@@ -24,9 +24,16 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/builder"
+	"github.com/rcrowley/go-metrics"
 )
 
 var _ kaiax.TxPoolModule = (*BuilderWrappingModule)(nil)
+
+var (
+	// Metrics for knownTxs
+	numKnownTxsGauge            = metrics.NewRegisteredGauge("txpool/knowntxs/num", nil)
+	oldestTxTimeInKnownTxsGauge = metrics.NewRegisteredGauge("txpool/knowntxs/oldesttime/seconds", nil)
+)
 
 type BuilderWrappingModule struct {
 	txPool           kaiax.TxPoolForCaller
@@ -99,6 +106,8 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 		isPrevTxBundleTx := len(ready) != 0 && b.txBundlingModule.IsBundleTx(ready[len(ready)-1])
 		if isPrevTxBundleTx {
 			b.knownTxs.add(tx)
+			numKnownTxsGauge.Update(int64(len(b.knownTxs)))
+			oldestTxTimeInKnownTxsGauge.Update(b.knownTxs.getTimeOfOldestKnownTx())
 			return true
 		}
 
@@ -123,6 +132,8 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 		}
 
 		b.knownTxs.add(tx)
+		numKnownTxsGauge.Update(int64(len(b.knownTxs)))
+		oldestTxTimeInKnownTxsGauge.Update(b.knownTxs.getTimeOfOldestKnownTx())
 	}
 
 	return true
@@ -141,6 +152,8 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
 		// remove known timed out tx from knownTxs
 		if knownTx.elapsedTime() >= KnownTxTimeout {
 			b.knownTxs.delete(hash)
+			numKnownTxsGauge.Update(int64(len(b.knownTxs)))
+			oldestTxTimeInKnownTxsGauge.Update(b.knownTxs.getTimeOfOldestKnownTx())
 		}
 	}
 	if b.txPoolModule != nil {

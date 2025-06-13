@@ -21,6 +21,7 @@ package log
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"sync"
 
 	"go.uber.org/zap"
@@ -54,9 +55,7 @@ func (zl *zapLogger) NewWith(keysAndValues ...interface{}) Logger {
 	defer zlManager.mutex.Unlock()
 
 	newCfg := genDefaultConfig()
-	for k, v := range zl.cfg.InitialFields {
-		newCfg.InitialFields[k] = v
-	}
+	maps.Copy(newCfg.InitialFields, zl.cfg.InitialFields)
 	newCfg.Level.SetLevel(zl.cfg.Level.Level())
 	return genLoggerZap(zl.mi, newCfg)
 }

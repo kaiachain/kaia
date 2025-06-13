@@ -658,7 +658,8 @@ func (l *txPricedList) Underpriced(tx *types.Transaction, local *accountSet) boo
 
 // Discard finds a number of most underpriced transactions, removes them from the
 // priced list and returns them for further removal from the entire pool.
-func (l *txPricedList) Discard(slots int, local *accountSet) types.Transactions {
+// If noPending is set to true, we will only consider the floating list
+func (l *txPricedList) Discard(slots int, local *accountSet) (types.Transactions, bool) {
 	drop := make(types.Transactions, 0, slots) // Remote underpriced transactions to drop
 	save := make(types.Transactions, 0, 64)    // Local underpriced transactions to keep
 
@@ -680,5 +681,11 @@ func (l *txPricedList) Discard(slots int, local *accountSet) types.Transactions 
 	for _, tx := range save {
 		heap.Push(l.items, tx)
 	}
-	return drop
+	if slots > 0 {
+		for _, tx := range drop {
+			heap.Push(l.items, tx)
+		}
+		return nil, false
+	}
+	return drop, true
 }

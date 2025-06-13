@@ -39,6 +39,16 @@ executors:
     resource_class: arm.medium
     docker:
       - image: kaiachain/circleci-rpmbuild:1.23.7-gcc11-arm
+  rpm-linux-amd64-el7-executor:
+    working_directory: /go/src/github.com/kaiachain/kaia
+    resource_class: medium
+    docker:
+      - image: kaiachain/circleci-rpmbuild:1.23.7-gcc7
+  rpm-linux-arm64-el7-executor:
+    working_directory: /go/src/github.com/kaiachain/kaia
+    resource_class: arm.medium
+    docker:
+      - image: kaiachain/circleci-rpmbuild:1.23.7-gcc7-arm
   tar-darwin-arm64-executor: # this executor is for darwin-arm64 tar packaging
     working_directory: ~/go/src/github.com/kaiachain/kaia
     macos:
@@ -135,6 +145,7 @@ commands:
       - run:
           name: "build binaries"
           command: |
+            touch ~/.bashrc
             source ~/.bashrc
             make all
       - run:
@@ -174,7 +185,11 @@ commands:
                       KAIROS="-kairos"
                     fi
                     TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
-                    aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/
+                    if [[ "$TARGET_RPM" == *".el7."*  ]]; then
+                      aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+                    elif [[ "$TARGET_RPM" == *".el9."* ]]; then
+                      aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/
+                    fi
                     aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
                   fi
                 done
@@ -183,6 +198,10 @@ commands:
       - run:
           name: "createrepo update"
           command: |
+            aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/ rhel/7/kaia/
+            createrepo --update rhel/7/kaia
+            aws s3 sync --delete rhel/7/kaia/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/repodata/
+            
             aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/ rhel/9-stream/kaia/
             createrepo --update rhel/9-stream/kaia
             aws s3 sync --delete rhel/9-stream/kaia/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/repodata/
@@ -473,6 +492,19 @@ jobs:
 #      - store_artifacts:
 #          path: /go/src/github.com/kaiachain/kaia/ken-linux-x86_64/rpmbuild/RPMS/x86_64/kend-kairos-v2.0.0-0.el9.x86_64.rpm
 #          destination: kend-kairos-v2.0.0-0.el9.x86_64.rpm
+  rpm-linux-amd64-el7-packaging:
+    executor: rpm-linux-amd64-el7-executor
+    steps:
+      - packaging-and-upload:
+          os-network: "linux-amd64"
+          package-type: "rpm"
+          is-test: false
+#      - store_artifacts:
+#          path: /go/src/github.com/kaiachain/kaia/ken-linux-x86_64/rpmbuild/RPMS/x86_64/kend-v2.0.0-0.el7.x86_64.rpm
+#          destination: kend-v2.0.0-0.el7.x86_64.rpm
+#      - store_artifacts:
+#          path: /go/src/github.com/kaiachain/kaia/ken-linux-x86_64/rpmbuild/RPMS/x86_64/kend-kairos-v2.0.0-0.el7.x86_64.rpm
+#          destination: kend-kairos-v2.0.0-0.el7.x86_64.rpm
   tar-linux-amd64-packaging:
     executor: tar-linux-amd64-executor
     steps:
@@ -496,6 +528,19 @@ jobs:
 #      - store_artifacts:
 #          path: /go/src/github.com/kaiachain/kaia/ken-linux-aarch64/rpmbuild/RPMS/aarch64/kend-kairos-v2.0.0-0.el9.aarch64.rpm
 #          destination: kend-kairos-v2.0.0-0.el9.aarch64.rpm
+  rpm-linux-arm64-el7-packaging:
+    executor: rpm-linux-arm64-el7-executor
+    steps:
+      - packaging-and-upload:
+          os-network: "linux-arm64"
+          package-type: "rpm"
+          is-test: false
+#      - store_artifacts:
+#          path: /go/src/github.com/kaiachain/kaia/ken-linux-aarch64/rpmbuild/RPMS/aarch64/kend-v2.0.0-0.el7.aarch64.rpm
+#          destination: kend-v2.0.0-0.el7.aarch64.rpm
+#      - store_artifacts:
+#          path: /go/src/github.com/kaiachain/kaia/ken-linux-aarch64/rpmbuild/RPMS/aarch64/kend-kairos-v2.0.0-0.el7.aarch64.rpm
+#          destination: kend-kairos-v2.0.0-0.el7.aarch64.rpm
   tar-linux-arm64-packaging:
     executor: tar-linux-arm64-executor
     steps:
@@ -613,20 +658,24 @@ workflows:
       - deploy-rpm-public:
           requires:
             - rpm-linux-amd64-packaging
+            - rpm-linux-amd64-el7-packaging
             - tar-linux-amd64-packaging
             - rpm-linux-arm64-packaging
+            - rpm-linux-arm64-el7-packaging
             - tar-linux-arm64-packaging
             - tar-darwin-arm64-packaging
           filters:
             tags:
-              only: /^v[0-9]+\.[0-9]+\.[0-9]/
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+&/
             branches:
               ignore: /.*/
       - release-PR:
           requires:
             - rpm-linux-amd64-packaging
+            - rpm-linux-amd64-el7-packaging
             - tar-linux-amd64-packaging
             - rpm-linux-arm64-packaging
+            - rpm-linux-arm64-el7-packaging
             - tar-linux-arm64-packaging
             - tar-darwin-arm64-packaging
           filters:
@@ -638,11 +687,19 @@ workflows:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
+      - rpm-linux-amd64-el7-packaging:
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
       - tar-linux-amd64-packaging:
           filters: *filter-only-version-tag
           requires:
             - pass-tests
       - rpm-linux-arm64-packaging:
+          filters: *filter-only-version-tag
+          requires:
+            - pass-tests
+      - rpm-linux-arm64-el7-packaging:
           filters: *filter-only-version-tag
           requires:
             - pass-tests

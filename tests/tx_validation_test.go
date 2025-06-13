@@ -135,7 +135,7 @@ func TestValidationPoolInsertEthTxType(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["EthTxType"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["EthTxType"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,7 +261,7 @@ func TestValidationPoolInsertMagma(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Magma"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Magma"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -388,7 +388,7 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -546,7 +546,7 @@ func TestValidationBlockTx(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1038,7 +1038,7 @@ func TestInvalidBalance(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1432,7 +1432,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1842,7 +1842,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Magma"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Magma"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2006,7 +2006,7 @@ func TestValidationTxSizeAfterRLPPrague(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2169,7 +2169,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -440,6 +440,14 @@ func (sb *backend) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul
 	return istanbul.NewRoundCommitteeState(blockValSet, committeeSize, committee, proposer), nil
 }
 
+func (sb *backend) GetProposerByRound(num uint64, round uint64) (common.Address, error) {
+	proposer, err := sb.valsetModule.GetProposer(num, round)
+	if err != nil {
+		return common.Address{}, err
+	}
+	return proposer, nil
+}
+
 // GetProposer implements istanbul.Backend.GetProposer
 func (sb *backend) GetProposer(number uint64) common.Address {
 	if h := sb.chain.GetHeaderByNumber(number); h != nil {

@@ -105,7 +105,7 @@ func TestGasCalculation(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
 	assert.Equal(t, nil, err)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 

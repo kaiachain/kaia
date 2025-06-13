@@ -31,6 +31,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -47,6 +48,7 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -1905,6 +1907,7 @@ func TestTxBundle(t *testing.T) {
 		)
 		bundleFuncMaker func(rewardBase, anon *TestAccountType, signer types.Signer, amount, gasPrice *big.Int,
 		) func([]*types.Transaction, []*builder.Bundle) []*builder.Bundle
+		cacheConfig *blockchain.CacheConfig
 	}{
 		{
 			// TestTxBundleRevert tests a following scenario:
@@ -1951,6 +1954,36 @@ func TestTxBundle(t *testing.T) {
 			runScenario:     testTxBundleTimeOutScenario,
 			bundleFuncMaker: bundleAll,
 		},
+		{
+			// TestTxBundleWithLivePruningByMiner tests a following scenario:
+			//  1. Transfer (rewardBase -> anon) using a legacy transaction.
+			//     This is just deposit for anon.
+			//  2. Transfer (anon -> validator) using a legacy transaction two times.
+			//     Create a mock TxBundlingModule and create a bundle for each two tx.
+			//     At that point, tx0 and tx1 are bundled, and then tx1 fails due to nonceTooHigh, so it is reverted.
+			//
+			// This test confirms that miners with live pruning cannot process failing bundles.
+			// All nodes marked as pruning during executing the bundle will be left in state db even though the bundle is reverted.
+			// This is because the state.Finalise() will store nodes as pruning before restoring the state.
+			name:            "TestTxBundleWithLivePruningByMiner",
+			runScenario:     makeTestTxBundleLivePruningScenario(true),
+			bundleFuncMaker: bundleEachTwoTxs,
+			cacheConfig:     cacheConfigForLivePruning(),
+		},
+		{
+			// TestTxBundleWithoutLivePruningByMiner tests a following scenario:
+			//  1. Transfer (rewardBase -> anon) using a legacy transaction.
+			//     This is just deposit for anon.
+			//  2. Transfer (anon -> validator) using a legacy transaction two times.
+			//     Create a mock TxBundlingModule and create a bundle for each two tx.
+			//     At that point, tx0 and tx1 are bundled, and then tx1 fails due to nonceTooHigh, so it is reverted.
+			//
+			// This test confirms that miners without live pruning can process failing bundles.
+			name:            "TestTxBundleWithoutLivePruningByMiner",
+			runScenario:     makeTestTxBundleLivePruningScenario(false),
+			bundleFuncMaker: bundleEachTwoTxs,
+			cacheConfig:     cacheConfigForLivePruning(),
+		},
 	}
 
 	for _, tc := range testcases {
@@ -1960,7 +1993,7 @@ func TestTxBundle(t *testing.T) {
 
 			// Initialize blockchain
 			start := time.Now()
-			bcdata, err := NewBCData(6, 4)
+			bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Byzantium"], tc.cacheConfig)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -2225,6 +2258,71 @@ func testTxBundleTimeOutScenario(t *testing.T, bcdata *BCData, rewardBase, valid
 	}()
 	if err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, nil, prof, txBundlingModules, builderModule); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func makeTestTxBundleLivePruningScenario(livePruningEnabled bool) func(*testing.T, *BCData, *TestAccountType, *TestAccountType, *TestAccountType, *AccountMap, *profile.Profiler, []builder.TxBundlingModule, builder.BuilderModule) {
+	return func(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType, accountMap *AccountMap, prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule) {
+		if livePruningEnabled {
+			bcdata.db.WritePruningEnabled()
+		}
+
+		bcdata.EnableMiner()
+
+		signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+		gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
+
+		// 1. Transfer (rewardBase -> anon) using a legacy transaction.
+		{
+			amount := new(big.Int).Mul(big.NewInt(10000), new(big.Int).SetUint64(params.KAIA))
+			tx := types.NewTransaction(rewardBase.Nonce, anon.Addr, amount, gasLimit, gasPrice, []byte{})
+			rewardBase.Nonce += 1
+			err := tx.SignWithKeys(signer, rewardBase.Keys)
+			assert.Equal(t, nil, err)
+			if err := bcdata.GenABlockWithTransactions(accountMap, []*types.Transaction{tx}, prof); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		// 2. Transfer (anon -> validator) using a legacy transaction two times.
+		{
+			txs := []*types.Transaction{}
+			for i := 0; i < 2; i++ {
+				amount := new(big.Int).Mul(common.Big1, new(big.Int).SetUint64(params.Kei))
+				nonce := anon.Nonce
+				if i == 1 {
+					nonce += 100
+				}
+				tx := types.NewTransaction(nonce, validator.Addr, amount, gasLimit, gasPrice, []byte{})
+				err := tx.SignWithKeys(signer, anon.Keys)
+				assert.Equal(t, nil, err)
+				txs = append(txs, tx)
+			}
+			// tx0 and tx1 are bundled, and then tx1 fails due to nonceTooHigh, so it is reverted.
+			expectedFailTxHashes := []common.Hash{txs[0].Hash(), txs[1].Hash()}
+			err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, expectedFailTxHashes, prof, txBundlingModules, builderModule)
+
+			if livePruningEnabled {
+				// State db will be broken because nodes marked as pruning during executing the bundle will be left in state db
+				// even though the bundle will be reverted.
+				assert.Error(t, err)
+			} else if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}
+
+func cacheConfigForLivePruning() *blockchain.CacheConfig {
+	return &blockchain.CacheConfig{
+		ArchiveMode:          false,
+		CacheSize:            0,
+		BlockInterval:        1,
+		TriesInMemory:        blockchain.DefaultTriesInMemory,
+		LivePruningRetention: 1,
+		TrieNodeCacheConfig:  statedb.GetEmptyTrieNodeCacheConfig(),
+		SnapshotCacheSize:    512,
+		SnapshotAsyncGen:     true,
 	}
 }
 

@@ -410,7 +410,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	return &BCData{
 		bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, mGov,
+		validatorPrivKeys, engine, genesis, mGov, false,
 	}, nil
 }
 
