@@ -85,6 +85,16 @@ func (k knownTxs) markDemoted(hash common.Hash) {
 	}
 }
 
+func (k knownTxs) getTimeOfOldestKnownTx() int64 {
+	var oldestTime float64 = 0
+	for _, knownTx := range k {
+		if oldestTime < knownTx.elapsedTime().Seconds() {
+			oldestTime = knownTx.elapsedTime().Seconds()
+		}
+	}
+	return int64(oldestTime)
+}
+
 type knownTx struct {
 	tx        *types.Transaction
 	time      time.Time
