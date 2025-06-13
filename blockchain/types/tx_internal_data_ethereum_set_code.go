@@ -552,14 +552,16 @@ func (t *TxInternalDataEthereumSetCode) setSignatureValues(chainID, v, r, s *big
 	t.ChainID, t.V, t.R, t.S = uint256.MustFromBig(chainID), v, r, s
 }
 
+//go:generate gencodec -type SetCodeAuthorization -field-override authorizationMarshaling -out gen_authorization.go
+
 // SetCodeAuthorization is an authorization from an account to deploy code at its address.
 type SetCodeAuthorization struct {
-	ChainID uint256.Int    `json:"chainId"`
-	Address common.Address `json:"address"`
-	Nonce   uint64         `json:"nonce"`
-	V       uint8          `json:"yParity"`
-	R       uint256.Int    `json:"r"`
-	S       uint256.Int    `json:"s"`
+	ChainID uint256.Int    `gencodec:"required" json:"chainId"`
+	Address common.Address `gencodec:"required" json:"address"`
+	Nonce   uint64         `gencodec:"required" json:"nonce"`
+	V       uint8          `gencodec:"required" json:"yParity"`
+	R       uint256.Int    `gencodec:"required" json:"r"`
+	S       uint256.Int    `gencodec:"required" json:"s"`
 }
 
 type authorizationMarshaling struct {
