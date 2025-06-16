@@ -425,7 +425,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1478,7 +1478,7 @@ func TestAccountUpdateRoleBasedKeyInvalidTypeKey(t *testing.T) {
 	}
 }
 
-// TestAccountUpdateWithRoleBasedKey tests account update with a roleBased key.
+// TestAccountUpdateRoleBasedKey tests account update with a roleBased key.
 // A roleBased key contains three types of sub-keys, and only RoleAccountUpdate key is used for update.
 // Other sub-keys are not used for the account update.
 // 0. create an account and update its key to a roleBased key.

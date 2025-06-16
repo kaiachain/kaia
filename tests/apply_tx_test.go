@@ -351,7 +351,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Istanbul"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Istanbul"], nil)
 	if err != nil {
 		b.Fatal(err)
 	}
