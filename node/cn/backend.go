@@ -584,7 +584,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	}
 
 	mTxPool = builder_impl.WrapAndConcatenateBundlingModules(mTxBundling, mTxPool, s.txPool)
-	
+
 	if !mAuction.IsDisabled() {
 		mBase = append(mBase, mAuction)
 		mExecution = append(mExecution, mAuction)

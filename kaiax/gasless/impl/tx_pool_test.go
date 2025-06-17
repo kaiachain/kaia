@@ -91,12 +91,6 @@ func TestIsReady(t *testing.T) {
 	sdb, _ := backend.BlockChain().State()
 	nodeKey, _ := crypto.GenerateKey()
 
-	dbm := database.NewMemoryDBManager()
-	alloc := testAllocStorage()
-	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
-	sdb, _ := backend.BlockChain().State()
-	nodeKey, _ := crypto.GenerateKey()
-
 	privkey, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(privkey.PublicKey)
 
