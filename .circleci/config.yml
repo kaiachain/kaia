@@ -185,10 +185,14 @@ commands:
                       KAIROS="-kairos"
                     fi
                     TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
-                    if [[ "$TARGET_RPM" == *".el7."*  ]]; then
-                      aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
-                    elif [[ "$TARGET_RPM" == *".el9."* ]]; then
-                      aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/
+                
+                    pat="^v[0-9]+\.[0-9]+\.[0-9]+$"
+                    if [[ $CIRCLE_TAG =~ $pat ]]; then
+                      if [[ "$TARGET_RPM" == *".el7."*  ]]; then
+                        aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+                      elif [[ "$TARGET_RPM" == *".el9."* ]]; then
+                        aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/
+                      fi
                     fi
                     aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
                   fi
