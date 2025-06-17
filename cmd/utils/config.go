@@ -762,7 +762,7 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 
 	// Set kaiax module config
 	gasless.SetGaslessConfig(ctx, cfg.Gasless)
-	cfg.Auction = auction.GetAuctionConfig(ctx, kCfg.Node.P2P.ConnectionType)
+	auction.SetAuctionConfig(ctx, cfg.Auction, kCfg.Node.P2P.ConnectionType)
 }
 
 // raiseFDLimit increases the file descriptor limit to process's maximum value
