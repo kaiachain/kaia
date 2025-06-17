@@ -87,13 +87,12 @@ func (bp *BidPool) SubscribeNewBid(sink chan<- *auction.Bid) event.Subscription 
 
 func (bp *BidPool) start() {
 	// Start the bid pool.
-	// running will be set 1 once it's ready.
+	// running will be set 1 once it's ready in the PostInsertBlock.
 
 	// If channels are closed, recreate them
-	if atomic.LoadUint32(&bp.stopped) == 1 {
+	if atomic.CompareAndSwapUint32(&bp.stopped, 1, 0) {
 		bp.bidMsgCh = make(chan *auction.Bid, bidChSize)
 		bp.newBidCh = make(chan *auction.Bid, bidChSize)
-		atomic.StoreUint32(&bp.stopped, 0)
 	}
 
 	bp.wg.Add(2)
