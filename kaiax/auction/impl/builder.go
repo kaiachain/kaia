@@ -68,6 +68,14 @@ func (a *AuctionModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 	return bundles
 }
 
+func (g *AuctionModule) IsBundleTx(tx *types.Transaction) bool {
+	return false
+}
+
+func (g *AuctionModule) GetMaxBundleTxsInPending() uint {
+	return 0
+}
+
 func (a *AuctionModule) FilterTxs(txs map[common.Address]types.Transactions) {
 	if atomic.LoadUint32(&a.bidPool.running) == 0 {
 		return
