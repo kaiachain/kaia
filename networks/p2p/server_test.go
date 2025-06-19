@@ -628,7 +628,7 @@ func (c *setupTransport) close(err error) {
 	c.closeErr = err
 }
 
-// setupConn shouldn't write to/read from the connection.
+// WriteMsg shouldn't write to/read from the connection.
 func (c *setupTransport) WriteMsg(Msg) error {
 	panic("WriteMsg called on setupTransport")
 }
