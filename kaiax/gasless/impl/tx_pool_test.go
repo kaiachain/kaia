@@ -195,11 +195,12 @@ func TestIsReady(t *testing.T) {
 				GaslessConfig: testGaslessConfig,
 				NodeKey:       nodeKey,
 				Chain:         backend.BlockChain(),
-				TxPool:        &testTxPool{cdb},
+				TxPool:        &testTxPool{},
 				NodeType:      common.ENDPOINTNODE,
 			})
 			require.NoError(t, err)
 
+			g.setCurrentState(cdb)
 			ok := g.IsReady(tc.queue, tc.i, tc.ready)
 			require.Equal(t, tc.expected, ok)
 		})
