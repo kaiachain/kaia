@@ -212,10 +212,6 @@ type testTxPool struct {
 	statedb *state.StateDB
 }
 
-func (pool *testTxPool) GetCurrentState() *state.StateDB {
-	return pool.statedb
-}
-
 func (pool *testTxPool) PendingUnlocked() (map[common.Address]types.Transactions, error) {
 	return nil, nil
 }
