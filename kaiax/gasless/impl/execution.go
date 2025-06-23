@@ -28,6 +28,6 @@ func (g *GaslessModule) PostInsertBlock(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	g.currentState = currentState
+	g.setCurrentState(currentState)
 	return g.updateAddresses(block.Header())
 }
