@@ -949,12 +949,10 @@ func TestPostReset_TxDemotion(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
-			mockTxPool := mock_kaiax.NewMockTxPoolForCaller(ctrl)
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
 				knownTxs:         copyknownTxMap(tt.knownTxs),
-				txPool:           mockTxPool,
 			}
 			builderModule.PostReset(nil, nil, tt.pendingTxs)
 
@@ -988,12 +986,10 @@ func TestPostReset_TxPoolModule(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
-			mockTxPool := mock_kaiax.NewMockTxPoolForCaller(ctrl)
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
 				knownTxs:         make(map[common.Hash]knownTx),
-				txPool:           mockTxPool,
 			}
 
 			mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)

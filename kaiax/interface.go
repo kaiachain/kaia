@@ -162,11 +162,6 @@ type TxPoolModule interface {
 	PostReset(oldHead, newHead *types.Header, pending map[common.Address]types.Transactions)
 }
 
-//go:generate mockgen -destination=./mock/tx_pool_for_caller.go -package=mock github.com/kaiachain/kaia/kaiax TxPoolForCaller
-type TxPoolForCaller interface {
-	PendingUnlocked() (map[common.Address]types.Transactions, error)
-}
-
 // Any component or module that accommodate txpool modules.
 type TxPoolModuleHost interface {
 	RegisterTxPoolModule(modules ...TxPoolModule)

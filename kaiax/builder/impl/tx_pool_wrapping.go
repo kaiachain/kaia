@@ -36,17 +36,15 @@ var (
 )
 
 type BuilderWrappingModule struct {
-	txPool           kaiax.TxPoolForCaller
 	txBundlingModule builder.TxBundlingModule
 	txPoolModule     kaiax.TxPoolModule // either nil or same object as txBundlingModule
 	knownTxs         knownTxs
 	mu               sync.RWMutex
 }
 
-func NewBuilderWrappingModule(txBundlingModule builder.TxBundlingModule, txPool kaiax.TxPoolForCaller) *BuilderWrappingModule {
+func NewBuilderWrappingModule(txBundlingModule builder.TxBundlingModule) *BuilderWrappingModule {
 	txPoolModule, _ := txBundlingModule.(kaiax.TxPoolModule)
 	return &BuilderWrappingModule{
-		txPool:           txPool,
 		txBundlingModule: txBundlingModule,
 		txPoolModule:     txPoolModule,
 		knownTxs:         knownTxs{},
