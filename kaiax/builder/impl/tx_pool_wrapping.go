@@ -162,15 +162,10 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
 }
 
 // PostReset is a wrapper function that calls the PostReset method of the underlying module.
-func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header) {
+func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header, pending map[common.Address]types.Transactions) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	pending, err := b.txPool.PendingUnlocked()
-	if err != nil {
-		logger.Error("Failed to get pending txs", "error", err)
-		return
-	}
 	flattened := make(map[common.Hash]*types.Transaction)
 	for _, txs := range pending {
 		for _, tx := range txs {
@@ -184,6 +179,6 @@ func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header) {
 	}
 
 	if b.txPoolModule != nil {
-		b.txPoolModule.PostReset(oldHead, newHead)
+		b.txPoolModule.PostReset(oldHead, newHead, pending)
 	}
 }

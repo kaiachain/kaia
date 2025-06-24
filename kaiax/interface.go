@@ -159,7 +159,7 @@ type TxPoolModule interface {
 	PreReset(oldHead, newHead *types.Header)
 
 	// Additional actions to perform after the txpool is reset.
-	PostReset(oldHead, newHead *types.Header)
+	PostReset(oldHead, newHead *types.Header, pending map[common.Address]types.Transactions)
 }
 
 //go:generate mockgen -destination=./mock/tx_pool_for_caller.go -package=mock github.com/kaiachain/kaia/kaiax TxPoolForCaller

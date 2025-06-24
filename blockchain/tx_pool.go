@@ -533,9 +533,14 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
 	}
 
+	pending, err := pool.Pending()
+	if err != nil {
+		logger.Error("Failed to get pending transactions", "err", err)
+	}
+	logger.Debug("Calling PostReset for each modules", "len(pending)", len(pending))
 	pool.txMu.Lock()
 	for _, module := range pool.modules {
-		module.PostReset(oldHead, newHead)
+		module.PostReset(oldHead, newHead, pending)
 	}
 	pool.txMu.Unlock()
 }

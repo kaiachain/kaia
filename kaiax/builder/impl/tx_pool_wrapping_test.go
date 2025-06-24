@@ -854,7 +854,6 @@ func TestPostReset_TxDemotion(t *testing.T) {
 		name            string
 		knownTxs        map[common.Hash]knownTx
 		pendingTxs      map[common.Address]types.Transactions
-		pendingErr      bool
 		expectedDemoted map[common.Hash]bool
 	}{
 		{
@@ -945,20 +944,6 @@ func TestPostReset_TxDemotion(t *testing.T) {
 				createTestTransaction(0).Hash(): true,
 			},
 		},
-		{
-			name: "Pending error",
-			knownTxs: map[common.Hash]knownTx{
-				createTestTransaction(0).Hash(): {
-					tx: createTestTransaction(0),
-				},
-				createTestTransaction(1).Hash(): {
-					tx: createTestTransaction(1),
-				},
-			},
-			pendingTxs:      make(map[common.Address]types.Transactions),
-			pendingErr:      true,
-			expectedDemoted: map[common.Hash]bool{},
-		},
 	}
 
 	for _, tt := range tests {
@@ -971,14 +956,7 @@ func TestPostReset_TxDemotion(t *testing.T) {
 				knownTxs:         copyknownTxMap(tt.knownTxs),
 				txPool:           mockTxPool,
 			}
-
-			if tt.pendingErr {
-				mockTxPool.EXPECT().PendingUnlocked().Return(tt.pendingTxs, errors.New("failed to get pending transactions"))
-			} else {
-				mockTxPool.EXPECT().PendingUnlocked().Return(tt.pendingTxs, nil)
-			}
-
-			builderModule.PostReset(nil, nil)
+			builderModule.PostReset(nil, nil, tt.pendingTxs)
 
 			// Verify that transactions are marked as demoted correctly
 			for hash, knownTx := range builderModule.knownTxs {
@@ -1011,7 +989,6 @@ func TestPostReset_TxPoolModule(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
 			mockTxPool := mock_kaiax.NewMockTxPoolForCaller(ctrl)
-			mockTxPool.EXPECT().PendingUnlocked().Return(make(map[common.Address]types.Transactions), nil).Times(1)
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
@@ -1021,13 +998,13 @@ func TestPostReset_TxPoolModule(t *testing.T) {
 
 			mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
 			if tt.hasTxPoolModule {
-				mockTxPoolModule.EXPECT().PostReset(nil, nil).Return().Times(1)
+				mockTxPoolModule.EXPECT().PostReset(nil, nil, gomock.Any()).Return().Times(1)
 				builderModule.txPoolModule = mockTxPoolModule
 			} else {
-				mockTxPoolModule.EXPECT().PostReset(nil, nil).Return().Times(0)
+				mockTxPoolModule.EXPECT().PostReset(nil, nil, gomock.Any()).Return().Times(0)
 			}
 
-			builderModule.PostReset(nil, nil)
+			builderModule.PostReset(nil, nil, make(map[common.Address]types.Transactions))
 		})
 	}
 }
