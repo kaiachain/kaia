@@ -26,7 +26,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -39,7 +38,6 @@ type InitOpts struct {
 	GaslessConfig *gasless.GaslessConfig
 	NodeKey       *ecdsa.PrivateKey
 	Chain         backends.BlockChainForCaller
-	TxPool        kaiax.TxPoolForCaller
 	NodeType      common.ConnType // if CN, minimum balance required to enable gasless module
 }
 
@@ -58,7 +56,7 @@ func NewGaslessModule() *GaslessModule {
 }
 
 func (g *GaslessModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.ChainConfig == nil || opts.GaslessConfig == nil || opts.NodeKey == nil || opts.Chain == nil || opts.TxPool == nil {
+	if opts == nil || opts.ChainConfig == nil || opts.GaslessConfig == nil || opts.NodeKey == nil || opts.Chain == nil {
 		return ErrInitUnexpectedNil
 	}
 

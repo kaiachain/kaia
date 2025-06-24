@@ -549,7 +549,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			GaslessConfig: s.config.Gasless,
 			NodeKey:       ctx.NodeKey(),
 			Chain:         s.blockchain,
-			TxPool:        s.txPool,
 			NodeType:      ctx.NodeType(),
 		}),
 	)
