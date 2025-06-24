@@ -10,7 +10,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	blockchain "github.com/kaiachain/kaia/blockchain"
-	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	event "github.com/kaiachain/kaia/event"
@@ -109,20 +108,6 @@ func (m *MockTxPool) Get(arg0 common.Hash) *types.Transaction {
 func (mr *MockTxPoolMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTxPool)(nil).Get), arg0)
-}
-
-// GetCurrentState mocks base method.
-func (m *MockTxPool) GetCurrentState() *state.StateDB {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCurrentState")
-	ret0, _ := ret[0].(*state.StateDB)
-	return ret0
-}
-
-// GetCurrentState indicates an expected call of GetCurrentState.
-func (mr *MockTxPoolMockRecorder) GetCurrentState() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentState", reflect.TypeOf((*MockTxPool)(nil).GetCurrentState))
 }
 
 // GetPendingNonce mocks base method.

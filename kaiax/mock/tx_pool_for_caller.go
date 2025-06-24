@@ -8,7 +8,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 )
@@ -34,20 +33,6 @@ func NewMockTxPoolForCaller(ctrl *gomock.Controller) *MockTxPoolForCaller {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTxPoolForCaller) EXPECT() *MockTxPoolForCallerMockRecorder {
 	return m.recorder
-}
-
-// GetCurrentState mocks base method.
-func (m *MockTxPoolForCaller) GetCurrentState() *state.StateDB {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCurrentState")
-	ret0, _ := ret[0].(*state.StateDB)
-	return ret0
-}
-
-// GetCurrentState indicates an expected call of GetCurrentState.
-func (mr *MockTxPoolForCallerMockRecorder) GetCurrentState() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentState", reflect.TypeOf((*MockTxPoolForCaller)(nil).GetCurrentState))
 }
 
 // PendingUnlocked mocks base method.

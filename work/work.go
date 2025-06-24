@@ -77,7 +77,6 @@ type TxPool interface {
 	Content() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
 	StartSpamThrottler(conf *blockchain.ThrottlerConfig) error
 	StopSpamThrottler()
-	GetCurrentState() *state.StateDB
 
 	kaiax.TxPoolModuleHost
 }

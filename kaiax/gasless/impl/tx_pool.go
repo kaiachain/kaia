@@ -68,7 +68,7 @@ func (g *GaslessModule) isApproveTxReady(approveTx, nextTx *types.Transaction) b
 	if err != nil {
 		return false
 	}
-	nonce := g.TxPool.GetCurrentState().GetNonce(addr)
+	nonce := g.getCurrentStateNonce(addr)
 
 	if approveTx.Nonce() != nonce {
 		return false
@@ -86,7 +86,7 @@ func (g *GaslessModule) isSwapTxReady(swapTx, prevTx *types.Transaction) bool {
 	if err != nil {
 		return false
 	}
-	nonce := g.TxPool.GetCurrentState().GetNonce(addr)
+	nonce := g.getCurrentStateNonce(addr)
 
 	var approveTx *types.Transaction
 	if swapTx.Nonce() == nonce {
