@@ -395,9 +395,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 			return nil, err
 		}
 		if msg.Gas() < floorDataGas {
-			// To prevent EstimateGas returning ErrFloorDataGas, we return ErrIntrinsicGas instead
-			// so that EstimateGas gas would try with higher gas limit.
-			return nil, fmt.Errorf("%w: have %d, want %d", ErrIntrinsicGas, st.gas, floorDataGas)
+			return nil, fmt.Errorf("%w: have %d, want %d", ErrFloorDataGas, st.gas, floorDataGas)
 		}
 	}
 	// SigValidationGas is already inclduded in IntrinsicGas
