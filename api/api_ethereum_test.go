@@ -2517,8 +2517,9 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 	//     }
 	// }
 	code := hexutil.Bytes(common.Hex2Bytes("6080604052348015600e575f5ffd5b50600436106026575f3560e01c80632e64cec114602a575b5f5ffd5b60306044565b604051603b91906062565b60405180910390f35b5f5f54905090565b5f819050919050565b605c81604c565b82525050565b5f60208201905060735f8301846055565b9291505056fea26469706673582212206aeab8d313a899d42a212113167e622ff770e746a3c3d0596d15fe2551d2c97464736f6c634300081e0033"))
+	// retrieve() with long junk to increase floor data gas. 104 nonzero tokens = 4160 floor data gas = 25160 intrinsic gas
 	data := hexutil.Bytes(common.Hex2Bytes("2e64cec1"))
-	data = append(data, bytes.Repeat([]byte{0xff}, 100)...) // increase floor gas
+	data = append(data, bytes.Repeat([]byte{0xff}, 100)...)
 
 	testcases := []struct {
 		args      EthTransactionArgs
