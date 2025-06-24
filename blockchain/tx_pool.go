@@ -539,12 +539,12 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// - pool.txMu is held here.
 	pending, err := pool.pendingUnlocked()
 	if err != nil {
-		logger.Error("Failed to get pending transactions", "err", err)
-		pending = make(map[common.Address]types.Transactions)
-	}
-	logger.Debug("Calling PostReset for each module", "len(pending)", len(pending))
-	for _, module := range pool.modules {
-		module.PostReset(oldHead, newHead, pending)
+		logger.Error("Failed to get pending transactions, skip PostReset", "err", err)
+	} else {
+		logger.Debug("Calling PostReset for each module", "len(pending)", len(pending))
+		for _, module := range pool.modules {
+			module.PostReset(oldHead, newHead, pending)
+		}
 	}
 	pool.txMu.Unlock()
 }
