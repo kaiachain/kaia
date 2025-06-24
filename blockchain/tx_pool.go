@@ -658,17 +658,6 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	return pending, nil
 }
 
-// PendingUnlocked retrieves all currently processable transactions, grouped by origin
-// account and sorted by nonce. The returned transaction set is a copy and can be
-// freely modified by calling code. This function is not thread safe.
-func (pool *TxPool) PendingUnlocked() (map[common.Address]types.Transactions, error) {
-	pending := make(map[common.Address]types.Transactions)
-	for addr, list := range pool.pending {
-		pending[addr] = list.Flatten()
-	}
-	return pending, nil
-}
-
 // CachedPendingTxsByCount retrieves about number of currently processable transactions
 // by requested count, grouped by origin account and sorted by nonce.
 func (pool *TxPool) CachedPendingTxsByCount(count int) types.Transactions {
