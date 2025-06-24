@@ -533,12 +533,15 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
 	}
 
-	pending, err := pool.Pending()
+	pool.txMu.Lock()
+	// pendingUnlocked() is supposed to be protected by pool.mu and pool.txMu.
+	// - pool.mu is held by (1) callers of reset() - loop(), lockedReset() or (2) unnecessary - NewTxPool()
+	// - pool.txMu is held here.
+	pending, err := pool.pendingUnlocked()
 	if err != nil {
 		logger.Error("Failed to get pending transactions", "err", err)
 	}
-	logger.Debug("Calling PostReset for each modules", "len(pending)", len(pending))
-	pool.txMu.Lock()
+	logger.Debug("Calling PostReset for each module", "len(pending)", len(pending))
 	for _, module := range pool.modules {
 		module.PostReset(oldHead, newHead, pending)
 	}
@@ -651,6 +654,11 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 	pool.txMu.Lock()
 	defer pool.txMu.Unlock()
 
+	return pool.pendingUnlocked()
+}
+
+// pendingUnlocked must be protected by pool.mu AND pool.txMu by the caller.
+func (pool *TxPool) pendingUnlocked() (map[common.Address]types.Transactions, error) {
 	pending := make(map[common.Address]types.Transactions)
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()
