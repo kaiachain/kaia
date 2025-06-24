@@ -36,17 +36,15 @@ var (
 )
 
 type BuilderWrappingModule struct {
-	txPool           kaiax.TxPoolForCaller
 	txBundlingModule builder.TxBundlingModule
 	txPoolModule     kaiax.TxPoolModule // either nil or same object as txBundlingModule
 	knownTxs         knownTxs
 	mu               sync.RWMutex
 }
 
-func NewBuilderWrappingModule(txBundlingModule builder.TxBundlingModule, txPool kaiax.TxPoolForCaller) *BuilderWrappingModule {
+func NewBuilderWrappingModule(txBundlingModule builder.TxBundlingModule) *BuilderWrappingModule {
 	txPoolModule, _ := txBundlingModule.(kaiax.TxPoolModule)
 	return &BuilderWrappingModule{
-		txPool:           txPool,
 		txBundlingModule: txBundlingModule,
 		txPoolModule:     txPoolModule,
 		knownTxs:         knownTxs{},
@@ -162,15 +160,10 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
 }
 
 // PostReset is a wrapper function that calls the PostReset method of the underlying module.
-func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header) {
+func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header, pending map[common.Address]types.Transactions) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	pending, err := b.txPool.PendingUnlocked()
-	if err != nil {
-		logger.Error("Failed to get pending txs", "error", err)
-		return
-	}
 	flattened := make(map[common.Hash]*types.Transaction)
 	for _, txs := range pending {
 		for _, tx := range txs {
@@ -184,6 +177,6 @@ func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header) {
 	}
 
 	if b.txPoolModule != nil {
-		b.txPoolModule.PostReset(oldHead, newHead)
+		b.txPoolModule.PostReset(oldHead, newHead, pending)
 	}
 }
