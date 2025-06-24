@@ -28,8 +28,10 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"strings"
 	"time"
 
+	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
@@ -38,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/misc"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node/cn/filters"
@@ -46,6 +49,14 @@ import (
 )
 
 var logger = log.NewModuleLogger(log.API)
+
+// CreditOutput represents the output structure for GetCypressCredit
+type CreditOutput struct {
+	Photo       string `json:"photo"`
+	Names       string `json:"names"`
+	EndingPhoto string `json:"endingPhoto"`
+	EndingNames string `json:"endingNames"`
+}
 
 // BlockChainAPI provides an API to access the Kaia blockchain.
 // It offers only methods that operate on public data that is freely available to anyone.
@@ -743,4 +754,75 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 		accessList = *args.AccessList
 	}
 	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, args.InputData(), false, intrinsicGas, accessList, nil, nil), nil
+}
+
+// MainnetCredit contract is stored in the address zero.
+var (
+	mainnetCreditContractAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
+	latestBlockNrOrHash          = rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
+	errNoCypressCreditContract   = errors.New("no mainnet credit contract")
+)
+
+// callCypressCreditGetFunc executes funcName in CypressCreditContract and returns the output.
+func (s *KaiaBlockChainAPI) callCypressCreditGetFunc(ctx context.Context, parsed *abi.ABI, funcName string) (*string, error) {
+	abiGet, err := parsed.Pack(funcName)
+	if err != nil {
+		return nil, err
+	}
+
+	args := CallArgs{
+		To:   &mainnetCreditContractAddress,
+		Data: abiGet,
+	}
+	ret, err := s.Call(ctx, args, latestBlockNrOrHash)
+	if err != nil {
+		return nil, err
+	}
+
+	output := new(string)
+	err = parsed.UnpackIntoInterface(output, funcName, ret)
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
+// GetCypressCredit calls getPhoto and getNames in the CypressCredit contract
+// and returns all the results as a struct.
+func (s *KaiaBlockChainAPI) GetCypressCredit(ctx context.Context) (*CreditOutput, error) {
+	if ok, err := s.IsContractAccount(ctx, mainnetCreditContractAddress, latestBlockNrOrHash); err != nil {
+		return nil, err
+	} else if !ok {
+		return nil, errNoCypressCreditContract
+	}
+
+	parsed, err := abi.JSON(strings.NewReader(misc.CypressCreditV2ABI))
+	if err != nil {
+		return nil, err
+	}
+
+	output := new(CreditOutput)
+
+	// getPhoto and getNames must exist from the Cypress genesis.
+	if str, err := s.callCypressCreditGetFunc(ctx, &parsed, "getPhoto"); err == nil {
+		output.Photo = *str
+	} else {
+		return nil, err
+	}
+	if str, err := s.callCypressCreditGetFunc(ctx, &parsed, "getNames"); err == nil {
+		output.Names = *str
+	} else {
+		return nil, err
+	}
+
+	// getEndingPhoto and getEndingNames are added at some nonzero block. They are returned if they exist.
+	if str, err := s.callCypressCreditGetFunc(ctx, &parsed, "getEndingPhoto"); err == nil {
+		output.EndingPhoto = *str
+	}
+	if str, err := s.callCypressCreditGetFunc(ctx, &parsed, "getEndingNames"); err == nil {
+		output.EndingNames = *str
+	}
+
+	return output, nil
 }
