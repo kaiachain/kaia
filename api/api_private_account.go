@@ -39,18 +39,18 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-// PrivateAccountAPI provides an API to access accounts managed by this node.
+// PersonalAPI provides an API to access accounts managed by this node.
 // It offers methods to create, (un)lock en list accounts. Some methods accept
 // passwords and are therefore considered private by default.
-type PrivateAccountAPI struct {
+type PersonalAPI struct {
 	am        accounts.AccountManager
 	nonceLock *AddrLocker
 	b         Backend
 }
 
-// NewPrivateAccountAPI create a new PrivateAccountAPI.
-func NewPrivateAccountAPI(b Backend, nonceLock *AddrLocker) *PrivateAccountAPI {
-	return &PrivateAccountAPI{
+// NewPersonalAPI create a new PersonalAPI.
+func NewPersonalAPI(b Backend, nonceLock *AddrLocker) *PersonalAPI {
+	return &PersonalAPI{
 		am:        b.AccountManager(),
 		nonceLock: nonceLock,
 		b:         b,
@@ -58,7 +58,7 @@ func NewPrivateAccountAPI(b Backend, nonceLock *AddrLocker) *PrivateAccountAPI {
 }
 
 // ListAccounts will return a list of addresses for accounts this node manages.
-func (s *PrivateAccountAPI) ListAccounts() []common.Address {
+func (s *PersonalAPI) ListAccounts() []common.Address {
 	addresses := make([]common.Address, 0) // return [] instead of nil if empty
 	for _, wallet := range s.am.Wallets() {
 		for _, account := range wallet.Accounts() {
@@ -78,7 +78,7 @@ type rawWallet struct {
 }
 
 // ListWallets will return a list of wallets this node manages.
-func (s *PrivateAccountAPI) ListWallets() []rawWallet {
+func (s *PersonalAPI) ListWallets() []rawWallet {
 	wallets := make([]rawWallet, 0) // return [] instead of nil if empty
 	for _, wallet := range s.am.Wallets() {
 		status, failure := wallet.Status()
@@ -100,7 +100,7 @@ func (s *PrivateAccountAPI) ListWallets() []rawWallet {
 // connection and attempting to authenticate via the provided passphrase. Note,
 // the method may return an extra challenge requiring a second open (e.g. the
 // Trezor PIN matrix challenge).
-func (s *PrivateAccountAPI) OpenWallet(url string, passphrase *string) error {
+func (s *PersonalAPI) OpenWallet(url string, passphrase *string) error {
 	wallet, err := s.am.Wallet(url)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func (s *PrivateAccountAPI) OpenWallet(url string, passphrase *string) error {
 
 // DeriveAccount requests a HD wallet to derive a new account, optionally pinning
 // it for later reuse.
-func (s *PrivateAccountAPI) DeriveAccount(url string, path string, pin *bool) (accounts.Account, error) {
+func (s *PersonalAPI) DeriveAccount(url string, path string, pin *bool) (accounts.Account, error) {
 	wallet, err := s.am.Wallet(url)
 	if err != nil {
 		return accounts.Account{}, err
@@ -130,7 +130,7 @@ func (s *PrivateAccountAPI) DeriveAccount(url string, path string, pin *bool) (a
 }
 
 // NewAccount will create a new account and returns the address for the new account.
-func (s *PrivateAccountAPI) NewAccount(password string) (common.Address, error) {
+func (s *PersonalAPI) NewAccount(password string) (common.Address, error) {
 	acc, err := fetchKeystore(s.am).NewAccount(password)
 	if err == nil {
 		return acc.Address, nil
@@ -160,7 +160,7 @@ func parseKaiaWalletKey(k string) (string, string, *common.Address, error) {
 
 // ReplaceRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ReplaceRawKey(privkey string, passphrase string, newPassphrase string) (common.Address, error) {
+func (s *PersonalAPI) ReplaceRawKey(privkey string, passphrase string, newPassphrase string) (common.Address, error) {
 	privkey, _, address, err := parseKaiaWalletKey(privkey)
 	if err != nil {
 		return common.Address{}, err
@@ -175,7 +175,7 @@ func (s *PrivateAccountAPI) ReplaceRawKey(privkey string, passphrase string, new
 
 // ImportRawKey stores the given hex encoded ECDSA key into the key directory,
 // encrypting it with the passphrase.
-func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (common.Address, error) {
+func (s *PersonalAPI) ImportRawKey(privkey string, password string) (common.Address, error) {
 	privkey, _, address, err := parseKaiaWalletKey(privkey)
 	if err != nil {
 		return common.Address{}, err
@@ -191,7 +191,7 @@ func (s *PrivateAccountAPI) ImportRawKey(privkey string, password string) (commo
 // UnlockAccount will unlock the account associated with the given address with
 // the given password for duration seconds. If duration is nil it will use a
 // default of 300 seconds. It returns an indication if the account was unlocked.
-func (s *PrivateAccountAPI) UnlockAccount(addr common.Address, password string, duration *uint64) (bool, error) {
+func (s *PersonalAPI) UnlockAccount(addr common.Address, password string, duration *uint64) (bool, error) {
 	const max = uint64(time.Duration(math.MaxInt64) / time.Second)
 	var d time.Duration
 	if duration == nil {
@@ -206,14 +206,14 @@ func (s *PrivateAccountAPI) UnlockAccount(addr common.Address, password string, 
 }
 
 // LockAccount will lock the account associated with the given address when it's unlocked.
-func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
+func (s *PersonalAPI) LockAccount(addr common.Address) bool {
 	return fetchKeystore(s.am).Lock(addr) == nil
 }
 
 // signTransaction sets defaults and signs the given transaction.
 // NOTE: the caller needs to ensure that the nonceLock is held, if applicable,
 // and release it after the transaction has been submitted to the tx pool.
-func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (*types.Transaction, error) {
+func (s *PersonalAPI) signTransaction(ctx context.Context, args SendTxArgs, passwd string) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
 	wallet, err := s.am.Find(account)
@@ -236,7 +236,7 @@ func (s *PrivateAccountAPI) signTransaction(ctx context.Context, args SendTxArgs
 // SendTransaction will create a transaction from the given arguments and try to
 // sign it with the key associated with args.From. If the given password isn't
 // able to decrypt the key it fails.
-func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
+func (s *PersonalAPI) SendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
 	if args.AccountNonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
@@ -253,7 +253,7 @@ func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs
 // SendTransactionAsFeePayer will create a transaction from the given arguments and
 // try to sign it as a fee payer with the key associated with args.From. If the
 // given password isn't able to decrypt the key it fails.
-func (s *PrivateAccountAPI) SendTransactionAsFeePayer(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
+func (s *PersonalAPI) SendTransactionAsFeePayer(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
 	// Don't allow dynamic assign of values from the setDefaults function since the sender already signed on specific values.
 	if args.TypeInt == nil {
 		return common.Hash{}, errTxArgNilTxType
@@ -280,7 +280,7 @@ func (s *PrivateAccountAPI) SendTransactionAsFeePayer(ctx context.Context, args 
 	return submitTransaction(ctx, s.b, feePayerSignedTx.Tx)
 }
 
-func (s *PrivateAccountAPI) signNewTransaction(ctx context.Context, args NewTxArgs, passwd string) (*types.Transaction, error) {
+func (s *PersonalAPI) signNewTransaction(ctx context.Context, args NewTxArgs, passwd string) (*types.Transaction, error) {
 	account := accounts.Account{Address: args.from()}
 	wallet, err := s.am.Find(account)
 	if err != nil {
@@ -308,7 +308,7 @@ func (s *PrivateAccountAPI) signNewTransaction(ctx context.Context, args NewTxAr
 // SendAccountUpdate will create a TxTypeAccountUpdate transaction from the given arguments and
 // try to sign it with the key associated with args.From. If the given password isn't able to
 // decrypt the key it fails.
-func (s *PrivateAccountAPI) SendAccountUpdate(ctx context.Context, args AccountUpdateTxArgs, passwd string) (common.Hash, error) {
+func (s *PersonalAPI) SendAccountUpdate(ctx context.Context, args AccountUpdateTxArgs, passwd string) (common.Hash, error) {
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
@@ -327,7 +327,7 @@ func (s *PrivateAccountAPI) SendAccountUpdate(ctx context.Context, args AccountU
 // SendValueTransfer will create a TxTypeValueTransfer transaction from the given arguments and
 // try to sign it with the key associated with args.From. If the given password isn't able to
 // decrypt the key it fails.
-func (s *PrivateAccountAPI) SendValueTransfer(ctx context.Context, args ValueTransferTxArgs, passwd string) (common.Hash, error) {
+func (s *PersonalAPI) SendValueTransfer(ctx context.Context, args ValueTransferTxArgs, passwd string) (common.Hash, error) {
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
@@ -346,7 +346,7 @@ func (s *PrivateAccountAPI) SendValueTransfer(ctx context.Context, args ValueTra
 // SignTransaction will create a transaction from the given arguments and
 // try to sign it with the key associated with args.From. If the given password isn't able to
 // decrypt the key, it fails. The transaction is returned in RLP-form, not broadcast to other nodes
-func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
+func (s *PersonalAPI) SignTransaction(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
 	if args.TypeInt != nil && args.TypeInt.IsEthTypedTransaction() {
 		if args.Price == nil && (args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil) {
 			return nil, errors.New("missing gasPrice or maxFeePerGas/maxPriorityFeePerGas")
@@ -377,7 +377,7 @@ func (s *PrivateAccountAPI) SignTransaction(ctx context.Context, args SendTxArgs
 // try to sign it as a fee payer with the key associated with args.From. If the given
 // password isn't able to decrypt the key, it fails. The transaction is returned in RLP-form,
 // not broadcast to other nodes
-func (s *PrivateAccountAPI) SignTransactionAsFeePayer(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
+func (s *PersonalAPI) SignTransactionAsFeePayer(ctx context.Context, args SendTxArgs, passwd string) (*SignTransactionResult, error) {
 	// Allows setting a default nonce value of the sender just for the case the fee payer tries to sign a tx earlier than the sender.
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
@@ -425,7 +425,7 @@ func ethSignHash(data []byte) []byte {
 
 // sign is a helper function that signs a transaction with the private key of the given address.
 // If the given password isn't able to decrypt the key, it fails.
-func (s *PrivateAccountAPI) sign(addr common.Address, passwd string, tx *types.Transaction) (*types.Transaction, error) {
+func (s *PersonalAPI) sign(addr common.Address, passwd string, tx *types.Transaction) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: addr}
 
@@ -439,7 +439,7 @@ func (s *PrivateAccountAPI) sign(addr common.Address, passwd string, tx *types.T
 
 // signAsFeePayer is a helper function that signs a transaction with the private key of the given address.
 // If the given password isn't able to decrypt the key, it fails.
-func (s *PrivateAccountAPI) signAsFeePayer(addr common.Address, passwd string, tx *types.Transaction) (*types.Transaction, error) {
+func (s *PersonalAPI) signAsFeePayer(addr common.Address, passwd string, tx *types.Transaction) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: addr}
 
@@ -460,7 +460,7 @@ func (s *PrivateAccountAPI) signAsFeePayer(addr common.Address, passwd string, t
 // The key used to calculate the signature is decrypted with the given password.
 //
 // https://github.com/ethereum/go-ethereum/wiki/Management-APIs#personal_sign
-func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr common.Address, passwd string) (hexutil.Bytes, error) {
+func (s *PersonalAPI) Sign(ctx context.Context, data hexutil.Bytes, addr common.Address, passwd string) (hexutil.Bytes, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: addr}
 
@@ -485,7 +485,7 @@ func (s *PrivateAccountAPI) Sign(ctx context.Context, data hexutil.Bytes, addr c
 //
 // Note, the signature must conform to the secp256k1 curve R, S and V values, where
 // the V value must be 27 or 28 for legacy reasons.
-func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Bytes) (common.Address, error) {
+func (s *PersonalAPI) EcRecover(ctx context.Context, data, sig hexutil.Bytes) (common.Address, error) {
 	if len(sig) != crypto.SignatureLength {
 		return common.Address{}, errors.New("signature must be 65 bytes long")
 	}
@@ -513,6 +513,6 @@ func ethEcRecover(data, sig hexutil.Bytes) (*ecdsa.PublicKey, error) {
 
 // SignAndSendTransaction was renamed to SendTransaction. This method is deprecated
 // and will be removed in the future. It primary goal is to give clients time to update.
-func (s *PrivateAccountAPI) SignAndSendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
+func (s *PersonalAPI) SignAndSendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
 	return s.SendTransaction(ctx, args, passwd)
 }

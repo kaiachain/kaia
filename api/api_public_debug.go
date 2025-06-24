@@ -30,20 +30,20 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-// PublicDebugAPI is the collection of Kaia APIs exposed over the public
+// DebugAPI is the collection of Kaia APIs exposed over the public
 // debugging endpoint.
-type PublicDebugAPI struct {
+type DebugAPI struct {
 	b Backend
 }
 
-// NewPublicDebugAPI creates a new API definition for the public debug methods
+// NewDebugAPI creates a new API definition for the public debug methods
 // of the Kaia service.
-func NewPublicDebugAPI(b Backend) *PublicDebugAPI {
-	return &PublicDebugAPI{b: b}
+func NewDebugAPI(b Backend) *DebugAPI {
+	return &DebugAPI{b: b}
 }
 
 // GetBlockRlp retrieves the RLP encoded for of a single block.
-func (api *PublicDebugAPI) GetBlockRlp(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (string, error) {
+func (api *DebugAPI) GetBlockRlp(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (string, error) {
 	block, _ := api.b.BlockByNumberOrHash(ctx, blockNrOrHash)
 	if block == nil {
 		blockNumberOrHashString, _ := blockNrOrHash.NumberOrHashString()

@@ -34,7 +34,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var dummyChainConfigForEthereumAPITest = &params.ChainConfig{
+var dummyChainConfigForEthAPITest = &params.ChainConfig{
 	ChainID:                  new(big.Int).SetUint64(111111),
 	IstanbulCompatibleBlock:  new(big.Int).SetUint64(0),
 	LondonCompatibleBlock:    new(big.Int).SetUint64(0),
@@ -99,12 +99,12 @@ var (
 )
 
 // TestEthereumAPI_Etherbase tests Etherbase.
-func TestEthereumAPI_Etherbase(t *testing.T) {
+func TestEthAPI_Etherbase(t *testing.T) {
 	testNodeAddress(t, "Etherbase")
 }
 
-// TestEthereumAPI_Coinbase tests Coinbase.
-func TestEthereumAPI_Coinbase(t *testing.T) {
+// TestEthAPI_Coinbase tests Coinbase.
+func TestEthAPI_Coinbase(t *testing.T) {
 	testNodeAddress(t, "Coinbase")
 }
 
@@ -113,68 +113,68 @@ func testNodeAddress(t *testing.T, testAPIName string) {
 	key, _ := crypto.GenerateKey()
 	nodeAddress := crypto.PubkeyToAddress(key.PublicKey)
 
-	api := EthereumAPI{nodeAddress: nodeAddress}
+	api := EthAPI{nodeAddress: nodeAddress}
 	results := reflect.ValueOf(&api).MethodByName(testAPIName).Call([]reflect.Value{})
 	result, ok := results[0].Interface().(common.Address)
 	assert.True(t, ok)
 	assert.Equal(t, nodeAddress, result)
 }
 
-// TestEthereumAPI_Hashrate tests Hasharate.
-func TestEthereumAPI_Hashrate(t *testing.T) {
-	api := &EthereumAPI{}
+// TestEthAPI_Hashrate tests Hasharate.
+func TestEthAPI_Hashrate(t *testing.T) {
+	api := &EthAPI{}
 	assert.Equal(t, hexutil.Uint64(ZeroHashrate), api.Hashrate())
 }
 
-// TestEthereumAPI_Mining tests Mining.
-func TestEthereumAPI_Mining(t *testing.T) {
-	api := &EthereumAPI{}
+// TestEthAPI_Mining tests Mining.
+func TestEthAPI_Mining(t *testing.T) {
+	api := &EthAPI{}
 	assert.Equal(t, false, api.Mining())
 }
 
-// TestEthereumAPI_GetWork tests GetWork.
-func TestEthereumAPI_GetWork(t *testing.T) {
-	api := &EthereumAPI{}
+// TestEthAPI_GetWork tests GetWork.
+func TestEthAPI_GetWork(t *testing.T) {
+	api := &EthAPI{}
 	_, err := api.GetWork()
 	assert.Equal(t, errNoMiningWork, err)
 }
 
-// TestEthereumAPI_SubmitWork tests SubmitWork.
-func TestEthereumAPI_SubmitWork(t *testing.T) {
-	api := &EthereumAPI{}
+// TestEthAPI_SubmitWork tests SubmitWork.
+func TestEthAPI_SubmitWork(t *testing.T) {
+	api := &EthAPI{}
 	assert.Equal(t, false, api.SubmitWork(BlockNonce{}, common.Hash{}, common.Hash{}))
 }
 
-// TestEthereumAPI_SubmitHashrate tests SubmitHashrate.
-func TestEthereumAPI_SubmitHashrate(t *testing.T) {
-	api := &EthereumAPI{}
+// TestEthAPI_SubmitHashrate tests SubmitHashrate.
+func TestEthAPI_SubmitHashrate(t *testing.T) {
+	api := &EthAPI{}
 	assert.Equal(t, false, api.SubmitHashrate(hexutil.Uint64(0), common.Hash{}))
 }
 
-// TestEthereumAPI_GetHashrate tests GetHashrate.
-func TestEthereumAPI_GetHashrate(t *testing.T) {
-	api := &EthereumAPI{}
+// TestEthAPI_GetHashrate tests GetHashrate.
+func TestEthAPI_GetHashrate(t *testing.T) {
+	api := &EthAPI{}
 	assert.Equal(t, ZeroHashrate, api.GetHashrate())
 }
 
-// TestEthereumAPI_GetUncleByBlockNumberAndIndex tests GetUncleByBlockNumberAndIndex.
-func TestEthereumAPI_GetUncleByBlockNumberAndIndex(t *testing.T) {
-	api := &EthereumAPI{}
+// TestEthAPI_GetUncleByBlockNumberAndIndex tests GetUncleByBlockNumberAndIndex.
+func TestEthAPI_GetUncleByBlockNumberAndIndex(t *testing.T) {
+	api := &EthAPI{}
 	uncleBlock, err := api.GetUncleByBlockNumberAndIndex(context.Background(), rpc.BlockNumber(0), hexutil.Uint(0))
 	assert.NoError(t, err)
 	assert.Nil(t, uncleBlock)
 }
 
-// TestEthereumAPI_GetUncleByBlockHashAndIndex tests GetUncleByBlockHashAndIndex.
-func TestEthereumAPI_GetUncleByBlockHashAndIndex(t *testing.T) {
-	api := &EthereumAPI{}
+// TestEthAPI_GetUncleByBlockHashAndIndex tests GetUncleByBlockHashAndIndex.
+func TestEthAPI_GetUncleByBlockHashAndIndex(t *testing.T) {
+	api := &EthAPI{}
 	uncleBlock, err := api.GetUncleByBlockHashAndIndex(context.Background(), common.Hash{}, hexutil.Uint(0))
 	assert.NoError(t, err)
 	assert.Nil(t, uncleBlock)
 }
 
-// TestTestEthereumAPI_GetUncleCountByBlockNumber tests GetUncleCountByBlockNumber.
-func TestTestEthereumAPI_GetUncleCountByBlockNumber(t *testing.T) {
+// TestTestEthAPI_GetUncleCountByBlockNumber tests GetUncleCountByBlockNumber.
+func TestTestEthAPI_GetUncleCountByBlockNumber(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	block, _, _, _, _ := createTestData(t, nil)
 
@@ -195,8 +195,8 @@ func TestTestEthereumAPI_GetUncleCountByBlockNumber(t *testing.T) {
 	mockCtrl.Finish()
 }
 
-// TestTestEthereumAPI_GetUncleCountByBlockHash tests GetUncleCountByBlockHash.
-func TestTestEthereumAPI_GetUncleCountByBlockHash(t *testing.T) {
+// TestTestEthAPI_GetUncleCountByBlockHash tests GetUncleCountByBlockHash.
+func TestTestEthAPI_GetUncleCountByBlockHash(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	block, _, _, _, _ := createTestData(t, nil)
 
@@ -217,21 +217,21 @@ func TestTestEthereumAPI_GetUncleCountByBlockHash(t *testing.T) {
 	mockCtrl.Finish()
 }
 
-// TestEthereumAPI_GetHeaderByNumber tests GetHeaderByNumber.
-func TestEthereumAPI_GetHeaderByNumber(t *testing.T) {
+// TestEthAPI_GetHeaderByNumber tests GetHeaderByNumber.
+func TestEthAPI_GetHeaderByNumber(t *testing.T) {
 	testGetHeader(t, "GetHeaderByNumber", testLondonConfig)
 	testGetHeader(t, "GetHeaderByNumber", testEthTxTypeConfig)
 	testGetHeader(t, "GetHeaderByNumber", testRandaoConfig)
 }
 
-// TestEthereumAPI_GetHeaderByHash tests GetHeaderByNumber.
-func TestEthereumAPI_GetHeaderByHash(t *testing.T) {
+// TestEthAPI_GetHeaderByHash tests GetHeaderByNumber.
+func TestEthAPI_GetHeaderByHash(t *testing.T) {
 	testGetHeader(t, "GetHeaderByHash", testLondonConfig)
 	testGetHeader(t, "GetHeaderByHash", testEthTxTypeConfig)
 	testGetHeader(t, "GetHeaderByHash", testRandaoConfig)
 }
 
-// testGetHeader generates data to test GetHeader related functions in EthereumAPI
+// testGetHeader generates data to test GetHeader related functions in EthAPI
 // and actually tests the API function passed as a parameter.
 func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
@@ -324,19 +324,19 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 	assert.Equal(t, stringifyMap(expected), stringifyMap(ethHeader))
 }
 
-// TestEthereumAPI_GetBlockByNumber tests GetBlockByNumber.
-func TestEthereumAPI_GetBlockByNumber(t *testing.T) {
+// TestEthAPI_GetBlockByNumber tests GetBlockByNumber.
+func TestEthAPI_GetBlockByNumber(t *testing.T) {
 	testGetBlock(t, "GetBlockByNumber", false)
 	testGetBlock(t, "GetBlockByNumber", true)
 }
 
-// TestEthereumAPI_GetBlockByHash tests GetBlockByHash.
-func TestEthereumAPI_GetBlockByHash(t *testing.T) {
+// TestEthAPI_GetBlockByHash tests GetBlockByHash.
+func TestEthAPI_GetBlockByHash(t *testing.T) {
 	testGetBlock(t, "GetBlockByHash", false)
 	testGetBlock(t, "GetBlockByHash", true)
 }
 
-// testGetBlock generates data to test GetBlock related functions in EthereumAPI
+// testGetBlock generates data to test GetBlock related functions in EthAPI
 // and actually tests the API function passed as a parameter.
 func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
@@ -345,7 +345,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
 	mockEngine := mocks.NewMockEngine(mockCtrl)
 	// GetHeader APIs calls internally below methods.
 	mockBackend.EXPECT().Engine().Return(mockEngine)
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest).AnyTimes()
 	// Author is called when calculates miner field of Header.
 	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
 	mockEngine.EXPECT().Author(gomock.Any()).Return(dummyMiner, nil)
@@ -850,14 +850,14 @@ func stringifyMap(m map[string]interface{}) map[string]interface{} {
 	return unmarshaled
 }
 
-// TestEthereumAPI_GetTransactionByBlockNumberAndIndex tests GetTransactionByBlockNumberAndIndex.
-func TestEthereumAPI_GetTransactionByBlockNumberAndIndex(t *testing.T) {
+// TestEthAPI_GetTransactionByBlockNumberAndIndex tests GetTransactionByBlockNumberAndIndex.
+func TestEthAPI_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	block, txs, _, _, _ := createTestData(t, nil)
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(block, nil).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest).AnyTimes()
 	// Get transaction by block number and index for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
 		ethTx := api.GetTransactionByBlockNumberAndIndex(context.Background(), rpc.BlockNumber(block.NumberU64()), hexutil.Uint(i))
@@ -867,14 +867,14 @@ func TestEthereumAPI_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 	mockCtrl.Finish()
 }
 
-// TestEthereumAPI_GetTransactionByBlockHashAndIndex tests GetTransactionByBlockHashAndIndex.
-func TestEthereumAPI_GetTransactionByBlockHashAndIndex(t *testing.T) {
+// TestEthAPI_GetTransactionByBlockHashAndIndex tests GetTransactionByBlockHashAndIndex.
+func TestEthAPI_GetTransactionByBlockHashAndIndex(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	block, txs, _, _, _ := createTestData(t, nil)
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().BlockByHash(gomock.Any(), gomock.Any()).Return(block, nil).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest).AnyTimes()
 
 	// Get transaction by block hash and index for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -885,8 +885,8 @@ func TestEthereumAPI_GetTransactionByBlockHashAndIndex(t *testing.T) {
 	mockCtrl.Finish()
 }
 
-// TestEthereumAPI_GetTransactionByHash tests GetTransactionByHash.
-func TestEthereumAPI_GetTransactionByHash(t *testing.T) {
+// TestEthAPI_GetTransactionByHash tests GetTransactionByHash.
+func TestEthAPI_GetTransactionByHash(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	block, txs, txHashMap, _, _ := createTestData(t, nil)
 
@@ -899,7 +899,7 @@ func TestEthereumAPI_GetTransactionByHash(t *testing.T) {
 	// Mock Backend functions.
 	mockBackend.EXPECT().ChainDB().Return(mockDBManager).Times(txs.Len())
 	mockBackend.EXPECT().BlockByHash(gomock.Any(), block.Hash()).Return(block, nil).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest).AnyTimes()
 
 	// Get transaction by hash for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -913,8 +913,8 @@ func TestEthereumAPI_GetTransactionByHash(t *testing.T) {
 	mockCtrl.Finish()
 }
 
-// TestEthereumAPI_GetTransactionByHash tests GetTransactionByHash from transaction pool.
-func TestEthereumAPI_GetTransactionByHashFromPool(t *testing.T) {
+// TestEthAPI_GetTransactionByHash tests GetTransactionByHash from transaction pool.
+func TestEthAPI_GetTransactionByHashFromPool(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	block, txs, txHashMap, _, _ := createTestData(t, nil)
 
@@ -926,7 +926,7 @@ func TestEthereumAPI_GetTransactionByHashFromPool(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().ChainDB().Return(mockDBManager).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest).AnyTimes()
 	mockBackend.EXPECT().GetPoolTransaction(gomock.Any()).DoAndReturn(
 		func(hash common.Hash) *types.Transaction {
 			return txHashMap[hash]
@@ -945,14 +945,14 @@ func TestEthereumAPI_GetTransactionByHashFromPool(t *testing.T) {
 	mockCtrl.Finish()
 }
 
-// TestEthereumAPI_PendingTransactions tests PendingTransactions.
-func TestEthereumAPI_PendingTransactions(t *testing.T) {
+// TestEthAPI_PendingTransactions tests PendingTransactions.
+func TestEthAPI_PendingTransactions(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	_, txs, txHashMap, _, _ := createTestData(t, nil)
 
 	mockAccountManager := mock_accounts.NewMockAccountManager(mockCtrl)
 	mockBackend.EXPECT().AccountManager().Return(mockAccountManager)
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest).AnyTimes()
 	mockBackend.EXPECT().GetPoolTransactions().Return(txs, nil)
 
 	wallets := make([]accounts.Wallet, 1)
@@ -971,8 +971,8 @@ func TestEthereumAPI_PendingTransactions(t *testing.T) {
 	mockCtrl.Finish()
 }
 
-// TestEthereumAPI_GetTransactionReceipt tests GetTransactionReceipt.
-func TestEthereumAPI_GetTransactionReceipt(t *testing.T) {
+// TestEthAPI_GetTransactionReceipt tests GetTransactionReceipt.
+func TestEthAPI_GetTransactionReceipt(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	block, txs, txHashMap, receiptMap, receipts := createTestData(t, nil)
 
@@ -1001,16 +1001,16 @@ func TestEthereumAPI_GetTransactionReceipt(t *testing.T) {
 	mockCtrl.Finish()
 }
 
-func testInitForEthApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend, EthereumAPI) {
+func testInitForEthApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend, EthAPI) {
 	mockCtrl := gomock.NewController(t)
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 
-	blockchain.InitDeriveSha(dummyChainConfigForEthereumAPITest)
+	blockchain.InitDeriveSha(dummyChainConfigForEthAPITest)
 
-	api := EthereumAPI{
-		publicTransactionPoolAPI: NewPublicTransactionPoolAPI(mockBackend, new(AddrLocker)),
-		publicKaiaAPI:            NewPublicKaiaAPI(mockBackend),
-		publicBlockChainAPI:      NewPublicBlockChainAPI(mockBackend),
+	api := EthAPI{
+		kaiaTransactionAPI: NewKaiaTransactionAPI(mockBackend, new(AddrLocker)),
+		kaiaAPI:            NewKaiaAPI(mockBackend),
+		kaiaBlockChainAPI:  NewKaiaBlockChainAPI(mockBackend),
 	}
 	return mockCtrl, mockBackend, api
 }
@@ -2044,7 +2044,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 	accountNonce := uint64(5)
 	to := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
 	byteCode := common.Hex2Bytes("6080604052600436106049576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680632e64cec114604e5780636057361d146076575b600080fd5b348015605957600080fd5b50606060a0565b6040518082815260200191505060405180910390f35b348015608157600080fd5b50609e6004803603810190808035906020019092919050505060a9565b005b60008054905090565b80600081905550505600a165627a7a723058207783dba41884f73679e167576362b7277f88458815141651f48ca38c25b498f80029")
-	unitPrice := new(big.Int).SetUint64(dummyChainConfigForEthereumAPITest.UnitPrice)
+	unitPrice := new(big.Int).SetUint64(dummyChainConfigForEthAPITest.UnitPrice)
 	value := new(big.Int).SetUint64(500)
 	testSet := []struct {
 		txArgs              EthTransactionArgs
@@ -2081,7 +2081,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 				Data:                 (*hexutil.Bytes)(&byteCode),
 				Input:                nil,
 				AccessList:           nil,
-				ChainID:              (*hexutil.Big)(dummyChainConfigForEthereumAPITest.ChainID),
+				ChainID:              (*hexutil.Big)(dummyChainConfigForEthAPITest.ChainID),
 			},
 			dynamicFeeParamsSet: false,
 			nonceSet:            false,
@@ -2115,7 +2115,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 				Data:                 (*hexutil.Bytes)(&byteCode),
 				Input:                nil,
 				AccessList:           nil,
-				ChainID:              (*hexutil.Big)(dummyChainConfigForEthereumAPITest.ChainID),
+				ChainID:              (*hexutil.Big)(dummyChainConfigForEthAPITest.ChainID),
 			},
 			dynamicFeeParamsSet: false,
 			nonceSet:            false,
@@ -2170,7 +2170,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 				Data:                 nil,
 				Input:                nil,
 				AccessList:           nil,
-				ChainID:              (*hexutil.Big)(dummyChainConfigForEthereumAPITest.ChainID),
+				ChainID:              (*hexutil.Big)(dummyChainConfigForEthAPITest.ChainID),
 			},
 			dynamicFeeParamsSet: false,
 			nonceSet:            false,
@@ -2246,7 +2246,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 				Data:                 nil,
 				Input:                nil,
 				AccessList:           nil,
-				ChainID:              (*hexutil.Big)(dummyChainConfigForEthereumAPITest.ChainID),
+				ChainID:              (*hexutil.Big)(dummyChainConfigForEthAPITest.ChainID),
 			},
 			dynamicFeeParamsSet: true,
 			nonceSet:            false,
@@ -2280,7 +2280,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 				Data:                 (*hexutil.Bytes)(&byteCode),
 				Input:                nil,
 				AccessList:           nil,
-				ChainID:              (*hexutil.Big)(dummyChainConfigForEthereumAPITest.ChainID),
+				ChainID:              (*hexutil.Big)(dummyChainConfigForEthAPITest.ChainID),
 			},
 			dynamicFeeParamsSet: false,
 			nonceSet:            true,
@@ -2314,7 +2314,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 				Data:                 (*hexutil.Bytes)(&byteCode),
 				Input:                nil,
 				AccessList:           nil,
-				ChainID:              (*hexutil.Big)(dummyChainConfigForEthereumAPITest.ChainID),
+				ChainID:              (*hexutil.Big)(dummyChainConfigForEthAPITest.ChainID),
 			},
 			dynamicFeeParamsSet: true,
 			nonceSet:            true,
@@ -2384,13 +2384,13 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 		mockBackend.EXPECT().SuggestTipCap(gomock.Any()).Return(unitPrice, nil)
 		mockBackend.EXPECT().SuggestPrice(gomock.Any()).Return(unitPrice, nil)
 		if !test.dynamicFeeParamsSet {
-			mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest)
+			mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest)
 		}
 		if !test.nonceSet {
 			mockBackend.EXPECT().GetPoolNonce(context.Background(), gomock.Any()).Return(poolNonce)
 		}
 		if !test.chainIdSet {
-			mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthereumAPITest)
+			mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest)
 		}
 		mockBackend.EXPECT().RPCGasCap().Return(nil)
 		txArgs := test.txArgs
@@ -2402,7 +2402,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 	}
 }
 
-func TestEthereumAPI_GetRawTransactionByHash(t *testing.T) {
+func TestEthAPI_GetRawTransactionByHash(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	block, txs, txHashMap, _, _ := createEthereumTypedTestData(t, nil)
 
@@ -2428,7 +2428,7 @@ func TestEthereumAPI_GetRawTransactionByHash(t *testing.T) {
 	mockCtrl.Finish()
 }
 
-func TestEthereumAPI_GetRawTransactionByBlockNumberAndIndex(t *testing.T) {
+func TestEthAPI_GetRawTransactionByBlockNumberAndIndex(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	block, txs, _, _, _ := createEthereumTypedTestData(t, nil)
 
@@ -2648,7 +2648,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 	}
 }
 
-func TestEthereumAPI_EstimateGas(t *testing.T) {
+func TestEthAPI_EstimateGas(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	defer mockCtrl.Finish()
 

@@ -47,31 +47,31 @@ import (
 
 var logger = log.NewModuleLogger(log.API)
 
-// PublicBlockChainAPI provides an API to access the Kaia blockchain.
+// BlockChainAPI provides an API to access the Kaia blockchain.
 // It offers only methods that operate on public data that is freely available to anyone.
-type PublicBlockChainAPI struct {
+type KaiaBlockChainAPI struct {
 	b Backend
 }
 
-// NewPublicBlockChainAPI creates a new Kaia blockchain API.
-func NewPublicBlockChainAPI(b Backend) *PublicBlockChainAPI {
-	return &PublicBlockChainAPI{b}
+// NewKaiaBlockChainAPI creates a new Kaia blockchain API.
+func NewKaiaBlockChainAPI(b Backend) *KaiaBlockChainAPI {
+	return &KaiaBlockChainAPI{b}
 }
 
 // BlockNumber returns the block number of the chain head.
-func (s *PublicBlockChainAPI) BlockNumber() hexutil.Uint64 {
+func (s *KaiaBlockChainAPI) BlockNumber() hexutil.Uint64 {
 	header, _ := s.b.HeaderByNumber(context.Background(), rpc.LatestBlockNumber) // latest header should always be available
 	return hexutil.Uint64(header.Number.Uint64())
 }
 
 // ChainID returns the chain ID of the chain from genesis file.
-func (s *PublicBlockChainAPI) ChainID() *hexutil.Big {
+func (s *KaiaBlockChainAPI) ChainID() *hexutil.Big {
 	return s.ChainId()
 }
 
 // ChainId returns the chain ID of the chain from genesis file.
 // This is for compatibility with ethereum client
-func (s *PublicBlockChainAPI) ChainId() *hexutil.Big {
+func (s *KaiaBlockChainAPI) ChainId() *hexutil.Big {
 	if s.b.ChainConfig() != nil {
 		return (*hexutil.Big)(s.b.ChainConfig().ChainID)
 	}
@@ -80,7 +80,7 @@ func (s *PublicBlockChainAPI) ChainId() *hexutil.Big {
 
 // IsContractAccount returns true if the account associated with addr has a non-empty codeHash.
 // It returns false otherwise.
-func (s *PublicBlockChainAPI) IsContractAccount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
+func (s *KaiaBlockChainAPI) IsContractAccount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return false, err
@@ -90,7 +90,7 @@ func (s *PublicBlockChainAPI) IsContractAccount(ctx context.Context, address com
 
 // IsHumanReadable returns true if the account associated with addr is a human-readable account.
 // It returns false otherwise.
-// func (s *PublicBlockChainAPI) IsHumanReadable(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (bool, error) {
+// func (s *KaiaBlockChainAPI) IsHumanReadable(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (bool, error) {
 //	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 //	if err != nil {
 //		return false, err
@@ -99,7 +99,7 @@ func (s *PublicBlockChainAPI) IsContractAccount(ctx context.Context, address com
 // }
 
 // GetBlockReceipts returns the receipts of all transactions in the block identified by number or hash.
-func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) ([]map[string]interface{}, error) {
+func (s *KaiaBlockChainAPI) GetBlockReceipts(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) ([]map[string]interface{}, error) {
 	block, err := s.b.BlockByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (s *PublicBlockChainAPI) GetBlockReceipts(ctx context.Context, blockNrOrHas
 // GetBalance returns the amount of kei for the given address in the state of the
 // given block number or hash. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers and hash are also allowed.
-func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
+func (s *KaiaBlockChainAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 
 // AccountCreated returns true if the account associated with the address is created.
 // It returns false otherwise.
-func (s *PublicBlockChainAPI) AccountCreated(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
+func (s *KaiaBlockChainAPI) AccountCreated(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (bool, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return false, err
@@ -140,7 +140,7 @@ func (s *PublicBlockChainAPI) AccountCreated(ctx context.Context, address common
 }
 
 // GetAccount returns account information of an input address.
-func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*account.AccountSerializer, error) {
+func (s *KaiaBlockChainAPI) GetAccount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*account.AccountSerializer, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return &account.AccountSerializer{}, err
@@ -153,7 +153,7 @@ func (s *PublicBlockChainAPI) GetAccount(ctx context.Context, address common.Add
 	return serAcc, state.Error()
 }
 
-func (s *PublicKaiaAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
+func (s *KaiaAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	block, err := s.b.BlockByNumber(ctx, number)
 	if err != nil {
 		return nil, err
@@ -174,13 +174,13 @@ func (s *PublicKaiaAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) 
 }
 
 // rpcMarshalHeader converts the given header to the RPC output.
-func (s *PublicBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
+func (s *KaiaBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
 	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig().Rules(header.Number))
 	return fields
 }
 
 // GetHeaderByNumber returns the requested canonical block header.
-func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
+func (s *KaiaBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	header, err := s.b.HeaderByNumber(ctx, number)
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (s *PublicBlockChainAPI) GetHeaderByNumber(ctx context.Context, number rpc.
 }
 
 // GetHeaderByHash returns the requested header by hash.
-func (s *PublicBlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
+func (s *KaiaBlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
 	header, err := s.b.HeaderByHash(ctx, hash)
 	if err != nil {
 		return nil, err
@@ -199,7 +199,7 @@ func (s *PublicBlockChainAPI) GetHeaderByHash(ctx context.Context, hash common.H
 
 // GetBlockByNumber returns the requested block. When blockNr is -1 the chain head is returned. When fullTx is true all
 // transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
-func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
+func (s *KaiaBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	block, err := s.b.BlockByNumber(ctx, blockNr)
 	if block != nil && err == nil {
 		response, err := s.rpcOutputBlock(block, true, fullTx)
@@ -216,7 +216,7 @@ func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned.
-func (s *PublicBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]interface{}, error) {
+func (s *KaiaBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]interface{}, error) {
 	block, err := s.b.BlockByHash(ctx, blockHash)
 	if err != nil {
 		return nil, err
@@ -225,7 +225,7 @@ func (s *PublicBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash comm
 }
 
 // GetCode returns the code stored at the given address in the state for the given block number or hash.
-func (s *PublicBlockChainAPI) GetCode(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+func (s *KaiaBlockChainAPI) GetCode(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return nil, err
@@ -237,7 +237,7 @@ func (s *PublicBlockChainAPI) GetCode(ctx context.Context, address common.Addres
 // GetStorageAt returns the storage from the state at the given address, key and
 // block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta block
 // numbers and hash are also allowed.
-func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.Address, key string, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+func (s *KaiaBlockChainAPI) GetStorageAt(ctx context.Context, address common.Address, key string, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return nil, err
@@ -248,7 +248,7 @@ func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.A
 
 // GetAccountKey returns the account key of EOA at a given address.
 // If the account of the given address is a Legacy Account or a Smart Contract Account, it will return nil.
-func (s *PublicBlockChainAPI) GetAccountKey(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*accountkey.AccountKeySerializer, error) {
+func (s *KaiaBlockChainAPI) GetAccountKey(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*accountkey.AccountKeySerializer, error) {
 	state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return &accountkey.AccountKeySerializer{}, err
@@ -263,18 +263,18 @@ func (s *PublicBlockChainAPI) GetAccountKey(ctx context.Context, address common.
 
 // IsParallelDBWrite returns if parallel write is enabled or not.
 // If enabled, data written in WriteBlockWithState is being written in parallel manner.
-func (s *PublicBlockChainAPI) IsParallelDBWrite() bool {
+func (s *KaiaBlockChainAPI) IsParallelDBWrite() bool {
 	return s.b.IsParallelDBWrite()
 }
 
 // IsSenderTxHashIndexingEnabled returns if senderTxHash to txHash mapping information
 // indexing is enabled or not.
-func (s *PublicBlockChainAPI) IsSenderTxHashIndexingEnabled() bool {
+func (s *KaiaBlockChainAPI) IsSenderTxHashIndexingEnabled() bool {
 	return s.b.IsSenderTxHashIndexingEnabled()
 }
 
 // IsConsoleLogEnabled returns if console log is enabled or not.
-func (s *PublicBlockChainAPI) IsConsoleLogEnabled() bool {
+func (s *KaiaBlockChainAPI) IsConsoleLogEnabled() bool {
 	return s.b.IsConsoleLogEnabled()
 }
 
@@ -387,7 +387,7 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 
 // Call executes the given transaction on the state for the given block number or hash.
 // It doesn't make and changes in the state/blockchain and is useful to execute and retrieve values.
-func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+func (s *KaiaBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	gasCap := big.NewInt(0)
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap
@@ -403,7 +403,7 @@ func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNrOr
 	return result.Return(), result.Unwrap()
 }
 
-func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
+func (s *KaiaBlockChainAPI) EstimateComputationCost(ctx context.Context, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
 	gasCap := big.NewInt(0)
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap
@@ -413,7 +413,7 @@ func (s *PublicBlockChainAPI) EstimateComputationCost(ctx context.Context, args 
 }
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the given transaction against the latest block.
-func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs, blockNrOrHash *rpc.BlockNumberOrHash, overrides *EthStateOverride) (hexutil.Uint64, error) {
+func (s *KaiaBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs, blockNrOrHash *rpc.BlockNumberOrHash, overrides *EthStateOverride) (hexutil.Uint64, error) {
 	gasCap := uint64(0)
 	if rpcGasCap := s.b.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
@@ -479,11 +479,11 @@ type AccessListResult struct {
 
 // CreateAccessList creates a EIP-2930 type AccessList for the given transaction.
 // Reexec and BlockNrOrHash can be specified to create the accessList on top of a certain state.
-func (s *PublicBlockChainAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (interface{}, error) {
+func (s *KaiaBlockChainAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (interface{}, error) {
 	return doCreateAccessList(ctx, s.b, args, blockNrOrHash)
 }
 
-func (s *PublicBlockChainAPI) GetProof(ctx context.Context, address common.Address, storageKeys []string, blockNrOrHash rpc.BlockNumberOrHash) (*EthAccountResult, error) {
+func (s *KaiaBlockChainAPI) GetProof(ctx context.Context, address common.Address, storageKeys []string, blockNrOrHash rpc.BlockNumberOrHash) (*EthAccountResult, error) {
 	return doGetProof(ctx, s.b, address, storageKeys, blockNrOrHash)
 }
 
@@ -618,7 +618,7 @@ func RpcOutputBlock(b *types.Block, inclTx bool, fullTx bool, config *params.Cha
 // rpcOutputBlock converts the given block to the RPC output which depends on fullTx. If inclTx is true transactions are
 // returned. When fullTx is true the returned block contains full transaction details, otherwise it will only contain
 // transaction hashes.
-func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
+func (s *KaiaBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
 	return RpcOutputBlock(b, inclTx, fullTx, s.b.ChainConfig())
 }
 

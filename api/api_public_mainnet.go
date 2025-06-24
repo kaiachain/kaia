@@ -44,7 +44,7 @@ type CreditOutput struct {
 }
 
 // callCypressCreditGetFunc executes funcName in CypressCreditContract and returns the output.
-func (s *PublicBlockChainAPI) callCypressCreditGetFunc(ctx context.Context, parsed *abi.ABI, funcName string) (*string, error) {
+func (s *BlockChainAPI) callCypressCreditGetFunc(ctx context.Context, parsed *abi.ABI, funcName string) (*string, error) {
 	abiGet, err := parsed.Pack(funcName)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (s *PublicBlockChainAPI) callCypressCreditGetFunc(ctx context.Context, pars
 
 // GetCypressCredit calls getPhoto and getNames in the CypressCredit contract
 // and returns all the results as a struct.
-func (s *PublicBlockChainAPI) GetCypressCredit(ctx context.Context) (*CreditOutput, error) {
+func (s *BlockChainAPI) GetCypressCredit(ctx context.Context) (*CreditOutput, error) {
 	if ok, err := s.IsContractAccount(ctx, mainnetCreditContractAddress, latestBlockNrOrHash); err != nil {
 		return nil, err
 	} else if !ok {
