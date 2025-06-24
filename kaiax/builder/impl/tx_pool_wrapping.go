@@ -126,7 +126,7 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 
 			// false if there is possibility of exceeding max bundle tx num
 			if numExecutable+numSeqTxs > maxBundleTxsInPending {
-				logger.Info("Exceed max bundle tx num", "numExecutable", numExecutable, "maxBundleTxsInPending", maxBundleTxsInPending)
+				logger.Trace("Not promoting a tx because of exceeding max bundle tx num", "tx", tx.Hash().String(), "numExecutable", numExecutable, "maxBundleTxsInPending", maxBundleTxsInPending)
 				return false
 			}
 		}
