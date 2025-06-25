@@ -109,6 +109,8 @@ type backend struct {
 	currentBlock     func() *types.Block
 	hasBadBlock      func(hash common.Hash) bool
 
+	v atomic.Int32
+
 	// the channels for istanbul engine notifications
 	commitCh          chan *types.Result
 	proposedBlockHash common.Hash
