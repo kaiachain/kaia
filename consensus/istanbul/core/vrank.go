@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/kaiachain/kaia/common"
@@ -41,6 +42,7 @@ type Vrank struct {
 	avgCommitWithinQuorum int64
 	lastCommit            int64
 	commitArrivalTimeMap  map[common.Address]time.Duration
+	mu                    sync.Mutex
 }
 
 var (
@@ -80,18 +82,24 @@ func NewVrank(view istanbul.View, committee []common.Address) *Vrank {
 	}
 }
 
-func (v *Vrank) TimeSinceStart() time.Duration {
+func (v *Vrank) timeSinceStart() time.Duration {
 	return time.Now().Sub(v.startTime)
 }
 
 func (v *Vrank) AddCommit(msg *istanbul.Subject, src common.Address) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
 	if v.isTargetCommit(msg, src) {
-		t := v.TimeSinceStart()
+		t := v.timeSinceStart()
 		v.commitArrivalTimeMap[src] = t
 	}
 }
 
 func (v *Vrank) HandleCommitted(blockNum *big.Int) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
 	if v.view.Sequence.Cmp(blockNum) != 0 {
 		return
 	}
@@ -120,14 +128,14 @@ func (v *Vrank) HandleCommitted(blockNum *big.Int) {
 	}
 }
 
-func (v *Vrank) Bitmap() string {
+func (v *Vrank) bitmap() string {
 	serialized := serialize(v.committee, v.commitArrivalTimeMap)
 	assessed := assessBatch(serialized, v.threshold)
 	compressed := compress(assessed)
 	return hex.EncodeToString(compressed)
 }
 
-func (v *Vrank) LateCommits() []time.Duration {
+func (v *Vrank) lateCommits() []time.Duration {
 	serialized := serialize(v.committee, v.commitArrivalTimeMap)
 	lateCommits := make([]time.Duration, 0)
 	for _, t := range serialized {
@@ -140,9 +148,12 @@ func (v *Vrank) LateCommits() []time.Duration {
 
 // Log logs accumulated data in a compressed form
 func (v *Vrank) Log() {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
 	var (
 		lastCommit  = time.Duration(0)
-		lateCommits = v.LateCommits()
+		lateCommits = v.lateCommits()
 	)
 
 	// lastCommit = max(lateCommits)
@@ -157,7 +168,7 @@ func (v *Vrank) Log() {
 
 	logger.Debug("VRank", "seq", v.view.Sequence.Int64(),
 		"round", v.view.Round.Int64(),
-		"bitmap", v.Bitmap(),
+		"bitmap", v.bitmap(),
 		"late", encodeDurationBatch(lateCommits),
 	)
 }
