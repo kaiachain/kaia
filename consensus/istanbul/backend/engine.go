@@ -718,6 +718,11 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	sb.currentBlock = currentBlock
 	sb.hasBadBlock = hasBadBlock
 
+	v := sb.v.Load()
+	if v > 1 {
+		panic(v)
+	}
+	sb.v.Store(sb.v.Add(1))
 	if err := sb.core.Start(); err != nil {
 		return err
 	}
