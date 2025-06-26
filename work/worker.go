@@ -77,7 +77,7 @@ var (
 	nonceTooHighTxsGauge    = metrics.NewRegisteredGauge("miner/nonce/high/txs", nil)
 	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
 	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
-	minerBalanceGuage       = metrics.NewRegisteredGauge("miner/balance", nil)
+	minerBalanceGauge       = metrics.NewRegisteredGauge("miner/balance", nil)
 
 	blockBaseFee              = metrics.NewRegisteredGauge("miner/block/mining/basefee", nil)
 	blockMiningTimer          = kaiametrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
@@ -587,7 +587,7 @@ func (self *worker) commitNewWork() {
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
 		// measure miner balance before executing txs
-		minerBalanceGuage.Update(getBalanceForGuage(work.state, self.nodeAddr))
+		minerBalanceGauge.Update(getBalanceForGauge(work.state, self.nodeAddr))
 
 		// Sort txs then execute them
 		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending, work.header.BaseFee)
@@ -666,7 +666,7 @@ func (self *worker) RegisterTxBundlingModule(modules ...builder.TxBundlingModule
 }
 
 // Return the balance of the address in KAIA, in int64. If the balance is greater (often happens in private net), return MaxInt64.
-func getBalanceForGuage(state *state.StateDB, nodeAddr common.Address) int64 {
+func getBalanceForGauge(state *state.StateDB, nodeAddr common.Address) int64 {
 	balance := new(big.Int).Div(state.GetBalance(nodeAddr), big.NewInt(params.KAIA))
 	if balance.IsInt64() {
 		return balance.Int64()
