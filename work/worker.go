@@ -23,6 +23,7 @@
 package work
 
 import (
+	"math"
 	"math/big"
 	"strconv"
 	"sync"
@@ -586,7 +587,7 @@ func (self *worker) commitNewWork() {
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
 		// measure miner balance before executing txs
-		minerBalanceGuage.Update(new(big.Int).Div(work.state.GetBalance(self.nodeAddr), big.NewInt(params.KAIA)).Int64())
+		minerBalanceGuage.Update(getBalanceForGuage(work.state, self.nodeAddr))
 
 		// Sort txs then execute them
 		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending, work.header.BaseFee)
@@ -662,6 +663,16 @@ func (self *worker) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
 
 func (self *worker) RegisterTxBundlingModule(modules ...builder.TxBundlingModule) {
 	self.txBundlingModules = append(self.txBundlingModules, modules...)
+}
+
+// Return the balance of the address in KAIA, in int64. If the balance is greater (often happens in private net), return MaxInt64.
+func getBalanceForGuage(state *state.StateDB, nodeAddr common.Address) int64 {
+	balance := new(big.Int).Div(state.GetBalance(nodeAddr), big.NewInt(params.KAIA))
+	if balance.IsInt64() {
+		return balance.Int64()
+	} else {
+		return math.MaxInt64
+	}
 }
 
 func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) {
