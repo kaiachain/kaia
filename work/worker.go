@@ -76,6 +76,7 @@ var (
 	nonceTooHighTxsGauge    = metrics.NewRegisteredGauge("miner/nonce/high/txs", nil)
 	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
 	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
+	minerBalanceGuage       = metrics.NewRegisteredGauge("miner/balance", nil)
 
 	blockBaseFee              = metrics.NewRegisteredGauge("miner/block/mining/basefee", nil)
 	blockMiningTimer          = kaiametrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
@@ -584,6 +585,10 @@ func (self *worker) commitNewWork() {
 	// Create the current work task
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
+		// measure miner balance before executing txs
+		minerBalanceGuage.Update(new(big.Int).Div(work.state.GetBalance(self.nodeAddr), big.NewInt(params.KAIA)).Int64())
+
+		// Sort txs then execute them
 		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending, work.header.BaseFee)
 		work.commitTransactions(self.mux, txs, self.chain, self.nodeAddr, self.txBundlingModules)
 		finishedCommitTx := time.Now()
