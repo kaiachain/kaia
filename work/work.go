@@ -91,25 +91,22 @@ type Backend interface {
 
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
-	mux *event.TypeMux
-
-	worker *worker
-
-	rewardbase common.Address
-	mining     int32
-	backend    Backend
-	engine     consensus.Engine
+	mux     *event.TypeMux
+	worker  *worker
+	mining  int32
+	backend Backend
+	engine  consensus.Engine
 
 	canStart    int32 // can start indicates whether we can start the mining operation
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, rewardbase common.Address, TxResendUseLegacy bool, govModule gov.GovModule) *Miner {
+func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, nodeAddr common.Address, TxResendUseLegacy bool, govModule gov.GovModule) *Miner {
 	miner := &Miner{
 		backend:  backend,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, rewardbase, backend, mux, nodetype, TxResendUseLegacy, govModule),
+		worker:   newWorker(config, engine, nodeAddr, backend, mux, nodetype, TxResendUseLegacy, govModule),
 		canStart: 1,
 	}
 	// TODO-Kaia drop or missing tx
