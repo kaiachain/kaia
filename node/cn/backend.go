@@ -142,7 +142,7 @@ type CN struct {
 	nodeAddress common.Address
 
 	networkId     uint64
-	netRPCService *api.PublicNetAPI
+	netRPCService *api.NetAPI
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price)
 
@@ -649,53 +649,53 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
 	var (
-		nonceLock                = new(api.AddrLocker)
-		publicBlockChainAPI      = api.NewPublicBlockChainAPI(s.APIBackend)
-		publicKaiaAPI            = api.NewPublicKaiaAPI(s.APIBackend)
-		publicTransactionPoolAPI = api.NewPublicTransactionPoolAPI(s.APIBackend, nonceLock)
-		publicAccountAPI         = api.NewPublicAccountAPI(s.APIBackend.AccountManager())
+		nonceLock          = new(api.AddrLocker)
+		kaiaBlockChainAPI  = api.NewKaiaBlockChainAPI(s.APIBackend)
+		kaiaAPI            = api.NewKaiaAPI(s.APIBackend)
+		kaiaTransactionAPI = api.NewKaiaTransactionAPI(s.APIBackend, nonceLock)
+		kaiaAccountAPI     = api.NewKaiaAccountAPI(s.APIBackend.AccountManager())
 	)
 
 	apis := []rpc.API{
 		{
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   publicKaiaAPI,
+			Service:   kaiaAPI,
 			Public:    true,
 		}, {
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   publicBlockChainAPI,
+			Service:   kaiaBlockChainAPI,
 			Public:    true,
 		}, {
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   publicTransactionPoolAPI,
+			Service:   kaiaTransactionAPI,
 			Public:    true,
 		}, {
 			Namespace: "txpool",
 			Version:   "1.0",
-			Service:   api.NewPublicTxPoolAPI(s.APIBackend),
+			Service:   api.NewTxPoolAPI(s.APIBackend),
 			Public:    true,
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   api.NewPublicDebugAPI(s.APIBackend),
+			Service:   api.NewDebugAPI(s.APIBackend),
 			Public:    false,
 		}, {
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   publicAccountAPI,
+			Service:   kaiaAccountAPI,
 			Public:    true,
 		}, {
 			Namespace: "personal",
 			Version:   "1.0",
-			Service:   api.NewPrivateAccountAPI(s.APIBackend, nonceLock),
+			Service:   api.NewPersonalAPI(s.APIBackend, nonceLock),
 			Public:    false,
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   api.NewPrivateDebugAPI(s.APIBackend),
+			Service:   api.NewDebugUtilAPI(s.APIBackend),
 			Public:    false,
 			IPCOnly:   s.config.DisableUnsafeDebug,
 		},
@@ -708,12 +708,12 @@ func (s *CN) APIs() []rpc.API {
 	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
-	ethAPI := api.NewEthereumAPI(
+	ethAPI := api.NewEthAPI(
 		publicFilterAPI,
-		publicKaiaAPI,
-		publicBlockChainAPI,
-		publicTransactionPoolAPI,
-		publicAccountAPI,
+		kaiaAPI,
+		kaiaBlockChainAPI,
+		kaiaTransactionAPI,
+		kaiaAccountAPI,
 		s.nodeAddress,
 	)
 
@@ -873,7 +873,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 	s.startBloomHandlers()
 
 	// Start the RPC service
-	s.netRPCService = api.NewPublicNetAPI(srvr, s.NetVersion())
+	s.netRPCService = api.NewNetAPI(srvr, s.NetVersion())
 
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers()

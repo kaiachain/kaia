@@ -143,7 +143,7 @@ func TestMainBridge_basic(t *testing.T) {
 		{
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   api.NewPublicKaiaAPI(&cn.CNAPIBackend{}),
+			Service:   api.NewKaiaAPI(&cn.CNAPIBackend{}),
 			Public:    true,
 		},
 	}

@@ -39,19 +39,19 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-// PublicTransactionPoolAPI exposes methods for the RPC interface
-type PublicTransactionPoolAPI struct {
+// KaiaTransactionAPI exposes methods for the RPC interface
+type KaiaTransactionAPI struct {
 	b         Backend
 	nonceLock *AddrLocker
 }
 
-// NewPublicTransactionPoolAPI creates a new RPC service with methods specific for the transaction pool.
-func NewPublicTransactionPoolAPI(b Backend, nonceLock *AddrLocker) *PublicTransactionPoolAPI {
-	return &PublicTransactionPoolAPI{b, nonceLock}
+// NewKaiaTransactionAPI creates a new RPC service with methods specific for the transaction pool.
+func NewKaiaTransactionAPI(b Backend, nonceLock *AddrLocker) *KaiaTransactionAPI {
+	return &KaiaTransactionAPI{b, nonceLock}
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block with the given block number.
-func (s *PublicTransactionPoolAPI) GetBlockTransactionCountByNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
+func (s *KaiaTransactionAPI) GetBlockTransactionCountByNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
 	block, _ := s.b.BlockByNumber(ctx, blockNr)
 	if block != nil {
 		n := hexutil.Uint(len(block.Transactions()))
@@ -61,7 +61,7 @@ func (s *PublicTransactionPoolAPI) GetBlockTransactionCountByNumber(ctx context.
 }
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.
-func (s *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
+func (s *KaiaTransactionAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
 	block, _ := s.b.BlockByHash(ctx, blockHash)
 	if block != nil {
 		n := hexutil.Uint(len(block.Transactions()))
@@ -71,7 +71,7 @@ func (s *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(ctx context.Co
 }
 
 // GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
-func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) map[string]interface{} {
+func (s *KaiaTransactionAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) map[string]interface{} {
 	block, _ := s.b.BlockByNumber(ctx, blockNr)
 	if block != nil {
 		return newRPCTransactionFromBlockIndex(block, uint64(index), s.b.ChainConfig())
@@ -80,7 +80,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberAndIndex(ctx conte
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
-func (s *PublicTransactionPoolAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) map[string]interface{} {
+func (s *KaiaTransactionAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) map[string]interface{} {
 	if block, _ := s.b.BlockByHash(ctx, blockHash); block != nil {
 		return newRPCTransactionFromBlockIndex(block, uint64(index), s.b.ChainConfig())
 	}
@@ -88,7 +88,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionByBlockHashAndIndex(ctx context
 }
 
 // GetRawTransactionByBlockNumberAndIndex returns the bytes of the transaction for the given block number and index.
-func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) hexutil.Bytes {
+func (s *KaiaTransactionAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) hexutil.Bytes {
 	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
 		return newRPCRawTransactionFromBlockIndex(block, uint64(index))
 	}
@@ -96,7 +96,7 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockNumberAndIndex(ctx co
 }
 
 // GetRawTransactionByBlockHashAndIndex returns the bytes of the transaction for the given block hash and index.
-func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) hexutil.Bytes {
+func (s *KaiaTransactionAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) hexutil.Bytes {
 	if block, _ := s.b.BlockByHash(ctx, blockHash); block != nil {
 		return newRPCRawTransactionFromBlockIndex(block, uint64(index))
 	}
@@ -104,7 +104,7 @@ func (s *PublicTransactionPoolAPI) GetRawTransactionByBlockHashAndIndex(ctx cont
 }
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number or hash
-func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Uint64, error) {
+func (s *KaiaTransactionAPI) GetTransactionCount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Uint64, error) {
 	// Ask transaction pool for the nonce which includes pending transactions
 	if blockNr, ok := blockNrOrHash.Number(); ok && blockNr == rpc.PendingBlockNumber {
 		nonce := s.b.GetPoolNonce(ctx, address)
@@ -120,7 +120,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionCount(ctx context.Context, addr
 	return (*hexutil.Uint64)(&nonce), state.Error()
 }
 
-func (s *PublicTransactionPoolAPI) GetTransactionBySenderTxHash(ctx context.Context, senderTxHash common.Hash) map[string]interface{} {
+func (s *KaiaTransactionAPI) GetTransactionBySenderTxHash(ctx context.Context, senderTxHash common.Hash) map[string]interface{} {
 	txhash := s.b.ChainDB().ReadTxHashFromSenderTxHash(senderTxHash)
 	if common.EmptyHash(txhash) {
 		txhash = senderTxHash
@@ -129,7 +129,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionBySenderTxHash(ctx context.Cont
 }
 
 // GetTransactionByHash returns the transaction for the given hash
-func (s *PublicTransactionPoolAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
+func (s *KaiaTransactionAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
 	// Try to return an already finalized transaction
 	if tx, blockHash, blockNumber, index := s.b.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
 		header, err := s.b.HeaderByHash(ctx, blockHash)
@@ -147,7 +147,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionByHash(ctx context.Context, has
 }
 
 // GetDecodedAnchoringTransactionByHash returns the decoded anchoring data of anchoring transaction for the given hash
-func (s *PublicTransactionPoolAPI) GetDecodedAnchoringTransactionByHash(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
+func (s *KaiaTransactionAPI) GetDecodedAnchoringTransactionByHash(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
 	var tx *types.Transaction
 
 	// Try to return an already finalized transaction
@@ -189,7 +189,7 @@ decode:
 }
 
 // GetRawTransactionByHash returns the bytes of the transaction for the given hash.
-func (s *PublicTransactionPoolAPI) GetRawTransactionByHash(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
+func (s *KaiaTransactionAPI) GetRawTransactionByHash(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
 	var tx *types.Transaction
 
 	// Retrieve a finalized transaction, or a pooled otherwise
@@ -244,7 +244,7 @@ func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash com
 	return fields
 }
 
-func (s *PublicTransactionPoolAPI) GetTransactionReceiptBySenderTxHash(ctx context.Context, senderTxHash common.Hash) (map[string]interface{}, error) {
+func (s *KaiaTransactionAPI) GetTransactionReceiptBySenderTxHash(ctx context.Context, senderTxHash common.Hash) (map[string]interface{}, error) {
 	txhash := s.b.ChainDB().ReadTxHashFromSenderTxHash(senderTxHash)
 	if common.EmptyHash(txhash) {
 		txhash = senderTxHash
@@ -253,19 +253,19 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceiptBySenderTxHash(ctx conte
 }
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
-func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
+func (s *KaiaTransactionAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
 	tx, blockHash, blockNumber, index, receipt := s.b.GetTxLookupInfoAndReceipt(ctx, hash)
 	return s.getTransactionReceipt(ctx, tx, blockHash, blockNumber, index, receipt)
 }
 
 // GetTransactionReceiptInCache returns the transaction receipt for the given transaction hash.
-func (s *PublicTransactionPoolAPI) GetTransactionReceiptInCache(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
+func (s *KaiaTransactionAPI) GetTransactionReceiptInCache(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
 	tx, blockHash, blockNumber, index, receipt := s.b.GetTxLookupInfoAndReceiptInCache(hash)
 	return s.getTransactionReceipt(ctx, tx, blockHash, blockNumber, index, receipt)
 }
 
 // getTransactionReceipt returns the transaction receipt for the given transaction hash.
-func (s *PublicTransactionPoolAPI) getTransactionReceipt(ctx context.Context, tx *types.Transaction, blockHash common.Hash,
+func (s *KaiaTransactionAPI) getTransactionReceipt(ctx context.Context, tx *types.Transaction, blockHash common.Hash,
 	blockNumber uint64, index uint64, receipt *types.Receipt,
 ) (map[string]interface{}, error) {
 	// No error handling is required here.
@@ -275,7 +275,7 @@ func (s *PublicTransactionPoolAPI) getTransactionReceipt(ctx context.Context, tx
 }
 
 // sign is a helper function that signs a transaction with the private key of the given address.
-func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+func (s *KaiaTransactionAPI) sign(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: addr}
 
@@ -288,7 +288,7 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 }
 
 // signAsFeePayer is a helper function that signs a transaction as a fee payer with the private key of the given address.
-func (s *PublicTransactionPoolAPI) signAsFeePayer(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
+func (s *KaiaTransactionAPI) signAsFeePayer(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: addr}
 
@@ -328,7 +328,7 @@ func submitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
-func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+func (s *KaiaTransactionAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
 	if args.AccountNonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
@@ -346,7 +346,7 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 
 // SendTransactionAsFeePayer creates a transaction for the given argument, sign it as a fee payer
 // and submit it to the transaction pool.
-func (s *PublicTransactionPoolAPI) SendTransactionAsFeePayer(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+func (s *KaiaTransactionAPI) SendTransactionAsFeePayer(ctx context.Context, args SendTxArgs) (common.Hash, error) {
 	// Don't allow dynamic assign of values from the setDefaults function since the sender already signed on specific values.
 	if args.TypeInt == nil {
 		return common.Hash{}, errTxArgNilTxType
@@ -375,7 +375,7 @@ func (s *PublicTransactionPoolAPI) SendTransactionAsFeePayer(ctx context.Context
 
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
-func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
+func (s *KaiaTransactionAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
 	tx := new(types.Transaction)
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
 		return common.Hash{}, err
@@ -392,7 +392,7 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encod
 // The account associated with addr must be unlocked.
 //
 // https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sign
-func (s *PublicTransactionPoolAPI) Sign(addr common.Address, data hexutil.Bytes) (hexutil.Bytes, error) {
+func (s *KaiaTransactionAPI) Sign(addr common.Address, data hexutil.Bytes) (hexutil.Bytes, error) {
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: addr}
 
@@ -417,7 +417,7 @@ type SignTransactionResult struct {
 // SignTransaction will sign the given transaction with the from account.
 // The node needs to have the private key of the account corresponding with
 // the given from address and it needs to be unlocked.
-func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
+func (s *KaiaTransactionAPI) SignTransaction(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
 	if args.TypeInt != nil && args.TypeInt.IsEthTypedTransaction() {
 		if args.Price == nil && (args.MaxPriorityFeePerGas == nil || args.MaxFeePerGas == nil) {
 			return nil, fmt.Errorf("missing gasPrice or maxFeePerGas/maxPriorityFeePerGas")
@@ -447,7 +447,7 @@ func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args Sen
 // SignTransactionAsFeePayer will sign the given transaction as a fee payer
 // with the from account. The node needs to have the private key of the account
 // corresponding with the given from address and it needs to be unlocked.
-func (s *PublicTransactionPoolAPI) SignTransactionAsFeePayer(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
+func (s *KaiaTransactionAPI) SignTransactionAsFeePayer(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
 	// Allows setting a default nonce value of the sender just for the case the fee payer tries to sign a tx earlier than the sender.
 	if err := args.setDefaults(ctx, s.b); err != nil {
 		return nil, err
@@ -487,7 +487,7 @@ func getAccountsFromWallets(wallets []accounts.Wallet) map[common.Address]struct
 
 // PendingTransactions returns the transactions that are in the transaction pool
 // and have a from address that is one of the accounts this node manages.
-func (s *PublicTransactionPoolAPI) PendingTransactions() ([]map[string]interface{}, error) {
+func (s *KaiaTransactionAPI) PendingTransactions() ([]map[string]interface{}, error) {
 	pending, err := s.b.GetPoolTransactions()
 	if err != nil {
 		return nil, err
@@ -505,13 +505,13 @@ func (s *PublicTransactionPoolAPI) PendingTransactions() ([]map[string]interface
 
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
 // the given transaction from the pool and reinsert it with the new gas price and limit.
-func (s *PublicTransactionPoolAPI) Resend(ctx context.Context, sendArgs SendTxArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
+func (s *KaiaTransactionAPI) Resend(ctx context.Context, sendArgs SendTxArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
 	return resend(s, ctx, &sendArgs, gasPrice, gasLimit)
 }
 
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
 // the given transaction from the pool and reinsert it with the new gas price and limit.
-func resend(s *PublicTransactionPoolAPI, ctx context.Context, sendArgs NewTxArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
+func resend(s *KaiaTransactionAPI, ctx context.Context, sendArgs NewTxArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
 	if sendArgs.nonce() == nil {
 		return common.Hash{}, fmt.Errorf("missing transaction nonce in transaction spec")
 	}
@@ -559,7 +559,7 @@ func resend(s *PublicTransactionPoolAPI, ctx context.Context, sendArgs NewTxArgs
 
 // RecoverFromTransaction recovers the sender address from a signed raw transaction.
 // The signature is validated against the sender account's key configuration at the given block number.
-func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, encodedTx hexutil.Bytes, blockNumber rpc.BlockNumber) (common.Address, error) {
+func (s *KaiaTransactionAPI) RecoverFromTransaction(ctx context.Context, encodedTx hexutil.Bytes, blockNumber rpc.BlockNumber) (common.Address, error) {
 	if len(encodedTx) == 0 {
 		return common.Address{}, fmt.Errorf("Empty input")
 	}
@@ -590,7 +590,7 @@ func (s *PublicTransactionPoolAPI) RecoverFromTransaction(ctx context.Context, e
 // The signature must be either EIP-191 or KIP-97 compliant, meaning the message must have been prefixed
 // with either "\x19Ethereum Signed Message" or "\x19Klaytn Signed Message" before hashed and signed.
 // Returns the recovered signer address, which may be different from the account address.
-func (s *PublicTransactionPoolAPI) RecoverFromMessage(
+func (s *KaiaTransactionAPI) RecoverFromMessage(
 	ctx context.Context, address common.Address, data, sig hexutil.Bytes, blockNumber rpc.BlockNumber,
 ) (common.Address, error) {
 	if len(sig) != crypto.SignatureLength {

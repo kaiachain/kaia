@@ -29,13 +29,13 @@ import (
 	"github.com/kaiachain/kaia/params"
 )
 
-func testInitForKaiaApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend, *PublicBlockChainAPI) {
+func testInitForKaiaApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend, *KaiaBlockChainAPI) {
 	mockCtrl := gomock.NewController(t)
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 
 	blockchain.InitDeriveSha(params.TestChainConfig)
 
-	api := NewPublicBlockChainAPI(mockBackend)
+	api := NewKaiaBlockChainAPI(mockBackend)
 	return mockCtrl, mockBackend, api
 }
 
