@@ -47,7 +47,6 @@ func TestIsApproveTx(t *testing.T) {
 		GaslessConfig: testGaslessConfig,
 		NodeKey:       key,
 		Chain:         backend.BlockChain(),
-		TxPool:        &testTxPool{},
 		NodeType:      common.ENDPOINTNODE,
 	})
 	require.NoError(t, err)
@@ -98,7 +97,6 @@ func TestIsSwapTx(t *testing.T) {
 		GaslessConfig: testGaslessConfig,
 		NodeKey:       key,
 		Chain:         backend.BlockChain(),
-		TxPool:        &testTxPool{},
 		NodeType:      common.ENDPOINTNODE,
 	})
 	require.NoError(t, err)
@@ -139,14 +137,12 @@ func TestIsExecutable(t *testing.T) {
 	db := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, testChainConfig)
-	sdb, _ := backend.BlockChain().State()
 	key, _ := crypto.GenerateKey()
 	err := g.Init(&InitOpts{
 		ChainConfig:   testChainConfig,
 		GaslessConfig: testGaslessConfig,
 		NodeKey:       key,
 		Chain:         backend.BlockChain(),
-		TxPool:        &testTxPool{sdb},
 		NodeType:      common.ENDPOINTNODE,
 	})
 	require.NoError(t, err)
@@ -246,7 +242,6 @@ func TestGetLendTxGenerator(t *testing.T) {
 				GaslessConfig: testGaslessConfig,
 				NodeKey:       nodekey,
 				Chain:         backend.BlockChain(),
-				TxPool:        pool,
 				NodeType:      common.ENDPOINTNODE,
 			})
 			require.NoError(t, err)

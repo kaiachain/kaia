@@ -43,7 +43,7 @@ func TestKaiaAPI_EstimateGas(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForKaiaApi(t)
 	defer mockCtrl.Finish()
 
-	testEstimateGas(t, mockBackend, func(ethArgs EthTransactionArgs) (hexutil.Uint64, error) {
+	testEstimateGas(t, mockBackend, func(ethArgs EthTransactionArgs, overrides *EthStateOverride) (hexutil.Uint64, error) {
 		// Testcases are written in EthTransactionArgs. Convert to Kaia CallArgs
 		args := CallArgs{
 			From:                 ethArgs.from(),
@@ -59,6 +59,6 @@ func TestKaiaAPI_EstimateGas(t *testing.T) {
 		if ethArgs.Value != nil {
 			args.Value = *ethArgs.Value
 		}
-		return api.EstimateGas(context.Background(), args, nil, nil)
+		return api.EstimateGas(context.Background(), args, nil, overrides)
 	})
 }

@@ -9,6 +9,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
 )
 
 // MockTxPoolModule is a mock of TxPoolModule interface.
@@ -77,15 +78,15 @@ func (mr *MockTxPoolModuleMockRecorder) IsReady(arg0, arg1, arg2 interface{}) *g
 }
 
 // PostReset mocks base method.
-func (m *MockTxPoolModule) PostReset(arg0, arg1 *types.Header) {
+func (m *MockTxPoolModule) PostReset(arg0, arg1 *types.Header, arg2 map[common.Address]types.Transactions) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PostReset", arg0, arg1)
+	m.ctrl.Call(m, "PostReset", arg0, arg1, arg2)
 }
 
 // PostReset indicates an expected call of PostReset.
-func (mr *MockTxPoolModuleMockRecorder) PostReset(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockTxPoolModuleMockRecorder) PostReset(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostReset", reflect.TypeOf((*MockTxPoolModule)(nil).PostReset), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostReset", reflect.TypeOf((*MockTxPoolModule)(nil).PostReset), arg0, arg1, arg2)
 }
 
 // PreAddTx mocks base method.

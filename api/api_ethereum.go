@@ -1488,7 +1488,7 @@ func EthDoEstimateGas(ctx context.Context, b Backend, args EthTransactionArgs, b
 		args.Gas = (*hexutil.Uint64)(&gas)
 		result, err := EthDoCall(ctx, b, args, blockNrOrHash, overrides, b.RPCEVMTimeout(), gasCap)
 		if err != nil {
-			if errors.Is(err, blockchain.ErrIntrinsicGas) {
+			if errors.Is(err, blockchain.ErrIntrinsicGas) || errors.Is(err, blockchain.ErrFloorDataGas) {
 				return true, nil, nil // Special case, raise gas limit
 			}
 			// Returns error when it is not VM error (less balance or wrong nonce, etc...).

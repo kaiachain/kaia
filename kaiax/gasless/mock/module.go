@@ -9,6 +9,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
 	builder "github.com/kaiachain/kaia/kaiax/builder"
 )
 
@@ -134,15 +135,15 @@ func (mr *MockGaslessModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomo
 }
 
 // PostReset mocks base method.
-func (m *MockGaslessModule) PostReset(arg0, arg1 *types.Header) {
+func (m *MockGaslessModule) PostReset(arg0, arg1 *types.Header, arg2 map[common.Address]types.Transactions) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PostReset", arg0, arg1)
+	m.ctrl.Call(m, "PostReset", arg0, arg1, arg2)
 }
 
 // PostReset indicates an expected call of PostReset.
-func (mr *MockGaslessModuleMockRecorder) PostReset(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockGaslessModuleMockRecorder) PostReset(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostReset", reflect.TypeOf((*MockGaslessModule)(nil).PostReset), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostReset", reflect.TypeOf((*MockGaslessModule)(nil).PostReset), arg0, arg1, arg2)
 }
 
 // PreAddTx mocks base method.

@@ -102,8 +102,10 @@ func TestMigration_StartMigrationByMiscDB(t *testing.T) {
 
 		// no error expected on node start, even if the state trie db has no data
 		stopNode(t, fullNode)
-		_, _ = startNode(t, workspace, validator)
+		fullNode, _ = startNode(t, workspace, validator)
 	}
+
+	stopNode(t, fullNode)
 }
 
 func writeRandomValueToStateTrieDB(t *testing.T, dbm database.DBManager) map[string]string {

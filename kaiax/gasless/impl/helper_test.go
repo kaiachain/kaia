@@ -208,18 +208,6 @@ func flattenBundleTxs(txOrGens []*builder.TxOrGen) ([]common.Hash, error) {
 	return hashes, nil
 }
 
-type testTxPool struct {
-	statedb *state.StateDB
-}
-
-func (pool *testTxPool) GetCurrentState() *state.StateDB {
-	return pool.statedb
-}
-
-func (pool *testTxPool) PendingUnlocked() (map[common.Address]types.Transactions, error) {
-	return nil, nil
-}
-
 func testAllocStorage() blockchain.GenesisAlloc {
 	allocStorage := system.AllocRegistry(&params.RegistryConfig{
 		Records: map[string]common.Address{

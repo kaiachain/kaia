@@ -20,6 +20,7 @@ import (
 	"math"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
 )
 
@@ -60,7 +61,8 @@ func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, rea
 
 func (g *GaslessModule) PreReset(oldHead, newHead *types.Header) {}
 
-func (g *GaslessModule) PostReset(oldHead, newHead *types.Header) {}
+func (g *GaslessModule) PostReset(oldHead, newHead *types.Header, pending map[common.Address]types.Transactions) {
+}
 
 // isApproveTxReady assumes that the caller checked `g.IsApproveTx(approveTx)`
 func (g *GaslessModule) isApproveTxReady(approveTx, nextTx *types.Transaction) bool {
@@ -68,7 +70,7 @@ func (g *GaslessModule) isApproveTxReady(approveTx, nextTx *types.Transaction) b
 	if err != nil {
 		return false
 	}
-	nonce := g.TxPool.GetCurrentState().GetNonce(addr)
+	nonce := g.getCurrentStateNonce(addr)
 
 	if approveTx.Nonce() != nonce {
 		return false
@@ -86,7 +88,7 @@ func (g *GaslessModule) isSwapTxReady(swapTx, prevTx *types.Transaction) bool {
 	if err != nil {
 		return false
 	}
-	nonce := g.TxPool.GetCurrentState().GetNonce(addr)
+	nonce := g.getCurrentStateNonce(addr)
 
 	var approveTx *types.Transaction
 	if swapTx.Nonce() == nonce {

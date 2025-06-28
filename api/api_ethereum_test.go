@@ -70,6 +70,34 @@ var (
 	}
 )
 
+// For floor data gas error case (EIP-7623)
+var (
+	// // SPDX-License-Identifier: GPL-3.0
+
+	// pragma solidity >=0.8.2 <0.9.0;
+	//
+	// /**
+	//  * @title Storage
+	//  * @dev Store & retrieve value in a variable
+	//  * @custom:dev-run-script ./scripts/deploy_with_ethers.ts
+	//  */
+	// contract Storage {
+	//
+	//     uint256 number;
+	//
+	//     /**
+	//      * @dev Return value
+	//      * @return value of 'number'
+	//      */
+	//     function retrieve() public view returns (uint256){
+	//         return number;
+	//     }
+	// }
+	floorDataGasTestCode = hexutil.Bytes(common.Hex2Bytes("6080604052348015600e575f5ffd5b50600436106026575f3560e01c80632e64cec114602a575b5f5ffd5b60306044565b604051603b91906062565b60405180910390f35b5f5f54905090565b5f819050919050565b605c81604c565b82525050565b5f60208201905060735f8301846055565b9291505056fea26469706673582212206aeab8d313a899d42a212113167e622ff770e746a3c3d0596d15fe2551d2c97464736f6c634300081e0033"))
+	// retrieve() with long junk to increase floor data gas. 104 nonzero tokens = 4160 floor data gas = 25160 intrinsic gas
+	floorDataGasTestData = hexutil.Bytes(append(common.Hex2Bytes("2e64cec1"), bytes.Repeat([]byte{0xff}, 100)...))
+)
+
 // TestEthereumAPI_Etherbase tests Etherbase.
 func TestEthereumAPI_Etherbase(t *testing.T) {
 	testNodeAddress(t, "Etherbase")
@@ -2432,7 +2460,7 @@ func (mc *testChainContext) GetHeader(common.Hash, uint64) *types.Header {
 // Contract C { constructor() { revert("hello"); } }
 var codeRevertHello = "0x6080604052348015600f57600080fd5b5060405162461bcd60e51b815260206004820152600560248201526468656c6c6f60d81b604482015260640160405180910390fdfe"
 
-func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimateGas func(EthTransactionArgs) (hexutil.Uint64, error)) {
+func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimateGas func(EthTransactionArgs, *EthStateOverride) (hexutil.Uint64, error)) {
 	chainConfig := &params.ChainConfig{}
 	chainConfig.IstanbulCompatibleBlock = common.Big0
 	chainConfig.LondonCompatibleBlock = common.Big0
@@ -2498,6 +2526,7 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 		args      EthTransactionArgs
 		expectErr string
 		expectGas uint64
+		overrides EthStateOverride
 	}{
 		{ // simple transfer
 			args: EthTransactionArgs{
@@ -2588,10 +2617,26 @@ func testEstimateGas(t *testing.T, mockBackend *mock_api.MockBackend, fnEstimate
 			},
 			expectGas: 21000,
 		},
+		{ // Should be able to handle EIP-7623.
+			args: EthTransactionArgs{
+				From: &account1,
+				To:   &account2,
+				Data: &floorDataGasTestData,
+			},
+			overrides: EthStateOverride{
+				account2: EthOverrideAccount{
+					Code: &floorDataGasTestCode,
+				},
+			},
+			expectGas: 25160,
+			// We return ErrIntrinsicGas instead of ErrFloorDataGas when floor data gas hits the cap.
+			// So EstimateGas will be able to return expected gas instead of this error.
+			// expectErr: "insufficient gas for floor data gas cost",
+		},
 	}
 
 	for i, tc := range testcases {
-		gas, err := fnEstimateGas(tc.args)
+		gas, err := fnEstimateGas(tc.args, &tc.overrides)
 		t.Logf("tc[%02d] = %d %v", i, gas, err)
 		if len(tc.expectErr) > 0 {
 			require.NotNil(t, err)
@@ -2607,7 +2652,7 @@ func TestEthereumAPI_EstimateGas(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	defer mockCtrl.Finish()
 
-	testEstimateGas(t, mockBackend, func(args EthTransactionArgs) (hexutil.Uint64, error) {
-		return api.EstimateGas(context.Background(), args, nil, nil)
+	testEstimateGas(t, mockBackend, func(args EthTransactionArgs, overrides *EthStateOverride) (hexutil.Uint64, error) {
+		return api.EstimateGas(context.Background(), args, nil, overrides)
 	})
 }

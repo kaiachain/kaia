@@ -45,7 +45,6 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				testGaslessConfig,
 				key,
 				backend.BlockChain(),
-				&testTxPool{},
 				common.ENDPOINTNODE,
 			},
 			false,
@@ -62,7 +61,6 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				nil,
 				key,
 				backend.BlockChain(),
-				&testTxPool{},
 				common.ENDPOINTNODE,
 			},
 			true,
@@ -74,7 +72,6 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				testGaslessConfig,
 				nil,
 				backend.BlockChain(),
-				&testTxPool{},
 				common.ENDPOINTNODE,
 			},
 			true,
@@ -85,19 +82,6 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				testChainConfig,
 				testGaslessConfig,
 				key,
-				nil,
-				&testTxPool{},
-				common.ENDPOINTNODE,
-			},
-			true,
-			ErrInitUnexpectedNil,
-		},
-		"tx pool is nil": {
-			&InitOpts{
-				testChainConfig,
-				testGaslessConfig,
-				key,
-				backend.BlockChain(),
 				nil,
 				common.ENDPOINTNODE,
 			},
@@ -113,7 +97,6 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				},
 				key,
 				backend.BlockChain(),
-				&testTxPool{},
 				common.ENDPOINTNODE,
 			},
 			true,
@@ -128,7 +111,6 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				},
 				key,
 				backend.BlockChain(),
-				&testTxPool{},
 				common.CONSENSUSNODE,
 			},
 			true,
@@ -140,7 +122,6 @@ func TestInitSuccessAndFailure(t *testing.T) {
 				testGaslessConfig,
 				key,
 				backends.NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), nil, testChainConfig).BlockChain(),
-				&testTxPool{},
 				common.ENDPOINTNODE,
 			},
 			false,
@@ -151,10 +132,10 @@ func TestInitSuccessAndFailure(t *testing.T) {
 	for tcName, tc := range tcs {
 		g := NewGaslessModule()
 		err := g.Init(tc.opts)
-		require.ErrorIs(t, tc.err, err)
+		require.ErrorIs(t, tc.err, err, tcName)
 		if err == nil {
 			disabled := g.IsDisabled()
-			assert.Equal(t, tc.disabled, disabled, "test case: %s", tcName)
+			assert.Equal(t, tc.disabled, disabled, tcName)
 		}
 	}
 }
@@ -176,7 +157,6 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				testGaslessConfig,
 				key,
 				backend.BlockChain(),
-				&testTxPool{},
 				common.ENDPOINTNODE,
 			},
 			dummyGSRAddress,
@@ -191,7 +171,6 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				},
 				key,
 				backend.BlockChain(),
-				&testTxPool{},
 				common.ENDPOINTNODE,
 			},
 			dummyGSRAddress,
@@ -206,7 +185,6 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				},
 				key,
 				backend.BlockChain(),
-				&testTxPool{},
 				common.ENDPOINTNODE,
 			},
 			dummyGSRAddress,
@@ -221,7 +199,6 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				},
 				key,
 				backend.BlockChain(),
-				&testTxPool{},
 				common.ENDPOINTNODE,
 			},
 			dummyGSRAddress,
@@ -233,7 +210,6 @@ func TestInitGSRAndAllowedTokens(t *testing.T) {
 				testGaslessConfig,
 				key,
 				backends.NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), nil, testChainConfig).BlockChain(),
-				&testTxPool{},
 				common.ENDPOINTNODE,
 			},
 			common.Address{},

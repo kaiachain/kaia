@@ -85,11 +85,6 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 	stateDB, _ := backend.BlockChain().State()
 	stateDB.SetNonce(sender, 0) // For approve tx
 
-	// Create mock txpool
-	txpool := &testTxPool{
-		statedb: stateDB,
-	}
-
 	// Create and initialize GaslessModule
 	gaslessModule := NewGaslessModule()
 	nodeKey, _ := crypto.GenerateKey()
@@ -98,7 +93,6 @@ func TestGaslessAPI_isGaslessTx(t *testing.T) {
 		GaslessConfig: testGaslessConfig,
 		NodeKey:       nodeKey,
 		Chain:         backend.BlockChain(),
-		TxPool:        txpool,
 		NodeType:      common.ENDPOINTNODE,
 	})
 	require.NoError(t, err)

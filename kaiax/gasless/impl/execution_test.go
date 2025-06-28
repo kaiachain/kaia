@@ -70,7 +70,6 @@ func TestPostInsertBlock(t *testing.T) {
 					GaslessConfig: testGaslessConfig,
 					NodeKey:       nodekey,
 					Chain:         backend.BlockChain(),
-					TxPool:        &testTxPool{},
 					NodeType:      common.ENDPOINTNODE,
 				})
 				require.NoError(t, err)
@@ -99,7 +98,6 @@ func TestPostInsertBlock(t *testing.T) {
 					GaslessConfig: testGaslessConfig,
 					NodeKey:       nodekey,
 					Chain:         backend.BlockChain(),
-					TxPool:        &testTxPool{},
 					NodeType:      common.ENDPOINTNODE,
 				})
 				require.NoError(t, err)
@@ -127,7 +125,6 @@ func TestPostInsertBlock(t *testing.T) {
 					GaslessConfig: testGaslessConfig,
 					NodeKey:       nodekey,
 					Chain:         backend.BlockChain(),
-					TxPool:        &testTxPool{},
 					NodeType:      common.ENDPOINTNODE,
 				})
 				require.NoError(t, err)
