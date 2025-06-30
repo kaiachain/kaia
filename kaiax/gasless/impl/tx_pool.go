@@ -17,6 +17,8 @@
 package impl
 
 import (
+	"errors"
+	"fmt"
 	"math"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -38,7 +40,29 @@ func (g *GaslessModule) IsModuleTx(tx *types.Transaction) bool {
 }
 
 func (g *GaslessModule) GetCheckBalance() func(tx *types.Transaction) error {
-	return func(*types.Transaction) error { return nil }
+	return func(tx *types.Transaction) error {
+		if approveArgs, ok := decodeApproveTx(tx, g.signer); ok {
+			balance, err := g.getCurrentStateTokenBalance(approveArgs.Token, approveArgs.Sender)
+			if err != nil {
+				return err
+			}
+			if balance.Sign() <= 0 {
+				return fmt.Errorf("insufficient sender token balance: token=%s, have=%s, want=nonzero", approveArgs.Token.Hex(), balance.String())
+			}
+			return nil
+		}
+		if swapArgs, ok := decodeSwapTx(tx, g.signer); ok {
+			balance, err := g.getCurrentStateTokenBalance(swapArgs.Token, swapArgs.Sender)
+			if err != nil {
+				return err
+			}
+			if balance.Cmp(swapArgs.AmountIn) < 0 {
+				return fmt.Errorf("insufficient sender token balance: token=%s, have=%s, want=%s", swapArgs.Token.Hex(), balance.String(), swapArgs.AmountIn.String())
+			}
+			return nil
+		}
+		return errors.New("not a gasless transaction") // should not happen because IsModuleTx is called before GetCheckBalance
+	}
 }
 
 func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, ready types.Transactions) bool {

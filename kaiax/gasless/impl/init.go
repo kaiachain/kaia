@@ -25,6 +25,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/contracts/contracts/testing/sc_erc20"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
@@ -111,4 +112,24 @@ func (g *GaslessModule) getCurrentStateBalance(addr common.Address) *big.Int {
 	defer g.currentStateMu.Unlock()
 
 	return g.currentState.GetBalance(addr)
+}
+
+func (g *GaslessModule) getCurrentStateTokenBalance(token common.Address, addr common.Address) (*big.Int, error) {
+	g.currentStateMu.Lock()
+	defer g.currentStateMu.Unlock()
+
+	bc := backends.NewBlockchainContractBackend(g.Chain, nil, nil)
+	tokenContract, err := sc_erc20.NewERC20(token, bc)
+	if err != nil {
+		logger.Error("failed to create erc20 contract", "token", token.Hex(), "error", err)
+		return nil, err
+	}
+
+	balance, err := tokenContract.BalanceOf(nil, addr)
+	if err != nil {
+		logger.Debug("failed to get erc20 balance", "token", token.Hex(), "addr", addr.Hex(), "error", err)
+		return nil, err
+	}
+
+	return balance, nil
 }
