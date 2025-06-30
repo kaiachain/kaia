@@ -82,6 +82,7 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
 			mockTxBundlingModule.EXPECT().IsBundleTx(tt.tx).Return(true).AnyTimes()
+			mockTxBundlingModule.EXPECT().GetMaxBundleTxsInPool().Return(uint(math.MaxUint64)).AnyTimes()
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
@@ -105,34 +106,52 @@ func TestPreAddTx_TxPoolModule(t *testing.T) {
 	preAddTxError := errors.New("tx pool error")
 
 	tests := []struct {
-		name            string
-		hasTxPoolModule bool
-		preAddTxResult  error
-		expectedError   error
+		name               string
+		hasTxPoolModule    bool
+		preAddTxResult     error
+		expectedError      error
+		maxBundleTxsInPool uint
+		knownTxs           map[common.Hash]knownTx
 	}{
 		{
-			name:            "TxPoolModule is not set",
-			hasTxPoolModule: false,
-			preAddTxResult:  nil,
-			expectedError:   nil,
+			name:               "TxPoolModule is not set",
+			hasTxPoolModule:    false,
+			preAddTxResult:     nil,
+			expectedError:      nil,
+			maxBundleTxsInPool: math.MaxUint64,
+			knownTxs:           make(map[common.Hash]knownTx),
 		},
 		{
-			name:            "TxPoolModule is not set and PreAddTx returns error",
-			hasTxPoolModule: false,
-			preAddTxResult:  preAddTxError,
-			expectedError:   nil,
+			name:               "TxPoolModule is not set and PreAddTx returns error",
+			hasTxPoolModule:    false,
+			preAddTxResult:     preAddTxError,
+			expectedError:      nil,
+			maxBundleTxsInPool: math.MaxUint64,
+			knownTxs:           make(map[common.Hash]knownTx),
 		},
 		{
-			name:            "TxPoolModule is set",
-			hasTxPoolModule: true,
-			preAddTxResult:  nil,
-			expectedError:   nil,
+			name:               "TxPoolModule is set",
+			hasTxPoolModule:    true,
+			preAddTxResult:     nil,
+			expectedError:      nil,
+			maxBundleTxsInPool: math.MaxUint64,
+			knownTxs:           make(map[common.Hash]knownTx),
 		},
 		{
-			name:            "TxPoolModule is set but PreAddTx returns error",
-			hasTxPoolModule: true,
-			preAddTxResult:  preAddTxError,
-			expectedError:   preAddTxError,
+			name:               "TxPoolModule is set but PreAddTx returns error",
+			hasTxPoolModule:    true,
+			preAddTxResult:     preAddTxError,
+			expectedError:      preAddTxError,
+			maxBundleTxsInPool: math.MaxUint64,
+			knownTxs:           make(map[common.Hash]knownTx),
+		},
+		{
+			name:               "Exceed GetMaxBundleTxsInPool limit",
+			hasTxPoolModule:    false,
+			preAddTxResult:     nil,
+			expectedError:      ErrUnableToAddKnownBundleTx,
+			maxBundleTxsInPool: 1,
+			knownTxs:           map[common.Hash]knownTx{createTestTransaction(0).Hash(): {tx: createTestTransaction(0), time: time.Now()}},
 		},
 	}
 
@@ -143,12 +162,13 @@ func TestPreAddTx_TxPoolModule(t *testing.T) {
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
-				knownTxs:         make(map[common.Hash]knownTx),
+				knownTxs:         tt.knownTxs,
 			}
 
-			mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
+			mockTxBundlingModule.EXPECT().GetMaxBundleTxsInPool().Return(tt.maxBundleTxsInPool).AnyTimes()
 
 			if tt.hasTxPoolModule {
+				mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
 				mockTxPoolModule.EXPECT().PreAddTx(testTx, true).Return(tt.preAddTxResult)
 				builderModule.txPoolModule = mockTxPoolModule
 			}

@@ -60,6 +60,11 @@ func (b *BuilderWrappingModule) PreAddTx(tx *types.Transaction, local bool) erro
 	if knownTx, ok := b.knownTxs.get(tx.Hash()); ok && knownTx.elapsedTime() < KnownTxTimeout {
 		return ErrUnableToAddKnownBundleTx
 	}
+
+	if uint(len(b.knownTxs)) >= b.txBundlingModule.GetMaxBundleTxsInPool() {
+		return ErrUnableToAddKnownBundleTx
+	}
+
 	if b.txPoolModule != nil {
 		return b.txPoolModule.PreAddTx(tx, local)
 	}

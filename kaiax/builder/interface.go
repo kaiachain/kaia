@@ -44,6 +44,10 @@ type TxBundlingModule interface {
 	// if zero or minus value is returned, it means no limit.
 	// this limitation works properly only when a module bundles only sequential txs by the same sender.
 	GetMaxBundleTxsInPending() uint
+
+	// GetMaxBundleTxsInPool returns the maximum number of transactions that can be bundled in txpool.
+	// if zero or minus value is returned, it means no limit.
+	GetMaxBundleTxsInPool() uint
 }
 
 // Any component or module that accomodate tx bundling modules.

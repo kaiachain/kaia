@@ -78,6 +78,20 @@ func (mr *MockGaslessModuleMockRecorder) GetMaxBundleTxsInPending() *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleTxsInPending", reflect.TypeOf((*MockGaslessModule)(nil).GetMaxBundleTxsInPending))
 }
 
+// GetMaxBundleTxsInPool mocks base method.
+func (m *MockGaslessModule) GetMaxBundleTxsInPool() uint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMaxBundleTxsInPool")
+	ret0, _ := ret[0].(uint)
+	return ret0
+}
+
+// GetMaxBundleTxsInPool indicates an expected call of GetMaxBundleTxsInPool.
+func (mr *MockGaslessModuleMockRecorder) GetMaxBundleTxsInPool() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleTxsInPool", reflect.TypeOf((*MockGaslessModule)(nil).GetMaxBundleTxsInPool))
+}
+
 // IsBundleTx mocks base method.
 func (m *MockGaslessModule) IsBundleTx(arg0 *types.Transaction) bool {
 	m.ctrl.T.Helper()
