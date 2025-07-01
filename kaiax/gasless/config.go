@@ -34,7 +34,7 @@ var (
 	DisableFlag = &cli.BoolFlag{
 		Name:     "gasless.disable",
 		Usage:    "disable gasless module",
-		Value:    true,
+		Value:    false,
 		Aliases:  []string{"kaiax.module.gasless.disable"},
 		Category: "KAIAX",
 	}
@@ -65,7 +65,7 @@ type GaslessConfig struct {
 func DefaultGaslessConfig() *GaslessConfig {
 	return &GaslessConfig{
 		AllowedTokens:         nil,
-		Disable:               true,
+		Disable:               false,
 		MaxBundleTxsInPending: 100,
 	}
 }
