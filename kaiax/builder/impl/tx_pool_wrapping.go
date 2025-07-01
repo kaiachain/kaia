@@ -17,7 +17,6 @@
 package impl
 
 import (
-	"errors"
 	"math"
 	"sync"
 
@@ -32,8 +31,9 @@ var _ kaiax.TxPoolModule = (*BuilderWrappingModule)(nil)
 
 var (
 	// Metrics for knownTxs
-	numQueueGauge               = metrics.NewRegisteredGauge("txpool/knowntxs/num/queue", nil)
-	numPendingGauge             = metrics.NewRegisteredGauge("txpool/knowntxs/num/pending", nil)
+	numQueueGauge   = metrics.NewRegisteredGauge("txpool/knowntxs/num/queue", nil)
+	numPendingGauge = metrics.NewRegisteredGauge("txpool/knowntxs/num/pending", nil)
+	// numExecutable = numPending - MarkedUnexecutable (by the local miner)
 	numExecutableGauge          = metrics.NewRegisteredGauge("txpool/knowntxs/num/executable", nil)
 	oldestTxTimeInKnownTxsGauge = metrics.NewRegisteredGauge("txpool/knowntxs/oldesttime/seconds", nil)
 )
@@ -75,7 +75,7 @@ func (b *BuilderWrappingModule) PreAddTx(tx *types.Transaction, local bool) erro
 
 	if b.txBundlingModule.IsBundleTx(tx) {
 		if b.knownTxs.numQueue() >= int(b.txBundlingModule.GetMaxBundleTxsInQueue()) {
-			return errors.New("queue is full")
+			return ErrBundleTxQueueFull
 		}
 		b.knownTxs.add(tx, TxStatusQueue)
 	}
@@ -153,14 +153,20 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 }
 
 // PreReset is a wrapper function that removes timed out tx from the tx pool and knownTxs.
-func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
+func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) []common.Hash {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
+	var drops []common.Hash
+
 	for hash, knownTx := range *b.knownTxs {
 		// remove pending timed out tx from tx pool
-		if knownTx.elapsedTime() >= PendingTimeout {
-			b.knownTxs.markUnexecutable(hash)
+		if knownTx.status == TxStatusPending && knownTx.elapsedTime() >= PendingTimeout {
+			drops = append(drops, hash)
+		}
+		// remove queue timed out tx from tx pool
+		if knownTx.status == TxStatusQueue && knownTx.elapsedTime() >= QueueTimeout {
+			drops = append(drops, hash)
 		}
 		// remove known timed out tx from knownTxs
 		if knownTx.elapsedTime() >= KnownTxTimeout {
@@ -171,6 +177,8 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
 	if b.txPoolModule != nil {
 		b.txPoolModule.PreReset(oldHead, newHead)
 	}
+
+	return drops
 }
 
 // PostReset is a wrapper function that calls the PostReset method of the underlying module.

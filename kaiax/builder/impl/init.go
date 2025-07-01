@@ -130,14 +130,18 @@ func (k knownTxs) Copy() *knownTxs {
 }
 
 const (
-	TxStatusQueue = iota
-	TxStatusPending
-	TxStatusDemoted
+	TxStatusQueue   = iota // exists in txpool.queue
+	TxStatusPending        // exists in txpool.pending
+	TxStatusDemoted        // not exist in txpool.pending and txpool.queue
 )
 
+// A metadata of a known bundle tx that has been submitted to txpool during the last window (KnownTxTimeout).
 type knownTx struct {
-	tx     *types.Transaction
-	time   time.Time
+	tx   *types.Transaction
+	time time.Time
+
+	// The location in txpool, of this knownTx.
+	// Refreshed at pool.reset()-PostReset(), pool.addTx()-PreAddTx(), pool.promoteExecutables()-IsReady()
 	status int
 }
 
