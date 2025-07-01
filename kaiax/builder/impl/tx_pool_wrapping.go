@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"errors"
 	"math"
 	"sync"
 
@@ -31,14 +32,14 @@ var _ kaiax.TxPoolModule = (*BuilderWrappingModule)(nil)
 
 var (
 	// Metrics for knownTxs
-	numKnownTxsGauge            = metrics.NewRegisteredGauge("txpool/knowntxs/num", nil)
+	numPendingGauge             = metrics.NewRegisteredGauge("txpool/knowntxs/num/pending", nil)
 	oldestTxTimeInKnownTxsGauge = metrics.NewRegisteredGauge("txpool/knowntxs/oldesttime/seconds", nil)
 )
 
 type BuilderWrappingModule struct {
 	txBundlingModule builder.TxBundlingModule
 	txPoolModule     kaiax.TxPoolModule // either nil or same object as txBundlingModule
-	knownTxs         knownTxs
+	knownTxs         *knownTxs
 	mu               sync.RWMutex
 }
 
@@ -47,7 +48,7 @@ func NewBuilderWrappingModule(txBundlingModule builder.TxBundlingModule) *Builde
 	return &BuilderWrappingModule{
 		txBundlingModule: txBundlingModule,
 		txPoolModule:     txPoolModule,
-		knownTxs:         knownTxs{},
+		knownTxs:         &knownTxs{},
 		mu:               sync.RWMutex{},
 	}
 }
@@ -60,9 +61,23 @@ func (b *BuilderWrappingModule) PreAddTx(tx *types.Transaction, local bool) erro
 	if knownTx, ok := b.knownTxs.get(tx.Hash()); ok && knownTx.elapsedTime() < KnownTxTimeout {
 		return ErrUnableToAddKnownBundleTx
 	}
+
+	var err error
 	if b.txPoolModule != nil {
-		return b.txPoolModule.PreAddTx(tx, local)
+		err = b.txPoolModule.PreAddTx(tx, local)
 	}
+
+	if err != nil {
+		return err
+	}
+
+	if b.txBundlingModule.IsBundleTx(tx) {
+		if b.knownTxs.numQueue() >= int(b.txBundlingModule.GetMaxBundleTxsInQueue()) {
+			return errors.New("queue is full")
+		}
+		b.knownTxs.add(tx, TxStatusQueue)
+	}
+
 	return nil
 }
 
@@ -103,8 +118,8 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 		// If prev tx is bundle tx, there's no need to check the knownTxs limit because it has been checked in the previous `IsReady()` execution.
 		isPrevTxBundleTx := len(ready) != 0 && b.txBundlingModule.IsBundleTx(ready[len(ready)-1])
 		if isPrevTxBundleTx {
-			b.knownTxs.add(tx)
-			numKnownTxsGauge.Update(int64(len(b.knownTxs)))
+			b.knownTxs.add(tx, TxStatusPending)
+			numPendingGauge.Update(int64(b.knownTxs.numPending()))
 			oldestTxTimeInKnownTxsGauge.Update(b.knownTxs.getTimeOfOldestKnownTx())
 			return true
 		}
@@ -129,8 +144,8 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 			}
 		}
 
-		b.knownTxs.add(tx)
-		numKnownTxsGauge.Update(int64(len(b.knownTxs)))
+		b.knownTxs.add(tx, TxStatusPending)
+		numPendingGauge.Update(int64(b.knownTxs.numPending()))
 		oldestTxTimeInKnownTxsGauge.Update(b.knownTxs.getTimeOfOldestKnownTx())
 	}
 
@@ -142,7 +157,7 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	for hash, knownTx := range b.knownTxs {
+	for hash, knownTx := range *b.knownTxs {
 		// remove pending timed out tx from tx pool
 		if knownTx.elapsedTime() >= PendingTimeout {
 			b.knownTxs.markUnexecutable(hash)
@@ -150,7 +165,7 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
 		// remove known timed out tx from knownTxs
 		if knownTx.elapsedTime() >= KnownTxTimeout {
 			b.knownTxs.delete(hash)
-			numKnownTxsGauge.Update(int64(len(b.knownTxs)))
+			numPendingGauge.Update(int64(b.knownTxs.numPending()))
 			oldestTxTimeInKnownTxsGauge.Update(b.knownTxs.getTimeOfOldestKnownTx())
 		}
 	}
@@ -160,23 +175,34 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
 }
 
 // PostReset is a wrapper function that calls the PostReset method of the underlying module.
-func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header, pending map[common.Address]types.Transactions) {
+func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header, queue, pending map[common.Address]types.Transactions) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	flattened := make(map[common.Hash]*types.Transaction)
-	for _, txs := range pending {
+	flattenedQueue := make(map[common.Hash]*types.Transaction)
+	flattenedPending := make(map[common.Hash]*types.Transaction)
+	for _, txs := range queue {
 		for _, tx := range txs {
-			flattened[tx.Hash()] = tx
+			flattenedQueue[tx.Hash()] = tx
 		}
 	}
-	for hash := range b.knownTxs {
-		if _, ok := flattened[hash]; !ok {
-			b.knownTxs.markDemoted(hash)
+	for _, txs := range pending {
+		for _, tx := range txs {
+			flattenedPending[tx.Hash()] = tx
+		}
+	}
+
+	for _, knownTx := range *b.knownTxs {
+		if _, ok := flattenedQueue[knownTx.tx.Hash()]; ok {
+			b.knownTxs.add(knownTx.tx, TxStatusQueue)
+		} else if _, ok := flattenedPending[knownTx.tx.Hash()]; ok {
+			b.knownTxs.add(knownTx.tx, TxStatusPending)
+		} else {
+			b.knownTxs.add(knownTx.tx, TxStatusDemoted)
 		}
 	}
 
 	if b.txPoolModule != nil {
-		b.txPoolModule.PostReset(oldHead, newHead, pending)
+		b.txPoolModule.PostReset(oldHead, newHead, queue, pending)
 	}
 }

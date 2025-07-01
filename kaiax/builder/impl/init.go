@@ -35,17 +35,33 @@ type InitOpts struct {
 	Backend api.Backend
 }
 
-type knownTxs map[common.Hash]knownTx
+type knownTxs map[common.Hash]*knownTx
 
-func (k knownTxs) add(tx *types.Transaction) {
-	k[tx.Hash()] = knownTx{
-		tx:        tx,
-		time:      time.Now(),
-		isDemoted: false,
+func (k knownTxs) add(tx *types.Transaction, status int) {
+	if tx == nil {
+		return
+	}
+
+	if ktx, ok := k[tx.Hash()]; ok {
+		ktx.status = status
+	} else {
+		k[tx.Hash()] = &knownTx{
+			tx:     tx,
+			time:   time.Now(),
+			status: status,
+		}
 	}
 }
 
-func (k knownTxs) get(hash common.Hash) (knownTx, bool) {
+func (k knownTxs) addKnownTx(knownTx *knownTx) {
+	if ktx, ok := k[knownTx.tx.Hash()]; ok {
+		ktx.status = knownTx.status
+	} else {
+		k[knownTx.tx.Hash()] = knownTx
+	}
+}
+
+func (k knownTxs) get(hash common.Hash) (*knownTx, bool) {
 	tx, ok := k[hash]
 	return tx, ok
 }
@@ -59,10 +75,30 @@ func (k knownTxs) delete(hash common.Hash) {
 	delete(k, hash)
 }
 
+func (k knownTxs) numPending() int {
+	num := 0
+	for _, knownTx := range k {
+		if knownTx.status == TxStatusPending {
+			num++
+		}
+	}
+	return num
+}
+
 func (k knownTxs) numExecutable() int {
 	num := 0
 	for _, knownTx := range k {
-		if !knownTx.tx.IsMarkedUnexecutable() && !knownTx.isDemoted {
+		if knownTx.status == TxStatusPending && !knownTx.tx.IsMarkedUnexecutable() {
+			num++
+		}
+	}
+	return num
+}
+
+func (k knownTxs) numQueue() int {
+	num := 0
+	for _, knownTx := range k {
+		if knownTx.status == TxStatusQueue {
 			num++
 		}
 	}
@@ -72,16 +108,6 @@ func (k knownTxs) numExecutable() int {
 func (k knownTxs) markUnexecutable(hash common.Hash) {
 	if tx, ok := k[hash]; ok {
 		tx.tx.MarkUnexecutable(true)
-	}
-}
-
-func (k knownTxs) markDemoted(hash common.Hash) {
-	if tx, ok := k[hash]; ok {
-		k[hash] = knownTx{
-			tx:        tx.tx,
-			time:      tx.time,
-			isDemoted: true,
-		}
 	}
 }
 
@@ -95,10 +121,24 @@ func (k knownTxs) getTimeOfOldestKnownTx() int64 {
 	return int64(oldestTime)
 }
 
+func (k knownTxs) Copy() *knownTxs {
+	newMap := &knownTxs{}
+	for _, knownTx := range k {
+		newMap.addKnownTx(knownTx)
+	}
+	return newMap
+}
+
+const (
+	TxStatusQueue = iota
+	TxStatusPending
+	TxStatusDemoted
+)
+
 type knownTx struct {
-	tx        *types.Transaction
-	time      time.Time
-	isDemoted bool
+	tx     *types.Transaction
+	time   time.Time
+	status int
 }
 
 func (t *knownTx) elapsedTime() time.Duration {

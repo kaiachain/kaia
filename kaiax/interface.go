@@ -159,7 +159,7 @@ type TxPoolModule interface {
 	PreReset(oldHead, newHead *types.Header)
 
 	// Additional actions to perform after the txpool is reset.
-	PostReset(oldHead, newHead *types.Header, pending map[common.Address]types.Transactions)
+	PostReset(oldHead, newHead *types.Header, queue, pending map[common.Address]types.Transactions)
 }
 
 // Any component or module that accommodate txpool modules.

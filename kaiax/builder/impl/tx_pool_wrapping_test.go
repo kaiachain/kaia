@@ -45,19 +45,19 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 	tests := []struct {
 		name          string
 		tx            *types.Transaction
-		knownTxs      map[common.Hash]knownTx
+		knownTxs      *knownTxs
 		expectedError error
 	}{
 		{
 			name:          "Transaction not in knownTxs",
 			tx:            createTestTransaction(0),
-			knownTxs:      make(map[common.Hash]knownTx),
+			knownTxs:      &knownTxs{},
 			expectedError: nil,
 		},
 		{
 			name: "Transaction during KnownTxTimeout period",
 			tx:   createTestTransaction(0),
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
 					time: time.Now(),
@@ -68,7 +68,7 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 		{
 			name: "Transaction after KnownTxTimeout period",
 			tx:   createTestTransaction(0),
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
 					time: time.Now().Add(-KnownTxTimeout),
@@ -82,6 +82,7 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
 			mockTxBundlingModule.EXPECT().IsBundleTx(tt.tx).Return(true).AnyTimes()
+			mockTxBundlingModule.EXPECT().GetMaxBundleTxsInQueue().Return(uint(200)).AnyTimes()
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
@@ -140,11 +141,10 @@ func TestPreAddTx_TxPoolModule(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			testTx := createTestTransaction(0)
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule.EXPECT().IsBundleTx(testTx).Return(true).AnyTimes()
+			mockTxBundlingModule.EXPECT().GetMaxBundleTxsInQueue().Return(uint(200)).AnyTimes()
 
-			builderModule := &BuilderWrappingModule{
-				txBundlingModule: mockTxBundlingModule,
-				knownTxs:         make(map[common.Hash]knownTx),
-			}
+			builderModule := NewBuilderWrappingModule(mockTxBundlingModule)
 
 			mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
 
@@ -208,7 +208,7 @@ func TestIsModuleTx(t *testing.T) {
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
-				knownTxs:         make(map[common.Hash]knownTx),
+				knownTxs:         new(knownTxs),
 			}
 
 			if tt.hasTxPoolModule {
@@ -281,7 +281,7 @@ func TestGetCheckBalance(t *testing.T) {
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
-				knownTxs:         make(map[common.Hash]knownTx),
+				knownTxs:         new(knownTxs),
 			}
 
 			if tt.hasTxPoolModule {
@@ -320,29 +320,29 @@ func TestIsReady_KnownTxs(t *testing.T) {
 		name             string
 		txs              map[uint64]*types.Transaction
 		isBundleTxResult bool
-		knownTxs         map[common.Hash]knownTx
-		expectedTxs      map[common.Hash]knownTx
+		knownTxs         *knownTxs
+		expectedTxs      *knownTxs
 	}{
 		{
 			name:             "No txs transactions",
 			txs:              make(map[uint64]*types.Transaction),
 			isBundleTxResult: false,
-			knownTxs:         make(map[common.Hash]knownTx),
-			expectedTxs:      make(map[common.Hash]knownTx),
+			knownTxs:         new(knownTxs),
+			expectedTxs:      new(knownTxs),
 		},
 		{
 			name:             "Non-bundle transaction",
 			txs:              map[uint64]*types.Transaction{0: createTestTransaction(0)},
 			isBundleTxResult: false,
-			knownTxs:         map[common.Hash]knownTx{},
-			expectedTxs:      map[common.Hash]knownTx{},
+			knownTxs:         new(knownTxs),
+			expectedTxs:      new(knownTxs),
 		},
 		{
 			name:             "New bundle transaction",
 			txs:              map[uint64]*types.Transaction{0: createTestTransaction(0)},
 			isBundleTxResult: true,
-			knownTxs:         map[common.Hash]knownTx{},
-			expectedTxs: map[common.Hash]knownTx{
+			knownTxs:         new(knownTxs),
+			expectedTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx: createTestTransaction(0),
 				},
@@ -352,13 +352,13 @@ func TestIsReady_KnownTxs(t *testing.T) {
 			name:             "Existing bundle transaction",
 			txs:              map[uint64]*types.Transaction{0: createTestTransaction(0)},
 			isBundleTxResult: true,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
 					time: oldTime,
 				},
 			},
-			expectedTxs: map[common.Hash]knownTx{
+			expectedTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
 					time: oldTime,
@@ -369,13 +369,13 @@ func TestIsReady_KnownTxs(t *testing.T) {
 			name:             "KnownTx has txs",
 			txs:              map[uint64]*types.Transaction{0: createTestTransaction(4)},
 			isBundleTxResult: true,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(3).Hash(): {
 					tx:   createTestTransaction(3),
 					time: oldTime,
 				},
 			},
-			expectedTxs: map[common.Hash]knownTx{
+			expectedTxs: &knownTxs{
 				createTestTransaction(3).Hash(): {
 					tx:   createTestTransaction(3),
 					time: oldTime,
@@ -395,20 +395,20 @@ func TestIsReady_KnownTxs(t *testing.T) {
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
-				knownTxs:         copyknownTxMap(tt.knownTxs),
+				knownTxs:         tt.knownTxs.Copy(),
 			}
 
 			builderModule.IsReady(tt.txs, 0, nil)
 
 			// Verify knownTxs state
-			assert.Equal(t, len(tt.expectedTxs), len(builderModule.knownTxs))
-			for hash, expected := range tt.expectedTxs {
-				actual, exists := builderModule.knownTxs[hash]
+			assert.Equal(t, len(*tt.expectedTxs), len(*builderModule.knownTxs))
+			for hash, expected := range *tt.expectedTxs {
+				actual, exists := (*builderModule.knownTxs)[hash]
 				assert.True(t, exists)
 				assert.Equal(t, expected.tx.Hash(), actual.tx.Hash())
 
 				// For new transactions, verify the time is recent
-				if _, exists := tt.knownTxs[hash]; !exists {
+				if _, exists := (*tt.knownTxs)[hash]; !exists {
 					assert.True(t, time.Since(actual.time) < time.Second, "New transaction time should be recent")
 				} else {
 					// For existing transactions, verify the time is preserved
@@ -431,7 +431,7 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 	tests := []struct {
 		name           string
 		maxBundleTxs   uint
-		knownTxs       map[common.Hash]knownTx
+		knownTxs       *knownTxs
 		additionalTxs  map[uint64]*types.Transaction
 		readyTxs       []*types.Transaction
 		expectedResult bool
@@ -439,16 +439,17 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 		{
 			name:           "Max bundle txs is zero",
 			maxBundleTxs:   0,
-			knownTxs:       make(map[common.Hash]knownTx),
+			knownTxs:       new(knownTxs),
 			expectedResult: false,
 		},
 		{
 			name:         "Below max bundle txs limit",
 			maxBundleTxs: 2,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: time.Now(),
+					tx:     createTestTransaction(0),
+					time:   time.Now(),
+					status: TxStatusPending,
 				},
 			},
 			expectedResult: true,
@@ -456,14 +457,16 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 		{
 			name:         "At max bundle txs limit",
 			maxBundleTxs: 2,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx:     createTestTransaction(0),
+					time:   now,
+					status: TxStatusPending,
 				},
 				createTestTransaction(1).Hash(): {
-					tx:   createTestTransaction(1),
-					time: now,
+					tx:     createTestTransaction(1),
+					time:   now,
+					status: TxStatusPending,
 				},
 			},
 			expectedResult: false,
@@ -471,14 +474,16 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 		{
 			name:         "At max bundle txs limit with ready bundle txs",
 			maxBundleTxs: 2,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx:     createTestTransaction(0),
+					time:   now,
+					status: TxStatusPending,
 				},
 				createTestTransaction(1).Hash(): {
-					tx:   createTestTransaction(1),
-					time: now,
+					tx:     createTestTransaction(1),
+					time:   now,
+					status: TxStatusPending,
 				},
 			},
 			readyTxs:       []*types.Transaction{createTestTransaction(1)},
@@ -487,14 +492,16 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 		{
 			name:         "At max bundle txs limit with ready non-bundle txs",
 			maxBundleTxs: 2,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx:     createTestTransaction(0),
+					time:   now,
+					status: TxStatusPending,
 				},
 				createTestTransaction(1).Hash(): {
-					tx:   createTestTransaction(1),
-					time: now,
+					tx:     createTestTransaction(1),
+					time:   now,
+					status: TxStatusPending,
 				},
 			},
 			readyTxs:       []*types.Transaction{createTestTransaction(1000)},
@@ -503,18 +510,21 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 		{
 			name:         "Above max bundle txs limit",
 			maxBundleTxs: 2,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx:     createTestTransaction(0),
+					time:   now,
+					status: TxStatusPending,
 				},
 				createTestTransaction(1).Hash(): {
-					tx:   createTestTransaction(1),
-					time: now,
+					tx:     createTestTransaction(1),
+					time:   now,
+					status: TxStatusPending,
 				},
 				createTestTransaction(2).Hash(): {
-					tx:   createTestTransaction(2),
-					time: now,
+					tx:     createTestTransaction(2),
+					time:   now,
+					status: TxStatusPending,
 				},
 			},
 			expectedResult: false,
@@ -522,18 +532,21 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 		{
 			name:         "Above max bundle txs limit with ready txs",
 			maxBundleTxs: 2,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx:     createTestTransaction(0),
+					time:   now,
+					status: TxStatusPending,
 				},
 				createTestTransaction(1).Hash(): {
-					tx:   createTestTransaction(1),
-					time: now,
+					tx:     createTestTransaction(1),
+					time:   now,
+					status: TxStatusPending,
 				},
 				createTestTransaction(2).Hash(): {
-					tx:   createTestTransaction(2),
-					time: now,
+					tx:     createTestTransaction(2),
+					time:   now,
+					status: TxStatusPending,
 				},
 			},
 			readyTxs:       []*types.Transaction{createTestTransaction(2)},
@@ -542,14 +555,16 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 		{
 			name:         "KnownTxs with unexecutable transactions",
 			maxBundleTxs: 2,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx:     createTestTransaction(0),
+					time:   now,
+					status: TxStatusPending,
 				},
 				createTestTransaction(1).Hash(): {
-					tx:   createTestTransaction(1),
-					time: unexecutable,
+					tx:     createTestTransaction(1),
+					time:   unexecutable,
+					status: TxStatusPending,
 				},
 			},
 			expectedResult: true,
@@ -557,15 +572,16 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 		{
 			name:         "KnownTxs with demoted transactions",
 			maxBundleTxs: 2,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx:     createTestTransaction(0),
+					time:   now,
+					status: TxStatusPending,
 				},
 				createTestTransaction(1).Hash(): {
-					tx:        createTestTransaction(1),
-					time:      now,
-					isDemoted: true,
+					tx:     createTestTransaction(1),
+					time:   now,
+					status: TxStatusDemoted,
 				},
 			},
 			expectedResult: true,
@@ -573,10 +589,11 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 		{
 			name:         "Additional bundle tx within limit",
 			maxBundleTxs: 2,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx:     createTestTransaction(0),
+					time:   now,
+					status: TxStatusPending,
 				},
 			},
 			additionalTxs:  map[uint64]*types.Transaction{902: createTestTransaction(902)},
@@ -585,10 +602,11 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 		{
 			name:         "Additional non-bundle tx within limit",
 			maxBundleTxs: 2,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx:     createTestTransaction(0),
+					time:   now,
+					status: TxStatusPending,
 				},
 			},
 			additionalTxs:  map[uint64]*types.Transaction{901: createTestTransaction(1000)},
@@ -597,10 +615,11 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 		{
 			name:         "Multiple additional txs with non-bundle tx",
 			maxBundleTxs: 2,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx:     createTestTransaction(0),
+					time:   now,
+					status: TxStatusPending,
 				},
 			},
 			additionalTxs:  map[uint64]*types.Transaction{899: createTestTransaction(899), 901: createTestTransaction(1000)},
@@ -609,14 +628,16 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 		{
 			name:         "Known transaction in knownTxs",
 			maxBundleTxs: 2,
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:   createTestTransaction(0),
-					time: now,
+					tx:     createTestTransaction(0),
+					time:   now,
+					status: TxStatusPending,
 				},
 				testTx.Hash(): {
-					tx:   testTx,
-					time: now,
+					tx:     testTx,
+					time:   now,
+					status: TxStatusPending,
 				},
 			},
 			expectedResult: true,
@@ -624,7 +645,7 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 		{
 			name:           "No max bundle txs limit",
 			maxBundleTxs:   math.MaxUint64,
-			knownTxs:       make(map[common.Hash]knownTx),
+			knownTxs:       new(knownTxs),
 			additionalTxs:  map[uint64]*types.Transaction{901: createTestTransaction(901)},
 			expectedResult: true,
 		},
@@ -643,11 +664,11 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
-				knownTxs:         copyknownTxMap(tt.knownTxs),
+				knownTxs:         tt.knownTxs.Copy(),
 			}
 
 			// Mark some transactions as unexecutable to test that they are not counted
-			for _, knownTx := range tt.knownTxs {
+			for _, knownTx := range *tt.knownTxs {
 				if knownTx.time.After(now) {
 					knownTx.tx.MarkUnexecutable(true)
 				}
@@ -700,7 +721,7 @@ func TestIsReady_TxPoolModule(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
-				knownTxs:         make(map[common.Hash]knownTx),
+				knownTxs:         new(knownTxs),
 			}
 
 			// Create a test transaction map
@@ -731,19 +752,19 @@ func TestPreReset_Timeout(t *testing.T) {
 
 	tests := []struct {
 		name                 string
-		existingBundles      map[common.Hash]knownTx
-		expectedBundles      map[common.Hash]knownTx
+		existingBundles      *knownTxs
+		expectedBundles      *knownTxs
 		expectedUnexecutable bool
 	}{
 		{
 			name: "Bundle tx within PendingTimeout period",
-			existingBundles: map[common.Hash]knownTx{
+			existingBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
 					time: now,
 				},
 			},
-			expectedBundles: map[common.Hash]knownTx{
+			expectedBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
 					time: now,
@@ -753,13 +774,13 @@ func TestPreReset_Timeout(t *testing.T) {
 		},
 		{
 			name: "Bundle tx exceeds PendingTimeout period",
-			existingBundles: map[common.Hash]knownTx{
+			existingBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
 					time: now.Add(-PendingTimeout),
 				},
 			},
-			expectedBundles: map[common.Hash]knownTx{
+			expectedBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
 					time: now.Add(-PendingTimeout),
@@ -769,13 +790,13 @@ func TestPreReset_Timeout(t *testing.T) {
 		},
 		{
 			name: "Bundle tx exceeds KnownTxTimeout period",
-			existingBundles: map[common.Hash]knownTx{
+			existingBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:   createTestTransaction(0),
 					time: now.Add(-KnownTxTimeout),
 				},
 			},
-			expectedBundles:      map[common.Hash]knownTx{},
+			expectedBundles:      new(knownTxs),
 			expectedUnexecutable: false,
 		},
 	}
@@ -787,17 +808,17 @@ func TestPreReset_Timeout(t *testing.T) {
 			// Setup BuilderModule
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
-				knownTxs:         copyknownTxMap(tt.existingBundles),
+				knownTxs:         tt.existingBundles.Copy(),
 			}
 
 			builderModule.PreReset(nil, nil)
 
 			// Verify the number of bundles
-			assert.Equal(t, len(tt.expectedBundles), len(builderModule.knownTxs))
+			assert.Equal(t, len(*tt.expectedBundles), len(*builderModule.knownTxs))
 
 			// Verify each bundle's state
-			for hash, expected := range tt.expectedBundles {
-				actual, exists := builderModule.knownTxs[hash]
+			for hash, expected := range *tt.expectedBundles {
+				actual, exists := (*builderModule.knownTxs)[hash]
 				assert.True(t, exists)
 				assert.Equal(t, expected.tx.Hash(), actual.tx.Hash())
 				assert.Equal(t, expected.time, actual.time)
@@ -828,10 +849,7 @@ func TestPreReset_TxPoolModule(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
-			builderModule := &BuilderWrappingModule{
-				txBundlingModule: mockTxBundlingModule,
-				knownTxs:         make(map[common.Hash]knownTx),
-			}
+			builderModule := NewBuilderWrappingModule(mockTxBundlingModule)
 
 			mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
 			if tt.hasTxPoolModule {
@@ -852,19 +870,19 @@ func TestPostReset_TxDemotion(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		knownTxs        map[common.Hash]knownTx
+		knownTxs        *knownTxs
 		pendingTxs      map[common.Address]types.Transactions
 		expectedDemoted map[common.Hash]bool
 	}{
 		{
 			name:            "No known transactions",
-			knownTxs:        make(map[common.Hash]knownTx),
+			knownTxs:        new(knownTxs),
 			pendingTxs:      make(map[common.Address]types.Transactions),
 			expectedDemoted: make(map[common.Hash]bool),
 		},
 		{
 			name: "All known transactions in pending",
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx: createTestTransaction(0),
 				},
@@ -882,7 +900,7 @@ func TestPostReset_TxDemotion(t *testing.T) {
 		},
 		{
 			name: "Some known transactions not in pending",
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx: createTestTransaction(0),
 				},
@@ -905,7 +923,7 @@ func TestPostReset_TxDemotion(t *testing.T) {
 		},
 		{
 			name: "No known transactions in pending",
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx: createTestTransaction(0),
 				},
@@ -926,10 +944,10 @@ func TestPostReset_TxDemotion(t *testing.T) {
 		},
 		{
 			name: "Already demoted transactions",
-			knownTxs: map[common.Hash]knownTx{
+			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:        createTestTransaction(0),
-					isDemoted: true,
+					tx:     createTestTransaction(0),
+					status: TxStatusDemoted,
 				},
 				createTestTransaction(1).Hash(): {
 					tx: createTestTransaction(1),
@@ -952,14 +970,14 @@ func TestPostReset_TxDemotion(t *testing.T) {
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
-				knownTxs:         copyknownTxMap(tt.knownTxs),
+				knownTxs:         tt.knownTxs.Copy(),
 			}
-			builderModule.PostReset(nil, nil, tt.pendingTxs)
+			builderModule.PostReset(nil, nil, make(map[common.Address]types.Transactions), tt.pendingTxs)
 
 			// Verify that transactions are marked as demoted correctly
-			for hash, knownTx := range builderModule.knownTxs {
+			for hash, knownTx := range *builderModule.knownTxs {
 				expectedDemoted := tt.expectedDemoted[hash]
-				assert.Equal(t, expectedDemoted, knownTx.isDemoted, "Transaction %x demoted state mismatch", hash)
+				assert.Equal(t, expectedDemoted, knownTx.status == TxStatusDemoted, "Transaction %x demoted state mismatch", hash)
 			}
 		})
 	}
@@ -989,18 +1007,18 @@ func TestPostReset_TxPoolModule(t *testing.T) {
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
-				knownTxs:         make(map[common.Hash]knownTx),
+				knownTxs:         new(knownTxs),
 			}
 
 			mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
 			if tt.hasTxPoolModule {
-				mockTxPoolModule.EXPECT().PostReset(nil, nil, gomock.Any()).Return().Times(1)
+				mockTxPoolModule.EXPECT().PostReset(nil, nil, gomock.Any(), gomock.Any()).Return().Times(1)
 				builderModule.txPoolModule = mockTxPoolModule
 			} else {
-				mockTxPoolModule.EXPECT().PostReset(nil, nil, gomock.Any()).Return().Times(0)
+				mockTxPoolModule.EXPECT().PostReset(nil, nil, gomock.Any(), gomock.Any()).Return().Times(0)
 			}
 
-			builderModule.PostReset(nil, nil, make(map[common.Address]types.Transactions))
+			builderModule.PostReset(nil, nil, make(map[common.Address]types.Transactions), make(map[common.Address]types.Transactions))
 		})
 	}
 }
@@ -1014,12 +1032,4 @@ func createTestTransaction(nonce uint64) *types.Transaction {
 		common.Big0,
 		nil,
 	)
-}
-
-func copyknownTxMap(m map[common.Hash]knownTx) map[common.Hash]knownTx {
-	newMap := make(map[common.Hash]knownTx)
-	for k, v := range m {
-		newMap[k] = v
-	}
-	return newMap
 }

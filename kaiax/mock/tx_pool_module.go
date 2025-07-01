@@ -78,15 +78,15 @@ func (mr *MockTxPoolModuleMockRecorder) IsReady(arg0, arg1, arg2 interface{}) *g
 }
 
 // PostReset mocks base method.
-func (m *MockTxPoolModule) PostReset(arg0, arg1 *types.Header, arg2 map[common.Address]types.Transactions) {
+func (m *MockTxPoolModule) PostReset(arg0, arg1 *types.Header, arg2, arg3 map[common.Address]types.Transactions) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PostReset", arg0, arg1, arg2)
+	m.ctrl.Call(m, "PostReset", arg0, arg1, arg2, arg3)
 }
 
 // PostReset indicates an expected call of PostReset.
-func (mr *MockTxPoolModuleMockRecorder) PostReset(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockTxPoolModuleMockRecorder) PostReset(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostReset", reflect.TypeOf((*MockTxPoolModule)(nil).PostReset), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostReset", reflect.TypeOf((*MockTxPoolModule)(nil).PostReset), arg0, arg1, arg2, arg3)
 }
 
 // PreAddTx mocks base method.

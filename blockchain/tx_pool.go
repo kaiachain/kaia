@@ -537,13 +537,18 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// pendingUnlocked() is supposed to be protected by pool.mu and pool.txMu.
 	// - pool.mu is held by (1) callers of reset() - loop(), lockedReset() or (2) unnecessary - NewTxPool()
 	// - pool.txMu is held here.
-	pending, err := pool.pendingUnlocked()
+	queue, err := pool.queueUnlocked()
 	if err != nil {
-		logger.Error("Failed to get pending transactions, skip PostReset", "err", err)
+		logger.Error("Failed to get queue transactions, skip PostReset", "err", err)
 	} else {
-		logger.Debug("Calling PostReset for each module", "len(pending)", len(pending))
-		for _, module := range pool.modules {
-			module.PostReset(oldHead, newHead, pending)
+		pending, err := pool.pendingUnlocked()
+		if err != nil {
+			logger.Error("Failed to get pending transactions, skip PostReset", "err", err)
+		} else {
+			logger.Debug("Calling PostReset for each module", "len(pending)", len(pending))
+			for _, module := range pool.modules {
+				module.PostReset(oldHead, newHead, queue, pending)
+			}
 		}
 	}
 	pool.txMu.Unlock()
@@ -665,6 +670,15 @@ func (pool *TxPool) pendingUnlocked() (map[common.Address]types.Transactions, er
 		pending[addr] = list.Flatten()
 	}
 	return pending, nil
+}
+
+// queueUnlocked must be protected by pool.mu AND pool.txMu by the caller.
+func (pool *TxPool) queueUnlocked() (map[common.Address]types.Transactions, error) {
+	queue := make(map[common.Address]types.Transactions)
+	for addr, list := range pool.queue {
+		queue[addr] = list.Flatten()
+	}
+	return queue, nil
 }
 
 // CachedPendingTxsByCount retrieves about number of currently processable transactions
