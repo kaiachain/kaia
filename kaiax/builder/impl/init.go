@@ -105,12 +105,6 @@ func (k knownTxs) numQueue() int {
 	return num
 }
 
-func (k knownTxs) markUnexecutable(hash common.Hash) {
-	if tx, ok := k[hash]; ok {
-		tx.tx.MarkUnexecutable(true)
-	}
-}
-
 func (k knownTxs) getTimeOfOldestKnownTx() int64 {
 	var oldestTime float64 = 0
 	for _, knownTx := range k {
