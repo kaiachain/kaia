@@ -752,10 +752,10 @@ func TestPreReset_Timeout(t *testing.T) {
 	now := time.Now()
 
 	tests := []struct {
-		name                 string
-		existingBundles      *knownTxs
-		expectedBundles      *knownTxs
-		expectedUnexecutable bool
+		name            string
+		existingBundles *knownTxs
+		expectedBundles *knownTxs
+		expectedDrop    []common.Hash
 	}{
 		{
 			name: "Bundle tx within PendingTimeout period",
@@ -771,7 +771,7 @@ func TestPreReset_Timeout(t *testing.T) {
 					time: now,
 				},
 			},
-			expectedUnexecutable: false,
+			expectedDrop: []common.Hash{},
 		},
 		{
 			name: "Bundle tx exceeds PendingTimeout period",
@@ -787,7 +787,7 @@ func TestPreReset_Timeout(t *testing.T) {
 					time: now.Add(-PendingTimeout),
 				},
 			},
-			expectedUnexecutable: true,
+			expectedDrop: []common.Hash{createTestTransaction(0).Hash()},
 		},
 		{
 			name: "Bundle tx exceeds KnownTxTimeout period",
@@ -797,8 +797,8 @@ func TestPreReset_Timeout(t *testing.T) {
 					time: now.Add(-KnownTxTimeout),
 				},
 			},
-			expectedBundles:      new(knownTxs),
-			expectedUnexecutable: false,
+			expectedBundles: new(knownTxs),
+			expectedDrop:    []common.Hash{},
 		},
 	}
 
@@ -812,7 +812,7 @@ func TestPreReset_Timeout(t *testing.T) {
 				knownTxs:         tt.existingBundles.Copy(),
 			}
 
-			builderModule.PreReset(nil, nil)
+			drops := builderModule.PreReset(nil, nil)
 
 			// Verify the number of bundles
 			assert.Equal(t, len(*tt.expectedBundles), len(*builderModule.knownTxs))
@@ -823,7 +823,7 @@ func TestPreReset_Timeout(t *testing.T) {
 				assert.True(t, exists)
 				assert.Equal(t, expected.tx.Hash(), actual.tx.Hash())
 				assert.Equal(t, expected.time, actual.time)
-				assert.Equal(t, tt.expectedUnexecutable, actual.tx.IsMarkedUnexecutable())
+				assert.Equal(t, tt.expectedDrop, drops)
 			}
 		})
 	}
@@ -854,10 +854,10 @@ func TestPreReset_TxPoolModule(t *testing.T) {
 
 			mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
 			if tt.hasTxPoolModule {
-				mockTxPoolModule.EXPECT().PreReset(nil, nil).Return().Times(1)
+				mockTxPoolModule.EXPECT().PreReset(nil, nil).Return(nil).Times(1)
 				builderModule.txPoolModule = mockTxPoolModule
 			} else {
-				mockTxPoolModule.EXPECT().PreReset(nil, nil).Return().Times(0)
+				mockTxPoolModule.EXPECT().PreReset(nil, nil).Return(nil).Times(0)
 			}
 
 			builderModule.PreReset(nil, nil)
@@ -1070,7 +1070,7 @@ func TestPreAddTx_BundleTxQueueManagement(t *testing.T) {
 			isBundleTx:              true,
 			maxBundleTxsInQueue:     10,
 			initialQueueCount:       10,
-			expectedError:           errors.New("queue is full"),
+			expectedError:           ErrBundleTxQueueFull,
 			expectedQueueCountAfter: 10,
 		},
 		{
@@ -1079,7 +1079,7 @@ func TestPreAddTx_BundleTxQueueManagement(t *testing.T) {
 			isBundleTx:              true,
 			maxBundleTxsInQueue:     10,
 			initialQueueCount:       11,
-			expectedError:           errors.New("queue is full"),
+			expectedError:           ErrBundleTxQueueFull,
 			expectedQueueCountAfter: 11, // Should not change
 		},
 		{
@@ -1088,7 +1088,7 @@ func TestPreAddTx_BundleTxQueueManagement(t *testing.T) {
 			isBundleTx:              true,
 			maxBundleTxsInQueue:     0,
 			initialQueueCount:       0,
-			expectedError:           errors.New("queue is full"),
+			expectedError:           ErrBundleTxQueueFull,
 			expectedQueueCountAfter: 0,
 		},
 	}

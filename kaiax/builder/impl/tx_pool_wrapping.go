@@ -157,7 +157,7 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) []commo
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	var drops []common.Hash
+	drops := make([]common.Hash, 0)
 
 	for hash, knownTx := range *b.knownTxs {
 		// remove pending timed out tx from tx pool
