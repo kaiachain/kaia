@@ -67,6 +67,7 @@ func DefaultGaslessConfig() *GaslessConfig {
 		AllowedTokens:         nil,
 		Disable:               false,
 		MaxBundleTxsInPending: 100,
+		MaxBundleTxsInQueue:   200,
 	}
 }
 
