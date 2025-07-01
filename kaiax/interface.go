@@ -156,7 +156,7 @@ type TxPoolModule interface {
 	IsReady(txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool
 
 	// Additional actions to perform before the txpool is reset.
-	PreReset(oldHead, newHead *types.Header)
+	PreReset(oldHead, newHead *types.Header) (dropTxs []common.Hash)
 
 	// Additional actions to perform after the txpool is reset.
 	PostReset(oldHead, newHead *types.Header, queue, pending map[common.Address]types.Transactions)

@@ -412,10 +412,15 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 // of the transaction pool is valid with regard to the chain state.
 func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.txMu.Lock()
+	var drops []common.Hash
 	for _, module := range pool.modules {
-		module.PreReset(oldHead, newHead)
+		drops = append(drops, module.PreReset(oldHead, newHead)...)
 	}
 	pool.txMu.Unlock()
+
+	for _, txHash := range drops {
+		pool.removeTx(txHash, false)
+	}
 
 	// If we're reorging an old state, reinject all dropped transactions
 	var reinject types.Transactions

@@ -104,9 +104,11 @@ func (mr *MockTxPoolModuleMockRecorder) PreAddTx(arg0, arg1 interface{}) *gomock
 }
 
 // PreReset mocks base method.
-func (m *MockTxPoolModule) PreReset(arg0, arg1 *types.Header) {
+func (m *MockTxPoolModule) PreReset(arg0, arg1 *types.Header) []common.Hash {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PreReset", arg0, arg1)
+	ret := m.ctrl.Call(m, "PreReset", arg0, arg1)
+	ret0, _ := ret[0].([]common.Hash)
+	return ret0
 }
 
 // PreReset indicates an expected call of PreReset.
