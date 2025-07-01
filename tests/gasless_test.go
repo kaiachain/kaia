@@ -43,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -52,7 +53,7 @@ var (
 )
 
 func TestGasless(t *testing.T) {
-	log.EnableLogForTest(log.LvlError, log.LvlInfo)
+	log.EnableLogForTest(log.LvlError, log.LvlError)
 
 	// prepare chain configuration
 	config := params.MainnetChainConfig.Copy()
@@ -130,12 +131,13 @@ func TestGasless(t *testing.T) {
 	setupLiquidity(t, owner, contracts, chain)
 
 	/* ------------------------------------ Main test process ------------------------------------- */
-	// get amounts out
+	// In the test below, we swap 1 Token -> `amountsOut` WKAIA.
 	swapAmmount := new(big.Int).Mul(big.NewInt(1), bigKaia)
 	amountsOut, err := routerContract.GetAmountsOut(&bind.CallOpts{}, swapAmmount, []common.Address{testTokenAddr, wkaiaAddr})
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("amountsOut: %s", amountsOut)
 
 	var (
 		gasPriceBN         = new(big.Int).Mul(big.NewInt(50), bigGkei)
@@ -143,11 +145,26 @@ func TestGasless(t *testing.T) {
 		R2                 = new(big.Int).Mul(big.NewInt(100000), gasPriceBN)
 		R3                 = new(big.Int).Mul(big.NewInt(500000), gasPriceBN)
 		ammontRepay        = new(big.Int).Add(R1, new(big.Int).Add(R2, R3))
+		amountRepaySwap    = new(big.Int).Add(R1, R3)
 		transferToken      = new(big.Int).Mul(big.NewInt(100), bigKaia)
 		swapExpectedOutput = amountsOut[1]
 		margin             = new(big.Int).Div(swapExpectedOutput, big.NewInt(100))
 		minAmountOut       = new(big.Int).Add(ammontRepay, margin)
+		deadline           = new(big.Int).Add(chain.CurrentBlock().Time(), big.NewInt(300))
 	)
+
+	//// Reject when token balance is zero, approval is zero.
+
+	// reject approveTx when token balance is zero
+	_, err = makeApproveTx(t, testTokenContract, accounts[0], gsrAddr, abi.MaxUint256)
+	assert.ErrorContains(t, err, "insufficient sender token balance")
+	assert.ErrorContains(t, err, "have=0, want=nonzero")
+
+	// reject swapTx when token isn't yet approved
+	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, ammontRepay, deadline)
+	assert.ErrorContains(t, err, "insufficient approval: approval=0")
+
+	//// After having token balance, ApproveTx + SwapTx pair succeeds.
 
 	// transfer test token
 	testTokenTransferTx, err := testTokenContract.Transfer(bind.NewKeyedTransactor(owner.Keys[0]), accounts[0].Addr, transferToken)
@@ -165,28 +182,19 @@ func TestGasless(t *testing.T) {
 	t.Log("test acc balance: ", preSwapBalanceOfTestAcc)
 	t.Log("owner balance: ", preSwapBalanceOfOwner)
 
-	// send approveTx
-	optsForApprove := bind.NewKeyedTransactor(accounts[0].Keys[0])
-	optsForApprove.GasLimit = 300000
-	optsForApprove.Nonce = big.NewInt(int64(accounts[0].Nonce))
-	approveTx, err := testTokenContract.Approve(optsForApprove, gsrAddr, abi.MaxUint256)
+	// success send normal approveTx
+	approveTx, err := makeApproveTx(t, testTokenContract, accounts[0], gsrAddr, abi.MaxUint256)
 	if err != nil {
 		t.Fatal(err)
 	}
 	accounts[0].Nonce += 1
-	t.Log("approveTxHash", approveTx.Hash().Hex())
 
-	// send swapTx
-	optsForSwap := bind.NewKeyedTransactor(accounts[0].Keys[0])
-	optsForSwap.GasLimit = 300000
-	optsForSwap.Nonce = big.NewInt(int64(accounts[0].Nonce))
-	deadline := new(big.Int).Add(chain.CurrentBlock().Time(), big.NewInt(300))
-	swapTx, err := gsrContract.SwapForGas(optsForSwap, testTokenAddr, swapAmmount, minAmountOut, ammontRepay, deadline)
+	// success send normal swapTx
+	swapTx, err := makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, ammontRepay, deadline)
 	if err != nil {
 		t.Fatal(err)
 	}
 	accounts[0].Nonce += 1
-	t.Log("swapTxHash", swapTx.Hash().Hex())
 
 	// check if account[0] without kaia can send tx
 	approveTxReceipt := waitReceipt(chain, approveTx.Hash())
@@ -196,6 +204,8 @@ func TestGasless(t *testing.T) {
 	swapTxReceipt := waitReceipt(chain, swapTx.Hash())
 	require.NotNil(t, swapTxReceipt)
 	require.Equal(t, types.ReceiptStatusSuccessful, swapTxReceipt.Status, "swapTx failed")
+
+	//// Verify the effect of ApproveTx + SwapTx pair.
 
 	// verify test acc's kaia balances
 	// since gasPrice may be less than the theoretical value, we check that the current balance is greater than or equal to FinalUserAmount.
@@ -221,7 +231,27 @@ func TestGasless(t *testing.T) {
 	// expected: (current balance) = (pre balance) - swapAmmount
 	currentBalanceOfTestAcc, _ := testTokenContract.BalanceOf(&bind.CallOpts{}, accounts[0].Addr)
 	require.True(t, currentBalanceOfTestAcc.Cmp(new(big.Int).Sub(preSwapBalanceOfTestAcc, swapAmmount)) == 0)
-	t.Log(currentBalanceOfTestAcc.Cmp(new(big.Int).Sub(preSwapBalanceOfTestAcc, swapAmmount)) == 0)
+	t.Logf("final token balance is correct: %v", currentBalanceOfTestAcc.Cmp(new(big.Int).Sub(preSwapBalanceOfTestAcc, swapAmmount)) == 0)
+
+	//// Reject obviously reverting SwapTx.
+
+	// reject swapTx when minAmountOut < amountRepay
+	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, common.Big0, amountRepaySwap, deadline)
+	assert.ErrorContains(t, err, "insufficient minAmountOut")
+
+	// reject swapTx when amountIn < router.GetAmountIn(minAmountOut)
+	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, common.Big0, minAmountOut, amountRepaySwap, deadline)
+	assert.ErrorContains(t, err, "insufficient amountIn")
+
+	// reject swapTx when balance < amountIn
+	// the test acc first received `transferToken` but used up some. So it has less than `transferToken`.
+	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, transferToken, minAmountOut, amountRepaySwap, deadline)
+	assert.ErrorContains(t, err, "insufficient balance")
+
+	// reject swapTx when deadline is in the past
+	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, amountRepaySwap, common.Big1)
+	assert.ErrorContains(t, err, "insufficient deadline: deadline=1")
+
 }
 
 func deployTestToken(t *testing.T, chain *blockchain.BlockChain, transactor *backends.BlockchainContractBackend, owner *TestAccountType, initialHolder common.Address,
@@ -428,4 +458,28 @@ func setupLiquidity(t *testing.T, owner *TestAccountType, contracts contractsFor
 		t.Fatal("failed to add token to gsr")
 	}
 	owner.Nonce += 1
+}
+
+func makeApproveTx(t *testing.T, testTokenContract *testingGaslessContracts.TestToken, owner *TestAccountType, gsrAddr common.Address, amount *big.Int) (*types.Transaction, error) {
+	optsForApprove := bind.NewKeyedTransactor(owner.Keys[0])
+	optsForApprove.GasLimit = 300000
+	optsForApprove.Nonce = big.NewInt(int64(owner.Nonce))
+	approveTx, err := testTokenContract.Approve(optsForApprove, gsrAddr, amount)
+	if err != nil {
+		return nil, err
+	}
+	t.Log("approveTxHash", approveTx.Hash().Hex())
+	return approveTx, nil
+}
+
+func makeSwapTx(t *testing.T, gsrContract *gaslessContract.GaslessSwapRouter, owner *TestAccountType, testTokenAddr common.Address, swapAmmount *big.Int, minAmountOut *big.Int, ammontRepay *big.Int, deadline *big.Int) (*types.Transaction, error) {
+	optsForSwap := bind.NewKeyedTransactor(owner.Keys[0])
+	optsForSwap.GasLimit = 300000
+	optsForSwap.Nonce = big.NewInt(int64(owner.Nonce))
+	swapTx, err := gsrContract.SwapForGas(optsForSwap, testTokenAddr, swapAmmount, minAmountOut, ammontRepay, deadline)
+	if err != nil {
+		return nil, err
+	}
+	t.Log("swapTxHash", swapTx.Hash().Hex())
+	return swapTx, nil
 }
