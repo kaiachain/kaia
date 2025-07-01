@@ -251,7 +251,6 @@ func TestGasless(t *testing.T) {
 	// reject swapTx when deadline is in the past
 	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, amountRepaySwap, common.Big1)
 	assert.ErrorContains(t, err, "insufficient deadline: deadline=1")
-
 }
 
 func deployTestToken(t *testing.T, chain *blockchain.BlockChain, transactor *backends.BlockchainContractBackend, owner *TestAccountType, initialHolder common.Address,

@@ -27,12 +27,21 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/contracts/contracts/testing/sc_erc20"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
 
-var logger = log.NewModuleLogger(log.KaiaxGasless)
+var (
+	logger = log.NewModuleLogger(log.KaiaxGasless)
+
+	_ kaiax.BaseModule         = (*GaslessModule)(nil)
+	_ kaiax.ExecutionModule    = (*GaslessModule)(nil)
+	_ kaiax.TxPoolModule       = (*GaslessModule)(nil)
+	_ builder.TxBundlingModule = (*GaslessModule)(nil)
+)
 
 type InitOpts struct {
 	ChainConfig   *params.ChainConfig

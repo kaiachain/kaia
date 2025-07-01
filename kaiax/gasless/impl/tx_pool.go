@@ -26,10 +26,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip247"
 	"github.com/kaiachain/kaia/contracts/contracts/testing/sc_erc20"
-	"github.com/kaiachain/kaia/kaiax"
 )
-
-var _ kaiax.TxPoolModule = (*GaslessModule)(nil)
 
 func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
 	return nil
