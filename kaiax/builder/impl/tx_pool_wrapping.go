@@ -32,7 +32,9 @@ var _ kaiax.TxPoolModule = (*BuilderWrappingModule)(nil)
 
 var (
 	// Metrics for knownTxs
+	numQueueGauge               = metrics.NewRegisteredGauge("txpool/knowntxs/num/queue", nil)
 	numPendingGauge             = metrics.NewRegisteredGauge("txpool/knowntxs/num/pending", nil)
+	numExecutableGauge          = metrics.NewRegisteredGauge("txpool/knowntxs/num/executable", nil)
 	oldestTxTimeInKnownTxsGauge = metrics.NewRegisteredGauge("txpool/knowntxs/oldesttime/seconds", nil)
 )
 
@@ -119,8 +121,7 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 		isPrevTxBundleTx := len(ready) != 0 && b.txBundlingModule.IsBundleTx(ready[len(ready)-1])
 		if isPrevTxBundleTx {
 			b.knownTxs.add(tx, TxStatusPending)
-			numPendingGauge.Update(int64(b.knownTxs.numPending()))
-			oldestTxTimeInKnownTxsGauge.Update(b.knownTxs.getTimeOfOldestKnownTx())
+			updateMetrics(b.knownTxs)
 			return true
 		}
 
@@ -145,8 +146,7 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 		}
 
 		b.knownTxs.add(tx, TxStatusPending)
-		numPendingGauge.Update(int64(b.knownTxs.numPending()))
-		oldestTxTimeInKnownTxsGauge.Update(b.knownTxs.getTimeOfOldestKnownTx())
+		updateMetrics(b.knownTxs)
 	}
 
 	return true
@@ -165,8 +165,7 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) {
 		// remove known timed out tx from knownTxs
 		if knownTx.elapsedTime() >= KnownTxTimeout {
 			b.knownTxs.delete(hash)
-			numPendingGauge.Update(int64(b.knownTxs.numPending()))
-			oldestTxTimeInKnownTxsGauge.Update(b.knownTxs.getTimeOfOldestKnownTx())
+			updateMetrics(b.knownTxs)
 		}
 	}
 	if b.txPoolModule != nil {
@@ -205,4 +204,11 @@ func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header, queue,
 	if b.txPoolModule != nil {
 		b.txPoolModule.PostReset(oldHead, newHead, queue, pending)
 	}
+}
+
+func updateMetrics(knownTxs *knownTxs) {
+	numQueueGauge.Update(int64(knownTxs.numQueue()))
+	numPendingGauge.Update(int64(knownTxs.numPending()))
+	numExecutableGauge.Update(int64(knownTxs.numExecutable()))
+	oldestTxTimeInKnownTxsGauge.Update(knownTxs.getTimeOfOldestKnownTx())
 }
