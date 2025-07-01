@@ -1270,7 +1270,7 @@ func TestPostReset_TransactionStatusUpdates(t *testing.T) {
 				},
 			},
 			queue: map[common.Address]types.Transactions{
-				common.Address{1}: {createTestTransaction(0)},
+				{1}: {createTestTransaction(0)},
 			},
 			pending: map[common.Address]types.Transactions{},
 			expectedStatus: map[common.Hash]int{
@@ -1288,7 +1288,7 @@ func TestPostReset_TransactionStatusUpdates(t *testing.T) {
 			},
 			queue: map[common.Address]types.Transactions{},
 			pending: map[common.Address]types.Transactions{
-				common.Address{1}: {createTestTransaction(0)},
+				{1}: {createTestTransaction(0)},
 			},
 			expectedStatus: map[common.Hash]int{
 				createTestTransaction(0).Hash(): TxStatusPending,
@@ -1304,10 +1304,10 @@ func TestPostReset_TransactionStatusUpdates(t *testing.T) {
 				},
 			},
 			queue: map[common.Address]types.Transactions{
-				common.Address{1}: {createTestTransaction(0)},
+				{1}: {createTestTransaction(0)},
 			},
 			pending: map[common.Address]types.Transactions{
-				common.Address{1}: {createTestTransaction(0)},
+				{1}: {createTestTransaction(0)},
 			},
 			expectedStatus: map[common.Hash]int{
 				createTestTransaction(0).Hash(): TxStatusQueue,
@@ -1353,11 +1353,11 @@ func TestPostReset_TransactionStatusUpdates(t *testing.T) {
 				},
 			},
 			queue: map[common.Address]types.Transactions{
-				common.Address{1}: {createTestTransaction(0)},
-				common.Address{2}: {createTestTransaction(1)},
+				{1}: {createTestTransaction(0)},
+				{2}: {createTestTransaction(1)},
 			},
 			pending: map[common.Address]types.Transactions{
-				common.Address{3}: {createTestTransaction(2)},
+				{3}: {createTestTransaction(2)},
 			},
 			expectedStatus: map[common.Hash]int{
 				createTestTransaction(0).Hash(): TxStatusQueue,   // In queue
@@ -1370,10 +1370,10 @@ func TestPostReset_TransactionStatusUpdates(t *testing.T) {
 			name:     "Empty knownTxs should not cause any issues",
 			knownTxs: &knownTxs{},
 			queue: map[common.Address]types.Transactions{
-				common.Address{1}: {createTestTransaction(0)},
+				{1}: {createTestTransaction(0)},
 			},
 			pending: map[common.Address]types.Transactions{
-				common.Address{1}: {createTestTransaction(1)},
+				{1}: {createTestTransaction(1)},
 			},
 			expectedStatus: map[common.Hash]int{},
 		},
@@ -1387,10 +1387,10 @@ func TestPostReset_TransactionStatusUpdates(t *testing.T) {
 				},
 			},
 			queue: map[common.Address]types.Transactions{
-				common.Address{2}: {createTestTransaction(1)}, // Different transaction
+				{2}: {createTestTransaction(1)}, // Different transaction
 			},
 			pending: map[common.Address]types.Transactions{
-				common.Address{3}: {createTestTransaction(2)}, // Different transaction
+				{3}: {createTestTransaction(2)}, // Different transaction
 			},
 			expectedStatus: map[common.Hash]int{
 				createTestTransaction(0).Hash(): TxStatusDemoted, // Should be demoted since not found
