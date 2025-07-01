@@ -55,20 +55,21 @@ func (g *GaslessModule) checkBalanceForApprove(approveArgs *ApproveArgs) error {
 	token := approveArgs.Token
 	bc := backends.NewBlockchainContractBackend(g.Chain, nil, nil)
 
-	tokenContract, err := sc_erc20.NewERC20(token, bc)
-	if err != nil {
-		return err
-	}
+	if g.GaslessConfig.ShouldCheckToken() {
+		tokenContract, err := sc_erc20.NewERC20(token, bc)
+		if err != nil {
+			return err
+		}
 
-	// tx.token.balanceOf(sender) > 0
-	tokenBalance, err := tokenContract.BalanceOf(nil, approveArgs.Sender)
-	if err != nil {
-		return err
+		// tx.token.balanceOf(sender) > 0
+		tokenBalance, err := tokenContract.BalanceOf(nil, approveArgs.Sender)
+		if err != nil {
+			return err
+		}
+		if tokenBalance.Sign() <= 0 {
+			return fmt.Errorf("insufficient sender token balance: token=%s, have=%s, want=nonzero", token.Hex(), tokenBalance.String())
+		}
 	}
-	if tokenBalance.Sign() <= 0 {
-		return fmt.Errorf("insufficient sender token balance: token=%s, have=%s, want=nonzero", token.Hex(), tokenBalance.String())
-	}
-
 	return nil
 }
 
@@ -78,17 +79,8 @@ func (g *GaslessModule) checkBalanceForApprove(approveArgs *ApproveArgs) error {
 // tx.token.balanceOf(sender) >= tx.amountIn
 // tx.deadline >= currentTimestamp
 func (g *GaslessModule) checkBalanceForSwap(swapArgs *SwapArgs, swapNonce uint64) error {
-	// If SwapTx.nonce is the sender's next nonce, then there is no room for ApproveTx proceeding SwapTx.
-	senderNonce := g.getCurrentStateNonce(swapArgs.Sender)
-	noApproveTxPreceeds := swapNonce == senderNonce
-
 	token := swapArgs.Token
 	bc := backends.NewBlockchainContractBackend(g.Chain, nil, nil)
-
-	tokenContract, err := sc_erc20.NewERC20(token, bc)
-	if err != nil {
-		return err
-	}
 
 	// tx.minAmountOut >= tx.amountRepay
 	minAmountOut := swapArgs.MinAmountOut
@@ -97,38 +89,51 @@ func (g *GaslessModule) checkBalanceForSwap(swapArgs *SwapArgs, swapNonce uint64
 		return fmt.Errorf("insufficient minAmountOut: minAmountOut=%s, amountRepay=%s", minAmountOut.String(), amountRepay.String())
 	}
 
-	// tx.amountIn >= gsr.getAmountIn(minAmountOut)
-	routerContract, err := kip247.NewGaslessSwapRouterCaller(g.swapRouter, bc)
-	if err != nil {
-		return err
-	}
-	// Required token amountIn, given the current exchange rate and the declared minAmountOut.
-	requiredAmountIn, err := routerContract.GetAmountIn(nil, token, minAmountOut)
-	if err != nil {
-		return err
-	}
-	if swapArgs.AmountIn.Cmp(requiredAmountIn) < 0 {
-		return fmt.Errorf("insufficient amountIn: have=%s, want=%s", swapArgs.AmountIn.String(), requiredAmountIn.String())
-	}
-
-	if noApproveTxPreceeds {
-		// tx.token.allowance(sender, router) >= tx.amountIn
-		approval, err := tokenContract.Allowance(nil, swapArgs.Sender, g.swapRouter)
+	if g.GaslessConfig.ShouldCheckSwapAmount() {
+		// tx.amountIn >= gsr.getAmountIn(minAmountOut)
+		routerContract, err := kip247.NewGaslessSwapRouterCaller(g.swapRouter, bc)
 		if err != nil {
 			return err
 		}
-		if approval.Cmp(swapArgs.AmountIn) < 0 {
-			return fmt.Errorf("insufficient approval: approval=%s, want=%s", approval.String(), swapArgs.AmountIn.String())
+		// Required token amountIn, given the current exchange rate and the declared minAmountOut.
+		requiredAmountIn, err := routerContract.GetAmountIn(nil, token, minAmountOut)
+		if err != nil {
+			return err
+		}
+		if swapArgs.AmountIn.Cmp(requiredAmountIn) < 0 {
+			return fmt.Errorf("insufficient amountIn: have=%s, want=%s", swapArgs.AmountIn.String(), requiredAmountIn.String())
 		}
 	}
 
-	// tx.token.balanceOf(sender) >= tx.amountIn
-	balance, err := tokenContract.BalanceOf(nil, swapArgs.Sender)
-	if err != nil {
-		return err
-	}
-	if balance.Cmp(swapArgs.AmountIn) < 0 {
-		return fmt.Errorf("insufficient balance: balance=%s, want=%s", balance.String(), swapArgs.AmountIn.String())
+	if g.GaslessConfig.ShouldCheckToken() {
+
+		tokenContract, err := sc_erc20.NewERC20(token, bc)
+		if err != nil {
+			return err
+		}
+
+		// If SwapTx.nonce is the sender's next nonce, then there is no room for ApproveTx proceeding SwapTx.
+		senderNonce := g.getCurrentStateNonce(swapArgs.Sender)
+		noApproveTxPreceeds := swapNonce == senderNonce
+		if noApproveTxPreceeds {
+			// tx.token.allowance(sender, router) >= tx.amountIn
+			approval, err := tokenContract.Allowance(nil, swapArgs.Sender, g.swapRouter)
+			if err != nil {
+				return err
+			}
+			if approval.Cmp(swapArgs.AmountIn) < 0 {
+				return fmt.Errorf("insufficient approval: approval=%s, want=%s", approval.String(), swapArgs.AmountIn.String())
+			}
+		}
+
+		// tx.token.balanceOf(sender) >= tx.amountIn
+		balance, err := tokenContract.BalanceOf(nil, swapArgs.Sender)
+		if err != nil {
+			return err
+		}
+		if balance.Cmp(swapArgs.AmountIn) < 0 {
+			return fmt.Errorf("insufficient balance: balance=%s, want=%s", balance.String(), swapArgs.AmountIn.String())
+		}
 	}
 
 	// tx.deadline >= currentTimestamp
