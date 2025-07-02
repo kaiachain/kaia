@@ -147,7 +147,7 @@ func (t *knownTx) elapsedPromotedTime() time.Duration {
 	return time.Since(t.promotedTime)
 }
 
-func (t *knownTx) elapsedAddedOrPromotedTime() time.Duration {
+func (t *knownTx) elapsedPromotedOrAddedTime() time.Duration {
 	if t.promotedTime.IsZero() {
 		return t.elapsedAddedTime()
 	}
