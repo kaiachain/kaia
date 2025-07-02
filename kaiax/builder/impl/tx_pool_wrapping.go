@@ -60,7 +60,7 @@ func (b *BuilderWrappingModule) PreAddTx(tx *types.Transaction, local bool) erro
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	if knownTx, ok := b.knownTxs.get(tx.Hash()); ok && knownTx.elapsedPromotedTime() < KnownTxTimeout {
+	if knownTx, ok := b.knownTxs.get(tx.Hash()); ok && knownTx.elapsedAddedTime() < KnownTxTimeout {
 		return ErrUnableToAddKnownBundleTx
 	}
 

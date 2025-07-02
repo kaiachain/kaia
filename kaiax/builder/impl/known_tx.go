@@ -107,8 +107,8 @@ func (k knownTxs) numQueue() int {
 func (k knownTxs) getTimeOfOldestKnownTx() int64 {
 	var oldestTime float64 = 0
 	for _, knownTx := range k {
-		if oldestTime < knownTx.elapsedPromotedTime().Seconds() {
-			oldestTime = knownTx.elapsedPromotedTime().Seconds()
+		if oldestTime < knownTx.elapsedAddedTime().Seconds() {
+			oldestTime = knownTx.elapsedAddedTime().Seconds()
 		}
 	}
 	return int64(oldestTime)
