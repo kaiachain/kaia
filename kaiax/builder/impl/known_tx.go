@@ -35,10 +35,18 @@ func (k knownTxs) add(tx *types.Transaction, status int) {
 	} else {
 		k[tx.Hash()] = &knownTx{
 			tx:           tx,
-			promotedTime: time.Now(),
+			addedTime:    time.Time{},
+			promotedTime: time.Time{},
 			status:       status,
 		}
 	}
+
+	if status == TxStatusQueue {
+		k[tx.Hash()].startAddedTimeIfZero()
+	} else if status == TxStatusPending {
+		k[tx.Hash()].startPromotedTimeIfZero()
+	}
+
 	updateMetrics(&k)
 }
 
@@ -99,8 +107,8 @@ func (k knownTxs) numQueue() int {
 func (k knownTxs) getTimeOfOldestKnownTx() int64 {
 	var oldestTime float64 = 0
 	for _, knownTx := range k {
-		if oldestTime < knownTx.elapsedTime().Seconds() {
-			oldestTime = knownTx.elapsedTime().Seconds()
+		if oldestTime < knownTx.elapsedPromotedTime().Seconds() {
+			oldestTime = knownTx.elapsedPromotedTime().Seconds()
 		}
 	}
 	return int64(oldestTime)
@@ -131,7 +139,11 @@ type knownTx struct {
 	status int
 }
 
-func (t *knownTx) elapsedTime() time.Duration {
+func (t *knownTx) elapsedAddedTime() time.Duration {
+	return time.Since(t.addedTime)
+}
+
+func (t *knownTx) elapsedPromotedTime() time.Duration {
 	return time.Since(t.promotedTime)
 }
 
@@ -143,6 +155,7 @@ func (t *knownTx) startAddedTimeIfZero() time.Time {
 }
 
 func (t *knownTx) startPromotedTimeIfZero() time.Time {
+	t.startAddedTimeIfZero()
 	if t.promotedTime.IsZero() {
 		t.promotedTime = time.Now()
 	}

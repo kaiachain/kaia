@@ -558,7 +558,8 @@ func TestIsReady_KnownTxs(t *testing.T) {
 					assert.True(t, time.Since(actual.promotedTime) < time.Second, "New transaction time should be recent")
 				} else {
 					// For existing transactions, verify the time is preserved
-					assert.Equal(t, expected.promotedTime, actual.promotedTime, "Existing transaction time should be preserved")
+					assert.Equal(t, expected.addedTime, actual.addedTime, "Existing transaction's addedTime should be preserved")
+					assert.Equal(t, expected.promotedTime, actual.promotedTime, "Existing transaction's promotedTime should be preserved")
 				}
 			}
 		})
@@ -912,6 +913,7 @@ func TestPreReset_Timeout(t *testing.T) {
 			existingBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
+					addedTime:    now,
 					promotedTime: now,
 					status:       TxStatusPending,
 				},
@@ -919,6 +921,7 @@ func TestPreReset_Timeout(t *testing.T) {
 			expectedBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
+					addedTime:    now,
 					promotedTime: now,
 					status:       TxStatusPending,
 				},
@@ -929,16 +932,16 @@ func TestPreReset_Timeout(t *testing.T) {
 			name: "Bundle tx within QueueTimeout period",
 			existingBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now,
-					status:       TxStatusQueue,
+					tx:        createTestTransaction(0),
+					addedTime: now,
+					status:    TxStatusQueue,
 				},
 			},
 			expectedBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now,
-					status:       TxStatusQueue,
+					tx:        createTestTransaction(0),
+					addedTime: now,
+					status:    TxStatusQueue,
 				},
 			},
 			expectedDrop: []common.Hash{},
@@ -948,6 +951,7 @@ func TestPreReset_Timeout(t *testing.T) {
 			existingBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
+					addedTime:    now,
 					promotedTime: now.Add(-PendingTimeout),
 					status:       TxStatusPending,
 				},
@@ -955,6 +959,7 @@ func TestPreReset_Timeout(t *testing.T) {
 			expectedBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
+					addedTime:    now,
 					promotedTime: now.Add(-PendingTimeout),
 					status:       TxStatusPending,
 				},
@@ -965,16 +970,16 @@ func TestPreReset_Timeout(t *testing.T) {
 			name: "Bundle tx exceeds QueueTimeout period",
 			existingBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now.Add(-QueueTimeout),
-					status:       TxStatusQueue,
+					tx:        createTestTransaction(0),
+					addedTime: now.Add(-QueueTimeout),
+					status:    TxStatusQueue,
 				},
 			},
 			expectedBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now.Add(-QueueTimeout),
-					status:       TxStatusQueue,
+					tx:        createTestTransaction(0),
+					addedTime: now.Add(-QueueTimeout),
+					status:    TxStatusQueue,
 				},
 			},
 			expectedDrop: []common.Hash{createTestTransaction(0).Hash()},
@@ -1012,6 +1017,7 @@ func TestPreReset_Timeout(t *testing.T) {
 				actual, exists := (*builderModule.knownTxs)[hash]
 				assert.True(t, exists)
 				assert.Equal(t, expected.tx.Hash(), actual.tx.Hash())
+				assert.Equal(t, expected.addedTime, actual.addedTime)
 				assert.Equal(t, expected.promotedTime, actual.promotedTime)
 				assert.Equal(t, tt.expectedDrop, drops)
 			}
