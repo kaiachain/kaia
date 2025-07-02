@@ -123,6 +123,7 @@ const (
 // A metadata of a known bundle tx that has been submitted to txpool during the last window (KnownTxTimeout).
 type knownTx struct {
 	tx           *types.Transaction
+	addedTime    time.Time
 	promotedTime time.Time
 
 	// The location in txpool, of this knownTx.
@@ -132,4 +133,18 @@ type knownTx struct {
 
 func (t *knownTx) elapsedTime() time.Duration {
 	return time.Since(t.promotedTime)
+}
+
+func (t *knownTx) startAddedTimeIfZero() time.Time {
+	if t.addedTime.IsZero() {
+		t.addedTime = time.Now()
+	}
+	return t.addedTime
+}
+
+func (t *knownTx) startPromotedTimeIfZero() time.Time {
+	if t.promotedTime.IsZero() {
+		t.promotedTime = time.Now()
+	}
+	return t.promotedTime
 }
