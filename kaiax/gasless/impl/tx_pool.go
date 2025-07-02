@@ -59,9 +59,11 @@ func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, rea
 	return false
 }
 
-func (g *GaslessModule) PreReset(oldHead, newHead *types.Header) {}
+func (g *GaslessModule) PreReset(oldHead, newHead *types.Header) []common.Hash {
+	return nil
+}
 
-func (g *GaslessModule) PostReset(oldHead, newHead *types.Header, pending map[common.Address]types.Transactions) {
+func (g *GaslessModule) PostReset(oldHead, newHead *types.Header, queue, pending map[common.Address]types.Transactions) {
 }
 
 // isApproveTxReady assumes that the caller checked `g.IsApproveTx(approveTx)`

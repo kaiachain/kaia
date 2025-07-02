@@ -412,10 +412,15 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 // of the transaction pool is valid with regard to the chain state.
 func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	pool.txMu.Lock()
+	var drops []common.Hash
 	for _, module := range pool.modules {
-		module.PreReset(oldHead, newHead)
+		drops = append(drops, module.PreReset(oldHead, newHead)...)
 	}
 	pool.txMu.Unlock()
+
+	for _, txHash := range drops {
+		pool.removeTx(txHash, false)
+	}
 
 	// If we're reorging an old state, reinject all dropped transactions
 	var reinject types.Transactions
@@ -533,20 +538,30 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
 	}
 
-	pool.txMu.Lock()
-	// pendingUnlocked() is supposed to be protected by pool.mu and pool.txMu.
-	// - pool.mu is held by (1) callers of reset() - loop(), lockedReset() or (2) unnecessary - NewTxPool()
-	// - pool.txMu is held here.
-	pending, err := pool.pendingUnlocked()
-	if err != nil {
-		logger.Error("Failed to get pending transactions, skip PostReset", "err", err)
-	} else {
+	func() {
+		pool.txMu.Lock()
+		defer pool.txMu.Unlock()
+
+		// pendingUnlocked() is supposed to be protected by pool.mu and pool.txMu.
+		// - pool.mu is held by (1) callers of reset() - loop(), lockedReset() or (2) unnecessary - NewTxPool()
+		// - pool.txMu is held here.
+		queue, err := pool.queueUnlocked()
+		if err != nil {
+			logger.Error("Failed to get queue transactions, skip PostReset", "err", err)
+			return
+		}
+
+		pending, err := pool.pendingUnlocked()
+		if err != nil {
+			logger.Error("Failed to get pending transactions, skip PostReset", "err", err)
+			return
+		}
+
 		logger.Debug("Calling PostReset for each module", "len(pending)", len(pending))
 		for _, module := range pool.modules {
-			module.PostReset(oldHead, newHead, pending)
+			module.PostReset(oldHead, newHead, queue, pending)
 		}
-	}
-	pool.txMu.Unlock()
+	}()
 }
 
 // Stop terminates the transaction pool.
@@ -665,6 +680,15 @@ func (pool *TxPool) pendingUnlocked() (map[common.Address]types.Transactions, er
 		pending[addr] = list.Flatten()
 	}
 	return pending, nil
+}
+
+// queueUnlocked must be protected by pool.mu AND pool.txMu by the caller.
+func (pool *TxPool) queueUnlocked() (map[common.Address]types.Transactions, error) {
+	queue := make(map[common.Address]types.Transactions)
+	for addr, list := range pool.queue {
+		queue[addr] = list.Flatten()
+	}
+	return queue, nil
 }
 
 // CachedPendingTxsByCount retrieves about number of currently processable transactions
