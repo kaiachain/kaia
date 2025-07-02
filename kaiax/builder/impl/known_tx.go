@@ -34,9 +34,9 @@ func (k knownTxs) add(tx *types.Transaction, status int) {
 		ktx.status = status
 	} else {
 		k[tx.Hash()] = &knownTx{
-			tx:     tx,
-			time:   time.Now(),
-			status: status,
+			tx:           tx,
+			promotedTime: time.Now(),
+			status:       status,
 		}
 	}
 	updateMetrics(&k)
@@ -122,8 +122,8 @@ const (
 
 // A metadata of a known bundle tx that has been submitted to txpool during the last window (KnownTxTimeout).
 type knownTx struct {
-	tx   *types.Transaction
-	time time.Time
+	tx           *types.Transaction
+	promotedTime time.Time
 
 	// The location in txpool, of this knownTx.
 	// Refreshed at pool.reset()-PostReset(), pool.addTx()-PreAddTx(), pool.promoteExecutables()-IsReady()
@@ -131,5 +131,5 @@ type knownTx struct {
 }
 
 func (t *knownTx) elapsedTime() time.Duration {
-	return time.Since(t.time)
+	return time.Since(t.promotedTime)
 }
