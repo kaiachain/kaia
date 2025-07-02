@@ -80,7 +80,7 @@ func TestGasless(t *testing.T) {
 		}
 	}()
 
-	numAccounts := 1
+	numAccounts := 2
 	_, accounts, _ := createAccount(t, numAccounts, validator)
 
 	var (
@@ -157,12 +157,12 @@ func TestGasless(t *testing.T) {
 	//// Reject when token balance is zero, approval is zero.
 
 	// reject approveTx when token balance is zero
-	_, err = sendApproveTx(t, testTokenContract, accounts[0], gsrAddr, abi.MaxUint256)
+	_, err = sendApproveTx(t, testTokenContract, accounts[1], gsrAddr, abi.MaxUint256)
 	assert.ErrorContains(t, err, "insufficient sender token balance")
 	assert.ErrorContains(t, err, "have=0, want=nonzero")
 
 	// reject swapTx when token isn't yet approved
-	_, err = sendSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, ammontRepay, deadline)
+	_, err = sendSwapTx(t, gsrContract, accounts[1], testTokenAddr, swapAmmount, minAmountOut, ammontRepay, deadline)
 	assert.ErrorContains(t, err, "insufficient approval: approval=0")
 
 	//// After having token balance, ApproveTx + SwapTx pair succeeds.
