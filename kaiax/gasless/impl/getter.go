@@ -42,8 +42,9 @@ const (
 )
 
 var (
-	erc20ApproveFunc = mustParseAbi(erc20AbiJson, "approve")
-	routerSwapFunc   = mustParseAbi(routerAbiJson, "swapForGas")
+	erc20BalanceOfFunc = mustParseAbi(erc20AbiJson, "balanceOf")
+	erc20ApproveFunc   = mustParseAbi(erc20AbiJson, "approve")
+	routerSwapFunc     = mustParseAbi(routerAbiJson, "swapForGas")
 )
 
 var _ gasless.GaslessModule = (*GaslessModule)(nil)

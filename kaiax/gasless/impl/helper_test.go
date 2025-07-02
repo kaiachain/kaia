@@ -61,10 +61,7 @@ var (
 		Kip160CompatibleBlock:    big.NewInt(0),
 		RandaoCompatibleBlock:    big.NewInt(0),
 	}
-	testGaslessConfig = &gasless.GaslessConfig{
-		AllowedTokens: nil,
-		Disable:       false,
-	}
+	testGaslessConfig = gasless.DefaultGaslessConfig()
 
 	// interface DummyGSR {
 	// 	function addToken(address token) public
