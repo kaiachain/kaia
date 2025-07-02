@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
@@ -251,6 +252,11 @@ func TestGasless(t *testing.T) {
 	// reject swapTx when deadline is in the past
 	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, amountRepaySwap, common.Big1)
 	assert.ErrorContains(t, err, "insufficient deadline: deadline=1")
+
+	// reject swapTx originating from an EOA with code
+	mustSetCode(t, chain, transactor, accounts[0])
+	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, amountRepaySwap, deadline)
+	assert.ErrorContains(t, err, "sender with code is not allowed")
 }
 
 func deployTestToken(t *testing.T, chain *blockchain.BlockChain, transactor *backends.BlockchainContractBackend, owner *TestAccountType, initialHolder common.Address,
@@ -481,4 +487,45 @@ func makeSwapTx(t *testing.T, gsrContract *gaslessContract.GaslessSwapRouter, ow
 	}
 	t.Log("swapTxHash", swapTx.Hash().Hex())
 	return swapTx, nil
+}
+
+func mustSetCode(t *testing.T, chain *blockchain.BlockChain, transactor bind.ContractBackend, sender *TestAccountType) {
+	chainID, err := transactor.ChainID(context.Background())
+	require.NoError(t, err)
+	auth, err := types.SignSetCode(sender.Keys[0], types.SetCodeAuthorization{
+		ChainID: *uint256.MustFromBig(chainID),
+		Address: common.HexToAddress("0x000000000000000000000000000000000000aaaa"),
+		Nonce:   sender.GetNonce() + 1,
+	})
+	require.NoError(t, err)
+
+	valueMap := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:             sender.GetNonce(),
+		types.TxValueKeyTo:                common.HexToAddress("0x0000000000000000000000000000000000001111"),
+		types.TxValueKeyAmount:            common.Big0,
+		types.TxValueKeyData:              []byte{},
+		types.TxValueKeyGasLimit:          uint64(100000),
+		types.TxValueKeyGasFeeCap:         big.NewInt(50000000000),
+		types.TxValueKeyGasTipCap:         big.NewInt(50000000000),
+		types.TxValueKeyAccessList:        types.AccessList{},
+		types.TxValueKeyAuthorizationList: []types.SetCodeAuthorization{auth},
+		types.TxValueKeyChainID:           chainID,
+	}
+	tx, err := types.NewTransactionWithMap(types.TxTypeEthereumSetCode, valueMap)
+	require.NoError(t, err)
+	signer := types.LatestSignerForChainID(chainID)
+	err = tx.SignWithKeys(signer, sender.Keys)
+	require.NoError(t, err)
+
+	err = transactor.SendTransaction(context.Background(), tx)
+	require.NoError(t, err)
+
+	receipt := waitReceipt(chain, tx.Hash())
+	require.NotNil(t, receipt)
+	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+
+	code, err := transactor.CodeAt(context.Background(), sender.Addr, nil)
+	require.NoError(t, err)
+	sender.Nonce += 2
+	t.Logf("setcode complete: code=0x%x", code)
 }

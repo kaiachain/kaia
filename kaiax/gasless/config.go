@@ -54,7 +54,7 @@ var (
 	}
 	BalanceCheckLevelFlag = &cli.IntFlag{
 		Name:     "gasless.balance-check-level",
-		Usage:    "balance check level: 0=static checks, 1=token balance and allowance, 2=all",
+		Usage:    "balance check level: 0=static checks, 1=token balance and allowance, 2=swap amount, 3=all",
 		Value:    BalanceCheckLevelAll,
 		Aliases:  []string{"kaiax.module.gasless.balance-check-level"},
 		Category: "KAIAX",
@@ -64,7 +64,8 @@ var (
 const (
 	BalanceCheckLevelStatic                   = iota // relation between amounts and deadline
 	BalanceCheckLevelTokenBalanceAndAllowance        // all above + token balance and allowance
-	BalanceCheckLevelAll                             // all above +	amountIn calculated by dex
+	BalanceCheckLevelSwapAmount                      // all above +	amountIn calculated by dex
+	BalanceCheckLevelAll                             // all above +	sender code check
 )
 
 type GaslessConfig struct {
@@ -91,6 +92,10 @@ func (cfg *GaslessConfig) ShouldCheckToken() bool {
 }
 
 func (cfg *GaslessConfig) ShouldCheckSwapAmount() bool {
+	return cfg.BalanceCheckLevel >= BalanceCheckLevelSwapAmount
+}
+
+func (cfg *GaslessConfig) ShouldCheckSenderCode() bool {
 	return cfg.BalanceCheckLevel >= BalanceCheckLevelAll
 }
 

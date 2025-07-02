@@ -55,6 +55,12 @@ func (g *GaslessModule) checkBalanceForApprove(approveArgs *ApproveArgs) error {
 	token := approveArgs.Token
 	bc := backends.NewBlockchainContractBackend(g.Chain, nil, nil)
 
+	if g.GaslessConfig.ShouldCheckSenderCode() {
+		if g.getCurrentHasCode(approveArgs.Sender) {
+			return errors.New("sender with code is not allowed")
+		}
+	}
+
 	if g.GaslessConfig.ShouldCheckToken() {
 		tokenContract, err := sc_erc20.NewERC20(token, bc)
 		if err != nil {
@@ -87,6 +93,12 @@ func (g *GaslessModule) checkBalanceForSwap(swapArgs *SwapArgs, swapNonce uint64
 	amountRepay := swapArgs.AmountRepay
 	if minAmountOut.Cmp(amountRepay) < 0 {
 		return fmt.Errorf("insufficient minAmountOut: minAmountOut=%s, amountRepay=%s", minAmountOut.String(), amountRepay.String())
+	}
+
+	if g.GaslessConfig.ShouldCheckSenderCode() {
+		if g.getCurrentHasCode(swapArgs.Sender) {
+			return errors.New("sender with code is not allowed")
+		}
 	}
 
 	if g.GaslessConfig.ShouldCheckSwapAmount() {
