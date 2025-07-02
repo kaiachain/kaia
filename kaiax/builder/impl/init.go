@@ -42,7 +42,7 @@ func (k knownTxs) add(tx *types.Transaction, status int) {
 		return
 	}
 
-	if ktx, ok := k[tx.Hash()]; ok {
+	if ktx, ok := k.get(tx.Hash()); ok {
 		ktx.status = status
 	} else {
 		k[tx.Hash()] = &knownTx{
