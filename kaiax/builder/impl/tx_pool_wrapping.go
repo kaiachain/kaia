@@ -67,10 +67,9 @@ func (b *BuilderWrappingModule) PreAddTx(tx *types.Transaction, local bool) erro
 	var err error
 	if b.txPoolModule != nil {
 		err = b.txPoolModule.PreAddTx(tx, local)
-	}
-
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	if b.txBundlingModule.IsBundleTx(tx) {
