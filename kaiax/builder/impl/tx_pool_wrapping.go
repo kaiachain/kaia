@@ -172,7 +172,8 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) []commo
 		}
 	}
 	if b.txPoolModule != nil {
-		b.txPoolModule.PreReset(oldHead, newHead)
+		moduleDrops := b.txPoolModule.PreReset(oldHead, newHead)
+		drops = append(drops, moduleDrops...)
 	}
 
 	return drops
