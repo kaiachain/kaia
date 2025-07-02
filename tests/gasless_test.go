@@ -157,12 +157,12 @@ func TestGasless(t *testing.T) {
 	//// Reject when token balance is zero, approval is zero.
 
 	// reject approveTx when token balance is zero
-	_, err = makeApproveTx(t, testTokenContract, accounts[0], gsrAddr, abi.MaxUint256)
+	_, err = sendApproveTx(t, testTokenContract, accounts[0], gsrAddr, abi.MaxUint256)
 	assert.ErrorContains(t, err, "insufficient sender token balance")
 	assert.ErrorContains(t, err, "have=0, want=nonzero")
 
 	// reject swapTx when token isn't yet approved
-	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, ammontRepay, deadline)
+	_, err = sendSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, ammontRepay, deadline)
 	assert.ErrorContains(t, err, "insufficient approval: approval=0")
 
 	//// After having token balance, ApproveTx + SwapTx pair succeeds.
@@ -184,14 +184,14 @@ func TestGasless(t *testing.T) {
 	t.Log("owner balance: ", preSwapBalanceOfOwner)
 
 	// success send normal approveTx
-	approveTx, err := makeApproveTx(t, testTokenContract, accounts[0], gsrAddr, abi.MaxUint256)
+	approveTx, err := sendApproveTx(t, testTokenContract, accounts[0], gsrAddr, abi.MaxUint256)
 	if err != nil {
 		t.Fatal(err)
 	}
 	accounts[0].Nonce += 1
 
 	// success send normal swapTx
-	swapTx, err := makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, ammontRepay, deadline)
+	swapTx, err := sendSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, ammontRepay, deadline)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,25 +237,25 @@ func TestGasless(t *testing.T) {
 	//// Reject obviously reverting SwapTx.
 
 	// reject swapTx when minAmountOut < amountRepay
-	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, common.Big0, amountRepaySwap, deadline)
+	_, err = sendSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, common.Big0, amountRepaySwap, deadline)
 	assert.ErrorContains(t, err, "insufficient minAmountOut")
 
 	// reject swapTx when amountIn < router.GetAmountIn(minAmountOut)
-	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, common.Big0, minAmountOut, amountRepaySwap, deadline)
+	_, err = sendSwapTx(t, gsrContract, accounts[0], testTokenAddr, common.Big0, minAmountOut, amountRepaySwap, deadline)
 	assert.ErrorContains(t, err, "insufficient amountIn")
 
 	// reject swapTx when balance < amountIn
 	// the test acc first received `transferToken` but used up some. So it has less than `transferToken`.
-	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, transferToken, minAmountOut, amountRepaySwap, deadline)
+	_, err = sendSwapTx(t, gsrContract, accounts[0], testTokenAddr, transferToken, minAmountOut, amountRepaySwap, deadline)
 	assert.ErrorContains(t, err, "insufficient balance")
 
 	// reject swapTx when deadline is in the past
-	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, amountRepaySwap, common.Big1)
+	_, err = sendSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, amountRepaySwap, common.Big1)
 	assert.ErrorContains(t, err, "insufficient deadline: deadline=1")
 
 	// reject swapTx originating from an EOA with code
-	mustSetCode(t, chain, transactor, accounts[0])
-	_, err = makeSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, amountRepaySwap, deadline)
+	sendSetCodeTx(t, chain, transactor, accounts[0])
+	_, err = sendSwapTx(t, gsrContract, accounts[0], testTokenAddr, swapAmmount, minAmountOut, amountRepaySwap, deadline)
 	assert.ErrorContains(t, err, "sender with code is not allowed")
 }
 
@@ -465,7 +465,7 @@ func setupLiquidity(t *testing.T, owner *TestAccountType, contracts contractsFor
 	owner.Nonce += 1
 }
 
-func makeApproveTx(t *testing.T, testTokenContract *testingGaslessContracts.TestToken, owner *TestAccountType, gsrAddr common.Address, amount *big.Int) (*types.Transaction, error) {
+func sendApproveTx(t *testing.T, testTokenContract *testingGaslessContracts.TestToken, owner *TestAccountType, gsrAddr common.Address, amount *big.Int) (*types.Transaction, error) {
 	optsForApprove := bind.NewKeyedTransactor(owner.Keys[0])
 	optsForApprove.GasLimit = 300000
 	optsForApprove.Nonce = big.NewInt(int64(owner.Nonce))
@@ -477,7 +477,7 @@ func makeApproveTx(t *testing.T, testTokenContract *testingGaslessContracts.Test
 	return approveTx, nil
 }
 
-func makeSwapTx(t *testing.T, gsrContract *gaslessContract.GaslessSwapRouter, owner *TestAccountType, testTokenAddr common.Address, swapAmmount *big.Int, minAmountOut *big.Int, ammontRepay *big.Int, deadline *big.Int) (*types.Transaction, error) {
+func sendSwapTx(t *testing.T, gsrContract *gaslessContract.GaslessSwapRouter, owner *TestAccountType, testTokenAddr common.Address, swapAmmount *big.Int, minAmountOut *big.Int, ammontRepay *big.Int, deadline *big.Int) (*types.Transaction, error) {
 	optsForSwap := bind.NewKeyedTransactor(owner.Keys[0])
 	optsForSwap.GasLimit = 300000
 	optsForSwap.Nonce = big.NewInt(int64(owner.Nonce))
@@ -489,7 +489,7 @@ func makeSwapTx(t *testing.T, gsrContract *gaslessContract.GaslessSwapRouter, ow
 	return swapTx, nil
 }
 
-func mustSetCode(t *testing.T, chain *blockchain.BlockChain, transactor bind.ContractBackend, sender *TestAccountType) {
+func sendSetCodeTx(t *testing.T, chain *blockchain.BlockChain, transactor bind.ContractBackend, sender *TestAccountType) {
 	chainID, err := transactor.ChainID(context.Background())
 	require.NoError(t, err)
 	auth, err := types.SignSetCode(sender.Keys[0], types.SetCodeAuthorization{
