@@ -60,7 +60,7 @@ func (b *BuilderWrappingModule) PreAddTx(tx *types.Transaction, local bool) erro
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	if knownTx, ok := b.knownTxs.get(tx.Hash()); ok && knownTx.elapsedAddedTime() < KnownTxTimeout {
+	if knownTx, ok := b.knownTxs.get(tx.Hash()); ok && knownTx.elapsedPromotedTime() < KnownTxTimeout {
 		return ErrUnableToAddKnownBundleTx
 	}
 
@@ -165,7 +165,7 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) []commo
 			drops = append(drops, hash)
 		}
 		// remove known timed out tx from knownTxs
-		if knownTx.elapsedAddedTime() >= KnownTxTimeout {
+		if knownTx.elapsedPromotedTime() >= KnownTxTimeout {
 			b.knownTxs.delete(hash)
 		}
 	}

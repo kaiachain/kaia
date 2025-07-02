@@ -61,6 +61,7 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
+					addedTime:    time.Now(),
 					promotedTime: time.Now(),
 					status:       TxStatusPending,
 				},
@@ -73,6 +74,7 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
+					addedTime:    time.Now(),
 					promotedTime: time.Now(),
 					status:       TxStatusQueue,
 				},
@@ -932,16 +934,18 @@ func TestPreReset_Timeout(t *testing.T) {
 			name: "Bundle tx within QueueTimeout period",
 			existingBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:        createTestTransaction(0),
-					addedTime: now,
-					status:    TxStatusQueue,
+					tx:           createTestTransaction(0),
+					addedTime:    now,
+					promotedTime: now,
+					status:       TxStatusQueue,
 				},
 			},
 			expectedBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:        createTestTransaction(0),
-					addedTime: now,
-					status:    TxStatusQueue,
+					tx:           createTestTransaction(0),
+					addedTime:    now,
+					promotedTime: now,
+					status:       TxStatusQueue,
 				},
 			},
 			expectedDrop: []common.Hash{},
@@ -970,16 +974,18 @@ func TestPreReset_Timeout(t *testing.T) {
 			name: "Bundle tx exceeds QueueTimeout period",
 			existingBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:        createTestTransaction(0),
-					addedTime: now.Add(-QueueTimeout),
-					status:    TxStatusQueue,
+					tx:           createTestTransaction(0),
+					addedTime:    now.Add(-QueueTimeout),
+					promotedTime: now,
+					status:       TxStatusQueue,
 				},
 			},
 			expectedBundles: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:        createTestTransaction(0),
-					addedTime: now.Add(-QueueTimeout),
-					status:    TxStatusQueue,
+					tx:           createTestTransaction(0),
+					addedTime:    now.Add(-QueueTimeout),
+					promotedTime: now,
+					status:       TxStatusQueue,
 				},
 			},
 			expectedDrop: []common.Hash{createTestTransaction(0).Hash()},
