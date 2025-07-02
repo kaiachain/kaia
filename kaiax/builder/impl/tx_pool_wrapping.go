@@ -114,7 +114,7 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 	}
 
 	// add tx to knownTxs if it is a bundle tx and not in knownTxs
-	if b.txBundlingModule.IsBundleTx(tx) && !b.knownTxs.has(tx.Hash()) {
+	if b.txBundlingModule.IsBundleTx(tx) {
 		// If prev tx is bundle tx, there's no need to check the knownTxs limit because it has been checked in the previous `IsReady()` execution.
 		isPrevTxBundleTx := len(ready) != 0 && b.txBundlingModule.IsBundleTx(ready[len(ready)-1])
 		if isPrevTxBundleTx {
