@@ -538,25 +538,30 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
 	}
 
-	pool.txMu.Lock()
-	// pendingUnlocked() is supposed to be protected by pool.mu and pool.txMu.
-	// - pool.mu is held by (1) callers of reset() - loop(), lockedReset() or (2) unnecessary - NewTxPool()
-	// - pool.txMu is held here.
-	queue, err := pool.queueUnlocked()
-	if err != nil {
-		logger.Error("Failed to get queue transactions, skip PostReset", "err", err)
-	} else {
+	func() {
+		pool.txMu.Lock()
+		defer pool.txMu.Unlock()
+
+		// pendingUnlocked() is supposed to be protected by pool.mu and pool.txMu.
+		// - pool.mu is held by (1) callers of reset() - loop(), lockedReset() or (2) unnecessary - NewTxPool()
+		// - pool.txMu is held here.
+		queue, err := pool.queueUnlocked()
+		if err != nil {
+			logger.Error("Failed to get queue transactions, skip PostReset", "err", err)
+			return
+		}
+
 		pending, err := pool.pendingUnlocked()
 		if err != nil {
 			logger.Error("Failed to get pending transactions, skip PostReset", "err", err)
-		} else {
-			logger.Debug("Calling PostReset for each module", "len(pending)", len(pending))
-			for _, module := range pool.modules {
-				module.PostReset(oldHead, newHead, queue, pending)
-			}
+			return
 		}
-	}
-	pool.txMu.Unlock()
+
+		logger.Debug("Calling PostReset for each module", "len(pending)", len(pending))
+		for _, module := range pool.modules {
+			module.PostReset(oldHead, newHead, queue, pending)
+		}
+	}()
 }
 
 // Stop terminates the transaction pool.
