@@ -503,12 +503,14 @@ func TestIsReady_KnownTxs(t *testing.T) {
 			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
+					addedTime:    oldTime,
 					promotedTime: oldTime,
 				},
 			},
 			expectedTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
+					addedTime:    oldTime,
 					promotedTime: oldTime,
 				},
 			},
@@ -794,7 +796,7 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 					status:       TxStatusPending,
 				},
 			},
-			expectedResult: true,
+			expectedResult: false,
 		},
 		{
 			name:           "No max bundle txs limit",
