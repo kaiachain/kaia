@@ -51,6 +51,7 @@ func (k knownTxs) add(tx *types.Transaction, status int) {
 			status: status,
 		}
 	}
+	updateMetrics(&k)
 }
 
 func (k knownTxs) addKnownTx(knownTx *knownTx) {
@@ -59,6 +60,7 @@ func (k knownTxs) addKnownTx(knownTx *knownTx) {
 	} else {
 		k[knownTx.tx.Hash()] = knownTx
 	}
+	updateMetrics(&k)
 }
 
 func (k knownTxs) get(hash common.Hash) (*knownTx, bool) {
@@ -73,6 +75,7 @@ func (k knownTxs) has(hash common.Hash) bool {
 
 func (k knownTxs) delete(hash common.Hash) {
 	delete(k, hash)
+	updateMetrics(&k)
 }
 
 func (k knownTxs) numPending() int {
@@ -164,4 +167,11 @@ func (b *BuilderModule) Start() error {
 }
 
 func (b *BuilderModule) Stop() {
+}
+
+func updateMetrics(knownTxs *knownTxs) {
+	numQueueGauge.Update(int64(knownTxs.numQueue()))
+	numPendingGauge.Update(int64(knownTxs.numPending()))
+	numExecutableGauge.Update(int64(knownTxs.numExecutable()))
+	oldestTxTimeInKnownTxsGauge.Update(knownTxs.getTimeOfOldestKnownTx())
 }

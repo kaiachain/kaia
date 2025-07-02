@@ -121,7 +121,6 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 		isPrevTxBundleTx := len(ready) != 0 && b.txBundlingModule.IsBundleTx(ready[len(ready)-1])
 		if isPrevTxBundleTx {
 			b.knownTxs.add(tx, TxStatusPending)
-			updateMetrics(b.knownTxs)
 			return true
 		}
 
@@ -146,7 +145,6 @@ func (b *BuilderWrappingModule) IsReady(txs map[uint64]*types.Transaction, next 
 		}
 
 		b.knownTxs.add(tx, TxStatusPending)
-		updateMetrics(b.knownTxs)
 	}
 
 	return true
@@ -171,7 +169,6 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) []commo
 		// remove known timed out tx from knownTxs
 		if knownTx.elapsedTime() >= KnownTxTimeout {
 			b.knownTxs.delete(hash)
-			updateMetrics(b.knownTxs)
 		}
 	}
 	if b.txPoolModule != nil {
@@ -212,11 +209,4 @@ func (b *BuilderWrappingModule) PostReset(oldHead, newHead *types.Header, queue,
 	if b.txPoolModule != nil {
 		b.txPoolModule.PostReset(oldHead, newHead, queue, pending)
 	}
-}
-
-func updateMetrics(knownTxs *knownTxs) {
-	numQueueGauge.Update(int64(knownTxs.numQueue()))
-	numPendingGauge.Update(int64(knownTxs.numPending()))
-	numExecutableGauge.Update(int64(knownTxs.numExecutable()))
-	oldestTxTimeInKnownTxsGauge.Update(knownTxs.getTimeOfOldestKnownTx())
 }
