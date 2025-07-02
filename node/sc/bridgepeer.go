@@ -166,7 +166,7 @@ func newKnownTxCache() common.Cache {
 	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownTxs, IsScaled: true})
 }
 
-// newPeer returns new Peer interface.
+// newBridgePeer returns new BridgePeer interface.
 func newBridgePeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) BridgePeer {
 	id := p.ID()
 
