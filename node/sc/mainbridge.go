@@ -75,7 +75,7 @@ type MainBridge struct {
 	accountManager *accounts.Manager
 
 	networkId     uint64
-	netRPCService *api.PublicNetAPI
+	netRPCService *api.NetAPI
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price)
 
@@ -345,7 +345,7 @@ func (mb *MainBridge) Start(srvr p2p.Server) error {
 	}
 
 	// Start the RPC service
-	mb.netRPCService = api.NewPublicNetAPI(mb.bridgeServer, mb.NetVersion())
+	mb.netRPCService = api.NewNetAPI(mb.bridgeServer, mb.NetVersion())
 
 	// Figure out a max peers count based on the server limits
 	// s.maxPeers = s.bridgeServer.MaxPhysicalConnections()

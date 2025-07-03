@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// test tx types and internal data to be supported by APIs in PublicTransactionPoolAPI.
+// test tx types and internal data to be supported by APIs in KaiaTransactionAPI.
 var internalDataTypes = map[types.TxType]interface{}{
 	types.TxTypeLegacyTransaction:                           types.TxInternalDataLegacy{},
 	types.TxTypeValueTransfer:                               types.TxInternalDataValueTransfer{},
@@ -64,7 +64,7 @@ var (
 	feePayerPrvKey, _ = crypto.HexToECDSA("aebb680a5e596c1d1a01bac78a3985b62c685c5e995d780c176138cb2679ba3e")
 )
 
-// TestTxTypeSupport tests tx type support of APIs in PublicTransactionPoolAPI.
+// TestTxTypeSupport tests tx type support of APIs in KaiaTransactionAPI.
 func TestTxTypeSupport(t *testing.T) {
 	var ctx context.Context
 	chainConf := params.ChainConfig{ChainID: big.NewInt(1)}
@@ -105,8 +105,8 @@ func TestTxTypeSupport(t *testing.T) {
 	mockAccountManager.EXPECT().Find(accounts.Account{Address: acc.Address}).Return(ks.Wallets()[0], nil).AnyTimes()
 	mockAccountManager.EXPECT().Find(accounts.Account{Address: accFeePayer.Address}).Return(ks.Wallets()[1], nil).AnyTimes()
 
-	// APIs in PublicTransactionPoolAPI will be tested
-	api := PublicTransactionPoolAPI{
+	// APIs in KaiaTransactionAPI will be tested
+	api := KaiaTransactionAPI{
 		b:         mockBackend,
 		nonceLock: new(AddrLocker),
 	}
@@ -159,7 +159,7 @@ func TestTxTypeSupport(t *testing.T) {
 }
 
 // testTxTypeSupport_normalCase tests APIs with proper SendTxArgs values.
-func testTxTypeSupport_normalCase(t *testing.T, api PublicTransactionPoolAPI, ctx context.Context, args SendTxArgs) {
+func testTxTypeSupport_normalCase(t *testing.T, api KaiaTransactionAPI, ctx context.Context, args SendTxArgs) {
 	var err error
 
 	// test APIs for non-fee-delegation txs
@@ -182,7 +182,7 @@ func testTxTypeSupport_normalCase(t *testing.T, api PublicTransactionPoolAPI, ct
 }
 
 // testTxTypeSupport_setDefault tests the setDefault function which auto-assign some values of tx.
-func testTxTypeSupport_setDefault(t *testing.T, api PublicTransactionPoolAPI, ctx context.Context, args SendTxArgs) {
+func testTxTypeSupport_setDefault(t *testing.T, api KaiaTransactionAPI, ctx context.Context, args SendTxArgs) {
 	args.AccountNonce = nil
 	args.GasLimit = nil
 	args.Price = nil
@@ -192,7 +192,7 @@ func testTxTypeSupport_setDefault(t *testing.T, api PublicTransactionPoolAPI, ct
 }
 
 // testTxTypeSupport_noFieldValues tests error handling for not assigned field values.
-func testTxTypeSupport_noFieldValues(t *testing.T, api PublicTransactionPoolAPI, ctx context.Context, oriArgs SendTxArgs) {
+func testTxTypeSupport_noFieldValues(t *testing.T, api KaiaTransactionAPI, ctx context.Context, oriArgs SendTxArgs) {
 	// fields of legacy tx will not be checked in the checkArgs function
 	if *oriArgs.TypeInt == types.TxTypeLegacyTransaction {
 		return
@@ -264,7 +264,7 @@ func testTxTypeSupport_noFieldValues(t *testing.T, api PublicTransactionPoolAPI,
 }
 
 // testTxTypeSupport_unnecessaryFieldValues tests error handling for not assigned field values.
-func testTxTypeSupport_unnecessaryFieldValues(t *testing.T, api PublicTransactionPoolAPI, ctx context.Context, oriArgs SendTxArgs) {
+func testTxTypeSupport_unnecessaryFieldValues(t *testing.T, api KaiaTransactionAPI, ctx context.Context, oriArgs SendTxArgs) {
 	// fields of legacy tx will not be checked in the checkArgs function
 	if *oriArgs.TypeInt == types.TxTypeLegacyTransaction {
 		return

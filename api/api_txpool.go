@@ -30,18 +30,18 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 )
 
-// PublicTxPoolAPI offers and API for the transaction pool. It only operates on data that is non confidential.
-type PublicTxPoolAPI struct {
+// TxPoolAPI offers and API for the transaction pool. It only operates on data that is non confidential.
+type TxPoolAPI struct {
 	b Backend
 }
 
-// NewPublicTxPoolAPI creates a new tx pool service that gives information about the transaction pool.
-func NewPublicTxPoolAPI(b Backend) *PublicTxPoolAPI {
-	return &PublicTxPoolAPI{b}
+// NewTxPoolAPI creates a new tx pool service that gives information about the transaction pool.
+func NewTxPoolAPI(b Backend) *TxPoolAPI {
+	return &TxPoolAPI{b}
 }
 
 // Content returns the transactions contained within the transaction pool.
-func (s *PublicTxPoolAPI) Content() map[string]map[string]map[string]map[string]interface{} {
+func (s *TxPoolAPI) Content() map[string]map[string]map[string]map[string]interface{} {
 	content := map[string]map[string]map[string]map[string]interface{}{
 		"pending": make(map[string]map[string]map[string]interface{}),
 		"queued":  make(map[string]map[string]map[string]interface{}),
@@ -68,7 +68,7 @@ func (s *PublicTxPoolAPI) Content() map[string]map[string]map[string]map[string]
 }
 
 // Status returns the number of pending and queued transaction in the pool.
-func (s *PublicTxPoolAPI) Status() map[string]hexutil.Uint {
+func (s *TxPoolAPI) Status() map[string]hexutil.Uint {
 	pending, queue := s.b.Stats()
 	return map[string]hexutil.Uint{
 		"pending": hexutil.Uint(pending),
@@ -78,7 +78,7 @@ func (s *PublicTxPoolAPI) Status() map[string]hexutil.Uint {
 
 // Inspect retrieves the content of the transaction pool and flattens it into an
 // easily inspectable list.
-func (s *PublicTxPoolAPI) Inspect() map[string]map[string]map[string]string {
+func (s *TxPoolAPI) Inspect() map[string]map[string]map[string]string {
 	content := map[string]map[string]map[string]string{
 		"pending": make(map[string]map[string]string),
 		"queued":  make(map[string]map[string]string),
