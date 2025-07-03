@@ -10,7 +10,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	blockchain "github.com/kaiachain/kaia/blockchain"
-	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	event "github.com/kaiachain/kaia/event"
@@ -111,20 +110,6 @@ func (mr *MockTxPoolMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTxPool)(nil).Get), arg0)
 }
 
-// GetCurrentState mocks base method.
-func (m *MockTxPool) GetCurrentState() *state.StateDB {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCurrentState")
-	ret0, _ := ret[0].(*state.StateDB)
-	return ret0
-}
-
-// GetCurrentState indicates an expected call of GetCurrentState.
-func (mr *MockTxPoolMockRecorder) GetCurrentState() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentState", reflect.TypeOf((*MockTxPool)(nil).GetCurrentState))
-}
-
 // GetPendingNonce mocks base method.
 func (m *MockTxPool) GetPendingNonce(arg0 common.Address) uint64 {
 	m.ctrl.T.Helper()
@@ -164,21 +149,6 @@ func (m *MockTxPool) Pending() (map[common.Address]types.Transactions, error) {
 func (mr *MockTxPoolMockRecorder) Pending() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pending", reflect.TypeOf((*MockTxPool)(nil).Pending))
-}
-
-// PendingUnlocked mocks base method.
-func (m *MockTxPool) PendingUnlocked() (map[common.Address]types.Transactions, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PendingUnlocked")
-	ret0, _ := ret[0].(map[common.Address]types.Transactions)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PendingUnlocked indicates an expected call of PendingUnlocked.
-func (mr *MockTxPoolMockRecorder) PendingUnlocked() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendingUnlocked", reflect.TypeOf((*MockTxPool)(nil).PendingUnlocked))
 }
 
 // RegisterTxPoolModule mocks base method.

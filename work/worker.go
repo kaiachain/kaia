@@ -23,6 +23,7 @@
 package work
 
 import (
+	"math"
 	"math/big"
 	"strconv"
 	"sync"
@@ -76,6 +77,7 @@ var (
 	nonceTooHighTxsGauge    = metrics.NewRegisteredGauge("miner/nonce/high/txs", nil)
 	gasLimitReachedTxsGauge = metrics.NewRegisteredGauge("miner/limitreached/gas/txs", nil)
 	strangeErrorTxsCounter  = metrics.NewRegisteredCounter("miner/strangeerror/txs", nil)
+	minerBalanceGauge       = metrics.NewRegisteredGauge("miner/balance", nil)
 
 	blockBaseFee              = metrics.NewRegisteredGauge("miner/block/mining/basefee", nil)
 	blockMiningTimer          = kaiametrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
@@ -162,9 +164,9 @@ type worker struct {
 
 	extra []byte
 
-	currentMu  sync.Mutex
-	current    *Task
-	rewardbase common.Address
+	currentMu sync.Mutex
+	current   *Task
+	nodeAddr  common.Address
 
 	snapshotMu       sync.RWMutex // The lock used to protect the block snapshot and state snapshot
 	snapshotBlock    *types.Block
@@ -178,7 +180,7 @@ type worker struct {
 	nodetype common.ConnType
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool, govModule gov.GovModule) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, nodeAddr common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool, govModule gov.GovModule) *worker {
 	worker := &worker{
 		config:      config,
 		engine:      engine,
@@ -193,7 +195,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, rewardbase c
 		proc:        backend.BlockChain().Validator(),
 		agents:      make(map[Agent]struct{}),
 		nodetype:    nodetype,
-		rewardbase:  rewardbase,
+		nodeAddr:    nodeAddr,
 		govModule:   govModule,
 	}
 
@@ -584,8 +586,12 @@ func (self *worker) commitNewWork() {
 	// Create the current work task
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {
+		// measure miner balance before executing txs
+		minerBalanceGauge.Update(getBalanceForGauge(work.state, self.nodeAddr))
+
+		// Sort txs then execute them
 		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending, work.header.BaseFee)
-		work.commitTransactions(self.mux, txs, self.chain, self.rewardbase, self.txBundlingModules)
+		work.commitTransactions(self.mux, txs, self.chain, self.nodeAddr, self.txBundlingModules)
 		finishedCommitTx := time.Now()
 
 		// Create the new block to seal with the consensus engine
@@ -659,8 +665,18 @@ func (self *worker) RegisterTxBundlingModule(modules ...builder.TxBundlingModule
 	self.txBundlingModules = append(self.txBundlingModules, modules...)
 }
 
-func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule) {
-	coalescedLogs := env.ApplyTransactions(txs, bc, rewardbase, txBundlingModules)
+// Return the balance of the address in KAIA, in int64. If the balance is greater (often happens in private net), return MaxInt64.
+func getBalanceForGauge(state *state.StateDB, nodeAddr common.Address) int64 {
+	balance := new(big.Int).Div(state.GetBalance(nodeAddr), big.NewInt(params.KAIA))
+	if balance.IsInt64() {
+		return balance.Int64()
+	} else {
+		return math.MaxInt64
+	}
+}
+
+func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) {
+	coalescedLogs := env.ApplyTransactions(txs, bc, nodeAddr, txBundlingModules)
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
 		// make a copy, the state caches the logs and these logs get "upgraded" from pending to mined
@@ -682,7 +698,7 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	}
 }
 
-func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, rewardbase common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
+func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
 	arrayTxs := builder_impl.Arrayify(txs)
 	incorporatedTxs, bundles := builder_impl.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
 	var coalescedLogs []*types.Log
@@ -760,7 +776,7 @@ CommitTransactionLoop:
 			numShift = len(targetBundle.BundleTxs)
 		}
 
-		tx, err := txOrGen.GetTx(env.state.GetNonce(rewardbase))
+		tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
 		if err != nil {
 			logger.Warn("TxGenerator returned a nil tx", "error", err)
 			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
@@ -787,14 +803,14 @@ CommitTransactionLoop:
 		// Start executing the transaction
 		if len(targetBundle.BundleTxs) != 0 {
 			atomic.StoreInt32(&isExecutingBundleTxs, 1)
-			err, tx, logs = env.commitBundleTransaction(targetBundle, bc, rewardbase, vmConfig)
+			err, tx, logs = env.commitBundleTransaction(targetBundle, bc, nodeAddr, vmConfig)
 			if err != nil && tx != nil {
 				// override sender to error tx
 				from, _ = types.Sender(env.signer, tx)
 			}
 		} else {
 			env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
-			err, logs = env.commitTransaction(tx, bc, rewardbase, vmConfig)
+			err, logs = env.commitTransaction(tx, bc, nodeAddr, vmConfig)
 		}
 
 		switch err {
@@ -866,10 +882,10 @@ CommitTransactionLoop:
 	return coalescedLogs
 }
 
-func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, []*types.Log) {
+func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAddr common.Address, vmConfig *vm.Config) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
-	receipt, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+	receipt, _, err := bc.ApplyTransaction(env.config, &nodeAddr, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 	if err != nil {
 		if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
 			tx.MarkUnexecutable(true)
@@ -884,7 +900,7 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, rewardb
 	return nil, receipt.Logs
 }
 
-func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, rewardbase common.Address, vmConfig *vm.Config) (error, *types.Transaction, []*types.Log) {
+func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, nodeAddr common.Address, vmConfig *vm.Config) (error, *types.Transaction, []*types.Log) {
 	lastSnapshot := env.state.Copy()
 	gasUsedSnapshot := env.header.GasUsed
 	tcountSnapshot := env.tcount
@@ -908,7 +924,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	}
 
 	for _, txOrGen := range bundle.BundleTxs {
-		tx, err := txOrGen.GetTx(env.state.GetNonce(rewardbase))
+		tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
 		if err != nil {
 			logger.Error("TxGenerator error", "error", err)
 			markAllTxUnexecutable()
@@ -917,7 +933,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		}
 
 		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
-		receipt, _, err := bc.ApplyTransaction(env.config, &rewardbase, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+		receipt, _, err := bc.ApplyTransaction(env.config, &nodeAddr, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 		// Bundled tx will be rejected with any receipt.Status other than success.
 		// There may be cases where a revert occurs within the EVM, which could result in an attack on a tx sender in an already executed bundle.
 		if err != nil || receipt.Status != types.ReceiptStatusSuccessful {

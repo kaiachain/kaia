@@ -29,6 +29,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -48,7 +49,6 @@ func TestIsModuleTx(t *testing.T) {
 		GaslessConfig: testGaslessConfig,
 		NodeKey:       nodekey,
 		Chain:         backend.BlockChain(),
-		TxPool:        &testTxPool{},
 		NodeType:      common.ENDPOINTNODE,
 	})
 	require.NoError(t, err)
@@ -195,11 +195,11 @@ func TestIsReady(t *testing.T) {
 				GaslessConfig: testGaslessConfig,
 				NodeKey:       nodeKey,
 				Chain:         backend.BlockChain(),
-				TxPool:        &testTxPool{cdb},
 				NodeType:      common.ENDPOINTNODE,
 			})
 			require.NoError(t, err)
 
+			g.setCurrentState(cdb)
 			ok := g.IsReady(tc.queue, tc.i, tc.ready)
 			require.Equal(t, tc.expected, ok)
 		})
@@ -219,6 +219,10 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 
 	testTxPoolConfig := blockchain.DefaultTxPoolConfig
 	testTxPoolConfig.Journal = ""
+
+	// Skip balance check for this test
+	gaslessConfig := *gasless.DefaultGaslessConfig()
+	gaslessConfig.BalanceCheckLevel = gasless.BalanceCheckLevelStatic
 
 	dbm := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
@@ -343,10 +347,9 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 		g := NewGaslessModule()
 		err := g.Init(&InitOpts{
 			ChainConfig:   testChainConfig,
-			GaslessConfig: testGaslessConfig,
+			GaslessConfig: &gaslessConfig,
 			NodeKey:       nodeKey,
 			Chain:         backend.BlockChain(),
-			TxPool:        pool,
 			NodeType:      common.ENDPOINTNODE,
 		})
 		require.NoError(t, err)
@@ -362,9 +365,9 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 			case A:
 				tx = makeApproveTx(t, userKey, nonce, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256})
 			case SwithA:
-				tx = makeSwapTx(t, userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)})
+				tx = makeSwapTx(t, userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(2077000), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)})
 			case SingleS:
-				tx = makeSwapTx(t, userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000), Deadline: big.NewInt(300)})
+				tx = makeSwapTx(t, userKey, nonce, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(1077000), AmountRepay: big.NewInt(1021000), Deadline: big.NewInt(300)})
 			}
 			txMap[ttype] = tx
 			err = pool.AddLocal(tx)
@@ -400,6 +403,10 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 	testTxPoolConfig := blockchain.DefaultTxPoolConfig
 	testTxPoolConfig.Journal = ""
 
+	// Skip balance check for this test
+	gaslessConfig := *gasless.DefaultGaslessConfig()
+	gaslessConfig.BalanceCheckLevel = gasless.BalanceCheckLevelStatic
+
 	dbm := database.NewMemoryDBManager()
 	alloc := testAllocStorage()
 	backend := backends.NewSimulatedBackendWithDatabase(dbm, alloc, testChainConfig)
@@ -412,12 +419,12 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 
 	// The number of variable means the number of sender. For exampele, A1 and S1 are Sender1's txs.
 	A1 := makeApproveTx(t, key1, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256})
-	S1 := makeSwapTx(t, key1, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)})
+	S1 := makeSwapTx(t, key1, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(2077000), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)})
 
 	A2 := makeApproveTx(t, key2, 0, ApproveArgs{Spender: common.HexToAddress("0x1234"), Amount: abi.MaxUint256})
-	S2 := makeSwapTx(t, key2, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)})
+	S2 := makeSwapTx(t, key2, 1, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(2077000), AmountRepay: big.NewInt(2021000), Deadline: big.NewInt(300)})
 
-	S3 := makeSwapTx(t, nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(100), AmountRepay: big.NewInt(1021000), Deadline: big.NewInt(300)})
+	S3 := makeSwapTx(t, nil, 0, SwapArgs{Token: common.HexToAddress("0xabcd"), AmountIn: big.NewInt(10), MinAmountOut: big.NewInt(1077000), AmountRepay: big.NewInt(1021000), Deadline: big.NewInt(300)})
 
 	T4 := makeTx(t, key4, 0, common.HexToAddress("0xAAAA"), big.NewInt(0), 1000000, big.NewInt(1), nil)
 
@@ -436,10 +443,9 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 		g := NewGaslessModule()
 		err := g.Init(&InitOpts{
 			ChainConfig:   testChainConfig,
-			GaslessConfig: testGaslessConfig,
+			GaslessConfig: &gaslessConfig,
 			NodeKey:       nodeKey,
 			Chain:         backend.BlockChain(),
-			TxPool:        pool,
 			NodeType:      common.ENDPOINTNODE,
 		})
 		require.NoError(t, err)

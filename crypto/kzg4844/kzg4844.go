@@ -108,3 +108,14 @@ func VerifyBlobProof(blob *Blob, commitment Commitment, proof Proof) error {
 	}
 	return gokzgVerifyBlobProof(blob, commitment, proof)
 }
+
+// ComputeCellProofs returns the KZG cell proofs that are used to verify the blob against
+// the commitment.
+//
+// This method does not verify that the commitment is correct with respect to blob.
+func ComputeCellProofs(blob *Blob) ([]Proof, error) {
+	if useCKZG.Load() {
+		return ckzgComputeCellProofs(blob)
+	}
+	return gokzgComputeCellProofs(blob)
+}

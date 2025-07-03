@@ -63,6 +63,20 @@ func (mr *MockTxBundlingModuleMockRecorder) GetMaxBundleTxsInPending() *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleTxsInPending", reflect.TypeOf((*MockTxBundlingModule)(nil).GetMaxBundleTxsInPending))
 }
 
+// GetMaxBundleTxsInQueue mocks base method.
+func (m *MockTxBundlingModule) GetMaxBundleTxsInQueue() uint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMaxBundleTxsInQueue")
+	ret0, _ := ret[0].(uint)
+	return ret0
+}
+
+// GetMaxBundleTxsInQueue indicates an expected call of GetMaxBundleTxsInQueue.
+func (mr *MockTxBundlingModuleMockRecorder) GetMaxBundleTxsInQueue() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleTxsInQueue", reflect.TypeOf((*MockTxBundlingModule)(nil).GetMaxBundleTxsInQueue))
+}
+
 // IsBundleTx mocks base method.
 func (m *MockTxBundlingModule) IsBundleTx(arg0 *types.Transaction) bool {
 	m.ctrl.T.Helper()
