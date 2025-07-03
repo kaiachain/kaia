@@ -62,7 +62,7 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
 					addedTime:    time.Now(),
-					promotedTime: time.Now(),
+					promotedTime: time.Time{},
 					status:       TxStatusPending,
 				},
 			},
@@ -87,6 +87,7 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
+					addedTime:    time.Now().Add(-KnownTxTimeout - 5),
 					promotedTime: time.Now().Add(-KnownTxTimeout),
 					status:       TxStatusPending,
 				},
@@ -98,7 +99,32 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 			tx:   createTestTransaction(0),
 			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
+					tx:        createTestTransaction(0),
+					addedTime: time.Now().Add(-KnownTxTimeout),
+					status:    TxStatusQueue,
+				},
+			},
+			expectedError: nil,
+		},
+		{
+			name: "Transaction in queue after KnownTxTimeout period",
+			tx:   createTestTransaction(0),
+			knownTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
+					tx:        createTestTransaction(0),
+					addedTime: time.Now().Add(-KnownTxTimeout),
+					status:    TxStatusQueue,
+				},
+			},
+			expectedError: nil,
+		},
+		{
+			name: "Re-enqueued transaction after KnownTxTimeout period",
+			tx:   createTestTransaction(0),
+			knownTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
+					addedTime:    time.Now().Add(-KnownTxTimeout - 5),
 					promotedTime: time.Now().Add(-KnownTxTimeout),
 					status:       TxStatusQueue,
 				},
@@ -202,7 +228,7 @@ func TestPreAddTx_BundleTxQueueSizeLimit(t *testing.T) {
 		expectedQueueCountAfter int
 	}{
 		{
-			name:                    "Non-bundle transaction should not be added to queue",
+			name:                    "Non-bundle transaction should not be added to knownTxs queue",
 			tx:                      createTestTransaction(0),
 			isBundleTx:              false,
 			maxBundleTxsInQueue:     10,
@@ -229,7 +255,7 @@ func TestPreAddTx_BundleTxQueueSizeLimit(t *testing.T) {
 			expectedQueueCountAfter: 6,
 		},
 		{
-			name:                    "Bundle transaction at queue limit should be added",
+			name:                    "Bundle transaction at queue limit should not be added",
 			tx:                      createTestTransaction(0),
 			isBundleTx:              true,
 			maxBundleTxsInQueue:     10,
@@ -238,16 +264,16 @@ func TestPreAddTx_BundleTxQueueSizeLimit(t *testing.T) {
 			expectedQueueCountAfter: 10,
 		},
 		{
-			name:                    "Bundle transaction exceeding queue limit should return error",
+			name:                    "Bundle transaction exceeding queue limit should not be added",
 			tx:                      createTestTransaction(0),
 			isBundleTx:              true,
 			maxBundleTxsInQueue:     10,
 			initialQueueCount:       11,
 			expectedError:           ErrBundleTxQueueFull,
-			expectedQueueCountAfter: 11, // Should not change
+			expectedQueueCountAfter: 11,
 		},
 		{
-			name:                    "Bundle transaction with zero queue limit should be added",
+			name:                    "Bundle transaction with zero queue limit should not be added",
 			tx:                      createTestTransaction(0),
 			isBundleTx:              true,
 			maxBundleTxsInQueue:     0,
@@ -273,6 +299,14 @@ func TestPreAddTx_BundleTxQueueSizeLimit(t *testing.T) {
 			for i := 0; i < tt.initialQueueCount; i++ {
 				tx := createTestTransaction(uint64(i + 100)) // Use different nonce to avoid hash conflicts
 				knownTxs.add(tx, TxStatusQueue)
+			}
+			for i := range 10 {
+				tx := createTestTransaction(uint64(i + 200)) // Use different nonce to avoid hash conflicts
+				knownTxs.add(tx, TxStatusPending)
+			}
+			for i := range 10 {
+				tx := createTestTransaction(uint64(i + 300)) // Use different nonce to avoid hash conflicts
+				knownTxs.add(tx, TxStatusDemoted)
 			}
 
 			// Create builder module
@@ -486,18 +520,42 @@ func TestIsReady_KnownTxs(t *testing.T) {
 			expectedTxs:      new(knownTxs),
 		},
 		{
+			name:             "Bundle transaction in queue",
+			txs:              map[uint64]*types.Transaction{0: createTestTransaction(0)},
+			isBundleTxResult: true,
+			knownTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
+					tx:           createTestTransaction(0),
+					addedTime:    oldTime,
+					promotedTime: time.Time{},
+					status:       TxStatusQueue,
+				},
+			},
+			expectedTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
+					tx:           createTestTransaction(0),
+					addedTime:    oldTime,
+					promotedTime: time.Now(),
+					status:       TxStatusPending,
+				},
+			},
+		},
+		{
 			name:             "New bundle transaction",
 			txs:              map[uint64]*types.Transaction{0: createTestTransaction(0)},
 			isBundleTxResult: true,
 			knownTxs:         new(knownTxs),
 			expectedTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx: createTestTransaction(0),
+					tx:           createTestTransaction(0),
+					addedTime:    time.Now(),
+					promotedTime: time.Now(),
+					status:       TxStatusPending,
 				},
 			},
 		},
 		{
-			name:             "Existing bundle transaction",
+			name:             "Existing bundle transaction in pending",
 			txs:              map[uint64]*types.Transaction{0: createTestTransaction(0)},
 			isBundleTxResult: true,
 			knownTxs: &knownTxs{
@@ -505,6 +563,7 @@ func TestIsReady_KnownTxs(t *testing.T) {
 					tx:           createTestTransaction(0),
 					addedTime:    oldTime,
 					promotedTime: oldTime,
+					status:       TxStatusPending,
 				},
 			},
 			expectedTxs: &knownTxs{
@@ -512,26 +571,34 @@ func TestIsReady_KnownTxs(t *testing.T) {
 					tx:           createTestTransaction(0),
 					addedTime:    oldTime,
 					promotedTime: oldTime,
+					status:       TxStatusPending,
 				},
 			},
 		},
 		{
-			name:             "KnownTx has txs",
+			name:             "KnownTx has other bundle txs",
 			txs:              map[uint64]*types.Transaction{0: createTestTransaction(4)},
 			isBundleTxResult: true,
 			knownTxs: &knownTxs{
 				createTestTransaction(3).Hash(): {
 					tx:           createTestTransaction(3),
+					addedTime:    oldTime,
 					promotedTime: oldTime,
+					status:       TxStatusPending,
 				},
 			},
 			expectedTxs: &knownTxs{
 				createTestTransaction(3).Hash(): {
 					tx:           createTestTransaction(3),
+					addedTime:    oldTime,
 					promotedTime: oldTime,
+					status:       TxStatusPending,
 				},
 				createTestTransaction(4).Hash(): {
-					tx: createTestTransaction(4),
+					tx:           createTestTransaction(4),
+					addedTime:    time.Now(),
+					promotedTime: time.Now(),
+					status:       TxStatusPending,
 				},
 			},
 		},
@@ -556,53 +623,62 @@ func TestIsReady_KnownTxs(t *testing.T) {
 				actual, exists := (*builderModule.knownTxs)[hash]
 				assert.True(t, exists)
 				assert.Equal(t, expected.tx.Hash(), actual.tx.Hash())
-
-				// For new transactions, verify the time is recent
-				if _, exists := (*tt.knownTxs)[hash]; !exists {
-					assert.True(t, time.Since(actual.promotedTime) < time.Second, "New transaction time should be recent")
-				} else {
-					// For existing transactions, verify the time is preserved
-					assert.Equal(t, expected.addedTime, actual.addedTime, "Existing transaction's addedTime should be preserved")
-					assert.Equal(t, expected.promotedTime, actual.promotedTime, "Existing transaction's promotedTime should be preserved")
-				}
+				assert.Equal(t, expected.status, actual.status)
+				assert.True(t, actual.addedTime.Sub(expected.addedTime) < time.Second)
+				assert.True(t, actual.promotedTime.Sub(expected.promotedTime) < time.Second)
 			}
 		})
 	}
 }
 
-func TestIsReady_MaxBundleTxs(t *testing.T) {
+func TestIsReady_BundleTxPendingSizeLimit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	now := time.Now()
-	unexecutable := now.Add(time.Hour)
-	testTx := createTestTransaction(900)
-
 	// we assume that tx.Nonce() < 1000 is a bundle tx
+	isBundleTx := func(tx *types.Transaction) bool {
+		return tx != nil && tx.Nonce() < 1000
+	}
+	createTestUnexecutableTransaction := func(nonce uint64) *types.Transaction {
+		tx := createTestTransaction(nonce)
+		tx.MarkUnexecutable(true)
+		return tx
+	}
+
 	tests := []struct {
 		name           string
 		maxBundleTxs   uint
 		knownTxs       *knownTxs
-		additionalTxs  map[uint64]*types.Transaction
+		txs            map[uint64]*types.Transaction
+		nextNonce      uint64
 		readyTxs       []*types.Transaction
 		expectedResult bool
 	}{
+		// maxBundleTxs is zero
 		{
 			name:           "Max bundle txs is zero",
 			maxBundleTxs:   0,
 			knownTxs:       new(knownTxs),
+			txs:            map[uint64]*types.Transaction{0: createTestTransaction(0)},
+			nextNonce:      0,
 			expectedResult: false,
 		},
+		// maxBundleTxs is 2
 		{
 			name:         "Below max bundle txs limit",
 			maxBundleTxs: 2,
 			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: time.Now(),
-					status:       TxStatusPending,
+					tx:     createTestTransaction(0),
+					status: TxStatusPending,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:     createTestTransaction(1),
+					status: TxStatusQueue,
 				},
 			},
+			txs:            map[uint64]*types.Transaction{1: createTestTransaction(1)},
+			nextNonce:      1,
 			expectedResult: true,
 		},
 		{
@@ -610,33 +686,205 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 			maxBundleTxs: 2,
 			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now,
-					status:       TxStatusPending,
+					tx:     createTestTransaction(0),
+					status: TxStatusPending,
 				},
 				createTestTransaction(1).Hash(): {
-					tx:           createTestTransaction(1),
-					promotedTime: now,
-					status:       TxStatusPending,
+					tx:     createTestTransaction(1),
+					status: TxStatusPending,
+				},
+				createTestTransaction(2).Hash(): {
+					tx:     createTestTransaction(2),
+					status: TxStatusQueue,
 				},
 			},
+			txs:            map[uint64]*types.Transaction{2: createTestTransaction(2)},
+			nextNonce:      2,
 			expectedResult: false,
 		},
+		{
+			name:         "Above max bundle txs limit",
+			maxBundleTxs: 2,
+			knownTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
+					tx:     createTestTransaction(0),
+					status: TxStatusPending,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:     createTestTransaction(1),
+					status: TxStatusPending,
+				},
+				createTestTransaction(2).Hash(): {
+					tx:     createTestTransaction(2),
+					status: TxStatusPending,
+				},
+				createTestTransaction(3).Hash(): {
+					tx:     createTestTransaction(3),
+					status: TxStatusQueue,
+				},
+			},
+			txs:            map[uint64]*types.Transaction{3: createTestTransaction(3)},
+			nextNonce:      3,
+			expectedResult: false,
+		},
+		{
+			name:         "KnownTxs with unexecutable and demoted transactions",
+			maxBundleTxs: 2,
+			knownTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
+					tx:     createTestTransaction(0),
+					status: TxStatusPending,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:     createTestTransaction(1),
+					status: TxStatusQueue,
+				},
+				createTestUnexecutableTransaction(2).Hash(): {
+					tx:     createTestUnexecutableTransaction(2),
+					status: TxStatusPending,
+				},
+				createTestTransaction(3).Hash(): {
+					tx:     createTestTransaction(3),
+					status: TxStatusDemoted,
+				},
+			},
+			txs:            map[uint64]*types.Transaction{1: createTestTransaction(1)},
+			nextNonce:      1,
+			expectedResult: true,
+		},
+		{
+			name:         "KnownTxs with not pending transactions but at max bundle txs limit",
+			maxBundleTxs: 2,
+			knownTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
+					tx:     createTestTransaction(0),
+					status: TxStatusPending,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:     createTestTransaction(1),
+					status: TxStatusPending,
+				},
+				createTestTransaction(2).Hash(): {
+					tx:     createTestTransaction(2),
+					status: TxStatusQueue,
+				},
+				createTestUnexecutableTransaction(3).Hash(): {
+					tx:     createTestUnexecutableTransaction(3),
+					status: TxStatusPending,
+				},
+				createTestTransaction(4).Hash(): {
+					tx:     createTestTransaction(4),
+					status: TxStatusDemoted,
+				},
+				createTestTransaction(5).Hash(): {
+					tx:     createTestTransaction(5),
+					status: TxStatusQueue,
+				},
+			},
+			txs:            map[uint64]*types.Transaction{5: createTestTransaction(5)},
+			nextNonce:      5,
+			expectedResult: false,
+		},
+		{
+			name:         "below max bundle txs limit but with subsequent bundle txs",
+			maxBundleTxs: 2,
+			knownTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
+					tx:     createTestTransaction(0),
+					status: TxStatusPending,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:     createTestTransaction(1),
+					status: TxStatusQueue,
+				},
+				createTestTransaction(2).Hash(): {
+					tx:     createTestTransaction(2),
+					status: TxStatusQueue,
+				},
+			},
+			txs:            map[uint64]*types.Transaction{1: createTestTransaction(1), 2: createTestTransaction(2)},
+			nextNonce:      1,
+			expectedResult: false,
+		},
+		{
+			name:         "Below max bundle txs limit with preceding bundle txs",
+			maxBundleTxs: 2,
+			knownTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
+					tx:     createTestTransaction(0),
+					status: TxStatusPending,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:     createTestTransaction(1),
+					status: TxStatusQueue,
+				},
+				createTestTransaction(2).Hash(): {
+					tx:     createTestTransaction(2),
+					status: TxStatusQueue,
+				},
+			},
+			txs:            map[uint64]*types.Transaction{1: createTestTransaction(1), 2: createTestTransaction(2)},
+			nextNonce:      2,
+			expectedResult: true,
+		},
+		{
+			name:         "Below max bundle txs limit with subsequent non-bundle txs",
+			maxBundleTxs: 2,
+			knownTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
+					tx:     createTestTransaction(0),
+					status: TxStatusPending,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:     createTestTransaction(1),
+					status: TxStatusQueue,
+				},
+			},
+			txs:            map[uint64]*types.Transaction{1: createTestTransaction(1), 2: createTestTransaction(1000)},
+			nextNonce:      1,
+			expectedResult: true,
+		},
+		{
+			name:         "Below max bundle txs limit with preceding bundle txs and subsequent non-bundle txs",
+			maxBundleTxs: 2,
+			knownTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
+					tx:     createTestTransaction(0),
+					status: TxStatusPending,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:     createTestTransaction(1),
+					status: TxStatusQueue,
+				},
+				createTestTransaction(2).Hash(): {
+					tx:     createTestTransaction(2),
+					status: TxStatusQueue,
+				},
+			},
+			txs:            map[uint64]*types.Transaction{1: createTestTransaction(1), 2: createTestTransaction(2), 3: createTestTransaction(1000)},
+			nextNonce:      2,
+			expectedResult: true,
+		},
+		// maxBundleTxs is 2 and readyTxs
 		{
 			name:         "At max bundle txs limit with ready bundle txs",
 			maxBundleTxs: 2,
 			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now,
-					status:       TxStatusPending,
+					tx:     createTestTransaction(0),
+					status: TxStatusPending,
 				},
 				createTestTransaction(1).Hash(): {
-					tx:           createTestTransaction(1),
-					promotedTime: now,
-					status:       TxStatusPending,
+					tx:     createTestTransaction(1),
+					status: TxStatusPending,
+				},
+				createTestTransaction(2).Hash(): {
+					tx:     createTestTransaction(2),
+					status: TxStatusQueue,
 				},
 			},
+			txs:            map[uint64]*types.Transaction{2: createTestTransaction(2)},
+			nextNonce:      2,
 			readyTxs:       []*types.Transaction{createTestTransaction(1)},
 			expectedResult: true,
 		},
@@ -645,164 +893,69 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 			maxBundleTxs: 2,
 			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now,
-					status:       TxStatusPending,
+					tx:     createTestTransaction(0),
+					status: TxStatusPending,
 				},
 				createTestTransaction(1).Hash(): {
-					tx:           createTestTransaction(1),
-					promotedTime: now,
-					status:       TxStatusPending,
+					tx:     createTestTransaction(1),
+					status: TxStatusPending,
+				},
+				createTestTransaction(2).Hash(): {
+					tx:     createTestTransaction(2),
+					status: TxStatusQueue,
 				},
 			},
+			txs:            map[uint64]*types.Transaction{2: createTestTransaction(2)},
+			nextNonce:      2,
 			readyTxs:       []*types.Transaction{createTestTransaction(1000)},
 			expectedResult: false,
 		},
 		{
-			name:         "Above max bundle txs limit",
+			name:         "Above max bundle txs limit with ready bundle txs",
 			maxBundleTxs: 2,
 			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now,
-					status:       TxStatusPending,
+					tx:     createTestTransaction(0),
+					status: TxStatusPending,
 				},
 				createTestTransaction(1).Hash(): {
-					tx:           createTestTransaction(1),
-					promotedTime: now,
-					status:       TxStatusPending,
+					tx:     createTestTransaction(1),
+					status: TxStatusPending,
 				},
 				createTestTransaction(2).Hash(): {
-					tx:           createTestTransaction(2),
-					promotedTime: now,
-					status:       TxStatusPending,
+					tx:     createTestTransaction(2),
+					status: TxStatusPending,
+				},
+				createTestTransaction(3).Hash(): {
+					tx:     createTestTransaction(3),
+					status: TxStatusQueue,
 				},
 			},
-			expectedResult: false,
-		},
-		{
-			name:         "Above max bundle txs limit with ready txs",
-			maxBundleTxs: 2,
-			knownTxs: &knownTxs{
-				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now,
-					status:       TxStatusPending,
-				},
-				createTestTransaction(1).Hash(): {
-					tx:           createTestTransaction(1),
-					promotedTime: now,
-					status:       TxStatusPending,
-				},
-				createTestTransaction(2).Hash(): {
-					tx:           createTestTransaction(2),
-					promotedTime: now,
-					status:       TxStatusPending,
-				},
-			},
+			txs:            map[uint64]*types.Transaction{3: createTestTransaction(3)},
+			nextNonce:      3,
 			readyTxs:       []*types.Transaction{createTestTransaction(2)},
 			expectedResult: true,
 		},
+		// maxBundleTxs is math.MaxUint64
 		{
-			name:         "KnownTxs with unexecutable transactions",
-			maxBundleTxs: 2,
+			name:         "No max bundle txs limit",
+			maxBundleTxs: math.MaxUint64,
 			knownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now,
-					status:       TxStatusPending,
+					tx:     createTestTransaction(0),
+					status: TxStatusPending,
 				},
 				createTestTransaction(1).Hash(): {
-					tx:           createTestTransaction(1),
-					promotedTime: unexecutable,
-					status:       TxStatusPending,
-				},
-			},
-			expectedResult: true,
-		},
-		{
-			name:         "KnownTxs with queue and demoted transactions",
-			maxBundleTxs: 2,
-			knownTxs: &knownTxs{
-				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now,
-					status:       TxStatusPending,
-				},
-				createTestTransaction(1).Hash(): {
-					tx:           createTestTransaction(1),
-					promotedTime: now,
-					status:       TxStatusQueue,
+					tx:     createTestTransaction(1),
+					status: TxStatusPending,
 				},
 				createTestTransaction(2).Hash(): {
-					tx:           createTestTransaction(2),
-					promotedTime: now,
-					status:       TxStatusDemoted,
+					tx:     createTestTransaction(2),
+					status: TxStatusQueue,
 				},
 			},
-			expectedResult: true,
-		},
-		{
-			name:         "Additional bundle tx within limit",
-			maxBundleTxs: 2,
-			knownTxs: &knownTxs{
-				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now,
-					status:       TxStatusPending,
-				},
-			},
-			additionalTxs:  map[uint64]*types.Transaction{902: createTestTransaction(902)},
-			expectedResult: true,
-		},
-		{
-			name:         "Additional non-bundle tx within limit",
-			maxBundleTxs: 2,
-			knownTxs: &knownTxs{
-				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now,
-					status:       TxStatusPending,
-				},
-			},
-			additionalTxs:  map[uint64]*types.Transaction{901: createTestTransaction(1000)},
-			expectedResult: true,
-		},
-		{
-			name:         "Multiple additional txs with non-bundle tx",
-			maxBundleTxs: 2,
-			knownTxs: &knownTxs{
-				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now,
-					status:       TxStatusPending,
-				},
-			},
-			additionalTxs:  map[uint64]*types.Transaction{899: createTestTransaction(899), 901: createTestTransaction(1000)},
-			expectedResult: true,
-		},
-		{
-			name:         "Known transaction in knownTxs",
-			maxBundleTxs: 2,
-			knownTxs: &knownTxs{
-				createTestTransaction(0).Hash(): {
-					tx:           createTestTransaction(0),
-					promotedTime: now,
-					status:       TxStatusPending,
-				},
-				testTx.Hash(): {
-					tx:           testTx,
-					promotedTime: now,
-					status:       TxStatusPending,
-				},
-			},
-			expectedResult: false,
-		},
-		{
-			name:           "No max bundle txs limit",
-			maxBundleTxs:   math.MaxUint64,
-			knownTxs:       new(knownTxs),
-			additionalTxs:  map[uint64]*types.Transaction{901: createTestTransaction(901)},
+			txs:            map[uint64]*types.Transaction{2: createTestTransaction(2)},
+			nextNonce:      2,
 			expectedResult: true,
 		},
 	}
@@ -810,9 +963,7 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
-			mockIsBundleTx := mockTxBundlingModule.EXPECT().IsBundleTx(gomock.Any()).DoAndReturn(func(tx *types.Transaction) bool {
-				return !(tx == nil || tx.Nonce() >= 1000)
-			}).Times(1)
+			mockIsBundleTx := mockTxBundlingModule.EXPECT().IsBundleTx(gomock.Any()).DoAndReturn(isBundleTx).Times(1)
 			if tt.maxBundleTxs != math.MaxUint64 {
 				mockIsBundleTx.AnyTimes()
 			}
@@ -823,20 +974,7 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 				knownTxs:         tt.knownTxs.Copy(),
 			}
 
-			// Mark some transactions as unexecutable to test that they are not counted
-			for _, knownTx := range *tt.knownTxs {
-				if knownTx.promotedTime.After(now) {
-					knownTx.tx.MarkUnexecutable(true)
-				}
-			}
-
-			txs := map[uint64]*types.Transaction{
-				900: testTx,
-			}
-			for nonce, tx := range tt.additionalTxs {
-				txs[nonce] = tx
-			}
-			result := builderModule.IsReady(txs, 900, tt.readyTxs)
+			result := builderModule.IsReady(tt.txs, tt.nextNonce, tt.readyTxs)
 			assert.Equal(t, tt.expectedResult, result)
 		})
 	}
@@ -907,14 +1045,14 @@ func TestPreReset_Timeout(t *testing.T) {
 	now := time.Now()
 
 	tests := []struct {
-		name            string
-		existingBundles *knownTxs
-		expectedBundles *knownTxs
-		expectedDrop    []common.Hash
+		name             string
+		existingKnownTxs *knownTxs
+		expectedKnownTxs *knownTxs
+		expectedDrop     []common.Hash
 	}{
 		{
 			name: "Bundle tx within PendingTimeout period",
-			existingBundles: &knownTxs{
+			existingKnownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
 					addedTime:    now,
@@ -922,7 +1060,7 @@ func TestPreReset_Timeout(t *testing.T) {
 					status:       TxStatusPending,
 				},
 			},
-			expectedBundles: &knownTxs{
+			expectedKnownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
 					addedTime:    now,
@@ -934,7 +1072,7 @@ func TestPreReset_Timeout(t *testing.T) {
 		},
 		{
 			name: "Bundle tx within QueueTimeout period",
-			existingBundles: &knownTxs{
+			existingKnownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
 					addedTime:    now,
@@ -942,7 +1080,7 @@ func TestPreReset_Timeout(t *testing.T) {
 					status:       TxStatusQueue,
 				},
 			},
-			expectedBundles: &knownTxs{
+			expectedKnownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
 					addedTime:    now,
@@ -954,7 +1092,7 @@ func TestPreReset_Timeout(t *testing.T) {
 		},
 		{
 			name: "Bundle tx exceeds PendingTimeout period",
-			existingBundles: &knownTxs{
+			existingKnownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
 					addedTime:    now,
@@ -962,7 +1100,7 @@ func TestPreReset_Timeout(t *testing.T) {
 					status:       TxStatusPending,
 				},
 			},
-			expectedBundles: &knownTxs{
+			expectedKnownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
 					addedTime:    now,
@@ -974,7 +1112,7 @@ func TestPreReset_Timeout(t *testing.T) {
 		},
 		{
 			name: "Bundle tx exceeds QueueTimeout period",
-			existingBundles: &knownTxs{
+			existingKnownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
 					addedTime:    now.Add(-QueueTimeout),
@@ -982,7 +1120,7 @@ func TestPreReset_Timeout(t *testing.T) {
 					status:       TxStatusQueue,
 				},
 			},
-			expectedBundles: &knownTxs{
+			expectedKnownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
 					addedTime:    now.Add(-QueueTimeout),
@@ -993,15 +1131,78 @@ func TestPreReset_Timeout(t *testing.T) {
 			expectedDrop: []common.Hash{createTestTransaction(0).Hash()},
 		},
 		{
-			name: "Bundle tx exceeds KnownTxTimeout period",
-			existingBundles: &knownTxs{
+			name: "Pending bundle tx exceeds KnownTxTimeout period",
+			existingKnownTxs: &knownTxs{
 				createTestTransaction(0).Hash(): {
 					tx:           createTestTransaction(0),
+					addedTime:    now,
 					promotedTime: now.Add(-KnownTxTimeout),
+					status:       TxStatusPending,
 				},
 			},
-			expectedBundles: new(knownTxs),
-			expectedDrop:    []common.Hash{},
+			expectedKnownTxs: new(knownTxs),
+			expectedDrop:     []common.Hash{createTestTransaction(0).Hash()},
+		},
+		{
+			name: "Queue bundle tx exceeds KnownTxTimeout period",
+			existingKnownTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
+					tx:           createTestTransaction(0),
+					addedTime:    now.Add(-KnownTxTimeout),
+					promotedTime: time.Time{},
+					status:       TxStatusQueue,
+				},
+			},
+			expectedKnownTxs: new(knownTxs),
+			expectedDrop:     []common.Hash{createTestTransaction(0).Hash()},
+		},
+		{
+			name: "Multiple known txs",
+			existingKnownTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
+					tx:           createTestTransaction(0),
+					addedTime:    now,
+					promotedTime: now,
+					status:       TxStatusPending,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:           createTestTransaction(1),
+					addedTime:    now,
+					promotedTime: now.Add(-PendingTimeout),
+					status:       TxStatusPending,
+				},
+				createTestTransaction(2).Hash(): {
+					tx:           createTestTransaction(2),
+					addedTime:    now,
+					promotedTime: now.Add(-KnownTxTimeout),
+					status:       TxStatusPending,
+				},
+				createTestTransaction(3).Hash(): {
+					tx:           createTestTransaction(3),
+					addedTime:    now,
+					promotedTime: now.Add(-KnownTxTimeout),
+					status:       TxStatusPending,
+				},
+			},
+			expectedKnownTxs: &knownTxs{
+				createTestTransaction(0).Hash(): {
+					tx:           createTestTransaction(0),
+					addedTime:    now,
+					promotedTime: now,
+					status:       TxStatusPending,
+				},
+				createTestTransaction(1).Hash(): {
+					tx:           createTestTransaction(1),
+					addedTime:    now,
+					promotedTime: now.Add(-PendingTimeout),
+					status:       TxStatusPending,
+				},
+			},
+			expectedDrop: []common.Hash{
+				createTestTransaction(1).Hash(),
+				createTestTransaction(2).Hash(),
+				createTestTransaction(3).Hash(),
+			},
 		},
 	}
 
@@ -1012,22 +1213,30 @@ func TestPreReset_Timeout(t *testing.T) {
 			// Setup BuilderModule
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
-				knownTxs:         tt.existingBundles.Copy(),
+				knownTxs:         tt.existingKnownTxs.Copy(),
 			}
 
 			drops := builderModule.PreReset(nil, nil)
 
 			// Verify the number of bundles
-			assert.Equal(t, len(*tt.expectedBundles), len(*builderModule.knownTxs))
+			assert.Equal(t, len(*tt.expectedKnownTxs), len(*builderModule.knownTxs))
 
-			// Verify each bundle's state
-			for hash, expected := range *tt.expectedBundles {
+			// Verify each bundle
+			for hash, expected := range *tt.expectedKnownTxs {
 				actual, exists := (*builderModule.knownTxs)[hash]
 				assert.True(t, exists)
 				assert.Equal(t, expected.tx.Hash(), actual.tx.Hash())
 				assert.Equal(t, expected.addedTime, actual.addedTime)
 				assert.Equal(t, expected.promotedTime, actual.promotedTime)
-				assert.Equal(t, tt.expectedDrop, drops)
+				assert.Equal(t, expected.status, actual.status)
+			}
+
+			// Verify the number of drops
+			assert.Equal(t, len(tt.expectedDrop), len(drops))
+
+			// Verify the drops
+			for _, drop := range drops {
+				assert.Contains(t, tt.expectedDrop, drop)
 			}
 		})
 	}
