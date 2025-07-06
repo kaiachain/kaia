@@ -1137,7 +1137,7 @@ func writeLicense(info *info) {
 	}
 }
 
-// dolines executes cmd
+// doLines executes cmd
 func doLines(cmd *exec.Cmd, f func(string)) error {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
