@@ -16,6 +16,7 @@
 
 package builder
 
+/*
 import (
 	"github.com/kaiachain/kaia/common"
 )
@@ -71,3 +72,4 @@ func (b *Bundle) IsConflict(newBundle *Bundle) bool {
 
 	return true
 }
+*/

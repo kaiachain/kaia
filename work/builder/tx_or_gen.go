@@ -16,6 +16,7 @@
 
 package builder
 
+/*
 import (
 	"fmt"
 
@@ -90,3 +91,4 @@ func (t *TxOrGen) IsTxGenerator() bool {
 func (t *TxOrGen) Equals(other *TxOrGen) bool {
 	return t.Id == other.Id
 }
+*/
