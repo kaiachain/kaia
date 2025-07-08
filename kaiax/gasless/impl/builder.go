@@ -19,7 +19,7 @@ package impl
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/builder"
+	"github.com/kaiachain/kaia/work/builder"
 )
 
 var _ builder.TxBundlingModule = (*GaslessModule)(nil)

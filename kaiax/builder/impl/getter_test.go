@@ -26,9 +26,9 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/builder"
 	mock_builder "github.com/kaiachain/kaia/kaiax/builder/mock"
 	mock_kaiax "github.com/kaiachain/kaia/kaiax/mock"
+	"github.com/kaiachain/kaia/work/builder"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
