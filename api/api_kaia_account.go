@@ -23,35 +23,28 @@
 package api
 
 import (
-	"context"
-	"fmt"
-
-	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/common"
 )
 
-// PublicDebugAPI is the collection of Kaia APIs exposed over the public
-// debugging endpoint.
-type PublicDebugAPI struct {
-	b Backend
+// KaiaAccountAPI provides an API to access accounts managed by this node.
+// It offers only methods that can retrieve accounts.
+type KaiaAccountAPI struct {
+	am accounts.AccountManager
 }
 
-// NewPublicDebugAPI creates a new API definition for the public debug methods
-// of the Kaia service.
-func NewPublicDebugAPI(b Backend) *PublicDebugAPI {
-	return &PublicDebugAPI{b: b}
+// NewKaiaAccountAPI creates a new KaiaAccountAPI.
+func NewKaiaAccountAPI(am accounts.AccountManager) *KaiaAccountAPI {
+	return &KaiaAccountAPI{am: am}
 }
 
-// GetBlockRlp retrieves the RLP encoded for of a single block.
-func (api *PublicDebugAPI) GetBlockRlp(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (string, error) {
-	block, _ := api.b.BlockByNumberOrHash(ctx, blockNrOrHash)
-	if block == nil {
-		blockNumberOrHashString, _ := blockNrOrHash.NumberOrHashString()
-		return "", fmt.Errorf("block %v not found", blockNumberOrHashString)
+// Accounts returns the collection of accounts this node manages
+func (s *KaiaAccountAPI) Accounts() []common.Address {
+	addresses := make([]common.Address, 0) // return [] instead of nil if empty
+	for _, wallet := range s.am.Wallets() {
+		for _, account := range wallet.Accounts() {
+			addresses = append(addresses, account.Address)
+		}
 	}
-	encoded, err := rlp.EncodeToBytes(block)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x", encoded), nil
+	return addresses
 }

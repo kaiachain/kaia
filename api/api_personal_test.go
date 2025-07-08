@@ -29,8 +29,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestPrivateAccountAPI_ImportRawKey tests ImportRawKey() and ReplaceRawKey().
-func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
+// TestPersonalAPI_ImportRawKey tests ImportRawKey() and ReplaceRawKey().
+func TestPersonalAPI_ImportRawKey(t *testing.T) {
 	scryptN := keystore.StandardScryptN
 	scryptP := keystore.StandardScryptP
 
@@ -45,7 +45,7 @@ func TestPrivateAccountAPI_ImportRawKey(t *testing.T) {
 		keystore.NewKeyStore(keydir, scryptN, scryptP),
 	}
 
-	api := PrivateAccountAPI{
+	api := PersonalAPI{
 		am:        accounts.NewManager(backends...),
 		nonceLock: new(AddrLocker),
 		b:         nil,

@@ -61,63 +61,63 @@ var (
 	errNotFoundBlock = errors.New("can't find a block in database")
 )
 
-// EthereumAPI provides an API to access the Kaia through the `eth` namespace.
-type EthereumAPI struct {
-	publicFilterAPI          *filters.PublicFilterAPI
-	publicKaiaAPI            *PublicKaiaAPI
-	publicBlockChainAPI      *PublicBlockChainAPI
-	publicTransactionPoolAPI *PublicTransactionPoolAPI
-	publicAccountAPI         *PublicAccountAPI
-	nodeAddress              common.Address
+// EthAPI provides an API to access the Kaia through the `eth` namespace.
+type EthAPI struct {
+	publicFilterAPI    *filters.PublicFilterAPI
+	kaiaAPI            *KaiaAPI
+	kaiaBlockChainAPI  *KaiaBlockChainAPI
+	kaiaTransactionAPI *KaiaTransactionAPI
+	kaiaAccountAPI     *KaiaAccountAPI
+	nodeAddress        common.Address
 }
 
-// NewEthereumAPI creates a new ethereum API.
-// EthereumAPI operates using Kaia's API internally without overriding.
+// NewEthAPI creates a new ethereum API.
+// EthAPI operates using Kaia's API internally without overriding.
 // Therefore, it is necessary to use APIs defined in two different packages(cn and api),
 // so those apis will be defined through a setter.
-func NewEthereumAPI(
+func NewEthAPI(
 	publicFilterAPI *filters.PublicFilterAPI,
-	publicKaiaAPI *PublicKaiaAPI,
-	publicBlockChainAPI *PublicBlockChainAPI,
-	publicTransactionPoolAPI *PublicTransactionPoolAPI,
-	publicAccountAPI *PublicAccountAPI,
+	kaiaAPI *KaiaAPI,
+	kaiaBlockChainAPI *KaiaBlockChainAPI,
+	kaiaTransactionAPI *KaiaTransactionAPI,
+	kaiaAccountAPI *KaiaAccountAPI,
 	nodeAddress common.Address,
-) *EthereumAPI {
-	return &EthereumAPI{
+) *EthAPI {
+	return &EthAPI{
 		publicFilterAPI,
-		publicKaiaAPI,
-		publicBlockChainAPI,
-		publicTransactionPoolAPI,
-		publicAccountAPI,
+		kaiaAPI,
+		kaiaBlockChainAPI,
+		kaiaTransactionAPI,
+		kaiaAccountAPI,
 		nodeAddress,
 	}
 }
 
 // Etherbase is the address of operating node.
 // Unlike Ethereum, it only returns the node address because Kaia does not have a POW mechanism.
-func (api *EthereumAPI) Etherbase() (common.Address, error) {
+func (api *EthAPI) Etherbase() (common.Address, error) {
 	return api.nodeAddress, nil
 }
 
 // Coinbase is the address of operating node (alias for Etherbase).
-func (api *EthereumAPI) Coinbase() (common.Address, error) {
+func (api *EthAPI) Coinbase() (common.Address, error) {
 	return api.Etherbase()
 }
 
 // Hashrate returns the POW hashrate.
 // Unlike Ethereum, it always returns ZeroHashrate because Kaia does not have a POW mechanism.
-func (api *EthereumAPI) Hashrate() hexutil.Uint64 {
+func (api *EthAPI) Hashrate() hexutil.Uint64 {
 	return hexutil.Uint64(ZeroHashrate)
 }
 
 // Mining returns an indication if this node is currently mining.
 // Unlike Ethereum, it always returns false because Kaia does not have a POW mechanism,
-func (api *EthereumAPI) Mining() bool {
+func (api *EthAPI) Mining() bool {
 	return false
 }
 
 // GetWork returns an errNoMiningWork because Kaia does not have a POW mechanism.
-func (api *EthereumAPI) GetWork() ([4]string, error) {
+func (api *EthAPI) GetWork() ([4]string, error) {
 	return [4]string{}, errNoMiningWork
 }
 
@@ -149,17 +149,17 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 }
 
 // SubmitWork returns false because Kaia does not have a POW mechanism.
-func (api *EthereumAPI) SubmitWork(nonce BlockNonce, hash, digest common.Hash) bool {
+func (api *EthAPI) SubmitWork(nonce BlockNonce, hash, digest common.Hash) bool {
 	return false
 }
 
 // SubmitHashrate returns false because Kaia does not have a POW mechanism.
-func (api *EthereumAPI) SubmitHashrate(rate hexutil.Uint64, id common.Hash) bool {
+func (api *EthAPI) SubmitHashrate(rate hexutil.Uint64, id common.Hash) bool {
 	return false
 }
 
 // GetHashrate returns ZeroHashrate because Kaia does not have a POW mechanism.
-func (api *EthereumAPI) GetHashrate() uint64 {
+func (api *EthAPI) GetHashrate() uint64 {
 	return ZeroHashrate
 }
 
@@ -170,13 +170,13 @@ func (api *EthereumAPI) GetHashrate() uint64 {
 // `eth_getFilterChanges` polling method that is also used for log filters.
 //
 // https://eth.wiki/json-rpc/API#eth_newpendingtransactionfilter
-func (api *EthereumAPI) NewPendingTransactionFilter() rpc.ID {
+func (api *EthAPI) NewPendingTransactionFilter() rpc.ID {
 	return api.publicFilterAPI.NewPendingTransactionFilter()
 }
 
 // NewPendingTransactions creates a subscription that is triggered each time a transaction
 // enters the transaction pool and was signed from one of the transactions this nodes manages.
-func (api *EthereumAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscription, error) {
+func (api *EthAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscription, error) {
 	return api.publicFilterAPI.NewPendingTransactions(ctx)
 }
 
@@ -184,12 +184,12 @@ func (api *EthereumAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscr
 // It is part of the filter package since polling goes with eth_getFilterChanges.
 //
 // https://eth.wiki/json-rpc/API#eth_newblockfilter
-func (api *EthereumAPI) NewBlockFilter() rpc.ID {
+func (api *EthAPI) NewBlockFilter() rpc.ID {
 	return api.publicFilterAPI.NewBlockFilter()
 }
 
 // NewHeads send a notification each time a new (header) block is appended to the chain.
-func (api *EthereumAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
+func (api *EthAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
 	notifier, supported := rpc.NotifierFromContext(ctx)
 	if !supported {
 		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
@@ -224,7 +224,7 @@ func (api *EthereumAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error)
 }
 
 // Logs creates a subscription that fires for all new log that match the given filter criteria.
-func (api *EthereumAPI) Logs(ctx context.Context, crit filters.FilterCriteria) (*rpc.Subscription, error) {
+func (api *EthAPI) Logs(ctx context.Context, crit filters.FilterCriteria) (*rpc.Subscription, error) {
 	return api.publicFilterAPI.Logs(ctx, crit)
 }
 
@@ -241,21 +241,21 @@ func (api *EthereumAPI) Logs(ctx context.Context, crit filters.FilterCriteria) (
 // In case "fromBlock" > "toBlock" an error is returned.
 //
 // https://eth.wiki/json-rpc/API#eth_newfilter
-func (api *EthereumAPI) NewFilter(crit filters.FilterCriteria) (rpc.ID, error) {
+func (api *EthAPI) NewFilter(crit filters.FilterCriteria) (rpc.ID, error) {
 	return api.publicFilterAPI.NewFilter(crit)
 }
 
 // GetLogs returns logs matching the given argument that are stored within the state.
 //
 // https://eth.wiki/json-rpc/API#eth_getlogs
-func (api *EthereumAPI) GetLogs(ctx context.Context, crit filters.FilterCriteria) ([]*types.Log, error) {
+func (api *EthAPI) GetLogs(ctx context.Context, crit filters.FilterCriteria) ([]*types.Log, error) {
 	return api.publicFilterAPI.GetLogs(ctx, crit)
 }
 
 // UninstallFilter removes the filter with the given filter id.
 //
 // https://eth.wiki/json-rpc/API#eth_uninstallfilter
-func (api *EthereumAPI) UninstallFilter(id rpc.ID) bool {
+func (api *EthAPI) UninstallFilter(id rpc.ID) bool {
 	return api.publicFilterAPI.UninstallFilter(id)
 }
 
@@ -263,7 +263,7 @@ func (api *EthereumAPI) UninstallFilter(id rpc.ID) bool {
 // If the filter could not be found an empty array of logs is returned.
 //
 // https://eth.wiki/json-rpc/API#eth_getfilterlogs
-func (api *EthereumAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.Log, error) {
+func (api *EthAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.Log, error) {
 	return api.publicFilterAPI.GetFilterLogs(ctx, id)
 }
 
@@ -274,26 +274,26 @@ func (api *EthereumAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.
 // (pending)Log filters return []Log.
 //
 // https://eth.wiki/json-rpc/API#eth_getfilterchanges
-func (api *EthereumAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
+func (api *EthAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
 	return api.publicFilterAPI.GetFilterChanges(id)
 }
 
 // GasPrice returns a suggestion for a gas price.
-func (api *EthereumAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
-	return api.publicKaiaAPI.GasPrice(ctx)
+func (api *EthAPI) GasPrice(ctx context.Context) (*hexutil.Big, error) {
+	return api.kaiaAPI.GasPrice(ctx)
 }
 
-func (api *EthereumAPI) UpperBoundGasPrice(ctx context.Context) *hexutil.Big {
-	return (*hexutil.Big)(api.publicKaiaAPI.UpperBoundGasPrice(ctx))
+func (api *EthAPI) UpperBoundGasPrice(ctx context.Context) *hexutil.Big {
+	return (*hexutil.Big)(api.kaiaAPI.UpperBoundGasPrice(ctx))
 }
 
-func (api *EthereumAPI) LowerBoundGasPrice(ctx context.Context) *hexutil.Big {
-	return (*hexutil.Big)(api.publicKaiaAPI.LowerBoundGasPrice(ctx))
+func (api *EthAPI) LowerBoundGasPrice(ctx context.Context) *hexutil.Big {
+	return (*hexutil.Big)(api.kaiaAPI.LowerBoundGasPrice(ctx))
 }
 
 // MaxPriorityFeePerGas returns a suggestion for a gas tip cap for dynamic fee transactions.
-func (api *EthereumAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
-	return api.publicKaiaAPI.MaxPriorityFeePerGas(ctx)
+func (api *EthAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error) {
+	return api.kaiaAPI.MaxPriorityFeePerGas(ctx)
 }
 
 // DecimalOrHex unmarshals a non-negative decimal or hex parameter into a uint64.
@@ -317,8 +317,8 @@ func (dh *DecimalOrHex) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (api *EthereumAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*FeeHistoryResult, error) {
-	return api.publicKaiaAPI.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
+func (api *EthAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*FeeHistoryResult, error) {
+	return api.kaiaAPI.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
 }
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
@@ -328,25 +328,25 @@ func (api *EthereumAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex,
 // - highestBlock:  block number of the highest block header this node has received from peers
 // - pulledStates:  number of state entries processed until now
 // - knownStates:   number of known state entries that still need to be pulled
-func (api *EthereumAPI) Syncing() (interface{}, error) {
-	return api.publicKaiaAPI.Syncing()
+func (api *EthAPI) Syncing() (interface{}, error) {
+	return api.kaiaAPI.Syncing()
 }
 
 // ChainId is the EIP-155 replay-protection chain id for the current ethereum chain config.
-func (api *EthereumAPI) ChainId() (*hexutil.Big, error) {
-	return api.publicBlockChainAPI.ChainId(), nil
+func (api *EthAPI) ChainId() (*hexutil.Big, error) {
+	return api.kaiaBlockChainAPI.ChainId(), nil
 }
 
 // BlockNumber returns the block number of the chain head.
-func (api *EthereumAPI) BlockNumber() hexutil.Uint64 {
-	return api.publicBlockChainAPI.BlockNumber()
+func (api *EthAPI) BlockNumber() hexutil.Uint64 {
+	return api.kaiaBlockChainAPI.BlockNumber()
 }
 
 // GetBalance returns the amount of wei for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers are also allowed.
-func (api *EthereumAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
-	return api.publicBlockChainAPI.GetBalance(ctx, address, blockNrOrHash)
+func (api *EthAPI) GetBalance(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Big, error) {
+	return api.kaiaBlockChainAPI.GetBalance(ctx, address, blockNrOrHash)
 }
 
 // EthAccountResult structs for GetProof
@@ -485,16 +485,16 @@ func doGetProof(ctx context.Context, b Backend, address common.Address, storageK
 }
 
 // GetProof returns the Merkle-proof for a given account and optionally some storage keys
-func (api *EthereumAPI) GetProof(ctx context.Context, address common.Address, storageKeys []string, blockNrOrHash rpc.BlockNumberOrHash) (*EthAccountResult, error) {
-	return doGetProof(ctx, api.publicBlockChainAPI.b, address, storageKeys, blockNrOrHash)
+func (api *EthAPI) GetProof(ctx context.Context, address common.Address, storageKeys []string, blockNrOrHash rpc.BlockNumberOrHash) (*EthAccountResult, error) {
+	return doGetProof(ctx, api.kaiaBlockChainAPI.b, address, storageKeys, blockNrOrHash)
 }
 
 // GetHeaderByNumber returns the requested canonical block header.
 // * When blockNr is -1 the chain head is returned.
 // * When blockNr is -2 the pending chain head is returned.
-func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
+func (api *EthAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockNumber) (map[string]interface{}, error) {
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
-	header, err := api.publicBlockChainAPI.b.HeaderByNumber(ctx, number)
+	header, err := api.kaiaBlockChainAPI.b.HeaderByNumber(ctx, number)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
 			return nil, nil
@@ -516,9 +516,9 @@ func (api *EthereumAPI) GetHeaderByNumber(ctx context.Context, number rpc.BlockN
 }
 
 // GetHeaderByHash returns the requested header by hash.
-func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
+func (api *EthAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) map[string]interface{} {
 	// In Ethereum, err is always nil because the backend of Ethereum always return nil.
-	header, _ := api.publicBlockChainAPI.b.HeaderByHash(ctx, hash)
+	header, _ := api.kaiaBlockChainAPI.b.HeaderByHash(ctx, hash)
 	if header != nil {
 		response, err := api.rpcMarshalHeader(header, true)
 		if err != nil {
@@ -534,10 +534,10 @@ func (api *EthereumAPI) GetHeaderByHash(ctx context.Context, hash common.Hash) m
 //   - When blockNr is -2 the pending chain head is returned.
 //   - When fullTx is true all transactions in the block are returned, otherwise
 //     only the transaction hash is returned.
-func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
+func (api *EthAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 	// Kaia backend returns error when there is no matched block but
 	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
-	block, err := api.publicBlockChainAPI.b.BlockByNumber(ctx, number)
+	block, err := api.kaiaBlockChainAPI.b.BlockByNumber(ctx, number)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
 			return nil, nil
@@ -559,10 +559,10 @@ func (api *EthereumAPI) GetBlockByNumber(ctx context.Context, number rpc.BlockNu
 
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned.
-func (api *EthereumAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fullTx bool) (map[string]interface{}, error) {
+func (api *EthAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fullTx bool) (map[string]interface{}, error) {
 	// Kaia backend returns error when there is no matched block but
 	// Ethereum returns it as nil without error, so we should return is as nil when there is no matched block.
-	block, err := api.publicBlockChainAPI.b.BlockByHash(ctx, hash)
+	block, err := api.kaiaBlockChainAPI.b.BlockByHash(ctx, hash)
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
 			return nil, nil
@@ -573,18 +573,18 @@ func (api *EthereumAPI) GetBlockByHash(ctx context.Context, hash common.Hash, fu
 }
 
 // GetUncleByBlockNumberAndIndex returns nil because there is no uncle block in Kaia.
-func (api *EthereumAPI) GetUncleByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) (map[string]interface{}, error) {
+func (api *EthAPI) GetUncleByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) (map[string]interface{}, error) {
 	return nil, nil
 }
 
 // GetUncleByBlockHashAndIndex returns nil because there is no uncle block in Kaia.
-func (api *EthereumAPI) GetUncleByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (map[string]interface{}, error) {
+func (api *EthAPI) GetUncleByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (map[string]interface{}, error) {
 	return nil, nil
 }
 
 // GetUncleCountByBlockNumber returns 0 when given blockNr exists because there is no uncle block in Kaia.
-func (api *EthereumAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
-	if block, _ := api.publicBlockChainAPI.b.BlockByNumber(ctx, blockNr); block != nil {
+func (api *EthAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
+	if block, _ := api.kaiaBlockChainAPI.b.BlockByNumber(ctx, blockNr); block != nil {
 		n := hexutil.Uint(ZeroUncleCount)
 		return &n
 	}
@@ -592,8 +592,8 @@ func (api *EthereumAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr 
 }
 
 // GetUncleCountByBlockHash returns 0 when given blockHash exists because there is no uncle block in Kaia.
-func (api *EthereumAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
-	if block, _ := api.publicBlockChainAPI.b.BlockByHash(ctx, blockHash); block != nil {
+func (api *EthAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
+	if block, _ := api.kaiaBlockChainAPI.b.BlockByHash(ctx, blockHash); block != nil {
 		n := hexutil.Uint(ZeroUncleCount)
 		return &n
 	}
@@ -601,15 +601,15 @@ func (api *EthereumAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash 
 }
 
 // GetCode returns the code stored at the given address in the state for the given block number.
-func (api *EthereumAPI) GetCode(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
-	return api.publicBlockChainAPI.GetCode(ctx, address, blockNrOrHash)
+func (api *EthAPI) GetCode(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	return api.kaiaBlockChainAPI.GetCode(ctx, address, blockNrOrHash)
 }
 
 // GetStorageAt returns the storage from the state at the given address, key and
 // block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta block
 // numbers are also allowed.
-func (api *EthereumAPI) GetStorageAt(ctx context.Context, address common.Address, key string, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
-	return api.publicBlockChainAPI.GetStorageAt(ctx, address, key, blockNrOrHash)
+func (api *EthAPI) GetStorageAt(ctx context.Context, address common.Address, key string, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	return api.kaiaBlockChainAPI.GetStorageAt(ctx, address, key, blockNrOrHash)
 }
 
 // EthOverrideAccount indicates the overriding fields of account during the execution
@@ -673,8 +673,8 @@ func (diff *EthStateOverride) Apply(state *state.StateDB) error {
 //
 // Note, this function doesn't make and changes in the state/blockchain and is
 // useful to execute and retrieve values.
-func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride) (hexutil.Bytes, error) {
-	bcAPI := api.publicBlockChainAPI.b
+func (api *EthAPI) Call(ctx context.Context, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride) (hexutil.Bytes, error) {
+	bcAPI := api.kaiaBlockChainAPI.b
 	gasCap := uint64(0)
 	if rpcGasCap := bcAPI.RPCGasCap(); rpcGasCap != nil {
 		gasCap = rpcGasCap.Uint64()
@@ -692,8 +692,8 @@ func (api *EthereumAPI) Call(ctx context.Context, args EthTransactionArgs, block
 
 // EstimateGas returns an estimate of the amount of gas needed to execute the
 // given transaction against the current pending block.
-func (api *EthereumAPI) EstimateGas(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash, overrides *EthStateOverride) (hexutil.Uint64, error) {
-	bcAPI := api.publicBlockChainAPI.b
+func (api *EthAPI) EstimateGas(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash, overrides *EthStateOverride) (hexutil.Uint64, error) {
+	bcAPI := api.kaiaBlockChainAPI.b
 	bNrOrHash := rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
 	if blockNrOrHash != nil {
 		bNrOrHash = *blockNrOrHash
@@ -706,13 +706,13 @@ func (api *EthereumAPI) EstimateGas(ctx context.Context, args EthTransactionArgs
 }
 
 // GetBlockTransactionCountByNumber returns the number of transactions in the block with the given block number.
-func (api *EthereumAPI) GetBlockTransactionCountByNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
-	return api.publicTransactionPoolAPI.GetBlockTransactionCountByNumber(ctx, blockNr)
+func (api *EthAPI) GetBlockTransactionCountByNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
+	return api.kaiaTransactionAPI.GetBlockTransactionCountByNumber(ctx, blockNr)
 }
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.
-func (api *EthereumAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
-	return api.publicTransactionPoolAPI.GetBlockTransactionCountByHash(ctx, blockHash)
+func (api *EthAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
+	return api.kaiaTransactionAPI.GetBlockTransactionCountByHash(ctx, blockHash)
 }
 
 // EthRPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
@@ -946,27 +946,27 @@ func formatTxToEthTxJSON(tx *types.Transaction) *ethTxJSON {
 }
 
 // GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
-func (api *EthereumAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) *EthRPCTransaction {
-	block, err := api.publicTransactionPoolAPI.b.BlockByNumber(ctx, blockNr)
+func (api *EthAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) *EthRPCTransaction {
+	block, err := api.kaiaTransactionAPI.b.BlockByNumber(ctx, blockNr)
 	if err != nil {
 		return nil
 	}
 
-	return newEthRPCTransactionFromBlockIndex(block, uint64(index), api.publicBlockChainAPI.b.ChainConfig())
+	return newEthRPCTransactionFromBlockIndex(block, uint64(index), api.kaiaBlockChainAPI.b.ChainConfig())
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
-func (api *EthereumAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) *EthRPCTransaction {
-	block, err := api.publicTransactionPoolAPI.b.BlockByHash(ctx, blockHash)
+func (api *EthAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) *EthRPCTransaction {
+	block, err := api.kaiaTransactionAPI.b.BlockByHash(ctx, blockHash)
 	if err != nil || block == nil {
 		return nil
 	}
-	return newEthRPCTransactionFromBlockIndex(block, uint64(index), api.publicBlockChainAPI.b.ChainConfig())
+	return newEthRPCTransactionFromBlockIndex(block, uint64(index), api.kaiaBlockChainAPI.b.ChainConfig())
 }
 
 // GetRawTransactionByBlockNumberAndIndex returns the bytes of the transaction for the given block number and index.
-func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) hexutil.Bytes {
-	rawTx := api.publicTransactionPoolAPI.GetRawTransactionByBlockNumberAndIndex(ctx, blockNr, index)
+func (api *EthAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) hexutil.Bytes {
+	rawTx := api.kaiaTransactionAPI.GetRawTransactionByBlockNumberAndIndex(ctx, blockNr, index)
 	if rawTx == nil {
 		return nil
 	}
@@ -977,8 +977,8 @@ func (api *EthereumAPI) GetRawTransactionByBlockNumberAndIndex(ctx context.Conte
 }
 
 // GetRawTransactionByBlockHashAndIndex returns the bytes of the transaction for the given block hash and index.
-func (api *EthereumAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) hexutil.Bytes {
-	rawTx := api.publicTransactionPoolAPI.GetRawTransactionByBlockHashAndIndex(ctx, blockHash, index)
+func (api *EthAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) hexutil.Bytes {
+	rawTx := api.kaiaTransactionAPI.GetRawTransactionByBlockHashAndIndex(ctx, blockHash, index)
 	if rawTx == nil {
 		return nil
 	}
@@ -989,13 +989,13 @@ func (api *EthereumAPI) GetRawTransactionByBlockHashAndIndex(ctx context.Context
 }
 
 // GetTransactionCount returns the number of transactions the given address has sent for the given block number.
-func (api *EthereumAPI) GetTransactionCount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Uint64, error) {
-	return api.publicTransactionPoolAPI.GetTransactionCount(ctx, address, blockNrOrHash)
+func (api *EthAPI) GetTransactionCount(ctx context.Context, address common.Address, blockNrOrHash rpc.BlockNumberOrHash) (*hexutil.Uint64, error) {
+	return api.kaiaTransactionAPI.GetTransactionCount(ctx, address, blockNrOrHash)
 }
 
 // GetTransactionByHash returns the transaction for the given hash.
-func (api *EthereumAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) (*EthRPCTransaction, error) {
-	txpoolAPI := api.publicTransactionPoolAPI.b
+func (api *EthAPI) GetTransactionByHash(ctx context.Context, hash common.Hash) (*EthRPCTransaction, error) {
+	txpoolAPI := api.kaiaTransactionAPI.b
 
 	// Try to return an already finalized transaction
 	if tx, blockHash, blockNumber, index := txpoolAPI.ChainDB().ReadTxAndLookupInfo(hash); tx != nil {
@@ -1006,19 +1006,19 @@ func (api *EthereumAPI) GetTransactionByHash(ctx context.Context, hash common.Ha
 		if block == nil {
 			return nil, errNotFoundBlock
 		}
-		return newEthRPCTransaction(block, tx, blockHash, blockNumber, index, api.publicBlockChainAPI.b.ChainConfig()), nil
+		return newEthRPCTransaction(block, tx, blockHash, blockNumber, index, api.kaiaBlockChainAPI.b.ChainConfig()), nil
 	}
 	// No finalized transaction, try to retrieve it from the pool
 	if tx := txpoolAPI.GetPoolTransaction(hash); tx != nil {
-		return newEthRPCPendingTransaction(tx, api.publicBlockChainAPI.b.ChainConfig()), nil
+		return newEthRPCPendingTransaction(tx, api.kaiaBlockChainAPI.b.ChainConfig()), nil
 	}
 	// Transaction unknown, return as such
 	return nil, nil
 }
 
 // GetRawTransactionByHash returns the bytes of the transaction for the given hash.
-func (api *EthereumAPI) GetRawTransactionByHash(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
-	rawTx, err := api.publicTransactionPoolAPI.GetRawTransactionByHash(ctx, hash)
+func (api *EthAPI) GetRawTransactionByHash(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
+	rawTx, err := api.kaiaTransactionAPI.GetRawTransactionByHash(ctx, hash)
 	if rawTx == nil || err != nil {
 		return nil, err
 	}
@@ -1029,8 +1029,8 @@ func (api *EthereumAPI) GetRawTransactionByHash(ctx context.Context, hash common
 }
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
-func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
-	txpoolAPI := api.publicTransactionPoolAPI.b
+func (api *EthAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
+	txpoolAPI := api.kaiaTransactionAPI.b
 
 	// Formats return Kaia transaction Receipt to the Ethereum Transaction Receipt.
 	tx, blockHash, blockNumber, index, receipt := txpoolAPI.GetTxLookupInfoAndReceipt(ctx, hash)
@@ -1056,8 +1056,8 @@ func (api *EthereumAPI) GetTransactionReceipt(ctx context.Context, hash common.H
 }
 
 // GetBlockReceipts returns the receipts of all transactions in the block identified by number or hash.
-func (api *EthereumAPI) GetBlockReceipts(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) ([]map[string]interface{}, error) {
-	b := api.publicBlockChainAPI.b
+func (api *EthAPI) GetBlockReceipts(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) ([]map[string]interface{}, error) {
+	b := api.kaiaBlockChainAPI.b
 	block, err := b.BlockByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		return nil, err
@@ -1143,18 +1143,18 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
-func (api *EthereumAPI) SendTransaction(ctx context.Context, args EthTransactionArgs) (common.Hash, error) {
+func (api *EthAPI) SendTransaction(ctx context.Context, args EthTransactionArgs) (common.Hash, error) {
 	if args.Nonce == nil {
 		// Hold the addresses mutex around signing to prevent concurrent assignment of
 		// the same nonce to multiple accounts.
-		api.publicTransactionPoolAPI.nonceLock.LockAddr(args.from())
-		defer api.publicTransactionPoolAPI.nonceLock.UnlockAddr(args.from())
+		api.kaiaTransactionAPI.nonceLock.LockAddr(args.from())
+		defer api.kaiaTransactionAPI.nonceLock.UnlockAddr(args.from())
 	}
-	if err := args.setDefaults(ctx, api.publicTransactionPoolAPI.b); err != nil {
+	if err := args.setDefaults(ctx, api.kaiaTransactionAPI.b); err != nil {
 		return common.Hash{}, err
 	}
 	tx, _ := args.toTransaction()
-	signedTx, err := api.publicTransactionPoolAPI.sign(args.from(), tx)
+	signedTx, err := api.kaiaTransactionAPI.sign(args.from(), tx)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -1163,7 +1163,7 @@ func (api *EthereumAPI) SendTransaction(ctx context.Context, args EthTransaction
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return submitTransaction(ctx, api.publicTransactionPoolAPI.b, signedTx)
+	return submitTransaction(ctx, api.kaiaTransactionAPI.b, signedTx)
 }
 
 // EthSignTransactionResult represents a RLP encoded signed transaction.
@@ -1177,8 +1177,8 @@ type EthSignTransactionResult struct {
 // FillTransaction fills the defaults (nonce, gas, gasPrice or 1559 fields)
 // on a given unsigned transaction, and returns it to the caller for further
 // processing (signing + broadcast).
-func (api *EthereumAPI) FillTransaction(ctx context.Context, args EthTransactionArgs) (*EthSignTransactionResult, error) { // Set some sanity defaults and terminate on failure
-	if err := args.setDefaults(ctx, api.publicTransactionPoolAPI.b); err != nil {
+func (api *EthAPI) FillTransaction(ctx context.Context, args EthTransactionArgs) (*EthSignTransactionResult, error) { // Set some sanity defaults and terminate on failure
+	if err := args.setDefaults(ctx, api.kaiaTransactionAPI.b); err != nil {
 		return nil, err
 	}
 	// Assemble the transaction and obtain rlp
@@ -1197,17 +1197,17 @@ func (api *EthereumAPI) FillTransaction(ctx context.Context, args EthTransaction
 
 // SendRawTransaction will add the signed transaction to the transaction pool.
 // The sender is responsible for signing the transaction and using the correct nonce.
-func (api *EthereumAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {
+func (api *EthAPI) SendRawTransaction(ctx context.Context, input hexutil.Bytes) (common.Hash, error) {
 	if len(input) == 0 {
 		return common.Hash{}, fmt.Errorf("Empty input")
 	}
 	if 0 < input[0] && input[0] < 0x7f {
 		inputBytes := []byte{byte(types.EthereumTxTypeEnvelope)}
 		inputBytes = append(inputBytes, input...)
-		return api.publicTransactionPoolAPI.SendRawTransaction(ctx, inputBytes)
+		return api.kaiaTransactionAPI.SendRawTransaction(ctx, inputBytes)
 	}
 	// legacy transaction
-	return api.publicTransactionPoolAPI.SendRawTransaction(ctx, input)
+	return api.kaiaTransactionAPI.SendRawTransaction(ctx, input)
 }
 
 // Sign calculates an ECDSA signature for:
@@ -1219,15 +1219,15 @@ func (api *EthereumAPI) SendRawTransaction(ctx context.Context, input hexutil.By
 // The account associated with addr must be unlocked.
 //
 // https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sign
-func (api *EthereumAPI) Sign(addr common.Address, data hexutil.Bytes) (hexutil.Bytes, error) {
-	return api.publicTransactionPoolAPI.Sign(addr, data)
+func (api *EthAPI) Sign(addr common.Address, data hexutil.Bytes) (hexutil.Bytes, error) {
+	return api.kaiaTransactionAPI.Sign(addr, data)
 }
 
 // SignTransaction will sign the given transaction with the from account.
 // The node needs to have the private key of the account corresponding with
 // the given from address and it needs to be unlocked.
-func (api *EthereumAPI) SignTransaction(ctx context.Context, args EthTransactionArgs) (*EthSignTransactionResult, error) {
-	b := api.publicTransactionPoolAPI.b
+func (api *EthAPI) SignTransaction(ctx context.Context, args EthTransactionArgs) (*EthSignTransactionResult, error) {
+	b := api.kaiaTransactionAPI.b
 
 	if args.Gas == nil {
 		return nil, fmt.Errorf("gas not specified")
@@ -1246,7 +1246,7 @@ func (api *EthereumAPI) SignTransaction(ctx context.Context, args EthTransaction
 	if err := checkTxFee(tx.GasPrice(), tx.Gas(), b.RPCTxFeeCap()); err != nil {
 		return nil, err
 	}
-	signed, err := api.publicTransactionPoolAPI.sign(args.from(), tx)
+	signed, err := api.kaiaTransactionAPI.sign(args.from(), tx)
 	if err != nil {
 		return nil, err
 	}
@@ -1263,8 +1263,8 @@ func (api *EthereumAPI) SignTransaction(ctx context.Context, args EthTransaction
 
 // PendingTransactions returns the transactions that are in the transaction pool
 // and have a from address that is one of the accounts this node manages.
-func (api *EthereumAPI) PendingTransactions() ([]*EthRPCTransaction, error) {
-	b := api.publicTransactionPoolAPI.b
+func (api *EthAPI) PendingTransactions() ([]*EthRPCTransaction, error) {
+	b := api.kaiaTransactionAPI.b
 	pending, err := b.GetPoolTransactions()
 	if err != nil {
 		return nil, err
@@ -1274,7 +1274,7 @@ func (api *EthereumAPI) PendingTransactions() ([]*EthRPCTransaction, error) {
 	for _, tx := range pending {
 		from := getFrom(tx)
 		if _, exists := accounts[from]; exists {
-			ethTx := newEthRPCPendingTransaction(tx, api.publicBlockChainAPI.b.ChainConfig())
+			ethTx := newEthRPCPendingTransaction(tx, api.kaiaBlockChainAPI.b.ChainConfig())
 			if ethTx == nil {
 				return nil, nil
 			}
@@ -1286,22 +1286,22 @@ func (api *EthereumAPI) PendingTransactions() ([]*EthRPCTransaction, error) {
 
 // Resend accepts an existing transaction and a new gas price and limit. It will remove
 // the given transaction from the pool and reinsert it with the new gas price and limit.
-func (api *EthereumAPI) Resend(ctx context.Context, sendArgs EthTransactionArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
-	return resend(api.publicTransactionPoolAPI, ctx, &sendArgs, gasPrice, gasLimit)
+func (api *EthAPI) Resend(ctx context.Context, sendArgs EthTransactionArgs, gasPrice *hexutil.Big, gasLimit *hexutil.Uint64) (common.Hash, error) {
+	return resend(api.kaiaTransactionAPI, ctx, &sendArgs, gasPrice, gasLimit)
 }
 
 // Accounts returns the collection of accounts this node manages.
-func (api *EthereumAPI) Accounts() []common.Address {
-	return api.publicAccountAPI.Accounts()
+func (api *EthAPI) Accounts() []common.Address {
+	return api.kaiaAccountAPI.Accounts()
 }
 
 // rpcMarshalHeader marshal block header as Ethereum compatible format.
 // It returns error when fetching Author which is block proposer is failed.
-func (api *EthereumAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (map[string]interface{}, error) {
+func (api *EthAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (map[string]interface{}, error) {
 	var proposer common.Address
 	var err error
 
-	b := api.publicKaiaAPI.b
+	b := api.kaiaAPI.b
 	if head.Number.Sign() != 0 && inclMiner {
 		proposer, err = b.Engine().Author(head)
 		if err != nil {
@@ -1348,7 +1348,7 @@ func (api *EthereumAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (ma
 }
 
 // rpcMarshalBlock marshal block as Ethereum compatible format
-func (api *EthereumAPI) rpcMarshalBlock(block *types.Block, inclMiner, inclTx, fullTx bool) (map[string]interface{}, error) {
+func (api *EthAPI) rpcMarshalBlock(block *types.Block, inclMiner, inclTx, fullTx bool) (map[string]interface{}, error) {
 	fields, err := api.rpcMarshalHeader(block.Header(), inclMiner)
 	if err != nil {
 		return nil, err
@@ -1361,7 +1361,7 @@ func (api *EthereumAPI) rpcMarshalBlock(block *types.Block, inclMiner, inclTx, f
 		}
 		if fullTx {
 			formatTx = func(tx *types.Transaction) (interface{}, error) {
-				return newEthRPCTransactionFromBlockHash(block, tx.Hash(), api.publicBlockChainAPI.b.ChainConfig()), nil
+				return newEthRPCTransactionFromBlockHash(block, tx.Hash(), api.kaiaBlockChainAPI.b.ChainConfig()), nil
 			}
 		}
 		txs := block.Transactions()
@@ -1543,8 +1543,8 @@ func doCreateAccessList(ctx context.Context, b Backend, args EthTransactionArgs,
 
 // CreateAccessList creates an EIP-2930 type AccessList for the given transaction.
 // Reexec and BlockNrOrHash can be specified to create the accessList on top of a certain state.
-func (api *EthereumAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (interface{}, error) {
-	return doCreateAccessList(ctx, api.publicKaiaAPI.b, args, blockNrOrHash)
+func (api *EthAPI) CreateAccessList(ctx context.Context, args EthTransactionArgs, blockNrOrHash *rpc.BlockNumberOrHash) (interface{}, error) {
+	return doCreateAccessList(ctx, api.kaiaAPI.b, args, blockNrOrHash)
 }
 
 // AccessList creates an access list for the given transaction.

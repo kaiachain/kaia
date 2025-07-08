@@ -33,26 +33,26 @@ import (
 	"github.com/kaiachain/kaia/networks/rpc"
 )
 
-// PrivateDebugAPI is the collection of Kaia APIs exposed over the private
+// DebugUtilAPI is the collection of Kaia APIs exposed over the private
 // debugging endpoint.
-type PrivateDebugAPI struct {
+type DebugUtilAPI struct {
 	b Backend
 }
 
-// NewPrivateDebugAPI creates a new API definition for the private debug methods
+// NewDebugUtilAPI creates a new API definition for the private debug methods
 // of the Kaia service.
-func NewPrivateDebugAPI(b Backend) *PrivateDebugAPI {
-	return &PrivateDebugAPI{b: b}
+func NewDebugUtilAPI(b Backend) *DebugUtilAPI {
+	return &DebugUtilAPI{b: b}
 }
 
 // ChaindbProperty returns leveldb properties of the chain database.
-func (api *PrivateDebugAPI) ChaindbProperty(property string) (string, error) {
+func (api *DebugUtilAPI) ChaindbProperty(property string) (string, error) {
 	return api.b.ChainDB().Stat(property)
 }
 
 // ChaindbCompact flattens the entire key-value database into a single level,
 // removing all unused slots and merging all keys.
-func (api *PrivateDebugAPI) ChaindbCompact() error {
+func (api *DebugUtilAPI) ChaindbCompact() error {
 	for b := 0; b <= 255; b++ {
 		var (
 			start = []byte{byte(b)}
@@ -73,7 +73,7 @@ func (api *PrivateDebugAPI) ChaindbCompact() error {
 }
 
 // SetHead rewinds the head of the blockchain to a previous block.
-func (api *PrivateDebugAPI) SetHead(number rpc.BlockNumber) error {
+func (api *DebugUtilAPI) SetHead(number rpc.BlockNumber) error {
 	if number == rpc.PendingBlockNumber ||
 		number == rpc.LatestBlockNumber ||
 		number.Uint64() > api.b.CurrentBlock().NumberU64() {
@@ -83,7 +83,7 @@ func (api *PrivateDebugAPI) SetHead(number rpc.BlockNumber) error {
 }
 
 // PrintBlock retrieves a block and returns its pretty printed form.
-func (api *PrivateDebugAPI) PrintBlock(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (string, error) {
+func (api *DebugUtilAPI) PrintBlock(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (string, error) {
 	block, _ := api.b.BlockByNumberOrHash(ctx, blockNrOrHash)
 	if block == nil {
 		blockNumberOrHashString, _ := blockNrOrHash.NumberOrHashString()
