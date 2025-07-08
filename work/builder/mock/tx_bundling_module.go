@@ -9,7 +9,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/kaiachain/kaia/blockchain/types"
-	builder "github.com/kaiachain/kaia/kaiax/builder"
+	builder "github.com/kaiachain/kaia/work/builder"
 )
 
 // MockTxBundlingModule is a mock of TxBundlingModule interface.
