@@ -154,6 +154,7 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) []commo
 	defer b.mu.Unlock()
 
 	drops := make([]common.Hash, 0)
+	deleted := make([]common.Hash, 0)
 
 	for hash, knownTx := range *b.knownTxs {
 		// remove pending timed out tx from tx pool
@@ -166,9 +167,13 @@ func (b *BuilderWrappingModule) PreReset(oldHead, newHead *types.Header) []commo
 		}
 		// remove known timed out tx from knownTxs
 		if knownTx.elapsedPromotedOrAddedTime() >= KnownTxTimeout {
-			b.knownTxs.delete(hash)
+			deleted = append(deleted, hash)
 		}
 	}
+	for _, hash := range deleted {
+		b.knownTxs.delete(hash)
+	}
+
 	if b.txPoolModule != nil {
 		moduleDrops := b.txPoolModule.PreReset(oldHead, newHead)
 		drops = append(drops, moduleDrops...)
