@@ -22,6 +22,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/work/builder"
 )
 
 // On top of below Module interfaces, every module must have these:
@@ -166,6 +167,11 @@ type TxPoolModule interface {
 type TxPoolModuleHost interface {
 	RegisterTxPoolModule(modules ...TxPoolModule)
 }
+
+type (
+	TxBundlingModule     = builder.TxBundlingModule
+	TxBundlingModuleHost = builder.TxBundlingModuleHost
+)
 
 // A module can freely add more methods.
 // But try to follow the naming convention:
