@@ -44,7 +44,6 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/snapshot"
 	"github.com/kaiachain/kaia/storage/database"
-	"github.com/kaiachain/kaia/work/builder"
 )
 
 var logger = log.NewModuleLogger(log.Work)
@@ -229,8 +228,8 @@ func (self *Miner) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
 	self.worker.RegisterExecutionModule(modules...)
 }
 
-// RegisterTxBundlingModule registers builder.TxBundlingModule to underlying worker.
-func (self *Miner) RegisterTxBundlingModule(modules ...builder.TxBundlingModule) {
+// RegisterTxBundlingModule registers kaiax.TxBundlingModule to underlying worker.
+func (self *Miner) RegisterTxBundlingModule(modules ...kaiax.TxBundlingModule) {
 	self.worker.RegisterTxBundlingModule(modules...)
 }
 

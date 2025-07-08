@@ -39,4 +39,4 @@ Send multiple transactions at once.
 - `IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([]*builder.TxOrGen, error)`: Incorporate bundles to transaction list to have a new reordered list of TxOrGen.
 - `Arrayify(heap *types.TransactionsByPriceAndNonce) []*types.Transaction`: Flatten transaction heap.
 - `IsConflict(prevBundles []*builder.Bundle, newBundles []*builder.Bundle) bool`: Check if `newBundles` have any conflict with `prevBundles`.
-- `ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModules []builder.TxBundlingModule) ([]*builder.TxOrGen, []*builder.Bundle)`: Extracts bundles from given modules and incorporates non-conflicting bundles.
+- `ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModules []kaiax.TxBundlingModule) ([]*builder.TxOrGen, []*builder.Bundle)`: Extracts bundles from given modules and incorporates non-conflicting bundles.

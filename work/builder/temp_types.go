@@ -8,7 +8,7 @@ import (
 // TxBundlingModule can intervene how miner/proposer orders transactions in a block.
 // TODO-Kaia: Move this to kaiax/interface.go
 //
-//go:generate mockgen -destination=./mock/tx_bundling_module.go -package=mock github.com/kaiachain/kaia/work/builder TxBundlingModule
+//go:generate mockgen -destination=./mock/tx_bundling_module.go -package=mock github.com/kaiachain/kaia/work/kaiax.TxBundlingModule
 type TxBundlingModule interface {
 	// The function finds transactions to be bundled.
 	// New transactions can be injected.

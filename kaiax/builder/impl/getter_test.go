@@ -22,7 +22,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/kaiax"
 	mock_kaiax "github.com/kaiachain/kaia/kaiax/mock"
-	"github.com/kaiachain/kaia/work/builder"
 	mock_builder "github.com/kaiachain/kaia/work/builder/mock"
 	"github.com/stretchr/testify/assert"
 )
@@ -56,37 +55,37 @@ func TestWrapAndConcatenateBundlingModules(t *testing.T) {
 
 	testCases := []struct {
 		name        string
-		mTxBundling []builder.TxBundlingModule
+		mTxBundling []kaiax.TxBundlingModule
 		mTxPool     []kaiax.TxPoolModule
 		expected    []interface{}
 	}{
 		{
 			name:        "No modules",
-			mTxBundling: []builder.TxBundlingModule{},
+			mTxBundling: []kaiax.TxBundlingModule{},
 			mTxPool:     []kaiax.TxPoolModule{},
 			expected:    []interface{}{},
 		},
 		{
 			name:        "Only TxPool modules",
-			mTxBundling: []builder.TxBundlingModule{},
+			mTxBundling: []kaiax.TxBundlingModule{},
 			mTxPool:     []kaiax.TxPoolModule{mockTxPool1, mockTxPool2},
 			expected:    []interface{}{mockTxPool1, mockTxPool2},
 		},
 		{
 			name:        "Only TxBundling modules",
-			mTxBundling: []builder.TxBundlingModule{mockTxBundling1, mockTxBundling2},
+			mTxBundling: []kaiax.TxBundlingModule{mockTxBundling1, mockTxBundling2},
 			mTxPool:     []kaiax.TxPoolModule{},
 			expected:    []interface{}{mockTxBundling1, mockTxBundling2},
 		},
 		{
 			name:        "Mixed modules",
-			mTxBundling: []builder.TxBundlingModule{mockTxBundling1, mockTxBundling2},
+			mTxBundling: []kaiax.TxBundlingModule{mockTxBundling1, mockTxBundling2},
 			mTxPool:     []kaiax.TxPoolModule{mockTxPool1, mockTxPool2},
 			expected:    []interface{}{mockTxPool1, mockTxPool2, mockTxBundling1, mockTxBundling2},
 		},
 		{
 			name:        "Overlapping modules",
-			mTxBundling: []builder.TxBundlingModule{mockBoth2, mockTxBundling1, mockBoth1},
+			mTxBundling: []kaiax.TxBundlingModule{mockBoth2, mockTxBundling1, mockBoth1},
 			mTxPool:     []kaiax.TxPoolModule{mockTxPool1, mockBoth1, mockBoth2},
 			expected:    []interface{}{mockTxPool1, mockBoth1, mockBoth2, mockTxBundling1},
 		},

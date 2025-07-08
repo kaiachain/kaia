@@ -42,6 +42,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
@@ -52,7 +53,6 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work"
-	"github.com/kaiachain/kaia/work/builder"
 )
 
 const transactionsJournalFilename = "transactions.rlp"
@@ -236,7 +236,7 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 	return header, nil
 }
 
-func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.Signer, prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule) (*state.StateDB, *types.Block, types.Receipts, error) {
+func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.Signer, prof *profile.Profiler, txBundlingModules []kaiax.TxBundlingModule) (*state.StateDB, *types.Block, types.Receipts, error) {
 	// Set the block header
 	start := time.Now()
 	header, err := bcdata.prepareHeader()
@@ -426,13 +426,13 @@ func (bcdata *BCData) GenABlockWithTransactions(accountMap *AccountMap, transact
 }
 
 func (bcdata *BCData) GenABlockWithTransactionsWithBundle(accountMap *AccountMap, transactions types.Transactions, txHashesExpectedFail []common.Hash,
-	prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule,
+	prof *profile.Profiler, txBundlingModules []kaiax.TxBundlingModule,
 ) error {
 	return bcdata.genABlockWithTransactionsWithBundle(accountMap, transactions, txHashesExpectedFail, prof, txBundlingModules)
 }
 
 func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap, transactions types.Transactions, txHashesExpectedFail []common.Hash,
-	prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule,
+	prof *profile.Profiler, txBundlingModules []kaiax.TxBundlingModule,
 ) error {
 	signer := types.MakeSigner(bcdata.bc.Config(), bcdata.bc.CurrentHeader().Number)
 
