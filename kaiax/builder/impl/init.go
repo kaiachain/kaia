@@ -17,42 +17,12 @@
 package impl
 
 import (
-	"github.com/kaiachain/kaia/api"
-	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
 )
 
 var (
-	_      builder.BuilderModule = (*BuilderModule)(nil)
-	logger                       = log.NewModuleLogger(log.KaiaxBuilder)
+	logger = log.NewModuleLogger(log.KaiaxBuilder)
 )
-
-type InitOpts struct {
-	Backend api.Backend
-}
-
-type BuilderModule struct {
-	InitOpts
-}
-
-func NewBuilderModule() *BuilderModule {
-	return &BuilderModule{}
-}
-
-func (b *BuilderModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.Backend == nil {
-		return ErrInitUnexpectedNil
-	}
-	b.InitOpts = *opts
-	return nil
-}
-
-func (b *BuilderModule) Start() error {
-	return nil
-}
-
-func (b *BuilderModule) Stop() {
-}
 
 func updateMetrics(knownTxs *knownTxs) {
 	numQueueGauge.Update(int64(knownTxs.numQueue()))

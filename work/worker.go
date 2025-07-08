@@ -158,7 +158,6 @@ type worker struct {
 	proc              blockchain.Validator
 	chainDB           database.DBManager
 	govModule         gov.GovModule
-	builderModule     builder.BuilderModule
 	executionModules  []kaiax.ExecutionModule
 	txBundlingModules []builder.TxBundlingModule
 

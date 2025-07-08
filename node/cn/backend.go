@@ -519,7 +519,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mRandao  = randao_impl.NewRandaoModule()
 		mReward  = reward_impl.NewRewardModule()
 		mSupply  = supply_impl.NewSupplyModule()
-		mBuilder = builder_impl.NewBuilderModule()
 		mGasless = gasless_impl.NewGaslessModule()
 	)
 
@@ -541,9 +540,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Chain:       s.blockchain,
 			Downloader:  s.protocolManager.Downloader(),
 		}),
-		mBuilder.Init(&builder_impl.InitOpts{
-			Backend: s.APIBackend,
-		}),
 		mGasless.Init(&gasless_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
 			GaslessConfig: s.config.Gasless,
@@ -559,7 +555,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
 	mTxBundling := []builder.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
-	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mRandao, mBuilder}
+	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mRandao}
 
 	gaslessDisabled := mGasless.IsDisabled()
 	if !gaslessDisabled {
