@@ -21,7 +21,6 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
 )
 
@@ -34,7 +33,7 @@ var (
 // buildDependencyIndices builds a dependency indices of txs.
 // Two txs with the same sender has an edge.
 // Two txs in the same bundle has an edge.
-func buildDependencyIndices(txs []*builder.TxOrGen, bundles []*builder.Bundle, signer types.Signer) (map[common.Address][]int, map[int][]int, error) {
+func buildDependencyIndices(txs []*TxOrGen, bundles []*Bundle, signer types.Signer) (map[common.Address][]int, map[int][]int, error) {
 	senderToIndices := make(map[common.Address][]int)
 	bundleToIndices := make(map[int][]int)
 
@@ -57,10 +56,10 @@ func buildDependencyIndices(txs []*builder.TxOrGen, bundles []*builder.Bundle, s
 
 // IncorporateBundleTx incorporates bundle transactions into the transaction list.
 // Caller must ensure that there is no conflict between bundles.
-func IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([]*builder.TxOrGen, error) {
-	ret := make([]*builder.TxOrGen, len(txs))
+func IncorporateBundleTx(txs []*types.Transaction, bundles []*Bundle) ([]*TxOrGen, error) {
+	ret := make([]*TxOrGen, len(txs))
 	for i, tx := range txs {
-		ret[i] = builder.NewTxOrGenFromTx(tx)
+		ret[i] = NewTxOrGenFromTx(tx)
 	}
 
 	for _, bundle := range bundles {
@@ -74,8 +73,8 @@ func IncorporateBundleTx(txs []*types.Transaction, bundles []*builder.Bundle) ([
 }
 
 // incorporate assumes that `txs` does not contain any bundle transactions.
-func incorporate(txs []*builder.TxOrGen, bundle *builder.Bundle) ([]*builder.TxOrGen, error) {
-	ret := make([]*builder.TxOrGen, 0, len(txs)+len(bundle.BundleTxs))
+func incorporate(txs []*TxOrGen, bundle *Bundle) ([]*TxOrGen, error) {
+	ret := make([]*TxOrGen, 0, len(txs)+len(bundle.BundleTxs))
 	targetFound := false
 
 	// 1. place bundle at the beginning
@@ -116,7 +115,7 @@ func Arrayify(heap *types.TransactionsByPriceAndNonce) []*types.Transaction {
 }
 
 // IsConflict checks if new bundles conflict with previous bundles
-func IsConflict(prevBundles []*builder.Bundle, newBundles []*builder.Bundle) bool {
+func IsConflict(prevBundles []*Bundle, newBundles []*Bundle) bool {
 	for _, newBundle := range newBundles {
 		for _, prevBundle := range prevBundles {
 			if prevBundle.IsConflict(newBundle) {
@@ -139,7 +138,7 @@ func Filter[T any](slice *[]T, toRemove map[int]bool) []T {
 	return ret
 }
 
-func FindBundleIdx(bundles []*builder.Bundle, txOrGen *builder.TxOrGen) int {
+func FindBundleIdx(bundles []*Bundle, txOrGen *TxOrGen) int {
 	for i, bundle := range bundles {
 		if bundle.Has(txOrGen) {
 			return i
@@ -148,8 +147,8 @@ func FindBundleIdx(bundles []*builder.Bundle, txOrGen *builder.TxOrGen) int {
 	return -1
 }
 
-func SetCorrectTargetTxHash(bundles []*builder.Bundle, txs []*builder.TxOrGen) []*builder.Bundle {
-	ret := make([]*builder.Bundle, 0)
+func SetCorrectTargetTxHash(bundles []*Bundle, txs []*TxOrGen) []*Bundle {
+	ret := make([]*Bundle, 0)
 	for _, bundle := range bundles {
 		bundle.TargetTxHash = FindTargetTxHash(bundle, txs)
 		ret = append(ret, bundle)
@@ -157,7 +156,7 @@ func SetCorrectTargetTxHash(bundles []*builder.Bundle, txs []*builder.TxOrGen) [
 	return ret
 }
 
-func FindTargetTxHash(bundle *builder.Bundle, txOrGens []*builder.TxOrGen) common.Hash {
+func FindTargetTxHash(bundle *Bundle, txOrGens []*TxOrGen) common.Hash {
 	for i := range txOrGens {
 		if bundle.BundleTxs[0].Equals(txOrGens[i]) {
 			if i == 0 {
@@ -170,7 +169,7 @@ func FindTargetTxHash(bundle *builder.Bundle, txOrGens []*builder.TxOrGen) commo
 	return common.Hash{}
 }
 
-func ShiftTxs(txs *[]*builder.TxOrGen, num int) {
+func ShiftTxs(txs *[]*TxOrGen, num int) {
 	if len(*txs) <= num {
 		*txs = (*txs)[:0]
 		return
@@ -178,7 +177,7 @@ func ShiftTxs(txs *[]*builder.TxOrGen, num int) {
 	*txs = (*txs)[num:]
 }
 
-func PopTxs(txOrGens *[]*builder.TxOrGen, num int, bundles *[]*builder.Bundle, signer types.Signer) {
+func PopTxs(txOrGens *[]*TxOrGen, num int, bundles *[]*Bundle, signer types.Signer) {
 	if len(*txOrGens) == 0 || num == 0 {
 		return
 	}
@@ -241,13 +240,13 @@ func PopTxs(txOrGens *[]*builder.TxOrGen, num int, bundles *[]*builder.Bundle, s
 	*bundles = newBundles
 }
 
-func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModules []builder.TxBundlingModule) ([]*builder.TxOrGen, []*builder.Bundle) {
+func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModules []TxBundlingModule) ([]*TxOrGen, []*Bundle) {
 	// Detect bundles and add them to bundles
-	bundles := []*builder.Bundle{}
-	flattenedTxs := []*builder.TxOrGen{}
+	bundles := []*Bundle{}
+	flattenedTxs := []*TxOrGen{}
 	if txBundlingModules == nil {
 		for _, tx := range arrayTxs {
-			flattenedTxs = append(flattenedTxs, builder.NewTxOrGenFromTx(tx))
+			flattenedTxs = append(flattenedTxs, NewTxOrGenFromTx(tx))
 		}
 		return flattenedTxs, nil
 	}

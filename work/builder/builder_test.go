@@ -24,7 +24,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -41,41 +40,41 @@ func TestIncorporateBundleTx(t *testing.T) {
 	gen := func(nonce uint64) (*types.Transaction, error) {
 		return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
 	}
-	g1 := builder.NewTxOrGenFromGen(gen, common.Hash{1})
-	g2 := builder.NewTxOrGenFromGen(gen, common.Hash{2})
+	g1 := NewTxOrGenFromGen(gen, common.Hash{1})
+	g2 := NewTxOrGenFromGen(gen, common.Hash{2})
 
 	testCases := []struct {
 		name     string
-		bundles  []*builder.Bundle
-		expected []*builder.TxOrGen
+		bundles  []*Bundle
+		expected []*TxOrGen
 	}{
 		{
 			name: "incorporate multiple bundles",
-			bundles: []*builder.Bundle{
-				{BundleTxs: builder.NewTxOrGenList(txs[0], txs[1]), TargetTxHash: common.Hash{}},
-				{BundleTxs: builder.NewTxOrGenList(txs[2]), TargetTxHash: txs[1].Hash()},
+			bundles: []*Bundle{
+				{BundleTxs: NewTxOrGenList(txs[0], txs[1]), TargetTxHash: common.Hash{}},
+				{BundleTxs: NewTxOrGenList(txs[2]), TargetTxHash: txs[1].Hash()},
 			},
-			expected: builder.NewTxOrGenList(txs[0], txs[1], txs[2], txs[3]),
+			expected: NewTxOrGenList(txs[0], txs[1], txs[2], txs[3]),
 		},
 		{
 			name:     "incorporate empty bundles",
-			bundles:  []*builder.Bundle{},
-			expected: builder.NewTxOrGenList(txs[0], txs[1], txs[2], txs[3]),
+			bundles:  []*Bundle{},
+			expected: NewTxOrGenList(txs[0], txs[1], txs[2], txs[3]),
 		},
 		{
 			name: "incorporate bundle with generator",
-			bundles: []*builder.Bundle{
-				{BundleTxs: builder.NewTxOrGenList(txs[0], g1), TargetTxHash: common.Hash{}},
+			bundles: []*Bundle{
+				{BundleTxs: NewTxOrGenList(txs[0], g1), TargetTxHash: common.Hash{}},
 			},
-			expected: builder.NewTxOrGenList(txs[0], g1, txs[1], txs[2], txs[3]),
+			expected: NewTxOrGenList(txs[0], g1, txs[1], txs[2], txs[3]),
 		},
 		{
 			name: "incorporate bundle with generator 2",
-			bundles: []*builder.Bundle{
-				{BundleTxs: builder.NewTxOrGenList(g1, txs[0]), TargetTxHash: common.Hash{}},
-				{BundleTxs: builder.NewTxOrGenList(g2, txs[1]), TargetTxHash: txs[0].Hash()},
+			bundles: []*Bundle{
+				{BundleTxs: NewTxOrGenList(g1, txs[0]), TargetTxHash: common.Hash{}},
+				{BundleTxs: NewTxOrGenList(g2, txs[1]), TargetTxHash: txs[0].Hash()},
 			},
-			expected: builder.NewTxOrGenList(g1, txs[0], g2, txs[1], txs[2], txs[3]),
+			expected: NewTxOrGenList(g1, txs[0], g2, txs[1], txs[2], txs[3]),
 		},
 	}
 
@@ -98,31 +97,31 @@ func TestIncorporate(t *testing.T) {
 		types.NewTransaction(1, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 		types.NewTransaction(2, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
 	}
-	txOrGenList := builder.NewTxOrGenList(txs[0], txs[1], txs[2])
+	txOrGenList := NewTxOrGenList(txs[0], txs[1], txs[2])
 	testCases := []struct {
 		name     string
-		bundle   *builder.Bundle
-		expected []*builder.TxOrGen
+		bundle   *Bundle
+		expected []*TxOrGen
 	}{
 		{
 			name:     "incorporate first two transactions",
-			bundle:   &builder.Bundle{BundleTxs: builder.NewTxOrGenList(txs[0], txs[1]), TargetTxHash: common.Hash{}},
-			expected: builder.NewTxOrGenList(txs[0], txs[1], txs[2]),
+			bundle:   &Bundle{BundleTxs: NewTxOrGenList(txs[0], txs[1]), TargetTxHash: common.Hash{}},
+			expected: NewTxOrGenList(txs[0], txs[1], txs[2]),
 		},
 		{
 			name:     "incorporate last two transactions",
-			bundle:   &builder.Bundle{BundleTxs: builder.NewTxOrGenList(txs[1], txs[2]), TargetTxHash: common.Hash{}},
-			expected: builder.NewTxOrGenList(txs[1], txs[2], txs[0]),
+			bundle:   &Bundle{BundleTxs: NewTxOrGenList(txs[1], txs[2]), TargetTxHash: common.Hash{}},
+			expected: NewTxOrGenList(txs[1], txs[2], txs[0]),
 		},
 		{
 			name:     "incorporate with target hash",
-			bundle:   &builder.Bundle{BundleTxs: builder.NewTxOrGenList(txs[0]), TargetTxHash: txs[2].Hash()},
-			expected: builder.NewTxOrGenList(txs[1], txs[2], txs[0]),
+			bundle:   &Bundle{BundleTxs: NewTxOrGenList(txs[0]), TargetTxHash: txs[2].Hash()},
+			expected: NewTxOrGenList(txs[1], txs[2], txs[0]),
 		},
 		{
 			name:     "incorporate single transaction",
-			bundle:   &builder.Bundle{BundleTxs: builder.NewTxOrGenList(txs[2]), TargetTxHash: common.Hash{}},
-			expected: builder.NewTxOrGenList(txs[2], txs[0], txs[1]),
+			bundle:   &Bundle{BundleTxs: NewTxOrGenList(txs[2]), TargetTxHash: common.Hash{}},
+			expected: NewTxOrGenList(txs[2], txs[0], txs[1]),
 		},
 	}
 
@@ -172,46 +171,46 @@ func TestIsConflict(t *testing.T) {
 		txs[i] = types.NewTransaction(uint64(i), common.Address{}, common.Big0, 0, common.Big0, nil)
 	}
 
-	b0 := &builder.Bundle{
-		BundleTxs:    builder.NewTxOrGenList(txs[0], txs[1]),
+	b0 := &Bundle{
+		BundleTxs:    NewTxOrGenList(txs[0], txs[1]),
 		TargetTxHash: common.Hash{},
 	}
 	defaultTargetHash := txs[1].Hash() // make TargetTxHash checks pass
 
 	testcases := []struct {
 		name        string
-		prevBundles []*builder.Bundle
-		newBundles  []*builder.Bundle
+		prevBundles []*Bundle
+		newBundles  []*Bundle
 		expected    bool
 	}{
 		{
 			name:        "Same TargetTxHash",
-			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{BundleTxs: []*builder.TxOrGen{}, TargetTxHash: common.Hash{}}},
+			prevBundles: []*Bundle{b0},
+			newBundles:  []*Bundle{{BundleTxs: []*TxOrGen{}, TargetTxHash: common.Hash{}}},
 			expected:    true,
 		},
 		{
 			name:        "TargetTxHash divides a bundle",
-			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{BundleTxs: []*builder.TxOrGen{}, TargetTxHash: txs[0].Hash()}},
+			prevBundles: []*Bundle{b0},
+			newBundles:  []*Bundle{{BundleTxs: []*TxOrGen{}, TargetTxHash: txs[0].Hash()}},
 			expected:    true,
 		},
 		{
 			name:        "Overlapping BundleTxs 1",
-			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{BundleTxs: builder.NewTxOrGenList(txs[0], txs[2]), TargetTxHash: defaultTargetHash}},
+			prevBundles: []*Bundle{b0},
+			newBundles:  []*Bundle{{BundleTxs: NewTxOrGenList(txs[0], txs[2]), TargetTxHash: defaultTargetHash}},
 			expected:    true,
 		},
 		{
 			name:        "Overlapping BundleTxs 2",
-			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{BundleTxs: builder.NewTxOrGenList(txs[1], txs[2], txs[3]), TargetTxHash: defaultTargetHash}},
+			prevBundles: []*Bundle{b0},
+			newBundles:  []*Bundle{{BundleTxs: NewTxOrGenList(txs[1], txs[2], txs[3]), TargetTxHash: defaultTargetHash}},
 			expected:    true,
 		},
 		{
 			name:        "Non-overlapping BundleTxs",
-			prevBundles: []*builder.Bundle{b0},
-			newBundles:  []*builder.Bundle{{BundleTxs: builder.NewTxOrGenList(txs[2], txs[3]), TargetTxHash: defaultTargetHash}},
+			prevBundles: []*Bundle{b0},
+			newBundles:  []*Bundle{{BundleTxs: NewTxOrGenList(txs[2], txs[3]), TargetTxHash: defaultTargetHash}},
 			expected:    false,
 		},
 	}
@@ -234,8 +233,8 @@ func TestPopTxs(t *testing.T) {
 	gen := func(nonce uint64) (*types.Transaction, error) {
 		return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
 	}
-	g1 := builder.NewTxOrGenFromGen(gen, common.Hash{1})
-	g2 := builder.NewTxOrGenFromGen(gen, common.Hash{2})
+	g1 := NewTxOrGenFromGen(gen, common.Hash{1})
+	g2 := NewTxOrGenFromGen(gen, common.Hash{2})
 
 	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
@@ -248,85 +247,85 @@ func TestPopTxs(t *testing.T) {
 	}
 
 	// Create test bundles
-	bundles := []*builder.Bundle{
+	bundles := []*Bundle{
 		{
-			BundleTxs: builder.NewTxOrGenList(txs[1], txs[2]),
+			BundleTxs: NewTxOrGenList(txs[1], txs[2]),
 		},
 		{
-			BundleTxs:    builder.NewTxOrGenList(txs[3], txs[4]),
+			BundleTxs:    NewTxOrGenList(txs[3], txs[4]),
 			TargetTxHash: txs[2].Hash(),
 		},
 		{
-			BundleTxs:    builder.NewTxOrGenList(g1, txs[5]),
+			BundleTxs:    NewTxOrGenList(g1, txs[5]),
 			TargetTxHash: txs[4].Hash(),
 		},
 		{
-			BundleTxs: builder.NewTxOrGenList(g1, txs[1], txs[2]),
+			BundleTxs: NewTxOrGenList(g1, txs[1], txs[2]),
 		},
 	}
 
 	testCases := []struct {
 		name            string
-		incorporatedTxs []*builder.TxOrGen
+		incorporatedTxs []*TxOrGen
 		numToPop        int
-		bundles         []*builder.Bundle
-		expectedTxs     []*builder.TxOrGen
+		bundles         []*Bundle
+		expectedTxs     []*TxOrGen
 	}{
 		{
 			name:            "Without any dependencies",
-			incorporatedTxs: builder.NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5]),
+			incorporatedTxs: NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5]),
 			numToPop:        1,
-			bundles:         []*builder.Bundle{},
-			expectedTxs:     builder.NewTxOrGenList(txs[2], txs[3], txs[4], txs[5]),
+			bundles:         []*Bundle{},
+			expectedTxs:     NewTxOrGenList(txs[2], txs[3], txs[4], txs[5]),
 		},
 		{
 			name:            "No bundles, tx0 and tx1 dependency (same sender)",
-			incorporatedTxs: builder.NewTxOrGenList(txs[0], txs[1], txs[2], txs[3], txs[4]),
+			incorporatedTxs: NewTxOrGenList(txs[0], txs[1], txs[2], txs[3], txs[4]),
 			numToPop:        1,
-			bundles:         []*builder.Bundle{},
-			expectedTxs:     builder.NewTxOrGenList(txs[2], txs[3], txs[4]),
+			bundles:         []*Bundle{},
+			expectedTxs:     NewTxOrGenList(txs[2], txs[3], txs[4]),
 		},
 		{
 			name:            "One bundle - first tx is generator",
-			incorporatedTxs: builder.NewTxOrGenList(g1, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
+			incorporatedTxs: NewTxOrGenList(g1, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
 			numToPop:        1,
-			bundles:         []*builder.Bundle{bundles[3]},
-			expectedTxs:     builder.NewTxOrGenList(txs[4], txs[5], txs[6]),
+			bundles:         []*Bundle{bundles[3]},
+			expectedTxs:     NewTxOrGenList(txs[4], txs[5], txs[6]),
 		},
 		{
 			name:            "Two bundles - chaining dependency",
-			incorporatedTxs: builder.NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5]),
+			incorporatedTxs: NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5]),
 			numToPop:        2,
-			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
-			expectedTxs:     builder.NewTxOrGenList(),
+			bundles:         []*Bundle{bundles[0], bundles[1]},
+			expectedTxs:     NewTxOrGenList(),
 		},
 		{
 			name:            "Two bundles - one independent tx (tx6)",
-			incorporatedTxs: builder.NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
+			incorporatedTxs: NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
 			numToPop:        2,
-			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
-			expectedTxs:     builder.NewTxOrGenList(txs[6]),
+			bundles:         []*Bundle{bundles[0], bundles[1]},
+			expectedTxs:     NewTxOrGenList(txs[6]),
 		},
 		{
 			name:            "Two bundles - change order",
-			incorporatedTxs: builder.NewTxOrGenList(txs[2], txs[3], txs[4], txs[6], txs[5]), // 6 is before 5
+			incorporatedTxs: NewTxOrGenList(txs[2], txs[3], txs[4], txs[6], txs[5]), // 6 is before 5
 			numToPop:        2,
-			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
-			expectedTxs:     builder.NewTxOrGenList(txs[6]),
+			bundles:         []*Bundle{bundles[0], bundles[1]},
+			expectedTxs:     NewTxOrGenList(txs[6]),
 		},
 		{
 			name:            "Two bundles - one independent tx (tx6) with one generator",
-			incorporatedTxs: builder.NewTxOrGenList(g1, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
+			incorporatedTxs: NewTxOrGenList(g1, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
 			numToPop:        2,
-			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
-			expectedTxs:     builder.NewTxOrGenList(txs[6]),
+			bundles:         []*Bundle{bundles[0], bundles[1]},
+			expectedTxs:     NewTxOrGenList(txs[6]),
 		},
 		{
 			name:            "Two bundles - two generators",
-			incorporatedTxs: builder.NewTxOrGenList(g1, g2, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
+			incorporatedTxs: NewTxOrGenList(g1, g2, txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
 			numToPop:        2,
-			bundles:         []*builder.Bundle{bundles[0], bundles[1]},
-			expectedTxs:     builder.NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
+			bundles:         []*Bundle{bundles[0], bundles[1]},
+			expectedTxs:     NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
 		},
 	}
 
