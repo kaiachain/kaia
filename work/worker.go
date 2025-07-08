@@ -697,8 +697,12 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 }
 
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []kaiax.TxBundlingModule) []*types.Log {
+	modules := make([]builder.TxBundlingModule, len(txBundlingModules)) // TODO-Kaia: Remove this cast.
+	for i, module := range txBundlingModules {
+		modules[i] = module.(builder.TxBundlingModule)
+	}
 	arrayTxs := builder.Arrayify(txs)
-	incorporatedTxs, bundles := builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
+	incorporatedTxs, bundles := builder.ExtractBundlesAndIncorporate(arrayTxs, modules)
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block

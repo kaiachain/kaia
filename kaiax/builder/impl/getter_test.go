@@ -22,7 +22,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/kaiax"
 	mock_kaiax "github.com/kaiachain/kaia/kaiax/mock"
-	mock_builder "github.com/kaiachain/kaia/work/builder/mock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,23 +33,23 @@ func TestWrapAndConcatenateBundlingModules(t *testing.T) {
 	// Create test modules
 	mockTxPool1 := mock_kaiax.NewMockTxPoolModule(ctrl)
 	mockTxPool2 := mock_kaiax.NewMockTxPoolModule(ctrl)
-	mockTxBundling1 := mock_builder.NewMockTxBundlingModule(ctrl)
-	mockTxBundling2 := mock_builder.NewMockTxBundlingModule(ctrl)
+	mockTxBundling1 := mock_kaiax.NewMockTxBundlingModule(ctrl)
+	mockTxBundling2 := mock_kaiax.NewMockTxBundlingModule(ctrl)
 
 	// Create a module that implements both interfaces
 	mockBoth1 := struct {
 		*mock_kaiax.MockTxPoolModule
-		*mock_builder.MockTxBundlingModule
+		*mock_kaiax.MockTxBundlingModule
 	}{
 		MockTxPoolModule:     mock_kaiax.NewMockTxPoolModule(ctrl),
-		MockTxBundlingModule: mock_builder.NewMockTxBundlingModule(ctrl),
+		MockTxBundlingModule: mock_kaiax.NewMockTxBundlingModule(ctrl),
 	}
 	mockBoth2 := struct {
 		*mock_kaiax.MockTxPoolModule
-		*mock_builder.MockTxBundlingModule
+		*mock_kaiax.MockTxBundlingModule
 	}{
 		MockTxPoolModule:     mock_kaiax.NewMockTxPoolModule(ctrl),
-		MockTxBundlingModule: mock_builder.NewMockTxBundlingModule(ctrl),
+		MockTxBundlingModule: mock_kaiax.NewMockTxBundlingModule(ctrl),
 	}
 
 	testCases := []struct {

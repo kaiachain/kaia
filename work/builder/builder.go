@@ -240,6 +240,13 @@ func PopTxs(txOrGens *[]*TxOrGen, num int, bundles *[]*Bundle, signer types.Sign
 	*bundles = newBundles
 }
 
+// To avoid import cycle.
+// A downside of this is that callers of ExtractBundlesAndIncorporate must cast []kaiax.TxBundlingModule to []builder.TxBundlingModule
+// because Golang does not automatically cast an array of interfaces.
+type TxBundlingModule interface {
+	ExtractTxBundles(txs []*types.Transaction, prevBundles []*Bundle) []*Bundle
+}
+
 func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModules []TxBundlingModule) ([]*TxOrGen, []*Bundle) {
 	// Detect bundles and add them to bundles
 	bundles := []*Bundle{}

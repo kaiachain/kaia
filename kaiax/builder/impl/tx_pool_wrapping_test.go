@@ -29,7 +29,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	mock_kaiax "github.com/kaiachain/kaia/kaiax/mock"
 	"github.com/kaiachain/kaia/params"
-	mock_builder "github.com/kaiachain/kaia/work/builder/mock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -109,7 +108,7 @@ func TestPreAddTx_KnownTxTimeout(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(ctrl)
 			mockTxBundlingModule.EXPECT().IsBundleTx(tt.tx).Return(true).AnyTimes()
 			mockTxBundlingModule.EXPECT().GetMaxBundleTxsInQueue().Return(uint(200)).AnyTimes()
 
@@ -169,7 +168,7 @@ func TestPreAddTx_TxPoolModule(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testTx := createTestTransaction(0)
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(ctrl)
 			mockTxBundlingModule.EXPECT().IsBundleTx(testTx).Return(true).AnyTimes()
 			mockTxBundlingModule.EXPECT().GetMaxBundleTxsInQueue().Return(uint(200)).AnyTimes()
 
@@ -260,7 +259,7 @@ func TestPreAddTx_BundleTxQueueSizeLimit(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create mock bundling module
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(ctrl)
 			mockTxBundlingModule.EXPECT().IsBundleTx(tt.tx).Return(tt.isBundleTx).Times(1)
 
 			// Only expect GetMaxBundleTxsInQueue if it's a bundle transaction
@@ -351,7 +350,7 @@ func TestIsModuleTx(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			testTx := createTestTransaction(0)
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(ctrl)
 			mockTxBundlingModule.EXPECT().IsBundleTx(testTx).Return(tt.isBundleTx).AnyTimes()
 
 			builderModule := &BuilderWrappingModule{
@@ -425,7 +424,7 @@ func TestGetCheckBalance(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(ctrl)
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
@@ -539,7 +538,7 @@ func TestIsReady_KnownTxs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(ctrl)
 			mockTxBundlingModule.EXPECT().IsBundleTx(gomock.Any()).Return(tt.isBundleTxResult).AnyTimes()
 			mockTxBundlingModule.EXPECT().GetMaxBundleTxsInPending().Return(uint(math.MaxUint64)).AnyTimes()
 
@@ -809,7 +808,7 @@ func TestIsReady_MaxBundleTxs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(ctrl)
 			mockIsBundleTx := mockTxBundlingModule.EXPECT().IsBundleTx(gomock.Any()).DoAndReturn(func(tx *types.Transaction) bool {
 				return !(tx == nil || tx.Nonce() >= 1000)
 			}).Times(1)
@@ -874,7 +873,7 @@ func TestIsReady_TxPoolModule(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(ctrl)
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
 				knownTxs:         new(knownTxs),
@@ -1007,7 +1006,7 @@ func TestPreReset_Timeout(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(ctrl)
 
 			// Setup BuilderModule
 			builderModule := &BuilderWrappingModule{
@@ -1053,7 +1052,7 @@ func TestPreReset_TxPoolModule(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(ctrl)
 			builderModule := NewBuilderWrappingModule(mockTxBundlingModule)
 
 			mockTxPoolModule := mock_kaiax.NewMockTxPoolModule(ctrl)
@@ -1089,7 +1088,7 @@ func TestPostReset_TxPoolModule(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(ctrl)
 
 			builderModule := &BuilderWrappingModule{
 				txBundlingModule: mockTxBundlingModule,
@@ -1415,7 +1414,7 @@ func TestPostReset_TransactionStatusUpdates(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create mock bundling module
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(ctrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(ctrl)
 
 			// Create builder module
 			builderModule := &BuilderWrappingModule{

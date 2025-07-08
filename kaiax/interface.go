@@ -168,10 +168,32 @@ type TxPoolModuleHost interface {
 	RegisterTxPoolModule(modules ...TxPoolModule)
 }
 
-type (
-	TxBundlingModule     = builder.TxBundlingModule
-	TxBundlingModuleHost = builder.TxBundlingModuleHost
-)
+// TxBundlingModule can intervene how miner/proposer orders transactions in a block.
+//
+//go:generate mockgen -destination=./mock/tx_bundling_module.go -package=mock github.com/kaiachain/kaia/work/kaiax.TxBundlingModule
+type TxBundlingModule interface {
+	// The function finds transactions to be bundled.
+	// New transactions can be injected.
+	// returned bundles must not have conflict with `prevBundles`.
+	// `txs` and `prevBundles` is read-only; it is only to check if there's conflict between new bundles.
+	ExtractTxBundles(txs []*types.Transaction, prevBundles []*builder.Bundle) []*builder.Bundle
+
+	// IsBundleTx returns true if the tx is a potential bundle tx.
+	IsBundleTx(tx *types.Transaction) bool
+
+	// GetMaxBundleTxsInPending returns the maximum number of transactions that can be bundled in pending.
+	// This limitation works properly only when a module bundles only sequential txs by the same sender.
+	GetMaxBundleTxsInPending() uint
+
+	// GetMaxBundleTxsInQueue returns the maximum number of transactions that can be bundled in queue.
+	// This limitation works properly only when a module bundles only sequential txs by the same sender.
+	GetMaxBundleTxsInQueue() uint
+}
+
+// Any component or module that accomodate tx bundling modules.
+type TxBundlingModuleHost interface {
+	RegisterTxBundlingModule(modules ...TxBundlingModule)
+}
 
 // A module can freely add more methods.
 // But try to follow the naming convention:

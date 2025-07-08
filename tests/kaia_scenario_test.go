@@ -42,13 +42,13 @@ import (
 	contracts "github.com/kaiachain/kaia/contracts/contracts/testing/reward"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax"
+	mock_kaiax "github.com/kaiachain/kaia/kaiax/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/kaiachain/kaia/work/builder"
-	mock_builder "github.com/kaiachain/kaia/work/builder/mock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -2041,7 +2041,7 @@ func TestTxBundle(t *testing.T) {
 			// Generate a mock bundling module.
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(mockCtrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(mockCtrl)
 			mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Any(), gomock.Any()).DoAndReturn(bundleFunc).AnyTimes()
 			txBundlingModules := []kaiax.TxBundlingModule{mockTxBundlingModule}
 
