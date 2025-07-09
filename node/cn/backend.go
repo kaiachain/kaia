@@ -141,8 +141,8 @@ type CN struct {
 	rewardbase  common.Address
 	nodeAddress common.Address
 
-	networkId     uint64
-	netRPCService *api.NetAPI
+	networkId uint64
+	p2pServer p2p.Server
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price)
 
@@ -650,6 +650,7 @@ func (s *CN) APIs() []rpc.API {
 		kaiaAPI            = api.NewKaiaAPI(s.APIBackend)
 		kaiaTransactionAPI = api.NewKaiaTransactionAPI(s.APIBackend, nonceLock)
 		kaiaAccountAPI     = api.NewKaiaAccountAPI(s.APIBackend.AccountManager())
+		netAPI             = api.NewNetAPI(s.p2pServer, s.NetVersion())
 	)
 
 	apis := []rpc.API{
@@ -762,7 +763,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "net",
 			Version:   "1.0",
-			Service:   s.netRPCService,
+			Service:   netAPI,
 			Public:    true,
 		}, {
 			Namespace: "eth",
@@ -869,7 +870,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 	s.startBloomHandlers()
 
 	// Start the RPC service
-	s.netRPCService = api.NewNetAPI(srvr, s.NetVersion())
+	s.p2pServer = srvr
 
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers()
