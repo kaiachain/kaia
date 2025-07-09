@@ -39,13 +39,12 @@ import (
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/builder"
-	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kerrors"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/work/builder"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -158,7 +157,6 @@ type worker struct {
 	proc              blockchain.Validator
 	chainDB           database.DBManager
 	govModule         gov.GovModule
-	builderModule     builder.BuilderModule
 	executionModules  []kaiax.ExecutionModule
 	txBundlingModules []builder.TxBundlingModule
 
@@ -699,8 +697,8 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 }
 
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
-	arrayTxs := builder_impl.Arrayify(txs)
-	incorporatedTxs, bundles := builder_impl.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
+	arrayTxs := builder.Arrayify(txs)
+	incorporatedTxs, bundles := builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block
@@ -771,7 +769,7 @@ CommitTransactionLoop:
 		// Verify that tx is included in the bundle
 		targetBundle := &builder.Bundle{}
 		numShift := 1
-		if bundleIdx := builder_impl.FindBundleIdx(bundles, txOrGen); bundleIdx != -1 {
+		if bundleIdx := builder.FindBundleIdx(bundles, txOrGen); bundleIdx != -1 {
 			targetBundle = bundles[bundleIdx]
 			numShift = len(targetBundle.BundleTxs)
 		}
@@ -779,7 +777,7 @@ CommitTransactionLoop:
 		tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
 		if err != nil {
 			logger.Warn("TxGenerator returned a nil tx", "error", err)
-			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 			continue
 		}
 		// If target is the tx in bundle, len(targetBundle.BundleTxs) is appended to numTxsChecked.
@@ -818,13 +816,13 @@ CommitTransactionLoop:
 			// New head notification data race between the transaction pool and miner, shift
 			logger.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooLow++
-			builder_impl.ShiftTxs(&incorporatedTxs, numShift)
+			builder.ShiftTxs(&incorporatedTxs, numShift)
 
 		case blockchain.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
 			logger.Trace("Skipping account with high nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooHigh++
-			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case vm.ErrTotalTimeLimitReached:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
@@ -839,30 +837,30 @@ CommitTransactionLoop:
 		case blockchain.ErrTxTypeNotSupported:
 			// Pop the unsupported transaction without shifting in the next from the account
 			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
-			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case kerrors.ErrRevertedBundleByVmErr:
 			// Pop transaction in bundle reverted by vm err without shifting in the next from the account
 			// During bundle execution, vm err is reverted, including the increment of the nonce, so a pop is executed.
 			logger.Trace("Skipping transaction in bundle reverted by vm err", "sender", from, "hash", tx.Hash().String())
-			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case kerrors.ErrTxGeneration:
 			// Pop transaction in bundle due to tx generation error without shifting in the next from the account
 			logger.Trace("Skipping transaction in bundle due to tx generation error", "err", err)
-			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
 			coalescedLogs = append(coalescedLogs, logs...)
-			builder_impl.ShiftTxs(&incorporatedTxs, numShift)
+			builder.ShiftTxs(&incorporatedTxs, numShift)
 
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
 			logger.Warn("Transaction failed, account skipped", "sender", from, "hash", tx.Hash().String(), "err", err)
 			strangeErrorTxsCounter.Inc(1)
-			builder_impl.ShiftTxs(&incorporatedTxs, numShift)
+			builder.ShiftTxs(&incorporatedTxs, numShift)
 		}
 		if len(targetBundle.BundleTxs) != 0 {
 			// After the last tx in the bundle finishes, set executingBundleTxs back to 0.

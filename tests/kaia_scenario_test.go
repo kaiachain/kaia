@@ -41,14 +41,13 @@ import (
 	"github.com/kaiachain/kaia/common/profile"
 	contracts "github.com/kaiachain/kaia/contracts/contracts/testing/reward"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/kaiax/builder"
-	builderImpl "github.com/kaiachain/kaia/kaiax/builder/impl"
-	mock_builder "github.com/kaiachain/kaia/kaiax/builder/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
+	"github.com/kaiachain/kaia/work/builder"
+	mock_builder "github.com/kaiachain/kaia/work/builder/mock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -1903,7 +1902,7 @@ func TestTxBundle(t *testing.T) {
 		name        string
 		runScenario func(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType,
 			accountMap *AccountMap, prof *profile.Profiler,
-			txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule,
+			txBundlingModules []builder.TxBundlingModule,
 		)
 		bundleFuncMaker func(rewardBase, anon *TestAccountType, signer types.Signer, amount, gasPrice *big.Int,
 		) func([]*types.Transaction, []*builder.Bundle) []*builder.Bundle
@@ -2044,11 +2043,9 @@ func TestTxBundle(t *testing.T) {
 			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(mockCtrl)
 			mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Any(), gomock.Any()).DoAndReturn(bundleFunc).AnyTimes()
 			txBundlingModules := []builder.TxBundlingModule{mockTxBundlingModule}
-			builderModule := builderImpl.NewBuilderModule()
-			builderModule.Init(nil)
 
 			// Run each scenario.
-			tc.runScenario(t, bcdata, rewardBase, validator, anon, accountMap, prof, txBundlingModules, builderModule)
+			tc.runScenario(t, bcdata, rewardBase, validator, anon, accountMap, prof, txBundlingModules)
 
 			if testing.Verbose() {
 				prof.PrintProfileInfo()
@@ -2059,7 +2056,7 @@ func TestTxBundle(t *testing.T) {
 
 func testTxBundleRevertScenario(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType,
 	accountMap *AccountMap, prof *profile.Profiler,
-	txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule,
+	txBundlingModules []builder.TxBundlingModule,
 ) {
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
@@ -2102,14 +2099,14 @@ func testTxBundleRevertScenario(t *testing.T, bcdata *BCData, rewardBase, valida
 
 	// tx3 and tx4 are bundled, and then tx4 fails due to nonceTooHigh, so it is reverted.
 	txHashesExpectedFail := []common.Hash{txs[2].Hash(), txs[3].Hash()}
-	if err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, txHashesExpectedFail, prof, txBundlingModules, builderModule); err != nil {
+	if err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, txHashesExpectedFail, prof, txBundlingModules); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func testTxBundleRevertByEvmErrorScenario(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType,
 	accountMap *AccountMap, prof *profile.Profiler,
-	txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule,
+	txBundlingModules []builder.TxBundlingModule,
 ) {
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
@@ -2195,7 +2192,7 @@ func testTxBundleRevertByEvmErrorScenario(t *testing.T, bcdata *BCData, rewardBa
 
 		// TransferTx and ExecutionTx are bundled, and then ExecutionTx fails due to OutOfGas, so it is reverted.
 		txHashesExpectedFail := []common.Hash{txs[0].Hash(), txs[1].Hash()}
-		if err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, txHashesExpectedFail, prof, txBundlingModules, builderModule); err != nil {
+		if err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, txHashesExpectedFail, prof, txBundlingModules); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -2203,7 +2200,7 @@ func testTxBundleRevertByEvmErrorScenario(t *testing.T, bcdata *BCData, rewardBa
 
 func testTxBundleAndRevertWithGeneratorScenario(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType,
 	accountMap *AccountMap, prof *profile.Profiler,
-	txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule,
+	txBundlingModules []builder.TxBundlingModule,
 ) {
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
@@ -2222,14 +2219,14 @@ func testTxBundleAndRevertWithGeneratorScenario(t *testing.T, bcdata *BCData, re
 
 	txs = append(txs, tx)
 
-	if err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, nil, prof, txBundlingModules, builderModule); err != nil {
+	if err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, nil, prof, txBundlingModules); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func testTxBundleTimeOutScenario(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType,
 	accountMap *AccountMap, prof *profile.Profiler,
-	txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule,
+	txBundlingModules []builder.TxBundlingModule,
 ) {
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
@@ -2256,13 +2253,13 @@ func testTxBundleTimeOutScenario(t *testing.T, bcdata *BCData, rewardBase, valid
 	defer func() {
 		params.BlockGenerationTimeLimit = params.DefaultBlockGenerationTimeLimit
 	}()
-	if err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, nil, prof, txBundlingModules, builderModule); err != nil {
+	if err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, nil, prof, txBundlingModules); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func makeTestTxBundleLivePruningScenario(livePruningEnabled bool) func(*testing.T, *BCData, *TestAccountType, *TestAccountType, *TestAccountType, *AccountMap, *profile.Profiler, []builder.TxBundlingModule, builder.BuilderModule) {
-	return func(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType, accountMap *AccountMap, prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule) {
+func makeTestTxBundleLivePruningScenario(livePruningEnabled bool) func(*testing.T, *BCData, *TestAccountType, *TestAccountType, *TestAccountType, *AccountMap, *profile.Profiler, []builder.TxBundlingModule) {
+	return func(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType, accountMap *AccountMap, prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule) {
 		if livePruningEnabled {
 			bcdata.db.WritePruningEnabled()
 		}
@@ -2300,7 +2297,7 @@ func makeTestTxBundleLivePruningScenario(livePruningEnabled bool) func(*testing.
 			}
 			// tx0 and tx1 are bundled, and then tx1 fails due to nonceTooHigh, so it is reverted.
 			expectedFailTxHashes := []common.Hash{txs[0].Hash(), txs[1].Hash()}
-			err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, expectedFailTxHashes, prof, txBundlingModules, builderModule)
+			err := bcdata.GenABlockWithTransactionsWithBundle(accountMap, txs, expectedFailTxHashes, prof, txBundlingModules)
 
 			if livePruningEnabled {
 				// State db will be broken because nodes marked as pruning during executing the bundle will be left in state db

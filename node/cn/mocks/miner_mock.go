@@ -11,8 +11,8 @@ import (
 	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	kaiax "github.com/kaiachain/kaia/kaiax"
-	builder "github.com/kaiachain/kaia/kaiax/builder"
 	work "github.com/kaiachain/kaia/work"
+	builder "github.com/kaiachain/kaia/work/builder"
 )
 
 // MockMiner is a mock of Miner interface.

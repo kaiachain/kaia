@@ -23,7 +23,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/builder"
+	"github.com/kaiachain/kaia/work/builder"
 	"github.com/rcrowley/go-metrics"
 )
 
