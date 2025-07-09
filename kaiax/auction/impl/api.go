@@ -18,7 +18,6 @@ package impl
 
 import (
 	"context"
-	"math/big"
 	"strings"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -67,7 +66,7 @@ type BidInput struct {
 	Sender        common.Address `json:"sender"`
 	To            common.Address `json:"to"`
 	Nonce         uint64         `json:"nonce"`
-	Bid           *big.Int       `json:"bid"`
+	Bid           hexutil.Big    `json:"bid"`
 	CallGasLimit  uint64         `json:"callGasLimit"`
 	Data          hexutil.Bytes  `json:"data"`
 	SearcherSig   hexutil.Bytes  `json:"searcherSig"`
@@ -81,7 +80,7 @@ func toBid(bidInput BidInput) *auction.Bid {
 		Sender:        bidInput.Sender,
 		To:            bidInput.To,
 		Nonce:         bidInput.Nonce,
-		Bid:           bidInput.Bid,
+		Bid:           bidInput.Bid.ToInt(),
 		CallGasLimit:  bidInput.CallGasLimit,
 		Data:          bidInput.Data,
 		SearcherSig:   bidInput.SearcherSig,
@@ -122,6 +121,7 @@ func (api *AuctionAPI) SubmitBid(ctx context.Context, bidInput BidInput) RPCOutp
 	bid := toBid(bidInput)
 	bidHash, errValidateBid := api.a.bidPool.AddBid(bid)
 	return makeRPCOutput(bidHash, errValidateBid)
+	return nil
 }
 
 func makeRPCOutput(bidHash common.Hash, err error) RPCOutput {
