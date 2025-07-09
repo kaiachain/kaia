@@ -745,6 +745,11 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "eth",
 			Version:   "1.0",
+			Service:   publicFilterAPI,
+			Public:    true,
+		}, {
+			Namespace: "eth",
+			Version:   "1.0",
 			Service:   publicDownloaderAPI,
 			Public:    true,
 		}, {
