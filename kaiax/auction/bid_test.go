@@ -23,10 +23,11 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/require"
 )
 
-var data = bidData{
+var data = BidData{
 	TargetTxHash:  common.HexToHash("0xf3c03c891206b24f5d2ff65b460df9b58c652279a3e0faed865dde4c46fe9dab"),
 	BlockNumber:   11,
 	Sender:        common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
@@ -40,7 +41,7 @@ var data = bidData{
 }
 
 var testBid = &Bid{
-	bidData: data,
+	BidData: data,
 }
 
 func TestBidEIP712Encode(t *testing.T) {
@@ -81,9 +82,9 @@ func TestBidDecodeRLP(t *testing.T) {
 	var buf bytes.Buffer
 	err := bid.EncodeRLP(&buf)
 	require.NoError(t, err)
-	err = decoded.DecodeRLP(&buf)
+	err = decoded.DecodeRLP(rlp.NewStream(&buf, 0))
 	require.NoError(t, err)
-	require.Equal(t, bid.bidData, decoded.bidData)
+	require.Equal(t, bid.BidData, decoded.BidData)
 }
 
 func TestBidHash(t *testing.T) {
