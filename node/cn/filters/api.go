@@ -118,6 +118,72 @@ func (api *FilterAPI) Events() *EventSystem {
 	return api.events
 }
 
+func (api *FilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
+	notifier, supported := rpc.NotifierFromContext(ctx)
+	if !supported {
+		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
+	}
+
+	rpcSub := notifier.CreateSubscription()
+
+	go func() {
+		headers := make(chan *types.Header)
+		headersSub := api.events.SubscribeNewHeads(headers)
+
+		for {
+			select {
+			case h := <-headers:
+				header := kaiaApi.RPCMarshalHeader(h, api.backend.ChainConfig().Rules(h.Number))
+				notifier.Notify(rpcSub.ID, header)
+			case <-rpcSub.Err():
+				headersSub.Unsubscribe()
+				return
+			case <-notifier.Closed():
+				headersSub.Unsubscribe()
+				return
+			}
+		}
+	}()
+
+	return rpcSub, nil
+}
+
+// NewPendingTransactions creates a subscription that is triggered each time a transaction
+// enters the transaction pool and was signed from one of the transactions this nodes manages.
+func (api *FilterAPI) NewPendingTransactions(ctx context.Context, fullTx *bool) (*rpc.Subscription, error) {
+	notifier, supported := rpc.NotifierFromContext(ctx)
+	if !supported {
+		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
+	}
+
+	rpcSub := notifier.CreateSubscription()
+
+	go func() {
+		txs := make(chan []*types.Transaction, 128)
+		pendingTxSub := api.events.SubscribePendingTxs(txs)
+		defer pendingTxSub.Unsubscribe()
+
+		for {
+			select {
+			case txs := <-txs:
+				// To keep the original behaviour, send a single tx hash in one notification.
+				// TODO(rjl493456442) Send a batch of tx hashes in one notification
+				for _, tx := range txs {
+					if fullTx != nil && *fullTx {
+						notifier.Notify(rpcSub.ID, tx.MakeRPCOutput())
+					} else {
+						notifier.Notify(rpcSub.ID, tx.Hash())
+					}
+				}
+			case <-rpcSub.Err():
+				return
+			}
+		}
+	}()
+
+	return rpcSub, nil
+}
+
 // PublicFilterAPI offers support to create and manage filters. This will allow external clients to retrieve various
 // information related to the Kaia protocol such as blocks, transactions and logs.
 type PublicFilterAPI struct {
@@ -165,40 +231,8 @@ func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
 	return pendingTxSub.ID
 }
 
-// NewPendingTransactions creates a subscription that is triggered each time a transaction
-// enters the transaction pool and was signed from one of the transactions this nodes manages.
 func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context, fullTx *bool) (*rpc.Subscription, error) {
-	notifier, supported := rpc.NotifierFromContext(ctx)
-	if !supported {
-		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
-	}
-
-	rpcSub := notifier.CreateSubscription()
-
-	go func() {
-		txs := make(chan []*types.Transaction, 128)
-		pendingTxSub := api.events.SubscribePendingTxs(txs)
-		defer pendingTxSub.Unsubscribe()
-
-		for {
-			select {
-			case txs := <-txs:
-				// To keep the original behaviour, send a single tx hash in one notification.
-				// TODO(rjl493456442) Send a batch of tx hashes in one notification
-				for _, tx := range txs {
-					if fullTx != nil && *fullTx {
-						notifier.Notify(rpcSub.ID, tx.MakeRPCOutput())
-					} else {
-						notifier.Notify(rpcSub.ID, tx.Hash())
-					}
-				}
-			case <-rpcSub.Err():
-				return
-			}
-		}
-	}()
-
-	return rpcSub, nil
+	return api.FilterAPI.NewPendingTransactions(ctx, fullTx)
 }
 
 // NewBlockFilter creates a filter that fetches blocks that are imported into the chain.
@@ -236,33 +270,7 @@ func (api *PublicFilterAPI) NewBlockFilter() rpc.ID {
 
 // NewHeads send a notification each time a new (header) block is appended to the chain.
 func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
-	notifier, supported := rpc.NotifierFromContext(ctx)
-	if !supported {
-		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
-	}
-
-	rpcSub := notifier.CreateSubscription()
-
-	go func() {
-		headers := make(chan *types.Header)
-		headersSub := api.events.SubscribeNewHeads(headers)
-
-		for {
-			select {
-			case h := <-headers:
-				header := kaiaApi.RPCMarshalHeader(h, api.backend.ChainConfig().Rules(h.Number))
-				notifier.Notify(rpcSub.ID, header)
-			case <-rpcSub.Err():
-				headersSub.Unsubscribe()
-				return
-			case <-notifier.Closed():
-				headersSub.Unsubscribe()
-				return
-			}
-		}
-	}()
-
-	return rpcSub, nil
+	return api.FilterAPI.NewHeads(ctx)
 }
 
 // Logs creates a subscription that fires for all new log that match the given filter criteria.
