@@ -19,6 +19,7 @@ package impl
 import (
 	"context"
 	"math/big"
+	"sync/atomic"
 	"testing"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
@@ -113,8 +114,20 @@ func TestUpdateAuctionInfo(t *testing.T) {
 	assert.Equal(t, mAuction.bidPool.auctioneer, common.Address{})
 	assert.Equal(t, mAuction.bidPool.auctionEntryPoint, common.Address{})
 
-	mAuction.updateAuctionInfo(big.NewInt(0))
+	mAuction.PostInsertBlock(backend.BlockChain().CurrentBlock())
 
 	assert.Equal(t, mAuction.bidPool.auctioneer, common.HexToAddress("0x01"))
 	assert.Equal(t, mAuction.bidPool.auctionEntryPoint, system.AuctionEntryPointAddrMock)
+
+	// Auction is running
+	assert.Equal(t, atomic.LoadUint32(&mAuction.bidPool.running), uint32(1))
+
+	// Update auction info again
+	mAuction.PostInsertBlock(types.NewBlock(&types.Header{Number: big.NewInt(1)}, nil, nil))
+
+	assert.Equal(t, mAuction.bidPool.auctioneer, common.Address{})
+	assert.Equal(t, mAuction.bidPool.auctionEntryPoint, common.Address{})
+
+	// Auction is not running
+	assert.Equal(t, atomic.LoadUint32(&mAuction.bidPool.running), uint32(0))
 }

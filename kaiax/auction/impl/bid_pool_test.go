@@ -248,8 +248,8 @@ func TestBidPool_RemoveOldBidsByNumber(t *testing.T) {
 		assert.Contains(t, pool.bidWinnerMap[bid.BlockNumber], bid.Sender)
 	}
 
-	// Remove bids for block 11
-	pool.removeOldBids(11, map[common.Hash]struct{}{})
+	// Remove bids for block 15, it will also remove bids for block 11
+	pool.removeOldBids(15, map[common.Hash]struct{}{})
 
 	// Verify bids for block 11 were removed
 	assert.Empty(t, pool.bidTargetMap[11])
