@@ -307,7 +307,11 @@ func (ec *Client) SyncProgress(ctx context.Context) (*kaia.SyncProgress, error) 
 // SubscribeNewHead subscribes to notifications about the current blockchain head
 // on the given channel.
 func (ec *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (kaia.Subscription, error) {
-	return ec.c.KaiaSubscribe(ctx, ch, "newHeads")
+	sub, err := ec.c.KaiaSubscribe(ctx, ch, "newHeads")
+	if err == nil {
+		return sub, err
+	}
+	return ec.c.AuctionSubscribe(ctx, ch, "newHeads")
 }
 
 // State Access

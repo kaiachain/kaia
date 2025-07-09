@@ -425,7 +425,7 @@ func (c *Client) ShhSubscribe(ctx context.Context, channel interface{}, args ...
 	return c.Subscribe(ctx, "shh", channel, args...)
 }
 
-// ShhSubscribe registers a subscripion under the "auction" namespace.
+// AuctionSubscribe registers a subscripion under the "auction" namespace.
 func (c *Client) AuctionSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
 	return c.Subscribe(ctx, "auction", channel, args...)
 }
