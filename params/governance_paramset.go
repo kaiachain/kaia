@@ -18,6 +18,7 @@ package params
 import (
 	"bytes"
 	"errors"
+	"maps"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -308,12 +309,8 @@ func NewGovParamSet() *GovParamSet {
 // If a key belongs to both sets, the value from `update` is used.
 func NewGovParamSetMerged(base *GovParamSet, update *GovParamSet) *GovParamSet {
 	p := NewGovParamSet()
-	for key, value := range base.items {
-		p.items[key] = value
-	}
-	for key, value := range update.items {
-		p.items[key] = value
-	}
+	maps.Copy(p.items, base.items)
+	maps.Copy(p.items, update.items)
 	return p
 }
 
@@ -458,9 +455,7 @@ func (p *GovParamSet) StrMap() map[string]interface{} {
 
 func (p *GovParamSet) IntMap() map[int]interface{} {
 	m := map[int]interface{}{}
-	for key, value := range p.items {
-		m[key] = value
-	}
+	maps.Copy(m, p.items)
 	return m
 }
 

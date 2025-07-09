@@ -549,7 +549,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			GaslessConfig: s.config.Gasless,
 			NodeKey:       ctx.NodeKey(),
 			Chain:         s.blockchain,
-			TxPool:        s.txPool,
 			NodeType:      ctx.NodeType(),
 		}),
 	)
@@ -570,7 +569,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mJsonRpc = append(mJsonRpc, mGasless)
 	}
 
-	mTxPool = builder_impl.WrapAndConcatenateBundlingModules(mTxBundling, mTxPool, s.txPool)
+	mTxPool = builder_impl.WrapAndConcatenateBundlingModules(mTxBundling, mTxPool)
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.

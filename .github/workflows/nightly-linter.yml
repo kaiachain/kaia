@@ -8,9 +8,16 @@ permissions: write-all
 
 jobs:
   linter:
-      uses: ./.github/workflows/test-excutor-template.yml
-      with:
-        test_command: |
-          make lint-try
-          mkdir -p /tmp/linter_reports
-          cp linter_report.txt /tmp/linter_reports/
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run linter
+        run: make lint-try
+      - name: Notify Slack on success
+        if: success()
+        run: |
+          curl --data '{"text": "✅ Nightly linter succeeded."}' "$SLACK_WEBHOOK_URL"
+      - name: Notify Slack on failure
+        if: failure()
+        run: |
+          curl --data '{"text": "❌ Nightly linter failed."}' "$SLACK_WEBHOOK_URL"

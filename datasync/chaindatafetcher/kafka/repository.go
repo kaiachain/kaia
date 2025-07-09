@@ -76,7 +76,7 @@ func (r *repository) HandleChainEvent(event blockchain.ChainEvent, dataType type
 	switch dataType {
 	case types.RequestTypeBlockGroup:
 		cInfo, err := r.engine.GetConsensusInfo(event.Block)
-		if err != nil {
+		if err != nil || cInfo.OriginProposer == nil {
 			return fmt.Errorf("failed to retrieve consensusinfo with the given block number: %v", event.Block.Number())
 		}
 		result := &blockGroupResult{

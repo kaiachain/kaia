@@ -28,7 +28,7 @@ const (
 	ReleaseNum   = 0
 	VersionMajor = 2 // Major version component of the current release
 	VersionMinor = 0 // Minor version component of the current release
-	VersionPatch = 0 // Patch version component of the current release
+	VersionPatch = 3 // Patch version component of the current release
 )
 
 // Version holds the textual version string.

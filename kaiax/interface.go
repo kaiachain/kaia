@@ -66,7 +66,7 @@ type ConsensusModule interface {
 	FinalizeHeader(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error
 }
 
-// Any component or module that accomodate consensus modules.
+// Any component or module that accommodate consensus modules.
 type ConsensusModuleHost interface {
 	RegisterConsensusModule(modules ...ConsensusModule)
 
@@ -83,7 +83,7 @@ type ExecutionModule interface {
 	PostInsertBlock(block *types.Block) error
 }
 
-// Any component or module that accomodate execution modules.
+// Any component or module that accommodate execution modules.
 type ExecutionModuleHost interface {
 	RegisterExecutionModule(modules ...ExecutionModule)
 }
@@ -112,7 +112,7 @@ type RewindableModule interface {
 	RewindDelete(hash common.Hash, num uint64)
 }
 
-// Any component or module that accomodate rewindable modules.
+// Any component or module that accommodate rewindable modules.
 type RewindableModuleHost interface {
 	RegisterRewindableModule(modules ...RewindableModule)
 }
@@ -131,7 +131,7 @@ type TxProcessModule interface {
 	PostRunTx(evm *vm.EVM, tx *types.Transaction) error
 }
 
-// Any component or module that accomodate tx process modules.
+// Any component or module that accommodate tx process modules.
 type TxProcessModuleHost interface {
 	RegisterTxProcessModule(modules ...TxProcessModule)
 }
@@ -156,19 +156,13 @@ type TxPoolModule interface {
 	IsReady(txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool
 
 	// Additional actions to perform before the txpool is reset.
-	PreReset(oldHead, newHead *types.Header)
+	PreReset(oldHead, newHead *types.Header) (dropTxs []common.Hash)
 
 	// Additional actions to perform after the txpool is reset.
-	PostReset(oldHead, newHead *types.Header)
+	PostReset(oldHead, newHead *types.Header, queue, pending map[common.Address]types.Transactions)
 }
 
-//go:generate mockgen -destination=./mock/tx_pool_for_caller.go -package=mock github.com/kaiachain/kaia/kaiax TxPoolForCaller
-type TxPoolForCaller interface {
-	GetCurrentState() *state.StateDB
-	PendingUnlocked() (map[common.Address]types.Transactions, error)
-}
-
-// Any component or module that accomodate txpool modules.
+// Any component or module that accommodate txpool modules.
 type TxPoolModuleHost interface {
 	RegisterTxPoolModule(modules ...TxPoolModule)
 }

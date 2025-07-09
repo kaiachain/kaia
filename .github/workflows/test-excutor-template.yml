@@ -23,6 +23,28 @@ jobs:
         run: |
           git config --global --add safe.directory /__w/kaia/kaia
           git fetch origin dev:dev
+      - name: Wait for Redis
+        run: |
+          for i in $(seq 1 10); do
+            nc -z 127.0.0.1 6379 && echo Success && exit 0
+            echo -n .
+            sleep 1
+          done
+          echo Failed waiting for Redis && exit 1
+        continue-on-error: true
+      - name: Wait for Kafka
+        run: |
+          for i in $(seq 1 10); do
+            nc -z kafka 9092 && echo Success && exit 0
+            echo -n .
+            sleep 1
+          done
+          echo Failed waiting for Kafka && exit 1
+        continue-on-error: true
+      - name: Wait for Localstack
+        run: |
+          timeout 60 sh -c 'until nc -z localhost 4566; do echo "Waiting for Localstack ..."; sleep 1; done'
+        continue-on-error: true
       - name: Run test
         shell: bash
         run: ${{ inputs.test_command }}

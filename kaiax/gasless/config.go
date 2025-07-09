@@ -45,6 +45,27 @@ var (
 		Aliases:  []string{"kaiax.module.gasless.max-bundle-txs-in-pending"},
 		Category: "KAIAX",
 	}
+	MaxBundleTxsInQueueFlag = &cli.IntFlag{
+		Name:     "gasless.max-bundle-txs-in-queue",
+		Usage:    "max number of gasless bundle txs in queue. Default value is 200. No limit if negative value",
+		Value:    200,
+		Aliases:  []string{"kaiax.module.gasless.max-bundle-txs-in-queue"},
+		Category: "KAIAX",
+	}
+	BalanceCheckLevelFlag = &cli.IntFlag{
+		Name:     "gasless.balance-check-level",
+		Usage:    "balance check level: 0=static checks, 1=token balance and allowance, 2=swap amount, 3=all",
+		Value:    BalanceCheckLevelAll,
+		Aliases:  []string{"kaiax.module.gasless.balance-check-level"},
+		Category: "KAIAX",
+	}
+)
+
+const (
+	BalanceCheckLevelStatic                   = iota // relation between amounts and deadline
+	BalanceCheckLevelTokenBalanceAndAllowance        // all above + token balance and allowance
+	BalanceCheckLevelSwapAmount                      // all above +	amountIn calculated by dex
+	BalanceCheckLevelAll                             // all above +	sender code check
 )
 
 type GaslessConfig struct {
@@ -52,6 +73,8 @@ type GaslessConfig struct {
 	AllowedTokens         []common.Address `toml:",omitempty"`
 	Disable               bool
 	MaxBundleTxsInPending uint
+	MaxBundleTxsInQueue   uint
+	BalanceCheckLevel     int
 }
 
 func DefaultGaslessConfig() *GaslessConfig {
@@ -59,7 +82,21 @@ func DefaultGaslessConfig() *GaslessConfig {
 		AllowedTokens:         nil,
 		Disable:               false,
 		MaxBundleTxsInPending: 100,
+		MaxBundleTxsInQueue:   200,
+		BalanceCheckLevel:     BalanceCheckLevelAll,
 	}
+}
+
+func (cfg *GaslessConfig) ShouldCheckToken() bool {
+	return cfg.BalanceCheckLevel >= BalanceCheckLevelTokenBalanceAndAllowance
+}
+
+func (cfg *GaslessConfig) ShouldCheckSwapAmount() bool {
+	return cfg.BalanceCheckLevel >= BalanceCheckLevelSwapAmount
+}
+
+func (cfg *GaslessConfig) ShouldCheckSenderCode() bool {
+	return cfg.BalanceCheckLevel >= BalanceCheckLevelAll
 }
 
 func SetGaslessConfig(ctx *cli.Context, cfg *GaslessConfig) {
@@ -82,4 +119,12 @@ func SetGaslessConfig(ctx *cli.Context, cfg *GaslessConfig) {
 	} else {
 		cfg.MaxBundleTxsInPending = math.MaxUint64
 	}
+
+	if size := ctx.Int(MaxBundleTxsInQueueFlag.Name); size > 0 {
+		cfg.MaxBundleTxsInQueue = uint(size)
+	} else {
+		cfg.MaxBundleTxsInQueue = math.MaxUint64
+	}
+
+	cfg.BalanceCheckLevel = ctx.Int(BalanceCheckLevelFlag.Name)
 }

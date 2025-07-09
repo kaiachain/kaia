@@ -8,17 +8,16 @@ permissions: write-all
 
 jobs:
   coverage:
-      uses: ./.github/workflows/test-other-excutor-template.yml
-      secrets:
-        AWS_ACCESS_KEY_ID: dummy
-        AWS_SECRET_ACCESS_KEY: dummy
-      with:
-        test_command: |
-          git config --global --add safe.directory /__w/kaia/kaia
-          set -e
-          export GOPATH=/go
-          git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
-          make cover
-          mkdir -p /tmp/coverage_reports
-          cp coverage_report.txt /tmp/coverage_reports/
-          cp coverage_report.html /tmp/coverage_reports/
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run coverage
+        run: make cover
+      - name: Notify Slack on success
+        if: success()
+        run: |
+          curl --data '{"text": "✅ Nightly coverage succeeded."}' "$SLACK_WEBHOOK_URL"
+      - name: Notify Slack on failure
+        if: failure()
+        run: |
+          curl --data '{"text": "❌ Nightly coverage failed."}' "$SLACK_WEBHOOK_URL"
