@@ -65,6 +65,20 @@ func (mr *MockPeerSetMockRecorder) CNPeers() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CNPeers", reflect.TypeOf((*MockPeerSet)(nil).CNPeers))
 }
 
+// CNWithoutBid mocks base method.
+func (m *MockPeerSet) CNWithoutBid(arg0 common.Hash) []Peer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CNWithoutBid", arg0)
+	ret0, _ := ret[0].([]Peer)
+	return ret0
+}
+
+// CNWithoutBid indicates an expected call of CNWithoutBid.
+func (mr *MockPeerSetMockRecorder) CNWithoutBid(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CNWithoutBid", reflect.TypeOf((*MockPeerSet)(nil).CNWithoutBid), arg0)
+}
+
 // CNWithoutTx mocks base method.
 func (m *MockPeerSet) CNWithoutTx(arg0 common.Hash) []Peer {
 	m.ctrl.T.Helper()
