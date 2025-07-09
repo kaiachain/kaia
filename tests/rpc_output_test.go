@@ -35,8 +35,8 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/profile"
-	"github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
+	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -696,23 +696,23 @@ func BenchmarkRPCOutput(t *testing.B) {
 		t.Fatal(err)
 	}
 
-	// Get APIExtension to execute GetBlockWithConsensusInfoByNumber.
+	// Get ValsetAPI to execute GetBlockWithConsensusInfoByNumber.
 	apis := bcdata.bc.Engine().APIs(bcdata.bc)
-	apiExtension, ok := apis[1].Service.(*backend.APIExtension)
+	valsetAPI, ok := apis[1].Service.(*valset_impl.ValsetAPI)
 	if !ok {
 		// checkout the code `consensus/istanbul/backend/engine.go` if it fails.
-		t.Fatalf("APIExetension is not the second item of apis. check out the code!")
+		t.Fatalf("ValsetAPI is not the second item of apis. check out the code!")
 	}
 
 	// Print the JSON output of the first block.
 	blkNum := rpc.BlockNumber(1)
-	out, err := apiExtension.GetBlockWithConsensusInfoByNumber(&blkNum)
+	out, err := valsetAPI.GetBlockWithConsensusInfoByNumber(&blkNum)
 	b, _ := json.MarshalIndent(out, "", "\t")
 	fmt.Println(string(b))
 
 	// Print the JSON output of the second block.
 	blkNum = rpc.BlockNumber(2)
-	out, err = apiExtension.GetBlockWithConsensusInfoByNumber(&blkNum)
+	out, err = valsetAPI.GetBlockWithConsensusInfoByNumber(&blkNum)
 	b, _ = json.MarshalIndent(out, "", "\t")
 	fmt.Println(string(b))
 
