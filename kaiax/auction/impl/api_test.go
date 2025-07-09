@@ -35,6 +35,7 @@ func prep(t *testing.T) *AuctionModule {
 		Chain:       backend.BlockChain(),
 		Backend:     apiBackend,
 		Downloader:  fakeDownloader,
+		NodeKey:     testNodeKey,
 	})
 	mAuction.bidPool.running = 1
 	mAuction.bidPool.auctioneer = common.HexToAddress("0x96Bd8E216c0D894C0486341288Bf486d5686C5b6")
