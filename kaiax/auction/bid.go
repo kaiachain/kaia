@@ -98,12 +98,11 @@ func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Add
 		sig[crypto.RecoveryIDOffset] -= 27
 	}
 
-	pub, err := crypto.SigToPub(digest, sig)
+	recoveredSender, err := getSigner(sig, digest)
 	if err != nil {
 		return fmt.Errorf("failed to recover searcher sig: %v", err)
 	}
 
-	recoveredSender := crypto.PubkeyToAddress(*pub)
 	if recoveredSender != b.Sender {
 		return fmt.Errorf("invalid searcher sig: expected %v, calculated %v", b.Sender, recoveredSender)
 	}
@@ -120,15 +119,22 @@ func (b *Bid) ValidateAuctioneerSig(auctioneer common.Address) error {
 		sig[crypto.RecoveryIDOffset] -= 27
 	}
 
-	pub, err := crypto.SigToPub(digest, sig)
+	recoveredAuctioneer, err := getSigner(sig, digest)
 	if err != nil {
 		return fmt.Errorf("failed to recover auctioneer sig: %v", err)
 	}
 
-	recoveredAuctioneer := crypto.PubkeyToAddress(*pub)
 	if recoveredAuctioneer != auctioneer {
 		return fmt.Errorf("invalid auctioneer sig: expected %v, calculated %v", auctioneer, recoveredAuctioneer)
 	}
 
 	return nil
+}
+
+func getSigner(sig, digest []byte) (common.Address, error) {
+	pub, err := crypto.SigToPub(digest, sig)
+	if err != nil {
+		return common.Address{}, err
+	}
+	return crypto.PubkeyToAddress(*pub), nil
 }
