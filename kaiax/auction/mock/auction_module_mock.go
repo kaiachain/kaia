@@ -93,6 +93,20 @@ func (mr *MockAuctionModuleMockRecorder) GetMaxBundleTxsInPending() *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleTxsInPending", reflect.TypeOf((*MockAuctionModule)(nil).GetMaxBundleTxsInPending))
 }
 
+// GetMaxBundleTxsInQueue mocks base method.
+func (m *MockAuctionModule) GetMaxBundleTxsInQueue() uint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMaxBundleTxsInQueue")
+	ret0, _ := ret[0].(uint)
+	return ret0
+}
+
+// GetMaxBundleTxsInQueue indicates an expected call of GetMaxBundleTxsInQueue.
+func (mr *MockAuctionModuleMockRecorder) GetMaxBundleTxsInQueue() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleTxsInQueue", reflect.TypeOf((*MockAuctionModule)(nil).GetMaxBundleTxsInQueue))
+}
+
 // HandleBid mocks base method.
 func (m *MockAuctionModule) HandleBid(arg0 *auction.Bid) {
 	m.ctrl.T.Helper()

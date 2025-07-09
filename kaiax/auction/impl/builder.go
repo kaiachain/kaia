@@ -76,6 +76,10 @@ func (g *AuctionModule) GetMaxBundleTxsInPending() uint {
 	return 0
 }
 
+func (g *AuctionModule) GetMaxBundleTxsInQueue() uint {
+	return 0
+}
+
 func (a *AuctionModule) FilterTxs(txs map[common.Address]types.Transactions) {
 	if atomic.LoadUint32(&a.bidPool.running) == 0 {
 		return
