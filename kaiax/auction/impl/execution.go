@@ -44,7 +44,11 @@ func (a *AuctionModule) PostInsertBlock(block *types.Block) error {
 	}
 
 	// Remove old bids unconditionally.
-	a.bidPool.removeOldBids(block.Number().Uint64())
+	txHashMap := make(map[common.Hash]struct{})
+	for _, tx := range block.Transactions() {
+		txHashMap[tx.Hash()] = struct{}{}
+	}
+	a.bidPool.removeOldBids(block.Number().Uint64(), txHashMap)
 
 	return nil
 }
