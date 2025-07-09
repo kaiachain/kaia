@@ -21,6 +21,7 @@
 package tests
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -30,13 +31,13 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi"
+	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/profile"
 	"github.com/kaiachain/kaia/crypto"
-	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -696,23 +697,30 @@ func BenchmarkRPCOutput(t *testing.B) {
 		t.Fatal(err)
 	}
 
-	// Get ValsetAPI to execute GetBlockWithConsensusInfoByNumber.
+	// Get KaiaBlockChainAPI to execute GetBlockWithConsensusInfoByNumber.
 	apis := bcdata.bc.Engine().APIs(bcdata.bc)
-	valsetAPI, ok := apis[1].Service.(*valset_impl.ValsetAPI)
-	if !ok {
-		// checkout the code `consensus/istanbul/backend/engine.go` if it fails.
-		t.Fatalf("ValsetAPI is not the second item of apis. check out the code!")
+	var kaiaAPI *api.KaiaBlockChainAPI
+	for _, apiItem := range apis {
+		if apiItem.Namespace == "kaia" {
+			if kAPI, ok := apiItem.Service.(*api.KaiaBlockChainAPI); ok {
+				kaiaAPI = kAPI
+				break
+			}
+		}
+	}
+	if kaiaAPI == nil {
+		t.Fatalf("KaiaBlockChainAPI not found in APIs")
 	}
 
 	// Print the JSON output of the first block.
 	blkNum := rpc.BlockNumber(1)
-	out, err := valsetAPI.GetBlockWithConsensusInfoByNumber(&blkNum)
+	out, err := kaiaAPI.GetBlockWithConsensusInfoByNumber(context.Background(), &blkNum)
 	b, _ := json.MarshalIndent(out, "", "\t")
 	fmt.Println(string(b))
 
 	// Print the JSON output of the second block.
 	blkNum = rpc.BlockNumber(2)
-	out, err = valsetAPI.GetBlockWithConsensusInfoByNumber(&blkNum)
+	out, err = kaiaAPI.GetBlockWithConsensusInfoByNumber(context.Background(), &blkNum)
 	b, _ = json.MarshalIndent(out, "", "\t")
 	fmt.Println(string(b))
 
