@@ -24,13 +24,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
-	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/log"
-	chain_mock "github.com/kaiachain/kaia/work/mocks"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -41,7 +40,7 @@ func init() {
 	// Initialize bids for each searcher
 	for i, key := range []*ecdsa.PrivateKey{testSearcher1Key, testSearcher2Key, testSearcher3Key, testSearcher1Key, testSearcher1Key} {
 		bid := &auction.Bid{}
-		initBaseBid(bid, i)
+		initBaseBid(bid, i, 2)
 
 		// Set searcher address
 		bid.Sender = crypto.PubkeyToAddress(key.PublicKey)
@@ -69,13 +68,11 @@ func init() {
 func TestHandler_HandleBid(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	var (
-		mockCtrl = gomock.NewController(t)
-		chain    = chain_mock.NewMockBlockChain(mockCtrl)
-		block    = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+		db     = database.NewMemoryDBManager()
+		alloc  = testAllocStorage()
+		config = testRandaoForkChainConfig(big.NewInt(0))
 	)
-	defer mockCtrl.Finish()
-
-	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
 
 	auctionConfig := auction.AuctionConfig{
 		Disable: false,
@@ -91,7 +88,7 @@ func TestHandler_HandleBid(t *testing.T) {
 	opts := &InitOpts{
 		ChainConfig:   testChainConfig,
 		AuctionConfig: &auctionConfig,
-		Chain:         chain,
+		Chain:         backend.BlockChain(),
 		Backend:       apiBackend,
 		Downloader:    fakeDownloader,
 		NodeKey:       testNodeKey,
@@ -133,13 +130,11 @@ func TestHandler_HandleBid(t *testing.T) {
 func TestHandler_SubscribeNewBid(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	var (
-		mockCtrl = gomock.NewController(t)
-		chain    = chain_mock.NewMockBlockChain(mockCtrl)
-		block    = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+		db     = database.NewMemoryDBManager()
+		alloc  = testAllocStorage()
+		config = testRandaoForkChainConfig(big.NewInt(0))
 	)
-	defer mockCtrl.Finish()
-
-	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
 
 	auctionConfig := auction.AuctionConfig{
 		Disable: false,
@@ -155,7 +150,7 @@ func TestHandler_SubscribeNewBid(t *testing.T) {
 	opts := &InitOpts{
 		ChainConfig:   testChainConfig,
 		AuctionConfig: &auctionConfig,
-		Chain:         chain,
+		Chain:         backend.BlockChain(),
 		Backend:       apiBackend,
 		Downloader:    fakeDownloader,
 		NodeKey:       testNodeKey,

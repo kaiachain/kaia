@@ -19,10 +19,13 @@ package impl
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn/filters"
@@ -64,6 +67,8 @@ const (
 	AuctionEarlyDeadline = 150 * time.Millisecond
 )
 
+var AuctionLenderMinBal = new(big.Int).Mul(big.NewInt(10), new(big.Int).SetUint64(params.KAIA))
+
 func NewAuctionModule() *AuctionModule {
 	return &AuctionModule{}
 }
@@ -73,12 +78,27 @@ func (a *AuctionModule) Init(opts *InitOpts) error {
 		return auction.ErrInitUnexpectedNil
 	}
 
+	a.InitOpts = *opts
+
+	// Note that the auction module is always disabled except CN.
+	// Disable the auction module if the CN has insufficient balance.
+	if !opts.AuctionConfig.Disable {
+		state, err := opts.Chain.State()
+		if err != nil {
+			return fmt.Errorf("failed to get state: %v", err)
+		}
+		nodeAddr := crypto.PubkeyToAddress(opts.NodeKey.PublicKey)
+		balance := state.GetBalance(nodeAddr)
+		if balance.Cmp(AuctionLenderMinBal) < 0 {
+			a.AuctionConfig.Disable = true
+			logger.Warn("disabling auction module due to insufficient balance", "node", nodeAddr.Hex(), "balance", balance.String())
+		}
+	}
+
 	a.bidPool = NewBidPool(opts.ChainConfig, opts.Chain)
 	if a.bidPool == nil {
 		return auction.ErrInitUnexpectedNil
 	}
-
-	a.InitOpts = *opts
 
 	return nil
 }

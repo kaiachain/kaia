@@ -25,7 +25,7 @@ var DisableFlag = &cli.BoolFlag{
 	Name:     "auction.disable",
 	Usage:    "disable auction module",
 	Value:    false,
-	Aliases:  []string{"genesis.module.auction.disable"},
+	Aliases:  []string{"kaiax.module.auction.disable"},
 	Category: "KAIAX",
 }
 
@@ -33,14 +33,18 @@ type AuctionConfig struct {
 	Disable bool
 }
 
-func GetAuctionConfig(ctx *cli.Context, nodeType common.ConnType) *AuctionConfig {
+func DefaultAuctionConfig() *AuctionConfig {
+	return &AuctionConfig{
+		Disable: false,
+	}
+}
+
+func SetAuctionConfig(ctx *cli.Context, cfg *AuctionConfig, nodeType common.ConnType) {
 	disable := ctx.Bool(DisableFlag.Name)
 	// Disable auction module for non-consensus nodes
 	if nodeType != common.CONSENSUSNODE {
 		disable = true
 	}
 
-	return &AuctionConfig{
-		Disable: disable,
-	}
+	cfg.Disable = disable
 }

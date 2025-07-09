@@ -61,7 +61,7 @@ func init() {
 	// Initialize bids for each searcher
 	for i, key := range []*ecdsa.PrivateKey{testSearcher1Key, testSearcher2Key, testSearcher3Key, testSearcher1Key, testSearcher1Key} {
 		bid := &auction.Bid{}
-		initBaseBid(bid, i)
+		initBaseBid(bid, i, 3)
 
 		if i == 3 {
 			bid.TargetTxHash = common.HexToHash("0xf3c03c891206b24f5d2ff65b460df9b58c652279a3e0faed865dde4c46fe9da0")
@@ -90,9 +90,9 @@ func init() {
 	}
 }
 
-func initBaseBid(bid *auction.Bid, index int) {
+func initBaseBid(bid *auction.Bid, index int, blockNumber uint64) {
 	bid.TargetTxHash = common.HexToHash(fmt.Sprintf("0xf3c03c891206b24f5d2ff65b460df9b58c652279a3e0faed865dde4c46fe9da%d", index))
-	bid.BlockNumber = 11
+	bid.BlockNumber = blockNumber
 	bid.To = common.HexToAddress(fmt.Sprintf("0x5FC8d32690cc91D4c39d9d3abcBD16989F87570%d", index))
 	bid.Nonce = uint64(index)
 	bid.Bid = new(big.Int).Add(
@@ -110,7 +110,7 @@ func TestNewBidPool(t *testing.T) {
 	)
 	defer mockCtrl.Finish()
 
-	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
 
 	testCases := []struct {
@@ -151,15 +151,15 @@ func TestBidPool_AddBid(t *testing.T) {
 	var (
 		mockCtrl = gomock.NewController(t)
 		chain    = chain_mock.NewMockBlockChain(mockCtrl)
-		block5   = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(5)})
-		block10  = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+		block0   = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(0)})
+		block1   = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	)
 	defer mockCtrl.Finish()
 
 	pool := NewBidPool(testChainConfig, chain)
 	require.NotNil(t, pool)
 
-	chain.EXPECT().CurrentBlock().Return(block5).Times(1)
+	chain.EXPECT().CurrentBlock().Return(block0).Times(1)
 
 	// Test adding bid when auction is paused
 	_, err := pool.AddBid(testBids[0])
@@ -176,7 +176,7 @@ func TestBidPool_AddBid(t *testing.T) {
 	_, err = pool.AddBid(testBids[0])
 	assert.Equal(t, auction.ErrInvalidBlockNumber, err)
 
-	chain.EXPECT().CurrentBlock().Return(block10).AnyTimes()
+	chain.EXPECT().CurrentBlock().Return(block1).AnyTimes()
 
 	// Test successful bid additions
 	for _, bid := range testBids[:3] {
@@ -229,7 +229,7 @@ func TestBidPool_RemoveOldBidsByNumber(t *testing.T) {
 	)
 	defer mockCtrl.Finish()
 
-	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
 
 	pool := NewBidPool(testChainConfig, chain)
@@ -253,12 +253,12 @@ func TestBidPool_RemoveOldBidsByNumber(t *testing.T) {
 		assert.Contains(t, pool.bidWinnerMap[bid.BlockNumber], bid.Sender)
 	}
 
-	// Remove bids for block 15, it will also remove bids for block 11
-	pool.removeOldBids(15, map[common.Hash]struct{}{})
+	// Remove bids for block 5, it will also remove bids for block 3
+	pool.removeOldBids(5, map[common.Hash]struct{}{})
 
-	// Verify bids for block 11 were removed
-	assert.Empty(t, pool.bidTargetMap[11])
-	assert.Empty(t, pool.bidWinnerMap[11])
+	// Verify bids for block 3 were removed
+	assert.Empty(t, pool.bidTargetMap[3])
+	assert.Empty(t, pool.bidWinnerMap[3])
 }
 
 func TestBidPool_RemoveOldBidsByTxHash(t *testing.T) {
@@ -268,7 +268,7 @@ func TestBidPool_RemoveOldBidsByTxHash(t *testing.T) {
 	)
 	defer mockCtrl.Finish()
 
-	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
 
 	pool := NewBidPool(testChainConfig, chain)
@@ -293,15 +293,15 @@ func TestBidPool_RemoveOldBidsByTxHash(t *testing.T) {
 	}
 
 	// Remove bids which target tx is in the txHashMap
-	pool.removeOldBids(10, map[common.Hash]struct{}{
+	pool.removeOldBids(2, map[common.Hash]struct{}{
 		testBids[0].TargetTxHash: {},
 		testBids[1].TargetTxHash: {},
 		testBids[2].TargetTxHash: {},
 	})
 
 	// Verify bids which target tx is in the txHashMap were removed
-	assert.Empty(t, pool.bidTargetMap[11])
-	assert.Empty(t, pool.bidWinnerMap[11])
+	assert.Empty(t, pool.bidTargetMap[3])
+	assert.Empty(t, pool.bidWinnerMap[3])
 }
 
 func TestBidPool_ClearBidPool(t *testing.T) {
@@ -311,7 +311,7 @@ func TestBidPool_ClearBidPool(t *testing.T) {
 	)
 	defer mockCtrl.Finish()
 
-	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
 
 	pool := NewBidPool(testChainConfig, chain)
@@ -352,7 +352,7 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	)
 	defer mockCtrl.Finish()
 
-	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
 
 	pool := NewBidPool(testChainConfig, chain)

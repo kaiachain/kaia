@@ -82,6 +82,9 @@ func testAllocStorage() blockchain.GenesisAlloc {
 			Balance: big.NewInt(0),
 			Storage: storage,
 		},
+		testNode: {
+			Balance: AuctionLenderMinBal,
+		},
 	}
 	return alloc
 }

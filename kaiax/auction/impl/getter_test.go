@@ -20,13 +20,13 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/log"
-	chain_mock "github.com/kaiachain/kaia/work/mocks"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,7 +34,7 @@ func genBid(targetTxHash common.Hash) *auction.Bid {
 	bid := new(auction.Bid)
 
 	bid.TargetTxHash = targetTxHash
-	bid.BlockNumber = 11
+	bid.BlockNumber = 3
 	bid.To = common.HexToAddress("0x5FC8d32690cc91D4c39d9d3abcBD16989F875701")
 	bid.Nonce = uint64(0)
 	bid.Bid = new(big.Int).SetBytes(common.Hex2Bytes("8ac7230489e80000"))
@@ -47,13 +47,11 @@ func genBid(targetTxHash common.Hash) *auction.Bid {
 func TestGetBidTxGenerator(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	var (
-		mockCtrl = gomock.NewController(t)
-		chain    = chain_mock.NewMockBlockChain(mockCtrl)
-		block    = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)})
+		db     = database.NewMemoryDBManager()
+		alloc  = testAllocStorage()
+		config = testRandaoForkChainConfig(big.NewInt(0))
 	)
-	defer mockCtrl.Finish()
-
-	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
 
 	auctionConfig := auction.AuctionConfig{
 		Disable: false,
@@ -69,7 +67,7 @@ func TestGetBidTxGenerator(t *testing.T) {
 	opts := &InitOpts{
 		ChainConfig:   testChainConfig,
 		AuctionConfig: &auctionConfig,
-		Chain:         chain,
+		Chain:         backend.BlockChain(),
 		Backend:       apiBackend,
 		Downloader:    fakeDownloader,
 		NodeKey:       testNodeKey,
@@ -79,6 +77,7 @@ func TestGetBidTxGenerator(t *testing.T) {
 
 	module.Start()
 
+	module.AuctionConfig.Disable = false
 	module.bidPool.auctioneer = testAuctioneer
 	module.bidPool.auctionEntryPoint = testAuctionEntryPoint
 

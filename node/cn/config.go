@@ -73,9 +73,7 @@ func GetDefaultConfig() *Config {
 		RPCEVMTimeout: 5 * time.Second,
 
 		Gasless: gasless.DefaultGaslessConfig(),
-		Auction: &auction.AuctionConfig{
-			Disable: false,
-		},
+		Auction: auction.DefaultAuctionConfig(),
 	}
 }
 
