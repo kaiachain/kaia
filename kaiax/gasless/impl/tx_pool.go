@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -28,7 +29,22 @@ import (
 	"github.com/kaiachain/kaia/contracts/contracts/testing/sc_erc20"
 )
 
+var (
+	QueueTimeout   = 10 * time.Second // bundle tx is removed from txpool.queue after QueueTimeout
+	PendingTimeout = 10 * time.Second // bundle tx is removed from txpool.pending after PendingTimeout
+	KnownTxTimeout = 30 * time.Second // bundle tx is removed from knownTxs after KnownTxTimeout
+)
+
 func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
+	g.knownTxsMu.RLock()
+	defer g.knownTxsMu.RUnlock()
+
+	if g.IsBundleTx(tx) {
+		if g.knownTxs.numQueue() >= int(g.GetMaxBundleTxsInQueue()) {
+			return ErrBundleTxQueueFull
+		}
+		g.knownTxs.add(tx, TxStatusQueue)
+	}
 	return nil
 }
 
@@ -157,7 +173,56 @@ func (g *GaslessModule) checkBalanceForSwap(swapArgs *SwapArgs, swapNonce uint64
 	return nil
 }
 
-func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, ready types.Transactions) bool {
+// Check promotion condition and enforce pending pool flow control.
+func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, next uint64, ready types.Transactions) bool {
+	g.knownTxsMu.Lock()
+	defer g.knownTxsMu.Unlock()
+
+	tx, ok := txs[next]
+	if !ok {
+		return false
+	}
+
+	if !g.isReady(txs, next, ready) {
+		return false
+	}
+
+	if g.IsBundleTx(tx) {
+		// If prev tx is bundle tx, there's no need to check the knownTxs limit because it has been checked in the previous `IsReady()` execution.
+		isPrevTxBundleTx := len(ready) != 0 && g.IsBundleTx(ready[len(ready)-1])
+		if isPrevTxBundleTx {
+			g.knownTxs.add(tx, TxStatusPending)
+			return true
+		}
+
+		maxBundleTxsInPending := g.GetMaxBundleTxsInPending()
+		if maxBundleTxsInPending != math.MaxUint64 {
+			numExecutable := uint(g.knownTxs.numExecutable())
+
+			numSeqTxs := uint(1)
+			for i := next + 1; i < next+uint64(len(txs)); i++ {
+				if tx, ok := txs[i]; ok && g.IsBundleTx(tx) {
+					numSeqTxs++
+				} else {
+					break
+				}
+			}
+
+			// false if there is possibility of exceeding max bundle tx num
+			if numExecutable+numSeqTxs > maxBundleTxsInPending {
+				logger.Trace("Not promoting a tx because of exceeding max bundle tx num", "tx", tx.Hash().String(), "numExecutable", numExecutable, "maxBundleTxsInPending", maxBundleTxsInPending)
+				return false
+			}
+
+			g.knownTxs.add(tx, TxStatusPending)
+		}
+	}
+
+	return true
+}
+
+// Check promotion condition.
+func (g *GaslessModule) isReady(txs map[uint64]*types.Transaction, i uint64, ready types.Transactions) bool {
 	tx := txs[i]
 
 	if g.IsApproveTx(tx) && i < uint64(math.MaxUint64) {
@@ -173,13 +238,6 @@ func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, i uint64, rea
 	}
 
 	return false
-}
-
-func (g *GaslessModule) PreReset(oldHead, newHead *types.Header) []common.Hash {
-	return nil
-}
-
-func (g *GaslessModule) PostReset(oldHead, newHead *types.Header, queue, pending map[common.Address]types.Transactions) {
 }
 
 // isApproveTxReady assumes that the caller checked `g.IsApproveTx(approveTx)`
@@ -221,4 +279,58 @@ func (g *GaslessModule) isSwapTxReady(swapTx, prevTx *types.Transaction) bool {
 	}
 
 	return g.IsExecutable(approveTx, swapTx)
+}
+
+// PreReset removes timed out tx from the tx pool and knownTxs.
+func (g *GaslessModule) PreReset(oldHead, newHead *types.Header) []common.Hash {
+	g.knownTxsMu.Lock()
+	defer g.knownTxsMu.Unlock()
+
+	drops := make([]common.Hash, 0)
+
+	for hash, knownTx := range *g.knownTxs {
+		// remove pending timed out tx from tx pool
+		if knownTx.status == TxStatusPending && knownTx.elapsedPromotedTime() >= PendingTimeout {
+			drops = append(drops, hash)
+		}
+		// remove queue timed out tx from tx pool
+		if knownTx.status == TxStatusQueue && knownTx.elapsedAddedTime() >= QueueTimeout {
+			drops = append(drops, hash)
+		}
+		// remove known timed out tx from knownTxs
+		if knownTx.elapsedPromotedOrAddedTime() >= KnownTxTimeout {
+			g.knownTxs.delete(hash)
+		}
+	}
+
+	return drops
+}
+
+// PostReset re-categorizes knownTxs based on the current txpool.queue and txpool.pending.
+func (g *GaslessModule) PostReset(oldHead, newHead *types.Header, queue, pending map[common.Address]types.Transactions) {
+	g.knownTxsMu.Lock()
+	defer g.knownTxsMu.Unlock()
+
+	flattenedQueue := make(map[common.Hash]*types.Transaction)
+	flattenedPending := make(map[common.Hash]*types.Transaction)
+	for _, txs := range queue {
+		for _, tx := range txs {
+			flattenedQueue[tx.Hash()] = tx
+		}
+	}
+	for _, txs := range pending {
+		for _, tx := range txs {
+			flattenedPending[tx.Hash()] = tx
+		}
+	}
+
+	for _, knownTx := range *g.knownTxs {
+		if _, ok := flattenedQueue[knownTx.tx.Hash()]; ok {
+			g.knownTxs.add(knownTx.tx, TxStatusQueue)
+		} else if _, ok := flattenedPending[knownTx.tx.Hash()]; ok {
+			g.knownTxs.add(knownTx.tx, TxStatusPending)
+		} else {
+			g.knownTxs.add(knownTx.tx, TxStatusDemoted)
+		}
+	}
 }

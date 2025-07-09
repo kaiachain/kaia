@@ -45,7 +45,6 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
-	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
 	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
@@ -563,8 +562,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mTxPool = append(mTxPool, mGasless)
 		mJsonRpc = append(mJsonRpc, mGasless)
 	}
-
-	mTxPool = builder_impl.WrapAndConcatenateBundlingModules(mTxBundling, mTxPool)
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.

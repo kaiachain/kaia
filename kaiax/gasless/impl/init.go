@@ -57,10 +57,16 @@ type GaslessModule struct {
 
 	currentStateMu sync.Mutex     // even simple GetNonce affects statedb's internal state, hence can't use RWMutex.
 	currentState   *state.StateDB // latest state for nonce lookup
+
+	knownTxsMu sync.RWMutex
+	knownTxs   *knownTxs
 }
 
 func NewGaslessModule() *GaslessModule {
-	return &GaslessModule{}
+	return &GaslessModule{
+		allowedTokens: map[common.Address]bool{},
+		knownTxs:      &knownTxs{},
+	}
 }
 
 func (g *GaslessModule) Init(opts *InitOpts) error {
