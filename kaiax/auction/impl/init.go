@@ -17,10 +17,11 @@
 package impl
 
 import (
+	"context"
 	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/api"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -36,10 +37,14 @@ type ProtocolManagerDownloader interface {
 	Synchronising() bool
 }
 
+type apiBackend interface {
+	SendTx(ctx context.Context, signedTx *types.Transaction) error
+}
+
 type InitOpts struct {
 	ChainConfig *params.ChainConfig
 	Chain       backends.BlockChainForCaller
-	Backend     api.Backend
+	Backend     apiBackend
 	Downloader  ProtocolManagerDownloader
 }
 
@@ -62,7 +67,7 @@ func (a *AuctionModule) Init(opts *InitOpts) error {
 		return auction.ErrInitUnexpectedNil
 	}
 
-	a.bidPool = NewBidPool(opts.ChainConfig)
+	a.bidPool = NewBidPool(opts.ChainConfig, opts.Chain)
 	if a.bidPool == nil {
 		return auction.ErrInitUnexpectedNil
 	}
@@ -73,10 +78,11 @@ func (a *AuctionModule) Init(opts *InitOpts) error {
 }
 
 func (a *AuctionModule) Start() error {
+	a.bidPool.start()
 	return nil
 }
 
 func (a *AuctionModule) Stop() {
 	// Clear the existing auction pool.
-	a.bidPool.clearBidPool()
+	a.bidPool.stop()
 }

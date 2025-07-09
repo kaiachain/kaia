@@ -20,13 +20,20 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/params"
 )
 
+const (
+	bidChSize        = 100
+	allowFutureBlock = 2
+)
+
 type BidPool struct {
 	ChainConfig *params.ChainConfig
+	Chain       backends.BlockChainForCaller
 
 	auctionInfoMu     sync.RWMutex
 	auctioneer        common.Address
@@ -38,22 +45,42 @@ type BidPool struct {
 	bidWinnerMap map[uint64]map[common.Address]common.Hash
 	allBids      map[uint64][]*auction.Bid
 
+	bidCh chan *auction.Bid
+	wg    sync.WaitGroup
+
 	running uint32
 }
 
-func NewBidPool(chainConfig *params.ChainConfig) *BidPool {
-	if chainConfig == nil {
+func NewBidPool(chainConfig *params.ChainConfig, chain backends.BlockChainForCaller) *BidPool {
+	if chainConfig == nil || chain == nil {
 		return nil
 	}
 
-	return &BidPool{
+	bp := &BidPool{
 		ChainConfig:  chainConfig,
+		Chain:        chain,
 		bidTargetMap: make(map[uint64]map[common.Hash]*auction.Bid),
 		bidWinnerMap: make(map[uint64]map[common.Address]common.Hash),
 		bidMap:       make(map[common.Hash]*auction.Bid),
 		allBids:      make(map[uint64][]*auction.Bid),
+		bidCh:        make(chan *auction.Bid, bidChSize),
 		running:      0, // not running yet
 	}
+
+	return bp
+}
+
+func (a *BidPool) start() {
+	atomic.CompareAndSwapUint32(&a.running, 0, 1)
+	a.wg.Add(1)
+	go a.handleBidMsg()
+}
+
+func (a *BidPool) stop() {
+	atomic.CompareAndSwapUint32(&a.running, 1, 0)
+	a.clearBidPool()
+	close(a.bidCh)
+	a.wg.Wait()
 }
 
 // removeOldBids removes the old bids for the given block number.
@@ -168,6 +195,16 @@ func (a *BidPool) validateBid(bid *auction.Bid) error {
 	blockNumber := bid.BlockNumber
 	sender := bid.Sender
 
+	curBlock := a.Chain.CurrentBlock()
+	if curBlock == nil {
+		return auction.ErrBlockNotFound
+	}
+
+	curNum := curBlock.NumberU64()
+	if blockNumber <= curNum || blockNumber > curNum+allowFutureBlock {
+		return auction.ErrInvalidBlockNumber
+	}
+
 	if bid.Bid.Sign() <= 0 {
 		return auction.ErrZeroBid
 	}
@@ -214,6 +251,27 @@ func (a *BidPool) validateBidSigs(bid *auction.Bid) error {
 	}
 
 	return nil
+}
+
+func (a *BidPool) HandleBid(bid *auction.Bid) {
+	if atomic.LoadUint32(&a.running) == 0 {
+		return
+	}
+	a.bidCh <- bid
+}
+
+func (a *BidPool) handleBidMsg() {
+	defer a.wg.Done()
+
+	for {
+		select {
+		case bid, ok := <-a.bidCh:
+			if !ok {
+				return
+			}
+			a.AddBid(bid)
+		}
+	}
 }
 
 func isSameBid(bid1 *auction.Bid, bid2 *auction.Bid) bool {
