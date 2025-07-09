@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/misc"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -49,6 +50,18 @@ import (
 )
 
 var logger = log.NewModuleLogger(log.API)
+
+// Error variables for consensus info APIs
+var (
+	errInternalError           = errors.New("internal error")
+	errNoBlockNumber           = errors.New("block number is not assigned")
+	errPendingNotAllowed       = errors.New("pending is not allowed")
+	errRangeNil                = errors.New("range values should not be nil")
+	errStartNotPositive        = errors.New("start block number should be positive")
+	errEndLargetThanLatest     = errors.New("end block number should be smaller than the latest block number")
+	errStartLargerThanEnd      = errors.New("start should be smaller than end")
+	errRequestedBlocksTooLarge = errors.New("number of requested blocks should be smaller than 50")
+)
 
 // CreditOutput represents the output structure for GetCypressCredit
 type CreditOutput struct {
@@ -233,6 +246,119 @@ func (s *KaiaBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash common
 		return nil, err
 	}
 	return s.rpcOutputBlock(block, true, fullTx)
+}
+
+func (s *KaiaBlockChainAPI) GetBlockWithConsensusInfoByNumber(ctx context.Context, number *rpc.BlockNumber) (map[string]interface{}, error) {
+	var block *types.Block
+	var blockNumber uint64
+
+	if number == nil {
+		logger.Trace("block number is not assigned")
+		return nil, errNoBlockNumber
+	}
+
+	if *number == rpc.PendingBlockNumber {
+		logger.Trace("Cannot get consensus information of the PendingBlock.")
+		return nil, errPendingNotAllowed
+	}
+
+	if *number == rpc.LatestBlockNumber {
+		block = s.b.CurrentBlock()
+		blockNumber = block.NumberU64()
+	} else {
+		// rpc.EarliestBlockNumber == 0, no need to treat it as a special case.
+		blockNumber = uint64(number.Int64())
+		block, _ = s.b.BlockByNumber(ctx, rpc.BlockNumber(blockNumber))
+	}
+
+	if block == nil {
+		logger.Trace("Finding a block by number failed.", "blockNum", blockNumber)
+		return nil, fmt.Errorf("the block does not exist (block number: %d)", blockNumber)
+	}
+	blockHash := block.Hash()
+
+	cInfo, err := s.b.Engine().GetConsensusInfo(block)
+	if err != nil {
+		logger.Error("Getting consensus information failed", "blockHash", blockHash, "err", err)
+		return nil, errInternalError
+	}
+
+	receipts := s.b.GetBlockReceipts(ctx, blockHash)
+	if receipts == nil {
+		receipts = s.b.GetBlockReceipts(ctx, blockHash)
+	}
+
+	return s.makeRPCBlockOutputWithConsensusInfo(block, cInfo, block.Transactions(), receipts), nil
+}
+
+func (s *KaiaBlockChainAPI) GetBlockWithConsensusInfoByNumberRange(ctx context.Context, start *rpc.BlockNumber, end *rpc.BlockNumber) (map[string]interface{}, error) {
+	blocks := make(map[string]interface{})
+
+	if start == nil || end == nil {
+		logger.Trace("the range values should not be nil.", "start", start, "end", end)
+		return nil, errRangeNil
+	}
+
+	// check error status.
+	startNum := start.Int64()
+	endNum := end.Int64()
+	if startNum < 0 {
+		logger.Trace("start should be positive", "start", startNum)
+		return nil, errStartNotPositive
+	}
+
+	eChain := s.b.CurrentBlock().Number().Int64()
+	if endNum > eChain {
+		logger.Trace("end should be smaller than the latest block number", "end", end, "eChain", eChain)
+		return nil, errEndLargetThanLatest
+	}
+
+	if startNum > endNum {
+		logger.Trace("start should be smaller than end", "start", startNum, "end", endNum)
+		return nil, errStartLargerThanEnd
+	}
+
+	if (endNum - startNum) > 50 {
+		logger.Trace("number of requested blocks should be smaller than 50", "start", startNum, "end", endNum)
+		return nil, errRequestedBlocksTooLarge
+	}
+
+	// gather start~end blocks
+	for i := startNum; i <= endNum; i++ {
+		strIdx := fmt.Sprintf("0x%x", i)
+
+		blockNum := rpc.BlockNumber(i)
+		b, err := s.GetBlockWithConsensusInfoByNumber(ctx, &blockNum)
+		if err != nil {
+			logger.Error("error on GetBlockWithConsensusInfoByNumber", "err", err)
+			blocks[strIdx] = nil
+		} else {
+			blocks[strIdx] = b
+		}
+	}
+
+	return blocks, nil
+}
+
+func (s *KaiaBlockChainAPI) GetBlockWithConsensusInfoByHash(ctx context.Context, blockHash common.Hash) (map[string]interface{}, error) {
+	block, _ := s.b.BlockByHash(ctx, blockHash)
+	if block == nil {
+		logger.Trace("Finding a block failed.", "blockHash", blockHash)
+		return nil, fmt.Errorf("the block does not exist (block hash: %s)", blockHash.String())
+	}
+
+	cInfo, err := s.b.Engine().GetConsensusInfo(block)
+	if err != nil {
+		logger.Error("Getting consensus information failed", "blockHash", blockHash, "err", err)
+		return nil, errInternalError
+	}
+
+	receipts := s.b.GetBlockReceipts(ctx, blockHash)
+	if receipts == nil {
+		receipts = s.b.GetBlockReceipts(ctx, blockHash)
+	}
+
+	return s.makeRPCBlockOutputWithConsensusInfo(block, cInfo, block.Transactions(), receipts), nil
 }
 
 // GetCode returns the code stored at the given address in the state for the given block number or hash.
@@ -825,4 +951,38 @@ func (s *KaiaBlockChainAPI) GetCypressCredit(ctx context.Context) (*CreditOutput
 	}
 
 	return output, nil
+}
+
+func (s *KaiaBlockChainAPI) makeRPCBlockOutputWithConsensusInfo(b *types.Block,
+	cInfo consensus.ConsensusInfo, transactions types.Transactions, receipts types.Receipts,
+) map[string]interface{} {
+	head := b.Header() // copies the header once
+	hash := head.Hash()
+
+	r, err := RpcOutputBlock(b, false, false, s.b.ChainConfig())
+	if err != nil {
+		logger.Error("failed to RpcOutputBlock", "err", err)
+		return nil
+	}
+
+	// make transactions
+	numTxs := len(transactions)
+	rpcTransactions := make([]map[string]interface{}, numTxs)
+	for i, tx := range transactions {
+		if len(receipts) == len(transactions) {
+			rpcTransactions[i] = RpcOutputReceipt(head, tx, hash, head.Number.Uint64(), uint64(i), receipts[i], s.b.ChainConfig())
+		} else {
+			// fill the transaction output if receipt is not found
+			rpcTransactions[i] = NewRPCTransaction(head, tx, hash, head.Number.Uint64(), uint64(i), s.b.ChainConfig())
+		}
+	}
+
+	r["committee"] = cInfo.Committee
+	r["committers"] = cInfo.Committers
+	r["sigHash"] = cInfo.SigHash
+	r["proposer"] = cInfo.Proposer
+	r["round"] = cInfo.Round
+	r["originProposer"] = cInfo.OriginProposer
+	r["transactions"] = rpcTransactions
+	return r
 }
