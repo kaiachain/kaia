@@ -52,6 +52,7 @@ func TestFilterTxs(t *testing.T) {
 		Chain:       backend.BlockChain(),
 		Backend:     apiBackend,
 		Downloader:  fakeDownloader,
+		NodeKey:     testNodeKey,
 	})
 	txs := make(map[common.Address]types.Transactions)
 
@@ -104,6 +105,7 @@ func TestFilterTxs_TargetTx(t *testing.T) {
 		Chain:       backend.BlockChain(),
 		Backend:     apiBackend,
 		Downloader:  fakeDownloader,
+		NodeKey:     testNodeKey,
 	})
 	txs := make(map[common.Address]types.Transactions)
 

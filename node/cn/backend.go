@@ -560,6 +560,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Chain:       s.blockchain,
 			Backend:     s.APIBackend,
 			Downloader:  s.protocolManager.Downloader(),
+			NodeKey:     ctx.NodeKey(),
 		}),
 	)
 	if err != nil {
