@@ -277,23 +277,175 @@ jobs:
             aws s3 cp packages/${item}-v*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
           done
 
-  deploy-rpm:
-    needs: [rpm-linux-amd64, tar-linux-amd64, tar-linux-arm64, rpm-linux-arm64]
+  rpm-linux-amd64-el7:
+    needs: [test-full, check-tagger]
+    permissions:
+      id-token: write
+    runs-on: ubuntu-latest
+    container:
+      image: kaiachain/circleci-rpmbuild:1.23.7-gcc7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Set version
+        shell: bash
+        run: |
+          export GOPATH=/go
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+      - name: Build binaries
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          make all
+      - name: Build RPM packages
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          git config --system --add safe.directory $GITHUB_WORKSPACE
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-rpm.sh $item
+          done
+          for item in kcn kpn ken; do
+            ./build/package-rpm.sh -b $item
+          done
+      - name: Upload RPM packages to S3
+        run: |
+          PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            BINARY=$item
+            KAIROS=""
+            if [[ $BINARY = *-kairos ]]; then
+              BINARY="${BINARY%-kairos}"
+              KAIROS="-kairos"
+            fi
+            TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
+  rpm-linux-arm64-el7:
+    needs: [test-full, check-tagger]
+    runs-on: ['arm-runner']
+    permissions:
+      id-token: write
+    container:
+      image: kaiachain/circleci-rpmbuild:1.23.7-gcc7-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Set version
+        shell: bash
+        run: |
+          export GOPATH=/go
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+      - name: Build binaries
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          make all
+      - name: Build RPM packages
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          git config --system --add safe.directory $GITHUB_WORKSPACE
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-rpm.sh $item
+          done
+          for item in kcn kpn ken; do
+            ./build/package-rpm.sh -b $item
+          done
+      - name: Upload RPM packages to S3
+        run: |
+          PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            BINARY=$item
+            KAIROS=""
+            if [[ $BINARY = *-kairos ]]; then
+              BINARY="${BINARY%-kairos}"
+              KAIROS="-kairos"
+            fi
+            TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
+  tar-darwin-arm64:
+    needs: [test-full, check-tagger]
+    runs-on: macos-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          brew install awscli
+          curl -O https://dl.google.com/go/go1.23.7.darwin-arm64.tar.gz
+          sudo tar -C /usr/local -xzf go1.23.7.darwin-arm64.tar.gz
+          echo 'export GOPATH=$HOME/go' >> $HOME/.bash_profile
+          echo 'export PATH=/usr/local/go/bin:$PATH' >> $HOME/.bash_profile
+          source $HOME/.bash_profile
+      - name: Set version
+        shell: bash
+        run: |
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+      - name: Build binaries
+        run: |
+          make all
+      - name: Build tar packages
+        run: |
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-tar.sh darwin-arm64 $item
+          done
+          for item in kcn kpn ken; do
+            ./build/package-tar.sh -b darwin-arm64 $item
+          done
+      - name: Upload tar packages to S3
+        run: |
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            aws s3 cp packages/${item}-v*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
+  update-repo-metadata:
+    needs: [rpm-linux-amd64, rpm-linux-amd64-el7, rpm-linux-arm64, rpm-linux-arm64-el7]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
     container:
       image: kaiachain/circleci-rpmbuild:1.23.7-gcc11
-
     steps:
       - name: Get AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
           role-session-name: SessionForKaiaActions
           aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Update RPM repository
+      - name: Update EL7 repo
+        run: |
+          aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/ rhel/7/kaia/
+          createrepo --update rhel/7/kaia
+          aws s3 sync --delete rhel/7/kaia/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/repodata/
+      - name: Update EL9 repo
         run: |
           aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/ rhel/9-stream/kaia/
           createrepo --update rhel/9-stream/kaia
@@ -301,35 +453,79 @@ jobs:
       - name: Notify Slack on success
         if: success()
         run: |
-          curl --data '{"text": "✅ Package deployment succeeded for ${{ github.ref_name }}. See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' "$SLACK_WEBHOOK_URL"
+          curl --data '{"text": "✅ Repo metadata update succeeded for ${{ github.ref_name }}."}' "$SLACK_WEBHOOK_URL"
       - name: Notify Slack on failure
         if: failure()
         run: |
-          curl --data '{"text": "❌ Package deployment failed for ${{ github.ref_name }}. See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}' "$SLACK_WEBHOOK_URL" 
+          curl --data '{"text": "❌ Repo metadata update failed for ${{ github.ref_name }}."}' "$SLACK_WEBHOOK_URL"
 
-  # Release
-  release:
-    needs: [rpm-linux-amd64, tar-linux-amd64, tar-linux-arm64, rpm-linux-arm64, deploy-rpm]
+  tag-verify:
     runs-on: ubuntu-latest
-    
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tag and file version match
+        run: |
+          echo "tag version is $GITHUB_REF_NAME"
+          KAIA_VERSION=$(go run build/rpm/main.go version)
+          echo "version on version.go $KAIA_VERSION"
+          if [ "$KAIA_VERSION" == "${GITHUB_REF_NAME%-*}" ]; then
+            echo "verification pass"
+          else
+            echo "It's not same version."
+            exit 1
+          fi
+
+  tagger-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tagger
+        run: |
+          TAGGER=$(git for-each-ref --format='%(tagger)' refs/tags/$GITHUB_REF_NAME | sed 's/ .*//')
+          if [ "$TAGGER" == 'circleci-kaia' ]; then
+            echo "Pass! Tagger is circleci-kaia"
+          else
+            echo "only circleci-kaia can tagging major version"
+            exit 1
+          fi
+
+  release-pr:
+    needs: [rpm-linux-amd64, rpm-linux-amd64-el7, tar-linux-amd64, rpm-linux-arm64, rpm-linux-arm64-el7, tar-linux-arm64, tar-darwin-arm64]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Generate changelog
-        id: changelog
-        uses: mikepenz/release-changelog-builder-action@v4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+      - name: Create release PR
+        uses: peter-evans/create-pull-request@v5
         with:
-          body: ${{steps.changelog.outputs.changelog}}
-          draft: false
-          prerelease: ${{ contains(github.ref, '-rc.') }}
-          files: |
-            packages/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          branch: release/${{ github.ref_name }}
+          title: "[Main] release/${{ github.ref_name }} QA Signoff"
+          body: |
+            [Main] release/${{ github.ref_name }} QA Sign-off
+            This PR is automatically created by CI to release a new official version of ${{ github.repository }}.
+            When this PR is approved by QA team, a new version will be released.
+          base: main
+          delete-branch: true
+
+  major-tagging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Generate tag
+        run: |
+          version=$(go run build/rpm/main.go version)
+          git config --global user.email "devops@kaia.io"
+          git config --global user.name "circleci-kaia"
+          git tag -a $version -m "Major release"
+          git push origin $version
+      - name: Delete release branch
+        run: |
+          version=$(go run build/rpm/main.go version)
+          if [[ "release/v" = $(git log --oneline -1 | grep -o "release/v") ]]; then
+            echo "Delete branch release/$version"
+            git push origin --delete release/$version
+          else
+            echo "Need to delete branch manually" 
