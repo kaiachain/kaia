@@ -50,6 +50,18 @@ func (mr *MockTxBundlingModuleMockRecorder) ExtractTxBundles(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractTxBundles", reflect.TypeOf((*MockTxBundlingModule)(nil).ExtractTxBundles), arg0, arg1)
 }
 
+// FilterTxs mocks base method.
+func (m *MockTxBundlingModule) FilterTxs(arg0 map[common.Address]types.Transactions) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "FilterTxs", arg0)
+}
+
+// FilterTxs indicates an expected call of FilterTxs.
+func (mr *MockTxBundlingModuleMockRecorder) FilterTxs(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilterTxs", reflect.TypeOf((*MockTxBundlingModule)(nil).FilterTxs), arg0)
+}
+
 // GetMaxBundleTxsInPending mocks base method.
 func (m *MockTxBundlingModule) GetMaxBundleTxsInPending() uint {
 	m.ctrl.T.Helper()
@@ -90,16 +102,4 @@ func (m *MockTxBundlingModule) IsBundleTx(arg0 *types.Transaction) bool {
 func (mr *MockTxBundlingModuleMockRecorder) IsBundleTx(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsBundleTx", reflect.TypeOf((*MockTxBundlingModule)(nil).IsBundleTx), arg0)
-}
-
-// FilterTxs mocks base method.
-func (m *MockTxBundlingModule) FilterTxs(arg0 map[common.Address]types.Transactions) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "FilterTxs", arg0)
-}
-
-// FilterTxs indicates an expected call of FilterTxs.
-func (mr *MockTxBundlingModuleMockRecorder) FilterTxs(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilterTxs", reflect.TypeOf((*MockTxBundlingModule)(nil).FilterTxs), arg0)
 }

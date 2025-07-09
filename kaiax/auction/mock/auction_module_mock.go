@@ -79,6 +79,20 @@ func (mr *MockAuctionModuleMockRecorder) FilterTxs(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilterTxs", reflect.TypeOf((*MockAuctionModule)(nil).FilterTxs), arg0)
 }
 
+// GetMaxBundleTxsInPending mocks base method.
+func (m *MockAuctionModule) GetMaxBundleTxsInPending() uint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMaxBundleTxsInPending")
+	ret0, _ := ret[0].(uint)
+	return ret0
+}
+
+// GetMaxBundleTxsInPending indicates an expected call of GetMaxBundleTxsInPending.
+func (mr *MockAuctionModuleMockRecorder) GetMaxBundleTxsInPending() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleTxsInPending", reflect.TypeOf((*MockAuctionModule)(nil).GetMaxBundleTxsInPending))
+}
+
 // HandleBid mocks base method.
 func (m *MockAuctionModule) HandleBid(arg0 *auction.Bid) {
 	m.ctrl.T.Helper()
@@ -89,6 +103,20 @@ func (m *MockAuctionModule) HandleBid(arg0 *auction.Bid) {
 func (mr *MockAuctionModuleMockRecorder) HandleBid(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleBid", reflect.TypeOf((*MockAuctionModule)(nil).HandleBid), arg0)
+}
+
+// IsBundleTx mocks base method.
+func (m *MockAuctionModule) IsBundleTx(arg0 *types.Transaction) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsBundleTx", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsBundleTx indicates an expected call of IsBundleTx.
+func (mr *MockAuctionModuleMockRecorder) IsBundleTx(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsBundleTx", reflect.TypeOf((*MockAuctionModule)(nil).IsBundleTx), arg0)
 }
 
 // PostInsertBlock mocks base method.
