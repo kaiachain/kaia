@@ -364,6 +364,10 @@ func (pm *ProtocolManager) RegisterAuctionModule(auctionModule auction.AuctionMo
 	pm.auctionModule = auctionModule
 }
 
+func (pm *ProtocolManager) IsAuctionModuleDisabled() bool {
+	return pm.auctionModule == nil
+}
+
 func (pm *ProtocolManager) getWSEndPoint() string {
 	return pm.wsendpoint
 }
@@ -407,10 +411,12 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.minedBlockSub = pm.eventMux.Subscribe(blockchain.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
 
-	// broadcast bids
-	pm.bidCh = make(chan *auction.Bid, bidChanSize)
-	pm.bidSub = pm.auctionModule.SubscribeNewBid(pm.bidCh)
-	go pm.bidBroadcastLoop()
+	if !pm.IsAuctionModuleDisabled() {
+		// broadcast bids
+		pm.bidCh = make(chan *auction.Bid, bidChanSize)
+		pm.bidSub = pm.auctionModule.SubscribeNewBid(pm.bidCh)
+		go pm.bidBroadcastLoop()
+	}
 
 	// start sync handlers
 	go pm.syncer()
@@ -422,7 +428,9 @@ func (pm *ProtocolManager) Stop() {
 
 	pm.txsSub.Unsubscribe()        // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
-	pm.bidSub.Unsubscribe()        // quits bidBroadcastLoop
+	if !pm.IsAuctionModuleDisabled() {
+		pm.bidSub.Unsubscribe() // quits bidBroadcastLoop
+	}
 
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
@@ -1140,6 +1148,10 @@ func handleStakingInfoMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 
 // handleBidMsg handles bid message.
 func handleBidMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	if pm.IsAuctionModuleDisabled() {
+		return nil
+	}
+
 	var data *auction.Bid
 	if err := msg.Decode(&data); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)

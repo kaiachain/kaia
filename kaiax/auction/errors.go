@@ -27,6 +27,7 @@ var (
 	ErrNilChainId           = errors.New("chainId is nil")
 	ErrNilVerifyingContract = errors.New("verifyingContract is nil")
 	ErrInvalidTargetTxHash  = errors.New("invalid target tx hash")
+	ErrAuctionDisabled      = errors.New("auction is disabled")
 
 	ErrBidAlreadyExists        = errors.New("bid already exists")
 	ErrBidSenderExists         = errors.New("bid sender already exists")
