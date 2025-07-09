@@ -17,12 +17,11 @@
 package impl
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
-	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn/filters"
@@ -41,7 +40,7 @@ type ProtocolManagerDownloader interface {
 
 type apiBackend interface {
 	filters.Backend
-	SendTx(ctx context.Context, signedTx *types.Transaction) error
+	api.Backend
 }
 
 type InitOpts struct {
