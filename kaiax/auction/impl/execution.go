@@ -25,6 +25,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/auction"
 )
 
 func (a *AuctionModule) PostInsertBlock(block *types.Block) error {
@@ -34,9 +35,10 @@ func (a *AuctionModule) PostInsertBlock(block *types.Block) error {
 	}
 
 	if err := a.updateAuctionInfo(block.Number()); err != nil {
-		logger.Error("failed to update auction info", "error", err)
+		logger.Debug("failed to update auction info", "error", err)
 		a.bidPool.clearBidPool()
 		atomic.CompareAndSwapUint32(&a.bidPool.running, 1, 0)
+		// Do not return error here to not interrupt the block processing.
 	} else {
 		atomic.CompareAndSwapUint32(&a.bidPool.running, 0, 1)
 	}
@@ -72,6 +74,10 @@ func (a *AuctionModule) updateAuctionInfo(num *big.Int) error {
 	auctionEntryPointAddr, err := system.ReadActiveAddressFromRegistry(backend, system.AuctionEntryPointName, num)
 	if err != nil {
 		return fmt.Errorf("failed to read auction entry point address: %v", err)
+	}
+
+	if auctionEntryPointAddr == (common.Address{}) {
+		return auction.ErrAuctionEntryPointNotSet
 	}
 
 	auctioneer, err := system.ReadAuctioneer(backend, auctionEntryPointAddr, num)
