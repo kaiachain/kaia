@@ -24,6 +24,8 @@ var (
 	ErrInvalidBlockNumber   = errors.New("invalid block number")
 	ErrInvalidSearcherSig   = errors.New("invalid searcher sig")
 	ErrInvalidAuctioneerSig = errors.New("invalid auctioneer sig")
+	ErrNilChainId           = errors.New("chainId is nil")
+	ErrNilVerifyingContract = errors.New("verifyingContract is nil")
 
 	ErrBidAlreadyExists        = errors.New("bid already exists")
 	ErrBidSenderExists         = errors.New("bid sender already exists")
