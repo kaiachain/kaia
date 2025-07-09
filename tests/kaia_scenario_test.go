@@ -41,13 +41,14 @@ import (
 	"github.com/kaiachain/kaia/common/profile"
 	contracts "github.com/kaiachain/kaia/contracts/contracts/testing/reward"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax"
+	mock_kaiax "github.com/kaiachain/kaia/kaiax/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/kaiachain/kaia/work/builder"
-	mock_builder "github.com/kaiachain/kaia/work/builder/mock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -1902,7 +1903,7 @@ func TestTxBundle(t *testing.T) {
 		name        string
 		runScenario func(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType,
 			accountMap *AccountMap, prof *profile.Profiler,
-			txBundlingModules []builder.TxBundlingModule,
+			txBundlingModules []kaiax.TxBundlingModule,
 		)
 		bundleFuncMaker func(rewardBase, anon *TestAccountType, signer types.Signer, amount, gasPrice *big.Int,
 		) func([]*types.Transaction, []*builder.Bundle) []*builder.Bundle
@@ -2040,9 +2041,9 @@ func TestTxBundle(t *testing.T) {
 			// Generate a mock bundling module.
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
-			mockTxBundlingModule := mock_builder.NewMockTxBundlingModule(mockCtrl)
+			mockTxBundlingModule := mock_kaiax.NewMockTxBundlingModule(mockCtrl)
 			mockTxBundlingModule.EXPECT().ExtractTxBundles(gomock.Any(), gomock.Any()).DoAndReturn(bundleFunc).AnyTimes()
-			txBundlingModules := []builder.TxBundlingModule{mockTxBundlingModule}
+			txBundlingModules := []kaiax.TxBundlingModule{mockTxBundlingModule}
 
 			// Run each scenario.
 			tc.runScenario(t, bcdata, rewardBase, validator, anon, accountMap, prof, txBundlingModules)
@@ -2056,7 +2057,7 @@ func TestTxBundle(t *testing.T) {
 
 func testTxBundleRevertScenario(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType,
 	accountMap *AccountMap, prof *profile.Profiler,
-	txBundlingModules []builder.TxBundlingModule,
+	txBundlingModules []kaiax.TxBundlingModule,
 ) {
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
@@ -2106,7 +2107,7 @@ func testTxBundleRevertScenario(t *testing.T, bcdata *BCData, rewardBase, valida
 
 func testTxBundleRevertByEvmErrorScenario(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType,
 	accountMap *AccountMap, prof *profile.Profiler,
-	txBundlingModules []builder.TxBundlingModule,
+	txBundlingModules []kaiax.TxBundlingModule,
 ) {
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
@@ -2200,7 +2201,7 @@ func testTxBundleRevertByEvmErrorScenario(t *testing.T, bcdata *BCData, rewardBa
 
 func testTxBundleAndRevertWithGeneratorScenario(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType,
 	accountMap *AccountMap, prof *profile.Profiler,
-	txBundlingModules []builder.TxBundlingModule,
+	txBundlingModules []kaiax.TxBundlingModule,
 ) {
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
@@ -2226,7 +2227,7 @@ func testTxBundleAndRevertWithGeneratorScenario(t *testing.T, bcdata *BCData, re
 
 func testTxBundleTimeOutScenario(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType,
 	accountMap *AccountMap, prof *profile.Profiler,
-	txBundlingModules []builder.TxBundlingModule,
+	txBundlingModules []kaiax.TxBundlingModule,
 ) {
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(bcdata.bc.Config().UnitPrice)
@@ -2258,8 +2259,8 @@ func testTxBundleTimeOutScenario(t *testing.T, bcdata *BCData, rewardBase, valid
 	}
 }
 
-func makeTestTxBundleLivePruningScenario(livePruningEnabled bool) func(*testing.T, *BCData, *TestAccountType, *TestAccountType, *TestAccountType, *AccountMap, *profile.Profiler, []builder.TxBundlingModule) {
-	return func(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType, accountMap *AccountMap, prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule) {
+func makeTestTxBundleLivePruningScenario(livePruningEnabled bool) func(*testing.T, *BCData, *TestAccountType, *TestAccountType, *TestAccountType, *AccountMap, *profile.Profiler, []kaiax.TxBundlingModule) {
+	return func(t *testing.T, bcdata *BCData, rewardBase, validator, anon *TestAccountType, accountMap *AccountMap, prof *profile.Profiler, txBundlingModules []kaiax.TxBundlingModule) {
 		if livePruningEnabled {
 			bcdata.db.WritePruningEnabled()
 		}

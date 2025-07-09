@@ -27,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/work/builder"
 )
 
@@ -108,8 +109,12 @@ func (a *AccountMap) Initialize(bcdata *BCData) error {
 	return nil
 }
 
-func (a *AccountMap) Update(txs types.Transactions, txHashesExpectedFail []common.Hash, txBundlingModules []builder.TxBundlingModule, signer types.Signer, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
-	incorporatedTxs, _ := builder.ExtractBundlesAndIncorporate(txs, txBundlingModules)
+func (a *AccountMap) Update(txs types.Transactions, txHashesExpectedFail []common.Hash, txBundlingModules []kaiax.TxBundlingModule, signer types.Signer, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
+	modules := make([]builder.TxBundlingModule, len(txBundlingModules)) // TODO-Kaia: Remove this cast.
+	for i, module := range txBundlingModules {
+		modules[i] = module.(builder.TxBundlingModule)
+	}
+	incorporatedTxs, _ := builder.ExtractBundlesAndIncorporate(txs, modules)
 	for _, txOrGen := range incorporatedTxs {
 		// To simulate tx, the nonce given to generate is set to zero.
 		// This does not affect subsequent operations on the AccountMap state.

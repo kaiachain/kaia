@@ -66,7 +66,6 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work"
-	"github.com/kaiachain/kaia/work/builder"
 )
 
 var errCNLightSync = errors.New("can't run cn.CN in light sync mode")
@@ -91,8 +90,8 @@ type Miner interface {
 	SetExtra(extra []byte) error
 	Pending() (*types.Block, types.Receipts, *state.StateDB)
 	PendingBlock() *types.Block
-	kaiax.ExecutionModuleHost    // Because miner executes blocks, inject ExecutionModule.
-	builder.TxBundlingModuleHost // Because miner bundle transactions, inject TxBundlingModule
+	kaiax.ExecutionModuleHost  // Because miner executes blocks, inject ExecutionModule.
+	kaiax.TxBundlingModuleHost // Because miner bundle transactions, inject TxBundlingModule
 }
 
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
@@ -553,7 +552,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	}
 
 	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
-	mTxBundling := []builder.TxBundlingModule{}
+	mTxBundling := []kaiax.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
 	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mRandao}
 

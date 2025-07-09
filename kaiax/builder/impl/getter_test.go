@@ -22,8 +22,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/kaiax"
 	mock_kaiax "github.com/kaiachain/kaia/kaiax/mock"
-	"github.com/kaiachain/kaia/work/builder"
-	mock_builder "github.com/kaiachain/kaia/work/builder/mock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,58 +33,58 @@ func TestWrapAndConcatenateBundlingModules(t *testing.T) {
 	// Create test modules
 	mockTxPool1 := mock_kaiax.NewMockTxPoolModule(ctrl)
 	mockTxPool2 := mock_kaiax.NewMockTxPoolModule(ctrl)
-	mockTxBundling1 := mock_builder.NewMockTxBundlingModule(ctrl)
-	mockTxBundling2 := mock_builder.NewMockTxBundlingModule(ctrl)
+	mockTxBundling1 := mock_kaiax.NewMockTxBundlingModule(ctrl)
+	mockTxBundling2 := mock_kaiax.NewMockTxBundlingModule(ctrl)
 
 	// Create a module that implements both interfaces
 	mockBoth1 := struct {
 		*mock_kaiax.MockTxPoolModule
-		*mock_builder.MockTxBundlingModule
+		*mock_kaiax.MockTxBundlingModule
 	}{
 		MockTxPoolModule:     mock_kaiax.NewMockTxPoolModule(ctrl),
-		MockTxBundlingModule: mock_builder.NewMockTxBundlingModule(ctrl),
+		MockTxBundlingModule: mock_kaiax.NewMockTxBundlingModule(ctrl),
 	}
 	mockBoth2 := struct {
 		*mock_kaiax.MockTxPoolModule
-		*mock_builder.MockTxBundlingModule
+		*mock_kaiax.MockTxBundlingModule
 	}{
 		MockTxPoolModule:     mock_kaiax.NewMockTxPoolModule(ctrl),
-		MockTxBundlingModule: mock_builder.NewMockTxBundlingModule(ctrl),
+		MockTxBundlingModule: mock_kaiax.NewMockTxBundlingModule(ctrl),
 	}
 
 	testCases := []struct {
 		name        string
-		mTxBundling []builder.TxBundlingModule
+		mTxBundling []kaiax.TxBundlingModule
 		mTxPool     []kaiax.TxPoolModule
 		expected    []interface{}
 	}{
 		{
 			name:        "No modules",
-			mTxBundling: []builder.TxBundlingModule{},
+			mTxBundling: []kaiax.TxBundlingModule{},
 			mTxPool:     []kaiax.TxPoolModule{},
 			expected:    []interface{}{},
 		},
 		{
 			name:        "Only TxPool modules",
-			mTxBundling: []builder.TxBundlingModule{},
+			mTxBundling: []kaiax.TxBundlingModule{},
 			mTxPool:     []kaiax.TxPoolModule{mockTxPool1, mockTxPool2},
 			expected:    []interface{}{mockTxPool1, mockTxPool2},
 		},
 		{
 			name:        "Only TxBundling modules",
-			mTxBundling: []builder.TxBundlingModule{mockTxBundling1, mockTxBundling2},
+			mTxBundling: []kaiax.TxBundlingModule{mockTxBundling1, mockTxBundling2},
 			mTxPool:     []kaiax.TxPoolModule{},
 			expected:    []interface{}{mockTxBundling1, mockTxBundling2},
 		},
 		{
 			name:        "Mixed modules",
-			mTxBundling: []builder.TxBundlingModule{mockTxBundling1, mockTxBundling2},
+			mTxBundling: []kaiax.TxBundlingModule{mockTxBundling1, mockTxBundling2},
 			mTxPool:     []kaiax.TxPoolModule{mockTxPool1, mockTxPool2},
 			expected:    []interface{}{mockTxPool1, mockTxPool2, mockTxBundling1, mockTxBundling2},
 		},
 		{
 			name:        "Overlapping modules",
-			mTxBundling: []builder.TxBundlingModule{mockBoth2, mockTxBundling1, mockBoth1},
+			mTxBundling: []kaiax.TxBundlingModule{mockBoth2, mockTxBundling1, mockBoth1},
 			mTxPool:     []kaiax.TxPoolModule{mockTxPool1, mockBoth1, mockBoth2},
 			expected:    []interface{}{mockTxPool1, mockBoth1, mockBoth2, mockTxBundling1},
 		},

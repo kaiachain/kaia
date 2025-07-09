@@ -19,10 +19,11 @@ package impl
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/work/builder"
 )
 
-var _ builder.TxBundlingModule = (*GaslessModule)(nil)
+var _ kaiax.TxBundlingModule = (*GaslessModule)(nil)
 
 func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles []*builder.Bundle) []*builder.Bundle {
 	// there are only at most two gasless transactions in pending for a sender

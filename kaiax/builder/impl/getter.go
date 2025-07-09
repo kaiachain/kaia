@@ -20,17 +20,16 @@ import (
 	"slices"
 
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/work/builder"
 )
 
 // WrapAndConcatenateBundlingModules wraps bundling modules and concatenates them.
 // given: mTxPool = [ A, B, C ], mTxBundling = [ B, D ]
 // want : mTxPool = [ A, WB, C, WD ] (W: wrapped)
-func WrapAndConcatenateBundlingModules(mTxBundling []builder.TxBundlingModule, mTxPool []kaiax.TxPoolModule) []kaiax.TxPoolModule {
+func WrapAndConcatenateBundlingModules(mTxBundling []kaiax.TxBundlingModule, mTxPool []kaiax.TxPoolModule) []kaiax.TxPoolModule {
 	ret := make([]kaiax.TxPoolModule, 0, len(mTxBundling)+len(mTxPool))
 
 	for _, module := range mTxPool {
-		if txb, ok := module.(builder.TxBundlingModule); ok {
+		if txb, ok := module.(kaiax.TxBundlingModule); ok {
 			ret = append(ret, NewBuilderWrappingModule(txb))
 		} else {
 			ret = append(ret, module)

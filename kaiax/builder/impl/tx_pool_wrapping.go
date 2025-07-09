@@ -23,7 +23,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/work/builder"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -39,13 +38,13 @@ var (
 )
 
 type BuilderWrappingModule struct {
-	txBundlingModule builder.TxBundlingModule
+	txBundlingModule kaiax.TxBundlingModule
 	txPoolModule     kaiax.TxPoolModule // either nil or same object as txBundlingModule
 	knownTxs         *knownTxs
 	mu               sync.RWMutex
 }
 
-func NewBuilderWrappingModule(txBundlingModule builder.TxBundlingModule) *BuilderWrappingModule {
+func NewBuilderWrappingModule(txBundlingModule kaiax.TxBundlingModule) *BuilderWrappingModule {
 	txPoolModule, _ := txBundlingModule.(kaiax.TxPoolModule)
 	return &BuilderWrappingModule{
 		txBundlingModule: txBundlingModule,

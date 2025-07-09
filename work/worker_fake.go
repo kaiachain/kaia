@@ -22,7 +22,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/work/builder"
 )
 
 type FakeWorker struct{}
@@ -34,13 +33,13 @@ func NewFakeWorker() *FakeWorker {
 	return &FakeWorker{}
 }
 
-func (*FakeWorker) Start()                                                       {}
-func (*FakeWorker) Stop()                                                        {}
-func (*FakeWorker) Register(Agent)                                               {}
-func (*FakeWorker) Mining() bool                                                 { return false }
-func (*FakeWorker) HashRate() (tot int64)                                        { return 0 }
-func (*FakeWorker) SetExtra([]byte) error                                        { return nil }
-func (*FakeWorker) Pending() (*types.Block, types.Receipts, *state.StateDB)      { return nil, nil, nil }
-func (*FakeWorker) PendingBlock() *types.Block                                   { return nil }
-func (*FakeWorker) RegisterExecutionModule(modules ...kaiax.ExecutionModule)     {}
-func (*FakeWorker) RegisterTxBundlingModule(modules ...builder.TxBundlingModule) {}
+func (*FakeWorker) Start()                                                     {}
+func (*FakeWorker) Stop()                                                      {}
+func (*FakeWorker) Register(Agent)                                             {}
+func (*FakeWorker) Mining() bool                                               { return false }
+func (*FakeWorker) HashRate() (tot int64)                                      { return 0 }
+func (*FakeWorker) SetExtra([]byte) error                                      { return nil }
+func (*FakeWorker) Pending() (*types.Block, types.Receipts, *state.StateDB)    { return nil, nil, nil }
+func (*FakeWorker) PendingBlock() *types.Block                                 { return nil }
+func (*FakeWorker) RegisterExecutionModule(modules ...kaiax.ExecutionModule)   {}
+func (*FakeWorker) RegisterTxBundlingModule(modules ...kaiax.TxBundlingModule) {}
