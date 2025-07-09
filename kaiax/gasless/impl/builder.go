@@ -78,3 +78,7 @@ func (g *GaslessModule) GetMaxBundleTxsInPending() uint {
 func (g *GaslessModule) GetMaxBundleTxsInQueue() uint {
 	return g.GaslessConfig.MaxBundleTxsInQueue
 }
+
+func (g *GaslessModule) FilterTxs(txs map[common.Address]types.Transactions) {
+	// do nothing
+}
