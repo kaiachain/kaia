@@ -39,6 +39,10 @@ func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
 	g.knownTxsMu.RLock()
 	defer g.knownTxsMu.RUnlock()
 
+	if knownTx, ok := g.knownTxs.get(tx.Hash()); ok && knownTx.elapsedPromotedOrAddedTime() < KnownTxTimeout {
+		return ErrUnableToAddKnownBundleTx
+	}
+
 	if g.IsBundleTx(tx) {
 		if g.knownTxs.numQueue() >= int(g.GetMaxBundleTxsInQueue()) {
 			return ErrBundleTxQueueFull
