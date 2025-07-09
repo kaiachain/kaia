@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
@@ -72,6 +73,7 @@ type BCData struct {
 	engine             consensus.Istanbul
 	genesis            *blockchain.Genesis
 	govModule          gov.GovModule
+	isMiner            bool
 }
 
 var (
@@ -79,7 +81,7 @@ var (
 	nodeAddr = common.StringToAddress("nodeAddr")
 )
 
-func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.ChainConfig) (*BCData, error) {
+func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.ChainConfig, cacheConfig *blockchain.CacheConfig) (*BCData, error) {
 	if chainCfg == nil {
 		return nil, errors.New("chainConfig is nil")
 	}
@@ -130,7 +132,7 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 	})
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain
-	bc, genesis, err := initBlockChain(chainDb, nil, addrs, validatorAddresses, nil, engine, chainCfg)
+	bc, genesis, err := initBlockChain(chainDb, cacheConfig, addrs, validatorAddresses, nil, engine, chainCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -180,17 +182,18 @@ func NewBCDataWithForkConfig(maxAccounts, numValidators int, chainCfg *params.Ch
 	return &BCData{
 		bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, mGov,
+		validatorPrivKeys, engine, genesis, mGov, false,
 	}, nil
 }
 
 // NewBCData enables all hardforks except randao hardfork
 func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
-	return NewBCDataWithForkConfig(maxAccounts, numValidators, Forks["Byzantium"])
+	return NewBCDataWithConfigs(maxAccounts, numValidators, Forks["Byzantium"], nil)
 }
 
 func (bcdata *BCData) Shutdown() {
 	bcdata.bc.Stop()
+	bcdata.engine.Stop()
 
 	bcdata.db.Close()
 	// Remove leveldb dir which was created for this test.
@@ -233,18 +236,18 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 	return header, nil
 }
 
-func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.Signer, prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule) (*types.Block, types.Receipts, error) {
+func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.Signer, prof *profile.Profiler, txBundlingModules []builder.TxBundlingModule, builderModule builder.BuilderModule) (*state.StateDB, *types.Block, types.Receipts, error) {
 	// Set the block header
 	start := time.Now()
 	header, err := bcdata.prepareHeader()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	prof.Profile("mine_prepareHeader", time.Now().Sub(start))
 
-	statedb, err := bcdata.bc.State()
+	statedb, err := bcdata.bc.PrunableStateAt(bcdata.bc.CurrentBlock().Root(), bcdata.bc.CurrentBlock().NumberU64())
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Group transactions by the sender address
@@ -253,7 +256,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 	for _, tx := range transactions {
 		acc, err := types.Sender(signer, tx)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		txs[acc] = append(txs[acc], tx)
 	}
@@ -276,7 +279,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 	start = time.Now()
 	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, newtxs, receipts)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	prof.Profile("mine_finalize_block", time.Now().Sub(start))
 
@@ -285,11 +288,12 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 	start = time.Now()
 	b, err = sealBlock(b, bcdata.validatorPrivKeys)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
+
 	prof.Profile("mine_seal_block", time.Now().Sub(start))
 
-	return b, receipts, nil
+	return statedb, b, receipts, nil
 }
 
 func (bcdata *BCData) GenABlock(accountMap *AccountMap, opt *testOption,
@@ -446,30 +450,37 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 
 	// Mine a block!
 	start = time.Now()
-	b, receipts, err := bcdata.MineABlock(transactions, signer, prof, txBundlingModules, builderModule)
+	statedb, b, receipts, err := bcdata.MineABlock(transactions, signer, prof, txBundlingModules, builderModule)
 	if err != nil {
 		return err
 	}
 	prof.Profile("main_mineABlock", time.Now().Sub(start))
 
-	txs := make(types.Transactions, len(b.Transactions()))
-	for i, tt := range b.Transactions() {
-		encodedTx, err := rlp.EncodeToBytes(tt)
-		if err != nil {
-			return err
+	if bcdata.isMiner {
+		start = time.Now()
+		bcdata.bc.WriteBlockWithState(b, receipts, statedb)
+		prof.Profile("main_write_block", time.Now().Sub(start))
+	} else {
+		txs := make(types.Transactions, len(b.Transactions()))
+		for i, tt := range b.Transactions() {
+			encodedTx, err := rlp.EncodeToBytes(tt)
+			if err != nil {
+				return err
+			}
+			decodedTx := types.Transaction{}
+			rlp.DecodeBytes(encodedTx, &decodedTx)
+			txs[i] = &decodedTx
 		}
-		decodedTx := types.Transaction{}
-		rlp.DecodeBytes(encodedTx, &decodedTx)
-		txs[i] = &decodedTx
-	}
-	b = b.WithBody(txs)
+		b = b.WithBody(txs)
 
-	// Insert the block into the blockchain
-	start = time.Now()
-	if n, err := bcdata.bc.InsertChain(types.Blocks{b}); err != nil {
-		return fmt.Errorf("err = %s, n = %d\n", err, n)
+		// Insert the block into the blockchain
+		start = time.Now()
+		if n, err := bcdata.bc.InsertChain(types.Blocks{b}); err != nil {
+			return fmt.Errorf("err = %s, n = %d\n", err, n)
+		}
+
+		prof.Profile("main_insert_blockchain", time.Now().Sub(start))
 	}
-	prof.Profile("main_insert_blockchain", time.Now().Sub(start))
 
 	// Apply reward
 	mStaking := staking_impl.NewStakingModule()
@@ -510,6 +521,10 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 	prof.Profile("main_verification", time.Now().Sub(start))
 
 	return nil
+}
+
+func (bcdata *BCData) EnableMiner() {
+	bcdata.isMiner = true
 }
 
 // //////////////////////////////////////////////////////////////////////////////

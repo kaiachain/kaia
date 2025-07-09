@@ -61,10 +61,7 @@ var (
 		Kip160CompatibleBlock:    big.NewInt(0),
 		RandaoCompatibleBlock:    big.NewInt(0),
 	}
-	testGaslessConfig = &gasless.GaslessConfig{
-		AllowedTokens: nil,
-		Disable:       false,
-	}
+	testGaslessConfig = gasless.DefaultGaslessConfig()
 
 	// interface DummyGSR {
 	// 	function addToken(address token) public
@@ -206,18 +203,6 @@ func flattenBundleTxs(txOrGens []*builder.TxOrGen) ([]common.Hash, error) {
 		hashes = append(hashes, tx.Hash())
 	}
 	return hashes, nil
-}
-
-type testTxPool struct {
-	statedb *state.StateDB
-}
-
-func (pool *testTxPool) GetCurrentState() *state.StateDB {
-	return pool.statedb
-}
-
-func (pool *testTxPool) PendingUnlocked() (map[common.Address]types.Transactions, error) {
-	return nil, nil
 }
 
 func testAllocStorage() blockchain.GenesisAlloc {

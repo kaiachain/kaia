@@ -42,8 +42,9 @@ const (
 )
 
 var (
-	erc20ApproveFunc = mustParseAbi(erc20AbiJson, "approve")
-	routerSwapFunc   = mustParseAbi(routerAbiJson, "swapForGas")
+	erc20BalanceOfFunc = mustParseAbi(erc20AbiJson, "balanceOf")
+	erc20ApproveFunc   = mustParseAbi(erc20AbiJson, "approve")
+	routerSwapFunc     = mustParseAbi(routerAbiJson, "swapForGas")
 )
 
 var _ gasless.GaslessModule = (*GaslessModule)(nil)
@@ -240,12 +241,12 @@ func (g *GaslessModule) VerifyExecutable(approveTxOrNil, swapTx *types.Transacti
 		if approveTxOrNil.Nonce()+1 != swapTx.Nonce() {
 			return fmt.Errorf("%w: approve nonce %d, swap nonce %d (expected %d)", ErrNonSequentialNonce, approveTxOrNil.Nonce(), swapTx.Nonce(), approveTxOrNil.Nonce()+1)
 		}
-		if nonce := g.TxPool.GetCurrentState().GetNonce(approveArgs.Sender); nonce != approveTxOrNil.Nonce() {
+		if nonce := g.getCurrentStateNonce(approveArgs.Sender); nonce != approveTxOrNil.Nonce() {
 			return fmt.Errorf("%w: approve nonce %d, current nonce %d", ErrApproveNonceNotCurrent, approveTxOrNil.Nonce(), nonce)
 		}
 	} else {
 		// SP3.
-		if nonce := g.TxPool.GetCurrentState().GetNonce(swapArgs.Sender); nonce != swapTx.Nonce() {
+		if nonce := g.getCurrentStateNonce(swapArgs.Sender); nonce != swapTx.Nonce() {
 			return fmt.Errorf("%w: swap nonce %d, current nonce %d", ErrSwapNonceNotCurrent, swapTx.Nonce(), nonce)
 		}
 	}

@@ -19,6 +19,7 @@ package impl
 import (
 	"sync"
 	"sync/atomic"
+	"time"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -35,8 +36,15 @@ import (
 var (
 	_ (valset.ValsetModule) = &ValsetModule{}
 
+	// Istanbul snapshots are generated every 1024 blocks.
+	// Note: snapshots are not persisted after the migration process.
 	istanbulCheckpointInterval = uint64(1024)
-	migrateLogInterval         = uint64(102400)
+
+	// A background migration thread transfers Istanbul snapshots to the valset council.
+	// To prevent high CPU usage, the migration loop is throttled with a 50ms delay per iteration.
+	// For example, if migration starts at block 180,000,000, the entire process will take at least 3.2 hours.
+	migrationThrottlingDelay = 50 * time.Millisecond
+	migrateLogInterval       = uint64(102400)
 
 	logger = log.NewModuleLogger(log.KaiaxValset)
 )
@@ -65,16 +73,20 @@ type ValsetModule struct {
 	// cache for weightedRandom and uniformRandom proposerLists.
 	proposerListCache *lru.Cache // uint64 -> []common.Address
 	removeVotesCache  *lru.Cache // uint64 -> removeVoteList
+	councilCache      *lru.Cache // uint64 -> *valset.AddressSet
 
 	validatorVoteBlockNumsCache []uint64
+	lowestScannedVoteNumCache   *uint64
 }
 
 func NewValsetModule() *ValsetModule {
 	pListCache, _ := lru.New(128)
 	rVoteCache, _ := lru.New(128)
+	councilCache, _ := lru.New(128)
 	return &ValsetModule{
 		proposerListCache: pListCache,
 		removeVotesCache:  rVoteCache,
+		councilCache:      councilCache,
 	}
 }
 
@@ -102,7 +114,7 @@ func (v *ValsetModule) initSchema() error {
 	}
 
 	// Ensure mandatory schema lowestScannedCheckpointInterval
-	if pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv); pMinVoteNum == nil {
+	if pMinVoteNum := v.readLowestScannedVoteNumCached(); pMinVoteNum == nil {
 		// migration not started. Migrating the last interval and leave the rest to be migrated by background thread.
 		currentNum := v.Chain.CurrentBlock().NumberU64()
 		_, snapshotNum, err := v.getCouncilFromIstanbulSnapshot(currentNum, true)
@@ -116,6 +128,7 @@ func (v *ValsetModule) initSchema() error {
 		} else {
 			writeLowestScannedVoteNum(v.ChainKv, 0)
 		}
+		v.lowestScannedVoteNumCache = nil
 	}
 
 	return nil
@@ -144,7 +157,7 @@ func (v *ValsetModule) Stop() {
 func (v *ValsetModule) migrate() {
 	defer v.wg.Done()
 
-	pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv)
+	pMinVoteNum := v.readLowestScannedVoteNumCached()
 	if pMinVoteNum == nil {
 		logger.Error("No lowest scanned snapshot num")
 		return
@@ -152,10 +165,14 @@ func (v *ValsetModule) migrate() {
 
 	targetNum := *pMinVoteNum
 	logger.Info("ValsetModule migrate start", "targetNum", targetNum)
+
 	for targetNum > 0 {
 		if v.quit.Load() == 1 {
 			break
 		}
+
+		time.Sleep(migrationThrottlingDelay)
+
 		// At each iteration, targetNum should decrease like ... -> 2048 -> 1024 -> 0.
 		// get(2048,true) scans [1025, 2048] and returns snapshotNum=1024. So we write lowestScannedVoteNum=1025.
 		// get(1024,true) scans [1, 1024] and returns snapshotNum=0. So we write lowestScannedVoteNum=1.
@@ -169,11 +186,14 @@ func (v *ValsetModule) migrate() {
 		}
 		// getCouncilFromIstanbulSnapshot() should have scanned until snapshotNum+1.
 		writeLowestScannedVoteNum(v.ChainKv, snapshotNum+1)
+		v.lowestScannedVoteNumCache = nil
 		targetNum = snapshotNum
 	}
+
 	if targetNum == 0 {
 		logger.Info("ValsetModule migrate complete")
 		// Now the migration is complete.
 		writeLowestScannedVoteNum(v.ChainKv, 0)
+		v.lowestScannedVoteNumCache = nil
 	}
 }

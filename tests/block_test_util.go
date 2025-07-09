@@ -118,18 +118,19 @@ type eestEngine struct {
 	*gxhash.Gxhash
 	baseFee  *big.Int
 	gasLimit uint64
+	coinbase common.Address
 }
 
 var _ consensus.Engine = &eestEngine{}
 
 // This is called inside blockchain.ApplyTransaction to manipulate the evm configuration and recreate the eth.
 func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
-	// Change GasLimit to the one in the eth header
+	// Change BaseFee/GasLimit to the one in the eth header
+	evm.Context.BaseFee = e.baseFee
 	evm.Context.GasLimit = e.gasLimit
 
 	if evm.ChainConfig().Rules(evm.Context.BlockNumber).IsCancun {
-		// EIP-1052 must be activated for backward compatibility on Kaia. But EIP-2929 is activated instead of it on Ethereum
-		vm.ChangeGasCostForTest(&evm.Config.JumpTable, vm.EXTCODEHASH, params.WarmStorageReadCostEIP2929)
+		vm.ChangeGasCostForTest(&evm.Config.JumpTable)
 	}
 
 	// When istanbul is enabled, instrinsic gas is different from eth, so enable IsPrague to make them equal
@@ -176,9 +177,14 @@ func (e *eestEngine) Finalize(chain consensus.ChainReader, header *types.Header,
 	return types.NewBlock(header, txs, receipts), nil
 }
 
+func (e *eestEngine) Author(header *types.Header) (common.Address, error) {
+	return e.coinbase, nil
+}
+
 func (e *eestEngine) applyHeader(h btHeader) {
 	e.baseFee = h.BaseFee
 	e.gasLimit = h.GasLimit
+	e.coinbase = h.Coinbase
 }
 
 func (t *BlockTest) Run() error {
@@ -295,9 +301,11 @@ func (t *BlockTest) insertBlocks(bc *blockchain.BlockChain, gBlock types.Block, 
 			e.applyHeader(header)
 		}
 
-		// var maxFeePerGas *big.Int
 		blocks, _ := blockchain.GenerateChain(bc.Config(), preBlock, bc.Engine(), db, 1, func(i int, b *blockchain.BlockGen) {
 			b.SetRewardbase(common.Address(header.Coinbase))
+			b.SetMixHash(header.MixHash)
+			b.SetBaseFee(header.BaseFee)
+			b.SetTime(big.NewInt(int64(header.Time)))
 			for _, tx := range txs {
 				b.AddTxWithChainEvenHasError(bc, tx)
 			}

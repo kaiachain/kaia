@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
-	gokzg4844 "github.com/crate-crypto/go-kzg-4844"
+	gokzg4844 "github.com/crate-crypto/go-eth-kzg"
 )
 
 func randFieldElement() [32]byte {
@@ -36,13 +36,13 @@ func randFieldElement() [32]byte {
 	return gokzg4844.SerializeScalar(r)
 }
 
-func randBlob() Blob {
+func randBlob() *Blob {
 	var blob Blob
 	for i := 0; i < len(blob); i += gokzg4844.SerializedScalarSize {
 		fieldElementBytes := randFieldElement()
 		copy(blob[i:i+gokzg4844.SerializedScalarSize], fieldElementBytes[:])
 	}
-	return blob
+	return &blob
 }
 
 func TestCKZGWithPoint(t *testing.T)  { testKZGWithPoint(t, true) }

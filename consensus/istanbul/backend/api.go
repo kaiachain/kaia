@@ -48,12 +48,12 @@ type API struct {
 
 // GetValidators retrieves the list of qualified validators with the given block number.
 func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error) {
-	header, err := headerByRpcNumber(api.chain, number)
+	num, err := resolveRpcNumber(api.chain, number, true)
 	if err != nil {
 		return nil, err
 	}
 
-	valSet, err := api.istanbul.GetValidatorSet(header.Number.Uint64())
+	valSet, err := api.istanbul.GetValidatorSet(num)
 	if err != nil {
 		return nil, err
 	}
@@ -62,12 +62,12 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 
 // GetDemotedValidators retrieves the list of authorized, but demoted validators with the given block number.
 func (api *API) GetDemotedValidators(number *rpc.BlockNumber) ([]common.Address, error) {
-	header, err := headerByRpcNumber(api.chain, number)
+	num, err := resolveRpcNumber(api.chain, number, true)
 	if err != nil {
 		return nil, err
 	}
 
-	valSet, err := api.istanbul.GetValidatorSet(header.Number.Uint64())
+	valSet, err := api.istanbul.GetValidatorSet(num)
 	if err != nil {
 		return nil, err
 	}
@@ -143,12 +143,12 @@ var (
 
 // GetCouncil retrieves the list of authorized validators at the specified block.
 func (api *APIExtension) GetCouncil(number *rpc.BlockNumber) ([]common.Address, error) {
-	header, err := headerByRpcNumber(api.chain, number)
+	num, err := resolveRpcNumber(api.chain, number, true)
 	if err != nil {
 		return nil, err
 	}
 
-	valSet, err := api.istanbul.GetValidatorSet(header.Number.Uint64())
+	valSet, err := api.istanbul.GetValidatorSet(num)
 	if err != nil {
 		return nil, err
 	}
@@ -164,11 +164,12 @@ func (api *APIExtension) GetCouncilSize(number *rpc.BlockNumber) (int, error) {
 }
 
 func (api *APIExtension) GetCommittee(number *rpc.BlockNumber) ([]common.Address, error) {
-	header, err := headerByRpcNumber(api.chain, number)
+	// cannot determine the committee of not-yet finalized block because it depends on the round.
+	num, err := resolveRpcNumber(api.chain, number, false)
 	if err != nil {
 		return nil, err
 	}
-	roundState, err := api.istanbul.GetCommitteeState(header.Number.Uint64())
+	roundState, err := api.istanbul.GetCommitteeState(num)
 	if err != nil {
 		return nil, err
 	}
@@ -407,20 +408,22 @@ func (api *API) GetTimeout() uint64 {
 	return istanbul.DefaultConfig.Timeout
 }
 
-// Retrieve the header at requested block number
-func headerByRpcNumber(chain consensus.ChainReader, number *rpc.BlockNumber) (*types.Header, error) {
-	var header *types.Header
+func resolveRpcNumber(chain consensus.ChainReader, number *rpc.BlockNumber, allowPending bool) (uint64, error) {
+	headNum := chain.CurrentHeader().Number.Uint64()
+	var num uint64
 	if number == nil || *number == rpc.LatestBlockNumber {
-		header = chain.CurrentHeader()
+		num = headNum
 	} else if *number == rpc.PendingBlockNumber {
-		logger.Trace("Cannot get snapshot of the pending block.", "number", number)
-		return nil, errPendingNotAllowed
+		num = headNum + 1
 	} else {
-		header = chain.GetHeaderByNumber(uint64(number.Int64()))
+		num = uint64(number.Int64())
 	}
-	// Ensure we have an actually valid block and return its snapshot
-	if header == nil {
-		return nil, errUnknownBlock
+
+	if num > headNum+1 { // May allow up to head + 1 to query the pending block.
+		return 0, errUnknownBlock
+	} else if num == headNum+1 && !allowPending {
+		return 0, errPendingNotAllowed
+	} else {
+		return num, nil
 	}
-	return header, nil
 }

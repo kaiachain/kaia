@@ -415,7 +415,7 @@ func TestWrapAndConcatenateBundlingModules(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := WrapAndConcatenateBundlingModules(tc.mTxBundling, tc.mTxPool, nil)
+			result := WrapAndConcatenateBundlingModules(tc.mTxBundling, tc.mTxPool)
 
 			// Check the length of the result
 			assert.Equal(t, len(tc.expected), len(result))

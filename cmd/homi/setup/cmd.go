@@ -146,6 +146,8 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewStringSliceFlag(gasless.AllowedTokensFlag),
 	altsrc.NewBoolFlag(gasless.DisableFlag),
 	altsrc.NewIntFlag(gasless.MaxBundleTxsInPendingFlag),
+	altsrc.NewIntFlag(gasless.MaxBundleTxsInQueueFlag),
+	altsrc.NewIntFlag(gasless.BalanceCheckLevelFlag),
 }
 
 var SetupCommand = &cli.Command{

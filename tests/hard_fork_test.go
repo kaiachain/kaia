@@ -170,7 +170,7 @@ func TestHardForkBlock(t *testing.T) {
 	require.Equal(t, 0, idx)
 }
 
-// genBlock generates two blocks including transactions utilizing all transaction types and account types.
+// genBlocks generates two blocks including transactions utilizing all transaction types and account types.
 func genBlocks(t *testing.T) {
 	testFunctions := []struct {
 		Name  string
@@ -211,7 +211,7 @@ func genBlocks(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCDataWithForkConfig(6, 4, Forks["Prague"])
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
 	assert.NoError(t, err)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 

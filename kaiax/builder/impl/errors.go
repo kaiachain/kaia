@@ -21,5 +21,6 @@ import "errors"
 var (
 	ErrInitUnexpectedNil         = errors.New("unexpected nil during module init")
 	ErrFailedToIncorporateBundle = errors.New("failed to incorporate bundle")
-	ErrUnableToAddKnownBundleTx  = errors.New("unable to add known bundle tx into tx pool during lock period")
+	ErrUnableToAddKnownBundleTx  = errors.New("cannot add known bundle tx during cooldown")
+	ErrBundleTxQueueFull         = errors.New("bundle tx queue is full")
 )

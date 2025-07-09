@@ -9,6 +9,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/kaiachain/kaia/blockchain/types"
+	common "github.com/kaiachain/kaia/common"
 	builder "github.com/kaiachain/kaia/kaiax/builder"
 )
 
@@ -77,6 +78,20 @@ func (mr *MockGaslessModuleMockRecorder) GetMaxBundleTxsInPending() *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleTxsInPending", reflect.TypeOf((*MockGaslessModule)(nil).GetMaxBundleTxsInPending))
 }
 
+// GetMaxBundleTxsInQueue mocks base method.
+func (m *MockGaslessModule) GetMaxBundleTxsInQueue() uint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMaxBundleTxsInQueue")
+	ret0, _ := ret[0].(uint)
+	return ret0
+}
+
+// GetMaxBundleTxsInQueue indicates an expected call of GetMaxBundleTxsInQueue.
+func (mr *MockGaslessModuleMockRecorder) GetMaxBundleTxsInQueue() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaxBundleTxsInQueue", reflect.TypeOf((*MockGaslessModule)(nil).GetMaxBundleTxsInQueue))
+}
+
 // IsBundleTx mocks base method.
 func (m *MockGaslessModule) IsBundleTx(arg0 *types.Transaction) bool {
 	m.ctrl.T.Helper()
@@ -134,15 +149,15 @@ func (mr *MockGaslessModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomo
 }
 
 // PostReset mocks base method.
-func (m *MockGaslessModule) PostReset(arg0, arg1 *types.Header) {
+func (m *MockGaslessModule) PostReset(arg0, arg1 *types.Header, arg2, arg3 map[common.Address]types.Transactions) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PostReset", arg0, arg1)
+	m.ctrl.Call(m, "PostReset", arg0, arg1, arg2, arg3)
 }
 
 // PostReset indicates an expected call of PostReset.
-func (mr *MockGaslessModuleMockRecorder) PostReset(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockGaslessModuleMockRecorder) PostReset(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostReset", reflect.TypeOf((*MockGaslessModule)(nil).PostReset), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostReset", reflect.TypeOf((*MockGaslessModule)(nil).PostReset), arg0, arg1, arg2, arg3)
 }
 
 // PreAddTx mocks base method.
@@ -160,9 +175,11 @@ func (mr *MockGaslessModuleMockRecorder) PreAddTx(arg0, arg1 interface{}) *gomoc
 }
 
 // PreReset mocks base method.
-func (m *MockGaslessModule) PreReset(arg0, arg1 *types.Header) {
+func (m *MockGaslessModule) PreReset(arg0, arg1 *types.Header) []common.Hash {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PreReset", arg0, arg1)
+	ret := m.ctrl.Call(m, "PreReset", arg0, arg1)
+	ret0, _ := ret[0].([]common.Hash)
+	return ret0
 }
 
 // PreReset indicates an expected call of PreReset.

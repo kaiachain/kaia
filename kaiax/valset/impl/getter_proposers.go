@@ -102,19 +102,11 @@ func (v *ValsetModule) scanBlocks(pUpdateNum, pUpdateInterval uint64) []uint64 {
 	scanBlocks := make([]uint64, 0)
 
 	// if migrated, scanBlocks is set as voteBlockNums between [pUpdateNum, pUpdateNum+pUpdateInterval)
-	pMinVoteNum := ReadLowestScannedVoteNum(v.ChainKv)
-
+	pMinVoteNum := v.readLowestScannedVoteNumCached()
 	if pMinVoteNum != nil && *pMinVoteNum <= pUpdateNum {
-		if v.validatorVoteBlockNumsCache != nil {
-			scanBlocks = make([]uint64, len(v.validatorVoteBlockNumsCache))
-			copy(scanBlocks, v.validatorVoteBlockNumsCache)
-		} else {
-			scanBlocks = ReadValidatorVoteBlockNums(v.ChainKv)
-		}
-		scanBlocks = slices.DeleteFunc(scanBlocks, func(n uint64) bool {
+		return slices.DeleteFunc(v.readValidatorVoteBlockNumsCached(), func(n uint64) bool {
 			return !(n >= pUpdateNum && n < pUpdateNum+pUpdateInterval)
 		})
-		return scanBlocks
 	}
 
 	// if not migrated, scanBlocks is set as blocknums between [updateNum, pUpdateNum+pUpdateInterval)

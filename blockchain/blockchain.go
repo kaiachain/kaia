@@ -583,7 +583,9 @@ func (bc *BlockChain) setHeadBeyondRoot(head uint64, root common.Hash, repair bo
 				}
 			}
 			if newHeadBlock.NumberU64() == 0 {
-				return 0, errors.New("rewound to block number 0, but repair failed")
+				if _, err := state.New(newHeadBlock.Root(), bc.stateCache, bc.snaps, nil); err != nil {
+					return 0, errors.New("rewound to block number 0, but repair failed")
+				}
 			}
 			bc.db.WriteHeadBlockHash(newHeadBlock.Hash())
 
@@ -1026,7 +1028,7 @@ func (bc *BlockChain) GetReceiptByTxHash(txHash common.Hash) *types.Receipt {
 
 	receipts := bc.GetReceiptsByBlockHash(blockHash)
 	if len(receipts) <= int(index) {
-		logger.Error("receipt index exceeds the size of receipts", "receiptIndex", index, "receiptsSize", len(receipts))
+		logger.Error("receipt index exceeds the size of receipts", "receiptIndex", index, "receiptsSize", len(receipts), "txHash", txHash, "blockHash", blockHash)
 		return nil
 	}
 	return receipts[index]
