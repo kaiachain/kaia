@@ -732,7 +732,6 @@ func (s *CN) APIs() []rpc.API {
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
 	ethAPI := api.NewEthAPI(
-		publicFilterAPI,
 		kaiaAPI,
 		kaiaBlockChainAPI,
 		kaiaTransactionAPI,

@@ -45,7 +45,6 @@ import (
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
-	"github.com/klaytn/klaytn/node/cn/filters"
 )
 
 var logger = log.NewModuleLogger(log.API)
@@ -186,7 +185,7 @@ func (s *KaiaAPI) ForkStatus(ctx context.Context, number rpc.BlockNumber) (map[s
 
 // rpcMarshalHeader converts the given header to the RPC output.
 func (s *KaiaBlockChainAPI) rpcMarshalHeader(header *types.Header) map[string]interface{} {
-	fields := filters.RPCMarshalHeader(header, s.b.ChainConfig().Rules(header.Number))
+	fields := RPCMarshalHeader(header, s.b.ChainConfig().Rules(header.Number))
 	return fields
 }
 
