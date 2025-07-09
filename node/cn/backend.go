@@ -584,6 +584,16 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 
 	mTxPool = builder_impl.WrapAndConcatenateBundlingModules(mTxBundling, mTxPool)
 
+	if !mAuction.IsDisabled() {
+		mBase = append(mBase, mAuction)
+		mExecution = append(mExecution, mAuction)
+		mTxBundling = append(mTxBundling, mAuction)
+		mJsonRpc = append(mJsonRpc, mAuction)
+		mRewindable = append(mRewindable, mAuction)
+
+		s.protocolManager.RegisterAuctionModule(mAuction)
+	}
+
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(mBase...)
