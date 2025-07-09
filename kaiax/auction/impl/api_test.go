@@ -45,7 +45,7 @@ func TestSubmitBid(t *testing.T) {
 		api      = newAuctionAPI(mAuction)
 		baseBid  = BidInput{
 			TargetTxRaw:   common.Hex2Bytes("f8674785066720b30083015f909496bd8e216c0d894c0486341288bf486d5686c5b601808207f4a0a97fa83b989a6d66acc942d1cbd70f548c21e24eefea12e72f8c27ba4369a434a01900811315ba3c64055e9778470f438128b54a46712cc032f25a1487e2144578"),
-			TargetTxHash:  common.HexToHash("0xc7f1b27b0c69006738b17567a7127c4d163fac7b575d046c6cbc90e62e6355e8"),
+			TargetTxHash:  common.HexToHash("0xacb81e7c775471be3e286a461701436f74b7bf7b951096f979b8557d870f246e"),
 			BlockNumber:   1,
 			Sender:        common.HexToAddress("0x14791697260E4c9A71f18484C9f997B308e59325"),
 			To:            common.HexToAddress("0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"),
@@ -53,14 +53,15 @@ func TestSubmitBid(t *testing.T) {
 			Bid:           big.NewInt(3),
 			CallGasLimit:  2,
 			Data:          common.Hex2Bytes("1234"),
-			SearcherSig:   common.Hex2Bytes("2cd97ec3eb8230a8cac9169146ea6ca406d908edd488e5fda30811ebf56647d94740d582c592e3476481b3fbab38a100623d2f4b0615da8b8dfd0f99128879901b"),
-			AuctioneerSig: common.Hex2Bytes("d87718806c267dd6de19f4ed1111742750ee8040fdb3d18b1bd0dc1020ad8ca84262dfb4a3449f53b2cef8e2142796a96cca9ff8d08302f07db1d53a7b792e8d1c"),
+			SearcherSig:   common.Hex2Bytes("4f17bd3304ab18e8fd19938b6b3898c491134ecdd6a104244b458dc339ce2bf043f3b8d0a6a96d34cb27180146fe265e3213bb9ddcbafc0778cc39cde4d388d31b"),
+			AuctioneerSig: common.Hex2Bytes("a9cfe35e9352818d7062b9a2ecfff939f46781ca352f35f56e790d4eaeb261e03564b4113517bda854eb530d642fdbc082085ead664e31014e902dbf4061fb841c"),
 		}
 		invalidTargetTx            = baseBid
 		invalidSearcherSigLenBid   = baseBid
 		unexpectedSEarcherSigBid   = baseBid
 		invalidAuctioneerSigLenBid = baseBid
 		unexpectedAuctioneerSigBid = baseBid
+		diffTargetTx               = baseBid
 		validBid                   = baseBid
 		anotherBid                 = baseBid
 	)
@@ -72,11 +73,13 @@ func TestSubmitBid(t *testing.T) {
 	invalidAuctioneerSigLenBid.AuctioneerSig = common.Hex2Bytes("1234")
 	unexpectedAuctioneerSigBid.AuctioneerSig = common.Hex2Bytes("d87718806c267dd6de19f4ed1111742750ee8040fdb3d18b1bd0dc1020ad8ca84262dfb4a3449f53b2cef8e2142796a96cca9ff8d08302f07dc1d53a7b792e8d1c")
 
+	diffTargetTx.TargetTxRaw = common.Hex2Bytes("f8674785066720b30083015f909496bd8e216c0d894c0486341288bf486d5686c5b601808207f4a0a97fa83b989a6d66acc942d1cbd70f548c21e24eefea12e72f8c27ba4369a434a01900811315ba3c64055e9778470f438128b54a46712cc032f25a1487e2144579")
+
 	validBid.TargetTxRaw = nil
 
 	anotherBid.Bid = big.NewInt(10)
-	anotherBid.SearcherSig = common.Hex2Bytes("a80aef9b383c2d947a4fdbedd6c211e83946a475a8bb9ac47afb494fe1bb87bc492898e25cf867a62f63f4e667208a172064abc86d9f854eb01905dc5aad02ea1b")
-	anotherBid.AuctioneerSig = common.Hex2Bytes("cb14cd6c0016da027ebf680988584fc9332a57234c5a3702baa488894b1e50c939cf19ba405e1f6c9692a41939e0594f664d9030e98a889519e5ade73b46a57c1c")
+	anotherBid.SearcherSig = common.Hex2Bytes("6439652673f1544bcd95d25c1dad31944321bdc0e6720f6c59a582aa0c40cc403ef4b5d1865eb3fa0e26fc49d7ef88f77f42d1559131a83a2326445eab3649741b")
+	anotherBid.AuctioneerSig = common.Hex2Bytes("640a09994942d99bb751db3347ea3e909752b363a90dc3ed9c0b4d8ad512ae3d44ec820239f9875dcdbffc28fafafd3ca7d48a4ff6f4a2d8969a8f5d309460361b")
 
 	tcs := []struct {
 		name     string
@@ -96,7 +99,7 @@ func TestSubmitBid(t *testing.T) {
 		{
 			"unexpected seacher signature",
 			unexpectedSEarcherSigBid,
-			makeRPCOutput(common.Hash{}, nil, nil, errors.New("invalid searcher sig: expected 0x14791697260E4c9A71f18484C9f997B308e59325, calculated 0xBAc7570F225089fE23C6cF96e4D37fB94BDAd222")),
+			makeRPCOutput(common.Hash{}, nil, nil, errors.New("invalid searcher sig: expected 0x14791697260E4c9A71f18484C9f997B308e59325, calculated 0x5CD48323C0ebc334437ae933E782F2761F8196cA")),
 		},
 		{
 			"invalid auctioneer signature length",
@@ -106,17 +109,22 @@ func TestSubmitBid(t *testing.T) {
 		{
 			"unexpected auctioneer signature length",
 			unexpectedAuctioneerSigBid,
-			makeRPCOutput(common.Hash{}, nil, nil, errors.New("invalid auctioneer sig: expected 0x96Bd8E216c0D894C0486341288Bf486d5686C5b6, calculated 0x913c15715cAdC50aAD43F11C88f7a6Ee4964925B")),
+			makeRPCOutput(common.Hash{}, nil, nil, errors.New("invalid auctioneer sig: expected 0x96Bd8E216c0D894C0486341288Bf486d5686C5b6, calculated 0xd9094A8A697677ab51AA715F6449253Eb9c9885A")),
+		},
+		{
+			"if target tx is not empty, its hash must be the same with bid's target tx hash",
+			diffTargetTx,
+			makeRPCOutput(common.Hash{}, auction.ErrInvalidTargetTxHash, nil, nil),
 		},
 		{
 			"valid bid and target tx can be empty",
 			validBid,
-			makeRPCOutput(common.HexToHash("0x60dda343662263ebcf704871a94420e2c21968662f3026f28730f9dfbf1edae7"), nil, nil, nil),
+			makeRPCOutput(common.HexToHash("0xec633e59d7237fc6cce22dc3ca2dacf5ce9230276644d8e134b5d307ca7981bd"), nil, nil, nil),
 		},
 		{
 			"another bid with same target tx",
 			anotherBid,
-			makeRPCOutput(common.HexToHash("0x42afaab759d44e9f5d6cacc714435e653aba87b674a3ebe8bf2edf6333cff5e7"), nil, nil, nil),
+			makeRPCOutput(common.HexToHash("0x26688d0fc660b6fed98b7f96ab5602e4c4dbe133e278fc08cc6bc51131d1bdd2"), nil, nil, nil),
 		},
 	}
 
