@@ -112,42 +112,6 @@ func (v *ValsetModule) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error
 	return istanbul.NewBlockValSet(council, demoted), nil
 }
 
-// GetCommitteeState returns the committee state for the given block number.
-func (v *ValsetModule) GetCommitteeState(num uint64) (*istanbul.RoundCommitteeState, error) {
-	header := v.Chain.GetHeaderByNumber(num)
-	if header == nil {
-		return nil, errUnknownBlock
-	}
-	return v.GetCommitteeStateByRound(num, uint64(header.Round()))
-}
-
-// GetCommitteeStateByRound returns the committee state for the given block number and round.
-func (v *ValsetModule) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul.RoundCommitteeState, error) {
-	// Get validator set first
-	valSet, err := v.GetValidatorSet(num)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get committee
-	committee, err := v.GetCommittee(num, round)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get proposer
-	proposer, err := v.GetProposer(num, round)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get committee size from governance parameters
-	committeeSize := v.GovModule.GetParamSet(num).CommitteeSize
-
-	// Use the constructor function
-	return istanbul.NewRoundCommitteeState(valSet, committeeSize, committee, proposer), nil
-}
-
 // GetConsensusInfo returns consensus information regarding the given block number.
 func (v *ValsetModule) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
 	blockNumber := block.NumberU64()
@@ -177,20 +141,16 @@ func (v *ValsetModule) GetConsensusInfo(block *types.Block) (consensus.Consensus
 		return consensus.ConsensusInfo{}, errInternalError
 	}
 
-	var currentCommittee []common.Address
-
-	currentRoundCState, err := v.GetCommitteeState(block.NumberU64())
-	if err == nil {
-		currentCommittee = currentRoundCState.Committee().List()
+	currentCommittee, err := v.GetCommittee(blockNumber, uint64(round))
+	if err != nil {
+		currentCommittee = []common.Address{}
 	}
 
 	// Get origin proposer at 0 round.
 	var roundZeroProposer *common.Address
-
-	roundZeroCState, err := v.GetCommitteeStateByRound(blockNumber, 0)
-	if err == nil {
-		addr := roundZeroCState.Proposer()
-		roundZeroProposer = &addr
+	roundZeroCommittee, err := v.GetCommittee(blockNumber, 0)
+	if err == nil && len(roundZeroCommittee) > 0 {
+		roundZeroProposer = &roundZeroCommittee[0]
 	}
 
 	cInfo := consensus.ConsensusInfo{

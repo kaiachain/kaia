@@ -42,11 +42,7 @@ func (api *ValsetAPI) GetCouncil(number *rpc.BlockNumber) ([]common.Address, err
 		return nil, err
 	}
 
-	valSet, err := api.vs.GetValidatorSet(num)
-	if err != nil {
-		return nil, err
-	}
-	return valSet.Council().List(), err
+	return api.vs.GetCouncil(num)
 }
 
 func (api *ValsetAPI) GetCouncilSize(number *rpc.BlockNumber) (int, error) {
@@ -63,11 +59,13 @@ func (api *ValsetAPI) GetCommittee(number *rpc.BlockNumber) ([]common.Address, e
 	if err != nil {
 		return nil, err
 	}
-	roundState, err := api.vs.GetCommitteeState(num)
-	if err != nil {
-		return nil, err
+	header := api.vs.Chain.GetHeaderByNumber(num)
+	if header == nil {
+		return nil, errUnknownBlock
 	}
-	return roundState.Committee().List(), nil
+	round := uint64(header.Round())
+
+	return api.vs.GetCommittee(num, round)
 }
 
 func (api *ValsetAPI) GetCommitteeSize(number *rpc.BlockNumber) (int, error) {
