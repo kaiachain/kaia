@@ -217,9 +217,9 @@ func (g *GaslessModule) IsReady(txs map[uint64]*types.Transaction, next uint64, 
 				logger.Trace("Not promoting a tx because of exceeding max bundle tx num", "tx", tx.Hash().String(), "numExecutable", numExecutable, "maxBundleTxsInPending", maxBundleTxsInPending)
 				return false
 			}
-
-			g.knownTxs.add(tx, TxStatusPending)
 		}
+
+		g.knownTxs.add(tx, TxStatusPending)
 	}
 
 	return true
