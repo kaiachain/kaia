@@ -404,16 +404,14 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 
 			// Update the block hash in all logs since it is now available and not when the
 			// receipt/log of individual transactions were created.
-			for _, r := range work.receipts {
-				for _, l := range r.Logs {
-					l.BlockHash = block.Hash()
-				}
-			}
 			work.stateMu.Lock()
 			for _, log := range work.state.Logs() {
 				log.BlockHash = block.Hash()
 			}
-
+			var logs []*types.Log
+			for _, r := range work.receipts {
+				logs = append(logs, r.Logs...)
+			}
 			start := time.Now()
 			result, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
 			work.stateMu.Unlock()
@@ -440,11 +438,6 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			self.mux.Post(blockchain.NewMinedBlockEvent{Block: block})
 
 			var events []interface{}
-
-			work.stateMu.RLock()
-			logs := work.state.Logs()
-			work.stateMu.RUnlock()
-
 			events = append(events, blockchain.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
 			if result.Status == blockchain.CanonStatTy {
 				events = append(events, blockchain.ChainHeadEvent{Block: block})
