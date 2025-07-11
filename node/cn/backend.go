@@ -701,7 +701,6 @@ func (s *CN) APIs() []rpc.API {
 	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
 
 	ethAPI := api.NewEthAPI(
-		publicFilterAPI,
 		kaiaAPI,
 		kaiaBlockChainAPI,
 		kaiaTransactionAPI,
@@ -723,6 +722,11 @@ func (s *CN) APIs() []rpc.API {
 			Public:    true,
 		}, {
 			Namespace: "kaia",
+			Version:   "1.0",
+			Service:   publicFilterAPI,
+			Public:    true,
+		}, {
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   publicFilterAPI,
 			Public:    true,
