@@ -11,6 +11,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
+	auction "github.com/kaiachain/kaia/kaiax/auction"
 	p2p "github.com/kaiachain/kaia/networks/p2p"
 	discover "github.com/kaiachain/kaia/networks/p2p/discover"
 	snap "github.com/kaiachain/kaia/node/cn/snap"
@@ -74,6 +75,18 @@ func (m *MockPeer) AddToKnownTxs(arg0 common.Hash) {
 func (mr *MockPeerMockRecorder) AddToKnownTxs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddToKnownTxs", reflect.TypeOf((*MockPeer)(nil).AddToKnownTxs), arg0)
+}
+
+// AsyncSendBid mocks base method.
+func (m *MockPeer) AsyncSendBid(arg0 *auction.Bid) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AsyncSendBid", arg0)
+}
+
+// AsyncSendBid indicates an expected call of AsyncSendBid.
+func (mr *MockPeerMockRecorder) AsyncSendBid(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncSendBid", reflect.TypeOf((*MockPeer)(nil).AsyncSendBid), arg0)
 }
 
 // AsyncSendNewBlock mocks base method.
@@ -359,6 +372,20 @@ func (mr *MockPeerMockRecorder) Info() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Info", reflect.TypeOf((*MockPeer)(nil).Info))
 }
 
+// KnowsBid mocks base method.
+func (m *MockPeer) KnowsBid(arg0 common.Hash) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KnowsBid", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// KnowsBid indicates an expected call of KnowsBid.
+func (mr *MockPeerMockRecorder) KnowsBid(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KnowsBid", reflect.TypeOf((*MockPeer)(nil).KnowsBid), arg0)
+}
+
 // KnowsBlock mocks base method.
 func (m *MockPeer) KnowsBlock(arg0 common.Hash) bool {
 	m.ctrl.T.Helper()
@@ -525,6 +552,20 @@ func (m *MockPeer) Send(arg0 uint64, arg1 interface{}) error {
 func (mr *MockPeerMockRecorder) Send(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockPeer)(nil).Send), arg0, arg1)
+}
+
+// SendBid mocks base method.
+func (m *MockPeer) SendBid(arg0 *auction.Bid) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendBid", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendBid indicates an expected call of SendBid.
+func (mr *MockPeerMockRecorder) SendBid(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendBid", reflect.TypeOf((*MockPeer)(nil).SendBid), arg0)
 }
 
 // SendBlockBodies mocks base method.

@@ -10,6 +10,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
+	auction "github.com/kaiachain/kaia/kaiax/auction"
 	staking "github.com/kaiachain/kaia/kaiax/staking"
 	p2p "github.com/kaiachain/kaia/networks/p2p"
 )
@@ -103,6 +104,18 @@ func (m *MockBackendProtocolManager) ReBroadcastTxs(arg0 types.Transactions) {
 func (mr *MockBackendProtocolManagerMockRecorder) ReBroadcastTxs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReBroadcastTxs", reflect.TypeOf((*MockBackendProtocolManager)(nil).ReBroadcastTxs), arg0)
+}
+
+// RegisterAuctionModule mocks base method.
+func (m *MockBackendProtocolManager) RegisterAuctionModule(arg0 auction.AuctionModule) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RegisterAuctionModule", arg0)
+}
+
+// RegisterAuctionModule indicates an expected call of RegisterAuctionModule.
+func (mr *MockBackendProtocolManagerMockRecorder) RegisterAuctionModule(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterAuctionModule", reflect.TypeOf((*MockBackendProtocolManager)(nil).RegisterAuctionModule), arg0)
 }
 
 // RegisterStakingModule mocks base method.
