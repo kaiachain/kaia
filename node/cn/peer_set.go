@@ -60,6 +60,7 @@ type PeerSet interface {
 	SnapLen() int
 
 	PeersWithoutBlock(hash common.Hash) []Peer
+	CNWithoutBid(hash common.Hash) []Peer
 
 	SamplePeersToSendBlock(block *types.Block, nodeType common.ConnType) []Peer
 	SampleResendPeersByType(nodeType common.ConnType) []Peer
@@ -305,6 +306,19 @@ func (ps *peerSet) PeersWithoutBlockExceptCN(hash common.Hash) []Peer {
 	list := make([]Peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
 		if p.ConnType() != common.CONSENSUSNODE && !p.KnowsBlock(hash) {
+			list = append(list, p)
+		}
+	}
+	return list
+}
+
+func (ps *peerSet) CNWithoutBid(hash common.Hash) []Peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	list := make([]Peer, 0, len(ps.cnpeers))
+	for _, p := range ps.cnpeers {
+		if !p.KnowsBid(hash) {
 			list = append(list, p)
 		}
 	}
