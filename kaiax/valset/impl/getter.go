@@ -17,15 +17,8 @@
 package impl
 
 import (
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/rlp"
 )
 
 // GetCouncil returns the whole validator list for validating the block `num`.
@@ -92,110 +85,4 @@ func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
 		return common.Address{}, err
 	}
 	return v.getProposer(c, round)
-}
-
-// GetValidatorSet returns the validator set for the given block number.
-func (v *ValsetModule) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
-	council, err := v.GetCouncil(num)
-	if err != nil {
-		return nil, err
-	}
-
-	demoted, err := v.GetDemotedValidators(num)
-	if err != nil {
-		return nil, err
-	}
-
-	// Use the constructor function
-	return istanbul.NewBlockValSet(council, demoted), nil
-}
-
-// GetConsensusInfo returns consensus information regarding the given block number.
-func (v *ValsetModule) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
-	blockNumber := block.NumberU64()
-	if blockNumber == 0 {
-		return consensus.ConsensusInfo{}, nil
-	}
-
-	if v.Chain == nil {
-		return consensus.ConsensusInfo{}, errNoChainReader
-	}
-
-	// Get the committers of this block from committed seals
-	extra, err := types.ExtractIstanbulExtra(block.Header())
-	if err != nil {
-		return consensus.ConsensusInfo{}, err
-	}
-	committers, err := v.recoverCommittedSeals(extra, block.Hash())
-	if err != nil {
-		return consensus.ConsensusInfo{}, err
-	}
-
-	round := block.Header().Round()
-	// Get the committee list of this block (blockNumber, round)
-	currentProposer, err := v.GetProposer(blockNumber, uint64(round))
-	if err != nil {
-		log.NewModuleLogger(log.ConsensusIstanbulBackend).Error("Failed to get proposer.", "blockNum", blockNumber, "round", uint64(round), "err", err)
-		return consensus.ConsensusInfo{}, errInternalError
-	}
-
-	currentCommittee, err := v.GetCommittee(blockNumber, uint64(round))
-	if err != nil {
-		currentCommittee = []common.Address{}
-	}
-
-	// Get origin proposer at 0 round.
-	var roundZeroProposer *common.Address
-	roundZeroCommittee, err := v.GetCommittee(blockNumber, 0)
-	if err == nil && len(roundZeroCommittee) > 0 {
-		roundZeroProposer = &roundZeroCommittee[0]
-	}
-
-	cInfo := consensus.ConsensusInfo{
-		SigHash:        sigHash(block.Header()),
-		Proposer:       currentProposer,
-		OriginProposer: roundZeroProposer,
-		Committee:      currentCommittee,
-		Committers:     committers,
-		Round:          round,
-	}
-
-	return cInfo, nil
-}
-
-// recoverCommittedSeals recovers the addresses of validators that committed seals for the given block.
-func (v *ValsetModule) recoverCommittedSeals(extra *types.IstanbulExtra, headerHash common.Hash) ([]common.Address, error) {
-	committers := make([]common.Address, len(extra.CommittedSeal))
-	for idx, cs := range extra.CommittedSeal {
-		committer, err := istanbul.GetSignatureAddress(istanbulCore.PrepareCommittedSeal(headerHash), cs)
-		if err != nil {
-			return nil, err
-		}
-		committers[idx] = committer
-	}
-	return committers, nil
-}
-
-// sigHash returns the hash which is used as input for the Istanbul
-// signing. It is the hash of the entire header apart from the 65 byte signature
-// contained at the end of the extra data.
-//
-// Note, the method requires the extra data to be at least 65 bytes, otherwise it
-// panics. This is done to avoid accidentally using both forms (signature present
-// or not), which could be abused to produce different hashes for the same header.
-//
-// This function is derived from consensus/istanbul/backend/engine.go:sigHash
-// to avoid import cycle between valset and istanbul backend packages.
-func sigHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewKeccak256()
-
-	// Clean seal is required for calculating proposer seal.
-	rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false))
-	hasher.Sum(hash[:0])
-	return hash
-}
-
-// CurrentHeader returns the current header of the chain.
-func (v *ValsetModule) CurrentHeader() *types.Header {
-	return v.Chain.CurrentBlock().Header()
 }
