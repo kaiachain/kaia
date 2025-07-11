@@ -158,7 +158,7 @@ type worker struct {
 	chainDB           database.DBManager
 	govModule         gov.GovModule
 	executionModules  []kaiax.ExecutionModule
-	txBundlingModules []kaiax.TxBundlingModule
+	txBundlingModules []builder.TxBundlingModule
 
 	extra []byte
 
@@ -652,7 +652,7 @@ func (self *worker) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
 	self.executionModules = append(self.executionModules, modules...)
 }
 
-func (self *worker) RegisterTxBundlingModule(modules ...kaiax.TxBundlingModule) {
+func (self *worker) RegisterTxBundlingModule(modules ...builder.TxBundlingModule) {
 	self.txBundlingModules = append(self.txBundlingModules, modules...)
 }
 
@@ -666,7 +666,7 @@ func getBalanceForGauge(state *state.StateDB, nodeAddr common.Address) int64 {
 	}
 }
 
-func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []kaiax.TxBundlingModule) {
+func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) {
 	coalescedLogs := env.ApplyTransactions(txs, bc, nodeAddr, txBundlingModules)
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {
@@ -689,13 +689,9 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	}
 }
 
-func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []kaiax.TxBundlingModule) []*types.Log {
-	modules := make([]builder.TxBundlingModule, len(txBundlingModules)) // TODO-Kaia: Remove this cast.
-	for i, module := range txBundlingModules {
-		modules[i] = module.(builder.TxBundlingModule)
-	}
+func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
 	arrayTxs := builder.Arrayify(txs)
-	incorporatedTxs, bundles := builder.ExtractBundlesAndIncorporate(arrayTxs, modules)
+	incorporatedTxs, bundles := builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block

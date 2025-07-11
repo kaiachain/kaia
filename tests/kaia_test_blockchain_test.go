@@ -53,6 +53,7 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work"
+	"github.com/kaiachain/kaia/work/builder"
 )
 
 const transactionsJournalFilename = "transactions.rlp"
@@ -270,7 +271,11 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 	// Apply the set of transactions
 	start = time.Now()
 	task := work.NewTask(bcdata.bc.Config(), signer, statedb, header)
-	task.ApplyTransactions(txset, bcdata.bc, *bcdata.rewardBase, txBundlingModules)
+	modules := make([]builder.TxBundlingModule, len(txBundlingModules))
+	for i, module := range txBundlingModules {
+		modules[i] = module.(builder.TxBundlingModule)
+	}
+	task.ApplyTransactions(txset, bcdata.bc, *bcdata.rewardBase, modules)
 	newtxs := task.Transactions()
 	receipts := task.Receipts()
 	prof.Profile("mine_ApplyTransactions", time.Now().Sub(start))
