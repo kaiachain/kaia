@@ -10,7 +10,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
-	builder "github.com/kaiachain/kaia/kaiax/builder"
+	builder "github.com/kaiachain/kaia/work/builder"
 )
 
 // MockGaslessModule is a mock of GaslessModule interface.

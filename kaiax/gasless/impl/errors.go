@@ -35,6 +35,8 @@ var (
 	ErrApproveNonceNotCurrent    = errors.New("approve transaction nonce is not current")
 	ErrSwapNonceNotCurrent       = errors.New("swap transaction nonce is not current")
 	ErrIncorrectRepayAmount      = errors.New("swap transaction has incorrect amountRepay")
+	ErrUnableToAddKnownBundleTx  = errors.New("cannot add known bundle tx during cooldown")
+	ErrBundleTxQueueFull         = errors.New("bundle tx queue is full")
 )
 
 func printApproveTx(args *ApproveArgs) string {

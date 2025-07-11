@@ -383,6 +383,43 @@ func (s *KaiaTransactionAPI) SendRawTransaction(ctx context.Context, encodedTx h
 	return submitTransaction(ctx, s.b, tx)
 }
 
+// SendRawTransactions will add multiple signed transactions to the transaction pool.
+func (s *KaiaTransactionAPI) SendRawTransactions(ctx context.Context, inputs []hexutil.Bytes) ([]common.Hash, error) {
+	hash := []common.Hash{}
+	errs := []error{}
+
+	if len(inputs) == 0 {
+		hash = append(hash, common.Hash{})
+		return hash, errors.New("Empty input")
+	}
+
+	for i, input := range inputs {
+		if len(input) == 0 {
+			hash = append(hash, common.Hash{})
+			errs = append(errs, fmt.Errorf("Index %d: empty input", i))
+			break
+		}
+		// Allow naked Ethereum tx types
+		if 0 < input[0] && input[0] < 0x7f {
+			input = append([]byte{byte(types.EthereumTxTypeEnvelope)}, input...)
+		}
+		tx := new(types.Transaction)
+		if err := rlp.DecodeBytes(input, tx); err != nil {
+			hash = append(hash, common.Hash{})
+			errs = append(errs, fmt.Errorf("Index %d: %w", i, err))
+			break
+		}
+		if err := s.b.SendTx(ctx, tx); err != nil {
+			hash = append(hash, common.Hash{})
+			errs = append(errs, fmt.Errorf("Index %d: %w", i, err))
+			break
+		}
+		hash = append(hash, tx.Hash())
+	}
+
+	return hash, errors.Join(errs...)
+}
+
 // Sign calculates an ECDSA signature for:
 // keccack256("\x19Ethereum Signed Message:\n" + len(message) + message).
 //

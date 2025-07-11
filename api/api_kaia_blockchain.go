@@ -293,7 +293,7 @@ func (s *KaiaBlockChainAPI) IsConsoleLogEnabled() bool {
 type CallArgs struct {
 	From                 common.Address  `json:"from"`
 	To                   *common.Address `json:"to"`
-	Gas                  hexutil.Uint64  `json:"gas"`
+	Gas                  *hexutil.Uint64 `json:"gas"`
 	GasPrice             *hexutil.Big    `json:"gasPrice"`
 	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
 	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
@@ -437,6 +437,11 @@ func (s *KaiaBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs, bloc
 }
 
 func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, gasCap *big.Int) (hexutil.Uint64, error) {
+	var gasLimit uint64 = 0
+	if args.Gas != nil {
+		gasLimit = uint64(*args.Gas)
+	}
+
 	var feeCap *big.Int
 	if args.GasPrice != nil {
 		feeCap = args.GasPrice.ToInt()
@@ -455,7 +460,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash 
 
 	// Create a helper to check if a gas allowance results in an executable transaction
 	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
-		args.Gas = hexutil.Uint64(gas)
+		args.Gas = (*hexutil.Uint64)(&gas)
 		result, _, err := DoCall(ctx, b, args, blockNrOrHash, vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite}, timeout, gasCap)
 		if err != nil {
 			if errors.Is(err, blockchain.ErrIntrinsicGas) || errors.Is(err, blockchain.ErrFloorDataGas) {
@@ -466,7 +471,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash 
 		return result.Failed(), result, nil
 	}
 
-	return blockchain.DoEstimateGas(ctx, uint64(args.Gas), gasCap.Uint64(), args.Value.ToInt(), feeCap, balance, executable)
+	return blockchain.DoEstimateGas(ctx, gasLimit, gasCap.Uint64(), args.Value.ToInt(), feeCap, balance, executable)
 }
 
 // ExecutionResult groups all structured logs emitted by the EVM
@@ -722,8 +727,8 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	if gas == 0 {
 		gas = params.UpperGasLimit
 	}
-	if args.Gas != 0 {
-		gas = uint64(args.Gas)
+	if args.Gas != nil {
+		gas = uint64(*args.Gas)
 	}
 	if globalGasCap != 0 && globalGasCap < gas {
 		logger.Warn("Caller gas above allowance, capping", "requested", gas, "cap", globalGasCap)

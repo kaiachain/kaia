@@ -21,7 +21,24 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/rcrowley/go-metrics"
 )
+
+var (
+	// Metrics for knownTxs
+	numQueueGauge   = metrics.NewRegisteredGauge("txpool/knowntxs/num/queue", nil)
+	numPendingGauge = metrics.NewRegisteredGauge("txpool/knowntxs/num/pending", nil)
+	// numExecutable = numPending - MarkedUnexecutable (by the local miner)
+	numExecutableGauge          = metrics.NewRegisteredGauge("txpool/knowntxs/num/executable", nil)
+	oldestTxTimeInKnownTxsGauge = metrics.NewRegisteredGauge("txpool/knowntxs/oldesttime/seconds", nil)
+)
+
+func updateMetrics(knownTxs *knownTxs) {
+	numQueueGauge.Update(int64(knownTxs.numQueue()))
+	numPendingGauge.Update(int64(knownTxs.numPending()))
+	numExecutableGauge.Update(int64(knownTxs.numExecutable()))
+	oldestTxTimeInKnownTxsGauge.Update(knownTxs.getTimeOfOldestKnownTx())
+}
 
 type knownTxs map[common.Hash]*knownTx
 
