@@ -27,7 +27,7 @@ import (
 var (
 	ErrFailedToIncorporateBundle = errors.New("failed to incorporate bundle")
 
-	logger = log.NewModuleLogger(log.KaiaxBuilder)
+	logger = log.NewModuleLogger(log.Builder)
 )
 
 // buildDependencyIndices builds a dependency indices of txs.

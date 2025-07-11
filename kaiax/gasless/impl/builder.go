@@ -49,7 +49,6 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 			}
 			b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(tx))
 
-			b.TargetTxHash = targetTxHash
 			targetTxHash = tx.Hash()
 
 			isConflict := false
