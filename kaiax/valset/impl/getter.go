@@ -17,7 +17,6 @@
 package impl
 
 import (
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
@@ -26,7 +25,6 @@ import (
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -200,33 +198,4 @@ func sigHash(header *types.Header) (hash common.Hash) {
 // CurrentHeader returns the current header of the chain.
 func (v *ValsetModule) CurrentHeader() *types.Header {
 	return v.Chain.CurrentBlock().Header()
-}
-
-// NewBlockchainContractBackend creates a new blockchain contract backend.
-func (v *ValsetModule) NewBlockchainContractBackend() *backends.BlockchainContractBackend {
-	if chain, ok := v.Chain.(backends.BlockChainForCaller); ok {
-		return backends.NewBlockchainContractBackend(chain, nil, nil)
-	}
-	return nil
-}
-
-// ResolveRpcNumber resolves the RPC block number to a uint64.
-func (v *ValsetModule) ResolveRpcNumber(number *rpc.BlockNumber, allowPending bool) (uint64, error) {
-	headNum := v.CurrentHeader().Number.Uint64()
-	var num uint64
-	if number == nil || *number == rpc.LatestBlockNumber {
-		num = headNum
-	} else if *number == rpc.PendingBlockNumber {
-		num = headNum + 1
-	} else {
-		num = uint64(number.Int64())
-	}
-
-	if num > headNum+1 { // May allow up to head + 1 to query the pending block.
-		return 0, errUnknownBlock
-	} else if num == headNum+1 && !allowPending {
-		return 0, errPendingNotAllowed
-	} else {
-		return num, nil
-	}
 }

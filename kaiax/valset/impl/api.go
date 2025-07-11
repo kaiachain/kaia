@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -32,7 +33,7 @@ func NewValsetAPI(vs *ValsetModule) *ValsetAPI {
 
 // GetCouncil retrieves the list of authorized validators at the specified block.
 func (api *ValsetAPI) GetCouncil(number *rpc.BlockNumber) ([]common.Address, error) {
-	num, err := api.vs.ResolveRpcNumber(number, true)
+	num, err := api.resolveRpcNumber(number, true)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +51,7 @@ func (api *ValsetAPI) GetCouncilSize(number *rpc.BlockNumber) (int, error) {
 
 func (api *ValsetAPI) GetCommittee(number *rpc.BlockNumber) ([]common.Address, error) {
 	// cannot determine the committee of not-yet finalized block because it depends on the round.
-	num, err := api.vs.ResolveRpcNumber(number, false)
+	num, err := api.resolveRpcNumber(number, false)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func (api *ValsetAPI) GetAllRecordsFromRegistry(name string, number rpc.BlockNum
 	}
 
 	if api.vs.Chain.Config().IsRandaoForkEnabled(bn) {
-		backend := api.vs.NewBlockchainContractBackend()
+		backend := api.newBlockchainContractBackend()
 		records, err := system.ReadAllRecordsFromRegistry(backend, name, bn)
 		if err != nil {
 			return nil, err
@@ -105,7 +106,7 @@ func (api *ValsetAPI) GetActiveAddressFromRegistry(name string, number rpc.Block
 	}
 
 	if api.vs.Chain.Config().IsRandaoForkEnabled(bn) {
-		backend := api.vs.NewBlockchainContractBackend()
+		backend := api.newBlockchainContractBackend()
 		addr, err := system.ReadActiveAddressFromRegistry(backend, name, bn)
 		if err != nil {
 			return common.Address{}, err
@@ -117,5 +118,34 @@ func (api *ValsetAPI) GetActiveAddressFromRegistry(name string, number rpc.Block
 		return addr, nil
 	} else {
 		return common.Address{}, errors.New("Randao fork is not enabled")
+	}
+}
+
+// newBlockchainContractBackend creates a new blockchain contract backend.
+func (api *ValsetAPI) newBlockchainContractBackend() *backends.BlockchainContractBackend {
+	if chain, ok := api.vs.Chain.(backends.BlockChainForCaller); ok {
+		return backends.NewBlockchainContractBackend(chain, nil, nil)
+	}
+	return nil
+}
+
+// resolveRpcNumber resolves the RPC block number to a uint64.
+func (api *ValsetAPI) resolveRpcNumber(number *rpc.BlockNumber, allowPending bool) (uint64, error) {
+	headNum := api.vs.Chain.CurrentBlock().NumberU64()
+	var num uint64
+	if number == nil || *number == rpc.LatestBlockNumber {
+		num = headNum
+	} else if *number == rpc.PendingBlockNumber {
+		num = headNum + 1
+	} else {
+		num = uint64(number.Int64())
+	}
+
+	if num > headNum+1 { // May allow up to head + 1 to query the pending block.
+		return 0, errUnknownBlock
+	} else if num == headNum+1 && !allowPending {
+		return 0, errPendingNotAllowed
+	} else {
+		return num, nil
 	}
 }
