@@ -76,3 +76,5 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 //go:generate ./abigenw --pkg consensus --sol ./contracts/system_contracts/consensus/Kip163.sol --out ./contracts/system_contracts/consensus/Kip163.go --ver 0.8.25
 //go:generate ./abigenw --pkg kip247 --sol ./contracts/system_contracts/kip247/GaslessSwapRouter.sol --out ./contracts/system_contracts/kip247/GaslessSwapRouter.go --ver 0.8.25
 //go:generate ./abigenw --pkg gasless --sol ./contracts/testing/system_contracts/gasless/TestToken.sol --out ./contracts/testing/system_contracts/gasless/TestToken.go --ver 0.8.25
+
+//go:generate ./abigenw --pkg auction --sol ./contracts/system_contracts/auction/Kip249.sol --out ./contracts/system_contracts/auction/Kip249.go --ver 0.8.25

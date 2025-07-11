@@ -591,6 +591,10 @@ func (tx *Transaction) Size() common.StorageSize {
 	return size
 }
 
+func (tx *Transaction) SetTime(t time.Time) {
+	tx.time = t
+}
+
 // Time returns the time that transaction was created.
 func (tx *Transaction) Time() time.Time {
 	return tx.time

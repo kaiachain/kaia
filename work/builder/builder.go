@@ -46,7 +46,7 @@ func buildDependencyIndices(txs []*TxOrGen, bundles []*Bundle, signer types.Sign
 			}
 			senderToIndices[from] = append(senderToIndices[from], i)
 		}
-		if bundleIdx := FindBundleIdx(bundles, txOrGen); bundleIdx != -1 {
+		if bundleIdx := FindDependentBundleIdx(bundles, txOrGen); bundleIdx != -1 {
 			bundleToIndices[bundleIdx] = append(bundleToIndices[bundleIdx], i)
 		}
 	}
@@ -147,10 +147,24 @@ func FindBundleIdx(bundles []*Bundle, txOrGen *TxOrGen) int {
 	return -1
 }
 
+func FindDependentBundleIdx(bundles []*Bundle, txOrGen *TxOrGen) int {
+	for i, bundle := range bundles {
+		if bundle.Has(txOrGen) || bundle.TargetRequired && bundle.TargetTxHash == txOrGen.Id {
+			return i
+		}
+	}
+	return -1
+}
+
 func SetCorrectTargetTxHash(bundles []*Bundle, txs []*TxOrGen) []*Bundle {
 	ret := make([]*Bundle, 0)
 	for _, bundle := range bundles {
-		bundle.TargetTxHash = FindTargetTxHash(bundle, txs)
+		newTargetHash := FindTargetTxHash(bundle, txs)
+		if bundle.TargetRequired && newTargetHash != bundle.TargetTxHash {
+			// Discard the bundle
+			continue
+		}
+		bundle.TargetTxHash = newTargetHash
 		ret = append(ret, bundle)
 	}
 	return ret
@@ -212,7 +226,7 @@ func PopTxs(txOrGens *[]*TxOrGen, num int, bundles *[]*Bundle, signer types.Sign
 				}
 			}
 		}
-		if bundleIdx := FindBundleIdx(*bundles, txOrGen); bundleIdx != -1 {
+		if bundleIdx := FindDependentBundleIdx(*bundles, txOrGen); bundleIdx != -1 {
 			for _, idx := range bundleToIndices[bundleIdx] {
 				if !toRemove[idx] {
 					toRemove[idx] = true
@@ -245,6 +259,7 @@ func PopTxs(txOrGens *[]*TxOrGen, num int, bundles *[]*Bundle, signer types.Sign
 // because Golang does not automatically cast an array of interfaces.
 type TxBundlingModule interface {
 	ExtractTxBundles(txs []*types.Transaction, prevBundles []*Bundle) []*Bundle
+	FilterTxs(txs map[common.Address]types.Transactions)
 }
 
 func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModules []TxBundlingModule) ([]*TxOrGen, []*Bundle) {
@@ -269,11 +284,15 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 					break
 				}
 			}
-			if !isConflict {
+			// Not allowing empty bundles
+			if !isConflict && len(newBundle.BundleTxs) > 0 {
 				bundles = append(bundles, newBundle)
 			}
 		}
 	}
+
+	// Coordinate target tx hash of bundles
+	bundles = CoordinateTargetTxHash(bundles)
 
 	incorporatedTxs, err := IncorporateBundleTx(arrayTxs, bundles)
 	if err != nil {
@@ -281,4 +300,17 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 	}
 
 	return incorporatedTxs, bundles
+}
+
+func FilterTxs(txs map[common.Address]types.Transactions, txBundlingModules []TxBundlingModule) map[common.Address]types.Transactions {
+	txMap := make(map[common.Address]types.Transactions)
+	for addr, txs := range txs {
+		txMap[addr] = txs
+	}
+
+	for _, txBundlingModule := range txBundlingModules {
+		txBundlingModule.FilterTxs(txMap)
+	}
+
+	return txMap
 }
