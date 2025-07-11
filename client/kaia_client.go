@@ -34,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	auction_impl "github.com/kaiachain/kaia/kaiax/auction/impl"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -306,7 +307,15 @@ func (ec *Client) SyncProgress(ctx context.Context) (*kaia.SyncProgress, error) 
 // SubscribeNewHead subscribes to notifications about the current blockchain head
 // on the given channel.
 func (ec *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (kaia.Subscription, error) {
-	return ec.c.KaiaSubscribe(ctx, ch, "newHeads")
+	sub, kaiaSubscribeErr := ec.c.KaiaSubscribe(ctx, ch, "newHeads")
+	if kaiaSubscribeErr == nil {
+		return sub, nil
+	}
+	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "newHeads")
+	if auctionSubscribeErr == nil {
+		return sub, nil
+	}
+	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
 }
 
 // State Access
@@ -367,7 +376,15 @@ func (ec *Client) FilterLogs(ctx context.Context, q kaia.FilterQuery) ([]types.L
 
 // SubscribeFilterLogs subscribes to the results of a streaming filter query.
 func (ec *Client) SubscribeFilterLogs(ctx context.Context, q kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
-	return ec.c.KaiaSubscribe(ctx, ch, "logs", toFilterArg(q))
+	sub, kaiaSubscribeErr := ec.c.KaiaSubscribe(ctx, ch, "logs", toFilterArg(q))
+	if kaiaSubscribeErr == nil {
+		return sub, nil
+	}
+	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "logs", toFilterArg(q))
+	if auctionSubscribeErr == nil {
+		return sub, nil
+	}
+	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
 }
 
 func toFilterArg(q kaia.FilterQuery) interface{} {
@@ -421,7 +438,41 @@ func (ec *Client) PendingTransactionCount(ctx context.Context) (uint, error) {
 	return uint(num), err
 }
 
-// TODO: SubscribePendingTransactions (needs server side)
+func (ec *Client) SubscribeFullPendingTransactions(ctx context.Context, ch chan<- *types.Transaction) (kaia.Subscription, error) {
+	sub, kaiaSubscribeErr := ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions", true)
+	if kaiaSubscribeErr == nil {
+		return sub, nil
+	}
+	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions", true)
+	if auctionSubscribeErr == nil {
+		return sub, nil
+	}
+	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
+}
+
+func (ec *Client) SubscribeFullPendingTransactionsRaw(ctx context.Context, ch chan<- map[string]any) (kaia.Subscription, error) {
+	sub, kaiaSubscribeErr := ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions", true)
+	if kaiaSubscribeErr == nil {
+		return sub, nil
+	}
+	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions", true)
+	if auctionSubscribeErr == nil {
+		return sub, nil
+	}
+	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
+}
+
+func (ec *Client) SubscribePendingTransactions(ctx context.Context, ch chan<- common.Hash) (kaia.Subscription, error) {
+	sub, kaiaSubscribeErr := ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions")
+	if kaiaSubscribeErr == nil {
+		return sub, nil
+	}
+	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions")
+	if auctionSubscribeErr == nil {
+		return sub, nil
+	}
+	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
+}
 
 // Contract Calling
 
@@ -433,11 +484,15 @@ func (ec *Client) PendingTransactionCount(ctx context.Context) (uint, error) {
 // blocks might not be available.
 func (ec *Client) CallContract(ctx context.Context, msg kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	var hex hexutil.Bytes
-	err := ec.c.CallContext(ctx, &hex, "kaia_call", toCallArg(msg), toBlockNumArg(blockNumber))
-	if err != nil {
-		return nil, err
+	kaiaCallErr := ec.c.CallContext(ctx, &hex, "kaia_call", toCallArg(msg), toBlockNumArg(blockNumber))
+	if kaiaCallErr == nil {
+		return hex, nil
 	}
-	return hex, nil
+	auctionCallErr := ec.c.CallContext(ctx, &hex, "auction_call", toCallArg(msg), toBlockNumArg(blockNumber))
+	if auctionCallErr == nil {
+		return hex, nil
+	}
+	return nil, errors.Join(kaiaCallErr, auctionCallErr)
 }
 
 // PendingCallContract executes a message call transaction using the EVM.
@@ -486,6 +541,14 @@ func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) er
 	//	return err
 	//}
 	//return ec.c.CallContext(ctx, nil, "kaia_sendRawTransaction", common.ToHex(data))
+}
+
+func (ec *Client) SendAuctionTx(ctx context.Context, bidInput auction_impl.BidInput) (auction_impl.RPCOutput, error) {
+	var output auction_impl.RPCOutput
+	if err := ec.c.CallContext(ctx, &output, "auction_submitBid", bidInput); err != nil {
+		return nil, err
+	}
+	return output, nil
 }
 
 // SendRawTransaction injects a signed transaction into the pending pool for execution.
