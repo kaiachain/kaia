@@ -301,6 +301,7 @@ jobs:
           AWS_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
+          yum install jq -y
           echo "Requesting OIDC token from GitHub..."
           ID_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
                           "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r .value)
