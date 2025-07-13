@@ -405,11 +405,11 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
           ##Get Credential
-          yum install -y epel-release
-          yum install -y jq
+          curl -Lo /usr/local/bin/jq  https://github.com/jqlang/jq/releases/download/jq-1.7rc1/jq-linux-arm64
+          chmod +x /usr/local/bin/jq
           echo "Requesting OIDC token from GitHub..."
           ID_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-                          "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r .value)
+                "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r .value)
           
           echo "Calling STS:AssumeRoleWithWebIdentity..."
           CREDS=$(aws sts assume-role-with-web-identity \
