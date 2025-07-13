@@ -296,32 +296,7 @@ jobs:
         run: |
           git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} .
           git checkout ${{ github.sha }}
-      - name: Assume AWS role using OIDC manually
-        env:
-          AWS_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-        run: |
-          yum install -y epel-release
-          yum install -y jq
-          echo "Requesting OIDC token from GitHub..."
-          ID_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-                          "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r .value)
-          
-          echo "Calling STS:AssumeRoleWithWebIdentity..."
-          CREDS=$(aws sts assume-role-with-web-identity \
-            --role-arn "$AWS_ROLE_ARN" \
-            --role-session-name "SessionForKaiaActions" \
-            --web-identity-token "$ID_TOKEN" \
-            --region "$AWS_REGION" \
-            --query "Credentials" \
-            --output json)
-          
-          export AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r .AccessKeyId)
-          export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r .SecretAccessKey)
-          export AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r .SessionToken)
-          
-          # Optional: verify identity
-          aws sts get-caller-identity
+
       - name: Set version
         shell: bash
         run: |
@@ -347,7 +322,33 @@ jobs:
             ./build/package-rpm.sh -b $item
           done
       - name: Upload RPM packages to S3
+        env:
+          AWS_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
+          ##Get Credential
+          yum install -y epel-release
+          yum install -y jq
+          echo "Requesting OIDC token from GitHub..."
+          ID_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+                          "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r .value)
+          
+          echo "Calling STS:AssumeRoleWithWebIdentity..."
+          CREDS=$(aws sts assume-role-with-web-identity \
+            --role-arn "$AWS_ROLE_ARN" \
+            --role-session-name "SessionForKaiaActions" \
+            --web-identity-token "$ID_TOKEN" \
+            --region "$AWS_REGION" \
+            --query "Credentials" \
+            --output json)
+          
+          export AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r .AccessKeyId)
+          export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r .SecretAccessKey)
+          export AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r .SessionToken)
+          
+          # Optional: verify identity
+          aws sts get-caller-identity
+          ## Upload
           PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
           for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
             BINARY=$item
@@ -373,30 +374,6 @@ jobs:
         run: |
           git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} .
           git checkout ${{ github.sha }}
-      - name: Assume AWS role using OIDC manually
-        env:
-          AWS_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-        run: |
-          echo "Requesting OIDC token from GitHub..."
-          ID_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-                          "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r .value)
-          
-          echo "Calling STS:AssumeRoleWithWebIdentity..."
-          CREDS=$(aws sts assume-role-with-web-identity \
-            --role-arn "$AWS_ROLE_ARN" \
-            --role-session-name "SessionForKaiaActions" \
-            --web-identity-token "$ID_TOKEN" \
-            --region "$AWS_REGION" \
-            --query "Credentials" \
-            --output json)
-          
-          export AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r .AccessKeyId)
-          export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r .SecretAccessKey)
-          export AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r .SessionToken)
-          
-          # Optional: verify identity
-          aws sts get-caller-identity
 
       - name: Set version
         shell: bash
@@ -423,7 +400,34 @@ jobs:
             ./build/package-rpm.sh -b $item
           done
       - name: Upload RPM packages to S3
+        env:
+          AWS_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
+          ##Get Credential
+          yum install -y epel-release
+          yum install -y jq
+          echo "Requesting OIDC token from GitHub..."
+          ID_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+                          "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r .value)
+          
+          echo "Calling STS:AssumeRoleWithWebIdentity..."
+          CREDS=$(aws sts assume-role-with-web-identity \
+            --role-arn "$AWS_ROLE_ARN" \
+            --role-session-name "SessionForKaiaActions" \
+            --web-identity-token "$ID_TOKEN" \
+            --region "$AWS_REGION" \
+            --query "Credentials" \
+            --output json)
+          
+          export AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r .AccessKeyId)
+          export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r .SecretAccessKey)
+          export AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r .SessionToken)
+          
+          # Optional: verify identity
+          aws sts get-caller-identity
+          
+          ##Upload
           PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
           for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
             BINARY=$item
