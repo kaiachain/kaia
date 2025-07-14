@@ -475,6 +475,14 @@ jobs:
           for item in kcn kpn ken; do
             ./build/package-tar.sh -b darwin-arm64 $item
           done
+          
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Upload tar packages to S3
         run: |
           for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
