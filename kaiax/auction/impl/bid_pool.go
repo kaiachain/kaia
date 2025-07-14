@@ -121,7 +121,7 @@ func (bp *BidPool) removeOldBids(num uint64, txHashMap map[common.Hash]struct{})
 	// Remove the old bids.
 	for bn := range bp.bidWinnerMap {
 		if bn > num {
-			break
+			continue
 		}
 
 		for _, bh := range bp.bidWinnerMap[bn] {

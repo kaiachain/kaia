@@ -90,6 +90,76 @@ func TestIncorporateBundleTx(t *testing.T) {
 	}
 }
 
+func TestExtractBundles(t *testing.T) {
+	// Create test transactions
+	txs := []*types.Transaction{
+		types.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		types.NewTransaction(1, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		types.NewTransaction(2, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		types.NewTransaction(3, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		types.NewTransaction(4, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+		types.NewTransaction(5, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil),
+	}
+
+	gen := func(nonce uint64) (*types.Transaction, error) {
+		return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
+	}
+	g1 := NewTxOrGenFromGen(gen, common.Hash{1})
+	g2 := NewTxOrGenFromGen(gen, common.Hash{2})
+	g3 := NewTxOrGenFromGen(gen, common.Hash{3})
+
+	testCases := []struct {
+		name                 string
+		bundles              []*Bundle
+		expectedList         []*TxOrGen
+		expectedTargetTxHash []common.Hash
+	}{
+		{
+			name: "correctly extract bundles with same target hash 1",
+			bundles: []*Bundle{
+				{BundleTxs: NewTxOrGenList(txs[0], txs[1]), TargetTxHash: common.Hash{}},
+				{BundleTxs: NewTxOrGenList(g1), TargetTxHash: common.Hash{}, TargetRequired: true},
+			},
+			expectedList:         NewTxOrGenList(g1, txs[0], txs[1], txs[2], txs[3], txs[4], txs[5]),
+			expectedTargetTxHash: []common.Hash{g1.Id, {}},
+		},
+		{
+			name: "correctly extract bundles with same target hash 2",
+			bundles: []*Bundle{
+				{BundleTxs: NewTxOrGenList(g1, txs[2], txs[3]), TargetTxHash: txs[1].Hash()},
+				{BundleTxs: NewTxOrGenList(g2), TargetTxHash: txs[1].Hash(), TargetRequired: true},
+			},
+			expectedList:         NewTxOrGenList(txs[0], txs[1], g2, g1, txs[2], txs[3], txs[4], txs[5]),
+			expectedTargetTxHash: []common.Hash{g2.Id, txs[1].Hash()},
+		},
+		{
+			name: "correctly extract bundles with same target hash 3",
+			bundles: []*Bundle{
+				{BundleTxs: NewTxOrGenList(g1), TargetTxHash: txs[0].Hash(), TargetRequired: true},
+				{BundleTxs: NewTxOrGenList(g2, txs[2], txs[3]), TargetTxHash: txs[1].Hash()},
+				{BundleTxs: NewTxOrGenList(g3), TargetTxHash: txs[1].Hash(), TargetRequired: true},
+			},
+			expectedList:         NewTxOrGenList(txs[0], g1, txs[1], g3, g2, txs[2], txs[3], txs[4], txs[5]),
+			expectedTargetTxHash: []common.Hash{txs[0].Hash(), g3.Id, txs[1].Hash()},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ret, err := IncorporateBundleTx(txs, tc.bundles)
+			bundles := SetCorrectTargetTxHash(tc.bundles, ret)
+			require.Nil(t, err)
+			require.Equal(t, len(tc.expectedList), len(ret))
+			for i := range ret {
+				assert.Equal(t, tc.expectedList[i].Id.Hex(), ret[i].Id.Hex(), "mismatch at ret[%d]", i)
+			}
+			for i := range bundles {
+				assert.Equal(t, tc.expectedTargetTxHash[i], bundles[i].TargetTxHash)
+			}
+		})
+	}
+}
+
 func TestIncorporate(t *testing.T) {
 	// Create test transactions
 	txs := []*types.Transaction{

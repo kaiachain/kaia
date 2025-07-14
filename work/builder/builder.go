@@ -291,13 +291,14 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 		}
 	}
 
-	// Coordinate target tx hash of bundles
-	bundles = CoordinateTargetTxHash(bundles)
-
 	incorporatedTxs, err := IncorporateBundleTx(arrayTxs, bundles)
 	if err != nil {
 		return flattenedTxs, nil
 	}
+
+	// Set correct target tx hash of bundles
+	// This is necessary since tx from auction module is not included in the arrayTxs but is included in the incorporatedTxs
+	bundles = SetCorrectTargetTxHash(bundles, incorporatedTxs)
 
 	return incorporatedTxs, bundles
 }
