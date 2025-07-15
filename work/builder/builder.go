@@ -291,14 +291,15 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 		}
 	}
 
+	// Coordinate target tx hash of bundles
+	// It assumes that the ordering of bundles does not break the execution result.
+	// For example, if bundle reordering breaks the nonce ordering, the execution result will be different.
+	bundles = coordinateTargetTxHash(bundles)
+
 	incorporatedTxs, err := IncorporateBundleTx(arrayTxs, bundles)
 	if err != nil {
 		return flattenedTxs, nil
 	}
-
-	// Set correct target tx hash of bundles
-	// This is necessary since tx from auction module is not included in the arrayTxs but is included in the incorporatedTxs
-	bundles = SetCorrectTargetTxHash(bundles, incorporatedTxs)
 
 	return incorporatedTxs, bundles
 }
@@ -314,4 +315,62 @@ func FilterTxs(txs map[common.Address]types.Transactions, txBundlingModules []Tx
 	}
 
 	return txMap
+}
+
+// coordinateTargetTxHash coordinates the target tx hash of bundles.
+// It assumes there's only one bundle with TargetRequired = true among the bundles with the same TargetTxHash
+// and no zero-length bundle.
+// e.g.) bundles = [
+//
+//	{TargetTxHash: 0x2, TargetRequired: false, BundleTxs: []*TxOrGen{tx3, tx4}},
+//	{TargetTxHash: 0x2, TargetRequired: true, BundleTxs: []*TxOrGen{g1}},
+//
+// ]
+// -> returns [
+//
+//	{TargetTxHash: 0x2, TargetRequired: true, BundleTxs: []*TxOrGen{g1}},
+//	{TargetTxHash: g1.Id, TargetRequired: false, BundleTxs: []*TxOrGen{tx3, tx4}},
+//
+// ]
+func coordinateTargetTxHash(bundles []*Bundle) []*Bundle {
+	if len(bundles) <= 1 {
+		return bundles
+	}
+
+	newBundles := make([]*Bundle, 0, len(bundles))
+	sameTargetTxHashBundles := make(map[common.Hash][]*Bundle)
+
+	for _, bundle := range bundles {
+		sameTargetTxHashBundles[bundle.TargetTxHash] = append(sameTargetTxHashBundles[bundle.TargetTxHash], bundle)
+	}
+
+	for _, list := range sameTargetTxHashBundles {
+		if len(list) == 1 {
+			newBundles = append(newBundles, list[0])
+			continue
+		}
+
+		// Find the bundle with TargetRequired = true and move it to the front.
+		// This is needed because #incorporate assumes that targetTxHash is already in the txs.
+		for i, bundle := range list {
+			if bundle.TargetRequired {
+				list[0], list[i] = list[i], list[0]
+				break
+			}
+		}
+
+		for i, bundle := range list {
+			if i == 0 {
+				continue
+			}
+			bundle.TargetTxHash = lastBundleTx(list[i-1]).Id
+		}
+		newBundles = append(newBundles, list...)
+	}
+
+	return newBundles
+}
+
+func lastBundleTx(bundle *Bundle) *TxOrGen {
+	return bundle.BundleTxs[len(bundle.BundleTxs)-1]
 }

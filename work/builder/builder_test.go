@@ -443,3 +443,47 @@ func TestPopTxs(t *testing.T) {
 		})
 	}
 }
+
+func TestCoordinateTargetTxHash(t *testing.T) {
+	txs := make([]*types.Transaction, 5)
+	for i := range txs {
+		txs[i] = types.NewTransaction(uint64(i), common.Address{}, common.Big0, 0, common.Big0, nil)
+	}
+
+	gen := func(nonce uint64) (*types.Transaction, error) {
+		return types.NewTransaction(nonce, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil), nil
+	}
+	g1 := NewTxOrGenFromGen(gen, common.Hash{1})
+	g2 := NewTxOrGenFromGen(gen, common.Hash{2})
+
+	// All bundles have same target tx hash
+	b0 := &Bundle{ // Gasless bundle
+		BundleTxs:      NewTxOrGenList(g1, txs[3], txs[4]),
+		TargetTxHash:   txs[2].Hash(),
+		TargetRequired: false,
+	}
+	b1 := &Bundle{ // Auction bundle
+		BundleTxs:      NewTxOrGenList(g2),
+		TargetTxHash:   txs[2].Hash(),
+		TargetRequired: true,
+	}
+
+	bundles := []*Bundle{b0, b1}
+
+	coordinatedBundles := coordinateTargetTxHash(bundles)
+
+	expectedTargetTxHashes := []common.Hash{
+		txs[2].Hash(),
+		g2.Id,
+	}
+
+	for i, bundle := range coordinatedBundles {
+		assert.Equal(t, expectedTargetTxHashes[i], bundle.TargetTxHash)
+	}
+
+	incorporatedTxs, err := IncorporateBundleTx(txs, coordinatedBundles)
+	require.Nil(t, err)
+
+	expectedTxs := NewTxOrGenList(txs[0], txs[1], txs[2], g2, g1, txs[3], txs[4])
+	assert.Equal(t, expectedTxs, incorporatedTxs)
+}
