@@ -96,7 +96,7 @@ func (a *AuctionModule) FilterTxs(txs map[common.Address]types.Transactions) {
 	// filter txs that are after the auction early deadline
 	for addr, list := range txs {
 		for i, tx := range list {
-			if tx.Time().After(now.Add(-AuctionEarlyDeadline)) {
+			if tx.Time().After(now.Add(-AuctionEarlyDeadline)) && !a.isGaslessTx(tx) {
 				// if the tx is a target tx, skip it
 				if _, ok := targetTxHashMap[tx.Hash()]; ok {
 					continue
@@ -113,4 +113,12 @@ func (a *AuctionModule) FilterTxs(txs map[common.Address]types.Transactions) {
 			}
 		}
 	}
+}
+
+func (a *AuctionModule) isGaslessTx(tx *types.Transaction) bool {
+	if a.gaslessModule == nil {
+		return false
+	}
+
+	return a.gaslessModule.IsBundleTx(tx)
 }

@@ -584,6 +584,10 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mRewindable = append(mRewindable, mAuction)
 
 		s.protocolManager.RegisterAuctionModule(mAuction)
+
+		if !mGasless.IsDisabled() {
+			mAuction.RegisterGaslessModule(mGasless)
+		}
 	}
 
 	// Register modules to respective components

@@ -19,6 +19,7 @@ package auction
 import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 )
 
 type AuctionModule interface {
@@ -30,6 +31,8 @@ type AuctionModule interface {
 
 	HandleBid(bid *Bid)
 	SubscribeNewBid(sink chan<- *Bid) event.Subscription
+
+	gasless.GaslessModuleHost
 }
 
 type AuctionModuleHost interface {

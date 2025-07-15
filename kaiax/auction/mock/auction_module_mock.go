@@ -12,6 +12,7 @@ import (
 	common "github.com/kaiachain/kaia/common"
 	event "github.com/kaiachain/kaia/event"
 	auction "github.com/kaiachain/kaia/kaiax/auction"
+	gasless "github.com/kaiachain/kaia/kaiax/gasless"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 	builder "github.com/kaiachain/kaia/work/builder"
 )
@@ -145,6 +146,18 @@ func (m *MockAuctionModule) PostInsertBlock(arg0 *types.Block) error {
 func (mr *MockAuctionModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockAuctionModule)(nil).PostInsertBlock), arg0)
+}
+
+// RegisterGaslessModule mocks base method.
+func (m *MockAuctionModule) RegisterGaslessModule(arg0 gasless.GaslessModule) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RegisterGaslessModule", arg0)
+}
+
+// RegisterGaslessModule indicates an expected call of RegisterGaslessModule.
+func (mr *MockAuctionModuleMockRecorder) RegisterGaslessModule(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterGaslessModule", reflect.TypeOf((*MockAuctionModule)(nil).RegisterGaslessModule), arg0)
 }
 
 // RewindDelete mocks base method.

@@ -27,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/auction"
+	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn/filters"
 	"github.com/kaiachain/kaia/params"
@@ -61,6 +62,8 @@ type AuctionModule struct {
 	InitOpts
 
 	bidPool *BidPool
+
+	gaslessModule gasless.GaslessModule
 }
 
 const (
@@ -101,6 +104,10 @@ func (a *AuctionModule) Init(opts *InitOpts) error {
 	}
 
 	return nil
+}
+
+func (a *AuctionModule) RegisterGaslessModule(module gasless.GaslessModule) {
+	a.gaslessModule = module
 }
 
 func (a *AuctionModule) IsDisabled() bool {
