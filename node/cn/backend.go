@@ -553,7 +553,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
 	mTxBundling := []kaiax.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
-	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mRandao}
+	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao}
 
 	gaslessDisabled := mGasless.IsDisabled()
 	if !gaslessDisabled {
