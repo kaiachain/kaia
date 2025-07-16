@@ -38,16 +38,16 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-// PrivateAdminAPI is the collection of administrative API methods exposed only
+// AdminNodeNetworkAPI is the collection of administrative API methods exposed only
 // over a secure RPC channel.
-type PrivateAdminAPI struct {
+type AdminNodeNetworkAPI struct {
 	node *Node // Node interfaced by this API
 }
 
-// NewPrivateAdminAPI creates a new API definition for the private admin methods
+// NewAdminNodeNetworkAPI creates a new API definition for the private admin methods
 // of the node itself.
-func NewPrivateAdminAPI(node *Node) *PrivateAdminAPI {
-	return &PrivateAdminAPI{node: node}
+func NewAdminNodeNetworkAPI(node *Node) *AdminNodeNetworkAPI {
+	return &AdminNodeNetworkAPI{node: node}
 }
 
 // addPeerInternal does common part for AddPeer.
@@ -63,7 +63,7 @@ func addPeerInternal(server p2p.Server, url string, onParentChain bool) (*discov
 
 // AddPeer requests connecting to a remote node, and also maintaining the new
 // connection at all times, even reconnecting if it is lost.
-func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
+func (api *AdminNodeNetworkAPI) AddPeer(url string) (bool, error) {
 	// Make sure the server is running, fail otherwise
 	server := api.node.Server()
 	if server == nil {
@@ -78,7 +78,7 @@ func (api *PrivateAdminAPI) AddPeer(url string) (bool, error) {
 }
 
 // RemovePeer disconnects from a remote node if the connection exists
-func (api *PrivateAdminAPI) RemovePeer(url string) (bool, error) {
+func (api *AdminNodeNetworkAPI) RemovePeer(url string) (bool, error) {
 	// Make sure the server is running, fail otherwise
 	server := api.node.Server()
 	if server == nil {
@@ -95,7 +95,7 @@ func (api *PrivateAdminAPI) RemovePeer(url string) (bool, error) {
 
 // PeerEvents creates an RPC subscription which receives peer events from the
 // node's p2p.Server
-func (api *PrivateAdminAPI) PeerEvents(ctx context.Context) (*rpc.Subscription, error) {
+func (api *AdminNodeNetworkAPI) PeerEvents(ctx context.Context) (*rpc.Subscription, error) {
 	// Make sure the server is running, fail otherwise
 	server := api.node.Server()
 	if server == nil {
@@ -132,7 +132,7 @@ func (api *PrivateAdminAPI) PeerEvents(ctx context.Context) (*rpc.Subscription, 
 }
 
 // StartHTTP starts the HTTP RPC API server.
-func (api *PrivateAdminAPI) StartHTTP(host *string, port *int, cors *string, apis *string, vhosts *string) (bool, error) {
+func (api *AdminNodeNetworkAPI) StartHTTP(host *string, port *int, cors *string, apis *string, vhosts *string) (bool, error) {
 	api.node.lock.Lock()
 	defer api.node.lock.Unlock()
 
@@ -186,13 +186,13 @@ func (api *PrivateAdminAPI) StartHTTP(host *string, port *int, cors *string, api
 
 // StartRPC starts the HTTP RPC API server.
 // This method is deprecated. Use StartHTTP instead.
-func (api *PrivateAdminAPI) StartRPC(host *string, port *int, cors *string, apis *string, vhosts *string) (bool, error) {
+func (api *AdminNodeNetworkAPI) StartRPC(host *string, port *int, cors *string, apis *string, vhosts *string) (bool, error) {
 	logger.Warn("Deprecation warning", "method", "admin.StartRPC", "use-instead", "admin.StartHTTP")
 	return api.StartHTTP(host, port, cors, apis, vhosts)
 }
 
 // StopHTTP terminates an already running HTTP RPC API endpoint.
-func (api *PrivateAdminAPI) StopHTTP() (bool, error) {
+func (api *AdminNodeNetworkAPI) StopHTTP() (bool, error) {
 	api.node.lock.Lock()
 	defer api.node.lock.Unlock()
 
@@ -205,13 +205,13 @@ func (api *PrivateAdminAPI) StopHTTP() (bool, error) {
 
 // StopRPC terminates an already running HTTP RPC API endpoint.
 // This method is deprecated. Use StopHTTP instead.
-func (api *PrivateAdminAPI) StopRPC() (bool, error) {
+func (api *AdminNodeNetworkAPI) StopRPC() (bool, error) {
 	logger.Warn("Deprecation warning", "method", "admin.StopRPC", "use-instead", "admin.StopHTTP")
 	return api.StopHTTP()
 }
 
 // StartWS starts the websocket RPC API server.
-func (api *PrivateAdminAPI) StartWS(host *string, port *int, allowedOrigins *string, apis *string) (bool, error) {
+func (api *AdminNodeNetworkAPI) StartWS(host *string, port *int, allowedOrigins *string, apis *string) (bool, error) {
 	api.node.lock.Lock()
 	defer api.node.lock.Unlock()
 
@@ -256,7 +256,7 @@ func (api *PrivateAdminAPI) StartWS(host *string, port *int, allowedOrigins *str
 }
 
 // StopRPC terminates an already running websocket RPC API endpoint.
-func (api *PrivateAdminAPI) StopWS() (bool, error) {
+func (api *AdminNodeNetworkAPI) StopWS() (bool, error) {
 	api.node.lock.Lock()
 	defer api.node.lock.Unlock()
 
@@ -267,27 +267,27 @@ func (api *PrivateAdminAPI) StopWS() (bool, error) {
 	return true, nil
 }
 
-func (api *PrivateAdminAPI) SetMaxSubscriptionPerWSConn(num int32) {
+func (api *AdminNodeNetworkAPI) SetMaxSubscriptionPerWSConn(num int32) {
 	logger.Info("Change the max subscription number for a websocket connection",
 		"old", rpc.MaxSubscriptionPerWSConn, "new", num)
 	rpc.MaxSubscriptionPerWSConn = num
 }
 
-// PublicAdminAPI is the collection of administrative API methods exposed over
+// AdminNodeAPI is the collection of administrative API methods exposed over
 // both secure and unsecure RPC channels.
-type PublicAdminAPI struct {
+type AdminNodeAPI struct {
 	node *Node // Node interfaced by this API
 }
 
-// NewPublicAdminAPI creates a new API definition for the public admin methods
+// NewAdminNodeAPI creates a new API definition for the public admin methods
 // of the node itself.
-func NewPublicAdminAPI(node *Node) *PublicAdminAPI {
-	return &PublicAdminAPI{node: node}
+func NewAdminNodeAPI(node *Node) *AdminNodeAPI {
+	return &AdminNodeAPI{node: node}
 }
 
 // Peers retrieves all the information we know about each individual peer at the
 // protocol granularity.
-func (api *PublicAdminAPI) Peers() ([]*p2p.PeerInfo, error) {
+func (api *AdminNodeAPI) Peers() ([]*p2p.PeerInfo, error) {
 	server := api.node.Server()
 	if server == nil {
 		return nil, ErrNodeStopped
@@ -314,7 +314,7 @@ type NodeInfoOutput struct {
 
 // NodeInfo retrieves all the information we know about the host node at the
 // protocol granularity.
-func (api *PublicAdminAPI) NodeInfo() (*NodeInfoOutput, error) {
+func (api *AdminNodeAPI) NodeInfo() (*NodeInfoOutput, error) {
 	server := api.node.Server()
 	if server == nil {
 		return nil, ErrNodeStopped
@@ -341,24 +341,24 @@ func (api *PublicAdminAPI) NodeInfo() (*NodeInfoOutput, error) {
 }
 
 // Datadir retrieves the current data directory the node is using.
-func (api *PublicAdminAPI) Datadir() string {
+func (api *AdminNodeAPI) Datadir() string {
 	return api.node.DataDir()
 }
 
-// PublicDebugAPI is the collection of debugging related API methods exposed over
+// DebugNodeAPI is the collection of debugging related API methods exposed over
 // both secure and unsecure RPC channels.
-type PublicDebugAPI struct {
+type DebugNodeAPI struct {
 	node *Node // Node interfaced by this API
 }
 
-// NewPublicDebugAPI creates a new API definition for the public debug methods
+// NewDebugNodeAPI creates a new API definition for the public debug methods
 // of the node itself.
-func NewPublicDebugAPI(node *Node) *PublicDebugAPI {
-	return &PublicDebugAPI{node: node}
+func NewDebugNodeAPI(node *Node) *DebugNodeAPI {
+	return &DebugNodeAPI{node: node}
 }
 
 // Metrics retrieves all the known system metric collected by the node.
-func (api *PublicDebugAPI) Metrics(raw bool) (map[string]interface{}, error) {
+func (api *DebugNodeAPI) Metrics(raw bool) (map[string]interface{}, error) {
 	// Create a rate formatter
 	units := []string{"", "K", "M", "G", "T", "E", "P"}
 	round := func(value float64, prec int) string {
@@ -462,23 +462,23 @@ func (api *PublicDebugAPI) Metrics(raw bool) (map[string]interface{}, error) {
 	return counters, nil
 }
 
-// PublicKaiaAPI offers helper utils
-type PublicKaiaAPI struct {
+// KaiaNodeAPI offers helper utils
+type KaiaNodeAPI struct {
 	stack *Node
 }
 
-// NewPublicKaiaAPI creates a new Web3Service instance
-func NewPublicKaiaAPI(stack *Node) *PublicKaiaAPI {
-	return &PublicKaiaAPI{stack}
+// NewKaiaNodeAPI creates a new Web3Service instance
+func NewKaiaNodeAPI(stack *Node) *KaiaNodeAPI {
+	return &KaiaNodeAPI{stack}
 }
 
 // ClientVersion returns the node name
-func (s *PublicKaiaAPI) ClientVersion() string {
+func (s *KaiaNodeAPI) ClientVersion() string {
 	return s.stack.Server().Name()
 }
 
 // Sha3 applies the Kaia sha3 implementation on the input.
 // It assumes the input is hex encoded.
-func (s *PublicKaiaAPI) Sha3(input hexutil.Bytes) hexutil.Bytes {
+func (s *KaiaNodeAPI) Sha3(input hexutil.Bytes) hexutil.Bytes {
 	return crypto.Keccak256(input)
 }

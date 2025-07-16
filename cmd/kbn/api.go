@@ -22,76 +22,76 @@ import (
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 )
 
-type PublicBootnodeAPI struct {
+type BootnodeAPI struct {
 	bn *BN
 }
 
-func NewPublicBootnodeAPI(b *BN) *PublicBootnodeAPI {
-	return &PublicBootnodeAPI{bn: b}
+func NewBootnodeAPI(b *BN) *BootnodeAPI {
+	return &BootnodeAPI{bn: b}
 }
 
-func (api *PublicBootnodeAPI) GetAuthorizedNodes() []*discover.Node {
+func (api *BootnodeAPI) GetAuthorizedNodes() []*discover.Node {
 	return api.bn.GetAuthorizedNodes()
 }
 
-type PrivateBootnodeAPI struct {
+type BootnodeRegistryAPI struct {
 	bn *BN
 }
 
-func NewPrivateBootnodeAPI(b *BN) *PrivateBootnodeAPI {
-	return &PrivateBootnodeAPI{bn: b}
+func NewBootnodeRegistryAPI(b *BN) *BootnodeRegistryAPI {
+	return &BootnodeRegistryAPI{bn: b}
 }
 
-func (api *PrivateBootnodeAPI) Name() string {
+func (api *BootnodeRegistryAPI) Name() string {
 	return api.bn.Name()
 }
 
-func (api *PrivateBootnodeAPI) Resolve(target discover.NodeID, targetType discover.NodeType) *discover.Node {
+func (api *BootnodeRegistryAPI) Resolve(target discover.NodeID, targetType discover.NodeType) *discover.Node {
 	return api.bn.Resolve(target, targetType)
 }
 
-func (api *PrivateBootnodeAPI) Lookup(target discover.NodeID, targetType discover.NodeType) []*discover.Node {
+func (api *BootnodeRegistryAPI) Lookup(target discover.NodeID, targetType discover.NodeType) []*discover.Node {
 	return api.bn.Lookup(target, targetType)
 }
 
-func (api *PrivateBootnodeAPI) ReadRandomNodes(nType discover.NodeType) []*discover.Node {
+func (api *BootnodeRegistryAPI) ReadRandomNodes(nType discover.NodeType) []*discover.Node {
 	var buf []*discover.Node
 	api.bn.ReadRandomNodes(buf, nType)
 	return buf
 }
 
-func (api *PrivateBootnodeAPI) CreateUpdateNodeOnDB(nodekni string) error {
+func (api *BootnodeRegistryAPI) CreateUpdateNodeOnDB(nodekni string) error {
 	return api.bn.CreateUpdateNodeOnDB(nodekni)
 }
 
-func (api *PrivateBootnodeAPI) CreateUpdateNodeOnTable(nodekni string) error {
+func (api *BootnodeRegistryAPI) CreateUpdateNodeOnTable(nodekni string) error {
 	return api.bn.CreateUpdateNodeOnTable(nodekni)
 }
 
-func (api *PrivateBootnodeAPI) GetNodeFromDB(id discover.NodeID) (*discover.Node, error) {
+func (api *BootnodeRegistryAPI) GetNodeFromDB(id discover.NodeID) (*discover.Node, error) {
 	return api.bn.GetNodeFromDB(id)
 }
 
-func (api *PrivateBootnodeAPI) GetTableEntries() []*discover.Node {
+func (api *BootnodeRegistryAPI) GetTableEntries() []*discover.Node {
 	return api.bn.GetTableEntries()
 }
 
-func (api *PrivateBootnodeAPI) GetTableReplacements() []*discover.Node {
+func (api *BootnodeRegistryAPI) GetTableReplacements() []*discover.Node {
 	return api.bn.GetTableReplacements()
 }
 
-func (api *PrivateBootnodeAPI) DeleteNodeFromDB(nodekni string) error {
+func (api *BootnodeRegistryAPI) DeleteNodeFromDB(nodekni string) error {
 	return api.bn.DeleteNodeFromDB(nodekni)
 }
 
-func (api *PrivateBootnodeAPI) DeleteNodeFromTable(nodekni string) error {
+func (api *BootnodeRegistryAPI) DeleteNodeFromTable(nodekni string) error {
 	return api.bn.DeleteNodeFromTable(nodekni)
 }
 
-func (api *PrivateBootnodeAPI) PutAuthorizedNodes(rawurl string) error {
+func (api *BootnodeRegistryAPI) PutAuthorizedNodes(rawurl string) error {
 	return api.bn.PutAuthorizedNodes(rawurl)
 }
 
-func (api *PrivateBootnodeAPI) DeleteAuthorizedNodes(rawurl string) error {
+func (api *BootnodeRegistryAPI) DeleteAuthorizedNodes(rawurl string) error {
 	return api.bn.DeleteAuthorizedNodes(rawurl)
 }

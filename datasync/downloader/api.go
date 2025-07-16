@@ -31,9 +31,9 @@ import (
 	"github.com/kaiachain/kaia/networks/rpc"
 )
 
-// PublicDownloaderAPI provides an API which gives information about the current synchronisation status.
+// KaiaDownloaderAPI provides an API which gives information about the current synchronisation status.
 // It offers only methods that operates on data that can be available to anyone without security risks.
-type PublicDownloaderAPI struct {
+type KaiaDownloaderAPI struct {
 	d                         downloader
 	mux                       *event.TypeMux
 	installSyncSubscription   chan chan interface{}
@@ -46,12 +46,12 @@ type downloader interface {
 	SyncStakingInfoStatus() *SyncingStatus
 }
 
-// NewPublicDownloaderAPI creates a new PublicDownloaderAPI. The API has an internal event loop that
+// NewKaiaDownloaderAPI creates a new KaiaDownloaderAPI. The API has an internal event loop that
 // listens for events from the downloader through the global event mux. In case it receives one of
 // these events it broadcasts it to all syncing subscriptions that are installed through the
 // installSyncSubscription channel.
-func NewPublicDownloaderAPI(d downloader, m *event.TypeMux) *PublicDownloaderAPI {
-	api := &PublicDownloaderAPI{
+func NewKaiaDownloaderAPI(d downloader, m *event.TypeMux) *KaiaDownloaderAPI {
+	api := &KaiaDownloaderAPI{
 		d:                         d,
 		mux:                       m,
 		installSyncSubscription:   make(chan chan interface{}),
@@ -65,7 +65,7 @@ func NewPublicDownloaderAPI(d downloader, m *event.TypeMux) *PublicDownloaderAPI
 
 // eventLoop runs a loop until the event mux closes. It will install and uninstall new
 // sync subscriptions and broadcasts sync status updates to the installed sync subscriptions.
-func (api *PublicDownloaderAPI) eventLoop() {
+func (api *KaiaDownloaderAPI) eventLoop() {
 	var (
 		sub               = api.mux.Subscribe(StartEvent{}, DoneEvent{}, FailedEvent{})
 		syncSubscriptions = make(map[chan interface{}]struct{})
@@ -102,7 +102,7 @@ func (api *PublicDownloaderAPI) eventLoop() {
 }
 
 // Syncing provides information when this nodes starts synchronising with the Kaia network and when it's finished.
-func (api *PublicDownloaderAPI) Syncing(ctx context.Context) (*rpc.Subscription, error) {
+func (api *KaiaDownloaderAPI) Syncing(ctx context.Context) (*rpc.Subscription, error) {
 	notifier, supported := rpc.NotifierFromContext(ctx)
 	if !supported {
 		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
@@ -145,9 +145,9 @@ type uninstallSyncSubscriptionRequest struct {
 
 // SyncStatusSubscription represents a syncing subscription.
 type SyncStatusSubscription struct {
-	api       *PublicDownloaderAPI // register subscription in event loop of this api instance
-	c         chan interface{}     // channel where events are broadcasted to
-	unsubOnce sync.Once            // make sure unsubscribe logic is executed once
+	api       *KaiaDownloaderAPI // register subscription in event loop of this api instance
+	c         chan interface{}   // channel where events are broadcasted to
+	unsubOnce sync.Once          // make sure unsubscribe logic is executed once
 }
 
 // Unsubscribe uninstalls the subscription from the DownloadAPI event loop.
@@ -172,27 +172,27 @@ func (s *SyncStatusSubscription) Unsubscribe() {
 
 // SubscribeSyncStatus creates a subscription that will broadcast new synchronisation updates.
 // The given channel must receive interface values, the result can either
-func (api *PublicDownloaderAPI) SubscribeSyncStatus(status chan interface{}) *SyncStatusSubscription {
+func (api *KaiaDownloaderAPI) SubscribeSyncStatus(status chan interface{}) *SyncStatusSubscription {
 	api.installSyncSubscription <- status
 	return &SyncStatusSubscription{api: api, c: status}
 }
 
-// PrivateDownloaderAPI provides an API which gives syncing staking information.
-type PrivateDownloaderAPI struct {
+// KaiaDownloaderSyncAPI provides an API which gives syncing staking information.
+type KaiaDownloaderSyncAPI struct {
 	d downloader
 }
 
-func NewPrivateDownloaderAPI(d downloader) *PrivateDownloaderAPI {
-	api := &PrivateDownloaderAPI{
+func NewKaiaDownloaderSyncAPI(d downloader) *KaiaDownloaderSyncAPI {
+	api := &KaiaDownloaderSyncAPI{
 		d: d,
 	}
 	return api
 }
 
-func (api *PrivateDownloaderAPI) SyncStakingInfo(id string, from, to uint64) error {
+func (api *KaiaDownloaderSyncAPI) SyncStakingInfo(id string, from, to uint64) error {
 	return api.d.SyncStakingInfo(id, from, to)
 }
 
-func (api *PrivateDownloaderAPI) SyncStakingInfoStatus() *SyncingStatus {
+func (api *KaiaDownloaderSyncAPI) SyncStakingInfoStatus() *SyncingStatus {
 	return api.d.SyncStakingInfoStatus()
 }

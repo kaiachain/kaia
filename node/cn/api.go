@@ -45,37 +45,37 @@ import (
 	"github.com/kaiachain/kaia/work"
 )
 
-// PublicKaiaAPI provides an API to access Kaia CN-related
+// KaiaCNAPI provides an API to access Kaia CN-related
 // information.
-type PublicKaiaAPI struct {
+type KaiaCNAPI struct {
 	cn *CN
 }
 
-// NewPublicKaiaAPI creates a new Kaia protocol API for full nodes.
-func NewPublicKaiaAPI(e *CN) *PublicKaiaAPI {
-	return &PublicKaiaAPI{e}
+// NewKaiaCNAPI creates a new Kaia protocol API for full nodes.
+func NewKaiaCNAPI(e *CN) *KaiaCNAPI {
+	return &KaiaCNAPI{e}
 }
 
 // Rewardbase is the address that consensus rewards will be send to
-func (api *PublicKaiaAPI) Rewardbase() (common.Address, error) {
+func (api *KaiaCNAPI) Rewardbase() (common.Address, error) {
 	return api.cn.Rewardbase()
 }
 
-// PrivateAdminAPI is the collection of CN full node-related APIs
+// AdminCNChainAPI is the collection of CN full node-related APIs
 // exposed over the private admin endpoint.
-type PrivateAdminAPI struct {
+type AdminCNChainAPI struct {
 	cn *CN
 }
 
-// NewPrivateAdminAPI creates a new API definition for the full node private
+// NewAdminCNChainAPI creates a new API definition for the full node private
 // admin methods of the CN service.
-func NewPrivateAdminAPI(cn *CN) *PrivateAdminAPI {
-	return &PrivateAdminAPI{cn: cn}
+func NewAdminCNChainAPI(cn *CN) *AdminCNChainAPI {
+	return &AdminCNChainAPI{cn: cn}
 }
 
 // ExportChain exports the current blockchain into a local file,
 // or a range of blocks if first and last are non-nil.
-func (api *PrivateAdminAPI) ExportChain(file string, first, last *rpc.BlockNumber) (bool, error) {
+func (api *AdminCNChainAPI) ExportChain(file string, first, last *rpc.BlockNumber) (bool, error) {
 	if _, err := os.Stat(file); err == nil {
 		// File already exists. Allowing overwrite could be a DoS vecotor,
 		// since the 'file' may point to arbitrary paths on the drive
@@ -124,7 +124,7 @@ func hasAllBlocks(chain work.BlockChain, bs []*types.Block) bool {
 }
 
 // ImportChain imports a blockchain from a local file.
-func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
+func (api *AdminCNChainAPI) ImportChain(file string) (bool, error) {
 	// Make sure the can access the file to import
 	in, err := os.Open(file)
 	if err != nil {
@@ -143,14 +143,14 @@ func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
 	return api.importChain(stream)
 }
 
-func (api *PrivateAdminAPI) ImportChainFromString(blockRlp string) (bool, error) {
+func (api *AdminCNChainAPI) ImportChainFromString(blockRlp string) (bool, error) {
 	// Run actual the import in pre-configured batches
 	stream := rlp.NewStream(bytes.NewReader(common.FromHex(blockRlp)), 0)
 
 	return api.importChain(stream)
 }
 
-func (api *PrivateAdminAPI) importChain(stream *rlp.Stream) (bool, error) {
+func (api *AdminCNChainAPI) importChain(stream *rlp.Stream) (bool, error) {
 	blocks, index := make([]*types.Block, 0, 2500), 0
 	for batch := 0; ; batch++ {
 		// Load a batch of blocks from the input file
@@ -182,17 +182,17 @@ func (api *PrivateAdminAPI) importChain(stream *rlp.Stream) (bool, error) {
 }
 
 // StartStateMigration starts state migration.
-func (api *PrivateAdminAPI) StartStateMigration() error {
+func (api *AdminCNChainAPI) StartStateMigration() error {
 	return api.cn.blockchain.PrepareStateMigration()
 }
 
 // StopStateMigration stops state migration and removes stateMigrationDB.
-func (api *PrivateAdminAPI) StopStateMigration() error {
+func (api *AdminCNChainAPI) StopStateMigration() error {
 	return api.cn.BlockChain().StopStateMigration()
 }
 
 // StateMigrationStatus returns the status information of state trie migration.
-func (api *PrivateAdminAPI) StateMigrationStatus() map[string]interface{} {
+func (api *AdminCNChainAPI) StateMigrationStatus() map[string]interface{} {
 	isMigration, blkNum, read, committed, pending, progress, err := api.cn.BlockChain().StateMigrationStatus()
 
 	errStr := "null"
@@ -211,11 +211,11 @@ func (api *PrivateAdminAPI) StateMigrationStatus() map[string]interface{} {
 	}
 }
 
-func (api *PrivateAdminAPI) SaveTrieNodeCacheToDisk() error {
+func (api *AdminCNChainAPI) SaveTrieNodeCacheToDisk() error {
 	return api.cn.BlockChain().SaveTrieNodeCacheToDisk()
 }
 
-func (api *PrivateAdminAPI) SpamThrottlerConfig(ctx context.Context) (*blockchain.ThrottlerConfig, error) {
+func (api *AdminCNChainAPI) SpamThrottlerConfig(ctx context.Context) (*blockchain.ThrottlerConfig, error) {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return nil, errors.New("spam throttler is not running")
@@ -223,7 +223,7 @@ func (api *PrivateAdminAPI) SpamThrottlerConfig(ctx context.Context) (*blockchai
 	return throttler.GetConfig(), nil
 }
 
-func (api *PrivateAdminAPI) StopSpamThrottler(ctx context.Context) error {
+func (api *AdminCNChainAPI) StopSpamThrottler(ctx context.Context) error {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return errors.New("spam throttler was already stopped")
@@ -232,7 +232,7 @@ func (api *PrivateAdminAPI) StopSpamThrottler(ctx context.Context) error {
 	return nil
 }
 
-func (api *PrivateAdminAPI) StartSpamThrottler(ctx context.Context, config *blockchain.ThrottlerConfig) error {
+func (api *AdminCNChainAPI) StartSpamThrottler(ctx context.Context, config *blockchain.ThrottlerConfig) error {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler != nil {
 		return errors.New("spam throttler is already running")
@@ -240,7 +240,7 @@ func (api *PrivateAdminAPI) StartSpamThrottler(ctx context.Context, config *bloc
 	return api.cn.txPool.StartSpamThrottler(config)
 }
 
-func (api *PrivateAdminAPI) SetSpamThrottlerWhiteList(ctx context.Context, addrs []common.Address) error {
+func (api *AdminCNChainAPI) SetSpamThrottlerWhiteList(ctx context.Context, addrs []common.Address) error {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return errors.New("spam throttler is not running")
@@ -249,7 +249,7 @@ func (api *PrivateAdminAPI) SetSpamThrottlerWhiteList(ctx context.Context, addrs
 	return nil
 }
 
-func (api *PrivateAdminAPI) GetSpamThrottlerWhiteList(ctx context.Context) ([]common.Address, error) {
+func (api *AdminCNChainAPI) GetSpamThrottlerWhiteList(ctx context.Context) ([]common.Address, error) {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return nil, errors.New("spam throttler is not running")
@@ -257,7 +257,7 @@ func (api *PrivateAdminAPI) GetSpamThrottlerWhiteList(ctx context.Context) ([]co
 	return throttler.GetAllowed(), nil
 }
 
-func (api *PrivateAdminAPI) GetSpamThrottlerThrottleList(ctx context.Context) ([]common.Address, error) {
+func (api *AdminCNChainAPI) GetSpamThrottlerThrottleList(ctx context.Context) ([]common.Address, error) {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return nil, errors.New("spam throttler is not running")
@@ -265,7 +265,7 @@ func (api *PrivateAdminAPI) GetSpamThrottlerThrottleList(ctx context.Context) ([
 	return throttler.GetThrottled(), nil
 }
 
-func (api *PrivateAdminAPI) GetSpamThrottlerCandidateList(ctx context.Context) (map[common.Address]int, error) {
+func (api *AdminCNChainAPI) GetSpamThrottlerCandidateList(ctx context.Context) (map[common.Address]int, error) {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return nil, errors.New("spam throttler is not running")
@@ -273,20 +273,20 @@ func (api *PrivateAdminAPI) GetSpamThrottlerCandidateList(ctx context.Context) (
 	return throttler.GetCandidates(), nil
 }
 
-// PublicDebugAPI is the collection of Kaia full node APIs exposed
+// DebugCNAPI is the collection of Kaia full node APIs exposed
 // over the public debugging endpoint.
-type PublicDebugAPI struct {
+type DebugCNAPI struct {
 	cn *CN
 }
 
-// NewPublicDebugAPI creates a new API definition for the full node-
+// NewDebugCNAPI creates a new API definition for the full node-
 // related public debug methods of the Kaia service.
-func NewPublicDebugAPI(cn *CN) *PublicDebugAPI {
-	return &PublicDebugAPI{cn: cn}
+func NewDebugCNAPI(cn *CN) *DebugCNAPI {
+	return &DebugCNAPI{cn: cn}
 }
 
 // DumpBlock retrieves the entire state of the database at a given block.
-func (api *PublicDebugAPI) DumpBlock(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (state.Dump, error) {
+func (api *DebugCNAPI) DumpBlock(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (state.Dump, error) {
 	if *blockNrOrHash.BlockNumber == rpc.PendingBlockNumber {
 		// If we're dumping the pending state, we need to request
 		// both the pending block as well as the pending state from
@@ -329,7 +329,7 @@ type DumpStateTrieResult struct {
 }
 
 // DumpStateTrie retrieves all state/storage tries of the given state root.
-func (api *PublicDebugAPI) DumpStateTrie(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (DumpStateTrieResult, error) {
+func (api *DebugCNAPI) DumpStateTrie(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (DumpStateTrieResult, error) {
 	block, err := api.cn.APIBackend.BlockByNumberOrHash(ctx, blockNrOrHash)
 	if err != nil {
 		blockNrOrHashString, _ := blockNrOrHash.NumberOrHashString()
@@ -360,56 +360,56 @@ func (api *PublicDebugAPI) DumpStateTrie(ctx context.Context, blockNrOrHash rpc.
 	return result, nil
 }
 
-// TODO-Kaia: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
 // StartWarmUp retrieves all state/storage tries of the latest committed state root and caches the tries.
-func (api *PrivateDebugAPI) StartWarmUp(minLoad uint) error {
+func (api *DebugCNStorageAPI) StartWarmUp(minLoad uint) error {
 	return api.cn.blockchain.StartWarmUp(minLoad)
 }
 
-// TODO-Kaia: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
 // StartContractWarmUp retrieves a storage trie of the latest state root and caches the trie
 // corresponding to the given contract address.
-func (api *PrivateDebugAPI) StartContractWarmUp(contractAddr common.Address, minLoad uint) error {
+func (api *DebugCNStorageAPI) StartContractWarmUp(contractAddr common.Address, minLoad uint) error {
 	return api.cn.blockchain.StartContractWarmUp(contractAddr, minLoad)
 }
 
-// TODO-Kaia: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
 // StopWarmUp stops the warming up process.
-func (api *PrivateDebugAPI) StopWarmUp() error {
+func (api *DebugCNStorageAPI) StopWarmUp() error {
 	return api.cn.blockchain.StopWarmUp()
 }
 
-// TODO-Kaia: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
 // StartCollectingTrieStats  collects state/storage trie statistics and print in the log.
-func (api *PrivateDebugAPI) StartCollectingTrieStats(contractAddr common.Address) error {
+func (api *DebugCNStorageAPI) StartCollectingTrieStats(contractAddr common.Address) error {
 	return api.cn.blockchain.StartCollectingTrieStats(contractAddr)
 }
 
-// PrivateDebugAPI is the collection of CN full node APIs exposed over
+// DebugCNStorageAPI is the collection of CN full node APIs exposed over
 // the private debugging endpoint.
-type PrivateDebugAPI struct {
+type DebugCNStorageAPI struct {
 	config *params.ChainConfig
 	cn     *CN
 }
 
-// NewPrivateDebugAPI creates a new API definition for the full node-related
+// NewDebugCNStorageAPI creates a new API definition for the full node-related
 // private debug methods of the CN service.
-func NewPrivateDebugAPI(config *params.ChainConfig, cn *CN) *PrivateDebugAPI {
-	return &PrivateDebugAPI{config: config, cn: cn}
+func NewDebugCNStorageAPI(config *params.ChainConfig, cn *CN) *DebugCNStorageAPI {
+	return &DebugCNStorageAPI{config: config, cn: cn}
 }
 
 // Preimage is a debug API function that returns the preimage for a sha3 hash, if known.
-func (api *PrivateDebugAPI) Preimage(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
+func (api *DebugCNStorageAPI) Preimage(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
 	if preimage := api.cn.ChainDB().ReadPreimage(hash); preimage != nil {
 		return preimage, nil
 	}
 	return nil, errors.New("unknown preimage")
 }
 
-// TODO-Kaia: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
 // GetBadBLocks returns a list of the last 'bad blocks' that the client has seen on the network
 // and returns them as a JSON list of block-hashes
-func (api *PublicDebugAPI) GetBadBlocks(ctx context.Context) ([]blockchain.BadBlockArgs, error) {
+func (api *DebugCNAPI) GetBadBlocks(ctx context.Context) ([]blockchain.BadBlockArgs, error) {
 	return api.cn.BlockChain().BadBlocks()
 }
 
@@ -427,7 +427,7 @@ type storageEntry struct {
 }
 
 // StorageRangeAt returns the storage at the given block height and transaction index.
-func (api *PrivateDebugAPI) StorageRangeAt(ctx context.Context, blockHash common.Hash, txIndex int, contractAddress common.Address, keyStart hexutil.Bytes, maxResult int) (StorageRangeResult, error) {
+func (api *DebugCNStorageAPI) StorageRangeAt(ctx context.Context, blockHash common.Hash, txIndex int, contractAddress common.Address, keyStart hexutil.Bytes, maxResult int) (StorageRangeResult, error) {
 	// Retrieve the block
 	block := api.cn.blockchain.GetBlockByHash(blockHash)
 	if block == nil {
@@ -469,13 +469,13 @@ func storageRangeAt(st state.Trie, start []byte, maxResult int) (StorageRangeRes
 	return result, nil
 }
 
-// TODO-Kaia: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
 // GetModifiedAccountsByNumber returns all accounts that have changed between the
 // two blocks specified. A change is defined as a difference in nonce, balance,
 // code hash, or storage hash.
 //
 // With one parameter, returns the list of accounts modified in the specified block.
-func (api *PublicDebugAPI) GetModifiedAccountsByNumber(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) ([]common.Address, error) {
+func (api *DebugCNAPI) GetModifiedAccountsByNumber(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) ([]common.Address, error) {
 	startBlock, endBlock, err := api.getStartAndEndBlock(ctx, startNum, endNum)
 	if err != nil {
 		return nil, err
@@ -483,13 +483,13 @@ func (api *PublicDebugAPI) GetModifiedAccountsByNumber(ctx context.Context, star
 	return api.getModifiedAccounts(startBlock, endBlock)
 }
 
-// TODO-Kaia: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
 // GetModifiedAccountsByHash returns all accounts that have changed between the
 // two blocks specified. A change is defined as a difference in nonce, balance,
 // code hash, or storage hash.
 //
 // With one parameter, returns the list of accounts modified in the specified block.
-func (api *PublicDebugAPI) GetModifiedAccountsByHash(startHash common.Hash, endHash *common.Hash) ([]common.Address, error) {
+func (api *DebugCNAPI) GetModifiedAccountsByHash(startHash common.Hash, endHash *common.Hash) ([]common.Address, error) {
 	var startBlock, endBlock *types.Block
 	startBlock = api.cn.blockchain.GetBlockByHash(startHash)
 	if startBlock == nil {
@@ -511,8 +511,8 @@ func (api *PublicDebugAPI) GetModifiedAccountsByHash(startHash common.Hash, endH
 	return api.getModifiedAccounts(startBlock, endBlock)
 }
 
-// TODO-Kaia: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
-func (api *PublicDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Block) ([]common.Address, error) {
+// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
+func (api *DebugCNAPI) getModifiedAccounts(startBlock, endBlock *types.Block) ([]common.Address, error) {
 	trieDB := api.cn.blockchain.StateCache().TrieDB()
 
 	oldTrie, err := statedb.NewSecureTrie(startBlock.Root(), trieDB, nil)
@@ -538,9 +538,9 @@ func (api *PublicDebugAPI) getModifiedAccounts(startBlock, endBlock *types.Block
 	return dirty, nil
 }
 
-// TODO-Kaia: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
 // getStartAndEndBlock returns start and end block based on the given startNum and endNum.
-func (api *PublicDebugAPI) getStartAndEndBlock(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) (*types.Block, *types.Block, error) {
+func (api *DebugCNAPI) getStartAndEndBlock(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) (*types.Block, *types.Block, error) {
 	var startBlock, endBlock *types.Block
 
 	startBlock, err := api.cn.APIBackend.BlockByNumber(ctx, startNum)
@@ -568,12 +568,12 @@ func (api *PublicDebugAPI) getStartAndEndBlock(ctx context.Context, startNum rpc
 	return startBlock, endBlock, nil
 }
 
-// TODO-Kaia: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
 // GetModifiedStorageNodesByNumber returns the number of storage nodes of a contract account
 // that have been changed between the two blocks specified.
 //
 // With the first two parameters, it returns the number of storage trie nodes modified in the specified block.
-func (api *PublicDebugAPI) GetModifiedStorageNodesByNumber(ctx context.Context, contractAddr common.Address, startNum rpc.BlockNumber, endNum *rpc.BlockNumber, printDetail *bool) (int, error) {
+func (api *DebugCNAPI) GetModifiedStorageNodesByNumber(ctx context.Context, contractAddr common.Address, startNum rpc.BlockNumber, endNum *rpc.BlockNumber, printDetail *bool) (int, error) {
 	startBlock, endBlock, err := api.getStartAndEndBlock(ctx, startNum, endNum)
 	if err != nil {
 		return 0, err
@@ -581,8 +581,8 @@ func (api *PublicDebugAPI) GetModifiedStorageNodesByNumber(ctx context.Context, 
 	return api.getModifiedStorageNodes(contractAddr, startBlock, endBlock, printDetail)
 }
 
-// TODO-Kaia: Rearrange PublicDebugAPI and PrivateDebugAPI receivers
-func (api *PublicDebugAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, printDetail *bool) (int, error) {
+// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
+func (api *DebugCNAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, printDetail *bool) (int, error) {
 	startBlockRoot, err := api.cn.blockchain.GetContractStorageRoot(startBlock, api.cn.blockchain.StateCache(), contractAddr)
 	if err != nil {
 		return 0, err
@@ -621,6 +621,6 @@ func (api *PublicDebugAPI) getModifiedStorageNodes(contractAddr common.Address, 
 	return numModifiedNodes, nil
 }
 
-func (s *PrivateAdminAPI) NodeConfig(ctx context.Context) interface{} {
+func (s *AdminCNChainAPI) NodeConfig(ctx context.Context) interface{} {
 	return *s.cn.config
 }

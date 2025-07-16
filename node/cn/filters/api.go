@@ -62,9 +62,9 @@ type filter struct {
 	s        *Subscription // associated subscription in event system
 }
 
-// PublicFilterAPI offers support to create and manage filters. This will allow external clients to retrieve various
+// KaiaFilterAPI offers support to create and manage filters. This will allow external clients to retrieve various
 // information related to the Kaia protocol such als blocks, transactions and logs.
-type PublicFilterAPI struct {
+type KaiaFilterAPI struct {
 	backend   Backend
 	mux       *event.TypeMux
 	quit      chan struct{}
@@ -77,9 +77,9 @@ type PublicFilterAPI struct {
 	timeout time.Duration
 }
 
-// NewPublicFilterAPI returns a new PublicFilterAPI instance.
-func NewPublicFilterAPI(backend Backend) *PublicFilterAPI {
-	api := &PublicFilterAPI{
+// NewKaiaFilterAPI returns a new KaiaFilterAPI instance.
+func NewKaiaFilterAPI(backend Backend) *KaiaFilterAPI {
+	api := &KaiaFilterAPI{
 		backend: backend,
 		mux:     backend.EventMux(),
 		chainDB: backend.ChainDB(),
@@ -94,7 +94,7 @@ func NewPublicFilterAPI(backend Backend) *PublicFilterAPI {
 
 // timeoutLoop runs every 5 minutes and deletes filters that have not been recently used.
 // Tt is started when the api is created.
-func (api *PublicFilterAPI) timeoutLoop() {
+func (api *KaiaFilterAPI) timeoutLoop() {
 	var toUninstall []*Subscription
 	ticker := time.NewTicker(api.timeout)
 	defer ticker.Stop()
@@ -127,7 +127,7 @@ func (api *PublicFilterAPI) timeoutLoop() {
 //
 // It is part of the filter package because this filter can be used through the
 // `kaia_getFilterChanges` polling method that is also used for log filters.
-func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
+func (api *KaiaFilterAPI) NewPendingTransactionFilter() rpc.ID {
 	var (
 		pendingTxs   = make(chan []common.Hash)
 		pendingTxSub = api.events.SubscribePendingTxs(pendingTxs)
@@ -160,7 +160,7 @@ func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
 
 // NewPendingTransactions creates a subscription that is triggered each time a transaction
 // enters the transaction pool and was signed from one of the transactions this nodes manages.
-func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscription, error) {
+func (api *KaiaFilterAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscription, error) {
 	notifier, supported := rpc.NotifierFromContext(ctx)
 	if !supported {
 		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
@@ -195,7 +195,7 @@ func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context) (*rpc.Su
 
 // NewBlockFilter creates a filter that fetches blocks that are imported into the chain.
 // It is part of the filter package since polling goes with eth_getFilterChanges.
-func (api *PublicFilterAPI) NewBlockFilter() rpc.ID {
+func (api *KaiaFilterAPI) NewBlockFilter() rpc.ID {
 	var (
 		headers   = make(chan *types.Header)
 		headerSub = api.events.SubscribeNewHeads(headers)
@@ -263,7 +263,7 @@ func RPCMarshalHeader(head *types.Header, rules params.Rules) map[string]interfa
 }
 
 // NewHeads send a notification each time a new (header) block is appended to the chain.
-func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
+func (api *KaiaFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
 	notifier, supported := rpc.NotifierFromContext(ctx)
 	if !supported {
 		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
@@ -294,7 +294,7 @@ func (api *PublicFilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, er
 }
 
 // Logs creates a subscription that fires for all new log that match the given filter criteria.
-func (api *PublicFilterAPI) Logs(ctx context.Context, crit FilterCriteria) (*rpc.Subscription, error) {
+func (api *KaiaFilterAPI) Logs(ctx context.Context, crit FilterCriteria) (*rpc.Subscription, error) {
 	notifier, supported := rpc.NotifierFromContext(ctx)
 	if !supported {
 		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
@@ -345,7 +345,7 @@ type FilterCriteria kaia.FilterQuery
 // again but with the removed property set to true.
 //
 // In case "fromBlock" > "toBlock" an error is returned.
-func (api *PublicFilterAPI) NewFilter(crit FilterCriteria) (rpc.ID, error) {
+func (api *KaiaFilterAPI) NewFilter(crit FilterCriteria) (rpc.ID, error) {
 	logs := make(chan []*types.Log)
 	logsSub, err := api.events.SubscribeLogs(kaia.FilterQuery(crit), logs)
 	if err != nil {
@@ -378,7 +378,7 @@ func (api *PublicFilterAPI) NewFilter(crit FilterCriteria) (rpc.ID, error) {
 }
 
 // GetLogs returns logs matching the given argument that are stored within the state.
-func (api *PublicFilterAPI) GetLogs(ctx context.Context, crit FilterCriteria) ([]*types.Log, error) {
+func (api *KaiaFilterAPI) GetLogs(ctx context.Context, crit FilterCriteria) ([]*types.Log, error) {
 	ctx = context.WithValue(ctx, getLogsCxtKeyMaxItems, GetLogsMaxItems)
 	ctx, cancelFnc := context.WithTimeout(ctx, GetLogsDeadline)
 	defer cancelFnc()
@@ -410,7 +410,7 @@ func (api *PublicFilterAPI) GetLogs(ctx context.Context, crit FilterCriteria) ([
 }
 
 // UninstallFilter removes the filter with the given filter id.
-func (api *PublicFilterAPI) UninstallFilter(id rpc.ID) bool {
+func (api *KaiaFilterAPI) UninstallFilter(id rpc.ID) bool {
 	api.filtersMu.Lock()
 	f, found := api.filters[id]
 	if found {
@@ -426,7 +426,7 @@ func (api *PublicFilterAPI) UninstallFilter(id rpc.ID) bool {
 
 // GetFilterLogs returns the logs for the filter with the given id.
 // If the filter could not be found an empty array of logs is returned.
-func (api *PublicFilterAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.Log, error) {
+func (api *KaiaFilterAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.Log, error) {
 	ctx = context.WithValue(ctx, getLogsCxtKeyMaxItems, GetLogsMaxItems)
 	ctx, cancelFnc := context.WithTimeout(ctx, GetLogsDeadline)
 	defer cancelFnc()
@@ -462,7 +462,7 @@ func (api *PublicFilterAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*ty
 //
 // For pending transaction and block filters the result is []common.Hash.
 // (pending)Log filters return []Log.
-func (api *PublicFilterAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
+func (api *KaiaFilterAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
 	api.filtersMu.Lock()
 	defer api.filtersMu.Unlock()
 
@@ -489,8 +489,8 @@ func (api *PublicFilterAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
 	return []interface{}{}, fmt.Errorf("filter not found")
 }
 
-// Events return private field events of PublicFilterAPI.
-func (api *PublicFilterAPI) Events() *EventSystem {
+// Events return private field events of KaiaFilterAPI.
+func (api *KaiaFilterAPI) Events() *EventSystem {
 	return api.events
 }
 
