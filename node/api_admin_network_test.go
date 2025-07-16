@@ -24,6 +24,7 @@ package node
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net"
 	"net/http"
@@ -250,7 +251,12 @@ func checkReachable(rawurl string) bool {
 
 // checkBodyOK checks whether the given HTTP URL responds with 200 OK and body "OK".
 func checkBodyOK(url string) bool {
-	resp, err := http.Get(url)
+	ctx := context.Background()
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return false
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return false
 	}

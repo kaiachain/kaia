@@ -24,6 +24,7 @@ package node
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -191,7 +192,7 @@ func (api *AdminNodeNetworkAPI) StopHTTP() (bool, error) {
 	defer api.node.lock.Unlock()
 
 	if api.node.httpHandler == nil {
-		return false, fmt.Errorf("HTTP RPC not running")
+		return false, errors.New("HTTP RPC not running")
 	}
 	api.node.stopHTTP()
 	return true, nil
@@ -255,7 +256,7 @@ func (api *AdminNodeNetworkAPI) StopWS() (bool, error) {
 	defer api.node.lock.Unlock()
 
 	if api.node.wsHandler == nil {
-		return false, fmt.Errorf("WebSocket RPC not running")
+		return false, errors.New("WebSocket RPC not running")
 	}
 	api.node.stopWS()
 	return true, nil

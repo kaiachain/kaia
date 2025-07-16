@@ -24,6 +24,7 @@ package cn
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -55,7 +56,7 @@ func (api *DebugCNAPI) DumpBlock(ctx context.Context, blockNrOrHash rpc.BlockNum
 		// the miner and operate on those
 		_, _, stateDb := api.cn.miner.Pending()
 		if stateDb == nil {
-			return state.Dump{}, fmt.Errorf("pending block is not prepared yet")
+			return state.Dump{}, errors.New("pending block is not prepared yet")
 		}
 		return stateDb.RawDump(), nil
 	}
