@@ -176,23 +176,3 @@ func (api *KaiaDownloaderAPI) SubscribeSyncStatus(status chan interface{}) *Sync
 	api.installSyncSubscription <- status
 	return &SyncStatusSubscription{api: api, c: status}
 }
-
-// KaiaDownloaderSyncAPI provides an API which gives syncing staking information.
-type KaiaDownloaderSyncAPI struct {
-	d downloader
-}
-
-func NewKaiaDownloaderSyncAPI(d downloader) *KaiaDownloaderSyncAPI {
-	api := &KaiaDownloaderSyncAPI{
-		d: d,
-	}
-	return api
-}
-
-func (api *KaiaDownloaderSyncAPI) SyncStakingInfo(id string, from, to uint64) error {
-	return api.d.SyncStakingInfo(id, from, to)
-}
-
-func (api *KaiaDownloaderSyncAPI) SyncStakingInfoStatus() *SyncingStatus {
-	return api.d.SyncStakingInfoStatus()
-}
