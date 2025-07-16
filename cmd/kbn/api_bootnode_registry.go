@@ -22,18 +22,6 @@ import (
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 )
 
-type BootnodeAPI struct {
-	bn *BN
-}
-
-func NewBootnodeAPI(b *BN) *BootnodeAPI {
-	return &BootnodeAPI{bn: b}
-}
-
-func (api *BootnodeAPI) GetAuthorizedNodes() []*discover.Node {
-	return api.bn.GetAuthorizedNodes()
-}
-
 type BootnodeRegistryAPI struct {
 	bn *BN
 }
