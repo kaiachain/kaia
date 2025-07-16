@@ -63,7 +63,7 @@ var (
 
 // EthAPI provides an API to access the Kaia through the `eth` namespace.
 type EthAPI struct {
-	publicFilterAPI    *filters.PublicFilterAPI
+	kaiaFilterAPI      *filters.KaiaFilterAPI
 	kaiaAPI            *KaiaAPI
 	kaiaBlockChainAPI  *KaiaBlockChainAPI
 	kaiaTransactionAPI *KaiaTransactionAPI
@@ -76,7 +76,7 @@ type EthAPI struct {
 // Therefore, it is necessary to use APIs defined in two different packages(cn and api),
 // so those apis will be defined through a setter.
 func NewEthAPI(
-	publicFilterAPI *filters.PublicFilterAPI,
+	kaiaFilterAPI *filters.KaiaFilterAPI,
 	kaiaAPI *KaiaAPI,
 	kaiaBlockChainAPI *KaiaBlockChainAPI,
 	kaiaTransactionAPI *KaiaTransactionAPI,
@@ -84,7 +84,7 @@ func NewEthAPI(
 	nodeAddress common.Address,
 ) *EthAPI {
 	return &EthAPI{
-		publicFilterAPI,
+		kaiaFilterAPI,
 		kaiaAPI,
 		kaiaBlockChainAPI,
 		kaiaTransactionAPI,
@@ -171,13 +171,13 @@ func (api *EthAPI) GetHashrate() uint64 {
 //
 // https://eth.wiki/json-rpc/API#eth_newpendingtransactionfilter
 func (api *EthAPI) NewPendingTransactionFilter() rpc.ID {
-	return api.publicFilterAPI.NewPendingTransactionFilter()
+	return api.kaiaFilterAPI.NewPendingTransactionFilter()
 }
 
 // NewPendingTransactions creates a subscription that is triggered each time a transaction
 // enters the transaction pool and was signed from one of the transactions this nodes manages.
 func (api *EthAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscription, error) {
-	return api.publicFilterAPI.NewPendingTransactions(ctx)
+	return api.kaiaFilterAPI.NewPendingTransactions(ctx)
 }
 
 // NewBlockFilter creates a filter that fetches blocks that are imported into the chain.
@@ -185,7 +185,7 @@ func (api *EthAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscriptio
 //
 // https://eth.wiki/json-rpc/API#eth_newblockfilter
 func (api *EthAPI) NewBlockFilter() rpc.ID {
-	return api.publicFilterAPI.NewBlockFilter()
+	return api.kaiaFilterAPI.NewBlockFilter()
 }
 
 // NewHeads send a notification each time a new (header) block is appended to the chain.
@@ -198,7 +198,7 @@ func (api *EthAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
 	rpcSub := notifier.CreateSubscription()
 	go func() {
 		headers := make(chan *types.Header)
-		headersSub := api.publicFilterAPI.Events().SubscribeNewHeads(headers)
+		headersSub := api.kaiaFilterAPI.Events().SubscribeNewHeads(headers)
 
 		for {
 			select {
@@ -225,7 +225,7 @@ func (api *EthAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
 
 // Logs creates a subscription that fires for all new log that match the given filter criteria.
 func (api *EthAPI) Logs(ctx context.Context, crit filters.FilterCriteria) (*rpc.Subscription, error) {
-	return api.publicFilterAPI.Logs(ctx, crit)
+	return api.kaiaFilterAPI.Logs(ctx, crit)
 }
 
 // NewFilter creates a new filter and returns the filter id. It can be
@@ -242,21 +242,21 @@ func (api *EthAPI) Logs(ctx context.Context, crit filters.FilterCriteria) (*rpc.
 //
 // https://eth.wiki/json-rpc/API#eth_newfilter
 func (api *EthAPI) NewFilter(crit filters.FilterCriteria) (rpc.ID, error) {
-	return api.publicFilterAPI.NewFilter(crit)
+	return api.kaiaFilterAPI.NewFilter(crit)
 }
 
 // GetLogs returns logs matching the given argument that are stored within the state.
 //
 // https://eth.wiki/json-rpc/API#eth_getlogs
 func (api *EthAPI) GetLogs(ctx context.Context, crit filters.FilterCriteria) ([]*types.Log, error) {
-	return api.publicFilterAPI.GetLogs(ctx, crit)
+	return api.kaiaFilterAPI.GetLogs(ctx, crit)
 }
 
 // UninstallFilter removes the filter with the given filter id.
 //
 // https://eth.wiki/json-rpc/API#eth_uninstallfilter
 func (api *EthAPI) UninstallFilter(id rpc.ID) bool {
-	return api.publicFilterAPI.UninstallFilter(id)
+	return api.kaiaFilterAPI.UninstallFilter(id)
 }
 
 // GetFilterLogs returns the logs for the filter with the given id.
@@ -264,7 +264,7 @@ func (api *EthAPI) UninstallFilter(id rpc.ID) bool {
 //
 // https://eth.wiki/json-rpc/API#eth_getfilterlogs
 func (api *EthAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.Log, error) {
-	return api.publicFilterAPI.GetFilterLogs(ctx, id)
+	return api.kaiaFilterAPI.GetFilterLogs(ctx, id)
 }
 
 // GetFilterChanges returns the logs for the filter with the given id since
@@ -275,7 +275,7 @@ func (api *EthAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.Log, 
 //
 // https://eth.wiki/json-rpc/API#eth_getfilterchanges
 func (api *EthAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
-	return api.publicFilterAPI.GetFilterChanges(id)
+	return api.kaiaFilterAPI.GetFilterChanges(id)
 }
 
 // GasPrice returns a suggestion for a gas price.

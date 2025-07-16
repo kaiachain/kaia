@@ -39,7 +39,7 @@ import (
 type test struct {
 	name string
 	cfg  Config
-	fn   func(*testing.T, *Node, *PrivateAdminAPI)
+	fn   func(*testing.T, *Node, *AdminNodeNetworkAPI)
 
 	// Checks. These run after the node is configured and all API calls have been made.
 	wantReachable bool // whether the HTTP server should be reachable at all
@@ -52,7 +52,7 @@ func TestStartRPC(t *testing.T) {
 		{
 			name: "all off",
 			cfg:  Config{},
-			fn: func(t *testing.T, n *Node, api *PrivateAdminAPI) {
+			fn: func(t *testing.T, n *Node, api *AdminNodeNetworkAPI) {
 			},
 			wantReachable: false,
 			wantRPC:       false,
@@ -61,7 +61,7 @@ func TestStartRPC(t *testing.T) {
 		{
 			name: "rpc enabled through config",
 			cfg:  Config{HTTPHost: "127.0.0.1"},
-			fn: func(t *testing.T, n *Node, api *PrivateAdminAPI) {
+			fn: func(t *testing.T, n *Node, api *AdminNodeNetworkAPI) {
 			},
 			wantReachable: true,
 			wantRPC:       true,
@@ -70,7 +70,7 @@ func TestStartRPC(t *testing.T) {
 		{
 			name: "rpc enabled through API",
 			cfg:  Config{},
-			fn: func(t *testing.T, n *Node, api *PrivateAdminAPI) {
+			fn: func(t *testing.T, n *Node, api *AdminNodeNetworkAPI) {
 				_, err := api.StartHTTP(sp("127.0.0.1"), ip(0), nil, nil, nil)
 				assert.NoError(t, err)
 			},
@@ -81,7 +81,7 @@ func TestStartRPC(t *testing.T) {
 		{
 			name: "rpc start again after failure",
 			cfg:  Config{},
-			fn: func(t *testing.T, n *Node, api *PrivateAdminAPI) {
+			fn: func(t *testing.T, n *Node, api *AdminNodeNetworkAPI) {
 				// Listen on a random port.
 				listener, err := net.Listen("tcp", "127.0.0.1:0")
 				if err != nil {
@@ -108,7 +108,7 @@ func TestStartRPC(t *testing.T) {
 		{
 			name: "rpc stopped through API",
 			cfg:  Config{HTTPHost: "127.0.0.1"},
-			fn: func(t *testing.T, n *Node, api *PrivateAdminAPI) {
+			fn: func(t *testing.T, n *Node, api *AdminNodeNetworkAPI) {
 				_, err := api.StopHTTP()
 				assert.NoError(t, err)
 			},
@@ -126,7 +126,7 @@ func TestStartRPC(t *testing.T) {
 		{
 			name: "ws enabled through API",
 			cfg:  Config{},
-			fn: func(t *testing.T, n *Node, api *PrivateAdminAPI) {
+			fn: func(t *testing.T, n *Node, api *AdminNodeNetworkAPI) {
 				_, err := api.StartWS(sp("127.0.0.1"), ip(0), nil, nil)
 				assert.NoError(t, err)
 			},
@@ -137,7 +137,7 @@ func TestStartRPC(t *testing.T) {
 		{
 			name: "ws stopped through API",
 			cfg:  Config{WSHost: "127.0.0.1"},
-			fn: func(t *testing.T, n *Node, api *PrivateAdminAPI) {
+			fn: func(t *testing.T, n *Node, api *AdminNodeNetworkAPI) {
 				_, err := api.StopWS()
 				assert.NoError(t, err)
 			},
@@ -148,7 +148,7 @@ func TestStartRPC(t *testing.T) {
 		{
 			name: "ws enabled after RPC",
 			cfg:  Config{HTTPHost: "127.0.0.1"},
-			fn: func(t *testing.T, n *Node, api *PrivateAdminAPI) {
+			fn: func(t *testing.T, n *Node, api *AdminNodeNetworkAPI) {
 				_, err := api.StartWS(sp("127.0.0.1"), ip(0), nil, nil)
 				assert.NoError(t, err)
 			},
@@ -159,7 +159,7 @@ func TestStartRPC(t *testing.T) {
 		{
 			name: "ws enabled after RPC then stopped",
 			cfg:  Config{HTTPHost: "127.0.0.1"},
-			fn: func(t *testing.T, n *Node, api *PrivateAdminAPI) {
+			fn: func(t *testing.T, n *Node, api *AdminNodeNetworkAPI) {
 				_, err := api.StartWS(sp("127.0.0.1"), ip(0), nil, nil)
 				assert.NoError(t, err)
 
@@ -206,7 +206,7 @@ func runTestWithServerType(t *testing.T, test test, httpServerType string) {
 
 	// Run the API call hook.
 	if test.fn != nil {
-		test.fn(t, stack, &PrivateAdminAPI{stack})
+		test.fn(t, stack, &AdminNodeNetworkAPI{stack})
 	}
 
 	httpBaseURL := "http://" + stack.httpEndpoint

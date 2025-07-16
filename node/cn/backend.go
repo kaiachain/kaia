@@ -697,12 +697,12 @@ func (s *CN) APIs() []rpc.API {
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
-	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend)
-	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
-	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
+	kaiaFilterAPI := filters.NewKaiaFilterAPI(s.APIBackend)
+	kaiaDownloaderAPI := downloader.NewKaiaDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
+	kaiaDownloaderSyncAPI := downloader.NewKaiaDownloaderSyncAPI(s.protocolManager.Downloader())
 
 	ethAPI := api.NewEthAPI(
-		publicFilterAPI,
+		kaiaFilterAPI,
 		kaiaAPI,
 		kaiaBlockChainAPI,
 		kaiaTransactionAPI,
@@ -715,35 +715,35 @@ func (s *CN) APIs() []rpc.API {
 		{
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   NewPublicKaiaAPI(s),
+			Service:   NewKaiaCNAPI(s),
 			Public:    true,
 		}, {
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   publicDownloaderAPI,
+			Service:   kaiaDownloaderAPI,
 			Public:    true,
 		}, {
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   publicFilterAPI,
+			Service:   kaiaFilterAPI,
 			Public:    true,
 		}, {
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   publicDownloaderAPI,
+			Service:   kaiaDownloaderAPI,
 			Public:    true,
 		}, {
 			Namespace: "admin",
 			Version:   "1.0",
-			Service:   privateDownloaderAPI,
+			Service:   kaiaDownloaderSyncAPI,
 		}, {
 			Namespace: "admin",
 			Version:   "1.0",
-			Service:   NewPrivateAdminAPI(s),
+			Service:   NewAdminCNChainAPI(s),
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   NewPublicDebugAPI(s),
+			Service:   NewDebugCNAPI(s),
 			Public:    false,
 		}, {
 			Namespace: "debug",
@@ -769,7 +769,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(s.chainConfig, s),
+			Service:   NewDebugCNStorageAPI(s.chainConfig, s),
 			Public:    false,
 			IPCOnly:   s.config.DisableUnsafeDebug,
 		},
