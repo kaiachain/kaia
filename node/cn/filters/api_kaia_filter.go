@@ -63,7 +63,7 @@ type filter struct {
 }
 
 // KaiaFilterAPI offers support to create and manage filters. This will allow external clients to retrieve various
-// information related to the Kaia protocol such als blocks, transactions and logs.
+// information related to the Kaia protocol such as blocks, transactions and logs.
 type KaiaFilterAPI struct {
 	backend   Backend
 	mux       *event.TypeMux
