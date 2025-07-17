@@ -157,7 +157,7 @@ func (api *AdminNetworkNodeAPI) StartHTTP(host *string, port *int, cors *string,
 	allowedVHosts := api.node.config.HTTPVirtualHosts
 	if vhosts != nil {
 		allowedVHosts = nil
-		for _, vhost := range strings.Split(*host, ",") {
+		for _, vhost := range strings.Split(*vhosts, ",") {
 			allowedVHosts = append(allowedVHosts, strings.TrimSpace(vhost))
 		}
 	}
