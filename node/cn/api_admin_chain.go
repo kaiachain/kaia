@@ -40,21 +40,21 @@ import (
 	"github.com/kaiachain/kaia/work"
 )
 
-// AdminCNChainAPI is the collection of CN full node-related APIs
+// AdminChainCNAPI is the collection of CN full node-related APIs
 // exposed over the private admin endpoint.
-type AdminCNChainAPI struct {
+type AdminChainCNAPI struct {
 	cn *CN
 }
 
-// NewAdminCNChainAPI creates a new API definition for the full node private
+// NewAdminChainCNAPI creates a new API definition for the full node private
 // admin methods of the CN service.
-func NewAdminCNChainAPI(cn *CN) *AdminCNChainAPI {
-	return &AdminCNChainAPI{cn: cn}
+func NewAdminChainCNAPI(cn *CN) *AdminChainCNAPI {
+	return &AdminChainCNAPI{cn: cn}
 }
 
 // ExportChain exports the current blockchain into a local file,
 // or a range of blocks if first and last are non-nil.
-func (api *AdminCNChainAPI) ExportChain(file string, first, last *rpc.BlockNumber) (bool, error) {
+func (api *AdminChainCNAPI) ExportChain(file string, first, last *rpc.BlockNumber) (bool, error) {
 	if _, err := os.Stat(file); err == nil {
 		// File already exists. Allowing overwrite could be a DoS vecotor,
 		// since the 'file' may point to arbitrary paths on the drive
@@ -103,7 +103,7 @@ func hasAllBlocks(chain work.BlockChain, bs []*types.Block) bool {
 }
 
 // ImportChain imports a blockchain from a local file.
-func (api *AdminCNChainAPI) ImportChain(file string) (bool, error) {
+func (api *AdminChainCNAPI) ImportChain(file string) (bool, error) {
 	// Make sure the can access the file to import
 	in, err := os.Open(file)
 	if err != nil {
@@ -122,14 +122,14 @@ func (api *AdminCNChainAPI) ImportChain(file string) (bool, error) {
 	return api.importChain(stream)
 }
 
-func (api *AdminCNChainAPI) ImportChainFromString(blockRlp string) (bool, error) {
+func (api *AdminChainCNAPI) ImportChainFromString(blockRlp string) (bool, error) {
 	// Run actual the import in pre-configured batches
 	stream := rlp.NewStream(bytes.NewReader(common.FromHex(blockRlp)), 0)
 
 	return api.importChain(stream)
 }
 
-func (api *AdminCNChainAPI) importChain(stream *rlp.Stream) (bool, error) {
+func (api *AdminChainCNAPI) importChain(stream *rlp.Stream) (bool, error) {
 	blocks, index := make([]*types.Block, 0, 2500), 0
 	for batch := 0; ; batch++ {
 		// Load a batch of blocks from the input file
@@ -161,17 +161,17 @@ func (api *AdminCNChainAPI) importChain(stream *rlp.Stream) (bool, error) {
 }
 
 // StartStateMigration starts state migration.
-func (api *AdminCNChainAPI) StartStateMigration() error {
+func (api *AdminChainCNAPI) StartStateMigration() error {
 	return api.cn.blockchain.PrepareStateMigration()
 }
 
 // StopStateMigration stops state migration and removes stateMigrationDB.
-func (api *AdminCNChainAPI) StopStateMigration() error {
+func (api *AdminChainCNAPI) StopStateMigration() error {
 	return api.cn.BlockChain().StopStateMigration()
 }
 
 // StateMigrationStatus returns the status information of state trie migration.
-func (api *AdminCNChainAPI) StateMigrationStatus() map[string]interface{} {
+func (api *AdminChainCNAPI) StateMigrationStatus() map[string]interface{} {
 	isMigration, blkNum, read, committed, pending, progress, err := api.cn.BlockChain().StateMigrationStatus()
 
 	errStr := "null"
@@ -190,11 +190,11 @@ func (api *AdminCNChainAPI) StateMigrationStatus() map[string]interface{} {
 	}
 }
 
-func (api *AdminCNChainAPI) SaveTrieNodeCacheToDisk() error {
+func (api *AdminChainCNAPI) SaveTrieNodeCacheToDisk() error {
 	return api.cn.BlockChain().SaveTrieNodeCacheToDisk()
 }
 
-func (api *AdminCNChainAPI) SpamThrottlerConfig(ctx context.Context) (*blockchain.ThrottlerConfig, error) {
+func (api *AdminChainCNAPI) SpamThrottlerConfig(ctx context.Context) (*blockchain.ThrottlerConfig, error) {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return nil, errors.New("spam throttler is not running")
@@ -202,7 +202,7 @@ func (api *AdminCNChainAPI) SpamThrottlerConfig(ctx context.Context) (*blockchai
 	return throttler.GetConfig(), nil
 }
 
-func (api *AdminCNChainAPI) StopSpamThrottler(ctx context.Context) error {
+func (api *AdminChainCNAPI) StopSpamThrottler(ctx context.Context) error {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return errors.New("spam throttler was already stopped")
@@ -211,7 +211,7 @@ func (api *AdminCNChainAPI) StopSpamThrottler(ctx context.Context) error {
 	return nil
 }
 
-func (api *AdminCNChainAPI) StartSpamThrottler(ctx context.Context, config *blockchain.ThrottlerConfig) error {
+func (api *AdminChainCNAPI) StartSpamThrottler(ctx context.Context, config *blockchain.ThrottlerConfig) error {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler != nil {
 		return errors.New("spam throttler is already running")
@@ -219,7 +219,7 @@ func (api *AdminCNChainAPI) StartSpamThrottler(ctx context.Context, config *bloc
 	return api.cn.txPool.StartSpamThrottler(config)
 }
 
-func (api *AdminCNChainAPI) SetSpamThrottlerWhiteList(ctx context.Context, addrs []common.Address) error {
+func (api *AdminChainCNAPI) SetSpamThrottlerWhiteList(ctx context.Context, addrs []common.Address) error {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return errors.New("spam throttler is not running")
@@ -228,7 +228,7 @@ func (api *AdminCNChainAPI) SetSpamThrottlerWhiteList(ctx context.Context, addrs
 	return nil
 }
 
-func (api *AdminCNChainAPI) GetSpamThrottlerWhiteList(ctx context.Context) ([]common.Address, error) {
+func (api *AdminChainCNAPI) GetSpamThrottlerWhiteList(ctx context.Context) ([]common.Address, error) {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return nil, errors.New("spam throttler is not running")
@@ -236,7 +236,7 @@ func (api *AdminCNChainAPI) GetSpamThrottlerWhiteList(ctx context.Context) ([]co
 	return throttler.GetAllowed(), nil
 }
 
-func (api *AdminCNChainAPI) GetSpamThrottlerThrottleList(ctx context.Context) ([]common.Address, error) {
+func (api *AdminChainCNAPI) GetSpamThrottlerThrottleList(ctx context.Context) ([]common.Address, error) {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return nil, errors.New("spam throttler is not running")
@@ -244,7 +244,7 @@ func (api *AdminCNChainAPI) GetSpamThrottlerThrottleList(ctx context.Context) ([
 	return throttler.GetThrottled(), nil
 }
 
-func (api *AdminCNChainAPI) GetSpamThrottlerCandidateList(ctx context.Context) (map[common.Address]int, error) {
+func (api *AdminChainCNAPI) GetSpamThrottlerCandidateList(ctx context.Context) (map[common.Address]int, error) {
 	throttler := blockchain.GetSpamThrottler()
 	if throttler == nil {
 		return nil, errors.New("spam throttler is not running")
@@ -252,6 +252,6 @@ func (api *AdminCNChainAPI) GetSpamThrottlerCandidateList(ctx context.Context) (
 	return throttler.GetCandidates(), nil
 }
 
-func (s *AdminCNChainAPI) NodeConfig(ctx context.Context) interface{} {
+func (s *AdminChainCNAPI) NodeConfig(ctx context.Context) interface{} {
 	return *s.cn.config
 }

@@ -739,7 +739,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "admin",
 			Version:   "1.0",
-			Service:   NewAdminCNChainAPI(s),
+			Service:   NewAdminChainCNAPI(s),
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
@@ -769,7 +769,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   NewDebugCNStorageAPI(s.chainConfig, s),
+			Service:   NewDebugStorageCNAPI(s.chainConfig, s),
 			Public:    false,
 			IPCOnly:   s.config.DisableUnsafeDebug,
 		},

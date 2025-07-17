@@ -33,16 +33,16 @@ import (
 	"github.com/kaiachain/kaia/networks/rpc"
 )
 
-// AdminNodeNetworkAPI is the collection of administrative API methods exposed only
+// AdminNetworkNodeAPI is the collection of administrative API methods exposed only
 // over a secure RPC channel.
-type AdminNodeNetworkAPI struct {
+type AdminNetworkNodeAPI struct {
 	node *Node // Node interfaced by this API
 }
 
-// NewAdminNodeNetworkAPI creates a new API definition for the private admin methods
+// NewAdminNetworkNodeAPI creates a new API definition for the private admin methods
 // of the node itself.
-func NewAdminNodeNetworkAPI(node *Node) *AdminNodeNetworkAPI {
-	return &AdminNodeNetworkAPI{node: node}
+func NewAdminNetworkNodeAPI(node *Node) *AdminNetworkNodeAPI {
+	return &AdminNetworkNodeAPI{node: node}
 }
 
 // addPeerInternal does common part for AddPeer.
@@ -58,7 +58,7 @@ func addPeerInternal(server p2p.Server, url string, onParentChain bool) (*discov
 
 // AddPeer requests connecting to a remote node, and also maintaining the new
 // connection at all times, even reconnecting if it is lost.
-func (api *AdminNodeNetworkAPI) AddPeer(url string) (bool, error) {
+func (api *AdminNetworkNodeAPI) AddPeer(url string) (bool, error) {
 	// Make sure the server is running, fail otherwise
 	server := api.node.Server()
 	if server == nil {
@@ -73,7 +73,7 @@ func (api *AdminNodeNetworkAPI) AddPeer(url string) (bool, error) {
 }
 
 // RemovePeer disconnects from a remote node if the connection exists
-func (api *AdminNodeNetworkAPI) RemovePeer(url string) (bool, error) {
+func (api *AdminNetworkNodeAPI) RemovePeer(url string) (bool, error) {
 	// Make sure the server is running, fail otherwise
 	server := api.node.Server()
 	if server == nil {
@@ -90,7 +90,7 @@ func (api *AdminNodeNetworkAPI) RemovePeer(url string) (bool, error) {
 
 // PeerEvents creates an RPC subscription which receives peer events from the
 // node's p2p.Server
-func (api *AdminNodeNetworkAPI) PeerEvents(ctx context.Context) (*rpc.Subscription, error) {
+func (api *AdminNetworkNodeAPI) PeerEvents(ctx context.Context) (*rpc.Subscription, error) {
 	// Make sure the server is running, fail otherwise
 	server := api.node.Server()
 	if server == nil {
@@ -127,7 +127,7 @@ func (api *AdminNodeNetworkAPI) PeerEvents(ctx context.Context) (*rpc.Subscripti
 }
 
 // StartHTTP starts the HTTP RPC API server.
-func (api *AdminNodeNetworkAPI) StartHTTP(host *string, port *int, cors *string, apis *string, vhosts *string) (bool, error) {
+func (api *AdminNetworkNodeAPI) StartHTTP(host *string, port *int, cors *string, apis *string, vhosts *string) (bool, error) {
 	api.node.lock.Lock()
 	defer api.node.lock.Unlock()
 
@@ -181,13 +181,13 @@ func (api *AdminNodeNetworkAPI) StartHTTP(host *string, port *int, cors *string,
 
 // StartRPC starts the HTTP RPC API server.
 // This method is deprecated. Use StartHTTP instead.
-func (api *AdminNodeNetworkAPI) StartRPC(host *string, port *int, cors *string, apis *string, vhosts *string) (bool, error) {
+func (api *AdminNetworkNodeAPI) StartRPC(host *string, port *int, cors *string, apis *string, vhosts *string) (bool, error) {
 	logger.Warn("Deprecation warning", "method", "admin.StartRPC", "use-instead", "admin.StartHTTP")
 	return api.StartHTTP(host, port, cors, apis, vhosts)
 }
 
 // StopHTTP terminates an already running HTTP RPC API endpoint.
-func (api *AdminNodeNetworkAPI) StopHTTP() (bool, error) {
+func (api *AdminNetworkNodeAPI) StopHTTP() (bool, error) {
 	api.node.lock.Lock()
 	defer api.node.lock.Unlock()
 
@@ -200,13 +200,13 @@ func (api *AdminNodeNetworkAPI) StopHTTP() (bool, error) {
 
 // StopRPC terminates an already running HTTP RPC API endpoint.
 // This method is deprecated. Use StopHTTP instead.
-func (api *AdminNodeNetworkAPI) StopRPC() (bool, error) {
+func (api *AdminNetworkNodeAPI) StopRPC() (bool, error) {
 	logger.Warn("Deprecation warning", "method", "admin.StopRPC", "use-instead", "admin.StopHTTP")
 	return api.StopHTTP()
 }
 
 // StartWS starts the websocket RPC API server.
-func (api *AdminNodeNetworkAPI) StartWS(host *string, port *int, allowedOrigins *string, apis *string) (bool, error) {
+func (api *AdminNetworkNodeAPI) StartWS(host *string, port *int, allowedOrigins *string, apis *string) (bool, error) {
 	api.node.lock.Lock()
 	defer api.node.lock.Unlock()
 
@@ -251,7 +251,7 @@ func (api *AdminNodeNetworkAPI) StartWS(host *string, port *int, allowedOrigins 
 }
 
 // StopRPC terminates an already running websocket RPC API endpoint.
-func (api *AdminNodeNetworkAPI) StopWS() (bool, error) {
+func (api *AdminNetworkNodeAPI) StopWS() (bool, error) {
 	api.node.lock.Lock()
 	defer api.node.lock.Unlock()
 
@@ -262,7 +262,7 @@ func (api *AdminNodeNetworkAPI) StopWS() (bool, error) {
 	return true, nil
 }
 
-func (api *AdminNodeNetworkAPI) SetMaxSubscriptionPerWSConn(num int32) {
+func (api *AdminNetworkNodeAPI) SetMaxSubscriptionPerWSConn(num int32) {
 	logger.Info("Change the max subscription number for a websocket connection",
 		"old", rpc.MaxSubscriptionPerWSConn, "new", num)
 	rpc.MaxSubscriptionPerWSConn = num

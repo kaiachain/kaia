@@ -123,14 +123,14 @@ func (api *DebugCNAPI) DumpStateTrie(ctx context.Context, blockNrOrHash rpc.Bloc
 	return result, nil
 }
 
-// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugStorageCNAPI receivers
 // GetBadBLocks returns a list of the last 'bad blocks' that the client has seen on the network
 // and returns them as a JSON list of block-hashes
 func (api *DebugCNAPI) GetBadBlocks(ctx context.Context) ([]blockchain.BadBlockArgs, error) {
 	return api.cn.BlockChain().BadBlocks()
 }
 
-// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugStorageCNAPI receivers
 // GetModifiedAccountsByNumber returns all accounts that have changed between the
 // two blocks specified. A change is defined as a difference in nonce, balance,
 // code hash, or storage hash.
@@ -144,7 +144,7 @@ func (api *DebugCNAPI) GetModifiedAccountsByNumber(ctx context.Context, startNum
 	return api.getModifiedAccounts(startBlock, endBlock)
 }
 
-// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugStorageCNAPI receivers
 // GetModifiedAccountsByHash returns all accounts that have changed between the
 // two blocks specified. A change is defined as a difference in nonce, balance,
 // code hash, or storage hash.
@@ -172,7 +172,7 @@ func (api *DebugCNAPI) GetModifiedAccountsByHash(startHash common.Hash, endHash 
 	return api.getModifiedAccounts(startBlock, endBlock)
 }
 
-// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugStorageCNAPI receivers
 func (api *DebugCNAPI) getModifiedAccounts(startBlock, endBlock *types.Block) ([]common.Address, error) {
 	trieDB := api.cn.blockchain.StateCache().TrieDB()
 
@@ -199,7 +199,7 @@ func (api *DebugCNAPI) getModifiedAccounts(startBlock, endBlock *types.Block) ([
 	return dirty, nil
 }
 
-// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugStorageCNAPI receivers
 // getStartAndEndBlock returns start and end block based on the given startNum and endNum.
 func (api *DebugCNAPI) getStartAndEndBlock(ctx context.Context, startNum rpc.BlockNumber, endNum *rpc.BlockNumber) (*types.Block, *types.Block, error) {
 	var startBlock, endBlock *types.Block
@@ -229,7 +229,7 @@ func (api *DebugCNAPI) getStartAndEndBlock(ctx context.Context, startNum rpc.Blo
 	return startBlock, endBlock, nil
 }
 
-// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugStorageCNAPI receivers
 // GetModifiedStorageNodesByNumber returns the number of storage nodes of a contract account
 // that have been changed between the two blocks specified.
 //
@@ -242,7 +242,7 @@ func (api *DebugCNAPI) GetModifiedStorageNodesByNumber(ctx context.Context, cont
 	return api.getModifiedStorageNodes(contractAddr, startBlock, endBlock, printDetail)
 }
 
-// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugStorageCNAPI receivers
 func (api *DebugCNAPI) getModifiedStorageNodes(contractAddr common.Address, startBlock, endBlock *types.Block, printDetail *bool) (int, error) {
 	startBlockRoot, err := api.cn.blockchain.GetContractStorageRoot(startBlock, api.cn.blockchain.StateCache(), contractAddr)
 	if err != nil {

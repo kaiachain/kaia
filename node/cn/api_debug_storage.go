@@ -35,46 +35,46 @@ import (
 	"github.com/kaiachain/kaia/storage/statedb"
 )
 
-// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugStorageCNAPI receivers
 // StartWarmUp retrieves all state/storage tries of the latest committed state root and caches the tries.
-func (api *DebugCNStorageAPI) StartWarmUp(minLoad uint) error {
+func (api *DebugStorageCNAPI) StartWarmUp(minLoad uint) error {
 	return api.cn.blockchain.StartWarmUp(minLoad)
 }
 
-// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugStorageCNAPI receivers
 // StartContractWarmUp retrieves a storage trie of the latest state root and caches the trie
 // corresponding to the given contract address.
-func (api *DebugCNStorageAPI) StartContractWarmUp(contractAddr common.Address, minLoad uint) error {
+func (api *DebugStorageCNAPI) StartContractWarmUp(contractAddr common.Address, minLoad uint) error {
 	return api.cn.blockchain.StartContractWarmUp(contractAddr, minLoad)
 }
 
-// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugStorageCNAPI receivers
 // StopWarmUp stops the warming up process.
-func (api *DebugCNStorageAPI) StopWarmUp() error {
+func (api *DebugStorageCNAPI) StopWarmUp() error {
 	return api.cn.blockchain.StopWarmUp()
 }
 
-// TODO-Kaia: Rearrange DebugCNAPI and DebugCNStorageAPI receivers
+// TODO-Kaia: Rearrange DebugCNAPI and DebugStorageCNAPI receivers
 // StartCollectingTrieStats  collects state/storage trie statistics and print in the log.
-func (api *DebugCNStorageAPI) StartCollectingTrieStats(contractAddr common.Address) error {
+func (api *DebugStorageCNAPI) StartCollectingTrieStats(contractAddr common.Address) error {
 	return api.cn.blockchain.StartCollectingTrieStats(contractAddr)
 }
 
-// DebugCNStorageAPI is the collection of CN full node APIs exposed over
+// DebugStorageCNAPI is the collection of CN full node APIs exposed over
 // the private debugging endpoint.
-type DebugCNStorageAPI struct {
+type DebugStorageCNAPI struct {
 	config *params.ChainConfig
 	cn     *CN
 }
 
-// NewDebugCNStorageAPI creates a new API definition for the full node-related
+// NewDebugStorageCNAPI creates a new API definition for the full node-related
 // private debug methods of the CN service.
-func NewDebugCNStorageAPI(config *params.ChainConfig, cn *CN) *DebugCNStorageAPI {
-	return &DebugCNStorageAPI{config: config, cn: cn}
+func NewDebugStorageCNAPI(config *params.ChainConfig, cn *CN) *DebugStorageCNAPI {
+	return &DebugStorageCNAPI{config: config, cn: cn}
 }
 
 // Preimage is a debug API function that returns the preimage for a sha3 hash, if known.
-func (api *DebugCNStorageAPI) Preimage(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
+func (api *DebugStorageCNAPI) Preimage(ctx context.Context, hash common.Hash) (hexutil.Bytes, error) {
 	if preimage := api.cn.ChainDB().ReadPreimage(hash); preimage != nil {
 		return preimage, nil
 	}
@@ -95,7 +95,7 @@ type storageEntry struct {
 }
 
 // StorageRangeAt returns the storage at the given block height and transaction index.
-func (api *DebugCNStorageAPI) StorageRangeAt(ctx context.Context, blockHash common.Hash, txIndex int, contractAddress common.Address, keyStart hexutil.Bytes, maxResult int) (StorageRangeResult, error) {
+func (api *DebugStorageCNAPI) StorageRangeAt(ctx context.Context, blockHash common.Hash, txIndex int, contractAddress common.Address, keyStart hexutil.Bytes, maxResult int) (StorageRangeResult, error) {
 	// Retrieve the block
 	block := api.cn.blockchain.GetBlockByHash(blockHash)
 	if block == nil {
