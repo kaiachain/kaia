@@ -93,7 +93,7 @@ func NewKaiaFilterAPI(backend Backend) *KaiaFilterAPI {
 }
 
 // timeoutLoop runs every 5 minutes and deletes filters that have not been recently used.
-// Tt is started when the api is created.
+// It is started when the api is created.
 func (api *KaiaFilterAPI) timeoutLoop() {
 	var toUninstall []*Subscription
 	ticker := time.NewTicker(api.timeout)
