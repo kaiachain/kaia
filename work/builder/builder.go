@@ -291,8 +291,8 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 		}
 	}
 
-	// Coordinate target tx hash of bundles
-	// It assumes that the ordering of bundles does not break the execution result.
+	// Coordinate target tx hash of bundles. It assumes the Gasless and Auction modules only currently.
+	// This reordering does not break the execution result.
 	// For example, if bundle reordering breaks the nonce ordering, the execution result will be different.
 	bundles = coordinateTargetTxHash(bundles)
 
@@ -304,17 +304,14 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 	return incorporatedTxs, bundles
 }
 
-func FilterTxs(txs map[common.Address]types.Transactions, txBundlingModules []TxBundlingModule) map[common.Address]types.Transactions {
-	txMap := make(map[common.Address]types.Transactions)
-	for addr, txs := range txs {
-		txMap[addr] = txs
+func FilterTxs(txs map[common.Address]types.Transactions, txBundlingModules []TxBundlingModule) {
+	if len(txs) == 0 {
+		return
 	}
 
 	for _, txBundlingModule := range txBundlingModules {
-		txBundlingModule.FilterTxs(txMap)
+		txBundlingModule.FilterTxs(txs)
 	}
-
-	return txMap
 }
 
 // coordinateTargetTxHash coordinates the target tx hash of bundles.

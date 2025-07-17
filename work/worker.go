@@ -548,7 +548,7 @@ func (self *worker) commitNewWork() {
 		}
 
 		// Filter txs with txBundlingModules
-		pending = builder.FilterTxs(pending, self.txBundlingModules)
+		builder.FilterTxs(pending, self.txBundlingModules)
 	}
 
 	header := &types.Header{

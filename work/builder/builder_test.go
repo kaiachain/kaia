@@ -444,8 +444,50 @@ func TestPopTxs(t *testing.T) {
 	}
 }
 
-func TestCoordinateTargetTxHash(t *testing.T) {
+type mockTxbundlingModule struct{}
+
+func (m *mockTxbundlingModule) ExtractTxBundles(txs []*types.Transaction, prevBundles []*Bundle) []*Bundle {
+	return nil
+}
+
+func (m *mockTxbundlingModule) FilterTxs(txs map[common.Address]types.Transactions) {
+	for addr, list := range txs {
+		for i, tx := range list {
+			if tx.Nonce() >= 3 {
+				if i == 0 {
+					delete(txs, addr)
+				} else {
+					txs[addr] = list[:i]
+				}
+				break
+			}
+		}
+	}
+}
+
+func TestFilterTxs(t *testing.T) {
 	txs := make([]*types.Transaction, 5)
+	for i := range txs {
+		txs[i] = types.NewTransaction(uint64(i), common.Address{}, common.Big0, 0, common.Big0, nil)
+	}
+
+	txsMap := map[common.Address]types.Transactions{
+		{1}: {txs[0], txs[1]},
+		{2}: {txs[2], txs[3]},
+		{3}: {txs[4]},
+	}
+
+	mockTxBundlingModule := &mockTxbundlingModule{}
+	FilterTxs(txsMap, []TxBundlingModule{mockTxBundlingModule})
+
+	assert.Equal(t, txsMap, map[common.Address]types.Transactions{
+		{1}: {txs[0], txs[1]},
+		{2}: {txs[2]},
+	})
+}
+
+func TestCoordinateTargetTxHash(t *testing.T) {
+	txs := make([]*types.Transaction, 6)
 	for i := range txs {
 		txs[i] = types.NewTransaction(uint64(i), common.Address{}, common.Big0, 0, common.Big0, nil)
 	}
@@ -455,35 +497,103 @@ func TestCoordinateTargetTxHash(t *testing.T) {
 	}
 	g1 := NewTxOrGenFromGen(gen, common.Hash{1})
 	g2 := NewTxOrGenFromGen(gen, common.Hash{2})
+	g3 := NewTxOrGenFromGen(gen, common.Hash{3})
+	g4 := NewTxOrGenFromGen(gen, common.Hash{4})
 
-	// All bundles have same target tx hash
-	b0 := &Bundle{ // Gasless bundle
+	b0 := &Bundle{
 		BundleTxs:      NewTxOrGenList(g1, txs[3], txs[4]),
 		TargetTxHash:   txs[2].Hash(),
 		TargetRequired: false,
 	}
-	b1 := &Bundle{ // Auction bundle
+	b1 := &Bundle{
 		BundleTxs:      NewTxOrGenList(g2),
 		TargetTxHash:   txs[2].Hash(),
 		TargetRequired: true,
 	}
-
-	bundles := []*Bundle{b0, b1}
-
-	coordinatedBundles := coordinateTargetTxHash(bundles)
-
-	expectedTargetTxHashes := []common.Hash{
-		txs[2].Hash(),
-		g2.Id,
+	b2 := &Bundle{
+		BundleTxs:      NewTxOrGenList(g3),
+		TargetTxHash:   txs[2].Hash(),
+		TargetRequired: false,
+	}
+	b3 := &Bundle{
+		BundleTxs:      NewTxOrGenList(g4, txs[5]),
+		TargetTxHash:   txs[4].Hash(),
+		TargetRequired: false,
 	}
 
-	for i, bundle := range coordinatedBundles {
-		assert.Equal(t, expectedTargetTxHashes[i], bundle.TargetTxHash)
+	// Copy bundles to avoid modifying the original bundles
+	copyBundles := func(bundles []*Bundle) []*Bundle {
+		copiedBundles := make([]*Bundle, len(bundles))
+		for i, bundle := range bundles {
+			copiedBundles[i] = &Bundle{
+				BundleTxs:      bundle.BundleTxs,
+				TargetTxHash:   bundle.TargetTxHash,
+				TargetRequired: bundle.TargetRequired,
+			}
+		}
+		return copiedBundles
 	}
 
-	incorporatedTxs, err := IncorporateBundleTx(txs, coordinatedBundles)
-	require.Nil(t, err)
+	testCases := []struct {
+		name                   string
+		bundles                []*Bundle
+		expectedTargetTxHashes []common.Hash
+		expectedTxs            []*TxOrGen
+	}{
+		{
+			name:                   "One bundles: True",
+			bundles:                copyBundles([]*Bundle{b1}),
+			expectedTargetTxHashes: []common.Hash{txs[2].Hash()},
+			expectedTxs:            NewTxOrGenList(txs[0], txs[1], txs[2], g2, txs[3], txs[4], txs[5]),
+		},
+		{
+			name:                   "One bundles: False",
+			bundles:                copyBundles([]*Bundle{b0}),
+			expectedTargetTxHashes: []common.Hash{txs[2].Hash()},
+			expectedTxs:            NewTxOrGenList(txs[0], txs[1], txs[2], g1, txs[3], txs[4], txs[5]),
+		},
+		{
+			name:                   "Two bundles: True, False",
+			bundles:                copyBundles([]*Bundle{b1, b0}),
+			expectedTargetTxHashes: []common.Hash{txs[2].Hash(), g2.Id},
+			expectedTxs:            NewTxOrGenList(txs[0], txs[1], txs[2], g2, g1, txs[3], txs[4], txs[5]),
+		},
+		{
+			name:                   "Two bundles: False, True",
+			bundles:                copyBundles([]*Bundle{b0, b1}),
+			expectedTargetTxHashes: []common.Hash{txs[2].Hash(), g2.Id},
+			expectedTxs:            NewTxOrGenList(txs[0], txs[1], txs[2], g2, g1, txs[3], txs[4], txs[5]),
+		},
+		{
+			name:                   "Two bundles: False, False",
+			bundles:                copyBundles([]*Bundle{b0, b2}),
+			expectedTargetTxHashes: []common.Hash{txs[2].Hash(), txs[4].Hash()},
+			expectedTxs:            NewTxOrGenList(txs[0], txs[1], txs[2], g1, txs[3], txs[4], g3, txs[5]),
+		},
+		{
+			name:                   "Three bundles with same target tx hash",
+			bundles:                copyBundles([]*Bundle{b0, b1, b2}),
+			expectedTargetTxHashes: []common.Hash{txs[2].Hash(), g2.Id, txs[4].Hash()},
+			expectedTxs:            NewTxOrGenList(txs[0], txs[1], txs[2], g2, g1, txs[3], txs[4], g3, txs[5]),
+		},
+		{
+			name:                   "Three bundles with different target tx hash",
+			bundles:                copyBundles([]*Bundle{b0, b1, b3}),
+			expectedTargetTxHashes: []common.Hash{txs[2].Hash(), g2.Id, txs[4].Hash()},
+			expectedTxs:            NewTxOrGenList(txs[0], txs[1], txs[2], g2, g1, txs[3], txs[4], g4, txs[5]),
+		},
+	}
 
-	expectedTxs := NewTxOrGenList(txs[0], txs[1], txs[2], g2, g1, txs[3], txs[4])
-	assert.Equal(t, expectedTxs, incorporatedTxs)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			coordinatedBundles := coordinateTargetTxHash(tc.bundles)
+			for i, bundle := range coordinatedBundles {
+				assert.Equal(t, tc.expectedTargetTxHashes[i], bundle.TargetTxHash)
+			}
+
+			incorporatedTxs, err := IncorporateBundleTx(txs, coordinatedBundles)
+			require.Nil(t, err)
+			assert.Equal(t, tc.expectedTxs, incorporatedTxs)
+		})
+	}
 }

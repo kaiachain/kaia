@@ -93,10 +93,11 @@ func (a *AuctionModule) FilterTxs(txs map[common.Address]types.Transactions) {
 	targetTxHashMap := a.bidPool.getTargetTxHashMap(curBlock.NumberU64() + 1)
 
 	now := time.Now()
+	threshold := now.Add(-AuctionEarlyDeadline)
 	// filter txs that are after the auction early deadline
 	for addr, list := range txs {
 		for i, tx := range list {
-			if tx.Time().After(now.Add(-AuctionEarlyDeadline)) && !a.isGaslessTx(tx) {
+			if tx.Time().After(threshold) && !a.isGaslessTx(tx) {
 				// if the tx is a target tx, skip it
 				if _, ok := targetTxHashMap[tx.Hash()]; ok {
 					continue

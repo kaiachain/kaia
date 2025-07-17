@@ -244,15 +244,15 @@ func (bp *BidPool) insertBid(bid *auction.Bid) error {
 	)
 
 	// If same block number, same target tx hash exists, replace it if it's better
-	if existingTx, ok := bp.bidTargetMap[blockNumber][targetTxHash]; ok {
+	if existingBid, ok := bp.bidTargetMap[blockNumber][targetTxHash]; ok {
 		// FCFS if the bid is the same.
-		if existingTx.Bid.Cmp(bid.Bid) >= 0 {
+		if existingBid.Bid.Cmp(bid.Bid) >= 0 {
 			return auction.ErrLowBid
 		}
 
-		logger.Trace("Replace bid", "old", existingTx.Hash(), "new", bid.Hash())
-		delete(bp.bidMap, existingTx.Hash())
-		delete(bp.bidWinnerMap[blockNumber], existingTx.Sender)
+		logger.Trace("Replace bid", "old", existingBid.Hash(), "new", bid.Hash())
+		delete(bp.bidMap, existingBid.Hash())
+		delete(bp.bidWinnerMap[blockNumber], existingBid.Sender)
 	}
 
 	hash := bid.Hash()
