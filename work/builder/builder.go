@@ -18,6 +18,7 @@ package builder
 
 import (
 	"errors"
+	"slices"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -37,6 +38,16 @@ func buildDependencyIndices(txs []*TxOrGen, bundles []*Bundle, signer types.Sign
 	senderToIndices := make(map[common.Address][]int)
 	bundleToIndices := make(map[int][]int)
 
+	txHashToBundleIndices := make(map[common.Hash][]int)
+	for i, bundle := range bundles {
+		for _, tx := range bundle.BundleTxs {
+			txHashToBundleIndices[tx.Id] = append(txHashToBundleIndices[tx.Id], i)
+		}
+		if bundle.TargetRequired {
+			txHashToBundleIndices[bundle.TargetTxHash] = append(txHashToBundleIndices[bundle.TargetTxHash], i)
+		}
+	}
+
 	for i, txOrGen := range txs {
 		if txOrGen.IsConcreteTx() {
 			tx, _ := txOrGen.GetTx(0)
@@ -46,7 +57,8 @@ func buildDependencyIndices(txs []*TxOrGen, bundles []*Bundle, signer types.Sign
 			}
 			senderToIndices[from] = append(senderToIndices[from], i)
 		}
-		if bundleIdx := FindDependentBundleIdx(bundles, txOrGen); bundleIdx != -1 {
+
+		for _, bundleIdx := range txHashToBundleIndices[txOrGen.Id] {
 			bundleToIndices[bundleIdx] = append(bundleToIndices[bundleIdx], i)
 		}
 	}
@@ -147,15 +159,6 @@ func FindBundleIdx(bundles []*Bundle, txOrGen *TxOrGen) int {
 	return -1
 }
 
-func FindDependentBundleIdx(bundles []*Bundle, txOrGen *TxOrGen) int {
-	for i, bundle := range bundles {
-		if bundle.Has(txOrGen) || bundle.TargetRequired && bundle.TargetTxHash == txOrGen.Id {
-			return i
-		}
-	}
-	return -1
-}
-
 func SetCorrectTargetTxHash(bundles []*Bundle, txs []*TxOrGen) []*Bundle {
 	ret := make([]*Bundle, 0)
 	for _, bundle := range bundles {
@@ -226,11 +229,13 @@ func PopTxs(txOrGens *[]*TxOrGen, num int, bundles *[]*Bundle, signer types.Sign
 				}
 			}
 		}
-		if bundleIdx := FindDependentBundleIdx(*bundles, txOrGen); bundleIdx != -1 {
-			for _, idx := range bundleToIndices[bundleIdx] {
-				if !toRemove[idx] {
-					toRemove[idx] = true
-					queue = append(queue, idx)
+		for _, txIndices := range bundleToIndices {
+			if slices.Contains(txIndices, curIdx) {
+				for _, idx := range txIndices {
+					if !toRemove[idx] {
+						toRemove[idx] = true
+						queue = append(queue, idx)
+					}
 				}
 			}
 		}

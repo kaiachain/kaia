@@ -312,6 +312,7 @@ func TestPopTxs(t *testing.T) {
 	}
 	g1 := NewTxOrGenFromGen(gen, common.Hash{1})
 	g2 := NewTxOrGenFromGen(gen, common.Hash{2})
+	g3 := NewTxOrGenFromGen(gen, common.Hash{3})
 
 	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
@@ -348,6 +349,11 @@ func TestPopTxs(t *testing.T) {
 			BundleTxs:      NewTxOrGenList(txs[2]),
 			TargetTxHash:   txs[1].Hash(),
 			TargetRequired: false, // Bundle is not popped if target is popped
+		},
+		{
+			BundleTxs:      NewTxOrGenList(g3),
+			TargetTxHash:   txs[2].Hash(),
+			TargetRequired: true, // If target in bundle is popped, the bundle should be popped
 		},
 	}
 
@@ -413,6 +419,13 @@ func TestPopTxs(t *testing.T) {
 			numToPop:        2,
 			bundles:         []*Bundle{bundles[0], bundles[1]},
 			expectedTxs:     NewTxOrGenList(txs[1], txs[2], txs[3], txs[4], txs[5], txs[6]),
+		},
+		{
+			name:            "Two bundles - target is popped",
+			incorporatedTxs: NewTxOrGenList(g1, txs[1], txs[2], g3, txs[3], txs[4], txs[5], txs[6]),
+			numToPop:        3,
+			bundles:         []*Bundle{bundles[3], bundles[6]},
+			expectedTxs:     NewTxOrGenList(txs[4], txs[5], txs[6]),
 		},
 		{
 			name:            "One bundle, target is popped with TargetRequired=true",
