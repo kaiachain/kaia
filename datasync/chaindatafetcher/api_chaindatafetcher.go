@@ -25,23 +25,23 @@ import (
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher/types"
 )
 
-type PublicChainDataFetcherAPI struct {
+type ChainDataFetcherAPI struct {
 	f *ChainDataFetcher
 }
 
-func NewPublicChainDataFetcherAPI(f *ChainDataFetcher) *PublicChainDataFetcherAPI {
-	return &PublicChainDataFetcherAPI{f: f}
+func NewChainDataFetcherAPI(f *ChainDataFetcher) *ChainDataFetcherAPI {
+	return &ChainDataFetcherAPI{f: f}
 }
 
-func (api *PublicChainDataFetcherAPI) StartFetching() error {
+func (api *ChainDataFetcherAPI) StartFetching() error {
 	return api.f.startFetching()
 }
 
-func (api *PublicChainDataFetcherAPI) StopFetching() error {
+func (api *ChainDataFetcherAPI) StopFetching() error {
 	return api.f.stopFetching()
 }
 
-func (api *PublicChainDataFetcherAPI) StartRangeFetching(start, end uint64, reqType interface{}) error {
+func (api *ChainDataFetcherAPI) StartRangeFetching(start, end uint64, reqType interface{}) error {
 	var t types.RequestType
 	switch reqType {
 	case "all":
@@ -65,19 +65,19 @@ func (api *PublicChainDataFetcherAPI) StartRangeFetching(start, end uint64, reqT
 	return api.f.startRangeFetching(start, end, t)
 }
 
-func (api *PublicChainDataFetcherAPI) StopRangeFetching() error {
+func (api *ChainDataFetcherAPI) StopRangeFetching() error {
 	return api.f.stopRangeFetching()
 }
 
-func (api *PublicChainDataFetcherAPI) Status() string {
+func (api *ChainDataFetcherAPI) Status() string {
 	return api.f.status()
 }
 
-func (api *PublicChainDataFetcherAPI) ReadCheckpoint() (int64, error) {
+func (api *ChainDataFetcherAPI) ReadCheckpoint() (int64, error) {
 	return api.f.checkpointDB.ReadCheckpoint()
 }
 
-func (api *PublicChainDataFetcherAPI) WriteCheckpoint(checkpoint int64) error {
+func (api *ChainDataFetcherAPI) WriteCheckpoint(checkpoint int64) error {
 	isRunning := atomic.LoadUint32(&api.f.fetchingStarted)
 	if isRunning == running {
 		return errors.New("call stopFetching before writing checkpoint manually")
@@ -88,6 +88,6 @@ func (api *PublicChainDataFetcherAPI) WriteCheckpoint(checkpoint int64) error {
 }
 
 // GetConfig returns the configuration setting of the launched chaindata fetcher.
-func (api *PublicChainDataFetcherAPI) GetConfig() *ChainDataFetcherConfig {
+func (api *ChainDataFetcherAPI) GetConfig() *ChainDataFetcherConfig {
 	return api.f.config
 }

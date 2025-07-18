@@ -196,3 +196,162 @@ Transaction pool operations
 - `txpool_content`
 - `txpool_status`
 - `txpool_inspect`
+
+## Node APIs
+
+### node/api_admin.go (AdminNodeAPI)
+
+Node administration and management
+
+- `admin_datadir`
+- `admin_nodeInfo`
+- `admin_peers`
+
+### node/api_admin_network.go (AdminNetworkNodeAPI)
+
+Network administration and peer management
+
+- `admin_addPeer`
+- `admin_peerEvents`
+- `admin_removePeer`
+- `admin_setMaxSubscriptionPerWSConn`
+- `admin_startHTTP`
+- `admin_startRPC`
+- `admin_startWS`
+- `admin_stopHTTP`
+- `admin_stopRPC`
+- `admin_stopWS`
+
+### node/api_debug.go (DebugNodeAPI)
+
+Node-level debug operations
+
+- `debug_metrics`
+
+### node/api_kaia.go (KaiaNodeAPI)
+
+Node-level Kaia operations
+
+- `kaia_clientVersion`
+- `kaia_sha3`
+
+## CN (Consensus Node) APIs
+
+### node/cn/api_admin_chain.go (AdminChainCNAPI)
+
+CN chain administration and management
+
+- `admin_exportChain`
+- `admin_getSpamThrottlerCandidateList`
+- `admin_getSpamThrottlerThrottleList`
+- `admin_getSpamThrottlerWhiteList`
+- `admin_importChain`
+- `admin_importChainFromString`
+- `admin_nodeConfig`
+- `admin_saveTrieNodeCacheToDisk`
+- `admin_setSpamThrottlerWhiteList`
+- `admin_spamThrottlerConfig`
+- `admin_startSpamThrottler`
+- `admin_startStateMigration`
+- `admin_stateMigrationStatus`
+- `admin_stopSpamThrottler`
+- `admin_stopStateMigration`
+
+### node/cn/api_debug.go (DebugCNAPI)
+
+CN debug operations and data inspection
+
+- `debug_dumpBlock`
+- `debug_dumpStateTrie`
+- `debug_getBadBlocks`
+- `debug_getModifiedAccountsByHash`
+- `debug_getModifiedAccountsByNumber`
+- `debug_getModifiedStorageNodesByNumber`
+
+### node/cn/api_debug_storage.go (DebugStorageCNAPI)
+
+CN storage debug operations
+
+- `debug_preimage`
+- `debug_startCollectingTrieStats`
+- `debug_startContractWarmUp`
+- `debug_startWarmUp`
+- `debug_stopWarmUp`
+- `debug_storageRangeAt`
+
+### node/cn/api_kaia.go (KaiaCNAPI)
+
+CN-specific Kaia operations
+
+- `kaia_rewardbase`
+
+### node/cn/filters/api_kaia_filter.go (KaiaFilterAPI)
+
+CN filter operations for events and logs
+
+- `kaia_events`
+- `kaia_getFilterChanges`
+- `kaia_getFilterLogs`
+- `kaia_getLogs`
+- `kaia_logs`
+- `kaia_newBlockFilter`
+- `kaia_newFilter`
+- `kaia_newHeads`
+- `kaia_newPendingTransactionFilter`
+- `kaia_newPendingTransactions`
+- `kaia_uninstallFilter`
+
+## Bootnode APIs
+
+### cmd/kbn/api_bootnode.go (BootnodeAPI)
+
+Bootnode operations
+
+- `bootnode_getAuthorizedNodes`
+
+### cmd/kbn/api_bootnode_registry.go (BootnodeRegistryAPI)
+
+Bootnode registry operations
+
+- `bootnode_createUpdateNodeOnDB`
+- `bootnode_createUpdateNodeOnTable`
+- `bootnode_deleteAuthorizedNodes`
+- `bootnode_deleteNodeFromDB`
+- `bootnode_deleteNodeFromTable`
+- `bootnode_getNodeFromDB`
+- `bootnode_getTableEntries`
+- `bootnode_getTableReplacements`
+- `bootnode_lookup`
+- `bootnode_name`
+- `bootnode_putAuthorizedNodes`
+- `bootnode_readRandomNodes`
+- `bootnode_resolve`
+
+## DataSync APIs
+
+### datasync/chaindatafetcher/api_chaindatafetcher.go (ChainDataFetcherAPI)
+
+Chain data fetching operations
+
+- `chaindatafetcher_getConfig`
+- `chaindatafetcher_readCheckpoint`
+- `chaindatafetcher_startFetching`
+- `chaindatafetcher_startRangeFetching`
+- `chaindatafetcher_status`
+- `chaindatafetcher_stopFetching`
+- `chaindatafetcher_stopRangeFetching`
+- `chaindatafetcher_writeCheckpoint`
+
+### datasync/downloader/api_kaia_downloader.go (KaiaDownloaderAPI)
+
+Kaia downloader operations
+
+- `kaia_subscribeSyncStatus`
+- `kaia_syncing`
+
+### datasync/downloader/api_kaia_downloader_sync.go (KaiaDownloaderSyncAPI)
+
+Kaia downloader sync operations
+
+- `kaia_syncStakingInfo`
+- `kaia_syncStakingInfoStatus`

@@ -207,7 +207,7 @@ func TestBlockSubscription(t *testing.T) {
 		logsFeed    = new(event.Feed)
 		chainFeed   = new(event.Feed)
 		backend     = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
-		api         = NewPublicFilterAPI(backend)
+		api         = NewKaiaFilterAPI(backend)
 		genesis     = new(blockchain.Genesis).MustCommit(db)
 		chain, _    = blockchain.GenerateChain(params.TestChainConfig, genesis, gxhash.NewFaker(), db, 10, func(i int, gen *blockchain.BlockGen) {})
 		chainEvents []blockchain.ChainEvent
@@ -264,7 +264,7 @@ func TestPendingTxFilter(t *testing.T) {
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
 		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
-		api        = NewPublicFilterAPI(backend)
+		api        = NewKaiaFilterAPI(backend)
 
 		transactions = []*types.Transaction{
 			types.NewTransaction(0, common.HexToAddress("0xb794f5ea0ba39494ce83a213fffba74279579268"), new(big.Int), 0, new(big.Int), nil),
@@ -324,7 +324,7 @@ func TestLogFilterCreation(t *testing.T) {
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
 		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
-		api        = NewPublicFilterAPI(backend)
+		api        = NewKaiaFilterAPI(backend)
 
 		testCases = []struct {
 			crit    FilterCriteria
@@ -378,7 +378,7 @@ func TestInvalidLogFilterCreation(t *testing.T) {
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
 		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
-		api        = NewPublicFilterAPI(backend)
+		api        = NewKaiaFilterAPI(backend)
 	)
 
 	// different situations where log filter creation should fail.
@@ -405,7 +405,7 @@ func TestInvalidGetLogsRequest(t *testing.T) {
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
 		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
-		api        = NewPublicFilterAPI(backend)
+		api        = NewKaiaFilterAPI(backend)
 		blockHash  = common.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111")
 	)
 
@@ -435,7 +435,7 @@ func TestLogFilter(t *testing.T) {
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
 		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
-		api        = NewPublicFilterAPI(backend)
+		api        = NewKaiaFilterAPI(backend)
 
 		firstAddr      = common.HexToAddress("0x1111111111111111111111111111111111111111")
 		secondAddr     = common.HexToAddress("0x2222222222222222222222222222222222222222")
@@ -550,9 +550,9 @@ func TestPendingTxFilterDeadlock(t *testing.T) {
 		done       = make(chan struct{})
 	)
 
-	// instead of using NewPublicFilterAPI, define it directly
+	// instead of using NewKaiaFilterAPI, define it directly
 	// It is for faster test (timeout: 5minute -> 100millisecond)
-	api := &PublicFilterAPI{
+	api := &KaiaFilterAPI{
 		backend: backend,
 		mux:     backend.EventMux(),
 		chainDB: backend.ChainDB(),

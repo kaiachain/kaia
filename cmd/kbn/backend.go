@@ -134,12 +134,12 @@ func (b *BN) APIs() []rpc.API {
 		{
 			Namespace: "bootnode",
 			Version:   "1.0",
-			Service:   NewPrivateBootnodeAPI(b),
+			Service:   NewBootnodeRegistryAPI(b),
 		},
 		{
 			Namespace: "bootnode",
 			Version:   "1.0",
-			Service:   NewPublicBootnodeAPI(b),
+			Service:   NewBootnodeAPI(b),
 			Public:    true,
 		},
 	}
