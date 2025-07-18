@@ -45,8 +45,6 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/builder"
-	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
 	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
@@ -91,8 +89,8 @@ type Miner interface {
 	SetExtra(extra []byte) error
 	Pending() (*types.Block, types.Receipts, *state.StateDB)
 	PendingBlock() *types.Block
-	kaiax.ExecutionModuleHost    // Because miner executes blocks, inject ExecutionModule.
-	builder.TxBundlingModuleHost // Because miner bundle transactions, inject TxBundlingModule
+	kaiax.ExecutionModuleHost  // Because miner executes blocks, inject ExecutionModule.
+	kaiax.TxBundlingModuleHost // Because miner bundle transactions, inject TxBundlingModule
 }
 
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
@@ -141,8 +139,8 @@ type CN struct {
 	rewardbase  common.Address
 	nodeAddress common.Address
 
-	networkId     uint64
-	netRPCService *api.PublicNetAPI
+	networkId uint64
+	p2pServer p2p.Server
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price)
 
@@ -519,7 +517,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mRandao  = randao_impl.NewRandaoModule()
 		mReward  = reward_impl.NewRewardModule()
 		mSupply  = supply_impl.NewSupplyModule()
-		mBuilder = builder_impl.NewBuilderModule()
 		mGasless = gasless_impl.NewGaslessModule()
 	)
 
@@ -541,9 +538,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Chain:       s.blockchain,
 			Downloader:  s.protocolManager.Downloader(),
 		}),
-		mBuilder.Init(&builder_impl.InitOpts{
-			Backend: s.APIBackend,
-		}),
 		mGasless.Init(&gasless_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
 			GaslessConfig: s.config.Gasless,
@@ -557,9 +551,9 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	}
 
 	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
-	mTxBundling := []builder.TxBundlingModule{}
+	mTxBundling := []kaiax.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
-	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mRandao, mBuilder}
+	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao}
 
 	gaslessDisabled := mGasless.IsDisabled()
 	if !gaslessDisabled {
@@ -568,8 +562,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mTxPool = append(mTxPool, mGasless)
 		mJsonRpc = append(mJsonRpc, mGasless)
 	}
-
-	mTxPool = builder_impl.WrapAndConcatenateBundlingModules(mTxBundling, mTxPool)
 
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
@@ -649,53 +641,54 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *CN) APIs() []rpc.API {
 	var (
-		nonceLock                = new(api.AddrLocker)
-		publicBlockChainAPI      = api.NewPublicBlockChainAPI(s.APIBackend)
-		publicKaiaAPI            = api.NewPublicKaiaAPI(s.APIBackend)
-		publicTransactionPoolAPI = api.NewPublicTransactionPoolAPI(s.APIBackend, nonceLock)
-		publicAccountAPI         = api.NewPublicAccountAPI(s.APIBackend.AccountManager())
+		nonceLock          = new(api.AddrLocker)
+		kaiaBlockChainAPI  = api.NewKaiaBlockChainAPI(s.APIBackend)
+		kaiaAPI            = api.NewKaiaAPI(s.APIBackend)
+		kaiaTransactionAPI = api.NewKaiaTransactionAPI(s.APIBackend, nonceLock)
+		kaiaAccountAPI     = api.NewKaiaAccountAPI(s.APIBackend.AccountManager())
+		netAPI             = api.NewNetAPI(s.p2pServer, s.NetVersion())
 	)
 
 	apis := []rpc.API{
 		{
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   publicKaiaAPI,
+			Service:   kaiaAPI,
 			Public:    true,
 		}, {
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   publicBlockChainAPI,
+			Service:   kaiaBlockChainAPI,
 			Public:    true,
 		}, {
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   publicTransactionPoolAPI,
+			Service:   kaiaTransactionAPI,
 			Public:    true,
 		}, {
 			Namespace: "txpool",
 			Version:   "1.0",
-			Service:   api.NewPublicTxPoolAPI(s.APIBackend),
+			Service:   api.NewTxPoolAPI(s.APIBackend),
 			Public:    true,
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   api.NewPublicDebugAPI(s.APIBackend),
+			Service:   api.NewDebugAPI(s.APIBackend),
 			Public:    false,
 		}, {
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   publicAccountAPI,
+			Service:   kaiaAccountAPI,
 			Public:    true,
 		}, {
 			Namespace: "personal",
 			Version:   "1.0",
-			Service:   api.NewPrivateAccountAPI(s.APIBackend, nonceLock),
+			Service:   api.NewPersonalAPI(s.APIBackend, nonceLock),
 			Public:    false,
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   api.NewPrivateDebugAPI(s.APIBackend),
+			Service:   api.NewDebugUtilAPI(s.APIBackend),
 			Public:    false,
 			IPCOnly:   s.config.DisableUnsafeDebug,
 		},
@@ -704,16 +697,16 @@ func (s *CN) APIs() []rpc.API {
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
-	publicFilterAPI := filters.NewPublicFilterAPI(s.APIBackend)
-	publicDownloaderAPI := downloader.NewPublicDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
-	privateDownloaderAPI := downloader.NewPrivateDownloaderAPI(s.protocolManager.Downloader())
+	kaiaFilterAPI := filters.NewKaiaFilterAPI(s.APIBackend)
+	kaiaDownloaderAPI := downloader.NewKaiaDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
+	kaiaDownloaderSyncAPI := downloader.NewKaiaDownloaderSyncAPI(s.protocolManager.Downloader())
 
-	ethAPI := api.NewEthereumAPI(
-		publicFilterAPI,
-		publicKaiaAPI,
-		publicBlockChainAPI,
-		publicTransactionPoolAPI,
-		publicAccountAPI,
+	ethAPI := api.NewEthAPI(
+		kaiaFilterAPI,
+		kaiaAPI,
+		kaiaBlockChainAPI,
+		kaiaTransactionAPI,
+		kaiaAccountAPI,
 		s.nodeAddress,
 	)
 
@@ -722,35 +715,35 @@ func (s *CN) APIs() []rpc.API {
 		{
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   NewPublicKaiaAPI(s),
+			Service:   NewKaiaCNAPI(s),
 			Public:    true,
 		}, {
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   publicDownloaderAPI,
+			Service:   kaiaDownloaderAPI,
 			Public:    true,
 		}, {
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   publicFilterAPI,
+			Service:   kaiaFilterAPI,
 			Public:    true,
 		}, {
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   publicDownloaderAPI,
+			Service:   kaiaDownloaderAPI,
 			Public:    true,
 		}, {
 			Namespace: "admin",
 			Version:   "1.0",
-			Service:   privateDownloaderAPI,
+			Service:   kaiaDownloaderSyncAPI,
 		}, {
 			Namespace: "admin",
 			Version:   "1.0",
-			Service:   NewPrivateAdminAPI(s),
+			Service:   NewAdminChainCNAPI(s),
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   NewPublicDebugAPI(s),
+			Service:   NewDebugCNAPI(s),
 			Public:    false,
 		}, {
 			Namespace: "debug",
@@ -766,7 +759,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "net",
 			Version:   "1.0",
-			Service:   s.netRPCService,
+			Service:   netAPI,
 			Public:    true,
 		}, {
 			Namespace: "eth",
@@ -776,7 +769,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   NewPrivateDebugAPI(s.chainConfig, s),
+			Service:   NewDebugStorageCNAPI(s.chainConfig, s),
 			Public:    false,
 			IPCOnly:   s.config.DisableUnsafeDebug,
 		},
@@ -873,7 +866,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 	s.startBloomHandlers()
 
 	// Start the RPC service
-	s.netRPCService = api.NewPublicNetAPI(srvr, s.NetVersion())
+	s.p2pServer = srvr
 
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers()
