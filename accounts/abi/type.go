@@ -344,7 +344,7 @@ func (t Type) pack(v reflect.Value) ([]byte, error) {
 		return append(ret, tail...), nil
 
 	default:
-		return packElement(t, v), nil
+		return packElement(t, v)
 	}
 }
 
