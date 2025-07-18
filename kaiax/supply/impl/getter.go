@@ -75,7 +75,10 @@ func (s *SupplyModule) GetTotalSupply(num uint64) (*supply.TotalSupply, error) {
 		kip103Burn,
 		kip160Burn,
 	)
-	s.supplyCache.Add(num, ts)
+	// Only cache if no error
+	if len(errs) == 0 {
+		s.supplyCache.Add(num, ts)
+	}
 	return ts, errors.Join(errs...)
 }
 
