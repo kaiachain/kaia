@@ -30,27 +30,40 @@ type Bundle struct {
 	// TargetRequired is true if the bundle must be executed after the target tx
 	// and only if the target tx is successfully executed.
 	TargetRequired bool
+
+	// lookup map for O(1) membership checks (lazy initialized)
+	txLookup map[common.Hash]int
 }
 
 func NewBundle(txs []*TxOrGen, targetTxHash common.Hash, targetRequired bool) *Bundle {
-	return &Bundle{
+	b := &Bundle{
 		BundleTxs:      txs,
 		TargetTxHash:   targetTxHash,
 		TargetRequired: targetRequired,
+	}
+	b.buildLookup()
+	return b
+}
+
+func (b *Bundle) buildLookup() {
+	if b.txLookup == nil {
+		b.txLookup = make(map[common.Hash]int, len(b.BundleTxs))
+		for i, txOrGen := range b.BundleTxs {
+			b.txLookup[txOrGen.Id] = i
+		}
 	}
 }
 
 // Has checks if the bundle contains a tx with the given hash.
 func (b *Bundle) Has(txOrGen *TxOrGen) bool {
-	return b.FindIdx(txOrGen.Id) != -1
+	_, exists := b.txLookup[txOrGen.Id]
+	return exists
 }
 
 // FindIdx returns if the bundle contains a tx with the given hash and its index in bundle.
 func (b *Bundle) FindIdx(id common.Hash) int {
-	for i, txOrGen := range b.BundleTxs {
-		if txOrGen.Id == id {
-			return i
-		}
+	if idx, exists := b.txLookup[id]; exists {
+		return idx
 	}
 	return -1
 }
