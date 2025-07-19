@@ -552,15 +552,8 @@ func TestPendingTxFilterDeadlock(t *testing.T) {
 
 	// instead of using NewKaiaFilterAPI, define it directly
 	// It is for faster test (timeout: 5minute -> 100millisecond)
-	api := &KaiaFilterAPI{
-		backend: backend,
-		mux:     backend.EventMux(),
-		chainDB: backend.ChainDB(),
-		events:  NewEventSystem(backend.EventMux(), backend),
-		filters: make(map[rpc.ID]*filter),
-		timeout: timeout,
-	}
-	go api.timeoutLoop()
+	api := NewKaiaFilterAPI(backend)
+	api.timeout = timeout
 
 	go func() {
 		// Bombard feed with txs until signal was received to stop

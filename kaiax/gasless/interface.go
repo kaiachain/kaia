@@ -27,3 +27,7 @@ type GaslessModule interface {
 	kaiax.TxPoolModule
 	kaiax.TxBundlingModule
 }
+
+type GaslessModuleHost interface {
+	RegisterGaslessModule(module GaslessModule)
+}

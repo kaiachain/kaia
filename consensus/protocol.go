@@ -34,12 +34,13 @@ const (
 	Kaia63 = 63
 	Kaia64 = 64
 	Kaia65 = 65
+	Kaia66 = 66
 )
 
 var KaiaProtocol = Protocol{
 	Name:     "kaia",
-	Versions: []uint{Kaia65, Kaia64, Kaia63, Kaia62},
-	Lengths:  []uint64{21, 19, 17, 8},
+	Versions: []uint{Kaia66, Kaia65, Kaia64, Kaia63, Kaia62},
+	Lengths:  []uint64{22, 21, 19, 17, 8},
 }
 
 // Protocol defines the protocol of the consensus

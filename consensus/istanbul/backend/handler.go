@@ -45,8 +45,8 @@ var (
 	// TODO-Kaia-Istanbul: define Versions and Lengths with correct values.
 	IstanbulProtocol = consensus.Protocol{
 		Name:     "istanbul",
-		Versions: []uint{65, 64},
-		Lengths:  []uint64{23, 21},
+		Versions: []uint{66, 65, 64},
+		Lengths:  []uint64{24, 23, 21},
 	}
 )
 

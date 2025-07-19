@@ -26,6 +26,18 @@ type Bundle struct {
 
 	// BundleTxs is placed AFTER the target tx. If empty hash, it is placed at the very front.
 	TargetTxHash common.Hash
+
+	// TargetRequired is true if the bundle must be executed after the target tx
+	// and only if the target tx is successfully executed.
+	TargetRequired bool
+}
+
+func NewBundle(txs []*TxOrGen, targetTxHash common.Hash, targetRequired bool) *Bundle {
+	return &Bundle{
+		BundleTxs:      txs,
+		TargetTxHash:   targetTxHash,
+		TargetRequired: targetRequired,
+	}
 }
 
 // Has checks if the bundle contains a tx with the given hash.
@@ -45,8 +57,9 @@ func (b *Bundle) FindIdx(id common.Hash) int {
 
 // IsConflict checks if newBundle conflicts with current bundle.
 func (b *Bundle) IsConflict(newBundle *Bundle) bool {
-	// 1. Check for same target tx hash
-	if b.TargetTxHash == newBundle.TargetTxHash {
+	// 1. Check for same target tx hash and both are required
+	// If both are required, it discards the new bundle.
+	if b.TargetTxHash == newBundle.TargetTxHash && b.TargetRequired && newBundle.TargetRequired {
 		return true
 	}
 
