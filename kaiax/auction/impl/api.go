@@ -26,6 +26,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/auction"
+	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node/cn/filters"
 	"github.com/kaiachain/kaia/rlp"
@@ -127,8 +128,8 @@ func (api *AuctionAPI) SubmitBid(ctx context.Context, bidInput BidInput) RPCOutp
 		return makeRPCOutput(EMPTY_HASH, auction.ErrInvalidTargetTxHash)
 	}
 	errTargetTxSend := api.a.Backend.SendTx(ctx, targetTx)
-	// ignore `known transaction ...` error against target tx validation
-	if errTargetTxSend != nil && !strings.HasPrefix(errTargetTxSend.Error(), "known transaction:") {
+	// ignore known transaction related errors against target tx validation
+	if errTargetTxSend != nil && !(strings.HasPrefix(errTargetTxSend.Error(), "known transaction:") || errors.Is(errTargetTxSend, gasless_impl.ErrUnableToAddKnownBundleTx)) {
 		return makeRPCOutput(EMPTY_HASH, errTargetTxSend)
 	}
 
