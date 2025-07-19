@@ -26,14 +26,15 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/params"
+	"github.com/rcrowley/go-metrics"
 )
 
 const (
 	bidChSize        = 100
 	allowFutureBlock = 2
-
-	MaxBidNum = 2048
 )
+
+var numBidsGauge = metrics.NewRegisteredGauge("kaiax/auction/bidpool/num/bids", nil)
 
 type BidPool struct {
 	ChainConfig *params.ChainConfig
@@ -53,25 +54,28 @@ type BidPool struct {
 	newBidFeed event.Feed
 	wg         sync.WaitGroup
 
+	maxBidPoolSize int64
+
 	running uint32
 	stopped uint32
 }
 
-func NewBidPool(chainConfig *params.ChainConfig, chain backends.BlockChainForCaller) *BidPool {
-	if chainConfig == nil || chain == nil {
+func NewBidPool(chainConfig *params.ChainConfig, chain backends.BlockChainForCaller, auctionConfig *auction.AuctionConfig) *BidPool {
+	if chainConfig == nil || chain == nil || auctionConfig == nil {
 		return nil
 	}
 
 	bp := &BidPool{
-		ChainConfig:  chainConfig,
-		Chain:        chain,
-		bidMap:       make(map[common.Hash]*auction.Bid),
-		bidTargetMap: make(map[uint64]map[common.Hash]*auction.Bid),
-		bidWinnerMap: make(map[uint64]map[common.Address]common.Hash),
-		bidMsgCh:     make(chan *auction.Bid, bidChSize),
-		newBidCh:     make(chan *auction.Bid, bidChSize),
-		running:      0, // not running yet
-		stopped:      0, // not stopped
+		ChainConfig:    chainConfig,
+		Chain:          chain,
+		bidMap:         make(map[common.Hash]*auction.Bid),
+		bidTargetMap:   make(map[uint64]map[common.Hash]*auction.Bid),
+		bidWinnerMap:   make(map[uint64]map[common.Address]common.Hash),
+		bidMsgCh:       make(chan *auction.Bid, bidChSize),
+		newBidCh:       make(chan *auction.Bid, bidChSize),
+		maxBidPoolSize: auctionConfig.MaxBidPoolSize,
+		running:        0, // not running yet
+		stopped:        0, // not stopped
 	}
 
 	return bp
@@ -154,6 +158,8 @@ func (bp *BidPool) removeOldBids(num uint64, txHashMap map[common.Hash]struct{})
 			delete(bp.bidMap, bid.Hash())
 		}
 	}
+
+	numBidsGauge.Update(int64(len(bp.bidMap)))
 }
 
 // clearBidPool clears the bid pool.
@@ -219,7 +225,8 @@ func (bp *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
 	bp.bidMu.Lock()
 	defer bp.bidMu.Unlock()
 
-	if len(bp.bidMap) >= MaxBidNum {
+	if int64(len(bp.bidMap)) >= bp.maxBidPoolSize {
+		logger.Info("Bid pool is full", "maxBidPoolSize", bp.maxBidPoolSize, "bid", bid.Hash())
 		return common.Hash{}, auction.ErrBidPoolFull
 	}
 
@@ -262,6 +269,8 @@ func (bp *BidPool) insertBid(bid *auction.Bid) error {
 	bp.bidMap[hash] = bid
 	bp.bidTargetMap[blockNumber][targetTxHash] = bid
 	bp.bidWinnerMap[blockNumber][sender] = hash
+
+	numBidsGauge.Update(int64(len(bp.bidMap)))
 
 	logger.Trace("Add bid", "bid", hash)
 

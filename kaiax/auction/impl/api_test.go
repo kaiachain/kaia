@@ -39,7 +39,8 @@ func prep(t *testing.T) *AuctionModule {
 		alloc         = testAllocStorage()
 		config        = testRandaoForkChainConfig(big.NewInt(0))
 		auctionConfig = auction.AuctionConfig{
-			Disable: false,
+			Disable:        false,
+			MaxBidPoolSize: 1024,
 		}
 	)
 

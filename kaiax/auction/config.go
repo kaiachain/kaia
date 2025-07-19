@@ -17,25 +17,40 @@
 package auction
 
 import (
+	"math"
+
 	"github.com/kaiachain/kaia/common"
 	"github.com/urfave/cli/v2"
 )
 
-var DisableFlag = &cli.BoolFlag{
-	Name:     "auction.disable",
-	Usage:    "disable auction module",
-	Value:    false,
-	Aliases:  []string{"kaiax.module.auction.disable"},
-	Category: "KAIAX",
-}
+const DefaultMaxBidPoolSize = math.MaxInt64
+
+var (
+	DisableFlag = &cli.BoolFlag{
+		Name:     "auction.disable",
+		Usage:    "disable auction module",
+		Value:    false,
+		Aliases:  []string{"kaiax.module.auction.disable"},
+		Category: "KAIAX",
+	}
+	MaxBidPoolSizeFlag = &cli.Int64Flag{
+		Name:     "auction.max-bid-pool-size",
+		Usage:    "max number of bids in bid pool. Default value is max uint64.",
+		Value:    DefaultMaxBidPoolSize,
+		Aliases:  []string{"kaiax.module.auction.max-bid-pool-size"},
+		Category: "KAIAX",
+	}
+)
 
 type AuctionConfig struct {
-	Disable bool
+	Disable        bool
+	MaxBidPoolSize int64
 }
 
 func DefaultAuctionConfig() *AuctionConfig {
 	return &AuctionConfig{
-		Disable: false,
+		Disable:        false,
+		MaxBidPoolSize: DefaultMaxBidPoolSize,
 	}
 }
 
@@ -47,4 +62,8 @@ func SetAuctionConfig(ctx *cli.Context, cfg *AuctionConfig, nodeType common.Conn
 	}
 
 	cfg.Disable = disable
+	cfg.MaxBidPoolSize = DefaultMaxBidPoolSize
+	if ctx.IsSet(MaxBidPoolSizeFlag.Name) {
+		cfg.MaxBidPoolSize = ctx.Int64(MaxBidPoolSizeFlag.Name)
+	}
 }

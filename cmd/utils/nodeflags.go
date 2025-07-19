@@ -285,6 +285,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewIntFlag(gasless.BalanceCheckLevelFlag),
 	// kaiax/auction
 	altsrc.NewBoolFlag(auction.DisableFlag),
+	altsrc.NewInt64Flag(auction.MaxBidPoolSizeFlag),
 }
 
 // Common RPC flags

@@ -98,7 +98,7 @@ func (a *AuctionModule) Init(opts *InitOpts) error {
 		}
 	}
 
-	a.bidPool = NewBidPool(opts.ChainConfig, opts.Chain)
+	a.bidPool = NewBidPool(opts.ChainConfig, opts.Chain, opts.AuctionConfig)
 	if a.bidPool == nil {
 		return auction.ErrInitUnexpectedNil
 	}

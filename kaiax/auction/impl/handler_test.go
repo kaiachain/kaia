@@ -75,7 +75,8 @@ func TestHandler_HandleBid(t *testing.T) {
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
 
 	auctionConfig := auction.AuctionConfig{
-		Disable: false,
+		Disable:        false,
+		MaxBidPoolSize: 1024,
 	}
 	apiBackend := &MockBackend{}
 	fakeDownloader := &downloader.FakeDownloader{}
@@ -137,7 +138,8 @@ func TestHandler_SubscribeNewBid(t *testing.T) {
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
 
 	auctionConfig := auction.AuctionConfig{
-		Disable: false,
+		Disable:        false,
+		MaxBidPoolSize: 1024,
 	}
 	apiBackend := &MockBackend{}
 	fakeDownloader := &downloader.FakeDownloader{}

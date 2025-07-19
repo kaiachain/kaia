@@ -132,7 +132,7 @@ func TestNewBidPool(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			pool := NewBidPool(tc.chainConfig, chain)
+			pool := NewBidPool(tc.chainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
 			if tc.wantNil {
 				assert.Nil(t, pool)
 			} else {
@@ -156,7 +156,7 @@ func TestBidPool_AddBid(t *testing.T) {
 	)
 	defer mockCtrl.Finish()
 
-	pool := NewBidPool(testChainConfig, chain)
+	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
 	require.NotNil(t, pool)
 
 	chain.EXPECT().CurrentBlock().Return(block0).Times(1)
@@ -222,6 +222,38 @@ func TestBidPool_AddBid(t *testing.T) {
 	assert.Equal(t, auction.ErrLowBid, err)
 }
 
+func TestBidPool_AddBid_MaxBidPoolSize(t *testing.T) {
+	var (
+		mockCtrl = gomock.NewController(t)
+		chain    = chain_mock.NewMockBlockChain(mockCtrl)
+		block1   = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+	)
+	defer mockCtrl.Finish()
+
+	// Test max bid pool size is 1
+	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1})
+	require.NotNil(t, pool)
+
+	chain.EXPECT().CurrentBlock().Return(block1).Times(1)
+
+	// Start the auction
+	pool.start()
+	atomic.StoreUint32(&pool.running, 1)
+	defer pool.stop()
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
+	// Test successful bid additions
+	bid := testBids[0]
+	hash, err := pool.AddBid(bid)
+	require.NoError(t, err)
+	assert.Equal(t, bid.Hash(), hash)
+
+	// Test adding bid when bid pool is full
+	_, err = pool.AddBid(testBids[1])
+	assert.Equal(t, auction.ErrBidPoolFull, err)
+}
+
 func TestBidPool_RemoveOldBidsByNumber(t *testing.T) {
 	var (
 		mockCtrl = gomock.NewController(t)
@@ -232,7 +264,7 @@ func TestBidPool_RemoveOldBidsByNumber(t *testing.T) {
 	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
 
-	pool := NewBidPool(testChainConfig, chain)
+	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
 	require.NotNil(t, pool)
 
 	// Start the auction
@@ -271,7 +303,7 @@ func TestBidPool_RemoveOldBidsByTxHash(t *testing.T) {
 	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
 
-	pool := NewBidPool(testChainConfig, chain)
+	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
 	require.NotNil(t, pool)
 
 	// Start the auction
@@ -314,7 +346,7 @@ func TestBidPool_ClearBidPool(t *testing.T) {
 	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
 
-	pool := NewBidPool(testChainConfig, chain)
+	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
 	require.NotNil(t, pool)
 
 	// Start the auction
@@ -355,7 +387,7 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
 
-	pool := NewBidPool(testChainConfig, chain)
+	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
 	require.NotNil(t, pool)
 
 	// Start the auction
