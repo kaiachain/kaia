@@ -547,10 +547,19 @@ func TestCoordinateTargetTxHash(t *testing.T) {
 		return copiedBundles
 	}
 
+	compareBundle := func(a, b *Bundle) bool {
+		for _, tx := range a.BundleTxs {
+			if !b.Has(tx) {
+				return false
+			}
+		}
+		return true
+	}
+
 	testCases := []struct {
 		name                   string
 		bundles                []*Bundle
-		expectedTargetTxHashes []common.Hash
+		expectedTargetTxHashes []common.Hash // Same order as bundles
 		expectedTxs            []*TxOrGen
 	}{
 		{
@@ -574,7 +583,7 @@ func TestCoordinateTargetTxHash(t *testing.T) {
 		{
 			name:                   "Two bundles: False, True",
 			bundles:                copyBundles([]*Bundle{b0, b1}),
-			expectedTargetTxHashes: []common.Hash{txs[2].Hash(), g2.Id},
+			expectedTargetTxHashes: []common.Hash{g2.Id, txs[2].Hash()},
 			expectedTxs:            NewTxOrGenList(txs[0], txs[1], txs[2], g2, g1, txs[3], txs[4], txs[5]),
 		},
 		{
@@ -586,13 +595,13 @@ func TestCoordinateTargetTxHash(t *testing.T) {
 		{
 			name:                   "Three bundles with same target tx hash",
 			bundles:                copyBundles([]*Bundle{b0, b1, b2}),
-			expectedTargetTxHashes: []common.Hash{txs[2].Hash(), g2.Id, txs[4].Hash()},
+			expectedTargetTxHashes: []common.Hash{g2.Id, txs[2].Hash(), txs[4].Hash()},
 			expectedTxs:            NewTxOrGenList(txs[0], txs[1], txs[2], g2, g1, txs[3], txs[4], g3, txs[5]),
 		},
 		{
 			name:                   "Three bundles with different target tx hash",
 			bundles:                copyBundles([]*Bundle{b0, b1, b3}),
-			expectedTargetTxHashes: []common.Hash{txs[2].Hash(), g2.Id, txs[4].Hash()},
+			expectedTargetTxHashes: []common.Hash{g2.Id, txs[2].Hash(), txs[4].Hash()},
 			expectedTxs:            NewTxOrGenList(txs[0], txs[1], txs[2], g2, g1, txs[3], txs[4], g4, txs[5]),
 		},
 	}
@@ -600,8 +609,16 @@ func TestCoordinateTargetTxHash(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			coordinatedBundles := coordinateTargetTxHash(tc.bundles)
-			for i, bundle := range coordinatedBundles {
-				assert.Equal(t, tc.expectedTargetTxHashes[i], bundle.TargetTxHash)
+			for _, bundle := range coordinatedBundles {
+				idx := 0
+				for _, b := range tc.bundles {
+					if compareBundle(b, bundle) {
+						break
+					}
+					idx++
+				}
+
+				assert.Equal(t, tc.expectedTargetTxHashes[idx], bundle.TargetTxHash)
 			}
 
 			incorporatedTxs, err := IncorporateBundleTx(txs, coordinatedBundles)
