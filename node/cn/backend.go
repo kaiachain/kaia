@@ -581,7 +581,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mExecution = append(mExecution, mAuction)
 		mTxBundling = append(mTxBundling, mAuction)
 		mJsonRpc = append(mJsonRpc, mAuction)
-		mRewindable = append(mRewindable, mAuction)
 
 		s.protocolManager.RegisterAuctionModule(mAuction)
 

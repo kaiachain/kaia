@@ -49,14 +49,6 @@ func (a *AuctionModule) PostInsertBlock(block *types.Block) error {
 	return nil
 }
 
-func (a *AuctionModule) RewindTo(newBlock *types.Block) {
-	// Nothing to do.
-}
-
-func (a *AuctionModule) RewindDelete(hash common.Hash, num uint64) {
-	// Nothing to do.
-}
-
 // updateAuctionInfo updates the auctioneer address and auction entry point address for the given block number.
 // It expects the `num` is after Randao fork.
 // It returns true if the non-zero auctioneer address and auction entry point address are set, otherwise false.

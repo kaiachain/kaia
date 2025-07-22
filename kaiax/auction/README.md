@@ -5,6 +5,7 @@ This module is responsible for processing the auction.
 ## APIs
 
 ### auction_submitBid
+
 Send a bid and get bid hash if successful, otherwise empty hash with error.
 
 ```sh
@@ -28,8 +29,9 @@ curl -H "Content-Type: application/json" \
             }
         ],
         "id": 1
-    }' http://localhost:8145
+    }' http://localhost:8551
 ```
+
 ```
 json
 {
@@ -38,4 +40,4 @@ json
 }
 ```
 
-Go client can use `SendAuctionTx(context Context, BidInput) (map[string]any, error)`, which is the same format with JSON RPC.
+Go client can use `SendAuctionTx(Context, BidInput) (map[string]any, error)`, which is the same format with JSON RPC.

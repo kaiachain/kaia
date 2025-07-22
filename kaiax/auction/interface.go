@@ -26,7 +26,6 @@ type AuctionModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
 	kaiax.ExecutionModule
-	kaiax.RewindableModule
 	kaiax.TxBundlingModule
 
 	HandleBid(bid *Bid)
