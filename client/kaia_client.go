@@ -307,15 +307,11 @@ func (ec *Client) SyncProgress(ctx context.Context) (*kaia.SyncProgress, error) 
 // SubscribeNewHead subscribes to notifications about the current blockchain head
 // on the given channel.
 func (ec *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (kaia.Subscription, error) {
-	sub, kaiaSubscribeErr := ec.c.KaiaSubscribe(ctx, ch, "newHeads")
-	if kaiaSubscribeErr == nil {
-		return sub, nil
-	}
-	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "newHeads")
-	if auctionSubscribeErr == nil {
-		return sub, nil
-	}
-	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
+	return ec.c.KaiaSubscribe(ctx, ch, "newHeads")
+}
+
+func (ec *Client) AuctionSubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (kaia.Subscription, error) {
+	return ec.c.AuctionSubscribe(ctx, ch, "newHeads")
 }
 
 // State Access
@@ -376,15 +372,11 @@ func (ec *Client) FilterLogs(ctx context.Context, q kaia.FilterQuery) ([]types.L
 
 // SubscribeFilterLogs subscribes to the results of a streaming filter query.
 func (ec *Client) SubscribeFilterLogs(ctx context.Context, q kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
-	sub, kaiaSubscribeErr := ec.c.KaiaSubscribe(ctx, ch, "logs", toFilterArg(q))
-	if kaiaSubscribeErr == nil {
-		return sub, nil
-	}
-	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "logs", toFilterArg(q))
-	if auctionSubscribeErr == nil {
-		return sub, nil
-	}
-	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
+	return ec.c.KaiaSubscribe(ctx, ch, "logs", toFilterArg(q))
+}
+
+func (ec *Client) AuctionSubscribeFilterLogs(ctx context.Context, q kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
+	return ec.c.AuctionSubscribe(ctx, ch, "logs", toFilterArg(q))
 }
 
 func toFilterArg(q kaia.FilterQuery) interface{} {
@@ -438,40 +430,21 @@ func (ec *Client) PendingTransactionCount(ctx context.Context) (uint, error) {
 	return uint(num), err
 }
 
-func (ec *Client) SubscribeFullPendingTransactions(ctx context.Context, ch chan<- *types.Transaction) (kaia.Subscription, error) {
-	sub, kaiaSubscribeErr := ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions", true)
-	if kaiaSubscribeErr == nil {
-		return sub, nil
-	}
-	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions", true)
-	if auctionSubscribeErr == nil {
-		return sub, nil
-	}
-	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
+func (ec *Client) AuctionSubscribeFullPendingTransactions(ctx context.Context, ch chan<- *types.Transaction) (kaia.Subscription, error) {
+	return ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions", true)
 }
 
-func (ec *Client) SubscribeFullPendingTransactionsRaw(ctx context.Context, ch chan<- map[string]any) (kaia.Subscription, error) {
-	sub, kaiaSubscribeErr := ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions", true)
-	if kaiaSubscribeErr == nil {
-		return sub, nil
-	}
-	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions", true)
-	if auctionSubscribeErr == nil {
-		return sub, nil
-	}
-	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
+func (ec *Client) AuctionSubscribeFullPendingTransactionsRaw(ctx context.Context, ch chan<- map[string]any) (kaia.Subscription, error) {
+	return ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions", true)
 }
 
-func (ec *Client) SubscribePendingTransactions(ctx context.Context, ch chan<- common.Hash) (kaia.Subscription, error) {
-	sub, kaiaSubscribeErr := ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions")
-	if kaiaSubscribeErr == nil {
-		return sub, nil
-	}
-	sub, auctionSubscribeErr := ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions")
-	if auctionSubscribeErr == nil {
-		return sub, nil
-	}
-	return nil, errors.Join(kaiaSubscribeErr, auctionSubscribeErr)
+func (ec *Client) AuctionSubscribePendingTransactions(ctx context.Context, ch chan<- common.Hash) (kaia.Subscription, error) {
+	return ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions")
+}
+
+// TODO: this is test function. remove me later
+func (ec *Client) TestSubscribe(ctx context.Context, ch chan<- common.Hash) (kaia.Subscription, error) {
+	return ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions")
 }
 
 // Contract Calling
@@ -484,15 +457,20 @@ func (ec *Client) SubscribePendingTransactions(ctx context.Context, ch chan<- co
 // blocks might not be available.
 func (ec *Client) CallContract(ctx context.Context, msg kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	var hex hexutil.Bytes
-	kaiaCallErr := ec.c.CallContext(ctx, &hex, "kaia_call", toCallArg(msg), toBlockNumArg(blockNumber))
-	if kaiaCallErr == nil {
-		return hex, nil
+	err := ec.c.CallContext(ctx, &hex, "kaia_call", toCallArg(msg), toBlockNumArg(blockNumber))
+	if err != nil {
+		return nil, err
 	}
-	auctionCallErr := ec.c.CallContext(ctx, &hex, "auction_call", toCallArg(msg), toBlockNumArg(blockNumber))
-	if auctionCallErr == nil {
-		return hex, nil
+	return hex, nil
+}
+
+func (ec *Client) AuctionCallContract(ctx context.Context, msg kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
+	var hex hexutil.Bytes
+	err := ec.c.CallContext(ctx, &hex, "auction_call", toCallArg(msg), toBlockNumArg(blockNumber))
+	if err != nil {
+		return nil, err
 	}
-	return nil, errors.Join(kaiaCallErr, auctionCallErr)
+	return hex, nil
 }
 
 // PendingCallContract executes a message call transaction using the EVM.
