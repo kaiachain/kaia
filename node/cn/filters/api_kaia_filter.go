@@ -84,7 +84,7 @@ func NewFilterAPI(backend Backend) *FilterAPI {
 }
 
 // timeoutLoop runs every 5 minutes and deletes filters that have not been recently used.
-// Tt is started when the api is created.
+// It is started when the api is created.
 func (api *FilterAPI) timeoutLoop() {
 	var toUninstall []*Subscription
 	ticker := time.NewTicker(api.timeout)

@@ -86,7 +86,7 @@ func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Add
 		return ErrNilChainId
 	}
 
-	if verifyingContract == (common.Address{}) {
+	if common.EmptyAddress(verifyingContract) {
 		return ErrNilVerifyingContract
 	}
 
@@ -117,6 +117,10 @@ func (b *Bid) ValidateAuctioneerSig(auctioneer common.Address) error {
 	}
 
 	return nil
+}
+
+func (b *Bid) Equals(other *Bid) bool {
+	return b.BlockNumber == other.BlockNumber && b.TargetTxHash == other.TargetTxHash
 }
 
 func getSigner(sig, digest []byte) (common.Address, error) {

@@ -1,6 +1,53 @@
 # kaiax/auction
 
-This module is responsible for processing the auction.
+This module is responsible for processing the auction specified by [KIP-249](https://kips.kaia.io/KIPs/kip-249).
+
+## Concepts
+
+The bid is a data that contains the information to generate a transaction to be executed right after the target transaction is executed.
+
+Note that the bid comes from the `Auctioneer`, which is an independent service that is responsible for processing auction and submit winner's bid to the Kaia client (CN).
+
+## Bid pool validation rules
+
+A bid pool is responsible for managing the valid bids from the auctioneer. The bid must satisfy the following rules:
+
+1. The `bid.BlockNumber` must be in range of `[currentBlockNumber + 1, currentBlockNumber + allowFutureBlock]`.
+2. The `bid.Bid` must be greater than 0.
+3. The `bid.Sender` must not be in the winner list of the same block number if the new bid isn't equal to the previous bid.
+4. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
+
+## Block building rules
+
+Upon detection of target transaction from the tx pool, the following logics are executed:
+
+- The corresponding bid is retrieved from the bid pool.
+- If the bid is found, a new bundle is generated which contain `[BidTx]`.
+- If the target transaction is not found in the bid pool, the bid will be ignored.
+
+## Persistent schema
+
+This module does not persist any data.
+
+## Module lifecycle
+
+### Init
+
+- Dependencies:
+  - ChainConfig: to generate the latest signer.
+  - NodeKey: for BidTxGenerator.
+- Notable dependents:
+  - worker: to extract bundles.
+
+### Start and stop
+
+It starts/stops the bid pool and corresponding background threads.
+
+## Block processing
+
+### Execution
+
+This module reads `SystemRegistry` and `AuctionEntryPoint` to detect any changes in `AuctionEntryPoint` and `Auctioneer` address. If the one of them is changed, the module will clear the existing bids in the bid pool.
 
 ## APIs
 

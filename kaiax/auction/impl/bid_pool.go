@@ -45,9 +45,9 @@ type BidPool struct {
 	auctionEntryPoint common.Address
 
 	bidMu        sync.RWMutex
-	bidMap       map[common.Hash]*auction.Bid
-	bidTargetMap map[uint64]map[common.Hash]*auction.Bid
-	bidWinnerMap map[uint64]map[common.Address]common.Hash
+	bidMap       map[common.Hash]*auction.Bid              // (bidHash) -> Bid
+	bidTargetMap map[uint64]map[common.Hash]*auction.Bid   // (blockNum, targetTxHash) -> Bid
+	bidWinnerMap map[uint64]map[common.Address]common.Hash // (blockNum, sender) -> bidHash
 
 	bidMsgCh   chan *auction.Bid
 	newBidCh   chan *auction.Bid
@@ -295,11 +295,13 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 		return auction.ErrBlockNotFound
 	}
 
+	// 1. The `bid.BlockNumber` must be in range of `[currentBlockNumber + 1, currentBlockNumber + allowFutureBlock]`.
 	curNum := curBlock.NumberU64()
 	if blockNumber <= curNum || blockNumber > curNum+allowFutureBlock {
 		return auction.ErrInvalidBlockNumber
 	}
 
+	// 2. The `bid.Bid` must be greater than 0.
 	if bid.Bid.Sign() <= 0 {
 		return auction.ErrZeroBid
 	}
@@ -309,14 +311,14 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 		return auction.ErrBidAlreadyExists
 	}
 
-	// Check if the sender is already in the winner list.
+	// 3. The `bid.Sender` must not be in the winner list of the same block number if the new bid isn't equal to the previous bid.
 	if hash, ok := bp.bidWinnerMap[blockNumber][sender]; ok {
-		if !isSameBid(bid, bp.bidMap[hash]) {
+		if !bid.Equals(bp.bidMap[hash]) {
 			return auction.ErrBidSenderExists
 		}
 	}
 
-	// Check if the bid is valid.
+	// 4. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
 	if err := bp.validateBidSigs(bid); err != nil {
 		return err
 	}
@@ -381,8 +383,4 @@ func (bp *BidPool) handleNewBid() {
 			bp.newBidFeed.Send(bid)
 		}
 	}
-}
-
-func isSameBid(bid1 *auction.Bid, bid2 *auction.Bid) bool {
-	return bid1.BlockNumber == bid2.BlockNumber && bid1.TargetTxHash == bid2.TargetTxHash
 }
