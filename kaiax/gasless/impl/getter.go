@@ -77,6 +77,9 @@ func (g *GaslessModule) IsApproveTx(tx *types.Transaction) bool {
 }
 
 func (g *GaslessModule) isApproveTx(args *ApproveArgs) bool {
+	g.gaslessInfoMu.RLock()
+	defer g.gaslessInfoMu.RUnlock()
+
 	return g.allowedTokens[args.Token] && // A1
 		g.swapRouter == args.Spender && // A3
 		args.Amount.Cmp(abi.MaxUint256) == 0 // A4
@@ -92,6 +95,9 @@ func (g *GaslessModule) IsSwapTx(tx *types.Transaction) bool {
 }
 
 func (g *GaslessModule) isSwapTx(args *SwapArgs) bool {
+	g.gaslessInfoMu.RLock()
+	defer g.gaslessInfoMu.RUnlock()
+
 	return g.swapRouter == args.Router && // S1
 		g.allowedTokens[args.Token] // S3
 }
@@ -307,6 +313,9 @@ func (g *GaslessModule) GetLendTxGenerator(approveTxOrNil, swapTx *types.Transac
 }
 
 func (g *GaslessModule) updateAddresses(header *types.Header) error {
+	g.gaslessInfoMu.Lock()
+	defer g.gaslessInfoMu.Unlock()
+
 	swapRouter, tokens, err := getGaslessInfo(g.Chain, header)
 	// proceed even if there is something wrong with multicall contract
 	if err != nil {
