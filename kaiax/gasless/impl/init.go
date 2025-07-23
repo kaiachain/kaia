@@ -51,6 +51,8 @@ type InitOpts struct {
 
 type GaslessModule struct {
 	InitOpts
+
+	gaslessInfoMu sync.RWMutex
 	swapRouter    common.Address
 	allowedTokens map[common.Address]bool
 	signer        types.Signer

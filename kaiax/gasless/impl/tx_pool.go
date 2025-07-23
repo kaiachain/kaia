@@ -108,6 +108,10 @@ func (g *GaslessModule) checkBalanceForSwap(swapArgs *SwapArgs, swapNonce uint64
 	token := swapArgs.Token
 	bc := backends.NewBlockchainContractBackend(g.Chain, nil, nil)
 
+	g.gaslessInfoMu.RLock()
+	swapRouter := g.swapRouter
+	g.gaslessInfoMu.RUnlock()
+
 	// tx.minAmountOut >= tx.amountRepay
 	minAmountOut := swapArgs.MinAmountOut
 	amountRepay := swapArgs.AmountRepay
@@ -123,7 +127,7 @@ func (g *GaslessModule) checkBalanceForSwap(swapArgs *SwapArgs, swapNonce uint64
 
 	if g.GaslessConfig.ShouldCheckSwapAmount() {
 		// tx.amountIn >= gsr.getAmountIn(minAmountOut)
-		routerContract, err := kip247.NewGaslessSwapRouterCaller(g.swapRouter, bc)
+		routerContract, err := kip247.NewGaslessSwapRouterCaller(swapRouter, bc)
 		if err != nil {
 			return err
 		}
@@ -149,7 +153,7 @@ func (g *GaslessModule) checkBalanceForSwap(swapArgs *SwapArgs, swapNonce uint64
 		noApproveTxPreceeds := swapNonce == senderNonce
 		if noApproveTxPreceeds {
 			// tx.token.allowance(sender, router) >= tx.amountIn
-			approval, err := tokenContract.Allowance(nil, swapArgs.Sender, g.swapRouter)
+			approval, err := tokenContract.Allowance(nil, swapArgs.Sender, swapRouter)
 			if err != nil {
 				return err
 			}
