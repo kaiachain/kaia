@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/gxhash"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -740,6 +741,10 @@ func (fb *filterBackend) ServiceFilter(_ context.Context, _ *bloombits.MatcherSe
 
 func (fb *filterBackend) ChainConfig() *params.ChainConfig {
 	return fb.bc.Config()
+}
+
+func (fb *filterBackend) Engine() consensus.Engine {
+	return fb.bc.Engine()
 }
 
 func nullSubscription() event.Subscription {
