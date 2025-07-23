@@ -1175,6 +1175,11 @@ func (pool *TxPool) journalTx(from common.Address, tx *types.Transaction) {
 	if pool.journal == nil || !pool.locals.contains(from) {
 		return
 	}
+	for _, module := range pool.modules {
+		if module.IsModuleTx(tx) {
+			return
+		}
+	}
 	if err := pool.journal.insert(tx); err != nil {
 		logger.Error("Failed to journal local transaction", "err", err)
 	}
