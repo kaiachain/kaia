@@ -442,11 +442,6 @@ func (ec *Client) AuctionSubscribePendingTransactions(ctx context.Context, ch ch
 	return ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions")
 }
 
-// TODO: this is test function. remove me later
-func (ec *Client) TestSubscribe(ctx context.Context, ch chan<- common.Hash) (kaia.Subscription, error) {
-	return ec.c.KaiaSubscribe(ctx, ch, "newPendingTransactions")
-}
-
 // Contract Calling
 
 // CallContract executes a message call transaction, which is directly executed in the VM

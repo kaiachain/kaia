@@ -104,9 +104,6 @@ func toTx(targetTxRaw []byte) (*types.Transaction, error) {
 	if len(targetTxRaw) == 0 {
 		return nil, ErrEmptyTargetTxRaw
 	}
-	if 0 < targetTxRaw[0] && targetTxRaw[0] < 0x7f {
-		targetTxRaw = append([]byte{byte(types.EthereumTxTypeEnvelope)}, targetTxRaw...)
-	}
 	tx := new(types.Transaction)
 	if err := rlp.DecodeBytes(targetTxRaw, tx); err != nil {
 		return nil, err
