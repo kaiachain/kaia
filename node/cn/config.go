@@ -34,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax/compress"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/node/cn/gasprice"
@@ -71,7 +72,8 @@ func GetDefaultConfig() *Config {
 		Istanbul:      *istanbul.DefaultConfig,
 		RPCEVMTimeout: 5 * time.Second,
 
-		Gasless: gasless.DefaultGaslessConfig(),
+		Gasless:  gasless.DefaultGaslessConfig(),
+		Compress: compress.GetDefaultCompressConfig(),
 	}
 }
 
@@ -200,7 +202,8 @@ type Config struct {
 	UseConsoleLog bool
 
 	// Kaiax configs
-	Gasless *gasless.GaslessConfig
+	Gasless  *gasless.GaslessConfig
+	Compress compress.CompressConfig
 }
 
 type configMarshaling struct {
