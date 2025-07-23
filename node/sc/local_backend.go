@@ -31,6 +31,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -128,4 +129,8 @@ func (fb *filterLocalBackend) ServiceFilter(_dummyCtx context.Context, session *
 
 func (fb *filterLocalBackend) ChainConfig() *params.ChainConfig {
 	return fb.subbridge.blockchain.Config()
+}
+
+func (fb *filterLocalBackend) Engine() consensus.Engine {
+	return fb.subbridge.blockchain.Engine()
 }

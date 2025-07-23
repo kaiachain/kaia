@@ -2,6 +2,10 @@
 // Copyright 2021 The klaytn Authors
 // This file is part of the klaytn library.
 //
+// Modifications Copyright 2024 The Kaia Authors
+// Copyright 2021 The klaytn Authors
+// This file is part of the klaytn library.
+//
 // The klaytn library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -35,9 +39,9 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/node/cn/filters"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/statedb"
@@ -63,7 +67,6 @@ var (
 
 // EthAPI provides an API to access the Kaia through the `eth` namespace.
 type EthAPI struct {
-	kaiaFilterAPI      *filters.KaiaFilterAPI
 	kaiaAPI            *KaiaAPI
 	kaiaBlockChainAPI  *KaiaBlockChainAPI
 	kaiaTransactionAPI *KaiaTransactionAPI
@@ -76,7 +79,6 @@ type EthAPI struct {
 // Therefore, it is necessary to use APIs defined in two different packages(cn and api),
 // so those apis will be defined through a setter.
 func NewEthAPI(
-	kaiaFilterAPI *filters.KaiaFilterAPI,
 	kaiaAPI *KaiaAPI,
 	kaiaBlockChainAPI *KaiaBlockChainAPI,
 	kaiaTransactionAPI *KaiaTransactionAPI,
@@ -84,7 +86,6 @@ func NewEthAPI(
 	nodeAddress common.Address,
 ) *EthAPI {
 	return &EthAPI{
-		kaiaFilterAPI,
 		kaiaAPI,
 		kaiaBlockChainAPI,
 		kaiaTransactionAPI,
@@ -161,121 +162,6 @@ func (api *EthAPI) SubmitHashrate(rate hexutil.Uint64, id common.Hash) bool {
 // GetHashrate returns ZeroHashrate because Kaia does not have a POW mechanism.
 func (api *EthAPI) GetHashrate() uint64 {
 	return ZeroHashrate
-}
-
-// NewPendingTransactionFilter creates a filter that fetches pending transaction hashes
-// as transactions enter the pending state.
-//
-// It is part of the filter package because this filter can be used through the
-// `eth_getFilterChanges` polling method that is also used for log filters.
-//
-// https://eth.wiki/json-rpc/API#eth_newpendingtransactionfilter
-func (api *EthAPI) NewPendingTransactionFilter() rpc.ID {
-	return api.kaiaFilterAPI.NewPendingTransactionFilter()
-}
-
-// NewPendingTransactions creates a subscription that is triggered each time a transaction
-// enters the transaction pool and was signed from one of the transactions this nodes manages.
-func (api *EthAPI) NewPendingTransactions(ctx context.Context) (*rpc.Subscription, error) {
-	return api.kaiaFilterAPI.NewPendingTransactions(ctx)
-}
-
-// NewBlockFilter creates a filter that fetches blocks that are imported into the chain.
-// It is part of the filter package since polling goes with eth_getFilterChanges.
-//
-// https://eth.wiki/json-rpc/API#eth_newblockfilter
-func (api *EthAPI) NewBlockFilter() rpc.ID {
-	return api.kaiaFilterAPI.NewBlockFilter()
-}
-
-// NewHeads send a notification each time a new (header) block is appended to the chain.
-func (api *EthAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
-	notifier, supported := rpc.NotifierFromContext(ctx)
-	if !supported {
-		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
-	}
-
-	rpcSub := notifier.CreateSubscription()
-	go func() {
-		headers := make(chan *types.Header)
-		headersSub := api.kaiaFilterAPI.Events().SubscribeNewHeads(headers)
-
-		for {
-			select {
-			case h := <-headers:
-				header, err := api.rpcMarshalHeader(h, true)
-				if err != nil {
-					logger.Error("Failed to marshal header during newHeads subscription", "err", err)
-					headersSub.Unsubscribe()
-					return
-				}
-				notifier.Notify(rpcSub.ID, header)
-			case <-rpcSub.Err():
-				headersSub.Unsubscribe()
-				return
-			case <-notifier.Closed():
-				headersSub.Unsubscribe()
-				return
-			}
-		}
-	}()
-
-	return rpcSub, nil
-}
-
-// Logs creates a subscription that fires for all new log that match the given filter criteria.
-func (api *EthAPI) Logs(ctx context.Context, crit filters.FilterCriteria) (*rpc.Subscription, error) {
-	return api.kaiaFilterAPI.Logs(ctx, crit)
-}
-
-// NewFilter creates a new filter and returns the filter id. It can be
-// used to retrieve logs when the state changes. This method cannot be
-// used to fetch logs that are already stored in the state.
-//
-// Default criteria for the from and to block are "latest".
-// Using "latest" as block number will return logs for mined blocks.
-// Using "pending" as block number returns logs for not yet mined (pending) blocks.
-// In case logs are removed (chain reorg) previously returned logs are returned
-// again but with the removed property set to true.
-//
-// In case "fromBlock" > "toBlock" an error is returned.
-//
-// https://eth.wiki/json-rpc/API#eth_newfilter
-func (api *EthAPI) NewFilter(crit filters.FilterCriteria) (rpc.ID, error) {
-	return api.kaiaFilterAPI.NewFilter(crit)
-}
-
-// GetLogs returns logs matching the given argument that are stored within the state.
-//
-// https://eth.wiki/json-rpc/API#eth_getlogs
-func (api *EthAPI) GetLogs(ctx context.Context, crit filters.FilterCriteria) ([]*types.Log, error) {
-	return api.kaiaFilterAPI.GetLogs(ctx, crit)
-}
-
-// UninstallFilter removes the filter with the given filter id.
-//
-// https://eth.wiki/json-rpc/API#eth_uninstallfilter
-func (api *EthAPI) UninstallFilter(id rpc.ID) bool {
-	return api.kaiaFilterAPI.UninstallFilter(id)
-}
-
-// GetFilterLogs returns the logs for the filter with the given id.
-// If the filter could not be found an empty array of logs is returned.
-//
-// https://eth.wiki/json-rpc/API#eth_getfilterlogs
-func (api *EthAPI) GetFilterLogs(ctx context.Context, id rpc.ID) ([]*types.Log, error) {
-	return api.kaiaFilterAPI.GetFilterLogs(ctx, id)
-}
-
-// GetFilterChanges returns the logs for the filter with the given id since
-// last time it was called. This can be used for polling.
-//
-// For pending transaction and block filters the result is []common.Hash.
-// (pending)Log filters return []Log.
-//
-// https://eth.wiki/json-rpc/API#eth_getfilterchanges
-func (api *EthAPI) GetFilterChanges(id rpc.ID) (interface{}, error) {
-	return api.kaiaFilterAPI.GetFilterChanges(id)
 }
 
 // GasPrice returns a suggestion for a gas price.
@@ -1295,15 +1181,12 @@ func (api *EthAPI) Accounts() []common.Address {
 	return api.kaiaAccountAPI.Accounts()
 }
 
-// rpcMarshalHeader marshal block header as Ethereum compatible format.
-// It returns error when fetching Author which is block proposer is failed.
-func (api *EthAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (map[string]interface{}, error) {
+func RpcMarshalEthHeader(head *types.Header, engine consensus.Engine, chainConfig *params.ChainConfig, inclMiner bool) (map[string]interface{}, error) {
 	var proposer common.Address
 	var err error
 
-	b := api.kaiaAPI.b
 	if head.Number.Sign() != 0 && inclMiner {
-		proposer, err = b.Engine().Author(head)
+		proposer, err = engine.Author(head)
 		if err != nil {
 			// miner is the field Kaia should provide the correct value. It's not the field dummy value is allowed.
 			logger.Error("Failed to fetch author during marshaling header", "err", err.Error())
@@ -1333,18 +1216,24 @@ func (api *EthAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (map[str
 		"receiptsRoot":     head.ReceiptHash,
 	}
 
-	if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
+	if chainConfig.IsEthTxTypeForkEnabled(head.Number) {
 		if head.BaseFee == nil {
 			result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
 		} else {
 			result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 		}
 	}
-	if b.ChainConfig().IsRandaoForkEnabled(head.Number) {
+	if chainConfig.IsRandaoForkEnabled(head.Number) {
 		result["randomReveal"] = hexutil.Bytes(head.RandomReveal)
 		result["mixHash"] = hexutil.Bytes(head.MixHash)
 	}
 	return result, nil
+}
+
+// rpcMarshalHeader marshal block header as Ethereum compatible format.
+// It returns error when fetching Author which is block proposer is failed.
+func (api *EthAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (map[string]interface{}, error) {
+	return RpcMarshalEthHeader(head, api.kaiaAPI.b.Engine(), api.kaiaAPI.b.ChainConfig(), inclMiner)
 }
 
 // rpcMarshalBlock marshal block as Ethereum compatible format

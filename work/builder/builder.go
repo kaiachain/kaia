@@ -18,6 +18,7 @@ package builder
 
 import (
 	"errors"
+	"slices"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -27,7 +28,7 @@ import (
 var (
 	ErrFailedToIncorporateBundle = errors.New("failed to incorporate bundle")
 
-	logger = log.NewModuleLogger(log.KaiaxBuilder)
+	logger = log.NewModuleLogger(log.Builder)
 )
 
 // buildDependencyIndices builds a dependency indices of txs.
@@ -36,6 +37,16 @@ var (
 func buildDependencyIndices(txs []*TxOrGen, bundles []*Bundle, signer types.Signer) (map[common.Address][]int, map[int][]int, error) {
 	senderToIndices := make(map[common.Address][]int)
 	bundleToIndices := make(map[int][]int)
+
+	txHashToBundleIndices := make(map[common.Hash][]int)
+	for i, bundle := range bundles {
+		for _, tx := range bundle.BundleTxs {
+			txHashToBundleIndices[tx.Id] = append(txHashToBundleIndices[tx.Id], i)
+		}
+		if bundle.TargetRequired {
+			txHashToBundleIndices[bundle.TargetTxHash] = append(txHashToBundleIndices[bundle.TargetTxHash], i)
+		}
+	}
 
 	for i, txOrGen := range txs {
 		if txOrGen.IsConcreteTx() {
@@ -46,7 +57,8 @@ func buildDependencyIndices(txs []*TxOrGen, bundles []*Bundle, signer types.Sign
 			}
 			senderToIndices[from] = append(senderToIndices[from], i)
 		}
-		if bundleIdx := FindBundleIdx(bundles, txOrGen); bundleIdx != -1 {
+
+		for _, bundleIdx := range txHashToBundleIndices[txOrGen.Id] {
 			bundleToIndices[bundleIdx] = append(bundleToIndices[bundleIdx], i)
 		}
 	}
@@ -150,7 +162,12 @@ func FindBundleIdx(bundles []*Bundle, txOrGen *TxOrGen) int {
 func SetCorrectTargetTxHash(bundles []*Bundle, txs []*TxOrGen) []*Bundle {
 	ret := make([]*Bundle, 0)
 	for _, bundle := range bundles {
-		bundle.TargetTxHash = FindTargetTxHash(bundle, txs)
+		newTargetHash := FindTargetTxHash(bundle, txs)
+		if bundle.TargetRequired && newTargetHash != bundle.TargetTxHash {
+			// Discard the bundle
+			continue
+		}
+		bundle.TargetTxHash = newTargetHash
 		ret = append(ret, bundle)
 	}
 	return ret
@@ -212,11 +229,13 @@ func PopTxs(txOrGens *[]*TxOrGen, num int, bundles *[]*Bundle, signer types.Sign
 				}
 			}
 		}
-		if bundleIdx := FindBundleIdx(*bundles, txOrGen); bundleIdx != -1 {
-			for _, idx := range bundleToIndices[bundleIdx] {
-				if !toRemove[idx] {
-					toRemove[idx] = true
-					queue = append(queue, idx)
+		for _, txIndices := range bundleToIndices {
+			if slices.Contains(txIndices, curIdx) {
+				for _, idx := range txIndices {
+					if !toRemove[idx] {
+						toRemove[idx] = true
+						queue = append(queue, idx)
+					}
 				}
 			}
 		}
@@ -245,6 +264,7 @@ func PopTxs(txOrGens *[]*TxOrGen, num int, bundles *[]*Bundle, signer types.Sign
 // because Golang does not automatically cast an array of interfaces.
 type TxBundlingModule interface {
 	ExtractTxBundles(txs []*types.Transaction, prevBundles []*Bundle) []*Bundle
+	FilterTxs(txs map[common.Address]types.Transactions)
 }
 
 func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModules []TxBundlingModule) ([]*TxOrGen, []*Bundle) {
@@ -269,11 +289,17 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 					break
 				}
 			}
-			if !isConflict {
+			// Not allowing empty bundles
+			if !isConflict && len(newBundle.BundleTxs) > 0 {
 				bundles = append(bundles, newBundle)
 			}
 		}
 	}
+
+	// Coordinate target tx hash of bundles. It assumes the Gasless and Auction modules only currently.
+	// This reordering does not break the execution result.
+	// For example, if bundle reordering breaks the nonce ordering, the execution result will be different.
+	bundles = coordinateTargetTxHash(bundles)
 
 	incorporatedTxs, err := IncorporateBundleTx(arrayTxs, bundles)
 	if err != nil {
@@ -281,4 +307,72 @@ func ExtractBundlesAndIncorporate(arrayTxs []*types.Transaction, txBundlingModul
 	}
 
 	return incorporatedTxs, bundles
+}
+
+func FilterTxs(txs map[common.Address]types.Transactions, txBundlingModules []TxBundlingModule) {
+	if len(txs) == 0 {
+		return
+	}
+
+	for _, txBundlingModule := range txBundlingModules {
+		txBundlingModule.FilterTxs(txs)
+	}
+}
+
+// coordinateTargetTxHash coordinates the target tx hash of bundles.
+// It assumes there's only one bundle with TargetRequired = true among the bundles with the same TargetTxHash
+// and no zero-length bundle.
+// e.g.) bundles = [
+//
+//	{TargetTxHash: 0x2, TargetRequired: false, BundleTxs: []*TxOrGen{tx3, tx4}},
+//	{TargetTxHash: 0x2, TargetRequired: true, BundleTxs: []*TxOrGen{g1}},
+//
+// ]
+// -> returns [
+//
+//	{TargetTxHash: 0x2, TargetRequired: true, BundleTxs: []*TxOrGen{g1}},
+//	{TargetTxHash: g1.Id, TargetRequired: false, BundleTxs: []*TxOrGen{tx3, tx4}},
+//
+// ]
+func coordinateTargetTxHash(bundles []*Bundle) []*Bundle {
+	if len(bundles) <= 1 {
+		return bundles
+	}
+
+	newBundles := make([]*Bundle, 0, len(bundles))
+	sameTargetTxHashBundles := make(map[common.Hash][]*Bundle)
+
+	for _, bundle := range bundles {
+		sameTargetTxHashBundles[bundle.TargetTxHash] = append(sameTargetTxHashBundles[bundle.TargetTxHash], bundle)
+	}
+
+	for _, list := range sameTargetTxHashBundles {
+		if len(list) == 1 {
+			newBundles = append(newBundles, list[0])
+			continue
+		}
+
+		// Find the bundle with TargetRequired = true and move it to the front.
+		// This is needed because #incorporate assumes that targetTxHash is already in the txs.
+		for i, bundle := range list {
+			if bundle.TargetRequired {
+				list[0], list[i] = list[i], list[0]
+				break
+			}
+		}
+
+		for i, bundle := range list {
+			if i == 0 {
+				continue
+			}
+			bundle.TargetTxHash = lastBundleTx(list[i-1]).Id
+		}
+		newBundles = append(newBundles, list...)
+	}
+
+	return newBundles
+}
+
+func lastBundleTx(bundle *Bundle) *TxOrGen {
+	return bundle.BundleTxs[len(bundle.BundleTxs)-1]
 }

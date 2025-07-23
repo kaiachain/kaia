@@ -50,6 +50,18 @@ func (mr *MockGaslessModuleMockRecorder) ExtractTxBundles(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractTxBundles", reflect.TypeOf((*MockGaslessModule)(nil).ExtractTxBundles), arg0, arg1)
 }
 
+// FilterTxs mocks base method.
+func (m *MockGaslessModule) FilterTxs(arg0 map[common.Address]types.Transactions) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "FilterTxs", arg0)
+}
+
+// FilterTxs indicates an expected call of FilterTxs.
+func (mr *MockGaslessModuleMockRecorder) FilterTxs(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FilterTxs", reflect.TypeOf((*MockGaslessModule)(nil).FilterTxs), arg0)
+}
+
 // GetCheckBalance mocks base method.
 func (m *MockGaslessModule) GetCheckBalance() func(*types.Transaction) error {
 	m.ctrl.T.Helper()

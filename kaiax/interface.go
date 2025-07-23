@@ -188,6 +188,9 @@ type TxBundlingModule interface {
 	// GetMaxBundleTxsInQueue returns the maximum number of transactions that can be bundled in queue.
 	// This limitation works properly only when a module bundles only sequential txs by the same sender.
 	GetMaxBundleTxsInQueue() uint
+
+	// FilterTxs filters transactions that are not bundled.
+	FilterTxs(txs map[common.Address]types.Transactions)
 }
 
 // Any component or module that accomodate tx bundling modules.

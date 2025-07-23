@@ -45,6 +45,8 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/auction"
+	auction_impl "github.com/kaiachain/kaia/kaiax/auction/impl"
 	gasless_impl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
@@ -108,6 +110,7 @@ type BackendProtocolManager interface {
 	Stop()
 	SetSyncStop(flag bool)
 	staking.StakingModuleHost
+	auction.AuctionModuleHost
 }
 
 // CN implements the Kaia consensus node service.
@@ -518,6 +521,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mReward  = reward_impl.NewRewardModule()
 		mSupply  = supply_impl.NewSupplyModule()
 		mGasless = gasless_impl.NewGaslessModule()
+		mAuction = auction_impl.NewAuctionModule()
 	)
 
 	err := errors.Join(
@@ -545,32 +549,54 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Chain:         s.blockchain,
 			NodeType:      ctx.NodeType(),
 		}),
+		mAuction.Init(&auction_impl.InitOpts{
+			ChainConfig:   s.chainConfig,
+			AuctionConfig: s.config.Auction,
+			Chain:         s.blockchain,
+			Backend:       s.APIBackend,
+			Downloader:    s.protocolManager.Downloader(),
+			NodeKey:       ctx.NodeKey(),
+		}),
 	)
 	if err != nil {
 		return err
 	}
 
+	mBase := []kaiax.BaseModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao}
 	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
 	mTxBundling := []kaiax.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
 	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao}
+	mRewindable := []kaiax.RewindableModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
 
-	gaslessDisabled := mGasless.IsDisabled()
-	if !gaslessDisabled {
+	if !mGasless.IsDisabled() {
 		mExecution = append(mExecution, mGasless)
 		mTxBundling = append(mTxBundling, mGasless)
 		mTxPool = append(mTxPool, mGasless)
 		mJsonRpc = append(mJsonRpc, mGasless)
 	}
 
+	if !mAuction.IsDisabled() {
+		mBase = append(mBase, mAuction)
+		mExecution = append(mExecution, mAuction)
+		mTxBundling = append(mTxBundling, mAuction)
+		mJsonRpc = append(mJsonRpc, mAuction)
+
+		s.protocolManager.RegisterAuctionModule(mAuction)
+
+		if !mGasless.IsDisabled() {
+			mAuction.RegisterGaslessModule(mGasless)
+		}
+	}
+
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
-	s.RegisterBaseModules(s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao)
+	s.RegisterBaseModules(mBase...)
 	s.RegisterJsonRpcModules(mJsonRpc...)
 	s.miner.RegisterExecutionModule(mExecution...)
 	s.miner.RegisterTxBundlingModule(mTxBundling...)
 	s.blockchain.RegisterExecutionModule(mExecution...)
-	s.blockchain.RegisterRewindableModule(s.stakingModule, mSupply, s.govModule, mValset, mRandao)
+	s.blockchain.RegisterRewindableModule(mRewindable...)
 	s.txPool.RegisterTxPoolModule(mTxPool...)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterKaiaxModules(s.govModule, s.stakingModule, mValset, mRandao)
@@ -698,11 +724,11 @@ func (s *CN) APIs() []rpc.API {
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
 	kaiaFilterAPI := filters.NewKaiaFilterAPI(s.APIBackend)
+	ethFilterAPI := filters.NewEthFilterAPI(s.APIBackend)
 	kaiaDownloaderAPI := downloader.NewKaiaDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	kaiaDownloaderSyncAPI := downloader.NewKaiaDownloaderSyncAPI(s.protocolManager.Downloader())
 
 	ethAPI := api.NewEthAPI(
-		kaiaFilterAPI,
 		kaiaAPI,
 		kaiaBlockChainAPI,
 		kaiaTransactionAPI,
@@ -726,6 +752,11 @@ func (s *CN) APIs() []rpc.API {
 			Namespace: "kaia",
 			Version:   "1.0",
 			Service:   kaiaFilterAPI,
+			Public:    true,
+		}, {
+			Namespace: "eth",
+			Version:   "1.0",
+			Service:   ethFilterAPI,
 			Public:    true,
 		}, {
 			Namespace: "eth",

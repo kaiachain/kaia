@@ -30,10 +30,11 @@ func TestBundle_IsConflict(t *testing.T) {
 		txs[i] = types.NewTransaction(uint64(i), common.Address{}, common.Big0, 0, common.Big0, nil)
 	}
 
-	b0 := &Bundle{
-		BundleTxs:    NewTxOrGenList(txs[0], txs[1]),
-		TargetTxHash: common.Hash{},
-	}
+	b0 := NewBundle(
+		NewTxOrGenList(txs[0], txs[1]),
+		common.Hash{},
+		true,
+	)
 	defaultTargetHash := txs[1].Hash()
 
 	testcases := []struct {
@@ -45,37 +46,51 @@ func TestBundle_IsConflict(t *testing.T) {
 		{
 			name:   "Same TargetTxHash (empty TargetHash)",
 			bundle: b0,
-			newBundle: &Bundle{
-				BundleTxs:    NewTxOrGenList(),
-				TargetTxHash: common.Hash{},
-			},
+			newBundle: NewBundle(
+				NewTxOrGenList(),
+				common.Hash{},
+				true,
+			),
 			expected: true,
+		},
+		{
+			name:   "Same TargetTxHash (empty TargetHash) but newBundle is not required",
+			bundle: b0,
+			newBundle: NewBundle(
+				NewTxOrGenList(),
+				common.Hash{},
+				false,
+			),
+			expected: false,
 		},
 		{
 			name:   "TargetTxHash divides a bundle",
 			bundle: b0,
-			newBundle: &Bundle{
-				BundleTxs:    NewTxOrGenList(),
-				TargetTxHash: txs[0].Hash(),
-			},
+			newBundle: NewBundle(
+				NewTxOrGenList(),
+				txs[0].Hash(),
+				true,
+			),
 			expected: true,
 		},
 		{
 			name:   "Overlapping BundleTxs",
 			bundle: b0,
-			newBundle: &Bundle{
-				BundleTxs:    NewTxOrGenList(txs[0]),
-				TargetTxHash: defaultTargetHash,
-			},
+			newBundle: NewBundle(
+				NewTxOrGenList(txs[0]),
+				defaultTargetHash,
+				true,
+			),
 			expected: true,
 		},
 		{
 			name:   "Non-overlapping BundleTxs",
 			bundle: b0,
-			newBundle: &Bundle{
-				BundleTxs:    NewTxOrGenList(txs[2], txs[3]),
-				TargetTxHash: defaultTargetHash,
-			},
+			newBundle: NewBundle(
+				NewTxOrGenList(txs[2], txs[3]),
+				defaultTargetHash,
+				true,
+			),
 			expected: false,
 		},
 	}

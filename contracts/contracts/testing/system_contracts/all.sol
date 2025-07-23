@@ -7,3 +7,4 @@ import "./RegistryMock.sol";
 import "./KIP113Mock.sol";
 import "./TreasuryRebalanceMock.sol";
 import "./MultiCallContractMock.sol";
+import "./AuctionEntryPointMock.sol";

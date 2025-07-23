@@ -38,21 +38,23 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 		if g.IsApproveTx(tx) {
 			approveTxs[addr] = tx
 		} else if g.IsSwapTx(tx) && g.IsExecutable(approveTxs[addr], tx) {
-			b := &builder.Bundle{
-				BundleTxs: builder.NewTxOrGenList(g.GetLendTxGenerator(approveTxs[addr], tx)),
-			}
+			b := builder.NewBundle(
+				builder.NewTxOrGenList(g.GetLendTxGenerator(approveTxs[addr], tx)),
+				targetTxHash,
+				false,
+			)
+
 			if approveTxs[addr] != nil {
 				b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(approveTxs[addr]))
 			}
 			b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(tx))
 
-			b.TargetTxHash = targetTxHash
 			targetTxHash = tx.Hash()
 
 			isConflict := false
 			for _, prev := range append(prevBundles, bundles...) {
-				isConflict = prev.IsConflict(b)
-				if isConflict {
+				if prev.IsConflict(b) {
+					isConflict = true
 					break
 				}
 			}
@@ -78,4 +80,8 @@ func (g *GaslessModule) GetMaxBundleTxsInPending() uint {
 
 func (g *GaslessModule) GetMaxBundleTxsInQueue() uint {
 	return g.GaslessConfig.MaxBundleTxsInQueue
+}
+
+func (g *GaslessModule) FilterTxs(txs map[common.Address]types.Transactions) {
+	// do nothing
 }
