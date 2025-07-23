@@ -83,6 +83,7 @@ func TestSubmitBid(t *testing.T) {
 			AuctioneerSig: common.Hex2Bytes("a9cfe35e9352818d7062b9a2ecfff939f46781ca352f35f56e790d4eaeb261e03564b4113517bda854eb530d642fdbc082085ead664e31014e902dbf4061fb841c"),
 		}
 		invalidTargetTx            = baseBid
+		undefinedTargetTxTyp       = baseBid
 		invalidSearcherSigLenBid   = baseBid
 		unexpectedSEarcherSigBid   = baseBid
 		invalidAuctioneerSigLenBid = baseBid
@@ -92,6 +93,8 @@ func TestSubmitBid(t *testing.T) {
 		validBid                   = baseBid
 	)
 	invalidTargetTx.TargetTxRaw = common.Hex2Bytes("1234")
+
+	undefinedTargetTxTyp.TargetTxRaw = common.Hex2Bytes("02f86f821fbf1385066720b30085066720b30083989680948e1b9a7cf306d671f9dfc4cdbb6b9fcb4d1fe2410180c080a01e125b30f20dac658684740ae5c20b3b9e3a6191dedb40446f12cfc48f65b3eba06f56ecf7535f6d3571fc2080f967b2f4de17695d46fa4f49e21caf09feb4fa1b")
 
 	invalidSearcherSigLenBid.SearcherSig = common.Hex2Bytes("1234")
 	unexpectedSEarcherSigBid.SearcherSig = common.Hex2Bytes("2cd97ec3eb8230a8cac9169146ea6ca406d908edd488e5fda30811ebf56647d94740d582c592e3476481b3fbab38a100623d2f4b0615da8b8dfd0f99128879901c")
@@ -113,8 +116,13 @@ func TestSubmitBid(t *testing.T) {
 		expected RPCOutput
 	}{
 		{
-			"target tx decoding error",
+			"invalid target tx decoding",
 			invalidTargetTx,
+			makeRPCOutput(common.Hash{}, errors.New("rlp: expected input list for types.TxInternalDataFeeDelegatedValueTransferMemoWithRatio")),
+		},
+		{
+			"undefined target tx type",
+			undefinedTargetTxTyp,
 			makeRPCOutput(common.Hash{}, errors.New("undefined tx type")),
 		},
 		{
