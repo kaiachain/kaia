@@ -68,16 +68,21 @@ type FilterAPI struct {
 	filtersMu sync.Mutex
 	filters   map[rpc.ID]*filter
 
+	supportFullTx bool
+	ethHead       bool
+
 	// this field is for test. it makes the filter timeout more flexible when testing
 	timeout time.Duration
 }
 
-func NewFilterAPI(backend Backend) *FilterAPI {
+func NewFilterAPI(backend Backend, supportFullTx, ethHead bool) *FilterAPI {
 	api := &FilterAPI{
-		backend: backend,
-		events:  NewEventSystem(backend.EventMux(), backend),
-		filters: make(map[rpc.ID]*filter),
-		timeout: defaultFilterDeadline,
+		backend:       backend,
+		events:        NewEventSystem(backend.EventMux(), backend),
+		filters:       make(map[rpc.ID]*filter),
+		timeout:       defaultFilterDeadline,
+		supportFullTx: supportFullTx,
+		ethHead:       ethHead,
 	}
 	go api.timeoutLoop()
 	return api
@@ -133,7 +138,18 @@ func (api *FilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
 		for {
 			select {
 			case h := <-headers:
-				header := kaiaApi.RPCMarshalHeader(h, api.backend.ChainConfig().Rules(h.Number))
+				var header map[string]interface{}
+				var err error
+				if api.ethHead {
+					header, err = kaiaApi.RpcMarshalEthHeader(h, api.backend.Engine(), api.backend.ChainConfig(), true)
+					if err != nil {
+						logger.Error("Failed to marshal header during newHeads subscription", "err", err)
+						headersSub.Unsubscribe()
+						return
+					}
+				} else {
+					header = kaiaApi.RPCMarshalHeader(h, api.backend.ChainConfig().Rules(h.Number))
+				}
 				notifier.Notify(rpcSub.ID, header)
 			case <-rpcSub.Err():
 				headersSub.Unsubscribe()
@@ -151,6 +167,11 @@ func (api *FilterAPI) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
 // NewPendingTransactions creates a subscription that is triggered each time a transaction
 // enters the transaction pool and was signed from one of the transactions this nodes manages.
 func (api *FilterAPI) NewPendingTransactions(ctx context.Context, fullTx *bool) (*rpc.Subscription, error) {
+	wantFullTx := fullTx != nil && *fullTx
+	if !api.supportFullTx && wantFullTx {
+		return nil, rpc.ErrSubscriptionNotFound
+	}
+
 	notifier, supported := rpc.NotifierFromContext(ctx)
 	if !supported {
 		return &rpc.Subscription{}, rpc.ErrNotificationsUnsupported
@@ -169,7 +190,7 @@ func (api *FilterAPI) NewPendingTransactions(ctx context.Context, fullTx *bool) 
 				// To keep the original behaviour, send a single tx hash in one notification.
 				// TODO(rjl493456442) Send a batch of tx hashes in one notification
 				for _, tx := range txs {
-					if fullTx != nil && *fullTx {
+					if wantFullTx {
 						m := tx.MakeRPCOutput()
 						m["time"] = tx.Time()
 						notifier.Notify(rpcSub.ID, m)
@@ -229,9 +250,19 @@ type KaiaFilterAPI struct {
 	*FilterAPI
 }
 
-// NewPublicFilterAPI returns a new PublicFilterAPI instance.
+// NewKaiaFilterAPI returns a new FilterAPI instance for kaia namespace.
 func NewKaiaFilterAPI(backend Backend) *KaiaFilterAPI {
-	return &KaiaFilterAPI{NewFilterAPI(backend)}
+	return &KaiaFilterAPI{NewFilterAPI(backend, false, false)}
+}
+
+// NewEthFilterAPI returns a new FilterAPI instance for eth namespace.
+func NewEthFilterAPI(backend Backend) *KaiaFilterAPI {
+	return &KaiaFilterAPI{NewFilterAPI(backend, false, true)}
+}
+
+// NewAuctionFilterAPI returns a new FilterAPI instance for auction namespace.
+func NewAuctionFilterAPI(backend Backend) *KaiaFilterAPI {
+	return &KaiaFilterAPI{NewFilterAPI(backend, true, false)}
 }
 
 // NewPendingTransactionFilter creates a filter that fetches pending transaction hashes

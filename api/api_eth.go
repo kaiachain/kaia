@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -1180,15 +1181,12 @@ func (api *EthAPI) Accounts() []common.Address {
 	return api.kaiaAccountAPI.Accounts()
 }
 
-// rpcMarshalHeader marshal block header as Ethereum compatible format.
-// It returns error when fetching Author which is block proposer is failed.
-func (api *EthAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (map[string]interface{}, error) {
+func RpcMarshalEthHeader(head *types.Header, engine consensus.Engine, chainConfig *params.ChainConfig, inclMiner bool) (map[string]interface{}, error) {
 	var proposer common.Address
 	var err error
 
-	b := api.kaiaAPI.b
 	if head.Number.Sign() != 0 && inclMiner {
-		proposer, err = b.Engine().Author(head)
+		proposer, err = engine.Author(head)
 		if err != nil {
 			// miner is the field Kaia should provide the correct value. It's not the field dummy value is allowed.
 			logger.Error("Failed to fetch author during marshaling header", "err", err.Error())
@@ -1218,18 +1216,24 @@ func (api *EthAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (map[str
 		"receiptsRoot":     head.ReceiptHash,
 	}
 
-	if b.ChainConfig().IsEthTxTypeForkEnabled(head.Number) {
+	if chainConfig.IsEthTxTypeForkEnabled(head.Number) {
 		if head.BaseFee == nil {
 			result["baseFeePerGas"] = (*hexutil.Big)(new(big.Int).SetUint64(params.ZeroBaseFee))
 		} else {
 			result["baseFeePerGas"] = (*hexutil.Big)(head.BaseFee)
 		}
 	}
-	if b.ChainConfig().IsRandaoForkEnabled(head.Number) {
+	if chainConfig.IsRandaoForkEnabled(head.Number) {
 		result["randomReveal"] = hexutil.Bytes(head.RandomReveal)
 		result["mixHash"] = hexutil.Bytes(head.MixHash)
 	}
 	return result, nil
+}
+
+// rpcMarshalHeader marshal block header as Ethereum compatible format.
+// It returns error when fetching Author which is block proposer is failed.
+func (api *EthAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (map[string]interface{}, error) {
+	return RpcMarshalEthHeader(head, api.kaiaAPI.b.Engine(), api.kaiaAPI.b.ChainConfig(), inclMiner)
 }
 
 // rpcMarshalBlock marshal block as Ethereum compatible format

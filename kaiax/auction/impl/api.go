@@ -58,13 +58,13 @@ func (a *AuctionModule) APIs() []rpc.API {
 
 type AuctionAPI struct {
 	a         *AuctionModule
-	f         *filters.FilterAPI
+	f         *filters.KaiaFilterAPI
 	publicAPI *api.KaiaBlockChainAPI
 }
 
 func newAuctionAPI(a *AuctionModule) *AuctionAPI {
 	kaiaBlockChainAPI := api.NewKaiaBlockChainAPI(a.Backend.(api.Backend))
-	return &AuctionAPI{a: a, f: filters.NewFilterAPI(a.Backend), publicAPI: kaiaBlockChainAPI}
+	return &AuctionAPI{a: a, f: filters.NewAuctionFilterAPI(a.Backend), publicAPI: kaiaBlockChainAPI}
 }
 
 type RPCOutput map[string]any

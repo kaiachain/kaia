@@ -724,6 +724,7 @@ func (s *CN) APIs() []rpc.API {
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
 
 	kaiaFilterAPI := filters.NewKaiaFilterAPI(s.APIBackend)
+	ethFilterAPI := filters.NewEthFilterAPI(s.APIBackend)
 	kaiaDownloaderAPI := downloader.NewKaiaDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	kaiaDownloaderSyncAPI := downloader.NewKaiaDownloaderSyncAPI(s.protocolManager.Downloader())
 
@@ -755,7 +756,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   kaiaFilterAPI,
+			Service:   ethFilterAPI,
 			Public:    true,
 		}, {
 			Namespace: "eth",
