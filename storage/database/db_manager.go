@@ -71,9 +71,13 @@ type DBManager interface {
 	getDatabase(DBEntryType) Database
 	CreateMigrationDBAndSetStatus(blockNum uint64) error
 	FinishStateMigration(succeed bool) chan struct{}
+	GetMiscDB() Database
+	GetHeaderDB() Database
+	GetBodyDB() Database
+	GetReceiptsDB() Database
 	GetStateTrieDB() Database
 	GetStateTrieMigrationDB() Database
-	GetMiscDB() Database
+	GetTxLookupEntryDB() Database
 	GetSnapshotDB() Database
 
 	// from accessors_chain.go
@@ -902,6 +906,22 @@ func (dbm *databaseManager) removeOldDB(dbPath string) {
 	logger.Info("Successfully removed database", "path", dbPath)
 }
 
+func (dbm *databaseManager) GetMiscDB() Database {
+	return dbm.dbs[MiscDB]
+}
+
+func (dbm *databaseManager) GetHeaderDB() Database {
+	return dbm.dbs[headerDB]
+}
+
+func (dbm *databaseManager) GetBodyDB() Database {
+	return dbm.dbs[BodyDB]
+}
+
+func (dbm *databaseManager) GetReceiptsDB() Database {
+	return dbm.dbs[ReceiptsDB]
+}
+
 func (dbm *databaseManager) GetStateTrieDB() Database {
 	return dbm.dbs[StateTrieDB]
 }
@@ -910,8 +930,8 @@ func (dbm *databaseManager) GetStateTrieMigrationDB() Database {
 	return dbm.dbs[StateTrieMigrationDB]
 }
 
-func (dbm *databaseManager) GetMiscDB() Database {
-	return dbm.dbs[MiscDB]
+func (dbm *databaseManager) GetTxLookupEntryDB() Database {
+	return dbm.dbs[TxLookUpEntryDB]
 }
 
 func (dbm *databaseManager) GetSnapshotDB() Database {

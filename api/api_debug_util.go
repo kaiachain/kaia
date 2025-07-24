@@ -23,14 +23,24 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
+	"slices"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/storage/database"
+)
+
+var (
+	errCompactRangeZeroStep = errors.New("step cannot be zero")
+	errCompactRangeStartEnd = errors.New("start must be less than end")
 )
 
 // DebugUtilAPI is the collection of Kaia APIs exposed over the private
@@ -50,24 +60,39 @@ func (api *DebugUtilAPI) ChaindbProperty(property string) (string, error) {
 	return api.b.ChainDB().Stat(property)
 }
 
+type ChaindbCompactArgs struct {
+	Preset *string           `json:"preset"`
+	Ranges []CompactionRange `json:"ranges"`
+}
+
 // ChaindbCompact flattens the entire key-value database into a single level,
 // removing all unused slots and merging all keys.
-func (api *DebugUtilAPI) ChaindbCompact() error {
-	for b := 0; b <= 255; b++ {
-		var (
-			start = []byte{byte(b)}
-			end   = []byte{byte(b + 1)}
-		)
-		if b == 255 {
-			end = nil
+func (api *DebugUtilAPI) ChaindbCompact(args *ChaindbCompactArgs) error {
+	if args == nil {
+		sDefault := "default"
+		args = &ChaindbCompactArgs{Preset: &sDefault}
+	}
+	preset := args.Preset
+	ranges := args.Ranges
+
+	if preset == nil {
+		ranges = compactionPresetDefault
+	} else if *preset == "default" {
+		ranges = compactionPresetDefault
+	} else if *preset == "custom" {
+		if len(ranges) == 0 {
+			return errors.New("no ranges provided for custom preset")
 		}
-		logger.Info("Compacting database started", "range", fmt.Sprintf("%#X-%#X", start, end))
-		cstart := time.Now()
-		if err := api.b.ChainDB().Compact(start, end); err != nil {
-			logger.Error("Database compaction failed", "err", err)
+	} else if r, ok := compactionPresets[*preset]; ok {
+		ranges = r
+	} else {
+		return fmt.Errorf("unknown preset: %s", *preset)
+	}
+
+	for _, r := range ranges {
+		if err := r.compactRange(context.Background(), api.b.ChainDB()); err != nil {
 			return err
 		}
-		logger.Info("Compacting database completed", "range", fmt.Sprintf("%#X-%#X", start, end), "elapsed", common.PrettyDuration(time.Since(cstart)))
 	}
 	return nil
 }
@@ -90,4 +115,227 @@ func (api *DebugUtilAPI) PrintBlock(ctx context.Context, blockNrOrHash rpc.Block
 		return "", fmt.Errorf("block %v not found", blockNumberOrHashString)
 	}
 	return spew.Sdump(block), nil
+}
+
+type CompactionRange struct {
+	Start    hexutil.Bytes `json:"start"`
+	Step     hexutil.Bytes `json:"step"`
+	End      hexutil.Bytes `json:"end"`
+	DB       []string      `json:"db"` // if empty, all database.
+	Interval string        `json:"interval"`
+}
+
+// CompactRange compacts over the given range, for all specified databases.
+func (r *CompactionRange) compactRange(ctx context.Context, chainDB database.DBManager) error {
+	var interval time.Duration
+	if r.Interval != "" {
+		if duration, err := time.ParseDuration(r.Interval); err != nil {
+			return err
+		} else {
+			interval = duration
+		}
+	}
+
+	fn := func(segStart, segEnd []byte) error {
+		logger.Info("Compacting database started", "range", fmt.Sprintf("0x%x-0x%x", segStart, segEnd))
+		cstart := time.Now()
+		if err := r.compactSegment(ctx, chainDB, segStart, segEnd); err != nil {
+			logger.Error("Database compaction failed", "err", err)
+			return err
+		}
+		logger.Info("Compacting database completed", "range", fmt.Sprintf("0x%x-0x%x", segStart, segEnd), "elapsed", common.PrettyDuration(time.Since(cstart)))
+		time.Sleep(interval)
+		return nil
+	}
+	if err := iterateRange(r.Start, r.Step, r.End, fn); err != nil {
+		return err
+	}
+	return nil
+}
+
+// compactSegment performs the compaction for a single segment, for all specified databases.
+func (r *CompactionRange) compactSegment(ctx context.Context, chainDB database.DBManager, segStart, segEnd []byte) error {
+	if len(r.DB) == 0 {
+		return chainDB.Compact(segStart, segEnd)
+	}
+
+	for _, db := range r.DB {
+		if db, err := getDatabase(chainDB, db); err != nil {
+			return err
+		} else if compactErr := db.Compact(segStart, segEnd); compactErr != nil {
+			return compactErr
+		}
+	}
+	return nil
+}
+
+func getDatabase(dbm database.DBManager, dbName string) (database.Database, error) {
+	var db database.Database
+	switch dbName {
+	case "misc":
+		db = dbm.GetMiscDB()
+	case "header":
+		db = dbm.GetHeaderDB()
+	case "body":
+		db = dbm.GetBodyDB()
+	case "receipts":
+		db = dbm.GetReceiptsDB()
+	case "txlookup":
+		db = dbm.GetTxLookupEntryDB()
+	case "statetrie":
+		db = dbm.GetStateTrieDB()
+	default:
+		return nil, fmt.Errorf("unknown database name: %s", dbName)
+	}
+	if db == nil {
+		return nil, fmt.Errorf("cannot get database: %s", dbName)
+	}
+	return db, nil
+}
+
+func padBytes(b []byte, padLen int) []byte {
+	if len(b) >= padLen {
+		return b
+	} else {
+		return append(b, bytes.Repeat([]byte{0}, padLen-len(b))...)
+	}
+}
+
+func padBig(b *big.Int, padLen int) []byte {
+	return padBytes(b.Bytes(), padLen)
+}
+
+func padRange(start, step, end []byte) (startBig, stepBig, endBig *big.Int, padLen int, err error) {
+	padLen = max(len(start), len(step), len(end))
+
+	// if start is empty, it means the range starts from zero.
+	startBig = new(big.Int).SetBytes(padBytes(start, padLen))
+
+	stepBig = new(big.Int).SetBytes(padBytes(step, padLen))
+	if stepBig.Sign() == 0 {
+		err = errCompactRangeZeroStep
+		return
+	}
+
+	endInfinity := len(end) == 0
+	if endInfinity {
+		// infinity is represented as 0x100..00 (1 followed by padLen zero bytes), just outside the range of prefixes.
+		endBig = new(big.Int).SetBytes(padBytes([]byte{1}, padLen+1))
+	} else {
+		endBig = new(big.Int).SetBytes(padBytes(end, padLen))
+	}
+	if !endInfinity && startBig.Cmp(endBig) > 0 {
+		err = errCompactRangeStartEnd
+		return
+	}
+
+	return
+}
+
+func iterateRange(start, step, end []byte, fn func(segStart, segEnd []byte) error) error {
+	endWithNil := len(end) == 0
+	rangeStart, rangeStep, rangeEnd, padLen, err := padRange(start, step, end)
+	if err != nil {
+		return err
+	}
+
+	segStart := rangeStart
+	segEnd := new(big.Int).Add(rangeStart, rangeStep)
+
+	for segEnd.Cmp(rangeEnd) < 0 {
+		if err := fn(padBig(segStart, padLen), padBig(segEnd, padLen)); err != nil {
+			return err
+		}
+
+		segStart.Add(segStart, rangeStep)
+		segEnd.Add(segEnd, rangeStep)
+	}
+
+	// last segment. run to the rangeEnd.
+	if endWithNil {
+		fn(padBig(segStart, padLen), nil)
+	} else {
+		fn(padBig(segStart, padLen), padBig(rangeEnd, padLen))
+	}
+	return nil
+}
+
+var (
+	compactionPresets = map[string][]CompactionRange{
+		"default":     compactionPresetDefault,
+		"allbutstate": slices.Concat(compactionPresetHeader, compactionPresetBody, compactionPresetReceipts),
+		"header":      compactionPresetHeader,
+		"body":        compactionPresetBody,
+		"receipts":    compactionPresetReceipts,
+	}
+	compactionPresetDefault = []CompactionRange{
+		{
+			Start: hexutil.MustDecode("0x"),
+			Step:  hexutil.MustDecode("0x01"),
+			End:   hexutil.MustDecode("0x"),
+		},
+	}
+	compactionPresetHeader = []CompactionRange{
+		{
+			// headerNumberPrefix("H") + hash -> num (uint64 big endian)
+			Start: hexutil.MustDecode("0x48"),
+			Step:  hexutil.MustDecode("0x01"),
+			End:   hexutil.MustDecode("0x49"),
+			DB:    []string{"header"},
+		},
+		{
+			// headerPrefix("h") + num (uint64 big endian) + hash -> header
+			Start: hexutil.MustDecode("0x68"),
+			Step:  hexutil.MustDecode("0x01"),
+			End:   hexutil.MustDecode("0x69"),
+			DB:    []string{"header"},
+		},
+	}
+	compactionPresetBody = []CompactionRange{
+		{
+			// blockBodyPrefix("b") + num (uint64 big endian) + hash -> block body
+			Start: hexutil.MustDecode("0x62"),
+			Step:  hexutil.MustDecode("0x01"),
+			End:   hexutil.MustDecode("0x63"),
+			DB:    []string{"body"},
+		},
+	}
+	compactionPresetReceipts = []CompactionRange{
+		{
+			// blockReceiptsPrefix("r") + num (uint64 big endian) + hash -> block receipts
+			Start: hexutil.MustDecode("0x72"),
+			Step:  hexutil.MustDecode("0x01"),
+			End:   hexutil.MustDecode("0x73"),
+			DB:    []string{"receipts"},
+		},
+	}
+	// compactionPresetReceiptsStepwise = []CompactionRange{
+	// 	{
+	// 		// e.g. 0x000000000b5d64b0 = num 190,670,000
+	// 		// step 0x0000000001000000 = num  16,777,216
+	// 		Start: hexutil.MustDecode("0x72"), // blockReceiptsPrefix("r")
+	// 		Step:  hexutil.MustDecode("0x00"+"0x0000000001"),
+	// 		End:   hexutil.MustDecode("0x72"+"0x000000000f"),
+	// 		DB:    []string{"receipts"},
+	// 	},
+	// }
+)
+
+// PrintBlock retrieves a block and returns its pretty printed form.
+func (api *DebugUtilAPI) IterKeys(ctx context.Context, dbname string, start, end hexutil.Bytes) ([]string, error) {
+	db, err := getDatabase(api.b.ChainDB(), dbname)
+	if err != nil {
+		return nil, err
+	}
+
+	iter := db.NewIterator(start, end)
+	keys := make([]string, 0)
+	max := 100
+	for iter.Next() {
+		keys = append(keys, hexutil.Encode(iter.Key()))
+		if len(keys) >= max {
+			break
+		}
+	}
+	return keys, nil
 }
