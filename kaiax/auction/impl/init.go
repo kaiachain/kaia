@@ -67,7 +67,7 @@ type AuctionModule struct {
 }
 
 const (
-	AuctionEarlyDeadline = 150 * time.Millisecond
+	AuctionEarlyDeadlineOffset = 150 * time.Millisecond
 )
 
 var AuctionLenderMinBal = new(big.Int).Mul(big.NewInt(10), new(big.Int).SetUint64(params.KAIA))
