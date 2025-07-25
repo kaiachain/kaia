@@ -38,16 +38,17 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 		if g.IsApproveTx(tx) {
 			approveTxs[addr] = tx
 		} else if g.IsSwapTx(tx) && g.IsExecutable(approveTxs[addr], tx) {
+			bundleTxs := builder.NewTxOrGenList(g.GetLendTxGenerator(approveTxs[addr], tx))
+			if approveTxs[addr] != nil {
+				bundleTxs = append(bundleTxs, builder.NewTxOrGenFromTx(approveTxs[addr]))
+			}
+			bundleTxs = append(bundleTxs, builder.NewTxOrGenFromTx(tx))
+
 			b := builder.NewBundle(
-				builder.NewTxOrGenList(g.GetLendTxGenerator(approveTxs[addr], tx)),
+				bundleTxs,
 				targetTxHash,
 				false,
 			)
-
-			if approveTxs[addr] != nil {
-				b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(approveTxs[addr]))
-			}
-			b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(tx))
 
 			targetTxHash = tx.Hash()
 

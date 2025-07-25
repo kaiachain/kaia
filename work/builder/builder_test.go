@@ -51,8 +51,8 @@ func TestIncorporateBundleTx(t *testing.T) {
 		{
 			name: "incorporate multiple bundles",
 			bundles: []*Bundle{
-				{BundleTxs: NewTxOrGenList(txs[0], txs[1]), TargetTxHash: common.Hash{}},
-				{BundleTxs: NewTxOrGenList(txs[2]), TargetTxHash: txs[1].Hash()},
+				NewBundle(NewTxOrGenList(txs[0], txs[1]), common.Hash{}, false),
+				NewBundle(NewTxOrGenList(txs[2]), txs[1].Hash(), false),
 			},
 			expected: NewTxOrGenList(txs[0], txs[1], txs[2], txs[3]),
 		},
@@ -64,15 +64,15 @@ func TestIncorporateBundleTx(t *testing.T) {
 		{
 			name: "incorporate bundle with generator",
 			bundles: []*Bundle{
-				{BundleTxs: NewTxOrGenList(txs[0], g1), TargetTxHash: common.Hash{}},
+				NewBundle(NewTxOrGenList(txs[0], g1), common.Hash{}, false),
 			},
 			expected: NewTxOrGenList(txs[0], g1, txs[1], txs[2], txs[3]),
 		},
 		{
 			name: "incorporate bundle with generator 2",
 			bundles: []*Bundle{
-				{BundleTxs: NewTxOrGenList(g1, txs[0]), TargetTxHash: common.Hash{}},
-				{BundleTxs: NewTxOrGenList(g2, txs[1]), TargetTxHash: txs[0].Hash()},
+				NewBundle(NewTxOrGenList(g1, txs[0]), common.Hash{}, false),
+				NewBundle(NewTxOrGenList(g2, txs[1]), txs[0].Hash(), false),
 			},
 			expected: NewTxOrGenList(g1, txs[0], g2, txs[1], txs[2], txs[3]),
 		},
@@ -117,8 +117,8 @@ func TestExtractBundles(t *testing.T) {
 		{
 			name: "correctly extract bundles with same target hash 1",
 			bundles: []*Bundle{
-				{BundleTxs: NewTxOrGenList(txs[0], txs[1]), TargetTxHash: common.Hash{}},
-				{BundleTxs: NewTxOrGenList(g1), TargetTxHash: common.Hash{}, TargetRequired: true},
+				NewBundle(NewTxOrGenList(txs[0], txs[1]), common.Hash{}, false),
+				NewBundle(NewTxOrGenList(g1), common.Hash{}, true),
 			},
 			expectedList:         NewTxOrGenList(g1, txs[0], txs[1], txs[2], txs[3], txs[4], txs[5]),
 			expectedTargetTxHash: []common.Hash{g1.Id, {}},
@@ -126,8 +126,8 @@ func TestExtractBundles(t *testing.T) {
 		{
 			name: "correctly extract bundles with same target hash 2",
 			bundles: []*Bundle{
-				{BundleTxs: NewTxOrGenList(g1, txs[2], txs[3]), TargetTxHash: txs[1].Hash()},
-				{BundleTxs: NewTxOrGenList(g2), TargetTxHash: txs[1].Hash(), TargetRequired: true},
+				NewBundle(NewTxOrGenList(g1, txs[2], txs[3]), txs[1].Hash(), false),
+				NewBundle(NewTxOrGenList(g2), txs[1].Hash(), true),
 			},
 			expectedList:         NewTxOrGenList(txs[0], txs[1], g2, g1, txs[2], txs[3], txs[4], txs[5]),
 			expectedTargetTxHash: []common.Hash{g2.Id, txs[1].Hash()},
@@ -135,9 +135,9 @@ func TestExtractBundles(t *testing.T) {
 		{
 			name: "correctly extract bundles with same target hash 3",
 			bundles: []*Bundle{
-				{BundleTxs: NewTxOrGenList(g1), TargetTxHash: txs[0].Hash(), TargetRequired: true},
-				{BundleTxs: NewTxOrGenList(g2, txs[2], txs[3]), TargetTxHash: txs[1].Hash()},
-				{BundleTxs: NewTxOrGenList(g3), TargetTxHash: txs[1].Hash(), TargetRequired: true},
+				NewBundle(NewTxOrGenList(g1), txs[0].Hash(), true),
+				NewBundle(NewTxOrGenList(g2, txs[2], txs[3]), txs[1].Hash(), false),
+				NewBundle(NewTxOrGenList(g3), txs[1].Hash(), true),
 			},
 			expectedList:         NewTxOrGenList(txs[0], g1, txs[1], g3, g2, txs[2], txs[3], txs[4], txs[5]),
 			expectedTargetTxHash: []common.Hash{txs[0].Hash(), g3.Id, txs[1].Hash()},
@@ -175,22 +175,22 @@ func TestIncorporate(t *testing.T) {
 	}{
 		{
 			name:     "incorporate first two transactions",
-			bundle:   &Bundle{BundleTxs: NewTxOrGenList(txs[0], txs[1]), TargetTxHash: common.Hash{}},
+			bundle:   NewBundle(NewTxOrGenList(txs[0], txs[1]), common.Hash{}, false),
 			expected: NewTxOrGenList(txs[0], txs[1], txs[2]),
 		},
 		{
 			name:     "incorporate last two transactions",
-			bundle:   &Bundle{BundleTxs: NewTxOrGenList(txs[1], txs[2]), TargetTxHash: common.Hash{}},
+			bundle:   NewBundle(NewTxOrGenList(txs[1], txs[2]), common.Hash{}, false),
 			expected: NewTxOrGenList(txs[1], txs[2], txs[0]),
 		},
 		{
 			name:     "incorporate with target hash",
-			bundle:   &Bundle{BundleTxs: NewTxOrGenList(txs[0]), TargetTxHash: txs[2].Hash()},
+			bundle:   NewBundle(NewTxOrGenList(txs[0]), txs[2].Hash(), false),
 			expected: NewTxOrGenList(txs[1], txs[2], txs[0]),
 		},
 		{
 			name:     "incorporate single transaction",
-			bundle:   &Bundle{BundleTxs: NewTxOrGenList(txs[2]), TargetTxHash: common.Hash{}},
+			bundle:   NewBundle(NewTxOrGenList(txs[2]), common.Hash{}, false),
 			expected: NewTxOrGenList(txs[2], txs[0], txs[1]),
 		},
 	}
@@ -241,11 +241,7 @@ func TestIsConflict(t *testing.T) {
 		txs[i] = types.NewTransaction(uint64(i), common.Address{}, common.Big0, 0, common.Big0, nil)
 	}
 
-	b0 := &Bundle{
-		BundleTxs:      NewTxOrGenList(txs[0], txs[1]),
-		TargetTxHash:   common.Hash{},
-		TargetRequired: true,
-	}
+	b0 := NewBundle(NewTxOrGenList(txs[0], txs[1]), common.Hash{}, true)
 	defaultTargetHash := txs[1].Hash() // make TargetTxHash checks pass
 
 	testcases := []struct {
@@ -257,37 +253,37 @@ func TestIsConflict(t *testing.T) {
 		{
 			name:        "Same TargetTxHash, TargetRequired",
 			prevBundles: []*Bundle{b0},
-			newBundles:  []*Bundle{{BundleTxs: []*TxOrGen{}, TargetTxHash: common.Hash{}, TargetRequired: true}},
+			newBundles:  []*Bundle{NewBundle(NewTxOrGenList(), common.Hash{}, true)},
 			expected:    true,
 		},
 		{
 			name:        "Same TargetTxHash, TargetRequired=false",
 			prevBundles: []*Bundle{b0},
-			newBundles:  []*Bundle{{BundleTxs: []*TxOrGen{}, TargetTxHash: common.Hash{}, TargetRequired: false}},
+			newBundles:  []*Bundle{NewBundle(NewTxOrGenList(), common.Hash{}, false)},
 			expected:    false,
 		},
 		{
 			name:        "TargetTxHash divides a bundle",
 			prevBundles: []*Bundle{b0},
-			newBundles:  []*Bundle{{BundleTxs: []*TxOrGen{}, TargetTxHash: txs[0].Hash()}},
+			newBundles:  []*Bundle{NewBundle(NewTxOrGenList(), txs[0].Hash(), false)},
 			expected:    true,
 		},
 		{
 			name:        "Overlapping BundleTxs 1",
 			prevBundles: []*Bundle{b0},
-			newBundles:  []*Bundle{{BundleTxs: NewTxOrGenList(txs[0], txs[2]), TargetTxHash: defaultTargetHash}},
+			newBundles:  []*Bundle{NewBundle(NewTxOrGenList(txs[0], txs[2]), defaultTargetHash, false)},
 			expected:    true,
 		},
 		{
 			name:        "Overlapping BundleTxs 2",
 			prevBundles: []*Bundle{b0},
-			newBundles:  []*Bundle{{BundleTxs: NewTxOrGenList(txs[1], txs[2], txs[3]), TargetTxHash: defaultTargetHash}},
+			newBundles:  []*Bundle{NewBundle(NewTxOrGenList(txs[1], txs[2], txs[3]), defaultTargetHash, false)},
 			expected:    true,
 		},
 		{
 			name:        "Non-overlapping BundleTxs",
 			prevBundles: []*Bundle{b0},
-			newBundles:  []*Bundle{{BundleTxs: NewTxOrGenList(txs[2], txs[3]), TargetTxHash: defaultTargetHash}},
+			newBundles:  []*Bundle{NewBundle(NewTxOrGenList(txs[2], txs[3]), defaultTargetHash, false)},
 			expected:    false,
 		},
 	}
@@ -326,35 +322,13 @@ func TestPopTxs(t *testing.T) {
 
 	// Create test bundles
 	bundles := []*Bundle{
-		{
-			BundleTxs: NewTxOrGenList(txs[1], txs[2]),
-		},
-		{
-			BundleTxs:    NewTxOrGenList(txs[3], txs[4]),
-			TargetTxHash: txs[2].Hash(),
-		},
-		{
-			BundleTxs:    NewTxOrGenList(g1, txs[5]),
-			TargetTxHash: txs[4].Hash(),
-		},
-		{
-			BundleTxs: NewTxOrGenList(g1, txs[1], txs[2]),
-		},
-		{
-			BundleTxs:      NewTxOrGenList(txs[2]),
-			TargetTxHash:   txs[1].Hash(),
-			TargetRequired: true, // If target is popped, the bundle should be popped
-		},
-		{
-			BundleTxs:      NewTxOrGenList(txs[2]),
-			TargetTxHash:   txs[1].Hash(),
-			TargetRequired: false, // Bundle is not popped if target is popped
-		},
-		{
-			BundleTxs:      NewTxOrGenList(g3),
-			TargetTxHash:   txs[2].Hash(),
-			TargetRequired: true, // If target in bundle is popped, the bundle should be popped
-		},
+		NewBundle(NewTxOrGenList(txs[1], txs[2]), common.Hash{}, false),
+		NewBundle(NewTxOrGenList(txs[3], txs[4]), txs[2].Hash(), false),
+		NewBundle(NewTxOrGenList(g1, txs[5]), txs[4].Hash(), false),
+		NewBundle(NewTxOrGenList(g1, txs[1], txs[2]), common.Hash{}, false),
+		NewBundle(NewTxOrGenList(txs[2]), txs[1].Hash(), true),  // If target is popped, the bundle should be popped
+		NewBundle(NewTxOrGenList(txs[2]), txs[1].Hash(), false), // Bundle is not popped if target is popped
+		NewBundle(NewTxOrGenList(g3), txs[2].Hash(), true),      // If target in bundle is popped, the bundle should be popped
 	}
 
 	testCases := []struct {
@@ -513,36 +487,16 @@ func TestCoordinateTargetTxHash(t *testing.T) {
 	g3 := NewTxOrGenFromGen(gen, common.Hash{3})
 	g4 := NewTxOrGenFromGen(gen, common.Hash{4})
 
-	b0 := &Bundle{
-		BundleTxs:      NewTxOrGenList(g1, txs[3], txs[4]),
-		TargetTxHash:   txs[2].Hash(),
-		TargetRequired: false,
-	}
-	b1 := &Bundle{
-		BundleTxs:      NewTxOrGenList(g2),
-		TargetTxHash:   txs[2].Hash(),
-		TargetRequired: true,
-	}
-	b2 := &Bundle{
-		BundleTxs:      NewTxOrGenList(g3),
-		TargetTxHash:   txs[2].Hash(),
-		TargetRequired: false,
-	}
-	b3 := &Bundle{
-		BundleTxs:      NewTxOrGenList(g4, txs[5]),
-		TargetTxHash:   txs[4].Hash(),
-		TargetRequired: false,
-	}
+	b0 := NewBundle(NewTxOrGenList(g1, txs[3], txs[4]), txs[2].Hash(), false)
+	b1 := NewBundle(NewTxOrGenList(g2), txs[2].Hash(), true)
+	b2 := NewBundle(NewTxOrGenList(g3), txs[2].Hash(), false)
+	b3 := NewBundle(NewTxOrGenList(g4, txs[5]), txs[4].Hash(), false)
 
 	// Copy bundles to avoid modifying the original bundles
 	copyBundles := func(bundles []*Bundle) []*Bundle {
 		copiedBundles := make([]*Bundle, len(bundles))
 		for i, bundle := range bundles {
-			copiedBundles[i] = &Bundle{
-				BundleTxs:      bundle.BundleTxs,
-				TargetTxHash:   bundle.TargetTxHash,
-				TargetRequired: bundle.TargetRequired,
-			}
+			copiedBundles[i] = NewBundle(bundle.BundleTxs, bundle.TargetTxHash, bundle.TargetRequired)
 		}
 		return copiedBundles
 	}
