@@ -2042,7 +2042,7 @@ func MakeDataDir(ctx *cli.Context) string {
 	return ""
 }
 
-// splitAndTrim splits input separated by a comma
+// SplitAndTrim splits input separated by a comma
 // and trims excessive white space from the substrings.
 func SplitAndTrim(input string) []string {
 	result := strings.Split(input, ",")
