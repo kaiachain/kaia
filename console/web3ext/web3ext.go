@@ -636,6 +636,8 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'chaindbCompact',
 			call: 'debug_chaindbCompact',
+			params: 1,
+			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'metrics',
