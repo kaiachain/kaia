@@ -92,3 +92,13 @@ func TestBidHash(t *testing.T) {
 	hash := bid.Hash()
 	require.Equal(t, bid.hash.Load(), hash)
 }
+
+func TestBidGetGasLimit(t *testing.T) {
+	bid := testBid
+	gasLimit := bid.GetGasLimit()
+	require.Equal(t, uint64(0), gasLimit)
+
+	bid.SetGasLimit(10000000)
+	gasLimit = bid.GetGasLimit()
+	require.Equal(t, uint64(10000000), gasLimit)
+}

@@ -20,13 +20,11 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,46 +44,20 @@ func genBid(targetTxHash common.Hash) *auction.Bid {
 
 func TestGetBidTxGenerator(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
-	var (
-		db     = database.NewMemoryDBManager()
-		alloc  = testAllocStorage()
-		config = testRandaoForkChainConfig(big.NewInt(0))
-	)
-	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
-
-	auctionConfig := auction.AuctionConfig{
-		Disable: false,
-	}
-	apiBackend := &MockBackend{}
-	fakeDownloader := &downloader.FakeDownloader{}
-
-	// Create a new auction module
-	module := NewAuctionModule()
-	require.NotNil(t, module)
-
-	// Initialize the module with test configuration
-	opts := &InitOpts{
-		ChainConfig:   testChainConfig,
-		AuctionConfig: &auctionConfig,
-		Chain:         backend.BlockChain(),
-		Backend:       apiBackend,
-		Downloader:    fakeDownloader,
-		NodeKey:       testNodeKey,
-	}
-	err := module.Init(opts)
-	require.NoError(t, err)
+	module := prep(t)
 
 	module.Start()
-
-	module.AuctionConfig.Disable = false
-	module.bidPool.auctioneer = testAuctioneer
-	module.bidPool.auctionEntryPoint = testAuctionEntryPoint
+	defer module.Stop()
 
 	// Arbitrary target tx
 	tx := types.NewTransaction(0, common.HexToAddress("0x5FC8d32690cc91D4c39d9d3abcBD16989F875701"), big.NewInt(0), 1000000, big.NewInt(100), []byte("d09de08a"))
 
-	txOrGen := module.GetBidTxGenerator(tx, genBid(tx.Hash()))
+	bid := genBid(tx.Hash())
+	txOrGen := module.GetBidTxGenerator(tx, bid)
 	require.NotNil(t, txOrGen)
+
+	gasLimit, err := module.bidPool.getBidTxGasLimit(bid)
+	require.NoError(t, err)
 
 	// Generate transaction from the generator function
 	generatedTx, err := txOrGen.GetTx(0)
@@ -95,16 +67,16 @@ func TestGetBidTxGenerator(t *testing.T) {
 	// Verify transaction properties
 	require.Equal(t, uint16(generatedTx.Type()), uint16(0x7802))
 	require.Equal(t, uint64(0), generatedTx.Nonce())
-	require.Equal(t, testAuctionEntryPoint, *generatedTx.To())
+	require.Equal(t, module.bidPool.auctionEntryPoint, *generatedTx.To())
 	require.Equal(t, common.Big0, generatedTx.Value())
-	require.Equal(t, AuctionTxMaxGasLimit, generatedTx.Gas())
+	require.Equal(t, gasLimit, generatedTx.Gas())
 	require.Equal(t, tx.GasFeeCap(), generatedTx.GasFeeCap())
 	require.Equal(t, tx.GasTipCap(), generatedTx.GasTipCap())
-	require.Equal(t, testChainConfig.ChainID, generatedTx.ChainId())
+	require.Equal(t, module.bidPool.ChainConfig.ChainID, generatedTx.ChainId())
 
 	// Verify the transaction is properly signed by the auctioneer
-	signer := types.LatestSignerForChainID(testChainConfig.ChainID)
+	signer := types.LatestSignerForChainID(module.bidPool.ChainConfig.ChainID)
 	sender, err := signer.Sender(generatedTx)
 	require.NoError(t, err)
-	require.Equal(t, testNode, sender)
+	require.Equal(t, crypto.PubkeyToAddress(module.InitOpts.NodeKey.PublicKey), sender)
 }

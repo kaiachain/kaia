@@ -14,8 +14,9 @@ A bid pool is responsible for managing the valid bids from the auctioneer. The b
 
 1. The `bid.BlockNumber` must be in range of `[currentBlockNumber + 1, currentBlockNumber + allowFutureBlock]`.
 2. The `bid.Bid` must be greater than 0.
-3. The `bid.Sender` must not be in the winner list of the same block number if the new bid isn't equal to the previous bid.
-4. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
+3. The gas limit must be less than the maximum limit.
+4. The `bid.Sender` must not be in the winner list of the same block number if the new bid isn't equal to the previous bid.
+5. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
 
 ## Block building rules
 

@@ -28,6 +28,7 @@ var (
 	ErrNilVerifyingContract = errors.New("verifyingContract is nil")
 	ErrInvalidTargetTxHash  = errors.New("invalid target tx hash")
 	ErrAuctionDisabled      = errors.New("auction is disabled")
+	ErrExceedMaxGasLimit    = errors.New("gas limit exceeds the maximum limit")
 
 	ErrBidAlreadyExists        = errors.New("bid already exists")
 	ErrBidSenderExists         = errors.New("bid sender already exists")

@@ -44,7 +44,8 @@ type BidData struct {
 
 type Bid struct {
 	BidData
-	hash atomic.Value
+	hash     atomic.Value
+	gasLimit atomic.Value
 }
 
 func (b *Bid) GetEthSignedMessageHash() []byte {
@@ -72,6 +73,17 @@ func (b *Bid) Hash() common.Hash {
 	hash := rlpHash(b.BidData)
 	b.hash.Store(hash)
 	return hash
+}
+
+func (b *Bid) SetGasLimit(gasLimit uint64) {
+	b.gasLimit.Store(gasLimit)
+}
+
+func (b *Bid) GetGasLimit() uint64 {
+	if gasLimit := b.gasLimit.Load(); gasLimit != nil {
+		return gasLimit.(uint64)
+	}
+	return 0
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
