@@ -255,11 +255,10 @@ func iterateRange(start, step, end []byte, fn func(segStart, segEnd []byte) erro
 
 	// last segment. run to the rangeEnd.
 	if endWithNil {
-		fn(padBig(segStart, padLen), nil)
+		return fn(padBig(segStart, padLen), nil)
 	} else {
-		fn(padBig(segStart, padLen), padBig(rangeEnd, padLen))
+		return fn(padBig(segStart, padLen), padBig(rangeEnd, padLen))
 	}
-	return nil
 }
 
 var (
