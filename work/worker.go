@@ -311,6 +311,7 @@ func (self *worker) handleTxsCh(quitByErr chan bool) {
 			if atomic.LoadInt32(&self.mining) != 0 {
 				// If we're mining, but nothing is being processed, wake on new transactions
 				if self.config.Clique != nil && self.config.Clique.Period == 0 {
+					logger.Info("[handleTxsCh]의 commitNewWork!")
 					self.commitNewWork()
 				}
 			}
@@ -337,6 +338,7 @@ func (self *worker) update() {
 			if h, ok := self.engine.(consensus.Handler); ok {
 				h.NewChainHead()
 			}
+			logger.Info("[update]의 commitNewWork!")
 			self.commitNewWork()
 
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
@@ -466,6 +468,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
 			//         Later we may be able to refine below code.
 			if mustCommitNewWork {
+				logger.Info("[wait]의 commitNewWork!")
 				self.commitNewWork()
 			}
 		}

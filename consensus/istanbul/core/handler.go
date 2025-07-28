@@ -170,6 +170,7 @@ func (c *core) handleMsg(payload []byte) error {
 			// Print view and address to help you analyze the node is valid or not.
 			// This information will help you to analyze whether the msg sender is valid or not.
 			// Furthermore, if the node is still syncing, there is a high probability that msg sender is a valid validator.
+			logger.Info("111")
 			logger.Warn("Received Consensus msg is signed by an unauthorized address. It could happen when the node is unsynced temporarily.", "senderAddress", msg.Address, "nodeView", c.currentView().String(), "msgView", msgView.String())
 		}
 		return err
@@ -239,6 +240,7 @@ func (c *core) handleTimeoutMsg(nextView *istanbul.View) {
 		maxRound := c.roundChangeSet.MaxRound(c.currentCommittee.F() + 1)
 		if maxRound != nil && maxRound.Cmp(c.current.Round()) > 0 {
 			logger.Warn("[RC] Send round change because of timeout event")
+			logger.Info("[handleTImeoutMsg-waitingForRoundChange] sendRoundChange")
 			c.sendRoundChange(maxRound)
 			return
 		}
@@ -248,6 +250,7 @@ func (c *core) handleTimeoutMsg(nextView *istanbul.View) {
 		c.logger.Trace("round change timeout, catch up latest sequence", "number", lastProposal.Number().Uint64())
 		c.startNewRound(common.Big0)
 	} else {
+		logger.Info("[handleTImeoutMsg-wcatch up latest sequence] sendRoundChange")
 		c.sendRoundChange(nextView.Round)
 	}
 }

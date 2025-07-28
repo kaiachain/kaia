@@ -139,6 +139,7 @@ func (c *core) handleRoundChange(msg *message, src common.Address) error {
 		if cv.Round.Cmp(roundView.Round) < 0 {
 			logger.Warn("[RC] Send round change because we have f+1 round change messages",
 				"currentRound", cv.Round.String(), "newRound", roundView.Round.String())
+			logger.Info("[handleRoundChange] sendRoundChange")
 			c.sendRoundChange(roundView.Round)
 		}
 		return nil

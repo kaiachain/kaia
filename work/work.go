@@ -161,6 +161,7 @@ func (self *Miner) Start() {
 		logger.Info("Starting mining operation")
 	}
 	self.worker.start()
+	logger.Info("[start]의 commitNewWork!")
 	self.worker.commitNewWork()
 }
 

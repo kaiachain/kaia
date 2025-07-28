@@ -261,6 +261,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	// istanbul BFT. Derive and set node's address using nodekey
 	if cn.chainConfig.Istanbul != nil {
+		logger.Info("Istanbul BFT!!!!!!!!!!!!!!!!!!!!")
 		cn.nodeAddress = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
 	}
 

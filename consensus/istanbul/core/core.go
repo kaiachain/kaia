@@ -307,6 +307,7 @@ func (c *core) startNewRound(round *big.Int) {
 			c.sendPreprepare(c.current.pendingRequest)
 		}
 	}
+	logger.Info("[startNewRound]의 newRoundChangeTimer!")
 	c.newRoundChangeTimer()
 
 	logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.currentCommittee.Proposer(), "isProposer", c.isProposer())
@@ -331,7 +332,7 @@ func (c *core) catchUpRound(view *istanbul.View) {
 		// The newProposer is only for logging purpose, so we don't need to return here.
 		// If there's error, it'll be handled in the `startNewRound` anyway.
 	}
-
+	logger.Info("[catchUpRound]의 newRoundChangeTimer!")
 	c.newRoundChangeTimer()
 	cLogger.Warn("[RC] Catch up round", "new_round", view.Round, "new_seq", view.Sequence, "new_proposer", newProposer)
 }
