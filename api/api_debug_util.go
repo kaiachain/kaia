@@ -322,22 +322,3 @@ var (
 	// 	},
 	// }
 )
-
-// PrintBlock retrieves a block and returns its pretty printed form.
-func (api *DebugUtilAPI) IterKeys(ctx context.Context, dbname string, start, end hexutil.Bytes) ([]string, error) {
-	db, err := getDatabase(api.b.ChainDB(), dbname)
-	if err != nil {
-		return nil, err
-	}
-
-	iter := db.NewIterator(start, end)
-	keys := make([]string, 0)
-	max := 100
-	for iter.Next() {
-		keys = append(keys, hexutil.Encode(iter.Key()))
-		if len(keys) >= max {
-			break
-		}
-	}
-	return keys, nil
-}
