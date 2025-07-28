@@ -2335,9 +2335,7 @@ func bundleEachTwoTxs(_, _ *TestAccountType, _ types.Signer, _, _ *big.Int,
 				tmpTx = tx
 				continue
 			}
-			b := &builder.Bundle{}
-			b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(tmpTx))
-			b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(tx))
+			b := builder.NewBundle(builder.NewTxOrGenList(builder.NewTxOrGenFromTx(tmpTx), builder.NewTxOrGenFromTx(tx)), common.Hash{}, false)
 			tmpTx = &types.Transaction{}
 			bundles = append(bundles, b)
 			if i > 1 {
@@ -2360,13 +2358,11 @@ func bundleAllAndAddGenToFirst(rewardBase, anon *TestAccountType, signer types.S
 
 		// Bundle all transaction and
 		bundles := []*builder.Bundle{}
-		b := &builder.Bundle{
-			BundleTxs:    builder.NewTxOrGenList(builder.NewTxOrGenFromGen(g, common.Hash{1})),
-			TargetTxHash: common.Hash{},
-		}
+		bundleTxs := builder.NewTxOrGenList(builder.NewTxOrGenFromGen(g, common.Hash{1}))
 		for _, tx := range txs {
-			b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(tx))
+			bundleTxs = append(bundleTxs, builder.NewTxOrGenFromTx(tx))
 		}
+		b := builder.NewBundle(bundleTxs, common.Hash{}, false)
 		bundles = append(bundles, b)
 		return bundles
 	}
@@ -2377,10 +2373,11 @@ func bundleAll(rewardBase, anon *TestAccountType, signer types.Signer, amount, g
 	return func(txs []*types.Transaction, _ []*builder.Bundle) []*builder.Bundle {
 		// Bundle every tx
 		bundles := []*builder.Bundle{}
-		b := &builder.Bundle{}
+		bundleTxs := []*builder.TxOrGen{}
 		for _, tx := range txs {
-			b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(tx))
+			bundleTxs = append(bundleTxs, builder.NewTxOrGenFromTx(tx))
 		}
+		b := builder.NewBundle(bundleTxs, common.Hash{}, false)
 		bundles = append(bundles, b)
 		return bundles
 	}

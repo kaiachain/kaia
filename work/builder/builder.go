@@ -43,7 +43,7 @@ func buildDependencyIndices(txs []*TxOrGen, bundles []*Bundle, signer types.Sign
 		for _, tx := range bundle.BundleTxs {
 			txHashToBundleIndices[tx.Id] = append(txHashToBundleIndices[tx.Id], i)
 		}
-		if bundle.TargetRequired {
+		if bundle.TargetRequired && bundle.TargetTxHash != (common.Hash{}) {
 			txHashToBundleIndices[bundle.TargetTxHash] = append(txHashToBundleIndices[bundle.TargetTxHash], i)
 		}
 	}
