@@ -137,13 +137,15 @@ func (r *CompactionRange) compactRange(ctx context.Context, chainDB database.DBM
 	}
 
 	fn := func(segStart, segEnd []byte) error {
-		logger.Info("Compacting database started", "range", fmt.Sprintf("0x%x-0x%x", segStart, segEnd))
-		cstart := time.Now()
+		sRange := fmt.Sprintf("0x%x-0x%x", segStart, segEnd)
+		logger.Info("Compacting database started", "db", r.DB, "range", sRange)
+		tStart := time.Now()
 		if err := r.compactSegment(ctx, chainDB, segStart, segEnd); err != nil {
-			logger.Error("Database compaction failed", "err", err)
+			logger.Error("Database compaction failed", "db", r.DB, "range", sRange, "err", err)
 			return err
 		}
-		logger.Info("Compacting database completed", "range", fmt.Sprintf("0x%x-0x%x", segStart, segEnd), "elapsed", common.PrettyDuration(time.Since(cstart)))
+		tElapsed := common.PrettyDuration(time.Since(tStart))
+		logger.Info("Compacting database completed", "db", r.DB, "range", sRange, "elapsed", tElapsed)
 		time.Sleep(interval)
 		return nil
 	}
