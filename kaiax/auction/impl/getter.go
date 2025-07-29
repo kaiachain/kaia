@@ -24,10 +24,6 @@ import (
 	"github.com/kaiachain/kaia/work/builder"
 )
 
-const (
-	AuctionTxMaxGasLimit = uint64(12_000_000)
-)
-
 func (a *AuctionModule) GetBidTxGenerator(tx *types.Transaction, bid *auction.Bid) *builder.TxOrGen {
 	gen := func(nonce uint64) (*types.Transaction, error) {
 		var (
@@ -42,12 +38,20 @@ func (a *AuctionModule) GetBidTxGenerator(tx *types.Transaction, bid *auction.Bi
 			return nil, err
 		}
 
+		if bid.GetGasLimit() == 0 {
+			gasLimit, err := a.bidPool.getBidTxGasLimit(bid)
+			if err != nil {
+				return nil, err
+			}
+			bid.SetGasLimit(gasLimit)
+		}
+
 		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumDynamicFee, map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:      nonce,
 			types.TxValueKeyTo:         &auctionEntryPoint,
 			types.TxValueKeyAmount:     common.Big0,
 			types.TxValueKeyData:       data,
-			types.TxValueKeyGasLimit:   AuctionTxMaxGasLimit,
+			types.TxValueKeyGasLimit:   bid.GetGasLimit(),
 			types.TxValueKeyGasFeeCap:  tx.GasFeeCap(),
 			types.TxValueKeyGasTipCap:  tx.GasTipCap(),
 			types.TxValueKeyAccessList: types.AccessList{},

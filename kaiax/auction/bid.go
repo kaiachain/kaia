@@ -44,7 +44,8 @@ type BidData struct {
 
 type Bid struct {
 	BidData
-	hash atomic.Value
+	hash     atomic.Value
+	gasLimit atomic.Uint64
 }
 
 func (b *Bid) GetEthSignedMessageHash() []byte {
@@ -72,6 +73,14 @@ func (b *Bid) Hash() common.Hash {
 	hash := rlpHash(b.BidData)
 	b.hash.Store(hash)
 	return hash
+}
+
+func (b *Bid) SetGasLimit(gasLimit uint64) {
+	b.gasLimit.Store(gasLimit)
+}
+
+func (b *Bid) GetGasLimit() uint64 {
+	return b.gasLimit.Load()
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
@@ -121,6 +130,12 @@ func (b *Bid) ValidateAuctioneerSig(auctioneer common.Address) error {
 
 func (b *Bid) Equals(other *Bid) bool {
 	return b.BlockNumber == other.BlockNumber && b.TargetTxHash == other.TargetTxHash
+}
+
+func (b *Bid) Copy() *Bid {
+	return &Bid{
+		BidData: b.BidData,
+	}
 }
 
 func getSigner(sig, digest []byte) (common.Address, error) {

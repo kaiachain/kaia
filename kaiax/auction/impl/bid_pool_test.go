@@ -54,17 +54,20 @@ var (
 	testSearcher2         = crypto.PubkeyToAddress(testSearcher2Key.PublicKey)
 	testSearcher3         = crypto.PubkeyToAddress(testSearcher3Key.PublicKey)
 
-	testBids = make([]*auction.Bid, 5)
+	testBids = make([]*auction.Bid, 6)
 )
 
 func init() {
 	// Initialize bids for each searcher
-	for i, key := range []*ecdsa.PrivateKey{testSearcher1Key, testSearcher2Key, testSearcher3Key, testSearcher1Key, testSearcher1Key} {
+	for i, key := range []*ecdsa.PrivateKey{testSearcher1Key, testSearcher2Key, testSearcher3Key, testSearcher1Key, testSearcher1Key, testSearcher1Key} {
 		bid := &auction.Bid{}
 		initBaseBid(bid, i, 3)
 
 		if i == 3 {
 			bid.TargetTxHash = common.HexToHash("0xf3c03c891206b24f5d2ff65b460df9b58c652279a3e0faed865dde4c46fe9da0")
+		}
+		if i == 5 {
+			bid.CallGasLimit = 15_000_000
 		}
 
 		// Set searcher address
@@ -183,6 +186,9 @@ func TestBidPool_AddBid(t *testing.T) {
 		hash, err := pool.AddBid(bid)
 		require.NoError(t, err)
 		assert.Equal(t, bid.Hash(), hash)
+		gasLimit, err := pool.getBidTxGasLimit(bid)
+		require.NoError(t, err)
+		assert.Equal(t, bid.GetGasLimit(), gasLimit)
 
 		// Verify bid was added correctly
 		assert.Equal(t, bid, pool.bidMap[hash])
@@ -191,8 +197,7 @@ func TestBidPool_AddBid(t *testing.T) {
 	}
 
 	// Test zero bid
-	zeroBid := &auction.Bid{}
-	*zeroBid = *testBids[0]
+	zeroBid := testBids[0].Copy()
 	zeroBid.Bid = big.NewInt(0)
 	_, err = pool.AddBid(zeroBid)
 	assert.Equal(t, auction.ErrZeroBid, err)
@@ -202,22 +207,19 @@ func TestBidPool_AddBid(t *testing.T) {
 	assert.Equal(t, auction.ErrBidAlreadyExists, err)
 
 	// Test bid with same sender but different target
-	duplicateSenderBid := &auction.Bid{}
-	*duplicateSenderBid = *testBids[4]
+	duplicateSenderBid := testBids[4].Copy()
 	_, err = pool.AddBid(duplicateSenderBid)
 	assert.Equal(t, auction.ErrBidSenderExists, err)
 
 	// Test bid with higher amount for same target
-	higherBid := &auction.Bid{}
-	*higherBid = *testBids[3]
+	higherBid := testBids[3].Copy()
 	_, err = pool.AddBid(higherBid)
 	require.NoError(t, err)
 	assert.Equal(t, higherBid, pool.bidTargetMap[testBids[3].BlockNumber][testBids[3].TargetTxHash])
 	assert.Equal(t, higherBid.Hash(), pool.bidWinnerMap[testBids[3].BlockNumber][testBids[3].Sender])
 
 	// Test bid with lower amount for same target
-	lowerBid := &auction.Bid{}
-	*lowerBid = *testBids[0]
+	lowerBid := testBids[0].Copy()
 	_, err = pool.AddBid(lowerBid)
 	assert.Equal(t, auction.ErrLowBid, err)
 }
@@ -252,6 +254,33 @@ func TestBidPool_AddBid_MaxBidPoolSize(t *testing.T) {
 	// Test adding bid when bid pool is full
 	_, err = pool.AddBid(testBids[1])
 	assert.Equal(t, auction.ErrBidPoolFull, err)
+}
+
+func TestBidPool_AddBid_ExceedMaxGasLimit(t *testing.T) {
+	var (
+		mockCtrl = gomock.NewController(t)
+		chain    = chain_mock.NewMockBlockChain(mockCtrl)
+		block1   = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+	)
+	defer mockCtrl.Finish()
+
+	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
+	require.NotNil(t, pool)
+
+	chain.EXPECT().CurrentBlock().Return(block1).Times(1)
+
+	// Start the auction
+	pool.start()
+	atomic.StoreUint32(&pool.running, 1)
+	defer pool.stop()
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
+	// Test successful bid additions
+	bid := testBids[5]
+	_, err := pool.AddBid(bid)
+	assert.Equal(t, auction.ErrExceedMaxCallGasLimit, err)
+	assert.Equal(t, uint64(0), bid.GetGasLimit())
 }
 
 func TestBidPool_RemoveOldBidsByNumber(t *testing.T) {

@@ -17,10 +17,14 @@
 package impl
 
 import (
+	"math/big"
 	"sync"
 	"sync/atomic"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/system"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
@@ -32,6 +36,9 @@ import (
 const (
 	bidChSize        = 100
 	allowFutureBlock = 2
+
+	BidTxMaxCallGasLimit = uint64(10_000_000)
+	BidTxGasBuffer       = uint64(180_000)
 )
 
 var numBidsGauge = metrics.NewRegisteredGauge("kaiax/auction/bidpool/num/bids", nil)
@@ -238,6 +245,12 @@ func (bp *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
 		return common.Hash{}, err
 	}
 
+	gasLimit, err := bp.getBidTxGasLimit(bid)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	bid.SetGasLimit(gasLimit)
+
 	bp.newBidCh <- bid
 
 	return bid.Hash(), nil
@@ -306,19 +319,24 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 		return auction.ErrZeroBid
 	}
 
+	// 3. The gas limit must be less than the maximum limit.
+	if bid.CallGasLimit > BidTxMaxCallGasLimit {
+		return auction.ErrExceedMaxCallGasLimit
+	}
+
 	// Check if the auction tx is already in the pool.
 	if _, ok := bp.bidMap[bid.Hash()]; ok {
 		return auction.ErrBidAlreadyExists
 	}
 
-	// 3. The `bid.Sender` must not be in the winner list of the same block number if the new bid isn't equal to the previous bid.
+	// 4. The `bid.Sender` must not be in the winner list of the same block number if the new bid isn't equal to the previous bid.
 	if hash, ok := bp.bidWinnerMap[blockNumber][sender]; ok {
 		if !bid.Equals(bp.bidMap[hash]) {
 			return auction.ErrBidSenderExists
 		}
 	}
 
-	// 4. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
+	// 5. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
 	if err := bp.validateBidSigs(bid); err != nil {
 		return err
 	}
@@ -383,4 +401,31 @@ func (bp *BidPool) handleNewBid() {
 			bp.newBidFeed.Send(bid)
 		}
 	}
+}
+
+func (bp *BidPool) getBidTxGasLimit(bid *auction.Bid) (uint64, error) {
+	data, err := system.EncodeAuctionCallData(bid)
+	if err != nil {
+		return 0, err
+	}
+
+	rules := bp.ChainConfig.Rules(big.NewInt(int64(bid.BlockNumber)))
+	intrinsicGas, err := types.IntrinsicGas(data, nil, nil, false, rules)
+	if err != nil {
+		return 0, err
+	}
+	floorDataGas := uint64(0)
+	if rules.IsPrague {
+		floorDataGas, err = blockchain.FloorDataGas(types.TxTypeEthereumDynamicFee, data, 0)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	gasLimit := intrinsicGas + bid.CallGasLimit + BidTxGasBuffer
+	if gasLimit < floorDataGas {
+		gasLimit = floorDataGas
+	}
+
+	return gasLimit, nil
 }
