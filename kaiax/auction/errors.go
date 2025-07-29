@@ -19,16 +19,16 @@ package auction
 import "errors"
 
 var (
-	ErrInitUnexpectedNil    = errors.New("unexpected nil during module init")
-	ErrBlockNotFound        = errors.New("block not found")
-	ErrInvalidBlockNumber   = errors.New("invalid block number")
-	ErrInvalidSearcherSig   = errors.New("invalid searcher sig")
-	ErrInvalidAuctioneerSig = errors.New("invalid auctioneer sig")
-	ErrNilChainId           = errors.New("chainId is nil")
-	ErrNilVerifyingContract = errors.New("verifyingContract is nil")
-	ErrInvalidTargetTxHash  = errors.New("invalid target tx hash")
-	ErrAuctionDisabled      = errors.New("auction is disabled")
-	ErrExceedMaxGasLimit    = errors.New("gas limit exceeds the maximum limit")
+	ErrInitUnexpectedNil     = errors.New("unexpected nil during module init")
+	ErrBlockNotFound         = errors.New("block not found")
+	ErrInvalidBlockNumber    = errors.New("invalid block number")
+	ErrInvalidSearcherSig    = errors.New("invalid searcher sig")
+	ErrInvalidAuctioneerSig  = errors.New("invalid auctioneer sig")
+	ErrNilChainId            = errors.New("chainId is nil")
+	ErrNilVerifyingContract  = errors.New("verifyingContract is nil")
+	ErrInvalidTargetTxHash   = errors.New("invalid target tx hash")
+	ErrAuctionDisabled       = errors.New("auction is disabled")
+	ErrExceedMaxCallGasLimit = errors.New("gas limit exceeds the maximum limit")
 
 	ErrBidAlreadyExists        = errors.New("bid already exists")
 	ErrBidSenderExists         = errors.New("bid sender already exists")

@@ -37,8 +37,8 @@ const (
 	bidChSize        = 100
 	allowFutureBlock = 2
 
-	BidTxMaxGasLimit = uint64(12_000_000)
-	BidTxGasBuffer   = uint64(180_000)
+	BidTxMaxCallGasLimit = uint64(10_000_000)
+	BidTxGasBuffer       = uint64(180_000)
 )
 
 var numBidsGauge = metrics.NewRegisteredGauge("kaiax/auction/bidpool/num/bids", nil)
@@ -245,6 +245,12 @@ func (bp *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
 		return common.Hash{}, err
 	}
 
+	gasLimit, err := bp.getBidTxGasLimit(bid)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	bid.SetGasLimit(gasLimit)
+
 	bp.newBidCh <- bid
 
 	return bid.Hash(), nil
@@ -314,14 +320,9 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 	}
 
 	// 3. The gas limit must be less than the maximum limit.
-	gasLimit, err := bp.getBidTxGasLimit(bid)
-	if err != nil {
-		return err
+	if bid.CallGasLimit > BidTxMaxCallGasLimit {
+		return auction.ErrExceedMaxCallGasLimit
 	}
-	if gasLimit > BidTxMaxGasLimit {
-		return auction.ErrExceedMaxGasLimit
-	}
-	bid.SetGasLimit(gasLimit)
 
 	// Check if the auction tx is already in the pool.
 	if _, ok := bp.bidMap[bid.Hash()]; ok {

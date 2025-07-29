@@ -197,8 +197,7 @@ func TestBidPool_AddBid(t *testing.T) {
 	}
 
 	// Test zero bid
-	zeroBid := &auction.Bid{}
-	*zeroBid = *testBids[0]
+	zeroBid := testBids[0].Copy()
 	zeroBid.Bid = big.NewInt(0)
 	_, err = pool.AddBid(zeroBid)
 	assert.Equal(t, auction.ErrZeroBid, err)
@@ -208,22 +207,19 @@ func TestBidPool_AddBid(t *testing.T) {
 	assert.Equal(t, auction.ErrBidAlreadyExists, err)
 
 	// Test bid with same sender but different target
-	duplicateSenderBid := &auction.Bid{}
-	*duplicateSenderBid = *testBids[4]
+	duplicateSenderBid := testBids[4].Copy()
 	_, err = pool.AddBid(duplicateSenderBid)
 	assert.Equal(t, auction.ErrBidSenderExists, err)
 
 	// Test bid with higher amount for same target
-	higherBid := &auction.Bid{}
-	*higherBid = *testBids[3]
+	higherBid := testBids[3].Copy()
 	_, err = pool.AddBid(higherBid)
 	require.NoError(t, err)
 	assert.Equal(t, higherBid, pool.bidTargetMap[testBids[3].BlockNumber][testBids[3].TargetTxHash])
 	assert.Equal(t, higherBid.Hash(), pool.bidWinnerMap[testBids[3].BlockNumber][testBids[3].Sender])
 
 	// Test bid with lower amount for same target
-	lowerBid := &auction.Bid{}
-	*lowerBid = *testBids[0]
+	lowerBid := testBids[0].Copy()
 	_, err = pool.AddBid(lowerBid)
 	assert.Equal(t, auction.ErrLowBid, err)
 }
@@ -283,7 +279,7 @@ func TestBidPool_AddBid_ExceedMaxGasLimit(t *testing.T) {
 	// Test successful bid additions
 	bid := testBids[5]
 	_, err := pool.AddBid(bid)
-	assert.Equal(t, auction.ErrExceedMaxGasLimit, err)
+	assert.Equal(t, auction.ErrExceedMaxCallGasLimit, err)
 	assert.Equal(t, uint64(0), bid.GetGasLimit())
 }
 
