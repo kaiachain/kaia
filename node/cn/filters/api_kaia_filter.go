@@ -191,7 +191,7 @@ func (api *FilterAPI) NewPendingTransactions(ctx context.Context, fullTx *bool) 
 				// TODO(rjl493456442) Send a batch of tx hashes in one notification
 				for _, tx := range txs {
 					if wantFullTx {
-						m := tx.MakeRPCOutput()
+						m := kaiaApi.NewRPCPendingTransaction(tx, api.backend.ChainConfig())
 						m["time"] = tx.Time()
 						notifier.Notify(rpcSub.ID, m)
 					} else {
