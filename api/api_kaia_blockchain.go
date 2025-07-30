@@ -800,6 +800,10 @@ func newRPCTransaction(header *types.Header, tx *types.Transaction, blockHash co
 	return output
 }
 
+func NewRPCPendingTransaction(tx *types.Transaction, config *params.ChainConfig) map[string]interface{} {
+	return newRPCPendingTransaction(tx, config)
+}
+
 // newRPCPendingTransaction returns a pending transaction that will serialize to the RPC representation
 func newRPCPendingTransaction(tx *types.Transaction, config *params.ChainConfig) map[string]interface{} {
 	return newRPCTransaction(nil, tx, common.Hash{}, 0, 0, config)
