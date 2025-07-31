@@ -65,7 +65,10 @@ interface IAuctionEntryPoint {
         AuctionTx calldata auctionTx
     ) external view returns (bytes32);
 
-    function getNonceAndBids(
+    function getNoncesAndDeposits(
         address[] memory searchers
-    ) external view returns (uint256[] memory nonces_, uint256[] memory bids_);
+    )
+        external
+        view
+        returns (uint256[] memory nonces_, uint256[] memory deposits_);
 }
