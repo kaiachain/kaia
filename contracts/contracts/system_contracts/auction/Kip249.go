@@ -2198,7 +2198,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) ParseVaultWithdraw(lo
 
 // IAuctionEntryPointMetaData contains all meta data concerning the IAuctionEntryPoint contract.
 var IAuctionEntryPointMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"Call\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"CallFailed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAuctioneer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAuctioneer\",\"type\":\"address\"}],\"name\":\"ChangeAuctioneer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldDepositVault\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newDepositVault\",\"type\":\"address\"}],\"name\":\"ChangeDepositVault\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"searcher\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"UseNonce\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"auctioneer\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structIAuctionEntryPoint.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"call\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_auctioneer\",\"type\":\"address\"}],\"name\":\"changeAuctioneer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_depositVault\",\"type\":\"address\"}],\"name\":\"changeDepositVault\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"depositVault\",\"outputs\":[{\"internalType\":\"contractIAuctionDepositVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structIAuctionEntryPoint.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"getAuctionTxHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"searchers\",\"type\":\"address[]\"}],\"name\":\"getNonceAndBids\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"nonces_\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"bids_\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"Call\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"CallFailed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAuctioneer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAuctioneer\",\"type\":\"address\"}],\"name\":\"ChangeAuctioneer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldDepositVault\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newDepositVault\",\"type\":\"address\"}],\"name\":\"ChangeDepositVault\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"searcher\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"UseNonce\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"auctioneer\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structIAuctionEntryPoint.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"call\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_auctioneer\",\"type\":\"address\"}],\"name\":\"changeAuctioneer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_depositVault\",\"type\":\"address\"}],\"name\":\"changeDepositVault\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"depositVault\",\"outputs\":[{\"internalType\":\"contractIAuctionDepositVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structIAuctionEntryPoint.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"getAuctionTxHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"searchers\",\"type\":\"address[]\"}],\"name\":\"getNoncesAndDeposits\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"nonces_\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"deposits_\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 	Sigs: map[string]string{
 		"5ec2c7bf": "auctioneer()",
 		"ca157554": "call((bytes32,uint256,address,address,uint256,uint256,uint256,bytes,bytes,bytes))",
@@ -2206,7 +2206,7 @@ var IAuctionEntryPointMetaData = &bind.MetaData{
 		"9d59928b": "changeDepositVault(address)",
 		"d7cd3949": "depositVault()",
 		"a8aa9450": "getAuctionTxHash((bytes32,uint256,address,address,uint256,uint256,uint256,bytes,bytes,bytes))",
-		"287ca78e": "getNonceAndBids(address[])",
+		"0339ed37": "getNoncesAndDeposits(address[])",
 	},
 }
 
@@ -2450,51 +2450,51 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GetAuctionTxHash(auc
 	return _IAuctionEntryPoint.Contract.GetAuctionTxHash(&_IAuctionEntryPoint.CallOpts, auctionTx)
 }
 
-// GetNonceAndBids is a free data retrieval call binding the contract method 0x287ca78e.
+// GetNoncesAndDeposits is a free data retrieval call binding the contract method 0x0339ed37.
 //
-// Solidity: function getNonceAndBids(address[] searchers) view returns(uint256[] nonces_, uint256[] bids_)
-func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GetNonceAndBids(opts *bind.CallOpts, searchers []common.Address) (struct {
-	Nonces []*big.Int
-	Bids   []*big.Int
+// Solidity: function getNoncesAndDeposits(address[] searchers) view returns(uint256[] nonces_, uint256[] deposits_)
+func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GetNoncesAndDeposits(opts *bind.CallOpts, searchers []common.Address) (struct {
+	Nonces   []*big.Int
+	Deposits []*big.Int
 }, error,
 ) {
 	var out []interface{}
-	err := _IAuctionEntryPoint.contract.Call(opts, &out, "getNonceAndBids", searchers)
+	err := _IAuctionEntryPoint.contract.Call(opts, &out, "getNoncesAndDeposits", searchers)
 
 	outstruct := new(struct {
-		Nonces []*big.Int
-		Bids   []*big.Int
+		Nonces   []*big.Int
+		Deposits []*big.Int
 	})
 	if err != nil {
 		return *outstruct, err
 	}
 
 	outstruct.Nonces = *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
-	outstruct.Bids = *abi.ConvertType(out[1], new([]*big.Int)).(*[]*big.Int)
+	outstruct.Deposits = *abi.ConvertType(out[1], new([]*big.Int)).(*[]*big.Int)
 
 	return *outstruct, err
 }
 
-// GetNonceAndBids is a free data retrieval call binding the contract method 0x287ca78e.
+// GetNoncesAndDeposits is a free data retrieval call binding the contract method 0x0339ed37.
 //
-// Solidity: function getNonceAndBids(address[] searchers) view returns(uint256[] nonces_, uint256[] bids_)
-func (_IAuctionEntryPoint *IAuctionEntryPointSession) GetNonceAndBids(searchers []common.Address) (struct {
-	Nonces []*big.Int
-	Bids   []*big.Int
+// Solidity: function getNoncesAndDeposits(address[] searchers) view returns(uint256[] nonces_, uint256[] deposits_)
+func (_IAuctionEntryPoint *IAuctionEntryPointSession) GetNoncesAndDeposits(searchers []common.Address) (struct {
+	Nonces   []*big.Int
+	Deposits []*big.Int
 }, error,
 ) {
-	return _IAuctionEntryPoint.Contract.GetNonceAndBids(&_IAuctionEntryPoint.CallOpts, searchers)
+	return _IAuctionEntryPoint.Contract.GetNoncesAndDeposits(&_IAuctionEntryPoint.CallOpts, searchers)
 }
 
-// GetNonceAndBids is a free data retrieval call binding the contract method 0x287ca78e.
+// GetNoncesAndDeposits is a free data retrieval call binding the contract method 0x0339ed37.
 //
-// Solidity: function getNonceAndBids(address[] searchers) view returns(uint256[] nonces_, uint256[] bids_)
-func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GetNonceAndBids(searchers []common.Address) (struct {
-	Nonces []*big.Int
-	Bids   []*big.Int
+// Solidity: function getNoncesAndDeposits(address[] searchers) view returns(uint256[] nonces_, uint256[] deposits_)
+func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GetNoncesAndDeposits(searchers []common.Address) (struct {
+	Nonces   []*big.Int
+	Deposits []*big.Int
 }, error,
 ) {
-	return _IAuctionEntryPoint.Contract.GetNonceAndBids(&_IAuctionEntryPoint.CallOpts, searchers)
+	return _IAuctionEntryPoint.Contract.GetNoncesAndDeposits(&_IAuctionEntryPoint.CallOpts, searchers)
 }
 
 // Call is a paid mutator transaction binding the contract method 0xca157554.
@@ -3219,6 +3219,998 @@ func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) WatchUseNonce(opts *bind.
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) ParseUseNonce(log types.Log) (*IAuctionEntryPointUseNonce, error) {
 	event := new(IAuctionEntryPointUseNonce)
 	if err := _IAuctionEntryPoint.contract.UnpackLog(event, "UseNonce", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// IAuctionFeeVaultMetaData contains all meta data concerning the IAuctionFeeVault contract.
+var IAuctionFeeVaultMetaData = &bind.MetaData{
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"paybackAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"validatorPaybackAmount\",\"type\":\"uint256\"}],\"name\":\"FeeDeposit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"FeeWithdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"reward\",\"type\":\"address\"}],\"name\":\"RewardAddressRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"searcherPaybackRate\",\"type\":\"uint256\"}],\"name\":\"SearcherPaybackRateUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"validatorPaybackRate\",\"type\":\"uint256\"}],\"name\":\"ValidatorPaybackRateUpdated\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getRewardAddr\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddr\",\"type\":\"address\"}],\"name\":\"registerRewardAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_searcherPaybackRate\",\"type\":\"uint256\"}],\"name\":\"setSearcherPaybackRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_validatorPaybackRate\",\"type\":\"uint256\"}],\"name\":\"setValidatorPaybackRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"searcher\",\"type\":\"address\"}],\"name\":\"takeBid\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"}],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Sigs: map[string]string{
+		"27a50f72": "getRewardAddr(address)",
+		"363d5183": "registerRewardAddress(address,address)",
+		"36cf2c63": "setSearcherPaybackRate(uint256)",
+		"11062696": "setValidatorPaybackRate(uint256)",
+		"8573e2ff": "takeBid(address)",
+		"51cff8d9": "withdraw(address)",
+	},
+}
+
+// IAuctionFeeVaultABI is the input ABI used to generate the binding from.
+// Deprecated: Use IAuctionFeeVaultMetaData.ABI instead.
+var IAuctionFeeVaultABI = IAuctionFeeVaultMetaData.ABI
+
+// IAuctionFeeVaultBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const IAuctionFeeVaultBinRuntime = ``
+
+// Deprecated: Use IAuctionFeeVaultMetaData.Sigs instead.
+// IAuctionFeeVaultFuncSigs maps the 4-byte function signature to its string representation.
+var IAuctionFeeVaultFuncSigs = IAuctionFeeVaultMetaData.Sigs
+
+// IAuctionFeeVault is an auto generated Go binding around a Kaia contract.
+type IAuctionFeeVault struct {
+	IAuctionFeeVaultCaller     // Read-only binding to the contract
+	IAuctionFeeVaultTransactor // Write-only binding to the contract
+	IAuctionFeeVaultFilterer   // Log filterer for contract events
+}
+
+// IAuctionFeeVaultCaller is an auto generated read-only Go binding around a Kaia contract.
+type IAuctionFeeVaultCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IAuctionFeeVaultTransactor is an auto generated write-only Go binding around a Kaia contract.
+type IAuctionFeeVaultTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IAuctionFeeVaultFilterer is an auto generated log filtering Go binding around a Kaia contract events.
+type IAuctionFeeVaultFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IAuctionFeeVaultSession is an auto generated Go binding around a Kaia contract,
+// with pre-set call and transact options.
+type IAuctionFeeVaultSession struct {
+	Contract     *IAuctionFeeVault // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// IAuctionFeeVaultCallerSession is an auto generated read-only Go binding around a Kaia contract,
+// with pre-set call options.
+type IAuctionFeeVaultCallerSession struct {
+	Contract *IAuctionFeeVaultCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts           // Call options to use throughout this session
+}
+
+// IAuctionFeeVaultTransactorSession is an auto generated write-only Go binding around a Kaia contract,
+// with pre-set transact options.
+type IAuctionFeeVaultTransactorSession struct {
+	Contract     *IAuctionFeeVaultTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts           // Transaction auth options to use throughout this session
+}
+
+// IAuctionFeeVaultRaw is an auto generated low-level Go binding around a Kaia contract.
+type IAuctionFeeVaultRaw struct {
+	Contract *IAuctionFeeVault // Generic contract binding to access the raw methods on
+}
+
+// IAuctionFeeVaultCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
+type IAuctionFeeVaultCallerRaw struct {
+	Contract *IAuctionFeeVaultCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// IAuctionFeeVaultTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
+type IAuctionFeeVaultTransactorRaw struct {
+	Contract *IAuctionFeeVaultTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewIAuctionFeeVault creates a new instance of IAuctionFeeVault, bound to a specific deployed contract.
+func NewIAuctionFeeVault(address common.Address, backend bind.ContractBackend) (*IAuctionFeeVault, error) {
+	contract, err := bindIAuctionFeeVault(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &IAuctionFeeVault{IAuctionFeeVaultCaller: IAuctionFeeVaultCaller{contract: contract}, IAuctionFeeVaultTransactor: IAuctionFeeVaultTransactor{contract: contract}, IAuctionFeeVaultFilterer: IAuctionFeeVaultFilterer{contract: contract}}, nil
+}
+
+// NewIAuctionFeeVaultCaller creates a new read-only instance of IAuctionFeeVault, bound to a specific deployed contract.
+func NewIAuctionFeeVaultCaller(address common.Address, caller bind.ContractCaller) (*IAuctionFeeVaultCaller, error) {
+	contract, err := bindIAuctionFeeVault(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IAuctionFeeVaultCaller{contract: contract}, nil
+}
+
+// NewIAuctionFeeVaultTransactor creates a new write-only instance of IAuctionFeeVault, bound to a specific deployed contract.
+func NewIAuctionFeeVaultTransactor(address common.Address, transactor bind.ContractTransactor) (*IAuctionFeeVaultTransactor, error) {
+	contract, err := bindIAuctionFeeVault(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IAuctionFeeVaultTransactor{contract: contract}, nil
+}
+
+// NewIAuctionFeeVaultFilterer creates a new log filterer instance of IAuctionFeeVault, bound to a specific deployed contract.
+func NewIAuctionFeeVaultFilterer(address common.Address, filterer bind.ContractFilterer) (*IAuctionFeeVaultFilterer, error) {
+	contract, err := bindIAuctionFeeVault(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &IAuctionFeeVaultFilterer{contract: contract}, nil
+}
+
+// bindIAuctionFeeVault binds a generic wrapper to an already deployed contract.
+func bindIAuctionFeeVault(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := IAuctionFeeVaultMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IAuctionFeeVault *IAuctionFeeVaultRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _IAuctionFeeVault.Contract.IAuctionFeeVaultCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IAuctionFeeVault *IAuctionFeeVaultRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.IAuctionFeeVaultTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IAuctionFeeVault *IAuctionFeeVaultRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.IAuctionFeeVaultTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IAuctionFeeVault *IAuctionFeeVaultCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _IAuctionFeeVault.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.contract.Transact(opts, method, params...)
+}
+
+// GetRewardAddr is a free data retrieval call binding the contract method 0x27a50f72.
+//
+// Solidity: function getRewardAddr(address nodeId) view returns(address)
+func (_IAuctionFeeVault *IAuctionFeeVaultCaller) GetRewardAddr(opts *bind.CallOpts, nodeId common.Address) (common.Address, error) {
+	var out []interface{}
+	err := _IAuctionFeeVault.contract.Call(opts, &out, "getRewardAddr", nodeId)
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+}
+
+// GetRewardAddr is a free data retrieval call binding the contract method 0x27a50f72.
+//
+// Solidity: function getRewardAddr(address nodeId) view returns(address)
+func (_IAuctionFeeVault *IAuctionFeeVaultSession) GetRewardAddr(nodeId common.Address) (common.Address, error) {
+	return _IAuctionFeeVault.Contract.GetRewardAddr(&_IAuctionFeeVault.CallOpts, nodeId)
+}
+
+// GetRewardAddr is a free data retrieval call binding the contract method 0x27a50f72.
+//
+// Solidity: function getRewardAddr(address nodeId) view returns(address)
+func (_IAuctionFeeVault *IAuctionFeeVaultCallerSession) GetRewardAddr(nodeId common.Address) (common.Address, error) {
+	return _IAuctionFeeVault.Contract.GetRewardAddr(&_IAuctionFeeVault.CallOpts, nodeId)
+}
+
+// RegisterRewardAddress is a paid mutator transaction binding the contract method 0x363d5183.
+//
+// Solidity: function registerRewardAddress(address nodeId, address rewardAddr) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactor) RegisterRewardAddress(opts *bind.TransactOpts, nodeId common.Address, rewardAddr common.Address) (*types.Transaction, error) {
+	return _IAuctionFeeVault.contract.Transact(opts, "registerRewardAddress", nodeId, rewardAddr)
+}
+
+// RegisterRewardAddress is a paid mutator transaction binding the contract method 0x363d5183.
+//
+// Solidity: function registerRewardAddress(address nodeId, address rewardAddr) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultSession) RegisterRewardAddress(nodeId common.Address, rewardAddr common.Address) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.RegisterRewardAddress(&_IAuctionFeeVault.TransactOpts, nodeId, rewardAddr)
+}
+
+// RegisterRewardAddress is a paid mutator transaction binding the contract method 0x363d5183.
+//
+// Solidity: function registerRewardAddress(address nodeId, address rewardAddr) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactorSession) RegisterRewardAddress(nodeId common.Address, rewardAddr common.Address) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.RegisterRewardAddress(&_IAuctionFeeVault.TransactOpts, nodeId, rewardAddr)
+}
+
+// SetSearcherPaybackRate is a paid mutator transaction binding the contract method 0x36cf2c63.
+//
+// Solidity: function setSearcherPaybackRate(uint256 _searcherPaybackRate) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactor) SetSearcherPaybackRate(opts *bind.TransactOpts, _searcherPaybackRate *big.Int) (*types.Transaction, error) {
+	return _IAuctionFeeVault.contract.Transact(opts, "setSearcherPaybackRate", _searcherPaybackRate)
+}
+
+// SetSearcherPaybackRate is a paid mutator transaction binding the contract method 0x36cf2c63.
+//
+// Solidity: function setSearcherPaybackRate(uint256 _searcherPaybackRate) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultSession) SetSearcherPaybackRate(_searcherPaybackRate *big.Int) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.SetSearcherPaybackRate(&_IAuctionFeeVault.TransactOpts, _searcherPaybackRate)
+}
+
+// SetSearcherPaybackRate is a paid mutator transaction binding the contract method 0x36cf2c63.
+//
+// Solidity: function setSearcherPaybackRate(uint256 _searcherPaybackRate) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactorSession) SetSearcherPaybackRate(_searcherPaybackRate *big.Int) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.SetSearcherPaybackRate(&_IAuctionFeeVault.TransactOpts, _searcherPaybackRate)
+}
+
+// SetValidatorPaybackRate is a paid mutator transaction binding the contract method 0x11062696.
+//
+// Solidity: function setValidatorPaybackRate(uint256 _validatorPaybackRate) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactor) SetValidatorPaybackRate(opts *bind.TransactOpts, _validatorPaybackRate *big.Int) (*types.Transaction, error) {
+	return _IAuctionFeeVault.contract.Transact(opts, "setValidatorPaybackRate", _validatorPaybackRate)
+}
+
+// SetValidatorPaybackRate is a paid mutator transaction binding the contract method 0x11062696.
+//
+// Solidity: function setValidatorPaybackRate(uint256 _validatorPaybackRate) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultSession) SetValidatorPaybackRate(_validatorPaybackRate *big.Int) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.SetValidatorPaybackRate(&_IAuctionFeeVault.TransactOpts, _validatorPaybackRate)
+}
+
+// SetValidatorPaybackRate is a paid mutator transaction binding the contract method 0x11062696.
+//
+// Solidity: function setValidatorPaybackRate(uint256 _validatorPaybackRate) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactorSession) SetValidatorPaybackRate(_validatorPaybackRate *big.Int) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.SetValidatorPaybackRate(&_IAuctionFeeVault.TransactOpts, _validatorPaybackRate)
+}
+
+// TakeBid is a paid mutator transaction binding the contract method 0x8573e2ff.
+//
+// Solidity: function takeBid(address searcher) payable returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactor) TakeBid(opts *bind.TransactOpts, searcher common.Address) (*types.Transaction, error) {
+	return _IAuctionFeeVault.contract.Transact(opts, "takeBid", searcher)
+}
+
+// TakeBid is a paid mutator transaction binding the contract method 0x8573e2ff.
+//
+// Solidity: function takeBid(address searcher) payable returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultSession) TakeBid(searcher common.Address) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.TakeBid(&_IAuctionFeeVault.TransactOpts, searcher)
+}
+
+// TakeBid is a paid mutator transaction binding the contract method 0x8573e2ff.
+//
+// Solidity: function takeBid(address searcher) payable returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactorSession) TakeBid(searcher common.Address) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.TakeBid(&_IAuctionFeeVault.TransactOpts, searcher)
+}
+
+// Withdraw is a paid mutator transaction binding the contract method 0x51cff8d9.
+//
+// Solidity: function withdraw(address to) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactor) Withdraw(opts *bind.TransactOpts, to common.Address) (*types.Transaction, error) {
+	return _IAuctionFeeVault.contract.Transact(opts, "withdraw", to)
+}
+
+// Withdraw is a paid mutator transaction binding the contract method 0x51cff8d9.
+//
+// Solidity: function withdraw(address to) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultSession) Withdraw(to common.Address) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.Withdraw(&_IAuctionFeeVault.TransactOpts, to)
+}
+
+// Withdraw is a paid mutator transaction binding the contract method 0x51cff8d9.
+//
+// Solidity: function withdraw(address to) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactorSession) Withdraw(to common.Address) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.Withdraw(&_IAuctionFeeVault.TransactOpts, to)
+}
+
+// IAuctionFeeVaultFeeDepositIterator is returned from FilterFeeDeposit and is used to iterate over the raw logs and unpacked data for FeeDeposit events raised by the IAuctionFeeVault contract.
+type IAuctionFeeVaultFeeDepositIterator struct {
+	Event *IAuctionFeeVaultFeeDeposit // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IAuctionFeeVaultFeeDepositIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IAuctionFeeVaultFeeDeposit)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IAuctionFeeVaultFeeDeposit)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IAuctionFeeVaultFeeDepositIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IAuctionFeeVaultFeeDepositIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IAuctionFeeVaultFeeDeposit represents a FeeDeposit event raised by the IAuctionFeeVault contract.
+type IAuctionFeeVaultFeeDeposit struct {
+	Sender                 common.Address
+	Amount                 *big.Int
+	PaybackAmount          *big.Int
+	ValidatorPaybackAmount *big.Int
+	Raw                    types.Log // Blockchain specific contextual infos
+}
+
+// FilterFeeDeposit is a free log retrieval operation binding the contract event 0xa34c9ef6ada915fef21639b2d5c085580cf79046cca66c2c2e8b87e2f3bd8567.
+//
+// Solidity: event FeeDeposit(address indexed sender, uint256 amount, uint256 paybackAmount, uint256 validatorPaybackAmount)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterFeeDeposit(opts *bind.FilterOpts, sender []common.Address) (*IAuctionFeeVaultFeeDepositIterator, error) {
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _IAuctionFeeVault.contract.FilterLogs(opts, "FeeDeposit", senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return &IAuctionFeeVaultFeeDepositIterator{contract: _IAuctionFeeVault.contract, event: "FeeDeposit", logs: logs, sub: sub}, nil
+}
+
+// WatchFeeDeposit is a free log subscription operation binding the contract event 0xa34c9ef6ada915fef21639b2d5c085580cf79046cca66c2c2e8b87e2f3bd8567.
+//
+// Solidity: event FeeDeposit(address indexed sender, uint256 amount, uint256 paybackAmount, uint256 validatorPaybackAmount)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) WatchFeeDeposit(opts *bind.WatchOpts, sink chan<- *IAuctionFeeVaultFeeDeposit, sender []common.Address) (event.Subscription, error) {
+	var senderRule []interface{}
+	for _, senderItem := range sender {
+		senderRule = append(senderRule, senderItem)
+	}
+
+	logs, sub, err := _IAuctionFeeVault.contract.WatchLogs(opts, "FeeDeposit", senderRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IAuctionFeeVaultFeeDeposit)
+				if err := _IAuctionFeeVault.contract.UnpackLog(event, "FeeDeposit", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseFeeDeposit is a log parse operation binding the contract event 0xa34c9ef6ada915fef21639b2d5c085580cf79046cca66c2c2e8b87e2f3bd8567.
+//
+// Solidity: event FeeDeposit(address indexed sender, uint256 amount, uint256 paybackAmount, uint256 validatorPaybackAmount)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) ParseFeeDeposit(log types.Log) (*IAuctionFeeVaultFeeDeposit, error) {
+	event := new(IAuctionFeeVaultFeeDeposit)
+	if err := _IAuctionFeeVault.contract.UnpackLog(event, "FeeDeposit", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// IAuctionFeeVaultFeeWithdrawalIterator is returned from FilterFeeWithdrawal and is used to iterate over the raw logs and unpacked data for FeeWithdrawal events raised by the IAuctionFeeVault contract.
+type IAuctionFeeVaultFeeWithdrawalIterator struct {
+	Event *IAuctionFeeVaultFeeWithdrawal // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IAuctionFeeVaultFeeWithdrawalIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IAuctionFeeVaultFeeWithdrawal)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IAuctionFeeVaultFeeWithdrawal)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IAuctionFeeVaultFeeWithdrawalIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IAuctionFeeVaultFeeWithdrawalIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IAuctionFeeVaultFeeWithdrawal represents a FeeWithdrawal event raised by the IAuctionFeeVault contract.
+type IAuctionFeeVaultFeeWithdrawal struct {
+	Amount *big.Int
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterFeeWithdrawal is a free log retrieval operation binding the contract event 0x706d7f48c702007c2fb0881cea5759732e64f52faee427d5ab030787cfb7d787.
+//
+// Solidity: event FeeWithdrawal(uint256 amount)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterFeeWithdrawal(opts *bind.FilterOpts) (*IAuctionFeeVaultFeeWithdrawalIterator, error) {
+	logs, sub, err := _IAuctionFeeVault.contract.FilterLogs(opts, "FeeWithdrawal")
+	if err != nil {
+		return nil, err
+	}
+	return &IAuctionFeeVaultFeeWithdrawalIterator{contract: _IAuctionFeeVault.contract, event: "FeeWithdrawal", logs: logs, sub: sub}, nil
+}
+
+// WatchFeeWithdrawal is a free log subscription operation binding the contract event 0x706d7f48c702007c2fb0881cea5759732e64f52faee427d5ab030787cfb7d787.
+//
+// Solidity: event FeeWithdrawal(uint256 amount)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) WatchFeeWithdrawal(opts *bind.WatchOpts, sink chan<- *IAuctionFeeVaultFeeWithdrawal) (event.Subscription, error) {
+	logs, sub, err := _IAuctionFeeVault.contract.WatchLogs(opts, "FeeWithdrawal")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IAuctionFeeVaultFeeWithdrawal)
+				if err := _IAuctionFeeVault.contract.UnpackLog(event, "FeeWithdrawal", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseFeeWithdrawal is a log parse operation binding the contract event 0x706d7f48c702007c2fb0881cea5759732e64f52faee427d5ab030787cfb7d787.
+//
+// Solidity: event FeeWithdrawal(uint256 amount)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) ParseFeeWithdrawal(log types.Log) (*IAuctionFeeVaultFeeWithdrawal, error) {
+	event := new(IAuctionFeeVaultFeeWithdrawal)
+	if err := _IAuctionFeeVault.contract.UnpackLog(event, "FeeWithdrawal", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// IAuctionFeeVaultRewardAddressRegisteredIterator is returned from FilterRewardAddressRegistered and is used to iterate over the raw logs and unpacked data for RewardAddressRegistered events raised by the IAuctionFeeVault contract.
+type IAuctionFeeVaultRewardAddressRegisteredIterator struct {
+	Event *IAuctionFeeVaultRewardAddressRegistered // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IAuctionFeeVaultRewardAddressRegisteredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IAuctionFeeVaultRewardAddressRegistered)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IAuctionFeeVaultRewardAddressRegistered)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IAuctionFeeVaultRewardAddressRegisteredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IAuctionFeeVaultRewardAddressRegisteredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IAuctionFeeVaultRewardAddressRegistered represents a RewardAddressRegistered event raised by the IAuctionFeeVault contract.
+type IAuctionFeeVaultRewardAddressRegistered struct {
+	NodeId common.Address
+	Reward common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterRewardAddressRegistered is a free log retrieval operation binding the contract event 0xe608476cb01b1d04f944f0fdb25841b1f483d26965d42c4a1fab67b8b1488b3b.
+//
+// Solidity: event RewardAddressRegistered(address indexed nodeId, address indexed reward)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterRewardAddressRegistered(opts *bind.FilterOpts, nodeId []common.Address, reward []common.Address) (*IAuctionFeeVaultRewardAddressRegisteredIterator, error) {
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+	var rewardRule []interface{}
+	for _, rewardItem := range reward {
+		rewardRule = append(rewardRule, rewardItem)
+	}
+
+	logs, sub, err := _IAuctionFeeVault.contract.FilterLogs(opts, "RewardAddressRegistered", nodeIdRule, rewardRule)
+	if err != nil {
+		return nil, err
+	}
+	return &IAuctionFeeVaultRewardAddressRegisteredIterator{contract: _IAuctionFeeVault.contract, event: "RewardAddressRegistered", logs: logs, sub: sub}, nil
+}
+
+// WatchRewardAddressRegistered is a free log subscription operation binding the contract event 0xe608476cb01b1d04f944f0fdb25841b1f483d26965d42c4a1fab67b8b1488b3b.
+//
+// Solidity: event RewardAddressRegistered(address indexed nodeId, address indexed reward)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) WatchRewardAddressRegistered(opts *bind.WatchOpts, sink chan<- *IAuctionFeeVaultRewardAddressRegistered, nodeId []common.Address, reward []common.Address) (event.Subscription, error) {
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+	var rewardRule []interface{}
+	for _, rewardItem := range reward {
+		rewardRule = append(rewardRule, rewardItem)
+	}
+
+	logs, sub, err := _IAuctionFeeVault.contract.WatchLogs(opts, "RewardAddressRegistered", nodeIdRule, rewardRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IAuctionFeeVaultRewardAddressRegistered)
+				if err := _IAuctionFeeVault.contract.UnpackLog(event, "RewardAddressRegistered", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRewardAddressRegistered is a log parse operation binding the contract event 0xe608476cb01b1d04f944f0fdb25841b1f483d26965d42c4a1fab67b8b1488b3b.
+//
+// Solidity: event RewardAddressRegistered(address indexed nodeId, address indexed reward)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) ParseRewardAddressRegistered(log types.Log) (*IAuctionFeeVaultRewardAddressRegistered, error) {
+	event := new(IAuctionFeeVaultRewardAddressRegistered)
+	if err := _IAuctionFeeVault.contract.UnpackLog(event, "RewardAddressRegistered", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// IAuctionFeeVaultSearcherPaybackRateUpdatedIterator is returned from FilterSearcherPaybackRateUpdated and is used to iterate over the raw logs and unpacked data for SearcherPaybackRateUpdated events raised by the IAuctionFeeVault contract.
+type IAuctionFeeVaultSearcherPaybackRateUpdatedIterator struct {
+	Event *IAuctionFeeVaultSearcherPaybackRateUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IAuctionFeeVaultSearcherPaybackRateUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IAuctionFeeVaultSearcherPaybackRateUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IAuctionFeeVaultSearcherPaybackRateUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IAuctionFeeVaultSearcherPaybackRateUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IAuctionFeeVaultSearcherPaybackRateUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IAuctionFeeVaultSearcherPaybackRateUpdated represents a SearcherPaybackRateUpdated event raised by the IAuctionFeeVault contract.
+type IAuctionFeeVaultSearcherPaybackRateUpdated struct {
+	SearcherPaybackRate *big.Int
+	Raw                 types.Log // Blockchain specific contextual infos
+}
+
+// FilterSearcherPaybackRateUpdated is a free log retrieval operation binding the contract event 0x71745430318b073bd776904f2432cb283ce3d2ded537bafe2640cf4d6e4bc64f.
+//
+// Solidity: event SearcherPaybackRateUpdated(uint256 searcherPaybackRate)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterSearcherPaybackRateUpdated(opts *bind.FilterOpts) (*IAuctionFeeVaultSearcherPaybackRateUpdatedIterator, error) {
+	logs, sub, err := _IAuctionFeeVault.contract.FilterLogs(opts, "SearcherPaybackRateUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &IAuctionFeeVaultSearcherPaybackRateUpdatedIterator{contract: _IAuctionFeeVault.contract, event: "SearcherPaybackRateUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchSearcherPaybackRateUpdated is a free log subscription operation binding the contract event 0x71745430318b073bd776904f2432cb283ce3d2ded537bafe2640cf4d6e4bc64f.
+//
+// Solidity: event SearcherPaybackRateUpdated(uint256 searcherPaybackRate)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) WatchSearcherPaybackRateUpdated(opts *bind.WatchOpts, sink chan<- *IAuctionFeeVaultSearcherPaybackRateUpdated) (event.Subscription, error) {
+	logs, sub, err := _IAuctionFeeVault.contract.WatchLogs(opts, "SearcherPaybackRateUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IAuctionFeeVaultSearcherPaybackRateUpdated)
+				if err := _IAuctionFeeVault.contract.UnpackLog(event, "SearcherPaybackRateUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseSearcherPaybackRateUpdated is a log parse operation binding the contract event 0x71745430318b073bd776904f2432cb283ce3d2ded537bafe2640cf4d6e4bc64f.
+//
+// Solidity: event SearcherPaybackRateUpdated(uint256 searcherPaybackRate)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) ParseSearcherPaybackRateUpdated(log types.Log) (*IAuctionFeeVaultSearcherPaybackRateUpdated, error) {
+	event := new(IAuctionFeeVaultSearcherPaybackRateUpdated)
+	if err := _IAuctionFeeVault.contract.UnpackLog(event, "SearcherPaybackRateUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// IAuctionFeeVaultValidatorPaybackRateUpdatedIterator is returned from FilterValidatorPaybackRateUpdated and is used to iterate over the raw logs and unpacked data for ValidatorPaybackRateUpdated events raised by the IAuctionFeeVault contract.
+type IAuctionFeeVaultValidatorPaybackRateUpdatedIterator struct {
+	Event *IAuctionFeeVaultValidatorPaybackRateUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IAuctionFeeVaultValidatorPaybackRateUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IAuctionFeeVaultValidatorPaybackRateUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IAuctionFeeVaultValidatorPaybackRateUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IAuctionFeeVaultValidatorPaybackRateUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IAuctionFeeVaultValidatorPaybackRateUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IAuctionFeeVaultValidatorPaybackRateUpdated represents a ValidatorPaybackRateUpdated event raised by the IAuctionFeeVault contract.
+type IAuctionFeeVaultValidatorPaybackRateUpdated struct {
+	ValidatorPaybackRate *big.Int
+	Raw                  types.Log // Blockchain specific contextual infos
+}
+
+// FilterValidatorPaybackRateUpdated is a free log retrieval operation binding the contract event 0x5309d48fe743a67ce32d8f66af9e2388d65bfc8cc026a4e1fbed3a4612a0af98.
+//
+// Solidity: event ValidatorPaybackRateUpdated(uint256 validatorPaybackRate)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterValidatorPaybackRateUpdated(opts *bind.FilterOpts) (*IAuctionFeeVaultValidatorPaybackRateUpdatedIterator, error) {
+	logs, sub, err := _IAuctionFeeVault.contract.FilterLogs(opts, "ValidatorPaybackRateUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &IAuctionFeeVaultValidatorPaybackRateUpdatedIterator{contract: _IAuctionFeeVault.contract, event: "ValidatorPaybackRateUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchValidatorPaybackRateUpdated is a free log subscription operation binding the contract event 0x5309d48fe743a67ce32d8f66af9e2388d65bfc8cc026a4e1fbed3a4612a0af98.
+//
+// Solidity: event ValidatorPaybackRateUpdated(uint256 validatorPaybackRate)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) WatchValidatorPaybackRateUpdated(opts *bind.WatchOpts, sink chan<- *IAuctionFeeVaultValidatorPaybackRateUpdated) (event.Subscription, error) {
+	logs, sub, err := _IAuctionFeeVault.contract.WatchLogs(opts, "ValidatorPaybackRateUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IAuctionFeeVaultValidatorPaybackRateUpdated)
+				if err := _IAuctionFeeVault.contract.UnpackLog(event, "ValidatorPaybackRateUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseValidatorPaybackRateUpdated is a log parse operation binding the contract event 0x5309d48fe743a67ce32d8f66af9e2388d65bfc8cc026a4e1fbed3a4612a0af98.
+//
+// Solidity: event ValidatorPaybackRateUpdated(uint256 validatorPaybackRate)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) ParseValidatorPaybackRateUpdated(log types.Log) (*IAuctionFeeVaultValidatorPaybackRateUpdated, error) {
+	event := new(IAuctionFeeVaultValidatorPaybackRateUpdated)
+	if err := _IAuctionFeeVault.contract.UnpackLog(event, "ValidatorPaybackRateUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
