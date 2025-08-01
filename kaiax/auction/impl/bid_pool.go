@@ -220,7 +220,12 @@ func (bp *BidPool) GetTargetTxMap(num uint64) map[common.Hash]*auction.Bid {
 	bp.bidMu.RLock()
 	defer bp.bidMu.RUnlock()
 
-	return bp.bidTargetMap[num]
+	targetTxMap := make(map[common.Hash]*auction.Bid)
+	for hash, bid := range bp.bidTargetMap[num] {
+		targetTxMap[hash] = bid
+	}
+
+	return targetTxMap
 }
 
 // AddBid adds a bid to the bid pool.
