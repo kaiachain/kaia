@@ -37,7 +37,7 @@ func (a *AuctionModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 
 	miningBlock := curBlock.NumberU64() + 1
 	bidTargetMap := a.bidPool.GetTargetTxMap(miningBlock)
-	if bidTargetMap == nil {
+	if len(bidTargetMap) == 0 {
 		return bundles
 	}
 
