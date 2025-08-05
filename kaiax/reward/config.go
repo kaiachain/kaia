@@ -32,7 +32,7 @@ var big100 = big.NewInt(100)
 
 type RewardConfig struct {
 	Rules      params.Rules
-	Rewardbase common.Address // Proposer's reward receipient address
+	Rewardbase common.Address // Proposer's reward recipient address
 
 	IsSimple      bool              // istanbul.policy != WeightedRandom in which case simple rules are used
 	UnitPrice     *big.Int          // governance.unitprice
