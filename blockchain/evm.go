@@ -194,7 +194,7 @@ func DoEstimateGas(ctx context.Context, gasLimit, rpcGasCap uint64, txValue, gas
 
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
-		mid := (hi + lo) / 2
+		mid := lo + (hi-lo)/2
 		failed, _, err := test(mid)
 		if err != nil {
 			return 0, err
