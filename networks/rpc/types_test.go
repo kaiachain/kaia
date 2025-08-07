@@ -45,19 +45,26 @@ func TestBlockNumberJSONUnmarshal(t *testing.T) {
 		6:  {`"0x12"`, false, BlockNumber(18)},
 		7:  {`"0x7fffffffffffffff"`, false, BlockNumber(math.MaxInt64)},
 		8:  {`"0x8000000000000000"`, true, BlockNumber(0)},
-		9:  {`"0"`, true, BlockNumber(0)},
+		9:  {"0", false, BlockNumber(0)}, // NOTE: This case is rpc.EarliestBlockNumber in Kaia
 		10: {`"ff"`, true, BlockNumber(0)},
 		11: {`"pending"`, false, PendingBlockNumber},
 		12: {`"latest"`, false, LatestBlockNumber},
 		13: {`"earliest"`, false, EarliestBlockNumber},
-		14: {`someString`, true, BlockNumber(0)},
-		15: {`""`, true, BlockNumber(0)},
-		16: {``, true, BlockNumber(0)},
-		17: {"0", false, BlockNumber(0)},
-		18: {"1", false, BlockNumber(1)},
-		19: {"10", false, BlockNumber(10)},
-		20: {"80000000", false, BlockNumber(80000000)},
-		21: {"-1", true, BlockNumber(0)},
+		14: {`"safe"`, false, LatestBlockNumber},      // NOTE: Kaia treats "safe" as "latest"
+		15: {`"finalized"`, false, LatestBlockNumber}, // NOTE: Kaia treats "finalized" as "latest"
+		16: {`someString`, true, BlockNumber(0)},
+		17: {`""`, true, BlockNumber(0)},
+		18: {``, true, BlockNumber(0)},
+
+		// NOTE: Kaia originil tests
+		19: {"1", false, BlockNumber(1)},
+		20: {"10", false, BlockNumber(10)},
+		21: {"80000000", false, BlockNumber(80000000)},
+		22: {"-1", true, BlockNumber(0)},
+		23: {"-2", true, BlockNumber(0)},
+		24: {"-3", true, BlockNumber(0)},
+		25: {"-4", true, BlockNumber(0)},
+		26: {"-5", true, BlockNumber(0)},
 	}
 
 	for i, test := range tests {
@@ -92,23 +99,35 @@ func TestBlockNumberOrHash_UnmarshalJSON(t *testing.T) {
 		6:  {`"0x12"`, false, NewBlockNumberOrHashWithNumber(18)},
 		7:  {`"0x7fffffffffffffff"`, false, NewBlockNumberOrHashWithNumber(math.MaxInt64)},
 		8:  {`"0x8000000000000000"`, true, BlockNumberOrHash{}},
-		9:  {`"0"`, true, BlockNumberOrHash{}},
+		9:  {"0", false, NewBlockNumberOrHashWithNumber(0)}, // NOTE: This case is rpc.EarliestBlockNumber in Kaia
 		10: {`"ff"`, true, BlockNumberOrHash{}},
 		11: {`"pending"`, false, NewBlockNumberOrHashWithNumber(PendingBlockNumber)},
 		12: {`"latest"`, false, NewBlockNumberOrHashWithNumber(LatestBlockNumber)},
 		13: {`"earliest"`, false, NewBlockNumberOrHashWithNumber(EarliestBlockNumber)},
-		14: {`someString`, true, BlockNumberOrHash{}},
-		15: {`""`, true, BlockNumberOrHash{}},
-		16: {``, true, BlockNumberOrHash{}},
-		17: {`"0x0000000000000000000000000000000000000000000000000000000000000000"`, false, NewBlockNumberOrHashWithHash(common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), false)},
-		18: {`{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}`, false, NewBlockNumberOrHashWithHash(common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), false)},
-		19: {`{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","requireCanonical":false}`, false, NewBlockNumberOrHashWithHash(common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), false)},
-		20: {`{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","requireCanonical":true}`, false, NewBlockNumberOrHashWithHash(common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), true)},
-		21: {`{"blockNumber":"0x1"}`, false, NewBlockNumberOrHashWithNumber(1)},
-		22: {`{"blockNumber":"pending"}`, false, NewBlockNumberOrHashWithNumber(PendingBlockNumber)},
-		23: {`{"blockNumber":"latest"}`, false, NewBlockNumberOrHashWithNumber(LatestBlockNumber)},
-		24: {`{"blockNumber":"earliest"}`, false, NewBlockNumberOrHashWithNumber(EarliestBlockNumber)},
-		25: {`{"blockNumber":"0x1", "blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}`, true, BlockNumberOrHash{}},
+		14: {`"safe"`, false, NewBlockNumberOrHashWithNumber(LatestBlockNumber)},      // NOTE: Kaia treats "safe" as "latest"
+		15: {`"finalized"`, false, NewBlockNumberOrHashWithNumber(LatestBlockNumber)}, // NOTE: Kaia treats "finalized" as "latest"
+		16: {`someString`, true, BlockNumberOrHash{}},
+		17: {`""`, true, BlockNumberOrHash{}},
+		18: {``, true, BlockNumberOrHash{}},
+		19: {`"0x0000000000000000000000000000000000000000000000000000000000000000"`, false, NewBlockNumberOrHashWithHash(common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), false)},
+		20: {`{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}`, false, NewBlockNumberOrHashWithHash(common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), false)},
+		21: {`{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","requireCanonical":false}`, false, NewBlockNumberOrHashWithHash(common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), false)},
+		22: {`{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","requireCanonical":true}`, false, NewBlockNumberOrHashWithHash(common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"), true)},
+		23: {`{"blockNumber":"0x1"}`, false, NewBlockNumberOrHashWithNumber(1)},
+		24: {`{"blockNumber":"pending"}`, false, NewBlockNumberOrHashWithNumber(PendingBlockNumber)},
+		25: {`{"blockNumber":"latest"}`, false, NewBlockNumberOrHashWithNumber(LatestBlockNumber)},
+		26: {`{"blockNumber":"earliest"}`, false, NewBlockNumberOrHashWithNumber(EarliestBlockNumber)},
+		27: {`{"blockNumber":"safe"}`, false, NewBlockNumberOrHashWithNumber(LatestBlockNumber)},      // NOTE: Kaia treats "safe" as "latest"
+		28: {`{"blockNumber":"finalized"}`, false, NewBlockNumberOrHashWithNumber(LatestBlockNumber)}, // NOTE: Kaia treats "finalized" as "latest"
+		29: {`{"blockNumber":"0x1", "blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}`, true, BlockNumberOrHash{}},
+
+		// NOTE: Kaia originil tests
+		30: {`"-1"`, true, BlockNumberOrHash{}},
+		31: {`"-2"`, true, BlockNumberOrHash{}},
+		32: {`"-3"`, true, BlockNumberOrHash{}},
+		33: {`{"blockNumber":"-1"}`, true, BlockNumberOrHash{}},
+		34: {`{"blockNumber":"-2"}`, true, BlockNumberOrHash{}},
+		35: {`{"blockNumber":"-3"}`, true, BlockNumberOrHash{}},
 	}
 
 	for i, test := range tests {
