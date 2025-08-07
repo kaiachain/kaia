@@ -121,7 +121,7 @@ func TestBlockNumberOrHash_UnmarshalJSON(t *testing.T) {
 		28: {`{"blockNumber":"finalized"}`, false, NewBlockNumberOrHashWithNumber(LatestBlockNumber)}, // NOTE: Kaia treats "finalized" as "latest"
 		29: {`{"blockNumber":"0x1", "blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}`, true, BlockNumberOrHash{}},
 
-		// NOTE: Kaia originil tests
+		// NOTE: Kaia original tests
 		30: {`"-1"`, true, BlockNumberOrHash{}},
 		31: {`"-2"`, true, BlockNumberOrHash{}},
 		32: {`"-3"`, true, BlockNumberOrHash{}},
