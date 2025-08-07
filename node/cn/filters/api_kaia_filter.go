@@ -403,6 +403,9 @@ func (api *KaiaFilterAPI) GetLogs(ctx context.Context, crit FilterCriteria) ([]*
 
 	var filter *Filter
 	if crit.BlockHash != nil {
+		if crit.FromBlock != nil || crit.ToBlock != nil {
+			return nil, errors.New("can't specify fromBlock/toBlock with blockHash")
+		}
 		// Block filter requested, construct a single-shot filter
 		filter = NewBlockFilter(api.backend, *crit.BlockHash, crit.Addresses, crit.Topics)
 	} else {
