@@ -60,7 +60,7 @@ func makeDeployTx(t *testing.T, privKey *ecdsa.PrivateKey, nonce uint64, gasLimi
 	return tx
 }
 
-// TestGaslessAPIIsGaslessTx tests the GaslessAPI.IsGaslessTx method
+// TestGaslessAPI_isGaslessTx tests the GaslessAPI.IsGaslessTx method
 func TestGaslessAPI_isGaslessTx(t *testing.T) {
 	// Create a private key for testing
 	privKey, err := crypto.GenerateKey()

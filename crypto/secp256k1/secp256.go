@@ -184,7 +184,7 @@ func checkSignature(sig []byte) error {
 	return nil
 }
 
-// SchnorrVerifyMulti verifies a Schnorr signature.
+// SchnorrVerifyNative verifies a Schnorr signature.
 // Returns true iff (R, s) is a valid signature verifiable by P; false otherwise.
 // R and P should be uncompressed points on SECP256k1 curve with proper padding in front (i.e., starting with 0x04).
 // P can be a single key or a combined public key s.t. P = P0 + P1 + ... + PN where Pi is a public key for i = 0..N.

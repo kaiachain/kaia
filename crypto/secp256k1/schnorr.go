@@ -66,7 +66,7 @@ func SchnorrSignSingle(G *BitCurve, msg, x, P []byte) ([]byte, []byte) {
 	return R, s
 }
 
-// SchnorrVerifySingle verifies a Schnorr signature.
+// SchnorrVerify verifies a Schnorr signature.
 // Note that this implementation is relatively slow compared to the C implementation. Use this sparingly.
 func SchnorrVerify(G *BitCurve, msg, R, s, P []byte) bool {
 	e := hash(msg, P, R)
