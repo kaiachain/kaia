@@ -56,7 +56,7 @@ func TestBlockNumberJSONUnmarshal(t *testing.T) {
 		17: {`""`, true, BlockNumber(0)},
 		18: {``, true, BlockNumber(0)},
 
-		// NOTE: Kaia originil tests
+		// NOTE: Kaia original tests
 		19: {"1", false, BlockNumber(1)},
 		20: {"10", false, BlockNumber(10)},
 		21: {"80000000", false, BlockNumber(80000000)},
