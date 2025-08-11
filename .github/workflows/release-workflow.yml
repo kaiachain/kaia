@@ -15,12 +15,12 @@ env:
 
 jobs:
   test-full:
-#    uses: ./.github/workflows/test-pr-workflow.yml
-    runs-on: ubuntu-latest
-    steps:
-      - name: mock
-        run: |
-          echo "all test done"
+    uses: ./.github/workflows/test-pr-workflow.yml
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: mock
+#        run: |
+#          echo "all test done"
 
   check-tagger:
     runs-on: ubuntu-latest
