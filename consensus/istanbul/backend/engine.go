@@ -92,6 +92,10 @@ var (
 	errInvalidRandaoFields = errors.New("invalid randao fields")
 	// errUnexpectedRandao is returned if the Randao fields randomReveal or mixHash are present when must not.
 	errUnexpectedRandao = errors.New("unexpected randao fields")
+	// errInternalError is returned when an internal error occurs.
+	errInternalError = errors.New("internal error")
+	// errPendingNotAllowed is returned when pending block is not allowed.
+	errPendingNotAllowed = errors.New("pending is not allowed")
 )
 
 var (
@@ -659,11 +663,6 @@ func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 			Namespace: "istanbul",
 			Version:   "1.0",
 			Service:   &API{chain: chain, istanbul: sb},
-			Public:    true,
-		}, {
-			Namespace: "kaia",
-			Version:   "1.0",
-			Service:   &APIExtension{chain: chain, istanbul: sb},
 			Public:    true,
 		},
 	}

@@ -42,6 +42,7 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/bitutil"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/ecies"
 	"github.com/kaiachain/kaia/crypto/secp256k1"
@@ -711,8 +712,6 @@ func exportPubkey(pub *ecies.PublicKey) []byte {
 
 func xor(one, other []byte) (xor []byte) {
 	xor = make([]byte, len(one))
-	for i := 0; i < len(one); i++ {
-		xor[i] = one[i] ^ other[i]
-	}
+	bitutil.XORBytes(xor, one, other)
 	return xor
 }

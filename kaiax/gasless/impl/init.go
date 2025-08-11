@@ -27,7 +27,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -36,10 +35,10 @@ import (
 var (
 	logger = log.NewModuleLogger(log.KaiaxGasless)
 
-	_ kaiax.BaseModule         = (*GaslessModule)(nil)
-	_ kaiax.ExecutionModule    = (*GaslessModule)(nil)
-	_ kaiax.TxPoolModule       = (*GaslessModule)(nil)
-	_ builder.TxBundlingModule = (*GaslessModule)(nil)
+	_ kaiax.BaseModule       = (*GaslessModule)(nil)
+	_ kaiax.ExecutionModule  = (*GaslessModule)(nil)
+	_ kaiax.TxPoolModule     = (*GaslessModule)(nil)
+	_ kaiax.TxBundlingModule = (*GaslessModule)(nil)
 )
 
 type InitOpts struct {
@@ -52,16 +51,24 @@ type InitOpts struct {
 
 type GaslessModule struct {
 	InitOpts
+
+	gaslessInfoMu sync.RWMutex
 	swapRouter    common.Address
 	allowedTokens map[common.Address]bool
 	signer        types.Signer
 
 	currentStateMu sync.Mutex     // even simple GetNonce affects statedb's internal state, hence can't use RWMutex.
 	currentState   *state.StateDB // latest state for nonce lookup
+
+	knownTxsMu sync.RWMutex
+	knownTxs   *knownTxs
 }
 
 func NewGaslessModule() *GaslessModule {
-	return &GaslessModule{}
+	return &GaslessModule{
+		allowedTokens: map[common.Address]bool{},
+		knownTxs:      &knownTxs{},
+	}
 }
 
 func (g *GaslessModule) Init(opts *InitOpts) error {

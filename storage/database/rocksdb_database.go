@@ -343,6 +343,15 @@ func (db *rocksDB) meter(t time.Duration) {
 	}
 }
 
+func (db *rocksDB) Stat(property string) (string, error) {
+	return db.db.GetProperty(property), nil
+}
+
+func (db *rocksDB) Compact(start []byte, limit []byte) error {
+	db.db.CompactRange(grocksdb.Range{Start: start, Limit: limit})
+	return nil
+}
+
 func (db *rocksDB) NewBatch() Batch {
 	return &rdbBatch{b: grocksdb.NewWriteBatch(), db: db}
 }

@@ -2,7 +2,7 @@ import { setCode } from "@nomicfoundation/hardhat-network-helpers";
 import { expect, Assertion } from "chai";
 import { ethers } from "hardhat";
 import { parseEther } from "ethers/lib/utils";
-import { Transaction, Contract, BytesLike } from "ethers";
+import { Transaction, Contract, BytesLike, Signer } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers.js";
 import _ from "lodash";
 
@@ -89,7 +89,12 @@ export enum Actions {
   txUpdateTimingRuleWrong,
 }
 
-export async function submitRequest(cnStaking: Contract, funcId: number, proposer: SignerWithAddress, args: any[3]) {
+export async function submitRequest(
+  cnStaking: Contract,
+  funcId: number,
+  proposer: SignerWithAddress,
+  args: any[3]
+) {
   switch (funcId) {
     case FuncID.AddAdmin:
       return await cnStaking.connect(proposer).submitAddAdmin(args[0]);
@@ -100,38 +105,65 @@ export async function submitRequest(cnStaking: Contract, funcId: number, propose
     case FuncID.ClearRequest:
       return await cnStaking.connect(proposer).submitClearRequest();
     case FuncID.WithdrawLockupStaking:
-      return await cnStaking.connect(proposer).submitWithdrawLockupStaking(args[0], args[1]);
+      return await cnStaking
+        .connect(proposer)
+        .submitWithdrawLockupStaking(args[0], args[1]);
     case FuncID.ApproveStakingWithdrawal:
-      return await cnStaking.connect(proposer).submitApproveStakingWithdrawal(args[0], args[1]);
+      return await cnStaking
+        .connect(proposer)
+        .submitApproveStakingWithdrawal(args[0], args[1]);
     case FuncID.CancelApprovedStakingWithdrawal:
-      return await cnStaking.connect(proposer).submitCancelApprovedStakingWithdrawal(args[0]);
+      return await cnStaking
+        .connect(proposer)
+        .submitCancelApprovedStakingWithdrawal(args[0]);
     case FuncID.UpdateRewardAddress:
-      return await cnStaking.connect(proposer).submitUpdateRewardAddress(args[0]);
+      return await cnStaking
+        .connect(proposer)
+        .submitUpdateRewardAddress(args[0]);
     case FuncID.UpdateStakingTracker:
-      return await cnStaking.connect(proposer).submitUpdateStakingTracker(args[0]);
+      return await cnStaking
+        .connect(proposer)
+        .submitUpdateStakingTracker(args[0]);
     case FuncID.UpdateVoterAddress:
-      return await cnStaking.connect(proposer).submitUpdateVoterAddress(args[0]);
+      return await cnStaking
+        .connect(proposer)
+        .submitUpdateVoterAddress(args[0]);
     default:
       throw new Error("Invalid funcId");
   }
 }
 
-export async function confirmRequests(cnStaking: Contract, confirmers: SignerWithAddress[], args: any[5]) {
+export async function confirmRequests(
+  cnStaking: Contract,
+  confirmers: SignerWithAddress[],
+  args: any[5]
+) {
   for (let i = 0; i < confirmers.length; i++) {
     await cnStaking
       .connect(confirmers[i])
-      .confirmRequest(args[0], args[1], toBytes32(args[2]), toBytes32(args[3]), toBytes32(args[4]));
+      .confirmRequest(
+        args[0],
+        args[1],
+        toBytes32(args[2]),
+        toBytes32(args[3]),
+        toBytes32(args[4])
+      );
   }
 }
 
-export async function registerVoter(cnStakingV2: Contract, admin: SignerWithAddress, voter: SignerWithAddress) {
-  await submitAndExecuteRequest(cnStakingV2, [admin], 1, FuncID.UpdateVoterAddress, admin, [
-    0,
+export async function registerVoter(
+  cnStakingV2: Contract,
+  admin: SignerWithAddress,
+  voter: SignerWithAddress
+) {
+  await submitAndExecuteRequest(
+    cnStakingV2,
+    [admin],
+    1,
     FuncID.UpdateVoterAddress,
-    voter.address,
-    0,
-    0,
-  ]);
+    admin,
+    [0, FuncID.UpdateVoterAddress, voter.address, 0, 0]
+  );
 }
 
 export async function submitAndExecuteRequest(
@@ -140,7 +172,7 @@ export async function submitAndExecuteRequest(
   requirement: number,
   funcId: number,
   proposer: SignerWithAddress,
-  args: any[5],
+  args: any[5]
 ) {
   await submitRequest(cnStaking, funcId, proposer, args.slice(2, 5));
   if (requirement === 1) {
@@ -160,7 +192,10 @@ export async function submitAndExecuteRequest(
   await confirmRequests(cnStaking, confirmers, args);
 }
 
-export async function deployAndInitStakingContract(version: number, args: CnStakingFixture): Promise<Contract> {
+export async function deployAndInitStakingContract(
+  version: number,
+  args: CnStakingFixture
+): Promise<Contract> {
   let stakingContract = {} as Contract;
 
   if (version === 1) {
@@ -189,15 +224,21 @@ export async function deployAndInitStakingContract(version: number, args: CnStak
     throw new Error("Invalid version");
   }
   if (version == 2) {
-    await stakingContract.connect(args.adminList[0]).setStakingTracker(args.stakingTrackerAddr);
+    await stakingContract
+      .connect(args.adminList[0])
+      .setStakingTracker(args.stakingTrackerAddr);
 
     await stakingContract.connect(args.adminList[0]).setGCId(args.gcId);
   }
 
-  await stakingContract.connect(args.contractValidator).reviewInitialConditions();
+  await stakingContract
+    .connect(args.contractValidator)
+    .reviewInitialConditions();
   await stakingContract.connect(args.adminList[0]).reviewInitialConditions();
 
-  await stakingContract.connect(args.adminList[0]).depositLockupStakingAndInit({ value: toPeb(6_000_000n) });
+  await stakingContract
+    .connect(args.adminList[0])
+    .depositLockupStakingAndInit({ value: toPeb(6_000_000n) });
 
   return stakingContract;
 }
@@ -214,7 +255,11 @@ export async function setCodeAt(name: string, addr: string) {
 }
 
 export async function deployAddressBook(kind = "AddressBookMock") {
-  const kinds = ["AddressBookMock", "AddressBookMockThreeCN", "AddressBookMockOneCN"];
+  const kinds = [
+    "AddressBookMock",
+    "AddressBookMockThreeCN",
+    "AddressBookMockOneCN",
+  ];
   for (const k of kinds) {
     if (k === kind) {
       await setCodeAt(k, ABOOK_ADDRESS);
@@ -239,7 +284,10 @@ export async function nowTime() {
   // hardhat simulated node has separate timer that increases every time
   // a new block is mined (which is basically every transaction).
   // Therefore nowTime() != Date.now().
-  const block = await hre.network.provider.send("eth_getBlockByNumber", ["latest", false]);
+  const block = await hre.network.provider.send("eth_getBlockByNumber", [
+    "latest",
+    false,
+  ]);
   return parseInt(block.timestamp);
 }
 
@@ -267,8 +315,16 @@ export async function getBalance(address: string) {
   return ethers.BigNumber.from(hex).toString();
 }
 
+export async function getMiner() {
+  const block = await hre.network.provider.send("eth_getBlockByNumber", [
+    "latest",
+    false,
+  ]);
+  return ethers.utils.getAddress(block.miner);
+}
+
 // Data conversion
-export function toPeb(klay: bigint) {
+export function toPeb(klay: bigint | number) {
   return ethers.utils.parseEther(klay.toString()).toString();
 }
 
@@ -302,7 +358,9 @@ export function toBytes32(x: any) {
 }
 
 export function padUtils(value: string | BytesLike, length: number) {
-  return ethers.utils.hexlify(ethers.utils.zeroPad(ethers.utils.hexlify(value), length));
+  return ethers.utils.hexlify(
+    ethers.utils.zeroPad(ethers.utils.hexlify(value), length)
+  );
 }
 
 export function numericAddr(n: number, m: number) {
@@ -354,7 +412,7 @@ export function augmentChai() {
       "expected #{this} to be equal to #{arr}",
       "expected #{this} to not equal to #{arr}",
       expected,
-      actual,
+      actual
     );
   });
   Assertion.addMethod("equalStrList", function (arr) {
@@ -365,7 +423,7 @@ export function augmentChai() {
       "expected #{this} to be equal to #{arr}",
       "expected #{this} to not equal to #{arr}",
       expected,
-      actual,
+      actual
     );
   });
   Assertion.addMethod("equalNumberList", function (arr) {
@@ -376,7 +434,7 @@ export function augmentChai() {
       "expected #{this} to be equal to #{arr}",
       "expected #{this} to not equal to #{arr}",
       expected,
-      actual,
+      actual
     );
   });
   Assertion.addMethod("equalBooleanList", function (arr) {
@@ -387,7 +445,7 @@ export function augmentChai() {
       "expected #{this} to be equal to #{arr}",
       "expected #{this} to not equal to #{arr}",
       expected,
-      actual,
+      actual
     );
   });
 }
@@ -396,7 +454,10 @@ export function augmentChai() {
 export async function onlyAdminFail(tx: Transaction) {
   await expectRevert(tx, "Address is not admin.");
 }
-export async function onlyAccessControlFail(tx: Transaction, contract: Contract) {
+export async function onlyAccessControlFail(
+  tx: Transaction,
+  contract: Contract
+) {
   await expectCustomRevert(tx, contract, "AccessControlUnauthorizedAccount");
 }
 export async function notNullFail(tx: Transaction) {
@@ -415,10 +476,17 @@ export async function afterInitFail(tx: Transaction) {
   await expectRevert(tx, "Contract is not initialized.");
 }
 
-export async function expectRevert(expr: Transaction, message: string | RegExp) {
+export async function expectRevert(
+  expr: Transaction,
+  message: string | RegExp
+) {
   return expect(expr).to.be.revertedWith(message);
 }
-export async function expectCustomRevert(expr: Transaction, contract: Contract, message: string) {
+export async function expectCustomRevert(
+  expr: Transaction,
+  contract: Contract,
+  message: string
+) {
   return expect(expr).to.be.revertedWithCustomError(contract, message);
 }
 
@@ -430,4 +498,65 @@ export function checkRequestInfo(expected: any, returned: any) {
   expect(returned[4]).to.equal(expected[4]);
   expect(returned[5]).to.equalAddrList(expected[5]);
   expect(returned[6]).to.equal(expected[6]);
+}
+
+export const typeDataAuctionTx = {
+  types: {
+    AuctionTx: [
+      { name: "targetTxHash", type: "bytes32" },
+      { name: "blockNumber", type: "uint256" },
+      { name: "sender", type: "address" },
+      { name: "to", type: "address" },
+      { name: "nonce", type: "uint256" },
+      { name: "bid", type: "uint256" },
+      { name: "callGasLimit", type: "uint256" },
+      { name: "data", type: "bytes" },
+    ],
+  },
+  domain: {
+    name: "KAIA_AUCTION",
+    version: "0.0.1",
+    chainId: 31337,
+    verifyingContract: "",
+  },
+  primaryType: "AuctionTx",
+  message: {
+    targetTxHash: "",
+    sender: "",
+    to: "",
+    nonce: 0,
+    blockNumber: 0,
+    callGasLimit: 0,
+    bid: 0n,
+    data: "",
+  },
+};
+
+export interface typeDataArgs {
+  verifyingContract: string;
+  targetTxHash: string;
+  blockNumber: number;
+  sender: string;
+  to: string;
+  nonce: number;
+  bid: string;
+  callGasLimit: number;
+  data: string;
+}
+
+export function fillTypeDataArgs(args: typeDataArgs) {
+  const typeData = _.cloneDeep(typeDataAuctionTx);
+
+  typeData.domain.verifyingContract = args.verifyingContract;
+
+  typeData.message.targetTxHash = args.targetTxHash;
+  typeData.message.blockNumber = args.blockNumber;
+  typeData.message.sender = args.sender;
+  typeData.message.to = args.to;
+  typeData.message.nonce = args.nonce;
+  typeData.message.bid = BigInt(args.bid);
+  typeData.message.callGasLimit = args.callGasLimit;
+  typeData.message.data = args.data;
+
+  return typeData;
 }

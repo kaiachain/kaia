@@ -39,13 +39,12 @@ import (
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/builder"
-	builder_impl "github.com/kaiachain/kaia/kaiax/builder/impl"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kerrors"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/work/builder"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -158,7 +157,6 @@ type worker struct {
 	proc              blockchain.Validator
 	chainDB           database.DBManager
 	govModule         gov.GovModule
-	builderModule     builder.BuilderModule
 	executionModules  []kaiax.ExecutionModule
 	txBundlingModules []builder.TxBundlingModule
 
@@ -406,16 +404,14 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 
 			// Update the block hash in all logs since it is now available and not when the
 			// receipt/log of individual transactions were created.
-			for _, r := range work.receipts {
-				for _, l := range r.Logs {
-					l.BlockHash = block.Hash()
-				}
-			}
 			work.stateMu.Lock()
 			for _, log := range work.state.Logs() {
 				log.BlockHash = block.Hash()
 			}
-
+			var logs []*types.Log
+			for _, r := range work.receipts {
+				logs = append(logs, r.Logs...)
+			}
 			start := time.Now()
 			result, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
 			work.stateMu.Unlock()
@@ -442,11 +438,6 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			self.mux.Post(blockchain.NewMinedBlockEvent{Block: block})
 
 			var events []interface{}
-
-			work.stateMu.RLock()
-			logs := work.state.Logs()
-			work.stateMu.RUnlock()
-
 			events = append(events, blockchain.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
 			if result.Status == blockchain.CanonStatTy {
 				events = append(events, blockchain.ChainHeadEvent{Block: block})
@@ -555,6 +546,9 @@ func (self *worker) commitNewWork() {
 			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), pset.ToKip71Config())
 			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
 		}
+
+		// Filter txs with txBundlingModules
+		builder.FilterTxs(pending, self.txBundlingModules)
 	}
 
 	header := &types.Header{
@@ -699,8 +693,8 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 }
 
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
-	arrayTxs := builder_impl.Arrayify(txs)
-	incorporatedTxs, bundles := builder_impl.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
+	arrayTxs := builder.Arrayify(txs)
+	incorporatedTxs, bundles := builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
 	var coalescedLogs []*types.Log
 
 	// Limit the execution time of all transactions in a block
@@ -771,15 +765,22 @@ CommitTransactionLoop:
 		// Verify that tx is included in the bundle
 		targetBundle := &builder.Bundle{}
 		numShift := 1
-		if bundleIdx := builder_impl.FindBundleIdx(bundles, txOrGen); bundleIdx != -1 {
+		if bundleIdx := builder.FindBundleIdx(bundles, txOrGen); bundleIdx != -1 {
 			targetBundle = bundles[bundleIdx]
 			numShift = len(targetBundle.BundleTxs)
+			// Skip this bundle if target is required but either:
+			// 1. The previous transaction hash doesn't match the target hash, or
+			// 2. The previous transaction failed (receipt status not successful)
+			if env.shouldDiscardBundle(targetBundle) {
+				builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+				continue
+			}
 		}
 
 		tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
 		if err != nil {
 			logger.Warn("TxGenerator returned a nil tx", "error", err)
-			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 			continue
 		}
 		// If target is the tx in bundle, len(targetBundle.BundleTxs) is appended to numTxsChecked.
@@ -818,13 +819,13 @@ CommitTransactionLoop:
 			// New head notification data race between the transaction pool and miner, shift
 			logger.Trace("Skipping transaction with low nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooLow++
-			builder_impl.ShiftTxs(&incorporatedTxs, numShift)
+			builder.ShiftTxs(&incorporatedTxs, numShift)
 
 		case blockchain.ErrNonceTooHigh:
 			// Reorg notification data race between the transaction pool and miner, skip account =
 			logger.Trace("Skipping account with high nonce", "sender", from, "nonce", tx.Nonce())
 			numTxsNonceTooHigh++
-			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case vm.ErrTotalTimeLimitReached:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
@@ -839,30 +840,30 @@ CommitTransactionLoop:
 		case blockchain.ErrTxTypeNotSupported:
 			// Pop the unsupported transaction without shifting in the next from the account
 			logger.Trace("Skipping unsupported transaction type", "sender", from, "type", tx.Type())
-			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case kerrors.ErrRevertedBundleByVmErr:
 			// Pop transaction in bundle reverted by vm err without shifting in the next from the account
 			// During bundle execution, vm err is reverted, including the increment of the nonce, so a pop is executed.
 			logger.Trace("Skipping transaction in bundle reverted by vm err", "sender", from, "hash", tx.Hash().String())
-			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case kerrors.ErrTxGeneration:
 			// Pop transaction in bundle due to tx generation error without shifting in the next from the account
 			logger.Trace("Skipping transaction in bundle due to tx generation error", "err", err)
-			builder_impl.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case nil:
 			// Everything ok, collect the logs and shift in the next transaction from the same account
 			coalescedLogs = append(coalescedLogs, logs...)
-			builder_impl.ShiftTxs(&incorporatedTxs, numShift)
+			builder.ShiftTxs(&incorporatedTxs, numShift)
 
 		default:
 			// Strange error, discard the transaction and get the next in line (note, the
 			// nonce-too-high clause will prevent us from executing in vain).
 			logger.Warn("Transaction failed, account skipped", "sender", from, "hash", tx.Hash().String(), "err", err)
 			strangeErrorTxsCounter.Inc(1)
-			builder_impl.ShiftTxs(&incorporatedTxs, numShift)
+			builder.ShiftTxs(&incorporatedTxs, numShift)
 		}
 		if len(targetBundle.BundleTxs) != 0 {
 			// After the last tx in the bundle finishes, set executingBundleTxs back to 0.
@@ -965,6 +966,19 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	env.receipts = append(env.receipts, receipts...)
 
 	return nil, nil, logs
+}
+
+func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) bool {
+	if !bundle.TargetRequired {
+		return false
+	}
+
+	if env.tcount == 0 {
+		return bundle.TargetTxHash != common.Hash{}
+	} else {
+		return !(bundle.TargetTxHash == env.txs[env.tcount-1].Hash() &&
+			env.receipts[env.tcount-1].Status == types.ReceiptStatusSuccessful)
+	}
 }
 
 func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, header *types.Header) *Task {

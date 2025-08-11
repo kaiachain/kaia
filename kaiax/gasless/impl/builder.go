@@ -19,10 +19,11 @@ package impl
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/builder"
+	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/work/builder"
 )
 
-var _ builder.TxBundlingModule = (*GaslessModule)(nil)
+var _ kaiax.TxBundlingModule = (*GaslessModule)(nil)
 
 func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles []*builder.Bundle) []*builder.Bundle {
 	// there are only at most two gasless transactions in pending for a sender
@@ -37,21 +38,24 @@ func (g *GaslessModule) ExtractTxBundles(txs []*types.Transaction, prevBundles [
 		if g.IsApproveTx(tx) {
 			approveTxs[addr] = tx
 		} else if g.IsSwapTx(tx) && g.IsExecutable(approveTxs[addr], tx) {
-			b := &builder.Bundle{
-				BundleTxs: builder.NewTxOrGenList(g.GetLendTxGenerator(approveTxs[addr], tx)),
-			}
+			bundleTxs := builder.NewTxOrGenList(g.GetLendTxGenerator(approveTxs[addr], tx))
 			if approveTxs[addr] != nil {
-				b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(approveTxs[addr]))
+				bundleTxs = append(bundleTxs, builder.NewTxOrGenFromTx(approveTxs[addr]))
 			}
-			b.BundleTxs = append(b.BundleTxs, builder.NewTxOrGenFromTx(tx))
+			bundleTxs = append(bundleTxs, builder.NewTxOrGenFromTx(tx))
 
-			b.TargetTxHash = targetTxHash
+			b := builder.NewBundle(
+				bundleTxs,
+				targetTxHash,
+				false,
+			)
+
 			targetTxHash = tx.Hash()
 
 			isConflict := false
 			for _, prev := range append(prevBundles, bundles...) {
-				isConflict = prev.IsConflict(b)
-				if isConflict {
+				if prev.IsConflict(b) {
+					isConflict = true
 					break
 				}
 			}
@@ -77,4 +81,8 @@ func (g *GaslessModule) GetMaxBundleTxsInPending() uint {
 
 func (g *GaslessModule) GetMaxBundleTxsInQueue() uint {
 	return g.GaslessConfig.MaxBundleTxsInQueue
+}
+
+func (g *GaslessModule) FilterTxs(txs map[common.Address]types.Transactions) {
+	// do nothing
 }

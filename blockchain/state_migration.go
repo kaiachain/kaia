@@ -93,7 +93,7 @@ func (bc *BlockChain) migrateState(rootHash common.Hash) (returnErr error) {
 	bc.migrationErr = nil
 	defer func() {
 		bc.migrationErr = returnErr
-		// If migration stops by quit signal, it doesn't finish migration and it it will restart again.
+		// If migration stops by quit signal, it doesn't finish migration and it will restart again.
 		if returnErr != ErrQuitBySignal {
 			// lock to prevent from a conflict of state DB close and state DB write
 			bc.mu.Lock()

@@ -1028,7 +1028,7 @@ func (bc *BlockChain) GetReceiptByTxHash(txHash common.Hash) *types.Receipt {
 
 	receipts := bc.GetReceiptsByBlockHash(blockHash)
 	if len(receipts) <= int(index) {
-		logger.Error("receipt index exceeds the size of receipts", "receiptIndex", index, "receiptsSize", len(receipts), "txHash", txHash, "blockHash", blockHash)
+		logger.Error("receipt index exceeds the size of receipts", "receiptIndex", index, "receiptsSize", len(receipts), "txHash", txHash.String(), "blockHash", blockHash.String())
 		return nil
 	}
 	return receipts[index]

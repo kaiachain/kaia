@@ -39,6 +39,7 @@ var Modules = map[string]string{
 	"bootnode":         Bootnode_JS,
 	"chaindatafetcher": ChainDataFetcher_JS,
 	"eth":              Eth_JS,
+	"auction":          Auction_JS,
 }
 
 const Eth_JS = `
@@ -635,6 +636,8 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'chaindbCompact',
 			call: 'debug_chaindbCompact',
+			params: 1,
+			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'metrics',
@@ -1374,17 +1377,6 @@ web3._extend({
 	methods:
 	[
 		new web3._extend.Method({
-			name: 'getSnapshot',
-			call: 'istanbul_getSnapshot',
-			params: 1,
-			inputFormatter: [null]
-		}),
-		new web3._extend.Method({
-			name: 'getSnapshotAtHash',
-			call: 'istanbul_getSnapshotAtHash',
-			params: 1
-		}),
-		new web3._extend.Method({
 			name: 'getValidators',
 			call: 'istanbul_getValidators',
 			params: 1,
@@ -1418,10 +1410,6 @@ web3._extend({
 			name: 'candidates',
 			getter: 'istanbul_candidates'
 		}),
-		new web3._extend.Property({
-			name: 'timeout',
-			getter: 'istanbul_getTimeout'
-		})
 	]
 });
 `
@@ -1795,6 +1783,20 @@ web3._extend({
 			name: 'proposals',
 			getter: 'clique_proposals'
 		}),
+	]
+});
+`
+
+const Auction_JS = `
+web3._extend({
+	property: 'auction',
+	methods: [
+		new web3._extend.Method({
+			name: 'submitBid',
+			call: 'auction_submitBid',
+			params: 1,
+			inputFormatter: [null]
+		})
 	]
 });
 `

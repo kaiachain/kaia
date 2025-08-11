@@ -24,6 +24,7 @@ package utils
 
 import (
 	"github.com/kaiachain/kaia/api/debug"
+	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
@@ -282,6 +283,9 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewIntFlag(gasless.MaxBundleTxsInPendingFlag),
 	altsrc.NewIntFlag(gasless.MaxBundleTxsInQueueFlag),
 	altsrc.NewIntFlag(gasless.BalanceCheckLevelFlag),
+	// kaiax/auction
+	altsrc.NewBoolFlag(auction.DisableFlag),
+	altsrc.NewInt64Flag(auction.MaxBidPoolSizeFlag),
 }
 
 // Common RPC flags
