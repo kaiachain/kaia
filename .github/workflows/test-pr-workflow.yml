@@ -44,6 +44,7 @@ jobs:
     permissions: write-all
     uses: ./.github/workflows/test-excutor-template.yml
     with:
+      install_python: false
       test_command: |
         make kcn
         git clone https://$TEST_TOKEN@github.com/kaiachain/kaia-rpc-tester.git
@@ -58,7 +59,7 @@ jobs:
         python3 -m venv venv
         source venv/bin/activate
         pip3 install -r requirements.txt
-        python main.py --protocol rpc
+        python3 main.py --protocol rpc
 
   # Service-dependent test jobs
   test-datasync:
