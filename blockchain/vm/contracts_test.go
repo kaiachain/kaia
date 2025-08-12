@@ -121,7 +121,7 @@ var blake2FMalformedInputTests = []precompiledFailureTest{
 func prepare(reqGas uint64) (*Contract, *EVM, error) {
 	// Generate Contract
 	contract := NewContract(types.NewAccountRefWithFeePayer(common.HexToAddress("1337"), common.HexToAddress("133773")),
-		nil, new(big.Int), reqGas)
+		nil, new(big.Int), reqGas, nil)
 
 	// Generate EVM
 	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)

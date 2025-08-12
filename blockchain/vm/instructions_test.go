@@ -79,7 +79,7 @@ func TestOpTstore(t *testing.T) {
 		caller         = common.Address{}
 		to             = common.Address{1}
 		contractRef    = contractRef{caller}
-		contract       = NewContract(contractRef, AccountRef(to), new(big.Int), 0)
+		contract       = NewContract(contractRef, AccountRef(to), new(big.Int), 0, nil)
 		scopeContext   = ScopeContext{mem, stack, contract}
 		value          = common.Hex2Bytes("abcdef00000000000000abba000000000deaf000000c0de00100000000133700")
 	)
@@ -461,7 +461,7 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVMInterpreter, scop
 
 	caller := types.NewAccountRefWithFeePayer(senderAddress, payerAddress)
 	object := types.NewAccountRefWithFeePayer(payerAddress, senderAddress)
-	contract := NewContract(caller, object, big.NewInt(0), uint64(1000))
+	contract := NewContract(caller, object, big.NewInt(0), uint64(1000), nil)
 	contract.Input = senderAddress.Bytes()
 	contract.Gas = uint64(1000)
 	contract.Code = common.Hex2Bytes("60ca60205260005b612710811015630000004557602051506020515060205150602051506020515060205150602051506020515060205150602051506001016300000007565b00")
@@ -997,7 +997,7 @@ func BenchmarkOpSstore(bench *testing.B) {
 
 	caller := types.NewAccountRefWithFeePayer(senderAddress, payerAddress)
 	object := types.NewAccountRefWithFeePayer(payerAddress, senderAddress)
-	contract := NewContract(caller, object, big.NewInt(0), uint64(1000))
+	contract := NewContract(caller, object, big.NewInt(0), uint64(1000), nil)
 
 	// convert args
 	byteArgs := make([][]byte, 2)

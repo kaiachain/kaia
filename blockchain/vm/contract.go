@@ -54,8 +54,8 @@ type Contract struct {
 	caller          types.ContractRef
 	self            types.ContractRef
 
-	jumpdests map[common.Hash]bitvec // Aggregated result of JUMPDEST analysis.
-	analysis  bitvec                 // Locally cached result of JUMPDEST analysis
+	jumpDests JumpDestCache // Aggregated result of JUMPDEST analysis.
+	analysis  BitVec        // Locally cached result of JUMPDEST analysis
 
 	Code     []byte
 	CodeHash common.Hash
@@ -67,8 +67,8 @@ type Contract struct {
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
-func NewContract(caller types.ContractRef, object types.ContractRef, value *big.Int, gas uint64) *Contract {
-	c := &Contract{CallerAddress: caller.Address(), FeePayerAddress: caller.FeePayer(), caller: caller, self: object}
+func NewContract(caller types.ContractRef, object types.ContractRef, value *big.Int, gas uint64, jumpDests JumpDestCache) *Contract {
+	/*c := &Contract{CallerAddress: caller.Address(), FeePayerAddress: caller.FeePayer(), caller: caller, self: object}
 
 	if parent, ok := caller.(*Contract); ok {
 		// Reuse JUMPDEST analysis from parent context if available.
@@ -83,7 +83,20 @@ func NewContract(caller types.ContractRef, object types.ContractRef, value *big.
 	// ensures a value is set
 	c.value = value
 
-	return c
+	return c*/
+	// Initialize the jump analysis cache if it's nil, mostly for tests
+	if jumpDests == nil {
+		jumpDests = newMapJumpDests()
+	}
+	return &Contract{
+		CallerAddress:   caller.Address(),
+		FeePayerAddress: caller.FeePayer(),
+		caller:          caller,
+		self:            object,
+		jumpDests:       jumpDests,
+		Gas:             gas,
+		value:           value,
+	}
 }
 
 func (c *Contract) validJumpdest(dest *uint256.Int) bool {
@@ -112,12 +125,12 @@ func (c *Contract) isCode(udest uint64) bool {
 	// contracts ( not temporary initcode), we store the analysis in a map
 	if c.CodeHash != (common.Hash{}) {
 		// Does parent context have the analysis?
-		analysis, exist := c.jumpdests[c.CodeHash]
+		analysis, exist := c.jumpDests.Load(c.CodeHash)
 		if !exist {
 			// Do the analysis and save in parent context
 			// We do not need to store it in c.analysis
 			analysis = codeBitmap(c.Code)
-			c.jumpdests[c.CodeHash] = analysis
+			c.jumpDests.Store(c.CodeHash, analysis)
 		}
 		// Also stash it in current contract for faster access
 		c.analysis = analysis
