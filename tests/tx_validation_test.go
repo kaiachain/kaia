@@ -779,6 +779,8 @@ func keyUpdateFromEOAWithCode(bcdata *BCData, txType types.TxType, values txValu
 	txType = toBasicType(txType)
 	if txType == types.TxTypeAccountUpdate {
 		values[types.TxValueKeyFrom] = EOAWithCode
+		// Use the correct nonce for the EOAWithCode account
+		values[types.TxValueKeyNonce] = uint64(1) // eoaWithCode.Nonce is 1 after SetCode transaction
 		return values, kerrors.ErrFromMustBeEOAWithoutCode
 	}
 
