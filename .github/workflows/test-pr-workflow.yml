@@ -44,7 +44,7 @@ jobs:
     permissions: write-all
     uses: ./.github/workflows/test-other-excutor-template.yml
     with:
-      install_python: false
+#      install_python: false
       test_command: |
         make kcn
         git clone https://github.com/kaiachain/kaia-rpc-tester.git
