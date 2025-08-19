@@ -42,7 +42,7 @@ jobs:
 
   test-rpc:
     permissions: write-all
-    uses: ./.github/workflows/test-excutor-template.yml
+    uses: ./.github/workflows/test-other-excutor-template.yml
     with:
       install_python: false
       test_command: |
