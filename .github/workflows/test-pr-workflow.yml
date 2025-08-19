@@ -47,7 +47,7 @@ jobs:
       install_python: false
       test_command: |
         make kcn
-        git clone https://$TEST_TOKEN@github.com/kaiachain/kaia-rpc-tester.git
+        git clone https://github.com/kaiachain/kaia-rpc-tester.git
         cd kaia-rpc-tester
         cp ../build/bin/kcn script/cn/bin/
         cd script
