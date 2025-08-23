@@ -1,3 +1,4 @@
+// Modifications Copyright 2025 The Kaia Authors
 // Copyright 2024 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
