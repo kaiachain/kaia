@@ -68,7 +68,7 @@ func testCtx() *vmContext {
 func runTrace(tracer *Tracer) (json.RawMessage, error) {
 	env := vm.NewEVM(vm.BlockContext{BlockNumber: big.NewInt(1)}, vm.TxContext{}, &dummyStatedb{}, params.TestChainConfig, &vm.Config{Debug: true, Tracer: tracer})
 
-	contract := vm.NewContract(account{}, account{}, big.NewInt(0), 10000)
+	contract := vm.NewContract(account{}, account{}, big.NewInt(0), 10000, nil)
 	contract.Code = []byte{byte(vm.PUSH1), 0x1, byte(vm.PUSH1), 0x1, 0x0}
 
 	_, err := env.Interpreter().Run(contract, []byte{})
@@ -203,7 +203,7 @@ func TestHaltBetweenSteps(t *testing.T) {
 	}
 
 	env := vm.NewEVM(vm.BlockContext{BlockNumber: big.NewInt(1)}, vm.TxContext{}, &dummyStatedb{}, params.TestChainConfig, &vm.Config{Debug: true, Tracer: tracer})
-	contract := vm.NewContract(&account{}, &account{}, big.NewInt(0), 0)
+	contract := vm.NewContract(&account{}, &account{}, big.NewInt(0), 0, nil)
 
 	tracer.CaptureState(env, 0, 0, 0, 0, 0, 0, &vm.ScopeContext{Contract: contract}, 0, nil)
 	timeout := errors.New("stahp")
@@ -231,7 +231,7 @@ func TestEnterExit(t *testing.T) {
 	}
 
 	scope := &vm.ScopeContext{
-		Contract: vm.NewContract(&account{}, &account{}, big.NewInt(0), 0),
+		Contract: vm.NewContract(&account{}, &account{}, big.NewInt(0), 0, nil),
 	}
 
 	tracer.CaptureEnter(vm.CALL, scope.Contract.Caller(), scope.Contract.Address(), []byte{}, 1000, new(big.Int))

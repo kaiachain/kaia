@@ -102,7 +102,7 @@ func prepareInterpreterAndContract(code []byte) (*vm.EVMInterpreter, *vm.Contrac
 	value := cfg.Value
 	gas := cfg.GasLimit
 
-	contract := vm.NewContract(caller, to, value, gas)
+	contract := vm.NewContract(caller, to, value, gas, nil)
 
 	contract.SetCallCode(&address, evm.StateDB.GetCodeHash(address), evm.StateDB.GetCode(address))
 
