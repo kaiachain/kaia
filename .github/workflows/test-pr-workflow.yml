@@ -9,7 +9,6 @@ on:
       - test/github-action
 
 jobs:
-  # Basic test jobs
   build:
     uses: ./.github/workflows/test-excutor-template.yml
     with:

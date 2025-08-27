@@ -15,7 +15,8 @@ on:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
-
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: kaia-xlarge-runner

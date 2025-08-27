@@ -10,7 +10,8 @@ on:
         required: false
         type: boolean
         default: true
-
+permissions:
+  contents: read
 jobs:
   test:
     runs-on: ubuntu-latest

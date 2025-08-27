@@ -30,6 +30,8 @@ jobs:
   docker:
     needs: [test-full, check-tagger]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
       - uses: actions/checkout@v4
