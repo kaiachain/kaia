@@ -4,9 +4,6 @@ on:
   pull_request_target:
     types: [opened, closed, synchronize]
   workflow_call:
-  push:
-    branches:
-      - test/github-action
 
 jobs:
   build:

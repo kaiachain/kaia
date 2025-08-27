@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - v[0-9]+.[0-9]+.[0-9]+
+    branches:
+      - test/github-action
 
 env:
   DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
