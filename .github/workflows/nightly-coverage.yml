@@ -4,8 +4,6 @@ on:
   schedule:
     - cron: '0 0 * * *'
 
-permissions: write-all
-
 jobs:
   coverage:
     runs-on: ubuntu-latest

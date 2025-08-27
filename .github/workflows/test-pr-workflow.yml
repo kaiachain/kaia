@@ -4,6 +4,9 @@ on:
   pull_request_target:
     types: [opened, closed, synchronize]
   workflow_call:
+  push:
+    branches:
+      - test/github-action
 
 jobs:
   # Basic test jobs
@@ -41,7 +44,8 @@ jobs:
         make test-tests
 
   test-rpc:
-    permissions: write-all
+    permissions:
+      contents: write
     uses: ./.github/workflows/test-other-excutor-template.yml
     secrets:
       AWS_ACCESS_KEY_ID: dummy
