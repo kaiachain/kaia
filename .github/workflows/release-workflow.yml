@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - v[0-9]+.[0-9]+.[0-9]+
-    branches:
-      - test/github-action
 
 env:
   DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
@@ -16,11 +14,6 @@ env:
 jobs:
   test-full:
     uses: ./.github/workflows/test-pr-workflow.yml
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: mock
-#        run: |
-#          echo "all test done"
 
   check-tagger:
     runs-on: ubuntu-latest
