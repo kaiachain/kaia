@@ -5,6 +5,9 @@ on:
     types: [opened, closed, synchronize]
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     uses: ./.github/workflows/test-excutor-template.yml

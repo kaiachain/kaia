@@ -13,10 +13,13 @@ env:
 
 jobs:
   test-full:
+    permissions:
+      contents: read
     uses: ./.github/workflows/test-pr-workflow.yml
 
   check-tagger:
     runs-on: ubuntu-latest
+    permissions: {}
     steps:
       - id: check-tag
         run: |
@@ -519,6 +522,8 @@ jobs:
 
   tag-verify:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Verify tag and file version match
@@ -535,6 +540,8 @@ jobs:
 
   tagger-verify:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Verify tagger
@@ -550,6 +557,9 @@ jobs:
   release-pr:
     needs: [rpm-linux-amd64, rpm-linux-amd64-el7, tar-linux-amd64, rpm-linux-arm64, rpm-linux-arm64-el7, tar-linux-arm64, tar-darwin-arm64]
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -568,6 +578,8 @@ jobs:
 
   major-tagging:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
