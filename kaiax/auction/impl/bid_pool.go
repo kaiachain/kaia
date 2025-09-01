@@ -229,17 +229,10 @@ func (bp *BidPool) GetTargetTxMap(num uint64) map[common.Hash]*auction.Bid {
 }
 
 // AddBid adds a bid to the bid pool.
+// Required mutex is locked in each function.
 func (bp *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
 	if atomic.LoadUint32(&bp.running) == 0 {
 		return common.Hash{}, auction.ErrAuctionPaused
-	}
-
-	bp.bidMu.Lock()
-	defer bp.bidMu.Unlock()
-
-	if int64(len(bp.bidMap)) >= bp.maxBidPoolSize {
-		logger.Info("Bid pool is full", "maxBidPoolSize", bp.maxBidPoolSize, "bid", bid.Hash())
-		return common.Hash{}, auction.ErrBidPoolFull
 	}
 
 	if err := bp.validateBid(bid); err != nil {
@@ -262,6 +255,9 @@ func (bp *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
 }
 
 func (bp *BidPool) insertBid(bid *auction.Bid) error {
+	bp.bidMu.Lock()
+	defer bp.bidMu.Unlock()
+
 	var (
 		blockNumber  = bid.BlockNumber
 		targetTxHash = bid.TargetTxHash
@@ -305,6 +301,14 @@ func (bp *BidPool) initializeBidMap(num uint64) {
 }
 
 func (bp *BidPool) validateBid(bid *auction.Bid) error {
+	bp.bidMu.RLock()
+	defer bp.bidMu.RUnlock()
+
+	if int64(len(bp.bidMap)) >= bp.maxBidPoolSize {
+		logger.Info("Bid pool is full", "maxBidPoolSize", bp.maxBidPoolSize, "bid", bid.Hash())
+		return auction.ErrBidPoolFull
+	}
+
 	blockNumber := bid.BlockNumber
 	sender := bid.Sender
 
