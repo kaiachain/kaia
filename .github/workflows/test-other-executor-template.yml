@@ -1,4 +1,4 @@
-name: Reusable test other excutor
+name: Reusable test other executor
 
 on:
   workflow_call:
