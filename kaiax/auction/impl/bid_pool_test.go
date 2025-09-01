@@ -162,6 +162,9 @@ func TestBidPool_AddBid(t *testing.T) {
 	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
 	require.NotNil(t, pool)
 
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
 	chain.EXPECT().CurrentBlock().Return(block0).Times(1)
 
 	// Test adding bid when auction is paused
@@ -172,8 +175,6 @@ func TestBidPool_AddBid(t *testing.T) {
 	pool.start()
 	atomic.StoreUint32(&pool.running, 1)
 	defer pool.stop()
-	pool.auctioneer = testAuctioneer
-	pool.auctionEntryPoint = testAuctionEntryPoint
 
 	// Test adding bid not valid block number
 	_, err = pool.AddBid(testBids[0])
@@ -236,14 +237,15 @@ func TestBidPool_AddBid_MaxBidPoolSize(t *testing.T) {
 	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1})
 	require.NotNil(t, pool)
 
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
 	chain.EXPECT().CurrentBlock().Return(block1).Times(1)
 
 	// Start the auction
 	pool.start()
 	atomic.StoreUint32(&pool.running, 1)
 	defer pool.stop()
-	pool.auctioneer = testAuctioneer
-	pool.auctionEntryPoint = testAuctionEntryPoint
 
 	// Test successful bid additions
 	bid := testBids[0]
@@ -267,14 +269,15 @@ func TestBidPool_AddBid_ExceedMaxGasLimit(t *testing.T) {
 	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
 	require.NotNil(t, pool)
 
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
 	chain.EXPECT().CurrentBlock().Return(block1).Times(1)
 
 	// Start the auction
 	pool.start()
 	atomic.StoreUint32(&pool.running, 1)
 	defer pool.stop()
-	pool.auctioneer = testAuctioneer
-	pool.auctionEntryPoint = testAuctionEntryPoint
 
 	// Test successful bid additions
 	bid := testBids[5]
@@ -296,12 +299,13 @@ func TestBidPool_RemoveOldBidsByNumber(t *testing.T) {
 	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
 	require.NotNil(t, pool)
 
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
 	// Start the auction
 	pool.start()
 	atomic.StoreUint32(&pool.running, 1)
 	defer pool.stop()
-	pool.auctioneer = testAuctioneer
-	pool.auctionEntryPoint = testAuctionEntryPoint
 
 	for _, bid := range testBids[:3] {
 		hash, err := pool.AddBid(bid)
@@ -335,12 +339,13 @@ func TestBidPool_RemoveOldBidsByTxHash(t *testing.T) {
 	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
 	require.NotNil(t, pool)
 
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
 	// Start the auction
 	pool.start()
 	atomic.StoreUint32(&pool.running, 1)
 	defer pool.stop()
-	pool.auctioneer = testAuctioneer
-	pool.auctionEntryPoint = testAuctionEntryPoint
 
 	for _, bid := range testBids[:3] {
 		hash, err := pool.AddBid(bid)
@@ -378,12 +383,13 @@ func TestBidPool_ClearBidPool(t *testing.T) {
 	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
 	require.NotNil(t, pool)
 
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
 	// Start the auction
 	pool.start()
 	atomic.StoreUint32(&pool.running, 1)
 	defer pool.stop()
-	pool.auctioneer = testAuctioneer
-	pool.auctionEntryPoint = testAuctionEntryPoint
 
 	// Add some bids
 	for _, bid := range testBids[:3] {
@@ -419,12 +425,13 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
 	require.NotNil(t, pool)
 
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
 	// Start the auction
 	pool.start()
 	atomic.StoreUint32(&pool.running, 1)
 	defer pool.stop()
-	pool.auctioneer = testAuctioneer
-	pool.auctionEntryPoint = testAuctionEntryPoint
 
 	// Add some bids
 	for _, bid := range testBids[:3] {
@@ -455,4 +462,72 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	assert.Empty(t, pool.bidMap)
 	assert.Equal(t, newAuctioneer, pool.auctioneer)
 	assert.Equal(t, newAuctionEntryPoint, pool.auctionEntryPoint)
+}
+
+func BenchmarkAddBid(b *testing.B) {
+	benchmarkAddBid(b, 1000)
+}
+
+func benchmarkAddBid(b *testing.B, numBids int) {
+	var (
+		mockCtrl = gomock.NewController(b)
+		chain    = chain_mock.NewMockBlockChain(mockCtrl)
+	)
+	defer mockCtrl.Finish()
+
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
+
+	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: int64(numBids)})
+
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
+	// Start the auction
+	pool.start()
+	atomic.StoreUint32(&pool.running, 1)
+	defer pool.stop()
+
+	bids := make([]*auction.Bid, numBids)
+	for i := 0; i < numBids; i++ {
+		// make random tx
+		searcherKey, _ := crypto.GenerateKey()
+		tx := types.NewTransaction(uint64(i), testSearcher1, big.NewInt(10000000), 10000000, big.NewInt(10000000), []byte{})
+		bid := &auction.Bid{BidData: auction.BidData{
+			TargetTxHash: tx.Hash(),
+			BlockNumber:  2,
+			Sender:       crypto.PubkeyToAddress(searcherKey.PublicKey),
+			To:           crypto.PubkeyToAddress(searcherKey.PublicKey),
+			Nonce:        uint64(i),
+			Bid:          big.NewInt(10),
+			CallGasLimit: 100,
+			Data:         common.Hex2Bytes("d09de08a"),
+		}}
+
+		// Generate searcher signature (EIP-712)
+		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint)
+		sig, _ := crypto.Sign(digest, searcherKey)
+		// Convert V from 0/1 to 27/28
+		sig[crypto.RecoveryIDOffset] += 27
+		bid.SearcherSig = sig
+
+		// Generate auctioneer signature
+		searcherSig := bid.SearcherSig
+		msg := fmt.Appendf(nil, "\x19Ethereum Signed Message:\n%d%s", len(searcherSig), searcherSig)
+		digest = crypto.Keccak256(msg)
+		sig, _ = crypto.Sign(digest, testAuctioneerKey)
+		// Convert V from 0/1 to 27/28
+		sig[crypto.RecoveryIDOffset] += 27
+		bid.AuctioneerSig = sig
+
+		bids[i] = bid
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, bid := range bids {
+			pool.AddBid(bid)
+		}
+		pool.clearBidPool()
+	}
 }

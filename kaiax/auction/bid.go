@@ -46,6 +46,9 @@ type Bid struct {
 	BidData
 	hash     atomic.Value
 	gasLimit atomic.Uint64
+
+	validated       atomic.Bool
+	validationError atomic.Value
 }
 
 func (b *Bid) GetEthSignedMessageHash() []byte {
@@ -90,7 +93,37 @@ func rlpHash(x interface{}) (h common.Hash) {
 	return h
 }
 
-func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Address) error {
+func (b *Bid) ValidateSig(chainId *big.Int, verifyingContract common.Address, auctioneer common.Address) error {
+	// Check if the signatures are already validated.
+	if b.validated.Load() {
+		return nil
+	}
+
+	// Check if the validation error is set.
+	if err := b.validationError.Load(); err != nil {
+		return err.(error)
+	}
+
+	if err := b.validateSearcherSig(chainId, verifyingContract); err != nil {
+		b.validationError.Store(err)
+		return err
+	}
+
+	if err := b.validateAuctioneerSig(auctioneer); err != nil {
+		b.validationError.Store(err)
+		return err
+	}
+
+	b.validated.Store(true)
+
+	return nil
+}
+
+func (b *Bid) validateSearcherSig(chainId *big.Int, verifyingContract common.Address) error {
+	if b.SearcherSig == nil || len(b.SearcherSig) != crypto.SignatureLength {
+		return ErrInvalidSearcherSig
+	}
+
 	if chainId == nil {
 		return ErrNilChainId
 	}
@@ -113,7 +146,15 @@ func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Add
 	return nil
 }
 
-func (b *Bid) ValidateAuctioneerSig(auctioneer common.Address) error {
+func (b *Bid) validateAuctioneerSig(auctioneer common.Address) error {
+	if b.AuctioneerSig == nil || len(b.AuctioneerSig) != crypto.SignatureLength {
+		return ErrInvalidAuctioneerSig
+	}
+
+	if common.EmptyAddress(auctioneer) {
+		return ErrNilAuctioneer
+	}
+
 	digest := b.GetEthSignedMessageHash()
 
 	recoveredAuctioneer, err := getSigner(b.AuctioneerSig, digest)

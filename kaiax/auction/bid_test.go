@@ -54,15 +54,23 @@ func TestBidGetEthSignedMessageHash(t *testing.T) {
 	require.Equal(t, common.Hex2Bytes("a328ed8cc9e6941076a892efd7687278bfd6f85b4b89ad196d0eef5215eb0059"), digest)
 }
 
+func TestBidValidateSig(t *testing.T) {
+	err := testBid.ValidateSig(big.NewInt(31337), common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"), common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"))
+	require.NoError(t, err)
+
+	require.True(t, testBid.validated.Load())
+	require.Nil(t, testBid.validationError.Load())
+}
+
 func TestBidValidateSearcherSig(t *testing.T) {
-	err := testBid.ValidateSearcherSig(big.NewInt(31337), common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"))
+	err := testBid.validateSearcherSig(big.NewInt(31337), common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"))
 	require.NoError(t, err)
 	// Do not modify the original bid.
 	require.Equal(t, uint8(27), testBid.SearcherSig[crypto.RecoveryIDOffset])
 }
 
 func TestBidValidateAuctioneerSig(t *testing.T) {
-	err := testBid.ValidateAuctioneerSig(common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"))
+	err := testBid.validateAuctioneerSig(common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"))
 	require.NoError(t, err)
 	// Do not modify the original bid.
 	require.Equal(t, uint8(27), testBid.AuctioneerSig[crypto.RecoveryIDOffset])

@@ -26,7 +26,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/params"
@@ -230,6 +229,11 @@ func (bp *BidPool) GetTargetTxMap(num uint64) map[common.Hash]*auction.Bid {
 
 // AddBid adds a bid to the bid pool.
 func (bp *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
+	// Recover the bid signatures.
+	bp.auctionInfoMu.RLock()
+	bidSigCacher.recover(bid, bp.ChainConfig.ChainID, bp.auctionEntryPoint, bp.auctioneer)
+	bp.auctionInfoMu.RUnlock()
+
 	if atomic.LoadUint32(&bp.running) == 0 {
 		return common.Hash{}, auction.ErrAuctionPaused
 	}
@@ -342,35 +346,15 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 	}
 
 	// 5. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
-	if err := bp.validateBidSigs(bid); err != nil {
-		return err
-	}
-
-	return nil
+	return bp.validateBidSigs(bid)
 }
 
 func (bp *BidPool) validateBidSigs(bid *auction.Bid) error {
 	bp.auctionInfoMu.RLock()
 	defer bp.auctionInfoMu.RUnlock()
 
-	if bid.SearcherSig == nil || len(bid.SearcherSig) != crypto.SignatureLength {
-		return auction.ErrInvalidSearcherSig
-	}
-	if bid.AuctioneerSig == nil || len(bid.AuctioneerSig) != crypto.SignatureLength {
-		return auction.ErrInvalidAuctioneerSig
-	}
-
-	// Verify the EIP712 signature.
-	if err := bid.ValidateSearcherSig(bp.ChainConfig.ChainID, bp.auctionEntryPoint); err != nil {
-		return err
-	}
-
-	// Verify the auctioneer signature.
-	if err := bid.ValidateAuctioneerSig(bp.auctioneer); err != nil {
-		return err
-	}
-
-	return nil
+	// Verify the signatures.
+	return bid.ValidateSig(bp.ChainConfig.ChainID, bp.auctionEntryPoint, bp.auctioneer)
 }
 
 func (bp *BidPool) HandleBid(bid *auction.Bid) {

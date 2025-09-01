@@ -26,6 +26,7 @@ var (
 	ErrInvalidAuctioneerSig  = errors.New("invalid auctioneer sig")
 	ErrNilChainId            = errors.New("chainId is nil")
 	ErrNilVerifyingContract  = errors.New("verifyingContract is nil")
+	ErrNilAuctioneer         = errors.New("auctioneer is nil")
 	ErrInvalidTargetTxHash   = errors.New("invalid target tx hash")
 	ErrAuctionDisabled       = errors.New("auction is disabled")
 	ErrExceedMaxCallGasLimit = errors.New("gas limit exceeds the maximum limit")
