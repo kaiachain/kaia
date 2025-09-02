@@ -30,7 +30,6 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/params"
-	"github.com/rcrowley/go-metrics"
 )
 
 const (
@@ -40,8 +39,6 @@ const (
 	BidTxMaxCallGasLimit = uint64(10_000_000)
 	BidTxGasBuffer       = uint64(180_000)
 )
-
-var numBidsGauge = metrics.NewRegisteredGauge("kaiax/auction/bidpool/num/bids", nil)
 
 type BidPool struct {
 	ChainConfig *params.ChainConfig
