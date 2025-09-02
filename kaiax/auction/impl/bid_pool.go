@@ -301,48 +301,50 @@ func (bp *BidPool) initializeBidMap(num uint64) {
 }
 
 func (bp *BidPool) validateBid(bid *auction.Bid) error {
-	bp.bidMu.RLock()
-	defer bp.bidMu.RUnlock()
+	blockNumber := bid.BlockNumber
+	sender := bid.Sender
 
+	bp.bidMu.RLock()
 	if int64(len(bp.bidMap)) >= bp.maxBidPoolSize {
 		logger.Info("Bid pool is full", "maxBidPoolSize", bp.maxBidPoolSize, "bid", bid.Hash())
+		bp.bidMu.RUnlock()
 		return auction.ErrBidPoolFull
 	}
 
-	blockNumber := bid.BlockNumber
-	sender := bid.Sender
+	// Check if the auction tx is already in the pool.
+	if _, ok := bp.bidMap[bid.Hash()]; ok {
+		bp.bidMu.RUnlock()
+		return auction.ErrBidAlreadyExists
+	}
+
+	// 1. The `bid.Sender` must not be in the winner list of the same block number if the new bid isn't equal to the previous bid.
+	if hash, ok := bp.bidWinnerMap[blockNumber][sender]; ok {
+		if !bid.Equals(bp.bidMap[hash]) {
+			bp.bidMu.RUnlock()
+			return auction.ErrBidSenderExists
+		}
+	}
+	bp.bidMu.RUnlock()
 
 	curBlock := bp.Chain.CurrentBlock()
 	if curBlock == nil {
 		return auction.ErrBlockNotFound
 	}
 
-	// 1. The `bid.BlockNumber` must be in range of `[currentBlockNumber + 1, currentBlockNumber + allowFutureBlock]`.
+	// 2. The `bid.BlockNumber` must be in range of `[currentBlockNumber + 1, currentBlockNumber + allowFutureBlock]`.
 	curNum := curBlock.NumberU64()
 	if blockNumber <= curNum || blockNumber > curNum+allowFutureBlock {
 		return auction.ErrInvalidBlockNumber
 	}
 
-	// 2. The `bid.Bid` must be greater than 0.
+	// 3. The `bid.Bid` must be greater than 0.
 	if bid.Bid.Sign() <= 0 {
 		return auction.ErrZeroBid
 	}
 
-	// 3. The gas limit must be less than the maximum limit.
+	// 4. The gas limit must be less than the maximum limit.
 	if bid.CallGasLimit > BidTxMaxCallGasLimit {
 		return auction.ErrExceedMaxCallGasLimit
-	}
-
-	// Check if the auction tx is already in the pool.
-	if _, ok := bp.bidMap[bid.Hash()]; ok {
-		return auction.ErrBidAlreadyExists
-	}
-
-	// 4. The `bid.Sender` must not be in the winner list of the same block number if the new bid isn't equal to the previous bid.
-	if hash, ok := bp.bidWinnerMap[blockNumber][sender]; ok {
-		if !bid.Equals(bp.bidMap[hash]) {
-			return auction.ErrBidSenderExists
-		}
 	}
 
 	// 5. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
