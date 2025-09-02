@@ -123,7 +123,7 @@ search:
 			break search
 
 		default:
-			// We don't have to update hash rate on every nonce, so update after after 2^X nonces
+			// We don't have to update hash rate on every nonce, so update after 2^X nonces
 			attempts++
 			if (attempts % (1 << 15)) == 0 {
 				gxhash.hashrate.Mark(attempts)
