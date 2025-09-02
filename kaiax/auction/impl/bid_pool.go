@@ -229,17 +229,10 @@ func (bp *BidPool) GetTargetTxMap(num uint64) map[common.Hash]*auction.Bid {
 }
 
 // AddBid adds a bid to the bid pool.
+// Required mutex is locked in each function.
 func (bp *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
 	if atomic.LoadUint32(&bp.running) == 0 {
 		return common.Hash{}, auction.ErrAuctionPaused
-	}
-
-	bp.bidMu.Lock()
-	defer bp.bidMu.Unlock()
-
-	if int64(len(bp.bidMap)) >= bp.maxBidPoolSize {
-		logger.Info("Bid pool is full", "maxBidPoolSize", bp.maxBidPoolSize, "bid", bid.Hash())
-		return common.Hash{}, auction.ErrBidPoolFull
 	}
 
 	if err := bp.validateBid(bid); err != nil {
@@ -262,6 +255,9 @@ func (bp *BidPool) AddBid(bid *auction.Bid) (common.Hash, error) {
 }
 
 func (bp *BidPool) insertBid(bid *auction.Bid) error {
+	bp.bidMu.Lock()
+	defer bp.bidMu.Unlock()
+
 	var (
 		blockNumber  = bid.BlockNumber
 		targetTxHash = bid.TargetTxHash
@@ -308,37 +304,47 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 	blockNumber := bid.BlockNumber
 	sender := bid.Sender
 
+	bp.bidMu.RLock()
+	if int64(len(bp.bidMap)) >= bp.maxBidPoolSize {
+		logger.Info("Bid pool is full", "maxBidPoolSize", bp.maxBidPoolSize, "bid", bid.Hash())
+		bp.bidMu.RUnlock()
+		return auction.ErrBidPoolFull
+	}
+
+	// Check if the auction tx is already in the pool.
+	if _, ok := bp.bidMap[bid.Hash()]; ok {
+		bp.bidMu.RUnlock()
+		return auction.ErrBidAlreadyExists
+	}
+
+	// 1. The `bid.Sender` must not be in the winner list of the same block number if the new bid isn't equal to the previous bid.
+	if hash, ok := bp.bidWinnerMap[blockNumber][sender]; ok {
+		if !bid.Equals(bp.bidMap[hash]) {
+			bp.bidMu.RUnlock()
+			return auction.ErrBidSenderExists
+		}
+	}
+	bp.bidMu.RUnlock()
+
 	curBlock := bp.Chain.CurrentBlock()
 	if curBlock == nil {
 		return auction.ErrBlockNotFound
 	}
 
-	// 1. The `bid.BlockNumber` must be in range of `[currentBlockNumber + 1, currentBlockNumber + allowFutureBlock]`.
+	// 2. The `bid.BlockNumber` must be in range of `[currentBlockNumber + 1, currentBlockNumber + allowFutureBlock]`.
 	curNum := curBlock.NumberU64()
 	if blockNumber <= curNum || blockNumber > curNum+allowFutureBlock {
 		return auction.ErrInvalidBlockNumber
 	}
 
-	// 2. The `bid.Bid` must be greater than 0.
+	// 3. The `bid.Bid` must be greater than 0.
 	if bid.Bid.Sign() <= 0 {
 		return auction.ErrZeroBid
 	}
 
-	// 3. The gas limit must be less than the maximum limit.
+	// 4. The gas limit must be less than the maximum limit.
 	if bid.CallGasLimit > BidTxMaxCallGasLimit {
 		return auction.ErrExceedMaxCallGasLimit
-	}
-
-	// Check if the auction tx is already in the pool.
-	if _, ok := bp.bidMap[bid.Hash()]; ok {
-		return auction.ErrBidAlreadyExists
-	}
-
-	// 4. The `bid.Sender` must not be in the winner list of the same block number if the new bid isn't equal to the previous bid.
-	if hash, ok := bp.bidWinnerMap[blockNumber][sender]; ok {
-		if !bid.Equals(bp.bidMap[hash]) {
-			return auction.ErrBidSenderExists
-		}
 	}
 
 	// 5. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
