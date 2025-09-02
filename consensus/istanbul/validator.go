@@ -93,11 +93,7 @@ func (cs *RoundCommitteeState) F() int                              { return cs.
 // requiredMessageCount returns a minimum required number of consensus messages to proceed
 func requiredMessageCount(qualifiedSize int, committeeSize uint64) int {
 	var size int
-	if qualifiedSize > int(committeeSize) {
-		size = int(committeeSize)
-	} else {
-		size = qualifiedSize
-	}
+	size = min(qualifiedSize, int(committeeSize))
 	// For less than 4 validators, quorum size equals validator count.
 	if size < 4 {
 		return size

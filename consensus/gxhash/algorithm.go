@@ -312,10 +312,7 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 			// Calculate the data segment this thread should generate
 			batch := uint32((size + hashBytes*uint64(threads) - 1) / (hashBytes * uint64(threads)))
 			first := uint32(id) * batch
-			limit := first + batch
-			if limit > uint32(size/hashBytes) {
-				limit = uint32(size / hashBytes)
-			}
+			limit := min(first+batch, uint32(size/hashBytes))
 			// Calculate the dataset segment
 			percent := uint32(size / hashBytes / 100)
 			for index := first; index < limit; index++ {
