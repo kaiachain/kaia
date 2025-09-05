@@ -2,7 +2,7 @@ name: Testing Workflow
 
 on:
   pull_request_target:
-    types: [opened, closed, synchronize]
+    types: [opened, reopened, synchronize]
   workflow_call:
 
 permissions:
