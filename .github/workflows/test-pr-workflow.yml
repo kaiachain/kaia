@@ -18,6 +18,7 @@ jobs:
     uses: ./.github/workflows/test-executor-template.yml
     with:
       test_command: |
+        exit 999
         git fetch origin dev:dev
         go run build/ci.go lint -v --new-from-rev=dev
 
