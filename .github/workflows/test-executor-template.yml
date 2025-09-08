@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches full history for test-linter's '--new-from-rev=dev to work
       - name: Add safe directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
