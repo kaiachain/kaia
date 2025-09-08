@@ -139,6 +139,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewStringFlag(kip160ContractAddressFlag),
 	altsrc.NewInt64Flag(randaoCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(pragueCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(osakaCompatibleBlockNumberFlag),
 	altsrc.NewStringFlag(kip113ProxyAddressFlag),
 	altsrc.NewStringFlag(kip113LogicAddressFlag),
 	altsrc.NewBoolFlag(kip113MockFlag),
@@ -801,6 +802,7 @@ func Gen(ctx *cli.Context) error {
 
 	genesisJson.Config.RandaoCompatibleBlock = big.NewInt(ctx.Int64(randaoCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.PragueCompatibleBlock = big.NewInt(ctx.Int64(pragueCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.OsakaCompatibleBlock = big.NewInt(ctx.Int64(osakaCompatibleBlockNumberFlag.Name))
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)
