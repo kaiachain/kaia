@@ -20,16 +20,14 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+      - name: Add safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: setup python 3.9
         if: ${{ inputs.install_python == true }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-      - name: Download dev branch
-        run: |
-          git config --global --add safe.directory /__w/kaia/kaia
-          git fetch origin dev:dev
-          apt-get install netcat-traditional
       - name: Wait for Redis
         run: |
           for i in $(seq 1 10); do
