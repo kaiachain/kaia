@@ -1,0 +1,601 @@
+name: Main workflow
+
+on:
+  push:
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+
+
+env:
+  DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  FRONTEND_BUCKET: ${{ secrets.FRONTEND_BUCKET }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+jobs:
+  test-full:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/test-pr-workflow.yml
+
+  check-tagger:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - id: check-tag
+        run: |
+          if [[ ${{ github.event.ref }} =~ ^refs/tags/^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "match=true" >> $GITHUB_OUTPUT
+          fi
+      - if: steps.check-tag.outputs.match == true
+        run: echo "Tag is good"
+
+  # Docker build
+  docker:
+    needs: [test-full, check-tagger]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ env.DOCKER_LOGIN }}
+          password: ${{ env.DOCKER_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            kaiachain/kaia:${{ github.ref == 'refs/heads/dev' && 'dev' || github.ref_name }}
+            ${{ startsWith(github.ref, 'refs/tags/v') && 'kaiachain/kaia:latest' || '' }} 
+
+
+  # Packing
+  rpm-linux-amd64:
+    needs: [test-full, check-tagger]
+    permissions:
+      id-token: write
+    runs-on: ubuntu-latest
+    container:
+      image: kaiachain/circleci-rpmbuild:1.23.7-gcc11
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set version
+        shell: bash
+        run: |
+          export GOPATH=/go
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+
+      - name: Build binaries
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          make all
+
+      - name: Build RPM packages
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          git config --system --add safe.directory $GITHUB_WORKSPACE
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-rpm.sh $item
+          done
+          
+          for item in kcn kpn ken; do
+            ./build/package-rpm.sh -b $item
+          done
+
+      - name: Upload RPM packages to S3
+        run: |
+          PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+          
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            BINARY=$item
+            KAIROS=""
+            if [[ $BINARY = *-kairos ]]; then
+              BINARY="${BINARY%-kairos}"
+              KAIROS="-kairos"
+            fi
+            TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
+  tar-linux-amd64:
+    needs: [test-full, check-tagger]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    container:
+      image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set version
+        shell: bash
+        run: |
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+
+      - name: Build binaries
+        run: |
+          git config --global --add safe.directory /__w/kaia/kaia
+          make all
+
+      - name: Build tar packages
+        run: |
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-tar.sh linux-amd64 $item
+          done
+          
+          for item in kcn kpn ken; do
+            ./build/package-tar.sh -b linux-amd64 $item
+          done
+
+      - name: Upload tar packages to S3
+        run: |
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            aws s3 cp packages/${item}-v*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
+  rpm-linux-arm64:
+    needs: [test-full, check-tagger]
+    runs-on: ['arm-runner']
+    permissions:
+      id-token: write
+    container:
+      image: kaiachain/circleci-rpmbuild:1.23.7-gcc11-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set version
+        shell: bash
+        run: |
+          export GOPATH=/go
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+
+      - name: Build binaries
+        run: |
+          git config --global --add safe.directory /__w/kaia/kaia
+          make all
+
+      - name: Build RPM packages
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          git config --system --add safe.directory $GITHUB_WORKSPACE
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-rpm.sh $item
+          done
+          
+          for item in kcn kpn ken; do
+            ./build/package-rpm.sh -b $item
+          done
+
+      - name: Upload RPM packages to S3
+        run: |
+          PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+          
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            BINARY=$item
+            KAIROS=""
+            if [[ $BINARY = *-kairos ]]; then
+              BINARY="${BINARY%-kairos}"
+              KAIROS="-kairos"
+            fi
+            TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
+  tar-linux-arm64:
+    needs: [test-full, check-tagger]
+    runs-on: ['arm-runner']
+    permissions:
+      id-token: write
+    container:
+      image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set version
+        shell: bash
+        run: |
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+
+      - name: Build binaries
+        run: |
+          git config --global --add safe.directory /__w/kaia/kaia
+          make all
+
+      - name: Build tar packages
+        run: |
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-tar.sh linux-arm64 $item
+          done
+          
+          for item in kcn kpn ken; do
+            ./build/package-tar.sh -b linux-arm64 $item
+          done
+
+      - name: Upload tar packages to S3
+        run: |
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            aws s3 cp packages/${item}-v*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
+  rpm-linux-amd64-el7:
+    needs: [test-full, check-tagger]
+    permissions:
+      id-token: write
+    runs-on: ubuntu-latest
+    container:
+      image: kaiachain/circleci-rpmbuild:1.23.7-gcc7
+    steps:
+      - name: Clone repository manually
+        run: |
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} .
+          git checkout ${{ github.sha }}
+
+      - name: Set version
+        shell: bash
+        run: |
+          export GOPATH=/go
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+      - name: Build binaries
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          make all
+      - name: Build RPM packages
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          git config --system --add safe.directory $GITHUB_WORKSPACE
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-rpm.sh $item
+          done
+          for item in kcn kpn ken; do
+            ./build/package-rpm.sh -b $item
+          done
+      - name: Upload RPM packages to S3
+        env:
+          AWS_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          ##Get Credential
+          yum install -y epel-release
+          yum install -y jq
+          echo "Requesting OIDC token from GitHub..."
+          ID_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+                          "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r .value)
+          
+          echo "Calling STS:AssumeRoleWithWebIdentity..."
+          CREDS=$(aws sts assume-role-with-web-identity \
+            --role-arn "$AWS_ROLE_ARN" \
+            --role-session-name "SessionForKaiaActions" \
+            --web-identity-token "$ID_TOKEN" \
+            --region "$AWS_REGION" \
+            --query "Credentials" \
+            --output json)
+          
+          export AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r .AccessKeyId)
+          export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r .SecretAccessKey)
+          export AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r .SessionToken)
+          
+          # Optional: verify identity
+          aws sts get-caller-identity
+          ## Upload
+          PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            BINARY=$item
+            KAIROS=""
+            if [[ $BINARY = *-kairos ]]; then
+              BINARY="${BINARY%-kairos}"
+              KAIROS="-kairos"
+            fi
+            TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
+  rpm-linux-arm64-el7:
+    needs: [test-full, check-tagger]
+    runs-on: ['arm-runner']
+    permissions:
+      id-token: write
+    container:
+      image: kaiachain/circleci-rpmbuild:1.23.7-gcc7-arm
+    steps:
+      - name: Clone repository manually
+        run: |
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} .
+          git checkout ${{ github.sha }}
+
+      - name: Set version
+        shell: bash
+        run: |
+          export GOPATH=/go
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+      - name: Build binaries
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          make all
+      - name: Build RPM packages
+        run: |
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          git config --system --add safe.directory $GITHUB_WORKSPACE
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-rpm.sh $item
+          done
+          for item in kcn kpn ken; do
+            ./build/package-rpm.sh -b $item
+          done
+      - name: Upload RPM packages to S3
+        env:
+          AWS_ROLE_ARN: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          ##Get Credential
+          curl -Lo /usr/local/bin/jq  https://github.com/jqlang/jq/releases/download/jq-1.7rc1/jq-linux-arm64
+          chmod +x /usr/local/bin/jq
+          echo "Requesting OIDC token from GitHub..."
+          ID_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+                "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r .value)
+          
+          echo "Calling STS:AssumeRoleWithWebIdentity..."
+          CREDS=$(aws sts assume-role-with-web-identity \
+            --role-arn "$AWS_ROLE_ARN" \
+            --role-session-name "SessionForKaiaActions" \
+            --web-identity-token "$ID_TOKEN" \
+            --region "$AWS_REGION" \
+            --query "Credentials" \
+            --output json)
+          
+          export AWS_ACCESS_KEY_ID=$(echo "$CREDS" | jq -r .AccessKeyId)
+          export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | jq -r .SecretAccessKey)
+          export AWS_SESSION_TOKEN=$(echo "$CREDS" | jq -r .SessionToken)
+          
+          # Optional: verify identity
+          aws sts get-caller-identity
+          
+          ##Upload
+          PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            BINARY=$item
+            KAIROS=""
+            if [[ $BINARY = *-kairos ]]; then
+              BINARY="${BINARY%-kairos}"
+              KAIROS="-kairos"
+            fi
+            TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/
+            aws s3 cp $TARGET_RPM s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
+  tar-darwin-arm64:
+    needs: [test-full, check-tagger]
+    runs-on: macos-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          brew install awscli
+          curl -O https://dl.google.com/go/go1.23.7.darwin-arm64.tar.gz
+          sudo tar -C /usr/local -xzf go1.23.7.darwin-arm64.tar.gz
+          echo "/usr/local/go/bin" >> $GITHUB_PATH
+          echo "GOPATH=$HOME/go" >> $GITHUB_ENV
+      - name: Set version
+        shell: bash
+        run: |
+          if [[ $GITHUB_REF_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+.* ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+      - name: Build binaries
+        run: |
+          make all
+      - name: Build tar packages
+        run: |
+          for item in kcn kpn ken kgen kscn kbn kspn ksen homi; do
+            ./build/package-tar.sh darwin-arm64 $item
+          done
+          for item in kcn kpn ken; do
+            ./build/package-tar.sh -b darwin-arm64 $item
+          done
+
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload tar packages to S3
+        run: |
+          for item in kcn kpn ken kcn-kairos kpn-kairos ken-kairos kgen kscn kbn kspn ksen homi; do
+            aws s3 cp packages/${item}-v*.tar.gz s3://$FRONTEND_BUCKET/packages/kaia/$KAIA_VERSION/
+          done
+
+  update-repo-metadata:
+    needs: [rpm-linux-amd64, rpm-linux-amd64-el7, rpm-linux-arm64, rpm-linux-arm64-el7]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    container:
+      image: kaiachain/circleci-rpmbuild:1.23.7-gcc11
+    steps:
+      - name: Get AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }}
+          role-session-name: SessionForKaiaActions
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Update EL7 repo
+        run: |
+          aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/ rhel/7/kaia/
+          createrepo --update rhel/7/kaia
+          aws s3 sync --delete rhel/7/kaia/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/7/kaia/repodata/
+      - name: Update EL9 repo
+        run: |
+          aws s3 sync s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/ rhel/9-stream/kaia/
+          createrepo --update rhel/9-stream/kaia
+          aws s3 sync --delete rhel/9-stream/kaia/repodata/ s3://$FRONTEND_BUCKET/packages/rhel/9-stream/kaia/repodata/
+      - name: Notify Slack on success
+        if: success()
+        run: |
+          curl --data '{"text": "✅ Repo metadata update succeeded for ${{ github.ref_name }}."}' "$SLACK_WEBHOOK_URL"
+      - name: Notify Slack on failure
+        if: failure()
+        run: |
+          curl --data '{"text": "❌ Repo metadata update failed for ${{ github.ref_name }}."}' "$SLACK_WEBHOOK_URL"
+
+  tag-verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tag and file version match
+        run: |
+          echo "tag version is $GITHUB_REF_NAME"
+          KAIA_VERSION=$(go run build/rpm/main.go version)
+          echo "version on version.go $KAIA_VERSION"
+          if [ "$KAIA_VERSION" == "${GITHUB_REF_NAME%-*}" ]; then
+            echo "verification pass"
+          else
+            echo "It's not same version."
+            exit 1
+          fi
+
+  tagger-verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tagger
+        run: |
+          TAGGER=$(git for-each-ref --format='%(tagger)' refs/tags/$GITHUB_REF_NAME | sed 's/ .*//')
+          if [ "$TAGGER" == 'circleci-kaia' ]; then
+            echo "Pass! Tagger is circleci-kaia"
+          else
+            echo "only circleci-kaia can tagging major version"
+            exit 1
+          fi
+
+  release-pr:
+    needs: [rpm-linux-amd64, rpm-linux-amd64-el7, tar-linux-amd64, rpm-linux-arm64, rpm-linux-arm64-el7, tar-linux-arm64, tar-darwin-arm64]
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create release PR
+        uses: peter-evans/create-pull-request@v5
+        with:
+          branch: release/${{ github.ref_name }}
+          title: "[Main] release/${{ github.ref_name }} QA Signoff"
+          body: |
+            [Main] release/${{ github.ref_name }} QA Sign-off
+            This PR is automatically created by CI to release a new official version of ${{ github.repository }}.
+            When this PR is approved by QA team, a new version will be released.
+          base: main
+          delete-branch: true
+
+  major-tagging:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Generate tag
+        run: |
+          version=$(go run build/rpm/main.go version)
+          git config --global user.email "devops@kaia.io"
+          git config --global user.name "circleci-kaia"
+          git tag -a $version -m "Major release"
+          git push origin $version
+      - name: Delete release branch
+        run: |
+          version=$(go run build/rpm/main.go version)
+          if [[ "release/v" = $(git log --oneline -1 | grep -o "release/v") ]]; then
+            echo "Delete branch release/$version"
+            git push origin --delete release/$version
+          else
+            echo "Need to delete branch manually"
