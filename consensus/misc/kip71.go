@@ -91,11 +91,9 @@ func nextBlockBaseFee(parentHeader *types.Header, kip71Config *params.KIP71Confi
 		parentBaseFee = lowerBoundBaseFee
 	}
 
-	parentGasUsed := parentHeader.GasUsed
-	// upper gas limit cut off the impulse of used gas to upper bound
-	if parentGasUsed > upperGasLimit {
-		parentGasUsed = upperGasLimit
-	}
+	parentGasUsed := min(
+		// upper gas limit cut off the impulse of used gas to upper bound
+		parentHeader.GasUsed, upperGasLimit)
 	if parentGasUsed == gasTarget {
 		return parentBaseFee
 	} else if parentGasUsed > gasTarget {

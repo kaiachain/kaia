@@ -69,10 +69,7 @@ func verifyTest(wg *sync.WaitGroup, e *Gxhash, workerIndex, epochs int) {
 	const wiggle = 4 * epochLength
 	r := rand.New(rand.NewSource(int64(workerIndex)))
 	for epoch := 0; epoch < epochs; epoch++ {
-		block := int64(epoch)*epochLength - wiggle/2 + r.Int63n(wiggle)
-		if block < 0 {
-			block = 0
-		}
+		block := max(int64(epoch)*epochLength-wiggle/2+r.Int63n(wiggle), 0)
 		head := &types.Header{Number: big.NewInt(block), BlockScore: big.NewInt(100)}
 		e.VerifySeal(nil, head)
 	}
