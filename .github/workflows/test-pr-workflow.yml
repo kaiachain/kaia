@@ -12,23 +12,17 @@ jobs:
   build:
     uses: ./.github/workflows/test-executor-template.yml
     with:
-      test_command: |
-        git config --global --add safe.directory /__w/kaia/kaia
-        make all
+      test_command: make all
 
   test-linter:
     uses: ./.github/workflows/test-executor-template.yml
     with:
-      test_command: |
-        git config --global --add safe.directory /__w/kaia/kaia
-        go run build/ci.go lint -v --new-from-rev=dev
+      test_command: go run build/ci.go lint -v --new-from-rev=dev
 
   test-networks:
     uses: ./.github/workflows/test-executor-template.yml
     with:
-      test_command: |
-        git config --global --add safe.directory /__w/kaia/kaia
-        make test-networks
+      test_command: make test-networks
 
   test-node:
     uses: ./.github/workflows/test-executor-template.yml
