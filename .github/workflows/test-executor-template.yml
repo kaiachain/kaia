@@ -23,33 +23,6 @@ jobs:
       - name: Add safe directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: setup python 3.9
-        if: ${{ inputs.install_python == true }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
-      - name: Wait for Redis
-        run: |
-          for i in $(seq 1 10); do
-            nc -z 127.0.0.1 6379 && echo Success && exit 0
-            echo -n .
-            sleep 1
-          done
-          echo Failed waiting for Redis && exit 1
-        continue-on-error: true
-      - name: Wait for Kafka
-        run: |
-          for i in $(seq 1 10); do
-            nc -z kafka 9092 && echo Success && exit 0
-            echo -n .
-            sleep 1
-          done
-          echo Failed waiting for Kafka && exit 1
-        continue-on-error: true
-      - name: Wait for Localstack
-        run: |
-          timeout 60 sh -c 'until nc -z localhost 4566; do echo "Waiting for Localstack ..."; sleep 1; done'
-        continue-on-error: true
       - name: Run test
         shell: bash
         run: ${{ inputs.test_command }}
