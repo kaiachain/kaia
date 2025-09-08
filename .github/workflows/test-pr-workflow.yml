@@ -40,9 +40,6 @@ jobs:
     permissions:
       contents: write
     uses: ./.github/workflows/test-other-executor-template.yml
-    secrets:
-      AWS_ACCESS_KEY_ID: dummy
-      AWS_SECRET_ACCESS_KEY: dummy
     with:
       install_python: false
       test_command: |
@@ -66,14 +63,8 @@ jobs:
     uses: ./.github/workflows/test-other-executor-template.yml
     with:
       test_command: make test-datasync
-    secrets:
-      AWS_ACCESS_KEY_ID: dummy
-      AWS_SECRET_ACCESS_KEY: dummy
 
   test-others:
     uses: ./.github/workflows/test-other-executor-template.yml
     with:
       test_command: make test-others
-    secrets:
-      AWS_ACCESS_KEY_ID: dummy
-      AWS_SECRET_ACCESS_KEY: dummy
