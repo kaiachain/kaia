@@ -1,0 +1,61 @@
+name: Reusable test other executor
+
+on:
+  workflow_call:
+    inputs:
+      test_command:
+        required: true
+        type: string
+      install_python:
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: kaia-xlarge-runner
+    services:
+      kafka:
+        image: bitnami/kafka:3.7
+        env:
+          KAFKA_CFG_NODE_ID: 0
+          KAFKA_CFG_PROCESS_ROLES: controller,broker
+          KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+          KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+          KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+          KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      redis:
+        image: redis:6.0.8-alpine
+      localstack:
+        image: localstack/localstack:3
+    container:
+      image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: setup python 3.9
+        if: ${{ inputs.install_python == true }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Download dev branch
+        shell: bash
+        run: |
+          git config --global --add safe.directory /__w/kaia/kaia
+          git fetch origin dev:dev
+      - name: Run test
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: ${{ inputs.test_command }}
