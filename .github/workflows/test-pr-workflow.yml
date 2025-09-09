@@ -12,23 +12,19 @@ jobs:
   build:
     uses: ./.github/workflows/test-executor-template.yml
     with:
-      test_command: |
-        git config --global --add safe.directory /__w/kaia/kaia
-        make all
+      test_command: make all
 
   test-linter:
     uses: ./.github/workflows/test-executor-template.yml
     with:
       test_command: |
-        git config --global --add safe.directory /__w/kaia/kaia
+        git fetch origin dev:dev
         go run build/ci.go lint -v --new-from-rev=dev
 
   test-networks:
     uses: ./.github/workflows/test-executor-template.yml
     with:
-      test_command: |
-        git config --global --add safe.directory /__w/kaia/kaia
-        make test-networks
+      test_command: make test-networks
 
   test-node:
     uses: ./.github/workflows/test-executor-template.yml
@@ -46,9 +42,6 @@ jobs:
     permissions:
       contents: write
     uses: ./.github/workflows/test-other-executor-template.yml
-    secrets:
-      AWS_ACCESS_KEY_ID: dummy
-      AWS_SECRET_ACCESS_KEY: dummy
     with:
       install_python: false
       test_command: |
@@ -72,14 +65,8 @@ jobs:
     uses: ./.github/workflows/test-other-executor-template.yml
     with:
       test_command: make test-datasync
-    secrets:
-      AWS_ACCESS_KEY_ID: dummy
-      AWS_SECRET_ACCESS_KEY: dummy
 
   test-others:
     uses: ./.github/workflows/test-other-executor-template.yml
     with:
       test_command: make test-others
-    secrets:
-      AWS_ACCESS_KEY_ID: dummy
-      AWS_SECRET_ACCESS_KEY: dummy
