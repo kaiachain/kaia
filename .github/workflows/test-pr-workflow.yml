@@ -18,8 +18,8 @@ jobs:
     uses: ./.github/workflows/test-executor-template.yml
     with:
       test_command: |
-        git fetch origin dev:dev
-        go run build/ci.go lint -v --new-from-rev=dev
+        git fetch origin test/test-linter-base:test/test-linter-base
+        go run build/ci.go lint -v --new-from-rev=test/test-linter-base
 
   test-networks:
     uses: ./.github/workflows/test-executor-template.yml
