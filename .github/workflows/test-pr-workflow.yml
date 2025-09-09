@@ -18,7 +18,17 @@ jobs:
     uses: ./.github/workflows/test-executor-template.yml
     with:
       test_command: |
+        CURRENT_BRANCH="${GITHUB_REF_NAME}"
+        BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+        
+        echo "Current branch: $CURRENT_BRANCH"
+        echo "Base branch: $BASE_BRANCH"
+        
+        if [[ "$CURRENT_BRANCH" == "test/test-linter-base" || "$BASE_BRANCH" == "test/test-linter-base" ]]; then
+        git fetch origin test/test-linter-base
+        else
         git fetch origin test/test-linter-base:test/test-linter-base
+        fi
         go run build/ci.go lint -v --new-from-rev=test/test-linter-base
 
   test-networks:
