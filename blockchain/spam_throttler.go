@@ -111,21 +111,15 @@ func (t *throttler) adjustThreshold(ratio uint) {
 	var newThreshold int
 	// Decrease threshold if a fail ratio is bigger than target value to put more addresses in throttled map
 	if ratio > t.config.TargetFailRatio {
-		if t.threshold-t.config.ThresholdAdjustment > t.config.MinimumThreshold {
-			newThreshold = t.threshold - t.config.ThresholdAdjustment
-		} else {
+		newThreshold = max(t.threshold-t.config.ThresholdAdjustment,
 			// Set minimum threshold
-			newThreshold = t.config.MinimumThreshold
-		}
+			t.config.MinimumThreshold)
 
 		// Increase threshold if a fail ratio is smaller than target ratio until it exceeds InitialThreshold
 	} else {
-		if t.threshold+t.config.ThresholdAdjustment < t.config.InitialThreshold {
-			newThreshold = t.threshold + t.config.ThresholdAdjustment
-		} else {
+		newThreshold = min(t.threshold+t.config.ThresholdAdjustment,
 			// Set maximum threshold
-			newThreshold = t.config.InitialThreshold
-		}
+			t.config.InitialThreshold)
 	}
 
 	t.threshold = newThreshold
