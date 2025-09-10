@@ -98,7 +98,6 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/call_to_precompile_in_pointer_context.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_call_to_precompile_in_pointer_context\[fork_Osaka-precompile_0x0000000000000000000000000000000000000100-`)
 	// TODO: When EIP-7883 is imeplemted, this skip should be removed!?
 	bt.skipLoad(`^byzantium/eip198_modexp_precompile/modexp/modexp.json`)
-	// TODO: ???
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/call_to_precompile_in_pointer_context.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_call_to_precompile_in_pointer_context\[fork_Osaka-precompile_0x0000000000000000000000000000000000000005-`)
 	bt.skipLoad(`^frontier\/identity_precompile\/identity\/call_identity_precompile.json\/tests\/frontier\/identity_precompile\/test_identity.py::test_call_identity_precompile\[fork_Osaka-blockchain_test_from_state_test-identity_1_nonzerovalue-call_type_CALL\]`)
 
