@@ -1290,10 +1290,7 @@ func (pool *TxPool) throttleLoop(spamThrottler *throttler) {
 		case <-ticker:
 			txs := types.Transactions{}
 
-			iterNum := len(spamThrottler.throttleCh)
-			if iterNum > throttleNum {
-				iterNum = throttleNum
-			}
+			iterNum := min(len(spamThrottler.throttleCh), throttleNum)
 
 			for i := 0; i < iterNum; i++ {
 				tx := <-spamThrottler.throttleCh
