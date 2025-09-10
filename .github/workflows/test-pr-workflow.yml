@@ -2,7 +2,7 @@ name: Testing Workflow
 
 on:
   pull_request_target:
-    types: [opened, closed, synchronize]
+    types: [opened, reopened, synchronize]
   workflow_call:
 
 permissions:
@@ -17,7 +17,15 @@ jobs:
   test-linter:
     uses: ./.github/workflows/test-executor-template.yml
     with:
-      test_command: go run build/ci.go lint -v --new-from-rev=dev
+      test_command: |
+        CURRENT_BRANCH="${GITHUB_REF_NAME}"
+        BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+        if [[ "$CURRENT_BRANCH" == "dev" || "$BASE_BRANCH" == "dev" ]]; then
+        git fetch origin dev
+        else
+        git fetch origin dev:dev
+        fi
+        go run build/ci.go lint -v --new-from-rev=dev
 
   test-networks:
     uses: ./.github/workflows/test-executor-template.yml
