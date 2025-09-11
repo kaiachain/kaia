@@ -86,7 +86,6 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	// TODO: Skip EIP tests that are not yet supported; expect to remove them
 	bt.skipLoad(`osaka/eip7594_peerdas`)
 	bt.skipLoad(`osaka/eip7825_transaction_gas_limit_cap`)
-	bt.skipLoad(`osaka/eip7883_modexp_gas_increase`)
 	bt.skipLoad(`osaka/eip7918_blob_reserve_price`)
 	bt.skipLoad(`osaka/eip7934_block_rlp_limit`)
 	bt.skipLoad(`osaka/eip7939_count_leading_zeros`)
@@ -96,9 +95,12 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/set_code_to_precompile.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_set_code_to_precompile\[fork_Osaka-precompile_0x0000000000000000000000000000000000000100-`)
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/pointer_to_precompile.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_pointer_to_precompile\[fork_Osaka-precompile_0x0000000000000000000000000000000000000100-`)
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/call_to_precompile_in_pointer_context.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_call_to_precompile_in_pointer_context\[fork_Osaka-precompile_0x0000000000000000000000000000000000000100-`)
-	// TODO: When EIP-7883 is imeplemted, this skip should be removed!?
-	bt.skipLoad(`^byzantium/eip198_modexp_precompile/modexp/modexp.json`)
+	// TODO: Why; Cannot run with "to" is address_0x0000000000000000000000000000000000000005 because precompiled contract address validation in TxInternalData#Validate
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/call_to_precompile_in_pointer_context.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_call_to_precompile_in_pointer_context\[fork_Osaka-precompile_0x0000000000000000000000000000000000000005-`)
+	bt.skipLoad(`^osaka\/eip7883_modexp_gas_increase\/modexp_thresholds\/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-exact_gas\]`)
+	bt.skipLoad(`^osaka\/eip7883_modexp_gas_increase\/modexp_thresholds\/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-extra_gas\]`)
+	bt.skipLoad(`^osaka\/eip7883_modexp_gas_increase\/modexp_thresholds\/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-insufficient_gas\]`)
+	// TODO: Investigate after all Osaka EIPs are applied
 	bt.skipLoad(`^frontier\/identity_precompile\/identity\/call_identity_precompile.json\/tests\/frontier\/identity_precompile\/test_identity.py::test_call_identity_precompile\[fork_Osaka-blockchain_test_from_state_test-identity_1_nonzerovalue-call_type_CALL\]`)
 
 	bt.walk(t, executionSpecBlockTestDir, func(t *testing.T, name string, test *BlockTest) {
@@ -129,7 +131,6 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 				t.Skip()
 			}
 		}
-
 		if err := bt.checkFailure(t, name, test.Run()); err != nil {
 			t.Error(err)
 		}
