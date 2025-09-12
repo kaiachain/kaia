@@ -90,10 +90,12 @@ func (a *AuctionModule) FilterTxs(txs map[common.Address]types.Transactions) {
 	if curBlock == nil {
 		return
 	}
+
 	targetTxHashMap := a.bidPool.getTargetTxHashMap(curBlock.NumberU64() + 1)
+	edOffset := a.AuctionConfig.EDOffset
 
 	now := time.Now()
-	deadline := now.Add(-AuctionEarlyDeadlineOffset)
+	deadline := now.Add(-edOffset)
 	// filter txs that are after the auction early deadline
 	for addr, list := range txs {
 		for i, tx := range list {
@@ -114,6 +116,8 @@ func (a *AuctionModule) FilterTxs(txs map[common.Address]types.Transactions) {
 			}
 		}
 	}
+
+	edOffsetGauge.Update(int64(edOffset))
 }
 
 func (a *AuctionModule) isGaslessTx(tx *types.Transaction) bool {

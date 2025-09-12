@@ -152,6 +152,7 @@ var HomiFlags = []cli.Flag{
 	// kaiax/auction
 	altsrc.NewBoolFlag(auction.DisableFlag),
 	altsrc.NewInt64Flag(auction.MaxBidPoolSizeFlag),
+	altsrc.NewDurationFlag(auction.EDOffsetFlag),
 }
 
 var SetupCommand = &cli.Command{

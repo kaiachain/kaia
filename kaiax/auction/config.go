@@ -18,12 +18,16 @@ package auction
 
 import (
 	"math"
+	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/urfave/cli/v2"
 )
 
-const DefaultMaxBidPoolSize = math.MaxInt64
+const (
+	DefaultMaxBidPoolSize = math.MaxInt64
+	DefaultEDOffset       = 200 * time.Millisecond
+)
 
 var (
 	DisableFlag = &cli.BoolFlag{
@@ -40,17 +44,26 @@ var (
 		Aliases:  []string{"kaiax.module.auction.max-bid-pool-size"},
 		Category: "KAIAX",
 	}
+	EDOffsetFlag = &cli.DurationFlag{
+		Name:     "auction.ed-offset",
+		Usage:    "Early deadline offset used in auction. Default value is 200 milliseconds.",
+		Value:    DefaultEDOffset,
+		Aliases:  []string{"kaiax.module.auction.ed-offset"},
+		Category: "KAIAX",
+	}
 )
 
 type AuctionConfig struct {
 	Disable        bool
 	MaxBidPoolSize int64
+	EDOffset       time.Duration
 }
 
 func DefaultAuctionConfig() *AuctionConfig {
 	return &AuctionConfig{
 		Disable:        false,
 		MaxBidPoolSize: DefaultMaxBidPoolSize,
+		EDOffset:       DefaultEDOffset,
 	}
 }
 
@@ -65,5 +78,9 @@ func SetAuctionConfig(ctx *cli.Context, cfg *AuctionConfig, nodeType common.Conn
 	cfg.MaxBidPoolSize = DefaultMaxBidPoolSize
 	if ctx.IsSet(MaxBidPoolSizeFlag.Name) {
 		cfg.MaxBidPoolSize = ctx.Int64(MaxBidPoolSizeFlag.Name)
+	}
+	cfg.EDOffset = DefaultEDOffset
+	if ctx.IsSet(EDOffsetFlag.Name) {
+		cfg.EDOffset = ctx.Duration(EDOffsetFlag.Name)
 	}
 }

@@ -21,6 +21,7 @@ import (
 	"errors"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
@@ -41,6 +42,7 @@ func prep(t *testing.T) *AuctionModule {
 		auctionConfig = auction.AuctionConfig{
 			Disable:        false,
 			MaxBidPoolSize: 1024,
+			EDOffset:       200 * time.Millisecond,
 		}
 	)
 
