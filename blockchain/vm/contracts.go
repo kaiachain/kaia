@@ -522,7 +522,6 @@ func berlinModexpGas(baseLen, expLen, modLen uint64, expHead uint256.Int) uint64
 func osakaModexpGas(baseLen, expLen, modLen uint64, expHead uint256.Int) uint64 {
 	const (
 		multiplier = 16
-		divisor    = 3
 		minGas     = 500
 	)
 
