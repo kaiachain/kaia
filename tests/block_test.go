@@ -88,7 +88,6 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`osaka/eip7825_transaction_gas_limit_cap`)
 	bt.skipLoad(`osaka/eip7918_blob_reserve_price`)
 	bt.skipLoad(`osaka/eip7934_block_rlp_limit`)
-	bt.skipLoad(`osaka/eip7939_count_leading_zeros`)
 	// TODO: When EIP-7951 is imeplemted, this skip should be removed: address_0x0000000000000000000000000000000000000100
 	bt.skipLoad(`osaka/eip7951_p256verify_precompiles`)
 	bt.skipLoad(`^frontier\/precompiles\/precompiles\/precompiles.json\/tests\/frontier\/precompiles\/test_precompiles.py::test_precompiles\[fork_Osaka-address_0x0000000000000000000000000000000000000100-precompile_exists_True-blockchain_test_from_state_test\]`)

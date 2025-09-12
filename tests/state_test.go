@@ -111,7 +111,6 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	// TODO: Skip EIP tests that are not yet supported; expect to remove them
 	st.skipLoad(`osaka/eip7594_peerdas`)
 	st.skipLoad(`osaka/eip7825_transaction_gas_limit_cap`)
-	st.skipLoad(`osaka/eip7939_count_leading_zeros`)
 	// TODO: When EIP-7951 is imeplemted, this skip should be removed: address_0x0000000000000000000000000000000000000100
 	st.skipLoad(`osaka/eip7951_p256verify_precompiles`)
 	st.skipLoad(`^frontier\/precompiles\/precompiles\/precompiles.json\/tests\/frontier\/precompiles\/test_precompiles.py::test_precompiles\[fork_Osaka-address_0x0000000000000000000000000000000000000100-precompile_exists_True-state_test\]`)
