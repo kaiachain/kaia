@@ -17,6 +17,7 @@
 package auction
 
 import (
+	"fmt"
 	"math"
 	"time"
 
@@ -50,6 +51,12 @@ var (
 		Value:    DefaultEDOffset,
 		Aliases:  []string{"kaiax.module.auction.ed-offset"},
 		Category: "KAIAX",
+		Action: func(ctx *cli.Context, d time.Duration) error {
+			if d < 0 || d > 1*time.Second {
+				return fmt.Errorf("auction.ed-offset must be between 0 and 1 second, got %s", d)
+			}
+			return nil
+		},
 	}
 )
 
