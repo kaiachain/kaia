@@ -423,7 +423,7 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVMInterpreter, scop
 		}
 
 		blockCtx = BlockContext{
-			BlockNumber: big1024,
+			BlockNumber: big.NewInt(1024),
 			BlockScore:  big.NewInt(0),
 			Coinbase:    common.HexToAddress("0xf4b0cb429b7d341bf467f2d51c09b64cd9add37c"),
 			BaseFee:     big.NewInt(1000000000000000000),

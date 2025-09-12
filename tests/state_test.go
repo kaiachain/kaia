@@ -111,7 +111,6 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	// TODO: Skip EIP tests that are not yet supported; expect to remove them
 	st.skipLoad(`osaka/eip7594_peerdas`)
 	st.skipLoad(`osaka/eip7825_transaction_gas_limit_cap`)
-	st.skipLoad(`osaka/eip7883_modexp_gas_increase`)
 	st.skipLoad(`osaka/eip7939_count_leading_zeros`)
 	// TODO: When EIP-7951 is imeplemted, this skip should be removed: address_0x0000000000000000000000000000000000000100
 	st.skipLoad(`osaka/eip7951_p256verify_precompiles`)
@@ -119,9 +118,9 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/set_code_to_precompile.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_set_code_to_precompile\[fork_Osaka-precompile_0x0000000000000000000000000000000000000100-`)
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/pointer_to_precompile.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_pointer_to_precompile\[fork_Osaka-precompile_0x0000000000000000000000000000000000000100-`)
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/call_to_precompile_in_pointer_context.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_call_to_precompile_in_pointer_context\[fork_Osaka-precompile_0x0000000000000000000000000000000000000100-`)
-	// TODO: When EIP-7883 is imeplemted, this skip should be removed!?
-	st.skipLoad(`^byzantium/eip198_modexp_precompile/modexp/modexp.json`)
+	// TODO: Why; Cannot run with "to" is address_0x0000000000000000000000000000000000000005 because precompiled contract address validation in TxInternalData#Validate
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/call_to_precompile_in_pointer_context.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_call_to_precompile_in_pointer_context\[fork_Osaka-precompile_0x0000000000000000000000000000000000000005-`)
+	// TODO: Investigate after all Osaka EIPs are applied
 	st.skipLoad(`^frontier\/identity_precompile\/identity\/call_identity_precompile.json\/tests\/frontier\/identity_precompile\/test_identity.py::test_call_identity_precompile\[fork_Osaka-state_test-identity_1_nonzerovalue-call_type_CALL\]`)
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
