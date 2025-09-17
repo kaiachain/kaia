@@ -48,6 +48,7 @@ import (
 	"github.com/kaiachain/kaia/crypto/blake2b"
 	"github.com/kaiachain/kaia/crypto/bn256"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
+	"github.com/kaiachain/kaia/crypto/secp256r1"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -194,6 +195,14 @@ var PrecompiledContractsOsaka = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{3, 253}): &vmLog{},
 	common.BytesToAddress([]byte{3, 254}): &feePayer{},
 	common.BytesToAddress([]byte{3, 255}): &validateSender{},
+
+	common.BytesToAddress([]byte{0x1, 0x00}): &p256Verify{},
+}
+
+// PrecompiledContractsP256Verify contains the precompiled Ethereum
+// contract specified in EIP-7212. This is exported for testing purposes.
+var PrecompiledContractsP256Verify = map[common.Address]PrecompiledContract{
+	common.BytesToAddress([]byte{0x1, 0x00}): &p256Verify{},
 }
 
 var (
@@ -1540,4 +1549,32 @@ func (c *consoleLog) decode(params []byte, types []common.ConsoleLogType) ([]str
 		}
 	}
 	return res, nil
+}
+
+// P256VERIFY (secp256r1 signature verification)
+// implemented as a native contract
+type p256Verify struct{}
+
+// RequiredGas returns the gas required to execute the precompiled contract
+func (c *p256Verify) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.P256VerifyGas, params.P256VerifyComputationCost
+}
+
+// Run executes the precompiled contract with given 160 bytes of param, returning the output and the used gas
+func (c *p256Verify) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	const p256VerifyInputLength = 160
+	if len(input) != p256VerifyInputLength {
+		return nil, nil
+	}
+
+	// Extract hash, r, s, x, y from the input.
+	hash := input[0:32]
+	r, s := new(big.Int).SetBytes(input[32:64]), new(big.Int).SetBytes(input[64:96])
+	x, y := new(big.Int).SetBytes(input[96:128]), new(big.Int).SetBytes(input[128:160])
+
+	// Verify the signature.
+	if secp256r1.Verify(hash, r, s, x, y) {
+		return true32Byte, nil
+	}
+	return nil, nil
 }

@@ -212,6 +212,8 @@ const (
 	Bls12381MapG1ComputationCost          = 275000
 	Bls12381MapG2ComputationCost          = 1190000
 
+	P256VerifyComputationCost = 34500
+
 	OpcodeComputationCostLimit         = 100000000      // 100ms
 	OpcodeComputationCostLimitCancun   = 150000000      // 150ms
 	OpcodeComputationCostLimitInfinite = math.MaxUint64 // pass it to disable computation cost checks
