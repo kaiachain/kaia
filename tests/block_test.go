@@ -55,9 +55,20 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 
 	// TODO-Kaia: should remove these skip
 	// executing precompiled contracts with value transferring is not permitted
+	// https://github.com/kaiachain/kaia/blob/d44ae2f4269a84bd379b4e992d8e3be46b7e5ad3/blockchain/vm/evm.go#L268-L269
 	bt.skipLoad(`^frontier\/opcodes\/all_opcodes\/all_opcodes.json`)
-	// executing precompiled contracts with set code tx is not permitted
+	// "to" is address_0x0000000000000000000000000000000000000001: insertion error because precompiled contract address validation in TxInternalData#Validate
+	// https://github.com/kaiachain/kaia/blob/d44ae2f4269a84bd379b4e992d8e3be46b7e5ad3/blockchain/types/tx_internal_data_legacy.go#L365
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/gas_diff_pointer_vs_direct_call.json`)
+	// "to" is address_0x0000000000000000000000000000000000000005: insertion error because precompiled contract address validation in TxInternalData#Validate
+	// https://github.com/kaiachain/kaia/blob/d44ae2f4269a84bd379b4e992d8e3be46b7e5ad3/blockchain/types/tx_internal_data_legacy.go#L365
+	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/call_to_precompile_in_pointer_context.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_call_to_precompile_in_pointer_context\[fork_Osaka-precompile_0x0000000000000000000000000000000000000005-`)
+	bt.skipLoad(`^osaka\/eip7883_modexp_gas_increase\/modexp_thresholds\/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-exact_gas\]`)
+	bt.skipLoad(`^osaka\/eip7883_modexp_gas_increase\/modexp_thresholds\/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-extra_gas\]`)
+	bt.skipLoad(`^osaka\/eip7883_modexp_gas_increase\/modexp_thresholds\/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-insufficient_gas\]`)
+	// "to" is address_0x0000000000000000000000000000000000000100: insertion error because precompiled contract address validation in TxInternalData#Validate
+	// https://github.com/kaiachain/kaia/blob/d44ae2f4269a84bd379b4e992d8e3be46b7e5ad3/blockchain/types/tx_internal_data_legacy.go#L365
+	bt.skipLoad(`^osaka\/eip7951_p256verify_precompiles\/p256verify\/precompile_as_tx_entry_point.json`)
 
 	// tests to skip
 	// unsupported EIPs
@@ -69,12 +80,6 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^prague\/eip7685_general_purpose_el_requests`)
 	bt.skipLoad(`^prague\/eip7002_el_triggerable_withdrawals`)
 	bt.skipLoad(`^prague\/eip6110_deposits`)
-	// different amount of gas is consumed because 0x0b contract is added to access list by ActivePrecompiles although Cancun doesn't have it as a precompiled contract
-	bt.skipLoad(`^frontier\/precompiles\/precompiles\/precompiles.json\/tests\/frontier\/precompiles\/test_precompiles.py::test_precompiles\[fork_Cancun-address_0xb-precompile_exists_False-blockchain_test_from_state_test\]`)
-	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test_from_state_test-31_bytes\]`)
-	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test_from_state_test-32_bytes\]`)
-	bt.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test_from_state_test-empty_calldata\]`)
-	bt.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/bls12_precompiles_before_fork\/precompile_before_fork.json\/tests\/prague\/eip2537_bls_12_381_precompiles\/test_bls12_precompiles_before_fork.py::test_precompile_before_fork\[fork_Cancun-state_test--G1ADD\]`)
 	// type 3 tx (EIP-4844) is not supported
 	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOBBASEFEE-debug\]`)
 	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
@@ -88,17 +93,6 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`osaka/eip7825_transaction_gas_limit_cap`)
 	bt.skipLoad(`osaka/eip7918_blob_reserve_price`)
 	bt.skipLoad(`osaka/eip7934_block_rlp_limit`)
-	// TODO: When EIP-7951 is imeplemted, this skip should be removed: address_0x0000000000000000000000000000000000000100
-	bt.skipLoad(`osaka/eip7951_p256verify_precompiles`)
-	bt.skipLoad(`^frontier\/precompiles\/precompiles\/precompiles.json\/tests\/frontier\/precompiles\/test_precompiles.py::test_precompiles\[fork_Osaka-address_0x0000000000000000000000000000000000000100-precompile_exists_True-blockchain_test_from_state_test\]`)
-	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/set_code_to_precompile.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_set_code_to_precompile\[fork_Osaka-precompile_0x0000000000000000000000000000000000000100-`)
-	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/pointer_to_precompile.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_pointer_to_precompile\[fork_Osaka-precompile_0x0000000000000000000000000000000000000100-`)
-	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/call_to_precompile_in_pointer_context.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_call_to_precompile_in_pointer_context\[fork_Osaka-precompile_0x0000000000000000000000000000000000000100-`)
-	// TODO: Why; Cannot run with "to" is address_0x0000000000000000000000000000000000000005 because precompiled contract address validation in TxInternalData#Validate
-	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/call_to_precompile_in_pointer_context.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_call_to_precompile_in_pointer_context\[fork_Osaka-precompile_0x0000000000000000000000000000000000000005-`)
-	bt.skipLoad(`^osaka\/eip7883_modexp_gas_increase\/modexp_thresholds\/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-exact_gas\]`)
-	bt.skipLoad(`^osaka\/eip7883_modexp_gas_increase\/modexp_thresholds\/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-extra_gas\]`)
-	bt.skipLoad(`^osaka\/eip7883_modexp_gas_increase\/modexp_thresholds\/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-insufficient_gas\]`)
 	// TODO: Investigate after all Osaka EIPs are applied
 	bt.skipLoad(`^frontier\/identity_precompile\/identity\/call_identity_precompile.json\/tests\/frontier\/identity_precompile\/test_identity.py::test_call_identity_precompile\[fork_Osaka-blockchain_test_from_state_test-identity_1_nonzerovalue-call_type_CALL\]`)
 
