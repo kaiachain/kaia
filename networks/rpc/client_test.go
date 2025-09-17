@@ -470,7 +470,6 @@ func TestClientHTTP(t *testing.T) {
 	)
 	defer client.Close()
 	for i := range results {
-		i := i
 		go func() {
 			errc <- client.Call(&results[i], "service_echo",
 				wantResult.String, wantResult.Int, wantResult.Args)

@@ -135,7 +135,6 @@ func TestExecutionSpecStateTestSuite(t *testing.T) {
 
 func execStateTest(t *testing.T, st *testMatcher, test *StateTest, name string, skipForks []string, isTestExecutionSpecState bool) {
 	for _, subtest := range test.Subtests() {
-		subtest := subtest
 		key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
 		name := name + "/" + key
 		t.Run(key, func(t *testing.T) {

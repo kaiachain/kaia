@@ -450,7 +450,6 @@ func (sb *SubBridge) Start(srvr p2p.Server) error {
 	scprotocols := make([]p2p.Protocol, 0, len(sb.SCProtocol().Versions))
 	for i, version := range sb.SCProtocol().Versions {
 		// Compatible; initialise the sub-protocol
-		version := version
 		scprotocols = append(scprotocols, p2p.Protocol{
 			Name:    sb.SCProtocol().Name,
 			Version: version,
