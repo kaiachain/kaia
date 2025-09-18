@@ -43,6 +43,14 @@ interface IAuctionEntryPoint {
 
     event ChangeAuctioneer(address oldAuctioneer, address newAuctioneer);
 
+    event ChangeGasParameters(
+        uint256 gasPerByteIntrinsic,
+        uint256 gasPerByteEip7623,
+        uint256 gasContractExecution,
+        uint256 gasBufferEstimate,
+        uint256 gasBufferUnmeasured
+    );
+
     event Call(address sender, uint256 nonce);
 
     event CallFailed(address sender, uint256 nonce);
@@ -54,6 +62,14 @@ interface IAuctionEntryPoint {
     function changeDepositVault(address _depositVault) external;
 
     function changeAuctioneer(address _auctioneer) external;
+
+    function changeGasParameters(
+        uint256 _gasPerByteIntrinsic,
+        uint256 _gasPerByteEip7623,
+        uint256 _gasContractExecution,
+        uint256 _gasBufferEstimate,
+        uint256 _gasBufferUnmeasured
+    ) external;
 
     function call(AuctionTx calldata auctionTx) external;
 
