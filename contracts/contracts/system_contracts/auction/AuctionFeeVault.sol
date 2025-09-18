@@ -28,7 +28,8 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
 
     /* ========== CONSTANTS ========== */
 
-    address public constant ADDRESS_BOOK = 0x0000000000000000000000000000000000000400;
+    address public constant ADDRESS_BOOK =
+        0x0000000000000000000000000000000000000400;
 
     uint256 public constant MAX_PAYBACK_RATE = 10000;
 
@@ -47,7 +48,8 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
         uint256 _searcherPaybackRate,
         uint256 _validatorPaybackRate
     ) Ownable(initialOwner) {
-        if (!_checkRate(_searcherPaybackRate, _validatorPaybackRate)) revert InvalidInput();
+        if (!_checkRate(_searcherPaybackRate, _validatorPaybackRate))
+            revert InvalidInput();
         searcherPaybackRate = _searcherPaybackRate;
         validatorPaybackRate = _validatorPaybackRate;
     }
@@ -63,7 +65,8 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
         uint256 originalAmount = msg.value;
         accumulatedBids += originalAmount;
 
-        uint256 searcherPaybackAmount = (originalAmount * searcherPaybackRate) / MAX_PAYBACK_RATE;
+        uint256 searcherPaybackAmount = (originalAmount * searcherPaybackRate) /
+            MAX_PAYBACK_RATE;
         if (searcherPaybackAmount > 0) {
             (bool success, ) = searcher.call{value: searcherPaybackAmount}("");
             /// @dev Do not revert if the payback fails
@@ -72,7 +75,8 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
             }
         }
 
-        uint256 validatorPayback = (originalAmount * validatorPaybackRate) / MAX_PAYBACK_RATE;
+        uint256 validatorPayback = (originalAmount * validatorPaybackRate) /
+            MAX_PAYBACK_RATE;
         if (validatorPayback > 0) {
             address rewardAddr = _nodeIdToRewardAddr[block.coinbase];
             if (rewardAddr != address(0)) {
@@ -86,7 +90,12 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
             }
         }
 
-        emit FeeDeposit(block.coinbase, originalAmount, searcherPaybackAmount, validatorPayback);
+        emit FeeDeposit(
+            block.coinbase,
+            originalAmount,
+            searcherPaybackAmount,
+            validatorPayback
+        );
     }
 
     /// @dev Withdraw KAIA from the vault
@@ -101,8 +110,11 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
 
     /// @dev Set the searcher payback rate
     /// @param _searcherPaybackRate The searcher payback rate (10000 = 100%)
-    function setSearcherPaybackRate(uint256 _searcherPaybackRate) external override onlyOwner {
-        if (!_checkRate(_searcherPaybackRate, validatorPaybackRate)) revert InvalidInput();
+    function setSearcherPaybackRate(
+        uint256 _searcherPaybackRate
+    ) external override onlyOwner {
+        if (!_checkRate(_searcherPaybackRate, validatorPaybackRate))
+            revert InvalidInput();
         searcherPaybackRate = _searcherPaybackRate;
 
         emit SearcherPaybackRateUpdated(searcherPaybackRate);
@@ -110,8 +122,11 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
 
     /// @dev Set the validator payback rate
     /// @param _validatorPaybackRate The validator payback rate (10000 = 100%)
-    function setValidatorPaybackRate(uint256 _validatorPaybackRate) external override onlyOwner {
-        if (!_checkRate(_validatorPaybackRate, searcherPaybackRate)) revert InvalidInput();
+    function setValidatorPaybackRate(
+        uint256 _validatorPaybackRate
+    ) external override onlyOwner {
+        if (!_checkRate(_validatorPaybackRate, searcherPaybackRate))
+            revert InvalidInput();
         validatorPaybackRate = _validatorPaybackRate;
 
         emit ValidatorPaybackRateUpdated(validatorPaybackRate);
@@ -119,10 +134,31 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
 
     /* ========== REGISTRATION ========== */
 
+    /// @dev Register the reward addresses for multiple nodes
+    /// @param nodeIds The CN node IDs registered as validators
+    /// @param rewardAddrs The reward recipient addresses
+    function registerRewardAddresses(
+        address[] memory nodeIds,
+        address[] memory rewardAddrs
+    ) external override onlyOwner {
+        if (nodeIds.length != rewardAddrs.length) revert InvalidInput();
+
+        for (uint256 i = 0; i < nodeIds.length; i++) {
+            address nodeId = nodeIds[i];
+            address rewardAddr = rewardAddrs[i];
+
+            _nodeIdToRewardAddr[nodeId] = rewardAddr;
+            emit RewardAddressRegistered(nodeId, rewardAddr);
+        }
+    }
+
     /// @dev Register the reward address for a node
     /// @param nodeId The CN node ID registered as a validator
     /// @param rewardAddr The reward recipient address
-    function registerRewardAddress(address nodeId, address rewardAddr) external override {
+    function registerRewardAddress(
+        address nodeId,
+        address rewardAddr
+    ) external override {
         /// @dev If there's no corresponding staking contract, it will revert
         (, address staking, ) = IAddressBook(ADDRESS_BOOK).getCnInfo(nodeId);
 
@@ -135,19 +171,26 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
 
     /* ========== HELPERS ========== */
 
-    function _checkRate(uint256 _rateA, uint256 _rateB) internal pure returns (bool) {
+    function _checkRate(
+        uint256 _rateA,
+        uint256 _rateB
+    ) internal pure returns (bool) {
         return _rateA + _rateB <= MAX_PAYBACK_RATE;
     }
 
     /* ========== GETTERS ========== */
 
-    function getRewardAddr(address nodeId) external view override returns (address) {
+    function getRewardAddr(
+        address nodeId
+    ) external view override returns (address) {
         return _nodeIdToRewardAddr[nodeId];
     }
 }
 
 interface IAddressBook {
-    function getCnInfo(address _cnNodeId) external view returns (address, address, address);
+    function getCnInfo(
+        address _cnNodeId
+    ) external view returns (address, address, address);
 }
 
 interface IStaking {
