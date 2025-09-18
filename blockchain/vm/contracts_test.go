@@ -319,6 +319,10 @@ func BenchmarkPrecompiledBLS12381Pairing(b *testing.B)    { benchJson("blsPairin
 func BenchmarkPrecompiledBLS12381MapG1(b *testing.B)      { benchJson("blsMapG1", "f0f", b) }
 func BenchmarkPrecompiledBLS12381MapG2(b *testing.B)      { benchJson("blsMapG2", "f10", b) }
 
+func TestPrecompiledp256Verify(t *testing.T) { testJson("p256Verify", "0b", t) }
+
+func BenchmarkPrecompiledp256Verify(b *testing.B) { benchJson("p256Verify", "0b", b) }
+
 // Tests OOG (out-of-gas) of modExp
 func TestPrecompiledModExpOOG(t *testing.T) {
 	modexpTests, err := loadJson("modexp")
