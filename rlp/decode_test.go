@@ -313,7 +313,6 @@ func TestStreamReadBytes(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		name := fmt.Sprintf("input_%s/size_%d", test.input, test.size)
 		t.Run(name, func(t *testing.T) {
 			s := NewStream(bytes.NewReader(unhex(test.input)), 0)
