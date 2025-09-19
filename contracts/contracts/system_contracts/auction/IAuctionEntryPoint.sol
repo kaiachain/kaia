@@ -75,6 +75,8 @@ interface IAuctionEntryPoint {
 
     function auctioneer() external view returns (address);
 
+    function gasBufferEstimate() external view returns (uint256);
+
     function depositVault() external view returns (IAuctionDepositVault);
 
     function getAuctionTxHash(

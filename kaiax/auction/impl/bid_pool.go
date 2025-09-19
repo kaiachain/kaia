@@ -38,7 +38,6 @@ const (
 	allowFutureBlock = 2
 
 	BidTxMaxCallGasLimit = uint64(10_000_000)
-	BidTxGasBuffer       = uint64(180_000)
 )
 
 var numBidsGauge = metrics.NewRegisteredGauge("kaiax/auction/bidpool/num/bids", nil)
@@ -50,6 +49,7 @@ type BidPool struct {
 	auctionInfoMu     sync.RWMutex
 	auctioneer        common.Address
 	auctionEntryPoint common.Address
+	bidTxGasBuffer    uint64
 
 	bidMu        sync.RWMutex
 	bidMap       map[common.Hash]*auction.Bid              // (bidHash) -> Bid
@@ -180,11 +180,11 @@ func (bp *BidPool) clearBidPool() {
 }
 
 // updateAuctionInfo updates the auction info if the auctioneer or auction entry point address is changed.
-func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoint common.Address) {
+func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoint common.Address, bidTxGasBuffer uint64) {
 	bp.auctionInfoMu.Lock()
 	defer bp.auctionInfoMu.Unlock()
 
-	if bp.auctioneer == auctioneer && bp.auctionEntryPoint == auctionEntryPoint {
+	if bp.auctioneer == auctioneer && bp.auctionEntryPoint == auctionEntryPoint && bp.bidTxGasBuffer == bidTxGasBuffer {
 		return
 	}
 
@@ -193,8 +193,9 @@ func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoin
 
 	bp.auctioneer = auctioneer
 	bp.auctionEntryPoint = auctionEntryPoint
+	bp.bidTxGasBuffer = bidTxGasBuffer
 
-	logger.Info("Update auction info", "auctioneer", auctioneer, "auctionEntryPoint", auctionEntryPoint)
+	logger.Info("Update auction info", "auctioneer", auctioneer, "auctionEntryPoint", auctionEntryPoint, "bidTxGasBuffer", bidTxGasBuffer)
 }
 
 // getTargetTxHashMap returns the target tx hash map for the given block number.
@@ -409,6 +410,10 @@ func (bp *BidPool) handleNewBid() {
 }
 
 func (bp *BidPool) getBidTxGasLimit(bid *auction.Bid) (uint64, error) {
+	bp.auctionInfoMu.RLock()
+	buffer := bp.bidTxGasBuffer
+	bp.auctionInfoMu.RUnlock()
+
 	data, err := system.EncodeAuctionCallData(bid)
 	if err != nil {
 		return 0, err
@@ -427,7 +432,7 @@ func (bp *BidPool) getBidTxGasLimit(bid *auction.Bid) (uint64, error) {
 		}
 	}
 
-	gasLimit := intrinsicGas + bid.CallGasLimit + BidTxGasBuffer
+	gasLimit := intrinsicGas + bid.CallGasLimit + buffer
 	if gasLimit < floorDataGas {
 		gasLimit = floorDataGas
 	}
