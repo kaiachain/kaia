@@ -48,6 +48,7 @@ import (
 	"github.com/kaiachain/kaia/crypto/blake2b"
 	"github.com/kaiachain/kaia/crypto/bn256"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
+	"github.com/kaiachain/kaia/crypto/secp256r1"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -174,26 +175,33 @@ var PrecompiledContractsPrague = map[common.Address]PrecompiledContract{
 // PrecompiledContractsOsaka contains the set of pre-compiled Ethereum
 // contracts used in the Osaka release.
 var PrecompiledContractsOsaka = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}):      &ecrecover{},
-	common.BytesToAddress([]byte{2}):      &sha256hash{},
-	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
-	common.BytesToAddress([]byte{4}):      &dataCopy{},
-	common.BytesToAddress([]byte{5}):      &bigModExp{eip2565: true, eip7823: true, eip7883: true},
-	common.BytesToAddress([]byte{6}):      &bn256AddIstanbul{},
-	common.BytesToAddress([]byte{7}):      &bn256ScalarMulIstanbul{},
-	common.BytesToAddress([]byte{8}):      &bn256PairingIstanbul{},
-	common.BytesToAddress([]byte{9}):      &blake2F{},
-	common.BytesToAddress([]byte{0x0a}):   &kzgPointEvaluation{},
-	common.BytesToAddress([]byte{0x0b}):   &bls12381G1Add{},
-	common.BytesToAddress([]byte{0x0c}):   &bls12381G1MultiExp{},
-	common.BytesToAddress([]byte{0x0d}):   &bls12381G2Add{},
-	common.BytesToAddress([]byte{0x0e}):   &bls12381G2MultiExp{},
-	common.BytesToAddress([]byte{0x0f}):   &bls12381Pairing{},
-	common.BytesToAddress([]byte{0x10}):   &bls12381MapG1{},
-	common.BytesToAddress([]byte{0x11}):   &bls12381MapG2{},
-	common.BytesToAddress([]byte{3, 253}): &vmLog{},
-	common.BytesToAddress([]byte{3, 254}): &feePayer{},
-	common.BytesToAddress([]byte{3, 255}): &validateSender{},
+	common.BytesToAddress([]byte{1}):         &ecrecover{},
+	common.BytesToAddress([]byte{2}):         &sha256hash{},
+	common.BytesToAddress([]byte{3}):         &ripemd160hash{},
+	common.BytesToAddress([]byte{4}):         &dataCopy{},
+	common.BytesToAddress([]byte{5}):         &bigModExp{eip2565: true, eip7823: true, eip7883: true},
+	common.BytesToAddress([]byte{6}):         &bn256AddIstanbul{},
+	common.BytesToAddress([]byte{7}):         &bn256ScalarMulIstanbul{},
+	common.BytesToAddress([]byte{8}):         &bn256PairingIstanbul{},
+	common.BytesToAddress([]byte{9}):         &blake2F{},
+	common.BytesToAddress([]byte{0x0a}):      &kzgPointEvaluation{},
+	common.BytesToAddress([]byte{0x0b}):      &bls12381G1Add{},
+	common.BytesToAddress([]byte{0x0c}):      &bls12381G1MultiExp{},
+	common.BytesToAddress([]byte{0x0d}):      &bls12381G2Add{},
+	common.BytesToAddress([]byte{0x0e}):      &bls12381G2MultiExp{},
+	common.BytesToAddress([]byte{0x0f}):      &bls12381Pairing{},
+	common.BytesToAddress([]byte{0x10}):      &bls12381MapG1{},
+	common.BytesToAddress([]byte{0x11}):      &bls12381MapG2{},
+	common.BytesToAddress([]byte{0x1, 0x00}): &p256Verify{},
+	common.BytesToAddress([]byte{3, 253}):    &vmLog{},
+	common.BytesToAddress([]byte{3, 254}):    &feePayer{},
+	common.BytesToAddress([]byte{3, 255}):    &validateSender{},
+}
+
+// PrecompiledContractsP256Verify contains the precompiled Ethereum
+// contract specified in EIP-7212. This is exported for testing purposes.
+var PrecompiledContractsP256Verify = map[common.Address]PrecompiledContract{
+	common.BytesToAddress([]byte{0x1, 0x00}): &p256Verify{},
 }
 
 var (
@@ -1540,4 +1548,32 @@ func (c *consoleLog) decode(params []byte, types []common.ConsoleLogType) ([]str
 		}
 	}
 	return res, nil
+}
+
+// P256VERIFY (secp256r1 signature verification)
+// implemented as a native contract
+type p256Verify struct{}
+
+// RequiredGas returns the gas required to execute the precompiled contract
+func (c *p256Verify) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	return params.P256VerifyGas, params.P256VerifyComputationCost
+}
+
+// Run executes the precompiled contract with given 160 bytes of param, returning the output and the used gas
+func (c *p256Verify) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
+	const p256VerifyInputLength = 160
+	if len(input) != p256VerifyInputLength {
+		return nil, nil
+	}
+
+	// Extract hash, r, s, x, y from the input.
+	hash := input[0:32]
+	r, s := new(big.Int).SetBytes(input[32:64]), new(big.Int).SetBytes(input[64:96])
+	x, y := new(big.Int).SetBytes(input[96:128]), new(big.Int).SetBytes(input[128:160])
+
+	// Verify the signature.
+	if secp256r1.Verify(hash, r, s, x, y) {
+		return true32Byte, nil
+	}
+	return nil, nil
 }

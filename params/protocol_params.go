@@ -202,6 +202,8 @@ const (
 	Bls12381MapG1Gas          uint64 = 5500  // Gas price for BLS12-381 mapping field element to G1 operation
 	Bls12381MapG2Gas          uint64 = 23800 // Gas price for BLS12-381 mapping field element to G2 operation
 
+	P256VerifyGas uint64 = 6900 // secp256r1 elliptic curve signature verifier gas price
+
 	// ZeroBaseFee exists for supporting Ethereum compatible data structure.
 	ZeroBaseFee uint64 = 0
 

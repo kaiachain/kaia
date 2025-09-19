@@ -91,6 +91,8 @@ var allPrecompiles = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{0x0f, 0x0e}): &bls12381Pairing{},
 	common.BytesToAddress([]byte{0x0f, 0x0f}): &bls12381MapG1{},
 	common.BytesToAddress([]byte{0x0f, 0x10}): &bls12381MapG2{},
+
+	common.BytesToAddress([]byte{0x0b}): &p256Verify{},
 }
 
 // EIP-152 test vectors
@@ -316,6 +318,10 @@ func BenchmarkPrecompiledBLS12381G2MultiExp(b *testing.B) { benchJson("blsG2Mult
 func BenchmarkPrecompiledBLS12381Pairing(b *testing.B)    { benchJson("blsPairing", "f0e", b) }
 func BenchmarkPrecompiledBLS12381MapG1(b *testing.B)      { benchJson("blsMapG1", "f0f", b) }
 func BenchmarkPrecompiledBLS12381MapG2(b *testing.B)      { benchJson("blsMapG2", "f10", b) }
+
+func TestPrecompiledp256Verify(t *testing.T) { testJson("p256Verify", "0b", t) }
+
+func BenchmarkPrecompiledp256Verify(b *testing.B) { benchJson("p256Verify", "0b", b) }
 
 // Tests OOG (out-of-gas) of modExp
 func TestPrecompiledModExpOOG(t *testing.T) {
