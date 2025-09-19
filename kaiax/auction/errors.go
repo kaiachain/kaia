@@ -22,6 +22,7 @@ var (
 	ErrInitUnexpectedNil     = errors.New("unexpected nil during module init")
 	ErrBlockNotFound         = errors.New("block not found")
 	ErrInvalidBlockNumber    = errors.New("invalid block number")
+	ErrInvalidSignature      = errors.New("invalid signature")
 	ErrInvalidSearcherSig    = errors.New("invalid searcher sig")
 	ErrInvalidAuctioneerSig  = errors.New("invalid auctioneer sig")
 	ErrNilChainId            = errors.New("chainId is nil")

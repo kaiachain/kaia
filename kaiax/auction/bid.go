@@ -145,6 +145,13 @@ func getSigner(sig, digest []byte) (common.Address, error) {
 		copiedSig[crypto.RecoveryIDOffset] -= 27
 	}
 
+	v := copiedSig[crypto.RecoveryIDOffset]
+	r := new(big.Int).SetBytes(copiedSig[0:32])
+	s := new(big.Int).SetBytes(copiedSig[32:64])
+	if !crypto.ValidateSignatureValues(v, r, s, false) {
+		return common.Address{}, ErrInvalidSignature
+	}
+
 	pub, err := crypto.SigToPub(digest, copiedSig)
 	if err != nil {
 		return common.Address{}, err
