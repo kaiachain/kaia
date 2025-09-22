@@ -72,6 +72,7 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
             /// Need to restrict the gas limit for deterministic gas calculation
             if (!payable(searcher).send(searcherPaybackAmount)) {
                 searcherPaybackAmount = 0;
+                emit FeeDepositFailed(searcher, originalAmount);
             }
         }
 
@@ -84,6 +85,7 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
                 /// Need to restrict the gas limit for deterministic gas calculation
                 if (!payable(rewardAddr).send(validatorPayback)) {
                     validatorPayback = 0;
+                    emit FeeDepositFailed(block.coinbase, originalAmount);
                 }
             } else {
                 validatorPayback = 0;
