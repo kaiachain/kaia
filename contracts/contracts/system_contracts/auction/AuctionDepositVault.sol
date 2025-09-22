@@ -54,8 +54,8 @@ contract AuctionDepositVault is IAuctionDepositVault, AuctionError, Ownable {
         _;
     }
 
-    modifier noWithdrawReservation() {
-        if (withdrawReservations[msg.sender].at != 0)
+    modifier noWithdrawReservation(address searcher) {
+        if (withdrawReservations[searcher].at != 0)
             revert WithdrawReservationExists();
         _;
     }
@@ -72,18 +72,27 @@ contract AuctionDepositVault is IAuctionDepositVault, AuctionError, Ownable {
     /* ========== VAULT IMPLEMENTATION ========== */
 
     /// @dev Deposit KAIA into the vault
-    function deposit() external payable override noWithdrawReservation {
+    function deposit()
+        external
+        payable
+        override
+        noWithdrawReservation(msg.sender)
+    {
         _deposit(msg.sender, msg.value);
     }
 
     function depositFor(
         address searcher
-    ) external payable override noWithdrawReservation {
+    ) external payable override noWithdrawReservation(searcher) {
         _deposit(searcher, msg.value);
     }
 
     /// @dev Reserve a withdrawal
-    function reserveWithdraw() external override noWithdrawReservation {
+    function reserveWithdraw()
+        external
+        override
+        noWithdrawReservation(msg.sender)
+    {
         address searcher = msg.sender;
         uint256 amount = depositBalances[searcher];
         if (amount == 0) revert ZeroDepositAmount();

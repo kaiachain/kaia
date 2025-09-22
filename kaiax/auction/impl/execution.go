@@ -55,9 +55,10 @@ func (a *AuctionModule) PostInsertBlock(block *types.Block) error {
 func (a *AuctionModule) updateAuctionInfo(num *big.Int) bool {
 	auctioneer := common.Address{}
 	auctionEntryPointAddr := common.Address{}
+	bidTxGasBuffer := uint64(0)
 
 	defer func() {
-		a.bidPool.updateAuctionInfo(auctioneer, auctionEntryPointAddr)
+		a.bidPool.updateAuctionInfo(auctioneer, auctionEntryPointAddr, bidTxGasBuffer)
 	}()
 
 	header := a.Chain.GetHeaderByNumber(num.Uint64())
@@ -71,6 +72,7 @@ func (a *AuctionModule) updateAuctionInfo(num *big.Int) bool {
 
 	backend := backends.NewBlockchainContractBackend(a.Chain, nil, nil)
 
+	// 1. Read auction entry point address
 	auctionEntryPointAddr, err = system.ReadActiveAddressFromRegistry(backend, system.AuctionEntryPointName, num)
 	if err != nil {
 		return false
@@ -80,12 +82,19 @@ func (a *AuctionModule) updateAuctionInfo(num *big.Int) bool {
 		return false
 	}
 
+	// 2. Read auctioneer address
 	auctioneer, err = system.ReadAuctioneer(backend, auctionEntryPointAddr, num)
 	if err != nil {
 		return false
 	}
 
 	if auctioneer == (common.Address{}) || auctionEntryPointAddr == (common.Address{}) {
+		return false
+	}
+
+	// 3. Read gas buffer estimate
+	bidTxGasBuffer, err = system.ReadGasBufferEstimate(backend, auctionEntryPointAddr, num)
+	if err != nil {
 		return false
 	}
 

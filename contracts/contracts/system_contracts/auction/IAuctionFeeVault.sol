@@ -21,7 +21,14 @@ pragma solidity 0.8.25;
 interface IAuctionFeeVault {
     /* ========== EVENTS ========== */
 
-    event FeeDeposit(address indexed sender, uint256 amount, uint256 paybackAmount, uint256 validatorPaybackAmount);
+    event FeeDepositFailed(address indexed receiver, uint256 amount);
+
+    event FeeDeposit(
+        address indexed sender,
+        uint256 amount,
+        uint256 paybackAmount,
+        uint256 validatorPaybackAmount
+    );
 
     event FeeWithdrawal(uint256 amount);
 
@@ -29,7 +36,10 @@ interface IAuctionFeeVault {
 
     event ValidatorPaybackRateUpdated(uint256 validatorPaybackRate);
 
-    event RewardAddressRegistered(address indexed nodeId, address indexed reward);
+    event RewardAddressRegistered(
+        address indexed nodeId,
+        address indexed reward
+    );
 
     /* ========== FUNCTION INTERFACE ========== */
 

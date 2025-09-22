@@ -43,12 +43,6 @@ contract AuctionEntryPoint is
             "AuctionTx(bytes32 targetTxHash,uint256 blockNumber,address sender,address to,uint256 nonce,uint256 bid,uint256 callGasLimit,bytes data)"
         );
 
-    uint256 public constant GAS_PER_BYTE_INTRINSIC = 16; // Base gas cost per byte of msg.data (approximated from 16 gas per non-zero byte + 4 gas per zero byte)
-    uint256 public constant GAS_PER_BYTE_EIP_7623 = 40; // Minimum gas cost per byte of msg.data under EIP-7623 (approximated from 40 gas per non-zero byte + 10 gas per zero byte)
-    uint256 public constant GAS_BUFFER_ESTIMATE = 180_000; // Buffer for gas calculation except for the main call
-    uint256 public constant GAS_BUFFER_UNMEASURED = 20_000; // Buffer for gas calculation that `gasleft()` can't capture after the main call
-    uint256 public constant GAS_CONTRACT_EXECUTION = 21_000; // Default transaction gas cost
-
     string public constant AUCTION_NAME = "KAIA_AUCTION";
     string public constant AUCTION_VERSION = "0.0.1";
 
@@ -56,6 +50,12 @@ contract AuctionEntryPoint is
 
     IAuctionDepositVault public depositVault;
     address public auctioneer;
+
+    uint256 public gasPerByteIntrinsic = 16; // Base gas cost per byte of msg.data (approximated from 16 gas per non-zero byte + 4 gas per zero byte)
+    uint256 public gasPerByteEip7623 = 40; // Minimum gas cost per byte of msg.data under EIP-7623 (approximated from 40 gas per non-zero byte + 10 gas per zero byte)
+    uint256 public gasContractExecution = 21_000; // Default transaction gas cost
+    uint256 public gasBufferEstimate = 180_000; // Buffer for gas calculation except for the main call
+    uint256 public gasBufferUnmeasured = 35_000; // Buffer for gas calculation that `gasleft()` can't capture after the main call
 
     /* ========== MODIFIER ========== */
 
@@ -132,6 +132,34 @@ contract AuctionEntryPoint is
         auctioneer = _auctioneer;
     }
 
+    /// @dev Change the gas parameters
+    /// @param _gasPerByteIntrinsic The new gas per byte intrinsic
+    /// @param _gasPerByteEip7623 The new gas per byte EIP-7623
+    /// @param _gasContractExecution The new gas contract execution
+    /// @param _gasBufferEstimate The new gas buffer estimate
+    /// @param _gasBufferUnmeasured The new gas buffer unmeasured
+    function changeGasParameters(
+        uint256 _gasPerByteIntrinsic,
+        uint256 _gasPerByteEip7623,
+        uint256 _gasContractExecution,
+        uint256 _gasBufferEstimate,
+        uint256 _gasBufferUnmeasured
+    ) external override onlyOwner {
+        emit ChangeGasParameters(
+            _gasPerByteIntrinsic,
+            _gasPerByteEip7623,
+            _gasContractExecution,
+            _gasBufferEstimate,
+            _gasBufferUnmeasured
+        );
+
+        gasPerByteIntrinsic = _gasPerByteIntrinsic;
+        gasPerByteEip7623 = _gasPerByteEip7623;
+        gasContractExecution = _gasContractExecution;
+        gasBufferEstimate = _gasBufferEstimate;
+        gasBufferUnmeasured = _gasBufferUnmeasured;
+    }
+
     /* ========== INTERNAL FUNCTIONS ========== */
 
     function _useNonce(address searcher) internal override returns (uint256) {
@@ -146,9 +174,7 @@ contract AuctionEntryPoint is
         uint256 bidAmount,
         uint256 callGasLimit
     ) internal returns (bool) {
-        uint256 expectedGas = _getMaximumGas(
-            callGasLimit + GAS_BUFFER_ESTIMATE
-        );
+        uint256 expectedGas = _getMaximumGas(callGasLimit + gasBufferEstimate);
         uint256 expectedSpent = bidAmount + expectedGas * tx.gasprice;
 
         if (expectedSpent > depositVault.depositBalances(searcher)) {
@@ -163,7 +189,7 @@ contract AuctionEntryPoint is
         uint256 initialGas
     ) internal returns (bool) {
         uint256 _gasUsed = _getMaximumGas(
-            initialGas - gasleft() + GAS_BUFFER_UNMEASURED
+            initialGas - gasleft() + gasBufferUnmeasured
         );
         /// @dev The tx.gasprice will be multiplied by the gasUsed in the depositVault
         return depositVault.takeGas(searcher, _gasUsed);
@@ -171,9 +197,9 @@ contract AuctionEntryPoint is
 
     function _getMaximumGas(
         uint256 executionGas
-    ) internal pure returns (uint256) {
-        uint256 legacyGas = executionGas + _defaultGas(GAS_PER_BYTE_INTRINSIC);
-        uint256 floorDataGas = _defaultGas(GAS_PER_BYTE_EIP_7623);
+    ) internal view returns (uint256) {
+        uint256 legacyGas = executionGas + _defaultGas(gasPerByteIntrinsic);
+        uint256 floorDataGas = _defaultGas(gasPerByteEip7623);
 
         return legacyGas > floorDataGas ? legacyGas : floorDataGas;
     }
@@ -216,8 +242,8 @@ contract AuctionEntryPoint is
         return auctionTx.nonce == nonces(auctionTx.sender);
     }
 
-    function _defaultGas(uint256 gasPerByte) internal pure returns (uint256) {
-        return msg.data.length * gasPerByte + GAS_CONTRACT_EXECUTION;
+    function _defaultGas(uint256 gasPerByte) internal view returns (uint256) {
+        return msg.data.length * gasPerByte + gasContractExecution;
     }
 
     function _getAuctionTxHash(

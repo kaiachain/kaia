@@ -243,6 +243,15 @@ describe("AuctionDepositVault", () => {
         auctionDepositVault,
         "WithdrawReservationExists"
       );
+
+      await expect(
+        auctionDepositVault.depositFor(user1.address, {
+          value: toPeb(10),
+        })
+      ).to.be.revertedWithCustomError(
+        auctionDepositVault,
+        "WithdrawReservationExists"
+      );
     });
     it("#withdraw: success", async () => {
       const { auctionDepositVault, user1 } = fixture;
