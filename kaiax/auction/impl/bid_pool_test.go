@@ -425,6 +425,7 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
+	pool.bidTxGasBuffer = 180_000
 
 	// Add some bids
 	for _, bid := range testBids[:3] {
@@ -439,7 +440,7 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	}
 
 	// Update auction info with same addresses
-	pool.updateAuctionInfo(testAuctioneer, testAuctionEntryPoint)
+	pool.updateAuctionInfo(testAuctioneer, testAuctionEntryPoint, 180_000)
 	assert.NotEmpty(t, pool.bidTargetMap)
 	assert.NotEmpty(t, pool.bidWinnerMap)
 	assert.NotEmpty(t, pool.bidMap)
@@ -447,7 +448,7 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	// Update auction info with different addresses
 	newAuctioneer := common.HexToAddress("0x1234")
 	newAuctionEntryPoint := common.HexToAddress("0x5678")
-	pool.updateAuctionInfo(newAuctioneer, newAuctionEntryPoint)
+	pool.updateAuctionInfo(newAuctioneer, newAuctionEntryPoint, 180_000)
 
 	// Verify pool was cleared and addresses were updated
 	assert.Empty(t, pool.bidTargetMap)
@@ -455,4 +456,53 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	assert.Empty(t, pool.bidMap)
 	assert.Equal(t, newAuctioneer, pool.auctioneer)
 	assert.Equal(t, newAuctionEntryPoint, pool.auctionEntryPoint)
+}
+
+func TestBidPool_UpdateAuctionInfo_DifferentGasBufferEstimate(t *testing.T) {
+	var (
+		mockCtrl = gomock.NewController(t)
+		chain    = chain_mock.NewMockBlockChain(mockCtrl)
+	)
+	defer mockCtrl.Finish()
+
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
+
+	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
+	require.NotNil(t, pool)
+
+	// Start the auction
+	pool.start()
+	atomic.StoreUint32(&pool.running, 1)
+	defer pool.stop()
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+	pool.bidTxGasBuffer = 180_000
+
+	// Add some bids
+	for _, bid := range testBids[:3] {
+		hash, err := pool.AddBid(bid)
+		require.NoError(t, err)
+		assert.Equal(t, bid.Hash(), hash)
+
+		// Verify bid was added correctly
+		assert.Equal(t, bid, pool.bidMap[hash])
+		assert.Equal(t, bid, pool.bidTargetMap[bid.BlockNumber][bid.TargetTxHash])
+		assert.Contains(t, pool.bidWinnerMap[bid.BlockNumber], bid.Sender)
+	}
+
+	// Update auction info with same addresses
+	pool.updateAuctionInfo(testAuctioneer, testAuctionEntryPoint, 180_000)
+	assert.NotEmpty(t, pool.bidTargetMap)
+	assert.NotEmpty(t, pool.bidWinnerMap)
+	assert.NotEmpty(t, pool.bidMap)
+
+	// Update auction info with different gas buffer estimate
+	pool.updateAuctionInfo(testAuctioneer, testAuctionEntryPoint, 160_000)
+
+	// Verify pool was cleared and addresses were updated
+	assert.Empty(t, pool.bidTargetMap)
+	assert.Empty(t, pool.bidWinnerMap)
+	assert.Empty(t, pool.bidMap)
+	assert.Equal(t, uint64(160_000), pool.bidTxGasBuffer)
 }
