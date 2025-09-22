@@ -506,3 +506,72 @@ func TestBidPool_UpdateAuctionInfo_DifferentGasBufferEstimate(t *testing.T) {
 	assert.Empty(t, pool.bidMap)
 	assert.Equal(t, uint64(160_000), pool.bidTxGasBuffer)
 }
+
+func BenchmarkAddBidParallel(b *testing.B) {
+	benchmarkAddBidParallel(b, 1000)
+}
+
+func benchmarkAddBidParallel(b *testing.B, numBids int) {
+	var (
+		mockCtrl = gomock.NewController(b)
+		chain    = chain_mock.NewMockBlockChain(mockCtrl)
+	)
+	defer mockCtrl.Finish()
+
+	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+	chain.EXPECT().CurrentBlock().Return(block).AnyTimes()
+
+	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: int64(numBids * 10)}) // Increase pool size for concurrent adds
+
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
+	// Start the auction
+	pool.start()
+	atomic.StoreUint32(&pool.running, 1)
+	defer pool.stop()
+
+	// Pre-generate bids
+	bids := make([]*auction.Bid, numBids)
+	for i := 0; i < numBids; i++ {
+		searcherKey, _ := crypto.GenerateKey()
+		tx := types.NewTransaction(uint64(i), testSearcher1, big.NewInt(10000000), 10000000, big.NewInt(10000000), []byte{})
+		bid := &auction.Bid{BidData: auction.BidData{
+			TargetTxHash: tx.Hash(),
+			BlockNumber:  2,
+			Sender:       crypto.PubkeyToAddress(searcherKey.PublicKey),
+			To:           crypto.PubkeyToAddress(searcherKey.PublicKey),
+			Nonce:        uint64(i),
+			Bid:          big.NewInt(10),
+			CallGasLimit: 100,
+			Data:         common.Hex2Bytes("d09de08a"),
+		}}
+
+		// Generate searcher signature (EIP-712)
+		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint)
+		sig, _ := crypto.Sign(digest, searcherKey)
+		sig[crypto.RecoveryIDOffset] += 27
+		bid.SearcherSig = sig
+
+		// Generate auctioneer signature
+		searcherSig := bid.SearcherSig
+		msg := fmt.Appendf(nil, "\x19Ethereum Signed Message:\n%d%s", len(searcherSig), searcherSig)
+		digest = crypto.Keccak256(msg)
+		sig, _ = crypto.Sign(digest, testAuctioneerKey)
+		sig[crypto.RecoveryIDOffset] += 27
+		bid.AuctioneerSig = sig
+
+		bids[i] = bid
+	}
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		bidIndex := 0
+		for pb.Next() {
+			// Round-robin through bids
+			bid := bids[bidIndex%numBids]
+			pool.AddBid(bid)
+			bidIndex++
+		}
+	})
+}
