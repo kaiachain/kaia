@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -122,7 +122,7 @@ func testLongDeepSetHead(t *testing.T, snapshots bool) {
 }
 
 func testSetHead(t *testing.T, tt *rewindTest) {
-	db, chain, err := newCanonical(gxhash.NewFullFaker(), 0, true)
+	db, chain, err := newCanonical(faker.NewFullFaker(), 0, true)
 	if err != nil {
 		t.Fatalf("failed to create pristine chain: %v", err)
 	}
@@ -132,13 +132,13 @@ func testSetHead(t *testing.T, tt *rewindTest) {
 	// If sidechain blocks are needed, make a light chain and import it
 	var sideblocks types.Blocks
 	if tt.sidechainBlocks > 0 {
-		sideblocks, _ = GenerateChain(params.TestChainConfig, chain.CurrentBlock(), gxhash.NewFaker(), db, tt.canonicalBlocks, func(i int, b *BlockGen) {})
+		sideblocks, _ = GenerateChain(params.TestChainConfig, chain.CurrentBlock(), faker.NewFaker(), db, tt.canonicalBlocks, func(i int, b *BlockGen) {})
 		if _, err := chain.InsertChain(sideblocks); err != nil {
 			t.Fatalf("Failed to import side chain: %v", err)
 		}
 	}
 
-	canonblocks, _ := GenerateChain(params.TestChainConfig, chain.CurrentBlock(), gxhash.NewFaker(), db, tt.canonicalBlocks, func(i int, b *BlockGen) {})
+	canonblocks, _ := GenerateChain(params.TestChainConfig, chain.CurrentBlock(), faker.NewFaker(), db, tt.canonicalBlocks, func(i int, b *BlockGen) {})
 	if _, err := chain.InsertChain(canonblocks[:tt.commitBlock]); err != nil {
 		t.Fatalf("Failed to import canonical chain start: %v", err)
 	}
@@ -290,14 +290,14 @@ func TestSetHeadEarlyExit(t *testing.T) {
 }
 
 func testSetHeadEarlyExit(t *testing.T, tt *rewindTest) {
-	db, chain, err := newCanonical(gxhash.NewFullFaker(), 0, true)
+	db, chain, err := newCanonical(faker.NewFullFaker(), 0, true)
 	if err != nil {
 		t.Fatalf("failed to create pristine chain: %v", err)
 	}
 	defer chain.Stop()
 	chain.Config().Istanbul = params.GetDefaultIstanbulConfig()
 
-	canonblocks, _ := GenerateChain(params.TestChainConfig, chain.CurrentBlock(), gxhash.NewFaker(), db, tt.canonicalBlocks, func(i int, b *BlockGen) {})
+	canonblocks, _ := GenerateChain(params.TestChainConfig, chain.CurrentBlock(), faker.NewFaker(), db, tt.canonicalBlocks, func(i int, b *BlockGen) {})
 	if _, err := chain.InsertChain(canonblocks); err != nil {
 		t.Fatalf("Failed to import canonical chain start: %v", err)
 	}

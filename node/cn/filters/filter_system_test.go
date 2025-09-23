@@ -39,7 +39,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -186,7 +186,7 @@ func (b *testBackend) notifyPending(logs []*types.Log) {
 	}
 	db := database.NewMemoryDBManager()
 	genesisBlock := genesis.MustCommit(db)
-	blocks, _ := blockchain.GenerateChain(genesis.Config, genesisBlock, gxhash.NewFaker(), db, 2, func(i int, b *blockchain.BlockGen) {})
+	blocks, _ := blockchain.GenerateChain(genesis.Config, genesisBlock, faker.NewFaker(), db, 2, func(i int, b *blockchain.BlockGen) {})
 	b.setPending(blocks[1], []*types.Receipt{{Logs: logs}})
 	b.chainFeed.Send(blockchain.ChainEvent{Block: blocks[0]})
 }
@@ -217,7 +217,7 @@ func TestBlockSubscription(t *testing.T) {
 		backend     = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil, nil}
 		api         = NewKaiaFilterAPI(backend)
 		genesis     = new(blockchain.Genesis).MustCommit(db)
-		chain, _    = blockchain.GenerateChain(params.TestChainConfig, genesis, gxhash.NewFaker(), db, 10, func(i int, gen *blockchain.BlockGen) {})
+		chain, _    = blockchain.GenerateChain(params.TestChainConfig, genesis, faker.NewFaker(), db, 10, func(i int, gen *blockchain.BlockGen) {})
 		chainEvents []blockchain.ChainEvent
 	)
 
@@ -409,12 +409,12 @@ func TestInvalidGetLogsRequest(t *testing.T) {
 		mux              = new(event.TypeMux)
 		db               = database.NewMemoryDBManager()
 		genesis          = new(blockchain.Genesis).MustCommit(db)
-		blocks, _        = blockchain.GenerateChain(params.TestChainConfig, genesis, gxhash.NewFaker(), db, 10, func(i int, gen *blockchain.BlockGen) {})
+		blocks, _        = blockchain.GenerateChain(params.TestChainConfig, genesis, faker.NewFaker(), db, 10, func(i int, gen *blockchain.BlockGen) {})
 		txFeed           = new(event.Feed)
 		rmLogsFeed       = new(event.Feed)
 		logsFeed         = new(event.Feed)
 		chainFeed        = new(event.Feed)
-		engine           = gxhash.NewFaker()
+		engine           = faker.NewFaker()
 		backend          = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil, engine}
 		api              = NewKaiaFilterAPI(backend)
 		blockHash        = blocks[0].Hash()

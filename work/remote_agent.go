@@ -110,6 +110,7 @@ func (a *RemoteAgent) GetHashRate() (tot int64) {
 	return
 }
 
+// TODO-Kaia remove this function
 func (a *RemoteAgent) GetWork() ([3]string, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()

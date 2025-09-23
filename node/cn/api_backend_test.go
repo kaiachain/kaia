@@ -30,7 +30,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	mocks3 "github.com/kaiachain/kaia/event/mocks"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
@@ -191,7 +191,7 @@ func TestCNAPIBackend_SetHead(t *testing.T) {
 	mockDownloader.EXPECT().Cancel().Times(1)
 	pm := &ProtocolManager{downloader: mockDownloader}
 	api.cn.protocolManager = pm
-	api.cn.engine = gxhash.NewFullFaker()
+	api.cn.engine = faker.NewFullFaker()
 	govModule := testGovModule(mockBlockChain)
 	api.gpo = gasprice.NewOracle(api, gasprice.Config{}, nil, govModule)
 
@@ -749,7 +749,7 @@ func testCfg(epoch uint64) *params.ChainConfig {
 
 func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlError)
-	db, chain, err := newCanonical(gxhash.NewFullFaker(), 0, true)
+	db, chain, err := newCanonical(faker.NewFullFaker(), 0, true)
 	if err != nil {
 		t.Fatalf("failed to create pristine chain: %v", err)
 	}
@@ -776,7 +776,7 @@ func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
 	chain.RegisterRewindableModule(govModule)
 	chain.RegisterExecutionModule(govModule)
 
-	canonblocks, _ := blockchain.GenerateChain(params.TestChainConfig, chain.CurrentBlock(), gxhash.NewFaker(), db, tt.canonicalBlocks, func(i int, b *blockchain.BlockGen) {
+	canonblocks, _ := blockchain.GenerateChain(params.TestChainConfig, chain.CurrentBlock(), faker.NewFaker(), db, tt.canonicalBlocks, func(i int, b *blockchain.BlockGen) {
 		if i == govBlockNum-1 { // Subtract 1, because the callback starts to enumerate from zero
 			// "reward.mintingamount" = 123
 			govData := hexutil.MustDecode("0x9e7b227265776172642e6d696e74696e67616d6f756e74223a22313233227d")

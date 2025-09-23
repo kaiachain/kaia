@@ -32,7 +32,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/params"
@@ -88,7 +88,7 @@ func makeChainEventsWithInternalTraces(numBlocks int, genTxs func(i int, block *
 	testGenesis.MustCommit(db)
 
 	// create new blockchain with enabled internal tx tracing option
-	b, _ := blockchain.NewBlockChain(db, nil, testGenesis.Config, gxhash.NewFaker(), vm.Config{Debug: true, EnableInternalTxTracing: true})
+	b, _ := blockchain.NewBlockChain(db, nil, testGenesis.Config, faker.NewFaker(), vm.Config{Debug: true, EnableInternalTxTracing: true})
 	defer b.Stop()
 
 	// subscribe a new chain event channel
@@ -97,7 +97,7 @@ func makeChainEventsWithInternalTraces(numBlocks int, genTxs func(i int, block *
 	defer subscription.Unsubscribe()
 
 	// generate blocks
-	blocks, _ := blockchain.GenerateChain(testGenesis.Config, genesis, gxhash.NewFaker(), gendb, numBlocks, genTxs)
+	blocks, _ := blockchain.GenerateChain(testGenesis.Config, genesis, faker.NewFaker(), gendb, numBlocks, genTxs)
 
 	// insert the generated blocks into the test chain
 	if _, err := b.InsertChain(blocks); err != nil {
