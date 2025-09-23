@@ -90,10 +90,14 @@ func (b *Bundle) IsConflict(newBundle *Bundle) bool {
 
 	// 2-3. Check for TargetTxHash breaking current bundle.
 	// If newBundle.TargetTxHash is equal to the last tx of current bundle, it is NOT a conflict.
+	// Check both direction to gaurantee symmetry.
 	// e.g.) b.txs = [0x1, 0x2] and newBundle's TargetTxHash is 0x2.
-	if idx := b.FindIdx(newBundle.TargetTxHash); idx == -1 || idx == len(b.BundleTxs)-1 {
-		return false
+	if idx := b.FindIdx(newBundle.TargetTxHash); idx != -1 && idx != len(b.BundleTxs)-1 {
+		return true
+	}
+	if idx := newBundle.FindIdx(b.TargetTxHash); idx != -1 && idx != len(newBundle.BundleTxs)-1 {
+		return true
 	}
 
-	return true
+	return false
 }
