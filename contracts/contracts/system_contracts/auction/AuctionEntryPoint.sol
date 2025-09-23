@@ -75,7 +75,12 @@ contract AuctionEntryPoint is
         address initialOwner,
         address _depositVault,
         address _auctioneer
-    ) EIP712(AUCTION_NAME, AUCTION_VERSION) Ownable(initialOwner) {
+    )
+        EIP712(AUCTION_NAME, AUCTION_VERSION)
+        Ownable(initialOwner)
+        notNull(_depositVault)
+        notNull(_auctioneer)
+    {
         depositVault = IAuctionDepositVault(_depositVault);
         auctioneer = _auctioneer;
     }
