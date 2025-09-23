@@ -195,6 +195,11 @@ func (f *Faker) VerifySeal(chain consensus.ChainReader, header *types.Header) er
 
 // Prepare prepares the header for mining.
 func (f *Faker) Prepare(chain consensus.ChainReader, header *types.Header) error {
+	// Handle nil Number field
+	if header.Number == nil {
+		return errors.New("header number is nil")
+	}
+
 	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	header.BlockScore = f.CalcBlockScore(chain, header.Time.Uint64(), parent)
 	return nil
@@ -245,14 +250,7 @@ func (f *Faker) Seal(chain consensus.ChainReader, block *types.Block, stop <-cha
 
 // CalcBlockScore calculates the block score.
 func (f *Faker) CalcBlockScore(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	// Handle nil parent or nil BlockScore
-	if parent == nil || parent.BlockScore == nil {
-		return big.NewInt(131072) // Default difficulty
-	}
-
-	// For faker, just use a fixed increment for simplicity and test predictability
-	// This matches the expected behavior in tests
-	return big.NewInt(131072)
+	return big.NewInt(1)
 }
 
 // APIs returns RPC APIs (none for faker).

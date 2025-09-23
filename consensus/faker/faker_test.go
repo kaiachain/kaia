@@ -21,9 +21,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -79,19 +82,45 @@ func TestVerifyHeader(t *testing.T) {
 	assert.Equal(t, consensus.ErrUnknownAncestor, err)
 
 	// Test normal case - should pass
-	header = &types.Header{Number: big.NewInt(3)}
-	err = f.VerifyHeader(nil, header, true)
+
+	// Create a test blockchain for proper chain context
+	db := database.NewMemoryDBManager()
+	genesis := blockchain.DefaultKairosGenesisBlock()
+	genesis.MustCommit(db)
+	chain, _ := blockchain.NewBlockChain(db, nil, params.TestChainConfig, f, vm.Config{})
+	defer chain.Stop()
+
+	header = &types.Header{
+		Number:     big.NewInt(1),
+		ParentHash: chain.CurrentBlock().Hash(),
+	}
+	err = f.VerifyHeader(chain, header, true)
 	assert.NoError(t, err)
 }
 
 // TestPrepare tests the Prepare method
 func TestPrepare(t *testing.T) {
 	f := NewFaker()
-	header := &types.Header{Number: big.NewInt(5)}
 
-	err := f.Prepare(nil, header)
+	// Create a test blockchain for proper chain context
+	db := database.NewMemoryDBManager()
+	genesis := blockchain.DefaultKairosGenesisBlock()
+	genesis.MustCommit(db)
+	chain, _ := blockchain.NewBlockChain(db, nil, params.TestChainConfig, f, vm.Config{})
+	defer chain.Stop()
+
+	// Get the current block (genesis block 0) to set proper parent hash
+	currentBlock := chain.CurrentBlock()
+	header := &types.Header{
+		Number:     big.NewInt(1), // Create block 1, not 5
+		ParentHash: currentBlock.Hash(),
+		Time:       big.NewInt(time.Now().Unix()),
+	}
+
+	err := f.Prepare(chain, header)
 	assert.NoError(t, err)
-	assert.Equal(t, big.NewInt(5), header.BlockScore)
+	// CalcBlockScore returns 1 for faker consensus (simplified difficulty)
+	assert.Equal(t, big.NewInt(1), header.BlockScore)
 }
 
 // TestSeal tests the Seal method
@@ -178,47 +207,71 @@ func TestNewShared(t *testing.T) {
 
 // TestHeaderValidation tests various header validation scenarios
 func TestHeaderValidation(t *testing.T) {
+	db := database.NewMemoryDBManager()
+	genesis := blockchain.DefaultKairosGenesisBlock()
+	genesis.MustCommit(db)
+	chain, _ := blockchain.NewBlockChain(db, nil, params.TestChainConfig, NewFaker(), vm.Config{})
+	defer chain.Stop()
+
 	tests := []struct {
 		name      string
 		faker     *Faker
 		header    *types.Header
+		chain     *blockchain.BlockChain
 		expectErr bool
 	}{
 		{
-			name:      "normal header passes",
-			faker:     NewFaker(),
-			header:    &types.Header{Number: big.NewInt(100)},
+			name:  "normal header passes",
+			faker: NewFaker(),
+			header: &types.Header{
+				Number:     big.NewInt(1),
+				ParentHash: chain.CurrentBlock().Hash(),
+				Time:       big.NewInt(time.Now().Unix()),
+			},
+			chain:     chain,
 			expectErr: false,
 		},
 		{
 			name:      "fullFake accepts anything",
 			faker:     NewFullFaker(),
 			header:    &types.Header{Number: big.NewInt(999)},
+			chain:     nil,
 			expectErr: false,
 		},
 		{
 			name:      "failBlock triggers error",
-			faker:     NewFakeFailer(50),
-			header:    &types.Header{Number: big.NewInt(50)},
+			faker:     NewFakeFailer(2),
+			header:    &types.Header{Number: big.NewInt(2)},
+			chain:     chain,
 			expectErr: true,
 		},
 		{
-			name:      "before failBlock passes",
-			faker:     NewFakeFailer(50),
-			header:    &types.Header{Number: big.NewInt(49)},
+			name:  "before failBlock passes",
+			faker: NewFakeFailer(2),
+			header: &types.Header{
+				Number:     big.NewInt(1),
+				ParentHash: chain.CurrentBlock().Hash(),
+				Time:       big.NewInt(time.Now().Unix()),
+			},
+			chain:     chain,
 			expectErr: false,
 		},
 		{
-			name:      "after failBlock passes",
-			faker:     NewFakeFailer(50),
-			header:    &types.Header{Number: big.NewInt(51)},
+			name:  "after failBlock passes",
+			faker: NewFakeFailer(2),
+			header: &types.Header{
+				Number:     big.NewInt(3),
+				ParentHash: chain.CurrentBlock().Hash(),
+				Time:       big.NewInt(time.Now().Unix()),
+			},
+			chain:     chain,
 			expectErr: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.faker.VerifyHeader(nil, tt.header, true)
+			err := tt.faker.VerifyHeader(tt.chain, tt.header, true)
 			if tt.expectErr {
 				assert.Error(t, err)
 			} else {
