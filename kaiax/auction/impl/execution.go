@@ -88,7 +88,7 @@ func (a *AuctionModule) updateAuctionInfo(num *big.Int) bool {
 		return false
 	}
 
-	if auctioneer == (common.Address{}) || auctionEntryPointAddr == (common.Address{}) {
+	if auctioneer == (common.Address{}) {
 		return false
 	}
 
