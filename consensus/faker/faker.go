@@ -92,13 +92,20 @@ func (f *Faker) VerifyHeader(chain consensus.ChainReader, header *types.Header, 
 	if f.fullFake {
 		return nil
 	}
-	// Short circuit if the header is known
+
 	number := header.Number.Uint64()
+
+	// Check if we should fail this block
+	if f.failBlock != 0 && number == f.failBlock {
+		return consensus.ErrUnknownAncestor
+	}
+
+	// Short circuit if the header is known
 	if chain.GetHeader(header.Hash(), number) != nil {
 		return nil
 	}
 
-	// For genesis block (number 0), skip parent check to avoid underflow
+	// For genesis block, skip parent check
 	if number == 0 {
 		return nil
 	}
@@ -106,23 +113,10 @@ func (f *Faker) VerifyHeader(chain consensus.ChainReader, header *types.Header, 
 	// Check parent existence
 	parent := chain.GetHeader(header.ParentHash, number-1)
 	if parent == nil {
-		// During block generation, GenerateChain creates a temporary blockchain
-		// that only contains genesis. We can detect this by checking if the chain
-		// has any blocks besides genesis
-		currentHead := chain.CurrentHeader()
-		if currentHead != nil && currentHead.Number.Uint64() == 0 {
-			// Chain only has genesis, we're likely in GenerateChain
-			// Accept the block as this is expected during generation
-			return nil
-		}
 		return consensus.ErrUnknownAncestor
 	}
 
-	// Check if we should fail this block
-	if f.failBlock != 0 && number == f.failBlock {
-		return consensus.ErrUnknownAncestor
-	}
-	// All other headers are valid in fake mode - we're only testing, not verifying actual consensus
+	// All other headers are valid in fake mode
 	return nil
 }
 
@@ -144,12 +138,51 @@ func (f *Faker) VerifyHeaders(chain consensus.ChainReader, headers []*types.Head
 			case <-abort:
 				return
 			default:
-				err := f.VerifyHeader(chain, headers[i], seals[i])
+				err := f.verifyHeaderWorker(chain, headers, seals, i)
 				results <- err
 			}
 		}
 	}()
 	return abort, results
+}
+
+// verifyHeaderWorker is a helper for batch header verification.
+// Similar to gxhash, it checks if previous headers in the batch can serve as parents.
+func (f *Faker) verifyHeaderWorker(chain consensus.ChainReader, headers []*types.Header, seals []bool, index int) error {
+	header := headers[index]
+	number := header.Number.Uint64()
+
+	// Check if we should fail this block
+	if f.failBlock != 0 && number == f.failBlock {
+		return consensus.ErrUnknownAncestor
+	}
+
+	// Short circuit if the header is known
+	if chain.GetHeader(header.Hash(), number) != nil {
+		return nil
+	}
+
+	// For genesis block, skip parent check
+	if number == 0 {
+		return nil
+	}
+
+	// Find parent - either from previous header in batch or from chain
+	var parent *types.Header
+	if index == 0 {
+		parent = chain.GetHeader(header.ParentHash, number-1)
+	} else if headers[index-1].Hash() == header.ParentHash {
+		parent = headers[index-1]
+	} else {
+		parent = chain.GetHeader(header.ParentHash, number-1)
+	}
+
+	if parent == nil {
+		return consensus.ErrUnknownAncestor
+	}
+
+	// All other headers are valid in fake mode
+	return nil
 }
 
 // VerifySeal implements consensus.Engine, checking the seal validity.
