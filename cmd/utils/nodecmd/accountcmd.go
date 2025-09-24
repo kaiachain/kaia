@@ -35,6 +35,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/keystore"
 	"github.com/kaiachain/kaia/api/debug"
 	"github.com/kaiachain/kaia/cmd/utils"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/console"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
@@ -88,6 +89,7 @@ Print a short summary of all accounts`,
 				utils.KeyStoreDirFlag,
 				utils.PasswordFileFlag,
 				utils.LightKDFFlag,
+				utils.KeyStoreV3Flag,
 			},
 			Description: `
 Creates a new account and prints the address.
@@ -335,7 +337,13 @@ func accountCreate(ctx *cli.Context) error {
 
 	password := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
-	address, err := keystore.StoreKey(keydir, password, scryptN, scryptP)
+	var address common.Address
+
+	if ctx.Bool(utils.KeyStoreV3Flag.Name) {
+		address, err = keystore.StoreKeyV3(keydir, password, scryptN, scryptP)
+	} else {
+		address, err = keystore.StoreKey(keydir, password, scryptN, scryptP)
+	}
 	if err != nil {
 		log.Fatalf("Failed to create account: %v", err)
 	}

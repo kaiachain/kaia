@@ -65,6 +65,7 @@ var FlagGroups = []FlagGroup{
 			PasswordFileFlag,
 			LightKDFFlag,
 			KeyStoreDirFlag,
+			KeyStoreV3Flag,
 		},
 	},
 	{

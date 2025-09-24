@@ -87,6 +87,18 @@ Repeat passphrase: {{.InputLine "foobar"}}
 	kaia.ExpectRegexp(`Address: \{[0-9a-f]{40}\}\n`)
 }
 
+func TestAccountNewV3(t *testing.T) {
+	kaia := runKaia(t, "kaia-test", "account", "new", "--v3", "--lightkdf")
+	defer kaia.ExpectExit()
+	kaia.Expect(`
+Your new account is locked with a password. Please give a password. Do not forget this password.
+!! Unsupported terminal, password will be echoed.
+Passphrase: {{.InputLine "foobar"}}
+Repeat passphrase: {{.InputLine "foobar"}}
+`)
+	kaia.ExpectRegexp(`Address: \{[0-9a-f]{40}\}\n`)
+}
+
 func TestAccountNewBadRepeat(t *testing.T) {
 	kaia := runKaia(t, "kaia-test", "account", "new", "--lightkdf")
 	defer kaia.ExpectExit()
