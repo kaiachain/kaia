@@ -207,6 +207,20 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) Key {
 	return key
 }
 
+func newKeyV3FromECDSA(privateKeyECDSA *ecdsa.PrivateKey) Key {
+	id, err := uuid.NewRandom()
+	if err != nil {
+		panic(fmt.Sprintf("Could not create random uuid: %v", err))
+	}
+
+	key := &KeyV3{
+		Id:         id,
+		Address:    crypto.PubkeyToAddress(privateKeyECDSA.PublicKey),
+		PrivateKey: privateKeyECDSA,
+	}
+	return key
+}
+
 // NewKeyForDirectICAP generates a key whose address fits into < 155 bits so it can fit
 // into the Direct ICAP spec. for simplicity and easier compatibility with other libs, we
 // retry until the first byte is 0.
@@ -228,16 +242,19 @@ func NewKeyForDirectICAP(rand io.Reader) Key {
 	return key
 }
 
-func newKey(rand io.Reader) (Key, error) {
+func newKey(rand io.Reader, v3 bool) (Key, error) {
 	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), rand)
 	if err != nil {
 		return nil, err
 	}
+	if v3 {
+		return newKeyV3FromECDSA(privateKeyECDSA), nil
+	}
 	return newKeyFromECDSA(privateKeyECDSA), nil
 }
 
-func storeNewKey(ks keyStore, rand io.Reader, auth string) (Key, accounts.Account, error) {
-	key, err := newKey(rand)
+func storeNewKey(ks keyStore, rand io.Reader, auth string, v3 bool) (Key, accounts.Account, error) {
+	key, err := newKey(rand, v3)
 	if err != nil {
 		return nil, accounts.Account{}, err
 	}
