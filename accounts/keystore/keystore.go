@@ -37,7 +37,6 @@ import (
 	"github.com/kaiachain/kaia/accounts"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 )
 
@@ -269,7 +268,7 @@ func (ks *KeyStore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
 		return nil, ErrLocked
 	}
 	// Sign the hash using plain ECDSA operations
-	return crypto.Sign(hash, unlockedKey.GetPrivateKey())
+	return unlockedKey.Sign(hash)
 }
 
 // SignTx signs the given transaction with the requested account.
@@ -284,7 +283,7 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	}
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
-		return types.SignTx(tx, types.LatestSignerForChainID(chainID), unlockedKey.GetPrivateKey())
+		return unlockedKey.SignTx(tx, types.LatestSignerForChainID(chainID))
 	}
 	return nil, ErrChainIdNil
 }
@@ -301,7 +300,7 @@ func (ks *KeyStore) SignTxAsFeePayer(a accounts.Account, tx *types.Transaction, 
 	}
 	// Depending on the presence of the chain ID, sign with EIP155 or homestead
 	if chainID != nil {
-		return types.SignTxAsFeePayer(tx, types.LatestSignerForChainID(chainID), unlockedKey.GetPrivateKey())
+		return unlockedKey.SignTxAsFeePayer(tx, types.LatestSignerForChainID(chainID))
 	}
 	return nil, ErrChainIdNil
 }
@@ -315,7 +314,7 @@ func (ks *KeyStore) SignHashWithPassphrase(a accounts.Account, passphrase string
 		return nil, err
 	}
 	defer key.ResetPrivateKey()
-	return crypto.Sign(hash, key.GetPrivateKey())
+	return key.Sign(hash)
 }
 
 // SignTxWithPassphrase signs the transaction if the private key matching the
@@ -331,7 +330,7 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, 
 	if chainID == nil {
 		return nil, ErrChainIdNil
 	}
-	return types.SignTx(tx, types.LatestSignerForChainID(chainID), key.GetPrivateKey())
+	return key.SignTx(tx, types.LatestSignerForChainID(chainID))
 }
 
 // SignTxAsFeePayerWithPassphrase signs the transaction as a fee payer if the private key
@@ -347,7 +346,7 @@ func (ks *KeyStore) SignTxAsFeePayerWithPassphrase(a accounts.Account, passphras
 	if chainID == nil {
 		return nil, ErrChainIdNil
 	}
-	return types.SignTxAsFeePayer(tx, types.LatestSignerForChainID(chainID), key.GetPrivateKey())
+	return key.SignTxAsFeePayer(tx, types.LatestSignerForChainID(chainID))
 }
 
 // Unlock unlocks the given account indefinitely.

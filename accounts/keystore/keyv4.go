@@ -24,9 +24,12 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 )
+
+var _ LocalKey = (*KeyV4)(nil)
 
 type KeyV4 struct {
 	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
@@ -117,6 +120,14 @@ func (k *KeyV4) GetAddress() common.Address {
 	return k.Address
 }
 
+func (k *KeyV4) GetPublicKey() *ecdsa.PublicKey {
+	privateKey := k.GetPrivateKey()
+	if privateKey == nil {
+		return nil
+	}
+	return &privateKey.PublicKey
+}
+
 func (k *KeyV4) GetPrivateKey() *ecdsa.PrivateKey {
 	if len(k.PrivateKeys) == 0 || len(k.PrivateKeys[0]) == 0 {
 		return nil
@@ -142,4 +153,17 @@ func (k *KeyV4) ResetPrivateKey() {
 			zeroKey(key)
 		}
 	}
+}
+
+func (k *KeyV4) Sign(data []byte) ([]byte, error) {
+	hash := crypto.Keccak256(data)
+	return crypto.Sign(hash, k.GetPrivateKey())
+}
+
+func (k *KeyV4) SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error) {
+	return types.SignTx(tx, signer, k.GetPrivateKey())
+}
+
+func (k *KeyV4) SignTxAsFeePayer(tx *types.Transaction, signer types.Signer) (*types.Transaction, error) {
+	return types.SignTxAsFeePayer(tx, signer, k.GetPrivateKey())
 }

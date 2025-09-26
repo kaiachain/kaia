@@ -36,12 +36,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kaiachain/kaia/accounts"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 )
 
-// Key represents a keystore storing private keys of an account.
-type Key interface {
+// BaseKey defines the minimal interface that all keys must implement.
+// This supports both local keys and remote keys.
+type BaseKey interface {
 	json.Marshaler
 	json.Unmarshaler
 
@@ -50,6 +52,24 @@ type Key interface {
 
 	// Returns the address of the keystore.
 	GetAddress() common.Address
+
+	// Returns the public key for signature verification
+	GetPublicKey() *ecdsa.PublicKey
+
+	// Signs the given data and returns the signature
+	Sign(data []byte) ([]byte, error)
+
+	// Signs a transaction
+	SignTx(tx *types.Transaction, s types.Signer) (*types.Transaction, error)
+
+	// Signs a transaction as fee payer
+	SignTxAsFeePayer(tx *types.Transaction, s types.Signer) (*types.Transaction, error)
+}
+
+// LocalKey extends BaseKey for keys where we have direct access to private key material
+// This includes KeyV3 and KeyV4 implementations
+type LocalKey interface {
+	BaseKey
 
 	// Returns the default key of the keystore.
 	GetPrivateKey() *ecdsa.PrivateKey
@@ -63,6 +83,17 @@ type Key interface {
 	// Resets all the keys in the keystore.
 	ResetPrivateKey()
 }
+
+// RemoteKey extends BaseKey for keys managed by external systems (KMS, HSM, etc.)
+type RemoteKey interface {
+	BaseKey
+}
+
+type Key interface {
+	LocalKey // Maintains backward compatibility - all existing Keys are LocalKeys
+}
+
+var _ LocalKey = (*KeyV3)(nil)
 
 type KeyV3 struct {
 	Id uuid.UUID // Version 4 "random" for unique id not derived from key data
@@ -164,6 +195,10 @@ func (k *KeyV3) GetAddress() common.Address {
 	return k.Address
 }
 
+func (k *KeyV3) GetPublicKey() *ecdsa.PublicKey {
+	return &k.PrivateKey.PublicKey
+}
+
 func (k *KeyV3) GetPrivateKey() *ecdsa.PrivateKey {
 	return k.PrivateKey
 }
@@ -178,6 +213,19 @@ func (k *KeyV3) GetPrivateKeysWithRole(role int) []*ecdsa.PrivateKey {
 
 func (k *KeyV3) ResetPrivateKey() {
 	zeroKey(k.PrivateKey)
+}
+
+func (k *KeyV3) Sign(data []byte) ([]byte, error) {
+	hash := crypto.Keccak256(data)
+	return crypto.Sign(hash, k.PrivateKey)
+}
+
+func (k *KeyV3) SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error) {
+	return types.SignTx(tx, signer, k.PrivateKey)
+}
+
+func (k *KeyV3) SignTxAsFeePayer(tx *types.Transaction, signer types.Signer) (*types.Transaction, error) {
+	return types.SignTxAsFeePayer(tx, signer, k.PrivateKey)
 }
 
 func newKeyFromECDSAWithAddress(privateKeyECDSA *ecdsa.PrivateKey, address common.Address) Key {
