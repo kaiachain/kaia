@@ -36,7 +36,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
@@ -186,7 +186,7 @@ func (dl *downloadTester) makeStakingInfoData(blockNumber uint64) (*staking.P2PS
 func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, parentReceipts types.Receipts, heavy bool) ([]common.Hash, map[common.Hash]*types.Header, map[common.Hash]*types.Block, map[common.Hash]types.Receipts, map[common.Hash]*staking.P2PStakingInfo) {
 	stakingUpdatedBlocks := make(map[uint64]*staking.P2PStakingInfo)
 	// Generate the block chain
-	blocks, receipts := blockchain.GenerateChain(params.TestChainConfig, parent, gxhash.NewFaker(), dl.peerDb, n, func(i int, block *blockchain.BlockGen) {
+	blocks, receipts := blockchain.GenerateChain(params.TestChainConfig, parent, faker.NewFaker(), dl.peerDb, n, func(i int, block *blockchain.BlockGen) {
 		block.SetRewardbase(common.Address{seed})
 		// If a heavy chain is requested, delay blocks to raise blockscore
 		if heavy {

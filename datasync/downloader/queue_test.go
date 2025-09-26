@@ -33,7 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/log"
@@ -50,7 +50,7 @@ var (
 // the returned hash chain is ordered head->parent. In addition, every 2nd block
 // contains a transaction.
 func makeChain(n int, seed byte, parent *types.Block, empty bool) ([]*types.Block, []types.Receipts) {
-	blocks, receipts := blockchain.GenerateChain(params.TestChainConfig, parent, gxhash.NewFaker(), testdb, n, func(i int, block *blockchain.BlockGen) {
+	blocks, receipts := blockchain.GenerateChain(params.TestChainConfig, parent, faker.NewFaker(), testdb, n, func(i int, block *blockchain.BlockGen) {
 		block.SetRewardbase(common.Address{seed})
 		// Add one tx to every second block
 		if !empty && i%2 == 0 {

@@ -23,7 +23,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -2450,7 +2450,7 @@ type testChainContext struct {
 }
 
 func (mc *testChainContext) Engine() consensus.Engine {
-	return gxhash.NewFaker()
+	return faker.NewFaker()
 }
 
 func (mc *testChainContext) GetHeader(common.Hash, uint64) *types.Header {

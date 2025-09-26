@@ -26,7 +26,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -53,7 +53,7 @@ func TestBlockChain_migrateState(t *testing.T) {
 		_     = gspec.MustCommit(testdb)
 	)
 
-	chain, err := NewBlockChain(testdb, nil, gspec.Config, gxhash.NewFaker(), vm.Config{})
+	chain, err := NewBlockChain(testdb, nil, gspec.Config, faker.NewFaker(), vm.Config{})
 	if err != nil {
 		t.Fatalf("Failed to create local chain, %v", err)
 	}

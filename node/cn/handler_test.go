@@ -34,7 +34,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	consensusmocks "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
@@ -1179,7 +1179,7 @@ func newTestBackendWithGenerator(blocks int, generator func(int, *blockchain.Blo
 		// Create a database pre-initialize with a genesis block
 		db     = database.NewMemoryDBManager()
 		config = params.TestChainConfig
-		engine = gxhash.NewFaker()
+		engine = faker.NewFaker()
 	)
 
 	gspec := &blockchain.Genesis{

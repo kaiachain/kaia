@@ -33,7 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -52,7 +52,7 @@ var (
 // contains a transaction to allow testing correct block
 // reassembly.
 func makeChain(n int, seed byte, parent *types.Block) ([]common.Hash, map[common.Hash]*types.Block) {
-	blocks, _ := blockchain.GenerateChain(params.TestChainConfig, parent, gxhash.NewFaker(), testdb, n, func(i int, block *blockchain.BlockGen) {
+	blocks, _ := blockchain.GenerateChain(params.TestChainConfig, parent, faker.NewFaker(), testdb, n, func(i int, block *blockchain.BlockGen) {
 		block.SetRewardbase(common.Address{seed})
 		// If the block number is multiple of 3, send a bonus transaction to the miner
 		if parent == genesis && i%3 == 0 {
