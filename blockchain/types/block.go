@@ -39,8 +39,6 @@ import (
 
 const (
 	Engine_IBFT int = iota
-	Engine_Clique
-	Engine_Gxhash
 )
 
 var EngineType = Engine_IBFT

@@ -23,15 +23,12 @@
 package work
 
 import (
-	"errors"
-	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/gxhash"
 )
 
 type hashrate struct {
@@ -108,32 +105,6 @@ func (a *RemoteAgent) GetHashRate() (tot int64) {
 		tot += int64(hashrate.rate)
 	}
 	return
-}
-
-// TODO-Kaia remove this function
-func (a *RemoteAgent) GetWork() ([3]string, error) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	var res [3]string
-
-	if a.currentWork != nil {
-		block := a.currentWork.Block
-
-		res[0] = block.HashNoNonce().Hex()
-		seedHash := gxhash.SeedHash(block.NumberU64())
-		res[1] = common.BytesToHash(seedHash).Hex()
-		// Calculate the "target" to be returned to the external miner
-		n := big.NewInt(1)
-		n.Lsh(n, 255)
-		n.Div(n, block.BlockScore())
-		n.Lsh(n, 1)
-		res[2] = common.BytesToHash(n.Bytes()).Hex()
-
-		a.work[block.HashNoNonce()] = a.currentWork
-		return res, nil
-	}
-	return res, errors.New("No work available yet, don't panic.")
 }
 
 // SubmitWork tries to inject a pow solution into the remote agent, returning

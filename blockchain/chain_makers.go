@@ -85,7 +85,6 @@ func (b *BlockGen) SetTime(time *big.Int) {
 }
 
 // AddTx adds a transaction to the generated block.
-// In gxhash, arbitrary address is used as a block author's address.
 //
 // AddTx panics if the transaction cannot be executed. In addition to
 // the protocol-imposed limitations (gas limit, etc.), there are some
@@ -97,7 +96,6 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 }
 
 // AddTxWithChain adds a transaction to the generated block.
-// In gxhash, arbitrary address is used as a block author's address.
 //
 // AddTxWithChain panics if the transaction cannot be executed. In addition to
 // the protocol-imposed limitations (gas limit, etc.), there are some

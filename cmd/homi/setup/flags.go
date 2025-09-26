@@ -71,11 +71,6 @@ var (
 		Usage:   "Generate genesis.json similar to the one used for Serivce Chain with shorter intervals for testing",
 		Aliases: []string{},
 	}
-	cliqueFlag = &cli.BoolFlag{
-		Name:    "clique",
-		Usage:   "Use Clique consensus",
-		Aliases: []string{"clique.enable"},
-	}
 
 	numOfCNsFlag = &cli.IntFlag{
 		Name:    "cn-num",
@@ -128,7 +123,7 @@ var (
 
 	genesisTypeFlag = &cli.StringFlag{
 		Name:    "genesis-type",
-		Usage:   "Set the type of genesis.json to generate (mainnet-test, mainnet, kairos-test, kairos, clique, servicechain, servicechain-test, istanbul)",
+		Usage:   "Set the type of genesis.json to generate (mainnet-test, mainnet, kairos-test, kairos, servicechain, servicechain-test, istanbul)",
 		Aliases: []string{"genesis.type"},
 	}
 
@@ -447,20 +442,6 @@ var (
 		Usage:   "governance subgroup size [default: 21]",
 		Value:   params.DefaultSubGroupSize,
 		Aliases: []string{"genesis.consensus.istanbul.subgroup"},
-	}
-
-	cliqueEpochFlag = &cli.Uint64Flag{
-		Name:    "clique-epoch",
-		Usage:   "clique epoch",
-		Value:   params.DefaultEpoch,
-		Aliases: []string{"genesis.consensus.clique.epoch"},
-	}
-
-	cliquePeriodFlag = &cli.Uint64Flag{
-		Name:    "clique-period",
-		Usage:   "clique period",
-		Value:   params.DefaultPeriod,
-		Aliases: []string{"genesis.consensus.clique.period"},
 	}
 
 	istanbulCompatibleBlockNumberFlag = &cli.Int64Flag{

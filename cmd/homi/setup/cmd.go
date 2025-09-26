@@ -71,7 +71,6 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewBoolFlag(kairosFlag),
 	altsrc.NewBoolFlag(serviceChainFlag),
 	altsrc.NewBoolFlag(serviceChainTestFlag),
-	altsrc.NewBoolFlag(cliqueFlag),
 	altsrc.NewIntFlag(numOfCNsFlag),
 	altsrc.NewIntFlag(numOfValidatorsFlag),
 	altsrc.NewIntFlag(numOfPNsFlag),
@@ -123,8 +122,6 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewUint64Flag(istEpochFlag),
 	altsrc.NewUint64Flag(istProposerPolicyFlag),
 	altsrc.NewUint64Flag(istSubGroupFlag),
-	altsrc.NewUint64Flag(cliqueEpochFlag),
-	altsrc.NewUint64Flag(cliquePeriodFlag),
 	altsrc.NewInt64Flag(istanbulCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(londonCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(ethTxTypeCompatibleBlockNumberFlag),
@@ -288,16 +285,6 @@ func genGovernanceConfig(ctx *cli.Context) *params.GovernanceConfig {
 	}
 }
 
-func genCliqueConfig(ctx *cli.Context) *params.CliqueConfig {
-	epoch := ctx.Uint64(cliqueEpochFlag.Name)
-	period := ctx.Uint64(cliquePeriodFlag.Name)
-
-	return &params.CliqueConfig{
-		Period: period,
-		Epoch:  epoch,
-	}
-}
-
 func genIstanbulGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address, chainId uint64) *blockchain.Genesis {
 	unitPrice := ctx.Uint64(unitPriceFlag.Name)
 	chainID := new(big.Int).SetUint64(chainId)
@@ -322,25 +309,6 @@ func genIstanbulGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address,
 	options = append(options, genesis.Istanbul(genIstanbulConfig(ctx)))
 
 	return genesis.New(options...)
-}
-
-func genCliqueGenesis(ctx *cli.Context, nodeAddrs, testAddrs []common.Address, chainId uint64) *blockchain.Genesis {
-	config := genCliqueConfig(ctx)
-	unitPrice := ctx.Uint64(unitPriceFlag.Name)
-	chainID := new(big.Int).SetUint64(chainId)
-
-	if ok := ctx.Bool(governanceFlag.Name); ok {
-		log.Fatalf("Currently, governance is not supported for clique consensus", "--governance", ok)
-	}
-
-	genesisJson := genesis.NewClique(
-		genesis.ValidatorsOfClique(nodeAddrs...),
-		genesis.Alloc(append(nodeAddrs, testAddrs...), new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)),
-		genesis.UnitPrice(unitPrice),
-		genesis.ChainID(chainID),
-		genesis.Clique(config),
-	)
-	return genesisJson
 }
 
 func genValidatorKeystore(privKeys []*ecdsa.PrivateKey) {
@@ -673,14 +641,13 @@ func Gen(ctx *cli.Context) error {
 	kairosTest := ctx.Bool(kairosTestFlag.Name)
 	mainnet := ctx.Bool(mainnetFlag.Name)
 	mainnetTest := ctx.Bool(mainnetTestFlag.Name)
-	clique := ctx.Bool(cliqueFlag.Name)
 	serviceChain := ctx.Bool(serviceChainFlag.Name)
 	serviceChainTest := ctx.Bool(serviceChainTestFlag.Name)
 	chainid := ctx.Uint64(chainIDFlag.Name)
 	serviceChainId := ctx.Uint64(serviceChainIDFlag.Name)
 
 	// NOTE-Kaia : the following code that seems unnecessary is for the priority to flags, not yaml
-	if !kairos && !kairosTest && !mainnet && !mainnetTest && !serviceChain && !serviceChainTest && !clique {
+	if !kairos && !kairosTest && !mainnet && !mainnetTest && !serviceChain && !serviceChainTest {
 		switch genesisType := ctx.String(genesisTypeFlag.Name); genesisType {
 		case "kairos":
 			kairos = true
@@ -694,8 +661,6 @@ func Gen(ctx *cli.Context) error {
 			serviceChain = true
 		case "servicechain-test":
 			serviceChainTest = true
-		case "clique":
-			clique = true
 		default:
 			fmt.Printf("Unknown genesis type is %s.\n", genesisType)
 		}
@@ -764,8 +729,6 @@ func Gen(ctx *cli.Context) error {
 		genesisJson = genKairosTestGenesis(validatorNodeAddrs, testAddrs)
 	} else if kairos {
 		genesisJson = genKairosGenesis(validatorNodeAddrs, testAddrs)
-	} else if clique {
-		genesisJson = genCliqueGenesis(ctx, validatorNodeAddrs, testAddrs, chainid)
 	} else if serviceChain {
 		genesisJson = genServiceChainGenesis(validatorNodeAddrs, testAddrs)
 	} else if serviceChainTest {

@@ -85,8 +85,6 @@ const (
 	Common
 
 	// 21~30
-	ConsensusClique
-	ConsensusGxhash
 	ConsensusIstanbul
 	ConsensusIstanbulBackend
 	ConsensusIstanbulCore
@@ -173,8 +171,6 @@ var moduleNames = [ModuleNameLen]string{
 	"common",
 
 	// 21~30
-	"consensus/clique",
-	"consensus/gxhash",
 	"consensus/istanbul",
 	"consensus/istanbul/backend",
 	"consensus/istanbul/core",
