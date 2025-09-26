@@ -183,7 +183,7 @@ func findBlockWithState(db database.DBManager) *types.Block {
 // The returned chain configuration is never nil.
 func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64, isPrivate, overwriteGenesis bool) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
-		return params.AllGxhashProtocolChanges, common.Hash{}, errGenesisNoConfig
+		return params.TestChainConfig, common.Hash{}, errGenesisNoConfig
 	}
 
 	// Just commit the new block if there is no stored genesis block.
@@ -193,7 +193,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 			switch {
 			case isPrivate:
 				logger.Error("No genesis is provided. --networkid should be omitted if you want to use preconfigured network")
-				return params.AllGxhashProtocolChanges, common.Hash{}, errNoGenesis
+				return params.TestChainConfig, common.Hash{}, errNoGenesis
 			case networkId == params.KairosNetworkId:
 				logger.Info("Writing default Kairos genesis block")
 				genesis = DefaultKairosGenesisBlock()
@@ -296,7 +296,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	case ghash == params.KairosGenesisHash:
 		return params.KairosChainConfig
 	default:
-		return params.AllGxhashProtocolChanges
+		return params.TestChainConfig
 	}
 }
 
@@ -391,7 +391,7 @@ func (g *Genesis) Commit(baseStateRoot common.Hash, db database.DBManager) (*typ
 
 	config := g.Config
 	if config == nil {
-		config = params.AllGxhashProtocolChanges
+		config = params.TestChainConfig
 	}
 	if err := config.CheckConfigForkOrder(); err != nil {
 		return nil, err
@@ -405,7 +405,7 @@ func (g *Genesis) Commit(baseStateRoot common.Hash, db database.DBManager) (*typ
 func (g *Genesis) MustCommit(db database.DBManager) *types.Block {
 	config := g.Config
 	if config == nil {
-		config = params.AllGxhashProtocolChanges
+		config = params.TestChainConfig
 	}
 	InitDeriveSha(config)
 

@@ -181,7 +181,7 @@ func TestSetupGenesis(t *testing.T) {
 				return SetupGenesisBlock(db, new(Genesis), params.UnusedNetworkId, false, false)
 			},
 			wantErr:    errGenesisNoConfig,
-			wantConfig: params.AllGxhashProtocolChanges,
+			wantConfig: params.TestChainConfig,
 		},
 		{
 			name: "no block in DB, genesis == nil, Mainnet networkId",

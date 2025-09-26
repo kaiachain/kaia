@@ -650,8 +650,8 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 
 	bacc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
 	assert.NoError(t, err)
-	bacc.pAccount.chainID = big.NewInt(0)
-	bacc.cAccount.chainID = big.NewInt(0)
+	bacc.pAccount.chainID = params.TestChainConfig.ChainID
+	bacc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	cAcc := bacc.cAccount.GenerateTransactOpts()
 	pAcc := bacc.pAccount.GenerateTransactOpts()
