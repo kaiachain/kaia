@@ -157,7 +157,8 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 		}
 
 		// Check stored chainConfig
-		storedChainConfig := db.ReadChainConfig(test.wantHash)
+		storedChainConfig, err := db.ReadChainConfig(test.wantHash)
+		assert.NoError(t, err)
 		assert.Equal(t, test.wantStoredConfig, storedChainConfig, test.name+": stored chainConfig is not compatible")
 	}
 }
