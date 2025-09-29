@@ -318,7 +318,7 @@ func (s *KaiaBlockChainAPI) GetBlockWithConsensusInfoByNumberRange(ctx context.C
 	}
 
 	if (endNum - startNum) > 50 {
-		logger.Trace("number of requested blocks should be smaller than 50", "start", startNum, "end", endNum)
+		logger.Trace("number of requested blocks should be smaller than 51 (inclusive)", "start", startNum, "end", endNum)
 		return nil, errRequestedBlocksTooLarge
 	}
 
