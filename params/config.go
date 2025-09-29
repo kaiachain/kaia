@@ -24,6 +24,7 @@ package params
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -251,10 +252,10 @@ func (c *ChainConfig) UnmarshalJSON(data []byte) error {
 
 	// Check for deprecated fields and return error
 	if aux.Clique != nil {
-		return fmt.Errorf("DEPRECATED: 'clique' consensus engine configuration is deprecated and has been removed. Please use 'istanbul' instead")
+		return errors.New("DEPRECATED: 'clique' consensus engine configuration is deprecated and has been removed. Please use 'istanbul' instead")
 	}
 	if aux.Gxhash != nil {
-		return fmt.Errorf("DEPRECATED: 'gxhash' consensus engine configuration is deprecated and has been removed. Please use 'istanbul' instead")
+		return errors.New("DEPRECATED: 'gxhash' consensus engine configuration is deprecated and has been removed. Please use 'istanbul' instead")
 	}
 
 	return nil
