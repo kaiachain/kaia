@@ -200,6 +200,8 @@ func (api *FilterAPI) NewPendingTransactions(ctx context.Context, fullTx *bool) 
 				}
 			case <-rpcSub.Err():
 				return
+			case <-notifier.Closed():
+				return
 			}
 		}
 	}()
