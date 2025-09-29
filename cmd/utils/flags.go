@@ -1376,10 +1376,9 @@ var (
 		EnvVars:  []string{"KLAYTN_ANCHORING", "KAIA_ANCHORING"},
 		Category: "SERVICECHAIN",
 	}
-	// TODO-Kaia: need to check if deprecated.
 	ServiceChainConsensusFlag = &cli.StringFlag{
 		Name:    "scconsensus",
-		Usage:   "Set the service chain consensus (\"istanbul\", \"clique\")",
+		Usage:   "Set the service chain consensus (\"istanbul\")",
 		Value:   "istanbul",
 		Aliases: []string{"servicechain.consensus"},
 		EnvVars: []string{"KLAYTN_SCCONSENSUS", "KAIA_SCCONSENSUS"},

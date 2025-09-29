@@ -711,18 +711,28 @@ func TestDBManager_DatabaseVersion(t *testing.T) {
 func TestDBManager_ChainConfig(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 	for _, dbm := range dbManagers {
-		assert.Nil(t, nil, dbm.ReadChainConfig(hash1))
+		cfg, err := dbm.ReadChainConfig(hash1)
+		assert.NoError(t, err)
+		assert.Nil(t, cfg)
 
 		cc1 := &params.ChainConfig{UnitPrice: 12345}
 		cc2 := &params.ChainConfig{UnitPrice: 54321}
 
 		dbm.WriteChainConfig(hash1, cc1)
-		assert.Equal(t, cc1, dbm.ReadChainConfig(hash1))
-		assert.NotEqual(t, cc2, dbm.ReadChainConfig(hash1))
+		cfg, err = dbm.ReadChainConfig(hash1)
+		assert.NoError(t, err)
+		assert.Equal(t, cc1, cfg)
+		cfg, err = dbm.ReadChainConfig(hash1)
+		assert.NoError(t, err)
+		assert.NotEqual(t, cc2, cfg)
 
 		dbm.WriteChainConfig(hash1, cc2)
-		assert.NotEqual(t, cc1, dbm.ReadChainConfig(hash1))
-		assert.Equal(t, cc2, dbm.ReadChainConfig(hash1))
+		cfg, err = dbm.ReadChainConfig(hash1)
+		assert.NoError(t, err)
+		assert.NotEqual(t, cc1, cfg)
+		cfg, err = dbm.ReadChainConfig(hash1)
+		assert.NoError(t, err)
+		assert.Equal(t, cc2, cfg)
 	}
 }
 
@@ -794,26 +804,6 @@ func TestDBManager_ChildChain(t *testing.T) {
 
 		dbm.WriteHandleTxHashFromRequestTxHash(hash1, hash2)
 		assert.Equal(t, hash2, dbm.ReadHandleTxHashFromRequestTxHash(hash1))
-	}
-}
-
-// TestDBManager_CliqueSnapshot tests read and write operations of clique snapshots.
-func TestDBManager_CliqueSnapshot(t *testing.T) {
-	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
-	for _, dbm := range dbManagers {
-		data, err := dbm.ReadCliqueSnapshot(hash1)
-		assert.NotNil(t, err)
-		assert.Nil(t, data)
-
-		dbm.WriteCliqueSnapshot(hash1, hash1[:])
-
-		data, _ = dbm.ReadCliqueSnapshot(hash1)
-		assert.Equal(t, hash1[:], data)
-
-		dbm.WriteCliqueSnapshot(hash1, hash2[:])
-
-		data, _ = dbm.ReadCliqueSnapshot(hash1)
-		assert.Equal(t, hash2[:], data)
 	}
 }
 
