@@ -83,7 +83,11 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
             if (rewardAddr != address(0)) {
                 /// @dev Do not revert if the validator payback fails
                 /// Need to restrict the gas limit for deterministic gas calculation
-                if (!payable(rewardAddr).send(validatorPayback)) {
+                (bool success, ) = payable(rewardAddr).call{
+                    value: validatorPayback,
+                    gas: 5000
+                }("");
+                if (!success) {
                     validatorPayback = 0;
                     emit FeeDepositFailed(block.coinbase, originalAmount);
                 }
