@@ -21,7 +21,7 @@ pragma solidity 0.8.25;
 interface IAuctionFeeVault {
     /* ========== EVENTS ========== */
 
-    event FeeDepositFailed(address indexed receiver, uint256 amount);
+    event FeePaybackFailed(address indexed receiver, uint256 amount);
 
     event FeeDeposit(
         address indexed sender,
