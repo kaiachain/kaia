@@ -21,8 +21,8 @@ import (
 	"github.com/kaiachain/kaia/kaiax/auction"
 )
 
-func (a *AuctionModule) HandleBid(bid *auction.Bid) {
-	a.bidPool.HandleBid(bid)
+func (a *AuctionModule) HandleBid(peerID string, bid *auction.Bid) {
+	a.bidPool.HandleBid(peerID, bid)
 }
 
 func (a *AuctionModule) SubscribeNewBid(sink chan<- *auction.Bid) event.Subscription {

@@ -68,9 +68,10 @@ func init() {
 func TestHandler_HandleBid(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	var (
-		db     = database.NewMemoryDBManager()
-		alloc  = testAllocStorage()
-		config = testRandaoForkChainConfig(big.NewInt(0))
+		db         = database.NewMemoryDBManager()
+		alloc      = testAllocStorage()
+		config     = testRandaoForkChainConfig(big.NewInt(0))
+		testPeerID = "testPeerID"
 	)
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
 
@@ -107,7 +108,7 @@ func TestHandler_HandleBid(t *testing.T) {
 	module.bidPool.auctionEntryPoint = testAuctionEntryPoint
 
 	// Test handling a valid bid
-	module.HandleBid(handlerTestBids[0])
+	module.HandleBid(testPeerID, handlerTestBids[0])
 	time.Sleep(10 * time.Millisecond)
 
 	// Verify the bid was added to the pool
@@ -115,25 +116,143 @@ func TestHandler_HandleBid(t *testing.T) {
 
 	// Test handling multiple bids
 	for _, bid := range handlerTestBids[1:3] {
-		module.HandleBid(bid)
+		module.HandleBid(testPeerID, bid)
 	}
 	time.Sleep(10 * time.Millisecond)
 
 	assert.Equal(t, 3, len(module.bidPool.bidMap))
 
 	// Test handling a nil bid
-	module.HandleBid(nil)
+	module.HandleBid(testPeerID, nil)
 	time.Sleep(10 * time.Millisecond)
 
 	assert.Equal(t, 3, len(module.bidPool.bidMap)) // Stats should not change
 }
 
+func TestHandler_RateLimit(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	var (
+		db          = database.NewMemoryDBManager()
+		alloc       = testAllocStorage()
+		config      = testRandaoForkChainConfig(big.NewInt(0))
+		testPeerID1 = "testPeer1"
+		testPeerID2 = "testPeer2"
+	)
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
+
+	auctionConfig := auction.AuctionConfig{
+		Disable:        false,
+		MaxBidPoolSize: 10000,
+	}
+	apiBackend := &MockBackend{}
+	fakeDownloader := &downloader.FakeDownloader{}
+
+	// Create a new auction module
+	module := NewAuctionModule()
+	require.NotNil(t, module)
+
+	// Initialize the module with test configuration
+	opts := &InitOpts{
+		ChainConfig:   testChainConfig,
+		AuctionConfig: &auctionConfig,
+		Chain:         backend.BlockChain(),
+		Backend:       apiBackend,
+		Downloader:    fakeDownloader,
+		NodeKey:       testNodeKey,
+	}
+	err := module.Init(opts)
+	require.NoError(t, err)
+
+	// Start the module
+	err = module.Start()
+	atomic.StoreUint32(&module.bidPool.running, 1)
+	require.NoError(t, err)
+	defer module.Stop()
+
+	module.bidPool.auctioneer = testAuctioneer
+	module.bidPool.auctionEntryPoint = testAuctionEntryPoint
+
+	// Commit a block to set current block number
+	backend.Commit()
+	currentBlock := backend.BlockChain().CurrentBlock().NumberU64()
+
+	// Create many test bids with different target transactions to avoid duplicate rejection
+	testBids := make([]*auction.Bid, 400)
+	for i := 0; i < 400; i++ {
+		key, _ := crypto.GenerateKey()
+		bid := &auction.Bid{}
+
+		initBaseBid(bid, i, currentBlock+1)
+		bid.Sender = crypto.PubkeyToAddress(key.PublicKey)
+
+		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint)
+		sig, _ := crypto.Sign(digest, key)
+		sig[crypto.RecoveryIDOffset] += 27
+		bid.SearcherSig = sig
+
+		searcherSig := bid.SearcherSig
+		msg := fmt.Appendf(nil, "\x19Ethereum Signed Message:\n%d%s", len(searcherSig), searcherSig)
+		digest = crypto.Keccak256(msg)
+		sig, _ = crypto.Sign(digest, testAuctioneerKey)
+		sig[crypto.RecoveryIDOffset] += 27
+		bid.AuctioneerSig = sig
+
+		testBids[i] = bid
+	}
+
+	// Test rate limiting for peer1
+	// Send 350 bids rapidly (should be limited to 300)
+	for i := 0; i < 350; i++ {
+		module.HandleBid(testPeerID1, testBids[i])
+	}
+
+	// Wait for processing
+	time.Sleep(200 * time.Millisecond)
+
+	// Should have accepted around 300 bids (rate limit)
+	bidCount1 := len(module.bidPool.bidMap)
+	assert.Equal(t, bidCount1, 300)
+
+	// Test that peer2 is not affected by peer1's rate limit
+	// Clear the bid pool first
+	module.bidPool.clearBidPool()
+
+	// Send bids from peer2
+	for i := 0; i < 50; i++ {
+		module.HandleBid(testPeerID2, testBids[i])
+	}
+
+	// Wait for processing
+	time.Sleep(200 * time.Millisecond)
+
+	// Peer2 should have all its bids accepted
+	bidCount2 := len(module.bidPool.bidMap)
+	assert.Equal(t, 50, bidCount2)
+
+	// Test rate limit recovery after 1 second
+	module.bidPool.clearBidPool()
+	time.Sleep(1100 * time.Millisecond) // Wait for rate limit to reset
+
+	// Send another batch from peer1
+	for i := 0; i < 100; i++ {
+		module.HandleBid(testPeerID1, testBids[i])
+	}
+
+	// Wait for processing
+	time.Sleep(200 * time.Millisecond)
+
+	// Should accept new bids after rate limit reset
+	bidCount3 := len(module.bidPool.bidMap)
+	assert.Equal(t, 100, bidCount3)
+}
+
 func TestHandler_SubscribeNewBid(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	var (
-		db     = database.NewMemoryDBManager()
-		alloc  = testAllocStorage()
-		config = testRandaoForkChainConfig(big.NewInt(0))
+		db         = database.NewMemoryDBManager()
+		alloc      = testAllocStorage()
+		config     = testRandaoForkChainConfig(big.NewInt(0))
+		testPeerID = "testPeerID"
 	)
 	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
 
@@ -178,9 +297,9 @@ func TestHandler_SubscribeNewBid(t *testing.T) {
 
 	// Test receiving new bids
 	go func() {
-		module.HandleBid(handlerTestBids[0])
-		module.HandleBid(handlerTestBids[1])
-		module.HandleBid(handlerTestBids[2])
+		module.HandleBid(testPeerID, handlerTestBids[0])
+		module.HandleBid(testPeerID, handlerTestBids[1])
+		module.HandleBid(testPeerID, handlerTestBids[2])
 	}()
 
 	// Verify we receive the bids in order
@@ -197,7 +316,7 @@ func TestHandler_SubscribeNewBid(t *testing.T) {
 	sub.Unsubscribe()
 
 	// Send another bid
-	module.HandleBid(handlerTestBids[3])
+	module.HandleBid(testPeerID, handlerTestBids[3])
 
 	// Verify we don't receive the bid after unsubscribing
 	select {

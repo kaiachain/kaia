@@ -28,7 +28,7 @@ type AuctionModule interface {
 	kaiax.ExecutionModule
 	kaiax.TxBundlingModule
 
-	HandleBid(bid *Bid)
+	HandleBid(peerID string, bid *Bid)
 	SubscribeNewBid(sink chan<- *Bid) event.Subscription
 
 	gasless.GaslessModuleHost
