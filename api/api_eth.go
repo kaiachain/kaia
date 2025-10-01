@@ -1230,6 +1230,35 @@ func RpcMarshalEthHeader(head *types.Header, engine consensus.Engine, chainConfi
 	return result, nil
 }
 
+func RpcMarshalEthBlock(block *types.Block, engine consensus.Engine, chainConfig *params.ChainConfig, inclMiner, inclTx, fullTx bool) (map[string]interface{}, error) {
+	fields, err := RpcMarshalEthHeader(block.Header(), engine, chainConfig, inclMiner)
+	if err != nil {
+		return nil, err
+	}
+	fields["size"] = hexutil.Uint64(block.Size())
+
+	if inclTx {
+		formatTx := func(tx *types.Transaction) interface{} {
+			return tx.Hash()
+		}
+		if fullTx {
+			formatTx = func(tx *types.Transaction) interface{} {
+				return newEthRPCTransactionFromBlockHash(block, tx.Hash(), chainConfig)
+			}
+		}
+		txs := block.Transactions()
+		transactions := make([]interface{}, len(txs))
+		for i, tx := range txs {
+			transactions[i] = formatTx(tx)
+		}
+		fields["transactions"] = transactions
+	}
+	// There is no uncles in Kaia
+	fields["uncles"] = []common.Hash{}
+
+	return fields, nil
+}
+
 // rpcMarshalHeader marshal block header as Ethereum compatible format.
 // It returns error when fetching Author which is block proposer is failed.
 func (api *EthAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (map[string]interface{}, error) {
@@ -1238,35 +1267,7 @@ func (api *EthAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (map[str
 
 // rpcMarshalBlock marshal block as Ethereum compatible format
 func (api *EthAPI) rpcMarshalBlock(block *types.Block, inclMiner, inclTx, fullTx bool) (map[string]interface{}, error) {
-	fields, err := api.rpcMarshalHeader(block.Header(), inclMiner)
-	if err != nil {
-		return nil, err
-	}
-	fields["size"] = hexutil.Uint64(block.Size())
-
-	if inclTx {
-		formatTx := func(tx *types.Transaction) (interface{}, error) {
-			return tx.Hash(), nil
-		}
-		if fullTx {
-			formatTx = func(tx *types.Transaction) (interface{}, error) {
-				return newEthRPCTransactionFromBlockHash(block, tx.Hash(), api.kaiaBlockChainAPI.b.ChainConfig()), nil
-			}
-		}
-		txs := block.Transactions()
-		transactions := make([]interface{}, len(txs))
-		var err error
-		for i, tx := range txs {
-			if transactions[i], err = formatTx(tx); err != nil {
-				return nil, err
-			}
-		}
-		fields["transactions"] = transactions
-	}
-	// There is no uncles in Kaia
-	fields["uncles"] = []common.Hash{}
-
-	return fields, nil
+	return RpcMarshalEthBlock(block, api.kaiaAPI.b.Engine(), api.kaiaAPI.b.ChainConfig(), inclMiner, inclTx, fullTx)
 }
 
 func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) (*blockchain.ExecutionResult, error) {
