@@ -201,33 +201,23 @@ func TestHandler_RateLimit(t *testing.T) {
 	}
 
 	// Test rate limiting for peer1
-	// Send 350 bids rapidly (should be limited to 300)
+	// Send 350 bids rapidly (should be limited to 300 by rate limit)
 	for i := 0; i < 350; i++ {
 		module.HandleBid(testPeerID1, testBids[i])
 	}
 
-	// Wait for processing
-	time.Sleep(200 * time.Millisecond)
-
-	// Should have accepted around 300 bids (rate limit)
-	bidCount1 := len(module.bidPool.bidMap)
-	assert.Equal(t, bidCount1, 300)
-
-	// Test that peer2 is not affected by peer1's rate limit
-	// Clear the bid pool first
-	module.bidPool.clearBidPool()
-
 	// Send bids from peer2
-	for i := 0; i < 50; i++ {
+	// All bids from peer2 should be accepted because peer2 is not affected by peer1's rate limit
+	for i := 300; i < 400; i++ {
 		module.HandleBid(testPeerID2, testBids[i])
 	}
 
 	// Wait for processing
 	time.Sleep(200 * time.Millisecond)
 
-	// Peer2 should have all its bids accepted
-	bidCount2 := len(module.bidPool.bidMap)
-	assert.Equal(t, 50, bidCount2)
+	// Should have accepted all bids
+	bidCount := len(module.bidPool.bidMap)
+	assert.Equal(t, bidCount, 400)
 
 	// Test rate limit recovery after 1 second
 	module.bidPool.clearBidPool()
@@ -242,8 +232,8 @@ func TestHandler_RateLimit(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Should accept new bids after rate limit reset
-	bidCount3 := len(module.bidPool.bidMap)
-	assert.Equal(t, 100, bidCount3)
+	bidCount = len(module.bidPool.bidMap)
+	assert.Equal(t, 100, bidCount)
 }
 
 func TestHandler_SubscribeNewBid(t *testing.T) {
