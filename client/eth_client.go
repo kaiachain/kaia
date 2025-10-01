@@ -69,19 +69,19 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 
 // EthHeader represents a block header in the Ethereum blockchain.
 type EthHeader struct {
-	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
+	ParentHash  common.Hash    `gencodec:"required" json:"parentHash"`
+	UncleHash   common.Hash    `gencodec:"required" json:"sha3Uncles"`
 	Coinbase    common.Address `json:"miner"`
-	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
-	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	Bloom       types.Bloom    `json:"logsBloom"        gencodec:"required"`
-	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
-	Number      *big.Int       `json:"number"           gencodec:"required"`
-	GasLimit    uint64         `json:"gasLimit"         gencodec:"required"`
-	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
-	Time        uint64         `json:"timestamp"        gencodec:"required"`
-	Extra       []byte         `json:"extraData"        gencodec:"required"`
+	Root        common.Hash    `gencodec:"required" json:"stateRoot"`
+	TxHash      common.Hash    `gencodec:"required" json:"transactionsRoot"`
+	ReceiptHash common.Hash    `gencodec:"required" json:"receiptsRoot"`
+	Bloom       types.Bloom    `gencodec:"required" json:"logsBloom"`
+	Difficulty  *big.Int       `gencodec:"required" json:"difficulty"`
+	Number      *big.Int       `gencodec:"required" json:"number"`
+	GasLimit    uint64         `gencodec:"required" json:"gasLimit"`
+	GasUsed     uint64         `gencodec:"required" json:"gasUsed"`
+	Time        uint64         `gencodec:"required" json:"timestamp"`
+	Extra       []byte         `gencodec:"required" json:"extraData"`
 	MixDigest   common.Hash    `json:"mixHash"`
 	Nonce       BlockNonce     `json:"nonce"`
 
