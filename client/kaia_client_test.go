@@ -43,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
+	"github.com/stretchr/testify/assert"
 )
 
 // Verify that Client implements the Kaia interfaces.
@@ -854,4 +855,31 @@ func genMockHeader(number int) *types.Header {
 		BaseFee:     big.NewInt(25e9),
 	}
 	return header
+}
+
+func TestKaiaClient_AnvilServer(t *testing.T) {
+	serverURL, cleanup := launchAnvilServer(t)
+	defer cleanup()
+	client, err := DialContext(context.Background(), serverURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test if server actually responds with a simple call
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	if chainId, err := client.NetworkID(ctx); err != nil {
+		t.Log("anvil server is not responding:", err)
+		t.Skip("skip this test")
+		return
+	} else if chainId.Cmp(big.NewInt(1337)) != 0 {
+		t.Fatal("the server must have chain id 1337, but got", chainId)
+		return
+	}
+
+	t.Log("Eth client connected to anvil server", serverURL)
+
+	_, err = client.HeaderByNumber(context.Background(), big.NewInt(0))
+	assert.Equal(t, err.Error(), "Method not found")
 }
