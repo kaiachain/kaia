@@ -411,13 +411,13 @@ func (bp *BidPool) checkRateLimit(peerID string) bool {
 	limiter, exists := bp.peerRateLimiter[peerID]
 	if !exists {
 		// Create new rate limiter for this peer
-		// Allow burst equal to the rate limit
+		// Use burst equal to the rate limit (we only use rate limit, not the burst)
 		limiter = rate.NewLimiter(rate.Limit(bidsPerSecondPerPeer), bidsPerSecondPerPeer)
 		bp.peerRateLimiter[peerID] = limiter
 	}
 
-	// The Auctioneer will send bid to every CN in the network
-	// So we don't need to reserve a token and wait for it here, but just check if allowed
+	// It'll simply discard the bid if the rate limit is exceeded
+	// We don't need to reserve for a bid here because the original bid will be sent from auctioneer through different channel (see #api.SubmitBid)
 	return limiter.Allow()
 }
 
