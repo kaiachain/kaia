@@ -109,15 +109,15 @@ func (mr *MockAuctionModuleMockRecorder) GetMaxBundleTxsInQueue() *gomock.Call {
 }
 
 // HandleBid mocks base method.
-func (m *MockAuctionModule) HandleBid(arg0 *auction.Bid) {
+func (m *MockAuctionModule) HandleBid(arg0 string, arg1 *auction.Bid) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "HandleBid", arg0)
+	m.ctrl.Call(m, "HandleBid", arg0, arg1)
 }
 
 // HandleBid indicates an expected call of HandleBid.
-func (mr *MockAuctionModuleMockRecorder) HandleBid(arg0 interface{}) *gomock.Call {
+func (mr *MockAuctionModuleMockRecorder) HandleBid(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleBid", reflect.TypeOf((*MockAuctionModule)(nil).HandleBid), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleBid", reflect.TypeOf((*MockAuctionModule)(nil).HandleBid), arg0, arg1)
 }
 
 // IsBundleTx mocks base method.
@@ -158,30 +158,6 @@ func (m *MockAuctionModule) RegisterGaslessModule(arg0 gasless.GaslessModule) {
 func (mr *MockAuctionModuleMockRecorder) RegisterGaslessModule(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterGaslessModule", reflect.TypeOf((*MockAuctionModule)(nil).RegisterGaslessModule), arg0)
-}
-
-// RewindDelete mocks base method.
-func (m *MockAuctionModule) RewindDelete(arg0 common.Hash, arg1 uint64) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RewindDelete", arg0, arg1)
-}
-
-// RewindDelete indicates an expected call of RewindDelete.
-func (mr *MockAuctionModuleMockRecorder) RewindDelete(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RewindDelete", reflect.TypeOf((*MockAuctionModule)(nil).RewindDelete), arg0, arg1)
-}
-
-// RewindTo mocks base method.
-func (m *MockAuctionModule) RewindTo(arg0 *types.Block) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RewindTo", arg0)
-}
-
-// RewindTo indicates an expected call of RewindTo.
-func (mr *MockAuctionModuleMockRecorder) RewindTo(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RewindTo", reflect.TypeOf((*MockAuctionModule)(nil).RewindTo), arg0)
 }
 
 // Start mocks base method.

@@ -31,13 +31,17 @@ import (
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/params"
 	"github.com/rcrowley/go-metrics"
+	"golang.org/x/time/rate"
 )
 
 const (
-	bidChSize        = 100
+	bidChSize        = 2048
 	allowFutureBlock = 2
 
 	BidTxMaxCallGasLimit = uint64(10_000_000)
+
+	// Rate limiting
+	bidsPerSecondPerPeer = 300 // Max bids per second per peer
 )
 
 var numBidsGauge = metrics.NewRegisteredGauge("kaiax/auction/bidpool/num/bids", nil)
@@ -56,6 +60,10 @@ type BidPool struct {
 	bidTargetMap map[uint64]map[common.Hash]*auction.Bid   // (blockNum, targetTxHash) -> Bid
 	bidWinnerMap map[uint64]map[common.Address]common.Hash // (blockNum, sender) -> bidHash
 
+	// Rate limiting per peer
+	peerRateLimiterMu sync.RWMutex
+	peerRateLimiter   map[string]*rate.Limiter // peerID -> rate limiter
+
 	bidMsgCh   chan *auction.Bid
 	newBidCh   chan *auction.Bid
 	newBidFeed event.Feed
@@ -73,16 +81,17 @@ func NewBidPool(chainConfig *params.ChainConfig, chain backends.BlockChainForCal
 	}
 
 	bp := &BidPool{
-		ChainConfig:    chainConfig,
-		Chain:          chain,
-		bidMap:         make(map[common.Hash]*auction.Bid),
-		bidTargetMap:   make(map[uint64]map[common.Hash]*auction.Bid),
-		bidWinnerMap:   make(map[uint64]map[common.Address]common.Hash),
-		bidMsgCh:       make(chan *auction.Bid, bidChSize),
-		newBidCh:       make(chan *auction.Bid, bidChSize),
-		maxBidPoolSize: auctionConfig.MaxBidPoolSize,
-		running:        0, // not running yet
-		stopped:        0, // not stopped
+		ChainConfig:     chainConfig,
+		Chain:           chain,
+		bidMap:          make(map[common.Hash]*auction.Bid),
+		bidTargetMap:    make(map[uint64]map[common.Hash]*auction.Bid),
+		bidWinnerMap:    make(map[uint64]map[common.Address]common.Hash),
+		peerRateLimiter: make(map[string]*rate.Limiter),
+		bidMsgCh:        make(chan *auction.Bid, bidChSize),
+		newBidCh:        make(chan *auction.Bid, bidChSize),
+		maxBidPoolSize:  auctionConfig.MaxBidPoolSize,
+		running:         0, // not running yet
+		stopped:         0, // not stopped
 	}
 
 	return bp
@@ -380,11 +389,36 @@ func (bp *BidPool) validateBidSigs(bid *auction.Bid) error {
 	return nil
 }
 
-func (bp *BidPool) HandleBid(bid *auction.Bid) {
+func (bp *BidPool) HandleBid(peerID string, bid *auction.Bid) {
 	if atomic.LoadUint32(&bp.running) == 0 || bid == nil {
 		return
 	}
+
+	// Check rate limit for this peer
+	if !bp.checkRateLimit(peerID) {
+		logger.Trace("Rate limit exceeded for peer", "peerID", peerID)
+		return
+	}
+
 	bp.bidMsgCh <- bid
+}
+
+// checkRateLimit checks if the peer is within rate limit
+func (bp *BidPool) checkRateLimit(peerID string) bool {
+	bp.peerRateLimiterMu.Lock()
+	defer bp.peerRateLimiterMu.Unlock()
+
+	limiter, exists := bp.peerRateLimiter[peerID]
+	if !exists {
+		// Create new rate limiter for this peer
+		// Use burst equal to the rate limit (we only use rate limit, not the burst)
+		limiter = rate.NewLimiter(rate.Limit(bidsPerSecondPerPeer), bidsPerSecondPerPeer)
+		bp.peerRateLimiter[peerID] = limiter
+	}
+
+	// It'll simply discard the bid if the rate limit is exceeded
+	// We don't need to reserve for a bid here because the original bid will be sent from auctioneer through different channel (see #api.SubmitBid)
+	return limiter.Allow()
 }
 
 func (bp *BidPool) handleBidMsg() {
