@@ -208,6 +208,8 @@ const (
 	ZeroBaseFee uint64 = 0
 
 	HistoryServeWindow = 8192 // Number of blocks to serve historical block hashes for, EIP-2935.
+
+	MaxBlockSize = 8_388_608 // maximum size of an RLP-encoded block
 )
 
 const (

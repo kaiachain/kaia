@@ -55,6 +55,10 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain, engin
 // header's transaction. The headers are assumed to be already
 // validated at this point.
 func (v *BlockValidator) ValidateBody(block *types.Block) error {
+	// check EIP 7934 RLP-encoded block size cap
+	if v.config.IsOsakaForkEnabled(block.Number()) && block.Size() > params.MaxBlockSize {
+		return ErrBlockOversized
+	}
 	// Check whether the block's known, and if not, that it's linkable
 	if v.bc.HasBlockAndState(block.Hash(), block.NumberU64()) {
 		return ErrKnownBlock
