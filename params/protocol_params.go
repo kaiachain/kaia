@@ -209,7 +209,9 @@ const (
 
 	HistoryServeWindow = 8192 // Number of blocks to serve historical block hashes for, EIP-2935.
 
-	MaxBlockSize = 8_388_608 // maximum size of an RLP-encoded block
+	// XXX Kaia is based on 12 MiB, so 12 MiB - 2 MiB = 10 MiB
+	// See: https://github.com/kaiachain/kaia/blob/cf530ad3d5443e88d047e18a0e2651891916e1c3/node/cn/protocol.go#L49
+	MaxBlockSize = 10_485_760 // maximum size of an RLP-encoded block
 )
 
 const (
