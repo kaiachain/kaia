@@ -287,6 +287,7 @@ contract AuctionDepositVault is IAuctionDepositVault, AuctionError, Ownable {
                 ? totalAddresses
                 : start + limit;
         }
+        if (start >= end) revert InvalidRange();
 
         searchers = new address[](end - start);
         for (uint256 i = start; i < end; i++) {
@@ -322,6 +323,7 @@ contract AuctionDepositVault is IAuctionDepositVault, AuctionError, Ownable {
                 ? totalAddresses
                 : start + limit;
         }
+        if (start >= end) revert InvalidRange();
 
         INonce entryPoint = INonce(_getAuctionEntryPointAddress());
 

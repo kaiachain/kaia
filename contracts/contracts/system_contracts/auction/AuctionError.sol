@@ -25,6 +25,7 @@ contract AuctionError {
     }
 
     error ZeroAddress();
+    error InvalidRange();
 
     error OnlyProposer();
     error EmptyDepositVault();
