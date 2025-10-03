@@ -89,7 +89,7 @@ func init() {
 		hashes[i] = blocks[i].Hash()
 	}
 
-	signer := types.MakeSigner(params.BFTTestChainConfig, big.NewInt(2019))
+	signer := types.MakeSigner(params.TestChainConfig, big.NewInt(2019))
 	tx1 = types.NewTransaction(111, addrs[0], big.NewInt(111), 111, big.NewInt(111), addrs[0][:])
 
 	tx1.Sign(signer, keys[0])

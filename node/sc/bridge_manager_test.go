@@ -1684,7 +1684,7 @@ func generateAnchoringEnv(t *testing.T, tempDir string) (*backends.SimulatedBack
 		feePayer.Address:       {Balance: initBal},
 		parentOperator.address: {Balance: initBal},
 	}
-	sim := backends.NewSimulatedBackendWithGasPrice(alloc, params.DefaultUnitPrice)
+	sim := backends.NewSimulatedBackend(alloc)
 
 	sc := &SubBridge{
 		config:         config,

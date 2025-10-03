@@ -134,40 +134,69 @@ var (
 		UnitPrice: 25000000000,
 	}
 
-	TestChainConfig = &ChainConfig{
-		ChainID:                  big.NewInt(1),
-		IstanbulCompatibleBlock:  big.NewInt(0),
-		LondonCompatibleBlock:    big.NewInt(0),
-		EthTxTypeCompatibleBlock: big.NewInt(0),
-		MagmaCompatibleBlock:     big.NewInt(0),
-		KoreCompatibleBlock:      big.NewInt(0),
-		ShanghaiCompatibleBlock:  big.NewInt(0),
-		CancunCompatibleBlock:    big.NewInt(0),
-		KaiaCompatibleBlock:      big.NewInt(0),
-		Istanbul:                 nil,
-		UnitPrice:                1, // NOTE-Kaia Use 1 for testing
-		DeriveShaImpl:            0,
-		Governance: &GovernanceConfig{
-			KIP71: &KIP71Config{
-				LowerBoundBaseFee:         0,
-				UpperBoundBaseFee:         750000000000,
-				GasTarget:                 15000000,
-				BaseFeeDenominator:        20,
-				MaxBlockGasUsedForBaseFee: 84000000,
-			},
-			Reward: &RewardConfig{
-				DeferredTxFee: false,
-			},
-		},
-	}
-	TestRules = TestChainConfig.Rules(new(big.Int))
-
-	// istanbul BFT
-	BFTTestChainConfig = &ChainConfig{
-		ChainID:  big.NewInt(1),
-		Istanbul: nil,
-	}
+	TestChainConfig = TestKaiaConfig("kaia")
 )
+
+func TestKaiaConfig(maxHardfork string) *ChainConfig {
+	// Create a custom governance config with lower/upper bound base fee as 1 for testing
+	testGovConfig := GetDefaultGovernanceConfig()
+	testGovConfig.KIP71.LowerBoundBaseFee = 0
+	testGovConfig.KIP71.UpperBoundBaseFee = 1
+
+	chainConfig := &ChainConfig{
+		ChainID:                 big.NewInt(1),
+		IstanbulCompatibleBlock: big.NewInt(0),
+		Istanbul: &IstanbulConfig{
+			Epoch:          DefaultEpoch,
+			ProposerPolicy: WeightedRandom,
+			SubGroupSize:   DefaultSubGroupSize,
+		},
+		UnitPrice:     1, // NOTE-Kaia Use 1 for testing
+		DeriveShaImpl: 0,
+		Governance:    testGovConfig,
+	}
+	if maxHardfork == "istanbul" {
+		return chainConfig
+	}
+	chainConfig.LondonCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "london" {
+		return chainConfig
+	}
+	chainConfig.EthTxTypeCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "ethTxType" {
+		return chainConfig
+	}
+	chainConfig.MagmaCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "magma" {
+		return chainConfig
+	}
+	chainConfig.KoreCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "kore" {
+		return chainConfig
+	}
+	chainConfig.ShanghaiCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "shanghai" {
+		return chainConfig
+	}
+	chainConfig.CancunCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "cancun" {
+		return chainConfig
+	}
+	chainConfig.KaiaCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "kaia" {
+		return chainConfig
+	}
+	chainConfig.PragueCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "prague" {
+		return chainConfig
+	}
+	chainConfig.RandaoCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "randao" {
+		return chainConfig
+	}
+
+	return chainConfig
+}
 
 // VMLogTarget sets the output target of vmlog.
 // The values below can be OR'ed.

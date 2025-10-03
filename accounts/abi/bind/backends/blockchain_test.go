@@ -204,23 +204,16 @@ func TestBlockchainPendingCodeAt(t *testing.T) {
 }
 
 func TestBlockChainSuggestGasPrice(t *testing.T) {
-	bc := newTestBlockchain()
+	config := params.TestKaiaConfig("ethTxType")
+	bc := newTestBlockchainWithConfig(config)
 	c := NewBlockchainContractBackend(bc, nil, nil)
 
 	// Normal case
 	gasPrice, err := c.SuggestGasPrice(context.Background())
 	assert.Nil(t, err)
-	assert.Equal(t, params.TestChainConfig.UnitPrice, gasPrice.Uint64())
+	assert.Equal(t, config.UnitPrice, gasPrice.Uint64())
 
-	config := params.TestChainConfig.Copy()
-	config.IstanbulCompatibleBlock = common.Big0
-	config.LondonCompatibleBlock = common.Big0
-	config.EthTxTypeCompatibleBlock = common.Big0
-	config.MagmaCompatibleBlock = common.Big0
-	config.KoreCompatibleBlock = common.Big0
-	config.Governance = params.GetDefaultGovernanceConfig()
-	config.Governance.KIP71.LowerBoundBaseFee = 0
-	bc = newTestBlockchainWithConfig(config)
+	bc = newTestBlockchain()
 	c = NewBlockchainContractBackend(bc, nil, nil)
 
 	// Normal case

@@ -55,12 +55,6 @@ var (
 	// testTxPoolConfig is a transaction pool configuration without stateful disk
 	// sideeffects used during testing.
 	testTxPoolConfig TxPoolConfig
-
-	// eip1559Config is a chain config with EIP-1559 enabled at block 0.
-	eip1559Config *params.ChainConfig
-
-	// kip71Config is a chain config with Magma enabled at block 0.
-	kip71Config *params.ChainConfig
 )
 
 type dummyGovModule struct {
@@ -75,20 +69,8 @@ func init() {
 	testTxPoolConfig = DefaultTxPoolConfig
 	testTxPoolConfig.Journal = ""
 
-	eip1559Config = params.TestChainConfig.Copy()
-	eip1559Config.IstanbulCompatibleBlock = common.Big0
-	eip1559Config.LondonCompatibleBlock = common.Big0
-	eip1559Config.EthTxTypeCompatibleBlock = common.Big0
-	fork.SetHardForkBlockNumberConfig(eip1559Config)
-
-	kip71Config = params.TestChainConfig.Copy()
-	kip71Config.MagmaCompatibleBlock = common.Big0
-	kip71Config.IstanbulCompatibleBlock = common.Big0
-	kip71Config.LondonCompatibleBlock = common.Big0
-	kip71Config.EthTxTypeCompatibleBlock = common.Big0
-	kip71Config.Governance = &params.GovernanceConfig{KIP71: params.GetDefaultKIP71Config()}
-
-	InitDeriveSha(params.TestChainConfig)
+	fork.SetHardForkBlockNumberConfig(params.TestChainConfig.Copy())
+	InitDeriveSha(params.TestChainConfig.Copy())
 }
 
 type testBlockChain struct {
@@ -246,6 +228,7 @@ func setupTxPoolWithConfig(config *params.ChainConfig) (*TxPool, *ecdsa.PrivateK
 	blockchain := &testBlockChain{statedb, 10000000, new(event.Feed)}
 
 	key, _ := crypto.GenerateKey()
+	statedb.SetBalance(crypto.PubkeyToAddress(key.PublicKey), new(big.Int).SetUint64(params.KAIA))
 	pool := NewTxPool(testTxPoolConfig, config, blockchain, &dummyGovModule{chainConfig: config})
 
 	return pool, key
@@ -420,7 +403,7 @@ func TestHomesteadTransaction(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, _ := setupTxPoolWithConfig(kip71Config)
+	pool, _ := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -442,9 +425,10 @@ func TestHomesteadTransaction(t *testing.T) {
 func TestInvalidTransactions(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPool()
+	pool, _ := setupTxPool()
 	defer pool.Stop()
 
+	key, _ := crypto.GenerateKey()
 	tx := transaction(0, 100, key)
 	from, _ := deriveSender(tx)
 
@@ -471,10 +455,10 @@ func TestInvalidTransactions(t *testing.T) {
 
 	// NOTE-Kaia We only accept txs with an expected gas price only
 	// regardless of local or remote.
-	if err := pool.AddRemote(tx); err != ErrInvalidUnitPrice {
+	if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
 		t.Error("expected", ErrInvalidUnitPrice, "got", err)
 	}
-	if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
+	if err := pool.AddLocal(tx); err != ErrGasPriceBelowBaseFee {
 		t.Error("expected", ErrInvalidUnitPrice, "got", err)
 	}
 }
@@ -482,7 +466,8 @@ func TestInvalidTransactions(t *testing.T) {
 func TestInvalidTransactionsMagma(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, _ := setupTxPool()
+	key, _ := crypto.GenerateKey()
 	pool.SetBaseFee(big.NewInt(1))
 	defer pool.Stop()
 
@@ -538,7 +523,7 @@ func genAnchorTx(nonce uint64) *types.Transaction {
 
 	tx, _ := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values)
 
-	signer := types.MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	signer := types.MakeSigner(params.TestChainConfig, big.NewInt(2))
 	tx.Sign(signer, key)
 
 	return tx
@@ -781,9 +766,10 @@ func TestTransactionDropping(t *testing.T) {
 	t.Parallel()
 
 	// Create a test account and fund it
-	pool, key := setupTxPool()
+	pool, _ := setupTxPool()
 	defer pool.Stop()
 
+	key, _ := crypto.GenerateKey()
 	account := crypto.PubkeyToAddress(key.PublicKey)
 	testAddBalance(pool, account, big.NewInt(1000))
 
@@ -860,7 +846,7 @@ func TestTransactionPostponing(t *testing.T) {
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
-	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
 	defer pool.Stop()
 
 	// Create two test accounts to produce different gap profiles with
@@ -1079,7 +1065,7 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 	config.NoLocals = nolocals
 	config.NonExecSlotsAll = config.NonExecSlotsAccount*3 - 1 // reduce the queue limits to shorten test time (-1 to make it non divisible)
 
-	pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+	pool := NewTxPool(config, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
 	defer pool.Stop()
 
 	// Create a number of test accounts and fund them (last one will be the local)
@@ -1181,7 +1167,7 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 	config.NoLocals = nolocals
 	config.KeepLocals = keepLocals
 
-	pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+	pool := NewTxPool(config, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
 	defer pool.Stop()
 
 	// Create two test accounts to ensure remotes expire but locals do not
@@ -1344,7 +1330,7 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 	config := testTxPoolConfig
 	config.ExecSlotsAll = config.ExecSlotsAccount * 10
 
-	pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+	pool := NewTxPool(config, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
 	defer pool.Stop()
 
 	// Create a number of test accounts and fund them
@@ -1456,7 +1442,7 @@ func TestTransactionCapClearsFromAll(t *testing.T) {
 	config.NonExecSlotsAccount = 2
 	config.ExecSlotsAll = 8
 
-	pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+	pool := NewTxPool(config, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
 	defer pool.Stop()
 
 	// Create a number of test accounts and fund them
@@ -1488,7 +1474,7 @@ func TestTransactionPendingMinimumAllowance(t *testing.T) {
 	config := testTxPoolConfig
 	config.ExecSlotsAll = 0
 
-	pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+	pool := NewTxPool(config, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
 	defer pool.Stop()
 
 	// Create a number of test accounts and fund them
@@ -1988,10 +1974,9 @@ func TestSetCodeTransactions(t *testing.T) {
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
-	eip7600Config := kip71Config.Copy()
-	eip7600Config.PragueCompatibleBlock = common.Big0
+	testChainConfig := params.TestKaiaConfig("prague")
 
-	pool := NewTxPool(testTxPoolConfig, eip7600Config, blockchain, &dummyGovModule{chainConfig: eip7600Config})
+	pool := NewTxPool(testTxPoolConfig, testChainConfig, blockchain, &dummyGovModule{chainConfig: testChainConfig})
 	defer pool.Stop()
 
 	// Create the test accounts
@@ -2447,7 +2432,7 @@ func TestTransactionStatusCheck(t *testing.T) {
 func TestDynamicFeeTransactionVeryHighValues(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 
 	veryBigNumber := big.NewInt(1)
@@ -2467,10 +2452,8 @@ func TestDynamicFeeTransactionVeryHighValues(t *testing.T) {
 func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPoolWithConfig(params.TestKaiaConfig("ethTxType"))
 	defer pool.Stop()
-
-	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
 
 	// Ensure gasFeeCap is greater than or equal to gasTipCap.
 	tx := dynamicFeeTx(0, 100, big.NewInt(1), big.NewInt(2), key)
@@ -2488,7 +2471,7 @@ func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
 func TestDynamicFeeTransactionAccepted(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 
 	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(1000000))
@@ -2508,7 +2491,8 @@ func TestDynamicFeeTransactionAccepted(t *testing.T) {
 func TestDynamicFeeTransactionNotAcceptedNotEnableHardfork(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPool()
+	pool, key := setupTxPoolWithConfig(params.TestKaiaConfig("london"))
+	defer pool.Stop()
 
 	tx := dynamicFeeTx(0, 21000, big.NewInt(1), big.NewInt(1), key)
 	if err := pool.AddRemote(tx); err != ErrTxTypeNotSupported {
@@ -2524,7 +2508,7 @@ func TestDynamicFeeTransactionAcceptedEip1559(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 	pool.SetGasPrice(baseFee)
 
@@ -2551,7 +2535,7 @@ func TestDynamicFeeTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2580,7 +2564,7 @@ func TestTransactionAcceptedEip1559(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2604,7 +2588,7 @@ func TestTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2627,7 +2611,7 @@ func TestCancelTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2667,7 +2651,7 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2684,7 +2668,7 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 
 	baseFee := big.NewInt(30)
@@ -2703,7 +2687,7 @@ func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 func TestTransactionsPromoteFull(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
@@ -2738,7 +2722,7 @@ func TestTransactionsPromoteFull(t *testing.T) {
 func TestTransactionsPromotePartial(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
@@ -2783,7 +2767,7 @@ func TestTransactionsPromotePartial(t *testing.T) {
 func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 	t.Parallel()
 
-	pool, _ := setupTxPoolWithConfig(kip71Config)
+	pool, _ := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(big.NewInt(10))
 
@@ -2841,7 +2825,7 @@ func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 	t.Parallel()
 
-	pool, _ := setupTxPoolWithConfig(kip71Config)
+	pool, _ := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(big.NewInt(10))
 
@@ -2915,7 +2899,8 @@ func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 func TestFeeDelegatedTransaction(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPool()
+	pool, _ := setupTxPool()
+	key, _ := crypto.GenerateKey()
 	senderKey, _ := crypto.GenerateKey()
 	feePayerKey, _ := crypto.GenerateKey()
 	defer pool.Stop()
@@ -2950,7 +2935,8 @@ func TestFeeDelegatedTransaction(t *testing.T) {
 func TestFeeDelegatedWithRatioTransaction(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPool()
+	pool, _ := setupTxPool()
+	key, _ := crypto.GenerateKey()
 	senderKey, _ := crypto.GenerateKey()
 	feePayerKey, _ := crypto.GenerateKey()
 	defer pool.Stop()
