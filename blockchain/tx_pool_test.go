@@ -1156,14 +1156,14 @@ func TestTransactionQueueTimeLimitingNoLocalsNoKeepLocals(t *testing.T) {
 func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 	// Reduce the eviction interval to a testable amount
 	defer func(old time.Duration) { evictionInterval = old }(evictionInterval)
-	evictionInterval = time.Second
+	evictionInterval = 100 * time.Millisecond
 
 	// Create the pool to test the non-expiration enforcement
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
-	config.Lifetime = 5 * time.Second
+	config.Lifetime = 500 * time.Millisecond
 	config.NoLocals = nolocals
 	config.KeepLocals = keepLocals
 
@@ -1195,7 +1195,7 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 		t.Fatalf("pool internal state corrupted: %v", err)
 	}
 
-	time.Sleep(2 * evictionInterval)
+	time.Sleep(3 * evictionInterval)
 
 	// Wait a bit for eviction, but queued transactions must remain.
 	pending, queued = pool.Stats()
@@ -1203,7 +1203,7 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 	assert.Equal(t, queued, 2)
 
 	// Wait a bit for eviction to run and clean up any leftovers, and ensure only the local remains
-	time.Sleep(2 * config.Lifetime)
+	time.Sleep(config.Lifetime + 200*time.Millisecond)
 
 	pending, queued = pool.Stats()
 	assert.Equal(t, pending, 0)
