@@ -54,12 +54,12 @@ var (
 	testSearcher2         = crypto.PubkeyToAddress(testSearcher2Key.PublicKey)
 	testSearcher3         = crypto.PubkeyToAddress(testSearcher3Key.PublicKey)
 
-	testBids = make([]*auction.Bid, 6)
+	testBids = make([]*auction.Bid, 7)
 )
 
 func init() {
 	// Initialize bids for each searcher
-	for i, key := range []*ecdsa.PrivateKey{testSearcher1Key, testSearcher2Key, testSearcher3Key, testSearcher1Key, testSearcher1Key, testSearcher1Key} {
+	for i, key := range []*ecdsa.PrivateKey{testSearcher1Key, testSearcher2Key, testSearcher3Key, testSearcher1Key, testSearcher1Key, testSearcher1Key, testSearcher1Key} {
 		bid := &auction.Bid{}
 		initBaseBid(bid, i, 3)
 
@@ -68,6 +68,9 @@ func init() {
 		}
 		if i == 5 {
 			bid.CallGasLimit = 15_000_000
+		}
+		if i == 6 {
+			bid.Data = make([]byte, 16*1024+1)
 		}
 
 		// Set searcher address
@@ -254,6 +257,32 @@ func TestBidPool_AddBid_MaxBidPoolSize(t *testing.T) {
 	// Test adding bid when bid pool is full
 	_, err = pool.AddBid(testBids[1])
 	assert.Equal(t, auction.ErrBidPoolFull, err)
+}
+
+func TestBidPool_AddBid_ExceedMaxDataSize(t *testing.T) {
+	var (
+		mockCtrl = gomock.NewController(t)
+		chain    = chain_mock.NewMockBlockChain(mockCtrl)
+		block1   = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+	)
+	defer mockCtrl.Finish()
+
+	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
+	require.NotNil(t, pool)
+
+	chain.EXPECT().CurrentBlock().Return(block1).Times(1)
+
+	// Start the auction
+	pool.start()
+	atomic.StoreUint32(&pool.running, 1)
+	defer pool.stop()
+	pool.auctioneer = testAuctioneer
+	pool.auctionEntryPoint = testAuctionEntryPoint
+
+	// Test bid with data size exceed max data size
+	bid := testBids[6]
+	_, err := pool.AddBid(bid)
+	assert.Equal(t, auction.ErrExceedMaxDataSize, err)
 }
 
 func TestBidPool_AddBid_ExceedMaxGasLimit(t *testing.T) {

@@ -39,6 +39,7 @@ const (
 	allowFutureBlock = 2
 
 	BidTxMaxCallGasLimit = uint64(10_000_000)
+	BidTxMaxDataSize     = uint64(16 * 1024) // 16KB
 
 	// Rate limiting
 	bidsPerSecondPerPeer = 300 // Max bids per second per peer
@@ -352,12 +353,17 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 		return auction.ErrZeroBid
 	}
 
-	// 4. The gas limit must be less than the maximum limit.
+	// 4. The data size must be less than the maximum limit.
+	if uint64(len(bid.Data)) > BidTxMaxDataSize {
+		return auction.ErrExceedMaxDataSize
+	}
+
+	// 5. The gas limit must be less than the maximum limit.
 	if bid.CallGasLimit > BidTxMaxCallGasLimit {
 		return auction.ErrExceedMaxCallGasLimit
 	}
 
-	// 5. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
+	// 6. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
 	if err := bp.validateBidSigs(bid); err != nil {
 		return err
 	}

@@ -351,6 +351,21 @@ describe("AuctionEntryPoint", () => {
 
       await expect(auctionEntryPoint.connect(coinbase).call(auctionTx2)).to.be
         .reverted;
+
+      const { auctionTx: auctionTx3 } = await generateAuctionTx(
+        auctionEntryPoint.address,
+        user1,
+        deployer,
+        testReceiver.address,
+        "0x" + "ff".repeat(16 * 1024) + "ff", // 16KB + 1 byte
+        (await nowBlock()) + 1,
+        10_000_000,
+        toPeb(10n),
+        0
+      );
+
+      await expect(auctionEntryPoint.connect(coinbase).call(auctionTx3)).to.be
+        .reverted;
     });
     it("#call: should take bid and gas reimbursement if failed to call the target", async () => {
       const {

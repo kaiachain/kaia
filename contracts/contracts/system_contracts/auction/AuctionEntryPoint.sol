@@ -46,6 +46,8 @@ contract AuctionEntryPoint is
     string public constant AUCTION_NAME = "KAIA_AUCTION";
     string public constant AUCTION_VERSION = "0.0.1";
 
+    uint256 public constant MAX_DATA_SIZE = 16 * 1024; // 16KB
+
     /* ========== STATE VARIABLES ========== */
 
     IAuctionDepositVault public depositVault;
@@ -222,7 +224,12 @@ contract AuctionEntryPoint is
             return false;
         }
 
-        /// 3. Check if the auctioneer signature is valid
+        /// 3. Check if the data size is less than the maximum limit
+        if (auctionTx.data.length > MAX_DATA_SIZE) {
+            return false;
+        }
+
+        /// 4. Check if the auctioneer signature is valid
         bytes32 digest = MessageHashUtils.toEthSignedMessageHash(
             auctionTx.searcherSig
         );
@@ -233,7 +240,7 @@ contract AuctionEntryPoint is
             return false;
         }
 
-        /// 4. Check if the searcher signature is valid
+        /// 5. Check if the searcher signature is valid
         bytes32 structHash = _getAuctionTxHash(auctionTx);
         // Compute the final digest
         digest = _hashTypedDataV4(structHash);
