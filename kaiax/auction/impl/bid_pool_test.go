@@ -236,7 +236,7 @@ func TestBidPool_AddBid_MaxBidPoolSize(t *testing.T) {
 	pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1})
 	require.NotNil(t, pool)
 
-	chain.EXPECT().CurrentBlock().Return(block1).Times(1)
+	chain.EXPECT().CurrentBlock().Return(block1).Times(2)
 
 	// Start the auction
 	pool.start()

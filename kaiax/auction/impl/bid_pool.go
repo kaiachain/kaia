@@ -284,6 +284,11 @@ func (bp *BidPool) insertBid(bid *auction.Bid) error {
 		logger.Trace("Replace bid", "old", existingBid.Hash(), "new", bid.Hash())
 		delete(bp.bidMap, existingBid.Hash())
 		delete(bp.bidWinnerMap[blockNumber], existingBid.Sender)
+	} else {
+		if int64(len(bp.bidMap)) >= bp.maxBidPoolSize {
+			logger.Info("Bid pool is full", "maxBidPoolSize", bp.maxBidPoolSize, "bid", bid.Hash())
+			return auction.ErrBidPoolFull
+		}
 	}
 
 	hash := bid.Hash()
@@ -315,11 +320,6 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 	sender := bid.Sender
 
 	bp.bidMu.RLock()
-	if int64(len(bp.bidMap)) >= bp.maxBidPoolSize {
-		logger.Info("Bid pool is full", "maxBidPoolSize", bp.maxBidPoolSize, "bid", bid.Hash())
-		bp.bidMu.RUnlock()
-		return auction.ErrBidPoolFull
-	}
 
 	// Check if the auction tx is already in the pool.
 	if _, ok := bp.bidMap[bid.Hash()]; ok {
