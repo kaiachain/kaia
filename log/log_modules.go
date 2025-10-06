@@ -85,6 +85,8 @@ const (
 	Common
 
 	// 21~30
+	ConsensusClique // deprecated
+	ConsensusGxhash // deprecated
 	ConsensusIstanbul
 	ConsensusIstanbulBackend
 	ConsensusIstanbulCore
@@ -171,6 +173,8 @@ var moduleNames = [ModuleNameLen]string{
 	"common",
 
 	// 21~30
+	"consensus/clique", // deprecated
+	"consensus/gxhash", // deprecated
 	"consensus/istanbul",
 	"consensus/istanbul/backend",
 	"consensus/istanbul/core",
