@@ -147,7 +147,6 @@ func (f *Faker) VerifyHeaders(chain consensus.ChainReader, headers []*types.Head
 }
 
 // verifyHeaderWorker is a helper for batch header verification.
-// Similar to gxhash, it checks if previous headers in the batch can serve as parents.
 func (f *Faker) verifyHeaderWorker(chain consensus.ChainReader, headers []*types.Header, seals []bool, index int) error {
 	header := headers[index]
 	number := header.Number.Uint64()
