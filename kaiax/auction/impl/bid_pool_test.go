@@ -70,7 +70,7 @@ func init() {
 			bid.CallGasLimit = 15_000_000
 		}
 		if i == 6 {
-			bid.Data = make([]byte, 16*1024+1)
+			bid.Data = make([]byte, 64*1024+1)
 		}
 
 		// Set searcher address

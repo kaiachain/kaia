@@ -39,7 +39,7 @@ const (
 	allowFutureBlock = 2
 
 	BidTxMaxCallGasLimit = uint64(10_000_000)
-	BidTxMaxDataSize     = uint64(16 * 1024) // 16KB
+	BidTxMaxDataSize     = uint64(64 * 1024) // 64KB
 
 	// Rate limiting
 	bidsPerSecondPerPeer = 300 // Max bids per second per peer

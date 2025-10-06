@@ -46,7 +46,7 @@ contract AuctionEntryPoint is
     string public constant AUCTION_NAME = "KAIA_AUCTION";
     string public constant AUCTION_VERSION = "0.0.1";
 
-    uint256 public constant MAX_DATA_SIZE = 16 * 1024; // 16KB
+    uint256 public constant MAX_DATA_SIZE = 64 * 1024; // 64KB
 
     /* ========== STATE VARIABLES ========== */
 
@@ -56,7 +56,7 @@ contract AuctionEntryPoint is
     uint256 public gasPerByteIntrinsic = 16; // Base gas cost per byte of msg.data (approximated from 16 gas per non-zero byte + 4 gas per zero byte)
     uint256 public gasPerByteEip7623 = 40; // Minimum gas cost per byte of msg.data under EIP-7623 (approximated from 40 gas per non-zero byte + 10 gas per zero byte)
     uint256 public gasContractExecution = 21_000; // Default transaction gas cost
-    uint256 public gasBufferEstimate = 180_000; // Buffer for gas calculation except for the main call
+    uint256 public gasBufferEstimate = 200_000; // Buffer for gas calculation except for the main call
     uint256 public gasBufferUnmeasured = 35_000; // Buffer for gas calculation that `gasleft()` can't capture after the main call
 
     /* ========== MODIFIER ========== */
