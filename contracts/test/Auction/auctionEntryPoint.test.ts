@@ -77,8 +77,10 @@ describe("AuctionEntryPoint", () => {
       expect(await auctionEntryPoint.gasPerByteIntrinsic()).to.equal(16);
       expect(await auctionEntryPoint.gasPerByteEip7623()).to.equal(40);
       expect(await auctionEntryPoint.gasContractExecution()).to.equal(21_000);
-      expect(await auctionEntryPoint.gasBufferEstimate()).to.equal(180_000);
+      expect(await auctionEntryPoint.gasBufferEstimate()).to.equal(200_000);
       expect(await auctionEntryPoint.gasBufferUnmeasured()).to.equal(35_000);
+
+      expect(await auctionEntryPoint.MAX_DATA_SIZE()).to.equal(64 * 1024);
     });
     it("Check initialize", async () => {
       const { auctionEntryPoint, deployer, auctionDepositVault } =
@@ -350,6 +352,21 @@ describe("AuctionEntryPoint", () => {
       auctionTx2.searcherSig = "0x";
 
       await expect(auctionEntryPoint.connect(coinbase).call(auctionTx2)).to.be
+        .reverted;
+
+      const { auctionTx: auctionTx3 } = await generateAuctionTx(
+        auctionEntryPoint.address,
+        user1,
+        deployer,
+        testReceiver.address,
+        "0x" + "ff".repeat(64 * 1024) + "ff", // 64KB + 1 byte
+        (await nowBlock()) + 1,
+        10_000_000,
+        toPeb(10n),
+        0
+      );
+
+      await expect(auctionEntryPoint.connect(coinbase).call(auctionTx3)).to.be
         .reverted;
     });
     it("#call: should take bid and gas reimbursement if failed to call the target", async () => {
