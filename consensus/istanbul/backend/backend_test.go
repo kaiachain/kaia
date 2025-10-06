@@ -56,8 +56,14 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 	configItems = append(configItems, epoch(3))
 	configItems = append(configItems, governanceMode("single"))
 	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(4000000)))
-	configItems = append(configItems, lowerBoundBaseFee(2))
-	configItems = append(configItems, upperBoundBaseFee(10))
+	configItems = append(configItems, istanbulCompatibleBlock(big.NewInt(5)))
+	configItems = append(configItems, LondonCompatibleBlock(nil))
+	configItems = append(configItems, EthTxTypeCompatibleBlock(nil))
+	configItems = append(configItems, magmaCompatibleBlock(nil))
+	configItems = append(configItems, koreCompatibleBlock(nil))
+	configItems = append(configItems, shanghaiCompatibleBlock(nil))
+	configItems = append(configItems, cancunCompatibleBlock(nil))
+	configItems = append(configItems, kaiaCompatibleBlock(nil))
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	configItems = append(configItems, mStaking)
 
