@@ -477,6 +477,14 @@ func TestInvalidTransactions(t *testing.T) {
 	if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
 		t.Error("expected", ErrInvalidUnitPrice, "got", err)
 	}
+
+	// Test EIP-2681 nonce max value check
+	testSetNonce(pool, from, 0)
+	testAddBalance(pool, from, big.NewInt(0xffffffffffffff))
+	tx = transaction(^uint64(0), 100000, key) // nonce = 2^64-1 (max uint64)
+	if err := pool.AddRemote(tx); err != ErrNonceMax {
+		t.Error("expected", ErrNonceMax, "got", err)
+	}
 }
 
 func TestInvalidTransactionsMagma(t *testing.T) {
@@ -3185,4 +3193,46 @@ func benchmarkPoolBatchInsert(b *testing.B, size int) {
 	for _, batch := range batches {
 		pool.AddRemotes(batch)
 	}
+}
+
+// TestEIP2681NonceMaxValue tests the EIP-2681 nonce max value validation
+func TestEIP2681NonceMaxValue(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPool()
+	defer pool.Stop()
+
+	from := crypto.PubkeyToAddress(key.PublicKey)
+	testAddBalance(pool, from, big.NewInt(1000000000000000)) // 1 ETH
+
+	// Test case 1: nonce = 2^64-1 (max uint64) should be rejected
+	t.Run("MaxNonceRejected", func(t *testing.T) {
+		testSetNonce(pool, from, 0)
+		tx := transaction(^uint64(0), 100000, key) // nonce = 2^64-1
+		if err := pool.AddRemote(tx); err != ErrNonceMax {
+			t.Errorf("expected ErrNonceMax, got %v", err)
+		}
+	})
+
+	// Test case 2: nonce = 2^64-2 should be accepted (just before max)
+	t.Run("MaxNonceMinusOneAccepted", func(t *testing.T) {
+		testSetNonce(pool, from, 0)
+		tx := transaction(^uint64(0)-1, 100000, key) // nonce = 2^64-2
+		if err := pool.AddRemote(tx); err != nil {
+			t.Errorf("expected no error, got %v", err)
+		}
+		// Clean up
+		pool.removeTx(tx.Hash(), false)
+	})
+
+	// Test case 3: nonce = 0 should be accepted (normal case)
+	t.Run("ZeroNonceAccepted", func(t *testing.T) {
+		testSetNonce(pool, from, 0)
+		tx := transaction(0, 100000, key)
+		if err := pool.AddRemote(tx); err != nil {
+			t.Errorf("expected no error, got %v", err)
+		}
+		// Clean up
+		pool.removeTx(tx.Hash(), false)
+	})
 }

@@ -849,6 +849,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return types.ErrSender(err)
 	}
 
+	// Limit nonce to 2^64-1 per EIP-2681
+	if tx.Nonce()+1 < tx.Nonce() {
+		return ErrNonceMax
+	}
+
 	var (
 		from          = tx.ValidatedSender()
 		senderBalance = pool.getBalance(from)
