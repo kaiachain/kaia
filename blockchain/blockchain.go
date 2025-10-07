@@ -277,7 +277,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 
 	bc.validator = NewBlockValidator(chainConfig, bc)
-	bc.prefetcher = newStatePrefetcher(chainConfig, bc)
+	bc.prefetcher = newStatePrefetcher(bc)
 	bc.processor = NewStateProcessor(chainConfig, bc)
 
 	var err error

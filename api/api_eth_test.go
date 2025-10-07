@@ -2449,12 +2449,44 @@ type testChainContext struct {
 	header *types.Header
 }
 
+func (mc *testChainContext) Config() *params.ChainConfig {
+	return &params.ChainConfig{}
+}
+
+func (mc *testChainContext) CurrentHeader() *types.Header {
+	return mc.header
+}
+
+func (mc *testChainContext) CurrentBlock() *types.Block {
+	return types.NewBlock(mc.header, nil, nil)
+}
+
 func (mc *testChainContext) Engine() consensus.Engine {
 	return gxhash.NewFaker()
 }
 
 func (mc *testChainContext) GetHeader(common.Hash, uint64) *types.Header {
 	return mc.header
+}
+
+func (mc *testChainContext) GetHeaderByNumber(number uint64) *types.Header {
+	return mc.header
+}
+
+func (mc *testChainContext) GetHeaderByHash(hash common.Hash) *types.Header {
+	return mc.header
+}
+
+func (mc *testChainContext) GetBlock(hash common.Hash, number uint64) *types.Block {
+	return types.NewBlock(mc.header, nil, nil)
+}
+
+func (mc *testChainContext) State() (*state.StateDB, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (mc *testChainContext) StateAt(root common.Hash) (*state.StateDB, error) {
+	return nil, errors.New("not implemented")
 }
 
 // Contract C { constructor() { revert("hello"); } }

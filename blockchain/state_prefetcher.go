@@ -29,22 +29,19 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/params"
 )
 
 // statePrefetcher is a basic Prefetcher, which blindly executes a block on top
 // of an arbitrary state with the goal of prefetching potentially useful state
 // data from disk before the main block processor start executing.
 type statePrefetcher struct {
-	config *params.ChainConfig // Chain configuration options
-	bc     *BlockChain         // Canonical block chain
+	chain ChainContext // Canonical block chain
 }
 
 // newStatePrefetcher initialises a new statePrefetcher.
-func newStatePrefetcher(config *params.ChainConfig, bc *BlockChain) *statePrefetcher {
+func newStatePrefetcher(chain ChainContext) *statePrefetcher {
 	return &statePrefetcher{
-		config: config,
-		bc:     bc,
+		chain: chain,
 	}
 }
 
@@ -61,7 +58,7 @@ func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, c
 		}
 		// Block precaching permitted to continue, execute the transaction
 		stateDB.SetTxContext(tx.Hash(), block.Hash(), i)
-		if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, tx, cfg); err != nil {
+		if err := precacheTransaction(p.chain, nil, stateDB, header, tx, cfg); err != nil {
 			return // Ugh, something went horribly wrong, bail out
 		}
 	}
@@ -84,7 +81,7 @@ func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.
 
 	// Block precaching permitted to continue, execute the transaction
 	stateDB.SetTxContext(tx.Hash(), block.Hash(), ti)
-	if err := precacheTransaction(p.config, p.bc, nil, stateDB, header, tx, cfg); err != nil {
+	if err := precacheTransaction(p.chain, nil, stateDB, header, tx, cfg); err != nil {
 		return // Ugh, something went horribly wrong, bail out
 	}
 }
@@ -92,16 +89,16 @@ func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.
 // precacheTransaction attempts to apply a transaction to the given state database
 // and uses the input parameters for its environment. The goal is not to execute
 // the transaction successfully, rather to warm up touched data slots.
-func precacheTransaction(config *params.ChainConfig, bc ChainContext, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, cfg vm.Config) error {
+func precacheTransaction(chain ChainContext, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, cfg vm.Config) error {
 	// Convert the transaction into an executable message and pre-cache its sender
-	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(config, header.Number), statedb, header.Number.Uint64())
+	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(chain.Config(), header.Number), statedb, header.Number.Uint64())
 	if err != nil {
 		return err
 	}
 	// Create the EVM and execute the transaction
-	blockContext := NewEVMBlockContext(header, bc, author)
-	txContext := NewEVMTxContext(msg, header, config)
-	vm := vm.NewEVM(blockContext, txContext, statedb, config, &cfg)
+	blockContext := NewEVMBlockContext(header, chain, author)
+	txContext := NewEVMTxContext(msg, header, chain.Config())
+	vm := vm.NewEVM(blockContext, txContext, statedb, chain.Config(), &cfg)
 
 	_, err = ApplyMessage(vm, msg)
 	return err

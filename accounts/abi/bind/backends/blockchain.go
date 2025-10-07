@@ -31,9 +31,9 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/node/cn/filters"
-	"github.com/kaiachain/kaia/params"
 )
 
 // Maintain separate minimal interfaces of blockchain.BlockChain because ContractBackend are used
@@ -41,17 +41,7 @@ import (
 // consensus.ChainReader, governance.blockChain, work.BlockChain.
 type BlockChainForCaller interface {
 	// Required by NewEVMContext
-	blockchain.ChainContext
-
-	// Below is a subset of consensus.ChainReader
-	// Only using the vocabulary of consensus.ChainReader for potential
-	// usability within consensus package.
-	Config() *params.ChainConfig
-	GetHeaderByNumber(number uint64) *types.Header
-	GetBlock(hash common.Hash, number uint64) *types.Block
-	State() (*state.StateDB, error)
-	StateAt(root common.Hash) (*state.StateDB, error)
-	CurrentBlock() *types.Block
+	consensus.ChainReader
 }
 
 // Maintain separate minimal interfaces of blockchain.TxPool because ContractBackend are used
