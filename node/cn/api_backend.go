@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/bloombits"
 	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
@@ -70,6 +71,10 @@ func (b *CNAPIBackend) GetBlockReceiptsInCache(blockHash common.Hash) types.Rece
 // GetTxLookupInfoAndReceiptInCache retrieves a tx and lookup info and receipt for a given transaction hash in cache.
 func (b *CNAPIBackend) GetTxLookupInfoAndReceiptInCache(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt) {
 	return b.cn.blockchain.GetTxLookupInfoAndReceiptInCache(txHash)
+}
+
+func (b *CNAPIBackend) GetActiveSystemContracts(c *params.ChainConfig, head *big.Int) map[string]common.Address {
+	return system.ActiveSystemContracts(c, head)
 }
 
 func (b *CNAPIBackend) ChainConfig() *params.ChainConfig {

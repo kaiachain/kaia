@@ -325,6 +325,10 @@ func (c *IstanbulConfig) String() string {
 	return "istanbul"
 }
 
+// This is to maintain compatibility with eth and eth_config response fields
+type BlobConfig struct {
+}
+
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}
@@ -527,6 +531,77 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		}
 	}
 	return nil
+}
+
+// LatestFork returns the latest fork enabled at the given head block.
+func (c *ChainConfig) LatestFork(head *big.Int) Fork {
+	switch {
+	case c.IsOsakaForkEnabled(head):
+		return Osaka
+	case c.IsPragueForkEnabled(head):
+		return Prague
+	case c.IsKaiaForkEnabled(head):
+		return Kaia
+	case c.IsRandaoForkEnabled(head):
+		return Randao
+	case c.IsShanghaiForkEnabled(head):
+		return Shanghai
+	case c.IsCancunForkEnabled(head):
+		return Cancun
+	case c.IsKoreForkEnabled(head):
+		return Kore
+	case c.IsMagmaForkEnabled(head):
+		return Magma
+	case c.IsEthTxTypeForkEnabled(head):
+		return EthTxType
+	case c.IsLondonForkEnabled(head):
+		return London
+	case c.IsIstanbulForkEnabled(head):
+		return Istanbul
+	default:
+		return Istanbul
+	}
+}
+
+// BlobConfig returns the blob config associated with the provided fork.
+func (c *ChainConfig) BlobConfig(fork Fork) *BlobConfig {
+	switch fork {
+	case Osaka:
+		return &BlobConfig{}
+	default:
+		return nil
+	}
+}
+
+// CompatibleBlock returns the compatible block associated with the fork or returns nil if
+// the fork isn't defined.
+func (c *ChainConfig) CompatibleBlock(fork Fork) *big.Int {
+	switch {
+	case fork == Osaka:
+		return c.OsakaCompatibleBlock
+	case fork == Prague:
+		return c.PragueCompatibleBlock
+	case fork == Kaia:
+		return c.KaiaCompatibleBlock
+	case fork == Randao:
+		return c.RandaoCompatibleBlock
+	case fork == Shanghai:
+		return c.ShanghaiCompatibleBlock
+	case fork == Cancun:
+		return c.CancunCompatibleBlock
+	case fork == Kore:
+		return c.KoreCompatibleBlock
+	case fork == Magma:
+		return c.MagmaCompatibleBlock
+	case fork == EthTxType:
+		return c.EthTxTypeCompatibleBlock
+	case fork == London:
+		return c.LondonCompatibleBlock
+	case fork == Istanbul:
+		return c.IstanbulCompatibleBlock
+	default:
+		return nil
+	}
 }
 
 func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *ConfigCompatError {

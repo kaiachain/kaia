@@ -33,6 +33,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -1546,4 +1547,58 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		}
 		prevTracer = tracer
 	}
+}
+
+type config struct {
+	// As mentioned in KIP-276, Kaia doesn't include ActivationTime as a field.
+	// ActivationTime  uint64                    `json:"activationTime"`
+	BlobSchedule    *params.BlobConfig        `json:"blobSchedule"`
+	ChainId         *hexutil.Big              `json:"chainId"`
+	ForkId          hexutil.Bytes             `json:"forkId"`
+	Precompiles     map[string]common.Address `json:"precompiles"`
+	SystemContracts map[string]common.Address `json:"systemContracts"`
+}
+
+type configResponse struct {
+	Current *config `json:"current"`
+	Next    *config `json:"next"`
+	Last    *config `json:"last"`
+}
+
+// Config implements the KIP-276(EIP-7910) eth_config method.
+func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
+	assemble := func(c *params.ChainConfig, head *big.Int) *config {
+		if head == nil {
+			return nil
+		}
+
+		var (
+			rules       = c.Rules(head)
+			precompiles = make(map[string]common.Address)
+		)
+		for addr, c := range vm.ActivePrecompiledContracts(rules) {
+			precompiles[c.Name()] = addr
+		}
+		return &config{
+			BlobSchedule:    c.BlobConfig(c.LatestFork(head)),
+			ChainId:         (*hexutil.Big)(c.ChainID),
+			ForkId:          hexutil.Bytes{0x00, 0x00, 0x00, 0x00}, // TODO-kaia: set Kaia's ForkId
+			Precompiles:     precompiles,
+			SystemContracts: api.kaiaBlockChainAPI.b.GetActiveSystemContracts(c, head),
+		}
+	}
+	var (
+		c  = api.kaiaBlockChainAPI.b.ChainConfig()
+		bn = api.kaiaBlockChainAPI.b.CurrentBlock().Number()
+	)
+	resp := configResponse{
+		Next:    assemble(c, c.CompatibleBlock(c.LatestFork(bn)+1)),
+		Current: assemble(c, c.CompatibleBlock(c.LatestFork(bn))),
+		Last:    assemble(c, c.CompatibleBlock(c.LatestFork(abi.MaxUint256))),
+	}
+	// Nil out last if no future-fork is configured.
+	if resp.Next == nil {
+		resp.Last = nil
+	}
+	return &resp, nil
 }
