@@ -481,7 +481,7 @@ func TestInvalidTransactions(t *testing.T) {
 	// Test EIP-2681 nonce max value check
 	testSetNonce(pool, from, 0)
 	testAddBalance(pool, from, big.NewInt(0xffffffffffffff))
-	tx = transaction(^uint64(0), 100000, key) // nonce = 2^64-1 (max uint64)
+	tx = pricedTransaction(^uint64(0), 100000, new(big.Int).SetUint64(pool.gasPrice.Uint64()), key) // nonce = 2^64-1 (max uint64)
 	if err := pool.AddRemote(tx); err != ErrNonceMax {
 		t.Error("expected", ErrNonceMax, "got", err)
 	}
