@@ -81,18 +81,25 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^prague\/eip7002_el_triggerable_withdrawals`)
 	bt.skipLoad(`^prague\/eip6110_deposits`)
 	// type 3 tx (EIP-4844) is not supported
+	// https://github.com/kaiachain/kaia/blob/cf530ad3d5443e88d047e18a0e2651891916e1c3/tests/block_test_util.go#L523
 	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOBBASEFEE-debug\]`)
 	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Osaka-tx_type_3-evm_code_type_LEGACY-blockchain_test-different_block\]`)
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Osaka-tx_type_3-evm_code_type_LEGACY-blockchain_test-same_block\]`)
+	bt.skipLoad(`^osaka\/eip7934_block_rlp_limit\/max_block_rlp_size\/block_rlp_size_at_limit_with_all_typed_transactions.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_rlp_size_at_limit_with_all_typed_transactions\[fork_Osaka-typed_transaction_3-blockchain_test\]`)
 	// Kaia cannot calculate the same block hash as Ethereum
 	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOCKHASH-debug\]`)
+	// Kaia have different max block rlp size than Ethereum
+	// See: MaxBlockSize in params/protocol_params.go
+	bt.skipLoad(`^osaka\/eip7934_block_rlp_limit\/max_block_rlp_size\/block_at_rlp_size_limit_boundary.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_at_rlp_size_limit_boundary\[fork_Osaka-blockchain_test-max_rlp_size_plus_1_byte\]`)
+	// Error message: post state validation failed: account balance mismatch for addr: 0xc0F86290A5411025A98594D9a4d9a88147a9d99D, want: 991778663999985853000, have: 991760475000000000000
+	// TODO: Should send `TxInternalDataEthereumDynamicFee` instead of `TxInternalDataEthereumAccessList`
+	bt.skipLoad(`^osaka\/eip7934_block_rlp_limit\/max_block_rlp_size\/block_rlp_size_at_limit_with_all_typed_transactions.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_rlp_size_at_limit_with_all_typed_transactions\[fork_Osaka-typed_transaction_2-blockchain_test\]`)
 
 	// TODO: Skip EIP tests that are not yet supported; expect to remove them
 	bt.skipLoad(`osaka/eip7594_peerdas`)
 	bt.skipLoad(`osaka/eip7825_transaction_gas_limit_cap`)
 	bt.skipLoad(`osaka/eip7918_blob_reserve_price`)
-	bt.skipLoad(`osaka/eip7934_block_rlp_limit`)
 	// TODO: Investigate after all Osaka EIPs are applied
 	bt.skipLoad(`^frontier\/identity_precompile\/identity\/call_identity_precompile.json\/tests\/frontier\/identity_precompile\/test_identity.py::test_call_identity_precompile\[fork_Osaka-blockchain_test_from_state_test-identity_1_nonzerovalue-call_type_CALL\]`)
 
