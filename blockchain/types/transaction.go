@@ -1147,9 +1147,12 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 		checkNonce:        checkNonce,
 	}
 
-	// Call supports EthereumAccessList, EthereumSetCode and Legacy txTypes only.
+	// Call supports EthereumAccessList, EthereumDynamicFee, EthereumSetCode and Legacy txTypes only.
 	if auth != nil {
 		internalData := newTxInternalDataEthereumSetCodeWithValues(nonce, *to, amount, gasLimit, gasFeeCap, gasTipCap, data, list, chainId, auth)
+		transaction.setDecoded(internalData, 0)
+	} else if gasFeeCap != nil && gasTipCap != nil {
+		internalData := newTxInternalDataEthereumDynamicFeeWithValues(nonce, to, amount, gasLimit, gasTipCap, gasFeeCap, data, list, chainId)
 		transaction.setDecoded(internalData, 0)
 	} else if list != nil {
 		internalData := newTxInternalDataEthereumAccessListWithValues(nonce, to, amount, gasLimit, gasPrice, data, list, chainId)

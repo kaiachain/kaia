@@ -142,8 +142,17 @@ func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 	sender := msg.ValidatedSender()
 	sigCopy := msg.RawSignatureValues()
 
+	// Kaia returns GasPrice if the target tx is not available in GasFeeCap and GasTipCap,
+	// but for accurate determination in NewMessage, nil is also accepted.
+	var gasFeeCap, gasTipCap *big.Int = nil, nil
+	if msg.Type() == types.TxTypeEthereumDynamicFee || msg.Type() == types.TxTypeEthereumSetCode {
+		te := msg.GetTxInternalData().(types.TxInternalDataBaseFee)
+		gasFeeCap = te.GetGasFeeCap()
+		gasTipCap = te.GetGasTipCap()
+	}
+
 	// Replace msg intrinsic gas with eth intrinsic gas
-	*msg = *types.NewMessage(sender, msg.To(), msg.Nonce(), msg.GetTxInternalData().GetAmount(), msg.Gas(), msg.GasPrice(), msg.GasFeeCap(), msg.GasTipCap(), msg.Data(), true, updatedIntrinsicGas, msg.AccessList(), r.ChainID, msg.AuthList())
+	*msg = *types.NewMessage(sender, msg.To(), msg.Nonce(), msg.GetTxInternalData().GetAmount(), msg.Gas(), msg.GasPrice(), gasFeeCap, gasTipCap, msg.Data(), true, updatedIntrinsicGas, msg.AccessList(), r.ChainID, msg.AuthList())
 	msg.SetSignature(sigCopy)
 
 	// Gas prices are calculated in eth
