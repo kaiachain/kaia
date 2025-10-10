@@ -80,8 +80,7 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^prague\/eip7685_general_purpose_el_requests`)
 	bt.skipLoad(`^prague\/eip7002_el_triggerable_withdrawals`)
 	bt.skipLoad(`^prague\/eip6110_deposits`)
-	// type 3 tx (EIP-4844) is not supported
-	// https://github.com/kaiachain/kaia/blob/cf530ad3d5443e88d047e18a0e2651891916e1c3/tests/block_test_util.go#L523
+	// type 3 tx (EIP-4844) is not supported. See tests/block_test_util.go:decode()
 	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOBBASEFEE-debug\]`)
 	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Osaka-tx_type_3-evm_code_type_LEGACY-blockchain_test-different_block\]`)
