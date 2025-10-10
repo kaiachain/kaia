@@ -142,8 +142,8 @@ func printFeeDelegatedRLPEncode(t *testing.T, chainId *big.Int, signer Signer, s
 func testTxRLPEncodeLegacy(t *testing.T) {
 	tx := genLegacyTransaction().(*TxInternalDataLegacy)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
@@ -283,8 +283,8 @@ func testTxRLPEncodeDynamicFee(t *testing.T) {
 func testTxRLPEncodeValueTransfer(t *testing.T) {
 	tx := genValueTransferTransaction().(*TxInternalDataValueTransfer)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
@@ -321,8 +321,8 @@ func testTxRLPEncodeValueTransfer(t *testing.T) {
 func testTxRLPEncodeValueTransferMemo(t *testing.T) {
 	tx := genValueTransferMemoTransaction().(*TxInternalDataValueTransferMemo)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
@@ -360,8 +360,8 @@ func testTxRLPEncodeValueTransferMemo(t *testing.T) {
 //func testTxRLPEncodeAccountCreation(t *testing.T) {
 //	tx := genAccountCreationTransaction().(*TxInternalDataAccountCreation)
 //
-//	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-//	chainId := params.BFTTestChainConfig.ChainID
+//	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+//	chainId := params.TestChainConfig.ChainID
 //	rawTx := &Transaction{data: tx}
 //	rawTx.Sign(signer, key)
 //
@@ -401,8 +401,8 @@ func testTxRLPEncodeValueTransferMemo(t *testing.T) {
 func testTxRLPEncodeAccountUpdate(t *testing.T) {
 	tx := genAccountUpdateTransaction().(*TxInternalDataAccountUpdate)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
@@ -441,8 +441,8 @@ func testTxRLPEncodeAccountUpdate(t *testing.T) {
 func testTxRLPEncodeSmartContractDeploy(t *testing.T) {
 	tx := genSmartContractDeployTransaction().(*TxInternalDataSmartContractDeploy)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
@@ -482,8 +482,8 @@ func testTxRLPEncodeSmartContractDeploy(t *testing.T) {
 func testTxRLPEncodeSmartContractExecution(t *testing.T) {
 	tx := genSmartContractExecutionTransaction().(*TxInternalDataSmartContractExecution)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
@@ -521,8 +521,8 @@ func testTxRLPEncodeSmartContractExecution(t *testing.T) {
 func testTxRLPEncodeCancel(t *testing.T) {
 	tx := genCancelTransaction().(*TxInternalDataCancel)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
@@ -557,8 +557,8 @@ func testTxRLPEncodeCancel(t *testing.T) {
 func testTxRLPEncodeChainDataAnchoring(t *testing.T) {
 	tx := genChainDataTransaction().(*TxInternalDataChainDataAnchoring)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
@@ -594,8 +594,8 @@ func testTxRLPEncodeChainDataAnchoring(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedValueTransfer(t *testing.T) {
 	tx := genFeeDelegatedValueTransferTransaction().(*TxInternalDataFeeDelegatedValueTransfer)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)
@@ -661,8 +661,8 @@ func testTxRLPEncodeFeeDelegatedValueTransfer(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedValueTransferMemo(t *testing.T) {
 	tx := genFeeDelegatedValueTransferMemoTransaction().(*TxInternalDataFeeDelegatedValueTransferMemo)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)
@@ -730,8 +730,8 @@ func testTxRLPEncodeFeeDelegatedValueTransferMemo(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedAccountUpdate(t *testing.T) {
 	tx := genFeeDelegatedAccountUpdateTransaction().(*TxInternalDataFeeDelegatedAccountUpdate)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)
@@ -798,8 +798,8 @@ func testTxRLPEncodeFeeDelegatedAccountUpdate(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedSmartContractDeploy(t *testing.T) {
 	tx := genFeeDelegatedSmartContractDeployTransaction().(*TxInternalDataFeeDelegatedSmartContractDeploy)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)
@@ -871,8 +871,8 @@ func testTxRLPEncodeFeeDelegatedSmartContractDeploy(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedSmartContractExecution(t *testing.T) {
 	tx := genFeeDelegatedSmartContractExecutionTransaction().(*TxInternalDataFeeDelegatedSmartContractExecution)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)
@@ -940,8 +940,8 @@ func testTxRLPEncodeFeeDelegatedSmartContractExecution(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedCancel(t *testing.T) {
 	tx := genFeeDelegatedCancelTransaction().(*TxInternalDataFeeDelegatedCancel)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)
@@ -1003,8 +1003,8 @@ func testTxRLPEncodeFeeDelegatedCancel(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedChainDataAnchoring(t *testing.T) {
 	tx := genFeeDelegatedChainDataTransaction().(*TxInternalDataFeeDelegatedChainDataAnchoring)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)
@@ -1068,8 +1068,8 @@ func testTxRLPEncodeFeeDelegatedChainDataAnchoring(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedValueTransferWithRatio(t *testing.T) {
 	tx := genFeeDelegatedValueTransferWithRatioTransaction().(*TxInternalDataFeeDelegatedValueTransferWithRatio)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)
@@ -1137,8 +1137,8 @@ func testTxRLPEncodeFeeDelegatedValueTransferWithRatio(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedValueTransferMemoWithRatio(t *testing.T) {
 	tx := genFeeDelegatedValueTransferMemoWithRatioTransaction().(*TxInternalDataFeeDelegatedValueTransferMemoWithRatio)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)
@@ -1208,8 +1208,8 @@ func testTxRLPEncodeFeeDelegatedValueTransferMemoWithRatio(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 	tx := genFeeDelegatedAccountUpdateWithRatioTransaction().(*TxInternalDataFeeDelegatedAccountUpdateWithRatio)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)
@@ -1278,8 +1278,8 @@ func testTxRLPEncodeFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 	tx := genFeeDelegatedSmartContractDeployWithRatioTransaction().(*TxInternalDataFeeDelegatedSmartContractDeployWithRatio)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)
@@ -1353,8 +1353,8 @@ func testTxRLPEncodeFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedSmartContractExecutionWithRatio(t *testing.T) {
 	tx := genFeeDelegatedSmartContractExecutionWithRatioTransaction().(*TxInternalDataFeeDelegatedSmartContractExecutionWithRatio)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)
@@ -1424,8 +1424,8 @@ func testTxRLPEncodeFeeDelegatedSmartContractExecutionWithRatio(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedCancelWithRatio(t *testing.T) {
 	tx := genFeeDelegatedCancelWithRatioTransaction().(*TxInternalDataFeeDelegatedCancelWithRatio)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)
@@ -1489,8 +1489,8 @@ func testTxRLPEncodeFeeDelegatedCancelWithRatio(t *testing.T) {
 func testTxRLPEncodeFeeDelegatedChainDataAnchoringWithRatio(t *testing.T) {
 	tx := genFeeDelegatedChainDataWithRatioTransaction().(*TxInternalDataFeeDelegatedChainDataAnchoringWithRatio)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
-	chainId := params.BFTTestChainConfig.ChainID
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
+	chainId := params.TestChainConfig.ChainID
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 	rawTx.SignFeePayer(signer, payerKey)

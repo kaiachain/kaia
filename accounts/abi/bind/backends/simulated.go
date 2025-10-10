@@ -93,18 +93,16 @@ func NewSimulatedBackendWithDatabase(database database.DBManager, alloc blockcha
 	return backend
 }
 
-// NewSimulatedBackendWithGasPrice creates a new binding backend using a simulated blockchain with a given unitPrice.
+// NewSimulatedBackendWithChainConfig creates a new binding backend using a simulated blockchain with a given chain config.
 // for testing purposes.
-func NewSimulatedBackendWithGasPrice(alloc blockchain.GenesisAlloc, unitPrice uint64) *SimulatedBackend {
-	cfg := params.AllGxhashProtocolChanges.Copy()
-	cfg.UnitPrice = unitPrice
+func NewSimulatedBackendWithChainConfig(alloc blockchain.GenesisAlloc, cfg *params.ChainConfig) *SimulatedBackend {
 	return NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), alloc, cfg)
 }
 
 // NewSimulatedBackend creates a new binding backend using a simulated blockchain
 // for testing purposes.
 func NewSimulatedBackend(alloc blockchain.GenesisAlloc) *SimulatedBackend {
-	return NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), alloc, params.AllGxhashProtocolChanges)
+	return NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), alloc, params.TestChainConfig)
 }
 
 // Close terminates the underlying blockchain's update loop.

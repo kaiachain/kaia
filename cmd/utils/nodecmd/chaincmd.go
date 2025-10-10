@@ -226,12 +226,8 @@ func ValidateGenesisConfig(g *blockchain.Genesis) error {
 		return errors.New("chainID is not specified")
 	}
 
-	if g.Config.Clique == nil && g.Config.Istanbul == nil {
+	if g.Config.Istanbul == nil {
 		return errors.New("consensus engine should be configured")
-	}
-
-	if g.Config.Clique != nil && g.Config.Istanbul != nil {
-		return errors.New("only one consensus engine can be configured")
 	}
 
 	if g.Config.Governance == nil || g.Config.Governance.Reward == nil {

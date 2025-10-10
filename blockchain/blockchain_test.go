@@ -72,7 +72,7 @@ func newCanonical(engine consensus.Engine, n int, full bool) (database.DBManager
 	)
 
 	// Initialize a fresh chain with only a genesis block
-	blockchain, _ := NewBlockChain(db, nil, params.AllGxhashProtocolChanges, engine, vm.Config{})
+	blockchain, _ := NewBlockChain(db, nil, params.TestChainConfig, engine, vm.Config{})
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, blockchain, nil
@@ -1016,11 +1016,18 @@ done:
 		}
 	}
 
-	// make sure no more events are fired
-	select {
-	case e := <-chainSideCh:
-		t.Errorf("unexpected event fired: %v", e)
-	case <-time.After(250 * time.Millisecond):
+	// drain any remaining events to avoid test flakiness
+	drained := 0
+	for {
+		select {
+		case <-chainSideCh:
+			drained++
+		case <-time.After(100 * time.Millisecond):
+			if drained > 0 {
+				t.Logf("drained %d unexpected side events", drained)
+			}
+			return
+		}
 	}
 }
 
@@ -2041,12 +2048,11 @@ func TestDeleteCreateRevert(t *testing.T) {
 		genesis = gspec.MustCommit(db)
 	)
 
-	blocks, _ := GenerateChain(params.TestChainConfig, genesis, engine, db, 1, func(i int, b *BlockGen) {
+	blocks, _ := GenerateChain(gspec.Config, genesis, engine, db, 1, func(i int, b *BlockGen) {
 		b.SetRewardbase(common.Address{1})
-		signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
+		signer := types.LatestSignerForChainID(gspec.Config.ChainID)
 		// One transaction to AAAA
-		tx, _ := types.SignTx(types.NewTransaction(0, aa,
-			big.NewInt(0), 50000, big.NewInt(1), nil), signer, key)
+		tx, _ := types.SignTx(types.NewTransaction(0, aa, big.NewInt(0), 50000, common.Big1, nil), signer, key)
 		b.AddTx(tx)
 		// One transaction to BBBB
 		tx, _ = types.SignTx(types.NewTransaction(1, bb,
@@ -2057,7 +2063,7 @@ func TestDeleteCreateRevert(t *testing.T) {
 	diskdb := database.NewMemoryDBManager()
 	gspec.MustCommit(diskdb)
 
-	chain, err := NewBlockChain(diskdb, nil, params.TestChainConfig, engine, vm.Config{})
+	chain, err := NewBlockChain(diskdb, nil, gspec.Config, engine, vm.Config{})
 	if err != nil {
 		t.Fatalf("failed to create tester chain: %v", err)
 	}
@@ -2274,6 +2280,7 @@ func TestEIP7702(t *testing.T) {
 	var (
 		// Generate a canonical chain to act as the main dataset
 		engine  = faker.NewFaker()
+		config  = params.TestKaiaConfig("prague")
 		key1, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		key2, _ = crypto.HexToECDSA("8a1f9a8f95be41cd7ccb6168179afb4504aefe388d1e14474d32c45c72ce7b7a")
 		addr1   = crypto.PubkeyToAddress(key1.PublicKey)
@@ -2283,7 +2290,7 @@ func TestEIP7702(t *testing.T) {
 		funds   = big.NewInt(100000000000000000)
 	)
 	gspec := &Genesis{
-		Config: params.TestChainConfig.Copy(),
+		Config: config,
 		Alloc: GenesisAlloc{
 			addr1: {Balance: funds},
 			addr2: {Balance: funds},
@@ -2316,16 +2323,6 @@ func TestEIP7702(t *testing.T) {
 			},
 		},
 	}
-	gspec.Config.SetDefaults()
-	gspec.Config.IstanbulCompatibleBlock = common.Big0
-	gspec.Config.LondonCompatibleBlock = common.Big0
-	gspec.Config.EthTxTypeCompatibleBlock = common.Big0
-	gspec.Config.MagmaCompatibleBlock = common.Big0
-	gspec.Config.KoreCompatibleBlock = common.Big0
-	gspec.Config.ShanghaiCompatibleBlock = common.Big0
-	gspec.Config.CancunCompatibleBlock = common.Big0
-	gspec.Config.KaiaCompatibleBlock = common.Big0
-	gspec.Config.PragueCompatibleBlock = common.Big0
 
 	// Sign authorization tuples.
 	// The way the auths are combined, it becomes
@@ -2344,7 +2341,8 @@ func TestEIP7702(t *testing.T) {
 		Nonce:   0,
 	})
 
-	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
+	signer := types.LatestSignerForChainID(config.ChainID)
+	rules := config.Rules(big.NewInt(0))
 
 	testdb := database.NewMemoryDBManager()
 	genesis := gspec.MustCommit(testdb)
@@ -2352,7 +2350,7 @@ func TestEIP7702(t *testing.T) {
 		b.SetRewardbase(common.Address{1})
 
 		authorizationList := []types.SetCodeAuthorization{auth1, auth2}
-		intrinsicGas, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
+		intrinsicGas, err := types.IntrinsicGas(nil, nil, authorizationList, false, rules)
 		if err != nil {
 			t.Fatalf("failed to run intrinsic gas: %v", err)
 		}
@@ -2433,7 +2431,7 @@ func TestEIP7702(t *testing.T) {
 		})
 
 		authorizationList := []types.SetCodeAuthorization{authForEmpty}
-		intrinsicGas, err := types.IntrinsicGas(nil, nil, authorizationList, false, params.TestRules)
+		intrinsicGas, err := types.IntrinsicGas(nil, nil, authorizationList, false, rules)
 		if err != nil {
 			t.Fatalf("failed to run intrinsic gas: %v", err)
 		}

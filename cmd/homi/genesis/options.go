@@ -26,7 +26,6 @@ import (
 	"github.com/kaiachain/kaia/cmd/homi/extra"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus/clique"
 	testcontract "github.com/kaiachain/kaia/contracts/contracts/testing/reward"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -44,15 +43,6 @@ func Validators(addrs ...common.Address) Option {
 			return
 		}
 		genesis.ExtraData = hexutil.MustDecode(extraData)
-	}
-}
-
-func ValidatorsOfClique(signers ...common.Address) Option {
-	return func(genesis *blockchain.Genesis) {
-		genesis.ExtraData = make([]byte, clique.ExtraVanity+len(signers)*common.AddressLength+clique.ExtraSeal)
-		for i, signer := range signers {
-			copy(genesis.ExtraData[32+i*common.AddressLength:], signer[:])
-		}
 	}
 }
 
@@ -273,11 +263,5 @@ func DeriveShaImpl(impl int) Option {
 func Governance(config *params.GovernanceConfig) Option {
 	return func(genesis *blockchain.Genesis) {
 		genesis.Config.Governance = config
-	}
-}
-
-func Clique(config *params.CliqueConfig) Option {
-	return func(genesis *blockchain.Genesis) {
-		genesis.Config.Clique = config
 	}
 }

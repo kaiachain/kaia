@@ -44,7 +44,7 @@ func TestSmartContract(t *testing.T) {
 	withdrawValue := big.NewInt(500000000)
 
 	alloc := blockchain.GenesisAlloc{auth.From: {Balance: initialValue}, auth2.From: {Balance: initialValue}}
-	sim := backends.NewSimulatedBackend(alloc)
+	sim := backends.NewSimulatedBackendWithChainConfig(alloc, params.TestChainConfig.Copy())
 	defer sim.Close()
 
 	// Deploy a token contract on the simulated blockchain

@@ -102,7 +102,7 @@ func TestTransactionSenderTxHash(t *testing.T) {
 }
 
 func testTransactionSenderTxHash(t *testing.T, tx TxInternalData) {
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 

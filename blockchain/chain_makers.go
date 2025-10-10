@@ -85,7 +85,6 @@ func (b *BlockGen) SetTime(time *big.Int) {
 }
 
 // AddTx adds a transaction to the generated block.
-// In gxhash, arbitrary address is used as a block author's address.
 //
 // AddTx panics if the transaction cannot be executed. In addition to
 // the protocol-imposed limitations (gas limit, etc.), there are some
@@ -97,7 +96,6 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 }
 
 // AddTxWithChain adds a transaction to the generated block.
-// In gxhash, arbitrary address is used as a block author's address.
 //
 // AddTxWithChain panics if the transaction cannot be executed. In addition to
 // the protocol-imposed limitations (gas limit, etc.), there are some
@@ -207,7 +205,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 	}
 	blocks, receipts := make(types.Blocks, n), make([]types.Receipts, n)
 	genblock := func(i int, parent *types.Block, stateDB *state.StateDB) (*types.Block, types.Receipts) {
-		// TODO(karalabe): This is needed for clique, which depends on multiple blocks.
+		// TODO(karalabe): This is needed for consensus engines, which depends on multiple blocks.
 		// It's nonetheless ugly to spin up a blockchain here. Get rid of this somehow.
 		cacheConfig := &CacheConfig{
 			ArchiveMode:         false,

@@ -66,10 +66,6 @@ func TestCN_SetEngineType(t *testing.T) {
 	setEngineType(cc)
 	assert.Equal(t, originalEngineType, types.EngineType)
 
-	cc.Clique = &params.CliqueConfig{}
-	setEngineType(cc)
-	assert.Equal(t, types.Engine_Clique, types.EngineType)
-
 	cc.Istanbul = &params.IstanbulConfig{}
 	setEngineType(cc)
 	assert.Equal(t, types.Engine_IBFT, types.EngineType)

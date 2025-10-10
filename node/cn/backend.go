@@ -210,9 +210,6 @@ func checkSyncMode(config *Config) error {
 }
 
 func setEngineType(chainConfig *params.ChainConfig) {
-	if chainConfig.Clique != nil {
-		types.EngineType = types.Engine_Clique
-	}
 	if chainConfig.Istanbul != nil {
 		types.EngineType = types.Engine_IBFT
 	}

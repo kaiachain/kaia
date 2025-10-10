@@ -44,13 +44,6 @@ var (
 	maxBlockNum     = int64(100)
 )
 
-func getTestConfig() *params.ChainConfig {
-	config := params.TestChainConfig.Copy()
-	config.Governance = params.GetDefaultGovernanceConfig()
-	config.Istanbul = params.GetDefaultIstanbulConfig()
-	return config
-}
-
 // TestBackend_GetTargetReceivers checks if the gossiping targets are same as council members
 func TestBackend_GetTargetReceivers(t *testing.T) {
 	stakes := []uint64{5000000, 5000000, 5000000, 5000000}
@@ -63,7 +56,14 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 	configItems = append(configItems, epoch(3))
 	configItems = append(configItems, governanceMode("single"))
 	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(4000000)))
-	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(5)))
+	configItems = append(configItems, istanbulCompatibleBlock(big.NewInt(5)))
+	configItems = append(configItems, LondonCompatibleBlock(nil))
+	configItems = append(configItems, EthTxTypeCompatibleBlock(nil))
+	configItems = append(configItems, magmaCompatibleBlock(nil))
+	configItems = append(configItems, koreCompatibleBlock(nil))
+	configItems = append(configItems, shanghaiCompatibleBlock(nil))
+	configItems = append(configItems, cancunCompatibleBlock(nil))
+	configItems = append(configItems, kaiaCompatibleBlock(nil))
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	configItems = append(configItems, mStaking)
 
@@ -122,8 +122,7 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 }
 
 func newTestBackend() (b *backend) {
-	config := getTestConfig()
-	config.Istanbul.ProposerPolicy = params.WeightedRandom
+	config := params.TestChainConfig.Copy()
 	return newTestBackendWithConfig(config, istanbul.DefaultConfig.BlockPeriod, nil)
 }
 
@@ -267,7 +266,10 @@ func TestGetProposer(t *testing.T) {
 	ctrl, mStaking := makeMockStakingManager(t, nil, 0)
 	defer ctrl.Finish()
 
-	chain, engine := newBlockChain(1, mStaking)
+	configItems := []interface{}{mStaking}
+	configItems = append(configItems, lowerBoundBaseFee(2))
+	configItems = append(configItems, upperBoundBaseFee(10))
+	chain, engine := newBlockChain(1, configItems...)
 	defer engine.Stop()
 
 	block := makeBlockWithSeal(chain, engine, chain.Genesis())

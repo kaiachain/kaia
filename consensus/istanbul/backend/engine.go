@@ -207,13 +207,16 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 
 	// Header verify before/after magma fork
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
-		// the kip71Config used when creating the block number is a previous block config.
-		blockNum := header.Number.Uint64()
-		pset := sb.govModule.GetParamSet(blockNum)
-		kip71 := pset.ToKip71Config()
-		if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
-			return err
+		if len(parents) > 0 {
+			// the kip71Config used when creating the block number is a previous block config.
+			blockNum := header.Number.Uint64()
+			pset := sb.govModule.GetParamSet(blockNum)
+			kip71 := pset.ToKip71Config()
+			if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
+				return err
+			}
 		}
+		// For Magma fork, BaseFee is allowed even without parents (first header)
 	} else if header.BaseFee != nil {
 		return consensus.ErrInvalidBaseFee
 	}

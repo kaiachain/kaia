@@ -35,7 +35,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/params"
 )
 
 var testKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
@@ -69,7 +68,7 @@ func TestWaitDeployed(t *testing.T) {
 
 		// Create the transaction.
 		tx := types.NewContractCreation(0, big.NewInt(0), test.gas, big.NewInt(1), common.FromHex(test.code))
-		tx, _ = types.SignTx(tx, types.LatestSignerForChainID(params.AllGxhashProtocolChanges.ChainID), testKey)
+		tx, _ = types.SignTx(tx, types.LatestSignerForChainID(backend.BlockChain().Config().ChainID), testKey)
 
 		// Wait for it to get mined in the background.
 		var (
@@ -113,7 +112,7 @@ func TestWaitDeployedCornerCases(t *testing.T) {
 	// Create a transaction to an account.
 	code := "6060604052600a8060106000396000f360606040526008565b00"
 	tx := types.NewTransaction(0, common.HexToAddress("0x0"), big.NewInt(0), 3000000, big.NewInt(1), common.FromHex(code))
-	tx, _ = types.SignTx(tx, types.LatestSignerForChainID(params.AllGxhashProtocolChanges.ChainID), testKey)
+	tx, _ = types.SignTx(tx, types.LatestSignerForChainID(backend.BlockChain().Config().ChainID), testKey)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	backend.SendTransaction(ctx, tx)
@@ -125,7 +124,7 @@ func TestWaitDeployedCornerCases(t *testing.T) {
 
 	// Create a transaction that is not mined.
 	tx = types.NewContractCreation(1, big.NewInt(0), 3000000, big.NewInt(1), common.FromHex(code))
-	tx, _ = types.SignTx(tx, types.LatestSignerForChainID(params.AllGxhashProtocolChanges.ChainID), testKey)
+	tx, _ = types.SignTx(tx, types.LatestSignerForChainID(backend.BlockChain().Config().ChainID), testKey)
 
 	go func() {
 		contextCanceled := errors.New("context canceled")
