@@ -145,8 +145,7 @@ func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 	// For tx types 0 and 1, GasFeeCap() and GasTipCap() will return tx.gasPrice even if the tx has no such fields.
 	// But for those tx types, NewMessage() must receive `nil` for those fields to accurately convey the original transaction.
 	var gasFeeCap, gasTipCap *big.Int = nil, nil
-	if msg.Type() == types.TxTypeEthereumDynamicFee || msg.Type() == types.TxTypeEthereumSetCode {
-		te := msg.GetTxInternalData().(types.TxInternalDataBaseFee)
+	if te, ok := msg.GetTxInternalData().(types.TxInternalDataBaseFee); ok {
 		gasFeeCap = te.GetGasFeeCap()
 		gasTipCap = te.GetGasTipCap()
 	}
