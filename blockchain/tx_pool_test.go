@@ -3203,28 +3203,28 @@ func TestEIP2681NonceMaxValue(t *testing.T) {
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
-	testAddBalance(pool, from, big.NewInt(1000000000000000)) // 1 ETH
+	testAddBalance(pool, from, big.NewInt(1000000000000000)) // 1 KAIA
 
 	testcases := []struct {
 		name          string
 		nonce         uint64
 		expectedError error
-		cleanUp       bool
 	}{
 		// Test case 1: nonce = 2^64-1 (max uint64) should be rejected
-		{"MaxNonceRejected", ^uint64(0), ErrNonceMax, false},
+		{"MaxNonceRejected", ^uint64(0), ErrNonceMax},
 		// Test case 2: nonce = 2^64-2 should be accepted (just before max)
-		{"MaxNonceMinusOneAccepted", ^uint64(0) - 1, nil, true},
+		{"MaxNonceMinusOneAccepted", ^uint64(0) - 1, nil},
 		// Test case 3: nonce = 0 should be accepted (normal case)
-		{"ZeroNonceAccepted", 0, nil, true},
+		{"ZeroNonceAccepted", 0, nil},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			testSetNonce(pool, from, 0)
-			tx := transaction(tc.nonce, 100000, key) // nonce = 2^64-1
+			tx := transaction(tc.nonce, 100000, key)
 			err := pool.AddRemote(tx)
 			assert.Equal(t, tc.expectedError, err)
 			if err == nil {
+				// clean up
 				pool.removeTx(tx.Hash(), false)
 			}
 		})
