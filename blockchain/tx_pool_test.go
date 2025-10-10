@@ -3205,34 +3205,28 @@ func TestEIP2681NonceMaxValue(t *testing.T) {
 	from := crypto.PubkeyToAddress(key.PublicKey)
 	testAddBalance(pool, from, big.NewInt(1000000000000000)) // 1 ETH
 
-	// Test case 1: nonce = 2^64-1 (max uint64) should be rejected
-	t.Run("MaxNonceRejected", func(t *testing.T) {
-		testSetNonce(pool, from, 0)
-		tx := transaction(^uint64(0), 100000, key) // nonce = 2^64-1
-		if err := pool.AddRemote(tx); err != ErrNonceMax {
-			t.Errorf("expected ErrNonceMax, got %v", err)
-		}
-	})
-
-	// Test case 2: nonce = 2^64-2 should be accepted (just before max)
-	t.Run("MaxNonceMinusOneAccepted", func(t *testing.T) {
-		testSetNonce(pool, from, 0)
-		tx := transaction(^uint64(0)-1, 100000, key) // nonce = 2^64-2
-		if err := pool.AddRemote(tx); err != nil {
-			t.Errorf("expected no error, got %v", err)
-		}
-		// Clean up
-		pool.removeTx(tx.Hash(), false)
-	})
-
-	// Test case 3: nonce = 0 should be accepted (normal case)
-	t.Run("ZeroNonceAccepted", func(t *testing.T) {
-		testSetNonce(pool, from, 0)
-		tx := transaction(0, 100000, key)
-		if err := pool.AddRemote(tx); err != nil {
-			t.Errorf("expected no error, got %v", err)
-		}
-		// Clean up
-		pool.removeTx(tx.Hash(), false)
-	})
+	testcases := []struct {
+		name          string
+		nonce         uint64
+		expectedError error
+		cleanUp       bool
+	}{
+		// Test case 1: nonce = 2^64-1 (max uint64) should be rejected
+		{"MaxNonceRejected", ^uint64(0), ErrNonceMax, false},
+		// Test case 2: nonce = 2^64-2 should be accepted (just before max)
+		{"MaxNonceMinusOneAccepted", ^uint64(0) - 1, nil, true},
+		// Test case 3: nonce = 0 should be accepted (normal case)
+		{"ZeroNonceAccepted", 0, nil, true},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			testSetNonce(pool, from, 0)
+			tx := transaction(tc.nonce, 100000, key) // nonce = 2^64-1
+			err := pool.AddRemote(tx)
+			assert.Equal(t, tc.expectedError, err)
+			if tc.cleanUp {
+				pool.removeTx(tx.Hash(), false)
+			}
+		})
+	}
 }
