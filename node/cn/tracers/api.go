@@ -140,6 +140,26 @@ type chainContext struct {
 	ctx     context.Context
 }
 
+func (context *chainContext) Config() *params.ChainConfig {
+	return context.backend.ChainConfig()
+}
+
+func (context *chainContext) CurrentHeader() *types.Header {
+	header, err := context.backend.HeaderByNumber(context.ctx, rpc.LatestBlockNumber)
+	if err != nil {
+		return nil
+	}
+	return header
+}
+
+func (context *chainContext) CurrentBlock() *types.Block {
+	block, err := context.backend.BlockByNumber(context.ctx, rpc.LatestBlockNumber)
+	if err != nil {
+		return nil
+	}
+	return block
+}
+
 func (context *chainContext) Engine() consensus.Engine {
 	return context.backend.Engine()
 }
@@ -159,9 +179,48 @@ func (context *chainContext) GetHeader(hash common.Hash, number uint64) *types.H
 	return header
 }
 
+func (context *chainContext) GetHeaderByNumber(number uint64) *types.Header {
+	header, err := context.backend.HeaderByNumber(context.ctx, rpc.BlockNumber(number))
+	if err != nil {
+		return nil
+	}
+	return header
+}
+
+func (context *chainContext) GetHeaderByHash(hash common.Hash) *types.Header {
+	header, err := context.backend.HeaderByHash(context.ctx, hash)
+	if err != nil {
+		return nil
+	}
+	return header
+}
+
+func (context *chainContext) GetBlock(hash common.Hash, number uint64) *types.Block {
+	block, err := context.backend.BlockByNumber(context.ctx, rpc.BlockNumber(number))
+	if err != nil {
+		return nil
+	}
+	if block.Hash() == hash {
+		return block
+	}
+	block, err = context.backend.BlockByHash(context.ctx, hash)
+	if err != nil {
+		return nil
+	}
+	return block
+}
+
+func (context *chainContext) State() (*state.StateDB, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (context *chainContext) StateAt(root common.Hash) (*state.StateDB, error) {
+	return nil, errors.New("not implemented")
+}
+
 // chainContext constructs the context reader which is used by the evm for reading
 // the necessary chain context.
-func newChainContext(ctx context.Context, backend Backend) blockchain.ChainContext {
+func newChainContext(ctx context.Context, backend Backend) consensus.ChainReader {
 	return &chainContext{backend: backend, ctx: ctx}
 }
 

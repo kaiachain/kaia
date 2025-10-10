@@ -37,14 +37,8 @@ import (
 	"github.com/kaiachain/kaia/params"
 )
 
-// ChainContext supports retrieving headers and consensus parameters from the
-// current blockchain to be used during transaction processing.
 type ChainContext interface {
-	// Engine retrieves the chain's consensus engine.
-	Engine() consensus.Engine
-
-	// GetHeader returns the hash corresponding to their hash.
-	GetHeader(common.Hash, uint64) *types.Header
+	consensus.ChainReader
 }
 
 // NewEVMBlockContext creates a new context for use in the EVM.
