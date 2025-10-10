@@ -174,6 +174,87 @@ func TestVerifyBlockBody(t *testing.T) {
 	}
 }
 
+// TestVerifyBlockBodyForOsakaFork test rlp size limit for Osaka fork
+// See: tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_at_rlp_size_limit_boundary
+func TestVerifyBlockBodyForOsakaFork(t *testing.T) {
+	testcases := []struct {
+		txData types.TxInternalData
+		err    bool
+	}{
+		{
+			&types.TxInternalDataLegacy{
+				GasLimit: 1,
+				Price:    big.NewInt(200),
+				Payload:  make([]byte, params.MaxBlockSize-1), // fork_Osaka-blockchain_test-max_rlp_size_minus_1_byte
+			},
+			false,
+		},
+		{
+			&types.TxInternalDataLegacy{
+				GasLimit: 1,
+				Price:    big.NewInt(200),
+				Payload:  make([]byte, params.MaxBlockSize), // fork_Osaka-blockchain_test-max_rlp_size
+			},
+			false,
+		},
+		{
+			&types.TxInternalDataLegacy{
+				GasLimit: 1,
+				Price:    big.NewInt(200),
+				Payload:  make([]byte, params.MaxBlockSize+1), // fork_Osaka-blockchain_test-max_rlp_size_plus_1_byte
+			},
+			true,
+		},
+	}
+
+	// Create a simple chain to verify
+	config := params.TestChainConfig
+	config.SetDefaults()
+	config.IstanbulCompatibleBlock = common.Big1
+	config.LondonCompatibleBlock = common.Big1
+	config.EthTxTypeCompatibleBlock = common.Big1
+	config.MagmaCompatibleBlock = common.Big1
+	config.KoreCompatibleBlock = common.Big1
+	config.ShanghaiCompatibleBlock = common.Big1
+	config.CancunCompatibleBlock = common.Big1
+	config.KaiaCompatibleBlock = common.Big1
+	config.PragueCompatibleBlock = common.Big1
+	config.OsakaCompatibleBlock = common.Big1
+	var (
+		testdb  = database.NewMemoryDBManager()
+		gspec   = &Genesis{Config: config}
+		genesis = gspec.MustCommit(testdb)
+	)
+	GenerateChain(config, genesis, gxhash.NewFaker(), testdb, 8, nil)
+	chain, _ := NewBlockChain(testdb, nil, config, gxhash.NewFaker(), vm.Config{})
+	defer chain.Stop()
+
+	// Generate a batch of accounts to start with
+	privKey, _ := crypto.GenerateKey()
+	signer := types.LatestSignerForChainID(big.NewInt(1))
+	var block *types.Block
+	for _, testcase := range testcases {
+		// Generate a block header
+		header := &types.Header{
+			ParentHash: chain.hc.currentHeaderHash,
+			Number:     common.Big1,
+			GasUsed:    0,
+			Extra:      []byte{},
+			BaseFee:    big.NewInt(100),
+		}
+
+		// Generate a block with tx
+		tx := types.NewTx(testcase.txData)
+		tx.Sign(signer, privKey)
+		block = types.NewBlock(header, append(types.Transactions{}, tx), nil)
+
+		err := chain.validator.ValidateBody(block)
+		if errExist := err != nil; errExist != testcase.err {
+			assert.Error(t, err)
+		}
+	}
+}
+
 // Tests that concurrent header verification works, for both good and bad blocks.
 func TestHeaderConcurrentVerification2(t *testing.T)  { testHeaderConcurrentVerification(t, 2) }
 func TestHeaderConcurrentVerification8(t *testing.T)  { testHeaderConcurrentVerification(t, 8) }
