@@ -3224,7 +3224,7 @@ func TestEIP2681NonceMaxValue(t *testing.T) {
 			tx := transaction(tc.nonce, 100000, key) // nonce = 2^64-1
 			err := pool.AddRemote(tx)
 			assert.Equal(t, tc.expectedError, err)
-			if tc.cleanUp {
+			if err == nil {
 				pool.removeTx(tx.Hash(), false)
 			}
 		})
