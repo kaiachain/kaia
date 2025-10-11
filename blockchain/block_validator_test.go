@@ -208,7 +208,7 @@ func TestVerifyBlockBodyForOsakaFork(t *testing.T) {
 	}
 
 	// Create a simple chain to verify
-	config := params.TestChainConfig
+	config := params.TestChainConfig.Copy()
 	config.SetDefaults()
 	config.IstanbulCompatibleBlock = common.Big1
 	config.LondonCompatibleBlock = common.Big1
