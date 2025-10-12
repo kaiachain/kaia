@@ -1048,7 +1048,7 @@ func benchmarkSortTxsByPriceAndTime(b *testing.B, size int) {
 
 	// Benchmark importing the transactions into the queue
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		rand.Shuffle(size, func(i, j int) {
 			txs[i], txs[j] = txs[j], txs[i]
 		})
@@ -1083,7 +1083,7 @@ func benchmarkTxSortByPriceAndTime(b *testing.B, size int) {
 
 	// Benchmark importing the transactions into the queue
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		rand.Shuffle(len(batches), func(i, j int) {
 			batches[i], batches[j] = batches[j], batches[i]
 		})

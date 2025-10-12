@@ -239,7 +239,7 @@ func BenchmarkBlockEncodingHashWithInterface(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		block.header.HashNoNonce()
 	}
 }
@@ -257,7 +257,7 @@ func BenchmarkBlockEncodingRlpHash(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		rlpHash(block.header)
 	}
 }
@@ -275,7 +275,7 @@ func BenchmarkBlockEncodingCopiedBlockHeader(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		rlpHash(block.header)
 	}
 }

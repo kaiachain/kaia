@@ -314,7 +314,7 @@ func makeChainForBench(db database.DBManager, full bool, count uint64) {
 
 // write 'count' blocks to database 'b.N' times
 func benchWriteChain(b *testing.B, full bool, databaseType database.DBType, count uint64) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		dir := genTempDirForDB(b)
 
 		db := genDBManagerForTest(dir, databaseType)
@@ -337,7 +337,7 @@ func benchReadChain(b *testing.B, full bool, databaseType database.DBType, count
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 
 		db = genDBManagerForTest(dir, databaseType)
 

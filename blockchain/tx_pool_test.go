@@ -3031,7 +3031,7 @@ func benchmarkPendingDemotion(b *testing.B, size int) {
 	}
 	// Benchmark the speed of pool validation
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		pool.demoteUnexecutables()
 	}
 }
@@ -3056,7 +3056,7 @@ func benchmarkFuturePromotion(b *testing.B, size int) {
 	}
 	// Benchmark the speed of pool validation
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		pool.promoteExecutables(nil)
 	}
 }
@@ -3071,7 +3071,7 @@ func BenchmarkPoolInsert(b *testing.B) {
 	testAddBalance(pool, account, big.NewInt(1000000))
 
 	txs := make(types.Transactions, b.N)
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		txs[i] = transaction(uint64(i), 100000, key)
 	}
 	// Benchmark importing the transactions into the queue
@@ -3095,7 +3095,7 @@ func benchmarkPoolBatchInsert(b *testing.B, size int) {
 	testAddBalance(pool, account, big.NewInt(1000000))
 
 	batches := make([]types.Transactions, b.N)
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		batches[i] = make(types.Transactions, size)
 		for j := 0; j < size; j++ {
 			batches[i][j] = transaction(uint64(size*i+j), 100000, key)

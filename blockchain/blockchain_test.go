@@ -1646,7 +1646,7 @@ func benchmarkLargeNumberOfValueToNonexisting(b *testing.B, numTxs, numBlocks in
 	shared, _ := GenerateChain(params.TestChainConfig, genesis, engine, db, numBlocks, blockGenerator)
 	b.StopTimer()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Import the shared chain and the original canonical one
 		diskdb := database.NewMemoryDBManager()
 		gspec.MustCommit(diskdb)

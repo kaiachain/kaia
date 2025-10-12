@@ -45,7 +45,7 @@ func BenchmarkSingleRecoverEIP155Signer(b *testing.B) {
 	signTx, _ := SignTx(tx, NewEIP155Signer(big.NewInt(2018)), from)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = signer.Sender(signTx)
 	}
 }
@@ -69,7 +69,7 @@ func BenchmarkDoubleRecoverEIP155Signer(b *testing.B) {
 	signTx, _ := SignTx(tx, NewEIP155Signer(big.NewInt(2018)), from)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_, _ = signer.Sender(signTx)
 		_, _ = signer.Sender(signTx)
 	}
@@ -94,7 +94,7 @@ func BenchmarkDoubleRecoverEIP155SignerDoubleGoroutine(b *testing.B) {
 	signTx, _ := SignTx(tx, NewEIP155Signer(big.NewInt(2018)), from)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		channel1 := make(chan common.Address)
 		channel2 := make(chan common.Address)
 		go func() {
@@ -129,7 +129,7 @@ func BenchmarkDoubleRecoverEIP155SignerSingleGoroutine(b *testing.B) {
 	signTx, _ := SignTx(tx, NewEIP155Signer(big.NewInt(2018)), from)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		channel1 := make(chan common.Address)
 		go func() {
 			addr, _ := signer.Sender(signTx)
@@ -189,7 +189,7 @@ func BenchmarkDoubleRecoverEIP155SignerReusedGoroutines(b *testing.B) {
 	ch1 := make(chan common.Address)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		paramCh <- param{signTx, ch0}
 		paramCh <- param{signTx, ch1}
 
