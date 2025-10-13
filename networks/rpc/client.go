@@ -420,6 +420,11 @@ func (c *Client) KaiaSubscribe(ctx context.Context, channel interface{}, args ..
 	return c.Subscribe(ctx, "kaia", channel, args...)
 }
 
+// EthSubscribe registers a subscripion under the "kaia" namespace.
+func (c *Client) EthSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
+	return c.Subscribe(ctx, "eth", channel, args...)
+}
+
 // ShhSubscribe registers a subscripion under the "shh" namespace.
 func (c *Client) ShhSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
 	return c.Subscribe(ctx, "shh", channel, args...)

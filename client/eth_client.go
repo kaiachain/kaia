@@ -258,7 +258,7 @@ func (ec *EthClient) FilterLogs(ctx context.Context, q kaia.FilterQuery) ([]type
 
 // SubscribeFilterLogs subscribes to the results of a streaming filter query.
 func (ec *EthClient) SubscribeFilterLogs(ctx context.Context, q kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
-	return ec.c.KaiaSubscribe(ctx, ch, "logs", toFilterArg(q))
+	return ec.c.EthSubscribe(ctx, ch, "logs", toFilterArg(q))
 }
 
 // Pending State
