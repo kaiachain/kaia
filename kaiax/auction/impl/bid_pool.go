@@ -30,7 +30,6 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/params"
-	"github.com/rcrowley/go-metrics"
 	"golang.org/x/time/rate"
 )
 
