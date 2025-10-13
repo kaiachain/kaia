@@ -75,7 +75,15 @@ interface IAuctionEntryPoint {
 
     function auctioneer() external view returns (address);
 
+    function gasPerByteIntrinsic() external view returns (uint256);
+
+    function gasPerByteEip7623() external view returns (uint256);
+
+    function gasContractExecution() external view returns (uint256);
+
     function gasBufferEstimate() external view returns (uint256);
+
+    function gasBufferUnmeasured() external view returns (uint256);
 
     function depositVault() external view returns (IAuctionDepositVault);
 

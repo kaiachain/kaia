@@ -2198,7 +2198,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) ParseVaultWithdraw(lo
 
 // IAuctionEntryPointMetaData contains all meta data concerning the IAuctionEntryPoint contract.
 var IAuctionEntryPointMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"Call\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"CallFailed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAuctioneer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAuctioneer\",\"type\":\"address\"}],\"name\":\"ChangeAuctioneer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldDepositVault\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newDepositVault\",\"type\":\"address\"}],\"name\":\"ChangeDepositVault\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasPerByteIntrinsic\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasPerByteEip7623\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasContractExecution\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasBufferEstimate\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasBufferUnmeasured\",\"type\":\"uint256\"}],\"name\":\"ChangeGasParameters\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"searcher\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"UseNonce\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"auctioneer\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structIAuctionEntryPoint.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"call\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_auctioneer\",\"type\":\"address\"}],\"name\":\"changeAuctioneer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_depositVault\",\"type\":\"address\"}],\"name\":\"changeDepositVault\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_gasPerByteIntrinsic\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_gasPerByteEip7623\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_gasContractExecution\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_gasBufferEstimate\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_gasBufferUnmeasured\",\"type\":\"uint256\"}],\"name\":\"changeGasParameters\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"depositVault\",\"outputs\":[{\"internalType\":\"contractIAuctionDepositVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasBufferEstimate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structIAuctionEntryPoint.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"getAuctionTxHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"searchers\",\"type\":\"address[]\"}],\"name\":\"getNoncesAndDeposits\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"nonces_\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"deposits_\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"Call\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"CallFailed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAuctioneer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAuctioneer\",\"type\":\"address\"}],\"name\":\"ChangeAuctioneer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldDepositVault\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newDepositVault\",\"type\":\"address\"}],\"name\":\"ChangeDepositVault\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasPerByteIntrinsic\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasPerByteEip7623\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasContractExecution\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasBufferEstimate\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasBufferUnmeasured\",\"type\":\"uint256\"}],\"name\":\"ChangeGasParameters\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"searcher\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"UseNonce\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"auctioneer\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structIAuctionEntryPoint.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"call\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_auctioneer\",\"type\":\"address\"}],\"name\":\"changeAuctioneer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_depositVault\",\"type\":\"address\"}],\"name\":\"changeDepositVault\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_gasPerByteIntrinsic\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_gasPerByteEip7623\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_gasContractExecution\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_gasBufferEstimate\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_gasBufferUnmeasured\",\"type\":\"uint256\"}],\"name\":\"changeGasParameters\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"depositVault\",\"outputs\":[{\"internalType\":\"contractIAuctionDepositVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasBufferEstimate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasBufferUnmeasured\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasContractExecution\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasPerByteEip7623\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasPerByteIntrinsic\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structIAuctionEntryPoint.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"getAuctionTxHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"searchers\",\"type\":\"address[]\"}],\"name\":\"getNoncesAndDeposits\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"nonces_\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"deposits_\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 	Sigs: map[string]string{
 		"5ec2c7bf": "auctioneer()",
 		"ca157554": "call((bytes32,uint256,address,address,uint256,uint256,uint256,bytes,bytes,bytes))",
@@ -2207,6 +2207,10 @@ var IAuctionEntryPointMetaData = &bind.MetaData{
 		"2a215610": "changeGasParameters(uint256,uint256,uint256,uint256,uint256)",
 		"d7cd3949": "depositVault()",
 		"a5b2ab40": "gasBufferEstimate()",
+		"145aa6c7": "gasBufferUnmeasured()",
+		"c62a1105": "gasContractExecution()",
+		"5e155d7a": "gasPerByteEip7623()",
+		"ea147667": "gasPerByteIntrinsic()",
 		"a8aa9450": "getAuctionTxHash((bytes32,uint256,address,address,uint256,uint256,uint256,bytes,bytes,bytes))",
 		"0339ed37": "getNoncesAndDeposits(address[])",
 	},
@@ -2450,6 +2454,122 @@ func (_IAuctionEntryPoint *IAuctionEntryPointSession) GasBufferEstimate() (*big.
 // Solidity: function gasBufferEstimate() view returns(uint256)
 func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GasBufferEstimate() (*big.Int, error) {
 	return _IAuctionEntryPoint.Contract.GasBufferEstimate(&_IAuctionEntryPoint.CallOpts)
+}
+
+// GasBufferUnmeasured is a free data retrieval call binding the contract method 0x145aa6c7.
+//
+// Solidity: function gasBufferUnmeasured() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasBufferUnmeasured(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _IAuctionEntryPoint.contract.Call(opts, &out, "gasBufferUnmeasured")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GasBufferUnmeasured is a free data retrieval call binding the contract method 0x145aa6c7.
+//
+// Solidity: function gasBufferUnmeasured() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointSession) GasBufferUnmeasured() (*big.Int, error) {
+	return _IAuctionEntryPoint.Contract.GasBufferUnmeasured(&_IAuctionEntryPoint.CallOpts)
+}
+
+// GasBufferUnmeasured is a free data retrieval call binding the contract method 0x145aa6c7.
+//
+// Solidity: function gasBufferUnmeasured() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GasBufferUnmeasured() (*big.Int, error) {
+	return _IAuctionEntryPoint.Contract.GasBufferUnmeasured(&_IAuctionEntryPoint.CallOpts)
+}
+
+// GasContractExecution is a free data retrieval call binding the contract method 0xc62a1105.
+//
+// Solidity: function gasContractExecution() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasContractExecution(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _IAuctionEntryPoint.contract.Call(opts, &out, "gasContractExecution")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GasContractExecution is a free data retrieval call binding the contract method 0xc62a1105.
+//
+// Solidity: function gasContractExecution() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointSession) GasContractExecution() (*big.Int, error) {
+	return _IAuctionEntryPoint.Contract.GasContractExecution(&_IAuctionEntryPoint.CallOpts)
+}
+
+// GasContractExecution is a free data retrieval call binding the contract method 0xc62a1105.
+//
+// Solidity: function gasContractExecution() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GasContractExecution() (*big.Int, error) {
+	return _IAuctionEntryPoint.Contract.GasContractExecution(&_IAuctionEntryPoint.CallOpts)
+}
+
+// GasPerByteEip7623 is a free data retrieval call binding the contract method 0x5e155d7a.
+//
+// Solidity: function gasPerByteEip7623() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasPerByteEip7623(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _IAuctionEntryPoint.contract.Call(opts, &out, "gasPerByteEip7623")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GasPerByteEip7623 is a free data retrieval call binding the contract method 0x5e155d7a.
+//
+// Solidity: function gasPerByteEip7623() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointSession) GasPerByteEip7623() (*big.Int, error) {
+	return _IAuctionEntryPoint.Contract.GasPerByteEip7623(&_IAuctionEntryPoint.CallOpts)
+}
+
+// GasPerByteEip7623 is a free data retrieval call binding the contract method 0x5e155d7a.
+//
+// Solidity: function gasPerByteEip7623() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GasPerByteEip7623() (*big.Int, error) {
+	return _IAuctionEntryPoint.Contract.GasPerByteEip7623(&_IAuctionEntryPoint.CallOpts)
+}
+
+// GasPerByteIntrinsic is a free data retrieval call binding the contract method 0xea147667.
+//
+// Solidity: function gasPerByteIntrinsic() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasPerByteIntrinsic(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _IAuctionEntryPoint.contract.Call(opts, &out, "gasPerByteIntrinsic")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GasPerByteIntrinsic is a free data retrieval call binding the contract method 0xea147667.
+//
+// Solidity: function gasPerByteIntrinsic() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointSession) GasPerByteIntrinsic() (*big.Int, error) {
+	return _IAuctionEntryPoint.Contract.GasPerByteIntrinsic(&_IAuctionEntryPoint.CallOpts)
+}
+
+// GasPerByteIntrinsic is a free data retrieval call binding the contract method 0xea147667.
+//
+// Solidity: function gasPerByteIntrinsic() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GasPerByteIntrinsic() (*big.Int, error) {
+	return _IAuctionEntryPoint.Contract.GasPerByteIntrinsic(&_IAuctionEntryPoint.CallOpts)
 }
 
 // GetAuctionTxHash is a free data retrieval call binding the contract method 0xa8aa9450.
@@ -3415,10 +3535,11 @@ func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) ParseUseNonce(log types.L
 
 // IAuctionFeeVaultMetaData contains all meta data concerning the IAuctionFeeVault contract.
 var IAuctionFeeVaultMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"paybackAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"validatorPaybackAmount\",\"type\":\"uint256\"}],\"name\":\"FeeDeposit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"FeeWithdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"reward\",\"type\":\"address\"}],\"name\":\"RewardAddressRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"searcherPaybackRate\",\"type\":\"uint256\"}],\"name\":\"SearcherPaybackRateUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"validatorPaybackRate\",\"type\":\"uint256\"}],\"name\":\"ValidatorPaybackRateUpdated\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getRewardAddr\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddr\",\"type\":\"address\"}],\"name\":\"registerRewardAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_searcherPaybackRate\",\"type\":\"uint256\"}],\"name\":\"setSearcherPaybackRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_validatorPaybackRate\",\"type\":\"uint256\"}],\"name\":\"setValidatorPaybackRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"searcher\",\"type\":\"address\"}],\"name\":\"takeBid\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"}],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"paybackAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"validatorPaybackAmount\",\"type\":\"uint256\"}],\"name\":\"FeeDeposit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"receiver\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"FeePaybackFailed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"FeeWithdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"reward\",\"type\":\"address\"}],\"name\":\"RewardAddressRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"searcherPaybackRate\",\"type\":\"uint256\"}],\"name\":\"SearcherPaybackRateUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"validatorPaybackRate\",\"type\":\"uint256\"}],\"name\":\"ValidatorPaybackRateUpdated\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getRewardAddr\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddr\",\"type\":\"address\"}],\"name\":\"registerRewardAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"address[]\",\"name\":\"rewardAddrs\",\"type\":\"address[]\"}],\"name\":\"registerRewardAddresses\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_searcherPaybackRate\",\"type\":\"uint256\"}],\"name\":\"setSearcherPaybackRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_validatorPaybackRate\",\"type\":\"uint256\"}],\"name\":\"setValidatorPaybackRate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"searcher\",\"type\":\"address\"}],\"name\":\"takeBid\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"}],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 	Sigs: map[string]string{
 		"27a50f72": "getRewardAddr(address)",
 		"363d5183": "registerRewardAddress(address,address)",
+		"6227cdc9": "registerRewardAddresses(address[],address[])",
 		"36cf2c63": "setSearcherPaybackRate(uint256)",
 		"11062696": "setValidatorPaybackRate(uint256)",
 		"8573e2ff": "takeBid(address)",
@@ -3627,6 +3748,27 @@ func (_IAuctionFeeVault *IAuctionFeeVaultSession) RegisterRewardAddress(nodeId c
 // Solidity: function registerRewardAddress(address nodeId, address rewardAddr) returns()
 func (_IAuctionFeeVault *IAuctionFeeVaultTransactorSession) RegisterRewardAddress(nodeId common.Address, rewardAddr common.Address) (*types.Transaction, error) {
 	return _IAuctionFeeVault.Contract.RegisterRewardAddress(&_IAuctionFeeVault.TransactOpts, nodeId, rewardAddr)
+}
+
+// RegisterRewardAddresses is a paid mutator transaction binding the contract method 0x6227cdc9.
+//
+// Solidity: function registerRewardAddresses(address[] nodeIds, address[] rewardAddrs) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactor) RegisterRewardAddresses(opts *bind.TransactOpts, nodeIds []common.Address, rewardAddrs []common.Address) (*types.Transaction, error) {
+	return _IAuctionFeeVault.contract.Transact(opts, "registerRewardAddresses", nodeIds, rewardAddrs)
+}
+
+// RegisterRewardAddresses is a paid mutator transaction binding the contract method 0x6227cdc9.
+//
+// Solidity: function registerRewardAddresses(address[] nodeIds, address[] rewardAddrs) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultSession) RegisterRewardAddresses(nodeIds []common.Address, rewardAddrs []common.Address) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.RegisterRewardAddresses(&_IAuctionFeeVault.TransactOpts, nodeIds, rewardAddrs)
+}
+
+// RegisterRewardAddresses is a paid mutator transaction binding the contract method 0x6227cdc9.
+//
+// Solidity: function registerRewardAddresses(address[] nodeIds, address[] rewardAddrs) returns()
+func (_IAuctionFeeVault *IAuctionFeeVaultTransactorSession) RegisterRewardAddresses(nodeIds []common.Address, rewardAddrs []common.Address) (*types.Transaction, error) {
+	return _IAuctionFeeVault.Contract.RegisterRewardAddresses(&_IAuctionFeeVault.TransactOpts, nodeIds, rewardAddrs)
 }
 
 // SetSearcherPaybackRate is a paid mutator transaction binding the contract method 0x36cf2c63.
@@ -3852,6 +3994,149 @@ func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) WatchFeeDeposit(opts *bind.Wa
 func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) ParseFeeDeposit(log types.Log) (*IAuctionFeeVaultFeeDeposit, error) {
 	event := new(IAuctionFeeVaultFeeDeposit)
 	if err := _IAuctionFeeVault.contract.UnpackLog(event, "FeeDeposit", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// IAuctionFeeVaultFeePaybackFailedIterator is returned from FilterFeePaybackFailed and is used to iterate over the raw logs and unpacked data for FeePaybackFailed events raised by the IAuctionFeeVault contract.
+type IAuctionFeeVaultFeePaybackFailedIterator struct {
+	Event *IAuctionFeeVaultFeePaybackFailed // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IAuctionFeeVaultFeePaybackFailedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IAuctionFeeVaultFeePaybackFailed)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IAuctionFeeVaultFeePaybackFailed)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IAuctionFeeVaultFeePaybackFailedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IAuctionFeeVaultFeePaybackFailedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IAuctionFeeVaultFeePaybackFailed represents a FeePaybackFailed event raised by the IAuctionFeeVault contract.
+type IAuctionFeeVaultFeePaybackFailed struct {
+	Receiver common.Address
+	Amount   *big.Int
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterFeePaybackFailed is a free log retrieval operation binding the contract event 0x1d8f87fe9d1161aace72d663f27ad7df24ed2a29e04491f7e14bd7324f6284b3.
+//
+// Solidity: event FeePaybackFailed(address indexed receiver, uint256 amount)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterFeePaybackFailed(opts *bind.FilterOpts, receiver []common.Address) (*IAuctionFeeVaultFeePaybackFailedIterator, error) {
+	var receiverRule []interface{}
+	for _, receiverItem := range receiver {
+		receiverRule = append(receiverRule, receiverItem)
+	}
+
+	logs, sub, err := _IAuctionFeeVault.contract.FilterLogs(opts, "FeePaybackFailed", receiverRule)
+	if err != nil {
+		return nil, err
+	}
+	return &IAuctionFeeVaultFeePaybackFailedIterator{contract: _IAuctionFeeVault.contract, event: "FeePaybackFailed", logs: logs, sub: sub}, nil
+}
+
+// WatchFeePaybackFailed is a free log subscription operation binding the contract event 0x1d8f87fe9d1161aace72d663f27ad7df24ed2a29e04491f7e14bd7324f6284b3.
+//
+// Solidity: event FeePaybackFailed(address indexed receiver, uint256 amount)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) WatchFeePaybackFailed(opts *bind.WatchOpts, sink chan<- *IAuctionFeeVaultFeePaybackFailed, receiver []common.Address) (event.Subscription, error) {
+	var receiverRule []interface{}
+	for _, receiverItem := range receiver {
+		receiverRule = append(receiverRule, receiverItem)
+	}
+
+	logs, sub, err := _IAuctionFeeVault.contract.WatchLogs(opts, "FeePaybackFailed", receiverRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IAuctionFeeVaultFeePaybackFailed)
+				if err := _IAuctionFeeVault.contract.UnpackLog(event, "FeePaybackFailed", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseFeePaybackFailed is a log parse operation binding the contract event 0x1d8f87fe9d1161aace72d663f27ad7df24ed2a29e04491f7e14bd7324f6284b3.
+//
+// Solidity: event FeePaybackFailed(address indexed receiver, uint256 amount)
+func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) ParseFeePaybackFailed(log types.Log) (*IAuctionFeeVaultFeePaybackFailed, error) {
+	event := new(IAuctionFeeVaultFeePaybackFailed)
+	if err := _IAuctionFeeVault.contract.UnpackLog(event, "FeePaybackFailed", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
