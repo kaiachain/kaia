@@ -21,7 +21,7 @@ A bid pool is responsible for managing the valid bids from the `Auctioneer`. The
 5. The `bid.CallGasLimit` must be less or equal to `BidTxMaxCallGasLimit`.
 6. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
 
-Please note that it's `Auctioneer`'s responsibility to check the bid and nonce of `bid.Sender` to ensure the bid is valid.
+Please note that `Auctioneer` also validates the searcher's bid according to the KIP-249.
 
 ## Block building rules
 
