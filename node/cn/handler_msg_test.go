@@ -117,7 +117,7 @@ func prepareBlockChain(t *testing.T) (*gomock.Controller, *mocks.MockBlockChain,
 	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
 	mockAuctionModule := auction_mock.NewMockAuctionModule(mockCtrl)
 
-	mockAuctionModule.EXPECT().HandleBid(gomock.Any()).AnyTimes()
+	mockAuctionModule.EXPECT().HandleBid(gomock.Any(), gomock.Any()).AnyTimes()
 
 	mockPeer := NewMockPeer(mockCtrl)
 	mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()

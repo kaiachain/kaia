@@ -12,11 +12,12 @@ Note that the bid comes from the `Auctioneer`, which is an independent service t
 
 A bid pool is responsible for managing the valid bids from the auctioneer. The bid must satisfy the following rules:
 
-1. The `bid.BlockNumber` must be in range of `[currentBlockNumber + 1, currentBlockNumber + allowFutureBlock]`.
-2. The `bid.Bid` must be greater than 0.
-3. The `bid.CallGasLimit` must be less or equal to `BidTxMaxCallGasLimit`.
-4. The `bid.Sender` must not be in the winner list of the same block number if the new bid doesn't have the same target block and hash as the previous bid.
-5. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
+1. The `bid.Sender` must not be in the winner list of the same block number if the new bid doesn't have the same target block and hash as the previous bid.
+2. The `bid.BlockNumber` must be in range of `[currentBlockNumber + 1, currentBlockNumber + allowFutureBlock]`.
+3. The `bid.Bid` must be greater than 0.
+4. The `bid.Data` size must be less than or equal to `BidTxMaxDataSize`.
+5. The `bid.CallGasLimit` must be less or equal to `BidTxMaxCallGasLimit`.
+6. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
 
 ## Block building rules
 

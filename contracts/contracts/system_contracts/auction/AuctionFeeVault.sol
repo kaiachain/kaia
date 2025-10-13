@@ -68,10 +68,11 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
         uint256 searcherPaybackAmount = (originalAmount * searcherPaybackRate) /
             MAX_PAYBACK_RATE;
         if (searcherPaybackAmount > 0) {
-            (bool success, ) = searcher.call{value: searcherPaybackAmount}("");
-            /// @dev Do not revert if the payback fails
-            if (!success) {
+            /// @dev Do not revert if the searcher payback fails
+            /// Need to restrict the gas limit for deterministic gas calculation
+            if (!payable(searcher).send(searcherPaybackAmount)) {
                 searcherPaybackAmount = 0;
+                emit FeePaybackFailed(searcher, originalAmount);
             }
         }
 
@@ -80,10 +81,15 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
         if (validatorPayback > 0) {
             address rewardAddr = _nodeIdToRewardAddr[block.coinbase];
             if (rewardAddr != address(0)) {
-                (bool success, ) = rewardAddr.call{value: validatorPayback}("");
                 /// @dev Do not revert if the validator payback fails
+                /// Need to restrict the gas limit for deterministic gas calculation
+                (bool success, ) = payable(rewardAddr).call{
+                    value: validatorPayback,
+                    gas: 5000
+                }("");
                 if (!success) {
                     validatorPayback = 0;
+                    emit FeePaybackFailed(rewardAddr, originalAmount);
                 }
             } else {
                 validatorPayback = 0;

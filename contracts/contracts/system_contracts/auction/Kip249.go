@@ -2198,13 +2198,15 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) ParseVaultWithdraw(lo
 
 // IAuctionEntryPointMetaData contains all meta data concerning the IAuctionEntryPoint contract.
 var IAuctionEntryPointMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"Call\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"CallFailed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAuctioneer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAuctioneer\",\"type\":\"address\"}],\"name\":\"ChangeAuctioneer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldDepositVault\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newDepositVault\",\"type\":\"address\"}],\"name\":\"ChangeDepositVault\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"searcher\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"UseNonce\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"auctioneer\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structIAuctionEntryPoint.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"call\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_auctioneer\",\"type\":\"address\"}],\"name\":\"changeAuctioneer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_depositVault\",\"type\":\"address\"}],\"name\":\"changeDepositVault\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"depositVault\",\"outputs\":[{\"internalType\":\"contractIAuctionDepositVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structIAuctionEntryPoint.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"getAuctionTxHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"searchers\",\"type\":\"address[]\"}],\"name\":\"getNoncesAndDeposits\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"nonces_\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"deposits_\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"Call\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"CallFailed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAuctioneer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAuctioneer\",\"type\":\"address\"}],\"name\":\"ChangeAuctioneer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldDepositVault\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newDepositVault\",\"type\":\"address\"}],\"name\":\"ChangeDepositVault\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasPerByteIntrinsic\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasPerByteEip7623\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasContractExecution\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasBufferEstimate\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gasBufferUnmeasured\",\"type\":\"uint256\"}],\"name\":\"ChangeGasParameters\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"searcher\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"UseNonce\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"auctioneer\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structIAuctionEntryPoint.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"call\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_auctioneer\",\"type\":\"address\"}],\"name\":\"changeAuctioneer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_depositVault\",\"type\":\"address\"}],\"name\":\"changeDepositVault\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_gasPerByteIntrinsic\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_gasPerByteEip7623\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_gasContractExecution\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_gasBufferEstimate\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_gasBufferUnmeasured\",\"type\":\"uint256\"}],\"name\":\"changeGasParameters\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"depositVault\",\"outputs\":[{\"internalType\":\"contractIAuctionDepositVault\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasBufferEstimate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structIAuctionEntryPoint.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"getAuctionTxHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"searchers\",\"type\":\"address[]\"}],\"name\":\"getNoncesAndDeposits\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"nonces_\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"deposits_\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
 	Sigs: map[string]string{
 		"5ec2c7bf": "auctioneer()",
 		"ca157554": "call((bytes32,uint256,address,address,uint256,uint256,uint256,bytes,bytes,bytes))",
 		"774f45ec": "changeAuctioneer(address)",
 		"9d59928b": "changeDepositVault(address)",
+		"2a215610": "changeGasParameters(uint256,uint256,uint256,uint256,uint256)",
 		"d7cd3949": "depositVault()",
+		"a5b2ab40": "gasBufferEstimate()",
 		"a8aa9450": "getAuctionTxHash((bytes32,uint256,address,address,uint256,uint256,uint256,bytes,bytes,bytes))",
 		"0339ed37": "getNoncesAndDeposits(address[])",
 	},
@@ -2421,6 +2423,35 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) DepositVault() (comm
 	return _IAuctionEntryPoint.Contract.DepositVault(&_IAuctionEntryPoint.CallOpts)
 }
 
+// GasBufferEstimate is a free data retrieval call binding the contract method 0xa5b2ab40.
+//
+// Solidity: function gasBufferEstimate() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasBufferEstimate(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _IAuctionEntryPoint.contract.Call(opts, &out, "gasBufferEstimate")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GasBufferEstimate is a free data retrieval call binding the contract method 0xa5b2ab40.
+//
+// Solidity: function gasBufferEstimate() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointSession) GasBufferEstimate() (*big.Int, error) {
+	return _IAuctionEntryPoint.Contract.GasBufferEstimate(&_IAuctionEntryPoint.CallOpts)
+}
+
+// GasBufferEstimate is a free data retrieval call binding the contract method 0xa5b2ab40.
+//
+// Solidity: function gasBufferEstimate() view returns(uint256)
+func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GasBufferEstimate() (*big.Int, error) {
+	return _IAuctionEntryPoint.Contract.GasBufferEstimate(&_IAuctionEntryPoint.CallOpts)
+}
+
 // GetAuctionTxHash is a free data retrieval call binding the contract method 0xa8aa9450.
 //
 // Solidity: function getAuctionTxHash((bytes32,uint256,address,address,uint256,uint256,uint256,bytes,bytes,bytes) auctionTx) view returns(bytes32)
@@ -2558,6 +2589,27 @@ func (_IAuctionEntryPoint *IAuctionEntryPointSession) ChangeDepositVault(_deposi
 // Solidity: function changeDepositVault(address _depositVault) returns()
 func (_IAuctionEntryPoint *IAuctionEntryPointTransactorSession) ChangeDepositVault(_depositVault common.Address) (*types.Transaction, error) {
 	return _IAuctionEntryPoint.Contract.ChangeDepositVault(&_IAuctionEntryPoint.TransactOpts, _depositVault)
+}
+
+// ChangeGasParameters is a paid mutator transaction binding the contract method 0x2a215610.
+//
+// Solidity: function changeGasParameters(uint256 _gasPerByteIntrinsic, uint256 _gasPerByteEip7623, uint256 _gasContractExecution, uint256 _gasBufferEstimate, uint256 _gasBufferUnmeasured) returns()
+func (_IAuctionEntryPoint *IAuctionEntryPointTransactor) ChangeGasParameters(opts *bind.TransactOpts, _gasPerByteIntrinsic *big.Int, _gasPerByteEip7623 *big.Int, _gasContractExecution *big.Int, _gasBufferEstimate *big.Int, _gasBufferUnmeasured *big.Int) (*types.Transaction, error) {
+	return _IAuctionEntryPoint.contract.Transact(opts, "changeGasParameters", _gasPerByteIntrinsic, _gasPerByteEip7623, _gasContractExecution, _gasBufferEstimate, _gasBufferUnmeasured)
+}
+
+// ChangeGasParameters is a paid mutator transaction binding the contract method 0x2a215610.
+//
+// Solidity: function changeGasParameters(uint256 _gasPerByteIntrinsic, uint256 _gasPerByteEip7623, uint256 _gasContractExecution, uint256 _gasBufferEstimate, uint256 _gasBufferUnmeasured) returns()
+func (_IAuctionEntryPoint *IAuctionEntryPointSession) ChangeGasParameters(_gasPerByteIntrinsic *big.Int, _gasPerByteEip7623 *big.Int, _gasContractExecution *big.Int, _gasBufferEstimate *big.Int, _gasBufferUnmeasured *big.Int) (*types.Transaction, error) {
+	return _IAuctionEntryPoint.Contract.ChangeGasParameters(&_IAuctionEntryPoint.TransactOpts, _gasPerByteIntrinsic, _gasPerByteEip7623, _gasContractExecution, _gasBufferEstimate, _gasBufferUnmeasured)
+}
+
+// ChangeGasParameters is a paid mutator transaction binding the contract method 0x2a215610.
+//
+// Solidity: function changeGasParameters(uint256 _gasPerByteIntrinsic, uint256 _gasPerByteEip7623, uint256 _gasContractExecution, uint256 _gasBufferEstimate, uint256 _gasBufferUnmeasured) returns()
+func (_IAuctionEntryPoint *IAuctionEntryPointTransactorSession) ChangeGasParameters(_gasPerByteIntrinsic *big.Int, _gasPerByteEip7623 *big.Int, _gasContractExecution *big.Int, _gasBufferEstimate *big.Int, _gasBufferUnmeasured *big.Int) (*types.Transaction, error) {
+	return _IAuctionEntryPoint.Contract.ChangeGasParameters(&_IAuctionEntryPoint.TransactOpts, _gasPerByteIntrinsic, _gasPerByteEip7623, _gasContractExecution, _gasBufferEstimate, _gasBufferUnmeasured)
 }
 
 // IAuctionEntryPointCallIterator is returned from FilterCall and is used to iterate over the raw logs and unpacked data for Call events raised by the IAuctionEntryPoint contract.
@@ -3086,6 +3138,142 @@ func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) WatchChangeDepositVault(o
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) ParseChangeDepositVault(log types.Log) (*IAuctionEntryPointChangeDepositVault, error) {
 	event := new(IAuctionEntryPointChangeDepositVault)
 	if err := _IAuctionEntryPoint.contract.UnpackLog(event, "ChangeDepositVault", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// IAuctionEntryPointChangeGasParametersIterator is returned from FilterChangeGasParameters and is used to iterate over the raw logs and unpacked data for ChangeGasParameters events raised by the IAuctionEntryPoint contract.
+type IAuctionEntryPointChangeGasParametersIterator struct {
+	Event *IAuctionEntryPointChangeGasParameters // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IAuctionEntryPointChangeGasParametersIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IAuctionEntryPointChangeGasParameters)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IAuctionEntryPointChangeGasParameters)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IAuctionEntryPointChangeGasParametersIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IAuctionEntryPointChangeGasParametersIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IAuctionEntryPointChangeGasParameters represents a ChangeGasParameters event raised by the IAuctionEntryPoint contract.
+type IAuctionEntryPointChangeGasParameters struct {
+	GasPerByteIntrinsic  *big.Int
+	GasPerByteEip7623    *big.Int
+	GasContractExecution *big.Int
+	GasBufferEstimate    *big.Int
+	GasBufferUnmeasured  *big.Int
+	Raw                  types.Log // Blockchain specific contextual infos
+}
+
+// FilterChangeGasParameters is a free log retrieval operation binding the contract event 0x88fa9ca37e3311ae53f6c07c267edc3aae4fc605df62318b5215d44665eb0308.
+//
+// Solidity: event ChangeGasParameters(uint256 gasPerByteIntrinsic, uint256 gasPerByteEip7623, uint256 gasContractExecution, uint256 gasBufferEstimate, uint256 gasBufferUnmeasured)
+func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) FilterChangeGasParameters(opts *bind.FilterOpts) (*IAuctionEntryPointChangeGasParametersIterator, error) {
+	logs, sub, err := _IAuctionEntryPoint.contract.FilterLogs(opts, "ChangeGasParameters")
+	if err != nil {
+		return nil, err
+	}
+	return &IAuctionEntryPointChangeGasParametersIterator{contract: _IAuctionEntryPoint.contract, event: "ChangeGasParameters", logs: logs, sub: sub}, nil
+}
+
+// WatchChangeGasParameters is a free log subscription operation binding the contract event 0x88fa9ca37e3311ae53f6c07c267edc3aae4fc605df62318b5215d44665eb0308.
+//
+// Solidity: event ChangeGasParameters(uint256 gasPerByteIntrinsic, uint256 gasPerByteEip7623, uint256 gasContractExecution, uint256 gasBufferEstimate, uint256 gasBufferUnmeasured)
+func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) WatchChangeGasParameters(opts *bind.WatchOpts, sink chan<- *IAuctionEntryPointChangeGasParameters) (event.Subscription, error) {
+	logs, sub, err := _IAuctionEntryPoint.contract.WatchLogs(opts, "ChangeGasParameters")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IAuctionEntryPointChangeGasParameters)
+				if err := _IAuctionEntryPoint.contract.UnpackLog(event, "ChangeGasParameters", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseChangeGasParameters is a log parse operation binding the contract event 0x88fa9ca37e3311ae53f6c07c267edc3aae4fc605df62318b5215d44665eb0308.
+//
+// Solidity: event ChangeGasParameters(uint256 gasPerByteIntrinsic, uint256 gasPerByteEip7623, uint256 gasContractExecution, uint256 gasBufferEstimate, uint256 gasBufferUnmeasured)
+func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) ParseChangeGasParameters(log types.Log) (*IAuctionEntryPointChangeGasParameters, error) {
+	event := new(IAuctionEntryPointChangeGasParameters)
+	if err := _IAuctionEntryPoint.contract.UnpackLog(event, "ChangeGasParameters", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

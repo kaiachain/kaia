@@ -243,6 +243,15 @@ describe("AuctionDepositVault", () => {
         auctionDepositVault,
         "WithdrawReservationExists"
       );
+
+      await expect(
+        auctionDepositVault.depositFor(user1.address, {
+          value: toPeb(10),
+        })
+      ).to.be.revertedWithCustomError(
+        auctionDepositVault,
+        "WithdrawReservationExists"
+      );
     });
     it("#withdraw: success", async () => {
       const { auctionDepositVault, user1 } = fixture;
@@ -477,6 +486,13 @@ describe("AuctionDepositVault", () => {
         fixture.user3.address,
       ]);
     });
+    it("#getDepositAddrs: invalid range", async () => {
+      const { auctionDepositVault } = fixture;
+
+      await expect(
+        auctionDepositVault.getDepositAddrs(3, 0)
+      ).to.be.revertedWithCustomError(auctionDepositVault, "InvalidRange");
+    });
     it("#isMinDepositOver: success", async () => {
       const { auctionDepositVault, user1 } = fixture;
 
@@ -526,6 +542,13 @@ describe("AuctionDepositVault", () => {
         [toPeb(40), toPeb(30)],
         [0, 0],
       ]);
+    });
+    it("#getAllAddrsOverMinDeposit: invalid range", async () => {
+      const { auctionDepositVault } = fixture;
+
+      await expect(
+        auctionDepositVault.getAllAddrsOverMinDeposit(3, 0)
+      ).to.be.revertedWithCustomError(auctionDepositVault, "InvalidRange");
     });
   });
 });

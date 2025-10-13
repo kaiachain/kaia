@@ -74,11 +74,13 @@ describe("AuctionEntryPoint", () => {
     it("Check constants", async () => {
       const { auctionEntryPoint } = await loadFixture(auctionTestFixture);
 
-      expect(await auctionEntryPoint.GAS_PER_BYTE_INTRINSIC()).to.equal(16);
-      expect(await auctionEntryPoint.GAS_PER_BYTE_EIP_7623()).to.equal(40);
-      expect(await auctionEntryPoint.GAS_CONTRACT_EXECUTION()).to.equal(21_000);
-      expect(await auctionEntryPoint.GAS_BUFFER_ESTIMATE()).to.equal(180_000);
-      expect(await auctionEntryPoint.GAS_BUFFER_UNMEASURED()).to.equal(20_000);
+      expect(await auctionEntryPoint.gasPerByteIntrinsic()).to.equal(16);
+      expect(await auctionEntryPoint.gasPerByteEip7623()).to.equal(40);
+      expect(await auctionEntryPoint.gasContractExecution()).to.equal(21_000);
+      expect(await auctionEntryPoint.gasBufferEstimate()).to.equal(200_000);
+      expect(await auctionEntryPoint.gasBufferUnmeasured()).to.equal(35_000);
+
+      expect(await auctionEntryPoint.MAX_DATA_SIZE()).to.equal(64 * 1024);
     });
     it("Check initialize", async () => {
       const { auctionEntryPoint, deployer, auctionDepositVault } =
@@ -104,6 +106,14 @@ describe("AuctionEntryPoint", () => {
       );
       await expect(
         auctionEntryPoint.connect(user1).changeDepositVault(user1.address)
+      ).to.be.revertedWithCustomError(
+        auctionEntryPoint,
+        "OwnableUnauthorizedAccount"
+      );
+      await expect(
+        auctionEntryPoint
+          .connect(user1)
+          .changeGasParameters(16, 40, 21_000, 180_000, 30_000)
       ).to.be.revertedWithCustomError(
         auctionEntryPoint,
         "OwnableUnauthorizedAccount"
@@ -147,6 +157,25 @@ describe("AuctionEntryPoint", () => {
         .to.emit(auctionEntryPoint, "ChangeDepositVault")
         .withArgs(auctionDepositVault.address, user1.address);
       expect(await auctionEntryPoint.depositVault()).to.equal(user1.address);
+    });
+    it("Change gas parameters", async () => {
+      const { auctionEntryPoint, deployer } = await loadFixture(
+        auctionTestFixture
+      );
+
+      await expect(
+        auctionEntryPoint
+          .connect(deployer)
+          .changeGasParameters(100, 100, 100, 100, 100)
+      )
+        .to.emit(auctionEntryPoint, "ChangeGasParameters")
+        .withArgs(100, 100, 100, 100, 100);
+
+      expect(await auctionEntryPoint.gasPerByteIntrinsic()).to.equal(100);
+      expect(await auctionEntryPoint.gasPerByteEip7623()).to.equal(100);
+      expect(await auctionEntryPoint.gasContractExecution()).to.equal(100);
+      expect(await auctionEntryPoint.gasBufferEstimate()).to.equal(100);
+      expect(await auctionEntryPoint.gasBufferUnmeasured()).to.equal(100);
     });
   });
   describe("Check call", () => {
@@ -323,6 +352,21 @@ describe("AuctionEntryPoint", () => {
       auctionTx2.searcherSig = "0x";
 
       await expect(auctionEntryPoint.connect(coinbase).call(auctionTx2)).to.be
+        .reverted;
+
+      const { auctionTx: auctionTx3 } = await generateAuctionTx(
+        auctionEntryPoint.address,
+        user1,
+        deployer,
+        testReceiver.address,
+        "0x" + "ff".repeat(64 * 1024) + "ff", // 64KB + 1 byte
+        (await nowBlock()) + 1,
+        10_000_000,
+        toPeb(10n),
+        0
+      );
+
+      await expect(auctionEntryPoint.connect(coinbase).call(auctionTx3)).to.be
         .reverted;
     });
     it("#call: should take bid and gas reimbursement if failed to call the target", async () => {

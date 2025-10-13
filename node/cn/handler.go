@@ -1157,7 +1157,7 @@ func handleBidMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 
-	pm.auctionModule.HandleBid(data)
+	pm.auctionModule.HandleBid(p.GetID(), data)
 
 	return nil
 }
