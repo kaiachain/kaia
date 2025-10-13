@@ -1,16 +1,18 @@
 # kaiax/auction
 
-This module is responsible for processing the auction specified by [KIP-249](https://kips.kaia.io/KIPs/kip-249).
+This module implements the Kaia client (CN) for processing the auction specified by [KIP-249](https://kips.kaia.io/KIPs/kip-249).
 
 ## Concepts
 
-The bid is a data that contains the information to generate a transaction to be executed right after the target transaction is executed.
+The bid is a data that contains the information to generate a transaction to be executed right after the target transaction is executed. All the winning bids is sent by `Auctioneer`, which is an independent service that is responsible for processing auction and submit winner's bid to the Kaia client (CN). The bid pool checks the `Auctioneer`'s signature to ensure the bid is coming from the `Auctioneer`.
 
-Note that the bid comes from the `Auctioneer`, which is an independent service that is responsible for processing auction and submit winner's bid to the Kaia client (CN).
+![auction_topology](./auction_topology.png)
+
+As shown in the topology, the `Auctioneer` won't connect to the PN or EN, and the auction module itself is disabled on PN and EN.
 
 ## Bid pool validation rules
 
-A bid pool is responsible for managing the valid bids from the auctioneer. The bid must satisfy the following rules:
+A bid pool is responsible for managing the valid bids from the `Auctioneer`. The bid must satisfy the following rules:
 
 1. The `bid.Sender` must not be in the winner list of the same block number if the new bid doesn't have the same target block and hash as the previous bid.
 2. The `bid.BlockNumber` must be in range of `[currentBlockNumber + 1, currentBlockNumber + allowFutureBlock]`.
@@ -18,6 +20,8 @@ A bid pool is responsible for managing the valid bids from the auctioneer. The b
 4. The `bid.Data` size must be less than or equal to `BidTxMaxDataSize`.
 5. The `bid.CallGasLimit` must be less or equal to `BidTxMaxCallGasLimit`.
 6. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
+
+Please note that it's `Auctioneer`'s responsibility to check the bid and nonce of `bid.Sender` to ensure the bid is valid.
 
 ## Block building rules
 
@@ -36,10 +40,10 @@ This module does not persist any data.
 ### Init
 
 - Dependencies:
-  - ChainConfig: to generate the latest signer.
-  - NodeKey: for BidTxGenerator.
+  - ChainConfig: To generate the latest signer.
+  - NodeKey: For BidTxGenerator. The corresponding address should hold at least `AuctionLenderMinBal` of KAIA.
 - Notable dependents:
-  - worker: to extract bundles.
+  - worker: To extract bundles.
 
 ### Start and stop
 
@@ -49,7 +53,7 @@ It starts/stops the bid pool and corresponding background threads.
 
 ### Execution
 
-This module reads `SystemRegistry` and `AuctionEntryPoint` to detect any changes in `AuctionEntryPoint` and `Auctioneer` address. If the one of them is changed, the module will clear the existing bids in the bid pool.
+This module reads `SystemRegistry` and `AuctionEntryPoint` to detect any changes of `AuctionEntryPoint` address, `bidTxGasBuffer` and `Auctioneer` address. If the one of them is changed, the module will clear the existing bids in the bid pool.
 
 ## APIs
 
@@ -81,8 +85,7 @@ curl -H "Content-Type: application/json" \
     }' http://localhost:8551
 ```
 
-```
-json
+```json
 {
   "bidHash": 0x...
   "err": "..."
