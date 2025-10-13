@@ -228,9 +228,7 @@ func (s *KaiaBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.Bl
 		response, err := s.rpcOutputBlock(block, true, fullTx)
 		if err == nil && blockNr == rpc.PendingBlockNumber {
 			// Pending blocks need to nil out a few fields
-			for _, field := range []string{"hash", "nonce", "miner"} {
-				response[field] = nil
-			}
+			s.nullifyPendingBlockFields(response)
 		}
 		return response, err
 	}
@@ -257,8 +255,15 @@ func (s *KaiaBlockChainAPI) GetBlockWithConsensusInfoByNumber(ctx context.Contex
 	}
 
 	if *number == rpc.PendingBlockNumber {
-		logger.Trace("Cannot get consensus information of the PendingBlock.")
-		return nil, errPendingNotAllowed
+		block, receipts, _ := s.b.Pending()
+		cInfo, err := s.b.Engine().GetConsensusInfo(block)
+		if err != nil {
+			logger.Error("Getting consensus information failed", "blockHash", block.Hash(), "err", err)
+			return nil, errInternalError
+		}
+		resp := s.makeRPCBlockOutputWithConsensusInfo(block, cInfo, block.Transactions(), receipts)
+		s.nullifyPendingBlockFields(resp)
+		return resp, nil
 	}
 
 	if *number == rpc.LatestBlockNumber {
@@ -282,12 +287,20 @@ func (s *KaiaBlockChainAPI) GetBlockWithConsensusInfoByNumber(ctx context.Contex
 		return nil, errInternalError
 	}
 
-	receipts := s.b.GetBlockReceipts(ctx, blockHash)
+	receipts := s.b.GetBlockReceiptsInCache(blockHash)
 	if receipts == nil {
 		receipts = s.b.GetBlockReceipts(ctx, blockHash)
 	}
 
 	return s.makeRPCBlockOutputWithConsensusInfo(block, cInfo, block.Transactions(), receipts), nil
+}
+
+// nullifyPendingBlockFields sets specific fields to nil for pending blocks
+func (s *KaiaBlockChainAPI) nullifyPendingBlockFields(response map[string]interface{}) {
+	pendingBlockNilFields := []string{"hash", "nonce", "miner"}
+	for _, field := range pendingBlockNilFields {
+		response[field] = nil
+	}
 }
 
 func (s *KaiaBlockChainAPI) GetBlockWithConsensusInfoByNumberRange(ctx context.Context, start *rpc.BlockNumber, end *rpc.BlockNumber) (map[string]interface{}, error) {

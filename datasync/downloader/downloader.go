@@ -566,7 +566,6 @@ func (d *Downloader) spawnSync(fetchers []func() error, peerID string) error {
 	logger.Debug("spawnSync started", "peerID", peerID)
 
 	for _, fn := range fetchers {
-		fn := fn
 		go func() { defer d.cancelWg.Done(); errc <- fn() }()
 	}
 	// Wait for the first error, then terminate the others.

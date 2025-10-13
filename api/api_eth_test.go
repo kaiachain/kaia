@@ -23,7 +23,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -32,42 +32,6 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-)
-
-var dummyChainConfigForEthAPITest = &params.ChainConfig{
-	ChainID:                  new(big.Int).SetUint64(111111),
-	IstanbulCompatibleBlock:  new(big.Int).SetUint64(0),
-	LondonCompatibleBlock:    new(big.Int).SetUint64(0),
-	EthTxTypeCompatibleBlock: new(big.Int).SetUint64(0),
-	UnitPrice:                25000000000, // 25 gkei
-}
-
-var (
-	testLondonConfig = &params.ChainConfig{
-		ChainID:                 new(big.Int).SetUint64(111111),
-		IstanbulCompatibleBlock: common.Big0,
-		LondonCompatibleBlock:   common.Big0,
-		UnitPrice:               25000000000,
-	}
-	testEthTxTypeConfig = &params.ChainConfig{
-		ChainID:                  new(big.Int).SetUint64(111111),
-		IstanbulCompatibleBlock:  common.Big0,
-		LondonCompatibleBlock:    common.Big0,
-		EthTxTypeCompatibleBlock: common.Big0,
-		UnitPrice:                25000000000, // 25 gkei
-	}
-	testRandaoConfig = &params.ChainConfig{
-		ChainID:                  new(big.Int).SetUint64(111111),
-		IstanbulCompatibleBlock:  common.Big0,
-		LondonCompatibleBlock:    common.Big0,
-		EthTxTypeCompatibleBlock: common.Big0,
-		MagmaCompatibleBlock:     common.Big0,
-		KoreCompatibleBlock:      common.Big0,
-		ShanghaiCompatibleBlock:  common.Big0,
-		CancunCompatibleBlock:    common.Big0,
-		RandaoCompatibleBlock:    common.Big0,
-		UnitPrice:                25000000000, // 25 gkei
-	}
 )
 
 // For floor data gas error case (EIP-7623)
@@ -219,16 +183,16 @@ func TestTestEthAPI_GetUncleCountByBlockHash(t *testing.T) {
 
 // TestEthAPI_GetHeaderByNumber tests GetHeaderByNumber.
 func TestEthAPI_GetHeaderByNumber(t *testing.T) {
-	testGetHeader(t, "GetHeaderByNumber", testLondonConfig)
-	testGetHeader(t, "GetHeaderByNumber", testEthTxTypeConfig)
-	testGetHeader(t, "GetHeaderByNumber", testRandaoConfig)
+	testGetHeader(t, "GetHeaderByNumber", params.TestKaiaConfig("london"))
+	testGetHeader(t, "GetHeaderByNumber", params.TestKaiaConfig("ethTxType"))
+	testGetHeader(t, "GetHeaderByNumber", params.TestKaiaConfig("randao"))
 }
 
 // TestEthAPI_GetHeaderByHash tests GetHeaderByNumber.
 func TestEthAPI_GetHeaderByHash(t *testing.T) {
-	testGetHeader(t, "GetHeaderByHash", testLondonConfig)
-	testGetHeader(t, "GetHeaderByHash", testEthTxTypeConfig)
-	testGetHeader(t, "GetHeaderByHash", testRandaoConfig)
+	testGetHeader(t, "GetHeaderByHash", params.TestKaiaConfig("london"))
+	testGetHeader(t, "GetHeaderByHash", params.TestKaiaConfig("ethTxType"))
+	testGetHeader(t, "GetHeaderByHash", params.TestKaiaConfig("randao"))
 }
 
 // testGetHeader generates data to test GetHeader related functions in EthAPI
@@ -345,7 +309,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
 	mockEngine := mocks.NewMockEngine(mockCtrl)
 	// GetHeader APIs calls internally below methods.
 	mockBackend.EXPECT().Engine().Return(mockEngine)
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("ethTxType")).AnyTimes()
 	// Author is called when calculates miner field of Header.
 	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
 	mockEngine.EXPECT().Author(gomock.Any()).Return(dummyMiner, nil)
@@ -857,7 +821,7 @@ func TestEthAPI_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(block, nil).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("ethTxType")).AnyTimes()
 	// Get transaction by block number and index for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
 		ethTx := api.GetTransactionByBlockNumberAndIndex(context.Background(), rpc.BlockNumber(block.NumberU64()), hexutil.Uint(i))
@@ -874,7 +838,7 @@ func TestEthAPI_GetTransactionByBlockHashAndIndex(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().BlockByHash(gomock.Any(), gomock.Any()).Return(block, nil).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("ethTxType")).AnyTimes()
 
 	// Get transaction by block hash and index for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -899,7 +863,7 @@ func TestEthAPI_GetTransactionByHash(t *testing.T) {
 	// Mock Backend functions.
 	mockBackend.EXPECT().ChainDB().Return(mockDBManager).Times(txs.Len())
 	mockBackend.EXPECT().BlockByHash(gomock.Any(), block.Hash()).Return(block, nil).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("ethTxType")).AnyTimes()
 
 	// Get transaction by hash for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -926,7 +890,7 @@ func TestEthAPI_GetTransactionByHashFromPool(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().ChainDB().Return(mockDBManager).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("ethTxType")).AnyTimes()
 	mockBackend.EXPECT().GetPoolTransaction(gomock.Any()).DoAndReturn(
 		func(hash common.Hash) *types.Transaction {
 			return txHashMap[hash]
@@ -952,7 +916,7 @@ func TestEthAPI_PendingTransactions(t *testing.T) {
 
 	mockAccountManager := mock_accounts.NewMockAccountManager(mockCtrl)
 	mockBackend.EXPECT().AccountManager().Return(mockAccountManager)
-	mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("ethTxType")).AnyTimes()
 	mockBackend.EXPECT().GetPoolTransactions().Return(txs, nil)
 
 	wallets := make([]accounts.Wallet, 1)
@@ -986,7 +950,7 @@ func TestEthAPI_GetTransactionReceipt(t *testing.T) {
 	).Times(txs.Len())
 	mockBackend.EXPECT().GetBlockReceipts(gomock.Any(), gomock.Any()).Return(receipts).Times(txs.Len())
 	mockBackend.EXPECT().HeaderByHash(gomock.Any(), block.Hash()).Return(block.Header(), nil).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(testRandaoConfig).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(params.TestChainConfig.Copy()).AnyTimes()
 
 	// Get receipt for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -1005,7 +969,7 @@ func testInitForEthApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend,
 	mockCtrl := gomock.NewController(t)
 	mockBackend := mock_api.NewMockBackend(mockCtrl)
 
-	blockchain.InitDeriveSha(dummyChainConfigForEthAPITest)
+	blockchain.InitDeriveSha(params.TestKaiaConfig("ethTxType"))
 
 	api := EthAPI{
 		kaiaTransactionAPI: NewKaiaTransactionAPI(mockBackend, new(AddrLocker)),
@@ -2044,7 +2008,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 	accountNonce := uint64(5)
 	to := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
 	byteCode := common.Hex2Bytes("6080604052600436106049576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680632e64cec114604e5780636057361d146076575b600080fd5b348015605957600080fd5b50606060a0565b6040518082815260200191505060405180910390f35b348015608157600080fd5b50609e6004803603810190808035906020019092919050505060a9565b005b60008054905090565b80600081905550505600a165627a7a723058207783dba41884f73679e167576362b7277f88458815141651f48ca38c25b498f80029")
-	unitPrice := new(big.Int).SetUint64(dummyChainConfigForEthAPITest.UnitPrice)
+	unitPrice := new(big.Int).SetUint64(25 * params.Gkei)
 	value := new(big.Int).SetUint64(500)
 	testSet := []struct {
 		txArgs              EthTransactionArgs
@@ -2081,7 +2045,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 				Data:                 (*hexutil.Bytes)(&byteCode),
 				Input:                nil,
 				AccessList:           nil,
-				ChainID:              (*hexutil.Big)(dummyChainConfigForEthAPITest.ChainID),
+				ChainID:              (*hexutil.Big)(params.TestChainConfig.ChainID),
 			},
 			dynamicFeeParamsSet: false,
 			nonceSet:            false,
@@ -2115,7 +2079,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 				Data:                 (*hexutil.Bytes)(&byteCode),
 				Input:                nil,
 				AccessList:           nil,
-				ChainID:              (*hexutil.Big)(dummyChainConfigForEthAPITest.ChainID),
+				ChainID:              (*hexutil.Big)(params.TestChainConfig.ChainID),
 			},
 			dynamicFeeParamsSet: false,
 			nonceSet:            false,
@@ -2170,7 +2134,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 				Data:                 nil,
 				Input:                nil,
 				AccessList:           nil,
-				ChainID:              (*hexutil.Big)(dummyChainConfigForEthAPITest.ChainID),
+				ChainID:              (*hexutil.Big)(params.TestChainConfig.ChainID),
 			},
 			dynamicFeeParamsSet: false,
 			nonceSet:            false,
@@ -2246,7 +2210,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 				Data:                 nil,
 				Input:                nil,
 				AccessList:           nil,
-				ChainID:              (*hexutil.Big)(dummyChainConfigForEthAPITest.ChainID),
+				ChainID:              (*hexutil.Big)(params.TestChainConfig.ChainID),
 			},
 			dynamicFeeParamsSet: true,
 			nonceSet:            false,
@@ -2280,7 +2244,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 				Data:                 (*hexutil.Bytes)(&byteCode),
 				Input:                nil,
 				AccessList:           nil,
-				ChainID:              (*hexutil.Big)(dummyChainConfigForEthAPITest.ChainID),
+				ChainID:              (*hexutil.Big)(params.TestChainConfig.ChainID),
 			},
 			dynamicFeeParamsSet: false,
 			nonceSet:            true,
@@ -2314,7 +2278,7 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 				Data:                 (*hexutil.Bytes)(&byteCode),
 				Input:                nil,
 				AccessList:           nil,
-				ChainID:              (*hexutil.Big)(dummyChainConfigForEthAPITest.ChainID),
+				ChainID:              (*hexutil.Big)(params.TestChainConfig.ChainID),
 			},
 			dynamicFeeParamsSet: true,
 			nonceSet:            true,
@@ -2384,13 +2348,13 @@ func TestEthTransactionArgs_setDefaults(t *testing.T) {
 		mockBackend.EXPECT().SuggestTipCap(gomock.Any()).Return(unitPrice, nil)
 		mockBackend.EXPECT().SuggestPrice(gomock.Any()).Return(unitPrice, nil)
 		if !test.dynamicFeeParamsSet {
-			mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest)
+			mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("ethTxType"))
 		}
 		if !test.nonceSet {
 			mockBackend.EXPECT().GetPoolNonce(context.Background(), gomock.Any()).Return(poolNonce)
 		}
 		if !test.chainIdSet {
-			mockBackend.EXPECT().ChainConfig().Return(dummyChainConfigForEthAPITest)
+			mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("ethTxType"))
 		}
 		mockBackend.EXPECT().RPCGasCap().Return(nil)
 		txArgs := test.txArgs
@@ -2450,7 +2414,7 @@ type testChainContext struct {
 }
 
 func (mc *testChainContext) Engine() consensus.Engine {
-	return gxhash.NewFaker()
+	return faker.NewFaker()
 }
 
 func (mc *testChainContext) GetHeader(common.Hash, uint64) *types.Header {

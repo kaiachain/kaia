@@ -38,7 +38,6 @@ APIs are categorized as follows. If you want to know more detail, please refer t
   - istanbul
   - mainbridge
   - subbridge
-  - clique
   - governance
   - bootnode
   - chaindatafetcher

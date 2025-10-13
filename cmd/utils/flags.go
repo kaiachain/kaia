@@ -336,11 +336,10 @@ var (
 		EnvVars:  []string{"KLAYTN_DB_LEVELDB_CACHE_SIZE", "KAIA_DB_LEVELDB_CACHE_SIZE"},
 		Category: "DATABASE",
 	}
-	// TODO-Kaia-Database LevelDBCompressionTypeFlag should be removed before main-net release.
 	LevelDBCompressionTypeFlag = &cli.IntFlag{
 		Name:     "db.leveldb.compression",
 		Usage:    "Determines the compression method for LevelDB. 0=AllNoCompression, 1=ReceiptOnlySnappyCompression, 2=StateTrieOnlyNoCompression, 3=AllSnappyCompression",
-		Value:    0,
+		Value:    2,
 		Aliases:  []string{"migration.src.db.leveldb.compression"},
 		EnvVars:  []string{"KLAYTN_DB_LEVELDB_COMPRESSION", "KAIA_DB_LEVELDB_COMPRESSION"},
 		Category: "DATABASE",
@@ -1377,10 +1376,9 @@ var (
 		EnvVars:  []string{"KLAYTN_ANCHORING", "KAIA_ANCHORING"},
 		Category: "SERVICECHAIN",
 	}
-	// TODO-Kaia: need to check if deprecated.
 	ServiceChainConsensusFlag = &cli.StringFlag{
 		Name:    "scconsensus",
-		Usage:   "Set the service chain consensus (\"istanbul\", \"clique\")",
+		Usage:   "Set the service chain consensus (\"istanbul\")",
 		Value:   "istanbul",
 		Aliases: []string{"servicechain.consensus"},
 		EnvVars: []string{"KLAYTN_SCCONSENSUS", "KAIA_SCCONSENSUS"},

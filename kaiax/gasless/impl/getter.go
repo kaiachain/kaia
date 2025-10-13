@@ -372,6 +372,11 @@ func getGaslessInfo(bc backends.BlockChainForCaller, header *types.Header) (comm
 		return common.Address{}, nil, err
 	}
 
+	// If Registry is not installed, do not query GaslessSwapRouter contract.
+	if statedb.GetCode(system.RegistryAddr) == nil || bc.Config().IsRandaoForkBlockParent(header.Number) {
+		return common.Address{}, nil, nil
+	}
+
 	caller, err := system.NewMultiCallContractCaller(statedb, bc, header)
 	if err != nil {
 		return common.Address{}, nil, err

@@ -467,7 +467,10 @@ func getChainConfig(chainDB database.DBManager) (*params.ChainConfig, error) {
 		return nil, errors.New("chainDB.ReadBlockByNumber(0) == nil")
 	}
 
-	chainConfig := chainDB.ReadChainConfig(stored.Hash())
+	chainConfig, err := chainDB.ReadChainConfig(stored.Hash())
+	if err != nil {
+		return nil, err
+	}
 	if chainConfig == nil {
 		return nil, errors.New("chainConfig == nil")
 	}

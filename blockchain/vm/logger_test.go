@@ -62,7 +62,7 @@ func TestStoreCapture(t *testing.T) {
 		logger   = NewStructLogger(nil)
 		mem      = NewMemory()
 		stack    = newstack()
-		contract = NewContract(&dummyContractRef{}, &dummyContractRef{}, new(big.Int), 0)
+		contract = NewContract(&dummyContractRef{}, &dummyContractRef{}, new(big.Int), 0, nil)
 	)
 
 	stack.push(uint256.NewInt(1))

@@ -86,6 +86,10 @@ var (
 	// transactions is reached for specific accounts.
 	ErrInflightTxLimitReached = errors.New("in-flight transaction limit reached for delegated accounts")
 
+	// ErrOutOfOrderTxFromDelegated is returned when the transaction with gapped
+	// nonce received from the accounts with delegation or pending delegation.
+	ErrOutOfOrderTxFromDelegated = errors.New("gapped-nonce tx from delegated accounts")
+
 	// ErrAuthorityReserved is returned if a transaction has an authorization
 	// signed by an address which already has in-flight transactions known to the
 	// pool.
@@ -969,37 +973,50 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	return nil
 }
 
+func (pool *TxPool) checkDelegationLimit(tx *types.Transaction) error {
+	from, _ := types.Sender(pool.signer, tx) // validated
+
+	// Short circuit if the sender has neither delegation nor pending delegation.
+	if pool.currentState.GetCodeHash(from) == types.EmptyCodeHash && !pool.all.hasAuth(from) {
+		return nil
+	}
+	pending := pool.pending[from]
+	if pending == nil {
+		// Transaction with gapped nonce is not supported for delegated accounts
+		if pool.getPendingNonce(from) != tx.Nonce() {
+			return ErrOutOfOrderTxFromDelegated
+		}
+		return nil
+	}
+	// Transaction replacement is supported
+	if pending.Contains(tx.Nonce()) {
+		return nil
+	}
+	return ErrInflightTxLimitReached
+}
+
 // validateAuth verifies that the transaction complies with code authorization
 // restrictions brought by SetCode transaction type.
 func (pool *TxPool) validateAuth(tx *types.Transaction) error {
-	from, _ := types.Sender(pool.signer, tx) // validated
-
 	// Allow at most one in-flight tx for delegated accounts or those with a
 	// pending authorization.
-	if pool.currentState.GetCodeHash(from) != types.EmptyCodeHash || len(pool.all.auths[from]) != 0 {
-		var (
-			count  int
-			exists bool
-		)
-		pending := pool.pending[from]
-		if pending != nil {
+	if err := pool.checkDelegationLimit(tx); err != nil {
+		return err
+	}
+
+	// For symmetry, allow at most one in-flight tx for any authority with a
+	// pending transaction.
+	for _, auth := range tx.SetCodeAuthorities() {
+		var count int
+		if pending := pool.pending[auth]; pending != nil {
 			count += pending.Len()
-			exists = pending.Contains(tx.Nonce())
 		}
-		queue := pool.queue[from]
-		if queue != nil {
+		if queue := pool.queue[auth]; queue != nil {
 			count += queue.Len()
-			exists = exists || queue.Contains(tx.Nonce())
 		}
 		// Replace the existing in-flight transaction for delegated accounts
 		// are still supported
-		if count >= 1 && !exists {
-			return ErrInflightTxLimitReached
-		}
-	}
-	// Authorities cannot conflict with any pending or queued transactions.
-	for _, auth := range tx.SetCodeAuthorities() {
-		if pool.pending[auth] != nil || pool.queue[auth] != nil {
+		if count > 1 {
 			return ErrAuthorityReserved
 		}
 	}
@@ -1273,10 +1290,7 @@ func (pool *TxPool) throttleLoop(spamThrottler *throttler) {
 		case <-ticker:
 			txs := types.Transactions{}
 
-			iterNum := len(spamThrottler.throttleCh)
-			if iterNum > throttleNum {
-				iterNum = throttleNum
-			}
+			iterNum := min(len(spamThrottler.throttleCh), throttleNum)
 
 			for i := 0; i < iterNum; i++ {
 				tx := <-spamThrottler.throttleCh
@@ -2049,6 +2063,15 @@ func (t *txLookup) removeAuthorities(tx *types.Transaction) {
 		}
 		t.auths[addr] = list
 	}
+}
+
+// hasAuth returns a flag indicating whether there are pending authorizations
+// from the specified address.
+func (t *txLookup) hasAuth(addr common.Address) bool {
+	t.lock.RLock()
+	defer t.lock.RUnlock()
+
+	return len(t.auths[addr]) > 0
 }
 
 // numSlots calculates the number of slots needed for a single transaction.

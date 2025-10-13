@@ -218,7 +218,7 @@ type DBManager interface {
 	ReadDatabaseVersion() *uint64
 	WriteDatabaseVersion(version uint64)
 
-	ReadChainConfig(hash common.Hash) *params.ChainConfig
+	ReadChainConfig(hash common.Hash) (*params.ChainConfig, error)
 	WriteChainConfig(hash common.Hash, cfg *params.ChainConfig)
 
 	// from accessors_snapshot.go
@@ -286,10 +286,6 @@ type DBManager interface {
 	ReadTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	ReadBlockReceiptsInCache(blockHash common.Hash) types.Receipts
 	ReadTxReceiptInCache(txHash common.Hash) *types.Receipt
-
-	// snapshot in clique(ConsensusClique) consensus
-	WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte)
-	ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error)
 
 	// Governance related functions
 	WriteGovernance(data map[string]interface{}, num uint64) error
@@ -2358,18 +2354,17 @@ func (dbm *databaseManager) WriteDatabaseVersion(version uint64) {
 }
 
 // ReadChainConfig retrieves the consensus settings based on the given genesis hash.
-func (dbm *databaseManager) ReadChainConfig(hash common.Hash) *params.ChainConfig {
+func (dbm *databaseManager) ReadChainConfig(hash common.Hash) (*params.ChainConfig, error) {
 	db := dbm.getDatabase(MiscDB)
 	data, _ := db.Get(configKey(hash))
 	if len(data) == 0 {
-		return nil
+		return nil, nil
 	}
 	var config params.ChainConfig
 	if err := json.Unmarshal(data, &config); err != nil {
-		logger.Error("Invalid chain config JSON", "hash", hash, "err", err)
-		return nil
+		return nil, err
 	}
-	return &config
+	return &config, nil
 }
 
 func (dbm *databaseManager) WriteChainConfig(hash common.Hash, cfg *params.ChainConfig) {
@@ -2772,18 +2767,6 @@ func (dbm *databaseManager) ReadBlockReceiptsInCache(blockHash common.Hash) type
 
 func (dbm *databaseManager) ReadTxReceiptInCache(txHash common.Hash) *types.Receipt {
 	return dbm.cm.readTxReceiptInCache(txHash)
-}
-
-func (dbm *databaseManager) WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) {
-	db := dbm.getDatabase(MiscDB)
-	if err := db.Put(snapshotKey(snapshotBlockHash), encodedSnapshot); err != nil {
-		logger.Crit("Failed to write clique snapshot", "err", err)
-	}
-}
-
-func (dbm *databaseManager) ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error) {
-	db := dbm.getDatabase(MiscDB)
-	return db.Get(snapshotKey(snapshotBlockHash))
 }
 
 func (dbm *databaseManager) WriteGovernance(data map[string]interface{}, num uint64) error {

@@ -308,9 +308,7 @@ func (self *worker) handleTxsCh(quitByErr chan bool) {
 		case <-self.txsCh:
 			if atomic.LoadInt32(&self.mining) != 0 {
 				// If we're mining, but nothing is being processed, wake on new transactions
-				if self.config.Clique != nil && self.config.Clique.Period == 0 {
-					self.commitNewWork()
-				}
+				// Clique consensus removed - no longer needed
 			}
 
 		case <-quitByErr:

@@ -53,23 +53,6 @@ func New(options ...Option) *blockchain.Genesis {
 	return genesis
 }
 
-func NewClique(options ...Option) *blockchain.Genesis {
-	genesis := &blockchain.Genesis{
-		Timestamp:  uint64(time.Now().Unix()),
-		BlockScore: big.NewInt(InitBlockScore),
-		Alloc:      make(blockchain.GenesisAlloc),
-		Config: &params.ChainConfig{
-			ChainID: big.NewInt(3000), // TODO-Kaia Needs Optional chainID
-		},
-	}
-
-	for _, opt := range options {
-		opt(genesis)
-	}
-
-	return genesis
-}
-
 func NewFileAt(dir string, options ...Option) string {
 	genesis := New(options...)
 	if err := Save(dir, genesis); err != nil {

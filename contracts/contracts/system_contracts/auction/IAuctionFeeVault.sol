@@ -47,6 +47,11 @@ interface IAuctionFeeVault {
 
     function withdraw(address to) external;
 
+    function registerRewardAddresses(
+        address[] memory nodeIds,
+        address[] memory rewardAddrs
+    ) external;
+
     function registerRewardAddress(address nodeId, address rewardAddr) external;
 
     function setSearcherPaybackRate(uint256 _searcherPaybackRate) external;

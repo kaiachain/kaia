@@ -140,6 +140,24 @@ contract AuctionFeeVault is IAuctionFeeVault, Ownable, AuctionError {
 
     /* ========== REGISTRATION ========== */
 
+    /// @dev Register the reward addresses for multiple nodes
+    /// @param nodeIds The CN node IDs registered as validators
+    /// @param rewardAddrs The reward recipient addresses
+    function registerRewardAddresses(
+        address[] memory nodeIds,
+        address[] memory rewardAddrs
+    ) external override onlyOwner {
+        if (nodeIds.length != rewardAddrs.length) revert InvalidInput();
+
+        for (uint256 i = 0; i < nodeIds.length; i++) {
+            address nodeId = nodeIds[i];
+            address rewardAddr = rewardAddrs[i];
+
+            _nodeIdToRewardAddr[nodeId] = rewardAddr;
+            emit RewardAddressRegistered(nodeId, rewardAddr);
+        }
+    }
+
     /// @dev Register the reward address for a node
     /// @param nodeId The CN node ID registered as a validator
     /// @param rewardAddr The reward recipient address

@@ -55,12 +55,6 @@ var (
 	// testTxPoolConfig is a transaction pool configuration without stateful disk
 	// sideeffects used during testing.
 	testTxPoolConfig TxPoolConfig
-
-	// eip1559Config is a chain config with EIP-1559 enabled at block 0.
-	eip1559Config *params.ChainConfig
-
-	// kip71Config is a chain config with Magma enabled at block 0.
-	kip71Config *params.ChainConfig
 )
 
 type dummyGovModule struct {
@@ -75,20 +69,8 @@ func init() {
 	testTxPoolConfig = DefaultTxPoolConfig
 	testTxPoolConfig.Journal = ""
 
-	eip1559Config = params.TestChainConfig.Copy()
-	eip1559Config.IstanbulCompatibleBlock = common.Big0
-	eip1559Config.LondonCompatibleBlock = common.Big0
-	eip1559Config.EthTxTypeCompatibleBlock = common.Big0
-	fork.SetHardForkBlockNumberConfig(eip1559Config)
-
-	kip71Config = params.TestChainConfig.Copy()
-	kip71Config.MagmaCompatibleBlock = common.Big0
-	kip71Config.IstanbulCompatibleBlock = common.Big0
-	kip71Config.LondonCompatibleBlock = common.Big0
-	kip71Config.EthTxTypeCompatibleBlock = common.Big0
-	kip71Config.Governance = &params.GovernanceConfig{KIP71: params.GetDefaultKIP71Config()}
-
-	InitDeriveSha(params.TestChainConfig)
+	fork.SetHardForkBlockNumberConfig(params.TestChainConfig.Copy())
+	InitDeriveSha(params.TestChainConfig.Copy())
 }
 
 type testBlockChain struct {
@@ -246,6 +228,7 @@ func setupTxPoolWithConfig(config *params.ChainConfig) (*TxPool, *ecdsa.PrivateK
 	blockchain := &testBlockChain{statedb, 10000000, new(event.Feed)}
 
 	key, _ := crypto.GenerateKey()
+	statedb.SetBalance(crypto.PubkeyToAddress(key.PublicKey), new(big.Int).SetUint64(params.KAIA))
 	pool := NewTxPool(testTxPoolConfig, config, blockchain, &dummyGovModule{chainConfig: config})
 
 	return pool, key
@@ -420,7 +403,7 @@ func TestHomesteadTransaction(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, _ := setupTxPoolWithConfig(kip71Config)
+	pool, _ := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -442,9 +425,10 @@ func TestHomesteadTransaction(t *testing.T) {
 func TestInvalidTransactions(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPool()
+	pool, _ := setupTxPool()
 	defer pool.Stop()
 
+	key, _ := crypto.GenerateKey()
 	tx := transaction(0, 100, key)
 	from, _ := deriveSender(tx)
 
@@ -471,10 +455,10 @@ func TestInvalidTransactions(t *testing.T) {
 
 	// NOTE-Kaia We only accept txs with an expected gas price only
 	// regardless of local or remote.
-	if err := pool.AddRemote(tx); err != ErrInvalidUnitPrice {
+	if err := pool.AddRemote(tx); err != ErrGasPriceBelowBaseFee {
 		t.Error("expected", ErrInvalidUnitPrice, "got", err)
 	}
-	if err := pool.AddLocal(tx); err != ErrInvalidUnitPrice {
+	if err := pool.AddLocal(tx); err != ErrGasPriceBelowBaseFee {
 		t.Error("expected", ErrInvalidUnitPrice, "got", err)
 	}
 }
@@ -482,7 +466,8 @@ func TestInvalidTransactions(t *testing.T) {
 func TestInvalidTransactionsMagma(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, _ := setupTxPool()
+	key, _ := crypto.GenerateKey()
 	pool.SetBaseFee(big.NewInt(1))
 	defer pool.Stop()
 
@@ -538,7 +523,7 @@ func genAnchorTx(nonce uint64) *types.Transaction {
 
 	tx, _ := types.NewTransactionWithMap(types.TxTypeChainDataAnchoring, values)
 
-	signer := types.MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	signer := types.MakeSigner(params.TestChainConfig, big.NewInt(2))
 	tx.Sign(signer, key)
 
 	return tx
@@ -781,9 +766,10 @@ func TestTransactionDropping(t *testing.T) {
 	t.Parallel()
 
 	// Create a test account and fund it
-	pool, key := setupTxPool()
+	pool, _ := setupTxPool()
 	defer pool.Stop()
 
+	key, _ := crypto.GenerateKey()
 	account := crypto.PubkeyToAddress(key.PublicKey)
 	testAddBalance(pool, account, big.NewInt(1000))
 
@@ -860,7 +846,7 @@ func TestTransactionPostponing(t *testing.T) {
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
-	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
 	defer pool.Stop()
 
 	// Create two test accounts to produce different gap profiles with
@@ -1079,7 +1065,7 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 	config.NoLocals = nolocals
 	config.NonExecSlotsAll = config.NonExecSlotsAccount*3 - 1 // reduce the queue limits to shorten test time (-1 to make it non divisible)
 
-	pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+	pool := NewTxPool(config, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
 	defer pool.Stop()
 
 	// Create a number of test accounts and fund them (last one will be the local)
@@ -1170,18 +1156,18 @@ func TestTransactionQueueTimeLimitingNoLocalsNoKeepLocals(t *testing.T) {
 func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 	// Reduce the eviction interval to a testable amount
 	defer func(old time.Duration) { evictionInterval = old }(evictionInterval)
-	evictionInterval = time.Second
+	evictionInterval = 100 * time.Millisecond
 
 	// Create the pool to test the non-expiration enforcement
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	config := testTxPoolConfig
-	config.Lifetime = 5 * time.Second
+	config.Lifetime = 500 * time.Millisecond
 	config.NoLocals = nolocals
 	config.KeepLocals = keepLocals
 
-	pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+	pool := NewTxPool(config, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
 	defer pool.Stop()
 
 	// Create two test accounts to ensure remotes expire but locals do not
@@ -1209,7 +1195,7 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 		t.Fatalf("pool internal state corrupted: %v", err)
 	}
 
-	time.Sleep(2 * evictionInterval)
+	time.Sleep(3 * evictionInterval)
 
 	// Wait a bit for eviction, but queued transactions must remain.
 	pending, queued = pool.Stats()
@@ -1217,7 +1203,7 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 	assert.Equal(t, queued, 2)
 
 	// Wait a bit for eviction to run and clean up any leftovers, and ensure only the local remains
-	time.Sleep(2 * config.Lifetime)
+	time.Sleep(config.Lifetime + 200*time.Millisecond)
 
 	pending, queued = pool.Stats()
 	assert.Equal(t, pending, 0)
@@ -1344,7 +1330,7 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 	config := testTxPoolConfig
 	config.ExecSlotsAll = config.ExecSlotsAccount * 10
 
-	pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+	pool := NewTxPool(config, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
 	defer pool.Stop()
 
 	// Create a number of test accounts and fund them
@@ -1456,7 +1442,7 @@ func TestTransactionCapClearsFromAll(t *testing.T) {
 	config.NonExecSlotsAccount = 2
 	config.ExecSlotsAll = 8
 
-	pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+	pool := NewTxPool(config, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
 	defer pool.Stop()
 
 	// Create a number of test accounts and fund them
@@ -1488,7 +1474,7 @@ func TestTransactionPendingMinimumAllowance(t *testing.T) {
 	config := testTxPoolConfig
 	config.ExecSlotsAll = 0
 
-	pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+	pool := NewTxPool(config, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
 	defer pool.Stop()
 
 	// Create a number of test accounts and fund them
@@ -1988,10 +1974,9 @@ func TestSetCodeTransactions(t *testing.T) {
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
-	eip7600Config := kip71Config.Copy()
-	eip7600Config.PragueCompatibleBlock = common.Big0
+	testChainConfig := params.TestKaiaConfig("prague")
 
-	pool := NewTxPool(testTxPoolConfig, eip7600Config, blockchain, &dummyGovModule{chainConfig: eip7600Config})
+	pool := NewTxPool(testTxPoolConfig, testChainConfig, blockchain, &dummyGovModule{chainConfig: testChainConfig})
 	defer pool.Stop()
 
 	// Create the test accounts
@@ -2015,28 +2000,97 @@ func TestSetCodeTransactions(t *testing.T) {
 	}{
 		{
 			// Check that only one in-flight transaction is allowed for accounts
-			// with delegation set. Also verify the accepted transaction can be
-			// replaced by fee.
-			name:    "only-one-in-flight",
+			// with delegation set.
+			name:    "accept-one-inflight-tx-of-delegated-account",
 			pending: 1,
 			run: func(name string) {
 				aa := common.Address{0xaa, 0xaa}
 				statedb.SetCode(addrA, append(types.DelegationPrefix, aa.Bytes()...))
 				statedb.SetCode(aa, []byte{byte(vm.ADDRESS), byte(vm.PUSH0), byte(vm.SSTORE)})
+
+				// Send gapped transaction, it should be rejected.
+				if err := pool.addTx(pricedTransaction(2, 100000, big.NewInt(1), keyA), false); !errors.Is(err, ErrOutOfOrderTxFromDelegated) {
+					t.Fatalf("%s: error mismatch: want %v, have %v", name, ErrOutOfOrderTxFromDelegated, err)
+				}
+
 				// Send transactions. First is accepted, second is rejected.
 				if err := pool.addTx(pricedTransaction(0, 100000, big.NewInt(1), keyA), false); err != nil {
 					t.Fatalf("%s: failed to add remote transaction: %v", name, err)
 				}
+				// Second and further transactions shall be rejected
 				if err := pool.addTx(pricedTransaction(1, 100000, big.NewInt(1), keyA), false); !errors.Is(err, ErrInflightTxLimitReached) {
 					t.Fatalf("%s: error mismatch: want %v, have %v", name, ErrInflightTxLimitReached, err)
 				}
-				// Also check gapped transaction.
+				// Check gapped transaction again.
 				if err := pool.addTx(pricedTransaction(2, 100000, big.NewInt(1), keyA), false); !errors.Is(err, ErrInflightTxLimitReached) {
 					t.Fatalf("%s: error mismatch: want %v, have %v", name, ErrInflightTxLimitReached, err)
 				}
 				// Replace by fee.
 				if err := pool.addTx(pricedTransaction(0, 100000, big.NewInt(10), keyA), false); err != nil {
 					t.Fatalf("%s: failed to replace with remote transaction: %v", name, err)
+				}
+				// Reset the delegation, avoid leaking state into the other tests
+				statedb.SetCode(addrA, nil)
+			},
+		},
+		{
+			// This test is analogous to the previous one, but the delegation is pending
+			// instead of set.
+			name:    "allow-one-tx-from-pooled-delegation",
+			pending: 2,
+			run: func(name string) {
+				// Create a pending delegation request from B.
+				if err := pool.addTx(setCodeTx(0, keyA, []unsignedAuth{{0, keyB}}), false); err != nil {
+					t.Fatalf("%s: failed to add with remote setcode transaction: %v", name, err)
+				}
+				// First transaction from B is accepted.
+				if err := pool.addTx(pricedTransaction(0, 100000, big.NewInt(1), keyB), false); err != nil {
+					t.Fatalf("%s: failed to add remote transaction: %v", name, err)
+				}
+				// Second transaction fails due to limit.
+				if err := pool.addTx(pricedTransaction(1, 100000, big.NewInt(1), keyB), false); !errors.Is(err, ErrInflightTxLimitReached) {
+					t.Fatalf("%s: error mismatch: want %v, have %v", name, ErrInflightTxLimitReached, err)
+				}
+				// Replace by fee for first transaction from B works.
+				if err := pool.addTx(pricedTransaction(0, 100000, big.NewInt(2), keyB), false); err != nil {
+					t.Fatalf("%s: failed to add remote transaction: %v", name, err)
+				}
+			},
+		},
+		{
+			// This is the symmetric case of the previous one, where the delegation request
+			// is received after the transaction. The resulting state shall be the same.
+			name:    "accept-authorization-from-sender-of-one-inflight-tx",
+			pending: 2,
+			run: func(name string) {
+				// The first in-flight transaction is accepted.
+				if err := pool.addTx(pricedTransaction(0, 100000, big.NewInt(1), keyB), false); err != nil {
+					t.Fatalf("%s: failed to add with pending delegation: %v", name, err)
+				}
+				// Delegation is accepted.
+				if err := pool.addTx(setCodeTx(0, keyA, []unsignedAuth{{0, keyB}}), false); err != nil {
+					t.Fatalf("%s: failed to add remote transaction: %v", name, err)
+				}
+				// The second in-flight transaction is rejected.
+				if err := pool.addTx(pricedTransaction(1, 100000, big.NewInt(1), keyB), false); !errors.Is(err, ErrInflightTxLimitReached) {
+					t.Fatalf("%s: error mismatch: want %v, have %v", name, ErrInflightTxLimitReached, err)
+				}
+			},
+		},
+		{
+			name:    "reject-authorization-from-sender-with-more-than-one-inflight-tx",
+			pending: 2,
+			run: func(name string) {
+				// Submit two transactions.
+				if err := pool.addTx(pricedTransaction(0, 100000, big.NewInt(1), keyB), false); err != nil {
+					t.Fatalf("%s: failed to add with pending delegation: %v", name, err)
+				}
+				if err := pool.addTx(pricedTransaction(1, 100000, big.NewInt(1), keyB), false); err != nil {
+					t.Fatalf("%s: failed to add with pending delegation: %v", name, err)
+				}
+				// Delegation rejected since two txs are already in-flight.
+				if err := pool.addTx(setCodeTx(0, keyA, []unsignedAuth{{0, keyB}}), false); !errors.Is(err, ErrAuthorityReserved) {
+					t.Fatalf("%s: error mismatch: want %v, have %v", name, ErrAuthorityReserved, err)
 				}
 			},
 		},
@@ -2045,7 +2099,7 @@ func TestSetCodeTransactions(t *testing.T) {
 			pending: 2,
 			run: func(name string) {
 				// Send two transactions where the first has no conflicting delegations and
-				// the second should be allowed despite conflicting with the authorities in 1).
+				// the second should be allowed despite conflicting with the authorities in the first.
 				if err := pool.addTx(setCodeTx(0, keyA, []unsignedAuth{{1, keyC}}), false); err != nil {
 					t.Fatalf("%s: failed to add with remote setcode transaction: %v", name, err)
 				}
@@ -2055,27 +2109,9 @@ func TestSetCodeTransactions(t *testing.T) {
 			},
 		},
 		{
-			name:    "allow-one-tx-from-pooled-delegation",
-			pending: 2,
-			run: func(name string) {
-				// Verify C cannot originate another transaction when it has a pooled delegation.
-				if err := pool.addTx(setCodeTx(0, keyA, []unsignedAuth{{0, keyC}}), false); err != nil {
-					t.Fatalf("%s: failed to add with remote setcode transaction: %v", name, err)
-				}
-				if err := pool.addTx(pricedTransaction(0, 100000, big.NewInt(1), keyC), false); err != nil {
-					t.Fatalf("%s: failed to add with pending delegatio: %v", name, err)
-				}
-				// Also check gapped transaction is rejected.
-				if err := pool.addTx(pricedTransaction(1, 100000, big.NewInt(1), keyC), false); !errors.Is(err, ErrInflightTxLimitReached) {
-					t.Fatalf("%s: error mismatch: want %v, have %v", name, ErrInflightTxLimitReached, err)
-				}
-			},
-		},
-		{
 			name:    "replace-by-fee-setcode-tx",
 			pending: 1,
 			run: func(name string) {
-				// 4. Fee bump the setcode tx send.
 				if err := pool.addTx(setCodeTx(0, keyB, []unsignedAuth{{1, keyC}}), false); err != nil {
 					t.Fatalf("%s: failed to add with remote setcode transaction: %v", name, err)
 				}
@@ -2085,44 +2121,85 @@ func TestSetCodeTransactions(t *testing.T) {
 			},
 		},
 		{
-			name:    "allow-tx-from-replaced-authority",
-			pending: 2,
+			name:    "allow-more-than-one-tx-from-replaced-authority",
+			pending: 3,
 			run: func(name string) {
-				// Fee bump with a different auth list. Make sure that unlocks the authorities.
+				// Send transaction from A with B as an authority.
 				if err := pool.addTx(pricedSetCodeTx(0, 250000, big.NewInt(10), big.NewInt(3), keyA, []unsignedAuth{{0, keyB}}), false); err != nil {
 					t.Fatalf("%s: failed to add with remote setcode transaction: %v", name, err)
 				}
+				// Replace transaction with another having C as an authority.
 				if err := pool.addTx(pricedSetCodeTx(0, 250000, big.NewInt(3000), big.NewInt(300), keyA, []unsignedAuth{{0, keyC}}), false); err != nil {
 					t.Fatalf("%s: failed to add with remote setcode transaction: %v", name, err)
 				}
-				// Now send a regular tx from B.
+				// B should not be considred as having an in-flight delegation, so
+				// should allow more than one pooled transaction.
 				if err := pool.addTx(pricedTransaction(0, 100000, big.NewInt(10), keyB), false); err != nil {
 					t.Fatalf("%s: failed to replace with remote transaction: %v", name, err)
 				}
+				if err := pool.addTx(pricedTransaction(1, 100000, big.NewInt(10), keyB), false); err != nil {
+					t.Fatalf("%s: failed to replace with remote transaction: %v", name, err)
+				}
 			},
 		},
 		{
+			// This test is analogous to the previous one, but the replaced
+			// transaction is self-sponsored.
 			name:    "allow-tx-from-replaced-self-sponsor-authority",
-			pending: 2,
+			pending: 3,
 			run: func(name string) {
-				//
+				// Send transaction from A with A as an authority.
 				if err := pool.addTx(pricedSetCodeTx(0, 250000, big.NewInt(10), big.NewInt(3), keyA, []unsignedAuth{{0, keyA}}), false); err != nil {
 					t.Fatalf("%s: failed to add with remote setcode transaction: %v", name, err)
 				}
+				// Replace transaction with a transaction with B as an authority.
 				if err := pool.addTx(pricedSetCodeTx(0, 250000, big.NewInt(30), big.NewInt(30), keyA, []unsignedAuth{{0, keyB}}), false); err != nil {
 					t.Fatalf("%s: failed to add with remote setcode transaction: %v", name, err)
 				}
-				// Now send a regular tx from keyA.
-				if err := pool.addTx(pricedTransaction(0, 100000, big.NewInt(1000), keyA), false); err != nil {
+				// The one in-flight transaction limit from A no longer applies, so we
+				// can stack a second transaction for the account.
+				if err := pool.addTx(pricedTransaction(1, 100000, big.NewInt(1000), keyA), false); err != nil {
 					t.Fatalf("%s: failed to replace with remote transaction: %v", name, err)
 				}
-				// Make sure we can still send from keyB.
+				// B should still be able to send transactions.
 				if err := pool.addTx(pricedTransaction(0, 100000, big.NewInt(1000), keyB), false); err != nil {
 					t.Fatalf("%s: failed to replace with remote transaction: %v", name, err)
+				}
+				// However B still has the limitation to one in-flight transaction.
+				if err := pool.addTx(pricedTransaction(1, 100000, big.NewInt(1), keyB), false); !errors.Is(err, ErrInflightTxLimitReached) {
+					t.Fatalf("%s: error mismatch: want %v, have %v", name, ErrInflightTxLimitReached, err)
 				}
 			},
 		},
 		{
+			name:    "replacements-respect-inflight-tx-count",
+			pending: 2,
+			run: func(name string) {
+				// Send transaction from A with B as an authority.
+				if err := pool.addTx(pricedSetCodeTx(0, 250000, big.NewInt(10), big.NewInt(3), keyA, []unsignedAuth{{0, keyB}}), false); err != nil {
+					t.Fatalf("%s: failed to add with remote setcode transaction: %v", name, err)
+				}
+				// Send two transactions from B. Only the first should be accepted due
+				// to in-flight limit.
+				if err := pool.addTx(pricedTransaction(0, 100000, big.NewInt(1), keyB), false); err != nil {
+					t.Fatalf("%s: failed to add remote transaction: %v", name, err)
+				}
+				if err := pool.addTx(pricedTransaction(1, 100000, big.NewInt(1), keyB), false); !errors.Is(err, ErrInflightTxLimitReached) {
+					t.Fatalf("%s: error mismatch: want %v, have %v", name, ErrInflightTxLimitReached, err)
+				}
+				// Replace the in-flight transaction from B.
+				if err := pool.addTx(pricedTransaction(0, 100000, big.NewInt(30), keyB), false); err != nil {
+					t.Fatalf("%s: failed to replace with remote transaction: %v", name, err)
+				}
+				// Ensure the in-flight limit for B is still in place.
+				if err := pool.addTx(pricedTransaction(1, 100000, big.NewInt(1), keyB), false); !errors.Is(err, ErrInflightTxLimitReached) {
+					t.Fatalf("%s: error mismatch: want %v, have %v", name, ErrInflightTxLimitReached, err)
+				}
+			},
+		},
+		{
+			// Since multiple authorizations can be pending simultaneously, replacing
+			// one of them should not break the one in-flight-transaction limit.
 			name:    "track-multiple-conflicting-delegations",
 			pending: 3,
 			run: func(name string) {
@@ -2143,19 +2220,6 @@ func TestSetCodeTransactions(t *testing.T) {
 					t.Fatalf("%s: failed to added single pooled for account with pending delegation: %v", name, err)
 				}
 				if err, want := pool.addTx(pricedTransaction(1, 100000, big.NewInt(1000), keyC), false), ErrInflightTxLimitReached; !errors.Is(err, want) {
-					t.Fatalf("%s: error mismatch: want %v, have %v", name, want, err)
-				}
-			},
-		},
-		{
-			name:    "reject-delegation-from-pending-account",
-			pending: 1,
-			run: func(name string) {
-				// Attempt to submit a delegation from an account with a pending tx.
-				if err := pool.addTx(pricedTransaction(0, 100000, big.NewInt(1000), keyC), false); err != nil {
-					t.Fatalf("%s: failed to add with remote setcode transaction: %v", name, err)
-				}
-				if err, want := pool.addTx(setCodeTx(0, keyA, []unsignedAuth{{1, keyC}}), false), ErrAuthorityReserved; !errors.Is(err, want) {
 					t.Fatalf("%s: error mismatch: want %v, have %v", name, want, err)
 				}
 			},
@@ -2368,7 +2432,7 @@ func TestTransactionStatusCheck(t *testing.T) {
 func TestDynamicFeeTransactionVeryHighValues(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 
 	veryBigNumber := big.NewInt(1)
@@ -2388,10 +2452,8 @@ func TestDynamicFeeTransactionVeryHighValues(t *testing.T) {
 func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPoolWithConfig(params.TestKaiaConfig("ethTxType"))
 	defer pool.Stop()
-
-	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(10000000000))
 
 	// Ensure gasFeeCap is greater than or equal to gasTipCap.
 	tx := dynamicFeeTx(0, 100, big.NewInt(1), big.NewInt(2), key)
@@ -2409,7 +2471,7 @@ func TestDynamicFeeTransactionHasNotSameGasPrice(t *testing.T) {
 func TestDynamicFeeTransactionAccepted(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 
 	testAddBalance(pool, crypto.PubkeyToAddress(key.PublicKey), big.NewInt(1000000))
@@ -2429,7 +2491,8 @@ func TestDynamicFeeTransactionAccepted(t *testing.T) {
 func TestDynamicFeeTransactionNotAcceptedNotEnableHardfork(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPool()
+	pool, key := setupTxPoolWithConfig(params.TestKaiaConfig("london"))
+	defer pool.Stop()
 
 	tx := dynamicFeeTx(0, 21000, big.NewInt(1), big.NewInt(1), key)
 	if err := pool.AddRemote(tx); err != ErrTxTypeNotSupported {
@@ -2445,7 +2508,7 @@ func TestDynamicFeeTransactionAcceptedEip1559(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 	pool.SetGasPrice(baseFee)
 
@@ -2472,7 +2535,7 @@ func TestDynamicFeeTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2501,7 +2564,7 @@ func TestTransactionAcceptedEip1559(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(eip1559Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2525,7 +2588,7 @@ func TestTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2548,7 +2611,7 @@ func TestCancelTransactionAcceptedMagma(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2588,7 +2651,7 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
 	baseFee := big.NewInt(30)
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(baseFee)
 
@@ -2605,7 +2668,7 @@ func TestDynamicFeeTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 
 	baseFee := big.NewInt(30)
@@ -2624,7 +2687,7 @@ func TestTransactionNotAcceptedWithLowerGasPrice(t *testing.T) {
 func TestTransactionsPromoteFull(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
@@ -2659,7 +2722,7 @@ func TestTransactionsPromoteFull(t *testing.T) {
 func TestTransactionsPromotePartial(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPoolWithConfig(kip71Config)
+	pool, key := setupTxPool()
 	defer pool.Stop()
 
 	from := crypto.PubkeyToAddress(key.PublicKey)
@@ -2704,7 +2767,7 @@ func TestTransactionsPromotePartial(t *testing.T) {
 func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 	t.Parallel()
 
-	pool, _ := setupTxPoolWithConfig(kip71Config)
+	pool, _ := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(big.NewInt(10))
 
@@ -2762,7 +2825,7 @@ func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 	t.Parallel()
 
-	pool, _ := setupTxPoolWithConfig(kip71Config)
+	pool, _ := setupTxPool()
 	defer pool.Stop()
 	pool.SetBaseFee(big.NewInt(10))
 
@@ -2836,7 +2899,8 @@ func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 func TestFeeDelegatedTransaction(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPool()
+	pool, _ := setupTxPool()
+	key, _ := crypto.GenerateKey()
 	senderKey, _ := crypto.GenerateKey()
 	feePayerKey, _ := crypto.GenerateKey()
 	defer pool.Stop()
@@ -2871,7 +2935,8 @@ func TestFeeDelegatedTransaction(t *testing.T) {
 func TestFeeDelegatedWithRatioTransaction(t *testing.T) {
 	t.Parallel()
 
-	pool, key := setupTxPool()
+	pool, _ := setupTxPool()
+	key, _ := crypto.GenerateKey()
 	senderKey, _ := crypto.GenerateKey()
 	feePayerKey, _ := crypto.GenerateKey()
 	defer pool.Stop()

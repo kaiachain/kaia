@@ -30,7 +30,6 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/params"
-	"github.com/rcrowley/go-metrics"
 	"golang.org/x/time/rate"
 )
 
@@ -44,8 +43,6 @@ const (
 	// Rate limiting
 	bidsPerSecondPerPeer = 300 // Max bids per second per peer
 )
-
-var numBidsGauge = metrics.NewRegisteredGauge("kaiax/auction/bidpool/num/bids", nil)
 
 type BidPool struct {
 	ChainConfig *params.ChainConfig
@@ -279,6 +276,11 @@ func (bp *BidPool) insertBid(bid *auction.Bid) error {
 	if existingBid, ok := bp.bidTargetMap[blockNumber][targetTxHash]; ok {
 		// FCFS if the bid is the same.
 		if existingBid.Bid.Cmp(bid.Bid) >= 0 {
+			// Since we allow the parallel bid validation, the previous duplicate bid check at #validateBid might be skipped.
+			// So we need to check the bid map again to return the correct error.
+			if _, ok := bp.bidMap[bid.Hash()]; ok {
+				return auction.ErrBidAlreadyExists
+			}
 			return auction.ErrLowBid
 		}
 

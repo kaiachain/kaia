@@ -34,7 +34,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	consensusmocks "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
@@ -89,7 +89,7 @@ func init() {
 		hashes[i] = blocks[i].Hash()
 	}
 
-	signer := types.MakeSigner(params.BFTTestChainConfig, big.NewInt(2019))
+	signer := types.MakeSigner(params.TestChainConfig, big.NewInt(2019))
 	tx1 = types.NewTransaction(111, addrs[0], big.NewInt(111), 111, big.NewInt(111), addrs[0][:])
 
 	tx1.Sign(signer, keys[0])
@@ -1179,7 +1179,7 @@ func newTestBackendWithGenerator(blocks int, generator func(int, *blockchain.Blo
 		// Create a database pre-initialize with a genesis block
 		db     = database.NewMemoryDBManager()
 		config = params.TestChainConfig
-		engine = gxhash.NewFaker()
+		engine = faker.NewFaker()
 	)
 
 	gspec := &blockchain.Genesis{

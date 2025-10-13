@@ -165,6 +165,9 @@ type EVM struct {
 
 	// opcodeComputationCostSum is the sum of computation cost of opcodes.
 	opcodeComputationCostSum uint64
+
+	// jumpDests stores results of JUMPDEST analysis.
+	jumpDests JumpDestCache
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
@@ -177,6 +180,7 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 		Config:      vmConfig,
 		chainConfig: chainConfig,
 		chainRules:  chainConfig.Rules(blockCtx.BlockNumber),
+		jumpDests:   newMapJumpDests(),
 	}
 
 	if vmConfig.RunningEVM != nil {
@@ -192,6 +196,11 @@ func NewEVM(blockCtx BlockContext, txCtx TxContext, statedb StateDB, chainConfig
 	evm.interpreter = NewEVMInterpreter(evm)
 
 	return evm
+}
+
+// SetJumpDestCache configures the analysis cache.
+func (evm *EVM) SetJumpDestCache(jumpDests JumpDestCache) {
+	evm.jumpDests = jumpDests
 }
 
 // Reset resets the EVM with a new transaction context.Reset
@@ -289,7 +298,7 @@ func (evm *EVM) Call(caller types.ContractRef, addr common.Address, input []byte
 	if isProgramAccount(evm, caller.Address(), addr, evm.StateDB) {
 		// Initialise a new contract and set the code that is to be used by the EVM.
 		// The contract is a scoped environment for this execution context only.
-		contract := NewContract(caller, to, value, gas)
+		contract := NewContract(caller, to, value, gas, evm.jumpDests)
 		contract.SetCallCode(&addr, evm.resolveCodeHash(addr), evm.resolveCode(addr))
 		ret, err = run(evm, contract, input)
 		gas = contract.Gas
@@ -351,7 +360,7 @@ func (evm *EVM) CallCode(caller types.ContractRef, addr common.Address, input []
 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
-	contract := NewContract(caller, to, value, gas)
+	contract := NewContract(caller, to, value, gas, evm.jumpDests)
 	contract.SetCallCode(&addr, evm.resolveCodeHash(addr), evm.resolveCode(addr))
 
 	ret, err = run(evm, contract, input)
@@ -401,7 +410,7 @@ func (evm *EVM) DelegateCall(caller types.ContractRef, addr common.Address, inpu
 	)
 
 	// Initialise a new contract and make initialise the delegate values
-	contract := NewContract(caller, to, nil, gas).AsDelegate()
+	contract := NewContract(caller, to, nil, gas, evm.jumpDests).AsDelegate()
 	contract.SetCallCode(&addr, evm.resolveCodeHash(addr), evm.resolveCode(addr))
 
 	ret, err = run(evm, contract, input)
@@ -454,7 +463,7 @@ func (evm *EVM) StaticCall(caller types.ContractRef, addr common.Address, input 
 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
-	contract := NewContract(caller, to, new(big.Int), gas)
+	contract := NewContract(caller, to, new(big.Int), gas, evm.jumpDests)
 	contract.SetCallCode(&addr, evm.resolveCodeHash(addr), evm.resolveCode(addr))
 
 	// When an error was returned by the EVM or when setting the creation code
@@ -556,7 +565,7 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	}
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
-	contract := NewContract(caller, AccountRef(address), value, gas)
+	contract := NewContract(caller, AccountRef(address), value, gas, evm.jumpDests)
 	contract.SetCodeOptionalHash(&address, codeAndHash)
 
 	if evm.Config.NoRecursion && evm.depth > 0 {

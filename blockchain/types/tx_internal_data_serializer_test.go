@@ -122,7 +122,7 @@ func TestTransactionSerialization(t *testing.T) {
 func testTransactionRLP(t *testing.T, tx TxInternalData) {
 	enc := newTxInternalDataSerializerWithValues(tx)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
@@ -153,7 +153,7 @@ func testTransactionRLP(t *testing.T, tx TxInternalData) {
 func testTransactionJSON(t *testing.T, tx TxInternalData) {
 	enc := newTxInternalDataSerializerWithValues(tx)
 
-	signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
+	signer := MakeSigner(params.TestChainConfig, big.NewInt(2))
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)
 
@@ -199,8 +199,6 @@ func newRPCTransaction(tx *Transaction, blockHash common.Hash, blockNumber uint6
 }
 
 func testTransactionRPC(t *testing.T, tx TxInternalData) {
-	// To test AccessList tx, it need to latest signer.
-	// signer := MakeSigner(params.BFTTestChainConfig, big.NewInt(2))
 	signer := LatestSignerForChainID(big.NewInt(2))
 	rawTx := &Transaction{data: tx}
 	rawTx.Sign(signer, key)

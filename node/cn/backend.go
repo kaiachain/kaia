@@ -210,9 +210,6 @@ func checkSyncMode(config *Config) error {
 }
 
 func setEngineType(chainConfig *params.ChainConfig) {
-	if chainConfig.Clique != nil {
-		types.EngineType = types.Engine_Clique
-	}
 	if chainConfig.Istanbul != nil {
 		types.EngineType = types.Engine_IBFT
 	}
@@ -726,6 +723,7 @@ func (s *CN) APIs() []rpc.API {
 	kaiaFilterAPI := filters.NewKaiaFilterAPI(s.APIBackend)
 	ethFilterAPI := filters.NewEthFilterAPI(s.APIBackend)
 	kaiaDownloaderAPI := downloader.NewKaiaDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
+	ethDownloaderAPI := downloader.NewEthDownloaderAPI(s.protocolManager.Downloader(), s.eventMux)
 	kaiaDownloaderSyncAPI := downloader.NewKaiaDownloaderSyncAPI(s.protocolManager.Downloader())
 
 	ethAPI := api.NewEthAPI(
@@ -761,7 +759,7 @@ func (s *CN) APIs() []rpc.API {
 		}, {
 			Namespace: "eth",
 			Version:   "1.0",
-			Service:   kaiaDownloaderAPI,
+			Service:   ethDownloaderAPI,
 			Public:    true,
 		}, {
 			Namespace: "admin",

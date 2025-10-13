@@ -36,7 +36,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -119,10 +119,10 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 				genesis := genMainnetGenesisBlock()
 				genesisBlock := genesis.MustCommit(db)
 
-				bc, _ := NewBlockChain(db, nil, genesis.Config, gxhash.NewFullFaker(), vm.Config{})
+				bc, _ := NewBlockChain(db, nil, genesis.Config, faker.NewFullFaker(), vm.Config{})
 				defer bc.Stop()
 
-				blocks, _ := GenerateChain(genesis.Config, genesisBlock, gxhash.NewFaker(), db, 4, nil)
+				blocks, _ := GenerateChain(genesis.Config, genesisBlock, faker.NewFaker(), db, 4, nil)
 				bc.InsertChain(blocks)
 				// This should return a compatibility error.
 				newConfig := *genesis
@@ -157,7 +157,8 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 		}
 
 		// Check stored chainConfig
-		storedChainConfig := db.ReadChainConfig(test.wantHash)
+		storedChainConfig, err := db.ReadChainConfig(test.wantHash)
+		assert.NoError(t, err)
 		assert.Equal(t, test.wantStoredConfig, storedChainConfig, test.name+": stored chainConfig is not compatible")
 	}
 }
@@ -181,7 +182,7 @@ func TestSetupGenesis(t *testing.T) {
 				return SetupGenesisBlock(db, new(Genesis), params.UnusedNetworkId, false, false)
 			},
 			wantErr:    errGenesisNoConfig,
-			wantConfig: params.AllGxhashProtocolChanges,
+			wantConfig: params.TestChainConfig,
 		},
 		{
 			name: "no block in DB, genesis == nil, Mainnet networkId",
@@ -310,10 +311,10 @@ func TestSetupGenesis(t *testing.T) {
 				// Advance to block #4, past the Istanbul transition block of customGenesis.
 				genesis := customGenesis.MustCommit(db)
 
-				bc, _ := NewBlockChain(db, nil, customGenesis.Config, gxhash.NewFullFaker(), vm.Config{})
+				bc, _ := NewBlockChain(db, nil, customGenesis.Config, faker.NewFullFaker(), vm.Config{})
 				defer bc.Stop()
 
-				blocks, _ := GenerateChain(customGenesis.Config, genesis, gxhash.NewFaker(), db, 4, nil)
+				blocks, _ := GenerateChain(customGenesis.Config, genesis, faker.NewFaker(), db, 4, nil)
 				bc.InsertChain(blocks)
 				// This should return a compatibility error.
 				newConfig := *customGenesis

@@ -1705,7 +1705,7 @@ func TestValidateSender(t *testing.T) {
 	statedb.SetNonce(decoupled.Addr, rand.Uint64())
 	statedb.SetBalance(decoupled.Addr, initialBalance)
 
-	signer := types.MakeSigner(params.BFTTestChainConfig, big.NewInt(32))
+	signer := types.MakeSigner(params.TestChainConfig, big.NewInt(32))
 	gasPrice := new(big.Int).SetUint64(0)
 	gasLimit := uint64(100000000000)
 	amount := new(big.Int).SetUint64(10000)

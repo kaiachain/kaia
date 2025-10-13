@@ -31,6 +31,16 @@ import (
 	"github.com/kaiachain/kaia/networks/rpc"
 )
 
+// EthDownloaderAPI wraps KaiaDownloaderAPI for eth namespace compatibility.
+type EthDownloaderAPI struct {
+	*KaiaDownloaderAPI
+}
+
+// NewEthDownloaderAPI creates a new EthDownloaderAPI.
+func NewEthDownloaderAPI(d downloader, m *event.TypeMux) *EthDownloaderAPI {
+	return &EthDownloaderAPI{NewKaiaDownloaderAPI(d, m)}
+}
+
 // KaiaDownloaderAPI provides an API which gives information about the current synchronisation status.
 // It offers only methods that operates on data that can be available to anyone without security risks.
 type KaiaDownloaderAPI struct {
@@ -102,6 +112,10 @@ func (api *KaiaDownloaderAPI) eventLoop() {
 }
 
 // Syncing provides information when this nodes starts synchronising with the Kaia network and when it's finished.
+//
+// WebSocket API:
+// ws  EthDownloaderAPI.Syncing    eth_syncing  = `{ syncing: true, status: SyncProgress }` || `false`
+// ws  KaiaDownloaderAPI.Syncing   kaia_syncing = `{ syncing: true, status: SyncProgress }` || `false`
 func (api *KaiaDownloaderAPI) Syncing(ctx context.Context) (*rpc.Subscription, error) {
 	notifier, supported := rpc.NotifierFromContext(ctx)
 	if !supported {

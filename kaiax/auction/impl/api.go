@@ -112,6 +112,7 @@ func toTx(targetTxRaw []byte) (*types.Transaction, error) {
 }
 
 func (api *AuctionAPI) SubmitBid(ctx context.Context, bidInput BidInput) RPCOutput {
+	numBidRequestCounter.Inc(1)
 	if api.a.IsDisabled() {
 		return makeRPCOutput(EMPTY_HASH, auction.ErrAuctionDisabled)
 	}

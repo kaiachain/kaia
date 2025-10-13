@@ -21,7 +21,6 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -65,10 +64,6 @@ type AuctionModule struct {
 
 	gaslessModule gasless.GaslessModule
 }
-
-const (
-	AuctionEarlyDeadlineOffset = 150 * time.Millisecond
-)
 
 var AuctionLenderMinBal = new(big.Int).Mul(big.NewInt(10), new(big.Int).SetUint64(params.KAIA))
 
