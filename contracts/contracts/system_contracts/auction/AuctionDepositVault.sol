@@ -35,7 +35,7 @@ contract AuctionDepositVault is IAuctionDepositVault, AuctionError, Ownable {
 
     /* ========== STATE VARIABLES ========== */
 
-    uint256 public minDepositAmount = 10 ether;
+    uint256 public minDepositAmount = 100 ether;
     uint256 public minWithdrawLockTime = 60; // 60 seconds
 
     address public auctionFeeVault;
