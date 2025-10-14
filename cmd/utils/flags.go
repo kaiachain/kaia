@@ -556,6 +556,13 @@ var (
 		EnvVars:  []string{"KLAYTN_STATE_LIVE_PRUNING_RETENTION", "KAIA_STATE_LIVE_PRUNING_RETENTION"},
 		Category: "STATE",
 	}
+	FlatTrieFlag = &cli.BoolFlag{
+		Name:     "state.experimental-flat-trie",
+		Usage:    "(experimental) Enable flat trie scheme",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATE_FLAT_TRIE", "KAIA_STATE_FLAT_TRIE"},
+		Category: "STATE",
+	}
 	CacheTypeFlag = &cli.IntFlag{
 		Name:     "cache.type",
 		Usage:    "Cache Type: 0=LRUCache, 1=LRUShardCache, 2=FIFOCache",
