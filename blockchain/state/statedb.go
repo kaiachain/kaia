@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/snapshot"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 )
 
@@ -126,10 +127,27 @@ type StateDB struct {
 
 // Create a new state from a given trie.
 func New(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.TrieOpts) (*StateDB, error) {
+	// For FlatTrie, find the canonical block number from the state root. FlatTrie database is addressed by the block numbers, not state roots.
+	if opts == nil {
+		opts = &statedb.TrieOpts{}
+	}
+	if blockNum, err := blockNumberFromRoot(db.TrieDB().DiskDB(), root); err != nil {
+		return nil, err
+	} else {
+		opts.BaseBlockNumber = blockNum
+	}
+
+	// Open the account trie.
 	tr, err := db.OpenTrie(root, opts)
 	if err != nil {
 		return nil, err
 	}
+
+	// For FlatTrie, supply the account trie to the storage tries.
+	if at, ok := tr.(*statedb.FlatAccountTrie); ok {
+		opts.AccountTrie = at
+	}
+
 	sdb := &StateDB{
 		db:                       db,
 		trie:                     tr,
@@ -157,6 +175,30 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.Trie
 	return sdb, nil
 }
 
+func blockNumberFromRoot(dbm database.DBManager, root common.Hash) (uint64, error) {
+	// Skip if not FlatTrie.
+	dm := dbm.GetDomainsManager()
+	if dm == nil {
+		return 0, nil
+	}
+
+	// Skip if empty (i.e. temporary) trie or at genesis block.
+	if common.EmptyHash(root) || root == types.EmptyRootHash {
+		return 0, nil
+	}
+
+	num, ok, err := dm.ReadBlockNumByRoot(root.Bytes())
+	if err != nil {
+		logger.Warn("cannot find block number from stateRoot", "root", root.Hex(), "err", err)
+		return 0, err
+	} else if ok {
+		return num, nil
+	} else {
+		logger.Warn("cannot find block number from stateRoot", "root", root.Hex(), "err", nil)
+		return 0, fmt.Errorf("block number not found for root %s", root.Hex())
+	}
+}
+
 // RLockGCCachedNode locks the GC lock of CachedNode.
 func (s *StateDB) LockGCCachedNode() {
 	s.db.RLockGCCachedNode()
@@ -181,6 +223,12 @@ func (s *StateDB) Error() error {
 // Reset clears out all ephemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (s *StateDB) Reset(root common.Hash) error {
+	blockNum, err := blockNumberFromRoot(s.db.TrieDB().DiskDB(), root)
+	if err != nil {
+		return err
+	}
+	s.trieOpts.BaseBlockNumber = blockNum
+
 	tr, err := s.db.OpenTrie(root, s.trieOpts)
 	if err != nil {
 		return err

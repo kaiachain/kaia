@@ -705,7 +705,7 @@ func prepareContractWarmUp(block *types.Block, db state.Database, contractAddr c
 	if err != nil {
 		return common.ExtHash{}, nil, err
 	}
-	storageTrie, err := db.OpenStorageTrie(storageTrieRoot, nil)
+	storageTrie, err := db.OpenStorageTrie(contractAddr, storageTrieRoot, nil)
 	if err != nil {
 		return common.ExtHash{}, nil, err
 	}
