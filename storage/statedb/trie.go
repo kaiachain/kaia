@@ -39,6 +39,13 @@ type TrieOpts struct {
 	// will schedule obsolete nodes to be pruned when the given block number becomes obsolete.
 	// This option is only viable when the pruning is enabled on database.
 	PruningBlockNumber uint64
+
+	// FlatTrie will read the states as of BaseBlockNumber.
+	BaseBlockNumber uint64
+	// If CommitGenesis is true, FlatTrie will commit to block 0. Otherwise, it will commit to (BaseBlockNumber+1).
+	CommitGenesis bool
+	// Parent account trie, required for FlatStorageTrie.
+	AccountTrie *FlatAccountTrie
 }
 
 // LeafCallback is a callback type invoked when a trie operation reaches a leaf
