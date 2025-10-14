@@ -117,6 +117,7 @@ type Task struct {
 	stateMu sync.RWMutex   // protects state
 	state   *state.StateDB // apply state changes here
 	tcount  int            // tx count in cycle
+	size    uint64         // size of the block we are building
 
 	Block *types.Block // the new block
 
@@ -126,6 +127,16 @@ type Task struct {
 
 	createdAt time.Time
 }
+
+// txFits reports whether the transaction fits into the block size limit.
+func (env *Task) txFitsSize(tx *types.Transaction) bool {
+	return env.size+uint64(tx.Size()) < params.MaxBlockSize-maxBlockSizeBufferZone
+}
+
+// Block size is capped by the protocol at params.MaxBlockSize. When producing blocks, we
+// try to say below the size including a buffer zone, this is to avoid going over the
+// maximum size with auxiliary data added into the block.
+const maxBlockSizeBufferZone = 1_000_000
 
 type Result struct {
 	Task  *Task
@@ -783,6 +794,11 @@ CommitTransactionLoop:
 			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 			continue
 		}
+		// if inclusion of the transaction would put the block size over the
+		// maximum we allow, don't add any more txs to the payload.
+		if !env.txFitsSize(tx) {
+			break
+		}
 		// If target is the tx in bundle, len(targetBundle.BundleTxs) is appended to numTxsChecked.
 		numTxsChecked += int64(numShift)
 		// Error may be ignored here. The error has already been checked
@@ -897,6 +913,7 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAdd
 	env.tcount++
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
+	env.size += uint64(tx.Size())
 
 	return nil, receipt.Logs
 }
@@ -957,6 +974,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		}
 
 		env.tcount++
+		env.size += uint64(tx.Size())
 		txs = append(txs, tx)
 		receipts = append(receipts, receipt)
 		logs = append(logs, receipt.Logs...)
@@ -986,6 +1004,7 @@ func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.Sta
 		config:    config,
 		signer:    signer,
 		state:     statedb,
+		size:      uint64(header.Size()),
 		header:    header,
 		createdAt: time.Now(),
 	}
