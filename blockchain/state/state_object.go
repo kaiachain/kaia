@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -61,9 +62,7 @@ func (s Storage) String() (str string) {
 
 func (s Storage) Copy() Storage {
 	cpy := make(Storage)
-	for key, value := range s {
-		cpy[key] = value
-	}
+	maps.Copy(cpy, s)
 
 	return cpy
 }
@@ -294,9 +293,7 @@ func (s *stateObject) SetStorage(storage map[common.Hash]common.Hash) {
 	if s.fakeStorage == nil {
 		s.fakeStorage = make(Storage)
 	}
-	for key, value := range storage {
-		s.fakeStorage[key] = value
-	}
+	maps.Copy(s.fakeStorage, storage)
 	// Don't bother journal since this function should only be used for
 	// debugging and the `fake` storage won't be committed to database.
 }

@@ -26,6 +26,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"maps"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -40,9 +41,7 @@ type Storage map[common.Hash]common.Hash
 // Copy duplicates the current storage.
 func (s Storage) Copy() Storage {
 	cpy := make(Storage)
-	for key, value := range s {
-		cpy[key] = value
-	}
+	maps.Copy(cpy, s)
 
 	return cpy
 }

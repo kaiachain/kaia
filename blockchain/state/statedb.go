@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
 	"sort"
 	"sync/atomic"
@@ -952,9 +953,7 @@ func copyStateDB(dst, src *StateDB) {
 	deepCopyLogs(src, dst)
 
 	// Copy preimages
-	for hash, preimage := range src.preimages {
-		dst.preimages[hash] = preimage
-	}
+	maps.Copy(dst.preimages, src.preimages)
 
 	if src.snaps != nil {
 		// In order for the miner to be able to use and make additions
@@ -965,19 +964,13 @@ func copyStateDB(dst, src *StateDB) {
 		dst.snap = src.snap
 		// deep copy needed
 		dst.snapDestructs = make(map[common.Hash]struct{})
-		for k, v := range src.snapDestructs {
-			dst.snapDestructs[k] = v
-		}
+		maps.Copy(dst.snapDestructs, src.snapDestructs)
 		dst.snapAccounts = make(map[common.Hash][]byte)
-		for k, v := range src.snapAccounts {
-			dst.snapAccounts[k] = v
-		}
+		maps.Copy(dst.snapAccounts, src.snapAccounts)
 		dst.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
 		for k, v := range src.snapStorage {
 			temp := make(map[common.Hash][]byte)
-			for kk, vv := range v {
-				temp[kk] = vv
-			}
+			maps.Copy(temp, v)
 			dst.snapStorage[k] = temp
 		}
 	}
