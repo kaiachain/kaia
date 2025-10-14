@@ -27,6 +27,32 @@ import (
 	"github.com/kaiachain/kaia/common"
 )
 
+type addressHexCache interface {
+	Get(addr common.Address) string
+}
+
+// addressHexCacheMap is a simple implementation of addressHexCache using a map.
+// TODO: if we expect dynamic set of addresses, we need to replace this with a proper cache
+type addressHexCacheMap struct {
+	cache sync.Map
+}
+
+func (c *addressHexCacheMap) Get(addr common.Address) string {
+	if val, ok := c.cache.Load(addr); ok {
+		return val.(string)
+	}
+
+	str := addr.String()
+	val, _ := c.cache.LoadOrStore(addr, str)
+	return val.(string)
+}
+
+var cache addressHexCache
+
+func init() {
+	cache = &addressHexCacheMap{cache: sync.Map{}}
+}
+
 type sortableAddressList []common.Address
 
 func (sa sortableAddressList) Len() int {
@@ -36,7 +62,7 @@ func (sa sortableAddressList) Len() int {
 func (sa sortableAddressList) Less(i, j int) bool {
 	// Sort by the EIP-155 mixed-case checksummed representation. It differs from the lower-case sorted order.
 	// This order is somewhat counterintuitive, but keeping it for backward compatibility.
-	return strings.Compare(sa[i].String(), sa[j].String()) < 0
+	return strings.Compare(cache.Get(sa[i]), cache.Get(sa[j])) < 0
 }
 
 func (sa sortableAddressList) Swap(i, j int) {
