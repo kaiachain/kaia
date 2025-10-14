@@ -387,7 +387,7 @@ func (srv *Server) HandleFastHTTP(requestCtx *fasthttp.RequestCtx) {
 		w.Header.Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header.Set("X-Content-Type-Options", "nosniff")
 		w.Header.SetStatusCode(code)
-		fmt.Fprintf(requestCtx, err.Error())
+		fmt.Fprintf(requestCtx, "%s", err.Error())
 		return
 	}
 	// All checks passed, create a codec that reads direct from the request body
