@@ -91,9 +91,6 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOCKHASH-debug\]`)
 	// Kaia's MaxBlockSize (10 MiB) higher than Ethereum's (8 MiB), so max_plus_1 is accepted in Kaia.
 	bt.skipLoad(`^osaka\/eip7934_block_rlp_limit\/max_block_rlp_size\/block_at_rlp_size_limit_boundary.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_at_rlp_size_limit_boundary\[fork_Osaka-blockchain_test-max_rlp_size_plus_1_byte\]`)
-	// Error message: post state validation failed: account balance mismatch for addr: 0xc0F86290A5411025A98594D9a4d9a88147a9d99D, want: 991778663999985853000, have: 991760475000000000000
-	// TODO: Should send `TxInternalDataEthereumDynamicFee` instead of `TxInternalDataEthereumAccessList`
-	bt.skipLoad(`^osaka\/eip7934_block_rlp_limit\/max_block_rlp_size\/block_rlp_size_at_limit_with_all_typed_transactions.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_rlp_size_at_limit_with_all_typed_transactions\[fork_Osaka-typed_transaction_2-blockchain_test\]`)
 
 	// TODO: Skip EIP tests that are not yet supported; expect to remove them
 	bt.skipLoad(`osaka/eip7594_peerdas`)
