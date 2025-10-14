@@ -133,6 +133,19 @@ func (env *Task) txFitsSize(tx *types.Transaction) bool {
 	return env.size+uint64(tx.Size()) < params.MaxBlockSize-maxBlockSizeBufferZone
 }
 
+func (env *Task) txFitsSizeForBundle(nodeAddr common.Address, bundle *builder.Bundle) bool {
+	totalTxSize := uint64(0)
+	for _, txOrGen := range bundle.BundleTxs {
+		tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
+		if err != nil {
+			// ignore error in this point since it will be handled later as tx generation error in commitBundleTransaction
+			continue
+		}
+		totalTxSize += uint64(tx.Size())
+	}
+	return env.size+totalTxSize < params.MaxBlockSize-maxBlockSizeBufferZone
+}
+
 // Block size is capped by the protocol at params.MaxBlockSize. When producing blocks, we
 // try to say below the size including a buffer zone, this is to avoid going over the
 // maximum size with auxiliary data added into the block.
@@ -794,10 +807,18 @@ CommitTransactionLoop:
 			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 			continue
 		}
-		// if inclusion of the transaction would put the block size over the
-		// maximum we allow, don't add any more txs to the payload.
-		if !env.txFitsSize(tx) {
-			break
+		if len(targetBundle.BundleTxs) != 0 {
+			// if inclusion of the transaction would put the block size over the
+			// maximum we allow, don't add any more txs to the payload.
+			if !env.txFitsSizeForBundle(nodeAddr, targetBundle) {
+				break
+			}
+		} else {
+			// if inclusion of the transaction would put the block size over the
+			// maximum we allow, don't add any more txs to the payload.
+			if !env.txFitsSize(tx) {
+				break
+			}
 		}
 		// If target is the tx in bundle, len(targetBundle.BundleTxs) is appended to numTxsChecked.
 		numTxsChecked += int64(numShift)
