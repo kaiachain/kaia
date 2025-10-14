@@ -29,8 +29,8 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 
+	"github.com/erigontech/secp256k1" // To avoid CGO duplicate symbol error.
 	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/crypto/secp256k1"
 )
 
 // Ecrecover returns the uncompressed public key that created the given signature.

@@ -17,7 +17,6 @@ require (
 	github.com/deckarep/golang-set v1.8.0
 	github.com/dgraph-io/badger v1.6.0
 	github.com/docker/docker v25.0.6+incompatible
-	github.com/edsrzf/mmap-go v1.0.0
 	github.com/ethereum/c-kzg-4844/v2 v2.1.0
 	github.com/fatih/color v1.16.0
 	github.com/go-redis/redis/v7 v7.4.0
@@ -74,6 +73,7 @@ require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
 	github.com/cockroachdb/pebble v1.1.5
 	github.com/dop251/goja v0.0.0-20231014103939-873a1496dc8e
+	github.com/erigontech/secp256k1 v1.2.0
 	github.com/google/uuid v1.6.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/satori/go.uuid v1.2.0
@@ -114,9 +114,7 @@ require (
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
-	github.com/fjl/gencodec v0.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/garslo/gogen v0.0.0-20170306192744-1d203ffc1f61 // indirect
 	github.com/getsentry/sentry-go v0.27.0 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
