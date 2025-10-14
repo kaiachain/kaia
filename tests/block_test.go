@@ -82,6 +82,7 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^prague\/eip6110_deposits`)
 	// type 3 tx (EIP-4844) is not supported. See tests/block_test_util.go:decode()
 	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOBBASEFEE-debug\]`)
+	bt.skipLoad(`^istanbul\/eip1344_chainid\/chainid\/chainid.json\/tests\/istanbul\/eip1344_chainid\/test_chainid.py::test_chainid\[fork_Osaka-typed_transaction_3-blockchain_test_from_state_test\]`)
 	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Osaka-tx_type_3-evm_code_type_LEGACY-blockchain_test-different_block\]`)
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Osaka-tx_type_3-evm_code_type_LEGACY-blockchain_test-same_block\]`)

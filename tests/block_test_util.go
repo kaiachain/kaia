@@ -142,8 +142,16 @@ func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 	sender := msg.ValidatedSender()
 	sigCopy := msg.RawSignatureValues()
 
+	// For tx types 0 and 1, GasFeeCap() and GasTipCap() will return tx.gasPrice even if the tx has no such fields.
+	// But for those tx types, NewMessage() must receive `nil` for those fields to accurately convey the original transaction.
+	var gasFeeCap, gasTipCap *big.Int = nil, nil
+	if te, ok := msg.GetTxInternalData().(types.TxInternalDataBaseFee); ok {
+		gasFeeCap = te.GetGasFeeCap()
+		gasTipCap = te.GetGasTipCap()
+	}
+
 	// Replace msg intrinsic gas with eth intrinsic gas
-	*msg = *types.NewMessage(sender, msg.To(), msg.Nonce(), msg.GetTxInternalData().GetAmount(), msg.Gas(), msg.GasPrice(), msg.GasFeeCap(), msg.GasTipCap(), msg.Data(), true, updatedIntrinsicGas, msg.AccessList(), r.ChainID, msg.AuthList())
+	*msg = *types.NewMessage(sender, msg.To(), msg.Nonce(), msg.GetTxInternalData().GetAmount(), msg.Gas(), msg.GasPrice(), gasFeeCap, gasTipCap, msg.Data(), true, updatedIntrinsicGas, msg.AccessList(), r.ChainID, msg.AuthList())
 	msg.SetSignature(sigCopy)
 
 	// Gas prices are calculated in eth

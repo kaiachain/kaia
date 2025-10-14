@@ -5,10 +5,8 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/contractgov"
 	contractgov_impl "github.com/kaiachain/kaia/kaiax/gov/contractgov/impl"
@@ -29,14 +27,7 @@ var (
 
 //go:generate mockgen -destination=./mock/blockchain_mock.go -package=mock_impl github.com/kaiachain/kaia/kaiax/gov/impl BlockChain
 type BlockChain interface {
-	blockchain.ChainContext
-
-	CurrentBlock() *types.Block
-	Config() *params.ChainConfig
-	GetHeaderByNumber(val uint64) *types.Header
-	State() (*state.StateDB, error)
-	StateAt(root common.Hash) (*state.StateDB, error)
-	GetBlock(hash common.Hash, number uint64) *types.Block
+	consensus.ChainReader
 }
 
 type GovModule struct {
