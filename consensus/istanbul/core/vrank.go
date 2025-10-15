@@ -52,6 +52,8 @@ var (
 
 	vrankDefaultThreshold = "300ms" // the time to receive 2f+1 commits in an ideal network
 
+	VRankLogFrequency = uint64(0) // Will be set to the value of VRankLogFrequencyFlag in SetKaiaConfig()
+
 	vrank *Vrank
 )
 
@@ -155,7 +157,12 @@ func (v *Vrank) Log() {
 
 	v.updateMetrics()
 
-	logger.Debug("VRank", "seq", v.view.Sequence.Int64(),
+	// Skip logging if VRankLogFrequency is 0 or not in the logging frequency
+	if VRankLogFrequency == 0 || v.view.Sequence.Uint64()%VRankLogFrequency != 0 {
+		return
+	}
+
+	logger.Info("VRank", "seq", v.view.Sequence.Int64(),
 		"round", v.view.Round.Int64(),
 		"bitmap", v.Bitmap(),
 		"late", encodeDurationBatch(lateCommits),

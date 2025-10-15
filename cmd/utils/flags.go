@@ -2022,6 +2022,14 @@ var (
 		Category: "GAS PRICE ORACLE",
 	}
 
+	// VRank logging frequency
+	VRankLogFrequencyFlag = &cli.Uint64Flag{
+		Name:     "vrank.log-frequency",
+		Usage:    "Frequency of VRank logging in blocks (0=disabled, 1=every block, 60=every 60 blocks, ...)",
+		Value:    uint64(0),
+		Category: "VRANK",
+	}
+
 	// TODO-Kaia-Bootnode: Add bootnode's metric options
 	// TODO-Kaia-Bootnode: Implements bootnode's RPC
 )

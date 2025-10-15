@@ -43,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/fdlimit"
+	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher"
@@ -759,6 +760,10 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.GPO.Blocks = ctx.Int(GpoBlocksFlag.Name)
 	cfg.GPO.Percentile = ctx.Int(GpoPercentileFlag.Name)
 	cfg.GPO.MaxPrice = big.NewInt(ctx.Int64(GpoMaxGasPriceFlag.Name))
+
+	if ctx.IsSet(VRankLogFrequencyFlag.Name) {
+		core.VRankLogFrequency = ctx.Uint64(VRankLogFrequencyFlag.Name)
+	}
 
 	// Set kaiax module config
 	gasless.SetGaslessConfig(ctx, cfg.Gasless)
