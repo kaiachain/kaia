@@ -367,6 +367,12 @@ var FlagGroups = []FlagGroup{
 			DocRootFlag,
 		},
 	},
+	{
+		Name: "VRANK",
+		Flags: []cli.Flag{
+			VRankLogFrequencyFlag,
+		},
+	},
 }
 
 // CategorizeFlags classifies each flag into pre-defined flagGroups.

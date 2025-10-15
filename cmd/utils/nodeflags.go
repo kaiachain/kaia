@@ -350,6 +350,7 @@ var KCNFlags = []cli.Flag{
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
 	altsrc.NewBoolFlag(gasless.DisableFlag),
+	altsrc.NewUint64Flag(VRankLogFrequencyFlag),
 }
 
 var KPNFlags = []cli.Flag{
