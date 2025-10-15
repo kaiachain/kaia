@@ -228,7 +228,7 @@ func (args *SendTxArgs) checkArgs() error {
 		return nil
 	}
 
-	argsType := reflect.TypeOf(*args)
+	argsType := reflect.TypeFor[SendTxArgs]()
 	argsValue := reflect.ValueOf(*args)
 
 	for i := 0; i < argsType.NumField(); i++ {

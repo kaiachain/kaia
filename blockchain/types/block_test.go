@@ -169,7 +169,7 @@ func TestHeaderSizeCalc(t *testing.T) {
 	// + BaseFee pointer (8)
 	// + RandomReveal slice (24)
 	// + MixHash slice (24)
-	constantSize := int(reflect.TypeOf(Header{}).Size())
+	constantSize := int(reflect.TypeFor[Header]().Size())
 	assert.Equal(t, 520+8+24+24, constantSize)
 
 	// Test header.Size() while adding fields one by one

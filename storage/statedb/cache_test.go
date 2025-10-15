@@ -35,9 +35,9 @@ func TestNewTrieNodeCache(t *testing.T) {
 		expectedType reflect.Type
 		err          error
 	}{
-		{getTestFastCacheConfig(), reflect.TypeOf(&FastCache{}), nil},
-		{getTestRedisConfig(), reflect.TypeOf(&RedisCache{}), nil},
-		{getTestHybridConfig(), reflect.TypeOf(&HybridCache{}), nil},
+		{getTestFastCacheConfig(), reflect.TypeFor[*FastCache](), nil},
+		{getTestRedisConfig(), reflect.TypeFor[*RedisCache](), nil},
+		{getTestHybridConfig(), reflect.TypeFor[*HybridCache](), nil},
 		{nil, nil, errNilTrieNodeCacheConfig},
 	}
 
