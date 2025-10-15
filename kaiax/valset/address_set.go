@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/common"
 )
 
@@ -31,26 +32,27 @@ type addressHexCache interface {
 	Get(addr common.Address) string
 }
 
-// addressHexCacheMap is a simple implementation of addressHexCache using a map.
-// TODO: if we expect dynamic set of addresses, we need to replace this with a proper cache
-type addressHexCacheMap struct {
-	cache sync.Map
+type addressHexCacheArc struct {
+	cache *lru.ARCCache
 }
 
-func (c *addressHexCacheMap) Get(addr common.Address) string {
-	if val, ok := c.cache.Load(addr); ok {
+func (c *addressHexCacheArc) Get(addr common.Address) string {
+	if val, ok := c.cache.Get(addr); ok {
 		return val.(string)
 	}
-
-	str := addr.String()
-	val, _ := c.cache.LoadOrStore(addr, str)
-	return val.(string)
+	hex := addr.String()
+	c.cache.Add(addr, hex)
+	return hex
 }
 
-var cache addressHexCache
+var (
+	hexCacheSize = 200
+	hexCache     addressHexCache
+)
 
 func init() {
-	cache = &addressHexCacheMap{cache: sync.Map{}}
+	arc, _ := lru.NewARC(hexCacheSize)
+	hexCache = &addressHexCacheArc{cache: arc}
 }
 
 type sortableAddressList []common.Address
@@ -62,7 +64,7 @@ func (sa sortableAddressList) Len() int {
 func (sa sortableAddressList) Less(i, j int) bool {
 	// Sort by the EIP-155 mixed-case checksummed representation. It differs from the lower-case sorted order.
 	// This order is somewhat counterintuitive, but keeping it for backward compatibility.
-	return strings.Compare(cache.Get(sa[i]), cache.Get(sa[j])) < 0
+	return strings.Compare(hexCache.Get(sa[i]), hexCache.Get(sa[j])) < 0
 }
 
 func (sa sortableAddressList) Swap(i, j int) {

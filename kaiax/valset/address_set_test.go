@@ -135,12 +135,12 @@ func TestAddressHexCache(t *testing.T) {
 	addr := common.HexToAddress("0x1234567890abcdef1234567890abcdef12345678")
 
 	// Test that cache returns correct hex strings
-	got := cache.Get(addr)
+	got := hexCache.Get(addr)
 	want := addr.String()
 	assert.Equal(t, want, got)
 
 	// Test cache hit consistency
-	gotAgain := cache.Get(addr)
+	gotAgain := hexCache.Get(addr)
 	assert.Equal(t, want, gotAgain)
 
 	// Test cache concurrency safety
@@ -158,7 +158,7 @@ func TestAddressHexCache(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < 100; j++ {
 				addr := addrs[(id+j)%len(addrs)]
-				got := cache.Get(addr)
+				got := hexCache.Get(addr)
 				want := addr.String()
 				if got != want {
 					errCh <- fmt.Errorf("goroutine %d: expected %s, got %s", id, want, got)
