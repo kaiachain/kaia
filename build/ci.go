@@ -391,8 +391,12 @@ func doLint(cmdline []string, exitOnError bool) {
 	// linters for "lint" command
 	lintersSet := [][]string{
 		{
-			"--presets=format",
-			"--presets=performance",
+			// old presets = performance
+			"--enable=bodyclose",
+			"--enable=fatcontext",
+			"--enable=noctx",
+			"--enable=perfsprint",
+			"--enable=prealloc",
 		},
 	}
 
@@ -432,12 +436,10 @@ func doLint(cmdline []string, exitOnError bool) {
 			{"--enable=gocyclo"},
 		}
 	}
-
 	for _, linters := range lintersSet {
 		configs := []string{
 			"run",
 			"--tests",
-			"--disable-all",
 			"--timeout=10m",
 		}
 		if *vFlag {
@@ -1031,8 +1033,8 @@ func installLinter() string {
 	if err != nil {
 		fmt.Println("Installing golangci-lint.")
 
-		cmdCurl := exec.Command("curl", "-sSfL", "https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh")
-		cmdSh := exec.Command("sh", "-s", "--", "-b", filepath.Join(build.GOPATH(), "bin"), "v1.52.0")
+		cmdCurl := exec.Command("curl", "-sSfL", "https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh")
+		cmdSh := exec.Command("sh", "-s", "--", "-b", filepath.Join(build.GOPATH(), "bin"), "v2.5.0")
 		cmdSh.Stdin, err = cmdCurl.StdoutPipe()
 		if err != nil {
 			log.Fatal(err)
