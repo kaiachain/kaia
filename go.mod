@@ -1,6 +1,6 @@
 module github.com/kaiachain/kaia
 
-go 1.23.7
+go 1.25
 
 require (
 	github.com/Shopify/sarama v1.26.4
