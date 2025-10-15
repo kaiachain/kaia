@@ -80,20 +80,22 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^prague\/eip7685_general_purpose_el_requests`)
 	bt.skipLoad(`^prague\/eip7002_el_triggerable_withdrawals`)
 	bt.skipLoad(`^prague\/eip6110_deposits`)
-	// type 3 tx (EIP-4844) is not supported
+	// type 3 tx (EIP-4844) is not supported. See tests/block_test_util.go:decode()
 	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOBBASEFEE-debug\]`)
+	bt.skipLoad(`^istanbul\/eip1344_chainid\/chainid\/chainid.json\/tests\/istanbul\/eip1344_chainid\/test_chainid.py::test_chainid\[fork_Osaka-typed_transaction_3-blockchain_test_from_state_test\]`)
 	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Osaka-tx_type_3-evm_code_type_LEGACY-blockchain_test-different_block\]`)
 	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Osaka-tx_type_3-evm_code_type_LEGACY-blockchain_test-same_block\]`)
-	bt.skipLoad(`^istanbul\/eip1344_chainid\/chainid\/chainid.json\/tests\/istanbul\/eip1344_chainid\/test_chainid.py::test_chainid\[fork_Osaka-typed_transaction_3-blockchain_test_from_state_test\]`)
+	bt.skipLoad(`^osaka\/eip7934_block_rlp_limit\/max_block_rlp_size\/block_rlp_size_at_limit_with_all_typed_transactions.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_rlp_size_at_limit_with_all_typed_transactions\[fork_Osaka-typed_transaction_3-blockchain_test\]`)
 	// Kaia cannot calculate the same block hash as Ethereum
 	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOCKHASH-debug\]`)
+	// Kaia's MaxBlockSize (10 MiB) higher than Ethereum's (8 MiB), so max_plus_1 is accepted in Kaia.
+	bt.skipLoad(`^osaka\/eip7934_block_rlp_limit\/max_block_rlp_size\/block_at_rlp_size_limit_boundary.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_at_rlp_size_limit_boundary\[fork_Osaka-blockchain_test-max_rlp_size_plus_1_byte\]`)
 
 	// TODO: Skip EIP tests that are not yet supported; expect to remove them
 	bt.skipLoad(`osaka/eip7594_peerdas`)
 	bt.skipLoad(`osaka/eip7825_transaction_gas_limit_cap`)
 	bt.skipLoad(`osaka/eip7918_blob_reserve_price`)
-	bt.skipLoad(`osaka/eip7934_block_rlp_limit`)
 	// TODO: Investigate after all Osaka EIPs are applied
 	bt.skipLoad(`^frontier\/identity_precompile\/identity\/call_identity_precompile.json\/tests\/frontier\/identity_precompile\/test_identity.py::test_call_identity_precompile\[fork_Osaka-blockchain_test_from_state_test-identity_1_nonzerovalue-call_type_CALL\]`)
 
