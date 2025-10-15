@@ -962,6 +962,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		env.tcount = tcountSnapshot
 	}
 
+	var totalTxSize uint64 = 0
 	for _, txOrGen := range bundle.BundleTxs {
 		tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
 		if err != nil {
@@ -995,12 +996,13 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		}
 
 		env.tcount++
-		env.size += uint64(tx.Size())
+		totalTxSize += uint64(tx.Size())
 		txs = append(txs, tx)
 		receipts = append(receipts, receipt)
 		logs = append(logs, receipt.Logs...)
 	}
 
+	env.size += totalTxSize
 	env.txs = append(env.txs, txs...)
 	env.receipts = append(env.receipts, receipts...)
 
