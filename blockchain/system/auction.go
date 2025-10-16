@@ -55,12 +55,12 @@ func ReadGasBufferEstimate(backend bind.ContractCaller, contractAddr common.Addr
 func EncodeAuctionCallData(bid *auction.Bid) ([]byte, error) {
 	input := contracts.IAuctionEntryPointAuctionTx{
 		TargetTxHash:  bid.TargetTxHash,
-		BlockNumber:   big.NewInt(int64(bid.BlockNumber)),
+		BlockNumber:   new(big.Int).SetUint64(bid.BlockNumber),
 		Sender:        bid.Sender,
 		To:            bid.To,
-		Nonce:         big.NewInt(int64(bid.Nonce)),
+		Nonce:         new(big.Int).SetUint64(bid.Nonce),
 		Bid:           bid.Bid,
-		CallGasLimit:  big.NewInt(int64(bid.CallGasLimit)),
+		CallGasLimit:  new(big.Int).SetUint64(bid.CallGasLimit),
 		Data:          bid.Data,
 		SearcherSig:   bid.SearcherSig,
 		AuctioneerSig: bid.AuctioneerSig,
