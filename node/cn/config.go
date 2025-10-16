@@ -201,6 +201,9 @@ type Config struct {
 	// Use console.log in solidity for local network
 	UseConsoleLog bool
 
+	// Use flat trie scheme
+	UseFlatTrie bool
+
 	// Kaiax configs
 	Gasless *gasless.GaslessConfig
 	Auction *auction.AuctionConfig

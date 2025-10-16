@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/storage/statedb"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -240,7 +241,9 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 	// The genesis block is present in the database but the corresponding state might not.
 	// Because the trie can be partially corrupted, we always commit the trie.
 	// It can happen in a state migrated database or live pruned database.
-	commitGenesisState(genesis, db, networkId)
+	if db.GetDomainsManager() == nil { // FlatTrie disallows re-commiting the block lower than the head block.
+		commitGenesisState(genesis, db, networkId)
+	}
 
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
@@ -310,7 +313,10 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 		// If db == nil, do not write to the real database. Here we supply a memory database as a placeholder.
 		db = database.NewMemoryDBManager()
 	}
-	stateDB, _ := state.New(baseStateRoot, state.NewDatabase(db), nil, nil)
+	stateDB, _ := state.New(baseStateRoot, state.NewDatabase(db), nil, &statedb.TrieOpts{
+		BaseBlockNumber: 0,
+		CommitGenesis:   true,
+	})
 	rules := params.Rules{}
 	if g.Config != nil {
 		rules = g.Config.Rules(new(big.Int).SetUint64(g.Number))
