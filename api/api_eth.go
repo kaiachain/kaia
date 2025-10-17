@@ -33,8 +33,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/forkid"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -1583,10 +1583,12 @@ func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
 		for addr, c := range vm.ActivePrecompiledContracts(rules) {
 			precompiles[c.Name()] = addr
 		}
+
+		id := forkid.NewID(c, genesis.Hash(), head.Uint64()).Hash
 		return &config{
-			BlobSchedule:    c.BlobConfig(c.LatestFork(head)),
+			BlobSchedule:    forkid.BlobConfig(c, head.Uint64()),
 			ChainId:         (*hexutil.Big)(c.ChainID),
-			ForkId:          hexutil.Bytes{0x00, 0x00, 0x00, 0x00}, // TODO-kaia: set Kaia's ForkId
+			ForkId:          id[:],
 			Precompiles:     precompiles,
 			SystemContracts: api.kaiaBlockChainAPI.b.GetActiveSystemContracts(c, genesis.Hash(), head),
 		}
@@ -1595,10 +1597,13 @@ func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
 		c  = api.kaiaBlockChainAPI.b.ChainConfig()
 		bn = api.kaiaBlockChainAPI.b.CurrentBlock().Number()
 	)
+	currentForkCompatibleBlock := forkid.LatestForkCompatibleBlock(c, bn)
+	nextForkCompatibleBlock := forkid.NextForkCompatibleBlock(c, bn)
+	lastForkCompatibleBlock := forkid.LastForkCompatibleBlock(c)
 	resp := configResponse{
-		Next:    assemble(c, c.CompatibleBlock(c.LatestFork(bn)+1)),
-		Current: assemble(c, c.CompatibleBlock(c.LatestFork(bn))),
-		Last:    assemble(c, c.CompatibleBlock(c.LatestFork(abi.MaxUint256))),
+		Next:    assemble(c, nextForkCompatibleBlock),
+		Current: assemble(c, currentForkCompatibleBlock),
+		Last:    assemble(c, lastForkCompatibleBlock),
 	}
 	// Nil out last if no future-fork is configured.
 	if resp.Next == nil {
