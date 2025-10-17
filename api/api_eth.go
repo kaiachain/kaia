@@ -1567,6 +1567,10 @@ type configResponse struct {
 
 // Config implements the KIP-276(EIP-7910) eth_config method.
 func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
+	genesis, err := api.kaiaBlockChainAPI.b.HeaderByNumber(ctx, 0)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load genesis: %w", err)
+	}
 	assemble := func(c *params.ChainConfig, head *big.Int) *config {
 		if head == nil {
 			return nil
@@ -1584,7 +1588,7 @@ func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
 			ChainId:         (*hexutil.Big)(c.ChainID),
 			ForkId:          hexutil.Bytes{0x00, 0x00, 0x00, 0x00}, // TODO-kaia: set Kaia's ForkId
 			Precompiles:     precompiles,
-			SystemContracts: api.kaiaBlockChainAPI.b.GetActiveSystemContracts(c, head),
+			SystemContracts: api.kaiaBlockChainAPI.b.GetActiveSystemContracts(c, genesis.Hash(), head),
 		}
 	}
 	var (

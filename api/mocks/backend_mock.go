@@ -196,17 +196,17 @@ func (mr *MockBackendMockRecorder) FeeHistory(arg0, arg1, arg2, arg3 interface{}
 }
 
 // GetActiveSystemContracts mocks base method.
-func (m *MockBackend) GetActiveSystemContracts(arg0 *params.ChainConfig, arg1 *big.Int) map[string]common.Address {
+func (m *MockBackend) GetActiveSystemContracts(arg0 *params.ChainConfig, arg1 common.Hash, arg2 *big.Int) map[string]common.Address {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetActiveSystemContracts", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetActiveSystemContracts", arg0, arg1, arg2)
 	ret0, _ := ret[0].(map[string]common.Address)
 	return ret0
 }
 
 // GetActiveSystemContracts indicates an expected call of GetActiveSystemContracts.
-func (mr *MockBackendMockRecorder) GetActiveSystemContracts(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockBackendMockRecorder) GetActiveSystemContracts(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveSystemContracts", reflect.TypeOf((*MockBackend)(nil).GetActiveSystemContracts), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveSystemContracts", reflect.TypeOf((*MockBackend)(nil).GetActiveSystemContracts), arg0, arg1, arg2)
 }
 
 // GetBlockReceipts mocks base method.

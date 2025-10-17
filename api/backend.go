@@ -94,7 +94,7 @@ type Backend interface {
 	TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
 	SubscribeNewTxsEvent(chan<- blockchain.NewTxsEvent) event.Subscription
 
-	GetActiveSystemContracts(c *params.ChainConfig, head *big.Int) map[string]common.Address
+	GetActiveSystemContracts(c *params.ChainConfig, genesis common.Hash, head *big.Int) map[string]common.Address
 	ChainConfig() *params.ChainConfig
 	CurrentBlock() *types.Block
 

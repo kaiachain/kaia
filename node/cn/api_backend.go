@@ -73,8 +73,8 @@ func (b *CNAPIBackend) GetTxLookupInfoAndReceiptInCache(txHash common.Hash) (*ty
 	return b.cn.blockchain.GetTxLookupInfoAndReceiptInCache(txHash)
 }
 
-func (b *CNAPIBackend) GetActiveSystemContracts(c *params.ChainConfig, head *big.Int) map[string]common.Address {
-	return system.ActiveSystemContracts(c, head)
+func (b *CNAPIBackend) GetActiveSystemContracts(c *params.ChainConfig, genesis common.Hash, head *big.Int) map[string]common.Address {
+	return system.ActiveSystemContracts(c, genesis, head)
 }
 
 func (b *CNAPIBackend) ChainConfig() *params.ChainConfig {
