@@ -16,6 +16,7 @@ import (
 	mock_accounts "github.com/kaiachain/kaia/accounts/mocks"
 	mock_api "github.com/kaiachain/kaia/api/mocks"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/forkid"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -2686,5 +2687,165 @@ func TestEthAPI_EstimateGas(t *testing.T) {
 
 	testEstimateGas(t, mockBackend, func(args EthTransactionArgs, overrides *EthStateOverride) (hexutil.Uint64, error) {
 		return api.EstimateGas(context.Background(), args, nil, overrides)
+	})
+}
+
+// TestEthAPI_Config tests the eth_config method.
+func TestEthAPI_Config(t *testing.T) {
+	expectedChainConfig := params.TestChainConfig
+	expectedChainConfig.IstanbulCompatibleBlock = big.NewInt(75373312)
+	expectedChainConfig.LondonCompatibleBlock = big.NewInt(80295291)
+	expectedChainConfig.PragueCompatibleBlock = big.NewInt(187930000)
+	genesisHeader := &types.Header{
+		Number: big.NewInt(0),
+		Root:   common.HexToHash("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"),
+	}
+	genesisForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 0).Hash
+	istanbulForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 75373312).Hash
+	lonondonForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 80295291).Hash
+	pragueForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 187930000).Hash
+	var (
+		genesisRules        = expectedChainConfig.Rules(big.NewInt(0))
+		istanbulRules       = expectedChainConfig.Rules(big.NewInt(75373312))
+		lonondonRules       = expectedChainConfig.Rules(big.NewInt(80295291))
+		pragueRules         = expectedChainConfig.Rules(big.NewInt(187930000))
+		genesisPrecompiles  = make(map[string]common.Address)
+		istanbulPrecompiles = make(map[string]common.Address)
+		lonondonPrecompiles = make(map[string]common.Address)
+		praguePrecompiles   = make(map[string]common.Address)
+	)
+	for addr, c := range vm.ActivePrecompiledContracts(genesisRules) {
+		genesisPrecompiles[c.Name()] = addr
+	}
+	for addr, c := range vm.ActivePrecompiledContracts(istanbulRules) {
+		istanbulPrecompiles[c.Name()] = addr
+	}
+	for addr, c := range vm.ActivePrecompiledContracts(lonondonRules) {
+		lonondonPrecompiles[c.Name()] = addr
+	}
+	for addr, c := range vm.ActivePrecompiledContracts(pragueRules) {
+		praguePrecompiles[c.Name()] = addr
+	}
+	tests := []struct {
+		name            string
+		blockNumber     uint64
+		expectedCurrent *config
+		expectedNext    *config
+		expectedLast    *config
+	}{
+		{
+			name:        "Genesis block",
+			blockNumber: 0,
+			expectedCurrent: &config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          genesisForkID[:],
+				Precompiles:     genesisPrecompiles,
+				SystemContracts: nil,
+			},
+			expectedNext: &config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          istanbulForkID[:],
+				Precompiles:     istanbulPrecompiles,
+				SystemContracts: nil,
+			},
+			expectedLast: &config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          pragueForkID[:],
+				Precompiles:     praguePrecompiles,
+				SystemContracts: nil,
+			},
+		},
+		{
+			name:        "Istanbul block",
+			blockNumber: 75373312,
+			expectedCurrent: &config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          istanbulForkID[:],
+				Precompiles:     istanbulPrecompiles,
+				SystemContracts: nil,
+			},
+			expectedNext: &config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          lonondonForkID[:],
+				Precompiles:     lonondonPrecompiles,
+				SystemContracts: nil,
+			},
+			expectedLast: &config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          pragueForkID[:],
+				Precompiles:     praguePrecompiles,
+				SystemContracts: nil,
+			},
+		},
+		{
+			name:        "Latest fork block (Prague)",
+			blockNumber: 187930000,
+			expectedCurrent: &config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          pragueForkID[:],
+				Precompiles:     praguePrecompiles,
+				SystemContracts: nil,
+			},
+			expectedNext: nil, // No more forks
+			expectedLast: nil, // Should be nil when Next is nil
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtrl, mockBackend, api := testInitForEthApi(t)
+			defer mockCtrl.Finish()
+
+			// Mock chain config
+			mockBackend.EXPECT().ChainConfig().Return(expectedChainConfig).AnyTimes()
+
+			// Mock genesis block (block 0) - this is called first in Config method
+			mockBackend.EXPECT().HeaderByNumber(gomock.Any(), gomock.Any()).Return(
+				genesisHeader,
+				nil,
+			)
+
+			// Mock current block - this is called after genesis
+			mockBackend.EXPECT().CurrentBlock().Return(
+				types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(tt.blockNumber)}),
+			)
+			mockBackend.EXPECT().GetActiveSystemContracts(gomock.Any(), gomock.Any(), gomock.Any()).Return(
+				nil,
+			).AnyTimes()
+
+			// Call the method
+			config, err := api.Config(context.Background())
+			require.NoError(t, err)
+			require.NotNil(t, config)
+
+			// Validate configs
+			assert.Equal(t, tt.expectedCurrent, config.Current)
+			assert.Equal(t, tt.expectedNext, config.Next)
+			assert.Equal(t, tt.expectedLast, config.Last)
+		})
+	}
+}
+
+func TestEthAPI_Config_ErrorCases(t *testing.T) {
+	t.Run("Genesis block not found", func(t *testing.T) {
+		mockCtrl, mockBackend, api := testInitForEthApi(t)
+		defer mockCtrl.Finish()
+
+		mockBackend.EXPECT().ChainConfig().Return(params.KairosChainConfig).AnyTimes()
+		mockBackend.EXPECT().HeaderByNumber(gomock.Any(), gomock.Any()).Return(
+			nil, errors.New("genesis block not found"),
+		)
+
+		config, err := api.Config(context.Background())
+		assert.Error(t, err)
+		assert.Nil(t, config)
+		assert.Contains(t, err.Error(), "unable to load genesis")
 	})
 }

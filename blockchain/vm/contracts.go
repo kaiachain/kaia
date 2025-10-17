@@ -235,19 +235,9 @@ func init() {
 // ActivePrecompiles returns the precompiles enabled with the current configuration.
 func ActivePrecompiles(rules params.Rules) []common.Address {
 	var precompiledContractAddrs []common.Address
-	switch {
-	case rules.IsOsaka:
-		precompiledContractAddrs = PrecompiledAddressOsaka
-	case rules.IsPrague:
-		precompiledContractAddrs = PrecompiledAddressPrague
-	case rules.IsCancun:
-		precompiledContractAddrs = PrecompiledAddressCancun
-	case rules.IsIstanbul:
-		precompiledContractAddrs = PrecompiledAddressIstanbul
-	default:
-		precompiledContractAddrs = PrecompiledAddressesByzantium
+	for addr := range ActivePrecompiledContracts(rules) {
+		precompiledContractAddrs = append(precompiledContractAddrs, addr)
 	}
-
 	// After istanbulCompatible hf, need to support for vmversion0 contracts, too.
 	// VmVersion0 contracts are deployed before istanbulCompatible and they use byzantiumCompatible precompiled contracts.
 	// VmVersion0 contracts are the contracts deployed before istanbulCompatible hf.
@@ -260,6 +250,7 @@ func ActivePrecompiles(rules params.Rules) []common.Address {
 }
 
 // ActivePrecompiledContracts returns the precompiled contracts enabled with the current configuration.
+// This function doesn't support for vmversion0 contracts, it only supports for istanbulCompatible hf.
 func ActivePrecompiledContracts(rules params.Rules) map[common.Address]PrecompiledContract {
 	var precompiledContracts map[common.Address]PrecompiledContract
 	switch {
@@ -275,16 +266,7 @@ func ActivePrecompiledContracts(rules params.Rules) map[common.Address]Precompil
 		precompiledContracts = PrecompiledContractsByzantium
 	}
 
-	// After istanbulCompatible hf, need to support for vmversion0 contracts, too.
-	// VmVersion0 contracts are deployed before istanbulCompatible and they use byzantiumCompatible precompiled contracts.
-	// VmVersion0 contracts are the contracts deployed before istanbulCompatible hf.
-	if rules.IsIstanbul {
-		precompiledContracts[common.BytesToAddress([]byte{10})] = &feePayer{}
-		precompiledContracts[common.BytesToAddress([]byte{11})] = &validateSender{}
-		return precompiledContracts
-	} else {
-		return precompiledContracts
-	}
+	return precompiledContracts
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
