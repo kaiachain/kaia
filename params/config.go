@@ -431,6 +431,16 @@ func (c *ChainConfig) IsKaiaForkEnabled(num *big.Int) bool {
 	return isForked(c.KaiaCompatibleBlock, num)
 }
 
+// IsKip103ForkEnabled returns whether num is either equal to the kip103 block or greater.
+func (c *ChainConfig) IsKip103ForkEnabled(num *big.Int) bool {
+	return isForked(c.Kip103CompatibleBlock, num)
+}
+
+// IsKip160ForkEnabled returns whether num is either equal to the kip160 block or greater.
+func (c *ChainConfig) IsKip160ForkEnabled(num *big.Int) bool {
+	return isForked(c.Kip160CompatibleBlock, num)
+}
+
 // IsRandaoForkEnabled returns whether num is either equal to the randao block or greater.
 func (c *ChainConfig) IsRandaoForkEnabled(num *big.Int) bool {
 	return isForked(c.RandaoCompatibleBlock, num)

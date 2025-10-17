@@ -28,16 +28,16 @@ import (
 func ActiveSystemContracts(c *params.ChainConfig, genesis common.Hash, head *big.Int) map[string]common.Address {
 	active := make(map[string]common.Address)
 
-	if head.Cmp(c.PragueCompatibleBlock) >= 0 {
+	if c.IsPragueForkEnabled(head) {
 		active["HISTORY_STORAGE_ADDRESS"] = params.HistoryStorageAddress
 	}
-	if head.Cmp(c.Kip160CompatibleBlock) >= 0 {
+	if c.IsKip160ForkEnabled(head) {
 		active["KIP160"] = c.Kip160ContractAddress
 	}
-	if head.Cmp(c.RandaoCompatibleBlock) >= 0 {
+	if c.IsRandaoForkEnabled(head) {
 		active["REGISTRY"] = RegistryAddr
 	}
-	if head.Cmp(c.Kip103CompatibleBlock) >= 0 {
+	if c.IsKip103ForkEnabled(head) {
 		active["KIP103"] = c.Kip103ContractAddress
 	}
 
