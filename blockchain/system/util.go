@@ -12,8 +12,6 @@ import (
 func ActiveSystemContracts(c *params.ChainConfig, genesis common.Hash, head *big.Int) map[string]common.Address {
 	active := make(map[string]common.Address)
 
-	if head.Cmp(c.OsakaCompatibleBlock) >= 0 {
-	}
 	if head.Cmp(c.PragueCompatibleBlock) >= 0 {
 		active["HISTORY_STORAGE_ADDRESS"] = params.HistoryStorageAddress
 	}

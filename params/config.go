@@ -326,8 +326,7 @@ func (c *IstanbulConfig) String() string {
 }
 
 // TODO-Kaia Add BlobConfig
-type BlobConfig struct {
-}
+type BlobConfig struct{}
 
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
