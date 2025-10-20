@@ -21,6 +21,7 @@ import (
 	"hash/crc32"
 	"math/big"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/kaiachain/kaia/common"
@@ -88,10 +89,6 @@ func LastForkCompatibleBlock(config *params.ChainConfig) *big.Int {
 	return new(big.Int).SetUint64(forks[len(forks)-1])
 }
 
-func BlobConfig(config *params.ChainConfig, head uint64) *params.BlobConfig {
-	return nil
-}
-
 // checksumUpdate calculates the next IEEE CRC32 checksum based on the previous
 // one and a fork block number (equivalent to CRC32(original-blob || fork)).
 func checksumUpdate(hash uint32, fork uint64) uint32 {
@@ -130,13 +127,7 @@ func gatherForks(config *params.ChainConfig) []uint64 {
 		}
 	}
 	// Sort the fork block numbers to permit chronologival XOR
-	for i := 0; i < len(forks); i++ {
-		for j := i + 1; j < len(forks); j++ {
-			if forks[i] > forks[j] {
-				forks[i], forks[j] = forks[j], forks[i]
-			}
-		}
-	}
+	slices.Sort(forks)
 	// Deduplicate block numbers applying multiple forks
 	for i := 1; i < len(forks); i++ {
 		if forks[i] == forks[i-1] {

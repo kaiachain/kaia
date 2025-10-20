@@ -328,6 +328,10 @@ func (c *IstanbulConfig) String() string {
 // TODO-Kaia Add BlobConfig
 type BlobConfig struct{}
 
+func (c *ChainConfig) BlobConfig(head uint64) *BlobConfig {
+	return nil
+}
+
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}

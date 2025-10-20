@@ -1567,7 +1567,8 @@ type configResponse struct {
 
 // Config implements the KIP-276(EIP-7910) eth_config method.
 func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
-	genesis, err := api.kaiaBlockChainAPI.b.HeaderByNumber(ctx, 0)
+	b := api.kaiaBlockChainAPI.b
+	genesis, err := b.HeaderByNumber(ctx, 0)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load genesis: %w", err)
 	}
@@ -1586,16 +1587,16 @@ func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
 
 		id := forkid.NewID(c, genesis.Hash(), head.Uint64()).Hash
 		return &config{
-			BlobSchedule:    forkid.BlobConfig(c, head.Uint64()),
+			BlobSchedule:    c.BlobConfig(head.Uint64()),
 			ChainId:         (*hexutil.Big)(c.ChainID),
 			ForkId:          id[:],
 			Precompiles:     precompiles,
-			SystemContracts: api.kaiaBlockChainAPI.b.GetActiveSystemContracts(c, genesis.Hash(), head),
+			SystemContracts: b.GetActiveSystemContracts(c, genesis.Hash(), head),
 		}
 	}
 	var (
-		c  = api.kaiaBlockChainAPI.b.ChainConfig()
-		bn = api.kaiaBlockChainAPI.b.CurrentBlock().Number()
+		c  = b.ChainConfig()
+		bn = b.CurrentBlock().Number()
 	)
 	currentForkCompatibleBlock := forkid.LatestForkCompatibleBlock(c, bn)
 	nextForkCompatibleBlock := forkid.NextForkCompatibleBlock(c, bn)
