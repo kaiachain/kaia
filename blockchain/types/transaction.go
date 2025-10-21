@@ -30,6 +30,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math/big"
 	"sort"
 	"sync"
@@ -1121,9 +1122,7 @@ func (t *TransactionsByPriceAndNonce) Clear() {
 // Copy the current object.
 func (t *TransactionsByPriceAndNonce) Copy() *TransactionsByPriceAndNonce {
 	txsCopy := make(map[common.Address]Transactions)
-	for addr, txList := range t.txs {
-		txsCopy[addr] = txList
-	}
+	maps.Copy(txsCopy, t.txs)
 
 	headsCopy := make(txByPriceAndTime, len(t.heads))
 	copy(headsCopy, t.heads)

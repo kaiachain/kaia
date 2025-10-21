@@ -23,6 +23,8 @@
 package state
 
 import (
+	"maps"
+
 	"github.com/kaiachain/kaia/common"
 )
 
@@ -63,9 +65,7 @@ func newAccessList() *accessList {
 // Copy creates an independent copy of an accessList.
 func (a *accessList) Copy() *accessList {
 	cp := newAccessList()
-	for k, v := range a.addresses {
-		cp.addresses[k] = v
-	}
+	maps.Copy(cp.addresses, a.addresses)
 	cp.slots = make([]map[common.Hash]struct{}, len(a.slots))
 	for i, slotMap := range a.slots {
 		newSlotmap := make(map[common.Hash]struct{}, len(slotMap))

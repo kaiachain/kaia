@@ -21,6 +21,7 @@ package system
 import (
 	"encoding/hex"
 	"encoding/json"
+	"maps"
 	"math/big"
 	"sort"
 	"strings"
@@ -134,12 +135,8 @@ func AllocKip113Proxy(init AllocKip113Init) map[common.Hash]common.Hash {
 		pubSlot := calcMappingSlot(202, addr, 0)
 		popSlot := calcMappingSlot(202, addr, 1)
 
-		for k, v := range allocDynamicData(pubSlot, info.PublicKey) {
-			storage[k] = v
-		}
-		for k, v := range allocDynamicData(popSlot, info.Pop) {
-			storage[k] = v
-		}
+		maps.Copy(storage, allocDynamicData(pubSlot, info.PublicKey))
+		maps.Copy(storage, allocDynamicData(popSlot, info.Pop))
 	}
 
 	return storage
