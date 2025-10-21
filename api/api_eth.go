@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/forkid"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -1546,4 +1547,68 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		}
 		prevTracer = tracer
 	}
+}
+
+type config struct {
+	// As mentioned in KIP-276, Kaia doesn't include ActivationTime as a field.
+	// ActivationTime  uint64                    `json:"activationTime"`
+	BlobSchedule    *params.BlobConfig        `json:"blobSchedule"`
+	ChainId         *hexutil.Big              `json:"chainId"`
+	ForkId          hexutil.Bytes             `json:"forkId"`
+	Precompiles     map[string]common.Address `json:"precompiles"`
+	SystemContracts map[string]common.Address `json:"systemContracts"`
+}
+
+type configResponse struct {
+	Current *config `json:"current"`
+	Next    *config `json:"next"`
+	Last    *config `json:"last"`
+}
+
+// Config implements the KIP-276(EIP-7910) eth_config method.
+func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
+	b := api.kaiaBlockChainAPI.b
+	genesis, err := b.HeaderByNumber(ctx, 0)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load genesis: %w", err)
+	}
+	assemble := func(c *params.ChainConfig, head *big.Int) *config {
+		if head == nil {
+			return nil
+		}
+
+		var (
+			rules       = c.Rules(head)
+			precompiles = make(map[string]common.Address)
+		)
+		for addr, c := range vm.ActivePrecompiledContracts(rules) {
+			precompiles[c.Name()] = addr
+		}
+
+		id := forkid.NewID(c, genesis.Hash(), head.Uint64()).Hash
+		return &config{
+			BlobSchedule:    c.BlobConfig(head.Uint64()),
+			ChainId:         (*hexutil.Big)(c.ChainID),
+			ForkId:          id[:],
+			Precompiles:     precompiles,
+			SystemContracts: b.GetActiveSystemContracts(c, genesis.Hash(), head),
+		}
+	}
+	var (
+		c  = b.ChainConfig()
+		bn = b.CurrentBlock().Number()
+	)
+	currentForkCompatibleBlock := forkid.LatestForkCompatibleBlock(c, bn)
+	nextForkCompatibleBlock := forkid.NextForkCompatibleBlock(c, bn)
+	lastForkCompatibleBlock := forkid.LastForkCompatibleBlock(c)
+	resp := configResponse{
+		Next:    assemble(c, nextForkCompatibleBlock),
+		Current: assemble(c, currentForkCompatibleBlock),
+		Last:    assemble(c, lastForkCompatibleBlock),
+	}
+	// Nil out last if no future-fork is configured.
+	if resp.Next == nil {
+		resp.Last = nil
+	}
+	return &resp, nil
 }

@@ -325,6 +325,13 @@ func (c *IstanbulConfig) String() string {
 	return "istanbul"
 }
 
+// TODO-Kaia Add BlobConfig
+type BlobConfig struct{}
+
+func (c *ChainConfig) BlobConfig(head uint64) *BlobConfig {
+	return nil
+}
+
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}
@@ -426,6 +433,16 @@ func (c *ChainConfig) IsCancunForkEnabled(num *big.Int) bool {
 // IsKaiaForkEnabled returns whether num is either equal to the kaia block or greater.
 func (c *ChainConfig) IsKaiaForkEnabled(num *big.Int) bool {
 	return isForked(c.KaiaCompatibleBlock, num)
+}
+
+// IsKip103ForkEnabled returns whether num is either equal to the kip103 block or greater.
+func (c *ChainConfig) IsKip103ForkEnabled(num *big.Int) bool {
+	return isForked(c.Kip103CompatibleBlock, num)
+}
+
+// IsKip160ForkEnabled returns whether num is either equal to the kip160 block or greater.
+func (c *ChainConfig) IsKip160ForkEnabled(num *big.Int) bool {
+	return isForked(c.Kip160CompatibleBlock, num)
 }
 
 // IsRandaoForkEnabled returns whether num is either equal to the randao block or greater.

@@ -75,6 +75,8 @@ type PrecompiledContract interface {
 	// Run runs the precompiled contract
 	// contract, evm is only exists in Kaia, those are not used in go-ethereum
 	Run(input []byte, contract *Contract, evm *EVM) ([]byte, error)
+
+	Name() string
 }
 
 // PrecompiledContractsByzantium contains the default set of pre-compiled Kaia
@@ -233,19 +235,9 @@ func init() {
 // ActivePrecompiles returns the precompiles enabled with the current configuration.
 func ActivePrecompiles(rules params.Rules) []common.Address {
 	var precompiledContractAddrs []common.Address
-	switch {
-	case rules.IsOsaka:
-		precompiledContractAddrs = PrecompiledAddressOsaka
-	case rules.IsPrague:
-		precompiledContractAddrs = PrecompiledAddressPrague
-	case rules.IsCancun:
-		precompiledContractAddrs = PrecompiledAddressCancun
-	case rules.IsIstanbul:
-		precompiledContractAddrs = PrecompiledAddressIstanbul
-	default:
-		precompiledContractAddrs = PrecompiledAddressesByzantium
+	for addr := range ActivePrecompiledContracts(rules) {
+		precompiledContractAddrs = append(precompiledContractAddrs, addr)
 	}
-
 	// After istanbulCompatible hf, need to support for vmversion0 contracts, too.
 	// VmVersion0 contracts are deployed before istanbulCompatible and they use byzantiumCompatible precompiled contracts.
 	// VmVersion0 contracts are the contracts deployed before istanbulCompatible hf.
@@ -255,6 +247,26 @@ func ActivePrecompiles(rules params.Rules) []common.Address {
 	} else {
 		return precompiledContractAddrs
 	}
+}
+
+// ActivePrecompiledContracts returns the precompiled contracts enabled with the current configuration.
+// This function doesn't support for vmversion0 contracts, it only supports for istanbulCompatible hf.
+func ActivePrecompiledContracts(rules params.Rules) map[common.Address]PrecompiledContract {
+	var precompiledContracts map[common.Address]PrecompiledContract
+	switch {
+	case rules.IsOsaka:
+		precompiledContracts = PrecompiledContractsOsaka
+	case rules.IsPrague:
+		precompiledContracts = PrecompiledContractsPrague
+	case rules.IsCancun:
+		precompiledContracts = PrecompiledContractsCancun
+	case rules.IsIstanbul:
+		precompiledContracts = PrecompiledContractsIstanbul
+	default:
+		precompiledContracts = PrecompiledContractsByzantium
+	}
+
+	return precompiledContracts
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -305,6 +317,10 @@ func (c *ecrecover) Run(input []byte, contract *Contract, evm *EVM) ([]byte, err
 	return common.LeftPadBytes(crypto.Keccak256(pubKey[1:])[12:], 32), nil
 }
 
+func (c *ecrecover) Name() string {
+	return "ECREC"
+}
+
 // SHA256 implemented as a native contract.
 type sha256hash struct{}
 
@@ -323,6 +339,10 @@ func (c *sha256hash) GetRequiredGasAndComputationCost(input []byte) (uint64, uin
 func (c *sha256hash) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	h := sha256.Sum256(input)
 	return h[:], nil
+}
+
+func (c *sha256hash) Name() string {
+	return "SHA256"
 }
 
 // RIPEMD160 implemented as a native contract.
@@ -346,6 +366,10 @@ func (c *ripemd160hash) Run(input []byte, contract *Contract, evm *EVM) ([]byte,
 	return common.LeftPadBytes(ripemd.Sum(nil), 32), nil
 }
 
+func (c *ripemd160hash) Name() string {
+	return "RIPEMD160"
+}
+
 // data copy implemented as a native contract.
 type dataCopy struct{}
 
@@ -364,11 +388,19 @@ func (c *dataCopy) Run(in []byte, contract *Contract, evm *EVM) ([]byte, error) 
 	return in, nil
 }
 
+func (c *dataCopy) Name() string {
+	return "ID"
+}
+
 // bigModExp implements a native big integer exponential modular operation.
 type bigModExp struct {
 	eip2565 bool
 	eip7823 bool
 	eip7883 bool
+}
+
+func (c *bigModExp) Name() string {
+	return "MODEXP"
 }
 
 // byzantiumMultComplexity implements the bigModexp multComplexity formula, as defined in EIP-198.
@@ -685,6 +717,10 @@ func (c *bn256AddIstanbul) Run(input []byte, contract *Contract, evm *EVM) ([]by
 	return runBn256Add(input)
 }
 
+func (c *bn256AddIstanbul) Name() string {
+	return "BN254_ADD"
+}
+
 // bn256AddByzantium implements a native elliptic curve point addition
 // conforming to Byzantium consensus rules.
 type bn256AddByzantium struct{}
@@ -695,6 +731,10 @@ func (c *bn256AddByzantium) GetRequiredGasAndComputationCost(input []byte) (uint
 
 func (c *bn256AddByzantium) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return runBn256Add(input)
+}
+
+func (c *bn256AddByzantium) Name() string {
+	return "BN254_ADD"
 }
 
 // runBn256ScalarMul implements the Bn256ScalarMul precompile, referenced by
@@ -721,6 +761,10 @@ func (c *bn256ScalarMulIstanbul) Run(input []byte, contract *Contract, evm *EVM)
 	return runBn256ScalarMul(input)
 }
 
+func (c *bn256ScalarMulIstanbul) Name() string {
+	return "BN254_MUL"
+}
+
 // bn256ScalarMulByzantium implements a native elliptic curve scalar
 // multiplication conforming to Byzantium consensus rules.
 type bn256ScalarMulByzantium struct{}
@@ -731,6 +775,10 @@ func (c *bn256ScalarMulByzantium) GetRequiredGasAndComputationCost(input []byte)
 
 func (c *bn256ScalarMulByzantium) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return runBn256ScalarMul(input)
+}
+
+func (c *bn256ScalarMulByzantium) Name() string {
+	return "BN254_MUL"
 }
 
 var (
@@ -789,6 +837,10 @@ func (c *bn256PairingIstanbul) Run(input []byte, contract *Contract, evm *EVM) (
 	return runBn256Pairing(input)
 }
 
+func (c *bn256PairingIstanbul) Name() string {
+	return "BN254_PAIRING"
+}
+
 // bn256PairingByzantium implements a pairing pre-compile for the bn256 curve
 // conforming to Byzantium consensus rules.
 type bn256PairingByzantium struct{}
@@ -801,6 +853,10 @@ func (c *bn256PairingByzantium) GetRequiredGasAndComputationCost(input []byte) (
 
 func (c *bn256PairingByzantium) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return runBn256Pairing(input)
+}
+
+func (c *bn256PairingByzantium) Name() string {
+	return "BN254_PAIRING"
 }
 
 type blake2F struct{}
@@ -865,6 +921,10 @@ func (c *blake2F) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error
 	return output, nil
 }
 
+func (c *blake2F) Name() string {
+	return "BLAKE2F"
+}
+
 // kzgPointEvaluation implements the EIP-4844 point evaluation precompile.
 type kzgPointEvaluation struct{}
 
@@ -921,6 +981,10 @@ func (b *kzgPointEvaluation) Run(input []byte, contract *Contract, evm *EVM) ([]
 	return common.Hex2Bytes(blobPrecompileReturnValue), nil
 }
 
+func (b *kzgPointEvaluation) Name() string {
+	return "KZG_POINT_EVALUATION"
+}
+
 // kZGToVersionedHash implements kzg_to_versioned_hash from EIP-4844
 func kZGToVersionedHash(kzg kzg4844.Commitment) common.Hash {
 	h := sha256.Sum256(kzg[:])
@@ -953,6 +1017,10 @@ func (c *vmLog) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) 
 	return nil, nil
 }
 
+func (c *vmLog) Name() string {
+	return "VMLOG"
+}
+
 type feePayer struct{}
 
 func (c *feePayer) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
@@ -961,6 +1029,10 @@ func (c *feePayer) GetRequiredGasAndComputationCost(input []byte) (uint64, uint6
 
 func (c *feePayer) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error) {
 	return contract.FeePayerAddress.Bytes(), nil
+}
+
+func (c *feePayer) Name() string {
+	return "FEE_PAYER"
 }
 
 type validateSender struct{}
@@ -979,6 +1051,10 @@ func (c *validateSender) Run(input []byte, contract *Contract, evm *EVM) ([]byte
 		return []byte{0}, nil
 	}
 	return []byte{1}, nil
+}
+
+func (c *validateSender) Name() string {
+	return "VALIDATE_SENDER"
 }
 
 func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPicker, currentBlockNumber uint64) error {
@@ -1068,6 +1144,10 @@ func (c *bls12381G1Add) Run(input []byte, contract *Contract, evm *EVM) ([]byte,
 	return encodePointG1(p0), nil
 }
 
+func (c *bls12381G1Add) Name() string {
+	return "BLS12_G1ADD"
+}
+
 // bls12381G1MultiExp implements EIP-2537 G1MultiExp precompile.
 type bls12381G1MultiExp struct{}
 
@@ -1129,6 +1209,10 @@ func (c *bls12381G1MultiExp) Run(input []byte, contract *Contract, evm *EVM) ([]
 	return encodePointG1(r), nil
 }
 
+func (c *bls12381G1MultiExp) Name() string {
+	return "BLS12_G1MSM"
+}
+
 // bls12381G2Add implements EIP-2537 G2Add precompile.
 type bls12381G2Add struct{}
 
@@ -1164,6 +1248,10 @@ func (c *bls12381G2Add) Run(input []byte, contract *Contract, evm *EVM) ([]byte,
 
 	// Encode the G2 point into 256 bytes
 	return encodePointG2(r), nil
+}
+
+func (c *bls12381G2Add) Name() string {
+	return "BLS12_G2ADD"
 }
 
 // bls12381G2MultiExp implements EIP-2537 G2MultiExp precompile.
@@ -1225,6 +1313,10 @@ func (c *bls12381G2MultiExp) Run(input []byte, contract *Contract, evm *EVM) ([]
 
 	// Encode the G2 point to 256 bytes.
 	return encodePointG2(r), nil
+}
+
+func (c *bls12381G2MultiExp) Name() string {
+	return "BLS12_G2MSM"
 }
 
 // bls12381Pairing implements EIP-2537 Pairing precompile.
@@ -1290,6 +1382,10 @@ func (c *bls12381Pairing) Run(input []byte, contract *Contract, evm *EVM) ([]byt
 		out[31] = 1
 	}
 	return out, nil
+}
+
+func (c *bls12381Pairing) Name() string {
+	return "BLS12_PAIRING_CHECK"
 }
 
 func decodePointG1(in []byte) (*bls12381.G1Affine, error) {
@@ -1410,6 +1506,10 @@ func (c *bls12381MapG1) Run(input []byte, contract *Contract, evm *EVM) ([]byte,
 	return encodePointG1(&r), nil
 }
 
+func (c *bls12381MapG1) Name() string {
+	return "BLS12_MAP_FP_TO_G1"
+}
+
 // bls12381MapG2 implements EIP-2537 MapG2 precompile.
 type bls12381MapG2 struct{}
 
@@ -1443,6 +1543,10 @@ func (c *bls12381MapG2) Run(input []byte, contract *Contract, evm *EVM) ([]byte,
 	return encodePointG2(&r), nil
 }
 
+func (c *bls12381MapG2) Name() string {
+	return "BLS12_MAP_FP2_TO_G2"
+}
+
 // consoleLog implements solidity console.log for local networks.
 type consoleLog struct{}
 
@@ -1456,6 +1560,10 @@ func (c *consoleLog) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		logger.Debug(decoded)
 	}
 	return nil, nil
+}
+
+func (c *consoleLog) Name() string {
+	return "CONSOLE_LOG"
 }
 
 // Hardhat console.log accepts format string, however we don't support it.
@@ -1576,4 +1684,8 @@ func (c *p256Verify) Run(input []byte, contract *Contract, evm *EVM) ([]byte, er
 		return true32Byte, nil
 	}
 	return nil, nil
+}
+
+func (c *p256Verify) Name() string {
+	return "P256VERIFY"
 }
