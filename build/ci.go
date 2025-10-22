@@ -391,8 +391,17 @@ func doLint(cmdline []string, exitOnError bool) {
 	// linters for "lint" command
 	lintersSet := [][]string{
 		{
-			"--presets=format",
-			"--presets=performance",
+			//"--presets=format", // presets are removed from v2
+			"--enable=gci",       // should be moved into formatter configuration from v2
+			"--enable=gofmt",     // should be moved into formatter configuration from v2
+			"--enable=gofumpt",   // should be moved into formatter configuration from v2
+			"--enable=goimports", // should be moved into formatter configuration from v2
+			//"--presets=performance", // presets are removed from v2
+			"--enable=bodyclose",
+			"--enable=fatcontext",
+			"--enable=noctx",
+			"--enable=perfsprint",
+			"--enable=prealloc",
 		},
 	}
 
@@ -427,7 +436,7 @@ func doLint(cmdline []string, exitOnError bool) {
 				"--enable=unused",
 			},
 			{"--enable=unconvert"},
-			{"--enable=gosimple"},
+			{"--enable=gosimple"}, // should be removed since it's merged into staticcheck from v2
 			{"--enable=staticcheck"},
 			{"--enable=gocyclo"},
 		}
@@ -437,7 +446,7 @@ func doLint(cmdline []string, exitOnError bool) {
 		configs := []string{
 			"run",
 			"--tests",
-			"--disable-all",
+			"--disable-all", // should be updated to default=none from v2
 			"--timeout=10m",
 		}
 		if *vFlag {
@@ -1031,8 +1040,8 @@ func installLinter() string {
 	if err != nil {
 		fmt.Println("Installing golangci-lint.")
 
-		cmdCurl := exec.Command("curl", "-sSfL", "https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh")
-		cmdSh := exec.Command("sh", "-s", "--", "-b", filepath.Join(build.GOPATH(), "bin"), "v1.52.0")
+		cmdCurl := exec.Command("curl", "-sSfL", "https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh")
+		cmdSh := exec.Command("sh", "-s", "--", "-b", filepath.Join(build.GOPATH(), "bin"), "v1.60.1")
 		cmdSh.Stdin, err = cmdCurl.StdoutPipe()
 		if err != nil {
 			log.Fatal(err)
