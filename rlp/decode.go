@@ -154,7 +154,7 @@ func addErrorContext(err error, ctx string) error {
 }
 
 var (
-	decoderInterface = reflect.TypeOf(new(Decoder)).Elem()
+	decoderInterface = reflect.TypeFor[*Decoder]().Elem()
 	bigInt           = reflect.TypeOf(big.Int{})
 	u256Int          = reflect.TypeOf(uint256.Int{})
 )
@@ -515,7 +515,7 @@ func makeNilPtrDecoder(etype reflect.Type, etypeinfo *typeinfo, ts rlpstruct.Tag
 	}
 }
 
-var ifsliceType = reflect.TypeOf([]interface{}{})
+var ifsliceType = reflect.TypeFor[[]interface{}]()
 
 func decodeInterface(s *Stream, val reflect.Value) error {
 	if val.Type().NumMethod() != 0 {
