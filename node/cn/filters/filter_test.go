@@ -33,7 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -179,7 +179,7 @@ func BenchmarkFilters(b *testing.B) {
 		rmLogsFeed = new(event.Feed)
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
-		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
+		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil, nil}
 		key1, _    = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr1      = crypto.PubkeyToAddress(key1.PublicKey)
 		addr2      = common.BytesToAddress([]byte("jeff"))
@@ -189,7 +189,7 @@ func BenchmarkFilters(b *testing.B) {
 	defer db.Close()
 
 	genesis := blockchain.GenesisBlockForTesting(db, addr1, big.NewInt(1000000))
-	chain, receipts := blockchain.GenerateChain(params.TestChainConfig, genesis, gxhash.NewFaker(), db, 100010, func(i int, gen *blockchain.BlockGen) {
+	chain, receipts := blockchain.GenerateChain(params.TestChainConfig, genesis, faker.NewFaker(), db, 100010, func(i int, gen *blockchain.BlockGen) {
 		switch i {
 		case 2403:
 			receipt := makeReceipt(addr1)
@@ -242,7 +242,7 @@ func TestFilters(t *testing.T) {
 		rmLogsFeed = new(event.Feed)
 		logsFeed   = new(event.Feed)
 		chainFeed  = new(event.Feed)
-		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil}
+		backend    = &testBackend{mux, db, 0, txFeed, rmLogsFeed, logsFeed, chainFeed, params.TestChainConfig, nil, nil, nil}
 		key1, _    = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
 		addr       = crypto.PubkeyToAddress(key1.PublicKey)
 
@@ -254,7 +254,7 @@ func TestFilters(t *testing.T) {
 	defer db.Close()
 
 	genesis := blockchain.GenesisBlockForTesting(db, addr, big.NewInt(1000000))
-	chain, receipts := blockchain.GenerateChain(params.TestChainConfig, genesis, gxhash.NewFaker(), db, 1000, func(i int, gen *blockchain.BlockGen) {
+	chain, receipts := blockchain.GenerateChain(params.TestChainConfig, genesis, faker.NewFaker(), db, 1000, func(i int, gen *blockchain.BlockGen) {
 		switch i {
 		case 1:
 			receipt := genReceipt(false, 0)

@@ -1,0 +1,30 @@
+name: Reusable Basic Test Job
+
+on:
+  workflow_call:
+    inputs:
+      test_command:
+        required: true
+        type: string
+      install_python:
+        required: false
+        type: boolean
+        default: true
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches full history for test-linter's '--new-from-rev=dev to work
+      - name: Add safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Run test
+        shell: bash
+        run: ${{ inputs.test_command }}

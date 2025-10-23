@@ -733,26 +733,26 @@ func (n *Node) apis() []rpc.API {
 		{
 			Namespace: "admin",
 			Version:   "1.0",
-			Service:   NewPrivateAdminAPI(n),
+			Service:   NewAdminNetworkNodeAPI(n),
 		}, {
 			Namespace: "admin",
 			Version:   "1.0",
-			Service:   NewPublicAdminAPI(n),
+			Service:   NewAdminNodeAPI(n),
 			Public:    true,
 		}, {
 			Namespace: "debug",
 			Version:   "1.0",
-			Service:   NewPublicDebugAPI(n),
+			Service:   NewDebugNodeAPI(n),
 		}, {
 			// "web3" namespace will be deprecated soon. The same APIs in "web3" are available in "kaia" namespace.
 			Namespace: "web3",
 			Version:   "1.0",
-			Service:   NewPublicKaiaAPI(n),
+			Service:   NewKaiaNodeAPI(n),
 			Public:    true,
 		}, {
 			Namespace: "kaia",
 			Version:   "1.0",
-			Service:   NewPublicKaiaAPI(n),
+			Service:   NewKaiaNodeAPI(n),
 			Public:    true,
 		}, {
 			Namespace: "debug",

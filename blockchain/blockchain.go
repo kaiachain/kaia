@@ -1028,7 +1028,7 @@ func (bc *BlockChain) GetReceiptByTxHash(txHash common.Hash) *types.Receipt {
 
 	receipts := bc.GetReceiptsByBlockHash(blockHash)
 	if len(receipts) <= int(index) {
-		logger.Error("receipt index exceeds the size of receipts", "receiptIndex", index, "receiptsSize", len(receipts), "txHash", txHash, "blockHash", blockHash)
+		logger.Error("receipt index exceeds the size of receipts", "receiptIndex", index, "receiptsSize", len(receipts), "txHash", txHash.String(), "blockHash", blockHash.String())
 		return nil
 	}
 	return receipts[index]
@@ -1425,6 +1425,13 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 
 			if bc.IsLivePruningRequired() {
 				bc.chPrune <- block.NumberU64()
+			}
+
+			if dm := trieDB.DiskDB().GetDomainsManager(); dm != nil {
+				if err := dm.CommitWrites(); err != nil {
+					return err
+				}
+				logger.Info("Committed domains manager changes into the disk", "blocknum", block.NumberU64())
 			}
 		}
 

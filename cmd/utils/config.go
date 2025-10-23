@@ -43,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/fdlimit"
+	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher"
@@ -50,6 +51,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kas"
 	"github.com/kaiachain/kaia/datasync/dbsyncer"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -639,6 +641,10 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.LivePruning = ctx.Bool(LivePruningFlag.Name)
 	cfg.LivePruningRetention = ctx.Uint64(LivePruningRetentionFlag.Name)
 
+	if ctx.IsSet(FlatTrieFlag.Name) {
+		cfg.UseFlatTrie = ctx.Bool(FlatTrieFlag.Name)
+	}
+
 	if ctx.IsSet(CacheScaleFlag.Name) {
 		common.CacheScale = ctx.Int(CacheScaleFlag.Name)
 	}
@@ -759,8 +765,13 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.GPO.Percentile = ctx.Int(GpoPercentileFlag.Name)
 	cfg.GPO.MaxPrice = big.NewInt(ctx.Int64(GpoMaxGasPriceFlag.Name))
 
+	if ctx.IsSet(VRankLogFrequencyFlag.Name) {
+		core.VRankLogFrequency = ctx.Uint64(VRankLogFrequencyFlag.Name)
+	}
+
 	// Set kaiax module config
 	gasless.SetGaslessConfig(ctx, cfg.Gasless)
+	auction.SetAuctionConfig(ctx, cfg.Auction, kCfg.Node.P2P.ConnectionType)
 }
 
 // raiseFDLimit increases the file descriptor limit to process's maximum value

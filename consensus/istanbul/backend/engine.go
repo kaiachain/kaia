@@ -92,6 +92,10 @@ var (
 	errInvalidRandaoFields = errors.New("invalid randao fields")
 	// errUnexpectedRandao is returned if the Randao fields randomReveal or mixHash are present when must not.
 	errUnexpectedRandao = errors.New("unexpected randao fields")
+	// errInternalError is returned when an internal error occurs.
+	errInternalError = errors.New("internal error")
+	// errPendingNotAllowed is returned when pending block is not allowed.
+	errPendingNotAllowed = errors.New("pending is not allowed")
 )
 
 var (
@@ -203,13 +207,16 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 
 	// Header verify before/after magma fork
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
-		// the kip71Config used when creating the block number is a previous block config.
-		blockNum := header.Number.Uint64()
-		pset := sb.govModule.GetParamSet(blockNum)
-		kip71 := pset.ToKip71Config()
-		if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
-			return err
+		if len(parents) > 0 {
+			// the kip71Config used when creating the block number is a previous block config.
+			blockNum := header.Number.Uint64()
+			pset := sb.govModule.GetParamSet(blockNum)
+			kip71 := pset.ToKip71Config()
+			if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
+				return err
+			}
 		}
+		// For Magma fork, BaseFee is allowed even without parents (first header)
 	} else if header.BaseFee != nil {
 		return consensus.ErrInvalidBaseFee
 	}
@@ -659,11 +666,6 @@ func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 			Namespace: "istanbul",
 			Version:   "1.0",
 			Service:   &API{chain: chain, istanbul: sb},
-			Public:    true,
-		}, {
-			Namespace: "kaia",
-			Version:   "1.0",
-			Service:   &APIExtension{chain: chain, istanbul: sb},
 			Public:    true,
 		},
 	}

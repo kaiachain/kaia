@@ -43,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/datasync/fetcher"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
@@ -61,6 +62,10 @@ const (
 	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
+
+	// bidChanSize is the size of channel listening to NewBidEvent.
+	// The number is referenced from the size of bid pool.
+	bidChanSize = 2048
 
 	concurrentPerPeer  = 3
 	channelSizePerPeer = 20
@@ -113,6 +118,8 @@ type ProtocolManager struct {
 	txsCh         chan blockchain.NewTxsEvent
 	txsSub        event.Subscription
 	minedBlockSub *event.TypeMuxSubscription
+	bidCh         chan *auction.Bid
+	bidSub        event.Subscription
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan Peer
@@ -137,6 +144,7 @@ type ProtocolManager struct {
 	syncStop int32
 
 	stakingModule staking.StakingModule
+	auctionModule auction.AuctionModule
 }
 
 // NewProtocolManager returns a new Kaia sub protocol manager. The Kaia sub protocol manages peers capable
@@ -352,6 +360,14 @@ func (pm *ProtocolManager) RegisterStakingModule(stakingModule staking.StakingMo
 	pm.stakingModule = stakingModule
 }
 
+func (pm *ProtocolManager) RegisterAuctionModule(auctionModule auction.AuctionModule) {
+	pm.auctionModule = auctionModule
+}
+
+func (pm *ProtocolManager) IsAuctionModuleDisabled() bool {
+	return pm.auctionModule == nil
+}
+
 func (pm *ProtocolManager) getWSEndPoint() string {
 	return pm.wsendpoint
 }
@@ -395,6 +411,13 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.minedBlockSub = pm.eventMux.Subscribe(blockchain.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
 
+	if !pm.IsAuctionModuleDisabled() {
+		// broadcast bids
+		pm.bidCh = make(chan *auction.Bid, bidChanSize)
+		pm.bidSub = pm.auctionModule.SubscribeNewBid(pm.bidCh)
+		go pm.bidBroadcastLoop()
+	}
+
 	// start sync handlers
 	go pm.syncer()
 	go pm.txsyncLoop()
@@ -405,6 +428,9 @@ func (pm *ProtocolManager) Stop() {
 
 	pm.txsSub.Unsubscribe()        // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
+	if !pm.IsAuctionModuleDisabled() {
+		pm.bidSub.Unsubscribe() // quits bidBroadcastLoop
+	}
 
 	// Quit the sync loop.
 	// After this send has completed, no new peers will be accepted.
@@ -721,6 +747,11 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 
 	case p.GetVersion() >= kaia65 && msg.Code == StakingInfoMsg:
 		if err := handleStakingInfoMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case p.GetVersion() >= kaia66 && msg.Code == BidMsg:
+		if err := handleBidMsg(pm, p, msg); err != nil {
 			return err
 		}
 
@@ -1115,6 +1146,22 @@ func handleStakingInfoMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	return nil
 }
 
+// handleBidMsg handles bid message.
+func handleBidMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	if pm.IsAuctionModuleDisabled() {
+		return nil
+	}
+
+	var data *auction.Bid
+	if err := msg.Decode(&data); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+
+	pm.auctionModule.HandleBid(p.GetID(), data)
+
+	return nil
+}
+
 // handleNewBlockHashesMsg handles new block hashes message.
 func handleNewBlockHashesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	var (
@@ -1326,6 +1373,19 @@ func (pm *ProtocolManager) BroadcastBlockHash(block *types.Block) {
 		"recipients", len(peersWithoutBlock), "duration", common.PrettyDuration(time.Since(block.ReceivedAt)))
 }
 
+// BroadcastBid will propagate a bid to a subset of its peers.
+// If current node is CN, it will send bid to all CN peers without bid.
+func (pm *ProtocolManager) BroadcastBid(bid *auction.Bid) {
+	if pm.nodetype != common.CONSENSUSNODE {
+		return
+	}
+
+	cnWithoutBid := pm.peers.CNWithoutBid(bid.Hash())
+	for _, peer := range cnWithoutBid {
+		peer.AsyncSendBid(bid)
+	}
+}
+
 // BroadcastTxs propagates a batch of transactions to its peers which are not known to
 // already have the given transaction.
 func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
@@ -1471,6 +1531,17 @@ func (pm *ProtocolManager) minedBroadcastLoop() {
 		case blockchain.NewMinedBlockEvent:
 			pm.BroadcastBlock(ev.Block)     // First propagate block to peers
 			pm.BroadcastBlockHash(ev.Block) // Only then announce to the rest
+		}
+	}
+}
+
+func (pm *ProtocolManager) bidBroadcastLoop() {
+	for {
+		select {
+		case bid := <-pm.bidCh:
+			pm.BroadcastBid(bid)
+		case <-pm.bidSub.Err():
+			return
 		}
 	}
 }

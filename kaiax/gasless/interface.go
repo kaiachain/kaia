@@ -18,7 +18,6 @@ package gasless
 
 import (
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/builder"
 )
 
 //go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/gasless GaslessModule
@@ -26,5 +25,9 @@ type GaslessModule interface {
 	kaiax.BaseModule
 	kaiax.ExecutionModule
 	kaiax.TxPoolModule
-	builder.TxBundlingModule
+	kaiax.TxBundlingModule
+}
+
+type GaslessModuleHost interface {
+	RegisterGaslessModule(module GaslessModule)
 }

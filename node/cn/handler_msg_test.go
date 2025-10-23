@@ -29,6 +29,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/auction"
+	auction_mock "github.com/kaiachain/kaia/kaiax/auction/mock"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -113,11 +115,14 @@ func TestHandleBlockHeadersMsg(t *testing.T) {
 func prepareBlockChain(t *testing.T) (*gomock.Controller, *mocks.MockBlockChain, *MockPeer, *ProtocolManager) {
 	mockCtrl := gomock.NewController(t)
 	mockBlockChain := mocks.NewMockBlockChain(mockCtrl)
+	mockAuctionModule := auction_mock.NewMockAuctionModule(mockCtrl)
+
+	mockAuctionModule.EXPECT().HandleBid(gomock.Any(), gomock.Any()).AnyTimes()
 
 	mockPeer := NewMockPeer(mockCtrl)
 	mockPeer.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
 
-	pm := &ProtocolManager{blockchain: mockBlockChain}
+	pm := &ProtocolManager{blockchain: mockBlockChain, auctionModule: mockAuctionModule}
 
 	return mockCtrl, mockBlockChain, mockPeer, pm
 }
@@ -652,4 +657,35 @@ func TestHandleStakingInfoMsg(t *testing.T) {
 		assert.NoError(t, err)
 		mockCtrl.Finish()
 	}
+}
+
+func TestHandleBidMsg(t *testing.T) {
+	mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+
+	bidData := auction.BidData{
+		TargetTxHash:  common.HexToHash("0xf3c03c891206b24f5d2ff65b460df9b58c652279a3e0faed865dde4c46fe9dab"),
+		BlockNumber:   11,
+		Sender:        common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
+		To:            common.HexToAddress("0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"),
+		Nonce:         0,
+		Bid:           new(big.Int).SetBytes(common.Hex2Bytes("8ac7230489e80000")),
+		CallGasLimit:  10000000,
+		Data:          common.Hex2Bytes("d09de08a"),
+		SearcherSig:   common.Hex2Bytes("2162312ceb6a69efdb73c98ee96e56d0aea1ea019184c372022ab378151112c0747066e9a9d224a822dbf31d59de492502d69d7cfc789464fa84aaac0d53f6a11b"),
+		AuctioneerSig: common.Hex2Bytes("63ca36c4f6a3522b59070539453ff92011463940f98930b34a80b06a5b6b45fa136f8e79957e56e41de19cb340f2f1f7db31f964e5d5f26b1d8df13aeb2b390c1b"),
+	}
+
+	testBid := &auction.Bid{
+		BidData: bidData,
+	}
+
+	msg := generateMsg(t, BidMsg, testBid)
+
+	mockPeer.EXPECT().GetVersion().Return(kaia63).Times(7)
+	assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg), "should return error when protocol version is not kaia66")
+
+	mockPeer.EXPECT().GetVersion().Return(kaia66).AnyTimes()
+	assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg), "should not return error when protocol version is kaia66")
+
+	mockCtrl.Finish()
 }

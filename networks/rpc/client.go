@@ -420,9 +420,19 @@ func (c *Client) KaiaSubscribe(ctx context.Context, channel interface{}, args ..
 	return c.Subscribe(ctx, "kaia", channel, args...)
 }
 
+// EthSubscribe registers a subscripion under the "eth" namespace.
+func (c *Client) EthSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
+	return c.Subscribe(ctx, "eth", channel, args...)
+}
+
 // ShhSubscribe registers a subscripion under the "shh" namespace.
 func (c *Client) ShhSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
 	return c.Subscribe(ctx, "shh", channel, args...)
+}
+
+// AuctionSubscribe registers a subscripion under the "auction" namespace.
+func (c *Client) AuctionSubscribe(ctx context.Context, channel interface{}, args ...interface{}) (*ClientSubscription, error) {
+	return c.Subscribe(ctx, "auction", channel, args...)
 }
 
 // Subscribe calls the "<namespace>_subscribe" method with the given arguments,

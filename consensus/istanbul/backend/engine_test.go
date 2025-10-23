@@ -81,6 +81,8 @@ type (
 type (
 	minimumStake           *big.Int
 	mintingAmount          *big.Int
+	lowerBoundBaseFee      uint64
+	upperBoundBaseFee      uint64
 	stakingUpdateInterval  uint64
 	proposerUpdateInterval uint64
 	proposerPolicy         uint64
@@ -166,8 +168,6 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 		err      error
 	)
 	// force enable Istanbul engine and governance
-	genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
-	genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 	for _, item := range items {
 		switch v := item.(type) {
 		case istanbulCompatibleBlock:
@@ -202,8 +202,14 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.Governance.Reward.MintingAmount = v
 		case governanceMode:
 			genesis.Config.Governance.GovernanceMode = string(v)
+		case lowerBoundBaseFee:
+			genesis.Config.Governance.KIP71.LowerBoundBaseFee = uint64(v)
+		case upperBoundBaseFee:
+			genesis.Config.Governance.KIP71.UpperBoundBaseFee = uint64(v)
 		case blockPeriod:
 			period = uint64(v)
+		case *params.ChainConfig:
+			genesis.Config = v
 		case *mock.MockStakingModule:
 			mStaking = v
 		}
@@ -277,6 +283,16 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			Chain:       bc,
 			Downloader:  fakeDownloader,
 		}),
+		func() error {
+			if stakingImpl, ok := mStaking.(*staking_impl.StakingModule); ok {
+				return stakingImpl.Init(&staking_impl.InitOpts{
+					ChainKv:     bc.StateCache().TrieDB().DiskDB().GetMiscDB(),
+					ChainConfig: genesis.Config,
+					Chain:       bc,
+				})
+			}
+			return nil
+		}(),
 	); err != nil {
 		panic(err)
 	}
@@ -485,7 +501,9 @@ func TestVerifyHeader(t *testing.T) {
 }
 
 func TestVerifySeal(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	ctrl, mStaking := makeMockStakingManager(t, nil, 0)
+	defer ctrl.Finish()
+	chain, engine := newBlockChain(1, mStaking)
 	defer engine.Stop()
 
 	genesis := chain.Genesis()
@@ -522,12 +540,10 @@ func TestVerifySeal(t *testing.T) {
 
 func TestVerifyHeaders(t *testing.T) {
 	var configItems []interface{}
-	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
 	configItems = append(configItems, proposerUpdateInterval(1))
 	configItems = append(configItems, epoch(3))
 	configItems = append(configItems, governanceMode("single"))
 	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(4000000)))
-	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 
 	ctrl, mStaking := makeMockStakingManager(t, nil, 0)
@@ -554,7 +570,7 @@ func TestVerifyHeaders(t *testing.T) {
 		headers = append(headers, blocks[i].Header())
 	}
 
-	// proceed time to avoid future block errors
+	// Set time to avoid future block errors
 	now = func() time.Time {
 		return time.Unix(headers[size-1].Time.Int64(), 0)
 	}
@@ -562,72 +578,60 @@ func TestVerifyHeaders(t *testing.T) {
 		now = time.Now
 	}()
 
-	_, results := engine.VerifyHeaders(chain, headers, nil)
-	const timeoutDura = 2 * time.Second
-	timeout := time.NewTimer(timeoutDura)
-	index := 0
-OUT1:
-	for {
-		select {
-		case err := <-results:
-			if err != nil {
-				if err != errEmptyCommittedSeals && err != errInvalidCommittedSeals && err != consensus.ErrUnknownAncestor {
-					t.Errorf("error mismatch: have %v, want errEmptyCommittedSeals|errInvalidCommittedSeals|ErrUnknownAncestor", err)
-					break OUT1
+	// Helper function to verify headers and collect results
+	verifyHeadersAndCollectResults := func(t *testing.T, testHeaders []*types.Header, expectErrors bool) int {
+		abort, results := engine.VerifyHeaders(chain, testHeaders, nil)
+		defer close(abort)
+
+		timeout := time.NewTimer(2 * time.Second)
+		defer timeout.Stop()
+
+		index := 0
+		errorCount := 0
+		for {
+			select {
+			case err := <-results:
+				if err != nil {
+					errorCount++
+					// These errors are expected in the test setup
+					if err != errEmptyCommittedSeals && err != errInvalidCommittedSeals && err != consensus.ErrUnknownAncestor {
+						if !expectErrors {
+							t.Errorf("unexpected error: %v", err)
+						}
+					}
 				}
+				index++
+				if index == len(testHeaders) {
+					return errorCount
+				}
+			case <-timeout.C:
+				t.Error("timeout waiting for header verification results")
+				return errorCount
 			}
-			index++
-			if index == size {
-				break OUT1
-			}
-		case <-timeout.C:
-			break OUT1
 		}
 	}
-	_, results = engine.VerifyHeaders(chain, headers, nil)
-	timeout = time.NewTimer(timeoutDura)
-	index = 0
-OUT2:
-	for {
-		select {
-		case err := <-results:
-			if err != nil {
-				if err != errEmptyCommittedSeals && err != errInvalidCommittedSeals && err != consensus.ErrUnknownAncestor {
-					t.Errorf("error mismatch: have %v, want errEmptyCommittedSeals|errInvalidCommittedSeals|ErrUnknownAncestor", err)
-					break OUT2
-				}
-			}
-		case <-timeout.C:
-			break OUT2
+
+	// Test 1: Verify valid headers using VerifyHeaders (skip first header to avoid empty parents)
+	t.Run("ValidHeaders", func(t *testing.T) {
+		// Use headers[1:] to skip the first header that causes empty parents slice
+		errorCount := verifyHeadersAndCollectResults(t, headers[1:], false)
+		if errorCount > 0 {
+			t.Logf("Valid headers test completed with %d expected errors", errorCount)
 		}
-	}
-	// error header cases
-	headers[2].Number = big.NewInt(100)
-	_, results = engine.VerifyHeaders(chain, headers, nil)
-	timeout = time.NewTimer(timeoutDura)
-	index = 0
-	errors := 0
-	expectedErrors := 0
-OUT3:
-	for {
-		select {
-		case err := <-results:
-			if err != nil {
-				if err != errEmptyCommittedSeals && err != errInvalidCommittedSeals && err != consensus.ErrUnknownAncestor {
-					errors++
-				}
-			}
-			index++
-			if index == size {
-				if errors != expectedErrors {
-					t.Errorf("error mismatch: have %v, want %v", errors, expectedErrors)
-				}
-				break OUT3
-			}
-		case <-timeout.C:
-			break OUT3
+	})
+
+	// Test 2: Verify headers with invalid block number using VerifyHeaders
+	t.Run("InvalidBlockNumber", func(t *testing.T) {
+		// Create a copy of headers and modify one
+		testHeaders := make([]*types.Header, len(headers)-1)
+		copy(testHeaders, headers[1:])
+		testHeaders[1].Number = big.NewInt(999999) // Invalid block number
+
+		errorCount := verifyHeadersAndCollectResults(t, testHeaders, true)
+		if errorCount == 0 {
+			t.Error("expected errors for invalid block number, but got none")
 		}
-	}
+	})
 }
 
 func TestPrepareExtra(t *testing.T) {
@@ -791,11 +795,10 @@ func TestRewardDistribution(t *testing.T) {
 	var configItems []interface{}
 	configItems = append(configItems, epoch(testEpoch))
 	configItems = append(configItems, mintingAmount(new(big.Int).SetUint64(mintAmount)))
-	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
-	configItems = append(configItems, LondonCompatibleBlock(new(big.Int).SetUint64(0)))
-	configItems = append(configItems, EthTxTypeCompatibleBlock(new(big.Int).SetUint64(0)))
-	configItems = append(configItems, magmaCompatibleBlock(new(big.Int).SetUint64(0)))
 	configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, shanghaiCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, cancunCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, kaiaCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 
 	chain, engine := newBlockChain(1, configItems...)
@@ -995,14 +998,13 @@ func Test_AfterMinimumStakingVotes(t *testing.T) {
 	}
 
 	testEpoch := 3
-
 	var configItems []interface{}
+	configItems = append(configItems, params.TestKaiaConfig("magma"))
 	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
 	configItems = append(configItems, proposerUpdateInterval(1))
 	configItems = append(configItems, epoch(testEpoch))
 	configItems = append(configItems, governanceMode("single"))
 	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(4000000)))
-	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 
 	for _, tc := range testcases {
@@ -1101,20 +1103,11 @@ func Test_AfterKaia_BasedOnStaking(t *testing.T) {
 	testNum := 4
 	ms := uint64(5500000)
 	configItems := makeSnapshotTestConfigItems(10, 10)
-	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(ms)))
 	for _, tc := range testcases {
-		if tc.isKaiaCompatible {
-			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
-			configItems = append(configItems, LondonCompatibleBlock(new(big.Int).SetUint64(0)))
-			configItems = append(configItems, EthTxTypeCompatibleBlock(new(big.Int).SetUint64(0)))
-			configItems = append(configItems, magmaCompatibleBlock(new(big.Int).SetUint64(0)))
-			configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(0)))
-			configItems = append(configItems, shanghaiCompatibleBlock(new(big.Int).SetUint64(0)))
-			configItems = append(configItems, cancunCompatibleBlock(new(big.Int).SetUint64(0)))
-			configItems = append(configItems, kaiaCompatibleBlock(new(big.Int).SetUint64(2)))
-		} else {
-			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
+		if !tc.isKaiaCompatible {
+			configItems = append(configItems, params.TestKaiaConfig("istanbul"))
 		}
+		configItems = append(configItems, minimumStake(new(big.Int).SetUint64(ms)))
 		setNodeKeys(testNum, nil)
 		mockCtrl := gomock.NewController(t)
 		mStaking := mock.NewMockStakingModule(mockCtrl)
@@ -1279,8 +1272,18 @@ func Test_BasedOnStaking(t *testing.T) {
 	ms := uint64(5500000)
 	configItems := makeSnapshotTestConfigItems(1, 1)
 	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(ms)))
+	configItems = append(configItems, LondonCompatibleBlock(nil))
+	configItems = append(configItems, EthTxTypeCompatibleBlock(nil))
+	configItems = append(configItems, magmaCompatibleBlock(nil))
+	configItems = append(configItems, koreCompatibleBlock(nil))
+	configItems = append(configItems, shanghaiCompatibleBlock(nil))
+	configItems = append(configItems, cancunCompatibleBlock(nil))
+	configItems = append(configItems, kaiaCompatibleBlock(nil))
+
 	for _, tc := range testcases {
-		if tc.isIstanbulCompatible {
+		if !tc.isIstanbulCompatible {
+			configItems = append(configItems, istanbulCompatibleBlock(nil))
+		} else {
 			configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
 		}
 		if tc.isSingleMode {
@@ -1742,6 +1745,9 @@ func TestGovernance_Votes(t *testing.T) {
 	}
 
 	var configItems []interface{}
+	configItems = append(configItems, params.TestKaiaConfig("ethTxType"))
+	configItems = append(configItems, lowerBoundBaseFee(25000000000))
+	configItems = append(configItems, upperBoundBaseFee(750000000000))
 	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
 	configItems = append(configItems, epoch(3))
 	configItems = append(configItems, governanceMode("single"))
@@ -1843,12 +1849,12 @@ func TestGovernance_GovModule(t *testing.T) {
 	}
 
 	var configItems []interface{}
+	configItems = append(configItems, params.TestKaiaConfig("ethTxType"))
 	configItems = append(configItems, proposerPolicy(params.WeightedRandom))
 	configItems = append(configItems, proposerUpdateInterval(1))
 	configItems = append(configItems, epoch(3))
 	configItems = append(configItems, governanceMode("single"))
 	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(4000000)))
-	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	stakes := []uint64{4000000, 4000000, 4000000, 4000000}
 

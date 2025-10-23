@@ -162,7 +162,7 @@ func (f *ChainDataFetcher) APIs() []rpc.API {
 		{
 			Namespace: "chaindatafetcher",
 			Version:   "1.0",
-			Service:   NewPublicChainDataFetcherAPI(f),
+			Service:   NewChainDataFetcherAPI(f),
 			Public:    true,
 		},
 	}

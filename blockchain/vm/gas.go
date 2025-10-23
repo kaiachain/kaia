@@ -35,7 +35,7 @@ const (
 	GasExtStep     uint64 = 20 // G_blockhash
 )
 
-// calcGas returns the actual gas cost of the call.
+// callGas returns the actual gas cost of the call.
 //
 // The returned gas is gas - base * 63 / 64.
 func callGas(availableGas, base uint64, callCost *uint256.Int) (uint64, error) {

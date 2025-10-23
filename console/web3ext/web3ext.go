@@ -34,11 +34,11 @@ var Modules = map[string]string{
 	"istanbul":         Istanbul_JS,
 	"mainbridge":       MainBridge_JS,
 	"subbridge":        SubBridge_JS,
-	"clique":           CliqueJs,
 	"governance":       Governance_JS,
 	"bootnode":         Bootnode_JS,
 	"chaindatafetcher": ChainDataFetcher_JS,
 	"eth":              Eth_JS,
+	"auction":          Auction_JS,
 }
 
 const Eth_JS = `
@@ -635,6 +635,8 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'chaindbCompact',
 			call: 'debug_chaindbCompact',
+			params: 1,
+			inputFormatter: [null]
 		}),
 		new web3._extend.Method({
 			name: 'metrics',
@@ -1374,17 +1376,6 @@ web3._extend({
 	methods:
 	[
 		new web3._extend.Method({
-			name: 'getSnapshot',
-			call: 'istanbul_getSnapshot',
-			params: 1,
-			inputFormatter: [null]
-		}),
-		new web3._extend.Method({
-			name: 'getSnapshotAtHash',
-			call: 'istanbul_getSnapshotAtHash',
-			params: 1
-		}),
-		new web3._extend.Method({
 			name: 'getValidators',
 			call: 'istanbul_getValidators',
 			params: 1,
@@ -1418,10 +1409,6 @@ web3._extend({
 			name: 'candidates',
 			getter: 'istanbul_candidates'
 		}),
-		new web3._extend.Property({
-			name: 'timeout',
-			getter: 'istanbul_getTimeout'
-		})
 	]
 });
 `
@@ -1753,48 +1740,16 @@ web3._extend({
 });
 `
 
-const CliqueJs = `
+const Auction_JS = `
 web3._extend({
-	property: 'clique',
+	property: 'auction',
 	methods: [
 		new web3._extend.Method({
-			name: 'getSnapshot',
-			call: 'clique_getSnapshot',
+			name: 'submitBid',
+			call: 'auction_submitBid',
 			params: 1,
 			inputFormatter: [null]
-		}),
-		new web3._extend.Method({
-			name: 'getSnapshotAtHash',
-			call: 'clique_getSnapshotAtHash',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getSigners',
-			call: 'clique_getSigners',
-			params: 1,
-			inputFormatter: [null]
-		}),
-		new web3._extend.Method({
-			name: 'getSignersAtHash',
-			call: 'clique_getSignersAtHash',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'propose',
-			call: 'clique_propose',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'discard',
-			call: 'clique_discard',
-			params: 1
-		}),
-	],
-	properties: [
-		new web3._extend.Property({
-			name: 'proposals',
-			getter: 'clique_proposals'
-		}),
+		})
 	]
 });
 `

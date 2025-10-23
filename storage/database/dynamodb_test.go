@@ -45,8 +45,8 @@ import (
 func GetTestDynamoConfig() *DynamoDBConfig {
 	return &DynamoDBConfig{
 		Region:             "us-east-1",
-		Endpoint:           "http://localhost:4566",
-		S3Endpoint:         "http://localhost:4566",
+		Endpoint:           "http://localstack:4566",
+		S3Endpoint:         "http://localstack:4566",
 		TableName:          "kaia-default" + strconv.Itoa(time.Now().Nanosecond()),
 		IsProvisioned:      false,
 		ReadCapacityUnits:  10000,

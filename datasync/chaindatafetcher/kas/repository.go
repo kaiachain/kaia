@@ -99,7 +99,7 @@ func NewRepository(config *KASConfig) (*repository, error) {
 func (r *repository) setBlockchainAPI(apis []rpc.API) {
 	for _, a := range apis {
 		switch s := a.Service.(type) {
-		case *api.PublicBlockChainAPI:
+		case *api.KaiaBlockChainAPI:
 			r.blockchainApi = s
 		}
 	}

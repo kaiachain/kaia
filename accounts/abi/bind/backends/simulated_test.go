@@ -131,12 +131,12 @@ func TestNewSimulatedBackend(t *testing.T) {
 	sim := simTestBackend(testAddr)
 	defer sim.Close()
 
-	if sim.config != params.AllGxhashProtocolChanges {
-		t.Errorf("expected sim config to equal params.AllGxhashProtocolChanges, got %v", sim.config)
+	if sim.config != params.TestChainConfig {
+		t.Errorf("expected sim config to equal params.TestChainConfig, got %v", sim.config)
 	}
 
-	if sim.blockchain.Config() != params.AllGxhashProtocolChanges {
-		t.Errorf("expected sim blockchain config to equal params.AllGxhashProtocolChanges, got %v", sim.config)
+	if sim.blockchain.Config() != params.TestChainConfig {
+		t.Errorf("expected sim blockchain config to equal params.TestChainConfig, got %v", sim.config)
 	}
 
 	stateDB, _ := sim.blockchain.State()
@@ -419,7 +419,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 	opts := bind.NewKeyedTransactor(key)
 
-	sim := simTestBackend(addr)
+	sim := NewSimulatedBackend(blockchain.GenesisAlloc{testAddr: {Balance: big.NewInt(10000000000)}, addr: {Balance: big.NewInt(10000000000)}})
 	defer sim.Close()
 
 	parsed, _ := abi.JSON(strings.NewReader(contractAbi))
@@ -506,13 +506,13 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			GasPrice: big.NewInt(0),
 			Value:    nil,
 			Data:     common.Hex2Bytes("e09fface"),
-		}, 21483, nil, nil},
+		}, 21611, nil, nil},
 	}
 	for _, c := range cases {
 		got, err := sim.EstimateGas(context.Background(), c.message)
 		if c.expectError != nil {
 			if err == nil {
-				t.Fatalf("Expect error, got nil")
+				t.Fatalf("Expect error, got nil for case: %s", c.name)
 			}
 			if c.expectError.Error() != err.Error() {
 				t.Fatalf("Expect error, want %v, got %v", c.expectError, err)

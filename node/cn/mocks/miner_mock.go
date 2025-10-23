@@ -11,7 +11,6 @@ import (
 	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	kaiax "github.com/kaiachain/kaia/kaiax"
-	builder "github.com/kaiachain/kaia/kaiax/builder"
 	work "github.com/kaiachain/kaia/work"
 )
 
@@ -125,7 +124,7 @@ func (mr *MockMinerMockRecorder) RegisterExecutionModule(arg0 ...interface{}) *g
 }
 
 // RegisterTxBundlingModule mocks base method.
-func (m *MockMiner) RegisterTxBundlingModule(arg0 ...builder.TxBundlingModule) {
+func (m *MockMiner) RegisterTxBundlingModule(arg0 ...kaiax.TxBundlingModule) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
 	for _, a := range arg0 {

@@ -35,7 +35,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -83,11 +83,11 @@ func newTestBlockchainWithConfig(config *params.ChainConfig) *blockchain.BlockCh
 	genesis := blockchain.Genesis{Config: config, Alloc: alloc}
 	genesis.MustCommit(db)
 
-	bc, _ := blockchain.NewBlockChain(db, nil, genesis.Config, gxhash.NewFaker(), vm.Config{})
+	bc, _ := blockchain.NewBlockChain(db, nil, genesis.Config, faker.NewFaker(), vm.Config{})
 
 	// Append 10 blocks to test with block numbers other than 0
 	block := bc.CurrentBlock()
-	blocks, _ := blockchain.GenerateChain(config, block, gxhash.NewFaker(), db, 10, func(i int, b *blockchain.BlockGen) {})
+	blocks, _ := blockchain.GenerateChain(config, block, faker.NewFaker(), db, 10, func(i int, b *blockchain.BlockGen) {})
 	bc.InsertChain(blocks)
 
 	return bc
@@ -204,23 +204,16 @@ func TestBlockchainPendingCodeAt(t *testing.T) {
 }
 
 func TestBlockChainSuggestGasPrice(t *testing.T) {
-	bc := newTestBlockchain()
+	config := params.TestKaiaConfig("ethTxType")
+	bc := newTestBlockchainWithConfig(config)
 	c := NewBlockchainContractBackend(bc, nil, nil)
 
 	// Normal case
 	gasPrice, err := c.SuggestGasPrice(context.Background())
 	assert.Nil(t, err)
-	assert.Equal(t, params.TestChainConfig.UnitPrice, gasPrice.Uint64())
+	assert.Equal(t, config.UnitPrice, gasPrice.Uint64())
 
-	config := params.TestChainConfig.Copy()
-	config.IstanbulCompatibleBlock = common.Big0
-	config.LondonCompatibleBlock = common.Big0
-	config.EthTxTypeCompatibleBlock = common.Big0
-	config.MagmaCompatibleBlock = common.Big0
-	config.KoreCompatibleBlock = common.Big0
-	config.Governance = params.GetDefaultGovernanceConfig()
-	config.Governance.KIP71.LowerBoundBaseFee = 0
-	bc = newTestBlockchainWithConfig(config)
+	bc = newTestBlockchain()
 	c = NewBlockchainContractBackend(bc, nil, nil)
 
 	// Normal case
@@ -304,7 +297,7 @@ func TestBlockChainSendTransaction(t *testing.T) {
 		t.Errorf("could not add tx to pending block: %v", err)
 	}
 
-	blocks, _ := blockchain.GenerateChain(bc.Config(), block, gxhash.NewFaker(), state.Database().TrieDB().DiskDB(), 1, func(i int, b *blockchain.BlockGen) {
+	blocks, _ := blockchain.GenerateChain(bc.Config(), block, faker.NewFaker(), state.Database().TrieDB().DiskDB(), 1, func(i int, b *blockchain.BlockGen) {
 		txs, err := txPool.Pending()
 		if err != nil {
 			t.Errorf("could not get pending txs: %v", err)
@@ -353,7 +346,7 @@ func initBackendForFiltererTests(t *testing.T, bc *blockchain.BlockChain) *Block
 		t.Errorf("could not sign tx: %v", err)
 	}
 
-	blocks, _ := blockchain.GenerateChain(bc.Config(), block, gxhash.NewFaker(), state.Database().TrieDB().DiskDB(), 1, func(i int, b *blockchain.BlockGen) {
+	blocks, _ := blockchain.GenerateChain(bc.Config(), block, faker.NewFaker(), state.Database().TrieDB().DiskDB(), 1, func(i int, b *blockchain.BlockGen) {
 		b.AddTx(signedTx)
 	})
 	bc.InsertChain(blocks)
@@ -440,7 +433,7 @@ func TestBlockChainSubscribeFilterLogs(t *testing.T) {
 
 		block := bc.CurrentBlock()
 
-		blocks, _ := blockchain.GenerateChain(c.bc.Config(), block, gxhash.NewFaker(), state.Database().TrieDB().DiskDB(), 1, func(i int, b *blockchain.BlockGen) {
+		blocks, _ := blockchain.GenerateChain(c.bc.Config(), block, faker.NewFaker(), state.Database().TrieDB().DiskDB(), 1, func(i int, b *blockchain.BlockGen) {
 			b.AddTx(signedTx)
 		})
 		bc.InsertChain(blocks)

@@ -32,6 +32,7 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
+	"github.com/erigontech/erigon-lib/kaiatrie"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/log"
@@ -71,10 +72,15 @@ type DBManager interface {
 	getDatabase(DBEntryType) Database
 	CreateMigrationDBAndSetStatus(blockNum uint64) error
 	FinishStateMigration(succeed bool) chan struct{}
+	GetMiscDB() Database
+	GetHeaderDB() Database
+	GetBodyDB() Database
+	GetReceiptsDB() Database
 	GetStateTrieDB() Database
 	GetStateTrieMigrationDB() Database
-	GetMiscDB() Database
+	GetTxLookupEntryDB() Database
 	GetSnapshotDB() Database
+	GetDomainsManager() *kaiatrie.DomainsManager
 
 	// from accessors_chain.go
 	ReadCanonicalHash(number uint64) common.Hash
@@ -214,7 +220,7 @@ type DBManager interface {
 	ReadDatabaseVersion() *uint64
 	WriteDatabaseVersion(version uint64)
 
-	ReadChainConfig(hash common.Hash) *params.ChainConfig
+	ReadChainConfig(hash common.Hash) (*params.ChainConfig, error)
 	WriteChainConfig(hash common.Hash, cfg *params.ChainConfig)
 
 	// from accessors_snapshot.go
@@ -282,10 +288,6 @@ type DBManager interface {
 	ReadTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	ReadBlockReceiptsInCache(blockHash common.Hash) types.Receipts
 	ReadTxReceiptInCache(txHash common.Hash) *types.Receipt
-
-	// snapshot in clique(ConsensusClique) consensus
-	WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte)
-	ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error)
 
 	// Governance related functions
 	WriteGovernance(data map[string]interface{}, num uint64) error
@@ -426,6 +428,7 @@ type databaseManager struct {
 	config *DBConfig
 	dbs    []Database
 	cm     *cacheManager
+	dm     *kaiatrie.DomainsManager
 
 	// TODO-Kaia need to refine below.
 	// -merge status variable
@@ -472,6 +475,9 @@ type DBConfig struct {
 
 	// DynamoDB related configurations
 	DynamoDBConfig *DynamoDBConfig
+
+	// FlatTrie related configurations
+	UseFlatTrie bool
 }
 
 const dbMetricPrefix = "klay/db/chaindata/"
@@ -546,6 +552,17 @@ func databaseDBManager(dbc *DBConfig) (*databaseManager, error) {
 		dbm.dbs[et] = db
 		db.Meter(dbMetricPrefix + dbBaseDirs[et] + "/") // Each database collects metrics independently.
 	}
+
+	if dbc.UseFlatTrie {
+		dmDir := filepath.Join(dbc.Dir, "flattrie")
+		logger.Info("Opening DomainsManager", "dir", dmDir)
+		dm, err := kaiatrie.NewDomainsManager(dmDir, logger, nil)
+		if err != nil {
+			logger.Crit("Failed to create domains manager", "err", err)
+		}
+		dbm.dm = dm
+	}
+
 	return dbm, nil
 }
 
@@ -902,6 +919,22 @@ func (dbm *databaseManager) removeOldDB(dbPath string) {
 	logger.Info("Successfully removed database", "path", dbPath)
 }
 
+func (dbm *databaseManager) GetMiscDB() Database {
+	return dbm.dbs[MiscDB]
+}
+
+func (dbm *databaseManager) GetHeaderDB() Database {
+	return dbm.dbs[headerDB]
+}
+
+func (dbm *databaseManager) GetBodyDB() Database {
+	return dbm.dbs[BodyDB]
+}
+
+func (dbm *databaseManager) GetReceiptsDB() Database {
+	return dbm.dbs[ReceiptsDB]
+}
+
 func (dbm *databaseManager) GetStateTrieDB() Database {
 	return dbm.dbs[StateTrieDB]
 }
@@ -910,12 +943,16 @@ func (dbm *databaseManager) GetStateTrieMigrationDB() Database {
 	return dbm.dbs[StateTrieMigrationDB]
 }
 
-func (dbm *databaseManager) GetMiscDB() Database {
-	return dbm.dbs[MiscDB]
+func (dbm *databaseManager) GetTxLookupEntryDB() Database {
+	return dbm.dbs[TxLookUpEntryDB]
 }
 
 func (dbm *databaseManager) GetSnapshotDB() Database {
 	return dbm.getDatabase(SnapshotDB)
+}
+
+func (dbm *databaseManager) GetDomainsManager() *kaiatrie.DomainsManager {
+	return dbm.dm
 }
 
 func (dbm *databaseManager) TryCatchUpWithPrimary() error {
@@ -1005,6 +1042,11 @@ func (dbm *databaseManager) Close() {
 		if db != nil {
 			db.Close()
 		}
+	}
+
+	if dbm.dm != nil {
+		logger.Info("Closing MDBX domains manager")
+		dbm.dm.Close()
 	}
 }
 
@@ -2338,18 +2380,17 @@ func (dbm *databaseManager) WriteDatabaseVersion(version uint64) {
 }
 
 // ReadChainConfig retrieves the consensus settings based on the given genesis hash.
-func (dbm *databaseManager) ReadChainConfig(hash common.Hash) *params.ChainConfig {
+func (dbm *databaseManager) ReadChainConfig(hash common.Hash) (*params.ChainConfig, error) {
 	db := dbm.getDatabase(MiscDB)
 	data, _ := db.Get(configKey(hash))
 	if len(data) == 0 {
-		return nil
+		return nil, nil
 	}
 	var config params.ChainConfig
 	if err := json.Unmarshal(data, &config); err != nil {
-		logger.Error("Invalid chain config JSON", "hash", hash, "err", err)
-		return nil
+		return nil, err
 	}
-	return &config
+	return &config, nil
 }
 
 func (dbm *databaseManager) WriteChainConfig(hash common.Hash, cfg *params.ChainConfig) {
@@ -2752,18 +2793,6 @@ func (dbm *databaseManager) ReadBlockReceiptsInCache(blockHash common.Hash) type
 
 func (dbm *databaseManager) ReadTxReceiptInCache(txHash common.Hash) *types.Receipt {
 	return dbm.cm.readTxReceiptInCache(txHash)
-}
-
-func (dbm *databaseManager) WriteCliqueSnapshot(snapshotBlockHash common.Hash, encodedSnapshot []byte) {
-	db := dbm.getDatabase(MiscDB)
-	if err := db.Put(snapshotKey(snapshotBlockHash), encodedSnapshot); err != nil {
-		logger.Crit("Failed to write clique snapshot", "err", err)
-	}
-}
-
-func (dbm *databaseManager) ReadCliqueSnapshot(snapshotBlockHash common.Hash) ([]byte, error) {
-	db := dbm.getDatabase(MiscDB)
-	return db.Get(snapshotKey(snapshotBlockHash))
 }
 
 func (dbm *databaseManager) WriteGovernance(data map[string]interface{}, num uint64) error {

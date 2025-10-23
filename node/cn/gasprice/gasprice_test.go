@@ -31,7 +31,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
@@ -135,7 +135,7 @@ func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int, pending bool) 
 	config.KaiaCompatibleBlock = kaiaBlock
 	config.Governance = params.GetDefaultGovernanceConfig()
 	config.Istanbul = params.GetDefaultIstanbulConfig()
-	blocks, _ := blockchain.GenerateChain(gspec.Config, genesis, gxhash.NewFaker(), db, testHead+1, func(i int, b *blockchain.BlockGen) {
+	blocks, _ := blockchain.GenerateChain(gspec.Config, genesis, faker.NewFaker(), db, testHead+1, func(i int, b *blockchain.BlockGen) {
 		toaddr := common.Address{}
 		// To test fee history, rewardbase should be different from the sender address
 		b.SetRewardbase(toaddr)
@@ -167,7 +167,7 @@ func newTestBackend(t *testing.T, magmaBlock, kaiaBlock *big.Int, pending bool) 
 		b.AddTx(tx)
 	})
 	// Construct testing chain
-	chain, err := blockchain.NewBlockChain(db, nil, gspec.Config, gxhash.NewFaker(), vm.Config{})
+	chain, err := blockchain.NewBlockChain(db, nil, gspec.Config, faker.NewFaker(), vm.Config{})
 	if err != nil {
 		t.Fatalf("Failed to create local chain, %v", err)
 	}

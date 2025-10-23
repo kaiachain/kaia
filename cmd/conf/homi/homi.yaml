@@ -46,7 +46,7 @@ deploy:
 #                       For genesis.json                             #
 ######################################################################
 genesis: 
-  # mainnet-test, mainnet, kairos-test, kairos, servicechain, servicechain-test, clique, default
+  # mainnet-test, mainnet, kairos-test, kairos, servicechain, servicechain-test, default
   type: "default"
   chain-id: 1000
   service-chain-id: 1001 
@@ -80,12 +80,6 @@ genesis:
       epoch: 604800
       policy: 0
       subgroup: 21
-
-    # To enable clique consensus engine
-    clique: 
-      enable: false
-      epoch: 604800
-      period: 1
 
   # Hard fork numbers, these should be ordered by ascending
   hardfork: 

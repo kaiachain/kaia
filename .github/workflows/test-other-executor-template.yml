@@ -1,0 +1,89 @@
+name: Reusable test other executor
+
+on:
+  workflow_call:
+    inputs:
+      test_command:
+        required: true
+        type: string
+      install_python:
+        required: false
+        type: boolean
+        default: true
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: kaia-xlarge-runner
+    services:
+      kafka:
+        image: apache/kafka:3.7.0
+        env:
+          KAFKA_NODE_ID: 0
+          KAFKA_PROCESS_ROLES: controller,broker
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+          KAFKA_NUM_PARTITIONS: "1"
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      redis:
+        image: redis:6.0.8-alpine
+      localstack:
+        image: localstack/localstack:3
+    container:
+      image: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches full history
+      - name: Add safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: setup python 3.9
+        if: ${{ inputs.install_python == true }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      - name: Wait for Redis
+        run: |
+          apt-get install -y netcat-traditional
+          for i in $(seq 1 10); do
+            nc -z redis 6379 && echo Success && exit 0
+            echo -n .
+            sleep 1
+          done
+          echo Failed waiting for Redis && exit 1
+        continue-on-error: true
+      - name: Wait for Kafka
+        run: |
+          for i in $(seq 1 10); do
+            nc -z kafka 9092 && echo Success && exit 0
+            echo -n .
+            sleep 1
+          done
+          echo Failed waiting for Kafka && exit 1
+        continue-on-error: true
+      - name: Wait for Localstack
+        run: |
+          for i in $(seq 1 60); do
+            nc -z localstack 4566 && echo Success && exit 0
+            echo -n .
+            sleep 1
+          done
+          echo Failed waiting for Kafka && exit 1
+        continue-on-error: true
+
+      - name: Run test
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: dummy
+          AWS_SECRET_ACCESS_KEY: dummy
+        run: ${{ inputs.test_command }}

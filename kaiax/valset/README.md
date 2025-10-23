@@ -87,7 +87,7 @@ A Committee is a randomly sampled subset of the qualified validators. To make a 
 
 - The committee of the genesis block is all qualified validators, and by extension all council members.
 - If qualified validator size is less than or equal to the committee size, the committee is all qualified validators.
-    - The committee size refers to the `istanbul.committeesize` paramter.
+    - The committee size refers to the `istanbul.committeesize` parameter.
 - If committee size is 1, return an 1-element set `{Proposer(N,R)}`.
     - From here, we can assume `1 < committee size < qualified validator size`.
 - Otherwise, randomly sample from the qualified validators. The sampling algorithm depends on the proposer policy.

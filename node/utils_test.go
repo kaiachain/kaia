@@ -131,15 +131,15 @@ type (
 )
 
 func InstrumentedServiceMakerA(base ServiceConstructor) ServiceConstructor {
-	return InstrumentingWrapperMaker(base, reflect.TypeOf(InstrumentedServiceA{}))
+	return InstrumentingWrapperMaker(base, reflect.TypeFor[InstrumentedServiceA]())
 }
 
 func InstrumentedServiceMakerB(base ServiceConstructor) ServiceConstructor {
-	return InstrumentingWrapperMaker(base, reflect.TypeOf(InstrumentedServiceB{}))
+	return InstrumentingWrapperMaker(base, reflect.TypeFor[InstrumentedServiceB]())
 }
 
 func InstrumentedServiceMakerC(base ServiceConstructor) ServiceConstructor {
-	return InstrumentingWrapperMaker(base, reflect.TypeOf(InstrumentedServiceC{}))
+	return InstrumentingWrapperMaker(base, reflect.TypeFor[InstrumentedServiceC]())
 }
 
 // OneMethodApi is a single-method API handler to be returned by test services.

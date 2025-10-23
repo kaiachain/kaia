@@ -42,7 +42,7 @@ import (
 	"github.com/urfave/cli/v2/altsrc"
 )
 
-// runKaiaNode is the main entry point into the system if no special subcommand is ran.
+// RunKaiaNode is the main entry point into the system if no special subcommand is ran.
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
 func RunKaiaNode(ctx *cli.Context) error {
@@ -235,7 +235,7 @@ func BeforeRunBootnode(ctx *cli.Context) error {
 
 var migrationApplied = map[*cli.Command]struct{}{}
 
-// migrateGlobalFlags makes all global flag values available in the
+// MigrateGlobalFlags makes all global flag values available in the
 // context. This should be called as early as possible in app.Before.
 //
 // Example:

@@ -1,0 +1,78 @@
+name: Testing Workflow
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/test-executor-template.yml
+    with:
+      test_command: make all
+
+  test-linter:
+    uses: ./.github/workflows/test-executor-template.yml
+    with:
+      test_command: |
+        CURRENT_BRANCH="${GITHUB_REF_NAME}"
+        BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+        if [[ "$CURRENT_BRANCH" == "dev" || "$BASE_BRANCH" == "dev" ]]; then
+        git fetch origin dev
+        else
+        git fetch origin dev:dev
+        fi
+        go run build/ci.go lint -v --new-from-rev=dev
+
+  test-networks:
+    uses: ./.github/workflows/test-executor-template.yml
+    with:
+      test_command: make test-networks
+
+  test-node:
+    uses: ./.github/workflows/test-executor-template.yml
+    with:
+      test_command: make test-node
+
+  test-tests:
+    uses: ./.github/workflows/test-executor-template.yml
+    with:
+      test_command: |
+        git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
+        make test-tests
+
+  test-rpc:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/test-other-executor-template.yml
+    with:
+      install_python: false
+      test_command: |
+        make kcn
+        git clone https://github.com/kaiachain/kaia-rpc-tester.git
+        cd kaia-rpc-tester
+        cp ../build/bin/kcn script/cn/bin/
+        cd script
+        ./set_CNonly.sh
+        cd ..
+        cp config_template.json config.json
+        apt update
+        apt install python3-venv -y
+        python3 -m venv venv
+        source venv/bin/activate
+        pip3 install -r requirements.txt
+        python3 main.py --protocol rpc
+
+  # Service-dependent test jobs
+  test-datasync:
+    uses: ./.github/workflows/test-other-executor-template.yml
+    with:
+      test_command: make test-datasync
+
+  test-others:
+    uses: ./.github/workflows/test-other-executor-template.yml
+    with:
+      test_command: make test-others

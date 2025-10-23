@@ -39,7 +39,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node/cn/filters"
@@ -80,7 +81,7 @@ type SimulatedBackend struct {
 func NewSimulatedBackendWithDatabase(database database.DBManager, alloc blockchain.GenesisAlloc, cfg *params.ChainConfig) *SimulatedBackend {
 	genesis := blockchain.Genesis{Config: cfg, Alloc: alloc}
 	genesis.MustCommit(database)
-	blockchain, _ := blockchain.NewBlockChain(database, nil, genesis.Config, gxhash.NewFaker(), vm.Config{})
+	blockchain, _ := blockchain.NewBlockChain(database, nil, genesis.Config, faker.NewFaker(), vm.Config{})
 
 	backend := &SimulatedBackend{
 		database:   database,
@@ -92,18 +93,16 @@ func NewSimulatedBackendWithDatabase(database database.DBManager, alloc blockcha
 	return backend
 }
 
-// NewSimulatedBackendWithGasPrice creates a new binding backend using a simulated blockchain with a given unitPrice.
+// NewSimulatedBackendWithChainConfig creates a new binding backend using a simulated blockchain with a given chain config.
 // for testing purposes.
-func NewSimulatedBackendWithGasPrice(alloc blockchain.GenesisAlloc, unitPrice uint64) *SimulatedBackend {
-	cfg := params.AllGxhashProtocolChanges.Copy()
-	cfg.UnitPrice = unitPrice
+func NewSimulatedBackendWithChainConfig(alloc blockchain.GenesisAlloc, cfg *params.ChainConfig) *SimulatedBackend {
 	return NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), alloc, cfg)
 }
 
 // NewSimulatedBackend creates a new binding backend using a simulated blockchain
 // for testing purposes.
 func NewSimulatedBackend(alloc blockchain.GenesisAlloc) *SimulatedBackend {
-	return NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), alloc, params.AllGxhashProtocolChanges)
+	return NewSimulatedBackendWithDatabase(database.NewMemoryDBManager(), alloc, params.TestChainConfig)
 }
 
 // Close terminates the underlying blockchain's update loop.
@@ -133,7 +132,7 @@ func (b *SimulatedBackend) Rollback() {
 }
 
 func (b *SimulatedBackend) rollback() {
-	blocks, receipts := blockchain.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(int, *blockchain.BlockGen) {})
+	blocks, receipts := blockchain.GenerateChain(b.config, b.blockchain.CurrentBlock(), faker.NewFaker(), b.database, 1, func(int, *blockchain.BlockGen) {})
 	stateDB, _ := b.blockchain.State()
 
 	b.pendingBlock = blocks[0]
@@ -533,7 +532,7 @@ func (b *SimulatedBackend) SendTransaction(_ context.Context, tx *types.Transact
 	}
 
 	// Include tx in chain.
-	blocks, receipts := blockchain.GenerateChain(b.config, block, gxhash.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
+	blocks, receipts := blockchain.GenerateChain(b.config, block, faker.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTxWithChain(b.blockchain, tx)
 		}
@@ -657,7 +656,7 @@ func (b *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
 		return errors.New("Could not adjust time on non-empty block")
 	}
 
-	blocks, receipts := blockchain.GenerateChain(b.config, b.blockchain.CurrentBlock(), gxhash.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
+	blocks, receipts := blockchain.GenerateChain(b.config, b.blockchain.CurrentBlock(), faker.NewFaker(), b.database, 1, func(number int, block *blockchain.BlockGen) {
 		block.OffsetTime(int64(adjustment.Seconds()))
 	})
 	stateDB, _ := b.blockchain.State()
@@ -740,6 +739,10 @@ func (fb *filterBackend) ServiceFilter(_ context.Context, _ *bloombits.MatcherSe
 
 func (fb *filterBackend) ChainConfig() *params.ChainConfig {
 	return fb.bc.Config()
+}
+
+func (fb *filterBackend) Engine() consensus.Engine {
+	return fb.bc.Engine()
 }
 
 func nullSubscription() event.Subscription {

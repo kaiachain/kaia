@@ -24,6 +24,7 @@ package params
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -110,7 +111,7 @@ var (
 		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		Kip160CompatibleBlock: big.NewInt(156660000),
 		Kip160ContractAddress: common.HexToAddress("0x3D478E73c9dBebB72332712D7265961B1868d193"),
-		// Genesis governance paramters
+		// Genesis governance parameters
 		DeriveShaImpl: 2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x99fb17d324fa0e07f23b49d09028ac0919414db6"),
@@ -133,48 +134,69 @@ var (
 		UnitPrice: 25000000000,
 	}
 
-	// AllGxhashProtocolChanges contains every protocol change (GxIPs) introduced
-	// and accepted by the Kaia developers into the Kaia consensus.
-	//
-	// This configuration is intentionally not using keyed fields to force anyone
-	// adding flags to the config to also have to set these fields.
-	AllGxhashProtocolChanges = &ChainConfig{
-		ChainID:  big.NewInt(0),
-		Gxhash:   new(GxhashConfig),
-		Clique:   nil,
-		Istanbul: nil,
-	}
-
-	// AllCliqueProtocolChanges contains every protocol change (GxIPs) introduced
-	// and accepted by the Kaia developers into the Clique consensus.
-	//
-	// This configuration is intentionally not using keyed fields to force anyone
-	// adding flags to the config to also have to set these fields.
-	AllCliqueProtocolChanges = &ChainConfig{
-		ChainID:  big.NewInt(0),
-		Gxhash:   nil,
-		Clique:   &CliqueConfig{Period: 0, Epoch: 30000},
-		Istanbul: nil,
-	}
-
-	TestChainConfig = &ChainConfig{
-		ChainID:       big.NewInt(1),
-		Gxhash:        new(GxhashConfig),
-		Clique:        nil,
-		Istanbul:      nil,
-		UnitPrice:     1, // NOTE-Kaia Use UnitPrice 1 for tests
-		DeriveShaImpl: 0,
-	}
-	TestRules = TestChainConfig.Rules(new(big.Int))
-
-	// istanbul BFT
-	BFTTestChainConfig = &ChainConfig{
-		ChainID:  big.NewInt(1),
-		Gxhash:   new(GxhashConfig),
-		Clique:   nil,
-		Istanbul: nil,
-	}
+	TestChainConfig = TestKaiaConfig("kaia")
 )
+
+func TestKaiaConfig(maxHardfork string) *ChainConfig {
+	// Create a custom governance config with lower/upper bound base fee as 1 for testing
+	testGovConfig := GetDefaultGovernanceConfig()
+	testGovConfig.KIP71.LowerBoundBaseFee = 0
+	testGovConfig.KIP71.UpperBoundBaseFee = 1
+
+	chainConfig := &ChainConfig{
+		ChainID:                 big.NewInt(1),
+		IstanbulCompatibleBlock: big.NewInt(0),
+		Istanbul: &IstanbulConfig{
+			Epoch:          DefaultEpoch,
+			ProposerPolicy: WeightedRandom,
+			SubGroupSize:   DefaultSubGroupSize,
+		},
+		UnitPrice:     1, // NOTE-Kaia Use 1 for testing
+		DeriveShaImpl: 0,
+		Governance:    testGovConfig,
+	}
+	if maxHardfork == "istanbul" {
+		return chainConfig
+	}
+	chainConfig.LondonCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "london" {
+		return chainConfig
+	}
+	chainConfig.EthTxTypeCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "ethTxType" {
+		return chainConfig
+	}
+	chainConfig.MagmaCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "magma" {
+		return chainConfig
+	}
+	chainConfig.KoreCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "kore" {
+		return chainConfig
+	}
+	chainConfig.ShanghaiCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "shanghai" {
+		return chainConfig
+	}
+	chainConfig.CancunCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "cancun" {
+		return chainConfig
+	}
+	chainConfig.KaiaCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "kaia" {
+		return chainConfig
+	}
+	chainConfig.PragueCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "prague" {
+		return chainConfig
+	}
+	chainConfig.RandaoCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "randao" {
+		return chainConfig
+	}
+
+	return chainConfig
+}
 
 // VMLogTarget sets the output target of vmlog.
 // The values below can be OR'ed.
@@ -234,13 +256,38 @@ type ChainConfig struct {
 	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
 
 	// Various consensus engines
-	Gxhash   *GxhashConfig   `json:"gxhash,omitempty"` // (deprecated) not supported engine
-	Clique   *CliqueConfig   `json:"clique,omitempty"`
 	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
 
 	UnitPrice     uint64            `json:"unitPrice"`
 	DeriveShaImpl int               `json:"deriveShaImpl"`
 	Governance    *GovernanceConfig `json:"governance"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler to detect deprecated consensus engine configurations
+func (c *ChainConfig) UnmarshalJSON(data []byte) error {
+	// First, unmarshal into a temporary struct that includes deprecated fields
+	type Alias ChainConfig
+	aux := &struct {
+		*Alias
+		Clique json.RawMessage `json:"clique,omitempty"`
+		Gxhash json.RawMessage `json:"gxhash,omitempty"`
+	}{
+		Alias: (*Alias)(c),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// Check for deprecated fields and return error
+	if aux.Clique != nil {
+		return errors.New("DEPRECATED: 'clique' consensus engine configuration is deprecated and has been removed. Please use 'istanbul' instead")
+	}
+	if aux.Gxhash != nil {
+		return errors.New("DEPRECATED: 'gxhash' consensus engine configuration is deprecated and has been removed. Please use 'istanbul' instead")
+	}
+
+	return nil
 }
 
 // GovernanceConfig stores governance information for a network
@@ -297,26 +344,6 @@ type RegistryConfig struct {
 	Owner   common.Address            `json:"owner"`
 }
 
-// GxhashConfig is the consensus engine configs for proof-of-work based sealing.
-// Deprecated: Use IstanbulConfig or CliqueConfig.
-type GxhashConfig struct{}
-
-// String implements the stringer interface, returning the consensus engine details.
-func (c *GxhashConfig) String() string {
-	return "gxhash"
-}
-
-// CliqueConfig is the consensus engine configs for proof-of-authority based sealing.
-type CliqueConfig struct {
-	Period uint64 `json:"period"` // Number of seconds between blocks to enforce
-	Epoch  uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
-}
-
-// String implements the stringer interface, returning the consensus engine details.
-func (c *CliqueConfig) String() string {
-	return "clique"
-}
-
 // String implements the stringer interface, returning the consensus engine details.
 func (c *IstanbulConfig) String() string {
 	return "istanbul"
@@ -326,10 +353,6 @@ func (c *IstanbulConfig) String() string {
 func (c *ChainConfig) String() string {
 	var engine interface{}
 	switch {
-	case c.Gxhash != nil:
-		engine = c.Gxhash
-	case c.Clique != nil:
-		engine = c.Clique
 	case c.Istanbul != nil:
 		engine = c.Istanbul
 	default:
@@ -563,7 +586,7 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 // Only used for generating genesis.
 // Empty values from genesis.json will be left out from genesis.
 func (c *ChainConfig) SetDefaultsForGenesis() {
-	if c.Clique == nil && c.Istanbul == nil {
+	if c.Istanbul == nil {
 		c.Istanbul = GetDefaultIstanbulConfig()
 		logger.Warn("Override the default Istanbul config to the chain config")
 	}
@@ -779,12 +802,5 @@ func GetDefaultKIP71Config() *KIP71Config {
 		GasTarget:                 DefaultGasTarget,
 		MaxBlockGasUsedForBaseFee: DefaultMaxBlockGasUsedForBaseFee,
 		BaseFeeDenominator:        DefaultBaseFeeDenominator,
-	}
-}
-
-func GetDefaultCliqueConfig() *CliqueConfig {
-	return &CliqueConfig{
-		Epoch:  DefaultEpoch,
-		Period: DefaultPeriod,
 	}
 }

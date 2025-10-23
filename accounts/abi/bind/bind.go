@@ -44,6 +44,11 @@ const (
 	LangObjC
 )
 
+var (
+	intRegex                  = regexp.MustCompile(`(u)?int([0-9]*)`)
+	intWithOptionalArrayRegex = regexp.MustCompile(`(u)?int([0-9]*)(\[[0-9]*\])?`)
+)
+
 func isKeyWord(arg string) bool {
 	switch arg {
 	case "break":
@@ -298,7 +303,7 @@ func bindBasicTypeGo(kind abi.Type) string {
 	case abi.AddressTy:
 		return "common.Address"
 	case abi.IntTy, abi.UintTy:
-		parts := regexp.MustCompile(`(u)?int([0-9]*)`).FindStringSubmatch(kind.String())
+		parts := intRegex.FindStringSubmatch(kind.String())
 		switch parts[2] {
 		case "8", "16", "32", "64":
 			return fmt.Sprintf("%sint%s", parts[1], parts[2])
@@ -340,7 +345,7 @@ func bindBasicTypeJava(kind abi.Type) string {
 	case abi.IntTy, abi.UintTy:
 		// Note that uint and int (without digits) are also matched,
 		// these are size 256, and will translate to BigInt (the default).
-		parts := regexp.MustCompile(`(u)?int([0-9]*)`).FindStringSubmatch(kind.String())
+		parts := intRegex.FindStringSubmatch(kind.String())
 		if len(parts) != 3 {
 			return kind.String()
 		}
@@ -547,7 +552,7 @@ func namedTypeJava(javaKind string, solKind abi.Type) string {
 	case "boolean":
 		return "Bool"
 	default:
-		parts := regexp.MustCompile(`(u)?int([0-9]*)(\[[0-9]*\])?`).FindStringSubmatch(solKind.String())
+		parts := intWithOptionalArrayRegex.FindStringSubmatch(solKind.String())
 		if len(parts) != 4 {
 			return javaKind
 		}

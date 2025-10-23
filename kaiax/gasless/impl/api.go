@@ -133,6 +133,9 @@ type GaslessInfoResult struct {
 }
 
 func (s *GaslessAPI) GaslessInfo() *GaslessInfoResult {
+	s.b.gaslessInfoMu.RLock()
+	defer s.b.gaslessInfoMu.RUnlock()
+
 	at := []common.Address{}
 	for addr := range s.b.allowedTokens {
 		at = append(at, addr)

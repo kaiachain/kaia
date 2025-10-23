@@ -25,9 +25,9 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/work/builder"
 	"github.com/stretchr/testify/require"
 )
 
@@ -175,7 +175,46 @@ func TestExtractTxBundles(t *testing.T) {
 					TargetTxHash: common.Hash{},
 				},
 			},
-			[]*builder.Bundle{},
+			[]*builder.Bundle{
+				{
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A1, S1), A1, S1),
+					TargetTxHash: common.Hash{},
+				},
+			},
+		},
+		{
+			[]*types.Transaction{A1, S1, T4, T5},
+			[]*builder.Bundle{
+				{
+					BundleTxs:      builder.NewTxOrGenList(T4),
+					TargetTxHash:   common.Hash{},
+					TargetRequired: true,
+				},
+			},
+			// Currently it has empty hash as a target. And it will be reordered in #CoordinateTargetTxHash.
+			[]*builder.Bundle{
+				{
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A1, S1), A1, S1),
+					TargetTxHash: common.Hash{},
+				},
+			},
+		},
+		{
+			[]*types.Transaction{A1, T4, S1, T5},
+			[]*builder.Bundle{
+				{
+					BundleTxs:      builder.NewTxOrGenList(T4),
+					TargetTxHash:   common.Hash{},
+					TargetRequired: true,
+				},
+			},
+			// It exists since gasless bundle is target-independent.
+			[]*builder.Bundle{
+				{
+					BundleTxs:    builder.NewTxOrGenList(g.GetLendTxGenerator(A1, S1), A1, S1),
+					TargetTxHash: T4.Hash(),
+				},
+			},
 		},
 	}
 

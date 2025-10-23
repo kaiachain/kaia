@@ -14,6 +14,7 @@ import (
 	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
+	consensus "github.com/kaiachain/kaia/consensus"
 	event "github.com/kaiachain/kaia/event"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 	params "github.com/kaiachain/kaia/params"
@@ -84,6 +85,20 @@ func (m *MockBackend) ChainDB() database.DBManager {
 func (mr *MockBackendMockRecorder) ChainDB() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChainDB", reflect.TypeOf((*MockBackend)(nil).ChainDB))
+}
+
+// Engine mocks base method.
+func (m *MockBackend) Engine() consensus.Engine {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Engine")
+	ret0, _ := ret[0].(consensus.Engine)
+	return ret0
+}
+
+// Engine indicates an expected call of Engine.
+func (mr *MockBackendMockRecorder) Engine() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Engine", reflect.TypeOf((*MockBackend)(nil).Engine))
 }
 
 // EventMux mocks base method.

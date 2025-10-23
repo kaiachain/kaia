@@ -99,10 +99,10 @@ var (
 		return true
 	}
 
-	uint64ByteLen = int(reflect.TypeOf(uint64(0)).Size())
+	uint64ByteLen = int(reflect.TypeFor[uint64]().Size())
 
 	govParamTypeGovMode = &govParamType{
-		canonicalType: reflect.TypeOf("single"),
+		canonicalType: reflect.TypeFor[string](),
 		parseValue:    parseValueString,
 		parseBytes:    parseBytesString,
 		validate: func(v interface{}) bool {
@@ -112,7 +112,7 @@ var (
 	}
 
 	govParamTypeAddress = &govParamType{
-		canonicalType: reflect.TypeOf(common.Address{}),
+		canonicalType: reflect.TypeFor[common.Address](),
 		parseValue: func(v interface{}) (interface{}, bool) {
 			switch v.(type) {
 			case string:
@@ -131,7 +131,7 @@ var (
 	}
 
 	govParamTypeUint64 = &govParamType{
-		canonicalType: reflect.TypeOf(uint64(0)),
+		canonicalType: reflect.TypeFor[uint64](),
 		parseValue: func(v interface{}) (interface{}, bool) {
 			switch v.(type) {
 			case int:
@@ -154,7 +154,7 @@ var (
 	}
 
 	govParamTypeBigInt = &govParamType{
-		canonicalType: reflect.TypeOf(""),
+		canonicalType: reflect.TypeFor[string](),
 		parseValue: func(v interface{}) (interface{}, bool) {
 			switch v.(type) {
 			case string:
@@ -175,7 +175,7 @@ var (
 	}
 
 	govParamTypeRatio = &govParamType{
-		canonicalType: reflect.TypeOf("12/34/54"),
+		canonicalType: reflect.TypeFor[string](),
 		parseValue:    parseValueString,
 		parseBytes:    parseBytesString,
 		validate: func(v interface{}) bool {
@@ -196,7 +196,7 @@ var (
 	}
 
 	govParamTypeKip82Ratio = &govParamType{
-		canonicalType: reflect.TypeOf("20/80"),
+		canonicalType: reflect.TypeFor[string](),
 		parseValue:    parseValueString,
 		parseBytes:    parseBytesString,
 		validate: func(v interface{}) bool {
@@ -217,7 +217,7 @@ var (
 	}
 
 	govParamTypeBool = &govParamType{
-		canonicalType: reflect.TypeOf(true),
+		canonicalType: reflect.TypeFor[bool](),
 		parseValue: func(v interface{}) (interface{}, bool) {
 			b, ok := v.(bool)
 			return b, ok

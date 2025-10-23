@@ -237,7 +237,7 @@ func TestGetGenesisParamNames(t *testing.T) {
 			field := configType.Field(i)
 			if strings.HasSuffix(field.Name, "CompatibleBlock") {
 				fieldValue := configValue.Field(i)
-				if fieldValue.Type() == reflect.TypeOf((*big.Int)(nil)) {
+				if fieldValue.Type() == reflect.TypeFor[*big.Int]() {
 					fieldValue.Set(reflect.ValueOf(big.NewInt(0)))
 				}
 			}

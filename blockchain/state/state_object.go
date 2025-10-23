@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -61,9 +62,7 @@ func (s Storage) String() (str string) {
 
 func (s Storage) Copy() Storage {
 	cpy := make(Storage)
-	for key, value := range s {
-		cpy[key] = value
-	}
+	maps.Copy(cpy, s)
 
 	return cpy
 }
@@ -168,22 +167,22 @@ func (s *stateObject) touch() {
 	}
 }
 
-func (s *stateObject) openStorageTrie(hash common.ExtHash, db Database) (Trie, error) {
-	return db.OpenStorageTrie(hash, s.db.trieOpts)
+func (s *stateObject) openStorageTrie(addr common.Address, hash common.ExtHash, db Database) (Trie, error) {
+	return db.OpenStorageTrie(addr, hash, s.db.trieOpts)
 }
 
 func (s *stateObject) getStorageTrie(db Database) Trie {
 	if s.storageTrie == nil {
 		if acc := account.GetProgramAccount(s.account); acc != nil {
 			var err error
-			s.storageTrie, err = s.openStorageTrie(acc.GetStorageRoot(), db)
+			s.storageTrie, err = s.openStorageTrie(s.address, acc.GetStorageRoot(), db)
 			if err != nil {
-				s.storageTrie, _ = s.openStorageTrie(common.ExtHash{}, db)
+				s.storageTrie, _ = s.openStorageTrie(s.address, common.ExtHash{}, db)
 				s.setError(fmt.Errorf("can't create storage trie: %v", err))
 			}
 		} else {
 			// not a contract account, just returns the empty trie.
-			s.storageTrie, _ = s.openStorageTrie(common.ExtHash{}, db)
+			s.storageTrie, _ = s.openStorageTrie(s.address, common.ExtHash{}, db)
 		}
 	}
 	return s.storageTrie
@@ -294,9 +293,7 @@ func (s *stateObject) SetStorage(storage map[common.Hash]common.Hash) {
 	if s.fakeStorage == nil {
 		s.fakeStorage = make(Storage)
 	}
-	for key, value := range storage {
-		s.fakeStorage[key] = value
-	}
+	maps.Copy(s.fakeStorage, storage)
 	// Don't bother journal since this function should only be used for
 	// debugging and the `fake` storage won't be committed to database.
 }

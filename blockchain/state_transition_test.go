@@ -260,6 +260,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 		bb              = common.HexToAddress("0x000000000000000000000000000000000000bbbb")
 		zeroAddress     = common.HexToAddress("0x0000000000000000000000000000000000000000")
 		toAddrTx        = types.NewTransaction(uint64(0), addr, nil, 0, nil, nil)
+		rules           = params.TestChainConfig.Rules(big.NewInt(0))
 	)
 
 	tests := []struct {
@@ -288,7 +289,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 				m.EXPECT().GetNonce(authority).Return(uint64(1))
 				m.EXPECT().Exist(authority).Return(false)
 				m.EXPECT().IncNonce(authority)
-				m.EXPECT().SetCodeToEOA(authority, types.AddressToDelegation(aa), params.TestRules)
+				m.EXPECT().SetCodeToEOA(authority, types.AddressToDelegation(aa), rules)
 			},
 		},
 		{
@@ -311,7 +312,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 				m.EXPECT().GetKey(authority).Return(accountkey.NewAccountKeyLegacy())
 				m.EXPECT().AddRefund(params.CallNewAccountGas - params.TxAuthTupleGas)
 				m.EXPECT().IncNonce(authority)
-				m.EXPECT().SetCodeToEOA(authority, types.AddressToDelegation(aa), params.TestRules)
+				m.EXPECT().SetCodeToEOA(authority, types.AddressToDelegation(aa), rules)
 			},
 		},
 		{
@@ -332,7 +333,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 				m.EXPECT().GetNonce(authority).Return(uint64(1))
 				m.EXPECT().Exist(authority).Return(false)
 				m.EXPECT().IncNonce(authority)
-				m.EXPECT().SetCodeToEOA(authority, []byte{}, params.TestRules)
+				m.EXPECT().SetCodeToEOA(authority, []byte{}, rules)
 			},
 		},
 		{
@@ -357,7 +358,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 				m.EXPECT().GetNonce(notAuthority).Return(uint64(1))
 				m.EXPECT().Exist(notAuthority).Return(false)
 				m.EXPECT().IncNonce(notAuthority)
-				m.EXPECT().SetCodeToEOA(notAuthority, types.AddressToDelegation(bb), params.TestRules)
+				m.EXPECT().SetCodeToEOA(notAuthority, types.AddressToDelegation(bb), rules)
 			},
 		},
 		// Cases: fail to set code
@@ -416,7 +417,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 
 			// Verify that the expected mockStateDB's calls are being made.
 			auth := tt.makeAuthorization()
-			actual := NewStateTransition(evm, tt.msg).applyAuthorization(&auth, params.TestRules)
+			actual := NewStateTransition(evm, tt.msg).applyAuthorization(&auth, rules)
 			require.Equal(t, tt.expectedError, actual)
 		})
 	}
@@ -425,17 +426,7 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 func TestStateTransition_EIP7623(t *testing.T) {
 	// Prague fork block at 10
 	config := params.TestChainConfig.Copy()
-	config.IstanbulCompatibleBlock = common.Big0
-	config.LondonCompatibleBlock = common.Big0
-	config.EthTxTypeCompatibleBlock = common.Big0
-	config.MagmaCompatibleBlock = common.Big0
-	config.KoreCompatibleBlock = common.Big0
-	config.ShanghaiCompatibleBlock = common.Big0
-	config.CancunCompatibleBlock = common.Big0
-	config.KaiaCompatibleBlock = common.Big0
 	config.PragueCompatibleBlock = big.NewInt(10)
-	config.Governance = params.GetDefaultGovernanceConfig()
-	config.Governance.KIP71.LowerBoundBaseFee = 0
 	// Apply chain config to fork
 	fork.SetHardForkBlockNumberConfig(config)
 

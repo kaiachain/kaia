@@ -62,8 +62,8 @@ func TestConsoleWelcome(t *testing.T) {
 	kaia.Expect(`
 Welcome to the Kaia JavaScript console!
 
- instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}
-  datadir: {{datadir}}
+instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}
+ datadir: {{datadir}}
   modules: {{apis}}
 
 > {{.InputLine "exit"}}
@@ -143,8 +143,8 @@ func testAttachWelcome(t *testing.T, klay *testKaia, endpoint, apis string) {
 	attach.Expect(`
 Welcome to the Kaia JavaScript console!
 
- instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}{{if ipc}}
-  datadir: {{datadir}}{{end}}
+instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}{{if ipc}}
+ datadir: {{datadir}}{{end}}
   modules: {{apis}}
 
 > {{.InputLine "exit" }}

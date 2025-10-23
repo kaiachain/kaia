@@ -112,7 +112,7 @@ type SubBridge struct {
 	accountManager *accounts.Manager
 
 	networkId     uint64
-	netRPCService *api.PublicNetAPI
+	netRPCService *api.NetAPI
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and coinbase)
 
@@ -450,7 +450,6 @@ func (sb *SubBridge) Start(srvr p2p.Server) error {
 	scprotocols := make([]p2p.Protocol, 0, len(sb.SCProtocol().Versions))
 	for i, version := range sb.SCProtocol().Versions {
 		// Compatible; initialise the sub-protocol
-		version := version
 		scprotocols = append(scprotocols, p2p.Protocol{
 			Name:    sb.SCProtocol().Name,
 			Version: version,
@@ -485,7 +484,7 @@ func (sb *SubBridge) Start(srvr p2p.Server) error {
 	}
 
 	// Start the RPC service
-	sb.netRPCService = api.NewPublicNetAPI(sb.bridgeServer, sb.NetVersion())
+	sb.netRPCService = api.NewNetAPI(sb.bridgeServer, sb.NetVersion())
 
 	// Figure out a max peers count based on the server limits
 	//sb.maxPeers = sb.bridgeServer.MaxPhysicalConnections()

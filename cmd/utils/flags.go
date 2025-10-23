@@ -336,11 +336,10 @@ var (
 		EnvVars:  []string{"KLAYTN_DB_LEVELDB_CACHE_SIZE", "KAIA_DB_LEVELDB_CACHE_SIZE"},
 		Category: "DATABASE",
 	}
-	// TODO-Kaia-Database LevelDBCompressionTypeFlag should be removed before main-net release.
 	LevelDBCompressionTypeFlag = &cli.IntFlag{
 		Name:     "db.leveldb.compression",
 		Usage:    "Determines the compression method for LevelDB. 0=AllNoCompression, 1=ReceiptOnlySnappyCompression, 2=StateTrieOnlyNoCompression, 3=AllSnappyCompression",
-		Value:    0,
+		Value:    2,
 		Aliases:  []string{"migration.src.db.leveldb.compression"},
 		EnvVars:  []string{"KLAYTN_DB_LEVELDB_COMPRESSION", "KAIA_DB_LEVELDB_COMPRESSION"},
 		Category: "DATABASE",
@@ -555,6 +554,13 @@ var (
 		Value:    blockchain.DefaultLivePruningRetention,
 		Aliases:  []string{},
 		EnvVars:  []string{"KLAYTN_STATE_LIVE_PRUNING_RETENTION", "KAIA_STATE_LIVE_PRUNING_RETENTION"},
+		Category: "STATE",
+	}
+	FlatTrieFlag = &cli.BoolFlag{
+		Name:     "state.experimental-flat-trie",
+		Usage:    "(experimental) Enable flat trie scheme",
+		Aliases:  []string{},
+		EnvVars:  []string{"KLAYTN_STATE_FLAT_TRIE", "KAIA_STATE_FLAT_TRIE"},
 		Category: "STATE",
 	}
 	CacheTypeFlag = &cli.IntFlag{
@@ -1377,10 +1383,9 @@ var (
 		EnvVars:  []string{"KLAYTN_ANCHORING", "KAIA_ANCHORING"},
 		Category: "SERVICECHAIN",
 	}
-	// TODO-Kaia: need to check if deprecated.
 	ServiceChainConsensusFlag = &cli.StringFlag{
 		Name:    "scconsensus",
-		Usage:   "Set the service chain consensus (\"istanbul\", \"clique\")",
+		Usage:   "Set the service chain consensus (\"istanbul\")",
 		Value:   "istanbul",
 		Aliases: []string{"servicechain.consensus"},
 		EnvVars: []string{"KLAYTN_SCCONSENSUS", "KAIA_SCCONSENSUS"},
@@ -2024,6 +2029,14 @@ var (
 		Category: "GAS PRICE ORACLE",
 	}
 
+	// VRank logging frequency
+	VRankLogFrequencyFlag = &cli.Uint64Flag{
+		Name:     "vrank.log-frequency",
+		Usage:    "Frequency of VRank logging in blocks (0=disabled, 1=every block, 60=every 60 blocks, ...)",
+		Value:    uint64(0),
+		Category: "VRANK",
+	}
+
 	// TODO-Kaia-Bootnode: Add bootnode's metric options
 	// TODO-Kaia-Bootnode: Implements bootnode's RPC
 )
@@ -2042,7 +2055,7 @@ func MakeDataDir(ctx *cli.Context) string {
 	return ""
 }
 
-// splitAndTrim splits input separated by a comma
+// SplitAndTrim splits input separated by a comma
 // and trims excessive white space from the substrings.
 func SplitAndTrim(input string) []string {
 	result := strings.Split(input, ",")

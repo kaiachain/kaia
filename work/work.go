@@ -38,13 +38,13 @@ import (
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
-	"github.com/kaiachain/kaia/kaiax/builder"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/snapshot"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/work/builder"
 )
 
 var logger = log.NewModuleLogger(log.Work)
@@ -229,8 +229,12 @@ func (self *Miner) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
 	self.worker.RegisterExecutionModule(modules...)
 }
 
-// RegisterTxBundlingModule registers builder.TxBundlingModule to underlying worker.
-func (self *Miner) RegisterTxBundlingModule(modules ...builder.TxBundlingModule) {
+// RegisterTxBundlingModule registers kaiax.TxBundlingModule to underlying worker.
+func (self *Miner) RegisterTxBundlingModule(txBundlingModules ...kaiax.TxBundlingModule) {
+	modules := make([]builder.TxBundlingModule, len(txBundlingModules)) // TODO-Kaia: Remove this cast.
+	for i, module := range txBundlingModules {
+		modules[i] = module.(builder.TxBundlingModule)
+	}
 	self.worker.RegisterTxBundlingModule(modules...)
 }
 
