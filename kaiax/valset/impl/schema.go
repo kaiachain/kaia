@@ -76,10 +76,8 @@ func insertValidatorVoteBlockNums(db database.Database, num uint64) {
 	nums := ReadValidatorVoteBlockNums(db)
 
 	// Skip if num already exists in the array
-	for _, n := range nums {
-		if n == num {
-			return
-		}
+	if slices.Contains(nums, num) {
+		return
 	}
 
 	nums = append(nums, num)

@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/kaiachain/kaia/blockchain"
@@ -246,20 +247,13 @@ func ValidateGenesisConfig(g *blockchain.Genesis) error {
 		// TODO-Kaia: Add validation logic for other GovernanceModes
 		// Check if governingNode is properly set
 		if strings.ToLower(g.Config.Governance.GovernanceMode) == "single" {
-			var found bool
 
 			istanbulExtra, err := types.ExtractIstanbulExtra(&types.Header{Extra: g.ExtraData})
 			if err != nil {
 				return err
 			}
 
-			for _, v := range istanbulExtra.Validators {
-				if v == g.Config.Governance.GoverningNode {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if !slices.Contains(istanbulExtra.Validators, g.Config.Governance.GoverningNode) {
 				return errors.New("governingNode is not in the validator list")
 			}
 		}
