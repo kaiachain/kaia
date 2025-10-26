@@ -25,6 +25,7 @@ package adapters
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"net"
 	"sync"
@@ -220,9 +221,7 @@ func (sn *SimNode) ServeRPC(conn *websocket.Conn) error {
 func (sn *SimNode) Snapshots() (map[string][]byte, error) {
 	sn.lock.RLock()
 	services := make(map[string]node.Service, len(sn.running))
-	for name, service := range sn.running {
-		services[name] = service
-	}
+	maps.Copy(services, sn.running)
 	sn.lock.RUnlock()
 	if len(services) == 0 {
 		return nil, errors.New("no running services")
