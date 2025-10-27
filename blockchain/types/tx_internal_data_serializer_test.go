@@ -27,9 +27,16 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
+)
+
+var (
+	emptyBlob          = new(kzg4844.Blob)
+	emptyBlobCommit, _ = kzg4844.BlobToCommitment(emptyBlob)
+	emptyBlobProof, _  = kzg4844.ComputeBlobProof(emptyBlob, emptyBlobCommit)
 )
 
 var (
@@ -43,6 +50,7 @@ var (
 	gasTipCap      = big.NewInt(25)
 	gasFeeCap      = big.NewInt(25)
 	accesses       = AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+	sidecar        = NewBlobTxSidecar(BlobSidecarVersion0, []kzg4844.Blob{*emptyBlob}, []kzg4844.Commitment{emptyBlobCommit}, []kzg4844.Proof{emptyBlobProof})
 	authorizations = []SetCodeAuthorization{{ChainID: *uint256.NewInt(2), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: *uint256.NewInt(0), S: *uint256.NewInt(0)}}
 )
 
@@ -76,6 +84,7 @@ func TestTransactionSerialization(t *testing.T) {
 		{"FeeDelegatedCancelWithRatio", genFeeDelegatedCancelWithRatioTransaction()},
 		{"AccessList", genAccessListTransaction()},
 		{"DynamicFee", genDynamicFeeTransaction()},
+		{"Blob", genBlobTransaction()},
 		{"SetCode", genSetCodeTransaction()},
 	}
 
@@ -281,6 +290,28 @@ func genDynamicFeeTransaction() TxInternalData {
 		TxValueKeyGasTipCap:  gasTipCap,
 		TxValueKeyData:       []byte("1234"),
 		TxValueKeyAccessList: accesses,
+		TxValueKeyChainID:    big.NewInt(2),
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return tx
+}
+
+func genBlobTransaction() TxInternalData {
+	tx, err := NewTxInternalDataWithMap(TxTypeEthereumBlob, map[TxValueKeyType]interface{}{
+		TxValueKeyNonce:      nonce,
+		TxValueKeyTo:         &to,
+		TxValueKeyAmount:     amount,
+		TxValueKeyGasLimit:   gasLimit,
+		TxValueKeyGasFeeCap:  gasFeeCap,
+		TxValueKeyGasTipCap:  gasTipCap,
+		TxValueKeyData:       []byte("1234"),
+		TxValueKeyAccessList: accesses,
+		TxValueKeyBlobFeeCap: gasFeeCap,
+		TxValueKeyBlobHashes: []common.Hash{{0}},
+		TxValueKeySidecar:    sidecar,
 		TxValueKeyChainID:    big.NewInt(2),
 	})
 	if err != nil {

@@ -125,19 +125,18 @@ const (
 	IdentityBaseGas     uint64 = 15   // Base price for a data copy operation
 	IdentityPerWordGas  uint64 = 3    // Per-work price for a data copy operation
 
-	Bn256AddGasByzantium               uint64 = 500    // Gas needed for an elliptic curve addition
-	Bn256AddGasIstanbul                uint64 = 150    // Istanbul version of gas needed for an elliptic curve addition
-	Bn256ScalarMulGasByzantium         uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
-	Bn256ScalarMulGasIstanbul          uint64 = 6000   // Istanbul version of gas needed for an elliptic curve scalar multiplication
-	Bn256PairingBaseGasByzantium       uint64 = 100000 // Base price for an elliptic curve pairing check
-	Bn256PairingBaseGasIstanbul        uint64 = 45000  // Istanbul version of base price for an elliptic curve pairing check
-	Bn256PairingPerPointGasByzantium   uint64 = 80000  // Per-point price for an elliptic curve pairing check
-	Bn256PairingPerPointGasIstanbul    uint64 = 34000  // Istanbul version of per-point price for an elliptic curve pairing check
-	BlobTxPointEvaluationPrecompileGas uint64 = 50000  // Gas price for the point evaluation precompile.
-	VMLogBaseGas                       uint64 = 100    // Base price for a VMLOG operation
-	VMLogPerByteGas                    uint64 = 20     // Per-byte price for a VMLOG operation
-	FeePayerGas                        uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
-	ValidateSenderGas                  uint64 = 5000   // Gas needed for validating the signature of a message.
+	Bn256AddGasByzantium             uint64 = 500    // Gas needed for an elliptic curve addition
+	Bn256AddGasIstanbul              uint64 = 150    // Istanbul version of gas needed for an elliptic curve addition
+	Bn256ScalarMulGasByzantium       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
+	Bn256ScalarMulGasIstanbul        uint64 = 6000   // Istanbul version of gas needed for an elliptic curve scalar multiplication
+	Bn256PairingBaseGasByzantium     uint64 = 100000 // Base price for an elliptic curve pairing check
+	Bn256PairingBaseGasIstanbul      uint64 = 45000  // Istanbul version of base price for an elliptic curve pairing check
+	Bn256PairingPerPointGasByzantium uint64 = 80000  // Per-point price for an elliptic curve pairing check
+	Bn256PairingPerPointGasIstanbul  uint64 = 34000  // Istanbul version of per-point price for an elliptic curve pairing check
+	VMLogBaseGas                     uint64 = 100    // Base price for a VMLOG operation
+	VMLogPerByteGas                  uint64 = 20     // Per-byte price for a VMLOG operation
+	FeePayerGas                      uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
+	ValidateSenderGas                uint64 = 5000   // Gas needed for validating the signature of a message.
 
 	// The Refund Quotient is the cap on how much of the used gas can be refunded. Before EIP-3529,
 	// up to half the consumed gas could be refunded. Redefined as 1/5th in EIP-3529
@@ -203,6 +202,14 @@ const (
 	Bls12381MapG2Gas          uint64 = 23800 // Gas price for BLS12-381 mapping field element to G2 operation
 
 	P256VerifyGas uint64 = 6900 // secp256r1 elliptic curve signature verifier gas price
+
+	BlobTxBytesPerFieldElement         = 32      // Size in bytes of a field element
+	BlobTxFieldElementsPerBlob         = 4096    // Number of field elements stored in a single data blob
+	BlobTxBlobGasPerBlob               = 1 << 17 // Gas consumption of a single data blob (== blob byte size)
+	BlobTxMinBlobGasprice              = 1       // Minimum gas price for data blobs
+	BlobTxPointEvaluationPrecompileGas = 50000   // Gas price for the point evaluation precompile.
+	BlobTxMaxBlobs                     = 6
+	BlobBaseCost                       = 1 << 13 // Base execution gas cost for a blob.
 
 	// ZeroBaseFee exists for supporting Ethereum compatible data structure.
 	ZeroBaseFee uint64 = 0

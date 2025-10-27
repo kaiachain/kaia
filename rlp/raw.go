@@ -28,6 +28,22 @@ type RawValue []byte
 
 var rawValueType = reflect.TypeOf(RawValue{})
 
+// BytesSize returns the encoded size of a byte slice.
+func BytesSize(b []byte) uint64 {
+	switch n := len(b); n {
+	case 0:
+		return 1
+	case 1:
+		if b[0] <= 0x7f {
+			return 1
+		} else {
+			return 2
+		}
+	default:
+		return uint64(headsize(uint64(n)) + n)
+	}
+}
+
 // ListSize returns the encoded size of an RLP list with the given
 // content size.
 func ListSize(contentSize uint64) uint64 {
