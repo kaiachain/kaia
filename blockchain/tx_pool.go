@@ -765,7 +765,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrTxTypeNotSupported
 	}
 
-	// Reject set code transactions until EIP-7607(osaka) activates.
+	// Reject set code transactions until EIP-7600(prague) activates.
 	if !pool.rules.IsPrague && tx.Type() == types.TxTypeEthereumSetCode {
 		return ErrTxTypeNotSupported
 	}
