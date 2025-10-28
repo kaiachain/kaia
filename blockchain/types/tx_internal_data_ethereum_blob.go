@@ -59,7 +59,7 @@ type TxInternalDataEthereumBlob struct {
 	GasTipCap    *uint256.Int // a.k.a. maxPriorityFeePerGas
 	GasFeeCap    *uint256.Int // a.k.a. maxFeePerGas
 	GasLimit     uint64
-	Recipient    *common.Address `rlp:"nil"` // nil means contract creation
+	Recipient    common.Address
 	Amount       *uint256.Int
 	Payload      []byte
 	AccessList   AccessList
@@ -87,7 +87,7 @@ type TxInternalDataEthereumBlobJSON struct {
 	MaxPriorityFeePerGas *hexutil.U256    `json:"maxPriorityFeePerGas"`
 	MaxFeePerGas         *hexutil.U256    `json:"maxFeePerGas"`
 	GasLimit             hexutil.Uint64   `json:"gas"`
-	Recipient            *common.Address  `json:"to"`
+	Recipient            common.Address   `json:"to"`
 	Amount               *hexutil.U256    `json:"value"`
 	Payload              hexutil.Bytes    `json:"input"`
 	AccessList           AccessList       `json:"accessList"`
@@ -104,7 +104,7 @@ type TxInternalDataEthereumBlobSerializable struct {
 	GasTipCap    *uint256.Int // a.k.a. maxPriorityFeePerGas
 	GasFeeCap    *uint256.Int // a.k.a. maxFeePerGas
 	GasLimit     uint64
-	Recipient    *common.Address `rlp:"nil"` // nil means contract creation
+	Recipient    common.Address
 	Amount       *uint256.Int
 	Payload      []byte
 	AccessList   AccessList
@@ -282,7 +282,7 @@ func newTxInternalDataEthereumBlob() *TxInternalDataEthereumBlob {
 		GasTipCap:    new(uint256.Int),
 		GasFeeCap:    new(uint256.Int),
 		GasLimit:     0,
-		Recipient:    nil,
+		Recipient:    common.Address{},
 		Amount:       new(uint256.Int),
 		Payload:      []byte{},
 		AccessList:   AccessList{},
@@ -295,7 +295,7 @@ func newTxInternalDataEthereumBlob() *TxInternalDataEthereumBlob {
 	}
 }
 
-func newTxInternalDataEthereumBlobWithValues(nonce uint64, to *common.Address, amount *big.Int, gasLimit uint64, gasTipCap *big.Int, gasFeeCap *big.Int, data []byte, accessList AccessList, chainID *big.Int, blobFeeCap *big.Int, blobHashes []common.Hash, sidecar *BlobTxSidecar) *TxInternalDataEthereumBlob {
+func newTxInternalDataEthereumBlobWithValues(nonce uint64, to common.Address, amount *big.Int, gasLimit uint64, gasTipCap *big.Int, gasFeeCap *big.Int, data []byte, accessList AccessList, chainID *big.Int, blobFeeCap *big.Int, blobHashes []common.Hash, sidecar *BlobTxSidecar) *TxInternalDataEthereumBlob {
 	d := newTxInternalDataEthereumBlob()
 
 	d.AccountNonce = nonce
@@ -358,7 +358,7 @@ func newTxInternalDataEthereumBlobWithMap(values map[TxValueKeyType]interface{})
 		return nil, errValueKeyNonceMustUint64
 	}
 
-	if v, ok := values[TxValueKeyTo].(*common.Address); ok {
+	if v, ok := values[TxValueKeyTo].(common.Address); ok {
 		d.Recipient = v
 		delete(values, TxValueKeyTo)
 	} else {
@@ -493,7 +493,7 @@ func (t *TxInternalDataEthereumBlob) GetGasLimit() uint64 {
 }
 
 func (t *TxInternalDataEthereumBlob) GetRecipient() *common.Address {
-	return t.Recipient
+	return &t.Recipient
 }
 
 func (t *TxInternalDataEthereumBlob) GetAmount() *big.Int {
@@ -564,7 +564,7 @@ func (t *TxInternalDataEthereumBlob) RecoverPubkey(txhash common.Hash, homestead
 }
 
 func (t *TxInternalDataEthereumBlob) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
-	return IntrinsicGas(t.Payload, t.AccessList, nil, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
+	return IntrinsicGas(t.Payload, t.AccessList, nil, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
 func (t *TxInternalDataEthereumBlob) ChainId() *big.Int {
@@ -582,7 +582,7 @@ func (t *TxInternalDataEthereumBlob) Equal(a TxInternalData) bool {
 		t.GasFeeCap.Cmp(ta.GasFeeCap) == 0 &&
 		t.GasTipCap.Cmp(ta.GasTipCap) == 0 &&
 		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
+		t.Recipient == ta.Recipient &&
 		t.Amount.Cmp(ta.Amount) == 0 &&
 		reflect.DeepEqual(t.AccessList, ta.AccessList) &&
 		t.BlobFeeCap.Cmp(ta.BlobFeeCap) == 0 &&
@@ -712,10 +712,8 @@ func (t *TxInternalDataEthereumBlob) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataEthereumBlob) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if t.Recipient != nil {
-		if common.IsPrecompiledContractAddress(*t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-			return kerrors.ErrPrecompiledContractAddress
-		}
+	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+		return kerrors.ErrPrecompiledContractAddress
 	}
 	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }
@@ -728,12 +726,6 @@ func (t *TxInternalDataEthereumBlob) IsLegacyTransaction() bool {
 	return false
 }
 
-func (t *TxInternalDataEthereumBlob) FillContractAddress(from common.Address, r *Receipt) {
-	if t.Recipient == nil {
-		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce)
-	}
-}
-
 func (t *TxInternalDataEthereumBlob) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	///////////////////////////////////////////////////////
 	// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.
@@ -743,14 +735,8 @@ func (t *TxInternalDataEthereumBlob) Execute(sender ContractRef, vm VM, stateDB 
 	//	logger.Debug("[TxInternalDataLegacy] EVM execution done", "elapsed", elapsed)
 	//}()
 	///////////////////////////////////////////////////////
-	if t.Recipient == nil {
-		// Sender's nonce will be increased in '`vm.Create()`
-		ret, _, usedGas, err = vm.Create(sender, t.Payload, gas, value, params.CodeFormatEVM)
-	} else {
-		stateDB.IncNonce(sender.Address())
-		ret, usedGas, err = vm.Call(sender, *t.Recipient, t.Payload, gas, value)
-	}
-	return ret, usedGas, err
+	stateDB.IncNonce(sender.Address())
+	return vm.Call(sender, t.Recipient, t.Payload, gas, value)
 }
 
 func (t *TxInternalDataEthereumBlob) MakeRPCOutput() map[string]interface{} {

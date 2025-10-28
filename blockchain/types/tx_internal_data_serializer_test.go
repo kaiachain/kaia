@@ -302,7 +302,7 @@ func genDynamicFeeTransaction() TxInternalData {
 func genBlobTransaction() TxInternalData {
 	tx, err := NewTxInternalDataWithMap(TxTypeEthereumBlob, map[TxValueKeyType]interface{}{
 		TxValueKeyNonce:      nonce,
-		TxValueKeyTo:         &to,
+		TxValueKeyTo:         to,
 		TxValueKeyAmount:     amount,
 		TxValueKeyGasLimit:   gasLimit,
 		TxValueKeyGasFeeCap:  gasFeeCap,

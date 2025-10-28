@@ -797,7 +797,7 @@ func genMapForBlobTransaction(from TestAccount, to TestAccount, gasPrice *big.In
 
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:      from.GetNonce(),
-		types.TxValueKeyTo:         &toAddress,
+		types.TxValueKeyTo:         toAddress,
 		types.TxValueKeyAmount:     amount,
 		types.TxValueKeyData:       data,
 		types.TxValueKeyGasLimit:   gasLimit,

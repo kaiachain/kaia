@@ -347,7 +347,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyAccessList] = types.AccessList{}
 	case types.TxTypeEthereumBlob:
 		values[types.TxValueKeyNonce] = sender.Nonce
-		values[types.TxValueKeyTo] = &recipient.Addr
+		values[types.TxValueKeyTo] = recipient.Addr
 		values[types.TxValueKeyAmount] = amount
 		values[types.TxValueKeyGasLimit] = gasLimit
 		values[types.TxValueKeyGasFeeCap] = gasFeeCap
