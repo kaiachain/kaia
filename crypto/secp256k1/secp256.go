@@ -184,22 +184,6 @@ func checkSignature(sig []byte) error {
 	return nil
 }
 
-// SchnorrVerifyNative verifies a Schnorr signature.
-// Returns true iff (R, s) is a valid signature verifiable by P; false otherwise.
-// R and P should be uncompressed points on SECP256k1 curve with proper padding in front (i.e., starting with 0x04).
-// P can be a single key or a combined public key s.t. P = P0 + P1 + ... + PN where Pi is a public key for i = 0..N.
-// s is a 32-byte scalar.
-func SchnorrVerifyNative(message, R, s, P []byte) bool {
-	e := hash(message, P, R)
-	var (
-		Pdata = (*C.uchar)(unsafe.Pointer(&P[1])) // skipping the first byte (i.e., key format indicator such as 0x04)
-		Rdata = (*C.uchar)(unsafe.Pointer(&R[1])) // same here
-		sdata = (*C.uchar)(unsafe.Pointer(&s[0]))
-		edata = (*C.uchar)(unsafe.Pointer(&e[0]))
-	)
-	return 0 != C.secp256k1_ext_schnorr_verify(context, Pdata, Rdata, sdata, edata)
-}
-
 // ScPointMul is a simple C-binding performing multiplication between a curve point and a scalar.
 // Returns a point in the uncompressed format.
 func ScPointMul(point, a []byte) []byte {
