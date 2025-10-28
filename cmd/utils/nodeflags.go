@@ -224,6 +224,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewUint64Flag(TriesInMemoryFlag),
 	altsrc.NewBoolFlag(LivePruningFlag),
 	altsrc.NewUint64Flag(LivePruningRetentionFlag),
+	altsrc.NewBoolFlag(FlatTrieFlag),
 	altsrc.NewIntFlag(CacheTypeFlag),
 	altsrc.NewIntFlag(CacheScaleFlag),
 	altsrc.NewStringFlag(CacheUsageLevelFlag),
@@ -286,6 +287,7 @@ var CommonNodeFlags = []cli.Flag{
 	// kaiax/auction
 	altsrc.NewBoolFlag(auction.DisableFlag),
 	altsrc.NewInt64Flag(auction.MaxBidPoolSizeFlag),
+	altsrc.NewDurationFlag(auction.EDOffsetFlag),
 }
 
 // Common RPC flags
@@ -349,6 +351,7 @@ var KCNFlags = []cli.Flag{
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
 	altsrc.NewBoolFlag(gasless.DisableFlag),
+	altsrc.NewUint64Flag(VRankLogFrequencyFlag),
 }
 
 var KPNFlags = []cli.Flag{

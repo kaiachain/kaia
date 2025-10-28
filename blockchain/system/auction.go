@@ -39,15 +39,28 @@ func ReadAuctioneer(backend bind.ContractCaller, contractAddr common.Address, nu
 	return caller.Auctioneer(opts)
 }
 
+func ReadGasBufferEstimate(backend bind.ContractCaller, contractAddr common.Address, num *big.Int) (uint64, error) {
+	caller, err := contracts.NewIAuctionEntryPointCaller(contractAddr, backend)
+	if err != nil {
+		return 0, err
+	}
+	opts := &bind.CallOpts{BlockNumber: num}
+	buffer, err := caller.GasBufferEstimate(opts)
+	if err != nil {
+		return 0, err
+	}
+	return buffer.Uint64(), nil
+}
+
 func EncodeAuctionCallData(bid *auction.Bid) ([]byte, error) {
 	input := contracts.IAuctionEntryPointAuctionTx{
 		TargetTxHash:  bid.TargetTxHash,
-		BlockNumber:   big.NewInt(int64(bid.BlockNumber)),
+		BlockNumber:   new(big.Int).SetUint64(bid.BlockNumber),
 		Sender:        bid.Sender,
 		To:            bid.To,
-		Nonce:         big.NewInt(int64(bid.Nonce)),
+		Nonce:         new(big.Int).SetUint64(bid.Nonce),
 		Bid:           bid.Bid,
-		CallGasLimit:  big.NewInt(int64(bid.CallGasLimit)),
+		CallGasLimit:  new(big.Int).SetUint64(bid.CallGasLimit),
 		Data:          bid.Data,
 		SearcherSig:   bid.SearcherSig,
 		AuctioneerSig: bid.AuctioneerSig,

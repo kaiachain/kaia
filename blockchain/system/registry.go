@@ -20,6 +20,7 @@ package system
 
 import (
 	"context"
+	"maps"
 	"math/big"
 	"sort"
 
@@ -70,9 +71,7 @@ func AllocRegistry(init *params.RegistryConfig) map[common.Hash]common.Hash {
 	storage[lpad32(1)] = lpad32(len(names))
 	for i, name := range names {
 		nameSlot := calcArraySlot(1, 1, i, 0) // Hash(1) + 1*i + 0
-		for k, v := range allocDynamicData(nameSlot, []byte(name)) {
-			storage[k] = v
-		}
+		maps.Copy(storage, allocDynamicData(nameSlot, []byte(name)))
 	}
 
 	// slot[2]: address _owner;

@@ -39,7 +39,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
@@ -115,7 +115,7 @@ type btHeaderMarshaling struct {
 // eestEngine is a test engine to absorb the difference in gas calculation and gas limit
 // between Kaia and Ethereum. This includes the distribution of rewards.
 type eestEngine struct {
-	*gxhash.Gxhash
+	*faker.Faker
 	baseFee  *big.Int
 	gasLimit uint64
 	coinbase common.Address
@@ -235,7 +235,7 @@ func (t *BlockTest) Run() error {
 	}
 
 	tracer := vm.NewStructLogger(nil)
-	chain, err := blockchain.NewBlockChain(db, nil, config, &eestEngine{Gxhash: gxhash.NewShared()}, vm.Config{Debug: true, Tracer: tracer, ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
+	chain, err := blockchain.NewBlockChain(db, nil, config, &eestEngine{Faker: faker.NewShared()}, vm.Config{Debug: true, Tracer: tracer, ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
 	if err != nil {
 		return err
 	}

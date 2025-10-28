@@ -123,9 +123,9 @@ func TestEIP2200(t *testing.T) {
 		}
 		var vmenv *EVM
 		if i <= 18 {
-			vmenv = NewEVM(vmctx, TxContext{}, statedb, params.AllGxhashProtocolChanges, &Config{})
+			vmenv = NewEVM(vmctx, TxContext{}, statedb, params.TestChainConfig, &Config{})
 		} else {
-			vmenv = NewEVM(vmctx, TxContext{}, statedb, params.AllGxhashProtocolChanges, &Config{ExtraEips: []int{2200}})
+			vmenv = NewEVM(vmctx, TxContext{}, statedb, params.TestChainConfig, &Config{ExtraEips: []int{2200}})
 		}
 
 		_, gas, err := vmenv.Call(AccountRef(common.Address{}), address, nil, tt.gaspool, new(big.Int))
@@ -182,7 +182,7 @@ func TestCreateGas(t *testing.T) {
 				config.ExtraEips = []int{3860}
 			}
 
-			vmenv := NewEVM(vmctx, TxContext{}, statedb, params.AllGxhashProtocolChanges, &config)
+			vmenv := NewEVM(vmctx, TxContext{}, statedb, params.TestChainConfig, &config)
 			startGas := uint64(testGas)
 			ret, gas, err := vmenv.Call(AccountRef(common.Address{}), address, nil, startGas, new(big.Int))
 			if err != nil {

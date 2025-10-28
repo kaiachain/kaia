@@ -62,6 +62,7 @@ func NewTxOrGenList(interfaces ...interface{}) []*TxOrGen {
 		case *types.Transaction:
 			txOrGens[i] = NewTxOrGenFromTx(v)
 		case TxGenerator:
+			// TxGenerator is only used for testing.
 			txOrGens[i] = NewTxOrGenFromGen(v, common.Hash{byte(i + 1)})
 		case *TxOrGen:
 			txOrGens[i] = v

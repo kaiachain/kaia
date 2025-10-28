@@ -233,14 +233,16 @@ func (_AddressUpgradeable *AddressUpgradeableTransactorRaw) Transact(opts *bind.
 
 // AuctionEntryPointMockMetaData contains all meta data concerning the AuctionEntryPointMock contract.
 var AuctionEntryPointMockMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"name\":\"auctioneer\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structAuctionEntryPointMock.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"call\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"count\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_auctioneer\",\"type\":\"address\"}],\"name\":\"setAuctioneer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"name\":\"auctioneer\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"targetTxHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"bid\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"searcherSig\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"auctioneerSig\",\"type\":\"bytes\"}],\"internalType\":\"structAuctionEntryPointMock.AuctionTx\",\"name\":\"auctionTx\",\"type\":\"tuple\"}],\"name\":\"call\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"count\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"gasBufferEstimate\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_auctioneer\",\"type\":\"address\"}],\"name\":\"setAuctioneer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_gasBufferEstimate\",\"type\":\"uint256\"}],\"name\":\"setGasBufferEstimate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 	Sigs: map[string]string{
 		"5ec2c7bf": "auctioneer()",
 		"ca157554": "call((bytes32,uint256,address,address,uint256,uint256,uint256,bytes,bytes,bytes))",
 		"06661abd": "count()",
+		"a5b2ab40": "gasBufferEstimate()",
 		"00ede7e4": "setAuctioneer(address)",
+		"b4b8a234": "setGasBufferEstimate(uint256)",
 	},
-	Bin: "0x608060405234801561001057600080fd5b50610207806100206000396000f3fe608060405234801561001057600080fd5b506004361061004b5760003560e01c8062ede7e41461005057806306661abd146100825780635ec2c7bf1461009e578063ca157554146100c9575b600080fd5b61008061005e36600461013e565b600080546001600160a01b0319166001600160a01b0392909216919091179055565b005b61008b60015481565b6040519081526020015b60405180910390f35b6000546100b1906001600160a01b031681565b6040516001600160a01b039091168152602001610095565b6100806100d736600461016e565b3341146100e357600080fd5b6100ec8161010d565b6100f557600080fd5b60018054906000610105836101aa565b919050555050565b60004382602001351461012257506000919050565b60008260a001351161013657506000919050565b506001919050565b60006020828403121561015057600080fd5b81356001600160a01b038116811461016757600080fd5b9392505050565b60006020828403121561018057600080fd5b813567ffffffffffffffff81111561019757600080fd5b8201610140818503121561016757600080fd5b6000600182016101ca57634e487b7160e01b600052601160045260246000fd5b506001019056fea264697066735822122048efb20df156c35937fffb4468794bfe40f552f1f97609f33e53c503b9f2602464736f6c63430008130033",
+	Bin: "0x60806040526202bf2060015534801561001757600080fd5b50610252806100276000396000f3fe608060405234801561001057600080fd5b50600436106100615760003560e01c8062ede7e41461006657806306661abd146100985780635ec2c7bf146100b4578063a5b2ab40146100df578063b4b8a234146100e8578063ca157554146100fb575b600080fd5b610096610074366004610170565b600080546001600160a01b0319166001600160a01b0392909216919091179055565b005b6100a160025481565b6040519081526020015b60405180910390f35b6000546100c7906001600160a01b031681565b6040516001600160a01b0390911681526020016100ab565b6100a160015481565b6100966100f63660046101a0565b600155565b6100966101093660046101b9565b33411461011557600080fd5b61011e8161013f565b61012757600080fd5b60028054906000610137836101f5565b919050555050565b60004382602001351461015457506000919050565b60008260a001351161016857506000919050565b506001919050565b60006020828403121561018257600080fd5b81356001600160a01b038116811461019957600080fd5b9392505050565b6000602082840312156101b257600080fd5b5035919050565b6000602082840312156101cb57600080fd5b813567ffffffffffffffff8111156101e257600080fd5b8201610140818503121561019957600080fd5b60006001820161021557634e487b7160e01b600052601160045260246000fd5b506001019056fea264697066735822122029758e60a23493ebc697d0e347d0b5f42705104a53ef041ea6fd86b4f2e3531064736f6c63430008130033",
 }
 
 // AuctionEntryPointMockABI is the input ABI used to generate the binding from.
@@ -248,7 +250,7 @@ var AuctionEntryPointMockMetaData = &bind.MetaData{
 var AuctionEntryPointMockABI = AuctionEntryPointMockMetaData.ABI
 
 // AuctionEntryPointMockBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const AuctionEntryPointMockBinRuntime = `608060405234801561001057600080fd5b506004361061004b5760003560e01c8062ede7e41461005057806306661abd146100825780635ec2c7bf1461009e578063ca157554146100c9575b600080fd5b61008061005e36600461013e565b600080546001600160a01b0319166001600160a01b0392909216919091179055565b005b61008b60015481565b6040519081526020015b60405180910390f35b6000546100b1906001600160a01b031681565b6040516001600160a01b039091168152602001610095565b6100806100d736600461016e565b3341146100e357600080fd5b6100ec8161010d565b6100f557600080fd5b60018054906000610105836101aa565b919050555050565b60004382602001351461012257506000919050565b60008260a001351161013657506000919050565b506001919050565b60006020828403121561015057600080fd5b81356001600160a01b038116811461016757600080fd5b9392505050565b60006020828403121561018057600080fd5b813567ffffffffffffffff81111561019757600080fd5b8201610140818503121561016757600080fd5b6000600182016101ca57634e487b7160e01b600052601160045260246000fd5b506001019056fea264697066735822122048efb20df156c35937fffb4468794bfe40f552f1f97609f33e53c503b9f2602464736f6c63430008130033`
+const AuctionEntryPointMockBinRuntime = `608060405234801561001057600080fd5b50600436106100615760003560e01c8062ede7e41461006657806306661abd146100985780635ec2c7bf146100b4578063a5b2ab40146100df578063b4b8a234146100e8578063ca157554146100fb575b600080fd5b610096610074366004610170565b600080546001600160a01b0319166001600160a01b0392909216919091179055565b005b6100a160025481565b6040519081526020015b60405180910390f35b6000546100c7906001600160a01b031681565b6040516001600160a01b0390911681526020016100ab565b6100a160015481565b6100966100f63660046101a0565b600155565b6100966101093660046101b9565b33411461011557600080fd5b61011e8161013f565b61012757600080fd5b60028054906000610137836101f5565b919050555050565b60004382602001351461015457506000919050565b60008260a001351161016857506000919050565b506001919050565b60006020828403121561018257600080fd5b81356001600160a01b038116811461019957600080fd5b9392505050565b6000602082840312156101b257600080fd5b5035919050565b6000602082840312156101cb57600080fd5b813567ffffffffffffffff8111156101e257600080fd5b8201610140818503121561019957600080fd5b60006001820161021557634e487b7160e01b600052601160045260246000fd5b506001019056fea264697066735822122029758e60a23493ebc697d0e347d0b5f42705104a53ef041ea6fd86b4f2e3531064736f6c63430008130033`
 
 // Deprecated: Use AuctionEntryPointMockMetaData.Sigs instead.
 // AuctionEntryPointMockFuncSigs maps the 4-byte function signature to its string representation.
@@ -475,6 +477,35 @@ func (_AuctionEntryPointMock *AuctionEntryPointMockCallerSession) Count() (*big.
 	return _AuctionEntryPointMock.Contract.Count(&_AuctionEntryPointMock.CallOpts)
 }
 
+// GasBufferEstimate is a free data retrieval call binding the contract method 0xa5b2ab40.
+//
+// Solidity: function gasBufferEstimate() view returns(uint256)
+func (_AuctionEntryPointMock *AuctionEntryPointMockCaller) GasBufferEstimate(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _AuctionEntryPointMock.contract.Call(opts, &out, "gasBufferEstimate")
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+}
+
+// GasBufferEstimate is a free data retrieval call binding the contract method 0xa5b2ab40.
+//
+// Solidity: function gasBufferEstimate() view returns(uint256)
+func (_AuctionEntryPointMock *AuctionEntryPointMockSession) GasBufferEstimate() (*big.Int, error) {
+	return _AuctionEntryPointMock.Contract.GasBufferEstimate(&_AuctionEntryPointMock.CallOpts)
+}
+
+// GasBufferEstimate is a free data retrieval call binding the contract method 0xa5b2ab40.
+//
+// Solidity: function gasBufferEstimate() view returns(uint256)
+func (_AuctionEntryPointMock *AuctionEntryPointMockCallerSession) GasBufferEstimate() (*big.Int, error) {
+	return _AuctionEntryPointMock.Contract.GasBufferEstimate(&_AuctionEntryPointMock.CallOpts)
+}
+
 // Call is a paid mutator transaction binding the contract method 0xca157554.
 //
 // Solidity: function call((bytes32,uint256,address,address,uint256,uint256,uint256,bytes,bytes,bytes) auctionTx) returns()
@@ -515,6 +546,27 @@ func (_AuctionEntryPointMock *AuctionEntryPointMockSession) SetAuctioneer(_aucti
 // Solidity: function setAuctioneer(address _auctioneer) returns()
 func (_AuctionEntryPointMock *AuctionEntryPointMockTransactorSession) SetAuctioneer(_auctioneer common.Address) (*types.Transaction, error) {
 	return _AuctionEntryPointMock.Contract.SetAuctioneer(&_AuctionEntryPointMock.TransactOpts, _auctioneer)
+}
+
+// SetGasBufferEstimate is a paid mutator transaction binding the contract method 0xb4b8a234.
+//
+// Solidity: function setGasBufferEstimate(uint256 _gasBufferEstimate) returns()
+func (_AuctionEntryPointMock *AuctionEntryPointMockTransactor) SetGasBufferEstimate(opts *bind.TransactOpts, _gasBufferEstimate *big.Int) (*types.Transaction, error) {
+	return _AuctionEntryPointMock.contract.Transact(opts, "setGasBufferEstimate", _gasBufferEstimate)
+}
+
+// SetGasBufferEstimate is a paid mutator transaction binding the contract method 0xb4b8a234.
+//
+// Solidity: function setGasBufferEstimate(uint256 _gasBufferEstimate) returns()
+func (_AuctionEntryPointMock *AuctionEntryPointMockSession) SetGasBufferEstimate(_gasBufferEstimate *big.Int) (*types.Transaction, error) {
+	return _AuctionEntryPointMock.Contract.SetGasBufferEstimate(&_AuctionEntryPointMock.TransactOpts, _gasBufferEstimate)
+}
+
+// SetGasBufferEstimate is a paid mutator transaction binding the contract method 0xb4b8a234.
+//
+// Solidity: function setGasBufferEstimate(uint256 _gasBufferEstimate) returns()
+func (_AuctionEntryPointMock *AuctionEntryPointMockTransactorSession) SetGasBufferEstimate(_gasBufferEstimate *big.Int) (*types.Transaction, error) {
+	return _AuctionEntryPointMock.Contract.SetGasBufferEstimate(&_AuctionEntryPointMock.TransactOpts, _gasBufferEstimate)
 }
 
 // ContextUpgradeableMetaData contains all meta data concerning the ContextUpgradeable contract.

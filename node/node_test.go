@@ -154,7 +154,6 @@ func TestServiceLifeCycle(t *testing.T) {
 	stopped := make(map[string]bool)
 
 	for id, maker := range services {
-		id := id // Closure for the constructor
 		constructor := func(*ServiceContext) (Service, error) {
 			return &InstrumentedService{
 				startHook: func(p2p.Server) { started[id] = true },
@@ -250,7 +249,6 @@ func TestServiceConstructionAbortion(t *testing.T) {
 	}
 	started := make(map[string]bool)
 	for id, maker := range services {
-		id := id // Closure for the constructor
 		constructor := func(*ServiceContext) (Service, error) {
 			return &InstrumentedService{
 				startHook: func(p2p.Server) { started[id] = true },
@@ -299,7 +297,6 @@ func TestServiceStartupAbortion(t *testing.T) {
 	stopped := make(map[string]bool)
 
 	for id, maker := range services {
-		id := id // Closure for the constructor
 		constructor := func(*ServiceContext) (Service, error) {
 			return &InstrumentedService{
 				startHook: func(p2p.Server) { started[id] = true },
@@ -352,7 +349,6 @@ func TestServiceTerminationGuarantee(t *testing.T) {
 	stopped := make(map[string]bool)
 
 	for id, maker := range services {
-		id := id // Closure for the constructor
 		constructor := func(*ServiceContext) (Service, error) {
 			return &InstrumentedService{
 				startHook: func(p2p.Server) { started[id] = true },
@@ -392,7 +388,7 @@ func TestServiceTerminationGuarantee(t *testing.T) {
 		if err, ok := err.(*StopError); !ok {
 			t.Fatalf("iter %d: termination failure mismatch: have %v, want StopError", i, err)
 		} else {
-			failer := reflect.TypeOf(&InstrumentedService{})
+			failer := reflect.TypeFor[*InstrumentedService]()
 			if err.Services[failer] != failure {
 				t.Fatalf("iter %d: failer termination failure mismatch: have %v, want %v", i, err.Services[failer], failure)
 			}
@@ -535,7 +531,6 @@ func TestAPIGather(t *testing.T) {
 	}
 
 	for id, config := range services {
-		config := config
 		constructor := func(*ServiceContext) (Service, error) {
 			return &InstrumentedService{apis: config.APIs}, nil
 		}

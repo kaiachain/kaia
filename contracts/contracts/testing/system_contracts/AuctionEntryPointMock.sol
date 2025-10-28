@@ -33,6 +33,7 @@ contract AuctionEntryPointMock {
     }
 
     address public auctioneer;
+    uint256 public gasBufferEstimate = 180_000;
     uint256 public count;
 
     modifier onlyProposer() {
@@ -42,6 +43,10 @@ contract AuctionEntryPointMock {
 
     function setAuctioneer(address _auctioneer) public {
         auctioneer = _auctioneer;
+    }
+
+    function setGasBufferEstimate(uint256 _gasBufferEstimate) public {
+        gasBufferEstimate = _gasBufferEstimate;
     }
 
     function call(AuctionTx calldata auctionTx) external onlyProposer {

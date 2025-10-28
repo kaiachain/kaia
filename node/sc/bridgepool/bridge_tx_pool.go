@@ -288,7 +288,7 @@ func (pool *BridgeTxPool) PendingTxHashesByAddress(from *common.Address, limit i
 	defer pool.mu.Unlock()
 
 	if list, exist := pool.queue[*from]; exist {
-		pendingTxHashes := make([]common.Hash, limit)
+		pendingTxHashes := make([]common.Hash, 0, limit)
 		txs := list.FlattenByCount(limit)
 		for _, tx := range txs {
 			pendingTxHashes = append(pendingTxHashes, tx.(*types.Transaction).Hash())

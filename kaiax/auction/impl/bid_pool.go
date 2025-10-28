@@ -30,14 +30,18 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/params"
+	"golang.org/x/time/rate"
 )
 
 const (
-	bidChSize        = 100
+	bidChSize        = 2048
 	allowFutureBlock = 2
 
 	BidTxMaxCallGasLimit = uint64(10_000_000)
-	BidTxGasBuffer       = uint64(180_000)
+	BidTxMaxDataSize     = uint64(64 * 1024) // 64KB
+
+	// Rate limiting
+	bidsPerSecondPerPeer = 300 // Max bids per second per peer
 )
 
 type BidPool struct {
@@ -47,11 +51,16 @@ type BidPool struct {
 	auctionInfoMu     sync.RWMutex
 	auctioneer        common.Address
 	auctionEntryPoint common.Address
+	bidTxGasBuffer    uint64
 
 	bidMu        sync.RWMutex
 	bidMap       map[common.Hash]*auction.Bid              // (bidHash) -> Bid
 	bidTargetMap map[uint64]map[common.Hash]*auction.Bid   // (blockNum, targetTxHash) -> Bid
 	bidWinnerMap map[uint64]map[common.Address]common.Hash // (blockNum, sender) -> bidHash
+
+	// Rate limiting per peer
+	peerRateLimiterMu sync.RWMutex
+	peerRateLimiter   map[string]*rate.Limiter // peerID -> rate limiter
 
 	bidMsgCh   chan *auction.Bid
 	newBidCh   chan *auction.Bid
@@ -70,16 +79,17 @@ func NewBidPool(chainConfig *params.ChainConfig, chain backends.BlockChainForCal
 	}
 
 	bp := &BidPool{
-		ChainConfig:    chainConfig,
-		Chain:          chain,
-		bidMap:         make(map[common.Hash]*auction.Bid),
-		bidTargetMap:   make(map[uint64]map[common.Hash]*auction.Bid),
-		bidWinnerMap:   make(map[uint64]map[common.Address]common.Hash),
-		bidMsgCh:       make(chan *auction.Bid, bidChSize),
-		newBidCh:       make(chan *auction.Bid, bidChSize),
-		maxBidPoolSize: auctionConfig.MaxBidPoolSize,
-		running:        0, // not running yet
-		stopped:        0, // not stopped
+		ChainConfig:     chainConfig,
+		Chain:           chain,
+		bidMap:          make(map[common.Hash]*auction.Bid),
+		bidTargetMap:    make(map[uint64]map[common.Hash]*auction.Bid),
+		bidWinnerMap:    make(map[uint64]map[common.Address]common.Hash),
+		peerRateLimiter: make(map[string]*rate.Limiter),
+		bidMsgCh:        make(chan *auction.Bid, bidChSize),
+		newBidCh:        make(chan *auction.Bid, bidChSize),
+		maxBidPoolSize:  auctionConfig.MaxBidPoolSize,
+		running:         0, // not running yet
+		stopped:         0, // not stopped
 	}
 
 	return bp
@@ -177,11 +187,11 @@ func (bp *BidPool) clearBidPool() {
 }
 
 // updateAuctionInfo updates the auction info if the auctioneer or auction entry point address is changed.
-func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoint common.Address) {
+func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoint common.Address, bidTxGasBuffer uint64) {
 	bp.auctionInfoMu.Lock()
 	defer bp.auctionInfoMu.Unlock()
 
-	if bp.auctioneer == auctioneer && bp.auctionEntryPoint == auctionEntryPoint {
+	if bp.auctioneer == auctioneer && bp.auctionEntryPoint == auctionEntryPoint && bp.bidTxGasBuffer == bidTxGasBuffer {
 		return
 	}
 
@@ -190,8 +200,9 @@ func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoin
 
 	bp.auctioneer = auctioneer
 	bp.auctionEntryPoint = auctionEntryPoint
+	bp.bidTxGasBuffer = bidTxGasBuffer
 
-	logger.Info("Update auction info", "auctioneer", auctioneer, "auctionEntryPoint", auctionEntryPoint)
+	logger.Info("Update auction info", "auctioneer", auctioneer, "auctionEntryPoint", auctionEntryPoint, "bidTxGasBuffer", bidTxGasBuffer)
 }
 
 // getTargetTxHashMap returns the target tx hash map for the given block number.
@@ -265,12 +276,22 @@ func (bp *BidPool) insertBid(bid *auction.Bid) error {
 	if existingBid, ok := bp.bidTargetMap[blockNumber][targetTxHash]; ok {
 		// FCFS if the bid is the same.
 		if existingBid.Bid.Cmp(bid.Bid) >= 0 {
+			// Since we allow the parallel bid validation, the previous duplicate bid check at #validateBid might be skipped.
+			// So we need to check the bid map again to return the correct error.
+			if _, ok := bp.bidMap[bid.Hash()]; ok {
+				return auction.ErrBidAlreadyExists
+			}
 			return auction.ErrLowBid
 		}
 
 		logger.Trace("Replace bid", "old", existingBid.Hash(), "new", bid.Hash())
 		delete(bp.bidMap, existingBid.Hash())
 		delete(bp.bidWinnerMap[blockNumber], existingBid.Sender)
+	} else {
+		if int64(len(bp.bidMap)) >= bp.maxBidPoolSize {
+			logger.Info("Bid pool is full", "maxBidPoolSize", bp.maxBidPoolSize, "bid", bid.Hash())
+			return auction.ErrBidPoolFull
+		}
 	}
 
 	hash := bid.Hash()
@@ -302,11 +323,6 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 	sender := bid.Sender
 
 	bp.bidMu.RLock()
-	if int64(len(bp.bidMap)) >= bp.maxBidPoolSize {
-		logger.Info("Bid pool is full", "maxBidPoolSize", bp.maxBidPoolSize, "bid", bid.Hash())
-		bp.bidMu.RUnlock()
-		return auction.ErrBidPoolFull
-	}
 
 	// Check if the auction tx is already in the pool.
 	if _, ok := bp.bidMap[bid.Hash()]; ok {
@@ -339,12 +355,17 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 		return auction.ErrZeroBid
 	}
 
-	// 4. The gas limit must be less than the maximum limit.
+	// 4. The data size must be less than the maximum limit.
+	if uint64(len(bid.Data)) > BidTxMaxDataSize {
+		return auction.ErrExceedMaxDataSize
+	}
+
+	// 5. The gas limit must be less than the maximum limit.
 	if bid.CallGasLimit > BidTxMaxCallGasLimit {
 		return auction.ErrExceedMaxCallGasLimit
 	}
 
-	// 5. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
+	// 6. The `bid.SearcherSig` and `bid.AuctioneerSig` must be valid.
 	if err := bp.validateBidSigs(bid); err != nil {
 		return err
 	}
@@ -376,11 +397,36 @@ func (bp *BidPool) validateBidSigs(bid *auction.Bid) error {
 	return nil
 }
 
-func (bp *BidPool) HandleBid(bid *auction.Bid) {
+func (bp *BidPool) HandleBid(peerID string, bid *auction.Bid) {
 	if atomic.LoadUint32(&bp.running) == 0 || bid == nil {
 		return
 	}
+
+	// Check rate limit for this peer
+	if !bp.checkRateLimit(peerID) {
+		logger.Trace("Rate limit exceeded for peer", "peerID", peerID)
+		return
+	}
+
 	bp.bidMsgCh <- bid
+}
+
+// checkRateLimit checks if the peer is within rate limit
+func (bp *BidPool) checkRateLimit(peerID string) bool {
+	bp.peerRateLimiterMu.Lock()
+	defer bp.peerRateLimiterMu.Unlock()
+
+	limiter, exists := bp.peerRateLimiter[peerID]
+	if !exists {
+		// Create new rate limiter for this peer
+		// Use burst equal to the rate limit (we only use rate limit, not the burst)
+		limiter = rate.NewLimiter(rate.Limit(bidsPerSecondPerPeer), bidsPerSecondPerPeer)
+		bp.peerRateLimiter[peerID] = limiter
+	}
+
+	// It'll simply discard the bid if the rate limit is exceeded
+	// We don't need to reserve for a bid here because the original bid will be sent from auctioneer through different channel (see #api.SubmitBid)
+	return limiter.Allow()
 }
 
 func (bp *BidPool) handleBidMsg() {
@@ -412,6 +458,10 @@ func (bp *BidPool) handleNewBid() {
 }
 
 func (bp *BidPool) getBidTxGasLimit(bid *auction.Bid) (uint64, error) {
+	bp.auctionInfoMu.RLock()
+	buffer := bp.bidTxGasBuffer
+	bp.auctionInfoMu.RUnlock()
+
 	data, err := system.EncodeAuctionCallData(bid)
 	if err != nil {
 		return 0, err
@@ -430,7 +480,7 @@ func (bp *BidPool) getBidTxGasLimit(bid *auction.Bid) (uint64, error) {
 		}
 	}
 
-	gasLimit := intrinsicGas + bid.CallGasLimit + BidTxGasBuffer
+	gasLimit := intrinsicGas + bid.CallGasLimit + buffer
 	if gasLimit < floorDataGas {
 		gasLimit = floorDataGas
 	}

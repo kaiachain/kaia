@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
 	"sort"
 	"sync/atomic"
@@ -40,6 +41,7 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/snapshot"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 )
 
@@ -126,10 +128,27 @@ type StateDB struct {
 
 // Create a new state from a given trie.
 func New(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.TrieOpts) (*StateDB, error) {
+	// For FlatTrie, find the canonical block number from the state root. FlatTrie database is addressed by the block numbers, not state roots.
+	if opts == nil {
+		opts = &statedb.TrieOpts{}
+	}
+	if blockNum, err := blockNumberFromRoot(db.TrieDB().DiskDB(), root); err != nil {
+		return nil, err
+	} else {
+		opts.BaseBlockNumber = blockNum
+	}
+
+	// Open the account trie.
 	tr, err := db.OpenTrie(root, opts)
 	if err != nil {
 		return nil, err
 	}
+
+	// For FlatTrie, supply the account trie to the storage tries.
+	if at, ok := tr.(*statedb.FlatAccountTrie); ok {
+		opts.AccountTrie = at
+	}
+
 	sdb := &StateDB{
 		db:                       db,
 		trie:                     tr,
@@ -157,6 +176,30 @@ func New(root common.Hash, db Database, snaps *snapshot.Tree, opts *statedb.Trie
 	return sdb, nil
 }
 
+func blockNumberFromRoot(dbm database.DBManager, root common.Hash) (uint64, error) {
+	// Skip if not FlatTrie.
+	dm := dbm.GetDomainsManager()
+	if dm == nil {
+		return 0, nil
+	}
+
+	// Skip if empty (i.e. temporary) trie or at genesis block.
+	if common.EmptyHash(root) || root == types.EmptyRootHash {
+		return 0, nil
+	}
+
+	num, ok, err := dm.ReadBlockNumByRoot(root.Bytes())
+	if err != nil {
+		logger.Warn("cannot find block number from stateRoot", "root", root.Hex(), "err", err)
+		return 0, err
+	} else if ok {
+		return num, nil
+	} else {
+		logger.Warn("cannot find block number from stateRoot", "root", root.Hex(), "err", nil)
+		return 0, fmt.Errorf("block number not found for root %s", root.Hex())
+	}
+}
+
 // RLockGCCachedNode locks the GC lock of CachedNode.
 func (s *StateDB) LockGCCachedNode() {
 	s.db.RLockGCCachedNode()
@@ -181,6 +224,12 @@ func (s *StateDB) Error() error {
 // Reset clears out all ephemeral state objects from the state db, but keeps
 // the underlying state trie to avoid reloading data for the next operations.
 func (s *StateDB) Reset(root common.Hash) error {
+	blockNum, err := blockNumberFromRoot(s.db.TrieDB().DiskDB(), root)
+	if err != nil {
+		return err
+	}
+	s.trieOpts.BaseBlockNumber = blockNum
+
 	tr, err := s.db.OpenTrie(root, s.trieOpts)
 	if err != nil {
 		return err
@@ -952,9 +1001,7 @@ func copyStateDB(dst, src *StateDB) {
 	deepCopyLogs(src, dst)
 
 	// Copy preimages
-	for hash, preimage := range src.preimages {
-		dst.preimages[hash] = preimage
-	}
+	maps.Copy(dst.preimages, src.preimages)
 
 	if src.snaps != nil {
 		// In order for the miner to be able to use and make additions
@@ -965,19 +1012,13 @@ func copyStateDB(dst, src *StateDB) {
 		dst.snap = src.snap
 		// deep copy needed
 		dst.snapDestructs = make(map[common.Hash]struct{})
-		for k, v := range src.snapDestructs {
-			dst.snapDestructs[k] = v
-		}
+		maps.Copy(dst.snapDestructs, src.snapDestructs)
 		dst.snapAccounts = make(map[common.Hash][]byte)
-		for k, v := range src.snapAccounts {
-			dst.snapAccounts[k] = v
-		}
+		maps.Copy(dst.snapAccounts, src.snapAccounts)
 		dst.snapStorage = make(map[common.Hash]map[common.Hash][]byte)
 		for k, v := range src.snapStorage {
 			temp := make(map[common.Hash][]byte)
-			for kk, vv := range v {
-				temp[kk] = vv
-			}
+			maps.Copy(temp, v)
 			dst.snapStorage[k] = temp
 		}
 	}
@@ -1167,7 +1208,7 @@ func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) 
 		if EnabledExpensive {
 			defer func(start time.Time) { s.SnapshotCommits += time.Since(start) }(time.Now())
 		}
-		// Only update if there's a state transition (skip empty Clique blocks)
+		// Only update if there's a state transition
 		if parent := s.snap.Root(); parent != root {
 			if err := s.snaps.Update(root, parent, s.snapDestructs, s.snapAccounts, s.snapStorage); err != nil {
 				logger.Warn("Failed to update snapshot tree", "from", parent, "to", root, "err", err)

@@ -542,7 +542,7 @@ func TestConsoleLog(t *testing.T) {
 						for i := 0; i < size; i++ {
 							b[i] = byte(i)
 						}
-						arrayType := reflect.ArrayOf(size, reflect.TypeOf(byte(0)))
+						arrayType := reflect.ArrayOf(size, reflect.TypeFor[byte]())
 						array := reflect.New(arrayType).Elem()
 						for i := 0; i < size; i++ {
 							array.Index(i).Set(reflect.ValueOf(byte(i)))

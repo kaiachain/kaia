@@ -69,9 +69,10 @@ executors:
     resource_class: xlarge
     docker:
       - image: kaiachain/build_base:go1.23-solc0.8.13-ubuntu-22.04
-
-      - image: localstack/localstack:0.13.0
-      - image: circleci/redis:6.0.8-alpine
+      - name: localstack
+        image: localstack/localstack:0.13.0
+      - name: redis
+        image: circleci/redis:6.0.8-alpine
       - name: kafka
         image: apache/kafka:3.7.0
         environment:
@@ -302,7 +303,7 @@ commands:
           command: |
             for i in `seq 1 10`;
             do
-              nc -z 127.0.0.1 6379 && echo Success && exit 0
+              nc -z redis 6379 && echo Success && exit 0
               echo -n .
               sleep 1
             done
@@ -321,7 +322,7 @@ commands:
           name: "Wait until localstack container running"
           command: |
             timeout 60 sh -c \
-            'until nc -z localhost 4566; do
+            'until nc -z localstack 4566; do
               echo "Waiting for Localstack ..."
               sleep 1
             done'

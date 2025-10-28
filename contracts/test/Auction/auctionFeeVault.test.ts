@@ -27,6 +27,15 @@ describe("AuctionFeeVault", () => {
       auctionFeeVault,
       "OwnableUnauthorizedAccount"
     );
+
+    await expect(
+      auctionFeeVault
+        .connect(user1)
+        .registerRewardAddresses([user1.address], [user1.address])
+    ).to.be.revertedWithCustomError(
+      auctionFeeVault,
+      "OwnableUnauthorizedAccount"
+    );
   });
   it("#setPaybackPercentage: invalid input", async () => {
     const { auctionFeeVault, deployer } = await auctionTestFixture();
@@ -42,6 +51,35 @@ describe("AuctionFeeVault", () => {
     await expect(
       auctionFeeVault.connect(deployer).setValidatorPaybackRate(10001)
     ).to.be.revertedWithCustomError(auctionFeeVault, "InvalidInput");
+  });
+  it("#registerRewardAddresses: invalid input", async () => {
+    const { auctionFeeVault, deployer } = await auctionTestFixture();
+
+    await expect(
+      auctionFeeVault
+        .connect(deployer)
+        .registerRewardAddresses(
+          [deployer.address],
+          [deployer.address, deployer.address]
+        )
+    ).to.be.revertedWithCustomError(auctionFeeVault, "InvalidInput");
+  });
+  it("registerRewardAddresses: success", async () => {
+    const { auctionFeeVault, deployer, user1, user2 } =
+      await auctionTestFixture();
+
+    const nodeIds = [deployer.address, user1.address, user2.address];
+    const rewardAddrs = [user1.address, user2.address, deployer.address];
+
+    await auctionFeeVault
+      .connect(deployer)
+      .registerRewardAddresses(nodeIds, rewardAddrs);
+
+    for (let i = 0; i < nodeIds.length; i++) {
+      expect(await auctionFeeVault.getRewardAddr(nodeIds[i])).to.equal(
+        rewardAddrs[i]
+      );
+    }
   });
   it("#registerRewardAddress: only valid validator", async () => {
     const { auctionFeeVault, deployer, user1, addressBook, cnStaking } =
@@ -174,6 +212,28 @@ describe("AuctionFeeVault", () => {
     await auctionFeeVault
       .connect(deployer)
       .registerRewardAddress(miner, user1.address);
+
+    const beforeBalance = await hre.ethers.provider.getBalance(user1.address);
+
+    await expect(
+      auctionFeeVault.connect(deployer).takeBid(miner, { value: 100 })
+    )
+      .to.emit(auctionFeeVault, "FeeDeposit")
+      .withArgs(miner, 100, 0, 10);
+
+    expect(await hre.ethers.provider.getBalance(user1.address)).to.equal(
+      beforeBalance.add(10)
+    );
+  });
+  it("#takeBid: should payback to validator by registerRewardAddresses", async () => {
+    const { auctionFeeVault, deployer, addressBook, cnStaking, user1 } =
+      await auctionTestFixture();
+
+    const miner = await getMiner();
+
+    await auctionFeeVault
+      .connect(deployer)
+      .registerRewardAddresses([miner], [user1.address]);
 
     const beforeBalance = await hre.ethers.provider.getBalance(user1.address);
 

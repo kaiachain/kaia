@@ -307,7 +307,6 @@ func (mb *MainBridge) Start(srvr p2p.Server) error {
 	scprotocols := make([]p2p.Protocol, 0, len(mb.SCProtocol().Versions))
 	for i, version := range mb.SCProtocol().Versions {
 		// Compatible; initialise the sub-protocol
-		version := version
 		scprotocols = append(scprotocols, p2p.Protocol{
 			Name:    mb.SCProtocol().Name,
 			Version: version,

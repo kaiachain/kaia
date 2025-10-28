@@ -332,9 +332,7 @@ func (self *worker) handleTxsCh(quitByErr chan bool) {
 		case <-self.txsCh:
 			if atomic.LoadInt32(&self.mining) != 0 {
 				// If we're mining, but nothing is being processed, wake on new transactions
-				if self.config.Clique != nil && self.config.Clique.Period == 0 {
-					self.commitNewWork()
-				}
+				// Clique consensus removed - no longer needed
 			}
 
 		case <-quitByErr:
@@ -796,6 +794,7 @@ CommitTransactionLoop:
 			// 1. The previous transaction hash doesn't match the target hash, or
 			// 2. The previous transaction failed (receipt status not successful)
 			if env.shouldDiscardBundle(targetBundle) {
+				logger.Trace("Skipping bundle due to invalid target tx", "target tx", targetBundle.TargetTxHash.String(), "bundle tx", txOrGen.Id.String(), "numShift", numShift)
 				builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 				continue
 			}

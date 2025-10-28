@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/storage/statedb"
 )
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
@@ -183,7 +184,7 @@ func findBlockWithState(db database.DBManager) *types.Block {
 // The returned chain configuration is never nil.
 func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64, isPrivate, overwriteGenesis bool) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
-		return params.AllGxhashProtocolChanges, common.Hash{}, errGenesisNoConfig
+		return params.TestChainConfig, common.Hash{}, errGenesisNoConfig
 	}
 
 	// Just commit the new block if there is no stored genesis block.
@@ -193,7 +194,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 			switch {
 			case isPrivate:
 				logger.Error("No genesis is provided. --networkid should be omitted if you want to use preconfigured network")
-				return params.AllGxhashProtocolChanges, common.Hash{}, errNoGenesis
+				return params.TestChainConfig, common.Hash{}, errNoGenesis
 			case networkId == params.KairosNetworkId:
 				logger.Info("Writing default Kairos genesis block")
 				genesis = DefaultKairosGenesisBlock()
@@ -240,14 +241,19 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 	// The genesis block is present in the database but the corresponding state might not.
 	// Because the trie can be partially corrupted, we always commit the trie.
 	// It can happen in a state migrated database or live pruned database.
-	commitGenesisState(genesis, db, networkId)
+	if db.GetDomainsManager() == nil { // FlatTrie disallows re-commiting the block lower than the head block.
+		commitGenesisState(genesis, db, networkId)
+	}
 
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
 	if err := newcfg.CheckConfigForkOrder(); err != nil {
 		return newcfg, common.Hash{}, err
 	}
-	storedcfg := db.ReadChainConfig(stored)
+	storedcfg, err := db.ReadChainConfig(stored)
+	if err != nil {
+		return newcfg, stored, err
+	}
 	if storedcfg == nil {
 		logger.Info("Found genesis block without chain config")
 		db.WriteChainConfig(stored, newcfg)
@@ -296,7 +302,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	case ghash == params.KairosGenesisHash:
 		return params.KairosChainConfig
 	default:
-		return params.AllGxhashProtocolChanges
+		return params.TestChainConfig
 	}
 }
 
@@ -307,7 +313,10 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 		// If db == nil, do not write to the real database. Here we supply a memory database as a placeholder.
 		db = database.NewMemoryDBManager()
 	}
-	stateDB, _ := state.New(baseStateRoot, state.NewDatabase(db), nil, nil)
+	stateDB, _ := state.New(baseStateRoot, state.NewDatabase(db), nil, &statedb.TrieOpts{
+		BaseBlockNumber: 0,
+		CommitGenesis:   true,
+	})
 	rules := params.Rules{}
 	if g.Config != nil {
 		rules = g.Config.Rules(new(big.Int).SetUint64(g.Number))
@@ -391,7 +400,7 @@ func (g *Genesis) Commit(baseStateRoot common.Hash, db database.DBManager) (*typ
 
 	config := g.Config
 	if config == nil {
-		config = params.AllGxhashProtocolChanges
+		config = params.TestChainConfig
 	}
 	if err := config.CheckConfigForkOrder(); err != nil {
 		return nil, err
@@ -405,7 +414,7 @@ func (g *Genesis) Commit(baseStateRoot common.Hash, db database.DBManager) (*typ
 func (g *Genesis) MustCommit(db database.DBManager) *types.Block {
 	config := g.Config
 	if config == nil {
-		config = params.AllGxhashProtocolChanges
+		config = params.TestChainConfig
 	}
 	InitDeriveSha(config)
 

@@ -49,7 +49,15 @@ Furthermore, for those who are interested in the Kaia Service Chain, please chec
 
 ## Import as library
 
-Please use git branch (main) or commit hash. Do not use tags (v2.0.0)
+First edit your go.mod file. Copy the replace statments from Kaia's go.mod file. It should look similar to:
+```
+replace (
+	github.com/erigontech/erigon-lib => github.com/kaiachain/kaia-erigon/erigon-lib v0.0.0-2025...
+	github.com/holiman/bloomfilter/v2 => github.com/AskAlexSharov/bloomfilter/v2 v2.0.9
+)
+```
+
+Then download this repo. Please use branch name (e.g. main) or commit hash (e.g. 59837ccdf). Do not use tags (v2.0.0)
 ```
 go get github.com/kaiachain/kaia@main
 go mod tidy

@@ -538,8 +538,9 @@ func TestColdAccountAccessCost(t *testing.T) {
 // delegation designator incurs the correct amount of gas based on the tracer.
 func TestDelegatedAccountAccessCost(t *testing.T) {
 	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	statedb.SetCodeToEOA(common.HexToAddress("0xff"), types.AddressToDelegation(common.HexToAddress("0xaa")), params.TestRules)
-	statedb.SetCodeToEOA(common.HexToAddress("0xaa"), []byte{}, params.TestRules)
+	rules := params.TestChainConfig.Rules(big.NewInt(0))
+	statedb.SetCodeToEOA(common.HexToAddress("0xff"), types.AddressToDelegation(common.HexToAddress("0xaa")), rules)
+	statedb.SetCodeToEOA(common.HexToAddress("0xaa"), []byte{}, rules)
 
 	for i, tc := range []struct {
 		code []byte

@@ -36,7 +36,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/gxhash"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
@@ -101,9 +101,10 @@ func rollbackOrigGovernance() {
 type downloadTester struct {
 	downloader *Downloader
 
-	genesis *types.Block       // Genesis blocks used by the tester and peers
-	stateDb database.DBManager // Database used by the tester for syncing from peers
-	peerDb  database.DBManager // Database of the peers containing all data
+	genesis *types.Block        // Genesis blocks used by the tester and peers
+	stateDb database.DBManager  // Database used by the tester for syncing from peers
+	peerDb  database.DBManager  // Database of the peers containing all data
+	config  *params.ChainConfig // Chain configuration used by the tester
 
 	ownHashes      []common.Hash                           // Hash chain belonging to the tester
 	ownHeaders     map[common.Hash]*types.Header           // Headers belonging to the tester
@@ -124,24 +125,41 @@ type downloadTester struct {
 	lock sync.RWMutex
 }
 
-// newTester creates a new downloader test mocker.
-func newTester(t *testing.T) *downloadTester {
+// newTesterWithConfig creates a new downloader test mocker with custom config.
+func newTesterWithConfig(t *testing.T, config *params.ChainConfig) *downloadTester {
 	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 
 	remotedb := database.NewMemoryDBManager()
 	localdb := database.NewMemoryDBManager()
-	genesis := blockchain.GenesisBlockForTesting(remotedb, testAddress, big.NewInt(1000000000))
+
+	// Create genesis with custom config
+	var genesisBlock *types.Block
+	if config == params.TestChainConfig {
+		// Use the standard testing genesis for default config
+		genesisBlock = blockchain.GenesisBlockForTesting(remotedb, testAddress, big.NewInt(1000000000))
+	} else {
+		// Create custom genesis with the provided config
+		genesis := &blockchain.Genesis{
+			Alloc: blockchain.GenesisAlloc{
+				testAddress: {Balance: big.NewInt(1000000000)},
+			},
+			Config: config,
+		}
+		genesisBlock = genesis.MustCommit(remotedb)
+	}
+
 	setTestGovernance(localdb)
 
 	tester := &downloadTester{
-		genesis:           genesis,
+		genesis:           genesisBlock,
 		peerDb:            remotedb,
-		ownHashes:         []common.Hash{genesis.Hash()},
-		ownHeaders:        map[common.Hash]*types.Header{genesis.Hash(): genesis.Header()},
-		ownBlocks:         map[common.Hash]*types.Block{genesis.Hash(): genesis},
-		ownReceipts:       map[common.Hash]types.Receipts{genesis.Hash(): nil},
+		config:            config,
+		ownHashes:         []common.Hash{genesisBlock.Hash()},
+		ownHeaders:        map[common.Hash]*types.Header{genesisBlock.Hash(): genesisBlock.Header()},
+		ownBlocks:         map[common.Hash]*types.Block{genesisBlock.Hash(): genesisBlock},
+		ownReceipts:       map[common.Hash]types.Receipts{genesisBlock.Hash(): nil},
 		ownStakingInfo:    map[common.Hash]*staking.P2PStakingInfo{},
-		ownChainTd:        map[common.Hash]*big.Int{genesis.Hash(): genesis.BlockScore()},
+		ownChainTd:        map[common.Hash]*big.Int{genesisBlock.Hash(): genesisBlock.BlockScore()},
 		peerHashes:        make(map[string][]common.Hash),
 		peerHeaders:       make(map[string]map[common.Hash]*types.Header),
 		peerBlocks:        make(map[string]map[common.Hash]*types.Block),
@@ -151,7 +169,7 @@ func newTester(t *testing.T) *downloadTester {
 		peerMissingStates: make(map[string]map[common.Hash]bool),
 	}
 	tester.stateDb = localdb
-	tester.stateDb.WriteTrieNode(genesis.Root().ExtendZero(), []byte{0x00})
+	tester.stateDb.WriteTrieNode(genesisBlock.Root().ExtendZero(), []byte{0x00})
 
 	mockCtrl := gomock.NewController(t)
 	mStaking := mock.NewMockStakingModule(mockCtrl)
@@ -165,6 +183,11 @@ func newTester(t *testing.T) *downloadTester {
 	tester.downloader = New(FullSync, tester.stateDb, statedb.NewSyncBloom(1, tester.stateDb.GetMemDB()), new(event.TypeMux), tester, nil, mStaking, tester.dropPeer, uint64(istanbul.WeightedRandom))
 
 	return tester
+}
+
+// newTester creates a new downloader test mocker.
+func newTester(t *testing.T) *downloadTester {
+	return newTesterWithConfig(t, params.TestChainConfig)
 }
 
 func (dl *downloadTester) makeStakingInfoData(blockNumber uint64) (*staking.P2PStakingInfo, []byte) {
@@ -186,7 +209,7 @@ func (dl *downloadTester) makeStakingInfoData(blockNumber uint64) (*staking.P2PS
 func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, parentReceipts types.Receipts, heavy bool) ([]common.Hash, map[common.Hash]*types.Header, map[common.Hash]*types.Block, map[common.Hash]types.Receipts, map[common.Hash]*staking.P2PStakingInfo) {
 	stakingUpdatedBlocks := make(map[uint64]*staking.P2PStakingInfo)
 	// Generate the block chain
-	blocks, receipts := blockchain.GenerateChain(params.TestChainConfig, parent, gxhash.NewFaker(), dl.peerDb, n, func(i int, block *blockchain.BlockGen) {
+	blocks, receipts := blockchain.GenerateChain(dl.config, parent, faker.NewFaker(), dl.peerDb, n, func(i int, block *blockchain.BlockGen) {
 		block.SetRewardbase(common.Address{seed})
 		// If a heavy chain is requested, delay blocks to raise blockscore
 		if heavy {
@@ -194,7 +217,7 @@ func (dl *downloadTester) makeChain(n int, seed byte, parent *types.Block, paren
 		}
 		// If the block number is multiple of 3, send a bonus transaction to the miner
 		if parent == dl.genesis && i%3 == 0 {
-			signer := types.MakeSigner(params.TestChainConfig, block.Number())
+			signer := types.MakeSigner(dl.config, block.Number())
 			tx, err := types.SignTx(types.NewTransaction(block.TxNonce(testAddress), common.Address{seed}, big.NewInt(1000), params.TxGas, nil, nil), signer, testKey)
 			if err != nil {
 				panic(err)
@@ -369,7 +392,7 @@ func (dl *downloadTester) CurrentBlock() *types.Block {
 
 // Config retrieves the chain configuration of the tester.
 func (dl *downloadTester) Config() *params.ChainConfig {
-	return params.TestChainConfig
+	return dl.config
 }
 
 // CurrentFastBlock retrieves the current head fast-sync block from the canonical chain.
@@ -1920,7 +1943,11 @@ func testDeliverHeadersHang(t *testing.T, protocol int, mode SyncMode) {
 func TestStakingInfoSync(t *testing.T) { testStakingInfoSync(t, 65) }
 
 func testStakingInfoSync(t *testing.T, protocol int) {
-	tester := newTester(t)
+	// Create a custom config without Kaia fork for this test
+	customConfig := params.TestChainConfig.Copy()
+	customConfig.KaiaCompatibleBlock = nil // Disable Kaia fork to avoid staking info requirement
+
+	tester := newTesterWithConfig(t, customConfig)
 	defer tester.terminate()
 
 	// Create a small enough block chain to download

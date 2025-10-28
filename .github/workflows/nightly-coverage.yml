@@ -1,0 +1,21 @@
+name: Nightly Coverage
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run coverage
+        run: make cover
+      - name: Notify Slack on success
+        if: success()
+        run: |
+          curl --data '{"text": "✅ Nightly coverage succeeded."}' "$SLACK_WEBHOOK_URL"
+      - name: Notify Slack on failure
+        if: failure()
+        run: |
+          curl --data '{"text": "❌ Nightly coverage failed."}' "$SLACK_WEBHOOK_URL"

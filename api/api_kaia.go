@@ -111,6 +111,10 @@ func (s *KaiaAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastB
 // - highestBlock:  block number of the highest block header this node has received from peers
 // - pulledStates:  number of state entries processed until now
 // - knownStates:   number of known state entries that still need to be pulled
+//
+// HTTP API:
+// http   EthAPI.Syncing()      eth_syncing     = `SyncProgress` || `false`
+// http   KaiaAPI.Syncing()     kaia_syncing 	= `SyncProgress` || `false`
 func (s *KaiaAPI) Syncing() (interface{}, error) {
 	progress := s.b.Progress()
 

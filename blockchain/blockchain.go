@@ -1426,6 +1426,13 @@ func (bc *BlockChain) writeStateTrie(block *types.Block, state *state.StateDB) e
 			if bc.IsLivePruningRequired() {
 				bc.chPrune <- block.NumberU64()
 			}
+
+			if dm := trieDB.DiskDB().GetDomainsManager(); dm != nil {
+				if err := dm.CommitWrites(); err != nil {
+					return err
+				}
+				logger.Info("Committed domains manager changes into the disk", "blocknum", block.NumberU64())
+			}
 		}
 
 		bc.chBlock <- gcBlock{root, block.NumberU64()}

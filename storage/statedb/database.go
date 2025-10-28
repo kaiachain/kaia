@@ -72,7 +72,7 @@ var (
 const commitResultChSizeLimit = 100 * 10000
 
 // AutoScaling is for auto-scaling cache size. If cacheSize is set to this value,
-// cache size is set scaling to physical memeory
+// cache size is set scaling to physical memory
 const AutoScaling = -1
 
 type DatabaseReader interface {

@@ -43,7 +43,7 @@ func TestFilterTxs(t *testing.T) {
 		tx := types.NewTransaction(uint64(i), tx1Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
 		tx2 := types.NewTransaction(uint64(i), tx2Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
 
-		time.Sleep(40 * time.Millisecond)
+		time.Sleep(55 * time.Millisecond)
 		txs[tx1Sender] = append(txs[tx1Sender], tx)
 		txs[tx2Sender] = append(txs[tx2Sender], tx2)
 	}
@@ -80,7 +80,7 @@ func TestFilterTxs_TargetTx(t *testing.T) {
 		tx := types.NewTransaction(uint64(i), tx1Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
 		tx2 := types.NewTransaction(uint64(i), tx2Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
 
-		time.Sleep(40 * time.Millisecond)
+		time.Sleep(55 * time.Millisecond)
 		txs[tx1Sender] = append(txs[tx1Sender], tx)
 		txs[tx2Sender] = append(txs[tx2Sender], tx2)
 	}
@@ -114,7 +114,7 @@ func TestFilterTxs_GaslessTx(t *testing.T) {
 		tx := types.NewTransaction(uint64(i), tx1Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
 		tx2 := types.NewTransaction(uint64(i), tx2Sender, big.NewInt(1), 1000000, big.NewInt(1), nil)
 
-		time.Sleep(40 * time.Millisecond)
+		time.Sleep(55 * time.Millisecond)
 		txs[tx1Sender] = append(txs[tx1Sender], tx)
 		txs[tx2Sender] = append(txs[tx2Sender], tx2)
 	}

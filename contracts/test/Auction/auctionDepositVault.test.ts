@@ -32,7 +32,7 @@ describe("AuctionDepositVault", () => {
         auctionFeeVault.address
       );
 
-      expect(await auctionDepositVault.minDepositAmount()).to.equal(toPeb(10));
+      expect(await auctionDepositVault.minDepositAmount()).to.equal(toPeb(100));
       expect(await auctionDepositVault.minWithdrawLockTime()).to.equal(
         MIN_WITHDRAW_LOCK_TIME
       );
@@ -98,13 +98,13 @@ describe("AuctionDepositVault", () => {
       await expect(
         auctionDepositVault
           .connect(deployer)
-          .changeMinDepositAmount(toPeb(100n))
+          .changeMinDepositAmount(toPeb(200n))
       )
         .to.emit(auctionDepositVault, "ChangeMinDepositAmount")
-        .withArgs(toPeb(10), toPeb(100));
+        .withArgs(toPeb(100), toPeb(200));
 
       expect(await auctionDepositVault.minDepositAmount()).to.equal(
-        toPeb(100n)
+        toPeb(200n)
       );
     });
     it("Change min withdraw lock time", async () => {
@@ -156,14 +156,14 @@ describe("AuctionDepositVault", () => {
       );
 
       await expect(
-        auctionDepositVault.connect(deployer).deposit({ value: toPeb(10) })
+        auctionDepositVault.connect(deployer).deposit({ value: toPeb(100) })
       )
         .to.emit(auctionDepositVault, "VaultDeposit")
-        .withArgs(deployer.address, toPeb(10), toPeb(10), 0);
+        .withArgs(deployer.address, toPeb(100), toPeb(100), 0);
 
       expect(
         await auctionDepositVault.depositBalances(deployer.address)
-      ).to.equal(toPeb(10));
+      ).to.equal(toPeb(100));
       expect(await auctionDepositVault.getDepositAddrs(0, 1)).to.deep.equal([
         deployer.address,
       ]);
@@ -174,11 +174,11 @@ describe("AuctionDepositVault", () => {
           .depositFor(deployer.address, { value: toPeb(10) })
       )
         .to.emit(auctionDepositVault, "VaultDeposit")
-        .withArgs(deployer.address, toPeb(10), toPeb(20), 0);
+        .withArgs(deployer.address, toPeb(10), toPeb(110), 0);
 
       expect(
         await auctionDepositVault.depositBalances(deployer.address)
-      ).to.equal(toPeb(20));
+      ).to.equal(toPeb(110));
       expect(await auctionDepositVault.getDepositAddrs(0, 1)).to.deep.equal([
         deployer.address,
       ]);
@@ -196,22 +196,22 @@ describe("AuctionDepositVault", () => {
         .connect(deployer)
         .changeMinWithdrawLocktime(100);
 
-      await auctionDepositVault.connect(user1).deposit({ value: toPeb(20) });
-      await auctionDepositVault.connect(user2).deposit({ value: toPeb(30) });
+      await auctionDepositVault.connect(user1).deposit({ value: toPeb(110) });
+      await auctionDepositVault.connect(user2).deposit({ value: toPeb(120) });
     });
     it("#reserveWithdraw: success", async () => {
       const { auctionDepositVault, user1 } = fixture;
 
       await expect(auctionDepositVault.connect(user1).reserveWithdraw())
         .to.emit(auctionDepositVault, "VaultReserveWithdraw")
-        .withArgs(user1.address, toPeb(20), 0);
+        .withArgs(user1.address, toPeb(110), 0);
 
       const [at, amount] = await auctionDepositVault.withdrawReservations(
         user1.address
       );
 
       expect(at).to.equal((await nowTime()) + 100);
-      expect(amount).to.equal(toPeb(20));
+      expect(amount).to.equal(toPeb(110));
     });
     it("#reserveWithdraw: can't reserve withdraw twice", async () => {
       const { auctionDepositVault, user1 } = fixture;
@@ -243,6 +243,15 @@ describe("AuctionDepositVault", () => {
         auctionDepositVault,
         "WithdrawReservationExists"
       );
+
+      await expect(
+        auctionDepositVault.depositFor(user1.address, {
+          value: toPeb(10),
+        })
+      ).to.be.revertedWithCustomError(
+        auctionDepositVault,
+        "WithdrawReservationExists"
+      );
     });
     it("#withdraw: success", async () => {
       const { auctionDepositVault, user1 } = fixture;
@@ -255,13 +264,13 @@ describe("AuctionDepositVault", () => {
 
       await expect(auctionDepositVault.connect(user1).withdraw())
         .to.emit(auctionDepositVault, "VaultWithdraw")
-        .withArgs(user1.address, toPeb(20), 0);
+        .withArgs(user1.address, toPeb(110), 0);
 
       expect(await auctionDepositVault.depositBalances(user1.address)).to.equal(
         0
       );
       expect(await hre.ethers.provider.getBalance(user1.address)).to.closeTo(
-        beforeBalance.add(BigInt(toPeb(20))),
+        beforeBalance.add(BigInt(toPeb(110))),
         toPeb(0.0001)
       );
 
@@ -305,10 +314,10 @@ describe("AuctionDepositVault", () => {
       await auctionDepositVault.connect(user1).withdraw();
 
       // Deposit again
-      await auctionDepositVault.connect(user1).deposit({ value: toPeb(10) });
+      await auctionDepositVault.connect(user1).deposit({ value: toPeb(100) });
 
       expect(await auctionDepositVault.depositBalances(user1.address)).to.equal(
-        toPeb(10)
+        toPeb(100)
       );
     });
   });
@@ -320,7 +329,7 @@ describe("AuctionDepositVault", () => {
 
       const { auctionEntryPoint, auctionDepositVault, user1 } = fixture;
 
-      await auctionDepositVault.connect(user1).deposit({ value: toPeb(30) });
+      await auctionDepositVault.connect(user1).deposit({ value: toPeb(110) });
 
       await impersonateAccount(auctionEntryPoint.address);
       entryPointSigner = await hre.ethers.getSigner(auctionEntryPoint.address);
@@ -335,20 +344,22 @@ describe("AuctionDepositVault", () => {
       await expect(
         auctionDepositVault
           .connect(entryPointSigner)
-          .takeBid(user1.address, toPeb(30))
+          .takeBid(user1.address, toPeb(110))
       )
         .to.emit(auctionDepositVault, "TakenBid")
-        .withArgs(user1.address, toPeb(30))
+        .withArgs(user1.address, toPeb(110))
         .to.emit(auctionFeeVault, "FeeDeposit")
-        .withArgs(await getMiner(), toPeb(30), toPeb(0), toPeb(0));
+        .withArgs(await getMiner(), toPeb(110), toPeb(0), toPeb(0));
 
       expect(await auctionDepositVault.depositBalances(user1.address)).to.equal(
         toPeb(0)
       );
-      expect(await auctionFeeVault.accumulatedBids()).to.equal(toPeb(30));
+      expect(await auctionFeeVault.accumulatedBids()).to.equal(toPeb(110));
 
       // No deposit left so user1 will be removed from deposit addresses
-      expect(await auctionDepositVault.getDepositAddrs(0, 1)).to.deep.equal([]);
+      await expect(
+        auctionDepositVault.getDepositAddrs(0, 0)
+      ).to.be.revertedWithCustomError(auctionDepositVault, "InvalidRange");
     });
     it("#takeBid: can take bid during the withdrawal", async () => {
       const { auctionDepositVault, auctionFeeVault, user1 } = fixture;
@@ -357,18 +368,18 @@ describe("AuctionDepositVault", () => {
 
       await auctionDepositVault
         .connect(entryPointSigner)
-        .takeBid(user1.address, toPeb(15));
+        .takeBid(user1.address, toPeb(105));
 
       expect(await auctionDepositVault.depositBalances(user1.address)).to.equal(
-        toPeb(15)
+        toPeb(5)
       );
-      expect(await auctionFeeVault.accumulatedBids()).to.equal(toPeb(15));
+      expect(await auctionFeeVault.accumulatedBids()).to.equal(toPeb(105));
 
       await setTime((await nowTime()) + 100);
 
       await expect(auctionDepositVault.connect(user1).withdraw())
         .to.emit(auctionDepositVault, "VaultWithdraw")
-        .withArgs(user1.address, toPeb(15), 0);
+        .withArgs(user1.address, toPeb(5), 0);
 
       expect(await auctionDepositVault.depositBalances(user1.address)).to.equal(
         0
@@ -387,13 +398,13 @@ describe("AuctionDepositVault", () => {
       await expect(
         auctionDepositVault
           .connect(entryPointSigner)
-          .takeBid(user1.address, toPeb(40))
+          .takeBid(user1.address, toPeb(120))
       )
         .to.emit(auctionDepositVault, "InsufficientBalance")
-        .withArgs(user1.address, toPeb(30), toPeb(40));
+        .withArgs(user1.address, toPeb(110), toPeb(120));
 
       expect(await auctionDepositVault.depositBalances(user1.address)).to.equal(
-        toPeb(30)
+        toPeb(110)
       );
       expect(await auctionFeeVault.accumulatedBids()).to.equal(toPeb(0));
     });
@@ -413,7 +424,7 @@ describe("AuctionDepositVault", () => {
         .withArgs(user1.address, toPeb(30));
 
       expect(await auctionDepositVault.depositBalances(user1.address)).to.equal(
-        toPeb(30)
+        toPeb(110)
       );
       expect(await auctionDepositVault.getDepositAddrs(0, 1)).to.deep.equal([
         user1.address,
@@ -448,7 +459,7 @@ describe("AuctionDepositVault", () => {
       );
 
       expect(await auctionDepositVault.depositBalances(user1.address)).to.equal(
-        parseEther("30").sub(gasAmount)
+        parseEther("110").sub(gasAmount)
       );
     });
   });
@@ -459,9 +470,9 @@ describe("AuctionDepositVault", () => {
 
       const { auctionDepositVault, user1, user2, user3 } = fixture;
 
-      await auctionDepositVault.connect(user1).deposit({ value: toPeb(20) });
-      await auctionDepositVault.connect(user2).deposit({ value: toPeb(30) });
-      await auctionDepositVault.connect(user3).deposit({ value: toPeb(40) });
+      await auctionDepositVault.connect(user1).deposit({ value: toPeb(110) });
+      await auctionDepositVault.connect(user2).deposit({ value: toPeb(120) });
+      await auctionDepositVault.connect(user3).deposit({ value: toPeb(130) });
     });
     it("#getDepositAddrsLength: success", async () => {
       const { auctionDepositVault } = fixture;
@@ -476,6 +487,13 @@ describe("AuctionDepositVault", () => {
         fixture.user2.address,
         fixture.user3.address,
       ]);
+    });
+    it("#getDepositAddrs: invalid range", async () => {
+      const { auctionDepositVault } = fixture;
+
+      await expect(
+        auctionDepositVault.getDepositAddrs(3, 0)
+      ).to.be.revertedWithCustomError(auctionDepositVault, "InvalidRange");
     });
     it("#isMinDepositOver: success", async () => {
       const { auctionDepositVault, user1 } = fixture;
@@ -511,7 +529,7 @@ describe("AuctionDepositVault", () => {
         await auctionDepositVault.getAllAddrsOverMinDeposit(0, 0)
       ).to.deep.equal([
         [user1.address, user2.address, user3.address],
-        [toPeb(20), toPeb(30), toPeb(40)],
+        [toPeb(110), toPeb(120), toPeb(130)],
         [0, 0, 0],
       ]);
 
@@ -523,9 +541,16 @@ describe("AuctionDepositVault", () => {
         await auctionDepositVault.getAllAddrsOverMinDeposit(0, 0)
       ).to.deep.equal([
         [user3.address, user2.address],
-        [toPeb(40), toPeb(30)],
+        [toPeb(130), toPeb(120)],
         [0, 0],
       ]);
+    });
+    it("#getAllAddrsOverMinDeposit: invalid range", async () => {
+      const { auctionDepositVault } = fixture;
+
+      await expect(
+        auctionDepositVault.getAllAddrsOverMinDeposit(3, 0)
+      ).to.be.revertedWithCustomError(auctionDepositVault, "InvalidRange");
     });
   });
 });

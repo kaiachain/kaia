@@ -46,9 +46,9 @@ const (
 )
 
 var (
-	hashT    = reflect.TypeOf(Hash{})
-	extHashT = reflect.TypeOf(ExtHash{})
-	addressT = reflect.TypeOf(Address{})
+	hashT    = reflect.TypeFor[Hash]()
+	extHashT = reflect.TypeFor[ExtHash]()
+	addressT = reflect.TypeFor[Address]()
 
 	// MaxHash represents the maximum possible hash value.
 	MaxHash = HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")

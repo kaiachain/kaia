@@ -39,8 +39,6 @@ import (
 
 const (
 	Engine_IBFT int = iota
-	Engine_Clique
-	Engine_Gxhash
 )
 
 var EngineType = Engine_IBFT
@@ -128,7 +126,7 @@ func (h *Header) HashNoNonce() common.Hash {
 // Size returns the approximate memory used by all internal contents. It is used
 // to approximate and limit the memory consumption of various caches.
 func (h *Header) Size() common.StorageSize {
-	constantSize := common.StorageSize(reflect.TypeOf(Header{}).Size())
+	constantSize := common.StorageSize(reflect.TypeFor[Header]().Size())
 	byteSize := common.StorageSize(len(h.Extra) + len(h.Governance) + len(h.Vote) + len(h.RandomReveal) + len(h.MixHash))
 	bigIntSize := common.StorageSize((h.BlockScore.BitLen() + h.Number.BitLen() + h.Time.BitLen()) / 8)
 	if h.BaseFee != nil {

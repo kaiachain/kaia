@@ -137,8 +137,8 @@ func TestBridgeManager(t *testing.T) {
 	config := &SCConfig{}
 	config.DataDir = tempDir
 	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = big.NewInt(0)
-	bacc.cAccount.chainID = big.NewInt(0)
+	bacc.pAccount.chainID = params.TestChainConfig.ChainID
+	bacc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	pAuth := bacc.cAccount.GenerateTransactOpts()
 	cAuth := bacc.pAccount.GenerateTransactOpts()
@@ -366,8 +366,8 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	config := &SCConfig{}
 	config.DataDir = tempDir
 	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = big.NewInt(0)
-	bacc.cAccount.chainID = big.NewInt(0)
+	bacc.pAccount.chainID = params.TestChainConfig.ChainID
+	bacc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	// pAuth := bacc.cAccount.GenerateTransactOpts()
 	cAuth := bacc.pAccount.GenerateTransactOpts()
@@ -545,8 +545,8 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	config := &SCConfig{}
 	config.DataDir = tempDir
 	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = big.NewInt(0)
-	bacc.cAccount.chainID = big.NewInt(0)
+	bacc.pAccount.chainID = params.TestChainConfig.ChainID
+	bacc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	pAuth := bacc.cAccount.GenerateTransactOpts()
 	cAuth := bacc.pAccount.GenerateTransactOpts()
@@ -949,8 +949,8 @@ func TestBasicJournal(t *testing.T) {
 	config.VTRecovery = true
 
 	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = big.NewInt(0)
-	bacc.cAccount.chainID = big.NewInt(0)
+	bacc.pAccount.chainID = params.TestChainConfig.ChainID
+	bacc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:             {Balance: big.NewInt(params.KAIA)},
@@ -1030,8 +1030,8 @@ func TestMethodRestoreBridges(t *testing.T) {
 	config.VTRecoveryInterval = 60
 
 	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = big.NewInt(0)
-	bacc.cAccount.chainID = big.NewInt(0)
+	bacc.pAccount.chainID = params.TestChainConfig.ChainID
+	bacc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:             {Balance: big.NewInt(params.KAIA)},
@@ -1255,8 +1255,8 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	config.VTRecovery = true
 
 	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = big.NewInt(0)
-	bacc.cAccount.chainID = big.NewInt(0)
+	bacc.pAccount.chainID = params.TestChainConfig.ChainID
+	bacc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:             {Balance: big.NewInt(params.KAIA)},
@@ -1322,8 +1322,8 @@ func TestScenarioSubUnsub(t *testing.T) {
 	config.VTRecovery = true
 
 	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = big.NewInt(0)
-	bacc.cAccount.chainID = big.NewInt(0)
+	bacc.pAccount.chainID = params.TestChainConfig.ChainID
+	bacc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:             {Balance: big.NewInt(params.KAIA)},
@@ -1428,8 +1428,8 @@ func TestErrorDupSubscription(t *testing.T) {
 	config.VTRecovery = true
 
 	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = big.NewInt(0)
-	bacc.cAccount.chainID = big.NewInt(0)
+	bacc.pAccount.chainID = params.TestChainConfig.ChainID
+	bacc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:             {Balance: big.NewInt(params.KAIA)},
@@ -1666,8 +1666,8 @@ func generateAnchoringEnv(t *testing.T, tempDir string) (*backends.SimulatedBack
 	}
 	am := accounts.NewManager(back...)
 	bAcc, _ := NewBridgeAccounts(am, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bAcc.pAccount.chainID = big.NewInt(0)
-	bAcc.cAccount.chainID = big.NewInt(0)
+	bAcc.pAccount.chainID = params.TestChainConfig.ChainID
+	bAcc.cAccount.chainID = params.TestChainConfig.ChainID
 	parentOperator := bAcc.pAccount
 
 	aliceKey, _ := crypto.GenerateKey()
@@ -1684,7 +1684,7 @@ func generateAnchoringEnv(t *testing.T, tempDir string) (*backends.SimulatedBack
 		feePayer.Address:       {Balance: initBal},
 		parentOperator.address: {Balance: initBal},
 	}
-	sim := backends.NewSimulatedBackendWithGasPrice(alloc, params.DefaultUnitPrice)
+	sim := backends.NewSimulatedBackend(alloc)
 
 	sc := &SubBridge{
 		config:         config,
@@ -1749,8 +1749,8 @@ func TestAnchoringStart(t *testing.T) {
 	config.VTRecovery = true
 
 	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bAcc.pAccount.chainID = big.NewInt(0)
-	bAcc.cAccount.chainID = big.NewInt(0)
+	bAcc.pAccount.chainID = params.TestChainConfig.ChainID
+	bAcc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	alloc := blockchain.GenesisAlloc{}
 	sim := backends.NewSimulatedBackend(alloc)
@@ -1832,8 +1832,8 @@ func TestAnchoringPeriod(t *testing.T) {
 	config.VTRecovery = true
 
 	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bAcc.pAccount.chainID = big.NewInt(0)
-	bAcc.cAccount.chainID = big.NewInt(0)
+	bAcc.pAccount.chainID = params.TestChainConfig.ChainID
+	bAcc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	alloc := blockchain.GenesisAlloc{}
 	sim := backends.NewSimulatedBackend(alloc)
@@ -1956,8 +1956,8 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	config.VTRecovery = true
 
 	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bAcc.pAccount.chainID = big.NewInt(0)
-	bAcc.cAccount.chainID = big.NewInt(0)
+	bAcc.pAccount.chainID = params.TestChainConfig.ChainID
+	bAcc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	alloc := blockchain.GenesisAlloc{}
 	sim := backends.NewSimulatedBackend(alloc)
@@ -2020,8 +2020,8 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	config.DataDir = tempDir
 
 	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = big.NewInt(0)
-	bacc.cAccount.chainID = big.NewInt(0)
+	bacc.pAccount.chainID = params.TestChainConfig.ChainID
+	bacc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	alloc := blockchain.GenesisAlloc{
 		alice.From:            {Balance: big.NewInt(params.KAIA)},
@@ -2484,8 +2484,8 @@ func TestBridgeAddressType(t *testing.T) {
 	config := &SCConfig{}
 	config.DataDir = tempDir
 	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = big.NewInt(0)
-	bacc.cAccount.chainID = big.NewInt(0)
+	bacc.pAccount.chainID = params.TestChainConfig.ChainID
+	bacc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	// Create Simulated backend
 	alloc := blockchain.GenesisAlloc{
@@ -2674,8 +2674,8 @@ func TestGetBridgeContractBalance(t *testing.T) {
 	config := &SCConfig{}
 	config.DataDir = tempDir
 	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = big.NewInt(0)
-	bacc.cAccount.chainID = big.NewInt(0)
+	bacc.pAccount.chainID = params.TestChainConfig.ChainID
+	bacc.cAccount.chainID = params.TestChainConfig.ChainID
 
 	// Create Simulated backend
 	alloc := blockchain.GenesisAlloc{

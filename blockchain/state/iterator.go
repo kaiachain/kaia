@@ -126,7 +126,8 @@ func (it *NodeIterator) step() error {
 	obj := serializer.GetAccount()
 
 	if pa := account.GetProgramAccount(obj); pa != nil {
-		dataTrie, err := it.state.db.OpenStorageTrie(pa.GetStorageRoot(), nil)
+		// TODO-FlatTrie: Determine the account's address from the LeafKey.
+		dataTrie, err := it.state.db.OpenStorageTrie(common.Address{}, pa.GetStorageRoot(), nil)
 		if err != nil {
 			return err
 		}
