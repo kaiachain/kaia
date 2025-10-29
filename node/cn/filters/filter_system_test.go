@@ -528,7 +528,7 @@ func TestLogFilter(t *testing.T) {
 	// raise events
 	time.Sleep(1 * time.Second)
 	if nsend := logsFeed.Send(allLogs); nsend == 0 {
-		t.Fatal("Shoud have at least one subscription")
+		t.Fatal("Should have at least one subscription")
 	}
 
 	// set pending logs
