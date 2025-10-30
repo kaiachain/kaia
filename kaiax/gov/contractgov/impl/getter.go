@@ -63,7 +63,52 @@ func (c *contractGovModule) contractGetAllParamsAtFromAddr(blockNum uint64, addr
 		return nil, ErrNotReady
 	}
 
-	caller := backends.NewBlockchainContractBackend(chain, nil, nil)
+	var (
+		// Get storage root for this contract at the parent block
+		storageRoot = c.getParentStorageRootHash(blockNum, addr)
+
+		// Create composite cache key: contract address + storage root (64 bytes)
+		cacheKey [64]byte
+	)
+
+	addrHash := addr.Hash()
+	copy(cacheKey[:32], addrHash.Bytes())
+	copy(cacheKey[32:], storageRoot.Bytes())
+
+	if !common.EmptyHash(storageRoot) {
+		// Try to get from cache first
+		c.cacheMutex.RLock()
+		if cached, exists := c.paramSetCache.Get(cacheKey); exists {
+			c.cacheMutex.RUnlock()
+			// Cache hit
+			cacheHits.Inc(1)
+			return cached, nil
+		}
+		c.cacheMutex.RUnlock()
+
+		// Cache miss
+		cacheMisses.Inc(1)
+	}
+
+	// compute the result
+	result, err := c.computeContractParams(blockNum, addr)
+	if err != nil {
+		return nil, err
+	}
+
+	if !common.EmptyHash(storageRoot) {
+		// Store in cache
+		c.cacheMutex.Lock()
+		c.paramSetCache.Add(cacheKey, result)
+		c.cacheMutex.Unlock()
+	}
+
+	return result, nil
+}
+
+// computeContractParams computes the contract parameters without caching
+func (c *contractGovModule) computeContractParams(blockNum uint64, addr common.Address) (gov.PartialParamSet, error) {
+	caller := backends.NewBlockchainContractBackend(c.Chain, nil, nil)
 	contract, err := govcontract.NewGovParamCaller(addr, caller)
 	if err != nil {
 		return nil, err
@@ -87,6 +132,26 @@ func (c *contractGovModule) contractGetAllParamsAtFromAddr(blockNum uint64, addr
 func (c *contractGovModule) contractAddrAt(blockNum uint64) (common.Address, error) {
 	headerParams := c.Hgm.GetParamSet(blockNum)
 	return headerParams.GovParamContract, nil
+}
+
+// getParentStorageRootHash computes the storage root for the ContractGov contract at the parent block
+func (c *contractGovModule) getParentStorageRootHash(blockNum uint64, contractAddr common.Address) common.Hash {
+	if blockNum == 0 {
+		return common.Hash{}
+	}
+
+	parent := c.Chain.GetHeaderByNumber(blockNum - 1)
+	if parent == nil {
+		return common.Hash{}
+	}
+
+	state, err := c.Chain.StateAt(parent.Root)
+	if err != nil {
+		return common.Hash{}
+	}
+
+	// Get the storage root for the specific contract
+	return state.GetStorageRoot(contractAddr)
 }
 
 func ParseContractCall(names []string, values [][]byte) gov.PartialParamSet {
