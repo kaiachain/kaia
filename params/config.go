@@ -61,6 +61,7 @@ var (
 			Owner: common.HexToAddress("0x04992a2B7E7CE809d409adE32185D49A96AAa32d"),
 		},
 		PragueCompatibleBlock: big.NewInt(190670000),
+		OsakaCompatibleBlock:  nil, // TODO-kaia-osaka: set Mainnet's OsakaCompatibleBlock
 		Kip103CompatibleBlock: big.NewInt(119750400),
 		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		Kip160CompatibleBlock: big.NewInt(162900480),
@@ -107,6 +108,7 @@ var (
 			Owner: common.HexToAddress("0x04992a2B7E7CE809d409adE32185D49A96AAa32d"),
 		},
 		PragueCompatibleBlock: big.NewInt(187930000),
+		OsakaCompatibleBlock:  nil, // TODO-kaia-osaka: set Kairos' OsakaCompatibleBlock
 		Kip103CompatibleBlock: big.NewInt(119145600),
 		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		Kip160CompatibleBlock: big.NewInt(156660000),
@@ -239,6 +241,7 @@ type ChainConfig struct {
 	CancunCompatibleBlock    *big.Int `json:"cancunCompatibleBlock,omitempty"`    // CancunCompatible switch block (nil = no fork, 0 already on Cancun)
 	KaiaCompatibleBlock      *big.Int `json:"kaiaCompatibleBlock,omitempty"`      // KaiaCompatible switch block (nil = no fork, 0 already on Kaia)
 	PragueCompatibleBlock    *big.Int `json:"pragueCompatibleBlock,omitempty"`    // PragueCompatible switch block (nil = no fork)
+	OsakaCompatibleBlock     *big.Int `json:"osakaCompatibleBlock,omitempty"`     // OsakaCompatible switch block (nil = no fork)
 
 	// Kip103 is a special purpose hardfork feature that can be executed only once
 	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
@@ -349,6 +352,13 @@ func (c *IstanbulConfig) String() string {
 	return "istanbul"
 }
 
+// TODO-Kaia Add BlobConfig
+type BlobConfig struct{}
+
+func (c *ChainConfig) BlobConfig(head uint64) *BlobConfig {
+	return nil
+}
+
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}
@@ -359,49 +369,46 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 
-	kip103 := fmt.Sprintf("KIP103CompatibleBlock: %v KIP103ContractAddress %s", c.Kip103CompatibleBlock, c.Kip103ContractAddress.String())
-	kip160 := fmt.Sprintf("KIP160CompatibleBlock: %v KIP160ContractAddress %s", c.Kip160CompatibleBlock, c.Kip160ContractAddress.String())
-
+	kip103 := fmt.Sprintf(" KIP103CompatibleBlock: %v KIP103ContractAddress %s", c.Kip103CompatibleBlock, c.Kip103ContractAddress.String())
+	kip160 := fmt.Sprintf(" KIP160CompatibleBlock: %v KIP160ContractAddress %s", c.Kip160CompatibleBlock, c.Kip160ContractAddress.String())
+	var subGroupSize string = ""
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v KaiaCompatibleBlock: %v RandaoCompatibleBlock: %v PragueCompatibleBlock: %v %s %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
-			c.ChainID,
-			c.IstanbulCompatibleBlock,
-			c.LondonCompatibleBlock,
-			c.EthTxTypeCompatibleBlock,
-			c.MagmaCompatibleBlock,
-			c.KoreCompatibleBlock,
-			c.ShanghaiCompatibleBlock,
-			c.CancunCompatibleBlock,
-			c.KaiaCompatibleBlock,
-			c.RandaoCompatibleBlock,
-			c.PragueCompatibleBlock,
-			kip103,
-			kip160,
-			c.Istanbul.SubGroupSize,
-			c.UnitPrice,
-			c.DeriveShaImpl,
-			engine,
-		)
-	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v KaiaCompatibleBlock: %v RandaoCompatibleBlock: %v PragueCompatibleBlock: %v %s %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
-			c.ChainID,
-			c.IstanbulCompatibleBlock,
-			c.LondonCompatibleBlock,
-			c.EthTxTypeCompatibleBlock,
-			c.MagmaCompatibleBlock,
-			c.KoreCompatibleBlock,
-			c.ShanghaiCompatibleBlock,
-			c.CancunCompatibleBlock,
-			c.KaiaCompatibleBlock,
-			c.RandaoCompatibleBlock,
-			c.PragueCompatibleBlock,
-			kip103,
-			kip160,
-			c.UnitPrice,
-			c.DeriveShaImpl,
-			engine,
-		)
+		subGroupSize = fmt.Sprintf(" SubGroupSize: %d", c.Istanbul.SubGroupSize)
 	}
+
+	return fmt.Sprintf("{ChainID: %v"+
+		" IstanbulCompatibleBlock: %v"+
+		" LondonCompatibleBlock: %v"+
+		" EthTxTypeCompatibleBlock: %v"+
+		" MagmaCompatibleBlock: %v"+
+		" KoreCompatibleBlock: %v"+
+		" ShanghaiCompatibleBlock: %v"+
+		" CancunCompatibleBlock: %v"+
+		" KaiaCompatibleBlock: %v"+
+		" RandaoCompatibleBlock: %v"+
+		" PragueCompatibleBlock: %v"+
+		" OsakaCompatibleBlock: %v"+
+		"%s%s%s"+
+		" UnitPrice: %d"+
+		" DeriveShaImpl: %d"+
+		" Engine: %v}",
+		c.ChainID,
+		c.IstanbulCompatibleBlock,
+		c.LondonCompatibleBlock,
+		c.EthTxTypeCompatibleBlock,
+		c.MagmaCompatibleBlock,
+		c.KoreCompatibleBlock,
+		c.ShanghaiCompatibleBlock,
+		c.CancunCompatibleBlock,
+		c.KaiaCompatibleBlock,
+		c.RandaoCompatibleBlock,
+		c.PragueCompatibleBlock,
+		c.OsakaCompatibleBlock,
+		kip103, kip160, subGroupSize,
+		c.UnitPrice,
+		c.DeriveShaImpl,
+		engine,
+	)
 }
 
 func (c *ChainConfig) Copy() *ChainConfig {
@@ -451,6 +458,16 @@ func (c *ChainConfig) IsKaiaForkEnabled(num *big.Int) bool {
 	return isForked(c.KaiaCompatibleBlock, num)
 }
 
+// IsKip103ForkEnabled returns whether num is either equal to the kip103 block or greater.
+func (c *ChainConfig) IsKip103ForkEnabled(num *big.Int) bool {
+	return isForked(c.Kip103CompatibleBlock, num)
+}
+
+// IsKip160ForkEnabled returns whether num is either equal to the kip160 block or greater.
+func (c *ChainConfig) IsKip160ForkEnabled(num *big.Int) bool {
+	return isForked(c.Kip160CompatibleBlock, num)
+}
+
 // IsRandaoForkEnabled returns whether num is either equal to the randao block or greater.
 func (c *ChainConfig) IsRandaoForkEnabled(num *big.Int) bool {
 	return isForked(c.RandaoCompatibleBlock, num)
@@ -459,6 +476,11 @@ func (c *ChainConfig) IsRandaoForkEnabled(num *big.Int) bool {
 // IsPragueForkEnabled returns whether num is either equal to the prague block or greater.
 func (c *ChainConfig) IsPragueForkEnabled(num *big.Int) bool {
 	return isForked(c.PragueCompatibleBlock, num)
+}
+
+// IsOsakaForkEnabled returns whether num is either equal to the osaka block or greater.
+func (c *ChainConfig) IsOsakaForkEnabled(num *big.Int) bool {
+	return isForked(c.OsakaCompatibleBlock, num)
 }
 
 // IsKIP103ForkBlock returns whether num is equal to the kip103 block.
@@ -524,6 +546,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "randaoBlock", block: c.RandaoCompatibleBlock, optional: true},
 		{name: "kaiaBlock", block: c.KaiaCompatibleBlock},
 		{name: "pragueBlock", block: c.PragueCompatibleBlock},
+		{name: "osakaBlock", block: c.OsakaCompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -578,6 +601,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	}
 	if isForkIncompatible(c.PragueCompatibleBlock, newcfg.PragueCompatibleBlock, head) {
 		return newCompatError("Prague Block", c.PragueCompatibleBlock, newcfg.PragueCompatibleBlock)
+	}
+	if isForkIncompatible(c.OsakaCompatibleBlock, newcfg.OsakaCompatibleBlock, head) {
+		return newCompatError("Osaka Block", c.OsakaCompatibleBlock, newcfg.OsakaCompatibleBlock)
 	}
 	return nil
 }
@@ -718,6 +744,7 @@ type Rules struct {
 	IsKaia      bool
 	IsRandao    bool
 	IsPrague    bool
+	IsOsaka     bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -738,6 +765,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		IsKaia:      c.IsKaiaForkEnabled(num),
 		IsRandao:    c.IsRandaoForkEnabled(num),
 		IsPrague:    c.IsPragueForkEnabled(num),
+		IsOsaka:     c.IsOsakaForkEnabled(num),
 	}
 }
 

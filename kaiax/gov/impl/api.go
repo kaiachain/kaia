@@ -107,6 +107,7 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 	config.Kip160ContractAddress = latestConfig.Kip160ContractAddress
 	config.RandaoCompatibleBlock = latestConfig.RandaoCompatibleBlock
 	config.PragueCompatibleBlock = latestConfig.PragueCompatibleBlock
+	config.OsakaCompatibleBlock = latestConfig.OsakaCompatibleBlock
 	return config
 }
 

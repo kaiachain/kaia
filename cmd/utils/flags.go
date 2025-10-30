@@ -133,6 +133,12 @@ var (
 		EnvVars:  []string{"KLAYTN_KEYSTORE", "KAIA_KEYSTORE"},
 		Category: "ACCOUNT",
 	}
+	KeyStoreV3Flag = &cli.BoolFlag{
+		Name:     "v3",
+		Usage:    "Create v3 keystore instead of the default v4 for new account",
+		EnvVars:  []string{"KLAYTN_KEYSTORE_V3", "KAIA_KEYSTORE_V3"},
+		Category: "ACCOUNT",
+	}
 	// TODO-Kaia-Bootnode: redefine networkid
 	NetworkIdFlag = &cli.Uint64Flag{
 		Name:     "networkid",

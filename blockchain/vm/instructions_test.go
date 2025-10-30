@@ -423,7 +423,7 @@ func opBenchmark(bench *testing.B, op func(pc *uint64, evm *EVMInterpreter, scop
 		}
 
 		blockCtx = BlockContext{
-			BlockNumber: big1024,
+			BlockNumber: big.NewInt(1024),
 			BlockScore:  big.NewInt(0),
 			Coinbase:    common.HexToAddress("0xf4b0cb429b7d341bf467f2d51c09b64cd9add37c"),
 			BaseFee:     big.NewInt(1000000000000000000),
@@ -1665,6 +1665,46 @@ func TestOpMCopy(t *testing.T) {
 		wantGas := tc.wantGas
 		if haveGas != wantGas {
 			t.Errorf("case %d: gas wrong, want %d have %d\n", i, wantGas, haveGas)
+		}
+	}
+}
+
+func TestOpCLZ(t *testing.T) {
+	evm := NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, &Config{})
+
+	tests := []struct {
+		inputHex string
+		want     uint64 // expected CLZ result
+	}{
+		{"0x0", 256},
+		{"0x1", 255},
+		{"0x6ff", 245},        // 0x6ff = 0b11011111111 (11 bits), so 256-11 = 245
+		{"0xffffffffff", 216}, // 40 bits, so 256-40 = 216
+		{"0x4000000000000000000000000000000000000000000000000000000000000000", 1},
+		{"0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 1},
+		{"0x8000000000000000000000000000000000000000000000000000000000000000", 0},
+		{"0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 0},
+	}
+	for _, tc := range tests {
+		// prepare a fresh stack and PC
+		stack := newstack()
+		pc := uint64(0)
+
+		// parse input
+		val := new(uint256.Int)
+		if err := val.SetFromHex(tc.inputHex); err != nil {
+			t.Fatal("invalid hex uint256:", tc.inputHex)
+		}
+
+		stack.push(val)
+		opCLZ(&pc, evm.interpreter, &ScopeContext{Stack: stack})
+
+		if gotLen := stack.len(); gotLen != 1 {
+			t.Fatalf("stack length = %d; want 1", gotLen)
+		}
+		result := stack.pop()
+		if got := result.Uint64(); got != tc.want {
+			t.Fatalf("clz(%q) = %d; want %d", tc.inputHex, got, tc.want)
 		}
 	}
 }

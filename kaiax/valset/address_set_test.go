@@ -17,7 +17,9 @@
 package valset
 
 import (
+	"fmt"
 	"math/big"
+	"sync"
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
@@ -126,5 +128,50 @@ func TestHashToSeed(t *testing.T) {
 	for _, tc := range testcases {
 		assert.Equal(t, tc.seedLegacy, HashToSeedLegacy(tc.hash))
 		assert.Equal(t, tc.seed, HashToSeed(tc.hash.Bytes()))
+	}
+}
+
+func TestAddressHexCache(t *testing.T) {
+	addr := common.HexToAddress("0x1234567890abcdef1234567890abcdef12345678")
+
+	// Test that cache returns correct hex strings
+	got := hexCache.Get(addr)
+	want := addr.String()
+	assert.Equal(t, want, got)
+
+	// Test cache hit consistency
+	gotAgain := hexCache.Get(addr)
+	assert.Equal(t, want, gotAgain)
+
+	// Test cache concurrency safety
+	addrs := []common.Address{
+		common.HexToAddress("0x1"), common.HexToAddress("0x2"),
+		common.HexToAddress("0x3"), common.HexToAddress("0x4"),
+	}
+
+	var wg sync.WaitGroup
+	errCh := make(chan error, 100)
+
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 100; j++ {
+				addr := addrs[(id+j)%len(addrs)]
+				got := hexCache.Get(addr)
+				want := addr.String()
+				if got != want {
+					errCh <- fmt.Errorf("goroutine %d: expected %s, got %s", id, want, got)
+					return
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		t.Error(err)
 	}
 }

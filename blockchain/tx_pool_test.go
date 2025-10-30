@@ -461,6 +461,14 @@ func TestInvalidTransactions(t *testing.T) {
 	if err := pool.AddLocal(tx); err != ErrGasPriceBelowBaseFee {
 		t.Error("expected", ErrInvalidUnitPrice, "got", err)
 	}
+
+	// Test EIP-2681 nonce max value check
+	testSetNonce(pool, from, 0)
+	testAddBalance(pool, from, big.NewInt(0xffffffffffffff))
+	tx = pricedTransaction(^uint64(0), 100000, new(big.Int).SetUint64(pool.gasPrice.Uint64()), key) // nonce = 2^64-1 (max uint64)
+	if err := pool.AddRemote(tx); err != ErrNonceMax {
+		t.Error("expected", ErrNonceMax, "got", err)
+	}
 }
 
 func TestInvalidTransactionsMagma(t *testing.T) {
@@ -3170,5 +3178,41 @@ func benchmarkPoolBatchInsert(b *testing.B, size int) {
 	b.ResetTimer()
 	for _, batch := range batches {
 		pool.AddRemotes(batch)
+	}
+}
+
+// TestEIP2681NonceMaxValue tests the EIP-2681 nonce max value validation
+func TestEIP2681NonceMaxValue(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPool()
+	defer pool.Stop()
+
+	from := crypto.PubkeyToAddress(key.PublicKey)
+	testAddBalance(pool, from, big.NewInt(1000000000000000)) // 1 KAIA
+
+	testcases := []struct {
+		name          string
+		nonce         uint64
+		expectedError error
+	}{
+		// Test case 1: nonce = 2^64-1 (max uint64) should be rejected
+		{"MaxNonceRejected", ^uint64(0), ErrNonceMax},
+		// Test case 2: nonce = 2^64-2 should be accepted (just before max)
+		{"MaxNonceMinusOneAccepted", ^uint64(0) - 1, nil},
+		// Test case 3: nonce = 0 should be accepted (normal case)
+		{"ZeroNonceAccepted", 0, nil},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			testSetNonce(pool, from, 0)
+			tx := transaction(tc.nonce, 100000, key)
+			err := pool.AddRemote(tx)
+			assert.Equal(t, tc.expectedError, err)
+			if err == nil {
+				// clean up
+				pool.removeTx(tx.Hash(), false)
+			}
+		})
 	}
 }

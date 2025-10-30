@@ -92,21 +92,25 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	// TODO-Kaia: should remove these skip
 	// executing precompiled contracts with value transferring is not permitted
 	st.skipLoad(`^frontier\/opcodes\/all_opcodes\/all_opcodes.json`)
+	// "to" is address_0x0000000000000000000000000000000000000005: insertion error because precompiled contract address validation in TxInternalData#Validate
+	// https://github.com/kaiachain/kaia/blob/d44ae2f4269a84bd379b4e992d8e3be46b7e5ad3/blockchain/types/tx_internal_data_legacy.go#L365
+	st.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/call_to_precompile_in_pointer_context.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_call_to_precompile_in_pointer_context\[fork_Osaka-precompile_0x0000000000000000000000000000000000000005-`)
 
 	// tests to skip
 	// unsupported EIPs
 	st.skipLoad(`^cancun\/eip4788_beacon_root\/`)
 	st.skipLoad(`^cancun\/eip4844_blobs\/`)
-	// different amount of gas is consumed because 0x0b contract is added to access list by ActivePrecompiles although Cancun doesn't have it as a precompiled contract
-	st.skipLoad(`^frontier\/precompiles\/precompiles\/precompiles.json\/tests\/frontier\/precompiles\/test_precompiles.py::test_precompiles\[fork_Cancun-address_0xb-precompile_exists_False-state_test\]`)
-	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-31_bytes\]`)
-	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-32_bytes\]`)
-	st.skipLoad(`^frontier\/precompiles\/precompile_absence\/precompile_absence.json\/tests\/frontier\/precompiles\/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-state_test-empty_calldata\]`)
-	st.skipLoad(`^prague\/eip2537_bls_12_381_precompiles\/bls12_precompiles_before_fork\/precompile_before_fork.json\/tests\/prague\/eip2537_bls_12_381_precompiles\/test_bls12_precompiles_before_fork.py::test_precompile_before_fork\[fork_Cancun-state_test--G1ADD\]`)
 	// type 3 tx (EIP-4844) is not supported
 	st.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
+	st.skipLoad(`^istanbul\/eip1344_chainid\/chainid\/chainid.json\/tests\/istanbul\/eip1344_chainid\/test_chainid.py::test_chainid\[fork_Osaka-typed_transaction_3-state_test\]`)
 	// EIP-3607 is not implemented because Kaia can't reject the TxFromSenderEOA since Kaia have a contract code at the zero address and people usually use from == 0x0 to call the view function
 	st.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/set_code_from_account_with_non_delegating_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_set_code_from_account_with_non_delegating_code`)
+
+	// TODO: Skip EIP tests that are not yet supported; expect to remove them
+	st.skipLoad(`osaka/eip7594_peerdas`)
+	st.skipLoad(`osaka/eip7825_transaction_gas_limit_cap`)
+	// TODO: Investigate after all Osaka EIPs are applied
+	st.skipLoad(`^frontier\/identity_precompile\/identity\/call_identity_precompile.json\/tests\/frontier\/identity_precompile\/test_identity.py::test_call_identity_precompile\[fork_Osaka-state_test-identity_1_nonzerovalue-call_type_CALL\]`)
 
 	st.walk(t, executionSpecStateTestDir, func(t *testing.T, name string, test *StateTest) {
 		execStateTest(t, st, test, name, []string{
@@ -125,6 +129,7 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 			"Shanghai",
 			// "Cancun",
 			// "Prague",
+			// "Osaka",
 		}, true)
 	})
 }

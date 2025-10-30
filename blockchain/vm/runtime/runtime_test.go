@@ -223,6 +223,21 @@ type dummyChain struct {
 	counter int
 }
 
+// Config retrieves the blockchain's chain configuration.
+func (d *dummyChain) Config() *params.ChainConfig {
+	return &params.ChainConfig{}
+}
+
+// CurrentHeader retrieves the current header from the local chain.
+func (d *dummyChain) CurrentHeader() *types.Header {
+	return fakeHeader(1000, common.Hash{})
+}
+
+// CurrentBlock retrieves the current block from the local chain.
+func (d *dummyChain) CurrentBlock() *types.Block {
+	return nil
+}
+
 // Engine retrieves the chain's consensus engine.
 func (d *dummyChain) Engine() consensus.Engine {
 	return nil
@@ -238,6 +253,31 @@ func (d *dummyChain) GetHeader(h common.Hash, n uint64) *types.Header {
 	// parentHash := common.Hash{byte(n - 1)}
 	// fmt.Printf("GetHeader(%x, %d) => header with parent %x\n", h, n, parentHash)
 	return fakeHeader(n, parentHash)
+}
+
+// GetHeaderByNumber retrieves a block header from the database by number.
+func (d *dummyChain) GetHeaderByNumber(number uint64) *types.Header {
+	return fakeHeader(number, common.Hash{})
+}
+
+// GetHeaderByHash retrieves a block header from the database by its hash.
+func (d *dummyChain) GetHeaderByHash(hash common.Hash) *types.Header {
+	return nil
+}
+
+// GetBlock retrieves a block from the database by hash and number.
+func (d *dummyChain) GetBlock(hash common.Hash, number uint64) *types.Block {
+	return nil
+}
+
+// State retrieves statedb
+func (d *dummyChain) State() (*state.StateDB, error) {
+	return nil, nil
+}
+
+// StateAt retrieves statedb on a particular point in time
+func (d *dummyChain) StateAt(root common.Hash) (*state.StateDB, error) {
+	return nil, nil
 }
 
 // TestBlockhash tests the blockhash operation. It's a bit special, since it internally

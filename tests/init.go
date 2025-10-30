@@ -114,6 +114,21 @@ var Forks = map[string]*params.ChainConfig{
 		Kip160CompatibleBlock:    new(big.Int),
 		PragueCompatibleBlock:    new(big.Int),
 	},
+	"Osaka": {
+		ChainID:                  big.NewInt(1),
+		IstanbulCompatibleBlock:  new(big.Int),
+		LondonCompatibleBlock:    new(big.Int),
+		EthTxTypeCompatibleBlock: new(big.Int),
+		MagmaCompatibleBlock:     new(big.Int),
+		KoreCompatibleBlock:      new(big.Int),
+		Kip103CompatibleBlock:    new(big.Int),
+		ShanghaiCompatibleBlock:  new(big.Int),
+		CancunCompatibleBlock:    new(big.Int),
+		KaiaCompatibleBlock:      new(big.Int),
+		Kip160CompatibleBlock:    new(big.Int),
+		PragueCompatibleBlock:    new(big.Int),
+		OsakaCompatibleBlock:     new(big.Int),
+	},
 }
 
 // UnsupportedForkError is returned when a test requests a fork that isn't implemented.
@@ -133,6 +148,8 @@ func isPrecompiledContractAddressForEthTest(addr common.Address, rules interface
 	}
 	var activePrecompiles []common.Address
 	switch {
+	case r.IsOsaka:
+		activePrecompiles = vm.PrecompiledAddressOsaka
 	case r.IsPrague:
 		activePrecompiles = vm.PrecompiledAddressPrague
 	case r.IsCancun:

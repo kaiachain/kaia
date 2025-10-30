@@ -29,7 +29,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -40,7 +39,6 @@ import (
 type StateProcessor struct {
 	config *params.ChainConfig // Chain configuration options
 	bc     *BlockChain         // Canonical block chain
-	engine consensus.Engine    // Consensus engine used for block rewards
 }
 
 // ProcessStats includes the time statistics regarding StateProcessor.Process.
@@ -51,11 +49,10 @@ type ProcessStats struct {
 }
 
 // NewStateProcessor initialises a new StateProcessor.
-func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consensus.Engine) *StateProcessor {
+func NewStateProcessor(config *params.ChainConfig, bc *BlockChain) *StateProcessor {
 	return &StateProcessor{
 		config: config,
 		bc:     bc,
-		engine: engine,
 	}
 }
 
@@ -75,7 +72,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		processStats     ProcessStats
 	)
 
-	p.engine.Initialize(p.bc, header, statedb)
+	p.bc.Engine().Initialize(p.bc, header, statedb)
 
 	// Extract author from the header
 	author, _ := p.bc.Engine().Author(header) // Ignore error, we're past header validation
@@ -95,7 +92,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	processStats.AfterApplyTxs = time.Now()
 
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
-	if _, err := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), receipts); err != nil {
+	if _, err := p.bc.Engine().Finalize(p.bc, header, statedb, block.Transactions(), receipts); err != nil {
 		return nil, nil, 0, nil, processStats, err
 	}
 	processStats.AfterFinalize = time.Now()

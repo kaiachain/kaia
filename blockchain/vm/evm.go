@@ -672,6 +672,8 @@ func (evm *EVM) getPrecompiledContractForVersion(addr common.Address) map[common
 	}
 
 	switch {
+	case evm.chainRules.IsOsaka:
+		return PrecompiledContractsOsaka
 	case evm.chainRules.IsPrague:
 		return PrecompiledContractsPrague
 	case evm.chainRules.IsCancun:

@@ -202,10 +202,16 @@ const (
 	Bls12381MapG1Gas          uint64 = 5500  // Gas price for BLS12-381 mapping field element to G1 operation
 	Bls12381MapG2Gas          uint64 = 23800 // Gas price for BLS12-381 mapping field element to G2 operation
 
+	P256VerifyGas uint64 = 6900 // secp256r1 elliptic curve signature verifier gas price
+
 	// ZeroBaseFee exists for supporting Ethereum compatible data structure.
 	ZeroBaseFee uint64 = 0
 
 	HistoryServeWindow = 8192 // Number of blocks to serve historical block hashes for, EIP-2935.
+
+	// The p2p message size is max 12 MiB, so a block is capped to it minus a safety margin for any metadata that may accompany the block message.
+	// MaxBlockSize (10 MiB) = ProtocolMaxMsgSize (12 MiB) - margin (2 MiB)
+	MaxBlockSize = 10_485_760 // maximum size of an RLP-encoded block
 )
 
 const (

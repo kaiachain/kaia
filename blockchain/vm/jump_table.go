@@ -64,10 +64,17 @@ var (
 	ShanghaiInstructionSet       = newShanghaiInstructionSet()
 	CancunInstructionSet         = newCancunInstructionSet()
 	PragueInstructionSet         = newPragueInstructionSet()
+	OsakaInstructionSet          = newOsakaInstructionSet()
 )
 
 // JumpTable contains the EVM opcodes supported at a given fork.
 type JumpTable [256]*operation
+
+func newOsakaInstructionSet() JumpTable {
+	instructionSet := newPragueInstructionSet()
+	enable7939(&instructionSet) // EIP-7939 (CLZ opcode)
+	return instructionSet
+}
 
 func newPragueInstructionSet() JumpTable {
 	instructionSet := newCancunInstructionSet()

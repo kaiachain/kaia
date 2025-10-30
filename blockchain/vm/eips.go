@@ -57,6 +57,8 @@ func EnableEIP(eipNum int, jt *JumpTable) error {
 		enable1153(jt)
 	case 7702:
 		enable7702(jt)
+	case 7939:
+		enable7939(jt)
 	default:
 		return fmt.Errorf("undefined eip %d", eipNum)
 	}
@@ -330,6 +332,13 @@ func opBlobBaseFee(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext)
 	return nil, nil
 }
 
+// opCLZ implements the CLZ opcode (count leading zero bytes)
+func opCLZ(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
+	x := scope.Stack.peek()
+	x.SetUint64(256 - uint64(x.BitLen()))
+	return nil, nil
+}
+
 // enable4844 applies EIP-4844 (BLOBHASH opcode)
 func enable4844(jt *JumpTable) {
 	jt[BLOBHASH] = &operation{
@@ -338,6 +347,15 @@ func enable4844(jt *JumpTable) {
 		minStack:        minStack(1, 1),
 		maxStack:        maxStack(1, 1),
 		computationCost: params.BlobHashComptationCost,
+	}
+}
+
+func enable7939(jt *JumpTable) {
+	jt[CLZ] = &operation{
+		execute:     opCLZ,
+		constantGas: GasFastStep,
+		minStack:    minStack(1, 1),
+		maxStack:    maxStack(1, 1),
 	}
 }
 
