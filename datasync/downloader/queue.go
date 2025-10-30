@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/derivesha"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/istanbul"
@@ -873,10 +874,28 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, e
 	defer q.lock.Unlock()
 
 	validate := func(index int, header *types.Header) error {
-		if types.DeriveSha(types.Transactions(txLists[index]), header.Number) != header.TxHash {
+		txs := types.Transactions(txLists[index])
+		if len(txs) == 0 {
+			// Header-only path: avoid gov-dependent deriveSha; compare against known empty roots
+			if header.TxHash == types.EmptyTxRootOriginal || header.TxHash == types.EmptyTxRootSimple || header.TxHash == types.EmptyTxRootConcat {
+				return nil
+			}
 			return errInvalidBody
 		}
-		return nil
+
+		// Try all known deriveSha implementations without consulting governance/state.
+		// Order by estimated cost: Simple, Concat, then Original (trie-based).
+		candidates := [...]common.Hash{
+			derivesha.DeriveShaSimple{}.DeriveSha(txs),
+			derivesha.DeriveShaConcat{}.DeriveSha(txs),
+			derivesha.DeriveShaOrig{}.DeriveSha(txs),
+		}
+		for _, h := range candidates {
+			if h == header.TxHash {
+				return nil
+			}
+		}
+		return errInvalidBody
 	}
 
 	reconstruct := func(index int, result *fetchResult) {

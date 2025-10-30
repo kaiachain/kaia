@@ -161,12 +161,16 @@ func prefixedRlpHash(prefix byte, x interface{}) (h common.Hash) {
 // EmptyBody returns true if there is no additional 'body' to complete the header
 // that is: no transactions.
 func (h *Header) EmptyBody() bool {
-	return h.TxHash == GetEmptyRootHash(h.Number)
+	// Avoid derivesha.GetType() during header-only paths; compare against all known empty roots
+	tx := h.TxHash
+	return tx == EmptyTxRootOriginal || tx == EmptyTxRootSimple || tx == EmptyTxRootConcat
 }
 
 // EmptyReceipts returns true if there are no receipts for this header/block.
 func (h *Header) EmptyReceipts() bool {
-	return h.ReceiptHash == GetEmptyRootHash(h.Number)
+	// Avoid derivesha.GetType() during header-only paths; compare against all known empty roots
+	rh := h.ReceiptHash
+	return rh == EmptyTxRootOriginal || rh == EmptyTxRootSimple || rh == EmptyTxRootConcat
 }
 
 // Body is a simple (mutable, non-safe) data container for storing and moving
