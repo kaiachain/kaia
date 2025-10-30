@@ -155,8 +155,8 @@ func addErrorContext(err error, ctx string) error {
 
 var (
 	decoderInterface = reflect.TypeFor[*Decoder]().Elem()
-	bigInt           = reflect.TypeOf(big.Int{})
-	u256Int          = reflect.TypeOf(uint256.Int{})
+	bigInt           = reflect.TypeFor[big.Int]()
+	u256Int          = reflect.TypeFor[uint256.Int]()
 )
 
 func makeDecoder(typ reflect.Type, tags rlpstruct.Tags) (dec decoder, err error) {
