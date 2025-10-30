@@ -234,15 +234,15 @@ func (t Type) GetType() reflect.Type {
 	case FixedBytesTy:
 		return reflect.ArrayOf(t.Size, reflect.TypeFor[byte]())
 	case BytesTy:
-		return reflect.SliceOf(reflect.TypeFor[byte]())
+		return reflect.TypeFor[[]byte]()
 	case HashTy:
 		// hashtype currently not used
-		return reflect.ArrayOf(32, reflect.TypeFor[byte]())
+		return reflect.TypeFor[[32]byte]()
 	case FixedPointTy:
 		// fixedpoint type currently not used
-		return reflect.ArrayOf(32, reflect.TypeFor[byte]())
+		return reflect.TypeFor[[32]byte]()
 	case FunctionTy:
-		return reflect.ArrayOf(24, reflect.TypeFor[byte]())
+		return reflect.TypeFor[[24]byte]()
 	default:
 		panic("Invalid type")
 	}
