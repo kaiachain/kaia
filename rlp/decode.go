@@ -154,7 +154,7 @@ func addErrorContext(err error, ctx string) error {
 }
 
 var (
-	decoderInterface = reflect.TypeOf(new(Decoder)).Elem()
+	decoderInterface = reflect.TypeFor[*Decoder]().Elem()
 	bigInt           = reflect.TypeFor[big.Int]()
 	u256Int          = reflect.TypeFor[uint256.Int]()
 )
