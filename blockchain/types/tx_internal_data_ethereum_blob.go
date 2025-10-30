@@ -849,6 +849,10 @@ func (tx *TxInternalDataEthereumBlob) EncodeRLP(w io.Writer) error {
 	}
 }
 
+// Decode various BlobTx encoding.
+// no sidecar: [chainID, nonce, ...]
+// sidecar v0: [[chainID, nonce, ...], blobs, commitments, proofs]
+// sidecar v1: [[chainID, nonce, ...], version, blobs, commitments, proofs]
 func (tx *TxInternalDataEthereumBlob) DecodeRLP(s *rlp.Stream) error {
 	// Here we need to support two outer formats: the network protocol encoding of the tx
 	// (with blobs) or the canonical encoding without blobs.
