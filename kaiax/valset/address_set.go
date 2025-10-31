@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/rand"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -142,10 +143,8 @@ func (as *AddressSet) Add(addr common.Address) {
 	as.mu.Lock()
 	defer as.mu.Unlock()
 
-	for _, a := range as.list {
-		if a == addr {
-			return
-		}
+	if slices.Contains(as.list, addr) {
+		return
 	}
 	as.list = append(as.list, addr)
 	sort.Sort(as.list)
