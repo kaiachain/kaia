@@ -396,7 +396,7 @@ func newTxInternalDataEthereumBlobWithMap(values map[TxValueKeyType]interface{})
 		d.GasTipCap.Set(uint256.MustFromBig(v))
 		delete(values, TxValueKeyGasTipCap)
 	} else {
-		return nil, errValueKeyGasTipCapMustBigInt // XXX: should be *uint256.Int?
+		return nil, errValueKeyGasTipCapMustBigInt
 	}
 	if v, ok := values[TxValueKeyAccessList].(AccessList); ok {
 		d.AccessList = make(AccessList, len(v))
@@ -409,7 +409,7 @@ func newTxInternalDataEthereumBlobWithMap(values map[TxValueKeyType]interface{})
 		d.BlobFeeCap.Set(uint256.MustFromBig(v))
 		delete(values, TxValueKeyBlobFeeCap)
 	} else {
-		return nil, errValueKeyBlobFeeCapMustBigInt // XXX: should be *uint256.Int?
+		return nil, errValueKeyBlobFeeCapMustBigInt
 	}
 	if v, ok := values[TxValueKeyBlobHashes].([]common.Hash); ok {
 		d.BlobHashes = make([]common.Hash, len(v))
