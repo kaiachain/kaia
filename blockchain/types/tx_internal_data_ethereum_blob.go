@@ -390,7 +390,7 @@ func newTxInternalDataEthereumBlobWithMap(values map[TxValueKeyType]interface{})
 		d.GasFeeCap.Set(uint256.MustFromBig(v))
 		delete(values, TxValueKeyGasFeeCap)
 	} else {
-		return nil, errValueKeyGasFeeCapMustBigInt // XXX: should be *uint256.Int?
+		return nil, errValueKeyGasFeeCapMustBigInt
 	}
 	if v, ok := values[TxValueKeyGasTipCap].(*big.Int); ok {
 		d.GasTipCap.Set(uint256.MustFromBig(v))
