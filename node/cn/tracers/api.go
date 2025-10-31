@@ -666,7 +666,7 @@ func (api *UnsafeAPI) StandardTraceBadBlockToFile(ctx context.Context, hash comm
 
 // traceBlock configures a new tracer according to the provided configuration, and
 // executes all the transactions contained within. The return value will be one item
-// per transaction, dependent on the requestd tracer.
+// per transaction, dependent on the requested tracer.
 func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config *TraceConfig) ([]*txTraceResult, error) {
 	if !api.unsafeTrace {
 		if atomic.LoadInt32(&heavyAPIRequestCount) >= HeavyAPIRequestLimit {
