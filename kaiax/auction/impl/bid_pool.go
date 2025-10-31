@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"maps"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -229,9 +230,7 @@ func (bp *BidPool) GetTargetTxMap(num uint64) map[common.Hash]*auction.Bid {
 	defer bp.bidMu.RUnlock()
 
 	targetTxMap := make(map[common.Hash]*auction.Bid)
-	for hash, bid := range bp.bidTargetMap[num] {
-		targetTxMap[hash] = bid
-	}
+	maps.Copy(targetTxMap, bp.bidTargetMap[num])
 
 	return targetTxMap
 }

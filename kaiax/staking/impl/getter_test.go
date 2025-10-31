@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"maps"
 	"math/big"
 	"testing"
 
@@ -60,9 +61,7 @@ func testPragueForkChainConfig(forkNum *big.Int) *params.ChainConfig {
 
 func copyAlloc(alloc blockchain.GenesisAlloc) blockchain.GenesisAlloc {
 	copiedAlloc := blockchain.GenesisAlloc{}
-	for addr, acc := range alloc {
-		copiedAlloc[addr] = acc
-	}
+	maps.Copy(copiedAlloc, alloc)
 	return copiedAlloc
 }
 

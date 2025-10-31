@@ -24,6 +24,7 @@ package fetcher
 
 import (
 	"errors"
+	"maps"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -161,9 +162,7 @@ func (f *fetcherTester) dropPeer(peer string) {
 // makeHeaderFetcher retrieves a block header fetcher associated with a simulated peer.
 func (f *fetcherTester) makeHeaderFetcher(peer string, blocks map[common.Hash]*types.Block, drift time.Duration) HeaderRequesterFn {
 	closure := make(map[common.Hash]*types.Block)
-	for hash, block := range blocks {
-		closure[hash] = block
-	}
+	maps.Copy(closure, blocks)
 	// Create a function that return a header from the closure
 	return func(hash common.Hash) error {
 		// Gather the blocks to return
@@ -181,9 +180,7 @@ func (f *fetcherTester) makeHeaderFetcher(peer string, blocks map[common.Hash]*t
 // makeBodyFetcher retrieves a block body fetcher associated with a simulated peer.
 func (f *fetcherTester) makeBodyFetcher(peer string, blocks map[common.Hash]*types.Block, drift time.Duration) BodyRequesterFn {
 	closure := make(map[common.Hash]*types.Block)
-	for hash, block := range blocks {
-		closure[hash] = block
-	}
+	maps.Copy(closure, blocks)
 	// Create a function that returns blocks from the closure
 	return func(hashes []common.Hash) error {
 		// Gather the block bodies to return
