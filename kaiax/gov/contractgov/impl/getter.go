@@ -63,32 +63,26 @@ func (c *contractGovModule) contractGetAllParamsAtFromAddr(blockNum uint64, addr
 		return nil, ErrNotReady
 	}
 
-	var (
-		// Get storage root for this contract at the parent block
-		storageRoot = c.getParentStorageRootHash(blockNum, addr)
+	// Get storage root for this contract at the latest state
+	storageRoot := c.getStorageRootHash(addr)
+	if common.EmptyHash(storageRoot) {
+		return nil, ErrStorageRootNotFound
+	}
 
-		// Create composite cache key: contract address + storage root (64 bytes)
-		cacheKey [64]byte
-	)
-
-	addrHash := addr.Hash()
-	copy(cacheKey[:32], addrHash.Bytes())
+	// Create composite cache key: contract address + storage root (64 bytes)
+	var cacheKey [64]byte
+	copy(cacheKey[:32], addr.Hash().Bytes())
 	copy(cacheKey[32:], storageRoot.Bytes())
 
-	if !common.EmptyHash(storageRoot) {
-		// Try to get from cache first
-		c.cacheMutex.RLock()
-		if cached, exists := c.paramSetCache.Get(cacheKey); exists {
-			c.cacheMutex.RUnlock()
-			// Cache hit
-			cacheHits.Inc(1)
-			return cached, nil
-		}
+	// Try to get from cache first
+	c.cacheMutex.RLock()
+	if cached, exists := c.paramSetCache.Get(cacheKey); exists {
 		c.cacheMutex.RUnlock()
-
-		// Cache miss
-		cacheMisses.Inc(1)
+		cacheHits.Inc(1) // Cache hit
+		return cached, nil
 	}
+	cacheMisses.Inc(1) // Cache miss
+	c.cacheMutex.RUnlock()
 
 	// compute the result
 	result, err := c.computeContractParams(blockNum, addr)
@@ -96,12 +90,10 @@ func (c *contractGovModule) contractGetAllParamsAtFromAddr(blockNum uint64, addr
 		return nil, err
 	}
 
-	if !common.EmptyHash(storageRoot) {
-		// Store in cache
-		c.cacheMutex.Lock()
-		c.paramSetCache.Add(cacheKey, result)
-		c.cacheMutex.Unlock()
-	}
+	// Store in cache
+	c.cacheMutex.Lock()
+	c.paramSetCache.Add(cacheKey, result)
+	c.cacheMutex.Unlock()
 
 	return result, nil
 }
@@ -134,18 +126,9 @@ func (c *contractGovModule) contractAddrAt(blockNum uint64) (common.Address, err
 	return headerParams.GovParamContract, nil
 }
 
-// getParentStorageRootHash computes the storage root for the ContractGov contract at the parent block
-func (c *contractGovModule) getParentStorageRootHash(blockNum uint64, contractAddr common.Address) common.Hash {
-	if blockNum == 0 {
-		return common.Hash{}
-	}
-
-	parent := c.Chain.GetHeaderByNumber(blockNum - 1)
-	if parent == nil {
-		return common.Hash{}
-	}
-
-	state, err := c.Chain.StateAt(parent.Root)
+// getStorageRootHash computes the storage root for the ContractGov contract at the latest state
+func (c *contractGovModule) getStorageRootHash(contractAddr common.Address) common.Hash {
+	state, err := c.Chain.State()
 	if err != nil {
 		return common.Hash{}
 	}
