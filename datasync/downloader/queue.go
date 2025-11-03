@@ -874,17 +874,9 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, e
 	defer q.lock.Unlock()
 
 	validate := func(index int, header *types.Header) error {
-		txs := types.Transactions(txLists[index])
-		if len(txs) == 0 {
-			// Header-only path: avoid gov-dependent deriveSha; compare against known empty roots
-			if header.TxHash == types.EmptyTxRootOriginal || header.TxHash == types.EmptyTxRootSimple || header.TxHash == types.EmptyTxRootConcat {
-				return nil
-			}
-			return errInvalidBody
-		}
-
 		// Try all known deriveSha implementations without consulting governance/state.
 		// Order by estimated cost: Simple, Concat, then Original (trie-based).
+		txs := types.Transactions(txLists[index])
 		candidates := [...]common.Hash{
 			derivesha.DeriveShaSimple{}.DeriveSha(txs),
 			derivesha.DeriveShaConcat{}.DeriveSha(txs),
