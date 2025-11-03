@@ -225,8 +225,8 @@ func TestVerifyBlockBodyForOsakaFork(t *testing.T) {
 		gspec   = &Genesis{Config: config}
 		genesis = gspec.MustCommit(testdb)
 	)
-	GenerateChain(config, genesis, gxhash.NewFaker(), testdb, 8, nil)
-	chain, _ := NewBlockChain(testdb, nil, config, gxhash.NewFaker(), vm.Config{})
+	GenerateChain(config, genesis, faker.NewFaker(), testdb, 8, nil)
+	chain, _ := NewBlockChain(testdb, nil, config, faker.NewFaker(), vm.Config{})
 	defer chain.Stop()
 
 	// Generate a batch of accounts to start with
