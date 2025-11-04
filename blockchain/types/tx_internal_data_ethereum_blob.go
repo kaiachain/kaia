@@ -18,6 +18,7 @@
 package types
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/hex"
@@ -584,6 +585,7 @@ func (t *TxInternalDataEthereumBlob) Equal(a TxInternalData) bool {
 		t.GasLimit == ta.GasLimit &&
 		t.Recipient == ta.Recipient &&
 		t.Amount.Cmp(ta.Amount) == 0 &&
+		bytes.Equal(t.Payload, ta.Payload) &&
 		reflect.DeepEqual(t.AccessList, ta.AccessList) &&
 		t.BlobFeeCap.Cmp(ta.BlobFeeCap) == 0 &&
 		reflect.DeepEqual(t.BlobHashes, ta.BlobHashes) &&
