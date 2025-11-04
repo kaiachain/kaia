@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	ErrNotReady            = errors.New("ContractEngine is not ready")
-	ErrStorageRootNotFound = errors.New("Storage root not found")
-	ErrHeaderGovFail       = errors.New("headerGov GetParamSet() failed")
+	ErrNotReady         = errors.New("ContractEngine is not ready")
+	ErrStorageRootEmpty = errors.New("Storage root of GovParam contract is empty")
+	ErrHeaderGovFail    = errors.New("headerGov GetParamSet() failed")
 )
 
 func errInitNil(msg string) error {

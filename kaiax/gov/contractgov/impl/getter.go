@@ -66,7 +66,7 @@ func (c *contractGovModule) contractGetAllParamsAtFromAddr(blockNum uint64, addr
 	// Get storage root for this contract at the latest state
 	storageRoot := c.getStorageRootHash(addr)
 	if common.EmptyHash(storageRoot) {
-		return nil, ErrStorageRootNotFound
+		return nil, ErrStorageRootEmpty
 	}
 
 	// Create composite cache key: contract address + storage root (64 bytes)
