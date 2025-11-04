@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -874,20 +875,20 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, e
 	defer q.lock.Unlock()
 
 	validate := func(index int, header *types.Header) error {
-		// Try all known deriveSha implementations without consulting governance/state.
-		// Order by estimated cost: Simple, Concat, then Original (trie-based).
+		// Governance parameters may not be available during header validation stage,
+		// as some depend on block states (e.g., ContractGov).
+		// Try all known deriveSha implementations for a sufficient sanity check.
+		// Note: empty bodies are already filtered out in newFetchResult.
 		txs := types.Transactions(txLists[index])
-		candidates := [...]common.Hash{
+		txHashes := []common.Hash{
 			derivesha.DeriveShaSimple{}.DeriveSha(txs),
 			derivesha.DeriveShaConcat{}.DeriveSha(txs),
 			derivesha.DeriveShaOrig{}.DeriveSha(txs),
 		}
-		for _, h := range candidates {
-			if h == header.TxHash {
-				return nil
-			}
+		if !slices.Contains(txHashes, header.TxHash) {
+			return errInvalidBody
 		}
-		return errInvalidBody
+		return nil
 	}
 
 	reconstruct := func(index int, result *fetchResult) {
@@ -904,7 +905,14 @@ func (q *queue) DeliverReceipts(id string, receiptList [][]*types.Receipt) (int,
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	validate := func(index int, header *types.Header) error {
-		if types.DeriveSha(types.Receipts(receiptList[index]), header.Number) != header.ReceiptHash {
+		// Note: empty receipts are already filtered out in newFetchResult.
+		receipts := types.Receipts(receiptList[index])
+		receiptHashes := []common.Hash{
+			derivesha.DeriveShaSimple{}.DeriveSha(receipts),
+			derivesha.DeriveShaConcat{}.DeriveSha(receipts),
+			derivesha.DeriveShaOrig{}.DeriveSha(receipts),
+		}
+		if !slices.Contains(receiptHashes, header.ReceiptHash) {
 			return errInvalidReceipt
 		}
 		return nil
