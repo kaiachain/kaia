@@ -345,6 +345,19 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyChainID] = big.NewInt(1)
 		values[types.TxValueKeyData] = dataCode
 		values[types.TxValueKeyAccessList] = types.AccessList{}
+	case types.TxTypeEthereumBlob:
+		values[types.TxValueKeyNonce] = sender.Nonce
+		values[types.TxValueKeyTo] = recipient.Addr
+		values[types.TxValueKeyAmount] = amount
+		values[types.TxValueKeyGasLimit] = gasLimit
+		values[types.TxValueKeyGasFeeCap] = gasFeeCap
+		values[types.TxValueKeyGasTipCap] = gasTipCap
+		values[types.TxValueKeyChainID] = big.NewInt(1)
+		values[types.TxValueKeyData] = dataCode
+		values[types.TxValueKeyAccessList] = types.AccessList{}
+		values[types.TxValueKeyBlobFeeCap] = gasFeeCap
+		values[types.TxValueKeyBlobHashes] = []common.Hash{{0}}
+		values[types.TxValueKeySidecar] = &types.BlobTxSidecar{}
 	case types.TxTypeEthereumSetCode:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyTo] = recipient.Addr
@@ -425,7 +438,7 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Osaka"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}

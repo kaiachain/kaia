@@ -666,6 +666,12 @@ var (
 		EnvVars:  []string{"KLAYTN_STATE_TRIE_CACHE_SAVE_PERIOD", "KAIA_STATE_TRIE_CACHE_SAVE_PERIOD"},
 		Category: "CACHE",
 	}
+	CryptoKZGFlag = &cli.StringFlag{
+		Name:     "crypto.kzg",
+		Usage:    "KZG library implementation to use; gokzg (recommended) or ckzg",
+		Value:    "gokzg",
+		Category: "PERFORMANCE TUNING",
+	}
 
 	ChildChainIndexingFlag = &cli.BoolFlag{
 		Name:     "childchainindexing",

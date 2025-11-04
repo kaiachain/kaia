@@ -63,7 +63,8 @@ func TestGasCalculation(t *testing.T) {
 		{"LegacyTransaction", genLegacyTransaction},
 		{"AccessListTransaction", genAccessListTransaction},
 		{"DynamicFeeTransaction", genDynamicFeeTransaction},
-
+		{"BlobTransaction", genBlobTransaction},
+		{"SetCodeTransaction", genSetCodeTransaction},
 		{"ValueTransfer", genValueTransfer},
 		{"ValueTransferWithMemo", genValueTransferWithMemo},
 		{"AccountUpdate", genAccountUpdate},
@@ -105,7 +106,7 @@ func TestGasCalculation(t *testing.T) {
 
 	// Initialize blockchain
 	start := time.Now()
-	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Osaka"], nil)
 	assert.Equal(t, nil, err)
 	prof.Profile("main_init_blockchain", time.Now().Sub(start))
 
@@ -242,7 +243,11 @@ func TestGasCalculation(t *testing.T) {
 			senderRole := accountkey.RoleTransaction
 
 			// LegacyTransaction can be used only by the KaiaAccount with AccountKeyLegacy.
-			if sender.Type != "KaiaLegacy" && (strings.Contains(f.Name, "Legacy") || strings.Contains(f.Name, "Access") || strings.Contains(f.Name, "Dynamic")) {
+			if sender.Type != "KaiaLegacy" && (strings.Contains(f.Name, "Legacy") ||
+				strings.Contains(f.Name, "Access") ||
+				strings.Contains(f.Name, "Dynamic") ||
+				strings.Contains(f.Name, "Blob") ||
+				strings.Contains(f.Name, "SetCode")) {
 				continue
 			}
 
@@ -280,7 +285,7 @@ func TestGasCalculation(t *testing.T) {
 
 func testGasValidation(t *testing.T, bcdata *BCData, tx *types.Transaction, validationGas uint64) {
 	receipt, err := applyTransaction(t, bcdata, tx)
-	assert.Equal(t, nil, err)
+	assert.Equal(t, nil, err, "tx: %s", tx.Type())
 
 	assert.Equal(t, receipt.Status, types.ReceiptStatusSuccessful)
 
@@ -317,6 +322,26 @@ func genDynamicFeeTransaction(t *testing.T, signer types.Signer, from TestAccoun
 	err = tx.SignWithKeys(signer, from.GetTxKeys())
 	assert.Equal(t, nil, err)
 
+	return tx, intrinsic
+}
+
+func genBlobTransaction(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
+	values, intrinsic := genMapForBlobTransaction(from, to, gasPrice, types.TxTypeEthereumBlob)
+	tx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, values)
+	assert.Equal(t, nil, err)
+
+	err = tx.SignWithKeys(signer, from.GetTxKeys())
+	assert.Equal(t, nil, err)
+	return tx, intrinsic
+}
+
+func genSetCodeTransaction(t *testing.T, signer types.Signer, from TestAccount, to TestAccount, payer TestAccount, gasPrice *big.Int) (*types.Transaction, uint64) {
+	values, intrinsic := genMapForSetCodeTransaction(from, to, gasPrice, types.TxTypeEthereumSetCode)
+	tx, err := types.NewTransactionWithMap(types.TxTypeEthereumSetCode, values)
+	assert.Equal(t, nil, err)
+
+	err = tx.SignWithKeys(signer, from.GetTxKeys())
+	assert.Equal(t, nil, err)
 	return tx, intrinsic
 }
 
@@ -752,6 +777,36 @@ func genMapForDynamicFeeTransaction(from TestAccount, to TestAccount, gasPrice *
 		types.TxValueKeyGasFeeCap:  gasPrice,
 		types.TxValueKeyGasTipCap:  gasPrice,
 		types.TxValueKeyAccessList: accessList,
+		types.TxValueKeyChainID:    big.NewInt(1),
+	}
+	return values, intrinsic + gasPayload
+}
+
+func genMapForBlobTransaction(from TestAccount, to TestAccount, gasPrice *big.Int, txType types.TxType) (map[types.TxValueKeyType]interface{}, uint64) {
+	intrinsic, _ := types.GetTxGasForTxType(txType)
+	amount := big.NewInt(100000)
+	data := []byte{0x11, 0x22}
+	// We have changed the gas calcuation since Prague per EIP-7623.
+	gasPayload := getDataGas(data)
+	accessList := types.AccessList{{Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), StorageKeys: []common.Hash{{0}}}}
+	toAddress := to.GetAddr()
+
+	gasPayload += uint64(len(accessList)) * params.TxAccessListAddressGas
+	gasPayload += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
+	gasPayload = getFlooredGas(data, gasPayload)
+
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:      from.GetNonce(),
+		types.TxValueKeyTo:         toAddress,
+		types.TxValueKeyAmount:     amount,
+		types.TxValueKeyData:       data,
+		types.TxValueKeyGasLimit:   gasLimit,
+		types.TxValueKeyGasFeeCap:  gasPrice,
+		types.TxValueKeyGasTipCap:  gasPrice,
+		types.TxValueKeyAccessList: accessList,
+		types.TxValueKeyBlobFeeCap: gasPrice,
+		types.TxValueKeyBlobHashes: []common.Hash{{0}},
+		types.TxValueKeySidecar:    &types.BlobTxSidecar{},
 		types.TxValueKeyChainID:    big.NewInt(1),
 	}
 	return values, intrinsic + gasPayload

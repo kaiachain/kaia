@@ -770,6 +770,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrTxTypeNotSupported
 	}
 
+	// Reject blob transactions until EIP-7607(osaka) activates.
+	if !pool.rules.IsOsaka && tx.Type() == types.TxTypeEthereumBlob {
+		return ErrTxTypeNotSupported
+	}
+
 	// Check whether the init code size has been exceeded
 	if pool.rules.IsShanghai && tx.To() == nil && len(tx.Data()) > params.MaxInitCodeSize {
 		return fmt.Errorf("%w: code size %v, limit %v", ErrMaxInitCodeSizeExceeded, len(tx.Data()), params.MaxInitCodeSize)

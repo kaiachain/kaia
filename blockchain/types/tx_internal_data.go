@@ -64,10 +64,9 @@ const (
 	TxTypeKaiaLast, _, _
 	TxTypeEthereumAccessList = TxType(0x7801)
 	TxTypeEthereumDynamicFee = TxType(0x7802)
-	// EIP-4844 BLOB_TX_TYPE not supported in Kaia.
-	_                     = TxType(0x7803)
-	TxTypeEthereumSetCode = TxType(0x7804)
-	TxTypeEthereumLast    = TxType(0x7805)
+	TxTypeEthereumBlob       = TxType(0x7803)
+	TxTypeEthereumSetCode    = TxType(0x7804)
+	TxTypeEthereumLast       = TxType(0x7805)
 )
 
 type TxValueKeyType uint
@@ -92,6 +91,9 @@ const (
 	TxValueKeyChainID
 	TxValueKeyGasTipCap
 	TxValueKeyGasFeeCap
+	TxValueKeyBlobFeeCap
+	TxValueKeyBlobHashes
+	TxValueKeySidecar
 	TxValueKeyAuthorizationList
 )
 
@@ -125,6 +127,8 @@ var (
 	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
 	errValueKeyAccessListInvalid         = errors.New("AccessList must be a type of AccessList")
+	errValueKeyBlobFeeCapMustBigInt      = errors.New("BlobFeeCap must be a type of *big.Int")
+	errValueKeySidecarInvalid            = errors.New("Sidecar must be a type of *BlobTxSidecar")
 	errValueKeyAuthorizationListInvalid  = errors.New("AuthorizationList must be a type of AuthorizationList")
 	errValueKeyChainIDInvalid            = errors.New("ChainID must be a type of ChainID")
 	errValueKeyGasTipCapMustBigInt       = errors.New("GasTipCap must be a type of *big.Int")
@@ -175,6 +179,12 @@ func (t TxValueKeyType) String() string {
 		return "TxValueKeyGasTipCap"
 	case TxValueKeyGasFeeCap:
 		return "TxValueKeyGasFeeCap"
+	case TxValueKeyBlobFeeCap:
+		return "TxValueKeyBlobFeeCap"
+	case TxValueKeyBlobHashes:
+		return "TxValueKeyBlobHashes"
+	case TxValueKeySidecar:
+		return "TxValueKeySidecar"
 	case TxValueKeyAuthorizationList:
 		return "TxValueKeyAuthorizationList"
 	}
@@ -236,6 +246,8 @@ func (t TxType) String() string {
 		return "TxTypeEthereumAccessList"
 	case TxTypeEthereumDynamicFee:
 		return "TxTypeEthereumDynamicFee"
+	case TxTypeEthereumBlob:
+		return "TxTypeEthereumBlob"
 	case TxTypeEthereumSetCode:
 		return "TxTypeEthereumSetCode"
 	}
@@ -497,6 +509,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataEthereumAccessList(), nil
 	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataEthereumDynamicFee(), nil
+	case TxTypeEthereumBlob:
+		return newTxInternalDataEthereumBlob(), nil
 	case TxTypeEthereumSetCode:
 		return newTxInternalDataEthereumSetCode(), nil
 	}
@@ -556,6 +570,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataEthereumAccessListWithMap(values)
 	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataEthereumDynamicFeeWithMap(values)
+	case TxTypeEthereumBlob:
+		return newTxInternalDataEthereumBlobWithMap(values)
 	case TxTypeEthereumSetCode:
 		return newTxInternalDataEthereumSetCodeWithMap(values)
 	}
@@ -704,6 +720,7 @@ var txTypeToGasMap = map[TxType]uint64{
 	TxTypeFeeDelegatedChainDataAnchoring:          params.TxChainDataAnchoringGas + params.TxGasFeeDelegated,
 	TxTypeFeeDelegatedChainDataAnchoringWithRatio: params.TxChainDataAnchoringGas + params.TxGasFeeDelegatedWithRatio,
 	TxTypeEthereumAccessList:                      params.TxGas,
+	TxTypeEthereumBlob:                            params.TxGas,
 	TxTypeEthereumDynamicFee:                      params.TxGas,
 	TxTypeEthereumSetCode:                         params.TxGas,
 }
