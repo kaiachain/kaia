@@ -19,7 +19,7 @@ RUN add-apt-repository ppa:longsleep/golang-backports -y && \
     ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 RUN apt install -y build-essential bash gcc musl-dev openssl wget golang golang-1.17
-RUN wget -O go.src.tar.gz https://dl.google.com/go/go1.23.7.src.tar.gz
+RUN wget -O go.src.tar.gz https://dl.google.com/go/go1.25.3.src.tar.gz
 RUN tar -C /usr/local -xzf go.src.tar.gz
 RUN cd /usr/local/go/src/ && \
     ./make.bash
@@ -37,4 +37,4 @@ COPY --from=go_builder /usr/local/go /usr/local
 ENV GOPATH /go
 ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
 RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
-RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.60.1
+RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.5.0
