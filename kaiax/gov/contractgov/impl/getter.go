@@ -130,6 +130,7 @@ func (c *contractGovModule) contractAddrAt(blockNum uint64) (common.Address, err
 func (c *contractGovModule) getStorageRootHash(contractAddr common.Address) common.Hash {
 	state, err := c.Chain.State()
 	if err != nil {
+		logger.Error("Failed to get the latest state", "err", err)
 		return common.Hash{}
 	}
 
