@@ -25,6 +25,7 @@ package node
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"os"
 	"path/filepath"
@@ -263,9 +264,7 @@ func (n *Node) Start() error {
 		started = append(started, kind)
 	}
 
-	for kind, service := range services {
-		coreservices[kind] = service
-	}
+	maps.Copy(coreservices, services)
 
 	// Lastly start the configured RPC interfaces
 	if err := n.startRPC(coreservices); err != nil {
@@ -302,9 +301,8 @@ func (n *Node) initService(serviceFunc []ServiceConstructor, services map[reflec
 	for _, constructor := range serviceFunc {
 		// Create a new context for the particular service
 		ctx := NewServiceContext(n.config, make(map[reflect.Type]Service), n.eventmux, n.accman)
-		for kind, s := range services { // copy needed for threaded access
-			ctx.services[kind] = s
-		}
+		// copy needed for threaded access
+		maps.Copy(ctx.services, services)
 		// Construct and save the service
 		service, err := constructor(ctx)
 		if err != nil {
