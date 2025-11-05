@@ -26,7 +26,7 @@ Each file contains following parameters.
   - config.go			: Defines various structs for different settings of a network. Also provides getters for those settings
   - denomination.go		: Defines units of KAIA
   - gas_table.go			: Organizes gas prices for different Kaia phases. Currently prices for Mainnet is defined
-  - governance_params.go		: Defines constants for governance and reward system. Also provides setters and getters for reward releated variables
+  - governance_params.go		: Defines constants for governance and reward system. Also provides setters and getters for reward related variables
   - network_params.go		: Defines network parameters that need to be constant between clients. Only `BloomBitsBlocks` is defined at the moment
   - protocol_params.go		: Defines fee schedule, total time limit and maximum computation cost
   - version.go			: Defines release and version number. Also provides a getter for the version

@@ -207,7 +207,7 @@ func TestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
 	}
 }
 
-// TestRedisCache_Timeout tests timout feature of redis client.
+// TestRedisCache_Timeout tests timeout feature of redis client.
 func TestRedisCache_Timeout(t *testing.T) {
 	storage.SkipLocalTest(t)
 	serverReady := make(chan struct{})
