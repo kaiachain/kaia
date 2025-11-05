@@ -1382,7 +1382,9 @@ func (pm *ProtocolManager) BroadcastBid(bid *auction.Bid) {
 
 	cnWithoutBid := pm.peers.CNWithoutBid(bid.Hash())
 	for _, peer := range cnWithoutBid {
-		peer.AsyncSendBid(bid)
+		if peer.GetVersion() >= kaia66 {
+			peer.AsyncSendBid(bid)
+		}
 	}
 }
 
