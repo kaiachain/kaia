@@ -106,9 +106,6 @@ func TestCalcBlobFee(t *testing.T) {
 
 func TestCalcBlobFeePostOsaka(t *testing.T) {
 	zero := big.NewInt(0)
-	bpo1 := big.NewInt(1754836608)
-	bpo2 := big.NewInt(1754934912)
-	bpo3 := big.NewInt(1755033216)
 
 	tests := []struct {
 		excessBlobGas uint64
@@ -118,32 +115,14 @@ func TestCalcBlobFeePostOsaka(t *testing.T) {
 		parenttime    big.Int
 		headertime    big.Int
 	}{
-		{5149252, 1310720, 5617366, 30, *big.NewInt(1754904516), *big.NewInt(1754904528)},
-		{19251039, 2490368, 20107103, 50, *big.NewInt(1755033204), *big.NewInt(1755033216)},
+		{5149252, 1310720, 5673540, 30, *big.NewInt(1754904516), *big.NewInt(1754904528)},
+		{19251039, 2490368, 20954975, 50, *big.NewInt(1755033204), *big.NewInt(1755033216)},
 	}
 	for i, tt := range tests {
 		config := params.TestChainConfig.Copy()
 		config.OsakaCompatibleBlock = zero
-		config.BPO1CompatibleBlock = bpo1
-		config.BPO2CompatibleBlock = bpo2
-		config.BPO3CompatibleBlock = bpo3
 		config.BlobScheduleConfig = &params.BlobScheduleConfig{
 			Osaka: params.DefaultOsakaBlobConfig,
-			BPO1: &params.BlobConfig{
-				Target:         9,
-				Max:            14,
-				UpdateFraction: 8832827,
-			},
-			BPO2: &params.BlobConfig{
-				Target:         14,
-				Max:            21,
-				UpdateFraction: 13739630,
-			},
-			BPO3: &params.BlobConfig{
-				Target:         21,
-				Max:            32,
-				UpdateFraction: 20609697,
-			},
 		}
 		parent := &types.Header{
 			ExcessBlobGas: &tt.excessBlobGas,

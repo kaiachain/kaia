@@ -63,16 +63,6 @@ func latestBlobConfig(cfg *params.ChainConfig, blockNumber *big.Int) *BlobConfig
 		bc *params.BlobConfig
 	)
 	switch {
-	case cfg.IsBPO5ForkEnabled(blockNumber) && s.BPO5 != nil:
-		bc = s.BPO5
-	case cfg.IsBPO4ForkEnabled(blockNumber) && s.BPO4 != nil:
-		bc = s.BPO4
-	case cfg.IsBPO3ForkEnabled(blockNumber) && s.BPO3 != nil:
-		bc = s.BPO3
-	case cfg.IsBPO2ForkEnabled(blockNumber) && s.BPO2 != nil:
-		bc = s.BPO2
-	case cfg.IsBPO1ForkEnabled(blockNumber) && s.BPO1 != nil:
-		bc = s.BPO1
 	case cfg.IsOsakaForkEnabled(blockNumber) && s.Osaka != nil:
 		bc = s.Osaka
 	default:

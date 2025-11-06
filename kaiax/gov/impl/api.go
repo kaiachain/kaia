@@ -108,13 +108,6 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 	config.RandaoCompatibleBlock = latestConfig.RandaoCompatibleBlock
 	config.PragueCompatibleBlock = latestConfig.PragueCompatibleBlock
 	config.OsakaCompatibleBlock = latestConfig.OsakaCompatibleBlock
-	config.BPO1CompatibleBlock = latestConfig.BPO1CompatibleBlock
-	config.BPO2CompatibleBlock = latestConfig.BPO2CompatibleBlock
-	config.BPO3CompatibleBlock = latestConfig.BPO3CompatibleBlock
-	config.BPO4CompatibleBlock = latestConfig.BPO4CompatibleBlock
-	config.BPO5CompatibleBlock = latestConfig.BPO5CompatibleBlock
-	config.AmsterdamCompatibleBlock = latestConfig.AmsterdamCompatibleBlock
-	config.VerkleCompatibleBlock = latestConfig.VerkleCompatibleBlock
 	return config
 }
 
