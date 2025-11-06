@@ -60,6 +60,9 @@ var (
 	// Empty TransactionRoot and ReceiptsRoot for the Concat algorithm.
 	EmptyTxRootConcat = EmptyCodeHash
 
+	// All known empty hashes to check for empty body or empty receipts.
+	EmptyRootHashes = []common.Hash{EmptyRootHash, EmptyCodeHash}
+
 	////////////////////////////////
 
 	// DeriveSha and EmptyRootHash are populated by derivesha.InitDeriveSha().

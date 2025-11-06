@@ -63,7 +63,44 @@ func (c *contractGovModule) contractGetAllParamsAtFromAddr(blockNum uint64, addr
 		return nil, ErrNotReady
 	}
 
-	caller := backends.NewBlockchainContractBackend(chain, nil, nil)
+	// Get storage root for this contract at the latest state
+	storageRoot := c.getStorageRootHash(addr)
+	if common.EmptyHash(storageRoot) {
+		return nil, ErrStorageRootEmpty
+	}
+
+	// Create composite cache key: contract address + storage root (64 bytes)
+	var cacheKey [64]byte
+	copy(cacheKey[:32], addr.Hash().Bytes())
+	copy(cacheKey[32:], storageRoot.Bytes())
+
+	// Try to get from cache first
+	c.cacheMutex.RLock()
+	if cached, exists := c.paramSetCache.Get(cacheKey); exists {
+		c.cacheMutex.RUnlock()
+		cacheHits.Inc(1) // Cache hit
+		return cached, nil
+	}
+	cacheMisses.Inc(1) // Cache miss
+	c.cacheMutex.RUnlock()
+
+	// compute the result
+	result, err := c.computeContractParams(blockNum, addr)
+	if err != nil {
+		return nil, err
+	}
+
+	// Store in cache
+	c.cacheMutex.Lock()
+	c.paramSetCache.Add(cacheKey, result)
+	c.cacheMutex.Unlock()
+
+	return result, nil
+}
+
+// computeContractParams computes the contract parameters without caching
+func (c *contractGovModule) computeContractParams(blockNum uint64, addr common.Address) (gov.PartialParamSet, error) {
+	caller := backends.NewBlockchainContractBackend(c.Chain, nil, nil)
 	contract, err := govcontract.NewGovParamCaller(addr, caller)
 	if err != nil {
 		return nil, err
@@ -87,6 +124,18 @@ func (c *contractGovModule) contractGetAllParamsAtFromAddr(blockNum uint64, addr
 func (c *contractGovModule) contractAddrAt(blockNum uint64) (common.Address, error) {
 	headerParams := c.Hgm.GetParamSet(blockNum)
 	return headerParams.GovParamContract, nil
+}
+
+// getStorageRootHash computes the storage root for the ContractGov contract at the latest state
+func (c *contractGovModule) getStorageRootHash(contractAddr common.Address) common.Hash {
+	state, err := c.Chain.State()
+	if err != nil {
+		logger.Error("Failed to get the latest state", "err", err)
+		return common.Hash{}
+	}
+
+	// Get the storage root for the specific contract
+	return state.GetStorageRoot(contractAddr)
 }
 
 func ParseContractCall(names []string, values [][]byte) gov.PartialParamSet {
