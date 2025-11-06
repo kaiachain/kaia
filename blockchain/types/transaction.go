@@ -88,8 +88,8 @@ type Transaction struct {
 	data TxInternalData
 	time time.Time
 	// caches
-	hash         atomic.Value
-	size         atomic.Value
+	hash         atomic.Pointer[common.Hash]
+	size         atomic.Uint64
 	from         atomic.Value
 	feePayer     atomic.Value
 	senderTxHash atomic.Value
@@ -286,7 +286,7 @@ func (tx *Transaction) setDecoded(inner TxInternalData, size int) {
 	tx.time = time.Now()
 
 	if size > 0 {
-		tx.size.Store(common.StorageSize(size))
+		tx.size.Store(uint64(size))
 	}
 }
 
@@ -336,6 +336,92 @@ func (tx *Transaction) AccessList() AccessList {
 		return te.GetAccessList()
 	}
 	return nil
+}
+
+// BlobGas returns the blob gas limit of the transaction for blob transactions, 0 otherwise.
+func (tx *Transaction) BlobGas() uint64 {
+	if tx.Type() != TxTypeEthereumBlob {
+		return 0
+	}
+	return tx.GetTxInternalData().(*TxInternalDataEthereumBlob).GetBlobGas().Uint64()
+}
+
+// BlobGasFeeCap returns the blob gas fee cap per blob gas of the transaction for blob transactions, nil otherwise.
+func (tx *Transaction) BlobGasFeeCap() *big.Int {
+	if tx.Type() != TxTypeEthereumBlob {
+		return nil
+	}
+	return new(big.Int).Set(tx.GetTxInternalData().(*TxInternalDataEthereumBlob).GasFeeCap.ToBig())
+}
+
+// BlobHashes returns the hashes of the blob commitments for blob transactions, nil otherwise.
+func (tx *Transaction) BlobHashes() []common.Hash {
+	if tx.Type() != TxTypeEthereumBlob {
+		return nil
+	}
+	return tx.GetTxInternalData().(*TxInternalDataEthereumBlob).BlobHashes
+}
+
+// BlobTxSidecar returns the sidecar of a blob transaction, nil otherwise.
+func (tx *Transaction) BlobTxSidecar() *BlobTxSidecar {
+	if tx.Type() != TxTypeEthereumBlob {
+		return nil
+	}
+	return tx.GetTxInternalData().(*TxInternalDataEthereumBlob).Sidecar
+}
+
+// BlobGasFeeCapCmp compares the blob fee cap of two transactions.
+func (tx *Transaction) BlobGasFeeCapCmp(other *Transaction) int {
+	return tx.BlobGasFeeCap().Cmp(other.BlobGasFeeCap())
+}
+
+// BlobGasFeeCapIntCmp compares the blob fee cap of the transaction against the given blob fee cap.
+func (tx *Transaction) BlobGasFeeCapIntCmp(other *big.Int) int {
+	return tx.BlobGasFeeCap().Cmp(other)
+}
+
+// WithoutBlobTxSidecar returns a copy of tx with the blob sidecar removed.
+func (tx *Transaction) WithoutBlobTxSidecar() *Transaction {
+	blobtx, ok := tx.GetTxInternalData().(*TxInternalDataEthereumBlob)
+	if !ok {
+		return tx
+	}
+	cpy := &Transaction{
+		data: blobtx.withoutSidecar(),
+		time: tx.time,
+	}
+	if size := tx.size.Load(); size != 0 {
+		// The tx had a sidecar before, so we need to subtract it from the size.
+		scSize := rlp.ListSize(blobtx.Sidecar.encodedSize())
+		cpy.size.Store(size - scSize)
+	}
+	if h := tx.hash.Load(); h != nil {
+		cpy.hash.Store(h)
+	}
+	if f := tx.from.Load(); f != nil {
+		cpy.from.Store(f)
+	}
+	return cpy
+}
+
+// WithBlobTxSidecar returns a copy of tx with the blob sidecar added.
+func (tx *Transaction) WithBlobTxSidecar(sideCar *BlobTxSidecar) *Transaction {
+	blobtx, ok := tx.GetTxInternalData().(*TxInternalDataEthereumBlob)
+	if !ok {
+		return tx
+	}
+	cpy := &Transaction{
+		data: blobtx.withSidecar(sideCar),
+		time: tx.time,
+	}
+	// Note: tx.size cache not carried over because the sidecar is included in size!
+	if h := tx.hash.Load(); h != nil {
+		cpy.hash.Store(h)
+	}
+	if f := tx.from.Load(); f != nil {
+		cpy.from.Store(f)
+	}
+	return cpy
 }
 
 func (tx *Transaction) AuthList() []SetCodeAuthorization {
@@ -548,7 +634,7 @@ func (tx *Transaction) FeeRatio() (FeeRatio, bool) {
 // It uniquely identifies the transaction.
 func (tx *Transaction) Hash() common.Hash {
 	if hash := tx.hash.Load(); hash != nil {
-		return hash.(common.Hash)
+		return *hash
 	}
 
 	var v common.Hash
@@ -559,19 +645,26 @@ func (tx *Transaction) Hash() common.Hash {
 		v = rlpHash(tx)
 	}
 
-	tx.hash.Store(v)
+	tx.hash.Store(&v)
 	return v
 }
 
 // Size returns the true RLP encoded storage size of the transaction, either by
 // encoding and returning it, or returning a previsouly cached value.
 func (tx *Transaction) Size() common.StorageSize {
-	if size := tx.size.Load(); size != nil {
-		return size.(common.StorageSize)
+	if size := tx.size.Load(); size > 0 {
+		return common.StorageSize(size)
 	}
 
 	size := calculateTxSize(tx.data)
-	tx.size.Store(size)
+
+	// For blob transactions, add the size of the blob content and the outer list of the
+	// tx + sidecar encoding.
+	if sc := tx.BlobTxSidecar(); sc != nil {
+		size += common.StorageSize(rlp.ListSize(sc.encodedSize()))
+	}
+
+	tx.size.Store(uint64(size))
 
 	return size
 }

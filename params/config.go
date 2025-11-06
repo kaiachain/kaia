@@ -60,13 +60,20 @@ var (
 			},
 			Owner: common.HexToAddress("0x04992a2B7E7CE809d409adE32185D49A96AAa32d"),
 		},
-		PragueCompatibleBlock: big.NewInt(190670000),
-		OsakaCompatibleBlock:  nil, // TODO-kaia-osaka: set Mainnet's OsakaCompatibleBlock
-		Kip103CompatibleBlock: big.NewInt(119750400),
-		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
-		Kip160CompatibleBlock: big.NewInt(162900480),
-		Kip160ContractAddress: common.HexToAddress("0xa4df15717Da40077C0aD528296AdBBd046579Ee9"),
-		DeriveShaImpl:         2,
+		PragueCompatibleBlock:    big.NewInt(190670000),
+		OsakaCompatibleBlock:     nil, // TODO-kaia-osaka: set Mainnet's OsakaCompatibleBlock
+		BPO1CompatibleBlock:      nil,
+		BPO2CompatibleBlock:      nil,
+		BPO3CompatibleBlock:      nil,
+		BPO4CompatibleBlock:      nil,
+		BPO5CompatibleBlock:      nil,
+		AmsterdamCompatibleBlock: nil,
+		VerkleCompatibleBlock:    nil,
+		Kip103CompatibleBlock:    big.NewInt(119750400),
+		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
+		Kip160CompatibleBlock:    big.NewInt(162900480),
+		Kip160ContractAddress:    common.HexToAddress("0xa4df15717Da40077C0aD528296AdBBd046579Ee9"),
+		DeriveShaImpl:            2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
 			GovernanceMode: "single",
@@ -84,6 +91,9 @@ var (
 			Epoch:          604800,
 			ProposerPolicy: 2,
 			SubGroupSize:   22,
+		},
+		BlobScheduleConfig: &BlobScheduleConfig{
+			Osaka: DefaultOsakaBlobConfig,
 		},
 		UnitPrice: 25000000000,
 	}
@@ -107,12 +117,19 @@ var (
 			},
 			Owner: common.HexToAddress("0x04992a2B7E7CE809d409adE32185D49A96AAa32d"),
 		},
-		PragueCompatibleBlock: big.NewInt(187930000),
-		OsakaCompatibleBlock:  nil, // TODO-kaia-osaka: set Kairos' OsakaCompatibleBlock
-		Kip103CompatibleBlock: big.NewInt(119145600),
-		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
-		Kip160CompatibleBlock: big.NewInt(156660000),
-		Kip160ContractAddress: common.HexToAddress("0x3D478E73c9dBebB72332712D7265961B1868d193"),
+		PragueCompatibleBlock:    big.NewInt(187930000),
+		OsakaCompatibleBlock:     nil, // TODO-kaia-osaka: set Kairos' OsakaCompatibleBlock
+		BPO1CompatibleBlock:      nil,
+		BPO2CompatibleBlock:      nil,
+		BPO3CompatibleBlock:      nil,
+		BPO4CompatibleBlock:      nil,
+		BPO5CompatibleBlock:      nil,
+		AmsterdamCompatibleBlock: nil,
+		VerkleCompatibleBlock:    nil,
+		Kip103CompatibleBlock:    big.NewInt(119145600),
+		Kip103ContractAddress:    common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
+		Kip160CompatibleBlock:    big.NewInt(156660000),
+		Kip160ContractAddress:    common.HexToAddress("0x3D478E73c9dBebB72332712D7265961B1868d193"),
 		// Genesis governance parameters
 		DeriveShaImpl: 2,
 		Governance: &GovernanceConfig{
@@ -132,6 +149,9 @@ var (
 			Epoch:          604800,
 			ProposerPolicy: 2,
 			SubGroupSize:   22,
+		},
+		BlobScheduleConfig: &BlobScheduleConfig{
+			Osaka: DefaultOsakaBlobConfig,
 		},
 		UnitPrice: 25000000000,
 	}
@@ -222,6 +242,43 @@ const (
 	PasswordLength = 16
 )
 
+var (
+	// DefaultOsakaBlobConfig is the default blob configuration for the Osaka fork.
+	DefaultOsakaBlobConfig = &BlobConfig{
+		Target:         6,
+		Max:            9,
+		UpdateFraction: 5007716,
+	}
+	// DefaultBPO1BlobConfig is the default blob configuration for the BPO1 fork.
+	DefaultBPO1BlobConfig = &BlobConfig{
+		Target:         10,
+		Max:            15,
+		UpdateFraction: 8346193,
+	}
+	// DefaultBPO2BlobConfig is the default blob configuration for the BPO2 fork.
+	DefaultBPO2BlobConfig = &BlobConfig{
+		Target:         14,
+		Max:            21,
+		UpdateFraction: 11684671,
+	}
+	// DefaultBPO3BlobConfig is the default blob configuration for the BPO3 fork.
+	DefaultBPO3BlobConfig = &BlobConfig{
+		Target:         21,
+		Max:            32,
+		UpdateFraction: 20609697,
+	}
+	// DefaultBPO4BlobConfig is the default blob configuration for the BPO4 fork.
+	DefaultBPO4BlobConfig = &BlobConfig{
+		Target:         14,
+		Max:            21,
+		UpdateFraction: 13739630,
+	}
+	// DefaultBlobSchedule is the latest configured blob schedule for Ethereum mainnet.
+	DefaultBlobSchedule = &BlobScheduleConfig{
+		Osaka: DefaultOsakaBlobConfig,
+	}
+)
+
 // ChainConfig is the blockchain config which determines the blockchain settings.
 //
 // ChainConfig is stored in the database on a per block basis. This means
@@ -242,6 +299,13 @@ type ChainConfig struct {
 	KaiaCompatibleBlock      *big.Int `json:"kaiaCompatibleBlock,omitempty"`      // KaiaCompatible switch block (nil = no fork, 0 already on Kaia)
 	PragueCompatibleBlock    *big.Int `json:"pragueCompatibleBlock,omitempty"`    // PragueCompatible switch block (nil = no fork)
 	OsakaCompatibleBlock     *big.Int `json:"osakaCompatibleBlock,omitempty"`     // OsakaCompatible switch block (nil = no fork)
+	BPO1CompatibleBlock      *big.Int `json:"bpo1CompatibleBlock,omitempty"`      // BPO1Compatible switch block (nil = no fork, 0 = already on bpo1)
+	BPO2CompatibleBlock      *big.Int `json:"bpo2CompatibleBlock,omitempty"`      // BPO2Compatible switch block (nil = no fork, 0 = already on bpo2)
+	BPO3CompatibleBlock      *big.Int `json:"bpo3CompatibleBlock,omitempty"`      // BPO3Compatible switch block (nil = no fork, 0 = already on bpo3)
+	BPO4CompatibleBlock      *big.Int `json:"bpo4CompatibleBlock,omitempty"`      // BPO4Compatible switch block (nil = no fork, 0 = already on bpo4)
+	BPO5CompatibleBlock      *big.Int `json:"bpo5CompatibleBlock,omitempty"`      // BPO5Compatible switch block (nil = no fork, 0 = already on bpo5)
+	AmsterdamCompatibleBlock *big.Int `json:"amsterdamCompatibleBlock,omitempty"` // AmsterdamCompatible switch block (nil = no fork, 0 = already on amsterdam)
+	VerkleCompatibleBlock    *big.Int `json:"verkleCompatibleBlock,omitempty"`    // VerkleCompatible switch block (nil = no fork, 0 = already on verkle)
 
 	// Kip103 is a special purpose hardfork feature that can be executed only once
 	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
@@ -259,7 +323,8 @@ type ChainConfig struct {
 	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
 
 	// Various consensus engines
-	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
+	Istanbul           *IstanbulConfig     `json:"istanbul,omitempty"`
+	BlobScheduleConfig *BlobScheduleConfig `json:"blobSchedule,omitempty"`
 
 	UnitPrice     uint64            `json:"unitPrice"`
 	DeriveShaImpl int               `json:"deriveShaImpl"`
@@ -352,13 +417,6 @@ func (c *IstanbulConfig) String() string {
 	return "istanbul"
 }
 
-// TODO-Kaia Add BlobConfig
-type BlobConfig struct{}
-
-func (c *ChainConfig) BlobConfig(head uint64) *BlobConfig {
-	return nil
-}
-
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}
@@ -416,6 +474,55 @@ func (c *ChainConfig) Copy() *ChainConfig {
 	j, _ := json.Marshal(c)
 	json.Unmarshal(j, r)
 	return r
+}
+
+// BlobConfig specifies the target and max blobs per block for the associated fork.
+type BlobConfig struct {
+	Target         int    `json:"target"`
+	Max            int    `json:"max"`
+	UpdateFraction uint64 `json:"baseFeeUpdateFraction"`
+}
+
+// String implement fmt.Stringer, returning string format blob config.
+func (bc *BlobConfig) String() string {
+	if bc == nil {
+		return "nil"
+	}
+	return fmt.Sprintf("target: %d, max: %d, fraction: %d", bc.Target, bc.Max, bc.UpdateFraction)
+}
+
+// BlobScheduleConfig determines target and max number of blobs allow per fork.
+type BlobScheduleConfig struct {
+	Osaka     *BlobConfig `json:"osaka,omitempty"`
+	Verkle    *BlobConfig `json:"verkle,omitempty"`
+	BPO1      *BlobConfig `json:"bpo1,omitempty"`
+	BPO2      *BlobConfig `json:"bpo2,omitempty"`
+	BPO3      *BlobConfig `json:"bpo3,omitempty"`
+	BPO4      *BlobConfig `json:"bpo4,omitempty"`
+	BPO5      *BlobConfig `json:"bpo5,omitempty"`
+	Amsterdam *BlobConfig `json:"amsterdam,omitempty"`
+}
+
+func (c *ChainConfig) BlobConfig(head *big.Int) *BlobConfig {
+	if c.IsBPO5ForkEnabled(head) {
+		return c.BlobScheduleConfig.BPO5
+	}
+	if c.IsBPO4ForkEnabled(head) {
+		return c.BlobScheduleConfig.BPO4
+	}
+	if c.IsBPO3ForkEnabled(head) {
+		return c.BlobScheduleConfig.BPO3
+	}
+	if c.IsBPO2ForkEnabled(head) {
+		return c.BlobScheduleConfig.BPO2
+	}
+	if c.IsBPO1ForkEnabled(head) {
+		return c.BlobScheduleConfig.BPO1
+	}
+	if c.IsOsakaForkEnabled(head) {
+		return c.BlobScheduleConfig.Osaka
+	}
+	return nil
 }
 
 // IsIstanbulForkEnabled returns whether num is either equal to the istanbul block or greater.
@@ -481,6 +588,31 @@ func (c *ChainConfig) IsPragueForkEnabled(num *big.Int) bool {
 // IsOsakaForkEnabled returns whether num is either equal to the osaka block or greater.
 func (c *ChainConfig) IsOsakaForkEnabled(num *big.Int) bool {
 	return isForked(c.OsakaCompatibleBlock, num)
+}
+
+// IsBPO1ForkEnabled returns whether num is either equal to the bpo1 block or greater.
+func (c *ChainConfig) IsBPO1ForkEnabled(num *big.Int) bool {
+	return isForked(c.BPO1CompatibleBlock, num)
+}
+
+// IsBPO2ForkEnabled returns whether num is either equal to the bpo2 block or greater.
+func (c *ChainConfig) IsBPO2ForkEnabled(num *big.Int) bool {
+	return isForked(c.BPO2CompatibleBlock, num)
+}
+
+// IsBPO3ForkEnabled returns whether num is either equal to the bpo3 block or greater.
+func (c *ChainConfig) IsBPO3ForkEnabled(num *big.Int) bool {
+	return isForked(c.BPO3CompatibleBlock, num)
+}
+
+// IsBPO4ForkEnabled returns whether num is either equal to the bpo4 block or greater.
+func (c *ChainConfig) IsBPO4ForkEnabled(num *big.Int) bool {
+	return isForked(c.BPO4CompatibleBlock, num)
+}
+
+// IsBPO5ForkEnabled returns whether num is either equal to the bpo5 block or greater.
+func (c *ChainConfig) IsBPO5ForkEnabled(num *big.Int) bool {
+	return isForked(c.BPO5CompatibleBlock, num)
 }
 
 // IsKIP103ForkBlock returns whether num is equal to the kip103 block.

@@ -71,6 +71,12 @@ type Header struct {
 	RandomReveal []byte `json:"randomReveal,omitempty" rlp:"optional"` // 96 byte BLS signature
 	MixHash      []byte `json:"mixHash,omitempty" rlp:"optional"`      // 32 byte RANDAO mix
 
+	// BlobGasUsed was added by EIP-4844 and is ignored in legacy headers.
+	BlobGasUsed *uint64 `json:"blobGasUsed" rlp:"optional"`
+
+	// ExcessBlobGas was added by EIP-4844 and is ignored in legacy headers.
+	ExcessBlobGas *uint64 `json:"excessBlobGas" rlp:"optional"`
+
 	// New header fields must be added at tail for backward compatibility.
 }
 
@@ -78,18 +84,20 @@ type Header struct {
 // gencodec will recognize headerMarshaling struct and use below types
 // instead of the default native types. e.g. []byte -> hexutil.Byte
 type headerMarshaling struct {
-	BlockScore   *hexutil.Big
-	Number       *hexutil.Big
-	GasUsed      hexutil.Uint64
-	Time         *hexutil.Big
-	TimeFoS      hexutil.Uint
-	Extra        hexutil.Bytes
-	BaseFee      *hexutil.Big
-	Hash         common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
-	Governance   hexutil.Bytes
-	Vote         hexutil.Bytes
-	RandomReveal hexutil.Bytes
-	MixHash      hexutil.Bytes
+	BlockScore    *hexutil.Big
+	Number        *hexutil.Big
+	GasUsed       hexutil.Uint64
+	Time          *hexutil.Big
+	TimeFoS       hexutil.Uint
+	Extra         hexutil.Bytes
+	BaseFee       *hexutil.Big
+	Hash          common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
+	Governance    hexutil.Bytes
+	Vote          hexutil.Bytes
+	RandomReveal  hexutil.Bytes
+	MixHash       hexutil.Bytes
+	BlobGasUsed   *hexutil.Uint64
+	ExcessBlobGas *hexutil.Uint64
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
@@ -279,6 +287,14 @@ func CopyHeader(h *Header) *Header {
 		cpy.MixHash = make([]byte, len(h.MixHash))
 		copy(cpy.MixHash, h.MixHash)
 	}
+	if h.ExcessBlobGas != nil {
+		cpy.ExcessBlobGas = new(uint64)
+		*cpy.ExcessBlobGas = *h.ExcessBlobGas
+	}
+	if h.BlobGasUsed != nil {
+		cpy.BlobGasUsed = new(uint64)
+		*cpy.BlobGasUsed = *h.BlobGasUsed
+	}
 	return &cpy
 }
 
@@ -327,6 +343,24 @@ func (b *Block) ParentHash() common.Hash    { return b.header.ParentHash }
 func (b *Block) TxHash() common.Hash        { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash   { return b.header.ReceiptHash }
 func (b *Block) Extra() []byte              { return common.CopyBytes(b.header.Extra) }
+
+func (b *Block) ExcessBlobGas() *uint64 {
+	var excessBlobGas *uint64
+	if b.header.ExcessBlobGas != nil {
+		excessBlobGas = new(uint64)
+		*excessBlobGas = *b.header.ExcessBlobGas
+	}
+	return excessBlobGas
+}
+
+func (b *Block) BlobGasUsed() *uint64 {
+	var blobGasUsed *uint64
+	if b.header.BlobGasUsed != nil {
+		blobGasUsed = new(uint64)
+		*blobGasUsed = *b.header.BlobGasUsed
+	}
+	return blobGasUsed
+}
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 

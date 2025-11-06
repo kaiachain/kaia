@@ -36,6 +36,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
@@ -887,6 +888,37 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, e
 		}
 		if !slices.Contains(txHashes, header.TxHash) {
 			return errInvalidBody
+		}
+		// Blocks must have a number of blobs corresponding to the header gas usage,
+		// and zero before the Cancun hardfork.
+		var blobs int
+		for _, tx := range txLists[index] {
+			// Count the number of blobs to validate against the header's blobGasUsed
+			blobs += len(tx.BlobHashes())
+
+			// Validate the data blobs individually too
+			if tx.Type() == types.TxTypeEthereumBlob {
+				if len(tx.BlobHashes()) == 0 {
+					return errInvalidBody
+				}
+				for _, hash := range tx.BlobHashes() {
+					if !kzg4844.IsValidVersionedHash(hash[:]) {
+						return errInvalidBody
+					}
+				}
+				if tx.BlobTxSidecar() != nil {
+					return errInvalidBody
+				}
+			}
+		}
+		if header.BlobGasUsed != nil {
+			if want := *header.BlobGasUsed / params.BlobTxBlobGasPerBlob; uint64(blobs) != want { // div because the header is surely good vs the body might be bloated
+				return errInvalidBody
+			}
+		} else {
+			if blobs != 0 {
+				return errInvalidBody
+			}
 		}
 		return nil
 	}
