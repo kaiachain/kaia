@@ -263,7 +263,7 @@ var (
 		Name:    "txgen-conn",
 		Usage:   "(docker only) txgen's connection size option [default : 100]",
 		Value:   100,
-		Aliases: []string{"deploy.docker.tx-gen.connetions"},
+		Aliases: []string{"deploy.docker.tx-gen.connections"},
 	}
 	txGenDurFlag = &cli.StringFlag{
 		Name:    "txgen-dur",
