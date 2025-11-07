@@ -137,15 +137,11 @@ func (t *TxInternalDataCancel) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataCancel) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataCancel) GetData() []byte {
 	return []byte{}
 }
 
-func (t *TxInternalDataCancel) SetHash(h *common.Hash) {
+func (t *TxInternalDataCancel) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

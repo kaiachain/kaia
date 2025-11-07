@@ -347,15 +347,11 @@ func (t *TxInternalDataAccountCreation) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataAccountCreation) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataAccountCreation) GetData() []byte {
 	return []byte{}
 }
 
-func (t *TxInternalDataAccountCreation) SetHash(h *common.Hash) {
+func (t *TxInternalDataAccountCreation) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

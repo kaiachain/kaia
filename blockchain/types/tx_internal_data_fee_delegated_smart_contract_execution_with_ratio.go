@@ -220,10 +220,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) GetFrom() co
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) GetFeePayer() common.Address {
 	return t.FeePayer
 }
@@ -236,7 +232,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) GetFeeRatio(
 	return t.FeeRatio
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedSmartContractExecutionWithRatio) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

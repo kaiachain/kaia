@@ -208,15 +208,11 @@ func (t *TxInternalDataSmartContractDeploy) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataSmartContractDeploy) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataSmartContractDeploy) GetCodeFormat() params.CodeFormat {
 	return t.CodeFormat
 }
 
-func (t *TxInternalDataSmartContractDeploy) SetHash(h *common.Hash) {
+func (t *TxInternalDataSmartContractDeploy) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

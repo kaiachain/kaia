@@ -229,10 +229,6 @@ func (t *TxInternalDataEthereumDynamicFee) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *TxInternalDataEthereumDynamicFee) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataEthereumDynamicFee) GetData() []byte {
 	return t.Payload
 }
@@ -249,7 +245,7 @@ func (t *TxInternalDataEthereumDynamicFee) GetGasFeeCap() *big.Int {
 	return t.GasFeeCap
 }
 
-func (t *TxInternalDataEthereumDynamicFee) SetHash(hash *common.Hash) {
+func (t *TxInternalDataEthereumDynamicFee) setHashForMarshaling(hash *common.Hash) {
 	t.Hash = hash
 }
 
@@ -389,7 +385,7 @@ func (t *TxInternalDataEthereumDynamicFee) SerializeForSign() []interface{} {
 	}
 }
 
-func (t *TxInternalDataEthereumDynamicFee) TxHash() common.Hash {
+func (t *TxInternalDataEthereumDynamicFee) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
 		t.AccountNonce,

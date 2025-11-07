@@ -276,11 +276,7 @@ func (t *TxInternalDataEthereumSetCode) GetGasFeeCap() *big.Int {
 	return t.GasFeeCap
 }
 
-func (t *TxInternalDataEthereumSetCode) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataEthereumSetCode) SetHash(h *common.Hash) {
+func (t *TxInternalDataEthereumSetCode) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
@@ -363,7 +359,7 @@ func (t *TxInternalDataEthereumSetCode) SerializeForSign() []interface{} {
 	}
 }
 
-func (t *TxInternalDataEthereumSetCode) TxHash() common.Hash {
+func (t *TxInternalDataEthereumSetCode) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
 		t.AccountNonce,

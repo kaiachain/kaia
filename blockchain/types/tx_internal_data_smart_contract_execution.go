@@ -191,11 +191,7 @@ func (t *TxInternalDataSmartContractExecution) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataSmartContractExecution) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataSmartContractExecution) SetHash(h *common.Hash) {
+func (t *TxInternalDataSmartContractExecution) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

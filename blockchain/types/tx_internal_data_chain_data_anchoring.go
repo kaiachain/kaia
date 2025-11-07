@@ -239,15 +239,11 @@ func (t *TxInternalDataChainDataAnchoring) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataChainDataAnchoring) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataChainDataAnchoring) SetHash(h *common.Hash) {
+func (t *TxInternalDataChainDataAnchoring) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

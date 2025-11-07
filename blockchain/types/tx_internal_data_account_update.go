@@ -248,15 +248,11 @@ func (t *TxInternalDataAccountUpdate) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataAccountUpdate) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataAccountUpdate) GetData() []byte {
 	return []byte{}
 }
 
-func (t *TxInternalDataAccountUpdate) SetHash(h *common.Hash) {
+func (t *TxInternalDataAccountUpdate) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

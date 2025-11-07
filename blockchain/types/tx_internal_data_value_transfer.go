@@ -206,15 +206,11 @@ func (t *TxInternalDataValueTransfer) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataValueTransfer) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataValueTransfer) GetData() []byte {
 	return []byte{}
 }
 
-func (t *TxInternalDataValueTransfer) SetHash(h *common.Hash) {
+func (t *TxInternalDataValueTransfer) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

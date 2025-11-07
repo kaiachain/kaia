@@ -242,10 +242,6 @@ func (t *TxInternalDataEthereumAccessList) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *TxInternalDataEthereumAccessList) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataEthereumAccessList) GetData() []byte {
 	return t.Payload
 }
@@ -254,7 +250,7 @@ func (t *TxInternalDataEthereumAccessList) GetAccessList() AccessList {
 	return t.AccessList
 }
 
-func (t *TxInternalDataEthereumAccessList) SetHash(hash *common.Hash) {
+func (t *TxInternalDataEthereumAccessList) setHashForMarshaling(hash *common.Hash) {
 	t.Hash = hash
 }
 
@@ -315,7 +311,7 @@ func (t *TxInternalDataEthereumAccessList) SerializeForSign() []interface{} {
 	}
 }
 
-func (t *TxInternalDataEthereumAccessList) TxHash() common.Hash {
+func (t *TxInternalDataEthereumAccessList) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
 		t.AccountNonce,

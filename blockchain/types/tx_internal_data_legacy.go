@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -188,15 +187,11 @@ func (t *TxInternalDataLegacy) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *TxInternalDataLegacy) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataLegacy) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataLegacy) SetHash(h *common.Hash) {
+func (t *TxInternalDataLegacy) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
@@ -268,19 +263,6 @@ func (t *TxInternalDataLegacy) SenderTxHash() common.Hash {
 	hw.Sum(h[:0])
 
 	return h
-}
-
-func (t *TxInternalDataLegacy) equalHash(a *TxInternalDataLegacy) bool {
-	if t.GetHash() == nil && a.GetHash() == nil {
-		return true
-	}
-
-	if t.GetHash() != nil && a.GetHash() != nil &&
-		bytes.Equal(t.GetHash().Bytes(), a.GetHash().Bytes()) {
-		return true
-	}
-
-	return false
 }
 
 func (t *TxInternalDataLegacy) Equal(a TxInternalData) bool {

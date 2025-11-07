@@ -278,10 +278,6 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) GetFrom() common
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) GetData() []byte {
 	return t.Payload
 }
@@ -298,7 +294,7 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) GetFeeRatio() Fe
 	return t.FeeRatio
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

@@ -217,7 +217,7 @@ func testTransactionRPC(t *testing.T, tx TxInternalData) {
 	}
 
 	h := rawTx.Hash()
-	tx.SetHash(&h)
+	tx.setHashForMarshaling(&h)
 
 	// Copied from newRPCTransaction
 	rpcout := newRPCTransaction(rawTx, common.Hash{}, 0, 0)

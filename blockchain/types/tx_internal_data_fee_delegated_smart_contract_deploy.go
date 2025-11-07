@@ -223,10 +223,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetFrom() common.Address
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetFeePayer() common.Address {
 	return t.FeePayer
 }
@@ -239,7 +235,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetFeePayerRawSignatureV
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

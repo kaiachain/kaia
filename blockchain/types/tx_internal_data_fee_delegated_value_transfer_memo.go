@@ -241,10 +241,6 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetFeePayer() common.Address {
 	return t.FeePayer
 }
@@ -253,7 +249,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetFeePayerRawSignatureVal
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

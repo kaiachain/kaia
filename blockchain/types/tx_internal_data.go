@@ -311,10 +311,9 @@ type TxInternalData interface {
 	GetGasLimit() uint64
 	GetTo() *common.Address
 	GetValue() *big.Int
-	GetHash() *common.Hash
 	GetData() []byte
 
-	SetHash(*common.Hash)
+	setHashForMarshaling(*common.Hash)
 	SetSignature(TxSignatures)
 
 	// RawSignatureValues returns signatures as a slice of `*big.Int`.
@@ -406,7 +405,7 @@ type TxInternalDataFrom interface {
 // For supporting new typed transaction defined EIP-2718, We provide an interface `TxInternalDataEthTyped `
 type TxInternalDataEthTyped interface {
 	setSignatureValues(chainID, v, r, s *big.Int)
-	TxHash() common.Hash
+	EthTxHash() common.Hash
 }
 
 // TxInternalDataAccessList has a function related to EIP-2930 Ethereum access list transactions.

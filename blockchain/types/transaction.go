@@ -266,7 +266,7 @@ func (tx *Transaction) UnmarshalBinary(b []byte) error {
 func (tx *Transaction) MarshalJSON() ([]byte, error) {
 	hash := tx.Hash()
 	data := tx.data
-	data.SetHash(&hash)
+	data.setHashForMarshaling(&hash)
 	serializer := newTxInternalDataSerializerWithValues(tx.data)
 	return json.Marshal(serializer)
 }
@@ -558,7 +558,7 @@ func (tx *Transaction) Hash() common.Hash {
 	var v common.Hash
 	if tx.IsEthTypedTransaction() {
 		te := tx.data.(TxInternalDataEthTyped)
-		v = te.TxHash()
+		v = te.EthTxHash()
 	} else {
 		v = rlpHash(tx)
 	}

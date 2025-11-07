@@ -501,10 +501,6 @@ func (t *TxInternalDataEthereumBlob) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount.ToBig())
 }
 
-func (t *TxInternalDataEthereumBlob) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataEthereumBlob) GetData() []byte {
 	return t.Payload
 }
@@ -525,7 +521,7 @@ func (t *TxInternalDataEthereumBlob) GetBlobGas() *big.Int {
 	return new(big.Int).SetUint64(params.BlobTxBlobGasPerBlob * uint64(len(t.BlobHashes)))
 }
 
-func (t *TxInternalDataEthereumBlob) SetHash(hash *common.Hash) {
+func (t *TxInternalDataEthereumBlob) setHashForMarshaling(hash *common.Hash) {
 	t.Hash = hash
 }
 
@@ -675,7 +671,7 @@ func (t *TxInternalDataEthereumBlob) SerializeForSign() []interface{} {
 	}
 }
 
-func (t *TxInternalDataEthereumBlob) TxHash() common.Hash {
+func (t *TxInternalDataEthereumBlob) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
 		t.AccountNonce,

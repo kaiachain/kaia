@@ -258,10 +258,6 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetFrom() common.Address 
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetData() []byte {
 	return t.Payload
 }
@@ -274,7 +270,7 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetFeePayerRawSignatureVa
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
