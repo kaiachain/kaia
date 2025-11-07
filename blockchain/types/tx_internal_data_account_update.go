@@ -224,11 +224,11 @@ func (t *TxInternalDataAccountUpdate) GetRoleTypeForValidation() accountkey.Role
 	return accountkey.RoleAccountUpdate
 }
 
-func (t *TxInternalDataAccountUpdate) GetAccountNonce() uint64 {
+func (t *TxInternalDataAccountUpdate) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataAccountUpdate) GetPrice() *big.Int {
+func (t *TxInternalDataAccountUpdate) GetGasPrice() *big.Int {
 	return t.Price
 }
 
@@ -236,11 +236,11 @@ func (t *TxInternalDataAccountUpdate) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataAccountUpdate) GetRecipient() *common.Address {
+func (t *TxInternalDataAccountUpdate) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataAccountUpdate) GetAmount() *big.Int {
+func (t *TxInternalDataAccountUpdate) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -252,12 +252,12 @@ func (t *TxInternalDataAccountUpdate) GetHash() *common.Hash {
 	return t.Hash
 }
 
-func (t *TxInternalDataAccountUpdate) SetHash(h *common.Hash) {
-	t.Hash = h
+func (t *TxInternalDataAccountUpdate) GetData() []byte {
+	return []byte{}
 }
 
-func (t *TxInternalDataAccountUpdate) IsLegacyTransaction() bool {
-	return false
+func (t *TxInternalDataAccountUpdate) SetHash(h *common.Hash) {
+	t.Hash = h
 }
 
 func (t *TxInternalDataAccountUpdate) Equal(a TxInternalData) bool {

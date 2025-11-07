@@ -236,11 +236,11 @@ func (t *TxInternalDataEthereumSetCode) Type() TxType {
 	return TxTypeEthereumSetCode
 }
 
-func (t *TxInternalDataEthereumSetCode) GetAccountNonce() uint64 {
+func (t *TxInternalDataEthereumSetCode) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataEthereumSetCode) GetPrice() *big.Int {
+func (t *TxInternalDataEthereumSetCode) GetGasPrice() *big.Int {
 	return t.GasFeeCap
 }
 
@@ -248,15 +248,15 @@ func (t *TxInternalDataEthereumSetCode) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataEthereumSetCode) GetRecipient() *common.Address {
+func (t *TxInternalDataEthereumSetCode) GetTo() *common.Address {
 	return &t.Recipient
 }
 
-func (t *TxInternalDataEthereumSetCode) GetAmount() *big.Int {
+func (t *TxInternalDataEthereumSetCode) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *TxInternalDataEthereumSetCode) GetPayload() []byte {
+func (t *TxInternalDataEthereumSetCode) GetData() []byte {
 	return t.Payload
 }
 
@@ -410,10 +410,6 @@ func (t *TxInternalDataEthereumSetCode) ValidateMutableValue(stateDB StateDB, cu
 	return nil
 }
 
-func (t *TxInternalDataEthereumSetCode) IsLegacyTransaction() bool {
-	return false
-}
-
 func (t *TxInternalDataEthereumSetCode) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
 }
@@ -434,7 +430,7 @@ func (t *TxInternalDataEthereumSetCode) String() string {
 		from = "[invalid sender: nil V field]"
 	}
 
-	to = hex.EncodeToString(t.GetRecipient().Bytes())
+	to = hex.EncodeToString(t.GetTo().Bytes())
 	enc, _ := rlp.EncodeToBytes(tx)
 	return fmt.Sprintf(`
 		TX(%x)
@@ -458,12 +454,12 @@ func (t *TxInternalDataEthereumSetCode) String() string {
 		t.ChainId(),
 		from,
 		to,
-		t.GetAccountNonce(),
+		t.GetNonce(),
 		t.GetGasTipCap(),
 		t.GetGasFeeCap(),
 		t.GetGasLimit(),
-		t.GetAmount(),
-		t.GetPayload(),
+		t.GetValue(),
+		t.GetData(),
 		t.AccessList,
 		t.AuthorizationList,
 		v,

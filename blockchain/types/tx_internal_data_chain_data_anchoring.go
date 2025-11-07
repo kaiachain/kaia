@@ -215,15 +215,11 @@ func (t *TxInternalDataChainDataAnchoring) SenderTxHash() common.Hash {
 	return h
 }
 
-func (t *TxInternalDataChainDataAnchoring) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataChainDataAnchoring) GetAccountNonce() uint64 {
+func (t *TxInternalDataChainDataAnchoring) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetPrice() *big.Int {
+func (t *TxInternalDataChainDataAnchoring) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -231,11 +227,11 @@ func (t *TxInternalDataChainDataAnchoring) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetRecipient() *common.Address {
+func (t *TxInternalDataChainDataAnchoring) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetAmount() *big.Int {
+func (t *TxInternalDataChainDataAnchoring) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -247,7 +243,7 @@ func (t *TxInternalDataChainDataAnchoring) GetHash() *common.Hash {
 	return t.Hash
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetPayload() []byte {
+func (t *TxInternalDataChainDataAnchoring) GetData() []byte {
 	return t.Payload
 }
 

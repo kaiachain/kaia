@@ -306,12 +306,13 @@ func (f FeeRatio) IsValid() bool {
 type TxInternalData interface {
 	Type() TxType
 
-	GetAccountNonce() uint64
-	GetPrice() *big.Int
+	GetNonce() uint64
+	GetGasPrice() *big.Int
 	GetGasLimit() uint64
-	GetRecipient() *common.Address
-	GetAmount() *big.Int
+	GetTo() *common.Address
+	GetValue() *big.Int
 	GetHash() *common.Hash
+	GetData() []byte
 
 	SetHash(*common.Hash)
 	SetSignature(TxSignatures)
@@ -357,12 +358,6 @@ type TxInternalData interface {
 	// MutableValues: accountKey, the existence of creating address, feePayer's balance, etc.
 	ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error
 
-	// IsLegacyTransaction returns true if the tx type is a legacy transaction (TxInternalDataLegacy) object.
-	IsLegacyTransaction() bool
-
-	// GetRoleTypeForValidation returns RoleType to validate this transaction.
-	GetRoleTypeForValidation() accountkey.RoleType
-
 	// String returns a string containing information about the fields of the object.
 	String() string
 
@@ -407,19 +402,16 @@ type TxInternalDataFrom interface {
 	GetFrom() common.Address
 }
 
-// TxInternalDataPayload has a function `GetPayload()`.
-// Since the payload field is not a common field for all tx types, we provide
-// an interface `TxInternalDataPayload` to obtain the payload.
-type TxInternalDataPayload interface {
-	GetPayload() []byte
-}
-
 // TxInternalDataEthTyped has a function related to EIP-2718 Ethereum typed transaction.
 // For supporting new typed transaction defined EIP-2718, We provide an interface `TxInternalDataEthTyped `
 type TxInternalDataEthTyped interface {
 	setSignatureValues(chainID, v, r, s *big.Int)
-	GetAccessList() AccessList
 	TxHash() common.Hash
+}
+
+// TxInternalDataAccessList has a function related to EIP-2930 Ethereum access list transactions.
+type TxInternalDataAccessList interface {
+	GetAccessList() AccessList
 }
 
 // TxInternalDataBaseFee has a function related to EIP-1559 Ethereum typed transaction.

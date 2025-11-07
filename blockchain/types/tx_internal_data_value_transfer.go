@@ -177,15 +177,11 @@ func (t *TxInternalDataValueTransfer) String() string {
 		enc)
 }
 
-func (t *TxInternalDataValueTransfer) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataValueTransfer) GetAccountNonce() uint64 {
+func (t *TxInternalDataValueTransfer) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataValueTransfer) GetPrice() *big.Int {
+func (t *TxInternalDataValueTransfer) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -193,7 +189,7 @@ func (t *TxInternalDataValueTransfer) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataValueTransfer) GetRecipient() *common.Address {
+func (t *TxInternalDataValueTransfer) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -202,7 +198,7 @@ func (t *TxInternalDataValueTransfer) GetRecipient() *common.Address {
 	return &to
 }
 
-func (t *TxInternalDataValueTransfer) GetAmount() *big.Int {
+func (t *TxInternalDataValueTransfer) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -212,6 +208,10 @@ func (t *TxInternalDataValueTransfer) GetFrom() common.Address {
 
 func (t *TxInternalDataValueTransfer) GetHash() *common.Hash {
 	return t.Hash
+}
+
+func (t *TxInternalDataValueTransfer) GetData() []byte {
+	return []byte{}
 }
 
 func (t *TxInternalDataValueTransfer) SetHash(h *common.Hash) {

@@ -139,11 +139,11 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetRoleTypeForValidation() a
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetGasPrice() *big.Int {
 	return t.Price
 }
 
@@ -151,11 +151,11 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -165,6 +165,10 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetFrom() common.Address {
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetHash() *common.Hash {
 	return t.Hash
+}
+
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetData() []byte {
+	return []byte{}
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetFeePayer() common.Address {
@@ -189,10 +193,6 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SetFeePayerSignatures(s TxSi
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
 	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
-}
-
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) IsLegacyTransaction() bool {
-	return false
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) Equal(b TxInternalData) bool {

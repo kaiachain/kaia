@@ -481,11 +481,11 @@ func (t *TxInternalDataEthereumBlob) GetRoleTypeForValidation() accountkey.RoleT
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataEthereumBlob) GetAccountNonce() uint64 {
+func (t *TxInternalDataEthereumBlob) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataEthereumBlob) GetPrice() *big.Int {
+func (t *TxInternalDataEthereumBlob) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.GasFeeCap.ToBig())
 }
 
@@ -493,11 +493,11 @@ func (t *TxInternalDataEthereumBlob) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataEthereumBlob) GetRecipient() *common.Address {
+func (t *TxInternalDataEthereumBlob) GetTo() *common.Address {
 	return &t.Recipient
 }
 
-func (t *TxInternalDataEthereumBlob) GetAmount() *big.Int {
+func (t *TxInternalDataEthereumBlob) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount.ToBig())
 }
 
@@ -505,7 +505,7 @@ func (t *TxInternalDataEthereumBlob) GetHash() *common.Hash {
 	return t.Hash
 }
 
-func (t *TxInternalDataEthereumBlob) GetPayload() []byte {
+func (t *TxInternalDataEthereumBlob) GetData() []byte {
 	return t.Payload
 }
 
@@ -611,10 +611,10 @@ func (t *TxInternalDataEthereumBlob) String() string {
 		from = "[invalid sender: nil V field]"
 	}
 
-	if t.GetRecipient() == nil {
+	if t.GetTo() == nil {
 		to = "[contract creation]"
 	} else {
-		to = hex.EncodeToString(t.GetRecipient().Bytes())
+		to = hex.EncodeToString(t.GetTo().Bytes())
 	}
 	enc, _ := rlp.EncodeToBytes(tx)
 	return fmt.Sprintf(`
@@ -638,16 +638,16 @@ func (t *TxInternalDataEthereumBlob) String() string {
 		Hex:      %x
 	`,
 		tx.Hash(),
-		t.GetRecipient() == nil,
+		t.GetTo() == nil,
 		t.ChainId(),
 		from,
 		to,
-		t.GetAccountNonce(),
+		t.GetNonce(),
 		t.GetGasTipCap(),
 		t.GetGasFeeCap(),
 		t.GetGasLimit(),
-		t.GetAmount(),
-		t.GetPayload(),
+		t.GetValue(),
+		t.GetData(),
 		t.AccessList,
 		t.BlobFeeCap,
 		t.BlobHashes,
@@ -722,10 +722,6 @@ func (t *TxInternalDataEthereumBlob) Validate(stateDB StateDB, currentBlockNumbe
 
 func (t *TxInternalDataEthereumBlob) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	return nil
-}
-
-func (t *TxInternalDataEthereumBlob) IsLegacyTransaction() bool {
-	return false
 }
 
 func (t *TxInternalDataEthereumBlob) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

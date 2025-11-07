@@ -224,15 +224,11 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) String() string {
 		enc)
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -240,7 +236,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetGasLimit() uin
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -249,7 +245,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetRecipient() *c
 	return &to
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -257,7 +253,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetFrom() common.
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetPayload() []byte {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetData() []byte {
 	return t.Payload
 }
 

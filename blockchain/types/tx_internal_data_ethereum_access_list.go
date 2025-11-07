@@ -222,11 +222,11 @@ func (t *TxInternalDataEthereumAccessList) ChainId() *big.Int {
 	return t.ChainID
 }
 
-func (t *TxInternalDataEthereumAccessList) GetAccountNonce() uint64 {
+func (t *TxInternalDataEthereumAccessList) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataEthereumAccessList) GetPrice() *big.Int {
+func (t *TxInternalDataEthereumAccessList) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -234,11 +234,11 @@ func (t *TxInternalDataEthereumAccessList) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataEthereumAccessList) GetRecipient() *common.Address {
+func (t *TxInternalDataEthereumAccessList) GetTo() *common.Address {
 	return t.Recipient
 }
 
-func (t *TxInternalDataEthereumAccessList) GetAmount() *big.Int {
+func (t *TxInternalDataEthereumAccessList) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -246,7 +246,7 @@ func (t *TxInternalDataEthereumAccessList) GetHash() *common.Hash {
 	return t.Hash
 }
 
-func (t *TxInternalDataEthereumAccessList) GetPayload() []byte {
+func (t *TxInternalDataEthereumAccessList) GetData() []byte {
 	return t.Payload
 }
 
@@ -347,10 +347,6 @@ func (t *TxInternalDataEthereumAccessList) SenderTxHash() common.Hash {
 	})
 }
 
-func (t *TxInternalDataEthereumAccessList) IsLegacyTransaction() bool {
-	return false
-}
-
 func (t *TxInternalDataEthereumAccessList) Equal(a TxInternalData) bool {
 	ta, ok := a.(*TxInternalDataEthereumAccessList)
 	if !ok {
@@ -386,10 +382,10 @@ func (t *TxInternalDataEthereumAccessList) String() string {
 		from = "[invalid sender: nil V field]"
 	}
 
-	if t.GetRecipient() == nil {
+	if t.GetTo() == nil {
 		to = "[contract creation]"
 	} else {
-		to = fmt.Sprintf("%x", t.GetRecipient().Bytes())
+		to = fmt.Sprintf("%x", t.GetTo().Bytes())
 	}
 	enc, _ := rlp.EncodeToBytes(tx)
 	return fmt.Sprintf(`
@@ -410,15 +406,15 @@ func (t *TxInternalDataEthereumAccessList) String() string {
 		Hex:      %x
 	`,
 		tx.Hash(),
-		t.GetRecipient() == nil,
+		t.GetTo() == nil,
 		t.ChainId(),
 		from,
 		to,
-		t.GetAccountNonce(),
-		t.GetPrice(),
+		t.GetNonce(),
+		t.GetGasPrice(),
 		t.GetGasLimit(),
-		t.GetAmount(),
-		t.GetPayload(),
+		t.GetValue(),
+		t.GetData(),
 		t.AccessList,
 		v,
 		r,

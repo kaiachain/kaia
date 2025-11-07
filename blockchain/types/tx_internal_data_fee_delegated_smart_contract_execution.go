@@ -173,19 +173,15 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) Equal(a TxInternalDat
 		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetPayload() []byte {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -193,7 +189,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetGasLimit() uint64 
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -202,7 +198,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetRecipient() *commo
 	return &to
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 

@@ -266,11 +266,11 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetRoleTypeForValidat
 	return accountkey.RoleAccountUpdate
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetGasPrice() *big.Int {
 	return t.Price
 }
 
@@ -278,11 +278,11 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetGasLimit() uint64 
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -292,6 +292,10 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetFrom() common.Addr
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetHash() *common.Hash {
 	return t.Hash
+}
+
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetData() []byte {
+	return []byte{}
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetFeePayer() common.Address {
@@ -308,10 +312,6 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) GetFeeRatio() FeeRati
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SetHash(h *common.Hash) {
 	t.Hash = h
-}
-
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) IsLegacyTransaction() bool {
-	return false
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Equal(a TxInternalData) bool {

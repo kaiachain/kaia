@@ -933,14 +933,8 @@ func assertEqual(orig *Transaction, cpy *Transaction) error {
 	if want, got := orig.ChainId(), cpy.ChainId(); want.Cmp(got) != 0 {
 		return fmt.Errorf("invalid chain id, want %d, got %d", want, got)
 	}
-
-	if orig.Type().IsEthTypedTransaction() && cpy.Type().IsEthTypedTransaction() {
-		tOrig := orig.data.(TxInternalDataEthTyped)
-		tCpy := cpy.data.(TxInternalDataEthTyped)
-
-		if !reflect.DeepEqual(tOrig.GetAccessList(), tCpy.GetAccessList()) {
-			return fmt.Errorf("access list wrong!")
-		}
+	if !reflect.DeepEqual(orig.AccessList(), cpy.AccessList()) {
+		return fmt.Errorf("access list wrong!")
 	}
 
 	return nil

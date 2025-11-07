@@ -295,13 +295,13 @@ func (tx *Transaction) setDecoded(inner TxInternalData, size int) {
 }
 
 func (tx *Transaction) Gas() uint64        { return tx.data.GetGasLimit() }
-func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.GetPrice()) }
+func (tx *Transaction) GasPrice() *big.Int { return new(big.Int).Set(tx.data.GetGasPrice()) }
 func (tx *Transaction) GasTipCap() *big.Int {
 	if te, ok := tx.GetTxInternalData().(TxInternalDataBaseFee); ok {
 		return te.GetGasTipCap()
 	}
 
-	return tx.data.GetPrice()
+	return tx.data.GetGasPrice()
 }
 
 func (tx *Transaction) GasFeeCap() *big.Int {
@@ -309,7 +309,7 @@ func (tx *Transaction) GasFeeCap() *big.Int {
 		return te.GetGasFeeCap()
 	}
 
-	return tx.data.GetPrice()
+	return tx.data.GetGasPrice()
 }
 
 func (tx *Transaction) EffectiveGasTip(baseFee *big.Int) *big.Int {
@@ -336,8 +336,7 @@ func (tx *Transaction) EffectiveGasPrice(header *Header, config *params.ChainCon
 }
 
 func (tx *Transaction) AccessList() AccessList {
-	if tx.IsEthTypedTransaction() {
-		te := tx.GetTxInternalData().(TxInternalDataEthTyped)
+	if te, ok := tx.GetTxInternalData().(TxInternalDataAccessList); ok {
 		return te.GetAccessList()
 	}
 	return nil
@@ -373,8 +372,8 @@ func (tx *Transaction) SetCodeAuthorities() []common.Address {
 	return auths
 }
 
-func (tx *Transaction) Value() *big.Int { return new(big.Int).Set(tx.data.GetAmount()) }
-func (tx *Transaction) Nonce() uint64   { return tx.data.GetAccountNonce() }
+func (tx *Transaction) Value() *big.Int { return new(big.Int).Set(tx.data.GetValue()) }
+func (tx *Transaction) Nonce() uint64   { return tx.data.GetNonce() }
 func (tx *Transaction) CheckNonce() bool {
 	tx.mu.RLock()
 	defer tx.mu.RUnlock()
@@ -444,7 +443,7 @@ func (tx *Transaction) ValidateMutableValue(db StateDB, signer Signer, currentBl
 	} else {
 		if pubkey, err := SenderPubkey(signer, tx); err != nil {
 			return ErrInvalidSigSender
-		} else if accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedSender(), accKey, pubkey, tx.GetRoleTypeForValidation()) != nil {
+		} else if accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedSender(), accKey, pubkey, GetRoleTypeForValidation(tx.Type())) != nil {
 			return ErrInvalidAccountKey
 		}
 	}
@@ -462,17 +461,8 @@ func (tx *Transaction) ValidateMutableValue(db StateDB, signer Signer, currentBl
 	return tx.data.ValidateMutableValue(db, currentBlockNumber)
 }
 
-func (tx *Transaction) GetRoleTypeForValidation() accountkey.RoleType {
-	return tx.data.GetRoleTypeForValidation()
-}
-
 func (tx *Transaction) Data() []byte {
-	tp, ok := tx.data.(TxInternalDataPayload)
-	if !ok {
-		return []byte{}
-	}
-
-	return common.CopyBytes(tp.GetPayload())
+	return common.CopyBytes(tx.data.GetData())
 }
 
 // IsFeeDelegatedTransaction returns true if the transaction is a fee-delegated transaction.
@@ -509,10 +499,10 @@ func (tx *Transaction) AnchoredData() ([]byte, error) {
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
 func (tx *Transaction) To() *common.Address {
-	if tx.data.GetRecipient() == nil {
+	if tx.data.GetTo() == nil {
 		return nil
 	}
-	to := *tx.data.GetRecipient()
+	to := *tx.data.GetTo()
 	return &to
 }
 
@@ -686,12 +676,12 @@ func (tx *Transaction) WithFeePayerSignature(signer Signer, sig []byte) (*Transa
 // Cost returns amount + gasprice * gaslimit.
 func (tx *Transaction) Cost() *big.Int {
 	total := tx.Fee()
-	total.Add(total, tx.data.GetAmount())
+	total.Add(total, tx.data.GetValue())
 	return total
 }
 
 func (tx *Transaction) Fee() *big.Int {
-	return new(big.Int).Mul(tx.data.GetPrice(), new(big.Int).SetUint64(tx.data.GetGasLimit()))
+	return new(big.Int).Mul(tx.data.GetGasPrice(), new(big.Int).SetUint64(tx.data.GetGasLimit()))
 }
 
 // Sign signs the tx with the given signer and private key.
@@ -827,12 +817,12 @@ func (tx *Transaction) ValidateSender(signer Signer, p AccountKeyPicker, current
 	from := txfrom.GetFrom()
 	accKey := p.GetKey(from)
 
-	gasKey, err := accKey.SigValidationGas(currentBlockNumber, tx.GetRoleTypeForValidation(), len(pubkey))
+	gasKey, err := accKey.SigValidationGas(currentBlockNumber, GetRoleTypeForValidation(tx.Type()), len(pubkey))
 	if err != nil {
 		return 0, err
 	}
 
-	if err := accountkey.ValidateAccountKey(currentBlockNumber, from, accKey, pubkey, tx.GetRoleTypeForValidation()); err != nil {
+	if err := accountkey.ValidateAccountKey(currentBlockNumber, from, accKey, pubkey, GetRoleTypeForValidation(tx.Type())); err != nil {
 		return 0, ErrInvalidAccountKey
 	}
 
@@ -940,7 +930,7 @@ type TxByNonce Transactions
 
 func (s TxByNonce) Len() int { return len(s) }
 func (s TxByNonce) Less(i, j int) bool {
-	return s[i].data.GetAccountNonce() < s[j].data.GetAccountNonce()
+	return s[i].data.GetNonce() < s[j].data.GetNonce()
 }
 func (s TxByNonce) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 
@@ -1123,6 +1113,15 @@ func (t *TransactionsByPriceAndNonce) Copy() *TransactionsByPriceAndNonce {
 		heads:   t.heads, // pop, shift changes it.
 		signer:  t.signer,
 		baseFee: t.baseFee, // read-only
+	}
+}
+
+func GetRoleTypeForValidation(txType TxType) accountkey.RoleType {
+	switch txType {
+	case TxTypeAccountUpdate, TxTypeFeeDelegatedAccountUpdate, TxTypeFeeDelegatedAccountUpdateWithRatio:
+		return accountkey.RoleAccountUpdate
+	default:
+		return accountkey.RoleTransaction
 	}
 }
 

@@ -162,7 +162,7 @@ func (t *TxInternalDataSmartContractDeploy) GetRoleTypeForValidation() accountke
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataSmartContractDeploy) GetPayload() []byte {
+func (t *TxInternalDataSmartContractDeploy) GetData() []byte {
 	return t.Payload
 }
 
@@ -184,15 +184,11 @@ func (t *TxInternalDataSmartContractDeploy) Equal(a TxInternalData) bool {
 		t.CodeFormat == ta.CodeFormat
 }
 
-func (t *TxInternalDataSmartContractDeploy) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataSmartContractDeploy) GetAccountNonce() uint64 {
+func (t *TxInternalDataSmartContractDeploy) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataSmartContractDeploy) GetPrice() *big.Int {
+func (t *TxInternalDataSmartContractDeploy) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -200,11 +196,11 @@ func (t *TxInternalDataSmartContractDeploy) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataSmartContractDeploy) GetRecipient() *common.Address {
+func (t *TxInternalDataSmartContractDeploy) GetTo() *common.Address {
 	return t.Recipient
 }
 
-func (t *TxInternalDataSmartContractDeploy) GetAmount() *big.Int {
+func (t *TxInternalDataSmartContractDeploy) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 

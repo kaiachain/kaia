@@ -318,15 +318,11 @@ func (t *TxInternalDataAccountCreation) String() string {
 		enc)
 }
 
-func (t *TxInternalDataAccountCreation) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataAccountCreation) GetAccountNonce() uint64 {
+func (t *TxInternalDataAccountCreation) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataAccountCreation) GetPrice() *big.Int {
+func (t *TxInternalDataAccountCreation) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -334,7 +330,7 @@ func (t *TxInternalDataAccountCreation) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataAccountCreation) GetRecipient() *common.Address {
+func (t *TxInternalDataAccountCreation) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -343,7 +339,7 @@ func (t *TxInternalDataAccountCreation) GetRecipient() *common.Address {
 	return &to
 }
 
-func (t *TxInternalDataAccountCreation) GetAmount() *big.Int {
+func (t *TxInternalDataAccountCreation) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -353,6 +349,10 @@ func (t *TxInternalDataAccountCreation) GetFrom() common.Address {
 
 func (t *TxInternalDataAccountCreation) GetHash() *common.Hash {
 	return t.Hash
+}
+
+func (t *TxInternalDataAccountCreation) GetData() []byte {
+	return []byte{}
 }
 
 func (t *TxInternalDataAccountCreation) SetHash(h *common.Hash) {

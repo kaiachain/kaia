@@ -151,7 +151,7 @@ func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 	}
 
 	// Replace msg intrinsic gas with eth intrinsic gas
-	*msg = *types.NewMessage(sender, msg.To(), msg.Nonce(), msg.GetTxInternalData().GetAmount(), msg.Gas(), msg.GasPrice(), gasFeeCap, gasTipCap, msg.Data(), true, updatedIntrinsicGas, msg.AccessList(), r.ChainID, msg.AuthList())
+	*msg = *types.NewMessage(sender, msg.To(), msg.Nonce(), msg.GetTxInternalData().GetValue(), msg.Gas(), msg.GasPrice(), gasFeeCap, gasTipCap, msg.Data(), true, updatedIntrinsicGas, msg.AccessList(), r.ChainID, msg.AuthList())
 	msg.SetSignature(sigCopy)
 
 	// Gas prices are calculated in eth
