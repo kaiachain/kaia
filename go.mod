@@ -23,6 +23,7 @@ require (
 	github.com/dgraph-io/badger v1.6.0
 	github.com/docker/docker v25.0.6+incompatible
 	github.com/ethereum/c-kzg-4844/v2 v2.1.0
+	github.com/ethereum/go-bigmodexpfix v0.0.0-20250911101455-f9e208c548ab
 	github.com/fatih/color v1.16.0
 	github.com/go-redis/redis/v7 v7.4.0
 	github.com/go-sql-driver/mysql v1.6.0
@@ -81,6 +82,7 @@ require (
 	github.com/erigontech/erigon-lib v0.0.0-00010101000000-000000000000
 	github.com/erigontech/secp256k1 v1.2.0
 	github.com/google/uuid v1.6.0
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/tyler-smith/go-bip32 v1.0.0
@@ -142,7 +144,6 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
-	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20241129212102-9c50ad6b591e // indirect
 	github.com/jcmturner/gofork v1.0.0 // indirect
