@@ -1473,7 +1473,7 @@ func (s *Syncer) assignBytecodeHealTasks(success chan *bytecodeHealResponse, fai
 	}
 }
 
-// revertRequests locates all the currently pending reuqests from a particular
+// revertRequests locates all the currently pending requests from a particular
 // peer and reverts them, rescheduling for others to fulfill.
 func (s *Syncer) revertRequests(peer string) {
 	// Gather the requests first, revertals need the lock too

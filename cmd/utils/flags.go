@@ -1435,7 +1435,7 @@ var (
 	}
 	KASServiceChainAnchorRequestTimeoutFlag = &cli.DurationFlag{
 		Name:     "kas.sc.anchor.request.timeout",
-		Usage:    "The reuqest timeout for KAS Anchoring API call",
+		Usage:    "The request timeout for KAS Anchoring API call",
 		Value:    500 * time.Millisecond,
 		Aliases:  []string{},
 		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_REQUEST_TIMEOUT", "KAIA_KAS_SC_ANCHOR_REQUEST_TIMEOUT"},

@@ -847,7 +847,7 @@ func makeSnapshotTestConfigItems(stakingInterval, proposerInterval uint64) []int
 
 func makeMockStakingManager(t *testing.T, amounts []uint64, blockNum uint64) (*gomock.Controller, *mock.MockStakingModule) {
 	if len(nodeKeys) != len(amounts) {
-		setNodeKeys(len(amounts), nil) // explictly set the nodeKey
+		setNodeKeys(len(amounts), nil) // explicitly set the nodeKey
 	}
 
 	si := makeTestStakingInfo(amounts, blockNum)
@@ -910,7 +910,7 @@ func assertMapSubset[M ~map[K]any, K comparable](t *testing.T, subset, set M) {
 //}
 
 func Test_AfterMinimumStakingVotes(t *testing.T) {
-	// temporaily enable forbidden votes
+	// temporarily enable forbidden votes
 	enableVotes([]gov.ParamName{gov.RewardMinimumStake, gov.GovernanceGovernanceMode})
 	defer disableVotes([]gov.ParamName{gov.RewardMinimumStake, gov.GovernanceGovernanceMode})
 
