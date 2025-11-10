@@ -20,6 +20,7 @@ package types
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -286,7 +287,7 @@ func (t *TxInternalDataLegacy) String() string {
 	if t.GetTo() == nil {
 		to = "[contract creation]"
 	} else {
-		to = fmt.Sprintf("%x", t.GetTo().Bytes())
+		to = hex.EncodeToString(t.GetTo().Bytes())
 	}
 	enc, _ := rlp.EncodeToBytes(t)
 	return fmt.Sprintf(`

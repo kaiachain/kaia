@@ -27,6 +27,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -934,7 +935,7 @@ func assertEqual(orig *Transaction, cpy *Transaction) error {
 		return fmt.Errorf("invalid chain id, want %d, got %d", want, got)
 	}
 	if !reflect.DeepEqual(orig.AccessList(), cpy.AccessList()) {
-		return fmt.Errorf("access list wrong!")
+		return errors.New("access list wrong!")
 	}
 
 	return nil
