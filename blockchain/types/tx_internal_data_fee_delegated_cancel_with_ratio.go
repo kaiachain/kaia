@@ -19,7 +19,6 @@
 package types
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -185,10 +184,6 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) setHashForMarshaling(h *comm
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) SetFeePayerSignatures(s TxSignatures) {
 	t.FeePayerSignatures = s
-}
-
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) String() string {

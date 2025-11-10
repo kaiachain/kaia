@@ -19,7 +19,6 @@
 package types
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -224,10 +223,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SetSignature(s TxSignatu
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SetFeePayerSignatures(s TxSignatures) {
 	t.FeePayerSignatures = s
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) String() string {

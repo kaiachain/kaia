@@ -210,3 +210,9 @@ func RecoverTxSender(txhash common.Hash, sigs TxSignatures, homestead bool, vfun
 	V := vfunc(txSig.V)
 	return recoverPlain(txhash, txSig.R, txSig.S, V, homestead)
 }
+
+// RecoverTxPubkeys returns public keys derived from txhash and signatures(r, s, v).
+// Since EIP155Signer modifies V value during recovering while other signers don't, it requires vfunc for the treatment.
+func RecoverTxPubkeys(txhash common.Hash, sigs TxSignatures, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
+	return sigs.RecoverPubkey(txhash, homestead, vfunc)
+}

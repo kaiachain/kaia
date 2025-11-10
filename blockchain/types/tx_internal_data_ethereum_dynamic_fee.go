@@ -19,7 +19,6 @@
 package types
 
 import (
-	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -260,17 +259,6 @@ func (t *TxInternalDataEthereumDynamicFee) SetSignature(signatures TxSignatures)
 
 func (t *TxInternalDataEthereumDynamicFee) RawSignatureValues() TxSignatures {
 	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
-}
-
-func (t *TxInternalDataEthereumDynamicFee) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	V := vfunc(t.V)
-
-	pk, err := recoverPlainPubkey(txhash, t.R, t.S, V, homestead)
-	if err != nil {
-		return nil, err
-	}
-
-	return []*ecdsa.PublicKey{pk}, nil
 }
 
 func (t *TxInternalDataEthereumDynamicFee) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

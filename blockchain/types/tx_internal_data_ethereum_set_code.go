@@ -293,17 +293,6 @@ func (t *TxInternalDataEthereumSetCode) RawSignatureValues() TxSignatures {
 	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
 }
 
-func (t *TxInternalDataEthereumSetCode) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	V := vfunc(t.V)
-
-	pk, err := recoverPlainPubkey(txhash, t.R, t.S, V, homestead)
-	if err != nil {
-		return nil, err
-	}
-
-	return []*ecdsa.PublicKey{pk}, nil
-}
-
 func (t *TxInternalDataEthereumSetCode) ChainId() *big.Int {
 	return t.ChainID.ToBig()
 }

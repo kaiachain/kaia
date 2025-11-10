@@ -310,7 +310,7 @@ func (s osakaSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
 		return nil, ErrInvalidChainId
 	}
 
-	return tx.data.RecoverPubkey(s.Hash(tx), true, func(v *big.Int) *big.Int {
+	return RecoverTxPubkeys(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
 		// AL txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
 		V := new(big.Int).Add(v, big.NewInt(27))
@@ -419,7 +419,7 @@ func (s pragueSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) 
 		return nil, ErrInvalidChainId
 	}
 
-	return tx.data.RecoverPubkey(s.Hash(tx), true, func(v *big.Int) *big.Int {
+	return RecoverTxPubkeys(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
 		// AL txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
 		V := new(big.Int).Add(v, big.NewInt(27))
@@ -527,7 +527,7 @@ func (s londonSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) 
 		return nil, ErrInvalidChainId
 	}
 
-	return tx.data.RecoverPubkey(s.Hash(tx), true, func(v *big.Int) *big.Int {
+	return RecoverTxPubkeys(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
 		// AL txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
 		V := new(big.Int).Add(v, big.NewInt(27))
@@ -635,7 +635,7 @@ func (s eip2930Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error)
 		return nil, ErrInvalidChainId
 	}
 
-	return tx.data.RecoverPubkey(s.Hash(tx), true, func(v *big.Int) *big.Int {
+	return RecoverTxPubkeys(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
 		// AL txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
 		V := new(big.Int).Add(v, big.NewInt(27))
@@ -845,7 +845,7 @@ func (s EIP155Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) 
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		return nil, ErrInvalidChainId
 	}
-	return tx.data.RecoverPubkey(s.Hash(tx), true, func(v *big.Int) *big.Int {
+	return RecoverTxPubkeys(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
 		V := new(big.Int).Sub(v, s.chainIdMul)
 		return V.Sub(V, big8)
 	})
@@ -875,7 +875,7 @@ func (s EIP155Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error
 		return nil, err
 	}
 
-	return tf.RecoverFeePayerPubkey(hash, true, func(v *big.Int) *big.Int {
+	return RecoverTxPubkeys(hash, tf.GetFeePayerRawSignatureValues(), true, func(v *big.Int) *big.Int {
 		V := new(big.Int).Sub(v, s.chainIdMul)
 		return V.Sub(V, big8)
 	})

@@ -20,7 +20,6 @@ package types
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"math"
@@ -321,10 +320,6 @@ type TxInternalData interface {
 	// The format would be something like [["V":v, "R":r, "S":s}, {"V":v, "R":r, "S":s}].
 	RawSignatureValues() TxSignatures
 
-	// RecoverPubkey returns a public key derived from txhash and signatures(r, s, v).
-	// Since EIP155Signer modifies V value during recovering while other signers don't, it requires vfunc for the treatment.
-	RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error)
-
 	// ChainId returns which chain id this transaction was signed for (if at all)
 	ChainId() *big.Int
 
@@ -368,9 +363,6 @@ type TxInternalDataFeePayer interface {
 	// Due to multi signatures, it is not good to return three values of `*big.Int`.
 	// The format would be something like [["V":v, "R":r, "S":s}, {"V":v, "R":r, "S":s}].
 	GetFeePayerRawSignatureValues() TxSignatures
-
-	// RecoverFeePayerPubkey returns the fee payer's public key derived from txhash and signatures(r, s, v).
-	RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error)
 
 	SetFeePayerSignatures(s TxSignatures)
 }
