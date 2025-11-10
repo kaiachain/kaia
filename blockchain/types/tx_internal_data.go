@@ -402,6 +402,9 @@ type TxInternalDataFrom interface {
 // For supporting new typed transaction defined EIP-2718, We provide an interface `TxInternalDataEthTyped `
 type TxInternalDataEthTyped interface {
 	setSignatureValues(chainID, v, r, s *big.Int)
+
+	// EthTxHash returns the Ethereum-compatible transaction hash.
+	// i.e. Hash of the transaction RLP without the EthereumTxTypeEnvelope prefix (0x78)
 	EthTxHash() common.Hash
 }
 
