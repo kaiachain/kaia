@@ -313,6 +313,10 @@ func (t *TxInternalDataEthereumSetCode) ChainId() *big.Int {
 	return t.ChainID.ToBig()
 }
 
+func (t *TxInternalDataEthereumSetCode) SetChainId(chainID *big.Int) {
+	t.ChainID = uint256.MustFromBig(chainID)
+}
+
 func (t *TxInternalDataEthereumSetCode) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	return IntrinsicGas(t.Payload, t.AccessList, t.AuthorizationList, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
@@ -512,10 +516,6 @@ func (t *TxInternalDataEthereumSetCode) UnmarshalJSON(bytes []byte) error {
 	t.Hash = js.Hash
 
 	return nil
-}
-
-func (t *TxInternalDataEthereumSetCode) setSignatureValues(chainID, v, r, s *big.Int) {
-	t.ChainID, t.V, t.R, t.S = uint256.MustFromBig(chainID), v, r, s
 }
 
 //go:generate gencodec -type SetCodeAuthorization -field-override authorizationMarshaling -out gen_authorization.go

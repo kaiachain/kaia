@@ -286,6 +286,10 @@ func (t *TxInternalDataEthereumDynamicFee) ChainId() *big.Int {
 	return t.ChainID
 }
 
+func (t *TxInternalDataEthereumDynamicFee) SetChainId(chainID *big.Int) {
+	t.ChainID = new(big.Int).Set(chainID)
+}
+
 func (t *TxInternalDataEthereumDynamicFee) String() string {
 	var from, to string
 	tx := &Transaction{data: t}
@@ -482,8 +486,4 @@ func (t *TxInternalDataEthereumDynamicFee) UnmarshalJSON(bytes []byte) error {
 	t.Hash = js.Hash
 
 	return nil
-}
-
-func (t *TxInternalDataEthereumDynamicFee) setSignatureValues(chainID, v, r, s *big.Int) {
-	t.ChainID, t.V, t.R, t.S = chainID, v, r, s
 }

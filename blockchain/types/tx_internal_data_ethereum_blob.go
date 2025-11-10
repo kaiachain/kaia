@@ -560,6 +560,10 @@ func (t *TxInternalDataEthereumBlob) ChainId() *big.Int {
 	return t.ChainID.ToBig()
 }
 
+func (t *TxInternalDataEthereumBlob) SetChainId(chainID *big.Int) {
+	t.ChainID = uint256.MustFromBig(chainID)
+}
+
 func (t *TxInternalDataEthereumBlob) String() string {
 	var from, to string
 	tx := &Transaction{data: t}
@@ -767,10 +771,6 @@ func (t *TxInternalDataEthereumBlob) UnmarshalJSON(bytes []byte) error {
 	t.Hash = js.Hash
 
 	return nil
-}
-
-func (t *TxInternalDataEthereumBlob) setSignatureValues(chainID, v, r, s *big.Int) {
-	t.ChainID, t.V, t.R, t.S = uint256.MustFromBig(chainID), v, r, s
 }
 
 func (tx *TxInternalDataEthereumBlob) withoutSidecar() *TxInternalDataEthereumBlob {

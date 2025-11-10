@@ -640,10 +640,12 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	}
 
 	cpy := &Transaction{data: tx.data, time: tx.time}
+
+	// Set chainID for Ethereum typed transactions
 	if tx.Type().IsEthTypedTransaction() {
 		te, ok := cpy.data.(TxInternalDataEthTyped)
 		if ok {
-			te.setSignatureValues(signer.ChainID(), v, r, s)
+			te.SetChainId(signer.ChainID())
 		} else {
 			return nil, errNotImplementTxInternalEthTyped
 		}
