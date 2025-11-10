@@ -451,6 +451,7 @@ type BlobScheduleConfig struct {
 	Osaka *BlobConfig `json:"osaka,omitempty"`
 }
 
+// BlobConfig returns the blob config associated with the provided fork.
 func (c *ChainConfig) BlobConfig(head *big.Int) *BlobConfig {
 	if c.IsOsakaForkEnabled(head) {
 		return c.BlobScheduleConfig.Osaka
