@@ -440,12 +440,6 @@ func (t *TxInternalDataEthereumDynamicFee) IsLegacyTransaction() bool {
 	return false
 }
 
-func (t *TxInternalDataEthereumDynamicFee) FillContractAddress(from common.Address, r *Receipt) {
-	if t.Recipient == nil {
-		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce)
-	}
-}
-
 func (t *TxInternalDataEthereumDynamicFee) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	///////////////////////////////////////////////////////
 	// OpcodeComputationCostLimit: The below code is commented and will be usd for debugging purposes.

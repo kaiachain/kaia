@@ -28,7 +28,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
@@ -370,12 +369,6 @@ func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint
 
 func (t *TxInternalDataLegacy) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	return nil
-}
-
-func (t *TxInternalDataLegacy) FillContractAddress(from common.Address, r *Receipt) {
-	if t.Recipient == nil {
-		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce)
-	}
 }
 
 func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

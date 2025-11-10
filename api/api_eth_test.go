@@ -1297,7 +1297,7 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 		if err != nil {
 			t.Fatal(err)
 		}
-		tx.FillContractAddress(fromAddress, r)
+		r.ContractAddress = crypto.CreateAddress(fromAddress, tx.Nonce())
 		receiptMap[tx.Hash()] = r
 		receipts = append(receipts, receiptMap[tx.Hash()])
 	}
@@ -1508,7 +1508,7 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 		if err != nil {
 			t.Fatal(err)
 		}
-		tx.FillContractAddress(fromAddress, r)
+		r.ContractAddress = crypto.CreateAddress(fromAddress, tx.Nonce())
 		receiptMap[tx.Hash()] = r
 		receipts = append(receipts, receiptMap[tx.Hash()])
 	}
@@ -1744,7 +1744,7 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 		if err != nil {
 			t.Fatal(err)
 		}
-		tx.FillContractAddress(fromAddress, r)
+		r.ContractAddress = crypto.CreateAddress(fromAddress, tx.Nonce())
 		receiptMap[tx.Hash()] = r
 		receipts = append(receipts, receiptMap[tx.Hash()])
 	}

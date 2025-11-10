@@ -2802,7 +2802,9 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 
 	receipt := types.NewReceipt(result.VmExecutionStatus, tx.Hash(), result.UsedGas)
 	// if the transaction created a contract, store the creation address in the receipt.
-	msg.FillContractAddress(vmenv.Origin, receipt)
+	if msg.To() == nil {
+		receipt.ContractAddress = crypto.CreateAddress(vmenv.Origin, tx.Nonce())
+	}
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
