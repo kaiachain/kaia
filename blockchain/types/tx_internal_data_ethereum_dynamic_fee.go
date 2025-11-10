@@ -262,11 +262,6 @@ func (t *TxInternalDataEthereumDynamicFee) RawSignatureValues() TxSignatures {
 	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
 }
 
-func (t *TxInternalDataEthereumDynamicFee) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
-	V := vfunc(t.V)
-	return recoverPlain(txhash, t.R, t.S, V, homestead)
-}
-
 func (t *TxInternalDataEthereumDynamicFee) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
 	V := vfunc(t.V)
 

@@ -292,7 +292,7 @@ func (s osakaSigner) Sender(tx *Transaction) (common.Address, error) {
 		return common.Address{}, ErrInvalidChainId
 	}
 
-	return tx.data.RecoverAddress(s.Hash(tx), true, func(v *big.Int) *big.Int {
+	return RecoverTxSender(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
 		// AL txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
 		V := new(big.Int).Add(v, big.NewInt(27))
@@ -401,7 +401,7 @@ func (s pragueSigner) Sender(tx *Transaction) (common.Address, error) {
 		return common.Address{}, ErrInvalidChainId
 	}
 
-	return tx.data.RecoverAddress(s.Hash(tx), true, func(v *big.Int) *big.Int {
+	return RecoverTxSender(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
 		// AL txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
 		V := new(big.Int).Add(v, big.NewInt(27))
@@ -509,7 +509,7 @@ func (s londonSigner) Sender(tx *Transaction) (common.Address, error) {
 		return common.Address{}, ErrInvalidChainId
 	}
 
-	return tx.data.RecoverAddress(s.Hash(tx), true, func(v *big.Int) *big.Int {
+	return RecoverTxSender(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
 		// AL txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
 		V := new(big.Int).Add(v, big.NewInt(27))
@@ -617,7 +617,7 @@ func (s eip2930Signer) Sender(tx *Transaction) (common.Address, error) {
 		return common.Address{}, ErrInvalidChainId
 	}
 
-	return tx.data.RecoverAddress(s.Hash(tx), true, func(v *big.Int) *big.Int {
+	return RecoverTxSender(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
 		// AL txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
 		V := new(big.Int).Add(v, big.NewInt(27))
@@ -826,7 +826,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	if tx.ChainId().Cmp(s.chainId) != 0 {
 		return common.Address{}, ErrInvalidChainId
 	}
-	return tx.data.RecoverAddress(s.Hash(tx), true, func(v *big.Int) *big.Int {
+	return RecoverTxSender(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
 		V := new(big.Int).Sub(v, s.chainIdMul)
 		return V.Sub(V, big8)
 	})

@@ -195,3 +195,18 @@ func SanityCheckSignatures(sigs TxSignatures, txType TxType) bool {
 
 	return sigs.ValidateSignature()
 }
+
+// RecoverTxSender returns address derived from txhash and signatures(r, s, v).
+// Since EIP155Signer modifies V value during recovering while other signers don't, it requires vfunc for the treatment.
+func RecoverTxSender(txhash common.Hash, sigs TxSignatures, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
+	if len(sigs) == 0 {
+		return common.Address{}, ErrInvalidSig
+	}
+	if len(sigs) != 1 {
+		return common.Address{}, ErrShouldBeSingleSignature
+	}
+
+	txSig, _ := sigs.getDefaultSig()
+	V := vfunc(txSig.V)
+	return recoverPlain(txhash, txSig.R, txSig.S, V, homestead)
+}
