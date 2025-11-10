@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -148,23 +147,6 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) Type() TxType {
 
 func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
-}
-
-func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataFeeDelegatedChainDataAnchoringWithRatio)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.From == tb.From &&
-		t.FeeRatio == tb.FeeRatio &&
-		bytes.Equal(t.Payload, tb.Payload) &&
-		t.TxSignatures.equal(tb.TxSignatures) &&
-		t.FeePayer == tb.FeePayer &&
-		t.FeePayerSignatures.equal(tb.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) String() string {

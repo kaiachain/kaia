@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -140,22 +139,6 @@ func (t *TxInternalDataSmartContractExecution) Type() TxType {
 
 func (t *TxInternalDataSmartContractExecution) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
-}
-
-func (t *TxInternalDataSmartContractExecution) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataSmartContractExecution)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.Recipient == ta.Recipient &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.From == ta.From &&
-		bytes.Equal(t.Payload, ta.Payload) &&
-		t.TxSignatures.equal(ta.TxSignatures)
 }
 
 func (t *TxInternalDataSmartContractExecution) GetData() []byte {

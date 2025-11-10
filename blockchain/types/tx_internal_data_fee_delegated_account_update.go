@@ -288,22 +288,6 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) setHashForMarshaling(h *common
 	t.Hash = h
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataFeeDelegatedAccountUpdate)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.From == ta.From &&
-		t.Key.Equal(ta.Key) &&
-		t.TxSignatures.equal(ta.TxSignatures) &&
-		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
-}
-
 func (t *TxInternalDataFeeDelegatedAccountUpdate) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
 	tx := Transaction{data: t}

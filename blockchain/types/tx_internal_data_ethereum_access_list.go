@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"reflect"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -341,24 +340,6 @@ func (t *TxInternalDataEthereumAccessList) SenderTxHash() common.Hash {
 		t.R,
 		t.S,
 	})
-}
-
-func (t *TxInternalDataEthereumAccessList) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataEthereumAccessList)
-	if !ok {
-		return false
-	}
-
-	return t.ChainID.Cmp(ta.ChainID) == 0 &&
-		t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		reflect.DeepEqual(t.AccessList, ta.AccessList) &&
-		t.V.Cmp(ta.V) == 0 &&
-		t.R.Cmp(ta.R) == 0 &&
-		t.S.Cmp(ta.S) == 0
 }
 
 func (t *TxInternalDataEthereumAccessList) String() string {

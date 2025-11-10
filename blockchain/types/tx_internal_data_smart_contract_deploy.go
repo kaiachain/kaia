@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -164,24 +163,6 @@ func (t *TxInternalDataSmartContractDeploy) GetRoleTypeForValidation() accountke
 
 func (t *TxInternalDataSmartContractDeploy) GetData() []byte {
 	return t.Payload
-}
-
-func (t *TxInternalDataSmartContractDeploy) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataSmartContractDeploy)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.From == ta.From &&
-		bytes.Equal(t.Payload, ta.Payload) &&
-		t.HumanReadable == ta.HumanReadable &&
-		t.TxSignatures.equal(ta.TxSignatures) &&
-		t.CodeFormat == ta.CodeFormat
 }
 
 func (t *TxInternalDataSmartContractDeploy) GetNonce() uint64 {

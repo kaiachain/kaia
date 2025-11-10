@@ -265,22 +265,6 @@ func (t *TxInternalDataLegacy) SenderTxHash() common.Hash {
 	return h
 }
 
-func (t *TxInternalDataLegacy) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataLegacy)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.V.Cmp(ta.V) == 0 &&
-		t.R.Cmp(ta.R) == 0 &&
-		t.S.Cmp(ta.S) == 0
-}
-
 func (t *TxInternalDataLegacy) String() string {
 	var from, to string
 	tx := &Transaction{data: t}

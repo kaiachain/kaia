@@ -18,7 +18,6 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/hex"
@@ -27,7 +26,6 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"reflect"
 	"slices"
 
 	"github.com/holiman/uint256"
@@ -566,29 +564,6 @@ func (t *TxInternalDataEthereumBlob) IntrinsicGas(currentBlockNumber uint64) (ui
 
 func (t *TxInternalDataEthereumBlob) ChainId() *big.Int {
 	return t.ChainID.ToBig()
-}
-
-func (t *TxInternalDataEthereumBlob) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataEthereumBlob)
-	if !ok {
-		return false
-	}
-
-	return t.ChainID.Cmp(ta.ChainID) == 0 &&
-		t.AccountNonce == ta.AccountNonce &&
-		t.GasFeeCap.Cmp(ta.GasFeeCap) == 0 &&
-		t.GasTipCap.Cmp(ta.GasTipCap) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.Recipient == ta.Recipient &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		bytes.Equal(t.Payload, ta.Payload) &&
-		reflect.DeepEqual(t.AccessList, ta.AccessList) &&
-		t.BlobFeeCap.Cmp(ta.BlobFeeCap) == 0 &&
-		reflect.DeepEqual(t.BlobHashes, ta.BlobHashes) &&
-		reflect.DeepEqual(t.Sidecar, ta.Sidecar) &&
-		t.V.Cmp(ta.V) == 0 &&
-		t.R.Cmp(ta.R) == 0 &&
-		t.S.Cmp(ta.S) == 0
 }
 
 func (t *TxInternalDataEthereumBlob) String() string {

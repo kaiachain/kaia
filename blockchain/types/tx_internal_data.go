@@ -335,9 +335,6 @@ type TxInternalData interface {
 	// ChainId returns which chain id this transaction was signed for (if at all)
 	ChainId() *big.Int
 
-	// Equal returns true if all attributes are the same.
-	Equal(t TxInternalData) bool
-
 	// IntrinsicGas computes additional 'intrinsic gas' based on tx types.
 	IntrinsicGas(currentBlockNumber uint64) (uint64, error)
 

@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -177,26 +176,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetRoleTypeForValidation
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetData() []byte {
 	return t.Payload
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataFeeDelegatedSmartContractDeploy)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.From == ta.From &&
-		bytes.Equal(t.Payload, ta.Payload) &&
-		t.HumanReadable == ta.HumanReadable &&
-		t.TxSignatures.equal(ta.TxSignatures) &&
-		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignatures.equal(ta.FeePayerSignatures) &&
-		t.CodeFormat == ta.CodeFormat
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetNonce() uint64 {

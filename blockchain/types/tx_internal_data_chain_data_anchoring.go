@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -122,20 +121,6 @@ func (t *TxInternalDataChainDataAnchoring) Type() TxType {
 
 func (t *TxInternalDataChainDataAnchoring) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
-}
-
-func (t *TxInternalDataChainDataAnchoring) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataChainDataAnchoring)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.From == tb.From &&
-		t.TxSignatures.equal(tb.TxSignatures) &&
-		bytes.Equal(t.Payload, tb.Payload)
 }
 
 func (t *TxInternalDataChainDataAnchoring) String() string {

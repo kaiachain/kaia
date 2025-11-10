@@ -214,10 +214,6 @@ func validateSignature(v, r, s *big.Int) bool {
 	return crypto.ValidateSignatureValues(V, r, s, false)
 }
 
-func (tx *Transaction) Equal(tb *Transaction) bool {
-	return tx.data.Equal(tb.data)
-}
-
 // EncodeRLP implements rlp.Encoder
 func (tx *Transaction) EncodeRLP(w io.Writer) error {
 	serializer := newTxInternalDataSerializerWithValues(tx.data)

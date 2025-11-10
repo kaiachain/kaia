@@ -147,23 +147,6 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) GetRoleTypeForValidation() acc
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataFeeDelegatedValueTransfer)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.Recipient == tb.Recipient &&
-		t.Amount.Cmp(tb.Amount) == 0 &&
-		t.From == tb.From &&
-		t.TxSignatures.equal(tb.TxSignatures) &&
-		t.FeePayer == tb.FeePayer &&
-		t.FeePayerSignatures.equal(tb.FeePayerSignatures)
-}
-
 func (t *TxInternalDataFeeDelegatedValueTransfer) GetNonce() uint64 {
 	return t.AccountNonce
 }

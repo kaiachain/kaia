@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -167,25 +166,6 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Type() TxType {
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataFeeDelegatedValueTransferMemoWithRatio)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.Recipient == tb.Recipient &&
-		t.Amount.Cmp(tb.Amount) == 0 &&
-		t.From == tb.From &&
-		t.FeeRatio == tb.FeeRatio &&
-		bytes.Equal(t.Payload, tb.Payload) &&
-		t.TxSignatures.equal(tb.TxSignatures) &&
-		t.FeePayer == tb.FeePayer &&
-		t.FeePayerSignatures.equal(tb.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) String() string {

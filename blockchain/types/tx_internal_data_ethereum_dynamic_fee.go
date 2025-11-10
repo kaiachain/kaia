@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"reflect"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -290,25 +289,6 @@ func (t *TxInternalDataEthereumDynamicFee) IntrinsicGas(currentBlockNumber uint6
 
 func (t *TxInternalDataEthereumDynamicFee) ChainId() *big.Int {
 	return t.ChainID
-}
-
-func (t *TxInternalDataEthereumDynamicFee) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataEthereumDynamicFee)
-	if !ok {
-		return false
-	}
-
-	return t.ChainID.Cmp(ta.ChainID) == 0 &&
-		t.AccountNonce == ta.AccountNonce &&
-		t.GasFeeCap.Cmp(ta.GasFeeCap) == 0 &&
-		t.GasTipCap.Cmp(ta.GasTipCap) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		reflect.DeepEqual(t.AccessList, ta.AccessList) &&
-		t.V.Cmp(ta.V) == 0 &&
-		t.R.Cmp(ta.R) == 0 &&
-		t.S.Cmp(ta.S) == 0
 }
 
 func (t *TxInternalDataEthereumDynamicFee) String() string {

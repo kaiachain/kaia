@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -153,24 +152,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) Type() TxType {
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataFeeDelegatedSmartContractExecution)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.Recipient == ta.Recipient &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.From == ta.From &&
-		bytes.Equal(t.Payload, ta.Payload) &&
-		t.TxSignatures.equal(ta.TxSignatures) &&
-		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetData() []byte {

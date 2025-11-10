@@ -174,21 +174,6 @@ func (t *TxInternalDataFeeDelegatedCancel) RecoverFeePayerPubkey(txhash common.H
 	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
-func (t *TxInternalDataFeeDelegatedCancel) Equal(b TxInternalData) bool {
-	ta, ok := b.(*TxInternalDataFeeDelegatedCancel)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.From == ta.From &&
-		t.TxSignatures.equal(ta.TxSignatures) &&
-		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
-}
-
 func (t *TxInternalDataFeeDelegatedCancel) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
 	tx := Transaction{data: t}

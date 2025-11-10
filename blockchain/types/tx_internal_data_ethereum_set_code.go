@@ -24,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"reflect"
 
 	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -317,26 +316,6 @@ func (t *TxInternalDataEthereumSetCode) RecoverPubkey(txhash common.Hash, homest
 
 func (t *TxInternalDataEthereumSetCode) ChainId() *big.Int {
 	return t.ChainID.ToBig()
-}
-
-func (t *TxInternalDataEthereumSetCode) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataEthereumSetCode)
-	if !ok {
-		return false
-	}
-
-	return t.ChainID.Cmp(ta.ChainID) == 0 &&
-		t.AccountNonce == ta.AccountNonce &&
-		t.GasFeeCap.Cmp(ta.GasFeeCap) == 0 &&
-		t.GasTipCap.Cmp(ta.GasTipCap) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.Recipient == ta.Recipient &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		reflect.DeepEqual(t.AccessList, ta.AccessList) &&
-		reflect.DeepEqual(t.AuthorizationList, ta.AuthorizationList) &&
-		t.V.Cmp(ta.V) == 0 &&
-		t.R.Cmp(ta.R) == 0 &&
-		t.S.Cmp(ta.S) == 0
 }
 
 func (t *TxInternalDataEthereumSetCode) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

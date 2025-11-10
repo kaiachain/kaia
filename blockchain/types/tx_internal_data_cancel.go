@@ -145,19 +145,6 @@ func (t *TxInternalDataCancel) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
-func (t *TxInternalDataCancel) Equal(b TxInternalData) bool {
-	ta, ok := b.(*TxInternalDataCancel)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.From == ta.From &&
-		t.TxSignatures.equal(ta.TxSignatures)
-}
-
 func (t *TxInternalDataCancel) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
 	tx := Transaction{data: t}

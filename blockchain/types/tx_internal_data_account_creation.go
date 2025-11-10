@@ -269,23 +269,6 @@ func (t *TxInternalDataAccountCreation) GetRoleTypeForValidation() accountkey.Ro
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataAccountCreation) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataAccountCreation)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.Recipient == ta.Recipient &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.From == ta.From &&
-		t.HumanReadable == ta.HumanReadable &&
-		t.Key.Equal(ta.Key) &&
-		t.TxSignatures.equal(ta.TxSignatures)
-}
-
 func (t *TxInternalDataAccountCreation) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
 	tx := Transaction{data: t}
