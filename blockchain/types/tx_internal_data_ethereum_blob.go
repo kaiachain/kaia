@@ -515,8 +515,8 @@ func (t *TxInternalDataEthereumBlob) GetGasFeeCap() *big.Int {
 	return new(big.Int).Set(t.GasFeeCap.ToBig())
 }
 
-func (t *TxInternalDataEthereumBlob) GetBlobGas() *big.Int {
-	return new(big.Int).SetUint64(params.BlobTxBlobGasPerBlob * uint64(len(t.BlobHashes)))
+func (t *TxInternalDataEthereumBlob) GetBlobGas() uint64 {
+	return params.BlobTxBlobGasPerBlob * uint64(len(t.BlobHashes))
 }
 
 func (t *TxInternalDataEthereumBlob) setHashForMarshaling(hash *common.Hash) {

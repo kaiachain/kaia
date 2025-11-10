@@ -343,7 +343,7 @@ func (tx *Transaction) BlobGas() uint64 {
 	if tx.Type() != TxTypeEthereumBlob {
 		return 0
 	}
-	return tx.GetTxInternalData().(*TxInternalDataEthereumBlob).GetBlobGas().Uint64()
+	return tx.GetTxInternalData().(*TxInternalDataEthereumBlob).GetBlobGas()
 }
 
 // BlobGasFeeCap returns the blob gas fee cap per blob gas of the transaction for blob transactions, nil otherwise.
