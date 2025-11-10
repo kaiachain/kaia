@@ -28,7 +28,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
@@ -266,11 +265,6 @@ func (t *TxInternalDataEthereumAccessList) SetSignature(signatures TxSignatures)
 
 func (t *TxInternalDataEthereumAccessList) RawSignatureValues() TxSignatures {
 	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
-}
-
-func (t *TxInternalDataEthereumAccessList) ValidateSignature() bool {
-	v := byte(t.V.Uint64())
-	return crypto.ValidateSignatureValues(v, t.R, t.S, false)
 }
 
 func (t *TxInternalDataEthereumAccessList) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {

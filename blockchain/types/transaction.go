@@ -236,7 +236,7 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 
-	if !serializer.tx.ValidateSignature() {
+	if !SanityCheckSignatures(serializer.tx.RawSignatureValues(), serializer.tx.Type()) {
 		return ErrInvalidSig
 	}
 
@@ -273,7 +273,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	if err := json.Unmarshal(input, serializer); err != nil {
 		return err
 	}
-	if !serializer.tx.ValidateSignature() {
+	if !SanityCheckSignatures(serializer.tx.RawSignatureValues(), serializer.tx.Type()) {
 		return ErrInvalidSig
 	}
 

@@ -27,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kerrors"
 )
 
@@ -171,4 +172,26 @@ func (t TxSignaturesJSON) ToTxSignatures() TxSignatures {
 	}
 
 	return sigs
+}
+
+// SanityCheckSignatures validates whether the signature values are valid.
+// It checks the signatures from the given TxSignatures.
+func SanityCheckSignatures(sigs TxSignatures, txType TxType) bool {
+	if len(sigs) == 0 {
+		return false
+	}
+
+	// Legacy and Typed transactions do not have multisig.
+	sig := sigs[0]
+
+	if txType.IsEthTypedTransaction() {
+		v := byte(sig.V.Uint64())
+		return crypto.ValidateSignatureValues(v, sig.R, sig.S, false)
+	}
+
+	if txType.IsLegacyTransaction() {
+		return validateSignature(sig.V, sig.R, sig.S)
+	}
+
+	return sigs.ValidateSignature()
 }

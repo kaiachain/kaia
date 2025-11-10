@@ -321,9 +321,6 @@ type TxInternalData interface {
 	// The format would be something like [["V":v, "R":r, "S":s}, {"V":v, "R":r, "S":s}].
 	RawSignatureValues() TxSignatures
 
-	// ValidateSignature returns true if the signature is valid.
-	ValidateSignature() bool
-
 	// RecoverAddress returns address derived from txhash and signatures(r, s, v).
 	// Since EIP155Signer modifies V value during recovering while other signers don't, it requires vfunc for the treatment.
 	RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error)
