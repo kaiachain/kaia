@@ -398,6 +398,8 @@ type TxInternalDataFrom interface {
 // TxInternalDataEthTyped has a function related to EIP-2718 Ethereum typed transaction.
 // For supporting new typed transaction defined EIP-2718, We provide an interface `TxInternalDataEthTyped `
 type TxInternalDataEthTyped interface {
+	// Legacy and Kaia typed transactions contain the chainId in its signature V value according to EIP-155.
+	// Eth typed transactions have separate chainId field so SetSignature([]{v,r,s}) is not enough.
 	SetChainId(chainID *big.Int)
 
 	// EthTxHash returns the Ethereum-compatible transaction hash.
