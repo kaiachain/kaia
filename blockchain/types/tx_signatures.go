@@ -181,7 +181,7 @@ func SanityCheckSignatures(sigs TxSignatures, txType TxType) bool {
 		return false
 	}
 
-	// Legacy and Typed transactions do not have multisig.
+	// Legacy and Eth Typed transactions have only one signature.
 	sig := sigs[0]
 
 	if txType.IsEthTypedTransaction() {
