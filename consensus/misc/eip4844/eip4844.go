@@ -187,6 +187,15 @@ func MaxBlobGasPerBlock(cfg *params.ChainConfig, blockNumber *big.Int) uint64 {
 // 	return bcfg.Max
 // }
 
+// TargetBlobsPerBlock returns the target blobs per block for a block at the given timestamp.
+func TargetBlobsPerBlock(cfg *params.ChainConfig, blockNumber *big.Int) int {
+	blobConfig := latestBlobConfig(cfg, blockNumber)
+	if blobConfig == nil {
+		return 0
+	}
+	return blobConfig.Target
+}
+
 // fakeExponential approximates factor * e ** (numerator / denominator) using
 // Taylor expansion.
 func fakeExponential(factor, numerator, denominator *big.Int) *big.Int {
