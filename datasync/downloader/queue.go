@@ -890,7 +890,7 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, e
 			return errInvalidBody
 		}
 		// Blocks must have a number of blobs corresponding to the header gas usage,
-		// and zero before the Cancun hardfork.
+		// and zero before the Osaka hardfork.
 		var blobs int
 		for _, tx := range txLists[index] {
 			// Validate the data blobs individually too
