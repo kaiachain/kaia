@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -188,40 +187,15 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetRoleTypeForV
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetPayload() []byte {
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataFeeDelegatedSmartContractDeployWithRatio)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.From == ta.From &&
-		t.FeeRatio == ta.FeeRatio &&
-		bytes.Equal(t.Payload, ta.Payload) &&
-		t.HumanReadable == ta.HumanReadable &&
-		t.TxSignatures.equal(ta.TxSignatures) &&
-		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignatures.equal(ta.FeePayerSignatures) &&
-		t.CodeFormat == ta.CodeFormat
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -229,20 +203,16 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetGasLimit() u
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetTo() *common.Address {
 	return t.Recipient
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetFrom() common.Address {
 	return t.From
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetHash() *common.Hash {
-	return t.Hash
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetFeePayer() common.Address {
@@ -261,7 +231,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) GetCodeFormat()
 	return t.CodeFormat
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

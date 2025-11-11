@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"reflect"
 	"testing"
 	"time"
 
@@ -1847,7 +1848,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 		tx, err := types.NewTxInternalData(i)
 		if err == nil {
 			// Since this test is for payload size, tx types without payload field will not be tested.
-			if _, ok := tx.(types.TxInternalDataPayload); ok {
+			if _, found := reflect.TypeOf(tx).Elem().FieldByName("Payload"); found {
 				testTxTypes = append(testTxTypes, i)
 			}
 		}
@@ -2011,7 +2012,7 @@ func TestValidationTxSizeAfterRLPPrague(t *testing.T) {
 		tx, err := types.NewTxInternalData(i)
 		if err == nil {
 			// Since this test is for payload size, tx types without payload field will not be tested.
-			if _, ok := tx.(types.TxInternalDataPayload); ok {
+			if _, found := reflect.TypeOf(tx).Elem().FieldByName("Payload"); found {
 				testTxTypes = append(testTxTypes, i)
 			}
 		}

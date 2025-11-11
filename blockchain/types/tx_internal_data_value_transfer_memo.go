@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -143,22 +142,6 @@ func (t *TxInternalDataValueTransferMemo) GetRoleTypeForValidation() accountkey.
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataValueTransferMemo) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataValueTransferMemo)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.Recipient == tb.Recipient &&
-		t.Amount.Cmp(tb.Amount) == 0 &&
-		t.From == tb.From &&
-		bytes.Equal(t.Payload, tb.Payload) &&
-		t.TxSignatures.equal(tb.TxSignatures)
-}
-
 func (t *TxInternalDataValueTransferMemo) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
 	tx := Transaction{data: t}
@@ -189,15 +172,11 @@ func (t *TxInternalDataValueTransferMemo) String() string {
 		enc)
 }
 
-func (t *TxInternalDataValueTransferMemo) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataValueTransferMemo) GetAccountNonce() uint64 {
+func (t *TxInternalDataValueTransferMemo) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataValueTransferMemo) GetPrice() *big.Int {
+func (t *TxInternalDataValueTransferMemo) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -205,7 +184,7 @@ func (t *TxInternalDataValueTransferMemo) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataValueTransferMemo) GetRecipient() *common.Address {
+func (t *TxInternalDataValueTransferMemo) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -214,7 +193,7 @@ func (t *TxInternalDataValueTransferMemo) GetRecipient() *common.Address {
 	return &to
 }
 
-func (t *TxInternalDataValueTransferMemo) GetAmount() *big.Int {
+func (t *TxInternalDataValueTransferMemo) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -222,15 +201,11 @@ func (t *TxInternalDataValueTransferMemo) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataValueTransferMemo) GetPayload() []byte {
+func (t *TxInternalDataValueTransferMemo) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataValueTransferMemo) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataValueTransferMemo) SetHash(h *common.Hash) {
+func (t *TxInternalDataValueTransferMemo) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

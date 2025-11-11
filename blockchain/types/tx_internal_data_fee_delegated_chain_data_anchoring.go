@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -137,22 +136,6 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetRoleTypeForValidation(
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataFeeDelegatedChainDataAnchoring)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.From == tb.From &&
-		bytes.Equal(t.Payload, tb.Payload) &&
-		t.TxSignatures.equal(tb.TxSignatures) &&
-		t.FeePayer == tb.FeePayer &&
-		t.FeePayerSignatures.equal(tb.FeePayerSignatures)
-}
-
 func (t *TxInternalDataFeeDelegatedChainDataAnchoring) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
 	enc, _ := rlp.EncodeToBytes(ser)
@@ -234,15 +217,11 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SenderTxHash() common.Has
 	return h
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -250,11 +229,11 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -262,11 +241,7 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetFrom() common.Address 
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetPayload() []byte {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetData() []byte {
 	return t.Payload
 }
 
@@ -278,7 +253,7 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetFeePayerRawSignatureVa
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

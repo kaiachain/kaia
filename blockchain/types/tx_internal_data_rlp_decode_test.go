@@ -97,7 +97,9 @@ func testTxRLPDecodeLegacy(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -126,7 +128,9 @@ func testTxRLPDecodeValueTransfer(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -156,7 +160,9 @@ func testTxRLPDecodeValueTransferMemo(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -221,7 +227,9 @@ func testTxRLPDecodeAccountUpdate(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -253,7 +261,9 @@ func testTxRLPDecodeSmartContractDeploy(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -283,7 +293,9 @@ func testTxRLPDecodeSmartContractExecution(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -310,7 +322,9 @@ func testTxRLPDecodeCancel(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -338,7 +352,9 @@ func testTxRLPDecodeChainDataAnchoring(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -369,7 +385,9 @@ func testTxRLPDecodeFeeDelegatedValueTransfer(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -401,7 +419,9 @@ func testTxRLPDecodeFeeDelegatedValueTransferMemo(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -434,7 +454,9 @@ func testTxRLPDecodeFeeDelegatedAccountUpdate(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -468,7 +490,9 @@ func testTxRLPDecodeFeeDelegatedSmartContractDeploy(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -500,7 +524,9 @@ func testTxRLPDecodeFeeDelegatedSmartContractExecution(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -529,7 +555,9 @@ func testTxRLPDecodeFeeDelegatedCancel(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -559,7 +587,9 @@ func testTxRLPDecodeFeeDelegatedChainDataAnchoring(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -591,7 +621,9 @@ func testTxRLPDecodeFeeDelegatedValueTransferWithRatio(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -624,7 +656,9 @@ func testTxRLPDecodeFeeDelegatedValueTransferMemoWithRatio(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -658,7 +692,9 @@ func testTxRLPDecodeFeeDelegatedAccountUpdateWithRatio(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -693,7 +729,9 @@ func testTxRLPDecodeFeeDelegatedSmartContractDeployWithRatio(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -726,7 +764,9 @@ func testTxRLPDecodeFeeDelegatedSmartContractExecutionWithRatio(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -756,7 +796,9 @@ func testTxRLPDecodeFeeDelegatedCancelWithRatio(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -787,7 +829,9 @@ func testTxRLPDecodeFeeDelegatedChainDataAnchoringWithRatio(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -821,7 +865,9 @@ func testTxRLPDecodeAccessList(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -856,7 +902,9 @@ func testTxRLPDecodeDynamicFee(t *testing.T) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }

@@ -147,32 +147,11 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) GetRoleTypeForValidation() acc
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataFeeDelegatedValueTransfer)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.Recipient == tb.Recipient &&
-		t.Amount.Cmp(tb.Amount) == 0 &&
-		t.From == tb.From &&
-		t.TxSignatures.equal(tb.TxSignatures) &&
-		t.FeePayer == tb.FeePayer &&
-		t.FeePayerSignatures.equal(tb.FeePayerSignatures)
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransfer) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransfer) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -180,7 +159,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -189,7 +168,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) GetRecipient() *common.Address
 	return &to
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -197,8 +176,8 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) GetHash() *common.Hash {
-	return t.Hash
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetData() []byte {
+	return []byte{}
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) GetFeePayer() common.Address {
@@ -209,7 +188,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) GetFeePayerRawSignatureValues(
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedValueTransfer) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

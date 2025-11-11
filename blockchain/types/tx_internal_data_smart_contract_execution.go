@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -142,35 +141,15 @@ func (t *TxInternalDataSmartContractExecution) GetRoleTypeForValidation() accoun
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataSmartContractExecution) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataSmartContractExecution)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.Recipient == ta.Recipient &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.From == ta.From &&
-		bytes.Equal(t.Payload, ta.Payload) &&
-		t.TxSignatures.equal(ta.TxSignatures)
-}
-
-func (t *TxInternalDataSmartContractExecution) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataSmartContractExecution) GetPayload() []byte {
+func (t *TxInternalDataSmartContractExecution) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataSmartContractExecution) GetAccountNonce() uint64 {
+func (t *TxInternalDataSmartContractExecution) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataSmartContractExecution) GetPrice() *big.Int {
+func (t *TxInternalDataSmartContractExecution) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -178,7 +157,7 @@ func (t *TxInternalDataSmartContractExecution) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataSmartContractExecution) GetRecipient() *common.Address {
+func (t *TxInternalDataSmartContractExecution) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -187,7 +166,7 @@ func (t *TxInternalDataSmartContractExecution) GetRecipient() *common.Address {
 	return &to
 }
 
-func (t *TxInternalDataSmartContractExecution) GetAmount() *big.Int {
+func (t *TxInternalDataSmartContractExecution) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -195,11 +174,7 @@ func (t *TxInternalDataSmartContractExecution) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataSmartContractExecution) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataSmartContractExecution) SetHash(h *common.Hash) {
+func (t *TxInternalDataSmartContractExecution) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

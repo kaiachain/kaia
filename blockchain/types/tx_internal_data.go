@@ -306,14 +306,14 @@ func (f FeeRatio) IsValid() bool {
 type TxInternalData interface {
 	Type() TxType
 
-	GetAccountNonce() uint64
-	GetPrice() *big.Int
+	GetNonce() uint64
+	GetGasPrice() *big.Int
 	GetGasLimit() uint64
-	GetRecipient() *common.Address
-	GetAmount() *big.Int
-	GetHash() *common.Hash
+	GetTo() *common.Address
+	GetValue() *big.Int
+	GetData() []byte
 
-	SetHash(*common.Hash)
+	setHashForMarshaling(*common.Hash)
 	SetSignature(TxSignatures)
 
 	// RawSignatureValues returns signatures as a slice of `*big.Int`.
@@ -335,9 +335,6 @@ type TxInternalData interface {
 	// ChainId returns which chain id this transaction was signed for (if at all)
 	ChainId() *big.Int
 
-	// Equal returns true if all attributes are the same.
-	Equal(t TxInternalData) bool
-
 	// IntrinsicGas computes additional 'intrinsic gas' based on tx types.
 	IntrinsicGas(currentBlockNumber uint64) (uint64, error)
 
@@ -356,12 +353,6 @@ type TxInternalData interface {
 	// The function validates tx values associated with mutable values in the state.
 	// MutableValues: accountKey, the existence of creating address, feePayer's balance, etc.
 	ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error
-
-	// IsLegacyTransaction returns true if the tx type is a legacy transaction (TxInternalDataLegacy) object.
-	IsLegacyTransaction() bool
-
-	// GetRoleTypeForValidation returns RoleType to validate this transaction.
-	GetRoleTypeForValidation() accountkey.RoleType
 
 	// String returns a string containing information about the fields of the object.
 	String() string
@@ -407,19 +398,19 @@ type TxInternalDataFrom interface {
 	GetFrom() common.Address
 }
 
-// TxInternalDataPayload has a function `GetPayload()`.
-// Since the payload field is not a common field for all tx types, we provide
-// an interface `TxInternalDataPayload` to obtain the payload.
-type TxInternalDataPayload interface {
-	GetPayload() []byte
-}
-
 // TxInternalDataEthTyped has a function related to EIP-2718 Ethereum typed transaction.
 // For supporting new typed transaction defined EIP-2718, We provide an interface `TxInternalDataEthTyped `
 type TxInternalDataEthTyped interface {
 	setSignatureValues(chainID, v, r, s *big.Int)
+
+	// EthTxHash returns the Ethereum-compatible transaction hash.
+	// i.e. Hash of the transaction RLP without the EthereumTxTypeEnvelope prefix (0x78)
+	EthTxHash() common.Hash
+}
+
+// TxInternalDataAccessList has a function related to EIP-2930 Ethereum access list transactions.
+type TxInternalDataAccessList interface {
 	GetAccessList() AccessList
-	TxHash() common.Hash
 }
 
 // TxInternalDataBaseFee has a function related to EIP-1559 Ethereum typed transaction.

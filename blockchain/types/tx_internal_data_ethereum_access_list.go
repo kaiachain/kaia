@@ -20,10 +20,10 @@ package types
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"reflect"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -222,11 +222,11 @@ func (t *TxInternalDataEthereumAccessList) ChainId() *big.Int {
 	return t.ChainID
 }
 
-func (t *TxInternalDataEthereumAccessList) GetAccountNonce() uint64 {
+func (t *TxInternalDataEthereumAccessList) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataEthereumAccessList) GetPrice() *big.Int {
+func (t *TxInternalDataEthereumAccessList) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -234,19 +234,15 @@ func (t *TxInternalDataEthereumAccessList) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataEthereumAccessList) GetRecipient() *common.Address {
+func (t *TxInternalDataEthereumAccessList) GetTo() *common.Address {
 	return t.Recipient
 }
 
-func (t *TxInternalDataEthereumAccessList) GetAmount() *big.Int {
+func (t *TxInternalDataEthereumAccessList) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *TxInternalDataEthereumAccessList) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataEthereumAccessList) GetPayload() []byte {
+func (t *TxInternalDataEthereumAccessList) GetData() []byte {
 	return t.Payload
 }
 
@@ -254,7 +250,7 @@ func (t *TxInternalDataEthereumAccessList) GetAccessList() AccessList {
 	return t.AccessList
 }
 
-func (t *TxInternalDataEthereumAccessList) SetHash(hash *common.Hash) {
+func (t *TxInternalDataEthereumAccessList) setHashForMarshaling(hash *common.Hash) {
 	t.Hash = hash
 }
 
@@ -315,7 +311,7 @@ func (t *TxInternalDataEthereumAccessList) SerializeForSign() []interface{} {
 	}
 }
 
-func (t *TxInternalDataEthereumAccessList) TxHash() common.Hash {
+func (t *TxInternalDataEthereumAccessList) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
 		t.AccountNonce,
@@ -347,28 +343,6 @@ func (t *TxInternalDataEthereumAccessList) SenderTxHash() common.Hash {
 	})
 }
 
-func (t *TxInternalDataEthereumAccessList) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataEthereumAccessList) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataEthereumAccessList)
-	if !ok {
-		return false
-	}
-
-	return t.ChainID.Cmp(ta.ChainID) == 0 &&
-		t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		reflect.DeepEqual(t.AccessList, ta.AccessList) &&
-		t.V.Cmp(ta.V) == 0 &&
-		t.R.Cmp(ta.R) == 0 &&
-		t.S.Cmp(ta.S) == 0
-}
-
 func (t *TxInternalDataEthereumAccessList) String() string {
 	var from, to string
 	tx := &Transaction{data: t}
@@ -386,10 +360,10 @@ func (t *TxInternalDataEthereumAccessList) String() string {
 		from = "[invalid sender: nil V field]"
 	}
 
-	if t.GetRecipient() == nil {
+	if t.GetTo() == nil {
 		to = "[contract creation]"
 	} else {
-		to = fmt.Sprintf("%x", t.GetRecipient().Bytes())
+		to = hex.EncodeToString(t.GetTo().Bytes())
 	}
 	enc, _ := rlp.EncodeToBytes(tx)
 	return fmt.Sprintf(`
@@ -410,15 +384,15 @@ func (t *TxInternalDataEthereumAccessList) String() string {
 		Hex:      %x
 	`,
 		tx.Hash(),
-		t.GetRecipient() == nil,
+		t.GetTo() == nil,
 		t.ChainId(),
 		from,
 		to,
-		t.GetAccountNonce(),
-		t.GetPrice(),
+		t.GetNonce(),
+		t.GetGasPrice(),
 		t.GetGasLimit(),
-		t.GetAmount(),
-		t.GetPayload(),
+		t.GetValue(),
+		t.GetData(),
 		t.AccessList,
 		v,
 		r,

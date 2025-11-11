@@ -113,11 +113,11 @@ func (t *TxInternalDataCancel) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataCancel) GetAccountNonce() uint64 {
+func (t *TxInternalDataCancel) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataCancel) GetPrice() *big.Int {
+func (t *TxInternalDataCancel) GetGasPrice() *big.Int {
 	return t.Price
 }
 
@@ -125,11 +125,11 @@ func (t *TxInternalDataCancel) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataCancel) GetRecipient() *common.Address {
+func (t *TxInternalDataCancel) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataCancel) GetAmount() *big.Int {
+func (t *TxInternalDataCancel) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -137,29 +137,12 @@ func (t *TxInternalDataCancel) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataCancel) GetHash() *common.Hash {
-	return t.Hash
+func (t *TxInternalDataCancel) GetData() []byte {
+	return []byte{}
 }
 
-func (t *TxInternalDataCancel) SetHash(h *common.Hash) {
+func (t *TxInternalDataCancel) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
-}
-
-func (t *TxInternalDataCancel) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataCancel) Equal(b TxInternalData) bool {
-	ta, ok := b.(*TxInternalDataCancel)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.From == ta.From &&
-		t.TxSignatures.equal(ta.TxSignatures)
 }
 
 func (t *TxInternalDataCancel) String() string {

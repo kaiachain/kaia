@@ -269,23 +269,6 @@ func (t *TxInternalDataAccountCreation) GetRoleTypeForValidation() accountkey.Ro
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataAccountCreation) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataAccountCreation)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.Recipient == ta.Recipient &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.From == ta.From &&
-		t.HumanReadable == ta.HumanReadable &&
-		t.Key.Equal(ta.Key) &&
-		t.TxSignatures.equal(ta.TxSignatures)
-}
-
 func (t *TxInternalDataAccountCreation) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
 	tx := Transaction{data: t}
@@ -318,15 +301,11 @@ func (t *TxInternalDataAccountCreation) String() string {
 		enc)
 }
 
-func (t *TxInternalDataAccountCreation) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataAccountCreation) GetAccountNonce() uint64 {
+func (t *TxInternalDataAccountCreation) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataAccountCreation) GetPrice() *big.Int {
+func (t *TxInternalDataAccountCreation) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -334,7 +313,7 @@ func (t *TxInternalDataAccountCreation) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataAccountCreation) GetRecipient() *common.Address {
+func (t *TxInternalDataAccountCreation) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -343,7 +322,7 @@ func (t *TxInternalDataAccountCreation) GetRecipient() *common.Address {
 	return &to
 }
 
-func (t *TxInternalDataAccountCreation) GetAmount() *big.Int {
+func (t *TxInternalDataAccountCreation) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -351,11 +330,11 @@ func (t *TxInternalDataAccountCreation) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataAccountCreation) GetHash() *common.Hash {
-	return t.Hash
+func (t *TxInternalDataAccountCreation) GetData() []byte {
+	return []byte{}
 }
 
-func (t *TxInternalDataAccountCreation) SetHash(h *common.Hash) {
+func (t *TxInternalDataAccountCreation) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

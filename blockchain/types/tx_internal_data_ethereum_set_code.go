@@ -24,7 +24,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"reflect"
 
 	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -236,11 +235,11 @@ func (t *TxInternalDataEthereumSetCode) Type() TxType {
 	return TxTypeEthereumSetCode
 }
 
-func (t *TxInternalDataEthereumSetCode) GetAccountNonce() uint64 {
+func (t *TxInternalDataEthereumSetCode) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataEthereumSetCode) GetPrice() *big.Int {
+func (t *TxInternalDataEthereumSetCode) GetGasPrice() *big.Int {
 	return t.GasFeeCap
 }
 
@@ -248,15 +247,15 @@ func (t *TxInternalDataEthereumSetCode) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataEthereumSetCode) GetRecipient() *common.Address {
+func (t *TxInternalDataEthereumSetCode) GetTo() *common.Address {
 	return &t.Recipient
 }
 
-func (t *TxInternalDataEthereumSetCode) GetAmount() *big.Int {
+func (t *TxInternalDataEthereumSetCode) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *TxInternalDataEthereumSetCode) GetPayload() []byte {
+func (t *TxInternalDataEthereumSetCode) GetData() []byte {
 	return t.Payload
 }
 
@@ -276,11 +275,7 @@ func (t *TxInternalDataEthereumSetCode) GetGasFeeCap() *big.Int {
 	return t.GasFeeCap
 }
 
-func (t *TxInternalDataEthereumSetCode) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataEthereumSetCode) SetHash(h *common.Hash) {
+func (t *TxInternalDataEthereumSetCode) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
@@ -323,26 +318,6 @@ func (t *TxInternalDataEthereumSetCode) ChainId() *big.Int {
 	return t.ChainID.ToBig()
 }
 
-func (t *TxInternalDataEthereumSetCode) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataEthereumSetCode)
-	if !ok {
-		return false
-	}
-
-	return t.ChainID.Cmp(ta.ChainID) == 0 &&
-		t.AccountNonce == ta.AccountNonce &&
-		t.GasFeeCap.Cmp(ta.GasFeeCap) == 0 &&
-		t.GasTipCap.Cmp(ta.GasTipCap) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.Recipient == ta.Recipient &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		reflect.DeepEqual(t.AccessList, ta.AccessList) &&
-		reflect.DeepEqual(t.AuthorizationList, ta.AuthorizationList) &&
-		t.V.Cmp(ta.V) == 0 &&
-		t.R.Cmp(ta.R) == 0 &&
-		t.S.Cmp(ta.S) == 0
-}
-
 func (t *TxInternalDataEthereumSetCode) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	return IntrinsicGas(t.Payload, t.AccessList, t.AuthorizationList, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
@@ -363,7 +338,7 @@ func (t *TxInternalDataEthereumSetCode) SerializeForSign() []interface{} {
 	}
 }
 
-func (t *TxInternalDataEthereumSetCode) TxHash() common.Hash {
+func (t *TxInternalDataEthereumSetCode) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
 		t.AccountNonce,
@@ -410,10 +385,6 @@ func (t *TxInternalDataEthereumSetCode) ValidateMutableValue(stateDB StateDB, cu
 	return nil
 }
 
-func (t *TxInternalDataEthereumSetCode) IsLegacyTransaction() bool {
-	return false
-}
-
 func (t *TxInternalDataEthereumSetCode) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
 }
@@ -434,7 +405,7 @@ func (t *TxInternalDataEthereumSetCode) String() string {
 		from = "[invalid sender: nil V field]"
 	}
 
-	to = hex.EncodeToString(t.GetRecipient().Bytes())
+	to = hex.EncodeToString(t.GetTo().Bytes())
 	enc, _ := rlp.EncodeToBytes(tx)
 	return fmt.Sprintf(`
 		TX(%x)
@@ -458,12 +429,12 @@ func (t *TxInternalDataEthereumSetCode) String() string {
 		t.ChainId(),
 		from,
 		to,
-		t.GetAccountNonce(),
+		t.GetNonce(),
 		t.GetGasTipCap(),
 		t.GetGasFeeCap(),
 		t.GetGasLimit(),
-		t.GetAmount(),
-		t.GetPayload(),
+		t.GetValue(),
+		t.GetData(),
 		t.AccessList,
 		t.AuthorizationList,
 		v,

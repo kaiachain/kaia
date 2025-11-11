@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -124,20 +123,6 @@ func (t *TxInternalDataChainDataAnchoring) GetRoleTypeForValidation() accountkey
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataChainDataAnchoring) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataChainDataAnchoring)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.From == tb.From &&
-		t.TxSignatures.equal(tb.TxSignatures) &&
-		bytes.Equal(t.Payload, tb.Payload)
-}
-
 func (t *TxInternalDataChainDataAnchoring) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
 	enc, _ := rlp.EncodeToBytes(ser)
@@ -215,15 +200,11 @@ func (t *TxInternalDataChainDataAnchoring) SenderTxHash() common.Hash {
 	return h
 }
 
-func (t *TxInternalDataChainDataAnchoring) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataChainDataAnchoring) GetAccountNonce() uint64 {
+func (t *TxInternalDataChainDataAnchoring) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetPrice() *big.Int {
+func (t *TxInternalDataChainDataAnchoring) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -231,11 +212,11 @@ func (t *TxInternalDataChainDataAnchoring) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetRecipient() *common.Address {
+func (t *TxInternalDataChainDataAnchoring) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetAmount() *big.Int {
+func (t *TxInternalDataChainDataAnchoring) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -243,15 +224,11 @@ func (t *TxInternalDataChainDataAnchoring) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataChainDataAnchoring) GetPayload() []byte {
+func (t *TxInternalDataChainDataAnchoring) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataChainDataAnchoring) SetHash(h *common.Hash) {
+func (t *TxInternalDataChainDataAnchoring) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

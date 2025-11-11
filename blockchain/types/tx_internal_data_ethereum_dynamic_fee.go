@@ -20,10 +20,10 @@ package types
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"reflect"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -209,11 +209,11 @@ func (t *TxInternalDataEthereumDynamicFee) GetRoleTypeForValidation() accountkey
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataEthereumDynamicFee) GetAccountNonce() uint64 {
+func (t *TxInternalDataEthereumDynamicFee) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataEthereumDynamicFee) GetPrice() *big.Int {
+func (t *TxInternalDataEthereumDynamicFee) GetGasPrice() *big.Int {
 	return t.GasFeeCap
 }
 
@@ -221,19 +221,15 @@ func (t *TxInternalDataEthereumDynamicFee) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataEthereumDynamicFee) GetRecipient() *common.Address {
+func (t *TxInternalDataEthereumDynamicFee) GetTo() *common.Address {
 	return t.Recipient
 }
 
-func (t *TxInternalDataEthereumDynamicFee) GetAmount() *big.Int {
+func (t *TxInternalDataEthereumDynamicFee) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *TxInternalDataEthereumDynamicFee) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataEthereumDynamicFee) GetPayload() []byte {
+func (t *TxInternalDataEthereumDynamicFee) GetData() []byte {
 	return t.Payload
 }
 
@@ -249,7 +245,7 @@ func (t *TxInternalDataEthereumDynamicFee) GetGasFeeCap() *big.Int {
 	return t.GasFeeCap
 }
 
-func (t *TxInternalDataEthereumDynamicFee) SetHash(hash *common.Hash) {
+func (t *TxInternalDataEthereumDynamicFee) setHashForMarshaling(hash *common.Hash) {
 	t.Hash = hash
 }
 
@@ -296,25 +292,6 @@ func (t *TxInternalDataEthereumDynamicFee) ChainId() *big.Int {
 	return t.ChainID
 }
 
-func (t *TxInternalDataEthereumDynamicFee) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataEthereumDynamicFee)
-	if !ok {
-		return false
-	}
-
-	return t.ChainID.Cmp(ta.ChainID) == 0 &&
-		t.AccountNonce == ta.AccountNonce &&
-		t.GasFeeCap.Cmp(ta.GasFeeCap) == 0 &&
-		t.GasTipCap.Cmp(ta.GasTipCap) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		reflect.DeepEqual(t.AccessList, ta.AccessList) &&
-		t.V.Cmp(ta.V) == 0 &&
-		t.R.Cmp(ta.R) == 0 &&
-		t.S.Cmp(ta.S) == 0
-}
-
 func (t *TxInternalDataEthereumDynamicFee) String() string {
 	var from, to string
 	tx := &Transaction{data: t}
@@ -331,10 +308,10 @@ func (t *TxInternalDataEthereumDynamicFee) String() string {
 		from = "[invalid sender: nil V field]"
 	}
 
-	if t.GetRecipient() == nil {
+	if t.GetTo() == nil {
 		to = "[contract creation]"
 	} else {
-		to = fmt.Sprintf("%x", t.GetRecipient().Bytes())
+		to = hex.EncodeToString(t.GetTo().Bytes())
 	}
 	enc, _ := rlp.EncodeToBytes(tx)
 	return fmt.Sprintf(`
@@ -356,16 +333,16 @@ func (t *TxInternalDataEthereumDynamicFee) String() string {
 		Hex:      %x
 	`,
 		tx.Hash(),
-		t.GetRecipient() == nil,
+		t.GetTo() == nil,
 		t.ChainId(),
 		from,
 		to,
-		t.GetAccountNonce(),
+		t.GetNonce(),
 		t.GetGasTipCap(),
 		t.GetGasFeeCap(),
 		t.GetGasLimit(),
-		t.GetAmount(),
-		t.GetPayload(),
+		t.GetValue(),
+		t.GetData(),
 		t.AccessList,
 		v,
 		r,
@@ -389,7 +366,7 @@ func (t *TxInternalDataEthereumDynamicFee) SerializeForSign() []interface{} {
 	}
 }
 
-func (t *TxInternalDataEthereumDynamicFee) TxHash() common.Hash {
+func (t *TxInternalDataEthereumDynamicFee) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
 		t.AccountNonce,
@@ -434,10 +411,6 @@ func (t *TxInternalDataEthereumDynamicFee) Validate(stateDB StateDB, currentBloc
 
 func (t *TxInternalDataEthereumDynamicFee) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	return nil
-}
-
-func (t *TxInternalDataEthereumDynamicFee) IsLegacyTransaction() bool {
-	return false
 }
 
 func (t *TxInternalDataEthereumDynamicFee) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

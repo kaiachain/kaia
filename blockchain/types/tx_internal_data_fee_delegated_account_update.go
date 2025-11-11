@@ -248,11 +248,11 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) GetRoleTypeForValidation() acc
 	return accountkey.RoleAccountUpdate
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedAccountUpdate) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedAccountUpdate) GetGasPrice() *big.Int {
 	return t.Price
 }
 
@@ -260,11 +260,11 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedAccountUpdate) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedAccountUpdate) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -272,8 +272,8 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) GetHash() *common.Hash {
-	return t.Hash
+func (t *TxInternalDataFeeDelegatedAccountUpdate) GetData() []byte {
+	return []byte{}
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) GetFeePayer() common.Address {
@@ -284,28 +284,8 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) GetFeePayerRawSignatureValues(
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedAccountUpdate) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
-}
-
-func (t *TxInternalDataFeeDelegatedAccountUpdate) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedAccountUpdate) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataFeeDelegatedAccountUpdate)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.From == ta.From &&
-		t.Key.Equal(ta.Key) &&
-		t.TxSignatures.equal(ta.TxSignatures) &&
-		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) String() string {

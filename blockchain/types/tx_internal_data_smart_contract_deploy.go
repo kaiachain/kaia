@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -162,37 +161,15 @@ func (t *TxInternalDataSmartContractDeploy) GetRoleTypeForValidation() accountke
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataSmartContractDeploy) GetPayload() []byte {
+func (t *TxInternalDataSmartContractDeploy) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataSmartContractDeploy) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataSmartContractDeploy)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.From == ta.From &&
-		bytes.Equal(t.Payload, ta.Payload) &&
-		t.HumanReadable == ta.HumanReadable &&
-		t.TxSignatures.equal(ta.TxSignatures) &&
-		t.CodeFormat == ta.CodeFormat
-}
-
-func (t *TxInternalDataSmartContractDeploy) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataSmartContractDeploy) GetAccountNonce() uint64 {
+func (t *TxInternalDataSmartContractDeploy) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataSmartContractDeploy) GetPrice() *big.Int {
+func (t *TxInternalDataSmartContractDeploy) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -200,11 +177,11 @@ func (t *TxInternalDataSmartContractDeploy) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataSmartContractDeploy) GetRecipient() *common.Address {
+func (t *TxInternalDataSmartContractDeploy) GetTo() *common.Address {
 	return t.Recipient
 }
 
-func (t *TxInternalDataSmartContractDeploy) GetAmount() *big.Int {
+func (t *TxInternalDataSmartContractDeploy) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -212,15 +189,11 @@ func (t *TxInternalDataSmartContractDeploy) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataSmartContractDeploy) GetHash() *common.Hash {
-	return t.Hash
-}
-
 func (t *TxInternalDataSmartContractDeploy) GetCodeFormat() params.CodeFormat {
 	return t.CodeFormat
 }
 
-func (t *TxInternalDataSmartContractDeploy) SetHash(h *common.Hash) {
+func (t *TxInternalDataSmartContractDeploy) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

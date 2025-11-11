@@ -154,7 +154,9 @@ func testTransactionRLP(t *testing.T, tx TxInternalData) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -181,7 +183,9 @@ func testTransactionJSON(t *testing.T, tx TxInternalData) {
 		panic(err)
 	}
 
-	if !tx.Equal(dec.tx) {
+	txHash := (&Transaction{data: tx}).Hash()
+	decHash := (&Transaction{data: dec.tx}).Hash()
+	if txHash != decHash {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, dec.tx)
 	}
 }
@@ -217,7 +221,7 @@ func testTransactionRPC(t *testing.T, tx TxInternalData) {
 	}
 
 	h := rawTx.Hash()
-	tx.SetHash(&h)
+	tx.setHashForMarshaling(&h)
 
 	// Copied from newRPCTransaction
 	rpcout := newRPCTransaction(rawTx, common.Hash{}, 0, 0)
@@ -238,7 +242,7 @@ func testTransactionRPC(t *testing.T, tx TxInternalData) {
 		panic(err)
 	}
 
-	if !rawTx.Equal(decTx) {
+	if rawTx.Hash() != decTx.Hash() {
 		t.Fatalf("tx != dec.tx\ntx=%v\ndec.tx=%v", tx, decTx)
 	}
 }

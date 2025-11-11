@@ -19,7 +19,6 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
@@ -156,24 +155,6 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetRoleTypeForValidation()
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataFeeDelegatedValueTransferMemo)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.Recipient == tb.Recipient &&
-		t.Amount.Cmp(tb.Amount) == 0 &&
-		t.From == tb.From &&
-		bytes.Equal(t.Payload, tb.Payload) &&
-		t.TxSignatures.equal(tb.TxSignatures) &&
-		t.FeePayer == tb.FeePayer &&
-		t.FeePayerSignatures.equal(tb.FeePayerSignatures)
-}
-
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) String() string {
 	ser := newTxInternalDataSerializerWithValues(t)
 	tx := Transaction{data: t}
@@ -208,15 +189,11 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) String() string {
 		enc)
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -224,7 +201,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -233,7 +210,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetRecipient() *common.Add
 	return &to
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -241,12 +218,8 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetPayload() []byte {
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetData() []byte {
 	return t.Payload
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetHash() *common.Hash {
-	return t.Hash
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetFeePayer() common.Address {
@@ -257,7 +230,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) GetFeePayerRawSignatureVal
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 

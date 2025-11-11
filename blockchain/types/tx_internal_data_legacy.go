@@ -19,8 +19,8 @@
 package types
 
 import (
-	"bytes"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -168,11 +168,11 @@ func (t *TxInternalDataLegacy) ChainId() *big.Int {
 	return deriveChainId(t.V)
 }
 
-func (t *TxInternalDataLegacy) GetAccountNonce() uint64 {
+func (t *TxInternalDataLegacy) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataLegacy) GetPrice() *big.Int {
+func (t *TxInternalDataLegacy) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -180,23 +180,19 @@ func (t *TxInternalDataLegacy) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataLegacy) GetRecipient() *common.Address {
+func (t *TxInternalDataLegacy) GetTo() *common.Address {
 	return t.Recipient
 }
 
-func (t *TxInternalDataLegacy) GetAmount() *big.Int {
+func (t *TxInternalDataLegacy) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *TxInternalDataLegacy) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataLegacy) GetPayload() []byte {
+func (t *TxInternalDataLegacy) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataLegacy) SetHash(h *common.Hash) {
+func (t *TxInternalDataLegacy) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
@@ -270,39 +266,6 @@ func (t *TxInternalDataLegacy) SenderTxHash() common.Hash {
 	return h
 }
 
-func (t *TxInternalDataLegacy) IsLegacyTransaction() bool {
-	return true
-}
-
-func (t *TxInternalDataLegacy) equalHash(a *TxInternalDataLegacy) bool {
-	if t.GetHash() == nil && a.GetHash() == nil {
-		return true
-	}
-
-	if t.GetHash() != nil && a.GetHash() != nil &&
-		bytes.Equal(t.GetHash().Bytes(), a.GetHash().Bytes()) {
-		return true
-	}
-
-	return false
-}
-
-func (t *TxInternalDataLegacy) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataLegacy)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.V.Cmp(ta.V) == 0 &&
-		t.R.Cmp(ta.R) == 0 &&
-		t.S.Cmp(ta.S) == 0
-}
-
 func (t *TxInternalDataLegacy) String() string {
 	var from, to string
 	tx := &Transaction{data: t}
@@ -321,10 +284,10 @@ func (t *TxInternalDataLegacy) String() string {
 		from = "[invalid sender: nil V field]"
 	}
 
-	if t.GetRecipient() == nil {
+	if t.GetTo() == nil {
 		to = "[contract creation]"
 	} else {
-		to = fmt.Sprintf("%x", t.GetRecipient().Bytes())
+		to = hex.EncodeToString(t.GetTo().Bytes())
 	}
 	enc, _ := rlp.EncodeToBytes(t)
 	return fmt.Sprintf(`
@@ -343,14 +306,14 @@ func (t *TxInternalDataLegacy) String() string {
 	Hex:      %x
 `,
 		tx.Hash(),
-		t.GetRecipient() == nil,
+		t.GetTo() == nil,
 		from,
 		to,
-		t.GetAccountNonce(),
-		t.GetPrice(),
+		t.GetNonce(),
+		t.GetGasPrice(),
 		t.GetGasLimit(),
-		t.GetAmount(),
-		t.GetPayload(),
+		t.GetValue(),
+		t.GetData(),
 		v,
 		r,
 		s,
