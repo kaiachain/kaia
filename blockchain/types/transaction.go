@@ -236,7 +236,7 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 
-	if !serializer.tx.ValidateSignature() {
+	if !SanityCheckSignatures(serializer.tx.RawSignatureValues(), serializer.tx.Type()) {
 		return ErrInvalidSig
 	}
 
@@ -273,7 +273,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	if err := json.Unmarshal(input, serializer); err != nil {
 		return err
 	}
-	if !serializer.tx.ValidateSignature() {
+	if !SanityCheckSignatures(serializer.tx.RawSignatureValues(), serializer.tx.Type()) {
 		return ErrInvalidSig
 	}
 
@@ -640,13 +640,13 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 	}
 
 	cpy := &Transaction{data: tx.data, time: tx.time}
-	if tx.Type().IsEthTypedTransaction() {
-		te, ok := cpy.data.(TxInternalDataEthTyped)
-		if ok {
-			te.setSignatureValues(signer.ChainID(), v, r, s)
-		} else {
-			return nil, errNotImplementTxInternalEthTyped
-		}
+
+	// Legacy transaction: v = (27 or 28) or EIP-155 (chainId * 2 + 35 + yParity)
+	// Kaia typed transaction: v = EIP-155 (chainId * 2 + 35 + yParity)
+	// Eth typed transaction: v = yParity (0 or 1) and separate chainId field
+	// Therefore, EIP-2718 Eth typed transactions must be supplied with the chainId field.
+	if te, ok := cpy.data.(TxInternalDataEthTyped); ok {
+		te.SetChainId(signer.ChainID())
 	}
 
 	cpy.data.SetSignature(TxSignatures{&TxSignature{v, r, s}})

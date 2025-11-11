@@ -28,7 +28,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
@@ -222,6 +221,10 @@ func (t *TxInternalDataEthereumAccessList) ChainId() *big.Int {
 	return t.ChainID
 }
 
+func (t *TxInternalDataEthereumAccessList) SetChainId(chainID *big.Int) {
+	t.ChainID = new(big.Int).Set(chainID)
+}
+
 func (t *TxInternalDataEthereumAccessList) GetNonce() uint64 {
 	return t.AccountNonce
 }
@@ -268,11 +271,6 @@ func (t *TxInternalDataEthereumAccessList) RawSignatureValues() TxSignatures {
 	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
 }
 
-func (t *TxInternalDataEthereumAccessList) ValidateSignature() bool {
-	v := byte(t.V.Uint64())
-	return crypto.ValidateSignatureValues(v, t.R, t.S, false)
-}
-
 func (t *TxInternalDataEthereumAccessList) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
 	V := vfunc(t.V)
 	return recoverPlain(txhash, t.R, t.S, V, homestead)
@@ -291,10 +289,6 @@ func (t *TxInternalDataEthereumAccessList) RecoverPubkey(txhash common.Hash, hom
 
 func (t *TxInternalDataEthereumAccessList) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	return IntrinsicGas(t.Payload, t.AccessList, nil, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
-}
-
-func (t *TxInternalDataEthereumAccessList) setSignatureValues(chainID, v, r, s *big.Int) {
-	t.ChainID, t.V, t.R, t.S = chainID, v, r, s
 }
 
 func (t *TxInternalDataEthereumAccessList) SerializeForSign() []interface{} {

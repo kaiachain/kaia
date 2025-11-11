@@ -210,10 +210,6 @@ func (t *TxInternalDataLegacy) RawSignatureValues() TxSignatures {
 	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
 }
 
-func (t *TxInternalDataLegacy) ValidateSignature() bool {
-	return validateSignature(t.V, t.R, t.S)
-}
-
 func (t *TxInternalDataLegacy) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
 	V := vfunc(t.V)
 	return recoverPlain(txhash, t.R, t.S, V, homestead)

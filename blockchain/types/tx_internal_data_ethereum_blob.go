@@ -32,7 +32,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
@@ -537,11 +536,6 @@ func (t *TxInternalDataEthereumBlob) RawSignatureValues() TxSignatures {
 	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
 }
 
-func (t *TxInternalDataEthereumBlob) ValidateSignature() bool {
-	v := byte(t.V.Uint64())
-	return crypto.ValidateSignatureValues(v, t.R, t.S, false)
-}
-
 func (t *TxInternalDataEthereumBlob) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
 	V := vfunc(t.V)
 	return recoverPlain(txhash, t.R, t.S, V, homestead)
@@ -564,6 +558,10 @@ func (t *TxInternalDataEthereumBlob) IntrinsicGas(currentBlockNumber uint64) (ui
 
 func (t *TxInternalDataEthereumBlob) ChainId() *big.Int {
 	return t.ChainID.ToBig()
+}
+
+func (t *TxInternalDataEthereumBlob) SetChainId(chainID *big.Int) {
+	t.ChainID = uint256.MustFromBig(chainID)
 }
 
 func (t *TxInternalDataEthereumBlob) String() string {
@@ -773,10 +771,6 @@ func (t *TxInternalDataEthereumBlob) UnmarshalJSON(bytes []byte) error {
 	t.Hash = js.Hash
 
 	return nil
-}
-
-func (t *TxInternalDataEthereumBlob) setSignatureValues(chainID, v, r, s *big.Int) {
-	t.ChainID, t.V, t.R, t.S = uint256.MustFromBig(chainID), v, r, s
 }
 
 func (tx *TxInternalDataEthereumBlob) withoutSidecar() *TxInternalDataEthereumBlob {

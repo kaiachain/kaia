@@ -321,9 +321,6 @@ type TxInternalData interface {
 	// The format would be something like [["V":v, "R":r, "S":s}, {"V":v, "R":r, "S":s}].
 	RawSignatureValues() TxSignatures
 
-	// ValidateSignature returns true if the signature is valid.
-	ValidateSignature() bool
-
 	// RecoverAddress returns address derived from txhash and signatures(r, s, v).
 	// Since EIP155Signer modifies V value during recovering while other signers don't, it requires vfunc for the treatment.
 	RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error)
@@ -401,7 +398,9 @@ type TxInternalDataFrom interface {
 // TxInternalDataEthTyped has a function related to EIP-2718 Ethereum typed transaction.
 // For supporting new typed transaction defined EIP-2718, We provide an interface `TxInternalDataEthTyped `
 type TxInternalDataEthTyped interface {
-	setSignatureValues(chainID, v, r, s *big.Int)
+	// Legacy and Kaia typed transactions contain the chainId in its signature V value according to EIP-155.
+	// Eth typed transactions have separate chainId field so SetSignature([]{v,r,s}) is not enough.
+	SetChainId(chainID *big.Int)
 
 	// EthTxHash returns the Ethereum-compatible transaction hash.
 	// i.e. Hash of the transaction RLP without the EthereumTxTypeEnvelope prefix (0x78)

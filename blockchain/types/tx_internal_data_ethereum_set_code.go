@@ -293,11 +293,6 @@ func (t *TxInternalDataEthereumSetCode) RawSignatureValues() TxSignatures {
 	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
 }
 
-func (t *TxInternalDataEthereumSetCode) ValidateSignature() bool {
-	v := byte(t.V.Uint64())
-	return crypto.ValidateSignatureValues(v, t.R, t.S, false)
-}
-
 func (t *TxInternalDataEthereumSetCode) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
 	V := vfunc(t.V)
 	return recoverPlain(txhash, t.R, t.S, V, homestead)
@@ -316,6 +311,10 @@ func (t *TxInternalDataEthereumSetCode) RecoverPubkey(txhash common.Hash, homest
 
 func (t *TxInternalDataEthereumSetCode) ChainId() *big.Int {
 	return t.ChainID.ToBig()
+}
+
+func (t *TxInternalDataEthereumSetCode) SetChainId(chainID *big.Int) {
+	t.ChainID = uint256.MustFromBig(chainID)
 }
 
 func (t *TxInternalDataEthereumSetCode) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
@@ -517,10 +516,6 @@ func (t *TxInternalDataEthereumSetCode) UnmarshalJSON(bytes []byte) error {
 	t.Hash = js.Hash
 
 	return nil
-}
-
-func (t *TxInternalDataEthereumSetCode) setSignatureValues(chainID, v, r, s *big.Int) {
-	t.ChainID, t.V, t.R, t.S = uint256.MustFromBig(chainID), v, r, s
 }
 
 //go:generate gencodec -type SetCodeAuthorization -field-override authorizationMarshaling -out gen_authorization.go
