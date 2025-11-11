@@ -893,14 +893,15 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, e
 		// and zero before the Cancun hardfork.
 		var blobs int
 		for _, tx := range txLists[index] {
-			// Count the number of blobs to validate against the header's blobGasUsed
-			blobs += len(tx.BlobHashes())
-
 			// Validate the data blobs individually too
 			if tx.Type() == types.TxTypeEthereumBlob {
-				if len(tx.BlobHashes()) == 0 {
+				// Count the number of blobs to validate against the header's blobGasUsed
+				txBlobHashCount := len(tx.BlobHashes())
+				if txBlobHashCount == 0 {
 					return errInvalidBody
 				}
+				blobs += txBlobHashCount
+				
 				for _, hash := range tx.BlobHashes() {
 					if !kzg4844.IsValidVersionedHash(hash[:]) {
 						return errInvalidBody
