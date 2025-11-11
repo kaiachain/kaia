@@ -641,14 +641,12 @@ func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, e
 
 	cpy := &Transaction{data: tx.data, time: tx.time}
 
-	// Set chainID for Ethereum typed transactions
-	if tx.Type().IsEthTypedTransaction() {
-		te, ok := cpy.data.(TxInternalDataEthTyped)
-		if ok {
-			te.SetChainId(signer.ChainID())
-		} else {
-			return nil, errNotImplementTxInternalEthTyped
-		}
+	// Legacy transaction: v = (27 or 28) or EIP-155 (chainId * 2 + 35 + yParity)
+	// Kaia typed transaction: v = EIP-155 (chainId * 2 + 35 + yParity)
+	// Eth typed transaction: v = yParity (0 or 1) and separate chainId field
+	// Therefore, EIP-2718 Eth typed transactions must be supplied with the chainId field.
+	if te, ok := cpy.data.(TxInternalDataEthTyped); ok {
+		te.SetChainId(signer.ChainID())
 	}
 
 	cpy.data.SetSignature(TxSignatures{&TxSignature{v, r, s}})
