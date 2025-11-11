@@ -20,7 +20,6 @@ package types
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"math/big"
 
@@ -285,36 +284,6 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) GetFeePayerRawSignatureValues(
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
-}
-
-func (t *TxInternalDataFeeDelegatedAccountUpdate) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Key:           %s
-	Signature:     %s
-	FeePayer:      %s
-	FeePayerSig:   %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Key.String(),
-		t.TxSignatures.string(),
-		t.FeePayer.String(),
-		t.FeePayerSignatures.string(),
-		enc)
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) SetSignature(s TxSignatures) {

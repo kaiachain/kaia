@@ -781,7 +781,8 @@ func (tx *Transaction) RawSignatureValues() TxSignatures {
 }
 
 func (tx *Transaction) String() string {
-	return tx.data.String()
+	b, _ := json.Marshal(tx)
+	return string(b)
 }
 
 // ValidateSender finds a sender from both legacy and new types of transactions.

@@ -24,7 +24,6 @@ package types
 
 import (
 	"crypto/ecdsa"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -819,8 +818,7 @@ func (s EIP155Signer) Sender(tx *Transaction) (common.Address, error) {
 	}
 
 	if !tx.IsLegacyTransaction() {
-		b, _ := json.Marshal(tx)
-		logger.Warn("No need to execute Sender!", "tx", string(b))
+		logger.Warn("No need to execute Sender!", "tx", tx.String())
 	}
 
 	if tx.ChainId().Cmp(s.chainId) != 0 {
@@ -838,8 +836,7 @@ func (s EIP155Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) 
 	}
 
 	if tx.IsLegacyTransaction() {
-		b, _ := json.Marshal(tx)
-		logger.Warn("No need to execute SenderPubkey!", "tx", string(b))
+		logger.Warn("No need to execute SenderPubkey!", "tx", tx.String())
 	}
 
 	if tx.ChainId().Cmp(s.chainId) != 0 {
@@ -857,8 +854,7 @@ func (s EIP155Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error
 	}
 
 	if tx.IsLegacyTransaction() {
-		b, _ := json.Marshal(tx)
-		logger.Warn("No need to execute SenderFeePayer!", "tx", string(b))
+		logger.Warn("No need to execute SenderFeePayer!", "tx", tx.String())
 	}
 
 	if tx.ChainId().Cmp(s.chainId) != 0 {

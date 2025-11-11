@@ -19,7 +19,6 @@ package types
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -545,69 +544,6 @@ func (t *TxInternalDataEthereumBlob) ChainId() *big.Int {
 
 func (t *TxInternalDataEthereumBlob) SetChainId(chainID *big.Int) {
 	t.ChainID = uint256.MustFromBig(chainID)
-}
-
-func (t *TxInternalDataEthereumBlob) String() string {
-	var from, to string
-	tx := &Transaction{data: t}
-
-	v, r, s := t.V, t.R, t.S
-	if v != nil {
-		signer := LatestSignerForChainID(t.ChainId())
-		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
-			from = "[invalid sender: invalid sig]"
-		} else {
-			from = hex.EncodeToString(f[:])
-		}
-	} else {
-		from = "[invalid sender: nil V field]"
-	}
-
-	if t.GetTo() == nil {
-		to = "[contract creation]"
-	} else {
-		to = hex.EncodeToString(t.GetTo().Bytes())
-	}
-	enc, _ := rlp.EncodeToBytes(tx)
-	return fmt.Sprintf(`
-		TX(%x)
-		Contract: %v
-		Chaind:   %#x
-		From:     %s
-		To:       %s
-		Nonce:    %v
-		GasTipCap: %#x
-		GasFeeCap: %#x
-		GasLimit  %#x
-		Value:    %#x
-		Data:     0x%x
-		AccessList: %x
-		BlobFeeCap: %#x
-		BlobHashes: %x
-		V:        %#x
-		R:        %#x
-		S:        %#x
-		Hex:      %x
-	`,
-		tx.Hash(),
-		t.GetTo() == nil,
-		t.ChainId(),
-		from,
-		to,
-		t.GetNonce(),
-		t.GetGasTipCap(),
-		t.GetGasFeeCap(),
-		t.GetGasLimit(),
-		t.GetValue(),
-		t.GetData(),
-		t.AccessList,
-		t.BlobFeeCap,
-		t.BlobHashes,
-		v,
-		r,
-		s,
-		enc,
-	)
 }
 
 func (t *TxInternalDataEthereumBlob) SerializeForSign() []interface{} {

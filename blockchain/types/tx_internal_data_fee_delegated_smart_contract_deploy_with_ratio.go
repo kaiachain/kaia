@@ -20,7 +20,6 @@ package types
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -240,52 +239,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SetSignature(s 
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SetFeePayerSignatures(s TxSignatures) {
 	t.FeePayerSignatures = s
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) String() string {
-	var to common.Address
-	if t.Recipient != nil {
-		to = *t.Recipient
-	} else {
-		to = crypto.CreateAddress(t.From, t.AccountNonce)
-	}
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	To:            %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Value:         %#x
-	Data:          %x
-	HumanReadable: %v
-	Signature:     %s
-	FeePayer:      %s
-	FeeRatio:      %d
-	CodeFormat:    %s
-	FeePayerSig:   %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		to.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Amount,
-		common.Bytes2Hex(t.Payload),
-		t.HumanReadable,
-		t.TxSignatures.string(),
-		t.FeePayer.String(),
-		t.FeeRatio,
-		t.CodeFormat.String(),
-		t.FeePayerSignatures.string(),
-		enc)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

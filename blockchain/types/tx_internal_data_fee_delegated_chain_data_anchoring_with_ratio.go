@@ -20,7 +20,6 @@ package types
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -146,39 +145,6 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) Type() TxType {
 
 func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
-}
-
-func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	enc, _ := rlp.EncodeToBytes(ser)
-	tx := Transaction{data: t}
-
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	AnchoredData:  %s
-	Signature:     %s
-	FeePayer:      %s
-	FeeRatio:      %d
-	FeePayerSig:   %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		common.Bytes2Hex(t.Payload),
-		t.TxSignatures.string(),
-		t.FeePayer.String(),
-		t.FeeRatio,
-		t.FeePayerSignatures.string(),
-		enc)
 }
 
 func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) SerializeForSignToBytes() []byte {

@@ -20,7 +20,6 @@ package types
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -180,36 +179,6 @@ func (t *TxInternalDataSmartContractExecution) setHashForMarshaling(h *common.Ha
 
 func (t *TxInternalDataSmartContractExecution) SetSignature(s TxSignatures) {
 	t.TxSignatures = s
-}
-
-func (t *TxInternalDataSmartContractExecution) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	To:            %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Value:         %#x
-	Signature:     %s
-	Data:          %x
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.Recipient.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Amount,
-		t.TxSignatures.string(),
-		common.Bytes2Hex(t.Payload),
-		enc)
 }
 
 func (t *TxInternalDataSmartContractExecution) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
