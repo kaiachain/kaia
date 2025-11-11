@@ -340,34 +340,34 @@ func (tx *Transaction) AccessList() AccessList {
 
 // BlobGas returns the blob gas limit of the transaction for blob transactions, 0 otherwise.
 func (tx *Transaction) BlobGas() uint64 {
-	if tx.Type() != TxTypeEthereumBlob {
-		return 0
+	if blobTx, ok := tx.GetTxInternalData().(*TxInternalDataEthereumBlob); ok {
+		return blobTx.GetBlobGas()
 	}
-	return tx.GetTxInternalData().(*TxInternalDataEthereumBlob).GetBlobGas()
+	return 0
 }
 
 // BlobGasFeeCap returns the blob gas fee cap per blob gas of the transaction for blob transactions, nil otherwise.
 func (tx *Transaction) BlobGasFeeCap() *big.Int {
-	if tx.Type() != TxTypeEthereumBlob {
-		return nil
+	if blobTx, ok := tx.GetTxInternalData().(*TxInternalDataEthereumBlob); ok {
+		return new(big.Int).Set(blobTx.BlobFeeCap.ToBig())
 	}
-	return new(big.Int).Set(tx.GetTxInternalData().(*TxInternalDataEthereumBlob).GasFeeCap.ToBig())
+	return nil
 }
 
 // BlobHashes returns the hashes of the blob commitments for blob transactions, nil otherwise.
 func (tx *Transaction) BlobHashes() []common.Hash {
-	if tx.Type() != TxTypeEthereumBlob {
-		return nil
+	if blobTx, ok := tx.GetTxInternalData().(*TxInternalDataEthereumBlob); ok {
+		return blobTx.BlobHashes
 	}
-	return tx.GetTxInternalData().(*TxInternalDataEthereumBlob).BlobHashes
+	return nil
 }
 
 // BlobTxSidecar returns the sidecar of a blob transaction, nil otherwise.
 func (tx *Transaction) BlobTxSidecar() *BlobTxSidecar {
-	if tx.Type() != TxTypeEthereumBlob {
-		return nil
+	if blobTx, ok := tx.GetTxInternalData().(*TxInternalDataEthereumBlob); ok {
+		return blobTx.Sidecar
 	}
-	return tx.GetTxInternalData().(*TxInternalDataEthereumBlob).Sidecar
+	return nil
 }
 
 // BlobGasFeeCapCmp compares the blob fee cap of two transactions.
