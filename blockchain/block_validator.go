@@ -23,6 +23,7 @@
 package blockchain
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -74,6 +75,7 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	if hash := types.DeriveSha(block.Transactions(), block.Number()); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)
 	}
+
 	baseFee := block.Header().BaseFee
 	// Blob transactions may be present after the Osaka fork.
 	var blobs int
@@ -94,6 +96,18 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 		// The individual checks for blob validity (version-check + not empty)
 		// happens in state transition.
 	}
+
+	// Check blob gas usage.
+	if header.BlobGasUsed != nil {
+		if want := *header.BlobGasUsed / params.BlobTxBlobGasPerBlob; uint64(blobs) != want { // div because the header is surely good vs the body might be bloated
+			return fmt.Errorf("blob gas used mismatch (header %v, calculated %v)", *header.BlobGasUsed, blobs*params.BlobTxBlobGasPerBlob)
+		}
+	} else {
+		if blobs > 0 {
+			return errors.New("data blobs present in block body")
+		}
+	}
+
 	return nil
 }
 
