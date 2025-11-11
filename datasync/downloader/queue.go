@@ -901,7 +901,7 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, e
 					return errInvalidBody
 				}
 				blobs += txBlobHashCount
-				
+
 				for _, hash := range tx.BlobHashes() {
 					if !kzg4844.IsValidVersionedHash(hash[:]) {
 						return errInvalidBody
