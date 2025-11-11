@@ -345,21 +345,19 @@ func (b *Block) ReceiptHash() common.Hash   { return b.header.ReceiptHash }
 func (b *Block) Extra() []byte              { return common.CopyBytes(b.header.Extra) }
 
 func (b *Block) ExcessBlobGas() *uint64 {
-	var excessBlobGas *uint64
-	if b.header.ExcessBlobGas != nil {
-		excessBlobGas = new(uint64)
-		*excessBlobGas = *b.header.ExcessBlobGas
+	if b.header.ExcessBlobGas == nil {
+		return nil
 	}
-	return excessBlobGas
+	excessBlobGas := *b.header.ExcessBlobGas
+	return &excessBlobGas
 }
 
 func (b *Block) BlobGasUsed() *uint64 {
-	var blobGasUsed *uint64
-	if b.header.BlobGasUsed != nil {
-		blobGasUsed = new(uint64)
-		*blobGasUsed = *b.header.BlobGasUsed
+	if b.header.BlobGasUsed == nil {
+		return nil
 	}
-	return blobGasUsed
+	blobGasUsed := *b.header.BlobGasUsed
+	return &blobGasUsed
 }
 
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
