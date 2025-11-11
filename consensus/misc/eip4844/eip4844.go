@@ -162,7 +162,7 @@ func CalcBlobFee(config *params.ChainConfig, header *types.Header) *big.Int {
 	return blobConfig.blobBaseFee(*header.ExcessBlobGas)
 }
 
-// MaxBlobsPerBlock returns the max blobs per block for a block at the given timestamp.
+// MaxBlobsPerBlock returns the max blobs per block for a block at the given block number.
 func MaxBlobsPerBlock(cfg *params.ChainConfig, blockNumber *big.Int) int {
 	blobConfig := latestBlobConfig(cfg, blockNumber)
 	if blobConfig == nil {
@@ -171,7 +171,7 @@ func MaxBlobsPerBlock(cfg *params.ChainConfig, blockNumber *big.Int) int {
 	return blobConfig.Max
 }
 
-// MaxBlobGasPerBlock returns the maximum blob gas that can be spent in a block at the given timestamp.
+// MaxBlobGasPerBlock returns the maximum blob gas that can be spent in a block at the given block number.
 func MaxBlobGasPerBlock(cfg *params.ChainConfig, blockNumber *big.Int) uint64 {
 	return uint64(MaxBlobsPerBlock(cfg, blockNumber)) * params.BlobTxBlobGasPerBlob
 }
@@ -187,7 +187,7 @@ func MaxBlobGasPerBlock(cfg *params.ChainConfig, blockNumber *big.Int) uint64 {
 // 	return bcfg.Max
 // }
 
-// TargetBlobsPerBlock returns the target blobs per block for a block at the given timestamp.
+// TargetBlobsPerBlock returns the target blobs per block for a block at the given block number.
 func TargetBlobsPerBlock(cfg *params.ChainConfig, blockNumber *big.Int) int {
 	blobConfig := latestBlobConfig(cfg, blockNumber)
 	if blobConfig == nil {
