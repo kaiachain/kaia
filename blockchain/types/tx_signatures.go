@@ -196,8 +196,8 @@ func SanityCheckSignatures(sigs TxSignatures, txType TxType) bool {
 	return sigs.ValidateSignature()
 }
 
-// RecoverTxSender returns address derived from txhash and signatures(r, s, v).
-// Since EIP155Signer modifies V value during recovering while other signers don't, it requires vfunc for the treatment.
+// RecoverTxSender returns the address derived from txhash and the sole signature (v, r, s).
+// Used to recover the sender of Legacy and Ethereum typed transactions at signer.Sender() via tx.ValidateSender().
 func RecoverTxSender(txhash common.Hash, sigs TxSignatures, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
 	if len(sigs) == 0 {
 		return common.Address{}, ErrInvalidSig
@@ -211,8 +211,8 @@ func RecoverTxSender(txhash common.Hash, sigs TxSignatures, homestead bool, vfun
 	return recoverPlain(txhash, txSig.R, txSig.S, V, homestead)
 }
 
-// RecoverTxPubkeys returns public keys derived from txhash and signatures(r, s, v).
-// Since EIP155Signer modifies V value during recovering while other signers don't, it requires vfunc for the treatment.
+// RecoverTxPubkeys returns the public keys derived from txhash and one or more signatures []{v, r, s}.
+// Used to recover the sender or fee payer of Kaia typed transactions at tx.ValidateSender() or tx.ValidateFeePayer().
 func RecoverTxPubkeys(txhash common.Hash, sigs TxSignatures, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
 	return sigs.RecoverPubkey(txhash, homestead, vfunc)
 }
