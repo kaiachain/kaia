@@ -323,23 +323,6 @@ func (t *TxInternalDataEthereumDynamicFee) EthTxHash() common.Hash {
 	})
 }
 
-func (t *TxInternalDataEthereumDynamicFee) SenderTxHash() common.Hash {
-	return prefixedRlpHash(byte(t.Type()), []interface{}{
-		t.ChainID,
-		t.AccountNonce,
-		t.GasTipCap,
-		t.GasFeeCap,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.AccessList,
-		t.V,
-		t.R,
-		t.S,
-	})
-}
-
 func (t *TxInternalDataEthereumDynamicFee) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	if t.Recipient != nil {
 		if common.IsPrecompiledContractAddress(*t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {

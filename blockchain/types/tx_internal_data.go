@@ -332,9 +332,6 @@ type TxInternalData interface {
 	// SigHash returns a hash of RLP encoded attributes to make its tx signature.
 	SigHash(chainId *big.Int) common.Hash
 
-	// SenderTxHash returns a hash of the tx without the fee payer's address and signature.
-	SenderTxHash() common.Hash
-
 	// Validate returns nil if tx is validated with the given stateDB and currentBlockNumber.
 	// Otherwise, it returns an error.
 	// This function is called in TxPool.validateTx() and TxInternalData.Execute().
@@ -365,6 +362,9 @@ type TxInternalDataFeePayer interface {
 	GetFeePayerRawSignatureValues() TxSignatures
 
 	SetFeePayerSignatures(s TxSignatures)
+
+	// SenderTxHash returns a hash of the tx without the fee payer's address and signature.
+	SenderTxHash() common.Hash
 
 	// FeePayerSigHash returns a hash of RLP encoded attributes to make its fee payer's tx signature.
 	FeePayerSigHash(chainId *big.Int) common.Hash

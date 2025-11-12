@@ -26,7 +26,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
@@ -269,29 +268,6 @@ func (t *TxInternalDataSmartContractDeploy) SerializeForSign() []interface{} {
 		t.HumanReadable,
 		t.CodeFormat,
 	}
-}
-
-func (t *TxInternalDataSmartContractDeploy) SenderTxHash() common.Hash {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, t.Type())
-	rlp.Encode(hw, []interface{}{
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-		t.HumanReadable,
-		t.CodeFormat,
-		t.TxSignatures,
-	})
-
-	h := common.Hash{}
-
-	hw.Sum(h[:0])
-
-	return h
 }
 
 func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB, currentBlockNumber uint64) error {

@@ -178,16 +178,17 @@ func (tx *Transaction) ChainId() *big.Int {
 // SenderTxHash returns (SenderTxHash, true) if the tx is a fee-delegated transaction.
 // Otherwise, it returns (nil hash, false).
 func (tx *Transaction) SenderTxHash() (common.Hash, bool) {
-	if tx.Type().IsFeeDelegatedTransaction() == false {
+	tf, isFeeDelegated := tx.data.(TxInternalDataFeePayer)
+	if !isFeeDelegated {
 		// Do not compute SenderTxHash for non-fee-delegated txs
-		return common.Hash{}, false
+		return common.Hash{}, isFeeDelegated
 	}
 	if senderTxHash := tx.senderTxHash.Load(); senderTxHash != nil {
-		return senderTxHash.(common.Hash), tx.Type().IsFeeDelegatedTransaction()
+		return senderTxHash.(common.Hash), isFeeDelegated
 	}
-	v := tx.data.SenderTxHash()
+	v := tf.SenderTxHash()
 	tx.senderTxHash.Store(v)
-	return v, tx.Type().IsFeeDelegatedTransaction()
+	return v, isFeeDelegated
 }
 
 // SenderTxHashAll returns SenderTxHash for all tx types.
@@ -196,7 +197,13 @@ func (tx *Transaction) SenderTxHashAll() common.Hash {
 	if senderTxHash := tx.senderTxHash.Load(); senderTxHash != nil {
 		return senderTxHash.(common.Hash)
 	}
-	v := tx.data.SenderTxHash()
+
+	var v common.Hash
+	if tf, ok := tx.data.(TxInternalDataFeePayer); ok {
+		v = tf.SenderTxHash()
+	} else {
+		v = tx.Hash()
+	}
 	tx.senderTxHash.Store(v)
 	return v
 }

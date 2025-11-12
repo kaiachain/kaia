@@ -25,11 +25,9 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
 )
 
 type TxInternalDataLegacy struct {
@@ -233,27 +231,6 @@ func (t *TxInternalDataLegacy) SigHash(chainId *big.Int) common.Hash {
 		chainId, uint(0), uint(0),
 	}
 	return rlpHash(infs)
-}
-
-func (t *TxInternalDataLegacy) SenderTxHash() common.Hash {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, []interface{}{
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.V,
-		t.R,
-		t.S,
-	})
-
-	h := common.Hash{}
-
-	hw.Sum(h[:0])
-
-	return h
 }
 
 func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint64) error {

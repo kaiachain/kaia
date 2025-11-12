@@ -26,7 +26,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -371,31 +370,6 @@ func (t *TxInternalDataAccountCreation) SerializeForSign() []interface{} {
 		t.HumanReadable,
 		keyEnc,
 	}
-}
-
-func (t *TxInternalDataAccountCreation) SenderTxHash() common.Hash {
-	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
-	keyEnc, _ := rlp.EncodeToBytes(serializer)
-
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, t.Type())
-	rlp.Encode(hw, []interface{}{
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.HumanReadable,
-		keyEnc,
-		t.TxSignatures,
-	})
-
-	h := common.Hash{}
-
-	hw.Sum(h[:0])
-
-	return h
 }
 
 func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB, currentBlockNumber uint64) error {

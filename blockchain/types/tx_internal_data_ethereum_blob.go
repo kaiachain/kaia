@@ -605,25 +605,6 @@ func (t *TxInternalDataEthereumBlob) EthTxHash() common.Hash {
 	})
 }
 
-func (t *TxInternalDataEthereumBlob) SenderTxHash() common.Hash {
-	return prefixedRlpHash(byte(t.Type()), []interface{}{
-		t.ChainID,
-		t.AccountNonce,
-		t.GasTipCap,
-		t.GasFeeCap,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.AccessList,
-		t.BlobFeeCap,
-		t.BlobHashes,
-		t.V,
-		t.R,
-		t.S,
-	})
-}
-
 func (t *TxInternalDataEthereumBlob) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 		return kerrors.ErrPrecompiledContractAddress
