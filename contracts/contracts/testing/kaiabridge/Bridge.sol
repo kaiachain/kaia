@@ -26,7 +26,7 @@ import "../../system_contracts/kaiabridge/IGuardian.sol";
 import "../../system_contracts/kaiabridge/IOperator.sol";
 import "../../system_contracts/kaiabridge/Bech32.sol";
 
-contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IERC165, IBridge,  Bech32 {
+contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IERC165, IBridge {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() { _disableInitializers(); }
 
@@ -228,7 +228,7 @@ contract NewKAIABridge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgrade
         notPause
     {
         if (addrValidationOn) {
-            require(verifyAddrFNSA(receiver, false), "KAIA::Bridge: Receiver address is invalid");
+            require(Bech32.verifyAddrFNSA(receiver, false), "KAIA::Bridge: Receiver address is invalid");
         }
         require(msg.value >= minLockableKAIA, "KAIA::Bridge: Locked KAIA must be larger than minimum");
         require(msg.value <= maxLockableKAIA, "KAIA::Bridge: Locked KAIA must be less than maximum");
