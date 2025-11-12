@@ -257,6 +257,22 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SenderTxHash() common.Hash {
 	return h
 }
 
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte     []byte
+		FeePayer common.Address
+		ChainId  *big.Int
+		R        uint
+		S        uint
+	}{
+		t.SerializeForSignToBytes(),
+		t.GetFeePayer(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	// No more validation required for TxTypeFeeDelegatedCancelWithRatio for now.
 	return t.ValidateMutableValue(stateDB, currentBlockNumber)

@@ -215,6 +215,22 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) SenderTxHash() c
 	return h
 }
 
+func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte     []byte
+		FeePayer common.Address
+		ChainId  *big.Int
+		R        uint
+		S        uint
+	}{
+		t.SerializeForSignToBytes(),
+		t.GetFeePayer(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
 func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) GetNonce() uint64 {
 	return t.AccountNonce
 }

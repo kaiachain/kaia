@@ -291,6 +291,22 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) SenderTxHash() common.Hash
 	return h
 }
 
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte     []byte
+		FeePayer common.Address
+		ChainId  *big.Int
+		R        uint
+		S        uint
+	}{
+		t.SerializeForSignToBytes(),
+		t.GetFeePayer(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
 func (t *TxInternalDataFeeDelegatedValueTransferMemo) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 		return kerrors.ErrPrecompiledContractAddress

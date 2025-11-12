@@ -339,6 +339,22 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) SenderTxHash() 
 	return h
 }
 
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte     []byte
+		FeePayer common.Address
+		ChainId  *big.Int
+		R        uint
+		S        uint
+	}{
+		t.SerializeForSignToBytes(),
+		t.GetFeePayer(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
 func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	var to common.Address
 	if t.Recipient != nil {

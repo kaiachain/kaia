@@ -397,6 +397,22 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SenderTxHash() common
 	return h
 }
 
+func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte     []byte
+		FeePayer common.Address
+		ChainId  *big.Int
+		R        uint
+		S        uint
+	}{
+		t.SerializeForSignToBytes(),
+		t.GetFeePayer(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	return t.ValidateMutableValue(stateDB, currentBlockNumber)
 }

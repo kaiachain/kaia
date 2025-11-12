@@ -365,6 +365,9 @@ type TxInternalDataFeePayer interface {
 	GetFeePayerRawSignatureValues() TxSignatures
 
 	SetFeePayerSignatures(s TxSignatures)
+
+	// FeePayerSigHash returns a hash of RLP encoded attributes to make its fee payer's tx signature.
+	FeePayerSigHash(chainId *big.Int) common.Hash
 }
 
 // TxInternalDataFeeRatio has a function `GetFeeRatio`.
