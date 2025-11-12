@@ -19,10 +19,8 @@ package types
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 
 	"github.com/holiman/uint256"
@@ -32,7 +30,6 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
-	"github.com/kaiachain/kaia/rlp"
 )
 
 // DelegationPrefix is used by code to denote the account is delegating to
@@ -370,61 +367,6 @@ func (t *TxInternalDataEthereumSetCode) ValidateMutableValue(stateDB StateDB, cu
 
 func (t *TxInternalDataEthereumSetCode) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
-}
-
-func (t *TxInternalDataEthereumSetCode) String() string {
-	var from, to string
-	tx := &Transaction{data: t}
-
-	v, r, s := t.V, t.R, t.S
-	if v != nil {
-		signer := LatestSignerForChainID(t.ChainId())
-		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
-			from = "[invalid sender: invalid sig]"
-		} else {
-			from = hex.EncodeToString(f[:])
-		}
-	} else {
-		from = "[invalid sender: nil V field]"
-	}
-
-	to = hex.EncodeToString(t.GetTo().Bytes())
-	enc, _ := rlp.EncodeToBytes(tx)
-	return fmt.Sprintf(`
-		TX(%x)
-		ChainId:   %#x
-		From:     %s
-		To:       %s
-		Nonce:    %v
-		GasTipCap: %#x
-		GasFeeCap: %#x
-		GasLimit  %#x
-		Value:    %#x
-		Data:     0x%x
-		AccessList: %x
-		AuthorizationList: %x
-		V:        %#x
-		R:        %#x
-		S:        %#x
-		Hex:      %x
-	`,
-		tx.Hash(),
-		t.ChainId(),
-		from,
-		to,
-		t.GetNonce(),
-		t.GetGasTipCap(),
-		t.GetGasFeeCap(),
-		t.GetGasLimit(),
-		t.GetValue(),
-		t.GetData(),
-		t.AccessList,
-		t.AuthorizationList,
-		v,
-		r,
-		s,
-		enc,
-	)
 }
 
 func (t *TxInternalDataEthereumSetCode) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

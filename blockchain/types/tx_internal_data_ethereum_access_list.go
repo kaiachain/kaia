@@ -19,9 +19,7 @@
 package types
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -30,7 +28,6 @@ import (
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
 )
 
 //go:generate gencodec -type AccessTuple -out gen_access_tuple.go
@@ -318,64 +315,6 @@ func (t *TxInternalDataEthereumAccessList) SenderTxHash() common.Hash {
 		t.R,
 		t.S,
 	})
-}
-
-func (t *TxInternalDataEthereumAccessList) String() string {
-	var from, to string
-	tx := &Transaction{data: t}
-
-	v, r, s := t.V, t.R, t.S
-
-	if v != nil {
-		signer := LatestSignerForChainID(t.ChainId())
-		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
-			from = "[invalid sender: invalid sig]"
-		} else {
-			from = fmt.Sprintf("%x", f[:])
-		}
-	} else {
-		from = "[invalid sender: nil V field]"
-	}
-
-	if t.GetTo() == nil {
-		to = "[contract creation]"
-	} else {
-		to = hex.EncodeToString(t.GetTo().Bytes())
-	}
-	enc, _ := rlp.EncodeToBytes(tx)
-	return fmt.Sprintf(`
-		TX(%x)
-		Contract: %v
-		Chaind:   %#x
-		From:     %s
-		To:       %s
-		Nonce:    %v
-		GasPrice: %#x
-		GasLimit  %#x
-		Value:    %#x
-		Data:     0x%x
-		AccessList: %x
-		V:        %#x
-		R:        %#x
-		S:        %#x
-		Hex:      %x
-	`,
-		tx.Hash(),
-		t.GetTo() == nil,
-		t.ChainId(),
-		from,
-		to,
-		t.GetNonce(),
-		t.GetGasPrice(),
-		t.GetGasLimit(),
-		t.GetValue(),
-		t.GetData(),
-		t.AccessList,
-		v,
-		r,
-		s,
-		enc,
-	)
 }
 
 func (t *TxInternalDataEthereumAccessList) Validate(stateDB StateDB, currentBlockNumber uint64) error {

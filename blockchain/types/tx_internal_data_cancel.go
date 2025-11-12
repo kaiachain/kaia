@@ -20,7 +20,6 @@ package types
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -143,30 +142,6 @@ func (t *TxInternalDataCancel) GetData() []byte {
 
 func (t *TxInternalDataCancel) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
-}
-
-func (t *TxInternalDataCancel) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Signature:     %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.TxSignatures.string(),
-		enc)
 }
 
 func (t *TxInternalDataCancel) SetSignature(s TxSignatures) {

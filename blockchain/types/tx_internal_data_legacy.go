@@ -19,9 +19,7 @@
 package types
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -243,61 +241,6 @@ func (t *TxInternalDataLegacy) SenderTxHash() common.Hash {
 	hw.Sum(h[:0])
 
 	return h
-}
-
-func (t *TxInternalDataLegacy) String() string {
-	var from, to string
-	tx := &Transaction{data: t}
-
-	v, r, s := t.V, t.R, t.S
-	if v != nil {
-		// make a best guess about the signer and use that to derive
-		// the sender.
-		signer := deriveSigner(v)
-		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
-			from = "[invalid sender: invalid sig]"
-		} else {
-			from = fmt.Sprintf("%x", f[:])
-		}
-	} else {
-		from = "[invalid sender: nil V field]"
-	}
-
-	if t.GetTo() == nil {
-		to = "[contract creation]"
-	} else {
-		to = hex.EncodeToString(t.GetTo().Bytes())
-	}
-	enc, _ := rlp.EncodeToBytes(t)
-	return fmt.Sprintf(`
-	TX(%x)
-	Contract: %v
-	From:     %s
-	To:       %s
-	Nonce:    %v
-	GasPrice: %#x
-	GasLimit  %#x
-	Value:    %#x
-	Data:     0x%x
-	V:        %#x
-	R:        %#x
-	S:        %#x
-	Hex:      %x
-`,
-		tx.Hash(),
-		t.GetTo() == nil,
-		from,
-		to,
-		t.GetNonce(),
-		t.GetGasPrice(),
-		t.GetGasLimit(),
-		t.GetValue(),
-		t.GetData(),
-		v,
-		r,
-		s,
-		enc,
-	)
 }
 
 func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint64) error {

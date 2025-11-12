@@ -342,9 +342,6 @@ type TxInternalData interface {
 	// MutableValues: accountKey, the existence of creating address, feePayer's balance, etc.
 	ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error
 
-	// String returns a string containing information about the fields of the object.
-	String() string
-
 	// Execute performs execution of the transaction according to the transaction type.
 	Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error)
 

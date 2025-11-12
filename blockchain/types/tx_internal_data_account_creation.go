@@ -20,7 +20,6 @@ package types
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"math/big"
 
@@ -267,38 +266,6 @@ func (t *TxInternalDataAccountCreation) Type() TxType {
 
 func (t *TxInternalDataAccountCreation) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
-}
-
-func (t *TxInternalDataAccountCreation) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	To:            %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Value:         %#x
-	HumanReadable: %t
-	Key:           %s
-	Signature:     %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.Recipient.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Amount,
-		t.HumanReadable,
-		t.Key.String(),
-		t.TxSignatures.string(),
-		enc)
 }
 
 func (t *TxInternalDataAccountCreation) GetNonce() uint64 {
