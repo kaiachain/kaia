@@ -326,9 +326,6 @@ type TxInternalData interface {
 	// IntrinsicGas computes additional 'intrinsic gas' based on tx types.
 	IntrinsicGas(currentBlockNumber uint64) (uint64, error)
 
-	// SerializeForSign returns a slice containing attributes to make its tx signature.
-	SerializeForSign() []interface{}
-
 	// SigHash returns a hash of RLP encoded attributes to make its tx signature.
 	SigHash(chainId *big.Int) common.Hash
 
@@ -346,10 +343,6 @@ type TxInternalData interface {
 	Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error)
 
 	MakeRPCOutput() map[string]interface{}
-}
-
-type TxInternalDataSerializeForSignToByte interface {
-	SerializeForSignToBytes() []byte
 }
 
 // TxInternalDataFeePayer has functions related to fee delegated transactions.

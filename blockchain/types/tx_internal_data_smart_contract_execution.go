@@ -218,19 +218,6 @@ func (t *TxInternalDataSmartContractExecution) SerializeForSignToBytes() []byte 
 	return b
 }
 
-func (t *TxInternalDataSmartContractExecution) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-	}
-}
-
 func (t *TxInternalDataSmartContractExecution) SigHash(chainId *big.Int) common.Hash {
 	return rlpHash(struct {
 		Byte    []byte

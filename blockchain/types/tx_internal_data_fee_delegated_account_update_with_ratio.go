@@ -359,21 +359,6 @@ func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SigHash(chainId *big.
 	})
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SerializeForSign() []interface{} {
-	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
-	keyEnc, _ := rlp.EncodeToBytes(serializer)
-
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		keyEnc,
-		t.FeeRatio,
-	}
-}
-
 func (t *TxInternalDataFeeDelegatedAccountUpdateWithRatio) SenderTxHash() common.Hash {
 	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
 	keyEnc, _ := rlp.EncodeToBytes(serializer)

@@ -255,21 +255,6 @@ func (t *TxInternalDataSmartContractDeploy) SigHash(chainId *big.Int) common.Has
 	})
 }
 
-func (t *TxInternalDataSmartContractDeploy) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-		t.HumanReadable,
-		t.CodeFormat,
-	}
-}
-
 func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	var to common.Address
 	if t.Recipient != nil {

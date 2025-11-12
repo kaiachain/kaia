@@ -257,19 +257,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) SigHash(chainId *big.
 	})
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-	}
-}
-
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) SenderTxHash() common.Hash {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, t.Type())

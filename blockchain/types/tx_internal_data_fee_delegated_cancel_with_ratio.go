@@ -227,17 +227,6 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SigHash(chainId *big.Int) co
 	})
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		t.FeeRatio,
-	}
-}
-
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) SenderTxHash() common.Hash {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, t.Type())

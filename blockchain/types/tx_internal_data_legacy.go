@@ -209,17 +209,6 @@ func (t *TxInternalDataLegacy) IntrinsicGas(currentBlockNumber uint64) (uint64, 
 	return IntrinsicGas(t.Payload, nil, nil, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
-func (t *TxInternalDataLegacy) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-	}
-}
-
 func (t *TxInternalDataLegacy) SigHash(chainId *big.Int) common.Hash {
 	infs := []interface{}{
 		t.AccountNonce,

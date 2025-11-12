@@ -233,19 +233,6 @@ func (t *TxInternalDataValueTransferMemo) SigHash(chainId *big.Int) common.Hash 
 	})
 }
 
-func (t *TxInternalDataValueTransferMemo) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-	}
-}
-
 func (t *TxInternalDataValueTransferMemo) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 		return kerrors.ErrPrecompiledContractAddress

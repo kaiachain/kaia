@@ -546,23 +546,6 @@ func (t *TxInternalDataEthereumBlob) SetChainId(chainID *big.Int) {
 	t.ChainID = uint256.MustFromBig(chainID)
 }
 
-func (t *TxInternalDataEthereumBlob) SerializeForSign() []interface{} {
-	// If the chainId has nil or empty value, It will be set signer's chainId.
-	return []interface{}{
-		t.ChainID,
-		t.AccountNonce,
-		t.GasTipCap,
-		t.GasFeeCap,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.AccessList,
-		t.BlobFeeCap,
-		t.BlobHashes,
-	}
-}
-
 func (t *TxInternalDataEthereumBlob) SigHash(chainId *big.Int) common.Hash {
 	infs := []interface{}{
 		t.ChainID,

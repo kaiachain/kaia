@@ -270,21 +270,6 @@ func (t *TxInternalDataEthereumDynamicFee) SetChainId(chainID *big.Int) {
 	t.ChainID = new(big.Int).Set(chainID)
 }
 
-func (t *TxInternalDataEthereumDynamicFee) SerializeForSign() []interface{} {
-	// If the chainId has nil or empty value, It will be set signer's chainId.
-	return []interface{}{
-		t.ChainID,
-		t.AccountNonce,
-		t.GasTipCap,
-		t.GasFeeCap,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.AccessList,
-	}
-}
-
 func (t *TxInternalDataEthereumDynamicFee) SigHash(chainId *big.Int) common.Hash {
 	infs := []interface{}{
 		t.ChainID,

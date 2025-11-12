@@ -285,29 +285,6 @@ func (t *TxInternalDataAccountUpdate) SerializeForSignToBytes() []byte {
 	return b
 }
 
-func (t *TxInternalDataAccountUpdate) SerializeForSign() []interface{} {
-	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
-	keyEnc, _ := rlp.EncodeToBytes(serializer)
-
-	b, _ := rlp.EncodeToBytes(struct {
-		Txtype       TxType
-		AccountNonce uint64
-		Price        *big.Int
-		GasLimit     uint64
-		From         common.Address
-		Key          []byte
-	}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		keyEnc,
-	})
-
-	return []interface{}{b}
-}
-
 func (t *TxInternalDataAccountUpdate) SigHash(chainId *big.Int) common.Hash {
 	return rlpHash(struct {
 		Byte    []byte

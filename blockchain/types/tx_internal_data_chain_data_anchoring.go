@@ -141,17 +141,6 @@ func (t *TxInternalDataChainDataAnchoring) SerializeForSignToBytes() []byte {
 	return b
 }
 
-func (t *TxInternalDataChainDataAnchoring) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		t.Payload,
-	}
-}
-
 func (t *TxInternalDataChainDataAnchoring) SigHash(chainId *big.Int) common.Hash {
 	return rlpHash(struct {
 		Byte    []byte

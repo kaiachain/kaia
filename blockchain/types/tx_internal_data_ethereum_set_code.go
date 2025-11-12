@@ -302,22 +302,6 @@ func (t *TxInternalDataEthereumSetCode) IntrinsicGas(currentBlockNumber uint64) 
 	return IntrinsicGas(t.Payload, t.AccessList, t.AuthorizationList, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
-func (t *TxInternalDataEthereumSetCode) SerializeForSign() []interface{} {
-	// If the chainId has nil or empty value, It will be set signer's chainId.
-	return []interface{}{
-		t.ChainID,
-		t.AccountNonce,
-		t.GasTipCap,
-		t.GasFeeCap,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.AccessList,
-		t.AuthorizationList,
-	}
-}
-
 func (t *TxInternalDataEthereumSetCode) SigHash(chainId *big.Int) common.Hash {
 	infs := []interface{}{
 		t.ChainID,

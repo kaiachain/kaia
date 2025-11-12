@@ -355,23 +355,6 @@ func (t *TxInternalDataAccountCreation) SigHash(chainId *big.Int) common.Hash {
 	})
 }
 
-func (t *TxInternalDataAccountCreation) SerializeForSign() []interface{} {
-	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
-	keyEnc, _ := rlp.EncodeToBytes(serializer)
-
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.HumanReadable,
-		keyEnc,
-	}
-}
-
 func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	return errUndefinedTxType
 	//if t.HumanReadable {

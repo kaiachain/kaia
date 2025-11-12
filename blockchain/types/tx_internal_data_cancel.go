@@ -183,16 +183,6 @@ func (t *TxInternalDataCancel) SigHash(chainId *big.Int) common.Hash {
 	})
 }
 
-func (t *TxInternalDataCancel) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-	}
-}
-
 func (t *TxInternalDataCancel) Validate(stateDB StateDB, currentBlockNumber uint64) error {
 	// No more validation required for TxTypeCancel for now.
 	return t.ValidateMutableValue(stateDB, currentBlockNumber)

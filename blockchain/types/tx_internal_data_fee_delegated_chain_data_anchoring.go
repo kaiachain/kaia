@@ -168,17 +168,6 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SigHash(chainId *big.Int)
 	})
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		t.Payload,
-	}
-}
-
 func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SenderTxHash() common.Hash {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, t.Type())

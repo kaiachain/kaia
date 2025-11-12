@@ -276,20 +276,6 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SigHash(chainId *
 	})
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-		t.FeeRatio,
-	}
-}
-
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SenderTxHash() common.Hash {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, t.Type())
