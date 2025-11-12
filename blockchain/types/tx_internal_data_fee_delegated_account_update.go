@@ -19,7 +19,6 @@
 package types
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -324,10 +323,6 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) SetSignature(s TxSignatures) {
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) SetFeePayerSignatures(s TxSignatures) {
 	t.FeePayerSignatures = s
-}
-
-func (t *TxInternalDataFeeDelegatedAccountUpdate) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {

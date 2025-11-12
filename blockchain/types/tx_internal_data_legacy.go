@@ -19,7 +19,6 @@
 package types
 
 import (
-	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -208,22 +207,6 @@ func (t *TxInternalDataLegacy) SetSignature(s TxSignatures) {
 
 func (t *TxInternalDataLegacy) RawSignatureValues() TxSignatures {
 	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
-}
-
-func (t *TxInternalDataLegacy) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
-	V := vfunc(t.V)
-	return recoverPlain(txhash, t.R, t.S, V, homestead)
-}
-
-func (t *TxInternalDataLegacy) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	V := vfunc(t.V)
-
-	pk, err := recoverPlainPubkey(txhash, t.R, t.S, V, homestead)
-	if err != nil {
-		return nil, err
-	}
-
-	return []*ecdsa.PublicKey{pk}, nil
 }
 
 func (t *TxInternalDataLegacy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
