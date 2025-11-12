@@ -42,7 +42,7 @@ contract FnsaVerifyHarness {
         string calldata fnsaAddress,
         bytes32 messageHash,
         bytes calldata signature
-    ) external pure {
-        FnsaVerify.verify(publicKey, fnsaAddress, messageHash, signature);
+    ) external pure returns (address) {
+        return FnsaVerify.verify(publicKey, fnsaAddress, messageHash, signature);
     }
 }

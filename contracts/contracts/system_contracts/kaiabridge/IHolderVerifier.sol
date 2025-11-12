@@ -26,19 +26,22 @@ interface IHolderVerifier {
         string indexed fnsaAddr,
         address indexed kaiaAddr,
         uint256 conyBalance,
-        uint256 kaiaAmount
+        uint256 kaiaAmount,
+        uint64 seq
     );
 
     /* ========== VIEWS ========== */
 
-    function getRecord(string calldata fnsaAddr) external view returns (uint256 conyBalance, bool provisioned);
+    function getRecord(string calldata fnsaAddr) external view returns (uint256 conyBalance, uint64 seq);
 
     function getRecords(
         uint256 startIdx,
         uint256 maxCount
-    ) external view returns (string[] memory fnsaAddrs, uint256[] memory conyBalances, bool[] memory claimedStatus);
+    ) external view returns (string[] memory fnsaAddrs, uint256[] memory conyBalances, uint64[] memory seqs);
 
     function getRecordCount() external view returns (uint256);
+
+    function isProvisioned(string memory fnsaAddr) external view returns (bool);
 
     function allConyBalances() external view returns (uint256);
 

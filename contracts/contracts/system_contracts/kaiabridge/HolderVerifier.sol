@@ -34,7 +34,7 @@ contract HolderVerifier is Ownable, ReentrancyGuard, IHolderVerifier {
     /* ========== STATE VARIABLES ========== */
 
     mapping(string => uint256) public conyBalances; // fnsaAddr => conyBalance
-    mapping(string => bool) public provisioned; // fnsaAddr => true if already provisioned to the Bridge
+    mapping(string => uint64) public provisionSeq; // fnsaAddr => provision seq (0 means not provisioned)
     string[] public fnsaAddrs;
 
     uint256 public override allConyBalances; // sum of all records in this contract. Includes provisioned amounts.
@@ -56,7 +56,7 @@ contract HolderVerifier is Ownable, ReentrancyGuard, IHolderVerifier {
     function addRecord(string calldata fnsaAddr, uint256 conyBalance) public override onlyOwner {
         require(bytes(fnsaAddr).length > 0, "HolderVerifier: empty fnsaAddr");
         require(conyBalance > 0, "HolderVerifier: zero conyBalance");
-        require(!provisioned[fnsaAddr], "HolderVerifier: cannot overwrite after provisioned");
+        require(!isProvisioned(fnsaAddr), "HolderVerifier: cannot overwrite after provisioned");
 
         uint256 previousBalance = conyBalances[fnsaAddr];
         if (previousBalance == 0) {
@@ -105,9 +105,9 @@ contract HolderVerifier is Ownable, ReentrancyGuard, IHolderVerifier {
 
         uint256 conyBalance = conyBalances[fnsaAddress];
         require(conyBalance > 0, "HolderVerifier: no claimable balance");
-        require(!provisioned[fnsaAddress], "HolderVerifier: already provisioned");
+        require(!isProvisioned(fnsaAddress), "HolderVerifier: already provisioned");
 
-        FnsaVerify.verify(publicKey, fnsaAddress, messageHash, signature);
+        address holderAddr = FnsaVerify.verify(publicKey, fnsaAddress, messageHash, signature);
 
         uint256 kaiaAmount = conyBalance * CONV_RATE;
         require(kaiaAmount > 0, "HolderVerifier: invalid amount");
@@ -124,7 +124,7 @@ contract HolderVerifier is Ownable, ReentrancyGuard, IHolderVerifier {
         IBridge.ProvisionData memory provisionData = IBridge.ProvisionData({
             seq: seq,
             sender: fnsaAddress,
-            receiver: msg.sender,
+            receiver: holderAddr,
             amount: kaiaAmount
         });
 
@@ -132,17 +132,17 @@ contract HolderVerifier is Ownable, ReentrancyGuard, IHolderVerifier {
 
         IOperator(operator).submitTransaction(currentBridge, payload, uint256(seq));
 
-        provisioned[fnsaAddress] = true;
+        provisionSeq[fnsaAddress] = seq;
         provisionedConyBalances += conyBalance;
         provisionedAccounts += 1;
 
-        emit ProvisionRequested(fnsaAddress, msg.sender, conyBalance, kaiaAmount);
+        emit ProvisionRequested(fnsaAddress, holderAddr, conyBalance, kaiaAmount, seq);
     }
 
     /* ========== VIEW FUNCTIONS ========== */
 
-    function getRecord(string calldata fnsaAddr) external view override returns (uint256 conyBalance, bool isClaimed) {
-        return (conyBalances[fnsaAddr], provisioned[fnsaAddr]);
+    function getRecord(string calldata fnsaAddr) external view override returns (uint256 conyBalance, uint64 seq) {
+        return (conyBalances[fnsaAddr], provisionSeq[fnsaAddr]);
     }
 
     function getRecords(
@@ -152,7 +152,7 @@ contract HolderVerifier is Ownable, ReentrancyGuard, IHolderVerifier {
         external
         view
         override
-        returns (string[] memory fnsaAddrsResult, uint256[] memory conyBalancesResult, bool[] memory claimedStatus)
+        returns (string[] memory fnsaAddrsResult, uint256[] memory conyBalancesResult, uint64[] memory seqs)
     {
         uint256 length = fnsaAddrs.length;
         require(startIdx < length, "HolderVerifier: startIdx out of bounds");
@@ -166,18 +166,22 @@ contract HolderVerifier is Ownable, ReentrancyGuard, IHolderVerifier {
         uint256 resultLength = endIdx - startIdx;
         fnsaAddrsResult = new string[](resultLength);
         conyBalancesResult = new uint256[](resultLength);
-        claimedStatus = new bool[](resultLength);
+        seqs = new uint64[](resultLength);
 
         for (uint256 i = 0; i < resultLength; i++) {
             string memory addr = fnsaAddrs[startIdx + i];
             fnsaAddrsResult[i] = addr;
             conyBalancesResult[i] = conyBalances[addr];
-            claimedStatus[i] = provisioned[addr];
+            seqs[i] = provisionSeq[addr];
         }
     }
 
     function getRecordCount() external view override returns (uint256) {
         return fnsaAddrs.length;
+    }
+
+    function isProvisioned(string memory fnsaAddr) public view override returns (bool) {
+        return provisionSeq[fnsaAddr] != 0;
     }
 
     /* ========== INTERNAL FUNCTIONS ========== */

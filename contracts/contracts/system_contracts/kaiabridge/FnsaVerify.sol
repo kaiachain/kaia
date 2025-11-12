@@ -36,7 +36,7 @@ library FnsaVerify {
         string memory fnsaAddress,
         bytes32 messageHash,
         bytes calldata signature
-    ) internal pure {
+    ) internal pure returns (address) {
         _validatePublicKey(publicKey);
         _validateSignature(signature);
 
@@ -52,6 +52,8 @@ library FnsaVerify {
         address computedEthAddr = computeEthAddr(publicKey);
         address recoveredEthAddr = recoverEthAddr(messageHash, signature);
         require(recoveredEthAddr == computedEthAddr, "Invalid signature");
+
+        return computedEthAddr;
     }
 
     function computeFnsaAddr(bytes calldata publicKey) internal pure returns (string memory) {

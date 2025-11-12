@@ -56,8 +56,10 @@ describe("Fnsa", function () {
     const sig = await wallet.signMessage(message);
 
     const { fnsa } = await loadFixture(deployFnsaFixture);
-    await expect(fnsa.verify(walletPub, expectedFnsaAddr, messageHash, sig)).to.not.be.reverted;
-    await expect(fnsa.verify(walletPub, expectedValoperAddr, messageHash, sig)).to.not.be.reverted;
+    const verifiedAddr = await fnsa.verify(walletPub, expectedFnsaAddr, messageHash, sig);
+    expect(verifiedAddr).to.equal(wallet.address);
+    const verifiedValoper = await fnsa.verify(walletPub, expectedValoperAddr, messageHash, sig);
+    expect(verifiedValoper).to.equal(wallet.address);
 
     // Detects mismatches
     const otherFnsaAddr = "link1lt90gyw368jj9h547ehe8v9t4cupcsca9g9wc6";

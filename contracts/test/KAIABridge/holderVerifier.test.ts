@@ -78,7 +78,7 @@ describe("HolderVerifier", function () {
     const addOperatorData = operator.interface.encodeFunctionData("addOperator", [holderVerifierAddr]);
     await (await guardian.submitTransaction(operatorAddr, addOperatorData, 0)).wait();
 
-    await owner.sendTransaction({ to: bridgeAddr, value: parseEther("1000") });
+    await owner.sendTransaction({ to: bridgeAddr, value: parseEther("200") });
   });
 
   describe("Deployment", function () {
@@ -95,7 +95,7 @@ describe("HolderVerifier", function () {
           .withArgs(fnsaAddr1, conyBalance1);
 
         expect(await holderVerifier.conyBalances(fnsaAddr1)).to.equal(conyBalance1);
-        expect(await holderVerifier.provisioned(fnsaAddr1)).to.be.false;
+        expect(await holderVerifier.isProvisioned(fnsaAddr1)).to.be.false;
         expect(await holderVerifier.allConyBalances()).to.equal(conyBalance1);
         expect(await holderVerifier.provisionedConyBalances()).to.equal(0);
         expect(await holderVerifier.provisionedAccounts()).to.equal(0);
@@ -184,6 +184,7 @@ describe("HolderVerifier", function () {
       const signingKey = wallet._signingKey();
       const publicKey = signingKey.publicKey;
       const fnsaAddr = await harness.computeFnsaAddr(publicKey);
+      const holderAddr = await harness.computeEthAddr(publicKey);
 
       const conyBalance = parseUnits("1", 6);
       await holderVerifier.addRecord(fnsaAddr, conyBalance);
@@ -196,7 +197,7 @@ describe("HolderVerifier", function () {
       const tx = await holderVerifier.connect(user1).requestProvision(publicKey, fnsaAddr, messageHash, signature);
       await expect(tx)
         .to.emit(holderVerifier, "ProvisionRequested")
-        .withArgs(fnsaAddr, user1.address, conyBalance, expectedKaiaAmount);
+        .withArgs(fnsaAddr, holderAddr, conyBalance, expectedKaiaAmount, 1n);
       await tx.wait();
 
       const txId = await operator.userIdx2TxID(1n);
@@ -208,12 +209,51 @@ describe("HolderVerifier", function () {
       const provisionData = await operator.provisions(txId);
       expect(provisionData.seq).to.equal(1n);
       expect(provisionData.sender).to.equal(fnsaAddr);
-      expect(provisionData.receiver).to.equal(user1.address);
+      expect(provisionData.receiver).to.equal(holderAddr);
       expect(provisionData.amount).to.equal(expectedKaiaAmount);
 
-      expect(await holderVerifier.provisioned(fnsaAddr)).to.be.true;
+      expect(await holderVerifier.isProvisioned(fnsaAddr)).to.be.true;
       expect(await holderVerifier.provisionedConyBalances()).to.equal(conyBalance);
       expect(await holderVerifier.provisionedAccounts()).to.equal(1n);
+    });
+
+    it("sends funds to holder address from public key, not msg.sender", async function () {
+      const harnessFactory = await ethers.getContractFactory("FnsaVerifyHarness");
+      const harness = await harnessFactory.deploy();
+      await harness.deployed();
+
+      const holderWallet = Wallet.createRandom();
+      const signingKey = holderWallet._signingKey();
+      const publicKey = signingKey.publicKey;
+      const fnsaAddr = await harness.computeFnsaAddr(publicKey);
+      const holderAddr = await harness.computeEthAddr(publicKey);
+
+      const callerWallet = user1;
+
+      const conyBalance = parseUnits("1", 6);
+      await holderVerifier.addRecord(fnsaAddr, conyBalance);
+
+      const messageHash = keccak256(toUtf8Bytes("kaia-holder-verifier"));
+      const signature = joinSignature(signingKey.signDigest(messageHash));
+      const expectedKaiaAmount = conyBalance.mul(CONV_RATE);
+
+      // ensure caller has sufficient balance for the transaction
+      await owner.sendTransaction({ to: callerWallet.address, value: parseEther("50") });
+
+      const tx = await holderVerifier
+        .connect(callerWallet)
+        .requestProvision(publicKey, fnsaAddr, messageHash, signature);
+      await tx.wait();
+
+      const txId = await operator.userIdx2TxID(1n);
+      const provisionData = await operator.provisions(txId);
+
+      expect(provisionData.receiver).to.equal(holderAddr);
+      expect(provisionData.receiver).to.not.equal(callerWallet.address);
+
+      await expect(tx)
+        .to.emit(holderVerifier, "ProvisionRequested")
+        .withArgs(fnsaAddr, holderAddr, conyBalance, expectedKaiaAmount, 1n);
     });
   });
 });
