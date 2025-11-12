@@ -222,6 +222,19 @@ func (t *TxInternalDataLegacy) SerializeForSign() []interface{} {
 	}
 }
 
+func (t *TxInternalDataLegacy) SigHash(chainId *big.Int) common.Hash {
+	infs := []interface{}{
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.Payload,
+		chainId, uint(0), uint(0),
+	}
+	return rlpHash(infs)
+}
+
 func (t *TxInternalDataLegacy) SenderTxHash() common.Hash {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, []interface{}{

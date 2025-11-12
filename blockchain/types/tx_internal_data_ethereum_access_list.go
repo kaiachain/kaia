@@ -285,6 +285,26 @@ func (t *TxInternalDataEthereumAccessList) SerializeForSign() []interface{} {
 	}
 }
 
+func (t *TxInternalDataEthereumAccessList) SigHash(chainId *big.Int) common.Hash {
+	infs := []interface{}{
+		t.ChainID,
+		t.AccountNonce,
+		t.Price,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.Payload,
+		t.AccessList,
+	}
+
+	// If the chainId has nil or empty value, It will be set signer's chainId.
+	existChainId := t.ChainId()
+	if existChainId == nil || existChainId.BitLen() == 0 {
+		infs[0] = chainId
+	}
+	return prefixedRlpHash(byte(t.Type()), infs)
+}
+
 func (t *TxInternalDataEthereumAccessList) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,

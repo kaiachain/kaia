@@ -342,6 +342,20 @@ func (t *TxInternalDataAccountCreation) SerializeForSignToBytes() []byte {
 	return b
 }
 
+func (t *TxInternalDataAccountCreation) SigHash(chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte    []byte
+		ChainId *big.Int
+		R       uint
+		S       uint
+	}{
+		t.SerializeForSignToBytes(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
 func (t *TxInternalDataAccountCreation) SerializeForSign() []interface{} {
 	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
 	keyEnc, _ := rlp.EncodeToBytes(serializer)

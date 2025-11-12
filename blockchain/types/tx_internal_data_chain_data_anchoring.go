@@ -153,6 +153,20 @@ func (t *TxInternalDataChainDataAnchoring) SerializeForSign() []interface{} {
 	}
 }
 
+func (t *TxInternalDataChainDataAnchoring) SigHash(chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte    []byte
+		ChainId *big.Int
+		R       uint
+		S       uint
+	}{
+		t.SerializeForSignToBytes(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
 func (t *TxInternalDataChainDataAnchoring) SenderTxHash() common.Hash {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, t.Type())

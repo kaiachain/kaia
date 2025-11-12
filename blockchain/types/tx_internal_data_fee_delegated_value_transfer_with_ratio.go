@@ -241,6 +241,20 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SerializeForSignToByt
 	return b
 }
 
+func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SigHash(chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte    []byte
+		ChainId *big.Int
+		R       uint
+		S       uint
+	}{
+		t.SerializeForSignToBytes(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
 func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) SerializeForSign() []interface{} {
 	return []interface{}{
 		t.Type(),

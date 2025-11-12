@@ -563,6 +563,29 @@ func (t *TxInternalDataEthereumBlob) SerializeForSign() []interface{} {
 	}
 }
 
+func (t *TxInternalDataEthereumBlob) SigHash(chainId *big.Int) common.Hash {
+	infs := []interface{}{
+		t.ChainID,
+		t.AccountNonce,
+		t.GasTipCap,
+		t.GasFeeCap,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.Payload,
+		t.AccessList,
+		t.BlobFeeCap,
+		t.BlobHashes,
+	}
+
+	// If the chainId has nil or empty value, It will be set signer's chainId.
+	existChainId := t.ChainId()
+	if existChainId == nil || existChainId.BitLen() == 0 {
+		infs[0] = chainId
+	}
+	return prefixedRlpHash(byte(t.Type()), infs)
+}
+
 func (t *TxInternalDataEthereumBlob) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,

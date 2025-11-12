@@ -285,6 +285,27 @@ func (t *TxInternalDataEthereumDynamicFee) SerializeForSign() []interface{} {
 	}
 }
 
+func (t *TxInternalDataEthereumDynamicFee) SigHash(chainId *big.Int) common.Hash {
+	infs := []interface{}{
+		t.ChainID,
+		t.AccountNonce,
+		t.GasTipCap,
+		t.GasFeeCap,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.Payload,
+		t.AccessList,
+	}
+
+	// If the chainId has nil or empty value, It will be set signer's chainId.
+	existChainId := t.ChainId()
+	if existChainId == nil || existChainId.BitLen() == 0 {
+		infs[0] = chainId
+	}
+	return prefixedRlpHash(byte(t.Type()), infs)
+}
+
 func (t *TxInternalDataEthereumDynamicFee) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,

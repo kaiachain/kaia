@@ -194,6 +194,20 @@ func (t *TxInternalDataFeeDelegatedCancel) SerializeForSignToBytes() []byte {
 	return b
 }
 
+func (t *TxInternalDataFeeDelegatedCancel) SigHash(chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte    []byte
+		ChainId *big.Int
+		R       uint
+		S       uint
+	}{
+		t.SerializeForSignToBytes(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
 func (t *TxInternalDataFeeDelegatedCancel) SerializeForSign() []interface{} {
 	return []interface{}{
 		t.Type(),

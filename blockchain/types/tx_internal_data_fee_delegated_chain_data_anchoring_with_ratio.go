@@ -169,6 +169,20 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) SerializeForSign
 	return b
 }
 
+func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) SigHash(chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte    []byte
+		ChainId *big.Int
+		R       uint
+		S       uint
+	}{
+		t.SerializeForSignToBytes(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
 func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) SerializeForSign() []interface{} {
 	return []interface{}{
 		t.Type(),

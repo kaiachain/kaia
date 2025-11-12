@@ -329,6 +329,9 @@ type TxInternalData interface {
 	// SerializeForSign returns a slice containing attributes to make its tx signature.
 	SerializeForSign() []interface{}
 
+	// SigHash returns a hash of RLP encoded attributes to make its tx signature.
+	SigHash(chainId *big.Int) common.Hash
+
 	// SenderTxHash returns a hash of the tx without the fee payer's address and signature.
 	SenderTxHash() common.Hash
 

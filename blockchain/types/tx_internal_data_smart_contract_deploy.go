@@ -242,6 +242,20 @@ func (t *TxInternalDataSmartContractDeploy) SerializeForSignToBytes() []byte {
 	return b
 }
 
+func (t *TxInternalDataSmartContractDeploy) SigHash(chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte    []byte
+		ChainId *big.Int
+		R       uint
+		S       uint
+	}{
+		t.SerializeForSignToBytes(),
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
 func (t *TxInternalDataSmartContractDeploy) SerializeForSign() []interface{} {
 	return []interface{}{
 		t.Type(),
