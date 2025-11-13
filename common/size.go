@@ -1,6 +1,5 @@
-// Modifications Copyright 2024 The Kaia Authors
-// Modifications Copyright 2018 The klaytn Authors
-// Copyright 2015 The go-ethereum Authors
+// Modifications Copyright 2025 The Kaia Authors
+// Copyright 2014 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
 // The go-ethereum library is free software: you can redistribute it and/or modify
@@ -16,8 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 //
-// This file is derived from common/size.go (2018/06/04).
-// Modified and improved for the klaytn development.
+// This file is derived from common/size.go (2025/11/13).
 // Modified and improved for the Kaia development.
 
 package common
@@ -30,10 +28,14 @@ type StorageSize float64
 
 // String implements the stringer interface.
 func (s StorageSize) String() string {
-	if s > 1000000 {
-		return fmt.Sprintf("%.2f mB", s/1000000)
-	} else if s > 1000 {
-		return fmt.Sprintf("%.2f kB", s/1000)
+	if s >= 1099511627776 {
+		return fmt.Sprintf("%.2f TiB", s/1099511627776)
+	} else if s >= 1073741824 {
+		return fmt.Sprintf("%.2f GiB", s/1073741824)
+	} else if s >= 1048576 {
+		return fmt.Sprintf("%.2f MiB", s/1048576)
+	} else if s >= 1024 {
+		return fmt.Sprintf("%.2f KiB", s/1024)
 	} else {
 		return fmt.Sprintf("%.2f B", s)
 	}
@@ -42,10 +44,14 @@ func (s StorageSize) String() string {
 // TerminalString implements log.TerminalStringer, formatting a string for console
 // output during logging.
 func (s StorageSize) TerminalString() string {
-	if s > 1000000 {
-		return fmt.Sprintf("%.2fmB", s/1000000)
-	} else if s > 1000 {
-		return fmt.Sprintf("%.2fkB", s/1000)
+	if s >= 1099511627776 {
+		return fmt.Sprintf("%.2fTiB", s/1099511627776)
+	} else if s >= 1073741824 {
+		return fmt.Sprintf("%.2fGiB", s/1073741824)
+	} else if s >= 1048576 {
+		return fmt.Sprintf("%.2fMiB", s/1048576)
+	} else if s >= 1024 {
+		return fmt.Sprintf("%.2fKiB", s/1024)
 	} else {
 		return fmt.Sprintf("%.2fB", s)
 	}
