@@ -1198,7 +1198,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "10_FeeDelegatedValueTransferWithRatio", // kaia-sdk
+		Name: "0a_FeeDelegatedValueTransferWithRatio", // kaia-sdk
 		Type: TxTypeFeeDelegatedValueTransferWithRatio,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:              uint64(1234),
@@ -1247,7 +1247,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "16_ValueTransferMemo", // kaia-sdk
+		Name: "10_ValueTransferMemo", // kaia-sdk
 		Type: TxTypeValueTransferMemo,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:    uint64(1234),
@@ -1288,7 +1288,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "17_FeeDelegatedValueTransferMemo", // kaia-sdk
+		Name: "11_FeeDelegatedValueTransferMemo", // kaia-sdk
 		Type: TxTypeFeeDelegatedValueTransferMemo,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:    uint64(1234),
@@ -1337,7 +1337,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "18_FeeDelegatedValueTransferWithRatio", // kaia-sdk
+		Name: "12_FeeDelegatedValueTransferWithRatio", // kaia-sdk
 		Type: TxTypeFeeDelegatedValueTransferMemoWithRatio,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:              uint64(1234),
@@ -1389,7 +1389,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "32_AccountUpdate", // kaia-sdk
+		Name: "20_AccountUpdate", // kaia-sdk
 		Type: TxTypeAccountUpdate,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:      uint64(1234),
@@ -1424,7 +1424,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "33_FeeDelegatedAccountUpdate", // kaia-sdk
+		Name: "21_FeeDelegatedAccountUpdate", // kaia-sdk
 		Type: TxTypeFeeDelegatedAccountUpdate,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:      uint64(1234),
@@ -1467,7 +1467,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "34_FeeDelegatedAccountUpdateWithRatio", // kaia-sdk
+		Name: "22_FeeDelegatedAccountUpdateWithRatio", // kaia-sdk
 		Type: TxTypeFeeDelegatedAccountUpdateWithRatio,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:              uint64(1234),
@@ -1513,7 +1513,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "40_SmartContractDeploy", // kaia-sdk
+		Name: "28_SmartContractDeploy", // kaia-sdk
 		Type: TxTypeSmartContractDeploy,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:         uint64(532),
@@ -1560,7 +1560,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "41_FeeDelegatedSmartContractDeploy", // kaia-sdk
+		Name: "29_FeeDelegatedSmartContractDeploy", // kaia-sdk
 		Type: TxTypeFeeDelegatedSmartContractDeploy,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:         uint64(563),
@@ -1615,7 +1615,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "42_FeeDelegatedSmartContractDeployWithRatio", // kaia-sdk
+		Name: "2a_FeeDelegatedSmartContractDeployWithRatio", // kaia-sdk
 		Type: TxTypeFeeDelegatedSmartContractDeployWithRatio,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:              uint64(564),
@@ -1673,7 +1673,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "48_SmartContractExecution", // kaia-sdk
+		Name: "30_SmartContractExecution", // kaia-sdk
 		Type: TxTypeSmartContractExecution,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:    uint64(1234),
@@ -1714,7 +1714,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "49_FeeDelegatedSmartContractExecution", // kaia-sdk
+		Name: "31_FeeDelegatedSmartContractExecution", // kaia-sdk
 		Type: TxTypeFeeDelegatedSmartContractExecution,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:    uint64(1234),
@@ -1763,7 +1763,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "50_FeeDelegatedSmartContractExecutionWithRatio", // kaia-sdk
+		Name: "32_FeeDelegatedSmartContractExecutionWithRatio", // kaia-sdk
 		Type: TxTypeFeeDelegatedSmartContractExecutionWithRatio,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:              uint64(1234),
@@ -1815,7 +1815,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "56_Cancel", // kaia-sdk
+		Name: "38_Cancel", // kaia-sdk
 		Type: TxTypeCancel,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:    uint64(1234),
@@ -1847,7 +1847,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "57_FeeDelegatedCancel", // kaia-sdk
+		Name: "39_FeeDelegatedCancel", // kaia-sdk
 		Type: TxTypeFeeDelegatedCancel,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:    uint64(1234),
@@ -1887,7 +1887,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "58_FeeDelegatedCancelWithRatio", // kaia-sdk
+		Name: "3a_FeeDelegatedCancelWithRatio", // kaia-sdk
 		Type: TxTypeFeeDelegatedCancelWithRatio,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:              uint64(1234),
@@ -1930,7 +1930,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "72_ChainDataAnchoring", // Manual creation
+		Name: "48_ChainDataAnchoring", // Manual creation
 		Type: TxTypeChainDataAnchoring,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:        uint64(1234),
@@ -1967,7 +1967,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "73_FeeDelegatedChainDataAnchoring", // Manual creation
+		Name: "49_FeeDelegatedChainDataAnchoring", // Manual creation
 		Type: TxTypeFeeDelegatedChainDataAnchoring,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:        uint64(1234),
@@ -2012,7 +2012,7 @@ var serializeTCs = []serializeTC{
 		}`,
 	},
 	{
-		Name: "74_FeeDelegatedChainDataAnchoringWithRatio", // Manual creation
+		Name: "4a_FeeDelegatedChainDataAnchoringWithRatio", // Manual creation
 		Type: TxTypeFeeDelegatedChainDataAnchoringWithRatio,
 		Map: map[TxValueKeyType]interface{}{
 			TxValueKeyNonce:              uint64(1234),
