@@ -862,9 +862,11 @@ func hexToECDSAPublicKey(hexkey string) *ecdsa.PublicKey {
 //     rlp encode '["0x24ae","0x07a3d3","0x3cd980f3","0x1cd12f7edecac097265d53754b782004bf0b8fb7","0x7aa930ce8a1a","0xe02ea655070ac8dce2e299bb782e344c55b17755c8c1e70e","0x01","",""]'
 //   - Viem vectors are manually prefixed with EthereumTxTypeEnvelope(0x78).
 //
-// Eip7702 case taken from eest
+// Eip7702 case taken from eest blockchain_test
+//   - eest test can be filtered with the way like vectors
+//
 // Related to ChainDataAnchoring test cases are manually generated
-// TxTypeAccountCreation, TxTypeBatch are ignored since they are not supported.
+// TxTypeAccountCreation, TxTypeBatch are not supported.
 var serializeTCs = []serializeTC{
 	{
 		Name: "00_Legacy", // Viem "legacy: 6840"
@@ -1040,40 +1042,77 @@ var serializeTCs = []serializeTC{
 	// 			common.HexToHash("0x01f263630289db00000000000000000000000000000000000000000000000000"),
 	// 			common.HexToHash("0x0159b494f64c2c6adac876c9d3ea38f46c9aca7d869300000000000000000000"),
 	// 		},
-	// 		TxValueKeySidecar: sidecar,
+	// 		TxValueKeySidecar: &BlobTxSidecar{},
 	// 	},
 	// 	ChainID:    6,
 	// 	SenderSigs: []txSigHex{{v: 27, r: "0xf529d0d7d2687fef8d097aafec3d8363ec5d69e29140c9603fba0179a2518b2b", s: "0x0def24511874e80989362ae91d7509ec5eb09f81c8a0c039f4e7a66ea86e6746"}},
 	// 	SigRLP:     "0x03f8e30682189680808094df3ca4eaf9017d01a26ef475e651faa9b1296da1809d09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0f838f7946092415c41b602d192c02d8bb5b2ee62fbab3b70e1a0a2c53cdc4de0f875229c19c1d05f5f000000000000000000000000000000000088f448c89d13854f96f863a0012730cf6ab975c7c39a00000000000000000000000000000000000000000000a001f263630289db00000000000000000000000000000000000000000000000000a00159b494f64c2c6adac876c9d3ea38f46c9aca7d869300000000000000000000",
-	// 	TxHashRLP:  "0x7803f901260682189680808094df3ca4eaf9017d01a26ef475e651faa9b1296da1809d09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0f838f7946092415c41b602d192c02d8bb5b2ee62fbab3b70e1a0a2c53cdc4de0f875229c19c1d05f5f000000000000000000000000000000000088f448c89d13854f96f863a0012730cf6ab975c7c39a00000000000000000000000000000000000000000000a001f263630289db00000000000000000000000000000000000000000000000000a00159b494f64c2c6adac876c9d3ea38f46c9aca7d8693000000000000000000001ba0f529d0d7d2687fef8d097aafec3d8363ec5d69e29140c9603fba0179a2518b2ba00def24511874e80989362ae91d7509ec5eb09f81c8a0c039f4e7a66ea86e6746",
+	// 	// rlp encode '["0x6","0x1896","","","","0xdf3ca4eaf9017d01a26ef475e651faa9b1296da1","","0x09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0",["0x6092415c41b602d192c02d8bb5b2ee62fbab3b70", ["0xa2c53cdc4de0f875229c19c1d05f5f0000000000000000000000000000000000"]],"F448C89D13854F96",["0x012730cf6ab975c7c39a00000000000000000000000000000000000000000000","0x01f263630289db00000000000000000000000000000000000000000000000000","0x0159b494f64c2c6adac876c9d3ea38f46c9aca7d869300000000000000000000"],"0x1b","0xf529d0d7d2687fef8d097aafec3d8363ec5d69e29140c9603fba0179a2518b2b","0x0def24511874e80989362ae91d7509ec5eb09f81c8a0c039f4e7a66ea86e6746"]'
+	// 	// TODO: got 0x7803f9012cf901260682189680808094df3ca4eaf9017d01a26ef475e651faa9b1296da1809d09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0f838f7946092415c41b602d192c02d8bb5b2ee62fbab3b70e1a0a2c53cdc4de0f875229c19c1d05f5f000000000000000000000000000000000088f448c89d13854f96f863a0012730cf6ab975c7c39a00000000000000000000000000000000000000000000a001f263630289db00000000000000000000000000000000000000000000000000a00159b494f64c2c6adac876c9d3ea38f46c9aca7d8693000000000000000000001ba0f529d0d7d2687fef8d097aafec3d8363ec5d69e29140c9603fba0179a2518b2ba00def24511874e80989362ae91d7509ec5eb09f81c8a0c039f4e7a66ea86e6746c0c0c0
+	// 	//      decoded data is: [["06","1896","","","","df3ca4eaf9017d01a26ef475e651faa9b1296da1","","09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0",[["6092415c41b602d192c02d8bb5b2ee62fbab3b70",["a2c53cdc4de0f875229c19c1d05f5f0000000000000000000000000000000000"]]],"f448c89d13854f96",["012730cf6ab975c7c39a00000000000000000000000000000000000000000000","01f263630289db00000000000000000000000000000000000000000000000000","0159b494f64c2c6adac876c9d3ea38f46c9aca7d869300000000000000000000"],"1b","f529d0d7d2687fef8d097aafec3d8363ec5d69e29140c9603fba0179a2518b2b","0def24511874e80989362ae91d7509ec5eb09f81c8a0c039f4e7a66ea86e6746"],[],[],[]]
+	// 	//      seems include sidecar
+	// 	TxHashRLP: "0x7803f9012c0682189680808094df3ca4eaf9017d01a26ef475e651faa9b1296da1809d09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0f7946092415c41b602d192c02d8bb5b2ee62fbab3b70e1a0a2c53cdc4de0f875229c19c1d05f5f00000000000000000000000000000000009046343438433839443133383534463936f863a0012730cf6ab975c7c39a00000000000000000000000000000000000000000000a001f263630289db00000000000000000000000000000000000000000000000000a00159b494f64c2c6adac876c9d3ea38f46c9aca7d8693000000000000000000001ba0f529d0d7d2687fef8d097aafec3d8363ec5d69e29140c9603fba0179a2518b2ba00def24511874e80989362ae91d7509ec5eb09f81c8a0c039f4e7a66ea86e6746",
 	// },
-	// {
-	// 	Name: "04_SetCode", // Viem "eip7702: 8386"
-	// 	Type: TxTypeEthereumSetCode,
-	// 	Map: map[TxValueKeyType]interface{}{
-	// 		TxValueKeyChainID:   big.NewInt(9),
-	// 		TxValueKeyNonce:     uint64(9778),
-	// 		TxValueKeyGasFeeCap: big.NewInt(1063),
-	// 		TxValueKeyGasTipCap: big.NewInt(0),
-	// 		TxValueKeyTo:        addrPtr(common.HexToAddress("0x529df59d69f3f13fc94af90af33e4f794d76a929")),
-	// 		TxValueKeyAmount:    new(big.Int).SetUint64(13922405099808277777),
-	// 		TxValueKeyData:      hexutil.MustDecode("0x3dde5092cfa391fc32d21999924a09e1f8b7f326dfdb312a423ca561"),
-	// 		TxValueKeyAccessList: AccessList{
-	// 			{
-	// 				Address: common.HexToAddress("0xee235c66c42e7e595890f50269770e80edfb198a"),
-	// 				StorageKeys: []common.Hash{
-	// 					common.HexToHash("0x70a80801a9955fad0a39bb6a7fd4000000000000000000000000000000000000"),
-	// 					common.HexToHash("0x657d828bf2a683f027ec06d606d8d40000000000000000000000000000000000"),
-	// 					common.HexToHash("0xf4e6d428979de9a52b6f73000000000000000000000000000000000000000000"),
-	// 				},
-	// 			},
-	// 		},
-	// 	},
-	// 	ChainID:    9,
-	// 	SenderSigs: []txSigHex{{v: 28, r: "0xd154b702f73f724567492930d9bf832cfa93d7b060e5da2ccfeac7f88ba502dd", s: "0x7330827cc70f8fb4024c1376b39f64cc8ae1430b7ccb178f258de88ba492dd11"}},
-	// 	// SigRLP:     "0x01f8ba098242758084bf7f714d94610590408a97e8f84152d45cbe2ec0b08059598f809bd962f328314a9cd384c349a461fdba53ead623afb4f751df94a604f87cf87a9467d560ba27b75d467fcf658e02ac3765c3634056f863a0a12c9f0600000000000000000000000000000000000000000000000000000000a05b00000000000000000000000000000000000000000000000000000000000000a0082b41eb5f7244029351c2533948000000000000000000000000000000000000",
-	// 	// TxHashRLP:  "0x7801f8fd098242758084bf7f714d94610590408a97e8f84152d45cbe2ec0b08059598f809bd962f328314a9cd384c349a461fdba53ead623afb4f751df94a604f87cf87a9467d560ba27b75d467fcf658e02ac3765c3634056f863a0a12c9f0600000000000000000000000000000000000000000000000000000000a05b00000000000000000000000000000000000000000000000000000000000000a0082b41eb5f7244029351c253394800000000000000000000000000000000000001a0c71988016460ca44c352598cc116cf2ac1b9293387f2f8287aa889b6cf55b1e7a0634101cdd4f96d642fe8509166cc63729722cb51c80f1624b4fe693106b0664c",
-	// },
+	{
+		Name: "04_SetCode", // EEST "test_set_code_to_system_contract[fork_Osaka-call_opcode_CALL-evm_code_type_LEGACY-system_contract_0x000f3df6d732807ef1319fb7b8bb8522d0beac02-blockchain_test]"
+		Type: TxTypeEthereumSetCode,
+		Map: map[TxValueKeyType]interface{}{
+			TxValueKeyChainID:    big.NewInt(1),
+			TxValueKeyNonce:      uint64(0),
+			TxValueKeyGasFeeCap:  big.NewInt(7),
+			TxValueKeyGasTipCap:  big.NewInt(0),
+			TxValueKeyGasLimit:   uint64(500000),
+			TxValueKeyTo:         common.HexToAddress("0x891dce8073514e62bb564c41f75df3062c381573"),
+			TxValueKeyAmount:     big.NewInt(0),
+			TxValueKeyData:       hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000001"),
+			TxValueKeyAccessList: AccessList{},
+			TxValueKeyAuthorizationList: []SetCodeAuthorization{
+				{
+					ChainID: *uint256.NewInt(1),
+					Address: common.HexToAddress("0x000f3df6d732807ef1319fb7b8bb8522d0beac02"),
+					Nonce:   0,
+					V:       1,
+					R:       *uint256.MustFromBig(hexutil.MustDecodeBig("0xd14d99564d380653121fa874e9e44f25a92d23c03a9e0dbb43e0e7e1e0995847")),
+					S:       *uint256.MustFromBig(hexutil.MustDecodeBig("0x492693b6721976ffca5c44674720163a2e36bcd06d8336408496ac9b96f92380")),
+				},
+			},
+		},
+		ChainID:    1,
+		SenderSigs: []txSigHex{{v: 1, r: "0xdcde3e1249cfff2b0593bf178f683f1b682fe7c8700310067a819b89b8363e52", s: "0x663694ed951ecdba3a9c3c652ce093d12d192a3acbd544267aa70e7004021bb2"}},
+		SigRLP:     "0x04f89e018080078307a12094891dce8073514e62bb564c41f75df3062c38157380a00000000000000000000000000000000000000000000000000000000000000001c0f85cf85a0194000f3df6d732807ef1319fb7b8bb8522d0beac028001a0d14d99564d380653121fa874e9e44f25a92d23c03a9e0dbb43e0e7e1e0995847a0492693b6721976ffca5c44674720163a2e36bcd06d8336408496ac9b96f92380",
+		TxHashRLP:  "0x7804f8e1018080078307a12094891dce8073514e62bb564c41f75df3062c38157380a00000000000000000000000000000000000000000000000000000000000000001c0f85cf85a0194000f3df6d732807ef1319fb7b8bb8522d0beac028001a0d14d99564d380653121fa874e9e44f25a92d23c03a9e0dbb43e0e7e1e0995847a0492693b6721976ffca5c44674720163a2e36bcd06d8336408496ac9b96f9238001a0dcde3e1249cfff2b0593bf178f683f1b682fe7c8700310067a819b89b8363e52a0663694ed951ecdba3a9c3c652ce093d12d192a3acbd544267aa70e7004021bb2",
+		TxJson: `{
+			"typeInt": 30724,
+			"type": "TxTypeEthereumSetCode",
+			"chainId": "0x1",
+			"nonce": "0x0",
+			"maxFeePerGas": "0x7",
+			"maxPriorityFeePerGas": "0x0",
+			"gas": "0x7a120",
+			"to": "0x891dce8073514e62bb564c41f75df3062c381573",
+			"value": "0x0",
+			"input": "0x0000000000000000000000000000000000000000000000000000000000000001",
+			"accessList": [],
+			"authorizationList": [{"chainId": "0x1", "address": "0x000f3df6d732807ef1319fb7b8bb8522d0beac02", "nonce": "0x0", "yParity": "0x1", "r": "0xd14d99564d380653121fa874e9e44f25a92d23c03a9e0dbb43e0e7e1e0995847", "s": "0x492693b6721976ffca5c44674720163a2e36bcd06d8336408496ac9b96f92380"}],
+			"signatures": [{"V": "0x1", "R": "0xdcde3e1249cfff2b0593bf178f683f1b682fe7c8700310067a819b89b8363e52", "S": "0x663694ed951ecdba3a9c3c652ce093d12d192a3acbd544267aa70e7004021bb2"}],
+			"hash": null
+		}`,
+		RpcJson: `{
+			"typeInt": 30724,
+			"type": "TxTypeEthereumSetCode",
+			"chainId": "0x1",
+			"nonce": "0x0",
+			"maxFeePerGas": "0x7",
+			"maxPriorityFeePerGas": "0x0",
+			"gas": "0x7a120",
+			"to": "0x891dce8073514e62bb564c41f75df3062c381573",
+			"value": "0x0",
+			"input": "0x0000000000000000000000000000000000000000000000000000000000000001",
+			"accessList": [],
+			"authorizationList": [{"chainId": "0x1", "address": "0x000f3df6d732807ef1319fb7b8bb8522d0beac02", "nonce": "0x0", "yParity": "0x1", "r": "0xd14d99564d380653121fa874e9e44f25a92d23c03a9e0dbb43e0e7e1e0995847", "s": "0x492693b6721976ffca5c44674720163a2e36bcd06d8336408496ac9b96f92380"}],
+			"signatures": [{"V": "0x1", "R": "0xdcde3e1249cfff2b0593bf178f683f1b682fe7c8700310067a819b89b8363e52", "S": "0x663694ed951ecdba3a9c3c652ce093d12d192a3acbd544267aa70e7004021bb2"}]
+		}`,
+	},
 	{
 		Name: "08_ValueTransfer", // kaia-sdk
 		Type: TxTypeValueTransfer,
@@ -1890,57 +1929,136 @@ var serializeTCs = []serializeTC{
 			"feePayerSignatures": [{"V": "0x26", "R": "0x6ba5ef20c3049323fc94defe14ca162e28b86aa64f7cf497ac8a5520e9615614", "S": "0x4a0a0fc61c10b416759af0ce4ce5c09ca1060141d56d958af77050c9564df6bf"}]
 		}`,
 	},
-	// {
-	// 	Name: "72_ChainDataAnchoring",
-	// 	Type: TxTypeChainDataAnchoring,
-	// 	Map: map[TxValueKeyType]interface{}{
-	// 		TxValueKeyNonce:    uint64(1234),
-	// 		TxValueKeyGasPrice: big.NewInt(0x19),
-	// 		TxValueKeyGasLimit: uint64(0xf4240),
-	// 		TxValueKeyFrom:     common.HexToAddress("0xa94f5374Fce5edBC8E2a8697C15331677e6EbF0B"),
-	// 	},
-	// 	ChainID:    1,
-	// 	SenderSigs: []txSigHex{{v: 0x25, r: "0xfb2c3d53d2f6b7bb1deb5a09f80366a5a45429cc1e3956687b075a9dcad20434", s: "0x5c6187822ee23b1001e9613d29a5d6002f990498d2902904f7f259ab3358216e"}},
-	// 	SigRLP:     "0xe39fde388204d219830f424094a94f5374fce5edbc8e2a8697c15331677e6ebf0b018080",
-	// 	TxHashRLP:  "0x38f8648204d219830f424094a94f5374fce5edbc8e2a8697c15331677e6ebf0bf845f84325a0fb2c3d53d2f6b7bb1deb5a09f80366a5a45429cc1e3956687b075a9dcad20434a05c6187822ee23b1001e9613d29a5d6002f990498d2902904f7f259ab3358216e",
-	// },
-	// {
-	// 	Name: "73_FeeDelegatedChainDataAnchoring",
-	// 	Type: TxTypeFeeDelegatedChainDataAnchoring,
-	// 	Map: map[TxValueKeyType]interface{}{
-	// 		TxValueKeyNonce:    uint64(1234),
-	// 		TxValueKeyGasPrice: big.NewInt(0x19),
-	// 		TxValueKeyGasLimit: uint64(0xf4240),
-	// 		TxValueKeyFrom:     common.HexToAddress("0xa94f5374Fce5edBC8E2a8697C15331677e6EbF0B"),
-	// 		TxValueKeyFeePayer: common.HexToAddress("0x5A0043070275d9f6054307Ee7348bD660849D90f"),
-	// 	},
-	// 	ChainID:         1,
-	// 	SenderSigs:      []txSigHex{{v: 0x26, r: "0x8409f5441d4725f90905ad87f03793857d124de7a43169bc67320cd2f020efa9", s: "0x60af63e87bdc565d7f7de906916b2334336ee7b24d9a71c9521a67df02e7ec92"}},
-	// 	FeePayerSigs:    []txSigHex{{v: 0x26, r: "0x044d5b25e8c649a1fdaa409dc3817be390ad90a17c25bc17c89b6d5d248495e0", s: "0x73938e690d27b5267c73108352cf12d01de7fd0077b388e94721aa1fa32f85ec"}},
-	// 	SigRLP:          "0xe39fde398204d219830f424094a94f5374fce5edbc8e2a8697c15331677e6ebf0b018080",
-	// 	SigFeePayerRLP:  "0xf8389fde398204d219830f424094a94f5374fce5edbc8e2a8697c15331677e6ebf0b945a0043070275d9f6054307ee7348bd660849d90f018080",
-	// 	SenderTxHashRLP: "0x39f8648204d219830f424094a94f5374fce5edbc8e2a8697c15331677e6ebf0bf845f84326a08409f5441d4725f90905ad87f03793857d124de7a43169bc67320cd2f020efa9a060af63e87bdc565d7f7de906916b2334336ee7b24d9a71c9521a67df02e7ec92",
-	// 	TxHashRLP:       "0x39f8c08204d219830f424094a94f5374fce5edbc8e2a8697c15331677e6ebf0bf845f84326a08409f5441d4725f90905ad87f03793857d124de7a43169bc67320cd2f020efa9a060af63e87bdc565d7f7de906916b2334336ee7b24d9a71c9521a67df02e7ec92945a0043070275d9f6054307ee7348bd660849d90ff845f84326a0044d5b25e8c649a1fdaa409dc3817be390ad90a17c25bc17c89b6d5d248495e0a073938e690d27b5267c73108352cf12d01de7fd0077b388e94721aa1fa32f85ec",
-	// },
-	// {
-	// 	Name: "74_FeeDelegatedChainDataAnchoringWithRatio",
-	// 	Type: TxTypeFeeDelegatedChainDataAnchoringWithRatio,
-	// 	Map: map[TxValueKeyType]interface{}{
-	// 		TxValueKeyNonce:              uint64(1234),
-	// 		TxValueKeyGasPrice:           big.NewInt(0x19),
-	// 		TxValueKeyGasLimit:           uint64(0xf4240),
-	// 		TxValueKeyFrom:               common.HexToAddress("0xa94f5374Fce5edBC8E2a8697C15331677e6EbF0B"),
-	// 		TxValueKeyFeePayer:           common.HexToAddress("0x5A0043070275d9f6054307Ee7348bD660849D90f"),
-	// 		TxValueKeyFeeRatioOfFeePayer: FeeRatio(30),
-	// 	},
-	// 	ChainID:         1,
-	// 	SenderSigs:      []txSigHex{{v: 0x26, r: "0x72efa47960bef40b536c72d7e03ceaf6ca5f6061eb8a3eda3545b1a78fe52ef5", s: "0x62006ddaf874da205f08b3789e2d014ae37794890fc2e575bf75201563a24ba9"}},
-	// 	FeePayerSigs:    []txSigHex{{v: 0x26, r: "0x6ba5ef20c3049323fc94defe14ca162e28b86aa64f7cf497ac8a5520e9615614", s: "0x4a0a0fc61c10b416759af0ce4ce5c09ca1060141d56d958af77050c9564df6bf"}},
-	// 	SigRLP:          "0xe4a0df3a8204d219830f424094a94f5374fce5edbc8e2a8697c15331677e6ebf0b1e018080",
-	// 	SigFeePayerRLP:  "0xf839a0df3a8204d219830f424094a94f5374fce5edbc8e2a8697c15331677e6ebf0b1e945a0043070275d9f6054307ee7348bd660849d90f018080",
-	// 	SenderTxHashRLP: "0x3af8658204d219830f424094a94f5374fce5edbc8e2a8697c15331677e6ebf0b1ef845f84326a072efa47960bef40b536c72d7e03ceaf6ca5f6061eb8a3eda3545b1a78fe52ef5a062006ddaf874da205f08b3789e2d014ae37794890fc2e575bf75201563a24ba9",
-	// 	TxHashRLP:       "0x3af8c18204d219830f424094a94f5374fce5edbc8e2a8697c15331677e6ebf0b1ef845f84326a072efa47960bef40b536c72d7e03ceaf6ca5f6061eb8a3eda3545b1a78fe52ef5a062006ddaf874da205f08b3789e2d014ae37794890fc2e575bf75201563a24ba9945a0043070275d9f6054307ee7348bd660849d90ff845f84326a06ba5ef20c3049323fc94defe14ca162e28b86aa64f7cf497ac8a5520e9615614a04a0a0fc61c10b416759af0ce4ce5c09ca1060141d56d958af77050c9564df6bf",
-	// },
+	{
+		Name: "72_ChainDataAnchoring", // Manual creation
+		Type: TxTypeChainDataAnchoring,
+		Map: map[TxValueKeyType]interface{}{
+			TxValueKeyNonce:        uint64(1234),
+			TxValueKeyGasPrice:     big.NewInt(25 * params.Gkei),
+			TxValueKeyGasLimit:     uint64(50000000),
+			TxValueKeyFrom:         common.HexToAddress("0x23a519a88e79fbc0bab796f3dce3ff79a2373e30"),
+			TxValueKeyAnchoredData: []byte{1, 2, 3, 4},
+		},
+		ChainID:    1,
+		SenderSigs: []txSigHex{{v: 1, r: "0x2", s: "0x3"}},
+		SigRLP:     "0xeeaae9488204d28505d21dba008402faf0809423a519a88e79fbc0bab796f3dce3ff79a2373e308401020304018080",
+		TxHashRLP:  "0x48ed8204d28505d21dba008402faf0809423a519a88e79fbc0bab796f3dce3ff79a2373e308401020304c4c3010203",
+		TxJson: `{
+			"typeInt": 72,
+			"type": "TxTypeChainDataAnchoring",
+			"nonce": "0x4d2",
+			"gasPrice": "0x5d21dba00",
+			"gas": "0x2faf080",
+			"from": "0x23a519a88e79fbc0bab796f3dce3ff79a2373e30",
+			"input": "0x01020304",
+			"inputJSON": null,
+			"signatures": [{"V": "0x1", "R": "0x2", "S": "0x3"}],
+			"hash": "0x0000000000000000000000000000000000000000000000000000000000000000"
+		}`,
+		RpcJson: `{
+			"typeInt": 72,
+			"type": "TxTypeChainDataAnchoring",
+			"gas": "0x2faf080",
+			"gasPrice": "0x5d21dba00",
+			"nonce": "0x4d2",
+			"input": "0x01020304",
+			"inputJSON": null,
+			"signatures": [{"V": "0x1", "R": "0x2", "S": "0x3"}]
+		}`,
+	},
+	{
+		Name: "73_FeeDelegatedChainDataAnchoring", // Manual creation
+		Type: TxTypeFeeDelegatedChainDataAnchoring,
+		Map: map[TxValueKeyType]interface{}{
+			TxValueKeyNonce:        uint64(1234),
+			TxValueKeyGasPrice:     big.NewInt(25 * params.Gkei),
+			TxValueKeyGasLimit:     uint64(50000000),
+			TxValueKeyFrom:         common.HexToAddress("0x23a519a88e79fbc0bab796f3dce3ff79a2373e30"),
+			TxValueKeyAnchoredData: []byte{1, 2, 3, 4},
+			TxValueKeyFeePayer:     common.HexToAddress("0x5A0043070275d9f6054307Ee7348bD660849D90f"),
+		},
+		ChainID:         1,
+		SenderSigs:      []txSigHex{{v: 1, r: "0x2", s: "0x3"}},
+		FeePayerSigs:    []txSigHex{{v: 1, r: "0x2", s: "0x3"}},
+		SigRLP:          "0xeeaae9498204d28505d21dba008402faf0809423a519a88e79fbc0bab796f3dce3ff79a2373e308401020304018080",
+		SigFeePayerRLP:  "0xf843aae9498204d28505d21dba008402faf0809423a519a88e79fbc0bab796f3dce3ff79a2373e308401020304945a0043070275d9f6054307ee7348bd660849d90f018080",
+		SenderTxHashRLP: "0x49ed8204d28505d21dba008402faf0809423a519a88e79fbc0bab796f3dce3ff79a2373e308401020304c4c3010203",
+		TxHashRLP:       "0x49f8478204d28505d21dba008402faf0809423a519a88e79fbc0bab796f3dce3ff79a2373e308401020304c4c3010203945a0043070275d9f6054307ee7348bd660849d90fc4c3010203",
+		TxJson: `{
+			"typeInt": 73,
+			"type": "TxTypeFeeDelegatedChainDataAnchoring",
+			"nonce": "0x4d2",
+			"gasPrice": "0x5d21dba00",
+			"gas": "0x2faf080",
+			"from": "0x23a519a88e79fbc0bab796f3dce3ff79a2373e30",
+			"input": "0x01020304",
+			"inputJSON": null,
+			"signatures": [{"V": "0x1", "R": "0x2", "S": "0x3"}],
+			"feePayer": "0x5a0043070275d9f6054307ee7348bd660849d90f",
+			"feePayerSignatures": [{"V": "0x1", "R": "0x2", "S": "0x3"}],
+			"hash": "0x0000000000000000000000000000000000000000000000000000000000000000"
+		}`,
+		RpcJson: `{
+			"typeInt": 73,
+			"type": "TxTypeFeeDelegatedChainDataAnchoring",
+			"gas": "0x2faf080",
+			"gasPrice": "0x5d21dba00",
+			"nonce": "0x4d2",
+			"input": "0x01020304",
+			"inputJSON": null,
+			"signatures": [{"V": "0x1", "R": "0x2", "S": "0x3"}],
+			"feePayer": "0x5a0043070275d9f6054307ee7348bd660849d90f",
+			"feePayerSignatures": [{"V": "0x1", "R": "0x2", "S": "0x3"}]
+		}`,
+	},
+	{
+		Name: "74_FeeDelegatedChainDataAnchoringWithRatio", // Manual creation
+		Type: TxTypeFeeDelegatedChainDataAnchoringWithRatio,
+		Map: map[TxValueKeyType]interface{}{
+			TxValueKeyNonce:              uint64(1234),
+			TxValueKeyGasPrice:           big.NewInt(25 * params.Gkei),
+			TxValueKeyGasLimit:           uint64(50000000),
+			TxValueKeyFrom:               common.HexToAddress("0x23a519a88e79fbc0bab796f3dce3ff79a2373e30"),
+			TxValueKeyAnchoredData:       []byte{1, 2, 3, 4},
+			TxValueKeyFeePayer:           common.HexToAddress("0x5A0043070275d9f6054307Ee7348bD660849D90f"),
+			TxValueKeyFeeRatioOfFeePayer: FeeRatio(30),
+		},
+		ChainID:         1,
+		SenderSigs:      []txSigHex{{v: 1, r: "0x2", s: "0x3"}},
+		FeePayerSigs:    []txSigHex{{v: 1, r: "0x2", s: "0x3"}},
+		SigRLP:          "0xefabea4a8204d28505d21dba008402faf0809423a519a88e79fbc0bab796f3dce3ff79a2373e3084010203041e018080",
+		SigFeePayerRLP:  "0xf844abea4a8204d28505d21dba008402faf0809423a519a88e79fbc0bab796f3dce3ff79a2373e3084010203041e945a0043070275d9f6054307ee7348bd660849d90f018080",
+		SenderTxHashRLP: "0x4aee8204d28505d21dba008402faf0809423a519a88e79fbc0bab796f3dce3ff79a2373e3084010203041ec4c3010203",
+		TxHashRLP:       "0x4af8488204d28505d21dba008402faf0809423a519a88e79fbc0bab796f3dce3ff79a2373e3084010203041ec4c3010203945a0043070275d9f6054307ee7348bd660849d90fc4c3010203",
+		TxJson: `{
+			"typeInt": 74,
+			"type": "TxTypeFeeDelegatedChainDataAnchoringWithRatio",
+			"nonce": "0x4d2",
+			"gasPrice": "0x5d21dba00",
+			"gas": "0x2faf080",
+			"from": "0x23a519a88e79fbc0bab796f3dce3ff79a2373e30",
+			"input": "0x01020304",
+			"inputJSON": null,
+			"feeRatio": "0x1e",
+			"signatures": [{"V": "0x1", "R": "0x2", "S": "0x3"}],
+			"feePayer": "0x5a0043070275d9f6054307ee7348bd660849d90f",
+			"feePayerSignatures": [{"V": "0x1", "R": "0x2", "S": "0x3"}],
+			"hash": "0x0000000000000000000000000000000000000000000000000000000000000000"
+		}`,
+		RpcJson: `{
+			"typeInt": 74,
+			"type": "TxTypeFeeDelegatedChainDataAnchoringWithRatio",
+			"gas": "0x2faf080",
+			"gasPrice": "0x5d21dba00",
+			"nonce": "0x4d2",
+			"input": "0x01020304",
+			"inputJSON": null,
+			"feeRatio": "0x1e",
+			"signatures": [{"V": "0x1", "R": "0x2", "S": "0x3"}],
+			"feePayer": "0x5a0043070275d9f6054307ee7348bd660849d90f",
+			"feePayerSignatures": [{"V": "0x1", "R": "0x2", "S": "0x3"}]
+		}`,
+	},
 }
 
 func TestTransactionSerialization2(t *testing.T) {
