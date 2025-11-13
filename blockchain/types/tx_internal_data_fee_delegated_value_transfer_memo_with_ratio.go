@@ -263,17 +263,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SerializeForSignT
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SigHash(chainId *big.Int) common.Hash {
-	return rlpHash(struct {
-		Byte    []byte
-		ChainId *big.Int
-		R       uint
-		S       uint
-	}{
-		t.SerializeForSignToBytes(),
-		chainId,
-		uint(0),
-		uint(0),
-	})
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SenderTxHash() common.Hash {
@@ -299,19 +289,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SenderTxHash() co
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) FeePayerSigHash(chainId *big.Int) common.Hash {
-	return rlpHash(struct {
-		Byte     []byte
-		FeePayer common.Address
-		ChainId  *big.Int
-		R        uint
-		S        uint
-	}{
-		t.SerializeForSignToBytes(),
-		t.GetFeePayer(),
-		chainId,
-		uint(0),
-		uint(0),
-	})
+	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {

@@ -286,17 +286,7 @@ func (t *TxInternalDataAccountUpdate) SerializeForSignToBytes() []byte {
 }
 
 func (t *TxInternalDataAccountUpdate) SigHash(chainId *big.Int) common.Hash {
-	return rlpHash(struct {
-		Byte    []byte
-		ChainId *big.Int
-		R       uint
-		S       uint
-	}{
-		t.SerializeForSignToBytes(),
-		chainId,
-		uint(0),
-		uint(0),
-	})
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataAccountUpdate) Validate(stateDB StateDB, currentBlockNumber uint64) error {

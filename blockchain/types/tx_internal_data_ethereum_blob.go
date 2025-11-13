@@ -547,8 +547,25 @@ func (t *TxInternalDataEthereumBlob) SetChainId(chainID *big.Int) {
 }
 
 func (t *TxInternalDataEthereumBlob) SigHash(chainId *big.Int) common.Hash {
-	infs := []interface{}{
-		t.ChainID,
+	// If the chainId has nil or empty value, It will be set signer's chainId.
+	chainIdField := t.ChainId()
+	if chainIdField == nil || chainIdField.BitLen() == 0 {
+		chainIdField = chainId
+	}
+	return prefixedRlpHash(byte(t.Type()), struct {
+		ChainID      *big.Int
+		AccountNonce uint64
+		GasTipCap    *uint256.Int
+		GasFeeCap    *uint256.Int
+		GasLimit     uint64
+		Recipient    common.Address
+		Amount       *uint256.Int
+		Payload      []byte
+		AccessList   AccessList
+		BlobFeeCap   *uint256.Int
+		BlobHashes   []common.Hash
+	}{
+		chainIdField,
 		t.AccountNonce,
 		t.GasTipCap,
 		t.GasFeeCap,
@@ -559,14 +576,7 @@ func (t *TxInternalDataEthereumBlob) SigHash(chainId *big.Int) common.Hash {
 		t.AccessList,
 		t.BlobFeeCap,
 		t.BlobHashes,
-	}
-
-	// If the chainId has nil or empty value, It will be set signer's chainId.
-	existChainId := t.ChainId()
-	if existChainId == nil || existChainId.BitLen() == 0 {
-		infs[0] = chainId
-	}
-	return prefixedRlpHash(byte(t.Type()), infs)
+	})
 }
 
 func (t *TxInternalDataEthereumBlob) EthTxHash() common.Hash {

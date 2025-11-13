@@ -823,3 +823,37 @@ func validate7702(stateDB StateDB, txType TxType, from, to common.Address) error
 		return nil
 	}
 }
+
+// Called by SigHash() of Kaia tx types
+// sigHashRLP = RLP([ [ type, fields... ], chainId, 0, 0 ])
+func sigHashKaia(inner []byte, chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte    []byte
+		ChainId *big.Int
+		R       uint
+		S       uint
+	}{
+		inner,
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
+// Called by FeePayerSigHash() of Kaia tx types
+// feePayerSigHashRLP = RLP([ [ type, fields... ], feePayer, chainId, 0, 0 ])
+func feePayerSigHash(inner []byte, feePayer common.Address, chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte     []byte
+		FeePayer common.Address
+		ChainId  *big.Int
+		R        uint
+		S        uint
+	}{
+		inner,
+		feePayer,
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}

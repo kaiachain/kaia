@@ -322,17 +322,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) SerializeForSignToBytes() []by
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) SigHash(chainId *big.Int) common.Hash {
-	return rlpHash(struct {
-		Byte    []byte
-		ChainId *big.Int
-		R       uint
-		S       uint
-	}{
-		t.SerializeForSignToBytes(),
-		chainId,
-		uint(0),
-		uint(0),
-	})
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) SenderTxHash() common.Hash {
@@ -358,19 +348,7 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) SenderTxHash() common.Hash {
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) FeePayerSigHash(chainId *big.Int) common.Hash {
-	return rlpHash(struct {
-		Byte     []byte
-		FeePayer common.Address
-		ChainId  *big.Int
-		R        uint
-		S        uint
-	}{
-		t.SerializeForSignToBytes(),
-		t.GetFeePayer(),
-		chainId,
-		uint(0),
-		uint(0),
-	})
+	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) Validate(stateDB StateDB, currentBlockNumber uint64) error {

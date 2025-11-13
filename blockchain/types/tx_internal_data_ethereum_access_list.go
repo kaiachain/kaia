@@ -272,8 +272,22 @@ func (t *TxInternalDataEthereumAccessList) IntrinsicGas(currentBlockNumber uint6
 }
 
 func (t *TxInternalDataEthereumAccessList) SigHash(chainId *big.Int) common.Hash {
-	infs := []interface{}{
-		t.ChainID,
+	// If the chainId has nil or empty value, It will be set signer's chainId.
+	chainIdField := t.ChainId()
+	if chainIdField == nil || chainIdField.BitLen() == 0 {
+		chainIdField = chainId
+	}
+	return prefixedRlpHash(byte(t.Type()), struct {
+		ChainID    *big.Int
+		Nonce      uint64
+		Price      *big.Int
+		GasLimit   uint64
+		Recipient  *common.Address
+		Amount     *big.Int
+		Payload    []byte
+		AccessList AccessList
+	}{
+		chainIdField,
 		t.AccountNonce,
 		t.Price,
 		t.GasLimit,
@@ -281,14 +295,7 @@ func (t *TxInternalDataEthereumAccessList) SigHash(chainId *big.Int) common.Hash
 		t.Amount,
 		t.Payload,
 		t.AccessList,
-	}
-
-	// If the chainId has nil or empty value, It will be set signer's chainId.
-	existChainId := t.ChainId()
-	if existChainId == nil || existChainId.BitLen() == 0 {
-		infs[0] = chainId
-	}
-	return prefixedRlpHash(byte(t.Type()), infs)
+	})
 }
 
 func (t *TxInternalDataEthereumAccessList) EthTxHash() common.Hash {

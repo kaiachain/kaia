@@ -220,17 +220,7 @@ func (t *TxInternalDataValueTransferMemo) SerializeForSignToBytes() []byte {
 }
 
 func (t *TxInternalDataValueTransferMemo) SigHash(chainId *big.Int) common.Hash {
-	return rlpHash(struct {
-		Byte    []byte
-		ChainId *big.Int
-		R       uint
-		S       uint
-	}{
-		t.SerializeForSignToBytes(),
-		chainId,
-		uint(0),
-		uint(0),
-	})
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataValueTransferMemo) Validate(stateDB StateDB, currentBlockNumber uint64) error {
