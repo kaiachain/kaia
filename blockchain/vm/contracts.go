@@ -616,7 +616,6 @@ func (c *bigModExp) GetRequiredGasAndComputationCost(input []byte) (uint64, uint
 		if expLen > 32 {
 			expHead.SetBytes(getData(input, baseLen, 32))
 		} else {
-			// TODO: Check that if expLen < baseLen, then getData will return an empty slice
 			expHead.SetBytes(getData(input, baseLen, expLen))
 		}
 	}
