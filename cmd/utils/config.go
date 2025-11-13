@@ -197,8 +197,8 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	cfg.NoDiscovery = ctx.Bool(NoDiscoverFlag.Name)
 
 	if ctx.IsSet(DiscoverTypesFlag.Name) {
-		nodetypes := strings.Split(ctx.String(DiscoverTypesFlag.Name), ",")
-		for _, nodetype := range nodetypes {
+		nodetypes := strings.SplitSeq(ctx.String(DiscoverTypesFlag.Name), ",")
+		for nodetype := range nodetypes {
 			switch strings.ToLower(nodetype) {
 			case "auto":
 				setDefaultDiscoverTypes(cfg)

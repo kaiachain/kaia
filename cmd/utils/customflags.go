@@ -121,15 +121,15 @@ func (self DirectoryFlag) Apply(set *flag.FlagSet) {
 }
 
 func eachName(longName string, fn func(string)) {
-	parts := strings.Split(longName, ",")
-	for _, name := range parts {
+	parts := strings.SplitSeq(longName, ",")
+	for name := range parts {
 		name = strings.Trim(name, " ")
 		fn(name)
 	}
 }
 
 func isEnvVarSet(envVars string) bool {
-	for _, envVar := range strings.Split(envVars, ",") {
+	for envVar := range strings.SplitSeq(envVars, ",") {
 		envVar = strings.TrimSpace(envVar)
 		if env, ok := syscall.Getenv(envVar); ok {
 			// TODO: Can't use this for bools as

@@ -82,7 +82,7 @@ func GenerateKeys(num int) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs [
 func GenerateKeysFromMnemonic(num int, mnemonic, path string) (keys []*ecdsa.PrivateKey, nodekeys []string, addrs []common.Address) {
 	var key *bip32.Key
 
-	for _, level := range strings.Split(path, "/") {
+	for level := range strings.SplitSeq(path, "/") {
 		if len(level) == 0 {
 			continue
 		}
