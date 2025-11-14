@@ -502,7 +502,7 @@ func allocGenesisFund(ctx *cli.Context, genesisJson *blockchain.Genesis) {
 	}
 
 	balance := new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)
-	for _, item := range strings.Split(fundingAddr, ",") {
+	for item := range strings.SplitSeq(fundingAddr, ",") {
 		if !common.IsHexAddress(item) {
 			log.Fatalf("'%s' is not a valid hex address", item)
 		}
