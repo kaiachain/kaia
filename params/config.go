@@ -85,6 +85,9 @@ var (
 			ProposerPolicy: 2,
 			SubGroupSize:   22,
 		},
+		BlobScheduleConfig: &BlobScheduleConfig{
+			Osaka: DefaultOsakaBlobConfig,
+		},
 		UnitPrice: 25000000000,
 	}
 
@@ -132,6 +135,9 @@ var (
 			Epoch:          604800,
 			ProposerPolicy: 2,
 			SubGroupSize:   22,
+		},
+		BlobScheduleConfig: &BlobScheduleConfig{
+			Osaka: DefaultOsakaBlobConfig,
 		},
 		UnitPrice: 25000000000,
 	}
@@ -222,6 +228,19 @@ const (
 	PasswordLength = 16
 )
 
+var (
+	// DefaultOsakaBlobConfig is the default blob configuration for the Osaka fork.
+	DefaultOsakaBlobConfig = &BlobConfig{
+		Target:         6,
+		Max:            9,
+		UpdateFraction: 5007716,
+	}
+	// DefaultBlobSchedule is the latest configured blob schedule for Ethereum mainnet.
+	DefaultBlobSchedule = &BlobScheduleConfig{
+		Osaka: DefaultOsakaBlobConfig,
+	}
+)
+
 // ChainConfig is the blockchain config which determines the blockchain settings.
 //
 // ChainConfig is stored in the database on a per block basis. This means
@@ -259,7 +278,8 @@ type ChainConfig struct {
 	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
 
 	// Various consensus engines
-	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
+	Istanbul           *IstanbulConfig     `json:"istanbul,omitempty"`
+	BlobScheduleConfig *BlobScheduleConfig `json:"blobSchedule,omitempty"`
 
 	UnitPrice     uint64            `json:"unitPrice"`
 	DeriveShaImpl int               `json:"deriveShaImpl"`
@@ -352,13 +372,6 @@ func (c *IstanbulConfig) String() string {
 	return "istanbul"
 }
 
-// TODO-Kaia Add BlobConfig
-type BlobConfig struct{}
-
-func (c *ChainConfig) BlobConfig(head uint64) *BlobConfig {
-	return nil
-}
-
 // String implements the fmt.Stringer interface.
 func (c *ChainConfig) String() string {
 	var engine interface{}
@@ -416,6 +429,34 @@ func (c *ChainConfig) Copy() *ChainConfig {
 	j, _ := json.Marshal(c)
 	json.Unmarshal(j, r)
 	return r
+}
+
+// BlobConfig specifies the target and max blobs per block for the associated fork.
+type BlobConfig struct {
+	Target         int    `json:"target"`
+	Max            int    `json:"max"`
+	UpdateFraction uint64 `json:"baseFeeUpdateFraction"`
+}
+
+// String implement fmt.Stringer, returning string format blob config.
+func (bc *BlobConfig) String() string {
+	if bc == nil {
+		return "nil"
+	}
+	return fmt.Sprintf("target: %d, max: %d, fraction: %d", bc.Target, bc.Max, bc.UpdateFraction)
+}
+
+// BlobScheduleConfig determines target and max number of blobs allow per fork.
+type BlobScheduleConfig struct {
+	Osaka *BlobConfig `json:"osaka,omitempty"`
+}
+
+// BlobConfig returns the blob config associated with the provided fork.
+func (c *ChainConfig) BlobConfig(head *big.Int) *BlobConfig {
+	if c.IsOsakaForkEnabled(head) {
+		return c.BlobScheduleConfig.Osaka
+	}
+	return nil
 }
 
 // IsIstanbulForkEnabled returns whether num is either equal to the istanbul block or greater.

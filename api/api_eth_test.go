@@ -271,7 +271,7 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 		"parentHash": "0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348",
 		"receiptsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 		"sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
-		"size": "0x244",
+		"size": "0x254",
 		"stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
 		"timestamp": "0x61d53854",
 		"transactionsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
@@ -284,7 +284,7 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 		expected["randomReveal"] = "0x94516a8bc695b5bf43aa077cd682d9475a3a6bed39a633395b78ed8f276e7c5bb00bb26a77825013c6718579f1b3ee2275b158801705ea77989e3acc849ee9c524bd1822bde3cba7be2aae04347f0d91508b7b7ce2f11ec36cbf763173421ae7"
 		expected["mixHash"] = "0xdf117d1245dceaae0a47f05371b23cd0d0db963ff9d5c8ba768dc989f4c31883"
 		expected["hash"] = "0x36f1c36d1723049abf1202a1cda828eec6399edd654dae12b72a1642097a29e4"
-		expected["size"] = "0x2c4"
+		expected["size"] = "0x2d4"
 	}
 	assert.Equal(t, stringifyMap(expected), stringifyMap(ethHeader))
 }

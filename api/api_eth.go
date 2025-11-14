@@ -1588,7 +1588,7 @@ func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
 
 		id := forkid.NewID(c, genesis.Hash(), head.Uint64()).Hash
 		return &config{
-			BlobSchedule:    c.BlobConfig(head.Uint64()),
+			BlobSchedule:    c.BlobConfig(head),
 			ChainId:         (*hexutil.Big)(c.ChainID),
 			ForkId:          id[:],
 			Precompiles:     precompiles,

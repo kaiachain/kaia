@@ -58,7 +58,7 @@ func TestAPI_kaia_getChainConfig(t *testing.T) {
 			if strings.HasSuffix(field.Name, "CompatibleBlock") {
 				fieldValue := v.Field(i)
 				if fieldValue.Type() == reflect.TypeFor[*big.Int]() {
-					assert.Equal(t, fieldValue.Interface().(*big.Int).String(), big.NewInt(0).String())
+					assert.Equal(t, fieldValue.Interface().(*big.Int).String(), big.NewInt(0).String(), field.Name)
 				}
 			}
 		}

@@ -23,6 +23,7 @@
 package blockchain
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -74,14 +75,39 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	if hash := types.DeriveSha(block.Transactions(), block.Number()); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)
 	}
+
 	baseFee := block.Header().BaseFee
-	if baseFee != nil {
-		for _, tx := range block.Transactions() {
+	// Blob transactions may be present after the Osaka fork.
+	var blobs int
+	for i, tx := range block.Transactions() {
+		// NOTE: Kaia validates tx gasPrice
+		if baseFee != nil {
 			if baseFee.Cmp(tx.GasPrice()) > 0 {
-				return fmt.Errorf("Invalid GasPrice: txHash %x, GasPrice %d, BaseFee %d", tx.Hash(), tx.GasPrice(), baseFee)
+				return fmt.Errorf("invalid GasPrice: txHash %x, GasPrice %d, BaseFee %d", tx.Hash(), tx.GasPrice(), baseFee)
 			}
 		}
+		// Count the number of blobs to validate against the header's blobGasUsed
+		blobs += len(tx.BlobHashes())
+		// If the tx is a blob tx, it must NOT have a sidecar attached to be valid in a block.
+		if tx.BlobTxSidecar() != nil {
+			return fmt.Errorf("unexpected blob sidecar in transaction at index %d", i)
+		}
+
+		// The individual checks for blob validity (version-check + not empty)
+		// happens in state transition.
 	}
+
+	// Check blob gas usage.
+	if header.BlobGasUsed != nil {
+		if want := *header.BlobGasUsed / params.BlobTxBlobGasPerBlob; uint64(blobs) != want { // div because the header is surely good vs the body might be bloated
+			return fmt.Errorf("blob gas used mismatch (header %v, calculated %v)", *header.BlobGasUsed, blobs*params.BlobTxBlobGasPerBlob)
+		}
+	} else {
+		if blobs > 0 {
+			return errors.New("data blobs present in block body")
+		}
+	}
+
 	return nil
 }
 
