@@ -23,6 +23,8 @@
 package work
 
 import (
+	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"strconv"
@@ -800,8 +802,8 @@ CommitTransactionLoop:
 			// Skip this bundle if target is required but either:
 			// 1. The previous transaction hash doesn't match the target hash, or
 			// 2. The previous transaction failed (receipt status not successful)
-			if env.shouldDiscardBundle(targetBundle) {
-				logger.Trace("Skipping bundle due to invalid target tx", "target tx", targetBundle.TargetTxHash.String(), "bundle tx", txOrGen.Id.String(), "numShift", numShift)
+			if discard, err := env.shouldDiscardBundle(targetBundle); discard {
+				logger.Warn("Skipping bundle due to invalid target tx", "err", err.Error(), "target tx", targetBundle.TargetTxHash.String(), "bundle tx", txOrGen.Id.String(), "numShift", numShift)
 				builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 				continue
 			}
@@ -872,11 +874,6 @@ CommitTransactionLoop:
 
 		case vm.ErrTotalTimeLimitReached:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
-			timeLimitReachedCounter.Inc(1)
-			if env.tcount == 0 {
-				logger.Error("A single transaction exceeds total time limit", "hash", tx.Hash().String())
-				tooLongTxCounter.Inc(1)
-			}
 			// NOTE-Kaia Exit for loop immediately without checking abort variable again.
 			break CommitTransactionLoop
 
@@ -911,6 +908,31 @@ CommitTransactionLoop:
 		if len(targetBundle.BundleTxs) != 0 {
 			// After the last tx in the bundle finishes, set executingBundleTxs back to 0.
 			atomic.StoreInt32(&isExecutingBundleTxs, 0)
+		}
+	}
+
+	if atomic.LoadInt32(&abort) == 1 {
+		timeLimitReachedCounter.Inc(1)
+		var txHash common.Hash
+		if len(incorporatedTxs) > 0 {
+			txOrGen := incorporatedTxs[0]
+			tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
+			if err == nil {
+				txHash = tx.Hash()
+			}
+			totalTxs := len(arrayTxs) + len(bundles)
+			logger.Warn("Unexecuted transactions due to time limit",
+				"txs", len(arrayTxs),
+				"bundlesTxs", len(bundles),
+				"totalTxs", totalTxs,
+				"executed", env.tcount,
+				"unexecuted", totalTxs-env.tcount,
+				"lastUnexecuted", txHash.String(),
+			)
+		}
+		if env.tcount == 1 && len(arrayTxs) > 0 {
+			logger.Error("A single transaction exceeds total time limit", "hash", arrayTxs[0].Hash().String())
+			tooLongTxCounter.Inc(1)
 		}
 	}
 
@@ -1015,17 +1037,22 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	return nil, nil, logs
 }
 
-func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) bool {
+func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
 	if !bundle.TargetRequired {
-		return false
+		return false, nil
 	}
 
 	if env.tcount == 0 {
-		return bundle.TargetTxHash != common.Hash{}
+		return bundle.TargetTxHash != common.Hash{}, errors.New("absent of target tx hash")
 	} else {
-		return !(bundle.TargetTxHash == env.txs[env.tcount-1].Hash() &&
-			env.receipts[env.tcount-1].Status == types.ReceiptStatusSuccessful)
+		if bundle.TargetTxHash != env.txs[env.tcount-1].Hash() {
+			return true, errors.New(fmt.Sprintf("target tx hash not found: %s", bundle.TargetTxHash.String()))
+		}
+		if env.receipts[env.tcount-1].Status != types.ReceiptStatusSuccessful {
+			return true, errors.New(fmt.Sprintf("target tx failed (status = %d)", env.receipts[env.tcount-1].Status))
+		}
 	}
+	return false, nil
 }
 
 func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, header *types.Header) *Task {
