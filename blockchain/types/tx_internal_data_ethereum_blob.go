@@ -415,7 +415,11 @@ func newTxInternalDataEthereumBlobWithMap(values map[TxValueKeyType]interface{})
 		return nil, errValueKeyDataMustByteSlice
 	}
 	if v, ok := values[TxValueKeySidecar].(*BlobTxSidecar); ok {
-		d.Sidecar = v.Copy()
+		if v == nil {
+			d.Sidecar = nil
+		} else {
+			d.Sidecar = v.Copy()
+		}
 		delete(values, TxValueKeySidecar)
 	} else {
 		return nil, errValueKeySidecarInvalid
