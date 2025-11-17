@@ -1046,7 +1046,7 @@ func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
 		return bundle.TargetTxHash != common.Hash{}, errors.New("absent of target tx hash")
 	} else {
 		if bundle.TargetTxHash != env.txs[env.tcount-1].Hash() {
-			return true, errors.New(fmt.Sprintf("target tx hash not found: %s", bundle.TargetTxHash.String()))
+			return true, errors.New("target tx hash not found:" + bundle.TargetTxHash.String())
 		}
 		if env.receipts[env.tcount-1].Status != types.ReceiptStatusSuccessful {
 			return true, errors.New(fmt.Sprintf("target tx failed (status = %d)", env.receipts[env.tcount-1].Status))
