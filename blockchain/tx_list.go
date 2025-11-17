@@ -382,7 +382,7 @@ func (l *txList) Filter(sender common.Address, pool *TxPool) (types.Transactions
 			return true
 		}
 		// Since there are mutable values such as accountKey in the state, a tx can be invalidated with the state change.
-		if tx.ValidateMutableValue(pool.currentState, pool.signer, pool.currentBlockNumber) != nil {
+		if tx.Validate(pool.currentState, pool.signer, pool.currentBlockNumber, true) != nil {
 			return true
 		}
 		// In case of fee-delegated transactions, the comparison value should consider tx fee and fee ratio.

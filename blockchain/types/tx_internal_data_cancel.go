@@ -173,12 +173,7 @@ func (t *TxInternalDataCancel) SigHash(chainId *big.Int) common.Hash {
 	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
-func (t *TxInternalDataCancel) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// No more validation required for TxTypeCancel for now.
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataCancel) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataCancel) Validate(stateDB StateDB, currentBlockNumber uint64, checkMutableValue bool) error {
 	// No more validation required for TxTypeCancel for now.
 	return nil
 }

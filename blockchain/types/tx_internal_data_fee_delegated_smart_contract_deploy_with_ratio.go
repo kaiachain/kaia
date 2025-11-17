@@ -317,27 +317,25 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) FeePayerSigHash
 	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	var to common.Address
-	if t.Recipient != nil {
-		return kerrors.ErrInvalidContractAddress
-	} else {
-		to = crypto.CreateAddress(t.From, t.AccountNonce)
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64, checkMutableValue bool) error {
+	if !checkMutableValue {
+		var to common.Address
+		if t.Recipient != nil {
+			return kerrors.ErrInvalidContractAddress
+		} else {
+			to = crypto.CreateAddress(t.From, t.AccountNonce)
+		}
+		if common.IsPrecompiledContractAddress(to, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+			return kerrors.ErrPrecompiledContractAddress
+		}
+		if t.HumanReadable {
+			return kerrors.ErrHumanReadableNotSupported
+		}
+		// Fail if the codeFormat is invalid.
+		if !t.CodeFormat.Validate() {
+			return kerrors.ErrInvalidCodeFormat
+		}
 	}
-	if common.IsPrecompiledContractAddress(to, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-		return kerrors.ErrPrecompiledContractAddress
-	}
-	if t.HumanReadable {
-		return kerrors.ErrHumanReadableNotSupported
-	}
-	// Fail if the codeFormat is invalid.
-	if !t.CodeFormat.Validate() {
-		return kerrors.ErrInvalidCodeFormat
-	}
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	// Fail if the address is already created.
 	if t.Recipient != nil && stateDB.Exist(*t.Recipient) {
 		return kerrors.ErrAccountAlreadyExists

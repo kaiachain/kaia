@@ -517,37 +517,33 @@ func (tx *Transaction) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	return tx.data.IntrinsicGas(currentBlockNumber)
 }
 
-func (tx *Transaction) Validate(db StateDB, blockNumber uint64) error {
-	return tx.data.Validate(db, blockNumber)
-}
-
-// ValidateMutableValue conducts validation of the sender's account key and additional validation for each transaction type.
-func (tx *Transaction) ValidateMutableValue(db StateDB, signer Signer, currentBlockNumber uint64) error {
+func (tx *Transaction) Validate(db StateDB, signer Signer, currentBlockNumber uint64, checkMutableValue bool) error {
 	// validate the sender's account key
-	accKey := db.GetKey(tx.ValidatedSender())
-	if tx.IsEthereumTransaction() {
-		if !accKey.Type().IsLegacyAccountKey() {
-			return ErrNotLegacyAccount
+	if checkMutableValue {
+		accKey := db.GetKey(tx.ValidatedSender())
+		if tx.IsEthereumTransaction() {
+			if !accKey.Type().IsLegacyAccountKey() {
+				return ErrNotLegacyAccount
+			}
+		} else {
+			if pubkey, err := SenderPubkey(signer, tx); err != nil {
+				return ErrInvalidSigSender
+			} else if accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedSender(), accKey, pubkey, GetRoleTypeForValidation(tx.Type())) != nil {
+				return ErrInvalidAccountKey
+			}
 		}
-	} else {
-		if pubkey, err := SenderPubkey(signer, tx); err != nil {
-			return ErrInvalidSigSender
-		} else if accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedSender(), accKey, pubkey, GetRoleTypeForValidation(tx.Type())) != nil {
-			return ErrInvalidAccountKey
+
+		// validate the fee payer's account key
+		if tx.IsFeeDelegatedTransaction() {
+			feePayerAccKey := db.GetKey(tx.ValidatedFeePayer())
+			if feePayerPubkey, err := SenderFeePayerPubkey(signer, tx); err != nil {
+				return ErrInvalidSigFeePayer
+			} else if accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedFeePayer(), feePayerAccKey, feePayerPubkey, accountkey.RoleFeePayer) != nil {
+				return ErrInvalidAccountKey
+			}
 		}
 	}
-
-	// validate the fee payer's account key
-	if tx.IsFeeDelegatedTransaction() {
-		feePayerAccKey := db.GetKey(tx.ValidatedFeePayer())
-		if feePayerPubkey, err := SenderFeePayerPubkey(signer, tx); err != nil {
-			return ErrInvalidSigFeePayer
-		} else if accountkey.ValidateAccountKey(currentBlockNumber, tx.ValidatedFeePayer(), feePayerAccKey, feePayerPubkey, accountkey.RoleFeePayer) != nil {
-			return ErrInvalidAccountKey
-		}
-	}
-
-	return tx.data.ValidateMutableValue(db, currentBlockNumber)
+	return tx.data.Validate(db, currentBlockNumber, checkMutableValue)
 }
 
 func (tx *Transaction) Data() []byte {

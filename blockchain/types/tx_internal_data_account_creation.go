@@ -345,30 +345,26 @@ func (t *TxInternalDataAccountCreation) SigHash(chainId *big.Int) common.Hash {
 	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
-func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataAccountCreation) Validate(stateDB StateDB, currentBlockNumber uint64, checkOnlyMutableValue bool) error {
 	return errUndefinedTxType
-	//if t.HumanReadable {
-	//	return kerrors.ErrHumanReadableNotSupported
-	//}
-	//if common.IsPrecompiledContractAddress(t.Recipient, fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-	//	return kerrors.ErrPrecompiledContractAddress
-	//}
-	//if err := t.Key.CheckInstallable(currentBlockNumber); err != nil {
-	//	return err
-	//}
+	// if !checkOnlyMutableValue {
+	// 	if t.HumanReadable {
+	// 		return kerrors.ErrHumanReadableNotSupported
+	// 	}
+	// 	if common.IsPrecompiledContractAddress(t.Recipient, fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+	// 		return kerrors.ErrPrecompiledContractAddress
+	// 	}
+	// 	if err := t.Key.CheckInstallable(currentBlockNumber); err != nil {
+	// 		return err
+	// 	}
+	// }
 	//
-	//return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataAccountCreation) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
-	return errUndefinedTxType
-	//// Fail if the address is already created.
-	//if stateDB.Exist(t.Recipient) {
-	//	return kerrors.ErrAccountAlreadyExists
-	//}
+	// Fail if the address is already created.
+	// if stateDB.Exist(t.Recipient) {
+	// 	return kerrors.ErrAccountAlreadyExists
+	// }
 	//return nil
 }
-
 func (t *TxInternalDataAccountCreation) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
 	to := t.Recipient
 	stateDB.IncNonce(sender.Address())

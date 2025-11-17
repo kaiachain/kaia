@@ -332,12 +332,7 @@ type TxInternalData interface {
 	// Validate returns nil if tx is validated with the given stateDB and currentBlockNumber.
 	// Otherwise, it returns an error.
 	// This function is called in TxPool.validateTx() and TxInternalData.Execute().
-	Validate(stateDB StateDB, currentBlockNumber uint64) error
-
-	// ValidateMutableValue returns nil if tx is validated. Otherwise, it returns an error.
-	// The function validates tx values associated with mutable values in the state.
-	// MutableValues: accountKey, the existence of creating address, feePayer's balance, etc.
-	ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error
+	Validate(stateDB StateDB, currentBlockNumber uint64, checkMutableValue bool) error
 
 	// Execute performs execution of the transaction according to the transaction type.
 	Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error)

@@ -314,16 +314,14 @@ func (t *TxInternalDataEthereumAccessList) EthTxHash() common.Hash {
 	})
 }
 
-func (t *TxInternalDataEthereumAccessList) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if t.Recipient != nil {
-		if common.IsPrecompiledContractAddress(*t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-			return kerrors.ErrPrecompiledContractAddress
+func (t *TxInternalDataEthereumAccessList) Validate(stateDB StateDB, currentBlockNumber uint64, checkMutableValue bool) error {
+	if !checkMutableValue {
+		if t.Recipient != nil {
+			if common.IsPrecompiledContractAddress(*t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+				return kerrors.ErrPrecompiledContractAddress
+			}
 		}
 	}
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataEthereumAccessList) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	return nil
 }
 

@@ -2757,13 +2757,14 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	*/
 
 	blockNumber := header.Number.Uint64()
+	signer := types.MakeSigner(chainConfig, header.Number)
 
 	// validation for each transaction before execution
-	if err := tx.Validate(statedb, blockNumber); err != nil {
+	if err := tx.Validate(statedb, signer, blockNumber, false); err != nil {
 		return nil, nil, err
 	}
 
-	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(chainConfig, header.Number), statedb, blockNumber)
+	msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, blockNumber)
 	if err != nil {
 		return nil, nil, err
 	}
