@@ -238,7 +238,7 @@ func (f *ChainDataFetcher) startFetching() error {
 	f.fetchingStopCh = make(chan struct{})
 	f.fetchingWg.Add(1)
 
-	// lanuch a goroutine to handle from checkpoint to the head block.
+	// launch a goroutine to handle from checkpoint to the head block.
 	go func() {
 		defer f.fetchingWg.Done()
 		switch f.config.Mode {
