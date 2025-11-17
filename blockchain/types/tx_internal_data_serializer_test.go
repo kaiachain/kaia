@@ -331,44 +331,74 @@ var serializeTCs = []serializeTC{
 			"signatures": [{"V": "0x1c", "R": "0xd154b702f73f724567492930d9bf832cfa93d7b060e5da2ccfeac7f88ba502dd", "S": "0x7330827cc70f8fb4024c1376b39f64cc8ae1430b7ccb178f258de88ba492dd11"}]
 		}`,
 	},
-	// {
-	// 	Name: "03_Blob", // Viem "eip4844: 6457"
-	// 	Type: TxTypeEthereumBlob,
-	// 	Map: map[TxValueKeyType]interface{}{
-	// 		TxValueKeyChainID:   big.NewInt(6),
-	// 		TxValueKeyNonce:     uint64(6294),
-	// 		TxValueKeyTo:        common.HexToAddress("0xdf3ca4eaf9017d01a26ef475e651faa9b1296da1"),
-	// 		TxValueKeyData:      hexutil.MustDecode("0x09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0"),
-	// 		TxValueKeyAmount:    big.NewInt(0),
-	// 		TxValueKeyGasFeeCap: big.NewInt(0),
-	// 		TxValueKeyGasTipCap: big.NewInt(0),
-	// 		TxValueKeyGasLimit:  uint64(0),
-	// 		TxValueKeyAccessList: AccessList{
-	// 			{
-	// 				Address: common.HexToAddress("0x6092415c41b602d192c02d8bb5b2ee62fbab3b70"),
-	// 				StorageKeys: []common.Hash{
-	// 					common.HexToHash("0xa2c53cdc4de0f875229c19c1d05f5f0000000000000000000000000000000000"),
-	// 				},
-	// 			},
-	// 		},
-	// 		TxValueKeyBlobFeeCap: new(big.Int).SetUint64(17602539720540508054),
-	// 		TxValueKeyBlobHashes: []common.Hash{
-	// 			common.HexToHash("0x012730cf6ab975c7c39a00000000000000000000000000000000000000000000"),
-	// 			common.HexToHash("0x01f263630289db00000000000000000000000000000000000000000000000000"),
-	// 			common.HexToHash("0x0159b494f64c2c6adac876c9d3ea38f46c9aca7d869300000000000000000000"),
-	// 		},
-	// 		TxValueKeySidecar: (*BlobTxSidecar)(nil),
-	// 	},
-	// 	ChainID:    6,
-	// 	SenderSigs: []txSigHex{{v: 27, r: "0xf529d0d7d2687fef8d097aafec3d8363ec5d69e29140c9603fba0179a2518b2b", s: "0x0def24511874e80989362ae91d7509ec5eb09f81c8a0c039f4e7a66ea86e6746"}},
-	// 	SigRLP:     "0x03f8e30682189680808094df3ca4eaf9017d01a26ef475e651faa9b1296da1809d09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0f838f7946092415c41b602d192c02d8bb5b2ee62fbab3b70e1a0a2c53cdc4de0f875229c19c1d05f5f000000000000000000000000000000000088f448c89d13854f96f863a0012730cf6ab975c7c39a00000000000000000000000000000000000000000000a001f263630289db00000000000000000000000000000000000000000000000000a00159b494f64c2c6adac876c9d3ea38f46c9aca7d869300000000000000000000",
-	// 	// Regarding to TxHashRLP:
-	//  // rlp encode '["0x6","0x1896","","","","0xdf3ca4eaf9017d01a26ef475e651faa9b1296da1","","0x09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0",["0x6092415c41b602d192c02d8bb5b2ee62fbab3b70", ["0xa2c53cdc4de0f875229c19c1d05f5f0000000000000000000000000000000000"]],"F448C89D13854F96",["0x012730cf6ab975c7c39a00000000000000000000000000000000000000000000","0x01f263630289db00000000000000000000000000000000000000000000000000","0x0159b494f64c2c6adac876c9d3ea38f46c9aca7d869300000000000000000000"],"0x1b","0xf529d0d7d2687fef8d097aafec3d8363ec5d69e29140c9603fba0179a2518b2b","0x0def24511874e80989362ae91d7509ec5eb09f81c8a0c039f4e7a66ea86e6746"]'
-	// 	// TODO: Solve these problems
-	//  //     - Unable to set sidecar to nil via newTxInternalDataEthereumBlobWithMap (argSidecar.Copy() -> invalid memory address or nil pointer dereference)
-	//  //     - Trying to decode blobTx without a sidecar results in an infinite loop
-	// 	TxHashRLP: "0x7803f9012c0682189680808094df3ca4eaf9017d01a26ef475e651faa9b1296da1809d09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0f7946092415c41b602d192c02d8bb5b2ee62fbab3b70e1a0a2c53cdc4de0f875229c19c1d05f5f00000000000000000000000000000000009046343438433839443133383534463936f863a0012730cf6ab975c7c39a00000000000000000000000000000000000000000000a001f263630289db00000000000000000000000000000000000000000000000000a00159b494f64c2c6adac876c9d3ea38f46c9aca7d8693000000000000000000001ba0f529d0d7d2687fef8d097aafec3d8363ec5d69e29140c9603fba0179a2518b2ba00def24511874e80989362ae91d7509ec5eb09f81c8a0c039f4e7a66ea86e6746",
-	// },
+	{
+		Name: "03_Blob", // Viem "eip4844: 6457"
+		Type: TxTypeEthereumBlob,
+		Map: map[TxValueKeyType]interface{}{
+			TxValueKeyChainID:   big.NewInt(6),
+			TxValueKeyNonce:     uint64(6294),
+			TxValueKeyTo:        common.HexToAddress("0xdf3ca4eaf9017d01a26ef475e651faa9b1296da1"),
+			TxValueKeyData:      hexutil.MustDecode("0x09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0"),
+			TxValueKeyAmount:    big.NewInt(0),
+			TxValueKeyGasFeeCap: big.NewInt(0),
+			TxValueKeyGasTipCap: big.NewInt(0),
+			TxValueKeyGasLimit:  uint64(0),
+			TxValueKeyAccessList: AccessList{
+				{
+					Address: common.HexToAddress("0x6092415c41b602d192c02d8bb5b2ee62fbab3b70"),
+					StorageKeys: []common.Hash{
+						common.HexToHash("0xa2c53cdc4de0f875229c19c1d05f5f0000000000000000000000000000000000"),
+					},
+				},
+			},
+			TxValueKeyBlobFeeCap: new(big.Int).SetUint64(17602539720540508054),
+			TxValueKeyBlobHashes: []common.Hash{
+				common.HexToHash("0x012730cf6ab975c7c39a00000000000000000000000000000000000000000000"),
+				common.HexToHash("0x01f263630289db00000000000000000000000000000000000000000000000000"),
+				common.HexToHash("0x0159b494f64c2c6adac876c9d3ea38f46c9aca7d869300000000000000000000"),
+			},
+			TxValueKeySidecar: (*BlobTxSidecar)(nil),
+		},
+		ChainID:    6,
+		SenderSigs: []txSigHex{{v: 27, r: "0xf529d0d7d2687fef8d097aafec3d8363ec5d69e29140c9603fba0179a2518b2b", s: "0x0def24511874e80989362ae91d7509ec5eb09f81c8a0c039f4e7a66ea86e6746"}},
+		SigRLP:     "0x03f8e30682189680808094df3ca4eaf9017d01a26ef475e651faa9b1296da1809d09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0f838f7946092415c41b602d192c02d8bb5b2ee62fbab3b70e1a0a2c53cdc4de0f875229c19c1d05f5f000000000000000000000000000000000088f448c89d13854f96f863a0012730cf6ab975c7c39a00000000000000000000000000000000000000000000a001f263630289db00000000000000000000000000000000000000000000000000a00159b494f64c2c6adac876c9d3ea38f46c9aca7d869300000000000000000000",
+		TxHashRLP:  "0x7803f901260682189680808094df3ca4eaf9017d01a26ef475e651faa9b1296da1809d09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0f838f7946092415c41b602d192c02d8bb5b2ee62fbab3b70e1a0a2c53cdc4de0f875229c19c1d05f5f000000000000000000000000000000000088f448c89d13854f96f863a0012730cf6ab975c7c39a00000000000000000000000000000000000000000000a001f263630289db00000000000000000000000000000000000000000000000000a00159b494f64c2c6adac876c9d3ea38f46c9aca7d8693000000000000000000001ba0f529d0d7d2687fef8d097aafec3d8363ec5d69e29140c9603fba0179a2518b2ba00def24511874e80989362ae91d7509ec5eb09f81c8a0c039f4e7a66ea86e6746",
+		TxJson: `{
+			"typeInt": 30723,
+			"type": "TxTypeEthereumBlob",
+			"chainId": "0x6",
+			"nonce": "0x1896",
+			"maxFeePerGas": "0x0",
+			"maxPriorityFeePerGas": "0x0",
+			"gas": "0x0",
+			"to": "0xdf3ca4eaf9017d01a26ef475e651faa9b1296da1",
+			"value": "0x0",
+			"input": "0x09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0",
+			"accessList": [{"address": "0x6092415c41b602d192c02d8bb5b2ee62fbab3b70", "storageKeys": ["0xa2c53cdc4de0f875229c19c1d05f5f0000000000000000000000000000000000"]}],
+			"blobFeeCap": "0xf448c89d13854f96",
+			"blobHashes": ["0x012730cf6ab975c7c39a00000000000000000000000000000000000000000000", "0x01f263630289db00000000000000000000000000000000000000000000000000", "0x0159b494f64c2c6adac876c9d3ea38f46c9aca7d869300000000000000000000"],
+			"sidecar": null,
+			"signatures": [{"V": "0x1b", "R": "0xf529d0d7d2687fef8d097aafec3d8363ec5d69e29140c9603fba0179a2518b2b", "S": "0xdef24511874e80989362ae91d7509ec5eb09f81c8a0c039f4e7a66ea86e6746"}],
+			"hash": null
+		}`,
+		RpcJson: `{
+			"typeInt": 30723,
+			"type": "TxTypeEthereumBlob",
+			"chainId": "0x6",
+			"nonce": "0x1896",
+			"maxFeePerGas": "0x0",
+			"maxPriorityFeePerGas": "0x0",
+			"gas": "0x0",
+			"to": "0xdf3ca4eaf9017d01a26ef475e651faa9b1296da1",
+			"value": "0x0",
+			"input": "0x09d34150cb13b7867ed4a95638b03d3c4ff4d065b901f4351e89091cd0",
+			"accessList": [{"address": "0x6092415c41b602d192c02d8bb5b2ee62fbab3b70", "storageKeys": ["0xa2c53cdc4de0f875229c19c1d05f5f0000000000000000000000000000000000"]}],
+			"blobFeeCap": "0xf448c89d13854f96",
+			"blobHashes": ["0x012730cf6ab975c7c39a00000000000000000000000000000000000000000000", "0x01f263630289db00000000000000000000000000000000000000000000000000", "0x0159b494f64c2c6adac876c9d3ea38f46c9aca7d869300000000000000000000"],
+			"sidecar": null,
+			"signatures": [{"V": "0x1b", "R": "0xf529d0d7d2687fef8d097aafec3d8363ec5d69e29140c9603fba0179a2518b2b", "S": "0xdef24511874e80989362ae91d7509ec5eb09f81c8a0c039f4e7a66ea86e6746"}]
+		}`,
+	},
 	{
 		Name: "04_SetCode", // EEST "test_set_code_to_system_contract[fork_Osaka-call_opcode_CALL-evm_code_type_LEGACY-system_contract_0x000f3df6d732807ef1319fb7b8bb8522d0beac02-blockchain_test]"
 		Type: TxTypeEthereumSetCode,
