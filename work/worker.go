@@ -778,6 +778,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	var numTxsNonceTooLow int64 = 0
 	var numTxsNonceTooHigh int64 = 0
 	var numTxsGasLimitReached int64 = 0
+	txAbortedByTimeLimit := false
 CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
 		// Retrieve the next transaction and abort if all done
@@ -876,6 +877,7 @@ CommitTransactionLoop:
 
 		case vm.ErrTotalTimeLimitReached:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
+			txAbortedByTimeLimit = true
 			// NOTE-Kaia Exit for loop immediately without checking abort variable again.
 			break CommitTransactionLoop
 
@@ -928,10 +930,10 @@ CommitTransactionLoop:
 				"totalTxs", totalTxs,
 				"executed", env.tcount,
 				"unexecuted", totalTxs-env.tcount,
-				"lastUnexecuted", txHash.String(),
+				"firstDroppedTx", txHash.String(),
 			)
 		}
-		if env.tcount == 1 && len(arrayTxs) > 0 {
+		if !txAbortedByTimeLimit && env.tcount == 1 && len(arrayTxs) > 0 {
 			logger.Error("A single transaction exceeds total time limit", "hash", arrayTxs[0].Hash().String())
 			tooLongTxCounter.Inc(1)
 		}
