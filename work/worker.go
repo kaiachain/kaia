@@ -1049,7 +1049,7 @@ func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
 			return true, errors.New("target tx hash not found:" + bundle.TargetTxHash.String())
 		}
 		if env.receipts[env.tcount-1].Status != types.ReceiptStatusSuccessful {
-			return true, errors.New(fmt.Sprintf("target tx failed (status = %d)", env.receipts[env.tcount-1].Status))
+			return true, fmt.Errorf("target tx %s failed with status %d", bundle.TargetTxHash.Hex(), env.receipts[env.tcount-1].Status))
 		}
 	}
 	return false, nil
