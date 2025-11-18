@@ -1045,7 +1045,7 @@ func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
 		return false, nil
 	}
 	if env.tcount == 0 && bundle.TargetTxHash == (common.Hash{}) {
-		return true, fmt.Errorf("target tx %s does not precede the bundle", bundle.TargetTxHash.Hex())
+		return false, fmt.Errorf("target tx %s does not precede the bundle", bundle.TargetTxHash.Hex())
 	} else {
 		// if `env.tcount` is not zero, the `bundle.TargetTxHash` must not be empty hash
 		if bundle.TargetTxHash != env.txs[env.tcount-1].Hash() {
