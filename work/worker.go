@@ -723,9 +723,12 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 }
 
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
-	arrayTxs := builder.Arrayify(txs)
-	incorporatedTxs, bundles := builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
-	var coalescedLogs []*types.Log
+	var (
+		arrayTxs                 = builder.Arrayify(txs)
+		incorporatedTxs, bundles = builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
+		totalTxs                 = len(arrayTxs) + len(bundles)
+		coalescedLogs            []*types.Log
+	)
 
 	// Limit the execution time of all transactions in a block
 	var abort int32 = 0            // To break the below commitTransaction for loop when timed out
@@ -919,7 +922,6 @@ CommitTransactionLoop:
 			if err == nil {
 				txHash = tx.Hash()
 			}
-			totalTxs := len(arrayTxs) + len(bundles)
 			logger.Warn("Unexecuted transactions due to time limit",
 				"txs", len(arrayTxs),
 				"bundlesTxs", len(bundles),
@@ -1040,9 +1042,11 @@ func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
 	if !bundle.TargetRequired {
 		return false, nil
 	}
-
+	if bundle.TargetTxHash == (common.Hash{}) {
+		return false, nil
+	}
 	if env.tcount == 0 {
-		return bundle.TargetTxHash != common.Hash{}, fmt.Errorf("target tx %s does not precede the bundle", bundle.TargetTxHash.Hex())
+		return true, fmt.Errorf("target tx %s does not precede the bundle", bundle.TargetTxHash.Hex())
 	} else {
 		if bundle.TargetTxHash != env.txs[env.tcount-1].Hash() {
 			return true, fmt.Errorf("target tx %s does not precede the bundle", bundle.TargetTxHash.Hex())
