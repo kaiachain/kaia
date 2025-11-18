@@ -726,7 +726,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	var (
 		arrayTxs                 = builder.Arrayify(txs)
 		incorporatedTxs, bundles = builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
-		totalTxs                 = len(arrayTxs) + len(bundles)
+		totalTxs                 = len(incorporatedTxs)
 		coalescedLogs            []*types.Log
 	)
 
@@ -925,12 +925,11 @@ CommitTransactionLoop:
 				txHash = tx.Hash()
 			}
 			logger.Warn("Unexecuted transactions due to time limit",
-				"txs", len(arrayTxs),
-				"bundlesTxs", len(bundles),
 				"totalTxs", totalTxs,
 				"executed", env.tcount,
 				"unexecuted", totalTxs-env.tcount,
-				"firstDroppedTx", txHash.String(),
+				"firstDroppedTxHash", txHash.String(),
+				"isFirstDroppedTxBundle", builder.FindBundleIdx(bundles, txOrGen) != -1,
 			)
 		}
 		if !txAbortedByTimeLimit && env.tcount == 1 && len(arrayTxs) > 0 {
