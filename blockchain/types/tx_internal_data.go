@@ -331,7 +331,8 @@ type TxInternalData interface {
 
 	// Validate returns nil if tx is validated with the given stateDB and currentBlockNumber.
 	// Otherwise, it returns an error.
-	// This function is called in TxPool.validateTx() and TxInternalData.Execute().
+	// if onlyMutableChecks, skip some immutable constraint checks
+	// TODO-Kaia: align the onlyMutableChecks flag with Transaction.Validate(checkMutableValues).
 	Validate(stateDB StateDB, currentBlockNumber uint64, checkMutableValue bool) error
 
 	// Execute performs execution of the transaction according to the transaction type.
