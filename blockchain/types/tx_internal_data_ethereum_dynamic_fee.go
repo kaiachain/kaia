@@ -270,24 +270,24 @@ func (t *TxInternalDataEthereumDynamicFee) SetChainId(chainID *big.Int) {
 	t.ChainID = new(big.Int).Set(chainID)
 }
 
-func (t *TxInternalDataEthereumDynamicFee) SerializeForSign() []interface{} {
+func (t *TxInternalDataEthereumDynamicFee) SigHash(chainId *big.Int) common.Hash {
 	// If the chainId has nil or empty value, It will be set signer's chainId.
-	return []interface{}{
-		t.ChainID,
-		t.AccountNonce,
-		t.GasTipCap,
-		t.GasFeeCap,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.AccessList,
+	chainIdField := t.ChainId()
+	if chainIdField == nil || chainIdField.BitLen() == 0 {
+		chainIdField = chainId
 	}
-}
-
-func (t *TxInternalDataEthereumDynamicFee) EthTxHash() common.Hash {
-	return prefixedRlpHash(byte(t.Type()), []interface{}{
-		t.ChainID,
+	return prefixedRlpHash(byte(t.Type()), struct {
+		ChainID      *big.Int
+		AccountNonce uint64
+		GasTipCap    *big.Int
+		GasFeeCap    *big.Int
+		GasLimit     uint64
+		Recipient    *common.Address
+		Amount       *big.Int
+		Payload      []byte
+		AccessList   AccessList
+	}{
+		chainIdField,
 		t.AccountNonce,
 		t.GasTipCap,
 		t.GasFeeCap,
@@ -296,13 +296,10 @@ func (t *TxInternalDataEthereumDynamicFee) EthTxHash() common.Hash {
 		t.Amount,
 		t.Payload,
 		t.AccessList,
-		t.V,
-		t.R,
-		t.S,
 	})
 }
 
-func (t *TxInternalDataEthereumDynamicFee) SenderTxHash() common.Hash {
+func (t *TxInternalDataEthereumDynamicFee) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
 		t.AccountNonce,

@@ -154,15 +154,8 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SerializeForSignToBytes()
 	return b
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		t.Payload,
-	}
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SenderTxHash() common.Hash {
@@ -182,6 +175,10 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SenderTxHash() common.Has
 	hw.Sum(h[:0])
 
 	return h
+}
+
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetNonce() uint64 {

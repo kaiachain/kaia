@@ -326,11 +326,8 @@ type TxInternalData interface {
 	// IntrinsicGas computes additional 'intrinsic gas' based on tx types.
 	IntrinsicGas(currentBlockNumber uint64) (uint64, error)
 
-	// SerializeForSign returns a slice containing attributes to make its tx signature.
-	SerializeForSign() []interface{}
-
-	// SenderTxHash returns a hash of the tx without the fee payer's address and signature.
-	SenderTxHash() common.Hash
+	// SigHash returns a hash of RLP encoded attributes to make its tx signature.
+	SigHash(chainId *big.Int) common.Hash
 
 	// Validate returns nil if tx is validated with the given stateDB and currentBlockNumber.
 	// Otherwise, it returns an error.
@@ -348,10 +345,6 @@ type TxInternalData interface {
 	MakeRPCOutput() map[string]interface{}
 }
 
-type TxInternalDataSerializeForSignToByte interface {
-	SerializeForSignToBytes() []byte
-}
-
 // TxInternalDataFeePayer has functions related to fee delegated transactions.
 type TxInternalDataFeePayer interface {
 	GetFeePayer() common.Address
@@ -362,6 +355,12 @@ type TxInternalDataFeePayer interface {
 	GetFeePayerRawSignatureValues() TxSignatures
 
 	SetFeePayerSignatures(s TxSignatures)
+
+	// SenderTxHash returns a hash of the tx without the fee payer's address and signature.
+	SenderTxHash() common.Hash
+
+	// FeePayerSigHash returns a hash of RLP encoded attributes to make its fee payer's tx signature.
+	FeePayerSigHash(chainId *big.Int) common.Hash
 }
 
 // TxInternalDataFeeRatio has a function `GetFeeRatio`.
@@ -823,4 +822,38 @@ func validate7702(stateDB StateDB, txType TxType, from, to common.Address) error
 	default:
 		return nil
 	}
+}
+
+// Called by SigHash() of Kaia tx types
+// sigHashRLP = RLP([ [ type, fields... ], chainId, 0, 0 ])
+func sigHashKaia(inner []byte, chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte    []byte
+		ChainId *big.Int
+		R       uint
+		S       uint
+	}{
+		inner,
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
+// Called by FeePayerSigHash() of Kaia tx types
+// feePayerSigHashRLP = RLP([ [ type, fields... ], feePayer, chainId, 0, 0 ])
+func feePayerSigHash(inner []byte, feePayer common.Address, chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte     []byte
+		FeePayer common.Address
+		ChainId  *big.Int
+		R        uint
+		S        uint
+	}{
+		inner,
+		feePayer,
+		chainId,
+		uint(0),
+		uint(0),
+	})
 }

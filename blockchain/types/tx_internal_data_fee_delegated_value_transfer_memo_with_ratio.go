@@ -262,18 +262,8 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SerializeForSignT
 	return b
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-		t.FeeRatio,
-	}
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SenderTxHash() common.Hash {
@@ -296,6 +286,10 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SenderTxHash() co
 	hw.Sum(h[:0])
 
 	return h
+}
+
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {

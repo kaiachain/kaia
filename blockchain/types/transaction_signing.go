@@ -354,13 +354,7 @@ func (s osakaSigner) Hash(tx *Transaction) common.Hash {
 		return s.pragueSigner.Hash(tx)
 	}
 
-	// infs[0] always has chainID
-	infs := tx.data.SerializeForSign()
-	chainID := tx.GetTxInternalData().ChainId()
-	if chainID == nil || chainID.BitLen() == 0 {
-		infs[0] = s.ChainID()
-	}
-	return prefixedRlpHash(byte(tx.Type()), infs)
+	return tx.data.SigHash(s.ChainID())
 }
 
 // HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
@@ -463,13 +457,7 @@ func (s pragueSigner) Hash(tx *Transaction) common.Hash {
 		return s.londonSigner.Hash(tx)
 	}
 
-	// infs[0] always has chainID
-	infs := tx.data.SerializeForSign()
-	chainID := tx.GetTxInternalData().ChainId()
-	if chainID == nil || chainID.BitLen() == 0 {
-		infs[0] = s.ChainID()
-	}
-	return prefixedRlpHash(byte(tx.Type()), infs)
+	return tx.data.SigHash(s.ChainID())
 }
 
 // HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
@@ -572,13 +560,7 @@ func (s londonSigner) Hash(tx *Transaction) common.Hash {
 		return s.eip2930Signer.Hash(tx)
 	}
 
-	// infs[0] always has chainID
-	infs := tx.data.SerializeForSign()
-	chainID := tx.GetTxInternalData().ChainId()
-	if chainID == nil || chainID.BitLen() == 0 {
-		infs[0] = s.ChainID()
-	}
-	return prefixedRlpHash(byte(tx.Type()), infs)
+	return tx.data.SigHash(s.ChainID())
 }
 
 // HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
@@ -675,14 +657,7 @@ func (s eip2930Signer) Hash(tx *Transaction) common.Hash {
 		return s.EIP155Signer.Hash(tx)
 	}
 
-	// infs[0] always has chainID
-	infs := tx.data.SerializeForSign()
-	chainID := tx.GetTxInternalData().ChainId()
-	if chainID == nil || chainID.BitLen() == 0 {
-		infs[0] = s.ChainID()
-	}
-
-	return prefixedRlpHash(byte(tx.Type()), infs)
+	return tx.data.SigHash(s.ChainID())
 }
 
 // HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
@@ -894,24 +869,7 @@ func (s EIP155Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 // Hash returns the hash to be signed by the sender.
 // It does not uniquely identify the transaction.
 func (s EIP155Signer) Hash(tx *Transaction) common.Hash {
-	// If the data object implements SerializeForSignToByte(), use it.
-	if ser, ok := tx.data.(TxInternalDataSerializeForSignToByte); ok {
-		return rlpHash(struct {
-			Byte    []byte
-			ChainId *big.Int
-			R       uint
-			S       uint
-		}{
-			ser.SerializeForSignToBytes(),
-			s.chainId,
-			uint(0),
-			uint(0),
-		})
-	}
-
-	infs := append(tx.data.SerializeForSign(),
-		s.chainId, uint(0), uint(0))
-	return rlpHash(infs)
+	return tx.data.SigHash(s.ChainID())
 }
 
 // HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
@@ -922,27 +880,7 @@ func (s EIP155Signer) HashFeePayer(tx *Transaction) (common.Hash, error) {
 		return common.Hash{}, errNotFeeDelegationTransaction
 	}
 
-	// If the data object implements SerializeForSignToByte(), use it.
-	if ser, ok := tx.data.(TxInternalDataSerializeForSignToByte); ok {
-		return rlpHash(struct {
-			Byte     []byte
-			FeePayer common.Address
-			ChainId  *big.Int
-			R        uint
-			S        uint
-		}{
-			ser.SerializeForSignToBytes(),
-			tf.GetFeePayer(),
-			s.chainId,
-			uint(0),
-			uint(0),
-		}), nil
-	}
-
-	infs := append(tx.data.SerializeForSign(),
-		tf.GetFeePayer(),
-		s.chainId, uint(0), uint(0))
-	return rlpHash(infs), nil
+	return tf.FeePayerSigHash(s.ChainID()), nil
 }
 
 func recoverPlainCommon(sighash common.Hash, R, S, Vb *big.Int, homestead bool) ([]byte, error) {

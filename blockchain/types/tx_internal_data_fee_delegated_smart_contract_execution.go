@@ -243,17 +243,8 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) SerializeForSignToByt
 	return b
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-	}
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) SenderTxHash() common.Hash {
@@ -275,6 +266,10 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) SenderTxHash() common
 	hw.Sum(h[:0])
 
 	return h
+}
+
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) Validate(stateDB StateDB, currentBlockNumber uint64) error {

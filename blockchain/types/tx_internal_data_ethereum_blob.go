@@ -546,26 +546,26 @@ func (t *TxInternalDataEthereumBlob) SetChainId(chainID *big.Int) {
 	t.ChainID = uint256.MustFromBig(chainID)
 }
 
-func (t *TxInternalDataEthereumBlob) SerializeForSign() []interface{} {
+func (t *TxInternalDataEthereumBlob) SigHash(chainId *big.Int) common.Hash {
 	// If the chainId has nil or empty value, It will be set signer's chainId.
-	return []interface{}{
-		t.ChainID,
-		t.AccountNonce,
-		t.GasTipCap,
-		t.GasFeeCap,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.AccessList,
-		t.BlobFeeCap,
-		t.BlobHashes,
+	chainIdField := t.ChainId()
+	if chainIdField == nil || chainIdField.BitLen() == 0 {
+		chainIdField = chainId
 	}
-}
-
-func (t *TxInternalDataEthereumBlob) EthTxHash() common.Hash {
-	return prefixedRlpHash(byte(t.Type()), []interface{}{
-		t.ChainID,
+	return prefixedRlpHash(byte(t.Type()), struct {
+		ChainID      *big.Int
+		AccountNonce uint64
+		GasTipCap    *uint256.Int
+		GasFeeCap    *uint256.Int
+		GasLimit     uint64
+		Recipient    common.Address
+		Amount       *uint256.Int
+		Payload      []byte
+		AccessList   AccessList
+		BlobFeeCap   *uint256.Int
+		BlobHashes   []common.Hash
+	}{
+		chainIdField,
 		t.AccountNonce,
 		t.GasTipCap,
 		t.GasFeeCap,
@@ -576,13 +576,10 @@ func (t *TxInternalDataEthereumBlob) EthTxHash() common.Hash {
 		t.AccessList,
 		t.BlobFeeCap,
 		t.BlobHashes,
-		t.V,
-		t.R,
-		t.S,
 	})
 }
 
-func (t *TxInternalDataEthereumBlob) SenderTxHash() common.Hash {
+func (t *TxInternalDataEthereumBlob) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
 		t.AccountNonce,

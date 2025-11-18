@@ -302,25 +302,25 @@ func (t *TxInternalDataEthereumSetCode) IntrinsicGas(currentBlockNumber uint64) 
 	return IntrinsicGas(t.Payload, t.AccessList, t.AuthorizationList, false, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
-func (t *TxInternalDataEthereumSetCode) SerializeForSign() []interface{} {
+func (t *TxInternalDataEthereumSetCode) SigHash(chainId *big.Int) common.Hash {
 	// If the chainId has nil or empty value, It will be set signer's chainId.
-	return []interface{}{
-		t.ChainID,
-		t.AccountNonce,
-		t.GasTipCap,
-		t.GasFeeCap,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.AccessList,
-		t.AuthorizationList,
+	chainIdField := t.ChainId()
+	if chainIdField == nil || chainIdField.BitLen() == 0 {
+		chainIdField = chainId
 	}
-}
-
-func (t *TxInternalDataEthereumSetCode) EthTxHash() common.Hash {
-	return prefixedRlpHash(byte(t.Type()), []interface{}{
-		t.ChainID,
+	return prefixedRlpHash(byte(t.Type()), struct {
+		ChainID           *big.Int
+		AccountNonce      uint64
+		GasTipCap         *big.Int
+		GasFeeCap         *big.Int
+		GasLimit          uint64
+		Recipient         common.Address
+		Amount            *big.Int
+		Payload           []byte
+		AccessList        AccessList
+		AuthorizationList []SetCodeAuthorization
+	}{
+		chainIdField,
 		t.AccountNonce,
 		t.GasTipCap,
 		t.GasFeeCap,
@@ -330,13 +330,10 @@ func (t *TxInternalDataEthereumSetCode) EthTxHash() common.Hash {
 		t.Payload,
 		t.AccessList,
 		t.AuthorizationList,
-		t.V,
-		t.R,
-		t.S,
 	})
 }
 
-func (t *TxInternalDataEthereumSetCode) SenderTxHash() common.Hash {
+func (t *TxInternalDataEthereumSetCode) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
 		t.AccountNonce,

@@ -25,7 +25,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -142,34 +141,8 @@ func (t *TxInternalDataChainDataAnchoring) SerializeForSignToBytes() []byte {
 	return b
 }
 
-func (t *TxInternalDataChainDataAnchoring) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		t.Payload,
-	}
-}
-
-func (t *TxInternalDataChainDataAnchoring) SenderTxHash() common.Hash {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, t.Type())
-	rlp.Encode(hw, []interface{}{
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		t.Payload,
-		t.TxSignatures,
-	})
-
-	h := common.Hash{}
-
-	hw.Sum(h[:0])
-
-	return h
+func (t *TxInternalDataChainDataAnchoring) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataChainDataAnchoring) GetNonce() uint64 {
