@@ -20,6 +20,7 @@ package types
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"math/big"
 	"testing"
@@ -70,17 +71,14 @@ func TestTransactionSerialization(t *testing.T) {
 				txDataFeePayer.SetFeePayerSignatures(tc.FeePayerSigs.TxSignatures())
 			}
 
-			// Tx -> SigHash, TxHash
+			// Tx -> SigHash, TxHashRLP
 			expectedSigHash := crypto.Keccak256Hash(hexutil.MustDecode(tc.SigRLP))
 			assert.Equal(t, expectedSigHash, txData.SigHash(big.NewInt(int64(tc.ChainID))), "SigHash")
 
-			elems := hexutil.MustDecode(tc.TxHashRLP)
-			if txData.Type().IsEthTypedTransaction() {
-				// remove the EthereumTxTypeEnvelope prefix (0x78) when hashing
-				elems = elems[1:]
-			}
-			expectedTxHash := crypto.Keccak256Hash(elems)
-			assert.Equal(t, expectedTxHash, (&Transaction{data: txData}).Hash(), "TxHash")
+			ser := newTxInternalDataSerializerWithValues(txData)
+			txHashRLP, err := rlp.EncodeToBytes(ser)
+			require.Nil(t, err)
+			assert.Equal(t, tc.TxHashRLP, "0x"+hex.EncodeToString(txHashRLP), "TxHash")
 
 			// Tx -> FeePayerSigHash, SenderTxHash (only for fee-delegated txs)
 			if txDataFeePayer, ok := txData.(TxInternalDataFeePayer); ok {
@@ -91,10 +89,12 @@ func TestTransactionSerialization(t *testing.T) {
 				assert.Equal(t, expectedSenderTxHash, txDataFeePayer.SenderTxHash(), "SenderTxHash")
 			}
 
-			// TxHashRLP -> Tx -> TxHash
+			// TxHashRLP -> Tx -> TxHashRLP
 			decRLP := newTxInternalDataSerializer()
 			require.Nil(t, rlp.DecodeBytes(hexutil.MustDecode(tc.TxHashRLP), decRLP))
-			assert.Equal(t, expectedTxHash, (&Transaction{data: decRLP.tx}).Hash(), "TxHash round trip")
+			txHashRLP2, err := rlp.EncodeToBytes(decRLP)
+			require.Nil(t, err)
+			assert.Equal(t, tc.TxHashRLP, "0x"+hex.EncodeToString(txHashRLP2), "TxHash round trip")
 
 			// Tx -> Json
 			txJson, err := json.Marshal(txData)
