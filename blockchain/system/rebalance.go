@@ -116,7 +116,7 @@ func (caller *Kip103ContractCaller) CallContract(ctx context.Context, call kaia.
 	// No need to handle acccess list here
 
 	// To fix 0x0 nonce increase, uncomment next line to generate state instance whenever it is called
-	// But for backward compatiblity after hardfork, remain this code as commented
+	// But for backward compatibility after hardfork, remain this code as commented
 	//state, err := caller.chain.State()
 	//if err != nil {
 	//	return nil, err

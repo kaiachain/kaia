@@ -123,7 +123,7 @@ func FuzzPair(data []byte) int {
 	} else if errc != nil {
 		return 0
 	}
-	// Pair the two points and ensure thet result in the same output
+	// Pair the two points and ensure they result in the same output
 	if cloudflare.PairingCheck([]*cloudflare.G1{pc}, []*cloudflare.G2{tc}) != google.PairingCheck([]*google.G1{pg}, []*google.G2{tg}) {
 		panic("pair mismatch")
 	}
