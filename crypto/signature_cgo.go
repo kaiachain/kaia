@@ -21,7 +21,6 @@
 // Modified and improved for the Kaia development.
 
 //go:build !nacl && !js && !nocgo
-// +build !nacl,!js,!nocgo
 
 package crypto
 

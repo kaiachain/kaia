@@ -7,7 +7,6 @@
 // Modified and improved for the klaytn development.
 
 //go:build gofuzz
-// +build gofuzz
 
 package bn256
 

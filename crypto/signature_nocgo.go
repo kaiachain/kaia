@@ -21,7 +21,6 @@
 // Modified and improved for the Kaia development.
 
 //go:build nacl || js || !cgo || gofuzz
-// +build nacl js !cgo gofuzz
 
 package crypto
 

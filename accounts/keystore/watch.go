@@ -21,7 +21,6 @@
 // Modified and improved for the Kaia development.
 
 //go:build (darwin && !ios) || freebsd || (linux && !arm64) || netbsd || solaris
-// +build darwin,!ios freebsd linux,!arm64 netbsd solaris
 
 package keystore
 

@@ -21,7 +21,6 @@
 // Modified and improved for the Kaia development.
 
 //go:build none
-// +build none
 
 /*
 The mkalloc tool creates the genesis allocation constants in genesis_alloc.go

@@ -4,7 +4,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build appengine || js
-// +build appengine js
 
 package term
 
