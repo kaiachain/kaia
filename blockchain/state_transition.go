@@ -119,7 +119,7 @@ type Message interface {
 	Type() types.TxType
 
 	// Validate performs additional validation for each transaction type
-	Validate(stateDB types.StateDB, currentBlockNumber uint64) error
+	Validate(stateDB types.StateDB, signer types.Signer, currentBlockNumber uint64, checkMutableValue bool) error
 
 	// Execute performs execution of the transaction according to the transaction type.
 	Execute(vm types.VM, stateDB types.StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error)

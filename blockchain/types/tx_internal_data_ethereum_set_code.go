@@ -351,17 +351,14 @@ func (t *TxInternalDataEthereumSetCode) EthTxHash() common.Hash {
 	})
 }
 
-func (t *TxInternalDataEthereumSetCode) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-		return kerrors.ErrPrecompiledContractAddress
+func (t *TxInternalDataEthereumSetCode) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
+	if !onlyMutableChecks {
+		if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+			return kerrors.ErrPrecompiledContractAddress
+		}
 	}
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataEthereumSetCode) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	return nil
 }
-
 func (t *TxInternalDataEthereumSetCode) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
 }

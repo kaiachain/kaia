@@ -272,11 +272,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) FeePayerSigHash(chain
 	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	if err := validate7702(stateDB, t.Type(), t.From, t.Recipient); err != nil {
 		return err
 	}

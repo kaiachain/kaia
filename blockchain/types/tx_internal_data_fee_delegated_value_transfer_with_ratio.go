@@ -270,14 +270,12 @@ func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) FeePayerSigHash(chain
 	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-		return kerrors.ErrPrecompiledContractAddress
+func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
+	if !onlyMutableChecks {
+		if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+			return kerrors.ErrPrecompiledContractAddress
+		}
 	}
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransferWithRatio) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	if err := validate7702(stateDB, t.Type(), t.From, t.Recipient); err != nil {
 		return err
 	}

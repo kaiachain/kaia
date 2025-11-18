@@ -223,14 +223,12 @@ func (t *TxInternalDataValueTransferMemo) SigHash(chainId *big.Int) common.Hash 
 	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
-func (t *TxInternalDataValueTransferMemo) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-		return kerrors.ErrPrecompiledContractAddress
+func (t *TxInternalDataValueTransferMemo) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
+	if !onlyMutableChecks {
+		if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+			return kerrors.ErrPrecompiledContractAddress
+		}
 	}
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataValueTransferMemo) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	if err := validate7702(stateDB, t.Type(), t.From, t.Recipient); err != nil {
 		return err
 	}

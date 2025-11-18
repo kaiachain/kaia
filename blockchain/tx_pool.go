@@ -976,7 +976,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	// Validate accountKey when the this create or update an account
 	// Validate the existence of the address which will be created though this Tx
 	// Validate a contract account whether it is executable
-	if err := tx.Validate(pool.currentState, pool.currentBlockNumber); err != nil {
+	if err := tx.Validate(pool.currentState, pool.signer, pool.currentBlockNumber, false); err != nil {
 		return err
 	}
 
