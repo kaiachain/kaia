@@ -23,7 +23,6 @@
 package work
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -1043,13 +1042,13 @@ func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
 	}
 
 	if env.tcount == 0 {
-		return bundle.TargetTxHash != common.Hash{}, errors.New("absent of target tx hash")
+		return bundle.TargetTxHash != common.Hash{}, fmt.Errorf("target tx %s does not precede the bundle", bundle.TargetTxHash.Hex())
 	} else {
 		if bundle.TargetTxHash != env.txs[env.tcount-1].Hash() {
 			return true, fmt.Errorf("target tx %s does not precede the bundle", bundle.TargetTxHash.Hex())
 		}
 		if env.receipts[env.tcount-1].Status != types.ReceiptStatusSuccessful {
-			return true, fmt.Errorf("target tx %s failed with status %d", bundle.TargetTxHash.Hex(), env.receipts[env.tcount-1].Status))
+			return true, fmt.Errorf("target tx %s failed with status %d", bundle.TargetTxHash.Hex(), env.receipts[env.tcount-1].Status)
 		}
 	}
 	return false, nil
