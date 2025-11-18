@@ -265,7 +265,7 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) IntrinsicGas(cur
 	return gasPayloadWithGas, nil
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64, checkMutableValue bool) error {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoringWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	return nil
 }
 

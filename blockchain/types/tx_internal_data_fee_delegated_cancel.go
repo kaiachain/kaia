@@ -220,7 +220,7 @@ func (t *TxInternalDataFeeDelegatedCancel) FeePayerSigHash(chainId *big.Int) com
 	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedCancel) Validate(stateDB StateDB, currentBlockNumber uint64, checkMutableValue bool) error {
+func (t *TxInternalDataFeeDelegatedCancel) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	return nil
 }
 

@@ -317,8 +317,8 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) FeePayerSigHash
 	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64, checkMutableValue bool) error {
-	if !checkMutableValue {
+func (t *TxInternalDataFeeDelegatedSmartContractDeployWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
+	if !onlyMutableChecks {
 		var to common.Address
 		if t.Recipient != nil {
 			return kerrors.ErrInvalidContractAddress

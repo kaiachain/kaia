@@ -272,8 +272,8 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemo) FeePayerSigHash(chainId *b
 	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemo) Validate(stateDB StateDB, currentBlockNumber uint64, checkMutableValue bool) error {
-	if !checkMutableValue {
+func (t *TxInternalDataFeeDelegatedValueTransferMemo) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
+	if !onlyMutableChecks {
 		if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
 			return kerrors.ErrPrecompiledContractAddress
 		}

@@ -197,7 +197,7 @@ func (t *TxInternalDataChainDataAnchoring) IntrinsicGas(currentBlockNumber uint6
 	return gasPayloadWithGas, nil
 }
 
-func (t *TxInternalDataChainDataAnchoring) Validate(stateDB StateDB, currentBlockNumber uint64, checkMutableValue bool) error {
+func (t *TxInternalDataChainDataAnchoring) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	return nil
 }
 

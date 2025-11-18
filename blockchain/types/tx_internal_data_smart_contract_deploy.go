@@ -245,8 +245,8 @@ func (t *TxInternalDataSmartContractDeploy) SigHash(chainId *big.Int) common.Has
 	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
-func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB, currentBlockNumber uint64, checkMutableValue bool) error {
-	if !checkMutableValue {
+func (t *TxInternalDataSmartContractDeploy) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
+	if !onlyMutableChecks {
 		var to common.Address
 		if t.Recipient != nil {
 			return kerrors.ErrInvalidContractAddress

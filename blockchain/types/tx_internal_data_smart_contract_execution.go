@@ -222,7 +222,7 @@ func (t *TxInternalDataSmartContractExecution) SigHash(chainId *big.Int) common.
 	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
-func (t *TxInternalDataSmartContractExecution) Validate(stateDB StateDB, currentBlockNumber uint64, checkMutableValue bool) error {
+func (t *TxInternalDataSmartContractExecution) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	if err := validate7702(stateDB, t.Type(), t.From, t.Recipient); err != nil {
 		return err
 	}
