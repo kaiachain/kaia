@@ -732,7 +732,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	)
 
 	// Limit the execution time of all transactions in a block
-	var abort int32 = 0            // To break the below commitTransaction for loop when timed out
+	var abort int32 = 0            // To break the below `CommitTransactionLoop` for loop when timed out
 	var isExecutingBundleTxs int32 // To wait for abort while the bundle is running
 	chDone := make(chan bool)      // To stop the goroutine below when processing txs is completed
 
@@ -779,7 +779,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	var numTxsNonceTooLow int64 = 0
 	var numTxsNonceTooHigh int64 = 0
 	var numTxsGasLimitReached int64 = 0
-	txAbortedByTimeLimit := false
+	txAbortedByTimeLimit := false // indicate that first tx is elapsed over execution time budget
 CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
 		// Retrieve the next transaction and abort if all done
@@ -931,12 +931,12 @@ CommitTransactionLoop:
 				"executedTxs", env.tcount,
 				"unexecutedTxs", len(incorporatedTxs),
 				"unexecutedBundles", len(bundles),
-				"firstDroppedTxHash", txHash.String(),
-				"isFirstDroppedTxBundle", builder.FindBundleIdx(bundles, txOrGen) != -1,
+				"firstUnexecutedTxHash", txHash.String(),
+				"firstUnexecutedTxInBundle", builder.FindBundleIdx(bundles, txOrGen) != -1,
 			)
 		}
 		if !txAbortedByTimeLimit && env.tcount == 1 && len(arrayTxs) > 0 {
-			logger.Error("A single transaction exceeds total time limit", "hash", arrayTxs[0].Hash().String())
+			logger.Warn("A single transaction exceeds total time limit", "hash", arrayTxs[0].Hash().String())
 			tooLongTxCounter.Inc(1)
 		}
 	}
