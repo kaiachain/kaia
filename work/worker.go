@@ -917,6 +917,13 @@ CommitTransactionLoop:
 		}
 	}
 
+	// Case 1: Single long tx
+	//   T0 (executing tx) ------- T_limit --> abort=1 (but let T0 finish)
+	//   Result: txAbortedByTimeLimit=false, tcount=1 → Log "single transaction exceeds limit"
+	//
+	// Case 2: Multiple txs, limit hit after first tx
+	//   T0 -- ... -- TN (executing tx) -- T_limit --> abort=1 (cancel TN immediately)
+	//   Result: txAbortedByTimeLimit=true, tcount=N → Log "unexecuted transactions due to time limit"
 	if atomic.LoadInt32(&abort) == 1 {
 		timeLimitReachedCounter.Inc(1)
 		var txHash common.Hash
