@@ -779,7 +779,8 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	var numTxsNonceTooLow int64 = 0
 	var numTxsNonceTooHigh int64 = 0
 	var numTxsGasLimitReached int64 = 0
-	txAbortedByTimeLimit := false // indicate that first tx is elapsed over execution time budget
+	txAbortedByTimeLimit := false // is true when a transaction was aborted mid-execution due to time limit. Note that the first transaction or first bundle of a block does not abort.
+
 CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
 		// Retrieve the next transaction and abort if all done
