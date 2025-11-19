@@ -919,7 +919,7 @@ CommitTransactionLoop:
 
 	// Case 1: Single long tx
 	//   T0 (executing tx) ------- T_limit --> abort=1 (but let T0 finish)
-	//   Result: txAbortedByTimeLimit=false, tcount=1 → Log "single transaction exceeds limit"
+	//   Result: txAbortedByTimeLimit=false, tcount=1 → Log "unexecuted transactions due to time limit" and "A single transaction exceeds limit"
 	//
 	// Case 2: Multiple txs, limit hit after first tx
 	//   T0 -- ... -- TN (executing tx) -- T_limit --> abort=1 (cancel TN immediately)
