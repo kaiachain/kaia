@@ -765,6 +765,13 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 				if env.tcount > 0 && atomic.LoadInt32(&isExecutingBundleTxs) == 0 {
 					// The total time limit reached, thus we stop the currently running EVM.
 					evm.Cancel(vm.CancelByTotalTimeLimit)
+				} else if env.tcount == 0 && len(arrayTxs) > 0 {
+					// Case 'Single long tx':
+					//   T0 (executing tx) ------- T_limit --> abort=1 (but let T0 finish)
+					//   Result: tcount=0 → Log "A single transaction exceeds limit" and "unexecuted transactions due to time limit"
+					//
+					logger.Warn("A single transaction exceeds total time limit", "hash", arrayTxs[0].Hash().String())
+					tooLongTxCounter.Inc(1)
 				}
 				evm = nil
 			}
@@ -779,7 +786,6 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	var numTxsNonceTooLow int64 = 0
 	var numTxsNonceTooHigh int64 = 0
 	var numTxsGasLimitReached int64 = 0
-	txAbortedByTimeLimit := false // is true when a transaction was aborted mid-execution due to time limit. Note that the first transaction or first bundle of a block does not abort.
 
 CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
@@ -879,7 +885,6 @@ CommitTransactionLoop:
 
 		case vm.ErrTotalTimeLimitReached:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
-			txAbortedByTimeLimit = true
 			// NOTE-Kaia Exit for loop immediately without checking abort variable again.
 			break CommitTransactionLoop
 
@@ -917,13 +922,9 @@ CommitTransactionLoop:
 		}
 	}
 
-	// Case 1: Single long tx
-	//   T0 (executing tx) ------- T_limit --> abort=1 (but let T0 finish)
-	//   Result: txAbortedByTimeLimit=false, tcount=1 → Log "unexecuted transactions due to time limit" and "A single transaction exceeds limit"
-	//
-	// Case 2: Multiple txs, limit hit after first tx
+	// Case 'Multiple txs, limit hit after first tx':
 	//   T0 -- ... -- TN (executing tx) -- T_limit --> abort=1 (cancel TN immediately)
-	//   Result: txAbortedByTimeLimit=true, tcount=N → Log "unexecuted transactions due to time limit"
+	//   Result: tcount=N → Log "unexecuted transactions due to time limit"
 	if atomic.LoadInt32(&abort) == 1 {
 		timeLimitReachedCounter.Inc(1)
 		var txHash common.Hash
@@ -942,10 +943,6 @@ CommitTransactionLoop:
 				"firstUnexecutedTxHash", txHash.String(),
 				"firstUnexecutedTxInBundle", builder.FindBundleIdx(bundles, txOrGen) != -1,
 			)
-		}
-		if !txAbortedByTimeLimit && env.tcount == 1 && len(arrayTxs) > 0 {
-			logger.Warn("A single transaction exceeds total time limit", "hash", arrayTxs[0].Hash().String())
-			tooLongTxCounter.Inc(1)
 		}
 	}
 
