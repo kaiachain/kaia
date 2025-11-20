@@ -5,8 +5,11 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 )
+
+var logger = log.NewModuleLogger(log.KaiaxGov)
 
 type PartialParamSet map[ParamName]any
 
@@ -38,6 +41,7 @@ func GetDefaultGovernanceParamSet() *ParamSet {
 	for name, param := range Params {
 		err := ps.Set(name, param.DefaultValue)
 		if err != nil {
+			logger.Error("GetDefaultGovernanceParamSet error", "name", name, "value", param)
 			return nil
 		}
 	}
@@ -47,7 +51,10 @@ func GetDefaultGovernanceParamSet() *ParamSet {
 
 // Set the canonical value in the ParamSet for the corresponding parameter name.
 func (p *ParamSet) Set(name ParamName, cv any) error {
-	var ok bool
+	var (
+		tmp *big.Int
+		ok  bool
+	)
 	switch name {
 	case GovernanceGovernanceMode:
 		p.GovernanceMode, ok = cv.(string)
@@ -78,9 +85,13 @@ func (p *ParamSet) Set(name ParamName, cv any) error {
 	case RewardKip82Ratio:
 		p.Kip82Ratio, ok = cv.(string)
 	case RewardMintingAmount:
-		p.MintingAmount, ok = cv.(*big.Int)
+		if tmp, ok = cv.(*big.Int); ok {
+			p.MintingAmount = new(big.Int).Set(tmp)
+		}
 	case RewardMinimumStake:
-		p.MinimumStake, ok = cv.(*big.Int)
+		if tmp, ok = cv.(*big.Int); ok {
+			p.MinimumStake = new(big.Int).Set(tmp)
+		}
 	case RewardProposerUpdateInterval:
 		p.ProposerUpdateInterval, ok = cv.(uint64)
 	case RewardRatio:
