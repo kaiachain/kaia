@@ -23,6 +23,7 @@
 package work
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 	"strconv"
@@ -722,12 +723,16 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 }
 
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
-	arrayTxs := builder.Arrayify(txs)
-	incorporatedTxs, bundles := builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
-	var coalescedLogs []*types.Log
+	var (
+		arrayTxs                 = builder.Arrayify(txs)
+		incorporatedTxs, bundles = builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
+		totalTxs                 = len(incorporatedTxs)
+		totalBundles             = len(bundles)
+		coalescedLogs            []*types.Log
+	)
 
 	// Limit the execution time of all transactions in a block
-	var abort int32 = 0            // To break the below commitTransaction for loop when timed out
+	var abort int32 = 0            // To break the below `CommitTransactionLoop` for loop when timed out
 	var isExecutingBundleTxs int32 // To wait for abort while the bundle is running
 	chDone := make(chan bool)      // To stop the goroutine below when processing txs is completed
 
@@ -760,6 +765,13 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 				if env.tcount > 0 && atomic.LoadInt32(&isExecutingBundleTxs) == 0 {
 					// The total time limit reached, thus we stop the currently running EVM.
 					evm.Cancel(vm.CancelByTotalTimeLimit)
+				} else if env.tcount == 0 && len(arrayTxs) > 0 {
+					// Case 'Single long tx':
+					//   T0 (executing tx) ------- T_limit --> abort=1 (but let T0 finish)
+					//   Result: tcount=0 → Log "A single transaction exceeds limit" and "unexecuted transactions due to time limit"
+					//
+					logger.Warn("A single transaction exceeds total time limit", "hash", arrayTxs[0].Hash().String())
+					tooLongTxCounter.Inc(1)
 				}
 				evm = nil
 			}
@@ -774,6 +786,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	var numTxsNonceTooLow int64 = 0
 	var numTxsNonceTooHigh int64 = 0
 	var numTxsGasLimitReached int64 = 0
+
 CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
 		// Retrieve the next transaction and abort if all done
@@ -800,8 +813,8 @@ CommitTransactionLoop:
 			// Skip this bundle if target is required but either:
 			// 1. The previous transaction hash doesn't match the target hash, or
 			// 2. The previous transaction failed (receipt status not successful)
-			if env.shouldDiscardBundle(targetBundle) {
-				logger.Trace("Skipping bundle due to invalid target tx", "target tx", targetBundle.TargetTxHash.String(), "bundle tx", txOrGen.Id.String(), "numShift", numShift)
+			if discard, err := env.shouldDiscardBundle(targetBundle); discard {
+				logger.Warn("Skipping bundle due to invalid target tx", "err", err.Error(), "target tx", targetBundle.TargetTxHash.String(), "bundle tx", txOrGen.Id.String(), "numShift", numShift)
 				builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 				continue
 			}
@@ -872,11 +885,6 @@ CommitTransactionLoop:
 
 		case vm.ErrTotalTimeLimitReached:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
-			timeLimitReachedCounter.Inc(1)
-			if env.tcount == 0 {
-				logger.Error("A single transaction exceeds total time limit", "hash", tx.Hash().String())
-				tooLongTxCounter.Inc(1)
-			}
 			// NOTE-Kaia Exit for loop immediately without checking abort variable again.
 			break CommitTransactionLoop
 
@@ -911,6 +919,30 @@ CommitTransactionLoop:
 		if len(targetBundle.BundleTxs) != 0 {
 			// After the last tx in the bundle finishes, set executingBundleTxs back to 0.
 			atomic.StoreInt32(&isExecutingBundleTxs, 0)
+		}
+	}
+
+	// Case 'Multiple txs, limit hit after first tx':
+	//   T0 -- ... -- TN (executing tx) -- T_limit --> abort=1 (cancel TN immediately)
+	//   Result: tcount=N → Log "unexecuted transactions due to time limit"
+	if atomic.LoadInt32(&abort) == 1 {
+		timeLimitReachedCounter.Inc(1)
+		var txHash common.Hash
+		if len(incorporatedTxs) > 0 {
+			txOrGen := incorporatedTxs[0]
+			tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
+			if err == nil {
+				txHash = tx.Hash()
+			}
+			logger.Warn("Unexecuted transactions due to time limit",
+				"totalTxs", totalTxs,
+				"totalBundles", totalBundles,
+				"executedTxs", env.tcount,
+				"unexecutedTxs", len(incorporatedTxs),
+				"unexecutedBundles", len(bundles),
+				"firstUnexecutedTxHash", txHash.String(),
+				"firstUnexecutedTxInBundle", builder.FindBundleIdx(bundles, txOrGen) != -1,
+			)
 		}
 	}
 
@@ -1015,17 +1047,22 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	return nil, nil, logs
 }
 
-func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) bool {
+func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
 	if !bundle.TargetRequired {
-		return false
+		return false, nil
 	}
-
 	if env.tcount == 0 {
-		return bundle.TargetTxHash != common.Hash{}
+		return bundle.TargetTxHash != common.Hash{}, fmt.Errorf("target tx %s does not precede the bundle", bundle.TargetTxHash.Hex())
 	} else {
-		return !(bundle.TargetTxHash == env.txs[env.tcount-1].Hash() &&
-			env.receipts[env.tcount-1].Status == types.ReceiptStatusSuccessful)
+		// if `env.tcount` is not zero, the `bundle.TargetTxHash` must not be empty hash
+		if bundle.TargetTxHash != env.txs[env.tcount-1].Hash() {
+			return true, fmt.Errorf("target tx %s does not precede the bundle", bundle.TargetTxHash.Hex())
+		}
+		if env.receipts[env.tcount-1].Status != types.ReceiptStatusSuccessful {
+			return true, fmt.Errorf("target tx %s failed with status %d", bundle.TargetTxHash.Hex(), env.receipts[env.tcount-1].Status)
+		}
 	}
+	return false, nil
 }
 
 func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, header *types.Header) *Task {
