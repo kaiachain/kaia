@@ -133,22 +133,6 @@ func CalcStakingBlockNumber(blockNum uint64) uint64 {
 	return number
 }
 
-func IsProposerUpdateInterval(blockNum uint64) (bool, uint64) {
-	proposerInterval := ProposerUpdateInterval()
-	return (blockNum % proposerInterval) == 0, proposerInterval
-}
-
-// CalcProposerBlockNumber returns number of block where list of proposers is updated for block blockNum
-func CalcProposerBlockNumber(blockNum uint64) uint64 {
-	var number uint64
-	if isInterval, proposerInterval := IsProposerUpdateInterval(blockNum); isInterval {
-		number = blockNum - proposerInterval
-	} else {
-		number = blockNum - (blockNum % proposerInterval)
-	}
-	return number
-}
-
 func SetStakingUpdateInterval(num uint64) {
 	atomic.StoreUint64(&stakingUpdateInterval, num)
 }

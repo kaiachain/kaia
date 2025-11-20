@@ -46,43 +46,6 @@ func TestSetStakingUpdateInterval(t *testing.T) {
 	}
 }
 
-func TestIsProposerUpdateInterval(t *testing.T) {
-	testCase := []struct {
-		interval uint64
-		blockNu  uint64
-		result   bool
-	}{
-		{10, 3, false},
-		{10, 10, true},
-		{10, 11, false},
-		{10, 20, true},
-		{10, 21, false},
-		{100, 99, false},
-		{100, 100, true},
-		{100, 101, false},
-		{100, 200, true},
-		{100, 201, false},
-		{3600, 3599, false},
-		{3600, 3600, true},
-		{3600, 3601, false},
-		{3600, 7200, true},
-		{3600, 7201, false},
-		{3600, 36000, true},
-		{3600, 36001, false},
-	}
-
-	for i := 0; i < len(testCase); i++ {
-		SetProposerUpdateInterval(testCase[i].interval)
-
-		result, _ := IsProposerUpdateInterval(testCase[i].blockNu)
-
-		if result != testCase[i].result {
-			t.Errorf("The result is different from the expected result. Result : %v, Expected : %v, block number : %v, update interval : %v",
-				result, testCase[i].result, testCase[i].blockNu, testCase[i].interval)
-		}
-	}
-}
-
 func TestIsStakingUpdatePossible(t *testing.T) {
 	testCase := []struct {
 		interval uint64
