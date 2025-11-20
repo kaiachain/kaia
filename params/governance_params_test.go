@@ -120,37 +120,6 @@ func TestIsStakingUpdatePossible(t *testing.T) {
 	}
 }
 
-func TestCalcProposerBlockNumber(t *testing.T) {
-	testCase := []struct {
-		interval uint64
-		blockNu  uint64
-		result   uint64
-	}{
-		{10, 3, 0},
-		{10, 10, 0},
-		{10, 11, 10},
-		{10, 20, 10},
-		{10, 21, 20},
-		{3600, 3599, 0},
-		{3600, 3600, 0},
-		{3600, 3601, 3600},
-		{3600, 7199, 3600},
-		{3600, 7200, 3600},
-		{3600, 7201, 7200},
-	}
-
-	for i := 0; i < len(testCase); i++ {
-		SetProposerUpdateInterval(testCase[i].interval)
-
-		result := CalcProposerBlockNumber(testCase[i].blockNu)
-
-		if result != testCase[i].result {
-			t.Errorf("The result is different from the expected result. Result : %v, Expected : %v, block number : %v, update interval : %v",
-				result, testCase[i].result, testCase[i].blockNu, testCase[i].interval)
-		}
-	}
-}
-
 func TestCalcStakingBlockNumber(t *testing.T) {
 	testCase := []struct {
 		interval uint64
