@@ -27,7 +27,6 @@ kip71.lowerboundbasefee
 kip71.maxblockgasusedforbasefee
 kip71.upperboundbasefee
 reward.kip82ratio
-
 reward.mintingamount
 reward.ratio
 
@@ -43,6 +42,11 @@ reward.useginicoeff: true
 ```
 
 This module utilizes [header governance](./headergov/README.md) and [contract governance](./contractgov/README.md) underneath to fetch the parameter set and to handle governance parameter updates.
+Parameters are aggregated from multiple locations following a specific precedence:
+
+![gov_precedence](./gov_precedence.png)
+
+In code (where `merge` respects new values):
 
 ```
 GetParamSet(blockNum):
@@ -119,7 +123,8 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
 
 ### kaia_getChainConfig
 
-Returns the chain config at the block `num`.
+Returns the governance parameter set at the block `num` in the chain config format.
+The values of deprecated governance parameters (`proposerupdateinterval`, `stakingupdateinterval`, `useginicoeff`) are patched and displayed.
 
 - Parameters:
   - `num`: block number
@@ -136,6 +141,7 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
 ### governance_getParams
 
 Returns the effective parameter set at the block `num`.
+The values of deprecated governance parameters (`proposerupdateinterval`, `stakingupdateinterval`, `useginicoeff`) are patched and displayed.
 
 - Parameters:
   - `num`: block number
@@ -182,6 +188,7 @@ Returns the rewards at the block `num`.
 - Returns
   - `RewardSpec`: rewards
 - Example
+
 ```
 curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data '
   {"jsonrpc":"2.0","id":1,"method":"kaia_getRewards","params":["0x10"]}' | jq '.result'
@@ -199,7 +206,6 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
 }
 ```
 
-
 ### kaia_nodeAddress, governance_nodeAddress
 
 Returns the node address.
@@ -214,7 +220,6 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
   {"jsonrpc":"2.0","id":1,"method":"governance_nodeAddress","params":[]}' | jq '.result'
 "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 ```
-
 
 ## Getters
 
