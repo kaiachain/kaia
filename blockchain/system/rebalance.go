@@ -113,7 +113,7 @@ func (caller *Kip103ContractCaller) CallContract(ctx context.Context, call kaia.
 	// call.To: the target contract address will be assigned by `BoundContract`
 	// call.Value: nil value is acceptable for `types.NewMessage`
 	// call.Data: a proper value will be assigned by `BoundContract`
-	// No need to handle acccess list here
+	// No need to handle access list here
 
 	// To fix 0x0 nonce increase, uncomment next line to generate state instance whenever it is called
 	// But for backward compatibility after hardfork, remain this code as commented
@@ -207,7 +207,7 @@ func (result *rebalanceResult) fillZeroed(contract RebalanceCaller, state *state
 			return err
 		}
 		result.Before.Zeroed[ret] = state.GetBalance(ret)
-		result.After.Zeroed[ret] = state.GetBalance(ret) // will be set as zero if rebalance suceed
+		result.After.Zeroed[ret] = state.GetBalance(ret) // will be set as zero if rebalance succeeds
 	}
 	return nil
 }
