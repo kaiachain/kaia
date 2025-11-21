@@ -415,7 +415,11 @@ func newTxInternalDataEthereumBlobWithMap(values map[TxValueKeyType]interface{})
 		return nil, errValueKeyDataMustByteSlice
 	}
 	if v, ok := values[TxValueKeySidecar].(*BlobTxSidecar); ok {
-		d.Sidecar = v.Copy()
+		if v == nil {
+			d.Sidecar = nil
+		} else {
+			d.Sidecar = v.Copy()
+		}
 		delete(values, TxValueKeySidecar)
 	} else {
 		return nil, errValueKeySidecarInvalid
@@ -702,7 +706,8 @@ func (tx *TxInternalDataEthereumBlob) withSidecar(sideCar *BlobTxSidecar) *TxInt
 func (tx *TxInternalDataEthereumBlob) EncodeRLP(w io.Writer) error {
 	switch {
 	case tx.Sidecar == nil:
-		return rlp.Encode(w, tx)
+		blobSerializable := tx.toBlobTxSerializable()
+		return rlp.Encode(w, blobSerializable)
 
 	case tx.Sidecar.Version == BlobSidecarVersion0:
 		return rlp.Encode(w, &blobTxWithBlobsV0{
@@ -761,7 +766,12 @@ func (tx *TxInternalDataEthereumBlob) DecodeRLP(s *rlp.Stream) error {
 	}
 	if firstElemKind != rlp.List {
 		// Blob tx without blobs.
-		return rlp.DecodeBytes(input, tx)
+		blobSerializable := new(TxInternalDataEthereumBlobSerializable)
+		if err := rlp.DecodeBytes(input, blobSerializable); err != nil {
+			return err
+		}
+		*tx = *blobSerializable.toBlobTx()
+		return nil
 	}
 
 	// Now we know it's the network encoding with the blob sidecar. Here we again need to
