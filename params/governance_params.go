@@ -22,11 +22,6 @@ import (
 	"math/big"
 )
 
-var (
-	stakingUpdateInterval  uint64 = DefaultStakeUpdateInterval
-	proposerUpdateInterval uint64 = DefaultProposerRefreshInterval
-)
-
 const (
 	// Block reward will be separated by three pieces and distributed
 	RewardSliceCount      = 3
