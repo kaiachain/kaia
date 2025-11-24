@@ -114,16 +114,14 @@ func dummyPeer(id string) *peerConnection {
 }
 
 func TestBasics(t *testing.T) {
-	// set test staking update interval
-	orig := params.StakingUpdateInterval()
-	params.SetStakingUpdateInterval(testInterval)
-	defer params.SetStakingUpdateInterval(orig)
-
 	numOfBlocks := len(chain.blocks)
 	numOfReceipts := len(chain.blocks) / 2
 	numOfStakingInfos := len(chain.stakingInfos)
 
-	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), nil)
+	config := params.TestChainConfig.Copy()
+	config.Governance.Reward.StakingUpdateInterval = testInterval
+	config.KaiaCompatibleBlock = nil
+	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), config)
 	if !q.Idle() {
 		t.Errorf("new queue should be idle")
 	}
@@ -254,12 +252,8 @@ func TestBasics(t *testing.T) {
 }
 
 func TestScheduleAfterKaia(t *testing.T) {
-	// set test staking update interval
-	orig := params.StakingUpdateInterval()
-	params.SetStakingUpdateInterval(testInterval)
-	defer params.SetStakingUpdateInterval(orig)
-
-	config := params.TestChainConfig
+	config := params.TestChainConfig.Copy()
+	config.Governance.Reward.StakingUpdateInterval = testInterval
 	config.KaiaCompatibleBlock = big.NewInt(21)
 
 	numOfStakingInfos := 5 // [4, 8, 12, 16, 20]; After kaia fork, it won't be scheduled.
@@ -301,15 +295,13 @@ func TestScheduleAfterKaia(t *testing.T) {
 }
 
 func TestEmptyBlocks(t *testing.T) {
-	// set test staking update interval
-	orig := params.StakingUpdateInterval()
-	params.SetStakingUpdateInterval(testInterval)
-	defer params.SetStakingUpdateInterval(orig)
-
 	numOfBlocks := len(emptyChain.blocks)
 	numOfStakingInfos := len(emptyChain.stakingInfos)
+	config := params.TestChainConfig.Copy()
+	config.Governance.Reward.StakingUpdateInterval = testInterval
+	config.KaiaCompatibleBlock = nil
 
-	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), nil)
+	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), config)
 
 	q.Prepare(1, FastSync)
 	// Schedule a batch of headers

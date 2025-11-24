@@ -112,36 +112,6 @@ var (
 	DefaultDeriveShaImpl             = uint64(0)     // Orig
 )
 
-func IsStakingUpdateInterval(blockNum uint64) bool {
-	return (blockNum % StakingUpdateInterval()) == 0
-}
-
-// CalcStakingBlockNumber returns number of block which contains staking information required to make a new block with blockNum.
-func CalcStakingBlockNumber(blockNum uint64) uint64 {
-	stakingInterval := StakingUpdateInterval()
-	if blockNum <= 2*stakingInterval {
-		// Just return genesis block number.
-		return 0
-	}
-
-	var number uint64
-	if (blockNum % stakingInterval) == 0 {
-		number = blockNum - 2*stakingInterval
-	} else {
-		number = blockNum - stakingInterval - (blockNum % stakingInterval)
-	}
-	return number
-}
-
-func SetStakingUpdateInterval(num uint64) {
-	atomic.StoreUint64(&stakingUpdateInterval, num)
-}
-
-func StakingUpdateInterval() uint64 {
-	ret := atomic.LoadUint64(&stakingUpdateInterval)
-	return ret
-}
-
 func SetProposerUpdateInterval(num uint64) {
 	atomic.StoreUint64(&proposerUpdateInterval, num)
 }
