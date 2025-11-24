@@ -130,7 +130,6 @@ func initGenesis(ctx *cli.Context) error {
 
 	// Set genesis.Governance and reward intervals
 	genesis.Governance = headergov_impl.GetGenesisGovBytes(genesis.Config)
-	params.SetProposerUpdateInterval(genesis.Config.Governance.Reward.ProposerUpdateInterval)
 
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)

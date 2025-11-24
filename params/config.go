@@ -678,7 +678,7 @@ func (c *ChainConfig) SetDefaultsForGenesis() {
 
 	// ProposerUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.ProposerUpdateInterval == 0 {
-		c.Governance.Reward.ProposerUpdateInterval = ProposerUpdateInterval()
+		c.Governance.Reward.ProposerUpdateInterval = DefaultProposerRefreshInterval
 		logger.Warn("Override the default proposer update interval to the chain config", "interval",
 			c.Governance.Reward.ProposerUpdateInterval)
 	}

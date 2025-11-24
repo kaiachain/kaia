@@ -20,7 +20,6 @@ package params
 
 import (
 	"math/big"
-	"sync/atomic"
 )
 
 var (
@@ -111,15 +110,6 @@ var (
 	DefaultProposerRefreshInterval   = uint64(3600)  // 1 hour
 	DefaultDeriveShaImpl             = uint64(0)     // Orig
 )
-
-func SetProposerUpdateInterval(num uint64) {
-	atomic.StoreUint64(&proposerUpdateInterval, num)
-}
-
-func ProposerUpdateInterval() uint64 {
-	ret := atomic.LoadUint64(&proposerUpdateInterval)
-	return ret
-}
 
 func IsCheckpointInterval(blockNum uint64) bool {
 	return blockNum != 0 && blockNum%CheckpointInterval == 0
