@@ -111,25 +111,6 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 	return config
 }
 
-// checkStateForStakingInfo checks the state of block for the given block number for staking info
-func checkStateForStakingInfo(g *GovModule, blockNumber uint64) error {
-	if blockNumber == 0 {
-		return nil
-	}
-
-	// The staking info at blockNumber is calculated by the state of previous block
-	blockNumber--
-	if !g.Chain.Config().IsKaiaForkEnabled(big.NewInt(int64(blockNumber + 1))) {
-		return nil
-	}
-	header := g.Chain.GetHeaderByNumber(blockNumber)
-	if header == nil {
-		return gov.ErrUnknownBlock
-	}
-	_, err := g.Chain.StateAt(header.Root)
-	return err
-}
-
 func getParams(g *GovModule, num *rpc.BlockNumber) (gov.PartialParamSet, error) {
 	blockNumber := uint64(0)
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {

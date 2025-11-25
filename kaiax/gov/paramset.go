@@ -185,17 +185,6 @@ func (p *ParamSet) ToMap() map[ParamName]any {
 	return ret
 }
 
-// TODO: remove this. Currently it's used for GetRewards API.
-func (p *ParamSet) ToGovParamSet() *params.GovParamSet {
-	m := make(map[string]any)
-	for name, val := range p.ToMap() {
-		m[string(name)] = val
-	}
-
-	ps, _ := params.NewGovParamSetStrMap(m)
-	return ps
-}
-
 func (p *ParamSet) ToKip71Config() *params.KIP71Config {
 	return &params.KIP71Config{
 		LowerBoundBaseFee:         p.LowerBoundBaseFee,
