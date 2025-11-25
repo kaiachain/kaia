@@ -185,7 +185,7 @@ kcn account bls-info
 				utils.LightKDFFlag,
 			},
 			Description: `
-Export the BLS secret key from the default location (DATADIR/bls-nodekey)
+Encrypt the BLS secret key from the default location (DATADIR/bls-nodekey)
 to an EIP-2335 keystore bls-keystore-NODEID.json.
 
 EXAMPLES
@@ -429,7 +429,7 @@ func accountBlsImport(ctx *cli.Context) error {
 		blsPriv                = cfg.Node.BlsNodeKey()
 		scryptN, scryptP, _, _ = cfg.Node.AccountConfig()
 	)
-	fmt.Printf("Exporting BLS key: pub=%x\n", blsPriv.PublicKey().Marshal())
+	fmt.Printf("Importing BLS key: pub=%x\n", blsPriv.PublicKey().Marshal())
 
 	// Calculate filename from node address.
 	nodeAddr := crypto.PubkeyToAddress(nodeKey.PublicKey)
@@ -453,7 +453,7 @@ func accountBlsExport(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Importing BLS key: pub=%x\n", blsPriv.PublicKey().Marshal())
+	fmt.Printf("Exporting BLS key: pub=%x\n", blsPriv.PublicKey().Marshal())
 
 	// Parse CLI arguments in the same way as running a node.
 	_, cfg := utils.MakeConfigNode(ctx)
