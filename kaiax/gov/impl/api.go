@@ -91,24 +91,53 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 	pset := g.GetParamSet(blocknum)
 	rule := latestConfig.Rules(new(big.Int).SetUint64(blocknum))
 	pset = patchDeprecatedParams(pset, rule)
-	config := pset.ToGovParamSet().ToChainConfig()
-	config.ChainID = latestConfig.ChainID
-	config.IstanbulCompatibleBlock = latestConfig.IstanbulCompatibleBlock
-	config.LondonCompatibleBlock = latestConfig.LondonCompatibleBlock
-	config.EthTxTypeCompatibleBlock = latestConfig.EthTxTypeCompatibleBlock
-	config.MagmaCompatibleBlock = latestConfig.MagmaCompatibleBlock
-	config.KoreCompatibleBlock = latestConfig.KoreCompatibleBlock
-	config.ShanghaiCompatibleBlock = latestConfig.ShanghaiCompatibleBlock
-	config.CancunCompatibleBlock = latestConfig.CancunCompatibleBlock
-	config.KaiaCompatibleBlock = latestConfig.KaiaCompatibleBlock
-	config.Kip103CompatibleBlock = latestConfig.Kip103CompatibleBlock
-	config.Kip103ContractAddress = latestConfig.Kip103ContractAddress
-	config.Kip160CompatibleBlock = latestConfig.Kip160CompatibleBlock
-	config.Kip160ContractAddress = latestConfig.Kip160ContractAddress
-	config.RandaoCompatibleBlock = latestConfig.RandaoCompatibleBlock
-	config.PragueCompatibleBlock = latestConfig.PragueCompatibleBlock
-	config.OsakaCompatibleBlock = latestConfig.OsakaCompatibleBlock
-	return config
+	return &params.ChainConfig{
+		ChainID:                  latestConfig.ChainID,
+		IstanbulCompatibleBlock:  latestConfig.IstanbulCompatibleBlock,
+		LondonCompatibleBlock:    latestConfig.LondonCompatibleBlock,
+		EthTxTypeCompatibleBlock: latestConfig.EthTxTypeCompatibleBlock,
+		MagmaCompatibleBlock:     latestConfig.MagmaCompatibleBlock,
+		KoreCompatibleBlock:      latestConfig.KoreCompatibleBlock,
+		ShanghaiCompatibleBlock:  latestConfig.ShanghaiCompatibleBlock,
+		CancunCompatibleBlock:    latestConfig.CancunCompatibleBlock,
+		KaiaCompatibleBlock:      latestConfig.KaiaCompatibleBlock,
+		Kip103CompatibleBlock:    latestConfig.Kip103CompatibleBlock,
+		Kip103ContractAddress:    latestConfig.Kip103ContractAddress,
+		Kip160CompatibleBlock:    latestConfig.Kip160CompatibleBlock,
+		Kip160ContractAddress:    latestConfig.Kip160ContractAddress,
+		RandaoCompatibleBlock:    latestConfig.RandaoCompatibleBlock,
+		PragueCompatibleBlock:    latestConfig.PragueCompatibleBlock,
+		OsakaCompatibleBlock:     latestConfig.OsakaCompatibleBlock,
+		Istanbul: &params.IstanbulConfig{
+			Epoch:          pset.Epoch,
+			ProposerPolicy: pset.ProposerPolicy,
+			SubGroupSize:   pset.CommitteeSize,
+		},
+		UnitPrice:     pset.UnitPrice,
+		DeriveShaImpl: int(pset.DeriveShaImpl),
+		Governance: &params.GovernanceConfig{
+			GoverningNode:    pset.GoverningNode,
+			GovernanceMode:   pset.GovernanceMode,
+			GovParamContract: pset.GovParamContract,
+			Reward: &params.RewardConfig{
+				MintingAmount:          pset.MintingAmount,
+				Ratio:                  pset.Ratio,
+				Kip82Ratio:             pset.Kip82Ratio,
+				UseGiniCoeff:           pset.UseGiniCoeff,
+				DeferredTxFee:          pset.DeferredTxFee,
+				StakingUpdateInterval:  pset.StakingUpdateInterval,
+				ProposerUpdateInterval: pset.ProposerUpdateInterval,
+				MinimumStake:           pset.MinimumStake,
+			},
+			KIP71: &params.KIP71Config{
+				LowerBoundBaseFee:         pset.LowerBoundBaseFee,
+				UpperBoundBaseFee:         pset.UpperBoundBaseFee,
+				GasTarget:                 pset.GasTarget,
+				MaxBlockGasUsedForBaseFee: pset.MaxBlockGasUsedForBaseFee,
+				BaseFeeDenominator:        pset.BaseFeeDenominator,
+			},
+		},
+	}
 }
 
 func getParams(g *GovModule, num *rpc.BlockNumber) (gov.PartialParamSet, error) {
