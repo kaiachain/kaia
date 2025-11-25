@@ -41,7 +41,7 @@ func GetDefaultGovernanceParamSet() *ParamSet {
 	for name, param := range Params {
 		err := ps.Set(name, param.DefaultValue)
 		if err != nil {
-			logger.Error("GetDefaultGovernanceParamSet error", "name", name, "value", param)
+			logger.Error("GetDefaultGovernanceParamSet error", "name", name, "value", param.DefaultValue)
 			return nil
 		}
 	}
