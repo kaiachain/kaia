@@ -130,7 +130,6 @@ func (p *ParamSet) ToJSON() (string, error) {
 	return string(j), nil
 }
 
-// TODO: remove this. Currently it's used for kaia_getParams API.
 func (p *ParamSet) ToMap() map[ParamName]any {
 	ret := make(map[ParamName]any)
 
