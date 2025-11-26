@@ -89,7 +89,7 @@ func TestRegressionPanicSlice(t *testing.T) {
 	}
 }
 
-// TestRegressionPanicSlice tests that we don't panic on bad arguments to stack peeks
+// TestRegressionPanicPeek tests that we don't panic on bad arguments to stack peeks
 func TestRegressionPanicPeek(t *testing.T) {
 	tracer, err := New("{depths: [], step: function(log) { this.depths.push(log.stack.peek(-1)); }, fault: function() {}, result: function() { return this.depths; }}", new(Context), true)
 	if err != nil {
@@ -100,7 +100,7 @@ func TestRegressionPanicPeek(t *testing.T) {
 	}
 }
 
-// TestRegressionPanicSlice tests that we don't panic on bad arguments to memory getUint
+// TestRegressionPanicGetUint tests that we don't panic on bad arguments to memory getUint
 func TestRegressionPanicGetUint(t *testing.T) {
 	tracer, err := New("{ depths: [], step: function(log, db) { this.depths.push(log.memory.getUint(-64));}, fault: function() {}, result: function() { return this.depths; }}", new(Context), true)
 	if err != nil {

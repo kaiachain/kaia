@@ -698,7 +698,7 @@ func (sb *SubBridgeAPI) GetChildBridgeOperatorGasLimit() uint64 {
 	return sb.subBridge.bridgeAccounts.GetChildBridgeOperatorGasLimit()
 }
 
-// getParentGasPrice returns the recently synced parent chain's gas price
+// GetParentGasPrice returns the recently synced parent chain's gas price
 func (sb *SubBridgeAPI) GetParentGasPrice() uint64 {
 	return sb.subBridge.bridgeAccounts.GetParentGasPrice()
 }
