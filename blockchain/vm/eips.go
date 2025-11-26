@@ -314,6 +314,10 @@ func enable6780(jt *JumpTable) {
 }
 
 // opBlobHash implements the BLOBHASH opcode
+// This works as follows:
+// - Since Cancun: Must return zero.
+// - Since Osaka: Returns BlobHashes if the transaction is BlobTx.
+// Before Osaka, there was no BlobTx after all, so the logic below is applicable to before and after Osaka.
 func opBlobHash(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	index := scope.Stack.peek()
 	if index.LtUint64(uint64(len(interpreter.evm.TxContext.BlobHashes))) {
