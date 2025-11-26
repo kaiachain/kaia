@@ -260,12 +260,6 @@ func benchmarkComputeCellProofs(b *testing.B, ckzg bool) {
 	}
 }
 
-// goos: darwin
-// goarch: arm64
-// pkg: github.com/ethereum/go-ethereum/crypto/kzg4844
-// cpu: Apple M1 Max
-// BenchmarkCKZGVerifyCellProofs
-// BenchmarkCKZGVerifyCellProofs-10               8          19569214 ns/op
 func BenchmarkCKZGVerifyCellProofs(b *testing.B)  { benchmarkVerifyCellProofs(b, true) }
 func BenchmarkGoKZGVerifyCellProofs(b *testing.B) { benchmarkVerifyCellProofs(b, false) }
 func benchmarkVerifyCellProofs(b *testing.B, ckzg bool) {
@@ -282,7 +276,7 @@ func benchmarkVerifyCellProofs(b *testing.B, ckzg bool) {
 	)
 
 	b.ResetTimer()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		VerifyCellProofs([]Blob{*blob}, []Commitment{commitment}, proofs)
 	}
 }
