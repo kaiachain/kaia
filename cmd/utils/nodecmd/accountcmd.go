@@ -23,6 +23,7 @@
 package nodecmd
 
 import (
+	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -155,6 +156,21 @@ For non-interactive use the passphrase can be specified with the --password flag
 Note, as you can directly copy your encrypted accounts to another Kaia instance,
 this import mechanism is not needed when you transfer an account between
 nodes.
+`,
+		},
+		{
+			Name:   "export",
+			Usage:  "Export a private key from the node keystore",
+			Action: accountExport,
+			Flags: []cli.Flag{
+				utils.DataDirFlag,
+				utils.NodeKeystoreFileFlag,
+				utils.PasswordFileFlag,
+			},
+			Description: `
+Exports the private key from the node keystore to DATADIR/nodekey.
+
+For non-interactive use the passphrase can be specified with the --password flag.
 `,
 		},
 		{
@@ -392,6 +408,44 @@ func accountImport(ctx *cli.Context) error {
 		fmt.Println("Your account is imported at", _acct.URL.Path)
 	}
 	return nil
+}
+
+func accountExport(ctx *cli.Context) error {
+	if !ctx.IsSet(utils.NodeKeystoreFileFlag.Name) {
+		return errors.New("no node keystore file specified")
+	}
+	priv, err := loadNodeKeystore(ctx)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Exporting node key: address=%x\n", crypto.PubkeyToAddress(priv.PublicKey))
+
+	// Parse CLI arguments in the same way as running a node.
+	_, cfg := utils.MakeConfigNode(ctx)
+	path := cfg.Node.ResolvePath(node.DatadirPrivateKey)
+
+	// Write DATADIR/nodekey
+	// Not using crypto.SaveECDSA to prevent overwriting the existing file.
+	b := []byte(hex.EncodeToString(crypto.FromECDSA(priv)))
+	writeFile(path, b, 0o600) // Secret file permission.
+
+	return nil
+}
+
+func loadNodeKeystore(ctx *cli.Context) (*ecdsa.PrivateKey, error) {
+	file := ctx.String(utils.NodeKeystoreFileFlag.Name)
+	content, err := os.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+
+	password := getPassPhrase("Enter the password", false, 0, utils.MakePasswordList(ctx))
+	key, err := keystore.DecryptKey(content, password)
+	if err != nil {
+		return nil, err
+	}
+
+	return key.GetPrivateKey(), nil
 }
 
 func accountBlsInfo(ctx *cli.Context) error {

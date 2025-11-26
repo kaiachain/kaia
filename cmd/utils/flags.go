@@ -1167,6 +1167,13 @@ var (
 		EnvVars:  []string{"KLAYTN_NODEKEY", "KAIA_NODEKEY"},
 		Category: "NETWORK",
 	}
+	NodeKeystoreFileFlag = &cli.StringFlag{
+		Name:     "nodekeystore",
+		Usage:    "P2P node keystore file",
+		Aliases:  []string{"p2p.node-keystore"},
+		EnvVars:  []string{"KLAYTN_NODEKEYSTORE", "KAIA_NODEKEYSTORE"},
+		Category: "NETWORK",
+	}
 	NodeKeyHexFlag = &cli.StringFlag{
 		Name:     "nodekeyhex",
 		Usage:    "P2P node key as hex (for testing)",
