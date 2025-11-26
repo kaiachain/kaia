@@ -20,12 +20,6 @@ package params
 
 import (
 	"math/big"
-	"sync/atomic"
-)
-
-var (
-	stakingUpdateInterval  uint64 = DefaultStakeUpdateInterval
-	proposerUpdateInterval uint64 = DefaultProposerRefreshInterval
 )
 
 const (
@@ -111,61 +105,6 @@ var (
 	DefaultProposerRefreshInterval   = uint64(3600)  // 1 hour
 	DefaultDeriveShaImpl             = uint64(0)     // Orig
 )
-
-func IsStakingUpdateInterval(blockNum uint64) bool {
-	return (blockNum % StakingUpdateInterval()) == 0
-}
-
-// CalcStakingBlockNumber returns number of block which contains staking information required to make a new block with blockNum.
-func CalcStakingBlockNumber(blockNum uint64) uint64 {
-	stakingInterval := StakingUpdateInterval()
-	if blockNum <= 2*stakingInterval {
-		// Just return genesis block number.
-		return 0
-	}
-
-	var number uint64
-	if (blockNum % stakingInterval) == 0 {
-		number = blockNum - 2*stakingInterval
-	} else {
-		number = blockNum - stakingInterval - (blockNum % stakingInterval)
-	}
-	return number
-}
-
-func IsProposerUpdateInterval(blockNum uint64) (bool, uint64) {
-	proposerInterval := ProposerUpdateInterval()
-	return (blockNum % proposerInterval) == 0, proposerInterval
-}
-
-// CalcProposerBlockNumber returns number of block where list of proposers is updated for block blockNum
-func CalcProposerBlockNumber(blockNum uint64) uint64 {
-	var number uint64
-	if isInterval, proposerInterval := IsProposerUpdateInterval(blockNum); isInterval {
-		number = blockNum - proposerInterval
-	} else {
-		number = blockNum - (blockNum % proposerInterval)
-	}
-	return number
-}
-
-func SetStakingUpdateInterval(num uint64) {
-	atomic.StoreUint64(&stakingUpdateInterval, num)
-}
-
-func StakingUpdateInterval() uint64 {
-	ret := atomic.LoadUint64(&stakingUpdateInterval)
-	return ret
-}
-
-func SetProposerUpdateInterval(num uint64) {
-	atomic.StoreUint64(&proposerUpdateInterval, num)
-}
-
-func ProposerUpdateInterval() uint64 {
-	ret := atomic.LoadUint64(&proposerUpdateInterval)
-	return ret
-}
 
 func IsCheckpointInterval(blockNum uint64) bool {
 	return blockNum != 0 && blockNum%CheckpointInterval == 0

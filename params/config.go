@@ -671,14 +671,14 @@ func (c *ChainConfig) SetDefaultsForGenesis() {
 
 	// StakingUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.StakingUpdateInterval == 0 {
-		c.Governance.Reward.StakingUpdateInterval = StakingUpdateInterval()
+		c.Governance.Reward.StakingUpdateInterval = DefaultStakeUpdateInterval
 		logger.Warn("Override the default staking update interval to the chain config", "interval",
 			c.Governance.Reward.StakingUpdateInterval)
 	}
 
 	// ProposerUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.ProposerUpdateInterval == 0 {
-		c.Governance.Reward.ProposerUpdateInterval = ProposerUpdateInterval()
+		c.Governance.Reward.ProposerUpdateInterval = DefaultProposerRefreshInterval
 		logger.Warn("Override the default proposer update interval to the chain config", "interval",
 			c.Governance.Reward.ProposerUpdateInterval)
 	}

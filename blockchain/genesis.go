@@ -265,12 +265,6 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 		if storedcfg.Governance.Reward == nil {
 			logger.Crit("Failed to read governance. storedcfg.Governance.Reward == nil")
 		}
-		if storedcfg.Governance.Reward.StakingUpdateInterval != 0 {
-			params.SetStakingUpdateInterval(storedcfg.Governance.Reward.StakingUpdateInterval)
-		}
-		if storedcfg.Governance.Reward.ProposerUpdateInterval != 0 {
-			params.SetProposerUpdateInterval(storedcfg.Governance.Reward.ProposerUpdateInterval)
-		}
 	}
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)

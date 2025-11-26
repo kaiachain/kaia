@@ -606,8 +606,12 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 		blockNums   []uint64
 		blockHashes []common.Hash
 	)
-	from = params.CalcStakingBlockNumber(from)
-	for i := from; i <= to; i += params.StakingUpdateInterval() {
+	stakingUpdateInterval := params.DefaultStakeUpdateInterval
+	if config != nil && config.Governance != nil && config.Governance.Reward != nil {
+		stakingUpdateInterval = config.Governance.Reward.StakingUpdateInterval
+	}
+	from = calcStakingBlockNumber(from, stakingUpdateInterval)
+	for i := from; i <= to; i += stakingUpdateInterval {
 		blockHash := d.stateDB.ReadCanonicalHash(i)
 		if blockHash == (common.Hash{}) {
 			d.isStakingInfoRecovery = false
@@ -2069,4 +2073,19 @@ func (d *Downloader) requestTTL() time.Duration {
 		ttl = ttlLimit
 	}
 	return ttl
+}
+
+func calcStakingBlockNumber(blockNum uint64, stakingUpdateInterval uint64) uint64 {
+	if blockNum <= 2*stakingUpdateInterval {
+		// Just return genesis block number.
+		return 0
+	}
+
+	var number uint64
+	if (blockNum % stakingUpdateInterval) == 0 {
+		number = blockNum - 2*stakingUpdateInterval
+	} else {
+		number = blockNum - stakingUpdateInterval - (blockNum % stakingUpdateInterval)
+	}
+	return number
 }

@@ -66,8 +66,7 @@ var (
 
 // govSetter sets governance items for testing purpose
 type govSetter struct {
-	numTesting          uint32
-	origStakingInterval uint64
+	numTesting uint32
 }
 
 // setTestGovernance sets staking manager with memory db and staking update interval to 4.
@@ -76,11 +75,8 @@ func setTestGovernance(db database.DBManager) {
 	defer lock.Unlock()
 	if setter == nil {
 		setter = &govSetter{
-			numTesting:          0,
-			origStakingInterval: params.StakingUpdateInterval(),
+			numTesting: 0,
 		}
-
-		params.SetStakingUpdateInterval(testStakingUpdateInterval)
 	}
 	setter.numTesting += 1
 }
@@ -91,8 +87,6 @@ func rollbackOrigGovernance() {
 	defer lock.Unlock()
 	setter.numTesting -= 1
 	if setter.numTesting == 0 {
-		params.SetStakingUpdateInterval(setter.origStakingInterval)
-
 		setter = nil
 	}
 }
@@ -1946,6 +1940,7 @@ func testStakingInfoSync(t *testing.T, protocol int) {
 	// Create a custom config without Kaia fork for this test
 	customConfig := params.TestChainConfig.Copy()
 	customConfig.KaiaCompatibleBlock = nil // Disable Kaia fork to avoid staking info requirement
+	customConfig.Governance.Reward.StakingUpdateInterval = testInterval
 
 	tester := newTesterWithConfig(t, customConfig)
 	defer tester.terminate()
@@ -1984,5 +1979,44 @@ func testStakingInfoSync(t *testing.T, protocol int) {
 		}
 		actual, _ := json.Marshal(si)
 		assert.JSONEq(t, string(expected), string(actual))
+	}
+}
+
+func TestCalcStakingBlockNumber(t *testing.T) {
+	testCase := []struct {
+		interval uint64
+		blockNu  uint64
+		result   uint64
+	}{
+		{10, 3, 0},
+		{10, 10, 0},
+		{10, 11, 0},
+		{10, 20, 0},
+		{10, 21, 10},
+		{10, 30, 10},
+		{10, 31, 20},
+		{10, 40, 20},
+		{3600, 3600, 0},
+		{3600, 5000, 0},
+		{3600, 7200, 0},
+		{3600, 7201, 3600},
+		{3600, 10800, 3600},
+		{3600, 10801, 7200},
+		{86400, 3600, 0},
+		{86400, 10000, 0},
+		{86400, 86400, 0},
+		{86400, 172800, 0},
+		{86400, 172801, 86400},
+		{86400, 259200, 86400},
+		{86400, 259201, 172800},
+	}
+
+	for i := 0; i < len(testCase); i++ {
+		result := calcStakingBlockNumber(testCase[i].blockNu, testCase[i].interval)
+
+		if result != testCase[i].result {
+			t.Errorf("The result is different from the expected result. Result : %v, Expected : %v, block number : %v, update interval : %v",
+				result, testCase[i].result, testCase[i].blockNu, testCase[i].interval)
+		}
 	}
 }
