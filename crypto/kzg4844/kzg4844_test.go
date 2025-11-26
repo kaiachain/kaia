@@ -259,3 +259,24 @@ func benchmarkComputeCellProofs(b *testing.B, ckzg bool) {
 		}
 	}
 }
+
+func BenchmarkCKZGVerifyCellProofs(b *testing.B)  { benchmarkVerifyCellProofs(b, true) }
+func BenchmarkGoKZGVerifyCellProofs(b *testing.B) { benchmarkVerifyCellProofs(b, false) }
+func benchmarkVerifyCellProofs(b *testing.B, ckzg bool) {
+	if ckzg && !ckzgAvailable {
+		b.Skip("CKZG unavailable in this test build")
+	}
+	defer func(old bool) { useCKZG.Store(old) }(useCKZG.Load())
+	useCKZG.Store(ckzg)
+
+	var (
+		blob          = randBlob()
+		commitment, _ = BlobToCommitment(blob)
+		proofs, _     = ComputeCellProofs(blob)
+	)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		VerifyCellProofs([]Blob{*blob}, []Commitment{commitment}, proofs)
+	}
+}
