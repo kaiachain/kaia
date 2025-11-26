@@ -125,6 +125,7 @@ type Message interface {
 	Execute(vm types.VM, stateDB types.StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error)
 
 	AccessList() types.AccessList
+	BlobHashes() []common.Hash
 	AuthList() []types.SetCodeAuthorization
 }
 

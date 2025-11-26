@@ -52,6 +52,7 @@ type Config struct {
 	Debug       bool
 	EVMConfig   vm.Config
 	BaseFee     *big.Int
+	BlobHashes  []common.Hash
 
 	State     *state.StateDB
 	GetHashFn func(n uint64) common.Hash

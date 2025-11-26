@@ -314,12 +314,18 @@ func enable6780(jt *JumpTable) {
 }
 
 // opBlobHash implements the BLOBHASH opcode
-// Since blob data is generated in dank sharding, opBlobHash will perform only the default action of setting the top of the stack as zero
-// as long as the blob txType is not fully supported in Kaia.
+// This works as follows:
+// - Since Cancun: Must return zero.
+// - Since Osaka: Returns BlobHashes if the transaction is BlobTx.
+// Before Osaka, there was no BlobTx after all, so the logic below is applicable to before and after Osaka.
 func opBlobHash(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	index := scope.Stack.peek()
-	index.Clear()
-
+	if index.LtUint64(uint64(len(interpreter.evm.TxContext.BlobHashes))) {
+		blobHash := interpreter.evm.TxContext.BlobHashes[index.Uint64()]
+		index.SetBytes32(blobHash[:])
+	} else {
+		index.Clear()
+	}
 	return nil, nil
 }
 
