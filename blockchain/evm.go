@@ -88,8 +88,9 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 // NewEVMTxContext creates a new transaction context for a single transaction.
 func NewEVMTxContext(msg Message, header *types.Header, config *params.ChainConfig) vm.TxContext {
 	return vm.TxContext{
-		Origin:   msg.ValidatedSender(),
-		GasPrice: new(big.Int).Set(msg.EffectiveGasPrice(header, config)),
+		Origin:     msg.ValidatedSender(),
+		GasPrice:   new(big.Int).Set(msg.EffectiveGasPrice(header, config)),
+		BlobHashes: msg.BlobHashes(),
 	}
 }
 
