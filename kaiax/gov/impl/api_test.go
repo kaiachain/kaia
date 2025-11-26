@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
-	"reflect"
-	"strings"
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain/forkid"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	contractgov_mock "github.com/kaiachain/kaia/kaiax/gov/contractgov/mock"
@@ -73,42 +72,23 @@ func generateRandomValue(name gov.ParamName) any {
 // after a new hardfork block has been introduced.
 func TestAPI_kaia_getChainConfig_CompatibleBlocksCompleteness(t *testing.T) {
 	var (
-		config                           = params.MainnetChainConfig.Copy()
+		config                           = params.KairosChainConfig.Copy()
 		api, mockChain, mockHgm, mockCgm = newKaiaAPI(t, config)
 		apiArg                           = rpc.BlockNumber(0)
-		hardforkBlock                    = big.NewInt(123456789)
-		configType                       = reflect.TypeFor[params.ChainConfig]()
 	)
 
 	mockHgm.EXPECT().GetPartialParamSet(uint64(0)).Return(gov.PartialParamSet{}).Times(1)
 	mockCgm.EXPECT().GetPartialParamSet(uint64(0)).Return(gov.PartialParamSet{}).Times(1)
 	mockChain.EXPECT().Config().Return(config).Times(2) // isKore, getChainConfig
 
-	// Set all *CompatibleBlock fields to hardforkBlock
-	v := reflect.ValueOf(config).Elem()
-	for i := 0; i < configType.NumField(); i++ {
-		field := configType.Field(i)
-		if strings.HasSuffix(field.Name, "CompatibleBlock") {
-			fieldValue := v.Field(i)
-			if fieldValue.Type() == reflect.TypeFor[*big.Int]() {
-				fieldValue.Set(reflect.ValueOf(hardforkBlock))
-			}
-		}
-	}
-
 	// Call the API
-	apiChainConfig := api.GetChainConfig(&apiArg)
-	require.NotNil(t, apiChainConfig, "kaia_getChainConfig should not return nil")
+	apiConfig := api.GetChainConfig(&apiArg)
+	require.NotNil(t, apiConfig, "kaia_getChainConfig should not return nil")
 
-	// Check the all hardfork block numbers are the hardforkBlock
-	apiStruct := reflect.ValueOf(apiChainConfig).Elem()
-	for i := 0; i < configType.NumField(); i++ {
-		fieldName := configType.Field(i).Name
-		if strings.HasSuffix(fieldName, "CompatibleBlock") {
-			apiValue := apiStruct.FieldByName(fieldName).Interface().(*big.Int).String()
-			assert.Equal(t, hardforkBlock.String(), apiValue, "kaia_getChainConfig did not return %s", fieldName)
-		}
-	}
+	apiForks := forkid.GatherForks(apiConfig)
+	expectedForks := forkid.GatherForks(config)
+
+	assert.Equal(t, expectedForks, apiForks, "kaia_getChainConfig did not return one or more hardforks, probably the latest hardfork block")
 }
 
 // TestAPI_kaia_getChainConfig_ParameterCompleteness ensures that

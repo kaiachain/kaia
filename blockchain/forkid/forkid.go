@@ -41,7 +41,7 @@ func NewID(config *params.ChainConfig, genesis common.Hash, head uint64) ID {
 
 	// Calculate the current fork checksum and the next fork block
 	var next uint64
-	for _, fork := range gatherForks(config) {
+	for _, fork := range GatherForks(config) {
 		if fork <= head {
 			// Fork already passed, checksum the previous hash and the fork number
 			hash = checksumUpdate(hash, fork)
@@ -56,7 +56,7 @@ func NewID(config *params.ChainConfig, genesis common.Hash, head uint64) ID {
 // LatestForkCompatibleBlock returns the latest fork compatible block or genesis(0) if no forks are known.
 func LatestForkCompatibleBlock(config *params.ChainConfig, head *big.Int) *big.Int {
 	latestForkCompatibleBlock := common.Big0
-	for _, fork := range gatherForks(config) {
+	for _, fork := range GatherForks(config) {
 		if new(big.Int).SetUint64(fork).Cmp(head) <= 0 {
 			latestForkCompatibleBlock = new(big.Int).SetUint64(fork)
 			continue
@@ -70,7 +70,7 @@ func LatestForkCompatibleBlock(config *params.ChainConfig, head *big.Int) *big.I
 // NextForkCompatibleBlock returns the next fork compatible block or nil if no forks are known.
 func NextForkCompatibleBlock(config *params.ChainConfig, head *big.Int) *big.Int {
 	var nextForkCompatibleBlock *big.Int
-	for _, fork := range gatherForks(config) {
+	for _, fork := range GatherForks(config) {
 		if new(big.Int).SetUint64(fork).Cmp(head) <= 0 {
 			continue
 		}
@@ -82,7 +82,7 @@ func NextForkCompatibleBlock(config *params.ChainConfig, head *big.Int) *big.Int
 
 // LastForkCompatibleBlock returns the last fork compatible block or genesis(0) if no forks are known.
 func LastForkCompatibleBlock(config *params.ChainConfig) *big.Int {
-	forks := gatherForks(config)
+	forks := GatherForks(config)
 	if len(forks) == 0 {
 		return common.Big0
 	}
@@ -104,8 +104,8 @@ func checksumToBytes(hash uint32) [4]byte {
 	return blob
 }
 
-// gatherForks gathers all the known forks and creates a sorted list out of them.
-func gatherForks(config *params.ChainConfig) []uint64 {
+// GatherForks gathers all the known forks and creates a sorted list out of them.
+func GatherForks(config *params.ChainConfig) []uint64 {
 	// Gather all the fork block numbers via reflection
 	kind := reflect.TypeFor[params.ChainConfig]()
 	conf := reflect.ValueOf(config).Elem()
