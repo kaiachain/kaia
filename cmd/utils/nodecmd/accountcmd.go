@@ -177,8 +177,26 @@ kcn account bls-info
 		},
 		{
 			Name:   "bls-import",
-			Usage:  "Import a BLS private key from an EIP-2335 keystore JSON",
+			Usage:  "Import a BLS private key to an EIP-2335 keystore JSON",
 			Action: accountBlsImport,
+			Flags: []cli.Flag{
+				utils.DataDirFlag,
+				utils.PasswordFileFlag,
+				utils.LightKDFFlag,
+			},
+			Description: `
+Encrypt the BLS secret key from the default location (DATADIR/bls-nodekey)
+to an EIP-2335 keystore bls-keystore-NODEID.json.
+
+EXAMPLES
+
+kcn account bls-import
+`,
+		},
+		{
+			Name:   "bls-export",
+			Usage:  "Export a BLS private key from the EIP-2335 keystore JSON",
+			Action: accountBlsExport,
 			Flags: []cli.Flag{
 				utils.DataDirFlag,
 				utils.BlsNodeKeystoreFileFlag,
@@ -189,25 +207,7 @@ Decrypt an EIP-2335 keystore and save the BLS secret key to default location (DA
 
 EXAMPLES
 
-kcn account bls-import --bls-nodekeystore bls-keystore.json
-`,
-		},
-		{
-			Name:   "bls-export",
-			Usage:  "Export a BLS private key to an EIP-2335 keystore JSON",
-			Action: accountBlsExport,
-			Flags: []cli.Flag{
-				utils.DataDirFlag,
-				utils.PasswordFileFlag,
-				utils.LightKDFFlag,
-			},
-			Description: `
-Export the BLS secret key from the default location (DATADIR/bls-nodekey)
-to an EIP-2335 keystore bls-keystore-NODEID.json.
-
-EXAMPLES
-
-kcn account bls-export
+kcn account bls-export --bls-nodekeystore bls-keystore.json
 `,
 		},
 	},
@@ -422,28 +422,6 @@ func accountBlsInfo(ctx *cli.Context) error {
 }
 
 func accountBlsImport(ctx *cli.Context) error {
-	// Load from keystore.json
-	if !ctx.IsSet(utils.BlsNodeKeystoreFileFlag.Name) {
-		return errors.New("no BLS keystore file specified")
-	}
-	blsPriv, err := loadBlsKeystore(ctx)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Importing BLS key: pub=%x\n", blsPriv.PublicKey().Marshal())
-
-	// Parse CLI arguments in the same way as running a node.
-	_, cfg := utils.MakeConfigNode(ctx)
-	path := cfg.Node.ResolvePath(node.DatadirBlsSecretKey)
-
-	// Write DATADIR/bls-nodekey
-	// Not using bls.SaveKey to prevent overwriting the existing file.
-	b := []byte(hex.EncodeToString(blsPriv.Marshal()))
-	writeFile(path, b, 0o600) // Secret file permission.
-	return nil
-}
-
-func accountBlsExport(ctx *cli.Context) error {
 	// Parse CLI arguments in the same way as running a node.
 	var (
 		_, cfg                 = utils.MakeConfigNode(ctx)
@@ -451,7 +429,7 @@ func accountBlsExport(ctx *cli.Context) error {
 		blsPriv                = cfg.Node.BlsNodeKey()
 		scryptN, scryptP, _, _ = cfg.Node.AccountConfig()
 	)
-	fmt.Printf("Exporting BLS key: pub=%x\n", blsPriv.PublicKey().Marshal())
+	fmt.Printf("Importing BLS key: pub=%x\n", blsPriv.PublicKey().Marshal())
 
 	// Calculate filename from node address.
 	nodeAddr := crypto.PubkeyToAddress(nodeKey.PublicKey)
@@ -463,6 +441,28 @@ func accountBlsExport(ctx *cli.Context) error {
 		return err
 	}
 	writeFile(name, keystoreJson, 0o600) // Secret file permission.
+	return nil
+}
+
+func accountBlsExport(ctx *cli.Context) error {
+	// Load from keystore.json
+	if !ctx.IsSet(utils.BlsNodeKeystoreFileFlag.Name) {
+		return errors.New("no BLS keystore file specified")
+	}
+	blsPriv, err := loadBlsKeystore(ctx)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Exporting BLS key: pub=%x\n", blsPriv.PublicKey().Marshal())
+
+	// Parse CLI arguments in the same way as running a node.
+	_, cfg := utils.MakeConfigNode(ctx)
+	path := cfg.Node.ResolvePath(node.DatadirBlsSecretKey)
+
+	// Write DATADIR/bls-nodekey
+	// Not using bls.SaveKey to prevent overwriting the existing file.
+	b := []byte(hex.EncodeToString(blsPriv.Marshal()))
+	writeFile(path, b, 0o600) // Secret file permission.
 	return nil
 }
 
