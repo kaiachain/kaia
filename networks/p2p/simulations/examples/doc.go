@@ -15,7 +15,6 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 //
 //go:build none
-// +build none
 
 // examples implements a simulation network which contains nodes running a simple ping-pong protocol.
 package main

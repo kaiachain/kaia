@@ -7,7 +7,6 @@
 // Modified and improved for the klaytn development.
 
 //go:build !amd64 && !arm64
-// +build !amd64,!arm64
 
 package bn256
 

@@ -16,7 +16,6 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 // Modified and improved for the Kaia development.
 //go:build multidisktest
-// +build multidisktest
 
 package database
 

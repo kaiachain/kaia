@@ -17,7 +17,6 @@
 // Modified and improved for the Kaia development.
 
 //go:build !rocksdb
-// +build !rocksdb
 
 package database
 
