@@ -43,7 +43,7 @@ import (
 )
 
 const (
-	datadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
+	DatadirPrivateKey      = "nodekey"            // Path within the datadir to the node's private key
 	DatadirBlsSecretKey    = "bls-nodekey"        // Path within the datadir to the node's bls secret key
 	datadirDefaultKeyStore = "keystore"           // Path within the datadir to the keystore
 	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
@@ -367,7 +367,7 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 		return c.P2P.PrivateKey
 	}
 
-	keyfile := c.ResolvePath(datadirPrivateKey)
+	keyfile := c.ResolvePath(DatadirPrivateKey)
 	if key, err := crypto.LoadECDSA(keyfile); err == nil {
 		return key
 	}
@@ -380,7 +380,7 @@ func (c *Config) NodeKey() *ecdsa.PrivateKey {
 	if err := os.MkdirAll(instanceDir, 0o700); err != nil {
 		logger.Crit("Failed to make dir to persist node key", "err", err)
 	}
-	keyfile = filepath.Join(instanceDir, datadirPrivateKey)
+	keyfile = filepath.Join(instanceDir, DatadirPrivateKey)
 	if err := crypto.SaveECDSA(keyfile, key); err != nil {
 		logger.Crit("Failed to persist node key", "err", err)
 	}
