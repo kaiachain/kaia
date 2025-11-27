@@ -20,6 +20,7 @@ package profile
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -55,12 +56,13 @@ func (p *Profiler) PrintProfileInfo() {
 }
 
 func (p *Profiler) GetProfileInfoString() string {
-	str := fmt.Sprintf("Key,Count,Time\n")
+	var str strings.Builder
+	str.WriteString("Key,Count,Time\n")
 	for k, v := range p.profMap {
-		str += fmt.Sprintf("%s,%d,%f\n", k, v.count, v.duration.Seconds())
+		str.WriteString(fmt.Sprintf("%s,%d,%f\n", k, v.count, v.duration.Seconds()))
 	}
 
-	return str
+	return str.String()
 }
 
 func NewProfiler() *Profiler {
