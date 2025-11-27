@@ -228,36 +228,3 @@ func deployGovParamTx_batchSetParamIn(t *testing.T, node *cn.CN, owner *TestAcco
 	t.Logf("GovParam.setParamIn executed %d times between blocks=%2d,%2d", len(txs), beginBlock, num)
 	return txs
 }
-
-// Kaia node only decodes the byte-array param values (refer to params/governance_paramset.go).
-// Encoding is the job of transaction senders (i.e. clients and dApps).
-// This is a reference implementation of such encoder.
-func chainConfigToBytesMap(t *testing.T, config *params.ChainConfig) map[string][]byte {
-	pset, err := params.NewGovParamSetChainConfig(config)
-	require.Nil(t, err)
-	strMap := pset.StrMap()
-
-	bytesMap := map[string][]byte{}
-	for name, value := range strMap {
-		switch value.(type) {
-		case string:
-			bytesMap[name] = []byte(value.(string))
-		case common.Address:
-			bytesMap[name] = value.(common.Address).Bytes()
-		case uint64:
-			bytesMap[name] = new(big.Int).SetUint64(value.(uint64)).Bytes()
-		case bool:
-			if value.(bool) == true {
-				bytesMap[name] = []byte{0x01}
-			} else {
-				bytesMap[name] = []byte{0x00}
-			}
-		}
-	}
-
-	// Check that bytesMap is correct just in case
-	qset, err := params.NewGovParamSetBytesMap(bytesMap)
-	require.Nil(t, err)
-	require.Equal(t, pset.StrMap(), qset.StrMap())
-	return bytesMap
-}

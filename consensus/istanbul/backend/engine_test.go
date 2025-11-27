@@ -1821,7 +1821,7 @@ func TestGovernance_GovModule(t *testing.T) {
 		name  string
 		value interface{}
 	}
-	type expected = map[string]interface{} // expected (subset of) governance items
+	type expected = map[gov.ParamName]any // expected (subset of) governance items
 	type testcase struct {
 		length   int // total number of blocks to simulate
 		votes    map[int]vote
@@ -1871,7 +1871,7 @@ func TestGovernance_GovModule(t *testing.T) {
 			// Validate current params with CurrentParams() and CurrentSetCopy().
 			// Check that both returns the expected result.
 			pset := engine.govModule.GetParamSet(uint64(num + 1))
-			assertMapSubset(t, tc.expected[num+1], pset.ToGovParamSet().StrMap())
+			assertMapSubset(t, tc.expected[num+1], pset.ToMap())
 
 			// Place a vote if a vote is scheduled in upcoming block
 			// Note that we're building (head+1)'th block here.
@@ -1892,11 +1892,11 @@ func TestGovernance_GovModule(t *testing.T) {
 		// Check that both returns the expected result.
 		for num := 0; num <= tc.length; num++ {
 			pset := engine.govModule.GetParamSet(uint64(num))
-			assertMapSubset(t, tc.expected[num], pset.ToGovParamSet().StrMap())
+			assertMapSubset(t, tc.expected[num], pset.ToMap())
 
-			partialParamSet := make(map[string]any)
+			partialParamSet := gov.PartialParamSet{}
 			for k, v := range engine.govModule.(*gov_impl.GovModule).Hgm.GetPartialParamSet(uint64(num + 1)) {
-				partialParamSet[string(k)] = v
+				partialParamSet.Add(string(k), v)
 			}
 			assertMapSubset(t, tc.expected[num+1], partialParamSet)
 		}

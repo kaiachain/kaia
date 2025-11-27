@@ -23,53 +23,7 @@ import (
 )
 
 const (
-	// Block reward will be separated by three pieces and distributed
-	RewardSliceCount      = 3
-	RewardKip82SliceCount = 2
-	// GovernanceConfig is stored in a cache which has below capacity
-	GovernanceCacheLimit    = 512
-	GovernanceIdxCacheLimit = 1000
-	// The prefix for governance cache
-	GovernanceCachePrefix = "governance"
-
-	CheckpointInterval       = 1024 // For Istanbul snapshot
-	SupplyCheckpointInterval = 128  // for SupplyManager tracking native token supply
-)
-
-const (
-	// Governance Key
-	GovernanceMode int = iota
-	GoverningNode
-	Epoch
-	Policy
-	CommitteeSize
-	UnitPrice
-	MintingAmount
-	Ratio
-	UseGiniCoeff
-	DeferredTxFee
-	MinimumStake
-	AddValidator
-	RemoveValidator
-	StakeUpdateInterval
-	ProposerRefreshInterval
-	ConstTxGasHumanReadable
-	CliqueEpoch
-	Timeout
-	LowerBoundBaseFee
-	UpperBoundBaseFee
-	GasTarget
-	MaxBlockGasUsedForBaseFee
-	BaseFeeDenominator
-	GovParamContract
-	Kip82Ratio
-	DeriveShaImpl
-)
-
-const (
-	GovernanceMode_None = iota
-	GovernanceMode_Single
-	GovernanceMode_Ballot
+	CheckpointInterval = 1024 // For Istanbul snapshot
 )
 
 const (
