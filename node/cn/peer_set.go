@@ -451,7 +451,7 @@ func (ps *peerSet) Close() {
 	ps.closed = true
 }
 
-// samplePeersToSendBlock samples peers from peers without block.
+// SamplePeersToSendBlock samples peers from peers without block.
 // It uses different sampling policy for different node type.
 func (peers *peerSet) SamplePeersToSendBlock(block *types.Block, nodeType common.ConnType) []Peer {
 	var peersWithoutBlock []Peer
