@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -73,6 +74,10 @@ const (
 var (
 	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
+
+	// blobTxMinBlobGasPrice is the big.Int version of the configured protocol
+	// parameter to avoid constructing a new big integer for every transaction.
+	blobTxMinBlobGasPrice = big.NewInt(params.BlobTxMinBlobGasprice)
 
 	txPoolIsFullErr = errors.New("txpool is full")
 
@@ -838,7 +843,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	// Reject transactions over MaxTxDataSize to prevent DOS attacks
-	if uint64(tx.Size()) > MaxTxDataSize {
+	// Note: Sidecar are not included in the size calculation.
+	// Sidecar-specific validation must be done elsewhere.
+	if uint64(tx.WithoutBlobTxSidecar().Size()) > MaxTxDataSize {
 		return ErrOversizedData
 	}
 
@@ -961,6 +968,40 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		}
 	}
 
+	if tx.Type() == types.TxTypeEthereumBlob {
+		sidecar := tx.BlobTxSidecar()
+		if sidecar == nil {
+			return errors.New("missing sidecar in blob transaction")
+		}
+		// Ensure the blob fee cap satisfies the minimum blob gas price
+		if tx.BlobGasFeeCapIntCmp(blobTxMinBlobGasPrice) < 0 {
+			return fmt.Errorf("%w: blob fee cap %v, minimum needed %v", ErrTxGasPriceTooLow, tx.BlobGasFeeCap(), blobTxMinBlobGasPrice)
+		}
+		// Ensure the number of items in the blob transaction and various side
+		// data match up before doing any expensive validations
+		hashes := tx.BlobHashes()
+		if len(hashes) == 0 {
+			return errors.New("blobless blob transaction")
+		}
+		if len(hashes) > params.BlobTxMaxBlobs {
+			return fmt.Errorf("too many blobs in transaction: have %d, permitted %d", len(hashes), params.BlobTxMaxBlobs)
+		}
+		if len(sidecar.Blobs) != len(hashes) {
+			return fmt.Errorf("invalid number of %d blobs compared to %d blob hashes", len(sidecar.Blobs), len(hashes))
+		}
+		if err := sidecar.ValidateBlobCommitmentHashes(hashes); err != nil {
+			return err
+		}
+		// Fork-specific sidecar checks, including proof verification.
+		if sidecar.Version == types.BlobSidecarVersion1 {
+			return validateBlobSidecarOsaka(sidecar, hashes)
+		} else {
+			// Kaia rejects sidecar.Version = 0.
+			// ref: https://github.com/kaiachain/kips/blob/main/KIPs/kip-279.md#reject-sidecar-v0
+			return fmt.Errorf("blob sidecar version %d not supported", sidecar.Version)
+		}
+	}
+
 	if tx.Type() == types.TxTypeEthereumSetCode {
 		if len(tx.AuthList()) == 0 {
 			return errors.New("set code tx must have at least one authorization tuple")
@@ -981,6 +1022,13 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	return nil
+}
+
+func validateBlobSidecarOsaka(sidecar *types.BlobTxSidecar, hashes []common.Hash) error {
+	if len(sidecar.Proofs) != len(hashes)*kzg4844.CellProofsPerBlob {
+		return fmt.Errorf("invalid number of %d blob proofs expected %d", len(sidecar.Proofs), len(hashes)*kzg4844.CellProofsPerBlob)
+	}
+	return kzg4844.VerifyCellProofs(sidecar.Blobs, sidecar.Commitments, sidecar.Proofs)
 }
 
 func (pool *TxPool) checkDelegationLimit(tx *types.Transaction) error {
