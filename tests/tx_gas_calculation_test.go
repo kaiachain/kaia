@@ -21,6 +21,7 @@ package tests
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"math/big"
 	"strings"
 	"testing"
@@ -33,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/profile"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
@@ -795,6 +797,11 @@ func genMapForBlobTransaction(from TestAccount, to TestAccount, gasPrice *big.In
 	gasPayload += uint64(accessList.StorageKeys()) * params.TxAccessListStorageKeyGas
 	gasPayload = getFlooredGas(data, gasPayload)
 
+	emptyBlob := kzg4844.Blob{}
+	emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
+	cellProofs, _ := kzg4844.ComputeCellProofs(&emptyBlob)
+	blobHash := kzg4844.CalcBlobHashV1(sha256.New(), &emptyBlobCommit)
+
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:      from.GetNonce(),
 		types.TxValueKeyTo:         toAddress,
@@ -805,9 +812,14 @@ func genMapForBlobTransaction(from TestAccount, to TestAccount, gasPrice *big.In
 		types.TxValueKeyGasTipCap:  gasPrice,
 		types.TxValueKeyAccessList: accessList,
 		types.TxValueKeyBlobFeeCap: gasPrice,
-		types.TxValueKeyBlobHashes: []common.Hash{{0}},
-		types.TxValueKeySidecar:    &types.BlobTxSidecar{},
-		types.TxValueKeyChainID:    big.NewInt(1),
+		types.TxValueKeyBlobHashes: []common.Hash{common.Hash(blobHash)},
+		types.TxValueKeySidecar: &types.BlobTxSidecar{
+			Version:     types.BlobSidecarVersion1,
+			Blobs:       []kzg4844.Blob{emptyBlob},
+			Commitments: []kzg4844.Commitment{emptyBlobCommit},
+			Proofs:      cellProofs,
+		},
+		types.TxValueKeyChainID: big.NewInt(1),
 	}
 	return values, intrinsic + gasPayload
 }
