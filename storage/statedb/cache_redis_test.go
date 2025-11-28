@@ -219,7 +219,6 @@ func TestRedisCache_Timeout(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		close(serverReady)
 
 		listen, err := net.ListenTCP("tcp", tcpAddr)
 		if err != nil {
@@ -227,6 +226,7 @@ func TestRedisCache_Timeout(t *testing.T) {
 			return
 		}
 		defer listen.Close()
+		close(serverReady)
 
 		for {
 			if err := listen.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
