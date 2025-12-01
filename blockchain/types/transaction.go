@@ -659,14 +659,9 @@ func (tx *Transaction) Size() common.StorageSize {
 		return common.StorageSize(size)
 	}
 
+	// Unlike eth, each tx type in Kaia implements EncodeRLP/DecodeRLP when it has its own encode/decode.
+	// Therefore, all sizes are included in the result as rlp.Encode calls it. e.g) sidecar
 	size := calculateTxSize(tx.data)
-
-	// For blob transactions, add the size of the blob content and the outer list of the
-	// tx + sidecar encoding.
-	if sc := tx.BlobTxSidecar(); sc != nil {
-		size += common.StorageSize(rlp.ListSize(sc.encodedSize()))
-	}
-
 	tx.size.Store(uint64(size))
 
 	return size
