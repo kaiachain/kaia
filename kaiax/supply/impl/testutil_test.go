@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -519,7 +520,8 @@ func (s *SupplyTestSuite) dumpState(num uint64) {
 	stateDB, _ := s.chain.StateAt(header.Root)
 	dump := stateDB.RawDump()
 
-	out := fmt.Sprintf("num=%d root=%s\n", num, header.Root.Hex())
+	var out strings.Builder
+	out.WriteString(fmt.Sprintf("num=%d root=%s\n", num, header.Root.Hex()))
 	keys := []string{}
 	for k := range dump.Accounts {
 		keys = append(keys, k)
@@ -530,10 +532,10 @@ func (s *SupplyTestSuite) dumpState(num uint64) {
 		if common.HexToAddress(k) == addrGenesis4 {
 			initial := bigMult(amount1B, big.NewInt(4))
 			left, _ := new(big.Int).SetString(v.Balance, 10)
-			out += fmt.Sprintf("  %s: %30s -%s\n", k, v.Balance, initial.Sub(initial, left))
+			out.WriteString(fmt.Sprintf("  %s: %30s -%s\n", k, v.Balance, initial.Sub(initial, left)))
 		} else {
-			out += fmt.Sprintf("  %s: %30s\n", k, v.Balance)
+			out.WriteString(fmt.Sprintf("  %s: %30s\n", k, v.Balance))
 		}
 	}
-	s.T().Log(out)
+	s.T().Log(out.String())
 }

@@ -172,11 +172,11 @@ func Test_repository_InvalidateCacheEOAList(t *testing.T) {
 		assert.Equal(t, makeBasicAuthWithParam(testAuth), req.Header.Get("Authorization"))
 
 		buffer := make([]byte, 1024)
-		bodyStr := ""
+		var bodyStr strings.Builder
 
 		for {
 			n, err := req.Body.Read(buffer)
-			bodyStr += string(buffer[:n])
+			bodyStr.WriteString(string(buffer[:n]))
 			if err == io.EOF {
 				break
 			}
@@ -184,7 +184,7 @@ func Test_repository_InvalidateCacheEOAList(t *testing.T) {
 
 		var body map[string]interface{}
 
-		assert.NoError(t, json.Unmarshal([]byte(bodyStr), &body))
+		assert.NoError(t, json.Unmarshal([]byte(bodyStr.String()), &body))
 		payload := body["payload"].(map[string]interface{})
 		eoaList := payload["addresses"].([]string)
 		for _, eoa := range eoaList {

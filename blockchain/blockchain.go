@@ -31,6 +31,7 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -2594,13 +2595,13 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 	badBlockCounter.Inc(1)
 	bc.db.WriteBadBlock(block)
 
-	var receiptString string
+	var receiptString strings.Builder
 	for i, receipt := range receipts {
-		receiptString += fmt.Sprintf("\t %d: tx: %v status: %v gas: %v contract: %v bloom: %x logs: %v\n",
+		receiptString.WriteString(fmt.Sprintf("\t %d: tx: %v status: %v gas: %v contract: %v bloom: %x logs: %v\n",
 			i, receipt.TxHash.Hex(), receipt.Status, receipt.GasUsed, receipt.ContractAddress.Hex(),
-			receipt.Bloom, receipt.Logs)
+			receipt.Bloom, receipt.Logs))
 	}
-	logger.Error(fmt.Sprintf(`########## BAD BLOCK ######### Chain config: %v Number: %v Hash: 0x%x Receipt: %v Error: %v`, bc.chainConfig, block.Number(), block.Hash(), receiptString, err))
+	logger.Error(fmt.Sprintf(`########## BAD BLOCK ######### Chain config: %v Number: %v Hash: 0x%x Receipt: %v Error: %v`, bc.chainConfig, block.Number(), block.Hash(), receiptString.String(), err))
 }
 
 // InsertHeaderChain attempts to insert the given header chain in to the local
