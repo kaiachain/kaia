@@ -43,6 +43,13 @@ func DefaultBlobStorageConfig(c node.Config) BlobStorageConfig {
 	}
 }
 
+var (
+	ErrBlobFailedToCreateDirectory = errors.New("failed to create blob directory")
+	ErrBlobWriteFailed             = errors.New("failed to write blob file")
+	ErrBlobNotFound                = errors.New("blob file not found")
+	ErrBlobReadFailed              = errors.New("failed to read blob file")
+)
+
 type BlobStorage struct {
 	config BlobStorageConfig
 }
@@ -63,7 +70,8 @@ func (b *BlobStorage) Save(blockNumber big.Int, txIndex int, sidecar *types.Blob
 
 	// Create directory if it doesn't exist
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		logger.Error("failed to create directory", "dir", dir, "err", err)
+		return ErrBlobFailedToCreateDirectory
 	}
 
 	// RLP encode the sidecar
@@ -74,7 +82,8 @@ func (b *BlobStorage) Save(blockNumber big.Int, txIndex int, sidecar *types.Blob
 
 	// Write to file
 	if err := os.WriteFile(filename, encoded, 0o644); err != nil {
-		return fmt.Errorf("failed to write file %s: %w", filename, err)
+		logger.Error("failed to write file", "file", filename, "err", err)
+		return ErrBlobWriteFailed
 	}
 
 	return nil
@@ -88,9 +97,11 @@ func (b *BlobStorage) Get(blockNumber big.Int, txIndex int) (*types.BlobTxSideca
 	encoded, err := os.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("blob file not found: %s", filename)
+			logger.Warn("blob file not found", "file", filename)
+			return nil, ErrBlobNotFound
 		}
-		return nil, fmt.Errorf("failed to read file %s: %w", filename, err)
+		logger.Error("failed to read file", "file", filename, "err", err)
+		return nil, ErrBlobReadFailed
 	}
 
 	// RLP decode the sidecar
