@@ -845,7 +845,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 	// Reject transactions over MaxTxDataSize to prevent DOS attacks
 	// Note: Sidecar are not included in the size calculation.
 	// Sidecar-specific validation must be done elsewhere.
-	if uint64(tx.WithoutBlobTxSidecar().Size()) > MaxTxDataSize {
+	if uint64(tx.SizeWithoutBlobTxSidecar()) > MaxTxDataSize {
 		return ErrOversizedData
 	}
 

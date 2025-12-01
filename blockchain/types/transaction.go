@@ -672,6 +672,16 @@ func (tx *Transaction) Size() common.StorageSize {
 	return size
 }
 
+// SizeWithoutBlobTxSidecar returns the true RLP encoded storage size of the transaction
+// without the blob sidecar.
+func (tx *Transaction) SizeWithoutBlobTxSidecar() common.StorageSize {
+	size := tx.Size()
+	if sc := tx.BlobTxSidecar(); sc != nil {
+		size -= common.StorageSize(rlp.ListSize(sc.encodedSize()))
+	}
+	return size
+}
+
 func (tx *Transaction) SetTime(t time.Time) {
 	tx.time = t
 }
