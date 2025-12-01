@@ -150,7 +150,8 @@ func (b *BlobStorage) Prune(blockNumber *big.Int) error {
 		return fmt.Errorf("failed to read base directory: %w", err)
 	}
 
-	var dirsToDelete []string
+	capacity := calculateCapacity(len(entries), b.config.retention)
+	dirsToDelete := make([]string, 0, capacity)
 
 	// Process each subdirectory
 	for _, entry := range entries {
@@ -231,4 +232,37 @@ func (b *BlobStorage) getSubDir(blockNumber *big.Int) *big.Int {
 	}
 
 	return new(big.Int).Div(blockNumber, big.NewInt(1000))
+}
+
+// calculateCapacity calculates the appropriate capacity for the dirsToDelete slice
+// based on the number of entries and the retention period.
+//
+// It estimates the maximum number of subdirectories that might be deleted by:
+// - Calculating retention period in seconds (assuming 1 block per second)
+// - Dividing by 1000 to get the number of subdirectories (subdirectories are block number / 1000)
+// - Adding a 2x buffer for safety to account for variations
+// - Capping at maxCap (10000) to balance memory efficiency and filesystem performance
+//
+// Parameters:
+//   - numEntries: The actual number of directory entries found
+//   - retention: The retention period duration
+//
+// Returns:
+//   - The calculated capacity, which is the minimum of numEntries and maxExpectedSubDirs
+func calculateCapacity(numEntries int, retention time.Duration) int {
+	const maxCap = 10000
+	// Calculate expected maximum subdirectories based on retention period
+	// Subdirectories are created by dividing block number by 1000
+	// Assuming 1 block per second: max subdirectories = retention_seconds / 1000
+	// Add 2x buffer for safety
+	retentionSeconds := int64(retention.Seconds())
+	maxExpectedSubDirs := int((retentionSeconds / 1000) * 2)
+	if maxExpectedSubDirs > maxCap {
+		maxExpectedSubDirs = maxCap
+	}
+	capacity := numEntries
+	if capacity > maxExpectedSubDirs {
+		capacity = maxExpectedSubDirs
+	}
+	return capacity
 }
