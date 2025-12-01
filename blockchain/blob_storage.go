@@ -208,6 +208,7 @@ func (b *BlobStorage) Prune(blockNumber big.Int) error {
 	return nil
 }
 
+// Return a filename like "11111/11111234_0.bin", in dirname and filename components.
 func (b *BlobStorage) GetFilename(blockNumber big.Int, txIndex int) (string, string) {
 	// Create subdirectory based on block number to avoid too many files in one directory
 	subDir := b.getSubDir(blockNumber)
