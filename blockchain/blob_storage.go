@@ -121,6 +121,7 @@ func (b *BlobStorage) Get(blockNumber *big.Int, txIndex int) (*types.BlobTxSidec
 	return &sidecar, nil
 }
 
+// Prune removes all epochs that are older than `retentionEpochThreshold`.
 func (b *BlobStorage) Prune(blockNumber *big.Int) error {
 	if blockNumber == nil {
 		return ErrBlobBlockNumberNil
