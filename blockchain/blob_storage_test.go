@@ -130,21 +130,25 @@ func TestBlobStorage_Prune(t *testing.T) {
 	storage := NewBlobStorage(config)
 
 	// Save old block (should be pruned)
+	// Block 100 is in subdir 0: 100/1000 = 0
 	oldBlockNumber := big.NewInt(100)
 	oldSidecar := createTestSidecar(t, 1)
 	err := storage.Save(*oldBlockNumber, 0, oldSidecar)
 	require.NoError(t, err)
 
 	// Save recent block (should be kept)
-	recentBlockNumber := big.NewInt(200)
+	// Block 2000 is in subdir 2: 2000/1000 = 2
+	recentBlockNumber := big.NewInt(2000)
 	recentSidecar := createTestSidecar(t, 1)
 	err = storage.Save(*recentBlockNumber, 0, recentSidecar)
 	require.NoError(t, err)
 
 	// Prune with current block number that makes old block exceed retention
-	// retention is 10 seconds, so block 200 - 10 = 190
-	// block 100 < 190, so it should be pruned
-	currentBlockNumber := big.NewInt(200)
+	// retention is 10 seconds, so block 2010 - 10 = 2000
+	// getSubDir(2000) = 2, retentionSubDir = 2 - 1 = 1
+	// subdir 0: 0 < 1, so it should be pruned
+	// subdir 2: 2 >= 1, so it should be kept
+	currentBlockNumber := big.NewInt(2010)
 	err = storage.Prune(*currentBlockNumber)
 	require.NoError(t, err)
 

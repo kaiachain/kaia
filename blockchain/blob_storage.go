@@ -23,7 +23,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -120,8 +119,9 @@ func (b *BlobStorage) Prune(blockNumber big.Int) error {
 		return nil
 	}
 
-	// Calculate the maximum subdirectory number to process
-	maxSubDir := b.getSubDir(retentionBlockNumber)
+	// Calculate retention subdirectory number once
+	// Subtract 1 because we want to delete the previous subdirectory of the retention subdirectory
+	retentionSubDir := new(big.Int).Sub(b.getSubDir(retentionBlockNumber), big.NewInt(1))
 
 	// Get all subdirectories in the base directory
 	entries, err := os.ReadDir(b.config.baseDir)
@@ -132,7 +132,7 @@ func (b *BlobStorage) Prune(blockNumber big.Int) error {
 		return fmt.Errorf("failed to read base directory: %w", err)
 	}
 
-	var deletedDirs []string
+	var dirsToDelete []string
 
 	// Process each subdirectory
 	for _, entry := range entries {
@@ -149,69 +149,20 @@ func (b *BlobStorage) Prune(blockNumber big.Int) error {
 
 		subDirNumBig := big.NewInt(int64(subDirNum))
 
-		// Only process subdirectories that are older than retention period
-		if subDirNumBig.Cmp(maxSubDir) > 0 {
+		// Compare subDirNum with retentionSubDir
+		if subDirNumBig.Cmp(retentionSubDir) >= 0 {
 			continue
 		}
 
+		// Delete the entire subdirectory
 		subDirPath := filepath.Join(b.config.baseDir, entry.Name())
-
-		// Process all files in this subdirectory
-		fileEntries, err := os.ReadDir(subDirPath)
-		if err != nil {
-			continue
-		}
-
-		hasFiles := false
-		for _, fileEntry := range fileEntries {
-			if fileEntry.IsDir() {
-				continue
-			}
-
-			// Only process .bin files
-			if !strings.HasSuffix(fileEntry.Name(), ".bin") {
-				continue
-			}
-
-			// Extract block number from filename (format: {blockNumber}_{txIndex}.bin)
-			baseName := strings.TrimSuffix(fileEntry.Name(), ".bin")
-			parts := strings.Split(baseName, "_")
-			if len(parts) < 2 {
-				continue
-			}
-
-			fileBlockNumber, err := strconv.ParseUint(parts[0], 10, 64)
-			if err != nil {
-				continue
-			}
-
-			// Compare with retention block number
-			fileBlockNumberBig := big.NewInt(int64(fileBlockNumber))
-			if fileBlockNumberBig.Cmp(&retentionBlockNumber) < 0 {
-				// Delete the file
-				filePath := filepath.Join(subDirPath, fileEntry.Name())
-				if err := os.Remove(filePath); err != nil {
-					continue
-				}
-			} else {
-				hasFiles = true
-			}
-		}
-
-		// If subdirectory is empty, mark it for deletion
-		if !hasFiles {
-			// Check if directory is actually empty
-			remainingEntries, err := os.ReadDir(subDirPath)
-			if err == nil && len(remainingEntries) == 0 {
-				deletedDirs = append(deletedDirs, subDirPath)
-			}
-		}
+		dirsToDelete = append(dirsToDelete, subDirPath)
 	}
 
-	// Remove empty directories
-	for _, dir := range deletedDirs {
-		if err := os.Remove(dir); err != nil {
-			// Ignore errors when removing empty directories
+	// Remove directories
+	for _, dir := range dirsToDelete {
+		if err := os.RemoveAll(dir); err != nil {
+			// Ignore errors when removing directories
 			continue
 		}
 	}
