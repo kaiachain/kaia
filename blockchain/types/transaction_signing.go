@@ -167,10 +167,7 @@ func SenderFeePayer(signer Signer, tx *Transaction) (common.Address, error) {
 func SenderFeePayerPubkey(signer Signer, tx *Transaction) ([]*ecdsa.PublicKey, error) {
 	if sc := tx.feePayer.Load(); sc != nil {
 		sigCache := sc.(sigCachePubkey)
-		// If the signer used to derive from in a previous
-		// call is not the same as used current, invalidate
-		// the cache.
-		if sigCache.signer.Equal(signer) {
+		if signer.IsCompatibleWith(sigCache.signer, tx) {
 			return sigCache.pubkey, nil
 		}
 	}
@@ -194,10 +191,7 @@ func SenderFeePayerPubkey(signer Signer, tx *Transaction) ([]*ecdsa.PublicKey, e
 func SenderFrom(signer Signer, tx *Transaction) (common.Address, error) {
 	if sc := tx.from.Load(); sc != nil {
 		sigCache := sc.(sigCache)
-		// If the signer used to derive from in a previous
-		// call is not the same as used current, invalidate
-		// the cache.
-		if sigCache.signer.Equal(signer) {
+		if signer.IsCompatibleWith(sigCache.signer, tx) {
 			return sigCache.from, nil
 		}
 	}
@@ -220,10 +214,7 @@ func SenderFrom(signer Signer, tx *Transaction) (common.Address, error) {
 func SenderPubkey(signer Signer, tx *Transaction) ([]*ecdsa.PublicKey, error) {
 	if sc := tx.from.Load(); sc != nil {
 		sigCache := sc.(sigCachePubkey)
-		// If the signer used to derive from in a previous
-		// call is not the same as used current, invalidate
-		// the cache.
-		if sigCache.signer.Equal(signer) {
+		if signer.IsCompatibleWith(sigCache.signer, tx) {
 			return sigCache.pubkey, nil
 		}
 	}
@@ -257,6 +248,9 @@ type Signer interface {
 	HashFeePayer(tx *Transaction) (common.Hash, error)
 	// Equal returns true if the given signer is the same as the receiver.
 	Equal(Signer) bool
+	// IsCompatibleWith returns true if the result from the given signer can be reused for the current signer and transaction.
+	// This allows result sharing between compatible signers (e.g., different modernSigners with the same chain ID and supported tx types).
+	IsCompatibleWith(Signer, *Transaction) bool
 }
 
 // modernSigner is a unified signer that can handle all eth typed transactions.
@@ -302,11 +296,24 @@ func (s modernSigner) IsSupported(tx *Transaction) bool {
 	return s.supported[tx.Type()]
 }
 
+// IsCompatibleWith returns true if the result from the cached signer can be reused for the current signer and transaction.
+// For modernSigner, we allow result sharing if chain IDs match and the current signer supports the tx type.
+func (s modernSigner) IsCompatibleWith(s2 Signer, tx *Transaction) bool {
+	ms, ok := s2.(modernSigner)
+	if !ok {
+		return false
+	}
+	if !s.IsSupported(tx) {
+		return false
+	}
+	return s.chainId.Cmp(ms.chainId) == 0
+}
+
 func (s modernSigner) Sender(tx *Transaction) (common.Address, error) {
 	// Check if this transaction type is supported
 	if !s.IsSupported(tx) {
 		return common.Address{}, ErrTxTypeNotSupported
-}
+	}
 
 	// Legacy transactions are handled by the legacy signer
 	if !tx.Type().IsEthTypedTransaction() {
@@ -354,7 +361,7 @@ func (s modernSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error
 	// Check if this transaction type is supported
 	if !s.IsSupported(tx) {
 		return nil, ErrTxTypeNotSupported
-}
+	}
 
 	return s.legacy.SenderFeePayer(tx)
 }
@@ -363,7 +370,7 @@ func (s modernSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big
 	// Check if this transaction type is supported
 	if !s.IsSupported(tx) {
 		return nil, nil, nil, ErrTxTypeNotSupported
-}
+	}
 
 	// Legacy transactions are handled by the legacy signer
 	if !tx.Type().IsEthTypedTransaction() {
@@ -447,7 +454,7 @@ func NewLondonSigner(chainId *big.Int) Signer {
 		TxTypeEthereumAccessList: true,
 	}
 	return NewModernSigner(chainId, supported)
-	}
+}
 
 // New2930Signer returns a signer that accepts
 // - EIP-2930 access list transactions,
@@ -469,6 +476,10 @@ func (s FrontierSigner) ChainID() *big.Int {
 func (s FrontierSigner) Equal(s2 Signer) bool {
 	_, ok := s2.(FrontierSigner)
 	return ok
+}
+
+func (s FrontierSigner) IsCompatibleWith(cached Signer, tx *Transaction) bool {
+	return s.Equal(cached)
 }
 
 func (fs FrontierSigner) Sender(tx *Transaction) (common.Address, error) {
@@ -531,6 +542,10 @@ func (s HomesteadSigner) Equal(s2 Signer) bool {
 	return ok
 }
 
+func (s HomesteadSigner) IsCompatibleWith(cached Signer, tx *Transaction) bool {
+	return s.Equal(cached)
+}
+
 // SignatureValues returns signature values. This signature
 // needs to be in the [R || S || V] format where V is 0 or 1.
 func (hs HomesteadSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *big.Int, err error) {
@@ -573,6 +588,10 @@ func (s EIP155Signer) ChainID() *big.Int {
 func (s EIP155Signer) Equal(s2 Signer) bool {
 	eip155, ok := s2.(EIP155Signer)
 	return ok && eip155.chainId.Cmp(s.chainId) == 0
+}
+
+func (s EIP155Signer) IsCompatibleWith(cached Signer, tx *Transaction) bool {
+	return s.Equal(cached)
 }
 
 var big8 = big.NewInt(8)
