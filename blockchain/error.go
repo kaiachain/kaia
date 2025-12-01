@@ -71,6 +71,10 @@ var (
 	// with a different one without the required price bump.
 	ErrReplaceUnderpriced = errors.New("replacement transaction underpriced")
 
+	// ErrTxGasPriceTooLow is returned if a transaction's gas price is below the
+	// minimum configured for the transaction pool.
+	ErrTxGasPriceTooLow = errors.New("transaction gas price below minimum")
+
 	// ErrAlreadyNonceExistInPool is returned if there is another tx with the same nonce in the tx pool.
 	ErrAlreadyNonceExistInPool = errors.New("there is another tx which has the same nonce in the tx pool")
 
@@ -110,6 +114,10 @@ var (
 	// than some meaningful limit a user might use. This is not a consensus error
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")
+
+	// ErrTxBlobLimitExceeded is returned if a transaction would exceed the number
+	// of blobs allowed by blobpool.
+	ErrTxBlobLimitExceeded = errors.New("transaction blob limit exceeded")
 
 	// ErrInvlidUnitPrice is returned if gas price of transaction is not equal to UnitPrice
 	ErrInvalidUnitPrice = errors.New("invalid unit price")

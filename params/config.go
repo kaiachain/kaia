@@ -202,6 +202,10 @@ func TestKaiaConfig(maxHardfork string) *ChainConfig {
 	if maxHardfork == "randao" {
 		return chainConfig
 	}
+	chainConfig.OsakaCompatibleBlock = big.NewInt(0)
+	if maxHardfork == "osaka" {
+		return chainConfig
+	}
 
 	return chainConfig
 }

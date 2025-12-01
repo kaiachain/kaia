@@ -25,6 +25,7 @@ package blockchain
 import (
 	"crypto/ecdsa"
 	crand "crypto/rand"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -33,6 +34,7 @@ import (
 	"os"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -42,6 +44,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -183,6 +186,78 @@ func cancelTx(nonce uint64, gasLimit uint64, gasPrice *big.Int, from common.Addr
 	}
 	cancelTx := types.NewTx(d)
 	signedTx, _ := types.SignTx(cancelTx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), key)
+	return signedTx
+}
+
+// blobTransaction creates a valid BlobTransaction with the given parameters.
+// If modifySidecar is provided, it can modify the sidecar before signing.
+func blobTransaction(nonce uint64, gasLimit uint64, gasFeeCap, gasTipCap, blobFeeCap *big.Int, key *ecdsa.PrivateKey, numBlobs int, modifySidecar func(*types.BlobTxSidecar)) *types.Transaction {
+	blobs := make([]kzg4844.Blob, numBlobs)
+	commitments := make([]kzg4844.Commitment, numBlobs)
+	proofs := make([]kzg4844.Proof, 0, numBlobs*kzg4844.CellProofsPerBlob)
+	blobHashes := make([]common.Hash, numBlobs)
+
+	hasher := sha256.New()
+	for i := 0; i < numBlobs; i++ {
+		// Create an empty blob (all zeros)
+		blob := kzg4844.Blob{}
+		// Optionally fill with some data for testing
+		if i > 0 {
+			blob[0] = byte(i)
+		}
+
+		commitment, err := kzg4844.BlobToCommitment(&blob)
+		if err != nil {
+			panic(fmt.Sprintf("failed to create blob commitment: %v", err))
+		}
+
+		cellProofs, err := kzg4844.ComputeCellProofs(&blob)
+		if err != nil {
+			panic(fmt.Sprintf("failed to compute cell proofs: %v", err))
+		}
+
+		blobs[i] = blob
+		commitments[i] = commitment
+		proofs = append(proofs, cellProofs...)
+		blobHashes[i] = kzg4844.CalcBlobHashV1(hasher, &commitment)
+	}
+
+	sidecar := &types.BlobTxSidecar{
+		Version:     types.BlobSidecarVersion1,
+		Blobs:       blobs,
+		Commitments: commitments,
+		Proofs:      proofs,
+	}
+
+	if modifySidecar != nil {
+		modifySidecar(sidecar)
+	}
+
+	values := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:      nonce,
+		types.TxValueKeyTo:         common.HexToAddress("0xAAAA"),
+		types.TxValueKeyAmount:     big.NewInt(100),
+		types.TxValueKeyData:       []byte{0x11, 0x22},
+		types.TxValueKeyGasLimit:   gasLimit,
+		types.TxValueKeyGasFeeCap:  gasFeeCap,
+		types.TxValueKeyGasTipCap:  gasTipCap,
+		types.TxValueKeyBlobFeeCap: blobFeeCap,
+		types.TxValueKeyBlobHashes: blobHashes,
+		types.TxValueKeySidecar:    sidecar,
+		types.TxValueKeyAccessList: types.AccessList{},
+		types.TxValueKeyChainID:    params.TestChainConfig.ChainID,
+	}
+
+	tx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, values)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create blob transaction: %v", err))
+	}
+
+	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(params.TestChainConfig.ChainID), key)
+	if err != nil {
+		panic(fmt.Sprintf("failed to sign blob transaction: %v", err))
+	}
+
 	return signedTx
 }
 
@@ -1972,6 +2047,150 @@ func TestTransactionReplacement(t *testing.T) {
 	}
 }
 */
+
+// TestBlobTransactions tests a few scenarios regarding the EIP-4844
+// BlobTransaction.
+func TestBlobTransactions(t *testing.T) {
+	t.Parallel()
+
+	// Create the pool to test the status retrievals with
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+
+	testChainConfig := params.TestKaiaConfig("osaka")
+
+	pool := NewTxPool(testTxPoolConfig, testChainConfig, blockchain, &dummyGovModule{chainConfig: testChainConfig})
+	defer pool.Stop()
+
+	// Create the test accounts
+	var (
+		key, _     = crypto.GenerateKey()
+		addr       = crypto.PubkeyToAddress(key.PublicKey)
+		blobFeeCap = big.NewInt(params.BlobTxMinBlobGasprice)
+	)
+	testAddBalance(pool, addr, big.NewInt(params.KAIA))
+
+	for _, tt := range []struct {
+		name          string
+		tx            *types.Transaction
+		expectedError error
+	}{
+		{
+			// Test that valid blob transactions pass all validations
+			name:          "accept-valid-blob-transaction",
+			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, 1, nil),
+			expectedError: nil,
+		},
+		{
+			// Test that blob transaction with maximum allowed blobs passes validation
+			name:          "accept-blob-transaction-with-max-blobs",
+			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, params.BlobTxMaxBlobs, nil),
+			expectedError: nil,
+		},
+		{
+			// Test rejection of blob transaction without sidecar
+			name:          "reject-blob-transaction-without-sidecar",
+			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, 1, nil).WithoutBlobTxSidecar(),
+			expectedError: errors.New("missing sidecar in blob transaction"),
+		},
+		{
+			// Test rejection of blob transaction with blob fee cap too low
+			name:          "reject-blob-transaction-with-low-blob-fee-cap",
+			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(params.BlobTxMinBlobGasprice-1), key, 1, nil),
+			expectedError: fmt.Errorf("%w: blob fee cap %v, minimum needed %v", ErrTxGasPriceTooLow, big.NewInt(params.BlobTxMinBlobGasprice-1), blobTxMinBlobGasPrice),
+		},
+		{
+			// Test rejection of blob transaction without blob
+			name:          "reject-blob-transaction-without-blob",
+			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, 0, nil),
+			expectedError: errors.New("blobless blob transaction"),
+		},
+		{
+			// Test rejection of blob transaction with too many blobs
+			name:          "reject-blob-transaction-with-too-many-blobs",
+			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, params.BlobTxMaxBlobs+1, nil),
+			expectedError: fmt.Errorf("too many blobs in transaction: have %d, permitted %d", params.BlobTxMaxBlobs+1, params.BlobTxMaxBlobs),
+		},
+		{
+			// Test rejection of blob transaction with mismatched blob count
+			name: "reject-blob-transaction-with-mismatched-blob-count",
+			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, params.BlobTxMaxBlobs, func(sc *types.BlobTxSidecar) {
+				// Add an extra blob to sidecar but keep hashes the same
+				extraBlob := kzg4844.Blob{}
+				sc.Blobs = append(sc.Blobs, extraBlob)
+			}),
+			expectedError: fmt.Errorf("invalid number of %d blobs compared to %d blob hashes", params.BlobTxMaxBlobs+1, params.BlobTxMaxBlobs),
+		},
+		{
+			// Test rejection of blob transaction with invalid commitment number
+			name: "reject-blob-transaction-with-mismatched-commitment-number",
+			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, params.BlobTxMaxBlobs, func(sc *types.BlobTxSidecar) {
+				// Add an extra commitment to sidecar but keep hashes the same
+				extraCommitment := kzg4844.Commitment{}
+				sc.Commitments = append(sc.Commitments, extraCommitment)
+			}),
+			expectedError: fmt.Errorf("invalid number of %d blob commitments compared to %d blob hashes", params.BlobTxMaxBlobs+1, params.BlobTxMaxBlobs),
+		},
+		{
+			// Test rejection of blob transaction with invalid commitment hash
+			name: "reject-blob-transaction-with-invalid-commitment-hash",
+			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, params.BlobTxMaxBlobs, func(sc *types.BlobTxSidecar) {
+				// Modify the commitment to make hash mismatch
+				sc.Commitments[0][0] ^= 0xFF
+			}),
+			expectedError: errors.New("mismatches transaction"),
+		},
+		{
+			// Test rejection of blob transaction with invalid proof count
+			name: "reject-blob-transaction-with-invalid-proof-count",
+			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, params.BlobTxMaxBlobs, func(sc *types.BlobTxSidecar) {
+				// Remove one proof to make count invalid
+				if len(sc.Proofs) > 0 {
+					sc.Proofs = sc.Proofs[:len(sc.Proofs)-1]
+				}
+			}),
+			expectedError: fmt.Errorf("invalid number of %d blob proofs expected %d", params.BlobTxMaxBlobs*kzg4844.CellProofsPerBlob-1, params.BlobTxMaxBlobs*kzg4844.CellProofsPerBlob),
+		},
+		{
+			// Test rejection of blob transaction with invalid cell proofs
+			name: "reject-blob-transaction-with-invalid-cell-proofs",
+			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, 1, func(sc *types.BlobTxSidecar) {
+				// Corrupt the first proof
+				if len(sc.Proofs) > 0 {
+					sc.Proofs[0][0] ^= 0xFF
+				}
+			}),
+			expectedError: errors.New("invalid point encoding"),
+		},
+		{
+			// Test rejection of blob transaction with invalid sidecar version
+			name: "reject-blob-transaction-with-invalid-sidecar-version",
+			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, 1, func(sc *types.BlobTxSidecar) {
+				sc.Version = types.BlobSidecarVersion0
+			}),
+			expectedError: fmt.Errorf("blob sidecar version %d not supported", types.BlobSidecarVersion0),
+		},
+	} {
+		err := pool.addTx(tt.tx, false)
+		if tt.expectedError == nil {
+			if err != nil {
+				t.Fatalf("%s: expected no error, got %v", tt.name, err)
+			}
+		} else {
+			if err == nil {
+				t.Fatalf("%s: expected error %v, got nil", tt.name, tt.expectedError)
+			}
+			// For errors that need string matching, check if the error message contains expected text
+			if !errors.Is(err, tt.expectedError) && !strings.Contains(err.Error(), tt.expectedError.Error()) {
+				t.Fatalf("%s: error mismatch: expected %v, got %v", tt.name, tt.expectedError, err)
+			}
+		}
+		if err := validateTxPoolInternals(pool); err != nil {
+			t.Fatalf("%s: pool internal state corrupted: %v", tt.name, err)
+		}
+		pool.Clear()
+	}
+}
 
 // TestSetCodeTransactions tests a few scenarios regarding the EIP-7702
 // SetCodeTx.
