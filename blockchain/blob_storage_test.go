@@ -30,232 +30,285 @@ import (
 )
 
 func TestBlobStorage_Save(t *testing.T) {
-	// Create temporary directory for testing
-	tmpDir := t.TempDir()
-	config := BlobStorageConfig{
-		baseDir:   tmpDir,
-		retention: 21 * 24 * time.Hour,
+	testcases := []struct {
+		name        string
+		blockNumber *big.Int
+		txIndex     int
+		sidecar     *types.BlobTxSidecar
+		wantErr     bool
+		errContains string
+		verify      func(*testing.T, *BlobStorage, *big.Int, int)
+	}{
+		{
+			name:        "success",
+			blockNumber: big.NewInt(1000),
+			txIndex:     0,
+			sidecar:     createTestSidecar(t, 1),
+			wantErr:     false,
+			verify: func(t *testing.T, storage *BlobStorage, blockNumber *big.Int, txIndex int) {
+				_, filename := storage.GetFilename(blockNumber, txIndex)
+				_, err := os.Stat(filename)
+				require.NoError(t, err)
+				assert.True(t, !os.IsNotExist(err))
+			},
+		},
+		{
+			name:        "nil block number",
+			blockNumber: nil,
+			txIndex:     0,
+			sidecar:     createTestSidecar(t, 1),
+			wantErr:     true,
+			errContains: "block number is nil",
+		},
+		{
+			name:        "nil sidecar",
+			blockNumber: big.NewInt(1000),
+			txIndex:     0,
+			sidecar:     nil,
+			wantErr:     true,
+			errContains: "sidecar is nil",
+		},
 	}
-	storage := NewBlobStorage(config)
 
-	// Create test sidecar
-	blockNumber := big.NewInt(1000)
-	txIndex := 0
-	sidecar := createTestSidecar(t, 1)
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			config := BlobStorageConfig{
+				baseDir:   tmpDir,
+				retention: 21 * 24 * time.Hour,
+			}
+			storage := NewBlobStorage(config)
 
-	// Save the sidecar
-	err := storage.Save(blockNumber, txIndex, sidecar)
-	require.NoError(t, err)
-
-	// Verify file exists
-	_, filename := storage.GetFilename(blockNumber, txIndex)
-	_, err = os.Stat(filename)
-	require.NoError(t, err)
-	assert.True(t, !os.IsNotExist(err))
-}
-
-func TestBlobStorage_Save_NilBlockNumber(t *testing.T) {
-	tmpDir := t.TempDir()
-	config := BlobStorageConfig{
-		baseDir:   tmpDir,
-		retention: 21 * 24 * time.Hour,
+			err := storage.Save(tc.blockNumber, tc.txIndex, tc.sidecar)
+			if tc.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.errContains)
+			} else {
+				require.NoError(t, err)
+				if tc.verify != nil {
+					tc.verify(t, storage, tc.blockNumber, tc.txIndex)
+				}
+			}
+		})
 	}
-	storage := NewBlobStorage(config)
-
-	txIndex := 0
-	sidecar := createTestSidecar(t, 1)
-
-	err := storage.Save(nil, txIndex, sidecar)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "block number is nil")
-}
-
-func TestBlobStorage_Save_NilSidecar(t *testing.T) {
-	tmpDir := t.TempDir()
-	config := BlobStorageConfig{
-		baseDir:   tmpDir,
-		retention: 21 * 24 * time.Hour,
-	}
-	storage := NewBlobStorage(config)
-
-	blockNumber := big.NewInt(1000)
-	txIndex := 0
-
-	err := storage.Save(blockNumber, txIndex, nil)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "sidecar is nil")
 }
 
 func TestBlobStorage_Get(t *testing.T) {
-	tmpDir := t.TempDir()
-	config := BlobStorageConfig{
-		baseDir:   tmpDir,
-		retention: 21 * 24 * time.Hour,
+	testcases := []struct {
+		name        string
+		blockNumber *big.Int
+		txIndex     int
+		setup       func(*BlobStorage, *big.Int, int) *types.BlobTxSidecar
+		wantErr     bool
+		errContains string
+		verify      func(*testing.T, *types.BlobTxSidecar, *types.BlobTxSidecar)
+	}{
+		{
+			name:        "success",
+			blockNumber: big.NewInt(2000),
+			txIndex:     1,
+			setup: func(storage *BlobStorage, blockNumber *big.Int, txIndex int) *types.BlobTxSidecar {
+				originalSidecar := createTestSidecar(t, 2)
+				err := storage.Save(blockNumber, txIndex, originalSidecar)
+				require.NoError(t, err)
+				return originalSidecar
+			},
+			wantErr: false,
+			verify: func(t *testing.T, original, retrieved *types.BlobTxSidecar) {
+				require.NotNil(t, retrieved)
+				assert.Equal(t, original.Version, retrieved.Version)
+				assert.Equal(t, len(original.Blobs), len(retrieved.Blobs))
+				assert.Equal(t, len(original.Commitments), len(retrieved.Commitments))
+				assert.Equal(t, len(original.Proofs), len(retrieved.Proofs))
+
+				for i := range original.Blobs {
+					assert.Equal(t, original.Blobs[i], retrieved.Blobs[i])
+					assert.Equal(t, original.Commitments[i], retrieved.Commitments[i])
+					assert.Equal(t, original.Proofs[i], retrieved.Proofs[i])
+				}
+			},
+		},
+		{
+			name:        "nil block number",
+			blockNumber: nil,
+			txIndex:     0,
+			wantErr:     true,
+			errContains: "block number is nil",
+		},
+		{
+			name:        "file not found",
+			blockNumber: big.NewInt(9999),
+			txIndex:     99,
+			wantErr:     true,
+			errContains: "blob file not found",
+		},
 	}
-	storage := NewBlobStorage(config)
 
-	// Create and save test sidecar
-	blockNumber := big.NewInt(2000)
-	txIndex := 1
-	originalSidecar := createTestSidecar(t, 2)
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			config := BlobStorageConfig{
+				baseDir:   tmpDir,
+				retention: 21 * 24 * time.Hour,
+			}
+			storage := NewBlobStorage(config)
 
-	err := storage.Save(blockNumber, txIndex, originalSidecar)
-	require.NoError(t, err)
+			var originalSidecar *types.BlobTxSidecar
+			if tc.setup != nil {
+				originalSidecar = tc.setup(storage, tc.blockNumber, tc.txIndex)
+			}
 
-	// Get the sidecar
-	retrievedSidecar, err := storage.Get(blockNumber, txIndex)
-	require.NoError(t, err)
-	require.NotNil(t, retrievedSidecar)
-
-	// Verify sidecar data
-	assert.Equal(t, originalSidecar.Version, retrievedSidecar.Version)
-	assert.Equal(t, len(originalSidecar.Blobs), len(retrievedSidecar.Blobs))
-	assert.Equal(t, len(originalSidecar.Commitments), len(retrievedSidecar.Commitments))
-	assert.Equal(t, len(originalSidecar.Proofs), len(retrievedSidecar.Proofs))
-
-	// Verify blob data matches
-	for i := range originalSidecar.Blobs {
-		assert.Equal(t, originalSidecar.Blobs[i], retrievedSidecar.Blobs[i])
-		assert.Equal(t, originalSidecar.Commitments[i], retrievedSidecar.Commitments[i])
-		assert.Equal(t, originalSidecar.Proofs[i], retrievedSidecar.Proofs[i])
+			retrievedSidecar, err := storage.Get(tc.blockNumber, tc.txIndex)
+			if tc.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.errContains)
+			} else {
+				require.NoError(t, err)
+				if tc.verify != nil {
+					tc.verify(t, originalSidecar, retrievedSidecar)
+				}
+			}
+		})
 	}
-}
-
-func TestBlobStorage_Get_NilBlockNumber(t *testing.T) {
-	tmpDir := t.TempDir()
-	config := BlobStorageConfig{
-		baseDir:   tmpDir,
-		retention: 21 * 24 * time.Hour,
-	}
-	storage := NewBlobStorage(config)
-
-	txIndex := 0
-
-	_, err := storage.Get(nil, txIndex)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "block number is nil")
-}
-
-func TestBlobStorage_Get_FileNotFound(t *testing.T) {
-	tmpDir := t.TempDir()
-	config := BlobStorageConfig{
-		baseDir:   tmpDir,
-		retention: 21 * 24 * time.Hour,
-	}
-	storage := NewBlobStorage(config)
-
-	blockNumber := big.NewInt(9999)
-	txIndex := 99
-
-	_, err := storage.Get(blockNumber, txIndex)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "blob file not found")
 }
 
 func TestBlobStorage_Prune(t *testing.T) {
-	tmpDir := t.TempDir()
-	config := BlobStorageConfig{
-		baseDir:   tmpDir,
-		retention: 10 * time.Second, // Short retention for testing
+	testcases := []struct {
+		name        string
+		retention   time.Duration
+		blockNumber *big.Int
+		setup       func(*BlobStorage) (*big.Int, *big.Int)
+		wantErr     bool
+		errContains string
+		verify      func(*testing.T, *BlobStorage, *big.Int, *big.Int)
+	}{
+		{
+			name:        "success with pruning",
+			retention:   10 * time.Second, // Short retention for testing
+			blockNumber: big.NewInt(2010),
+			setup: func(storage *BlobStorage) (*big.Int, *big.Int) {
+				// Save old block (should be pruned)
+				// Block 100 is in epoch 0: 100/1000 = 0
+				oldBlockNumber := big.NewInt(100)
+				oldSidecar := createTestSidecar(t, 1)
+				err := storage.Save(oldBlockNumber, 0, oldSidecar)
+				require.NoError(t, err)
+
+				// Save recent block (should be kept)
+				// Block 2000 is in epoch 2: 2000/1000 = 2
+				recentBlockNumber := big.NewInt(2000)
+				recentSidecar := createTestSidecar(t, 1)
+				err = storage.Save(recentBlockNumber, 0, recentSidecar)
+				require.NoError(t, err)
+
+				return oldBlockNumber, recentBlockNumber
+			},
+			wantErr: false,
+			verify: func(t *testing.T, storage *BlobStorage, oldBlockNumber, recentBlockNumber *big.Int) {
+				// Verify old block is deleted
+				// retention is 10 seconds, so block 2010 - 10 = 2000
+				// getEpochIdx(2000) = 2, retentionEpochThreshold = 2
+				// epoch 0: 0 < 2, so it should be pruned
+				// epoch 2: 2 >= 2, so it should be kept
+				_, err := storage.Get(oldBlockNumber, 0)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "blob file not found")
+
+				// Verify recent block still exists
+				_, err = storage.Get(recentBlockNumber, 0)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:        "nil block number",
+			retention:   21 * 24 * time.Hour,
+			blockNumber: nil,
+			wantErr:     true,
+			errContains: "block number is nil",
+		},
+		{
+			name:        "negative retention",
+			retention:   21 * 24 * time.Hour,
+			blockNumber: big.NewInt(100),
+			wantErr:     false,
+			// Should return without error and do nothing
+		},
+		{
+			name:        "empty directory",
+			retention:   10 * time.Second,
+			blockNumber: big.NewInt(1000),
+			wantErr:     false,
+			// Prune on empty directory should not error
+		},
 	}
-	storage := NewBlobStorage(config)
 
-	// Save old block (should be pruned)
-	// Block 100 is in epoch 0: 100/1000 = 0
-	oldBlockNumber := big.NewInt(100)
-	oldSidecar := createTestSidecar(t, 1)
-	err := storage.Save(oldBlockNumber, 0, oldSidecar)
-	require.NoError(t, err)
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			config := BlobStorageConfig{
+				baseDir:   tmpDir,
+				retention: tc.retention,
+			}
+			storage := NewBlobStorage(config)
 
-	// Save recent block (should be kept)
-	// Block 2000 is in epoch 2: 2000/1000 = 2
-	recentBlockNumber := big.NewInt(2000)
-	recentSidecar := createTestSidecar(t, 1)
-	err = storage.Save(recentBlockNumber, 0, recentSidecar)
-	require.NoError(t, err)
+			var oldBlockNumber, recentBlockNumber *big.Int
+			if tc.setup != nil {
+				oldBlockNumber, recentBlockNumber = tc.setup(storage)
+			}
 
-	// Prune with current block number that makes old block exceed retention
-	// retention is 10 seconds, so block 2010 - 10 = 2000
-	// getEpochIdx(2000) = 2, retentionEpochThreshold = 2
-	// epoch 0: 0 < 2, so it should be pruned
-	// epoch 2: 2 >= 2, so it should be kept
-	currentBlockNumber := big.NewInt(2010)
-	err = storage.Prune(currentBlockNumber)
-	require.NoError(t, err)
-
-	// Verify old block is deleted
-	_, err = storage.Get(oldBlockNumber, 0)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "blob file not found")
-
-	// Verify recent block still exists
-	_, err = storage.Get(recentBlockNumber, 0)
-	require.NoError(t, err)
-}
-
-func TestBlobStorage_Prune_NilBlockNumber(t *testing.T) {
-	tmpDir := t.TempDir()
-	config := BlobStorageConfig{
-		baseDir:   tmpDir,
-		retention: 21 * 24 * time.Hour,
+			err := storage.Prune(tc.blockNumber)
+			if tc.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.errContains)
+			} else {
+				require.NoError(t, err)
+				if tc.verify != nil {
+					tc.verify(t, storage, oldBlockNumber, recentBlockNumber)
+				}
+			}
+		})
 	}
-	storage := NewBlobStorage(config)
-
-	err := storage.Prune(nil)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "block number is nil")
-}
-
-func TestBlobStorage_Prune_NegativeRetention(t *testing.T) {
-	tmpDir := t.TempDir()
-	config := BlobStorageConfig{
-		baseDir:   tmpDir,
-		retention: 21 * 24 * time.Hour,
-	}
-	storage := NewBlobStorage(config)
-
-	// Use a very small block number that would result in negative retention
-	blockNumber := big.NewInt(100)
-	err := storage.Prune(blockNumber)
-	require.NoError(t, err)
-	// Should return without error and do nothing
-}
-
-func TestBlobStorage_Prune_EmptyDirectory(t *testing.T) {
-	tmpDir := t.TempDir()
-	config := BlobStorageConfig{
-		baseDir:   tmpDir,
-		retention: 10 * time.Second,
-	}
-	storage := NewBlobStorage(config)
-
-	// Prune on empty directory should not error
-	blockNumber := big.NewInt(1000)
-	err := storage.Prune(blockNumber)
-	require.NoError(t, err)
 }
 
 func TestBlobStorage_GetFilename(t *testing.T) {
-	tmpDir := t.TempDir()
-	config := BlobStorageConfig{
-		baseDir:   tmpDir,
-		retention: 21 * 24 * time.Hour,
+	testcases := []struct {
+		name          string
+		blockNumber   *big.Int
+		txIndex       int
+		expectedEpoch string
+		expectedDir   string
+		expectedFile  string
+	}{
+		{
+			name:          "success",
+			blockNumber:   big.NewInt(12345),
+			txIndex:       5,
+			expectedEpoch: "12", // 12345 / 1000 = 12
+			expectedDir:   "",   // Will be set in test
+			expectedFile:  "12345_5.bin",
+		},
 	}
-	storage := NewBlobStorage(config)
 
-	blockNumber := big.NewInt(12345)
-	txIndex := 5
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			config := BlobStorageConfig{
+				baseDir:   tmpDir,
+				retention: 21 * 24 * time.Hour,
+			}
+			storage := NewBlobStorage(config)
 
-	dir, filename := storage.GetFilename(blockNumber, txIndex)
+			dir, filename := storage.GetFilename(tc.blockNumber, tc.txIndex)
 
-	// Verify directory structure
-	expectedEpoch := "12" // 12345 / 1000 = 12
-	expectedDir := filepath.Join(tmpDir, expectedEpoch)
-	assert.Equal(t, expectedDir, dir)
+			// Verify directory structure
+			expectedDir := filepath.Join(tmpDir, tc.expectedEpoch)
+			assert.Equal(t, expectedDir, dir)
 
-	// Verify filename
-	expectedFilename := filepath.Join(expectedDir, "12345_5.bin")
-	assert.Equal(t, expectedFilename, filename)
+			// Verify filename
+			expectedFilename := filepath.Join(expectedDir, tc.expectedFile)
+			assert.Equal(t, expectedFilename, filename)
+		})
+	}
 }
 
 // createTestSidecar creates a test BlobTxSidecar with the specified number of blobs
