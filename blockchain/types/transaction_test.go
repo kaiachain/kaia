@@ -1225,3 +1225,11 @@ func TestHeapCopy(t *testing.T) {
 	assert.True(t, txset.Empty())
 	assert.False(t, txsetCopy.Empty())
 }
+
+// TestTransactionSizeWithoutBlobTxSidecar tests the SizeWithoutBlobTxSidecar
+// method compares equality with tx.WithoutBlobTxSidecar().Size().
+func TestTransactionSizeWithoutBlobTxSidecar(t *testing.T) {
+	tx := Transaction{data: genBlobTransaction()}
+	expectedSize := tx.WithoutBlobTxSidecar().Size()
+	assert.Equal(t, expectedSize, tx.SizeWithoutBlobTxSidecar())
+}
