@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"reflect"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
@@ -258,412 +259,205 @@ type Signer interface {
 	Equal(Signer) bool
 }
 
-// NOTE: Kaia supports EIP-4844 blob transactions since Osaka fork.
-type osakaSigner struct{ pragueSigner }
+// modernSigner is a unified signer that can handle all eth typed transactions.
+// It uses a map to track supported eth typed transaction types.
+// Legacy transactions are all enabled by default and handled by the legacy signer.
+type modernSigner struct {
+	chainId   *big.Int
+	legacy    EIP155Signer
+	supported map[TxType]bool
+}
+
+// NewModernSigner creates a modern signer that supports the specified eth typed transaction types.
+// Supported eth typed transaction types are passed as a map.
+func NewModernSigner(chainId *big.Int, supported map[TxType]bool) Signer {
+	if chainId == nil {
+		chainId = new(big.Int)
+	}
+	return modernSigner{
+		chainId:   chainId,
+		legacy:    NewEIP155Signer(chainId),
+		supported: supported,
+	}
+}
+
+// ChainID returns the chain id.
+func (s modernSigner) ChainID() *big.Int {
+	return s.chainId
+}
+
+// Equal returns true if the given signer is the same as the receiver.
+// All modern signers with the same chain ID are considered equal, which allows
+// cache sharing between different fork configurations.
+func (s modernSigner) Equal(s2 Signer) bool {
+	ms, ok := s2.(modernSigner)
+	return ok && ms.chainId.Cmp(s.chainId) == 0 && reflect.DeepEqual(ms.supported, s.supported) && s.legacy.Equal(ms.legacy)
+}
+
+// IsSupported returns true if the signer supports the given transaction type.
+func (s modernSigner) IsSupported(tx *Transaction) bool {
+	if !tx.Type().IsEthTypedTransaction() {
+		return true // Legacy transactions are always supported
+	}
+	return s.supported[tx.Type()]
+}
+
+func (s modernSigner) Sender(tx *Transaction) (common.Address, error) {
+	// Check if this transaction type is supported
+	if !s.IsSupported(tx) {
+		return common.Address{}, ErrTxTypeNotSupported
+}
+
+	// Legacy transactions are handled by the legacy signer
+	if !tx.Type().IsEthTypedTransaction() {
+		return s.legacy.Sender(tx)
+	}
+
+	// Validate chain ID
+	if tx.ChainId().Cmp(s.chainId) != 0 {
+		return common.Address{}, ErrInvalidChainId
+	}
+
+	// All modern transaction types use the same recovery mechanism
+	return RecoverTxSender(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
+		// Modern txs use 0 and 1 as recovery id, add 27 to become equivalent to unprotected Homestead signatures.
+		V := new(big.Int).Add(v, big.NewInt(27))
+		return V
+	})
+}
+
+func (s modernSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
+	// Check if this transaction type is supported
+	if !s.IsSupported(tx) {
+		return nil, ErrTxTypeNotSupported
+	}
+
+	// Legacy transactions are handled by the legacy signer
+	if !tx.Type().IsEthTypedTransaction() {
+		return s.legacy.SenderPubkey(tx)
+	}
+
+	// Validate chain ID
+	if tx.ChainId().Cmp(s.chainId) != 0 {
+		return nil, ErrInvalidChainId
+	}
+
+	// All modern transaction types use the same recovery mechanism
+	return RecoverTxPubkeys(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
+		// Modern txs use 0 and 1 as recovery id, add 27 to become equivalent to unprotected Homestead signatures.
+		V := new(big.Int).Add(v, big.NewInt(27))
+		return V
+	})
+}
+
+func (s modernSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
+	// Check if this transaction type is supported
+	if !s.IsSupported(tx) {
+		return nil, ErrTxTypeNotSupported
+}
+
+	return s.legacy.SenderFeePayer(tx)
+}
+
+func (s modernSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
+	// Check if this transaction type is supported
+	if !s.IsSupported(tx) {
+		return nil, nil, nil, ErrTxTypeNotSupported
+}
+
+	// Legacy transactions are handled by the legacy signer
+	if !tx.Type().IsEthTypedTransaction() {
+		return s.legacy.SignatureValues(tx, sig)
+	}
+
+	if len(sig) != crypto.SignatureLength {
+		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
+	}
+
+	// Check that chain ID of tx matches the signer. We also accept ID zero or nil here,
+	// because it indicates that the chain ID was not specified in the tx.
+	// NOTE: Kaia allow chain ID to be nil in this fork
+	if tx.data.ChainId() != nil && tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
+		return nil, nil, nil, ErrInvalidChainId
+	}
+
+	R = new(big.Int).SetBytes(sig[:32])
+	S = new(big.Int).SetBytes(sig[32:64])
+	V = big.NewInt(int64(sig[crypto.RecoveryIDOffset]))
+
+	return R, S, V, nil
+}
+
+func (s modernSigner) Hash(tx *Transaction) common.Hash {
+	if !s.IsSupported(tx) {
+		return common.Hash{}
+	}
+
+	return tx.data.SigHash(s.ChainID())
+}
+
+func (s modernSigner) HashFeePayer(tx *Transaction) (common.Hash, error) {
+	if !s.IsSupported(tx) {
+		return common.Hash{}, ErrTxTypeNotSupported
+	}
+
+	return s.legacy.HashFeePayer(tx)
+}
 
 // NewOsakaSigner returns a signer that accepts
 // - EIP-4844 blob transactions,
 // - EIP-7702 set code transactions,
 // - EIP-1559 dynamic fee transactions,
-// - EIP-2930 access list transactions and
-// - EIP-155 replay protected transactions.
+// - EIP-2930 access list transactions,
+// - EIP-155 replay protected transactions and
+// - legacy transactions
 func NewOsakaSigner(chainId *big.Int) Signer {
-	return osakaSigner{pragueSigner{londonSigner{eip2930Signer{NewEIP155Signer(chainId)}}}}
-}
-
-// ChainID returns the chain id.
-func (s osakaSigner) ChainID() *big.Int {
-	return s.chainId
-}
-
-// Equal returns true if the given signer is the same as the receiver.
-func (s osakaSigner) Equal(s2 Signer) bool {
-	x, ok := s2.(osakaSigner)
-	return ok && x.chainId.Cmp(s.chainId) == 0
-}
-
-func (s osakaSigner) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != TxTypeEthereumBlob {
-		return s.pragueSigner.Sender(tx)
+	supported := map[TxType]bool{
+		TxTypeEthereumBlob:       true,
+		TxTypeEthereumSetCode:    true,
+		TxTypeEthereumDynamicFee: true,
+		TxTypeEthereumAccessList: true,
 	}
-
-	if tx.ChainId().Cmp(s.chainId) != 0 {
-		return common.Address{}, ErrInvalidChainId
-	}
-
-	return RecoverTxSender(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
-		// AL txs are defined to use 0 and 1 as their recovery
-		// id, add 27 to become equivalent to unprotected Homestead signatures.
-		V := new(big.Int).Add(v, big.NewInt(27))
-		return V
-	})
+	return NewModernSigner(chainId, supported)
 }
-
-// SenderPubkey returns the public key derived from tx signature and txhash.
-func (s osakaSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	if tx.Type() != TxTypeEthereumBlob {
-		return s.pragueSigner.SenderPubkey(tx)
-	}
-
-	if tx.ChainId().Cmp(s.chainId) != 0 {
-		return nil, ErrInvalidChainId
-	}
-
-	return RecoverTxPubkeys(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
-		// AL txs are defined to use 0 and 1 as their recovery
-		// id, add 27 to become equivalent to unprotected Homestead signatures.
-		V := new(big.Int).Add(v, big.NewInt(27))
-		return V
-	})
-}
-
-// SenderFeePayer returns the public key derived from tx signature and txhash.
-func (s osakaSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	// EIP-4844(Blob transaction) tx don't supported fee-delegation.
-	return s.pragueSigner.SenderFeePayer(tx)
-}
-
-// SignatureValues returns a new transaction with the given signature. This signature
-// needs to be in the [R || S || V] format where V is 0 or 1.
-func (s osakaSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	if tx.Type() != TxTypeEthereumBlob {
-		return s.pragueSigner.SignatureValues(tx, sig)
-	}
-
-	if len(sig) != crypto.SignatureLength {
-		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
-	}
-
-	// Check that chain ID of tx matches the signer. We also accept ID zero here,
-	// because it indicates that the chain ID was not specified in the tx.
-	if tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
-		return nil, nil, nil, ErrInvalidChainId
-	}
-
-	R = new(big.Int).SetBytes(sig[:32])
-	S = new(big.Int).SetBytes(sig[32:64])
-	V = big.NewInt(int64(sig[crypto.RecoveryIDOffset]))
-
-	return R, S, V, nil
-}
-
-// Hash returns the hash to be signed by the sender.
-// It does not uniquely identify the transaction.
-func (s osakaSigner) Hash(tx *Transaction) common.Hash {
-	if tx.Type() != TxTypeEthereumBlob {
-		return s.pragueSigner.Hash(tx)
-	}
-
-	return tx.data.SigHash(s.ChainID())
-}
-
-// HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
-// It does not uniquely identify the transaction.
-func (s osakaSigner) HashFeePayer(tx *Transaction) (common.Hash, error) {
-	return s.pragueSigner.HashFeePayer(tx)
-}
-
-type pragueSigner struct{ londonSigner }
 
 // NewPragueSigner returns a signer that accepts
 // - EIP-7702 set code transactions,
 // - EIP-1559 dynamic fee transactions,
-// - EIP-2930 access list transactions and
-// - EIP-155 replay protected transactions.
+// - EIP-2930 access list transactions,
+// - EIP-155 replay protected transactions and
+// - legacy transactions
 func NewPragueSigner(chainId *big.Int) Signer {
-	return pragueSigner{londonSigner{eip2930Signer{NewEIP155Signer(chainId)}}}
-}
-
-// ChainID returns the chain id.
-func (s pragueSigner) ChainID() *big.Int {
-	return s.chainId
-}
-
-// Equal returns true if the given signer is the same as the receiver.
-func (s pragueSigner) Equal(s2 Signer) bool {
-	x, ok := s2.(pragueSigner)
-	return ok && x.chainId.Cmp(s.chainId) == 0
-}
-
-func (s pragueSigner) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != TxTypeEthereumSetCode {
-		return s.londonSigner.Sender(tx)
+	supported := map[TxType]bool{
+		TxTypeEthereumSetCode:    true,
+		TxTypeEthereumDynamicFee: true,
+		TxTypeEthereumAccessList: true,
 	}
-
-	if tx.ChainId().Cmp(s.chainId) != 0 {
-		return common.Address{}, ErrInvalidChainId
-	}
-
-	return RecoverTxSender(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
-		// AL txs are defined to use 0 and 1 as their recovery
-		// id, add 27 to become equivalent to unprotected Homestead signatures.
-		V := new(big.Int).Add(v, big.NewInt(27))
-		return V
-	})
+	return NewModernSigner(chainId, supported)
 }
-
-// SenderPubkey returns the public key derived from tx signature and txhash.
-func (s pragueSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	if tx.Type() != TxTypeEthereumSetCode {
-		return s.londonSigner.SenderPubkey(tx)
-	}
-
-	if tx.ChainId().Cmp(s.chainId) != 0 {
-		return nil, ErrInvalidChainId
-	}
-
-	return RecoverTxPubkeys(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
-		// AL txs are defined to use 0 and 1 as their recovery
-		// id, add 27 to become equivalent to unprotected Homestead signatures.
-		V := new(big.Int).Add(v, big.NewInt(27))
-		return V
-	})
-}
-
-// SenderFeePayer returns the public key derived from tx signature and txhash.
-func (s pragueSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	// EIP-7702(Set code transaction) tx don't supported fee-delegation.
-	return s.londonSigner.SenderFeePayer(tx)
-}
-
-// SignatureValues returns a new transaction with the given signature. This signature
-// needs to be in the [R || S || V] format where V is 0 or 1.
-func (s pragueSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	if tx.Type() != TxTypeEthereumSetCode {
-		return s.londonSigner.SignatureValues(tx, sig)
-	}
-
-	if len(sig) != crypto.SignatureLength {
-		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
-	}
-
-	// Check that chain ID of tx matches the signer. We also accept ID zero here,
-	// because it indicates that the chain ID was not specified in the tx.
-	if tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
-		return nil, nil, nil, ErrInvalidChainId
-	}
-
-	R = new(big.Int).SetBytes(sig[:32])
-	S = new(big.Int).SetBytes(sig[32:64])
-	V = big.NewInt(int64(sig[crypto.RecoveryIDOffset]))
-
-	return R, S, V, nil
-}
-
-// Hash returns the hash to be signed by the sender.
-// It does not uniquely identify the transaction.
-func (s pragueSigner) Hash(tx *Transaction) common.Hash {
-	if tx.Type() != TxTypeEthereumSetCode {
-		return s.londonSigner.Hash(tx)
-	}
-
-	return tx.data.SigHash(s.ChainID())
-}
-
-// HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
-// It does not uniquely identify the transaction.
-func (s pragueSigner) HashFeePayer(tx *Transaction) (common.Hash, error) {
-	return s.londonSigner.HashFeePayer(tx)
-}
-
-type londonSigner struct{ eip2930Signer }
 
 // NewLondonSigner returns a signer that accepts
 // - EIP-1559 dynamic fee transactions,
-// - EIP-2930 access list transactions and
-// - EIP-155 replay protected transactions.
+// - EIP-2930 access list transactions,
+// - EIP-155 replay protected transactions and
+// - legacy transactions
 func NewLondonSigner(chainId *big.Int) Signer {
-	return londonSigner{eip2930Signer{NewEIP155Signer(chainId)}}
-}
-
-// ChainID returns the chain id.
-func (s londonSigner) ChainID() *big.Int {
-	return s.chainId
-}
-
-// Equal returns true if the given signer is the same as the receiver.
-func (s londonSigner) Equal(s2 Signer) bool {
-	x, ok := s2.(londonSigner)
-	return ok && x.chainId.Cmp(s.chainId) == 0
-}
-
-func (s londonSigner) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != TxTypeEthereumDynamicFee {
-		return s.eip2930Signer.Sender(tx)
+	supported := map[TxType]bool{
+		TxTypeEthereumDynamicFee: true,
+		TxTypeEthereumAccessList: true,
+	}
+	return NewModernSigner(chainId, supported)
 	}
 
-	if tx.ChainId().Cmp(s.chainId) != 0 {
-		return common.Address{}, ErrInvalidChainId
-	}
-
-	return RecoverTxSender(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
-		// AL txs are defined to use 0 and 1 as their recovery
-		// id, add 27 to become equivalent to unprotected Homestead signatures.
-		V := new(big.Int).Add(v, big.NewInt(27))
-		return V
-	})
-}
-
-// SenderPubkey returns the public key derived from tx signature and txhash.
-func (s londonSigner) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	if tx.Type() != TxTypeEthereumDynamicFee {
-		return s.eip2930Signer.SenderPubkey(tx)
-	}
-
-	if tx.ChainId().Cmp(s.chainId) != 0 {
-		return nil, ErrInvalidChainId
-	}
-
-	return RecoverTxPubkeys(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
-		// AL txs are defined to use 0 and 1 as their recovery
-		// id, add 27 to become equivalent to unprotected Homestead signatures.
-		V := new(big.Int).Add(v, big.NewInt(27))
-		return V
-	})
-}
-
-// SenderFeePayer returns the public key derived from tx signature and txhash.
-func (s londonSigner) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	// EIP-1559(Dynamic fee transaction) tx don't supported fee-delegation.
-	return s.eip2930Signer.SenderFeePayer(tx)
-}
-
-// SignatureValues returns a new transaction with the given signature. This signature
-// needs to be in the [R || S || V] format where V is 0 or 1.
-func (s londonSigner) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	if tx.Type() != TxTypeEthereumDynamicFee {
-		return s.eip2930Signer.SignatureValues(tx, sig)
-	}
-
-	if len(sig) != crypto.SignatureLength {
-		panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
-	}
-
-	// Check that chain ID of tx matches the signer. We also accept ID zero or nil here,
-	// because it indicates that the chain ID was not specified in the tx.
-	// NOTE: Kaia allow chain ID to be nil in this fork
-	if tx.data.ChainId() != nil && tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
-		return nil, nil, nil, ErrInvalidChainId
-	}
-
-	R = new(big.Int).SetBytes(sig[:32])
-	S = new(big.Int).SetBytes(sig[32:64])
-	V = big.NewInt(int64(sig[crypto.RecoveryIDOffset]))
-
-	return R, S, V, nil
-}
-
-// Hash returns the hash to be signed by the sender.
-// It does not uniquely identify the transaction.
-func (s londonSigner) Hash(tx *Transaction) common.Hash {
-	if tx.Type() != TxTypeEthereumDynamicFee {
-		return s.eip2930Signer.Hash(tx)
-	}
-
-	return tx.data.SigHash(s.ChainID())
-}
-
-// HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
-// It does not uniquely identify the transaction.
-func (s londonSigner) HashFeePayer(tx *Transaction) (common.Hash, error) {
-	return s.eip2930Signer.HashFeePayer(tx)
-}
-
-type eip2930Signer struct{ EIP155Signer }
-
-// NewEIP2930Signer returns a signer that accepts EIP-2930 access list transactions,
-// EIP-155 replay protected transactions, and legacy transactions.
+// New2930Signer returns a signer that accepts
+// - EIP-2930 access list transactions,
+// - EIP-155 replay protected transactions and
+// - legacy transactions
 func NewEIP2930Signer(chainId *big.Int) Signer {
-	return eip2930Signer{NewEIP155Signer(chainId)}
-}
-
-// ChainID returns the chain id.
-func (s eip2930Signer) ChainID() *big.Int {
-	return s.chainId
-}
-
-// Equal returns true if the given signer is the same as the receiver.
-func (s eip2930Signer) Equal(s2 Signer) bool {
-	eip2930, ok := s2.(eip2930Signer)
-	return ok && eip2930.chainId.Cmp(s.chainId) == 0
-}
-
-// Sender returns the sender address of the transaction.
-func (s eip2930Signer) Sender(tx *Transaction) (common.Address, error) {
-	if tx.Type() != TxTypeEthereumAccessList {
-		return s.EIP155Signer.Sender(tx)
+	supported := map[TxType]bool{
+		TxTypeEthereumAccessList: true,
 	}
-
-	if tx.ChainId().Cmp(s.chainId) != 0 {
-		return common.Address{}, ErrInvalidChainId
-	}
-
-	return RecoverTxSender(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
-		// AL txs are defined to use 0 and 1 as their recovery
-		// id, add 27 to become equivalent to unprotected Homestead signatures.
-		V := new(big.Int).Add(v, big.NewInt(27))
-		return V
-	})
-}
-
-// SenderPubkey returns the public key derived from tx signature and txhash.
-func (s eip2930Signer) SenderPubkey(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	if tx.Type() != TxTypeEthereumAccessList {
-		return s.EIP155Signer.SenderPubkey(tx)
-	}
-
-	if tx.ChainId().Cmp(s.chainId) != 0 {
-		return nil, ErrInvalidChainId
-	}
-
-	return RecoverTxPubkeys(s.Hash(tx), tx.data.RawSignatureValues(), true, func(v *big.Int) *big.Int {
-		// AL txs are defined to use 0 and 1 as their recovery
-		// id, add 27 to become equivalent to unprotected Homestead signatures.
-		V := new(big.Int).Add(v, big.NewInt(27))
-		return V
-	})
-}
-
-// SenderFeePayer returns the public key derived from tx signature and txhash.
-func (s eip2930Signer) SenderFeePayer(tx *Transaction) ([]*ecdsa.PublicKey, error) {
-	// EIP-2930(Optional access list transaction) tx don't supported fee-delegation.
-	return s.EIP155Signer.SenderFeePayer(tx)
-}
-
-// SignatureValues returns a new transaction with the given signature. This signature
-// needs to be in the [R || S || V] format where V is 0 or 1.
-func (s eip2930Signer) SignatureValues(tx *Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	if tx.Type() != TxTypeEthereumAccessList {
-		return s.EIP155Signer.SignatureValues(tx, sig)
-	}
-
-	// Check that chain ID of tx matches the signer. We also accept ID zero or nil here,
-	// because it indicates that the chain ID was not specified in the tx.
-	// NOTE: Kaia allow chain ID to be nil in this fork
-	if tx.data.ChainId() != nil && tx.data.ChainId().Sign() != 0 && tx.data.ChainId().Cmp(s.ChainID()) != 0 {
-		return nil, nil, nil, ErrInvalidChainId
-	}
-
-	R, S, _ = decodeSignature(sig)
-	V = big.NewInt(int64(sig[64]))
-
-	return R, S, V, nil
-}
-
-// Hash returns the hash to be signed by the sender.
-// It does not uniquely identify the transaction.
-func (s eip2930Signer) Hash(tx *Transaction) common.Hash {
-	if tx.Type() != TxTypeEthereumAccessList {
-		return s.EIP155Signer.Hash(tx)
-	}
-
-	return tx.data.SigHash(s.ChainID())
-}
-
-// HashFeePayer returns the hash with a fee payer's address to be signed by a fee payer.
-// It does not uniquely identify the transaction.
-func (s eip2930Signer) HashFeePayer(tx *Transaction) (common.Hash, error) {
-	return s.EIP155Signer.HashFeePayer(tx)
+	return NewModernSigner(chainId, supported)
 }
 
 type FrontierSigner struct{}
