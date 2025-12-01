@@ -44,14 +44,30 @@ func TestBlobStorage_Save(t *testing.T) {
 	sidecar := createTestSidecar(t, 1)
 
 	// Save the sidecar
-	err := storage.Save(*blockNumber, txIndex, sidecar)
+	err := storage.Save(blockNumber, txIndex, sidecar)
 	require.NoError(t, err)
 
 	// Verify file exists
-	_, filename := storage.GetFilename(*blockNumber, txIndex)
+	_, filename := storage.GetFilename(blockNumber, txIndex)
 	_, err = os.Stat(filename)
 	require.NoError(t, err)
 	assert.True(t, !os.IsNotExist(err))
+}
+
+func TestBlobStorage_Save_NilBlockNumber(t *testing.T) {
+	tmpDir := t.TempDir()
+	config := BlobStorageConfig{
+		baseDir:   tmpDir,
+		retention: 21 * 24 * time.Hour,
+	}
+	storage := NewBlobStorage(config)
+
+	txIndex := 0
+	sidecar := createTestSidecar(t, 1)
+
+	err := storage.Save(nil, txIndex, sidecar)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "block number is nil")
 }
 
 func TestBlobStorage_Save_NilSidecar(t *testing.T) {
@@ -65,7 +81,7 @@ func TestBlobStorage_Save_NilSidecar(t *testing.T) {
 	blockNumber := big.NewInt(1000)
 	txIndex := 0
 
-	err := storage.Save(*blockNumber, txIndex, nil)
+	err := storage.Save(blockNumber, txIndex, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "sidecar is nil")
 }
@@ -83,11 +99,11 @@ func TestBlobStorage_Get(t *testing.T) {
 	txIndex := 1
 	originalSidecar := createTestSidecar(t, 2)
 
-	err := storage.Save(*blockNumber, txIndex, originalSidecar)
+	err := storage.Save(blockNumber, txIndex, originalSidecar)
 	require.NoError(t, err)
 
 	// Get the sidecar
-	retrievedSidecar, err := storage.Get(*blockNumber, txIndex)
+	retrievedSidecar, err := storage.Get(blockNumber, txIndex)
 	require.NoError(t, err)
 	require.NotNil(t, retrievedSidecar)
 
@@ -105,6 +121,21 @@ func TestBlobStorage_Get(t *testing.T) {
 	}
 }
 
+func TestBlobStorage_Get_NilBlockNumber(t *testing.T) {
+	tmpDir := t.TempDir()
+	config := BlobStorageConfig{
+		baseDir:   tmpDir,
+		retention: 21 * 24 * time.Hour,
+	}
+	storage := NewBlobStorage(config)
+
+	txIndex := 0
+
+	_, err := storage.Get(nil, txIndex)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "block number is nil")
+}
+
 func TestBlobStorage_Get_FileNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 	config := BlobStorageConfig{
@@ -116,7 +147,7 @@ func TestBlobStorage_Get_FileNotFound(t *testing.T) {
 	blockNumber := big.NewInt(9999)
 	txIndex := 99
 
-	_, err := storage.Get(*blockNumber, txIndex)
+	_, err := storage.Get(blockNumber, txIndex)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "blob file not found")
 }
@@ -133,14 +164,14 @@ func TestBlobStorage_Prune(t *testing.T) {
 	// Block 100 is in subdir 0: 100/1000 = 0
 	oldBlockNumber := big.NewInt(100)
 	oldSidecar := createTestSidecar(t, 1)
-	err := storage.Save(*oldBlockNumber, 0, oldSidecar)
+	err := storage.Save(oldBlockNumber, 0, oldSidecar)
 	require.NoError(t, err)
 
 	// Save recent block (should be kept)
 	// Block 2000 is in subdir 2: 2000/1000 = 2
 	recentBlockNumber := big.NewInt(2000)
 	recentSidecar := createTestSidecar(t, 1)
-	err = storage.Save(*recentBlockNumber, 0, recentSidecar)
+	err = storage.Save(recentBlockNumber, 0, recentSidecar)
 	require.NoError(t, err)
 
 	// Prune with current block number that makes old block exceed retention
@@ -149,17 +180,30 @@ func TestBlobStorage_Prune(t *testing.T) {
 	// subdir 0: 0 < 1, so it should be pruned
 	// subdir 2: 2 >= 1, so it should be kept
 	currentBlockNumber := big.NewInt(2010)
-	err = storage.Prune(*currentBlockNumber)
+	err = storage.Prune(currentBlockNumber)
 	require.NoError(t, err)
 
 	// Verify old block is deleted
-	_, err = storage.Get(*oldBlockNumber, 0)
+	_, err = storage.Get(oldBlockNumber, 0)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "blob file not found")
 
 	// Verify recent block still exists
-	_, err = storage.Get(*recentBlockNumber, 0)
+	_, err = storage.Get(recentBlockNumber, 0)
 	require.NoError(t, err)
+}
+
+func TestBlobStorage_Prune_NilBlockNumber(t *testing.T) {
+	tmpDir := t.TempDir()
+	config := BlobStorageConfig{
+		baseDir:   tmpDir,
+		retention: 21 * 24 * time.Hour,
+	}
+	storage := NewBlobStorage(config)
+
+	err := storage.Prune(nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "block number is nil")
 }
 
 func TestBlobStorage_Prune_NegativeRetention(t *testing.T) {
@@ -172,7 +216,7 @@ func TestBlobStorage_Prune_NegativeRetention(t *testing.T) {
 
 	// Use a very small block number that would result in negative retention
 	blockNumber := big.NewInt(100)
-	err := storage.Prune(*blockNumber)
+	err := storage.Prune(blockNumber)
 	require.NoError(t, err)
 	// Should return without error and do nothing
 }
@@ -187,7 +231,7 @@ func TestBlobStorage_Prune_EmptyDirectory(t *testing.T) {
 
 	// Prune on empty directory should not error
 	blockNumber := big.NewInt(1000)
-	err := storage.Prune(*blockNumber)
+	err := storage.Prune(blockNumber)
 	require.NoError(t, err)
 }
 
@@ -202,7 +246,7 @@ func TestBlobStorage_GetFilename(t *testing.T) {
 	blockNumber := big.NewInt(12345)
 	txIndex := 5
 
-	dir, filename := storage.GetFilename(*blockNumber, txIndex)
+	dir, filename := storage.GetFilename(blockNumber, txIndex)
 
 	// Verify directory structure
 	expectedSubDir := "12" // 12345 / 1000 = 12

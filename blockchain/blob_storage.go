@@ -43,6 +43,8 @@ func DefaultBlobStorageConfig(c node.Config) BlobStorageConfig {
 }
 
 var (
+	ErrBlobBlockNumberNil          = errors.New("block number is nil")
+	ErrBlobSidecarNil              = errors.New("sidecar is nil")
 	ErrBlobFailedToCreateDirectory = errors.New("failed to create blob directory")
 	ErrBlobWriteFailed             = errors.New("failed to write blob file")
 	ErrBlobNotFound                = errors.New("blob file not found")
@@ -59,9 +61,12 @@ func NewBlobStorage(config BlobStorageConfig) *BlobStorage {
 	}
 }
 
-func (b *BlobStorage) Save(blockNumber big.Int, txIndex int, sidecar *types.BlobTxSidecar) error {
+func (b *BlobStorage) Save(blockNumber *big.Int, txIndex int, sidecar *types.BlobTxSidecar) error {
+	if blockNumber == nil {
+		return ErrBlobBlockNumberNil
+	}
 	if sidecar == nil {
-		return errors.New("sidecar is nil")
+		return ErrBlobSidecarNil
 	}
 
 	// Get filename
@@ -88,7 +93,11 @@ func (b *BlobStorage) Save(blockNumber big.Int, txIndex int, sidecar *types.Blob
 	return nil
 }
 
-func (b *BlobStorage) Get(blockNumber big.Int, txIndex int) (*types.BlobTxSidecar, error) {
+func (b *BlobStorage) Get(blockNumber *big.Int, txIndex int) (*types.BlobTxSidecar, error) {
+	if blockNumber == nil {
+		return nil, ErrBlobBlockNumberNil
+	}
+
 	// Get filename
 	_, filename := b.GetFilename(blockNumber, txIndex)
 
@@ -112,16 +121,25 @@ func (b *BlobStorage) Get(blockNumber big.Int, txIndex int) (*types.BlobTxSideca
 	return &sidecar, nil
 }
 
-func (b *BlobStorage) Prune(blockNumber big.Int) error {
+func (b *BlobStorage) Prune(blockNumber *big.Int) error {
+	if blockNumber == nil {
+		return ErrBlobBlockNumberNil
+	}
+
 	retentionBlockNumber := b.GetRetentionBlockNumber(blockNumber)
-	if retentionBlockNumber.Sign() < 0 {
+	if retentionBlockNumber == nil || retentionBlockNumber.Sign() < 0 {
 		// no target blocks to prune
 		return nil
 	}
 
 	// Calculate retention subdirectory number once
 	// Subtract 1 because we want to delete the previous subdirectory of the retention subdirectory
-	retentionSubDir := new(big.Int).Sub(b.getSubDir(retentionBlockNumber), big.NewInt(1))
+	retentionSubDirNum := b.getSubDir(retentionBlockNumber)
+	if retentionSubDirNum == nil {
+		// no target blocks to prune
+		return nil
+	}
+	retentionSubDir := new(big.Int).Sub(retentionSubDirNum, big.NewInt(1))
 
 	// Get all subdirectories in the base directory
 	entries, err := os.ReadDir(b.config.baseDir)
@@ -171,26 +189,46 @@ func (b *BlobStorage) Prune(blockNumber big.Int) error {
 }
 
 // Return a filename like "11111/11111234_0.bin", in dirname and filename components.
-func (b *BlobStorage) GetFilename(blockNumber big.Int, txIndex int) (string, string) {
+func (b *BlobStorage) GetFilename(blockNumber *big.Int, txIndex int) (string, string) {
+	if blockNumber == nil {
+		// Return empty strings if blockNumber is nil to avoid panic
+		// Caller should check for nil before calling this method
+		return "", ""
+	}
+
 	// Create subdirectory based on block number to avoid too many files in one directory
 	subDir := b.getSubDir(blockNumber)
+	if subDir == nil {
+		// Return empty strings if subDir is nil
+		return "", ""
+	}
 	dir := filepath.Join(b.config.baseDir, subDir.String())
 	return dir, filepath.Join(dir, fmt.Sprintf("%d_%d.bin", blockNumber.Uint64(), txIndex))
 }
 
-func (b *BlobStorage) GetRetentionBlockNumber(blockNumber big.Int) big.Int {
+func (b *BlobStorage) GetRetentionBlockNumber(blockNumber *big.Int) *big.Int {
+	if blockNumber == nil {
+		// Return nil if blockNumber is nil
+		return nil
+	}
+
 	// Convert retention period to seconds (assuming 1 block per second)
 	retentionSeconds := int64(b.config.retention.Seconds())
 	retentionBlocks := big.NewInt(retentionSeconds)
 
 	// Calculate the block number to retain by subtracting retention period from current block number
-	retentionBlockNumber := new(big.Int).Sub(&blockNumber, retentionBlocks)
+	retentionBlockNumber := new(big.Int).Sub(blockNumber, retentionBlocks)
 
-	return *retentionBlockNumber
+	return retentionBlockNumber
 }
 
 // getSubDir calculates the subdirectory number for a given block number
 // Subdirectories are created by dividing block number by 1000
-func (b *BlobStorage) getSubDir(blockNumber big.Int) *big.Int {
-	return new(big.Int).Div(&blockNumber, big.NewInt(1000))
+func (b *BlobStorage) getSubDir(blockNumber *big.Int) *big.Int {
+	if blockNumber == nil {
+		// Return nil if blockNumber is nil
+		return nil
+	}
+
+	return new(big.Int).Div(blockNumber, big.NewInt(1000))
 }
