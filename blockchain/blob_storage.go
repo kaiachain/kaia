@@ -133,16 +133,14 @@ func (b *BlobStorage) Prune(blockNumber *big.Int) error {
 		return nil
 	}
 
-	// Calculate retention subdirectory number once
-	// Subtract 1 because we want to delete the previous subdirectory of the retention subdirectory
-	retentionSubDirNum := b.getSubDir(retentionBlockNumber)
-	if retentionSubDirNum == nil {
+	// Calculate retention epoch number
+	retentionEpochThreshold := b.getEpochIdx(retentionBlockNumber)
+	if retentionEpochThreshold == nil {
 		// no target blocks to prune
 		return nil
 	}
-	retentionSubDir := new(big.Int).Sub(retentionSubDirNum, big.NewInt(1))
 
-	// Get all subdirectories in the base directory
+	// Get all epoch directories in the base directory
 	entries, err := os.ReadDir(b.config.baseDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -154,29 +152,27 @@ func (b *BlobStorage) Prune(blockNumber *big.Int) error {
 	capacity := calculateCapacity(len(entries), b.config.retention)
 	dirsToDelete := make([]string, 0, capacity)
 
-	// Process each subdirectory
+	// Process each epoch directory
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 
-		// Parse subdirectory name as block number
-		subDirNum, err := strconv.ParseUint(entry.Name(), 10, 64)
+		// Parse epoch directory name as epoch number
+		epochNum, err := strconv.ParseUint(entry.Name(), 10, 64)
 		if err != nil {
 			// Skip non-numeric directory names
 			continue
 		}
 
-		subDirNumBig := big.NewInt(int64(subDirNum))
+		epochNumBig := big.NewInt(int64(epochNum))
 
-		// Compare subDirNum with retentionSubDir
-		if subDirNumBig.Cmp(retentionSubDir) >= 0 {
-			continue
+		// Compare epochNum with retentionEpochThreshold
+		if epochNumBig.Cmp(retentionEpochThreshold) < 0 {
+			subDirPath := filepath.Join(b.config.baseDir, entry.Name())
+			dirsToDelete = append(dirsToDelete, subDirPath)
 		}
 
-		// Delete the entire subdirectory
-		subDirPath := filepath.Join(b.config.baseDir, entry.Name())
-		dirsToDelete = append(dirsToDelete, subDirPath)
 	}
 
 	// Remove directories
@@ -198,13 +194,13 @@ func (b *BlobStorage) GetFilename(blockNumber *big.Int, txIndex int) (string, st
 		return "", ""
 	}
 
-	// Create subdirectory based on block number to avoid too many files in one directory
-	subDir := b.getSubDir(blockNumber)
-	if subDir == nil {
-		// Return empty strings if subDir is nil
+	// Create epoch directory based on block number to avoid too many files in one directory
+	epoch := b.getEpochIdx(blockNumber)
+	if epoch == nil {
+		// Return empty strings if epoch is nil
 		return "", ""
 	}
-	dir := filepath.Join(b.config.baseDir, subDir.String())
+	dir := filepath.Join(b.config.baseDir, epoch.String())
 	return dir, filepath.Join(dir, fmt.Sprintf("%d_%d.bin", blockNumber.Uint64(), txIndex))
 }
 
@@ -224,9 +220,9 @@ func (b *BlobStorage) GetRetentionBlockNumber(blockNumber *big.Int) *big.Int {
 	return retentionBlockNumber
 }
 
-// getSubDir calculates the subdirectory number for a given block number
-// Subdirectories are created by dividing block number by 1000
-func (b *BlobStorage) getSubDir(blockNumber *big.Int) *big.Int {
+// getEpochIdx calculates the epoch number for a given block number
+// Epochs are created by dividing block number by 1000
+func (b *BlobStorage) getEpochIdx(blockNumber *big.Int) *big.Int {
 	if blockNumber == nil {
 		// Return nil if blockNumber is nil
 		return nil
@@ -238,9 +234,9 @@ func (b *BlobStorage) getSubDir(blockNumber *big.Int) *big.Int {
 // calculateCapacity calculates the appropriate capacity for the dirsToDelete slice
 // based on the number of entries and the retention period.
 //
-// It estimates the maximum number of subdirectories that might be deleted by:
+// It estimates the maximum number of epochs that might be deleted by:
 // - Calculating retention period in seconds (assuming 1 block per second)
-// - Dividing by 1000 to get the number of subdirectories (subdirectories are block number / 1000)
+// - Dividing by 1000 to get the number of epochs (epochs are block number / 1000)
 // - Adding a 2x buffer for safety to account for variations
 // - Capping at maxCap (10000) to balance memory efficiency and filesystem performance
 //
@@ -249,21 +245,21 @@ func (b *BlobStorage) getSubDir(blockNumber *big.Int) *big.Int {
 //   - retention: The retention period duration
 //
 // Returns:
-//   - The calculated capacity, which is the minimum of numEntries and maxExpectedSubDirs
+//   - The calculated capacity, which is the minimum of numEntries and maxExpectedEpochs
 func calculateCapacity(numEntries int, retention time.Duration) int {
 	const maxCap = 10000
-	// Calculate expected maximum subdirectories based on retention period
-	// Subdirectories are created by dividing block number by 1000
-	// Assuming 1 block per second: max subdirectories = retention_seconds / 1000
+	// Calculate expected maximum epochs based on retention period
+	// Epochs are created by dividing block number by 1000
+	// Assuming 1 block per second: max epochs = retention_seconds / 1000
 	// Add 2x buffer for safety
 	retentionSeconds := int64(retention.Seconds())
-	maxExpectedSubDirs := int((retentionSeconds / 1000) * 2)
-	if maxExpectedSubDirs > maxCap {
-		maxExpectedSubDirs = maxCap
+	maxExpectedEpochs := int((retentionSeconds / 1000) * 2)
+	if maxExpectedEpochs > maxCap {
+		maxExpectedEpochs = maxCap
 	}
 	capacity := numEntries
-	if capacity > maxExpectedSubDirs {
-		capacity = maxExpectedSubDirs
+	if capacity > maxExpectedEpochs {
+		capacity = maxExpectedEpochs
 	}
 	return capacity
 }

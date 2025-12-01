@@ -161,14 +161,14 @@ func TestBlobStorage_Prune(t *testing.T) {
 	storage := NewBlobStorage(config)
 
 	// Save old block (should be pruned)
-	// Block 100 is in subdir 0: 100/1000 = 0
+	// Block 100 is in epoch 0: 100/1000 = 0
 	oldBlockNumber := big.NewInt(100)
 	oldSidecar := createTestSidecar(t, 1)
 	err := storage.Save(oldBlockNumber, 0, oldSidecar)
 	require.NoError(t, err)
 
 	// Save recent block (should be kept)
-	// Block 2000 is in subdir 2: 2000/1000 = 2
+	// Block 2000 is in epoch 2: 2000/1000 = 2
 	recentBlockNumber := big.NewInt(2000)
 	recentSidecar := createTestSidecar(t, 1)
 	err = storage.Save(recentBlockNumber, 0, recentSidecar)
@@ -176,9 +176,9 @@ func TestBlobStorage_Prune(t *testing.T) {
 
 	// Prune with current block number that makes old block exceed retention
 	// retention is 10 seconds, so block 2010 - 10 = 2000
-	// getSubDir(2000) = 2, retentionSubDir = 2 - 1 = 1
-	// subdir 0: 0 < 1, so it should be pruned
-	// subdir 2: 2 >= 1, so it should be kept
+	// getEpochIdx(2000) = 2, retentionEpochThreshold = 2
+	// epoch 0: 0 < 2, so it should be pruned
+	// epoch 2: 2 >= 2, so it should be kept
 	currentBlockNumber := big.NewInt(2010)
 	err = storage.Prune(currentBlockNumber)
 	require.NoError(t, err)
@@ -249,8 +249,8 @@ func TestBlobStorage_GetFilename(t *testing.T) {
 	dir, filename := storage.GetFilename(blockNumber, txIndex)
 
 	// Verify directory structure
-	expectedSubDir := "12" // 12345 / 1000 = 12
-	expectedDir := filepath.Join(tmpDir, expectedSubDir)
+	expectedEpoch := "12" // 12345 / 1000 = 12
+	expectedDir := filepath.Join(tmpDir, expectedEpoch)
 	assert.Equal(t, expectedDir, dir)
 
 	// Verify filename
