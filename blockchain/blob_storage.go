@@ -30,6 +30,11 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
+const (
+	BLOCKS_PER_BUCKET       = 1000
+	BLOB_SIDECARS_RETENTION = 21 * 24 * time.Hour
+)
+
 type BlobStorageConfig struct {
 	baseDir   string
 	retention time.Duration
@@ -38,7 +43,7 @@ type BlobStorageConfig struct {
 func DefaultBlobStorageConfig(c node.Config) BlobStorageConfig {
 	return BlobStorageConfig{
 		baseDir:   filepath.Join(c.ChainDataDir, "blob"),
-		retention: 21 * 24 * time.Hour, // TODO Should use params.BLOB_SIDECARS_RETENTION
+		retention: BLOB_SIDECARS_RETENTION,
 	}
 }
 
@@ -221,14 +226,14 @@ func (b *BlobStorage) GetRetentionBlockNumber(blockNumber *big.Int) *big.Int {
 }
 
 // getBucketIdx calculates the bucket number for a given block number
-// Buckets are created by dividing block number by 1000
+// Buckets are created by dividing block number by BLOCKS_PER_BUCKET
 func (b *BlobStorage) getBucketIdx(blockNumber *big.Int) *big.Int {
 	if blockNumber == nil {
 		// Return nil if blockNumber is nil
 		return nil
 	}
 
-	return new(big.Int).Div(blockNumber, big.NewInt(1000))
+	return new(big.Int).Div(blockNumber, big.NewInt(BLOCKS_PER_BUCKET))
 }
 
 // calculateCapacity calculates the appropriate capacity for the dirsToDelete slice
@@ -236,7 +241,7 @@ func (b *BlobStorage) getBucketIdx(blockNumber *big.Int) *big.Int {
 //
 // It estimates the maximum number of buckets that might be deleted by:
 // - Calculating retention period in seconds (assuming 1 block per second)
-// - Dividing by 1000 to get the number of buckets (buckets are block number / 1000)
+// - Dividing by BLOCKS_PER_BUCKET to get the number of buckets (buckets are block number / BLOCKS_PER_BUCKET)
 // - Adding a 2x buffer for safety to account for variations
 // - Capping at maxCap (10000) to balance memory efficiency and filesystem performance
 //
@@ -249,11 +254,11 @@ func (b *BlobStorage) getBucketIdx(blockNumber *big.Int) *big.Int {
 func calculateCapacity(numEntries int, retention time.Duration) int {
 	const maxCap = 10000
 	// Calculate expected maximum buckets based on retention period
-	// Buckets are created by dividing block number by 1000
-	// Assuming 1 block per second: max buckets = retention_seconds / 1000
+	// Buckets are created by dividing block number by BLOCKS_PER_BUCKET
+	// Assuming 1 block per second: max buckets = retention_seconds / BLOCKS_PER_BUCKET
 	// Add 2x buffer for safety
 	retentionSeconds := int64(retention.Seconds())
-	maxExpectedBuckets := min(maxCap, int((retentionSeconds/1000)*2))
+	maxExpectedBuckets := min(maxCap, int((retentionSeconds/BLOCKS_PER_BUCKET)*2))
 	capacity := min(maxExpectedBuckets, numEntries)
 	return capacity
 }
