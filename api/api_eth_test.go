@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,8 +26,10 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -61,6 +64,8 @@ var (
 	floorDataGasTestCode = hexutil.Bytes(common.Hex2Bytes("6080604052348015600e575f5ffd5b50600436106026575f3560e01c80632e64cec114602a575b5f5ffd5b60306044565b604051603b91906062565b60405180910390f35b5f5f54905090565b5f819050919050565b605c81604c565b82525050565b5f60208201905060735f8301846055565b9291505056fea26469706673582212206aeab8d313a899d42a212113167e622ff770e746a3c3d0596d15fe2551d2c97464736f6c634300081e0033"))
 	// retrieve() with long junk to increase floor data gas. 104 nonzero tokens = 4160 floor data gas = 25160 intrinsic gas
 	floorDataGasTestData = hexutil.Bytes(append(common.Hex2Bytes("2e64cec1"), bytes.Repeat([]byte{0xff}, 100)...))
+
+	excessBlobGas = uint64(1000000)
 )
 
 // TestEthereumAPI_Etherbase tests Etherbase.
@@ -939,7 +944,7 @@ func TestEthAPI_PendingTransactions(t *testing.T) {
 // TestEthAPI_GetTransactionReceipt tests GetTransactionReceipt.
 func TestEthAPI_GetTransactionReceipt(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
-	block, txs, txHashMap, receiptMap, receipts := createTestData(t, nil)
+	block, txs, txHashMap, receiptMap, receipts := createTestData(t, &types.Header{Number: big.NewInt(1), ExcessBlobGas: &excessBlobGas})
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().GetTxLookupInfoAndReceipt(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -951,7 +956,7 @@ func TestEthAPI_GetTransactionReceipt(t *testing.T) {
 	).Times(txs.Len())
 	mockBackend.EXPECT().GetBlockReceipts(gomock.Any(), gomock.Any()).Return(receipts).Times(txs.Len())
 	mockBackend.EXPECT().HeaderByHash(gomock.Any(), block.Hash()).Return(block.Header(), nil).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(params.TestChainConfig.Copy()).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
 
 	// Get receipt for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -960,7 +965,7 @@ func TestEthAPI_GetTransactionReceipt(t *testing.T) {
 			t.Fatal(err)
 		}
 		txIdx := uint64(i)
-		checkEthTransactionReceiptFormat(t, block, receipts, receipt, RpcOutputReceipt(block.Header(), txs[i], block.Hash(), block.NumberU64(), txIdx, receiptMap[txs[i].Hash()], params.TestChainConfig), txIdx)
+		checkEthTransactionReceiptFormat(t, block, receipts, receipt, RpcOutputReceipt(block.Header(), txs[i], block.Hash(), block.NumberU64(), txIdx, receiptMap[txs[i].Hash()], params.TestKaiaConfig("osaka")), txIdx)
 	}
 
 	mockCtrl.Finish()
@@ -1117,13 +1122,31 @@ func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts
 	if !ok {
 		t.Fatal("type is not defined in Ethereum transaction receipt format.")
 	}
-	assert.Equal(t, types.TxType(typeInt.(hexutil.Uint)), types.TxTypeLegacyTransaction)
+	if tx.IsEthTypedTransaction() {
+		assert.Equal(t, types.TxType(typeInt.(hexutil.Uint)), types.TxType(tx.Type()&0x00FF)) // The eth receipt is compared with the 0x78 prefix masked.
+	} else {
+		assert.Equal(t, types.TxType(typeInt.(hexutil.Uint)), types.TxTypeLegacyTransaction)
+	}
 
 	effectiveGasPrice, ok := ethReceipt["effectiveGasPrice"]
 	if !ok {
 		t.Fatal("effectiveGasPrice is not defined in Ethereum transaction receipt format.")
 	}
 	assert.Equal(t, effectiveGasPrice, hexutil.Uint64(kReceipt["gasPrice"].(*hexutil.Big).ToInt().Uint64()))
+
+	if tx.Type() == types.TxTypeEthereumBlob {
+		blobGasUsed, ok := ethReceipt["blobGasUsed"]
+		if !ok {
+			t.Fatal("blobGasUsed is not defined in Ethereum transaction receipt format.")
+		}
+		assert.Equal(t, blobGasUsed, hexutil.Uint64(tx.BlobGas()))
+
+		blobGasPrice, ok := ethReceipt["blobGasPrice"]
+		if !ok {
+			t.Fatal("blobGasPrice is not defined in Ethereum transaction receipt format.")
+		}
+		assert.Equal(t, blobGasPrice, hexutil.Uint64(eip4844.CalcBlobFee(params.TestKaiaConfig("osaka"), block.Header()).Uint64()))
+	}
 
 	status, ok := ethReceipt["status"]
 	if !ok {
@@ -1838,6 +1861,44 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 			&types.TxSignature{V: big.NewInt(4), R: big.NewInt(5), S: big.NewInt(6)},
 		}
 		tx.SetFeePayerSignatures(feePayerSignatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
+	{
+		// TxTypeEthereumBlob
+		emptyBlob := kzg4844.Blob{}
+		emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
+		cellProofs, _ := kzg4844.ComputeCellProofs(&emptyBlob)
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      uint64(txs.Len()),
+			types.TxValueKeyTo:         common.StringToAddress("0xa06fa690d92788cac4953da5f2dfbc4a2b3871db"),
+			types.TxValueKeyAmount:     big.NewInt(0),
+			types.TxValueKeyGasLimit:   uint64(10000000),
+			types.TxValueKeyGasFeeCap:  big.NewInt(25),
+			types.TxValueKeyGasTipCap:  big.NewInt(25),
+			types.TxValueKeyData:       []byte("0x1234"),
+			types.TxValueKeyAccessList: types.AccessList{},
+			types.TxValueKeyBlobFeeCap: big.NewInt(25),
+			types.TxValueKeyBlobHashes: []common.Hash{common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &emptyBlobCommit))},
+			types.TxValueKeySidecar: &types.BlobTxSidecar{
+				Version:     types.BlobSidecarVersion1,
+				Blobs:       []kzg4844.Blob{emptyBlob},
+				Commitments: []kzg4844.Commitment{emptyBlobCommit},
+				Proofs:      cellProofs,
+			},
+			types.TxValueKeyChainID: params.TestChainConfig.ChainID,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+		}
+		tx.SetSignature(signatures)
 
 		txs = append(txs, tx)
 		txHashMap[tx.Hash()] = tx
