@@ -188,14 +188,14 @@ func TestBlobStorage_Prune(t *testing.T) {
 			blockNumber: big.NewInt(2010),
 			setup: func(storage *BlobStorage) (*big.Int, *big.Int) {
 				// Save old block (should be pruned)
-				// Block 100 is in epoch 0: 100/1000 = 0
+				// Block 100 is in bucket 0: 100/1000 = 0
 				oldBlockNumber := big.NewInt(100)
 				oldSidecar := createTestSidecar(t, 1)
 				err := storage.Save(oldBlockNumber, 0, oldSidecar)
 				require.NoError(t, err)
 
 				// Save recent block (should be kept)
-				// Block 2000 is in epoch 2: 2000/1000 = 2
+				// Block 2000 is in bucket 2: 2000/1000 = 2
 				recentBlockNumber := big.NewInt(2000)
 				recentSidecar := createTestSidecar(t, 1)
 				err = storage.Save(recentBlockNumber, 0, recentSidecar)
@@ -207,9 +207,9 @@ func TestBlobStorage_Prune(t *testing.T) {
 			verify: func(t *testing.T, storage *BlobStorage, oldBlockNumber, recentBlockNumber *big.Int) {
 				// Verify old block is deleted
 				// retention is 10 seconds, so block 2010 - 10 = 2000
-				// getEpochIdx(2000) = 2, retentionEpochThreshold = 2
-				// epoch 0: 0 < 2, so it should be pruned
-				// epoch 2: 2 >= 2, so it should be kept
+				// getBucketIdx(2000) = 2, retentionBucketThreshold = 2
+				// bucket 0: 0 < 2, so it should be pruned
+				// bucket 2: 2 >= 2, so it should be kept
 				_, err := storage.Get(oldBlockNumber, 0)
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "blob file not found")
@@ -272,20 +272,20 @@ func TestBlobStorage_Prune(t *testing.T) {
 
 func TestBlobStorage_GetFilename(t *testing.T) {
 	testcases := []struct {
-		name          string
-		blockNumber   *big.Int
-		txIndex       int
-		expectedEpoch string
-		expectedDir   string
-		expectedFile  string
+		name           string
+		blockNumber    *big.Int
+		txIndex        int
+		expectedBucket string
+		expectedDir    string
+		expectedFile   string
 	}{
 		{
-			name:          "success",
-			blockNumber:   big.NewInt(12345),
-			txIndex:       5,
-			expectedEpoch: "12", // 12345 / 1000 = 12
-			expectedDir:   "",   // Will be set in test
-			expectedFile:  "12345_5.bin",
+			name:           "success",
+			blockNumber:    big.NewInt(12345),
+			txIndex:        5,
+			expectedBucket: "12", // 12345 / 1000 = 12
+			expectedDir:    "",   // Will be set in test
+			expectedFile:   "12345_5.bin",
 		},
 	}
 
@@ -301,7 +301,7 @@ func TestBlobStorage_GetFilename(t *testing.T) {
 			dir, filename := storage.GetFilename(tc.blockNumber, tc.txIndex)
 
 			// Verify directory structure
-			expectedDir := filepath.Join(tmpDir, tc.expectedEpoch)
+			expectedDir := filepath.Join(tmpDir, tc.expectedBucket)
 			assert.Equal(t, expectedDir, dir)
 
 			// Verify filename
