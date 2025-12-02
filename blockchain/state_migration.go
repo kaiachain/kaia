@@ -303,11 +303,9 @@ func (bc *BlockChain) restartStateMigration() {
 		root := block.Root()
 		logger.Warn("State migration : Restarted", "blockNumber", number, "root", root.String())
 
-		bc.wg.Add(1)
-		go func() {
+		bc.wg.Go(func() {
 			bc.migrateState(root)
-			bc.wg.Done()
-		}()
+		})
 	} else if dbPath := bc.db.MigrationOldDBPath(); dbPath != "" {
 		// Remove the old database if it exists.
 		// This can happen when the node is stopped while removing the old database.
@@ -380,11 +378,9 @@ func (bc *BlockChain) StartStateMigration(number uint64, root common.Hash) error
 		return err
 	}
 
-	bc.wg.Add(1)
-	go func() {
+	bc.wg.Go(func() {
 		bc.migrateState(root)
-		bc.wg.Done()
-	}()
+	})
 
 	return nil
 }

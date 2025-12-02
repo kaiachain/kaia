@@ -49,9 +49,8 @@ func TestSubscription(t *testing.T) {
 	msg2 := "testMessage2"
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
 
-	go func() {
+	wg.Go(func() {
 		cache, err := newRedisCache(getTestRedisConfig())
 		assert.Nil(t, err)
 
@@ -71,8 +70,7 @@ func TestSubscription(t *testing.T) {
 			panic("timeout")
 		}
 
-		wg.Done()
-	}()
+	})
 	time.Sleep(sleepDurationForAsyncBehavior)
 
 	cache, err := newRedisCache(getTestRedisConfig())

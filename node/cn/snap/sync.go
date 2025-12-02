@@ -1064,16 +1064,14 @@ func (s *Syncer) assignBytecodeTasks(success chan *bytecodeResponse, fail chan *
 		s.bytecodeReqs[reqid] = req
 		delete(s.bytecodeIdlers, idle)
 
-		s.pend.Add(1)
-		go func() {
-			defer s.pend.Done()
+		s.pend.Go(func() {
 
 			// Attempt to send the remote request and revert if it fails
 			if err := peer.RequestByteCodes(reqid, hashes, maxRequestSize); err != nil {
 				logger.Debug("Failed to request bytecodes", "err", err)
 				s.scheduleRevertBytecodeRequest(req)
 			}
-		}()
+		})
 	}
 }
 
@@ -1460,16 +1458,14 @@ func (s *Syncer) assignBytecodeHealTasks(success chan *bytecodeHealResponse, fai
 		s.bytecodeHealReqs[reqid] = req
 		delete(s.bytecodeHealIdlers, idle)
 
-		s.pend.Add(1)
-		go func() {
-			defer s.pend.Done()
+		s.pend.Go(func() {
 
 			// Attempt to send the remote request and revert if it fails
 			if err := peer.RequestByteCodes(reqid, hashes, maxRequestSize); err != nil {
 				logger.Debug("Failed to request bytecode healers", "err", err)
 				s.scheduleRevertBytecodeHealRequest(req)
 			}
-		}()
+		})
 	}
 }
 

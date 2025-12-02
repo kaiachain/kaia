@@ -391,9 +391,7 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 		reler    = new(releaser)
 	)
 	for th := 0; th < threads; th++ {
-		pend.Add(1)
-		go func() {
-			defer pend.Done()
+		pend.Go(func() {
 
 			// Fetch and execute the block trace tasks
 			for task := range tasks {
@@ -435,7 +433,7 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 					results <- task
 				}
 			}
-		}()
+		})
 	}
 	// Start a goroutine to feed all the blocks into the tracers
 
@@ -707,9 +705,7 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 		threads = len(txs)
 	}
 	for th := 0; th < threads; th++ {
-		pend.Add(1)
-		go func() {
-			defer pend.Done()
+		pend.Go(func() {
 
 			// Fetch and execute the next transaction trace tasks
 			for task := range jobs {
@@ -728,7 +724,7 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 				}
 				results[task.index] = &txTraceResult{TxHash: txs[task.index].Hash(), Result: res}
 			}
-		}()
+		})
 	}
 	// Feed the transactions into the tracers and return
 	var failed error

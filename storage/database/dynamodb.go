@@ -545,8 +545,7 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 
 	// If the size of the item is larger than the limit, it should be handled in different way
 	if dataSize > dynamoWriteSizeLimit {
-		batch.wg.Add(1)
-		go func() {
+		batch.wg.Go(func() {
 			failCnt := 0
 			batch.db.logger.Debug("write large size data into fileDB")
 
@@ -560,8 +559,7 @@ func (batch *dynamoBatch) Put(key, val []byte) error {
 				batch.db.logger.Warn("retrying write an item into fileDB")
 				_, err = batch.db.fdb.write(item{key: key, val: val})
 			}
-			batch.wg.Done()
-		}()
+		})
 		data.Val = overSizedDataPrefix
 		dataSize = len(data.Val)
 	}
