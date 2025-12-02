@@ -253,13 +253,7 @@ func calculateCapacity(numEntries int, retention time.Duration) int {
 	// Assuming 1 block per second: max epochs = retention_seconds / 1000
 	// Add 2x buffer for safety
 	retentionSeconds := int64(retention.Seconds())
-	maxExpectedEpochs := int((retentionSeconds / 1000) * 2)
-	if maxExpectedEpochs > maxCap {
-		maxExpectedEpochs = maxCap
-	}
-	capacity := numEntries
-	if capacity > maxExpectedEpochs {
-		capacity = maxExpectedEpochs
-	}
+	maxExpectedEpochs := min(maxCap, int((retentionSeconds / 1000) * 2))
+	capacity := min(maxExpectedEpochs, numEntries)
 	return capacity
 }
