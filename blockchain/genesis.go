@@ -182,7 +182,7 @@ func findBlockWithState(db database.DBManager) *types.Block {
 // error is a *params.ConfigCompatError and the new, unwritten config is returned.
 //
 // The returned chain configuration is never nil.
-func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64, isPrivate, overwriteGenesis bool) (*params.ChainConfig, common.Hash, error) {
+func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64, overwriteGenesis bool) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
 		return params.TestChainConfig, common.Hash{}, errGenesisNoConfig
 	}
@@ -192,9 +192,6 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 	if (stored == common.Hash{}) {
 		if genesis == nil {
 			switch {
-			case isPrivate:
-				logger.Error("No genesis is provided. --networkid should be omitted if you want to use preconfigured network")
-				return params.TestChainConfig, common.Hash{}, errNoGenesis
 			case networkId == params.KairosNetworkId:
 				logger.Info("Writing default Kairos genesis block")
 				genesis = DefaultKairosGenesisBlock()

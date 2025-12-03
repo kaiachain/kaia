@@ -75,7 +75,7 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
 				mainnetGenesisBlock.MustCommit(db)
 				mainnetGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
-				return SetupGenesisBlock(db, mainnetGenesisBlock, params.MainnetNetworkId, false, false)
+				return SetupGenesisBlock(db, mainnetGenesisBlock, params.MainnetNetworkId, false)
 			},
 			wantHash:         params.MainnetGenesisHash,
 			wantConfig:       mainnetGenesisBlock.Config,
@@ -89,7 +89,7 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
 				kairosGenesisBlock.MustCommit(db)
 				kairosGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
-				return SetupGenesisBlock(db, kairosGenesisBlock, params.KairosNetworkId, false, false)
+				return SetupGenesisBlock(db, kairosGenesisBlock, params.KairosNetworkId, false)
 			},
 			wantHash:         params.KairosGenesisHash,
 			wantConfig:       kairosGenesisBlock.Config,
@@ -102,7 +102,7 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
 				kairosGenesisBlock.MustCommit(db)
 				kairosGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
-				return SetupGenesisBlock(db, kairosGenesisBlock, params.KairosNetworkId, false, false)
+				return SetupGenesisBlock(db, kairosGenesisBlock, params.KairosNetworkId, false)
 			},
 			wantHash:         common.Hash{},
 			wantConfig:       kairosGenesisBlock.Config,
@@ -127,7 +127,7 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 				// This should return a compatibility error.
 				newConfig := *genesis
 				newConfig.Config.IstanbulCompatibleBlock = newHFBlock
-				return SetupGenesisBlock(db, &newConfig, params.MainnetNetworkId, true, false)
+				return SetupGenesisBlock(db, &newConfig, params.MainnetNetworkId, false)
 			},
 			wantHash:         params.MainnetGenesisHash,
 			wantConfig:       mainnetGenesisBlock.Config,
@@ -179,7 +179,7 @@ func TestSetupGenesis(t *testing.T) {
 		{
 			name: "genesis without ChainConfig",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				return SetupGenesisBlock(db, new(Genesis), params.UnusedNetworkId, false, false)
+				return SetupGenesisBlock(db, new(Genesis), params.UnusedNetworkId, false)
 			},
 			wantErr:    errGenesisNoConfig,
 			wantConfig: params.TestChainConfig,
@@ -187,7 +187,7 @@ func TestSetupGenesis(t *testing.T) {
 		{
 			name: "no block in DB, genesis == nil, Mainnet networkId",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				return SetupGenesisBlock(db, nil, params.MainnetNetworkId, false, false)
+				return SetupGenesisBlock(db, nil, params.MainnetNetworkId, false)
 			},
 			wantHash:   params.MainnetGenesisHash,
 			wantConfig: params.MainnetChainConfig,
@@ -195,7 +195,7 @@ func TestSetupGenesis(t *testing.T) {
 		{
 			name: "no block in DB, genesis == nil, Kairos networkId",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				return SetupGenesisBlock(db, nil, params.KairosNetworkId, false, false)
+				return SetupGenesisBlock(db, nil, params.KairosNetworkId, false)
 			},
 			wantHash:   params.KairosGenesisHash,
 			wantConfig: params.KairosChainConfig,
@@ -203,7 +203,7 @@ func TestSetupGenesis(t *testing.T) {
 		{
 			name: "no block in DB, genesis == customGenesis, private network",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				return SetupGenesisBlock(db, customGenesis, customChainId, true, false)
+				return SetupGenesisBlock(db, customGenesis, customChainId, false)
 			},
 			wantHash:   customGenesisHash,
 			wantConfig: customGenesis.Config,
@@ -212,7 +212,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "Mainnet block in DB, genesis == nil, Mainnet networkId",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				genMainnetGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, nil, params.MainnetNetworkId, false, false)
+				return SetupGenesisBlock(db, nil, params.MainnetNetworkId, false)
 			},
 			wantHash:   params.MainnetGenesisHash,
 			wantConfig: params.MainnetChainConfig,
@@ -221,7 +221,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "Kairos block in DB, genesis == nil, Kairos networkId",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				genKairosGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, nil, params.KairosNetworkId, false, false)
+				return SetupGenesisBlock(db, nil, params.KairosNetworkId, false)
 			},
 			wantHash:   params.KairosGenesisHash,
 			wantConfig: params.KairosChainConfig,
@@ -230,7 +230,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "custom block in DB, genesis == nil, custom networkId",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				customGenesis.MustCommit(db)
-				return SetupGenesisBlock(db, nil, customChainId, true, false)
+				return SetupGenesisBlock(db, nil, customChainId, false)
 			},
 			wantHash:   customGenesisHash,
 			wantConfig: customGenesis.Config,
@@ -239,7 +239,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "Mainnet block in DB, genesis == Kairos",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				genMainnetGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, genKairosGenesisBlock(), params.KairosNetworkId, false, false)
+				return SetupGenesisBlock(db, genKairosGenesisBlock(), params.KairosNetworkId, false)
 			},
 			wantErr:    &GenesisMismatchError{Stored: params.MainnetGenesisHash, New: params.KairosGenesisHash},
 			wantHash:   params.KairosGenesisHash,
@@ -249,7 +249,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "Kairos block in DB, genesis == Mainnet",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				genKairosGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, genMainnetGenesisBlock(), params.MainnetNetworkId, false, false)
+				return SetupGenesisBlock(db, genMainnetGenesisBlock(), params.MainnetNetworkId, false)
 			},
 			wantErr:    &GenesisMismatchError{Stored: params.KairosGenesisHash, New: params.MainnetGenesisHash},
 			wantHash:   params.MainnetGenesisHash,
@@ -259,7 +259,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "Mainnet block in DB, genesis == custom",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				genMainnetGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, genCustomGenesisBlock(customChainId), customChainId, true, false)
+				return SetupGenesisBlock(db, genCustomGenesisBlock(customChainId), customChainId, false)
 			},
 			wantErr:    &GenesisMismatchError{Stored: params.MainnetGenesisHash, New: customGenesisHash},
 			wantHash:   customGenesisHash,
@@ -269,7 +269,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "Kairos block in DB, genesis == custom",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				genKairosGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, customGenesis, customChainId, true, false)
+				return SetupGenesisBlock(db, customGenesis, customChainId, false)
 			},
 			wantErr:    &GenesisMismatchError{Stored: params.KairosGenesisHash, New: customGenesisHash},
 			wantHash:   customGenesisHash,
@@ -279,7 +279,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "custom block in DB, genesis == Mainnet",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				customGenesis.MustCommit(db)
-				return SetupGenesisBlock(db, genMainnetGenesisBlock(), params.MainnetNetworkId, false, false)
+				return SetupGenesisBlock(db, genMainnetGenesisBlock(), params.MainnetNetworkId, false)
 			},
 			wantErr:    &GenesisMismatchError{Stored: customGenesisHash, New: params.MainnetGenesisHash},
 			wantHash:   params.MainnetGenesisHash,
@@ -289,7 +289,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "custom block in DB, genesis == Kairos",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				customGenesis.MustCommit(db)
-				return SetupGenesisBlock(db, genKairosGenesisBlock(), params.KairosNetworkId, false, false)
+				return SetupGenesisBlock(db, genKairosGenesisBlock(), params.KairosNetworkId, false)
 			},
 			wantErr:    &GenesisMismatchError{Stored: customGenesisHash, New: params.KairosGenesisHash},
 			wantHash:   params.KairosGenesisHash,
@@ -299,7 +299,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "compatible config in DB",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				customGenesis.MustCommit(db)
-				return SetupGenesisBlock(db, customGenesis, customChainId, true, false)
+				return SetupGenesisBlock(db, customGenesis, customChainId, false)
 			},
 			wantHash:   customGenesisHash,
 			wantConfig: customGenesis.Config,
@@ -319,7 +319,7 @@ func TestSetupGenesis(t *testing.T) {
 				// This should return a compatibility error.
 				newConfig := *customGenesis
 				newConfig.Config.IstanbulCompatibleBlock = big.NewInt(3)
-				return SetupGenesisBlock(db, &newConfig, customChainId, true, false)
+				return SetupGenesisBlock(db, &newConfig, customChainId, false)
 			},
 			wantHash:   customGenesisHash,
 			wantConfig: customGenesis.Config,
@@ -360,7 +360,7 @@ func TestGenesisRestoreState(t *testing.T) {
 	db := database.NewMemoryDBManager()
 
 	// Setup first to Commit the Genesis block
-	_, hash, err := SetupGenesisBlock(db, nil, params.MainnetNetworkId, false, false)
+	_, hash, err := SetupGenesisBlock(db, nil, params.MainnetNetworkId, false)
 	assert.Nil(t, err)
 	assert.Equal(t, params.MainnetGenesisHash, hash)
 
@@ -370,7 +370,7 @@ func TestGenesisRestoreState(t *testing.T) {
 	db.DeleteTrieNode(root)
 
 	// Setup again to restore the state trie
-	_, hash, err = SetupGenesisBlock(db, nil, params.MainnetNetworkId, false, false)
+	_, hash, err = SetupGenesisBlock(db, nil, params.MainnetNetworkId, false)
 	assert.Nil(t, err)
 	assert.Equal(t, params.MainnetGenesisHash, hash)
 	ok, _ := db.HasTrieNode(root)
