@@ -96,7 +96,7 @@ func TestHardForkBlock(t *testing.T) {
 		os.RemoveAll(dir)
 	}()
 
-	chainConfig, _, err := blockchain.SetupGenesisBlock(chainDb, &genesis, params.UnusedNetworkId, false)
+	chainConfig, _, err := blockchain.SetupGenesisBlock(chainDb, &genesis, params.UnusedNetworkId)
 	chainConfig.Istanbul = &params.IstanbulConfig{
 		Epoch: 100,
 	}

@@ -182,7 +182,7 @@ func findBlockWithState(db database.DBManager) *types.Block {
 // error is a *params.ConfigCompatError and the new, unwritten config is returned.
 //
 // The returned chain configuration is never nil.
-func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64, overwriteGenesis bool) (*params.ChainConfig, common.Hash, error) {
+func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
 		return params.TestChainConfig, common.Hash{}, errGenesisNoConfig
 	}
@@ -217,15 +217,6 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 
 	// Check whether the genesis block is already written.
 	if genesis != nil {
-		// If overwriteGenesis is true, overwrite existing genesis block with the new one.
-		// This is to run a test with pre-existing data.
-		if overwriteGenesis {
-			headBlock := findBlockWithState(db)
-			logger.Warn("Trying to overwrite original genesis block with the new one",
-				"headBlockHash", headBlock.Hash().String(), "headBlockNum", headBlock.NumberU64())
-			newGenesisBlock, err := genesis.Commit(headBlock.Root(), db)
-			return genesis.Config, newGenesisBlock.Hash(), err
-		}
 		// This is the usual path which does not overwrite genesis block with the new one.
 		// Make sure the provided genesis is equal to the stored one.
 		InitDeriveSha(genesis.Config)
