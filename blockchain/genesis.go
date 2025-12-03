@@ -407,7 +407,7 @@ func GenesisBlockForTesting(db database.DBManager, addr common.Address, balance 
 func DefaultGenesisBlock() *Genesis {
 	ret := &Genesis{}
 	if err := json.Unmarshal(mainnetGenesisJson, &ret); err != nil {
-		logger.Error("Error in Unmarshalling Mainnet Genesis Json", "err", err)
+		logger.Crit("Error in Unmarshalling Mainnet Genesis Json", "err", err)
 	}
 	ret.Config = params.MainnetChainConfig.Copy()
 	ret.Governance = SetGenesisGovernance(ret)
@@ -419,8 +419,7 @@ func DefaultGenesisBlock() *Genesis {
 func DefaultKairosGenesisBlock() *Genesis {
 	ret := &Genesis{}
 	if err := json.Unmarshal(kairosGenesisJson, &ret); err != nil {
-		logger.Error("Error in Unmarshalling Kairos Genesis Json", "err", err)
-		return nil
+		logger.Crit("Error in Unmarshalling Kairos Genesis Json", "err", err)
 	}
 	ret.Config = params.KairosChainConfig.Copy()
 	ret.Governance = SetGenesisGovernance(ret)
