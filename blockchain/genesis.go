@@ -182,7 +182,7 @@ func findBlockWithState(db database.DBManager) *types.Block {
 // error is a *params.ConfigCompatError and the new, unwritten config is returned.
 //
 // The returned chain configuration is never nil.
-func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64) (*params.ChainConfig, common.Hash, error) {
+func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
 		return params.TestChainConfig, common.Hash{}, errGenesisNoConfig
 	}
@@ -191,19 +191,8 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 	stored := db.ReadCanonicalHash(0)
 	if (stored == common.Hash{}) {
 		if genesis == nil {
-			switch {
-			case networkId == params.KairosNetworkId:
-				logger.Info("Writing default Kairos genesis block")
-				genesis = DefaultKairosGenesisBlock()
-			case networkId == params.MainnetNetworkId:
-				fallthrough
-			default:
-				logger.Info("Writing default Mainnet genesis block")
-				genesis = DefaultGenesisBlock()
-			}
-			if genesis.Config.Governance != nil {
-				genesis.Governance = SetGenesisGovernance(genesis)
-			}
+			logger.Info("Writing default Mainnet genesis block")
+			genesis = DefaultGenesisBlock()
 		} else {
 			logger.Info("Writing custom genesis block")
 		}
@@ -230,7 +219,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 	// Because the trie can be partially corrupted, we always commit the trie.
 	// It can happen in a state migrated database or live pruned database.
 	if db.GetDomainsManager() == nil { // FlatTrie disallows re-commiting the block lower than the head block.
-		commitGenesisState(genesis, db, networkId)
+		commitGenesisState(genesis, db)
 	}
 
 	// Get the existing chain configuration.
@@ -420,7 +409,9 @@ func DefaultGenesisBlock() *Genesis {
 	if err := json.Unmarshal(mainnetGenesisJson, &ret); err != nil {
 		logger.Error("Error in Unmarshalling Mainnet Genesis Json", "err", err)
 	}
-	ret.Config = params.MainnetChainConfig
+	ret.Config = params.MainnetChainConfig.Copy()
+	ret.Governance = SetGenesisGovernance(ret)
+	InitDeriveSha(ret.Config)
 	return ret
 }
 
@@ -431,7 +422,9 @@ func DefaultKairosGenesisBlock() *Genesis {
 		logger.Error("Error in Unmarshalling Kairos Genesis Json", "err", err)
 		return nil
 	}
-	ret.Config = params.KairosChainConfig
+	ret.Config = params.KairosChainConfig.Copy()
+	ret.Governance = SetGenesisGovernance(ret)
+	InitDeriveSha(ret.Config)
 	return ret
 }
 
@@ -447,19 +440,9 @@ func decodePrealloc(data string) GenesisAlloc {
 	return ga
 }
 
-func commitGenesisState(genesis *Genesis, db database.DBManager, networkId uint64) {
+func commitGenesisState(genesis *Genesis, db database.DBManager) {
 	if genesis == nil {
-		switch {
-		case networkId == params.KairosNetworkId:
-			genesis = DefaultKairosGenesisBlock()
-		case networkId == params.MainnetNetworkId:
-			fallthrough
-		default:
-			genesis = DefaultGenesisBlock()
-		}
-		if genesis.Config.Governance != nil {
-			genesis.Governance = SetGenesisGovernance(genesis)
-		}
+		genesis = DefaultGenesisBlock()
 	}
 	// Run genesis.ToBlock() to calls StateDB.Commit() which writes the state trie.
 	// But do not run genesis.Commit() which overwrites HeaderHash.

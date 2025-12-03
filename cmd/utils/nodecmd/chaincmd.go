@@ -34,7 +34,6 @@ import (
 	"github.com/kaiachain/kaia/cmd/utils"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/urfave/cli/v2"
 )
@@ -184,7 +183,7 @@ func initGenesis(ctx *cli.Context) error {
 		// Initialize DeriveSha implementation
 		blockchain.InitDeriveSha(genesis.Config)
 
-		_, hash, err := blockchain.SetupGenesisBlock(chainDB, genesis, params.UnusedNetworkId)
+		_, hash, err := blockchain.SetupGenesisBlock(chainDB, genesis)
 		if err != nil {
 			logger.Crit("Failed to write genesis block", "err", err)
 		}
