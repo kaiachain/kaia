@@ -375,11 +375,9 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			"dir", bc.cacheConfig.TrieNodeCacheConfig.FastCacheFileDir,
 			"period", bc.cacheConfig.TrieNodeCacheConfig.FastCacheSavePeriod)
 		trieDB := bc.stateCache.TrieDB()
-		bc.wg.Add(1)
-		go func() {
-			defer bc.wg.Done()
+		bc.wg.Go(func() {
 			trieDB.SaveCachePeriodically(bc.cacheConfig.TrieNodeCacheConfig, bc.quit)
-		}()
+		})
 	}
 
 	return bc, nil
@@ -1460,9 +1458,7 @@ func (bc *BlockChain) triesInMemory() uint64 {
 func (bc *BlockChain) gcCachedNodeLoop() {
 	trieDB := bc.stateCache.TrieDB()
 
-	bc.wg.Add(1)
-	go func() {
-		defer bc.wg.Done()
+	bc.wg.Go(func() {
 		for {
 			select {
 			case block := <-bc.chBlock:
@@ -1491,7 +1487,7 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 				return
 			}
 		}
-	}()
+	})
 }
 
 func (bc *BlockChain) pruneTrieNodeLoop() {
@@ -1499,9 +1495,7 @@ func (bc *BlockChain) pruneTrieNodeLoop() {
 	// ReadPruningMarks(start, limit) is much faster because it only iterates a small range.
 	startNum := uint64(1)
 
-	bc.wg.Add(1)
-	go func() {
-		defer bc.wg.Done()
+	bc.wg.Go(func() {
 		for {
 			select {
 			case num := <-bc.chPrune:
@@ -1524,7 +1518,7 @@ func (bc *BlockChain) pruneTrieNodeLoop() {
 				return
 			}
 		}
-	}()
+	})
 }
 
 func (bc *BlockChain) IsLivePruningRequired() bool {

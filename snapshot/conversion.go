@@ -202,18 +202,14 @@ func generateTrieRoot(it Iterator, accountHash common.Hash, generatorFn trieGene
 		wg      sync.WaitGroup
 	)
 	// Spin up a go-routine for trie hash re-generation
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		generatorFn(in, out)
-	}()
+	})
 	// Spin up a go-routine for progress logging
 	if report && stats != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			runReport(stats, stoplog)
-		}()
+		})
 	}
 	// Create a semaphore to assign tasks and collect results through. We'll pre-
 	// fill it with nils, thus using the same channel for both limiting concurrent

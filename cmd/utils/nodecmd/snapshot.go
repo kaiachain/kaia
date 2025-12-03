@@ -228,16 +228,14 @@ func traceTrie(ctx *cli.Context) error {
 	endFlag := false
 
 	childWait.Add(len(children))
-	logWait.Add(1)
 	// create logging goroutine
-	go func() {
-		defer logWait.Done()
+	logWait.Go(func() {
 		for !endFlag {
 			time.Sleep(time.Second * 5)
 			logger.Info("Trie Tracer", "AccNode", midAccountCnt, "AccLeaf", leafAccountCnt, "StrgNode", midStorageCnt, "StrgLeaf", leafStorageCnt, "Unknown", unknownCnt, "CodeAcc", codeCnt)
 		}
 		logger.Info("Trie Tracer Finished", "AccNode", midAccountCnt, "AccLeaf", leafAccountCnt, "StrgNode", midStorageCnt, "StrgLeaf", leafStorageCnt, "Unknown", unknownCnt, "CodeAcc", codeCnt)
-	}()
+	})
 
 	// Create goroutine by number of childrens
 	for _, child := range children {

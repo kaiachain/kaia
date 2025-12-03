@@ -127,9 +127,7 @@ func (api *RewardGovAPI) accumulateRewards(lower, upper uint64) (*reward.RewardS
 	defer cancel()
 
 	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for {
 				select {
 				case <-ctx.Done():
@@ -152,7 +150,7 @@ func (api *RewardGovAPI) accumulateRewards(lower, upper uint64) (*reward.RewardS
 					mu.Unlock()
 				}
 			}
-		}()
+		})
 	}
 
 	for num := lower; num <= upper; num++ {
