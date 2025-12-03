@@ -222,19 +222,32 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		commitGenesisState(genesis, db)
 	}
 
-	// Get the existing chain configuration.
-	newCfg := genesis.configOrDefault(ghash)
-	if err := newCfg.CheckConfigForkOrder(); err != nil {
-		return newCfg, common.Hash{}, err
-	}
 	storedCfg, err := db.ReadChainConfig(ghash)
 	if err != nil {
-		return newCfg, ghash, err
+		logger.Crit("Failed to read chain config", "err", err)
 	}
 	if storedCfg == nil {
-		logger.Info("Found genesis block without chain config")
-		db.WriteChainConfig(ghash, newCfg)
-		return newCfg, ghash, nil
+		// Ensure the stored genesis block matches with the given genesis. Private
+		// networks must explicitly specify the genesis in the config file, mainnet
+		// genesis will be used as default and the initialization will always fail.
+		if genesis == nil {
+			logger.Info("Writing default main-net genesis block")
+			genesis = DefaultGenesisBlock()
+		} else {
+			logger.Info("Writing custom genesis block")
+		}
+
+		InitDeriveSha(genesis.Config)
+		hash := genesis.ToBlock(common.Hash{}, nil).Hash()
+		if hash != ghash {
+			return genesis.Config, hash, &GenesisMismatchError{ghash, hash}
+		}
+		block, err := genesis.Commit(hash, db)
+		if err != nil {
+			return params.TestChainConfig, common.Hash{}, err
+		}
+
+		return genesis.Config, block.Hash(), err
 	} else {
 		if storedCfg.Governance == nil {
 			logger.Crit("Failed to read governance. storedcfg.Governance == nil")
@@ -243,11 +256,18 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 			logger.Crit("Failed to read governance. storedcfg.Governance.Reward == nil")
 		}
 	}
+
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
 	// if we just continued here.
 	if genesis == nil && params.MainnetGenesisHash != ghash && params.KairosGenesisHash != ghash {
 		return storedCfg, ghash, nil
+	}
+
+	// Get the existing chain configuration.
+	newCfg := genesis.configOrDefault(ghash)
+	if err := newCfg.CheckConfigForkOrder(); err != nil {
+		return newCfg, common.Hash{}, err
 	}
 
 	// Check config compatibility and write the config. Compatibility errors
