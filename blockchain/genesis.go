@@ -68,6 +68,19 @@ type Genesis struct {
 	ParentHash common.Hash `json:"parentHash"`
 }
 
+// copy copies the genesis.
+func (g *Genesis) copy() *Genesis {
+	if g != nil {
+		cpy := *g
+		if g.Config != nil {
+			conf := g.Config.Copy()
+			cpy.Config = conf
+		}
+		return &cpy
+	}
+	return nil
+}
+
 // GenesisAlloc specifies the initial state that is part of the genesis block.
 type GenesisAlloc map[common.Address]GenesisAccount
 
@@ -184,7 +197,7 @@ func findBlockWithState(db database.DBManager) *types.Block {
 // The returned chain configuration is never nil.
 func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
-		return params.TestChainConfig, common.Hash{}, errGenesisNoConfig
+		return nil, common.Hash{}, errGenesisNoConfig
 	}
 
 	// Just commit the new block if there is no ghash genesis block.
@@ -199,7 +212,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		InitDeriveSha(genesis.Config)
 		block, err := genesis.Commit(common.Hash{}, db)
 		if err != nil {
-			return genesis.Config, common.Hash{}, err
+			return nil, common.Hash{}, err
 		}
 		return genesis.Config, block.Hash(), err
 	}
@@ -211,7 +224,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		InitDeriveSha(genesis.Config)
 		hash := genesis.ToBlock(common.Hash{}, nil).Hash()
 		if hash != ghash {
-			return genesis.Config, hash, &GenesisMismatchError{ghash, hash}
+			return nil, common.Hash{}, &GenesisMismatchError{ghash, hash}
 		}
 	}
 
@@ -240,11 +253,11 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		InitDeriveSha(genesis.Config)
 		hash := genesis.ToBlock(common.Hash{}, nil).Hash()
 		if hash != ghash {
-			return genesis.Config, hash, &GenesisMismatchError{ghash, hash}
+			return nil, common.Hash{}, &GenesisMismatchError{ghash, hash}
 		}
 		block, err := genesis.Commit(hash, db)
 		if err != nil {
-			return params.TestChainConfig, common.Hash{}, err
+			return nil, common.Hash{}, err
 		}
 
 		return genesis.Config, block.Hash(), err
@@ -257,24 +270,17 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		}
 	}
 
-	// Special case: don't change the existing config of a non-mainnet chain if no new
-	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
-	// if we just continued here.
-	if genesis == nil && params.MainnetGenesisHash != ghash && params.KairosGenesisHash != ghash {
-		return storedCfg, ghash, nil
-	}
-
 	// Get the existing chain configuration.
-	newCfg := genesis.configOrDefault(ghash)
+	newCfg := genesis.configOrDefault(ghash, storedCfg)
 	if err := newCfg.CheckConfigForkOrder(); err != nil {
-		return newCfg, common.Hash{}, err
+		return nil, common.Hash{}, err
 	}
 
 	// Check config compatibility and write the config. Compatibility errors
 	// are returned to the caller unless we're already at block zero.
 	height := db.ReadHeaderNumber(db.ReadHeadHeaderHash())
 	if height == nil {
-		return newCfg, ghash, errors.New("missing block number for head header hash")
+		return nil, common.Hash{}, errors.New("missing block number for head header hash")
 	}
 	compatErr := storedCfg.CheckCompatible(newCfg, *height)
 	if compatErr != nil && *height != 0 && compatErr.RewindTo != 0 {
@@ -284,7 +290,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 	return newCfg, ghash, nil
 }
 
-func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
+func (g *Genesis) configOrDefault(ghash common.Hash, storedCfg *params.ChainConfig) *params.ChainConfig {
 	switch {
 	case g != nil:
 		return g.Config
@@ -293,7 +299,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	case ghash == params.KairosGenesisHash:
 		return params.KairosChainConfig
 	default:
-		return params.TestChainConfig
+		return storedCfg
 	}
 }
 
