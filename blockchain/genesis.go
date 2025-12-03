@@ -187,9 +187,9 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		return params.TestChainConfig, common.Hash{}, errGenesisNoConfig
 	}
 
-	// Just commit the new block if there is no stored genesis block.
-	stored := db.ReadCanonicalHash(0)
-	if (stored == common.Hash{}) {
+	// Just commit the new block if there is no ghash genesis block.
+	ghash := db.ReadCanonicalHash(0)
+	if (ghash == common.Hash{}) {
 		if genesis == nil {
 			logger.Info("Writing default Mainnet genesis block")
 			genesis = DefaultGenesisBlock()
@@ -210,8 +210,8 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		// Make sure the provided genesis is equal to the stored one.
 		InitDeriveSha(genesis.Config)
 		hash := genesis.ToBlock(common.Hash{}, nil).Hash()
-		if hash != stored {
-			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
+		if hash != ghash {
+			return genesis.Config, hash, &GenesisMismatchError{ghash, hash}
 		}
 	}
 
@@ -223,45 +223,45 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 	}
 
 	// Get the existing chain configuration.
-	newcfg := genesis.configOrDefault(stored)
-	if err := newcfg.CheckConfigForkOrder(); err != nil {
-		return newcfg, common.Hash{}, err
+	newCfg := genesis.configOrDefault(ghash)
+	if err := newCfg.CheckConfigForkOrder(); err != nil {
+		return newCfg, common.Hash{}, err
 	}
-	storedcfg, err := db.ReadChainConfig(stored)
+	storedCfg, err := db.ReadChainConfig(ghash)
 	if err != nil {
-		return newcfg, stored, err
+		return newCfg, ghash, err
 	}
-	if storedcfg == nil {
+	if storedCfg == nil {
 		logger.Info("Found genesis block without chain config")
-		db.WriteChainConfig(stored, newcfg)
-		return newcfg, stored, nil
+		db.WriteChainConfig(ghash, newCfg)
+		return newCfg, ghash, nil
 	} else {
-		if storedcfg.Governance == nil {
+		if storedCfg.Governance == nil {
 			logger.Crit("Failed to read governance. storedcfg.Governance == nil")
 		}
-		if storedcfg.Governance.Reward == nil {
+		if storedCfg.Governance.Reward == nil {
 			logger.Crit("Failed to read governance. storedcfg.Governance.Reward == nil")
 		}
 	}
 	// Special case: don't change the existing config of a non-mainnet chain if no new
 	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
 	// if we just continued here.
-	if genesis == nil && params.MainnetGenesisHash != stored && params.KairosGenesisHash != stored {
-		return storedcfg, stored, nil
+	if genesis == nil && params.MainnetGenesisHash != ghash && params.KairosGenesisHash != ghash {
+		return storedCfg, ghash, nil
 	}
 
 	// Check config compatibility and write the config. Compatibility errors
 	// are returned to the caller unless we're already at block zero.
 	height := db.ReadHeaderNumber(db.ReadHeadHeaderHash())
 	if height == nil {
-		return newcfg, stored, fmt.Errorf("missing block number for head header hash")
+		return newCfg, ghash, fmt.Errorf("missing block number for head header hash")
 	}
-	compatErr := storedcfg.CheckCompatible(newcfg, *height)
+	compatErr := storedCfg.CheckCompatible(newCfg, *height)
 	if compatErr != nil && *height != 0 && compatErr.RewindTo != 0 {
-		return newcfg, stored, compatErr
+		return newCfg, ghash, compatErr
 	}
-	db.WriteChainConfig(stored, newcfg)
-	return newcfg, stored, nil
+	db.WriteChainConfig(ghash, newCfg)
+	return newCfg, ghash, nil
 }
 
 func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
