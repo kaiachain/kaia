@@ -45,11 +45,11 @@ import (
 
 // TestDefaultGenesisBlock tests the genesis block generation functions: DefaultGenesisBlock, DefaultKairosGenesisBlock
 func TestDefaultGenesisBlock(t *testing.T) {
-	block := genMainnetGenesisBlock().ToBlock(common.Hash{}, nil)
+	block := DefaultGenesisBlock().ToBlock(common.Hash{}, nil)
 	if block.Hash() != params.MainnetGenesisHash {
 		t.Errorf("wrong Mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
 	}
-	block = genKairosGenesisBlock().ToBlock(common.Hash{}, nil)
+	block = DefaultKairosGenesisBlock().ToBlock(common.Hash{}, nil)
 	if block.Hash() != params.KairosGenesisHash {
 		t.Errorf("wrong Kairos genesis hash, got %v, want %v", block.Hash(), params.KairosGenesisHash)
 	}
@@ -57,7 +57,7 @@ func TestDefaultGenesisBlock(t *testing.T) {
 
 // TestHardCodedChainConfigUpdate tests the public network's chainConfig update.
 func TestHardCodedChainConfigUpdate(t *testing.T) {
-	mainnetGenesisBlock, kairosGenesisBlock := genMainnetGenesisBlock(), genKairosGenesisBlock()
+	mainnetGenesisBlock, kairosGenesisBlock := DefaultGenesisBlock(), DefaultKairosGenesisBlock()
 	tests := []struct {
 		name             string
 		newHFBlock       *big.Int
@@ -116,7 +116,7 @@ func TestHardCodedChainConfigUpdate(t *testing.T) {
 			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
 				// Commit the 'old' genesis block with Istanbul transition at #2.
 				// Advance to block #4, past the Istanbul transition block of customGenesis.
-				genesis := genMainnetGenesisBlock()
+				genesis := DefaultGenesisBlock()
 				genesisBlock := genesis.MustCommit(db)
 
 				bc, _ := NewBlockChain(db, nil, genesis.Config, faker.NewFullFaker(), vm.Config{})
@@ -203,8 +203,8 @@ func TestSetupGenesis(t *testing.T) {
 		{
 			name: "Mainnet block in DB, genesis != nil",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				genMainnetGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, genMainnetGenesisBlock())
+				DefaultGenesisBlock().MustCommit(db)
+				return SetupGenesisBlock(db, DefaultGenesisBlock())
 			},
 			wantHash:   params.MainnetGenesisHash,
 			wantConfig: params.MainnetChainConfig,
@@ -212,8 +212,8 @@ func TestSetupGenesis(t *testing.T) {
 		{
 			name: "Kairos block in DB, genesis != nil, Kairos networkId",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				genKairosGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, genKairosGenesisBlock())
+				DefaultKairosGenesisBlock().MustCommit(db)
+				return SetupGenesisBlock(db, DefaultKairosGenesisBlock())
 			},
 			wantHash:   params.KairosGenesisHash,
 			wantConfig: params.KairosChainConfig,
@@ -230,8 +230,8 @@ func TestSetupGenesis(t *testing.T) {
 		{
 			name: "Mainnet block in DB, genesis == Kairos",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				genMainnetGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, genKairosGenesisBlock())
+				DefaultGenesisBlock().MustCommit(db)
+				return SetupGenesisBlock(db, DefaultKairosGenesisBlock())
 			},
 			wantErr:    &GenesisMismatchError{Stored: params.MainnetGenesisHash, New: params.KairosGenesisHash},
 			wantHash:   params.KairosGenesisHash,
@@ -240,8 +240,8 @@ func TestSetupGenesis(t *testing.T) {
 		{
 			name: "Kairos block in DB, genesis == Mainnet",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				genKairosGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, genMainnetGenesisBlock())
+				DefaultKairosGenesisBlock().MustCommit(db)
+				return SetupGenesisBlock(db, DefaultGenesisBlock())
 			},
 			wantErr:    &GenesisMismatchError{Stored: params.KairosGenesisHash, New: params.MainnetGenesisHash},
 			wantHash:   params.MainnetGenesisHash,
@@ -250,7 +250,7 @@ func TestSetupGenesis(t *testing.T) {
 		{
 			name: "Mainnet block in DB, genesis == custom",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				genMainnetGenesisBlock().MustCommit(db)
+				DefaultGenesisBlock().MustCommit(db)
 				return SetupGenesisBlock(db, genCustomGenesisBlock(customChainId))
 			},
 			wantErr:    &GenesisMismatchError{Stored: params.MainnetGenesisHash, New: customGenesisHash},
@@ -260,7 +260,7 @@ func TestSetupGenesis(t *testing.T) {
 		{
 			name: "Kairos block in DB, genesis == custom",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				genKairosGenesisBlock().MustCommit(db)
+				DefaultKairosGenesisBlock().MustCommit(db)
 				return SetupGenesisBlock(db, customGenesis)
 			},
 			wantErr:    &GenesisMismatchError{Stored: params.KairosGenesisHash, New: customGenesisHash},
@@ -271,7 +271,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "custom block in DB, genesis == Mainnet",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				customGenesis.MustCommit(db)
-				return SetupGenesisBlock(db, genMainnetGenesisBlock())
+				return SetupGenesisBlock(db, DefaultGenesisBlock())
 			},
 			wantErr:    &GenesisMismatchError{Stored: customGenesisHash, New: params.MainnetGenesisHash},
 			wantHash:   params.MainnetGenesisHash,
@@ -281,7 +281,7 @@ func TestSetupGenesis(t *testing.T) {
 			name: "custom block in DB, genesis == Kairos",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				customGenesis.MustCommit(db)
-				return SetupGenesisBlock(db, genKairosGenesisBlock())
+				return SetupGenesisBlock(db, DefaultKairosGenesisBlock())
 			},
 			wantErr:    &GenesisMismatchError{Stored: customGenesisHash, New: params.KairosGenesisHash},
 			wantHash:   params.KairosGenesisHash,
@@ -500,22 +500,6 @@ func TestGenesisAccount(t *testing.T) {
 			})
 		}
 	}
-}
-
-func genMainnetGenesisBlock() *Genesis {
-	genesis := DefaultGenesisBlock()
-	genesis.Config = params.MainnetChainConfig.Copy()
-	genesis.Governance = SetGenesisGovernance(genesis)
-	InitDeriveSha(genesis.Config)
-	return genesis
-}
-
-func genKairosGenesisBlock() *Genesis {
-	genesis := DefaultKairosGenesisBlock()
-	genesis.Config = params.KairosChainConfig.Copy()
-	genesis.Governance = SetGenesisGovernance(genesis)
-	InitDeriveSha(genesis.Config)
-	return genesis
 }
 
 func genCustomGenesisBlock(customChainId uint64) *Genesis {
