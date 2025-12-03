@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/accounts"
 	mock_accounts "github.com/kaiachain/kaia/accounts/mocks"
 	mock_api "github.com/kaiachain/kaia/api/mocks"
@@ -323,17 +324,18 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
 	// Create dummy header
 	header := types.CopyHeader(&types.Header{
 		ParentHash: common.HexToHash("0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348"), Rewardbase: common.Address{}, TxHash: types.EmptyTxRootOriginal,
-		Root:        common.HexToHash("0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9"),
-		ReceiptHash: types.EmptyTxRootOriginal,
-		Bloom:       types.Bloom{},
-		BlockScore:  new(big.Int).SetUint64(1),
-		Number:      new(big.Int).SetUint64(4),
-		GasUsed:     uint64(10000),
-		Time:        new(big.Int).SetUint64(1641363540),
-		TimeFoS:     uint8(85),
-		Extra:       common.Hex2Bytes("0xd983010701846b6c617988676f312e31362e338664617277696e000000000000f89ed5949712f943b296758aaae79944ec975884188d3a96b8415a0614be7fd5ea40f11ce558e02993bd55f11ae72a3cfbc861875a57483ec5ec3adda3e5845fd7ab271d670c755480f9ef5b8dd731f4e1f032fff5d165b763ac01f843b8418867d3733167a0c737fa5b62dcc59ec3b0af5748bcc894e7990a0b5a642da4546713c9127b3358cdfe7894df1ca1db5a97560599986d7f1399003cd63660b98200"),
-		Governance:  []byte{},
-		Vote:        []byte{},
+		Root:          common.HexToHash("0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9"),
+		ReceiptHash:   types.EmptyTxRootOriginal,
+		Bloom:         types.Bloom{},
+		BlockScore:    new(big.Int).SetUint64(1),
+		Number:        new(big.Int).SetUint64(4),
+		GasUsed:       uint64(10000),
+		Time:          new(big.Int).SetUint64(1641363540),
+		TimeFoS:       uint8(85),
+		Extra:         common.Hex2Bytes("0xd983010701846b6c617988676f312e31362e338664617277696e000000000000f89ed5949712f943b296758aaae79944ec975884188d3a96b8415a0614be7fd5ea40f11ce558e02993bd55f11ae72a3cfbc861875a57483ec5ec3adda3e5845fd7ab271d670c755480f9ef5b8dd731f4e1f032fff5d165b763ac01f843b8418867d3733167a0c737fa5b62dcc59ec3b0af5748bcc894e7990a0b5a642da4546713c9127b3358cdfe7894df1ca1db5a97560599986d7f1399003cd63660b98200"),
+		ExcessBlobGas: &excessBlobGas,
+		Governance:    []byte{},
+		Vote:          []byte{},
 	})
 	block, _, _, _, _ := createTestData(t, header)
 	var blockParam interface{}
@@ -366,21 +368,21 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
         "extraData": "0x",
         "gasLimit": "0xe8d4a50fff",
         "gasUsed": "0x2710",
-        "hash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+        "hash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
         "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         "miner": "0x9712f943b296758aaae79944ec975884188d3a96",
         "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "nonce": "0x0000000000000000",
         "number": "0x4",
         "parentHash": "0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348",
-        "receiptsRoot": "0xf6278dd71ffc1637f78dc2ee54f6f9e64d4b1633c1179dfdbc8c3b482efbdbec",
+        "receiptsRoot": "0x7ef08df185ad9cd68f6428b6c32a344250bbf7dd9681c016ccbe349a6f9ccc5a",
         "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
-        "size": "0xe44",
+        "size": "0x22976",
         "stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
         "timestamp": "0x61d53854",
         "transactions": [
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x0000000000000000000000000000000000000000",
               "gas": "0x1c9c380",
@@ -397,7 +399,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3036656164333031646165616636376537376538",
               "gas": "0x989680",
@@ -414,7 +416,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3730323366383135666136613633663761613063",
               "gas": "0x1312d00",
@@ -431,7 +433,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x1312d00",
@@ -448,7 +450,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x5f5e100",
@@ -465,7 +467,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -482,7 +484,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -499,7 +501,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -516,7 +518,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3036656164333031646165616636376537376538",
               "gas": "0x989680",
@@ -533,7 +535,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3730323366383135666136613633663761613063",
               "gas": "0x1312d00",
@@ -550,7 +552,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x1312d00",
@@ -567,7 +569,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x5f5e100",
@@ -584,7 +586,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -601,7 +603,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -618,7 +620,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -635,7 +637,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3036656164333031646165616636376537376538",
               "gas": "0x989680",
@@ -652,7 +654,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3730323366383135666136613633663761613063",
               "gas": "0x1312d00",
@@ -669,7 +671,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x1312d00",
@@ -686,7 +688,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x5f5e100",
@@ -703,7 +705,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -720,7 +722,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -737,7 +739,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -752,9 +754,123 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "v": "0x1",
               "r": "0x2",
               "s": "0x3"
+            },
+			{
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockNumber": "0x4",
+              "from": "0xd2cf1be6309647d3fb68cd1578a350fbf9579365",
+              "gas": "0x2faf080",
+			  "chainId": "0x1",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0xc7df054d6a9815f3502f75290058ebc454ebfbd1ec4a845e57835de58859df79",
+              "input": "0x",
+              "nonce": "0x16",
+              "to": "0x3336623562313539333066323466653862616538",
+			  "transactionIndex": "0x16",
+			  "value": "0xa",
+			  "type": "0x1",
+			  "accessList": [
+				{
+					"address": "0x3337333936313332333333373333363533333330",
+					"storageKeys": [
+						"0xa145cd642157a5df01f5bc3837a1bb59b3dcefbbfad5ec435919780aebeaba2b",
+						"0x12e2c26dca2fb2b8879f54a5ea1604924edf0e37965c2be8aa6133b75818da40"
+					]
+				}
+			  ],
+			  "chainId": "0x1",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+			{
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockNumber": "0x4",
+              "from": "0x99ece38c38250d5a366886bb319003a2c43a6652",
+              "gas": "0x2faf080",
+              "gasPrice": "0x5d21dba00",
+			  "maxFeePerGas": "0x5d21dba00",
+			  "maxPriorityFeePerGas": "0x5d21dba00",
+              "hash": "0x75d228540a72ae7fab2cca049fc7456ff4b7c39ec04d9d0399851e4590dd01fd",
+              "input": "0x",
+              "nonce": "0x17",
+              "to": "0x3336623562313539333066323466653862616538",
+			  "transactionIndex": "0x17",
+              "value": "0x3",
+              "type": "0x2",
+			  "accessList": [
+				{
+					"address": "0x3337333936313332333333373333363533333330",
+					"storageKeys": [
+						"0xa145cd642157a5df01f5bc3837a1bb59b3dcefbbfad5ec435919780aebeaba2b",
+						"0x12e2c26dca2fb2b8879f54a5ea1604924edf0e37965c2be8aa6133b75818da40"
+					]
+				}
+			  ],
+			  "chainId": "0x1",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+			{
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockNumber": "0x4",
+              "from": "0xd4ce9909ab4e4c80852f52ac01d39eefaf70014a",
+              "gas": "0x989680",
+              "gasPrice": "0x19",
+              "hash": "0xeb1c26e494ecd699ad51b1695de42c83ff815442760610b82d2baf57c4b01488",
+              "input": "0x",
+              "nonce": "0x18",
+              "to": "0x3336623562313539333066323466653862616538",
+              "transactionIndex": "0x18",
+              "value": "0x0",
+              "type": "0x3",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+			{
+              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockNumber": "0x4",
+              "from": "0x3e00e20175e3efe9190bcfa24b4bca6b1ea6f582",
+			  "chainId": "0x1",
+              "gas": "0x2faf080",
+              "gasPrice": "0x5d21dba00",
+			  "maxFeePerGas": "0x5d21dba00",
+			  "maxPriorityFeePerGas": "0x5d21dba00",
+              "hash": "0x59b20492615e0a314b5de568bb061c2099d731d1a238455c9a55cb0f5a6f1f9d",
+              "input": "0x",
+              "nonce": "0x19",
+              "to": "0x3336623562313539333066323466653862616538",
+			  "transactionIndex": "0x19",
+              "value": "0x3",
+              "type": "0x4",
+			  "accessList": [
+				{
+					"address": "0x3337333936313332333333373333363533333330",
+					"storageKeys": [
+						"0xa145cd642157a5df01f5bc3837a1bb59b3dcefbbfad5ec435919780aebeaba2b",
+						"0x12e2c26dca2fb2b8879f54a5ea1604924edf0e37965c2be8aa6133b75818da40"
+					]
+				}
+			  ],
+			  "chainId": "0x1",
+			  "authorizationList": [
+				{
+					"chainId": "0x1",
+					"address": "0x3337333936313332333333373333363533333330",
+					"nonce": "0x0",
+					"yParity": "0x0",
+					"r": "0x0",
+					"s": "0x0"
+				}
+			  ],
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
             }
         ],
-        "transactionsRoot": "0x0a83e34ab7302f42f4a9203e8295f545517645989da6555d8cbdc1e9599df85b",
+        "transactionsRoot": "0x8f1fcd90c14eb37cc2de811f393b309686ee0fcb97b4a79950598ee96ac03970",
         "uncles": []
     }
     `,
@@ -767,16 +883,16 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
         "extraData": "0x",
         "gasLimit": "0xe8d4a50fff",
         "gasUsed": "0x2710",
-        "hash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+        "hash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
         "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         "miner": "0x9712f943b296758aaae79944ec975884188d3a96",
         "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "nonce": "0x0000000000000000",
         "number": "0x4",
         "parentHash": "0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348",
-        "receiptsRoot": "0xf6278dd71ffc1637f78dc2ee54f6f9e64d4b1633c1179dfdbc8c3b482efbdbec",
+        "receiptsRoot": "0x7ef08df185ad9cd68f6428b6c32a344250bbf7dd9681c016ccbe349a6f9ccc5a",
         "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
-        "size": "0xe44",
+        "size": "0x22976",
         "stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
         "timestamp": "0x61d53854",
         "transactions": [
@@ -801,9 +917,13 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
             "0xa354fe3fdde6292e85545e6327c314827a20e0d7a1525398b38526fe28fd36e1",
             "0x5bb64e885f196f7b515e62e3b90496864d960e2f5e0d7ad88550fa1c875ca691",
             "0x6f4308b3c98db2db215d02c0df24472a215df7aa283261fcb06a6c9f796df9af",
-            "0x1df88d113f0c5833c1f7264687cd6ac43888c232600ffba8d3a7d89bb5013e71"
+            "0x1df88d113f0c5833c1f7264687cd6ac43888c232600ffba8d3a7d89bb5013e71",
+            "0xc7df054d6a9815f3502f75290058ebc454ebfbd1ec4a845e57835de58859df79",
+            "0x75d228540a72ae7fab2cca049fc7456ff4b7c39ec04d9d0399851e4590dd01fd",
+            "0xeb1c26e494ecd699ad51b1695de42c83ff815442760610b82d2baf57c4b01488",
+            "0x59b20492615e0a314b5de568bb061c2099d731d1a238455c9a55cb0f5a6f1f9d"
         ],
-        "transactionsRoot": "0x0a83e34ab7302f42f4a9203e8295f545517645989da6555d8cbdc1e9599df85b",
+        "transactionsRoot": "0x8f1fcd90c14eb37cc2de811f393b309686ee0fcb97b4a79950598ee96ac03970",
         "uncles": []
     }
     `,
@@ -827,7 +947,7 @@ func TestEthAPI_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(block, nil).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("ethTxType")).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
 	// Get transaction by block number and index for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
 		ethTx := api.GetTransactionByBlockNumberAndIndex(context.Background(), rpc.BlockNumber(block.NumberU64()), hexutil.Uint(i))
@@ -986,8 +1106,13 @@ func testInitForEthApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend,
 }
 
 func checkEthRPCTransactionFormat(t *testing.T, block *types.Block, ethTx *EthRPCTransaction, tx *types.Transaction, expectedIndex hexutil.Uint64) {
-	// All Kaia transaction types must be returned as TxTypeLegacyTransaction types.
-	assert.Equal(t, types.TxType(ethTx.Type), types.TxTypeLegacyTransaction)
+	isEthTyped := tx.IsEthTypedTransaction()
+	if isEthTyped {
+		assert.Equal(t, types.TxType(ethTx.Type), types.TxType(tx.Type()&0x00FF)) // The eth receipt is compared with the 0x78 prefix masked.
+	} else {
+		// All Kaia transaction types must be returned as TxTypeLegacyTransaction types.
+		assert.Equal(t, types.TxType(ethTx.Type), types.TxTypeLegacyTransaction)
+	}
 
 	// Check the data of common fields of the transaction.
 	from := getFrom(tx)
@@ -1023,12 +1148,14 @@ func checkEthRPCTransactionFormat(t *testing.T, block *types.Block, ethTx *EthRP
 		assert.Equal(t, expectedIndex, *ethTx.TransactionIndex)
 	}
 
-	// Fields additionally used for Ethereum transaction types are not used
-	// when returning Kaia transactions.
-	assert.Equal(t, true, reflect.ValueOf(ethTx.Accesses).IsNil())
-	assert.Equal(t, true, reflect.ValueOf(ethTx.ChainID).IsNil())
-	assert.Equal(t, true, reflect.ValueOf(ethTx.GasFeeCap).IsNil())
-	assert.Equal(t, true, reflect.ValueOf(ethTx.GasTipCap).IsNil())
+	if !isEthTyped {
+		// Fields additionally used for Ethereum transaction types are not used
+		// when returning Kaia transactions.
+		assert.Equal(t, true, reflect.ValueOf(ethTx.Accesses).IsNil())
+		assert.Equal(t, true, reflect.ValueOf(ethTx.ChainID).IsNil())
+		assert.Equal(t, true, reflect.ValueOf(ethTx.GasFeeCap).IsNil())
+		assert.Equal(t, true, reflect.ValueOf(ethTx.GasTipCap).IsNil())
+	}
 }
 
 func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts []*types.Receipt, ethReceipt map[string]interface{}, kReceipt map[string]interface{}, idx uint64) {
@@ -1173,6 +1300,26 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 	deployData := "0x60806040526000805534801561001457600080fd5b506101ea806100246000396000f30060806040526004361061006d576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806306661abd1461007257806342cbb15c1461009d578063767800de146100c8578063b22636271461011f578063d14e62b814610150575b600080fd5b34801561007e57600080fd5b5061008761017d565b6040518082815260200191505060405180910390f35b3480156100a957600080fd5b506100b2610183565b6040518082815260200191505060405180910390f35b3480156100d457600080fd5b506100dd61018b565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b34801561012b57600080fd5b5061014e60048036038101908080356000191690602001909291905050506101b1565b005b34801561015c57600080fd5b5061017b600480360381019080803590602001909291905050506101b4565b005b60005481565b600043905090565b600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b50565b80600081905550505600a165627a7a7230582053c65686a3571c517e2cf4f741d842e5ee6aa665c96ce70f46f9a594794f11eb0029"
 	executeData := "0xa9059cbb0000000000000000000000008a4c9c443bb0645df646a2d5bb55def0ed1e885a0000000000000000000000000000000000000000000000000000000000003039"
 	var anchorData []byte
+
+	accessList := types.AccessList{
+		types.AccessTuple{
+			Address: common.StringToAddress("0x3936663364636533666637396132333733653330"),
+			StorageKeys: []common.Hash{
+				common.HexToHash("0xa145cd642157a5df01f5bc3837a1bb59b3dcefbbfad5ec435919780aebeaba2b"),
+				common.HexToHash("0x12e2c26dca2fb2b8879f54a5ea1604924edf0e37965c2be8aa6133b75818da40"),
+			},
+		},
+	}
+	authorizationList := []types.SetCodeAuthorization{
+		{
+			ChainID: *uint256.MustFromBig(params.TestChainConfig.ChainID),
+			Address: common.StringToAddress("0x3936663364636533666637396132333733653330"),
+			Nonce:   0,
+			V:       0,
+			R:       *uint256.NewInt(0),
+			S:       *uint256.NewInt(0),
+		},
+	}
 
 	txHashMap := make(map[common.Hash]*types.Transaction)
 	receiptMap := make(map[common.Hash]*types.Receipt)
@@ -1868,20 +2015,77 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
 		receipts = append(receipts, receiptMap[tx.Hash()])
 	}
+	// Make test transactions data
+	{
+		// TxTypeEthereumAccessList
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      uint64(txs.Len()),
+			types.TxValueKeyTo:         &to,
+			types.TxValueKeyAmount:     big.NewInt(10),
+			types.TxValueKeyGasLimit:   uint64(50000000),
+			types.TxValueKeyData:       []byte{},
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccessList: accessList,
+			types.TxValueKeyChainID:    params.TestChainConfig.ChainID,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumAccessList, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+		}
+		tx.SetSignature(signatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
+	{
+		// TxTypeEthereumDynamicFee
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      uint64(txs.Len()),
+			types.TxValueKeyTo:         &to,
+			types.TxValueKeyAmount:     big.NewInt(3),
+			types.TxValueKeyGasLimit:   uint64(50000000),
+			types.TxValueKeyData:       []byte{},
+			types.TxValueKeyGasTipCap:  gasPrice,
+			types.TxValueKeyGasFeeCap:  gasPrice,
+			types.TxValueKeyAccessList: accessList,
+			types.TxValueKeyChainID:    params.TestChainConfig.ChainID,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumDynamicFee, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+		}
+		tx.SetSignature(signatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
 	{
 		// TxTypeEthereumBlob
 		emptyBlob := kzg4844.Blob{}
 		emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
 		cellProofs, _ := kzg4844.ComputeCellProofs(&emptyBlob)
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
 		values := map[types.TxValueKeyType]interface{}{
 			types.TxValueKeyNonce:      uint64(txs.Len()),
-			types.TxValueKeyTo:         common.StringToAddress("0xa06fa690d92788cac4953da5f2dfbc4a2b3871db"),
+			types.TxValueKeyTo:         to,
 			types.TxValueKeyAmount:     big.NewInt(0),
 			types.TxValueKeyGasLimit:   uint64(10000000),
 			types.TxValueKeyGasFeeCap:  big.NewInt(25),
 			types.TxValueKeyGasTipCap:  big.NewInt(25),
-			types.TxValueKeyData:       []byte("0x1234"),
-			types.TxValueKeyAccessList: types.AccessList{},
+			types.TxValueKeyData:       []byte{},
+			types.TxValueKeyAccessList: accessList,
 			types.TxValueKeyBlobFeeCap: big.NewInt(25),
 			types.TxValueKeyBlobHashes: []common.Hash{common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &emptyBlobCommit))},
 			types.TxValueKeySidecar: &types.BlobTxSidecar{
@@ -1893,6 +2097,35 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 			types.TxValueKeyChainID: params.TestChainConfig.ChainID,
 		}
 		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+		}
+		tx.SetSignature(signatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
+	{
+		// TxTypeEthereumSetCode
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:             uint64(txs.Len()),
+			types.TxValueKeyTo:                to,
+			types.TxValueKeyAmount:            big.NewInt(3),
+			types.TxValueKeyGasLimit:          uint64(50000000),
+			types.TxValueKeyData:              []byte{},
+			types.TxValueKeyGasTipCap:         gasPrice,
+			types.TxValueKeyGasFeeCap:         gasPrice,
+			types.TxValueKeyAccessList:        accessList,
+			types.TxValueKeyAuthorizationList: authorizationList,
+			types.TxValueKeyChainID:           params.TestChainConfig.ChainID,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumSetCode, values)
 		assert.Equal(t, nil, err)
 
 		signatures := types.TxSignatures{
@@ -1930,6 +2163,16 @@ func createEthereumTypedTestData(t *testing.T, header *types.Header) (*types.Blo
 				common.HexToHash("0xa145cd642157a5df01f5bc3837a1bb59b3dcefbbfad5ec435919780aebeaba2b"),
 				common.HexToHash("0x12e2c26dca2fb2b8879f54a5ea1604924edf0e37965c2be8aa6133b75818da40"),
 			},
+		},
+	}
+	authorizationList := []types.SetCodeAuthorization{
+		{
+			ChainID: *uint256.MustFromBig(params.TestChainConfig.ChainID),
+			Address: common.StringToAddress("0x23a519a88e79fbc0bab796f3dce3ff79a2373e30"),
+			Nonce:   0,
+			V:       0,
+			R:       *uint256.NewInt(0),
+			S:       *uint256.NewInt(0),
 		},
 	}
 	chainId := new(big.Int).SetUint64(2019)
@@ -1985,6 +2228,74 @@ func createEthereumTypedTestData(t *testing.T, header *types.Header) (*types.Blo
 
 		signatures := types.TxSignatures{
 			&types.TxSignature{V: big.NewInt(2), R: big.NewInt(3), S: big.NewInt(4)},
+		}
+		tx.SetSignature(signatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
+	{
+		// TxTypeEthereumBlob
+		emptyBlob := kzg4844.Blob{}
+		emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
+		cellProofs, _ := kzg4844.ComputeCellProofs(&emptyBlob)
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      uint64(txs.Len()),
+			types.TxValueKeyTo:         to,
+			types.TxValueKeyAmount:     big.NewInt(0),
+			types.TxValueKeyGasLimit:   uint64(10000000),
+			types.TxValueKeyGasFeeCap:  big.NewInt(25),
+			types.TxValueKeyGasTipCap:  big.NewInt(25),
+			types.TxValueKeyData:       common.Hex2Bytes(deployData),
+			types.TxValueKeyAccessList: accessList,
+			types.TxValueKeyBlobFeeCap: big.NewInt(25),
+			types.TxValueKeyBlobHashes: []common.Hash{common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &emptyBlobCommit))},
+			types.TxValueKeySidecar: &types.BlobTxSidecar{
+				Version:     types.BlobSidecarVersion1,
+				Blobs:       []kzg4844.Blob{emptyBlob},
+				Commitments: []kzg4844.Commitment{emptyBlobCommit},
+				Proofs:      cellProofs,
+			},
+			types.TxValueKeyChainID: params.TestChainConfig.ChainID,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+		}
+		tx.SetSignature(signatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
+	{
+		// TxTypeEthereumSetCode
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:             uint64(txs.Len()),
+			types.TxValueKeyTo:                to,
+			types.TxValueKeyAmount:            big.NewInt(3),
+			types.TxValueKeyGasLimit:          uint64(50000000),
+			types.TxValueKeyData:              common.Hex2Bytes(deployData),
+			types.TxValueKeyGasTipCap:         gasPrice,
+			types.TxValueKeyGasFeeCap:         gasPrice,
+			types.TxValueKeyAccessList:        accessList,
+			types.TxValueKeyAuthorizationList: authorizationList,
+			types.TxValueKeyChainID:           chainId,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumSetCode, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
 		}
 		tx.SetSignature(signatures)
 
