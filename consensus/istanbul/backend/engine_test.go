@@ -158,7 +158,7 @@ func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, [
 // other fake events to process Istanbul.
 func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backend) {
 	// generate a genesis block
-	genesis := blockchain.DefaultGenesisBlock()
+	genesis := blockchain.DefaultTestGenesisBlock()
 	genesis.Config = params.TestChainConfig.Copy()
 	genesis.Timestamp = uint64(time.Now().Unix())
 

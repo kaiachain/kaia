@@ -427,6 +427,12 @@ func DefaultKairosGenesisBlock() *Genesis {
 	return ret
 }
 
+func DefaultTestGenesisBlock() *Genesis {
+	ret := DefaultGenesisBlock()
+	ret.Governance = nil
+	return ret
+}
+
 func decodePrealloc(data string) GenesisAlloc {
 	var p []struct{ Addr, Balance *big.Int }
 	if err := rlp.NewStream(strings.NewReader(data), 0).Decode(&p); err != nil {

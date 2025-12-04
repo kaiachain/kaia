@@ -455,7 +455,9 @@ func (bc *BlobConfig) String() string {
 
 // BlobScheduleConfig determines target and max number of blobs allow per fork.
 type BlobScheduleConfig struct {
-	Osaka *BlobConfig `json:"osaka,omitempty"`
+	Cancun *BlobConfig `json:"cancun,omitempty"`
+	Prague *BlobConfig `json:"prague,omitempty"`
+	Osaka  *BlobConfig `json:"osaka,omitempty"`
 }
 
 // BlobConfig returns the blob config associated with the provided fork.

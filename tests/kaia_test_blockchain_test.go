@@ -574,7 +574,7 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 	extraData, err := prepareIstanbulExtra(validators)
 
 	if genesis == nil {
-		genesis = blockchain.DefaultGenesisBlock()
+		genesis = blockchain.DefaultTestGenesisBlock()
 		genesis.Config = config.Copy()
 		genesis.ExtraData = extraData
 		genesis.BlockScore = big.NewInt(1)
