@@ -41,6 +41,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -1008,6 +1009,12 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 	//  return gas price of tx.
 	// Before EthTxType hard fork : return gas price of tx. (typed ethereum txs are not available.)
 	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header, b.ChainConfig()).Uint64())
+
+	// After Osaka fork : return blob gas used and blob gas price when the tx is a blob transaction.
+	if tx.Type() == types.TxTypeEthereumBlob {
+		fields["blobGasUsed"] = hexutil.Uint64(tx.BlobGas())
+		fields["blobGasPrice"] = hexutil.Uint64(eip4844.CalcBlobFee(b.ChainConfig(), header).Uint64())
+	}
 
 	// Always use the "status" field and Ignore the "root" field.
 	if receipt.Status != types.ReceiptStatusSuccessful {

@@ -203,6 +203,9 @@ func TestKaiaConfig(maxHardfork string) *ChainConfig {
 		return chainConfig
 	}
 	chainConfig.OsakaCompatibleBlock = big.NewInt(0)
+	chainConfig.BlobScheduleConfig = &BlobScheduleConfig{
+		Osaka: DefaultOsakaBlobConfig,
+	}
 	if maxHardfork == "osaka" {
 		return chainConfig
 	}
