@@ -42,6 +42,9 @@ var (
 
 	// consoleLog is a precompiled contract used for debugging purposes.
 	consoleLogContractAddress = common.HexToAddress("0x000000000000000000636F6E736F6C652E6C6F67")
+
+	// blobBaseFee is the base fee for blob transactions.
+	blobBaseFee *big.Int
 )
 
 const (
@@ -116,6 +119,7 @@ type BlockContext struct {
 	Time        *big.Int       // Provides information for TIME
 	BlockScore  *big.Int       // Provides information for DIFFICULTY
 	BaseFee     *big.Int       // Provides information for BASEFEE
+	BlobBaseFee *big.Int       // Provides information for BLOBBASEFEE
 	Random      common.Hash    // Provides information for RANDOM
 }
 

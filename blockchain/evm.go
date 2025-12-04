@@ -34,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -48,6 +49,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		beneficiary common.Address
 		rewardBase  common.Address
 		baseFee     *big.Int
+		blobBaseFee *big.Int
 		random      common.Hash
 	)
 
@@ -63,6 +65,12 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		baseFee = header.BaseFee
 	} else { // Before Magma hardfork, BASEFEE (48) returns 0
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
+	}
+
+	if header.ExcessBlobGas != nil {
+		blobBaseFee = eip4844.CalcBlobFee(chain.Config(), header)
+	} else { // Before Osaka hardfork, BLOBBASEFEE (4a) returns 0
+		blobBaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
 
 	if header.MixHash != nil {
@@ -81,6 +89,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		Time:        new(big.Int).Set(header.Time),
 		BlockScore:  new(big.Int).Set(header.BlockScore),
 		BaseFee:     baseFee,
+		BlobBaseFee: blobBaseFee,
 		Random:      random,
 	}
 }

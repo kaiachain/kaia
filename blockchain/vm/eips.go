@@ -330,10 +330,13 @@ func opBlobHash(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([
 }
 
 // opBlobBaseFee implements BLOBBASEFEE opcode
-// Since blob data is generated in dank sharding, opBlobBaseFee will use only the zeroBaseFee
-// as long as the blob txType is not fully supported in Kaia.
+// This works as follows:
+// - Since Cancun: Must return zero.
+// - Since Osaka: Returns BlobBaseFee calculated from ExcessBlobGas in the header.
+// Before Osaka, ExcessBlobGas was always nil, so params.ZeroBaseFee was assigned in NewEVMBlockContext in blockchain/evm.go.
+// So the logic below is applicable to before and after Osaka.
 func opBlobBaseFee(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
-	blobBaseFee := uint256.NewInt(params.ZeroBaseFee)
+	blobBaseFee, _ := uint256.FromBig(interpreter.evm.Context.BlobBaseFee)
 	scope.Stack.push(blobBaseFee)
 	return nil, nil
 }
