@@ -251,11 +251,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		}
 
 		InitDeriveSha(genesis.Config)
-		hash := genesis.ToBlock(common.Hash{}, nil).Hash()
-		if hash != ghash {
-			return nil, common.Hash{}, &GenesisMismatchError{ghash, hash}
-		}
-		block, err := genesis.Commit(hash, db)
+		block, err := genesis.Commit(common.Hash{}, db)
 		if err != nil {
 			return nil, common.Hash{}, err
 		}
