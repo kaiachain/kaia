@@ -115,8 +115,8 @@ func TestCalcBlobFeePostOsaka(t *testing.T) {
 		parenttime    big.Int
 		headertime    big.Int
 	}{
-		{5149252, 1310720, 5673540, 30, *big.NewInt(1754904516), *big.NewInt(1754904528)},
-		{19251039, 2490368, 20954975, 50, *big.NewInt(1755033204), *big.NewInt(1755033216)},
+		{5149252, 1310720, 6328900, 30, *big.NewInt(1754904516), *big.NewInt(1754904528)},
+		{19251039, 2490368, 21610335, 50, *big.NewInt(1755033204), *big.NewInt(1755033216)},
 	}
 	for i, tt := range tests {
 		config := params.TestChainConfig.Copy()
@@ -182,8 +182,9 @@ func TestCalcExcessBlobGasEIP7918(t *testing.T) {
 		Osaka: params.DefaultOsakaBlobConfig,
 	}
 	var (
-		targetBlobs   = cfg.BlobScheduleConfig.Osaka.Target
-		blobGasTarget = uint64(targetBlobs) * params.BlobTxBlobGasPerBlob
+		targetBlobs      = cfg.BlobScheduleConfig.Osaka.Target
+		blobGasTarget    = uint64(targetBlobs) * params.BlobTxBlobGasPerBlob
+		latestBlobConfig = latestBlobConfig(cfg, cfg.OsakaCompatibleBlock)
 	)
 
 	makeHeader := func(parentExcess, parentBaseFee uint64, blobsUsed int) *types.Header {
@@ -203,7 +204,7 @@ func TestCalcExcessBlobGasEIP7918(t *testing.T) {
 		{
 			name:          "BelowReservePrice",
 			header:        makeHeader(0, 1_000_000_000, targetBlobs),
-			wantExcessGas: blobGasTarget * 3 / 9,
+			wantExcessGas: blobGasTarget * (uint64(latestBlobConfig.Max) - uint64(latestBlobConfig.Target)) / uint64(latestBlobConfig.Max),
 		},
 		{
 			name:          "AboveReservePrice",
