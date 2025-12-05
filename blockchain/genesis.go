@@ -254,7 +254,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 	// are returned to the caller unless we're already at block zero.
 	height := db.ReadHeaderNumber(db.ReadHeadHeaderHash())
 	if height == nil {
-		return newCfg, ghash, fmt.Errorf("missing block number for head header hash")
+		return newCfg, ghash, errors.New("missing block number for head header hash")
 	}
 	compatErr := storedCfg.CheckCompatible(newCfg, *height)
 	if compatErr != nil && *height != 0 && compatErr.RewindTo != 0 {
