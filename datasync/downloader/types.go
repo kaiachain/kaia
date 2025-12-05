@@ -23,7 +23,7 @@
 package downloader
 
 import (
-	"fmt"
+	"strconv"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -47,7 +47,7 @@ type headerPack struct {
 
 func (p *headerPack) PeerId() string { return p.peerId }
 func (p *headerPack) Items() int     { return len(p.headers) }
-func (p *headerPack) Stats() string  { return fmt.Sprintf("%d", len(p.headers)) }
+func (p *headerPack) Stats() string  { return strconv.Itoa(len(p.headers)) }
 
 // bodyPack is a batch of block bodies returned by a peer.
 type bodyPack struct {
@@ -59,7 +59,7 @@ func (p *bodyPack) PeerId() string { return p.peerId }
 func (p *bodyPack) Items() int {
 	return len(p.transactions)
 }
-func (p *bodyPack) Stats() string { return fmt.Sprintf("%d", len(p.transactions)) }
+func (p *bodyPack) Stats() string { return strconv.Itoa(len(p.transactions)) }
 
 // receiptPack is a batch of receipts returned by a peer.
 type receiptPack struct {
@@ -69,7 +69,7 @@ type receiptPack struct {
 
 func (p *receiptPack) PeerId() string { return p.peerId }
 func (p *receiptPack) Items() int     { return len(p.receipts) }
-func (p *receiptPack) Stats() string  { return fmt.Sprintf("%d", len(p.receipts)) }
+func (p *receiptPack) Stats() string  { return strconv.Itoa(len(p.receipts)) }
 
 // statePack is a batch of states returned by a peer.
 type statePack struct {
@@ -79,7 +79,7 @@ type statePack struct {
 
 func (p *statePack) PeerId() string { return p.peerId }
 func (p *statePack) Items() int     { return len(p.states) }
-func (p *statePack) Stats() string  { return fmt.Sprintf("%d", len(p.states)) }
+func (p *statePack) Stats() string  { return strconv.Itoa(len(p.states)) }
 
 type stakingInfoPack struct {
 	peerId       string
@@ -88,7 +88,7 @@ type stakingInfoPack struct {
 
 func (p *stakingInfoPack) PeerId() string { return p.peerId }
 func (p *stakingInfoPack) Items() int     { return len(p.stakingInfos) }
-func (p *stakingInfoPack) Stats() string  { return fmt.Sprintf("%d", len(p.stakingInfos)) }
+func (p *stakingInfoPack) Stats() string  { return strconv.Itoa(len(p.stakingInfos)) }
 
 type blobSidecarsPack struct {
 	peerId   string
@@ -97,4 +97,4 @@ type blobSidecarsPack struct {
 
 func (p *blobSidecarsPack) PeerId() string { return p.peerId }
 func (p *blobSidecarsPack) Items() int     { return len(p.sidecars) }
-func (p *blobSidecarsPack) Stats() string  { return fmt.Sprintf("%d", len(p.sidecars)) }
+func (p *blobSidecarsPack) Stats() string  { return strconv.Itoa(len(p.sidecars)) }
