@@ -29,6 +29,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	auction_mock "github.com/kaiachain/kaia/kaiax/auction/mock"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -681,11 +682,67 @@ func TestHandleBidMsg(t *testing.T) {
 
 	msg := generateMsg(t, BidMsg, testBid)
 
-	mockPeer.EXPECT().GetVersion().Return(kaia63).Times(7)
+	mockPeer.EXPECT().GetVersion().Return(kaia63).Times(9)
 	assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg), "should return error when protocol version is not kaia66")
 
 	mockPeer.EXPECT().GetVersion().Return(kaia66).AnyTimes()
 	assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg), "should not return error when protocol version is kaia66")
 
 	mockCtrl.Finish()
+}
+
+func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
+	requestedHashes := []common.Hash{hashes[0], hashes[1]}
+	mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+	msg := generateMsg(t, BlobSidecarsRequestMsg, requestedHashes)
+	sidecar := &types.BlobTxSidecar{
+		Version:     types.BlobSidecarVersion1,
+		Blobs:       make([]kzg4844.Blob, 2),
+		Commitments: make([]kzg4844.Commitment, 2),
+		Proofs:      make([]kzg4844.Proof, 2*kzg4844.CellProofsPerBlob),
+	}
+	data, _ := rlp.EncodeToBytes(sidecar)
+	expectedRlpList := []rlp.RawValue{data, data}
+	mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
+	err := handleBlobSidecarsRequestMsg(pm, mockPeer, msg)
+	assert.NoError(t, err)
+	mockCtrl.Finish()
+}
+
+func TestHandleBlobSidecarsMsg(t *testing.T) {
+	{
+		// test if message does not contain expected data
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		msg := generateMsg(t, BlobSidecarsMsg, uint64(123)) // Non-list value to invoke an error
+
+		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
+		assert.Error(t, err)
+		assert.True(t, strings.Contains(err.Error(), errCode(ErrDecode).String()))
+		mockCtrl.Finish()
+	}
+
+	{
+		mockCtrl, mockPeer, mockDownloader, pm := preparePeerAndDownloader(t)
+
+		sidecars := []*types.BlobTxSidecar{
+			{
+				Version:     types.BlobSidecarVersion1,
+				Blobs:       make([]kzg4844.Blob, 2),
+				Commitments: make([]kzg4844.Commitment, 2),
+				Proofs:      make([]kzg4844.Proof, 2*kzg4844.CellProofsPerBlob),
+			},
+			{
+				Version:     types.BlobSidecarVersion1,
+				Blobs:       make([]kzg4844.Blob, 2),
+				Commitments: make([]kzg4844.Commitment, 2),
+				Proofs:      make([]kzg4844.Proof, 2*kzg4844.CellProofsPerBlob),
+			},
+		}
+		mockDownloader.EXPECT().DeliverBlobSidecars(gomock.Eq(nodeids[0].String()), gomock.Eq(sidecars)).Times(1).Return(expectedErr)
+
+		msg := generateMsg(t, BlobSidecarsMsg, sidecars)
+		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
 }

@@ -44,6 +44,7 @@ const (
 	kaia63 = 63
 	kaia65 = 65
 	kaia66 = 66
+	kaia67 = 67
 )
 
 const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
@@ -82,7 +83,11 @@ const (
 	// Protocol messages belonging to kaia/66
 	BidMsg = 0x14
 
-	MsgCodeEnd = 0x15
+	// Protocol messages belonging to kaia/67
+	BlobSidecarsRequestMsg = 0x15
+	BlobSidecarsMsg        = 0x16
+
+	MsgCodeEnd = 0x17
 )
 
 type errCode int
@@ -137,6 +142,7 @@ type ProtocolManagerDownloader interface {
 	DeliverReceipts(id string, receipts [][]*types.Receipt) error
 	DeliverStakingInfos(id string, stakingInfos []*staking.P2PStakingInfo) error
 	DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) error
+	DeliverBlobSidecars(id string, sidecars []*types.BlobTxSidecar) error
 
 	Terminate()
 	Synchronise(id string, head common.Hash, td *big.Int, mode downloader.SyncMode) error

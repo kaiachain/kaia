@@ -45,14 +45,15 @@ import (
 )
 
 var (
-	MaxHashFetch        = 512 // Amount of hashes to be fetched per retrieval request
-	MaxBlockFetch       = 128 // Amount of blocks to be fetched per retrieval request
-	MaxHeaderFetch      = 192 // Amount of block headers to be fetched per retrieval request
-	MaxSkeletonSize     = 128 // Number of header fetches to need for a skeleton assembly
-	MaxBodyFetch        = 128 // Amount of block bodies to be fetched per retrieval request
-	MaxReceiptFetch     = 256 // Amount of transaction receipts to allow fetching per request
-	MaxStakingInfoFetch = 128 // Amount of staking information to allow fetching per request
-	MaxStateFetch       = 384 // Amount of node state values to allow fetching per request
+	MaxHashFetch         = 512 // Amount of hashes to be fetched per retrieval request
+	MaxBlockFetch        = 128 // Amount of blocks to be fetched per retrieval request
+	MaxHeaderFetch       = 192 // Amount of block headers to be fetched per retrieval request
+	MaxSkeletonSize      = 128 // Number of header fetches to need for a skeleton assembly
+	MaxBodyFetch         = 128 // Amount of block bodies to be fetched per retrieval request
+	MaxReceiptFetch      = 256 // Amount of transaction receipts to allow fetching per request
+	MaxStakingInfoFetch  = 128 // Amount of staking information to allow fetching per request
+	MaxStateFetch        = 384 // Amount of node state values to allow fetching per request
+	MaxBlobSidecarsFetch = 128 // Amount of blob sidecars to allow fetching per request
 
 	MaxForkAncestry  = 3 * params.EpochDuration // Maximum chain reorganisation
 	rttMinEstimate   = 2 * time.Second          // Minimum round-trip time to target for download requests
@@ -144,6 +145,7 @@ type Downloader struct {
 	receiptWakeCh     chan bool            // [kaia/63] Channel to signal the receipt fetcher of new tasks
 	stakingInfoWakeCh chan bool            // [kaia/65] Channel to signal the staking info fetcher of new tasks
 	headerProcCh      chan []*types.Header // [kaia/62] Channel to feed the header processor new tasks
+	blobSidecarsCh    chan dataPack        // [kaia/67] Channel receiving inbound blob sidecars
 
 	// for snapsyncer
 	snapSync   bool         // Whether to run state sync over the snap protocol
@@ -1974,6 +1976,11 @@ func (d *Downloader) DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) erro
 	default:
 		return fmt.Errorf("unexpected snap packet type: %T", packet)
 	}
+}
+
+// DeliverBlobSidecars injects a new batch of blob sidecars received from a remote node.
+func (d *Downloader) DeliverBlobSidecars(id string, sidecars []*types.BlobTxSidecar) error {
+	return d.deliver(id, d.blobSidecarsCh, &blobSidecarsPack{id, sidecars}, blobSidecarsInMeter, blobSidecarsDropMeter)
 }
 
 // deliver injects a new batch of data received from a remote node.

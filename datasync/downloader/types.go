@@ -89,3 +89,12 @@ type stakingInfoPack struct {
 func (p *stakingInfoPack) PeerId() string { return p.peerId }
 func (p *stakingInfoPack) Items() int     { return len(p.stakingInfos) }
 func (p *stakingInfoPack) Stats() string  { return fmt.Sprintf("%d", len(p.stakingInfos)) }
+
+type blobSidecarsPack struct {
+	peerId   string
+	sidecars []*types.BlobTxSidecar
+}
+
+func (p *blobSidecarsPack) PeerId() string { return p.peerId }
+func (p *blobSidecarsPack) Items() int     { return len(p.sidecars) }
+func (p *blobSidecarsPack) Stats() string  { return fmt.Sprintf("%d", len(p.sidecars)) }

@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/datasync/fetcher"
 	"github.com/kaiachain/kaia/event"
@@ -421,6 +422,8 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	// start sync handlers
 	go pm.syncer()
 	go pm.txsyncLoop()
+
+	// todo: start blob sidecars sync handler?
 }
 
 func (pm *ProtocolManager) Stop() {
@@ -752,6 +755,16 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 
 	case p.GetVersion() >= kaia66 && msg.Code == BidMsg:
 		if err := handleBidMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case p.GetVersion() >= kaia67 && msg.Code == BlobSidecarsRequestMsg:
+		if err := handleBlobSidecarsRequestMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case p.GetVersion() >= kaia67 && msg.Code == BlobSidecarsMsg:
+		if err := handleBlobSidecarsMsg(pm, p, msg); err != nil {
 			return err
 		}
 
@@ -1159,6 +1172,61 @@ func handleBidMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 
 	pm.auctionModule.HandleBid(p.GetID(), data)
 
+	return nil
+}
+
+func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// Decode the retrieval message
+	msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
+	if _, err := msgStream.List(); err != nil {
+		return err
+	}
+	// Gather state data until the fetch or network limits is reached
+	var (
+		hash     common.Hash
+		bytes    int
+		sidecars []rlp.RawValue
+	)
+	for bytes < softResponseLimit && len(sidecars) < downloader.MaxBlobSidecarsFetch {
+		// Retrieve the hash of the next block
+		if err := msgStream.Decode(&hash); err == rlp.EOL {
+			break
+		} else if err != nil {
+			return errResp(ErrDecode, "msg %v: %v", msg, err)
+		}
+
+		// Retrieve the requested tx's blob sidecars, skipping if unknown to us
+		// result := pm.blockchain.GetBlobSidecarsByTxHash(hash)
+		// result := pm.txpool.GetBlobSidecarsByTxHash(hash)
+		result := types.BlobTxSidecar{
+			Version:     types.BlobSidecarVersion1,
+			Blobs:       make([]kzg4844.Blob, 2),
+			Commitments: make([]kzg4844.Commitment, 2),
+			Proofs:      make([]kzg4844.Proof, 2*kzg4844.CellProofsPerBlob),
+		}
+		// If known, encode and queue for response packet
+		if encoded, err := rlp.EncodeToBytes(result); err != nil {
+			logger.Error("Failed to encode blob sidecars", "err", err)
+		} else {
+			fmt.Println("encoding", result, "len", len(encoded))
+			sidecars = append(sidecars, encoded)
+			bytes += len(encoded)
+		}
+	}
+
+	return p.SendBlobSidecarsRLP(sidecars)
+}
+
+func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	// A batch of blob sidecars arrived to one of our previous requests
+	var sidecars []*types.BlobTxSidecar
+	if err := msg.Decode(&sidecars); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+	// Deliver all to the downloader
+	if err := pm.downloader.DeliverBlobSidecars(p.GetID(), sidecars); err != nil {
+		logger.Debug("Failed to deliver staking information", "err", err)
+	}
 	return nil
 }
 
