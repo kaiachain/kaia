@@ -129,7 +129,7 @@ type Task struct {
 	createdAt time.Time
 }
 
-// txFits reports whether the transaction fits into the block size limit.
+// txFitsSize reports whether the transaction fits into the block size limit.
 func (env *Task) txFitsSize(tx *types.Transaction) bool {
 	return env.size+uint64(tx.Size()) < params.MaxBlockSize-maxBlockSizeBufferZone
 }
