@@ -607,26 +607,28 @@ func (api *EthAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash
 // RPCTransaction in go-ethereum has been renamed to EthRPCTransaction.
 // RPCTransaction is defined in go-ethereum's internal package, so RPCTransaction is redefined here as EthRPCTransaction.
 type EthRPCTransaction struct {
-	BlockHash         *common.Hash                 `json:"blockHash"`
-	BlockNumber       *hexutil.Big                 `json:"blockNumber"`
-	From              common.Address               `json:"from"`
-	Gas               hexutil.Uint64               `json:"gas"`
-	GasPrice          *hexutil.Big                 `json:"gasPrice"`
-	GasFeeCap         *hexutil.Big                 `json:"maxFeePerGas,omitempty"`
-	GasTipCap         *hexutil.Big                 `json:"maxPriorityFeePerGas,omitempty"`
-	Hash              common.Hash                  `json:"hash"`
-	Input             hexutil.Bytes                `json:"input"`
-	Nonce             hexutil.Uint64               `json:"nonce"`
-	To                *common.Address              `json:"to"`
-	TransactionIndex  *hexutil.Uint64              `json:"transactionIndex"`
-	Value             *hexutil.Big                 `json:"value"`
-	Type              hexutil.Uint64               `json:"type"`
-	Accesses          *types.AccessList            `json:"accessList,omitempty"`
-	ChainID           *hexutil.Big                 `json:"chainId,omitempty"`
-	AuthorizationList []types.SetCodeAuthorization `json:"authorizationList,omitempty"`
-	V                 *hexutil.Big                 `json:"v"`
-	R                 *hexutil.Big                 `json:"r"`
-	S                 *hexutil.Big                 `json:"s"`
+	BlockHash           *common.Hash                 `json:"blockHash"`
+	BlockNumber         *hexutil.Big                 `json:"blockNumber"`
+	From                common.Address               `json:"from"`
+	Gas                 hexutil.Uint64               `json:"gas"`
+	GasPrice            *hexutil.Big                 `json:"gasPrice"`
+	GasFeeCap           *hexutil.Big                 `json:"maxFeePerGas,omitempty"`
+	GasTipCap           *hexutil.Big                 `json:"maxPriorityFeePerGas,omitempty"`
+	MaxFeePerBlobGas    *hexutil.Big                 `json:"maxFeePerBlobGas,omitempty"`
+	Hash                common.Hash                  `json:"hash"`
+	Input               hexutil.Bytes                `json:"input"`
+	Nonce               hexutil.Uint64               `json:"nonce"`
+	To                  *common.Address              `json:"to"`
+	TransactionIndex    *hexutil.Uint64              `json:"transactionIndex"`
+	Value               *hexutil.Big                 `json:"value"`
+	Type                hexutil.Uint64               `json:"type"`
+	Accesses            *types.AccessList            `json:"accessList,omitempty"`
+	ChainID             *hexutil.Big                 `json:"chainId,omitempty"`
+	BlobVersionedHashes []common.Hash                `json:"blobVersionedHashes,omitempty"`
+	AuthorizationList   []types.SetCodeAuthorization `json:"authorizationList,omitempty"`
+	V                   *hexutil.Big                 `json:"v"`
+	R                   *hexutil.Big                 `json:"r"`
+	S                   *hexutil.Big                 `json:"s"`
 }
 
 // ethTxJSON is the JSON representation of Ethereum transaction.
@@ -655,6 +657,10 @@ type ethTxJSON struct {
 	// Access list transaction fields:
 	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 	AccessList *types.AccessList `json:"accessList,omitempty"`
+
+	// Blob transaction fields:
+	MaxFeePerBlobGas    *hexutil.Big  `json:"maxFeePerBlobGas,omitempty"`
+	BlobVersionedHashes []common.Hash `json:"blobVersionedHashes,omitempty"`
 
 	// Set code transaction fields:
 	AuthorizationList []types.SetCodeAuthorization `json:"authorizationList,omitempty"`
@@ -752,6 +758,20 @@ func newEthRPCTransaction(block *types.Block, tx *types.Transaction, blockHash c
 			// transaction is not processed yet
 			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(nil, nil))
 		}
+	case types.TxTypeEthereumBlob:
+		al := tx.AccessList()
+		result.Accesses = &al
+		result.ChainID = (*hexutil.Big)(tx.ChainId())
+		result.GasFeeCap = (*hexutil.Big)(tx.GasFeeCap())
+		result.GasTipCap = (*hexutil.Big)(tx.GasTipCap())
+		// if the transaction has been mined, compute the effective gas price
+		if block != nil {
+			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(block.Header(), config))
+		} else {
+			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(nil, nil))
+		}
+		result.MaxFeePerBlobGas = (*hexutil.Big)(tx.BlobGasFeeCap())
+		result.BlobVersionedHashes = tx.BlobHashes()
 	case types.TxTypeEthereumSetCode:
 		al := tx.AccessList()
 		result.Accesses = &al
@@ -820,6 +840,14 @@ func formatTxToEthTxJSON(tx *types.Transaction) *ethTxJSON {
 		enc.ChainID = (*hexutil.Big)(tx.ChainId())
 		enc.MaxFeePerGas = (*hexutil.Big)(tx.GasFeeCap())
 		enc.MaxPriorityFeePerGas = (*hexutil.Big)(tx.GasTipCap())
+	case types.TxTypeEthereumBlob:
+		al := tx.AccessList()
+		enc.AccessList = &al
+		enc.ChainID = (*hexutil.Big)(tx.ChainId())
+		enc.MaxFeePerGas = (*hexutil.Big)(tx.GasFeeCap())
+		enc.MaxPriorityFeePerGas = (*hexutil.Big)(tx.GasTipCap())
+		enc.MaxFeePerBlobGas = (*hexutil.Big)(tx.BlobGasFeeCap())
+		enc.BlobVersionedHashes = tx.BlobHashes()
 	case types.TxTypeEthereumSetCode:
 		al := tx.AccessList()
 		enc.AccessList = &al

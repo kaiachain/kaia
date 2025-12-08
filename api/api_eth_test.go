@@ -816,8 +816,12 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
               "blockNumber": "0x4",
               "from": "0xd4ce9909ab4e4c80852f52ac01d39eefaf70014a",
+			  "chainId": "0x1",
               "gas": "0x989680",
               "gasPrice": "0x19",
+			  "maxFeePerBlobGas": "0x19",
+			  "maxFeePerGas": "0x19",
+			  "maxPriorityFeePerGas": "0x19",
               "hash": "0xeb1c26e494ecd699ad51b1695de42c83ff815442760610b82d2baf57c4b01488",
               "input": "0x",
               "nonce": "0x18",
@@ -825,6 +829,18 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "transactionIndex": "0x18",
               "value": "0x0",
               "type": "0x3",
+			  "accessList": [
+				{
+					"address": "0x3337333936313332333333373333363533333330",
+					"storageKeys": [
+						"0xa145cd642157a5df01f5bc3837a1bb59b3dcefbbfad5ec435919780aebeaba2b",
+						"0x12e2c26dca2fb2b8879f54a5ea1604924edf0e37965c2be8aa6133b75818da40"
+					]
+				}
+			  ],
+			  "blobVersionedHashes": [
+				"0x010657f37554c781402a22917dee2f75def7ab966d7b770905398eba3c444014"
+			  ],
               "v": "0x1",
               "r": "0x2",
               "s": "0x3"

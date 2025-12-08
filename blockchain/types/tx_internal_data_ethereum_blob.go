@@ -87,9 +87,8 @@ type TxInternalDataEthereumBlobJSON struct {
 	Amount               *hexutil.U256    `json:"value"`
 	Payload              hexutil.Bytes    `json:"input"`
 	AccessList           AccessList       `json:"accessList"`
-	BlobFeeCap           *hexutil.U256    `json:"blobFeeCap"`
-	BlobHashes           []common.Hash    `json:"blobHashes"`
-	Sidecar              *BlobTxSidecar   `json:"sidecar"`
+	BlobFeeCap           *hexutil.U256    `json:"maxFeePerBlobGas"`
+	BlobHashes           []common.Hash    `json:"blobVersionedHashes"`
 	TxSignatures         TxSignaturesJSON `json:"signatures"`
 	Hash                 *common.Hash     `json:"hash"`
 }
@@ -637,9 +636,8 @@ func (t *TxInternalDataEthereumBlob) MakeRPCOutput() map[string]interface{} {
 		"input":                hexutil.Bytes(t.Payload),
 		"value":                (*hexutil.Big)(t.Amount.ToBig()),
 		"accessList":           t.AccessList,
-		"blobFeeCap":           (*hexutil.Big)(t.BlobFeeCap.ToBig()),
-		"blobHashes":           t.BlobHashes,
-		"sidecar":              t.Sidecar,
+		"maxFeePerBlobGas":     (*hexutil.Big)(t.BlobFeeCap.ToBig()),
+		"blobVersionedHashes":  t.BlobHashes,
 		"signatures":           TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
 	}
 }
@@ -659,7 +657,6 @@ func (t *TxInternalDataEthereumBlob) MarshalJSON() ([]byte, error) {
 		t.AccessList,
 		(*hexutil.U256)(t.BlobFeeCap),
 		t.BlobHashes,
-		t.Sidecar,
 		TxSignaturesJSON{&TxSignatureJSON{(*hexutil.Big)(t.V), (*hexutil.Big)(t.R), (*hexutil.Big)(t.S)}},
 		t.Hash,
 	})
@@ -682,7 +679,6 @@ func (t *TxInternalDataEthereumBlob) UnmarshalJSON(bytes []byte) error {
 	t.AccessList = js.AccessList
 	t.BlobFeeCap = (*uint256.Int)(js.BlobFeeCap)
 	t.BlobHashes = js.BlobHashes
-	t.Sidecar = js.Sidecar
 	t.V = (*big.Int)(js.TxSignatures[0].V)
 	t.R = (*big.Int)(js.TxSignatures[0].R)
 	t.S = (*big.Int)(js.TxSignatures[0].S)
