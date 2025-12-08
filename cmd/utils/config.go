@@ -579,6 +579,12 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	}
 
 	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
+	switch {
+	case ctx.Bool(MainnetFlag.Name), cfg.NetworkId == params.MainnetNetworkId:
+		cfg.Genesis = blockchain.DefaultGenesisBlock()
+	case ctx.Bool(KairosFlag.Name), cfg.NetworkId == params.KairosNetworkId:
+		cfg.Genesis = blockchain.DefaultKairosGenesisBlock()
+	}
 
 	if dbtype := database.DBType(ctx.String(DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
 		cfg.DBType = dbtype

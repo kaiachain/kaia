@@ -392,7 +392,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		if err != nil {
 			return nil, err
 		}
-		genesis = blockchain.DefaultGenesisBlock()
+		genesis = blockchain.DefaultTestGenesisBlock()
 		genesis.Config = chainConfig
 		bc, err = blockchain.NewBlockChain(chainDB, tc.cacheConfig, chainConfig, engine, vm.Config{})
 	}

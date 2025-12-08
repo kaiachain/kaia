@@ -19,7 +19,7 @@ import (
 func TestMainnetGenesisGovernance(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 	config := params.MainnetChainConfig.Copy()
-	genesis := blockchain.DefaultGenesisBlock()
+	genesis := blockchain.DefaultTestGenesisBlock()
 	genesis.Config = config
 	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
 

@@ -34,7 +34,6 @@ import (
 	"github.com/kaiachain/kaia/cmd/utils"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/urfave/cli/v2"
 )
@@ -136,7 +135,7 @@ func initGenesis(ctx *cli.Context) error {
 	parallelDBWrite := !ctx.Bool(utils.NoParallelDBWriteFlag.Name)
 	singleDB := ctx.Bool(utils.SingleDBFlag.Name)
 	numStateTrieShards := ctx.Uint(utils.NumStateTrieShardsFlag.Name)
-	overwriteGenesis := ctx.Bool(utils.OverwriteGenesisFlag.Name)
+	// overwriteGenesis := ctx.Bool(utils.OverwriteGenesisFlag.Name) // TODO-Kaia: repurpose this flag
 	livePruning := ctx.Bool(utils.LivePruningFlag.Name)
 	useFlatTrie := ctx.Bool(utils.FlatTrieFlag.Name)
 
@@ -184,7 +183,7 @@ func initGenesis(ctx *cli.Context) error {
 		// Initialize DeriveSha implementation
 		blockchain.InitDeriveSha(genesis.Config)
 
-		_, hash, err := blockchain.SetupGenesisBlock(chainDB, genesis, params.UnusedNetworkId, false, overwriteGenesis)
+		_, hash, err := blockchain.SetupGenesisBlock(chainDB, genesis)
 		if err != nil {
 			logger.Crit("Failed to write genesis block", "err", err)
 		}
