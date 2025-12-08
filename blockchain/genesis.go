@@ -182,19 +182,20 @@ func findBlockWithState(db database.DBManager) *types.Block {
 	return headBlock
 }
 
-// SetupGenesisBlock writes or updates the genesis block in db.
-// The block that will be used is:
-//
-//	                     genesis == nil                             genesis != nil
-//	                  +-------------------------------------------------------------------
-//	db has no genesis |  Mainnet default, Kairos if specified    |  genesis
-//	db has genesis    |  from DB                                 |  genesis (if compatible)
-//
-// The stored chain configuration will be updated if it is compatible (i.e. does not
+// SetupGenesisBlock writes or updates the genesis block and ChainConfig in db.
+// Note that a "genesis block" is composed of a regular Block and ChainConfig, hence the return types.
+// The block and ChainConfig that will be returned/written to DB are:
+// (1) stored ghash == nil: Commit the provided genesis and config, defaulting to Mainnet if absent.
+// (2) stored ghash != nil && stored config == nil: Same as above.
+// (3) stored ghash != nil && stored config != nil: Update ChainConfigDB only if it's compatible with the existing config.
+// For the case (3), the stored chain configuration will be updated if it is compatible (i.e. does not
 // specify a fork block below the local head block). In case of a conflict, the
 // error is a *params.ConfigCompatError and the new, unwritten config is returned.
 //
-// The returned chain configuration is never nil.
+// Notes:
+// - `genesis != nil` is the normal case for Mainnet/Kairos `cn.New()`.
+// - `genesis != nil` is the normal case for other networks `initGenesis()`.
+// - `stored ghash != nil && genesis == nil` is the normal case for other networks `cn.New()`.
 func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
 		return nil, common.Hash{}, errGenesisNoConfig
@@ -217,7 +218,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		return genesis.Config, block.Hash(), err
 	}
 
-	// Check whether the genesis block is already written.
+	// Genesis block exists, and another genesis is supplied. Abort if they are different, because we don't want to overwrite the genesis block.
 	if genesis != nil {
 		// This is the usual path which does not overwrite genesis block with the new one.
 		// Make sure the provided genesis is equal to the stored one.
@@ -239,6 +240,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 	if err != nil {
 		logger.Crit("Failed to read chain config", "err", err)
 	}
+	// Genesis block exists, but no ChainConfig. Re-commit to store the ChainConfig.
 	if storedCfg == nil {
 		// Ensure the stored genesis block matches with the given genesis. Private
 		// networks must explicitly specify the genesis in the config file, mainnet
@@ -267,7 +269,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 	}
 
 	// Get the existing chain configuration.
-	newCfg := genesis.configOrDefault(ghash, storedCfg)
+	newCfg := configOrDefault(genesis, ghash, storedCfg)
 	if err := newCfg.CheckConfigForkOrder(); err != nil {
 		return nil, common.Hash{}, err
 	}
@@ -286,7 +288,7 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 	return newCfg, ghash, nil
 }
 
-func (g *Genesis) configOrDefault(ghash common.Hash, storedCfg *params.ChainConfig) *params.ChainConfig {
+func configOrDefault(g *Genesis, ghash common.Hash, storedCfg *params.ChainConfig) *params.ChainConfig {
 	switch {
 	case g != nil:
 		return g.Config
