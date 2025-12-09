@@ -98,7 +98,7 @@ func init() {
 	tx1.Size()
 	tx2.Sign(signer, keys[1])
 	tx2.Size()
-	txs = types.Transactions{tx1, tx2}
+	txs = types.Transactions{tx1}
 
 	hash1 = tx1.Hash()
 }
