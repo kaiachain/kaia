@@ -341,7 +341,7 @@ type BlockChain interface {
 	Snapshots() *snapshot.Tree
 
 	// Blob sidecars
-	GetBlobSidecar(hash common.Hash) *types.BlobTxSidecar
+	GetBlobSidecar(blockNum uint64, txIndex int) *types.BlobTxSidecar
 
 	// kaiax module host
 	kaiax.ExecutionModuleHost

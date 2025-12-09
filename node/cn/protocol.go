@@ -240,3 +240,10 @@ type blockBody struct {
 
 // blockBodiesData is the network packet for block content distribution.
 type blockBodiesData []*blockBody
+
+// BlobSidecarsRequestMsgData is the network packet for the blob sidecars request message.
+type blobSidecarsRequestData struct {
+	BlockNum uint64
+	TxIndex  uint64
+	Hash     common.Hash
+}

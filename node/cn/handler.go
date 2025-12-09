@@ -1178,24 +1178,24 @@ func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 	if _, err := msgStream.List(); err != nil {
 		return err
 	}
-	// Gather state data until the fetch or network limits is reached
+	// Gather blob sidecars data until the fetch or network limits is reached
 	var (
-		hash     common.Hash
+		data     blobSidecarsRequestData
 		bytes    int
 		sidecars []rlp.RawValue
 	)
 	for bytes < softResponseLimit && len(sidecars) < downloader.MaxBlobSidecarsFetch {
-		// Retrieve the hash of the next block
-		if err := msgStream.Decode(&hash); err == rlp.EOL {
+		// Retrieve data
+		if err := msgStream.Decode(&data); err == rlp.EOL {
 			break
 		} else if err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
 		// Retrieve a requested tx's blob sidecar, skipping if unknown to us
-		result := pm.blockchain.GetBlobSidecar(hash)
+		result := pm.blockchain.GetBlobSidecar(data.BlockNum, int(data.TxIndex))
 		if result == nil {
-			result = pm.txpool.GetBlobSidecar(hash)
+			result = pm.txpool.GetBlobSidecar(data.Hash)
 		}
 		if result == nil {
 			continue
