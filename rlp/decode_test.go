@@ -34,7 +34,6 @@ import (
 	"testing"
 
 	"github.com/holiman/uint256"
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/math"
 )
 
@@ -72,24 +71,6 @@ func TestStreamKind(t *testing.T) {
 		if len != test.wantLen {
 			t.Errorf("test %d: len mismatch: got %d, want %d", i, len, test.wantLen)
 		}
-	}
-}
-
-func TestStreamKind2(t *testing.T) {
-	tests := []struct {
-		input    string
-		wantKind Kind
-		wantLen  uint64
-	}{
-		{"1FFFFFFFFFFFFFFFFF", List, ^uint64(0)},
-	}
-
-	for _, test := range tests {
-		// using plainReader to inhibit input limit errors.
-		s := NewStream(newPlainReader(unhex(test.input)), 0)
-		var kind common.Hash
-		s.Decode(&kind)
-		panic(kind)
 	}
 }
 
