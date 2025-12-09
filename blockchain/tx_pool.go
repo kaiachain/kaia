@@ -1594,7 +1594,7 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 }
 
 // GetBlobSidecar retrieves a blob sidecar from txpool by transaction hash.
-func (pool *TxPool) GetBlobSidecar(hash common.Hash) *types.BlobTxSidecar {
+func (pool *TxPool) GetBlobSidecar(txHash common.Hash) *types.BlobTxSidecar {
 	panic("implement me")
 }
 
