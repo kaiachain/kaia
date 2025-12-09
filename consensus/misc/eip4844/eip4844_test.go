@@ -94,9 +94,7 @@ func TestCalcBlobFee(t *testing.T) {
 	for i, tt := range tests {
 		config := &params.ChainConfig{OsakaCompatibleBlock: big.NewInt(0), BlobScheduleConfig: params.DefaultBlobSchedule}
 		config.BlobScheduleConfig.Osaka = GethCancunBlobConfig
-		header := &types.Header{BaseFee: big.NewInt(tt.baseFee)}
-		header.Number = big.NewInt(0)
-		have := CalcBlobFee(config, header)
+		have := CalcBlobFee(big.NewInt(tt.baseFee))
 		if have.Int64() != tt.blobfee {
 			t.Errorf("test %d: blobfee mismatch: have %v want %v", i, have, tt.blobfee)
 		}

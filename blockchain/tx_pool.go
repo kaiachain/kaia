@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
@@ -1025,9 +1026,8 @@ func (pool *TxPool) validateBlobTx(tx *types.Transaction) error {
 		return errors.New("missing sidecar in blob transaction")
 	}
 	// Ensure the blob fee cap satisfies the minimum blob gas price
-	blobTxMinBlobGasPrice := new(big.Int).Mul(pool.gasPrice, blobBaseFeeMultiplier)
-	if tx.BlobGasFeeCapIntCmp(blobTxMinBlobGasPrice) < 0 {
-		return fmt.Errorf("%w: blob fee cap %v, minimum needed %v", ErrTxGasPriceTooLow, tx.BlobGasFeeCap(), blobTxMinBlobGasPrice)
+	if tx.BlobGasFeeCapIntCmp(eip4844.CalcBlobFee(pool.gasPrice)) < 0 {
+		return fmt.Errorf("%w: blob fee cap %v, minimum needed %v", ErrTxGasPriceTooLow, tx.BlobGasFeeCap(), eip4844.CalcBlobFee(pool.gasPrice))
 	}
 	// Ensure the number of items in the blob transaction and various side
 	// data match up before doing any expensive validations

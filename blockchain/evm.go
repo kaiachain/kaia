@@ -68,7 +68,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 	}
 
 	if header.ExcessBlobGas != nil {
-		blobBaseFee = eip4844.CalcBlobFee(chain.Config(), header)
+		blobBaseFee = eip4844.CalcBlobFee(header.BaseFee)
 	} else { // Before Osaka hardfork, BLOBBASEFEE (4a) returns 0
 		blobBaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}

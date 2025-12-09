@@ -1288,7 +1288,7 @@ func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts
 		if !ok {
 			t.Fatal("blobGasPrice is not defined in Ethereum transaction receipt format.")
 		}
-		assert.Equal(t, blobGasPrice, hexutil.Uint64(eip4844.CalcBlobFee(params.TestKaiaConfig("osaka"), block.Header()).Uint64()))
+		assert.Equal(t, blobGasPrice, hexutil.Uint64(eip4844.CalcBlobFee(block.Header().BaseFee).Uint64()))
 	}
 
 	status, ok := ethReceipt["status"]

@@ -43,18 +43,6 @@ func (bc *BlobConfig) maxBlobGas() uint64 {
 	return uint64(bc.Max) * params.BlobTxBlobGasPerBlob
 }
 
-// blobBaseFee computes the blob fee for KIP-279.
-func (bc *BlobConfig) blobBaseFee(baseFee uint64) *big.Int {
-	// return fakeExponential(minBlobGasPrice, new(big.Int).SetUint64(excessBlobGas), new(big.Int).SetUint64(bc.UpdateFraction))
-	return new(big.Int).Mul(new(big.Int).SetUint64(baseFee), new(big.Int).SetUint64(params.BlobBaseFeeMultiplier))
-}
-
-// blobPrice returns the price for KIP-279 of one blob in Kei.
-func (bc *BlobConfig) blobPrice(baseFee uint64) *big.Int {
-	f := bc.blobBaseFee(baseFee)
-	return new(big.Int).Mul(f, big.NewInt(params.BlobTxBlobGasPerBlob))
-}
-
 // blobBaseFeeEIP4844 computes the blob fee for EIP-4844.
 func (bc *BlobConfig) blobBaseFeeEIP4844(excessBlobGas uint64) *big.Int {
 	return fakeExponential(minBlobGasPrice, new(big.Int).SetUint64(excessBlobGas), new(big.Int).SetUint64(bc.UpdateFraction))
@@ -169,12 +157,8 @@ func calcExcessBlobGas(isOsaka bool, bcfg *BlobConfig, parent *types.Header) uin
 }
 
 // CalcBlobFee calculates the blobfee for KIP-279 from the header's base fee field.
-func CalcBlobFee(config *params.ChainConfig, header *types.Header) *big.Int {
-	blobConfig := latestBlobConfig(config, header.Number)
-	if blobConfig == nil {
-		panic("calculating blob fee on unsupported fork")
-	}
-	return blobConfig.blobBaseFee((*header.BaseFee).Uint64())
+func CalcBlobFee(baseFee *big.Int) *big.Int {
+	return new(big.Int).Mul(baseFee, new(big.Int).SetUint64(params.BlobBaseFeeMultiplier))
 }
 
 // MaxBlobsPerBlock returns the max blobs per block for a block at the given block number.
