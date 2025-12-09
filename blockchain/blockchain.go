@@ -1047,8 +1047,8 @@ func (bc *BlockChain) GetLogsByHash(hash common.Hash) [][]*types.Log {
 	return logs
 }
 
-// GetBlobSidecar retrieves a blob sidecar from the database by hash.
-func (bc *BlockChain) GetBlobSidecar(hash common.Hash) *types.BlobTxSidecar {
+// GetBlobSidecar retrieves a blob sidecar from blob storage by transaction hash.
+func (bc *BlockChain) GetBlobSidecar(txHash common.Hash) *types.BlobTxSidecar {
 	panic("implement me")
 }
 

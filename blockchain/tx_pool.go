@@ -1593,7 +1593,7 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 	return pool.all.Get(hash)
 }
 
-// GetBlobSidecar retrieves a blob sidecar from the pool by hash.
+// GetBlobSidecar retrieves a blob sidecar from txpool by transaction hash.
 func (pool *TxPool) GetBlobSidecar(hash common.Hash) *types.BlobTxSidecar {
 	panic("implement me")
 }
