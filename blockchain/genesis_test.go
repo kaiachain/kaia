@@ -29,7 +29,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
@@ -37,6 +36,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus/faker"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -55,296 +55,673 @@ func TestDefaultGenesisBlock(t *testing.T) {
 	}
 }
 
-// TestHardCodedChainConfigUpdate tests the public network's chainConfig update.
-func TestHardCodedChainConfigUpdate(t *testing.T) {
-	mainnetGenesisBlock, kairosGenesisBlock := DefaultGenesisBlock(), DefaultKairosGenesisBlock()
-	tests := []struct {
-		name             string
-		newHFBlock       *big.Int
-		originHFBlock    *big.Int
-		fn               func(database.DBManager, *big.Int) (*params.ChainConfig, common.Hash, error)
-		wantConfig       *params.ChainConfig // expect value of the SetupGenesisBlock's first return value
-		wantHash         common.Hash
-		wantErr          error
-		wantStoredConfig *params.ChainConfig // expect value of the stored config in DB
-		resetFn          func(*big.Int)
-	}{
-		{
-			name:       "Mainnet chainConfig update",
-			newHFBlock: big.NewInt(3),
-			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
-				mainnetGenesisBlock.MustCommit(db)
-				mainnetGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
-				return SetupGenesisBlock(db, mainnetGenesisBlock)
-			},
-			wantHash:         params.MainnetGenesisHash,
-			wantConfig:       mainnetGenesisBlock.Config,
-			wantStoredConfig: mainnetGenesisBlock.Config,
-		},
-		// TODO-Kaia: add more Mainnet test cases after Mainnet hard fork block numbers are added
-		{
-			// Because of the fork-ordering check logic, the istanbulCompatibleBlock should be less than the londonCompatibleBlock
-			name:       "Kairos chainConfig update - correct hard-fork block number order",
-			newHFBlock: big.NewInt(79999999),
-			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
-				kairosGenesisBlock.MustCommit(db)
-				kairosGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
-				return SetupGenesisBlock(db, kairosGenesisBlock)
-			},
-			wantHash:         params.KairosGenesisHash,
-			wantConfig:       kairosGenesisBlock.Config,
-			wantStoredConfig: kairosGenesisBlock.Config,
-		},
-		{
-			// This test fails because the new istanbulCompatibleBlock(90909999) is larger than londonCompatibleBlock(80295291)
-			name:       "Kairos chainConfig update - wrong hard-fork block number order",
-			newHFBlock: big.NewInt(90909999),
-			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
-				kairosGenesisBlock.MustCommit(db)
-				kairosGenesisBlock.Config.IstanbulCompatibleBlock = newHFBlock
-				return SetupGenesisBlock(db, kairosGenesisBlock)
-			},
-			wantHash:         common.Hash{},
-			wantConfig:       kairosGenesisBlock.Config,
-			wantStoredConfig: nil,
-			wantErr: fmt.Errorf("unsupported fork ordering: %v enabled at %v, but %v enabled at %v",
-				"istanbulBlock", big.NewInt(90909999), "londonBlock", big.NewInt(80295291)),
-		},
-		{
-			name:       "incompatible config in DB",
-			newHFBlock: big.NewInt(3),
-			fn: func(db database.DBManager, newHFBlock *big.Int) (*params.ChainConfig, common.Hash, error) {
-				// Commit the 'old' genesis block with Istanbul transition at #2.
-				// Advance to block #4, past the Istanbul transition block of customGenesis.
-				genesis := DefaultGenesisBlock()
-				genesisBlock := genesis.MustCommit(db)
-
-				bc, _ := NewBlockChain(db, nil, genesis.Config, faker.NewFullFaker(), vm.Config{})
-				defer bc.Stop()
-
-				blocks, _ := GenerateChain(genesis.Config, genesisBlock, faker.NewFaker(), db, 4, nil)
-				bc.InsertChain(blocks)
-				// This should return a compatibility error.
-				newConfig := *genesis
-				newConfig.Config.IstanbulCompatibleBlock = newHFBlock
-				return SetupGenesisBlock(db, &newConfig)
-			},
-			wantHash:         params.MainnetGenesisHash,
-			wantConfig:       mainnetGenesisBlock.Config,
-			wantStoredConfig: params.MainnetChainConfig,
-			wantErr: &params.ConfigCompatError{
-				What:         "Istanbul Block",
-				StoredConfig: params.MainnetChainConfig.IstanbulCompatibleBlock,
-				NewConfig:    big.NewInt(3),
-				RewindTo:     2,
-			},
-		},
-	}
-
-	for _, test := range tests {
-		db := database.NewMemoryDBManager()
-		config, hash, err := test.fn(db, test.newHFBlock)
-
-		// Check the return values
-		assert.Equal(t, test.wantErr, err, test.name+": err is mismatching")
-		assert.Equal(t, test.wantConfig, config, test.name+": config is mismatching")
-		assert.Equal(t, test.wantHash, hash, test.name+": hash is mismatching")
-
-		// Check stored genesis block
-		if test.wantHash != (common.Hash{}) {
-			stored := db.ReadBlock(test.wantHash, 0)
-			assert.Equal(t, test.wantHash, stored.Hash(), test.name+": stored genesis block is not compatible")
-		}
-
-		// Check stored chainConfig
-		storedChainConfig, err := db.ReadChainConfig(test.wantHash)
-		assert.NoError(t, err)
-		assert.Equal(t, test.wantStoredConfig, storedChainConfig, test.name+": stored chainConfig is not compatible")
-	}
-}
-
 func TestSetupGenesis(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	type ExpectedReturn struct {
+		config *params.ChainConfig
+		hash   common.Hash
+		err    error
+	}
+	type ExpectedDB struct {
+		storedCfg *params.ChainConfig
+		ghash     common.Hash
+	}
+
+	// NOTE: Do NOT move {mainnet,kairosGenesis,custom,new}Genesis.Config pointers.
+	// Because they are referenced by expected values.
+	// It is only safe to change config.IstanbulCompatibleBlock.
 	var (
+		mainnetGenesis    = DefaultGenesisBlock()
+		kairosGenesis     = DefaultKairosGenesisBlock()
 		customGenesisHash = common.HexToHash("0x4eb4035b7a09619a9950c9a4751cc331843f2373ef38263d676b4a132ba4059c")
 		customChainId     = uint64(4343)
 		customGenesis     = genCustomGenesisBlock(customChainId)
+		newGenesis        = customGenesis.copy()
 	)
 	tests := []struct {
-		name       string
-		fn         func(database.DBManager) (*params.ChainConfig, common.Hash, error)
-		wantConfig *params.ChainConfig
-		wantHash   common.Hash
-		wantErr    error
+		name           string
+		fn             func(database.DBManager) (*params.ChainConfig, common.Hash, error)
+		expectedReturn ExpectedReturn
+		expectedDB     ExpectedDB
 	}{
 		{
 			name: "genesis without ChainConfig",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				return SetupGenesisBlock(db, new(Genesis))
 			},
-			wantErr:    errGenesisNoConfig,
-			wantConfig: params.TestChainConfig,
+			expectedReturn: ExpectedReturn{
+				err: errGenesisNoConfig,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     common.Hash{},
+				storedCfg: nil,
+			},
 		},
 		{
-			name: "no block in DB, genesis == nil",
+			name: "no block in DB, genesis is nil",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				return SetupGenesisBlock(db, nil)
 			},
-			wantHash:   params.MainnetGenesisHash,
-			wantConfig: params.MainnetChainConfig,
+			expectedReturn: ExpectedReturn{
+				hash:   params.MainnetGenesisHash,
+				config: params.MainnetChainConfig,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.MainnetGenesisHash,
+				storedCfg: params.MainnetChainConfig,
+			},
 		},
 		{
-			name: "no block in DB, genesis == customGenesis, private network",
+			name: "no block in DB, genesis is Mainnet",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				return SetupGenesisBlock(db, DefaultGenesisBlock())
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   params.MainnetGenesisHash,
+				config: params.MainnetChainConfig,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.MainnetGenesisHash,
+				storedCfg: params.MainnetChainConfig,
+			},
+		},
+		{
+			name: "no block in DB, genesis is Kairos",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				return SetupGenesisBlock(db, DefaultKairosGenesisBlock())
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   params.KairosGenesisHash,
+				config: params.KairosChainConfig,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.KairosGenesisHash,
+				storedCfg: params.KairosChainConfig,
+			},
+		},
+		{
+			name: "no block in DB, genesis is customGenesis",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				return SetupGenesisBlock(db, customGenesis)
 			},
-			wantHash:   customGenesisHash,
-			wantConfig: customGenesis.Config,
+			expectedReturn: ExpectedReturn{
+				hash:   customGenesisHash,
+				config: customGenesis.Config,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     customGenesisHash,
+				storedCfg: customGenesis.Config,
+			},
 		},
 		{
-			name: "Mainnet block in DB, genesis != nil",
+			name: "Mainnet block in DB, storedCfg is nil, genesis is nil",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				DefaultGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, DefaultGenesisBlock())
-			},
-			wantHash:   params.MainnetGenesisHash,
-			wantConfig: params.MainnetChainConfig,
-		},
-		{
-			name: "Kairos block in DB, genesis != nil, Kairos networkId",
-			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				DefaultKairosGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, DefaultKairosGenesisBlock())
-			},
-			wantHash:   params.KairosGenesisHash,
-			wantConfig: params.KairosChainConfig,
-		},
-		{
-			name: "custom block in DB, genesis == nil, custom networkId",
-			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				customGenesis.MustCommit(db)
+				writeNilChainConfig(db, params.MainnetGenesisHash)
 				return SetupGenesisBlock(db, nil)
 			},
-			wantHash:   customGenesisHash,
-			wantConfig: customGenesis.Config,
+			expectedReturn: ExpectedReturn{
+				hash:   params.MainnetGenesisHash,
+				config: params.MainnetChainConfig,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.MainnetGenesisHash,
+				storedCfg: params.MainnetChainConfig,
+			},
 		},
 		{
-			name: "Mainnet block in DB, genesis == Kairos",
+			name: "Mainnet block in DB, storedCfg is nil, genesis is Mainnet",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				DefaultGenesisBlock().MustCommit(db)
+				writeNilChainConfig(db, params.MainnetGenesisHash)
+				return SetupGenesisBlock(db, DefaultGenesisBlock())
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   params.MainnetGenesisHash,
+				config: params.MainnetChainConfig,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.MainnetGenesisHash,
+				storedCfg: params.MainnetChainConfig,
+			},
+		},
+		{
+			name: "Mainnet block in DB, storedCfg is nil, genesis is Kairos",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				DefaultGenesisBlock().MustCommit(db)
+				writeNilChainConfig(db, params.MainnetGenesisHash)
+				return SetupGenesisBlock(db, DefaultKairosGenesisBlock())
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   common.Hash{},
+				config: nil,
+				err:    &GenesisMismatchError{Stored: params.MainnetGenesisHash, New: params.KairosGenesisHash},
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.MainnetGenesisHash,
+				storedCfg: nil,
+			},
+		},
+		{
+			name: "Mainnet block in DB, storedCfg is nil, genesis is Custom",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				DefaultGenesisBlock().MustCommit(db)
+				writeNilChainConfig(db, params.MainnetGenesisHash)
+				return SetupGenesisBlock(db, customGenesis)
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   common.Hash{},
+				config: nil,
+				err:    &GenesisMismatchError{Stored: params.MainnetGenesisHash, New: customGenesisHash},
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.MainnetGenesisHash,
+				storedCfg: nil,
+			},
+		},
+		{
+			name: "Kairos block in DB, storedCfg is nil, genesis is nil",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				DefaultKairosGenesisBlock().MustCommit(db)
+				writeNilChainConfig(db, params.KairosGenesisHash)
+				return SetupGenesisBlock(db, nil)
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   params.MainnetGenesisHash,
+				config: params.MainnetChainConfig,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.MainnetGenesisHash,
+				storedCfg: params.MainnetChainConfig,
+			},
+		},
+		{
+			name: "Kairos block in DB, storedCfg is nil, genesis is Kairos",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				DefaultKairosGenesisBlock().MustCommit(db)
+				writeNilChainConfig(db, params.KairosGenesisHash)
+				return SetupGenesisBlock(db, DefaultKairosGenesisBlock())
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   params.KairosGenesisHash,
+				config: params.KairosChainConfig,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.KairosGenesisHash,
+				storedCfg: params.KairosChainConfig,
+			},
+		},
+		{
+			name: "Kairos block in DB, storedCfg is nil, genesis is Mainnet",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				DefaultKairosGenesisBlock().MustCommit(db)
+				writeNilChainConfig(db, params.KairosGenesisHash)
+				return SetupGenesisBlock(db, DefaultGenesisBlock())
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   common.Hash{},
+				config: nil,
+				err:    &GenesisMismatchError{Stored: params.KairosGenesisHash, New: params.MainnetGenesisHash},
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.KairosGenesisHash,
+				storedCfg: nil,
+			},
+		},
+		{
+			name: "Kairos block in DB, storedCfg is nil, genesis is Custom",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				DefaultKairosGenesisBlock().MustCommit(db)
+				writeNilChainConfig(db, params.KairosGenesisHash)
+				return SetupGenesisBlock(db, customGenesis)
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   common.Hash{},
+				config: nil,
+				err:    &GenesisMismatchError{Stored: params.KairosGenesisHash, New: customGenesisHash},
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.KairosGenesisHash,
+				storedCfg: nil,
+			},
+		},
+		{
+			name: "Custom block in DB, storedCfg is nil, genesis is nil",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				customGenesis.MustCommit(db)
+				writeNilChainConfig(db, customGenesisHash)
+				return SetupGenesisBlock(db, nil)
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   params.MainnetGenesisHash,
+				config: params.MainnetChainConfig,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.MainnetGenesisHash,
+				storedCfg: params.MainnetChainConfig,
+			},
+		},
+		{
+			name: "Custom block in DB, storedCfg is nil, genesis is Custom",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				customGenesis.MustCommit(db)
+				writeNilChainConfig(db, customGenesisHash)
+				return SetupGenesisBlock(db, customGenesis)
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   customGenesisHash,
+				config: customGenesis.Config,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     customGenesisHash,
+				storedCfg: customGenesis.Config,
+			},
+		},
+		{
+			name: "Custom block in DB, storedCfg is nil, genesis is Mainnet",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				customGenesis.MustCommit(db)
+				writeNilChainConfig(db, customGenesisHash)
+				return SetupGenesisBlock(db, DefaultGenesisBlock())
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   common.Hash{},
+				config: nil,
+				err:    &GenesisMismatchError{Stored: customGenesisHash, New: params.MainnetGenesisHash},
+			},
+			expectedDB: ExpectedDB{
+				ghash:     customGenesisHash,
+				storedCfg: nil,
+			},
+		},
+		{
+			name: "Custom block in DB, storedCfg is nil, genesis is Kairos",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				customGenesis.MustCommit(db)
+				writeNilChainConfig(db, customGenesisHash)
+				return SetupGenesisBlock(db, DefaultKairosGenesisBlock())
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   common.Hash{},
+				config: nil,
+				err:    &GenesisMismatchError{Stored: customGenesisHash, New: params.KairosGenesisHash},
+			},
+			expectedDB: ExpectedDB{
+				ghash:     customGenesisHash,
+				storedCfg: nil,
+			},
+		},
+		{
+			name: "Mainnet block in DB, genesis is nil",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				DefaultGenesisBlock().MustCommit(db)
+				return SetupGenesisBlock(db, nil)
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   params.MainnetGenesisHash,
+				config: params.MainnetChainConfig,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.MainnetGenesisHash,
+				storedCfg: params.MainnetChainConfig,
+			},
+		},
+		{
+			name: "Mainnet block in DB, genesis is Mainnet",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				DefaultGenesisBlock().MustCommit(db)
+				return SetupGenesisBlock(db, DefaultGenesisBlock())
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   params.MainnetGenesisHash,
+				config: params.MainnetChainConfig,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.MainnetGenesisHash,
+				storedCfg: params.MainnetChainConfig,
+			},
+		},
+		{
+			name: "Mainnet block in DB, genesis is Kairos",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				DefaultGenesisBlock().MustCommit(db)
 				return SetupGenesisBlock(db, DefaultKairosGenesisBlock())
 			},
-			wantErr:    &GenesisMismatchError{Stored: params.MainnetGenesisHash, New: params.KairosGenesisHash},
-			wantHash:   params.KairosGenesisHash,
-			wantConfig: params.KairosChainConfig,
-		},
-		{
-			name: "Kairos block in DB, genesis == Mainnet",
-			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				DefaultKairosGenesisBlock().MustCommit(db)
-				return SetupGenesisBlock(db, DefaultGenesisBlock())
+			expectedReturn: ExpectedReturn{
+				hash:   common.Hash{},
+				config: nil,
+				err:    &GenesisMismatchError{Stored: params.MainnetGenesisHash, New: params.KairosGenesisHash},
 			},
-			wantErr:    &GenesisMismatchError{Stored: params.KairosGenesisHash, New: params.MainnetGenesisHash},
-			wantHash:   params.MainnetGenesisHash,
-			wantConfig: params.MainnetChainConfig,
+			expectedDB: ExpectedDB{
+				ghash:     params.MainnetGenesisHash,
+				storedCfg: params.MainnetChainConfig,
+			},
 		},
 		{
-			name: "Mainnet block in DB, genesis == custom",
+			name: "Mainnet block in DB, genesis is custom",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				DefaultGenesisBlock().MustCommit(db)
 				return SetupGenesisBlock(db, genCustomGenesisBlock(customChainId))
 			},
-			wantErr:    &GenesisMismatchError{Stored: params.MainnetGenesisHash, New: customGenesisHash},
-			wantHash:   customGenesisHash,
-			wantConfig: customGenesis.Config,
+			expectedReturn: ExpectedReturn{
+				hash:   common.Hash{},
+				config: nil,
+				err:    &GenesisMismatchError{Stored: params.MainnetGenesisHash, New: customGenesisHash},
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.MainnetGenesisHash,
+				storedCfg: params.MainnetChainConfig,
+			},
 		},
 		{
-			name: "Kairos block in DB, genesis == custom",
+			name: "Kairos block in DB, genesis is nil",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				DefaultKairosGenesisBlock().MustCommit(db)
+				return SetupGenesisBlock(db, nil)
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   params.KairosGenesisHash,
+				config: params.KairosChainConfig,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.KairosGenesisHash,
+				storedCfg: params.KairosChainConfig,
+			},
+		},
+		{
+			name: "Kairos block in DB, genesis is Kairos",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				DefaultKairosGenesisBlock().MustCommit(db)
+				return SetupGenesisBlock(db, DefaultKairosGenesisBlock())
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   params.KairosGenesisHash,
+				config: params.KairosChainConfig,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.KairosGenesisHash,
+				storedCfg: params.KairosChainConfig,
+			},
+		},
+		{
+			name: "Kairos block in DB, genesis is Mainnet",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				DefaultKairosGenesisBlock().MustCommit(db)
+				return SetupGenesisBlock(db, DefaultGenesisBlock())
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   common.Hash{},
+				config: nil,
+				err:    &GenesisMismatchError{Stored: params.KairosGenesisHash, New: params.MainnetGenesisHash},
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.KairosGenesisHash,
+				storedCfg: params.KairosChainConfig,
+			},
+		},
+		{
+			name: "Kairos block in DB, genesis is custom",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				DefaultKairosGenesisBlock().MustCommit(db)
 				return SetupGenesisBlock(db, customGenesis)
 			},
-			wantErr:    &GenesisMismatchError{Stored: params.KairosGenesisHash, New: customGenesisHash},
-			wantHash:   customGenesisHash,
-			wantConfig: customGenesis.Config,
+			expectedReturn: ExpectedReturn{
+				hash:   common.Hash{},
+				config: nil,
+				err:    &GenesisMismatchError{Stored: params.KairosGenesisHash, New: customGenesisHash},
+			},
+			expectedDB: ExpectedDB{
+				ghash:     params.KairosGenesisHash,
+				storedCfg: params.KairosChainConfig,
+			},
 		},
 		{
-			name: "custom block in DB, genesis == Mainnet",
+			name: "custom block in DB, genesis is nil",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				customGenesis.MustCommit(db)
-				return SetupGenesisBlock(db, DefaultGenesisBlock())
+				return SetupGenesisBlock(db, nil)
 			},
-			wantErr:    &GenesisMismatchError{Stored: customGenesisHash, New: params.MainnetGenesisHash},
-			wantHash:   params.MainnetGenesisHash,
-			wantConfig: params.MainnetChainConfig,
+			expectedReturn: ExpectedReturn{
+				hash:   customGenesisHash,
+				config: customGenesis.Config,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     customGenesisHash,
+				storedCfg: customGenesis.Config,
+			},
 		},
 		{
-			name: "custom block in DB, genesis == Kairos",
-			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				customGenesis.MustCommit(db)
-				return SetupGenesisBlock(db, DefaultKairosGenesisBlock())
-			},
-			wantErr:    &GenesisMismatchError{Stored: customGenesisHash, New: params.KairosGenesisHash},
-			wantHash:   params.KairosGenesisHash,
-			wantConfig: params.KairosChainConfig,
-		},
-		{
-			name: "compatible config in DB",
+			name: "custom block in DB, genesis is custom",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
 				customGenesis.MustCommit(db)
 				return SetupGenesisBlock(db, customGenesis)
 			},
-			wantHash:   customGenesisHash,
-			wantConfig: customGenesis.Config,
+			expectedReturn: ExpectedReturn{
+				hash:   customGenesisHash,
+				config: customGenesis.Config,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     customGenesisHash,
+				storedCfg: customGenesis.Config,
+			},
 		},
 		{
-			name: "incompatible config in DB",
+			name: "custom block in DB, genesis is Mainnet",
 			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
-				// Commit the 'old' genesis block with Istanbul transition at #2.
-				// Advance to block #4, past the Istanbul transition block of customGenesis.
-				genesis := customGenesis.MustCommit(db)
+				customGenesis.MustCommit(db)
+				return SetupGenesisBlock(db, DefaultGenesisBlock())
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   common.Hash{},
+				config: nil,
+				err:    &GenesisMismatchError{Stored: customGenesisHash, New: params.MainnetGenesisHash},
+			},
+			expectedDB: ExpectedDB{
+				ghash:     customGenesisHash,
+				storedCfg: customGenesis.Config,
+			},
+		},
+		{
+			name: "custom block in DB, genesis is Kairos",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				customGenesis.MustCommit(db)
+				return SetupGenesisBlock(db, DefaultKairosGenesisBlock())
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   common.Hash{},
+				config: nil,
+				err:    &GenesisMismatchError{Stored: customGenesisHash, New: params.KairosGenesisHash},
+			},
+			expectedDB: ExpectedDB{
+				ghash:     customGenesisHash,
+				storedCfg: customGenesis.Config,
+			},
+		},
+		{
+			name: "HF update: Mainnet chainConfig update, valid",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				mainnetGenesis.MustCommit(db)
+				mainnetGenesis.Config.IstanbulCompatibleBlock = big.NewInt(3)
+				return SetupGenesisBlock(db, mainnetGenesis)
+			},
+			expectedReturn: ExpectedReturn{
+				config: mainnetGenesis.Config,
+				hash:   params.MainnetGenesisHash,
+				err:    nil,
+			},
+			expectedDB: ExpectedDB{
+				storedCfg: mainnetGenesis.Config,
+				ghash:     params.MainnetGenesisHash,
+			},
+		},
+		{
+			name: "HF update: Kairos chainConfig update, valid",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				kairosGenesis.MustCommit(db)
+				kairosGenesis.Config.IstanbulCompatibleBlock = big.NewInt(79999999)
+				return SetupGenesisBlock(db, kairosGenesis)
+			},
+			expectedReturn: ExpectedReturn{
+				config: kairosGenesis.Config,
+				hash:   params.KairosGenesisHash,
+				err:    nil,
+			},
+			expectedDB: ExpectedDB{
+				storedCfg: kairosGenesis.Config,
+				ghash:     params.KairosGenesisHash,
+			},
+		},
+		{
+			name: "HF update: Kairos chainConfig update, invalid (istanbulCompatibleBlock > londonCompatibleBlock)",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				kairosGenesis.MustCommit(db)
+				kairosGenesis.Config.IstanbulCompatibleBlock = big.NewInt(90909999)
+				return SetupGenesisBlock(db, kairosGenesis)
+			},
+			expectedReturn: ExpectedReturn{
+				config: nil,
+				hash:   common.Hash{},
+				err: fmt.Errorf("unsupported fork ordering: %v enabled at %v, but %v enabled at %v",
+					"istanbulBlock", big.NewInt(90909999), "londonBlock", big.NewInt(80295291)),
+			},
+			expectedDB: ExpectedDB{ // not overwritten
+				storedCfg: params.KairosChainConfig,
+				ghash:     params.KairosGenesisHash,
+			},
+		},
+		{
+			name: "HF update: custom, valid (head=1 < Istanbul=2 < NewIstanbul=5)",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				customGenesis.Config.IstanbulCompatibleBlock = big.NewInt(2)
+				newGenesis.Config.IstanbulCompatibleBlock = big.NewInt(5)
+				head := 1
 
+				genesis := customGenesis.MustCommit(db)
 				bc, _ := NewBlockChain(db, nil, customGenesis.Config, faker.NewFullFaker(), vm.Config{})
 				defer bc.Stop()
-
-				blocks, _ := GenerateChain(customGenesis.Config, genesis, faker.NewFaker(), db, 4, nil)
+				blocks, _ := GenerateChain(customGenesis.Config, genesis, faker.NewFaker(), db, head, nil)
 				bc.InsertChain(blocks)
-				// This should return a compatibility error.
-				newConfig := *customGenesis
-				newConfig.Config.IstanbulCompatibleBlock = big.NewInt(3)
-				return SetupGenesisBlock(db, &newConfig)
+				return SetupGenesisBlock(db, newGenesis)
 			},
-			wantHash:   customGenesisHash,
-			wantConfig: customGenesis.Config,
-			wantErr: &params.ConfigCompatError{
-				What:         "Istanbul Block",
-				StoredConfig: big.NewInt(2),
-				NewConfig:    big.NewInt(3),
-				RewindTo:     1,
+			expectedReturn: ExpectedReturn{
+				hash:   customGenesisHash,
+				config: newGenesis.Config,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     customGenesisHash,
+				storedCfg: newGenesis.Config,
+			},
+		},
+		{
+			name: "HF update: custom, valid (head=1 < NewIstanbul=2 < Istanbul=5)",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				customGenesis.Config.IstanbulCompatibleBlock = big.NewInt(5)
+				newGenesis.Config.IstanbulCompatibleBlock = big.NewInt(2)
+				head := 1
+
+				genesis := customGenesis.MustCommit(db)
+				bc, _ := NewBlockChain(db, nil, customGenesis.Config, faker.NewFullFaker(), vm.Config{})
+				defer bc.Stop()
+				blocks, _ := GenerateChain(customGenesis.Config, genesis, faker.NewFaker(), db, head, nil)
+				bc.InsertChain(blocks)
+				return SetupGenesisBlock(db, newGenesis)
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   customGenesisHash,
+				config: newGenesis.Config,
+			},
+			expectedDB: ExpectedDB{
+				ghash:     customGenesisHash,
+				storedCfg: newGenesis.Config,
+			},
+		},
+		{
+			name: "HF update: custom, invalid (Istanbul=2 < head=4 < NewIstanbul=5)",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				customGenesis.Config.IstanbulCompatibleBlock = big.NewInt(2)
+				newGenesis.Config.IstanbulCompatibleBlock = big.NewInt(5)
+				head := 4
+
+				genesis := customGenesis.MustCommit(db)
+				bc, _ := NewBlockChain(db, nil, customGenesis.Config, faker.NewFullFaker(), vm.Config{})
+				defer bc.Stop()
+				blocks, _ := GenerateChain(customGenesis.Config, genesis, faker.NewFaker(), db, head, nil)
+				bc.InsertChain(blocks)
+				return SetupGenesisBlock(db, newGenesis)
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   customGenesisHash,
+				config: newGenesis.Config,
+				err: &params.ConfigCompatError{
+					What:         "Istanbul Block",
+					StoredConfig: big.NewInt(2),
+					NewConfig:    big.NewInt(5),
+					RewindTo:     1,
+				},
+			},
+			expectedDB: ExpectedDB{
+				ghash:     customGenesisHash,
+				storedCfg: customGenesis.Config,
+			},
+		},
+		{
+			name: "HF update: custom, invalid (NewIstanbul=2 < head=4 < Istanbul=5)",
+			fn: func(db database.DBManager) (*params.ChainConfig, common.Hash, error) {
+				customGenesis.Config.IstanbulCompatibleBlock = big.NewInt(5)
+				newGenesis.Config.IstanbulCompatibleBlock = big.NewInt(2)
+				head := 4
+
+				genesis := customGenesis.MustCommit(db)
+				bc, _ := NewBlockChain(db, nil, customGenesis.Config, faker.NewFullFaker(), vm.Config{})
+				defer bc.Stop()
+				blocks, _ := GenerateChain(customGenesis.Config, genesis, faker.NewFaker(), db, head, nil)
+				bc.InsertChain(blocks)
+				return SetupGenesisBlock(db, newGenesis)
+			},
+			expectedReturn: ExpectedReturn{
+				hash:   customGenesisHash,
+				config: newGenesis.Config,
+				err: &params.ConfigCompatError{
+					What:         "Istanbul Block",
+					StoredConfig: big.NewInt(5),
+					NewConfig:    big.NewInt(2),
+					RewindTo:     1,
+				},
+			},
+			expectedDB: ExpectedDB{
+				ghash:     customGenesisHash,
+				storedCfg: customGenesis.Config,
 			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			origMainnetIstanbulCompatibleBlock := params.MainnetChainConfig.IstanbulCompatibleBlock
+			origKairosIstanbulCompatibleBlock := params.KairosChainConfig.IstanbulCompatibleBlock
+			origCustomIstanbulCompatibleBlock := customGenesis.Config.IstanbulCompatibleBlock
+			origNewIstanbulCompatibleBlock := newGenesis.Config.IstanbulCompatibleBlock
+			defer func() {
+				mainnetGenesis.Config.IstanbulCompatibleBlock = new(big.Int).Set(origMainnetIstanbulCompatibleBlock)
+				kairosGenesis.Config.IstanbulCompatibleBlock = new(big.Int).Set(origKairosIstanbulCompatibleBlock)
+				customGenesis.Config.IstanbulCompatibleBlock = new(big.Int).Set(origCustomIstanbulCompatibleBlock)
+				newGenesis.Config.IstanbulCompatibleBlock = new(big.Int).Set(origNewIstanbulCompatibleBlock)
+			}()
+
 			db := database.NewMemoryDBManager()
 			config, hash, err := test.fn(db)
-			// Check the return values.
-			if !reflect.DeepEqual(err, test.wantErr) {
-				spew := spew.ConfigState{DisablePointerAddresses: true, DisableCapacities: true}
-				t.Errorf("%s: returned error %#v, want %#v", test.name, spew.NewFormatter(err), spew.NewFormatter(test.wantErr))
-			}
-			if !reflect.DeepEqual(config, test.wantConfig) {
-				t.Errorf("%s:\nreturned %v\nwant     %v", test.name, config, test.wantConfig)
-			}
-			if hash != test.wantHash {
-				t.Errorf("%s: returned hash %s, want %s", test.name, hash.Hex(), test.wantHash.Hex())
-			} else if err == nil {
-				// Check database content.
-				stored := db.ReadBlock(test.wantHash, 0)
-				if stored.Hash() != test.wantHash {
-					t.Errorf("%s: block in DB has hash %s, want %s", test.name, stored.Hash(), test.wantHash)
-				}
-			}
+
+			// Check the return values
+			assert.Equal(t, test.expectedReturn.config, config)
+			assert.Equal(t, test.expectedReturn.hash, hash)
+			assert.Equal(t, test.expectedReturn.err, err)
+
+			// Check DB
+			ghash := db.ReadCanonicalHash(0)
+			storedCfg, err := db.ReadChainConfig(ghash)
+			assert.NoError(t, err)
+			assert.Equal(t, test.expectedDB.storedCfg, storedCfg, test.name+": stored chainConfig is mismatching")
+			assert.Equal(t, test.expectedDB.ghash, ghash, test.name+": stored genesis block is not compatible")
 		})
 	}
 }
@@ -519,4 +896,12 @@ func genCustomGenesisBlock(customChainId uint64) *Genesis {
 	genesis.Governance = SetGenesisGovernance(genesis)
 	InitDeriveSha(genesis.Config)
 	return genesis
+}
+
+// because db.WriteChainConfig(hash, nil) is rejected
+func writeNilChainConfig(db database.DBManager, hash common.Hash) {
+	miscdb := db.GetMiscDB()
+	configPrefix := []byte("klay-config-")
+	key := append(configPrefix, hash.Bytes()...)
+	miscdb.Delete(key)
 }
