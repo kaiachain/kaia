@@ -632,7 +632,8 @@ func (p *basePeer) SendBid(bid *auction.Bid) error {
 	return p2p.Send(p.rw, BidMsg, bid)
 }
 
-// SendBlobSidecars sends a batch of blob sidecars to the remote peer.
+// SendBlobSidecarsRLP sends a batch of blob sidecars to the remote peer from
+// ones requested from an already RLP encoded format.
 func (p *basePeer) SendBlobSidecarsRLP(blobSidecars []rlp.RawValue) error {
 	return p2p.Send(p.rw, BlobSidecarsMsg, blobSidecars)
 }
@@ -1020,8 +1021,9 @@ func (p *multiChannelPeer) SendBid(bid *auction.Bid) error {
 	return p.msgSender(BidMsg, bid)
 }
 
-// SendBlobSidecars sends a batch of blob sidecars to the remote peer.
-func (p *multiChannelPeer) SendBlobSidecars(blobSidecars []rlp.RawValue) error {
+// SendBlobSidecarsRLP sends a batch of blob sidecars to the remote peer from
+// ones requested from an already RLP encoded format.
+func (p *multiChannelPeer) SendBlobSidecarsRLP(blobSidecars []rlp.RawValue) error {
 	return p.msgSender(BlobSidecarsMsg, blobSidecars)
 }
 
