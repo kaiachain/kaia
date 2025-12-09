@@ -53,7 +53,7 @@ var (
 	MaxReceiptFetch      = 256 // Amount of transaction receipts to allow fetching per request
 	MaxStakingInfoFetch  = 128 // Amount of staking information to allow fetching per request
 	MaxStateFetch        = 384 // Amount of node state values to allow fetching per request
-	MaxBlobSidecarsFetch = 128 // Amount of blob sidecars to allow fetching per request
+	MaxBlobSidecarsFetch = 4   // Amount of blob sidecars to allow fetching per request
 
 	MaxForkAncestry  = 3 * params.EpochDuration // Maximum chain reorganisation
 	rttMinEstimate   = 2 * time.Second          // Minimum round-trip time to target for download requests
