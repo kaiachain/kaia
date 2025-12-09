@@ -77,6 +77,8 @@ type TxPool interface {
 	StartSpamThrottler(conf *blockchain.ThrottlerConfig) error
 	StopSpamThrottler()
 
+	GetBlobSidecar(hash common.Hash) *types.BlobTxSidecar
+
 	kaiax.TxPoolModuleHost
 }
 
@@ -337,6 +339,9 @@ type BlockChain interface {
 
 	// Snapshot
 	Snapshots() *snapshot.Tree
+
+	// Blob sidecars
+	GetBlobSidecar(blockNum uint64, txIndex int) *types.BlobTxSidecar
 
 	// kaiax module host
 	kaiax.ExecutionModuleHost

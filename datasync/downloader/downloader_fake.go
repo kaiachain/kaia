@@ -49,8 +49,10 @@ func (*FakeDownloader) DeliverReceipts(id string, receipts [][]*types.Receipt) e
 func (*FakeDownloader) DeliverStakingInfos(id string, stakingInfos []*staking.P2PStakingInfo) error {
 	return nil
 }
-
 func (*FakeDownloader) DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) error {
+	return nil
+}
+func (*FakeDownloader) DeliverBlobSidecars(id string, sidecars []*types.BlobTxSidecar) error {
 	return nil
 }
 

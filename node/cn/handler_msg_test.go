@@ -29,6 +29,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	auction_mock "github.com/kaiachain/kaia/kaiax/auction/mock"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -681,11 +682,129 @@ func TestHandleBidMsg(t *testing.T) {
 
 	msg := generateMsg(t, BidMsg, testBid)
 
-	mockPeer.EXPECT().GetVersion().Return(kaia63).Times(7)
+	mockPeer.EXPECT().GetVersion().Return(kaia63).Times(9)
 	assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg), "should return error when protocol version is not kaia66")
 
 	mockPeer.EXPECT().GetVersion().Return(kaia66).AnyTimes()
 	assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg), "should not return error when protocol version is kaia66")
 
 	mockCtrl.Finish()
+}
+
+func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
+	// test if the blob sidecars are retrieved from the block chain
+	{
+		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		requestData := []blobSidecarsRequestData{
+			{BlockNum: 10, TxIndex: 0, Hash: tx1.Hash()},
+			{BlockNum: 20, TxIndex: 1, Hash: tx2.Hash()},
+		}
+		msg := generateMsg(t, BlobSidecarsRequestMsg, requestData)
+
+		sidecar0 := generateTestSidecar(tx1.Hash())
+		sidecar1 := generateTestSidecar(tx2.Hash())
+		rlp0, _ := rlp.EncodeToBytes(sidecar0)
+		rlp1, _ := rlp.EncodeToBytes(sidecar1)
+		expectedRlpList := []rlp.RawValue{rlp0, rlp1}
+
+		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Eq(uint64(requestData[0].BlockNum)), gomock.Eq(int(requestData[0].TxIndex))).Return(sidecar0).Times(1)
+		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Eq(uint64(requestData[1].BlockNum)), gomock.Eq(int(requestData[1].TxIndex))).Return(sidecar1).Times(1)
+		mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
+		err := handleBlobSidecarsRequestMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
+	// test if the blob sidecars are retrieved from the tx pool
+	{
+		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		requestData := []blobSidecarsRequestData{
+			{BlockNum: 10, TxIndex: 0, Hash: tx1.Hash()},
+			{BlockNum: 20, TxIndex: 1, Hash: tx2.Hash()},
+		}
+		msg := generateMsg(t, BlobSidecarsRequestMsg, requestData)
+
+		sidecar0 := generateTestSidecar(tx1.Hash())
+		sidecar1 := generateTestSidecar(tx2.Hash())
+		rlp0, _ := rlp.EncodeToBytes(sidecar0)
+		rlp1, _ := rlp.EncodeToBytes(sidecar1)
+		expectedRlpList := []rlp.RawValue{rlp0, rlp1}
+
+		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+		mockTxPool := mocks.NewMockTxPool(mockCtrl)
+		mockTxPool.EXPECT().GetBlobSidecar(gomock.Eq(requestData[0].Hash)).Return(sidecar0).Times(1)
+		mockTxPool.EXPECT().GetBlobSidecar(gomock.Eq(requestData[1].Hash)).Return(sidecar1).Times(1)
+		pm.txpool = mockTxPool
+		mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
+		err := handleBlobSidecarsRequestMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
+	// test if the blob sidecars are not retrieved from the block chain or tx pool
+	{
+		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		requestData := []blobSidecarsRequestData{
+			{BlockNum: 10, TxIndex: 0, Hash: tx1.Hash()},
+			{BlockNum: 20, TxIndex: 1, Hash: tx2.Hash()},
+		}
+		msg := generateMsg(t, BlobSidecarsRequestMsg, requestData)
+
+		sidecar1 := generateTestSidecar(requestData[1].Hash)
+		rlp1, _ := rlp.EncodeToBytes(sidecar1)
+		expectedRlpList := []rlp.RawValue{rlp1}
+
+		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Eq(uint64(requestData[0].BlockNum)), gomock.Eq(int(requestData[0].TxIndex))).Return(nil).Times(1)
+		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Eq(uint64(requestData[1].BlockNum)), gomock.Eq(int(requestData[1].TxIndex))).Return(sidecar1).Times(1)
+		mockTxPool := mocks.NewMockTxPool(mockCtrl)
+		mockTxPool.EXPECT().GetBlobSidecar(gomock.Eq(requestData[0].Hash)).Return(nil).Times(1)
+		pm.txpool = mockTxPool
+		mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
+		err := handleBlobSidecarsRequestMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
+}
+
+func TestHandleBlobSidecarsMsg(t *testing.T) {
+	{
+		// test if message does not contain expected data
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		msg := generateMsg(t, BlobSidecarsMsg, uint64(123)) // Non-list value to invoke an error
+
+		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
+		assert.Error(t, err)
+		assert.True(t, strings.Contains(err.Error(), errCode(ErrDecode).String()))
+		mockCtrl.Finish()
+	}
+
+	{
+		mockCtrl, mockPeer, mockDownloader, pm := preparePeerAndDownloader(t)
+
+		sidecars := []*types.BlobTxSidecar{
+			generateTestSidecar(hashes[0]),
+			generateTestSidecar(hashes[1]),
+		}
+		mockDownloader.EXPECT().DeliverBlobSidecars(gomock.Eq(nodeids[0].String()), gomock.Eq(sidecars)).Times(1).Return(expectedErr)
+
+		msg := generateMsg(t, BlobSidecarsMsg, sidecars)
+		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
+}
+
+// generateTestSidecar generates a test BlobTxSidecar for a given transaction hash.
+func generateTestSidecar(hash common.Hash) *types.BlobTxSidecar {
+	var blob kzg4844.Blob
+	var commitment kzg4844.Commitment
+	var proof kzg4844.Proof
+
+	copy(blob[:], hash.Bytes())
+	copy(commitment[:], hash.Bytes())
+	copy(proof[:], hash.Bytes())
+	return &types.BlobTxSidecar{
+		Version:     types.BlobSidecarVersion1,
+		Blobs:       []kzg4844.Blob{blob},
+		Commitments: []kzg4844.Commitment{commitment},
+		Proofs:      []kzg4844.Proof{proof},
+	}
 }

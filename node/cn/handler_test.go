@@ -67,6 +67,7 @@ var (
 
 var (
 	tx1 *types.Transaction
+	tx2 *types.Transaction
 	txs types.Transactions
 )
 
@@ -91,9 +92,12 @@ func init() {
 
 	signer := types.MakeSigner(params.TestChainConfig, big.NewInt(2019))
 	tx1 = types.NewTransaction(111, addrs[0], big.NewInt(111), 111, big.NewInt(111), addrs[0][:])
+	tx2 = types.NewTransaction(222, addrs[1], big.NewInt(222), 222, big.NewInt(222), addrs[1][:])
 
 	tx1.Sign(signer, keys[0])
 	tx1.Size()
+	tx2.Sign(signer, keys[1])
+	tx2.Size()
 	txs = types.Transactions{tx1}
 
 	hash1 = tx1.Hash()

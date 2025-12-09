@@ -52,6 +52,20 @@ func (mr *MockProtocolManagerDownloaderMockRecorder) Cancel() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cancel", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).Cancel))
 }
 
+// DeliverBlobSidecars mocks base method.
+func (m *MockProtocolManagerDownloader) DeliverBlobSidecars(arg0 string, arg1 []*types.BlobTxSidecar) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeliverBlobSidecars", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeliverBlobSidecars indicates an expected call of DeliverBlobSidecars.
+func (mr *MockProtocolManagerDownloaderMockRecorder) DeliverBlobSidecars(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeliverBlobSidecars", reflect.TypeOf((*MockProtocolManagerDownloader)(nil).DeliverBlobSidecars), arg0, arg1)
+}
+
 // DeliverBodies mocks base method.
 func (m *MockProtocolManagerDownloader) DeliverBodies(arg0 string, arg1 [][]*types.Transaction) error {
 	m.ctrl.T.Helper()

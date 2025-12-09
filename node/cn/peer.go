@@ -183,6 +183,10 @@ type Peer interface {
 	// ones requested from an already RLP encoded format.
 	SendStakingInfoRLP(stakingInfos []rlp.RawValue) error
 
+	// SendBlobSidecarsRLP sends a batch of blob sidecars, corresponding to the
+	// ones requested from an already RLP encoded format.
+	SendBlobSidecarsRLP(blobSidecars []rlp.RawValue) error
+
 	// FetchBlockHeader is a wrapper around the header query functions to fetch a
 	// single header. It is used solely by the fetcher.
 	FetchBlockHeader(hash common.Hash) error
@@ -354,6 +358,10 @@ var ChannelOfMessage = map[uint64]int{
 
 	// Protocol messages belonging to kaia/66
 	BidMsg: p2p.ConnDefault,
+
+	// Protocol messages belonging to kaia/67
+	BlobSidecarsRequestMsg: p2p.ConnDefault,
+	BlobSidecarsMsg:        p2p.ConnDefault,
 }
 
 var ConcurrentOfChannel = []int{
@@ -624,6 +632,12 @@ func (p *basePeer) SendBid(bid *auction.Bid) error {
 	return p2p.Send(p.rw, BidMsg, bid)
 }
 
+// SendBlobSidecarsRLP sends a batch of blob sidecars to the remote peer from
+// ones requested from an already RLP encoded format.
+func (p *basePeer) SendBlobSidecarsRLP(blobSidecars []rlp.RawValue) error {
+	return p2p.Send(p.rw, BlobSidecarsMsg, blobSidecars)
+}
+
 // FetchBlockHeader is a wrapper around the header query functions to fetch a
 // single header. It is used solely by the fetcher.
 func (p *basePeer) FetchBlockHeader(hash common.Hash) error {
@@ -676,6 +690,12 @@ func (p *basePeer) RequestReceipts(hashes []common.Hash) error {
 func (p *basePeer) RequestStakingInfo(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of staking infos", "count", len(hashes))
 	return p2p.Send(p.rw, StakingInfoRequestMsg, hashes)
+}
+
+// RequestBlobSidecars fetches a batch of blob sidecars from a remote node.
+func (p *basePeer) RequestBlobSidecars(hashes []common.Hash) error {
+	p.Log().Debug("Fetching batch of blob sidecars", "count", len(hashes))
+	return p2p.Send(p.rw, BlobSidecarsRequestMsg, hashes)
 }
 
 // Handshake executes the Kaia protocol handshake, negotiating version number,
@@ -1001,6 +1021,12 @@ func (p *multiChannelPeer) SendBid(bid *auction.Bid) error {
 	return p.msgSender(BidMsg, bid)
 }
 
+// SendBlobSidecarsRLP sends a batch of blob sidecars to the remote peer from
+// ones requested from an already RLP encoded format.
+func (p *multiChannelPeer) SendBlobSidecarsRLP(blobSidecars []rlp.RawValue) error {
+	return p.msgSender(BlobSidecarsMsg, blobSidecars)
+}
+
 // FetchBlockHeader is a wrapper around the header query functions to fetch a
 // single header. It is used solely by the fetcher.
 func (p *multiChannelPeer) FetchBlockHeader(hash common.Hash) error {
@@ -1053,6 +1079,12 @@ func (p *multiChannelPeer) RequestReceipts(hashes []common.Hash) error {
 func (p *multiChannelPeer) RequestStakingInfo(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of staking infos", "count", len(hashes))
 	return p.msgSender(StakingInfoRequestMsg, hashes)
+}
+
+// RequestBlobSidecars fetches a batch of blob sidecars from a remote node.
+func (p *multiChannelPeer) RequestBlobSidecars(hashes []common.Hash) error {
+	p.Log().Debug("Fetching batch of staking infos", "count", len(hashes))
+	return p.msgSender(BlobSidecarsRequestMsg, hashes)
 }
 
 // msgSender sends data to the peer.
