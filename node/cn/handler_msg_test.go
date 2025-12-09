@@ -692,21 +692,67 @@ func TestHandleBidMsg(t *testing.T) {
 }
 
 func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
-	requestedHashes := []common.Hash{hashes[0], hashes[1]}
-	mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
-	msg := generateMsg(t, BlobSidecarsRequestMsg, requestedHashes)
-	sidecar := &types.BlobTxSidecar{
-		Version:     types.BlobSidecarVersion1,
-		Blobs:       make([]kzg4844.Blob, 2),
-		Commitments: make([]kzg4844.Commitment, 2),
-		Proofs:      make([]kzg4844.Proof, 2*kzg4844.CellProofsPerBlob),
+	// test if the blob sidecars are retrieved from the block chain
+	{
+		requestedHashes := []common.Hash{hashes[0], hashes[1]}
+		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		msg := generateMsg(t, BlobSidecarsRequestMsg, requestedHashes)
+
+		sidecar0 := generateTestSidecar(requestedHashes[0])
+		sidecar1 := generateTestSidecar(requestedHashes[1])
+		rlp0, _ := rlp.EncodeToBytes(sidecar0)
+		rlp1, _ := rlp.EncodeToBytes(sidecar1)
+		expectedRlpList := []rlp.RawValue{rlp0, rlp1}
+
+		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Eq(requestedHashes[0])).Return(sidecar0).Times(1)
+		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Eq(requestedHashes[1])).Return(sidecar1).Times(1)
+		mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
+		err := handleBlobSidecarsRequestMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
 	}
-	data, _ := rlp.EncodeToBytes(sidecar)
-	expectedRlpList := []rlp.RawValue{data, data}
-	mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
-	err := handleBlobSidecarsRequestMsg(pm, mockPeer, msg)
-	assert.NoError(t, err)
-	mockCtrl.Finish()
+	// test if the blob sidecars are retrieved from the tx pool
+	{
+		requestedHashes := []common.Hash{hashes[0], hashes[1]}
+		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		msg := generateMsg(t, BlobSidecarsRequestMsg, requestedHashes)
+
+		sidecar0 := generateTestSidecar(requestedHashes[0])
+		sidecar1 := generateTestSidecar(requestedHashes[1])
+		rlp0, _ := rlp.EncodeToBytes(sidecar0)
+		rlp1, _ := rlp.EncodeToBytes(sidecar1)
+		expectedRlpList := []rlp.RawValue{rlp0, rlp1}
+
+		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Any()).Return(nil).Times(2)
+		mockTxPool := mocks.NewMockTxPool(mockCtrl)
+		mockTxPool.EXPECT().GetBlobSidecar(gomock.Eq(requestedHashes[0])).Return(sidecar0).Times(1)
+		mockTxPool.EXPECT().GetBlobSidecar(gomock.Eq(requestedHashes[1])).Return(sidecar1).Times(1)
+		pm.txpool = mockTxPool
+		mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
+		err := handleBlobSidecarsRequestMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
+	// test if the blob sidecars are not retrieved from the block chain or tx pool
+	{
+		requestedHashes := []common.Hash{hashes[0], hashes[1]}
+		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		msg := generateMsg(t, BlobSidecarsRequestMsg, requestedHashes)
+
+		sidecar1 := generateTestSidecar(requestedHashes[1])
+		rlp1, _ := rlp.EncodeToBytes(sidecar1)
+		expectedRlpList := []rlp.RawValue{rlp1}
+
+		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Eq(requestedHashes[0])).Return(nil).Times(1)
+		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Eq(requestedHashes[1])).Return(sidecar1).Times(1)
+		mockTxPool := mocks.NewMockTxPool(mockCtrl)
+		mockTxPool.EXPECT().GetBlobSidecar(gomock.Eq(requestedHashes[0])).Return(nil).Times(1)
+		pm.txpool = mockTxPool
+		mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
+		err := handleBlobSidecarsRequestMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
 }
 
 func TestHandleBlobSidecarsMsg(t *testing.T) {
@@ -725,18 +771,8 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		mockCtrl, mockPeer, mockDownloader, pm := preparePeerAndDownloader(t)
 
 		sidecars := []*types.BlobTxSidecar{
-			{
-				Version:     types.BlobSidecarVersion1,
-				Blobs:       make([]kzg4844.Blob, 2),
-				Commitments: make([]kzg4844.Commitment, 2),
-				Proofs:      make([]kzg4844.Proof, 2*kzg4844.CellProofsPerBlob),
-			},
-			{
-				Version:     types.BlobSidecarVersion1,
-				Blobs:       make([]kzg4844.Blob, 2),
-				Commitments: make([]kzg4844.Commitment, 2),
-				Proofs:      make([]kzg4844.Proof, 2*kzg4844.CellProofsPerBlob),
-			},
+			generateTestSidecar(hashes[0]),
+			generateTestSidecar(hashes[1]),
 		}
 		mockDownloader.EXPECT().DeliverBlobSidecars(gomock.Eq(nodeids[0].String()), gomock.Eq(sidecars)).Times(1).Return(expectedErr)
 
@@ -744,5 +780,22 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)
 		mockCtrl.Finish()
+	}
+}
+
+// generateTestSidecar generates a test BlobTxSidecar for a given transaction hash.
+func generateTestSidecar(hash common.Hash) *types.BlobTxSidecar {
+	var blob kzg4844.Blob
+	var commitment kzg4844.Commitment
+	var proof kzg4844.Proof
+
+	copy(blob[:], hash.Bytes())
+	copy(commitment[:], hash.Bytes())
+	copy(proof[:], hash.Bytes())
+	return &types.BlobTxSidecar{
+		Version:     types.BlobSidecarVersion1,
+		Blobs:       []kzg4844.Blob{blob},
+		Commitments: []kzg4844.Commitment{commitment},
+		Proofs:      []kzg4844.Proof{proof},
 	}
 }
