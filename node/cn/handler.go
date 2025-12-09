@@ -40,7 +40,6 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/datasync/fetcher"
 	"github.com/kaiachain/kaia/event"
@@ -422,8 +421,6 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	// start sync handlers
 	go pm.syncer()
 	go pm.txsyncLoop()
-
-	// todo: start blob sidecars sync handler?
 }
 
 func (pm *ProtocolManager) Stop() {
@@ -1195,15 +1192,15 @@ func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
-		// Retrieve the requested tx's blob sidecars, skipping if unknown to us
-		// result := pm.blockchain.GetBlobSidecarsByTxHash(hash)
-		// result := pm.txpool.GetBlobSidecarsByTxHash(hash)
-		result := types.BlobTxSidecar{
-			Version:     types.BlobSidecarVersion1,
-			Blobs:       make([]kzg4844.Blob, 2),
-			Commitments: make([]kzg4844.Commitment, 2),
-			Proofs:      make([]kzg4844.Proof, 2*kzg4844.CellProofsPerBlob),
+		// Retrieve a requested tx's blob sidecar, skipping if unknown to us
+		result := pm.blockchain.GetBlobSidecar(hash)
+		if result == nil {
+			result = pm.txpool.GetBlobSidecar(hash)
 		}
+		if result == nil {
+			continue
+		}
+
 		// If known, encode and queue for response packet
 		if encoded, err := rlp.EncodeToBytes(result); err != nil {
 			logger.Error("Failed to encode blob sidecars", "err", err)

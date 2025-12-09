@@ -1047,6 +1047,11 @@ func (bc *BlockChain) GetLogsByHash(hash common.Hash) [][]*types.Log {
 	return logs
 }
 
+// GetBlobSidecar retrieves a blob sidecar from the database by hash.
+func (bc *BlockChain) GetBlobSidecar(hash common.Hash) *types.BlobTxSidecar {
+	panic("implement me")
+}
+
 // TrieNode retrieves a blob of data associated with a trie node
 // either from ephemeral in-memory cache, or from persistent storage.
 // Cannot retrieve nodes keyed with ExtHash

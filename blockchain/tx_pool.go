@@ -1593,6 +1593,11 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 	return pool.all.Get(hash)
 }
 
+// GetBlobSidecar retrieves a blob sidecar from the pool by hash.
+func (pool *TxPool) GetBlobSidecar(hash common.Hash) *types.BlobTxSidecar {
+	panic("implement me")
+}
+
 // checkAndSetBeat sets the beat of the account if there is no beat of the account.
 func (pool *TxPool) checkAndSetBeat(addr common.Address) {
 	_, exist := pool.beats[addr]
