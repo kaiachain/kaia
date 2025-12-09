@@ -1080,7 +1080,7 @@ func TestEthAPI_PendingTransactions(t *testing.T) {
 // TestEthAPI_GetTransactionReceipt tests GetTransactionReceipt.
 func TestEthAPI_GetTransactionReceipt(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
-	block, txs, txHashMap, receiptMap, receipts := createTestData(t, &types.Header{Number: big.NewInt(1), ExcessBlobGas: &excessBlobGas})
+	block, txs, txHashMap, receiptMap, receipts := createTestData(t, &types.Header{Number: big.NewInt(1), ExcessBlobGas: &excessBlobGas, BaseFee: big.NewInt(1)})
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().GetTxLookupInfoAndReceipt(gomock.Any(), gomock.Any()).DoAndReturn(
