@@ -84,18 +84,17 @@ func TestCalcExcessBlobGas(t *testing.T) {
 
 func TestCalcBlobFee(t *testing.T) {
 	tests := []struct {
-		excessBlobGas uint64
-		blobfee       int64
+		baseFee int64
+		blobfee int64
 	}{
-		{0, 1},
-		{2314057, 1},
-		{2314058, 2},
-		{10 * 1024 * 1024, 23},
+		{0, 0},
+		{1, 8},
+		{25000000000, 200000000000}, // 25gkei
 	}
 	for i, tt := range tests {
 		config := &params.ChainConfig{OsakaCompatibleBlock: big.NewInt(0), BlobScheduleConfig: params.DefaultBlobSchedule}
 		config.BlobScheduleConfig.Osaka = GethCancunBlobConfig
-		header := &types.Header{ExcessBlobGas: &tt.excessBlobGas}
+		header := &types.Header{BaseFee: big.NewInt(tt.baseFee)}
 		header.Number = big.NewInt(0)
 		have := CalcBlobFee(config, header)
 		if have.Int64() != tt.blobfee {

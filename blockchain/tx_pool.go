@@ -75,9 +75,9 @@ var (
 	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
 
-	// blobTxMinBlobGasPrice is the big.Int version of the configured protocol
+	// blobBaseFeeMultiplier is the big.Int version of the configured protocol
 	// parameter to avoid constructing a new big integer for every transaction.
-	blobTxMinBlobGasPrice = big.NewInt(params.BlobTxMinBlobGasprice)
+	blobBaseFeeMultiplier = big.NewInt(params.BlobBaseFeeMultiplier)
 
 	txPoolIsFullErr = errors.New("txpool is full")
 
@@ -1025,6 +1025,7 @@ func (pool *TxPool) validateBlobTx(tx *types.Transaction) error {
 		return errors.New("missing sidecar in blob transaction")
 	}
 	// Ensure the blob fee cap satisfies the minimum blob gas price
+	blobTxMinBlobGasPrice := new(big.Int).Mul(pool.gasPrice, blobBaseFeeMultiplier)
 	if tx.BlobGasFeeCapIntCmp(blobTxMinBlobGasPrice) < 0 {
 		return fmt.Errorf("%w: blob fee cap %v, minimum needed %v", ErrTxGasPriceTooLow, tx.BlobGasFeeCap(), blobTxMinBlobGasPrice)
 	}
