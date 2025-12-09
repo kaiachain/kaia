@@ -31,6 +31,7 @@ import (
 	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/datasync/fetcher"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -243,7 +244,7 @@ type blockBodiesData []*blockBody
 
 // BlobSidecarsRequestMsgData is the network packet for the blob sidecars request message.
 type blobSidecarsRequestData struct {
-	BlockNum uint64
-	TxIndex  uint64
+	BlockNum hexutil.Uint64
+	TxIndex  hexutil.Uint
 	Hash     common.Hash
 }
