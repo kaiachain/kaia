@@ -1,0 +1,33 @@
+name: Major Tagging Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  major-tagging:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PR_TOKEN }} # PAT for other workflows to trigger
+      - name: Generate tag
+        run: |
+          version=$(go run build/rpm/main.go version)
+          git config --global user.email "devops@kaia.io"
+          git config --global user.name "github-actions-kaia"
+          git tag -a $version -m "Major release"
+          git push origin $version
+      - name: Delete release branch
+        run: |
+          version=$(go run build/rpm/main.go version)
+          if [[ "release/v" = $(git log --oneline -1 | grep -o "release/v") ]]; then
+            echo "Delete branch release/$version"
+            git push origin --delete release/$version
+          else
+            echo "Need to delete branch manually"
+          fi

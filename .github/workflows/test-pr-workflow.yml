@@ -9,11 +9,13 @@ permissions:
 
 jobs:
   build:
+    name: Build
     uses: ./.github/workflows/test-executor-template.yml
     with:
       test_command: make all
 
   test-linter:
+    name: Test Linter
     uses: ./.github/workflows/test-executor-template.yml
     with:
       test_command: |
@@ -21,16 +23,19 @@ jobs:
         go run build/ci.go lint -v --new-from-rev="origin/${BASE_BRANCH}"
 
   test-networks:
+    name: Test Networks
     uses: ./.github/workflows/test-executor-template.yml
     with:
       test_command: make test-networks
 
   test-node:
+    name: Test Node
     uses: ./.github/workflows/test-executor-template.yml
     with:
       test_command: make test-node
 
   test-tests:
+    name: Test Tests
     uses: ./.github/workflows/test-executor-template.yml
     with:
       test_command: |
@@ -38,6 +43,7 @@ jobs:
         make test-tests
 
   test-rpc:
+    name: Test RPC
     permissions:
       contents: write
     uses: ./.github/workflows/test-other-executor-template.yml
@@ -61,11 +67,13 @@ jobs:
 
   # Service-dependent test jobs
   test-datasync:
+    name: Test Datasync
     uses: ./.github/workflows/test-other-executor-template.yml
     with:
       test_command: make test-datasync
 
   test-others:
+    name: Test Others
     uses: ./.github/workflows/test-other-executor-template.yml
     with:
       test_command: make test-others
