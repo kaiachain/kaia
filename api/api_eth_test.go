@@ -3495,11 +3495,6 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 				if tc.validate != nil {
 					tc.validate(t, results)
 				}
-				// Print results as JSON string for debugging
-				jsonBytes, jsonErr := json.MarshalIndent(results, "", "  ")
-				if jsonErr == nil {
-					fmt.Println("Results:", string(jsonBytes))
-				}
 			}
 		})
 	}
