@@ -218,6 +218,9 @@ type BlockChain struct {
 
 	prefetchTxCh chan prefetchTx
 
+	// blob storage
+	blobStorage *BlobStorage
+
 	// kaiax modules
 	executionModules  []kaiax.ExecutionModule
 	rewindableModules []kaiax.RewindableModule
@@ -270,6 +273,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
 		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
+		blobStorage:        NewBlobStorage(DefaultBlobStorageConfig(db.GetDBConfig().Dir)),
 	}
 
 	// set hardForkBlockNumberConfig which will be used as a global variable
