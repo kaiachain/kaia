@@ -597,7 +597,12 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 		log.Fatalf("%v should be power of 2 but %v is not!", NumStateTrieShardsFlag.Name, cfg.NumStateTrieShards)
 	}
 
-	cfg.OverwriteGenesis = ctx.Bool(OverwriteGenesisFlag.Name)
+	var overrides blockchain.ChainOverrides
+	if ctx.IsSet(OverrideOsaka.Name) {
+		v := ctx.Uint64(OverrideOsaka.Name)
+		overrides.OverrideOsaka = new(big.Int).SetUint64(v)
+	}
+	cfg.Overrides = &overrides
 	cfg.StartBlockNumber = ctx.Uint64(StartBlockNumberFlag.Name)
 
 	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.Int(LevelDBCompressionTypeFlag.Name))

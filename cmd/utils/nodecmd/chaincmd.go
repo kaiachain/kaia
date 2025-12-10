@@ -25,6 +25,7 @@ package nodecmd
 import (
 	"encoding/json"
 	"errors"
+	"math/big"
 	"os"
 	"slices"
 	"strings"
@@ -68,7 +69,7 @@ var (
 			utils.RocksDBDisableMetricsFlag,
 			utils.RocksDBMaxOpenFilesFlag,
 			utils.RocksDBCacheIndexAndFilterFlag,
-			utils.OverwriteGenesisFlag,
+			utils.OverrideOsaka,
 			utils.LivePruningFlag,
 			utils.FlatTrieFlag,
 		},
@@ -119,6 +120,12 @@ func initGenesis(ctx *cli.Context) error {
 		logger.Crit("Genesis config is not set")
 	}
 
+	var overrides blockchain.ChainOverrides
+	if ctx.IsSet(utils.OverrideOsaka.Name) {
+		v := ctx.Uint64(utils.OverrideOsaka.Name)
+		overrides.OverrideOsaka = new(big.Int).SetUint64(v)
+	}
+
 	// Update undefined config with default values
 	genesis.Config.SetDefaultsForGenesis()
 
@@ -135,7 +142,6 @@ func initGenesis(ctx *cli.Context) error {
 	parallelDBWrite := !ctx.Bool(utils.NoParallelDBWriteFlag.Name)
 	singleDB := ctx.Bool(utils.SingleDBFlag.Name)
 	numStateTrieShards := ctx.Uint(utils.NumStateTrieShardsFlag.Name)
-	// overwriteGenesis := ctx.Bool(utils.OverwriteGenesisFlag.Name) // TODO-Kaia: repurpose this flag
 	livePruning := ctx.Bool(utils.LivePruningFlag.Name)
 	useFlatTrie := ctx.Bool(utils.FlatTrieFlag.Name)
 
@@ -183,7 +189,7 @@ func initGenesis(ctx *cli.Context) error {
 		// Initialize DeriveSha implementation
 		blockchain.InitDeriveSha(genesis.Config)
 
-		_, hash, err := blockchain.SetupGenesisBlock(chainDB, genesis)
+		_, hash, err := blockchain.SetupGenesisBlockWithOverride(chainDB, genesis, &overrides)
 		if err != nil {
 			logger.Crit("Failed to write genesis block", "err", err)
 		}
