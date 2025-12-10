@@ -269,19 +269,19 @@ func (mr *MockBlockChainMockRecorder) Genesis() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Genesis", reflect.TypeOf((*MockBlockChain)(nil).Genesis))
 }
 
-// GetBlobSidecarByBlockNumberAndIndex mocks base method.
-func (m *MockBlockChain) GetBlobSidecarByBlockNumberAndIndex(arg0 *big.Int, arg1 int) (*types.BlobTxSidecar, error) {
+// GetBlobSidecarFromStorage mocks base method.
+func (m *MockBlockChain) GetBlobSidecarFromStorage(arg0 *big.Int, arg1 int) (*types.BlobTxSidecar, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBlobSidecarByBlockNumberAndIndex", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetBlobSidecarFromStorage", arg0, arg1)
 	ret0, _ := ret[0].(*types.BlobTxSidecar)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetBlobSidecarByBlockNumberAndIndex indicates an expected call of GetBlobSidecarByBlockNumberAndIndex.
-func (mr *MockBlockChainMockRecorder) GetBlobSidecarByBlockNumberAndIndex(arg0, arg1 interface{}) *gomock.Call {
+// GetBlobSidecarFromStorage indicates an expected call of GetBlobSidecarFromStorage.
+func (mr *MockBlockChainMockRecorder) GetBlobSidecarFromStorage(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecarByBlockNumberAndIndex", reflect.TypeOf((*MockBlockChain)(nil).GetBlobSidecarByBlockNumberAndIndex), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecarFromStorage", reflect.TypeOf((*MockBlockChain)(nil).GetBlobSidecarFromStorage), arg0, arg1)
 }
 
 // GetBlock mocks base method.

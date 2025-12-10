@@ -1052,7 +1052,7 @@ func (bc *BlockChain) GetLogsByHash(hash common.Hash) [][]*types.Log {
 }
 
 // GetBlobSidecarByBlockNumberAndIndex retrieves a blob sidecar from blob storage by block number and transaction index.
-func (bc *BlockChain) GetBlobSidecarByBlockNumberAndIndex(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error) {
+func (bc *BlockChain) GetBlobSidecarFromStorage(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error) {
 	sidecar, err := bc.blobStorage.Get(blockNum, txIndex)
 	if err != nil {
 		return nil, err

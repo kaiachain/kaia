@@ -1193,12 +1193,12 @@ func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 		}
 
 		// Retrieve a requested tx's blob sidecar, skipping if unknown to us
-		result, err := pm.blockchain.GetBlobSidecarByBlockNumberAndIndex(big.NewInt(int64(data.BlockNum)), int(data.TxIndex))
+		result, err := pm.blockchain.GetBlobSidecarFromStorage(big.NewInt(int64(data.BlockNum)), int(data.TxIndex))
 		if result == nil {
 			if err != nil {
 				logger.Debug("Failed to get blob sidecar by block number and index", "err", err)
 			}
-			result, err = pm.txpool.GetBlobSidecarByTxHash(data.Hash)
+			result, err = pm.txpool.GetBlobSidecarFromPool(data.Hash)
 			if result == nil {
 				if err != nil {
 					logger.Debug("Failed to get blob sidecar by tx hash", "err", err)

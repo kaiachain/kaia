@@ -101,6 +101,6 @@ type Backend interface {
 	GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	GetBlockReceiptsInCache(blockHash common.Hash) types.Receipts
 	GetTxLookupInfoAndReceiptInCache(Hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
-	GetBlobSidecarByBlockNumberAndIndex(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error)
-	GetBlobSidecarByTxHash(txHash common.Hash) (*types.BlobTxSidecar, error)
+	GetBlobSidecarFromStorage(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error)
+	GetBlobSidecarFromPool(txHash common.Hash) (*types.BlobTxSidecar, error)
 }

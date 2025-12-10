@@ -1665,9 +1665,9 @@ func (api *EthAPI) GetBlobSidecars(ctx context.Context, number *rpc.BlockNumber,
 		var sidecarErr error
 
 		if *number == rpc.PendingBlockNumber {
-			sidecar, sidecarErr = api.kaiaBlockChainAPI.b.GetBlobSidecarByTxHash(tx.Hash())
+			sidecar, sidecarErr = api.kaiaBlockChainAPI.b.GetBlobSidecarFromPool(tx.Hash())
 		} else {
-			sidecar, sidecarErr = api.kaiaBlockChainAPI.b.GetBlobSidecarByBlockNumberAndIndex(block.Number(), txIndex)
+			sidecar, sidecarErr = api.kaiaBlockChainAPI.b.GetBlobSidecarFromStorage(block.Number(), txIndex)
 		}
 
 		if sidecarErr != nil {
@@ -1691,7 +1691,7 @@ func (api *EthAPI) GetBlobSidecarsByTxHash(ctx context.Context, txHash common.Ha
 	}
 	blockNumber := big.NewInt(int64(number))
 	txIndex := int(index)
-	sidecar, err := api.kaiaBlockChainAPI.b.GetBlobSidecarByBlockNumberAndIndex(blockNumber, txIndex)
+	sidecar, err := api.kaiaBlockChainAPI.b.GetBlobSidecarFromStorage(blockNumber, txIndex)
 	if err != nil {
 		return nil, err
 	}

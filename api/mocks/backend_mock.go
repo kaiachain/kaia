@@ -209,34 +209,34 @@ func (mr *MockBackendMockRecorder) GetActiveSystemContracts(arg0, arg1, arg2 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveSystemContracts", reflect.TypeOf((*MockBackend)(nil).GetActiveSystemContracts), arg0, arg1, arg2)
 }
 
-// GetBlobSidecarByBlockNumberAndIndex mocks base method.
-func (m *MockBackend) GetBlobSidecarByBlockNumberAndIndex(arg0 *big.Int, arg1 int) (*types.BlobTxSidecar, error) {
+// GetBlobSidecarFromPool mocks base method.
+func (m *MockBackend) GetBlobSidecarFromPool(arg0 common.Hash) (*types.BlobTxSidecar, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBlobSidecarByBlockNumberAndIndex", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetBlobSidecarFromPool", arg0)
 	ret0, _ := ret[0].(*types.BlobTxSidecar)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetBlobSidecarByBlockNumberAndIndex indicates an expected call of GetBlobSidecarByBlockNumberAndIndex.
-func (mr *MockBackendMockRecorder) GetBlobSidecarByBlockNumberAndIndex(arg0, arg1 interface{}) *gomock.Call {
+// GetBlobSidecarFromPool indicates an expected call of GetBlobSidecarFromPool.
+func (mr *MockBackendMockRecorder) GetBlobSidecarFromPool(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecarByBlockNumberAndIndex", reflect.TypeOf((*MockBackend)(nil).GetBlobSidecarByBlockNumberAndIndex), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecarFromPool", reflect.TypeOf((*MockBackend)(nil).GetBlobSidecarFromPool), arg0)
 }
 
-// GetBlobSidecarByTxHash mocks base method.
-func (m *MockBackend) GetBlobSidecarByTxHash(arg0 common.Hash) (*types.BlobTxSidecar, error) {
+// GetBlobSidecarFromStorage mocks base method.
+func (m *MockBackend) GetBlobSidecarFromStorage(arg0 *big.Int, arg1 int) (*types.BlobTxSidecar, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBlobSidecarByTxHash", arg0)
+	ret := m.ctrl.Call(m, "GetBlobSidecarFromStorage", arg0, arg1)
 	ret0, _ := ret[0].(*types.BlobTxSidecar)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetBlobSidecarByTxHash indicates an expected call of GetBlobSidecarByTxHash.
-func (mr *MockBackendMockRecorder) GetBlobSidecarByTxHash(arg0 interface{}) *gomock.Call {
+// GetBlobSidecarFromStorage indicates an expected call of GetBlobSidecarFromStorage.
+func (mr *MockBackendMockRecorder) GetBlobSidecarFromStorage(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecarByTxHash", reflect.TypeOf((*MockBackend)(nil).GetBlobSidecarByTxHash), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecarFromStorage", reflect.TypeOf((*MockBackend)(nil).GetBlobSidecarFromStorage), arg0, arg1)
 }
 
 // GetBlockReceipts mocks base method.

@@ -1594,7 +1594,7 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 }
 
 // GetBlobSidecar retrieves a blob sidecar from txpool by transaction hash.
-func (pool *TxPool) GetBlobSidecarByTxHash(txHash common.Hash) (*types.BlobTxSidecar, error) {
+func (pool *TxPool) GetBlobSidecarFromPool(txHash common.Hash) (*types.BlobTxSidecar, error) {
 	tx := pool.all.Get(txHash)
 	if tx == nil {
 		return nil, fmt.Errorf("transaction not found in pool: %s", txHash.String())

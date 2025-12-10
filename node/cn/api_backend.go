@@ -407,11 +407,11 @@ func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount uint64, lastBl
 }
 
 // GetBlobSidecar retrieves a blob sidecar from blob storage by block number and transaction index.
-func (b *CNAPIBackend) GetBlobSidecarByBlockNumberAndIndex(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error) {
-	return b.cn.blockchain.GetBlobSidecarByBlockNumberAndIndex(blockNum, txIndex)
+func (b *CNAPIBackend) GetBlobSidecarFromStorage(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error) {
+	return b.cn.blockchain.GetBlobSidecarFromStorage(blockNum, txIndex)
 }
 
 // GetBlobSidecarFromTxPool retrieves a blob sidecar from the transaction pool by transaction hash.
-func (b *CNAPIBackend) GetBlobSidecarByTxHash(txHash common.Hash) (*types.BlobTxSidecar, error) {
-	return b.cn.txPool.GetBlobSidecarByTxHash(txHash)
+func (b *CNAPIBackend) GetBlobSidecarFromPool(txHash common.Hash) (*types.BlobTxSidecar, error) {
+	return b.cn.txPool.GetBlobSidecarFromPool(txHash)
 }

@@ -3296,7 +3296,7 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 			setupMock: func() {
 				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(1)).Return(blockWithBlobTx, nil)
 				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
-				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(big.NewInt(1), 0).Return(sidecar, nil)
+				mockBackend.EXPECT().GetBlobSidecarFromStorage(big.NewInt(1), 0).Return(sidecar, nil)
 			},
 			expectedCount: 1,
 			validate: func(t *testing.T, results []*map[string]interface{}) {
@@ -3321,7 +3321,7 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 			setupMock: func() {
 				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(1)).Return(blockWithBlobTx, nil)
 				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
-				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(big.NewInt(1), 0).Return(sidecar, nil)
+				mockBackend.EXPECT().GetBlobSidecarFromStorage(big.NewInt(1), 0).Return(sidecar, nil)
 			},
 			expectedCount: 1,
 			validate: func(t *testing.T, results []*map[string]interface{}) {
@@ -3357,8 +3357,8 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 			setupMock: func() {
 				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(3)).Return(blockWithMultipleBlobTxs, nil)
 				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
-				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(big.NewInt(3), 0).Return(sidecar, nil)
-				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(big.NewInt(3), 2).Return(sidecar, nil)
+				mockBackend.EXPECT().GetBlobSidecarFromStorage(big.NewInt(3), 0).Return(sidecar, nil)
+				mockBackend.EXPECT().GetBlobSidecarFromStorage(big.NewInt(3), 2).Return(sidecar, nil)
 			},
 			expectedCount: 2,
 			validate: func(t *testing.T, results []*map[string]interface{}) {
@@ -3389,7 +3389,7 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 			setupMock: func() {
 				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(1)).Return(blockWithBlobTx, nil)
 				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
-				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(big.NewInt(1), 0).Return(nil, blockchain.ErrBlobNotFound)
+				mockBackend.EXPECT().GetBlobSidecarFromStorage(big.NewInt(1), 0).Return(nil, blockchain.ErrBlobNotFound)
 			},
 			expectedErr: "blob file not found",
 		},
@@ -3400,7 +3400,7 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 			setupMock: func() {
 				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.LatestBlockNumber).Return(blockWithBlobTx, nil)
 				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
-				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(big.NewInt(1), 0).Return(sidecar, nil)
+				mockBackend.EXPECT().GetBlobSidecarFromStorage(big.NewInt(1), 0).Return(sidecar, nil)
 			},
 			expectedCount: 1,
 			validate: func(t *testing.T, results []*map[string]interface{}) {
@@ -3423,7 +3423,7 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 			setupMock: func() {
 				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.PendingBlockNumber).Return(blockWithBlobTx, nil)
 				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
-				mockBackend.EXPECT().GetBlobSidecarByTxHash(blobTx.Hash()).Return(sidecar, nil)
+				mockBackend.EXPECT().GetBlobSidecarFromPool(blobTx.Hash()).Return(sidecar, nil)
 			},
 			expectedCount: 1,
 			validate: func(t *testing.T, results []*map[string]interface{}) {
@@ -3464,7 +3464,7 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 			setupMock: func() {
 				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.PendingBlockNumber).Return(blockWithBlobTx, nil)
 				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
-				mockBackend.EXPECT().GetBlobSidecarByTxHash(blobTx.Hash()).Return(nil, fmt.Errorf("transaction not found in pool: %s", blobTx.Hash().String()))
+				mockBackend.EXPECT().GetBlobSidecarFromPool(blobTx.Hash()).Return(nil, fmt.Errorf("transaction not found in pool: %s", blobTx.Hash().String()))
 			},
 			expectedErr: "transaction not found in pool",
 		},
@@ -3475,7 +3475,7 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 			setupMock: func() {
 				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.PendingBlockNumber).Return(blockWithBlobTx, nil)
 				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
-				mockBackend.EXPECT().GetBlobSidecarByTxHash(blobTx.Hash()).Return(nil, fmt.Errorf("blob sidecar not found for transaction: %s", blobTx.Hash().String()))
+				mockBackend.EXPECT().GetBlobSidecarFromPool(blobTx.Hash()).Return(nil, fmt.Errorf("blob sidecar not found for transaction: %s", blobTx.Hash().String()))
 			},
 			expectedErr: "blob sidecar not found for transaction",
 		},
@@ -3584,7 +3584,7 @@ func TestEthAPI_GetBlobSidecarsByTxHash(t *testing.T) {
 			fullBlob: true,
 			setupMock: func() {
 				mockBackend.EXPECT().GetTxAndLookupInfo(blobTx.Hash()).Return(blobTx, blockHash, uint64(blockNumber.Int64()), uint64(txIndex))
-				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(blockNumber, txIndex).Return(sidecar, nil)
+				mockBackend.EXPECT().GetBlobSidecarFromStorage(blockNumber, txIndex).Return(sidecar, nil)
 			},
 			expected: &map[string]interface{}{
 				"blobSidecar": map[string]interface{}{
@@ -3605,7 +3605,7 @@ func TestEthAPI_GetBlobSidecarsByTxHash(t *testing.T) {
 			fullBlob: false,
 			setupMock: func() {
 				mockBackend.EXPECT().GetTxAndLookupInfo(blobTx.Hash()).Return(blobTx, blockHash, uint64(blockNumber.Int64()), uint64(txIndex))
-				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(blockNumber, txIndex).Return(sidecar, nil)
+				mockBackend.EXPECT().GetBlobSidecarFromStorage(blockNumber, txIndex).Return(sidecar, nil)
 			},
 			expected: &map[string]interface{}{
 				"blobSidecar": map[string]interface{}{
@@ -3642,7 +3642,7 @@ func TestEthAPI_GetBlobSidecarsByTxHash(t *testing.T) {
 			fullBlob: true,
 			setupMock: func() {
 				mockBackend.EXPECT().GetTxAndLookupInfo(blobTx.Hash()).Return(blobTx, blockHash, uint64(blockNumber.Int64()), uint64(txIndex))
-				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(blockNumber, txIndex).Return(nil, blockchain.ErrBlobNotFound)
+				mockBackend.EXPECT().GetBlobSidecarFromStorage(blockNumber, txIndex).Return(nil, blockchain.ErrBlobNotFound)
 			},
 			expectedErr: "blob file not found",
 		},
