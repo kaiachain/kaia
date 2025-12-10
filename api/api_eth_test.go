@@ -3201,3 +3201,504 @@ func TestEthAPI_Config_ErrorCases(t *testing.T) {
 		assert.Contains(t, err.Error(), "unable to load genesis")
 	})
 }
+
+func TestEthAPI_GetBlobSidecars(t *testing.T) {
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
+	defer mockCtrl.Finish()
+
+	// Create test blob transaction
+	emptyBlob := kzg4844.Blob{}
+	emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
+	cellProofs, _ := kzg4844.ComputeCellProofs(&emptyBlob)
+	to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+	accessList := types.AccessList{}
+
+	blobTxValues := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:      uint64(0),
+		types.TxValueKeyTo:         to,
+		types.TxValueKeyAmount:     big.NewInt(0),
+		types.TxValueKeyGasLimit:   uint64(10000000),
+		types.TxValueKeyGasFeeCap:  big.NewInt(25),
+		types.TxValueKeyGasTipCap:  big.NewInt(25),
+		types.TxValueKeyData:       []byte{},
+		types.TxValueKeyAccessList: accessList,
+		types.TxValueKeyBlobFeeCap: big.NewInt(25),
+		types.TxValueKeyBlobHashes: []common.Hash{common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &emptyBlobCommit))},
+		types.TxValueKeySidecar: &types.BlobTxSidecar{
+			Version:     types.BlobSidecarVersion1,
+			Blobs:       []kzg4844.Blob{emptyBlob},
+			Commitments: []kzg4844.Commitment{emptyBlobCommit},
+			Proofs:      cellProofs,
+		},
+		types.TxValueKeyChainID: params.TestChainConfig.ChainID,
+	}
+	blobTx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, blobTxValues)
+	require.NoError(t, err)
+	blobTx.SetSignature(types.TxSignatures{
+		&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+	})
+
+	// Create regular transaction
+	regularTxValues := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    uint64(1),
+		types.TxValueKeyTo:       to,
+		types.TxValueKeyAmount:   big.NewInt(10),
+		types.TxValueKeyGasLimit: uint64(21000),
+		types.TxValueKeyGasPrice: big.NewInt(25),
+		types.TxValueKeyData:     []byte{},
+	}
+	regularTx, err := types.NewTransactionWithMap(types.TxTypeLegacyTransaction, regularTxValues)
+	require.NoError(t, err)
+	regularTx.SetSignature(types.TxSignatures{
+		&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+	})
+
+	// Create blocks with different scenarios
+	blockWithBlobTx := types.NewBlock(
+		&types.Header{Number: big.NewInt(1)},
+		[]*types.Transaction{blobTx},
+		nil,
+	)
+
+	blockWithoutBlobTx := types.NewBlock(
+		&types.Header{Number: big.NewInt(2)},
+		[]*types.Transaction{regularTx},
+		nil,
+	)
+
+	blockWithMultipleBlobTxs := types.NewBlock(
+		&types.Header{Number: big.NewInt(3)},
+		[]*types.Transaction{blobTx, regularTx, blobTx},
+		nil,
+	)
+
+	// Create sidecar for blob transactions
+	sidecar := &types.BlobTxSidecar{
+		Version:     types.BlobSidecarVersion1,
+		Blobs:       []kzg4844.Blob{emptyBlob},
+		Commitments: []kzg4844.Commitment{emptyBlobCommit},
+		Proofs:      cellProofs,
+	}
+
+	testcases := []struct {
+		name          string
+		blockNumber   rpc.BlockNumber
+		fullBlob      bool
+		setupMock     func()
+		expectedCount int
+		expectedErr   string
+		validate      func(*testing.T, []*map[string]interface{})
+	}{
+		{
+			name:        "success with blob tx and fullBlob=true",
+			blockNumber: rpc.BlockNumber(1),
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(1)).Return(blockWithBlobTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(big.NewInt(1), 0).Return(sidecar, nil)
+			},
+			expectedCount: 1,
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 1)
+				result := *results[0]
+				assert.Equal(t, blockWithBlobTx.Hash(), result["blockHash"])
+				assert.Equal(t, big.NewInt(1), result["blockNumber"])
+				assert.Equal(t, blobTx.Hash(), result["txHash"])
+				assert.Equal(t, 0, result["txIndex"])
+				sidecarResult := result["blobSidecar"].(map[string]interface{})
+				assert.Equal(t, types.BlobSidecarVersion1, byte(sidecarResult["version"].(uint8)))
+				blobs := sidecarResult["blobs"].([]kzg4844.Blob)
+				assert.Len(t, blobs, 1)
+				// With fullBlob=true, blob should be full size (131072 bytes)
+				assert.Len(t, blobs[0], 131072)
+			},
+		},
+		{
+			name:        "success with blob tx and fullBlob=false",
+			blockNumber: rpc.BlockNumber(1),
+			fullBlob:    false,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(1)).Return(blockWithBlobTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(big.NewInt(1), 0).Return(sidecar, nil)
+			},
+			expectedCount: 1,
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 1)
+				result := *results[0]
+				sidecarResult := result["blobSidecar"].(map[string]interface{})
+				blobs := sidecarResult["blobs"].([]hexutil.Bytes)
+				require.Len(t, blobs, 1)
+				// With fullBlob=false, blob should be truncated to 32 bytes
+				assert.Len(t, blobs[0], 32)
+				// Check that first 32 bytes match the original blob's first 32 bytes
+				originalBlob := emptyBlob
+				assert.Equal(t, originalBlob[:32], []byte(blobs[0]))
+			},
+		},
+		{
+			name:        "success with no blob tx",
+			blockNumber: rpc.BlockNumber(2),
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(2)).Return(blockWithoutBlobTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+			},
+			expectedCount: 0,
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 0)
+			},
+		},
+		{
+			name:        "success with multiple blob txs",
+			blockNumber: rpc.BlockNumber(3),
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(3)).Return(blockWithMultipleBlobTxs, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(big.NewInt(3), 0).Return(sidecar, nil)
+				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(big.NewInt(3), 2).Return(sidecar, nil)
+			},
+			expectedCount: 2,
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 2)
+				// First blob tx at index 0
+				result0 := *results[0]
+				assert.Equal(t, blobTx.Hash(), result0["txHash"])
+				assert.Equal(t, 0, result0["txIndex"])
+				// Second blob tx at index 2
+				result1 := *results[1]
+				assert.Equal(t, blobTx.Hash(), result1["txHash"])
+				assert.Equal(t, 2, result1["txIndex"])
+			},
+		},
+		{
+			name:        "error when block not found",
+			blockNumber: rpc.BlockNumber(999),
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(999)).Return(nil, fmt.Errorf("the block does not exist (block number: %d)", 999))
+			},
+			expectedErr: "the block does not exist",
+		},
+		{
+			name:        "error when GetBlobSidecar fails",
+			blockNumber: rpc.BlockNumber(1),
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(1)).Return(blockWithBlobTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(big.NewInt(1), 0).Return(nil, blockchain.ErrBlobNotFound)
+			},
+			expectedErr: "blob file not found",
+		},
+		{
+			name:        "success with latest block and blob tx",
+			blockNumber: rpc.LatestBlockNumber,
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.LatestBlockNumber).Return(blockWithBlobTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(big.NewInt(1), 0).Return(sidecar, nil)
+			},
+			expectedCount: 1,
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 1)
+				result := *results[0]
+				assert.Equal(t, blockWithBlobTx.Hash(), result["blockHash"])
+				assert.Equal(t, big.NewInt(1), result["blockNumber"])
+				assert.Equal(t, blobTx.Hash(), result["txHash"])
+				sidecarResult := result["blobSidecar"].(map[string]interface{})
+				assert.Equal(t, types.BlobSidecarVersion1, byte(sidecarResult["version"].(uint8)))
+				blobs := sidecarResult["blobs"].([]kzg4844.Blob)
+				assert.Len(t, blobs, 1)
+				assert.Len(t, blobs[0], 131072)
+			},
+		},
+		{
+			name:        "success with pending block and blob tx",
+			blockNumber: rpc.PendingBlockNumber,
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.PendingBlockNumber).Return(blockWithBlobTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				mockBackend.EXPECT().GetBlobSidecarByTxHash(blobTx.Hash()).Return(sidecar, nil)
+			},
+			expectedCount: 1,
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 1)
+				result := *results[0]
+				assert.Equal(t, blockWithBlobTx.Hash(), result["blockHash"])
+				assert.Equal(t, blobTx.Hash(), result["txHash"])
+				sidecarResult := result["blobSidecar"].(map[string]interface{})
+				assert.Equal(t, types.BlobSidecarVersion1, byte(sidecarResult["version"].(uint8)))
+				blobs := sidecarResult["blobs"].([]kzg4844.Blob)
+				assert.Len(t, blobs, 1)
+				assert.Len(t, blobs[0], 131072)
+			},
+		},
+		{
+			name:        "success with pending block containing only regular tx (no blob tx)",
+			blockNumber: rpc.PendingBlockNumber,
+			fullBlob:    true,
+			setupMock: func() {
+				blockWithRegularTx := types.NewBlock(
+					&types.Header{Number: big.NewInt(1)},
+					[]*types.Transaction{regularTx},
+					nil,
+				)
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.PendingBlockNumber).Return(blockWithRegularTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				// GetBlobSidecarByTxHash is not called for non-blob transactions
+			},
+			expectedCount: 0,
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 0)
+			},
+		},
+		{
+			name:        "error when pending block GetBlobSidecarByTxHash fails - transaction not found",
+			blockNumber: rpc.PendingBlockNumber,
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.PendingBlockNumber).Return(blockWithBlobTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				mockBackend.EXPECT().GetBlobSidecarByTxHash(blobTx.Hash()).Return(nil, fmt.Errorf("transaction not found in pool: %s", blobTx.Hash().String()))
+			},
+			expectedErr: "transaction not found in pool",
+		},
+		{
+			name:        "error when pending block GetBlobSidecarByTxHash fails - sidecar not found",
+			blockNumber: rpc.PendingBlockNumber,
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.PendingBlockNumber).Return(blockWithBlobTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				mockBackend.EXPECT().GetBlobSidecarByTxHash(blobTx.Hash()).Return(nil, fmt.Errorf("blob sidecar not found for transaction: %s", blobTx.Hash().String()))
+			},
+			expectedErr: "blob sidecar not found for transaction",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.setupMock()
+			results, err := api.GetBlobSidecars(context.Background(), &tc.blockNumber, tc.fullBlob)
+
+			if tc.expectedErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedErr)
+			} else {
+				require.NoError(t, err)
+				assert.Len(t, results, tc.expectedCount)
+				if tc.validate != nil {
+					tc.validate(t, results)
+				}
+				// Print results as JSON string for debugging
+				jsonBytes, jsonErr := json.MarshalIndent(results, "", "  ")
+				if jsonErr == nil {
+					fmt.Println("Results:", string(jsonBytes))
+				}
+			}
+		})
+	}
+}
+
+func TestEthAPI_GetBlobSidecarsByTxHash(t *testing.T) {
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
+	defer mockCtrl.Finish()
+
+	// Create test blob transaction
+	emptyBlob := kzg4844.Blob{}
+	emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
+	cellProofs, _ := kzg4844.ComputeCellProofs(&emptyBlob)
+	to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+	accessList := types.AccessList{}
+
+	blobTxValues := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:      uint64(0),
+		types.TxValueKeyTo:         to,
+		types.TxValueKeyAmount:     big.NewInt(0),
+		types.TxValueKeyGasLimit:   uint64(10000000),
+		types.TxValueKeyGasFeeCap:  big.NewInt(25),
+		types.TxValueKeyGasTipCap:  big.NewInt(25),
+		types.TxValueKeyData:       []byte{},
+		types.TxValueKeyAccessList: accessList,
+		types.TxValueKeyBlobFeeCap: big.NewInt(25),
+		types.TxValueKeyBlobHashes: []common.Hash{common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &emptyBlobCommit))},
+		types.TxValueKeySidecar: &types.BlobTxSidecar{
+			Version:     types.BlobSidecarVersion1,
+			Blobs:       []kzg4844.Blob{emptyBlob},
+			Commitments: []kzg4844.Commitment{emptyBlobCommit},
+			Proofs:      cellProofs,
+		},
+		types.TxValueKeyChainID: params.TestChainConfig.ChainID,
+	}
+	blobTx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, blobTxValues)
+	require.NoError(t, err)
+	blobTx.SetSignature(types.TxSignatures{
+		&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+	})
+
+	// Create regular transaction
+	regularTxValues := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    uint64(1),
+		types.TxValueKeyTo:       to,
+		types.TxValueKeyAmount:   big.NewInt(10),
+		types.TxValueKeyGasLimit: uint64(21000),
+		types.TxValueKeyGasPrice: big.NewInt(25),
+		types.TxValueKeyData:     []byte{},
+	}
+	regularTx, err := types.NewTransactionWithMap(types.TxTypeLegacyTransaction, regularTxValues)
+	require.NoError(t, err)
+	regularTx.SetSignature(types.TxSignatures{
+		&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+	})
+
+	// Create block with blob transaction
+	blockWithBlobTx := types.NewBlock(
+		&types.Header{Number: big.NewInt(1)},
+		[]*types.Transaction{blobTx},
+		nil,
+	)
+
+	// Create sidecar for blob transactions
+	sidecar := &types.BlobTxSidecar{
+		Version:     types.BlobSidecarVersion1,
+		Blobs:       []kzg4844.Blob{emptyBlob},
+		Commitments: []kzg4844.Commitment{emptyBlobCommit},
+		Proofs:      cellProofs,
+	}
+
+	blockHash := blockWithBlobTx.Hash()
+	blockNumber := big.NewInt(1)
+	txIndex := 0
+
+	testcases := []struct {
+		name        string
+		txHash      common.Hash
+		fullBlob    bool
+		setupMock   func()
+		expected    *map[string]interface{}
+		expectedErr string
+	}{
+		{
+			name:     "success with blob tx and fullBlob=true",
+			txHash:   blobTx.Hash(),
+			fullBlob: true,
+			setupMock: func() {
+				mockBackend.EXPECT().GetTxAndLookupInfo(blobTx.Hash()).Return(blobTx, blockHash, uint64(blockNumber.Int64()), uint64(txIndex))
+				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(blockNumber, txIndex).Return(sidecar, nil)
+			},
+			expected: &map[string]interface{}{
+				"blobSidecar": map[string]interface{}{
+					"version":     types.BlobSidecarVersion1,
+					"blobs":       []kzg4844.Blob{emptyBlob},
+					"commitments": []kzg4844.Commitment{emptyBlobCommit},
+					"proofs":      cellProofs,
+				},
+				"blockHash":   blockHash,
+				"blockNumber": blockNumber,
+				"txHash":      blobTx.Hash(),
+				"txIndex":     txIndex,
+			},
+		},
+		{
+			name:     "success with blob tx and fullBlob=false",
+			txHash:   blobTx.Hash(),
+			fullBlob: false,
+			setupMock: func() {
+				mockBackend.EXPECT().GetTxAndLookupInfo(blobTx.Hash()).Return(blobTx, blockHash, uint64(blockNumber.Int64()), uint64(txIndex))
+				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(blockNumber, txIndex).Return(sidecar, nil)
+			},
+			expected: &map[string]interface{}{
+				"blobSidecar": map[string]interface{}{
+					"version":     types.BlobSidecarVersion1,
+					"blobs":       []hexutil.Bytes{hexutil.Bytes(emptyBlob[:32])},
+					"commitments": []kzg4844.Commitment{emptyBlobCommit},
+					"proofs":      cellProofs,
+				},
+				"blockHash":   blockHash,
+				"blockNumber": blockNumber,
+				"txHash":      blobTx.Hash(),
+				"txIndex":     txIndex,
+			},
+		},
+		{
+			name:   "error when transaction not found",
+			txHash: common.HexToHash("0x1234567890123456789012345678901234567890123456789012345678901234"),
+			setupMock: func() {
+				mockBackend.EXPECT().GetTxAndLookupInfo(gomock.Any()).Return(nil, common.Hash{}, uint64(0), uint64(0))
+			},
+			expectedErr: "transaction not found",
+		},
+		{
+			name:   "error when transaction is not a blob transaction",
+			txHash: regularTx.Hash(),
+			setupMock: func() {
+				mockBackend.EXPECT().GetTxAndLookupInfo(regularTx.Hash()).Return(regularTx, blockHash, uint64(blockNumber.Int64()), uint64(0))
+			},
+			expectedErr: "transaction is not a blob transaction",
+		},
+		{
+			name:     "error when GetBlobSidecarByBlockNumberAndIndex fails",
+			txHash:   blobTx.Hash(),
+			fullBlob: true,
+			setupMock: func() {
+				mockBackend.EXPECT().GetTxAndLookupInfo(blobTx.Hash()).Return(blobTx, blockHash, uint64(blockNumber.Int64()), uint64(txIndex))
+				mockBackend.EXPECT().GetBlobSidecarByBlockNumberAndIndex(blockNumber, txIndex).Return(nil, blockchain.ErrBlobNotFound)
+			},
+			expectedErr: "blob file not found",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.setupMock()
+			result, err := api.GetBlobSidecarsByTxHash(context.Background(), tc.txHash, tc.fullBlob)
+
+			if tc.expectedErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedErr)
+				assert.Nil(t, result)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				require.NotNil(t, tc.expected)
+
+				// Verify basic fields
+				assert.Equal(t, (*tc.expected)["blockHash"], (*result)["blockHash"])
+				assert.Equal(t, (*tc.expected)["blockNumber"], (*result)["blockNumber"])
+				assert.Equal(t, (*tc.expected)["txHash"], (*result)["txHash"])
+				assert.Equal(t, (*tc.expected)["txIndex"], (*result)["txIndex"])
+
+				// Verify blobSidecar
+				expectedSidecar := (*tc.expected)["blobSidecar"].(map[string]interface{})
+				resultSidecar := (*result)["blobSidecar"].(map[string]interface{})
+				assert.Equal(t, expectedSidecar["version"], resultSidecar["version"])
+				assert.Equal(t, expectedSidecar["commitments"], resultSidecar["commitments"])
+				assert.Equal(t, expectedSidecar["proofs"], resultSidecar["proofs"])
+
+				// Verify blobs based on fullBlob flag
+				if tc.fullBlob {
+					expectedBlobs := expectedSidecar["blobs"].([]kzg4844.Blob)
+					resultBlobs := resultSidecar["blobs"].([]kzg4844.Blob)
+					assert.Len(t, resultBlobs, len(expectedBlobs))
+					if len(resultBlobs) > 0 {
+						assert.Len(t, resultBlobs[0], 131072)
+						assert.Equal(t, expectedBlobs[0], resultBlobs[0])
+					}
+				} else {
+					expectedBlobs := expectedSidecar["blobs"].([]hexutil.Bytes)
+					resultBlobs := resultSidecar["blobs"].([]hexutil.Bytes)
+					assert.Len(t, resultBlobs, len(expectedBlobs))
+					if len(resultBlobs) > 0 {
+						assert.Len(t, resultBlobs[0], 32)
+						assert.Equal(t, expectedBlobs[0], resultBlobs[0])
+					}
+				}
+			}
+		})
+	}
+}
