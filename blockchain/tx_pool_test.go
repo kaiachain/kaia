@@ -240,7 +240,7 @@ func blobTransaction(nonce uint64, gasLimit uint64, gasFeeCap, gasTipCap, blobFe
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:      nonce,
 		types.TxValueKeyTo:         common.HexToAddress("0xAAAA"),
-		types.TxValueKeyAmount:     big.NewInt(100),
+		types.TxValueKeyAmount:     big.NewInt(0),
 		types.TxValueKeyData:       []byte{0x11, 0x22},
 		types.TxValueKeyGasLimit:   gasLimit,
 		types.TxValueKeyGasFeeCap:  gasFeeCap,

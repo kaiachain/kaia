@@ -45,6 +45,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -2496,4 +2497,102 @@ func applyTransaction(chain *BlockChain, state *state.StateDB, tx *types.Transac
 	usedGas := uint64(0)
 	_, _, err := chain.ApplyTransaction(chain.Config(), &author, state, header, tx, &usedGas, &vm.Config{})
 	return err
+}
+
+// TestBlobTx tests that both regular gas and blob gas are correctly deducted from sender's balance.
+func TestBlobTx(t *testing.T) {
+	var (
+		engine  = faker.NewFaker()
+		config  = params.TestKaiaConfig("osaka")
+		key, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		addr    = crypto.PubkeyToAddress(key.PublicKey)
+		funds   = new(big.Int).Mul(big.NewInt(100), big.NewInt(params.KAIA))
+		numBlob = 1
+	)
+
+	gspec := &Genesis{
+		Config: config,
+		Alloc: GenesisAlloc{
+			addr: {Balance: funds},
+		},
+	}
+
+	gspec.Config.Governance.KIP71.LowerBoundBaseFee = 1
+	gspec.Config.Governance.KIP71.UpperBoundBaseFee = 1
+
+	testdb := database.NewMemoryDBManager()
+	genesis := gspec.MustCommit(testdb)
+
+	// Create chain before GenerateChain so it can be used in AddTxWithChain
+	chain, err := NewBlockChain(testdb, nil, gspec.Config, engine, vm.Config{})
+	if err != nil {
+		t.Fatalf("failed to create tester chain: %v", err)
+	}
+	defer chain.Stop()
+
+	var (
+		gasFeeCap  = newGkei(50) // 50 Gkei
+		gasTipCap  = newGkei(1)  // 1 Gkei
+		blobFeeCap = big.NewInt(1000000)
+		gasLimit   = uint64(100000)
+	)
+
+	// Calculate blob gas for header fields
+	blobGas := uint64(numBlob) * params.BlobTxBlobGasPerBlob
+
+	blocks, _ := GenerateChain(gspec.Config, genesis, engine, testdb, 1, func(i int, b *BlockGen) {
+		b.SetRewardbase(common.Address{1})
+
+		// Set blob gas fields in header for Osaka fork
+		b.SetBlobGasUsed(blobGas)
+		b.SetExcessBlobGas(0)
+
+		signedTx := blobTransaction(0, gasLimit, gasFeeCap, gasTipCap, blobFeeCap, key, numBlob, nil)
+
+		// Strip sidecar before adding to block - sidecars are stored separately, not in block body
+		b.AddTxWithChain(chain, signedTx.WithoutBlobTxSidecar())
+	})
+
+	if n, err := chain.InsertChain(blocks); err != nil {
+		t.Fatalf("block %d: failed to insert into chain: %v", n, err)
+	}
+
+	// Verify block was successfully inserted
+	block := chain.GetBlockByNumber(1)
+	if block == nil {
+		t.Fatal("block 1 not found")
+	}
+
+	// Verify blob gas used in header
+	if block.Header().BlobGasUsed == nil {
+		t.Fatal("BlobGasUsed is nil in header")
+	}
+	if *block.Header().BlobGasUsed != blobGas {
+		t.Fatalf("blob gas used in header incorrect: got %v, want %d", *block.Header().BlobGasUsed, blobGas)
+	}
+
+	// Calculate blob gas cost
+	blobBaseFee := eip4844.CalcBlobFee(block.Header().BaseFee)
+	blobGasCost := new(big.Int).Mul(new(big.Int).SetUint64(blobGas), blobBaseFee)
+
+	// Get the sender's final balance
+	state, _ := chain.State()
+	actualBalance := state.GetBalance(addr)
+
+	// Calculate total cost from the balance difference
+	actualTotalCost := new(big.Int).Sub(funds, actualBalance)
+
+	// Verify that blob gas was charged (total cost should be blob gas cost + regular gas cost)
+	// This test is executed as osaka fork, so the regular gas cost = gasUsed * effectiveGasPrice.
+	receipts := chain.GetReceiptsByBlockHash(block.Hash())
+	expectedTotalCost := blobGasCost
+	for i, tx := range block.Transactions() {
+		gasUsed := receipts[i].GasUsed
+		effectiveGasPrice := tx.EffectiveGasPrice(block.Header(), gspec.Config)
+		txGasCost := new(big.Int).Mul(new(big.Int).SetUint64(gasUsed), effectiveGasPrice)
+		expectedTotalCost.Add(expectedTotalCost, txGasCost)
+	}
+	if actualTotalCost.Cmp(expectedTotalCost) != 0 {
+		t.Fatalf("total cost not properly charged: total cost %v != expected total cost %v", actualTotalCost, expectedTotalCost)
+	}
 }

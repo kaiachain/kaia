@@ -84,6 +84,16 @@ func (b *BlockGen) SetTime(time *big.Int) {
 	b.header.Time = time
 }
 
+// SetBlobGasUsed sets the blob gas used field of the generated block.
+func (b *BlockGen) SetBlobGasUsed(blobGasUsed uint64) {
+	b.header.BlobGasUsed = &blobGasUsed
+}
+
+// SetExcessBlobGas sets the excess blob gas field of the generated block.
+func (b *BlockGen) SetExcessBlobGas(excessBlobGas uint64) {
+	b.header.ExcessBlobGas = &excessBlobGas
+}
+
 // AddTx adds a transaction to the generated block.
 //
 // AddTx panics if the transaction cannot be executed. In addition to
