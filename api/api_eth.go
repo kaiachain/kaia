@@ -1651,7 +1651,7 @@ func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
 
 func (api *EthAPI) GetBlobSidecars(ctx context.Context, number *rpc.BlockNumber, fullBlob bool) ([]*map[string]interface{}, error) {
 	if *number == rpc.PendingBlockNumber {
-		return nil, fmt.Errorf("pending block not supported")
+		return nil, errors.New("pending block not supported")
 	}
 	block, err := api.kaiaBlockChainAPI.b.BlockByNumber(ctx, *number)
 	if err != nil {
