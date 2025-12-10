@@ -50,7 +50,7 @@ var FlagGroups = []FlagGroup{
 			SrvTypeFlag,
 			ExtraDataFlag,
 			ConfigFileFlag,
-			OverwriteGenesisFlag,
+			OverrideOsaka,
 			StartBlockNumberFlag,
 			BlockGenerationIntervalFlag,
 			BlockGenerationTimeLimitFlag,

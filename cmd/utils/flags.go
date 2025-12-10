@@ -188,11 +188,9 @@ var (
 		EnvVars:  []string{"KLAYTN_LIGHTKDF", "KAIA_LIGHTKDF"},
 		Category: "ACCOUNT",
 	}
-	OverwriteGenesisFlag = &cli.BoolFlag{
-		Name:     "overwrite-genesis",
-		Usage:    "Overwrites genesis block with the given new genesis block for testing purpose",
-		Aliases:  []string{"common.overwrite-genesis"},
-		EnvVars:  []string{"KLAYTN_OVERWRITE_GENESIS", "KAIA_OVERWRITE_GENESIS"},
+	OverrideOsaka = &cli.Uint64Flag{
+		Name:     "override.osaka",
+		Usage:    "Manually specify the Osaka fork block, overriding the bundled setting",
 		Category: "KAIA",
 	}
 	StartBlockNumberFlag = &cli.Uint64Flag{
