@@ -154,6 +154,22 @@ func (e *GenesisMismatchError) Error() string {
 	return fmt.Sprintf("database already contains an incompatible genesis block (have %x, new %x)", e.Stored[:8], e.New[:8])
 }
 
+// ChainOverrides contains the changes to chain config.
+type ChainOverrides struct {
+	OverrideOsaka *big.Int
+}
+
+// apply applies the chain overrides on the supplied chain config.
+func (o *ChainOverrides) apply(cfg *params.ChainConfig) error {
+	if o == nil || cfg == nil {
+		return nil
+	}
+	if o.OverrideOsaka != nil {
+		cfg.OsakaCompatibleBlock = new(big.Int).Set(o.OverrideOsaka)
+	}
+	return cfg.CheckConfigForkOrder()
+}
+
 // findBlockWithState returns the latest block with state.
 func findBlockWithState(db database.DBManager) *types.Block {
 	headBlock := db.ReadBlockByHash(db.ReadHeadBlockHash())
@@ -197,6 +213,10 @@ func findBlockWithState(db database.DBManager) *types.Block {
 // - `genesis != nil` is the normal case for other networks `initGenesis()`.
 // - `stored ghash != nil && genesis == nil` is the normal case for other networks `cn.New()`.
 func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
+	return SetupGenesisBlockWithOverride(db, genesis, nil)
+}
+
+func SetupGenesisBlockWithOverride(db database.DBManager, genesis *Genesis, overrides *ChainOverrides) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
 		return nil, common.Hash{}, errGenesisNoConfig
 	}
@@ -210,6 +230,9 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		} else {
 			logger.Info("Writing custom genesis block")
 		}
+		if err := overrides.apply(genesis.Config); err != nil {
+			return nil, common.Hash{}, err
+		}
 		InitDeriveSha(genesis.Config)
 		block, err := genesis.Commit(common.Hash{}, db)
 		if err != nil {
@@ -222,6 +245,9 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 	if genesis != nil {
 		// This is the usual path which does not overwrite genesis block with the new one.
 		// Make sure the provided genesis is equal to the stored one.
+		if err := overrides.apply(genesis.Config); err != nil {
+			return nil, common.Hash{}, err
+		}
 		InitDeriveSha(genesis.Config)
 		hash := genesis.ToBlock(common.Hash{}, nil).Hash()
 		if hash != ghash {
@@ -233,7 +259,9 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 	// Because the trie can be partially corrupted, we always commit the trie.
 	// It can happen in a state migrated database or live pruned database.
 	if db.GetDomainsManager() == nil { // FlatTrie disallows re-commiting the block lower than the head block.
-		commitGenesisState(genesis, db)
+		if err := commitGenesisState(genesis, db, overrides); err != nil {
+			return nil, common.Hash{}, err
+		}
 	}
 
 	storedCfg, err := db.ReadChainConfig(ghash)
@@ -246,12 +274,14 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 		// networks must explicitly specify the genesis in the config file, mainnet
 		// genesis will be used as default and the initialization will always fail.
 		if genesis == nil {
-			logger.Info("Writing default main-net genesis block")
+			logger.Info("Writing default Mainnet genesis block")
 			genesis = DefaultGenesisBlock()
 		} else {
 			logger.Info("Writing custom genesis block")
 		}
-
+		if err := overrides.apply(genesis.Config); err != nil {
+			return nil, common.Hash{}, err
+		}
 		InitDeriveSha(genesis.Config)
 		block, err := genesis.Commit(common.Hash{}, db)
 		if err != nil {
@@ -270,6 +300,9 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainCo
 
 	// Get the existing chain configuration.
 	newCfg := configOrDefault(genesis, ghash, storedCfg)
+	if err := overrides.apply(newCfg); err != nil {
+		return nil, common.Hash{}, err
+	}
 	if err := newCfg.CheckConfigForkOrder(); err != nil {
 		return nil, common.Hash{}, err
 	}
@@ -469,15 +502,19 @@ func decodePrealloc(data string) GenesisAlloc {
 	return ga
 }
 
-func commitGenesisState(genesis *Genesis, db database.DBManager) {
+func commitGenesisState(genesis *Genesis, db database.DBManager, overrides *ChainOverrides) error {
 	if genesis == nil {
 		genesis = DefaultGenesisBlock()
+	}
+	if err := overrides.apply(genesis.Config); err != nil {
+		return err
 	}
 	// Run genesis.ToBlock() to calls StateDB.Commit() which writes the state trie.
 	// But do not run genesis.Commit() which overwrites HeaderHash.
 	InitDeriveSha(genesis.Config)
 	genesis.ToBlock(common.Hash{}, db).Hash()
 	logger.Info("Restored state trie for the genesis block")
+	return nil
 }
 
 type GovernanceSet map[string]interface{}
