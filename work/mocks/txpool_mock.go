@@ -110,18 +110,19 @@ func (mr *MockTxPoolMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTxPool)(nil).Get), arg0)
 }
 
-// GetBlobSidecar mocks base method.
-func (m *MockTxPool) GetBlobSidecar(arg0 common.Hash) *types.BlobTxSidecar {
+// GetBlobSidecarByTxHash mocks base method.
+func (m *MockTxPool) GetBlobSidecarByTxHash(arg0 common.Hash) (*types.BlobTxSidecar, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBlobSidecar", arg0)
+	ret := m.ctrl.Call(m, "GetBlobSidecarByTxHash", arg0)
 	ret0, _ := ret[0].(*types.BlobTxSidecar)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// GetBlobSidecar indicates an expected call of GetBlobSidecar.
-func (mr *MockTxPoolMockRecorder) GetBlobSidecar(arg0 interface{}) *gomock.Call {
+// GetBlobSidecarByTxHash indicates an expected call of GetBlobSidecarByTxHash.
+func (mr *MockTxPoolMockRecorder) GetBlobSidecarByTxHash(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecar", reflect.TypeOf((*MockTxPool)(nil).GetBlobSidecar), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecarByTxHash", reflect.TypeOf((*MockTxPool)(nil).GetBlobSidecarByTxHash), arg0)
 }
 
 // GetPendingNonce mocks base method.

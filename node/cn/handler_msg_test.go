@@ -707,8 +707,8 @@ func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
 		rlp1, _ := rlp.EncodeToBytes(sidecar1)
 		expectedRlpList := []rlp.RawValue{rlp0, rlp1}
 
-		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Eq(uint64(requestData[0].BlockNum)), gomock.Eq(int(requestData[0].TxIndex))).Return(sidecar0).Times(1)
-		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Eq(uint64(requestData[1].BlockNum)), gomock.Eq(int(requestData[1].TxIndex))).Return(sidecar1).Times(1)
+		mockBlockChain.EXPECT().GetBlobSidecarByBlockNumberAndIndex(gomock.Eq(big.NewInt(int64(requestData[0].BlockNum))), gomock.Eq(int(requestData[0].TxIndex))).Return(sidecar0, nil).Times(1)
+		mockBlockChain.EXPECT().GetBlobSidecarByBlockNumberAndIndex(gomock.Eq(big.NewInt(int64(requestData[1].BlockNum))), gomock.Eq(int(requestData[1].TxIndex))).Return(sidecar1, nil).Times(1)
 		mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
 		err := handleBlobSidecarsRequestMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)
@@ -729,10 +729,10 @@ func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
 		rlp1, _ := rlp.EncodeToBytes(sidecar1)
 		expectedRlpList := []rlp.RawValue{rlp0, rlp1}
 
-		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Any(), gomock.Any()).Return(nil).Times(2)
+		mockBlockChain.EXPECT().GetBlobSidecarByBlockNumberAndIndex(gomock.Any(), gomock.Any()).Return(nil, nil).Times(2)
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
-		mockTxPool.EXPECT().GetBlobSidecar(gomock.Eq(requestData[0].Hash)).Return(sidecar0).Times(1)
-		mockTxPool.EXPECT().GetBlobSidecar(gomock.Eq(requestData[1].Hash)).Return(sidecar1).Times(1)
+		mockTxPool.EXPECT().GetBlobSidecarByTxHash(gomock.Eq(requestData[0].Hash)).Return(sidecar0, nil).Times(1)
+		mockTxPool.EXPECT().GetBlobSidecarByTxHash(gomock.Eq(requestData[1].Hash)).Return(sidecar1, nil).Times(1)
 		pm.txpool = mockTxPool
 		mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
 		err := handleBlobSidecarsRequestMsg(pm, mockPeer, msg)
@@ -752,10 +752,10 @@ func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
 		rlp1, _ := rlp.EncodeToBytes(sidecar1)
 		expectedRlpList := []rlp.RawValue{rlp1}
 
-		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Eq(uint64(requestData[0].BlockNum)), gomock.Eq(int(requestData[0].TxIndex))).Return(nil).Times(1)
-		mockBlockChain.EXPECT().GetBlobSidecar(gomock.Eq(uint64(requestData[1].BlockNum)), gomock.Eq(int(requestData[1].TxIndex))).Return(sidecar1).Times(1)
+		mockBlockChain.EXPECT().GetBlobSidecarByBlockNumberAndIndex(gomock.Eq(big.NewInt(int64(requestData[0].BlockNum))), gomock.Eq(int(requestData[0].TxIndex))).Return(nil, nil).Times(1)
+		mockBlockChain.EXPECT().GetBlobSidecarByBlockNumberAndIndex(gomock.Eq(big.NewInt(int64(requestData[1].BlockNum))), gomock.Eq(int(requestData[1].TxIndex))).Return(sidecar1, nil).Times(1)
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
-		mockTxPool.EXPECT().GetBlobSidecar(gomock.Eq(requestData[0].Hash)).Return(nil).Times(1)
+		mockTxPool.EXPECT().GetBlobSidecarByTxHash(gomock.Eq(requestData[0].Hash)).Return(nil, nil).Times(1)
 		pm.txpool = mockTxPool
 		mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
 		err := handleBlobSidecarsRequestMsg(pm, mockPeer, msg)
