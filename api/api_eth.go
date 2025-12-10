@@ -1650,6 +1650,9 @@ func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
 }
 
 func (api *EthAPI) GetBlobSidecars(ctx context.Context, number *rpc.BlockNumber, fullBlob bool) ([]*map[string]interface{}, error) {
+	if *number == rpc.PendingBlockNumber {
+		return nil, fmt.Errorf("pending block not supported")
+	}
 	block, err := api.kaiaBlockChainAPI.b.BlockByNumber(ctx, *number)
 	if err != nil {
 		return nil, err
@@ -1661,17 +1664,9 @@ func (api *EthAPI) GetBlobSidecars(ctx context.Context, number *rpc.BlockNumber,
 		if tx.Type() != types.TxTypeEthereumBlob {
 			continue
 		}
-		var sidecar *types.BlobTxSidecar
-		var sidecarErr error
-
-		if *number == rpc.PendingBlockNumber {
-			sidecar, sidecarErr = api.kaiaBlockChainAPI.b.GetBlobSidecarFromPool(tx.Hash())
-		} else {
-			sidecar, sidecarErr = api.kaiaBlockChainAPI.b.GetBlobSidecarFromStorage(block.Number(), txIndex)
-		}
-
-		if sidecarErr != nil {
-			return nil, sidecarErr
+		sidecar, err := api.kaiaBlockChainAPI.b.GetBlobSidecar(block.Number(), txIndex, tx.Hash())
+		if err != nil {
+			return nil, err
 		}
 
 		results[count] = api.RpcMarshalBlobSidecar(sidecar, fullBlob, block.Hash(), block.Number(), tx.Hash(), txIndex)
@@ -1691,7 +1686,7 @@ func (api *EthAPI) GetBlobSidecarsByTxHash(ctx context.Context, txHash common.Ha
 	}
 	blockNumber := big.NewInt(int64(number))
 	txIndex := int(index)
-	sidecar, err := api.kaiaBlockChainAPI.b.GetBlobSidecarFromStorage(blockNumber, txIndex)
+	sidecar, err := api.kaiaBlockChainAPI.b.GetBlobSidecar(blockNumber, txIndex, txHash)
 	if err != nil {
 		return nil, err
 	}

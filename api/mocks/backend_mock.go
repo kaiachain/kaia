@@ -209,34 +209,19 @@ func (mr *MockBackendMockRecorder) GetActiveSystemContracts(arg0, arg1, arg2 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveSystemContracts", reflect.TypeOf((*MockBackend)(nil).GetActiveSystemContracts), arg0, arg1, arg2)
 }
 
-// GetBlobSidecarFromPool mocks base method.
-func (m *MockBackend) GetBlobSidecarFromPool(arg0 common.Hash) (*types.BlobTxSidecar, error) {
+// GetBlobSidecar mocks base method.
+func (m *MockBackend) GetBlobSidecar(arg0 *big.Int, arg1 int, arg2 common.Hash) (*types.BlobTxSidecar, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBlobSidecarFromPool", arg0)
+	ret := m.ctrl.Call(m, "GetBlobSidecar", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*types.BlobTxSidecar)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetBlobSidecarFromPool indicates an expected call of GetBlobSidecarFromPool.
-func (mr *MockBackendMockRecorder) GetBlobSidecarFromPool(arg0 interface{}) *gomock.Call {
+// GetBlobSidecar indicates an expected call of GetBlobSidecar.
+func (mr *MockBackendMockRecorder) GetBlobSidecar(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecarFromPool", reflect.TypeOf((*MockBackend)(nil).GetBlobSidecarFromPool), arg0)
-}
-
-// GetBlobSidecarFromStorage mocks base method.
-func (m *MockBackend) GetBlobSidecarFromStorage(arg0 *big.Int, arg1 int) (*types.BlobTxSidecar, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBlobSidecarFromStorage", arg0, arg1)
-	ret0, _ := ret[0].(*types.BlobTxSidecar)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetBlobSidecarFromStorage indicates an expected call of GetBlobSidecarFromStorage.
-func (mr *MockBackendMockRecorder) GetBlobSidecarFromStorage(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecarFromStorage", reflect.TypeOf((*MockBackend)(nil).GetBlobSidecarFromStorage), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecar", reflect.TypeOf((*MockBackend)(nil).GetBlobSidecar), arg0, arg1, arg2)
 }
 
 // GetBlockReceipts mocks base method.
