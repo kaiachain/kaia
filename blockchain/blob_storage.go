@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/node"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -40,9 +39,9 @@ type BlobStorageConfig struct {
 	retention time.Duration
 }
 
-func DefaultBlobStorageConfig(c node.Config) BlobStorageConfig {
+func DefaultBlobStorageConfig(baseDir string) BlobStorageConfig {
 	return BlobStorageConfig{
-		baseDir:   filepath.Join(c.ChainDataDir, "blob"),
+		baseDir:   filepath.Join(baseDir, "blob"),
 		retention: BLOB_SIDECARS_RETENTION,
 	}
 }
