@@ -209,7 +209,8 @@ const (
 	BlobTxBlobGasPerBlob               = 1 << 17 // Gas consumption of a single data blob (== blob byte size)
 	BlobTxMinBlobGasprice              = 1       // Minimum gas price for data blobs
 	BlobTxPointEvaluationPrecompileGas = 50000   // Gas price for the point evaluation precompile.
-	BlobTxMaxBlobs                     = 6
+	BlobBaseFeeMultiplier              = 8       // Multiplier for the base execution gas cost for a blob.
+	BlobTxMaxBlobs                     = 1
 	BlobBaseCost                       = 1 << 13 // Base execution gas cost for a blob.
 
 	// ZeroBaseFee exists for supporting Ethereum compatible data structure.

@@ -238,8 +238,8 @@ const (
 var (
 	// DefaultOsakaBlobConfig is the default blob configuration for the Osaka fork.
 	DefaultOsakaBlobConfig = &BlobConfig{
-		Target:         6,
-		Max:            9,
+		Target:         1,
+		Max:            1,
 		UpdateFraction: 5007716,
 	}
 	// DefaultBlobSchedule is the latest configured blob schedule for Ethereum mainnet.

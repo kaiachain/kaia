@@ -65,7 +65,11 @@ type dummyGovModule struct {
 }
 
 func (m *dummyGovModule) GetParamSet(blockNum uint64) gov.ParamSet {
-	return gov.ParamSet{UnitPrice: m.chainConfig.UnitPrice}
+	return gov.ParamSet{
+		UnitPrice:         m.chainConfig.UnitPrice,
+		LowerBoundBaseFee: m.chainConfig.Governance.KIP71.LowerBoundBaseFee,
+		UpperBoundBaseFee: m.chainConfig.Governance.KIP71.UpperBoundBaseFee,
+	}
 }
 
 func init() {
@@ -2058,15 +2062,17 @@ func TestBlobTransactions(t *testing.T) {
 	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
 
 	testChainConfig := params.TestKaiaConfig("osaka")
+	// Assume that a valid value is entered for gasPrice(baseFee).
+	testChainConfig.Governance.KIP71.LowerBoundBaseFee = 1
+	testChainConfig.Governance.KIP71.UpperBoundBaseFee = 1
 
 	pool := NewTxPool(testTxPoolConfig, testChainConfig, blockchain, &dummyGovModule{chainConfig: testChainConfig})
 	defer pool.Stop()
 
 	// Create the test accounts
 	var (
-		key, _     = crypto.GenerateKey()
-		addr       = crypto.PubkeyToAddress(key.PublicKey)
-		blobFeeCap = big.NewInt(params.BlobTxMinBlobGasprice)
+		key, _ = crypto.GenerateKey()
+		addr   = crypto.PubkeyToAddress(key.PublicKey)
 	)
 	testAddBalance(pool, addr, big.NewInt(params.KAIA))
 
@@ -2078,43 +2084,43 @@ func TestBlobTransactions(t *testing.T) {
 		{
 			// Test that valid blob transactions pass all validations
 			name:          "accept-valid-blob-transaction",
-			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, 1, nil),
+			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), pool.blobBaseFee, key, 1, nil),
 			expectedError: nil,
 		},
 		{
 			// Test that blob transaction with maximum allowed blobs passes validation
 			name:          "accept-blob-transaction-with-max-blobs",
-			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, params.BlobTxMaxBlobs, nil),
+			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), pool.blobBaseFee, key, params.BlobTxMaxBlobs, nil),
 			expectedError: nil,
 		},
 		{
 			// Test rejection of blob transaction without sidecar
 			name:          "reject-blob-transaction-without-sidecar",
-			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, 1, nil).WithoutBlobTxSidecar(),
+			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), pool.blobBaseFee, key, 1, nil).WithoutBlobTxSidecar(),
 			expectedError: errors.New("missing sidecar in blob transaction"),
 		},
 		{
 			// Test rejection of blob transaction with blob fee cap too low
 			name:          "reject-blob-transaction-with-low-blob-fee-cap",
-			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(params.BlobTxMinBlobGasprice-1), key, 1, nil),
-			expectedError: fmt.Errorf("%w: blob fee cap %v, minimum needed %v", ErrTxGasPriceTooLow, big.NewInt(params.BlobTxMinBlobGasprice-1), blobTxMinBlobGasPrice),
+			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), new(big.Int).Sub(pool.blobBaseFee, common.Big1), key, 1, nil),
+			expectedError: fmt.Errorf("%w: blob fee cap %v, minimum needed %v", ErrTxGasPriceTooLow, new(big.Int).Sub(pool.blobBaseFee, common.Big1), pool.blobBaseFee),
 		},
 		{
 			// Test rejection of blob transaction without blob
 			name:          "reject-blob-transaction-without-blob",
-			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, 0, nil),
+			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), pool.blobBaseFee, key, 0, nil),
 			expectedError: errors.New("blobless blob transaction"),
 		},
 		{
 			// Test rejection of blob transaction with too many blobs
 			name:          "reject-blob-transaction-with-too-many-blobs",
-			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, params.BlobTxMaxBlobs+1, nil),
+			tx:            blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), pool.blobBaseFee, key, params.BlobTxMaxBlobs+1, nil),
 			expectedError: fmt.Errorf("too many blobs in transaction: have %d, permitted %d", params.BlobTxMaxBlobs+1, params.BlobTxMaxBlobs),
 		},
 		{
 			// Test rejection of blob transaction with mismatched blob count
 			name: "reject-blob-transaction-with-mismatched-blob-count",
-			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, params.BlobTxMaxBlobs, func(sc *types.BlobTxSidecar) {
+			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), pool.blobBaseFee, key, params.BlobTxMaxBlobs, func(sc *types.BlobTxSidecar) {
 				// Add an extra blob to sidecar but keep hashes the same
 				extraBlob := kzg4844.Blob{}
 				sc.Blobs = append(sc.Blobs, extraBlob)
@@ -2124,7 +2130,7 @@ func TestBlobTransactions(t *testing.T) {
 		{
 			// Test rejection of blob transaction with invalid commitment number
 			name: "reject-blob-transaction-with-mismatched-commitment-number",
-			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, params.BlobTxMaxBlobs, func(sc *types.BlobTxSidecar) {
+			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), pool.blobBaseFee, key, params.BlobTxMaxBlobs, func(sc *types.BlobTxSidecar) {
 				// Add an extra commitment to sidecar but keep hashes the same
 				extraCommitment := kzg4844.Commitment{}
 				sc.Commitments = append(sc.Commitments, extraCommitment)
@@ -2134,7 +2140,7 @@ func TestBlobTransactions(t *testing.T) {
 		{
 			// Test rejection of blob transaction with invalid commitment hash
 			name: "reject-blob-transaction-with-invalid-commitment-hash",
-			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, params.BlobTxMaxBlobs, func(sc *types.BlobTxSidecar) {
+			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), pool.blobBaseFee, key, params.BlobTxMaxBlobs, func(sc *types.BlobTxSidecar) {
 				// Modify the commitment to make hash mismatch
 				sc.Commitments[0][0] ^= 0xFF
 			}),
@@ -2143,7 +2149,7 @@ func TestBlobTransactions(t *testing.T) {
 		{
 			// Test rejection of blob transaction with invalid proof count
 			name: "reject-blob-transaction-with-invalid-proof-count",
-			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, params.BlobTxMaxBlobs, func(sc *types.BlobTxSidecar) {
+			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), pool.blobBaseFee, key, params.BlobTxMaxBlobs, func(sc *types.BlobTxSidecar) {
 				// Remove one proof to make count invalid
 				if len(sc.Proofs) > 0 {
 					sc.Proofs = sc.Proofs[:len(sc.Proofs)-1]
@@ -2154,7 +2160,7 @@ func TestBlobTransactions(t *testing.T) {
 		{
 			// Test rejection of blob transaction with invalid cell proofs
 			name: "reject-blob-transaction-with-invalid-cell-proofs",
-			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, 1, func(sc *types.BlobTxSidecar) {
+			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), pool.blobBaseFee, key, 1, func(sc *types.BlobTxSidecar) {
 				// Corrupt the first proof
 				if len(sc.Proofs) > 0 {
 					sc.Proofs[0][0] ^= 0xFF
@@ -2165,7 +2171,7 @@ func TestBlobTransactions(t *testing.T) {
 		{
 			// Test rejection of blob transaction with invalid sidecar version
 			name: "reject-blob-transaction-with-invalid-sidecar-version",
-			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), blobFeeCap, key, 1, func(sc *types.BlobTxSidecar) {
+			tx: blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), pool.blobBaseFee, key, 1, func(sc *types.BlobTxSidecar) {
 				sc.Version = types.BlobSidecarVersion0
 			}),
 			expectedError: fmt.Errorf("blob sidecar version %d not supported", types.BlobSidecarVersion0),

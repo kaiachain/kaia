@@ -1041,7 +1041,7 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 	// After Osaka fork : return blob gas used and blob gas price when the tx is a blob transaction.
 	if tx.Type() == types.TxTypeEthereumBlob {
 		fields["blobGasUsed"] = hexutil.Uint64(tx.BlobGas())
-		fields["blobGasPrice"] = hexutil.Uint64(eip4844.CalcBlobFee(b.ChainConfig(), header).Uint64())
+		fields["blobGasPrice"] = hexutil.Uint64(eip4844.CalcBlobFee(header.BaseFee).Uint64())
 	}
 
 	// Always use the "status" field and Ignore the "root" field.
