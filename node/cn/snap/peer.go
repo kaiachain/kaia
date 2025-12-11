@@ -67,7 +67,7 @@ func (p *Peer) ID() string {
 	return p.id
 }
 
-// Version retrieves the peer's negoatiated `snap` protocol version.
+// Version retrieves the peer's negotiated `snap` protocol version.
 func (p *Peer) Version() uint {
 	return p.version
 }
@@ -93,7 +93,7 @@ func (p *Peer) RequestAccountRange(id uint64, root common.Hash, origin, limit co
 }
 
 // RequestStorageRanges fetches a batch of storage slots belonging to one or more
-// accounts. If slots from only one accout is requested, an origin marker may also
+// accounts. If slots from only one account is requested, an origin marker may also
 // be used to retrieve from there.
 func (p *Peer) RequestStorageRanges(id uint64, root common.Hash, accounts []common.Hash, origin, limit []byte, bytes uint64) error {
 	if len(accounts) == 1 && origin != nil {
