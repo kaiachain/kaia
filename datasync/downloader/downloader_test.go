@@ -1921,10 +1921,10 @@ func TestStakingInfoSync(t *testing.T) { testStakingInfoSync(t, 65) }
 func testStakingInfoSync(t *testing.T, protocol int) {
 	// Create a custom config without Kaia fork for this test
 	customConfig := params.TestChainConfig.Copy()
-	customConfig.KaiaCompatibleBlock = nil // Disable Kaia fork to avoid staking info requirement
+	customConfig.KaiaCompatibleBlock = nil   // Disable Kaia fork to avoid staking info requirement
 	customConfig.PragueCompatibleBlock = nil // Disable Prague fork to maintain fork order
-	customConfig.OsakaCompatibleBlock = nil // Disable Osaka fork to maintain fork order
-	customConfig.BlobScheduleConfig = nil // Disable BlobScheduleConfig when Osaka is disabled
+	customConfig.OsakaCompatibleBlock = nil  // Disable Osaka fork to maintain fork order
+	customConfig.BlobScheduleConfig = nil    // Disable BlobScheduleConfig when Osaka is disabled
 	customConfig.Governance.Reward.StakingUpdateInterval = testInterval
 
 	tester := newTesterWithConfig(t, customConfig)
