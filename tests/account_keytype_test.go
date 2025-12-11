@@ -20,6 +20,7 @@ package tests
 
 import (
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"fmt"
 	"math"
 	"math/big"
@@ -37,6 +38,7 @@ import (
 	"github.com/kaiachain/kaia/common/profile"
 	contracts "github.com/kaiachain/kaia/contracts/contracts/testing/reward"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -150,6 +152,19 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 	dataAnchor := []byte{0x11, 0x22}
 	dataCode := common.FromHex(code)
 	values := map[types.TxValueKeyType]interface{}{}
+
+	// Default blob hashes
+	emptyBlob := kzg4844.Blob{}
+	emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
+	cellProofs, _ := kzg4844.ComputeCellProofs(&emptyBlob)
+	blobHash := kzg4844.CalcBlobHashV1(sha256.New(), &emptyBlobCommit)
+	blobHashes := []common.Hash{common.Hash(blobHash)}
+	blobSidecar := &types.BlobTxSidecar{
+		Version:     types.BlobSidecarVersion1,
+		Blobs:       []kzg4844.Blob{emptyBlob},
+		Commitments: []kzg4844.Commitment{emptyBlobCommit},
+		Proofs:      cellProofs,
+	}
 
 	// Default authorization list
 	authorizationList := []types.SetCodeAuthorization{{ChainID: *uint256.NewInt(2), Address: common.HexToAddress("0x0000000000000000000000000000000000000001"), Nonce: nonce, V: uint8(0), R: *uint256.NewInt(0), S: *uint256.NewInt(0)}}
@@ -355,9 +370,9 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyChainID] = big.NewInt(1)
 		values[types.TxValueKeyData] = dataCode
 		values[types.TxValueKeyAccessList] = types.AccessList{}
-		values[types.TxValueKeyBlobFeeCap] = gasFeeCap
-		values[types.TxValueKeyBlobHashes] = []common.Hash{{0}}
-		values[types.TxValueKeySidecar] = &types.BlobTxSidecar{}
+		values[types.TxValueKeyBlobFeeCap] = new(big.Int).Mul(gasFeeCap, new(big.Int).SetUint64(params.BlobBaseFeeMultiplier))
+		values[types.TxValueKeyBlobHashes] = blobHashes
+		values[types.TxValueKeySidecar] = blobSidecar
 	case types.TxTypeEthereumSetCode:
 		values[types.TxValueKeyNonce] = sender.Nonce
 		values[types.TxValueKeyTo] = recipient.Addr

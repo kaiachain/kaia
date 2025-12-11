@@ -32,6 +32,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
 )
@@ -74,6 +75,8 @@ type StateTransition struct {
 }
 
 // Message represents a message sent to a contract.
+//
+//go:generate mockgen -destination=./mocks/message_mock.go -package=mock_bc github.com/kaiachain/kaia/blockchain Message
 type Message interface {
 	// ValidatedSender returns the sender of the transaction.
 	// It should be set by calling AsMessageAccountKeyPicker().
@@ -126,6 +129,7 @@ type Message interface {
 
 	AccessList() types.AccessList
 	BlobHashes() []common.Hash
+	BlobGasFeeCap() *big.Int
 	AuthList() []types.SetCodeAuthorization
 }
 
@@ -233,23 +237,38 @@ func (st *StateTransition) buyGas() error {
 	// st.gasPrice : gasPrice user set before magma hardfork
 	// st.gasPrice : BaseFee after magma hardfork
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
+	balanceCheck := new(big.Int).Set(mgval)
+
+	if st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka {
+		if blobGas := st.blobGasUsed(); blobGas > 0 {
+			// Check that the user has enough funds to cover blobGasUsed * tx.BlobGasFeeCap
+			blobBalanceCheck := new(big.Int).SetUint64(blobGas)
+			blobBalanceCheck.Mul(blobBalanceCheck, st.msg.BlobGasFeeCap())
+			balanceCheck.Add(balanceCheck, blobBalanceCheck)
+			// Pay for blobGasUsed * actual blob fee
+			blobFee := new(big.Int).SetUint64(blobGas)
+			blobFee.Mul(blobFee, st.evm.Context.BlobBaseFee)
+			mgval.Add(mgval, blobFee)
+		}
+	}
 
 	validatedFeePayer := st.msg.ValidatedFeePayer()
 	validatedSender := st.msg.ValidatedSender()
 	feeRatio, isRatioTx := st.msg.FeeRatio()
 	if isRatioTx {
 		feePayerFee, senderFee := types.CalcFeeWithRatio(feeRatio, mgval)
+		feePayerFeeForBalanceCheck, senderFeeForBalanceCheck := types.CalcFeeWithRatio(feeRatio, balanceCheck)
 
-		if st.state.GetBalance(validatedFeePayer).Cmp(feePayerFee) < 0 {
+		if st.state.GetBalance(validatedFeePayer).Cmp(feePayerFeeForBalanceCheck) < 0 {
 			logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
-				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", feePayerFee.Uint64(),
+				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", feePayerFeeForBalanceCheck.Uint64(),
 				"txHash", st.msg.Hash().String())
 			return errInsufficientBalanceForGasFeePayer
 		}
 
-		if st.state.GetBalance(validatedSender).Cmp(senderFee) < 0 {
+		if st.state.GetBalance(validatedSender).Cmp(senderFeeForBalanceCheck) < 0 {
 			logger.Debug(errInsufficientBalanceForGas.Error(), "sender", validatedSender.String(),
-				"senderBalance", st.state.GetBalance(validatedSender).Uint64(), "senderFee", senderFee.Uint64(),
+				"senderBalance", st.state.GetBalance(validatedSender).Uint64(), "senderFee", senderFeeForBalanceCheck.Uint64(),
 				"txHash", st.msg.Hash().String())
 			return errInsufficientBalanceForGas
 		}
@@ -258,9 +277,9 @@ func (st *StateTransition) buyGas() error {
 		st.state.SubBalance(validatedSender, senderFee)
 	} else {
 		// to make a short circuit, process the special case feeRatio == MaxFeeRatio
-		if st.state.GetBalance(validatedFeePayer).Cmp(mgval) < 0 {
+		if st.state.GetBalance(validatedFeePayer).Cmp(balanceCheck) < 0 {
 			logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
-				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", mgval.Uint64(),
+				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", balanceCheck.Uint64(),
 				"txHash", st.msg.Hash().String())
 			return errInsufficientBalanceForGasFeePayer
 		}
@@ -323,6 +342,42 @@ func (st *StateTransition) preCheck() error {
 			if st.msg.GasFeeCap().Cmp(st.evm.Context.BaseFee) < 0 {
 				return fmt.Errorf("%w: address %v, maxFeePerGas: %s, baseFee: %s", ErrFeeCapTooLow,
 					st.msg.ValidatedSender().Hex(), st.msg.GasFeeCap(), st.evm.Context.BaseFee)
+			}
+		}
+	}
+
+	// Check the blob version validity
+	if st.msg.BlobHashes() != nil {
+		// The to field of a blob tx type is mandatory, and a `BlobTx` transaction internally
+		// has it as a non-nillable value, so any msg derived from blob transaction has it non-nil.
+		// However, messages created through RPC (eth_call) don't have this restriction.
+		if st.msg.To() == nil {
+			return ErrBlobTxCreate
+		}
+		if len(st.msg.BlobHashes()) == 0 {
+			return ErrMissingBlobHashes
+		}
+		if st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka && len(st.msg.BlobHashes()) > params.BlobTxMaxBlobs {
+			return ErrTooManyBlobs
+		}
+		for i, hash := range st.msg.BlobHashes() {
+			if !kzg4844.IsValidVersionedHash(hash[:]) {
+				return fmt.Errorf("blob %d has invalid hash version", i)
+			}
+		}
+	}
+	// Check that the user is paying at least the current blob fee
+	if st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka {
+		if st.blobGasUsed() > 0 {
+			// Skip the checks if gas fields are zero and blobBaseFee was explicitly disabled (eth_call)
+			skipCheck := st.msg.BlobGasFeeCap().BitLen() == 0
+			if !skipCheck {
+				// This will panic if blobBaseFee is nil, but blobBaseFee presence
+				// is verified as part of header validation.
+				if st.msg.BlobGasFeeCap().Cmp(st.evm.Context.BlobBaseFee) < 0 {
+					return fmt.Errorf("%w: address %v blobGasFeeCap: %v, blobBaseFee: %v", ErrBlobFeeCapTooLow,
+						st.msg.ValidatedSender().Hex(), st.msg.BlobGasFeeCap(), st.evm.Context.BlobBaseFee)
+				}
 			}
 		}
 	}
@@ -665,6 +720,11 @@ func (st *StateTransition) returnGas() {
 // gasUsed returns the amount of gas used up by the state transition.
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
+}
+
+// blobGasUsed returns the amount of blob gas used by the message.
+func (st *StateTransition) blobGasUsed() uint64 {
+	return uint64(len(st.msg.BlobHashes()) * params.BlobTxBlobGasPerBlob)
 }
 
 // FloorDataGas calculates the minimum gas required for a transaction

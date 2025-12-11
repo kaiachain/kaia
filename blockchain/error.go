@@ -172,6 +172,21 @@ var (
 	// ErrGasPriceBelowBaseFee is returned if gas price of transaction is lower than gas unit price.
 	ErrGasPriceBelowBaseFee = errors.New("invalid gas price. It must be set to value greater than or equal to baseFee")
 
+	// -- EIP-4844 errors --
+
+	// ErrBlobFeeCapTooLow is returned if the transaction fee cap is less than the
+	// blob gas fee of the block.
+	ErrBlobFeeCapTooLow = errors.New("max fee per blob gas less than block blob gas fee")
+
+	// ErrMissingBlobHashes is returned if a blob transaction has no blob hashes.
+	ErrMissingBlobHashes = errors.New("blob transaction missing blob hashes")
+
+	// ErrTooManyBlobs is returned if a blob transaction exceeds the maximum number of blobs.
+	ErrTooManyBlobs = errors.New("blob transaction has too many blobs")
+
+	// ErrBlobTxCreate is returned if a blob transaction has no explicit to field.
+	ErrBlobTxCreate = errors.New("blob transaction of type create")
+
 	// -- EIP-7702 errors --
 
 	// Message validation errors:
