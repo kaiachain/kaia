@@ -167,7 +167,7 @@ jobs:
           
           eval $(aws sts assume-role-with-web-identity \
             --role-arn ${{ secrets.AWS_IAM_ROLE_ARN_TEST }} \
-            --role-session-name SessionForKaiaActions \
+            --role-session-name SessionForKaiaActions2 \
             --web-identity-token "$OIDC_TOKEN" \
             --output text \
             --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' | \
