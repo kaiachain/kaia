@@ -109,7 +109,7 @@ jobs:
     name: ${{ matrix.name }}-packaging-and-upload
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
-    env:
+    env: 
       GOFLAGS: "-buildvcs=false"
     steps:
       - name: Install dependencies
