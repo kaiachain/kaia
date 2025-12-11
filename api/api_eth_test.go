@@ -3146,7 +3146,7 @@ func TestEthAPI_Config(t *testing.T) {
 			},
 		},
 		{
-			name:        "Prague for block",
+			name:        "Prague fork block",
 			blockNumber: 187930000,
 			expectedCurrent: &config{
 				BlobSchedule:    nil,
