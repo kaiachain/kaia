@@ -370,7 +370,7 @@ func generateDefaultTx(sender *TestAccountType, recipient *TestAccountType, txTy
 		values[types.TxValueKeyChainID] = big.NewInt(1)
 		values[types.TxValueKeyData] = dataCode
 		values[types.TxValueKeyAccessList] = types.AccessList{}
-		values[types.TxValueKeyBlobFeeCap] = gasFeeCap
+		values[types.TxValueKeyBlobFeeCap] = new(big.Int).Mul(gasFeeCap, new(big.Int).SetUint64(params.BlobBaseFeeMultiplier))
 		values[types.TxValueKeyBlobHashes] = blobHashes
 		values[types.TxValueKeySidecar] = blobSidecar
 	case types.TxTypeEthereumSetCode:

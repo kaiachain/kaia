@@ -237,9 +237,14 @@ func (st *StateTransition) buyGas() error {
 	// st.gasPrice : gasPrice user set before magma hardfork
 	// st.gasPrice : BaseFee after magma hardfork
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
+	balanceCheck := new(big.Int).Set(mgval)
 
 	if st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka {
 		if blobGas := st.blobGasUsed(); blobGas > 0 {
+			// Check that the user has enough funds to cover blobGasUsed * tx.BlobGasFeeCap
+			blobBalanceCheck := new(big.Int).SetUint64(blobGas)
+			blobBalanceCheck.Mul(blobBalanceCheck, st.msg.BlobGasFeeCap())
+			balanceCheck.Add(balanceCheck, blobBalanceCheck)
 			// Pay for blobGasUsed * actual blob fee
 			blobFee := new(big.Int).SetUint64(blobGas)
 			blobFee.Mul(blobFee, st.evm.Context.BlobBaseFee)
@@ -252,17 +257,18 @@ func (st *StateTransition) buyGas() error {
 	feeRatio, isRatioTx := st.msg.FeeRatio()
 	if isRatioTx {
 		feePayerFee, senderFee := types.CalcFeeWithRatio(feeRatio, mgval)
+		feePayerFeeForBalanceCheck, senderFeeForBalanceCheck := types.CalcFeeWithRatio(feeRatio, balanceCheck)
 
-		if st.state.GetBalance(validatedFeePayer).Cmp(feePayerFee) < 0 {
+		if st.state.GetBalance(validatedFeePayer).Cmp(feePayerFeeForBalanceCheck) < 0 {
 			logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
-				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", feePayerFee.Uint64(),
+				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", feePayerFeeForBalanceCheck.Uint64(),
 				"txHash", st.msg.Hash().String())
 			return errInsufficientBalanceForGasFeePayer
 		}
 
-		if st.state.GetBalance(validatedSender).Cmp(senderFee) < 0 {
+		if st.state.GetBalance(validatedSender).Cmp(senderFeeForBalanceCheck) < 0 {
 			logger.Debug(errInsufficientBalanceForGas.Error(), "sender", validatedSender.String(),
-				"senderBalance", st.state.GetBalance(validatedSender).Uint64(), "senderFee", senderFee.Uint64(),
+				"senderBalance", st.state.GetBalance(validatedSender).Uint64(), "senderFee", senderFeeForBalanceCheck.Uint64(),
 				"txHash", st.msg.Hash().String())
 			return errInsufficientBalanceForGas
 		}
@@ -271,9 +277,9 @@ func (st *StateTransition) buyGas() error {
 		st.state.SubBalance(validatedSender, senderFee)
 	} else {
 		// to make a short circuit, process the special case feeRatio == MaxFeeRatio
-		if st.state.GetBalance(validatedFeePayer).Cmp(mgval) < 0 {
+		if st.state.GetBalance(validatedFeePayer).Cmp(balanceCheck) < 0 {
 			logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
-				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", mgval.Uint64(),
+				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", balanceCheck.Uint64(),
 				"txHash", st.msg.Hash().String())
 			return errInsufficientBalanceForGasFeePayer
 		}
