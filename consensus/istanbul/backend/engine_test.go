@@ -34,6 +34,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
@@ -42,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
@@ -75,7 +77,10 @@ type (
 	koreCompatibleBlock      *big.Int
 	shanghaiCompatibleBlock  *big.Int
 	cancunCompatibleBlock    *big.Int
+	randaoCompatibleBlock    *big.Int
 	kaiaCompatibleBlock      *big.Int
+	pragueCompatibleBlock    *big.Int
+	osakaCompatibleBlock     *big.Int
 )
 
 type (
@@ -184,8 +189,14 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.ShanghaiCompatibleBlock = v
 		case cancunCompatibleBlock:
 			genesis.Config.CancunCompatibleBlock = v
+		case randaoCompatibleBlock:
+			genesis.Config.RandaoCompatibleBlock = v
 		case kaiaCompatibleBlock:
 			genesis.Config.KaiaCompatibleBlock = v
+		case pragueCompatibleBlock:
+			genesis.Config.PragueCompatibleBlock = v
+		case osakaCompatibleBlock:
+			genesis.Config.OsakaCompatibleBlock = v
 		case proposerPolicy:
 			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
 		case epoch:
@@ -223,6 +234,46 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	b := newTestBackendWithConfig(genesis.Config, period, nodeKeys[0])
 
 	appendValidators(genesis, addrs)
+
+	// Set up Registry and KIP113 contracts for Randao fork
+	if genesis.Config.IsRandaoForkEnabled(big.NewInt(0)) {
+		// Generate BLS keys for all nodes
+		nodeBlsKeys := make([]bls.SecretKey, n)
+		for i := 0; i < n; i++ {
+			nodeBlsKeys[i], _ = bls.DeriveFromECDSA(nodeKeys[i])
+		}
+
+		allocRegistryStorage := system.AllocRegistry(&params.RegistryConfig{
+			Records: map[string]common.Address{
+				"KIP113": system.Kip113LogicAddrMock,
+			},
+			Owner: common.HexToAddress("0xffff"),
+		})
+		infos := make(map[common.Address]system.BlsPublicKeyInfo)
+		for i, addr := range addrs {
+			infos[addr] = system.BlsPublicKeyInfo{
+				PublicKey: nodeBlsKeys[i].PublicKey().Marshal(),
+				Pop:       bls.PopProve(nodeBlsKeys[i]).Marshal(),
+			}
+		}
+		allocKip113Storage := system.AllocKip113Proxy(system.AllocKip113Init{
+			Infos: infos,
+			Owner: common.HexToAddress("0xffff"),
+		})
+		if genesis.Alloc == nil {
+			genesis.Alloc = make(blockchain.GenesisAlloc)
+		}
+		genesis.Alloc[system.RegistryAddr] = blockchain.GenesisAccount{
+			Code:    system.RegistryMockCode,
+			Balance: big.NewInt(0),
+			Storage: allocRegistryStorage,
+		}
+		genesis.Alloc[system.Kip113LogicAddrMock] = blockchain.GenesisAccount{
+			Code:    system.Kip113MockCode,
+			Balance: big.NewInt(0),
+			Storage: allocKip113Storage,
+		}
+	}
 
 	genesisGov := make(gov.PartialParamSet)
 	for name, param := range gov.Params {
@@ -795,10 +846,13 @@ func TestRewardDistribution(t *testing.T) {
 	var configItems []interface{}
 	configItems = append(configItems, epoch(testEpoch))
 	configItems = append(configItems, mintingAmount(new(big.Int).SetUint64(mintAmount)))
-	configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, shanghaiCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, cancunCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, randaoCompatibleBlock(nil)) // randao is optional
 	configItems = append(configItems, kaiaCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, pragueCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, osakaCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 
 	chain, engine := newBlockChain(1, configItems...)
@@ -1278,7 +1332,10 @@ func Test_BasedOnStaking(t *testing.T) {
 	configItems = append(configItems, koreCompatibleBlock(nil))
 	configItems = append(configItems, shanghaiCompatibleBlock(nil))
 	configItems = append(configItems, cancunCompatibleBlock(nil))
+	configItems = append(configItems, randaoCompatibleBlock(nil))
 	configItems = append(configItems, kaiaCompatibleBlock(nil))
+	configItems = append(configItems, pragueCompatibleBlock(nil))
+	configItems = append(configItems, osakaCompatibleBlock(nil))
 
 	for _, tc := range testcases {
 		if !tc.isIstanbulCompatible {
