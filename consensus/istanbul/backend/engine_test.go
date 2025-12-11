@@ -831,14 +831,14 @@ func TestRewardDistribution(t *testing.T) {
 				3:  3,
 				4:  4,
 				5:  5,
-				6:  7,
-				7:  9, // 2 is minted from now
-				8:  11,
-				9:  14, // 3 is minted from now
-				10: 17,
-				11: 20,
-				12: 23,
-				13: 26,
+				6:  6,
+				7:  8, // 2 is minted from now
+				8:  10,
+				9:  13, // 3 is minted from now
+				10: 16,
+				11: 19,
+				12: 22,
+				13: 25,
 			},
 		},
 	}
@@ -846,10 +846,10 @@ func TestRewardDistribution(t *testing.T) {
 	var configItems []interface{}
 	configItems = append(configItems, epoch(testEpoch))
 	configItems = append(configItems, mintingAmount(new(big.Int).SetUint64(mintAmount)))
-	configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(0)))
-	configItems = append(configItems, shanghaiCompatibleBlock(new(big.Int).SetUint64(0)))
-	configItems = append(configItems, cancunCompatibleBlock(new(big.Int).SetUint64(0)))
-	configItems = append(configItems, randaoCompatibleBlock(new(big.Int).SetUint64(0)))
+	configItems = append(configItems, shanghaiCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, cancunCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, randaoCompatibleBlock(nil)) // randao is optional
 	configItems = append(configItems, kaiaCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, pragueCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, osakaCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
