@@ -54,6 +54,14 @@ refer to the following websites:
 - https://go.dev/doc/effective_go#commentary
 - https://go.dev/blog/godoc
 
+## Versioning Policy
+
+Kaia follows [Semantic Versioning](https://semver.org/) format `v{ MAJOR }.{ MINOR }.{ PATCH }`. Increment the:
+
+- **MAJOR** version when both conditions are met: (1) when a breaking change (hard fork) occurs, and (2) when tokenomics/governance is affected.
+- **MINOR** version for most regular client updates.
+- **PATCH** version for simple/urgent bug fixes, improvements, or hard fork activation block number updates.
+
 ## Contributor License Agreement (CLA)
 
 Keep in mind when you submit your pull request, you will need to sign the [CLA](https://gist.github.com/kaiachain-dev/bbf65cc330275c057463c4c94ce787a6) via the PR comment for legal purposes. You will have to sign the CLA just one time, either as an individual or corporation.
