@@ -1596,8 +1596,19 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 }
 
 // GetBlobSidecar retrieves a blob sidecar from txpool by transaction hash.
-func (pool *TxPool) GetBlobSidecar(txHash common.Hash) *types.BlobTxSidecar {
-	panic("implement me")
+func (pool *TxPool) GetBlobSidecarFromPool(txHash common.Hash) (*types.BlobTxSidecar, error) {
+	tx := pool.all.Get(txHash)
+	if tx == nil {
+		return nil, fmt.Errorf("transaction not found in pool: %s", txHash.String())
+	}
+	if tx.Type() != types.TxTypeEthereumBlob {
+		return nil, fmt.Errorf("transaction is not a blob transaction: %s", txHash.String())
+	}
+	sidecar := tx.BlobTxSidecar()
+	if sidecar == nil {
+		return nil, fmt.Errorf("blob sidecar not found for transaction: %s", txHash.String())
+	}
+	return sidecar, nil
 }
 
 // checkAndSetBeat sets the beat of the account if there is no beat of the account.

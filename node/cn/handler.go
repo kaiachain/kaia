@@ -1193,19 +1193,24 @@ func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 		}
 
 		// Retrieve a requested tx's blob sidecar, skipping if unknown to us
-		result := pm.blockchain.GetBlobSidecar(uint64(data.BlockNum), int(data.TxIndex))
+		result, err := pm.blockchain.GetBlobSidecarFromStorage(big.NewInt(int64(data.BlockNum)), int(data.TxIndex))
 		if result == nil {
-			result = pm.txpool.GetBlobSidecar(data.Hash)
-		}
-		if result == nil {
-			continue
+			if err != nil {
+				logger.Debug("Failed to get blob sidecar by block number and index", "err", err)
+			}
+			result, err = pm.txpool.GetBlobSidecarFromPool(data.Hash)
+			if result == nil {
+				if err != nil {
+					logger.Debug("Failed to get blob sidecar by tx hash", "err", err)
+				}
+				continue
+			}
 		}
 
 		// If known, encode and queue for response packet
 		if encoded, err := rlp.EncodeToBytes(result); err != nil {
 			logger.Error("Failed to encode blob sidecars", "err", err)
 		} else {
-			fmt.Println("encoding", result, "len", len(encoded))
 			sidecars = append(sidecars, encoded)
 			bytes += len(encoded)
 		}

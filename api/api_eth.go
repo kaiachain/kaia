@@ -1648,3 +1648,73 @@ func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
 	}
 	return &resp, nil
 }
+
+func (api *EthAPI) GetBlobSidecars(ctx context.Context, number *rpc.BlockNumber, fullBlob bool) ([]*map[string]interface{}, error) {
+	if *number == rpc.PendingBlockNumber {
+		return nil, errors.New("pending block not supported")
+	}
+	block, err := api.kaiaBlockChainAPI.b.BlockByNumber(ctx, *number)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]*map[string]interface{}, 0, eip4844.MaxBlobsPerBlock(api.kaiaBlockChainAPI.b.ChainConfig(), block.Number()))
+	for txIndex, tx := range block.Transactions() {
+		if tx.Type() != types.TxTypeEthereumBlob {
+			continue
+		}
+		sidecar, err := api.kaiaBlockChainAPI.b.GetBlobSidecar(block.Number(), txIndex)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, api.RpcMarshalBlobSidecar(sidecar, fullBlob, block.Hash(), block.Number(), tx.Hash(), txIndex))
+		if len(results) == cap(results) {
+			break
+		}
+	}
+
+	return results, nil
+}
+
+func (api *EthAPI) GetBlobSidecarsByTxHash(ctx context.Context, txHash common.Hash, fullBlob bool) (*map[string]interface{}, error) {
+	tx, blockHash, number, index := api.kaiaBlockChainAPI.b.GetTxAndLookupInfo(txHash)
+	if tx == nil {
+		return nil, fmt.Errorf("transaction not found: %s", txHash.String())
+	}
+	if tx.Type() != types.TxTypeEthereumBlob {
+		return nil, fmt.Errorf("transaction is not a blob transaction: %s", txHash.String())
+	}
+	blockNumber := big.NewInt(int64(number))
+	txIndex := int(index)
+	sidecar, err := api.kaiaBlockChainAPI.b.GetBlobSidecar(blockNumber, txIndex)
+	if err != nil {
+		return nil, err
+	}
+	return api.RpcMarshalBlobSidecar(sidecar, fullBlob, blockHash, blockNumber, txHash, txIndex), nil
+}
+
+func (api *EthAPI) RpcMarshalBlobSidecar(sidecar *types.BlobTxSidecar, fullBlob bool, blockHash common.Hash, blockNumber *big.Int, txHash common.Hash, txIndex int) *map[string]interface{} {
+	sidecarMap := map[string]interface{}{
+		"version":     sidecar.Version,
+		"commitments": sidecar.Commitments,
+		"proofs":      sidecar.Proofs,
+	}
+	if fullBlob {
+		sidecarMap["blobs"] = sidecar.Blobs
+	} else {
+		// Truncate blobs to 32 bytes
+		truncatedBlobs := make([]hexutil.Bytes, len(sidecar.Blobs))
+		for i, blob := range sidecar.Blobs {
+			truncatedBlobs[i] = hexutil.Bytes(blob[:32])
+		}
+		sidecarMap["blobs"] = truncatedBlobs
+	}
+	result := make(map[string]interface{})
+	result["blobSidecar"] = sidecarMap
+	result["blockHash"] = blockHash
+	result["blockNumber"] = blockNumber
+	result["txHash"] = txHash
+	result["txIndex"] = txIndex
+	return &result
+}
