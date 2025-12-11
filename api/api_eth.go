@@ -1658,8 +1658,7 @@ func (api *EthAPI) GetBlobSidecars(ctx context.Context, number *rpc.BlockNumber,
 		return nil, err
 	}
 
-	results := make([]*map[string]interface{}, eip4844.MaxBlobsPerBlock(api.kaiaBlockChainAPI.b.ChainConfig(), block.Number()))
-	count := 0
+	results := make([]*map[string]interface{}, 0, eip4844.MaxBlobsPerBlock(api.kaiaBlockChainAPI.b.ChainConfig(), block.Number()))
 	for txIndex, tx := range block.Transactions() {
 		if tx.Type() != types.TxTypeEthereumBlob {
 			continue
@@ -1669,11 +1668,13 @@ func (api *EthAPI) GetBlobSidecars(ctx context.Context, number *rpc.BlockNumber,
 			return nil, err
 		}
 
-		results[count] = api.RpcMarshalBlobSidecar(sidecar, fullBlob, block.Hash(), block.Number(), tx.Hash(), txIndex)
-		count++
+		results = append(results, api.RpcMarshalBlobSidecar(sidecar, fullBlob, block.Hash(), block.Number(), tx.Hash(), txIndex))
+		if len(results) == cap(results) {
+			break
+		}
 	}
 
-	return results[:count], nil
+	return results, nil
 }
 
 func (api *EthAPI) GetBlobSidecarsByTxHash(ctx context.Context, txHash common.Hash, fullBlob bool) (*map[string]interface{}, error) {
