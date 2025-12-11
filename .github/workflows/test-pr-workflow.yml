@@ -174,7 +174,7 @@ jobs:
             awk '{printf "export AWS_ACCESS_KEY_ID=%s\nexport AWS_SECRET_ACCESS_KEY=%s\nexport AWS_SESSION_TOKEN=%s\n", $1, $2, $3}')
           
           export AWS_REGION=${{ secrets.AWS_REGION }}
-
+ 
           for item in kcn kpn ken kscn kspn ksen kgen kbn homi kcn-kairos kpn-kairos ken-kairos; do
             if [[ $PACKAGE_TYPE == "rpm" ]]; then
               PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
