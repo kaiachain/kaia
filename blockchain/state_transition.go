@@ -75,6 +75,8 @@ type StateTransition struct {
 }
 
 // Message represents a message sent to a contract.
+//
+//go:generate mockgen -destination=./mocks/message_mock.go -package=mock_bc github.com/kaiachain/kaia/blockchain Message
 type Message interface {
 	// ValidatedSender returns the sender of the transaction.
 	// It should be set by calling AsMessageAccountKeyPicker().
