@@ -67,19 +67,19 @@ jobs:
             runner: ubuntu-latest
             container: kaiachain/circleci-rpmbuild:1.23.7-gcc11
           - name: rpm-linux-arm64
-            runner: arm-runner
+            runner: ubuntu-22.04-arm
             container: kaiachain/circleci-rpmbuild:1.23.7-gcc11-arm
           - name: rpm-linux-amd64-el7
             runner: ubuntu-latest
             container: kaiachain/circleci-rpmbuild:1.23.7-gcc7
           - name: rpm-linux-arm64-el7
-            runner: arm-runner
+            runner: ubuntu-22.04-arm
             container: kaiachain/circleci-rpmbuild:1.23.7-gcc7-arm
           - name: tar-linux-amd64
             runner: ubuntu-latest
             container: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04
           - name: tar-linux-arm64
-            runner: arm-runner
+            runner: ubuntu-22.04-arm
             container: kaiachain/build_base:go1.23.7-solc0.8.13-ubuntu-22.04
           - name: tar-darwin-arm64
             runner: macos-14
