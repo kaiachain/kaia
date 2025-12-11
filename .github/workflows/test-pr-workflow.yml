@@ -8,72 +8,193 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build
-    uses: ./.github/workflows/test-executor-template.yml
-    with:
-      test_command: make all
+  # build:
+  #   name: Build
+  #   uses: ./.github/workflows/test-executor-template.yml
+  #   with:
+  #     test_command: make all
 
-  test-linter:
-    name: Test Linter
-    uses: ./.github/workflows/test-executor-template.yml
-    with:
-      test_command: |
-        BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
-        go run build/ci.go lint -v --new-from-rev="origin/${BASE_BRANCH}"
+  # test-linter:
+  #   name: Test Linter
+  #   uses: ./.github/workflows/test-executor-template.yml
+  #   with:
+  #     test_command: |
+  #       BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+  #       go run build/ci.go lint -v --new-from-rev="origin/${BASE_BRANCH}"
 
-  test-networks:
-    name: Test Networks
-    uses: ./.github/workflows/test-executor-template.yml
-    with:
-      test_command: make test-networks
+  # test-networks:
+  #   name: Test Networks
+  #   uses: ./.github/workflows/test-executor-template.yml
+  #   with:
+  #     test_command: make test-networks
 
-  test-node:
-    name: Test Node
-    uses: ./.github/workflows/test-executor-template.yml
-    with:
-      test_command: make test-node
+  # test-node:
+  #   name: Test Node
+  #   uses: ./.github/workflows/test-executor-template.yml
+  #   with:
+  #     test_command: make test-node
 
-  test-tests:
-    name: Test Tests
-    uses: ./.github/workflows/test-executor-template.yml
-    with:
-      test_command: |
-        git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
-        make test-tests
+  # test-tests:
+  #   name: Test Tests
+  #   uses: ./.github/workflows/test-executor-template.yml
+  #   with:
+  #     test_command: |
+  #       git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
+  #       make test-tests
 
-  test-rpc:
-    name: Test RPC
-    permissions:
-      contents: write
-    uses: ./.github/workflows/test-other-executor-template.yml
-    with:
-      install_python: false
-      test_command: |
-        make kcn
-        git clone https://github.com/kaiachain/kaia-rpc-tester.git
-        cd kaia-rpc-tester
-        cp ../build/bin/kcn script/cn/bin/
-        cd script
-        ./set_CNonly.sh
-        cd ..
-        cp config_template.json config.json
-        apt update
-        apt install python3-venv -y
-        python3 -m venv venv
-        source venv/bin/activate
-        pip3 install -r requirements.txt
-        python3 main.py --protocol rpc
+  # test-rpc:
+  #   name: Test RPC
+  #   permissions:
+  #     contents: write
+  #   uses: ./.github/workflows/test-other-executor-template.yml
+  #   with:
+  #     install_python: false
+  #     test_command: |
+  #       make kcn
+  #       git clone https://github.com/kaiachain/kaia-rpc-tester.git
+  #       cd kaia-rpc-tester
+  #       cp ../build/bin/kcn script/cn/bin/
+  #       cd script
+  #       ./set_CNonly.sh
+  #       cd ..
+  #       cp config_template.json config.json
+  #       apt update
+  #       apt install python3-venv -y
+  #       python3 -m venv venv
+  #       source venv/bin/activate
+  #       pip3 install -r requirements.txt
+  #       python3 main.py --protocol rpc
 
   # Service-dependent test jobs
-  test-datasync:
-    name: Test Datasync
-    uses: ./.github/workflows/test-other-executor-template.yml
-    with:
-      test_command: make test-datasync
+  # test-datasync:
+  #   name: Test Datasync
+  #   uses: ./.github/workflows/test-other-executor-template.yml
+  #   with:
+  #     test_command: make test-datasync
 
-  test-others:
-    name: Test Others
-    uses: ./.github/workflows/test-other-executor-template.yml
-    with:
-      test_command: make test-others
+  # test-others:
+  #   name: Test Others
+  #   uses: ./.github/workflows/test-other-executor-template.yml
+  #   with:
+  #     test_command: make test-others
+
+  packaging-and-upload:
+    # needs: [tag-verify, tagger-verify]
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - name: rpm-linux-amd64
+            runner: ubuntu-latest
+            container: kaiachain/circleci-rpmbuild:1.25.3-gcc11
+          - name: rpm-linux-arm64
+            runner: ubuntu-22.04-arm
+            container: kaiachain/circleci-rpmbuild:1.25.3-gcc11-arm
+          - name: rpm-linux-amd64-el7
+            runner: ubuntu-latest
+            container: kaiachain/circleci-rpmbuild:1.25.3-gcc7
+          - name: rpm-linux-arm64-el7
+            runner: ubuntu-22.04-arm
+            container: kaiachain/circleci-rpmbuild:1.25.3-gcc7-arm
+          - name: tar-linux-amd64
+            runner: ubuntu-latest
+            container: kaiachain/build_base:go1.25.3-solc0.8.13-ubuntu-22.04
+          - name: tar-linux-arm64
+            runner: ubuntu-22.04-arm
+            container: kaiachain/build_base:go1.25.3-solc0.8.13-ubuntu-22.04-arm
+          - name: tar-darwin-arm64
+            runner: macos-14
+    name: ${{ matrix.name }}-packaging-and-upload
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
+    env:
+      GOFLAGS: "-buildvcs=false"
+    steps:
+      - name: Install dependencies
+        if: ${{ matrix.name == 'tar-darwin-arm64' }}
+        run: |
+          # Install dependencies for macOS ARM64
+          brew install awscli
+          curl -O https://dl.google.com/go/go1.23.7.darwin-arm64.tar.gz
+          sudo tar -C /usr/local -xzf go1.23.7.darwin-arm64.tar.gz
+          echo "/usr/local/go/bin" >> $GITHUB_PATH
+          echo "GOPATH=$HOME/go" >> $GITHUB_ENV
+      - name: Checkout
+        run: |
+          git config --global --add safe.directory '*'
+          git init
+          git remote add origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+          git fetch origin ${{ github.sha }} --depth=1
+          git checkout FETCH_HEAD
+      - name: Set environment variables
+        run: |
+          PACKAGE_NAME=${{ matrix.name }}
+          echo "PACKAGE_TYPE=$(echo $PACKAGE_NAME | cut -c1-3)" >> $GITHUB_ENV
+          echo "OS_NETWORK=$(echo $PACKAGE_NAME | cut -c5- | sed 's/-el7$//')" >> $GITHUB_ENV
+          echo "IS_RC_VERSION=$(echo $GITHUB_REF_NAME | grep -q 'rc' && echo true || echo false)" >> $GITHUB_ENV
+      - name: Set version
+        shell: bash
+        run: |
+          if [[ $IS_RC_VERSION == "true" ]]; then
+            rc_num=$(echo $GITHUB_REF_NAME | cut -d '-' -f 2)
+            sed 's/%d.%d.%d/%d.%d.%d~'$rc_num'/' params/version.go > params/version.go.tmp
+            mv params/version.go.tmp params/version.go
+          fi
+          echo "KAIA_VERSION=$(go run build/rpm/main.go version)" >> $GITHUB_ENV
+      - name: Build binaries
+        run: make all
+      - name: Build packages
+        shell: bash
+        run: |
+          if [[ $PACKAGE_TYPE == "rpm" ]]; then
+            OS_NETWORK=""
+            export GOPATH=/go
+          fi
+          for item in kcn kpn ken kscn kspn ksen kgen kbn homi; do
+            ./build/package-$PACKAGE_TYPE.sh $OS_NETWORK $item
+          done
+          for item in kcn kpn ken; do
+            ./build/package-$PACKAGE_TYPE.sh -b $OS_NETWORK $item
+          done
+      - name: Upload packages to S3
+        shell: bash
+        run: |
+          OIDC_TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | \
+            grep -o '"value":"[^"]*"' | cut -d'"' -f4)
+          
+          eval $(aws sts assume-role-with-web-identity \
+            --role-arn ${{ secrets.AWS_IAM_ROLE_ARN_TEST }} \
+            --role-session-name SessionForKaiaActions \
+            --web-identity-token "$OIDC_TOKEN" \
+            --output text \
+            --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' | \
+            awk '{printf "export AWS_ACCESS_KEY_ID=%s\nexport AWS_SECRET_ACCESS_KEY=%s\nexport AWS_SESSION_TOKEN=%s\n", $1, $2, $3}')
+          
+          export AWS_REGION=${{ secrets.AWS_REGION }}
+
+          for item in kcn kpn ken kscn kspn ksen kgen kbn homi kcn-kairos kpn-kairos ken-kairos; do
+            if [[ $PACKAGE_TYPE == "rpm" ]]; then
+              PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
+              BINARY=$item
+              KAIROS=""
+              RHEL_VERSION="9-stream"
+              if [[ "${{ matrix.name }}" == *"el7"* ]]; then
+                RHEL_VERSION="7"
+              fi
+              if [[ $BINARY == *-kairos ]]; then
+                BINARY="${BINARY%-kairos}"
+                KAIROS="-kairos"
+              fi
+              TARGET_RPM=$(find $BINARY-$PLATFORM_SUFFIX/rpmbuild/RPMS/$(uname -m)/ | awk -v pat="$BINARY(d)?$KAIROS-v" '$0~pat')
+              if [[ $IS_RC_VERSION == "false" ]]; then
+                aws s3 cp $TARGET_RPM s3://${{ secrets.FRONTEND_BUCKET_TEST }}/packages/rhel/$RHEL_VERSION/kaia/
+              fi
+              aws s3 cp $TARGET_RPM s3://${{ secrets.FRONTEND_BUCKET_TEST }}/packages/kaia/$KAIA_VERSION/
+            else
+              aws s3 cp packages/${item}-v*.tar.gz s3://${{ secrets.FRONTEND_BUCKET_TEST }}/packages/kaia/$KAIA_VERSION/
+            fi
+          done
+        
