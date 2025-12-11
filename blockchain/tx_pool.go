@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
@@ -74,10 +75,6 @@ const (
 var (
 	evictionInterval    = time.Minute     // Time interval to check for evictable transactions
 	statsReportInterval = 8 * time.Second // Time interval to report transaction pool stats
-
-	// blobTxMinBlobGasPrice is the big.Int version of the configured protocol
-	// parameter to avoid constructing a new big integer for every transaction.
-	blobTxMinBlobGasPrice = big.NewInt(params.BlobTxMinBlobGasprice)
 
 	txPoolIsFullErr = errors.New("txpool is full")
 
@@ -221,7 +218,8 @@ type TxPool struct {
 	config       TxPoolConfig
 	chainconfig  *params.ChainConfig
 	chain        blockChain
-	gasPrice     *big.Int
+	gasPrice     *big.Int // minimum required gasPrice = unitPrice (before Magma) or baseFee (since Magma)
+	blobBaseFee  *big.Int // minimum required blobFee =  0 (before Osaka for nil safety) or blobBaseFee (since Osaka)
 	txFeed       event.Feed
 	scope        event.SubscriptionScope
 	chainHeadCh  chan ChainHeadEvent
@@ -278,6 +276,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		pendingNonce: make(map[common.Address]uint64),
 		chainHeadCh:  make(chan ChainHeadEvent, chainHeadChanSize),
 		gasPrice:     new(big.Int).SetUint64(pset.UnitPrice),
+		blobBaseFee:  new(big.Int).SetUint64(params.ZeroBaseFee),
 		txMsgCh:      make(chan types.Transactions, txMsgChSize),
 		txFeedCh:     make(chan types.Transactions, txFeedChSize),
 		govModule:    govModule,
@@ -545,6 +544,9 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	if pool.rules.IsMagma {
 		pset := pool.govModule.GetParamSet(newHead.Number.Uint64() + 1)
 		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
+		if pool.rules.IsOsaka {
+			pool.blobBaseFee = eip4844.CalcBlobFee(pool.gasPrice)
+		}
 	}
 
 	func() {
@@ -1025,8 +1027,8 @@ func (pool *TxPool) validateBlobTx(tx *types.Transaction) error {
 		return errors.New("missing sidecar in blob transaction")
 	}
 	// Ensure the blob fee cap satisfies the minimum blob gas price
-	if tx.BlobGasFeeCapIntCmp(blobTxMinBlobGasPrice) < 0 {
-		return fmt.Errorf("%w: blob fee cap %v, minimum needed %v", ErrTxGasPriceTooLow, tx.BlobGasFeeCap(), blobTxMinBlobGasPrice)
+	if tx.BlobGasFeeCapIntCmp(pool.blobBaseFee) < 0 {
+		return fmt.Errorf("%w: blob fee cap %v, minimum needed %v", ErrTxGasPriceTooLow, tx.BlobGasFeeCap(), pool.blobBaseFee)
 	}
 	// Ensure the number of items in the blob transaction and various side
 	// data match up before doing any expensive validations

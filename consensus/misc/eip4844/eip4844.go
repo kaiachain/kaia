@@ -43,14 +43,14 @@ func (bc *BlobConfig) maxBlobGas() uint64 {
 	return uint64(bc.Max) * params.BlobTxBlobGasPerBlob
 }
 
-// blobBaseFee computes the blob fee.
-func (bc *BlobConfig) blobBaseFee(excessBlobGas uint64) *big.Int {
+// blobBaseFeeEIP4844 computes the blob fee for EIP-4844.
+func (bc *BlobConfig) blobBaseFeeEIP4844(excessBlobGas uint64) *big.Int {
 	return fakeExponential(minBlobGasPrice, new(big.Int).SetUint64(excessBlobGas), new(big.Int).SetUint64(bc.UpdateFraction))
 }
 
-// blobPrice returns the price of one blob in Wei.
-func (bc *BlobConfig) blobPrice(excessBlobGas uint64) *big.Int {
-	f := bc.blobBaseFee(excessBlobGas)
+// blobPriceEIP4844 returns the price for EIP-4844 of one blob in Wei.
+func (bc *BlobConfig) blobPriceEIP4844(excessBlobGas uint64) *big.Int {
+	f := bc.blobBaseFeeEIP4844(excessBlobGas)
 	return new(big.Int).Mul(f, big.NewInt(params.BlobTxBlobGasPerBlob))
 }
 
@@ -84,7 +84,7 @@ func VerifyEIP4844Header(config *params.ChainConfig, parent, header *types.Heade
 		panic("bad header pair")
 	}
 
-	bcfg := latestBlobConfig(config, header.Time)
+	bcfg := latestBlobConfig(config, header.Number)
 	if bcfg == nil {
 		panic("called before EIP-4844 is active")
 	}
@@ -105,15 +105,18 @@ func VerifyEIP4844Header(config *params.ChainConfig, parent, header *types.Heade
 	}
 
 	// Verify the excessBlobGas is correct based on the parent header
-	expectedExcessBlobGas := CalcExcessBlobGas(config, parent, header.Number)
-	if *header.ExcessBlobGas != expectedExcessBlobGas {
-		return fmt.Errorf("invalid excessBlobGas: have %d, want %d", *header.ExcessBlobGas, expectedExcessBlobGas)
+	// NOTE: Kaia does not calculate excessBlobGas, so it should be 0.
+	if *header.ExcessBlobGas != uint64(0) {
+		return fmt.Errorf("invalid excessBlobGas: have %d, want %d", *header.ExcessBlobGas, uint64(0))
 	}
 	return nil
 }
 
 // CalcExcessBlobGas calculates the excess blob gas after applying the set of
-// blobs on top of the excess blob gas.
+// blobs on top of the excess blob gas for EIP-7918.
+// NOTE: This is not used because Kaia calculates blobBaseFee by multiplying it with baseFee.
+// For compatibility, `blobBaseFeeEIP4844` and `blobPriceEIP4844` is also being kept for CalcExcessBlobGas.
+// ref: https://github.com/kaiachain/kips/blob/fac337aad17db40ed2a6c988e03ad6b2ec9771f2/KIPs/kip-279.md#blob-base-fee-as-a-multiple-of-base-fee
 func CalcExcessBlobGas(config *params.ChainConfig, parent *types.Header, headNumber *big.Int) uint64 {
 	isOsaka := config.IsOsakaForkEnabled(headNumber)
 	bcfg := latestBlobConfig(config, headNumber)
@@ -141,7 +144,7 @@ func calcExcessBlobGas(isOsaka bool, bcfg *BlobConfig, parent *types.Header) uin
 		var (
 			baseCost     = big.NewInt(params.BlobBaseCost)
 			reservePrice = baseCost.Mul(baseCost, parent.BaseFee)
-			blobPrice    = bcfg.blobPrice(parentExcessBlobGas)
+			blobPrice    = bcfg.blobPriceEIP4844(parentExcessBlobGas)
 		)
 		if reservePrice.Cmp(blobPrice) > 0 {
 			scaledExcess := parentBlobGasUsed * uint64(bcfg.Max-bcfg.Target) / uint64(bcfg.Max)
@@ -153,13 +156,9 @@ func calcExcessBlobGas(isOsaka bool, bcfg *BlobConfig, parent *types.Header) uin
 	return excessBlobGas - targetGas
 }
 
-// CalcBlobFee calculates the blobfee from the header's excess blob gas field.
-func CalcBlobFee(config *params.ChainConfig, header *types.Header) *big.Int {
-	blobConfig := latestBlobConfig(config, header.Number)
-	if blobConfig == nil {
-		panic("calculating blob fee on unsupported fork")
-	}
-	return blobConfig.blobBaseFee(*header.ExcessBlobGas)
+// CalcBlobFee calculates the blobfee for KIP-279 from the header's base fee field.
+func CalcBlobFee(baseFee *big.Int) *big.Int {
+	return new(big.Int).Mul(baseFee, new(big.Int).SetUint64(params.BlobBaseFeeMultiplier))
 }
 
 // MaxBlobsPerBlock returns the max blobs per block for a block at the given block number.

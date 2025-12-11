@@ -1,58 +1,24 @@
 # How to lint your change
 
-This document describe how to setup automatically or manually linting your change.
+This document describes how to setup automatically or manually linting your change.
 
 ## Prerequisites
-- go version should be equal to or higher than v1.20.0
-- `gofumpt` should be installed. To install it, run `go install mvdan.cc/gofumpt@latest`
-- `goimports` should be installed. To install it, run `go install golang.org/x/tools/cmd/goimports@latest`
 
-## Git Hook Setup
-This will apply code formatting automatically when you commit your change. So you can pass the lint tests registered in Klaytn's CI.
+- `go` version should be equal to the one specified in `go.mod`
 
-- Copy and paste below pre-commit script to `klaytn/.git/hooks/pre-commit` file and make the file executable (e.g., `chmod +x pre-commit`).
+## Run linter
 
-```go
-#!/bin/sh
-# Copyright 2012 The Go Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style
-# license that can be found in the LICENSE file.
-
-# git gofmt pre-commit hook
-#
-# To use, store as .git/hooks/pre-commit inside your repository and make sure
-# it has execute permissions.
-#
-# This script does not handle file names that contain spaces.
-
-gofiles=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$')
-[ -z "$gofiles" ] && exit 0
-
-unformatted=$(gofumpt -l $gofiles)
-unimported=$(goimports -l $gofiles)
-
-# Some files are not gofmt'd. Print message and fail.
-echo >&2 "Go files must be formatted with gofmt. Below files are reformatted:"
-for fn in $unformatted; do
-	echo >&2 "$PWD/$fn"
-	gofumpt -w $PWD/$fn
-	git add $PWD/$fn
-done
-
-echo >&2 "Algin import packages. Below files are reformatted:"
-for fn in $unimported; do
-	echo >&2 "$PWD/$fn"
-	goimports -w $PWD/$fn
-	git add $PWD/$fn
-done
-
-exit 0
-```
-
-## Manually formatting
-You can format codes manually by using below commands in the root of klaytn repository.
+Run the following command (`golangci-lint` will be installed automatically if not installed):
 
 ```bash
-klaytn$ gofumpt -w .
-klaytn$ goimports -w .
+go run build/ci.go lint -v --new-from-rev=dev
+```
+
+## Git Hook Setup
+
+This will automatically run the linter when you commit your change. Copy and paste below pre-commit script to `.git/hooks/pre-commit` file and make the file executable (e.g., `chmod +x pre-commit`).
+
+```bash
+#!/bin/sh
+go run build/ci.go lint -v --new-from-rev=dev
 ```

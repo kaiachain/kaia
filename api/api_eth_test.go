@@ -1080,7 +1080,7 @@ func TestEthAPI_PendingTransactions(t *testing.T) {
 // TestEthAPI_GetTransactionReceipt tests GetTransactionReceipt.
 func TestEthAPI_GetTransactionReceipt(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
-	block, txs, txHashMap, receiptMap, receipts := createTestData(t, &types.Header{Number: big.NewInt(1), ExcessBlobGas: &excessBlobGas})
+	block, txs, txHashMap, receiptMap, receipts := createTestData(t, &types.Header{Number: big.NewInt(1), ExcessBlobGas: &excessBlobGas, BaseFee: big.NewInt(1)})
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().GetTxLookupInfoAndReceipt(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -1288,7 +1288,7 @@ func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts
 		if !ok {
 			t.Fatal("blobGasPrice is not defined in Ethereum transaction receipt format.")
 		}
-		assert.Equal(t, blobGasPrice, hexutil.Uint64(eip4844.CalcBlobFee(params.TestKaiaConfig("osaka"), block.Header()).Uint64()))
+		assert.Equal(t, blobGasPrice, hexutil.Uint64(eip4844.CalcBlobFee(block.Header().BaseFee).Uint64()))
 	}
 
 	status, ok := ethReceipt["status"]

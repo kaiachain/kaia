@@ -801,6 +801,7 @@ func genMapForBlobTransaction(from TestAccount, to TestAccount, gasPrice *big.In
 	emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
 	cellProofs, _ := kzg4844.ComputeCellProofs(&emptyBlob)
 	blobHash := kzg4844.CalcBlobHashV1(sha256.New(), &emptyBlobCommit)
+	blobGasPrice := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(params.BlobBaseFeeMultiplier))
 
 	values := map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:      from.GetNonce(),
@@ -811,7 +812,7 @@ func genMapForBlobTransaction(from TestAccount, to TestAccount, gasPrice *big.In
 		types.TxValueKeyGasFeeCap:  gasPrice,
 		types.TxValueKeyGasTipCap:  gasPrice,
 		types.TxValueKeyAccessList: accessList,
-		types.TxValueKeyBlobFeeCap: gasPrice,
+		types.TxValueKeyBlobFeeCap: blobGasPrice,
 		types.TxValueKeyBlobHashes: []common.Hash{common.Hash(blobHash)},
 		types.TxValueKeySidecar: &types.BlobTxSidecar{
 			Version:     types.BlobSidecarVersion1,
