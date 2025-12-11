@@ -3351,26 +3351,55 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 			},
 		},
 		{
-			name:        "success with multiple blob txs",
+			name:        "success with non-contiguous blob txs capped at MaxBlobsPerBlock",
 			blockNumber: rpc.BlockNumber(3),
 			fullBlob:    true,
 			setupMock: func() {
 				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(3)).Return(blockWithMultipleBlobTxs, nil)
 				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				// MaxBlobsPerBlock for Osaka is 1, so only first blob tx should be processed
 				mockBackend.EXPECT().GetBlobSidecar(big.NewInt(3), 0).Return(sidecar, nil)
-				mockBackend.EXPECT().GetBlobSidecar(big.NewInt(3), 2).Return(sidecar, nil)
+				// GetBlobSidecar(3, 2) should not be called because MaxBlobsPerBlock=1
 			},
-			expectedCount: 2,
+			expectedCount: 1, // Capped at MaxBlobsPerBlock (1 for Osaka)
 			validate: func(t *testing.T, results []*map[string]interface{}) {
-				require.Len(t, results, 2)
+				require.Len(t, results, 1)
 				// First blob tx at index 0
 				result0 := *results[0]
 				assert.Equal(t, blobTx.Hash(), result0["txHash"])
 				assert.Equal(t, 0, result0["txIndex"])
-				// Second blob tx at index 2
-				result1 := *results[1]
-				assert.Equal(t, blobTx.Hash(), result1["txHash"])
-				assert.Equal(t, 2, result1["txIndex"])
+			},
+		},
+		{
+			name:        "success with contiguous blob txs exceeding MaxBlobsPerBlock",
+			blockNumber: rpc.BlockNumber(4),
+			fullBlob:    true,
+			setupMock: func() {
+				// Create a block with 3 blob transactions (exceeding Max=1 for Osaka)
+				txs := make([]*types.Transaction, 3)
+				for i := 0; i < 3; i++ {
+					txs[i] = blobTx
+				}
+				blockWithManyBlobTxs := types.NewBlock(
+					&types.Header{Number: big.NewInt(4)},
+					txs,
+					nil,
+				)
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(4)).Return(blockWithManyBlobTxs, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				// MaxBlobsPerBlock for Osaka is 1, so only first blob tx should be processed
+				mockBackend.EXPECT().GetBlobSidecar(big.NewInt(4), 0).Return(sidecar, nil)
+				// GetBlobSidecar(4, 1) and GetBlobSidecar(4, 2) should not be called
+			},
+			expectedCount: 1, // Should be capped at MaxBlobsPerBlock (1 for Osaka)
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 1)
+				// Verify that only the first result is returned
+				result0 := *results[0]
+				assert.Equal(t, big.NewInt(4), result0["blockNumber"])
+				assert.Equal(t, 0, result0["txIndex"])
+				sidecarResult := result0["blobSidecar"].(map[string]interface{})
+				assert.Equal(t, types.BlobSidecarVersion1, byte(sidecarResult["version"].(uint8)))
 			},
 		},
 		{
