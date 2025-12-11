@@ -217,6 +217,7 @@ func TestVerifyBlockBodyForOsakaFork(t *testing.T) {
 	config.KoreCompatibleBlock = common.Big1
 	config.ShanghaiCompatibleBlock = common.Big1
 	config.CancunCompatibleBlock = common.Big1
+	config.RandaoCompatibleBlock = common.Big1
 	config.KaiaCompatibleBlock = common.Big1
 	config.PragueCompatibleBlock = common.Big1
 	config.OsakaCompatibleBlock = common.Big1

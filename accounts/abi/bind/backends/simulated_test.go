@@ -506,7 +506,7 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 			GasPrice: big.NewInt(0),
 			Value:    nil,
 			Data:     common.Hex2Bytes("e09fface"),
-		}, 21611, nil, nil},
+		}, 21275, nil, nil},
 	}
 	for _, c := range cases {
 		got, err := sim.EstimateGas(context.Background(), c.message)

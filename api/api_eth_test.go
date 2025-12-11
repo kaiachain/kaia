@@ -3044,10 +3044,14 @@ func TestEthAPI_EstimateGas(t *testing.T) {
 
 // TestEthAPI_Config tests the eth_config method.
 func TestEthAPI_Config(t *testing.T) {
-	expectedChainConfig := params.TestChainConfig
+	expectedChainConfig := params.TestChainConfig.Copy()
 	expectedChainConfig.IstanbulCompatibleBlock = big.NewInt(75373312)
 	expectedChainConfig.LondonCompatibleBlock = big.NewInt(80295291)
 	expectedChainConfig.PragueCompatibleBlock = big.NewInt(187930000)
+	expectedChainConfig.OsakaCompatibleBlock = big.NewInt(195000000)
+	expectedChainConfig.BlobScheduleConfig = &params.BlobScheduleConfig{
+		Osaka: params.DefaultOsakaBlobConfig,
+	}
 	genesisHeader := &types.Header{
 		Number: big.NewInt(0),
 		Root:   common.HexToHash("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"),
@@ -3056,15 +3060,18 @@ func TestEthAPI_Config(t *testing.T) {
 	istanbulForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 75373312).Hash
 	lonondonForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 80295291).Hash
 	pragueForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 187930000).Hash
+	osakaForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 195000000).Hash
 	var (
 		genesisRules        = expectedChainConfig.Rules(big.NewInt(0))
 		istanbulRules       = expectedChainConfig.Rules(big.NewInt(75373312))
 		lonondonRules       = expectedChainConfig.Rules(big.NewInt(80295291))
 		pragueRules         = expectedChainConfig.Rules(big.NewInt(187930000))
+		osakaRules          = expectedChainConfig.Rules(big.NewInt(195000000))
 		genesisPrecompiles  = make(map[string]common.Address)
 		istanbulPrecompiles = make(map[string]common.Address)
 		lonondonPrecompiles = make(map[string]common.Address)
 		praguePrecompiles   = make(map[string]common.Address)
+		osakaPrecompiles    = make(map[string]common.Address)
 	)
 	for addr, c := range vm.ActivePrecompiledContracts(genesisRules) {
 		genesisPrecompiles[c.Name()] = addr
@@ -3077,6 +3084,9 @@ func TestEthAPI_Config(t *testing.T) {
 	}
 	for addr, c := range vm.ActivePrecompiledContracts(pragueRules) {
 		praguePrecompiles[c.Name()] = addr
+	}
+	for addr, c := range vm.ActivePrecompiledContracts(osakaRules) {
+		osakaPrecompiles[c.Name()] = addr
 	}
 	tests := []struct {
 		name            string
@@ -3103,10 +3113,10 @@ func TestEthAPI_Config(t *testing.T) {
 				SystemContracts: nil,
 			},
 			expectedLast: &config{
-				BlobSchedule:    nil,
+				BlobSchedule:    params.DefaultOsakaBlobConfig,
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
-				ForkId:          pragueForkID[:],
-				Precompiles:     praguePrecompiles,
+				ForkId:          osakaForkID[:],
+				Precompiles:     osakaPrecompiles,
 				SystemContracts: nil,
 			},
 		},
@@ -3128,21 +3138,46 @@ func TestEthAPI_Config(t *testing.T) {
 				SystemContracts: nil,
 			},
 			expectedLast: &config{
-				BlobSchedule:    nil,
+				BlobSchedule:    params.DefaultOsakaBlobConfig,
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
-				ForkId:          pragueForkID[:],
-				Precompiles:     praguePrecompiles,
+				ForkId:          osakaForkID[:],
+				Precompiles:     osakaPrecompiles,
 				SystemContracts: nil,
 			},
 		},
 		{
-			name:        "Latest fork block (Prague)",
+			name:        "Prague for block",
 			blockNumber: 187930000,
 			expectedCurrent: &config{
 				BlobSchedule:    nil,
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
 				ForkId:          pragueForkID[:],
 				Precompiles:     praguePrecompiles,
+				SystemContracts: nil,
+			},
+			expectedNext: &config{
+				BlobSchedule:    params.DefaultOsakaBlobConfig,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          osakaForkID[:],
+				Precompiles:     osakaPrecompiles,
+				SystemContracts: nil,
+			},
+			expectedLast: &config{
+				BlobSchedule:    params.DefaultOsakaBlobConfig,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          osakaForkID[:],
+				Precompiles:     osakaPrecompiles,
+				SystemContracts: nil,
+			},
+		},
+		{
+			name:        "Latest fork block (Osaka)",
+			blockNumber: 195000000,
+			expectedCurrent: &config{
+				BlobSchedule:    params.DefaultOsakaBlobConfig,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          osakaForkID[:],
+				Precompiles:     osakaPrecompiles,
 				SystemContracts: nil,
 			},
 			expectedNext: nil, // No more forks

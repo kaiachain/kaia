@@ -436,7 +436,7 @@ func (b *SimulatedBackend) EstimateGas(ctx context.Context, call kaia.CallMsg) (
 		}
 		res, err := b.callContract(ctx, call, b.blockchain.CurrentBlock(), currentState)
 		if err != nil {
-			if errors.Is(err, blockchain.ErrIntrinsicGas) {
+			if errors.Is(err, blockchain.ErrIntrinsicGas) || errors.Is(err, blockchain.ErrFloorDataGas) {
 				return true, nil, nil // Special case, raise gas limit
 			}
 			return true, nil, err // Bail out
