@@ -1663,7 +1663,7 @@ func (api *EthAPI) GetBlobSidecars(ctx context.Context, number *rpc.BlockNumber,
 		if tx.Type() != types.TxTypeEthereumBlob {
 			continue
 		}
-		sidecar, err := api.kaiaBlockChainAPI.b.GetBlobSidecar(block.Number(), txIndex, tx.Hash())
+		sidecar, err := api.kaiaBlockChainAPI.b.GetBlobSidecar(block.Number(), txIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -1687,7 +1687,7 @@ func (api *EthAPI) GetBlobSidecarsByTxHash(ctx context.Context, txHash common.Ha
 	}
 	blockNumber := big.NewInt(int64(number))
 	txIndex := int(index)
-	sidecar, err := api.kaiaBlockChainAPI.b.GetBlobSidecar(blockNumber, txIndex, txHash)
+	sidecar, err := api.kaiaBlockChainAPI.b.GetBlobSidecar(blockNumber, txIndex)
 	if err != nil {
 		return nil, err
 	}
