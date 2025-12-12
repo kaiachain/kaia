@@ -1719,7 +1719,7 @@ func (api *EthAPI) RpcMarshalBlobSidecar(sidecar *types.BlobTxSidecar, fullBlob 
 	return &result
 }
 
-func (api *EthAPI) GetBlobBaseFee(ctx context.Context) (*hexutil.Big, error) {
+func (api *EthAPI) BlobBaseFee(ctx context.Context) (*hexutil.Big, error) {
 	header, err := api.kaiaBlockChainAPI.b.HeaderByNumber(ctx, rpc.LatestBlockNumber)
 	if err != nil {
 		return nil, err

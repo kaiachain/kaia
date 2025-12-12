@@ -3854,8 +3854,8 @@ func TestEthAPI_FeeHistory(t *testing.T) {
 	}
 }
 
-// TestEthAPI_GetBlobBaseFee tests the GetBlobBaseFee method.
-func TestEthAPI_GetBlobBaseFee(t *testing.T) {
+// TestEthAPI_BlobBaseFee tests the BlobBaseFee method.
+func TestEthAPI_BlobBaseFee(t *testing.T) {
 	testcases := []struct {
 		name        string
 		setupMock   func(*mock_api.MockBackend)
@@ -3911,7 +3911,7 @@ func TestEthAPI_GetBlobBaseFee(t *testing.T) {
 
 			tc.setupMock(mockBackend)
 
-			result, err := api.GetBlobBaseFee(context.Background())
+			result, err := api.BlobBaseFee(context.Background())
 
 			if tc.expectedErr != "" {
 				require.Error(t, err)
