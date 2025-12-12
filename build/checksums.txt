@@ -1,5 +1,5 @@
 # This file contains sha256 checksums of optional build dependencies.
 
-# version:spec-tests fusaka-devnet-5@v2.1.0
-# https://github.com/ethereum/execution-spec-tests/releases/download/fusaka-devnet-5@v2.1.0/
-96a39d8eb8de742e450a7e7c63ffb4c2b82187f4fed9c1406f39ff3ef9f53a91  fixtures_fusaka-devnet-5.tar.gz
+# version:spec-tests v5.4.0
+# https://github.com/ethereum/execution-spec-tests/releases/download/v5.4.0
+3e2b02d49fe903eda4fd8caca5cbf0d139c470e97e1de9a85299b1b034f97099  fixtures_develop.tar.gz
