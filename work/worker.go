@@ -23,6 +23,7 @@
 package work
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -38,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -125,6 +127,8 @@ type Task struct {
 	header   *types.Header
 	txs      []*types.Transaction
 	receipts []*types.Receipt
+	sidecars []*types.BlobTxSidecar
+	blobs    int
 
 	createdAt time.Time
 }
@@ -594,6 +598,16 @@ func (self *worker) commitNewWork() {
 		logger.Error("Failed to prepare header for mining", "err", err)
 		return
 	}
+	// Apply KIP-279.
+	if self.config.IsOsakaForkEnabled(header.Number) {
+		// In KIP-279, ExcessBlobGas is defined as follows:
+		// - ExcessBlobGas = max(0, parent.excessBlobGas + parent.blobGasUsed - TARGET_BLOB_GAS_PER_BLOCK)
+		// In DefaultOsakaBlobConfig(Target: 1, Max: 1), parent.blobGasUsed never exceeds
+		// TARGET_BLOB_GAS_PER_BLOCK (because Target == Max). Therefore, in the Osaka fork, this is always set to 0.
+		var excessBlobGas uint64 = 0
+		header.BlobGasUsed = new(uint64)
+		header.ExcessBlobGas = &excessBlobGas
+	}
 	// Could potentially happen if starting to mine in an odd state.
 	err = self.makeCurrent(parent, header)
 	if err != nil {
@@ -839,6 +853,19 @@ CommitTransactionLoop:
 				break
 			}
 		}
+
+		// Most of the blob gas logic here is agnostic as to if the chain supports
+		// blobs or not, however the max check panics when called on a chain without
+		// a defined schedule, so we need to verify it's safe to call.
+		if env.config.IsOsakaForkEnabled(env.header.Number) {
+			left := eip4844.MaxBlobsPerBlock(env.config, env.header.Number) - env.blobs
+			if left < len(tx.BlobHashes()) {
+				logger.Trace("Not enough blob space left for transaction", "hash", tx.Hash(), "left", left, "needed", len(tx.BlobHashes()))
+				builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+				continue
+			}
+		}
+
 		// If target is the tx in bundle, len(targetBundle.BundleTxs) is appended to numTxsChecked.
 		numTxsChecked += int64(numShift)
 		// Error may be ignored here. The error has already been checked
@@ -961,6 +988,22 @@ CommitTransactionLoop:
 func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAddr common.Address, vmConfig *vm.Config) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
+	isBlobTx := tx.Type() == types.TxTypeEthereumBlob
+	sc := tx.BlobTxSidecar()
+	if isBlobTx {
+		if sc == nil {
+			panic("blob transaction without blobs in miner")
+		}
+		// Checking against blob gas limit: It's kind of ugly to perform this check here, but there
+		// isn't really a better place right now. The blob gas limit is checked at block validation time
+		// and not during execution. This means core.ApplyTransaction will not return an error if the
+		// tx has too many blobs. So we have to explicitly check it here.
+		maxBlobs := eip4844.MaxBlobsPerBlock(env.config, env.header.Number)
+		if env.blobs+len(sc.Blobs) > maxBlobs {
+			return errors.New("max data blobs reached"), nil
+		}
+	}
+
 	receipt, _, err := bc.ApplyTransaction(env.config, &nodeAddr, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 	if err != nil {
 		if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
@@ -969,10 +1012,19 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAdd
 		env.state.RevertToSnapshot(snap)
 		return err, nil
 	}
+
+	txNoBlob := tx
+	// blob related temporary variables are updated
+	if isBlobTx {
+		txNoBlob = tx.WithoutBlobTxSidecar()
+		env.sidecars = append(env.sidecars, sc)
+		env.blobs += len(sc.Blobs)
+		*env.header.BlobGasUsed += tx.BlobGas()
+	}
 	env.tcount++
-	env.txs = append(env.txs, tx)
+	env.txs = append(env.txs, txNoBlob)
 	env.receipts = append(env.receipts, receipt)
-	env.size += uint64(tx.Size())
+	env.size += uint64(txNoBlob.Size())
 
 	return nil, receipt.Logs
 }
@@ -980,9 +1032,13 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAdd
 func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, nodeAddr common.Address, vmConfig *vm.Config) (error, *types.Transaction, []*types.Log) {
 	lastSnapshot := env.state.Copy()
 	gasUsedSnapshot := env.header.GasUsed
+	blobGasUsedSnapshot := env.header.BlobGasUsed
+	blobsSnapshot := env.blobs
 	tcountSnapshot := env.tcount
 	txs := []*types.Transaction{}
 	receipts := []*types.Receipt{}
+	sidecars := []*types.BlobTxSidecar{}
+	blobs := int(0)
 	logs := []*types.Log{}
 
 	markAllTxUnexecutable := func() {
@@ -998,6 +1054,9 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		env.state.Set(lastSnapshot)
 		env.header.GasUsed = gasUsedSnapshot
 		env.tcount = tcountSnapshot
+		// blob related env are restored to the snapshot
+		env.header.BlobGasUsed = blobGasUsedSnapshot
+		env.blobs = blobsSnapshot
 	}
 
 	var totalTxSize uint64 = 0
@@ -1008,6 +1067,22 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			markAllTxUnexecutable()
 			restoreEnv()
 			return kerrors.ErrTxGeneration, nil, nil
+		}
+
+		isBlobTx := tx.Type() == types.TxTypeEthereumBlob
+		sc := tx.BlobTxSidecar()
+		if isBlobTx {
+			if sc == nil {
+				panic("blob transaction without blobs in miner")
+			}
+			// Checking against blob gas limit: It's kind of ugly to perform this check here, but there
+			// isn't really a better place right now. The blob gas limit is checked at block validation time
+			// and not during execution. This means core.ApplyTransaction will not return an error if the
+			// tx has too many blobs. So we have to explicitly check it here.
+			maxBlobs := eip4844.MaxBlobsPerBlock(env.config, env.header.Number)
+			if env.blobs+len(sc.Blobs) > maxBlobs {
+				return errors.New("max data blobs reached"), nil, nil
+			}
 		}
 
 		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
@@ -1033,9 +1108,17 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			return err, tx, nil
 		}
 
+		txNoBlob := tx
+		// blob related temporary variables are updated
+		if isBlobTx {
+			txNoBlob = tx.WithoutBlobTxSidecar()
+			sidecars = append(sidecars, sc)
+			blobs += len(sc.Blobs)
+			*env.header.BlobGasUsed += tx.BlobGas()
+		}
 		env.tcount++
-		totalTxSize += uint64(tx.Size())
-		txs = append(txs, tx)
+		totalTxSize += uint64(txNoBlob.Size())
+		txs = append(txs, txNoBlob)
 		receipts = append(receipts, receipt)
 		logs = append(logs, receipt.Logs...)
 	}
@@ -1043,7 +1126,9 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	env.size += totalTxSize
 	env.txs = append(env.txs, txs...)
 	env.receipts = append(env.receipts, receipts...)
-
+	// blob related env are updated
+	env.sidecars = append(env.sidecars, sidecars...)
+	env.blobs += blobs
 	return nil, nil, logs
 }
 
