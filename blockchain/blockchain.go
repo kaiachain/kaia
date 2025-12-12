@@ -371,7 +371,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	// Take ownership of this particular state
 	go bc.update()
 	bc.gcCachedNodeLoop()
-	bc.pruneTrieNodeLoop()
+	bc.pruneTrieNodeAndBlobLoop()
 	bc.restartStateMigration()
 
 	if cacheConfig.TrieNodeCacheConfig.DumpPeriodically() {
@@ -1506,7 +1506,7 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 	})
 }
 
-func (bc *BlockChain) pruneTrieNodeLoop() {
+func (bc *BlockChain) pruneTrieNodeAndBlobLoop() {
 	// ReadPruningMarks(1, limit) is very slow because it iterates over the most of MiscDB.
 	// ReadPruningMarks(start, limit) is much faster because it only iterates a small range.
 	startNum := uint64(1)
@@ -1515,6 +1515,13 @@ func (bc *BlockChain) pruneTrieNodeLoop() {
 		for {
 			select {
 			case num := <-bc.chPrune:
+				err := bc.blobStorage.Prune(big.NewInt(int64(num)))
+				if err != nil {
+					logger.Error("Failed to prune blob at block number", num, "err", err)
+				} else {
+					logger.Info("Pruned blob at block number", num)
+				}
+
 				if num <= bc.cacheConfig.LivePruningRetention {
 					continue
 				}
