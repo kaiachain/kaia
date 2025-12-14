@@ -218,9 +218,6 @@ type BlockChain struct {
 
 	prefetchTxCh chan prefetchTx
 
-	// blob storage
-	blobStorage *BlobStorage
-
 	// kaiax modules
 	executionModules  []kaiax.ExecutionModule
 	rewindableModules []kaiax.RewindableModule
@@ -273,7 +270,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
 		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
-		blobStorage:        NewBlobStorage(DefaultBlobStorageConfig(db.GetDBConfig().Dir)),
 	}
 
 	// set hardForkBlockNumberConfig which will be used as a global variable
@@ -371,7 +367,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	// Take ownership of this particular state
 	go bc.update()
 	bc.gcCachedNodeLoop()
-	bc.pruneTrieNodeAndBlobLoop()
+	bc.pruneTrieNodeLoop()
 	bc.restartStateMigration()
 
 	if cacheConfig.TrieNodeCacheConfig.DumpPeriodically() {
@@ -1051,15 +1047,6 @@ func (bc *BlockChain) GetLogsByHash(hash common.Hash) [][]*types.Log {
 	return logs
 }
 
-// GetBlobSidecarByBlockNumberAndIndex retrieves a blob sidecar from blob storage by block number and transaction index.
-func (bc *BlockChain) GetBlobSidecarFromStorage(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error) {
-	sidecar, err := bc.blobStorage.Get(blockNum, txIndex)
-	if err != nil {
-		return nil, err
-	}
-	return sidecar, nil
-}
-
 // TrieNode retrieves a blob of data associated with a trie node
 // either from ephemeral in-memory cache, or from persistent storage.
 // Cannot retrieve nodes keyed with ExtHash
@@ -1506,7 +1493,7 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 	})
 }
 
-func (bc *BlockChain) pruneTrieNodeAndBlobLoop() {
+func (bc *BlockChain) pruneTrieNodeLoop() {
 	// ReadPruningMarks(1, limit) is very slow because it iterates over the most of MiscDB.
 	// ReadPruningMarks(start, limit) is much faster because it only iterates a small range.
 	startNum := uint64(1)
@@ -1515,13 +1502,6 @@ func (bc *BlockChain) pruneTrieNodeAndBlobLoop() {
 		for {
 			select {
 			case num := <-bc.chPrune:
-				err := bc.blobStorage.Prune(big.NewInt(int64(num)))
-				if err != nil {
-					logger.Error("Failed to prune blob at block number", num, "err", err)
-				} else {
-					logger.Info("Pruned blob at block number", num)
-				}
-
 				if num <= bc.cacheConfig.LivePruningRetention {
 					continue
 				}

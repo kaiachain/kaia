@@ -408,7 +408,7 @@ func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount uint64, lastBl
 
 // GetBlobSidecar retrieves a blob sidecar from blob storage by block number and transaction index.
 func (b *CNAPIBackend) GetBlobSidecar(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error) {
-	sidecar, err := b.cn.blockchain.GetBlobSidecarFromStorage(blockNum, txIndex)
+	sidecar, err := b.cn.txPool.GetBlobSidecarFromStorage(blockNum, txIndex)
 	if err != nil {
 		return nil, err
 	}

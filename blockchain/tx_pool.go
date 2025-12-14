@@ -249,6 +249,8 @@ type TxPool struct {
 
 	rules params.Rules // Fork indicator
 
+	blobStorage *BlobStorage
+
 	govModule GovModule
 
 	modules []kaiax.TxPoolModule
@@ -297,6 +299,9 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	}
 	// Subscribe events from blockchain
 	pool.chainHeadSub = pool.chain.SubscribeChainHeadEvent(pool.chainHeadCh)
+
+	// TODO-Kaia: add blob storage
+	// pool.storage = NewBlobStorage(config.BlobStorageConfig)
 
 	// Start the event loop and return
 	pool.wg.Add(3)
@@ -1577,7 +1582,15 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 	return pool.all.Get(hash)
 }
 
-// GetBlobSidecar retrieves a blob sidecar from txpool by transaction hash.
+// GetBlobSidecarFromStorage retrieves a blob sidecar from blob storage by block number and transaction index.
+func (pool *TxPool) GetBlobSidecarFromStorage(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error) {
+	if pool.blobStorage == nil {
+		return nil, fmt.Errorf("blob storage not initialized")
+	}
+	return pool.blobStorage.Get(blockNum, txIndex)
+}
+
+// GetBlobSidecarFromPool retrieves a blob sidecar from txpool by transaction hash.
 func (pool *TxPool) GetBlobSidecarFromPool(txHash common.Hash) (*types.BlobTxSidecar, error) {
 	tx := pool.all.Get(txHash)
 	if tx == nil {

@@ -125,6 +125,21 @@ func (mr *MockTxPoolMockRecorder) GetBlobSidecarFromPool(arg0 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecarFromPool", reflect.TypeOf((*MockTxPool)(nil).GetBlobSidecarFromPool), arg0)
 }
 
+// GetBlobSidecarFromStorage mocks base method.
+func (m *MockTxPool) GetBlobSidecarFromStorage(arg0 *big.Int, arg1 int) (*types.BlobTxSidecar, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBlobSidecarFromStorage", arg0, arg1)
+	ret0, _ := ret[0].(*types.BlobTxSidecar)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBlobSidecarFromStorage indicates an expected call of GetBlobSidecarFromStorage.
+func (mr *MockTxPoolMockRecorder) GetBlobSidecarFromStorage(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecarFromStorage", reflect.TypeOf((*MockTxPool)(nil).GetBlobSidecarFromStorage), arg0, arg1)
+}
+
 // GetPendingNonce mocks base method.
 func (m *MockTxPool) GetPendingNonce(arg0 common.Address) uint64 {
 	m.ctrl.T.Helper()
