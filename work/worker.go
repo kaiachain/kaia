@@ -602,9 +602,10 @@ func (self *worker) commitNewWork() {
 	if self.config.IsOsakaForkEnabled(header.Number) {
 		// In KIP-279, ExcessBlobGas is defined as follows:
 		// - ExcessBlobGas = max(0, parent.excessBlobGas + parent.blobGasUsed - TARGET_BLOB_GAS_PER_BLOCK)
-		// In DefaultOsakaBlobConfig(Target: 1, Max: 1), parent.blobGasUsed never exceeds
-		// TARGET_BLOB_GAS_PER_BLOCK (because Target == Max). Therefore, in the Osaka fork, this is always set to 0.
-		var excessBlobGas uint64 = 0
+		var excessBlobGas uint64
+		if self.config.IsOsakaForkEnabled(parent.Number()) {
+			excessBlobGas = eip4844.CalcExcessBlobGas(self.config, parent.Header(), header.Number)
+		}
 		header.BlobGasUsed = new(uint64)
 		header.ExcessBlobGas = &excessBlobGas
 	}
