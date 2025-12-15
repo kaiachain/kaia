@@ -387,7 +387,7 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 	// Parse recipient if present.
 	var to *common.Address
 	if tx.To == "" {
-		if tx.AuthorizationList != nil {
+		if (tx.BlobGasFeeCap != nil && tx.BlobVersionedHashes != nil) || tx.AuthorizationList != nil {
 			// NOTE: Kaia's `newTxInternalDataEthereumSetCodeWithValues` in `MewMessage` ​​cannot be called with a "to" of "nil",
 			// so specify an emptyAddress to generate a test message and test it.
 			to = &common.Address{}
@@ -457,7 +457,7 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 		return nil, err
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, data, true, intrinsicGas, accessList, nil, authorizationList)
+	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, nil, data, true, intrinsicGas, accessList, nil, nil, nil, authorizationList)
 	return msg, nil
 }
 

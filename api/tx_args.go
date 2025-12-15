@@ -804,7 +804,7 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 	if args.AuthorizationList != nil {
 		AuthorizationList = args.AuthorizationList
 	}
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, data, false, intrinsicGas, accessList, nil, AuthorizationList), nil
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, nil, data, false, intrinsicGas, accessList, nil, nil, nil, AuthorizationList), nil
 }
 
 // toTransaction converts the arguments to a transaction.
