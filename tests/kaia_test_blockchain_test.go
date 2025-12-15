@@ -39,6 +39,7 @@ import (
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/datasync/downloader"
@@ -228,6 +229,14 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 	}
 	if bcdata.bc.Config().IsMagmaForkEnabled(num) {
 		header.BaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), bcdata.bc.Config().Governance.KIP71)
+	}
+	if bcdata.bc.Config().IsOsakaForkEnabled(num) {
+		var excessBlobGas uint64
+		if bcdata.bc.Config().IsOsakaForkEnabled(parent.Number()) {
+			excessBlobGas = eip4844.CalcExcessBlobGas(bcdata.bc.Config(), parent.Header(), header.Number)
+		}
+		header.BlobGasUsed = new(uint64)
+		header.ExcessBlobGas = &excessBlobGas
 	}
 
 	if err := bcdata.engine.Prepare(bcdata.bc, header); err != nil {

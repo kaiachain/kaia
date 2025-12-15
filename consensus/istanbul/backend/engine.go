@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -40,6 +41,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -246,6 +248,22 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		}
 	}
 
+	// Verify the existence / non-existence of osaka-specific header fields
+	osaka := chain.Config().IsOsakaForkEnabled(header.Number)
+	if !osaka {
+		switch {
+		case header.ExcessBlobGas != nil:
+			return fmt.Errorf("invalid excessBlobGas: have %d, expected nil", *header.ExcessBlobGas)
+		case header.BlobGasUsed != nil:
+			return fmt.Errorf("invalid blobGasUsed: have %d, expected nil", *header.BlobGasUsed)
+		}
+	} else {
+		if len(parents) > 0 {
+			if err := eip4844.VerifyEIP4844Header(chain.Config(), parents[len(parents)-1], header); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 

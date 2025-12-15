@@ -128,6 +128,9 @@ var Forks = map[string]*params.ChainConfig{
 		Kip160CompatibleBlock:    new(big.Int),
 		PragueCompatibleBlock:    new(big.Int),
 		OsakaCompatibleBlock:     new(big.Int),
+		BlobScheduleConfig: &params.BlobScheduleConfig{
+			Osaka: params.DefaultOsakaBlobConfig,
+		},
 	},
 }
 
