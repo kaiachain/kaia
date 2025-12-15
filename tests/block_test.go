@@ -56,48 +56,48 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	// TODO-Kaia: should remove these skip
 	// executing precompiled contracts with value transferring is not permitted
 	// https://github.com/kaiachain/kaia/blob/d44ae2f4269a84bd379b4e992d8e3be46b7e5ad3/blockchain/vm/evm.go#L268-L269
-	bt.skipLoad(`^frontier\/opcodes\/all_opcodes\/all_opcodes.json`)
+	bt.skipLoad(`^frontier/opcodes/all_opcodes/all_opcodes.json`)
 	// "to" is address_0x0000000000000000000000000000000000000001: insertion error because precompiled contract address validation in TxInternalData#Validate
 	// https://github.com/kaiachain/kaia/blob/d44ae2f4269a84bd379b4e992d8e3be46b7e5ad3/blockchain/types/tx_internal_data_legacy.go#L365
-	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/gas_diff_pointer_vs_direct_call.json`)
+	bt.skipLoad(`^prague/eip7702_set_code_tx/set_code_txs_2/gas_diff_pointer_vs_direct_call.json`)
 	// "to" is address_0x0000000000000000000000000000000000000005: insertion error because precompiled contract address validation in TxInternalData#Validate
 	// https://github.com/kaiachain/kaia/blob/d44ae2f4269a84bd379b4e992d8e3be46b7e5ad3/blockchain/types/tx_internal_data_legacy.go#L365
-	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs_2\/call_to_precompile_in_pointer_context.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs_2.py::test_call_to_precompile_in_pointer_context\[fork_Osaka-precompile_0x0000000000000000000000000000000000000005-`)
-	bt.skipLoad(`^osaka\/eip7883_modexp_gas_increase\/modexp_thresholds\/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-exact_gas\]`)
-	bt.skipLoad(`^osaka\/eip7883_modexp_gas_increase\/modexp_thresholds\/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-extra_gas\]`)
-	bt.skipLoad(`^osaka\/eip7883_modexp_gas_increase\/modexp_thresholds\/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-insufficient_gas\]`)
+	bt.skipLoad(`^prague/eip7702_set_code_tx/set_code_txs_2/call_to_precompile_in_pointer_context.json/tests/prague/eip7702_set_code_tx/test_set_code_txs_2.py::test_call_to_precompile_in_pointer_context\[fork_Osaka-precompile_0x0000000000000000000000000000000000000005-\]`)
+	bt.skipLoad(`^osaka/eip7883_modexp_gas_increase/modexp_thresholds/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-exact_gas\]`)
+	bt.skipLoad(`^osaka/eip7883_modexp_gas_increase/modexp_thresholds/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-extra_gas\]`)
+	bt.skipLoad(`^osaka/eip7883_modexp_gas_increase/modexp_thresholds/modexp_used_in_transaction_entry_points.json/tests/osaka/eip7883_modexp_gas_increase/test_modexp_thresholds.py::test_modexp_used_in_transaction_entry_points\[fork_Osaka-blockchain_test_from_state_test-insufficient_gas\]`)
 	// "to" is address_0x0000000000000000000000000000000000000100: insertion error because precompiled contract address validation in TxInternalData#Validate
 	// https://github.com/kaiachain/kaia/blob/d44ae2f4269a84bd379b4e992d8e3be46b7e5ad3/blockchain/types/tx_internal_data_legacy.go#L365
-	bt.skipLoad(`^osaka\/eip7951_p256verify_precompiles\/p256verify\/precompile_as_tx_entry_point.json`)
+	bt.skipLoad(`^osaka/eip7951_p256verify_precompiles/p256verify/precompile_as_tx_entry_point.json`)
 
 	// tests to skip
 	// unsupported EIPs
-	bt.skipLoad(`^shanghai\/eip4895_withdrawals\/`)
-	bt.skipLoad(`^cancun\/eip4788_beacon_root\/`)
-	bt.skipLoad(`^cancun\/eip4844_blobs\/`)
-	bt.skipLoad(`^cancun\/eip7516_blobgasfee\/`)
-	bt.skipLoad(`^prague\/eip7251_consolidations`)
-	bt.skipLoad(`^prague\/eip7685_general_purpose_el_requests`)
-	bt.skipLoad(`^prague\/eip7002_el_triggerable_withdrawals`)
-	bt.skipLoad(`^prague\/eip6110_deposits`)
+	bt.skipLoad(`^shanghai/eip4895_withdrawals/`)
+	bt.skipLoad(`^cancun/eip4788_beacon_root/`)
+	bt.skipLoad(`^cancun/eip4844_blobs/`)
+	bt.skipLoad(`^cancun/eip7516_blobgasfee/`)
+	bt.skipLoad(`^prague/eip7251_consolidations`)
+	bt.skipLoad(`^prague/eip7685_general_purpose_el_requests`)
+	bt.skipLoad(`^prague/eip7002_el_triggerable_withdrawals`)
+	bt.skipLoad(`^prague/eip6110_deposits`)
 	// type 3 tx (EIP-4844) is not supported. See tests/block_test_util.go:decode()
-	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOBBASEFEE-debug\]`)
-	bt.skipLoad(`^istanbul\/eip1344_chainid\/chainid\/chainid.json\/tests\/istanbul\/eip1344_chainid\/test_chainid.py::test_chainid\[fork_Osaka-typed_transaction_3-blockchain_test_from_state_test\]`)
-	bt.skipLoad(`^prague\/eip7623_increase_calldata_cost\/.*type_3.*`)
-	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Osaka-tx_type_3-evm_code_type_LEGACY-blockchain_test-different_block\]`)
-	bt.skipLoad(`^prague\/eip7702_set_code_tx\/set_code_txs\/eoa_tx_after_set_code.json\/tests\/prague\/eip7702_set_code_tx\/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Osaka-tx_type_3-evm_code_type_LEGACY-blockchain_test-same_block\]`)
-	bt.skipLoad(`^osaka\/eip7934_block_rlp_limit\/max_block_rlp_size\/block_rlp_size_at_limit_with_all_typed_transactions.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_rlp_size_at_limit_with_all_typed_transactions\[fork_Osaka-typed_transaction_3-blockchain_test\]`)
+	bt.skipLoad(`^frontier/scenarios/scenarios/scenarios.json/tests/frontier/scenarios/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOBBASEFEE-debug\]`)
+	bt.skipLoad(`^istanbul/eip1344_chainid/chainid/chainid.json/tests/istanbul/eip1344_chainid/test_chainid.py::test_chainid\[fork_Osaka-typed_transaction_3-blockchain_test_from_state_test\]`)
+	bt.skipLoad(`^prague/eip7623_increase_calldata_cost/.*type_3.*`)
+	bt.skipLoad(`^prague/eip7702_set_code_tx/set_code_txs/eoa_tx_after_set_code.json/tests/prague/eip7702_set_code_tx/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Osaka-tx_type_3-evm_code_type_LEGACY-blockchain_test-different_block\]`)
+	bt.skipLoad(`^prague/eip7702_set_code_tx/set_code_txs/eoa_tx_after_set_code.json/tests/prague/eip7702_set_code_tx/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Osaka-tx_type_3-evm_code_type_LEGACY-blockchain_test-same_block\]`)
+	bt.skipLoad(`^osaka/eip7934_block_rlp_limit/max_block_rlp_size/block_rlp_size_at_limit_with_all_typed_transactions.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_rlp_size_at_limit_with_all_typed_transactions\[fork_Osaka-typed_transaction_3-blockchain_test\]`)
 	// Kaia cannot calculate the same block hash as Ethereum
-	bt.skipLoad(`^frontier\/scenarios\/scenarios\/scenarios.json\/tests\/frontier\/scenarios\/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOCKHASH-debug\]`)
+	bt.skipLoad(`^frontier/scenarios/scenarios/scenarios.json/tests/frontier/scenarios/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOCKHASH-debug\]`)
 	// Kaia's MaxBlockSize (10 MiB) higher than Ethereum's (8 MiB), so max_plus_1 is accepted in Kaia.
-	bt.skipLoad(`^osaka\/eip7934_block_rlp_limit\/max_block_rlp_size\/block_at_rlp_size_limit_boundary.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_at_rlp_size_limit_boundary\[fork_Osaka-blockchain_test-max_rlp_size_plus_1_byte\]`)
+	bt.skipLoad(`^osaka/eip7934_block_rlp_limit/max_block_rlp_size/block_at_rlp_size_limit_boundary.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_at_rlp_size_limit_boundary\[fork_Osaka-blockchain_test-max_rlp_size_plus_1_byte\]`)
 
 	// TODO: Skip EIP tests that are not yet supported; expect to remove them
 	bt.skipLoad(`osaka/eip7594_peerdas`)
 	bt.skipLoad(`osaka/eip7825_transaction_gas_limit_cap`)
 	bt.skipLoad(`osaka/eip7918_blob_reserve_price`)
 	// TODO: Investigate after all Osaka EIPs are applied
-	bt.skipLoad(`^frontier\/identity_precompile\/identity\/call_identity_precompile.json\/tests\/frontier\/identity_precompile\/test_identity.py::test_call_identity_precompile\[fork_Osaka-blockchain_test_from_state_test-identity_1_nonzerovalue-call_type_CALL\]`)
+	bt.skipLoad(`^frontier/identity_precompile/identity/call_identity_precompile.json/tests/frontier/identity_precompile/test_identity.py::test_call_identity_precompile\[fork_Osaka-blockchain_test_from_state_test-identity_1_nonzerovalue-call_type_CALL\]`)
 
 	bt.walk(t, executionSpecBlockTestDir, func(t *testing.T, name string, test *BlockTest) {
 		skipForks := []string{
