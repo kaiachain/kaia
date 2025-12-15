@@ -991,43 +991,35 @@ CommitTransactionLoop:
 func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAddr common.Address, vmConfig *vm.Config) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
-	isBlobTx := tx.Type() == types.TxTypeEthereumBlob
-	sc := tx.BlobTxSidecar()
-	if isBlobTx {
-		if sc == nil {
-			panic("blob transaction without blobs in miner")
+	executeTx := func() (error, *types.Receipt) {
+		receipt, _, err := bc.ApplyTransaction(env.config, &nodeAddr, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+		if err != nil {
+			if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
+				tx.MarkUnexecutable(true)
+			}
+			env.state.RevertToSnapshot(snap)
+			return err, nil
 		}
-		// Checking against blob gas limit: It's kind of ugly to perform this check here, but there
-		// isn't really a better place right now. The blob gas limit is checked at block validation time
-		// and not during execution. This means core.ApplyTransaction will not return an error if the
-		// tx has too many blobs. So we have to explicitly check it here.
-		maxBlobs := eip4844.MaxBlobsPerBlock(env.config, env.header.Number)
-		if env.blobs+len(sc.Blobs) > maxBlobs {
-			return errors.New("max data blobs reached"), nil
-		}
+		return nil, receipt
 	}
 
-	receipt, _, err := bc.ApplyTransaction(env.config, &nodeAddr, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+	isBlobTx := tx.Type() == types.TxTypeEthereumBlob
+	var receipt *types.Receipt
+	var err error
+	if isBlobTx {
+		// In the case of blob execution, tx will be overwritten with WithoutSidecar.
+		err, tx, receipt = env.commitBlobTransaction(tx, &env.sidecars, &env.blobs, executeTx)
+	} else {
+		err, receipt = executeTx()
+	}
 	if err != nil {
-		if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
-			tx.MarkUnexecutable(true)
-		}
-		env.state.RevertToSnapshot(snap)
 		return err, nil
 	}
 
-	txNoBlob := tx
-	// blob related temporary variables are updated
-	if isBlobTx {
-		txNoBlob = tx.WithoutBlobTxSidecar()
-		env.sidecars = append(env.sidecars, sc)
-		env.blobs += len(sc.Blobs)
-		*env.header.BlobGasUsed += tx.BlobGas()
-	}
 	env.tcount++
-	env.txs = append(env.txs, txNoBlob)
+	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
-	env.size += uint64(txNoBlob.Size())
+	env.size += uint64(tx.Size())
 
 	return nil, receipt.Logs
 }
@@ -1072,56 +1064,47 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			return kerrors.ErrTxGeneration, nil, nil
 		}
 
-		isBlobTx := tx.Type() == types.TxTypeEthereumBlob
-		sc := tx.BlobTxSidecar()
-		if isBlobTx {
-			if sc == nil {
-				panic("blob transaction without blobs in miner")
+		executTx := func() (error, *types.Receipt) {
+			env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
+			receipt, _, err := bc.ApplyTransaction(env.config, &nodeAddr, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+			// Bundled tx will be rejected with any receipt.Status other than success.
+			// There may be cases where a revert occurs within the EVM, which could result in an attack on a tx sender in an already executed bundle.
+			if err != nil || receipt.Status != types.ReceiptStatusSuccessful {
+				if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
+					markAllTxUnexecutable()
+				}
+				receiptStatus := ""
+				if receipt != nil {
+					receiptStatus = strconv.FormatUint(uint64(receipt.Status), 10)
+				}
+				logger.Warn("ApplyTransaction error, restoring env",
+					"blockNum", env.header.Number.String(), "txHash", tx.Hash().String(),
+					"error", err, "receiptStatus", receiptStatus,
+				)
+				restoreEnv()
+				if err == nil {
+					err = kerrors.ErrRevertedBundleByVmErr
+				}
+				return err, nil
 			}
-			// Checking against blob gas limit: It's kind of ugly to perform this check here, but there
-			// isn't really a better place right now. The blob gas limit is checked at block validation time
-			// and not during execution. This means core.ApplyTransaction will not return an error if the
-			// tx has too many blobs. So we have to explicitly check it here.
-			maxBlobs := eip4844.MaxBlobsPerBlock(env.config, env.header.Number)
-			if env.blobs+len(sc.Blobs) > maxBlobs {
-				return errors.New("max data blobs reached"), nil, nil
-			}
+			return nil, receipt
 		}
 
-		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
-		receipt, _, err := bc.ApplyTransaction(env.config, &nodeAddr, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
-		// Bundled tx will be rejected with any receipt.Status other than success.
-		// There may be cases where a revert occurs within the EVM, which could result in an attack on a tx sender in an already executed bundle.
-		if err != nil || receipt.Status != types.ReceiptStatusSuccessful {
-			if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
-				markAllTxUnexecutable()
-			}
-			receiptStatus := ""
-			if receipt != nil {
-				receiptStatus = strconv.FormatUint(uint64(receipt.Status), 10)
-			}
-			logger.Warn("ApplyTransaction error, restoring env",
-				"blockNum", env.header.Number.String(), "txHash", tx.Hash().String(),
-				"error", err, "receiptStatus", receiptStatus,
-			)
-			restoreEnv()
-			if err == nil {
-				err = kerrors.ErrRevertedBundleByVmErr
-			}
+		isBlobTx := tx.Type() == types.TxTypeEthereumBlob
+		var receipt *types.Receipt
+		if isBlobTx {
+			// In the case of blob execution, tx will be overwritten with WithoutSidecar.
+			err, tx, receipt = env.commitBlobTransaction(tx, &sidecars, &blobs, executTx)
+		} else {
+			err, receipt = executTx()
+		}
+		if err != nil {
 			return err, tx, nil
 		}
 
-		txNoBlob := tx
-		// blob related temporary variables are updated
-		if isBlobTx {
-			txNoBlob = tx.WithoutBlobTxSidecar()
-			sidecars = append(sidecars, sc)
-			blobs += len(sc.Blobs)
-			*env.header.BlobGasUsed += tx.BlobGas()
-		}
 		env.tcount++
-		totalTxSize += uint64(txNoBlob.Size())
-		txs = append(txs, txNoBlob)
+		totalTxSize += uint64(tx.Size())
+		txs = append(txs, tx)
 		receipts = append(receipts, receipt)
 		logs = append(logs, receipt.Logs...)
 	}
@@ -1133,6 +1116,34 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	env.sidecars = append(env.sidecars, sidecars...)
 	env.blobs += blobs
 	return nil, nil, logs
+}
+
+// commitBlobTransaction is a wrapper for executeTx.
+// It updates the blob-specific env for the argument tx and returns tx.WithoutBlobTxSidecar().
+func (env *Task) commitBlobTransaction(tx *types.Transaction, sidecars *[]*types.BlobTxSidecar, blobs *int, executeTx func() (error, *types.Receipt)) (err error, executedTx *types.Transaction, receipt *types.Receipt) {
+	sc := tx.BlobTxSidecar()
+	if sc == nil {
+		panic("blob transaction without blobs in miner")
+	}
+	// Checking against blob gas limit: It's kind of ugly to perform this check here, but there
+	// isn't really a better place right now. The blob gas limit is checked at block validation time
+	// and not during execution. This means core.ApplyTransaction will not return an error if the
+	// tx has too many blobs. So we have to explicitly check it here.
+	maxBlobs := eip4844.MaxBlobsPerBlock(env.config, env.header.Number)
+	if env.blobs+len(sc.Blobs) > maxBlobs {
+		return errors.New("max data blobs reached"), tx, nil
+	}
+
+	err, receipt = executeTx()
+	if err != nil {
+		return err, tx, nil
+	}
+
+	txNoBlob := tx.WithoutBlobTxSidecar()
+	*sidecars = append(*sidecars, sc)
+	*blobs += len(sc.Blobs)
+	*env.header.BlobGasUsed += tx.BlobGas()
+	return nil, txNoBlob, receipt
 }
 
 func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
