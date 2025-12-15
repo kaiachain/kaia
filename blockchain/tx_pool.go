@@ -347,6 +347,7 @@ func (pool *TxPool) loop() {
 		case ev := <-pool.chainHeadCh:
 			if ev.Block != nil {
 				pool.mu.Lock()
+				pool.saveAndPruneBlobStorage(ev.Block)
 				currBlock := pool.chain.CurrentBlock()
 				if ev.Block.Root() != currBlock.Root() {
 					pool.mu.Unlock()
@@ -500,6 +501,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 			}
 		}
 	}
+
 	// Initialize the internal state to the current head
 	if newHead == nil {
 		newHead = pool.chain.CurrentBlock().Header() // Special case during testing
@@ -1965,6 +1967,14 @@ func (pool *TxPool) RegisterTxPoolModule(modules ...kaiax.TxPoolModule) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 	pool.modules = modules
+}
+
+// saveAndPruneBlobStorage saves and prunes blob storage.
+func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
+	if pool.blobStorage == nil || newHead == nil {
+		return
+	}
+	pool.blobStorage.Prune(newHead.Number())
 }
 
 // addressByHeartbeat is an account address tagged with its last activity timestamp.

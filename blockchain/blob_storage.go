@@ -126,6 +126,12 @@ func (b *BlobStorage) Get(blockNumber *big.Int, txIndex int) (*types.BlobTxSidec
 }
 
 // Prune removes all buckets that are older than `retentionBucketThreshold`.
+// Example:
+// at 1814400 +  500: do nothing
+// at 1814400 + 1000: prune [0, 999]
+// at 1814400 + 1500: do nothing
+// at 1814400 + 2000: prune [0, 999], [1000, 1999]
+// at 1814400 + 2500: do nothing
 func (b *BlobStorage) Prune(current *big.Int) error {
 	if current == nil {
 		return ErrBlobBlockNumberNil
@@ -137,9 +143,13 @@ func (b *BlobStorage) Prune(current *big.Int) error {
 		return nil
 	}
 
+	if new(big.Int).Mod(retentionBlockNumber, big.NewInt(BLOCKS_PER_BUCKET)) != big.NewInt(0) {
+		return nil
+	}
+
 	// Calculate retention bucket number
 	retentionBucketThreshold := b.getBucketIdx(retentionBlockNumber)
-	if retentionBucketThreshold == nil {
+	if retentionBucketThreshold == nil || retentionBucketThreshold.Sign() <= 0 {
 		// no target blocks to prune
 		return nil
 	}
@@ -176,7 +186,6 @@ func (b *BlobStorage) Prune(current *big.Int) error {
 			subDirPath := filepath.Join(b.config.baseDir, entry.Name())
 			dirsToDelete = append(dirsToDelete, subDirPath)
 		}
-
 	}
 
 	// Remove directories
