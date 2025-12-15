@@ -82,6 +82,7 @@ var (
 	minerBalanceGauge       = metrics.NewRegisteredGauge("miner/balance", nil)
 
 	blockBaseFee              = metrics.NewRegisteredGauge("miner/block/mining/basefee", nil)
+	blobsGauge                = metrics.NewRegisteredGauge("miner/block/mining/blobs", nil)
 	blockMiningTimer          = kaiametrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
 	blockMiningExecuteTxTimer = kaiametrics.NewRegisteredHybridTimer("miner/block/execute/time", nil)
 	blockMiningCommitTxTimer  = kaiametrics.NewRegisteredHybridTimer("miner/block/commit/time", nil)
@@ -668,6 +669,7 @@ func (self *worker) commitNewWork() {
 			if header.BaseFee != nil {
 				blockBaseFee.Update(header.BaseFee.Int64() / int64(params.Gkei))
 			}
+			blobsGauge.Update(int64(work.blobs))
 			blockMiningTimer.Update(blockMiningTime)
 			blockMiningCommitTxTimer.Update(commitTxTime)
 			blockMiningExecuteTxTimer.Update(commitTxTime - trieAccess)
