@@ -43,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -258,7 +259,7 @@ type TxPool struct {
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
 // transactions from the network.
-func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain blockChain, govModule GovModule) *TxPool {
+func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, dbConfig *database.DBConfig, chain blockChain, govModule GovModule) *TxPool {
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
 
@@ -300,8 +301,8 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	// Subscribe events from blockchain
 	pool.chainHeadSub = pool.chain.SubscribeChainHeadEvent(pool.chainHeadCh)
 
-	// TODO-Kaia: add blob storage
-	// pool.storage = NewBlobStorage(config.BlobStorageConfig)
+	// Initialize blob storage
+	pool.blobStorage = NewBlobStorage(DefaultBlobStorageConfig(dbConfig.Dir))
 
 	// Start the event loop and return
 	pool.wg.Add(3)

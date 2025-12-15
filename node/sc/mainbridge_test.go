@@ -100,7 +100,7 @@ func testTxPool(t *testing.T, dataDir string, bc *blockchain.BlockChain) *blockc
 	blockchain.DefaultTxPoolConfig.Journal = path.Join(dataDir, blockchain.DefaultTxPoolConfig.Journal)
 	mockGov := gov_mock.NewMockGovModule(gomock.NewController(t))
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{UnitPrice: bc.Config().UnitPrice}).AnyTimes()
-	return blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bc.Config(), bc, mockGov)
+	return blockchain.NewTxPool(blockchain.DefaultTxPoolConfig, bc.Config(), &database.DBConfig{}, bc, mockGov)
 }
 
 // TestCreateDB tests creation of chain database and proper working of database operation.
