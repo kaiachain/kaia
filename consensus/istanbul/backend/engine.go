@@ -98,6 +98,10 @@ var (
 	errInternalError = errors.New("internal error")
 	// errPendingNotAllowed is returned when pending block is not allowed.
 	errPendingNotAllowed = errors.New("pending is not allowed")
+	// errNoBlobSidecarForBlobTx is returned if the blob sidecar is not found for a blob transaction.
+	errNoBlobSidecarForBlobTx = errors.New("no blob sidecar for blob transaction")
+	// errInvalidBlobTxWithSidecar is returned if the blob transaction has an invalid sidecar.
+	errInvalidBlobTxWithSidecar = errors.New("invalid blob transaction with sidecar")
 )
 
 var (

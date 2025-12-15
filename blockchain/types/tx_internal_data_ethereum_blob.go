@@ -221,6 +221,45 @@ func (sc *BlobTxSidecar) Copy() *BlobTxSidecar {
 	}
 }
 
+// ValidateWithBlobTx validates the blob transaction with the sidecar.
+// This method also verifies the validity of the proof.
+func (sc *BlobTxSidecar) ValidateWithBlobTx(tx *TxInternalDataEthereumBlob) error {
+	// Ensure the number of items in the blob transaction and various side
+	// data match up before doing any expensive validations
+	hashes := tx.BlobHashes
+	if len(hashes) == 0 {
+		return errors.New("blobless blob transaction")
+	}
+	if len(hashes) > params.BlobTxMaxBlobs {
+		return fmt.Errorf("too many blobs in transaction: have %d, permitted %d", len(hashes), params.BlobTxMaxBlobs)
+	}
+	if len(sc.Blobs) != len(hashes) {
+		return fmt.Errorf("invalid number of %d blobs compared to %d blob hashes", len(sc.Blobs), len(hashes))
+	}
+	if err := sc.ValidateBlobCommitmentHashes(hashes); err != nil {
+		return err
+	}
+	// Fork-specific sidecar checks, including proof verification.
+	if sc.Version == BlobSidecarVersion1 {
+		err := validateBlobSidecarOsaka(sc, hashes)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Kaia rejects sidecar.Version = 0.
+		// ref: https://github.com/kaiachain/kips/blob/main/KIPs/kip-279.md#reject-sidecar-v0
+		return fmt.Errorf("blob sidecar version %d not supported", sc.Version)
+	}
+	return nil
+}
+
+func validateBlobSidecarOsaka(sidecar *BlobTxSidecar, hashes []common.Hash) error {
+	if len(sidecar.Proofs) != len(hashes)*kzg4844.CellProofsPerBlob {
+		return fmt.Errorf("invalid number of %d blob proofs expected %d", len(sidecar.Proofs), len(hashes)*kzg4844.CellProofsPerBlob)
+	}
+	return kzg4844.VerifyCellProofs(sidecar.Blobs, sidecar.Commitments, sidecar.Proofs)
+}
+
 // blobTxWithBlobs represents blob tx with its corresponding sidecar.
 // This is an interface because sidecars are versioned.
 type blobTxWithBlobs interface {
