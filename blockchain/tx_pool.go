@@ -1586,7 +1586,7 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 // GetBlobSidecarFromStorage retrieves a blob sidecar from blob storage by block number and transaction index.
 func (pool *TxPool) GetBlobSidecarFromStorage(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error) {
 	if pool.blobStorage == nil {
-		return nil, fmt.Errorf("blob storage not initialized")
+		return nil, errors.New("blob storage not initialized")
 	}
 	return pool.blobStorage.Get(blockNum, txIndex)
 }
