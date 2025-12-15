@@ -1578,6 +1578,14 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 // If BlockChain.parallelDBWrite is true, it calls writeBlockWithStateParallel.
 // If not, it calls writeBlockWithStateSerial.
 func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (WriteResult, error) {
+	// Remove the blob sidecar from the transactions.
+	// This prevents the sidecar from being saved to the database.
+	// It is not necessary to remove the sidecar from the transactions
+	// if the block does not contain any blob transactions.
+	if block.IncludeBlobTx() {
+		block = block.WithoutBlobTxSidecar()
+	}
+
 	var status WriteResult
 	var err error
 	if bc.parallelDBWrite {

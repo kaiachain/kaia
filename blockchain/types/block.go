@@ -409,6 +409,25 @@ func (b *Block) WithBody(transactions []*Transaction) *Block {
 	return block
 }
 
+// WithoutBlobTxSidecar returns a new block with the blob sidecar removed from the transactions.
+func (b *Block) WithoutBlobTxSidecar() *Block {
+	transactions := make([]*Transaction, len(b.transactions))
+	for i, tx := range b.transactions {
+		transactions[i] = tx.WithoutBlobTxSidecar()
+	}
+	return b.WithBody(transactions)
+}
+
+// IncludeBlobTx returns true if the block contains any blob transactions.
+func (b *Block) IncludeBlobTx() bool {
+	for _, tx := range b.transactions {
+		if tx.Type() == TxTypeEthereumBlob {
+			return true
+		}
+	}
+	return false
+}
+
 // Hash returns the keccak256 hash of b's header.
 // The hash is computed on the first call and cached thereafter.
 func (b *Block) Hash() common.Hash {

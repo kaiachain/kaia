@@ -430,6 +430,14 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			block := result.Block
 			work := result.Task
 
+			// Remove the Sidecar from the blobTx just before writing the block.
+			// This prevents the sidecar from being broadcast.
+			// It is not necessary to remove the sidecar from the transactions
+			// if the block does not contain any blob transactions.
+			if block.IncludeBlobTx() {
+				block = block.WithoutBlobTxSidecar()
+			}
+
 			// Update the block hash in all logs since it is now available and not when the
 			// receipt/log of individual transactions were created.
 			for _, r := range work.receipts {
@@ -1007,8 +1015,7 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAdd
 	var receipt *types.Receipt
 	var err error
 	if isBlobTx {
-		// In the case of blob execution, tx will be overwritten with WithoutSidecar.
-		err, tx, receipt = env.commitBlobTransaction(tx, &env.sidecars, &env.blobs, executeTx)
+		err, receipt = env.commitBlobTransaction(tx, &env.sidecars, &env.blobs, executeTx)
 	} else {
 		err, receipt = executeTx()
 	}
@@ -1093,8 +1100,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		isBlobTx := tx.Type() == types.TxTypeEthereumBlob
 		var receipt *types.Receipt
 		if isBlobTx {
-			// In the case of blob execution, tx will be overwritten with WithoutSidecar.
-			err, tx, receipt = env.commitBlobTransaction(tx, &sidecars, &blobs, executTx)
+			err, receipt = env.commitBlobTransaction(tx, &sidecars, &blobs, executTx)
 		} else {
 			err, receipt = executTx()
 		}
@@ -1119,11 +1125,12 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 }
 
 // commitBlobTransaction is a wrapper for executeTx.
-// It updates the blob-specific env for the argument tx and returns tx.WithoutBlobTxSidecar().
-func (env *Task) commitBlobTransaction(tx *types.Transaction, sidecars *[]*types.BlobTxSidecar, blobs *int, executeTx func() (error, *types.Receipt)) (err error, executedTx *types.Transaction, receipt *types.Receipt) {
+// NOTE: Kaia keeps the blob sidecar until consensus is reached and omits it
+// when broadcasting or writing to the database, so tx.WithoutBlobTxSidecar() is not called.
+func (env *Task) commitBlobTransaction(tx *types.Transaction, sidecars *[]*types.BlobTxSidecar, blobs *int, executeTx func() (error, *types.Receipt)) (err error, receipt *types.Receipt) {
 	sc := tx.BlobTxSidecar()
 	if sc == nil {
-		panic("blob transaction without blobs in miner")
+		return errors.New("blob transaction without blobs in miner"), nil
 	}
 	// Checking against blob gas limit: It's kind of ugly to perform this check here, but there
 	// isn't really a better place right now. The blob gas limit is checked at block validation time
@@ -1131,19 +1138,18 @@ func (env *Task) commitBlobTransaction(tx *types.Transaction, sidecars *[]*types
 	// tx has too many blobs. So we have to explicitly check it here.
 	maxBlobs := eip4844.MaxBlobsPerBlock(env.config, env.header.Number)
 	if env.blobs+len(sc.Blobs) > maxBlobs {
-		return errors.New("max data blobs reached"), tx, nil
+		return errors.New("max data blobs reached"), nil
 	}
 
 	err, receipt = executeTx()
 	if err != nil {
-		return err, tx, nil
+		return err, nil
 	}
 
-	txNoBlob := tx.WithoutBlobTxSidecar()
 	*sidecars = append(*sidecars, sc)
 	*blobs += len(sc.Blobs)
 	*env.header.BlobGasUsed += tx.BlobGas()
-	return nil, txNoBlob, receipt
+	return nil, receipt
 }
 
 func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
