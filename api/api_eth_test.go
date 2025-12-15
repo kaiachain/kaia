@@ -3707,3 +3707,222 @@ func TestEthAPI_GetBlobSidecarsByTxHash(t *testing.T) {
 		})
 	}
 }
+
+// TestEthAPI_FeeHistory tests the FeeHistory method.
+func TestEthAPI_FeeHistory(t *testing.T) {
+	testcases := []struct {
+		name              string
+		blockCount        DecimalOrHex
+		lastBlock         rpc.BlockNumber
+		rewardPercentiles []float64
+		setupMock         func(*mock_api.MockBackend)
+		expected          *FeeHistoryResult
+		expectedErr       string
+	}{
+		{
+			name:              "success with valid parameters",
+			blockCount:        DecimalOrHex(2),
+			lastBlock:         rpc.LatestBlockNumber,
+			rewardPercentiles: []float64{50.0, 90.0},
+			setupMock: func(mockBackend *mock_api.MockBackend) {
+				oldestBlock := big.NewInt(100)
+				reward := [][]*big.Int{
+					{big.NewInt(1000000000), big.NewInt(2000000000)},
+					{big.NewInt(1500000000), big.NewInt(2500000000)},
+				}
+				baseFee := []*big.Int{
+					big.NewInt(25000000000),
+					big.NewInt(30000000000),
+				}
+				gasUsedRatio := []float64{0.5, 0.6}
+				mockBackend.EXPECT().FeeHistory(
+					gomock.Any(),
+					uint64(2),
+					rpc.LatestBlockNumber,
+					[]float64{50.0, 90.0},
+				).Return(oldestBlock, reward, baseFee, gasUsedRatio, nil)
+			},
+			expected: &FeeHistoryResult{
+				OldestBlock: (*hexutil.Big)(big.NewInt(100)),
+				Reward: [][]*hexutil.Big{
+					{(*hexutil.Big)(big.NewInt(1000000000)), (*hexutil.Big)(big.NewInt(2000000000))},
+					{(*hexutil.Big)(big.NewInt(1500000000)), (*hexutil.Big)(big.NewInt(2500000000))},
+				},
+				BaseFee: []*hexutil.Big{
+					(*hexutil.Big)(big.NewInt(25000000000)),
+					(*hexutil.Big)(big.NewInt(30000000000)),
+				},
+				BlobBaseFee: []*hexutil.Big{
+					(*hexutil.Big)(eip4844.CalcBlobFee(big.NewInt(25000000000))),
+					(*hexutil.Big)(eip4844.CalcBlobFee(big.NewInt(30000000000))),
+				},
+				GasUsedRatio: []float64{0.5, 0.6},
+			},
+		},
+		{
+			name:              "success with no baseFee",
+			blockCount:        DecimalOrHex(1),
+			lastBlock:         rpc.BlockNumber(100),
+			rewardPercentiles: nil,
+			setupMock: func(mockBackend *mock_api.MockBackend) {
+				oldestBlock := big.NewInt(100)
+				var reward [][]*big.Int
+				var baseFee []*big.Int
+				gasUsedRatio := []float64{0.5}
+				mockBackend.EXPECT().FeeHistory(
+					gomock.Any(),
+					uint64(1),
+					rpc.BlockNumber(100),
+					[]float64(nil),
+				).Return(oldestBlock, reward, baseFee, gasUsedRatio, nil)
+			},
+			expected: &FeeHistoryResult{
+				OldestBlock:  (*hexutil.Big)(big.NewInt(100)),
+				Reward:       nil,
+				BaseFee:      nil,
+				BlobBaseFee:  nil,
+				GasUsedRatio: []float64{0.5},
+			},
+		},
+		{
+			name:              "error when FeeHistory fails",
+			blockCount:        DecimalOrHex(1),
+			lastBlock:         rpc.LatestBlockNumber,
+			rewardPercentiles: []float64{50.0},
+			setupMock: func(mockBackend *mock_api.MockBackend) {
+				mockBackend.EXPECT().FeeHistory(
+					gomock.Any(),
+					uint64(1),
+					rpc.LatestBlockNumber,
+					[]float64{50.0},
+				).Return(nil, nil, nil, nil, errors.New("fee history error"))
+			},
+			expectedErr: "fee history error",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl, mockBackend, api := testInitForEthApi(t)
+			defer mockCtrl.Finish()
+
+			tc.setupMock(mockBackend)
+
+			result, err := api.FeeHistory(context.Background(), tc.blockCount, tc.lastBlock, tc.rewardPercentiles)
+
+			if tc.expectedErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedErr)
+				assert.Nil(t, result)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				require.NotNil(t, tc.expected)
+
+				assert.Equal(t, tc.expected.OldestBlock, result.OldestBlock)
+				assert.Equal(t, tc.expected.GasUsedRatio, result.GasUsedRatio)
+
+				if tc.expected.Reward != nil {
+					require.NotNil(t, result.Reward)
+					assert.Equal(t, len(tc.expected.Reward), len(result.Reward))
+					for i, expectedReward := range tc.expected.Reward {
+						require.NotNil(t, result.Reward[i])
+						assert.Equal(t, len(expectedReward), len(result.Reward[i]))
+						for j, expectedVal := range expectedReward {
+							assert.Equal(t, expectedVal, result.Reward[i][j])
+						}
+					}
+				} else {
+					assert.Nil(t, result.Reward)
+				}
+
+				if tc.expected.BaseFee != nil {
+					require.NotNil(t, result.BaseFee)
+					require.NotNil(t, result.BlobBaseFee)
+					assert.Equal(t, len(tc.expected.BaseFee), len(result.BaseFee))
+					assert.Equal(t, len(tc.expected.BlobBaseFee), len(result.BlobBaseFee))
+					for i, expectedBaseFee := range tc.expected.BaseFee {
+						assert.Equal(t, expectedBaseFee, result.BaseFee[i])
+						assert.Equal(t, tc.expected.BlobBaseFee[i], result.BlobBaseFee[i])
+					}
+				} else {
+					assert.Nil(t, result.BaseFee)
+					assert.Nil(t, result.BlobBaseFee)
+				}
+			}
+		})
+	}
+}
+
+// TestEthAPI_BlobBaseFee tests the BlobBaseFee method.
+func TestEthAPI_BlobBaseFee(t *testing.T) {
+	testcases := []struct {
+		name        string
+		setupMock   func(*mock_api.MockBackend)
+		expected    *hexutil.Big
+		expectedErr string
+	}{
+		{
+			name: "success with valid baseFee",
+			setupMock: func(mockBackend *mock_api.MockBackend) {
+				baseFee := big.NewInt(25000000000) // 25 gwei
+				header := &types.Header{
+					Number:  big.NewInt(100),
+					BaseFee: baseFee,
+				}
+				mockBackend.EXPECT().HeaderByNumber(
+					gomock.Any(),
+					rpc.LatestBlockNumber,
+				).Return(header, nil)
+			},
+			expected: (*hexutil.Big)(eip4844.CalcBlobFee(big.NewInt(25000000000))),
+		},
+		{
+			name: "success with zero baseFee",
+			setupMock: func(mockBackend *mock_api.MockBackend) {
+				baseFee := big.NewInt(0)
+				header := &types.Header{
+					Number:  big.NewInt(100),
+					BaseFee: baseFee,
+				}
+				mockBackend.EXPECT().HeaderByNumber(
+					gomock.Any(),
+					rpc.LatestBlockNumber,
+				).Return(header, nil)
+			},
+			expected: (*hexutil.Big)(eip4844.CalcBlobFee(big.NewInt(0))),
+		},
+		{
+			name: "error when HeaderByNumber fails",
+			setupMock: func(mockBackend *mock_api.MockBackend) {
+				mockBackend.EXPECT().HeaderByNumber(
+					gomock.Any(),
+					rpc.LatestBlockNumber,
+				).Return(nil, errors.New("header not found"))
+			},
+			expectedErr: "header not found",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl, mockBackend, api := testInitForEthApi(t)
+			defer mockCtrl.Finish()
+
+			tc.setupMock(mockBackend)
+
+			result, err := api.BlobBaseFee(context.Background())
+
+			if tc.expectedErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedErr)
+				assert.Nil(t, result)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				require.NotNil(t, tc.expected)
+				assert.Equal(t, tc.expected.ToInt(), result.ToInt())
+			}
+		})
+	}
+}

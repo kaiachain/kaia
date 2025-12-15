@@ -29,6 +29,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -73,6 +74,7 @@ type FeeHistoryResult struct {
 	OldestBlock  *hexutil.Big     `json:"oldestBlock"`
 	Reward       [][]*hexutil.Big `json:"reward,omitempty"`
 	BaseFee      []*hexutil.Big   `json:"baseFeePerGas,omitempty"`
+	BlobBaseFee  []*hexutil.Big   `json:"blobBaseFeePerGas,omitempty"`
 	GasUsedRatio []float64        `json:"gasUsedRatio"`
 }
 
@@ -97,8 +99,10 @@ func (s *KaiaAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastB
 	}
 	if baseFee != nil {
 		results.BaseFee = make([]*hexutil.Big, len(baseFee))
+		results.BlobBaseFee = make([]*hexutil.Big, len(baseFee))
 		for i, v := range baseFee {
 			results.BaseFee[i] = (*hexutil.Big)(v)
+			results.BlobBaseFee[i] = (*hexutil.Big)(eip4844.CalcBlobFee(v))
 		}
 	}
 	return results, nil
