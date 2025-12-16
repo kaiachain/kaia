@@ -443,7 +443,7 @@ func (mr *MockPeerMockRecorder) RegisterConsensusMsgCode(arg0 interface{}) *gomo
 }
 
 // RequestBlobSidecars mocks base method.
-func (m *MockPeer) RequestBlobSidecars(arg0 []common.Hash) error {
+func (m *MockPeer) RequestBlobSidecars(arg0 []blobSidecarsRequestData) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RequestBlobSidecars", arg0)
 	ret0, _ := ret[0].(error)
