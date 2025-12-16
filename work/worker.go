@@ -1071,7 +1071,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			return kerrors.ErrTxGeneration, nil, nil
 		}
 
-		executTx := func() (error, *types.Receipt) {
+		executeTx := func() (error, *types.Receipt) {
 			env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
 			receipt, _, err := bc.ApplyTransaction(env.config, &nodeAddr, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 			// Bundled tx will be rejected with any receipt.Status other than success.
@@ -1100,9 +1100,9 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		isBlobTx := tx.Type() == types.TxTypeEthereumBlob
 		var receipt *types.Receipt
 		if isBlobTx {
-			err, receipt = env.commitBlobTransaction(tx, &sidecars, &blobs, executTx)
+			err, receipt = env.commitBlobTransaction(tx, &sidecars, &blobs, executeTx)
 		} else {
-			err, receipt = executTx()
+			err, receipt = executeTx()
 		}
 		if err != nil {
 			return err, tx, nil
