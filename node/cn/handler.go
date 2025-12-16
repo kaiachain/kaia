@@ -1220,14 +1220,9 @@ func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 }
 
 func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
-	// A batch of blob sidecars arrived to one of our previous requests
 	var sidecars []*types.BlobTxSidecar
 	if err := msg.Decode(&sidecars); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
-	}
-	// Deliver all to the downloader
-	if err := pm.downloader.DeliverBlobSidecars(p.GetID(), sidecars); err != nil {
-		logger.Debug("Failed to deliver staking information", "err", err)
 	}
 	return nil
 }

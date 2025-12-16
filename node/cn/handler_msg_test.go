@@ -775,21 +775,6 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		assert.True(t, strings.Contains(err.Error(), errCode(ErrDecode).String()))
 		mockCtrl.Finish()
 	}
-
-	{
-		mockCtrl, mockPeer, mockDownloader, pm := preparePeerAndDownloader(t)
-
-		sidecars := []*types.BlobTxSidecar{
-			generateTestSidecar(hashes[0]),
-			generateTestSidecar(hashes[1]),
-		}
-		mockDownloader.EXPECT().DeliverBlobSidecars(gomock.Eq(nodeids[0].String()), gomock.Eq(sidecars)).Times(1).Return(expectedErr)
-
-		msg := generateMsg(t, BlobSidecarsMsg, sidecars)
-		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
-		assert.NoError(t, err)
-		mockCtrl.Finish()
-	}
 }
 
 // generateTestSidecar generates a test BlobTxSidecar for a given transaction hash.

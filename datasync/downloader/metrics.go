@@ -52,7 +52,4 @@ var (
 	stateDropMeter = metrics.NewRegisteredMeter("klay/downloader/states/drop", nil)
 
 	throttleCounter = metrics.NewRegisteredCounter("klay/downloader/throttle", nil)
-
-	blobSidecarsInMeter   = metrics.NewRegisteredMeter("klay/downloader/blobsidecars/in", nil)
-	blobSidecarsDropMeter = metrics.NewRegisteredMeter("klay/downloader/blobsidecars/drop", nil)
 )

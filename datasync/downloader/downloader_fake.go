@@ -52,9 +52,6 @@ func (*FakeDownloader) DeliverStakingInfos(id string, stakingInfos []*staking.P2
 func (*FakeDownloader) DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) error {
 	return nil
 }
-func (*FakeDownloader) DeliverBlobSidecars(id string, sidecars []*types.BlobTxSidecar) error {
-	return nil
-}
 
 func (*FakeDownloader) Terminate()          {}
 func (*FakeDownloader) Synchronising() bool { return false }
