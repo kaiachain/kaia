@@ -246,12 +246,6 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return err
 	}
 
-	for _, module := range sb.consensusModules {
-		if err := module.VerifyHeader(header); err != nil {
-			return err
-		}
-	}
-
 	// Verify the existence / non-existence of osaka-specific header fields
 	osaka := chain.Config().IsOsakaForkEnabled(header.Number)
 	if !osaka {
@@ -268,6 +262,13 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 			}
 		}
 	}
+
+	for _, module := range sb.consensusModules {
+		if err := module.VerifyHeader(header); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
