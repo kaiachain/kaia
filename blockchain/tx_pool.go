@@ -70,6 +70,8 @@ const (
 	txMsgChSize = 100
 	// txFeedChSize is the number of transactions can be queued for event feed.
 	txFeedChSize = 100
+	// missingBlobSidecarsChSize is the number of missing blob sidecars can be queued for event feed.
+	missingBlobSidecarsChSize = 100
 )
 
 var (
@@ -255,6 +257,8 @@ type TxPool struct {
 	txMsgCh  chan types.Transactions // A buffer for async tx intake via AddRemotes
 	txFeedCh chan types.Transactions // A buffer for async tx event emission via txFeed
 
+	missingBlobSidecarsCh chan *MissingBlobSidecar // A buffer for async missing blob sidecars event emission
+
 	rules params.Rules // Fork indicator
 
 	blobStorage *BlobStorage
@@ -262,9 +266,6 @@ type TxPool struct {
 	govModule GovModule
 
 	modules []kaiax.TxPoolModule
-
-	missingBlobSidecars   []*MissingBlobSidecar
-	missingBlobSidecarsMu sync.RWMutex
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -277,21 +278,22 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, dbConfig *d
 
 	// Create the transaction pool with its initial settings
 	pool := &TxPool{
-		config:       config,
-		chainconfig:  chainconfig,
-		chain:        chain,
-		signer:       types.LatestSignerForChainID(chainconfig.ChainID),
-		pending:      make(map[common.Address]*txList),
-		queue:        make(map[common.Address]*txList),
-		beats:        make(map[common.Address]time.Time),
-		all:          newTxLookup(),
-		pendingNonce: make(map[common.Address]uint64),
-		chainHeadCh:  make(chan ChainHeadEvent, chainHeadChanSize),
-		gasPrice:     new(big.Int).SetUint64(pset.UnitPrice),
-		blobBaseFee:  new(big.Int).SetUint64(params.ZeroBaseFee),
-		txMsgCh:      make(chan types.Transactions, txMsgChSize),
-		txFeedCh:     make(chan types.Transactions, txFeedChSize),
-		govModule:    govModule,
+		config:                config,
+		chainconfig:           chainconfig,
+		chain:                 chain,
+		signer:                types.LatestSignerForChainID(chainconfig.ChainID),
+		pending:               make(map[common.Address]*txList),
+		queue:                 make(map[common.Address]*txList),
+		beats:                 make(map[common.Address]time.Time),
+		all:                   newTxLookup(),
+		pendingNonce:          make(map[common.Address]uint64),
+		chainHeadCh:           make(chan ChainHeadEvent, chainHeadChanSize),
+		gasPrice:              new(big.Int).SetUint64(pset.UnitPrice),
+		blobBaseFee:           new(big.Int).SetUint64(params.ZeroBaseFee),
+		txMsgCh:               make(chan types.Transactions, txMsgChSize),
+		txFeedCh:              make(chan types.Transactions, txFeedChSize),
+		missingBlobSidecarsCh: make(chan *MissingBlobSidecar, missingBlobSidecarsChSize),
+		govModule:             govModule,
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(pool.all)
@@ -1979,31 +1981,16 @@ func (pool *TxPool) RegisterTxPoolModule(modules ...kaiax.TxPoolModule) {
 	pool.modules = modules
 }
 
-func (pool *TxPool) addMissingBlobSidecars(sidecars []*MissingBlobSidecar) {
-	pool.missingBlobSidecarsMu.Lock()
-	defer pool.missingBlobSidecarsMu.Unlock()
-	pool.missingBlobSidecars = append(pool.missingBlobSidecars, sidecars...)
+func (pool *TxPool) sendMissingBlobSidecar(sidecar *MissingBlobSidecar) {
+	select {
+	case pool.missingBlobSidecarsCh <- sidecar:
+	default:
+		logger.Debug("Missing blob sidecars channel is full, dropping notification", "txHash", sidecar.TxHash)
+	}
 }
 
-func (pool *TxPool) GetMissingBlobSidecars(maxCount int) []*MissingBlobSidecar {
-	// HY-TODO: should replace with a channel to avoid blocking the main thread?
-	pool.missingBlobSidecarsMu.RLock()
-	defer pool.missingBlobSidecarsMu.RUnlock()
-
-	if len(pool.missingBlobSidecars) == 0 {
-		return nil
-	}
-
-	count := len(pool.missingBlobSidecars)
-	if maxCount > 0 && count > maxCount {
-		count = maxCount
-	}
-
-	requests := make([]*MissingBlobSidecar, count)
-	copy(requests, pool.missingBlobSidecars[:count])
-	pool.missingBlobSidecars = pool.missingBlobSidecars[count:]
-
-	return requests
+func (pool *TxPool) SubscribeMissingBlobSidecars() <-chan *MissingBlobSidecar {
+	return pool.missingBlobSidecarsCh
 }
 
 func (pool *TxPool) SaveMissingBlobSidecar(blockNum *big.Int, txIndex int, txHash common.Hash, sidecar *types.BlobTxSidecar) error {
@@ -2054,12 +2041,10 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 
 		// missing blob sidecar is registered to be fetched later
 		// protocol manager will fetch the missing blob sidecars from the peer
-		pool.addMissingBlobSidecars([]*MissingBlobSidecar{
-			{
-				BlockNum: newHead.Number(),
-				TxIndex:  i,
-				TxHash:   tx.Hash(),
-			},
+		pool.sendMissingBlobSidecar(&MissingBlobSidecar{
+			BlockNum: newHead.Number(),
+			TxIndex:  i,
+			TxHash:   tx.Hash(),
 		})
 
 		// HY-TODO: what about blob from istanbul p2p?

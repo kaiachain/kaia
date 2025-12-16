@@ -140,20 +140,6 @@ func (mr *MockTxPoolMockRecorder) GetBlobSidecarFromStorage(arg0, arg1 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecarFromStorage", reflect.TypeOf((*MockTxPool)(nil).GetBlobSidecarFromStorage), arg0, arg1)
 }
 
-// GetMissingBlobSidecars mocks base method.
-func (m *MockTxPool) GetMissingBlobSidecars(arg0 int) []*blockchain.MissingBlobSidecar {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMissingBlobSidecars", arg0)
-	ret0, _ := ret[0].([]*blockchain.MissingBlobSidecar)
-	return ret0
-}
-
-// GetMissingBlobSidecars indicates an expected call of GetMissingBlobSidecars.
-func (mr *MockTxPoolMockRecorder) GetMissingBlobSidecars(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMissingBlobSidecars", reflect.TypeOf((*MockTxPool)(nil).GetMissingBlobSidecars), arg0)
-}
-
 // GetPendingNonce mocks base method.
 func (m *MockTxPool) GetPendingNonce(arg0 common.Address) uint64 {
 	m.ctrl.T.Helper()
@@ -288,6 +274,20 @@ func (m *MockTxPool) StopSpamThrottler() {
 func (mr *MockTxPoolMockRecorder) StopSpamThrottler() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopSpamThrottler", reflect.TypeOf((*MockTxPool)(nil).StopSpamThrottler))
+}
+
+// SubscribeMissingBlobSidecars mocks base method.
+func (m *MockTxPool) SubscribeMissingBlobSidecars() <-chan *blockchain.MissingBlobSidecar {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubscribeMissingBlobSidecars")
+	ret0, _ := ret[0].(<-chan *blockchain.MissingBlobSidecar)
+	return ret0
+}
+
+// SubscribeMissingBlobSidecars indicates an expected call of SubscribeMissingBlobSidecars.
+func (mr *MockTxPoolMockRecorder) SubscribeMissingBlobSidecars() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeMissingBlobSidecars", reflect.TypeOf((*MockTxPool)(nil).SubscribeMissingBlobSidecars))
 }
 
 // SubscribeNewTxsEvent mocks base method.
