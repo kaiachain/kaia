@@ -1240,12 +1240,12 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	pm.blobSidecarMu.Lock()
 	for _, sidecarData := range sidecarsData {
 		if sidecarData.Sidecar != nil {
-			_, ok := pm.blobSidecarPending[sidecarData.Hash.String()]
+			pending, ok := pm.blobSidecarPending[sidecarData.Hash.String()]
 			if !ok {
 				continue
 			}
 
-			if err := pm.txpool.SaveMissingBlobSidecar(big.NewInt(int64(sidecarData.BlockNum)), int(sidecarData.TxIndex), sidecarData.Sidecar); err != nil {
+			if err := pm.txpool.SaveMissingBlobSidecar(big.NewInt(int64(sidecarData.BlockNum)), int(sidecarData.TxIndex), pending.TxHash, sidecarData.Sidecar); err != nil {
 				logger.Warn("Failed to deliver blob sidecar to txpool", "blockNum", sidecarData.BlockNum, "txIndex", sidecarData.TxIndex, "err", err)
 			}
 		}

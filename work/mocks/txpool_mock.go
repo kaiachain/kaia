@@ -212,17 +212,17 @@ func (mr *MockTxPoolMockRecorder) RegisterTxPoolModule(arg0 ...interface{}) *gom
 }
 
 // SaveMissingBlobSidecar mocks base method.
-func (m *MockTxPool) SaveMissingBlobSidecar(arg0 *big.Int, arg1 int, arg2 *types.BlobTxSidecar) error {
+func (m *MockTxPool) SaveMissingBlobSidecar(arg0 *big.Int, arg1 int, arg2 common.Hash, arg3 *types.BlobTxSidecar) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveMissingBlobSidecar", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "SaveMissingBlobSidecar", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SaveMissingBlobSidecar indicates an expected call of SaveMissingBlobSidecar.
-func (mr *MockTxPoolMockRecorder) SaveMissingBlobSidecar(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockTxPoolMockRecorder) SaveMissingBlobSidecar(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveMissingBlobSidecar", reflect.TypeOf((*MockTxPool)(nil).SaveMissingBlobSidecar), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveMissingBlobSidecar", reflect.TypeOf((*MockTxPool)(nil).SaveMissingBlobSidecar), arg0, arg1, arg2, arg3)
 }
 
 // SetGasPrice mocks base method.

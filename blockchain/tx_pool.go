@@ -2006,8 +2006,7 @@ func (pool *TxPool) GetMissingBlobSidecars(maxCount int) []*MissingBlobSidecar {
 	return requests
 }
 
-// HY-TODO: replace with tx hash and extend this txpool chain
-func (pool *TxPool) SaveMissingBlobSidecar(blockNum *big.Int, txIndex int, sidecar *types.BlobTxSidecar) error {
+func (pool *TxPool) SaveMissingBlobSidecar(blockNum *big.Int, txIndex int, txHash common.Hash, sidecar *types.BlobTxSidecar) error {
 	if pool.blobStorage == nil || blockNum == nil {
 		return errors.New("blob storage not initialized")
 	}
