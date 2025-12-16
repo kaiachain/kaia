@@ -247,3 +247,10 @@ type blobSidecarsRequestData struct {
 	TxIndex  hexutil.Uint
 	Hash     common.Hash
 }
+
+type blobSidecarsData struct {
+	BlockNum hexutil.Uint64
+	TxIndex  hexutil.Uint
+	Hash     common.Hash
+	Sidecar  *types.BlobTxSidecar
+}

@@ -148,7 +148,7 @@ type ProtocolManager struct {
 	stakingModule staking.StakingModule
 	auctionModule auction.AuctionModule
 
-	blobSidecarPending map[string][]*kaia_blockchain.MissingBlobSidecar
+	blobSidecarPending map[string]*kaia_blockchain.MissingBlobSidecar
 	blobSidecarMu      sync.RWMutex
 }
 
@@ -174,7 +174,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		engine:             engine,
 		nodetype:           nodetype,
 		txResendUseLegacy:  cnconfig.TxResendUseLegacy,
-		blobSidecarPending: make(map[string][]*kaia_blockchain.MissingBlobSidecar),
+		blobSidecarPending: make(map[string]*kaia_blockchain.MissingBlobSidecar),
 	}
 
 	// istanbul BFT
@@ -1215,7 +1215,12 @@ func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 		}
 
 		// If known, encode and queue for response packet
-		if encoded, err := rlp.EncodeToBytes(result); err != nil {
+		if encoded, err := rlp.EncodeToBytes(blobSidecarsData{
+			BlockNum: hexutil.Uint64(data.BlockNum),
+			TxIndex:  hexutil.Uint(data.TxIndex),
+			Hash:     data.Hash,
+			Sidecar:  result,
+		}); err != nil {
 			logger.Error("Failed to encode blob sidecars", "err", err)
 		} else {
 			sidecars = append(sidecars, encoded)
@@ -1227,31 +1232,24 @@ func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 }
 
 func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
-	var sidecars []*types.BlobTxSidecar
-	if err := msg.Decode(&sidecars); err != nil {
+	var sidecarsData []*blobSidecarsData
+	if err := msg.Decode(&sidecarsData); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 
-	peerID := p.GetID()
 	pm.blobSidecarMu.Lock()
-	pendingRequests, ok := pm.blobSidecarPending[peerID]
-	if !ok {
-		pm.blobSidecarMu.Unlock()
-		return nil
-	}
+	for _, sidecarData := range sidecarsData {
+		if sidecarData.Sidecar != nil {
+			_, ok := pm.blobSidecarPending[sidecarData.Hash.String()]
+			if !ok {
+				continue
+			}
 
-	for i, sidecar := range sidecars {
-		if i >= len(pendingRequests) {
-			break
-		}
-		req := pendingRequests[i]
-		if sidecar != nil {
-			if err := pm.txpool.SaveMissingBlobSidecar(req.BlockNum, req.TxIndex, sidecar); err != nil {
-				logger.Warn("Failed to deliver blob sidecar to txpool", "blockNum", req.BlockNum, "txIndex", req.TxIndex, "err", err)
+			if err := pm.txpool.SaveMissingBlobSidecar(big.NewInt(int64(sidecarData.BlockNum)), int(sidecarData.TxIndex), sidecarData.Sidecar); err != nil {
+				logger.Warn("Failed to deliver blob sidecar to txpool", "blockNum", sidecarData.BlockNum, "txIndex", sidecarData.TxIndex, "err", err)
 			}
 		}
 	}
-	delete(pm.blobSidecarPending, peerID)
 	pm.blobSidecarMu.Unlock()
 
 	return nil
@@ -1267,8 +1265,8 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			requests := pm.txpool.GetMissingBlobSidecars(downloader.MaxBlobSidecarsFetch)
-			if len(requests) == 0 {
+			missingBlobSidecars := pm.txpool.GetMissingBlobSidecars(downloader.MaxBlobSidecarsFetch)
+			if len(missingBlobSidecars) == 0 {
 				continue
 			}
 
@@ -1281,26 +1279,40 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 				continue
 			}
 
-			p2pRequests := make([]blobSidecarsRequestData, len(requests))
-			for i, req := range requests {
+			p2pRequests := make([]blobSidecarsRequestData, len(missingBlobSidecars))
+			for i, sidecar := range missingBlobSidecars {
 				p2pRequests[i] = blobSidecarsRequestData{
-					BlockNum: hexutil.Uint64(req.BlockNum.Uint64()),
-					TxIndex:  hexutil.Uint(req.TxIndex),
-					Hash:     req.TxHash,
+					BlockNum: hexutil.Uint64(sidecar.BlockNum.Uint64()),
+					TxIndex:  hexutil.Uint(sidecar.TxIndex),
+					Hash:     sidecar.TxHash,
 				}
 			}
 
-			peerID := peer.GetID()
+			// peerID := peer.GetID()
 			pm.blobSidecarMu.Lock()
-			pm.blobSidecarPending[peerID] = requests
+			for _, sidecar := range missingBlobSidecars {
+				pm.blobSidecarPending[sidecar.TxHash.String()] = sidecar
+			}
 			pm.blobSidecarMu.Unlock()
 
 			if err := peer.RequestBlobSidecars(p2pRequests); err != nil {
 				logger.Debug("Failed to request blob sidecars", "err", err)
 				pm.blobSidecarMu.Lock()
-				delete(pm.blobSidecarPending, peerID)
+				for _, sidecar := range missingBlobSidecars {
+					delete(pm.blobSidecarPending, sidecar.TxHash.String())
+				}
 				pm.blobSidecarMu.Unlock()
 			}
+
+			// timeout is 30 seconds to request blob sidecars
+			go func() {
+				time.Sleep(30 * time.Second)
+				pm.blobSidecarMu.Lock()
+				for _, sidecar := range missingBlobSidecars {
+					delete(pm.blobSidecarPending, sidecar.TxHash.String())
+				}
+				pm.blobSidecarMu.Unlock()
+			}()
 
 		case <-pm.quitSync:
 			return
