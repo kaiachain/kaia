@@ -409,13 +409,17 @@ func (b *Block) WithBody(transactions []*Transaction) *Block {
 	return block
 }
 
-// WithoutBlobTxSidecar returns a new block with the blob sidecar removed from the transactions.
-func (b *Block) WithoutBlobTxSidecar() *Block {
+// RemoveSidecarFromBlobTxs removes the blob sidecar from the blob transactions.
+func (b *Block) RemoveSidecarFromBlobTxs() {
 	transactions := make([]*Transaction, len(b.transactions))
 	for i, tx := range b.transactions {
-		transactions[i] = tx.WithoutBlobTxSidecar()
+		// Call tx.WithoutBlobTxSidecar() only for BlobTx to avoid copy costs.
+		if tx.Type() == TxTypeEthereumBlob {
+			tx = tx.WithoutBlobTxSidecar()
+		}
+		transactions[i] = tx
 	}
-	return b.WithBody(transactions)
+	b.transactions = transactions
 }
 
 // IsBlobTxIncluded returns true if the block contains any blob transactions.

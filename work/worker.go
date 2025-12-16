@@ -430,14 +430,6 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			block := result.Block
 			work := result.Task
 
-			// Remove the Sidecar from the blobTx just before writing the block.
-			// This prevents the sidecar from being broadcast.
-			// It is not necessary to remove the sidecar from the transactions
-			// if the block does not contain any blob transactions.
-			if block.IsBlobTxIncluded() {
-				block = block.WithoutBlobTxSidecar()
-			}
-
 			// Update the block hash in all logs since it is now available and not when the
 			// receipt/log of individual transactions were created.
 			for _, r := range work.receipts {
