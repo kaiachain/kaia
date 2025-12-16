@@ -207,6 +207,10 @@ type GovModule interface {
 	GetParamSet(blockNum uint64) gov.ParamSet
 }
 
+type BlobSidecarRequester interface {
+	RequestBlobSidecar(blockNum *big.Int, txIndex int, txHash common.Hash, callback func(*types.BlobTxSidecar, error))
+}
+
 // TxPool contains all currently known transactions. Transactions
 // enter the pool when they are received from the network or submitted
 // locally. They exit the pool when they are included in the blockchain.
@@ -255,6 +259,8 @@ type TxPool struct {
 	govModule GovModule
 
 	modules []kaiax.TxPoolModule
+
+	blobSidecarRequester BlobSidecarRequester
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -1969,13 +1975,30 @@ func (pool *TxPool) RegisterTxPoolModule(modules ...kaiax.TxPoolModule) {
 	pool.modules = modules
 }
 
+func (pool *TxPool) RegisterBlobSidecarRequester(requester BlobSidecarRequester) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	pool.blobSidecarRequester = requester
+}
+
 // saveAndPruneBlobStorage saves and prunes blob storage.
 func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 	if pool.blobStorage == nil || newHead == nil {
 		return
 	}
 	pool.blobStorage.Prune(newHead.Number())
+
+	var missingSidecars []struct {
+		blockNum *big.Int
+		txIndex  int
+		txHash   common.Hash
+	}
+
 	for i, tx := range newHead.Transactions() {
+		if tx.Type() != types.TxTypeEthereumBlob {
+			continue
+		}
+
 		// try to get blob sidecar from local
 		// HY-TODO: tx has already have blob sidecar?
 		if sidecar, err := pool.GetBlobSidecarFromPool(tx.Hash()); sidecar != nil {
@@ -1984,9 +2007,39 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 		} else if err != nil {
 			logger.Warn("failed to get blob sidecar from pool", "hash", tx.Hash(), "err", err)
 		}
-		// try to get blob sidecar from remote
 
-		// HY-TODO: how about blob from istanbul p2p?
+		// try to get blob sidecar from remote
+		missingSidecars = append(missingSidecars, struct {
+			blockNum *big.Int
+			txIndex  int
+			txHash   common.Hash
+		}{
+			blockNum: newHead.Number(),
+			txIndex:  i,
+			txHash:   tx.Hash(),
+		})
+
+		// HY-TODO: what about blob from istanbul p2p?
+	}
+
+	if len(missingSidecars) > 0 && pool.blobSidecarRequester != nil {
+		for _, req := range missingSidecars {
+			pool.blobSidecarRequester.RequestBlobSidecar(
+				req.blockNum,
+				req.txIndex,
+				req.txHash,
+				func(sidecar *types.BlobTxSidecar, err error) {
+					if err != nil {
+						logger.Warn("failed to fetch blob sidecar from peer",
+							"blockNum", req.blockNum, "txIndex", req.txIndex, "err", err)
+						return
+					}
+					if sidecar != nil {
+						pool.blobStorage.Save(req.blockNum, req.txIndex, sidecar)
+					}
+				},
+			)
+		}
 	}
 }
 
