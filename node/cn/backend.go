@@ -357,8 +357,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	cn.protocolManager = pm
 
-	cn.txPool.RegisterBlobSidecarRequester(pm)
-
 	if err := cn.setAcceptTxs(); err != nil {
 		logger.Error("Failed to decode IstanbulExtra", "err", err)
 	}

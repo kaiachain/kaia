@@ -140,6 +140,20 @@ func (mr *MockTxPoolMockRecorder) GetBlobSidecarFromStorage(arg0, arg1 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecarFromStorage", reflect.TypeOf((*MockTxPool)(nil).GetBlobSidecarFromStorage), arg0, arg1)
 }
 
+// GetMissingBlobSidecars mocks base method.
+func (m *MockTxPool) GetMissingBlobSidecars(arg0 int) []*blockchain.MissingBlobSidecar {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMissingBlobSidecars", arg0)
+	ret0, _ := ret[0].([]*blockchain.MissingBlobSidecar)
+	return ret0
+}
+
+// GetMissingBlobSidecars indicates an expected call of GetMissingBlobSidecars.
+func (mr *MockTxPoolMockRecorder) GetMissingBlobSidecars(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMissingBlobSidecars", reflect.TypeOf((*MockTxPool)(nil).GetMissingBlobSidecars), arg0)
+}
+
 // GetPendingNonce mocks base method.
 func (m *MockTxPool) GetPendingNonce(arg0 common.Address) uint64 {
 	m.ctrl.T.Helper()
@@ -181,18 +195,6 @@ func (mr *MockTxPoolMockRecorder) Pending() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pending", reflect.TypeOf((*MockTxPool)(nil).Pending))
 }
 
-// RegisterBlobSidecarRequester mocks base method.
-func (m *MockTxPool) RegisterBlobSidecarRequester(arg0 blockchain.BlobSidecarRequester) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RegisterBlobSidecarRequester", arg0)
-}
-
-// RegisterBlobSidecarRequester indicates an expected call of RegisterBlobSidecarRequester.
-func (mr *MockTxPoolMockRecorder) RegisterBlobSidecarRequester(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterBlobSidecarRequester", reflect.TypeOf((*MockTxPool)(nil).RegisterBlobSidecarRequester), arg0)
-}
-
 // RegisterTxPoolModule mocks base method.
 func (m *MockTxPool) RegisterTxPoolModule(arg0 ...kaiax.TxPoolModule) {
 	m.ctrl.T.Helper()
@@ -207,6 +209,20 @@ func (m *MockTxPool) RegisterTxPoolModule(arg0 ...kaiax.TxPoolModule) {
 func (mr *MockTxPoolMockRecorder) RegisterTxPoolModule(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterTxPoolModule", reflect.TypeOf((*MockTxPool)(nil).RegisterTxPoolModule), arg0...)
+}
+
+// SaveMissingBlobSidecar mocks base method.
+func (m *MockTxPool) SaveMissingBlobSidecar(arg0 *big.Int, arg1 int, arg2 *types.BlobTxSidecar) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveMissingBlobSidecar", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveMissingBlobSidecar indicates an expected call of SaveMissingBlobSidecar.
+func (mr *MockTxPoolMockRecorder) SaveMissingBlobSidecar(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveMissingBlobSidecar", reflect.TypeOf((*MockTxPool)(nil).SaveMissingBlobSidecar), arg0, arg1, arg2)
 }
 
 // SetGasPrice mocks base method.

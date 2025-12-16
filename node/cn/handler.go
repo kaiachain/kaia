@@ -35,8 +35,10 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain"
+	kaia_blockchain "github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
@@ -115,7 +117,7 @@ type ProtocolManager struct {
 	SubProtocols []p2p.Protocol
 
 	eventMux      *event.TypeMux
-	txsCh         chan blockchain.NewTxsEvent
+	txsCh         chan kaia_blockchain.NewTxsEvent
 	txsSub        event.Subscription
 	minedBlockSub *event.TypeMuxSubscription
 	bidCh         chan *auction.Bid
@@ -146,9 +148,8 @@ type ProtocolManager struct {
 	stakingModule staking.StakingModule
 	auctionModule auction.AuctionModule
 
-	blobSidecarCallbacks map[common.Hash]func(*types.BlobTxSidecar, error)
-	blobSidecarPending   map[string][]common.Hash
-	blobSidecarMu        sync.RWMutex
+	blobSidecarPending map[string][]*kaia_blockchain.MissingBlobSidecar
+	blobSidecarMu      sync.RWMutex
 }
 
 // NewProtocolManager returns a new Kaia sub protocol manager. The Kaia sub protocol manages peers capable
@@ -159,22 +160,21 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 ) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
-		networkId:            networkId,
-		eventMux:             mux,
-		txpool:               txpool,
-		blockchain:           blockchain,
-		chainconfig:          config,
-		peers:                newPeerSet(),
-		newPeerCh:            make(chan Peer),
-		noMorePeers:          make(chan struct{}),
-		txsyncCh:             make(chan *txsync),
-		quitSync:             make(chan struct{}),
-		quitResendCh:         make(chan struct{}),
-		engine:               engine,
-		nodetype:             nodetype,
-		txResendUseLegacy:    cnconfig.TxResendUseLegacy,
-		blobSidecarCallbacks: make(map[common.Hash]func(*types.BlobTxSidecar, error)),
-		blobSidecarPending:   make(map[string][]common.Hash),
+		networkId:          networkId,
+		eventMux:           mux,
+		txpool:             txpool,
+		blockchain:         blockchain,
+		chainconfig:        config,
+		peers:              newPeerSet(),
+		newPeerCh:          make(chan Peer),
+		noMorePeers:        make(chan struct{}),
+		txsyncCh:           make(chan *txsync),
+		quitSync:           make(chan struct{}),
+		quitResendCh:       make(chan struct{}),
+		engine:             engine,
+		nodetype:           nodetype,
+		txResendUseLegacy:  cnconfig.TxResendUseLegacy,
+		blobSidecarPending: make(map[string][]*kaia_blockchain.MissingBlobSidecar),
 	}
 
 	// istanbul BFT
@@ -427,6 +427,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	// start sync handlers
 	go pm.syncer()
 	go pm.txsyncLoop()
+	go pm.blobSidecarSyncLoop()
 }
 
 func (pm *ProtocolManager) Stop() {
@@ -447,7 +448,7 @@ func (pm *ProtocolManager) Stop() {
 		pm.quitResendCh <- struct{}{}
 	}
 
-	// Quit fetcher, txsyncLoop.
+	// Quit fetcher, txsyncLoop, blobSidecarSyncLoop.
 	close(pm.quitSync)
 
 	// Disconnect existing sessions.
@@ -1233,24 +1234,21 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 
 	peerID := p.GetID()
 	pm.blobSidecarMu.Lock()
-	pendingHashes, ok := pm.blobSidecarPending[peerID]
+	pendingRequests, ok := pm.blobSidecarPending[peerID]
 	if !ok {
 		pm.blobSidecarMu.Unlock()
 		return nil
 	}
 
 	for i, sidecar := range sidecars {
-		if i >= len(pendingHashes) {
+		if i >= len(pendingRequests) {
 			break
 		}
-		txHash := pendingHashes[i]
-		if callback, ok := pm.blobSidecarCallbacks[txHash]; ok {
-			if sidecar != nil {
-				callback(sidecar, nil)
-			} else {
-				callback(nil, errors.New("blob sidecar not found"))
+		req := pendingRequests[i]
+		if sidecar != nil {
+			if err := pm.txpool.SaveMissingBlobSidecar(req.BlockNum, req.TxIndex, sidecar); err != nil {
+				logger.Warn("Failed to deliver blob sidecar to txpool", "blockNum", req.BlockNum, "txIndex", req.TxIndex, "err", err)
 			}
-			delete(pm.blobSidecarCallbacks, txHash)
 		}
 	}
 	delete(pm.blobSidecarPending, peerID)
@@ -1259,46 +1257,55 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	return nil
 }
 
-func (pm *ProtocolManager) RequestBlobSidecar(blockNum *big.Int, txIndex int, txHash common.Hash, callback func(*types.BlobTxSidecar, error)) {
-	peer := pm.peers.BestPeer()
-	if peer == nil {
-		callback(nil, errors.New("no available peer"))
-		return
-	}
+func (pm *ProtocolManager) blobSidecarSyncLoop() {
+	pm.wg.Add(1)
+	defer pm.wg.Done()
 
-	if peer.GetVersion() < kaia67 {
-		callback(nil, errors.New("peer does not support blob sidecars"))
-		return
-	}
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
 
-	peerID := peer.GetID()
-	hashes := []common.Hash{txHash}
+	for {
+		select {
+		case <-ticker.C:
+			requests := pm.txpool.GetMissingBlobSidecars(downloader.MaxBlobSidecarsFetch)
+			if len(requests) == 0 {
+				continue
+			}
 
-	pm.blobSidecarMu.Lock()
-	pm.blobSidecarCallbacks[txHash] = callback
-	pm.blobSidecarPending[peerID] = hashes
-	pm.blobSidecarMu.Unlock()
+			peer := pm.peers.BestPeer()
+			if peer == nil {
+				continue
+			}
 
-	go func() {
-		timeout := time.NewTimer(30 * time.Second)
-		defer timeout.Stop()
+			if peer.GetVersion() < kaia67 {
+				continue
+			}
 
-		if err := peer.RequestBlobSidecars(hashes); err != nil {
+			p2pRequests := make([]blobSidecarsRequestData, len(requests))
+			for i, req := range requests {
+				p2pRequests[i] = blobSidecarsRequestData{
+					BlockNum: hexutil.Uint64(req.BlockNum.Uint64()),
+					TxIndex:  hexutil.Uint(req.TxIndex),
+					Hash:     req.TxHash,
+				}
+			}
+
+			peerID := peer.GetID()
 			pm.blobSidecarMu.Lock()
-			delete(pm.blobSidecarCallbacks, txHash)
-			delete(pm.blobSidecarPending, peerID)
+			pm.blobSidecarPending[peerID] = requests
 			pm.blobSidecarMu.Unlock()
-			callback(nil, err)
+
+			if err := peer.RequestBlobSidecars(p2pRequests); err != nil {
+				logger.Debug("Failed to request blob sidecars", "err", err)
+				pm.blobSidecarMu.Lock()
+				delete(pm.blobSidecarPending, peerID)
+				pm.blobSidecarMu.Unlock()
+			}
+
+		case <-pm.quitSync:
 			return
 		}
-
-		<-timeout.C
-		pm.blobSidecarMu.Lock()
-		delete(pm.blobSidecarCallbacks, txHash)
-		delete(pm.blobSidecarPending, peerID)
-		pm.blobSidecarMu.Unlock()
-		callback(nil, errors.New("blob sidecar request timeout"))
-	}()
+	}
 }
 
 // handleNewBlockHashesMsg handles new block hashes message.

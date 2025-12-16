@@ -207,8 +207,10 @@ type GovModule interface {
 	GetParamSet(blockNum uint64) gov.ParamSet
 }
 
-type BlobSidecarRequester interface {
-	RequestBlobSidecar(blockNum *big.Int, txIndex int, txHash common.Hash, callback func(*types.BlobTxSidecar, error))
+type MissingBlobSidecar struct {
+	BlockNum *big.Int
+	TxIndex  int
+	TxHash   common.Hash
 }
 
 // TxPool contains all currently known transactions. Transactions
@@ -260,7 +262,8 @@ type TxPool struct {
 
 	modules []kaiax.TxPoolModule
 
-	blobSidecarRequester BlobSidecarRequester
+	missingBlobSidecars   []*MissingBlobSidecar
+	missingBlobSidecarsMu sync.RWMutex
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -1975,10 +1978,40 @@ func (pool *TxPool) RegisterTxPoolModule(modules ...kaiax.TxPoolModule) {
 	pool.modules = modules
 }
 
-func (pool *TxPool) RegisterBlobSidecarRequester(requester BlobSidecarRequester) {
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-	pool.blobSidecarRequester = requester
+func (pool *TxPool) addMissingBlobSidecars(sidecars []*MissingBlobSidecar) {
+	pool.missingBlobSidecarsMu.Lock()
+	defer pool.missingBlobSidecarsMu.Unlock()
+	pool.missingBlobSidecars = append(pool.missingBlobSidecars, sidecars...)
+}
+
+func (pool *TxPool) GetMissingBlobSidecars(maxCount int) []*MissingBlobSidecar {
+	pool.missingBlobSidecarsMu.RLock()
+	defer pool.missingBlobSidecarsMu.RUnlock()
+
+	if len(pool.missingBlobSidecars) == 0 {
+		return nil
+	}
+
+	count := len(pool.missingBlobSidecars)
+	if maxCount > 0 && count > maxCount {
+		count = maxCount
+	}
+
+	requests := make([]*MissingBlobSidecar, count)
+	copy(requests, pool.missingBlobSidecars[:count])
+	pool.missingBlobSidecars = pool.missingBlobSidecars[count:]
+
+	return requests
+}
+
+func (pool *TxPool) SaveMissingBlobSidecar(blockNum *big.Int, txIndex int, sidecar *types.BlobTxSidecar) error {
+	if pool.blobStorage == nil || blockNum == nil {
+		return nil
+	}
+	if sidecar == nil {
+		return nil
+	}
+	return pool.blobStorage.Save(blockNum, txIndex, sidecar)
 }
 
 // saveAndPruneBlobStorage saves and prunes blob storage.
@@ -1987,12 +2020,6 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 		return
 	}
 	pool.blobStorage.Prune(newHead.Number())
-
-	var missingSidecars []struct {
-		blockNum *big.Int
-		txIndex  int
-		txHash   common.Hash
-	}
 
 	for i, tx := range newHead.Transactions() {
 		if tx.Type() != types.TxTypeEthereumBlob {
@@ -2008,38 +2035,17 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 			logger.Warn("failed to get blob sidecar from pool", "hash", tx.Hash(), "err", err)
 		}
 
-		// try to get blob sidecar from remote
-		missingSidecars = append(missingSidecars, struct {
-			blockNum *big.Int
-			txIndex  int
-			txHash   common.Hash
-		}{
-			blockNum: newHead.Number(),
-			txIndex:  i,
-			txHash:   tx.Hash(),
+		// missing blob sidecar is registered to be fetched later
+		// protocol manager will fetch the missing blob sidecars from the peer
+		pool.addMissingBlobSidecars([]*MissingBlobSidecar{
+			{
+				BlockNum: newHead.Number(),
+				TxIndex:  i,
+				TxHash:   tx.Hash(),
+			},
 		})
 
 		// HY-TODO: what about blob from istanbul p2p?
-	}
-
-	if len(missingSidecars) > 0 && pool.blobSidecarRequester != nil {
-		for _, req := range missingSidecars {
-			pool.blobSidecarRequester.RequestBlobSidecar(
-				req.blockNum,
-				req.txIndex,
-				req.txHash,
-				func(sidecar *types.BlobTxSidecar, err error) {
-					if err != nil {
-						logger.Warn("failed to fetch blob sidecar from peer",
-							"blockNum", req.blockNum, "txIndex", req.txIndex, "err", err)
-						return
-					}
-					if sidecar != nil {
-						pool.blobStorage.Save(req.blockNum, req.txIndex, sidecar)
-					}
-				},
-			)
-		}
 	}
 }
 

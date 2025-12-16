@@ -80,7 +80,8 @@ type TxPool interface {
 	// Blob sidecars
 	GetBlobSidecarFromStorage(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error)
 	GetBlobSidecarFromPool(txHash common.Hash) (*types.BlobTxSidecar, error)
-	RegisterBlobSidecarRequester(requester blockchain.BlobSidecarRequester)
+	GetMissingBlobSidecars(maxCount int) []*blockchain.MissingBlobSidecar
+	SaveMissingBlobSidecar(blockNum *big.Int, txIndex int, sidecar *types.BlobTxSidecar) error
 
 	kaiax.TxPoolModuleHost
 }
