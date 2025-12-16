@@ -1975,6 +1975,26 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 		return
 	}
 	pool.blobStorage.Prune(newHead.Number())
+	for i, tx := range newHead.Transactions() {
+		// try to get blob sidecar from local
+		// HY-TODO: tx has already have blob sidecar?
+		if sidecar, err := pool.GetBlobSidecarFromPool(tx.Hash()); sidecar != nil {
+			pool.blobStorage.Save(newHead.Number(), i, sidecar)
+			continue
+		} else if err != nil {
+			logger.Warn("failed to get blob sidecar from pool", "hash", tx.Hash(), "err", err)
+		}
+		// try to get blob sidecar from remote
+		// HY-TODO: implement GetBlobSidecarFromP2P
+		// if sidecar, err := pool.GetBlobSidecarFromP2P(tx.Hash()); sidecar != nil {
+		// 	pool.blobStorage.Save(newHead.Number(), i, sidecar)
+		// 	continue
+		// } else if err != nil {
+		// 	logger.Warn("failed to get blob sidecar from p2p", "hash", tx.Hash(), "err", err)
+		// }
+
+		// HY-TODO: how about blob from istanbul p2p?
+	}
 }
 
 // addressByHeartbeat is an account address tagged with its last activity timestamp.
