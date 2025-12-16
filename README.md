@@ -49,7 +49,8 @@ Furthermore, for those who are interested in the Kaia Service Chain, please chec
 
 ## Import as library
 
-First edit your go.mod file. Copy the replace statements from Kaia's go.mod file. It should look similar to:
+Copy from [Kaia's go.mod](https://github.com/kaiachain/kaia/blob/dev/go.mod) the "replace" directives, and paste it into your project's `go.mod` file.
+It should look similar to:
 ```
 replace (
 	github.com/erigontech/erigon-lib => github.com/kaiachain/kaia-erigon/erigon-lib v0.0.0-2025...
