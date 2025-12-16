@@ -128,7 +128,6 @@ type Task struct {
 	header   *types.Header
 	txs      []*types.Transaction
 	receipts []*types.Receipt
-	sidecars []*types.BlobTxSidecar
 	blobs    int
 
 	createdAt time.Time
@@ -1007,7 +1006,7 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAdd
 	var receipt *types.Receipt
 	var err error
 	if isBlobTx {
-		err, receipt = env.commitBlobTransaction(tx, &env.sidecars, &env.blobs, executeTx)
+		err, receipt = env.commitBlobTransaction(tx, &env.blobs, executeTx)
 	} else {
 		err, receipt = executeTx()
 	}
@@ -1031,8 +1030,6 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	tcountSnapshot := env.tcount
 	txs := []*types.Transaction{}
 	receipts := []*types.Receipt{}
-	sidecars := []*types.BlobTxSidecar{}
-	blobs := int(0)
 	logs := []*types.Log{}
 
 	markAllTxUnexecutable := func() {
@@ -1092,7 +1089,7 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		isBlobTx := tx.Type() == types.TxTypeEthereumBlob
 		var receipt *types.Receipt
 		if isBlobTx {
-			err, receipt = env.commitBlobTransaction(tx, &sidecars, &blobs, executeTx)
+			err, receipt = env.commitBlobTransaction(tx, &env.blobs, executeTx)
 		} else {
 			err, receipt = executeTx()
 		}
@@ -1110,16 +1107,13 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	env.size += totalTxSize
 	env.txs = append(env.txs, txs...)
 	env.receipts = append(env.receipts, receipts...)
-	// blob related env are updated
-	env.sidecars = append(env.sidecars, sidecars...)
-	env.blobs += blobs
 	return nil, nil, logs
 }
 
 // commitBlobTransaction is a wrapper for executeTx.
 // NOTE: Kaia keeps the blob sidecar until consensus is reached and omits it
 // when broadcasting or writing to the database, so tx.WithoutBlobTxSidecar() is not called.
-func (env *Task) commitBlobTransaction(tx *types.Transaction, sidecars *[]*types.BlobTxSidecar, blobs *int, executeTx func() (error, *types.Receipt)) (err error, receipt *types.Receipt) {
+func (env *Task) commitBlobTransaction(tx *types.Transaction, blobs *int, executeTx func() (error, *types.Receipt)) (err error, receipt *types.Receipt) {
 	sc := tx.BlobTxSidecar()
 	if sc == nil {
 		return errors.New("blob transaction without blobs in miner"), nil
@@ -1138,9 +1132,8 @@ func (env *Task) commitBlobTransaction(tx *types.Transaction, sidecars *[]*types
 		return err, nil
 	}
 
-	*sidecars = append(*sidecars, sc)
-	*blobs += len(sc.Blobs)
 	*env.header.BlobGasUsed += tx.BlobGas()
+	*blobs += len(sc.Blobs)
 	return nil, receipt
 }
 
