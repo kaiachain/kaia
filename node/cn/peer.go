@@ -249,6 +249,9 @@ type Peer interface {
 	// Peer encapsulates the methods required to synchronise with a remote full peer.
 	downloader.Peer
 
+	// RequestBlobSidecars fetches a batch of blob sidecars from a remote node.
+	RequestBlobSidecars(hashes []common.Hash) error
+
 	// RegisterConsensusMsgCode registers the channel of consensus msg.
 	RegisterConsensusMsgCode(msgCode uint64) error
 

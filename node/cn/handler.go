@@ -145,6 +145,10 @@ type ProtocolManager struct {
 
 	stakingModule staking.StakingModule
 	auctionModule auction.AuctionModule
+
+	blobSidecarCallbacks map[common.Hash]func(*types.BlobTxSidecar, error)
+	blobSidecarPending   map[string][]common.Hash
+	blobSidecarMu        sync.RWMutex
 }
 
 // NewProtocolManager returns a new Kaia sub protocol manager. The Kaia sub protocol manages peers capable
@@ -155,20 +159,22 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 ) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
-		networkId:         networkId,
-		eventMux:          mux,
-		txpool:            txpool,
-		blockchain:        blockchain,
-		chainconfig:       config,
-		peers:             newPeerSet(),
-		newPeerCh:         make(chan Peer),
-		noMorePeers:       make(chan struct{}),
-		txsyncCh:          make(chan *txsync),
-		quitSync:          make(chan struct{}),
-		quitResendCh:      make(chan struct{}),
-		engine:            engine,
-		nodetype:          nodetype,
-		txResendUseLegacy: cnconfig.TxResendUseLegacy,
+		networkId:            networkId,
+		eventMux:             mux,
+		txpool:               txpool,
+		blockchain:           blockchain,
+		chainconfig:          config,
+		peers:                newPeerSet(),
+		newPeerCh:            make(chan Peer),
+		noMorePeers:          make(chan struct{}),
+		txsyncCh:             make(chan *txsync),
+		quitSync:             make(chan struct{}),
+		quitResendCh:         make(chan struct{}),
+		engine:               engine,
+		nodetype:             nodetype,
+		txResendUseLegacy:    cnconfig.TxResendUseLegacy,
+		blobSidecarCallbacks: make(map[common.Hash]func(*types.BlobTxSidecar, error)),
+		blobSidecarPending:   make(map[string][]common.Hash),
 	}
 
 	// istanbul BFT
@@ -1224,7 +1230,75 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	if err := msg.Decode(&sidecars); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
+
+	peerID := p.GetID()
+	pm.blobSidecarMu.Lock()
+	pendingHashes, ok := pm.blobSidecarPending[peerID]
+	if !ok {
+		pm.blobSidecarMu.Unlock()
+		return nil
+	}
+
+	for i, sidecar := range sidecars {
+		if i >= len(pendingHashes) {
+			break
+		}
+		txHash := pendingHashes[i]
+		if callback, ok := pm.blobSidecarCallbacks[txHash]; ok {
+			if sidecar != nil {
+				callback(sidecar, nil)
+			} else {
+				callback(nil, errors.New("blob sidecar not found"))
+			}
+			delete(pm.blobSidecarCallbacks, txHash)
+		}
+	}
+	delete(pm.blobSidecarPending, peerID)
+	pm.blobSidecarMu.Unlock()
+
 	return nil
+}
+
+func (pm *ProtocolManager) RequestBlobSidecar(blockNum *big.Int, txIndex int, txHash common.Hash, callback func(*types.BlobTxSidecar, error)) {
+	peer := pm.peers.BestPeer()
+	if peer == nil {
+		callback(nil, errors.New("no available peer"))
+		return
+	}
+
+	if peer.GetVersion() < kaia67 {
+		callback(nil, errors.New("peer does not support blob sidecars"))
+		return
+	}
+
+	peerID := peer.GetID()
+	hashes := []common.Hash{txHash}
+
+	pm.blobSidecarMu.Lock()
+	pm.blobSidecarCallbacks[txHash] = callback
+	pm.blobSidecarPending[peerID] = hashes
+	pm.blobSidecarMu.Unlock()
+
+	go func() {
+		timeout := time.NewTimer(30 * time.Second)
+		defer timeout.Stop()
+
+		if err := peer.RequestBlobSidecars(hashes); err != nil {
+			pm.blobSidecarMu.Lock()
+			delete(pm.blobSidecarCallbacks, txHash)
+			delete(pm.blobSidecarPending, peerID)
+			pm.blobSidecarMu.Unlock()
+			callback(nil, err)
+			return
+		}
+
+		<-timeout.C
+		pm.blobSidecarMu.Lock()
+		delete(pm.blobSidecarCallbacks, txHash)
+		delete(pm.blobSidecarPending, peerID)
+		pm.blobSidecarMu.Unlock()
+		callback(nil, errors.New("blob sidecar request timeout"))
+	}()
 }
 
 // handleNewBlockHashesMsg handles new block hashes message.
