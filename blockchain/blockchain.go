@@ -1370,7 +1370,7 @@ func (bc *BlockChain) writeBlock(block *types.Block) {
 	// It is not necessary to remove the sidecar from the transactions
 	// if the block does not contain any blob transactions.
 	if block.IsBlobTxIncluded() {
-		block = block.RemoveSidecarFromBlobTxs()
+		block = block.StripBlobSidecars()
 	}
 	bc.db.WriteBlock(block)
 }

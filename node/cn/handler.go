@@ -1606,7 +1606,7 @@ func (pm *ProtocolManager) minedBroadcastLoop() {
 			// It is not necessary to remove the sidecar from the transactions
 			// if the block does not contain any blob transactions.
 			if ev.Block.IsBlobTxIncluded() {
-				ev.Block = ev.Block.RemoveSidecarFromBlobTxs()
+				ev.Block = ev.Block.StripBlobSidecars()
 			}
 			pm.BroadcastBlock(ev.Block)     // First propagate block to peers
 			pm.BroadcastBlockHash(ev.Block) // Only then announce to the rest
