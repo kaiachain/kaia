@@ -139,6 +139,7 @@ type blockChain interface {
 	CurrentBlock() *types.Block
 	GetBlock(hash common.Hash, number uint64) *types.Block
 	StateAt(root common.Hash) (*state.StateDB, error)
+	GetTxAndLookupInfo(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 
 	SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription
 }
@@ -1985,6 +1986,7 @@ func (pool *TxPool) addMissingBlobSidecars(sidecars []*MissingBlobSidecar) {
 }
 
 func (pool *TxPool) GetMissingBlobSidecars(maxCount int) []*MissingBlobSidecar {
+	// HY-TODO: should replace with a channel to avoid blocking the main thread?
 	pool.missingBlobSidecarsMu.RLock()
 	defer pool.missingBlobSidecarsMu.RUnlock()
 
@@ -2004,14 +2006,23 @@ func (pool *TxPool) GetMissingBlobSidecars(maxCount int) []*MissingBlobSidecar {
 	return requests
 }
 
+// HY-TODO: replace with tx hash and extend this txpool chain
 func (pool *TxPool) SaveMissingBlobSidecar(blockNum *big.Int, txIndex int, sidecar *types.BlobTxSidecar) error {
 	if pool.blobStorage == nil || blockNum == nil {
-		return nil
+		return errors.New("blob storage not initialized")
 	}
 	if sidecar == nil {
-		return nil
+		return errors.New("sidecar is nil")
 	}
 	// HY-TODO: verify sidecar
+	// tx, _, _, _ := pool.chain.GetTxAndLookupInfo(txHash)
+	// if  tx == nil {
+	// 	return errors.New("tx not found")
+	// }
+	// if err := sidecar.ValidateWithBlobTx(tx.GetTxInternalData().(*types.TxInternalDataEthereumBlob)); err != nil {
+	// 	return err
+	// }
+
 	return pool.blobStorage.Save(blockNum, txIndex, sidecar)
 }
 
