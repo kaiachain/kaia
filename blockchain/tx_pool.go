@@ -2011,6 +2011,7 @@ func (pool *TxPool) SaveMissingBlobSidecar(blockNum *big.Int, txIndex int, sidec
 	if sidecar == nil {
 		return nil
 	}
+	// HY-TODO: verify sidecar
 	return pool.blobStorage.Save(blockNum, txIndex, sidecar)
 }
 
@@ -2026,8 +2027,14 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 			continue
 		}
 
+		// try to get blob sidecar from tx
+		if sidecar := tx.BlobTxSidecar(); sidecar != nil {
+			// HY-TODO: verify sidecar
+			pool.blobStorage.Save(newHead.Number(), i, sidecar)
+			continue
+		}
+
 		// try to get blob sidecar from local
-		// HY-TODO: tx has already have blob sidecar?
 		if sidecar, err := pool.GetBlobSidecarFromPool(tx.Hash()); sidecar != nil {
 			pool.blobStorage.Save(newHead.Number(), i, sidecar)
 			continue
