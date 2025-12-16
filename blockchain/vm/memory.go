@@ -70,10 +70,14 @@ func (m *Memory) Increase(size uint64) {
 	m.store = append(m.store, make([]byte, size)...)
 }
 
-// Resize resizes the memory to size
+// Resize grows the memory to the requested size.
 func (m *Memory) Resize(size uint64) {
-	if uint64(m.Len()) < size {
-		m.store = append(m.store, make([]byte, size-uint64(m.Len()))...)
+	if uint64(len(m.store)) < size {
+		if uint64(cap(m.store)) >= size {
+			m.store = m.store[:size]
+		} else {
+			m.store = append(m.store, make([]byte, size-uint64(len(m.store)))...)
+		}
 	}
 }
 
