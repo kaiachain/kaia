@@ -1367,7 +1367,11 @@ type TransactionLookup struct {
 func (bc *BlockChain) writeBlock(block *types.Block) {
 	// Remove the blob sidecar from the transactions.
 	// This prevents the sidecar from being saved to the database.
-	block.RemoveSidecarFromBlobTxs()
+	// It is not necessary to remove the sidecar from the transactions
+	// if the block does not contain any blob transactions.
+	if block.IsBlobTxIncluded() {
+		block = block.RemoveSidecarFromBlobTxs()
+	}
 	bc.db.WriteBlock(block)
 }
 

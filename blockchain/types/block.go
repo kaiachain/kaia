@@ -409,8 +409,9 @@ func (b *Block) WithBody(transactions []*Transaction) *Block {
 	return block
 }
 
-// RemoveSidecarFromBlobTxs removes the blob sidecar from the blob transactions.
-func (b *Block) RemoveSidecarFromBlobTxs() {
+// RemoveSidecarFromBlobTxs returns a new block with the blob sidecar removed from the transactions.
+// Create a new block object to avoid side effects.
+func (b *Block) RemoveSidecarFromBlobTxs() *Block {
 	transactions := make([]*Transaction, len(b.transactions))
 	for i, tx := range b.transactions {
 		// Call tx.WithoutBlobTxSidecar() only for BlobTx to avoid copy costs.
@@ -419,7 +420,7 @@ func (b *Block) RemoveSidecarFromBlobTxs() {
 		}
 		transactions[i] = tx
 	}
-	b.transactions = transactions
+	return b.WithBody(transactions)
 }
 
 // IsBlobTxIncluded returns true if the block contains any blob transactions.
