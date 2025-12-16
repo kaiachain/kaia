@@ -418,8 +418,8 @@ func (b *Block) WithoutBlobTxSidecar() *Block {
 	return b.WithBody(transactions)
 }
 
-// IncludeBlobTx returns true if the block contains any blob transactions.
-func (b *Block) IncludeBlobTx() bool {
+// IsBlobTxIncluded returns true if the block contains any blob transactions.
+func (b *Block) IsBlobTxIncluded() bool {
 	for _, tx := range b.transactions {
 		if tx.Type() == TxTypeEthereumBlob {
 			return true

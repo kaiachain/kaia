@@ -434,7 +434,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			// This prevents the sidecar from being broadcast.
 			// It is not necessary to remove the sidecar from the transactions
 			// if the block does not contain any blob transactions.
-			if block.IncludeBlobTx() {
+			if block.IsBlobTxIncluded() {
 				block = block.WithoutBlobTxSidecar()
 			}
 
