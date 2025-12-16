@@ -1029,7 +1029,16 @@ func (pool *TxPool) validateBlobTx(tx *types.Transaction) error {
 	if tx.BlobGasFeeCapIntCmp(pool.blobBaseFee) < 0 {
 		return fmt.Errorf("%w: blob fee cap %v, minimum needed %v", ErrTxGasPriceTooLow, tx.BlobGasFeeCap(), pool.blobBaseFee)
 	}
-	if err := sidecar.ValidateWithBlobTx(tx.GetTxInternalData().(*types.TxInternalDataEthereumBlob)); err != nil {
+	// Ensure the number of items in the blob transaction and various side
+	// data match up before doing any expensive validations
+	hashes := tx.BlobHashes()
+	if len(hashes) == 0 {
+		return errors.New("blobless blob transaction")
+	}
+	if len(hashes) > params.BlobTxMaxBlobs {
+		return fmt.Errorf("too many blobs in transaction: have %d, permitted %d", len(hashes), params.BlobTxMaxBlobs)
+	}
+	if err := sidecar.ValidateWithBlobHashes(hashes); err != nil {
 		return err
 	}
 	return nil

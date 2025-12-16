@@ -221,18 +221,20 @@ func (sc *BlobTxSidecar) Copy() *BlobTxSidecar {
 	}
 }
 
-// ValidateWithBlobTx validates the blob transaction with the sidecar.
+// ValidateWithBlobHashes validates the sidecar with the blob hashes.
 // This method also verifies the validity of the proof.
-func (sc *BlobTxSidecar) ValidateWithBlobTx(tx *TxInternalDataEthereumBlob) error {
-	// Ensure the number of items in the blob transaction and various side
-	// data match up before doing any expensive validations
-	hashes := tx.BlobHashes
-	if len(hashes) == 0 {
-		return errors.New("blobless blob transaction")
-	}
-	if len(hashes) > params.BlobTxMaxBlobs {
-		return fmt.Errorf("too many blobs in transaction: have %d, permitted %d", len(hashes), params.BlobTxMaxBlobs)
-	}
+// Validation rules:
+// 1. The BlobTxWithBlobs format complies with EIP-7594.
+// - assert sidecar_version == 1  # BlobSidecarVersionV1
+// - assert len(tx.blobVersionedHashes) == len(blobs) == len(commitments)  # 1 commitment per blob
+// - assert len(blobs) * CELLS_PER_EXT_BLOB == len(proofs)  # 128 proofs per blob
+// 2. The BlobTxWithBlobs contains the correct proofs
+// - for i in range(len(tx.blobVersionedHashes)):
+//   - assert CalcBlobHashV1(commitments[i]) == tx.blobVersionedHashes[i]
+//
+// - assert VerifyCellProofs(blobs, commitments, cellProofs)
+// ref: https://github.com/kaiachain/kips/blob/fac337aad17db40ed2a6c988e03ad6b2ec9771f2/KIPs/kip-279.md#blobtxwithblobs-validation
+func (sc *BlobTxSidecar) ValidateWithBlobHashes(hashes []common.Hash) error {
 	if len(sc.Blobs) != len(hashes) {
 		return fmt.Errorf("invalid number of %d blobs compared to %d blob hashes", len(sc.Blobs), len(hashes))
 	}
@@ -241,16 +243,11 @@ func (sc *BlobTxSidecar) ValidateWithBlobTx(tx *TxInternalDataEthereumBlob) erro
 	}
 	// Fork-specific sidecar checks, including proof verification.
 	if sc.Version == BlobSidecarVersion1 {
-		err := validateBlobSidecarOsaka(sc, hashes)
-		if err != nil {
-			return err
-		}
-	} else {
-		// Kaia rejects sidecar.Version = 0.
-		// ref: https://github.com/kaiachain/kips/blob/main/KIPs/kip-279.md#reject-sidecar-v0
-		return fmt.Errorf("blob sidecar version %d not supported", sc.Version)
+		return validateBlobSidecarOsaka(sc, hashes)
 	}
-	return nil
+	// Kaia rejects sidecar.Version = 0.
+	// ref: https://github.com/kaiachain/kips/blob/main/KIPs/kip-279.md#reject-sidecar-v0
+	return fmt.Errorf("blob sidecar version %d not supported", sc.Version)
 }
 
 func validateBlobSidecarOsaka(sidecar *BlobTxSidecar, hashes []common.Hash) error {
