@@ -120,7 +120,7 @@ type BlobTxSidecar struct {
 	Commitments []kzg4844.Commitment // Commitments needed by the blob pool
 	Proofs      []kzg4844.Proof      // Proofs needed by the blob pool
 
-	validatedHash common.Hash // Hash of the versioned hashes that have been validated
+	validatedSummaryHash common.Hash // Hash of the versioned hashes that have been validated
 }
 
 // NewBlobTxSidecar initialises the BlobTxSidecar object with the provided parameters.
@@ -238,15 +238,15 @@ func (sc *BlobTxSidecar) Copy() *BlobTxSidecar {
 // - assert VerifyCellProofs(blobs, commitments, cellProofs)
 // ref: https://github.com/kaiachain/kips/blob/fac337aad17db40ed2a6c988e03ad6b2ec9771f2/KIPs/kip-279.md#blobtxwithblobs-validation
 func (sc *BlobTxSidecar) ValidateWithBlobHashes(hashes []common.Hash) error {
-	// Combine all hashes and compute the hash
-	combined := make([]byte, 0, len(hashes)*32)
+	// Summarize all hashes and compute the hash
+	blobHashesSummary := make([]byte, 0, len(hashes)*32)
 	for _, h := range hashes {
-		combined = append(combined, h[:]...)
+		blobHashesSummary = append(blobHashesSummary, h[:]...)
 	}
-	combinedHash := crypto.Keccak256Hash(combined)
+	blobHashesSummaryHash := crypto.Keccak256Hash(blobHashesSummary)
 
-	// If the combined hash is the same as the validated hash, return nil for cached hashes.
-	if combinedHash == sc.validatedHash {
+	// If the summarized hash is the same as the validated summary hash, return nil for cached hashes.
+	if blobHashesSummaryHash == sc.validatedSummaryHash {
 		return nil
 	}
 
@@ -269,7 +269,7 @@ func (sc *BlobTxSidecar) ValidateWithBlobHashes(hashes []common.Hash) error {
 	}
 
 	// Once verified, the hash of hashes is cached.
-	sc.validatedHash = crypto.Keccak256Hash(combined)
+	sc.validatedSummaryHash = blobHashesSummaryHash
 	return nil
 }
 

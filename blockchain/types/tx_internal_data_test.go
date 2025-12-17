@@ -381,10 +381,10 @@ func TestSidecar_ValidateWithBlobHashes(t *testing.T) {
 			hashes:  singleSidecarHashes,
 			cacheCheck: func(t *testing.T, sidecar *BlobTxSidecar, err error) {
 				require.NoError(t, err)
-				combined := make([]byte, 0, 32)
-				combined = append(combined, singleSidecarHashes[0][:]...)
-				expectedHash := crypto.Keccak256Hash(combined)
-				assert.Equal(t, sidecar.validatedHash, expectedHash)
+				blobHashesSummary := make([]byte, 0, 32)
+				blobHashesSummary = append(blobHashesSummary, singleSidecarHashes[0][:]...)
+				expectedSummaryHash := crypto.Keccak256Hash(blobHashesSummary)
+				assert.Equal(t, sidecar.validatedSummaryHash, expectedSummaryHash)
 			},
 		},
 		{
@@ -393,12 +393,12 @@ func TestSidecar_ValidateWithBlobHashes(t *testing.T) {
 			hashes:  multipleSidecarHashes,
 			cacheCheck: func(t *testing.T, sidecar *BlobTxSidecar, err error) {
 				require.NoError(t, err)
-				combined := make([]byte, 0, len(multipleSidecarHashes)*32)
+				blobHashesSummary := make([]byte, 0, len(multipleSidecarHashes)*32)
 				for _, hash := range multipleSidecarHashes {
-					combined = append(combined, hash[:]...)
+					blobHashesSummary = append(blobHashesSummary, hash[:]...)
 				}
-				expectedHash := crypto.Keccak256Hash(combined)
-				assert.Equal(t, sidecar.validatedHash, expectedHash)
+				expectedSummaryHash := crypto.Keccak256Hash(blobHashesSummary)
+				assert.Equal(t, sidecar.validatedSummaryHash, expectedSummaryHash)
 			},
 		},
 		{
