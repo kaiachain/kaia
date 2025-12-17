@@ -26,7 +26,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -102,6 +101,10 @@ var (
 	errNoBlobSidecarForBlobTx = errors.New("no blob sidecar for blob transaction")
 	// errInvalidBlobTxWithSidecar is returned if the blob transaction has an invalid sidecar.
 	errInvalidBlobTxWithSidecar = errors.New("invalid blob transaction with sidecar")
+	// errUnexpectedExcessBlobGasBeforeOsaka is returned if the excessBlobGas is present before the osaka fork.
+	errUnexpectedExcessBlobGasBeforeOsaka = errors.New("unexpected excessBlobGas before osaka")
+	// errUnexpectedBlobGasUsedBeforeOsaka is returned if the blobGasUsed is present before the osaka fork.
+	errUnexpectedBlobGasUsedBeforeOsaka = errors.New("unexpected blobGasUsed before osaka")
 )
 
 var (
@@ -246,23 +249,6 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return err
 	}
 
-	// Verify the existence / non-existence of osaka-specific header fields
-	osaka := chain.Config().IsOsakaForkEnabled(header.Number)
-	if !osaka {
-		switch {
-		case header.ExcessBlobGas != nil:
-			return fmt.Errorf("invalid excessBlobGas: have %d, expected nil", *header.ExcessBlobGas)
-		case header.BlobGasUsed != nil:
-			return fmt.Errorf("invalid blobGasUsed: have %d, expected nil", *header.BlobGasUsed)
-		}
-	} else {
-		if len(parents) > 0 {
-			if err := eip4844.VerifyEIP4844Header(chain.Config(), parents[len(parents)-1], header); err != nil {
-				return err
-			}
-		}
-	}
-
 	for _, module := range sb.consensusModules {
 		if err := module.VerifyHeader(header); err != nil {
 			return err
@@ -307,6 +293,21 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		}
 	} else if header.RandomReveal != nil || header.MixHash != nil {
 		return errUnexpectedRandao
+	}
+
+	// Verify the existence / non-existence of osaka-specific header fields
+	osaka := chain.Config().IsOsakaForkEnabled(header.Number)
+	if !osaka {
+		switch {
+		case header.ExcessBlobGas != nil:
+			return errUnexpectedExcessBlobGasBeforeOsaka
+		case header.BlobGasUsed != nil:
+			return errUnexpectedBlobGasUsedBeforeOsaka
+		}
+	} else {
+		if err := eip4844.VerifyEIP4844Header(chain.Config(), parent, header); err != nil {
+			return err
+		}
 	}
 
 	return sb.verifyCommittedSeals(chain, header, parents)

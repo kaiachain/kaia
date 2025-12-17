@@ -599,7 +599,7 @@ func TestVerifyHeader(t *testing.T) {
 					}))
 					return block.Header()
 				}(),
-				expectedErr: fmt.Errorf("invalid excessBlobGas: have %d, expected nil", 0),
+				expectedErr: errUnexpectedExcessBlobGasBeforeOsaka,
 				targetFork:  "kore",
 			},
 			{
@@ -611,7 +611,7 @@ func TestVerifyHeader(t *testing.T) {
 					}))
 					return block.Header()
 				}(),
-				expectedErr: fmt.Errorf("invalid blobGasUsed: have %d, expected nil", 0),
+				expectedErr: errUnexpectedBlobGasUsedBeforeOsaka,
 				targetFork:  "kore",
 			},
 			{
