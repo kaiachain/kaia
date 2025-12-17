@@ -1243,20 +1243,16 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 
 	pm.blobSidecarMu.Lock()
 	for _, sidecar := range sidecars {
-		if sidecar.Sidecar != nil {
-			peerID, ok := pm.blobSidecarPending[sidecar.Hash.String()]
-			if !ok {
-				continue
-			}
-
-			if peerID != p.GetID() {
-				continue
-			}
-
-			if err := pm.txpool.SaveMissingBlobSidecar(big.NewInt(int64(sidecar.BlockNum)), int(sidecar.TxIndex), sidecar.Hash, sidecar.Sidecar); err != nil {
-				logger.Warn("Failed to save blob sidecar to txpool", "blockNum", sidecar.BlockNum, "txIndex", sidecar.TxIndex, "err", err)
-			}
+		if sidecar.Sidecar == nil {
+			continue
 		}
+		if peerID, ok := pm.blobSidecarPending[sidecar.Hash.String()]; peerID != p.GetID() || !ok {
+			continue
+		}
+		if err := pm.txpool.SaveMissingBlobSidecar(big.NewInt(int64(sidecar.BlockNum)), int(sidecar.TxIndex), sidecar.Hash, sidecar.Sidecar); err != nil {
+			logger.Warn("Failed to save blob sidecar to txpool", "blockNum", sidecar.BlockNum, "txIndex", sidecar.TxIndex, "err", err)
+		}
+		delete(pm.blobSidecarPending, sidecar.Hash.String())
 	}
 	pm.blobSidecarMu.Unlock()
 
@@ -1266,6 +1262,8 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 func (pm *ProtocolManager) blobSidecarSyncLoop() {
 	pm.wg.Add(1)
 	defer pm.wg.Done()
+
+	lastFetchTime := time.Now()
 
 	for {
 		select {
@@ -1280,6 +1278,7 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 			}
 
 			if peer.GetVersion() < kaia67 {
+				// HY-TODO: should select other peer?
 				continue
 			}
 
@@ -1295,6 +1294,12 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 				},
 			}
 
+			interval := 100 * time.Millisecond
+			if elapsed := time.Since(lastFetchTime); elapsed < interval {
+				time.Sleep(interval - elapsed)
+			}
+
+			// HY-TODO: should retry if failed to request blob sidecars?
 			if err := peer.RequestBlobSidecars(requests); err != nil {
 				logger.Debug("Failed to request blob sidecars", "err", err)
 				pm.blobSidecarMu.Lock()
@@ -1309,6 +1314,8 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 					pm.blobSidecarMu.Unlock()
 				}(sidecar)
 			}
+
+			lastFetchTime = time.Now()
 
 		case <-pm.quitSync:
 			return

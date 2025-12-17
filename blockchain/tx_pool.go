@@ -2019,6 +2019,7 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 	}
 	pool.blobStorage.Prune(newHead.Number())
 
+	// HY-TODO: skip if the block is too old
 	for i, tx := range newHead.Transactions() {
 		if tx.Type() != types.TxTypeEthereumBlob {
 			continue
