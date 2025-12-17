@@ -2026,6 +2026,11 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 		return
 	}
 
+	// TODO: skip if the block does not include blob tx
+	// if !newHead.IsBlobTxIncluded() {
+	// 	return
+	// }
+
 	// prune blob storage
 	pool.blobStorage.Prune(newHead.Number())
 
