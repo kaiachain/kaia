@@ -1249,7 +1249,7 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		if peerID, ok := pm.blobSidecarPending[sidecar.Hash.String()]; peerID != p.GetID() || !ok {
 			continue
 		}
-		if err := pm.txpool.SaveMissingBlobSidecar(big.NewInt(int64(sidecar.BlockNum)), int(sidecar.TxIndex), sidecar.Hash, sidecar.Sidecar); err != nil {
+		if err := pm.txpool.SaveBlobSidecar(big.NewInt(int64(sidecar.BlockNum)), int(sidecar.TxIndex), sidecar.Hash, sidecar.Sidecar); err != nil {
 			logger.Warn("Failed to save blob sidecar to txpool", "blockNum", sidecar.BlockNum, "txIndex", sidecar.TxIndex, "err", err)
 		}
 		delete(pm.blobSidecarPending, sidecar.Hash.String())

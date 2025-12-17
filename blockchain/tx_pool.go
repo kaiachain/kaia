@@ -1993,7 +1993,7 @@ func (pool *TxPool) SubscribeMissingBlobSidecars() <-chan *MissingBlobSidecar {
 	return pool.missingBlobSidecarsCh
 }
 
-func (pool *TxPool) SaveMissingBlobSidecar(blockNum *big.Int, txIndex int, txHash common.Hash, sidecar *types.BlobTxSidecar) error {
+func (pool *TxPool) SaveBlobSidecar(blockNum *big.Int, txIndex int, txHash common.Hash, sidecar *types.BlobTxSidecar) error {
 	if pool.blobStorage == nil || blockNum == nil {
 		return errors.New("blob storage not initialized")
 	}
