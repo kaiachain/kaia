@@ -143,7 +143,7 @@ func (b *BlobStorage) Prune(current *big.Int) error {
 		return nil
 	}
 
-	if new(big.Int).Mod(retentionBlockNumber, big.NewInt(BLOCKS_PER_BUCKET)) != big.NewInt(0) {
+	if new(big.Int).Mod(retentionBlockNumber, big.NewInt(BLOCKS_PER_BUCKET)).Sign() != 0 {
 		return nil
 	}
 
