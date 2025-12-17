@@ -149,7 +149,7 @@ type ProtocolManager struct {
 	auctionModule auction.AuctionModule
 
 	blobSidecarCh      <-chan *kaia_blockchain.MissingBlobSidecar
-	blobSidecarPending map[string]string
+	blobSidecarPending map[common.Hash]string // txHash -> peerID
 	blobSidecarMu      sync.RWMutex
 }
 
@@ -175,7 +175,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		engine:             engine,
 		nodetype:           nodetype,
 		txResendUseLegacy:  cnconfig.TxResendUseLegacy,
-		blobSidecarPending: make(map[string]string),
+		blobSidecarPending: make(map[common.Hash]string),
 	}
 
 	// istanbul BFT
@@ -1222,7 +1222,7 @@ func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 		if encoded, err := rlp.EncodeToBytes(blobSidecarsData{
 			BlockNum: hexutil.Uint64(data.BlockNum),
 			TxIndex:  hexutil.Uint(data.TxIndex),
-			Hash:     data.Hash,
+			TxHash:   data.Hash,
 			Sidecar:  result,
 		}); err != nil {
 			logger.Error("Failed to encode blob sidecars", "err", err)
@@ -1248,16 +1248,16 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		if pm.blobSidecarPending == nil {
 			continue
 		}
-		peerID, ok := pm.blobSidecarPending[sidecar.Hash.String()]
+		peerID, ok := pm.blobSidecarPending[sidecar.TxHash]
 		if !ok || peerID != p.GetID() {
 			continue
 		}
 
 		pm.blobSidecarMu.Lock()
-		delete(pm.blobSidecarPending, sidecar.Hash.String())
+		delete(pm.blobSidecarPending, sidecar.TxHash)
 		pm.blobSidecarMu.Unlock()
 
-		if err := pm.txpool.SaveBlobSidecar(big.NewInt(int64(sidecar.BlockNum)), int(sidecar.TxIndex), sidecar.Hash, sidecar.Sidecar); err != nil {
+		if err := pm.txpool.SaveBlobSidecar(big.NewInt(int64(sidecar.BlockNum)), int(sidecar.TxIndex), sidecar.TxHash, sidecar.Sidecar); err != nil {
 			logger.Warn("Failed to save blob sidecar to txpool", "blockNum", sidecar.BlockNum, "txIndex", sidecar.TxIndex, "err", err)
 		}
 	}
@@ -1289,7 +1289,7 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 			}
 
 			pm.blobSidecarMu.Lock()
-			pm.blobSidecarPending[sidecar.TxHash.String()] = peer.GetID()
+			pm.blobSidecarPending[sidecar.TxHash] = peer.GetID()
 			pm.blobSidecarMu.Unlock()
 
 			requests := []blobSidecarsRequestData{
@@ -1309,14 +1309,14 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 			if err := peer.RequestBlobSidecars(requests); err != nil {
 				logger.Debug("Failed to request blob sidecars", "err", err)
 				pm.blobSidecarMu.Lock()
-				delete(pm.blobSidecarPending, sidecar.TxHash.String())
+				delete(pm.blobSidecarPending, sidecar.TxHash)
 				pm.blobSidecarMu.Unlock()
 			} else {
 				// 10 seconds timeout to remove the missing blob sidecars from the pending list
 				go func(sidecars *kaia_blockchain.MissingBlobSidecar) {
 					time.Sleep(10 * time.Second)
 					pm.blobSidecarMu.Lock()
-					delete(pm.blobSidecarPending, sidecar.TxHash.String())
+					delete(pm.blobSidecarPending, sidecar.TxHash)
 					pm.blobSidecarMu.Unlock()
 				}(sidecar)
 			}

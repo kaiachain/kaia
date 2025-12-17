@@ -706,13 +706,13 @@ func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
 		rlp0, _ := rlp.EncodeToBytes(blobSidecarsData{
 			BlockNum: requestData[0].BlockNum,
 			TxIndex:  requestData[0].TxIndex,
-			Hash:     requestData[0].Hash,
+			TxHash:   requestData[0].Hash,
 			Sidecar:  sidecar0,
 		})
 		rlp1, _ := rlp.EncodeToBytes(blobSidecarsData{
 			BlockNum: requestData[1].BlockNum,
 			TxIndex:  requestData[1].TxIndex,
-			Hash:     requestData[1].Hash,
+			TxHash:   requestData[1].Hash,
 			Sidecar:  sidecar1,
 		})
 		expectedRlpList := []rlp.RawValue{rlp0, rlp1}
@@ -740,13 +740,13 @@ func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
 		rlp0, _ := rlp.EncodeToBytes(blobSidecarsData{
 			BlockNum: requestData[0].BlockNum,
 			TxIndex:  requestData[0].TxIndex,
-			Hash:     requestData[0].Hash,
+			TxHash:   requestData[0].Hash,
 			Sidecar:  sidecar0,
 		})
 		rlp1, _ := rlp.EncodeToBytes(blobSidecarsData{
 			BlockNum: requestData[1].BlockNum,
 			TxIndex:  requestData[1].TxIndex,
-			Hash:     requestData[1].Hash,
+			TxHash:   requestData[1].Hash,
 			Sidecar:  sidecar1,
 		})
 		expectedRlpList := []rlp.RawValue{rlp0, rlp1}
@@ -774,7 +774,7 @@ func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
 		rlp1, _ := rlp.EncodeToBytes(blobSidecarsData{
 			BlockNum: requestData[1].BlockNum,
 			TxIndex:  requestData[1].TxIndex,
-			Hash:     requestData[1].Hash,
+			TxHash:   requestData[1].Hash,
 			Sidecar:  sidecar1,
 		})
 		expectedRlpList := []rlp.RawValue{rlp1}
@@ -809,7 +809,7 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		d := &blobSidecarsData{
 			BlockNum: 1,
 			TxIndex:  1,
-			Hash:     tx1.Hash(),
+			TxHash:   tx1.Hash(),
 			Sidecar:  nil,
 		}
 		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
@@ -833,10 +833,10 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		d := &blobSidecarsData{
 			BlockNum: 1,
 			TxIndex:  1,
-			Hash:     tx1.Hash(),
+			TxHash:   tx1.Hash(),
 			Sidecar:  generateTestSidecar(tx1.Hash()),
 		}
-		pm.blobSidecarPending = make(map[string]string) // no entry
+		pm.blobSidecarPending = make(map[common.Hash]string) // no entry
 		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)
@@ -849,10 +849,10 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		d := &blobSidecarsData{
 			BlockNum: 1,
 			TxIndex:  1,
-			Hash:     tx1.Hash(),
+			TxHash:   tx1.Hash(),
 			Sidecar:  generateTestSidecar(tx1.Hash()),
 		}
-		pm.blobSidecarPending = map[string]string{d.Hash.String(): "different-peer-id"}
+		pm.blobSidecarPending = map[common.Hash]string{d.TxHash: "different-peer-id"}
 		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)
@@ -865,23 +865,23 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		d := &blobSidecarsData{
 			BlockNum: 1,
 			TxIndex:  1,
-			Hash:     tx1.Hash(),
+			TxHash:   tx1.Hash(),
 			Sidecar:  generateTestSidecar(tx1.Hash()),
 		}
-		pm.blobSidecarPending = map[string]string{d.Hash.String(): mockPeer.GetID()}
+		pm.blobSidecarPending = map[common.Hash]string{d.TxHash: mockPeer.GetID()}
 		// Setup expected save call
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 		mockTxPool.EXPECT().SaveBlobSidecar(
 			big.NewInt(int64(d.BlockNum)),
 			int(d.TxIndex),
-			d.Hash,
+			d.TxHash,
 			d.Sidecar,
 		).Return(nil).Times(1)
 		pm.txpool = mockTxPool
 		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)
-		_, ok := pm.blobSidecarPending[d.Hash.String()]
+		_, ok := pm.blobSidecarPending[d.TxHash]
 		assert.False(t, ok, "should be deleted from blobSidecarPending")
 		mockCtrl.Finish()
 	}
@@ -892,22 +892,22 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		d := &blobSidecarsData{
 			BlockNum: 1,
 			TxIndex:  1,
-			Hash:     tx1.Hash(),
+			TxHash:   tx1.Hash(),
 			Sidecar:  generateTestSidecar(tx1.Hash()),
 		}
-		pm.blobSidecarPending = map[string]string{d.Hash.String(): mockPeer.GetID()}
+		pm.blobSidecarPending = map[common.Hash]string{d.TxHash: mockPeer.GetID()}
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 		mockTxPool.EXPECT().SaveBlobSidecar(
 			big.NewInt(int64(d.BlockNum)),
 			int(d.TxIndex),
-			d.Hash,
+			d.TxHash,
 			d.Sidecar,
 		).Return(errors.New("expected error")).Times(1)
 		pm.txpool = mockTxPool
 		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)
-		_, ok := pm.blobSidecarPending[d.Hash.String()]
+		_, ok := pm.blobSidecarPending[d.TxHash]
 		assert.False(t, ok, "should be deleted from blobSidecarPending even on error")
 		mockCtrl.Finish()
 	}
