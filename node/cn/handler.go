@@ -1241,7 +1241,6 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 
-	pm.blobSidecarMu.Lock()
 	for _, sidecar := range sidecars {
 		if sidecar.Sidecar == nil {
 			continue
@@ -1253,12 +1252,15 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		if !ok || peerID != p.GetID() {
 			continue
 		}
+
+		pm.blobSidecarMu.Lock()
+		delete(pm.blobSidecarPending, sidecar.Hash.String())
+		pm.blobSidecarMu.Unlock()
+
 		if err := pm.txpool.SaveBlobSidecar(big.NewInt(int64(sidecar.BlockNum)), int(sidecar.TxIndex), sidecar.Hash, sidecar.Sidecar); err != nil {
 			logger.Warn("Failed to save blob sidecar to txpool", "blockNum", sidecar.BlockNum, "txIndex", sidecar.TxIndex, "err", err)
 		}
-		delete(pm.blobSidecarPending, sidecar.Hash.String())
 	}
-	pm.blobSidecarMu.Unlock()
 
 	return nil
 }
