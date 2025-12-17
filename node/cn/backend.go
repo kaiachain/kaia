@@ -347,7 +347,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// TODO-Kaia-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
 
-	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, chainDB.GetDBConfig(), bc, mGov)
+	blobStorageConfig := blockchain.DefaultBlobStorageConfig(chainDB.GetDBConfig().Dir)
+	config.TxPool.BlobStorageConfig = &blobStorageConfig
+
+	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov)
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB

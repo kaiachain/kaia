@@ -343,7 +343,7 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 			cdb.SetBalance(crypto.PubkeyToAddress(userKey.PublicKey), new(big.Int).SetUint64(params.KAIA))
 		}
 		bc := &testBlockChain{cdb, 10000000, new(event.Feed)}
-		pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, &database.DBConfig{}, bc, &dummyGovModule{chainConfig: testChainConfig})
+		pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
 		g := NewGaslessModule()
 		err := g.Init(&InitOpts{
 			ChainConfig:   testChainConfig,
@@ -439,7 +439,7 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 	for range make([]int, 1000) {
 		cdb := sdb.Copy()
 		bc := &testBlockChain{cdb, 10000000, new(event.Feed)}
-		pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, &database.DBConfig{}, bc, &dummyGovModule{chainConfig: testChainConfig})
+		pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
 		g := NewGaslessModule()
 		err := g.Init(&InitOpts{
 			ChainConfig:   testChainConfig,

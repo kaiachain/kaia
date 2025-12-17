@@ -43,7 +43,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -167,6 +166,8 @@ type TxPoolConfig struct {
 
 	NoAccountCreation            bool // Whether account creation transactions should be disabled
 	EnableSpamThrottlerAtRuntime bool // Enable txpool spam throttler at runtime
+
+	BlobStorageConfig *BlobStorageConfig // Blob storage configuration
 }
 
 // DefaultTxPoolConfig contains the default configurations for the transaction
@@ -270,7 +271,7 @@ type TxPool struct {
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
 // transactions from the network.
-func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, dbConfig *database.DBConfig, chain blockChain, govModule GovModule) *TxPool {
+func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain blockChain, govModule GovModule) *TxPool {
 	// Sanitize the input to ensure no vulnerable gas prices are set
 	config = (&config).sanitize()
 
@@ -314,7 +315,9 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, dbConfig *d
 	pool.chainHeadSub = pool.chain.SubscribeChainHeadEvent(pool.chainHeadCh)
 
 	// Initialize blob storage
-	pool.blobStorage = NewBlobStorage(DefaultBlobStorageConfig(dbConfig.Dir))
+	if config.BlobStorageConfig != nil {
+		pool.blobStorage = NewBlobStorage(*config.BlobStorageConfig)
+	}
 
 	// Start the event loop and return
 	pool.wg.Add(3)
