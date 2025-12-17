@@ -694,7 +694,7 @@ func TestHandleBidMsg(t *testing.T) {
 func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
 	// test if the blob sidecars are retrieved from the block chain
 	{
-		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
 		requestData := []blobSidecarsRequestData{
 			{BlockNum: 10, TxIndex: 0, Hash: tx1.Hash()},
 			{BlockNum: 20, TxIndex: 1, Hash: tx2.Hash()},
@@ -703,12 +703,24 @@ func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
 
 		sidecar0 := generateTestSidecar(tx1.Hash())
 		sidecar1 := generateTestSidecar(tx2.Hash())
-		rlp0, _ := rlp.EncodeToBytes(sidecar0)
-		rlp1, _ := rlp.EncodeToBytes(sidecar1)
+		rlp0, _ := rlp.EncodeToBytes(blobSidecarsData{
+			BlockNum: requestData[0].BlockNum,
+			TxIndex:  requestData[0].TxIndex,
+			Hash:     requestData[0].Hash,
+			Sidecar:  sidecar0,
+		})
+		rlp1, _ := rlp.EncodeToBytes(blobSidecarsData{
+			BlockNum: requestData[1].BlockNum,
+			TxIndex:  requestData[1].TxIndex,
+			Hash:     requestData[1].Hash,
+			Sidecar:  sidecar1,
+		})
 		expectedRlpList := []rlp.RawValue{rlp0, rlp1}
 
-		mockBlockChain.EXPECT().GetBlobSidecarFromStorage(gomock.Eq(big.NewInt(int64(requestData[0].BlockNum))), gomock.Eq(int(requestData[0].TxIndex))).Return(sidecar0, nil).Times(1)
-		mockBlockChain.EXPECT().GetBlobSidecarFromStorage(gomock.Eq(big.NewInt(int64(requestData[1].BlockNum))), gomock.Eq(int(requestData[1].TxIndex))).Return(sidecar1, nil).Times(1)
+		mockTxPool := mocks.NewMockTxPool(mockCtrl)
+		mockTxPool.EXPECT().GetBlobSidecarFromStorage(gomock.Eq(big.NewInt(int64(requestData[0].BlockNum))), gomock.Eq(int(requestData[0].TxIndex))).Return(sidecar0, nil).Times(1)
+		mockTxPool.EXPECT().GetBlobSidecarFromStorage(gomock.Eq(big.NewInt(int64(requestData[1].BlockNum))), gomock.Eq(int(requestData[1].TxIndex))).Return(sidecar1, nil).Times(1)
+		pm.txpool = mockTxPool
 		mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
 		err := handleBlobSidecarsRequestMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)
@@ -716,7 +728,7 @@ func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
 	}
 	// test if the blob sidecars are retrieved from the tx pool
 	{
-		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
 		requestData := []blobSidecarsRequestData{
 			{BlockNum: 10, TxIndex: 0, Hash: tx1.Hash()},
 			{BlockNum: 20, TxIndex: 1, Hash: tx2.Hash()},
@@ -725,12 +737,22 @@ func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
 
 		sidecar0 := generateTestSidecar(tx1.Hash())
 		sidecar1 := generateTestSidecar(tx2.Hash())
-		rlp0, _ := rlp.EncodeToBytes(sidecar0)
-		rlp1, _ := rlp.EncodeToBytes(sidecar1)
+		rlp0, _ := rlp.EncodeToBytes(blobSidecarsData{
+			BlockNum: requestData[0].BlockNum,
+			TxIndex:  requestData[0].TxIndex,
+			Hash:     requestData[0].Hash,
+			Sidecar:  sidecar0,
+		})
+		rlp1, _ := rlp.EncodeToBytes(blobSidecarsData{
+			BlockNum: requestData[1].BlockNum,
+			TxIndex:  requestData[1].TxIndex,
+			Hash:     requestData[1].Hash,
+			Sidecar:  sidecar1,
+		})
 		expectedRlpList := []rlp.RawValue{rlp0, rlp1}
 
-		mockBlockChain.EXPECT().GetBlobSidecarFromStorage(gomock.Any(), gomock.Any()).Return(nil, nil).Times(2)
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
+		mockTxPool.EXPECT().GetBlobSidecarFromStorage(gomock.Any(), gomock.Any()).Return(nil, nil).Times(2)
 		mockTxPool.EXPECT().GetBlobSidecarFromPool(gomock.Eq(requestData[0].Hash)).Return(sidecar0, nil).Times(1)
 		mockTxPool.EXPECT().GetBlobSidecarFromPool(gomock.Eq(requestData[1].Hash)).Return(sidecar1, nil).Times(1)
 		pm.txpool = mockTxPool
@@ -741,7 +763,7 @@ func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
 	}
 	// test if the blob sidecars are not retrieved from the block chain or tx pool
 	{
-		mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
 		requestData := []blobSidecarsRequestData{
 			{BlockNum: 10, TxIndex: 0, Hash: tx1.Hash()},
 			{BlockNum: 20, TxIndex: 1, Hash: tx2.Hash()},
@@ -749,12 +771,17 @@ func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
 		msg := generateMsg(t, BlobSidecarsRequestMsg, requestData)
 
 		sidecar1 := generateTestSidecar(requestData[1].Hash)
-		rlp1, _ := rlp.EncodeToBytes(sidecar1)
+		rlp1, _ := rlp.EncodeToBytes(blobSidecarsData{
+			BlockNum: requestData[1].BlockNum,
+			TxIndex:  requestData[1].TxIndex,
+			Hash:     requestData[1].Hash,
+			Sidecar:  sidecar1,
+		})
 		expectedRlpList := []rlp.RawValue{rlp1}
 
-		mockBlockChain.EXPECT().GetBlobSidecarFromStorage(gomock.Eq(big.NewInt(int64(requestData[0].BlockNum))), gomock.Eq(int(requestData[0].TxIndex))).Return(nil, nil).Times(1)
-		mockBlockChain.EXPECT().GetBlobSidecarFromStorage(gomock.Eq(big.NewInt(int64(requestData[1].BlockNum))), gomock.Eq(int(requestData[1].TxIndex))).Return(sidecar1, nil).Times(1)
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
+		mockTxPool.EXPECT().GetBlobSidecarFromStorage(gomock.Eq(big.NewInt(int64(requestData[0].BlockNum))), gomock.Eq(int(requestData[0].TxIndex))).Return(nil, nil).Times(1)
+		mockTxPool.EXPECT().GetBlobSidecarFromStorage(gomock.Eq(big.NewInt(int64(requestData[1].BlockNum))), gomock.Eq(int(requestData[1].TxIndex))).Return(sidecar1, nil).Times(1)
 		mockTxPool.EXPECT().GetBlobSidecarFromPool(gomock.Eq(requestData[0].Hash)).Return(nil, nil).Times(1)
 		pm.txpool = mockTxPool
 		mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
@@ -766,13 +793,122 @@ func TestHandleBlobSidecarsRequestMsg(t *testing.T) {
 
 func TestHandleBlobSidecarsMsg(t *testing.T) {
 	{
-		// test if message does not contain expected data
+		// test if message does not contain expected data (decode error)
 		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
 		msg := generateMsg(t, BlobSidecarsMsg, uint64(123)) // Non-list value to invoke an error
 
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
 		assert.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(), errCode(ErrDecode).String()))
+		mockCtrl.Finish()
+	}
+
+	{
+		// test if message does not contain sidecar.Sidecar (decode error)
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		d := &blobSidecarsData{
+			BlockNum: 1,
+			TxIndex:  1,
+			Hash:     tx1.Hash(),
+			Sidecar:  nil,
+		}
+		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
+		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
+		assert.Error(t, err)
+		mockCtrl.Finish()
+	}
+
+	{
+		// empty sidecars list, nothing happens
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{})
+		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
+
+	{
+		// blobSidecarPending does not contain hash
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		d := &blobSidecarsData{
+			BlockNum: 1,
+			TxIndex:  1,
+			Hash:     tx1.Hash(),
+			Sidecar:  generateTestSidecar(tx1.Hash()),
+		}
+		pm.blobSidecarPending = make(map[string]string) // no entry
+		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
+		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
+
+	{
+		// blobSidecarPending entry exists but from wrong peer
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		d := &blobSidecarsData{
+			BlockNum: 1,
+			TxIndex:  1,
+			Hash:     tx1.Hash(),
+			Sidecar:  generateTestSidecar(tx1.Hash()),
+		}
+		pm.blobSidecarPending = map[string]string{d.Hash.String(): "different-peer-id"}
+		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
+		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		mockCtrl.Finish()
+	}
+
+	{
+		// test: sidecar is present, peerId matches, save succeeds
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		d := &blobSidecarsData{
+			BlockNum: 1,
+			TxIndex:  1,
+			Hash:     tx1.Hash(),
+			Sidecar:  generateTestSidecar(tx1.Hash()),
+		}
+		pm.blobSidecarPending = map[string]string{d.Hash.String(): mockPeer.GetID()}
+		// Setup expected save call
+		mockTxPool := mocks.NewMockTxPool(mockCtrl)
+		mockTxPool.EXPECT().SaveBlobSidecar(
+			big.NewInt(int64(d.BlockNum)),
+			int(d.TxIndex),
+			d.Hash,
+			d.Sidecar,
+		).Return(nil).Times(1)
+		pm.txpool = mockTxPool
+		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
+		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		_, ok := pm.blobSidecarPending[d.Hash.String()]
+		assert.False(t, ok, "should be deleted from blobSidecarPending")
+		mockCtrl.Finish()
+	}
+
+	{
+		// test: save fails (error is logged, not returned), pending entry deleted
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		d := &blobSidecarsData{
+			BlockNum: 1,
+			TxIndex:  1,
+			Hash:     tx1.Hash(),
+			Sidecar:  generateTestSidecar(tx1.Hash()),
+		}
+		pm.blobSidecarPending = map[string]string{d.Hash.String(): mockPeer.GetID()}
+		mockTxPool := mocks.NewMockTxPool(mockCtrl)
+		mockTxPool.EXPECT().SaveBlobSidecar(
+			big.NewInt(int64(d.BlockNum)),
+			int(d.TxIndex),
+			d.Hash,
+			d.Sidecar,
+		).Return(errors.New("expected error")).Times(1)
+		pm.txpool = mockTxPool
+		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
+		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
+		assert.NoError(t, err)
+		_, ok := pm.blobSidecarPending[d.Hash.String()]
+		assert.False(t, ok, "should be deleted from blobSidecarPending even on error")
 		mockCtrl.Finish()
 	}
 }

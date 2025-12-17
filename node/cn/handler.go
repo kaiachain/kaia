@@ -1246,7 +1246,11 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		if sidecar.Sidecar == nil {
 			continue
 		}
-		if peerID, ok := pm.blobSidecarPending[sidecar.Hash.String()]; peerID != p.GetID() || !ok {
+		if pm.blobSidecarPending == nil {
+			continue
+		}
+		peerID, ok := pm.blobSidecarPending[sidecar.Hash.String()]
+		if !ok || peerID != p.GetID() {
 			continue
 		}
 		if err := pm.txpool.SaveBlobSidecar(big.NewInt(int64(sidecar.BlockNum)), int(sidecar.TxIndex), sidecar.Hash, sidecar.Sidecar); err != nil {
