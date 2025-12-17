@@ -32,6 +32,7 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -52,6 +53,7 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -84,6 +86,7 @@ type testBlockChain struct {
 	statedb       *state.StateDB
 	gasLimit      uint64
 	chainHeadFeed *event.Feed
+	txMap         map[common.Hash]*types.Transaction
 }
 
 func (pool *TxPool) SetBaseFee(baseFee *big.Int) {
@@ -103,7 +106,21 @@ func (bc *testBlockChain) StateAt(common.Hash) (*state.StateDB, error) {
 }
 
 func (bc *testBlockChain) GetTxAndLookupInfo(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64) {
-	panic("not implemented")
+	if bc.txMap == nil {
+		return nil, common.Hash{}, 0, 0
+	}
+	tx, ok := bc.txMap[hash]
+	if !ok {
+		return nil, common.Hash{}, 0, 0
+	}
+	return tx, common.Hash{}, 0, 0
+}
+
+func (bc *testBlockChain) addTransaction(tx *types.Transaction) {
+	if bc.txMap == nil {
+		bc.txMap = make(map[common.Hash]*types.Transaction)
+	}
+	bc.txMap[tx.Hash()] = tx
 }
 
 func (bc *testBlockChain) SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription {
@@ -308,13 +325,41 @@ func setupTxPool() (*TxPool, *ecdsa.PrivateKey) {
 
 func setupTxPoolWithConfig(config *params.ChainConfig) (*TxPool, *ecdsa.PrivateKey) {
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	blockchain := &testBlockChain{statedb, 10000000, new(event.Feed)}
+	blockchain := &testBlockChain{
+		statedb:       statedb,
+		gasLimit:      10000000,
+		chainHeadFeed: new(event.Feed),
+		txMap:         make(map[common.Hash]*types.Transaction),
+	}
 
 	key, _ := crypto.GenerateKey()
 	statedb.SetBalance(crypto.PubkeyToAddress(key.PublicKey), new(big.Int).SetUint64(params.KAIA))
 	pool := NewTxPool(testTxPoolConfig, config, blockchain, &dummyGovModule{chainConfig: config})
 
 	return pool, key
+}
+
+func setupTxPoolWithBlobStorage(t *testing.T) (*TxPool, *testBlockChain, *ecdsa.PrivateKey, string) {
+	tmpDir := t.TempDir()
+	config := testTxPoolConfig
+	config.BlobStorageConfig = &BlobStorageConfig{
+		BaseDir:   filepath.Join(tmpDir, "blob"),
+		Retention: 21 * 24 * time.Hour,
+	}
+
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	blockchain := &testBlockChain{
+		statedb:       statedb,
+		gasLimit:      10000000,
+		chainHeadFeed: new(event.Feed),
+		txMap:         make(map[common.Hash]*types.Transaction),
+	}
+
+	key, _ := crypto.GenerateKey()
+	statedb.SetBalance(crypto.PubkeyToAddress(key.PublicKey), new(big.Int).SetUint64(params.KAIA))
+	pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+	return pool, blockchain, key, tmpDir
 }
 
 // validateTxPoolInternals checks various consistency invariants within the pool.
@@ -435,7 +480,7 @@ func TestStateChangeDuringTransactionPoolReset(t *testing.T) {
 
 	// setup pool with 2 transaction in it
 	statedb.SetBalance(address, new(big.Int).SetUint64(params.KAIA))
-	blockchain := &testChain{&testBlockChain{statedb, 1000000000, new(event.Feed)}, address, &trigger}
+	blockchain := &testChain{&testBlockChain{statedb: statedb, gasLimit: 1000000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}, address, &trigger}
 
 	tx0 := transaction(0, 100000, key)
 	tx1 := transaction(1, 100000, key)
@@ -736,7 +781,7 @@ func TestTransactionChainFork(t *testing.T) {
 		statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 		statedb.AddBalance(addr, big.NewInt(100000000000000))
 
-		pool.chain = &testBlockChain{statedb, 1000000, new(event.Feed)}
+		pool.chain = &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 		pool.lockedReset(nil, nil)
 	}
 	resetState()
@@ -765,7 +810,7 @@ func TestTransactionDoubleNonce(t *testing.T) {
 		statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 		statedb.AddBalance(addr, big.NewInt(100000000000000))
 
-		pool.chain = &testBlockChain{statedb, 1000000, new(event.Feed)}
+		pool.chain = &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 		pool.lockedReset(nil, nil)
 	}
 	resetState()
@@ -935,7 +980,7 @@ func TestTransactionPostponing(t *testing.T) {
 
 	// Create the pool to test the postponing with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
 	defer pool.Stop()
@@ -1150,7 +1195,7 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 
 	// Create the pool to test the limit enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	config := testTxPoolConfig
 	config.NoLocals = nolocals
@@ -1251,7 +1296,7 @@ func testTransactionQueueTimeLimiting(t *testing.T, nolocals, keepLocals bool) {
 
 	// Create the pool to test the non-expiration enforcement
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	config := testTxPoolConfig
 	config.Lifetime = 500 * time.Millisecond
@@ -1416,7 +1461,7 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 
 	// Create the pool to test the limit enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	config := testTxPoolConfig
 	config.ExecSlotsAll = config.ExecSlotsAccount * 10
@@ -1526,7 +1571,7 @@ func TestTransactionCapClearsFromAll(t *testing.T) {
 
 	// Create the pool to test the limit enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	config := testTxPoolConfig
 	config.ExecSlotsAccount = 2
@@ -1560,7 +1605,7 @@ func TestTransactionPendingMinimumAllowance(t *testing.T) {
 
 	// Create the pool to test the limit enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	config := testTxPoolConfig
 	config.ExecSlotsAll = 0
@@ -1610,7 +1655,7 @@ func TestTransactionPoolRepricing(t *testing.T) {
 
 	// Create the pool to test the pricing enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemDB()))
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig, blockchain)
 	defer pool.Stop()
@@ -1738,7 +1783,7 @@ func TestTransactionPoolRepricingKeepsLocals(t *testing.T) {
 
 	// Create the pool to test the pricing enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemDB()))
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig, blockchain)
 	defer pool.Stop()
@@ -1804,7 +1849,7 @@ func TestTransactionPoolUnderpricing(t *testing.T) {
 
 	// Create the pool to test the pricing enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemDB()))
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	config := testTxPoolConfig
 	config.ExecSlotsAll = 2
@@ -1914,7 +1959,7 @@ func TestTransactionPoolStableUnderpricing(t *testing.T) {
 
 	// Create the pool to test the pricing enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemDB()))
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	config := testTxPoolConfig
 	config.ExecSlotsAll = 128
@@ -1983,7 +2028,7 @@ func TestTransactionReplacement(t *testing.T) {
 
 	// Create the pool to test the pricing enforcement with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemDB()))
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig, blockchain)
 	defer pool.Stop()
@@ -2063,7 +2108,7 @@ func TestBlobTransactions(t *testing.T) {
 
 	// Create the pool to test the status retrievals with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	testChainConfig := params.TestKaiaConfig("osaka")
 	// Assume that a valid value is entered for gasPrice(baseFee).
@@ -2209,7 +2254,7 @@ func TestSetCodeTransactions(t *testing.T) {
 
 	// Create the pool to test the status retrievals with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	testChainConfig := params.TestKaiaConfig("prague")
 
@@ -2519,7 +2564,7 @@ func testTransactionJournaling(t *testing.T, nolocals bool) {
 
 	// Create the original pool to inject transaction into the journal
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	config := testTxPoolConfig
 	config.NoLocals = nolocals
@@ -2561,7 +2606,7 @@ func testTransactionJournaling(t *testing.T, nolocals bool) {
 	// Terminate the old pool, bump the local nonce, create a new pool and ensure relevant transaction survive
 	pool.Stop()
 	statedb.SetNonce(crypto.PubkeyToAddress(local.PublicKey), 1)
-	blockchain = &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain = &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	pool = NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
 
@@ -2588,7 +2633,7 @@ func testTransactionJournaling(t *testing.T, nolocals bool) {
 	pool.Stop()
 
 	statedb.SetNonce(crypto.PubkeyToAddress(local.PublicKey), 1)
-	blockchain = &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain = &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 	pool = NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
 
 	pending, queued = pool.Stats()
@@ -2617,7 +2662,7 @@ func TestTransactionStatusCheck(t *testing.T) {
 
 	// Create the pool to test the status retrievals with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	pool := NewTxPool(testTxPoolConfig, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
 	defer pool.Stop()
@@ -3231,7 +3276,7 @@ func TestTransactionJournalingSortedByTime(t *testing.T) {
 
 	// Create the pool to test the status retrievals with
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
-	blockchain := &testBlockChain{statedb, 1000000, new(event.Feed)}
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
 
 	config := testTxPoolConfig
 	config.Journal = journal
@@ -3442,6 +3487,852 @@ func TestEIP2681NonceMaxValue(t *testing.T) {
 				// clean up
 				pool.removeTx(tx.Hash(), false)
 			}
+		})
+	}
+}
+
+// TestTxPool_GetBlobSidecarFromStorage tests the GetBlobSidecarFromStorage method
+func TestTxPool_GetBlobSidecarFromStorage(t *testing.T) {
+	t.Parallel()
+
+	testcases := []struct {
+		name        string
+		setup       func(*testing.T) (*TxPool, *big.Int, int, *types.BlobTxSidecar)
+		blockNum    *big.Int
+		txIndex     int
+		wantErr     bool
+		errContains string
+		verify      func(*testing.T, *types.BlobTxSidecar, *types.BlobTxSidecar)
+	}{
+		{
+			name: "blobStorage is nil",
+			setup: func(t *testing.T) (*TxPool, *big.Int, int, *types.BlobTxSidecar) {
+				// Create TxPool without BlobStorageConfig (blobStorage will be nil)
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				config.BlobStorageConfig = nil // Explicitly set to nil
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+				return pool, big.NewInt(1000), 0, nil
+			},
+			blockNum:    big.NewInt(1000),
+			txIndex:     0,
+			wantErr:     true,
+			errContains: "blob storage not initialized",
+		},
+		{
+			name: "success - retrieve saved sidecar",
+			setup: func(t *testing.T) (*TxPool, *big.Int, int, *types.BlobTxSidecar) {
+				// Create TxPool with BlobStorageConfig
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				// Save a sidecar
+				blockNum := big.NewInt(2000)
+				txIndex := 1
+				originalSidecar := createTestSidecar(t, 2)
+				txHash := common.Hash{0x01, 0x02, 0x03}
+				err := pool.SaveBlobSidecar(blockNum, txIndex, txHash, originalSidecar)
+				require.NoError(t, err)
+
+				return pool, blockNum, txIndex, originalSidecar
+			},
+			blockNum: big.NewInt(2000),
+			txIndex:  1,
+			wantErr:  false,
+			verify: func(t *testing.T, original, retrieved *types.BlobTxSidecar) {
+				require.NotNil(t, retrieved)
+				assert.Equal(t, original.Version, retrieved.Version)
+				assert.Equal(t, len(original.Blobs), len(retrieved.Blobs))
+				assert.Equal(t, len(original.Commitments), len(retrieved.Commitments))
+				assert.Equal(t, len(original.Proofs), len(retrieved.Proofs))
+
+				for i := range original.Blobs {
+					assert.Equal(t, original.Blobs[i], retrieved.Blobs[i])
+					assert.Equal(t, original.Commitments[i], retrieved.Commitments[i])
+					assert.Equal(t, original.Proofs[i], retrieved.Proofs[i])
+				}
+			},
+		},
+		{
+			name: "blockNumber is nil",
+			setup: func(t *testing.T) (*TxPool, *big.Int, int, *types.BlobTxSidecar) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+				return pool, nil, 0, nil
+			},
+			blockNum:    nil,
+			txIndex:     0,
+			wantErr:     true,
+			errContains: "block number is nil",
+		},
+		{
+			name: "file not found",
+			setup: func(t *testing.T) (*TxPool, *big.Int, int, *types.BlobTxSidecar) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+				return pool, big.NewInt(9999), 99, nil
+			},
+			blockNum:    big.NewInt(9999),
+			txIndex:     99,
+			wantErr:     true,
+			errContains: "blob file not found",
+		},
+		{
+			name: "multiple sidecars - retrieve correct one",
+			setup: func(t *testing.T) (*TxPool, *big.Int, int, *types.BlobTxSidecar) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				// Save multiple sidecars with different blockNum and txIndex
+				sidecar1 := createTestSidecar(t, 1)
+				sidecar2 := createTestSidecar(t, 2)
+				sidecar3 := createTestSidecar(t, 3)
+
+				err := pool.SaveBlobSidecar(big.NewInt(1000), 0, common.Hash{0x01}, sidecar1)
+				require.NoError(t, err)
+				err = pool.SaveBlobSidecar(big.NewInt(1000), 1, common.Hash{0x02}, sidecar2)
+				require.NoError(t, err)
+				err = pool.SaveBlobSidecar(big.NewInt(2000), 0, common.Hash{0x03}, sidecar3)
+				require.NoError(t, err)
+
+				// Return pool and parameters to retrieve sidecar2
+				return pool, big.NewInt(1000), 1, sidecar2
+			},
+			blockNum: big.NewInt(1000),
+			txIndex:  1,
+			wantErr:  false,
+			verify: func(t *testing.T, original, retrieved *types.BlobTxSidecar) {
+				require.NotNil(t, retrieved)
+				assert.Equal(t, original.Version, retrieved.Version)
+				assert.Equal(t, len(original.Blobs), len(retrieved.Blobs))
+				// Verify it's sidecar2 (2 blobs) and not sidecar1 (1 blob) or sidecar3 (3 blobs)
+				assert.Equal(t, 2, len(retrieved.Blobs))
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			pool, expectedBlockNum, expectedTxIndex, expectedSidecar := tc.setup(t)
+			if pool != nil {
+				defer pool.Stop()
+			}
+
+			// Use provided blockNum and txIndex, or fall back to expected values
+			blockNum := tc.blockNum
+			if blockNum == nil {
+				blockNum = expectedBlockNum
+			}
+			txIndex := tc.txIndex
+			if txIndex == 0 && expectedTxIndex != 0 {
+				txIndex = expectedTxIndex
+			}
+
+			retrievedSidecar, err := pool.GetBlobSidecarFromStorage(blockNum, txIndex)
+			if tc.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.errContains)
+			} else {
+				require.NoError(t, err)
+				if tc.verify != nil && expectedSidecar != nil {
+					tc.verify(t, expectedSidecar, retrievedSidecar)
+				}
+			}
+		})
+	}
+}
+
+func TestTxPool_sendMissingBlobSidecar(t *testing.T) {
+	t.Parallel()
+
+	// successful send
+	t.Run("successful send", func(t *testing.T) {
+		pool, _ := setupTxPool()
+		defer pool.Stop()
+
+		sidecar := &MissingBlobSidecar{
+			BlockNum: big.NewInt(1000),
+			TxIndex:  0,
+			TxHash:   common.Hash{0x01, 0x02, 0x03},
+		}
+
+		ch := pool.SubscribeMissingBlobSidecars()
+		pool.sendMissingBlobSidecar(sidecar)
+
+		select {
+		case received := <-ch:
+			assert.Equal(t, sidecar.BlockNum, received.BlockNum)
+			assert.Equal(t, sidecar.TxIndex, received.TxIndex)
+			assert.Equal(t, sidecar.TxHash, received.TxHash)
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for sidecar")
+		}
+	})
+
+	// channel full drops notification
+	t.Run("channel full drops notification", func(t *testing.T) {
+		pool, _ := setupTxPool()
+		defer pool.Stop()
+
+		ch := pool.SubscribeMissingBlobSidecars()
+
+		// fill channel
+		for i := 0; i < missingBlobSidecarsChSize; i++ {
+			sidecar := &MissingBlobSidecar{
+				BlockNum: big.NewInt(int64(i)),
+				TxIndex:  i,
+				TxHash:   common.Hash{byte(i)},
+			}
+			pool.sendMissingBlobSidecar(sidecar)
+		}
+
+		// send extra sidecar (should be dropped)
+		extraSidecar := &MissingBlobSidecar{
+			BlockNum: big.NewInt(9999),
+			TxIndex:  9999,
+			TxHash:   common.Hash{0xFF},
+		}
+		pool.sendMissingBlobSidecar(extraSidecar)
+
+		// read all data from channel
+		receivedCount := 0
+		for i := 0; i < missingBlobSidecarsChSize; i++ {
+			select {
+			case <-ch:
+				receivedCount++
+			case <-time.After(100 * time.Millisecond):
+				break
+			}
+		}
+
+		assert.Equal(t, missingBlobSidecarsChSize, receivedCount)
+
+		// extra sidecar should not be sent
+		select {
+		case received := <-ch:
+			assert.NotEqual(t, extraSidecar.TxHash, received.TxHash, "extra sidecar should be dropped")
+		case <-time.After(100 * time.Millisecond):
+			// channel should be empty
+		}
+	})
+}
+
+func TestTxPool_SubscribeMissingBlobSidecars(t *testing.T) {
+	t.Parallel()
+
+	// channel should be readable
+	t.Run("returns read-only channel", func(t *testing.T) {
+		pool, _ := setupTxPool()
+		defer pool.Stop()
+
+		ch := pool.SubscribeMissingBlobSidecars()
+		// verify channel is read-only by type assertion
+		var readOnlyCh <-chan *MissingBlobSidecar = ch
+		require.NotNil(t, readOnlyCh, "channel should be readable")
+		// should be writable at compile time
+	})
+
+	// receives events through channel
+	t.Run("receives events through channel", func(t *testing.T) {
+		pool, _ := setupTxPool()
+		defer pool.Stop()
+
+		ch := pool.SubscribeMissingBlobSidecars()
+
+		sidecar := &MissingBlobSidecar{
+			BlockNum: big.NewInt(1000),
+			TxIndex:  5,
+			TxHash:   common.Hash{0x01, 0x02, 0x03},
+		}
+
+		pool.sendMissingBlobSidecar(sidecar)
+
+		select {
+		case received := <-ch:
+			assert.Equal(t, sidecar.BlockNum, received.BlockNum, "BlockNum should match")
+			assert.Equal(t, sidecar.TxIndex, received.TxIndex, "TxIndex should match")
+			assert.Equal(t, sidecar.TxHash, received.TxHash, "TxHash should match")
+		case <-time.After(time.Second):
+			t.Fatal("timeout waiting for sidecar event")
+		}
+	})
+}
+
+func TestTxPool_SaveBlobSidecar(t *testing.T) {
+	t.Parallel()
+
+	testcases := []struct {
+		name          string
+		setup         func(*testing.T) (*TxPool, *testBlockChain, *types.Transaction, *types.BlobTxSidecar, *big.Int, int, common.Hash)
+		expectedError string
+		verify        func(*testing.T, *TxPool, *big.Int, int, *types.BlobTxSidecar)
+	}{
+		{
+			name: "success-save-blob-sidecar",
+			setup: func(t *testing.T) (*TxPool, *testBlockChain, *types.Transaction, *types.BlobTxSidecar, *big.Int, int, common.Hash) {
+				pool, blockchain, key, _ := setupTxPoolWithBlobStorage(t)
+				blockNum := big.NewInt(1000)
+				txIndex := 0
+
+				// Create a blob transaction
+				tx := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(10), key, 1, nil)
+				txHash := tx.Hash()
+
+				// Get the sidecar from the transaction
+				sidecar := tx.BlobTxSidecar()
+				require.NotNil(t, sidecar, "sidecar should not be nil")
+
+				// Add transaction to blockchain
+				blockchain.addTransaction(tx)
+
+				return pool, blockchain, tx, sidecar, blockNum, txIndex, txHash
+			},
+			expectedError: "",
+			verify: func(t *testing.T, pool *TxPool, blockNum *big.Int, txIndex int, expectedSidecar *types.BlobTxSidecar) {
+				// Verify the sidecar was saved by retrieving it
+				savedSidecar, err := pool.GetBlobSidecarFromStorage(blockNum, txIndex)
+				require.NoError(t, err)
+				require.NotNil(t, savedSidecar)
+				assert.Equal(t, len(expectedSidecar.Blobs), len(savedSidecar.Blobs))
+				assert.Equal(t, len(expectedSidecar.Commitments), len(savedSidecar.Commitments))
+			},
+		},
+		{
+			name: "error-blob-storage-not-initialized",
+			setup: func(t *testing.T) (*TxPool, *testBlockChain, *types.Transaction, *types.BlobTxSidecar, *big.Int, int, common.Hash) {
+				// Create TxPool without BlobStorageConfig
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{
+					statedb:       statedb,
+					gasLimit:      10000000,
+					chainHeadFeed: new(event.Feed),
+					txMap:         make(map[common.Hash]*types.Transaction),
+				}
+				config := testTxPoolConfig
+				config.BlobStorageConfig = nil
+				key, _ := crypto.GenerateKey()
+				statedb.SetBalance(crypto.PubkeyToAddress(key.PublicKey), new(big.Int).SetUint64(params.KAIA))
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				tx := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(10), key, 1, nil)
+				sidecar := tx.BlobTxSidecar()
+				blockchain.addTransaction(tx)
+
+				return pool, blockchain, tx, sidecar, big.NewInt(1000), 0, tx.Hash()
+			},
+			expectedError: "blob storage not initialized",
+		},
+		{
+			name: "error-block-num-nil",
+			setup: func(t *testing.T) (*TxPool, *testBlockChain, *types.Transaction, *types.BlobTxSidecar, *big.Int, int, common.Hash) {
+				pool, blockchain, key, _ := setupTxPoolWithBlobStorage(t)
+				tx := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(10), key, 1, nil)
+				sidecar := tx.BlobTxSidecar()
+				blockchain.addTransaction(tx)
+
+				return pool, blockchain, tx, sidecar, nil, 0, tx.Hash()
+			},
+			expectedError: "blob storage not initialized",
+		},
+		{
+			name: "error-sidecar-nil",
+			setup: func(t *testing.T) (*TxPool, *testBlockChain, *types.Transaction, *types.BlobTxSidecar, *big.Int, int, common.Hash) {
+				pool, blockchain, key, _ := setupTxPoolWithBlobStorage(t)
+				tx := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(10), key, 1, nil)
+				blockchain.addTransaction(tx)
+
+				return pool, blockchain, tx, nil, big.NewInt(1000), 0, tx.Hash()
+			},
+			expectedError: "sidecar is nil",
+		},
+		{
+			name: "error-tx-not-found",
+			setup: func(t *testing.T) (*TxPool, *testBlockChain, *types.Transaction, *types.BlobTxSidecar, *big.Int, int, common.Hash) {
+				pool, blockchain, key, _ := setupTxPoolWithBlobStorage(t)
+				tx := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(10), key, 1, nil)
+				sidecar := tx.BlobTxSidecar()
+				// Don't add transaction to blockchain
+
+				return pool, blockchain, tx, sidecar, big.NewInt(1000), 0, tx.Hash()
+			},
+			expectedError: "tx not found",
+		},
+		{
+			name: "error-tx-not-blob-transaction",
+			setup: func(t *testing.T) (*TxPool, *testBlockChain, *types.Transaction, *types.BlobTxSidecar, *big.Int, int, common.Hash) {
+				pool, blockchain, key, _ := setupTxPoolWithBlobStorage(t)
+				// Create a regular transaction (not a blob transaction)
+				tx := transaction(0, 100000, key)
+				blockchain.addTransaction(tx)
+
+				// Create a sidecar for testing (even though tx is not a blob tx)
+				sidecar := createTestSidecar(t, 1)
+
+				return pool, blockchain, tx, sidecar, big.NewInt(1000), 0, tx.Hash()
+			},
+			expectedError: "tx is not a blob transaction",
+		},
+		{
+			name: "error-blob-commitment-hash-mismatch",
+			setup: func(t *testing.T) (*TxPool, *testBlockChain, *types.Transaction, *types.BlobTxSidecar, *big.Int, int, common.Hash) {
+				pool, blockchain, key, _ := setupTxPoolWithBlobStorage(t)
+				// Create a blob transaction with 1 blob
+				tx := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(10), key, 1, nil)
+				blockchain.addTransaction(tx)
+
+				// Create a sidecar with mismatched commitment (different blob)
+				mismatchedSidecar := createTestSidecar(t, 1)
+
+				return pool, blockchain, tx, mismatchedSidecar, big.NewInt(1000), 0, tx.Hash()
+			},
+			expectedError: "mismatches transaction",
+		},
+		{
+			name: "error-blob-storage-save-failed",
+			setup: func(t *testing.T) (*TxPool, *testBlockChain, *types.Transaction, *types.BlobTxSidecar, *big.Int, int, common.Hash) {
+				// Create TxPool with blob storage path that points to a file (not a directory)
+				// This will cause MkdirAll to fail when trying to create subdirectories
+				tmpDir := t.TempDir()
+				// Create a file in the temp dir
+				filePath := filepath.Join(tmpDir, "notadir")
+				file, err := os.Create(filePath)
+				require.NoError(t, err)
+				file.Close()
+
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{
+					statedb:       statedb,
+					gasLimit:      10000000,
+					chainHeadFeed: new(event.Feed),
+					txMap:         make(map[common.Hash]*types.Transaction),
+				}
+				config := testTxPoolConfig
+				// Use the file path as BaseDir - this will cause directory creation to fail
+				config.BlobStorageConfig = &BlobStorageConfig{
+					BaseDir:   filePath,
+					Retention: 21 * 24 * time.Hour,
+				}
+				key, _ := crypto.GenerateKey()
+				statedb.SetBalance(crypto.PubkeyToAddress(key.PublicKey), new(big.Int).SetUint64(params.KAIA))
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				tx := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(10), key, 1, nil)
+				sidecar := tx.BlobTxSidecar()
+				blockchain.addTransaction(tx)
+
+				return pool, blockchain, tx, sidecar, big.NewInt(1000), 0, tx.Hash()
+			},
+			expectedError: "failed to create blob directory",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			pool, _, _, sidecar, blockNum, txIndex, txHash := tc.setup(t)
+			if pool != nil {
+				defer pool.Stop()
+			}
+
+			err := pool.SaveBlobSidecar(blockNum, txIndex, txHash, sidecar)
+
+			if tc.expectedError != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedError)
+			} else {
+				require.NoError(t, err)
+				if tc.verify != nil {
+					tc.verify(t, pool, blockNum, txIndex, sidecar)
+				}
+			}
+		})
+	}
+}
+
+// createTestBlock creates a test block with the given parameters
+func createTestBlock(blockNumber *big.Int, timestamp *big.Int, txs types.Transactions) *types.Block {
+	header := &types.Header{
+		ParentHash:  common.Hash{0x01},
+		Root:        common.Hash{0x02},
+		TxHash:      common.Hash{0x03},
+		ReceiptHash: common.Hash{0x04},
+		Bloom:       types.Bloom{},
+		BlockScore:  big.NewInt(1),
+		Number:      new(big.Int).Set(blockNumber),
+		GasUsed:     0,
+		Time:        new(big.Int).Set(timestamp),
+		TimeFoS:     0,
+		Extra:       nil,
+		Governance:  nil,
+	}
+	return types.NewBlock(header, txs, nil)
+}
+
+func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
+	t.Parallel()
+
+	testcases := []struct {
+		name   string
+		setup  func(*testing.T) (*TxPool, *types.Block)
+		verify func(*testing.T, *TxPool, *types.Block)
+	}{
+		{
+			name: "blobStorage is nil - early return",
+			setup: func(t *testing.T) (*TxPool, *types.Block) {
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				config.BlobStorageConfig = nil // blobStorage will be nil
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				block := createTestBlock(big.NewInt(1000), big.NewInt(time.Now().Unix()), nil)
+				return pool, block
+			},
+			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
+				// Function should return early without error
+				pool.saveAndPruneBlobStorage(block)
+				// Verify blobStorage is nil
+				require.Nil(t, pool.blobStorage)
+			},
+		},
+		{
+			name: "newHead is nil - early return",
+			setup: func(t *testing.T) (*TxPool, *types.Block) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				return pool, nil
+			},
+			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
+				// Function should return early without error
+				pool.saveAndPruneBlobStorage(block)
+				// No assertions needed - just verify no panic
+			},
+		},
+		{
+			name: "block too old - early return",
+			setup: func(t *testing.T) (*TxPool, *types.Block) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				blobConfig.Retention = 10 * time.Second
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				// Create some old bucket directories to test pruning
+				pool.blobStorage.Save(big.NewInt(100), 0, createTestSidecar(t, 1))
+
+				// Create a block that is older than retention period
+				oldTimestamp := big.NewInt(time.Now().Add(-25 * time.Hour).Unix())
+				block := createTestBlock(big.NewInt(2000), oldTimestamp, nil)
+				return pool, block
+			},
+			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
+				// Function should return early without processing
+				pool.saveAndPruneBlobStorage(block)
+				// Verify sidecar is not pruned
+				sidecar, err := pool.GetBlobSidecarFromStorage(big.NewInt(100), 0)
+				require.NoError(t, err)
+				require.NotNil(t, sidecar)
+			},
+		},
+		{
+			name: "prune called at BLOCKS_PER_BUCKET multiple",
+			setup: func(t *testing.T) (*TxPool, *types.Block) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				blobConfig.Retention = 10 * time.Second
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				// Create some old bucket directories to test pruning
+				pool.blobStorage.Save(big.NewInt(100), 0, createTestSidecar(t, 1))
+
+				// Block number is BLOCKS_PER_BUCKET (2000)
+				block := createTestBlock(big.NewInt(2000), big.NewInt(time.Now().Unix()), nil)
+				return pool, block
+			},
+			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
+				pool.saveAndPruneBlobStorage(block)
+				// Prune should be called, but since retention is 21 days and block is 1000,
+				sidecar, err := pool.GetBlobSidecarFromStorage(big.NewInt(100), 0)
+				require.Error(t, err)
+				require.Nil(t, sidecar)
+			},
+		},
+		{
+			name: "prune not called at non-BLOCKS_PER_BUCKET multiple",
+			setup: func(t *testing.T) (*TxPool, *types.Block) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				blobConfig.Retention = 10 * time.Second
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				// Create a sidecar to test pruning
+				pool.blobStorage.Save(big.NewInt(100), 0, createTestSidecar(t, 1))
+
+				// Block number is not BLOCKS_PER_BUCKET multiple (2001)
+				block := createTestBlock(big.NewInt(2001), big.NewInt(time.Now().Unix()), nil)
+				return pool, block
+			},
+			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
+				pool.saveAndPruneBlobStorage(block)
+				// Prune should not be called for non-multiple blocks
+				sidecar, err := pool.GetBlobSidecarFromStorage(big.NewInt(100), 0)
+				require.NoError(t, err)
+				require.NotNil(t, sidecar)
+			},
+		},
+		{
+			name: "save blob sidecar from transaction",
+			setup: func(t *testing.T) (*TxPool, *types.Block) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				// Create blob transaction with sidecar
+				key, _ := crypto.GenerateKey()
+				tx := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(100), key, 1, nil)
+				block := createTestBlock(big.NewInt(1000), big.NewInt(time.Now().Unix()), types.Transactions{tx})
+				return pool, block
+			},
+			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
+				pool.saveAndPruneBlobStorage(block)
+				// Verify sidecar was saved
+				savedSidecar, err := pool.GetBlobSidecarFromStorage(block.Number(), 0)
+				require.NoError(t, err)
+				require.NotNil(t, savedSidecar)
+				assert.Equal(t, types.BlobSidecarVersion1, savedSidecar.Version)
+			},
+		},
+		{
+			name: "save blob sidecar from pool when not in transaction",
+			setup: func(t *testing.T) (*TxPool, *types.Block) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				// Create blob transaction and add to pool
+				key, _ := crypto.GenerateKey()
+				addr := crypto.PubkeyToAddress(key.PublicKey)
+				testAddBalance(pool, addr, big.NewInt(params.KAIA))
+				txWithSidecar := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(100), key, 1, nil)
+				require.NoError(t, pool.AddLocal(txWithSidecar))
+
+				// Create block with transaction without sidecar
+				txWithoutSidecar := txWithSidecar.WithoutBlobTxSidecar()
+				block := createTestBlock(big.NewInt(1000), big.NewInt(time.Now().Unix()), types.Transactions{txWithoutSidecar})
+				return pool, block
+			},
+			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
+				pool.saveAndPruneBlobStorage(block)
+				// Verify sidecar was saved from pool
+				savedSidecar, err := pool.GetBlobSidecarFromStorage(block.Number(), 0)
+				require.NoError(t, err)
+				require.NotNil(t, savedSidecar)
+				assert.Equal(t, types.BlobSidecarVersion1, savedSidecar.Version)
+			},
+		},
+		{
+			name: "send missing blob sidecar when not found",
+			setup: func(t *testing.T) (*TxPool, *types.Block) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				// Create blob transaction without sidecar and not in pool
+				key, _ := crypto.GenerateKey()
+				txWithoutSidecar := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(100), key, 1, nil).WithoutBlobTxSidecar()
+				block := createTestBlock(big.NewInt(1000), big.NewInt(time.Now().Unix()), types.Transactions{txWithoutSidecar})
+				return pool, block
+			},
+			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
+				ch := pool.SubscribeMissingBlobSidecars()
+				pool.saveAndPruneBlobStorage(block)
+
+				// Verify missing blob sidecar was sent
+				select {
+				case missing := <-ch:
+					assert.Equal(t, block.Number(), missing.BlockNum)
+					assert.Equal(t, 0, missing.TxIndex)
+					assert.Equal(t, block.Transactions()[0].Hash(), missing.TxHash)
+				case <-time.After(time.Second):
+					t.Fatal("timeout waiting for missing blob sidecar")
+				}
+			},
+		},
+		{
+			name: "skip non-blob transactions",
+			setup: func(t *testing.T) (*TxPool, *types.Block) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				// Create regular transaction (not blob)
+				key, _ := crypto.GenerateKey()
+				tx := transaction(0, 100000, key)
+				block := createTestBlock(big.NewInt(1000), big.NewInt(time.Now().Unix()), types.Transactions{tx})
+				return pool, block
+			},
+			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
+				pool.saveAndPruneBlobStorage(block)
+				// Verify no sidecar was saved (non-blob transaction)
+				_, err := pool.GetBlobSidecarFromStorage(block.Number(), 0)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "blob file not found")
+			},
+		},
+		{
+			name: "multiple blob transactions",
+			setup: func(t *testing.T) (*TxPool, *types.Block) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				// Create multiple blob transactions
+				key1, _ := crypto.GenerateKey()
+				key2, _ := crypto.GenerateKey()
+				tx1 := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(100), key1, 1, nil)
+				tx2 := blobTransaction(1, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(100), key2, 2, nil)
+				block := createTestBlock(big.NewInt(1000), big.NewInt(time.Now().Unix()), types.Transactions{tx1, tx2})
+				return pool, block
+			},
+			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
+				pool.saveAndPruneBlobStorage(block)
+				// Verify both sidecars were saved
+				sidecar1, err1 := pool.GetBlobSidecarFromStorage(block.Number(), 0)
+				require.NoError(t, err1)
+				assert.Equal(t, 1, len(sidecar1.Blobs))
+
+				sidecar2, err2 := pool.GetBlobSidecarFromStorage(block.Number(), 1)
+				require.NoError(t, err2)
+				assert.Equal(t, 2, len(sidecar2.Blobs))
+			},
+		},
+		{
+			name: "mixed blob and non-blob transactions",
+			setup: func(t *testing.T) (*TxPool, *types.Block) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				// Create mixed transactions
+				key1, _ := crypto.GenerateKey()
+				key2, _ := crypto.GenerateKey()
+				tx1 := transaction(0, 100000, key1) // regular transaction
+				tx2 := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(100), key2, 1, nil)
+				block := createTestBlock(big.NewInt(1000), big.NewInt(time.Now().Unix()), types.Transactions{tx1, tx2})
+				return pool, block
+			},
+			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
+				pool.saveAndPruneBlobStorage(block)
+				// Verify only blob transaction sidecar was saved (at index 1)
+				_, err0 := pool.GetBlobSidecarFromStorage(block.Number(), 0)
+				require.Error(t, err0) // tx0 is not blob
+
+				sidecar1, err1 := pool.GetBlobSidecarFromStorage(block.Number(), 1)
+				require.NoError(t, err1)
+				assert.Equal(t, 1, len(sidecar1.Blobs))
+			},
+		},
+		{
+			name: "transaction sidecar takes priority over pool",
+			setup: func(t *testing.T) (*TxPool, *types.Block) {
+				tmpDir := t.TempDir()
+				statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+				blockchain := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+				config := testTxPoolConfig
+				blobConfig := DefaultBlobStorageConfig(tmpDir)
+				config.BlobStorageConfig = &blobConfig
+				pool := NewTxPool(config, params.TestChainConfig, blockchain, &dummyGovModule{chainConfig: params.TestChainConfig})
+
+				// Create blob transaction and add to pool
+				key, _ := crypto.GenerateKey()
+				addr := crypto.PubkeyToAddress(key.PublicKey)
+				testAddBalance(pool, addr, big.NewInt(params.KAIA))
+				txWithSidecar1 := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(100), key, 1, nil)
+				require.NoError(t, pool.AddLocal(txWithSidecar1))
+
+				// Create block with transaction that has different sidecar (2 blobs)
+				txWithSidecar2 := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(100), key, 2, nil)
+				block := createTestBlock(big.NewInt(1000), big.NewInt(time.Now().Unix()), types.Transactions{txWithSidecar2})
+				return pool, block
+			},
+			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
+				pool.saveAndPruneBlobStorage(block)
+				// Verify transaction's sidecar (2 blobs) was saved, not pool's (1 blob)
+				savedSidecar, err := pool.GetBlobSidecarFromStorage(block.Number(), 0)
+				require.NoError(t, err)
+				assert.Equal(t, 2, len(savedSidecar.Blobs), "transaction sidecar should take priority")
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			pool, block := tc.setup(t)
+			if pool != nil {
+				defer pool.Stop()
+			}
+			tc.verify(t, pool, block)
 		})
 	}
 }
