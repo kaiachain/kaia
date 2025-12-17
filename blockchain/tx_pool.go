@@ -2003,15 +2003,16 @@ func (pool *TxPool) SaveBlobSidecar(blockNum *big.Int, txIndex int, txHash commo
 	if sidecar == nil {
 		return errors.New("sidecar is nil")
 	}
-	// TODO: verify sidecar
-	// tx, _, _, _ := pool.chain.GetTxAndLookupInfo(txHash)
-	// if  tx == nil {
-	// 	return errors.New("tx not found")
-	// }
-	// if err := sidecar.ValidateWithBlobTx(tx.GetTxInternalData().(*types.TxInternalDataEthereumBlob)); err != nil {
-	// 	return err
-	// }
-
+	tx, _, _, _ := pool.chain.GetTxAndLookupInfo(txHash)
+	if tx == nil {
+		return errors.New("tx not found")
+	}
+	if tx.Type() != types.TxTypeEthereumBlob {
+		return errors.New("tx is not a blob transaction")
+	}
+	if err := sidecar.ValidateBlobCommitmentHashes(tx.BlobHashes()); err != nil {
+		return err
+	}
 	return pool.blobStorage.Save(blockNum, txIndex, sidecar)
 }
 
