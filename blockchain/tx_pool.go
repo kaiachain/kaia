@@ -2000,7 +2000,7 @@ func (pool *TxPool) SaveBlobSidecar(blockNum *big.Int, txIndex int, txHash commo
 	if sidecar == nil {
 		return errors.New("sidecar is nil")
 	}
-	// HY-TODO: verify sidecar
+	// TODO: verify sidecar
 	// tx, _, _, _ := pool.chain.GetTxAndLookupInfo(txHash)
 	// if  tx == nil {
 	// 	return errors.New("tx not found")
@@ -2034,7 +2034,6 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 
 		// try to get blob sidecar from tx
 		if sidecar := tx.BlobTxSidecar(); sidecar != nil {
-			// HY-TODO: verify sidecar
 			pool.blobStorage.Save(newHead.Number(), i, sidecar)
 			continue
 		}
@@ -2053,8 +2052,6 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 			TxIndex:  i,
 			TxHash:   tx.Hash(),
 		})
-
-		// HY-TODO: what about blob from istanbul p2p?
 	}
 }
 

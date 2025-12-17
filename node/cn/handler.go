@@ -1278,7 +1278,7 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 			}
 
 			if peer.GetVersion() < kaia67 {
-				// HY-TODO: should select other peer?
+				// TODO: should select other peer
 				continue
 			}
 
@@ -1299,7 +1299,7 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 				time.Sleep(interval - elapsed)
 			}
 
-			// HY-TODO: should retry if failed to request blob sidecars?
+			// TODO: should retry if failed to request blob sidecars
 			if err := peer.RequestBlobSidecars(requests); err != nil {
 				logger.Debug("Failed to request blob sidecars", "err", err)
 				pm.blobSidecarMu.Lock()
