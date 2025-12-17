@@ -450,6 +450,7 @@ func TestSidecar_ValidateWithBlobHashes(t *testing.T) {
 		})
 	}
 }
+
 func BenchmarkSidecar_ValidateWithBlobHashes(b *testing.B) {
 	emptyBlob := kzg4844.Blob{}
 	emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
