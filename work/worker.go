@@ -856,16 +856,9 @@ CommitTransactionLoop:
 			}
 		}
 
-		// Most of the blob gas logic here is agnostic as to if the chain supports
-		// blobs or not, however the max check panics when called on a chain without
-		// a defined schedule, so we need to verify it's safe to call.
-		if env.config.IsOsakaForkEnabled(env.header.Number) {
-			left := eip4844.MaxBlobsPerBlock(env.config, env.header.Number) - env.blobs
-			if left < len(tx.BlobHashes()) {
-				logger.Trace("Not enough blob space left for transaction", "hash", tx.Hash(), "left", left, "needed", len(tx.BlobHashes()))
-				builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
-				continue
-			}
+		if hasBlobSpace := env.hasBlobSpace(tx, targetBundle, nodeAddr); !hasBlobSpace {
+			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+			continue
 		}
 
 		// If target is the tx in bundle, len(targetBundle.BundleTxs) is appended to numTxsChecked.
@@ -990,27 +983,12 @@ CommitTransactionLoop:
 func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAddr common.Address, vmConfig *vm.Config) (error, []*types.Log) {
 	snap := env.state.Snapshot()
 
-	executeTx := func() (error, *types.Receipt) {
-		receipt, _, err := bc.ApplyTransaction(env.config, &nodeAddr, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
-		if err != nil {
-			if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
-				tx.MarkUnexecutable(true)
-			}
-			env.state.RevertToSnapshot(snap)
-			return err, nil
-		}
-		return nil, receipt
-	}
-
-	isBlobTx := tx.Type() == types.TxTypeEthereumBlob
-	var receipt *types.Receipt
-	var err error
-	if isBlobTx {
-		err, receipt = env.commitBlobTransaction(tx, &env.blobs, executeTx)
-	} else {
-		err, receipt = executeTx()
-	}
+	receipt, _, err := bc.ApplyTransaction(env.config, &nodeAddr, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
 	if err != nil {
+		if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
+			tx.MarkUnexecutable(true)
+		}
+		env.state.RevertToSnapshot(snap)
 		return err, nil
 	}
 
@@ -1018,6 +996,10 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAdd
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
 	env.size += uint64(tx.Size())
+	if tx.Type() == types.TxTypeEthereumBlob {
+		env.blobs += len(tx.BlobHashes())
+		*env.header.BlobGasUsed += tx.BlobGas()
+	}
 
 	return nil, receipt.Logs
 }
@@ -1060,40 +1042,26 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 			return kerrors.ErrTxGeneration, nil, nil
 		}
 
-		executeTx := func() (error, *types.Receipt) {
-			env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
-			receipt, _, err := bc.ApplyTransaction(env.config, &nodeAddr, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
-			// Bundled tx will be rejected with any receipt.Status other than success.
-			// There may be cases where a revert occurs within the EVM, which could result in an attack on a tx sender in an already executed bundle.
-			if err != nil || receipt.Status != types.ReceiptStatusSuccessful {
-				if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
-					markAllTxUnexecutable()
-				}
-				receiptStatus := ""
-				if receipt != nil {
-					receiptStatus = strconv.FormatUint(uint64(receipt.Status), 10)
-				}
-				logger.Warn("ApplyTransaction error, restoring env",
-					"blockNum", env.header.Number.String(), "txHash", tx.Hash().String(),
-					"error", err, "receiptStatus", receiptStatus,
-				)
-				restoreEnv()
-				if err == nil {
-					err = kerrors.ErrRevertedBundleByVmErr
-				}
-				return err, nil
+		env.state.SetTxContext(tx.Hash(), common.Hash{}, env.tcount)
+		receipt, _, err := bc.ApplyTransaction(env.config, &nodeAddr, env.state, env.header, tx, &env.header.GasUsed, vmConfig)
+		// Bundled tx will be rejected with any receipt.Status other than success.
+		// There may be cases where a revert occurs within the EVM, which could result in an attack on a tx sender in an already executed bundle.
+		if err != nil || receipt.Status != types.ReceiptStatusSuccessful {
+			if err != vm.ErrInsufficientBalance && err != vm.ErrTotalTimeLimitReached {
+				markAllTxUnexecutable()
 			}
-			return nil, receipt
-		}
-
-		isBlobTx := tx.Type() == types.TxTypeEthereumBlob
-		var receipt *types.Receipt
-		if isBlobTx {
-			err, receipt = env.commitBlobTransaction(tx, &env.blobs, executeTx)
-		} else {
-			err, receipt = executeTx()
-		}
-		if err != nil {
+			receiptStatus := ""
+			if receipt != nil {
+				receiptStatus = strconv.FormatUint(uint64(receipt.Status), 10)
+			}
+			logger.Warn("ApplyTransaction error, restoring env",
+				"blockNum", env.header.Number.String(), "txHash", tx.Hash().String(),
+				"error", err, "receiptStatus", receiptStatus,
+			)
+			restoreEnv()
+			if err == nil {
+				err = kerrors.ErrRevertedBundleByVmErr
+			}
 			return err, tx, nil
 		}
 
@@ -1102,11 +1070,16 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		txs = append(txs, tx)
 		receipts = append(receipts, receipt)
 		logs = append(logs, receipt.Logs...)
+		if tx.Type() == types.TxTypeEthereumBlob {
+			env.blobs += len(tx.BlobHashes())
+			*env.header.BlobGasUsed += tx.BlobGas()
+		}
 	}
 
 	env.size += totalTxSize
 	env.txs = append(env.txs, txs...)
 	env.receipts = append(env.receipts, receipts...)
+
 	return nil, nil, logs
 }
 
@@ -1153,6 +1126,53 @@ func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func (env *Task) txsWillBeExecuted(tx *types.Transaction, bundle *builder.Bundle, nodeAddr common.Address) []*types.Transaction {
+	var txsWillBeExecuted []*types.Transaction
+	if len(bundle.BundleTxs) != 0 {
+		for _, txOrGen := range bundle.BundleTxs {
+			tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
+			if err != nil {
+				// ignore error in this point since it will be handled later as tx generation error in commitBundleTransaction
+				continue
+			}
+			txsWillBeExecuted = append(txsWillBeExecuted, tx)
+		}
+	} else {
+		txsWillBeExecuted = []*types.Transaction{tx}
+	}
+	return txsWillBeExecuted
+}
+
+// hasBlobSpace checks if the task has enough blob space for the given transaction and bundle.
+// It has already been validated in the pool, 
+// but as a precaution it will also return false if the BlobTx does not have a Sidecar.
+func (env *Task) hasBlobSpace(tx *types.Transaction, bundle *builder.Bundle, nodeAddr common.Address) bool {
+	txsWillBeExecuted := env.txsWillBeExecuted(tx, bundle, nodeAddr)
+	blobsWillBeExecuted := 0
+	for _, tx := range txsWillBeExecuted {
+		if tx.Type() == types.TxTypeEthereumBlob {
+			sc := tx.BlobTxSidecar()
+			if sc == nil {
+				logger.Trace("Blob transaction without sidecar", "hash", tx.Hash())
+				return false
+			}
+			blobsWillBeExecuted += len(sc.Blobs)
+		}
+	}
+
+	// Most of the blob gas logic here is agnostic as to if the chain supports
+	// blobs or not, however the max check panics when called on a chain without
+	// a defined schedule, so we need to verify it's safe to call.
+	if env.config.IsOsakaForkEnabled(env.header.Number) {
+		left := eip4844.MaxBlobsPerBlock(env.config, env.header.Number) - env.blobs
+		if left < blobsWillBeExecuted {
+			logger.Trace("Not enough blob space left for transaction", "hash", tx.Hash(), "left", left, "needed", len(tx.BlobHashes()))
+			return false
+		}
+	}
+	return true
 }
 
 func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, header *types.Header) *Task {
