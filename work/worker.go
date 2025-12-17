@@ -23,7 +23,6 @@
 package work
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -1083,33 +1082,6 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 	return nil, nil, logs
 }
 
-// commitBlobTransaction is a wrapper for executeTx.
-// NOTE: Kaia keeps the blob sidecar until consensus is reached and omits it
-// when broadcasting or writing to the database, so tx.WithoutBlobTxSidecar() is not called.
-func (env *Task) commitBlobTransaction(tx *types.Transaction, blobs *int, executeTx func() (error, *types.Receipt)) (err error, receipt *types.Receipt) {
-	sc := tx.BlobTxSidecar()
-	if sc == nil {
-		return errors.New("blob transaction without blobs in miner"), nil
-	}
-	// Checking against blob gas limit: It's kind of ugly to perform this check here, but there
-	// isn't really a better place right now. The blob gas limit is checked at block validation time
-	// and not during execution. This means core.ApplyTransaction will not return an error if the
-	// tx has too many blobs. So we have to explicitly check it here.
-	maxBlobs := eip4844.MaxBlobsPerBlock(env.config, env.header.Number)
-	if env.blobs+len(sc.Blobs) > maxBlobs {
-		return errors.New("max data blobs reached"), nil
-	}
-
-	err, receipt = executeTx()
-	if err != nil {
-		return err, nil
-	}
-
-	*env.header.BlobGasUsed += tx.BlobGas()
-	*blobs += len(sc.Blobs)
-	return nil, receipt
-}
-
 func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
 	if !bundle.TargetRequired {
 		return false, nil
@@ -1146,9 +1118,16 @@ func (env *Task) txsWillBeExecuted(tx *types.Transaction, bundle *builder.Bundle
 }
 
 // hasBlobSpace checks if the task has enough blob space for the given transaction and bundle.
-// It has already been validated in the pool, 
+// It has already been validated in the pool,
 // but as a precaution it will also return false if the BlobTx does not have a Sidecar.
 func (env *Task) hasBlobSpace(tx *types.Transaction, bundle *builder.Bundle, nodeAddr common.Address) bool {
+	// Most of the blob gas logic here is agnostic as to if the chain supports
+	// blobs or not, however the max check panics when called on a chain without
+	// a defined schedule, so we need to verify it's safe to call.
+	if !env.config.IsOsakaForkEnabled(env.header.Number) {
+		return false
+	}
+
 	txsWillBeExecuted := env.txsWillBeExecuted(tx, bundle, nodeAddr)
 	blobsWillBeExecuted := 0
 	for _, tx := range txsWillBeExecuted {
@@ -1162,16 +1141,12 @@ func (env *Task) hasBlobSpace(tx *types.Transaction, bundle *builder.Bundle, nod
 		}
 	}
 
-	// Most of the blob gas logic here is agnostic as to if the chain supports
-	// blobs or not, however the max check panics when called on a chain without
-	// a defined schedule, so we need to verify it's safe to call.
-	if env.config.IsOsakaForkEnabled(env.header.Number) {
-		left := eip4844.MaxBlobsPerBlock(env.config, env.header.Number) - env.blobs
-		if left < blobsWillBeExecuted {
-			logger.Trace("Not enough blob space left for transaction", "hash", tx.Hash(), "left", left, "needed", len(tx.BlobHashes()))
-			return false
-		}
+	left := eip4844.MaxBlobsPerBlock(env.config, env.header.Number) - env.blobs
+	if left < blobsWillBeExecuted {
+		logger.Trace("Not enough blob space left for transaction", "hash", tx.Hash(), "left", left, "needed", len(tx.BlobHashes()))
+		return false
 	}
+
 	return true
 }
 
