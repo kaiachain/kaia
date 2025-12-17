@@ -49,17 +49,17 @@ import (
 // Verify that Client implements the Kaia interfaces.
 var (
 	// _ = kaia.Subscription(&Client{})
-	_ = kaia.ChainReader(&Client{})
-	_ = kaia.TransactionReader(&Client{})
-	_ = kaia.ChainStateReader(&Client{})
-	_ = kaia.ChainSyncReader(&Client{})
-	_ = kaia.ContractCaller(&Client{})
-	_ = kaia.LogFilterer(&Client{})
-	_ = kaia.TransactionSender(&Client{})
-	_ = kaia.GasPricer(&Client{})
-	_ = kaia.PendingStateReader(&Client{})
-	_ = kaia.PendingContractCaller(&Client{})
-	_ = kaia.GasEstimator(&Client{})
+	_ = kaia.ChainReader(&KaiaClient{})
+	_ = kaia.TransactionReader(&KaiaClient{})
+	_ = kaia.ChainStateReader(&KaiaClient{})
+	_ = kaia.ChainSyncReader(&KaiaClient{})
+	_ = kaia.ContractCaller(&KaiaClient{})
+	_ = kaia.LogFilterer(&KaiaClient{})
+	_ = kaia.TransactionSender(&KaiaClient{})
+	_ = kaia.GasPricer(&KaiaClient{})
+	_ = kaia.PendingStateReader(&KaiaClient{})
+	_ = kaia.PendingContractCaller(&KaiaClient{})
+	_ = kaia.GasEstimator(&KaiaClient{})
 	// _ = kaia.PendingStateEventer(&Client{})
 )
 
@@ -409,7 +409,7 @@ func TestKaiaClient(t *testing.T) {
 	}
 }
 
-func testHeader(t *testing.T, client *Client) {
+func testHeader(t *testing.T, client *KaiaClient) {
 	tests := map[string]struct {
 		block   *big.Int
 		want    *types.Header
@@ -449,7 +449,7 @@ func testHeader(t *testing.T, client *Client) {
 	}
 }
 
-func testBalanceAt(t *testing.T, client *Client) {
+func testBalanceAt(t *testing.T, client *KaiaClient) {
 	tests := map[string]struct {
 		account common.Address
 		block   *big.Int
@@ -495,7 +495,7 @@ func testBalanceAt(t *testing.T, client *Client) {
 	}
 }
 
-func testTransactionInBlock(t *testing.T, c *Client) {
+func testTransactionInBlock(t *testing.T, c *KaiaClient) {
 	// Get current block by number.
 	block, err := c.BlockByNumber(context.Background(), nil)
 	if err != nil {
@@ -531,7 +531,7 @@ func testTransactionInBlock(t *testing.T, c *Client) {
 	}
 }
 
-func testChainID(t *testing.T, c *Client) {
+func testChainID(t *testing.T, c *KaiaClient) {
 	id, err := c.ChainID(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -541,7 +541,7 @@ func testChainID(t *testing.T, c *Client) {
 	}
 }
 
-func testGetBlock(t *testing.T, c *Client) {
+func testGetBlock(t *testing.T, c *KaiaClient) {
 	// Get current block number
 	blockNumber, err := c.BlockNumber(context.Background())
 	if err != nil {
@@ -584,7 +584,7 @@ func testGetBlock(t *testing.T, c *Client) {
 	}
 }
 
-func testStatusFunctions(t *testing.T, c *Client) {
+func testStatusFunctions(t *testing.T, c *KaiaClient) {
 	// Sync progress
 	progress, err := c.SyncProgress(context.Background())
 	if err != nil {
@@ -616,7 +616,7 @@ func testStatusFunctions(t *testing.T, c *Client) {
 	// Skipping these tests for Kaia compatibility
 }
 
-func testCallContractAtHash(t *testing.T, c *Client) {
+func testCallContractAtHash(t *testing.T, c *KaiaClient) {
 	// EstimateGas
 	msg := kaia.CallMsg{
 		From:  testAddr,
@@ -639,7 +639,7 @@ func testCallContractAtHash(t *testing.T, c *Client) {
 	// Skipping this test for Kaia compatibility
 }
 
-func testCallContract(t *testing.T, c *Client) {
+func testCallContract(t *testing.T, c *KaiaClient) {
 	// EstimateGas
 	msg := kaia.CallMsg{
 		From:  testAddr,
@@ -664,7 +664,7 @@ func testCallContract(t *testing.T, c *Client) {
 	}
 }
 
-func testAtFunctions(t *testing.T, c *Client) {
+func testAtFunctions(t *testing.T, c *KaiaClient) {
 	_, err := c.HeaderByNumber(context.Background(), big.NewInt(1))
 	if err != nil {
 		t.Fatalf("BlockByNumber error: %v", err)
@@ -763,7 +763,7 @@ func testAtFunctions(t *testing.T, c *Client) {
 	}
 }
 
-func testTransactionSender(t *testing.T, c *Client) {
+func testTransactionSender(t *testing.T, c *KaiaClient) {
 	ctx := context.Background()
 
 	// Retrieve testTx1 via RPC.
@@ -810,7 +810,7 @@ func newCanceledContext() context.Context {
 	return ctx
 }
 
-func sendTransaction(c *Client) error {
+func sendTransaction(c *KaiaClient) error {
 	chainID, err := c.ChainID(context.Background())
 	if err != nil {
 		return err
@@ -871,7 +871,7 @@ func TestKaiaClient_AnvilServer(t *testing.T) {
 	assert.Equal(t, err.Error(), "Method not found")
 }
 
-func tryConnect(serverURL string) (*Client, error) {
+func tryConnect(serverURL string) (*KaiaClient, error) {
 	client, err := DialContext(context.Background(), serverURL)
 	if err != nil {
 		return nil, err
