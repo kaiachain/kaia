@@ -30,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
@@ -118,6 +119,8 @@ type BlobTxSidecar struct {
 	Blobs       []kzg4844.Blob       // Blobs needed by the blob pool
 	Commitments []kzg4844.Commitment // Commitments needed by the blob pool
 	Proofs      []kzg4844.Proof      // Proofs needed by the blob pool
+
+	validatedHash common.Hash // Hash of the versioned hashes that have been validated
 }
 
 // NewBlobTxSidecar initialises the BlobTxSidecar object with the provided parameters.
@@ -235,19 +238,39 @@ func (sc *BlobTxSidecar) Copy() *BlobTxSidecar {
 // - assert VerifyCellProofs(blobs, commitments, cellProofs)
 // ref: https://github.com/kaiachain/kips/blob/fac337aad17db40ed2a6c988e03ad6b2ec9771f2/KIPs/kip-279.md#blobtxwithblobs-validation
 func (sc *BlobTxSidecar) ValidateWithBlobHashes(hashes []common.Hash) error {
+	// Combine all hashes and compute the hash
+	combined := make([]byte, 0, len(hashes)*32)
+	for _, h := range hashes {
+		combined = append(combined, h[:]...)
+	}
+	combinedHash := crypto.Keccak256Hash(combined)
+
+	// If the combined hash is the same as the validated hash, return nil for cached hashes.
+	if combinedHash == sc.validatedHash {
+		return nil
+	}
+
 	if len(sc.Blobs) != len(hashes) {
 		return fmt.Errorf("invalid number of %d blobs compared to %d blob hashes", len(sc.Blobs), len(hashes))
 	}
 	if err := sc.ValidateBlobCommitmentHashes(hashes); err != nil {
 		return err
 	}
-	// Fork-specific sidecar checks, including proof verification.
-	if sc.Version == BlobSidecarVersion1 {
-		return validateBlobSidecarOsaka(sc, hashes)
+
+	if sc.Version != BlobSidecarVersion1 {
+		// Kaia rejects sidecar.Version = 0.
+		// ref: https://github.com/kaiachain/kips/blob/main/KIPs/kip-279.md#reject-sidecar-v0
+		return fmt.Errorf("blob sidecar version %d not supported", sc.Version)
 	}
-	// Kaia rejects sidecar.Version = 0.
-	// ref: https://github.com/kaiachain/kips/blob/main/KIPs/kip-279.md#reject-sidecar-v0
-	return fmt.Errorf("blob sidecar version %d not supported", sc.Version)
+
+	// Fork-specific sidecar checks, including proof verification.
+	if err := validateBlobSidecarOsaka(sc, hashes); err != nil {
+		return err
+	}
+
+	// Once verified, the hash of hashes is cached.
+	sc.validatedHash = crypto.Keccak256Hash(combined)
+	return nil
 }
 
 func validateBlobSidecarOsaka(sidecar *BlobTxSidecar, hashes []common.Hash) error {
