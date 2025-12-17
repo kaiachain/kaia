@@ -2017,9 +2017,16 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 	if pool.blobStorage == nil || newHead == nil {
 		return
 	}
+
+	// skip if the block is too old
+	if time.Since(time.Unix(int64(newHead.Time().Uint64()), 0)) > 3*7*24*time.Hour {
+		return
+	}
+
+	// prune blob storage
 	pool.blobStorage.Prune(newHead.Number())
 
-	// HY-TODO: skip if the block is too old
+	// save blob sidecars
 	for i, tx := range newHead.Transactions() {
 		if tx.Type() != types.TxTypeEthereumBlob {
 			continue
@@ -2040,8 +2047,7 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 			logger.Warn("failed to get blob sidecar from pool", "hash", tx.Hash(), "err", err)
 		}
 
-		// missing blob sidecar is registered to be fetched later
-		// protocol manager will fetch the missing blob sidecars from the peer
+		// missing blob sidecar is sent to be protocol manager to fetch later
 		pool.sendMissingBlobSidecar(&MissingBlobSidecar{
 			BlockNum: newHead.Number(),
 			TxIndex:  i,
