@@ -2022,7 +2022,7 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 	}
 
 	// skip if the block is too old
-	if time.Since(time.Unix(int64(newHead.Time().Uint64()), 0)) > 3*7*24*time.Hour {
+	if time.Since(time.Unix(int64(newHead.Time().Uint64()), 0)) > pool.config.BlobStorageConfig.Retention {
 		return
 	}
 

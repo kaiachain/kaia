@@ -35,14 +35,14 @@ const (
 )
 
 type BlobStorageConfig struct {
-	baseDir   string
-	retention time.Duration
+	BaseDir   string
+	Retention time.Duration
 }
 
 func DefaultBlobStorageConfig(baseDir string) BlobStorageConfig {
 	return BlobStorageConfig{
-		baseDir:   filepath.Join(baseDir, "blob"),
-		retention: BLOB_SIDECARS_RETENTION,
+		BaseDir:   filepath.Join(baseDir, "blob"),
+		Retention: BLOB_SIDECARS_RETENTION,
 	}
 }
 
@@ -155,7 +155,7 @@ func (b *BlobStorage) Prune(current *big.Int) error {
 	}
 
 	// Get all bucket directories in the base directory
-	entries, err := os.ReadDir(b.config.baseDir)
+	entries, err := os.ReadDir(b.config.BaseDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
@@ -163,7 +163,7 @@ func (b *BlobStorage) Prune(current *big.Int) error {
 		return fmt.Errorf("failed to read base directory: %w", err)
 	}
 
-	capacity := calculateCapacity(len(entries), b.config.retention)
+	capacity := calculateCapacity(len(entries), b.config.Retention)
 	dirsToDelete := make([]string, 0, capacity)
 
 	// Process each bucket directory
@@ -183,7 +183,7 @@ func (b *BlobStorage) Prune(current *big.Int) error {
 
 		// Compare bucketNum with retentionBucketThreshold
 		if bucketNumBig.Cmp(retentionBucketThreshold) < 0 {
-			subDirPath := filepath.Join(b.config.baseDir, entry.Name())
+			subDirPath := filepath.Join(b.config.BaseDir, entry.Name())
 			dirsToDelete = append(dirsToDelete, subDirPath)
 		}
 	}
@@ -213,7 +213,7 @@ func (b *BlobStorage) GetFilename(blockNumber *big.Int, txIndex int) (string, st
 		// Return empty strings if bucket is nil
 		return "", ""
 	}
-	dir := filepath.Join(b.config.baseDir, bucket.String())
+	dir := filepath.Join(b.config.BaseDir, bucket.String())
 	return dir, filepath.Join(dir, fmt.Sprintf("%d_%d.bin", blockNumber.Uint64(), txIndex))
 }
 
@@ -224,7 +224,7 @@ func (b *BlobStorage) GetRetentionBlockNumber(blockNumber *big.Int) *big.Int {
 	}
 
 	// Convert retention period to seconds (assuming 1 block per second)
-	retentionSeconds := int64(b.config.retention.Seconds())
+	retentionSeconds := int64(b.config.Retention.Seconds())
 	retentionBlocks := big.NewInt(retentionSeconds)
 
 	// Calculate the block number to retain by subtracting retention period from current block number
