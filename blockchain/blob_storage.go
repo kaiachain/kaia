@@ -126,30 +126,20 @@ func (b *BlobStorage) Get(blockNumber *big.Int, txIndex int) (*types.BlobTxSidec
 }
 
 // Prune removes all buckets that are older than `retentionBucketThreshold`.
-// Example:
-// at 1814400 +  500: do nothing
-// at 1814400 + 1000: prune [0, 999]
-// at 1814400 + 1500: do nothing
-// at 1814400 + 2000: prune [0, 999], [1000, 1999]
-// at 1814400 + 2500: do nothing
-func (b *BlobStorage) Prune(current *big.Int) error {
-	if current == nil {
+func (b *BlobStorage) Prune(blockNumber *big.Int) error {
+	if blockNumber == nil {
 		return ErrBlobBlockNumberNil
 	}
 
-	retentionBlockNumber := b.GetRetentionBlockNumber(current)
+	retentionBlockNumber := b.GetRetentionBlockNumber(blockNumber)
 	if retentionBlockNumber == nil || retentionBlockNumber.Sign() < 0 {
 		// no target blocks to prune
 		return nil
 	}
 
-	if new(big.Int).Mod(retentionBlockNumber, big.NewInt(BLOCKS_PER_BUCKET)).Cmp(big.NewInt(0)) == 0 {
-		return nil
-	}
-
 	// Calculate retention bucket number
 	retentionBucketThreshold := b.getBucketIdx(retentionBlockNumber)
-	if retentionBucketThreshold == nil || retentionBucketThreshold.Sign() <= 0 {
+	if retentionBucketThreshold == nil {
 		// no target blocks to prune
 		return nil
 	}

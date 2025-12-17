@@ -2031,8 +2031,10 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 	// 	return
 	// }
 
-	// prune blob storage
-	pool.blobStorage.Prune(newHead.Number())
+	// prune blob storage at BLOCKS_PER_BUCKET block interval
+	if new(big.Int).Mod(newHead.Number(), big.NewInt(int64(BLOCKS_PER_BUCKET))).Cmp(big.NewInt(0)) == 0 {
+		pool.blobStorage.Prune(newHead.Number())
+	}
 
 	// save blob sidecars
 	for i, tx := range newHead.Transactions() {
@@ -2054,7 +2056,7 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 			logger.Warn("failed to get blob sidecar from pool", "hash", tx.Hash(), "err", err)
 		}
 
-		// missing blob sidecar is sent to be protocol manager to fetch later
+		// missing blob sidecar is sent to protocol manager to fetch later
 		pool.sendMissingBlobSidecar(&MissingBlobSidecar{
 			BlockNum: newHead.Number(),
 			TxIndex:  i,

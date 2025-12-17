@@ -220,42 +220,6 @@ func TestBlobStorage_Prune(t *testing.T) {
 			},
 		},
 		{
-			name:        "success without pruning",
-			retention:   10 * time.Second, // Short retention for testing
-			blockNumber: big.NewInt(2011),
-			setup: func(storage *BlobStorage) (*big.Int, *big.Int) {
-				// Save old block (should be pruned)
-				// Block 100 is in bucket 0: 100/1000 = 0
-				oldBlockNumber := big.NewInt(100)
-				oldSidecar := createTestSidecar(t, 1)
-				err := storage.Save(oldBlockNumber, 0, oldSidecar)
-				require.NoError(t, err)
-
-				// Save recent block (should be kept)
-				// Block 2000 is in bucket 2: 2000/1000 = 2
-				recentBlockNumber := big.NewInt(2000)
-				recentSidecar := createTestSidecar(t, 1)
-				err = storage.Save(recentBlockNumber, 0, recentSidecar)
-				require.NoError(t, err)
-
-				return oldBlockNumber, recentBlockNumber
-			},
-			wantErr: false,
-			verify: func(t *testing.T, storage *BlobStorage, oldBlockNumber, recentBlockNumber *big.Int) {
-				// Verify old block is deleted
-				// retention is 10 seconds, so block 2011 - 10 = 2001
-				// 2001 % BLOCKS_PER_BUCKET != 0
-				// so it should not be pruned
-
-				_, err := storage.Get(oldBlockNumber, 0)
-				require.NoError(t, err)
-
-				// Verify recent block still exists
-				_, err = storage.Get(recentBlockNumber, 0)
-				require.NoError(t, err)
-			},
-		},
-		{
 			name:        "nil block number",
 			retention:   21 * 24 * time.Hour,
 			blockNumber: nil,
