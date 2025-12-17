@@ -354,11 +354,9 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB
-	var pm *ProtocolManager
-	if pm, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, cacheLimit, ctx.NodeType(), config); err != nil {
+	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, cacheLimit, ctx.NodeType(), config); err != nil {
 		return nil, err
 	}
-	cn.protocolManager = pm
 
 	if err := cn.setAcceptTxs(); err != nil {
 		logger.Error("Failed to decode IstanbulExtra", "err", err)
