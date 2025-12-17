@@ -855,9 +855,14 @@ CommitTransactionLoop:
 			}
 		}
 
-		if hasBlobSpace := env.hasBlobSpace(tx, targetBundle, nodeAddr); !hasBlobSpace {
-			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
-			continue
+		// Most of the blob gas logic here is agnostic as to if the chain supports
+		// blobs or not, however the max check panics when called on a chain without
+		// a defined schedule, so we need to verify it's safe to call.
+		if env.config.IsOsakaForkEnabled(env.header.Number) {
+			if hasBlobSpace := env.hasBlobSpace(tx, targetBundle, nodeAddr); !hasBlobSpace {
+				builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+				continue
+			}
 		}
 
 		// If target is the tx in bundle, len(targetBundle.BundleTxs) is appended to numTxsChecked.
@@ -1121,13 +1126,6 @@ func (env *Task) txsWillBeExecuted(tx *types.Transaction, bundle *builder.Bundle
 // It has already been validated in the pool,
 // but as a precaution it will also return false if the BlobTx does not have a Sidecar.
 func (env *Task) hasBlobSpace(tx *types.Transaction, bundle *builder.Bundle, nodeAddr common.Address) bool {
-	// Most of the blob gas logic here is agnostic as to if the chain supports
-	// blobs or not, however the max check panics when called on a chain without
-	// a defined schedule, so we need to verify it's safe to call.
-	if !env.config.IsOsakaForkEnabled(env.header.Number) {
-		return false
-	}
-
 	txsWillBeExecuted := env.txsWillBeExecuted(tx, bundle, nodeAddr)
 	blobsWillBeExecuted := 0
 	for _, tx := range txsWillBeExecuted {
