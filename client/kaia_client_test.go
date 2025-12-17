@@ -23,12 +23,13 @@
 package client
 
 import (
-	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
+	"net"
 	"net/http"
 	"slices"
 	"strconv"
@@ -44,9 +45,11 @@ import (
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-// Verify that Client implements the Kaia interfaces.
+// Interface compliance checks
 var (
 	// _ = kaia.Subscription(&Client{})
 	_ = kaia.ChainReader(&KaiaClient{})
@@ -63,52 +66,286 @@ var (
 	// _ = kaia.PendingStateEventer(&Client{})
 )
 
+// Expected genesis block hashes for different clients
 var (
-	testKey, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-	testAddr    = crypto.PubkeyToAddress(testKey.PublicKey)
-	testBalance = big.NewInt(2e15)
+	ethGenesisBlockHash  = common.HexToHash("0x1c6ef781e4f30626053500c374498f78e3138128603e6f9c92bff0292613c5bb")
+	kaiaGenesisBlockHash = common.HexToHash("0x3b624db9bc6547b908e2e78460d2849047b6d28c0c078f09d6a0472ab0e57d0c")
+	genesisChainConfig   = &params.ChainConfig{
+		ChainID:                  big.NewInt(1337),
+		IstanbulCompatibleBlock:  big.NewInt(0),
+		LondonCompatibleBlock:    big.NewInt(0),
+		EthTxTypeCompatibleBlock: big.NewInt(0),
+		MagmaCompatibleBlock:     big.NewInt(0),
+		KoreCompatibleBlock:      big.NewInt(0),
+		ShanghaiCompatibleBlock:  big.NewInt(0),
+		CancunCompatibleBlock:    big.NewInt(0),
+		KaiaCompatibleBlock:      big.NewInt(0),
+		PragueCompatibleBlock:    big.NewInt(0),
+		UnitPrice:                25000000000,
+	}
 )
 
-var genesisConfig = &params.ChainConfig{
-	ChainID:                  big.NewInt(1337),
-	IstanbulCompatibleBlock:  big.NewInt(0),
-	LondonCompatibleBlock:    big.NewInt(0),
-	EthTxTypeCompatibleBlock: big.NewInt(0),
-	MagmaCompatibleBlock:     big.NewInt(0),
-	KoreCompatibleBlock:      big.NewInt(0),
-	ShanghaiCompatibleBlock:  big.NewInt(0),
-	CancunCompatibleBlock:    big.NewInt(0),
-	KaiaCompatibleBlock:      big.NewInt(0),
-	PragueCompatibleBlock:    big.NewInt(0),
-	UnitPrice:                25000000000,
+// =============================================================================
+// MockHttpServerTestSuite
+// =============================================================================
+type MockHttpServerTestSuite struct {
+	suite.Suite
+
+	// Server
+	server    *http.Server
+	serverURL string
+
+	// Client
+	kaiaClient *KaiaClient
+
+	// Chain config
+	chainConfig *params.ChainConfig
+
+	// Test account
+	testerKey         *ecdsa.PrivateKey
+	testerAddr        common.Address
+	testerInitBalance *big.Int
+
+	// Dummy data
+	blocks []*types.Block
+	txs    []*types.Transaction
 }
 
-var testTx1 = func() *types.Transaction {
-	tx := types.NewTransaction(0, common.Address{2}, big.NewInt(12), params.TxGas, new(big.Int).SetUint64(params.DefaultLowerBoundBaseFee), nil)
-	signer := types.LatestSignerForChainID(genesisConfig.ChainID)
-	signedTx, _ := types.SignTx(tx, signer, testKey)
-	return signedTx
-}()
+func TestMockKaiaRpcServerTestSuite(t *testing.T) {
+	suite.Run(t, new(MockHttpServerTestSuite))
+}
 
-var testTx2 = func() *types.Transaction {
-	tx := types.NewTransaction(1, common.Address{2}, big.NewInt(8), params.TxGas, new(big.Int).SetUint64(params.DefaultLowerBoundBaseFee), nil)
-	signer := types.LatestSigner(genesisConfig)
-	signedTx, _ := types.SignTx(tx, signer, testKey)
-	return signedTx
-}()
+func (s *MockHttpServerTestSuite) SetupSuite() {
+	s.chainConfig = genesisChainConfig.Copy()
+	s.initTestAccount()
+	s.initBlocksAndTxs()
 
-var blocks = make([]*types.Block, 3)
+	if err := s.startServer(); err != nil {
+		s.T().Skip("Mock server setup failed:", err)
+		return
+	}
 
-func init() {
+	if err := s.connectClient(); err != nil {
+		s.TearDownSuite()
+		s.T().Skip("Client connection failed:", err)
+		return
+	}
+
+	s.T().Logf("MockHttpServer started on %s", s.serverURL)
+}
+
+func (s *MockHttpServerTestSuite) initTestAccount() {
+	s.testerKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	s.testerAddr = crypto.PubkeyToAddress(s.testerKey.PublicKey)
+	s.testerInitBalance = big.NewInt(2e15)
+}
+
+func (s *MockHttpServerTestSuite) initBlocksAndTxs() {
+	s.blocks = make([]*types.Block, 3)
 	for i := 0; i < 3; i++ {
-		header := genMockHeader(i)
-		blocks[i] = types.NewBlockWithHeader(header)
+		s.blocks[i] = types.NewBlockWithHeader(s.genMockHeader(i))
+	}
+
+	signer := types.LatestSignerForChainID(s.chainConfig.ChainID)
+
+	tx1 := types.NewTransaction(0, s.testerAddr, big.NewInt(12), params.TxGas, new(big.Int).SetUint64(params.DefaultLowerBoundBaseFee), nil)
+	signedTx1, _ := types.SignTx(tx1, signer, s.testerKey)
+	s.txs = append(s.txs, signedTx1)
+
+	tx2 := types.NewTransaction(1, common.Address{2}, big.NewInt(8), params.TxGas, new(big.Int).SetUint64(params.DefaultLowerBoundBaseFee), nil)
+	signedTx2, _ := types.SignTx(tx2, signer, s.testerKey)
+	s.txs = append(s.txs, signedTx2)
+}
+
+func (s *MockHttpServerTestSuite) TearDownSuite() {
+	if s.kaiaClient != nil {
+		s.kaiaClient.Close()
+	}
+	if s.server != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		s.server.Shutdown(ctx)
 	}
 }
 
-func MockGetBalance(t *testing.T, address common.Address, blockNumber *big.Int) map[string]interface{} {
-	// Handle different test scenarios
-	if blockNumber.Cmp(big.NewInt(2)) > 0 {
+func (s *MockHttpServerTestSuite) startServer() error {
+	handler := s.createMockHandler()
+
+	addr := "127.0.0.1:36000"
+	s.serverURL = "http://" + addr
+	s.server = &http.Server{
+		Addr:    addr,
+		Handler: handler,
+	}
+
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- s.server.ListenAndServe()
+	}()
+
+	// Wait for server to be ready
+	if err := s.waitForServer(addr, 5*time.Second); err != nil {
+		select {
+		case serverErr := <-errChan:
+			return fmt.Errorf("server startup failed: %w", serverErr)
+		default:
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *MockHttpServerTestSuite) waitForServer(addr string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return errors.New("timeout waiting for server")
+}
+
+func (s *MockHttpServerTestSuite) connectClient() error {
+	client, err := tryConnect(s.serverURL)
+	if err != nil {
+		return fmt.Errorf("failed to connect: %w", err)
+	}
+	s.kaiaClient = client
+	return nil
+}
+
+func (s *MockHttpServerTestSuite) createMockHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var reqData map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		s.T().Logf("Request: %s", reqData["method"])
+
+		method, _ := reqData["method"].(string)
+		id := reqData["id"]
+		response := s.handleRPCMethod(method, reqData["params"])
+		response["id"] = id
+		response["jsonrpc"] = "2.0"
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	})
+}
+
+func (s *MockHttpServerTestSuite) handleRPCMethod(method string, params interface{}) map[string]interface{} {
+	switch method {
+	case "kaia_chainID":
+		return map[string]interface{}{"result": "0x" + s.chainConfig.ChainID.Text(16)}
+
+	case "kaia_getBalance":
+		p := params.([]interface{})
+		address := common.HexToAddress(p[0].(string))
+		blockNumber := s.parseBlockNumber(p[1].(string))
+		return s.mockGetBalance(address, blockNumber)
+
+	case "kaia_getBlockByNumber":
+		p := params.([]interface{})
+		return s.mockGetBlockByNumber(p[0].(string))
+
+	case "eth_getBlockByNumber":
+		p := params.([]interface{})
+		return s.mockGetBlockByNumberEth(p[0].(string))
+
+	case "kaia_getBlockByHash":
+		p := params.([]interface{})
+		return s.mockGetBlockByHash(p[0].(string))
+
+	case "kaia_blockNumber":
+		return map[string]interface{}{"result": "0x2"}
+
+	case "kaia_syncing":
+		return map[string]interface{}{"result": false}
+
+	case "net_version":
+		return map[string]interface{}{"result": s.chainConfig.ChainID.Text(10)}
+
+	case "kaia_gasPrice":
+		return map[string]interface{}{"result": "0x3b9aca00"}
+
+	case "kaia_estimateGas":
+		return map[string]interface{}{"result": "0x5208"}
+
+	case "kaia_call":
+		return map[string]interface{}{"result": "0x"}
+
+	case "kaia_getTransactionByBlockHashAndIndex":
+		p := params.([]interface{})
+		blockHash := p[0].(string)
+		txIdx, _ := strconv.ParseUint(p[1].(string)[2:], 16, 64)
+		return s.mockGetTransactionByBlockHashAndIndex(blockHash, txIdx)
+
+	default:
+		return map[string]interface{}{
+			"error": map[string]interface{}{
+				"code":    -32601,
+				"message": fmt.Sprintf("the method %s does not exist/is not available", method),
+			},
+		}
+	}
+}
+
+func (s *MockHttpServerTestSuite) parseBlockNumber(str string) *big.Int {
+	assert.True(s.T(), strings.HasPrefix(str, "0x"), "blockNumber should start with 0x, got %v", str)
+
+	num, ok := new(big.Int).SetString(str[2:], 16)
+	assert.True(s.T(), ok, "failed to parse blockNumber: %v", str)
+	return num
+}
+
+// =============================================================================
+// Tests
+// =============================================================================
+
+func (s *MockHttpServerTestSuite) TestKaiaClient() {
+	s.Run("Header", s.testHeader)
+	s.Run("BalanceAt", s.testBalanceAt)
+	s.Run("ChainID", s.testChainID)
+	s.Run("TxInBlockInterrupted", s.testTransactionInBlock)
+	s.Run("GetBlock", s.testGetBlock)
+	s.Run("StatusFunctions", s.testStatusFunctions)
+	s.Run("CallContract", s.testCallContract)
+	s.Run("CallContractAtHash", s.testCallContractAtHash)
+	s.Run("TransactionSender", s.testTransactionSender)
+}
+
+func (s *MockHttpServerTestSuite) TestEthClient() {
+	t := s.T()
+
+	ethclient, err := tryConnectEth(s.serverURL)
+	if err != nil {
+		t.Skip("Could not connect Eth client to mock server:", err)
+		return
+	}
+	defer ethclient.Close()
+
+	ethHeader, err := ethclient.HeaderByNumber(context.Background(), big.NewInt(0))
+	require.NoError(t, err)
+	assert.Equal(t, ethGenesisBlockHash, ethHeader.Hash())
+}
+
+// =============================================================================
+// Mock Response Generators
+// =============================================================================
+
+func (s *MockHttpServerTestSuite) mockGetBalance(address common.Address, blockNumber *big.Int) map[string]interface{} {
+	if blockNumber.Cmp(big.NewInt(int64(len(s.blocks)))) > 0 {
 		return map[string]interface{}{
 			"error": map[string]interface{}{
 				"code":    -32000,
@@ -116,73 +353,37 @@ func MockGetBalance(t *testing.T, address common.Address, blockNumber *big.Int) 
 			},
 		}
 	}
-	if address == testAddr {
-		// testAddr - has balance (2000000000000000 wei)
-		return map[string]interface{}{
-			"result": "0x71afd498d0000", // 2000000000000000 wei
-		}
+	if address == s.testerAddr {
+		return map[string]interface{}{"result": "0x71afd498d0000"} // 0.002 KAIA
 	}
-
-	// Non-existent account - zero balance
-	return map[string]interface{}{
-		"result": "0x0",
-	}
+	return map[string]interface{}{"result": "0x0"}
 }
 
-func MockGetBlockByNumber(t *testing.T, blockNumberArg string) map[string]interface{} {
-	var block *types.Block
-	switch blockNumberArg {
-	case "0x0", "earliest":
-		block = blocks[0]
-	case "0x1":
-		block = blocks[1]
-	case "0x2", "latest", "pending", "-0x2", "-0x1":
-		block = blocks[2]
-	default:
-		// Return null result for other blocks (will be converted to kaia.NotFound by client)
-		return map[string]interface{}{
-			"result": nil,
-		}
+func (s *MockHttpServerTestSuite) mockGetBlockByNumber(blockNumberArg string) map[string]interface{} {
+	block := s.getBlockByArg(blockNumberArg)
+	if block == nil {
+		return map[string]interface{}{"result": nil}
 	}
 
-	rpcOutput, err := api.RpcOutputBlock(block, false, false, genesisConfig)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	return map[string]interface{}{
-		"result": rpcOutput,
-	}
+	rpcOutput, err := api.RpcOutputBlock(block, false, false, s.chainConfig)
+	require.NoError(s.T(), err)
+	return map[string]interface{}{"result": rpcOutput}
 }
 
-func MockGetBlockByNumberEth(t *testing.T, blockNumberArg string) map[string]interface{} {
-	var block *types.Block
-	switch blockNumberArg {
-	case "0x0", "earliest":
-		block = blocks[0]
-	case "0x1":
-		block = blocks[1]
-	case "0x2", "latest", "pending", "-0x2", "-0x1":
-		block = blocks[2]
-	default:
-		// Return null result for other blocks (will be converted to kaia.NotFound by client)
-		return map[string]interface{}{
-			"result": nil,
-		}
+func (s *MockHttpServerTestSuite) mockGetBlockByNumberEth(blockNumberArg string) map[string]interface{} {
+	block := s.getBlockByArg(blockNumberArg)
+	if block == nil {
+		return map[string]interface{}{"result": nil}
 	}
 
-	rpcOutput, err := api.RpcMarshalEthBlock(block, nil, genesisConfig, false, false, false)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	t.Logf("RpcMarshalEthBlock nonce: %v", rpcOutput["nonce"])
-	return map[string]interface{}{
-		"result": rpcOutput,
-	}
+	rpcOutput, err := api.RpcMarshalEthBlock(block, nil, s.chainConfig, false, false, false)
+	require.NoError(s.T(), err)
+	return map[string]interface{}{"result": rpcOutput}
 }
 
-func MockGetBlockByHash(t *testing.T, blockHash string) map[string]interface{} {
-	blockNum := slices.IndexFunc(blocks, func(h *types.Block) bool {
-		return h.Hash().Hex() == blockHash
+func (s *MockHttpServerTestSuite) mockGetBlockByHash(blockHash string) map[string]interface{} {
+	blockNum := slices.IndexFunc(s.blocks, func(b *types.Block) bool {
+		return b.Hash().Hex() == blockHash
 	})
 	if blockNum == -1 {
 		return map[string]interface{}{
@@ -193,22 +394,16 @@ func MockGetBlockByHash(t *testing.T, blockHash string) map[string]interface{} {
 		}
 	}
 
-	block := blocks[blockNum]
-	rpcOutput, err := api.RpcOutputBlock(block, false, false, genesisConfig)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	return map[string]interface{}{
-		"result": rpcOutput,
-	}
+	rpcOutput, err := api.RpcOutputBlock(s.blocks[blockNum], false, false, s.chainConfig)
+	require.NoError(s.T(), err)
+	return map[string]interface{}{"result": rpcOutput}
 }
 
-func MockGetTransactionByBlockHashAndIndex(t *testing.T, blockHash string, transactionIndex uint64) map[string]interface{} {
-	blockNum := slices.IndexFunc(blocks, func(h *types.Block) bool {
-		return h.Hash().Hex() == blockHash
+func (s *MockHttpServerTestSuite) mockGetTransactionByBlockHashAndIndex(blockHash string, transactionIndex uint64) map[string]interface{} {
+	blockNum := slices.IndexFunc(s.blocks, func(b *types.Block) bool {
+		return b.Hash().Hex() == blockHash
 	})
-	// only accept block number = 2
-	if blockNum < 2 || transactionIndex > 2 {
+	if blockNum < 2 || transactionIndex > 1 {
 		return map[string]interface{}{
 			"error": map[string]interface{}{
 				"code":    -32000,
@@ -217,225 +412,46 @@ func MockGetTransactionByBlockHashAndIndex(t *testing.T, blockHash string, trans
 		}
 	}
 
-	txs := []*types.Transaction{testTx1, testTx2}
-	return map[string]interface{}{
-		"result": txs[transactionIndex],
+	return map[string]interface{}{"result": s.txs[transactionIndex]}
+}
+
+func (s *MockHttpServerTestSuite) getBlockByArg(arg string) *types.Block {
+	switch arg {
+	case "0x0", "earliest":
+		return s.blocks[0]
+	case "0x1":
+		return s.blocks[1]
+	case "0x2", "latest", "pending", "-0x2", "-0x1":
+		return s.blocks[2]
+	default:
+		return nil
 	}
 }
 
-func launchMockServer(t *testing.T, quit chan struct{}) string {
-	myHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
+// =============================================================================
+// Individual Test Functions
+// =============================================================================
 
-		var reqData map[string]interface{}
-		decoder := json.NewDecoder(r.Body)
-		if err := decoder.Decode(&reqData); err != nil {
-			http.Error(w, "Invalid JSON", http.StatusBadRequest)
-			return
-		}
+func (s *MockHttpServerTestSuite) testHeader() {
+	t := s.T()
+	client := s.kaiaClient
 
-		t.Logf("MockHttpServer received request: %+v", reqData)
-
-		// Extract method and id from JSON-RPC request
-		method, _ := reqData["method"].(string)
-		id := reqData["id"]
-
-		var response map[string]interface{}
-
-		switch method {
-		case "kaia_chainID":
-			response = map[string]interface{}{
-				"result": "0x" + genesisConfig.ChainID.Text(16),
-			}
-		case "kaia_getBalance":
-			params := reqData["params"].([]interface{})
-			addressStr := params[0].(string)
-			address := common.HexToAddress(addressStr)
-			blockNumberStr := params[1].(string)
-			if !strings.HasPrefix(blockNumberStr, "0x") {
-				t.Fatalf("blockNumberStr should start with 0x, but got %v", blockNumberStr)
-			}
-			blockNumber, ok := new(big.Int).SetString(blockNumberStr[2:], 16)
-			if !ok {
-				t.Fatalf("unexpected error: %v", blockNumberStr)
-			}
-			response = MockGetBalance(t, address, blockNumber)
-		case "kaia_getBlockByNumber":
-			params := reqData["params"].([]interface{})
-			blockNumber := params[0].(string)
-			response = MockGetBlockByNumber(t, blockNumber)
-		case "eth_getBlockByNumber":
-			params := reqData["params"].([]interface{})
-			blockNumber := params[0].(string)
-			response = MockGetBlockByNumberEth(t, blockNumber)
-		case "kaia_getBlockByHash":
-			params := reqData["params"].([]interface{})
-			blockHash := params[0].(string)
-			response = MockGetBlockByHash(t, blockHash)
-		case "kaia_blockNumber":
-			response = map[string]interface{}{
-				"result": "0x2", // Block 2
-			}
-		case "kaia_syncing":
-			response = map[string]interface{}{
-				"result": false,
-			}
-		case "net_version":
-			response = map[string]interface{}{
-				"result": genesisConfig.ChainID.Text(10),
-			}
-		case "kaia_gasPrice":
-			response = map[string]interface{}{
-				"result": "0x3b9aca00",
-			}
-		case "kaia_estimateGas":
-			response = map[string]interface{}{
-				"result": "0x5208",
-			}
-		case "kaia_call":
-			response = map[string]interface{}{
-				"result": "0x",
-			}
-		case "kaia_getTransactionByBlockHashAndIndex":
-			params := reqData["params"].([]interface{})
-			blockHash := params[0].(string)
-			transactionIndexStr := params[1].(string)
-			txIdx, err := strconv.ParseUint(transactionIndexStr[2:], 16, 64)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", transactionIndexStr)
-			}
-			response = MockGetTransactionByBlockHashAndIndex(t, blockHash, txIdx)
-		default:
-			// Return method not found error
-			response = map[string]interface{}{
-				"jsonrpc": "2.0",
-				"id":      id,
-				"error": map[string]interface{}{
-					"code":    -32601,
-					"message": fmt.Sprintf("the method %s does not exist/is not available", method),
-				},
-			}
-		}
-		response["id"] = id
-		response["jsonrpc"] = "2.0"
-
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			t.Errorf("Failed to encode response: %v", err)
-		}
-		t.Logf("MockHttpServer sent response: %+v", response)
-	})
-
-	s := &http.Server{
-		Addr:    "127.0.0.1:36000",
-		Handler: myHandler,
-	}
-
-	go func() {
-		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			t.Errorf("Server failed: %v", err)
-		}
-	}()
-
-	t.Log("MockHttpServer started on 127.0.0.1:36000")
-
-	go func() {
-		<-quit
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		s.Shutdown(ctx)
-	}()
-
-	return "http://127.0.0.1:36000"
-}
-
-func TestKaiaClient(t *testing.T) {
-	quitChan := make(chan struct{})
-	defer close(quitChan)
-
-	serverURL := launchMockServer(t, quitChan)
-
-	// Give server time to start
-	time.Sleep(100 * time.Millisecond)
-
-	client, err := tryConnect(serverURL)
-	if err != nil {
-		t.Skip("Could not connect Kaia client to mock server:", err)
-		return
-	}
-	defer client.Close()
-
-	tests := map[string]struct {
-		test func(t *testing.T)
-	}{
-		"Header": {
-			func(t *testing.T) { testHeader(t, client) },
-		},
-		"BalanceAt": {
-			func(t *testing.T) { testBalanceAt(t, client) },
-		},
-		"ChainID": {
-			func(t *testing.T) { testChainID(t, client) },
-		},
-		"TxInBlockInterrupted": {
-			func(t *testing.T) { testTransactionInBlock(t, client) },
-		},
-		"GetBlock": {
-			func(t *testing.T) { testGetBlock(t, client) },
-		},
-		"StatusFunctions": {
-			func(t *testing.T) { testStatusFunctions(t, client) },
-		},
-		"CallContract": {
-			func(t *testing.T) { testCallContract(t, client) },
-		},
-		"CallContractAtHash": {
-			func(t *testing.T) { testCallContractAtHash(t, client) },
-		},
-		// "AtFunctions": {
-		// 	func(t *testing.T) { testAtFunctions(t, client) },
-		// },
-		"TransactionSender": {
-			func(t *testing.T) { testTransactionSender(t, client) },
-		},
-	}
-
-	t.Parallel()
-	for name, tt := range tests {
-		t.Run(name, tt.test)
-	}
-}
-
-func testHeader(t *testing.T, client *KaiaClient) {
 	tests := map[string]struct {
 		block   *big.Int
 		want    *types.Header
 		wantErr error
 	}{
-		"genesis": {
-			block: big.NewInt(0),
-			want:  blocks[0].Header(),
-		},
-		"first_block": {
-			block: big.NewInt(1),
-			want:  blocks[1].Header(),
-		},
-		"future_block": {
-			block:   big.NewInt(1000000000),
-			want:    nil,
-			wantErr: kaia.NotFound,
-		},
+		"genesis":      {block: big.NewInt(0), want: s.blocks[0].Header()},
+		"first_block":  {block: big.NewInt(1), want: s.blocks[1].Header()},
+		"future_block": {block: big.NewInt(1000000000), want: nil, wantErr: kaia.NotFound},
 	}
+
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			c := client
 			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel()
 
-			got, err := c.HeaderByNumber(ctx, tt.block)
+			got, err := client.HeaderByNumber(ctx, tt.block)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("HeaderByNumber(%v) error = %q, want %q", tt.block, err, tt.wantErr)
 			}
@@ -449,395 +465,189 @@ func testHeader(t *testing.T, client *KaiaClient) {
 	}
 }
 
-func testBalanceAt(t *testing.T, client *KaiaClient) {
+func (s *MockHttpServerTestSuite) testBalanceAt() {
+	t := s.T()
+	client := s.kaiaClient
+
 	tests := map[string]struct {
 		account common.Address
 		block   *big.Int
 		want    *big.Int
 		wantErr error
 	}{
-		"valid_account_genesis": {
-			account: testAddr,
-			block:   big.NewInt(0),
-			want:    testBalance,
-		},
-		"valid_account": {
-			account: testAddr,
-			block:   big.NewInt(1),
-			want:    testBalance,
-		},
-		"non_existent_account": {
-			account: common.Address{1},
-			block:   big.NewInt(1),
-			want:    big.NewInt(0),
-		},
-		"future_block": {
-			account: testAddr,
-			block:   big.NewInt(1000000000),
-			want:    big.NewInt(0),
-			wantErr: kaia.NotFound,
-		},
+		"valid_account_genesis": {account: s.testerAddr, block: big.NewInt(0), want: s.testerInitBalance},
+		"valid_account":         {account: s.testerAddr, block: big.NewInt(1), want: s.testerInitBalance},
+		"non_existent_account":  {account: common.Address{1}, block: big.NewInt(1), want: big.NewInt(0)},
+		"future_block":          {account: s.testerAddr, block: big.NewInt(1000000000), want: big.NewInt(0), wantErr: kaia.NotFound},
 	}
+
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			c := client
 			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel()
 
-			got, err := c.BalanceAt(ctx, tt.account, tt.block)
+			got, err := client.BalanceAt(ctx, tt.account, tt.block)
 			if tt.wantErr != nil && (err == nil || err.Error() != tt.wantErr.Error()) {
 				t.Fatalf("BalanceAt(%x, %v) error = %q, want %q", tt.account, tt.block, err, tt.wantErr)
 			}
-			if got.Cmp(tt.want) != 0 {
-				t.Fatalf("BalanceAt(%x, %v) = %v, want %v", tt.account, tt.block, got, tt.want)
-			}
+			assert.Equal(s.T(), tt.want.String(), got.String())
 		})
 	}
 }
 
-func testTransactionInBlock(t *testing.T, c *KaiaClient) {
-	// Get current block by number.
+func (s *MockHttpServerTestSuite) testTransactionInBlock() {
+	t := s.T()
+	c := s.kaiaClient
+
 	block, err := c.BlockByNumber(context.Background(), nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
-	// Test tx in block not found.
-	if _, err := c.TransactionInBlock(context.Background(), block.Hash(), 20); err.Error() != kaia.NotFound.Error() {
-		t.Fatal("error should be kaia.NotFound")
-	}
+	// Test tx not found
+	_, err = c.TransactionInBlock(context.Background(), block.Hash(), 20)
+	assert.Equal(t, kaia.NotFound.Error(), err.Error())
 
-	// Test tx in block found.
+	// Test tx found
 	tx, err := c.TransactionInBlock(context.Background(), block.Hash(), 0)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if tx.Hash() != testTx1.Hash() {
-		t.Fatalf("unexpected transaction: %v", tx)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, s.txs[0].Hash(), tx.Hash())
 
 	tx, err = c.TransactionInBlock(context.Background(), block.Hash(), 1)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if tx.Hash() != testTx2.Hash() {
-		t.Fatalf("unexpected transaction: %v", tx)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, s.txs[1].Hash(), tx.Hash())
 
 	// Test pending block
 	_, err = c.BlockByNumber(context.Background(), big.NewInt(int64(rpc.PendingBlockNumber)))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 }
 
-func testChainID(t *testing.T, c *KaiaClient) {
-	id, err := c.ChainID(context.Background())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if id == nil || id.Cmp(genesisConfig.ChainID) != 0 {
-		t.Fatalf("ChainID returned wrong number: %+v", id)
-	}
+func (s *MockHttpServerTestSuite) testChainID() {
+	id, err := s.kaiaClient.ChainID(context.Background())
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), s.chainConfig.ChainID, id)
 }
 
-func testGetBlock(t *testing.T, c *KaiaClient) {
-	// Get current block number
+func (s *MockHttpServerTestSuite) testGetBlock() {
+	t := s.T()
+	c := s.kaiaClient
+
 	blockNumber, err := c.BlockNumber(context.Background())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if blockNumber.Int64() != 2 {
-		t.Fatalf("BlockNumber returned wrong number: %d", blockNumber)
-	}
-	// Get current block
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), blockNumber.Int64())
+
 	block, err := c.BlockByNumber(context.Background(), big.NewInt(blockNumber.Int64()))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if block.NumberU64() != blockNumber.Uint64() {
-		t.Fatalf("BlockByNumber returned wrong block: want %d got %d", blockNumber, block.NumberU64())
-	}
-	// Get current block by hash
+	require.NoError(t, err)
+	assert.Equal(t, blockNumber.Uint64(), block.NumberU64())
+
 	blockH, err := c.BlockByHash(context.Background(), block.Hash())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if block.Hash() != blockH.Hash() {
-		t.Fatalf("BlockByHash returned wrong block: want %v got %v", block.Hash().Hex(), blockH.Hash().Hex())
-	}
-	// Get header by number
+	require.NoError(t, err)
+	assert.Equal(t, block.Hash(), blockH.Hash())
+
 	header, err := c.HeaderByNumber(context.Background(), big.NewInt(blockNumber.Int64()))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if block.Header().Hash() != header.Hash() {
-		t.Fatalf("HeaderByNumber returned wrong header: want %v got %v", block.Header().Hash().Hex(), header.Hash().Hex())
-	}
-	// Get header by hash
+	require.NoError(t, err)
+	assert.Equal(t, block.Header().Hash(), header.Hash())
+
 	headerH, err := c.HeaderByHash(context.Background(), block.Hash())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if block.Header().Hash() != headerH.Hash() {
-		t.Fatalf("HeaderByHash returned wrong header: want %v got %v", block.Header().Hash().Hex(), headerH.Hash().Hex())
-	}
+	require.NoError(t, err)
+	assert.Equal(t, block.Header().Hash(), headerH.Hash())
 }
 
-func testStatusFunctions(t *testing.T, c *KaiaClient) {
-	// Sync progress
+func (s *MockHttpServerTestSuite) testStatusFunctions() {
+	t := s.T()
+	c := s.kaiaClient
+
 	progress, err := c.SyncProgress(context.Background())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if progress != nil {
-		t.Fatalf("unexpected progress: %v", progress)
-	}
+	require.NoError(t, err)
+	assert.Nil(t, progress)
 
-	// NetworkID
 	networkID, err := c.NetworkID(context.Background())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if networkID.Cmp(genesisConfig.ChainID) != 0 {
-		t.Fatalf("unexpected networkID: %v", networkID)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, s.chainConfig.ChainID, networkID)
 
-	// SuggestGasPrice
 	gasPrice, err := c.SuggestGasPrice(context.Background())
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if gasPrice.Cmp(big.NewInt(1000000000)) != 0 {
-		t.Fatalf("unexpected gas price: %v", gasPrice)
-	}
-
-	// Note: SuggestGasTipCap, BlobBaseFee, and FeeHistory methods are not available in Kaia client
-	// Skipping these tests for Kaia compatibility
+	require.NoError(t, err)
+	assert.Equal(t, big.NewInt(1000000000), gasPrice)
 }
 
-func testCallContractAtHash(t *testing.T, c *KaiaClient) {
-	// EstimateGas
+func (s *MockHttpServerTestSuite) testCallContractAtHash() {
+	t := s.T()
+	c := s.kaiaClient
+
 	msg := kaia.CallMsg{
-		From:  testAddr,
+		From:  s.testerAddr,
 		To:    &common.Address{},
 		Gas:   21000,
 		Value: big.NewInt(1),
 	}
+
 	gas, err := c.EstimateGas(context.Background(), msg)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if gas != 21000 {
-		t.Fatalf("unexpected gas price: %v", gas)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, uint64(21000), gas)
+
 	_, err = c.HeaderByNumber(context.Background(), big.NewInt(1))
-	if err != nil {
-		t.Fatalf("BlockByNumber error: %v", err)
-	}
-	// Note: CallContractAtHash method is not available in Kaia client
-	// Skipping this test for Kaia compatibility
+	require.NoError(t, err)
 }
 
-func testCallContract(t *testing.T, c *KaiaClient) {
-	// EstimateGas
+func (s *MockHttpServerTestSuite) testCallContract() {
+	t := s.T()
+	c := s.kaiaClient
+
 	msg := kaia.CallMsg{
-		From:  testAddr,
+		From:  s.testerAddr,
 		To:    &common.Address{},
 		Gas:   21000,
 		Value: big.NewInt(1),
 	}
+
 	gas, err := c.EstimateGas(context.Background(), msg)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if gas != 21000 {
-		t.Fatalf("unexpected gas price: %v", gas)
-	}
-	// CallContract
-	if _, err := c.CallContract(context.Background(), msg, big.NewInt(1)); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	// PendingCallContract
-	if _, err := c.PendingCallContract(context.Background(), msg); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, uint64(21000), gas)
+
+	_, err = c.CallContract(context.Background(), msg, big.NewInt(1))
+	require.NoError(t, err)
 }
 
-func testAtFunctions(t *testing.T, c *KaiaClient) {
-	_, err := c.HeaderByNumber(context.Background(), big.NewInt(1))
-	if err != nil {
-		t.Fatalf("BlockByNumber error: %v", err)
-	}
-
-	// send a transaction for some interesting pending status
-	if err := sendTransaction(c); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// wait for the transaction to be included in the pending block
-	for {
-		// Check pending transaction count
-		pending, err := c.PendingTransactionCount(context.Background())
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if pending == 1 {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	// Query balance
-	balance, err := c.BalanceAt(context.Background(), testAddr, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	// Note: BalanceAtHash method is not available in Kaia client
-	// Skipping this test for Kaia compatibility
-	penBalance, err := c.PendingBalanceAt(context.Background(), testAddr)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if balance.Cmp(penBalance) == 0 {
-		t.Fatalf("unexpected balance: %v %v", balance, penBalance)
-	}
-	// NonceAt
-	nonce, err := c.NonceAt(context.Background(), testAddr, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	// Note: NonceAtHash method is not available in Kaia client
-	// Skipping this test for Kaia compatibility
-	penNonce, err := c.PendingNonceAt(context.Background(), testAddr)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if penNonce != nonce+1 {
-		t.Fatalf("unexpected nonce: %v %v", nonce, penNonce)
-	}
-	// StorageAt
-	storage, err := c.StorageAt(context.Background(), testAddr, common.Hash{}, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	// Note: StorageAtHash method is not available in Kaia client
-	// Skipping this test for Kaia compatibility
-	penStorage, err := c.PendingStorageAt(context.Background(), testAddr, common.Hash{})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !bytes.Equal(storage, penStorage) {
-		t.Fatalf("unexpected storage: %v %v", storage, penStorage)
-	}
-	// CodeAt
-	code, err := c.CodeAt(context.Background(), testAddr, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	// Note: CodeAtHash method is not available in Kaia client
-	// Skipping this test for Kaia compatibility
-	penCode, err := c.PendingCodeAt(context.Background(), testAddr)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !bytes.Equal(code, penCode) {
-		t.Fatalf("unexpected code: %v %v", code, penCode)
-	}
-	// Note: EstimateGasAtBlock and EstimateGasAtBlockHash methods are not available in Kaia client
-	// Skipping these tests for Kaia compatibility
-
-	// Verify that sender address of pending transaction is saved in cache.
-	pendingBlock, err := c.BlockByNumber(context.Background(), big.NewInt(int64(rpc.PendingBlockNumber)))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	// No additional RPC should be required, ensure the server is not asked by
-	// canceling the context.
-	sender, err := c.TransactionSender(newCanceledContext(), pendingBlock.Transactions()[0], pendingBlock.Hash(), 0)
-	if err != nil {
-		t.Fatal("unable to recover sender:", err)
-	}
-	if sender != testAddr {
-		t.Fatal("wrong sender:", sender)
-	}
-}
-
-func testTransactionSender(t *testing.T, c *KaiaClient) {
+func (s *MockHttpServerTestSuite) testTransactionSender() {
+	t := s.T()
+	c := s.kaiaClient
 	ctx := context.Background()
 
-	// Retrieve testTx1 via RPC.
 	block2, err := c.HeaderByNumber(ctx, big.NewInt(2))
-	if err != nil {
-		t.Fatal("can't get block 1:", err)
-	}
+	require.NoError(t, err)
+
 	tx1, err := c.TransactionInBlock(ctx, block2.Hash(), 0)
-	if err != nil {
-		t.Fatal("can't get tx:", err)
-	}
-	if tx1.Hash() != testTx1.Hash() {
-		t.Fatalf("wrong tx hash %v, want %v", tx1.Hash(), testTx1.Hash())
-	}
+	require.NoError(t, err)
+	assert.Equal(t, s.txs[0].Hash(), tx1.Hash())
 
-	// The sender address is cached in tx1, so no additional RPC should be required in
-	// TransactionSender. Ensure the server is not asked by canceling the context here.
+	// Sender is cached, no RPC needed
 	_, err = c.TransactionSender(newCanceledContext(), tx1, block2.Hash(), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	// Kaia tx.From is zero for legacy txs, so skip the check
-	// if sender1 != testAddr {
-	// 	t.Fatal("wrong sender:", sender1)
-	// }
-
-	// Now try to get the sender of testTx2, which was not fetched through RPC.
-	// TransactionSender should query the server here.
-	_, err = c.TransactionSender(ctx, testTx2, block2.Hash(), 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Kaia tx.From is zero for legacy txs, so skip the check
-	// if sender2 != testAddr {
-	// 	t.Fatal("wrong sender:", sender2)
-	// }
+	// s.txs[1] not fetched via RPC, will query server
+	_, err = c.TransactionSender(ctx, s.txs[1], block2.Hash(), 1)
+	require.NoError(t, err)
 }
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
 
 func newCanceledContext() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	<-ctx.Done() // Ensure the close of the Done channel
+	<-ctx.Done()
 	return ctx
 }
 
-func sendTransaction(c *KaiaClient) error {
-	chainID, err := c.ChainID(context.Background())
-	if err != nil {
-		return err
-	}
-	nonce, err := c.NonceAt(context.Background(), testAddr, nil)
-	if err != nil {
-		return err
-	}
-
-	signer := types.LatestSignerForChainID(chainID)
-	tx := types.NewTransaction(nonce, common.Address{2}, big.NewInt(1), 22000, new(big.Int).SetUint64(params.DefaultLowerBoundBaseFee), nil)
-	tx, err = types.SignTx(tx, signer, testKey)
-	if err != nil {
-		return err
-	}
-	return c.SendTransaction(context.Background(), tx)
-}
-
-func genMockHeader(number int) *types.Header {
-	numToHash := common.HexToHash(strconv.Itoa(int(number)))
+func (s *MockHttpServerTestSuite) genMockHeader(number int) *types.Header {
+	numToHash := common.HexToHash(strconv.Itoa(number))
 	var parentHash common.Hash
 	if number <= 0 {
 		parentHash = common.Hash{0xFF}
 	} else {
-		parentHash = blocks[number-1].Hash()
+		parentHash = s.blocks[number-1].Hash()
 	}
-	header := &types.Header{
+
+	return &types.Header{
 		ParentHash:  parentHash,
 		Rewardbase:  common.Address{},
 		Root:        numToHash,
@@ -854,21 +664,6 @@ func genMockHeader(number int) *types.Header {
 		Vote:        []byte{},
 		BaseFee:     big.NewInt(25e9),
 	}
-	return header
-}
-
-func TestKaiaClient_AnvilServer(t *testing.T) {
-	serverURL, cleanup := launchAnvilServer(t)
-	defer cleanup()
-	client, err := tryConnect(serverURL)
-	if err != nil {
-		t.Skip("Could not connect Kaia client to anvil server:", err)
-		return
-	}
-	defer client.Close()
-
-	_, err = client.HeaderByNumber(context.Background(), big.NewInt(0))
-	assert.Equal(t, err.Error(), "Method not found")
 }
 
 func tryConnect(serverURL string) (*KaiaClient, error) {
@@ -879,8 +674,8 @@ func tryConnect(serverURL string) (*KaiaClient, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_, err = client.NetworkID(ctx)
-	if err != nil {
+
+	if _, err = client.NetworkID(ctx); err != nil {
 		return nil, err
 	}
 
@@ -895,8 +690,8 @@ func tryConnectEth(serverURL string) (*EthClient, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_, err = client.NetworkID(ctx)
-	if err != nil {
+
+	if _, err = client.NetworkID(ctx); err != nil {
 		return nil, err
 	}
 

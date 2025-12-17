@@ -39,8 +39,6 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-// TODO-Kaia Needs to separate APIs along with each namespaces.
-
 // KaiaClient defines typed wrappers for the Kaia RPC API.
 type KaiaClient struct {
 	c       *rpc.Client
