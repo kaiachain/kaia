@@ -1601,13 +1601,9 @@ func (pm *ProtocolManager) minedBroadcastLoop() {
 	for obj := range pm.minedBlockSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case blockchain.NewMinedBlockEvent:
-			// Remove the Sidecar from the blobTx just before writing the block.
-			// This prevents the sidecar from being broadcast.
-			// It is not necessary to remove the sidecar from the transactions
-			// if the block does not contain any blob transactions.
-			if ev.Block.IsBlobTxIncluded() {
-				ev.Block = ev.Block.StripBlobSidecars()
-			}
+			// Remove the sidecars from the blob transactions.
+			// This prevents the sidecars from being broadcast.
+			ev.Block = ev.Block.WithoutBlobSidecars()
 			pm.BroadcastBlock(ev.Block)     // First propagate block to peers
 			pm.BroadcastBlockHash(ev.Block) // Only then announce to the rest
 		}

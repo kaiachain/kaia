@@ -1105,7 +1105,7 @@ func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
 	return false, nil
 }
 
-func (env *Task) txsWillBeExecuted(tx *types.Transaction, bundle *builder.Bundle, nodeAddr common.Address) []*types.Transaction {
+func (env *Task) flattenTxOrBundle(tx *types.Transaction, bundle *builder.Bundle, nodeAddr common.Address) []*types.Transaction {
 	var txsWillBeExecuted []*types.Transaction
 	if len(bundle.BundleTxs) != 0 {
 		for _, txOrGen := range bundle.BundleTxs {
@@ -1126,7 +1126,7 @@ func (env *Task) txsWillBeExecuted(tx *types.Transaction, bundle *builder.Bundle
 // It has already been validated in the pool,
 // but as a precaution it will also return false if the BlobTx does not have a Sidecar.
 func (env *Task) hasBlobSpace(tx *types.Transaction, bundle *builder.Bundle, nodeAddr common.Address) bool {
-	txsWillBeExecuted := env.txsWillBeExecuted(tx, bundle, nodeAddr)
+	txsWillBeExecuted := env.flattenTxOrBundle(tx, bundle, nodeAddr)
 	blobsWillBeExecuted := 0
 	for _, tx := range txsWillBeExecuted {
 		if tx.Type() == types.TxTypeEthereumBlob {

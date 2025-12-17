@@ -409,28 +409,33 @@ func (b *Block) WithBody(transactions []*Transaction) *Block {
 	return block
 }
 
-// StripBlobSidecars returns a new block with the blob sidecar removed from the transactions.
-// Create a new block object to avoid side effects.
-func (b *Block) StripBlobSidecars() *Block {
-	transactions := make([]*Transaction, len(b.transactions))
-	for i, tx := range b.transactions {
-		// Call tx.WithoutBlobTxSidecar() only for BlobTx to avoid copy costs.
-		if tx.Type() == TxTypeEthereumBlob {
-			tx = tx.WithoutBlobTxSidecar()
-		}
-		transactions[i] = tx
-	}
-	return b.WithBody(transactions)
-}
+// WithoutBlobSidecars returns a new block with the blob sidecar removed from the transactions.
+// It skips block copy if there are no blob transactions.
+func (b *Block) WithoutBlobSidecars() *Block {
+	var replaceIdx []int
+	var replaceTxs []*Transaction
 
-// IsBlobTxIncluded returns true if the block contains any blob transactions.
-func (b *Block) IsBlobTxIncluded() bool {
-	for _, tx := range b.transactions {
+	for i, tx := range b.transactions {
 		if tx.Type() == TxTypeEthereumBlob {
-			return true
+			replaceIdx = append(replaceIdx, i)
+			replaceTxs = append(replaceTxs, tx.WithoutBlobTxSidecar())
 		}
 	}
-	return false
+
+	// Skip the block copy if unnecessary
+	if len(replaceTxs) == 0 {
+		return b
+	}
+
+	// Create a copy of transactions and replace the blob transactions
+	newTxs := make([]*Transaction, len(b.transactions))
+	copy(newTxs, b.transactions)
+	for j := range replaceTxs {
+		i := replaceIdx[j]
+		newTxs[i] = replaceTxs[j]
+	}
+
+	return b.WithBody(newTxs)
 }
 
 // Hash returns the keccak256 hash of b's header.

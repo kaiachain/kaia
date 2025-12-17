@@ -1365,13 +1365,9 @@ type TransactionLookup struct {
 // writeBlock writes block to persistent database.
 // If write through caching is enabled, it also writes block to the cache.
 func (bc *BlockChain) writeBlock(block *types.Block) {
-	// Remove the blob sidecar from the transactions.
-	// This prevents the sidecar from being saved to the database.
-	// It is not necessary to remove the sidecar from the transactions
-	// if the block does not contain any blob transactions.
-	if block.IsBlobTxIncluded() {
-		block = block.StripBlobSidecars()
-	}
+	// Remove the sidecars from the blob transactions.
+	// This prevents the sidecars from being saved to the database.
+	block = block.WithoutBlobSidecars()
 	bc.db.WriteBlock(block)
 }
 
