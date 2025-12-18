@@ -2010,8 +2010,7 @@ func (pool *TxPool) SaveBlobSidecar(blockNum *big.Int, txIndex int, txHash commo
 	if tx.Type() != types.TxTypeEthereumBlob {
 		return errors.New("tx is not a blob transaction")
 	}
-	// TODO: merge latest
-	if err := sidecar.ValidateBlobCommitmentHashes(tx.BlobHashes()); err != nil {
+	if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
 		return err
 	}
 	return pool.blobStorage.Save(blockNum, txIndex, sidecar)
