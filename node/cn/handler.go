@@ -1280,15 +1280,15 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 
 	for {
 		select {
-		case sidecar := <-pm.missingBlobSidecarCh:
-			if sidecar == nil {
+		case missignSidecar := <-pm.missingBlobSidecarCh:
+			if missignSidecar == nil {
 				continue
 			}
 
-			pm.blobSidecarReqManager.add(sidecar.TxHash, blobSidecarsRequestData{
-				BlockNum: hexutil.Uint64(sidecar.BlockNum.Uint64()),
-				TxIndex:  hexutil.Uint(sidecar.TxIndex),
-				Hash:     sidecar.TxHash,
+			pm.blobSidecarReqManager.add(missignSidecar.TxHash, blobSidecarsRequestData{
+				BlockNum: hexutil.Uint64(missignSidecar.BlockNum.Uint64()),
+				TxIndex:  hexutil.Uint(missignSidecar.TxIndex),
+				Hash:     missignSidecar.TxHash,
 			})
 
 		case <-timeoutTicker.C:
