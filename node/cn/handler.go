@@ -1275,8 +1275,8 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 	pm.wg.Add(1)
 	defer pm.wg.Done()
 
-	timeoutTicker := time.NewTicker(100 * time.Millisecond)
-	defer timeoutTicker.Stop()
+	requestIntervalTicker := time.NewTicker(100 * time.Millisecond)
+	defer requestIntervalTicker.Stop()
 
 	for {
 		select {
@@ -1291,7 +1291,7 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 				Hash:     missignSidecar.TxHash,
 			})
 
-		case <-timeoutTicker.C:
+		case <-requestIntervalTicker.C:
 			req := pm.blobSidecarReqManager.search()
 			if req == nil {
 				continue
