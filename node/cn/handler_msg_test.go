@@ -885,7 +885,7 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		}
 		pm.blobSidecarReqManager = &sidecarReqManager{
 			list: map[common.Hash]*sidecarReq{
-				d.TxHash: &sidecarReq{
+				d.TxHash: {
 					peer: mockPeer.GetID(),
 					try:  1,
 					time: time.Now(),
@@ -922,7 +922,7 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		}
 		pm.blobSidecarReqManager = &sidecarReqManager{
 			list: map[common.Hash]*sidecarReq{
-				d.TxHash: &sidecarReq{
+				d.TxHash: {
 					peer: mockPeer.GetID(),
 					try:  1,
 					time: time.Now(),
