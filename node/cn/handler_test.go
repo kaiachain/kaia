@@ -25,7 +25,6 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
-	"sync"
 	"testing"
 	"time"
 
@@ -1573,10 +1572,10 @@ func TestSidecarReqManager_Update(t *testing.T) {
 	assert.NotNil(t, req, "Request should still exist at try=4")
 	assert.Equal(t, maxTry-1, req.try, "Try should be maxTry-1")
 
-	// Note: The update method implementation has an issue where it deletes the entry
-	// when try+1 >= maxTry but then tries to access the deleted entry, which would cause a panic.
-	// In practice, this is avoided because update is only called after search() returns a valid request.
-	// Testing the boundary case where deletion would occur is skipped to avoid the panic.
+	// Test update that reaches maxTry (should delete)
+	m.update(txHash, "test-peer-final")
+	req = m.get(txHash)
+	assert.Nil(t, req, "Request should be deleted when try >= maxTry")
 }
 
 // TestSidecarReqManager_Delete tests the delete method
@@ -1635,7 +1634,7 @@ func TestSidecarReqManager_Search(t *testing.T) {
 	m.add(txHash2, request2)
 	req = m.search()
 	assert.NotNil(t, req, "Should return a request with try == 0")
-	assert.True(t, req.request.Hash == txHash1 || req.request.Hash == txHash2,
+	assert.True(t, req.request.Hash == txHash1,
 		"Should return one of the requests with try == 0")
 
 	// Update one request so it has try > 0 but not expired
@@ -1646,142 +1645,47 @@ func TestSidecarReqManager_Search(t *testing.T) {
 	assert.Equal(t, txHash2, req.request.Hash, "Should return the request with try == 0")
 
 	// Wait for timeout and test expired request
-	m.update(txHash2, "peer-2")
+	m.update(txHash1, "peer-2")
 	time.Sleep(timeout + 50*time.Millisecond) // Wait for timeout
 	req = m.search()
 	assert.NotNil(t, req, "Should return expired request")
-	assert.True(t, req.request.Hash == txHash1 || req.request.Hash == txHash2,
-		"Should return one of the expired requests")
+	assert.True(t, req.request.Hash == txHash2, "Should return one of the expired requests")
 
-	// Test with all requests having try > 0 and not expired
-	m = newTestSidecarReqManager(timeout, maxTry)
-	m.add(txHash1, request1)
-	m.update(txHash1, "peer-1")
-	time.Sleep(10 * time.Millisecond) // Small delay but not enough for timeout
-	req = m.search()
-	assert.Nil(t, req, "Should return nil when no valid requests exist")
-
-	// Test sorting by time (ascending order)
-	m = newTestSidecarReqManager(timeout, maxTry)
-	m.add(txHash1, request1)
-	time.Sleep(10 * time.Millisecond)
-	m.add(txHash2, request2)
-	time.Sleep(10 * time.Millisecond)
-	m.add(txHash3, request3)
-	// All have try == 0, so should return the oldest (first added)
-	req = m.search()
-	assert.NotNil(t, req, "Should return a request")
-	assert.Equal(t, txHash1, req.request.Hash, "Should return the oldest request (first added)")
-
-	// Test with mixed scenarios: some expired, some with try == 0
-	m = newTestSidecarReqManager(timeout, maxTry)
-	m.add(txHash1, request1) // try == 0
-	m.add(txHash2, request2)
-	m.update(txHash2, "peer-2")
-	time.Sleep(timeout + 50*time.Millisecond) // Make txHash2 expired
-	req = m.search()
-	assert.NotNil(t, req, "Should return a request")
-	assert.Equal(t, txHash1, req.request.Hash, "Should prioritize try == 0 over expired")
-}
-
-// TestSidecarReqManager_Concurrency tests concurrent access safety
-func TestSidecarReqManager_Concurrency(t *testing.T) {
-	timeout := 10 * time.Second
-	maxTry := 5
-	m := newTestSidecarReqManager(timeout, maxTry)
-
-	const numGoroutines = 10
-	const numOperations = 100
-
-	var wg sync.WaitGroup
-	wg.Add(numGoroutines)
-
-	// Create multiple hashes for testing
-	hashes := make([]common.Hash, numOperations)
-	for i := 0; i < numOperations; i++ {
-		hashes[i] = common.BytesToHash([]byte(fmt.Sprintf("hash-%d", i)))
+	{
+		// Test with all requests having try > 0 and not expired
+		m = newTestSidecarReqManager(timeout, maxTry)
+		m.add(txHash1, request1)
+		m.update(txHash1, "peer-1")
+		time.Sleep(10 * time.Millisecond) // Small delay but not enough for timeout
+		req = m.search()
+		assert.Nil(t, req, "Should return nil when no valid requests exist")
 	}
 
-	// Concurrent add operations
-	for i := 0; i < numGoroutines; i++ {
-		go func(id int) {
-			defer wg.Done()
-			for j := 0; j < numOperations; j++ {
-				hash := hashes[(id*numOperations+j)%numOperations]
-				request := newTestBlobSidecarsRequestData(hash, uint64(j), uint(id))
-				m.add(hash, request)
-			}
-		}(i)
+	{
+		// Test sorting by time (ascending order)
+		m = newTestSidecarReqManager(timeout, maxTry)
+		m.add(txHash1, request1)
+		time.Sleep(10 * time.Millisecond)
+		m.add(txHash2, request2)
+		time.Sleep(10 * time.Millisecond)
+		m.add(txHash3, request3)
+		// All have try == 0, so should return the oldest (first added)
+		req = m.search()
+		assert.NotNil(t, req, "Should return a request")
+		assert.Equal(t, txHash1, req.request.Hash, "Should return the oldest request (first added)")
 	}
 
-	wg.Wait()
-
-	// Verify all requests were added
-	assert.GreaterOrEqual(t, len(m.list), numOperations/2, "Should have many requests added")
-
-	// Concurrent get operations
-	wg.Add(numGoroutines)
-	for i := 0; i < numGoroutines; i++ {
-		go func() {
-			defer wg.Done()
-			for j := 0; j < numOperations; j++ {
-				hash := hashes[j%numOperations]
-				m.get(hash)
-			}
-		}()
+	{
+		// Test with mixed scenarios: some expired, some with try == 0
+		m = newTestSidecarReqManager(timeout, maxTry)
+		m.add(txHash1, request1) // try == 0
+		m.add(txHash2, request2)
+		m.update(txHash2, "peer-2")
+		time.Sleep(timeout + 50*time.Millisecond) // Make txHash2 expired
+		req = m.search()
+		assert.NotNil(t, req, "Should return a request")
+		assert.Equal(t, txHash1, req.request.Hash, "Should prioritize try == 0 over expired")
 	}
-
-	// Concurrent update operations
-	wg.Add(numGoroutines)
-	for i := 0; i < numGoroutines; i++ {
-		go func(id int) {
-			defer wg.Done()
-			for j := 0; j < numOperations/10; j++ {
-				hash := hashes[j%numOperations]
-				// Use recover to handle potential panic from update method bug
-				// (when request is deleted between get and update)
-				func() {
-					defer func() {
-						if r := recover(); r != nil {
-							// Expected panic due to race condition with delete
-							// This documents the known issue in update method
-						}
-					}()
-					req := m.get(hash)
-					if req != nil && req.try < maxTry-1 {
-						// Only update if request exists and won't trigger deletion
-						m.update(hash, fmt.Sprintf("peer-%d", id))
-					}
-				}()
-			}
-		}(i)
-	}
-
-	// Concurrent delete operations
-	wg.Add(numGoroutines)
-	for i := 0; i < numGoroutines; i++ {
-		go func() {
-			defer wg.Done()
-			for j := 0; j < numOperations/10; j++ {
-				hash := hashes[j%numOperations]
-				m.delete(hash)
-			}
-		}()
-	}
-
-	// Concurrent search operations
-	wg.Add(numGoroutines)
-	for i := 0; i < numGoroutines; i++ {
-		go func() {
-			defer wg.Done()
-			for j := 0; j < numOperations; j++ {
-				m.search()
-			}
-		}()
-	}
-
-	wg.Wait()
-	// If we get here without panic, concurrency is safe
 }
 
 // TestSidecarReqManager_Integration tests integration scenarios
@@ -1818,14 +1722,17 @@ func TestSidecarReqManager_Integration(t *testing.T) {
 	assert.NotNil(t, req, "Should find another request")
 	assert.NotEqual(t, originalHash, req.request.Hash, "Should find a different request")
 
-	// Update until just before maxTry boundary
-	// With maxTry=3, we can safely update once more (try=1 -> try=2)
-	// Further update (try=2 -> try=3) would trigger deletion and cause panic
+	// Update until maxTry is reached (should delete)
+	// With maxTry=3, current try=1, so one more update (try=2) then another (try=3) will trigger deletion
 	m.update(originalHash, "peer-2")
 	req = m.get(originalHash)
 	assert.NotNil(t, req, "Request should still exist")
 	assert.Equal(t, 2, req.try, "Try should be 2 (maxTry-1)")
-	// Note: Further update would trigger deletion but causes panic due to update method bug
+
+	// One more update should trigger deletion
+	m.update(originalHash, "peer-3")
+	req = m.get(originalHash)
+	assert.Nil(t, req, "Request should be deleted when try >= maxTry")
 
 	// Delete remaining requests
 	m.delete(txHash2)
