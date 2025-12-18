@@ -858,7 +858,12 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 			Sidecar:  generateTestSidecar(tx1.Hash()),
 		}
 		pm.blobSidecarReqManager = &sidecarReqManager{
-			list:    map[common.Hash]*sidecarReq{d.TxHash: &sidecarReq{peer: "different-peer-id", try: 1, time: time.Now()}},
+			list: map[common.Hash]*sidecarReq{
+				d.TxHash: &sidecarReq{peer: "different-peer-id",
+					try:  1,
+					time: time.Now(),
+				},
+			},
 			timeout: 10 * time.Second,
 			maxTry:  5,
 		}
