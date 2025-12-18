@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -57,6 +58,7 @@ var (
 
 type BlobStorage struct {
 	config BlobStorageConfig
+	mu     sync.RWMutex // TODO
 }
 
 func NewBlobStorage(config BlobStorageConfig) *BlobStorage {

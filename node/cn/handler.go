@@ -1879,7 +1879,7 @@ type sidecarReq struct {
 
 type sidecarReqManager struct {
 	list    map[common.Hash]*sidecarReq
-	timeout time.Duration
+	timeout time.Duration // TODO: cooldown
 	maxTry  int
 	mu      sync.RWMutex
 }
