@@ -361,8 +361,8 @@ func (pool *TxPool) loop() {
 		// Handle ChainHeadEvent
 		case ev := <-pool.chainHeadCh:
 			if ev.Block != nil {
-				pool.mu.Lock()
 				pool.saveAndPruneBlobStorage(ev.Block)
+				pool.mu.Lock()
 				currBlock := pool.chain.CurrentBlock()
 				if ev.Block.Root() != currBlock.Root() {
 					pool.mu.Unlock()
@@ -1610,6 +1610,9 @@ func (pool *TxPool) GetBlobSidecarFromStorage(blockNum *big.Int, txIndex int) (*
 
 // GetBlobSidecarFromPool retrieves a blob sidecar from txpool by transaction hash.
 func (pool *TxPool) GetBlobSidecarFromPool(txHash common.Hash) (*types.BlobTxSidecar, error) {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
+
 	tx := pool.all.Get(txHash)
 	if tx == nil {
 		return nil, fmt.Errorf("transaction not found in pool: %s", txHash.String())
