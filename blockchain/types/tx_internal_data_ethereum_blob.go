@@ -30,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
@@ -118,6 +119,8 @@ type BlobTxSidecar struct {
 	Blobs       []kzg4844.Blob       // Blobs needed by the blob pool
 	Commitments []kzg4844.Commitment // Commitments needed by the blob pool
 	Proofs      []kzg4844.Proof      // Proofs needed by the blob pool
+
+	validatedSummaryHash common.Hash // Hash of the versioned hashes that have been validated
 }
 
 // NewBlobTxSidecar initialises the BlobTxSidecar object with the provided parameters.
@@ -219,6 +222,62 @@ func (sc *BlobTxSidecar) Copy() *BlobTxSidecar {
 		Commitments: slices.Clone(sc.Commitments),
 		Proofs:      slices.Clone(sc.Proofs),
 	}
+}
+
+// ValidateWithBlobHashes validates the sidecar with the blob hashes.
+// This method also verifies the validity of the proof.
+// Validation rules:
+// 1. The BlobTxWithBlobs format complies with EIP-7594.
+// - assert sidecar_version == 1  # BlobSidecarVersionV1
+// - assert len(tx.blobVersionedHashes) == len(blobs) == len(commitments)  # 1 commitment per blob
+// - assert len(blobs) * CELLS_PER_EXT_BLOB == len(proofs)  # 128 proofs per blob
+// 2. The BlobTxWithBlobs contains the correct proofs
+// - for i in range(len(tx.blobVersionedHashes)):
+//   - assert CalcBlobHashV1(commitments[i]) == tx.blobVersionedHashes[i]
+//
+// - assert VerifyCellProofs(blobs, commitments, cellProofs)
+// ref: https://github.com/kaiachain/kips/blob/fac337aad17db40ed2a6c988e03ad6b2ec9771f2/KIPs/kip-279.md#blobtxwithblobs-validation
+func (sc *BlobTxSidecar) ValidateWithBlobHashes(hashes []common.Hash) error {
+	// Summarize all hashes and compute the hash
+	blobHashesSummary := make([]byte, 0, len(hashes)*32)
+	for _, h := range hashes {
+		blobHashesSummary = append(blobHashesSummary, h[:]...)
+	}
+	blobHashesSummaryHash := crypto.Keccak256Hash(blobHashesSummary)
+
+	// If the summarized hash is the same as the validated summary hash, return nil for cached hashes.
+	if blobHashesSummaryHash == sc.validatedSummaryHash {
+		return nil
+	}
+
+	if len(sc.Blobs) != len(hashes) {
+		return fmt.Errorf("invalid number of %d blobs compared to %d blob hashes", len(sc.Blobs), len(hashes))
+	}
+	if err := sc.ValidateBlobCommitmentHashes(hashes); err != nil {
+		return err
+	}
+
+	if sc.Version != BlobSidecarVersion1 {
+		// Kaia rejects sidecar.Version = 0.
+		// ref: https://github.com/kaiachain/kips/blob/main/KIPs/kip-279.md#reject-sidecar-v0
+		return fmt.Errorf("blob sidecar version %d not supported", sc.Version)
+	}
+
+	// Fork-specific sidecar checks, including proof verification.
+	if err := validateBlobSidecarOsaka(sc, hashes); err != nil {
+		return err
+	}
+
+	// Once verified, the hash of hashes is cached.
+	sc.validatedSummaryHash = blobHashesSummaryHash
+	return nil
+}
+
+func validateBlobSidecarOsaka(sidecar *BlobTxSidecar, hashes []common.Hash) error {
+	if len(sidecar.Proofs) != len(hashes)*kzg4844.CellProofsPerBlob {
+		return fmt.Errorf("invalid number of %d blob proofs expected %d", len(sidecar.Proofs), len(hashes)*kzg4844.CellProofsPerBlob)
+	}
+	return kzg4844.VerifyCellProofs(sidecar.Blobs, sidecar.Commitments, sidecar.Proofs)
 }
 
 // blobTxWithBlobs represents blob tx with its corresponding sidecar.

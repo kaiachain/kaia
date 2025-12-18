@@ -38,6 +38,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -80,6 +81,7 @@ var (
 	minerBalanceGauge       = metrics.NewRegisteredGauge("miner/balance", nil)
 
 	blockBaseFee              = metrics.NewRegisteredGauge("miner/block/mining/basefee", nil)
+	blobsGauge                = metrics.NewRegisteredGauge("miner/block/mining/blobs", nil)
 	blockMiningTimer          = kaiametrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
 	blockMiningExecuteTxTimer = kaiametrics.NewRegisteredHybridTimer("miner/block/execute/time", nil)
 	blockMiningCommitTxTimer  = kaiametrics.NewRegisteredHybridTimer("miner/block/commit/time", nil)
@@ -125,6 +127,7 @@ type Task struct {
 	header   *types.Header
 	txs      []*types.Transaction
 	receipts []*types.Receipt
+	blobs    int
 
 	createdAt time.Time
 }
@@ -594,6 +597,17 @@ func (self *worker) commitNewWork() {
 		logger.Error("Failed to prepare header for mining", "err", err)
 		return
 	}
+	// Apply KIP-279.
+	if self.config.IsOsakaForkEnabled(header.Number) {
+		// In KIP-279, ExcessBlobGas is defined as follows:
+		// - ExcessBlobGas = max(0, parent.excessBlobGas + parent.blobGasUsed - TARGET_BLOB_GAS_PER_BLOCK)
+		var excessBlobGas uint64
+		if self.config.IsOsakaForkEnabled(parent.Number()) {
+			excessBlobGas = eip4844.CalcExcessBlobGas(self.config, parent.Header(), header.Number)
+		}
+		header.BlobGasUsed = new(uint64)
+		header.ExcessBlobGas = &excessBlobGas
+	}
 	// Could potentially happen if starting to mine in an odd state.
 	err = self.makeCurrent(parent, header)
 	if err != nil {
@@ -653,6 +667,7 @@ func (self *worker) commitNewWork() {
 			if header.BaseFee != nil {
 				blockBaseFee.Update(header.BaseFee.Int64() / int64(params.Gkei))
 			}
+			blobsGauge.Update(int64(work.blobs))
 			blockMiningTimer.Update(blockMiningTime)
 			blockMiningCommitTxTimer.Update(commitTxTime)
 			blockMiningExecuteTxTimer.Update(commitTxTime - trieAccess)
@@ -839,6 +854,17 @@ CommitTransactionLoop:
 				break
 			}
 		}
+
+		// Most of the blob gas logic here is agnostic as to if the chain supports
+		// blobs or not, however the max check panics when called on a chain without
+		// a defined schedule, so we need to verify it's safe to call.
+		if env.config.IsOsakaForkEnabled(env.header.Number) {
+			if hasBlobSpace := env.hasBlobSpace(tx, targetBundle, nodeAddr); !hasBlobSpace {
+				builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+				continue
+			}
+		}
+
 		// If target is the tx in bundle, len(targetBundle.BundleTxs) is appended to numTxsChecked.
 		numTxsChecked += int64(numShift)
 		// Error may be ignored here. The error has already been checked
@@ -969,10 +995,15 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAdd
 		env.state.RevertToSnapshot(snap)
 		return err, nil
 	}
+
 	env.tcount++
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
 	env.size += uint64(tx.Size())
+	if tx.Type() == types.TxTypeEthereumBlob {
+		env.blobs += len(tx.BlobHashes())
+		*env.header.BlobGasUsed += tx.BlobGas()
+	}
 
 	return nil, receipt.Logs
 }
@@ -980,6 +1011,8 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAdd
 func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, nodeAddr common.Address, vmConfig *vm.Config) (error, *types.Transaction, []*types.Log) {
 	lastSnapshot := env.state.Copy()
 	gasUsedSnapshot := env.header.GasUsed
+	blobGasUsedSnapshot := env.header.BlobGasUsed
+	blobsSnapshot := env.blobs
 	tcountSnapshot := env.tcount
 	txs := []*types.Transaction{}
 	receipts := []*types.Receipt{}
@@ -998,6 +1031,9 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		env.state.Set(lastSnapshot)
 		env.header.GasUsed = gasUsedSnapshot
 		env.tcount = tcountSnapshot
+		// blob related env are restored to the snapshot
+		env.header.BlobGasUsed = blobGasUsedSnapshot
+		env.blobs = blobsSnapshot
 	}
 
 	var totalTxSize uint64 = 0
@@ -1038,6 +1074,10 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		txs = append(txs, tx)
 		receipts = append(receipts, receipt)
 		logs = append(logs, receipt.Logs...)
+		if tx.Type() == types.TxTypeEthereumBlob {
+			env.blobs += len(tx.BlobHashes())
+			*env.header.BlobGasUsed += tx.BlobGas()
+		}
 	}
 
 	env.size += totalTxSize
@@ -1063,6 +1103,49 @@ func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func (env *Task) flattenTxOrBundle(tx *types.Transaction, bundle *builder.Bundle, nodeAddr common.Address) []*types.Transaction {
+	var txsWillBeExecuted []*types.Transaction
+	if len(bundle.BundleTxs) != 0 {
+		for _, txOrGen := range bundle.BundleTxs {
+			tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
+			if err != nil {
+				// ignore error in this point since it will be handled later as tx generation error in commitBundleTransaction
+				continue
+			}
+			txsWillBeExecuted = append(txsWillBeExecuted, tx)
+		}
+	} else {
+		txsWillBeExecuted = []*types.Transaction{tx}
+	}
+	return txsWillBeExecuted
+}
+
+// hasBlobSpace checks if the task has enough blob space for the given transaction and bundle.
+// It has already been validated in the pool,
+// but as a precaution it will also return false if the BlobTx does not have a Sidecar.
+func (env *Task) hasBlobSpace(tx *types.Transaction, bundle *builder.Bundle, nodeAddr common.Address) bool {
+	txsWillBeExecuted := env.flattenTxOrBundle(tx, bundle, nodeAddr)
+	blobsWillBeExecuted := 0
+	for _, tx := range txsWillBeExecuted {
+		if tx.Type() == types.TxTypeEthereumBlob {
+			sc := tx.BlobTxSidecar()
+			if sc == nil {
+				logger.Trace("Blob transaction without sidecar", "hash", tx.Hash())
+				return false
+			}
+			blobsWillBeExecuted += len(sc.Blobs)
+		}
+	}
+
+	left := eip4844.MaxBlobsPerBlock(env.config, env.header.Number) - env.blobs
+	if left < blobsWillBeExecuted {
+		logger.Trace("Not enough blob space left for transaction", "hash", tx.Hash(), "left", left, "needed", len(tx.BlobHashes()))
+		return false
+	}
+
+	return true
 }
 
 func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, header *types.Header) *Task {

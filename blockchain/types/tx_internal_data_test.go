@@ -17,6 +17,9 @@
 package types
 
 import (
+	"crypto/sha256"
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/holiman/uint256"
@@ -24,6 +27,7 @@ import (
 	mock_types "github.com/kaiachain/kaia/blockchain/types/mocks"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/require"
@@ -321,5 +325,145 @@ func TestValidate7702(t *testing.T) {
 				assert.Equal(t, tt.expectedErr, err)
 			}
 		})
+	}
+}
+
+func TestSidecar_ValidateWithBlobHashes(t *testing.T) {
+	// Helper function to create a valid sidecar with empty blob
+	createValidSidecar := func(numBlobs int) (*BlobTxSidecar, []common.Hash) {
+		blobs := make([]kzg4844.Blob, numBlobs)
+		commitments := make([]kzg4844.Commitment, numBlobs)
+		proofs := make([]kzg4844.Proof, 0)
+		blobHashes := make([]common.Hash, numBlobs)
+		hasher := sha256.New()
+
+		for i := 0; i < numBlobs; i++ {
+			blob := kzg4844.Blob{}
+			commitment, _ := kzg4844.BlobToCommitment(&blob)
+			cellProofs, _ := kzg4844.ComputeCellProofs(&blob)
+
+			blobs[i] = blob
+			commitments[i] = commitment
+			proofs = append(proofs, cellProofs...)
+			blobHashes[i] = kzg4844.CalcBlobHashV1(hasher, &commitment)
+		}
+
+		return &BlobTxSidecar{
+			Version:     1,
+			Blobs:       blobs,
+			Commitments: commitments,
+			Proofs:      proofs,
+		}, blobHashes
+	}
+
+	var (
+		singleSidecar, singleSidecarHashes     = createValidSidecar(1)
+		multipleSidecar, multipleSidecarHashes = createValidSidecar(2)
+		singleSidecarCommitEmpty               = singleSidecar.Copy()
+		singleSidecarVersion0                  = singleSidecar.Copy()
+		singleSidecarProofInvalid              = singleSidecar.Copy()
+		wrongHash                              = []common.Hash{common.HexToHash("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")}
+	)
+	singleSidecarCommitEmpty.Commitments = []kzg4844.Commitment{}
+	singleSidecarVersion0.Version = 0
+	singleSidecarProofInvalid.Proofs = singleSidecarProofInvalid.Proofs[:len(singleSidecarProofInvalid.Proofs)-1]
+
+	tests := []struct {
+		name       string
+		sidecar    *BlobTxSidecar
+		hashes     []common.Hash
+		expected   error
+		cacheCheck func(t *testing.T, sidecar *BlobTxSidecar, err error)
+	}{
+		{
+			name:    "empty blob",
+			sidecar: singleSidecar,
+			hashes:  singleSidecarHashes,
+			cacheCheck: func(t *testing.T, sidecar *BlobTxSidecar, err error) {
+				require.NoError(t, err)
+				blobHashesSummary := make([]byte, 0, 32)
+				blobHashesSummary = append(blobHashesSummary, singleSidecarHashes[0][:]...)
+				expectedSummaryHash := crypto.Keccak256Hash(blobHashesSummary)
+				assert.Equal(t, sidecar.validatedSummaryHash, expectedSummaryHash)
+			},
+		},
+		{
+			name:    "multiple blobs",
+			sidecar: multipleSidecar,
+			hashes:  multipleSidecarHashes,
+			cacheCheck: func(t *testing.T, sidecar *BlobTxSidecar, err error) {
+				require.NoError(t, err)
+				blobHashesSummary := make([]byte, 0, len(multipleSidecarHashes)*32)
+				for _, hash := range multipleSidecarHashes {
+					blobHashesSummary = append(blobHashesSummary, hash[:]...)
+				}
+				expectedSummaryHash := crypto.Keccak256Hash(blobHashesSummary)
+				assert.Equal(t, sidecar.validatedSummaryHash, expectedSummaryHash)
+			},
+		},
+		{
+			name:     "mismatched blob count",
+			sidecar:  singleSidecar,
+			hashes:   multipleSidecarHashes,
+			expected: errors.New("invalid number of"),
+		},
+		{
+			name:     "mismatched commitment count",
+			sidecar:  singleSidecarCommitEmpty,
+			hashes:   singleSidecarHashes,
+			expected: errors.New("invalid number of"),
+		},
+		{
+			name:     "mismatched hash",
+			sidecar:  singleSidecar,
+			hashes:   wrongHash,
+			expected: errors.New("mismatches transaction one"),
+		},
+		{
+			name:     "unsupported version 0",
+			sidecar:  singleSidecarVersion0,
+			hashes:   singleSidecarHashes,
+			expected: errors.New("version 0 not supported"),
+		},
+		{
+			name:     "invalid proof count",
+			sidecar:  singleSidecarProofInvalid,
+			hashes:   singleSidecarHashes,
+			expected: errors.New("invalid number of"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.sidecar.ValidateWithBlobHashes(tt.hashes)
+
+			if tt.expected != nil {
+				require.Error(t, err)
+				require.True(t, strings.Contains(err.Error(), tt.expected.Error()))
+			} else {
+				require.NoError(t, err)
+			}
+
+			if tt.cacheCheck != nil {
+				tt.cacheCheck(t, tt.sidecar, err)
+			}
+		})
+	}
+}
+
+func BenchmarkSidecar_ValidateWithBlobHashes(b *testing.B) {
+	emptyBlob := kzg4844.Blob{}
+	emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
+	cellProofs, _ := kzg4844.ComputeCellProofs(&emptyBlob)
+	blobHash := kzg4844.CalcBlobHashV1(sha256.New(), &emptyBlobCommit)
+	sidecar := &BlobTxSidecar{
+		Version:     1,
+		Blobs:       []kzg4844.Blob{emptyBlob},
+		Commitments: []kzg4844.Commitment{emptyBlobCommit},
+		Proofs:      cellProofs,
+	}
+
+	for i := 0; i < b.N; i++ {
+		sidecar.ValidateWithBlobHashes([]common.Hash{blobHash})
 	}
 }

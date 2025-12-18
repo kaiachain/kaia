@@ -105,19 +105,39 @@ func VerifyEIP4844Header(config *params.ChainConfig, parent, header *types.Heade
 	}
 
 	// Verify the excessBlobGas is correct based on the parent header
-	// NOTE: Kaia does not calculate excessBlobGas, so it should be 0.
-	if *header.ExcessBlobGas != uint64(0) {
-		return fmt.Errorf("invalid excessBlobGas: have %d, want %d", *header.ExcessBlobGas, uint64(0))
+	expectedExcessBlobGas := CalcExcessBlobGas(config, parent, header.Number)
+	if *header.ExcessBlobGas != expectedExcessBlobGas {
+		return fmt.Errorf("invalid excessBlobGas: have %d, want %d", *header.ExcessBlobGas, expectedExcessBlobGas)
 	}
 	return nil
 }
 
-// CalcExcessBlobGas calculates the excess blob gas after applying the set of
+// CalcExcessBlobGas calculates the excess blob gas for KIP-279.
+func CalcExcessBlobGas(config *params.ChainConfig, parent *types.Header, headNumber *big.Int) uint64 {
+	bcfg := latestBlobConfig(config, headNumber)
+	if bcfg == nil {
+		return 0
+	}
+	var parentExcessBlobGas, parentBlobGasUsed uint64
+	if parent.ExcessBlobGas != nil {
+		parentExcessBlobGas = *parent.ExcessBlobGas
+		parentBlobGasUsed = *parent.BlobGasUsed
+	}
+
+	// return max(0, parentExcessBlobGas+parentBlobGasUsed-(uint64(bcfg.Target)*params.BlobTxBlobGasPerBlob))
+	// Since max(0, negative) cannot be expressed in uint64, it is calculated as follows.
+	if parentExcessBlobGas+parentBlobGasUsed < uint64(bcfg.Target)*params.BlobTxBlobGasPerBlob {
+		return 0
+	}
+	return parentExcessBlobGas + parentBlobGasUsed - (uint64(bcfg.Target) * params.BlobTxBlobGasPerBlob)
+}
+
+// CalcExcessBlobGasEIP4844 calculates the excess blob gas after applying the set of
 // blobs on top of the excess blob gas for EIP-7918.
 // NOTE: This is not used because Kaia calculates blobBaseFee by multiplying it with baseFee.
-// For compatibility, `blobBaseFeeEIP4844` and `blobPriceEIP4844` is also being kept for CalcExcessBlobGas.
+// For compatibility, `blobBaseFeeEIP4844` and `blobPriceEIP4844` is also being kept for CalcExcessBlobGasEIP4844.
 // ref: https://github.com/kaiachain/kips/blob/fac337aad17db40ed2a6c988e03ad6b2ec9771f2/KIPs/kip-279.md#blob-base-fee-as-a-multiple-of-base-fee
-func CalcExcessBlobGas(config *params.ChainConfig, parent *types.Header, headNumber *big.Int) uint64 {
+func CalcExcessBlobGasEIP4844(config *params.ChainConfig, parent *types.Header, headNumber *big.Int) uint64 {
 	isOsaka := config.IsOsakaForkEnabled(headNumber)
 	bcfg := latestBlobConfig(config, headNumber)
 	return calcExcessBlobGas(isOsaka, bcfg, parent)

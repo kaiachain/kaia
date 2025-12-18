@@ -36,6 +36,39 @@ var GethCancunBlobConfig = &params.BlobConfig{
 }
 
 func TestCalcExcessBlobGas(t *testing.T) {
+	config := params.TestChainConfig.Copy()
+	var (
+		targetBlobs   = config.BlobScheduleConfig.Osaka.Target
+		targetBlobGas = uint64(targetBlobs) * params.BlobTxBlobGasPerBlob
+	)
+
+	tests := []struct {
+		excess uint64
+		blobs  int
+		want   uint64
+	}{
+		// In Osaka, all patterns where (excessBlobGas, blobGasUsed)
+		// is 0 or targetBlobGas are tested.
+		{0, 0, 0},
+		{targetBlobGas, 0, 0},
+		{0, targetBlobs, 0},
+		{targetBlobGas, targetBlobs, targetBlobGas},
+	}
+	for i, tt := range tests {
+		blobGasUsed := uint64(tt.blobs) * params.BlobTxBlobGasPerBlob
+		header := &types.Header{
+			ExcessBlobGas: &tt.excess,
+			BlobGasUsed:   &blobGasUsed,
+			BaseFee:       big.NewInt(1),
+		}
+		result := CalcExcessBlobGas(config, header, config.OsakaCompatibleBlock)
+		if result != tt.want {
+			t.Errorf("test %d: excess blob gas mismatch: have %v, want %v", i, result, tt.want)
+		}
+	}
+}
+
+func TestCalcExcessBlobGasEIP4844(t *testing.T) {
 	config := params.MainnetChainConfig.Copy()
 	config.OsakaCompatibleBlock = big.NewInt(0)
 	config.BlobScheduleConfig.Osaka = GethCancunBlobConfig
@@ -75,7 +108,7 @@ func TestCalcExcessBlobGas(t *testing.T) {
 			BlobGasUsed:   &blobGasUsed,
 			BaseFee:       big.NewInt(1),
 		}
-		result := CalcExcessBlobGas(config, header, config.OsakaCompatibleBlock)
+		result := CalcExcessBlobGasEIP4844(config, header, config.OsakaCompatibleBlock)
 		if result != tt.want {
 			t.Errorf("test %d: excess blob gas mismatch: have %v, want %v", i, result, tt.want)
 		}
@@ -127,7 +160,7 @@ func TestCalcBlobFeePostOsaka(t *testing.T) {
 			BaseFee:       big.NewInt(int64(tt.basefee)),
 			Time:          &tt.parenttime,
 		}
-		have := CalcExcessBlobGas(config, parent, &tt.headertime)
+		have := CalcExcessBlobGasEIP4844(config, parent, &tt.headertime)
 		if have != tt.blobfee {
 			t.Errorf("test %d: blobfee mismatch: have %v want %v", i, have, tt.blobfee)
 		}
@@ -210,7 +243,7 @@ func TestCalcExcessBlobGasEIP7918(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		got := CalcExcessBlobGas(cfg, tc.header, cfg.OsakaCompatibleBlock)
+		got := CalcExcessBlobGasEIP4844(cfg, tc.header, cfg.OsakaCompatibleBlock)
 		if got != tc.wantExcessGas {
 			t.Fatalf("%s: excess-blob-gas mismatch – have %d, want %d",
 				tc.name, got, tc.wantExcessGas)

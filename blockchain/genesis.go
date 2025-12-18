@@ -405,6 +405,11 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 		head.RandomReveal = params.ZeroRandomReveal
 		head.MixHash = params.ZeroMixHash
 	}
+	if g.Config != nil && g.Config.IsOsakaForkEnabled(common.Big0) {
+		// In genesis these will always be 0.
+		head.BlobGasUsed = new(uint64)
+		head.ExcessBlobGas = new(uint64)
+	}
 
 	stateDB.Commit(false)
 	stateDB.Database().TrieDB().Commit(root, true, g.Number)
