@@ -4010,6 +4010,7 @@ func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
 			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
 				// Function should return early without error
 				pool.saveAndPruneBlobStorage(block)
+				time.Sleep(10 * time.Millisecond)
 				// Verify blobStorage is nil
 				require.Nil(t, pool.blobStorage)
 			},
@@ -4056,6 +4057,7 @@ func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
 			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
 				// Function should return early without processing
 				pool.saveAndPruneBlobStorage(block)
+				time.Sleep(10 * time.Millisecond)
 				// Verify sidecar is not pruned
 				sidecar, err := pool.GetBlobSidecarFromStorage(big.NewInt(100), 0)
 				require.NoError(t, err)
@@ -4083,6 +4085,7 @@ func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
 			},
 			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
 				pool.saveAndPruneBlobStorage(block)
+				time.Sleep(10 * time.Millisecond)
 				// Prune should be called, but since retention is 21 days and block is 1000,
 				sidecar, err := pool.GetBlobSidecarFromStorage(big.NewInt(100), 0)
 				require.Error(t, err)
@@ -4110,6 +4113,7 @@ func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
 			},
 			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
 				pool.saveAndPruneBlobStorage(block)
+				time.Sleep(10 * time.Millisecond)
 				// Prune should not be called for non-multiple blocks
 				sidecar, err := pool.GetBlobSidecarFromStorage(big.NewInt(100), 0)
 				require.NoError(t, err)
@@ -4135,6 +4139,7 @@ func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
 			},
 			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
 				pool.saveAndPruneBlobStorage(block)
+				time.Sleep(10 * time.Millisecond)
 				// Verify sidecar was saved
 				savedSidecar, err := pool.GetBlobSidecarFromStorage(block.Number(), 0)
 				require.NoError(t, err)
@@ -4167,6 +4172,7 @@ func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
 			},
 			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
 				pool.saveAndPruneBlobStorage(block)
+				time.Sleep(10 * time.Millisecond)
 				// Verify sidecar was saved from pool
 				savedSidecar, err := pool.GetBlobSidecarFromStorage(block.Number(), 0)
 				require.NoError(t, err)
@@ -4194,6 +4200,7 @@ func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
 			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
 				ch := pool.SubscribeMissingBlobSidecars()
 				pool.saveAndPruneBlobStorage(block)
+				time.Sleep(10 * time.Millisecond)
 
 				// Verify missing blob sidecar was sent
 				select {
@@ -4225,6 +4232,8 @@ func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
 			},
 			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
 				pool.saveAndPruneBlobStorage(block)
+				time.Sleep(10 * time.Millisecond)
+
 				// Verify no sidecar was saved (non-blob transaction)
 				_, err := pool.GetBlobSidecarFromStorage(block.Number(), 0)
 				require.Error(t, err)
@@ -4252,6 +4261,8 @@ func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
 			},
 			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
 				pool.saveAndPruneBlobStorage(block)
+				time.Sleep(10 * time.Millisecond)
+
 				// Verify both sidecars were saved
 				sidecar1, err1 := pool.GetBlobSidecarFromStorage(block.Number(), 0)
 				require.NoError(t, err1)
@@ -4283,6 +4294,8 @@ func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
 			},
 			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
 				pool.saveAndPruneBlobStorage(block)
+				time.Sleep(10 * time.Millisecond)
+
 				// Verify only blob transaction sidecar was saved (at index 1)
 				_, err0 := pool.GetBlobSidecarFromStorage(block.Number(), 0)
 				require.Error(t, err0) // tx0 is not blob
@@ -4317,6 +4330,8 @@ func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
 			},
 			verify: func(t *testing.T, pool *TxPool, block *types.Block) {
 				pool.saveAndPruneBlobStorage(block)
+				time.Sleep(10 * time.Millisecond)
+
 				// Verify transaction's sidecar (2 blobs) was saved, not pool's (1 blob)
 				savedSidecar, err := pool.GetBlobSidecarFromStorage(block.Number(), 0)
 				require.NoError(t, err)
