@@ -27,6 +27,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -966,7 +967,7 @@ func testReorgSideEvent() []error {
 	rand.Seed(1)
 	defer rand.Seed(time.Now().UnixNano())
 
-	var errors []error
+	var errs []error
 
 	var (
 		db      = database.NewMemoryDBManager()
@@ -985,8 +986,8 @@ func testReorgSideEvent() []error {
 
 	chain, _ := GenerateChain(gspec.Config, genesis, faker.NewFaker(), db, 3, func(i int, gen *BlockGen) {})
 	if _, err := blockchain.InsertChain(chain); err != nil {
-		errors = append(errors, fmt.Errorf("failed to insert chain: %v", err))
-		return errors
+		errs = append(errs, fmt.Errorf("failed to insert chain: %v", err))
+		return errs
 	}
 
 	replacementBlocks, _ := GenerateChain(gspec.Config, genesis, faker.NewFaker(), db, 4, func(i int, gen *BlockGen) {
@@ -995,7 +996,7 @@ func testReorgSideEvent() []error {
 			gen.OffsetTime(-9)
 		}
 		if err != nil {
-			errors = append(errors, fmt.Errorf("failed to create tx: %v", err))
+			errs = append(errs, fmt.Errorf("failed to create tx: %v", err))
 			return
 		}
 		gen.AddTx(tx)
@@ -1003,8 +1004,8 @@ func testReorgSideEvent() []error {
 	chainSideCh := make(chan ChainSideEvent, 64)
 	blockchain.SubscribeChainSideEvent(chainSideCh)
 	if _, err := blockchain.InsertChain(replacementBlocks); err != nil {
-		errors = append(errors, fmt.Errorf("failed to insert chain: %v", err))
-		return errors
+		errs = append(errs, fmt.Errorf("failed to insert chain: %v", err))
+		return errs
 	}
 
 	// first two block of the secondary chain are for a brief moment considered
@@ -1028,7 +1029,7 @@ done:
 		case ev := <-chainSideCh:
 			block := ev.Block
 			if _, ok := expectedSideHashes[block.Hash()]; !ok {
-				errors = append(errors, fmt.Errorf("%d: didn't expect %x to be in side chain", i, block.Hash()))
+				errs = append(errs, fmt.Errorf("%d: didn't expect %x to be in side chain", i, block.Hash()))
 			}
 			i++
 
@@ -1040,8 +1041,8 @@ done:
 			timeout.Reset(timeoutDura)
 
 		case <-timeout.C:
-			errors = append(errors, fmt.Errorf("Timeout. Possibly not all blocks were triggered for sideevent"))
-			return errors
+			errs = append(errs, errors.New("Timeout. Possibly not all blocks were triggered for sideevent"))
+			return errs
 		}
 	}
 
@@ -1053,9 +1054,9 @@ done:
 			drained++
 		case <-time.After(100 * time.Millisecond):
 			if drained > 0 {
-				errors = append(errors, fmt.Errorf("drained %d unexpected side events", drained))
+				errs = append(errs, fmt.Errorf("drained %d unexpected side events", drained))
 			}
-			return errors
+			return errs
 		}
 	}
 }
