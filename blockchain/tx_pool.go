@@ -1988,7 +1988,7 @@ func (pool *TxPool) sendMissingBlobSidecar(sidecar *MissingBlobSidecar) {
 	select {
 	case pool.missingBlobSidecarsCh <- sidecar:
 	default:
-		logger.Debug("Missing blob sidecars channel is full, dropping notification", "txHash", sidecar.TxHash)
+		logger.Error("Missing blob sidecars channel is full, dropping notification", "txHash", sidecar.TxHash)
 	}
 }
 
