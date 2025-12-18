@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 
@@ -74,6 +75,7 @@ type PeerSet interface {
 	WaitSnapExtension(peer Peer) (*snap.Peer, error)
 
 	BestPeer() Peer
+	SortedPeersForBlobSidecar() []Peer
 	RegisterValidator(connType common.ConnType, validator p2p.PeerTypeValidator)
 	Close()
 }
@@ -432,6 +434,29 @@ func (ps *peerSet) BestPeer() Peer {
 		}
 	}
 	return bestPeer
+}
+
+// BestPeerWithBlobSidecar retrieves the known peer with the currently highest total blockscore.
+func (ps *peerSet) SortedPeersForBlobSidecar() []Peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	// filter peers with version >= kaia67
+	sortedPeers := make([]Peer, 0, len(ps.peers))
+	for _, p := range ps.peers {
+		if p.GetVersion() < kaia67 {
+			continue
+		}
+		sortedPeers = append(sortedPeers, p)
+	}
+
+	// sort by head in descending order
+	sort.Slice(sortedPeers, func(i, j int) bool {
+		_, head1 := sortedPeers[i].Head()
+		_, head2 := sortedPeers[j].Head()
+		return head1.Cmp(head2) > 0
+	})
+	return sortedPeers
 }
 
 // RegisterValidator registers a validator.

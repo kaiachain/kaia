@@ -285,6 +285,20 @@ func (mr *MockPeerSetMockRecorder) SnapLen() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SnapLen", reflect.TypeOf((*MockPeerSet)(nil).SnapLen))
 }
 
+// SortedPeersForBlobSidecar mocks base method.
+func (m *MockPeerSet) SortedPeersForBlobSidecar() []Peer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SortedPeersForBlobSidecar")
+	ret0, _ := ret[0].([]Peer)
+	return ret0
+}
+
+// SortedPeersForBlobSidecar indicates an expected call of SortedPeersForBlobSidecar.
+func (mr *MockPeerSetMockRecorder) SortedPeersForBlobSidecar() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SortedPeersForBlobSidecar", reflect.TypeOf((*MockPeerSet)(nil).SortedPeersForBlobSidecar))
+}
+
 // TypePeersWithoutTx mocks base method.
 func (m *MockPeerSet) TypePeersWithoutTx(arg0 common.Hash, arg1 common.ConnType) []Peer {
 	m.ctrl.T.Helper()

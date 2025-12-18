@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -828,7 +829,7 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 	}
 
 	{
-		// blobSidecarPending does not contain hash
+		// blobSidecarReqManager does not contain hash
 		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
 		d := &blobSidecarsData{
 			BlockNum: 1,
@@ -836,7 +837,11 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 			TxHash:   tx1.Hash(),
 			Sidecar:  generateTestSidecar(tx1.Hash()),
 		}
-		pm.blobSidecarPending = make(map[common.Hash]string) // no entry
+		pm.blobSidecarReqManager = &sidecarReqManager{
+			list:    map[common.Hash]*sidecarReq{},
+			timeout: 10 * time.Second,
+			maxTry:  5,
+		}
 		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)
@@ -844,7 +849,7 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 	}
 
 	{
-		// blobSidecarPending entry exists but from wrong peer
+		// blobSidecarReqManager entry exists but from wrong peer
 		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
 		d := &blobSidecarsData{
 			BlockNum: 1,
@@ -852,7 +857,11 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 			TxHash:   tx1.Hash(),
 			Sidecar:  generateTestSidecar(tx1.Hash()),
 		}
-		pm.blobSidecarPending = map[common.Hash]string{d.TxHash: "different-peer-id"}
+		pm.blobSidecarReqManager = &sidecarReqManager{
+			list:    map[common.Hash]*sidecarReq{d.TxHash: &sidecarReq{peer: "different-peer-id", try: 1, time: time.Now()}},
+			timeout: 10 * time.Second,
+			maxTry:  5,
+		}
 		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)
@@ -868,7 +877,11 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 			TxHash:   tx1.Hash(),
 			Sidecar:  generateTestSidecar(tx1.Hash()),
 		}
-		pm.blobSidecarPending = map[common.Hash]string{d.TxHash: mockPeer.GetID()}
+		pm.blobSidecarReqManager = &sidecarReqManager{
+			list:    map[common.Hash]*sidecarReq{d.TxHash: &sidecarReq{peer: mockPeer.GetID(), try: 1, time: time.Now()}},
+			timeout: 10 * time.Second,
+			maxTry:  5,
+		}
 		// Setup expected save call
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 		mockTxPool.EXPECT().SaveBlobSidecar(
@@ -881,13 +894,13 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)
-		_, ok := pm.blobSidecarPending[d.TxHash]
-		assert.False(t, ok, "should be deleted from blobSidecarPending")
+		req := pm.blobSidecarReqManager.get(d.TxHash)
+		assert.Nilf(t, req, "should be deleted from blobSidecarReqManager")
 		mockCtrl.Finish()
 	}
 
 	{
-		// test: save fails (error is logged, not returned), pending entry deleted
+		// test: save fails (error is logged, not returned), req entry should not be deleted
 		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
 		d := &blobSidecarsData{
 			BlockNum: 1,
@@ -895,7 +908,11 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 			TxHash:   tx1.Hash(),
 			Sidecar:  generateTestSidecar(tx1.Hash()),
 		}
-		pm.blobSidecarPending = map[common.Hash]string{d.TxHash: mockPeer.GetID()}
+		pm.blobSidecarReqManager = &sidecarReqManager{
+			list:    map[common.Hash]*sidecarReq{d.TxHash: &sidecarReq{peer: mockPeer.GetID(), try: 1, time: time.Now()}},
+			timeout: 10 * time.Second,
+			maxTry:  5,
+		}
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 		mockTxPool.EXPECT().SaveBlobSidecar(
 			big.NewInt(int64(d.BlockNum)),
@@ -907,8 +924,8 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)
-		_, ok := pm.blobSidecarPending[d.TxHash]
-		assert.False(t, ok, "should be deleted from blobSidecarPending even on error")
+		req := pm.blobSidecarReqManager.get(d.TxHash)
+		assert.NotNil(t, req, "should not be deleted from blobSidecarReqManager even on error")
 		mockCtrl.Finish()
 	}
 }

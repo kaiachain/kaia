@@ -30,6 +30,7 @@ import (
 	"math/big"
 	"math/rand"
 	"runtime/debug"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -148,9 +149,8 @@ type ProtocolManager struct {
 	stakingModule staking.StakingModule
 	auctionModule auction.AuctionModule
 
-	blobSidecarCh      <-chan *kaia_blockchain.MissingBlobSidecar
-	blobSidecarPending map[common.Hash]string // txHash -> peerID
-	blobSidecarMu      sync.RWMutex
+	blobSidecarCh         <-chan *kaia_blockchain.MissingBlobSidecar
+	blobSidecarReqManager *sidecarReqManager
 }
 
 // NewProtocolManager returns a new Kaia sub protocol manager. The Kaia sub protocol manages peers capable
@@ -161,21 +161,25 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 ) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
-		networkId:          networkId,
-		eventMux:           mux,
-		txpool:             txpool,
-		blockchain:         blockchain,
-		chainconfig:        config,
-		peers:              newPeerSet(),
-		newPeerCh:          make(chan Peer),
-		noMorePeers:        make(chan struct{}),
-		txsyncCh:           make(chan *txsync),
-		quitSync:           make(chan struct{}),
-		quitResendCh:       make(chan struct{}),
-		engine:             engine,
-		nodetype:           nodetype,
-		txResendUseLegacy:  cnconfig.TxResendUseLegacy,
-		blobSidecarPending: make(map[common.Hash]string),
+		networkId:         networkId,
+		eventMux:          mux,
+		txpool:            txpool,
+		blockchain:        blockchain,
+		chainconfig:       config,
+		peers:             newPeerSet(),
+		newPeerCh:         make(chan Peer),
+		noMorePeers:       make(chan struct{}),
+		txsyncCh:          make(chan *txsync),
+		quitSync:          make(chan struct{}),
+		quitResendCh:      make(chan struct{}),
+		engine:            engine,
+		nodetype:          nodetype,
+		txResendUseLegacy: cnconfig.TxResendUseLegacy,
+		blobSidecarReqManager: &sidecarReqManager{
+			list:    make(map[common.Hash]*sidecarReq),
+			timeout: 10 * time.Second,
+			maxTry:  5,
+		},
 	}
 
 	// istanbul BFT
@@ -1245,21 +1249,23 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		if sidecar.Sidecar == nil {
 			continue
 		}
-		if pm.blobSidecarPending == nil {
-			continue
-		}
-		peerID, ok := pm.blobSidecarPending[sidecar.TxHash]
-		if !ok || peerID != p.GetID() {
+		if pm.blobSidecarReqManager == nil {
 			continue
 		}
 
-		pm.blobSidecarMu.Lock()
-		delete(pm.blobSidecarPending, sidecar.TxHash)
-		pm.blobSidecarMu.Unlock()
+		req := pm.blobSidecarReqManager.get(sidecar.TxHash)
+
+		if req == nil || req.peer != p.GetID() {
+			continue
+		}
 
 		if err := pm.txpool.SaveBlobSidecar(big.NewInt(int64(sidecar.BlockNum)), int(sidecar.TxIndex), sidecar.TxHash, sidecar.Sidecar); err != nil {
-			logger.Warn("Failed to save blob sidecar to txpool", "blockNum", sidecar.BlockNum, "txIndex", sidecar.TxIndex, "err", err)
+			logger.Warn("Saved blob sidecar", "blockNum", sidecar.BlockNum, "txIndex", sidecar.TxIndex, "txHash", sidecar.TxHash)
+			continue
 		}
+
+		// delete request if the sidecar is saved successfully
+		pm.blobSidecarReqManager.delete(sidecar.TxHash)
 	}
 
 	return nil
@@ -1269,7 +1275,8 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 	pm.wg.Add(1)
 	defer pm.wg.Done()
 
-	lastFetchTime := time.Now()
+	timeoutTicker := time.NewTicker(100 * time.Millisecond)
+	defer timeoutTicker.Stop()
 
 	for {
 		select {
@@ -1278,51 +1285,33 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 				continue
 			}
 
-			peer := pm.peers.BestPeer()
-			if peer == nil {
+			pm.blobSidecarReqManager.add(sidecar.TxHash, blobSidecarsRequestData{
+				BlockNum: hexutil.Uint64(sidecar.BlockNum.Uint64()),
+				TxIndex:  hexutil.Uint(sidecar.TxIndex),
+				Hash:     sidecar.TxHash,
+			})
+
+		case <-timeoutTicker.C:
+			req := pm.blobSidecarReqManager.search()
+			if req == nil {
+				continue
+			}
+			peers := pm.peers.SortedPeersForBlobSidecar()
+
+			if len(peers) == 0 {
 				continue
 			}
 
-			if peer.GetVersion() < kaia67 {
-				// TODO: should select other peer
-				continue
+			// should change peer because previous peer may have sidecar
+			peer := peers[len(peers)-1]
+			if len(peers) > req.try {
+				peer = peers[req.try]
 			}
 
-			pm.blobSidecarMu.Lock()
-			pm.blobSidecarPending[sidecar.TxHash] = peer.GetID()
-			pm.blobSidecarMu.Unlock()
-
-			requests := []blobSidecarsRequestData{
-				{
-					BlockNum: hexutil.Uint64(sidecar.BlockNum.Uint64()),
-					TxIndex:  hexutil.Uint(sidecar.TxIndex),
-					Hash:     sidecar.TxHash,
-				},
+			if err := peer.RequestBlobSidecars([]blobSidecarsRequestData{req.request}); err != nil {
+				logger.Warn("Failed to request blob sidecars", "err", err)
 			}
-
-			interval := 100 * time.Millisecond
-			if elapsed := time.Since(lastFetchTime); elapsed < interval {
-				time.Sleep(interval - elapsed)
-			}
-
-			// TODO: should retry if failed to request blob sidecars
-			if err := peer.RequestBlobSidecars(requests); err != nil {
-				logger.Debug("Failed to request blob sidecars", "err", err)
-				pm.blobSidecarMu.Lock()
-				delete(pm.blobSidecarPending, sidecar.TxHash)
-				pm.blobSidecarMu.Unlock()
-			} else {
-				// 10 seconds timeout to remove the missing blob sidecars from the pending list
-				go func(sidecars *kaia_blockchain.MissingBlobSidecar) {
-					time.Sleep(10 * time.Second)
-					pm.blobSidecarMu.Lock()
-					delete(pm.blobSidecarPending, sidecar.TxHash)
-					pm.blobSidecarMu.Unlock()
-				}(sidecar)
-			}
-
-			lastFetchTime = time.Now()
-
+			pm.blobSidecarReqManager.update(req.request.Hash, peer.GetID())
 		case <-pm.quitSync:
 			return
 		}
@@ -1879,4 +1868,75 @@ func (pm *ProtocolManager) SetAcceptTxs() {
 
 func (pm *ProtocolManager) NodeType() common.ConnType {
 	return pm.nodetype
+}
+
+type sidecarReq struct {
+	peer    string
+	try     int
+	time    time.Time
+	request blobSidecarsRequestData
+}
+
+type sidecarReqManager struct {
+	list    map[common.Hash]*sidecarReq
+	timeout time.Duration
+	maxTry  int
+	mu      sync.RWMutex
+}
+
+func (m *sidecarReqManager) add(txHash common.Hash, request blobSidecarsRequestData) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.list[txHash] = &sidecarReq{peer: "", try: 0, time: time.Now().Add(-m.timeout), request: request}
+}
+
+func (m *sidecarReqManager) get(txHash common.Hash) *sidecarReq {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.list[txHash]
+}
+
+func (m *sidecarReqManager) update(txHash common.Hash, peer string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// no longer keep the request if the try count is too high
+	if m.list[txHash].try+1 >= m.maxTry {
+		delete(m.list, txHash)
+	}
+	m.list[txHash] = &sidecarReq{peer: peer, try: m.list[txHash].try + 1, time: time.Now(), request: m.list[txHash].request}
+}
+
+func (m *sidecarReqManager) delete(txHash common.Hash) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.list, txHash)
+}
+
+func (m *sidecarReqManager) search() *sidecarReq {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if len(m.list) == 0 {
+		return nil
+	}
+
+	// sort by time in ascending order
+	sorted := make([]*sidecarReq, 0, len(m.list))
+	for _, req := range m.list {
+		sorted = append(sorted, req)
+	}
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].time.Before(sorted[j].time)
+	})
+
+	// search for the first request that is not expired
+	for _, req := range sorted {
+		if req.try == 0 {
+			return req
+		}
+		if time.Since(req.time) > m.timeout {
+			return req
+		}
+	}
+	return nil
 }
