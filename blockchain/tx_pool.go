@@ -2010,6 +2010,7 @@ func (pool *TxPool) SaveBlobSidecar(blockNum *big.Int, txIndex int, txHash commo
 	if tx.Type() != types.TxTypeEthereumBlob {
 		return errors.New("tx is not a blob transaction")
 	}
+	// TODO: merge latest
 	if err := sidecar.ValidateBlobCommitmentHashes(tx.BlobHashes()); err != nil {
 		return err
 	}
@@ -2029,7 +2030,11 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 
 	// prune blob storage at BLOCKS_PER_BUCKET block interval
 	if new(big.Int).Mod(newHead.Number(), big.NewInt(int64(BLOCKS_PER_BUCKET))).Cmp(big.NewInt(0)) == 0 {
-		pool.blobStorage.Prune(newHead.Number())
+		go func() {
+			if err := pool.blobStorage.Prune(newHead.Number()); err != nil {
+				logger.Warn("failed to prune blob storage", "err", err)
+			}
+		}()
 	}
 
 	// save blob sidecars
@@ -2040,19 +2045,28 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 
 		// try to get blob sidecar from tx
 		if sidecar := tx.BlobTxSidecar(); sidecar != nil {
-			pool.blobStorage.Save(newHead.Number(), i, sidecar)
+			go func() {
+				if err := pool.blobStorage.Save(newHead.Number(), i, sidecar); err != nil {
+					logger.Warn("failed to save blob sidecar", "err", err)
+				}
+			}()
 			continue
 		}
 
 		// try to get blob sidecar from local
 		if sidecar, err := pool.GetBlobSidecarFromPool(tx.Hash()); sidecar != nil {
-			pool.blobStorage.Save(newHead.Number(), i, sidecar)
+			go func() {
+				if err := pool.blobStorage.Save(newHead.Number(), i, sidecar); err != nil {
+					logger.Warn("failed to save blob sidecar", "err", err)
+				}
+			}()
 			continue
 		} else if err != nil {
 			logger.Warn("failed to get blob sidecar from pool", "hash", tx.Hash(), "err", err)
 		}
 
 		// missing blob sidecar is sent to protocol manager to fetch later
+		// todo directly add
 		pool.sendMissingBlobSidecar(&MissingBlobSidecar{
 			BlockNum: newHead.Number(),
 			TxIndex:  i,
