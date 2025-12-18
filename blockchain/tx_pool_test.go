@@ -3536,8 +3536,7 @@ func TestTxPool_GetBlobSidecarFromStorage(t *testing.T) {
 				blockNum := big.NewInt(2000)
 				txIndex := 1
 				originalSidecar := createTestSidecar(t, 2)
-				txHash := common.Hash{0x01, 0x02, 0x03}
-				err := pool.SaveBlobSidecar(blockNum, txIndex, txHash, originalSidecar)
+				err := pool.blobStorage.Save(blockNum, txIndex, originalSidecar)
 				require.NoError(t, err)
 
 				return pool, blockNum, txIndex, originalSidecar
@@ -3609,11 +3608,11 @@ func TestTxPool_GetBlobSidecarFromStorage(t *testing.T) {
 				sidecar2 := createTestSidecar(t, 2)
 				sidecar3 := createTestSidecar(t, 3)
 
-				err := pool.SaveBlobSidecar(big.NewInt(1000), 0, common.Hash{0x01}, sidecar1)
+				err := pool.blobStorage.Save(big.NewInt(1000), 0, sidecar1)
 				require.NoError(t, err)
-				err = pool.SaveBlobSidecar(big.NewInt(1000), 1, common.Hash{0x02}, sidecar2)
+				err = pool.blobStorage.Save(big.NewInt(1000), 1, sidecar2)
 				require.NoError(t, err)
-				err = pool.SaveBlobSidecar(big.NewInt(2000), 0, common.Hash{0x03}, sidecar3)
+				err = pool.blobStorage.Save(big.NewInt(2000), 0, sidecar3)
 				require.NoError(t, err)
 
 				// Return pool and parameters to retrieve sidecar2
