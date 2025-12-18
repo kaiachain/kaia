@@ -2065,7 +2065,6 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 		}
 
 		// missing blob sidecar is sent to protocol manager to fetch later
-		// todo directly add
 		pool.sendMissingBlobSidecar(&MissingBlobSidecar{
 			BlockNum: newHead.Number(),
 			TxIndex:  i,
