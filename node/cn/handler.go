@@ -1902,6 +1902,7 @@ func (m *sidecarReqManager) update(txHash common.Hash, peer string) {
 	// no longer keep the request if the try count is too high
 	if m.list[txHash].try+1 >= m.maxTry {
 		delete(m.list, txHash)
+		return
 	}
 	m.list[txHash] = &sidecarReq{peer: peer, try: m.list[txHash].try + 1, time: time.Now(), request: m.list[txHash].request}
 }
