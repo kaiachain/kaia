@@ -1930,7 +1930,7 @@ func (m *sidecarReqManager) search() *sidecarReq {
 		return sorted[i].time.Before(sorted[j].time)
 	})
 
-	// search for the first request that is not expired
+	// search for the first request that is expired
 	for _, req := range sorted {
 		if req.try == 0 {
 			return req
