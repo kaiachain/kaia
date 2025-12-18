@@ -68,6 +68,9 @@ func NewBlobStorage(config BlobStorageConfig) *BlobStorage {
 }
 
 func (b *BlobStorage) Save(blockNumber *big.Int, txIndex int, sidecar *types.BlobTxSidecar) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	if blockNumber == nil {
 		return ErrBlobBlockNumberNil
 	}
@@ -100,6 +103,9 @@ func (b *BlobStorage) Save(blockNumber *big.Int, txIndex int, sidecar *types.Blo
 }
 
 func (b *BlobStorage) Get(blockNumber *big.Int, txIndex int) (*types.BlobTxSidecar, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
 	if blockNumber == nil {
 		return nil, ErrBlobBlockNumberNil
 	}
@@ -129,6 +135,9 @@ func (b *BlobStorage) Get(blockNumber *big.Int, txIndex int) (*types.BlobTxSidec
 
 // Prune removes all buckets that are older than `retentionBucketThreshold`.
 func (b *BlobStorage) Prune(blockNumber *big.Int) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	if blockNumber == nil {
 		return ErrBlobBlockNumberNil
 	}
