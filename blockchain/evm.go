@@ -68,7 +68,9 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 	}
 
 	if header.ExcessBlobGas != nil {
-		blobBaseFee = eip4844.CalcBlobFee(header.BaseFee)
+		// Since CalcBlobFee returns nil for a nil baseFee,
+		// use baseFee instead of header.BaseFee to at least force blobBaseFee to zero in this context.
+		blobBaseFee = eip4844.CalcBlobFee(baseFee)
 	} else { // Before Osaka hardfork, BLOBBASEFEE (4a) returns 0
 		blobBaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}

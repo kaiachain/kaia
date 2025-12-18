@@ -178,6 +178,11 @@ func calcExcessBlobGas(isOsaka bool, bcfg *BlobConfig, parent *types.Header) uin
 
 // CalcBlobFee calculates the blobfee for KIP-279 from the header's base fee field.
 func CalcBlobFee(baseFee *big.Int) *big.Int {
+	// If baseFee is nil, CalcBlobFee will return nil as it cannot be calculated.
+	// Returning nil makes the difference from 0 explicit.
+	if baseFee == nil {
+		return nil
+	}
 	return new(big.Int).Mul(baseFee, new(big.Int).SetUint64(params.BlobBaseFeeMultiplier))
 }
 
