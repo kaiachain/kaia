@@ -149,7 +149,7 @@ type ProtocolManager struct {
 	stakingModule staking.StakingModule
 	auctionModule auction.AuctionModule
 
-	blobSidecarCh         <-chan *kaia_blockchain.MissingBlobSidecar
+	missingBlobSidecarCh  <-chan *kaia_blockchain.MissingBlobSidecar
 	blobSidecarReqManager *sidecarReqManager
 }
 
@@ -430,7 +430,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	}
 
 	// sync missing blob sidecars
-	pm.blobSidecarCh = pm.txpool.SubscribeMissingBlobSidecars()
+	pm.missingBlobSidecarCh = pm.txpool.SubscribeMissingBlobSidecars()
 	go pm.blobSidecarSyncLoop()
 
 	// start sync handlers
@@ -1280,7 +1280,7 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 
 	for {
 		select {
-		case sidecar := <-pm.blobSidecarCh:
+		case sidecar := <-pm.missingBlobSidecarCh:
 			if sidecar == nil {
 				continue
 			}
