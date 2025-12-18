@@ -176,9 +176,9 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		nodetype:          nodetype,
 		txResendUseLegacy: cnconfig.TxResendUseLegacy,
 		blobSidecarReqManager: &sidecarReqManager{
-			list:    make(map[common.Hash]*sidecarReq),
-			timeout: 10 * time.Second,
-			maxTry:  5,
+			list:     make(map[common.Hash]*sidecarReq),
+			cooldown: 10 * time.Second,
+			maxTry:   5,
 		},
 	}
 
@@ -1878,16 +1878,16 @@ type sidecarReq struct {
 }
 
 type sidecarReqManager struct {
-	list    map[common.Hash]*sidecarReq
-	timeout time.Duration // TODO: cooldown
-	maxTry  int
-	mu      sync.RWMutex
+	list     map[common.Hash]*sidecarReq
+	cooldown time.Duration
+	maxTry   int
+	mu       sync.RWMutex
 }
 
 func (m *sidecarReqManager) add(txHash common.Hash, request blobSidecarsRequestData) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.list[txHash] = &sidecarReq{peer: "", try: 0, time: time.Now().Add(-m.timeout), request: request}
+	m.list[txHash] = &sidecarReq{peer: "", try: 0, time: time.Now().Add(-m.cooldown), request: request}
 }
 
 func (m *sidecarReqManager) get(txHash common.Hash) *sidecarReq {
@@ -1935,7 +1935,7 @@ func (m *sidecarReqManager) search() *sidecarReq {
 		if req.try == 0 {
 			return req
 		}
-		if time.Since(req.time) > m.timeout {
+		if time.Since(req.time) > m.cooldown {
 			return req
 		}
 	}

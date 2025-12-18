@@ -1450,11 +1450,11 @@ func TestGetBlockHeaders(t *testing.T) {
 
 // Helper functions for sidecarReqManager tests
 
-func newTestSidecarReqManager(timeout time.Duration, maxTry int) *sidecarReqManager {
+func newTestSidecarReqManager(cooldown time.Duration, maxTry int) *sidecarReqManager {
 	return &sidecarReqManager{
-		list:    make(map[common.Hash]*sidecarReq),
-		timeout: timeout,
-		maxTry:  maxTry,
+		list:     make(map[common.Hash]*sidecarReq),
+		cooldown: cooldown,
+		maxTry:   maxTry,
 	}
 }
 
@@ -1468,9 +1468,9 @@ func newTestBlobSidecarsRequestData(txHash common.Hash, blockNum uint64, txIndex
 
 // TestSidecarReqManager_Add tests the add method
 func TestSidecarReqManager_Add(t *testing.T) {
-	timeout := 10 * time.Second
+	cooldown := 10 * time.Second
 	maxTry := 5
-	m := newTestSidecarReqManager(timeout, maxTry)
+	m := newTestSidecarReqManager(cooldown, maxTry)
 
 	txHash1 := tx1.Hash()
 	txHash2 := tx2.Hash()
@@ -1486,10 +1486,10 @@ func TestSidecarReqManager_Add(t *testing.T) {
 	assert.Equal(t, "", req.peer, "Peer should be empty string")
 	assert.Equal(t, 0, req.try, "Try should be 0")
 	assert.Equal(t, request1, req.request, "Request data should match")
-	// Check that time is approximately timeout ago
-	expectedTime := beforeTime.Add(-timeout)
+	// Check that time is approximately cooldown ago
+	expectedTime := beforeTime.Add(-cooldown)
 	assert.True(t, req.time.After(expectedTime.Add(-100*time.Millisecond)) && req.time.Before(expectedTime.Add(100*time.Millisecond)),
-		"Time should be approximately timeout ago")
+		"Time should be approximately cooldown ago")
 
 	// Test adding multiple requests
 	m.add(txHash2, request2)
@@ -1503,9 +1503,9 @@ func TestSidecarReqManager_Add(t *testing.T) {
 
 // TestSidecarReqManager_Get tests the get method
 func TestSidecarReqManager_Get(t *testing.T) {
-	timeout := 10 * time.Second
+	cooldown := 10 * time.Second
 	maxTry := 5
-	m := newTestSidecarReqManager(timeout, maxTry)
+	m := newTestSidecarReqManager(cooldown, maxTry)
 
 	txHash1 := tx1.Hash()
 	txHash2 := tx2.Hash()
@@ -1528,9 +1528,9 @@ func TestSidecarReqManager_Get(t *testing.T) {
 
 // TestSidecarReqManager_Update tests the update method
 func TestSidecarReqManager_Update(t *testing.T) {
-	timeout := 10 * time.Second
+	cooldown := 10 * time.Second
 	maxTry := 5
-	m := newTestSidecarReqManager(timeout, maxTry)
+	m := newTestSidecarReqManager(cooldown, maxTry)
 
 	txHash := tx1.Hash()
 	request := newTestBlobSidecarsRequestData(txHash, 100, 0)
@@ -1580,9 +1580,9 @@ func TestSidecarReqManager_Update(t *testing.T) {
 
 // TestSidecarReqManager_Delete tests the delete method
 func TestSidecarReqManager_Delete(t *testing.T) {
-	timeout := 10 * time.Second
+	cooldown := 10 * time.Second
 	maxTry := 5
-	m := newTestSidecarReqManager(timeout, maxTry)
+	m := newTestSidecarReqManager(cooldown, maxTry)
 
 	txHash1 := tx1.Hash()
 	txHash2 := tx2.Hash()
@@ -1609,9 +1609,9 @@ func TestSidecarReqManager_Delete(t *testing.T) {
 
 // TestSidecarReqManager_Search tests the search method
 func TestSidecarReqManager_Search(t *testing.T) {
-	timeout := 100 * time.Millisecond
+	cooldown := 100 * time.Millisecond
 	maxTry := 5
-	m := newTestSidecarReqManager(timeout, maxTry)
+	m := newTestSidecarReqManager(cooldown, maxTry)
 
 	// Test empty list
 	req := m.search()
@@ -1644,26 +1644,26 @@ func TestSidecarReqManager_Search(t *testing.T) {
 	assert.NotNil(t, req, "Should return request with try == 0")
 	assert.Equal(t, txHash2, req.request.Hash, "Should return the request with try == 0")
 
-	// Wait for timeout and test expired request
+	// Wait for cooldown and test expired request
 	m.update(txHash1, "peer-2")
-	time.Sleep(timeout + 50*time.Millisecond) // Wait for timeout
+	time.Sleep(cooldown + 50*time.Millisecond) // Wait for cooldown
 	req = m.search()
 	assert.NotNil(t, req, "Should return expired request")
 	assert.True(t, req.request.Hash == txHash2, "Should return one of the expired requests")
 
 	{
 		// Test with all requests having try > 0 and not expired
-		m = newTestSidecarReqManager(timeout, maxTry)
+		m = newTestSidecarReqManager(cooldown, maxTry)
 		m.add(txHash1, request1)
 		m.update(txHash1, "peer-1")
-		time.Sleep(10 * time.Millisecond) // Small delay but not enough for timeout
+		time.Sleep(10 * time.Millisecond) // Small delay but not enough for cooldown
 		req = m.search()
 		assert.Nil(t, req, "Should return nil when no valid requests exist")
 	}
 
 	{
 		// Test sorting by time (ascending order)
-		m = newTestSidecarReqManager(timeout, maxTry)
+		m = newTestSidecarReqManager(cooldown, maxTry)
 		m.add(txHash1, request1)
 		time.Sleep(10 * time.Millisecond)
 		m.add(txHash2, request2)
@@ -1677,11 +1677,11 @@ func TestSidecarReqManager_Search(t *testing.T) {
 
 	{
 		// Test with mixed scenarios: some expired, some with try == 0
-		m = newTestSidecarReqManager(timeout, maxTry)
+		m = newTestSidecarReqManager(cooldown, maxTry)
 		m.add(txHash1, request1) // try == 0
 		m.add(txHash2, request2)
 		m.update(txHash2, "peer-2")
-		time.Sleep(timeout + 50*time.Millisecond) // Make txHash2 expired
+		time.Sleep(cooldown + 50*time.Millisecond) // Make txHash2 cooldown
 		req = m.search()
 		assert.NotNil(t, req, "Should return a request")
 		assert.Equal(t, txHash1, req.request.Hash, "Should prioritize try == 0 over expired")
@@ -1690,9 +1690,9 @@ func TestSidecarReqManager_Search(t *testing.T) {
 
 // TestSidecarReqManager_Integration tests integration scenarios
 func TestSidecarReqManager_Integration(t *testing.T) {
-	timeout := 100 * time.Millisecond
+	cooldown := 100 * time.Millisecond
 	maxTry := 3
-	m := newTestSidecarReqManager(timeout, maxTry)
+	m := newTestSidecarReqManager(cooldown, maxTry)
 
 	txHash1 := tx1.Hash()
 	txHash2 := tx2.Hash()
@@ -1740,10 +1740,10 @@ func TestSidecarReqManager_Integration(t *testing.T) {
 	req = m.search()
 	assert.Nil(t, req, "Should return nil when all requests are deleted")
 
-	// Scenario: Add, wait for timeout, search should find expired request
+	// Scenario: Add, wait for cooldown, search should find expired request
 	m.add(txHash1, request1)
 	m.update(txHash1, "peer-1")
-	time.Sleep(timeout + 50*time.Millisecond)
+	time.Sleep(cooldown + 50*time.Millisecond)
 	req = m.search()
 	assert.NotNil(t, req, "Should find expired request")
 	assert.Equal(t, txHash1, req.request.Hash, "Should find the expired request")

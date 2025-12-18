@@ -838,9 +838,9 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 			Sidecar:  generateTestSidecar(tx1.Hash()),
 		}
 		pm.blobSidecarReqManager = &sidecarReqManager{
-			list:    map[common.Hash]*sidecarReq{},
-			timeout: 10 * time.Second,
-			maxTry:  5,
+			list:     map[common.Hash]*sidecarReq{},
+			cooldown: 10 * time.Second,
+			maxTry:   5,
 		}
 		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
@@ -865,8 +865,8 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 					time: time.Now(),
 				},
 			},
-			timeout: 10 * time.Second,
-			maxTry:  5,
+			cooldown: 10 * time.Second,
+			maxTry:   5,
 		}
 		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
@@ -891,8 +891,8 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 					time: time.Now(),
 				},
 			},
-			timeout: 10 * time.Second,
-			maxTry:  5,
+			cooldown: 10 * time.Second,
+			maxTry:   5,
 		}
 		// Setup expected save call
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
@@ -928,8 +928,8 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 					time: time.Now(),
 				},
 			},
-			timeout: 10 * time.Second,
-			maxTry:  5,
+			cooldown: 10 * time.Second,
+			maxTry:   5,
 		}
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 		mockTxPool.EXPECT().SaveBlobSidecar(
