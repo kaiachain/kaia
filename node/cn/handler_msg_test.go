@@ -800,6 +800,22 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
 		assert.Error(t, err)
+		assert.True(t, strings.Contains(err.Error(), "blob sidecar request manager is not initialized"))
+		mockCtrl.Finish()
+	}
+
+	{
+		// test if message does not contain expected data (decode error)
+		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		msg := generateMsg(t, BlobSidecarsMsg, uint64(123)) // Non-list value to invoke an error
+		pm.blobSidecarReqManager = &sidecarReqManager{
+			list:     map[common.Hash]*sidecarReq{},
+			cooldown: 10 * time.Second,
+			maxTry:   5,
+		}
+
+		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
+		assert.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(), errCode(ErrDecode).String()))
 		mockCtrl.Finish()
 	}
@@ -813,6 +829,11 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 			TxHash:   tx1.Hash(),
 			Sidecar:  nil,
 		}
+		pm.blobSidecarReqManager = &sidecarReqManager{
+			list:     map[common.Hash]*sidecarReq{},
+			cooldown: 10 * time.Second,
+			maxTry:   5,
+		}
 		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{d})
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
 		assert.Error(t, err)
@@ -822,6 +843,11 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 	{
 		// empty sidecars list, nothing happens
 		mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+		pm.blobSidecarReqManager = &sidecarReqManager{
+			list:     map[common.Hash]*sidecarReq{},
+			cooldown: 10 * time.Second,
+			maxTry:   5,
+		}
 		msg := generateMsg(t, BlobSidecarsMsg, []*blobSidecarsData{})
 		err := handleBlobSidecarsMsg(pm, mockPeer, msg)
 		assert.NoError(t, err)
