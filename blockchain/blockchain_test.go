@@ -944,10 +944,29 @@ func TestLogReorgs(t *testing.T) {
 }
 
 func TestReorgSideEvent(t *testing.T) {
+	// This is a test that will fail probabilistically, so it needs to be retried.
+	// If successful, it will finish in about 0.500 seconds on average,
+	// and if it fails, it will finish in around 0.10 seconds.
+	// There should be no problem with retrying 10 times.
+	const trials = 10
+
+	var lastErrors []error
+	for i := 0; i < trials; i++ {
+		if lastErrors = testReorgSideEvent(); len(lastErrors) == 0 {
+			return // success
+		}
+	}
+
+	t.Fatalf("TestReorgSideEvent failed after %d trials: %v", trials, lastErrors)
+}
+
+func testReorgSideEvent() []error {
 	// Fix random seed for deterministic behavior in reorg decision
 	// This prevents flaky test failures due to random tie-breaking
 	rand.Seed(1)
 	defer rand.Seed(time.Now().UnixNano())
+
+	var errors []error
 
 	var (
 		db      = database.NewMemoryDBManager()
@@ -966,7 +985,8 @@ func TestReorgSideEvent(t *testing.T) {
 
 	chain, _ := GenerateChain(gspec.Config, genesis, faker.NewFaker(), db, 3, func(i int, gen *BlockGen) {})
 	if _, err := blockchain.InsertChain(chain); err != nil {
-		t.Fatalf("failed to insert chain: %v", err)
+		errors = append(errors, fmt.Errorf("failed to insert chain: %v", err))
+		return errors
 	}
 
 	replacementBlocks, _ := GenerateChain(gspec.Config, genesis, faker.NewFaker(), db, 4, func(i int, gen *BlockGen) {
@@ -975,14 +995,16 @@ func TestReorgSideEvent(t *testing.T) {
 			gen.OffsetTime(-9)
 		}
 		if err != nil {
-			t.Fatalf("failed to create tx: %v", err)
+			errors = append(errors, fmt.Errorf("failed to create tx: %v", err))
+			return
 		}
 		gen.AddTx(tx)
 	})
 	chainSideCh := make(chan ChainSideEvent, 64)
 	blockchain.SubscribeChainSideEvent(chainSideCh)
 	if _, err := blockchain.InsertChain(replacementBlocks); err != nil {
-		t.Fatalf("failed to insert chain: %v", err)
+		errors = append(errors, fmt.Errorf("failed to insert chain: %v", err))
+		return errors
 	}
 
 	// first two block of the secondary chain are for a brief moment considered
@@ -1006,7 +1028,7 @@ done:
 		case ev := <-chainSideCh:
 			block := ev.Block
 			if _, ok := expectedSideHashes[block.Hash()]; !ok {
-				t.Errorf("%d: didn't expect %x to be in side chain", i, block.Hash())
+				errors = append(errors, fmt.Errorf("%d: didn't expect %x to be in side chain", i, block.Hash()))
 			}
 			i++
 
@@ -1018,7 +1040,8 @@ done:
 			timeout.Reset(timeoutDura)
 
 		case <-timeout.C:
-			t.Fatal("Timeout. Possibly not all blocks were triggered for sideevent")
+			errors = append(errors, fmt.Errorf("Timeout. Possibly not all blocks were triggered for sideevent"))
+			return errors
 		}
 	}
 
@@ -1030,9 +1053,9 @@ done:
 			drained++
 		case <-time.After(100 * time.Millisecond):
 			if drained > 0 {
-				t.Logf("drained %d unexpected side events", drained)
+				errors = append(errors, fmt.Errorf("drained %d unexpected side events", drained))
 			}
-			return
+			return errors
 		}
 	}
 }
