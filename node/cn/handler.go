@@ -35,7 +35,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain"
 	kaia_blockchain "github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -414,12 +413,12 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	pm.maxPeers = maxPeers
 
 	// broadcast transactions
-	pm.txsCh = make(chan blockchain.NewTxsEvent, txChanSize)
+	pm.txsCh = make(chan kaia_blockchain.NewTxsEvent, txChanSize)
 	pm.txsSub = pm.txpool.SubscribeNewTxsEvent(pm.txsCh)
 	go pm.txBroadcastLoop()
 
 	// broadcast mined blocks
-	pm.minedBlockSub = pm.eventMux.Subscribe(blockchain.NewMinedBlockEvent{})
+	pm.minedBlockSub = pm.eventMux.Subscribe(kaia_blockchain.NewMinedBlockEvent{})
 	go pm.minedBroadcastLoop()
 
 	if !pm.IsAuctionModuleDisabled() {
@@ -1686,7 +1685,7 @@ func (pm *ProtocolManager) minedBroadcastLoop() {
 	// automatically stops if unsubscribe
 	for obj := range pm.minedBlockSub.Chan() {
 		switch ev := obj.Data.(type) {
-		case blockchain.NewMinedBlockEvent:
+		case kaia_blockchain.NewMinedBlockEvent:
 			// Remove the sidecars from the blob transactions.
 			// This prevents the sidecars from being broadcast.
 			ev.Block = ev.Block.WithoutBlobSidecars()

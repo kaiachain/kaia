@@ -58,7 +58,7 @@ var (
 
 type BlobStorage struct {
 	config BlobStorageConfig
-	mu     sync.RWMutex // TODO
+	mu     sync.RWMutex
 }
 
 func NewBlobStorage(config BlobStorageConfig) *BlobStorage {
