@@ -69,6 +69,8 @@ const (
 	txMsgChSize = 100
 	// txFeedChSize is the number of transactions can be queued for event feed.
 	txFeedChSize = 100
+	// missingBlobSidecarsChSize is the number of missing blob sidecars can be queued for event feed.
+	missingBlobSidecarsChSize = 100
 )
 
 var (
@@ -138,6 +140,7 @@ type blockChain interface {
 	CurrentBlock() *types.Block
 	GetBlock(hash common.Hash, number uint64) *types.Block
 	StateAt(root common.Hash) (*state.StateDB, error)
+	GetTxAndLookupInfo(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 
 	SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription
 }
@@ -163,6 +166,8 @@ type TxPoolConfig struct {
 
 	NoAccountCreation            bool // Whether account creation transactions should be disabled
 	EnableSpamThrottlerAtRuntime bool // Enable txpool spam throttler at runtime
+
+	BlobStorageConfig *BlobStorageConfig // Blob storage configuration
 }
 
 // DefaultTxPoolConfig contains the default configurations for the transaction
@@ -206,6 +211,12 @@ type GovModule interface {
 	GetParamSet(blockNum uint64) gov.ParamSet
 }
 
+type MissingBlobSidecar struct {
+	BlockNum *big.Int
+	TxIndex  int
+	TxHash   common.Hash
+}
+
 // TxPool contains all currently known transactions. Transactions
 // enter the pool when they are received from the network or submitted
 // locally. They exit the pool when they are included in the blockchain.
@@ -247,7 +258,11 @@ type TxPool struct {
 	txMsgCh  chan types.Transactions // A buffer for async tx intake via AddRemotes
 	txFeedCh chan types.Transactions // A buffer for async tx event emission via txFeed
 
+	missingBlobSidecarsCh chan *MissingBlobSidecar // A buffer for async missing blob sidecars event emission
+
 	rules params.Rules // Fork indicator
+
+	blobStorage *BlobStorage
 
 	govModule GovModule
 
@@ -264,21 +279,22 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 
 	// Create the transaction pool with its initial settings
 	pool := &TxPool{
-		config:       config,
-		chainconfig:  chainconfig,
-		chain:        chain,
-		signer:       types.LatestSignerForChainID(chainconfig.ChainID),
-		pending:      make(map[common.Address]*txList),
-		queue:        make(map[common.Address]*txList),
-		beats:        make(map[common.Address]time.Time),
-		all:          newTxLookup(),
-		pendingNonce: make(map[common.Address]uint64),
-		chainHeadCh:  make(chan ChainHeadEvent, chainHeadChanSize),
-		gasPrice:     new(big.Int).SetUint64(pset.UnitPrice),
-		blobBaseFee:  new(big.Int).SetUint64(params.ZeroBaseFee),
-		txMsgCh:      make(chan types.Transactions, txMsgChSize),
-		txFeedCh:     make(chan types.Transactions, txFeedChSize),
-		govModule:    govModule,
+		config:                config,
+		chainconfig:           chainconfig,
+		chain:                 chain,
+		signer:                types.LatestSignerForChainID(chainconfig.ChainID),
+		pending:               make(map[common.Address]*txList),
+		queue:                 make(map[common.Address]*txList),
+		beats:                 make(map[common.Address]time.Time),
+		all:                   newTxLookup(),
+		pendingNonce:          make(map[common.Address]uint64),
+		chainHeadCh:           make(chan ChainHeadEvent, chainHeadChanSize),
+		gasPrice:              new(big.Int).SetUint64(pset.UnitPrice),
+		blobBaseFee:           new(big.Int).SetUint64(params.ZeroBaseFee),
+		txMsgCh:               make(chan types.Transactions, txMsgChSize),
+		txFeedCh:              make(chan types.Transactions, txFeedChSize),
+		missingBlobSidecarsCh: make(chan *MissingBlobSidecar, missingBlobSidecarsChSize),
+		govModule:             govModule,
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(pool.all)
@@ -297,6 +313,11 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	}
 	// Subscribe events from blockchain
 	pool.chainHeadSub = pool.chain.SubscribeChainHeadEvent(pool.chainHeadCh)
+
+	// Initialize blob storage
+	if config.BlobStorageConfig != nil {
+		pool.blobStorage = NewBlobStorage(*config.BlobStorageConfig)
+	}
 
 	// Start the event loop and return
 	pool.wg.Add(3)
@@ -340,6 +361,7 @@ func (pool *TxPool) loop() {
 		// Handle ChainHeadEvent
 		case ev := <-pool.chainHeadCh:
 			if ev.Block != nil {
+				pool.saveAndPruneBlobStorage(ev.Block)
 				pool.mu.Lock()
 				currBlock := pool.chain.CurrentBlock()
 				if ev.Block.Root() != currBlock.Root() {
@@ -494,6 +516,7 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 			}
 		}
 	}
+
 	// Initialize the internal state to the current head
 	if newHead == nil {
 		newHead = pool.chain.CurrentBlock().Header() // Special case during testing
@@ -1577,8 +1600,19 @@ func (pool *TxPool) Get(hash common.Hash) *types.Transaction {
 	return pool.all.Get(hash)
 }
 
-// GetBlobSidecar retrieves a blob sidecar from txpool by transaction hash.
+// GetBlobSidecarFromStorage retrieves a blob sidecar from blob storage by block number and transaction index.
+func (pool *TxPool) GetBlobSidecarFromStorage(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error) {
+	if pool.blobStorage == nil {
+		return nil, errors.New("blob storage not initialized")
+	}
+	return pool.blobStorage.Get(blockNum, txIndex)
+}
+
+// GetBlobSidecarFromPool retrieves a blob sidecar from txpool by transaction hash.
 func (pool *TxPool) GetBlobSidecarFromPool(txHash common.Hash) (*types.BlobTxSidecar, error) {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
+
 	tx := pool.all.Get(txHash)
 	if tx == nil {
 		return nil, fmt.Errorf("transaction not found in pool: %s", txHash.String())
@@ -1951,6 +1985,95 @@ func (pool *TxPool) RegisterTxPoolModule(modules ...kaiax.TxPoolModule) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 	pool.modules = modules
+}
+
+func (pool *TxPool) sendMissingBlobSidecar(sidecar *MissingBlobSidecar) {
+	select {
+	case pool.missingBlobSidecarsCh <- sidecar:
+	default:
+		logger.Error("Missing blob sidecars channel is full, dropping notification", "txHash", sidecar.TxHash)
+	}
+}
+
+func (pool *TxPool) SubscribeMissingBlobSidecars() <-chan *MissingBlobSidecar {
+	return pool.missingBlobSidecarsCh
+}
+
+func (pool *TxPool) SaveBlobSidecar(blockNum *big.Int, txIndex int, txHash common.Hash, sidecar *types.BlobTxSidecar) error {
+	if pool.blobStorage == nil || blockNum == nil {
+		return errors.New("blob storage not initialized")
+	}
+	if sidecar == nil {
+		return errors.New("sidecar is nil")
+	}
+	tx, _, _, _ := pool.chain.GetTxAndLookupInfo(txHash)
+	if tx == nil {
+		return errors.New("tx not found")
+	}
+	if tx.Type() != types.TxTypeEthereumBlob {
+		return errors.New("tx is not a blob transaction")
+	}
+	if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
+		return err
+	}
+	return pool.blobStorage.Save(blockNum, txIndex, sidecar)
+}
+
+// saveAndPruneBlobStorage saves and prunes blob storage.
+func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
+	if pool.blobStorage == nil || newHead == nil {
+		return
+	}
+
+	// skip if the block is too old
+	if time.Since(time.Unix(int64(newHead.Time().Uint64()), 0)) > pool.config.BlobStorageConfig.Retention {
+		return
+	}
+
+	// prune blob storage at BLOCKS_PER_BUCKET block interval
+	if new(big.Int).Mod(newHead.Number(), big.NewInt(int64(BLOCKS_PER_BUCKET))).Cmp(big.NewInt(0)) == 0 {
+		go func() {
+			if err := pool.blobStorage.Prune(newHead.Number()); err != nil {
+				logger.Warn("failed to prune blob storage", "err", err)
+			}
+		}()
+	}
+
+	// save blob sidecars
+	for i, tx := range newHead.Transactions() {
+		if tx.Type() != types.TxTypeEthereumBlob {
+			continue
+		}
+
+		// try to get blob sidecar from tx
+		if sidecar := tx.BlobTxSidecar(); sidecar != nil {
+			go func() {
+				if err := pool.blobStorage.Save(newHead.Number(), i, sidecar); err != nil {
+					logger.Warn("failed to save blob sidecar", "err", err)
+				}
+			}()
+			continue
+		}
+
+		// try to get blob sidecar from local
+		if sidecar, err := pool.GetBlobSidecarFromPool(tx.Hash()); sidecar != nil {
+			go func() {
+				if err := pool.blobStorage.Save(newHead.Number(), i, sidecar); err != nil {
+					logger.Warn("failed to save blob sidecar", "err", err)
+				}
+			}()
+			continue
+		} else if err != nil {
+			logger.Warn("failed to get blob sidecar from pool", "hash", tx.Hash(), "err", err)
+		}
+
+		// missing blob sidecar is sent to protocol manager to fetch later
+		pool.sendMissingBlobSidecar(&MissingBlobSidecar{
+			BlockNum: newHead.Number(),
+			TxIndex:  i,
+			TxHash:   tx.Hash(),
+		})
+	}
 }
 
 // addressByHeartbeat is an account address tagged with its last activity timestamp.

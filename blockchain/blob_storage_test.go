@@ -74,8 +74,8 @@ func TestBlobStorage_Save(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
 			config := BlobStorageConfig{
-				baseDir:   tmpDir,
-				retention: 21 * 24 * time.Hour,
+				BaseDir:   tmpDir,
+				Retention: 21 * 24 * time.Hour,
 			}
 			storage := NewBlobStorage(config)
 
@@ -148,8 +148,8 @@ func TestBlobStorage_Get(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
 			config := BlobStorageConfig{
-				baseDir:   tmpDir,
-				retention: 21 * 24 * time.Hour,
+				BaseDir:   tmpDir,
+				Retention: 21 * 24 * time.Hour,
 			}
 			storage := NewBlobStorage(config)
 
@@ -246,8 +246,8 @@ func TestBlobStorage_Prune(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
 			config := BlobStorageConfig{
-				baseDir:   tmpDir,
-				retention: tc.retention,
+				BaseDir:   tmpDir,
+				Retention: tc.retention,
 			}
 			storage := NewBlobStorage(config)
 
@@ -293,8 +293,8 @@ func TestBlobStorage_GetFilename(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
 			config := BlobStorageConfig{
-				baseDir:   tmpDir,
-				retention: 21 * 24 * time.Hour,
+				BaseDir:   tmpDir,
+				Retention: 21 * 24 * time.Hour,
 			}
 			storage := NewBlobStorage(config)
 

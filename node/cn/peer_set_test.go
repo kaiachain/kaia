@@ -341,6 +341,199 @@ func TestPeerSet_BestPeer(t *testing.T) {
 	assert.Equal(t, pnPeer, peerSet.BestPeer())
 }
 
+func TestPeerSet_SortedPeersForBlobSidecar(t *testing.T) {
+	// Test case 1: Empty peer set
+	{
+		peerSet := newPeerSet()
+		result := peerSet.SortedPeersForBlobSidecar()
+		assert.Equal(t, 0, len(result))
+		assert.Equal(t, []Peer{}, result)
+	}
+
+	// Test case 2: Only peers with version < kaia67 (should be filtered out)
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+
+		peer1.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+		peer2.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+		setMockPeers([]*MockPeer{peer1, peer2})
+
+		peer1.EXPECT().GetVersion().Return(kaia66).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia65).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peer1, nil))
+		assert.NoError(t, peerSet.Register(peer2, nil))
+
+		result := peerSet.SortedPeersForBlobSidecar()
+		assert.Equal(t, 0, len(result))
+		assert.Equal(t, []Peer{}, result)
+
+		mockCtrl.Finish()
+	}
+
+	// Test case 3: Only peers with version >= kaia67 (all should be returned)
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+		peer3 := NewMockPeer(mockCtrl)
+
+		setMockPeersConnType(peer1, peer2, peer3)
+		setMockPeers([]*MockPeer{peer1, peer2, peer3})
+
+		peer1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer3.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		peer1.EXPECT().Head().Return(common.Hash{}, big.NewInt(100)).AnyTimes()
+		peer2.EXPECT().Head().Return(common.Hash{}, big.NewInt(200)).AnyTimes()
+		peer3.EXPECT().Head().Return(common.Hash{}, big.NewInt(300)).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peer1, nil))
+		assert.NoError(t, peerSet.Register(peer2, nil))
+		assert.NoError(t, peerSet.Register(peer3, nil))
+
+		result := peerSet.SortedPeersForBlobSidecar()
+		assert.Equal(t, 3, len(result))
+		// Should be sorted in descending order: peer3 (300), peer2 (200), peer1 (100)
+		assert.Equal(t, peer3, result[0])
+		assert.Equal(t, peer2, result[1])
+		assert.Equal(t, peer1, result[2])
+
+		mockCtrl.Finish()
+	}
+
+	// Test case 4: Mixed peers (version < kaia67 and >= kaia67)
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peerOld1 := NewMockPeer(mockCtrl)
+		peerOld2 := NewMockPeer(mockCtrl)
+		peerNew1 := NewMockPeer(mockCtrl)
+		peerNew2 := NewMockPeer(mockCtrl)
+
+		peerOld1.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+		peerOld2.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+		peerNew1.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		peerNew2.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+		setMockPeers([]*MockPeer{peerOld1, peerOld2, peerNew1, peerNew2})
+
+		peerOld1.EXPECT().GetVersion().Return(kaia66).AnyTimes()
+		peerOld2.EXPECT().GetVersion().Return(kaia65).AnyTimes()
+		peerNew1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peerNew2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		peerNew1.EXPECT().Head().Return(common.Hash{}, big.NewInt(150)).AnyTimes()
+		peerNew2.EXPECT().Head().Return(common.Hash{}, big.NewInt(250)).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peerOld1, nil))
+		assert.NoError(t, peerSet.Register(peerOld2, nil))
+		assert.NoError(t, peerSet.Register(peerNew1, nil))
+		assert.NoError(t, peerSet.Register(peerNew2, nil))
+
+		result := peerSet.SortedPeersForBlobSidecar()
+		assert.Equal(t, 2, len(result))
+		// Should only contain peers with version >= kaia67, sorted descending
+		assert.Equal(t, peerNew2, result[0]) // 250
+		assert.Equal(t, peerNew1, result[1]) // 150
+		// Verify old peers are not included
+		assert.False(t, containsPeer(peerOld1, result))
+		assert.False(t, containsPeer(peerOld2, result))
+
+		mockCtrl.Finish()
+	}
+
+	// Test case 5: Sort verification with different head block numbers
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+		peer3 := NewMockPeer(mockCtrl)
+		peer4 := NewMockPeer(mockCtrl)
+
+		peer1.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+		peer2.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+		peer3.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		peer4.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+		setMockPeers([]*MockPeer{peer1, peer2, peer3, peer4})
+
+		peer1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer3.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer4.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		// Set different head block numbers
+		peer1.EXPECT().Head().Return(common.Hash{}, big.NewInt(50)).AnyTimes()
+		peer2.EXPECT().Head().Return(common.Hash{}, big.NewInt(300)).AnyTimes()
+		peer3.EXPECT().Head().Return(common.Hash{}, big.NewInt(100)).AnyTimes()
+		peer4.EXPECT().Head().Return(common.Hash{}, big.NewInt(200)).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peer1, nil))
+		assert.NoError(t, peerSet.Register(peer2, nil))
+		assert.NoError(t, peerSet.Register(peer3, nil))
+		assert.NoError(t, peerSet.Register(peer4, nil))
+
+		result := peerSet.SortedPeersForBlobSidecar()
+		assert.Equal(t, 4, len(result))
+		// Should be sorted in descending order: 300, 200, 100, 50
+		assert.Equal(t, peer2, result[0]) // 300
+		assert.Equal(t, peer4, result[1]) // 200
+		assert.Equal(t, peer3, result[2]) // 100
+		assert.Equal(t, peer1, result[3]) // 50
+
+		mockCtrl.Finish()
+	}
+
+	// Test case 6: Peers with same head block number
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+		peer3 := NewMockPeer(mockCtrl)
+
+		setMockPeersConnType(peer1, peer2, peer3)
+		setMockPeers([]*MockPeer{peer1, peer2, peer3})
+
+		peer1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer3.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		// Set same head block number for peer1 and peer2
+		sameHead := big.NewInt(100)
+		peer1.EXPECT().Head().Return(common.Hash{}, sameHead).AnyTimes()
+		peer2.EXPECT().Head().Return(common.Hash{}, sameHead).AnyTimes()
+		peer3.EXPECT().Head().Return(common.Hash{}, big.NewInt(200)).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peer1, nil))
+		assert.NoError(t, peerSet.Register(peer2, nil))
+		assert.NoError(t, peerSet.Register(peer3, nil))
+
+		result := peerSet.SortedPeersForBlobSidecar()
+		assert.Equal(t, 3, len(result))
+		// peer3 should be first (200), then peer1 and peer2 (both 100) can be in any order
+		assert.Equal(t, peer3, result[0]) // 200
+		// Verify both peer1 and peer2 are in the result
+		assert.True(t, containsPeer(peer1, result))
+		assert.True(t, containsPeer(peer2, result))
+		// Verify they are after peer3
+		assert.True(t, result[1] == peer1 || result[1] == peer2)
+		assert.True(t, result[2] == peer1 || result[2] == peer2)
+
+		mockCtrl.Finish()
+	}
+}
+
 func TestPeerSet_Close(t *testing.T) {
 	peerSet := newPeerSet()
 	mockCtrl := gomock.NewController(t)

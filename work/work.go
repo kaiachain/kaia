@@ -77,7 +77,11 @@ type TxPool interface {
 	StartSpamThrottler(conf *blockchain.ThrottlerConfig) error
 	StopSpamThrottler()
 
+	// Blob sidecars
+	GetBlobSidecarFromStorage(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error)
 	GetBlobSidecarFromPool(txHash common.Hash) (*types.BlobTxSidecar, error)
+	SubscribeMissingBlobSidecars() <-chan *blockchain.MissingBlobSidecar
+	SaveBlobSidecar(blockNum *big.Int, txIndex int, txHash common.Hash, sidecar *types.BlobTxSidecar) error
 
 	kaiax.TxPoolModuleHost
 }
@@ -339,9 +343,6 @@ type BlockChain interface {
 
 	// Snapshot
 	Snapshots() *snapshot.Tree
-
-	// Blob sidecars
-	GetBlobSidecarFromStorage(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error)
 
 	// kaiax module host
 	kaiax.ExecutionModuleHost

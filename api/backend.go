@@ -93,6 +93,7 @@ type Backend interface {
 	Stats() (pending int, queued int)
 	TxPoolContent() (map[common.Address]types.Transactions, map[common.Address]types.Transactions)
 	SubscribeNewTxsEvent(chan<- blockchain.NewTxsEvent) event.Subscription
+	GetBlobSidecar(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error)
 
 	GetActiveSystemContracts(c *params.ChainConfig, genesis common.Hash, head *big.Int) map[string]common.Address
 	ChainConfig() *params.ChainConfig
@@ -101,5 +102,4 @@ type Backend interface {
 	GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	GetBlockReceiptsInCache(blockHash common.Hash) types.Receipts
 	GetTxLookupInfoAndReceiptInCache(Hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
-	GetBlobSidecar(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error)
 }

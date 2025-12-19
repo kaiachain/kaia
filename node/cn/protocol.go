@@ -143,7 +143,6 @@ type ProtocolManagerDownloader interface {
 	DeliverReceipts(id string, receipts [][]*types.Receipt) error
 	DeliverStakingInfos(id string, stakingInfos []*staking.P2PStakingInfo) error
 	DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) error
-	DeliverBlobSidecars(id string, sidecars []*types.BlobTxSidecar) error
 
 	Terminate()
 	Synchronise(id string, head common.Hash, td *big.Int, mode downloader.SyncMode) error
@@ -247,4 +246,11 @@ type blobSidecarsRequestData struct {
 	BlockNum hexutil.Uint64
 	TxIndex  hexutil.Uint
 	Hash     common.Hash
+}
+
+type blobSidecarsData struct {
+	BlockNum hexutil.Uint64
+	TxIndex  hexutil.Uint
+	TxHash   common.Hash
+	Sidecar  *types.BlobTxSidecar
 }

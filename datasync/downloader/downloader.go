@@ -145,7 +145,6 @@ type Downloader struct {
 	receiptWakeCh     chan bool            // [kaia/63] Channel to signal the receipt fetcher of new tasks
 	stakingInfoWakeCh chan bool            // [kaia/65] Channel to signal the staking info fetcher of new tasks
 	headerProcCh      chan []*types.Header // [kaia/62] Channel to feed the header processor new tasks
-	blobSidecarsCh    chan dataPack        // [kaia/67] Channel receiving inbound blob sidecars
 
 	// for snapsyncer
 	snapSync   bool         // Whether to run state sync over the snap protocol
@@ -1978,10 +1977,6 @@ func (d *Downloader) DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) erro
 	}
 }
 
-// DeliverBlobSidecars injects a new batch of blob sidecars received from a remote node.
-func (d *Downloader) DeliverBlobSidecars(id string, sidecars []*types.BlobTxSidecar) error {
-	return d.deliver(id, d.blobSidecarsCh, &blobSidecarsPack{id, sidecars}, blobSidecarsInMeter, blobSidecarsDropMeter)
-}
 
 // deliver injects a new batch of data received from a remote node.
 func (d *Downloader) deliver(id string, destCh chan dataPack, packet dataPack, inMeter, dropMeter metrics.Meter) (err error) {

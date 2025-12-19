@@ -249,6 +249,9 @@ type Peer interface {
 	// Peer encapsulates the methods required to synchronise with a remote full peer.
 	downloader.Peer
 
+	// RequestBlobSidecars fetches a batch of blob sidecars from a remote node.
+	RequestBlobSidecars([]blobSidecarsRequestData) error
+
 	// RegisterConsensusMsgCode registers the channel of consensus msg.
 	RegisterConsensusMsgCode(msgCode uint64) error
 
@@ -693,9 +696,9 @@ func (p *basePeer) RequestStakingInfo(hashes []common.Hash) error {
 }
 
 // RequestBlobSidecars fetches a batch of blob sidecars from a remote node.
-func (p *basePeer) RequestBlobSidecars(hashes []common.Hash) error {
-	p.Log().Debug("Fetching batch of blob sidecars", "count", len(hashes))
-	return p2p.Send(p.rw, BlobSidecarsRequestMsg, hashes)
+func (p *basePeer) RequestBlobSidecars(request []blobSidecarsRequestData) error {
+	p.Log().Debug("Fetching batch of blob sidecars", "count", len(request))
+	return p2p.Send(p.rw, BlobSidecarsRequestMsg, request)
 }
 
 // Handshake executes the Kaia protocol handshake, negotiating version number,
@@ -1082,9 +1085,9 @@ func (p *multiChannelPeer) RequestStakingInfo(hashes []common.Hash) error {
 }
 
 // RequestBlobSidecars fetches a batch of blob sidecars from a remote node.
-func (p *multiChannelPeer) RequestBlobSidecars(hashes []common.Hash) error {
-	p.Log().Debug("Fetching batch of staking infos", "count", len(hashes))
-	return p.msgSender(BlobSidecarsRequestMsg, hashes)
+func (p *multiChannelPeer) RequestBlobSidecars(request []blobSidecarsRequestData) error {
+	p.Log().Debug("Fetching batch of blob sidecars", "count", len(request))
+	return p.msgSender(BlobSidecarsRequestMsg, request)
 }
 
 // msgSender sends data to the peer.
