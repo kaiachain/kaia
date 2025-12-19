@@ -951,23 +951,21 @@ func TestReorgSideEvent(t *testing.T) {
 	// There should be no problem with retrying 10 times.
 	const trials = 10
 
-	var lastErrors []error
+	var lastErr error
 	for i := 0; i < trials; i++ {
-		if lastErrors = testReorgSideEvent(); len(lastErrors) == 0 {
+		if lastErr = testReorgSideEvent(t); lastErr == nil {
 			return // success
 		}
 	}
 
-	t.Fatalf("TestReorgSideEvent failed after %d trials: %v", trials, lastErrors)
+	t.Fatalf("TestReorgSideEvent failed after %d trials: %v", trials, lastErr)
 }
 
-func testReorgSideEvent() []error {
+func testReorgSideEvent(t *testing.T) error {
 	// Fix random seed for deterministic behavior in reorg decision
 	// This prevents flaky test failures due to random tie-breaking
 	rand.Seed(1)
 	defer rand.Seed(time.Now().UnixNano())
-
-	var errs []error
 
 	var (
 		db      = database.NewMemoryDBManager()
@@ -986,8 +984,7 @@ func testReorgSideEvent() []error {
 
 	chain, _ := GenerateChain(gspec.Config, genesis, faker.NewFaker(), db, 3, func(i int, gen *BlockGen) {})
 	if _, err := blockchain.InsertChain(chain); err != nil {
-		errs = append(errs, fmt.Errorf("failed to insert chain: %v", err))
-		return errs
+		t.Fatalf("failed to insert chain: %v", err)
 	}
 
 	replacementBlocks, _ := GenerateChain(gspec.Config, genesis, faker.NewFaker(), db, 4, func(i int, gen *BlockGen) {
@@ -996,17 +993,31 @@ func testReorgSideEvent() []error {
 			gen.OffsetTime(-9)
 		}
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to create tx: %v", err))
-			return
+			t.Fatalf("failed to create tx: %v", err)
 		}
 		gen.AddTx(tx)
 	})
 	chainSideCh := make(chan ChainSideEvent, 64)
 	blockchain.SubscribeChainSideEvent(chainSideCh)
 	if _, err := blockchain.InsertChain(replacementBlocks); err != nil {
-		errs = append(errs, fmt.Errorf("failed to insert chain: %v", err))
-		return errs
+		t.Fatalf("failed to insert chain: %v", err)
 	}
+
+	// drain any remaining events after the test completes
+	defer func() {
+		drained := 0
+		for {
+			select {
+			case <-chainSideCh:
+				drained++
+			case <-time.After(100 * time.Millisecond):
+				if drained > 0 {
+					t.Logf("drained %d unexpected side events", drained)
+				}
+				return
+			}
+		}
+	}()
 
 	// first two block of the secondary chain are for a brief moment considered
 	// side chains because up to that point the first one is considered the
@@ -1029,7 +1040,7 @@ done:
 		case ev := <-chainSideCh:
 			block := ev.Block
 			if _, ok := expectedSideHashes[block.Hash()]; !ok {
-				errs = append(errs, fmt.Errorf("%d: didn't expect %x to be in side chain", i, block.Hash()))
+				return fmt.Errorf("%d: didn't expect %x to be in side chain", i, block.Hash())
 			}
 			i++
 
@@ -1041,24 +1052,10 @@ done:
 			timeout.Reset(timeoutDura)
 
 		case <-timeout.C:
-			errs = append(errs, errors.New("Timeout. Possibly not all blocks were triggered for sideevent"))
-			return errs
+			return errors.New("Timeout. Possibly not all blocks were triggered for sideevent")
 		}
 	}
-
-	// drain any remaining events to avoid test flakiness
-	drained := 0
-	for {
-		select {
-		case <-chainSideCh:
-			drained++
-		case <-time.After(100 * time.Millisecond):
-			if drained > 0 {
-				errs = append(errs, fmt.Errorf("drained %d unexpected side events", drained))
-			}
-			return errs
-		}
-	}
+	return nil
 }
 
 // Tests if the canonical block can be fetched from the database during chain insertion.
