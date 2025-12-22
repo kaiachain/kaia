@@ -48,6 +48,10 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 )
 
+const (
+	EthBlobTxMaxBlobs = 6
+)
+
 // StateTest checks transaction processing without block context.
 // See https://github.com/ethereum/EIPs/issues/176 for the test format specification.
 type StateTest struct {

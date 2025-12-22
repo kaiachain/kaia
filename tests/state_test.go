@@ -70,15 +70,19 @@ func TestKaiaSpecState(t *testing.T) {
 type ExecutionSpecStateTestSuite struct {
 	suite.Suite
 	originalIsPrecompiledContractAddress func(common.Address, interface{}) bool
+	originalBlobTxMaxBlobs               int
 }
 
 func (suite *ExecutionSpecStateTestSuite) SetupSuite() {
 	suite.originalIsPrecompiledContractAddress = common.IsPrecompiledContractAddress
 	common.IsPrecompiledContractAddress = isPrecompiledContractAddressForEthTest
+	suite.originalBlobTxMaxBlobs = params.BlobTxMaxBlobs
+	params.BlobTxMaxBlobs = EthBlobTxMaxBlobs
 }
 
 func (suite *ExecutionSpecStateTestSuite) TearDownSuite() {
 	common.IsPrecompiledContractAddress = suite.originalIsPrecompiledContractAddress
+	params.BlobTxMaxBlobs = suite.originalBlobTxMaxBlobs
 }
 
 func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
