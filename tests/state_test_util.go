@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/params"
@@ -86,21 +87,23 @@ type stPostState struct {
 //go:generate gencodec -type stEnv -field-override stEnvMarshaling -out gen_stenv.go
 
 type stEnv struct {
-	Coinbase   common.Address `gencodec:"required" json:"currentCoinbase"`
-	BlockScore *big.Int       `gencodec:"required" json:"currentDifficulty"`
-	GasLimit   uint64         `gencodec:"required" json:"currentGasLimit"`
-	Number     uint64         `gencodec:"required" json:"currentNumber"`
-	Timestamp  uint64         `gencodec:"required" json:"currentTimestamp"`
-	BaseFee    *big.Int       `gencodec:"optional" json:"currentBaseFee"`
+	Coinbase      common.Address `gencodec:"required" json:"currentCoinbase"`
+	BlockScore    *big.Int       `gencodec:"required" json:"currentDifficulty"`
+	GasLimit      uint64         `gencodec:"required" json:"currentGasLimit"`
+	Number        uint64         `gencodec:"required" json:"currentNumber"`
+	Timestamp     uint64         `gencodec:"required" json:"currentTimestamp"`
+	BaseFee       *big.Int       `gencodec:"optional" json:"currentBaseFee"`
+	ExcessBlobGas *uint64        `json:"currentExcessBlobGas" gencodec:"optional"`
 }
 
 type stEnvMarshaling struct {
-	Coinbase   common.UnprefixedAddress
-	BlockScore *math.HexOrDecimal256
-	GasLimit   math.HexOrDecimal64
-	Number     math.HexOrDecimal64
-	Timestamp  math.HexOrDecimal64
-	BaseFee    *math.HexOrDecimal256
+	Coinbase      common.UnprefixedAddress
+	BlockScore    *math.HexOrDecimal256
+	GasLimit      math.HexOrDecimal64
+	Number        math.HexOrDecimal64
+	Timestamp     math.HexOrDecimal64
+	BaseFee       *math.HexOrDecimal256
+	ExcessBlobGas *math.HexOrDecimal64
 }
 
 //go:generate gencodec -type stTransaction -field-override stTransactionMarshaling -out gen_sttransaction.go
@@ -116,6 +119,8 @@ type stTransaction struct {
 	GasLimit             []uint64            `json:"gasLimit"`
 	Value                []string            `json:"value"`
 	PrivateKey           []byte              `json:"secretKey"`
+	BlobVersionedHashes  []common.Hash       `json:"blobVersionedHashes,omitempty"`
+	BlobGasFeeCap        *big.Int            `json:"maxFeePerBlobGas,omitempty"`
 	AuthorizationList    []*stAuthorization  `json:"authorizationList"`
 }
 
@@ -126,6 +131,7 @@ type stTransactionMarshaling struct {
 	Nonce                math.HexOrDecimal64
 	GasLimit             []math.HexOrDecimal64
 	PrivateKey           hexutil.Bytes
+	BlobGasFeeCap        *math.HexOrDecimal256
 }
 
 //go:generate gencodec -type stAuthorization -field-override stAuthorizationMarshaling -out gen_stauthorization.go
@@ -251,6 +257,15 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 				DeferredTxFee: true,
 			},
 		}
+		if config.IsOsakaForkEnabled(big.NewInt(int64(t.json.Env.Number))) {
+			config.BlobScheduleConfig = &params.BlobScheduleConfig{
+				Osaka: &params.BlobConfig{
+					Target:         6,
+					Max:            9,
+					UpdateFraction: 5007716,
+				},
+			}
+		}
 	}
 
 	vmconfig.ExtraEips = eips
@@ -294,6 +309,10 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 	if isTestExecutionSpecState {
 		blockContext.BaseFee = t.json.Env.BaseFee
 		blockContext.GasLimit = t.json.Env.GasLimit
+		// For eest, we use blobBaseFee for EIP4844.
+		if config.IsOsakaForkEnabled(block.Header().Number) {
+			blockContext.BlobBaseFee = eip4844.CalcBlobFeeEIP4844(config, block.Header())
+		}
 	}
 	evm := vm.NewEVM(blockContext, txContext, st, config, &vmconfig)
 
@@ -366,11 +385,12 @@ func MakePreState(db database.DBManager, accounts blockchain.GenesisAlloc, isTes
 
 func (t *StateTest) genesis(config *params.ChainConfig) *blockchain.Genesis {
 	return &blockchain.Genesis{
-		Config:     config,
-		BlockScore: t.json.Env.BlockScore,
-		Number:     t.json.Env.Number,
-		Timestamp:  t.json.Env.Timestamp,
-		Alloc:      t.json.Pre,
+		Config:        config,
+		BlockScore:    t.json.Env.BlockScore,
+		Number:        t.json.Env.Number,
+		Timestamp:     t.json.Env.Timestamp,
+		Alloc:         t.json.Pre,
+		ExcessBlobGas: t.json.Env.ExcessBlobGas,
 	}
 }
 
@@ -457,7 +477,7 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 		return nil, err
 	}
 
-	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, nil, data, true, intrinsicGas, accessList, nil, nil, nil, authorizationList)
+	msg := types.NewMessage(from, to, tx.Nonce, value, gasLimit, tx.GasPrice, tx.MaxFeePerGas, tx.MaxPriorityFeePerGas, tx.BlobGasFeeCap, data, true, intrinsicGas, accessList, nil, tx.BlobVersionedHashes, nil, authorizationList)
 	return msg, nil
 }
 

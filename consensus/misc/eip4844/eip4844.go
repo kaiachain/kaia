@@ -132,6 +132,15 @@ func CalcExcessBlobGas(config *params.ChainConfig, parent *types.Header, headNum
 	return parentExcessBlobGas + parentBlobGasUsed - (uint64(bcfg.Target) * params.BlobTxBlobGasPerBlob)
 }
 
+// CalcBlobFeeEIP4844 calculates the blobfee from the header's excess blob gas field.
+func CalcBlobFeeEIP4844(config *params.ChainConfig, header *types.Header) *big.Int {
+	blobConfig := latestBlobConfig(config, header.Number)
+	if blobConfig == nil {
+		panic("calculating blob fee on unsupported fork")
+	}
+	return blobConfig.blobBaseFeeEIP4844(*header.ExcessBlobGas)
+}
+
 // CalcExcessBlobGasEIP4844 calculates the excess blob gas after applying the set of
 // blobs on top of the excess blob gas for EIP-7918.
 // NOTE: This is not used because Kaia calculates blobBaseFee by multiplying it with baseFee.

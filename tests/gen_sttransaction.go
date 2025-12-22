@@ -7,6 +7,7 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
 )
@@ -26,6 +27,8 @@ func (s stTransaction) MarshalJSON() ([]byte, error) {
 		GasLimit             []math.HexOrDecimal64 `json:"gasLimit"`
 		Value                []string              `json:"value"`
 		PrivateKey           hexutil.Bytes         `json:"secretKey"`
+		BlobVersionedHashes  []common.Hash         `json:"blobVersionedHashes,omitempty"`
+		BlobGasFeeCap        *math.HexOrDecimal256 `json:"maxFeePerBlobGas,omitempty"`
 		AuthorizationList    []*stAuthorization    `json:"authorizationList"`
 	}
 	var enc stTransaction
@@ -44,6 +47,8 @@ func (s stTransaction) MarshalJSON() ([]byte, error) {
 	}
 	enc.Value = s.Value
 	enc.PrivateKey = s.PrivateKey
+	enc.BlobVersionedHashes = s.BlobVersionedHashes
+	enc.BlobGasFeeCap = (*math.HexOrDecimal256)(s.BlobGasFeeCap)
 	enc.AuthorizationList = s.AuthorizationList
 	return json.Marshal(&enc)
 }
@@ -61,6 +66,8 @@ func (s *stTransaction) UnmarshalJSON(input []byte) error {
 		GasLimit             []math.HexOrDecimal64 `json:"gasLimit"`
 		Value                []string              `json:"value"`
 		PrivateKey           *hexutil.Bytes        `json:"secretKey"`
+		BlobVersionedHashes  []common.Hash         `json:"blobVersionedHashes,omitempty"`
+		BlobGasFeeCap        *math.HexOrDecimal256 `json:"maxFeePerBlobGas,omitempty"`
 		AuthorizationList    []*stAuthorization    `json:"authorizationList"`
 	}
 	var dec stTransaction
@@ -99,6 +106,12 @@ func (s *stTransaction) UnmarshalJSON(input []byte) error {
 	}
 	if dec.PrivateKey != nil {
 		s.PrivateKey = *dec.PrivateKey
+	}
+	if dec.BlobVersionedHashes != nil {
+		s.BlobVersionedHashes = dec.BlobVersionedHashes
+	}
+	if dec.BlobGasFeeCap != nil {
+		s.BlobGasFeeCap = (*big.Int)(dec.BlobGasFeeCap)
 	}
 	if dec.AuthorizationList != nil {
 		s.AuthorizationList = dec.AuthorizationList
