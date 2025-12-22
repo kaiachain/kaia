@@ -144,10 +144,10 @@ abstract contract IBridge {
     event ReleaseClaim(uint256 indexed seq, uint256 indexed time);
 
     /// @dev Emitted when bridge is paused
-    event BridgePause(string indexed msg);
+    event BridgePause(string msg);
 
     /// @dev Emitted when bridge is resumed
-    event BridgeResume(string indexed msg);
+    event BridgeResume(string msg);
 
     /// @dev Emitted when the bridge service period is changed
     event ChangeBridgeServicePeriod(uint256 indexed bridgeServicePeriod, uint256 indexed newPeriod);
