@@ -103,12 +103,23 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	// tests to skip
 	// unsupported EIPs
 	st.skipLoad(`^cancun/eip4788_beacon_root/`)
+	// type 3 tx (EIP-4844) is not supported before Osaka
+	st.skipLoad(`^cancun/eip4844_blobs/.*\[fork_(Cancun|Prague)`)
+	st.skipLoad(`^static/state_tests/Cancun/stEIP4844_blobtransactions/.*\[fork_(Cancun|Prague)`)
+	st.skipLoad(`^istanbul/eip1344_chainid/.*\[fork_(Cancun|Prague).*typed_transaction_3`)
+	st.skipLoad(`^prague/eip7623_increase_calldata_cost/.*\[fork_(Cancun|Prague).*type_3`)
+	st.skipLoad(`^prague/eip7623_increase_calldata_cost/test_transaction_validity_type_3.json/tests/prague/eip7623_increase_calldata_cost/test_transaction_validity.py::test_transaction_validity_type_3\[fork_(Cancun|Prague)`)
 	// EIP-3607 is not implemented because Kaia can't reject the TxFromSenderEOA since Kaia have a contract code at the zero address and people usually use from == 0x0 to call the view function
 	st.skipLoad(`^prague/eip7702_set_code_tx/set_code_txs/set_code_from_account_with_non_delegating_code.json/tests/prague/eip7702_set_code_tx/test_set_code_txs.py::test_set_code_from_account_with_non_delegating_code`)
 	st.skipLoad(`^static/state_tests/stEIP3607/transactionCollidingWithNonEmptyAccount_calls.json`)
 	st.skipLoad(`^static/state_tests/stEIP3607/transactionCollidingWithNonEmptyAccount_send_Paris.json`)
 	st.skipLoad(`^static/state_tests/stEIP3607/transactionCollidingWithNonEmptyAccount_callsItself.json`)
 	st.skipLoad(`^static/state_tests/stEIP3607/transactionCollidingWithNonEmptyAccount_init_Paris.json`)
+	// Skip the tests for balance check.
+	// This test requires a balance check of GasFeeCap*GasLimit+BlobFeeCap*Blobs+tx.Value.
+	// Kaia's balance check is GasPrice(baseFee)*GasLimit+BlobFeeCap*Blobs, and tightening this may cause compatibility issues.
+	st.skipLoad(`^cancun/eip4844_blobs/test_insufficient_balance_blob_tx.json`)
+	st.skipLoad(`^cancun/eip4844_blobs/blob_txs/insufficient_balance_blob_tx.json`)
 
 	// TODO: Skip EIP tests that are not yet supported; expect to remove them
 	st.skipLoad(`osaka/eip7594_peerdas`)
