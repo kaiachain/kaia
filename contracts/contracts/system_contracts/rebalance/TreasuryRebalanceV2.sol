@@ -347,6 +347,7 @@ contract TreasuryRebalanceV2 is Ownable {
 
     /**
      * @dev resets all storage values to empty objects except targetBlockNumber
+     * Note that the `pendingMemo` is not reset. Use setPendingMemo to set a new memo after approval.
      */
     function reset() external onlyOwner {
         //reset cannot be called at Finalized status or after target block.number
