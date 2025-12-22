@@ -20,10 +20,10 @@ pragma solidity 0.8.24;
 interface IHolderVerifier {
     /* ========== EVENTS ========== */
 
-    event RecordAdded(string indexed fnsaAddr, uint256 conyBalance);
+    event RecordAdded(string fnsaAddr, uint256 conyBalance);
     event RecordsAdded(uint256 count);
     event ProvisionRequested(
-        string indexed fnsaAddr,
+        string fnsaAddr,
         address indexed kaiaAddr,
         uint256 conyBalance,
         uint256 kaiaAmount,
