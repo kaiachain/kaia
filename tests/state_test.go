@@ -99,12 +99,6 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	// tests to skip
 	// unsupported EIPs
 	st.skipLoad(`^cancun/eip4788_beacon_root/`)
-	st.skipLoad(`^cancun/eip4844_blobs/`)
-	// type 3 tx (EIP-4844) is not supported
-	st.skipLoad(`^prague/eip7623_increase_calldata_cost/.*type_3.*`)
-	st.skipLoad(`^istanbul/eip1344_chainid/chainid/chainid.json/tests/istanbul/eip1344_chainid/test_chainid.py::test_chainid\[fork_Osaka-typed_transaction_3-state_test\]`)
-	st.skipLoad(`^istanbul/eip1344_chainid/test_chainid.json/tests/istanbul/eip1344_chainid/test_chainid.py::test_chainid\[.*typed_transaction_3-state_test\]`)
-	st.skipLoad(`^static/state_tests/Cancun/stEIP4844_blobtransactions/`)
 	// EIP-3607 is not implemented because Kaia can't reject the TxFromSenderEOA since Kaia have a contract code at the zero address and people usually use from == 0x0 to call the view function
 	st.skipLoad(`^prague/eip7702_set_code_tx/set_code_txs/set_code_from_account_with_non_delegating_code.json/tests/prague/eip7702_set_code_tx/test_set_code_txs.py::test_set_code_from_account_with_non_delegating_code`)
 	st.skipLoad(`^static/state_tests/stEIP3607/transactionCollidingWithNonEmptyAccount_calls.json`)
