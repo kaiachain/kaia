@@ -117,7 +117,9 @@ contract HolderVerifier is Ownable, ReentrancyGuard, IHolderVerifier {
         require(currentBridge != address(0), "HolderVerifier: bridge not set");
 
         // NOTE: Using nextProvisionSeq + 1 may be seen counter-intuitive,
-        // but it's the operator's actual behavior.
+        // but Bridge.sol expects nextProvisionSeq + 1 in the new provision.
+        // Since HolderVerifier can execute the provision by itself,
+        // nextProvisionSeq should increment as soon as submitTransaction is finished
         uint64 bridgeSeq = IBridge(currentBridge).nextProvisionSeq();
         uint64 seq = bridgeSeq + 1;
 
