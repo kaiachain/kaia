@@ -369,15 +369,11 @@ func (st *StateTransition) preCheck() error {
 	// Check that the user is paying at least the current blob fee
 	if st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka {
 		if st.blobGasUsed() > 0 {
-			// Skip the checks if gas fields are zero and blobBaseFee was explicitly disabled (eth_call)
-			skipCheck := st.msg.BlobGasFeeCap().BitLen() == 0
-			if !skipCheck {
-				// This will panic if blobBaseFee is nil, but blobBaseFee presence
-				// is verified as part of header validation.
-				if st.msg.BlobGasFeeCap().Cmp(st.evm.Context.BlobBaseFee) < 0 {
-					return fmt.Errorf("%w: address %v blobGasFeeCap: %v, blobBaseFee: %v", ErrBlobFeeCapTooLow,
-						st.msg.ValidatedSender().Hex(), st.msg.BlobGasFeeCap(), st.evm.Context.BlobBaseFee)
-				}
+			// This will panic if blobBaseFee is nil, but blobBaseFee presence
+			// is verified as part of header validation.
+			if st.msg.BlobGasFeeCap().Cmp(st.evm.Context.BlobBaseFee) < 0 {
+				return fmt.Errorf("%w: address %v blobGasFeeCap: %v, blobBaseFee: %v", ErrBlobFeeCapTooLow,
+					st.msg.ValidatedSender().Hex(), st.msg.BlobGasFeeCap(), st.evm.Context.BlobBaseFee)
 			}
 		}
 	}
