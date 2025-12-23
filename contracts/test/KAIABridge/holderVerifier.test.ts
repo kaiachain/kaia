@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
 
-const { parseUnits, parseEther, keccak256, toUtf8Bytes, joinSignature } = ethers.utils;
+const { parseUnits, parseEther, keccak256, toUtf8Bytes, joinSignature, concat } = ethers.utils;
 const { BigNumber, Wallet } = ethers;
 
 type SignerWithAddress = Awaited<ReturnType<typeof ethers.getSigners>>[number];
@@ -27,6 +27,15 @@ describe("HolderVerifier", function () {
 
   const mockSignature = "0x" + "11".repeat(65);
   const mockMessageHash = keccak256(toUtf8Bytes("message"));
+
+  const kaiabridgeMessageFor = (address: string) => "kaiabridge" + address.toLowerCase();
+  const signKlaytnPrefixedMessage = (wallet: any, address: string) => {
+    const message = kaiabridgeMessageFor(address);
+    const prefix = "\x19Klaytn Signed Message:\n52";
+    const hash = keccak256(concat([toUtf8Bytes(prefix), toUtf8Bytes(message)]));
+    const sig = wallet._signingKey().signDigest(hash);
+    return joinSignature(sig);
+  };
 
   beforeEach(async function () {
     [owner, user1, nonOwner] = await ethers.getSigners();
@@ -170,7 +179,9 @@ describe("HolderVerifier", function () {
       const invalidPubKey = "0x" + "04" + "11".repeat(32);
       await expect(
         holderVerifier.requestProvision(invalidPubKey, fnsaAddr1, mockMessageHash, mockSignature),
-      ).to.be.revertedWith("Invalid public key length");
+      ).to.be.revertedWith(
+        "Invalid public key length",
+      );
     });
   });
 
@@ -189,8 +200,9 @@ describe("HolderVerifier", function () {
       const conyBalance = parseUnits("1", 6);
       await holderVerifier.addRecord(fnsaAddr, conyBalance);
 
-      const messageHash = keccak256(toUtf8Bytes("kaia-holder-verifier"));
-      const signature = joinSignature(signingKey.signDigest(messageHash));
+      const message = kaiabridgeMessageFor(holderAddr);
+      const messageHash = ethers.utils.hashMessage(message);
+      const signature = await wallet.signMessage(message);
 
       const expectedKaiaAmount = conyBalance.mul(CONV_RATE);
 
@@ -217,6 +229,30 @@ describe("HolderVerifier", function () {
       expect(await holderVerifier.provisionedAccounts()).to.equal(1n);
     });
 
+    it("accepts Klaytn prefix signed message", async function () {
+      const harnessFactory = await ethers.getContractFactory("FnsaVerifyHarness");
+      const harness = await harnessFactory.deploy();
+      await harness.deployed();
+
+      const wallet = Wallet.createRandom();
+      const publicKey = wallet._signingKey().publicKey;
+      const fnsaAddr = await harness.computeFnsaAddr(publicKey);
+      const expectedHolderAddr = await harness.computeEthAddr(publicKey);
+
+      const conyBalance = parseUnits("1", 6);
+      await holderVerifier.addRecord(fnsaAddr, conyBalance);
+
+      const message = kaiabridgeMessageFor(expectedHolderAddr);
+      const klayPrefix = "\x19Klaytn Signed Message:\n52";
+      const klayHash = keccak256(concat([toUtf8Bytes(klayPrefix), toUtf8Bytes(message)]));
+      const signature = signKlaytnPrefixedMessage(wallet, expectedHolderAddr);
+
+      const tx = await holderVerifier.connect(user1).requestProvision(publicKey, fnsaAddr, klayHash, signature);
+      await expect(tx)
+        .to.emit(holderVerifier, "ProvisionRequested")
+        .withArgs(fnsaAddr, expectedHolderAddr, conyBalance, conyBalance.mul(CONV_RATE), 1n);
+    });    
+
     it("sends funds to holder address from public key, not msg.sender", async function () {
       const harnessFactory = await ethers.getContractFactory("FnsaVerifyHarness");
       const harness = await harnessFactory.deploy();
@@ -233,8 +269,9 @@ describe("HolderVerifier", function () {
       const conyBalance = parseUnits("1", 6);
       await holderVerifier.addRecord(fnsaAddr, conyBalance);
 
-      const messageHash = keccak256(toUtf8Bytes("kaia-holder-verifier"));
-      const signature = joinSignature(signingKey.signDigest(messageHash));
+      const message = kaiabridgeMessageFor(holderAddr);
+      const messageHash = ethers.utils.hashMessage(message);
+      const signature = await holderWallet.signMessage(message);
       const expectedKaiaAmount = conyBalance.mul(CONV_RATE);
 
       // ensure caller has sufficient balance for the transaction

@@ -18,6 +18,7 @@
 pragma solidity ^0.8.24;
 
 import {Bech32} from "../kaiabridge/Bech32.sol";
+import {Strings} from "openzeppelin-contracts-5.0/utils/Strings.sol";
 
 library FnsaVerify {
     /* ========== CONSTANTS ========== */
@@ -50,8 +51,15 @@ library FnsaVerify {
         );
 
         address computedEthAddr = computeEthAddr(publicKey);
-        address recoveredEthAddr = recoverEthAddr(messageHash, signature);
-        require(recoveredEthAddr == computedEthAddr, "Invalid signature");
+        bytes memory message = _kaiabridgeMessage(computedEthAddr);
+        // On top of EIP-191, also support KIP-97 for some old Klaytn wallets
+        bytes32 ethPrefixedHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n52", message));
+        bytes32 klayPrefixedHash = keccak256(abi.encodePacked("\x19Klaytn Signed Message:\n52", message));
+
+        require(messageHash == ethPrefixedHash || messageHash == klayPrefixedHash, "messageHash mismatch");
+
+        address recoveredAddr = recoverEthAddr(messageHash, signature);
+        require(recoveredAddr == computedEthAddr, "Invalid signature");
 
         return computedEthAddr;
     }
@@ -96,6 +104,12 @@ library FnsaVerify {
 
     function _validateSignature(bytes calldata signature) private pure {
         require(signature.length == SIGNATURE_LENGTH, "Invalid signature length");
+    }
+
+    function _kaiabridgeMessage(address ethAddr) private pure returns (bytes memory) {
+        // EIP-191/KIP-97 message body: "kaiabridge" + address hex (0x-prefixed), total length 52.
+        string memory hexAddr = Strings.toHexString(ethAddr);
+        return abi.encodePacked("kaiabridge", hexAddr);
     }
 
     function _encodePublicKey(bytes calldata publicKey, uint[] memory hrp) private pure returns (bytes memory) {

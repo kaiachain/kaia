@@ -19,7 +19,6 @@ pragma solidity ^0.8.24;
 
 import {FnsaVerify} from "../../system_contracts/kaiabridge/FnsaVerify.sol";
 
-
 contract FnsaVerifyHarness {
     function computeFnsaAddr(bytes calldata publicKey) external pure returns (string memory) {
         return FnsaVerify.computeFnsaAddr(publicKey);
