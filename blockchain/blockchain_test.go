@@ -945,11 +945,13 @@ func TestLogReorgs(t *testing.T) {
 }
 
 func TestReorgSideEvent(t *testing.T) {
-	// This is a test that will fail probabilistically, so it needs to be retried.
+	// This is a test that will fail probabilistically due to concurrency issue, so it needs to be retried.
+	// Success rate is 99%, so under 4 trials the failure rate is less than 1e^-6.
+	// Temporary fix: increase the number of trials. TODO: fix the concurrency issue.
 	// If successful, it will finish in about 0.500 seconds on average,
 	// and if it fails, it will finish in around 0.10 seconds.
-	// There should be no problem with retrying 10 times.
-	const trials = 10
+	// There should be no problem with retrying 4 times.
+	const trials = 4
 
 	var lastErr error
 	for i := 0; i < trials; i++ {
