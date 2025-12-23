@@ -66,6 +66,7 @@ type Genesis struct {
 	Number        uint64      `json:"number"`
 	GasUsed       uint64      `json:"gasUsed"`
 	ParentHash    common.Hash `json:"parentHash"`
+	BaseFee       *big.Int    `json:"baseFeePerGas"`
 	ExcessBlobGas *uint64     `json:"excessBlobGas"`
 	BlobGasUsed   *uint64     `json:"blobGasUsed"`
 }
@@ -401,6 +402,11 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 			head.BaseFee = new(big.Int).SetUint64(g.Config.Governance.KIP71.LowerBoundBaseFee)
 		} else {
 			head.BaseFee = new(big.Int).SetUint64(params.DefaultLowerBoundBaseFee)
+		}
+
+		// If the base fee is set in the genesis, use it.
+		if g.BaseFee != nil {
+			head.BaseFee = g.BaseFee
 		}
 	}
 	if g.Config != nil && g.Config.IsRandaoForkEnabled(common.Big0) {

@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -33,16 +34,20 @@ import (
 type ExecutionSpecBlockTestSuite struct {
 	suite.Suite
 	originalIsPrecompiledContractAddress func(common.Address, interface{}) bool
+	originalBlobTxMaxBlobs               int
 }
 
 func (suite *ExecutionSpecBlockTestSuite) SetupSuite() {
 	suite.originalIsPrecompiledContractAddress = common.IsPrecompiledContractAddress
 	common.IsPrecompiledContractAddress = isPrecompiledContractAddressForEthTest
+	suite.originalBlobTxMaxBlobs = params.BlobTxMaxBlobs
+	params.BlobTxMaxBlobs = EthBlobTxMaxBlobs
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TearDownSuite() {
 	// Reset global variables for test
 	common.IsPrecompiledContractAddress = suite.originalIsPrecompiledContractAddress
+	params.BlobTxMaxBlobs = suite.originalBlobTxMaxBlobs
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {

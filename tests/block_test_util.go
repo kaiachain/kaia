@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
@@ -116,9 +117,11 @@ type btHeaderMarshaling struct {
 // between Kaia and Ethereum. This includes the distribution of rewards.
 type eestEngine struct {
 	*faker.Faker
-	baseFee  *big.Int
-	gasLimit uint64
-	coinbase common.Address
+	baseFee       *big.Int
+	gasLimit      uint64
+	coinbase      common.Address
+	parentHeader  *types.Header
+	excessBlobGas uint64
 }
 
 var _ consensus.Engine = &eestEngine{}
@@ -128,6 +131,17 @@ func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 	// Change BaseFee/GasLimit to the one in the eth header
 	evm.Context.BaseFee = e.baseFee
 	evm.Context.GasLimit = e.gasLimit
+	if evm.ChainConfig().IsOsakaForkEnabled(evm.Context.BlockNumber) {
+		// If the parent header has excess blob gas, calculate the excess blob gas for the current block.
+		if e.parentHeader.ExcessBlobGas != nil {
+			e.excessBlobGas = eip4844.CalcExcessBlobGasEIP4844(evm.ChainConfig(), e.parentHeader, evm.Context.BlockNumber)
+		}
+		header := &types.Header{
+			Number:        new(big.Int).Set(evm.Context.BlockNumber),
+			ExcessBlobGas: &e.excessBlobGas,
+		}
+		evm.Context.BlobBaseFee = eip4844.CalcBlobFeeEIP4844(evm.ChainConfig(), header)
+	}
 
 	if evm.ChainConfig().Rules(evm.Context.BlockNumber).IsCancun {
 		vm.ChangeGasCostForTest(&evm.Config.JumpTable)
@@ -151,7 +165,7 @@ func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 	}
 
 	// Replace msg intrinsic gas with eth intrinsic gas
-	*msg = *types.NewMessage(sender, msg.To(), msg.Nonce(), msg.GetTxInternalData().GetValue(), msg.Gas(), msg.GasPrice(), gasFeeCap, gasTipCap, nil, msg.Data(), true, updatedIntrinsicGas, msg.AccessList(), r.ChainID, nil, nil, msg.AuthList())
+	*msg = *types.NewMessage(sender, msg.To(), msg.Nonce(), msg.GetTxInternalData().GetValue(), msg.Gas(), msg.GasPrice(), gasFeeCap, gasTipCap, msg.BlobGasFeeCap(), msg.Data(), true, updatedIntrinsicGas, msg.AccessList(), r.ChainID, msg.BlobHashes(), nil, msg.AuthList())
 	msg.SetSignature(sigCopy)
 
 	// Gas prices are calculated in eth
@@ -164,6 +178,70 @@ func (e *eestEngine) Initialize(chain consensus.ChainReader, header *types.Heade
 		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
 		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
 	}
+}
+
+// VerifyHeaders verifies a batch of headers concurrently.
+func (e *eestEngine) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+	abort, results := make(chan struct{}), make(chan error, len(headers))
+	go func() {
+		for i := range headers {
+			select {
+			case <-abort:
+				return
+			default:
+				err := e.verifyHeaderWorker(chain, headers, seals, i)
+				results <- err
+			}
+		}
+	}()
+	return abort, results
+}
+
+func (e *eestEngine) verifyHeaderWorker(chain consensus.ChainReader, headers []*types.Header, seals []bool, index int) error {
+	header := headers[index]
+	number := header.Number.Uint64()
+
+	// Short circuit if the header is known
+	if chain.GetHeader(header.Hash(), number) != nil {
+		return nil
+	}
+
+	// For genesis block, skip parent check
+	if number == 0 {
+		return nil
+	}
+
+	// Find parent - either from previous header in batch or from chain
+	var parent *types.Header
+	if index == 0 {
+		parent = chain.GetHeader(header.ParentHash, number-1)
+	} else if headers[index-1].Hash() == header.ParentHash {
+		parent = headers[index-1]
+	} else {
+		parent = chain.GetHeader(header.ParentHash, number-1)
+	}
+
+	if parent == nil {
+		return consensus.ErrUnknownAncestor
+	}
+
+	// Verify the existence / non-existence of osaka-specific header fields
+	osaka := chain.Config().IsOsakaForkEnabled(header.Number)
+	if !osaka {
+		switch {
+		case header.ExcessBlobGas != nil:
+			return errors.New("unexpected excessBlobGas before osaka")
+		case header.BlobGasUsed != nil:
+			return errors.New("unexpected blobGasUsed before osaka")
+		}
+	} else {
+		if err := eip4844.VerifyEIP4844HeaderForEEST(chain.Config(), parent, header); err != nil {
+			return err
+		}
+	}
+
+	// All other headers are valid in fake mode
+	return nil
 }
 
 func (e *eestEngine) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
@@ -189,10 +267,14 @@ func (e *eestEngine) Author(header *types.Header) (common.Address, error) {
 	return e.coinbase, nil
 }
 
-func (e *eestEngine) applyHeader(h btHeader) {
+func (e *eestEngine) applyHeader(parent *types.Header, h btHeader) {
 	e.baseFee = h.BaseFee
 	e.gasLimit = h.GasLimit
 	e.coinbase = h.Coinbase
+	e.parentHeader = parent
+	if h.ExcessBlobGas != nil {
+		e.excessBlobGas = *h.ExcessBlobGas
+	}
 }
 
 func (t *BlockTest) Run() error {
@@ -212,6 +294,15 @@ func (t *BlockTest) Run() error {
 	// Override Finalize in testEngine and enable it to distribute eth rewards.
 	config.Governance.Reward = &params.RewardConfig{
 		DeferredTxFee: true,
+	}
+	if config.IsOsakaForkEnabled(t.json.Genesis.Number) {
+		config.BlobScheduleConfig = &params.BlobScheduleConfig{
+			Osaka: &params.BlobConfig{
+				Target:         6,
+				Max:            9,
+				UpdateFraction: 5007716,
+			},
+		}
 	}
 	blockchain.InitDeriveSha(config)
 
@@ -262,13 +353,16 @@ func (t *BlockTest) Run() error {
 
 func (t *BlockTest) genesis(config *params.ChainConfig) *blockchain.Genesis {
 	return &blockchain.Genesis{
-		Config:     config,
-		Timestamp:  t.json.Genesis.Time,
-		ParentHash: t.json.Genesis.ParentHash,
-		ExtraData:  t.json.Genesis.Extra,
-		GasUsed:    t.json.Genesis.GasUsed,
-		BlockScore: t.json.Genesis.Number,
-		Alloc:      t.json.Pre,
+		Config:        config,
+		Timestamp:     t.json.Genesis.Time,
+		ParentHash:    t.json.Genesis.ParentHash,
+		ExtraData:     t.json.Genesis.Extra,
+		GasUsed:       t.json.Genesis.GasUsed,
+		BlockScore:    t.json.Genesis.Number,
+		Alloc:         t.json.Pre,
+		BaseFee:       t.json.Genesis.BaseFee,
+		ExcessBlobGas: t.json.Genesis.ExcessBlobGas,
+		BlobGasUsed:   t.json.Genesis.BlobGasUsed,
 	}
 }
 
@@ -305,15 +399,22 @@ func (t *BlockTest) insertBlocks(bc *blockchain.BlockChain, gBlock types.Block, 
 		}
 
 		// The eth header is recorded to the engine by calling applyHeader.
-		if e := bc.Engine().(interface{ applyHeader(btHeader) }); e != nil {
-			e.applyHeader(header)
+		if e := bc.Engine().(interface{ applyHeader(*types.Header, btHeader) }); e != nil {
+			e.applyHeader(preBlock.Header(), header)
 		}
 
 		blocks, _ := blockchain.GenerateChain(bc.Config(), preBlock, bc.Engine(), db, 1, func(i int, b *blockchain.BlockGen) {
 			b.SetRewardbase(common.Address(header.Coinbase))
 			b.SetMixHash(header.MixHash)
 			b.SetBaseFee(header.BaseFee)
-			b.SetTime(big.NewInt(int64(header.Time)))
+			if bc.Config().IsOsakaForkEnabled(header.Number) {
+				if header.ExcessBlobGas != nil {
+					b.SetExcessBlobGas(*header.ExcessBlobGas)
+				}
+				if header.BlobGasUsed != nil {
+					b.SetBlobGasUsed(*header.BlobGasUsed)
+				}
+			}
 			for _, tx := range txs {
 				b.AddTxWithChainEvenHasError(bc, tx)
 			}
@@ -515,7 +616,7 @@ func (bb *btBlock) decode() (types.Transactions, btHeader, error) {
 				ethTypeIndex = int(txdata[0] - 0xb7 + 1)
 			}
 			switch txdata[ethTypeIndex] {
-			case 1, 2, 4: // eth transaction types whick kaia support
+			case 1, 2, 3, 4: // eth transaction types whick kaia support
 				ethTxDataInKaia = append([]byte{byte(types.EthereumTxTypeEnvelope)}, txdata[ethTypeIndex:]...)
 			default:
 				ethTxDataInKaia = txdata
