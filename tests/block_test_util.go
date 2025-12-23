@@ -432,6 +432,7 @@ func (t *BlockTest) insertBlocks(bc *blockchain.BlockChain, gBlock types.Block, 
 			b.SetRewardbase(common.Address(header.Coinbase))
 			b.SetMixHash(header.MixHash)
 			b.SetBaseFee(header.BaseFee)
+			b.SetTime(big.NewInt(int64(header.Time)))
 			if bc.Config().IsOsakaForkEnabled(header.Number) {
 				if header.ExcessBlobGas != nil {
 					b.SetExcessBlobGas(*header.ExcessBlobGas)
