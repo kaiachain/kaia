@@ -199,7 +199,9 @@ func (s *MockHttpServerTestSuite) startServer() error {
 func (s *MockHttpServerTestSuite) waitForServer(addr string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+		conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", addr)
 		if err == nil {
 			conn.Close()
 			return nil

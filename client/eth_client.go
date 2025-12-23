@@ -269,7 +269,7 @@ func (ec *EthClient) TransactionByHash(ctx context.Context, hash common.Hash) (t
 	} else if json == nil {
 		return nil, false, kaia.NotFound
 	} else if json.V == nil {
-		return nil, false, fmt.Errorf("server returned transaction without signature")
+		return nil, false, errors.New("server returned transaction without signature")
 	}
 	return json, json.BlockNumber == nil, nil
 }
@@ -319,7 +319,7 @@ func (ec *EthClient) TransactionInBlock(ctx context.Context, blockHash common.Ha
 	if json == nil {
 		return nil, kaia.NotFound
 	} else if json.V == nil {
-		return nil, fmt.Errorf("server returned transaction without signature")
+		return nil, errors.New("server returned transaction without signature")
 	}
 	return json, err
 }
