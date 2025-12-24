@@ -45,6 +45,9 @@ type KaiaClient struct {
 	chainID *big.Int
 }
 
+// Deprecated: Use KaiaClient or EthClient instead.
+type Client = KaiaClient
+
 // Dial connects a client to the given URL.
 func Dial(rawurl string) (*KaiaClient, error) {
 	return DialContext(context.Background(), rawurl)
