@@ -3338,9 +3338,9 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 				require.Len(t, results, 1)
 				result := *results[0]
 				assert.Equal(t, blockWithBlobTx.Hash(), result["blockHash"])
-				assert.Equal(t, big.NewInt(1), result["blockNumber"])
+				assert.Equal(t, hexutil.Big(*big.NewInt(1)), result["blockNumber"])
 				assert.Equal(t, blobTx.Hash(), result["txHash"])
-				assert.Equal(t, 0, result["txIndex"])
+				assert.Equal(t, hexutil.Uint(0), result["txIndex"])
 				sidecarResult := result["blobSidecar"].(map[string]interface{})
 				assert.Equal(t, types.BlobSidecarVersion1, byte(sidecarResult["version"].(uint8)))
 				blobs := sidecarResult["blobs"].([]kzg4844.Blob)
@@ -3402,7 +3402,7 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 				// First blob tx at index 0
 				result0 := *results[0]
 				assert.Equal(t, blobTx.Hash(), result0["txHash"])
-				assert.Equal(t, 0, result0["txIndex"])
+				assert.Equal(t, hexutil.Uint(0), result0["txIndex"])
 			},
 		},
 		{
@@ -3431,8 +3431,8 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 				require.Len(t, results, 1)
 				// Verify that only the first result is returned
 				result0 := *results[0]
-				assert.Equal(t, big.NewInt(4), result0["blockNumber"])
-				assert.Equal(t, 0, result0["txIndex"])
+				assert.Equal(t, hexutil.Big(*big.NewInt(4)), result0["blockNumber"])
+				assert.Equal(t, hexutil.Uint(0), result0["txIndex"])
 				sidecarResult := result0["blobSidecar"].(map[string]interface{})
 				assert.Equal(t, types.BlobSidecarVersion1, byte(sidecarResult["version"].(uint8)))
 			},
@@ -3471,7 +3471,7 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 				require.Len(t, results, 1)
 				result := *results[0]
 				assert.Equal(t, blockWithBlobTx.Hash(), result["blockHash"])
-				assert.Equal(t, big.NewInt(1), result["blockNumber"])
+				assert.Equal(t, hexutil.Big(*big.NewInt(1)), result["blockNumber"])
 				assert.Equal(t, blobTx.Hash(), result["txHash"])
 				sidecarResult := result["blobSidecar"].(map[string]interface{})
 				assert.Equal(t, types.BlobSidecarVersion1, byte(sidecarResult["version"].(uint8)))
@@ -3510,7 +3510,7 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 	}
 }
 
-func TestEthAPI_GetBlobSidecarsByTxHash(t *testing.T) {
+func TestEthAPI_GetBlobSidecarByTxHash(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
 	defer mockCtrl.Finish()
 
@@ -3604,9 +3604,9 @@ func TestEthAPI_GetBlobSidecarsByTxHash(t *testing.T) {
 					"proofs":      cellProofs,
 				},
 				"blockHash":   blockHash,
-				"blockNumber": blockNumber,
+				"blockNumber": hexutil.Big(*blockNumber),
 				"txHash":      blobTx.Hash(),
-				"txIndex":     txIndex,
+				"txIndex":     hexutil.Uint(txIndex),
 			},
 		},
 		{
@@ -3625,9 +3625,9 @@ func TestEthAPI_GetBlobSidecarsByTxHash(t *testing.T) {
 					"proofs":      cellProofs,
 				},
 				"blockHash":   blockHash,
-				"blockNumber": blockNumber,
+				"blockNumber": hexutil.Big(*blockNumber),
 				"txHash":      blobTx.Hash(),
-				"txIndex":     txIndex,
+				"txIndex":     hexutil.Uint(txIndex),
 			},
 		},
 		{
@@ -3661,7 +3661,7 @@ func TestEthAPI_GetBlobSidecarsByTxHash(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.setupMock()
-			result, err := api.GetBlobSidecarsByTxHash(context.Background(), tc.txHash, tc.fullBlob)
+			result, err := api.GetBlobSidecarByTxHash(context.Background(), tc.txHash, tc.fullBlob)
 
 			if tc.expectedErr != "" {
 				require.Error(t, err)
