@@ -1677,7 +1677,7 @@ func (api *EthAPI) GetBlobSidecars(ctx context.Context, number *rpc.BlockNumber,
 	return results, nil
 }
 
-func (api *EthAPI) GetBlobSidecarsByTxHash(ctx context.Context, txHash common.Hash, fullBlob bool) (*map[string]interface{}, error) {
+func (api *EthAPI) GetBlobSidecarByTxHash(ctx context.Context, txHash common.Hash, fullBlob bool) (*map[string]interface{}, error) {
 	tx, blockHash, number, index := api.kaiaBlockChainAPI.b.GetTxAndLookupInfo(txHash)
 	if tx == nil {
 		return nil, fmt.Errorf("transaction not found: %s", txHash.String())

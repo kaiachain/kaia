@@ -3661,7 +3661,7 @@ func TestEthAPI_GetBlobSidecarsByTxHash(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.setupMock()
-			result, err := api.GetBlobSidecarsByTxHash(context.Background(), tc.txHash, tc.fullBlob)
+			result, err := api.GetBlobSidecarByTxHash(context.Background(), tc.txHash, tc.fullBlob)
 
 			if tc.expectedErr != "" {
 				require.Error(t, err)
