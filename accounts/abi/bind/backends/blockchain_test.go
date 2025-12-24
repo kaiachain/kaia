@@ -241,7 +241,7 @@ func TestBlockChainEstimateGas(t *testing.T) {
 		To:    &code1Addr,
 		Value: big.NewInt(1),
 	})
-	assert.Contains(t, err.Error(), "insufficient balance for transfer")
+	assert.Contains(t, err.Error(), "insufficient balance of the fee payer to pay for gas")
 	assert.Zero(t, gas)
 
 	// Error case - simple transfer with high GasPrice

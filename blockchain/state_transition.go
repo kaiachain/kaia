@@ -29,6 +29,7 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
@@ -237,9 +238,23 @@ func (st *StateTransition) buyGas() error {
 	// st.gasPrice : gasPrice user set before magma hardfork
 	// st.gasPrice : BaseFee after magma hardfork
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
+
+	validatedFeePayer := st.msg.ValidatedFeePayer()
+	validatedSender := st.msg.ValidatedSender()
+	feeRatio, isRatioTx := st.msg.FeeRatio()
+
+	// Before Osaka hardfork, check that the user has enough funds to cover
+	// gasLimit * gasPrice
 	balanceCheck := new(big.Int).Set(mgval)
 
+	// These are used when tx is TxInternalDataFeeRatio.
+	feePayerFeeForBalanceCheck, senderFeeForBalanceCheck := types.CalcFeeWithRatio(feeRatio, balanceCheck)
+
 	if st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka {
+		// After Osaka hardfork, check that the user has enough funds to cover
+		// gasLimit * gasFeeCap + blobGasUsed * blobGasFeeCap + value
+		balanceCheck.Set(new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.msg.GasFeeCap()))
+
 		if blobGas := st.blobGasUsed(); blobGas > 0 {
 			// Check that the user has enough funds to cover blobGasUsed * tx.BlobGasFeeCap
 			blobBalanceCheck := new(big.Int).SetUint64(blobGas)
@@ -250,14 +265,21 @@ func (st *StateTransition) buyGas() error {
 			blobFee.Mul(blobFee, st.evm.Context.BlobBaseFee)
 			mgval.Add(mgval, blobFee)
 		}
+		_, overflow := uint256.FromBig(balanceCheck)
+		if overflow {
+			return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, validatedSender.Hex())
+		}
+
+		if isRatioTx {
+			feePayerFeeForBalanceCheck, senderFeeForBalanceCheck = types.CalcFeeWithRatio(feeRatio, balanceCheck)
+			senderFeeForBalanceCheck.Add(senderFeeForBalanceCheck, st.msg.Value())
+		} else {
+			balanceCheck.Add(balanceCheck, st.msg.Value())
+		}
 	}
 
-	validatedFeePayer := st.msg.ValidatedFeePayer()
-	validatedSender := st.msg.ValidatedSender()
-	feeRatio, isRatioTx := st.msg.FeeRatio()
 	if isRatioTx {
 		feePayerFee, senderFee := types.CalcFeeWithRatio(feeRatio, mgval)
-		feePayerFeeForBalanceCheck, senderFeeForBalanceCheck := types.CalcFeeWithRatio(feeRatio, balanceCheck)
 
 		if st.state.GetBalance(validatedFeePayer).Cmp(feePayerFeeForBalanceCheck) < 0 {
 			logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),

@@ -134,11 +134,6 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	// Kaia's MaxBlockSize (10 MiB) higher than Ethereum's (8 MiB), so max_plus_1 is accepted in Kaia.
 	bt.skipLoad(`^osaka/eip7934_block_rlp_limit/max_block_rlp_size/block_at_rlp_size_limit_boundary.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_at_rlp_size_limit_boundary\[fork_Osaka-blockchain_test-max_rlp_size_plus_1_byte\]`)
 	bt.skipLoad(`^osaka/eip7934_block_rlp_limit/test_block_at_rlp_size_limit_boundary.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_at_rlp_size_limit_boundary\[fork_Osaka-blockchain_test-max_rlp_size_plus_1_byte\]`)
-	// Skip the tests for balance check.
-	// This test requires a balance check of GasFeeCap*GasLimit+BlobFeeCap*Blobs+tx.Value.
-	// Kaia's balance check is GasPrice(baseFee)*GasLimit+BlobFeeCap*Blobs, and tightening this may cause compatibility issues.
-	bt.skipLoad(`^cancun/eip4844_blobs/test_insufficient_balance_blob_tx.json`)
-	bt.skipLoad(`^cancun/eip4844_blobs/blob_txs/insufficient_balance_blob_tx.json`)
 
 	// TODO: Skip EIP tests that are not yet supported; expect to remove them
 	bt.skipLoad(`osaka/eip7594_peerdas`)

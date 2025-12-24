@@ -115,11 +115,6 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	st.skipLoad(`^static/state_tests/stEIP3607/transactionCollidingWithNonEmptyAccount_send_Paris.json`)
 	st.skipLoad(`^static/state_tests/stEIP3607/transactionCollidingWithNonEmptyAccount_callsItself.json`)
 	st.skipLoad(`^static/state_tests/stEIP3607/transactionCollidingWithNonEmptyAccount_init_Paris.json`)
-	// Skip the tests for balance check.
-	// This test requires a balance check of GasFeeCap*GasLimit+BlobFeeCap*Blobs+tx.Value.
-	// Kaia's balance check is GasPrice(baseFee)*GasLimit+BlobFeeCap*Blobs, and tightening this may cause compatibility issues.
-	st.skipLoad(`^cancun/eip4844_blobs/test_insufficient_balance_blob_tx.json`)
-	st.skipLoad(`^cancun/eip4844_blobs/blob_txs/insufficient_balance_blob_tx.json`)
 
 	// TODO: Skip EIP tests that are not yet supported; expect to remove them
 	st.skipLoad(`osaka/eip7594_peerdas`)
