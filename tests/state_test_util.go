@@ -412,7 +412,7 @@ func (tx *stTransaction) toMessage(ps stPostState, r params.Rules, isTestExecuti
 	var to *common.Address
 	if tx.To == "" {
 		if (tx.BlobGasFeeCap != nil && tx.BlobVersionedHashes != nil) || tx.AuthorizationList != nil {
-			// NOTE: Kaia's `newTxInternalDataEthereumSetCodeWithValues` in `MewMessage` ​​cannot be called with a "to" of "nil",
+			// NOTE: Kaia's `newTxInternalDataEthereumBlobWithValues` and `newTxInternalDataEthereumSetCodeWithValues` in `MewMessage` ​​cannot be called with a "to" of "nil",
 			// so specify an emptyAddress to generate a test message and test it.
 			to = &common.Address{}
 		}
