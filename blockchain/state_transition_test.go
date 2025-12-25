@@ -880,6 +880,33 @@ func TestStateTransition_preCheck(t *testing.T) {
 				m.EXPECT().GetNonce(addr).Return(nonce)
 			},
 		},
+		{
+			name:          "Osaka: blob fee cap too low when blobGasFeeCap is zero",
+			config:        osakaChainConfig,
+			expectedError: ErrBlobFeeCapTooLow,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(1 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return([]common.Hash{validBlobHash}).AnyTimes()
+				mockMsg.EXPECT().BlobGasFeeCap().Return(big.NewInt(0)).AnyTimes() // zero - skip check
+				mockMsg.EXPECT().To().Return(&to).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
 		// === EIP-7702 Authorization List checks ===
 		{
 			name:          "EIP-7702: setcode tx cannot create contract (to is nil)",
