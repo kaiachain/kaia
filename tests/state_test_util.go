@@ -97,7 +97,7 @@ type stEnv struct {
 	Number        uint64         `gencodec:"required" json:"currentNumber"`
 	Timestamp     uint64         `gencodec:"required" json:"currentTimestamp"`
 	BaseFee       *big.Int       `gencodec:"optional" json:"currentBaseFee"`
-	ExcessBlobGas *uint64        `json:"currentExcessBlobGas" gencodec:"optional"`
+	ExcessBlobGas *uint64        `gencodec:"optional" json:"currentExcessBlobGas"`
 }
 
 type stEnvMarshaling struct {
