@@ -62,6 +62,7 @@ type btJSON struct {
 	Pre        blockchain.GenesisAlloc `json:"pre"`
 	Post       blockchain.GenesisAlloc `json:"postState"`
 	BestBlock  common.UnprefixedHash   `json:"lastblockhash"`
+	Config     btConfig                `json:"config"`
 	Network    string                  `json:"network"`
 	SealEngine string                  `json:"sealEngine"`
 }
@@ -111,6 +112,28 @@ type btHeaderMarshaling struct {
 	BaseFee       *math.HexOrDecimal256
 	BlobGasUsed   *math.HexOrDecimal64
 	ExcessBlobGas *math.HexOrDecimal64
+}
+
+type btConfig struct {
+	BlobSchedule btBlobScheduleConfig `json:"blobSchedule"`
+}
+
+type btBlobScheduleConfig struct {
+	Osaka *btBlobConfig `json:"Osaka,omitempty"`
+}
+
+//go:generate gencodec -type btBlobConfig -field-override btBlobConfigMarshaling -out gen_btblobconfig.go
+
+type btBlobConfig struct {
+	Target         int    `json:"target"`
+	Max            int    `json:"max"`
+	UpdateFraction uint64 `json:"baseFeeUpdateFraction"`
+}
+
+type btBlobConfigMarshaling struct {
+	Target         math.HexOrDecimal64
+	Max            math.HexOrDecimal64
+	UpdateFraction math.HexOrDecimal64
 }
 
 // eestEngine is a test engine to absorb the difference in gas calculation and gas limit
@@ -296,12 +319,14 @@ func (t *BlockTest) Run() error {
 		DeferredTxFee: true,
 	}
 	if config.IsOsakaForkEnabled(t.json.Genesis.Number) {
-		config.BlobScheduleConfig = &params.BlobScheduleConfig{
-			Osaka: &params.BlobConfig{
-				Target:         6,
-				Max:            9,
-				UpdateFraction: 5007716,
-			},
+		if t.json.Config.BlobSchedule.Osaka != nil {
+			config.BlobScheduleConfig = &params.BlobScheduleConfig{
+				Osaka: &params.BlobConfig{
+					Target:         t.json.Config.BlobSchedule.Osaka.Target,
+					Max:            t.json.Config.BlobSchedule.Osaka.Max,
+					UpdateFraction: t.json.Config.BlobSchedule.Osaka.UpdateFraction,
+				},
+			}
 		}
 	}
 	blockchain.InitDeriveSha(config)
