@@ -117,7 +117,6 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 	st.skipLoad(`^static/state_tests/stEIP3607/transactionCollidingWithNonEmptyAccount_init_Paris.json`)
 
 	// TODO: Skip EIP tests that are not yet supported; expect to remove them
-	st.skipLoad(`osaka/eip7594_peerdas`)
 	st.skipLoad(`osaka/eip7825_transaction_gas_limit_cap`)
 	// post state root mismatch: the address is reserved for pre-compiled contracts
 	st.skipLoad(`^osaka/eip7883_modexp_gas_increase/test_modexp_used_in_transaction_entry_points.json`)

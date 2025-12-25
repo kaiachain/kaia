@@ -136,9 +136,7 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^osaka/eip7934_block_rlp_limit/test_block_at_rlp_size_limit_boundary.json/tests/osaka/eip7934_block_rlp_limit/test_max_block_rlp_size.py::test_block_at_rlp_size_limit_boundary\[fork_Osaka-blockchain_test-max_rlp_size_plus_1_byte\]`)
 
 	// TODO: Skip EIP tests that are not yet supported; expect to remove them
-	bt.skipLoad(`osaka/eip7594_peerdas`)
 	bt.skipLoad(`osaka/eip7825_transaction_gas_limit_cap`)
-	bt.skipLoad(`osaka/eip7918_blob_reserve_price`)
 	// TODO: Investigate after all Osaka EIPs are applied
 	bt.skipLoad(`^frontier/identity_precompile/identity/call_identity_precompile.json/tests/frontier/identity_precompile/test_identity.py::test_call_identity_precompile\[fork_Osaka-blockchain_test_from_state_test-identity_1_nonzerovalue-call_type_CALL\]`)
 
@@ -280,6 +278,10 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 			// "Prague",
 			"PragueToOsakaAtTime15k",
 			// "Osaka",
+			"OsakaToBPO1AtTime15k",
+			"BPO1ToBPO2AtTime15k",
+			"BPO2ToBPO3AtTime15k",
+			"BPO3ToBPO4AtTime15k",
 		}
 		for _, fork := range skipForks {
 			if test.json.Network == fork {
