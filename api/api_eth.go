@@ -1713,9 +1713,9 @@ func (api *EthAPI) RpcMarshalBlobSidecar(sidecar *types.BlobTxSidecar, fullBlob 
 	result := make(map[string]interface{})
 	result["blobSidecar"] = sidecarMap
 	result["blockHash"] = blockHash
-	result["blockNumber"] = blockNumber
+	result["blockNumber"] = hexutil.Big(*blockNumber)
 	result["txHash"] = txHash
-	result["txIndex"] = txIndex
+	result["txIndex"] = hexutil.Uint(txIndex)
 	return &result
 }
 
