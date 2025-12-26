@@ -39,20 +39,21 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-// TODO-Kaia Needs to separate APIs along with each namespaces.
-
-// Client defines typed wrappers for the Kaia RPC API.
-type Client struct {
+// KaiaClient defines typed wrappers for the Kaia RPC API.
+type KaiaClient struct {
 	c       *rpc.Client
 	chainID *big.Int
 }
 
+// Deprecated: Use KaiaClient or EthClient instead.
+type Client = KaiaClient
+
 // Dial connects a client to the given URL.
-func Dial(rawurl string) (*Client, error) {
+func Dial(rawurl string) (*KaiaClient, error) {
 	return DialContext(context.Background(), rawurl)
 }
 
-func DialContext(ctx context.Context, rawurl string) (*Client, error) {
+func DialContext(ctx context.Context, rawurl string) (*KaiaClient, error) {
 	c, err := rpc.DialContext(ctx, rawurl)
 	if err != nil {
 		return nil, err
@@ -61,15 +62,15 @@ func DialContext(ctx context.Context, rawurl string) (*Client, error) {
 }
 
 // NewClient creates a client that uses the given RPC client.
-func NewClient(c *rpc.Client) *Client {
-	return &Client{c, nil}
+func NewClient(c *rpc.Client) *KaiaClient {
+	return &KaiaClient{c, nil}
 }
 
-func (ec *Client) Close() {
+func (ec *KaiaClient) Close() {
 	ec.c.Close()
 }
 
-func (ec *Client) SetHeader(key, value string) {
+func (ec *KaiaClient) SetHeader(key, value string) {
 	ec.c.SetHeader(key, value)
 }
 
@@ -79,7 +80,7 @@ func (ec *Client) SetHeader(key, value string) {
 //
 // Note that loading full blocks requires two requests. Use HeaderByHash
 // if you don't need all transactions.
-func (ec *Client) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
+func (ec *KaiaClient) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
 	return ec.getBlock(ctx, "kaia_getBlockByHash", hash, true)
 }
 
@@ -88,7 +89,7 @@ func (ec *Client) BlockByHash(ctx context.Context, hash common.Hash) (*types.Blo
 //
 // Note that loading full blocks requires two requests. Use HeaderByNumber
 // if you don't need all transactions.
-func (ec *Client) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+func (ec *KaiaClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	return ec.getBlock(ctx, "kaia_getBlockByNumber", toBlockNumArg(number), true)
 }
 
@@ -97,7 +98,7 @@ type rpcBlock struct {
 	Transactions []rpcTransaction `json:"transactions"`
 }
 
-func (ec *Client) getBlock(ctx context.Context, method string, args ...interface{}) (*types.Block, error) {
+func (ec *KaiaClient) getBlock(ctx context.Context, method string, args ...interface{}) (*types.Block, error) {
 	var raw json.RawMessage
 	err := ec.c.CallContext(ctx, &raw, method, args...)
 	if err != nil {
@@ -134,7 +135,7 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 }
 
 // HeaderByHash returns the block header with the given hash.
-func (ec *Client) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+func (ec *KaiaClient) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
 	var head *types.Header
 	err := ec.c.CallContext(ctx, &head, "kaia_getBlockByHash", hash, false)
 	if err == nil && head == nil {
@@ -145,7 +146,7 @@ func (ec *Client) HeaderByHash(ctx context.Context, hash common.Hash) (*types.He
 
 // HeaderByNumber returns a block header from the current canonical chain. If number is
 // nil, the latest known header is returned.
-func (ec *Client) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+func (ec *KaiaClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
 	var head *types.Header
 	err := ec.c.CallContext(ctx, &head, "kaia_getBlockByNumber", toBlockNumArg(number), false)
 	if err == nil && head == nil {
@@ -173,7 +174,7 @@ func (tx *rpcTransaction) UnmarshalJSON(msg []byte) error {
 }
 
 // TransactionByHash returns the transaction with the given hash.
-func (ec *Client) TransactionByHash(ctx context.Context, hash common.Hash) (tx *types.Transaction, isPending bool, err error) {
+func (ec *KaiaClient) TransactionByHash(ctx context.Context, hash common.Hash) (tx *types.Transaction, isPending bool, err error) {
 	var json *rpcTransaction
 	err = ec.c.CallContext(ctx, &json, "kaia_getTransactionByHash", hash)
 	if err != nil {
@@ -195,7 +196,7 @@ func (ec *Client) TransactionByHash(ctx context.Context, hash common.Hash) (tx *
 //
 // There is a fast-path for transactions retrieved by TransactionByHash and
 // TransactionInBlock. Getting their sender address can be done without an RPC interaction.
-func (ec *Client) TransactionSender(ctx context.Context, tx *types.Transaction, block common.Hash, index uint) (common.Address, error) {
+func (ec *KaiaClient) TransactionSender(ctx context.Context, tx *types.Transaction, block common.Hash, index uint) (common.Address, error) {
 	if tx == nil {
 		return common.Address{}, errors.New("Transaction must not be nil")
 	}
@@ -218,14 +219,14 @@ func (ec *Client) TransactionSender(ctx context.Context, tx *types.Transaction, 
 }
 
 // TransactionCount returns the total number of transactions in the given block.
-func (ec *Client) TransactionCount(ctx context.Context, blockHash common.Hash) (uint, error) {
+func (ec *KaiaClient) TransactionCount(ctx context.Context, blockHash common.Hash) (uint, error) {
 	var num hexutil.Uint
 	err := ec.c.CallContext(ctx, &num, "kaia_getBlockTransactionCountByHash", blockHash)
 	return uint(num), err
 }
 
 // TransactionInBlock returns a single transaction at index in the given block.
-func (ec *Client) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
+func (ec *KaiaClient) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
 	var json *rpcTransaction
 	err := ec.c.CallContext(ctx, &json, "kaia_getTransactionByBlockHashAndIndex", blockHash, hexutil.Uint64(index))
 	if err != nil {
@@ -244,7 +245,7 @@ func (ec *Client) TransactionInBlock(ctx context.Context, blockHash common.Hash,
 
 // TransactionReceipt returns the receipt of a transaction by transaction hash.
 // Note that the receipt is not available for pending transactions.
-func (ec *Client) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+func (ec *KaiaClient) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
 	var r *types.Receipt
 	err := ec.c.CallContext(ctx, &r, "kaia_getTransactionReceipt", txHash)
 	if err == nil {
@@ -256,7 +257,7 @@ func (ec *Client) TransactionReceipt(ctx context.Context, txHash common.Hash) (*
 }
 
 // TransactionReceiptRpcOutput returns the receipt of a transaction by transaction hash as a rpc output.
-func (ec *Client) TransactionReceiptRpcOutput(ctx context.Context, txHash common.Hash) (r map[string]interface{}, err error) {
+func (ec *KaiaClient) TransactionReceiptRpcOutput(ctx context.Context, txHash common.Hash) (r map[string]interface{}, err error) {
 	err = ec.c.CallContext(ctx, &r, "kaia_getTransactionReceipt", txHash)
 	if err == nil && r == nil {
 		return nil, kaia.NotFound
@@ -281,7 +282,7 @@ type rpcProgress struct {
 
 // SyncProgress retrieves the current progress of the sync algorithm. If there's
 // no sync currently running, it returns nil.
-func (ec *Client) SyncProgress(ctx context.Context) (*kaia.SyncProgress, error) {
+func (ec *KaiaClient) SyncProgress(ctx context.Context) (*kaia.SyncProgress, error) {
 	var raw json.RawMessage
 	if err := ec.c.CallContext(ctx, &raw, "kaia_syncing"); err != nil {
 		return nil, err
@@ -306,18 +307,18 @@ func (ec *Client) SyncProgress(ctx context.Context) (*kaia.SyncProgress, error) 
 
 // SubscribeNewHead subscribes to notifications about the current blockchain head
 // on the given channel.
-func (ec *Client) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (kaia.Subscription, error) {
+func (ec *KaiaClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (kaia.Subscription, error) {
 	return ec.c.KaiaSubscribe(ctx, ch, "newHeads")
 }
 
-func (ec *Client) AuctionSubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (kaia.Subscription, error) {
+func (ec *KaiaClient) AuctionSubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (kaia.Subscription, error) {
 	return ec.c.AuctionSubscribe(ctx, ch, "newHeads")
 }
 
 // State Access
 
 // NetworkID returns the network ID (also known as the chain ID) for this chain.
-func (ec *Client) NetworkID(ctx context.Context) (*big.Int, error) {
+func (ec *KaiaClient) NetworkID(ctx context.Context) (*big.Int, error) {
 	version := new(big.Int)
 	var ver string
 	if err := ec.c.CallContext(ctx, &ver, "net_version"); err != nil {
@@ -331,7 +332,7 @@ func (ec *Client) NetworkID(ctx context.Context) (*big.Int, error) {
 
 // BalanceAt returns the kei balance of the given account.
 // The block number can be nil, in which case the balance is taken from the latest known block.
-func (ec *Client) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
+func (ec *KaiaClient) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
 	var result hexutil.Big
 	err := ec.c.CallContext(ctx, &result, "kaia_getBalance", account, toBlockNumArg(blockNumber))
 	return (*big.Int)(&result), err
@@ -339,7 +340,7 @@ func (ec *Client) BalanceAt(ctx context.Context, account common.Address, blockNu
 
 // StorageAt returns the value of key in the contract storage of the given account.
 // The block number can be nil, in which case the value is taken from the latest known block.
-func (ec *Client) StorageAt(ctx context.Context, account common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error) {
+func (ec *KaiaClient) StorageAt(ctx context.Context, account common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error) {
 	var result hexutil.Bytes
 	err := ec.c.CallContext(ctx, &result, "kaia_getStorageAt", account, key, toBlockNumArg(blockNumber))
 	return result, err
@@ -347,7 +348,7 @@ func (ec *Client) StorageAt(ctx context.Context, account common.Address, key com
 
 // CodeAt returns the contract code of the given account.
 // The block number can be nil, in which case the code is taken from the latest known block.
-func (ec *Client) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
+func (ec *KaiaClient) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
 	var result hexutil.Bytes
 	err := ec.c.CallContext(ctx, &result, "kaia_getCode", account, toBlockNumArg(blockNumber))
 	return result, err
@@ -355,7 +356,7 @@ func (ec *Client) CodeAt(ctx context.Context, account common.Address, blockNumbe
 
 // NonceAt returns the account nonce of the given account.
 // The block number can be nil, in which case the nonce is taken from the latest known block.
-func (ec *Client) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
+func (ec *KaiaClient) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
 	var result hexutil.Uint64
 	err := ec.c.CallContext(ctx, &result, "kaia_getTransactionCount", account, toBlockNumArg(blockNumber))
 	return uint64(result), err
@@ -364,18 +365,18 @@ func (ec *Client) NonceAt(ctx context.Context, account common.Address, blockNumb
 // Filters
 
 // FilterLogs executes a filter query.
-func (ec *Client) FilterLogs(ctx context.Context, q kaia.FilterQuery) ([]types.Log, error) {
+func (ec *KaiaClient) FilterLogs(ctx context.Context, q kaia.FilterQuery) ([]types.Log, error) {
 	var result []types.Log
 	err := ec.c.CallContext(ctx, &result, "kaia_getLogs", toFilterArg(q))
 	return result, err
 }
 
 // SubscribeFilterLogs subscribes to the results of a streaming filter query.
-func (ec *Client) SubscribeFilterLogs(ctx context.Context, q kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
+func (ec *KaiaClient) SubscribeFilterLogs(ctx context.Context, q kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
 	return ec.c.KaiaSubscribe(ctx, ch, "logs", toFilterArg(q))
 }
 
-func (ec *Client) AuctionSubscribeFilterLogs(ctx context.Context, q kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
+func (ec *KaiaClient) AuctionSubscribeFilterLogs(ctx context.Context, q kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
 	return ec.c.AuctionSubscribe(ctx, ch, "logs", toFilterArg(q))
 }
 
@@ -395,21 +396,21 @@ func toFilterArg(q kaia.FilterQuery) interface{} {
 // Pending State
 
 // PendingBalanceAt returns the kei balance of the given account in the pending state.
-func (ec *Client) PendingBalanceAt(ctx context.Context, account common.Address) (*big.Int, error) {
+func (ec *KaiaClient) PendingBalanceAt(ctx context.Context, account common.Address) (*big.Int, error) {
 	var result hexutil.Big
 	err := ec.c.CallContext(ctx, &result, "kaia_getBalance", account, "pending")
 	return (*big.Int)(&result), err
 }
 
 // PendingStorageAt returns the value of key in the contract storage of the given account in the pending state.
-func (ec *Client) PendingStorageAt(ctx context.Context, account common.Address, key common.Hash) ([]byte, error) {
+func (ec *KaiaClient) PendingStorageAt(ctx context.Context, account common.Address, key common.Hash) ([]byte, error) {
 	var result hexutil.Bytes
 	err := ec.c.CallContext(ctx, &result, "kaia_getStorageAt", account, key, "pending")
 	return result, err
 }
 
 // PendingCodeAt returns the contract code of the given account in the pending state.
-func (ec *Client) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
+func (ec *KaiaClient) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
 	var result hexutil.Bytes
 	err := ec.c.CallContext(ctx, &result, "kaia_getCode", account, "pending")
 	return result, err
@@ -417,28 +418,28 @@ func (ec *Client) PendingCodeAt(ctx context.Context, account common.Address) ([]
 
 // PendingNonceAt returns the account nonce of the given account in the pending state.
 // This is the nonce that should be used for the next transaction.
-func (ec *Client) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
+func (ec *KaiaClient) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
 	var result hexutil.Uint64
 	err := ec.c.CallContext(ctx, &result, "kaia_getTransactionCount", account, "pending")
 	return uint64(result), err
 }
 
 // PendingTransactionCount returns the total number of transactions in the pending state.
-func (ec *Client) PendingTransactionCount(ctx context.Context) (uint, error) {
+func (ec *KaiaClient) PendingTransactionCount(ctx context.Context) (uint, error) {
 	var num hexutil.Uint
 	err := ec.c.CallContext(ctx, &num, "kaia_getBlockTransactionCountByNumber", "pending")
 	return uint(num), err
 }
 
-func (ec *Client) AuctionSubscribeFullPendingTransactions(ctx context.Context, ch chan<- *types.Transaction) (kaia.Subscription, error) {
+func (ec *KaiaClient) AuctionSubscribeFullPendingTransactions(ctx context.Context, ch chan<- *types.Transaction) (kaia.Subscription, error) {
 	return ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions", true)
 }
 
-func (ec *Client) AuctionSubscribeFullPendingTransactionsRaw(ctx context.Context, ch chan<- map[string]any) (kaia.Subscription, error) {
+func (ec *KaiaClient) AuctionSubscribeFullPendingTransactionsRaw(ctx context.Context, ch chan<- map[string]any) (kaia.Subscription, error) {
 	return ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions", true)
 }
 
-func (ec *Client) AuctionSubscribePendingTransactions(ctx context.Context, ch chan<- common.Hash) (kaia.Subscription, error) {
+func (ec *KaiaClient) AuctionSubscribePendingTransactions(ctx context.Context, ch chan<- common.Hash) (kaia.Subscription, error) {
 	return ec.c.AuctionSubscribe(ctx, ch, "newPendingTransactions")
 }
 
@@ -450,7 +451,7 @@ func (ec *Client) AuctionSubscribePendingTransactions(ctx context.Context, ch ch
 // blockNumber selects the block height at which the call runs. It can be nil, in which
 // case the code is taken from the latest known block. Note that state from very old
 // blocks might not be available.
-func (ec *Client) CallContract(ctx context.Context, msg kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (ec *KaiaClient) CallContract(ctx context.Context, msg kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	var hex hexutil.Bytes
 	err := ec.c.CallContext(ctx, &hex, "kaia_call", toCallArg(msg), toBlockNumArg(blockNumber))
 	if err != nil {
@@ -459,7 +460,7 @@ func (ec *Client) CallContract(ctx context.Context, msg kaia.CallMsg, blockNumbe
 	return hex, nil
 }
 
-func (ec *Client) AuctionCallContract(ctx context.Context, msg kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
+func (ec *KaiaClient) AuctionCallContract(ctx context.Context, msg kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	var hex hexutil.Bytes
 	err := ec.c.CallContext(ctx, &hex, "auction_call", toCallArg(msg), toBlockNumArg(blockNumber))
 	if err != nil {
@@ -470,7 +471,7 @@ func (ec *Client) AuctionCallContract(ctx context.Context, msg kaia.CallMsg, blo
 
 // PendingCallContract executes a message call transaction using the EVM.
 // The state seen by the contract call is the pending state.
-func (ec *Client) PendingCallContract(ctx context.Context, msg kaia.CallMsg) ([]byte, error) {
+func (ec *KaiaClient) PendingCallContract(ctx context.Context, msg kaia.CallMsg) ([]byte, error) {
 	var hex hexutil.Bytes
 	err := ec.c.CallContext(ctx, &hex, "kaia_call", toCallArg(msg), "pending")
 	if err != nil {
@@ -481,7 +482,7 @@ func (ec *Client) PendingCallContract(ctx context.Context, msg kaia.CallMsg) ([]
 
 // SuggestGasPrice retrieves the currently suggested gas price to allow a timely
 // execution of a transaction.
-func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
+func (ec *KaiaClient) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	var hex hexutil.Big
 	if err := ec.c.CallContext(ctx, &hex, "kaia_gasPrice"); err != nil {
 		return nil, err
@@ -493,7 +494,7 @@ func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 // the latest state of the backend blockchain. There is no guarantee that this is
 // the true gas limit requirement as other transactions may be added or removed by miners,
 // but it should provide a basis for setting a reasonable default.
-func (ec *Client) EstimateGas(ctx context.Context, msg kaia.CallMsg) (uint64, error) {
+func (ec *KaiaClient) EstimateGas(ctx context.Context, msg kaia.CallMsg) (uint64, error) {
 	var hex hexutil.Uint64
 	err := ec.c.CallContext(ctx, &hex, "kaia_estimateGas", toCallArg(msg))
 	if err != nil {
@@ -506,7 +507,7 @@ func (ec *Client) EstimateGas(ctx context.Context, msg kaia.CallMsg) (uint64, er
 //
 // If the transaction was a contract creation use the TransactionReceipt method to get the
 // contract address after the transaction has been mined.
-func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+func (ec *KaiaClient) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	_, err := ec.SendRawTransaction(ctx, tx)
 	return err
 	//data, err := rlp.EncodeToBytes(tx)
@@ -516,7 +517,7 @@ func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) er
 	//return ec.c.CallContext(ctx, nil, "kaia_sendRawTransaction", common.ToHex(data))
 }
 
-func (ec *Client) SendAuctionTx(ctx context.Context, bidInput auction_impl.BidInput) (auction_impl.RPCOutput, error) {
+func (ec *KaiaClient) SendAuctionTx(ctx context.Context, bidInput auction_impl.BidInput) (auction_impl.RPCOutput, error) {
 	var output auction_impl.RPCOutput
 	if err := ec.c.CallContext(ctx, &output, "auction_submitBid", bidInput); err != nil {
 		return nil, err
@@ -527,7 +528,7 @@ func (ec *Client) SendAuctionTx(ctx context.Context, bidInput auction_impl.BidIn
 // SendRawTransaction injects a signed transaction into the pending pool for execution.
 //
 // This function can return the transaction hash and error.
-func (ec *Client) SendRawTransaction(ctx context.Context, tx *types.Transaction) (common.Hash, error) {
+func (ec *KaiaClient) SendRawTransaction(ctx context.Context, tx *types.Transaction) (common.Hash, error) {
 	var hex hexutil.Bytes
 	data, err := rlp.EncodeToBytes(tx)
 	if err != nil {
@@ -543,7 +544,7 @@ func (ec *Client) SendRawTransaction(ctx context.Context, tx *types.Transaction)
 // SendUnsignedTransaction injects a unsigned transaction into the pending pool for execution.
 //
 // This function can return the transaction hash and error.
-func (ec *Client) SendUnsignedTransaction(ctx context.Context, unsignedTx api.SendTxArgs) (common.Hash, error) {
+func (ec *KaiaClient) SendUnsignedTransaction(ctx context.Context, unsignedTx api.SendTxArgs) (common.Hash, error) {
 	var hex hexutil.Bytes
 	if err := ec.c.CallContext(ctx, &hex, "kaia_sendTransaction", toSendTxArgs(unsignedTx)); err != nil {
 		return common.Hash{}, err
@@ -553,7 +554,7 @@ func (ec *Client) SendUnsignedTransaction(ctx context.Context, unsignedTx api.Se
 }
 
 // ImportRawKey can create key store from private key string on Kaia node.
-func (ec *Client) ImportRawKey(ctx context.Context, key string, password string) (common.Address, error) {
+func (ec *KaiaClient) ImportRawKey(ctx context.Context, key string, password string) (common.Address, error) {
 	var result hexutil.Bytes
 	err := ec.c.CallContext(ctx, &result, "personal_importRawKey", key, password)
 	address := common.BytesToAddress(result)
@@ -561,7 +562,7 @@ func (ec *Client) ImportRawKey(ctx context.Context, key string, password string)
 }
 
 // UnlockAccount can unlock the account on Kaia node.
-func (ec *Client) UnlockAccount(ctx context.Context, address common.Address, password string, time uint) (bool, error) {
+func (ec *KaiaClient) UnlockAccount(ctx context.Context, address common.Address, password string, time uint) (bool, error) {
 	var result bool
 	err := ec.c.CallContext(ctx, &result, "personal_unlockAccount", address, password, time)
 	return result, err
@@ -636,14 +637,14 @@ func toSendTxArgs(msg api.SendTxArgs) interface{} {
 }
 
 // BlockNumber can get the latest block number.
-func (ec *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
+func (ec *KaiaClient) BlockNumber(ctx context.Context) (*big.Int, error) {
 	var result hexutil.Big
 	err := ec.c.CallContext(ctx, &result, "kaia_blockNumber")
 	return (*big.Int)(&result), err
 }
 
 // ChainID can return the chain ID of the chain.
-func (ec *Client) ChainID(ctx context.Context) (*big.Int, error) {
+func (ec *KaiaClient) ChainID(ctx context.Context) (*big.Int, error) {
 	if ec.chainID != nil {
 		return ec.chainID, nil
 	}
@@ -657,14 +658,14 @@ func (ec *Client) ChainID(ctx context.Context) (*big.Int, error) {
 }
 
 // AddPeer can add a static peer on Kaia node.
-func (ec *Client) AddPeer(ctx context.Context, url string) (bool, error) {
+func (ec *KaiaClient) AddPeer(ctx context.Context, url string) (bool, error) {
 	var result bool
 	err := ec.c.CallContext(ctx, &result, "admin_addPeer", url)
 	return result, err
 }
 
 // RemovePeer can remove a static peer on Kaia node.
-func (ec *Client) RemovePeer(ctx context.Context, url string) (bool, error) {
+func (ec *KaiaClient) RemovePeer(ctx context.Context, url string) (bool, error) {
 	var result bool
 	err := ec.c.CallContext(ctx, &result, "admin_removePeer", url)
 	return result, err
@@ -672,7 +673,7 @@ func (ec *Client) RemovePeer(ctx context.Context, url string) (bool, error) {
 
 // CreateAccessList tries to create an access list for a specific transaction based on the
 // current pending state of the blockchain.
-func (ec *Client) CreateAccessList(ctx context.Context, msg kaia.CallMsg) (*types.AccessList, uint64, string, error) {
+func (ec *KaiaClient) CreateAccessList(ctx context.Context, msg kaia.CallMsg) (*types.AccessList, uint64, string, error) {
 	type AccessListResult struct {
 		Accesslist *types.AccessList `json:"accessList"`
 		Error      string            `json:"error,omitempty"`

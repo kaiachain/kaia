@@ -25,10 +25,13 @@ package client
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia"
+	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -104,6 +107,19 @@ type EthHeader struct {
 	RequestsHash *common.Hash `json:"requestsHash" rlp:"optional"`
 }
 
+type EthBlock struct {
+	header       *EthHeader
+	transactions []*api.EthRPCTransaction
+}
+
+func (b *EthBlock) Header() *EthHeader {
+	return b.header
+}
+
+func (b *EthBlock) Transactions() []*api.EthRPCTransaction {
+	return b.transactions
+}
+
 // field type overrides for gencodec
 type headerMarshaling struct {
 	Difficulty    *hexutil.Big
@@ -162,8 +178,68 @@ func (ec *EthClient) SetHeader(key, value string) {
 	ec.c.SetHeader(key, value)
 }
 
-// HeaderByHash returns a block header from the current canonical chain. If number is
-// nil, the latest known header is returned.
+// Blockchain Access
+
+// BlockByHash returns the given full block.
+//
+// Note that loading full blocks requires two requests. Use HeaderByHash
+// if you don't need all transactions.
+func (ec *EthClient) BlockByHash(ctx context.Context, hash common.Hash) (*EthBlock, error) {
+	return ec.getBlock(ctx, "eth_getBlockByHash", hash, true)
+}
+
+// BlockByNumber returns a block from the current canonical chain. If number is nil, the
+// latest known block is returned.
+//
+// Note that loading full blocks requires two requests. Use HeaderByNumber
+// if you don't need all transactions.
+func (ec *EthClient) BlockByNumber(ctx context.Context, number *big.Int) (*EthBlock, error) {
+	return ec.getBlock(ctx, "eth_getBlockByNumber", toBlockNumArg(number), true)
+}
+
+// rpcBlockEth is used for eth_getBlockBy* responses
+type rpcBlockEth struct {
+	Hash         common.Hash             `json:"hash"`
+	Transactions []api.EthRPCTransaction `json:"transactions"`
+}
+
+func (ec *EthClient) getBlock(ctx context.Context, method string, args ...interface{}) (*EthBlock, error) {
+	var raw json.RawMessage
+	err := ec.c.CallContext(ctx, &raw, method, args...)
+	if err != nil {
+		return nil, err
+	} else if len(raw) == 0 {
+		return nil, kaia.NotFound
+	}
+	// Decode header and transactions.
+	var head *EthHeader
+	var body rpcBlockEth
+	if err := json.Unmarshal(raw, &head); err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(raw, &body); err != nil {
+		return nil, err
+	}
+	// TODO-Kaia Enable the below error checks after having a way to get the correct EmptyRootHash
+	// Quick-verify transaction lists. This mostly helps with debugging the server.
+	//if head.TxHash == types.EmptyRootHash && len(body.Transactions) > 0 {
+	//	return nil, fmt.Errorf("server returned non-empty transaction list but block header indicates no transactions")
+	//}
+	//if head.TxHash != types.EmptyRootHash && len(body.Transactions) == 0 {
+	//	return nil, fmt.Errorf("server returned empty transaction list but block header indicates transactions")
+	//}
+	// Fill the sender cache of transactions in the block.
+	txs := make([]*api.EthRPCTransaction, len(body.Transactions))
+	for i, tx := range body.Transactions {
+		txs[i] = &tx
+	}
+	return &EthBlock{
+		header:       head,
+		transactions: txs,
+	}, nil
+}
+
+// HeaderByHash returns the block header with the given hash.
 func (ec *EthClient) HeaderByHash(ctx context.Context, hash common.Hash) (*EthHeader, error) {
 	var head *EthHeader
 	err := ec.c.CallContext(ctx, &head, "eth_getBlockByHash", hash, false)
@@ -184,11 +260,81 @@ func (ec *EthClient) HeaderByNumber(ctx context.Context, number *big.Int) (*EthH
 	return head, err
 }
 
+// TransactionByHash returns the transaction with the given hash.
+func (ec *EthClient) TransactionByHash(ctx context.Context, hash common.Hash) (tx *api.EthRPCTransaction, isPending bool, err error) {
+	var json *api.EthRPCTransaction
+	err = ec.c.CallContext(ctx, &json, "eth_getTransactionByHash", hash)
+	if err != nil {
+		return nil, false, err
+	} else if json == nil {
+		return nil, false, kaia.NotFound
+	} else if json.V == nil {
+		return nil, false, errors.New("server returned transaction without signature")
+	}
+	return json, json.BlockNumber == nil, nil
+}
+
+// TransactionSender returns the sender address of the given transaction. The transaction
+// must be known to the remote node and included in the blockchain at the given block and
+// index. The sender is the one derived by the protocol at the time of inclusion.
+//
+// There is a fast-path for transactions retrieved by TransactionByHash and
+// TransactionInBlock. Getting their sender address can be done without an RPC interaction.
+func (ec *EthClient) TransactionSender(ctx context.Context, tx *types.Transaction, block common.Hash, index uint) (common.Address, error) {
+	if tx == nil {
+		return common.Address{}, errors.New("Transaction must not be nil")
+	}
+	// Try to load the address from the cache.
+	sender, err := types.Sender(&senderFromServer{blockhash: block}, tx)
+	if err == nil {
+		return sender, nil
+	}
+	var meta struct {
+		Hash common.Hash
+		From common.Address
+	}
+	if err = ec.c.CallContext(ctx, &meta, "eth_getTransactionByBlockHashAndIndex", block, hexutil.Uint64(index)); err != nil {
+		return common.Address{}, err
+	}
+	if meta.Hash == (common.Hash{}) || meta.Hash != tx.Hash() {
+		return common.Address{}, errors.New("wrong inclusion block/index")
+	}
+	return meta.From, nil
+}
+
 // TransactionCount returns the total number of transactions in the given block.
 func (ec *EthClient) TransactionCount(ctx context.Context, blockHash common.Hash) (uint, error) {
 	var num hexutil.Uint
 	err := ec.c.CallContext(ctx, &num, "eth_getBlockTransactionCountByHash", blockHash)
 	return uint(num), err
+}
+
+// TransactionInBlock returns a single transaction at index in the given block.
+func (ec *EthClient) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*api.EthRPCTransaction, error) {
+	var json *api.EthRPCTransaction
+	err := ec.c.CallContext(ctx, &json, "eth_getTransactionByBlockHashAndIndex", blockHash, hexutil.Uint64(index))
+	if err != nil {
+		return nil, err
+	}
+	if json == nil {
+		return nil, kaia.NotFound
+	} else if json.V == nil {
+		return nil, errors.New("server returned transaction without signature")
+	}
+	return json, err
+}
+
+// TransactionReceipt returns the receipt of a transaction by transaction hash.
+// Note that the receipt is not available for pending transactions.
+func (ec *EthClient) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	var r *types.Receipt
+	err := ec.c.CallContext(ctx, &r, "eth_getTransactionReceipt", txHash)
+	if err == nil {
+		if r == nil {
+			return nil, kaia.NotFound
+		}
+	}
+	return r, err
 }
 
 // TransactionReceiptRpcOutput returns the receipt of a transaction by transaction hash as a rpc output.
@@ -198,6 +344,12 @@ func (ec *EthClient) TransactionReceiptRpcOutput(ctx context.Context, txHash com
 		return nil, kaia.NotFound
 	}
 	return
+}
+
+// SubscribeNewHead subscribes to notifications about the current blockchain head
+// on the given channel.
+func (ec *EthClient) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (kaia.Subscription, error) {
+	return ec.c.EthSubscribe(ctx, ch, "newHeads")
 }
 
 // State Access
