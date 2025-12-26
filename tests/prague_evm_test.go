@@ -28,7 +28,9 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
@@ -46,7 +48,13 @@ func testPragueForkChainConfig(forkNum *big.Int) *params.ChainConfig {
 	config.KoreCompatibleBlock = big.NewInt(0)
 	config.ShanghaiCompatibleBlock = big.NewInt(0)
 	config.CancunCompatibleBlock = big.NewInt(0)
-	config.RandaoCompatibleBlock = nil
+	config.RandaoCompatibleBlock = big.NewInt(0)
+	config.RandaoRegistry = &params.RegistryConfig{
+		Records: map[string]common.Address{
+			"KIP113": system.Kip113LogicAddrMock,
+		},
+		Owner: common.HexToAddress("0x0000000000000000000000000000000000000000"),
+	}
 	config.KaiaCompatibleBlock = big.NewInt(0)
 	config.PragueCompatibleBlock = forkNum
 
