@@ -52,7 +52,6 @@ var (
 		KoreCompatibleBlock:      big.NewInt(119750400),
 		ShanghaiCompatibleBlock:  big.NewInt(135456000),
 		CancunCompatibleBlock:    big.NewInt(147534000),
-		KaiaCompatibleBlock:      big.NewInt(162900480),
 		RandaoCompatibleBlock:    big.NewInt(147534000),
 		RandaoRegistry: &RegistryConfig{
 			Records: map[string]common.Address{
@@ -60,13 +59,16 @@ var (
 			},
 			Owner: common.HexToAddress("0x04992a2B7E7CE809d409adE32185D49A96AAa32d"),
 		},
+		KaiaCompatibleBlock:   big.NewInt(162900480),
 		PragueCompatibleBlock: big.NewInt(190670000),
 		OsakaCompatibleBlock:  nil, // TODO-kaia-osaka: set Mainnet's OsakaCompatibleBlock
+		// Optional forks
 		Kip103CompatibleBlock: big.NewInt(119750400),
 		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		Kip160CompatibleBlock: big.NewInt(162900480),
 		Kip160ContractAddress: common.HexToAddress("0xa4df15717Da40077C0aD528296AdBBd046579Ee9"),
-		DeriveShaImpl:         2,
+		// Genesis governance parameters
+		DeriveShaImpl: 2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
 			GovernanceMode: "single",
