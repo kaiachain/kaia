@@ -584,7 +584,8 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 }
 
 // CheckConfigForkOrder checks that we don't "skip" any forks, geth isn't pluggable enough
-// to guarantee that forks can be implemented in a different order than on official networks
+// to guarantee that forks can be implemented in a different order than on official networks.
+// Because some forks (namely KIP103 and KIP160) can be situated at any position, they are not checked for fork order.
 func (c *ChainConfig) CheckConfigForkOrder() error {
 	type fork struct {
 		name  string
