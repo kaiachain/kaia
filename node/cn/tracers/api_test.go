@@ -290,7 +290,7 @@ func TestTraceCall(t *testing.T) {
 				Value: (hexutil.Big)(*big.NewInt(1000)),
 			},
 			config:    nil,
-			expectErr: errors.New("tracing failed: insufficient balance for transfer"),
+			expectErr: errors.New("tracing failed: insufficient balance of the fee payer to pay for gas"),
 			expect:    nil,
 		},
 		// Standard JSON trace upon the head, plain transfer.
@@ -359,7 +359,7 @@ func TestTraceCall(t *testing.T) {
 	}
 	for _, testspec := range testSuite {
 		result, err := api.TraceCall(context.Background(), testspec.call, rpc.BlockNumberOrHash{BlockNumber: &testspec.blockNumber}, testspec.config)
-		assert.Equal(t, err, testspec.expectErr)
+		assert.Equal(t, testspec.expectErr, err)
 		assert.Equal(t, result, testspec.expect)
 	}
 }

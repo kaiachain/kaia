@@ -1226,7 +1226,7 @@ func GetRoleTypeForValidation(txType TxType) accountkey.RoleType {
 // NewMessage returns a `*Transaction` object with the given arguments.
 // Care must be taken when creating SetCodeTx because if you assign nil to `to`,
 // a panic will occur because `newTxInternalDataEthereumSetCodeWithValues` reference the pointer of `to`.
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, list AccessList, chainId *big.Int, auth []SetCodeAuthorization) *Transaction {
+func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice, gasFeeCap, gasTipCap, blobGasFeeCap *big.Int, data []byte, checkNonce bool, intrinsicGas uint64, list AccessList, chainId *big.Int, blobHashes []common.Hash, sidecar *BlobTxSidecar, auth []SetCodeAuthorization) *Transaction {
 	transaction := &Transaction{
 		validatedGas:      &ValidatedGas{IntrinsicGas: intrinsicGas, SigValidateGas: 0},
 		validatedFeePayer: from,
@@ -1234,9 +1234,12 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *b
 		checkNonce:        checkNonce,
 	}
 
-	// Call supports EthereumAccessList, EthereumDynamicFee, EthereumSetCode and Legacy txTypes only.
+	// Call supports EthereumAccessList, EthereumDynamicFee, EthereumBlob, EthereumSetCode and Legacy txTypes only.
 	if auth != nil {
 		internalData := newTxInternalDataEthereumSetCodeWithValues(nonce, *to, amount, gasLimit, gasFeeCap, gasTipCap, data, list, chainId, auth)
+		transaction.setDecoded(internalData, 0)
+	} else if blobGasFeeCap != nil && blobHashes != nil {
+		internalData := newTxInternalDataEthereumBlobWithValues(nonce, *to, amount, gasLimit, gasTipCap, gasFeeCap, data, list, chainId, blobGasFeeCap, blobHashes, sidecar)
 		transaction.setDecoded(internalData, 0)
 	} else if gasFeeCap != nil && gasTipCap != nil {
 		internalData := newTxInternalDataEthereumDynamicFeeWithValues(nonce, to, amount, gasLimit, gasTipCap, gasFeeCap, data, list, chainId)

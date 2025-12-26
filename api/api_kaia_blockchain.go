@@ -936,7 +936,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	if args.AccessList != nil {
 		accessList = *args.AccessList
 	}
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, args.InputData(), false, intrinsicGas, accessList, nil, nil), nil
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, nil, args.InputData(), false, intrinsicGas, accessList, nil, nil, nil, nil), nil
 }
 
 // MainnetCredit contract is stored in the address zero.

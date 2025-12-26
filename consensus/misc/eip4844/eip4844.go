@@ -112,6 +112,42 @@ func VerifyEIP4844Header(config *params.ChainConfig, parent, header *types.Heade
 	return nil
 }
 
+// VerifyEIP4844HeaderForEEST verifies the presence of the excessBlobGas field and that
+// if the current block contains no transactions, the excessBlobGas is updated
+// accordingly.
+func VerifyEIP4844HeaderForEEST(config *params.ChainConfig, parent, header *types.Header) error {
+	if header.Number.Uint64() != parent.Number.Uint64()+1 {
+		panic("bad header pair")
+	}
+
+	bcfg := latestBlobConfig(config, header.Number)
+	if bcfg == nil {
+		panic("called before EIP-4844 is active")
+	}
+
+	if header.ExcessBlobGas == nil {
+		return errors.New("header is missing excessBlobGas")
+	}
+	if header.BlobGasUsed == nil {
+		return errors.New("header is missing blobGasUsed")
+	}
+
+	// Verify that the blob gas used remains within reasonable limits.
+	if *header.BlobGasUsed > bcfg.maxBlobGas() {
+		return fmt.Errorf("blob gas used %d exceeds maximum allowance %d", *header.BlobGasUsed, bcfg.maxBlobGas())
+	}
+	if *header.BlobGasUsed%params.BlobTxBlobGasPerBlob != 0 {
+		return fmt.Errorf("blob gas used %d not a multiple of blob gas per blob %d", header.BlobGasUsed, params.BlobTxBlobGasPerBlob)
+	}
+
+	// Verify the excessBlobGas is correct based on the parent header
+	expectedExcessBlobGas := CalcExcessBlobGasEIP4844(config, parent, header.Number)
+	if *header.ExcessBlobGas != expectedExcessBlobGas {
+		return fmt.Errorf("invalid excessBlobGas: have %d, want %d", *header.ExcessBlobGas, expectedExcessBlobGas)
+	}
+	return nil
+}
+
 // CalcExcessBlobGas calculates the excess blob gas for KIP-279.
 func CalcExcessBlobGas(config *params.ChainConfig, parent *types.Header, headNumber *big.Int) uint64 {
 	bcfg := latestBlobConfig(config, headNumber)
@@ -130,6 +166,15 @@ func CalcExcessBlobGas(config *params.ChainConfig, parent *types.Header, headNum
 		return 0
 	}
 	return parentExcessBlobGas + parentBlobGasUsed - (uint64(bcfg.Target) * params.BlobTxBlobGasPerBlob)
+}
+
+// CalcBlobFeeEIP4844 calculates the blobfee from the header's excess blob gas field.
+func CalcBlobFeeEIP4844(config *params.ChainConfig, header *types.Header) *big.Int {
+	blobConfig := latestBlobConfig(config, header.Number)
+	if blobConfig == nil {
+		panic("calculating blob fee on unsupported fork")
+	}
+	return blobConfig.blobBaseFeeEIP4844(*header.ExcessBlobGas)
 }
 
 // CalcExcessBlobGasEIP4844 calculates the excess blob gas after applying the set of

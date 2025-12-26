@@ -63,9 +63,12 @@ type Genesis struct {
 
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
-	Number     uint64      `json:"number"`
-	GasUsed    uint64      `json:"gasUsed"`
-	ParentHash common.Hash `json:"parentHash"`
+	Number        uint64      `json:"number"`
+	GasUsed       uint64      `json:"gasUsed"`
+	ParentHash    common.Hash `json:"parentHash"`
+	BaseFee       *big.Int    `json:"baseFeePerGas"`
+	ExcessBlobGas *uint64     `json:"excessBlobGas"`
+	BlobGasUsed   *uint64     `json:"blobGasUsed"`
 }
 
 // copy copies the genesis.
@@ -400,15 +403,26 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 		} else {
 			head.BaseFee = new(big.Int).SetUint64(params.DefaultLowerBoundBaseFee)
 		}
+
+		// If the base fee is set in the genesis, use it.
+		if g.BaseFee != nil {
+			head.BaseFee = g.BaseFee
+		}
 	}
 	if g.Config != nil && g.Config.IsRandaoForkEnabled(common.Big0) {
 		head.RandomReveal = params.ZeroRandomReveal
 		head.MixHash = params.ZeroMixHash
 	}
 	if g.Config != nil && g.Config.IsOsakaForkEnabled(common.Big0) {
-		// In genesis these will always be 0.
-		head.BlobGasUsed = new(uint64)
-		head.ExcessBlobGas = new(uint64)
+		head.ExcessBlobGas = g.ExcessBlobGas
+		head.BlobGasUsed = g.BlobGasUsed
+		// If these are not set, they will always be 0.
+		if head.ExcessBlobGas == nil {
+			head.ExcessBlobGas = new(uint64)
+		}
+		if head.BlobGasUsed == nil {
+			head.BlobGasUsed = new(uint64)
+		}
 	}
 
 	stateDB.Commit(false)

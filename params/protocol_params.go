@@ -210,7 +210,6 @@ const (
 	BlobTxMinBlobGasprice              = 1       // Minimum gas price for data blobs
 	BlobTxPointEvaluationPrecompileGas = 50000   // Gas price for the point evaluation precompile.
 	BlobBaseFeeMultiplier              = 8       // Multiplier for the base execution gas cost for a blob.
-	BlobTxMaxBlobs                     = 1
 	BlobBaseCost                       = 1 << 13 // Base execution gas cost for a blob.
 
 	// ZeroBaseFee exists for supporting Ethereum compatible data structure.
@@ -251,6 +250,10 @@ var (
 	// EIP-2935 - Serve historical block hashes from state
 	HistoryStorageAddress = common.HexToAddress("0x0000F90827F1C53a10cb7A02335B175320002935")
 	HistoryStorageCode    = common.FromHex("3373fffffffffffffffffffffffffffffffffffffffe14604657602036036042575f35600143038111604257611fff81430311604257611fff9006545f5260205ff35b5f5ffd5b5f35611fff60014303065500")
+
+	// KIP-279 - Blob Transaction
+	// It is var because mutability is required when eest is executed.
+	BlobTxMaxBlobs = 1
 )
 
 // Parameters for execution time limit

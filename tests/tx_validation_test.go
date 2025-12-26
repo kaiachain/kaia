@@ -465,7 +465,7 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 		authorizationList := []types.SetCodeAuthorization{auth}
 
 		tx := types.NewMessage(reservoir.Addr, &eoaWithCode.Addr, reservoir.GetNonce(), nil, gasLimit,
-			nil, big.NewInt(25*params.Gkei), big.NewInt(25*params.Gkei), nil, false, uint64(0), nil, bcdata.bc.Config().ChainID, authorizationList)
+			nil, big.NewInt(25*params.Gkei), big.NewInt(25*params.Gkei), nil, nil, false, uint64(0), nil, bcdata.bc.Config().ChainID, nil, nil, authorizationList)
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
@@ -1585,7 +1585,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 					valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(amount)
 					valueMap[types.TxValueKeyGasLimit] = gasLimit + 1 // requires 1 more gas
 					// The tx will be failed in vm since it can buy gas but cannot send enough value
-					expectedErr = vm.ErrInsufficientBalance
+					expectedErr = errInsufficientBalanceForGasFeePayer
 				} else {
 					valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64()) + 1 // requires 1 more gas
 					// The tx will be failed in buyGas() since it cannot buy enough gas
@@ -1719,7 +1719,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 					valueMap[types.TxValueKeyTo] = contract.Addr
 				}
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
-				valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64())
+				valueMap[types.TxValueKeyGasLimit] = gasLimit
 
 				tx, err := types.NewTransactionWithMap(txType, valueMap)
 				assert.Equal(t, nil, err)
@@ -1752,7 +1752,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 					// = (gasLimit + 1) * 10 * (100 - 90) * 0.01 = gasLimit + 1
 					valueMap[types.TxValueKeyGasLimit] = (gasLimit + 1) * 10 // requires 1 more gas
 					// The tx will be failed in vm since it can buy gas but cannot send enough value
-					expectedErr = vm.ErrInsufficientBalance
+					expectedErr = errInsufficientBalanceForGas
 				} else {
 					// Gas testAcc will charge = tx gasLimit * sender's feeRatio
 					// = (gasLimit + (amount / gasPrice.Uint64()) + 1) * 10 * (100 - 90) * 0.01 = gasLimit + (amount / gasPrice.Uint64()) + 1
