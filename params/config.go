@@ -287,7 +287,6 @@ type ChainConfig struct {
 	Kip160CompatibleBlock *big.Int       `json:"kip160CompatibleBlock,omitempty"` // Kip160Compatible activate block (nil = no fork)
 	Kip160ContractAddress common.Address `json:"kip160ContractAddress,omitempty"` // Kip160 contract address already deployed on the network
 
-	// Randao is now a required hardfork
 	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao
 	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible switch block (nil = no fork, 0 already on Randao)
 	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
