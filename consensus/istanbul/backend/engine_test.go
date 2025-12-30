@@ -236,8 +236,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 
 	appendValidators(genesis, addrs)
 
-	// Set up Registry and KIP113 contracts for Randao fork
-	if genesis.Config.IsRandaoForkEnabled(big.NewInt(0)) {
+	// Set up Registry and KIP113 contracts for Randao fork if RandaoCompatibleBlock is set
+	if genesis.Config.RandaoCompatibleBlock != nil {
 		// Generate BLS keys for all nodes
 		nodeBlsKeys := make([]bls.SecretKey, n)
 		for i := 0; i < n; i++ {
@@ -947,7 +947,7 @@ func TestRewardDistribution(t *testing.T) {
 	configItems = append(configItems, shanghaiCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, cancunCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
-	configItems = append(configItems, randaoCompatibleBlock(nil)) // randao is optional
+	configItems = append(configItems, randaoCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, kaiaCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, pragueCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, osakaCompatibleBlock(new(big.Int).SetUint64(koreBlock)))

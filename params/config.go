@@ -52,7 +52,6 @@ var (
 		KoreCompatibleBlock:      big.NewInt(119750400),
 		ShanghaiCompatibleBlock:  big.NewInt(135456000),
 		CancunCompatibleBlock:    big.NewInt(147534000),
-		KaiaCompatibleBlock:      big.NewInt(162900480),
 		RandaoCompatibleBlock:    big.NewInt(147534000),
 		RandaoRegistry: &RegistryConfig{
 			Records: map[string]common.Address{
@@ -60,13 +59,16 @@ var (
 			},
 			Owner: common.HexToAddress("0x04992a2B7E7CE809d409adE32185D49A96AAa32d"),
 		},
+		KaiaCompatibleBlock:   big.NewInt(162900480),
 		PragueCompatibleBlock: big.NewInt(190670000),
 		OsakaCompatibleBlock:  nil, // TODO-kaia-osaka: set Mainnet's OsakaCompatibleBlock
+		// Optional forks
 		Kip103CompatibleBlock: big.NewInt(119750400),
 		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		Kip160CompatibleBlock: big.NewInt(162900480),
 		Kip160ContractAddress: common.HexToAddress("0xa4df15717Da40077C0aD528296AdBBd046579Ee9"),
-		DeriveShaImpl:         2,
+		// Genesis governance parameters
+		DeriveShaImpl: 2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
 			GovernanceMode: "single",
@@ -101,17 +103,17 @@ var (
 		KoreCompatibleBlock:      big.NewInt(111736800),
 		ShanghaiCompatibleBlock:  big.NewInt(131608000),
 		CancunCompatibleBlock:    big.NewInt(141367000),
-		KaiaCompatibleBlock:      big.NewInt(156660000),
-		// Optional forks
-		RandaoCompatibleBlock: big.NewInt(141367000),
+		RandaoCompatibleBlock:    big.NewInt(141367000),
 		RandaoRegistry: &RegistryConfig{
 			Records: map[string]common.Address{
 				"KIP113": common.HexToAddress("0x4BEed0651C46aE5a7CB3b7737345d2ee733789e6"),
 			},
 			Owner: common.HexToAddress("0x04992a2B7E7CE809d409adE32185D49A96AAa32d"),
 		},
+		KaiaCompatibleBlock:   big.NewInt(156660000),
 		PragueCompatibleBlock: big.NewInt(187930000),
 		OsakaCompatibleBlock:  nil, // TODO-kaia-osaka: set Kairos' OsakaCompatibleBlock
+		// Optional forks
 		Kip103CompatibleBlock: big.NewInt(119145600),
 		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		Kip160CompatibleBlock: big.NewInt(156660000),
@@ -190,16 +192,17 @@ func TestKaiaConfig(maxHardfork string) *ChainConfig {
 	if maxHardfork == "cancun" {
 		return chainConfig
 	}
+	chainConfig.RandaoCompatibleBlock = big.NewInt(0)
+	chainConfig.RandaoRegistry = DefaultRegistryConfig
+	if maxHardfork == "randao" {
+		return chainConfig
+	}
 	chainConfig.KaiaCompatibleBlock = big.NewInt(0)
 	if maxHardfork == "kaia" {
 		return chainConfig
 	}
 	chainConfig.PragueCompatibleBlock = big.NewInt(0)
 	if maxHardfork == "prague" {
-		return chainConfig
-	}
-	chainConfig.RandaoCompatibleBlock = big.NewInt(0)
-	if maxHardfork == "randao" {
 		return chainConfig
 	}
 	chainConfig.OsakaCompatibleBlock = big.NewInt(0)
@@ -246,6 +249,13 @@ var (
 	DefaultBlobSchedule = &BlobScheduleConfig{
 		Osaka: DefaultOsakaBlobConfig,
 	}
+	// DefaultRegistryConfig is the default registry config for the Randao fork.
+	DefaultRegistryConfig = &RegistryConfig{
+		Records: map[string]common.Address{
+			"KIP113": common.HexToAddress("0x0000000000000000000000000000000000000403"),
+		},
+		Owner: common.HexToAddress("0x0000000000000000000000000000000000000000"),
+	}
 )
 
 // ChainConfig is the blockchain config which determines the blockchain settings.
@@ -279,9 +289,8 @@ type ChainConfig struct {
 	Kip160CompatibleBlock *big.Int       `json:"kip160CompatibleBlock,omitempty"` // Kip160Compatible activate block (nil = no fork)
 	Kip160ContractAddress common.Address `json:"kip160ContractAddress,omitempty"` // Kip160 contract address already deployed on the network
 
-	// Randao is an optional hardfork
 	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao
-	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible activate block (nil = no fork)
+	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible switch block (nil = no fork, 0 already on Randao)
 	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
 
 	// Various consensus engines
@@ -575,12 +584,12 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 }
 
 // CheckConfigForkOrder checks that we don't "skip" any forks, geth isn't pluggable enough
-// to guarantee that forks can be implemented in a different order than on official networks
+// to guarantee that forks can be implemented in a different order than on official networks.
+// Because some forks (namely KIP103 and KIP160) can be situated at any position, they are not checked for fork order.
 func (c *ChainConfig) CheckConfigForkOrder() error {
 	type fork struct {
-		name     string
-		block    *big.Int
-		optional bool // if true, the fork may be nil and next fork is still allowed
+		name  string
+		block *big.Int
 	}
 	var lastFork fork
 	for _, cur := range []fork{
@@ -591,7 +600,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "koreBlock", block: c.KoreCompatibleBlock},
 		{name: "shanghaiBlock", block: c.ShanghaiCompatibleBlock},
 		{name: "cancunBlock", block: c.CancunCompatibleBlock},
-		{name: "randaoBlock", block: c.RandaoCompatibleBlock, optional: true},
+		{name: "randaoBlock", block: c.RandaoCompatibleBlock},
 		{name: "kaiaBlock", block: c.KaiaCompatibleBlock},
 		{name: "pragueBlock", block: c.PragueCompatibleBlock},
 		{name: "osakaBlock", block: c.OsakaCompatibleBlock},
@@ -609,8 +618,8 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 				}
 			}
 		}
-		// If it was optional and not set, then ignore it
-		if !cur.optional || cur.block != nil {
+		// If it was not set, then ignore it
+		if cur.block != nil {
 			lastFork = cur
 		}
 	}
