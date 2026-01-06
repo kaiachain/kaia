@@ -2,7 +2,7 @@
 // OpenZeppelin Contracts (last updated v5.0.0) (utils/ReentrancyGuard.sol)
 
 pragma solidity 0.8.24;
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "openzeppelin-contracts-upgradeable-4.0/proxy/utils/Initializable.sol";
 
 /**
  * @dev Contract module that helps prevent reentrant calls to a function.
@@ -44,9 +44,14 @@ abstract contract ReentrancyGuardUpgradeable is Initializable {
     }
 
     // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.ReentrancyGuard")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant ReentrancyGuardStorageLocation = 0x9b779b17422d0df92223018b32b4d1fa46e071723d6817e2486d003becc55f00;
+    bytes32 private constant ReentrancyGuardStorageLocation =
+        0x9b779b17422d0df92223018b32b4d1fa46e071723d6817e2486d003becc55f00;
 
-    function _getReentrancyGuardStorage() private pure returns (ReentrancyGuardStorage storage $) {
+    function _getReentrancyGuardStorage()
+        private
+        pure
+        returns (ReentrancyGuardStorage storage $)
+    {
         assembly {
             $.slot := ReentrancyGuardStorageLocation
         }

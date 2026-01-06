@@ -19,14 +19,22 @@ pragma solidity 0.8.19;
 
 import "./IKIP113.sol";
 import "./IAddressBook.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable-4.0/proxy/utils/Initializable.sol";
+import "openzeppelin-contracts-upgradeable-4.0/proxy/utils/UUPSUpgradeable.sol";
+import "openzeppelin-contracts-upgradeable-4.0/access/OwnableUpgradeable.sol";
 
-contract SimpleBlsRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeable, IKIP113 {
-    IAddressBook public constant abook = IAddressBook(0x0000000000000000000000000000000000000400);
-    bytes32 public constant ZERO48HASH = 0xc980e59163ce244bb4bb6211f48c7b46f88a4f40943e84eb99bdc41e129bd293; // keccak256(hex"00"*48)
-    bytes32 public constant ZERO96HASH = 0x46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c21; // keccak256(hex"00"*96)
+contract SimpleBlsRegistry is
+    Initializable,
+    UUPSUpgradeable,
+    OwnableUpgradeable,
+    IKIP113
+{
+    IAddressBook public constant abook =
+        IAddressBook(0x0000000000000000000000000000000000000400);
+    bytes32 public constant ZERO48HASH =
+        0xc980e59163ce244bb4bb6211f48c7b46f88a4f40943e84eb99bdc41e129bd293; // keccak256(hex"00"*48)
+    bytes32 public constant ZERO96HASH =
+        0x46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c21; // keccak256(hex"00"*96)
 
     address[] public allNodeIds;
     mapping(address => BlsPublicKeyInfo) public record; // cnNodeId => BlsPublicKeyInfo
@@ -36,7 +44,10 @@ contract SimpleBlsRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeable
 
     modifier onlyValidPublicKey(bytes calldata publicKey) {
         require(publicKey.length == 48, "Public key must be 48 bytes");
-        require(keccak256(publicKey) != ZERO48HASH, "Public key cannot be zero");
+        require(
+            keccak256(publicKey) != ZERO48HASH,
+            "Public key cannot be zero"
+        );
         // TODO: verify more with EIP-2537
         _;
     }
@@ -62,7 +73,13 @@ contract SimpleBlsRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeable
         address cnNodeId,
         bytes calldata publicKey,
         bytes calldata pop
-    ) external virtual onlyOwner onlyValidPublicKey(publicKey) onlyValidPop(pop) {
+    )
+        external
+        virtual
+        onlyOwner
+        onlyValidPublicKey(publicKey)
+        onlyValidPop(pop)
+    {
         require(isCN(cnNodeId), "cnNodeId is not in AddressBook");
         if (record[cnNodeId].publicKey.length == 0) {
             allNodeIds.push(cnNodeId);
@@ -77,7 +94,11 @@ contract SimpleBlsRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeable
         require(record[cnNodeId].publicKey.length != 0, "CN is not registered");
 
         _removeCnNodeId(cnNodeId);
-        emit Unregistered(cnNodeId, record[cnNodeId].publicKey, record[cnNodeId].pop);
+        emit Unregistered(
+            cnNodeId,
+            record[cnNodeId].publicKey,
+            record[cnNodeId].pop
+        );
         delete record[cnNodeId];
     }
 
@@ -98,7 +119,10 @@ contract SimpleBlsRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeable
         external
         view
         virtual
-        returns (address[] memory nodeIdList, BlsPublicKeyInfo[] memory pubkeyList)
+        returns (
+            address[] memory nodeIdList,
+            BlsPublicKeyInfo[] memory pubkeyList
+        )
     {
         nodeIdList = new address[](allNodeIds.length);
         pubkeyList = new BlsPublicKeyInfo[](allNodeIds.length);
@@ -117,5 +141,7 @@ contract SimpleBlsRegistry is Initializable, UUPSUpgradeable, OwnableUpgradeable
         }
     }
 
-    function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal virtual override onlyOwner {}
 }

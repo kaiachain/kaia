@@ -17,29 +17,39 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "openzeppelin-contracts-upgradeable-4.0/proxy/utils/Initializable.sol";
 import "../../system_contracts/kaiabridge/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "openzeppelin-contracts-4.0/utils/introspection/IERC165.sol";
+import "openzeppelin-contracts-upgradeable-4.0/proxy/utils/UUPSUpgradeable.sol";
 import "../../system_contracts/kaiabridge/IOperator.sol";
 import "../../system_contracts/kaiabridge/IGuardian.sol";
 import "../../system_contracts/kaiabridge/IBridge.sol";
 
-contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IERC165, IOperator {
+contract NewOperator is
+    Initializable,
+    ReentrancyGuardUpgradeable,
+    UUPSUpgradeable,
+    IERC165,
+    IOperator
+{
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() { _disableInitializers(); }
+    constructor() {
+        _disableInitializers();
+    }
 
     function initialize(
         address[] calldata initOperators,
         address initGuardian,
         uint8 _minGaurdianRequiredConfirm
-    )
-        public
-        initializer
-    {
-        require(IERC165(initGuardian).supportsInterface(type(IGuardian).interfaceId), "KAIA::Operator: Operator contract address does not implement IGuardian");
+    ) public initializer {
+        require(
+            IERC165(initGuardian).supportsInterface(
+                type(IGuardian).interfaceId
+            ),
+            "KAIA::Operator: Operator contract address does not implement IGuardian"
+        );
 
-        for (uint8 i=0; i<initOperators.length; i++) {
+        for (uint8 i = 0; i < initOperators.length; i++) {
             operators.push(initOperators[i]);
             isOperator[initOperators[i]] = true;
         }
@@ -53,14 +63,20 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
         __ReentrancyGuard_init();
     }
 
-    function _authorizeUpgrade(address newImplementation) internal virtual override onlyGuardian {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal virtual override onlyGuardian {}
 
-    function supportsInterface(bytes4 interfaceId) external override pure returns (bool) {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) external pure override returns (bool) {
         return interfaceId == type(IOperator).interfaceId;
     }
 
     /// @dev See {IOperator-addOperator}
-    function addOperator(address operator)
+    function addOperator(
+        address operator
+    )
         public
         override
         onlyGuardian
@@ -73,14 +89,11 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     }
 
     /// @dev See {IOperator-removeOperator}
-    function removeOperator(address operator)
-        public
-        override
-        onlyGuardian
-        operatorExists(operator)
-    {
+    function removeOperator(
+        address operator
+    ) public override onlyGuardian operatorExists(operator) {
         isOperator[operator] = false;
-        for (uint64 i=0; i<operators.length - 1; i++)
+        for (uint64 i = 0; i < operators.length - 1; i++)
             if (operators[i] == operator) {
                 operators[i] = operators[operators.length - 1];
                 break;
@@ -93,14 +106,17 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     }
 
     /// @dev See {IOperator-replaceOperator}
-    function replaceOperator(address operator, address newOperator)
+    function replaceOperator(
+        address operator,
+        address newOperator
+    )
         public
         override
         onlyGuardian
         operatorExists(operator)
         operatorDoesNotExist(newOperator)
     {
-        for (uint64 i=0; i<operators.length; i++) {
+        for (uint64 i = 0; i < operators.length; i++) {
             if (operators[i] == operator) {
                 operators[i] = newOperator;
                 break;
@@ -113,27 +129,21 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     }
 
     /// @dev See {IOperator-changeGuardian}
-    function changeGuardian(address newGuardian)
-        public
-        override
-        onlyGuardian
-    {
+    function changeGuardian(address newGuardian) public override onlyGuardian {
         emit ChangeGuardian(guardian, newGuardian);
         guardian = newGuardian;
     }
 
     /// @dev See {IOperator-changeBridge}
-    function changeBridge(address newBridge)
-        public
-        override
-        onlyGuardian
-    {
+    function changeBridge(address newBridge) public override onlyGuardian {
         emit ChangeBridge(bridge, newBridge);
         bridge = newBridge;
     }
 
     /// @dev See {IOperator-changeRequirement}
-    function changeRequirement(uint8 _minOperatorRequiredConfirm)
+    function changeRequirement(
+        uint8 _minOperatorRequiredConfirm
+    )
         public
         override
         onlyGuardian
@@ -143,17 +153,22 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
         emit RequirementChange(_minOperatorRequiredConfirm);
     }
 
-    function submitTransaction(address to, bytes calldata data, uint256 uniqUserTxIndex)
-        public
-        override
-        returns (uint64)
-    {
+    function submitTransaction(
+        address to,
+        bytes calldata data,
+        uint256 uniqUserTxIndex
+    ) public override returns (uint64) {
         require(data.length >= 4, "Calldata length must be larger than 4bytes");
         uint64 seq = 0;
         uint64 txID = 0;
 
-        try IBridge(bridge).bytes2Provision(data) returns (IBridge.ProvisionData memory provision) {
-            require(bridge == to, "KAIA::Operator: Provision transaction must be targeted to knwon bridge contract address");
+        try IBridge(bridge).bytes2Provision(data) returns (
+            IBridge.ProvisionData memory provision
+        ) {
+            require(
+                bridge == to,
+                "KAIA::Operator: Provision transaction must be targeted to knwon bridge contract address"
+            );
 
             seq = provision.seq;
             bytes32 calldataHash = keccak256(data);
@@ -177,26 +192,25 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     }
 
     /// @dev See {IOperator-confirmTransaction}
-    function confirmTransaction(uint64 txID)
-        public
-        override
-        txExists(txID)
-        notConfirmed(txID, msg.sender)
-    {
+    function confirmTransaction(
+        uint64 txID
+    ) public override txExists(txID) notConfirmed(txID, msg.sender) {
         // `provisions[txID]` is set only if the target contract address is bridge
         IBridge.ProvisionData storage provision = provisions[txID];
         if (provision.seq != 0) {
             EnumerableSetUint64.setAdd(seq2TxID[provision.seq], txID);
             updateGreatestSubmittedSeq(provision.seq);
             updateNextSeq(provision.seq);
-            emit IBridge.Provision(IBridge.ProvisionIndividualEvent({
-                seq: provision.seq,
-                sender: provision.sender,
-                receiver: provision.receiver,
-                amount: provision.amount,
-                txID: txID,
-                operator: msg.sender
-            }));
+            emit IBridge.Provision(
+                IBridge.ProvisionIndividualEvent({
+                    seq: provision.seq,
+                    sender: provision.sender,
+                    receiver: provision.receiver,
+                    amount: provision.amount,
+                    txID: txID,
+                    operator: msg.sender
+                })
+            );
         }
 
         confirmations[txID][msg.sender] = true;
@@ -205,7 +219,9 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     }
 
     /// @dev See {IOperator-revokeConfirmation}
-    function revokeConfirmation(uint64 txID)
+    function revokeConfirmation(
+        uint64 txID
+    )
         public
         override
         operatorExists(msg.sender)
@@ -217,12 +233,9 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     }
 
     /// @dev See {IOperator-executeTransaction}
-    function executeTransaction(uint64 txID)
-        public
-        override
-        operatorExists(msg.sender)
-        confirmed(txID, msg.sender)
-    {
+    function executeTransaction(
+        uint64 txID
+    ) public override operatorExists(msg.sender) confirmed(txID, msg.sender) {
         // if transaction was already executed, silently return without revert
         if (transactions[txID].executed) {
             return;
@@ -238,11 +251,10 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
 
     /// @dev Calls predefined function
     /// @param data Calldata
-    function predefinedExecute(address to, bytes memory data)
-        private
-        nonReentrant
-        returns (bool)
-    {
+    function predefinedExecute(
+        address to,
+        bytes memory data
+    ) private nonReentrant returns (bool) {
         // 1. execute transaction
         (bool success, bytes memory res) = to.call(data);
         if (!success) {
@@ -260,20 +272,20 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     /// @dev Adds a new transaction to the transaction mapping, if transaction does not exist yet.
     /// @param data Transaction data payload.
     /// @return Returns transaction ID.
-    function addTransaction(address to, bytes memory data, uint256 uniqUserTxIndex)
-        internal
-        returns (uint64)
-    {
-        transactions.push(Transaction({
-            to: to,
-            data: data,
-            executed: false
-        }));
+    function addTransaction(
+        address to,
+        bytes memory data,
+        uint256 uniqUserTxIndex
+    ) internal returns (uint64) {
+        transactions.push(Transaction({to: to, data: data, executed: false}));
         uint64 txID = uint64(transactions.length - 1);
         emit Submission(txID);
 
         if (uniqUserTxIndex != 0) {
-            require(userIdx2TxID[uniqUserTxIndex] == 0, "KAIA::Operator: Submission to txID exists");
+            require(
+                userIdx2TxID[uniqUserTxIndex] == 0,
+                "KAIA::Operator: Submission to txID exists"
+            );
             userIdx2TxID[uniqUserTxIndex] = txID;
         }
         return txID;
@@ -281,7 +293,9 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
 
     /// @dev Update greatest sequence per operator
     /// @param seq ProvisionData sequence number
-    function updateGreatestSubmittedSeq(uint64 seq) internal operatorExists(msg.sender) {
+    function updateGreatestSubmittedSeq(
+        uint64 seq
+    ) internal operatorExists(msg.sender) {
         if (greatestSubmittedSeq[msg.sender] < seq) {
             greatestSubmittedSeq[msg.sender] = seq;
         }
@@ -296,14 +310,9 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     }
 
     /// @dev See {IOperator-isConfirmed}
-    function isConfirmed(uint64 txID)
-        public
-        override
-        view
-        returns (bool)
-    {
+    function isConfirmed(uint64 txID) public view override returns (bool) {
         uint64 count = 0;
-        for (uint64 i=0; i<operators.length; i++) {
+        for (uint64 i = 0; i < operators.length; i++) {
             if (confirmations[txID][operators[i]]) {
                 count += 1;
             }
@@ -315,9 +324,11 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     }
 
     /// @dev See {IOperator-getConfirmationCount}
-    function getConfirmationCount(uint64 txID) public override view returns (uint64) {
+    function getConfirmationCount(
+        uint64 txID
+    ) public view override returns (uint64) {
         uint64 count = 0;
-        for (uint64 i=0; i<operators.length; i++) {
+        for (uint64 i = 0; i < operators.length; i++) {
             if (confirmations[txID][operators[i]]) {
                 count += 1;
             }
@@ -326,11 +337,14 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     }
 
     /// @dev See {IOperator-getTransactionCount}
-    function getTransactionCount(bool pending, bool executed) public override view returns (uint64, uint64) {
+    function getTransactionCount(
+        bool pending,
+        bool executed
+    ) public view override returns (uint64, uint64) {
         uint64 pendingCnt = 0;
         uint64 executedCnt = 0;
         // Ignore the first dummy transaction
-        for (uint i=1; i<transactions.length; i++) {
+        for (uint i = 1; i < transactions.length; i++) {
             if (pending && !transactions[i].executed) {
                 pendingCnt++;
             }
@@ -342,33 +356,35 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     }
 
     /// @dev See {IOperator-getOperators}
-    function getOperators() public override view returns (address[] memory) {
+    function getOperators() public view override returns (address[] memory) {
         return operators;
     }
 
     /// @dev See {IOperator-getConfirmations}
-    function getConfirmations(uint64 txID) public override view returns (address[] memory) {
+    function getConfirmations(
+        uint64 txID
+    ) public view override returns (address[] memory) {
         address[] memory confirmationsTemp = new address[](operators.length);
         uint64 count = 0;
-        for (uint64 i=0; i<operators.length; i++) {
+        for (uint64 i = 0; i < operators.length; i++) {
             if (confirmations[txID][operators[i]]) {
                 confirmationsTemp[count++] = operators[i];
             }
         }
         address[] memory _confirmations = new address[](count);
-        for (uint64 i=0; i<count; i++) {
+        for (uint64 i = 0; i < count; i++) {
             _confirmations[i] = confirmationsTemp[i];
         }
         return _confirmations;
     }
 
     /// @dev See {IOperator-getTransactionIds}
-    function getTransactionIds(uint64 from, uint64 to, bool pending, bool executed)
-        public
-        override
-        view
-        returns (uint64[] memory, uint64[] memory)
-    {
+    function getTransactionIds(
+        uint64 from,
+        uint64 to,
+        bool pending,
+        bool executed
+    ) public view override returns (uint64[] memory, uint64[] memory) {
         require(to > from, "KAIA::Operator: Invalid from and to");
         // Ignore the first dummy transaction
         if (from == 0) {
@@ -384,7 +400,7 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
         uint64 pendingCnt = 0;
         uint64 executedCnt = 0;
 
-        for (uint64 i=from; i<to; i++) {
+        for (uint64 i = from; i < to; i++) {
             if (pending && !transactions[i].executed) {
                 _pendingTxs[pendingCnt++] = i;
             }
@@ -395,34 +411,45 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
 
         uint64[] memory pendingTxs = new uint64[](pendingCnt);
         uint64[] memory executedTxs = new uint64[](executedCnt);
-        for (uint64 i=0; i<pendingCnt; i++) {
+        for (uint64 i = 0; i < pendingCnt; i++) {
             pendingTxs[i] = _pendingTxs[i];
         }
-        for (uint64 i=0; i<executedCnt; i++) {
+        for (uint64 i = 0; i < executedCnt; i++) {
             executedTxs[i] = _executedTxs[i];
         }
         return (pendingTxs, executedTxs);
     }
 
     /// @dev See {IOperator-getUnconfirmedProvisionSeqs}
-    function getUnconfirmedProvisionSeqs(address targetOperator, uint64 range)
-        operatorExists(targetOperator)
+    function getUnconfirmedProvisionSeqs(
+        address targetOperator,
+        uint64 range
+    )
         public
-        override
         view
+        override
+        operatorExists(targetOperator)
         returns (uint64[] memory)
     {
         uint64 seqFrom = unsubmittedNextSeq[targetOperator];
-        return doGetUnconfirmedProvisionSeqs(targetOperator, seqFrom, seqFrom + range);
+        return
+            doGetUnconfirmedProvisionSeqs(
+                targetOperator,
+                seqFrom,
+                seqFrom + range
+            );
     }
 
-
     /// @dev See {IOperator-doGetUnconfirmedProvisionSeqs}
-    function doGetUnconfirmedProvisionSeqs(address targetOperator, uint64 seqFrom, uint64 seqTo)
-        operatorExists(targetOperator)
+    function doGetUnconfirmedProvisionSeqs(
+        address targetOperator,
+        uint64 seqFrom,
+        uint64 seqTo
+    )
         public
-        override
         view
+        override
+        operatorExists(targetOperator)
         returns (uint64[] memory)
     {
         require(seqTo > seqFrom, "KAIA::Operator: Invalid from and to");
@@ -434,12 +461,12 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
         uint64[] memory unsubmittedProvisionSeqsTemp = new uint64[](n);
         uint unsubmittedCnt = 0;
 
-        for (uint64 seq=seqFrom; seq<seqTo; seq++) {
+        for (uint64 seq = seqFrom; seq < seqTo; seq++) {
             uint64[] memory txIDs = EnumerableSetUint64.getAll(seq2TxID[seq]);
             uint64 unconfirmedCnt = 0;
             bool txExecuted = false;
 
-            for (uint i=0; i<txIDs.length; i++) {
+            for (uint i = 0; i < txIDs.length; i++) {
                 Transaction storage txData = transactions[txIDs[i]];
                 if (!confirmations[txIDs[i]][targetOperator]) {
                     unconfirmedCnt++;
@@ -450,7 +477,10 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
                 }
             }
 
-            bool revoked = EnumerableSetUint64.setContains(revokedProvisionSeqs, seq);
+            bool revoked = EnumerableSetUint64.setContains(
+                revokedProvisionSeqs,
+                seq
+            );
             if (revoked) {
                 // Condition0: If the sequence was revoked
                 unsubmittedProvisionSeqsTemp[unsubmittedCnt++] = seq;
@@ -463,7 +493,7 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
 
         // fitting
         uint64[] memory unsubmittedProvisionSeqs = new uint64[](unsubmittedCnt);
-        for (uint64 i=0; i<unsubmittedCnt; i++) {
+        for (uint64 i = 0; i < unsubmittedCnt; i++) {
             unsubmittedProvisionSeqs[i] = unsubmittedProvisionSeqsTemp[i];
         }
         return unsubmittedProvisionSeqs;
@@ -481,30 +511,40 @@ contract NewOperator is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeab
     }
 
     /// @dev See {IOperator-updateNextUnsubmittedSeq}
-    function updateNextUnsubmittedSeq(uint64 nextUnprovisionedSeq)
-        public
-        override
-        operatorExists(msg.sender)
-    {
-        require(nextUnprovisionedSeq != 0, "KAIA::Operator: sequence number must not be zero");
-        emit UnsubmittedNextSeqUpdate(unsubmittedNextSeq[msg.sender], nextUnprovisionedSeq);
+    function updateNextUnsubmittedSeq(
+        uint64 nextUnprovisionedSeq
+    ) public override operatorExists(msg.sender) {
+        require(
+            nextUnprovisionedSeq != 0,
+            "KAIA::Operator: sequence number must not be zero"
+        );
+        emit UnsubmittedNextSeqUpdate(
+            unsubmittedNextSeq[msg.sender],
+            nextUnprovisionedSeq
+        );
         unsubmittedNextSeq[msg.sender] = nextUnprovisionedSeq;
     }
 
     /// @dev See {IOperator-getSeq2TxIDs}
-    function getSeq2TxIDs(uint64 seq) public override view returns (uint64[] memory) {
+    function getSeq2TxIDs(
+        uint64 seq
+    ) public view override returns (uint64[] memory) {
         return EnumerableSetUint64.getAll(seq2TxID[seq]);
     }
 
     /// @dev See {IOperator-checkProvisionShouldSubmit}
-    function checkProvisionShouldSubmit(bytes32 hashedData, address operator) public override view returns (bool) {
+    function checkProvisionShouldSubmit(
+        bytes32 hashedData,
+        address operator
+    ) public view override returns (bool) {
         uint64 txID = calldataHashes[hashedData];
         if (txID > 0 && txID < transactions.length) {
             bool executed = transactions[txID].executed;
             bool confirmed = confirmations[txID][operator];
             return !confirmed && !executed;
         }
-        if (txID == 0) { // not submitted before for this payload
+        if (txID == 0) {
+            // not submitted before for this payload
             return true;
         }
         return false;
