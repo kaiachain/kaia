@@ -22,69 +22,48 @@ import "openzeppelin-contracts-4.0/utils/structs/EnumerableSet.sol";
 library EnumerableSetUint64 {
     using EnumerableSet for EnumerableSet.UintSet;
 
-    function setAdd(
-        EnumerableSet.UintSet storage set,
-        uint64 v
-    ) internal returns (bool) {
+    function setAdd(EnumerableSet.UintSet storage set, uint64 v) internal returns (bool) {
         return set.add(v);
     }
 
-    function setRemove(
-        EnumerableSet.UintSet storage set,
-        uint64 v
-    ) internal returns (bool) {
+    function setRemove(EnumerableSet.UintSet storage set, uint64 v) internal returns (bool) {
         return set.remove(v);
     }
 
-    function setContains(
-        EnumerableSet.UintSet storage set,
-        uint64 v
-    ) internal view returns (bool) {
+    function setContains(EnumerableSet.UintSet storage set, uint64 v) internal view returns (bool) {
         return set.contains(v);
     }
 
-    function setAt(
-        EnumerableSet.UintSet storage set,
-        uint256 index
-    ) internal view returns (uint64) {
+    function setAt(EnumerableSet.UintSet storage set, uint256 index) internal view returns (uint64) {
         require(index < set.length(), "Index out of bounds");
         return uint64(set.at(index));
     }
 
-    function setLength(
-        EnumerableSet.UintSet storage set
-    ) internal view returns (uint256) {
+    function setLength(EnumerableSet.UintSet storage set) internal view returns (uint256) {
         return set.length();
     }
 
-    function setValues(
-        EnumerableSet.UintSet storage set
-    ) internal view returns (uint256[] memory) {
+    function setValues(EnumerableSet.UintSet storage set) internal view returns (uint256[] memory) {
         return set.values();
     }
 
-    function getAll(
-        EnumerableSet.UintSet storage set
-    ) internal view returns (uint64[] memory) {
+    function getAll(EnumerableSet.UintSet storage set) internal view returns (uint64[] memory) {
         uint256 len = set.length();
         uint64[] memory vs = new uint64[](len);
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i=0; i<len; i++) {
             vs[i] = uint64(set.at(i));
         }
         return vs;
     }
 
-    function getRange(
-        EnumerableSet.UintSet storage set,
-        uint64 range
-    ) internal view returns (uint64[] memory) {
+    function getRange(EnumerableSet.UintSet storage set, uint64 range) internal view returns (uint64[] memory) {
         uint256 to = range;
         uint256 sl = set.length();
         if (range > sl) {
             to = sl;
         }
         uint64[] memory vs = new uint64[](to);
-        for (uint256 i = 0; i < to; i++) {
+        for (uint256 i=0; i<to; i++) {
             vs[i] = uint64(set.at(i));
         }
         return vs;

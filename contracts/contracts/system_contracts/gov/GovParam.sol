@@ -30,20 +30,13 @@ contract GovParam is Ownable, IGovParam {
     mapping(string => Param[]) private _checkpoints;
 
     /// @dev Returns all parameter names that ever existed, including those that are currently non-existing
-    function getAllParamNames()
-        external
-        view
-        override
-        returns (string[] memory)
-    {
+    function getAllParamNames() external view override returns (string[] memory) {
         return paramNames;
     }
 
     /// @dev Returns all checkpoints of the parameter
     /// @param name The parameter name
-    function checkpoints(
-        string calldata name
-    ) public view override returns (Param[] memory) {
+    function checkpoints(string calldata name) public view override returns (Param[] memory) {
         return _checkpoints[name];
     }
 
@@ -68,9 +61,7 @@ contract GovParam is Ownable, IGovParam {
     /// @dev Returns the parameter viewed by the current block
     /// @param name The parameter name
     /// @return (1) Whether the parameter exists, and if the parameter exists, (2) its value
-    function getParam(
-        string calldata name
-    ) external view override returns (bool, bytes memory) {
+    function getParam(string calldata name) external view override returns (bool, bytes memory) {
         if (_checkpoints[name].length == 0) {
             return (false, "");
         }
@@ -88,10 +79,7 @@ contract GovParam is Ownable, IGovParam {
 
     /// @dev Returns the parameters used for generating the "blockNumber" block
     ///      WARNING: for future blocks, the result may change
-    function getParamAt(
-        string memory name,
-        uint256 blockNumber
-    ) public view override returns (bool, bytes memory) {
+    function getParamAt(string memory name, uint256 blockNumber) public view override returns (bool, bytes memory) {
         uint256 len = _checkpoints[name].length;
         if (len == 0) {
             return (false, "");
@@ -130,12 +118,7 @@ contract GovParam is Ownable, IGovParam {
     }
 
     /// @dev Returns existing parameters viewed by the current block
-    function getAllParams()
-        external
-        view
-        override
-        returns (string[] memory, bytes[] memory)
-    {
+    function getAllParams() external view override returns (string[] memory, bytes[] memory) {
         // solidity doesn't allow memory arrays to be resized
         // so we calculate the size in advance (existCount)
         // See https://docs.soliditylang.org/en/latest/types.html#allocating-memory-arrays
@@ -164,9 +147,7 @@ contract GovParam is Ownable, IGovParam {
 
     /// @dev Returns parameters used for generating the "blockNumber" block
     ///      WARNING: for future blocks, the result may change
-    function getAllParamsAt(
-        uint256 blockNumber
-    ) external view override returns (string[] memory, bytes[] memory) {
+    function getAllParamsAt(uint256 blockNumber) external view override returns (string[] memory, bytes[] memory) {
         // solidity doesn't allow memory arrays to be resized
         // so we calculate the size in advance (existCount)
         // See https://docs.soliditylang.org/en/latest/types.html#allocating-memory-arrays
@@ -183,10 +164,7 @@ contract GovParam is Ownable, IGovParam {
 
         uint256 idx = 0;
         for (uint256 i = 0; i < paramNames.length; i++) {
-            (bool exists, bytes memory val) = getParamAt(
-                paramNames[i],
-                blockNumber
-            );
+            (bool exists, bytes memory val) = getParamAt(paramNames[i], blockNumber);
             if (exists) {
                 names[idx] = paramNames[i];
                 vals[idx] = val;
@@ -198,12 +176,7 @@ contract GovParam is Ownable, IGovParam {
     }
 
     /// @dev Returns all parameters as stored in the contract
-    function getAllCheckpoints()
-        external
-        view
-        override
-        returns (string[] memory, Param[][] memory)
-    {
+    function getAllCheckpoints() external view override returns (string[] memory, Param[][] memory) {
         Param[][] memory ckptsArr = new Param[][](paramNames.length);
         for (uint256 i = 0; i < paramNames.length; i++) {
             ckptsArr[i] = _checkpoints[paramNames[i]];
@@ -212,12 +185,11 @@ contract GovParam is Ownable, IGovParam {
     }
 
     /// @dev Returns all parameters as stored in the contract
-    function setParam(
-        string calldata name,
-        bool exists,
-        bytes calldata val,
-        uint256 activation
-    ) public override onlyOwner {
+    function setParam(string calldata name, bool exists, bytes calldata val, uint256 activation)
+        public
+        override
+        onlyOwner
+    {
         require(bytes(name).length > 0, "GovParam: name cannot be empty");
         require(
             activation > block.number,
@@ -261,12 +233,11 @@ contract GovParam is Ownable, IGovParam {
     }
 
     /// @dev Updates the parameter to the given state at the relative activation block
-    function setParamIn(
-        string calldata name,
-        bool exists,
-        bytes calldata val,
-        uint256 relativeActivation
-    ) external override onlyOwner {
+    function setParamIn(string calldata name, bool exists, bytes calldata val, uint256 relativeActivation)
+        external
+        override
+        onlyOwner
+    {
         uint256 activation = block.number + relativeActivation;
         setParam(name, exists, val, activation);
     }

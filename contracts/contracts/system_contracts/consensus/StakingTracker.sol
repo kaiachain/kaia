@@ -50,13 +50,7 @@ contract StakingTracker is IStakingTracker, Ownable {
     mapping(address => uint256) public override voterToGCId;
 
     // Constants
-    function CONTRACT_TYPE()
-        external
-        view
-        virtual
-        override
-        returns (string memory)
-    {
+    function CONTRACT_TYPE() external view virtual override returns (string memory) {
         return "StakingTracker";
     }
 
@@ -64,13 +58,7 @@ contract StakingTracker is IStakingTracker, Ownable {
         return 1;
     }
 
-    function ADDRESS_BOOK_ADDRESS()
-        public
-        view
-        virtual
-        override
-        returns (address)
-    {
+    function ADDRESS_BOOK_ADDRESS() public view virtual override returns (address) {
         return 0x0000000000000000000000000000000000000400;
     }
 
@@ -110,13 +98,7 @@ contract StakingTracker is IStakingTracker, Ownable {
         for (uint256 i = 0; i < stakingContracts.length; i++) {
             address staking = stakingContracts[i];
 
-            (
-                bool isV2,
-                uint256 balance,
-                uint256 gcId,
-                address stakingTracker,
-
-            ) = readCnStaking(staking);
+            (bool isV2, uint256 balance, uint256 gcId, address stakingTracker, ) = readCnStaking(staking);
             if (!isV2) {
                 // Ignore V1 contract
                 continue;
@@ -215,22 +197,10 @@ contract StakingTracker is IStakingTracker, Ownable {
         tracker.totalVotes -= oldVotes;
         tracker.totalVotes += newVotes;
 
-        emit RefreshStake(
-            trackerId,
-            gcId,
-            staking,
-            newBalance,
-            newGcBalance,
-            newVotes,
-            tracker.totalVotes
-        );
+        emit RefreshStake(trackerId, gcId, staking, newBalance, newGcBalance, newVotes, tracker.totalVotes);
     }
 
-    function recalcAllVotesIfNeeded(
-        uint256 trackerId,
-        uint256 oldGcBalance,
-        uint256 newGcBalance
-    ) internal {
+    function recalcAllVotesIfNeeded(uint256 trackerId, uint256 oldGcBalance, uint256 newGcBalance) internal {
         Tracker storage tracker = trackers[trackerId];
 
         bool wasEligible = oldGcBalance >= MIN_STAKE();
@@ -289,9 +259,7 @@ contract StakingTracker is IStakingTracker, Ownable {
         }
         require(stakingInAddressBook, "Not a staking contract");
 
-        (bool isV2, , uint256 gcId, , address newVoter) = readCnStaking(
-            staking
-        );
+        (bool isV2, , uint256 gcId, , address newVoter) = readCnStaking(staking);
         require(isV2, "Invalid CnStaking contract");
 
         updateVoter(gcId, newVoter);
@@ -321,24 +289,11 @@ contract StakingTracker is IStakingTracker, Ownable {
     function getAddressBookLists()
         internal
         view
-        returns (
-            address[] memory nodeIds,
-            address[] memory stakingContracts,
-            address[] memory rewardAddrs
-        )
+        returns (address[] memory nodeIds, address[] memory stakingContracts, address[] memory rewardAddrs)
     {
-        (
-            nodeIds,
-            stakingContracts,
-            rewardAddrs /* kgf */ /* kir */,
-            ,
-
-        ) = IAddressBook(ADDRESS_BOOK_ADDRESS()).getAllAddressInfo();
-        require(
-            nodeIds.length == stakingContracts.length &&
-                nodeIds.length == rewardAddrs.length,
-            "Invalid data"
-        );
+        (nodeIds, stakingContracts, rewardAddrs /* kgf */ /* kir */, , ) = IAddressBook(ADDRESS_BOOK_ADDRESS())
+            .getAllAddressInfo();
+        require(nodeIds.length == stakingContracts.length && nodeIds.length == rewardAddrs.length, "Invalid data");
     }
 
     /// @dev Test if the given contract is a CnStakingV2 instance
@@ -347,9 +302,7 @@ contract StakingTracker is IStakingTracker, Ownable {
         bool ok;
         bytes memory out;
 
-        (ok, out) = staking.staticcall(
-            abi.encodeWithSignature("CONTRACT_TYPE()")
-        );
+        (ok, out) = staking.staticcall(abi.encodeWithSignature("CONTRACT_TYPE()"));
         if (!ok || out.length == 0) {
             return false;
         }
@@ -377,13 +330,7 @@ contract StakingTracker is IStakingTracker, Ownable {
         public
         view
         virtual
-        returns (
-            bool isV2,
-            uint256 effectiveBalance,
-            uint256 gcId,
-            address stakingTracker,
-            address voterAddress
-        )
+        returns (bool isV2, uint256 effectiveBalance, uint256 gcId, address stakingTracker, address voterAddress)
     {
         if (isCnStakingV2(staking)) {
             return (
@@ -400,10 +347,7 @@ contract StakingTracker is IStakingTracker, Ownable {
     /// @dev Calculate voting power from staking amounts.
     /// One integer vote is granted for each MIN_STAKE() balance. But the number of votes
     /// is at most ([number of eligible GCs] - 1).
-    function calcVotes(
-        uint256 numEligible,
-        uint256 balance
-    ) private view returns (uint256) {
+    function calcVotes(uint256 numEligible, uint256 balance) private view returns (uint256) {
         uint256 voteCap = 1;
         if (numEligible > 1) {
             voteCap = numEligible - 1;
@@ -419,8 +363,7 @@ contract StakingTracker is IStakingTracker, Ownable {
     /// @dev Determine if given tracker is updatable with respect to current block.
     function isTrackerLive(uint256 trackerId) private view returns (bool) {
         Tracker storage tracker = trackers[trackerId];
-        return (tracker.trackStart <= block.number &&
-            block.number < tracker.trackEnd);
+        return (tracker.trackStart <= block.number && block.number < tracker.trackEnd);
     }
 
     // Getter functions
@@ -429,21 +372,11 @@ contract StakingTracker is IStakingTracker, Ownable {
         return allTrackerIds.length;
     }
 
-    function getAllTrackerIds()
-        external
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function getAllTrackerIds() external view override returns (uint256[] memory) {
         return allTrackerIds;
     }
 
-    function getLiveTrackerIds()
-        external
-        view
-        override
-        returns (uint256[] memory)
-    {
+    function getLiveTrackerIds() external view override returns (uint256[] memory) {
         return liveTrackerIds;
     }
 
@@ -453,22 +386,10 @@ contract StakingTracker is IStakingTracker, Ownable {
         public
         view
         override
-        returns (
-            uint256 trackStart,
-            uint256 trackEnd,
-            uint256 numGCs,
-            uint256 totalVotes,
-            uint256 numEligible
-        )
+        returns (uint256 trackStart, uint256 trackEnd, uint256 numGCs, uint256 totalVotes, uint256 numEligible)
     {
         Tracker storage tracker = trackers[trackerId];
-        return (
-            tracker.trackStart,
-            tracker.trackEnd,
-            tracker.gcIds.length,
-            tracker.totalVotes,
-            tracker.numEligible
-        );
+        return (tracker.trackStart, tracker.trackEnd, tracker.gcIds.length, tracker.totalVotes, tracker.numEligible);
     }
 
     function getTrackedGC(
@@ -481,16 +402,7 @@ contract StakingTracker is IStakingTracker, Ownable {
 
     function getAllTrackedGCs(
         uint256 trackerId
-    )
-        public
-        view
-        override
-        returns (
-            uint256[] memory gcIds,
-            uint256[] memory gcBalances,
-            uint256[] memory gcVotes
-        )
-    {
+    ) public view override returns (uint256[] memory gcIds, uint256[] memory gcBalances, uint256[] memory gcVotes) {
         Tracker storage tracker = trackers[trackerId];
         uint256 numGCs = tracker.gcIds.length;
         gcIds = tracker.gcIds;
@@ -504,10 +416,7 @@ contract StakingTracker is IStakingTracker, Ownable {
         }
     }
 
-    function stakingToGCId(
-        uint256 trackerId,
-        address staking
-    ) external view override returns (uint256) {
+    function stakingToGCId(uint256 trackerId, address staking) external view override returns (uint256) {
         Tracker storage tracker = trackers[trackerId];
         return tracker.stakingToGCId[staking];
     }
@@ -517,13 +426,7 @@ interface IAddressBook {
     function getAllAddressInfo()
         external
         view
-        returns (
-            address[] memory,
-            address[] memory,
-            address[] memory,
-            address,
-            address
-        );
+        returns (address[] memory, address[] memory, address[] memory, address, address);
 }
 
 interface ICnStakingV2 {

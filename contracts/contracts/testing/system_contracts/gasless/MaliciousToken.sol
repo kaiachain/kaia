@@ -8,10 +8,7 @@ contract MaliciousToken is ERC20 {
         _mint(initialHolder, 1000000 * 10 ** 18);
     }
 
-    function approve(
-        address spender,
-        uint256 amount
-    ) public virtual override returns (bool) {
+    function approve(address spender, uint256 amount) public virtual override returns (bool) {
         return false; // Always fails
     }
 }

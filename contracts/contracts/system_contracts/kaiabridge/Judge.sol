@@ -24,31 +24,21 @@ import "openzeppelin-contracts-upgradeable-4.0/proxy/utils/UUPSUpgradeable.sol";
 import "./IGuardian.sol";
 import "./IJudge.sol";
 
-contract Judge is
-    Initializable,
-    ReentrancyGuardUpgradeable,
-    UUPSUpgradeable,
-    IERC165,
-    IJudge
-{
+contract Judge is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IERC165, IJudge {
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
+    constructor() { _disableInitializers(); }
 
     function initialize(
         address[] calldata initJudges,
         address initGuardian,
         uint8 _minJudgeRequiredConfirm
-    ) public initializer {
-        require(
-            IERC165(initGuardian).supportsInterface(
-                type(IGuardian).interfaceId
-            ),
-            "KAIA::Judge: Guardian contract address does not implement IGuardian"
-        );
+    )
+        public
+        initializer
+    {
+        require(IERC165(initGuardian).supportsInterface(type(IGuardian).interfaceId), "KAIA::Judge: Guardian contract address does not implement IGuardian");
 
-        for (uint8 i = 0; i < initJudges.length; i++) {
+        for (uint8 i=0; i<initJudges.length; i++) {
             judges.push(initJudges[i]);
             isJudge[initJudges[i]] = true;
         }
@@ -62,31 +52,34 @@ contract Judge is
         __ReentrancyGuard_init();
     }
 
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal virtual override onlyGuardian {}
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyGuardian {}
 
-    function supportsInterface(
-        bytes4 interfaceId
-    ) external pure override returns (bool) {
+    function supportsInterface(bytes4 interfaceId) external override pure returns (bool) {
         return interfaceId == type(IJudge).interfaceId;
     }
 
     /// @dev See {IJudge-addJudge}
-    function addJudge(
-        address judge
-    ) public override onlyGuardian judgeDoesNotExist(judge) notNull(judge) {
+    function addJudge(address judge)
+        public
+        override
+        onlyGuardian
+        judgeDoesNotExist(judge)
+        notNull(judge)
+    {
         isJudge[judge] = true;
         judges.push(judge);
         emit JudgeAddition(judge);
     }
 
     /// @dev See {IJudge-removeJudge}
-    function removeJudge(
-        address judge
-    ) public override onlyGuardian judgeExists(judge) {
+    function removeJudge(address judge)
+        public
+        override
+        onlyGuardian
+        judgeExists(judge)
+    {
         isJudge[judge] = false;
-        for (uint256 i = 0; i < judges.length - 1; i++)
+        for (uint256 i=0; i<judges.length - 1; i++)
             if (judges[i] == judge) {
                 judges[i] = judges[judges.length - 1];
                 break;
@@ -99,10 +92,7 @@ contract Judge is
     }
 
     /// @dev See {IJudge-replaceJudge}
-    function replaceJudge(
-        address judge,
-        address newJudge
-    )
+    function replaceJudge(address judge, address newJudge)
         public
         override
         onlyGuardian
@@ -110,7 +100,7 @@ contract Judge is
         judgeDoesNotExist(newJudge)
         notNull(newJudge)
     {
-        for (uint256 i = 0; i < judges.length; i++) {
+        for (uint256 i=0; i<judges.length; i++) {
             if (judges[i] == judge) {
                 judges[i] = newJudge;
                 break;
@@ -123,17 +113,18 @@ contract Judge is
     }
 
     /// @dev See {IJudge-changeGuardian}
-    function changeGuardian(
-        address newGuardian
-    ) public override onlyGuardian notNull(newGuardian) {
+    function changeGuardian(address newGuardian)
+        public
+        override
+        onlyGuardian
+        notNull(newGuardian)
+    {
         emit ChangeGuardian(guardian, newGuardian);
         guardian = newGuardian;
     }
 
     /// @dev See {IJudge-changeRequirement}
-    function changeRequirement(
-        uint8 _minJudgeRequiredConfirm
-    )
+    function changeRequirement(uint8 _minJudgeRequiredConfirm)
         public
         override
         onlyGuardian
@@ -144,29 +135,30 @@ contract Judge is
     }
 
     /// @dev See {IJudge-submitTransaction}
-    function submitTransaction(
-        address to,
-        bytes calldata data,
-        uint256 uniqUserTxIndex
-    ) public override returns (uint256) {
+    function submitTransaction(address to, bytes calldata data, uint256 uniqUserTxIndex)
+        public
+        override
+        returns (uint256)
+    {
         uint256 txID = addTransaction(to, data, uniqUserTxIndex);
         confirmTransaction(txID);
         return txID;
     }
 
     /// @dev See {IJudge-confirmTransaction}
-    function confirmTransaction(
-        uint256 txID
-    ) public override txExists(txID) notConfirmed(txID, msg.sender) {
+    function confirmTransaction(uint256 txID)
+        public
+        override
+        txExists(txID)
+        notConfirmed(txID, msg.sender)
+    {
         confirmations[txID][msg.sender] = true;
         emit Confirmation(msg.sender, txID);
         executeTransaction(txID);
     }
 
     /// @dev See {IJudge-revokeConfirmation}
-    function revokeConfirmation(
-        uint256 txID
-    )
+    function revokeConfirmation(uint256 txID)
         public
         override
         judgeExists(msg.sender)
@@ -178,9 +170,12 @@ contract Judge is
     }
 
     /// @dev See {IJudge-executeTransaction}
-    function executeTransaction(
-        uint256 txID
-    ) public override judgeExists(msg.sender) confirmed(txID, msg.sender) {
+    function executeTransaction(uint256 txID)
+        public
+        override
+        judgeExists(msg.sender)
+        confirmed(txID, msg.sender)
+    {
         // if transaction was already executed, silently return without revert
         if (transactions[txID].executed) {
             return;
@@ -196,10 +191,11 @@ contract Judge is
 
     /// @dev Calls predefined function
     /// @param data Calldata
-    function predefinedExecute(
-        address to,
-        bytes memory data
-    ) private nonReentrant returns (bool) {
+    function predefinedExecute(address to, bytes memory data)
+        private
+        nonReentrant
+        returns (bool)
+    {
         // 1. execute transaction
         (bool success, bytes memory res) = to.call(data);
         if (!success) {
@@ -217,29 +213,34 @@ contract Judge is
     /// @dev Adds a new transaction to the transaction mapping, if transaction does not exist yet.
     /// @param data Transaction data payload.
     /// @return Returns transaction ID.
-    function addTransaction(
-        address to,
-        bytes memory data,
-        uint256 uniqUserTxIndex
-    ) internal returns (uint256) {
-        transactions.push(Transaction({to: to, data: data, executed: false}));
+    function addTransaction(address to, bytes memory data, uint256 uniqUserTxIndex)
+        internal
+        returns (uint256)
+    {
+        transactions.push(Transaction({
+            to: to,
+            data: data,
+            executed: false
+        }));
         uint64 txID = uint64(transactions.length - 1);
         emit Submission(txID);
 
         if (uniqUserTxIndex != 0) {
-            require(
-                userIdx2TxID[uniqUserTxIndex] == 0,
-                "KAIA::Judge: Submission to txID exists"
-            );
+            require(userIdx2TxID[uniqUserTxIndex] == 0, "KAIA::Judge: Submission to txID exists");
             userIdx2TxID[uniqUserTxIndex] = txID;
         }
         return txID;
     }
 
     /// @dev See {IJudge-isConfirmed}
-    function isConfirmed(uint256 txID) public view override returns (bool) {
+    function isConfirmed(uint256 txID)
+        public
+        override
+        view
+        returns (bool)
+    {
         uint256 count = 0;
-        for (uint256 i = 0; i < judges.length; i++) {
+        for (uint256 i=0; i<judges.length; i++) {
             if (confirmations[txID][judges[i]]) {
                 count += 1;
             }
@@ -251,11 +252,9 @@ contract Judge is
     }
 
     /// @dev See {IJudge-getConfirmationCount}
-    function getConfirmationCount(
-        uint256 txID
-    ) public view override returns (uint256) {
+    function getConfirmationCount(uint256 txID) public override view returns (uint256) {
         uint256 count = 0;
-        for (uint256 i = 0; i < judges.length; i++) {
+        for (uint256 i=0; i<judges.length; i++) {
             if (confirmations[txID][judges[i]]) {
                 count += 1;
             }
@@ -264,14 +263,11 @@ contract Judge is
     }
 
     /// @dev See {IJudge-getTransactionCount}
-    function getTransactionCount(
-        bool pending,
-        bool executed
-    ) public view override returns (uint256, uint256) {
+    function getTransactionCount(bool pending, bool executed) public override view returns (uint256, uint256) {
         uint256 pendingCnt = 0;
         uint256 executedCnt = 0;
         // Ignore the first dummy transaction
-        for (uint i = 1; i < transactions.length; i++) {
+        for (uint i=1; i<transactions.length; i++) {
             if (pending && !transactions[i].executed) {
                 pendingCnt++;
             }
@@ -283,35 +279,33 @@ contract Judge is
     }
 
     /// @dev See {IJudge-getJudges}
-    function getJudges() public view override returns (address[] memory) {
+    function getJudges() public override view returns (address[] memory) {
         return judges;
     }
 
     /// @dev See {IJudge-getConfirmations}
-    function getConfirmations(
-        uint256 txID
-    ) public view override returns (address[] memory) {
+    function getConfirmations(uint256 txID) public override view returns (address[] memory) {
         address[] memory confirmationsTemp = new address[](judges.length);
         uint256 count = 0;
-        for (uint256 i = 0; i < judges.length; i++) {
+        for (uint256 i=0; i<judges.length; i++) {
             if (confirmations[txID][judges[i]]) {
                 confirmationsTemp[count++] = judges[i];
             }
         }
         address[] memory _confirmations = new address[](count);
-        for (uint256 i = 0; i < count; i++) {
+        for (uint256 i=0; i<count; i++) {
             _confirmations[i] = confirmationsTemp[i];
         }
         return _confirmations;
     }
 
     /// @dev See {IJudge-getTransactionIds}
-    function getTransactionIds(
-        uint256 from,
-        uint256 to,
-        bool pending,
-        bool executed
-    ) public view override returns (uint256[] memory, uint256[] memory) {
+    function getTransactionIds(uint256 from, uint256 to, bool pending, bool executed)
+        public
+        override
+        view
+        returns (uint256[] memory, uint256[] memory)
+    {
         require(to > from, "KAIA::Judge: Invalid from and to");
         // Ignore the first dummy transaction
         if (from == 0) {
@@ -327,7 +321,7 @@ contract Judge is
         uint256 pendingCnt = 0;
         uint256 executedCnt = 0;
 
-        for (uint256 i = from; i < to; i++) {
+        for (uint256 i=from; i<to; i++) {
             if (pending && !transactions[i].executed) {
                 _pendingTxs[pendingCnt++] = i;
             }
@@ -338,10 +332,10 @@ contract Judge is
 
         uint256[] memory pendingTxs = new uint[](pendingCnt);
         uint256[] memory executedTxs = new uint[](executedCnt);
-        for (uint256 i = 0; i < pendingCnt; i++) {
+        for (uint256 i=0; i<pendingCnt; i++) {
             pendingTxs[i] = _pendingTxs[i];
         }
-        for (uint256 i = 0; i < executedCnt; i++) {
+        for (uint256 i=0; i<executedCnt; i++) {
             executedTxs[i] = _executedTxs[i];
         }
         return (pendingTxs, executedTxs);

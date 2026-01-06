@@ -35,11 +35,7 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         uint256 finalUserAmount,
         uint256 commission
     );
-    event TokenAdded(
-        address indexed token,
-        address indexed factory,
-        address router
-    );
+    event TokenAdded(address indexed token, address indexed factory, address router);
     event TokenRemoved(address indexed token);
     event CommissionRateUpdated(uint256 oldRate, uint256 newRate);
     event CommissionClaimed(uint256 amount);
@@ -56,24 +52,15 @@ contract GaslessSwapRouter is IKIP247, Ownable {
      * @dev IMPORTANT: This contract does not support Fee-on-transfer (FoT) tokens.
      * Such tokens will not function correctly with this contract and should not be added.
      */
-    function addToken(
-        address token,
-        address factory,
-        address router
-    ) external override onlyOwner {
+    function addToken(address token, address factory, address router) external override onlyOwner {
         require(token != address(0), "Invalid token address");
         require(factory != address(0), "Invalid factory address");
         require(router != address(0), "Invalid router address");
-        require(
-            _dexInfos[token].factory == address(0),
-            "TokenAlreadySupported"
-        );
+        require(_dexInfos[token].factory == address(0), "TokenAlreadySupported");
 
         address pair;
         bool success;
-        try IUniswapV2Factory(factory).getPair(token, address(WKAIA)) returns (
-            address pairAddress
-        ) {
+        try IUniswapV2Factory(factory).getPair(token, address(WKAIA)) returns (address pairAddress) {
             pair = pairAddress;
             success = true;
         } catch {
@@ -83,8 +70,7 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         require(success, "InvalidDEXAddress");
         require(pair != address(0), "PairDoesNotExist");
 
-        (uint112 reserve0, uint112 reserve1, ) = IUniswapV2Pair(pair)
-            .getReserves();
+        (uint112 reserve0, uint112 reserve1, ) = IUniswapV2Pair(pair).getReserves();
         require(reserve0 > 0 && reserve1 > 0, "NoLiquidity");
 
         _dexInfos[token] = DEXInfo({factory: factory, router: router});
@@ -101,9 +87,7 @@ contract GaslessSwapRouter is IKIP247, Ownable {
 
         for (uint i = 0; i < _supportedTokens.length; i++) {
             if (_supportedTokens[i] == token) {
-                _supportedTokens[i] = _supportedTokens[
-                    _supportedTokens.length - 1
-                ];
+                _supportedTokens[i] = _supportedTokens[_supportedTokens.length - 1];
                 _supportedTokens.pop();
                 break;
             }
@@ -112,16 +96,12 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         emit TokenRemoved(token);
     }
 
-    function dexAddress(
-        address token
-    ) external view override returns (address) {
+    function dexAddress(address token) external view override returns (address) {
         require(_dexInfos[token].factory != address(0), "TokenNotSupported");
         return _dexInfos[token].factory;
     }
 
-    function getDEXInfo(
-        address token
-    ) external view returns (address factory, address router) {
+    function getDEXInfo(address token) external view returns (address factory, address router) {
         require(isTokenSupported(token), "TokenNotSupported");
 
         DEXInfo memory info = _dexInfos[token];
@@ -138,9 +118,7 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         emit CommissionClaimed(amount);
     }
 
-    function updateCommissionRate(
-        uint256 _commissionRate
-    ) external override onlyOwner {
+    function updateCommissionRate(uint256 _commissionRate) external override onlyOwner {
         require(_commissionRate <= 10000, "InvalidCommissionRate");
 
         uint256 oldRate = commissionRate;
@@ -162,10 +140,7 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         DEXInfo memory dexInfo = _dexInfos[token];
 
         // R1: Sender has enough tokens
-        require(
-            IERC20(token).balanceOf(msg.sender) >= amountIn,
-            "Insufficient token balance"
-        );
+        require(IERC20(token).balanceOf(msg.sender) >= amountIn, "Insufficient token balance");
 
         // Part of R3: Check minAmountOut >= amountRepay before swap
         require(minAmountOut >= amountRepay, "InsufficientSwapOutput");
@@ -183,13 +158,7 @@ contract GaslessSwapRouter is IKIP247, Ownable {
 
         // Execute swap using token-specific router
         IUniswapV2Router02 router = IUniswapV2Router02(dexInfo.router);
-        uint256[] memory amounts = router.swapExactTokensForETH(
-            amountIn,
-            minAmountOut,
-            path,
-            address(this),
-            deadline
-        );
+        uint256[] memory amounts = router.swapExactTokensForETH(amountIn, minAmountOut, path, address(this), deadline);
 
         uint256 receivedAmount = amounts[1];
 
@@ -208,19 +177,10 @@ contract GaslessSwapRouter is IKIP247, Ownable {
         // Send remaining KAIA to user
         payable(msg.sender).transfer(finalUserAmount);
 
-        emit SwappedForGas(
-            block.coinbase,
-            amountRepay,
-            msg.sender,
-            finalUserAmount,
-            commission
-        );
+        emit SwappedForGas(block.coinbase, amountRepay, msg.sender, finalUserAmount, commission);
     }
 
-    function getAmountIn(
-        address token,
-        uint256 amountOut
-    ) external view override returns (uint256 amountIn) {
+    function getAmountIn(address token, uint256 amountOut) external view override returns (uint256 amountIn) {
         require(isTokenSupported(token), "TokenNotSupported");
 
         DEXInfo memory dexInfo = _dexInfos[token];

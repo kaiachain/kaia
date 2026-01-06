@@ -125,20 +125,12 @@ contract Voting is IVoting {
 
     /// @dev Check for propose() access permission
     function checkProposeAccess(uint256 proposalId) internal view {
-        checkAccess(
-            proposalId,
-            accessRule.secretaryPropose,
-            accessRule.voterPropose
-        );
+        checkAccess(proposalId, accessRule.secretaryPropose, accessRule.voterPropose);
     }
 
     /// @dev Check for queue() and execute() access permission
     function checkExecuteAccess(uint256 proposalId) internal view {
-        checkAccess(
-            proposalId,
-            accessRule.secretaryExecute,
-            accessRule.voterExecute
-        );
+        checkAccess(proposalId, accessRule.secretaryExecute, accessRule.voterExecute);
     }
 
     /// @dev Check that sender has access to a certain operation for the given proposal.
@@ -146,11 +138,7 @@ contract Voting is IVoting {
     /// @param proposalId       The proposal ID which the operation changes
     /// @param secretaryAccess  True if the operation is allowed to the secretary
     /// @param voterAccess      True if the operation is allowed to any voter of the proposal
-    function checkAccess(
-        uint256 proposalId,
-        bool secretaryAccess,
-        bool voterAccess
-    ) internal view {
+    function checkAccess(uint256 proposalId, bool secretaryAccess, bool voterAccess) internal view {
         // if ( sA &&  vA), msg.sender must be the secretary or a voter.
         //   Note that in this case, the revert message would be
         //   "Not a registered voter" or "Not eligible to vote".
@@ -178,10 +166,7 @@ contract Voting is IVoting {
 
     /// @dev The proposal must exist and is in the speciefied state
     modifier onlyState(uint256 proposalId, ProposalState s) {
-        require(
-            proposals[proposalId].proposer != address(0),
-            "No such proposal"
-        );
+        require(proposals[proposalId].proposer != address(0), "No such proposal");
         require(state(proposalId) == s, "Not allowed in current state");
         _;
     }
@@ -194,10 +179,7 @@ contract Voting is IVoting {
 
     /// @dev Sender must be this contract or the secretary.
     modifier onlyGovernanceOrSecretary() {
-        require(
-            msg.sender == address(this) || msg.sender == secretary,
-            "Not a governance transaction or secretary"
-        );
+        require(msg.sender == address(this) || msg.sender == secretary, "Not a governance transaction or secretary");
         _;
     }
 
@@ -218,19 +200,13 @@ contract Voting is IVoting {
         uint256 votingDelay,
         uint256 votingPeriod
     ) external override returns (uint256 proposalId) {
+        require(targets.length == values.length && targets.length == calldatas.length, "Invalid actions");
         require(
-            targets.length == values.length &&
-                targets.length == calldatas.length,
-            "Invalid actions"
-        );
-        require(
-            timingRule.minVotingDelay <= votingDelay &&
-                votingDelay <= timingRule.maxVotingDelay,
+            timingRule.minVotingDelay <= votingDelay && votingDelay <= timingRule.maxVotingDelay,
             "Invalid votingDelay"
         );
         require(
-            timingRule.minVotingPeriod <= votingPeriod &&
-                votingPeriod <= timingRule.maxVotingPeriod,
+            timingRule.minVotingPeriod <= votingPeriod && votingPeriod <= timingRule.maxVotingPeriod,
             "Invalid votingPeriod"
         );
 
@@ -250,10 +226,7 @@ contract Voting is IVoting {
 
         // Finalize voter list and track balance changes during the preparation period
         p.stakingTracker = stakingTracker;
-        p.trackerId = IStakingTracker(p.stakingTracker).createTracker(
-            block.number,
-            p.voteStart
-        );
+        p.trackerId = IStakingTracker(p.stakingTracker).createTracker(block.number, p.voteStart);
 
         // Permission check must be done here since it requires trackerId.
         checkProposeAccess(proposalId);
@@ -274,9 +247,7 @@ contract Voting is IVoting {
     /// @dev Cancel a proposal
     /// The proposal must be in Pending state
     /// Only the proposer of the proposal can cancel the proposal.
-    function cancel(
-        uint256 proposalId
-    ) external override onlyState(proposalId, ProposalState.Pending) {
+    function cancel(uint256 proposalId) external override onlyState(proposalId, ProposalState.Pending) {
         Proposal storage p = proposals[proposalId];
         require(p.proposer == msg.sender, "Not the proposer");
 
@@ -288,10 +259,7 @@ contract Voting is IVoting {
     /// The proposal must be in Active state
     /// A node can only vote once for a proposal
     /// choice must be one of VoteChoice.
-    function castVote(
-        uint256 proposalId,
-        uint8 choice
-    ) external override onlyState(proposalId, ProposalState.Active) {
+    function castVote(uint256 proposalId, uint8 choice) external override onlyState(proposalId, ProposalState.Active) {
         Proposal storage p = proposals[proposalId];
 
         // cache quorums to (1) save gas for checkQuorum,
@@ -307,9 +275,7 @@ contract Voting is IVoting {
         require(votes > 0, "Not eligible to vote");
 
         require(
-            choice == uint8(VoteChoice.Yes) ||
-                choice == uint8(VoteChoice.No) ||
-                choice == uint8(VoteChoice.Abstain),
+            choice == uint8(VoteChoice.Yes) || choice == uint8(VoteChoice.No) || choice == uint8(VoteChoice.Abstain),
             "Not a valid choice"
         );
 
@@ -321,20 +287,10 @@ contract Voting is IVoting {
         incrementTally(proposalId, choice, votes);
         p.voters.push(gcId);
 
-        emit VoteCast(
-            msg.sender,
-            proposalId,
-            choice,
-            votes,
-            Strings.toHexString(gcId, 32)
-        );
+        emit VoteCast(msg.sender, proposalId, choice, votes, Strings.toHexString(gcId, 32));
     }
 
-    function incrementTally(
-        uint256 proposalId,
-        uint8 choice,
-        uint256 votes
-    ) private {
+    function incrementTally(uint256 proposalId, uint8 choice, uint256 votes) private {
         Proposal storage p = proposals[proposalId];
         if (choice == uint8(VoteChoice.Yes)) {
             p.totalYes += votes;
@@ -352,12 +308,7 @@ contract Voting is IVoting {
     /// Otherwise only secretary can queue.
     function queue(
         uint256 proposalId
-    )
-        external
-        override
-        onlyState(proposalId, ProposalState.Passed)
-        onlyExecutor(proposalId)
-    {
+    ) external override onlyState(proposalId, ProposalState.Passed) onlyExecutor(proposalId) {
         Proposal storage p = proposals[proposalId];
         require(p.targets.length > 0, "Proposal has no action");
 
@@ -375,20 +326,12 @@ contract Voting is IVoting {
     /// Otherwise only secretary can execute.
     function execute(
         uint256 proposalId
-    )
-        external
-        payable
-        override
-        onlyState(proposalId, ProposalState.Queued)
-        onlyExecutor(proposalId)
-    {
+    ) external payable override onlyState(proposalId, ProposalState.Queued) onlyExecutor(proposalId) {
         Proposal storage p = proposals[proposalId];
         require(block.number >= p.eta, "Not yet executable");
 
         for (uint256 i = 0; i < p.targets.length; i++) {
-            (bool success, bytes memory result) = p.targets[i].call{
-                value: p.values[i]
-            }(p.calldatas[i]);
+            (bool success, bytes memory result) = p.targets[i].call{value: p.values[i]}(p.calldatas[i]);
             handleCallResult(success, result);
         }
 
@@ -419,9 +362,7 @@ contract Voting is IVoting {
 
     /// @dev Update the StakingTracker address
     /// Should not be called if there is an active proposal
-    function updateStakingTracker(
-        address newAddr
-    ) public override onlyGovernance {
+    function updateStakingTracker(address newAddr) public override onlyGovernance {
         // Retire expired trackers
         require(newAddr != address(0), "Address is null");
         IStakingTracker(stakingTracker).refreshStake(address(0));
@@ -458,24 +399,13 @@ contract Voting is IVoting {
 
         validateAccessRule();
 
-        emit UpdateAccessRule(
-            ar.secretaryPropose,
-            ar.voterPropose,
-            ar.secretaryExecute,
-            ar.voterExecute
-        );
+        emit UpdateAccessRule(ar.secretaryPropose, ar.voterPropose, ar.secretaryExecute, ar.voterExecute);
     }
 
     function validateAccessRule() internal view {
         AccessRule storage ar = accessRule;
-        require(
-            (ar.secretaryPropose && secretary != address(0)) || ar.voterPropose,
-            "No propose access"
-        );
-        require(
-            (ar.secretaryExecute && secretary != address(0)) || ar.voterExecute,
-            "No execute access"
-        );
+        require((ar.secretaryPropose && secretary != address(0)) || ar.voterPropose, "No propose access");
+        require((ar.secretaryExecute && secretary != address(0)) || ar.voterExecute, "No execute access");
     }
 
     /// @dev Update the timing rule
@@ -493,12 +423,7 @@ contract Voting is IVoting {
 
         validateTimingRule();
 
-        emit UpdateTimingRule(
-            tr.minVotingDelay,
-            tr.maxVotingDelay,
-            tr.minVotingPeriod,
-            tr.maxVotingPeriod
-        );
+        emit UpdateTimingRule(tr.minVotingDelay, tr.maxVotingDelay, tr.minVotingPeriod, tr.maxVotingPeriod);
     }
 
     function validateTimingRule() internal view {
@@ -518,9 +443,7 @@ contract Voting is IVoting {
     }
 
     /// @dev State of a proposal
-    function state(
-        uint256 proposalId
-    ) public view override returns (ProposalState) {
+    function state(uint256 proposalId) public view override returns (ProposalState) {
         Proposal storage p = proposals[proposalId];
 
         if (p.executed) {
@@ -553,9 +476,7 @@ contract Voting is IVoting {
     /// @dev Check if a proposal is passed
     /// Note that its return value represents the current voting status,
     /// and is subject to change until the voting ends.
-    function checkQuorum(
-        uint256 proposalId
-    ) public view override returns (bool) {
+    function checkQuorum(uint256 proposalId) public view override returns (bool) {
         Proposal storage p = proposals[proposalId];
 
         (uint256 quorumCount, uint256 quorumPower) = getQuorum(proposalId);
@@ -570,18 +491,16 @@ contract Voting is IVoting {
     }
 
     /// @dev Calculate count and power quorums for a proposal
-    function getQuorum(
-        uint256 proposalId
-    ) private view returns (uint256 quorumCount, uint256 quorumPower) {
+    function getQuorum(uint256 proposalId) private view returns (uint256 quorumCount, uint256 quorumPower) {
         Proposal storage p = proposals[proposalId];
         if (p.quorumCount != 0) {
             // return cached numbers
             return (p.quorumCount, p.quorumPower);
         }
 
-        (, , , uint256 totalVotes, uint256 numEligible) = IStakingTracker(
-            p.stakingTracker
-        ).getTrackerSummary(p.trackerId);
+        (, , , uint256 totalVotes, uint256 numEligible) = IStakingTracker(p.stakingTracker).getTrackerSummary(
+            p.trackerId
+        );
 
         quorumCount = (numEligible + 2) / 3; // more than or equal to 1/3 of all GC members
         quorumPower = (totalVotes + 2) / 3; // more than or equal to 1/3 of all voting powers
@@ -596,28 +515,17 @@ contract Voting is IVoting {
     /// @param proposalId  The proposal id
     /// @return gcId    The gcId assigned to this voter account
     /// @return votes   The amount of voting powers the voter account represents
-    function getVotes(
-        uint256 proposalId,
-        address voter
-    ) public view override returns (uint256 gcId, uint256 votes) {
+    function getVotes(uint256 proposalId, address voter) public view override returns (uint256 gcId, uint256 votes) {
         Proposal storage p = proposals[proposalId];
 
         gcId = IStakingTracker(p.stakingTracker).voterToGCId(voter);
-        (, votes) = IStakingTracker(p.stakingTracker).getTrackedGC(
-            p.trackerId,
-            gcId
-        );
+        (, votes) = IStakingTracker(p.stakingTracker).getTrackedGC(p.trackerId, gcId);
     }
 
     /// @dev General contents of a proposal
     function getProposalContent(
         uint256 proposalId
-    )
-        external
-        view
-        override
-        returns (uint256 id, address proposer, string memory description)
-    {
+    ) external view override returns (uint256 id, address proposer, string memory description) {
         Proposal storage p = proposals[proposalId];
         return (proposalId, p.proposer, p.description);
     }
@@ -638,12 +546,7 @@ contract Voting is IVoting {
         )
     {
         Proposal storage p = proposals[proposalId];
-        return (
-            p.targets,
-            p.values,
-            new string[](p.targets.length),
-            p.calldatas
-        );
+        return (p.targets, p.values, new string[](p.targets.length), p.calldatas);
     }
 
     /// @dev Timing and state related properties of a proposal
@@ -665,16 +568,7 @@ contract Voting is IVoting {
         )
     {
         Proposal storage p = proposals[proposalId];
-        return (
-            p.voteStart,
-            p.voteEnd,
-            p.queueDeadline,
-            p.eta,
-            p.execDeadline,
-            p.canceled,
-            p.queued,
-            p.executed
-        );
+        return (p.voteStart, p.voteEnd, p.queueDeadline, p.eta, p.execDeadline, p.canceled, p.queued, p.executed);
     }
 
     /// @dev Vote counting related properties of a proposal
@@ -695,26 +589,14 @@ contract Voting is IVoting {
     {
         Proposal storage p = proposals[proposalId];
         (quorumCount, quorumPower) = getQuorum(proposalId);
-        return (
-            p.totalYes,
-            p.totalNo,
-            p.totalAbstain,
-            quorumCount,
-            quorumPower,
-            p.voters
-        );
+        return (p.totalYes, p.totalNo, p.totalAbstain, quorumCount, quorumPower, p.voters);
     }
 
     /// @dev Individual vote receipt
     function getReceipt(
         uint256 proposalId,
         uint256 gcId
-    )
-        external
-        view
-        override
-        returns (bool hasVoted, uint8 choice, uint256 votes)
-    {
+    ) external view override returns (bool hasVoted, uint8 choice, uint256 votes) {
         Proposal storage p = proposals[proposalId];
         Receipt storage r = p.receipts[gcId];
         return (r.hasVoted, r.choice, r.votes);
@@ -726,13 +608,7 @@ contract Voting is IVoting {
         external
         view
         override
-        returns (
-            uint256 trackStart,
-            uint256 trackEnd,
-            uint256 numGCs,
-            uint256 totalVotes,
-            uint256 numEligible
-        )
+        returns (uint256 trackStart, uint256 trackEnd, uint256 numGCs, uint256 totalVotes, uint256 numEligible)
     {
         Proposal storage p = proposals[proposalId];
         return IStakingTracker(p.stakingTracker).getTrackerSummary(p.trackerId);
@@ -740,29 +616,16 @@ contract Voting is IVoting {
 
     function getAllTrackedGCs(
         uint256 proposalId
-    )
-        external
-        view
-        override
-        returns (
-            uint256[] memory gcIds,
-            uint256[] memory gcBalances,
-            uint256[] memory gcVotes
-        )
-    {
+    ) external view override returns (uint256[] memory gcIds, uint256[] memory gcBalances, uint256[] memory gcVotes) {
         Proposal storage p = proposals[proposalId];
         return IStakingTracker(p.stakingTracker).getAllTrackedGCs(p.trackerId);
     }
 
-    function voterToGCId(
-        address voter
-    ) external view override returns (uint256 gcId) {
+    function voterToGCId(address voter) external view override returns (uint256 gcId) {
         return IStakingTracker(stakingTracker).voterToGCId(voter);
     }
 
-    function gcIdToVoter(
-        uint256 gcId
-    ) external view override returns (address voter) {
+    function gcIdToVoter(uint256 gcId) external view override returns (address voter) {
         return IStakingTracker(stakingTracker).gcIdToVoter(gcId);
     }
 }
