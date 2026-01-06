@@ -160,7 +160,7 @@ func (v *Vrank) Log() {
 		return
 	}
 
-	logger.Info("VRank", "seq", v.view.Sequence.Int64(),
+	logger.Warn("VRank", "seq", v.view.Sequence.Int64(),
 		"round", v.view.Round.Int64(),
 		"preprepareArrivalTimes", preprepareArrivalTimes,
 		"commitArrivalTimes", commitArrivalTimes,
