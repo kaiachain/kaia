@@ -1,0 +1,19 @@
+[profile.default]
+src = "src"
+out = "artifacts"
+libs = ["node_modules", "lib"]
+optimizer = true
+optimizer_runs = 200
+
+remappings = [
+    "@openzeppelin/=node_modules/@openzeppelin/",
+    "@uniswap/=node_modules/@uniswap/",
+    "eth-gas-reporter/=node_modules/eth-gas-reporter/",
+    "hardhat/=node_modules/hardhat/",
+    "openzeppelin-contracts-4.0/=node_modules/openzeppelin-contracts-4.0/",
+    "openzeppelin-contracts-5.0/=node_modules/openzeppelin-contracts-5.0/",
+    "openzeppelin-contracts-upgradeable-4.0/=node_modules/openzeppelin-contracts-upgradeable-4.0/",
+    "openzeppelin-contracts-upgradeable-5.0/=node_modules/openzeppelin-contracts-upgradeable-5.0/",
+]
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

@@ -1,0 +1,8 @@
+{
+  "lib/forge-std": {
+    "branch": {
+      "name": "v1.5.2",
+      "rev": "1801b0541f4fda118a10798fd3486bb7051c5dd6"
+    }
+  }
+}

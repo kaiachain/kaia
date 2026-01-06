@@ -46,8 +46,10 @@ These contracts in `contracts/libs` are external dependencies and libraries. Som
 
 Some libraries are outside `/contracts` directory and are installed via npm
 
-- `node_modules/@openzeppelin/contracts`: OpenZeppelin contracts.
+- `node_modules/openzeppelin-contracts-4.0`: OpenZeppelin contracts v4.0.
+- `node_modules/openzeppelin-contracts-upgradeable-4.0`: OpenZeppelin contracts upgradeable v4.0.
 - `node_modules/openzeppelin-contracts-5.0`: OpenZeppelin contracts v5.0.
+- `node_modules/openzeppelin-contracts-upgradeable-5.0`: OpenZeppelin contracts upgradeable v5.0.
 
 ### Service chain contracts
 
