@@ -27,6 +27,7 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -147,11 +148,15 @@ func (v *Vrank) HandleCommitted(blockNum *big.Int) {
 
 // Log logs accumulated data in a compressed form
 func (v *Vrank) Log() {
-	_, preprepareArrivalTimes := sortByArrivalTimes(v.preprepareArrivalTimeMap)
-	v.lastPreprepare = preprepareArrivalTimes[len(preprepareArrivalTimes)-1]
+	if len(v.preprepareArrivalTimeMap) > 0 {
+		_, preprepareArrivalTimes := sortByArrivalTimes(v.preprepareArrivalTimeMap)
+		v.lastPreprepare = preprepareArrivalTimes[len(preprepareArrivalTimes)-1]
+	}
 
-	_, commitArrivalTimes := sortByArrivalTimes(v.commitArrivalTimeMap)
-	v.lastCommit = commitArrivalTimes[len(commitArrivalTimes)-1]
+	if len(v.commitArrivalTimeMap) > 0 {
+		_, commitArrivalTimes := sortByArrivalTimes(v.commitArrivalTimeMap)
+		v.lastCommit = commitArrivalTimes[len(commitArrivalTimes)-1]
+	}
 
 	v.updateMetrics()
 
@@ -160,11 +165,27 @@ func (v *Vrank) Log() {
 		return
 	}
 
-	logger.Warn("VRank", "seq", v.view.Sequence.Int64(),
-		"round", v.view.Round.Int64(),
-		"preprepareArrivalTimes", preprepareArrivalTimes,
-		"commitArrivalTimes", commitArrivalTimes,
-	)
+	seq, round, msgArrivalTimes := v.buildLogData()
+	logger.Warn("VRank", "seq", seq, "round", round, "msgArrivalTimes(preprepare,commit)", msgArrivalTimes)
+}
+
+func (v *Vrank) buildLogData() (seq int64, round int64, msgArrivalTimes []string) {
+	sortedCommittee := valset.NewAddressSet(v.committee).List()
+	msgArrivalTimes = make([]string, len(sortedCommittee))
+	for i, addr := range sortedCommittee {
+		preprepareTime := "-" // not arrived
+		if t, ok := v.preprepareArrivalTimeMap[addr]; ok {
+			preprepareTime = encodeDuration(t)
+		}
+		commitTime := "-" // not arrived
+		if t, ok := v.commitArrivalTimeMap[addr]; ok {
+			commitTime = encodeDuration(t)
+		}
+		// Format: "addr:preprepare/commit"
+		msgArrivalTimes[i] = fmt.Sprintf("%s:%s,%s", addr.Hex(), preprepareTime, commitTime)
+	}
+
+	return v.view.Sequence.Int64(), v.view.Round.Int64(), msgArrivalTimes
 }
 
 func (v *Vrank) updateMetrics() {
@@ -233,14 +254,6 @@ func encodeDuration(d time.Duration) string {
 	} else {
 		return fmt.Sprintf("%d", d.Milliseconds())
 	}
-}
-
-func encodeDurationBatch(ds []time.Duration) []string {
-	ret := make([]string, len(ds))
-	for i, d := range ds {
-		ret[i] = encodeDuration(d)
-	}
-	return ret
 }
 
 func sortByArrivalTimes(arrivalTimeMap map[common.Address]time.Duration) ([]common.Address, []int64) {

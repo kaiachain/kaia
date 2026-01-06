@@ -20,35 +20,64 @@ package core
 
 import (
 	"math/big"
+	"math/rand"
 	"testing"
 	"time"
 
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestVrank(t *testing.T) {
 	var (
-		N            = 6
-		quorum       = 4
-		committee, _ = genValidators(N)
-		view         = istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)}
-		msg          = &istanbul.Subject{View: &view}
-		vrank        = NewVrank(view, committee)
-
-		expectedAssessList  []uint8
-		expectedLateCommits []time.Duration
+		N             = 6
+		quorum        = 4
+		committee, _  = genValidators(N)
+		view          = istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(2)}
+		preprepareMsg = &istanbul.Preprepare{View: &view}
+		commitMsg     = &istanbul.Subject{View: &view}
+		vrank         = NewVrank(view, committee)
 	)
 
-	committee = valset.NewAddressSet(committee).List() // sort it
+	time.Sleep(1 * time.Millisecond)
+
 	for i := 0; i < quorum; i++ {
-		vrank.AddCommit(msg, committee[i])
-		expectedAssessList = append(expectedAssessList, vrankArrivedEarly)
+		r := (1 + time.Duration(rand.Int63n(10))) * time.Millisecond
+		time.Sleep(r)
+		vrank.AddPreprepare(preprepareMsg, committee[i])
+		time.Sleep(r)
+		vrank.AddCommit(commitMsg, committee[i])
 	}
+
+	vrank.HandlePreprepared(view.Sequence)
 	vrank.HandleCommitted(view.Sequence)
+
+	// late messages
 	for i := quorum; i < N; i++ {
-		vrank.AddCommit(msg, committee[i])
-		expectedAssessList = append(expectedAssessList, vrankArrivedLate)
-		expectedLateCommits = append(expectedLateCommits, vrank.commitArrivalTimeMap[committee[i]])
+		r := (1 + time.Duration(rand.Int63n(10))) * time.Millisecond
+		time.Sleep(r)
+		vrank.AddPreprepare(preprepareMsg, committee[i])
+		time.Sleep(r)
+		vrank.AddCommit(commitMsg, committee[i])
 	}
+
+	vrank.Log()
+
+	assert.NotEqual(t, vrank.firstPreprepare, int64(0))
+	assert.NotEqual(t, vrank.quorumPreprepare, int64(0))
+	assert.NotEqual(t, vrank.avgPreprepareWithinQuorum, int64(0))
+	assert.NotEqual(t, vrank.lastPreprepare, int64(0))
+	assert.Equal(t, N, len(vrank.preprepareArrivalTimeMap))
+
+	assert.NotEqual(t, vrank.firstCommit, int64(0))
+	assert.NotEqual(t, vrank.quorumCommit, int64(0))
+	assert.NotEqual(t, vrank.avgCommitWithinQuorum, int64(0))
+	assert.NotEqual(t, vrank.lastCommit, int64(0))
+	assert.Equal(t, N, len(vrank.commitArrivalTimeMap))
+
+	seq, round, msgArrivalTimes := vrank.buildLogData()
+	assert.Equal(t, view.Sequence.Int64(), seq)
+	assert.Equal(t, view.Round.Int64(), round)
+	t.Logf("msgArrivalTimes: %v", msgArrivalTimes)
+	assert.Equal(t, N, len(msgArrivalTimes))
 }
