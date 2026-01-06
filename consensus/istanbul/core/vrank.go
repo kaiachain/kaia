@@ -20,8 +20,9 @@ package core
 
 import (
 	"fmt"
-	"math"
+	"maps"
 	"math/big"
+	"slices"
 	"time"
 
 	"github.com/kaiachain/kaia/common"
@@ -30,13 +31,18 @@ import (
 )
 
 type Vrank struct {
-	startTime            time.Time
-	view                 istanbul.View
-	committee            []common.Address
-	threshold            time.Duration
-	commitArrivalTimeMap map[common.Address]time.Duration
+	roundStartTime           time.Time
+	view                     istanbul.View
+	committee                []common.Address
+	preprepareArrivalTimeMap map[common.Address]time.Duration
+	commitArrivalTimeMap     map[common.Address]time.Duration
 
 	// metrics
+	firstPreprepare           int64
+	quorumPreprepare          int64
+	avgPreprepareWithinQuorum int64
+	lastPreprepare            int64
+
 	firstCommit           int64
 	quorumCommit          int64
 	avgCommitWithinQuorum int64
@@ -45,16 +51,19 @@ type Vrank struct {
 
 var (
 	// VRank metrics
+	vrankFirstPreprepareArrivalTimeGauge           = metrics.NewRegisteredGauge("vrank/first_preprepare", nil)
+	vrankQuorumPreprepareArrivalTimeGauge          = metrics.NewRegisteredGauge("vrank/quorum_preprepare", nil)
+	vrankAvgPreprepareArrivalTimeWithinQuorumGauge = metrics.NewRegisteredGauge("vrank/avg_preprepare_within_quorum", nil)
+	vrankLastPreprepareArrivalTimeGauge            = metrics.NewRegisteredGauge("vrank/last_preprepare", nil)
+
 	vrankFirstCommitArrivalTimeGauge           = metrics.NewRegisteredGauge("vrank/first_commit", nil)
 	vrankQuorumCommitArrivalTimeGauge          = metrics.NewRegisteredGauge("vrank/quorum_commit", nil)
 	vrankAvgCommitArrivalTimeWithinQuorumGauge = metrics.NewRegisteredGauge("vrank/avg_commit_within_quorum", nil)
 	vrankLastCommitArrivalTimeGauge            = metrics.NewRegisteredGauge("vrank/last_commit", nil)
 
-	vrankDefaultThreshold = "300ms" // the time to receive 2f+1 commits in an ideal network
-
 	VRankLogFrequency = uint64(0) // Will be set to the value of VRankLogFrequencyFlag in SetKaiaConfig()
 
-	vrank *Vrank
+	vrank *Vrank // vrank instance is newly created every time a new round starts
 )
 
 const (
@@ -68,62 +77,82 @@ const (
 )
 
 func NewVrank(view istanbul.View, committee []common.Address) *Vrank {
-	threshold, _ := time.ParseDuration(vrankDefaultThreshold)
 	return &Vrank{
-		startTime:             time.Now(),
-		view:                  view,
-		committee:             committee,
-		threshold:             threshold,
-		firstCommit:           int64(0),
-		quorumCommit:          int64(0),
-		avgCommitWithinQuorum: int64(0),
-		lastCommit:            int64(0),
-		commitArrivalTimeMap:  make(map[common.Address]time.Duration),
+		roundStartTime:           time.Now(),
+		view:                     view,
+		committee:                committee,
+		preprepareArrivalTimeMap: make(map[common.Address]time.Duration),
+		commitArrivalTimeMap:     make(map[common.Address]time.Duration),
+		firstCommit:              int64(0),
+		quorumCommit:             int64(0),
+		avgCommitWithinQuorum:    int64(0),
 	}
 }
 
-func (v *Vrank) TimeSinceStart() time.Duration {
-	return time.Now().Sub(v.startTime)
+func (v *Vrank) TimeSinceRoundStart() time.Duration {
+	return time.Now().Sub(v.roundStartTime)
+}
+
+func (v *Vrank) AddPreprepare(msg *istanbul.Preprepare, src common.Address) {
+	if v.isTargetPreprepare(msg, src) {
+		t := v.TimeSinceRoundStart()
+		v.preprepareArrivalTimeMap[src] = t
+	}
 }
 
 func (v *Vrank) AddCommit(msg *istanbul.Subject, src common.Address) {
 	if v.isTargetCommit(msg, src) {
-		t := v.TimeSinceStart()
+		t := v.TimeSinceRoundStart()
 		v.commitArrivalTimeMap[src] = t
 	}
 }
 
+// HandlePreprepared is called once when the state is changed to Preprepared
+func (v *Vrank) HandlePreprepared(blockNum *big.Int) {
+	if v.view.Sequence.Cmp(blockNum) != 0 {
+		return
+	}
+
+	if len(v.preprepareArrivalTimeMap) != 0 {
+		_, arrivalTimes := sortByArrivalTimes(v.preprepareArrivalTimeMap)
+		v.firstPreprepare = arrivalTimes[0]
+		v.quorumPreprepare = arrivalTimes[len(arrivalTimes)-1]
+
+		sum := int64(0)
+		for _, arrivalTime := range arrivalTimes {
+			sum += int64(arrivalTime)
+		}
+		v.avgPreprepareWithinQuorum = sum / int64(len(arrivalTimes))
+	}
+}
+
+// HandleCommitted is called once when the state is changed to Committed
 func (v *Vrank) HandleCommitted(blockNum *big.Int) {
 	if v.view.Sequence.Cmp(blockNum) != 0 {
 		return
 	}
 
 	if len(v.commitArrivalTimeMap) != 0 {
-		sum := int64(0)
-		firstCommitTime := time.Duration(math.MaxInt64)
-		quorumCommitTime := time.Duration(0)
-		for _, arrivalTime := range v.commitArrivalTimeMap {
-			sum += int64(arrivalTime)
-			if firstCommitTime > arrivalTime {
-				firstCommitTime = arrivalTime
-			}
-			if quorumCommitTime < arrivalTime {
-				quorumCommitTime = arrivalTime
-			}
-		}
-		avg := sum / int64(len(v.commitArrivalTimeMap))
-		v.avgCommitWithinQuorum = avg
-		v.firstCommit = int64(firstCommitTime)
-		v.quorumCommit = int64(quorumCommitTime)
+		_, arrivalTimes := sortByArrivalTimes(v.commitArrivalTimeMap)
+		v.firstCommit = arrivalTimes[0]
+		v.quorumCommit = arrivalTimes[len(arrivalTimes)-1]
 
-		if quorumCommitTime != time.Duration(0) && v.threshold > quorumCommitTime {
-			v.threshold = quorumCommitTime
+		sum := int64(0)
+		for _, arrivalTime := range arrivalTimes {
+			sum += int64(arrivalTime)
 		}
+		v.avgCommitWithinQuorum = sum / int64(len(arrivalTimes))
 	}
 }
 
 // Log logs accumulated data in a compressed form
 func (v *Vrank) Log() {
+	_, preprepareArrivalTimes := sortByArrivalTimes(v.preprepareArrivalTimeMap)
+	v.lastPreprepare = preprepareArrivalTimes[len(preprepareArrivalTimes)-1]
+
+	_, commitArrivalTimes := sortByArrivalTimes(v.commitArrivalTimeMap)
+	v.lastCommit = commitArrivalTimes[len(commitArrivalTimes)-1]
+
 	v.updateMetrics()
 
 	// Skip logging if VRankLogFrequency is 0 or not in the logging frequency
@@ -133,10 +162,25 @@ func (v *Vrank) Log() {
 
 	logger.Info("VRank", "seq", v.view.Sequence.Int64(),
 		"round", v.view.Round.Int64(),
+		"preprepareArrivalTimes", preprepareArrivalTimes,
+		"commitArrivalTimes", commitArrivalTimes,
 	)
 }
 
 func (v *Vrank) updateMetrics() {
+	if v.firstPreprepare != int64(0) {
+		vrankFirstPreprepareArrivalTimeGauge.Update(v.firstPreprepare)
+	}
+	if v.quorumPreprepare != int64(0) {
+		vrankQuorumPreprepareArrivalTimeGauge.Update(v.quorumPreprepare)
+	}
+	if v.avgPreprepareWithinQuorum != int64(0) {
+		vrankAvgPreprepareArrivalTimeWithinQuorumGauge.Update(v.avgPreprepareWithinQuorum)
+	}
+	if v.lastPreprepare != int64(0) {
+		vrankLastPreprepareArrivalTimeGauge.Update(v.lastPreprepare)
+	}
+
 	if v.firstCommit != int64(0) {
 		vrankFirstCommitArrivalTimeGauge.Update(v.firstCommit)
 	}
@@ -149,6 +193,20 @@ func (v *Vrank) updateMetrics() {
 	if v.lastCommit != int64(0) {
 		vrankLastCommitArrivalTimeGauge.Update(v.lastCommit)
 	}
+}
+
+func (v *Vrank) isTargetPreprepare(msg *istanbul.Preprepare, src common.Address) bool {
+	if msg.View == nil || msg.View.Sequence == nil || msg.View.Round == nil {
+		return false
+	}
+	if msg.View.Cmp(&v.view) != 0 {
+		return false
+	}
+	_, ok := v.preprepareArrivalTimeMap[src]
+	if ok {
+		return false
+	}
+	return true
 }
 
 func (v *Vrank) isTargetCommit(msg *istanbul.Subject, src common.Address) bool {
@@ -183,4 +241,18 @@ func encodeDurationBatch(ds []time.Duration) []string {
 		ret[i] = encodeDuration(d)
 	}
 	return ret
+}
+
+func sortByArrivalTimes(arrivalTimeMap map[common.Address]time.Duration) ([]common.Address, []int64) {
+	// Sort addresses by their arrival times
+	sortedAddrs := slices.SortedFunc(maps.Keys(arrivalTimeMap), func(a, b common.Address) int {
+		return int(arrivalTimeMap[a] - arrivalTimeMap[b])
+	})
+
+	retTimes := make([]int64, len(sortedAddrs))
+	for i, addr := range sortedAddrs {
+		retTimes[i] = int64(arrivalTimeMap[addr])
+	}
+
+	return sortedAddrs, retTimes
 }

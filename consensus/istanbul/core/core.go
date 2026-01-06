@@ -311,6 +311,12 @@ func (c *core) startNewRound(round *big.Int) {
 
 	logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.currentCommittee.Proposer(), "isProposer", c.isProposer())
 	logger.Trace("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "size", c.currentCommittee.Qualified().Len(), "valSet", c.currentCommittee.Qualified().String())
+
+	// log the previous round's vrank
+	if vrank != nil {
+		vrank.Log()
+	}
+	vrank = NewVrank(*c.currentView(), c.currentCommittee.Committee().List())
 }
 
 func (c *core) catchUpRound(view *istanbul.View) {
