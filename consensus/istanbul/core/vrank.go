@@ -114,7 +114,7 @@ func (v *Vrank) HandlePreprepared(blockNum *big.Int) {
 		return
 	}
 
-	if len(v.preprepareArrivalTimeMap) != 0 {
+	if len(v.preprepareArrivalTimeMap) > 0 {
 		_, arrivalTimes := sortByArrivalTimes(v.preprepareArrivalTimeMap)
 		v.firstPreprepare = arrivalTimes[0]
 		v.quorumPreprepare = arrivalTimes[len(arrivalTimes)-1]
@@ -123,7 +123,7 @@ func (v *Vrank) HandlePreprepared(blockNum *big.Int) {
 		for _, arrivalTime := range arrivalTimes {
 			sum += int64(arrivalTime)
 		}
-		v.avgPreprepareWithinQuorum = sum / int64(len(arrivalTimes))
+		v.avgPreprepareWithinQuorum = sum / int64(len(v.preprepareArrivalTimeMap))
 	}
 }
 
@@ -133,7 +133,7 @@ func (v *Vrank) HandleCommitted(blockNum *big.Int) {
 		return
 	}
 
-	if len(v.commitArrivalTimeMap) != 0 {
+	if len(v.commitArrivalTimeMap) > 0 {
 		_, arrivalTimes := sortByArrivalTimes(v.commitArrivalTimeMap)
 		v.firstCommit = arrivalTimes[0]
 		v.quorumCommit = arrivalTimes[len(arrivalTimes)-1]
@@ -142,7 +142,7 @@ func (v *Vrank) HandleCommitted(blockNum *big.Int) {
 		for _, arrivalTime := range arrivalTimes {
 			sum += int64(arrivalTime)
 		}
-		v.avgCommitWithinQuorum = sum / int64(len(arrivalTimes))
+		v.avgCommitWithinQuorum = sum / int64(len(v.commitArrivalTimeMap))
 	}
 }
 
