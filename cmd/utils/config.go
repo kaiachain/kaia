@@ -381,7 +381,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	}
 }
 
-// setNodeConfig applies node-related command line flags to the config.
+// SetNodeConfig applies node-related command line flags to the config.
 func (kCfg *KaiaConfig) SetNodeConfig(ctx *cli.Context) {
 	cfg := &kCfg.Node
 	// ntp check enable with remote server
@@ -824,7 +824,7 @@ func setRewardbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
 	}
 }
 
-// makeAddress converts an account specified directly as a hex encoded string or
+// MakeAddress converts an account specified directly as a hex encoded string or
 // a key index in the key store to an internal account representation.
 func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
 	// If the specified account is a valid address, return it
