@@ -36,7 +36,7 @@ func TestVrank(t *testing.T) {
 		view          = istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(2)}
 		preprepareMsg = &istanbul.Preprepare{View: &view}
 		commitMsg     = &istanbul.Subject{View: &view}
-		vrank         = NewVrank(view, committee, quorum)
+		vrank         = NewVrank()
 	)
 
 	vrank.StartTimer()
