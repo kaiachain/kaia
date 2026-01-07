@@ -245,15 +245,8 @@ func (v *Vrank) isTargetCommit(msg *istanbul.Subject, src common.Address) bool {
 }
 
 // encodeDuration encodes given duration into string
-// The returned string is at most 4 bytes
 func encodeDuration(d time.Duration) string {
-	if d > 10*time.Second {
-		return fmt.Sprintf("%.0fs", d.Seconds())
-	} else if d > time.Second {
-		return fmt.Sprintf("%.1fs", d.Seconds())
-	} else {
-		return fmt.Sprintf("%d", d.Milliseconds())
-	}
+	return fmt.Sprintf("%d", d.Milliseconds())
 }
 
 func sortByArrivalTimes(arrivalTimeMap map[common.Address]time.Duration) ([]common.Address, []int64) {
