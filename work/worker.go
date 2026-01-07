@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/event"
@@ -558,6 +559,10 @@ func (self *worker) commitNewWork() {
 				"parentBlockTimestamp", parentTimestamp,
 				"nextBlockTimestamp", tstamp,
 			)
+		}
+
+		if core.Vrank != nil {
+			core.Vrank.StartTimer()
 		}
 	}
 

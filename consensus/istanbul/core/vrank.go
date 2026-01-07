@@ -32,7 +32,7 @@ import (
 )
 
 type vrank struct {
-	roundStartTime           time.Time
+	miningStartTime          time.Time
 	view                     istanbul.View
 	committee                []common.Address
 	preprepareArrivalTimeMap map[common.Address]time.Duration
@@ -64,7 +64,7 @@ var (
 
 	VRankLogFrequency = uint64(0) // Will be set to the value of VRankLogFrequencyFlag in SetKaiaConfig()
 
-	Vrank *vrank // vrank instance is newly created every time a new round starts
+	Vrank *vrank
 )
 
 const (
@@ -79,7 +79,6 @@ const (
 
 func NewVrank(view istanbul.View, committee []common.Address) *vrank {
 	return &vrank{
-		roundStartTime:           time.Now(),
 		view:                     view,
 		committee:                committee,
 		preprepareArrivalTimeMap: make(map[common.Address]time.Duration),
@@ -90,20 +89,24 @@ func NewVrank(view istanbul.View, committee []common.Address) *vrank {
 	}
 }
 
-func (v *vrank) TimeSinceRoundStart() time.Duration {
-	return time.Now().Sub(v.roundStartTime)
+func (v *vrank) StartTimer() {
+	v.miningStartTime = time.Now()
+}
+
+func (v *vrank) TimeSinceMiningStart() time.Duration {
+	return time.Now().Sub(v.miningStartTime)
 }
 
 func (v *vrank) AddPreprepare(msg *istanbul.Preprepare, src common.Address) {
 	if v.isTargetPreprepare(msg, src) {
-		t := v.TimeSinceRoundStart()
+		t := v.TimeSinceMiningStart()
 		v.preprepareArrivalTimeMap[src] = t
 	}
 }
 
 func (v *vrank) AddCommit(msg *istanbul.Subject, src common.Address) {
 	if v.isTargetCommit(msg, src) {
-		t := v.TimeSinceRoundStart()
+		t := v.TimeSinceMiningStart()
 		v.commitArrivalTimeMap[src] = t
 	}
 }
