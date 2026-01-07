@@ -195,10 +195,6 @@ func (c *core) commit() {
 			c.sendNextRoundChange("commit failure")
 			return
 		}
-
-		if Vrank != nil {
-			Vrank.HandleCommitted(proposal.Number())
-		}
 	} else {
 		// TODO-Kaia never happen, but if proposal is nil, mining is not working.
 		logger.Error("istanbul.core current.Proposal is NULL")
@@ -316,7 +312,7 @@ func (c *core) startNewRound(round *big.Int) {
 	if Vrank != nil {
 		Vrank.Log()
 	}
-	Vrank = NewVrank(*c.currentView(), c.currentCommittee.Committee().List())
+	Vrank = NewVrank(*c.currentView(), c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
 }
 
 func (c *core) catchUpRound(view *istanbul.View) {

@@ -36,9 +36,10 @@ func TestVrank(t *testing.T) {
 		view          = istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(2)}
 		preprepareMsg = &istanbul.Preprepare{View: &view}
 		commitMsg     = &istanbul.Subject{View: &view}
-		vrank         = NewVrank(view, committee)
+		vrank         = NewVrank(view, committee, quorum)
 	)
 
+	vrank.StartTimer()
 	time.Sleep(1 * time.Millisecond)
 
 	for i := 0; i < quorum; i++ {
@@ -48,9 +49,6 @@ func TestVrank(t *testing.T) {
 		time.Sleep(r)
 		vrank.AddCommit(commitMsg, committee[i])
 	}
-
-	vrank.HandlePreprepared(view.Sequence)
-	vrank.HandleCommitted(view.Sequence)
 
 	// late messages
 	for i := quorum; i < N; i++ {
@@ -63,21 +61,18 @@ func TestVrank(t *testing.T) {
 
 	vrank.Log()
 
-	assert.NotEqual(t, vrank.firstPreprepare, int64(0))
-	assert.NotEqual(t, vrank.quorumPreprepare, int64(0))
-	assert.NotEqual(t, vrank.avgPreprepareWithinQuorum, int64(0))
-	assert.NotEqual(t, vrank.lastPreprepare, int64(0))
-	assert.Equal(t, N, len(vrank.preprepareArrivalTimeMap))
+	assert.NotEqual(t, vrank.preprepareArrivalTime, int64(0))
 
-	assert.NotEqual(t, vrank.firstCommit, int64(0))
-	assert.NotEqual(t, vrank.quorumCommit, int64(0))
-	assert.NotEqual(t, vrank.avgCommitWithinQuorum, int64(0))
-	assert.NotEqual(t, vrank.lastCommit, int64(0))
+	firstCommit, lastCommit, quorumCommit, avgCommitWithinQuorum := vrank.calcMetrics()
+	assert.NotEqual(t, firstCommit, int64(0))
+	assert.NotEqual(t, quorumCommit, int64(0))
+	assert.NotEqual(t, avgCommitWithinQuorum, int64(0))
+	assert.NotEqual(t, lastCommit, int64(0))
 	assert.Equal(t, N, len(vrank.commitArrivalTimeMap))
 
-	seq, round, msgArrivalTimes := vrank.buildLogData()
+	seq, round, _, commitArrivalTimes := vrank.buildLogData()
 	assert.Equal(t, view.Sequence.Int64(), seq)
 	assert.Equal(t, view.Round.Int64(), round)
-	t.Logf("msgArrivalTimes: %v", msgArrivalTimes)
-	assert.Equal(t, N, len(msgArrivalTimes))
+	t.Logf("commitArrivalTimes: %v", commitArrivalTimes)
+	assert.Equal(t, N, len(commitArrivalTimes))
 }

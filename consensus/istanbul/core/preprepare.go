@@ -141,9 +141,6 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 			c.acceptPreprepare(preprepare)
 			c.setState(StatePreprepared)
 			c.sendPrepare()
-			if Vrank != nil {
-				Vrank.HandlePreprepared(preprepare.View.Sequence)
-			}
 		}
 	}
 
