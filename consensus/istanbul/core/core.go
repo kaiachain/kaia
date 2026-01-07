@@ -312,7 +312,12 @@ func (c *core) startNewRound(round *big.Int) {
 	if Vrank != nil {
 		Vrank.Log()
 	}
-	Vrank = NewVrank(*c.currentView(), c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+
+	if c.currentView().Round.Cmp(big.NewInt(0)) == 0 {
+		Vrank = NewVrank(*c.currentView(), c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+	} else {
+		Vrank.StartNewRound(*c.currentView())
+	}
 }
 
 func (c *core) catchUpRound(view *istanbul.View) {

@@ -80,6 +80,12 @@ func (v *vrank) StartTimer() {
 	v.miningStartTime = time.Now()
 }
 
+func (v *vrank) StartNewRound(view istanbul.View) {
+	v.view = view
+	v.commitArrivalTimeMap = make(map[common.Address]time.Duration)
+	v.preprepareArrivalTime = time.Duration(0)
+}
+
 func (v *vrank) AddPreprepare(msg *istanbul.Preprepare, src common.Address) {
 	if v.isTargetPreprepare(msg, src) {
 		v.preprepareArrivalTime = time.Since(v.miningStartTime)
