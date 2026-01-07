@@ -404,6 +404,101 @@ func (c *bigModExp) Name() string {
 	return "MODEXP"
 }
 
+var (
+	big1      = big.NewInt(1)
+	big4      = big.NewInt(4)
+	big8      = big.NewInt(8)
+	big16     = big.NewInt(16)
+	big20     = big.NewInt(20)
+	big32     = big.NewInt(32)
+	big64     = big.NewInt(64)
+	big96     = big.NewInt(96)
+	big480    = big.NewInt(480)
+	big1024   = big.NewInt(1024)
+	big3072   = big.NewInt(3072)
+	big199680 = big.NewInt(199680)
+)
+
+// modexpMultComplexityForKaiaBackwardCompatibility implements bigModexp multComplexity formula, as defined in EIP-198
+//
+// def mult_complexity(x):
+//
+//	if x <= 64: return x ** 2
+//	elif x <= 1024: return x ** 2 // 4 + 96 * x - 3072
+//	else: return x ** 2 // 16 + 480 * x - 199680
+//
+// where is x is max(length_of_MODULUS, length_of_BASE)
+// Contract: Kaia should keep this function as it is, don't change it for backward compatibility.
+func modexpMultComplexityForKaiaBackwardCompatibility(x *big.Int) *big.Int {
+	switch {
+	case x.Cmp(big64) <= 0:
+		x.Mul(x, x) // x ** 2
+	case x.Cmp(big1024) <= 0:
+		// (x ** 2 // 4 ) + ( 96 * x - 3072)
+		x = new(big.Int).Add(
+			new(big.Int).Div(new(big.Int).Mul(x, x), big4),
+			new(big.Int).Sub(new(big.Int).Mul(big96, x), big3072),
+		)
+	default:
+		// (x ** 2 // 16) + (480 * x - 199680)
+		x = new(big.Int).Add(
+			new(big.Int).Div(new(big.Int).Mul(x, x), big16),
+			new(big.Int).Sub(new(big.Int).Mul(big480, x), big199680),
+		)
+	}
+	return x
+}
+
+// GetRequiredGasAndComputationCostForKaiaBackwardCompatibility returns the gas required to execute the pre-compiled contract
+// and the computation cost of the precompiled contract.
+// Contract: Kaia should keep this function as it is, don't change it for backward compatibility.
+func (c *bigModExp) GetRequiredGasAndComputationCostForKaiaBackwardCompatibility(input []byte) (uint64, uint64) {
+	var (
+		baseLen = new(big.Int).SetBytes(getData(input, 0, 32))
+		expLen  = new(big.Int).SetBytes(getData(input, 32, 32))
+		modLen  = new(big.Int).SetBytes(getData(input, 64, 32))
+	)
+	if len(input) > 96 {
+		input = input[96:]
+	} else {
+		input = input[:0]
+	}
+	// Retrieve the head 32 bytes of exp for the adjusted exponent length
+	var expHead *big.Int
+	if big.NewInt(int64(len(input))).Cmp(baseLen) <= 0 {
+		expHead = new(big.Int)
+	} else {
+		if expLen.Cmp(big32) > 0 {
+			expHead = new(big.Int).SetBytes(getData(input, baseLen.Uint64(), 32))
+		} else {
+			expHead = new(big.Int).SetBytes(getData(input, baseLen.Uint64(), expLen.Uint64()))
+		}
+	}
+	// Calculate the adjusted exponent length
+	var msb int
+	if bitlen := expHead.BitLen(); bitlen > 0 {
+		msb = bitlen - 1
+	}
+	adjExpLen := new(big.Int)
+	if expLen.Cmp(big32) > 0 {
+		adjExpLen.Sub(expLen, big32)
+		adjExpLen.Mul(big8, adjExpLen)
+	}
+	adjExpLen.Add(adjExpLen, big.NewInt(int64(msb)))
+
+	// Calculate the gas cost of the operation
+	gas := new(big.Int).Set(math.BigMax(modLen, baseLen))
+	gas = modexpMultComplexityForKaiaBackwardCompatibility(gas)
+	gas.Mul(gas, math.BigMax(adjExpLen, big1))
+	gas.Div(gas, big20)
+
+	if gas.BitLen() > 64 {
+		// Contract: Kaia shoudn't divide by 100
+		return math.MaxUint64, math.MaxUint64
+	}
+	return gas.Uint64(), (gas.Uint64() / 100) + params.BigModExpBaseComputationCost
+}
+
 // byzantiumMultComplexity implements the bigModexp multComplexity formula, as defined in EIP-198.
 //
 //	def mult_complexity(x):
@@ -584,6 +679,10 @@ func osakaModexpGas(baseLen, expLen, modLen uint64, expHead uint256.Int) uint64 
 // GetRequiredGasAndComputationCost returns the gas required to execute the pre-compiled contract
 // and the computation cost of the precompiled contract.
 func (c *bigModExp) GetRequiredGasAndComputationCost(input []byte) (uint64, uint64) {
+	// Contract: Kaia need to calculate the gas cost by old formula for backward compatibility.
+	if !(c.eip2565 || c.eip7883) {
+		return c.GetRequiredGasAndComputationCostForKaiaBackwardCompatibility(input)
+	}
 	// Parse input lengths
 	baseLenBig := new(uint256.Int).SetBytes(getData(input, 0, 32))
 	expLenBig := new(uint256.Int).SetBytes(getData(input, 32, 32))
@@ -628,6 +727,7 @@ func (c *bigModExp) GetRequiredGasAndComputationCost(input []byte) (uint64, uint
 		gas := berlinModexpGas(baseLen, expLen, modLen, expHead)
 		return gas, gas/100 + params.BigModExpBaseComputationCost
 	} else {
+		// Contract: Kaia doesn't rearch here, because it's already calculated in the old formula.
 		gas := byzantiumModexpGas(baseLen, expLen, modLen, expHead)
 		return gas, gas/100 + params.BigModExpBaseComputationCost
 	}
