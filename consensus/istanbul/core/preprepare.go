@@ -69,6 +69,7 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 	}
 
 	if Vrank != nil {
+		Vrank.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
 		Vrank.AddPreprepare(preprepare, src)
 	}
 

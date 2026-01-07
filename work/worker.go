@@ -562,8 +562,11 @@ func (self *worker) commitNewWork() {
 		}
 
 		if core.Vrank != nil {
-			core.Vrank.StartTimer()
+			core.Vrank.Log()
+		} else {
+			core.Vrank = core.NewVrank()
 		}
+		core.Vrank.StartTimer()
 	}
 
 	var pending map[common.Address]types.Transactions

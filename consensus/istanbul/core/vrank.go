@@ -21,7 +21,6 @@ package core
 import (
 	"fmt"
 	"maps"
-	"math/big"
 	"slices"
 	"time"
 
@@ -53,44 +52,23 @@ var (
 	Vrank *vrank
 )
 
-const (
-	vrankArrivedEarly = iota
-	vrankArrivedLate
-	vrankNotArrived
-)
-
-const (
-	vrankNotArrivedPlaceholder = -1
-)
-
-func NewVrank(view istanbul.View, committee []common.Address, quorum int) *vrank {
-	if quorum == 0 {
-		return nil
-	}
-
-	return &vrank{
-		view:                  view,
-		committee:             committee,
-		quorum:                quorum,
-		commitArrivalTimeMap:  make(map[common.Address]time.Duration),
-		preprepareArrivalTime: time.Duration(0),
-	}
+func NewVrank() *vrank {
+	return &vrank{}
 }
 
 func (v *vrank) StartTimer() {
 	v.miningStartTime = time.Now()
+	v.preprepareArrivalTime = time.Duration(0)
+	v.commitArrivalTimeMap = make(map[common.Address]time.Duration)
+	v.view = istanbul.View{}
+	v.committee = []common.Address{}
+	v.quorum = 0
 }
 
-func (v *vrank) StartNewRound(view istanbul.View, committee []common.Address, quorum int) {
-	// preserve miningStartTime for the first round
-	if view.Round.Cmp(big.NewInt(0)) == 0 {
-		v.miningStartTime = time.Time{}
-	}
+func (v *vrank) SetLatestView(view istanbul.View, committee []common.Address, quorum int) {
 	v.view = view
 	v.committee = committee
 	v.quorum = quorum
-	v.commitArrivalTimeMap = make(map[common.Address]time.Duration)
-	v.preprepareArrivalTime = time.Duration(0)
 }
 
 func (v *vrank) AddPreprepare(msg *istanbul.Preprepare, src common.Address) {
@@ -105,8 +83,42 @@ func (v *vrank) AddCommit(msg *istanbul.Subject, src common.Address) {
 	}
 }
 
+func (v *vrank) isTargetPreprepare(msg *istanbul.Preprepare, src common.Address) bool {
+	if msg.View == nil || msg.View.Sequence == nil || msg.View.Round == nil {
+		return false
+	}
+	if v.view.Sequence == nil || v.view.Round == nil {
+		return false
+	}
+	if msg.View.Cmp(&v.view) != 0 {
+		return false
+	}
+	return true
+}
+
+func (v *vrank) isTargetCommit(msg *istanbul.Subject, src common.Address) bool {
+	if msg.View == nil || msg.View.Sequence == nil || msg.View.Round == nil {
+		return false
+	}
+	if v.view.Sequence == nil || v.view.Round == nil {
+		return false
+	}
+	if msg.View.Cmp(&v.view) != 0 {
+		return false
+	}
+	if _, ok := v.commitArrivalTimeMap[src]; ok {
+		return false
+	}
+	return true
+}
+
 // Log logs accumulated data in a compressed form
 func (v *vrank) Log() {
+	// Skip if no data collected (view not set)
+	if v.view.Sequence == nil || v.view.Round == nil {
+		return
+	}
+
 	v.updateMetrics()
 
 	// Skip logging if VRankLogFrequency is 0 or not in the logging frequency
@@ -171,30 +183,6 @@ func (v *vrank) updateMetrics() {
 	if avgCommitWithinQuorum != 0 {
 		vrankAvgCommitArrivalTimeWithinQuorumGauge.Update(avgCommitWithinQuorum)
 	}
-}
-
-func (v *vrank) isTargetPreprepare(msg *istanbul.Preprepare, src common.Address) bool {
-	if msg.View == nil || msg.View.Sequence == nil || msg.View.Round == nil {
-		return false
-	}
-	if msg.View.Cmp(&v.view) != 0 {
-		return false
-	}
-	return true
-}
-
-func (v *vrank) isTargetCommit(msg *istanbul.Subject, src common.Address) bool {
-	if msg.View == nil || msg.View.Sequence == nil || msg.View.Round == nil {
-		return false
-	}
-	if msg.View.Cmp(&v.view) != 0 {
-		return false
-	}
-	_, ok := v.commitArrivalTimeMap[src]
-	if ok {
-		return false
-	}
-	return true
 }
 
 // encodeDuration encodes given duration into string

@@ -40,6 +40,7 @@ func TestVrank(t *testing.T) {
 	)
 
 	vrank.StartTimer()
+	vrank.SetLatestView(view, committee, quorum)
 	time.Sleep(1 * time.Millisecond)
 
 	for i := 0; i < quorum; i++ {
