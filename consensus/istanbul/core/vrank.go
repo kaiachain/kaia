@@ -181,8 +181,8 @@ func (v *Vrank) buildLogData() (seq int64, round int64, msgArrivalTimes []string
 		if t, ok := v.commitArrivalTimeMap[addr]; ok {
 			commitTime = encodeDuration(t)
 		}
-		// Format: "addr:preprepare/commit"
-		msgArrivalTimes[i] = fmt.Sprintf("%s:%s,%s", addr.Hex(), preprepareTime, commitTime)
+		// Format: "(preprepare,commit)"
+		msgArrivalTimes[i] = fmt.Sprintf("(%s,%s)", preprepareTime, commitTime)
 	}
 
 	return v.view.Sequence.Int64(), v.view.Round.Int64(), msgArrivalTimes
