@@ -448,6 +448,8 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		return consensus.ErrUnknownAncestor
 	}
 
+	sb.core
+
 	// unused fields, force to set to empty
 	header.Rewardbase = sb.rewardbase
 	// use the same blockscore for all blocks

@@ -68,8 +68,8 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 		return errInvalidMessage
 	}
 
-	if vrank != nil {
-		vrank.AddPreprepare(preprepare, src)
+	if Vrank != nil {
+		Vrank.AddPreprepare(preprepare, src)
 	}
 
 	// Ensure we have the same view with the PRE-PREPARE message
@@ -141,8 +141,8 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 			c.acceptPreprepare(preprepare)
 			c.setState(StatePreprepared)
 			c.sendPrepare()
-			if vrank != nil {
-				vrank.HandlePreprepared(preprepare.View.Sequence)
+			if Vrank != nil {
+				Vrank.HandlePreprepared(preprepare.View.Sequence)
 			}
 		}
 	}

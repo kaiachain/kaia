@@ -31,7 +31,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-type Vrank struct {
+type vrank struct {
 	roundStartTime           time.Time
 	view                     istanbul.View
 	committee                []common.Address
@@ -64,7 +64,7 @@ var (
 
 	VRankLogFrequency = uint64(0) // Will be set to the value of VRankLogFrequencyFlag in SetKaiaConfig()
 
-	vrank *Vrank // vrank instance is newly created every time a new round starts
+	Vrank *vrank // vrank instance is newly created every time a new round starts
 )
 
 const (
@@ -77,8 +77,8 @@ const (
 	vrankNotArrivedPlaceholder = -1
 )
 
-func NewVrank(view istanbul.View, committee []common.Address) *Vrank {
-	return &Vrank{
+func NewVrank(view istanbul.View, committee []common.Address) *vrank {
+	return &vrank{
 		roundStartTime:           time.Now(),
 		view:                     view,
 		committee:                committee,
@@ -90,18 +90,18 @@ func NewVrank(view istanbul.View, committee []common.Address) *Vrank {
 	}
 }
 
-func (v *Vrank) TimeSinceRoundStart() time.Duration {
+func (v *vrank) TimeSinceRoundStart() time.Duration {
 	return time.Now().Sub(v.roundStartTime)
 }
 
-func (v *Vrank) AddPreprepare(msg *istanbul.Preprepare, src common.Address) {
+func (v *vrank) AddPreprepare(msg *istanbul.Preprepare, src common.Address) {
 	if v.isTargetPreprepare(msg, src) {
 		t := v.TimeSinceRoundStart()
 		v.preprepareArrivalTimeMap[src] = t
 	}
 }
 
-func (v *Vrank) AddCommit(msg *istanbul.Subject, src common.Address) {
+func (v *vrank) AddCommit(msg *istanbul.Subject, src common.Address) {
 	if v.isTargetCommit(msg, src) {
 		t := v.TimeSinceRoundStart()
 		v.commitArrivalTimeMap[src] = t
@@ -109,7 +109,7 @@ func (v *Vrank) AddCommit(msg *istanbul.Subject, src common.Address) {
 }
 
 // HandlePreprepared is called once when the state is changed to Preprepared
-func (v *Vrank) HandlePreprepared(blockNum *big.Int) {
+func (v *vrank) HandlePreprepared(blockNum *big.Int) {
 	if v.view.Sequence.Cmp(blockNum) != 0 {
 		return
 	}
@@ -128,7 +128,7 @@ func (v *Vrank) HandlePreprepared(blockNum *big.Int) {
 }
 
 // HandleCommitted is called once when the state is changed to Committed
-func (v *Vrank) HandleCommitted(blockNum *big.Int) {
+func (v *vrank) HandleCommitted(blockNum *big.Int) {
 	if v.view.Sequence.Cmp(blockNum) != 0 {
 		return
 	}
@@ -147,7 +147,7 @@ func (v *Vrank) HandleCommitted(blockNum *big.Int) {
 }
 
 // Log logs accumulated data in a compressed form
-func (v *Vrank) Log() {
+func (v *vrank) Log() {
 	if len(v.preprepareArrivalTimeMap) > 0 {
 		_, preprepareArrivalTimes := sortByArrivalTimes(v.preprepareArrivalTimeMap)
 		v.lastPreprepare = preprepareArrivalTimes[len(preprepareArrivalTimes)-1]
@@ -169,7 +169,7 @@ func (v *Vrank) Log() {
 	logger.Warn("VRank", "seq", seq, "round", round, "msgArrivalTimes(preprepare,commit)", msgArrivalTimes)
 }
 
-func (v *Vrank) buildLogData() (seq int64, round int64, msgArrivalTimes []string) {
+func (v *vrank) buildLogData() (seq int64, round int64, msgArrivalTimes []string) {
 	sortedCommittee := valset.NewAddressSet(v.committee).List()
 	msgArrivalTimes = make([]string, len(sortedCommittee))
 	for i, addr := range sortedCommittee {
@@ -188,7 +188,7 @@ func (v *Vrank) buildLogData() (seq int64, round int64, msgArrivalTimes []string
 	return v.view.Sequence.Int64(), v.view.Round.Int64(), msgArrivalTimes
 }
 
-func (v *Vrank) updateMetrics() {
+func (v *vrank) updateMetrics() {
 	if v.firstPreprepare != int64(0) {
 		vrankFirstPreprepareArrivalTimeGauge.Update(v.firstPreprepare)
 	}
@@ -216,7 +216,7 @@ func (v *Vrank) updateMetrics() {
 	}
 }
 
-func (v *Vrank) isTargetPreprepare(msg *istanbul.Preprepare, src common.Address) bool {
+func (v *vrank) isTargetPreprepare(msg *istanbul.Preprepare, src common.Address) bool {
 	if msg.View == nil || msg.View.Sequence == nil || msg.View.Round == nil {
 		return false
 	}
@@ -230,7 +230,7 @@ func (v *Vrank) isTargetPreprepare(msg *istanbul.Preprepare, src common.Address)
 	return true
 }
 
-func (v *Vrank) isTargetCommit(msg *istanbul.Subject, src common.Address) bool {
+func (v *vrank) isTargetCommit(msg *istanbul.Subject, src common.Address) bool {
 	if msg.View == nil || msg.View.Sequence == nil || msg.View.Round == nil {
 		return false
 	}

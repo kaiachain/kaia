@@ -196,8 +196,8 @@ func (c *core) commit() {
 			return
 		}
 
-		if vrank != nil {
-			vrank.HandleCommitted(proposal.Number())
+		if Vrank != nil {
+			Vrank.HandleCommitted(proposal.Number())
 		}
 	} else {
 		// TODO-Kaia never happen, but if proposal is nil, mining is not working.
@@ -313,10 +313,10 @@ func (c *core) startNewRound(round *big.Int) {
 	logger.Trace("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "size", c.currentCommittee.Qualified().Len(), "valSet", c.currentCommittee.Qualified().String())
 
 	// log the previous round's vrank
-	if vrank != nil {
-		vrank.Log()
+	if Vrank != nil {
+		Vrank.Log()
 	}
-	vrank = NewVrank(*c.currentView(), c.currentCommittee.Committee().List())
+	Vrank = NewVrank(*c.currentView(), c.currentCommittee.Committee().List())
 }
 
 func (c *core) catchUpRound(view *istanbul.View) {
