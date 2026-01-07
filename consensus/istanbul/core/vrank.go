@@ -21,6 +21,7 @@ package core
 import (
 	"fmt"
 	"maps"
+	"math/big"
 	"slices"
 	"time"
 
@@ -80,8 +81,14 @@ func (v *vrank) StartTimer() {
 	v.miningStartTime = time.Now()
 }
 
-func (v *vrank) StartNewRound(view istanbul.View) {
+func (v *vrank) StartNewRound(view istanbul.View, committee []common.Address, quorum int) {
+	// preserve miningStartTime for the first round
+	if view.Round.Cmp(big.NewInt(0)) == 0 {
+		v.miningStartTime = time.Time{}
+	}
 	v.view = view
+	v.committee = committee
+	v.quorum = quorum
 	v.commitArrivalTimeMap = make(map[common.Address]time.Duration)
 	v.preprepareArrivalTime = time.Duration(0)
 }

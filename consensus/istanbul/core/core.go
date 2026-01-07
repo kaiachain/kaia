@@ -308,15 +308,12 @@ func (c *core) startNewRound(round *big.Int) {
 	logger.Debug("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "new_proposer", c.currentCommittee.Proposer(), "isProposer", c.isProposer())
 	logger.Trace("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "size", c.currentCommittee.Qualified().Len(), "valSet", c.currentCommittee.Qualified().String())
 
-	// log the previous round's vrank
-	if Vrank != nil {
-		Vrank.Log()
-	}
-
-	if c.currentView().Round.Cmp(big.NewInt(0)) == 0 {
+	if Vrank == nil {
 		Vrank = NewVrank(*c.currentView(), c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
 	} else {
-		Vrank.StartNewRound(*c.currentView())
+		// log the previous round's vrank
+		Vrank.Log()
+		Vrank.StartNewRound(*c.currentView(), c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
 	}
 }
 
