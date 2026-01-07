@@ -765,6 +765,10 @@ func RpcOutputBlock(b *types.Block, inclTx bool, fullTx bool, config *params.Cha
 		fields["randomReveal"] = hexutil.Bytes(head.RandomReveal)
 		fields["mixHash"] = hexutil.Bytes(head.MixHash)
 	}
+	if rules.IsOsaka {
+		fields["excessBlobGas"] = (*hexutil.Big)(new(big.Int).SetUint64(*head.ExcessBlobGas))
+		fields["blobGasUsed"] = hexutil.Uint64(*head.BlobGasUsed)
+	}
 
 	return fields, nil
 }

@@ -1263,6 +1263,10 @@ func RpcMarshalEthHeader(head *types.Header, engine consensus.Engine, chainConfi
 		result["randomReveal"] = hexutil.Bytes(head.RandomReveal)
 		result["mixHash"] = hexutil.Bytes(head.MixHash)
 	}
+	if chainConfig.IsOsakaForkEnabled(head.Number) {
+		result["excessBlobGas"] = (*hexutil.Big)(new(big.Int).SetUint64(*head.ExcessBlobGas))
+		result["blobGasUsed"] = hexutil.Uint64(*head.BlobGasUsed)
+	}
 	return result, nil
 }
 
