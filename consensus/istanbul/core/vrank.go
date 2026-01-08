@@ -19,7 +19,6 @@
 package core
 
 import (
-	"fmt"
 	"maps"
 	"slices"
 	"strconv"
@@ -142,7 +141,7 @@ func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTime st
 		if t, ok := v.commitArrivalTimeMap[addr]; ok {
 			commitTime = encodeDuration(t)
 		}
-		commitArrivalTimes[i] = fmt.Sprintf("%s", commitTime)
+		commitArrivalTimes[i] = commitTime
 	}
 
 	return v.view.Sequence.Int64(), v.view.Round.Int64(), preprepareArrivalTime, commitArrivalTimes
