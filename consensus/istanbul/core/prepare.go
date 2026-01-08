@@ -77,11 +77,6 @@ func (c *core) handlePrepare(msg *message, src common.Address) error {
 
 	c.acceptPrepare(msg, src)
 
-	// in case of proposer, view is not set from handlePreprepare(), thus set here
-	if Vrank != nil {
-		Vrank.SetLatestView(*prepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
-	}
-
 	// Change to Prepared state if we've received enough PREPARE/COMMIT messages or it is locked
 	// and we are in earlier state before Prepared state.
 	// Both of PREPARE and COMMIT messages are counted since the nodes which is hashlocked in

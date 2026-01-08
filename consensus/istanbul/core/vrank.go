@@ -134,7 +134,10 @@ func (v *vrank) Log() {
 
 func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTime string, commitArrivalTimes []string) {
 	sortedCommittee := valset.NewAddressSet(v.committee).List()
-	preprepareArrivalTime = encodeDuration(v.preprepareArrivalTime)
+	preprepareArrivalTime = "-"
+	if v.preprepareArrivalTime != time.Duration(0) {
+		preprepareArrivalTime = encodeDuration(v.preprepareArrivalTime)
+	}
 	commitArrivalTimes = make([]string, len(sortedCommittee))
 	for i, addr := range sortedCommittee {
 		commitTime := "-" // not arrived
