@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/kaiachain/kaia/common"
@@ -187,7 +188,7 @@ func (v *vrank) updateMetrics() {
 
 // encodeDuration encodes given duration into string
 func encodeDuration(d time.Duration) string {
-	return fmt.Sprintf("%d", d.Milliseconds())
+	return strconv.FormatInt(d.Milliseconds(), 10)
 }
 
 func sortByArrivalTimes(arrivalTimeMap map[common.Address]time.Duration) ([]common.Address, []int64) {
