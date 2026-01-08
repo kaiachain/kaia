@@ -1589,7 +1589,7 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 	}
 }
 
-type config struct {
+type Kip276Config struct {
 	// As mentioned in KIP-276, Kaia doesn't include ActivationTime as a field.
 	// ActivationTime  uint64                    `json:"activationTime"`
 	BlobSchedule    *params.BlobConfig        `json:"blobSchedule"`
@@ -1599,20 +1599,20 @@ type config struct {
 	SystemContracts map[string]common.Address `json:"systemContracts"`
 }
 
-type configResponse struct {
-	Current *config `json:"current"`
-	Next    *config `json:"next"`
-	Last    *config `json:"last"`
+type ConfigResponse struct {
+	Current *Kip276Config `json:"current"`
+	Next    *Kip276Config `json:"next"`
+	Last    *Kip276Config `json:"last"`
 }
 
 // Config implements the KIP-276(EIP-7910) eth_config method.
-func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
+func (api *EthAPI) Config(ctx context.Context) (*ConfigResponse, error) {
 	b := api.kaiaBlockChainAPI.b
 	genesis, err := b.HeaderByNumber(ctx, 0)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load genesis: %w", err)
 	}
-	assemble := func(c *params.ChainConfig, head *big.Int) *config {
+	assemble := func(c *params.ChainConfig, head *big.Int) *Kip276Config {
 		if head == nil {
 			return nil
 		}
@@ -1626,7 +1626,7 @@ func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
 		}
 
 		id := forkid.NewID(c, genesis.Hash(), head.Uint64()).Hash
-		return &config{
+		return &Kip276Config{
 			BlobSchedule:    c.BlobConfig(head),
 			ChainId:         (*hexutil.Big)(c.ChainID),
 			ForkId:          id[:],
@@ -1641,7 +1641,7 @@ func (api *EthAPI) Config(ctx context.Context) (*configResponse, error) {
 	currentForkCompatibleBlock := forkid.LatestForkCompatibleBlock(c, bn)
 	nextForkCompatibleBlock := forkid.NextForkCompatibleBlock(c, bn)
 	lastForkCompatibleBlock := forkid.LastForkCompatibleBlock(c)
-	resp := configResponse{
+	resp := ConfigResponse{
 		Next:    assemble(c, nextForkCompatibleBlock),
 		Current: assemble(c, currentForkCompatibleBlock),
 		Last:    assemble(c, lastForkCompatibleBlock),

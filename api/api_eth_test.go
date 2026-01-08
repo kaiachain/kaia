@@ -3091,28 +3091,28 @@ func TestEthAPI_Config(t *testing.T) {
 	tests := []struct {
 		name            string
 		blockNumber     uint64
-		expectedCurrent *config
-		expectedNext    *config
-		expectedLast    *config
+		expectedCurrent *Kip276Config
+		expectedNext    *Kip276Config
+		expectedLast    *Kip276Config
 	}{
 		{
 			name:        "Genesis block",
 			blockNumber: 0,
-			expectedCurrent: &config{
+			expectedCurrent: &Kip276Config{
 				BlobSchedule:    nil,
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
 				ForkId:          genesisForkID[:],
 				Precompiles:     genesisPrecompiles,
 				SystemContracts: nil,
 			},
-			expectedNext: &config{
+			expectedNext: &Kip276Config{
 				BlobSchedule:    nil,
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
 				ForkId:          istanbulForkID[:],
 				Precompiles:     istanbulPrecompiles,
 				SystemContracts: nil,
 			},
-			expectedLast: &config{
+			expectedLast: &Kip276Config{
 				BlobSchedule:    params.DefaultOsakaBlobConfig,
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
 				ForkId:          osakaForkID[:],
@@ -3123,21 +3123,21 @@ func TestEthAPI_Config(t *testing.T) {
 		{
 			name:        "Istanbul block",
 			blockNumber: 75373312,
-			expectedCurrent: &config{
+			expectedCurrent: &Kip276Config{
 				BlobSchedule:    nil,
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
 				ForkId:          istanbulForkID[:],
 				Precompiles:     istanbulPrecompiles,
 				SystemContracts: nil,
 			},
-			expectedNext: &config{
+			expectedNext: &Kip276Config{
 				BlobSchedule:    nil,
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
 				ForkId:          lonondonForkID[:],
 				Precompiles:     lonondonPrecompiles,
 				SystemContracts: nil,
 			},
-			expectedLast: &config{
+			expectedLast: &Kip276Config{
 				BlobSchedule:    params.DefaultOsakaBlobConfig,
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
 				ForkId:          osakaForkID[:],
@@ -3148,21 +3148,21 @@ func TestEthAPI_Config(t *testing.T) {
 		{
 			name:        "Prague fork block",
 			blockNumber: 187930000,
-			expectedCurrent: &config{
+			expectedCurrent: &Kip276Config{
 				BlobSchedule:    nil,
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
 				ForkId:          pragueForkID[:],
 				Precompiles:     praguePrecompiles,
 				SystemContracts: nil,
 			},
-			expectedNext: &config{
+			expectedNext: &Kip276Config{
 				BlobSchedule:    params.DefaultOsakaBlobConfig,
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
 				ForkId:          osakaForkID[:],
 				Precompiles:     osakaPrecompiles,
 				SystemContracts: nil,
 			},
-			expectedLast: &config{
+			expectedLast: &Kip276Config{
 				BlobSchedule:    params.DefaultOsakaBlobConfig,
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
 				ForkId:          osakaForkID[:],
@@ -3173,7 +3173,7 @@ func TestEthAPI_Config(t *testing.T) {
 		{
 			name:        "Latest fork block (Osaka)",
 			blockNumber: 195000000,
-			expectedCurrent: &config{
+			expectedCurrent: &Kip276Config{
 				BlobSchedule:    params.DefaultOsakaBlobConfig,
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
 				ForkId:          osakaForkID[:],
