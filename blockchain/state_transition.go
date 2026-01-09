@@ -234,45 +234,34 @@ func (st *StateTransition) to() common.Address {
 	return *st.msg.To()
 }
 
-type AccountClassification string
-
-const (
-	feePayer AccountClassification = "feePayer"
-	sender   AccountClassification = "sender"
-)
-
-type BalanceCheckInput struct {
-	AccountClassification AccountClassification
-	Address               common.Address
-	BalanceCheck          *big.Int
-}
-
-func (st *StateTransition) checkBalanceOverflows(inputs []BalanceCheckInput) error {
-	for _, input := range inputs {
-		_, overflow := uint256.FromBig(input.BalanceCheck)
-		if overflow {
-			return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, input.Address.Hex())
-		}
+func (st *StateTransition) checkBalanceOverflow(address common.Address, balance *big.Int) error {
+	_, overflow := uint256.FromBig(balance)
+	if overflow {
+		return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, address.Hex())
 	}
 	return nil
 }
 
-func (st *StateTransition) checkBalances(inputs []BalanceCheckInput) error {
-	for _, input := range inputs {
-		actualBalance := st.state.GetBalance(input.Address)
-		var err error
-		switch input.AccountClassification {
-		case feePayer:
-			err = errInsufficientBalanceForGasFeePayer
-		case sender:
-			err = errInsufficientBalanceForGas
-		}
-		if actualBalance.Cmp(input.BalanceCheck) < 0 {
-			logger.Debug(err.Error(), input.AccountClassification, input.Address.String(),
-				input.AccountClassification+"Balance", actualBalance.Uint64(), input.AccountClassification+"Fee", input.BalanceCheck.Uint64(),
-				"txHash", st.msg.Hash().String())
-			return err
-		}
+func (st *StateTransition) checkFeePayerBalance(balanceCheck *big.Int) error {
+	feePayerAddress := st.msg.ValidatedFeePayer()
+	actualBalance := st.state.GetBalance(feePayerAddress)
+	if actualBalance.Cmp(balanceCheck) < 0 {
+		logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", feePayerAddress.String(),
+			"feePayerBalance", actualBalance.Uint64(), "feePayerFee", balanceCheck.Uint64(),
+			"txHash", st.msg.Hash().String())
+		return errInsufficientBalanceForGasFeePayer
+	}
+	return nil
+}
+
+func (st *StateTransition) checkSenderBalance(balanceCheck *big.Int) error {
+	senderAddress := st.msg.ValidatedSender()
+	actualBalance := st.state.GetBalance(senderAddress)
+	if actualBalance.Cmp(balanceCheck) < 0 {
+		logger.Debug(errInsufficientBalanceForGas.Error(), "sender", senderAddress.String(),
+			"senderBalance", actualBalance.Uint64(), "senderFee", balanceCheck.Uint64(),
+			"txHash", st.msg.Hash().String())
+		return errInsufficientBalanceForGas
 	}
 	return nil
 }
@@ -313,21 +302,23 @@ func (st *StateTransition) buyGas() error {
 		if isOsaka {
 			feePayerBalanceCheck, senderBalanceCheck := types.CalcFeeWithRatio(feeRatio, feeCap)
 			senderBalanceCheck.Add(senderBalanceCheck, st.msg.Value())
-			balanceChecks := []BalanceCheckInput{
-				{AccountClassification: feePayer, Address: validatedFeePayer, BalanceCheck: feePayerBalanceCheck},
-				{AccountClassification: sender, Address: validatedSender, BalanceCheck: senderBalanceCheck},
-			}
-			if err := st.checkBalanceOverflows(balanceChecks); err != nil {
+			if err := st.checkBalanceOverflow(validatedFeePayer, feePayerBalanceCheck); err != nil {
 				return err
 			}
-			if err := st.checkBalances(balanceChecks); err != nil {
+			if err := st.checkBalanceOverflow(validatedSender, senderBalanceCheck); err != nil {
+				return err
+			}
+			if err := st.checkFeePayerBalance(feePayerBalanceCheck); err != nil {
+				return err
+			}
+			if err := st.checkSenderBalance(senderBalanceCheck); err != nil {
 				return err
 			}
 		} else {
-			if err := st.checkBalances([]BalanceCheckInput{
-				{AccountClassification: feePayer, Address: validatedFeePayer, BalanceCheck: feePayerFee},
-				{AccountClassification: sender, Address: validatedSender, BalanceCheck: senderFee},
-			}); err != nil {
+			if err := st.checkFeePayerBalance(feePayerFee); err != nil {
+				return err
+			}
+			if err := st.checkSenderBalance(senderFee); err != nil {
 				return err
 			}
 		}
@@ -338,20 +329,20 @@ func (st *StateTransition) buyGas() error {
 		if isOsaka {
 			feePayerBalanceCheck := feeCap
 			senderBalanceCheck := st.msg.Value()
-			balanceChecks := []BalanceCheckInput{
-				{AccountClassification: feePayer, Address: validatedFeePayer, BalanceCheck: feePayerBalanceCheck},
-				{AccountClassification: sender, Address: validatedSender, BalanceCheck: senderBalanceCheck},
-			}
-			if err := st.checkBalanceOverflows(balanceChecks); err != nil {
+			if err := st.checkBalanceOverflow(validatedFeePayer, feePayerBalanceCheck); err != nil {
 				return err
 			}
-			if err := st.checkBalances(balanceChecks); err != nil {
+			if err := st.checkBalanceOverflow(validatedSender, senderBalanceCheck); err != nil {
+				return err
+			}
+			if err := st.checkFeePayerBalance(feePayerBalanceCheck); err != nil {
+				return err
+			}
+			if err := st.checkSenderBalance(senderBalanceCheck); err != nil {
 				return err
 			}
 		} else {
-			if err := st.checkBalances([]BalanceCheckInput{
-				{AccountClassification: feePayer, Address: validatedFeePayer, BalanceCheck: mgval},
-			}); err != nil {
+			if err := st.checkFeePayerBalance(mgval); err != nil {
 				return err
 			}
 		}
@@ -362,19 +353,14 @@ func (st *StateTransition) buyGas() error {
 		// covers basic Tx                and feepayer == sender (obviously)
 		if isOsaka {
 			balanceCheck := new(big.Int).Add(feeCap, st.msg.Value())
-			balanceChecks := []BalanceCheckInput{
-				{AccountClassification: feePayer, Address: validatedFeePayer, BalanceCheck: balanceCheck},
-			}
-			if err := st.checkBalanceOverflows(balanceChecks); err != nil {
+			if err := st.checkBalanceOverflow(validatedFeePayer, balanceCheck); err != nil {
 				return err
 			}
-			if err := st.checkBalances(balanceChecks); err != nil {
+			if err := st.checkFeePayerBalance(balanceCheck); err != nil {
 				return err
 			}
 		} else {
-			if err := st.checkBalances([]BalanceCheckInput{
-				{AccountClassification: feePayer, Address: validatedFeePayer, BalanceCheck: mgval},
-			}); err != nil {
+			if err := st.checkFeePayerBalance(mgval); err != nil {
 				return err
 			}
 		}
