@@ -234,114 +234,143 @@ func (st *StateTransition) to() common.Address {
 	return *st.msg.To()
 }
 
+func (st *StateTransition) checkBalance(address common.Address, balanceCheck *big.Int) error {
+	actualBalance := st.state.GetBalance(address)
+	if actualBalance.Cmp(balanceCheck) < 0 {
+		logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", address.String(),
+			"feePayerBalance", actualBalance.Uint64(), "feePayerFee", balanceCheck.Uint64(),
+			"txHash", st.msg.Hash().String())
+		return errInsufficientBalanceForGasFeePayer
+	}
+	return nil
+}
+
+func (st *StateTransition) checkBalanceSenderAndFeePayer(feePayerAddress, senderAddress common.Address, feePayerBalanceCheck, senderBalanceCheck *big.Int) error {
+	feePayerActualBalance := st.state.GetBalance(feePayerAddress)
+	senderActualBalance := st.state.GetBalance(senderAddress)
+	if feePayerActualBalance.Cmp(feePayerBalanceCheck) < 0 {
+		logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", feePayerAddress.String(),
+			"feePayerBalance", feePayerActualBalance.Uint64(), "feePayerFee", feePayerBalanceCheck.Uint64(),
+			"txHash", st.msg.Hash().String())
+		return errInsufficientBalanceForGasFeePayer
+	}
+	if senderActualBalance.Cmp(senderBalanceCheck) < 0 {
+		logger.Debug(errInsufficientBalanceForGas.Error(), "sender", senderAddress.String(),
+			"senderBalance", senderActualBalance.Uint64(), "senderFee", senderBalanceCheck.Uint64(),
+			"txHash", st.msg.Hash().String())
+		return errInsufficientBalanceForGas
+	}
+	return nil
+}
+
+func (st *StateTransition) checkBalanceOverflow(address common.Address, balance *big.Int) error {
+	_, overflow := uint256.FromBig(balance)
+	if overflow {
+		return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, address.Hex())
+	}
+	return nil
+}
+
+func (st *StateTransition) checkBalanceOverflowSenderAndFeePayer(feePayerAddress, senderAddress common.Address, feePayerBalance, senderBalance *big.Int) error {
+	_, overflowFeePayerBalance := uint256.FromBig(feePayerBalance)
+	if overflowFeePayerBalance {
+		return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, feePayerAddress.Hex())
+	}
+	_, overflowSenderBalance := uint256.FromBig(senderBalance)
+	if overflowSenderBalance {
+		return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, senderAddress.Hex())
+	}
+	return nil
+}
+
 func (st *StateTransition) buyGas() error {
-	// st.gasPrice : gasPrice user set before magma hardfork
-	// st.gasPrice : BaseFee after magma hardfork
+	var (
+		validatedFeePayer   = st.msg.ValidatedFeePayer()
+		validatedSender     = st.msg.ValidatedSender()
+		isSelfDelegated     = validatedFeePayer == validatedSender
+		feeRatio, isRatioTx = st.msg.FeeRatio()
+		isOsaka             = st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka
+	)
+
+	// mgval is the maximum gas fee that can actually be paid in the worst case (e.g., revert)
+	// st.gasPrice = tx.gasPrice (before Magma) or effectiveGasPrice (since Magma)
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
 
-	validatedFeePayer := st.msg.ValidatedFeePayer()
-	validatedSender := st.msg.ValidatedSender()
-	feeRatio, isRatioTx := st.msg.FeeRatio()
-	isOsaka := st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka
-
-	// ------------- 1. Balance Check Part -------------
-	// This part checks following conditions:
-	// 1. mgval check (before Osaka): Sender >= gasLimit * effectiveGasPrice
-	// 2. FeeCap check (since Osaka): Sender >= gasLimit * gasFeeCap + blobGasUsed * blobGasFeeCap + value
-	// 3. Feepayer check: Feepayer >= gasLimit * effectiveGasPrice (gasFeeCap since Osaka) * feePayerRatio
-	// 4. Sender check: Sender >= gasLimit * effectiveGasPrice (gasFeeCap since Osaka) * senderRatio (+ value since Osaka)
-	// 5. Feepayer==Sender check (since Osaka): Sender >= gasLimit * gasFeeCap + value
-
-	mgvalCheck := new(big.Int).Set(mgval)
-	feeCapCheck := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.msg.GasFeeCap())
-
-	// These are used when tx is TxInternalDataFeeRatio.
-	feePayerBalanceCheck, senderBalanceCheck := types.CalcFeeWithRatio(feeRatio, mgval)
-	feePayerEqualSenderBalanceCheck := new(big.Int).Add(feePayerBalanceCheck, senderBalanceCheck)
+	// feeCapCheck is the maximum gas fee the sender was willing to pay
+	// GasFeeCap = tx.maxFeePerGas (if exists) or tx.gasPrice
+	feeCap := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.msg.GasFeeCap())
 
 	if isOsaka {
 		if blobGas := st.blobGasUsed(); blobGas > 0 {
 			// Check that the user has enough funds to cover blobGasUsed * tx.BlobGasFeeCap
-			blobBalanceCheck := new(big.Int).SetUint64(blobGas)
-			blobBalanceCheck.Mul(blobBalanceCheck, st.msg.BlobGasFeeCap())
-			feeCapCheck.Add(feeCapCheck, blobBalanceCheck)
+			blobFeeCap := new(big.Int).SetUint64(blobGas)
+			blobFeeCap.Mul(blobFeeCap, st.msg.BlobGasFeeCap())
+			feeCap.Add(feeCap, blobFeeCap)
 			// Pay for blobGasUsed * actual blob fee
 			blobFee := new(big.Int).SetUint64(blobGas)
 			blobFee.Mul(blobFee, st.evm.Context.BlobBaseFee)
 			mgval.Add(mgval, blobFee)
 		}
-		_, overflow := uint256.FromBig(feeCapCheck)
-		if overflow {
-			return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, validatedSender.Hex())
-		}
-
-		if isRatioTx {
-			feePayerBalanceCheck, senderBalanceCheck = types.CalcFeeWithRatio(feeRatio, feeCapCheck)
-			feePayerEqualSenderBalanceCheck = new(big.Int).Add(feePayerBalanceCheck, senderBalanceCheck)
-			// The sender pays all the value
-			senderBalanceCheck.Add(senderBalanceCheck, st.msg.Value())
-			feePayerEqualSenderBalanceCheck.Add(feePayerEqualSenderBalanceCheck, st.msg.Value())
-		} else {
-			feeCapCheck.Add(feeCapCheck, st.msg.Value())
-		}
 	}
 
-	if isRatioTx {
-		feePayerBalance := st.state.GetBalance(validatedFeePayer)
-		senderBalance := st.state.GetBalance(validatedSender)
-		// Check 3. Feepayer check: Feepayer >= gasLimit * effectiveGasPrice (gasFeeCap since Osaka) * feePayerRatio
-		if feePayerBalance.Cmp(feePayerBalanceCheck) < 0 {
-			logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
-				"feePayerBalance", feePayerBalance.Uint64(), "feePayerFee", feePayerBalanceCheck.Uint64(),
-				"txHash", st.msg.Hash().String())
-			return errInsufficientBalanceForGasFeePayer
-		}
-		// Check 4. Sender check: Sender >= gasLimit * effectiveGasPrice (gasFeeCap since Osaka) * senderRatio (+ value since Osaka)
-		if senderBalance.Cmp(senderBalanceCheck) < 0 {
-			logger.Debug(errInsufficientBalanceForGas.Error(), "sender", validatedSender.String(),
-				"senderBalance", senderBalance.Uint64(), "senderFee", senderBalanceCheck.Uint64(),
-				"txHash", st.msg.Hash().String())
-			return errInsufficientBalanceForGas
-		}
-		// additional balance check in case of sender = feepayer
-		// since a single account has to bear the both cost(feepayer_cost + sender_cost),
-		// it is necessary to check whether the balance is equal to the sum of the cost.
-		if isOsaka && validatedFeePayer == validatedSender {
-			// Check 5. Feepayer==Sender check (since Osaka): Sender >= gasLimit * gasFeeCap + value
-			if feePayerBalance.Cmp(feePayerEqualSenderBalanceCheck) < 0 {
-				logger.Debug(errInsufficientBalanceForGas.Error(), "feePayer", validatedFeePayer.String(),
-					"feePayerBalance", feePayerBalance.Uint64(), "feePayerFee", feePayerEqualSenderBalanceCheck.Uint64(),
-					"txHash", st.msg.Hash().String())
-				return errInsufficientBalanceForGas
-			}
-		}
-	} else {
-		feePayerBalance := st.state.GetBalance(validatedFeePayer)
-		if isOsaka {
-			// Check 2. FeeCap check (since Osaka): Sender >= gasLimit * gasFeeCap + blobGasUsed * blobGasFeeCap + value
-			if feePayerBalance.Cmp(feeCapCheck) < 0 {
-				logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
-					"feePayerBalance", feePayerBalance.Uint64(), "feePayerFee", feeCapCheck.Uint64(),
-					"txHash", st.msg.Hash().String())
-				return errInsufficientBalanceForGasFeePayer
-			}
-		} else {
-			// Check 1. mgval check (before Osaka): Sender >= gasLimit * effectiveGasPrice
-			if feePayerBalance.Cmp(mgvalCheck) < 0 {
-				logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
-					"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", mgvalCheck.Uint64(),
-					"txHash", st.msg.Hash().String())
-				return errInsufficientBalanceForGasFeePayer
-			}
-		}
-	}
-
-	// ------------- 2. Balance Subtraction Part -------------
-	if isRatioTx {
+	if isRatioTx && !isSelfDelegated {
+		// covers FeeDelegatedTxWithRatio and feepayer != sender
 		feePayerFee, senderFee := types.CalcFeeWithRatio(feeRatio, mgval)
+		if isOsaka {
+			feePayerBalanceCheck, senderBalanceCheck := types.CalcFeeWithRatio(feeRatio, feeCap)
+			senderBalanceCheck.Add(senderBalanceCheck, st.msg.Value())
+			if err := st.checkBalanceOverflowSenderAndFeePayer(validatedFeePayer, validatedSender,
+				feePayerBalanceCheck, senderBalanceCheck); err != nil {
+				return err
+			}
+			if err := st.checkBalanceSenderAndFeePayer(validatedFeePayer, validatedSender,
+				feePayerBalanceCheck, senderBalanceCheck); err != nil {
+				return err
+			}
+		} else {
+			if err := st.checkBalanceSenderAndFeePayer(validatedFeePayer, validatedSender,
+				feePayerFee, senderFee); err != nil {
+				return err
+			}
+		}
 		st.state.SubBalance(validatedFeePayer, feePayerFee)
 		st.state.SubBalance(validatedSender, senderFee)
+	} else if st.msg.Type().IsFeeDelegatedTransaction() && !isSelfDelegated {
+		// covers FeeDelegatedTx and feepayer != sender
+		if isOsaka {
+			feePayerBalanceCheck := feeCap
+			senderBalanceCheck := st.msg.Value()
+			if err := st.checkBalanceOverflowSenderAndFeePayer(validatedFeePayer, validatedSender,
+				feePayerBalanceCheck, senderBalanceCheck); err != nil {
+				return err
+			}
+			if err := st.checkBalanceSenderAndFeePayer(validatedFeePayer, validatedSender,
+				feePayerBalanceCheck, senderBalanceCheck); err != nil {
+				return err
+			}
+		} else {
+			if err := st.checkBalance(validatedFeePayer, mgval); err != nil {
+				return err
+			}
+		}
+		st.state.SubBalance(validatedFeePayer, mgval)
 	} else {
+		// covers FeeDelegatedTxWithRatio and feepayer == sender
+		// covers FeeDelegatedTx          and feepayer == sender
+		// covers basic Tx                and feepayer == sender (obviously)
+		if isOsaka {
+			balanceCheck := new(big.Int).Add(feeCap, st.msg.Value())
+			if err := st.checkBalanceOverflow(validatedFeePayer, balanceCheck); err != nil {
+				return err
+			}
+			if err := st.checkBalance(validatedFeePayer, balanceCheck); err != nil {
+				return err
+			}
+		} else {
+			if err := st.checkBalance(validatedFeePayer, mgval); err != nil {
+				return err
+			}
+		}
 		st.state.SubBalance(validatedFeePayer, mgval)
 	}
 

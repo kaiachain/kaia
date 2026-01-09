@@ -31,7 +31,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
-	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/profile"
 	"github.com/kaiachain/kaia/crypto"
@@ -1654,7 +1653,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 					assert.Equal(t, nil, err)
 
 					receipt, err := applyTransaction(t, bcdata, tx)
-					assert.Equal(t, vm.ErrInsufficientBalance, err)
+					assert.Equal(t, errInsufficientBalanceForGas, err)
 					assert.Equal(t, (*types.Receipt)(nil), receipt)
 				}
 			}
