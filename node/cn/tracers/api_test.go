@@ -290,7 +290,7 @@ func TestTraceCall(t *testing.T) {
 				Value: (hexutil.Big)(*big.NewInt(1000)),
 			},
 			config:    nil,
-			expectErr: errors.New("tracing failed: insufficient balance of the fee payer to pay for gas"),
+			expectErr: errors.New("tracing failed: insufficient balance for transfer"),
 			expect:    nil,
 		},
 		// Standard JSON trace upon the head, plain transfer.

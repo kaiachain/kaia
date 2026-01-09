@@ -234,15 +234,17 @@ func (st *StateTransition) to() common.Address {
 	return *st.msg.To()
 }
 
-func (st *StateTransition) checkBalanceOverflow(address common.Address, balance *big.Int) error {
-	_, overflow := uint256.FromBig(balance)
-	if overflow {
-		return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, address.Hex())
+func (st *StateTransition) checkBalancesOverflow(address common.Address, balances ...*big.Int) error {
+	for _, balance := range balances {
+		_, overflow := uint256.FromBig(balance)
+		if overflow {
+			return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, address.Hex())
+		}
 	}
 	return nil
 }
 
-func (st *StateTransition) checkFeePayerBalance(balanceCheck *big.Int) error {
+func (st *StateTransition) checkFeePayerBalance(balanceCheck, balanceCheckWithValue *big.Int, checkWithValue bool) error {
 	feePayerAddress := st.msg.ValidatedFeePayer()
 	actualBalance := st.state.GetBalance(feePayerAddress)
 	if actualBalance.Cmp(balanceCheck) < 0 {
@@ -250,11 +252,13 @@ func (st *StateTransition) checkFeePayerBalance(balanceCheck *big.Int) error {
 			"feePayerBalance", actualBalance.Uint64(), "feePayerFee", balanceCheck.Uint64(),
 			"txHash", st.msg.Hash().String())
 		return errInsufficientBalanceForGasFeePayer
+	} else if checkWithValue && actualBalance.Cmp(balanceCheckWithValue) < 0 { // Error due to insufficient Value must be vm.ErrInsufficientBalance.
+		return vm.ErrInsufficientBalance
 	}
 	return nil
 }
 
-func (st *StateTransition) checkSenderBalance(balanceCheck *big.Int) error {
+func (st *StateTransition) checkSenderBalance(balanceCheck, balanceCheckWithValue *big.Int, checkWithValue bool) error {
 	senderAddress := st.msg.ValidatedSender()
 	actualBalance := st.state.GetBalance(senderAddress)
 	if actualBalance.Cmp(balanceCheck) < 0 {
@@ -262,6 +266,8 @@ func (st *StateTransition) checkSenderBalance(balanceCheck *big.Int) error {
 			"senderBalance", actualBalance.Uint64(), "senderFee", balanceCheck.Uint64(),
 			"txHash", st.msg.Hash().String())
 		return errInsufficientBalanceForGas
+	} else if checkWithValue && actualBalance.Cmp(balanceCheckWithValue) < 0 { // Error due to insufficient Value must be vm.ErrInsufficientBalance.
+		return vm.ErrInsufficientBalance
 	}
 	return nil
 }
@@ -301,14 +307,14 @@ func (st *StateTransition) buyGas() error {
 		// 3. FeeDelegated          with sender == feePayer
 		if isOsaka {
 			balanceCheck := new(big.Int).Add(feeCap, st.msg.Value())
-			if err := st.checkBalanceOverflow(validatedFeePayer, balanceCheck); err != nil {
+			if err := st.checkBalancesOverflow(validatedFeePayer, feeCap, balanceCheck); err != nil {
 				return err
 			}
-			if err := st.checkFeePayerBalance(balanceCheck); err != nil {
+			if err := st.checkFeePayerBalance(feeCap, balanceCheck, true); err != nil {
 				return err
 			}
 		} else {
-			if err := st.checkFeePayerBalance(mgval); err != nil {
+			if err := st.checkFeePayerBalance(mgval, nil, false); err != nil {
 				return err
 			}
 		}
@@ -321,24 +327,24 @@ func (st *StateTransition) buyGas() error {
 		feePayerFee, senderFee := types.CalcFeeWithRatio(feeRatio, mgval)
 		if isOsaka {
 			feePayerBalanceCheck, senderBalanceCheck := types.CalcFeeWithRatio(feeRatio, feeCap)
-			senderBalanceCheck.Add(senderBalanceCheck, st.msg.Value())
-			if err := st.checkBalanceOverflow(validatedFeePayer, feePayerBalanceCheck); err != nil {
+			senderBalanceCheckWithValue := new(big.Int).Add(senderBalanceCheck, st.msg.Value())
+			if err := st.checkBalancesOverflow(validatedFeePayer, feePayerBalanceCheck); err != nil {
 				return err
 			}
-			if err := st.checkBalanceOverflow(validatedSender, senderBalanceCheck); err != nil {
+			if err := st.checkBalancesOverflow(validatedSender, senderBalanceCheck, senderBalanceCheckWithValue); err != nil {
 				return err
 			}
-			if err := st.checkFeePayerBalance(feePayerBalanceCheck); err != nil {
+			if err := st.checkFeePayerBalance(feePayerBalanceCheck, nil, false); err != nil {
 				return err
 			}
-			if err := st.checkSenderBalance(senderBalanceCheck); err != nil {
+			if err := st.checkSenderBalance(senderBalanceCheck, senderBalanceCheckWithValue, true); err != nil {
 				return err
 			}
 		} else {
-			if err := st.checkFeePayerBalance(feePayerFee); err != nil {
+			if err := st.checkFeePayerBalance(feePayerFee, nil, false); err != nil {
 				return err
 			}
-			if err := st.checkSenderBalance(senderFee); err != nil {
+			if err := st.checkSenderBalance(senderFee, nil, false); err != nil {
 				return err
 			}
 		}
