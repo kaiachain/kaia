@@ -78,8 +78,8 @@ func (c *core) handleCommit(msg *message, src common.Address) error {
 		return errInvalidMessage
 	}
 
-	if vrank != nil {
-		vrank.AddCommit(commit, src)
+	if Vrank != nil {
+		Vrank.AddCommit(commit, src)
 	}
 
 	// logger.Error("receive handle commit","num", commit.View.Sequence)

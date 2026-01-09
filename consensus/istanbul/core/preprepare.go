@@ -68,6 +68,11 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 		return errInvalidMessage
 	}
 
+	if Vrank != nil {
+		Vrank.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+		Vrank.AddPreprepare(preprepare, src)
+	}
+
 	// Ensure we have the same view with the PRE-PREPARE message
 	// If it is old message, see if we need to broadcast COMMIT
 	if err := c.checkMessage(msgPreprepare, preprepare.View); err != nil {
@@ -126,11 +131,6 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 				c.acceptPreprepare(preprepare)
 				c.setState(StatePrepared)
 				c.sendCommit()
-
-				if vrank != nil {
-					vrank.Log()
-				}
-				vrank = NewVrank(*c.currentView(), c.currentCommittee.Committee().List())
 			} else {
 				// Send round change
 				c.sendNextRoundChange("handlePreprepare. HashLocked, but received hash is different from locked hash")
@@ -142,11 +142,6 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 			c.acceptPreprepare(preprepare)
 			c.setState(StatePreprepared)
 			c.sendPrepare()
-
-			if vrank != nil {
-				vrank.Log()
-			}
-			vrank = NewVrank(*c.currentView(), c.currentCommittee.Committee().List())
 		}
 	}
 

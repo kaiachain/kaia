@@ -37,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/event"
@@ -559,6 +560,13 @@ func (self *worker) commitNewWork() {
 				"nextBlockTimestamp", tstamp,
 			)
 		}
+
+		if core.Vrank != nil {
+			core.Vrank.Log()
+		} else {
+			core.Vrank = core.NewVrank()
+		}
+		core.Vrank.StartTimer()
 	}
 
 	var pending map[common.Address]types.Transactions
