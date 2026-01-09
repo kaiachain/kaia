@@ -626,9 +626,17 @@ func (c *bigModExp) GetRequiredGasAndComputationCost(input []byte) (uint64, uint
 		return gas, gas/100 + params.BigModExpBaseComputationCost
 	} else if c.eip2565 {
 		gas := berlinModexpGas(baseLen, expLen, modLen, expHead)
+		if gas == math.MaxUint64 {
+			// Contract: Kaia doesn't divide computation cost by 100 for backward compatibility
+			return math.MaxUint64, math.MaxUint64
+		}
 		return gas, gas/100 + params.BigModExpBaseComputationCost
 	} else {
 		gas := byzantiumModexpGas(baseLen, expLen, modLen, expHead)
+		if gas == math.MaxUint64 {
+			// Contract: Kaia doesn't divide computation cost by 100 for backward compatibility
+			return math.MaxUint64, math.MaxUint64
+		}
 		return gas, gas/100 + params.BigModExpBaseComputationCost
 	}
 }

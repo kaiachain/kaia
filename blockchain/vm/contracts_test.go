@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -356,6 +357,45 @@ func TestPrecompiledModExpOOG(t *testing.T) {
 	testPrecompiledOOG("05", gasCostTest, t)
 	testPrecompiledOOG("f5", gasCostTest, t)
 	testPrecompiledOOG("f6", gasCostTest, t)
+}
+
+// TestPrecompiledModExpOverflow tests the case
+// where gas calculation overflows 64 bits, causing the function to return math.MaxUint64.
+func TestPrecompiledModExpOverflow(t *testing.T) {
+	c := &bigModExp{eip2565: false, eip7883: false}
+
+	// Create input that will cause gas.BitLen() > 64
+	// We need very large baseLen, expLen, and modLen to trigger overflow
+	// baseLen = 0xFFFFFFFF (4294967295)
+	// expLen = 0xFFFFFFFF (4294967295)
+	// modLen = 0xFFFFFFFF (4294967295)
+	baseLen := make([]byte, 32)
+	expLen := make([]byte, 32)
+	modLen := make([]byte, 32)
+
+	// Set all bytes to 0xFF to get maximum values
+	for i := 0; i < 32; i++ {
+		baseLen[i] = 0xFF
+		expLen[i] = 0xFF
+		modLen[i] = 0xFF
+	}
+
+	// Construct input: baseLen (32 bytes) + expLen (32 bytes) + modLen (32 bytes) + data
+	input := make([]byte, 96)
+	copy(input[0:32], baseLen)
+	copy(input[32:64], expLen)
+	copy(input[64:96], modLen)
+
+	// Add some dummy data to make input valid
+	// We need at least baseLen + expLen + modLen bytes of data
+	// But since we're only testing GetRequiredGasAndComputationCost, we can use minimal data
+	input = append(input, make([]byte, 100)...) // Add some dummy data
+
+	gas, computationCost := c.GetRequiredGasAndComputationCost(input)
+
+	// Verify that both return values are math.MaxUint64 when overflow occurs
+	assert.Equal(t, uint64(math.MaxUint64), gas, "Gas should be MaxUint64 when overflow occurs")
+	assert.Equal(t, uint64(math.MaxUint64), computationCost, "ComputationCost should be MaxUint64 when overflow occurs")
 }
 
 func loadJson(name string) ([]precompiledTest, error) {
