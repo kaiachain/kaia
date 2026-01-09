@@ -279,7 +279,7 @@ func (st *StateTransition) buyGas() error {
 	// st.gasPrice = tx.gasPrice (before Magma) or effectiveGasPrice (since Magma)
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
 
-	// feeCapCheck is the maximum gas fee the sender was willing to pay
+	// feeCap is the maximum gas fee the sender was willing to pay
 	// GasFeeCap = tx.maxFeePerGas (if exists) or tx.gasPrice
 	feeCap := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.msg.GasFeeCap())
 
