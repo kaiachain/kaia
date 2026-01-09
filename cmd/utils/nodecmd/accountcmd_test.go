@@ -127,6 +127,42 @@ Repeat passphrase: {{.InputLine "foobar2"}}
 `)
 }
 
+func TestAccountImportV3(t *testing.T) {
+	var (
+		datadir     = tmpdir(t)
+		testKeyHex  = "46aa96666b069332debfa3d2f233b948ae909f65d1f401c32ba1c9b87bb7411b"
+		testKeyPath = filepath.Join(datadir, "testkey")
+		expectFile  = `\{"address":"60de0c1187078952bae878157ea477ccc09c06e8","crypto":\{.*\},"id":"[0-9a-f-]{36}","version":3}`
+	)
+
+	defer os.RemoveAll(datadir)
+	t.Logf("datadir: %s", datadir)
+
+	assert.Nil(t, os.WriteFile(testKeyPath, []byte(testKeyHex), 0o400))
+	defer os.Remove(testKeyPath)
+
+	kaia := runKaia(t, "kaia-test", "account", "import", "--v3", testKeyPath)
+	// Enter password
+	kaia.InputLine("")
+	// Confirm password
+	kaia.InputLine("")
+
+	defer kaia.ExpectExit()
+	// Parse output path from stdout using regex with capture group
+	_, matches := kaia.ExpectRegexp(`Address: \{60de0c1187078952bae878157ea477ccc09c06e8\}\nYour account is imported at (.+)`)
+	if len(matches) < 2 {
+		t.Fatal("Failed to parse output path from command output")
+	}
+	outputPath := strings.TrimSpace(matches[1]) // First capture group contains the path
+	assert.NotEmpty(t, outputPath)
+	defer os.Remove(outputPath) // Clean up the imported key file
+
+	// Verify the file exists and has the correct structure
+	content, err := os.ReadFile(outputPath)
+	assert.Nil(t, err)
+	assert.Regexp(t, expectFile, string(content))
+}
+
 func TestUnlockFlag(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
 	kaia := runKaia(t, "kaia-test",

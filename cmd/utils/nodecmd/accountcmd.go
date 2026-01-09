@@ -139,6 +139,7 @@ changing your password is only possible interactively.
 				utils.KeyStoreDirFlag,
 				utils.PasswordFileFlag,
 				utils.LightKDFFlag,
+				utils.KeyStoreV3Flag,
 			},
 			ArgsUsage: "<keyFile>",
 			Description: `
@@ -418,7 +419,12 @@ func accountImport(ctx *cli.Context) error {
 	passphrase := getPassPhrase("Your new account is locked with a password. Please give a password. Do not forget this password.", true, 0, utils.MakePasswordList(ctx))
 
 	ks := stack.AccountManager().Backends(keystore.KeyStoreType)[0].(*keystore.KeyStore)
-	acct, err := ks.ImportECDSA(key, passphrase)
+	var acct accounts.Account
+	if ctx.Bool(utils.KeyStoreV3Flag.Name) {
+		acct, err = ks.ImportECDSAV3(key, passphrase)
+	} else {
+		acct, err = ks.ImportECDSA(key, passphrase)
+	}
 	if err != nil {
 		log.Fatalf("Could not create the account: %v", err)
 	}

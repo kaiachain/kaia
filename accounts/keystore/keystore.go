@@ -550,6 +550,16 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (acco
 	return ks.importKey(key, passphrase)
 }
 
+func (ks *KeyStore) ImportECDSAV3(priv *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
+	key := newKeyV3FromECDSA(priv)
+	ks.importMu.Lock()
+	defer ks.importMu.Unlock()
+	if ks.cache.hasAddress(key.GetAddress()) {
+		return accounts.Account{}, errors.New("account already exists")
+	}
+	return ks.importKey(key, passphrase)
+}
+
 func (ks *KeyStore) importKey(key Key, passphrase string) (accounts.Account, error) {
 	a := accounts.Account{Address: key.GetAddress(), URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.GetAddress()))}}
 	if err := ks.storage.StoreKey(a.URL.Path, key, passphrase); err != nil {
