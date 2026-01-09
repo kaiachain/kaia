@@ -476,7 +476,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -502,7 +501,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -529,7 +527,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -580,7 +577,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -608,7 +604,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -637,7 +632,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -664,7 +658,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -690,7 +683,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -716,7 +708,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -745,7 +736,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(0)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -775,7 +765,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -802,7 +791,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -833,7 +821,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -860,7 +847,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -915,7 +901,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -944,7 +929,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {
@@ -972,7 +956,6 @@ func TestStateTransition_preCheck(t *testing.T) {
 				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
 				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
 				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
-				mockMsg.EXPECT().Type().Return(types.TxTypeLegacyTransaction).AnyTimes()
 				return mockMsg
 			},
 			setupStateMockCall: func(m *mock_vm.MockStateDB) {

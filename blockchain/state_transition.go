@@ -268,11 +268,10 @@ func (st *StateTransition) checkSenderBalance(balanceCheck *big.Int) error {
 
 func (st *StateTransition) buyGas() error {
 	var (
-		validatedFeePayer   = st.msg.ValidatedFeePayer()
-		validatedSender     = st.msg.ValidatedSender()
-		isSelfDelegated     = validatedFeePayer == validatedSender
-		feeRatio, isRatioTx = st.msg.FeeRatio()
-		isOsaka             = st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka
+		validatedFeePayer = st.msg.ValidatedFeePayer()
+		validatedSender   = st.msg.ValidatedSender()
+		feeRatio, _       = st.msg.FeeRatio()
+		isOsaka           = st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka
 	)
 
 	// mgval is the maximum gas fee that can actually be paid in the worst case (e.g., revert)
@@ -296,8 +295,29 @@ func (st *StateTransition) buyGas() error {
 		}
 	}
 
-	if isRatioTx && !isSelfDelegated {
-		// covers FeeDelegatedTxWithRatio and feepayer != sender
+	if validatedFeePayer == validatedSender {
+		// 1. Non fee-delegated tx
+		// 2. FeeDelegatedWithRatio with sender == feePayer
+		// 3. FeeDelegated          with sender == feePayer
+		if isOsaka {
+			balanceCheck := new(big.Int).Add(feeCap, st.msg.Value())
+			if err := st.checkBalanceOverflow(validatedFeePayer, balanceCheck); err != nil {
+				return err
+			}
+			if err := st.checkFeePayerBalance(balanceCheck); err != nil {
+				return err
+			}
+		} else {
+			if err := st.checkFeePayerBalance(mgval); err != nil {
+				return err
+			}
+		}
+		st.state.SubBalance(validatedFeePayer, mgval)
+	} else {
+		// 1. FeeDelegatedWithRatio with sender != feePayer
+		// 2. FeeDelegated          with sender != feePayer
+
+		// For 2, feeRatio will be always 100 (feePayer pays all fee)
 		feePayerFee, senderFee := types.CalcFeeWithRatio(feeRatio, mgval)
 		if isOsaka {
 			feePayerBalanceCheck, senderBalanceCheck := types.CalcFeeWithRatio(feeRatio, feeCap)
@@ -324,47 +344,6 @@ func (st *StateTransition) buyGas() error {
 		}
 		st.state.SubBalance(validatedFeePayer, feePayerFee)
 		st.state.SubBalance(validatedSender, senderFee)
-	} else if st.msg.Type().IsFeeDelegatedTransaction() && !isSelfDelegated {
-		// covers FeeDelegatedTx and feepayer != sender
-		if isOsaka {
-			feePayerBalanceCheck := feeCap
-			senderBalanceCheck := st.msg.Value()
-			if err := st.checkBalanceOverflow(validatedFeePayer, feePayerBalanceCheck); err != nil {
-				return err
-			}
-			if err := st.checkBalanceOverflow(validatedSender, senderBalanceCheck); err != nil {
-				return err
-			}
-			if err := st.checkFeePayerBalance(feePayerBalanceCheck); err != nil {
-				return err
-			}
-			if err := st.checkSenderBalance(senderBalanceCheck); err != nil {
-				return err
-			}
-		} else {
-			if err := st.checkFeePayerBalance(mgval); err != nil {
-				return err
-			}
-		}
-		st.state.SubBalance(validatedFeePayer, mgval)
-	} else {
-		// covers FeeDelegatedTxWithRatio and feepayer == sender
-		// covers FeeDelegatedTx          and feepayer == sender
-		// covers basic Tx                and feepayer == sender (obviously)
-		if isOsaka {
-			balanceCheck := new(big.Int).Add(feeCap, st.msg.Value())
-			if err := st.checkBalanceOverflow(validatedFeePayer, balanceCheck); err != nil {
-				return err
-			}
-			if err := st.checkFeePayerBalance(balanceCheck); err != nil {
-				return err
-			}
-		} else {
-			if err := st.checkFeePayerBalance(mgval); err != nil {
-				return err
-			}
-		}
-		st.state.SubBalance(validatedFeePayer, mgval)
 	}
 
 	st.gas += st.msg.Gas()
