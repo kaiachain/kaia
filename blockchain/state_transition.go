@@ -244,9 +244,19 @@ func (st *StateTransition) checkBalancesOverflow(address common.Address, balance
 	return nil
 }
 
-func (st *StateTransition) checkFeePayerBalance(balanceCheck, balanceCheckWithValue *big.Int, checkWithValue bool) error {
+func (st *StateTransition) checkFeePayerBalance(balanceCheck *big.Int, checkOverflow, checkWithValue bool) error {
 	feePayerAddress := st.msg.ValidatedFeePayer()
 	actualBalance := st.state.GetBalance(feePayerAddress)
+	balanceCheckWithValue := new(big.Int).Add(balanceCheck, st.msg.Value())
+	if checkOverflow {
+		balances := []*big.Int{balanceCheck}
+		if checkWithValue {
+			balances = append(balances, balanceCheckWithValue)
+		}
+		if err := st.checkBalancesOverflow(feePayerAddress, balances...); err != nil {
+			return err
+		}
+	}
 	if actualBalance.Cmp(balanceCheck) < 0 {
 		logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", feePayerAddress.String(),
 			"feePayerBalance", actualBalance.Uint64(), "feePayerFee", balanceCheck.Uint64(),
@@ -258,9 +268,19 @@ func (st *StateTransition) checkFeePayerBalance(balanceCheck, balanceCheckWithVa
 	return nil
 }
 
-func (st *StateTransition) checkSenderBalance(balanceCheck, balanceCheckWithValue *big.Int, checkWithValue bool) error {
+func (st *StateTransition) checkSenderBalance(balanceCheck *big.Int, checkOverflow, checkWithValue bool) error {
 	senderAddress := st.msg.ValidatedSender()
 	actualBalance := st.state.GetBalance(senderAddress)
+	balanceCheckWithValue := new(big.Int).Add(balanceCheck, st.msg.Value())
+	if checkOverflow {
+		balances := []*big.Int{balanceCheck}
+		if checkWithValue {
+			balances = append(balances, balanceCheckWithValue)
+		}
+		if err := st.checkBalancesOverflow(senderAddress, balances...); err != nil {
+			return err
+		}
+	}
 	if actualBalance.Cmp(balanceCheck) < 0 {
 		logger.Debug(errInsufficientBalanceForGas.Error(), "sender", senderAddress.String(),
 			"senderBalance", actualBalance.Uint64(), "senderFee", balanceCheck.Uint64(),
@@ -305,48 +325,46 @@ func (st *StateTransition) buyGas() error {
 		// 1. Non fee-delegated tx
 		// 2. FeeDelegatedWithRatio with sender == feePayer
 		// 3. FeeDelegated          with sender == feePayer
+
+		// Before Osaka, only the check of the amount to be deducted is applied.
+		// Therefore, all options are false.
+		checkOverflow, checkWithValue := false, false
+		balanceCheck := mgval
 		if isOsaka {
-			balanceCheck := new(big.Int).Add(feeCap, st.msg.Value())
-			if err := st.checkBalancesOverflow(validatedFeePayer, feeCap, balanceCheck); err != nil {
-				return err
-			}
-			if err := st.checkFeePayerBalance(feeCap, balanceCheck, true); err != nil {
-				return err
-			}
-		} else {
-			if err := st.checkFeePayerBalance(mgval, nil, false); err != nil {
-				return err
-			}
+			// Overflow will be checked from osaka onwards.
+			// A value check is also performed.
+			checkOverflow, checkWithValue = true, true
+			balanceCheck = feeCap
+		}
+		if err := st.checkFeePayerBalance(balanceCheck, checkOverflow, checkWithValue); err != nil {
+			return err
 		}
 		st.state.SubBalance(validatedFeePayer, mgval)
 	} else {
 		// 1. FeeDelegatedWithRatio with sender != feePayer
 		// 2. FeeDelegated          with sender != feePayer
 
+		// Before Osaka, only the check of the amount to be deducted is applied.
+		// Therefore, all options are false.
+		feePayerCheckOverflow, feePayerCheckWithValue := false, false
+		senderCheckOverflow, senderCheckWithValue := false, false
+
 		// For 2, feeRatio will be always 100 (feePayer pays all fee)
 		feePayerFee, senderFee := types.CalcFeeWithRatio(feeRatio, mgval)
+		feePayerBalanceCheck, senderBalanceCheck := feePayerFee, senderFee
 		if isOsaka {
-			feePayerBalanceCheck, senderBalanceCheck := types.CalcFeeWithRatio(feeRatio, feeCap)
-			senderBalanceCheckWithValue := new(big.Int).Add(senderBalanceCheck, st.msg.Value())
-			if err := st.checkBalancesOverflow(validatedFeePayer, feePayerBalanceCheck); err != nil {
-				return err
-			}
-			if err := st.checkBalancesOverflow(validatedSender, senderBalanceCheck, senderBalanceCheckWithValue); err != nil {
-				return err
-			}
-			if err := st.checkFeePayerBalance(feePayerBalanceCheck, nil, false); err != nil {
-				return err
-			}
-			if err := st.checkSenderBalance(senderBalanceCheck, senderBalanceCheckWithValue, true); err != nil {
-				return err
-			}
-		} else {
-			if err := st.checkFeePayerBalance(feePayerFee, nil, false); err != nil {
-				return err
-			}
-			if err := st.checkSenderBalance(senderFee, nil, false); err != nil {
-				return err
-			}
+			// Overflow will be checked from osaka onwards.
+			// Value checks only apply to sender.
+			feePayerCheckOverflow, feePayerCheckWithValue = true, false
+			senderCheckOverflow, senderCheckWithValue = true, true
+
+			feePayerBalanceCheck, senderBalanceCheck = types.CalcFeeWithRatio(feeRatio, feeCap)
+		}
+		if err := st.checkFeePayerBalance(feePayerBalanceCheck, feePayerCheckOverflow, feePayerCheckWithValue); err != nil {
+			return err
+		}
+		if err := st.checkSenderBalance(senderBalanceCheck, senderCheckOverflow, senderCheckWithValue); err != nil {
+			return err
 		}
 		st.state.SubBalance(validatedFeePayer, feePayerFee)
 		st.state.SubBalance(validatedSender, senderFee)
