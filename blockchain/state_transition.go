@@ -234,12 +234,10 @@ func (st *StateTransition) to() common.Address {
 	return *st.msg.To()
 }
 
-func (st *StateTransition) checkBalancesOverflow(address common.Address, balances ...*big.Int) error {
-	for _, balance := range balances {
-		_, overflow := uint256.FromBig(balance)
-		if overflow {
-			return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, address.Hex())
-		}
+func (st *StateTransition) checkBalanceOverflow(address common.Address, balance *big.Int) error {
+	_, overflow := uint256.FromBig(balance)
+	if overflow {
+		return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, address.Hex())
 	}
 	return nil
 }
@@ -249,11 +247,11 @@ func (st *StateTransition) checkFeePayerBalance(balanceCheck *big.Int, checkOver
 	actualBalance := st.state.GetBalance(feePayerAddress)
 	balanceCheckWithValue := new(big.Int).Add(balanceCheck, st.msg.Value())
 	if checkOverflow {
-		balances := []*big.Int{balanceCheck}
+		balance := balanceCheck
 		if checkWithValue {
-			balances = append(balances, balanceCheckWithValue)
+			balance = balanceCheckWithValue
 		}
-		if err := st.checkBalancesOverflow(feePayerAddress, balances...); err != nil {
+		if err := st.checkBalanceOverflow(feePayerAddress, balance); err != nil {
 			return err
 		}
 	}
@@ -273,11 +271,11 @@ func (st *StateTransition) checkSenderBalance(balanceCheck *big.Int, checkOverfl
 	actualBalance := st.state.GetBalance(senderAddress)
 	balanceCheckWithValue := new(big.Int).Add(balanceCheck, st.msg.Value())
 	if checkOverflow {
-		balances := []*big.Int{balanceCheck}
+		balance := balanceCheck
 		if checkWithValue {
-			balances = append(balances, balanceCheckWithValue)
+			balance = balanceCheckWithValue
 		}
-		if err := st.checkBalancesOverflow(senderAddress, balances...); err != nil {
+		if err := st.checkBalanceOverflow(senderAddress, balance); err != nil {
 			return err
 		}
 	}
