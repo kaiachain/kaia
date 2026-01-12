@@ -31,12 +31,14 @@ import (
 )
 
 type vrank struct {
-	miningStartTime       time.Time
-	view                  istanbul.View
-	committee             []common.Address
-	quorum                int
-	preprepareArrivalTime time.Duration // node receives only one preprepare from proposer
-	commitArrivalTimeMap  map[common.Address]time.Duration
+	miningStartTime           time.Time
+	view                      istanbul.View
+	committee                 []common.Address
+	quorum                    int
+	preprepareArrivalTime     time.Duration // node receives only one preprepare from proposer
+	commitArrivalTimeMap      map[common.Address]time.Duration
+	roundChangeTime           time.Duration
+	roundChangeArrivalTimeMap map[common.Address]map[uint64]time.Duration // per node address per round
 }
 
 const (
@@ -80,16 +82,24 @@ func (v *vrank) AddPreprepare(msg *istanbul.Preprepare, src common.Address, time
 }
 
 func (v *vrank) AddCommit(msg *istanbul.Subject, src common.Address, timestamp time.Time) {
-	if v.isFirstCommit(src) {
+	if _, exists := v.commitArrivalTimeMap[src]; !exists {
 		v.commitArrivalTimeMap[src] = timestamp.Sub(v.miningStartTime)
 	}
 }
 
-func (v *vrank) isFirstCommit(src common.Address) bool {
-	if _, ok := v.commitArrivalTimeMap[src]; ok {
-		return false
+func (v *vrank) AddRoundChange(msg *istanbul.Subject, src common.Address, timestamp time.Time) {
+	roundChanges, exists := v.roundChangeArrivalTimeMap[src]
+	if !exists {
+		v.roundChangeArrivalTimeMap[src] = map[uint64]time.Duration{
+			msg.View.Round.Uint64(): timestamp.Sub(v.miningStartTime),
+		}
+		return
 	}
-	return true
+
+	_, exists = roundChanges[msg.View.Round.Uint64()]
+	if !exists {
+		roundChanges[msg.View.Round.Uint64()] = time.Since(v.miningStartTime)
+	}
 }
 
 // Log logs accumulated data in a compressed form
@@ -106,13 +116,14 @@ func (v *vrank) Log() {
 		return
 	}
 
-	seq, round, preprepareArrivalTime, commitArrivalTimes := v.buildLogData()
+	seq, round, preprepareArrivalTime, commitArrivalTimes, roundChangeArrivalTimes := v.buildLogData()
 	logger.Warn("VRank", "seq", seq, "round", round,
 		"preprepareArrivalTime", preprepareArrivalTime,
-		"commitArrivalTimes", commitArrivalTimes)
+		"commitArrivalTimes", commitArrivalTimes,
+		"roundChangeArrivalTimes", roundChangeArrivalTimes)
 }
 
-func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTime string, commitArrivalTimes []string) {
+func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTime string, commitArrivalTimes []string, roundChangeArrivalTimes []string) {
 	sortedCommittee := valset.NewAddressSet(v.committee).List()
 	preprepareArrivalTime = "-"
 	if v.preprepareArrivalTime != time.Duration(0) {
@@ -125,9 +136,17 @@ func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTime st
 			commitTime = encodeDuration(t)
 		}
 		commitArrivalTimes[i] = commitTime
+		roundChangeTime := "-" // no round change or not arrived
+		for round, t := range v.roundChangeArrivalTimeMap[addr] {
+			if round == v.view.Round.Uint64() {
+				roundChangeTime = encodeDuration(t)
+				break
+			}
+		}
+		roundChangeArrivalTimes[i] = roundChangeTime
 	}
 
-	return v.view.Sequence.Int64(), v.view.Round.Int64(), preprepareArrivalTime, commitArrivalTimes
+	return v.view.Sequence.Int64(), v.view.Round.Int64(), preprepareArrivalTime, commitArrivalTimes, roundChangeArrivalTimes
 }
 
 func (v *vrank) calcMetrics() (int64, int64, int64, int64) {

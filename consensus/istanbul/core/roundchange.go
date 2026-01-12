@@ -25,6 +25,7 @@ package core
 import (
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
@@ -86,6 +87,7 @@ func (c *core) sendRoundChange(round *big.Int) {
 
 func (c *core) handleRoundChange(msg *message, src common.Address) error {
 	logger := c.logger.NewWith("state", c.state, "from", src.Hex())
+	timestamp := time.Now()
 
 	// Decode ROUND CHANGE message
 	var rc *istanbul.Subject
@@ -112,6 +114,10 @@ func (c *core) handleRoundChange(msg *message, src common.Address) error {
 	if err != nil {
 		logger.Warn("Failed to add round change message", "from", src, "msg", msg, "err", err)
 		return err
+	}
+
+	if Vrank != nil {
+		Vrank.AddRoundChange(rc, src, timestamp)
 	}
 
 	var numCatchUp, numStartNewRound int
