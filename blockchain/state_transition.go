@@ -354,7 +354,7 @@ func (st *StateTransition) buyGas() error {
 		feePayerBalanceCheck, senderBalanceCheck := feePayerFee, senderFee
 		if isOsaka {
 			// Overflow will be checked from osaka onwards.
-			// Value checks only apply to sender.
+			// Since the value is paid entirely by the sender, value checks only apply to sender.
 			feePayerCheckOverflow, feePayerCheckWithValue = true, false
 			senderCheckOverflow, senderCheckWithValue = true, true
 
