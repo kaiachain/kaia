@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
         contents: read
+        pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -190,8 +191,6 @@ jobs:
     permissions:
       pull-requests: write
       contents: write
-    env:
-      GH_TOKEN: ${{ secrets.RELEASE_PR_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -225,9 +224,10 @@ jobs:
             --title "[Main] ${{ env.RELEASE_BRANCH }} QA Signoff" \
             --body-file - <<-EOF
             [Main] ${{ env.RELEASE_BRANCH }} QA Sign-off
-            
+
             This PR is automatically created by CI to release a new official version of ${{ github.repository }}.
             When this PR is approved by the QA team, a new version will be released.
+            EOF
 
   # ============================================================================
   # MAJOR VERSION ONLY JOBS
@@ -283,7 +283,7 @@ jobs:
       - name: Update EL7 repo
         run: |
           aws s3 sync s3://${{ secrets.FRONTEND_BUCKET }}/packages/rhel/7/kaia/ rhel/7/kaia/
-          createrepo --update rhel/7/kaia"
+          createrepo --update rhel/7/kaia
           aws s3 sync --delete rhel/7/kaia/repodata/ s3://${{ secrets.FRONTEND_BUCKET }}/packages/rhel/7/kaia/repodata/
       - name: Update EL9 repo
         run: |
