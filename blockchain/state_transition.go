@@ -234,79 +234,138 @@ func (st *StateTransition) to() common.Address {
 	return *st.msg.To()
 }
 
+func (st *StateTransition) checkBalanceOverflow(address common.Address, balance *big.Int) error {
+	_, overflow := uint256.FromBig(balance)
+	if overflow {
+		return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, address.Hex())
+	}
+	return nil
+}
+
+func (st *StateTransition) checkFeePayerBalance(balanceCheck *big.Int, checkOverflow, checkWithValue bool) error {
+	feePayerAddress := st.msg.ValidatedFeePayer()
+	actualBalance := st.state.GetBalance(feePayerAddress)
+	balanceCheckWithValue := new(big.Int).Add(balanceCheck, st.msg.Value())
+	if checkOverflow {
+		balance := balanceCheck
+		if checkWithValue {
+			balance = balanceCheckWithValue
+		}
+		if err := st.checkBalanceOverflow(feePayerAddress, balance); err != nil {
+			return err
+		}
+	}
+	if actualBalance.Cmp(balanceCheck) < 0 {
+		logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", feePayerAddress.String(),
+			"feePayerBalance", actualBalance.Uint64(), "feePayerFee", balanceCheck.Uint64(),
+			"txHash", st.msg.Hash().String())
+		return errInsufficientBalanceForGasFeePayer
+	} else if checkWithValue && actualBalance.Cmp(balanceCheckWithValue) < 0 { // Error due to insufficient Value must be vm.ErrInsufficientBalance.
+		return vm.ErrInsufficientBalance
+	}
+	return nil
+}
+
+func (st *StateTransition) checkSenderBalance(balanceCheck *big.Int, checkOverflow, checkWithValue bool) error {
+	senderAddress := st.msg.ValidatedSender()
+	actualBalance := st.state.GetBalance(senderAddress)
+	balanceCheckWithValue := new(big.Int).Add(balanceCheck, st.msg.Value())
+	if checkOverflow {
+		balance := balanceCheck
+		if checkWithValue {
+			balance = balanceCheckWithValue
+		}
+		if err := st.checkBalanceOverflow(senderAddress, balance); err != nil {
+			return err
+		}
+	}
+	if actualBalance.Cmp(balanceCheck) < 0 {
+		logger.Debug(errInsufficientBalanceForGas.Error(), "sender", senderAddress.String(),
+			"senderBalance", actualBalance.Uint64(), "senderFee", balanceCheck.Uint64(),
+			"txHash", st.msg.Hash().String())
+		return errInsufficientBalanceForGas
+	} else if checkWithValue && actualBalance.Cmp(balanceCheckWithValue) < 0 { // Error due to insufficient Value must be vm.ErrInsufficientBalance.
+		return vm.ErrInsufficientBalance
+	}
+	return nil
+}
+
 func (st *StateTransition) buyGas() error {
-	// st.gasPrice : gasPrice user set before magma hardfork
-	// st.gasPrice : BaseFee after magma hardfork
+	var (
+		validatedFeePayer = st.msg.ValidatedFeePayer()
+		validatedSender   = st.msg.ValidatedSender()
+		feeRatio, _       = st.msg.FeeRatio()
+		isOsaka           = st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka
+	)
+
+	// mgval is the maximum gas fee that can actually be paid in the worst case (e.g., revert)
+	// st.gasPrice = tx.gasPrice (before Magma) or effectiveGasPrice (since Magma)
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
 
-	validatedFeePayer := st.msg.ValidatedFeePayer()
-	validatedSender := st.msg.ValidatedSender()
-	feeRatio, isRatioTx := st.msg.FeeRatio()
+	// feeCap is the maximum gas fee the sender was willing to pay
+	// GasFeeCap = tx.maxFeePerGas (if exists) or tx.gasPrice
+	feeCap := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.msg.GasFeeCap())
 
-	// Before Osaka hardfork, check that the user has enough funds to cover
-	// gasLimit * gasPrice
-	balanceCheck := new(big.Int).Set(mgval)
-
-	// These are used when tx is TxInternalDataFeeRatio.
-	feePayerFeeForBalanceCheck, senderFeeForBalanceCheck := types.CalcFeeWithRatio(feeRatio, balanceCheck)
-
-	if st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka {
-		// After Osaka hardfork, check that the user has enough funds to cover
-		// gasLimit * gasFeeCap + blobGasUsed * blobGasFeeCap + value
-		balanceCheck.Set(new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.msg.GasFeeCap()))
-
+	if isOsaka {
 		if blobGas := st.blobGasUsed(); blobGas > 0 {
 			// Check that the user has enough funds to cover blobGasUsed * tx.BlobGasFeeCap
-			blobBalanceCheck := new(big.Int).SetUint64(blobGas)
-			blobBalanceCheck.Mul(blobBalanceCheck, st.msg.BlobGasFeeCap())
-			balanceCheck.Add(balanceCheck, blobBalanceCheck)
+			blobFeeCap := new(big.Int).SetUint64(blobGas)
+			blobFeeCap.Mul(blobFeeCap, st.msg.BlobGasFeeCap())
+			feeCap.Add(feeCap, blobFeeCap)
 			// Pay for blobGasUsed * actual blob fee
 			blobFee := new(big.Int).SetUint64(blobGas)
 			blobFee.Mul(blobFee, st.evm.Context.BlobBaseFee)
 			mgval.Add(mgval, blobFee)
 		}
-		_, overflow := uint256.FromBig(balanceCheck)
-		if overflow {
-			return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, validatedSender.Hex())
-		}
-
-		if isRatioTx {
-			feePayerFeeForBalanceCheck, senderFeeForBalanceCheck = types.CalcFeeWithRatio(feeRatio, balanceCheck)
-			senderFeeForBalanceCheck.Add(senderFeeForBalanceCheck, st.msg.Value())
-		} else {
-			balanceCheck.Add(balanceCheck, st.msg.Value())
-		}
 	}
 
-	if isRatioTx {
+	if validatedFeePayer == validatedSender {
+		// 1. Non fee-delegated tx
+		// 2. FeeDelegatedWithRatio with sender == feePayer
+		// 3. FeeDelegated          with sender == feePayer
+
+		// Before Osaka, only the check of the amount to be deducted is applied.
+		// Therefore, all options are false.
+		checkOverflow, checkWithValue := false, false
+		balanceCheck := mgval
+		if isOsaka {
+			// Overflow will be checked from osaka onwards.
+			// A value check is also performed.
+			checkOverflow, checkWithValue = true, true
+			balanceCheck = feeCap
+		}
+		if err := st.checkFeePayerBalance(balanceCheck, checkOverflow, checkWithValue); err != nil {
+			return err
+		}
+		st.state.SubBalance(validatedFeePayer, mgval)
+	} else {
+		// 1. FeeDelegatedWithRatio with sender != feePayer
+		// 2. FeeDelegated          with sender != feePayer
+
+		// Before Osaka, only the check of the amount to be deducted is applied.
+		// Therefore, all options are false.
+		feePayerCheckOverflow, feePayerCheckWithValue := false, false
+		senderCheckOverflow, senderCheckWithValue := false, false
+
+		// For 2, feeRatio will be always 100 (feePayer pays all fee)
 		feePayerFee, senderFee := types.CalcFeeWithRatio(feeRatio, mgval)
+		feePayerBalanceCheck, senderBalanceCheck := feePayerFee, senderFee
+		if isOsaka {
+			// Overflow will be checked from osaka onwards.
+			// Since the value is paid entirely by the sender, value checks only apply to sender.
+			feePayerCheckOverflow, feePayerCheckWithValue = true, false
+			senderCheckOverflow, senderCheckWithValue = true, true
 
-		if st.state.GetBalance(validatedFeePayer).Cmp(feePayerFeeForBalanceCheck) < 0 {
-			logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
-				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", feePayerFeeForBalanceCheck.Uint64(),
-				"txHash", st.msg.Hash().String())
-			return errInsufficientBalanceForGasFeePayer
+			feePayerBalanceCheck, senderBalanceCheck = types.CalcFeeWithRatio(feeRatio, feeCap)
 		}
-
-		if st.state.GetBalance(validatedSender).Cmp(senderFeeForBalanceCheck) < 0 {
-			logger.Debug(errInsufficientBalanceForGas.Error(), "sender", validatedSender.String(),
-				"senderBalance", st.state.GetBalance(validatedSender).Uint64(), "senderFee", senderFeeForBalanceCheck.Uint64(),
-				"txHash", st.msg.Hash().String())
-			return errInsufficientBalanceForGas
+		if err := st.checkFeePayerBalance(feePayerBalanceCheck, feePayerCheckOverflow, feePayerCheckWithValue); err != nil {
+			return err
 		}
-
+		if err := st.checkSenderBalance(senderBalanceCheck, senderCheckOverflow, senderCheckWithValue); err != nil {
+			return err
+		}
 		st.state.SubBalance(validatedFeePayer, feePayerFee)
 		st.state.SubBalance(validatedSender, senderFee)
-	} else {
-		// to make a short circuit, process the special case feeRatio == MaxFeeRatio
-		if st.state.GetBalance(validatedFeePayer).Cmp(balanceCheck) < 0 {
-			logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
-				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", balanceCheck.Uint64(),
-				"txHash", st.msg.Hash().String())
-			return errInsufficientBalanceForGasFeePayer
-		}
-
-		st.state.SubBalance(validatedFeePayer, mgval)
 	}
 
 	st.gas += st.msg.Gas()

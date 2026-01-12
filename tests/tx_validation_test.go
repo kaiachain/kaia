@@ -1585,7 +1585,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 					valueMap[types.TxValueKeyAmount] = new(big.Int).SetUint64(amount)
 					valueMap[types.TxValueKeyGasLimit] = gasLimit + 1 // requires 1 more gas
 					// The tx will be failed in vm since it can buy gas but cannot send enough value
-					expectedErr = errInsufficientBalanceForGasFeePayer
+					expectedErr = vm.ErrInsufficientBalance
 				} else {
 					valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64()) + 1 // requires 1 more gas
 					// The tx will be failed in buyGas() since it cannot buy enough gas
@@ -1752,7 +1752,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 					// = (gasLimit + 1) * 10 * (100 - 90) * 0.01 = gasLimit + 1
 					valueMap[types.TxValueKeyGasLimit] = (gasLimit + 1) * 10 // requires 1 more gas
 					// The tx will be failed in vm since it can buy gas but cannot send enough value
-					expectedErr = errInsufficientBalanceForGas
+					expectedErr = vm.ErrInsufficientBalance
 				} else {
 					// Gas testAcc will charge = tx gasLimit * sender's feeRatio
 					// = (gasLimit + (amount / gasPrice.Uint64()) + 1) * 10 * (100 - 90) * 0.01 = gasLimit + (amount / gasPrice.Uint64()) + 1
