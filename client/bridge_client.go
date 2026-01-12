@@ -130,7 +130,7 @@ func (ec *KaiaClient) BridgeGetParentOperatorNonce(ctx context.Context) (uint64,
 	return result, err
 }
 
-// BridgeGetChildOperatorAddr can get a child chain operator nonce.
+// BridgeGetChildOperatorNonce can get a child chain operator nonce.
 func (ec *KaiaClient) BridgeGetChildOperatorNonce(ctx context.Context) (uint64, error) {
 	var result uint64
 	err := ec.c.CallContext(ctx, &result, "subbridge_getChildOperatorNonce")
@@ -175,7 +175,7 @@ func (ec *KaiaClient) BridgeGetSentChainTxsLimit(ctx context.Context) (uint64, e
 	return result, err
 }
 
-// BridgeRegisteredOperators registers an operator.
+// BridgeRegisterOperator registers an operator.
 func (ec *KaiaClient) BridgeRegisterOperator(ctx context.Context, bridge, operator common.Address) (common.Hash, error) {
 	var result common.Hash
 	err := ec.c.CallContext(ctx, &result, "subbridge_registerOperator", bridge, operator)

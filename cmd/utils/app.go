@@ -29,7 +29,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// NewApp creates an app with sane defaults.
+// NewCLI creates an app with sane defaults.
 func NewCLI() *cli.App {
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
