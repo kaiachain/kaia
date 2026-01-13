@@ -26,13 +26,11 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/types/derivesha"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/istanbul"
@@ -884,17 +882,7 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, e
 	defer q.lock.Unlock()
 
 	validate := func(index int, header *types.Header) error {
-		// Governance parameters may not be available during header validation stage,
-		// as some depend on block states (e.g., ContractGov).
-		// Try all known deriveSha implementations for a sufficient sanity check.
-		// Note: empty bodies are already filtered out in newFetchResult.
-		txs := types.Transactions(txLists[index])
-		txHashes := []common.Hash{
-			derivesha.DeriveShaSimple{}.DeriveSha(txs),
-			derivesha.DeriveShaConcat{}.DeriveSha(txs),
-			derivesha.DeriveShaOrig{}.DeriveSha(txs),
-		}
-		if !slices.Contains(txHashes, header.TxHash) {
+		if types.DeriveSha(types.Transactions(txLists[index]), header.Number) != header.TxHash {
 			return errInvalidBody
 		}
 		// Blocks must have a number of blobs corresponding to the header gas usage,
@@ -946,14 +934,7 @@ func (q *queue) DeliverReceipts(id string, receiptList [][]*types.Receipt) (int,
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	validate := func(index int, header *types.Header) error {
-		// Note: empty receipts are already filtered out in newFetchResult.
-		receipts := types.Receipts(receiptList[index])
-		receiptHashes := []common.Hash{
-			derivesha.DeriveShaSimple{}.DeriveSha(receipts),
-			derivesha.DeriveShaConcat{}.DeriveSha(receipts),
-			derivesha.DeriveShaOrig{}.DeriveSha(receipts),
-		}
-		if !slices.Contains(receiptHashes, header.ReceiptHash) {
+		if types.DeriveSha(types.Receipts(receiptList[index]), header.Number) != header.ReceiptHash {
 			return errInvalidReceipt
 		}
 		return nil
