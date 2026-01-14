@@ -75,7 +75,7 @@ type PeerSet interface {
 	WaitSnapExtension(peer Peer) (*snap.Peer, error)
 
 	BestPeer() Peer
-	SortedPeersForBlobSidecar() []Peer
+	BestPeerForBlobSidecar(try int) Peer
 	RegisterValidator(connType common.ConnType, validator p2p.PeerTypeValidator)
 	Close()
 }
@@ -436,10 +436,14 @@ func (ps *peerSet) BestPeer() Peer {
 	return bestPeer
 }
 
-// BestPeerWithBlobSidecar retrieves the known peer with the currently highest total blockscore.
-func (ps *peerSet) SortedPeersForBlobSidecar() []Peer {
+// BestPeerWithBlobSidecar retrieves the best peer for blob sidecar
+func (ps *peerSet) BestPeerForBlobSidecar(try int) Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
+
+	if len(ps.peers) == 0 {
+		return nil
+	}
 
 	// filter peers with version >= kaia67
 	sortedPeers := make([]Peer, 0, len(ps.peers))
@@ -450,13 +454,37 @@ func (ps *peerSet) SortedPeersForBlobSidecar() []Peer {
 		sortedPeers = append(sortedPeers, p)
 	}
 
+	if len(sortedPeers) == 0 {
+		return nil
+	}
+
 	// sort by head in descending order
 	sort.Slice(sortedPeers, func(i, j int) bool {
 		_, head1 := sortedPeers[i].Head()
 		_, head2 := sortedPeers[j].Head()
 		return head1.Cmp(head2) > 0
 	})
-	return sortedPeers
+
+	// cn is priority
+	for _, p := range sortedPeers {
+		if p.ConnType() == common.CONSENSUSNODE {
+			return p
+		}
+	}
+
+	// pn is second priority
+	for _, p := range sortedPeers {
+		if p.ConnType() == common.PROXYNODE {
+			return p
+		}
+	}
+
+	// peer at the try index
+	if len(sortedPeers) > try {
+		return sortedPeers[try]
+	}
+
+	return sortedPeers[len(sortedPeers)-1]
 }
 
 // RegisterValidator registers a validator.

@@ -1296,16 +1296,10 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 			if req == nil {
 				continue
 			}
-			peers := pm.peers.SortedPeersForBlobSidecar()
 
-			if len(peers) == 0 {
+			peer := pm.peers.BestPeerForBlobSidecar(req.try)
+			if peer == nil {
 				continue
-			}
-
-			// should change peer because previous peer may have sidecar
-			peer := peers[len(peers)-1]
-			if len(peers) > req.try {
-				peer = peers[req.try]
 			}
 
 			if err := peer.RequestBlobSidecars([]blobSidecarsRequestData{req.request}); err != nil {

@@ -341,13 +341,12 @@ func TestPeerSet_BestPeer(t *testing.T) {
 	assert.Equal(t, pnPeer, peerSet.BestPeer())
 }
 
-func TestPeerSet_SortedPeersForBlobSidecar(t *testing.T) {
+func TestPeerSet_BestPeerForBlobSidecar(t *testing.T) {
 	// Test case 1: Empty peer set
 	{
 		peerSet := newPeerSet()
-		result := peerSet.SortedPeersForBlobSidecar()
-		assert.Equal(t, 0, len(result))
-		assert.Equal(t, []Peer{}, result)
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Nil(t, result)
 	}
 
 	// Test case 2: Only peers with version < kaia67 (should be filtered out)
@@ -368,14 +367,13 @@ func TestPeerSet_SortedPeersForBlobSidecar(t *testing.T) {
 		assert.NoError(t, peerSet.Register(peer1, nil))
 		assert.NoError(t, peerSet.Register(peer2, nil))
 
-		result := peerSet.SortedPeersForBlobSidecar()
-		assert.Equal(t, 0, len(result))
-		assert.Equal(t, []Peer{}, result)
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Nil(t, result)
 
 		mockCtrl.Finish()
 	}
 
-	// Test case 3: Only peers with version >= kaia67 (all should be returned)
+	// Test case 3: Only peers with version >= kaia67, CN priority
 	{
 		peerSet := newPeerSet()
 		mockCtrl := gomock.NewController(t)
@@ -399,17 +397,14 @@ func TestPeerSet_SortedPeersForBlobSidecar(t *testing.T) {
 		assert.NoError(t, peerSet.Register(peer2, nil))
 		assert.NoError(t, peerSet.Register(peer3, nil))
 
-		result := peerSet.SortedPeersForBlobSidecar()
-		assert.Equal(t, 3, len(result))
-		// Should be sorted in descending order: peer3 (300), peer2 (200), peer1 (100)
-		assert.Equal(t, peer3, result[0])
-		assert.Equal(t, peer2, result[1])
-		assert.Equal(t, peer1, result[2])
+		// CN (peer1) should be selected first regardless of head block number
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Equal(t, peer1, result)
 
 		mockCtrl.Finish()
 	}
 
-	// Test case 4: Mixed peers (version < kaia67 and >= kaia67)
+	// Test case 4: Mixed peers (version < kaia67 and >= kaia67), CN priority
 	{
 		peerSet := newPeerSet()
 		mockCtrl := gomock.NewController(t)
@@ -438,19 +433,14 @@ func TestPeerSet_SortedPeersForBlobSidecar(t *testing.T) {
 		assert.NoError(t, peerSet.Register(peerNew1, nil))
 		assert.NoError(t, peerSet.Register(peerNew2, nil))
 
-		result := peerSet.SortedPeersForBlobSidecar()
-		assert.Equal(t, 2, len(result))
-		// Should only contain peers with version >= kaia67, sorted descending
-		assert.Equal(t, peerNew2, result[0]) // 250
-		assert.Equal(t, peerNew1, result[1]) // 150
-		// Verify old peers are not included
-		assert.False(t, containsPeer(peerOld1, result))
-		assert.False(t, containsPeer(peerOld2, result))
+		// peerNew2 is CN and should be selected
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Equal(t, peerNew2, result)
 
 		mockCtrl.Finish()
 	}
 
-	// Test case 5: Sort verification with different head block numbers
+	// Test case 5: CN priority, then PN, then try index
 	{
 		peerSet := newPeerSet()
 		mockCtrl := gomock.NewController(t)
@@ -482,18 +472,92 @@ func TestPeerSet_SortedPeersForBlobSidecar(t *testing.T) {
 		assert.NoError(t, peerSet.Register(peer3, nil))
 		assert.NoError(t, peerSet.Register(peer4, nil))
 
-		result := peerSet.SortedPeersForBlobSidecar()
-		assert.Equal(t, 4, len(result))
-		// Should be sorted in descending order: 300, 200, 100, 50
-		assert.Equal(t, peer2, result[0]) // 300
-		assert.Equal(t, peer4, result[1]) // 200
-		assert.Equal(t, peer3, result[2]) // 100
-		assert.Equal(t, peer1, result[3]) // 50
+		// After sorting: peer2(300), peer4(200), peer3(100), peer1(50)
+		// CN priority: peer4 or peer1, but peer4 comes first in sorted order
+		result := peerSet.BestPeerForBlobSidecar(0)
+		// Should return first CN found in sorted order (peer4)
+		assert.Equal(t, peer4, result)
 
 		mockCtrl.Finish()
 	}
 
-	// Test case 6: Peers with same head block number
+	// Test case 6: PN priority when no CN
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+		peer3 := NewMockPeer(mockCtrl)
+
+		peer1.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+		peer2.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		peer3.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+		setMockPeers([]*MockPeer{peer1, peer2, peer3})
+
+		peer1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer3.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		peer1.EXPECT().Head().Return(common.Hash{}, big.NewInt(100)).AnyTimes()
+		peer2.EXPECT().Head().Return(common.Hash{}, big.NewInt(200)).AnyTimes()
+		peer3.EXPECT().Head().Return(common.Hash{}, big.NewInt(300)).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peer1, nil))
+		assert.NoError(t, peerSet.Register(peer2, nil))
+		assert.NoError(t, peerSet.Register(peer3, nil))
+
+		// After sorting: peer3(300), peer2(200), peer1(100)
+		// No CN, so PN priority: peer3 or peer1, but peer3 comes first in sorted order
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Equal(t, peer3, result)
+
+		mockCtrl.Finish()
+	}
+
+	// Test case 7: Try index when no CN or PN
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+		peer3 := NewMockPeer(mockCtrl)
+
+		peer1.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		peer2.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		peer3.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		setMockPeers([]*MockPeer{peer1, peer2, peer3})
+
+		peer1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer3.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		peer1.EXPECT().Head().Return(common.Hash{}, big.NewInt(100)).AnyTimes()
+		peer2.EXPECT().Head().Return(common.Hash{}, big.NewInt(200)).AnyTimes()
+		peer3.EXPECT().Head().Return(common.Hash{}, big.NewInt(300)).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peer1, nil))
+		assert.NoError(t, peerSet.Register(peer2, nil))
+		assert.NoError(t, peerSet.Register(peer3, nil))
+
+		// After sorting: peer3(300), peer2(200), peer1(100)
+		// No CN or PN, so try index 1 should return peer2
+		result := peerSet.BestPeerForBlobSidecar(1)
+		assert.Equal(t, peer2, result)
+
+		// Try index 0 should return peer3
+		result = peerSet.BestPeerForBlobSidecar(0)
+		assert.Equal(t, peer3, result)
+
+		// Try index beyond length should return last peer
+		result = peerSet.BestPeerForBlobSidecar(10)
+		assert.Equal(t, peer1, result)
+
+		mockCtrl.Finish()
+	}
+
+	// Test case 8: Peers with same head block number, CN priority
 	{
 		peerSet := newPeerSet()
 		mockCtrl := gomock.NewController(t)
@@ -519,16 +583,10 @@ func TestPeerSet_SortedPeersForBlobSidecar(t *testing.T) {
 		assert.NoError(t, peerSet.Register(peer2, nil))
 		assert.NoError(t, peerSet.Register(peer3, nil))
 
-		result := peerSet.SortedPeersForBlobSidecar()
-		assert.Equal(t, 3, len(result))
-		// peer3 should be first (200), then peer1 and peer2 (both 100) can be in any order
-		assert.Equal(t, peer3, result[0]) // 200
-		// Verify both peer1 and peer2 are in the result
-		assert.True(t, containsPeer(peer1, result))
-		assert.True(t, containsPeer(peer2, result))
-		// Verify they are after peer3
-		assert.True(t, result[1] == peer1 || result[1] == peer2)
-		assert.True(t, result[2] == peer1 || result[2] == peer2)
+		// After sorting: peer3(200), then peer1(100) and peer2(100) in some order
+		// CN priority: peer1 should be selected (it's CN)
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Equal(t, peer1, result)
 
 		mockCtrl.Finish()
 	}
