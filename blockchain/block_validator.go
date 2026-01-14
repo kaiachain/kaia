@@ -72,7 +72,7 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	}
 	// Header validity is known at this point, check the transactions
 	header := block.Header()
-	if hash := types.DeriveSha(block.Transactions(), block.Number()); hash != header.TxHash {
+	if hash := types.DeriveTransactionsRoot(block.Transactions(), block.Number()); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)
 	}
 

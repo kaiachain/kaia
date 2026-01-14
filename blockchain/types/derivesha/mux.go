@@ -66,12 +66,21 @@ func InitDeriveSha(chainConfig *params.ChainConfig, g GovModule) {
 	config = chainConfig
 	govModule = g
 	types.DeriveSha = DeriveShaMux
+	types.DeriveTransactionsRoot = DeriveTransactionsRootMux
 	types.GetEmptyRootHash = EmptyRootHashMux
 	logger.Info("InitDeriveSha", "initial", config.DeriveShaImpl, "withGov", govModule != nil)
 }
 
 func DeriveShaMux(list types.DerivableList, num *big.Int) common.Hash {
 	return impls[getType(num)].DeriveSha(list)
+}
+
+func DeriveTransactionsRootMux(list types.Transactions, num *big.Int) common.Hash {
+	listWithoutBlobSidecars := make(types.Transactions, len(list))
+	for i, tx := range list {
+		listWithoutBlobSidecars[i] = tx.WithoutBlobTxSidecar()
+	}
+	return impls[getType(num)].DeriveSha(listWithoutBlobSidecars)
 }
 
 func EmptyRootHashMux(num *big.Int) common.Hash {

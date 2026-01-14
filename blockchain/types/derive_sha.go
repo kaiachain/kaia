@@ -62,15 +62,22 @@ var (
 
 	////////////////////////////////
 
-	// DeriveSha and EmptyRootHash are populated by derivesha.InitDeriveSha().
-	// DeriveSha is used to calculate TransactionsRoot and ReceiptsRoot.
+	// DeriveSha, DeriveTransactionsRoot and EmptyRootHash are populated by derivesha.InitDeriveSha().
+	// DeriveSha is used to calculate ReceiptsRoot.
+	// DeriveTransactionsRoot is used to calculate TransactionsRoot.
 	// EmptyRootHash is a transaction/receipt root hash when there is no transaction.
-	DeriveSha        func(list DerivableList, num *big.Int) common.Hash = DeriveShaNone
-	GetEmptyRootHash func(num *big.Int) common.Hash                     = EmptyRootHashNone
+	DeriveSha              func(list DerivableList, num *big.Int) common.Hash = DeriveShaNone
+	DeriveTransactionsRoot func(list Transactions, num *big.Int) common.Hash  = DeriveTransactionsRootNone
+	GetEmptyRootHash       func(num *big.Int) common.Hash                     = EmptyRootHashNone
 )
 
 func DeriveShaNone(list DerivableList, num *big.Int) common.Hash {
 	logger.Crit("DeriveSha not initialized")
+	return common.Hash{}
+}
+
+func DeriveTransactionsRootNone(list Transactions, num *big.Int) common.Hash {
+	logger.Crit("DeriveTransactionsRoot not initialized")
 	return common.Hash{}
 }
 
