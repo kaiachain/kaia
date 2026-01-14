@@ -32,7 +32,19 @@ import (
 // This function generates a hash of `DerivableList` by simulating merkle tree generation
 type DeriveShaSimple struct{}
 
-func (d DeriveShaSimple) DeriveSha(list types.DerivableList) common.Hash {
+func (d DeriveShaSimple) DeriveReceiptsRoot(list types.Receipts) common.Hash {
+	return d.deriveSha(list)
+}
+
+func (d DeriveShaSimple) DeriveTransactionsRoot(list types.Transactions) common.Hash {
+	listWithoutBlobSidecars := make(types.Transactions, len(list))
+	for i, tx := range list {
+		listWithoutBlobSidecars[i] = tx.WithoutBlobTxSidecar()
+	}
+	return d.deriveSha(listWithoutBlobSidecars)
+}
+
+func (d DeriveShaSimple) deriveSha(list types.DerivableList) common.Hash {
 	hasher := sha3.NewKeccak256()
 
 	encoded := make([][]byte, 0, list.Len())

@@ -34,7 +34,19 @@ import (
 // 2. make a hash of the byte slice.
 type DeriveShaConcat struct{}
 
-func (d DeriveShaConcat) DeriveSha(list types.DerivableList) (hash common.Hash) {
+func (d DeriveShaConcat) DeriveReceiptsRoot(list types.Receipts) common.Hash {
+	return d.deriveSha(list)
+}
+
+func (d DeriveShaConcat) DeriveTransactionsRoot(list types.Transactions) common.Hash {
+	listWithoutBlobSidecars := make(types.Transactions, len(list))
+	for i, tx := range list {
+		listWithoutBlobSidecars[i] = tx.WithoutBlobTxSidecar()
+	}
+	return d.deriveSha(listWithoutBlobSidecars)
+}
+
+func (d DeriveShaConcat) deriveSha(list types.DerivableList) (hash common.Hash) {
 	hasher := sha3.NewKeccak256()
 
 	for i := 0; i < list.Len(); i++ {

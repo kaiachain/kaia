@@ -690,7 +690,7 @@ func TestFastVsFullChains(t *testing.T) {
 		}
 		freceipts := fastDb.ReadReceipts(hash, *fastDb.ReadHeaderNumber(hash))
 		areceipts := archiveDb.ReadReceipts(hash, *archiveDb.ReadHeaderNumber(hash))
-		if types.DeriveSha(freceipts, bnum) != types.DeriveSha(areceipts, bnum) {
+		if types.DeriveReceiptsRoot(freceipts, bnum) != types.DeriveReceiptsRoot(areceipts, bnum) {
 			t.Errorf("block #%d [%x]: receipts mismatch: have %v, want %v", num, hash, freceipts, areceipts)
 		}
 	}

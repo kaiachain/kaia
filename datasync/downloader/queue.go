@@ -882,7 +882,7 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, e
 	defer q.lock.Unlock()
 
 	validate := func(index int, header *types.Header) error {
-		if types.DeriveSha(types.Transactions(txLists[index]), header.Number) != header.TxHash {
+		if types.DeriveTransactionsRoot(types.Transactions(txLists[index]), header.Number) != header.TxHash {
 			return errInvalidBody
 		}
 		// Blocks must have a number of blobs corresponding to the header gas usage,
@@ -934,7 +934,7 @@ func (q *queue) DeliverReceipts(id string, receiptList [][]*types.Receipt) (int,
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	validate := func(index int, header *types.Header) error {
-		if types.DeriveSha(types.Receipts(receiptList[index]), header.Number) != header.ReceiptHash {
+		if types.DeriveReceiptsRoot(types.Receipts(receiptList[index]), header.Number) != header.ReceiptHash {
 			return errInvalidReceipt
 		}
 		return nil

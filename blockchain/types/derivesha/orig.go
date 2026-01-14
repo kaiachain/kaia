@@ -31,7 +31,19 @@ import (
 
 type DeriveShaOrig struct{}
 
-func (d DeriveShaOrig) DeriveSha(list types.DerivableList) common.Hash {
+func (d DeriveShaOrig) DeriveReceiptsRoot(list types.Receipts) common.Hash {
+	return d.deriveSha(list)
+}
+
+func (d DeriveShaOrig) DeriveTransactionsRoot(list types.Transactions) common.Hash {
+	listWithoutBlobSidecars := make(types.Transactions, len(list))
+	for i, tx := range list {
+		listWithoutBlobSidecars[i] = tx.WithoutBlobTxSidecar()
+	}
+	return d.deriveSha(listWithoutBlobSidecars)
+}
+
+func (d DeriveShaOrig) deriveSha(list types.DerivableList) common.Hash {
 	trie := statedb.NewStackTrie(nil)
 	trie.Reset()
 	var buf []byte
