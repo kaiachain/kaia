@@ -73,7 +73,7 @@ func TestMuxChainConfig(t *testing.T) {
 	for implType, impl := range impls {
 		InitDeriveSha(&params.ChainConfig{DeriveShaImpl: implType}, nil)
 		assert.Equal(t,
-			DeriveShaMux(dummyList, big.NewInt(0)),
+			DeriveTransactionsRootMux(dummyList, big.NewInt(0)),
 			impl.DeriveSha(dummyList),
 		)
 		assert.Equal(t,
@@ -95,7 +95,7 @@ func TestMuxGovernance(t *testing.T) {
 		impl := impls[implType]
 
 		assert.Equal(t,
-			DeriveShaMux(dummyList, new(big.Int).SetUint64(num)),
+			DeriveTransactionsRootMux(dummyList, new(big.Int).SetUint64(num)),
 			impl.DeriveSha(dummyList),
 		)
 		assert.Equal(t,

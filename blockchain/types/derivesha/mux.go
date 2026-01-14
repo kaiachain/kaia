@@ -71,7 +71,7 @@ func InitDeriveSha(chainConfig *params.ChainConfig, g GovModule) {
 	logger.Info("InitDeriveSha", "initial", config.DeriveShaImpl, "withGov", govModule != nil)
 }
 
-func DeriveShaMux(list types.DerivableList, num *big.Int) common.Hash {
+func DeriveShaMux(list types.Receipts, num *big.Int) common.Hash {
 	return impls[getType(num)].DeriveSha(list)
 }
 
