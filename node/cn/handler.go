@@ -1681,9 +1681,6 @@ func (pm *ProtocolManager) minedBroadcastLoop() {
 	for obj := range pm.minedBlockSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case kaia_blockchain.NewMinedBlockEvent:
-			// Remove the sidecars from the blob transactions.
-			// This prevents the sidecars from being broadcast.
-			ev.Block = ev.Block.WithoutBlobSidecars()
 			pm.BroadcastBlock(ev.Block)     // First propagate block to peers
 			pm.BroadcastBlockHash(ev.Block) // Only then announce to the rest
 		}
