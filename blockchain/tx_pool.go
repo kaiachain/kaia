@@ -2067,7 +2067,7 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 			}()
 			continue
 		} else if err != nil {
-			logger.Warn("failed to get blob sidecar from pool", "hash", tx.Hash(), "err", err)
+			logger.Debug("failed to get blob sidecar from pool", "hash", tx.Hash(), "err", err)
 		}
 
 		// missing blob sidecar is sent to protocol manager to fetch later
