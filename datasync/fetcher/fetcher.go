@@ -569,7 +569,7 @@ func (f *Fetcher) loop() {
 						}
 
 						if common.EmptyHash(txnHash) {
-							txnHash = types.DeriveSha(
+							txnHash = types.DeriveTransactionsRoot(
 								types.Transactions(task.transactions[i]), announce.header.Number)
 						}
 

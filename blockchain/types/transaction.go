@@ -393,6 +393,9 @@ func (tx *Transaction) WithoutBlobTxSidecar() *Transaction {
 	if !ok {
 		return tx
 	}
+	if blobtx.Sidecar == nil {
+		return tx
+	}
 	cpy := &Transaction{
 		data: blobtx.withoutSidecar(),
 		time: tx.time,

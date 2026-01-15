@@ -65,12 +65,12 @@ func init() {
 func InitDeriveSha(chainConfig *params.ChainConfig, g GovModule) {
 	config = chainConfig
 	govModule = g
-	types.DeriveSha = DeriveShaMux
+	types.DeriveShaImpl = DeriveShaImplMux
 	types.GetEmptyRootHash = EmptyRootHashMux
 	logger.Info("InitDeriveSha", "initial", config.DeriveShaImpl, "withGov", govModule != nil)
 }
 
-func DeriveShaMux(list types.DerivableList, num *big.Int) common.Hash {
+func DeriveShaImplMux(list types.DerivableList, num *big.Int) common.Hash {
 	return impls[getType(num)].DeriveSha(list)
 }
 

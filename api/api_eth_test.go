@@ -368,7 +368,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
         "extraData": "0x",
         "gasLimit": "0xe8d4a50fff",
         "gasUsed": "0x2710",
-        "hash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+        "hash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
         "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         "miner": "0x9712f943b296758aaae79944ec975884188d3a96",
         "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -382,7 +382,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
         "timestamp": "0x61d53854",
         "transactions": [
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x0000000000000000000000000000000000000000",
               "gas": "0x1c9c380",
@@ -399,7 +399,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3036656164333031646165616636376537376538",
               "gas": "0x989680",
@@ -416,7 +416,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3730323366383135666136613633663761613063",
               "gas": "0x1312d00",
@@ -433,7 +433,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x1312d00",
@@ -450,7 +450,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x5f5e100",
@@ -467,7 +467,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -484,7 +484,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -501,7 +501,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -518,7 +518,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3036656164333031646165616636376537376538",
               "gas": "0x989680",
@@ -535,7 +535,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3730323366383135666136613633663761613063",
               "gas": "0x1312d00",
@@ -552,7 +552,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x1312d00",
@@ -569,7 +569,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x5f5e100",
@@ -586,7 +586,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -603,7 +603,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -620,7 +620,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -637,7 +637,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3036656164333031646165616636376537376538",
               "gas": "0x989680",
@@ -654,7 +654,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3730323366383135666136613633663761613063",
               "gas": "0x1312d00",
@@ -671,7 +671,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x1312d00",
@@ -688,7 +688,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x5f5e100",
@@ -705,7 +705,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -722,7 +722,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -739,7 +739,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -756,7 +756,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
 			{
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0xd2cf1be6309647d3fb68cd1578a350fbf9579365",
               "gas": "0x2faf080",
@@ -784,7 +784,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
 			{
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x99ece38c38250d5a366886bb319003a2c43a6652",
               "gas": "0x2faf080",
@@ -813,7 +813,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
 			{
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0xd4ce9909ab4e4c80852f52ac01d39eefaf70014a",
 			  "chainId": "0x1",
@@ -846,7 +846,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
 			{
-              "blockHash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3e00e20175e3efe9190bcfa24b4bca6b1ea6f582",
 			  "chainId": "0x1",
@@ -886,7 +886,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             }
         ],
-        "transactionsRoot": "0x8f1fcd90c14eb37cc2de811f393b309686ee0fcb97b4a79950598ee96ac03970",
+        "transactionsRoot": "0x764e25fbdb4a2cd43fe4a079cdd3555154f4c92d69debab4d3fb3f36bcb6b8d1",
         "uncles": []
     }
     `,
@@ -899,7 +899,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
         "extraData": "0x",
         "gasLimit": "0xe8d4a50fff",
         "gasUsed": "0x2710",
-        "hash": "0xb56c19db829e5e56dfaa66ad286c747b5a879ca18e967e5025b356c21437c3fa",
+        "hash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
         "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         "miner": "0x9712f943b296758aaae79944ec975884188d3a96",
         "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -939,7 +939,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
             "0xeb1c26e494ecd699ad51b1695de42c83ff815442760610b82d2baf57c4b01488",
             "0x59b20492615e0a314b5de568bb061c2099d731d1a238455c9a55cb0f5a6f1f9d"
         ],
-        "transactionsRoot": "0x8f1fcd90c14eb37cc2de811f393b309686ee0fcb97b4a79950598ee96ac03970",
+        "transactionsRoot": "0x764e25fbdb4a2cd43fe4a079cdd3555154f4c92d69debab4d3fb3f36bcb6b8d1",
         "uncles": []
     }
     `,

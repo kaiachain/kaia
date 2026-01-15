@@ -72,14 +72,14 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 	}
 	// Header validity is known at this point, check the transactions
 	header := block.Header()
-	if hash := types.DeriveSha(block.Transactions(), block.Number()); hash != header.TxHash {
+	if hash := types.DeriveTransactionsRoot(block.Transactions(), block.Number()); hash != header.TxHash {
 		return fmt.Errorf("transaction root hash mismatch: have %x, want %x", hash, header.TxHash)
 	}
 
 	baseFee := block.Header().BaseFee
 	// Blob transactions may be present after the Osaka fork.
 	var blobs int
-	for i, tx := range block.Transactions() {
+	for _, tx := range block.Transactions() {
 		// NOTE: Kaia validates tx gasPrice
 		if baseFee != nil {
 			if baseFee.Cmp(tx.GasPrice()) > 0 {
@@ -88,10 +88,6 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 		}
 		// Count the number of blobs to validate against the header's blobGasUsed
 		blobs += len(tx.BlobHashes())
-		// If the tx is a blob tx, it must NOT have a sidecar attached to be valid in a block.
-		if tx.BlobTxSidecar() != nil {
-			return fmt.Errorf("unexpected blob sidecar in transaction at index %d", i)
-		}
 
 		// The individual checks for blob validity (version-check + not empty)
 		// happens in state transition.
@@ -127,7 +123,7 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 		return fmt.Errorf("invalid bloom (remote: %x  local: %x)", header.Bloom, rbloom)
 	}
 	// Tre receipt Trie's root (R = (Tr [[H1, R1], ... [Hn, R1]]))
-	receiptSha := types.DeriveSha(receipts, block.Number())
+	receiptSha := types.DeriveReceiptsRoot(receipts, block.Number())
 	if receiptSha != header.ReceiptHash {
 		return fmt.Errorf("invalid receipt root hash (remote: %x local: %x)", header.ReceiptHash, receiptSha)
 	}

@@ -225,7 +225,7 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	if len(txs) == 0 {
 		b.header.TxHash = GetEmptyRootHash(header.Number)
 	} else {
-		b.header.TxHash = DeriveSha(Transactions(txs), header.Number)
+		b.header.TxHash = DeriveTransactionsRoot(txs, header.Number)
 		b.transactions = make(Transactions, len(txs))
 		copy(b.transactions, txs)
 	}
@@ -233,7 +233,7 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	if len(receipts) == 0 {
 		b.header.ReceiptHash = GetEmptyRootHash(header.Number)
 	} else {
-		b.header.ReceiptHash = DeriveSha(Receipts(receipts), header.Number)
+		b.header.ReceiptHash = DeriveReceiptsRoot(Receipts(receipts), header.Number)
 		b.header.Bloom = CreateBloom(receipts)
 	}
 

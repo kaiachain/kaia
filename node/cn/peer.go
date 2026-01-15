@@ -562,7 +562,11 @@ func (p *basePeer) AsyncSendNewBlockHash(block *types.Block) {
 // SendNewBlock propagates an entire block to a remote peer.
 func (p *basePeer) SendNewBlock(block *types.Block, td *big.Int) error {
 	p.AddToKnownBlocks(block.Hash())
-	return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td})
+	if p.ConnType() == common.CONSENSUSNODE {
+		return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td})
+	} else {
+		return p2p.Send(p.rw, NewBlockMsg, []interface{}{block.WithoutBlobSidecars(), td})
+	}
 }
 
 // AsyncSendNewBlock queues an entire block for propagation to a remote peer. If
@@ -970,7 +974,11 @@ func (p *multiChannelPeer) SendNewBlockHashes(hashes []common.Hash, numbers []ui
 // SendNewBlock propagates an entire block to a remote peer.
 func (p *multiChannelPeer) SendNewBlock(block *types.Block, td *big.Int) error {
 	p.AddToKnownBlocks(block.Hash())
-	return p.msgSender(NewBlockMsg, []interface{}{block, td})
+	if p.ConnType() == common.CONSENSUSNODE {
+		return p.msgSender(NewBlockMsg, []interface{}{block, td})
+	} else {
+		return p.msgSender(NewBlockMsg, []interface{}{block.WithoutBlobSidecars(), td})
+	}
 }
 
 // SendBlockHeaders sends a batch of block headers to the remote peer.

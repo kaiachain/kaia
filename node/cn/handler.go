@@ -1296,16 +1296,10 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 			if req == nil {
 				continue
 			}
-			peers := pm.peers.SortedPeersForBlobSidecar()
 
-			if len(peers) == 0 {
+			peer := pm.peers.BestPeerForBlobSidecar(req.try)
+			if peer == nil {
 				continue
-			}
-
-			// should change peer because previous peer may have sidecar
-			peer := peers[len(peers)-1]
-			if len(peers) > req.try {
-				peer = peers[req.try]
 			}
 
 			if err := peer.RequestBlobSidecars([]blobSidecarsRequestData{req.request}); err != nil {
@@ -1687,9 +1681,6 @@ func (pm *ProtocolManager) minedBroadcastLoop() {
 	for obj := range pm.minedBlockSub.Chan() {
 		switch ev := obj.Data.(type) {
 		case kaia_blockchain.NewMinedBlockEvent:
-			// Remove the sidecars from the blob transactions.
-			// This prevents the sidecars from being broadcast.
-			ev.Block = ev.Block.WithoutBlobSidecars()
 			pm.BroadcastBlock(ev.Block)     // First propagate block to peers
 			pm.BroadcastBlockHash(ev.Block) // Only then announce to the rest
 		}

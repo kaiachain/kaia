@@ -2027,6 +2027,7 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 
 	// skip if the block is too old
 	if time.Since(time.Unix(int64(newHead.Time().Uint64()), 0)) > pool.config.BlobStorageConfig.Retention {
+		logger.Debug("skipping blob storage save and prune because the block is too old", "blockNumber", newHead.Number(), "blockTime", newHead.Time(), "retention", pool.config.BlobStorageConfig.Retention)
 		return
 	}
 
@@ -2047,6 +2048,7 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 
 		// try to get blob sidecar from tx
 		if sidecar := tx.BlobTxSidecar(); sidecar != nil {
+			logger.Debug("saving blob sidecar from tx in finalized block", "blockNumber", newHead.Number(), "txIndex", i, "txHash", tx.Hash())
 			go func() {
 				if err := pool.blobStorage.Save(newHead.Number(), i, sidecar); err != nil {
 					logger.Warn("failed to save blob sidecar", "err", err)
@@ -2057,6 +2059,7 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 
 		// try to get blob sidecar from local
 		if sidecar, err := pool.GetBlobSidecarFromPool(tx.Hash()); sidecar != nil {
+			logger.Debug("saving blob sidecar from pool", "blockNumber", newHead.Number(), "txIndex", i, "txHash", tx.Hash())
 			go func() {
 				if err := pool.blobStorage.Save(newHead.Number(), i, sidecar); err != nil {
 					logger.Warn("failed to save blob sidecar", "err", err)
@@ -2064,10 +2067,11 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 			}()
 			continue
 		} else if err != nil {
-			logger.Warn("failed to get blob sidecar from pool", "hash", tx.Hash(), "err", err)
+			logger.Debug("failed to get blob sidecar from pool", "hash", tx.Hash(), "err", err)
 		}
 
 		// missing blob sidecar is sent to protocol manager to fetch later
+		logger.Debug("missing blob sidecar is sent to protocol manager to fetch later", "blockNumber", newHead.Number(), "txIndex", i, "txHash", tx.Hash())
 		pool.sendMissingBlobSidecar(&MissingBlobSidecar{
 			BlockNum: newHead.Number(),
 			TxIndex:  i,

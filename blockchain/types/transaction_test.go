@@ -1233,3 +1233,131 @@ func TestTransactionSizeWithoutBlobTxSidecar(t *testing.T) {
 	expectedSize := tx.WithoutBlobTxSidecar().Size()
 	assert.Equal(t, expectedSize, tx.SizeWithoutBlobTxSidecar())
 }
+
+// TestTransactionWithoutBlobTxSidecar tests the WithoutBlobTxSidecar method.
+func TestTransactionWithoutBlobTxSidecar(t *testing.T) {
+	t.Run("BlobTx with sidecar", func(t *testing.T) {
+		// Create a blob transaction with sidecar
+		blobData := genBlobTransaction()
+		tx := NewTx(blobData)
+		testTime := time.Unix(1234567890, 0)
+		tx.time = testTime
+
+		// Set up caches
+		testHash := common.HexToHash("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
+		testFrom := common.HexToAddress("0xabcdefabcdefabcdefabcdefabcdefabcdefabcd")
+		tx.hash.Store(&testHash)
+		tx.from.Store(testFrom)
+
+		// Calculate original size to set cache
+		originalSize := tx.Size()
+		originalSidecar := tx.BlobTxSidecar()
+		assert.NotNil(t, originalSidecar, "original transaction should have sidecar")
+
+		// Call WithoutBlobTxSidecar
+		result := tx.WithoutBlobTxSidecar()
+
+		// Verify it's a different instance (copy)
+		assert.NotSame(t, tx, result, "result should be a copy, not the same instance")
+
+		// Verify sidecar is removed from result
+		assert.Nil(t, result.BlobTxSidecar(), "result should not have sidecar")
+
+		// Verify original transaction still has sidecar (not modified)
+		assert.NotNil(t, tx.BlobTxSidecar(), "original transaction should still have sidecar")
+
+		// Verify time is copied
+		assert.Equal(t, testTime, result.time, "time should be copied")
+
+		// Verify hash cache is copied
+		resultHash := result.hash.Load()
+		assert.NotNil(t, resultHash, "hash cache should be copied")
+		assert.Equal(t, testHash, *resultHash, "hash should match")
+
+		// Verify from cache is copied
+		resultFrom := result.from.Load()
+		assert.NotNil(t, resultFrom, "from cache should be copied")
+		assert.Equal(t, testFrom, resultFrom, "from should match")
+
+		// Verify size cache is adjusted correctly
+		sidecarSize := rlp.ListSize(originalSidecar.encodedSize())
+		expectedSize := originalSize - common.StorageSize(sidecarSize)
+		resultSize := result.Size()
+		assert.Equal(t, expectedSize, resultSize, "size should be adjusted by subtracting sidecar size")
+
+		// Verify SizeWithoutBlobTxSidecar matches
+		assert.Equal(t, result.Size(), tx.SizeWithoutBlobTxSidecar(), "SizeWithoutBlobTxSidecar should match result.Size()")
+	})
+
+	t.Run("BlobTx without sidecar", func(t *testing.T) {
+		// Create a blob transaction without sidecar
+		blobData := genBlobTransaction()
+		blobTx, ok := blobData.(*TxInternalDataEthereumBlob)
+		assert.True(t, ok, "should be blob transaction")
+		blobTx.Sidecar = nil
+
+		tx := NewTx(blobData)
+		assert.Nil(t, tx.BlobTxSidecar(), "transaction should not have sidecar")
+
+		// Call WithoutBlobTxSidecar
+		result := tx.WithoutBlobTxSidecar()
+
+		// Verify it returns the same instance
+		assert.Same(t, tx, result, "should return the same instance when sidecar is nil")
+	})
+
+	t.Run("Non-blob transactions", func(t *testing.T) {
+		tests := []struct {
+			name string
+			tx   *Transaction
+		}{
+			{
+				name: "Legacy transaction",
+				tx:   rightvrsTx,
+			},
+			{
+				name: "AccessList transaction",
+				tx:   signedEip2718Tx,
+			},
+			{
+				name: "DynamicFee transaction",
+				tx:   signedEip1559Tx,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				// Call WithoutBlobTxSidecar
+				result := tt.tx.WithoutBlobTxSidecar()
+
+				// Verify it returns the same instance
+				assert.Same(t, tt.tx, result, "should return the same instance for non-blob transactions")
+			})
+		}
+	})
+
+	t.Run("Size cache edge cases", func(t *testing.T) {
+		// Test with size cache = 0
+		blobData := genBlobTransaction()
+		tx := NewTx(blobData)
+		// Don't call Size() to keep cache at 0
+		assert.Equal(t, uint64(0), tx.size.Load(), "size cache should be 0")
+
+		originalSidecar := tx.BlobTxSidecar()
+		assert.NotNil(t, originalSidecar, "transaction should have sidecar")
+
+		// Call WithoutBlobTxSidecar
+		result := tx.WithoutBlobTxSidecar()
+
+		// Verify sidecar is removed
+		assert.Nil(t, result.BlobTxSidecar(), "result should not have sidecar")
+
+		// Verify size cache remains 0 (not adjusted when original size is 0)
+		assert.Equal(t, uint64(0), result.size.Load(), "size cache should remain 0 when original was 0")
+
+		// But when we call Size(), it should calculate correctly
+		resultSize := result.Size()
+		expectedSize := tx.SizeWithoutBlobTxSidecar()
+		assert.Equal(t, expectedSize, resultSize, "calculated size should match SizeWithoutBlobTxSidecar")
+	})
+}
