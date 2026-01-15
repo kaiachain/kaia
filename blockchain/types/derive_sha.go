@@ -62,26 +62,31 @@ var (
 
 	////////////////////////////////
 
-	// DeriveReceiptsRoot, DeriveTransactionsRoot and EmptyRootHash are populated by derivesha.InitDeriveSha().
-	// DeriveReceiptsRoot is used to calculate ReceiptsRoot.
-	// DeriveTransactionsRoot is used to calculate TransactionsRoot.
+	// DeriveShaImpl and EmptyRootHash are populated by derivesha.InitDeriveSha().
+	// DeriveShaImpl is used to calculate TransactionsRoot and ReceiptsRoot.
 	// EmptyRootHash is a transaction/receipt root hash when there is no transaction.
-	DeriveReceiptsRoot     func(list Receipts, num *big.Int) common.Hash     = DeriveReceiptsRootNone
-	DeriveTransactionsRoot func(list Transactions, num *big.Int) common.Hash = DeriveTransactionsRootNone
-	GetEmptyRootHash       func(num *big.Int) common.Hash                    = EmptyRootHashNone
+	DeriveShaImpl    func(list DerivableList, num *big.Int) common.Hash = DeriveShaNone
+	GetEmptyRootHash func(num *big.Int) common.Hash                     = EmptyRootHashNone
 )
 
-func DeriveReceiptsRootNone(list Receipts, num *big.Int) common.Hash {
+func DeriveShaNone(list DerivableList, num *big.Int) common.Hash {
 	logger.Crit("DeriveSha not initialized")
-	return common.Hash{}
-}
-
-func DeriveTransactionsRootNone(list Transactions, num *big.Int) common.Hash {
-	logger.Crit("DeriveTransactionsRoot not initialized")
 	return common.Hash{}
 }
 
 func EmptyRootHashNone(num *big.Int) common.Hash {
 	logger.Crit("DeriveSha not initialized")
 	return common.Hash{}
+}
+
+func DeriveReceiptsRoot(list Receipts, num *big.Int) common.Hash {
+	return DeriveShaImpl(list, num)
+}
+
+func DeriveTransactionsRoot(list Transactions, num *big.Int) common.Hash {
+	listWithoutBlobSidecars := make(Transactions, len(list))
+	for i, tx := range list {
+		listWithoutBlobSidecars[i] = tx.WithoutBlobTxSidecar()
+	}
+	return DeriveShaImpl(listWithoutBlobSidecars, num)
 }

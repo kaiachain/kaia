@@ -33,8 +33,7 @@ import (
 )
 
 type IDeriveSha interface {
-	DeriveReceiptsRoot(list types.Receipts) common.Hash
-	DeriveTransactionsRoot(list types.Transactions) common.Hash
+	DeriveSha(list types.DerivableList) common.Hash
 }
 
 type GovModule interface {
@@ -59,29 +58,20 @@ func init() {
 
 	emptyRoots = make(map[int]common.Hash)
 	for implType, impl := range impls {
-		emptyRoots[implType] = impl.DeriveTransactionsRoot(types.Transactions{})
+		emptyRoots[implType] = impl.DeriveSha(types.Transactions{})
 	}
 }
 
 func InitDeriveSha(chainConfig *params.ChainConfig, g GovModule) {
 	config = chainConfig
 	govModule = g
-	types.DeriveReceiptsRoot = DeriveReceiptsRootMux
-	types.DeriveTransactionsRoot = DeriveTransactionsRootMux
+	types.DeriveShaImpl = DeriveShaImplMux
 	types.GetEmptyRootHash = EmptyRootHashMux
 	logger.Info("InitDeriveSha", "initial", config.DeriveShaImpl, "withGov", govModule != nil)
 }
 
-func DeriveReceiptsRootMux(list types.Receipts, num *big.Int) common.Hash {
-	return impls[getType(num)].DeriveReceiptsRoot(list)
-}
-
-func DeriveTransactionsRootMux(list types.Transactions, num *big.Int) common.Hash {
-	listWithoutBlobSidecars := make(types.Transactions, len(list))
-	for i, tx := range list {
-		listWithoutBlobSidecars[i] = tx.WithoutBlobTxSidecar()
-	}
-	return impls[getType(num)].DeriveTransactionsRoot(listWithoutBlobSidecars)
+func DeriveShaImplMux(list types.DerivableList, num *big.Int) common.Hash {
+	return impls[getType(num)].DeriveSha(list)
 }
 
 func EmptyRootHashMux(num *big.Int) common.Hash {

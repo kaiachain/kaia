@@ -64,7 +64,7 @@ func BenchmarkDeriveShaSingleAccount(b *testing.B) {
 	for k, f := range funcs {
 		b.Run(k, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				f.DeriveTransactionsRoot(txs)
+				f.DeriveSha(txs)
 			}
 		})
 	}
@@ -106,7 +106,7 @@ func benchDeriveSha(b *testing.B, numTransactions, numValidators int, sha derive
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sha.DeriveTransactionsRoot(txs)
+		sha.DeriveSha(txs)
 	}
 }
 

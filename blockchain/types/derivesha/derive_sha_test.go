@@ -58,13 +58,13 @@ func (e *testGov) GetParamSet(num uint64) gov.ParamSet {
 
 func TestEmptyRoot(t *testing.T) {
 	assert.Equal(t,
-		DeriveShaOrig{}.DeriveTransactionsRoot(types.Transactions{}).Hex(),
+		DeriveShaOrig{}.DeriveSha(types.Transactions{}).Hex(),
 		types.EmptyTxRootOriginal.Hex())
 	assert.Equal(t,
-		DeriveShaSimple{}.DeriveTransactionsRoot(types.Transactions{}).Hex(),
+		DeriveShaSimple{}.DeriveSha(types.Transactions{}).Hex(),
 		types.EmptyTxRootSimple.Hex())
 	assert.Equal(t,
-		DeriveShaConcat{}.DeriveTransactionsRoot(types.Transactions{}).Hex(),
+		DeriveShaConcat{}.DeriveSha(types.Transactions{}).Hex(),
 		types.EmptyTxRootConcat.Hex())
 }
 
@@ -74,12 +74,12 @@ func TestMuxChainConfig(t *testing.T) {
 	for implType, impl := range impls {
 		InitDeriveSha(&params.ChainConfig{DeriveShaImpl: implType}, nil)
 		assert.Equal(t,
-			DeriveTransactionsRootMux(dummyList, big.NewInt(0)),
-			impl.DeriveTransactionsRoot(dummyList),
+			DeriveShaImplMux(dummyList, big.NewInt(0)),
+			impl.DeriveSha(dummyList),
 		)
 		assert.Equal(t,
 			EmptyRootHashMux(big.NewInt(0)),
-			impl.DeriveTransactionsRoot(types.Transactions{}),
+			impl.DeriveSha(types.Transactions{}),
 		)
 	}
 }
@@ -96,12 +96,12 @@ func TestMuxGovernance(t *testing.T) {
 		impl := impls[implType]
 
 		assert.Equal(t,
-			DeriveTransactionsRootMux(dummyList, new(big.Int).SetUint64(num)),
-			impl.DeriveTransactionsRoot(dummyList),
+			DeriveShaImplMux(dummyList, new(big.Int).SetUint64(num)),
+			impl.DeriveSha(dummyList),
 		)
 		assert.Equal(t,
 			EmptyRootHashMux(new(big.Int).SetUint64(num)),
-			impl.DeriveTransactionsRoot(types.Transactions{}),
+			impl.DeriveSha(types.Transactions{}),
 		)
 	}
 }
