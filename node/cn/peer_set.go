@@ -485,6 +485,10 @@ func (ps *peerSet) BestPeerForBlobSidecar(try int) Peer {
 	concatPeers := append(cnPeers, pnPeers...)
 	concatPeers = append(concatPeers, enPeers...)
 
+	if len(concatPeers) == 0 {
+		return nil
+	}
+
 	// rotate the concatPeers by try
 	// try start with 0
 	rotationIndex := try % len(concatPeers)

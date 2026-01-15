@@ -616,6 +616,40 @@ func TestPeerSet_BestPeerForBlobSidecar(t *testing.T) {
 
 		mockCtrl.Finish()
 	}
+
+	// Test case 9: concatPeers is empty (peers with version >= kaia67 but unknown connection types)
+	// This tests the defensive check for empty concatPeers by directly adding peers to peerSet.peers
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+
+		peer1.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
+		peer2.EXPECT().GetID().Return(nodeids[1].String()).AnyTimes()
+
+		peer1.EXPECT().ConnType().Return(common.UNKNOWNNODE).AnyTimes()
+		peer2.EXPECT().ConnType().Return(common.BOOTNODE).AnyTimes()
+
+		peer1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		peer1.EXPECT().Head().Return(common.Hash{}, big.NewInt(100)).AnyTimes()
+		peer2.EXPECT().Head().Return(common.Hash{}, big.NewInt(200)).AnyTimes()
+
+		// Directly add peers to peerSet.peers to bypass Register validation
+		peerSet.peers[nodeids[0].String()] = peer1
+		peerSet.peers[nodeids[1].String()] = peer2
+
+		// sortedPeers is not empty (version >= kaia67), but concatPeers is empty because
+		// no peers match CONSENSUSNODE, PROXYNODE, or ENDPOINTNODE
+		// Should return nil due to the defensive check
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Nil(t, result)
+
+		mockCtrl.Finish()
+	}
 }
 
 func TestPeerSet_Close(t *testing.T) {
