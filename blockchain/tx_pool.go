@@ -2048,7 +2048,7 @@ func (pool *TxPool) saveAndPruneBlobStorage(newHead *types.Block) {
 
 		// try to get blob sidecar from tx
 		if sidecar := tx.BlobTxSidecar(); sidecar != nil {
-			logger.Debug("saving blob sidecar from tx", "blockNumber", newHead.Number(), "txIndex", i, "txHash", tx.Hash())
+			logger.Debug("saving blob sidecar from tx in finalized block", "blockNumber", newHead.Number(), "txIndex", i, "txHash", tx.Hash())
 			go func() {
 				if err := pool.blobStorage.Save(newHead.Number(), i, sidecar); err != nil {
 					logger.Warn("failed to save blob sidecar", "err", err)
