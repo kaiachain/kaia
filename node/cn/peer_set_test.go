@@ -397,7 +397,10 @@ func TestPeerSet_BestPeerForBlobSidecar(t *testing.T) {
 		assert.NoError(t, peerSet.Register(peer2, nil))
 		assert.NoError(t, peerSet.Register(peer3, nil))
 
-		// CN (peer1) should be selected first regardless of head block number
+		// After sorting: peer3(300), peer2(200), peer1(100)
+		// CN: [peer1], PN: [peer2], EN: [peer3]
+		// concatPeers: [peer1, peer2, peer3]
+		// try=0: peer1 (first CN) should be selected
 		result := peerSet.BestPeerForBlobSidecar(0)
 		assert.Equal(t, peer1, result)
 
@@ -473,10 +476,19 @@ func TestPeerSet_BestPeerForBlobSidecar(t *testing.T) {
 		assert.NoError(t, peerSet.Register(peer4, nil))
 
 		// After sorting: peer2(300), peer4(200), peer3(100), peer1(50)
-		// CN priority: peer4 or peer1, but peer4 comes first in sorted order
+		// CN: [peer4, peer1] (sorted order preserved), PN: [peer2], EN: [peer3]
+		// concatPeers: [peer4, peer1, peer2, peer3]
+		// try=0: peer4 (first CN in sorted order) should be selected
 		result := peerSet.BestPeerForBlobSidecar(0)
-		// Should return first CN found in sorted order (peer4)
 		assert.Equal(t, peer4, result)
+
+		// try=1: peer1 (second CN)
+		result = peerSet.BestPeerForBlobSidecar(1)
+		assert.Equal(t, peer1, result)
+
+		// try=2: peer2 (first PN)
+		result = peerSet.BestPeerForBlobSidecar(2)
+		assert.Equal(t, peer2, result)
 
 		mockCtrl.Finish()
 	}
@@ -508,9 +520,15 @@ func TestPeerSet_BestPeerForBlobSidecar(t *testing.T) {
 		assert.NoError(t, peerSet.Register(peer3, nil))
 
 		// After sorting: peer3(300), peer2(200), peer1(100)
-		// No CN, so PN priority: peer3 or peer1, but peer3 comes first in sorted order
+		// CN: [], PN: [peer3, peer1] (sorted order preserved), EN: [peer2]
+		// concatPeers: [peer3, peer1, peer2]
+		// try=0: peer3 (first PN) should be selected
 		result := peerSet.BestPeerForBlobSidecar(0)
 		assert.Equal(t, peer3, result)
+
+		// try=1: peer1 (second PN)
+		result = peerSet.BestPeerForBlobSidecar(1)
+		assert.Equal(t, peer1, result)
 
 		mockCtrl.Finish()
 	}
@@ -542,17 +560,23 @@ func TestPeerSet_BestPeerForBlobSidecar(t *testing.T) {
 		assert.NoError(t, peerSet.Register(peer3, nil))
 
 		// After sorting: peer3(300), peer2(200), peer1(100)
-		// No CN or PN, so try index 1 should return peer2
-		result := peerSet.BestPeerForBlobSidecar(1)
-		assert.Equal(t, peer2, result)
-
-		// Try index 0 should return peer3
-		result = peerSet.BestPeerForBlobSidecar(0)
+		// CN: [], PN: [], EN: [peer3, peer2, peer1] (sorted order preserved)
+		// concatPeers: [peer3, peer2, peer1]
+		// try=0: peer3 (first EN)
+		result := peerSet.BestPeerForBlobSidecar(0)
 		assert.Equal(t, peer3, result)
 
-		// Try index beyond length should return last peer
-		result = peerSet.BestPeerForBlobSidecar(10)
+		// try=1: peer2 (second EN)
+		result = peerSet.BestPeerForBlobSidecar(1)
+		assert.Equal(t, peer2, result)
+
+		// try=2: peer1 (third EN)
+		result = peerSet.BestPeerForBlobSidecar(2)
 		assert.Equal(t, peer1, result)
+
+		// try=10: peer1 (10 % 3 = 1, so peer2)
+		result = peerSet.BestPeerForBlobSidecar(10)
+		assert.Equal(t, peer2, result)
 
 		mockCtrl.Finish()
 	}
@@ -584,7 +608,9 @@ func TestPeerSet_BestPeerForBlobSidecar(t *testing.T) {
 		assert.NoError(t, peerSet.Register(peer3, nil))
 
 		// After sorting: peer3(200), then peer1(100) and peer2(100) in some order
-		// CN priority: peer1 should be selected (it's CN)
+		// CN: [peer1], PN: [peer2], EN: [peer3]
+		// concatPeers: [peer1, peer2, peer3]
+		// try=0: peer1 (first CN) should be selected
 		result := peerSet.BestPeerForBlobSidecar(0)
 		assert.Equal(t, peer1, result)
 

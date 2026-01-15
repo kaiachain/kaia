@@ -436,7 +436,8 @@ func (ps *peerSet) BestPeer() Peer {
 	return bestPeer
 }
 
-// BestPeerWithBlobSidecar retrieves the best peer for blob sidecar
+// BestPeerWithBlobSidecar returns the best peer capable of serving blob sidecar,
+// prioritizing consensus nodes over proxy nodes, and supporting peer rotation by 'try' parameter.
 func (ps *peerSet) BestPeerForBlobSidecar(try int) Peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
@@ -465,26 +466,30 @@ func (ps *peerSet) BestPeerForBlobSidecar(try int) Peer {
 		return head1.Cmp(head2) > 0
 	})
 
-	// cn is priority
+	cnPeers := []Peer{}
+	pnPeers := []Peer{}
+	enPeers := []Peer{}
 	for _, p := range sortedPeers {
 		if p.ConnType() == common.CONSENSUSNODE {
-			return p
+			cnPeers = append(cnPeers, p)
 		}
-	}
-
-	// pn is second priority
-	for _, p := range sortedPeers {
 		if p.ConnType() == common.PROXYNODE {
-			return p
+			pnPeers = append(pnPeers, p)
+		}
+		if p.ConnType() == common.ENDPOINTNODE {
+			enPeers = append(enPeers, p)
 		}
 	}
 
-	// peer at the try index
-	if len(sortedPeers) > try {
-		return sortedPeers[try]
-	}
+	// concatPeers = [CNs, Pns, ENs]
+	concatPeers := append(cnPeers, pnPeers...)
+	concatPeers = append(concatPeers, enPeers...)
 
-	return sortedPeers[len(sortedPeers)-1]
+	// rotate the concatPeers by try
+	// try start with 0
+	rotationIndex := try % len(concatPeers)
+
+	return concatPeers[rotationIndex]
 }
 
 // RegisterValidator registers a validator.
