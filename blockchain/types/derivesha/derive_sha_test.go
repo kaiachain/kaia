@@ -280,3 +280,165 @@ func TestDeriveTransactionsRootExcludesSidecar(t *testing.T) {
 		})
 	})
 }
+
+// createTestHeader creates a simple header for testing.
+func createTestHeader(number *big.Int) *types.Header {
+	return &types.Header{
+		ParentHash:  common.Hash{},
+		Rewardbase:  common.Address{},
+		Root:        common.Hash{},
+		TxHash:      common.Hash{},
+		ReceiptHash: common.Hash{},
+		BlockScore:  big.NewInt(1),
+		Number:      number,
+		GasUsed:     0,
+		Time:        big.NewInt(0),
+		TimeFoS:     0,
+		Extra:       []byte{},
+		Governance:  []byte{},
+		Vote:        []byte{},
+	}
+}
+
+// TestNewBlockExcludesBlobSidecar tests that NewBlock excludes blob sidecars
+// when calculating Header.TxHash.
+func TestNewBlockExcludesBlobSidecar(t *testing.T) {
+	t.Run("NewBlock excludes sidecar", func(t *testing.T) {
+		log.EnableLogForTest(log.LvlCrit, log.LvlInfo)
+
+		// Initialize DeriveSha with Original implementation
+		InitDeriveSha(&params.ChainConfig{DeriveShaImpl: types.ImplDeriveShaOriginal}, nil)
+
+		// Create blob transaction with sidecar
+		txWithSidecar := createBlobTransactionWithSidecar()
+		assert.NotNil(t, txWithSidecar.BlobTxSidecar(), "transaction should have sidecar")
+
+		// Create header
+		header := createTestHeader(big.NewInt(0))
+
+		// Create block with sidecar
+		blockWithSidecar := types.NewBlock(header, []*types.Transaction{txWithSidecar}, []*types.Receipt{})
+		assert.NotNil(t, blockWithSidecar, "block should be created")
+		txHashWithSidecar := blockWithSidecar.Header().TxHash
+
+		// Verify original transaction still has sidecar
+		assert.NotNil(t, txWithSidecar.BlobTxSidecar(), "original transaction should still have sidecar")
+
+		// Create block without sidecar
+		txWithoutSidecar := txWithSidecar.WithoutBlobTxSidecar()
+		assert.Nil(t, txWithoutSidecar.BlobTxSidecar(), "transaction should not have sidecar")
+
+		blockWithoutSidecar := types.NewBlock(header, []*types.Transaction{txWithoutSidecar}, []*types.Receipt{})
+		assert.NotNil(t, blockWithoutSidecar, "block should be created")
+		txHashWithoutSidecar := blockWithoutSidecar.Header().TxHash
+
+		// Both blocks should have the same TxHash because sidecars are excluded
+		assert.Equal(t, txHashWithSidecar, txHashWithoutSidecar,
+			"NewBlock should exclude sidecars, so both blocks should have the same TxHash")
+	})
+
+	t.Run("Multiple implementation types", func(t *testing.T) {
+		log.EnableLogForTest(log.LvlCrit, log.LvlInfo)
+
+		implementations := []struct {
+			name     string
+			implType int
+		}{
+			{"Original", types.ImplDeriveShaOriginal},
+			{"Simple", types.ImplDeriveShaSimple},
+			{"Concat", types.ImplDeriveShaConcat},
+		}
+
+		for _, impl := range implementations {
+			t.Run(impl.name, func(t *testing.T) {
+				// Initialize DeriveSha with specific implementation
+				InitDeriveSha(&params.ChainConfig{DeriveShaImpl: impl.implType}, nil)
+
+				// Create blob transaction with sidecar
+				txWithSidecar := createBlobTransactionWithSidecar()
+				assert.NotNil(t, txWithSidecar.BlobTxSidecar(), "transaction should have sidecar")
+
+				// Create header
+				header := createTestHeader(big.NewInt(0))
+
+				// Create blocks
+				blockWithSidecar := types.NewBlock(header, []*types.Transaction{txWithSidecar}, []*types.Receipt{})
+				txHashWithSidecar := blockWithSidecar.Header().TxHash
+
+				blockWithoutSidecar := types.NewBlock(header, []*types.Transaction{txWithSidecar.WithoutBlobTxSidecar()}, []*types.Receipt{})
+				txHashWithoutSidecar := blockWithoutSidecar.Header().TxHash
+
+				// Both blocks should have the same TxHash
+				assert.Equal(t, txHashWithSidecar, txHashWithoutSidecar,
+					"%s implementation should exclude sidecars", impl.name)
+			})
+		}
+	})
+
+	t.Run("Mixed transaction list", func(t *testing.T) {
+		log.EnableLogForTest(log.LvlCrit, log.LvlInfo)
+
+		// Initialize DeriveSha
+		InitDeriveSha(&params.ChainConfig{DeriveShaImpl: types.ImplDeriveShaOriginal}, nil)
+
+		// Create blob transaction with sidecar
+		txWithSidecar := createBlobTransactionWithSidecar()
+		assert.NotNil(t, txWithSidecar.BlobTxSidecar(), "blob transaction should have sidecar")
+
+		// Create legacy transaction
+		legacyTx := types.NewTransaction(1, common.Address{}, big.NewInt(123), 21000, big.NewInt(25e9), nil)
+
+		// Create header
+		header := createTestHeader(big.NewInt(0))
+
+		// Create blocks with mixed transactions
+		mixedBlockWithSidecar := types.NewBlock(header, []*types.Transaction{txWithSidecar, legacyTx}, []*types.Receipt{})
+		txHashWithSidecar := mixedBlockWithSidecar.Header().TxHash
+
+		mixedBlockWithoutSidecar := types.NewBlock(header, []*types.Transaction{txWithSidecar.WithoutBlobTxSidecar(), legacyTx}, []*types.Receipt{})
+		txHashWithoutSidecar := mixedBlockWithoutSidecar.Header().TxHash
+
+		// Both blocks should have the same TxHash
+		assert.Equal(t, txHashWithSidecar, txHashWithoutSidecar,
+			"NewBlock should exclude sidecars even in mixed transaction lists")
+	})
+
+	t.Run("Edge cases", func(t *testing.T) {
+		log.EnableLogForTest(log.LvlCrit, log.LvlInfo)
+
+		// Initialize DeriveSha
+		InitDeriveSha(&params.ChainConfig{DeriveShaImpl: types.ImplDeriveShaOriginal}, nil)
+
+		t.Run("Empty transaction list", func(t *testing.T) {
+			header := createTestHeader(big.NewInt(0))
+
+			emptyBlock := types.NewBlock(header, []*types.Transaction{}, []*types.Receipt{})
+			expectedTxHash := types.GetEmptyRootHash(header.Number)
+			assert.Equal(t, expectedTxHash, emptyBlock.Header().TxHash,
+				"empty transaction list should produce empty root hash")
+		})
+
+		t.Run("Multiple blob transactions with sidecars", func(t *testing.T) {
+			// Create multiple blob transactions with sidecars
+			tx1 := createBlobTransactionWithSidecar()
+			tx2 := createBlobTransactionWithSidecar()
+
+			assert.NotNil(t, tx1.BlobTxSidecar(), "tx1 should have sidecar")
+			assert.NotNil(t, tx2.BlobTxSidecar(), "tx2 should have sidecar")
+
+			// Create header
+			header := createTestHeader(big.NewInt(0))
+
+			// Create blocks
+			blockWithSidecars := types.NewBlock(header, []*types.Transaction{tx1, tx2}, []*types.Receipt{})
+			txHashWithSidecars := blockWithSidecars.Header().TxHash
+
+			blockWithoutSidecars := types.NewBlock(header, []*types.Transaction{tx1.WithoutBlobTxSidecar(), tx2.WithoutBlobTxSidecar()}, []*types.Receipt{})
+			txHashWithoutSidecars := blockWithoutSidecars.Header().TxHash
+
+			// Both blocks should have the same TxHash
+			assert.Equal(t, txHashWithSidecars, txHashWithoutSidecars,
+				"multiple blob transactions with sidecars should produce the same hash as without sidecars")
+		})
+	})
+}
