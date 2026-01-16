@@ -39,6 +39,10 @@ type vrank struct {
 	commitArrivalTimeMap  map[common.Address]time.Duration
 }
 
+const (
+	DefaultVRankLogFrequency = uint64(60)
+)
+
 var (
 	// VRank metrics
 	vrankFirstPreprepareArrivalTimeGauge       = metrics.NewRegisteredGauge("vrank/first_preprepare", nil)
@@ -47,7 +51,7 @@ var (
 	vrankAvgCommitArrivalTimeWithinQuorumGauge = metrics.NewRegisteredGauge("vrank/avg_commit_within_quorum", nil)
 	vrankLastCommitArrivalTimeGauge            = metrics.NewRegisteredGauge("vrank/last_commit", nil)
 
-	VRankLogFrequency = uint64(0) // Will be set to the value of VRankLogFrequencyFlag in SetKaiaConfig()
+	VRankLogFrequency = DefaultVRankLogFrequency // Will be set to the value of VRankLogFrequencyFlag in SetKaiaConfig()
 
 	Vrank *vrank
 )

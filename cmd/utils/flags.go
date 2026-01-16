@@ -31,6 +31,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kafka"
 	"github.com/kaiachain/kaia/datasync/dbsyncer"
@@ -2050,7 +2051,7 @@ var (
 	VRankLogFrequencyFlag = &cli.Uint64Flag{
 		Name:     "vrank.log-frequency",
 		Usage:    "Frequency of VRank logging in blocks (0=disabled, 1=every block, 60=every 60 blocks, ...)",
-		Value:    uint64(0),
+		Value:    core.DefaultVRankLogFrequency,
 		Category: "VRANK",
 	}
 
