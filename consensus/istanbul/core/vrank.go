@@ -47,7 +47,7 @@ var (
 	vrankAvgCommitArrivalTimeWithinQuorumGauge = metrics.NewRegisteredGauge("vrank/avg_commit_within_quorum", nil)
 	vrankLastCommitArrivalTimeGauge            = metrics.NewRegisteredGauge("vrank/last_commit", nil)
 
-	VRankLogFrequency = uint64(0) // Will be set to the value of VRankLogFrequencyFlag in SetKaiaConfig()
+	VRankLogFrequency = uint64(60) // Will be set to the value of VRankLogFrequencyFlag in SetKaiaConfig()
 
 	Vrank *vrank
 )
