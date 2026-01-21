@@ -77,11 +77,11 @@ func (v *vrank) SetLatestView(view istanbul.View, committee []common.Address, qu
 	v.quorum = quorum
 }
 
-func (v *vrank) AddPreprepare(msg *istanbul.Preprepare, src common.Address, timestamp time.Time) {
+func (v *vrank) AddPreprepare(src common.Address, timestamp time.Time) {
 	v.preprepareArrivalTime = timestamp.Sub(v.miningStartTime)
 }
 
-func (v *vrank) AddCommit(msg *istanbul.Subject, src common.Address, timestamp time.Time) {
+func (v *vrank) AddCommit(src common.Address, timestamp time.Time) {
 	if _, exists := v.commitArrivalTimeMap[src]; !exists {
 		v.commitArrivalTimeMap[src] = timestamp.Sub(v.miningStartTime)
 	}

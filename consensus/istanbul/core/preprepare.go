@@ -127,7 +127,7 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 				// Broadcast COMMIT and enters Prepared state directly
 				if Vrank != nil {
 					Vrank.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
-					Vrank.AddPreprepare(preprepare, src, timestamp)
+					Vrank.AddPreprepare(src, timestamp)
 				}
 				c.acceptPreprepare(preprepare)
 				c.setState(StatePrepared)
@@ -139,7 +139,7 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 		} else {
 			if Vrank != nil {
 				Vrank.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
-				Vrank.AddPreprepare(preprepare, src, timestamp)
+				Vrank.AddPreprepare(src, timestamp)
 			}
 			// Either
 			//   1. the locked proposal and the received proposal match

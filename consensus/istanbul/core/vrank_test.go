@@ -30,13 +30,11 @@ import (
 
 func TestVrank(t *testing.T) {
 	var (
-		N             = 6
-		quorum        = 4
-		committee, _  = genValidators(N)
-		view          = istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(2)}
-		preprepareMsg = &istanbul.Preprepare{View: &view}
-		commitMsg     = &istanbul.Subject{View: &view}
-		vrank         = NewVrank()
+		N            = 6
+		quorum       = 4
+		committee, _ = genValidators(N)
+		view         = istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(2)}
+		vrank        = NewVrank()
 	)
 
 	vrank.StartTimer()
@@ -46,18 +44,18 @@ func TestVrank(t *testing.T) {
 	for i := 0; i < quorum; i++ {
 		r := (1 + time.Duration(rand.Int63n(10))) * time.Millisecond
 		time.Sleep(r)
-		vrank.AddPreprepare(preprepareMsg, committee[i], time.Now())
+		vrank.AddPreprepare(committee[i], time.Now())
 		time.Sleep(r)
-		vrank.AddCommit(commitMsg, committee[i], time.Now())
+		vrank.AddCommit(committee[i], time.Now())
 	}
 
 	// late messages
 	for i := quorum; i < N; i++ {
 		r := (1 + time.Duration(rand.Int63n(10))) * time.Millisecond
 		time.Sleep(r)
-		vrank.AddPreprepare(preprepareMsg, committee[i], time.Now())
+		vrank.AddPreprepare(committee[i], time.Now())
 		time.Sleep(r)
-		vrank.AddCommit(commitMsg, committee[i], time.Now())
+		vrank.AddCommit(committee[i], time.Now())
 	}
 
 	vrank.Log()
