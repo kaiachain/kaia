@@ -33,7 +33,8 @@ func TestVrank(t *testing.T) {
 		N            = 6
 		quorum       = 4
 		committee, _ = genValidators(N)
-		view         = istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(2)}
+		testRound    = uint64(2)
+		view         = istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(int64(testRound))}
 		vrank        = NewVrank()
 	)
 
@@ -41,47 +42,51 @@ func TestVrank(t *testing.T) {
 	vrank.SetLatestView(view, committee, quorum)
 	time.Sleep(1 * time.Millisecond)
 
-	for i := 0; i < quorum; i++ {
-		r := (1 + time.Duration(rand.Int63n(10))) * time.Millisecond
-		time.Sleep(r)
-		vrank.AddPreprepare(committee[i], time.Now())
-		time.Sleep(r)
-		vrank.AddCommit(committee[i], time.Now())
-	}
-
-	// late messages
-	for i := quorum; i < N; i++ {
-		r := (1 + time.Duration(rand.Int63n(10))) * time.Millisecond
-		time.Sleep(r)
-		vrank.AddPreprepare(committee[i], time.Now())
-		time.Sleep(r)
-		vrank.AddCommit(committee[i], time.Now())
-	}
-
-	// round change messages
-	for round := 0; round < 4; round++ {
-		for i := 0; i < N; i++ {
-			r := time.Duration(round*10+int(rand.Int63n(10))) * time.Millisecond
-			vrank.AddRoundChange(committee[i], uint64(round+1), time.Now().Add(r))
+	// Simulate messages for each round up to testRound
+	for round := uint64(0); round <= testRound; round++ {
+		for i := 0; i < quorum; i++ {
+			r := (1 + time.Duration(rand.Int63n(10))) * time.Millisecond
+			time.Sleep(r)
+			vrank.AddPreprepare(committee[i], round, time.Now())
+			time.Sleep(r)
+			vrank.AddCommit(committee[i], round, time.Now())
 		}
-		r := time.Duration(round*10+int(rand.Int63n(10))) * time.Millisecond
-		vrank.AddMyRoundChange(uint64(round+1), time.Now().Add(r))
+
+		// late messages
+		for i := quorum; i < N; i++ {
+			r := (1 + time.Duration(rand.Int63n(10))) * time.Millisecond
+			time.Sleep(r)
+			vrank.AddPreprepare(committee[i], round, time.Now())
+			time.Sleep(r)
+			vrank.AddCommit(committee[i], round, time.Now())
+		}
+
+		// round change messages (not for round 0)
+		if round > 0 {
+			for i := 0; i < N; i++ {
+				r := time.Duration(round*10+uint64(rand.Int63n(10))) * time.Millisecond
+				vrank.AddRoundChange(committee[i], round, time.Now().Add(r))
+			}
+			r := time.Duration(round*10+uint64(rand.Int63n(10))) * time.Millisecond
+			vrank.AddMyRoundChange(round, time.Now().Add(r))
+		}
 	}
 
 	vrank.Log()
 
-	assert.NotEqual(t, vrank.preprepareArrivalTime, int64(0))
+	assert.NotEqual(t, vrank.timestamps[testRound].preprepareArrivalTime, int64(0))
 
 	firstCommit, lastCommit, quorumCommit, avgCommitWithinQuorum := vrank.calcMetrics()
 	assert.NotEqual(t, firstCommit, int64(0))
 	assert.NotEqual(t, quorumCommit, int64(0))
 	assert.NotEqual(t, avgCommitWithinQuorum, int64(0))
 	assert.NotEqual(t, lastCommit, int64(0))
-	assert.Equal(t, N, len(vrank.commitArrivalTimeMap))
+	assert.Equal(t, N, len(vrank.timestamps[testRound].commitArrivalTimeMap))
 
-	seq, round, _, commitArrivalTimes, myRoundChangeTimes, roundChangeArrivalTimes := vrank.buildLogData()
+	seq, round, preprepareArrivalTimes, commitArrivalTimes, myRoundChangeTimes, roundChangeArrivalTimes := vrank.buildLogData()
 	assert.Equal(t, view.Sequence.Int64(), seq)
 	assert.Equal(t, view.Round.Int64(), round)
+	t.Logf("preprepareArrivalTimes: %v", preprepareArrivalTimes)
 	t.Logf("commitArrivalTimes: %v", commitArrivalTimes)
 	t.Logf("myRoundChangeTimes: %v", myRoundChangeTimes)
 	t.Logf("roundChangeArrivalTimes: %v", roundChangeArrivalTimes)
