@@ -89,7 +89,9 @@ func (v *vrank) SetLatestView(view istanbul.View, committee []common.Address, qu
 }
 
 func (v *vrank) AddPreprepare(src common.Address, timestamp time.Time) {
-	v.preprepareArrivalTime = timestamp.Sub(v.miningStartTime)
+	if v.preprepareArrivalTime == time.Duration(0) {
+		v.preprepareArrivalTime = timestamp.Sub(v.miningStartTime)
+	}
 }
 
 func (v *vrank) AddCommit(src common.Address, timestamp time.Time) {
@@ -162,6 +164,8 @@ func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTime st
 	for _, t := range v.myRoundChangeTimes {
 		if t != time.Duration(0) {
 			myRoundChangeTimes = append(myRoundChangeTimes, encodeDuration(t))
+		} else {
+			myRoundChangeTimes = append(myRoundChangeTimes, "-")
 		}
 	}
 
@@ -178,6 +182,8 @@ func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTime st
 		for _, t := range times {
 			if t != time.Duration(0) {
 				validatorTimes = append(validatorTimes, encodeDuration(t))
+			} else {
+				validatorTimes = append(validatorTimes, "-")
 			}
 		}
 		if len(validatorTimes) == 0 {
