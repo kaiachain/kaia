@@ -46,18 +46,18 @@ func TestVrank(t *testing.T) {
 	for i := 0; i < quorum; i++ {
 		r := (1 + time.Duration(rand.Int63n(10))) * time.Millisecond
 		time.Sleep(r)
-		vrank.AddPreprepare(preprepareMsg, committee[i])
+		vrank.AddPreprepare(preprepareMsg, committee[i], time.Now())
 		time.Sleep(r)
-		vrank.AddCommit(commitMsg, committee[i])
+		vrank.AddCommit(commitMsg, committee[i], time.Now())
 	}
 
 	// late messages
 	for i := quorum; i < N; i++ {
 		r := (1 + time.Duration(rand.Int63n(10))) * time.Millisecond
 		time.Sleep(r)
-		vrank.AddPreprepare(preprepareMsg, committee[i])
+		vrank.AddPreprepare(preprepareMsg, committee[i], time.Now())
 		time.Sleep(r)
-		vrank.AddCommit(commitMsg, committee[i])
+		vrank.AddCommit(commitMsg, committee[i], time.Now())
 	}
 
 	vrank.Log()

@@ -75,41 +75,17 @@ func (v *vrank) SetLatestView(view istanbul.View, committee []common.Address, qu
 	v.quorum = quorum
 }
 
-func (v *vrank) AddPreprepare(msg *istanbul.Preprepare, src common.Address) {
-	if v.isTargetPreprepare(msg, src) {
-		v.preprepareArrivalTime = time.Since(v.miningStartTime)
+func (v *vrank) AddPreprepare(msg *istanbul.Preprepare, src common.Address, timestamp time.Time) {
+	v.preprepareArrivalTime = timestamp.Sub(v.miningStartTime)
+}
+
+func (v *vrank) AddCommit(msg *istanbul.Subject, src common.Address, timestamp time.Time) {
+	if v.isFirstCommit(src) {
+		v.commitArrivalTimeMap[src] = timestamp.Sub(v.miningStartTime)
 	}
 }
 
-func (v *vrank) AddCommit(msg *istanbul.Subject, src common.Address) {
-	if v.isTargetCommit(msg, src) {
-		v.commitArrivalTimeMap[src] = time.Since(v.miningStartTime)
-	}
-}
-
-func (v *vrank) isTargetPreprepare(msg *istanbul.Preprepare, src common.Address) bool {
-	if msg.View == nil || msg.View.Sequence == nil || msg.View.Round == nil {
-		return false
-	}
-	if v.view.Sequence == nil || v.view.Round == nil {
-		return false
-	}
-	if msg.View.Cmp(&v.view) != 0 {
-		return false
-	}
-	return true
-}
-
-func (v *vrank) isTargetCommit(msg *istanbul.Subject, src common.Address) bool {
-	if msg.View == nil || msg.View.Sequence == nil || msg.View.Round == nil {
-		return false
-	}
-	if v.view.Sequence == nil || v.view.Round == nil {
-		return false
-	}
-	if msg.View.Cmp(&v.view) != 0 {
-		return false
-	}
+func (v *vrank) isFirstCommit(src common.Address) bool {
 	if _, ok := v.commitArrivalTimeMap[src]; ok {
 		return false
 	}
