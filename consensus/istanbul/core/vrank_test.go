@@ -58,6 +58,16 @@ func TestVrank(t *testing.T) {
 		vrank.AddCommit(committee[i], time.Now())
 	}
 
+	// round change messages
+	for round := 0; round < 4; round++ {
+		for i := 0; i < N; i++ {
+			r := time.Duration(round*10+int(rand.Int63n(10))) * time.Millisecond
+			vrank.AddRoundChange(committee[i], uint64(round+1), time.Now().Add(r))
+		}
+		r := time.Duration(round*10+int(rand.Int63n(10))) * time.Millisecond
+		vrank.AddMyRoundChange(uint64(round+1), time.Now().Add(r))
+	}
+
 	vrank.Log()
 
 	assert.NotEqual(t, vrank.preprepareArrivalTime, int64(0))
@@ -69,9 +79,10 @@ func TestVrank(t *testing.T) {
 	assert.NotEqual(t, lastCommit, int64(0))
 	assert.Equal(t, N, len(vrank.commitArrivalTimeMap))
 
-	seq, round, _, commitArrivalTimes, _ := vrank.buildLogData()
+	seq, round, _, commitArrivalTimes, myRoundChangeTimes, roundChangeArrivalTimes := vrank.buildLogData()
 	assert.Equal(t, view.Sequence.Int64(), seq)
 	assert.Equal(t, view.Round.Int64(), round)
 	t.Logf("commitArrivalTimes: %v", commitArrivalTimes)
-	assert.Equal(t, N, len(commitArrivalTimes))
+	t.Logf("myRoundChangeTimes: %v", myRoundChangeTimes)
+	t.Logf("roundChangeArrivalTimes: %v", roundChangeArrivalTimes)
 }

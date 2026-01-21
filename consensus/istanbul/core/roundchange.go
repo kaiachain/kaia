@@ -43,6 +43,7 @@ func (c *core) sendNextRoundChange(loc string) {
 // sendRoundChange sends the ROUND CHANGE message with the given round
 func (c *core) sendRoundChange(round *big.Int) {
 	logger := c.logger.NewWith("state", c.state)
+	timestamp := time.Now()
 
 	cv := c.currentView()
 	if cv.Round.Cmp(round) >= 0 {
@@ -83,6 +84,14 @@ func (c *core) sendRoundChange(round *big.Int) {
 		Code: msgRoundChange,
 		Msg:  payload,
 	})
+
+	if Vrank != nil {
+		Vrank.SetLatestView(istanbul.View{
+			Round:    new(big.Int).Set(round),
+			Sequence: new(big.Int).Set(cv.Sequence),
+		}, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+		Vrank.AddMyRoundChange(round.Uint64(), timestamp)
+	}
 }
 
 func (c *core) handleRoundChange(msg *message, src common.Address) error {

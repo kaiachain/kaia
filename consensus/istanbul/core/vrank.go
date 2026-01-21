@@ -19,9 +19,11 @@
 package core
 
 import (
+	"cmp"
 	"maps"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kaiachain/kaia/common"
@@ -37,12 +39,13 @@ type vrank struct {
 	quorum                    int
 	preprepareArrivalTime     time.Duration // node receives only one preprepare from proposer
 	commitArrivalTimeMap      map[common.Address]time.Duration
-	roundChangeTime           time.Duration
-	roundChangeArrivalTimeMap map[common.Address]map[uint64]time.Duration // per node address per round
+	myRoundChangeTimes        []time.Duration
+	roundChangeArrivalTimeMap map[common.Address][]time.Duration // per node address per round
 }
 
 const (
 	DefaultVRankLogFrequency = uint64(60)
+	MaxRoundChangeCount      = uint64(8)
 )
 
 var (
@@ -59,13 +62,21 @@ var (
 )
 
 func NewVrank() *vrank {
-	return &vrank{}
+	return &vrank{
+		myRoundChangeTimes:        make([]time.Duration, MaxRoundChangeCount),
+		commitArrivalTimeMap:      make(map[common.Address]time.Duration),
+		roundChangeArrivalTimeMap: make(map[common.Address][]time.Duration),
+		view:                      istanbul.View{},
+		committee:                 []common.Address{},
+	}
 }
 
 func (v *vrank) StartTimer() {
 	v.miningStartTime = time.Now()
 	v.preprepareArrivalTime = time.Duration(0)
+	v.myRoundChangeTimes = make([]time.Duration, MaxRoundChangeCount)
 	v.commitArrivalTimeMap = make(map[common.Address]time.Duration)
+	v.roundChangeArrivalTimeMap = make(map[common.Address][]time.Duration)
 	v.view = istanbul.View{}
 	v.committee = []common.Address{}
 	v.quorum = 0
@@ -87,18 +98,24 @@ func (v *vrank) AddCommit(src common.Address, timestamp time.Time) {
 	}
 }
 
-func (v *vrank) AddRoundChange(src common.Address, round uint64, timestamp time.Time) {
-	roundChangesByNode, exists := v.roundChangeArrivalTimeMap[src]
-	if !exists {
-		v.roundChangeArrivalTimeMap[src] = map[uint64]time.Duration{
-			round: timestamp.Sub(v.miningStartTime),
-		}
+func (v *vrank) AddMyRoundChange(round uint64, timestamp time.Time) {
+	if round > MaxRoundChangeCount || round == 0 {
 		return
 	}
+	if v.myRoundChangeTimes[round-1] == time.Duration(0) {
+		v.myRoundChangeTimes[round-1] = timestamp.Sub(v.miningStartTime)
+	}
+}
 
-	_, exists = roundChangesByNode[round]
-	if !exists {
-		roundChangesByNode[round] = timestamp.Sub(v.miningStartTime)
+func (v *vrank) AddRoundChange(src common.Address, round uint64, timestamp time.Time) {
+	if round > MaxRoundChangeCount || round == 0 {
+		return
+	}
+	if _, exists := v.roundChangeArrivalTimeMap[src]; !exists {
+		v.roundChangeArrivalTimeMap[src] = make([]time.Duration, MaxRoundChangeCount)
+	}
+	if v.roundChangeArrivalTimeMap[src][round-1] == time.Duration(0) {
+		v.roundChangeArrivalTimeMap[src][round-1] = timestamp.Sub(v.miningStartTime)
 	}
 }
 
@@ -116,19 +133,22 @@ func (v *vrank) Log() {
 		return
 	}
 
-	seq, round, preprepareArrivalTime, commitArrivalTimes, roundChangeArrivalTimes := v.buildLogData()
+	seq, round, preprepareArrivalTime, commitArrivalTimes, myRoundChangeTimes, roundChangeArrivalTimes := v.buildLogData()
 	logger.Warn("VRank", "seq", seq, "round", round,
 		"preprepareArrivalTime", preprepareArrivalTime,
 		"commitArrivalTimes", commitArrivalTimes,
+		"myRoundChangeTimes", myRoundChangeTimes,
 		"roundChangeArrivalTimes", roundChangeArrivalTimes)
 }
 
-func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTime string, commitArrivalTimes []string, roundChangeArrivalTimes []string) {
+func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTime string, commitArrivalTimes []string, myRoundChangeTimes []string, roundChangeArrivalTimes []string) {
 	sortedCommittee := valset.NewAddressSet(v.committee).List()
 	preprepareArrivalTime = "-"
 	if v.preprepareArrivalTime != time.Duration(0) {
 		preprepareArrivalTime = encodeDuration(v.preprepareArrivalTime)
 	}
+
+	// Build commitArrivalTimes: [18 18 - 18]
 	commitArrivalTimes = make([]string, len(sortedCommittee))
 	for i, addr := range sortedCommittee {
 		commitTime := "-" // not arrived
@@ -136,17 +156,38 @@ func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTime st
 			commitTime = encodeDuration(t)
 		}
 		commitArrivalTimes[i] = commitTime
-		roundChangeTime := "-" // no round change or not arrived
-		for round, t := range v.roundChangeArrivalTimeMap[addr] {
-			if round == v.view.Round.Uint64() {
-				roundChangeTime = encodeDuration(t)
-				break
-			}
-		}
-		roundChangeArrivalTimes[i] = roundChangeTime
 	}
 
-	return v.view.Sequence.Int64(), v.view.Round.Int64(), preprepareArrivalTime, commitArrivalTimes, roundChangeArrivalTimes
+	// Build myRoundChangeTimes: [] or [10000 20000 600000]
+	for _, t := range v.myRoundChangeTimes {
+		if t != time.Duration(0) {
+			myRoundChangeTimes = append(myRoundChangeTimes, encodeDuration(t))
+		}
+	}
+
+	// Build roundChangeArrivalTimes: [- - - -] or [10123,20456,60789 10321,20654,60987 ...]
+	roundChangeArrivalTimes = make([]string, len(sortedCommittee))
+	for i, addr := range sortedCommittee {
+		times, exists := v.roundChangeArrivalTimeMap[addr]
+		if !exists || len(times) == 0 {
+			roundChangeArrivalTimes[i] = "-"
+			continue
+		}
+		// Collect non-zero times for this validator (comma-separated for each round)
+		var validatorTimes []string
+		for _, t := range times {
+			if t != time.Duration(0) {
+				validatorTimes = append(validatorTimes, encodeDuration(t))
+			}
+		}
+		if len(validatorTimes) == 0 {
+			roundChangeArrivalTimes[i] = "-"
+		} else {
+			roundChangeArrivalTimes[i] = strings.Join(validatorTimes, ",")
+		}
+	}
+
+	return v.view.Sequence.Int64(), v.view.Round.Int64(), preprepareArrivalTime, commitArrivalTimes, myRoundChangeTimes, roundChangeArrivalTimes
 }
 
 func (v *vrank) calcMetrics() (int64, int64, int64, int64) {
@@ -155,10 +196,10 @@ func (v *vrank) calcMetrics() (int64, int64, int64, int64) {
 		_, arrivalTimes := sortByArrivalTimes(v.commitArrivalTimeMap)
 		firstCommit = arrivalTimes[0]
 		lastCommit = arrivalTimes[len(arrivalTimes)-1]
-		if len(arrivalTimes) >= v.quorum {
+		if v.quorum > 0 && len(arrivalTimes) >= v.quorum {
 			quorumCommit = arrivalTimes[v.quorum-1]
 			sum := int64(0)
-			for _, arrivalTime := range arrivalTimes[v.quorum-1:] {
+			for _, arrivalTime := range arrivalTimes[:v.quorum] {
 				sum += int64(arrivalTime)
 			}
 			avgCommitWithinQuorum = sum / int64(v.quorum)
@@ -195,7 +236,7 @@ func encodeDuration(d time.Duration) string {
 func sortByArrivalTimes(arrivalTimeMap map[common.Address]time.Duration) ([]common.Address, []int64) {
 	// Sort addresses by their arrival times
 	sortedAddrs := slices.SortedFunc(maps.Keys(arrivalTimeMap), func(a, b common.Address) int {
-		return int(arrivalTimeMap[a] - arrivalTimeMap[b])
+		return cmp.Compare(arrivalTimeMap[a], arrivalTimeMap[b])
 	})
 
 	retTimes := make([]int64, len(sortedAddrs))
