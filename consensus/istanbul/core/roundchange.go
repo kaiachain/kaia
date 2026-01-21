@@ -117,7 +117,8 @@ func (c *core) handleRoundChange(msg *message, src common.Address) error {
 	}
 
 	if Vrank != nil {
-		Vrank.AddRoundChange(rc, src, timestamp)
+		Vrank.SetLatestView(*cv, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+		Vrank.AddRoundChange(src, roundView.Round.Uint64(), timestamp)
 	}
 
 	var numCatchUp, numStartNewRound int

@@ -71,7 +71,7 @@ func TestVrank(t *testing.T) {
 	assert.NotEqual(t, lastCommit, int64(0))
 	assert.Equal(t, N, len(vrank.commitArrivalTimeMap))
 
-	seq, round, _, commitArrivalTimes := vrank.buildLogData()
+	seq, round, _, commitArrivalTimes, _ := vrank.buildLogData()
 	assert.Equal(t, view.Sequence.Int64(), seq)
 	assert.Equal(t, view.Round.Int64(), round)
 	t.Logf("commitArrivalTimes: %v", commitArrivalTimes)

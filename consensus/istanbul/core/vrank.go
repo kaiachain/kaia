@@ -87,18 +87,18 @@ func (v *vrank) AddCommit(msg *istanbul.Subject, src common.Address, timestamp t
 	}
 }
 
-func (v *vrank) AddRoundChange(msg *istanbul.Subject, src common.Address, timestamp time.Time) {
-	roundChanges, exists := v.roundChangeArrivalTimeMap[src]
+func (v *vrank) AddRoundChange(src common.Address, round uint64, timestamp time.Time) {
+	roundChangesByNode, exists := v.roundChangeArrivalTimeMap[src]
 	if !exists {
 		v.roundChangeArrivalTimeMap[src] = map[uint64]time.Duration{
-			msg.View.Round.Uint64(): timestamp.Sub(v.miningStartTime),
+			round: timestamp.Sub(v.miningStartTime),
 		}
 		return
 	}
 
-	_, exists = roundChanges[msg.View.Round.Uint64()]
+	_, exists = roundChangesByNode[round]
 	if !exists {
-		roundChanges[msg.View.Round.Uint64()] = time.Since(v.miningStartTime)
+		roundChangesByNode[round] = timestamp.Sub(v.miningStartTime)
 	}
 }
 
