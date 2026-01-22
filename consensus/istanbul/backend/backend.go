@@ -30,6 +30,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -459,15 +460,6 @@ func (sb *backend) GetProposerByRound(num uint64, round uint64) (common.Address,
 		return common.Address{}, err
 	}
 	return proposer, nil
-}
-
-// GetProposer implements istanbul.Backend.GetProposer
-func (sb *backend) GetProposer(number uint64) common.Address {
-	if h := sb.chain.GetHeaderByNumber(number); h != nil {
-		a, _ := sb.Author(h)
-		return a
-	}
-	return common.Address{}
 }
 
 func (sb *backend) GetRewardAddress(num uint64, nodeId common.Address) common.Address {
