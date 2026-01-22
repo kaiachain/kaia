@@ -125,9 +125,9 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
 				logger.Warn("Received preprepare message of the hash locked proposal and change state to prepared")
 				// Broadcast COMMIT and enters Prepared state directly
-				if v := Vrank.Load(); v != nil {
-					v.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
-					v.AddPreprepare(src, preprepare.View.Round.Uint64(), timestamp)
+				if Vrank != nil {
+					Vrank.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+					Vrank.AddPreprepare(src, preprepare.View.Round.Uint64(), timestamp)
 				}
 				c.acceptPreprepare(preprepare)
 				c.setState(StatePrepared)
@@ -137,9 +137,9 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 				c.sendNextRoundChange("handlePreprepare. HashLocked, but received hash is different from locked hash")
 			}
 		} else {
-			if v := Vrank.Load(); v != nil {
-				v.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
-				v.AddPreprepare(src, preprepare.View.Round.Uint64(), timestamp)
+			if Vrank != nil {
+				Vrank.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+				Vrank.AddPreprepare(src, preprepare.View.Round.Uint64(), timestamp)
 			}
 			// Either
 			//   1. the locked proposal and the received proposal match

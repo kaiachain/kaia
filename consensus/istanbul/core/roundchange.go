@@ -85,12 +85,12 @@ func (c *core) sendRoundChange(round *big.Int) {
 		Msg:  payload,
 	})
 
-	if v := Vrank.Load(); v != nil {
-		v.SetLatestView(istanbul.View{
+	if Vrank != nil {
+		Vrank.SetLatestView(istanbul.View{
 			Round:    new(big.Int).Set(round),
 			Sequence: new(big.Int).Set(cv.Sequence),
 		}, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
-		v.AddMyRoundChange(round.Uint64(), timestamp)
+		Vrank.AddMyRoundChange(round.Uint64(), timestamp)
 	}
 }
 
@@ -125,9 +125,9 @@ func (c *core) handleRoundChange(msg *message, src common.Address) error {
 		return err
 	}
 
-	if v := Vrank.Load(); v != nil {
-		v.SetLatestView(*cv, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
-		v.AddRoundChange(src, roundView.Round.Uint64(), timestamp)
+	if Vrank != nil {
+		Vrank.SetLatestView(*cv, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+		Vrank.AddRoundChange(src, roundView.Round.Uint64(), timestamp)
 	}
 
 	var numCatchUp, numStartNewRound int

@@ -561,14 +561,12 @@ func (self *worker) commitNewWork() {
 			)
 		}
 
-		// Create and initialize new Vrank before making it visible to other goroutines
-		newVrank := core.NewVrank()
-		newVrank.StartTimer()
-		// Atomically swap; old instance is now read-only (only Log reads it)
-		old := core.Vrank.Swap(newVrank)
-		if old != nil {
-			old.Log()
+		if core.Vrank != nil {
+			core.Vrank.Log()
+		} else {
+			core.Vrank = core.NewVrank()
 		}
+		core.Vrank.StartTimer()
 	}
 
 	var pending map[common.Address]types.Transactions

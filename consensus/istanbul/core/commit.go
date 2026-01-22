@@ -98,8 +98,8 @@ func (c *core) handleCommit(msg *message, src common.Address) error {
 	}
 
 	c.acceptCommit(msg, src)
-	if v := Vrank.Load(); v != nil {
-		v.AddCommit(src, commit.View.Round.Uint64(), timestamp)
+	if Vrank != nil {
+		Vrank.AddCommit(src, commit.View.Round.Uint64(), timestamp)
 	}
 
 	// Change to Prepared state if we've received enough PREPARE/COMMIT messages or it is locked

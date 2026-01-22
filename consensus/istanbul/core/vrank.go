@@ -23,7 +23,6 @@ import (
 	"slices"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/kaiachain/kaia/common"
@@ -62,7 +61,7 @@ var (
 
 	VRankLogFrequency = DefaultVRankLogFrequency // Will be set to the value of VRankLogFrequencyFlag in SetKaiaConfig()
 
-	Vrank atomic.Pointer[vrank]
+	Vrank *vrank
 )
 
 func NewVrank() *vrank {
@@ -87,6 +86,12 @@ func NewMsgArrivalTimes() *msgArrivalTimes {
 
 func (v *vrank) StartTimer() {
 	v.miningStartTime = time.Now()
+	v.view = istanbul.View{}
+	v.committee = []common.Address{}
+	v.quorum = 0
+	for i := range v.timestamps {
+		v.timestamps[i] = *NewMsgArrivalTimes()
+	}
 }
 
 func (v *vrank) SetLatestView(view istanbul.View, committee []common.Address, quorum int) {
