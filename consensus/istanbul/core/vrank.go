@@ -35,6 +35,7 @@ type vrank struct {
 	view            istanbul.View
 	committee       []common.Address
 	quorum          int
+	maxRound        uint64 // highest round with RC data received
 	timestamps      [MaxRoundChangeCount]msgArrivalTimes
 }
 
@@ -131,6 +132,10 @@ func (v *vrank) AddRoundChange(src common.Address, round uint64, timestamp time.
 	}
 	// LoadOrStore stores only if key doesn't exist (first write wins)
 	v.timestamps[round].roundChangeArrivalTimeMap.LoadOrStore(src, timestamp.Sub(v.miningStartTime))
+	// Track max round for logging future RC messages
+	if round > v.maxRound {
+		v.maxRound = round
+	}
 }
 
 func (v *vrank) shouldEmitLog() bool {
@@ -171,7 +176,9 @@ func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTimes s
 		return 0, 0, "", []string{}, "", []string{}
 	}
 	sortedCommittee := valset.NewAddressSet(v.committee).List()
-	maxRound := min(v.view.Round.Uint64(), MaxRoundChangeCount-1)
+
+	// To log future RC messages, use the max round received
+	maxRound := min(max(v.view.Round.Uint64(), v.maxRound), MaxRoundChangeCount-1)
 
 	// Initialize per-validator arrays
 	commitArrivalTimes = make([]string, len(sortedCommittee))
