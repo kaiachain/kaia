@@ -561,11 +561,7 @@ func (self *worker) commitNewWork() {
 			)
 		}
 
-		if core.Vrank != nil {
-			core.Vrank.Log()
-		} else {
-			core.Vrank = core.NewVrank()
-		}
+		core.Vrank.Log()
 		core.Vrank.StartTimer()
 	}
 
