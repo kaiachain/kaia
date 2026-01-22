@@ -19,7 +19,6 @@
 package core
 
 import (
-	"cmp"
 	"slices"
 	"strconv"
 	"sync"
@@ -61,7 +60,7 @@ var (
 
 	VRankLogFrequency = DefaultVRankLogFrequency // Will be set to the value of VRankLogFrequencyFlag in SetKaiaConfig()
 
-	Vrank *vrank
+	Vrank = NewVrank()
 )
 
 func NewVrank() *vrank {
@@ -101,7 +100,7 @@ func (v *vrank) SetLatestView(view istanbul.View, committee []common.Address, qu
 }
 
 func (v *vrank) AddPreprepare(src common.Address, round uint64, timestamp time.Time) {
-	if round > MaxRoundChangeCount {
+	if round >= MaxRoundChangeCount {
 		return
 	}
 	if v.timestamps[round].preprepareArrivalTime == time.Duration(0) {
@@ -118,7 +117,7 @@ func (v *vrank) AddCommit(src common.Address, round uint64, timestamp time.Time)
 }
 
 func (v *vrank) AddMyRoundChange(round uint64, timestamp time.Time) {
-	if round > MaxRoundChangeCount {
+	if round >= MaxRoundChangeCount {
 		return
 	}
 	if v.timestamps[round].myRoundChangeTime == time.Duration(0) {
@@ -259,7 +258,7 @@ func (v *vrank) calcMetrics() (int64, int64, int64, int64) {
 
 	var firstCommit, lastCommit, quorumCommit, avgCommitWithinQuorum int64
 	if len(commitMap) > 0 {
-		_, arrivalTimes := sortByArrivalTimes(commitMap)
+		arrivalTimes := sortByArrivalTimes(commitMap)
 		firstCommit = arrivalTimes[0]
 		lastCommit = arrivalTimes[len(arrivalTimes)-1]
 		if v.quorum > 0 && len(arrivalTimes) >= v.quorum {
@@ -306,22 +305,12 @@ func encodeDuration(d time.Duration) string {
 	return strconv.FormatInt(d.Milliseconds(), 10)
 }
 
-func sortByArrivalTimes(arrivalTimeMap map[common.Address]time.Duration) ([]common.Address, []int64) {
-	// Collect keys
-	addrs := make([]common.Address, 0, len(arrivalTimeMap))
-	for addr := range arrivalTimeMap {
-		addrs = append(addrs, addr)
+func sortByArrivalTimes(arrivalTimeMap map[common.Address]time.Duration) []int64 {
+	// Convert to []int64 and sort
+	result := make([]int64, 0, len(arrivalTimeMap))
+	for _, v := range arrivalTimeMap {
+		result = append(result, int64(v))
 	}
-
-	// Sort addresses by their arrival times
-	slices.SortFunc(addrs, func(a, b common.Address) int {
-		return cmp.Compare(arrivalTimeMap[a], arrivalTimeMap[b])
-	})
-
-	retTimes := make([]int64, len(addrs))
-	for i, addr := range addrs {
-		retTimes[i] = int64(arrivalTimeMap[addr])
-	}
-
-	return addrs, retTimes
+	slices.Sort(result)
+	return result
 }
