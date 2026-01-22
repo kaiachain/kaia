@@ -77,17 +77,19 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 	// If it is old message, see if we need to broadcast COMMIT
 	if err := c.checkMessage(msgPreprepare, preprepare.View); err != nil {
 		if err == errOldMessage {
-			// Get validator set for the given proposal
-			councilState, getCouncilError := c.backend.GetCommitteeStateByRound(preprepare.View.Sequence.Uint64(), preprepare.View.Round.Uint64())
-			if getCouncilError != nil {
-				return getCouncilError
-			}
-			// Broadcast COMMIT if it is an existing block
-			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
-			// 2. The given block must exist
-			if councilState.IsProposer(src) && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
-				c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash(), preprepare.Proposal.ParentHash())
-				return nil
+			// Get validator set for the given proposal using type assertion
+			if provider, ok := c.backend.(committeeStateProvider); ok {
+				councilState, getCouncilError := provider.GetCommitteeStateByRound(preprepare.View.Sequence.Uint64(), preprepare.View.Round.Uint64())
+				if getCouncilError != nil {
+					return getCouncilError
+				}
+				// Broadcast COMMIT if it is an existing block
+				// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
+				// 2. The given block must exist
+				if councilState.IsProposer(src) && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
+					c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash(), preprepare.Proposal.ParentHash())
+					return nil
+				}
 			}
 		}
 		return err

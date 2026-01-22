@@ -413,7 +413,7 @@ func (sb *backend) HasBadProposal(hash common.Hash) bool {
 	return sb.hasBadBlock(hash)
 }
 
-// GetValidatorSet implements istanbul.Backend.GetValidatorSet
+// GetValidatorSet returns the validator set for the given block number
 func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
 	council, err := sb.valsetModule.GetCouncil(num)
 	if err != nil {
@@ -428,7 +428,7 @@ func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
 	return istanbul.NewBlockValSet(council, demoted), nil
 }
 
-// GetCommitteeStateByRound implements istanbul.Backend.GetCommitteeStateByRound
+// GetCommitteeStateByRound returns the committee state for the given block number and round
 func (sb *backend) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul.RoundCommitteeState, error) {
 	blockValSet, err := sb.GetValidatorSet(num)
 	if err != nil {
@@ -449,7 +449,7 @@ func (sb *backend) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul
 	return istanbul.NewRoundCommitteeState(blockValSet, committeeSize, committee, proposer), nil
 }
 
-// GetProposerByRound implements istanbul.Backend.GetProposerByRound
+// GetProposerByRound returns the proposer address for the given block number and round
 func (sb *backend) GetProposerByRound(num uint64, round uint64) (common.Address, error) {
 	proposer, err := sb.valsetModule.GetProposer(num, round)
 	if err != nil {

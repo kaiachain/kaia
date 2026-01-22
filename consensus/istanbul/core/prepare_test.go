@@ -45,19 +45,20 @@ func TestCore_sendPrepare(t *testing.T) {
 		{"valid case", 0, true},
 		{"invalid case - not committee", 2, false},
 	} {
-		mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+		backend, mockCtrl := newMockBackend(t, validatorAddrs)
+		wrapper := backend.(*testBackendWrapper)
 		if tc.valid {
-			mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).AnyTimes()
-			mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			wrapper.mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).AnyTimes()
+			wrapper.mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 		}
 
 		istConfig := istanbul.DefaultConfig.Copy()
 		istConfig.ProposerPolicy = istanbul.WeightedRandom
 
-		istCore := New(mockBackend, istConfig).(*core)
+		istCore := New(backend, istConfig).(*core)
 		assert.NoError(t, istCore.Start())
 
-		lastProposal, _ := mockBackend.LastProposal()
+		lastProposal, _ := backend.LastProposal()
 		proposal, err := genBlock(lastProposal.(*types.Block), validatorKeyMap[validatorAddrs[0]])
 		assert.NoError(t, err)
 

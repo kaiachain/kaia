@@ -30,16 +30,24 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/rcrowley/go-metrics"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/log"
-	"github.com/rcrowley/go-metrics"
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulCore)
+
+// committeeStateProvider is a helper interface for accessing committee state methods
+// that are not part of the Backend interface but are available on the concrete backend type
+type committeeStateProvider interface {
+	GetCommitteeStateByRound(num uint64, round uint64) (*istanbul.RoundCommitteeState, error)
+	GetProposerByRound(num uint64, round uint64) (common.Address, error)
+}
 
 // New creates an Istanbul consensus core
 func New(backend istanbul.Backend, config *istanbul.Config) Engine {
@@ -266,9 +274,15 @@ func (c *core) startNewRound(round *big.Int) {
 		}
 	}
 
-	c.currentCommittee, err = c.backend.GetCommitteeStateByRound(newView.Sequence.Uint64(), round.Uint64())
-	if err != nil {
-		logger.Error("Failed to get current round's committee state", "err", err)
+	// Get committee state using type assertion to access methods not in Backend interface
+	if provider, ok := c.backend.(committeeStateProvider); ok {
+		c.currentCommittee, err = provider.GetCommitteeStateByRound(newView.Sequence.Uint64(), round.Uint64())
+		if err != nil {
+			logger.Error("Failed to get current round's committee state", "err", err)
+			return
+		}
+	} else {
+		logger.Error("Backend does not support GetCommitteeStateByRound")
 		return
 	}
 
@@ -321,11 +335,16 @@ func (c *core) catchUpRound(view *istanbul.View) {
 	c.updateRoundState(view, c.currentCommittee, true)
 	c.roundChangeSet.Clear(view.Round)
 
-	newProposer, err := c.backend.GetProposerByRound(view.Sequence.Uint64(), view.Round.Uint64())
-	if err != nil {
-		logger.Warn("Failed to get proposer by round", "err", err)
-		// The newProposer is only for logging purpose, so we don't need to return here.
-		// If there's error, it'll be handled in the `startNewRound` anyway.
+	// Get proposer using type assertion to access methods not in Backend interface
+	var newProposer common.Address
+	var err error
+	if provider, ok := c.backend.(committeeStateProvider); ok {
+		newProposer, err = provider.GetProposerByRound(view.Sequence.Uint64(), view.Round.Uint64())
+		if err != nil {
+			logger.Warn("Failed to get proposer by round", "err", err)
+			// The newProposer is only for logging purpose, so we don't need to return here.
+			// If there's error, it'll be handled in the `startNewRound` anyway.
+		}
 	}
 
 	c.newRoundChangeTimer()

@@ -108,65 +108,6 @@ func (mr *MockBackendMockRecorder) EventMux() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EventMux", reflect.TypeOf((*MockBackend)(nil).EventMux))
 }
 
-// GetCommitteeState mocks base method.
-func (m *MockBackend) GetCommitteeState(arg0 uint64) (*istanbul.RoundCommitteeState, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCommitteeState", arg0)
-	ret0, _ := ret[0].(*istanbul.RoundCommitteeState)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetCommitteeState indicates an expected call of GetCommitteeState.
-func (mr *MockBackendMockRecorder) GetCommitteeState(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommitteeState", reflect.TypeOf((*MockBackend)(nil).GetCommitteeState), arg0)
-}
-
-// GetCommitteeStateByRound mocks base method.
-func (m *MockBackend) GetCommitteeStateByRound(arg0, arg1 uint64) (*istanbul.RoundCommitteeState, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCommitteeStateByRound", arg0, arg1)
-	ret0, _ := ret[0].(*istanbul.RoundCommitteeState)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetCommitteeStateByRound indicates an expected call of GetCommitteeStateByRound.
-func (mr *MockBackendMockRecorder) GetCommitteeStateByRound(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommitteeStateByRound", reflect.TypeOf((*MockBackend)(nil).GetCommitteeStateByRound), arg0, arg1)
-}
-
-// GetProposer mocks base method.
-func (m *MockBackend) GetProposer(arg0 uint64) common.Address {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProposer", arg0)
-	ret0, _ := ret[0].(common.Address)
-	return ret0
-}
-
-// GetProposer indicates an expected call of GetProposer.
-func (mr *MockBackendMockRecorder) GetProposer(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProposer", reflect.TypeOf((*MockBackend)(nil).GetProposer), arg0)
-}
-
-// GetProposerByRound mocks base method.
-func (m *MockBackend) GetProposerByRound(arg0, arg1 uint64) (common.Address, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProposerByRound", arg0, arg1)
-	ret0, _ := ret[0].(common.Address)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetProposerByRound indicates an expected call of GetProposerByRound.
-func (mr *MockBackendMockRecorder) GetProposerByRound(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProposerByRound", reflect.TypeOf((*MockBackend)(nil).GetProposerByRound), arg0, arg1)
-}
-
 // GetRewardBase mocks base method.
 func (m *MockBackend) GetRewardBase() common.Address {
 	m.ctrl.T.Helper()
@@ -179,21 +120,6 @@ func (m *MockBackend) GetRewardBase() common.Address {
 func (mr *MockBackendMockRecorder) GetRewardBase() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRewardBase", reflect.TypeOf((*MockBackend)(nil).GetRewardBase))
-}
-
-// GetValidatorSet mocks base method.
-func (m *MockBackend) GetValidatorSet(arg0 uint64) (*istanbul.BlockValSet, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetValidatorSet", arg0)
-	ret0, _ := ret[0].(*istanbul.BlockValSet)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetValidatorSet indicates an expected call of GetValidatorSet.
-func (mr *MockBackendMockRecorder) GetValidatorSet(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorSet", reflect.TypeOf((*MockBackend)(nil).GetValidatorSet), arg0)
 }
 
 // Gossip mocks base method.
