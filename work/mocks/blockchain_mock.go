@@ -11,6 +11,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	blockchain "github.com/kaiachain/kaia/blockchain"
+	interfaces "github.com/kaiachain/kaia/blockchain/interfaces"
 	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	vm "github.com/kaiachain/kaia/blockchain/vm"
@@ -1082,10 +1083,10 @@ func (mr *MockBlockChainMockRecorder) TrieNode(arg0 interface{}) *gomock.Call {
 }
 
 // Validator mocks base method.
-func (m *MockBlockChain) Validator() blockchain.Validator {
+func (m *MockBlockChain) Validator() interfaces.Validator {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Validator")
-	ret0, _ := ret[0].(blockchain.Validator)
+	ret0, _ := ret[0].(interfaces.Validator)
 	return ret0
 }
 

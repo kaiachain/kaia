@@ -8,6 +8,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	interfaces "github.com/kaiachain/kaia/blockchain/interfaces"
 	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
@@ -178,4 +179,18 @@ func (m *MockBlockChain) StateAt(arg0 common.Hash) (*state.StateDB, error) {
 func (mr *MockBlockChainMockRecorder) StateAt(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateAt", reflect.TypeOf((*MockBlockChain)(nil).StateAt), arg0)
+}
+
+// Validator mocks base method.
+func (m *MockBlockChain) Validator() interfaces.Validator {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Validator")
+	ret0, _ := ret[0].(interfaces.Validator)
+	return ret0
+}
+
+// Validator indicates an expected call of Validator.
+func (mr *MockBlockChainMockRecorder) Validator() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validator", reflect.TypeOf((*MockBlockChain)(nil).Validator))
 }

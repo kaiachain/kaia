@@ -19,6 +19,7 @@ import (
 	mock_api "github.com/kaiachain/kaia/api/mocks"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/forkid"
+	"github.com/kaiachain/kaia/blockchain/interfaces"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -2840,6 +2841,10 @@ func (mc *testChainContext) State() (*state.StateDB, error) {
 
 func (mc *testChainContext) StateAt(root common.Hash) (*state.StateDB, error) {
 	return nil, errors.New("not implemented")
+}
+
+func (mc *testChainContext) Validator() interfaces.Validator {
+	return nil
 }
 
 // Contract C { constructor() { revert("hello"); } }

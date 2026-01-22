@@ -40,7 +40,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/consensus/misc"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -195,23 +194,28 @@ func (sb *backend) computeSignatureAddrs(header *types.Header) error {
 // given engine. Verifying the seal may be done optionally here, or explicitly
 // via the VerifySeal method.
 func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-	var parent []*types.Header
-	if header.Number.Sign() == 0 {
-		// If current block is genesis, the parent is also genesis
-		parent = append(parent, chain.GetHeaderByNumber(0))
-	} else {
-		parent = append(parent, chain.GetHeader(header.ParentHash, header.Number.Uint64()-1))
+	if err := sb.chain.Validator().ValidateHeader(header); err != nil {
+		return err
 	}
-	return sb.verifyHeader(chain, header, parent)
+
+	return sb.verifyHeader(chain, header)
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules.The
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
-func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header) error {
 	if header.Number == nil {
 		return errUnknownBlock
+	}
+
+	var parents []*types.Header
+	if header.Number.Sign() == 0 {
+		// If current block is genesis, the parent is also genesis
+		parents = append(parents, chain.GetHeaderByNumber(0))
+	} else {
+		parents = append(parents, chain.GetHeader(header.ParentHash, header.Number.Uint64()-1))
 	}
 
 	// Header verify before/after magma fork
@@ -230,40 +234,11 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return consensus.ErrInvalidBaseFee
 	}
 
-	// Don't waste time checking blocks from the future
-	if header.Time.Cmp(big.NewInt(now().Add(allowedFutureBlockTime).Unix())) > 0 {
-		return consensus.ErrFutureBlock
-	}
-
 	// Ensure that the extra data format is satisfied
 	if _, err := types.ExtractIstanbulExtra(header); err != nil {
 		return errInvalidExtraDataFormat
 	}
-	// Ensure that the block's blockscore is meaningful (may not be correct at this point)
-	if header.BlockScore == nil || header.BlockScore.Cmp(defaultBlockScore) != 0 {
-		return errInvalidBlockScore
-	}
 
-	// TODO-kaiax: further flatten the code inside; especially after most of the checks are moved to consensus modules
-	if err := sb.verifyCascadingFields(chain, header, parents); err != nil {
-		return err
-	}
-
-	for _, module := range sb.consensusModules {
-		if err := module.VerifyHeader(header); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// verifyCascadingFields verifies all the header fields that are not standalone,
-// rather depend on a batch of previous headers. The caller may optionally pass
-// in a batch of parents (ascending order) to avoid looking those up from the
-// database. This is useful for concurrently verifying a batch of new headers.
-func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
-	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
 		return nil
@@ -295,22 +270,17 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		return errUnexpectedRandao
 	}
 
-	// Verify the existence / non-existence of osaka-specific header fields
-	osaka := chain.Config().IsOsakaForkEnabled(header.Number)
-	if !osaka {
-		switch {
-		case header.ExcessBlobGas != nil:
-			return errUnexpectedExcessBlobGasBeforeOsaka
-		case header.BlobGasUsed != nil:
-			return errUnexpectedBlobGasUsedBeforeOsaka
-		}
-	} else {
-		if err := eip4844.VerifyEIP4844Header(chain.Config(), parent, header); err != nil {
+	if err := sb.verifyCommittedSeals(chain, header, nil); err != nil {
+		return err
+	}
+
+	for _, module := range sb.consensusModules {
+		if err := module.VerifyHeader(header); err != nil {
 			return err
 		}
 	}
 
-	return sb.verifyCommittedSeals(chain, header, parents)
+	return nil
 }
 
 // VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
@@ -322,12 +292,12 @@ func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.H
 	results := make(chan error, len(headers))
 	go func() {
 		errored := false
-		for i, header := range headers {
+		for _, header := range headers {
 			var err error
 			if errored { // If errored once in the batch, skip the rest
 				err = consensus.ErrUnknownAncestor
 			} else {
-				err = sb.verifyHeader(chain, header, headers[:i])
+				err = sb.VerifyHeader(chain, header, false)
 			}
 
 			if err != nil {

@@ -32,6 +32,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/kaiachain/kaia/blockchain/interfaces"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -464,4 +465,8 @@ func (hc *HeaderChain) State() (*state.StateDB, error) {
 
 func (hc *HeaderChain) StateAt(root common.Hash) (*state.StateDB, error) {
 	return nil, errors.New("HeaderChain does not support StateAt() method")
+}
+
+func (hc *HeaderChain) Validator() interfaces.Validator {
+	return nil
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/asm"
+	"github.com/kaiachain/kaia/blockchain/interfaces"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -278,6 +279,11 @@ func (d *dummyChain) State() (*state.StateDB, error) {
 // StateAt retrieves statedb on a particular point in time
 func (d *dummyChain) StateAt(root common.Hash) (*state.StateDB, error) {
 	return nil, nil
+}
+
+// Validator retrieves a validator
+func (d *dummyChain) Validator() interfaces.Validator {
+	return nil
 }
 
 // TestBlockhash tests the blockhash operation. It's a bit special, since it internally

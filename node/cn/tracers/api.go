@@ -36,6 +36,7 @@ import (
 
 	kaiaapi "github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/interfaces"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -216,6 +217,10 @@ func (context *chainContext) State() (*state.StateDB, error) {
 
 func (context *chainContext) StateAt(root common.Hash) (*state.StateDB, error) {
 	return nil, errors.New("not implemented")
+}
+
+func (context *chainContext) Validator() interfaces.Validator {
+	return nil
 }
 
 // chainContext constructs the context reader which is used by the evm for reading

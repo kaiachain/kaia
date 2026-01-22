@@ -25,11 +25,44 @@ package blockchain
 import (
 	"errors"
 	"fmt"
+	"math/big"
+	"time"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/params"
+)
+
+const allowedFutureBlockTime = 1 * time.Second // Max time from current time allowed for blocks, before they're considered future blocks
+
+var defaultBlockScore = big.NewInt(1)
+
+var (
+	// ErrUnknownAncestor is returned when validating a block requires an ancestor
+	// that is unknown.
+	errUnknownAncestor = errors.New("unknown ancestor")
+
+	// ErrPrunedAncestor is returned when validating a block requires an ancestor
+	// that is known, but the state of which is not available.
+	errPrunedAncestor = errors.New("pruned ancestor")
+
+	// ErrFutureBlock is returned when a block's timestamp is in the future according
+	// to the current node.
+	errFutureBlock = errors.New("block in the future")
+
+	// errUnknownBlock is returned when the list of validators is requested for a block
+	// that is not part of the local blockchain.
+	errUnknownBlock = errors.New("unknown block")
+
+	// errInvalidBlockScore is returned if the BlockScore of a block is not 1
+	errInvalidBlockScore = errors.New("invalid blockscore")
+
+	// errUnexpectedExcessBlobGasBeforeOsaka is returned if the excessBlobGas is present before the osaka fork.
+	errUnexpectedExcessBlobGasBeforeOsaka = errors.New("unexpected excessBlobGas before osaka")
+
+	// errUnexpectedBlobGasUsedBeforeOsaka is returned if the blobGasUsed is present before the osaka fork.
+	errUnexpectedBlobGasUsedBeforeOsaka = errors.New("unexpected blobGasUsed before osaka")
 )
 
 // BlockValidator is responsible for validating block headers and
@@ -50,6 +83,63 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain) *Bloc
 	return validator
 }
 
+func (v *BlockValidator) ValidateHeader(header *types.Header) error {
+	if header.Number == nil {
+		return errUnknownBlock
+	}
+
+	var parents []*types.Header
+	if header.Number.Sign() == 0 {
+		// If current block is genesis, the parent is also genesis
+		parents = append(parents, v.bc.GetHeaderByNumber(0))
+	} else {
+		parents = append(parents, v.bc.GetHeader(header.ParentHash, header.Number.Uint64()-1))
+	}
+
+	// Don't waste time checking blocks from the future
+	if header.Time.Cmp(big.NewInt(time.Now().Add(allowedFutureBlockTime).Unix())) > 0 {
+		return errFutureBlock
+	}
+
+	// Ensure that the block's blockscore is meaningful (may not be correct at this point)
+	if header.BlockScore == nil || header.BlockScore.Cmp(defaultBlockScore) != 0 {
+		return errInvalidBlockScore
+	}
+
+	// The genesis block is the always valid dead-end
+	number := header.Number.Uint64()
+	if number == 0 {
+		return nil
+	}
+	// Ensure that the block's timestamp isn't too close to it's parent
+	var parent *types.Header
+	if len(parents) > 0 {
+		parent = parents[len(parents)-1]
+	} else {
+		parent = v.bc.GetHeader(header.ParentHash, number-1)
+	}
+	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
+		return errUnknownAncestor
+	}
+
+	// Verify the existence / non-existence of osaka-specific header fields
+	osaka := v.config.IsOsakaForkEnabled(header.Number)
+	if !osaka {
+		switch {
+		case header.ExcessBlobGas != nil:
+			return errUnexpectedExcessBlobGasBeforeOsaka
+		case header.BlobGasUsed != nil:
+			return errUnexpectedBlobGasUsedBeforeOsaka
+		}
+	} else {
+		if err := eip4844.VerifyEIP4844Header(v.config, parent, header); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // ValidateBody verifies the block
 // header's transaction. The headers are assumed to be already
 // validated at this point.
@@ -66,9 +156,9 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 		if !v.bc.HasBlock(block.ParentHash(), block.NumberU64()-1) {
 			logger.Error("unknown ancestor (ValidateBody)", "num", block.NumberU64(),
 				"hash", block.Hash(), "parentHash", block.ParentHash())
-			return consensus.ErrUnknownAncestor
+			return errUnknownAncestor
 		}
-		return consensus.ErrPrunedAncestor
+		return errPrunedAncestor
 	}
 	// Header validity is known at this point, check the transactions
 	header := block.Header()

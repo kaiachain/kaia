@@ -25,6 +25,7 @@ package consensus
 import (
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/interfaces"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -70,6 +71,9 @@ type ChainReader interface {
 
 	// StateAt retrieves statedb on a particular point in time
 	StateAt(root common.Hash) (*state.StateDB, error)
+
+	// Validator retrieves a validator
+	Validator() interfaces.Validator
 }
 
 // Engine is an algorithm agnostic consensus engine.
