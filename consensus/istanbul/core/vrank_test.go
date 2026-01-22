@@ -81,7 +81,13 @@ func TestVrank(t *testing.T) {
 	assert.NotEqual(t, quorumCommit, int64(0))
 	assert.NotEqual(t, avgCommitWithinQuorum, int64(0))
 	assert.NotEqual(t, lastCommit, int64(0))
-	assert.Equal(t, N, len(vrank.timestamps[testRound].commitArrivalTimeMap))
+	// Count entries in sync.Map
+	commitCount := 0
+	vrank.timestamps[testRound].commitArrivalTimeMap.Range(func(_, _ any) bool {
+		commitCount++
+		return true
+	})
+	assert.Equal(t, N, commitCount)
 
 	seq, round, preprepareArrivalTimes, commitArrivalTimes, myRoundChangeTimes, roundChangeArrivalTimes := vrank.buildLogData()
 	assert.Equal(t, view.Sequence.Int64(), seq)
