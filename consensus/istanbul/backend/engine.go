@@ -30,6 +30,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"
@@ -528,7 +529,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			// TODO-Kaia Let's redesign below logic and remove dependency between block reward and istanbul consensus.
 			var (
 				blockNum      = header.Number.Uint64()
-				rewardAddress = sb.GetRewardAddress(blockNum, sb.address)
+				rewardAddress = sb.getRewardAddress(blockNum, sb.address)
 			)
 
 			valSet, err := sb.GetValidatorSet(blockNum)
@@ -797,7 +798,7 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 
 	var currentCommittee []common.Address
 
-	currentRoundCState, err := sb.GetCommitteeState(block.NumberU64())
+	currentRoundCState, err := sb.getCommitteeState(block.NumberU64())
 	if err == nil {
 		currentCommittee = currentRoundCState.Committee().List()
 	}

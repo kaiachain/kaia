@@ -237,7 +237,7 @@ func (sb *backend) getTargetReceivers() map[common.Address]bool {
 	return targets
 }
 
-// GossipSubPeer implements istanbul.Backend.Gossip
+// GossipSubPeer implements istanbul.Backend.GossipSubPeer
 func (sb *backend) GossipSubPeer(prevHash common.Hash, payload []byte) {
 	targets := sb.getTargetReceivers()
 	if targets == nil {
@@ -387,6 +387,7 @@ func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
 	return sb.chain.GetHeader(hash, number.Uint64()) != nil
 }
 
+// LastProposal implements istanbul.Backend.LastProposal
 func (sb *backend) LastProposal() (istanbul.Proposal, common.Address) {
 	block := sb.currentBlock()
 
@@ -404,6 +405,7 @@ func (sb *backend) LastProposal() (istanbul.Proposal, common.Address) {
 	return block, proposer
 }
 
+// HasBadProposal implements istanbul.Backend.HasBadProposal
 func (sb *backend) HasBadProposal(hash common.Hash) bool {
 	if sb.hasBadBlock == nil {
 		return false
@@ -411,6 +413,7 @@ func (sb *backend) HasBadProposal(hash common.Hash) bool {
 	return sb.hasBadBlock(hash)
 }
 
+// GetValidatorSet implements istanbul.Backend.GetValidatorSet
 func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
 	council, err := sb.valsetModule.GetCouncil(num)
 	if err != nil {
@@ -425,15 +428,7 @@ func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
 	return istanbul.NewBlockValSet(council, demoted), nil
 }
 
-func (sb *backend) GetCommitteeState(num uint64) (*istanbul.RoundCommitteeState, error) {
-	header := sb.chain.GetHeaderByNumber(num)
-	if header == nil {
-		return nil, errUnknownBlock
-	}
-
-	return sb.GetCommitteeStateByRound(num, uint64(header.Round()))
-}
-
+// GetCommitteeStateByRound implements istanbul.Backend.GetCommitteeStateByRound
 func (sb *backend) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul.RoundCommitteeState, error) {
 	blockValSet, err := sb.GetValidatorSet(num)
 	if err != nil {
@@ -454,6 +449,7 @@ func (sb *backend) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul
 	return istanbul.NewRoundCommitteeState(blockValSet, committeeSize, committee, proposer), nil
 }
 
+// GetProposerByRound implements istanbul.Backend.GetProposerByRound
 func (sb *backend) GetProposerByRound(num uint64, round uint64) (common.Address, error) {
 	proposer, err := sb.valsetModule.GetProposer(num, round)
 	if err != nil {
@@ -462,7 +458,16 @@ func (sb *backend) GetProposerByRound(num uint64, round uint64) (common.Address,
 	return proposer, nil
 }
 
-func (sb *backend) GetRewardAddress(num uint64, nodeId common.Address) common.Address {
+func (sb *backend) getCommitteeState(num uint64) (*istanbul.RoundCommitteeState, error) {
+	header := sb.chain.GetHeaderByNumber(num)
+	if header == nil {
+		return nil, errUnknownBlock
+	}
+
+	return sb.GetCommitteeStateByRound(num, uint64(header.Round()))
+}
+
+func (sb *backend) getRewardAddress(num uint64, nodeId common.Address) common.Address {
 	sInfo, err := sb.stakingModule.GetStakingInfo(num)
 	if err != nil {
 		return common.Address{}
