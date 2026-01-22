@@ -137,6 +137,20 @@ func (v *vrank) AddRoundChange(src common.Address, round uint64, timestamp time.
 	}
 }
 
+func (v *vrank) shouldEmitLog() bool {
+	// Always log at round change
+	if v.view.Round.Uint64() > 0 {
+		return true
+	}
+
+	// Skip logging if VRankLogFrequency is 0 or not in the logging frequency
+	if VRankLogFrequency != 0 && v.view.Sequence.Uint64()%VRankLogFrequency == 0 {
+		return true
+	}
+
+	return false
+}
+
 // Log logs accumulated data in a compressed form
 func (v *vrank) Log() {
 	// Skip if no data collected (view not set)
@@ -146,17 +160,14 @@ func (v *vrank) Log() {
 
 	v.updateMetrics()
 
-	// Skip logging if VRankLogFrequency is 0 or not in the logging frequency
-	if VRankLogFrequency == 0 || v.view.Sequence.Uint64()%VRankLogFrequency != 0 {
-		return
+	if v.shouldEmitLog() {
+		seq, round, preprepareArrivalTime, commitArrivalTimes, myRoundChangeTimes, roundChangeArrivalTimes := v.buildLogData()
+		logger.Warn("VRank", "seq", seq, "round", round,
+			"preprepareArrivalTime", preprepareArrivalTime,
+			"commitArrivalTimes", commitArrivalTimes,
+			"myRoundChangeTimes", myRoundChangeTimes,
+			"roundChangeArrivalTimes", roundChangeArrivalTimes)
 	}
-
-	seq, round, preprepareArrivalTime, commitArrivalTimes, myRoundChangeTimes, roundChangeArrivalTimes := v.buildLogData()
-	logger.Warn("VRank", "seq", seq, "round", round,
-		"preprepareArrivalTime", preprepareArrivalTime,
-		"commitArrivalTimes", commitArrivalTimes,
-		"myRoundChangeTimes", myRoundChangeTimes,
-		"roundChangeArrivalTimes", roundChangeArrivalTimes)
 }
 
 func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTimes string, commitArrivalTimes []string, myRoundChangeTimes string, roundChangeArrivalTimes []string) {
