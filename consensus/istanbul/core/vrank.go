@@ -169,7 +169,7 @@ func (v *vrank) Log() {
 
 func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTimes string, commitArrivalTimes []string, myRoundChangeTimes string, roundChangeArrivalTimes []string) {
 	if v.view.Round == nil {
-		return
+		return 0, 0, "", []string{}, "", []string{}
 	}
 	sortedCommittee := valset.NewAddressSet(v.committee).List()
 	maxRound := v.view.Round.Uint64()
