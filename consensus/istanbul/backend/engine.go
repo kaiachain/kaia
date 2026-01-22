@@ -707,6 +707,8 @@ func (sb *backend) RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.Sta
 	sb.RegisterStakingModule(mStaking)
 	sb.valsetModule = mValset
 	sb.randaoModule = mRandao
+	// Initialize committee state provider with the registered modules
+	sb.committeeStateProvider = consensus.NewCommitteeStateProvider(mValset, mGov)
 }
 
 func (sb *backend) RegisterStakingModule(module staking.StakingModule) {

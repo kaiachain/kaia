@@ -140,6 +140,9 @@ type backend struct {
 	nodetype common.ConnType
 
 	isRestoringSnapshots atomic.Bool
+
+	// Committee state provider
+	committeeStateProvider *consensus.CommitteeStateProvider
 }
 
 func (sb *backend) NodeType() common.ConnType {
@@ -415,47 +418,26 @@ func (sb *backend) HasBadProposal(hash common.Hash) bool {
 
 // GetValidatorSet returns the validator set for the given block number
 func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
-	council, err := sb.valsetModule.GetCouncil(num)
-	if err != nil {
-		return nil, err
+	if sb.committeeStateProvider == nil {
+		return nil, errInternalError
 	}
-
-	demoted, err := sb.valsetModule.GetDemotedValidators(num)
-	if err != nil {
-		return nil, err
-	}
-
-	return istanbul.NewBlockValSet(council, demoted), nil
+	return sb.committeeStateProvider.GetValidatorSet(num)
 }
 
 // GetCommitteeStateByRound returns the committee state for the given block number and round
 func (sb *backend) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul.RoundCommitteeState, error) {
-	blockValSet, err := sb.GetValidatorSet(num)
-	if err != nil {
-		return nil, err
+	if sb.committeeStateProvider == nil {
+		return nil, errInternalError
 	}
-
-	committee, err := sb.valsetModule.GetCommittee(num, round)
-	if err != nil {
-		return nil, err
-	}
-
-	proposer, err := sb.valsetModule.GetProposer(num, round)
-	if err != nil {
-		return nil, err
-	}
-
-	committeeSize := sb.govModule.GetParamSet(num).CommitteeSize
-	return istanbul.NewRoundCommitteeState(blockValSet, committeeSize, committee, proposer), nil
+	return sb.committeeStateProvider.GetCommitteeStateByRound(num, round)
 }
 
 // GetProposerByRound returns the proposer address for the given block number and round
 func (sb *backend) GetProposerByRound(num uint64, round uint64) (common.Address, error) {
-	proposer, err := sb.valsetModule.GetProposer(num, round)
-	if err != nil {
-		return common.Address{}, err
+	if sb.committeeStateProvider == nil {
+		return common.Address{}, errInternalError
 	}
-	return proposer, nil
+	return sb.committeeStateProvider.GetProposerByRound(num, round)
 }
 
 func (sb *backend) getCommitteeState(num uint64) (*istanbul.RoundCommitteeState, error) {
