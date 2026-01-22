@@ -89,6 +89,7 @@ func (v *vrank) StartTimer() {
 	v.view = istanbul.View{}
 	v.committee = []common.Address{}
 	v.quorum = 0
+	v.maxRound = 0
 	for i := range v.timestamps {
 		v.timestamps[i] = *NewMsgArrivalTimes()
 	}
