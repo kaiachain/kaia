@@ -171,7 +171,7 @@ func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTimes s
 		return 0, 0, "", []string{}, "", []string{}
 	}
 	sortedCommittee := valset.NewAddressSet(v.committee).List()
-	maxRound := v.view.Round.Uint64()
+	maxRound := min(v.view.Round.Uint64(), MaxRoundChangeCount-1)
 
 	// Initialize per-validator arrays
 	commitArrivalTimes = make([]string, len(sortedCommittee))
@@ -244,10 +244,7 @@ func (v *vrank) calcMetrics() (int64, int64, int64, int64) {
 	if v.view.Round == nil {
 		return 0, 0, 0, 0
 	}
-	round := v.view.Round.Uint64()
-	if round >= MaxRoundChangeCount {
-		round = MaxRoundChangeCount - 1
-	}
+	round := min(v.view.Round.Uint64(), MaxRoundChangeCount-1)
 
 	// Convert sync.Map to regular map for sorting
 	commitMap := make(map[common.Address]time.Duration)
