@@ -28,6 +28,7 @@ import (
 	"io"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -35,6 +36,7 @@ import (
 type Engine interface {
 	Start() error
 	Stop() error
+	SetCommitteeStateProvider(provider consensus.CommitteeStateProviderInterface)
 }
 
 type State uint64

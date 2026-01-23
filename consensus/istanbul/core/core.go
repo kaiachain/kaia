@@ -35,19 +35,13 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/log"
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulCore)
-
-// committeeStateProvider is a helper interface for accessing committee state methods
-// that are not part of the Backend interface but are available on the concrete backend type
-type committeeStateProvider interface {
-	GetCommitteeStateByRound(num uint64, round uint64) (*istanbul.RoundCommitteeState, error)
-	GetProposerByRound(num uint64, round uint64) (common.Address, error)
-}
 
 // New creates an Istanbul consensus core
 func New(backend istanbul.Backend, config *istanbul.Config) Engine {
@@ -119,6 +113,9 @@ type core struct {
 
 	councilSizeGauge   metrics.Gauge
 	committeeSizeGauge metrics.Gauge
+
+	// Committee state provider
+	committeeStateProvider consensus.CommitteeStateProviderInterface
 }
 
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
@@ -274,15 +271,14 @@ func (c *core) startNewRound(round *big.Int) {
 		}
 	}
 
-	// Get committee state using type assertion to access methods not in Backend interface
-	if provider, ok := c.backend.(committeeStateProvider); ok {
-		c.currentCommittee, err = provider.GetCommitteeStateByRound(newView.Sequence.Uint64(), round.Uint64())
-		if err != nil {
-			logger.Error("Failed to get current round's committee state", "err", err)
-			return
-		}
-	} else {
-		logger.Error("Backend does not support GetCommitteeStateByRound")
+	// Get committee state using committee state provider
+	if c.committeeStateProvider == nil {
+		logger.Error("Committee state provider is not set")
+		return
+	}
+	c.currentCommittee, err = c.committeeStateProvider.GetCommitteeStateByRound(newView.Sequence.Uint64(), round.Uint64())
+	if err != nil {
+		logger.Error("Failed to get current round's committee state", "err", err)
 		return
 	}
 
@@ -335,11 +331,11 @@ func (c *core) catchUpRound(view *istanbul.View) {
 	c.updateRoundState(view, c.currentCommittee, true)
 	c.roundChangeSet.Clear(view.Round)
 
-	// Get proposer using type assertion to access methods not in Backend interface
+	// Get proposer using committee state provider
 	var newProposer common.Address
 	var err error
-	if provider, ok := c.backend.(committeeStateProvider); ok {
-		newProposer, err = provider.GetProposerByRound(view.Sequence.Uint64(), view.Round.Uint64())
+	if c.committeeStateProvider != nil {
+		newProposer, err = c.committeeStateProvider.GetProposerByRound(view.Sequence.Uint64(), view.Round.Uint64())
 		if err != nil {
 			logger.Warn("Failed to get proposer by round", "err", err)
 			// The newProposer is only for logging purpose, so we don't need to return here.
@@ -454,6 +450,11 @@ func (c *core) newRoundChangeTimer() {
 
 func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
 	return c.currentCommittee.CheckValidatorSignature(data, sig)
+}
+
+// SetCommitteeStateProvider sets the committee state provider for the core
+func (c *core) SetCommitteeStateProvider(provider consensus.CommitteeStateProviderInterface) {
+	c.committeeStateProvider = provider
 }
 
 // PrepareCommittedSeal returns a committed seal for the given hash

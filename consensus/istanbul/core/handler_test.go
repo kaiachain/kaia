@@ -44,7 +44,7 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-// testBackendWrapper wraps a mock backend and implements committeeStateProvider
+// testBackendWrapper wraps a mock backend
 type testBackendWrapper struct {
 	istanbul.Backend
 	mockBackend    *mock_istanbul.MockBackend
@@ -53,19 +53,29 @@ type testBackendWrapper struct {
 	committeeSize  uint64
 }
 
-func (w *testBackendWrapper) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul.RoundCommitteeState, error) {
+// testCommitteeStateProvider is a test implementation that wraps testBackendWrapper
+// and provides committee state functionality for testing
+type testCommitteeStateProvider struct {
+	wrapper *testBackendWrapper
+}
+
+func (p *testCommitteeStateProvider) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
+	return p.wrapper.mockValset, nil
+}
+
+func (p *testCommitteeStateProvider) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul.RoundCommitteeState, error) {
 	if round == 2 {
 		return istanbul.NewRoundCommitteeState(
-			w.mockValset, w.committeeSize, w.validatorAddrs[2:w.committeeSize+2], w.validatorAddrs[0],
+			p.wrapper.mockValset, p.wrapper.committeeSize, p.wrapper.validatorAddrs[2:p.wrapper.committeeSize+2], p.wrapper.validatorAddrs[0],
 		), nil
 	}
 	return istanbul.NewRoundCommitteeState(
-		w.mockValset, w.committeeSize, w.validatorAddrs[0:w.committeeSize], w.validatorAddrs[0],
+		p.wrapper.mockValset, p.wrapper.committeeSize, p.wrapper.validatorAddrs[0:p.wrapper.committeeSize], p.wrapper.validatorAddrs[0],
 	), nil
 }
 
-func (w *testBackendWrapper) GetProposerByRound(num uint64, round uint64) (common.Address, error) {
-	return w.validatorAddrs[0], nil
+func (p *testCommitteeStateProvider) GetProposerByRound(num uint64, round uint64) (common.Address, error) {
+	return p.wrapper.validatorAddrs[0], nil
 }
 
 // newMockBackend create a mock-backend initialized with default values
@@ -119,7 +129,7 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (istanbul.Bac
 	// Verify checks whether the proposal of the preprepare message is a valid block. Consider it valid.
 	mockBackend.EXPECT().Verify(gomock.Any()).Return(time.Duration(0), nil).AnyTimes()
 
-	// Wrap the mock backend to implement committeeStateProvider
+	// Wrap the mock backend
 	wrappedBackend := &testBackendWrapper{
 		Backend:        mockBackend,
 		mockBackend:    mockBackend,
@@ -273,6 +283,12 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// When the istanbul core started, a message handling loop in `handleEvents()` waits istanbul messages
 	istCore := New(backend, istConfig).(*core)
+	wrapper := backend.(*testBackendWrapper)
+	// Create a test committee state provider and set it to the core
+	testProvider := &testCommitteeStateProvider{wrapper: wrapper}
+	// Set the provider directly to the core's internal field for testing
+	// Note: This is a test-only workaround. In production, the provider is set via SetCommitteeStateProvider
+	istCore.committeeStateProvider = testProvider
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -282,9 +298,8 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 	eventMux := backend.EventMux()
 	lastProposal, _ := backend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
-	// Use type assertion to access GetCommitteeStateByRound (not part of Backend interface)
-	provider, _ := backend.(committeeStateProvider)
-	cState, err := provider.GetCommitteeStateByRound(istCore.currentView().Sequence.Uint64(), istCore.currentView().Round.Uint64())
+	// Get committee state using the provider
+	cState, err := istCore.committeeStateProvider.GetCommitteeStateByRound(istCore.currentView().Sequence.Uint64(), istCore.currentView().Round.Uint64())
 	assert.NoError(t, err)
 
 	// Preprepare message originated from invalid sender
@@ -455,6 +470,9 @@ func TestCore_handlerMsg(t *testing.T) {
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 
 	istCore := New(backend, istConfig).(*core)
+	wrapper := backend.(*testBackendWrapper)
+	testProvider := &testCommitteeStateProvider{wrapper: wrapper}
+	istCore.committeeStateProvider = testProvider
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -462,9 +480,8 @@ func TestCore_handlerMsg(t *testing.T) {
 
 	lastProposal, _ := backend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
-	// Use type assertion to access GetCommitteeStateByRound (not part of Backend interface)
-	provider, _ := backend.(committeeStateProvider)
-	cState, _ := provider.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
+	// Get committee state using the provider
+	cState, _ := istCore.committeeStateProvider.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
 
 	// invalid format
 	{
@@ -568,27 +585,28 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	wrapper.mockBackend.EXPECT().HasBadProposal(gomock.Any()).Return(true).AnyTimes()
 	defer mockCtrl.Finish()
 
+	// Start istanbul core
+	istConfig := istanbul.DefaultConfig
+	istConfig.ProposerPolicy = istanbul.WeightedRandom
+	istCore := New(backend, istConfig).(*core)
+	// Set up test committee state provider
+	testProvider := &testCommitteeStateProvider{wrapper: wrapper}
+	istCore.committeeStateProvider = testProvider
+
 	var (
 		// it creates two pre-defined blocks: one for benign CNs, the other for the malicious
 		// newProposal is a block which the proposer has created
 		// malProposal is an incorrect block that malicious CNs use to try stop consensus
 		lastProposal, _ = backend.LastProposal()
 		lastBlock       = lastProposal.(*types.Block)
-		// Use type assertion to access GetCommitteeStateByRound (not part of Backend interface)
-		provider, _ = backend.(committeeStateProvider)
-		cState, _   = provider.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
-		proposer    = cState.Proposer()
-		proposerKey = validatorKeyMap[proposer]
+		cState, _       = istCore.committeeStateProvider.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
+		proposer        = cState.Proposer()
+		proposerKey     = validatorKeyMap[proposer]
 		// the proposer generates a block as newProposal
 		// malicious CNs does not accept the proposer's block and use malProposal's hash value for consensus
 		newProposal, _ = genBlockParams(lastBlock, proposerKey, 0, 1, 1)
 		malProposal, _ = genBlockParams(lastBlock, proposerKey, 0, 0, 0)
 	)
-
-	// Start istanbul core
-	istConfig := istanbul.DefaultConfig
-	istConfig.ProposerPolicy = istanbul.WeightedRandom
-	istCore := New(backend, istConfig).(*core)
 	require.Nil(t, istCore.Start())
 	defer istCore.Stop()
 
@@ -665,22 +683,25 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	wrapper.mockBackend.EXPECT().HasBadProposal(gomock.Any()).Return(true).AnyTimes()
 	defer mockCtrl.Finish()
 
-	var (
-		lastProposal, _ = backend.LastProposal()
-		lastBlock       = lastProposal.(*types.Block)
-		// Use type assertion to access GetCommitteeStateByRound (not part of Backend interface)
-		provider, _ = backend.(committeeStateProvider)
-		cState, _   = provider.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
-		proposer    = cState.Proposer()
-		proposerKey = validatorKeyMap[proposer]
-	)
-
 	// Start istanbul core
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 	coreProposer := New(backend, istConfig).(*core)
 	coreA := New(backend, istConfig).(*core)
 	coreB := New(backend, istConfig).(*core)
+	// Set up test committee state provider
+	testProvider := &testCommitteeStateProvider{wrapper: wrapper}
+	coreProposer.committeeStateProvider = testProvider
+	coreA.committeeStateProvider = testProvider
+	coreB.committeeStateProvider = testProvider
+
+	var (
+		lastProposal, _ = backend.LastProposal()
+		lastBlock       = lastProposal.(*types.Block)
+		cState, _       = coreProposer.committeeStateProvider.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
+		proposer        = cState.Proposer()
+		proposerKey     = validatorKeyMap[proposer]
+	)
 	require.Nil(t,
 		coreProposer.Start(),
 		coreA.Start(),
@@ -804,6 +825,10 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 
 	istCore := New(backend, istConfig).(*core)
+	// Set up test committee state provider
+	wrapper := backend.(*testBackendWrapper)
+	testProvider := &testCommitteeStateProvider{wrapper: wrapper}
+	istCore.committeeStateProvider = testProvider
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}

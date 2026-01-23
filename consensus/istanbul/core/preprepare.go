@@ -77,9 +77,9 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 	// If it is old message, see if we need to broadcast COMMIT
 	if err := c.checkMessage(msgPreprepare, preprepare.View); err != nil {
 		if err == errOldMessage {
-			// Get validator set for the given proposal using type assertion
-			if provider, ok := c.backend.(committeeStateProvider); ok {
-				councilState, getCouncilError := provider.GetCommitteeStateByRound(preprepare.View.Sequence.Uint64(), preprepare.View.Round.Uint64())
+			// Get validator set for the given proposal using committee state provider
+			if c.committeeStateProvider != nil {
+				councilState, getCouncilError := c.committeeStateProvider.GetCommitteeStateByRound(preprepare.View.Sequence.Uint64(), preprepare.View.Round.Uint64())
 				if getCouncilError != nil {
 					return getCouncilError
 				}

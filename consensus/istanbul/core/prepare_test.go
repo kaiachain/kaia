@@ -23,12 +23,13 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/params"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCore_sendPrepare(t *testing.T) {
@@ -56,6 +57,9 @@ func TestCore_sendPrepare(t *testing.T) {
 		istConfig.ProposerPolicy = istanbul.WeightedRandom
 
 		istCore := New(backend, istConfig).(*core)
+		// Set up test committee state provider
+		testProvider := &testCommitteeStateProvider{wrapper: wrapper}
+		istCore.committeeStateProvider = testProvider
 		assert.NoError(t, istCore.Start())
 
 		lastProposal, _ := backend.LastProposal()
