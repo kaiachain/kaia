@@ -20,12 +20,11 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/params"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCore_sendCommit(t *testing.T) {

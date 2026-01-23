@@ -30,7 +30,6 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"

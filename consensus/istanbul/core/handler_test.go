@@ -26,10 +26,6 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/mattn/go-colorable"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
@@ -42,6 +38,9 @@ import (
 	"github.com/kaiachain/kaia/log/term"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
+	"github.com/mattn/go-colorable"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // testBackendWrapper wraps a mock backend
