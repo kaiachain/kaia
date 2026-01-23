@@ -479,10 +479,5 @@ func (bp *BidPool) getBidTxGasLimit(bid *auction.Bid) (uint64, error) {
 		}
 	}
 
-	gasLimit := intrinsicGas + bid.CallGasLimit + buffer
-	if gasLimit < floorDataGas {
-		gasLimit = floorDataGas
-	}
-
-	return gasLimit, nil
+	return max(intrinsicGas+bid.CallGasLimit+buffer, floorDataGas), nil
 }
