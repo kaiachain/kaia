@@ -72,6 +72,8 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain) *Bloc
 	return validator
 }
 
+// ValidateHeader validates header's consensus-agnostic properties, such as the block number, parent hash, time, block score, etc.
+// This method is used by the consensus engine to validate the header.
 func (v *BlockValidator) ValidateHeader(header *types.Header) error {
 	if header.Number == nil {
 		return errUnknownBlock
