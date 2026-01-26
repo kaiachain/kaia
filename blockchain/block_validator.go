@@ -31,13 +31,12 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/params"
 )
 
 const allowedFutureBlockTime = 1 * time.Second // Max time from current time allowed for blocks, before they're considered future blocks
-
-var defaultBlockScore = big.NewInt(1)
 
 var (
 	// errUnknownBlock is returned when the list of validators is requested for a block
@@ -88,12 +87,12 @@ func (v *BlockValidator) ValidateHeader(header *types.Header) error {
 	}
 
 	// Don't waste time checking blocks from the future
-	if header.Time.Cmp(big.NewInt(time.Now().Add(allowedFutureBlockTime).Unix())) > 0 {
+	if header.Time.Cmp(big.NewInt(istanbul.Now().Add(allowedFutureBlockTime).Unix())) > 0 {
 		return consensus.ErrFutureBlock
 	}
 
 	// Ensure that the block's blockscore is meaningful (may not be correct at this point)
-	if header.BlockScore == nil || header.BlockScore.Cmp(defaultBlockScore) != 0 {
+	if header.BlockScore == nil || header.BlockScore.Cmp(istanbul.DefaultBlockScore) != 0 {
 		return errInvalidBlockScore
 	}
 

@@ -107,9 +107,6 @@ var (
 )
 
 var (
-	defaultBlockScore = big.NewInt(1)
-	now               = time.Now
-
 	inmemoryBlocks             = 2048 // Number of blocks to precompute validators' addresses
 	inmemoryValidatorsPerBlock = 30   // Approximate number of validators' addresses from ecrecover
 	signatureAddresses, _      = lru.NewARC(inmemoryBlocks * inmemoryValidatorsPerBlock)
@@ -402,7 +399,7 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 	}
 
 	// ensure that the blockscore equals to defaultBlockScore
-	if header.BlockScore.Cmp(defaultBlockScore) != 0 {
+	if header.BlockScore.Cmp(istanbul.DefaultBlockScore) != 0 {
 		return errInvalidBlockScore
 	}
 	return sb.verifySigner(chain, header, nil)
@@ -421,7 +418,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	// unused fields, force to set to empty
 	header.Rewardbase = sb.rewardbase
 	// use the same blockscore for all blocks
-	header.BlockScore = defaultBlockScore
+	header.BlockScore = istanbul.DefaultBlockScore
 
 	if chain.Config().IsRandaoForkEnabled(header.Number) {
 		prevMixHash := headerMixHash(chain, parent)
@@ -593,7 +590,7 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 	}
 
 	// wait for the timestamp of header, use this to adjust the block period
-	delay := time.Unix(block.Header().Time.Int64(), 0).Sub(now())
+	delay := time.Unix(block.Header().Time.Int64(), 0).Sub(istanbul.Now())
 	select {
 	case <-time.After(delay):
 	case <-stop:
