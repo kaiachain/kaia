@@ -114,8 +114,6 @@ func TestHardForkBlock(t *testing.T) {
 	chain, err := blockchain.NewBlockChain(chainDb, nil, chainConfig, engine, vm.Config{})
 	require.NoError(t, err)
 
-	engine.SetChain(chain)
-
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
 	mValset := valset_impl.NewValsetModule()
