@@ -199,7 +199,7 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 		parent = append(parent, chain.GetHeader(header.ParentHash, header.Number.Uint64()-1))
 	}
 
-	return sb.verifyHeader(sb.chain, header, parent)
+	return sb.verifyHeader(chain, header, parent)
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules.The
@@ -211,7 +211,7 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return errUnknownBlock
 	}
 
-	if err := sb.chain.Validator().ValidateHeader(header, parents); err != nil {
+	if err := chain.Validator().ValidateHeader(header, parents); err != nil {
 		return err
 	}
 
