@@ -34,6 +34,8 @@ var (
 	// errUnknownBlock is returned when the list of validators is requested for a block
 	// that is not part of the local blockchain.
 	ErrUnknownBlock = errors.New("unknown block")
+	// errNoValidator is returned when the validator is not set.
+	ErrNoValidator = errors.New("no validator")
 	// errUnauthorized is returned if a header is signed by a non authorized entity.
 	ErrUnauthorized = errors.New("unauthorized")
 	// errInvalidBlockScore is returned if the BlockScore of a block is not 1

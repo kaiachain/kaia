@@ -161,6 +161,10 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 		return istanbul.ErrUnknownBlock
 	}
 
+	if chain.Validator() == nil {
+		return istanbul.ErrNoValidator
+	}
+
 	if err := chain.Validator().ValidateHeader(header, parents); err != nil {
 		return err
 	}
