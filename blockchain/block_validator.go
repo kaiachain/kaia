@@ -30,6 +30,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/params"
 )
@@ -39,18 +40,6 @@ const allowedFutureBlockTime = 1 * time.Second // Max time from current time all
 var defaultBlockScore = big.NewInt(1)
 
 var (
-	// ErrUnknownAncestor is returned when validating a block requires an ancestor
-	// that is unknown.
-	errUnknownAncestor = errors.New("unknown ancestor")
-
-	// ErrPrunedAncestor is returned when validating a block requires an ancestor
-	// that is known, but the state of which is not available.
-	errPrunedAncestor = errors.New("pruned ancestor")
-
-	// ErrFutureBlock is returned when a block's timestamp is in the future according
-	// to the current node.
-	errFutureBlock = errors.New("block in the future")
-
 	// errUnknownBlock is returned when the list of validators is requested for a block
 	// that is not part of the local blockchain.
 	errUnknownBlock = errors.New("unknown block")
@@ -98,7 +87,7 @@ func (v *BlockValidator) ValidateHeader(header *types.Header) error {
 
 	// Don't waste time checking blocks from the future
 	if header.Time.Cmp(big.NewInt(time.Now().Add(allowedFutureBlockTime).Unix())) > 0 {
-		return errFutureBlock
+		return consensus.ErrFutureBlock
 	}
 
 	// Ensure that the block's blockscore is meaningful (may not be correct at this point)
@@ -119,7 +108,7 @@ func (v *BlockValidator) ValidateHeader(header *types.Header) error {
 		parent = v.bc.GetHeader(header.ParentHash, number-1)
 	}
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
-		return errUnknownAncestor
+		return consensus.ErrUnknownAncestor
 	}
 
 	// Verify the existence / non-existence of osaka-specific header fields
@@ -156,9 +145,9 @@ func (v *BlockValidator) ValidateBody(block *types.Block) error {
 		if !v.bc.HasBlock(block.ParentHash(), block.NumberU64()-1) {
 			logger.Error("unknown ancestor (ValidateBody)", "num", block.NumberU64(),
 				"hash", block.Hash(), "parentHash", block.ParentHash())
-			return errUnknownAncestor
+			return consensus.ErrUnknownAncestor
 		}
-		return errPrunedAncestor
+		return consensus.ErrPrunedAncestor
 	}
 	// Header validity is known at this point, check the transactions
 	header := block.Header()

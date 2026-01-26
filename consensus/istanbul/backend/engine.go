@@ -198,7 +198,7 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 		return err
 	}
 
-	return sb.verifyHeader(chain, header)
+	return sb.verifyHeader(sb.chain, header)
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules.The
