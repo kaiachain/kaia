@@ -10,7 +10,7 @@ import (
 // done by the specific consensus engines.
 type Validator interface {
 	// ValidateHeader validates the given header.
-	ValidateHeader(header *types.Header) error
+	ValidateHeader(header *types.Header, parents []*types.Header) error
 
 	// ValidateBody validates the given block's content.
 	ValidateBody(block *types.Block) error

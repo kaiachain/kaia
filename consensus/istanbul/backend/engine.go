@@ -191,28 +191,28 @@ func (sb *backend) computeSignatureAddrs(header *types.Header) error {
 // given engine. Verifying the seal may be done optionally here, or explicitly
 // via the VerifySeal method.
 func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-	if err := sb.chain.Validator().ValidateHeader(header); err != nil {
-		return err
+	var parent []*types.Header
+	if header.Number.Sign() == 0 {
+		// If current block is genesis, the parent is also genesis
+		parent = append(parent, chain.GetHeaderByNumber(0))
+	} else {
+		parent = append(parent, chain.GetHeader(header.ParentHash, header.Number.Uint64()-1))
 	}
 
-	return sb.verifyHeader(sb.chain, header)
+	return sb.verifyHeader(sb.chain, header, parent)
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules.The
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
-func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header) error {
+func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return errUnknownBlock
 	}
 
-	var parents []*types.Header
-	if header.Number.Sign() == 0 {
-		// If current block is genesis, the parent is also genesis
-		parents = append(parents, chain.GetHeaderByNumber(0))
-	} else {
-		parents = append(parents, chain.GetHeader(header.ParentHash, header.Number.Uint64()-1))
+	if err := sb.chain.Validator().ValidateHeader(header, parents); err != nil {
+		return err
 	}
 
 	// Header verify before/after magma fork
@@ -289,12 +289,12 @@ func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.H
 	results := make(chan error, len(headers))
 	go func() {
 		errored := false
-		for _, header := range headers {
+		for i, header := range headers {
 			var err error
 			if errored { // If errored once in the batch, skip the rest
 				err = consensus.ErrUnknownAncestor
 			} else {
-				err = sb.VerifyHeader(chain, header, false)
+				err = sb.verifyHeader(chain, header, headers[:i])
 			}
 
 			if err != nil {
