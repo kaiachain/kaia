@@ -23,6 +23,8 @@
 package core
 
 import (
+	"time"
+
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 )
@@ -70,16 +72,13 @@ func (c *core) broadcastCommit(sub *istanbul.Subject) {
 }
 
 func (c *core) handleCommit(msg *message, src common.Address) error {
+	timestamp := time.Now()
 	// Decode COMMIT message
 	var commit *istanbul.Subject
 	err := msg.Decode(&commit)
 	if err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
 		return errInvalidMessage
-	}
-
-	if Vrank != nil {
-		Vrank.AddCommit(commit, src)
 	}
 
 	// logger.Error("receive handle commit","num", commit.View.Sequence)
@@ -99,6 +98,7 @@ func (c *core) handleCommit(msg *message, src common.Address) error {
 	}
 
 	c.acceptCommit(msg, src)
+	Vrank.AddCommit(src, commit.View.Round.Uint64(), timestamp)
 
 	// Change to Prepared state if we've received enough PREPARE/COMMIT messages or it is locked
 	// and we are in earlier state before Prepared state.
