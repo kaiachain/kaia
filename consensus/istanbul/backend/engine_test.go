@@ -530,7 +530,7 @@ func TestVerifyHeader(t *testing.T) {
 					block, _ = engine.updateBlock(block)
 					return block.Header()
 				}(),
-				expectedErr: errEmptyCommittedSeals,
+				expectedErr: istanbul.ErrEmptyCommittedSeals,
 				targetFork:  "kore",
 			},
 			{
@@ -542,7 +542,7 @@ func TestVerifyHeader(t *testing.T) {
 					header.Extra = []byte{}
 					return header
 				}(),
-				expectedErr: errInvalidExtraDataFormat,
+				expectedErr: istanbul.ErrInvalidExtraDataFormat,
 				targetFork:  "kore",
 			},
 			{
@@ -554,7 +554,7 @@ func TestVerifyHeader(t *testing.T) {
 					header.Extra = []byte("0000000000000000000000000000000012300000000000000000000000000000000000000000000000000000000000000000")
 					return header
 				}(),
-				expectedErr: errInvalidExtraDataFormat,
+				expectedErr: istanbul.ErrInvalidExtraDataFormat,
 				targetFork:  "kore",
 			},
 			{
@@ -565,7 +565,7 @@ func TestVerifyHeader(t *testing.T) {
 					header.BlockScore = big.NewInt(2)
 					return header
 				}(),
-				expectedErr: errInvalidBlockScore,
+				expectedErr: istanbul.ErrInvalidBlockScore,
 				targetFork:  "kore",
 			},
 			{
@@ -576,7 +576,7 @@ func TestVerifyHeader(t *testing.T) {
 					header.Time = new(big.Int).Add(chain.Genesis().Time(), new(big.Int).SetUint64(engine.config.BlockPeriod-1))
 					return header
 				}(),
-				expectedErr: errInvalidTimestamp,
+				expectedErr: istanbul.ErrInvalidTimestamp,
 				targetFork:  "kore",
 			},
 			{
@@ -599,7 +599,7 @@ func TestVerifyHeader(t *testing.T) {
 					}))
 					return block.Header()
 				}(),
-				expectedErr: errUnexpectedExcessBlobGasBeforeOsaka,
+				expectedErr: istanbul.ErrUnexpectedExcessBlobGasBeforeOsaka,
 				targetFork:  "kore",
 			},
 			{
@@ -611,7 +611,7 @@ func TestVerifyHeader(t *testing.T) {
 					}))
 					return block.Header()
 				}(),
-				expectedErr: errUnexpectedBlobGasUsedBeforeOsaka,
+				expectedErr: istanbul.ErrUnexpectedBlobGasUsedBeforeOsaka,
 				targetFork:  "kore",
 			},
 			{
@@ -659,8 +659,8 @@ func TestVerifySeal(t *testing.T) {
 
 	// cannot verify genesis
 	err := engine.VerifySeal(chain, genesis.Header())
-	if err != errUnknownBlock {
-		t.Errorf("error mismatch: have %v, want %v", err, errUnknownBlock)
+	if err != istanbul.ErrUnknownBlock {
+		t.Errorf("error mismatch: have %v, want %v", err, istanbul.ErrUnknownBlock)
 	}
 	block := makeBlock(chain, engine, genesis)
 
@@ -672,8 +672,8 @@ func TestVerifySeal(t *testing.T) {
 	header.Number = big.NewInt(4)
 	block1 := block.WithSeal(header)
 	err = engine.VerifySeal(chain, block1.Header())
-	if err != errUnauthorized {
-		t.Errorf("error mismatch: have %v, want %v", err, errUnauthorized)
+	if err != istanbul.ErrUnauthorized {
+		t.Errorf("error mismatch: have %v, want %v", err, istanbul.ErrUnauthorized)
 	}
 
 	// clean cache before testing
@@ -743,7 +743,7 @@ func TestVerifyHeaders(t *testing.T) {
 				if err != nil {
 					errorCount++
 					// These errors are expected in the test setup
-					if err != errEmptyCommittedSeals && err != errInvalidCommittedSeals && err != consensus.ErrUnknownAncestor {
+					if err != istanbul.ErrEmptyCommittedSeals && err != istanbul.ErrInvalidCommittedSeals && err != consensus.ErrUnknownAncestor {
 						if !expectErrors {
 							t.Errorf("unexpected error: %v", err)
 						}
@@ -852,8 +852,8 @@ func TestWriteSeal(t *testing.T) {
 	// invalid seal
 	unexpectedSeal := append(expectedSeal, make([]byte, 1)...)
 	err = writeSeal(h, unexpectedSeal)
-	if err != errInvalidSignature {
-		t.Errorf("error mismatch: have %v, want %v", err, errInvalidSignature)
+	if err != istanbul.ErrInvalidSignature {
+		t.Errorf("error mismatch: have %v, want %v", err, istanbul.ErrInvalidSignature)
 	}
 }
 
@@ -895,8 +895,8 @@ func TestWriteCommittedSeals(t *testing.T) {
 	// invalid seal
 	unexpectedCommittedSeal := append(expectedCommittedSeal, make([]byte, 1)...)
 	err = writeCommittedSeals(h, [][]byte{unexpectedCommittedSeal})
-	if err != errInvalidCommittedSeals {
-		t.Errorf("error mismatch: have %v, want %v", err, errInvalidCommittedSeals)
+	if err != istanbul.ErrInvalidCommittedSeals {
+		t.Errorf("error mismatch: have %v, want %v", err, istanbul.ErrInvalidCommittedSeals)
 	}
 }
 

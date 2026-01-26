@@ -26,7 +26,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -34,23 +33,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/params"
-)
-
-const allowedFutureBlockTime = 1 * time.Second // Max time from current time allowed for blocks, before they're considered future blocks
-
-var (
-	// errUnknownBlock is returned when the list of validators is requested for a block
-	// that is not part of the local blockchain.
-	errUnknownBlock = errors.New("unknown block")
-
-	// errInvalidBlockScore is returned if the BlockScore of a block is not 1
-	errInvalidBlockScore = errors.New("invalid blockscore")
-
-	// errUnexpectedExcessBlobGasBeforeOsaka is returned if the excessBlobGas is present before the osaka fork.
-	errUnexpectedExcessBlobGasBeforeOsaka = errors.New("unexpected excessBlobGas before osaka")
-
-	// errUnexpectedBlobGasUsedBeforeOsaka is returned if the blobGasUsed is present before the osaka fork.
-	errUnexpectedBlobGasUsedBeforeOsaka = errors.New("unexpected blobGasUsed before osaka")
 )
 
 // BlockValidator is responsible for validating block headers and
@@ -75,17 +57,17 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain) *Bloc
 // This method is used by the consensus engine to validate the header.
 func (v *BlockValidator) ValidateHeader(header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
-		return errUnknownBlock
+		return istanbul.ErrUnknownBlock
 	}
 
 	// Don't waste time checking blocks from the future
-	if header.Time.Cmp(big.NewInt(istanbul.Now().Add(allowedFutureBlockTime).Unix())) > 0 {
+	if header.Time.Cmp(big.NewInt(istanbul.Now().Add(istanbul.AllowedFutureBlockTime).Unix())) > 0 {
 		return consensus.ErrFutureBlock
 	}
 
 	// Ensure that the block's blockscore is meaningful (may not be correct at this point)
 	if header.BlockScore == nil || header.BlockScore.Cmp(istanbul.DefaultBlockScore) != 0 {
-		return errInvalidBlockScore
+		return istanbul.ErrInvalidBlockScore
 	}
 
 	// The genesis block is the always valid dead-end
@@ -109,9 +91,9 @@ func (v *BlockValidator) ValidateHeader(header *types.Header, parents []*types.H
 	if !osaka {
 		switch {
 		case header.ExcessBlobGas != nil:
-			return errUnexpectedExcessBlobGasBeforeOsaka
+			return istanbul.ErrUnexpectedExcessBlobGasBeforeOsaka
 		case header.BlobGasUsed != nil:
-			return errUnexpectedBlobGasUsedBeforeOsaka
+			return istanbul.ErrUnexpectedBlobGasUsedBeforeOsaka
 		}
 	} else {
 		if err := eip4844.VerifyEIP4844Header(v.config, parent, header); err != nil {

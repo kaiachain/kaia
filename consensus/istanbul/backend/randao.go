@@ -23,6 +23,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/params"
@@ -32,11 +33,11 @@ import (
 // https://github.com/klaytn/kips/blob/kip114/KIPs/kip-114.md
 func (sb *backend) CalcRandao(number *big.Int, prevMixHash []byte) ([]byte, []byte, error) {
 	if sb.blsSecretKey == nil {
-		return nil, nil, errNoBlsKey
+		return nil, nil, istanbul.ErrNoBlsKey
 	}
 	if len(prevMixHash) != 32 {
 		logger.Error("invalid prevMixHash", "number", number.Uint64(), "prevMixHash", hexutil.Encode(prevMixHash))
-		return nil, nil, errInvalidRandaoFields
+		return nil, nil, istanbul.ErrInvalidRandaoFields
 	}
 
 	// block_num_to_bytes() = num.to_bytes(32, byteorder="big")
@@ -75,13 +76,13 @@ func (sb *backend) VerifyRandao(chain consensus.ChainReader, header *types.Heade
 	if err != nil {
 		return err
 	} else if !ok {
-		return errInvalidRandaoFields
+		return istanbul.ErrInvalidRandaoFields
 	}
 
 	// if not newHeader.mixHash == calc_mix_hash(prevMixHash, newHeader.randomReveal): return False
 	mixHash := calcMixHash(header.RandomReveal, prevMixHash)
 	if !bytes.Equal(header.MixHash, mixHash) {
-		return errInvalidRandaoFields
+		return istanbul.ErrInvalidRandaoFields
 	}
 
 	return nil

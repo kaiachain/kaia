@@ -69,7 +69,7 @@ func (api *API) GetDemotedValidators(number *rpc.BlockNumber) ([]common.Address,
 func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
 	header := api.chain.GetHeaderByHash(hash)
 	if header == nil {
-		return nil, errUnknownBlock
+		return nil, istanbul.ErrUnknownBlock
 	}
 	rpcBlockNumber := rpc.BlockNumber(header.Number.Uint64())
 	return api.GetValidators(&rpcBlockNumber)
@@ -79,7 +79,7 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 func (api *API) GetDemotedValidatorsAtHash(hash common.Hash) ([]common.Address, error) {
 	header := api.chain.GetHeaderByHash(hash)
 	if header == nil {
-		return nil, errUnknownBlock
+		return nil, istanbul.ErrUnknownBlock
 	}
 	rpcBlockNumber := rpc.BlockNumber(header.Number.Uint64())
 	return api.GetDemotedValidators(&rpcBlockNumber)
@@ -143,9 +143,9 @@ func resolveRpcNumber(chain consensus.ChainReader, number *rpc.BlockNumber, allo
 	}
 
 	if num > headNum+1 { // May allow up to head + 1 to query the pending block.
-		return 0, errUnknownBlock
+		return 0, istanbul.ErrUnknownBlock
 	} else if num == headNum+1 && !allowPending {
-		return 0, errPendingNotAllowed
+		return 0, istanbul.ErrPendingNotAllowed
 	} else {
 		return num, nil
 	}

@@ -33,6 +33,8 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
+const AllowedFutureBlockTime = 1 * time.Second // Max time from current time allowed for blocks, before they're considered future blocks
+
 var (
 	DefaultBlockScore = big.NewInt(1)
 	Now               = time.Now

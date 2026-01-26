@@ -280,7 +280,7 @@ func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		sb.logger.Error("Invalid proposal, %v", proposal)
-		return errInvalidProposal
+		return istanbul.ErrInvalidProposal
 	}
 	h := block.Header()
 	round := sb.currentView.Load().(*istanbul.View).Round.Int64()
@@ -323,7 +323,7 @@ func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		sb.logger.Error("Invalid proposal, %v", proposal)
-		return 0, errInvalidProposal
+		return 0, istanbul.ErrInvalidProposal
 	}
 
 	// check bad block
@@ -334,18 +334,18 @@ func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
 	// check block body
 	txnHash := types.DeriveTransactionsRoot(block.Transactions(), block.Number())
 	if txnHash != block.Header().TxHash {
-		return 0, errMismatchTxhashes
+		return 0, istanbul.ErrMismatchTxhashes
 	}
 	for _, tx := range block.Transactions() {
 		if tx.Type() == types.TxTypeEthereumBlob {
 			sidecar := tx.BlobTxSidecar()
 			if sidecar == nil {
 				sb.logger.Error("No blob sidecar for blob transaction", "txHash", tx.Hash())
-				return 0, errNoBlobSidecarForBlobTx
+				return 0, istanbul.ErrNoBlobSidecarForBlobTx
 			}
 			if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
 				sb.logger.Error("Invalid blob transaction with sidecar", "txHash", tx.Hash(), "err", err)
-				return 0, errInvalidBlobTxWithSidecar
+				return 0, istanbul.ErrInvalidBlobTxWithSidecar
 			}
 		}
 	}
@@ -353,7 +353,7 @@ func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
 	// verify the header of proposed block
 	err := sb.VerifyHeader(sb.chain, block.Header(), false)
 	// ignore errEmptyCommittedSeals error because we don't have the committed seals yet
-	if err == nil || err == errEmptyCommittedSeals {
+	if err == nil || err == istanbul.ErrEmptyCommittedSeals {
 		return 0, nil
 	} else if err == consensus.ErrFutureBlock {
 		return time.Unix(block.Header().Time.Int64(), 0).Sub(istanbul.Now()), consensus.ErrFutureBlock
@@ -376,7 +376,7 @@ func (sb *backend) CheckSignature(data []byte, address common.Address, sig []byt
 	}
 	// Compare derived addresses
 	if signer != address {
-		return errInvalidSignature
+		return istanbul.ErrInvalidSignature
 	}
 	return nil
 }
@@ -427,7 +427,7 @@ func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
 func (sb *backend) GetCommitteeState(num uint64) (*istanbul.RoundCommitteeState, error) {
 	header := sb.chain.GetHeaderByNumber(num)
 	if header == nil {
-		return nil, errUnknownBlock
+		return nil, istanbul.ErrUnknownBlock
 	}
 
 	return sb.GetCommitteeStateByRound(num, uint64(header.Round()))
