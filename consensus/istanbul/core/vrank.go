@@ -215,34 +215,28 @@ func (m *msgArrivalTimes) buildLogData(sortedCommittee []common.Address) (prepre
 		preprepareArrivalTime = encodeDuration(m.preprepareArrivalTime)
 	}
 
-	// commitArrivalTimes: one per validator
+	// commitArrivalTimes, roundChangeArrivalTimes: one per validator
 	commitArrivalTimes = make([]string, len(sortedCommittee))
+	roundChangeArrivalTimes = make([]string, len(sortedCommittee))
 	for i, addr := range sortedCommittee {
+		commitArrivalTimes[i] = "-"
 		if val, ok := m.commitArrivalTimeMap.Load(addr); ok {
 			if t := val.(time.Duration); t != time.Duration(0) {
 				commitArrivalTimes[i] = encodeDuration(t)
-				continue
 			}
 		}
-		commitArrivalTimes[i] = "-"
+		roundChangeArrivalTimes[i] = "-"
+		if val, ok := m.roundChangeArrivalTimeMap.Load(addr); ok {
+			if t := val.(time.Duration); t != time.Duration(0) {
+				roundChangeArrivalTimes[i] = encodeDuration(t)
+			}
+		}
 	}
 
 	// myRoundChangeTime
 	myRoundChangeTime = "-"
 	if m.myRoundChangeTime != time.Duration(0) {
 		myRoundChangeTime = encodeDuration(m.myRoundChangeTime)
-	}
-
-	// roundChangeArrivalTimes: one per validator
-	roundChangeArrivalTimes = make([]string, len(sortedCommittee))
-	for i, addr := range sortedCommittee {
-		if val, ok := m.roundChangeArrivalTimeMap.Load(addr); ok {
-			if t := val.(time.Duration); t != time.Duration(0) {
-				roundChangeArrivalTimes[i] = encodeDuration(t)
-				continue
-			}
-		}
-		roundChangeArrivalTimes[i] = "-"
 	}
 
 	return preprepareArrivalTime, commitArrivalTimes, myRoundChangeTime, roundChangeArrivalTimes
