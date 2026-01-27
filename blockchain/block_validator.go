@@ -30,7 +30,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/params"
 )
@@ -57,17 +56,17 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain) *Bloc
 // This method is used by the consensus engine to validate the header.
 func (v *BlockValidator) ValidateHeader(header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
-		return istanbul.ErrUnknownBlock
+		return consensus.ErrUnknownBlock
 	}
 
 	// Don't waste time checking blocks from the future
-	if header.Time.Cmp(big.NewInt(istanbul.Now().Add(istanbul.AllowedFutureBlockTime).Unix())) > 0 {
+	if header.Time.Cmp(big.NewInt(consensus.Now().Add(consensus.AllowedFutureBlockTime).Unix())) > 0 {
 		return consensus.ErrFutureBlock
 	}
 
 	// Ensure that the block's blockscore is meaningful (may not be correct at this point)
-	if header.BlockScore == nil || header.BlockScore.Cmp(istanbul.DefaultBlockScore) != 0 {
-		return istanbul.ErrInvalidBlockScore
+	if header.BlockScore == nil || header.BlockScore.Cmp(consensus.DefaultBlockScore) != 0 {
+		return consensus.ErrInvalidBlockScore
 	}
 
 	// The genesis block is the always valid dead-end
@@ -91,9 +90,9 @@ func (v *BlockValidator) ValidateHeader(header *types.Header, parents []*types.H
 	if !osaka {
 		switch {
 		case header.ExcessBlobGas != nil:
-			return istanbul.ErrUnexpectedExcessBlobGasBeforeOsaka
+			return consensus.ErrUnexpectedExcessBlobGasBeforeOsaka
 		case header.BlobGasUsed != nil:
-			return istanbul.ErrUnexpectedBlobGasUsedBeforeOsaka
+			return consensus.ErrUnexpectedBlobGasUsedBeforeOsaka
 		}
 	} else {
 		if err := eip4844.VerifyEIP4844Header(v.config, parent, header); err != nil {
