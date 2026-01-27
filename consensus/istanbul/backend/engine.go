@@ -158,7 +158,7 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 // a batch of new headers.
 func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
-		return istanbul.ErrUnknownBlock
+		return consensus.ErrUnknownBlock
 	}
 
 	if chain.Validator() == nil {
@@ -270,7 +270,7 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 	// Verifying the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
-		return istanbul.ErrUnknownBlock
+		return consensus.ErrUnknownBlock
 	}
 
 	// Retrieve the snapshot needed to verify this header and cache it
@@ -349,12 +349,12 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 	// get parent header and ensure the signer is in parent's validator set
 	number := header.Number.Uint64()
 	if number == 0 {
-		return istanbul.ErrUnknownBlock
+		return consensus.ErrUnknownBlock
 	}
 
 	// ensure that the blockscore equals to defaultBlockScore
 	if header.BlockScore.Cmp(istanbul.DefaultBlockScore) != 0 {
-		return istanbul.ErrInvalidBlockScore
+		return consensus.ErrInvalidBlockScore
 	}
 	return sb.verifySigner(chain, header, nil)
 }

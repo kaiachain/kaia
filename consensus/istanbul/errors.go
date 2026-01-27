@@ -31,15 +31,10 @@ var (
 	// errInvalidSignature is returned when given signature is not signed by given
 	// address.
 	ErrInvalidSignature = errors.New("invalid signature")
-	// errUnknownBlock is returned when the list of validators is requested for a block
-	// that is not part of the local blockchain.
-	ErrUnknownBlock = errors.New("unknown block")
 	// errNoValidator is returned when the validator is not set.
 	ErrNoValidator = errors.New("no validator")
 	// errUnauthorized is returned if a header is signed by a non authorized entity.
 	ErrUnauthorized = errors.New("unauthorized")
-	// errInvalidBlockScore is returned if the BlockScore of a block is not 1
-	ErrInvalidBlockScore = errors.New("invalid blockscore")
 	// errInvalidExtraDataFormat is returned when the extra data format is incorrect
 	ErrInvalidExtraDataFormat = errors.New("invalid extra data format")
 	// errInvalidTimestamp is returned if the timestamp of a block is lower than the previous block's timestamp + the minimum block period.
@@ -69,8 +64,4 @@ var (
 	ErrNoBlobSidecarForBlobTx = errors.New("no blob sidecar for blob transaction")
 	// errInvalidBlobTxWithSidecar is returned if the blob transaction has an invalid sidecar.
 	ErrInvalidBlobTxWithSidecar = errors.New("invalid blob transaction with sidecar")
-	// errUnexpectedExcessBlobGasBeforeOsaka is returned if the excessBlobGas is present before the osaka fork.
-	ErrUnexpectedExcessBlobGasBeforeOsaka = errors.New("unexpected excessBlobGas before osaka")
-	// errUnexpectedBlobGasUsedBeforeOsaka is returned if the blobGasUsed is present before the osaka fork.
-	ErrUnexpectedBlobGasUsedBeforeOsaka = errors.New("unexpected blobGasUsed before osaka")
 )

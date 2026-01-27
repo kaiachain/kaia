@@ -565,7 +565,7 @@ func TestVerifyHeader(t *testing.T) {
 					header.BlockScore = big.NewInt(2)
 					return header
 				}(),
-				expectedErr: istanbul.ErrInvalidBlockScore,
+				expectedErr: consensus.ErrInvalidBlockScore,
 				targetFork:  "kore",
 			},
 			{
@@ -599,7 +599,7 @@ func TestVerifyHeader(t *testing.T) {
 					}))
 					return block.Header()
 				}(),
-				expectedErr: istanbul.ErrUnexpectedExcessBlobGasBeforeOsaka,
+				expectedErr: consensus.ErrUnexpectedExcessBlobGasBeforeOsaka,
 				targetFork:  "kore",
 			},
 			{
@@ -611,7 +611,7 @@ func TestVerifyHeader(t *testing.T) {
 					}))
 					return block.Header()
 				}(),
-				expectedErr: istanbul.ErrUnexpectedBlobGasUsedBeforeOsaka,
+				expectedErr: consensus.ErrUnexpectedBlobGasUsedBeforeOsaka,
 				targetFork:  "kore",
 			},
 			{
@@ -659,8 +659,8 @@ func TestVerifySeal(t *testing.T) {
 
 	// cannot verify genesis
 	err := engine.VerifySeal(chain, genesis.Header())
-	if err != istanbul.ErrUnknownBlock {
-		t.Errorf("error mismatch: have %v, want %v", err, istanbul.ErrUnknownBlock)
+	if err != consensus.ErrUnknownBlock {
+		t.Errorf("error mismatch: have %v, want %v", err, consensus.ErrUnknownBlock)
 	}
 	block := makeBlock(chain, engine, genesis)
 

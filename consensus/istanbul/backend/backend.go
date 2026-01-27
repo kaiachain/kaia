@@ -427,7 +427,7 @@ func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
 func (sb *backend) GetCommitteeState(num uint64) (*istanbul.RoundCommitteeState, error) {
 	header := sb.chain.GetHeaderByNumber(num)
 	if header == nil {
-		return nil, istanbul.ErrUnknownBlock
+		return nil, consensus.ErrUnknownBlock
 	}
 
 	return sb.GetCommitteeStateByRound(num, uint64(header.Round()))
