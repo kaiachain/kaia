@@ -42,6 +42,9 @@ var (
 
 	// consoleLog is a precompiled contract used for debugging purposes.
 	consoleLogContractAddress = common.HexToAddress("0x000000000000000000636F6E736F6C652E6C6F67")
+
+	// blobBaseFee is the base fee for blob transactions.
+	blobBaseFee *big.Int
 )
 
 const (
@@ -116,6 +119,7 @@ type BlockContext struct {
 	Time        *big.Int       // Provides information for TIME
 	BlockScore  *big.Int       // Provides information for DIFFICULTY
 	BaseFee     *big.Int       // Provides information for BASEFEE
+	BlobBaseFee *big.Int       // Provides information for BLOBBASEFEE
 	Random      common.Hash    // Provides information for RANDOM
 }
 
@@ -123,8 +127,9 @@ type BlockContext struct {
 // All fields can change between transactions.
 type TxContext struct {
 	// Message information
-	Origin   common.Address // Provides information for ORIGIN
-	GasPrice *big.Int       // Provides information for GASPRICE
+	Origin     common.Address // Provides information for ORIGIN (0x32)
+	GasPrice   *big.Int       // Provides information for GASPRICE (0x3a)
+	BlobHashes []common.Hash  // Provides information for BLOBHASH (0x49)
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
@@ -516,6 +521,10 @@ func (evm *EVM) create(caller types.ContractRef, codeAndHash *codeAndHash, gas u
 	if !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, common.Address{}, gas, ErrInsufficientBalance // TODO-Klaytn-Issue615
 	}
+	nonce := evm.StateDB.GetNonce(caller.Address())
+	if nonce+1 < nonce {
+		return nil, common.Address{}, gas, ErrNonceUintOverflow
+	}
 
 	// Increasing nonce since a failed tx with one of following error will be loaded on a block.
 	evm.StateDB.IncNonce(caller.Address())
@@ -672,6 +681,8 @@ func (evm *EVM) getPrecompiledContractForVersion(addr common.Address) map[common
 	}
 
 	switch {
+	case evm.chainRules.IsOsaka:
+		return PrecompiledContractsOsaka
 	case evm.chainRules.IsPrague:
 		return PrecompiledContractsPrague
 	case evm.chainRules.IsCancun:

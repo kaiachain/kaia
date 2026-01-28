@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
 	consensusmocks "github.com/kaiachain/kaia/consensus/mocks"
@@ -67,6 +68,7 @@ var (
 
 var (
 	tx1 *types.Transaction
+	tx2 *types.Transaction
 	txs types.Transactions
 )
 
@@ -91,9 +93,12 @@ func init() {
 
 	signer := types.MakeSigner(params.TestChainConfig, big.NewInt(2019))
 	tx1 = types.NewTransaction(111, addrs[0], big.NewInt(111), 111, big.NewInt(111), addrs[0][:])
+	tx2 = types.NewTransaction(222, addrs[1], big.NewInt(222), 222, big.NewInt(222), addrs[1][:])
 
 	tx1.Sign(signer, keys[0])
 	tx1.Size()
+	tx2.Sign(signer, keys[1])
+	tx2.Size()
 	txs = types.Transactions{tx1}
 
 	hash1 = tx1.Hash()
@@ -1441,4 +1446,305 @@ func TestGetBlockHeaders(t *testing.T) {
 			}
 		}
 	}
+}
+
+// Helper functions for sidecarReqManager tests
+
+func newTestSidecarReqManager(cooldown time.Duration, maxTry int) *sidecarReqManager {
+	return &sidecarReqManager{
+		list:     make(map[common.Hash]*sidecarReq),
+		cooldown: cooldown,
+		maxTry:   maxTry,
+	}
+}
+
+func newTestBlobSidecarsRequestData(txHash common.Hash, blockNum uint64, txIndex uint) blobSidecarsRequestData {
+	return blobSidecarsRequestData{
+		BlockNum: hexutil.Uint64(blockNum),
+		TxIndex:  hexutil.Uint(txIndex),
+		Hash:     txHash,
+	}
+}
+
+// TestSidecarReqManager_Add tests the add method
+func TestSidecarReqManager_Add(t *testing.T) {
+	cooldown := 10 * time.Second
+	maxTry := 5
+	m := newTestSidecarReqManager(cooldown, maxTry)
+
+	txHash1 := tx1.Hash()
+	txHash2 := tx2.Hash()
+	request1 := newTestBlobSidecarsRequestData(txHash1, 100, 0)
+	request2 := newTestBlobSidecarsRequestData(txHash2, 200, 1)
+
+	// Test adding a single request
+	beforeTime := time.Now()
+	m.add(txHash1, request1)
+
+	req := m.get(txHash1)
+	assert.NotNil(t, req, "Request should be added")
+	assert.Equal(t, "", req.peer, "Peer should be empty string")
+	assert.Equal(t, 0, req.try, "Try should be 0")
+	assert.Equal(t, request1, req.request, "Request data should match")
+	// Check that time is approximately cooldown ago
+	expectedTime := beforeTime.Add(-cooldown)
+	assert.True(t, req.time.After(expectedTime.Add(-100*time.Millisecond)) && req.time.Before(expectedTime.Add(100*time.Millisecond)),
+		"Time should be approximately cooldown ago")
+
+	// Test adding multiple requests
+	m.add(txHash2, request2)
+	req2 := m.get(txHash2)
+	assert.NotNil(t, req2, "Second request should be added")
+	assert.Equal(t, request2, req2.request, "Second request data should match")
+
+	// Verify both requests exist
+	assert.Equal(t, 2, len(m.list), "Should have 2 requests in the list")
+}
+
+// TestSidecarReqManager_Get tests the get method
+func TestSidecarReqManager_Get(t *testing.T) {
+	cooldown := 10 * time.Second
+	maxTry := 5
+	m := newTestSidecarReqManager(cooldown, maxTry)
+
+	txHash1 := tx1.Hash()
+	txHash2 := tx2.Hash()
+	request1 := newTestBlobSidecarsRequestData(txHash1, 100, 0)
+
+	// Test getting non-existent request
+	req := m.get(txHash1)
+	assert.Nil(t, req, "Should return nil for non-existent request")
+
+	// Test getting existing request
+	m.add(txHash1, request1)
+	req = m.get(txHash1)
+	assert.NotNil(t, req, "Should return request after adding")
+	assert.Equal(t, request1, req.request, "Request data should match")
+
+	// Test getting different hash
+	req2 := m.get(txHash2)
+	assert.Nil(t, req2, "Should return nil for different hash")
+}
+
+// TestSidecarReqManager_Update tests the update method
+func TestSidecarReqManager_Update(t *testing.T) {
+	cooldown := 10 * time.Second
+	maxTry := 5
+	m := newTestSidecarReqManager(cooldown, maxTry)
+
+	txHash := tx1.Hash()
+	request := newTestBlobSidecarsRequestData(txHash, 100, 0)
+	peerID := "test-peer-1"
+
+	// Add a request first
+	m.add(txHash, request)
+
+	// Test updating the request
+	beforeUpdate := time.Now()
+	m.update(txHash, peerID)
+	afterUpdate := time.Now()
+
+	req := m.get(txHash)
+	assert.NotNil(t, req, "Request should still exist after update")
+	assert.Equal(t, peerID, req.peer, "Peer should be updated")
+	assert.Equal(t, 1, req.try, "Try count should be incremented")
+	assert.Equal(t, request, req.request, "Request data should remain unchanged")
+	assert.True(t, req.time.After(beforeUpdate) && req.time.Before(afterUpdate.Add(100*time.Millisecond)),
+		"Time should be updated to current time")
+
+	// Test multiple updates
+	m.update(txHash, "test-peer-2")
+	req = m.get(txHash)
+	assert.Equal(t, "test-peer-2", req.peer, "Peer should be updated again")
+	assert.Equal(t, 2, req.try, "Try count should be incremented again")
+
+	// Test update that reaches maxTry boundary
+	// Current try is 2, maxTry is 5
+	// Update until we're just before maxTry
+	for i := 2; i < maxTry-1; i++ {
+		m.update(txHash, "test-peer")
+		req = m.get(txHash)
+		assert.NotNil(t, req, "Request should still exist")
+		assert.Equal(t, i+1, req.try, "Try count should increment")
+	}
+	// Verify we're at try=4 (maxTry-1)
+	req = m.get(txHash)
+	assert.NotNil(t, req, "Request should still exist at try=4")
+	assert.Equal(t, maxTry-1, req.try, "Try should be maxTry-1")
+
+	// Test update that reaches maxTry (should delete)
+	m.update(txHash, "test-peer-final")
+	req = m.get(txHash)
+	assert.Nil(t, req, "Request should be deleted when try >= maxTry")
+}
+
+// TestSidecarReqManager_Delete tests the delete method
+func TestSidecarReqManager_Delete(t *testing.T) {
+	cooldown := 10 * time.Second
+	maxTry := 5
+	m := newTestSidecarReqManager(cooldown, maxTry)
+
+	txHash1 := tx1.Hash()
+	txHash2 := tx2.Hash()
+	request1 := newTestBlobSidecarsRequestData(txHash1, 100, 0)
+	request2 := newTestBlobSidecarsRequestData(txHash2, 200, 1)
+
+	// Add requests
+	m.add(txHash1, request1)
+	m.add(txHash2, request2)
+
+	// Test deleting existing request
+	m.delete(txHash1)
+	req := m.get(txHash1)
+	assert.Nil(t, req, "Request should be deleted")
+
+	// Verify other request still exists
+	req2 := m.get(txHash2)
+	assert.NotNil(t, req2, "Other request should still exist")
+
+	// Test deleting non-existent request (should not panic)
+	m.delete(common.Hash{})
+	assert.Equal(t, 1, len(m.list), "Should still have one request")
+}
+
+// TestSidecarReqManager_Search tests the search method
+func TestSidecarReqManager_Search(t *testing.T) {
+	cooldown := 100 * time.Millisecond
+	maxTry := 5
+	m := newTestSidecarReqManager(cooldown, maxTry)
+
+	// Test empty list
+	req := m.search()
+	assert.Nil(t, req, "Should return nil for empty list")
+
+	txHash1 := tx1.Hash()
+	txHash2 := tx2.Hash()
+	txHash3 := common.BytesToHash([]byte("test-hash-3"))
+	request1 := newTestBlobSidecarsRequestData(txHash1, 100, 0)
+	request2 := newTestBlobSidecarsRequestData(txHash2, 200, 1)
+	request3 := newTestBlobSidecarsRequestData(txHash3, 300, 2)
+
+	// Test with try == 0 request (should be returned immediately)
+	m.add(txHash1, request1)
+	req = m.search()
+	assert.NotNil(t, req, "Should return request with try == 0")
+	assert.Equal(t, txHash1, req.request.Hash, "Should return the first request with try == 0")
+
+	// Add another request with try == 0
+	m.add(txHash2, request2)
+	req = m.search()
+	assert.NotNil(t, req, "Should return a request with try == 0")
+	assert.True(t, req.request.Hash == txHash1,
+		"Should return one of the requests with try == 0")
+
+	// Update one request so it has try > 0 but not expired
+	m.update(txHash1, "peer-1")
+	time.Sleep(10 * time.Millisecond) // Small delay to ensure time difference
+	req = m.search()
+	assert.NotNil(t, req, "Should return request with try == 0")
+	assert.Equal(t, txHash2, req.request.Hash, "Should return the request with try == 0")
+
+	// Wait for cooldown and test expired request
+	m.update(txHash1, "peer-2")
+	time.Sleep(cooldown + 50*time.Millisecond) // Wait for cooldown
+	req = m.search()
+	assert.NotNil(t, req, "Should return expired request")
+	assert.True(t, req.request.Hash == txHash2, "Should return one of the expired requests")
+
+	{
+		// Test with all requests having try > 0 and not expired
+		m = newTestSidecarReqManager(cooldown, maxTry)
+		m.add(txHash1, request1)
+		m.update(txHash1, "peer-1")
+		time.Sleep(10 * time.Millisecond) // Small delay but not enough for cooldown
+		req = m.search()
+		assert.Nil(t, req, "Should return nil when no valid requests exist")
+	}
+
+	{
+		// Test sorting by time (ascending order)
+		m = newTestSidecarReqManager(cooldown, maxTry)
+		m.add(txHash1, request1)
+		time.Sleep(10 * time.Millisecond)
+		m.add(txHash2, request2)
+		time.Sleep(10 * time.Millisecond)
+		m.add(txHash3, request3)
+		// All have try == 0, so should return the oldest (first added)
+		req = m.search()
+		assert.NotNil(t, req, "Should return a request")
+		assert.Equal(t, txHash1, req.request.Hash, "Should return the oldest request (first added)")
+	}
+
+	{
+		// Test with mixed scenarios: some expired, some with try == 0
+		m = newTestSidecarReqManager(cooldown, maxTry)
+		m.add(txHash1, request1) // try == 0
+		m.add(txHash2, request2)
+		m.update(txHash2, "peer-2")
+		time.Sleep(cooldown + 50*time.Millisecond) // Make txHash2 cooldown
+		req = m.search()
+		assert.NotNil(t, req, "Should return a request")
+		assert.Equal(t, txHash1, req.request.Hash, "Should prioritize try == 0 over expired")
+	}
+}
+
+// TestSidecarReqManager_Integration tests integration scenarios
+func TestSidecarReqManager_Integration(t *testing.T) {
+	cooldown := 100 * time.Millisecond
+	maxTry := 3
+	m := newTestSidecarReqManager(cooldown, maxTry)
+
+	txHash1 := tx1.Hash()
+	txHash2 := tx2.Hash()
+	txHash3 := common.BytesToHash([]byte("test-hash-3"))
+	request1 := newTestBlobSidecarsRequestData(txHash1, 100, 0)
+	request2 := newTestBlobSidecarsRequestData(txHash2, 200, 1)
+	request3 := newTestBlobSidecarsRequestData(txHash3, 300, 2)
+
+	// Scenario: Add multiple requests, search, update, search again, delete
+	m.add(txHash1, request1)
+	m.add(txHash2, request2)
+	m.add(txHash3, request3)
+
+	// Search should find one with try == 0
+	req := m.search()
+	assert.NotNil(t, req, "Should find a request")
+	originalHash := req.request.Hash
+
+	// Update the found request
+	m.update(originalHash, "peer-1")
+	req = m.get(originalHash)
+	assert.Equal(t, 1, req.try, "Try count should be 1")
+	assert.Equal(t, "peer-1", req.peer, "Peer should be updated")
+
+	// Search again - should find another request with try == 0
+	req = m.search()
+	assert.NotNil(t, req, "Should find another request")
+	assert.NotEqual(t, originalHash, req.request.Hash, "Should find a different request")
+
+	// Update until maxTry is reached (should delete)
+	// With maxTry=3, current try=1, so one more update (try=2) then another (try=3) will trigger deletion
+	m.update(originalHash, "peer-2")
+	req = m.get(originalHash)
+	assert.NotNil(t, req, "Request should still exist")
+	assert.Equal(t, 2, req.try, "Try should be 2 (maxTry-1)")
+
+	// One more update should trigger deletion
+	m.update(originalHash, "peer-3")
+	req = m.get(originalHash)
+	assert.Nil(t, req, "Request should be deleted when try >= maxTry")
+
+	// Delete remaining requests
+	m.delete(txHash2)
+	m.delete(txHash3)
+	req = m.search()
+	assert.Nil(t, req, "Should return nil when all requests are deleted")
+
+	// Scenario: Add, wait for cooldown, search should find expired request
+	m.add(txHash1, request1)
+	m.update(txHash1, "peer-1")
+	time.Sleep(cooldown + 50*time.Millisecond)
+	req = m.search()
+	assert.NotNil(t, req, "Should find expired request")
+	assert.Equal(t, txHash1, req.request.Hash, "Should find the expired request")
 }

@@ -53,7 +53,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// WaitGroupWithTimeOut waits the given wait group until the timout duration.
+// WaitGroupWithTimeOut waits the given wait group until the timeout duration.
 func WaitGroupWithTimeOut(wg *sync.WaitGroup, duration time.Duration, t *testing.T) {
 	c := make(chan struct{})
 	go func() {
@@ -2066,7 +2066,7 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	pTokenAddrStr := pTokenAddr.String()
 	// -------------------------- Done prepration --------------------------
 
-	// -------------------------- API test with the raw addresss format --------------------------
+	// -------------------------- API test with the raw address format --------------------------
 	{
 		// TEST 1-1 - Success (Register bridge, tokens and subscribe registered bridges)
 		bridgePairs := bm.subBridge.APIBackend.ListBridge()
@@ -2253,7 +2253,7 @@ func TestBridgeAliasAPIs(t *testing.T) {
 			}
 			wg.Wait()
 			t.Log("Test Done: ", testCases[uint8(testNum)])
-			// Check the status of conccurent calls with a signle thread
+			// Check the status of conccurent calls with a single thread
 			switch testNum {
 			case BRIDGE_SETUP:
 				checkBridgeSetup(t, bm, true, 1, contractPairLen/2)

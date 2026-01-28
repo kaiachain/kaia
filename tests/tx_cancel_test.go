@@ -90,7 +90,7 @@ func TestTxCancel(t *testing.T) {
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
 		assert.Equal(t, 1, len(pending))
-		assert.True(t, tx.Equal(pending[*bcdata.addrs[0]][0]))
+		assert.Equal(t, tx.Hash(), pending[*bcdata.addrs[0]][0].Hash())
 	}
 
 	// 2. Insert a value transfer transaction with nonce 0. This should not be replaced.
@@ -122,7 +122,7 @@ func TestTxCancel(t *testing.T) {
 		pending, queued = txpool.Content()
 		assert.Equal(t, 0, len(queued))
 		assert.Equal(t, 1, len(pending))
-		assert.True(t, oldtx.Equal(pending[*bcdata.addrs[0]][0]))
+		assert.Equal(t, oldtx.Hash(), pending[*bcdata.addrs[0]][0].Hash())
 	}
 
 	// 3. Insert a TxCancel transaction with nonce 0. This should replace the tx with the same nonce.
@@ -148,7 +148,7 @@ func TestTxCancel(t *testing.T) {
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
 		assert.Equal(t, 1, len(pending))
-		assert.True(t, tx.Equal(pending[*bcdata.addrs[0]][0]))
+		assert.Equal(t, tx.Hash(), pending[*bcdata.addrs[0]][0].Hash())
 	}
 
 	// 4. Insert a TxCancel transaction with nonce 0 and different gas limit. This should replace the tx with the same nonce.
@@ -174,7 +174,7 @@ func TestTxCancel(t *testing.T) {
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
 		assert.Equal(t, 1, len(pending))
-		assert.True(t, tx.Equal(pending[*bcdata.addrs[0]][0]))
+		assert.Equal(t, tx.Hash(), pending[*bcdata.addrs[0]][0].Hash())
 	}
 
 	if testing.Verbose() {
@@ -241,7 +241,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
 		assert.Equal(t, 1, len(pending))
-		assert.True(t, tx.Equal(pending[*bcdata.addrs[0]][0]))
+		assert.Equal(t, tx.Hash(), pending[*bcdata.addrs[0]][0].Hash())
 	}
 
 	// 2. Insert a value transfer transaction with nonce 0. This should not be replaced.
@@ -273,7 +273,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 		pending, queued = txpool.Content()
 		assert.Equal(t, 0, len(queued))
 		assert.Equal(t, 1, len(pending))
-		assert.True(t, oldtx.Equal(pending[*bcdata.addrs[0]][0]))
+		assert.Equal(t, oldtx.Hash(), pending[*bcdata.addrs[0]][0].Hash())
 	}
 
 	// 3. Insert a TxCancel transaction with nonce 0. This should replace the tx with the same nonce.
@@ -303,7 +303,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
 		assert.Equal(t, 1, len(pending))
-		assert.True(t, tx.Equal(pending[*bcdata.addrs[0]][0]))
+		assert.Equal(t, tx.Hash(), pending[*bcdata.addrs[0]][0].Hash())
 	}
 
 	// 4. Insert a TxCancel transaction with nonce 0 and different gas limit. This should replace the tx with the same nonce.
@@ -333,7 +333,7 @@ func TestTxFeeDelegatedCancel(t *testing.T) {
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
 		assert.Equal(t, 1, len(pending))
-		assert.True(t, tx.Equal(pending[*bcdata.addrs[0]][0]))
+		assert.Equal(t, tx.Hash(), pending[*bcdata.addrs[0]][0].Hash())
 	}
 
 	if testing.Verbose() {
@@ -400,7 +400,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
 		assert.Equal(t, 1, len(pending))
-		assert.True(t, tx.Equal(pending[*bcdata.addrs[0]][0]))
+		assert.Equal(t, tx.Hash(), pending[*bcdata.addrs[0]][0].Hash())
 	}
 
 	// 2. Insert a value transfer transaction with nonce 0. This should not be replaced.
@@ -432,7 +432,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 		pending, queued = txpool.Content()
 		assert.Equal(t, 0, len(queued))
 		assert.Equal(t, 1, len(pending))
-		assert.True(t, oldtx.Equal(pending[*bcdata.addrs[0]][0]))
+		assert.Equal(t, oldtx.Hash(), pending[*bcdata.addrs[0]][0].Hash())
 	}
 
 	// 3. Insert a TxCancel transaction with nonce 0. This should replace the tx with the same nonce.
@@ -463,7 +463,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
 		assert.Equal(t, 1, len(pending))
-		assert.True(t, tx.Equal(pending[*bcdata.addrs[0]][0]))
+		assert.Equal(t, tx.Hash(), pending[*bcdata.addrs[0]][0].Hash())
 	}
 
 	// 4. Insert a TxCancel transaction with nonce 0 and different gas limit. This should replace the tx with the same nonce.
@@ -494,7 +494,7 @@ func TestTxFeeDelegatedCancelWithRatio(t *testing.T) {
 		pending, queued := txpool.Content()
 		assert.Equal(t, 0, len(queued))
 		assert.Equal(t, 1, len(pending))
-		assert.True(t, tx.Equal(pending[*bcdata.addrs[0]][0]))
+		assert.Equal(t, tx.Hash(), pending[*bcdata.addrs[0]][0].Hash())
 	}
 
 	if testing.Verbose() {

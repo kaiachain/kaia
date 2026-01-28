@@ -108,7 +108,7 @@ func TestNodeKeyPersistency(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	keyfile := filepath.Join(dir, "unit-test", datadirPrivateKey)
+	keyfile := filepath.Join(dir, "unit-test", DatadirPrivateKey)
 
 	// Configure a node with a preset key and ensure it's not persisted
 	key, err := crypto.GenerateKey()
@@ -151,7 +151,7 @@ func TestNodeKeyPersistency(t *testing.T) {
 		// Configure ephemeral node and ensure no key is dumped locally
 		config = &Config{Name: "unit-test", DataDir: ""}
 		config.NodeKey()
-		if _, err := os.Stat(filepath.Join(".", "unit-test", datadirPrivateKey)); err == nil {
+		if _, err := os.Stat(filepath.Join(".", "unit-test", DatadirPrivateKey)); err == nil {
 			t.Fatalf("ephemeral node key persisted to disk")
 		}
 	*/

@@ -765,6 +765,10 @@ func RpcOutputBlock(b *types.Block, inclTx bool, fullTx bool, config *params.Cha
 		fields["randomReveal"] = hexutil.Bytes(head.RandomReveal)
 		fields["mixHash"] = hexutil.Bytes(head.MixHash)
 	}
+	if rules.IsOsaka {
+		fields["excessBlobGas"] = (*hexutil.Big)(new(big.Int).SetUint64(*head.ExcessBlobGas))
+		fields["blobGasUsed"] = hexutil.Uint64(*head.BlobGasUsed)
+	}
 
 	return fields, nil
 }
@@ -801,7 +805,7 @@ func newRPCTransaction(header *types.Header, tx *types.Transaction, blockHash co
 	output["from"] = getFrom(tx)
 	output["hash"] = tx.Hash()
 	output["transactionIndex"] = hexutil.Uint(index)
-	if tx.Type() == types.TxTypeEthereumDynamicFee || tx.Type() == types.TxTypeEthereumSetCode {
+	if _, ok := tx.GetTxInternalData().(types.TxInternalDataBaseFee); ok {
 		if header != nil {
 			output["gasPrice"] = (*hexutil.Big)(tx.EffectiveGasPrice(header, config))
 		} else {
@@ -936,7 +940,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	if args.AccessList != nil {
 		accessList = *args.AccessList
 	}
-	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, args.InputData(), false, intrinsicGas, accessList, nil, nil), nil
+	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, nil, args.InputData(), false, intrinsicGas, accessList, nil, nil, nil, nil), nil
 }
 
 // MainnetCredit contract is stored in the address zero.

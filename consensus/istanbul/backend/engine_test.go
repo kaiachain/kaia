@@ -34,6 +34,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
@@ -41,7 +42,9 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
@@ -75,7 +78,10 @@ type (
 	koreCompatibleBlock      *big.Int
 	shanghaiCompatibleBlock  *big.Int
 	cancunCompatibleBlock    *big.Int
+	randaoCompatibleBlock    *big.Int
 	kaiaCompatibleBlock      *big.Int
+	pragueCompatibleBlock    *big.Int
+	osakaCompatibleBlock     *big.Int
 )
 
 type (
@@ -158,7 +164,7 @@ func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, [
 // other fake events to process Istanbul.
 func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backend) {
 	// generate a genesis block
-	genesis := blockchain.DefaultGenesisBlock()
+	genesis := blockchain.DefaultTestGenesisBlock()
 	genesis.Config = params.TestChainConfig.Copy()
 	genesis.Timestamp = uint64(time.Now().Unix())
 
@@ -184,8 +190,14 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config.ShanghaiCompatibleBlock = v
 		case cancunCompatibleBlock:
 			genesis.Config.CancunCompatibleBlock = v
+		case randaoCompatibleBlock:
+			genesis.Config.RandaoCompatibleBlock = v
 		case kaiaCompatibleBlock:
 			genesis.Config.KaiaCompatibleBlock = v
+		case pragueCompatibleBlock:
+			genesis.Config.PragueCompatibleBlock = v
+		case osakaCompatibleBlock:
+			genesis.Config.OsakaCompatibleBlock = v
 		case proposerPolicy:
 			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
 		case epoch:
@@ -223,6 +235,46 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	b := newTestBackendWithConfig(genesis.Config, period, nodeKeys[0])
 
 	appendValidators(genesis, addrs)
+
+	// Set up Registry and KIP113 contracts for Randao fork if RandaoCompatibleBlock is set
+	if genesis.Config.RandaoCompatibleBlock != nil {
+		// Generate BLS keys for all nodes
+		nodeBlsKeys := make([]bls.SecretKey, n)
+		for i := 0; i < n; i++ {
+			nodeBlsKeys[i], _ = bls.DeriveFromECDSA(nodeKeys[i])
+		}
+
+		allocRegistryStorage := system.AllocRegistry(&params.RegistryConfig{
+			Records: map[string]common.Address{
+				"KIP113": system.Kip113LogicAddrMock,
+			},
+			Owner: common.HexToAddress("0xffff"),
+		})
+		infos := make(map[common.Address]system.BlsPublicKeyInfo)
+		for i, addr := range addrs {
+			infos[addr] = system.BlsPublicKeyInfo{
+				PublicKey: nodeBlsKeys[i].PublicKey().Marshal(),
+				Pop:       bls.PopProve(nodeBlsKeys[i]).Marshal(),
+			}
+		}
+		allocKip113Storage := system.AllocKip113Proxy(system.AllocKip113Init{
+			Infos: infos,
+			Owner: common.HexToAddress("0xffff"),
+		})
+		if genesis.Alloc == nil {
+			genesis.Alloc = make(blockchain.GenesisAlloc)
+		}
+		genesis.Alloc[system.RegistryAddr] = blockchain.GenesisAccount{
+			Code:    system.RegistryMockCode,
+			Balance: big.NewInt(0),
+			Storage: allocRegistryStorage,
+		}
+		genesis.Alloc[system.Kip113LogicAddrMock] = blockchain.GenesisAccount{
+			Code:    system.Kip113MockCode,
+			Balance: big.NewInt(0),
+			Storage: allocKip113Storage,
+		}
+	}
 
 	genesisGov := make(gov.PartialParamSet)
 	for name, param := range gov.Params {
@@ -326,7 +378,7 @@ func appendValidators(genesis *blockchain.Genesis, addrs []common.Address) {
 	genesis.ExtraData = append(genesis.ExtraData, istPayload...)
 }
 
-func makeHeader(parent *types.Block, config *istanbul.Config) *types.Header {
+func makeHeader(parent *types.Block, config *istanbul.Config, chainConfig *params.ChainConfig) *types.Header {
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     parent.Number().Add(parent.Number(), common.Big1),
@@ -338,6 +390,14 @@ func makeHeader(parent *types.Block, config *istanbul.Config) *types.Header {
 	if parent.Header().BaseFee != nil {
 		// We don't have chainConfig so the BaseFee of the current block is set by parent's for test
 		header.BaseFee = parent.Header().BaseFee
+	}
+	if chainConfig.IsOsakaForkEnabled(header.Number) {
+		var excessBlobGas uint64
+		if chainConfig.IsOsakaForkEnabled(parent.Number()) {
+			excessBlobGas = eip4844.CalcExcessBlobGas(chainConfig, parent.Header(), header.Number)
+		}
+		header.BlobGasUsed = new(uint64)
+		header.ExcessBlobGas = &excessBlobGas
 	}
 	return header
 }
@@ -354,8 +414,30 @@ func makeBlock(chain *blockchain.BlockChain, engine *backend, parent *types.Bloc
 
 // makeBlockWithSeal creates a block with the proposer seal as well as all committed seals of validators.
 func makeBlockWithSeal(chain *blockchain.BlockChain, engine *backend, parent *types.Block) *types.Block {
-	blockWithoutSeal := makeBlockWithoutSeal(chain, engine, parent)
+	return sealBlock(engine, makeBlockWithoutSeal(chain, engine, parent))
+}
 
+func makeBlockWithoutSeal(chain *blockchain.BlockChain, engine *backend, parent *types.Block) *types.Block {
+	return makeBlockWithoutSealAndModifiedHeader(chain, engine, parent, nil)
+}
+
+// makeBlockWithoutSealAndModifiedHeader creates a block without seal, optionally with a modified header.
+// The modifyHeader function is called before finalization.
+func makeBlockWithoutSealAndModifiedHeader(chain *blockchain.BlockChain, engine *backend, parent *types.Block, modifyHeader func(*types.Header)) *types.Block {
+	header := makeHeader(parent, engine.config, chain.Config())
+	if err := engine.Prepare(chain, header); err != nil {
+		panic(err)
+	}
+	if modifyHeader != nil {
+		modifyHeader(header)
+	}
+	state, _ := chain.StateAt(parent.Root())
+	block, _ := engine.Finalize(chain, header, state, nil, nil)
+	return block
+}
+
+// sealBlock adds the proposer seal and committed seals to a block.
+func sealBlock(engine *backend, blockWithoutSeal *types.Block) *types.Block {
 	// add proposer seal for the block
 	block, err := engine.updateBlock(blockWithoutSeal)
 	if err != nil {
@@ -369,26 +451,14 @@ func makeBlockWithSeal(chain *blockchain.BlockChain, engine *backend, parent *ty
 	if err != nil {
 		panic(err)
 	}
-	block = block.WithSeal(header)
-
-	return block
-}
-
-func makeBlockWithoutSeal(chain *blockchain.BlockChain, engine *backend, parent *types.Block) *types.Block {
-	header := makeHeader(parent, engine.config)
-	if err := engine.Prepare(chain, header); err != nil {
-		panic(err)
-	}
-	state, _ := chain.StateAt(parent.Root())
-	block, _ := engine.Finalize(chain, header, state, nil, nil)
-	return block
+	return block.WithSeal(header)
 }
 
 func TestPrepare(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	defer engine.Stop()
 
-	header := makeHeader(chain.Genesis(), engine.config)
+	header := makeHeader(chain.Genesis(), engine.config, chain.Config())
 	err := engine.Prepare(chain, header)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
@@ -439,65 +509,144 @@ func TestSealCommitted(t *testing.T) {
 }
 
 func TestVerifyHeader(t *testing.T) {
-	var configItems []interface{}
-	configItems = append(configItems, istanbulCompatibleBlock(new(big.Int).SetUint64(0)))
-	configItems = append(configItems, LondonCompatibleBlock(new(big.Int).SetUint64(0)))
-	configItems = append(configItems, EthTxTypeCompatibleBlock(new(big.Int).SetUint64(0)))
-	configItems = append(configItems, magmaCompatibleBlock(new(big.Int).SetUint64(0)))
-	configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(0)))
-	chain, engine := newBlockChain(1, configItems...)
-	defer engine.Stop()
+	testForks := []string{"kore", "osaka"}
 
-	// errEmptyCommittedSeals case
-	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	block, _ = engine.updateBlock(block)
-	err := engine.VerifyHeader(chain, block.Header(), false)
-	if err != errEmptyCommittedSeals {
-		t.Errorf("error mismatch: have %v, want %v", err, errEmptyCommittedSeals)
-	}
+	for _, fork := range testForks {
+		var configItems []interface{}
+		configItems = append(configItems, params.TestKaiaConfig(fork))
+		chain, engine := newBlockChain(1, configItems...)
+		defer engine.Stop()
 
-	// short extra data
-	header := block.Header()
-	header.Extra = []byte{}
-	err = engine.VerifyHeader(chain, header, false)
-	if err != errInvalidExtraDataFormat {
-		t.Errorf("error mismatch: have %v, want %v", err, errInvalidExtraDataFormat)
-	}
-	// incorrect extra format
-	header.Extra = []byte("0000000000000000000000000000000012300000000000000000000000000000000000000000000000000000000000000000")
-	err = engine.VerifyHeader(chain, header, false)
-	if err != errInvalidExtraDataFormat {
-		t.Errorf("error mismatch: have %v, want %v", err, errInvalidExtraDataFormat)
-	}
+		testCases := []struct {
+			name        string
+			header      *types.Header
+			expectedErr error
+			targetFork  string
+		}{
+			{
+				name: "errEmptyCommittedSeals case",
+				header: func() *types.Header {
+					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+					block, _ = engine.updateBlock(block)
+					return block.Header()
+				}(),
+				expectedErr: errEmptyCommittedSeals,
+				targetFork:  "kore",
+			},
+			{
+				name: "short extra data",
+				header: func() *types.Header {
+					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+					block, _ = engine.updateBlock(block)
+					header := block.Header()
+					header.Extra = []byte{}
+					return header
+				}(),
+				expectedErr: errInvalidExtraDataFormat,
+				targetFork:  "kore",
+			},
+			{
+				name: "incorrect extra format",
+				header: func() *types.Header {
+					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+					block, _ = engine.updateBlock(block)
+					header := block.Header()
+					header.Extra = []byte("0000000000000000000000000000000012300000000000000000000000000000000000000000000000000000000000000000")
+					return header
+				}(),
+				expectedErr: errInvalidExtraDataFormat,
+				targetFork:  "kore",
+			},
+			{
+				name: "invalid difficulty",
+				header: func() *types.Header {
+					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+					header := block.Header()
+					header.BlockScore = big.NewInt(2)
+					return header
+				}(),
+				expectedErr: errInvalidBlockScore,
+				targetFork:  "kore",
+			},
+			{
+				name: "invalid timestamp",
+				header: func() *types.Header {
+					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+					header := block.Header()
+					header.Time = new(big.Int).Add(chain.Genesis().Time(), new(big.Int).SetUint64(engine.config.BlockPeriod-1))
+					return header
+				}(),
+				expectedErr: errInvalidTimestamp,
+				targetFork:  "kore",
+			},
+			{
+				name: "future block",
+				header: func() *types.Header {
+					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+					header := block.Header()
+					header.Time = new(big.Int).Add(big.NewInt(now().Unix()), new(big.Int).SetUint64(10))
+					return header
+				}(),
+				expectedErr: consensus.ErrFutureBlock,
+				targetFork:  "kore",
+			},
+			{
+				name: "eip4844 header before osaka - excessBlobGas",
+				header: func() *types.Header {
+					block := sealBlock(engine, makeBlockWithoutSealAndModifiedHeader(chain, engine, chain.Genesis(), func(h *types.Header) {
+						excessBlobGas := uint64(0)
+						h.ExcessBlobGas = &excessBlobGas
+					}))
+					return block.Header()
+				}(),
+				expectedErr: errUnexpectedExcessBlobGasBeforeOsaka,
+				targetFork:  "kore",
+			},
+			{
+				name: "eip4844 header before osaka - blobGasUsed",
+				header: func() *types.Header {
+					block := sealBlock(engine, makeBlockWithoutSealAndModifiedHeader(chain, engine, chain.Genesis(), func(h *types.Header) {
+						blobGasUsed := uint64(0)
+						h.BlobGasUsed = &blobGasUsed
+					}))
+					return block.Header()
+				}(),
+				expectedErr: errUnexpectedBlobGasUsedBeforeOsaka,
+				targetFork:  "kore",
+			},
+			{
+				name: "invalid eip4844 header",
+				header: func() *types.Header {
+					block := sealBlock(engine, makeBlockWithoutSealAndModifiedHeader(chain, engine, chain.Genesis(), func(h *types.Header) {
+						h.ExcessBlobGas = nil
+					}))
+					return block.Header()
+				}(),
+				expectedErr: errors.New("header is missing excessBlobGas"),
+				targetFork:  "osaka",
+			},
+			// TODO-Kaia: add more tests for header.Governance, header.Rewardbase, header.Vote
+		}
 
-	// invalid difficulty
-	block = makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	header = block.Header()
-	header.BlockScore = big.NewInt(2)
-	err = engine.VerifyHeader(chain, header, false)
-	if err != errInvalidBlockScore {
-		t.Errorf("error mismatch: have %v, want %v", err, errInvalidBlockScore)
-	}
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				if tc.targetFork != fork {
+					return
+				}
 
-	// invalid timestamp
-	block = makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	header = block.Header()
-	header.Time = new(big.Int).Add(chain.Genesis().Time(), new(big.Int).SetUint64(engine.config.BlockPeriod-1))
-	err = engine.VerifyHeader(chain, header, false)
-	if err != errInvalidTimestamp {
-		t.Errorf("error mismatch: have %v, want %v", err, errInvalidTimestamp)
+				err := engine.VerifyHeader(chain, tc.header, false)
+				if tc.expectedErr != nil {
+					if err.Error() != tc.expectedErr.Error() {
+						t.Errorf("error mismatch: have %v, want %v", err, tc.expectedErr)
+					}
+				} else {
+					if err != nil {
+						t.Errorf("unexpected error: have %v, want nil", err)
+					}
+				}
+			})
+		}
 	}
-
-	// future block
-	block = makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	header = block.Header()
-	header.Time = new(big.Int).Add(big.NewInt(now().Unix()), new(big.Int).SetUint64(10))
-	err = engine.VerifyHeader(chain, header, false)
-	if err != consensus.ErrFutureBlock {
-		t.Errorf("error mismatch: have %v, want %v", err, consensus.ErrFutureBlock)
-	}
-
-	// TODO-Kaia: add more tests for header.Governance, header.Rewardbase, header.Vote
 }
 
 func TestVerifySeal(t *testing.T) {
@@ -795,10 +944,13 @@ func TestRewardDistribution(t *testing.T) {
 	var configItems []interface{}
 	configItems = append(configItems, epoch(testEpoch))
 	configItems = append(configItems, mintingAmount(new(big.Int).SetUint64(mintAmount)))
-	configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, shanghaiCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, cancunCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, koreCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, randaoCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, kaiaCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, pragueCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
+	configItems = append(configItems, osakaCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 
 	chain, engine := newBlockChain(1, configItems...)
@@ -847,7 +999,7 @@ func makeSnapshotTestConfigItems(stakingInterval, proposerInterval uint64) []int
 
 func makeMockStakingManager(t *testing.T, amounts []uint64, blockNum uint64) (*gomock.Controller, *mock.MockStakingModule) {
 	if len(nodeKeys) != len(amounts) {
-		setNodeKeys(len(amounts), nil) // explictly set the nodeKey
+		setNodeKeys(len(amounts), nil) // explicitly set the nodeKey
 	}
 
 	si := makeTestStakingInfo(amounts, blockNum)
@@ -910,7 +1062,7 @@ func assertMapSubset[M ~map[K]any, K comparable](t *testing.T, subset, set M) {
 //}
 
 func Test_AfterMinimumStakingVotes(t *testing.T) {
-	// temporaily enable forbidden votes
+	// temporarily enable forbidden votes
 	enableVotes([]gov.ParamName{gov.RewardMinimumStake, gov.GovernanceGovernanceMode})
 	defer disableVotes([]gov.ParamName{gov.RewardMinimumStake, gov.GovernanceGovernanceMode})
 
@@ -1278,7 +1430,10 @@ func Test_BasedOnStaking(t *testing.T) {
 	configItems = append(configItems, koreCompatibleBlock(nil))
 	configItems = append(configItems, shanghaiCompatibleBlock(nil))
 	configItems = append(configItems, cancunCompatibleBlock(nil))
+	configItems = append(configItems, randaoCompatibleBlock(nil))
 	configItems = append(configItems, kaiaCompatibleBlock(nil))
+	configItems = append(configItems, pragueCompatibleBlock(nil))
+	configItems = append(configItems, osakaCompatibleBlock(nil))
 
 	for _, tc := range testcases {
 		if !tc.isIstanbulCompatible {
@@ -1821,7 +1976,7 @@ func TestGovernance_GovModule(t *testing.T) {
 		name  string
 		value interface{}
 	}
-	type expected = map[string]interface{} // expected (subset of) governance items
+	type expected = map[gov.ParamName]any // expected (subset of) governance items
 	type testcase struct {
 		length   int // total number of blocks to simulate
 		votes    map[int]vote
@@ -1871,7 +2026,7 @@ func TestGovernance_GovModule(t *testing.T) {
 			// Validate current params with CurrentParams() and CurrentSetCopy().
 			// Check that both returns the expected result.
 			pset := engine.govModule.GetParamSet(uint64(num + 1))
-			assertMapSubset(t, tc.expected[num+1], pset.ToGovParamSet().StrMap())
+			assertMapSubset(t, tc.expected[num+1], pset.ToMap())
 
 			// Place a vote if a vote is scheduled in upcoming block
 			// Note that we're building (head+1)'th block here.
@@ -1892,11 +2047,11 @@ func TestGovernance_GovModule(t *testing.T) {
 		// Check that both returns the expected result.
 		for num := 0; num <= tc.length; num++ {
 			pset := engine.govModule.GetParamSet(uint64(num))
-			assertMapSubset(t, tc.expected[num], pset.ToGovParamSet().StrMap())
+			assertMapSubset(t, tc.expected[num], pset.ToMap())
 
-			partialParamSet := make(map[string]any)
+			partialParamSet := gov.PartialParamSet{}
 			for k, v := range engine.govModule.(*gov_impl.GovModule).Hgm.GetPartialParamSet(uint64(num + 1)) {
-				partialParamSet[string(k)] = v
+				partialParamSet.Add(string(k), v)
 			}
 			assertMapSubset(t, tc.expected[num+1], partialParamSet)
 		}

@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -224,6 +225,12 @@ func RpcOutputReceipt(header *types.Header, tx *types.Transaction, blockHash com
 	fields["gasUsed"] = hexutil.Uint64(receipt.GasUsed)
 
 	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header, config).Uint64())
+
+	// After Osaka fork : return blob gas used and blob gas price when the tx is a blob transaction.
+	if tx.Type() == types.TxTypeEthereumBlob {
+		fields["blobGasUsed"] = hexutil.Uint64(tx.BlobGas())
+		fields["blobGasPrice"] = hexutil.Uint64(eip4844.CalcBlobFee(header.BaseFee).Uint64())
+	}
 
 	if receipt.Logs == nil {
 		fields["logs"] = [][]*types.Log{}

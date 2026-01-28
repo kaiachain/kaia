@@ -70,6 +70,12 @@ type Header struct {
 	RandomReveal []byte `json:"randomReveal,omitempty" rlp:"optional"` // 96 byte BLS signature
 	MixHash      []byte `json:"mixHash,omitempty" rlp:"optional"`      // 32 byte RANDAO mix
 
+	// BlobGasUsed was added by EIP-4844 and is ignored in legacy headers.
+	BlobGasUsed *uint64 `json:"blobGasUsed" rlp:"optional"`
+
+	// ExcessBlobGas was added by EIP-4844 and is ignored in legacy headers.
+	ExcessBlobGas *uint64 `json:"excessBlobGas" rlp:"optional"`
+
 	// New header fields must be added at tail for backward compatibility.
 }
 
@@ -77,18 +83,20 @@ type Header struct {
 // gencodec will recognize headerMarshaling struct and use below types
 // instead of the default native types. e.g. []byte -> hexutil.Byte
 type headerMarshaling struct {
-	BlockScore   *hexutil.Big
-	Number       *hexutil.Big
-	GasUsed      hexutil.Uint64
-	Time         *hexutil.Big
-	TimeFoS      hexutil.Uint
-	Extra        hexutil.Bytes
-	BaseFee      *hexutil.Big
-	Hash         common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
-	Governance   hexutil.Bytes
-	Vote         hexutil.Bytes
-	RandomReveal hexutil.Bytes
-	MixHash      hexutil.Bytes
+	BlockScore    *hexutil.Big
+	Number        *hexutil.Big
+	GasUsed       hexutil.Uint64
+	Time          *hexutil.Big
+	TimeFoS       hexutil.Uint
+	Extra         hexutil.Bytes
+	BaseFee       *hexutil.Big
+	Hash          common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
+	Governance    hexutil.Bytes
+	Vote          hexutil.Bytes
+	RandomReveal  hexutil.Bytes
+	MixHash       hexutil.Bytes
+	BlobGasUsed   *hexutil.Uint64
+	ExcessBlobGas *hexutil.Uint64
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
@@ -217,7 +225,7 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	if len(txs) == 0 {
 		b.header.TxHash = GetEmptyRootHash(header.Number)
 	} else {
-		b.header.TxHash = DeriveSha(Transactions(txs), header.Number)
+		b.header.TxHash = DeriveTransactionsRoot(txs, header.Number)
 		b.transactions = make(Transactions, len(txs))
 		copy(b.transactions, txs)
 	}
@@ -225,7 +233,7 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	if len(receipts) == 0 {
 		b.header.ReceiptHash = GetEmptyRootHash(header.Number)
 	} else {
-		b.header.ReceiptHash = DeriveSha(Receipts(receipts), header.Number)
+		b.header.ReceiptHash = DeriveReceiptsRoot(Receipts(receipts), header.Number)
 		b.header.Bloom = CreateBloom(receipts)
 	}
 
@@ -276,6 +284,14 @@ func CopyHeader(h *Header) *Header {
 		cpy.MixHash = make([]byte, len(h.MixHash))
 		copy(cpy.MixHash, h.MixHash)
 	}
+	if h.ExcessBlobGas != nil {
+		cpy.ExcessBlobGas = new(uint64)
+		*cpy.ExcessBlobGas = *h.ExcessBlobGas
+	}
+	if h.BlobGasUsed != nil {
+		cpy.BlobGasUsed = new(uint64)
+		*cpy.BlobGasUsed = *h.BlobGasUsed
+	}
 	return &cpy
 }
 
@@ -325,6 +341,22 @@ func (b *Block) TxHash() common.Hash        { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash   { return b.header.ReceiptHash }
 func (b *Block) Extra() []byte              { return common.CopyBytes(b.header.Extra) }
 
+func (b *Block) ExcessBlobGas() *uint64 {
+	if b.header.ExcessBlobGas == nil {
+		return nil
+	}
+	excessBlobGas := *b.header.ExcessBlobGas
+	return &excessBlobGas
+}
+
+func (b *Block) BlobGasUsed() *uint64 {
+	if b.header.BlobGasUsed == nil {
+		return nil
+	}
+	blobGasUsed := *b.header.BlobGasUsed
+	return &blobGasUsed
+}
+
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
@@ -372,6 +404,35 @@ func (b *Block) WithBody(transactions []*Transaction) *Block {
 	}
 	copy(block.transactions, transactions)
 	return block
+}
+
+// WithoutBlobSidecars returns a new block with the blob sidecar removed from the transactions.
+// It skips block copy if there are no blob transactions.
+func (b *Block) WithoutBlobSidecars() *Block {
+	var replaceIdx []int
+	var replaceTxs []*Transaction
+
+	for i, tx := range b.transactions {
+		if tx.Type() == TxTypeEthereumBlob {
+			replaceIdx = append(replaceIdx, i)
+			replaceTxs = append(replaceTxs, tx.WithoutBlobTxSidecar())
+		}
+	}
+
+	// Skip the block copy if unnecessary
+	if len(replaceTxs) == 0 {
+		return b
+	}
+
+	// Create a copy of transactions and replace the blob transactions
+	newTxs := make([]*Transaction, len(b.transactions))
+	copy(newTxs, b.transactions)
+	for j := range replaceTxs {
+		i := replaceIdx[j]
+		newTxs[i] = replaceTxs[j]
+	}
+
+	return b.WithBody(newTxs)
 }
 
 // Hash returns the keccak256 hash of b's header.

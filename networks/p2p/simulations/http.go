@@ -501,13 +501,13 @@ func (s *Server) StreamNetworkEvents(w http.ResponseWriter, req *http.Request) {
 // A message code of '*' or '-1' is considered a wildcard and matches any code.
 func NewMsgFilters(filterParam string) (MsgFilters, error) {
 	filters := make(MsgFilters)
-	for _, filter := range strings.Split(filterParam, "-") {
+	for filter := range strings.SplitSeq(filterParam, "-") {
 		protoCodes := strings.SplitN(filter, ":", 2)
 		if len(protoCodes) != 2 || protoCodes[0] == "" || protoCodes[1] == "" {
 			return nil, fmt.Errorf("invalid message filter: %s", filter)
 		}
 		proto := protoCodes[0]
-		for _, code := range strings.Split(protoCodes[1], ",") {
+		for code := range strings.SplitSeq(protoCodes[1], ",") {
 			if code == "*" || code == "-1" {
 				filters[MsgFilter{Proto: proto, Code: -1}] = struct{}{}
 				continue

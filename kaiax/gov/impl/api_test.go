@@ -1,11 +1,13 @@
 package impl
 
 import (
+	"fmt"
 	"math/big"
-	"reflect"
-	"strings"
+	"math/rand"
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain/forkid"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	contractgov_mock "github.com/kaiachain/kaia/kaiax/gov/contractgov/mock"
 	headergov_mock "github.com/kaiachain/kaia/kaiax/gov/headergov/mock"
@@ -13,6 +15,7 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newKaiaAPI(t *testing.T, chainConfig *params.ChainConfig) (*KaiaAPI, *mocks.MockBlockChain, *headergov_mock.MockHeaderGovModule, *contractgov_mock.MockContractGovModule) {
@@ -20,47 +23,107 @@ func newKaiaAPI(t *testing.T, chainConfig *params.ChainConfig) (*KaiaAPI, *mocks
 	return NewKaiaAPI(h), mockChain, mockHgm, mockCgm
 }
 
-func TestAPI_kaia_getChainConfig(t *testing.T) {
+func generateRandomValue(name gov.ParamName) any {
+	param := gov.Params[name]
+	var randomValue any
+
+	switch param.DefaultValue.(type) {
+	case int:
+		randomValue = rand.Int()
+	case int64:
+		randomValue = rand.Int63()
+	case uint64:
+		if name == gov.IstanbulPolicy || name == gov.GovernanceDeriveShaImpl {
+			randomValue = uint64(rand.Intn(3))
+		} else {
+			randomValue = rand.Uint64()
+		}
+	case bool:
+		// Alternate true/false by hash of name
+		randomValue = rand.Intn(2) == 0
+	case string:
+		if name == gov.GovernanceGovernanceMode {
+			randomValue = []string{"none", "single"}[rand.Intn(2)]
+		} else if name == gov.RewardRatio {
+			a := rand.Intn(101)
+			b := rand.Intn(101 - a)
+			c := 100 - a - b
+			randomValue = fmt.Sprintf("%d/%d/%d", a, b, c)
+		} else if name == gov.RewardKip82Ratio {
+			a := rand.Intn(101)
+			b := 100 - a
+			randomValue = fmt.Sprintf("%d/%d", a, b)
+		} else {
+			panic(fmt.Sprintf("unknown string type %s", name))
+		}
+	case *big.Int:
+		randomValue = big.NewInt(rand.Int63())
+	case common.Address:
+		randomValue = common.BytesToAddress(common.MakeRandomBytes(common.AddressLength))
+	default:
+		panic(fmt.Errorf("unknown type %s: %T", name, param.DefaultValue))
+	}
+	return randomValue
+}
+
+// TestAPI_kaia_getChainConfig_CompatibleBlocksCompleteness ensures that
+// no hardfork block is omitted from the API output.
+// In other words, the test fails if API has not been synced
+// after a new hardfork block has been introduced.
+func TestAPI_kaia_getChainConfig_CompatibleBlocksCompleteness(t *testing.T) {
 	var (
-		latestGenesisConfig              = params.MainnetChainConfig.Copy()
-		api, mockChain, mockHgm, mockCgm = newKaiaAPI(t, latestGenesisConfig)
-		num                              = rpc.BlockNumber(0)
+		config                           = params.KairosChainConfig.Copy()
+		api, mockChain, mockHgm, mockCgm = newKaiaAPI(t, config)
+		apiArg                           = rpc.BlockNumber(0)
 	)
 
 	mockHgm.EXPECT().GetPartialParamSet(uint64(0)).Return(gov.PartialParamSet{}).Times(1)
 	mockCgm.EXPECT().GetPartialParamSet(uint64(0)).Return(gov.PartialParamSet{}).Times(1)
-	mockChain.EXPECT().Config().Return(latestGenesisConfig).Times(2) // isKore, getChainConfig
+	mockChain.EXPECT().Config().Return(config).Times(2) // isKore, getChainConfig
 
-	// Set all *CompatibleBlock fields to zero.
-	{
-		v := reflect.ValueOf(latestGenesisConfig).Elem()
-		ty := v.Type()
+	// Call the API
+	apiConfig := api.GetChainConfig(&apiArg)
+	require.NotNil(t, apiConfig, "kaia_getChainConfig should not return nil")
 
-		for i := 0; i < ty.NumField(); i++ {
-			field := ty.Field(i)
-			if strings.HasSuffix(field.Name, "CompatibleBlock") {
-				fieldValue := v.Field(i)
-				if fieldValue.Type() == reflect.TypeFor[*big.Int]() {
-					fieldValue.Set(reflect.ValueOf(big.NewInt(0)))
-				}
-			}
+	apiForks := forkid.GatherForks(apiConfig)
+	expectedForks := forkid.GatherForks(config)
+
+	assert.Equal(t, expectedForks, apiForks, "kaia_getChainConfig did not return one or more hardforks, probably the latest hardfork block")
+}
+
+// TestAPI_kaia_getChainConfig_ParameterCompleteness ensures that
+// no governance parameter is omitted from the API output.
+// In other words, the test fails if API has not been synced
+// after a new governance parameter (`gov.Params`) has been introduced.
+func TestAPI_kaia_getChainConfig_ParameterCompleteness(t *testing.T) {
+	var (
+		config                           = params.MainnetChainConfig.Copy()
+		api, mockChain, mockHgm, mockCgm = newKaiaAPI(t, config)
+		apiArg                           = rpc.BlockNumber(0)
+	)
+
+	// run multiple times to increase reliability (with random ChainConfig values)
+	for range 100 {
+		latestParams := gov.PartialParamSet{}
+		for name := range gov.Params {
+			err := latestParams.Add(string(name), generateRandomValue(name))
+			require.NoError(t, err, "failed to add %s to PartialParamSet", name)
 		}
-	}
 
-	// Check if there is any missing Hardfork block in the API result
-	{
-		cc := api.GetChainConfig(&num)
-		v := reflect.ValueOf(cc).Elem()
-		ty := v.Type()
+		mockHgm.EXPECT().GetPartialParamSet(uint64(0)).Return(latestParams).Times(1)
+		mockCgm.EXPECT().GetPartialParamSet(uint64(0)).Return(gov.PartialParamSet{}).Times(1)
+		mockChain.EXPECT().Config().Return(config).Times(2) // isKore, getChainConfig
 
-		for i := 0; i < ty.NumField(); i++ {
-			field := ty.Field(i)
-			if strings.HasSuffix(field.Name, "CompatibleBlock") {
-				fieldValue := v.Field(i)
-				if fieldValue.Type() == reflect.TypeFor[*big.Int]() {
-					assert.Equal(t, fieldValue.Interface().(*big.Int).String(), big.NewInt(0).String())
-				}
-			}
+		// Call the API
+		apiChainConfig := api.GetChainConfig(&apiArg)
+		require.NotNil(t, apiChainConfig, "kaia_getChainConfig should not return nil")
+
+		// Check the values are the latest
+		for name, param := range gov.Params {
+			expectedValue := latestParams[name]
+			apiValue, err := param.ChainConfigValue(apiChainConfig)
+			require.NoError(t, err, "failed to get chain config value for %s", name)
+			require.Equal(t, expectedValue, apiValue, "kaia_getChainConfig did not return %s", name)
 		}
 	}
 }

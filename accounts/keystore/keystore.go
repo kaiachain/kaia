@@ -452,7 +452,7 @@ func (ks *KeyStore) expire(addr common.Address, u *unlocked, timeout time.Durati
 // NewAccount generates a new key and stores it into the key directory,
 // encrypting it with the passphrase.
 func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
-	_, account, err := storeNewKey(ks.storage, crand.Reader, passphrase)
+	_, account, err := storeNewKey(ks.storage, crand.Reader, passphrase, false)
 	if err != nil {
 		return accounts.Account{}, err
 	}
@@ -469,6 +469,7 @@ func (ks *KeyStore) Export(a accounts.Account, passphrase, newPassphrase string)
 	if err != nil {
 		return nil, err
 	}
+	defer key.ResetPrivateKey()
 	var N, P int
 	if store, ok := ks.storage.(*keyStorePassphrase); ok {
 		N, P = store.scryptN, store.scryptP
@@ -549,6 +550,16 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (acco
 	return ks.importKey(key, passphrase)
 }
 
+func (ks *KeyStore) ImportECDSAV3(priv *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
+	key := newKeyV3FromECDSA(priv)
+	ks.importMu.Lock()
+	defer ks.importMu.Unlock()
+	if ks.cache.hasAddress(key.GetAddress()) {
+		return accounts.Account{}, errors.New("account already exists")
+	}
+	return ks.importKey(key, passphrase)
+}
+
 func (ks *KeyStore) importKey(key Key, passphrase string) (accounts.Account, error) {
 	a := accounts.Account{Address: key.GetAddress(), URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.GetAddress()))}}
 	if err := ks.storage.StoreKey(a.URL.Path, key, passphrase); err != nil {
@@ -574,6 +585,7 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 	if err != nil {
 		return err
 	}
+	defer key.ResetPrivateKey()
 	return ks.storage.StoreKey(a.URL.Path, key, newPassphrase)
 }
 

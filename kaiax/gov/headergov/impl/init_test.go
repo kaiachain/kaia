@@ -263,7 +263,6 @@ func TestKairosGenesisHash(t *testing.T) {
 func TestMainnetGenesisHash(t *testing.T) {
 	mainnetHash := params.MainnetGenesisHash
 	genesis := blockchain.DefaultGenesisBlock()
-	genesis.Governance = blockchain.SetGenesisGovernance(genesis)
 	blockchain.InitDeriveSha(genesis.Config)
 
 	db := database.NewMemoryDBManager()

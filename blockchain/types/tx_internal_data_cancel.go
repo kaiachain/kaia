@@ -20,13 +20,11 @@ package types
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -113,11 +111,11 @@ func (t *TxInternalDataCancel) GetRoleTypeForValidation() accountkey.RoleType {
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataCancel) GetAccountNonce() uint64 {
+func (t *TxInternalDataCancel) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataCancel) GetPrice() *big.Int {
+func (t *TxInternalDataCancel) GetGasPrice() *big.Int {
 	return t.Price
 }
 
@@ -125,11 +123,11 @@ func (t *TxInternalDataCancel) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataCancel) GetRecipient() *common.Address {
+func (t *TxInternalDataCancel) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataCancel) GetAmount() *big.Int {
+func (t *TxInternalDataCancel) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -137,53 +135,12 @@ func (t *TxInternalDataCancel) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataCancel) GetHash() *common.Hash {
-	return t.Hash
+func (t *TxInternalDataCancel) GetData() []byte {
+	return []byte{}
 }
 
-func (t *TxInternalDataCancel) SetHash(h *common.Hash) {
+func (t *TxInternalDataCancel) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
-}
-
-func (t *TxInternalDataCancel) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataCancel) Equal(b TxInternalData) bool {
-	ta, ok := b.(*TxInternalDataCancel)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.From == ta.From &&
-		t.TxSignatures.equal(ta.TxSignatures)
-}
-
-func (t *TxInternalDataCancel) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Signature:     %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.TxSignatures.string(),
-		enc)
 }
 
 func (t *TxInternalDataCancel) SetSignature(s TxSignatures) {
@@ -212,40 +169,11 @@ func (t *TxInternalDataCancel) SerializeForSignToBytes() []byte {
 	return b
 }
 
-func (t *TxInternalDataCancel) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-	}
+func (t *TxInternalDataCancel) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
-func (t *TxInternalDataCancel) SenderTxHash() common.Hash {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, t.Type())
-	rlp.Encode(hw, []interface{}{
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		t.TxSignatures,
-	})
-
-	h := common.Hash{}
-
-	hw.Sum(h[:0])
-
-	return h
-}
-
-func (t *TxInternalDataCancel) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// No more validation required for TxTypeCancel for now.
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataCancel) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataCancel) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	// No more validation required for TxTypeCancel for now.
 	return nil
 }

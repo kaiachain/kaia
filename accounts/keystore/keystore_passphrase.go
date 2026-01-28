@@ -95,12 +95,25 @@ func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) 
 
 // StoreKey generates a key, encrypts with 'auth' and stores in the given directory
 func StoreKey(dir, auth string, scryptN, scryptP int) (common.Address, error) {
-	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP, false}, rand.Reader, auth)
+	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP, false}, rand.Reader, auth, false /* v4 */)
+	return a.Address, err
+}
+
+// StoreKeyV3 generates a v3 key, encrypts with 'auth' and stores in the given directory
+func StoreKeyV3(dir, auth string, scryptN, scryptP int) (common.Address, error) {
+	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP, false}, rand.Reader, auth, true /* v3 */)
 	return a.Address, err
 }
 
 func (ks keyStorePassphrase) StoreKey(filename string, key Key, auth string) error {
-	keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
+	var keyjson []byte
+	var err error
+
+	if _, isV3 := key.(*KeyV3); isV3 {
+		keyjson, err = EncryptKeyV3(key, auth, ks.scryptN, ks.scryptP)
+	} else {
+		keyjson, err = EncryptKey(key, auth, ks.scryptN, ks.scryptP)
+	}
 	if err != nil {
 		return err
 	}

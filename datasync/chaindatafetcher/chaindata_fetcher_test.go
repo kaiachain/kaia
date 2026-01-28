@@ -69,11 +69,9 @@ func TestChainDataFetcher_Success_sendRequests(t *testing.T) {
 	endBlock := uint64(10)
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		fetcher.sendRequests(startBlock, endBlock, cfTypes.RequestTypeAll, false, stopCh)
-	}()
+	})
 
 	// take all the items from the reqCh and check them.
 	for i := startBlock; i <= endBlock; i++ {
@@ -93,11 +91,9 @@ func TestChainDataFetcher_Success_sendRequestsStop(t *testing.T) {
 	endBlock := uint64(10)
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		fetcher.sendRequests(startBlock, endBlock, cfTypes.RequestTypeAll, false, stopCh)
-	}()
+	})
 
 	stopCh <- struct{}{}
 	wg.Wait()
@@ -279,13 +275,11 @@ func TestChainDataFetcher_handleRequestByType_WhileRetrying(t *testing.T) {
 	mockRepo.EXPECT().HandleChainEvent(gomock.Any(), gomock.Any()).Return(testError).AnyTimes().After(precall)
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
 	// trigger stop function after 3 seconds
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		time.Sleep(3 * time.Second)
 		fetcher.Stop()
-	}()
+	})
 
 	fetcher.repo, fetcher.checkpointDB = mockRepo, checkpointDB
 	fetcher.handleRequestByType(cfTypes.RequestTypeAll, true, block1)

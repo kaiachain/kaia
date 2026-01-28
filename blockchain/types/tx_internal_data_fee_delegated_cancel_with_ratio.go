@@ -19,9 +19,7 @@
 package types
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -139,11 +137,11 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetRoleTypeForValidation() a
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetGasPrice() *big.Int {
 	return t.Price
 }
 
@@ -151,11 +149,11 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -163,8 +161,8 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetHash() *common.Hash {
-	return t.Hash
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetData() []byte {
+	return []byte{}
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetFeePayer() common.Address {
@@ -179,66 +177,12 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) GetFeeRatio() FeeRatio {
 	return t.FeeRatio
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) SetFeePayerSignatures(s TxSignatures) {
 	t.FeePayerSignatures = s
-}
-
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
-}
-
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) Equal(b TxInternalData) bool {
-	ta, ok := b.(*TxInternalDataFeeDelegatedCancelWithRatio)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.From == ta.From &&
-		t.FeeRatio == ta.FeeRatio &&
-		t.TxSignatures.equal(ta.TxSignatures) &&
-		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
-}
-
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Signature:     %s
-	FeePayer:      %s
-	FeeRatio:      %d
-	FeePayerSig:   %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.TxSignatures.string(),
-		t.FeePayer.String(),
-		t.FeeRatio,
-		t.FeePayerSignatures.string(),
-		enc)
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) SetSignature(s TxSignatures) {
@@ -269,15 +213,8 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SerializeForSignToBytes() []
 	return b
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		t.FeeRatio,
-	}
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedCancelWithRatio) SenderTxHash() common.Hash {
@@ -299,12 +236,11 @@ func (t *TxInternalDataFeeDelegatedCancelWithRatio) SenderTxHash() common.Hash {
 	return h
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	// No more validation required for TxTypeFeeDelegatedCancelWithRatio for now.
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedCancelWithRatio) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataFeeDelegatedCancelWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	// No more validation required for TxTypeFeeDelegatedCancelWithRatio for now.
 	return nil
 }

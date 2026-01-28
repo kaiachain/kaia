@@ -236,11 +236,9 @@ func (f *ChainDataFetcher) startFetching() error {
 	currentBlock := f.blockchain.CurrentHeader().Number.Uint64()
 
 	f.fetchingStopCh = make(chan struct{})
-	f.fetchingWg.Add(1)
 
-	// lanuch a goroutine to handle from checkpoint to the head block.
-	go func() {
-		defer f.fetchingWg.Done()
+	// launch a goroutine to handle from checkpoint to the head block.
+	f.fetchingWg.Go(func() {
 		switch f.config.Mode {
 		case ModeKAS:
 			f.sendRequests(uint64(f.checkpoint), currentBlock, cfTypes.RequestTypeAll, true, f.fetchingStopCh)
@@ -249,7 +247,7 @@ func (f *ChainDataFetcher) startFetching() error {
 		default:
 			logger.Error("the chaindatafetcher mode is not supported", "mode", f.config.Mode, "checkpoint", f.checkpoint, "currentBlock", currentBlock)
 		}
-	}()
+	})
 	logger.Info("fetching is started", "startedCheckpoint", checkpoint, "currentBlock", currentBlock)
 	return nil
 }
@@ -272,12 +270,10 @@ func (f *ChainDataFetcher) startRangeFetching(startBlock, endBlock uint64, reqTy
 	}
 
 	f.rangeFetchingStopCh = make(chan struct{})
-	f.rangeFetchingWg.Add(1)
-	go func() {
-		defer f.rangeFetchingWg.Done()
+	f.rangeFetchingWg.Go(func() {
 		f.sendRequests(startBlock, endBlock, reqType, false, f.rangeFetchingStopCh)
 		atomic.StoreUint32(&f.rangeFetchingStarted, stopped)
-	}()
+	})
 	logger.Info("range fetching is started", "startBlock", startBlock, "endBlock", endBlock, "reqType", reqType)
 	return nil
 }

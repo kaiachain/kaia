@@ -1,7 +1,7 @@
 package headergov
 
 import (
-	"sort"
+	"slices"
 
 	"github.com/kaiachain/kaia/kaiax/gov"
 )
@@ -19,9 +19,7 @@ func GovsToHistory(govs map[uint64]GovData) History {
 	for num := range govs {
 		sortedNums = append(sortedNums, num)
 	}
-	sort.Slice(sortedNums, func(i, j int) bool {
-		return sortedNums[i] < sortedNums[j]
-	})
+	slices.Sort(sortedNums)
 
 	gp := *gov.GetDefaultGovernanceParamSet()
 	for _, num := range sortedNums {

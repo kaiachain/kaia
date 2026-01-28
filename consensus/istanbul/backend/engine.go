@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -96,6 +97,14 @@ var (
 	errInternalError = errors.New("internal error")
 	// errPendingNotAllowed is returned when pending block is not allowed.
 	errPendingNotAllowed = errors.New("pending is not allowed")
+	// errNoBlobSidecarForBlobTx is returned if the blob sidecar is not found for a blob transaction.
+	errNoBlobSidecarForBlobTx = errors.New("no blob sidecar for blob transaction")
+	// errInvalidBlobTxWithSidecar is returned if the blob transaction has an invalid sidecar.
+	errInvalidBlobTxWithSidecar = errors.New("invalid blob transaction with sidecar")
+	// errUnexpectedExcessBlobGasBeforeOsaka is returned if the excessBlobGas is present before the osaka fork.
+	errUnexpectedExcessBlobGasBeforeOsaka = errors.New("unexpected excessBlobGas before osaka")
+	// errUnexpectedBlobGasUsedBeforeOsaka is returned if the blobGasUsed is present before the osaka fork.
+	errUnexpectedBlobGasUsedBeforeOsaka = errors.New("unexpected blobGasUsed before osaka")
 )
 
 var (
@@ -284,6 +293,21 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		}
 	} else if header.RandomReveal != nil || header.MixHash != nil {
 		return errUnexpectedRandao
+	}
+
+	// Verify the existence / non-existence of osaka-specific header fields
+	osaka := chain.Config().IsOsakaForkEnabled(header.Number)
+	if !osaka {
+		switch {
+		case header.ExcessBlobGas != nil:
+			return errUnexpectedExcessBlobGasBeforeOsaka
+		case header.BlobGasUsed != nil:
+			return errUnexpectedBlobGasUsedBeforeOsaka
+		}
+	} else {
+		if err := eip4844.VerifyEIP4844Header(chain.Config(), parent, header); err != nil {
+			return err
+		}
 	}
 
 	return sb.verifyCommittedSeals(chain, header, parents)

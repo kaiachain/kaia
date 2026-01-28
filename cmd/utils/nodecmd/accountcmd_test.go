@@ -87,6 +87,18 @@ Repeat passphrase: {{.InputLine "foobar"}}
 	kaia.ExpectRegexp(`Address: \{[0-9a-f]{40}\}\n`)
 }
 
+func TestAccountNewV3(t *testing.T) {
+	kaia := runKaia(t, "kaia-test", "account", "new", "--v3", "--lightkdf")
+	defer kaia.ExpectExit()
+	kaia.Expect(`
+Your new account is locked with a password. Please give a password. Do not forget this password.
+!! Unsupported terminal, password will be echoed.
+Passphrase: {{.InputLine "foobar"}}
+Repeat passphrase: {{.InputLine "foobar"}}
+`)
+	kaia.ExpectRegexp(`Address: \{[0-9a-f]{40}\}\n`)
+}
+
 func TestAccountNewBadRepeat(t *testing.T) {
 	kaia := runKaia(t, "kaia-test", "account", "new", "--lightkdf")
 	defer kaia.ExpectExit()
@@ -113,6 +125,42 @@ Please give a new password. Do not forget this password.
 Passphrase: {{.InputLine "foobar2"}}
 Repeat passphrase: {{.InputLine "foobar2"}}
 `)
+}
+
+func TestAccountImportV3(t *testing.T) {
+	var (
+		datadir     = tmpdir(t)
+		testKeyHex  = "46aa96666b069332debfa3d2f233b948ae909f65d1f401c32ba1c9b87bb7411b"
+		testKeyPath = filepath.Join(datadir, "testkey")
+		expectFile  = `\{"address":"60de0c1187078952bae878157ea477ccc09c06e8","crypto":\{.*\},"id":"[0-9a-f-]{36}","version":3}`
+	)
+
+	defer os.RemoveAll(datadir)
+	t.Logf("datadir: %s", datadir)
+
+	assert.Nil(t, os.WriteFile(testKeyPath, []byte(testKeyHex), 0o400))
+	defer os.Remove(testKeyPath)
+
+	kaia := runKaia(t, "kaia-test", "account", "import", "--v3", testKeyPath)
+	// Enter password
+	kaia.InputLine("")
+	// Confirm password
+	kaia.InputLine("")
+
+	defer kaia.ExpectExit()
+	// Parse output path from stdout using regex with capture group
+	_, matches := kaia.ExpectRegexp(`Address: \{60de0c1187078952bae878157ea477ccc09c06e8\}\nYour account is imported at (.+)`)
+	if len(matches) < 2 {
+		t.Fatal("Failed to parse output path from command output")
+	}
+	outputPath := strings.TrimSpace(matches[1]) // First capture group contains the path
+	assert.NotEmpty(t, outputPath)
+	defer os.Remove(outputPath) // Clean up the imported key file
+
+	// Verify the file exists and has the correct structure
+	content, err := os.ReadFile(outputPath)
+	assert.Nil(t, err)
+	assert.Regexp(t, expectFile, string(content))
 }
 
 func TestUnlockFlag(t *testing.T) {
@@ -320,32 +368,6 @@ func TestBlsInfo(t *testing.T) {
 }
 
 func TestBlsImport(t *testing.T) {
-	// Test keystore + password -> datadir/bls-nodekey
-	var (
-		// Scrypt Test Vector from https://eips.ethereum.org/EIPS/eip-2335
-		keystorePath = "../../../accounts/keystore/testdata/eip2335_scrypt.json"
-		passwordPath = "../../../accounts/keystore/testdata/eip2335_password.txt"
-
-		datadir     = tmpdir(t)
-		outputPath  = filepath.Join(datadir, "klay", "bls-nodekey")
-		expectPrint = fmt.Sprintf(
-			"Importing BLS key: pub=9612d7a727c9d0a22e185a1c768478dfe919cada9266988cb32359c11f2b7b27f4ae4040902382ae2910c15e2b420d07\n"+
-				"Successfully wrote '%s/klay/bls-nodekey'", datadir)
-		expectFile = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
-	)
-	defer os.RemoveAll(datadir)
-	t.Logf("datadir: %s", datadir)
-
-	kaia := runKaia(t, "kaia-test", "account", "bls-import", "--datadir", datadir,
-		"--bls-nodekeystore", keystorePath, "--password", passwordPath)
-	kaia.ExpectRegexp(expectPrint)
-
-	content, err := os.ReadFile(outputPath)
-	assert.Nil(t, err)
-	assert.Regexp(t, expectFile, string(content))
-}
-
-func TestBlsExport(t *testing.T) {
 	// Test datadir/bls-nodekey -> bls-keystore.json
 	var (
 		datadir        = tmpdir(t)
@@ -371,7 +393,7 @@ func TestBlsExport(t *testing.T) {
 	assert.Nil(t, os.WriteFile(blsnodekeyPath, []byte(blsnodekeyHex), 0o400))
 
 	os.Remove(outputPath) // delete before test, because otherwise the "already exists" error occurs
-	kaia := runKaia(t, "kaia-test", "account", "bls-export", "--datadir", datadir)
+	kaia := runKaia(t, "kaia-test", "account", "bls-import", "--datadir", datadir)
 	kaia.InputLine("1234") // Enter password
 	kaia.InputLine("1234") // Confirm password
 	kaia.ExpectRegexp(expectPrint)
@@ -381,4 +403,30 @@ func TestBlsExport(t *testing.T) {
 	for _, expectField := range expectFile {
 		assert.Regexp(t, expectField, string(content))
 	}
+}
+
+func TestBlsExport(t *testing.T) {
+	// Test keystore + password -> datadir/bls-nodekey
+	var (
+		// Scrypt Test Vector from https://eips.ethereum.org/EIPS/eip-2335
+		keystorePath = "../../../accounts/keystore/testdata/eip2335_scrypt.json"
+		passwordPath = "../../../accounts/keystore/testdata/eip2335_password.txt"
+
+		datadir     = tmpdir(t)
+		outputPath  = filepath.Join(datadir, "klay", "bls-nodekey")
+		expectPrint = fmt.Sprintf(
+			"Exporting BLS key: pub=9612d7a727c9d0a22e185a1c768478dfe919cada9266988cb32359c11f2b7b27f4ae4040902382ae2910c15e2b420d07\n"+
+				"Successfully wrote '%s/klay/bls-nodekey'", datadir)
+		expectFile = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
+	)
+	defer os.RemoveAll(datadir)
+	t.Logf("datadir: %s", datadir)
+
+	kaia := runKaia(t, "kaia-test", "account", "bls-export", "--datadir", datadir,
+		"--bls-nodekeystore", keystorePath, "--password", passwordPath)
+	kaia.ExpectRegexp(expectPrint)
+
+	content, err := os.ReadFile(outputPath)
+	assert.Nil(t, err)
+	assert.Regexp(t, expectFile, string(content))
 }

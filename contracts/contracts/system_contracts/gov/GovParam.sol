@@ -195,10 +195,12 @@ contract GovParam is Ownable, IGovParam {
             activation > block.number,
             "GovParam: activation must be in the future"
         );
+        // This require only activates when exists=true. If exists=false, require is automatically satisfied.
         require(
             !exists || val.length > 0,
             "GovParam: val must not be empty if exists=true"
         );
+        // This require only activates when exists=false. If exists=true, require is automatically satisfied.
         require(
             exists || val.length == 0,
             "GovParam: val must be empty if exists=false"

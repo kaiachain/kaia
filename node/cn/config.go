@@ -112,7 +112,7 @@ type Config struct {
 	// LightServ  int `toml:",omitempty"` // Maximum percentage of time allowed for serving LES requests
 	// LightPeers int `toml:",omitempty"` // Maximum number of LES client peers
 
-	OverwriteGenesis bool
+	Overrides        *blockchain.ChainOverrides
 	StartBlockNumber uint64
 
 	// Database options

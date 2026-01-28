@@ -27,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kerrors"
 )
 
@@ -171,4 +172,47 @@ func (t TxSignaturesJSON) ToTxSignatures() TxSignatures {
 	}
 
 	return sigs
+}
+
+// SanityCheckSignatures validates whether the signature values are valid.
+// It checks the signatures from the given TxSignatures.
+func SanityCheckSignatures(sigs TxSignatures, txType TxType) bool {
+	if len(sigs) == 0 {
+		return false
+	}
+
+	// Legacy and Eth Typed transactions have only one signature.
+	sig := sigs[0]
+
+	if txType.IsEthTypedTransaction() {
+		v := byte(sig.V.Uint64())
+		return crypto.ValidateSignatureValues(v, sig.R, sig.S, false)
+	}
+
+	if txType.IsLegacyTransaction() {
+		return validateSignature(sig.V, sig.R, sig.S)
+	}
+
+	return sigs.ValidateSignature()
+}
+
+// RecoverTxSender returns the address derived from txhash and the sole signature (v, r, s).
+// Used to recover the sender of Legacy and Ethereum typed transactions at signer.Sender() via tx.ValidateSender().
+func RecoverTxSender(txhash common.Hash, sigs TxSignatures, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
+	if len(sigs) == 0 {
+		return common.Address{}, ErrInvalidSig
+	}
+	if len(sigs) != 1 {
+		return common.Address{}, ErrShouldBeSingleSignature
+	}
+
+	txSig, _ := sigs.getDefaultSig()
+	V := vfunc(txSig.V)
+	return recoverPlain(txhash, txSig.R, txSig.S, V, homestead)
+}
+
+// RecoverTxPubkeys returns the public keys derived from txhash and one or more signatures []{v, r, s}.
+// Used to recover the sender or fee payer of Kaia typed transactions at tx.ValidateSender() or tx.ValidateFeePayer().
+func RecoverTxPubkeys(txhash common.Hash, sigs TxSignatures, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
+	return sigs.RecoverPubkey(txhash, homestead, vfunc)
 }

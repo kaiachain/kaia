@@ -19,10 +19,7 @@
 package types
 
 import (
-	"bytes"
-	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -169,70 +166,11 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetRoleTypeForVal
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataFeeDelegatedValueTransferMemoWithRatio)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.Recipient == tb.Recipient &&
-		t.Amount.Cmp(tb.Amount) == 0 &&
-		t.From == tb.From &&
-		t.FeeRatio == tb.FeeRatio &&
-		bytes.Equal(t.Payload, tb.Payload) &&
-		t.TxSignatures.equal(tb.TxSignatures) &&
-		t.FeePayer == tb.FeePayer &&
-		t.FeePayerSignatures.equal(tb.FeePayerSignatures)
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	To:            %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Value:         %#x
-	Signature:     %s
-	FeePayer:      %s
-	FeeRatio:      %d
-	FeePayerSig:   %s
-	Data:          %x
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.Recipient.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Amount,
-		t.TxSignatures.string(),
-		t.FeePayer.String(),
-		t.FeeRatio,
-		t.FeePayerSignatures.string(),
-		common.Bytes2Hex(t.Payload),
-		enc)
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -240,7 +178,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetGasLimit() uin
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -249,7 +187,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetRecipient() *c
 	return &to
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -257,12 +195,8 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetFrom() common.
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetPayload() []byte {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetData() []byte {
 	return t.Payload
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetHash() *common.Hash {
-	return t.Hash
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetFeePayer() common.Address {
@@ -277,7 +211,7 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) GetFeeRatio() Fee
 	return t.FeeRatio
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
@@ -287,10 +221,6 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SetSignature(s Tx
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SetFeePayerSignatures(s TxSignatures) {
 	t.FeePayerSignatures = s
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
@@ -332,18 +262,8 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SerializeForSignT
 	return b
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-		t.FeeRatio,
-	}
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SenderTxHash() common.Hash {
@@ -368,14 +288,16 @@ func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) SenderTxHash() co
 	return h
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-		return kerrors.ErrPrecompiledContractAddress
-	}
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataFeeDelegatedValueTransferMemoWithRatio) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
+	if !onlyMutableChecks {
+		if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+			return kerrors.ErrPrecompiledContractAddress
+		}
+	}
 	if err := validate7702(stateDB, t.Type(), t.From, t.Recipient); err != nil {
 		return err
 	}

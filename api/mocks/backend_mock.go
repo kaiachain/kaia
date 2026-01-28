@@ -195,6 +195,35 @@ func (mr *MockBackendMockRecorder) FeeHistory(arg0, arg1, arg2, arg3 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FeeHistory", reflect.TypeOf((*MockBackend)(nil).FeeHistory), arg0, arg1, arg2, arg3)
 }
 
+// GetActiveSystemContracts mocks base method.
+func (m *MockBackend) GetActiveSystemContracts(arg0 *params.ChainConfig, arg1 common.Hash, arg2 *big.Int) map[string]common.Address {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetActiveSystemContracts", arg0, arg1, arg2)
+	ret0, _ := ret[0].(map[string]common.Address)
+	return ret0
+}
+
+// GetActiveSystemContracts indicates an expected call of GetActiveSystemContracts.
+func (mr *MockBackendMockRecorder) GetActiveSystemContracts(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveSystemContracts", reflect.TypeOf((*MockBackend)(nil).GetActiveSystemContracts), arg0, arg1, arg2)
+}
+
+// GetBlobSidecar mocks base method.
+func (m *MockBackend) GetBlobSidecar(arg0 *big.Int, arg1 int) (*types.BlobTxSidecar, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBlobSidecar", arg0, arg1)
+	ret0, _ := ret[0].(*types.BlobTxSidecar)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBlobSidecar indicates an expected call of GetBlobSidecar.
+func (mr *MockBackendMockRecorder) GetBlobSidecar(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlobSidecar", reflect.TypeOf((*MockBackend)(nil).GetBlobSidecar), arg0, arg1)
+}
+
 // GetBlockReceipts mocks base method.
 func (m *MockBackend) GetBlockReceipts(arg0 context.Context, arg1 common.Hash) types.Receipts {
 	m.ctrl.T.Helper()

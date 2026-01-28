@@ -49,9 +49,8 @@ func TestSubscription(t *testing.T) {
 	msg2 := "testMessage2"
 
 	wg := sync.WaitGroup{}
-	wg.Add(1)
 
-	go func() {
+	wg.Go(func() {
 		cache, err := newRedisCache(getTestRedisConfig())
 		assert.Nil(t, err)
 
@@ -71,8 +70,7 @@ func TestSubscription(t *testing.T) {
 			panic("timeout")
 		}
 
-		wg.Done()
-	}()
+	})
 	time.Sleep(sleepDurationForAsyncBehavior)
 
 	cache, err := newRedisCache(getTestRedisConfig())
@@ -207,7 +205,7 @@ func TestRedisCache_SetAsync_LargeNumberItems(t *testing.T) {
 	}
 }
 
-// TestRedisCache_Timeout tests timout feature of redis client.
+// TestRedisCache_Timeout tests timeout feature of redis client.
 func TestRedisCache_Timeout(t *testing.T) {
 	storage.SkipLocalTest(t)
 	serverReady := make(chan struct{})
@@ -219,7 +217,6 @@ func TestRedisCache_Timeout(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		close(serverReady)
 
 		listen, err := net.ListenTCP("tcp", tcpAddr)
 		if err != nil {
@@ -227,6 +224,7 @@ func TestRedisCache_Timeout(t *testing.T) {
 			return
 		}
 		defer listen.Close()
+		close(serverReady)
 
 		for {
 			if err := listen.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {

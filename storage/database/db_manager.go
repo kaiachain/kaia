@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -2891,9 +2892,7 @@ func (dbm *databaseManager) ReadRecentGovernanceIdx(count int) ([]uint64, error)
 		}
 
 		// Make sure idxHistory should be in ascending order
-		sort.Slice(idxHistory, func(i, j int) bool {
-			return idxHistory[i] < idxHistory[j]
-		})
+		slices.Sort(idxHistory)
 
 		max := 0
 		leng := len(idxHistory)

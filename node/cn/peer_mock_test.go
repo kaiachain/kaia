@@ -442,6 +442,20 @@ func (mr *MockPeerMockRecorder) RegisterConsensusMsgCode(arg0 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterConsensusMsgCode", reflect.TypeOf((*MockPeer)(nil).RegisterConsensusMsgCode), arg0)
 }
 
+// RequestBlobSidecars mocks base method.
+func (m *MockPeer) RequestBlobSidecars(arg0 []blobSidecarsRequestData) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RequestBlobSidecars", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RequestBlobSidecars indicates an expected call of RequestBlobSidecars.
+func (mr *MockPeerMockRecorder) RequestBlobSidecars(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestBlobSidecars", reflect.TypeOf((*MockPeer)(nil).RequestBlobSidecars), arg0)
+}
+
 // RequestBodies mocks base method.
 func (m *MockPeer) RequestBodies(arg0 []common.Hash) error {
 	m.ctrl.T.Helper()
@@ -566,6 +580,20 @@ func (m *MockPeer) SendBid(arg0 *auction.Bid) error {
 func (mr *MockPeerMockRecorder) SendBid(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendBid", reflect.TypeOf((*MockPeer)(nil).SendBid), arg0)
+}
+
+// SendBlobSidecarsRLP mocks base method.
+func (m *MockPeer) SendBlobSidecarsRLP(arg0 []rlp.RawValue) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendBlobSidecarsRLP", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendBlobSidecarsRLP indicates an expected call of SendBlobSidecarsRLP.
+func (mr *MockPeerMockRecorder) SendBlobSidecarsRLP(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendBlobSidecarsRLP", reflect.TypeOf((*MockPeer)(nil).SendBlobSidecarsRLP), arg0)
 }
 
 // SendBlockBodies mocks base method.

@@ -332,9 +332,22 @@ func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
 	}
 
 	// check block body
-	txnHash := types.DeriveSha(block.Transactions(), block.Number())
+	txnHash := types.DeriveTransactionsRoot(block.Transactions(), block.Number())
 	if txnHash != block.Header().TxHash {
 		return 0, errMismatchTxhashes
+	}
+	for _, tx := range block.Transactions() {
+		if tx.Type() == types.TxTypeEthereumBlob {
+			sidecar := tx.BlobTxSidecar()
+			if sidecar == nil {
+				sb.logger.Error("No blob sidecar for blob transaction", "txHash", tx.Hash())
+				return 0, errNoBlobSidecarForBlobTx
+			}
+			if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
+				sb.logger.Error("Invalid blob transaction with sidecar", "txHash", tx.Hash(), "err", err)
+				return 0, errInvalidBlobTxWithSidecar
+			}
+		}
 	}
 
 	// verify the header of proposed block

@@ -52,7 +52,6 @@ var (
 		KoreCompatibleBlock:      big.NewInt(119750400),
 		ShanghaiCompatibleBlock:  big.NewInt(135456000),
 		CancunCompatibleBlock:    big.NewInt(147534000),
-		KaiaCompatibleBlock:      big.NewInt(162900480),
 		RandaoCompatibleBlock:    big.NewInt(147534000),
 		RandaoRegistry: &RegistryConfig{
 			Records: map[string]common.Address{
@@ -60,12 +59,16 @@ var (
 			},
 			Owner: common.HexToAddress("0x04992a2B7E7CE809d409adE32185D49A96AAa32d"),
 		},
+		KaiaCompatibleBlock:   big.NewInt(162900480),
 		PragueCompatibleBlock: big.NewInt(190670000),
+		OsakaCompatibleBlock:  nil, // TODO-kaia-osaka: set Mainnet's OsakaCompatibleBlock
+		// Optional forks
 		Kip103CompatibleBlock: big.NewInt(119750400),
 		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		Kip160CompatibleBlock: big.NewInt(162900480),
 		Kip160ContractAddress: common.HexToAddress("0xa4df15717Da40077C0aD528296AdBBd046579Ee9"),
-		DeriveShaImpl:         2,
+		// Genesis governance parameters
+		DeriveShaImpl: 2,
 		Governance: &GovernanceConfig{
 			GoverningNode:  common.HexToAddress("0x52d41ca72af615a1ac3301b0a93efa222ecc7541"),
 			GovernanceMode: "single",
@@ -84,6 +87,9 @@ var (
 			ProposerPolicy: 2,
 			SubGroupSize:   22,
 		},
+		BlobScheduleConfig: &BlobScheduleConfig{
+			Osaka: DefaultOsakaBlobConfig,
+		},
 		UnitPrice: 25000000000,
 	}
 
@@ -97,16 +103,17 @@ var (
 		KoreCompatibleBlock:      big.NewInt(111736800),
 		ShanghaiCompatibleBlock:  big.NewInt(131608000),
 		CancunCompatibleBlock:    big.NewInt(141367000),
-		KaiaCompatibleBlock:      big.NewInt(156660000),
-		// Optional forks
-		RandaoCompatibleBlock: big.NewInt(141367000),
+		RandaoCompatibleBlock:    big.NewInt(141367000),
 		RandaoRegistry: &RegistryConfig{
 			Records: map[string]common.Address{
 				"KIP113": common.HexToAddress("0x4BEed0651C46aE5a7CB3b7737345d2ee733789e6"),
 			},
 			Owner: common.HexToAddress("0x04992a2B7E7CE809d409adE32185D49A96AAa32d"),
 		},
+		KaiaCompatibleBlock:   big.NewInt(156660000),
 		PragueCompatibleBlock: big.NewInt(187930000),
+		OsakaCompatibleBlock:  big.NewInt(209134000),
+		// Optional forks
 		Kip103CompatibleBlock: big.NewInt(119145600),
 		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
 		Kip160CompatibleBlock: big.NewInt(156660000),
@@ -131,10 +138,13 @@ var (
 			ProposerPolicy: 2,
 			SubGroupSize:   22,
 		},
+		BlobScheduleConfig: &BlobScheduleConfig{
+			Osaka: DefaultOsakaBlobConfig,
+		},
 		UnitPrice: 25000000000,
 	}
 
-	TestChainConfig = TestKaiaConfig("kaia")
+	TestChainConfig = TestKaiaConfig("osaka")
 )
 
 func TestKaiaConfig(maxHardfork string) *ChainConfig {
@@ -182,6 +192,11 @@ func TestKaiaConfig(maxHardfork string) *ChainConfig {
 	if maxHardfork == "cancun" {
 		return chainConfig
 	}
+	chainConfig.RandaoCompatibleBlock = big.NewInt(0)
+	chainConfig.RandaoRegistry = DefaultRegistryConfig
+	if maxHardfork == "randao" {
+		return chainConfig
+	}
 	chainConfig.KaiaCompatibleBlock = big.NewInt(0)
 	if maxHardfork == "kaia" {
 		return chainConfig
@@ -190,8 +205,11 @@ func TestKaiaConfig(maxHardfork string) *ChainConfig {
 	if maxHardfork == "prague" {
 		return chainConfig
 	}
-	chainConfig.RandaoCompatibleBlock = big.NewInt(0)
-	if maxHardfork == "randao" {
+	chainConfig.OsakaCompatibleBlock = big.NewInt(0)
+	chainConfig.BlobScheduleConfig = &BlobScheduleConfig{
+		Osaka: DefaultOsakaBlobConfig,
+	}
+	if maxHardfork == "osaka" {
 		return chainConfig
 	}
 
@@ -220,6 +238,26 @@ const (
 	PasswordLength = 16
 )
 
+var (
+	// DefaultOsakaBlobConfig is the default blob configuration for the Osaka fork.
+	DefaultOsakaBlobConfig = &BlobConfig{
+		Target:         1,
+		Max:            1,
+		UpdateFraction: 5007716,
+	}
+	// DefaultBlobSchedule is the latest configured blob schedule for Ethereum mainnet.
+	DefaultBlobSchedule = &BlobScheduleConfig{
+		Osaka: DefaultOsakaBlobConfig,
+	}
+	// DefaultRegistryConfig is the default registry config for the Randao fork.
+	DefaultRegistryConfig = &RegistryConfig{
+		Records: map[string]common.Address{
+			"KIP113": common.HexToAddress("0x0000000000000000000000000000000000000403"),
+		},
+		Owner: common.HexToAddress("0x0000000000000000000000000000000000000000"),
+	}
+)
+
 // ChainConfig is the blockchain config which determines the blockchain settings.
 //
 // ChainConfig is stored in the database on a per block basis. This means
@@ -239,6 +277,7 @@ type ChainConfig struct {
 	CancunCompatibleBlock    *big.Int `json:"cancunCompatibleBlock,omitempty"`    // CancunCompatible switch block (nil = no fork, 0 already on Cancun)
 	KaiaCompatibleBlock      *big.Int `json:"kaiaCompatibleBlock,omitempty"`      // KaiaCompatible switch block (nil = no fork, 0 already on Kaia)
 	PragueCompatibleBlock    *big.Int `json:"pragueCompatibleBlock,omitempty"`    // PragueCompatible switch block (nil = no fork)
+	OsakaCompatibleBlock     *big.Int `json:"osakaCompatibleBlock,omitempty"`     // OsakaCompatible switch block (nil = no fork)
 
 	// Kip103 is a special purpose hardfork feature that can be executed only once
 	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
@@ -250,13 +289,13 @@ type ChainConfig struct {
 	Kip160CompatibleBlock *big.Int       `json:"kip160CompatibleBlock,omitempty"` // Kip160Compatible activate block (nil = no fork)
 	Kip160ContractAddress common.Address `json:"kip160ContractAddress,omitempty"` // Kip160 contract address already deployed on the network
 
-	// Randao is an optional hardfork
 	// RandaoCompatibleBlock, RandaoRegistryRecords and RandaoRegistryOwner all must be specified to enable Randao
-	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible activate block (nil = no fork)
+	RandaoCompatibleBlock *big.Int        `json:"randaoCompatibleBlock,omitempty"` // RandaoCompatible switch block (nil = no fork, 0 already on Randao)
 	RandaoRegistry        *RegistryConfig `json:"randaoRegistry,omitempty"`        // Registry initial states
 
 	// Various consensus engines
-	Istanbul *IstanbulConfig `json:"istanbul,omitempty"`
+	Istanbul           *IstanbulConfig     `json:"istanbul,omitempty"`
+	BlobScheduleConfig *BlobScheduleConfig `json:"blobSchedule,omitempty"`
 
 	UnitPrice     uint64            `json:"unitPrice"`
 	DeriveShaImpl int               `json:"deriveShaImpl"`
@@ -359,49 +398,46 @@ func (c *ChainConfig) String() string {
 		engine = "unknown"
 	}
 
-	kip103 := fmt.Sprintf("KIP103CompatibleBlock: %v KIP103ContractAddress %s", c.Kip103CompatibleBlock, c.Kip103ContractAddress.String())
-	kip160 := fmt.Sprintf("KIP160CompatibleBlock: %v KIP160ContractAddress %s", c.Kip160CompatibleBlock, c.Kip160ContractAddress.String())
-
+	kip103 := fmt.Sprintf(" KIP103CompatibleBlock: %v KIP103ContractAddress %s", c.Kip103CompatibleBlock, c.Kip103ContractAddress.String())
+	kip160 := fmt.Sprintf(" KIP160CompatibleBlock: %v KIP160ContractAddress %s", c.Kip160CompatibleBlock, c.Kip160ContractAddress.String())
+	var subGroupSize string = ""
 	if c.Istanbul != nil {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v KaiaCompatibleBlock: %v RandaoCompatibleBlock: %v PragueCompatibleBlock: %v %s %s SubGroupSize: %d UnitPrice: %d DeriveShaImpl: %d Engine: %v}",
-			c.ChainID,
-			c.IstanbulCompatibleBlock,
-			c.LondonCompatibleBlock,
-			c.EthTxTypeCompatibleBlock,
-			c.MagmaCompatibleBlock,
-			c.KoreCompatibleBlock,
-			c.ShanghaiCompatibleBlock,
-			c.CancunCompatibleBlock,
-			c.KaiaCompatibleBlock,
-			c.RandaoCompatibleBlock,
-			c.PragueCompatibleBlock,
-			kip103,
-			kip160,
-			c.Istanbul.SubGroupSize,
-			c.UnitPrice,
-			c.DeriveShaImpl,
-			engine,
-		)
-	} else {
-		return fmt.Sprintf("{ChainID: %v IstanbulCompatibleBlock: %v LondonCompatibleBlock: %v EthTxTypeCompatibleBlock: %v MagmaCompatibleBlock: %v KoreCompatibleBlock: %v ShanghaiCompatibleBlock: %v CancunCompatibleBlock: %v KaiaCompatibleBlock: %v RandaoCompatibleBlock: %v PragueCompatibleBlock: %v %s %s UnitPrice: %d DeriveShaImpl: %d Engine: %v }",
-			c.ChainID,
-			c.IstanbulCompatibleBlock,
-			c.LondonCompatibleBlock,
-			c.EthTxTypeCompatibleBlock,
-			c.MagmaCompatibleBlock,
-			c.KoreCompatibleBlock,
-			c.ShanghaiCompatibleBlock,
-			c.CancunCompatibleBlock,
-			c.KaiaCompatibleBlock,
-			c.RandaoCompatibleBlock,
-			c.PragueCompatibleBlock,
-			kip103,
-			kip160,
-			c.UnitPrice,
-			c.DeriveShaImpl,
-			engine,
-		)
+		subGroupSize = fmt.Sprintf(" SubGroupSize: %d", c.Istanbul.SubGroupSize)
 	}
+
+	return fmt.Sprintf("{ChainID: %v"+
+		" IstanbulCompatibleBlock: %v"+
+		" LondonCompatibleBlock: %v"+
+		" EthTxTypeCompatibleBlock: %v"+
+		" MagmaCompatibleBlock: %v"+
+		" KoreCompatibleBlock: %v"+
+		" ShanghaiCompatibleBlock: %v"+
+		" CancunCompatibleBlock: %v"+
+		" KaiaCompatibleBlock: %v"+
+		" RandaoCompatibleBlock: %v"+
+		" PragueCompatibleBlock: %v"+
+		" OsakaCompatibleBlock: %v"+
+		"%s%s%s"+
+		" UnitPrice: %d"+
+		" DeriveShaImpl: %d"+
+		" Engine: %v}",
+		c.ChainID,
+		c.IstanbulCompatibleBlock,
+		c.LondonCompatibleBlock,
+		c.EthTxTypeCompatibleBlock,
+		c.MagmaCompatibleBlock,
+		c.KoreCompatibleBlock,
+		c.ShanghaiCompatibleBlock,
+		c.CancunCompatibleBlock,
+		c.KaiaCompatibleBlock,
+		c.RandaoCompatibleBlock,
+		c.PragueCompatibleBlock,
+		c.OsakaCompatibleBlock,
+		kip103, kip160, subGroupSize,
+		c.UnitPrice,
+		c.DeriveShaImpl,
+		engine,
+	)
 }
 
 func (c *ChainConfig) Copy() *ChainConfig {
@@ -409,6 +445,34 @@ func (c *ChainConfig) Copy() *ChainConfig {
 	j, _ := json.Marshal(c)
 	json.Unmarshal(j, r)
 	return r
+}
+
+// BlobConfig specifies the target and max blobs per block for the associated fork.
+type BlobConfig struct {
+	Target         int    `json:"target"`
+	Max            int    `json:"max"`
+	UpdateFraction uint64 `json:"baseFeeUpdateFraction"`
+}
+
+// String implement fmt.Stringer, returning string format blob config.
+func (bc *BlobConfig) String() string {
+	if bc == nil {
+		return "nil"
+	}
+	return fmt.Sprintf("target: %d, max: %d, fraction: %d", bc.Target, bc.Max, bc.UpdateFraction)
+}
+
+// BlobScheduleConfig determines target and max number of blobs allow per fork.
+type BlobScheduleConfig struct {
+	Osaka *BlobConfig `json:"osaka,omitempty"`
+}
+
+// BlobConfig returns the blob config associated with the provided fork.
+func (c *ChainConfig) BlobConfig(head *big.Int) *BlobConfig {
+	if c.IsOsakaForkEnabled(head) {
+		return c.BlobScheduleConfig.Osaka
+	}
+	return nil
 }
 
 // IsIstanbulForkEnabled returns whether num is either equal to the istanbul block or greater.
@@ -451,6 +515,16 @@ func (c *ChainConfig) IsKaiaForkEnabled(num *big.Int) bool {
 	return isForked(c.KaiaCompatibleBlock, num)
 }
 
+// IsKip103ForkEnabled returns whether num is either equal to the kip103 block or greater.
+func (c *ChainConfig) IsKip103ForkEnabled(num *big.Int) bool {
+	return isForked(c.Kip103CompatibleBlock, num)
+}
+
+// IsKip160ForkEnabled returns whether num is either equal to the kip160 block or greater.
+func (c *ChainConfig) IsKip160ForkEnabled(num *big.Int) bool {
+	return isForked(c.Kip160CompatibleBlock, num)
+}
+
 // IsRandaoForkEnabled returns whether num is either equal to the randao block or greater.
 func (c *ChainConfig) IsRandaoForkEnabled(num *big.Int) bool {
 	return isForked(c.RandaoCompatibleBlock, num)
@@ -459,6 +533,11 @@ func (c *ChainConfig) IsRandaoForkEnabled(num *big.Int) bool {
 // IsPragueForkEnabled returns whether num is either equal to the prague block or greater.
 func (c *ChainConfig) IsPragueForkEnabled(num *big.Int) bool {
 	return isForked(c.PragueCompatibleBlock, num)
+}
+
+// IsOsakaForkEnabled returns whether num is either equal to the osaka block or greater.
+func (c *ChainConfig) IsOsakaForkEnabled(num *big.Int) bool {
+	return isForked(c.OsakaCompatibleBlock, num)
 }
 
 // IsKIP103ForkBlock returns whether num is equal to the kip103 block.
@@ -505,12 +584,12 @@ func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *Confi
 }
 
 // CheckConfigForkOrder checks that we don't "skip" any forks, geth isn't pluggable enough
-// to guarantee that forks can be implemented in a different order than on official networks
+// to guarantee that forks can be implemented in a different order than on official networks.
+// Because some forks (namely KIP103 and KIP160) can be situated at any position, they are not checked for fork order.
 func (c *ChainConfig) CheckConfigForkOrder() error {
 	type fork struct {
-		name     string
-		block    *big.Int
-		optional bool // if true, the fork may be nil and next fork is still allowed
+		name  string
+		block *big.Int
 	}
 	var lastFork fork
 	for _, cur := range []fork{
@@ -521,9 +600,10 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "koreBlock", block: c.KoreCompatibleBlock},
 		{name: "shanghaiBlock", block: c.ShanghaiCompatibleBlock},
 		{name: "cancunBlock", block: c.CancunCompatibleBlock},
-		{name: "randaoBlock", block: c.RandaoCompatibleBlock, optional: true},
+		{name: "randaoBlock", block: c.RandaoCompatibleBlock},
 		{name: "kaiaBlock", block: c.KaiaCompatibleBlock},
 		{name: "pragueBlock", block: c.PragueCompatibleBlock},
+		{name: "osakaBlock", block: c.OsakaCompatibleBlock},
 	} {
 		if lastFork.name != "" {
 			// Next one must be higher number
@@ -538,8 +618,8 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 				}
 			}
 		}
-		// If it was optional and not set, then ignore it
-		if !cur.optional || cur.block != nil {
+		// If it was not set, then ignore it
+		if cur.block != nil {
 			lastFork = cur
 		}
 	}
@@ -579,6 +659,9 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 	if isForkIncompatible(c.PragueCompatibleBlock, newcfg.PragueCompatibleBlock, head) {
 		return newCompatError("Prague Block", c.PragueCompatibleBlock, newcfg.PragueCompatibleBlock)
 	}
+	if isForkIncompatible(c.OsakaCompatibleBlock, newcfg.OsakaCompatibleBlock, head) {
+		return newCompatError("Osaka Block", c.OsakaCompatibleBlock, newcfg.OsakaCompatibleBlock)
+	}
 	return nil
 }
 
@@ -604,14 +687,14 @@ func (c *ChainConfig) SetDefaultsForGenesis() {
 
 	// StakingUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.StakingUpdateInterval == 0 {
-		c.Governance.Reward.StakingUpdateInterval = StakingUpdateInterval()
+		c.Governance.Reward.StakingUpdateInterval = DefaultStakeUpdateInterval
 		logger.Warn("Override the default staking update interval to the chain config", "interval",
 			c.Governance.Reward.StakingUpdateInterval)
 	}
 
 	// ProposerUpdateInterval must be nonzero because it is used as denominator
 	if c.Governance.Reward.ProposerUpdateInterval == 0 {
-		c.Governance.Reward.ProposerUpdateInterval = ProposerUpdateInterval()
+		c.Governance.Reward.ProposerUpdateInterval = DefaultProposerRefreshInterval
 		logger.Warn("Override the default proposer update interval to the chain config", "interval",
 			c.Governance.Reward.ProposerUpdateInterval)
 	}
@@ -718,6 +801,7 @@ type Rules struct {
 	IsKaia      bool
 	IsRandao    bool
 	IsPrague    bool
+	IsOsaka     bool
 }
 
 // Rules ensures c's ChainID is not nil.
@@ -738,6 +822,7 @@ func (c *ChainConfig) Rules(num *big.Int) Rules {
 		IsKaia:      c.IsKaiaForkEnabled(num),
 		IsRandao:    c.IsRandaoForkEnabled(num),
 		IsPrague:    c.IsPragueForkEnabled(num),
+		IsOsaka:     c.IsOsakaForkEnabled(num),
 	}
 }
 

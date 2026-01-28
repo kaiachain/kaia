@@ -216,7 +216,7 @@ func (f *Faker) Finalize(chain consensus.ChainReader, header *types.Header, stat
 
 	// Set header fields
 	header.Root = state.IntermediateRoot(true)
-	header.ReceiptHash = types.DeriveSha(types.Receipts(receipts), header.Number)
+	header.ReceiptHash = types.DeriveReceiptsRoot(types.Receipts(receipts), header.Number)
 	header.Bloom = types.CreateBloom(receipts)
 
 	return types.NewBlock(header, txs, receipts), nil

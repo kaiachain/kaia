@@ -66,10 +66,8 @@ func InsertVoteDataBlockNum(db database.Database, blockNum uint64) {
 	}
 
 	// Check if blockNum already exists in the array
-	for _, num := range blockNums {
-		if num == blockNum {
-			return
-		}
+	if slices.Contains(blockNums, blockNum) {
+		return
 	}
 
 	blockNums = append(blockNums, blockNum)

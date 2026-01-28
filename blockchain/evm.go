@@ -34,17 +34,12 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/params"
 )
 
-// ChainContext supports retrieving headers and consensus parameters from the
-// current blockchain to be used during transaction processing.
 type ChainContext interface {
-	// Engine retrieves the chain's consensus engine.
-	Engine() consensus.Engine
-
-	// GetHeader returns the hash corresponding to their hash.
-	GetHeader(common.Hash, uint64) *types.Header
+	consensus.ChainReader
 }
 
 // NewEVMBlockContext creates a new context for use in the EVM.
@@ -54,6 +49,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		beneficiary common.Address
 		rewardBase  common.Address
 		baseFee     *big.Int
+		blobBaseFee *big.Int
 		random      common.Hash
 	)
 
@@ -69,6 +65,14 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		baseFee = header.BaseFee
 	} else { // Before Magma hardfork, BASEFEE (48) returns 0
 		baseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
+	}
+
+	if header.ExcessBlobGas != nil {
+		// Since CalcBlobFee returns nil for a nil baseFee,
+		// use baseFee instead of header.BaseFee to at least force blobBaseFee to zero in this context.
+		blobBaseFee = eip4844.CalcBlobFee(baseFee)
+	} else { // Before Osaka hardfork, BLOBBASEFEE (4a) returns 0
+		blobBaseFee = new(big.Int).SetUint64(params.ZeroBaseFee)
 	}
 
 	if header.MixHash != nil {
@@ -87,6 +91,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 		Time:        new(big.Int).Set(header.Time),
 		BlockScore:  new(big.Int).Set(header.BlockScore),
 		BaseFee:     baseFee,
+		BlobBaseFee: blobBaseFee,
 		Random:      random,
 	}
 }
@@ -94,8 +99,9 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 // NewEVMTxContext creates a new transaction context for a single transaction.
 func NewEVMTxContext(msg Message, header *types.Header, config *params.ChainConfig) vm.TxContext {
 	return vm.TxContext{
-		Origin:   msg.ValidatedSender(),
-		GasPrice: new(big.Int).Set(msg.EffectiveGasPrice(header, config)),
+		Origin:     msg.ValidatedSender(),
+		GasPrice:   new(big.Int).Set(msg.EffectiveGasPrice(header, config)),
+		BlobHashes: msg.BlobHashes(),
 	}
 }
 

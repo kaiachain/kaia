@@ -192,7 +192,7 @@ func ExpandPackages(packages []string) []string {
 				log.Fatalf("package listing failed: %v\n%s", err, string(out))
 			}
 
-			for _, line := range strings.Split(string(out), "\n") {
+			for line := range strings.SplitSeq(string(out), "\n") {
 				newPkgs = append(newPkgs, strings.TrimSpace(line))
 			}
 			return newPkgs

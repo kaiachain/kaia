@@ -1,0 +1,283 @@
+// Copyright 2024 The Kaia Authors
+// Copyright 2023 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+//
+// This file is derived from eth/consensus/misc/eip4844/eip4844.go (2025/11/06).
+// Modified and improved for the Kaia development.
+
+package eip4844
+
+import (
+	"errors"
+	"fmt"
+	"math/big"
+
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/params"
+)
+
+var minBlobGasPrice = big.NewInt(params.BlobTxMinBlobGasprice)
+
+// BlobConfig contains the parameters for blob-related formulas.
+// These can be adjusted in a fork.
+type BlobConfig struct {
+	Target         int
+	Max            int
+	UpdateFraction uint64
+}
+
+func (bc *BlobConfig) maxBlobGas() uint64 {
+	return uint64(bc.Max) * params.BlobTxBlobGasPerBlob
+}
+
+// blobBaseFeeEIP4844 computes the blob fee for EIP-4844.
+func (bc *BlobConfig) blobBaseFeeEIP4844(excessBlobGas uint64) *big.Int {
+	return fakeExponential(minBlobGasPrice, new(big.Int).SetUint64(excessBlobGas), new(big.Int).SetUint64(bc.UpdateFraction))
+}
+
+// blobPriceEIP4844 returns the price for EIP-4844 of one blob in Wei.
+func (bc *BlobConfig) blobPriceEIP4844(excessBlobGas uint64) *big.Int {
+	f := bc.blobBaseFeeEIP4844(excessBlobGas)
+	return new(big.Int).Mul(f, big.NewInt(params.BlobTxBlobGasPerBlob))
+}
+
+func latestBlobConfig(cfg *params.ChainConfig, blockNumber *big.Int) *BlobConfig {
+	if cfg.BlobScheduleConfig == nil {
+		return nil
+	}
+	var (
+		s  = cfg.BlobScheduleConfig
+		bc *params.BlobConfig
+	)
+	switch {
+	case cfg.IsOsakaForkEnabled(blockNumber) && s.Osaka != nil:
+		bc = s.Osaka
+	default:
+		return nil
+	}
+
+	return &BlobConfig{
+		Target:         bc.Target,
+		Max:            bc.Max,
+		UpdateFraction: bc.UpdateFraction,
+	}
+}
+
+// VerifyEIP4844Header verifies the presence of the excessBlobGas field and that
+// if the current block contains no transactions, the excessBlobGas is updated
+// accordingly.
+func VerifyEIP4844Header(config *params.ChainConfig, parent, header *types.Header) error {
+	if header.Number.Uint64() != parent.Number.Uint64()+1 {
+		panic("bad header pair")
+	}
+
+	bcfg := latestBlobConfig(config, header.Number)
+	if bcfg == nil {
+		panic("called before EIP-4844 is active")
+	}
+
+	if header.ExcessBlobGas == nil {
+		return errors.New("header is missing excessBlobGas")
+	}
+	if header.BlobGasUsed == nil {
+		return errors.New("header is missing blobGasUsed")
+	}
+
+	// Verify that the blob gas used remains within reasonable limits.
+	if *header.BlobGasUsed > bcfg.maxBlobGas() {
+		return fmt.Errorf("blob gas used %d exceeds maximum allowance %d", *header.BlobGasUsed, bcfg.maxBlobGas())
+	}
+	if *header.BlobGasUsed%params.BlobTxBlobGasPerBlob != 0 {
+		return fmt.Errorf("blob gas used %d not a multiple of blob gas per blob %d", header.BlobGasUsed, params.BlobTxBlobGasPerBlob)
+	}
+
+	// Verify the excessBlobGas is correct based on the parent header
+	expectedExcessBlobGas := CalcExcessBlobGas(config, parent, header.Number)
+	if *header.ExcessBlobGas != expectedExcessBlobGas {
+		return fmt.Errorf("invalid excessBlobGas: have %d, want %d", *header.ExcessBlobGas, expectedExcessBlobGas)
+	}
+	return nil
+}
+
+// VerifyEIP4844HeaderForEEST verifies the presence of the excessBlobGas field and that
+// if the current block contains no transactions, the excessBlobGas is updated
+// accordingly.
+func VerifyEIP4844HeaderForEEST(config *params.ChainConfig, parent, header *types.Header) error {
+	if header.Number.Uint64() != parent.Number.Uint64()+1 {
+		panic("bad header pair")
+	}
+
+	bcfg := latestBlobConfig(config, header.Number)
+	if bcfg == nil {
+		panic("called before EIP-4844 is active")
+	}
+
+	if header.ExcessBlobGas == nil {
+		return errors.New("header is missing excessBlobGas")
+	}
+	if header.BlobGasUsed == nil {
+		return errors.New("header is missing blobGasUsed")
+	}
+
+	// Verify that the blob gas used remains within reasonable limits.
+	if *header.BlobGasUsed > bcfg.maxBlobGas() {
+		return fmt.Errorf("blob gas used %d exceeds maximum allowance %d", *header.BlobGasUsed, bcfg.maxBlobGas())
+	}
+	if *header.BlobGasUsed%params.BlobTxBlobGasPerBlob != 0 {
+		return fmt.Errorf("blob gas used %d not a multiple of blob gas per blob %d", header.BlobGasUsed, params.BlobTxBlobGasPerBlob)
+	}
+
+	// Verify the excessBlobGas is correct based on the parent header
+	expectedExcessBlobGas := CalcExcessBlobGasEIP4844(config, parent, header.Number)
+	if *header.ExcessBlobGas != expectedExcessBlobGas {
+		return fmt.Errorf("invalid excessBlobGas: have %d, want %d", *header.ExcessBlobGas, expectedExcessBlobGas)
+	}
+	return nil
+}
+
+// CalcExcessBlobGas calculates the excess blob gas for KIP-279.
+func CalcExcessBlobGas(config *params.ChainConfig, parent *types.Header, headNumber *big.Int) uint64 {
+	bcfg := latestBlobConfig(config, headNumber)
+	if bcfg == nil {
+		return 0
+	}
+	var parentExcessBlobGas, parentBlobGasUsed uint64
+	if parent.ExcessBlobGas != nil {
+		parentExcessBlobGas = *parent.ExcessBlobGas
+		parentBlobGasUsed = *parent.BlobGasUsed
+	}
+
+	// return max(0, parentExcessBlobGas+parentBlobGasUsed-(uint64(bcfg.Target)*params.BlobTxBlobGasPerBlob))
+	// Since max(0, negative) cannot be expressed in uint64, it is calculated as follows.
+	if parentExcessBlobGas+parentBlobGasUsed < uint64(bcfg.Target)*params.BlobTxBlobGasPerBlob {
+		return 0
+	}
+	return parentExcessBlobGas + parentBlobGasUsed - (uint64(bcfg.Target) * params.BlobTxBlobGasPerBlob)
+}
+
+// CalcBlobFeeEIP4844 calculates the blobfee from the header's excess blob gas field.
+func CalcBlobFeeEIP4844(config *params.ChainConfig, header *types.Header) *big.Int {
+	blobConfig := latestBlobConfig(config, header.Number)
+	if blobConfig == nil {
+		panic("calculating blob fee on unsupported fork")
+	}
+	return blobConfig.blobBaseFeeEIP4844(*header.ExcessBlobGas)
+}
+
+// CalcExcessBlobGasEIP4844 calculates the excess blob gas after applying the set of
+// blobs on top of the excess blob gas for EIP-7918.
+// NOTE: This is not used because Kaia calculates blobBaseFee by multiplying it with baseFee.
+// For compatibility, `blobBaseFeeEIP4844` and `blobPriceEIP4844` is also being kept for CalcExcessBlobGasEIP4844.
+// ref: https://github.com/kaiachain/kips/blob/fac337aad17db40ed2a6c988e03ad6b2ec9771f2/KIPs/kip-279.md#blob-base-fee-as-a-multiple-of-base-fee
+func CalcExcessBlobGasEIP4844(config *params.ChainConfig, parent *types.Header, headNumber *big.Int) uint64 {
+	isOsaka := config.IsOsakaForkEnabled(headNumber)
+	bcfg := latestBlobConfig(config, headNumber)
+	return calcExcessBlobGas(isOsaka, bcfg, parent)
+}
+
+func calcExcessBlobGas(isOsaka bool, bcfg *BlobConfig, parent *types.Header) uint64 {
+	var parentExcessBlobGas, parentBlobGasUsed uint64
+	if parent.ExcessBlobGas != nil {
+		parentExcessBlobGas = *parent.ExcessBlobGas
+		parentBlobGasUsed = *parent.BlobGasUsed
+	}
+
+	var (
+		excessBlobGas = parentExcessBlobGas + parentBlobGasUsed
+		targetGas     = uint64(bcfg.Target) * params.BlobTxBlobGasPerBlob
+	)
+	if excessBlobGas < targetGas {
+		return 0
+	}
+
+	// EIP-7918 (post-Osaka) introduces a different formula for computing excess,
+	// in cases where the price is lower than a 'reserve price'.
+	if isOsaka {
+		var (
+			baseCost     = big.NewInt(params.BlobBaseCost)
+			reservePrice = baseCost.Mul(baseCost, parent.BaseFee)
+			blobPrice    = bcfg.blobPriceEIP4844(parentExcessBlobGas)
+		)
+		if reservePrice.Cmp(blobPrice) > 0 {
+			scaledExcess := parentBlobGasUsed * uint64(bcfg.Max-bcfg.Target) / uint64(bcfg.Max)
+			return parentExcessBlobGas + scaledExcess
+		}
+	}
+
+	// Original EIP-4844 formula.
+	return excessBlobGas - targetGas
+}
+
+// CalcBlobFee calculates the blobfee for KIP-279 from the header's base fee field.
+func CalcBlobFee(baseFee *big.Int) *big.Int {
+	// If baseFee is nil, CalcBlobFee will return nil as it cannot be calculated.
+	// Returning nil makes the difference from 0 explicit.
+	if baseFee == nil {
+		return nil
+	}
+	return new(big.Int).Mul(baseFee, new(big.Int).SetUint64(params.BlobBaseFeeMultiplier))
+}
+
+// MaxBlobsPerBlock returns the max blobs per block for a block at the given block number.
+func MaxBlobsPerBlock(cfg *params.ChainConfig, blockNumber *big.Int) int {
+	blobConfig := latestBlobConfig(cfg, blockNumber)
+	if blobConfig == nil {
+		return 0
+	}
+	return blobConfig.Max
+}
+
+// MaxBlobGasPerBlock returns the maximum blob gas that can be spent in a block at the given block number.
+func MaxBlobGasPerBlock(cfg *params.ChainConfig, blockNumber *big.Int) uint64 {
+	return uint64(MaxBlobsPerBlock(cfg, blockNumber)) * params.BlobTxBlobGasPerBlob
+}
+
+// NOTE: Kaia is based on BlockNumber, not Timestamp. Should use MaxBlobsPerBlock
+// // LatestMaxBlobsPerBlock returns the latest max blobs per block defined by the
+// // configuration, regardless of the currently active fork.
+// func LatestMaxBlobsPerBlock(cfg *params.ChainConfig) int {
+// 	bcfg := latestBlobConfig(cfg, math.MaxUint64)
+// 	if bcfg == nil {
+// 		return 0
+// 	}
+// 	return bcfg.Max
+// }
+
+// TargetBlobsPerBlock returns the target blobs per block for a block at the given block number.
+func TargetBlobsPerBlock(cfg *params.ChainConfig, blockNumber *big.Int) int {
+	blobConfig := latestBlobConfig(cfg, blockNumber)
+	if blobConfig == nil {
+		return 0
+	}
+	return blobConfig.Target
+}
+
+// fakeExponential approximates factor * e ** (numerator / denominator) using
+// Taylor expansion.
+func fakeExponential(factor, numerator, denominator *big.Int) *big.Int {
+	var (
+		output = new(big.Int)
+		accum  = new(big.Int).Mul(factor, denominator)
+	)
+	for i := 1; accum.Sign() > 0; i++ {
+		output.Add(output, accum)
+
+		accum.Mul(accum, numerator)
+		accum.Div(accum, denominator)
+		accum.Div(accum, big.NewInt(int64(i)))
+	}
+	return output.Div(output, denominator)
+}

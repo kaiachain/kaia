@@ -19,10 +19,7 @@
 package types
 
 import (
-	"bytes"
-	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -155,37 +152,15 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetRoleTypeForValidat
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataFeeDelegatedSmartContractExecution)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.Recipient == ta.Recipient &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.From == ta.From &&
-		bytes.Equal(t.Payload, ta.Payload) &&
-		t.TxSignatures.equal(ta.TxSignatures) &&
-		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetPayload() []byte {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -193,7 +168,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetGasLimit() uint64 
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -202,16 +177,12 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetRecipient() *commo
 	return &to
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetFrom() common.Address {
 	return t.From
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetHash() *common.Hash {
-	return t.Hash
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetFeePayer() common.Address {
@@ -222,7 +193,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) GetFeePayerRawSignatu
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
@@ -232,44 +203,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) SetSignature(s TxSign
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) SetFeePayerSignatures(s TxSignatures) {
 	t.FeePayerSignatures = s
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	To:            %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Value:         %#x
-	Data:          %x
-	Signature:     %s
-	FeePayer:      %s
-	FeePayerSig:   %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.Recipient.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Amount,
-		common.Bytes2Hex(t.Payload),
-		t.TxSignatures.string(),
-		t.FeePayer.String(),
-		t.FeePayerSignatures.string(),
-		enc)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
@@ -310,17 +243,8 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) SerializeForSignToByt
 	return b
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-	}
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractExecution) SenderTxHash() common.Hash {
@@ -344,11 +268,11 @@ func (t *TxInternalDataFeeDelegatedSmartContractExecution) SenderTxHash() common
 	return h
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractExecution) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataFeeDelegatedSmartContractExecution) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	if err := validate7702(stateDB, t.Type(), t.From, t.Recipient); err != nil {
 		return err
 	}

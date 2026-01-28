@@ -18,7 +18,10 @@
 
 package types
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 // TestFeeRatioCheck checks the txs with a fee-ratio implement GetFeeRatio() or not.
 // This prohibits the case that GetFeeRatio() is not implemented for TxTypeFeeDelegatedWithRatio types.
@@ -31,7 +34,8 @@ func TestFeeRatioCheck(t *testing.T) {
 		tx, err := NewTxInternalData(i)
 		if err == nil && tx.Type().IsFeeDelegatedWithRatioTransaction() {
 			if _, ok := tx.(TxInternalDataFeeRatio); !ok {
-				t.Fatalf("GetFeeRatio() is not implemented. tx=%s", tx.String())
+				b, _ := json.Marshal(tx)
+				t.Fatalf("GetFeeRatio() is not implemented. tx=%s", string(b))
 			}
 		}
 	}
@@ -48,7 +52,8 @@ func TestFeeDelegatedCheck(t *testing.T) {
 		tx, err := NewTxInternalData(i)
 		if err == nil && tx.Type().IsFeeDelegatedTransaction() {
 			if _, ok := tx.(TxInternalDataFeePayer); !ok {
-				t.Fatalf("GetFeePayer() is not implemented. tx=%s", tx.String())
+				b, _ := json.Marshal(tx)
+				t.Fatalf("GetFeePayer() is not implemented. tx=%s", string(b))
 			}
 		}
 	}

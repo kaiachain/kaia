@@ -3,6 +3,7 @@ package snapshot
 import (
 	"encoding/binary"
 	"fmt"
+	"maps"
 	"math"
 	"math/rand"
 	"sort"
@@ -27,7 +28,7 @@ var (
 	aggregatorMemoryLimit = uint64(4 * 1024 * 1024)
 
 	// aggregatorItemLimit is an approximate number of items that will end up
-	// in the agregator layer before it's flushed out to disk. A plain account
+	// in the aggregator layer before it's flushed out to disk. A plain account
 	// weighs around 14B (+hash), a storage slot 32B (+hash), a deleted slot
 	// 0B (+hash). Slots are mostly set/unset in lockstep, so that average at
 	// 16B (+hash). All in all, the average entry seems to be 15+32=47B. Use a
@@ -451,9 +452,7 @@ func (dl *diffLayer) flatten() snapshot {
 		delete(parent.accountData, hash)
 		delete(parent.storageData, hash)
 	}
-	for hash, data := range dl.accountData {
-		parent.accountData[hash] = data
-	}
+	maps.Copy(parent.accountData, dl.accountData)
 	// Overwrite all the updated storage slots (individually)
 	for accountHash, storage := range dl.storageData {
 		// If storage didn't exist (or was deleted) in the parent, overwrite blindly
@@ -463,9 +462,7 @@ func (dl *diffLayer) flatten() snapshot {
 		}
 		// Storage exists in both parent and child, merge the slots
 		comboData := parent.storageData[accountHash]
-		for storageHash, data := range storage {
-			comboData[storageHash] = data
-		}
+		maps.Copy(comboData, storage)
 		parent.storageData[accountHash] = comboData
 	}
 	// Return the combo parent

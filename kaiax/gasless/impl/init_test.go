@@ -39,7 +39,7 @@ func TestInitSuccessAndFailure(t *testing.T) {
 		disabled bool
 		err      error
 	}{
-		"correct chain conifg": {
+		"correct chain config": {
 			&InitOpts{
 				testChainConfig,
 				testGaslessConfig,

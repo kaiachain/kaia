@@ -224,7 +224,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	chainDB := CreateDB(ctx, config, "chaindata")
 
-	chainConfig, genesisHash, genesisErr := blockchain.SetupGenesisBlock(chainDB, config.Genesis, config.NetworkId, config.IsPrivate, false)
+	chainConfig, genesisHash, genesisErr := blockchain.SetupGenesisBlockWithOverride(chainDB, config.Genesis, config.Overrides)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
@@ -346,6 +346,9 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 	// TODO-Kaia-ServiceChain: add account creation prevention in the txPool if TxTypeAccountCreation is supported.
 	config.TxPool.NoAccountCreation = config.NoAccountCreation
+
+	blobStorageConfig := blockchain.DefaultBlobStorageConfig(chainDB.GetDBConfig().Dir)
+	config.TxPool.BlobStorageConfig = &blobStorageConfig
 
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov)
 

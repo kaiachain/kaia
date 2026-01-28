@@ -1,0 +1,15 @@
+# Defines the configuration version.
+# The only possible value is "2".
+version: "2"
+
+linters:
+  default: none
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+    #- golines (if enabled, it will make too many changes)
+    #- swaggo (we don't use swagger)

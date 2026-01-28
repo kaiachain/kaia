@@ -341,6 +341,317 @@ func TestPeerSet_BestPeer(t *testing.T) {
 	assert.Equal(t, pnPeer, peerSet.BestPeer())
 }
 
+func TestPeerSet_BestPeerForBlobSidecar(t *testing.T) {
+	// Test case 1: Empty peer set
+	{
+		peerSet := newPeerSet()
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Nil(t, result)
+	}
+
+	// Test case 2: Only peers with version < kaia67 (should be filtered out)
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+
+		peer1.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+		peer2.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+		setMockPeers([]*MockPeer{peer1, peer2})
+
+		peer1.EXPECT().GetVersion().Return(kaia66).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia65).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peer1, nil))
+		assert.NoError(t, peerSet.Register(peer2, nil))
+
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Nil(t, result)
+
+		mockCtrl.Finish()
+	}
+
+	// Test case 3: Only peers with version >= kaia67, CN priority
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+		peer3 := NewMockPeer(mockCtrl)
+
+		setMockPeersConnType(peer1, peer2, peer3)
+		setMockPeers([]*MockPeer{peer1, peer2, peer3})
+
+		peer1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer3.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		peer1.EXPECT().Head().Return(common.Hash{}, big.NewInt(100)).AnyTimes()
+		peer2.EXPECT().Head().Return(common.Hash{}, big.NewInt(200)).AnyTimes()
+		peer3.EXPECT().Head().Return(common.Hash{}, big.NewInt(300)).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peer1, nil))
+		assert.NoError(t, peerSet.Register(peer2, nil))
+		assert.NoError(t, peerSet.Register(peer3, nil))
+
+		// After sorting: peer3(300), peer2(200), peer1(100)
+		// CN: [peer1], PN: [peer2], EN: [peer3]
+		// concatPeers: [peer1, peer2, peer3]
+		// try=0: peer1 (first CN) should be selected
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Equal(t, peer1, result)
+
+		mockCtrl.Finish()
+	}
+
+	// Test case 4: Mixed peers (version < kaia67 and >= kaia67), CN priority
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peerOld1 := NewMockPeer(mockCtrl)
+		peerOld2 := NewMockPeer(mockCtrl)
+		peerNew1 := NewMockPeer(mockCtrl)
+		peerNew2 := NewMockPeer(mockCtrl)
+
+		peerOld1.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+		peerOld2.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+		peerNew1.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		peerNew2.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+		setMockPeers([]*MockPeer{peerOld1, peerOld2, peerNew1, peerNew2})
+
+		peerOld1.EXPECT().GetVersion().Return(kaia66).AnyTimes()
+		peerOld2.EXPECT().GetVersion().Return(kaia65).AnyTimes()
+		peerNew1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peerNew2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		peerNew1.EXPECT().Head().Return(common.Hash{}, big.NewInt(150)).AnyTimes()
+		peerNew2.EXPECT().Head().Return(common.Hash{}, big.NewInt(250)).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peerOld1, nil))
+		assert.NoError(t, peerSet.Register(peerOld2, nil))
+		assert.NoError(t, peerSet.Register(peerNew1, nil))
+		assert.NoError(t, peerSet.Register(peerNew2, nil))
+
+		// peerNew2 is CN and should be selected
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Equal(t, peerNew2, result)
+
+		mockCtrl.Finish()
+	}
+
+	// Test case 5: CN priority, then PN, then try index
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+		peer3 := NewMockPeer(mockCtrl)
+		peer4 := NewMockPeer(mockCtrl)
+
+		peer1.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+		peer2.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+		peer3.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		peer4.EXPECT().ConnType().Return(common.CONSENSUSNODE).AnyTimes()
+		setMockPeers([]*MockPeer{peer1, peer2, peer3, peer4})
+
+		peer1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer3.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer4.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		// Set different head block numbers
+		peer1.EXPECT().Head().Return(common.Hash{}, big.NewInt(50)).AnyTimes()
+		peer2.EXPECT().Head().Return(common.Hash{}, big.NewInt(300)).AnyTimes()
+		peer3.EXPECT().Head().Return(common.Hash{}, big.NewInt(100)).AnyTimes()
+		peer4.EXPECT().Head().Return(common.Hash{}, big.NewInt(200)).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peer1, nil))
+		assert.NoError(t, peerSet.Register(peer2, nil))
+		assert.NoError(t, peerSet.Register(peer3, nil))
+		assert.NoError(t, peerSet.Register(peer4, nil))
+
+		// After sorting: peer2(300), peer4(200), peer3(100), peer1(50)
+		// CN: [peer4, peer1] (sorted order preserved), PN: [peer2], EN: [peer3]
+		// concatPeers: [peer4, peer1, peer2, peer3]
+		// try=0: peer4 (first CN in sorted order) should be selected
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Equal(t, peer4, result)
+
+		// try=1: peer1 (second CN)
+		result = peerSet.BestPeerForBlobSidecar(1)
+		assert.Equal(t, peer1, result)
+
+		// try=2: peer2 (first PN)
+		result = peerSet.BestPeerForBlobSidecar(2)
+		assert.Equal(t, peer2, result)
+
+		mockCtrl.Finish()
+	}
+
+	// Test case 6: PN priority when no CN
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+		peer3 := NewMockPeer(mockCtrl)
+
+		peer1.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+		peer2.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		peer3.EXPECT().ConnType().Return(common.PROXYNODE).AnyTimes()
+		setMockPeers([]*MockPeer{peer1, peer2, peer3})
+
+		peer1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer3.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		peer1.EXPECT().Head().Return(common.Hash{}, big.NewInt(100)).AnyTimes()
+		peer2.EXPECT().Head().Return(common.Hash{}, big.NewInt(200)).AnyTimes()
+		peer3.EXPECT().Head().Return(common.Hash{}, big.NewInt(300)).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peer1, nil))
+		assert.NoError(t, peerSet.Register(peer2, nil))
+		assert.NoError(t, peerSet.Register(peer3, nil))
+
+		// After sorting: peer3(300), peer2(200), peer1(100)
+		// CN: [], PN: [peer3, peer1] (sorted order preserved), EN: [peer2]
+		// concatPeers: [peer3, peer1, peer2]
+		// try=0: peer3 (first PN) should be selected
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Equal(t, peer3, result)
+
+		// try=1: peer1 (second PN)
+		result = peerSet.BestPeerForBlobSidecar(1)
+		assert.Equal(t, peer1, result)
+
+		mockCtrl.Finish()
+	}
+
+	// Test case 7: Try index when no CN or PN
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+		peer3 := NewMockPeer(mockCtrl)
+
+		peer1.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		peer2.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		peer3.EXPECT().ConnType().Return(common.ENDPOINTNODE).AnyTimes()
+		setMockPeers([]*MockPeer{peer1, peer2, peer3})
+
+		peer1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer3.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		peer1.EXPECT().Head().Return(common.Hash{}, big.NewInt(100)).AnyTimes()
+		peer2.EXPECT().Head().Return(common.Hash{}, big.NewInt(200)).AnyTimes()
+		peer3.EXPECT().Head().Return(common.Hash{}, big.NewInt(300)).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peer1, nil))
+		assert.NoError(t, peerSet.Register(peer2, nil))
+		assert.NoError(t, peerSet.Register(peer3, nil))
+
+		// After sorting: peer3(300), peer2(200), peer1(100)
+		// CN: [], PN: [], EN: [peer3, peer2, peer1] (sorted order preserved)
+		// concatPeers: [peer3, peer2, peer1]
+		// try=0: peer3 (first EN)
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Equal(t, peer3, result)
+
+		// try=1: peer2 (second EN)
+		result = peerSet.BestPeerForBlobSidecar(1)
+		assert.Equal(t, peer2, result)
+
+		// try=2: peer1 (third EN)
+		result = peerSet.BestPeerForBlobSidecar(2)
+		assert.Equal(t, peer1, result)
+
+		// try=10: peer1 (10 % 3 = 1, so peer2)
+		result = peerSet.BestPeerForBlobSidecar(10)
+		assert.Equal(t, peer2, result)
+
+		mockCtrl.Finish()
+	}
+
+	// Test case 8: Peers with same head block number, CN priority
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+		peer3 := NewMockPeer(mockCtrl)
+
+		setMockPeersConnType(peer1, peer2, peer3)
+		setMockPeers([]*MockPeer{peer1, peer2, peer3})
+
+		peer1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer3.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		// Set same head block number for peer1 and peer2
+		sameHead := big.NewInt(100)
+		peer1.EXPECT().Head().Return(common.Hash{}, sameHead).AnyTimes()
+		peer2.EXPECT().Head().Return(common.Hash{}, sameHead).AnyTimes()
+		peer3.EXPECT().Head().Return(common.Hash{}, big.NewInt(200)).AnyTimes()
+
+		assert.NoError(t, peerSet.Register(peer1, nil))
+		assert.NoError(t, peerSet.Register(peer2, nil))
+		assert.NoError(t, peerSet.Register(peer3, nil))
+
+		// After sorting: peer3(200), then peer1(100) and peer2(100) in some order
+		// CN: [peer1], PN: [peer2], EN: [peer3]
+		// concatPeers: [peer1, peer2, peer3]
+		// try=0: peer1 (first CN) should be selected
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Equal(t, peer1, result)
+
+		mockCtrl.Finish()
+	}
+
+	// Test case 9: concatPeers is empty (peers with version >= kaia67 but unknown connection types)
+	// This tests the defensive check for empty concatPeers by directly adding peers to peerSet.peers
+	{
+		peerSet := newPeerSet()
+		mockCtrl := gomock.NewController(t)
+
+		peer1 := NewMockPeer(mockCtrl)
+		peer2 := NewMockPeer(mockCtrl)
+
+		peer1.EXPECT().GetID().Return(nodeids[0].String()).AnyTimes()
+		peer2.EXPECT().GetID().Return(nodeids[1].String()).AnyTimes()
+
+		peer1.EXPECT().ConnType().Return(common.UNKNOWNNODE).AnyTimes()
+		peer2.EXPECT().ConnType().Return(common.BOOTNODE).AnyTimes()
+
+		peer1.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+		peer2.EXPECT().GetVersion().Return(kaia67).AnyTimes()
+
+		peer1.EXPECT().Head().Return(common.Hash{}, big.NewInt(100)).AnyTimes()
+		peer2.EXPECT().Head().Return(common.Hash{}, big.NewInt(200)).AnyTimes()
+
+		// Directly add peers to peerSet.peers to bypass Register validation
+		peerSet.peers[nodeids[0].String()] = peer1
+		peerSet.peers[nodeids[1].String()] = peer2
+
+		// sortedPeers is not empty (version >= kaia67), but concatPeers is empty because
+		// no peers match CONSENSUSNODE, PROXYNODE, or ENDPOINTNODE
+		// Should return nil due to the defensive check
+		result := peerSet.BestPeerForBlobSidecar(0)
+		assert.Nil(t, result)
+
+		mockCtrl.Finish()
+	}
+}
+
 func TestPeerSet_Close(t *testing.T) {
 	peerSet := newPeerSet()
 	mockCtrl := gomock.NewController(t)

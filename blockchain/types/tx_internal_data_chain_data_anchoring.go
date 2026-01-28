@@ -19,15 +19,12 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -124,47 +121,6 @@ func (t *TxInternalDataChainDataAnchoring) GetRoleTypeForValidation() accountkey
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataChainDataAnchoring) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataChainDataAnchoring)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.From == tb.From &&
-		t.TxSignatures.equal(tb.TxSignatures) &&
-		bytes.Equal(t.Payload, tb.Payload)
-}
-
-func (t *TxInternalDataChainDataAnchoring) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	enc, _ := rlp.EncodeToBytes(ser)
-	tx := Transaction{data: t}
-
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Signature:     %s
-	Hex:           %x
-	AnchoredData:  %s
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.TxSignatures.string(),
-		enc,
-		common.Bytes2Hex(t.Payload))
-}
-
 func (t *TxInternalDataChainDataAnchoring) SerializeForSignToBytes() []byte {
 	b, _ := rlp.EncodeToBytes(struct {
 		Txtype       TxType
@@ -185,45 +141,15 @@ func (t *TxInternalDataChainDataAnchoring) SerializeForSignToBytes() []byte {
 	return b
 }
 
-func (t *TxInternalDataChainDataAnchoring) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		t.Payload,
-	}
+func (t *TxInternalDataChainDataAnchoring) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
-func (t *TxInternalDataChainDataAnchoring) SenderTxHash() common.Hash {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, t.Type())
-	rlp.Encode(hw, []interface{}{
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		t.Payload,
-		t.TxSignatures,
-	})
-
-	h := common.Hash{}
-
-	hw.Sum(h[:0])
-
-	return h
-}
-
-func (t *TxInternalDataChainDataAnchoring) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataChainDataAnchoring) GetAccountNonce() uint64 {
+func (t *TxInternalDataChainDataAnchoring) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetPrice() *big.Int {
+func (t *TxInternalDataChainDataAnchoring) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -231,11 +157,11 @@ func (t *TxInternalDataChainDataAnchoring) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetRecipient() *common.Address {
+func (t *TxInternalDataChainDataAnchoring) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetAmount() *big.Int {
+func (t *TxInternalDataChainDataAnchoring) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -243,15 +169,11 @@ func (t *TxInternalDataChainDataAnchoring) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataChainDataAnchoring) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataChainDataAnchoring) GetPayload() []byte {
+func (t *TxInternalDataChainDataAnchoring) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataChainDataAnchoring) SetHash(h *common.Hash) {
+func (t *TxInternalDataChainDataAnchoring) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
@@ -275,11 +197,7 @@ func (t *TxInternalDataChainDataAnchoring) IntrinsicGas(currentBlockNumber uint6
 	return gasPayloadWithGas, nil
 }
 
-func (t *TxInternalDataChainDataAnchoring) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataChainDataAnchoring) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataChainDataAnchoring) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	return nil
 }
 

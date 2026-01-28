@@ -19,9 +19,7 @@
 package types
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -126,11 +124,11 @@ func (t *TxInternalDataFeeDelegatedCancel) GetRoleTypeForValidation() accountkey
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataFeeDelegatedCancel) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedCancel) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedCancel) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedCancel) GetGasPrice() *big.Int {
 	return t.Price
 }
 
@@ -138,11 +136,11 @@ func (t *TxInternalDataFeeDelegatedCancel) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedCancel) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedCancel) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedCancel) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedCancel) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -150,8 +148,8 @@ func (t *TxInternalDataFeeDelegatedCancel) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedCancel) GetHash() *common.Hash {
-	return t.Hash
+func (t *TxInternalDataFeeDelegatedCancel) GetData() []byte {
+	return []byte{}
 }
 
 func (t *TxInternalDataFeeDelegatedCancel) GetFeePayer() common.Address {
@@ -162,63 +160,12 @@ func (t *TxInternalDataFeeDelegatedCancel) GetFeePayerRawSignatureValues() TxSig
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedCancel) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedCancel) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
 func (t *TxInternalDataFeeDelegatedCancel) SetFeePayerSignatures(s TxSignatures) {
 	t.FeePayerSignatures = s
-}
-
-func (t *TxInternalDataFeeDelegatedCancel) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
-}
-
-func (t *TxInternalDataFeeDelegatedCancel) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedCancel) Equal(b TxInternalData) bool {
-	ta, ok := b.(*TxInternalDataFeeDelegatedCancel)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.From == ta.From &&
-		t.TxSignatures.equal(ta.TxSignatures) &&
-		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
-}
-
-func (t *TxInternalDataFeeDelegatedCancel) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Signature:     %s
-	FeePayer:      %s
-	FeePayerSig:   %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.TxSignatures.string(),
-		t.FeePayer.String(),
-		t.FeePayerSignatures.string(),
-		enc)
 }
 
 func (t *TxInternalDataFeeDelegatedCancel) SetSignature(s TxSignatures) {
@@ -247,14 +194,8 @@ func (t *TxInternalDataFeeDelegatedCancel) SerializeForSignToBytes() []byte {
 	return b
 }
 
-func (t *TxInternalDataFeeDelegatedCancel) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-	}
+func (t *TxInternalDataFeeDelegatedCancel) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedCancel) SenderTxHash() common.Hash {
@@ -275,11 +216,11 @@ func (t *TxInternalDataFeeDelegatedCancel) SenderTxHash() common.Hash {
 	return h
 }
 
-func (t *TxInternalDataFeeDelegatedCancel) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
+func (t *TxInternalDataFeeDelegatedCancel) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedCancel) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataFeeDelegatedCancel) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	return nil
 }
 

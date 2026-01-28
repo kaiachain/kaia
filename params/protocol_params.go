@@ -125,19 +125,18 @@ const (
 	IdentityBaseGas     uint64 = 15   // Base price for a data copy operation
 	IdentityPerWordGas  uint64 = 3    // Per-work price for a data copy operation
 
-	Bn256AddGasByzantium               uint64 = 500    // Gas needed for an elliptic curve addition
-	Bn256AddGasIstanbul                uint64 = 150    // Istanbul version of gas needed for an elliptic curve addition
-	Bn256ScalarMulGasByzantium         uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
-	Bn256ScalarMulGasIstanbul          uint64 = 6000   // Istanbul version of gas needed for an elliptic curve scalar multiplication
-	Bn256PairingBaseGasByzantium       uint64 = 100000 // Base price for an elliptic curve pairing check
-	Bn256PairingBaseGasIstanbul        uint64 = 45000  // Istanbul version of base price for an elliptic curve pairing check
-	Bn256PairingPerPointGasByzantium   uint64 = 80000  // Per-point price for an elliptic curve pairing check
-	Bn256PairingPerPointGasIstanbul    uint64 = 34000  // Istanbul version of per-point price for an elliptic curve pairing check
-	BlobTxPointEvaluationPrecompileGas uint64 = 50000  // Gas price for the point evaluation precompile.
-	VMLogBaseGas                       uint64 = 100    // Base price for a VMLOG operation
-	VMLogPerByteGas                    uint64 = 20     // Per-byte price for a VMLOG operation
-	FeePayerGas                        uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
-	ValidateSenderGas                  uint64 = 5000   // Gas needed for validating the signature of a message.
+	Bn256AddGasByzantium             uint64 = 500    // Gas needed for an elliptic curve addition
+	Bn256AddGasIstanbul              uint64 = 150    // Istanbul version of gas needed for an elliptic curve addition
+	Bn256ScalarMulGasByzantium       uint64 = 40000  // Gas needed for an elliptic curve scalar multiplication
+	Bn256ScalarMulGasIstanbul        uint64 = 6000   // Istanbul version of gas needed for an elliptic curve scalar multiplication
+	Bn256PairingBaseGasByzantium     uint64 = 100000 // Base price for an elliptic curve pairing check
+	Bn256PairingBaseGasIstanbul      uint64 = 45000  // Istanbul version of base price for an elliptic curve pairing check
+	Bn256PairingPerPointGasByzantium uint64 = 80000  // Per-point price for an elliptic curve pairing check
+	Bn256PairingPerPointGasIstanbul  uint64 = 34000  // Istanbul version of per-point price for an elliptic curve pairing check
+	VMLogBaseGas                     uint64 = 100    // Base price for a VMLOG operation
+	VMLogPerByteGas                  uint64 = 20     // Per-byte price for a VMLOG operation
+	FeePayerGas                      uint64 = 300    // Gas needed for calculating the fee payer of the transaction in a smart contract.
+	ValidateSenderGas                uint64 = 5000   // Gas needed for validating the signature of a message.
 
 	// The Refund Quotient is the cap on how much of the used gas can be refunded. Before EIP-3529,
 	// up to half the consumed gas could be refunded. Redefined as 1/5th in EIP-3529
@@ -202,10 +201,25 @@ const (
 	Bls12381MapG1Gas          uint64 = 5500  // Gas price for BLS12-381 mapping field element to G1 operation
 	Bls12381MapG2Gas          uint64 = 23800 // Gas price for BLS12-381 mapping field element to G2 operation
 
+	P256VerifyGas uint64 = 6900 // secp256r1 elliptic curve signature verifier gas price
+
+	BlobTxHashVersion                  = 0x01    // Version byte of the commitment hash
+	BlobTxBytesPerFieldElement         = 32      // Size in bytes of a field element
+	BlobTxFieldElementsPerBlob         = 4096    // Number of field elements stored in a single data blob
+	BlobTxBlobGasPerBlob               = 1 << 17 // Gas consumption of a single data blob (== blob byte size)
+	BlobTxMinBlobGasprice              = 1       // Minimum gas price for data blobs
+	BlobTxPointEvaluationPrecompileGas = 50000   // Gas price for the point evaluation precompile.
+	BlobBaseFeeMultiplier              = 8       // Multiplier for the base execution gas cost for a blob.
+	BlobBaseCost                       = 1 << 13 // Base execution gas cost for a blob.
+
 	// ZeroBaseFee exists for supporting Ethereum compatible data structure.
 	ZeroBaseFee uint64 = 0
 
 	HistoryServeWindow = 8192 // Number of blocks to serve historical block hashes for, EIP-2935.
+
+	// The p2p message size is max 12 MiB, so a block is capped to it minus a safety margin for any metadata that may accompany the block message.
+	// MaxBlockSize (10 MiB) = ProtocolMaxMsgSize (12 MiB) - margin (2 MiB)
+	MaxBlockSize = 10_485_760 // maximum size of an RLP-encoded block
 )
 
 const (
@@ -236,6 +250,10 @@ var (
 	// EIP-2935 - Serve historical block hashes from state
 	HistoryStorageAddress = common.HexToAddress("0x0000F90827F1C53a10cb7A02335B175320002935")
 	HistoryStorageCode    = common.FromHex("3373fffffffffffffffffffffffffffffffffffffffe14604657602036036042575f35600143038111604257611fff81430311604257611fff9006545f5260205ff35b5f5ffd5b5f35611fff60014303065500")
+
+	// KIP-279 - Blob Transaction
+	// It is var because mutability is required when eest is executed.
+	BlobTxMaxBlobs = 1
 )
 
 // Parameters for execution time limit

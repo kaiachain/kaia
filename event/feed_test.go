@@ -51,7 +51,7 @@ func TestFeedPanics(t *testing.T) {
 	{
 		var f Feed
 		f.Send(int(2))
-		want := feedTypeError{op: "Subscribe", got: reflect.TypeOf(make(chan uint64)), want: reflect.TypeOf(make(chan<- int))}
+		want := feedTypeError{op: "Subscribe", got: reflect.TypeFor[chan uint64](), want: reflect.TypeFor[chan<- int]()}
 		if err := checkPanic(want, func() { f.Subscribe(make(chan uint64)) }); err != nil {
 			t.Error(err)
 		}
@@ -254,11 +254,9 @@ func TestFeedUnsubscribeSentChan(t *testing.T) {
 	)
 	defer sub2.Unsubscribe()
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		feed.Send(0)
-		wg.Done()
-	}()
+	})
 
 	// Wait for the value on ch1.
 	<-ch1
@@ -271,11 +269,9 @@ func TestFeedUnsubscribeSentChan(t *testing.T) {
 
 	// Send again. This should send to ch2 only, so the wait group will unblock
 	// as soon as a value is received on ch2.
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		feed.Send(0)
-		wg.Done()
-	}()
+	})
 	<-ch2
 	wg.Wait()
 }

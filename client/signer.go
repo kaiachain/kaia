@@ -51,6 +51,10 @@ func (s *senderFromServer) Equal(other types.Signer) bool {
 	return ok && os.blockhash == s.blockhash
 }
 
+func (s *senderFromServer) IsCompatibleWith(cached types.Signer, tx *types.Transaction) bool {
+	return s.Equal(cached)
+}
+
 func (s *senderFromServer) Sender(tx *types.Transaction) (common.Address, error) {
 	if s.blockhash == (common.Hash{}) {
 		return common.Address{}, errNotCached

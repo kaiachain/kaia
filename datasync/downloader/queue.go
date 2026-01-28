@@ -34,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
@@ -77,7 +78,7 @@ type fetchResult struct {
 	StakingInfo  *staking.P2PStakingInfo
 }
 
-func newFetchResult(header *types.Header, mode SyncMode, proposerPolicy uint64, isKaiaFork bool) *fetchResult {
+func newFetchResult(header *types.Header, mode SyncMode, proposerPolicy uint64, stakingUpdateInterval uint64, isKaiaFork bool) *fetchResult {
 	var (
 		fastSync = mode == FastSync
 		snapSync = mode == SnapSync
@@ -91,7 +92,8 @@ func newFetchResult(header *types.Header, mode SyncMode, proposerPolicy uint64, 
 	if (fastSync || snapSync) && !header.EmptyReceipts() {
 		item.pending |= (1 << receiptType)
 	}
-	if (fastSync || snapSync) && proposerPolicy == uint64(istanbul.WeightedRandom) && (params.IsStakingUpdateInterval(header.Number.Uint64()) && !isKaiaFork) {
+	if (fastSync || snapSync) && proposerPolicy == uint64(istanbul.WeightedRandom) &&
+		(header.Number.Uint64()%stakingUpdateInterval == 0 && !isKaiaFork) {
 		item.pending |= (1 << stakingInfoType)
 	}
 	return item
@@ -164,7 +166,8 @@ type queue struct {
 	active *sync.Cond
 	closed bool
 
-	proposerPolicy uint64
+	proposerPolicy        uint64
+	stakingUpdateInterval uint64
 
 	lastStatLog time.Time
 
@@ -174,15 +177,20 @@ type queue struct {
 // newQueue creates a new download queue for scheduling block retrieval.
 func newQueue(blockCacheLimit int, thresholdInitialSize int, proposerPolicy uint64, config *params.ChainConfig) *queue {
 	lock := new(sync.RWMutex)
+	stakingUpdateInterval := params.DefaultStakeUpdateInterval
+	if config != nil && config.Governance != nil && config.Governance.Reward != nil {
+		stakingUpdateInterval = config.Governance.Reward.StakingUpdateInterval
+	}
 	q := &queue{
-		headerContCh:         make(chan bool),
-		blockTaskQueue:       prque.New(),
-		receiptTaskQueue:     prque.New(),
-		stakingInfoTaskQueue: prque.New(),
-		active:               sync.NewCond(lock),
-		lock:                 lock,
-		proposerPolicy:       proposerPolicy,
-		config:               config,
+		headerContCh:          make(chan bool),
+		blockTaskQueue:        prque.New(),
+		receiptTaskQueue:      prque.New(),
+		stakingInfoTaskQueue:  prque.New(),
+		active:                sync.NewCond(lock),
+		lock:                  lock,
+		proposerPolicy:        proposerPolicy,
+		stakingUpdateInterval: stakingUpdateInterval,
+		config:                config,
 	}
 	q.Reset(blockCacheLimit, thresholdInitialSize)
 	return q
@@ -380,7 +388,8 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 			}
 		}
 
-		if (q.mode == FastSync || q.mode == SnapSync) && q.proposerPolicy == uint64(istanbul.WeightedRandom) && (params.IsStakingUpdateInterval(header.Number.Uint64()) && !q.IsKaiaFork(header.Number)) {
+		if (q.mode == FastSync || q.mode == SnapSync) && q.proposerPolicy == uint64(istanbul.WeightedRandom) &&
+			(header.Number.Uint64()%q.stakingUpdateInterval == 0 && !q.IsKaiaFork(header.Number)) {
 			if _, ok := q.stakingInfoTaskPool[hash]; ok {
 				logger.Trace("Header already scheduled for staking info fetch", "number", header.Number, "hash", hash)
 			} else {
@@ -576,7 +585,7 @@ func (q *queue) reserveHeaders(p *peerConnection, count int, taskPool map[common
 		header := h.(*types.Header)
 		// we can ask the resultCache if this header is within the
 		// "prioritized" segment of blocks. If it is not, we need to throttle
-		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode, q.proposerPolicy, q.IsKaiaFork(header.Number))
+		stale, throttle, item, err := q.resultCache.AddFetch(header, q.mode, q.proposerPolicy, q.stakingUpdateInterval, q.IsKaiaFork(header.Number))
 		if stale {
 			// Don't put back in the task queue, this item has already been
 			// delivered upstream
@@ -873,8 +882,40 @@ func (q *queue) DeliverBodies(id string, txLists [][]*types.Transaction) (int, e
 	defer q.lock.Unlock()
 
 	validate := func(index int, header *types.Header) error {
-		if types.DeriveSha(types.Transactions(txLists[index]), header.Number) != header.TxHash {
+		if types.DeriveTransactionsRoot(types.Transactions(txLists[index]), header.Number) != header.TxHash {
 			return errInvalidBody
+		}
+		// Blocks must have a number of blobs corresponding to the header gas usage,
+		// and zero before the Osaka hardfork.
+		var blobs int
+		for _, tx := range txLists[index] {
+			// Validate the data blobs individually too
+			if tx.Type() == types.TxTypeEthereumBlob {
+				// Count the number of blobs to validate against the header's blobGasUsed
+				txBlobHashCount := len(tx.BlobHashes())
+				if txBlobHashCount == 0 {
+					return errInvalidBody
+				}
+				blobs += txBlobHashCount
+
+				for _, hash := range tx.BlobHashes() {
+					if !kzg4844.IsValidVersionedHash(hash[:]) {
+						return errInvalidBody
+					}
+				}
+				if tx.BlobTxSidecar() != nil {
+					return errInvalidBody
+				}
+			}
+		}
+		if header.BlobGasUsed != nil {
+			if want := *header.BlobGasUsed / params.BlobTxBlobGasPerBlob; uint64(blobs) != want { // div because the header is surely good vs the body might be bloated
+				return errInvalidBody
+			}
+		} else {
+			if blobs != 0 {
+				return errInvalidBody
+			}
 		}
 		return nil
 	}
@@ -893,7 +934,7 @@ func (q *queue) DeliverReceipts(id string, receiptList [][]*types.Receipt) (int,
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	validate := func(index int, header *types.Header) error {
-		if types.DeriveSha(types.Receipts(receiptList[index]), header.Number) != header.ReceiptHash {
+		if types.DeriveReceiptsRoot(types.Receipts(receiptList[index]), header.Number) != header.ReceiptHash {
 			return errInvalidReceipt
 		}
 		return nil

@@ -63,9 +63,25 @@ type Genesis struct {
 
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
-	Number     uint64      `json:"number"`
-	GasUsed    uint64      `json:"gasUsed"`
-	ParentHash common.Hash `json:"parentHash"`
+	Number        uint64      `json:"number"`
+	GasUsed       uint64      `json:"gasUsed"`
+	ParentHash    common.Hash `json:"parentHash"`
+	BaseFee       *big.Int    `json:"baseFeePerGas"`
+	ExcessBlobGas *uint64     `json:"excessBlobGas"`
+	BlobGasUsed   *uint64     `json:"blobGasUsed"`
+}
+
+// copy copies the genesis.
+func (g *Genesis) copy() *Genesis {
+	if g != nil {
+		cpy := *g
+		if g.Config != nil {
+			conf := g.Config.Copy()
+			cpy.Config = conf
+		}
+		return &cpy
+	}
+	return nil
 }
 
 // GenesisAlloc specifies the initial state that is part of the genesis block.
@@ -141,6 +157,22 @@ func (e *GenesisMismatchError) Error() string {
 	return fmt.Sprintf("database already contains an incompatible genesis block (have %x, new %x)", e.Stored[:8], e.New[:8])
 }
 
+// ChainOverrides contains the changes to chain config.
+type ChainOverrides struct {
+	OverrideOsaka *big.Int
+}
+
+// apply applies the chain overrides on the supplied chain config.
+func (o *ChainOverrides) apply(cfg *params.ChainConfig) error {
+	if o == nil || cfg == nil {
+		return nil
+	}
+	if o.OverrideOsaka != nil {
+		cfg.OsakaCompatibleBlock = new(big.Int).Set(o.OverrideOsaka)
+	}
+	return cfg.CheckConfigForkOrder()
+}
+
 // findBlockWithState returns the latest block with state.
 func findBlockWithState(db database.DBManager) *types.Block {
 	headBlock := db.ReadBlockByHash(db.ReadHeadBlockHash())
@@ -169,72 +201,60 @@ func findBlockWithState(db database.DBManager) *types.Block {
 	return headBlock
 }
 
-// SetupGenesisBlock writes or updates the genesis block in db.
-// The block that will be used is:
-//
-//	                     genesis == nil                             genesis != nil
-//	                  +-------------------------------------------------------------------
-//	db has no genesis |  Mainnet default, Kairos if specified    |  genesis
-//	db has genesis    |  from DB                                 |  genesis (if compatible)
-//
-// The stored chain configuration will be updated if it is compatible (i.e. does not
+// SetupGenesisBlock writes or updates the genesis block and ChainConfig in db.
+// Note that a "genesis block" is composed of a regular Block and ChainConfig, hence the return types.
+// The block and ChainConfig that will be returned/written to DB are:
+// (1) stored ghash == nil: Commit the provided genesis and config, defaulting to Mainnet if absent.
+// (2) stored ghash != nil && stored config == nil: Same as above.
+// (3) stored ghash != nil && stored config != nil: Update ChainConfigDB only if it's compatible with the existing config.
+// For the case (3), the stored chain configuration will be updated if it is compatible (i.e. does not
 // specify a fork block below the local head block). In case of a conflict, the
 // error is a *params.ConfigCompatError and the new, unwritten config is returned.
 //
-// The returned chain configuration is never nil.
-func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64, isPrivate, overwriteGenesis bool) (*params.ChainConfig, common.Hash, error) {
+// Notes:
+// - `genesis != nil` is the normal case for Mainnet/Kairos `cn.New()`.
+// - `genesis != nil` is the normal case for other networks `initGenesis()`.
+// - `stored ghash != nil && genesis == nil` is the normal case for other networks `cn.New()`.
+func SetupGenesisBlock(db database.DBManager, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
+	return SetupGenesisBlockWithOverride(db, genesis, nil)
+}
+
+func SetupGenesisBlockWithOverride(db database.DBManager, genesis *Genesis, overrides *ChainOverrides) (*params.ChainConfig, common.Hash, error) {
 	if genesis != nil && genesis.Config == nil {
-		return params.TestChainConfig, common.Hash{}, errGenesisNoConfig
+		return nil, common.Hash{}, errGenesisNoConfig
 	}
 
-	// Just commit the new block if there is no stored genesis block.
-	stored := db.ReadCanonicalHash(0)
-	if (stored == common.Hash{}) {
+	// Just commit the new block if there is no ghash genesis block.
+	ghash := db.ReadCanonicalHash(0)
+	if (ghash == common.Hash{}) {
 		if genesis == nil {
-			switch {
-			case isPrivate:
-				logger.Error("No genesis is provided. --networkid should be omitted if you want to use preconfigured network")
-				return params.TestChainConfig, common.Hash{}, errNoGenesis
-			case networkId == params.KairosNetworkId:
-				logger.Info("Writing default Kairos genesis block")
-				genesis = DefaultKairosGenesisBlock()
-			case networkId == params.MainnetNetworkId:
-				fallthrough
-			default:
-				logger.Info("Writing default Mainnet genesis block")
-				genesis = DefaultGenesisBlock()
-			}
-			if genesis.Config.Governance != nil {
-				genesis.Governance = SetGenesisGovernance(genesis)
-			}
+			logger.Info("Writing default Mainnet genesis block")
+			genesis = DefaultGenesisBlock()
 		} else {
 			logger.Info("Writing custom genesis block")
+		}
+		if err := overrides.apply(genesis.Config); err != nil {
+			return nil, common.Hash{}, err
 		}
 		InitDeriveSha(genesis.Config)
 		block, err := genesis.Commit(common.Hash{}, db)
 		if err != nil {
-			return genesis.Config, common.Hash{}, err
+			return nil, common.Hash{}, err
 		}
 		return genesis.Config, block.Hash(), err
 	}
 
-	// Check whether the genesis block is already written.
+	// Genesis block exists, and another genesis is supplied. Abort if they are different, because we don't want to overwrite the genesis block.
 	if genesis != nil {
-		// If overwriteGenesis is true, overwrite existing genesis block with the new one.
-		// This is to run a test with pre-existing data.
-		if overwriteGenesis {
-			headBlock := findBlockWithState(db)
-			logger.Warn("Trying to overwrite original genesis block with the new one",
-				"headBlockHash", headBlock.Hash().String(), "headBlockNum", headBlock.NumberU64())
-			newGenesisBlock, err := genesis.Commit(headBlock.Root(), db)
-			return genesis.Config, newGenesisBlock.Hash(), err
-		}
 		// This is the usual path which does not overwrite genesis block with the new one.
 		// Make sure the provided genesis is equal to the stored one.
+		if err := overrides.apply(genesis.Config); err != nil {
+			return nil, common.Hash{}, err
+		}
 		InitDeriveSha(genesis.Config)
 		hash := genesis.ToBlock(common.Hash{}, nil).Hash()
-		if hash != stored {
-			return genesis.Config, hash, &GenesisMismatchError{stored, hash}
+		if hash != ghash {
+			return nil, common.Hash{}, &GenesisMismatchError{ghash, hash}
 		}
 	}
 
@@ -242,58 +262,69 @@ func SetupGenesisBlock(db database.DBManager, genesis *Genesis, networkId uint64
 	// Because the trie can be partially corrupted, we always commit the trie.
 	// It can happen in a state migrated database or live pruned database.
 	if db.GetDomainsManager() == nil { // FlatTrie disallows re-commiting the block lower than the head block.
-		commitGenesisState(genesis, db, networkId)
+		if err := commitGenesisState(genesis, db, overrides); err != nil {
+			return nil, common.Hash{}, err
+		}
+	}
+
+	storedCfg, err := db.ReadChainConfig(ghash)
+	if err != nil {
+		logger.Crit("Failed to read chain config", "err", err)
+	}
+	// Genesis block exists, but no ChainConfig. Re-commit to store the ChainConfig.
+	if storedCfg == nil {
+		// Ensure the stored genesis block matches with the given genesis. Private
+		// networks must explicitly specify the genesis in the config file, mainnet
+		// genesis will be used as default and the initialization will always fail.
+		if genesis == nil {
+			logger.Info("Writing default Mainnet genesis block")
+			genesis = DefaultGenesisBlock()
+		} else {
+			logger.Info("Writing custom genesis block")
+		}
+		if err := overrides.apply(genesis.Config); err != nil {
+			return nil, common.Hash{}, err
+		}
+		InitDeriveSha(genesis.Config)
+		block, err := genesis.Commit(common.Hash{}, db)
+		if err != nil {
+			return nil, common.Hash{}, err
+		}
+
+		return genesis.Config, block.Hash(), err
+	} else {
+		if storedCfg.Governance == nil {
+			logger.Crit("Failed to read governance. storedcfg.Governance == nil")
+		}
+		if storedCfg.Governance.Reward == nil {
+			logger.Crit("Failed to read governance. storedcfg.Governance.Reward == nil")
+		}
 	}
 
 	// Get the existing chain configuration.
-	newcfg := genesis.configOrDefault(stored)
-	if err := newcfg.CheckConfigForkOrder(); err != nil {
-		return newcfg, common.Hash{}, err
+	newCfg := configOrDefault(genesis, ghash, storedCfg)
+	if err := overrides.apply(newCfg); err != nil {
+		return nil, common.Hash{}, err
 	}
-	storedcfg, err := db.ReadChainConfig(stored)
-	if err != nil {
-		return newcfg, stored, err
-	}
-	if storedcfg == nil {
-		logger.Info("Found genesis block without chain config")
-		db.WriteChainConfig(stored, newcfg)
-		return newcfg, stored, nil
-	} else {
-		if storedcfg.Governance == nil {
-			logger.Crit("Failed to read governance. storedcfg.Governance == nil")
-		}
-		if storedcfg.Governance.Reward == nil {
-			logger.Crit("Failed to read governance. storedcfg.Governance.Reward == nil")
-		}
-		if storedcfg.Governance.Reward.StakingUpdateInterval != 0 {
-			params.SetStakingUpdateInterval(storedcfg.Governance.Reward.StakingUpdateInterval)
-		}
-		if storedcfg.Governance.Reward.ProposerUpdateInterval != 0 {
-			params.SetProposerUpdateInterval(storedcfg.Governance.Reward.ProposerUpdateInterval)
-		}
-	}
-	// Special case: don't change the existing config of a non-mainnet chain if no new
-	// config is supplied. These chains would get AllProtocolChanges (and a compat error)
-	// if we just continued here.
-	if genesis == nil && params.MainnetGenesisHash != stored && params.KairosGenesisHash != stored {
-		return storedcfg, stored, nil
+	if err := newCfg.CheckConfigForkOrder(); err != nil {
+		return nil, common.Hash{}, err
 	}
 
 	// Check config compatibility and write the config. Compatibility errors
 	// are returned to the caller unless we're already at block zero.
 	height := db.ReadHeaderNumber(db.ReadHeadHeaderHash())
 	if height == nil {
-		return newcfg, stored, fmt.Errorf("missing block number for head header hash")
+		return nil, common.Hash{}, errors.New("missing block number for head header hash")
 	}
-	compatErr := storedcfg.CheckCompatible(newcfg, *height)
+	compatErr := storedCfg.CheckCompatible(newCfg, *height)
 	if compatErr != nil && *height != 0 && compatErr.RewindTo != 0 {
-		return newcfg, stored, compatErr
+		return newCfg, ghash, compatErr
 	}
-	db.WriteChainConfig(stored, newcfg)
-	return newcfg, stored, nil
+	db.WriteChainConfig(ghash, newCfg)
+	return newCfg, ghash, nil
 }
 
-func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
+func configOrDefault(g *Genesis, ghash common.Hash, storedCfg *params.ChainConfig) *params.ChainConfig {
 	switch {
 	case g != nil:
 		return g.Config
@@ -302,7 +333,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	case ghash == params.KairosGenesisHash:
 		return params.KairosChainConfig
 	default:
-		return params.TestChainConfig
+		return storedCfg
 	}
 }
 
@@ -372,10 +403,26 @@ func (g *Genesis) ToBlock(baseStateRoot common.Hash, db database.DBManager) *typ
 		} else {
 			head.BaseFee = new(big.Int).SetUint64(params.DefaultLowerBoundBaseFee)
 		}
+
+		// If the base fee is set in the genesis, use it.
+		if g.BaseFee != nil {
+			head.BaseFee = g.BaseFee
+		}
 	}
 	if g.Config != nil && g.Config.IsRandaoForkEnabled(common.Big0) {
 		head.RandomReveal = params.ZeroRandomReveal
 		head.MixHash = params.ZeroMixHash
+	}
+	if g.Config != nil && g.Config.IsOsakaForkEnabled(common.Big0) {
+		head.ExcessBlobGas = g.ExcessBlobGas
+		head.BlobGasUsed = g.BlobGasUsed
+		// If these are not set, they will always be 0.
+		if head.ExcessBlobGas == nil {
+			head.ExcessBlobGas = new(uint64)
+		}
+		if head.BlobGasUsed == nil {
+			head.BlobGasUsed = new(uint64)
+		}
 	}
 
 	stateDB.Commit(false)
@@ -436,9 +483,11 @@ func GenesisBlockForTesting(db database.DBManager, addr common.Address, balance 
 func DefaultGenesisBlock() *Genesis {
 	ret := &Genesis{}
 	if err := json.Unmarshal(mainnetGenesisJson, &ret); err != nil {
-		logger.Error("Error in Unmarshalling Mainnet Genesis Json", "err", err)
+		logger.Crit("Error in Unmarshalling Mainnet Genesis Json", "err", err)
 	}
-	ret.Config = params.MainnetChainConfig
+	ret.Config = params.MainnetChainConfig.Copy()
+	ret.Governance = SetGenesisGovernance(ret)
+	InitDeriveSha(ret.Config)
 	return ret
 }
 
@@ -446,10 +495,17 @@ func DefaultGenesisBlock() *Genesis {
 func DefaultKairosGenesisBlock() *Genesis {
 	ret := &Genesis{}
 	if err := json.Unmarshal(kairosGenesisJson, &ret); err != nil {
-		logger.Error("Error in Unmarshalling Kairos Genesis Json", "err", err)
-		return nil
+		logger.Crit("Error in Unmarshalling Kairos Genesis Json", "err", err)
 	}
-	ret.Config = params.KairosChainConfig
+	ret.Config = params.KairosChainConfig.Copy()
+	ret.Governance = SetGenesisGovernance(ret)
+	InitDeriveSha(ret.Config)
+	return ret
+}
+
+func DefaultTestGenesisBlock() *Genesis {
+	ret := DefaultGenesisBlock()
+	ret.Governance = nil
 	return ret
 }
 
@@ -465,25 +521,19 @@ func decodePrealloc(data string) GenesisAlloc {
 	return ga
 }
 
-func commitGenesisState(genesis *Genesis, db database.DBManager, networkId uint64) {
+func commitGenesisState(genesis *Genesis, db database.DBManager, overrides *ChainOverrides) error {
 	if genesis == nil {
-		switch {
-		case networkId == params.KairosNetworkId:
-			genesis = DefaultKairosGenesisBlock()
-		case networkId == params.MainnetNetworkId:
-			fallthrough
-		default:
-			genesis = DefaultGenesisBlock()
-		}
-		if genesis.Config.Governance != nil {
-			genesis.Governance = SetGenesisGovernance(genesis)
-		}
+		genesis = DefaultGenesisBlock()
+	}
+	if err := overrides.apply(genesis.Config); err != nil {
+		return err
 	}
 	// Run genesis.ToBlock() to calls StateDB.Commit() which writes the state trie.
 	// But do not run genesis.Commit() which overwrites HeaderHash.
 	InitDeriveSha(genesis.Config)
 	genesis.ToBlock(common.Hash{}, db).Hash()
 	logger.Info("Restored state trie for the genesis block")
+	return nil
 }
 
 type GovernanceSet map[string]interface{}

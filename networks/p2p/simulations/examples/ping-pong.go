@@ -21,7 +21,6 @@
 // Modified and improved for the Kaia development.
 
 //go:build none
-// +build none
 
 package main
 

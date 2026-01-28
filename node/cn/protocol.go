@@ -31,6 +31,7 @@ import (
 	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/datasync/fetcher"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -44,6 +45,7 @@ const (
 	kaia63 = 63
 	kaia65 = 65
 	kaia66 = 66
+	kaia67 = 67
 )
 
 const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
@@ -82,7 +84,11 @@ const (
 	// Protocol messages belonging to kaia/66
 	BidMsg = 0x14
 
-	MsgCodeEnd = 0x15
+	// Protocol messages belonging to kaia/67
+	BlobSidecarsRequestMsg = 0x15
+	BlobSidecarsMsg        = 0x16
+
+	MsgCodeEnd = 0x17
 )
 
 type errCode int
@@ -234,3 +240,17 @@ type blockBody struct {
 
 // blockBodiesData is the network packet for block content distribution.
 type blockBodiesData []*blockBody
+
+// BlobSidecarsRequestMsgData is the network packet for the blob sidecars request message.
+type blobSidecarsRequestData struct {
+	BlockNum hexutil.Uint64
+	TxIndex  hexutil.Uint
+	Hash     common.Hash
+}
+
+type blobSidecarsData struct {
+	BlockNum hexutil.Uint64
+	TxIndex  hexutil.Uint
+	TxHash   common.Hash
+	Sidecar  *types.BlobTxSidecar
+}

@@ -19,15 +19,12 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/rlp"
@@ -143,61 +140,11 @@ func (t *TxInternalDataValueTransferMemo) GetRoleTypeForValidation() accountkey.
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataValueTransferMemo) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataValueTransferMemo)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.Recipient == tb.Recipient &&
-		t.Amount.Cmp(tb.Amount) == 0 &&
-		t.From == tb.From &&
-		bytes.Equal(t.Payload, tb.Payload) &&
-		t.TxSignatures.equal(tb.TxSignatures)
-}
-
-func (t *TxInternalDataValueTransferMemo) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	To:            %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Value:         %#x
-	Signature:     %s
-	Data:          %x
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.Recipient.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Amount,
-		t.TxSignatures.string(),
-		common.Bytes2Hex(t.Payload),
-		enc)
-}
-
-func (t *TxInternalDataValueTransferMemo) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataValueTransferMemo) GetAccountNonce() uint64 {
+func (t *TxInternalDataValueTransferMemo) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataValueTransferMemo) GetPrice() *big.Int {
+func (t *TxInternalDataValueTransferMemo) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -205,7 +152,7 @@ func (t *TxInternalDataValueTransferMemo) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataValueTransferMemo) GetRecipient() *common.Address {
+func (t *TxInternalDataValueTransferMemo) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -214,7 +161,7 @@ func (t *TxInternalDataValueTransferMemo) GetRecipient() *common.Address {
 	return &to
 }
 
-func (t *TxInternalDataValueTransferMemo) GetAmount() *big.Int {
+func (t *TxInternalDataValueTransferMemo) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -222,15 +169,11 @@ func (t *TxInternalDataValueTransferMemo) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataValueTransferMemo) GetPayload() []byte {
+func (t *TxInternalDataValueTransferMemo) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataValueTransferMemo) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataValueTransferMemo) SetHash(h *common.Hash) {
+func (t *TxInternalDataValueTransferMemo) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
@@ -276,48 +219,16 @@ func (t *TxInternalDataValueTransferMemo) SerializeForSignToBytes() []byte {
 	return b
 }
 
-func (t *TxInternalDataValueTransferMemo) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
+func (t *TxInternalDataValueTransferMemo) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
+}
+
+func (t *TxInternalDataValueTransferMemo) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
+	if !onlyMutableChecks {
+		if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+			return kerrors.ErrPrecompiledContractAddress
+		}
 	}
-}
-
-func (t *TxInternalDataValueTransferMemo) SenderTxHash() common.Hash {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, t.Type())
-	rlp.Encode(hw, []interface{}{
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-		t.TxSignatures,
-	})
-
-	h := common.Hash{}
-
-	hw.Sum(h[:0])
-
-	return h
-}
-
-func (t *TxInternalDataValueTransferMemo) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-		return kerrors.ErrPrecompiledContractAddress
-	}
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataValueTransferMemo) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	if err := validate7702(stateDB, t.Type(), t.From, t.Recipient); err != nil {
 		return err
 	}

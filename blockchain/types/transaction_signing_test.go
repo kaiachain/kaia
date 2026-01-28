@@ -34,9 +34,93 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestOsakaSigning(t *testing.T) {
+	chainId := uint256.NewInt(10)
+	key, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+
+	signer := NewOsakaSigner(chainId.ToBig())
+
+	testData := []struct {
+		name    string
+		isPanic bool
+		inputTx *Transaction
+	}{
+		{"WithChainID", false, NewTx(&TxInternalDataEthereumBlob{
+			AccountNonce: 1,
+			Amount:       uint256.NewInt(10),
+			GasFeeCap:    uint256.NewInt(10),
+			GasTipCap:    uint256.NewInt(10),
+			GasLimit:     100,
+			Recipient:    addr,
+			BlobHashes:   []common.Hash{{0}},
+			Sidecar:      NewBlobTxSidecar(0, []kzg4844.Blob{{0}}, []kzg4844.Commitment{{0}}, []kzg4844.Proof{{0}}),
+			ChainID:      chainId,
+		})},
+		{"WithChainID_Zero", false, NewTx(&TxInternalDataEthereumBlob{
+			AccountNonce: 1,
+			Amount:       uint256.NewInt(10),
+			GasFeeCap:    uint256.NewInt(10),
+			GasTipCap:    uint256.NewInt(10),
+			GasLimit:     100,
+			Recipient:    addr,
+			BlobHashes:   []common.Hash{{0}},
+			Sidecar:      NewBlobTxSidecar(0, []kzg4844.Blob{{0}}, []kzg4844.Commitment{{0}}, []kzg4844.Proof{{0}}),
+			ChainID:      uint256.NewInt(0),
+		})},
+		{"WithNoBitChainID", false, NewTx(&TxInternalDataEthereumBlob{
+			AccountNonce: 1,
+			Amount:       uint256.NewInt(10),
+			GasFeeCap:    uint256.NewInt(10),
+			GasTipCap:    uint256.NewInt(10),
+			GasLimit:     100,
+			Recipient:    addr,
+			BlobHashes:   []common.Hash{{0}},
+			Sidecar:      NewBlobTxSidecar(0, []kzg4844.Blob{{0}}, []kzg4844.Commitment{{0}}, []kzg4844.Proof{{0}}),
+			ChainID:      new(uint256.Int),
+		})},
+		{"WithoutChainID_expected_panic", true, NewTx(&TxInternalDataEthereumBlob{
+			AccountNonce: 1,
+			Amount:       uint256.NewInt(10),
+			GasFeeCap:    uint256.NewInt(10),
+			GasTipCap:    uint256.NewInt(10),
+			GasLimit:     100,
+			Recipient:    addr,
+			BlobHashes:   []common.Hash{{0}},
+			Sidecar:      NewBlobTxSidecar(0, []kzg4844.Blob{{0}}, []kzg4844.Commitment{{0}}, []kzg4844.Proof{{0}}),
+		})},
+	}
+
+	for _, tc := range testData {
+		t.Run(tc.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					if !tc.isPanic {
+						t.Errorf("unexpected panic:%x", r)
+					}
+				}
+			}()
+
+			tx, err := SignTx(tc.inputTx, signer, key)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			from, err := Sender(signer, tx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if from != addr {
+				t.Errorf("exected from and address to be equal. Got %x want %x", from, addr)
+			}
+		})
+	}
+}
 
 func TestPragueSigning(t *testing.T) {
 	chainId := uint256.NewInt(10)

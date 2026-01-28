@@ -636,9 +636,9 @@ func (db *Database) Nodes() []common.ExtHash {
 	return hashes
 }
 
-// Reference adds a new reference from a parent node to a child node.
-// This function is used to add reference between internal trie node
-// and external node(e.g. storage trie root), all internal trie nodes
+// ReferenceRoot adds a new reference for a state root.
+// This function is used to add reference for a state root node,
+// which is an external node, all internal trie nodes
 // are referenced together by database itself.
 // Use ReferenceRoot to reference a state root, otherwise use Reference.
 func (db *Database) ReferenceRoot(root common.Hash) {

@@ -149,7 +149,7 @@ func (api *AdminNetworkNodeAPI) StartHTTP(host *string, port *int, cors *string,
 	allowedOrigins := api.node.config.HTTPCors
 	if cors != nil {
 		allowedOrigins = nil
-		for _, origin := range strings.Split(*cors, ",") {
+		for origin := range strings.SplitSeq(*cors, ",") {
 			allowedOrigins = append(allowedOrigins, strings.TrimSpace(origin))
 		}
 	}
@@ -157,7 +157,7 @@ func (api *AdminNetworkNodeAPI) StartHTTP(host *string, port *int, cors *string,
 	allowedVHosts := api.node.config.HTTPVirtualHosts
 	if vhosts != nil {
 		allowedVHosts = nil
-		for _, vhost := range strings.Split(*vhosts, ",") {
+		for vhost := range strings.SplitSeq(*vhosts, ",") {
 			allowedVHosts = append(allowedVHosts, strings.TrimSpace(vhost))
 		}
 	}
@@ -165,7 +165,7 @@ func (api *AdminNetworkNodeAPI) StartHTTP(host *string, port *int, cors *string,
 	modules := api.node.httpWhitelist
 	if apis != nil {
 		modules = nil
-		for _, m := range strings.Split(*apis, ",") {
+		for m := range strings.SplitSeq(*apis, ",") {
 			modules = append(modules, strings.TrimSpace(m))
 		}
 	}
@@ -228,7 +228,7 @@ func (api *AdminNetworkNodeAPI) StartWS(host *string, port *int, allowedOrigins 
 	origins := api.node.config.WSOrigins
 	if allowedOrigins != nil {
 		origins = nil
-		for _, origin := range strings.Split(*allowedOrigins, ",") {
+		for origin := range strings.SplitSeq(*allowedOrigins, ",") {
 			origins = append(origins, strings.TrimSpace(origin))
 		}
 	}
@@ -236,7 +236,7 @@ func (api *AdminNetworkNodeAPI) StartWS(host *string, port *int, allowedOrigins 
 	modules := api.node.config.WSModules
 	if apis != nil {
 		modules = nil
-		for _, m := range strings.Split(*apis, ",") {
+		for m := range strings.SplitSeq(*apis, ",") {
 			modules = append(modules, strings.TrimSpace(m))
 		}
 	}

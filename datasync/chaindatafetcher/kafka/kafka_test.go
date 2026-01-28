@@ -146,15 +146,13 @@ func (s *KafkaSuite) TestKafka_setupTopicConcurrency() {
 	topicName := "test-setup-concurrency-topic"
 	wg := sync.WaitGroup{}
 	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			kaf, err := NewKafka(s.conf)
 			s.NoError(err)
 
 			err = kaf.setupTopic(topicName)
 			s.NoError(err)
-		}()
+		})
 	}
 	wg.Wait()
 }

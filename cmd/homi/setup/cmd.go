@@ -136,6 +136,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewStringFlag(kip160ContractAddressFlag),
 	altsrc.NewInt64Flag(randaoCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(pragueCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(osakaCompatibleBlockNumberFlag),
 	altsrc.NewStringFlag(kip113ProxyAddressFlag),
 	altsrc.NewStringFlag(kip113LogicAddressFlag),
 	altsrc.NewBoolFlag(kip113MockFlag),
@@ -501,7 +502,7 @@ func allocGenesisFund(ctx *cli.Context, genesisJson *blockchain.Genesis) {
 	}
 
 	balance := new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)
-	for _, item := range strings.Split(fundingAddr, ",") {
+	for item := range strings.SplitSeq(fundingAddr, ",") {
 		if !common.IsHexAddress(item) {
 			log.Fatalf("'%s' is not a valid hex address", item)
 		}
@@ -765,6 +766,8 @@ func Gen(ctx *cli.Context) error {
 
 	genesisJson.Config.RandaoCompatibleBlock = big.NewInt(ctx.Int64(randaoCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.PragueCompatibleBlock = big.NewInt(ctx.Int64(pragueCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.OsakaCompatibleBlock = big.NewInt(ctx.Int64(osakaCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.BlobScheduleConfig = params.DefaultBlobSchedule
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)

@@ -158,9 +158,9 @@ func NewType(t string, internalType string, components []ArgumentMarshaling) (ty
 			fields     []reflect.StructField
 			elems      []*Type
 			names      []string
-			expression string // canonical parameter expression
+			expression strings.Builder // canonical parameter expression
 		)
-		expression += "("
+		expression.WriteString("(")
 		overloadedNames := make(map[string]string)
 		for idx, c := range components {
 			cType, err := NewType(c.Type, c.InternalType, c.Components)
@@ -179,18 +179,18 @@ func NewType(t string, internalType string, components []ArgumentMarshaling) (ty
 			})
 			elems = append(elems, &cType)
 			names = append(names, c.Name)
-			expression += cType.stringKind
+			expression.WriteString(cType.stringKind)
 			if idx != len(components)-1 {
-				expression += ","
+				expression.WriteString(",")
 			}
 		}
-		expression += ")"
+		expression.WriteString(")")
 
 		typ.TupleType = reflect.StructOf(fields)
 		typ.TupleElems = elems
 		typ.TupleRawNames = names
 		typ.T = TupleTy
-		typ.stringKind = expression
+		typ.stringKind = expression.String()
 
 		const structPrefix = "struct "
 		// After solidity 0.5.10, a new field of abi "internalType"
@@ -234,15 +234,15 @@ func (t Type) GetType() reflect.Type {
 	case FixedBytesTy:
 		return reflect.ArrayOf(t.Size, reflect.TypeFor[byte]())
 	case BytesTy:
-		return reflect.SliceOf(reflect.TypeFor[byte]())
+		return reflect.TypeFor[[]byte]()
 	case HashTy:
 		// hashtype currently not used
-		return reflect.ArrayOf(32, reflect.TypeFor[byte]())
+		return reflect.TypeFor[[32]byte]()
 	case FixedPointTy:
 		// fixedpoint type currently not used
-		return reflect.ArrayOf(32, reflect.TypeFor[byte]())
+		return reflect.TypeFor[[32]byte]()
 	case FunctionTy:
-		return reflect.ArrayOf(24, reflect.TypeFor[byte]())
+		return reflect.TypeFor[[24]byte]()
 	default:
 		panic("Invalid type")
 	}

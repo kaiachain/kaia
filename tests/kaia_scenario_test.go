@@ -2433,12 +2433,19 @@ func applyTransaction(t *testing.T, bcdata *BCData, tx *types.Transaction) (*typ
 	parent := bcdata.bc.CurrentBlock()
 	num := parent.Number()
 	author := bcdata.addrs[0]
+	excessBlobGas := uint64(0)
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), common.Big1),
 		BlockScore: big.NewInt(0),
+	}
+	if bcdata.bc.Config().Rules(num).IsMagma {
+		header.BaseFee = big.NewInt(25 * params.Gkei)
+	}
+	if bcdata.bc.Config().Rules(num).IsOsaka {
+		header.ExcessBlobGas = &excessBlobGas
 	}
 	usedGas := uint64(0)
 	receipt, _, err := bcdata.bc.ApplyTransaction(bcdata.bc.Config(), author, state, header, tx, &usedGas, vmConfig)

@@ -19,20 +19,15 @@
 package types
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"math/big"
-	"reflect"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
 )
 
 //go:generate gencodec -type AccessTuple -out gen_access_tuple.go
@@ -222,11 +217,15 @@ func (t *TxInternalDataEthereumAccessList) ChainId() *big.Int {
 	return t.ChainID
 }
 
-func (t *TxInternalDataEthereumAccessList) GetAccountNonce() uint64 {
+func (t *TxInternalDataEthereumAccessList) SetChainId(chainID *big.Int) {
+	t.ChainID = new(big.Int).Set(chainID)
+}
+
+func (t *TxInternalDataEthereumAccessList) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataEthereumAccessList) GetPrice() *big.Int {
+func (t *TxInternalDataEthereumAccessList) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -234,19 +233,15 @@ func (t *TxInternalDataEthereumAccessList) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataEthereumAccessList) GetRecipient() *common.Address {
+func (t *TxInternalDataEthereumAccessList) GetTo() *common.Address {
 	return t.Recipient
 }
 
-func (t *TxInternalDataEthereumAccessList) GetAmount() *big.Int {
+func (t *TxInternalDataEthereumAccessList) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *TxInternalDataEthereumAccessList) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataEthereumAccessList) GetPayload() []byte {
+func (t *TxInternalDataEthereumAccessList) GetData() []byte {
 	return t.Payload
 }
 
@@ -254,7 +249,7 @@ func (t *TxInternalDataEthereumAccessList) GetAccessList() AccessList {
 	return t.AccessList
 }
 
-func (t *TxInternalDataEthereumAccessList) SetHash(hash *common.Hash) {
+func (t *TxInternalDataEthereumAccessList) setHashForMarshaling(hash *common.Hash) {
 	t.Hash = hash
 }
 
@@ -272,39 +267,27 @@ func (t *TxInternalDataEthereumAccessList) RawSignatureValues() TxSignatures {
 	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
 }
 
-func (t *TxInternalDataEthereumAccessList) ValidateSignature() bool {
-	v := byte(t.V.Uint64())
-	return crypto.ValidateSignatureValues(v, t.R, t.S, false)
-}
-
-func (t *TxInternalDataEthereumAccessList) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
-	V := vfunc(t.V)
-	return recoverPlain(txhash, t.R, t.S, V, homestead)
-}
-
-func (t *TxInternalDataEthereumAccessList) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	V := vfunc(t.V)
-
-	pk, err := recoverPlainPubkey(txhash, t.R, t.S, V, homestead)
-	if err != nil {
-		return nil, err
-	}
-
-	return []*ecdsa.PublicKey{pk}, nil
-}
-
 func (t *TxInternalDataEthereumAccessList) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	return IntrinsicGas(t.Payload, t.AccessList, nil, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
-func (t *TxInternalDataEthereumAccessList) setSignatureValues(chainID, v, r, s *big.Int) {
-	t.ChainID, t.V, t.R, t.S = chainID, v, r, s
-}
-
-func (t *TxInternalDataEthereumAccessList) SerializeForSign() []interface{} {
+func (t *TxInternalDataEthereumAccessList) SigHash(chainId *big.Int) common.Hash {
 	// If the chainId has nil or empty value, It will be set signer's chainId.
-	return []interface{}{
-		t.ChainID,
+	chainIdField := t.ChainId()
+	if chainIdField == nil || chainIdField.BitLen() == 0 {
+		chainIdField = chainId
+	}
+	return prefixedRlpHash(byte(t.Type()), struct {
+		ChainID    *big.Int
+		Nonce      uint64
+		Price      *big.Int
+		GasLimit   uint64
+		Recipient  *common.Address
+		Amount     *big.Int
+		Payload    []byte
+		AccessList AccessList
+	}{
+		chainIdField,
 		t.AccountNonce,
 		t.Price,
 		t.GasLimit,
@@ -312,10 +295,10 @@ func (t *TxInternalDataEthereumAccessList) SerializeForSign() []interface{} {
 		t.Amount,
 		t.Payload,
 		t.AccessList,
-	}
+	})
 }
 
-func (t *TxInternalDataEthereumAccessList) TxHash() common.Hash {
+func (t *TxInternalDataEthereumAccessList) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
 		t.AccountNonce,
@@ -331,119 +314,15 @@ func (t *TxInternalDataEthereumAccessList) TxHash() common.Hash {
 	})
 }
 
-func (t *TxInternalDataEthereumAccessList) SenderTxHash() common.Hash {
-	return prefixedRlpHash(byte(t.Type()), []interface{}{
-		t.ChainID,
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.AccessList,
-		t.V,
-		t.R,
-		t.S,
-	})
-}
-
-func (t *TxInternalDataEthereumAccessList) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataEthereumAccessList) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataEthereumAccessList)
-	if !ok {
-		return false
-	}
-
-	return t.ChainID.Cmp(ta.ChainID) == 0 &&
-		t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		reflect.DeepEqual(t.AccessList, ta.AccessList) &&
-		t.V.Cmp(ta.V) == 0 &&
-		t.R.Cmp(ta.R) == 0 &&
-		t.S.Cmp(ta.S) == 0
-}
-
-func (t *TxInternalDataEthereumAccessList) String() string {
-	var from, to string
-	tx := &Transaction{data: t}
-
-	v, r, s := t.V, t.R, t.S
-
-	if v != nil {
-		signer := LatestSignerForChainID(t.ChainId())
-		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
-			from = "[invalid sender: invalid sig]"
-		} else {
-			from = fmt.Sprintf("%x", f[:])
-		}
-	} else {
-		from = "[invalid sender: nil V field]"
-	}
-
-	if t.GetRecipient() == nil {
-		to = "[contract creation]"
-	} else {
-		to = fmt.Sprintf("%x", t.GetRecipient().Bytes())
-	}
-	enc, _ := rlp.EncodeToBytes(tx)
-	return fmt.Sprintf(`
-		TX(%x)
-		Contract: %v
-		Chaind:   %#x
-		From:     %s
-		To:       %s
-		Nonce:    %v
-		GasPrice: %#x
-		GasLimit  %#x
-		Value:    %#x
-		Data:     0x%x
-		AccessList: %x
-		V:        %#x
-		R:        %#x
-		S:        %#x
-		Hex:      %x
-	`,
-		tx.Hash(),
-		t.GetRecipient() == nil,
-		t.ChainId(),
-		from,
-		to,
-		t.GetAccountNonce(),
-		t.GetPrice(),
-		t.GetGasLimit(),
-		t.GetAmount(),
-		t.GetPayload(),
-		t.AccessList,
-		v,
-		r,
-		s,
-		enc,
-	)
-}
-
-func (t *TxInternalDataEthereumAccessList) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if t.Recipient != nil {
-		if common.IsPrecompiledContractAddress(*t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-			return kerrors.ErrPrecompiledContractAddress
+func (t *TxInternalDataEthereumAccessList) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
+	if !onlyMutableChecks {
+		if t.Recipient != nil {
+			if common.IsPrecompiledContractAddress(*t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+				return kerrors.ErrPrecompiledContractAddress
+			}
 		}
 	}
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataEthereumAccessList) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	return nil
-}
-
-func (t *TxInternalDataEthereumAccessList) FillContractAddress(from common.Address, r *Receipt) {
-	if t.Recipient == nil {
-		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce)
-	}
 }
 
 func (t *TxInternalDataEthereumAccessList) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

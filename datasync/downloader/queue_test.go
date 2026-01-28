@@ -114,16 +114,14 @@ func dummyPeer(id string) *peerConnection {
 }
 
 func TestBasics(t *testing.T) {
-	// set test staking update interval
-	orig := params.StakingUpdateInterval()
-	params.SetStakingUpdateInterval(testInterval)
-	defer params.SetStakingUpdateInterval(orig)
-
 	numOfBlocks := len(chain.blocks)
 	numOfReceipts := len(chain.blocks) / 2
 	numOfStakingInfos := len(chain.stakingInfos)
 
-	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), nil)
+	config := params.TestChainConfig.Copy()
+	config.Governance.Reward.StakingUpdateInterval = testInterval
+	config.KaiaCompatibleBlock = nil
+	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), config)
 	if !q.Idle() {
 		t.Errorf("new queue should be idle")
 	}
@@ -254,12 +252,8 @@ func TestBasics(t *testing.T) {
 }
 
 func TestScheduleAfterKaia(t *testing.T) {
-	// set test staking update interval
-	orig := params.StakingUpdateInterval()
-	params.SetStakingUpdateInterval(testInterval)
-	defer params.SetStakingUpdateInterval(orig)
-
-	config := params.TestChainConfig
+	config := params.TestChainConfig.Copy()
+	config.Governance.Reward.StakingUpdateInterval = testInterval
 	config.KaiaCompatibleBlock = big.NewInt(21)
 
 	numOfStakingInfos := 5 // [4, 8, 12, 16, 20]; After kaia fork, it won't be scheduled.
@@ -301,15 +295,13 @@ func TestScheduleAfterKaia(t *testing.T) {
 }
 
 func TestEmptyBlocks(t *testing.T) {
-	// set test staking update interval
-	orig := params.StakingUpdateInterval()
-	params.SetStakingUpdateInterval(testInterval)
-	defer params.SetStakingUpdateInterval(orig)
-
 	numOfBlocks := len(emptyChain.blocks)
 	numOfStakingInfos := len(emptyChain.stakingInfos)
+	config := params.TestChainConfig.Copy()
+	config.Governance.Reward.StakingUpdateInterval = testInterval
+	config.KaiaCompatibleBlock = nil
 
-	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), nil)
+	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), config)
 
 	q.Prepare(1, FastSync)
 	// Schedule a batch of headers
@@ -420,10 +412,8 @@ func XTestDelivery(t *testing.T) {
 	q := newQueue(10, 10, uint64(istanbul.WeightedRandom), nil)
 	var wg sync.WaitGroup
 	q.Prepare(1, FastSync)
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		// deliver headers
-		defer wg.Done()
 		c := 1
 		for {
 			// fmt.Printf("getting headers from %d\n", c)
@@ -434,11 +424,9 @@ func XTestDelivery(t *testing.T) {
 			q.Schedule(hdrs, uint64(c))
 			c += l
 		}
-	}()
-	wg.Add(1)
-	go func() {
+	})
+	wg.Go(func() {
 		// collect results
-		defer wg.Done()
 		tot := 0
 		for {
 			res := q.Results(true)
@@ -448,10 +436,8 @@ func XTestDelivery(t *testing.T) {
 			world.forget(res[len(res)-1].Header.Number.Uint64())
 
 		}
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		// reserve body fetch
 		i := 4
 		for {
@@ -473,7 +459,7 @@ func XTestDelivery(t *testing.T) {
 				time.Sleep(200 * time.Millisecond)
 			}
 		}
-	}()
+	})
 	go func() {
 		defer wg.Done()
 		// reserve receiptfetch
@@ -495,9 +481,7 @@ func XTestDelivery(t *testing.T) {
 			}
 		}
 	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for i := 0; i < 50; i++ {
 			time.Sleep(300 * time.Millisecond)
 			// world.tick()
@@ -507,17 +491,15 @@ func XTestDelivery(t *testing.T) {
 		for i := 0; i < 50; i++ {
 			time.Sleep(2990 * time.Millisecond)
 		}
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		for {
 			time.Sleep(990 * time.Millisecond)
 			fmt.Printf("world block tip is %d\n",
 				world.chain[len(world.chain)-1].Header().Number.Uint64())
 			fmt.Println(q.Stats())
 		}
-	}()
+	})
 	wg.Wait()
 }
 

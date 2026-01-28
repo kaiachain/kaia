@@ -20,14 +20,12 @@ package types
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -224,11 +222,11 @@ func (t *TxInternalDataAccountUpdate) GetRoleTypeForValidation() accountkey.Role
 	return accountkey.RoleAccountUpdate
 }
 
-func (t *TxInternalDataAccountUpdate) GetAccountNonce() uint64 {
+func (t *TxInternalDataAccountUpdate) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataAccountUpdate) GetPrice() *big.Int {
+func (t *TxInternalDataAccountUpdate) GetGasPrice() *big.Int {
 	return t.Price
 }
 
@@ -236,11 +234,11 @@ func (t *TxInternalDataAccountUpdate) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataAccountUpdate) GetRecipient() *common.Address {
+func (t *TxInternalDataAccountUpdate) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataAccountUpdate) GetAmount() *big.Int {
+func (t *TxInternalDataAccountUpdate) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -248,56 +246,12 @@ func (t *TxInternalDataAccountUpdate) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataAccountUpdate) GetHash() *common.Hash {
-	return t.Hash
+func (t *TxInternalDataAccountUpdate) GetData() []byte {
+	return []byte{}
 }
 
-func (t *TxInternalDataAccountUpdate) SetHash(h *common.Hash) {
+func (t *TxInternalDataAccountUpdate) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
-}
-
-func (t *TxInternalDataAccountUpdate) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataAccountUpdate) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataAccountUpdate)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.From == ta.From &&
-		t.Key.Equal(ta.Key) &&
-		t.TxSignatures.equal(ta.TxSignatures)
-}
-
-func (t *TxInternalDataAccountUpdate) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Key:           %s
-	Signature:     %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Key.String(),
-		t.TxSignatures.string(),
-		enc)
 }
 
 func (t *TxInternalDataAccountUpdate) SetSignature(s TxSignatures) {
@@ -331,56 +285,11 @@ func (t *TxInternalDataAccountUpdate) SerializeForSignToBytes() []byte {
 	return b
 }
 
-func (t *TxInternalDataAccountUpdate) SerializeForSign() []interface{} {
-	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
-	keyEnc, _ := rlp.EncodeToBytes(serializer)
-
-	b, _ := rlp.EncodeToBytes(struct {
-		Txtype       TxType
-		AccountNonce uint64
-		Price        *big.Int
-		GasLimit     uint64
-		From         common.Address
-		Key          []byte
-	}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		keyEnc,
-	})
-
-	return []interface{}{b}
+func (t *TxInternalDataAccountUpdate) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
-func (t *TxInternalDataAccountUpdate) SenderTxHash() common.Hash {
-	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
-	keyEnc, _ := rlp.EncodeToBytes(serializer)
-
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, t.Type())
-	rlp.Encode(hw, []interface{}{
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		keyEnc,
-		t.TxSignatures,
-	})
-
-	h := common.Hash{}
-
-	hw.Sum(h[:0])
-
-	return h
-}
-
-func (t *TxInternalDataAccountUpdate) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataAccountUpdate) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataAccountUpdate) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	oldKey := stateDB.GetKey(t.From)
 	if err := accountkey.CheckReplacable(oldKey, t.Key, currentBlockNumber); err != nil {
 		return err

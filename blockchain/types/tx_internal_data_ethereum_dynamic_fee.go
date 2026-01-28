@@ -19,20 +19,15 @@
 package types
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"math/big"
-	"reflect"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
 )
 
 type TxInternalDataEthereumDynamicFee struct {
@@ -120,7 +115,7 @@ func newTxInternalDataEthereumDynamicFeeWithValues(nonce uint64, to *common.Addr
 	}
 
 	if accessList != nil {
-		copy(d.AccessList, accessList)
+		d.AccessList = append(d.AccessList, accessList...)
 	}
 
 	return d
@@ -209,11 +204,11 @@ func (t *TxInternalDataEthereumDynamicFee) GetRoleTypeForValidation() accountkey
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataEthereumDynamicFee) GetAccountNonce() uint64 {
+func (t *TxInternalDataEthereumDynamicFee) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataEthereumDynamicFee) GetPrice() *big.Int {
+func (t *TxInternalDataEthereumDynamicFee) GetGasPrice() *big.Int {
 	return t.GasFeeCap
 }
 
@@ -221,19 +216,15 @@ func (t *TxInternalDataEthereumDynamicFee) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataEthereumDynamicFee) GetRecipient() *common.Address {
+func (t *TxInternalDataEthereumDynamicFee) GetTo() *common.Address {
 	return t.Recipient
 }
 
-func (t *TxInternalDataEthereumDynamicFee) GetAmount() *big.Int {
+func (t *TxInternalDataEthereumDynamicFee) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *TxInternalDataEthereumDynamicFee) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataEthereumDynamicFee) GetPayload() []byte {
+func (t *TxInternalDataEthereumDynamicFee) GetData() []byte {
 	return t.Payload
 }
 
@@ -249,7 +240,7 @@ func (t *TxInternalDataEthereumDynamicFee) GetGasFeeCap() *big.Int {
 	return t.GasFeeCap
 }
 
-func (t *TxInternalDataEthereumDynamicFee) SetHash(hash *common.Hash) {
+func (t *TxInternalDataEthereumDynamicFee) setHashForMarshaling(hash *common.Hash) {
 	t.Hash = hash
 }
 
@@ -267,27 +258,6 @@ func (t *TxInternalDataEthereumDynamicFee) RawSignatureValues() TxSignatures {
 	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
 }
 
-func (t *TxInternalDataEthereumDynamicFee) ValidateSignature() bool {
-	v := byte(t.V.Uint64())
-	return crypto.ValidateSignatureValues(v, t.R, t.S, false)
-}
-
-func (t *TxInternalDataEthereumDynamicFee) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
-	V := vfunc(t.V)
-	return recoverPlain(txhash, t.R, t.S, V, homestead)
-}
-
-func (t *TxInternalDataEthereumDynamicFee) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	V := vfunc(t.V)
-
-	pk, err := recoverPlainPubkey(txhash, t.R, t.S, V, homestead)
-	if err != nil {
-		return nil, err
-	}
-
-	return []*ecdsa.PublicKey{pk}, nil
-}
-
 func (t *TxInternalDataEthereumDynamicFee) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	return IntrinsicGas(t.Payload, t.AccessList, nil, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
@@ -296,100 +266,40 @@ func (t *TxInternalDataEthereumDynamicFee) ChainId() *big.Int {
 	return t.ChainID
 }
 
-func (t *TxInternalDataEthereumDynamicFee) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataEthereumDynamicFee)
-	if !ok {
-		return false
-	}
-
-	return t.ChainID.Cmp(ta.ChainID) == 0 &&
-		t.AccountNonce == ta.AccountNonce &&
-		t.GasFeeCap.Cmp(ta.GasFeeCap) == 0 &&
-		t.GasTipCap.Cmp(ta.GasTipCap) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		reflect.DeepEqual(t.AccessList, ta.AccessList) &&
-		t.V.Cmp(ta.V) == 0 &&
-		t.R.Cmp(ta.R) == 0 &&
-		t.S.Cmp(ta.S) == 0
+func (t *TxInternalDataEthereumDynamicFee) SetChainId(chainID *big.Int) {
+	t.ChainID = new(big.Int).Set(chainID)
 }
 
-func (t *TxInternalDataEthereumDynamicFee) String() string {
-	var from, to string
-	tx := &Transaction{data: t}
-
-	v, r, s := t.V, t.R, t.S
-	if v != nil {
-		signer := LatestSignerForChainID(t.ChainId())
-		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
-			from = "[invalid sender: invalid sig]"
-		} else {
-			from = fmt.Sprintf("%x", f[:])
-		}
-	} else {
-		from = "[invalid sender: nil V field]"
-	}
-
-	if t.GetRecipient() == nil {
-		to = "[contract creation]"
-	} else {
-		to = fmt.Sprintf("%x", t.GetRecipient().Bytes())
-	}
-	enc, _ := rlp.EncodeToBytes(tx)
-	return fmt.Sprintf(`
-		TX(%x)
-		Contract: %v
-		Chaind:   %#x
-		From:     %s
-		To:       %s
-		Nonce:    %v
-		GasTipCap: %#x
-		GasFeeCap: %#x
-		GasLimit  %#x
-		Value:    %#x
-		Data:     0x%x
-		AccessList: %x
-		V:        %#x
-		R:        %#x
-		S:        %#x
-		Hex:      %x
-	`,
-		tx.Hash(),
-		t.GetRecipient() == nil,
-		t.ChainId(),
-		from,
-		to,
-		t.GetAccountNonce(),
-		t.GetGasTipCap(),
-		t.GetGasFeeCap(),
-		t.GetGasLimit(),
-		t.GetAmount(),
-		t.GetPayload(),
-		t.AccessList,
-		v,
-		r,
-		s,
-		enc,
-	)
-}
-
-func (t *TxInternalDataEthereumDynamicFee) SerializeForSign() []interface{} {
+func (t *TxInternalDataEthereumDynamicFee) SigHash(chainId *big.Int) common.Hash {
 	// If the chainId has nil or empty value, It will be set signer's chainId.
-	return []interface{}{
-		t.ChainID,
-		t.AccountNonce,
-		t.GasTipCap,
-		t.GasFeeCap,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.AccessList,
+	chainIdField := t.ChainId()
+	if chainIdField == nil || chainIdField.BitLen() == 0 {
+		chainIdField = chainId
 	}
+	return prefixedRlpHash(byte(t.Type()), struct {
+		ChainID      *big.Int
+		AccountNonce uint64
+		GasTipCap    *big.Int
+		GasFeeCap    *big.Int
+		GasLimit     uint64
+		Recipient    *common.Address
+		Amount       *big.Int
+		Payload      []byte
+		AccessList   AccessList
+	}{
+		chainIdField,
+		t.AccountNonce,
+		t.GasTipCap,
+		t.GasFeeCap,
+		t.GasLimit,
+		t.Recipient,
+		t.Amount,
+		t.Payload,
+		t.AccessList,
+	})
 }
 
-func (t *TxInternalDataEthereumDynamicFee) TxHash() common.Hash {
+func (t *TxInternalDataEthereumDynamicFee) EthTxHash() common.Hash {
 	return prefixedRlpHash(byte(t.Type()), []interface{}{
 		t.ChainID,
 		t.AccountNonce,
@@ -406,44 +316,15 @@ func (t *TxInternalDataEthereumDynamicFee) TxHash() common.Hash {
 	})
 }
 
-func (t *TxInternalDataEthereumDynamicFee) SenderTxHash() common.Hash {
-	return prefixedRlpHash(byte(t.Type()), []interface{}{
-		t.ChainID,
-		t.AccountNonce,
-		t.GasTipCap,
-		t.GasFeeCap,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.AccessList,
-		t.V,
-		t.R,
-		t.S,
-	})
-}
-
-func (t *TxInternalDataEthereumDynamicFee) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if t.Recipient != nil {
-		if common.IsPrecompiledContractAddress(*t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-			return kerrors.ErrPrecompiledContractAddress
+func (t *TxInternalDataEthereumDynamicFee) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
+	if !onlyMutableChecks {
+		if t.Recipient != nil {
+			if common.IsPrecompiledContractAddress(*t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+				return kerrors.ErrPrecompiledContractAddress
+			}
 		}
 	}
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataEthereumDynamicFee) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	return nil
-}
-
-func (t *TxInternalDataEthereumDynamicFee) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataEthereumDynamicFee) FillContractAddress(from common.Address, r *Receipt) {
-	if t.Recipient == nil {
-		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce)
-	}
 }
 
 func (t *TxInternalDataEthereumDynamicFee) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {
@@ -521,8 +402,4 @@ func (t *TxInternalDataEthereumDynamicFee) UnmarshalJSON(bytes []byte) error {
 	t.Hash = js.Hash
 
 	return nil
-}
-
-func (t *TxInternalDataEthereumDynamicFee) setSignatureValues(chainID, v, r, s *big.Int) {
-	t.ChainID, t.V, t.R, t.S = chainID, v, r, s
 }

@@ -44,7 +44,7 @@ var (
 	headBlockKey       = []byte("LastBlock")
 	headBlockBackupKey = []byte("LastBlockBackup")
 
-	// headFastBlockKey tracks the latest known incomplete block's hash duirng fast sync.
+	// headFastBlockKey tracks the latest known incomplete block's hash during fast sync.
 	headFastBlockKey       = []byte("LastFast")
 	headFastBlockBackupKey = []byte("LastFastBackup")
 

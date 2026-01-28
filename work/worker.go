@@ -23,6 +23,7 @@
 package work
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 	"strconv"
@@ -36,7 +37,9 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -79,6 +82,7 @@ var (
 	minerBalanceGauge       = metrics.NewRegisteredGauge("miner/balance", nil)
 
 	blockBaseFee              = metrics.NewRegisteredGauge("miner/block/mining/basefee", nil)
+	blobsGauge                = metrics.NewRegisteredGauge("miner/block/mining/blobs", nil)
 	blockMiningTimer          = kaiametrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
 	blockMiningExecuteTxTimer = kaiametrics.NewRegisteredHybridTimer("miner/block/execute/time", nil)
 	blockMiningCommitTxTimer  = kaiametrics.NewRegisteredHybridTimer("miner/block/commit/time", nil)
@@ -117,15 +121,40 @@ type Task struct {
 	stateMu sync.RWMutex   // protects state
 	state   *state.StateDB // apply state changes here
 	tcount  int            // tx count in cycle
+	size    uint64         // size of the block we are building
 
 	Block *types.Block // the new block
 
 	header   *types.Header
 	txs      []*types.Transaction
 	receipts []*types.Receipt
+	blobs    int
 
 	createdAt time.Time
 }
+
+// txFitsSize reports whether the transaction fits into the block size limit.
+func (env *Task) txFitsSize(tx *types.Transaction) bool {
+	return env.size+uint64(tx.Size()) < params.MaxBlockSize-maxBlockSizeBufferZone
+}
+
+func (env *Task) txFitsSizeForBundle(nodeAddr common.Address, bundle *builder.Bundle) bool {
+	totalTxSize := uint64(0)
+	for _, txOrGen := range bundle.BundleTxs {
+		tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
+		if err != nil {
+			// ignore error in this point since it will be handled later as tx generation error in commitBundleTransaction
+			continue
+		}
+		totalTxSize += uint64(tx.Size())
+	}
+	return env.size+totalTxSize < params.MaxBlockSize-maxBlockSizeBufferZone
+}
+
+// Block size is capped by the protocol at params.MaxBlockSize. When producing blocks, we
+// try to say below the size including a buffer zone, this is to avoid going over the
+// maximum size with auxiliary data added into the block.
+const maxBlockSizeBufferZone = 1_000_000
 
 type Result struct {
 	Task  *Task
@@ -402,14 +431,16 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 
 			// Update the block hash in all logs since it is now available and not when the
 			// receipt/log of individual transactions were created.
+			for _, r := range work.receipts {
+				for _, l := range r.Logs {
+					l.BlockHash = block.Hash()
+				}
+			}
 			work.stateMu.Lock()
 			for _, log := range work.state.Logs() {
 				log.BlockHash = block.Hash()
 			}
-			var logs []*types.Log
-			for _, r := range work.receipts {
-				logs = append(logs, r.Logs...)
-			}
+
 			start := time.Now()
 			result, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
 			work.stateMu.Unlock()
@@ -436,6 +467,11 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 			self.mux.Post(blockchain.NewMinedBlockEvent{Block: block})
 
 			var events []interface{}
+
+			work.stateMu.RLock()
+			logs := work.state.Logs()
+			work.stateMu.RUnlock()
+
 			events = append(events, blockchain.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
 			if result.Status == blockchain.CanonStatTy {
 				events = append(events, blockchain.ChainHeadEvent{Block: block})
@@ -524,6 +560,9 @@ func (self *worker) commitNewWork() {
 				"nextBlockTimestamp", tstamp,
 			)
 		}
+
+		core.Vrank.Log()
+		core.Vrank.StartTimer()
 	}
 
 	var pending map[common.Address]types.Transactions
@@ -561,6 +600,17 @@ func (self *worker) commitNewWork() {
 	if err := self.engine.Prepare(self.chain, header); err != nil {
 		logger.Error("Failed to prepare header for mining", "err", err)
 		return
+	}
+	// Apply KIP-279.
+	if self.config.IsOsakaForkEnabled(header.Number) {
+		// In KIP-279, ExcessBlobGas is defined as follows:
+		// - ExcessBlobGas = max(0, parent.excessBlobGas + parent.blobGasUsed - TARGET_BLOB_GAS_PER_BLOCK)
+		var excessBlobGas uint64
+		if self.config.IsOsakaForkEnabled(parent.Number()) {
+			excessBlobGas = eip4844.CalcExcessBlobGas(self.config, parent.Header(), header.Number)
+		}
+		header.BlobGasUsed = new(uint64)
+		header.ExcessBlobGas = &excessBlobGas
 	}
 	// Could potentially happen if starting to mine in an odd state.
 	err = self.makeCurrent(parent, header)
@@ -621,6 +671,7 @@ func (self *worker) commitNewWork() {
 			if header.BaseFee != nil {
 				blockBaseFee.Update(header.BaseFee.Int64() / int64(params.Gkei))
 			}
+			blobsGauge.Update(int64(work.blobs))
 			blockMiningTimer.Update(blockMiningTime)
 			blockMiningCommitTxTimer.Update(commitTxTime)
 			blockMiningExecuteTxTimer.Update(commitTxTime - trieAccess)
@@ -691,12 +742,16 @@ func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 }
 
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
-	arrayTxs := builder.Arrayify(txs)
-	incorporatedTxs, bundles := builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
-	var coalescedLogs []*types.Log
+	var (
+		arrayTxs                 = builder.Arrayify(txs)
+		incorporatedTxs, bundles = builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
+		totalTxs                 = len(incorporatedTxs)
+		totalBundles             = len(bundles)
+		coalescedLogs            []*types.Log
+	)
 
 	// Limit the execution time of all transactions in a block
-	var abort int32 = 0            // To break the below commitTransaction for loop when timed out
+	var abort int32 = 0            // To break the below `CommitTransactionLoop` for loop when timed out
 	var isExecutingBundleTxs int32 // To wait for abort while the bundle is running
 	chDone := make(chan bool)      // To stop the goroutine below when processing txs is completed
 
@@ -729,6 +784,13 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 				if env.tcount > 0 && atomic.LoadInt32(&isExecutingBundleTxs) == 0 {
 					// The total time limit reached, thus we stop the currently running EVM.
 					evm.Cancel(vm.CancelByTotalTimeLimit)
+				} else if env.tcount == 0 && len(arrayTxs) > 0 {
+					// Case 'Single long tx':
+					//   T0 (executing tx) ------- T_limit --> abort=1 (but let T0 finish)
+					//   Result: tcount=0 → Log "A single transaction exceeds limit" and "unexecuted transactions due to time limit"
+					//
+					logger.Warn("A single transaction exceeds total time limit", "hash", arrayTxs[0].Hash().String())
+					tooLongTxCounter.Inc(1)
 				}
 				evm = nil
 			}
@@ -743,6 +805,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	var numTxsNonceTooLow int64 = 0
 	var numTxsNonceTooHigh int64 = 0
 	var numTxsGasLimitReached int64 = 0
+
 CommitTransactionLoop:
 	for atomic.LoadInt32(&abort) == 0 {
 		// Retrieve the next transaction and abort if all done
@@ -769,8 +832,8 @@ CommitTransactionLoop:
 			// Skip this bundle if target is required but either:
 			// 1. The previous transaction hash doesn't match the target hash, or
 			// 2. The previous transaction failed (receipt status not successful)
-			if env.shouldDiscardBundle(targetBundle) {
-				logger.Trace("Skipping bundle due to invalid target tx", "target tx", targetBundle.TargetTxHash.String(), "bundle tx", txOrGen.Id.String(), "numShift", numShift)
+			if discard, err := env.shouldDiscardBundle(targetBundle); discard {
+				logger.Warn("Skipping bundle due to invalid target tx", "err", err.Error(), "target tx", targetBundle.TargetTxHash.String(), "bundle tx", txOrGen.Id.String(), "numShift", numShift)
 				builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 				continue
 			}
@@ -782,6 +845,30 @@ CommitTransactionLoop:
 			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 			continue
 		}
+		if len(targetBundle.BundleTxs) != 0 {
+			// if inclusion of the transaction would put the block size over the
+			// maximum we allow, don't add any more txs to the payload.
+			if !env.txFitsSizeForBundle(nodeAddr, targetBundle) {
+				break
+			}
+		} else {
+			// if inclusion of the transaction would put the block size over the
+			// maximum we allow, don't add any more txs to the payload.
+			if !env.txFitsSize(tx) {
+				break
+			}
+		}
+
+		// Most of the blob gas logic here is agnostic as to if the chain supports
+		// blobs or not, however the max check panics when called on a chain without
+		// a defined schedule, so we need to verify it's safe to call.
+		if env.config.IsOsakaForkEnabled(env.header.Number) {
+			if hasBlobSpace := env.hasBlobSpace(tx, targetBundle, nodeAddr); !hasBlobSpace {
+				builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+				continue
+			}
+		}
+
 		// If target is the tx in bundle, len(targetBundle.BundleTxs) is appended to numTxsChecked.
 		numTxsChecked += int64(numShift)
 		// Error may be ignored here. The error has already been checked
@@ -828,11 +915,6 @@ CommitTransactionLoop:
 
 		case vm.ErrTotalTimeLimitReached:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
-			timeLimitReachedCounter.Inc(1)
-			if env.tcount == 0 {
-				logger.Error("A single transaction exceeds total time limit", "hash", tx.Hash().String())
-				tooLongTxCounter.Inc(1)
-			}
 			// NOTE-Kaia Exit for loop immediately without checking abort variable again.
 			break CommitTransactionLoop
 
@@ -870,6 +952,30 @@ CommitTransactionLoop:
 		}
 	}
 
+	// Case 'Multiple txs, limit hit after first tx':
+	//   T0 -- ... -- TN (executing tx) -- T_limit --> abort=1 (cancel TN immediately)
+	//   Result: tcount=N → Log "unexecuted transactions due to time limit"
+	if atomic.LoadInt32(&abort) == 1 {
+		timeLimitReachedCounter.Inc(1)
+		var txHash common.Hash
+		if len(incorporatedTxs) > 0 {
+			txOrGen := incorporatedTxs[0]
+			tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
+			if err == nil {
+				txHash = tx.Hash()
+			}
+			logger.Warn("Unexecuted transactions due to time limit",
+				"totalTxs", totalTxs,
+				"totalBundles", totalBundles,
+				"executedTxs", env.tcount,
+				"unexecutedTxs", len(incorporatedTxs),
+				"unexecutedBundles", len(bundles),
+				"firstUnexecutedTxHash", txHash.String(),
+				"firstUnexecutedTxInBundle", builder.FindBundleIdx(bundles, txOrGen) != -1,
+			)
+		}
+	}
+
 	// Update the number of transactions checked and dropped during ApplyTransactions.
 	checkedTxsGauge.Update(numTxsChecked)
 	nonceTooLowTxsGauge.Update(numTxsNonceTooLow)
@@ -893,9 +999,15 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAdd
 		env.state.RevertToSnapshot(snap)
 		return err, nil
 	}
+
 	env.tcount++
 	env.txs = append(env.txs, tx)
 	env.receipts = append(env.receipts, receipt)
+	env.size += uint64(tx.Size())
+	if tx.Type() == types.TxTypeEthereumBlob {
+		env.blobs += len(tx.BlobHashes())
+		*env.header.BlobGasUsed += tx.BlobGas()
+	}
 
 	return nil, receipt.Logs
 }
@@ -903,6 +1015,8 @@ func (env *Task) commitTransaction(tx *types.Transaction, bc BlockChain, nodeAdd
 func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, nodeAddr common.Address, vmConfig *vm.Config) (error, *types.Transaction, []*types.Log) {
 	lastSnapshot := env.state.Copy()
 	gasUsedSnapshot := env.header.GasUsed
+	blobGasUsedSnapshot := env.header.BlobGasUsed
+	blobsSnapshot := env.blobs
 	tcountSnapshot := env.tcount
 	txs := []*types.Transaction{}
 	receipts := []*types.Receipt{}
@@ -921,8 +1035,12 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		env.state.Set(lastSnapshot)
 		env.header.GasUsed = gasUsedSnapshot
 		env.tcount = tcountSnapshot
+		// blob related env are restored to the snapshot
+		env.header.BlobGasUsed = blobGasUsedSnapshot
+		env.blobs = blobsSnapshot
 	}
 
+	var totalTxSize uint64 = 0
 	for _, txOrGen := range bundle.BundleTxs {
 		tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
 		if err != nil {
@@ -956,28 +1074,82 @@ func (env *Task) commitBundleTransaction(bundle *builder.Bundle, bc BlockChain, 
 		}
 
 		env.tcount++
+		totalTxSize += uint64(tx.Size())
 		txs = append(txs, tx)
 		receipts = append(receipts, receipt)
 		logs = append(logs, receipt.Logs...)
+		if tx.Type() == types.TxTypeEthereumBlob {
+			env.blobs += len(tx.BlobHashes())
+			*env.header.BlobGasUsed += tx.BlobGas()
+		}
 	}
 
+	env.size += totalTxSize
 	env.txs = append(env.txs, txs...)
 	env.receipts = append(env.receipts, receipts...)
 
 	return nil, nil, logs
 }
 
-func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) bool {
+func (env *Task) shouldDiscardBundle(bundle *builder.Bundle) (bool, error) {
 	if !bundle.TargetRequired {
+		return false, nil
+	}
+	if env.tcount == 0 {
+		return bundle.TargetTxHash != common.Hash{}, fmt.Errorf("target tx %s does not precede the bundle", bundle.TargetTxHash.Hex())
+	} else {
+		// if `env.tcount` is not zero, the `bundle.TargetTxHash` must not be empty hash
+		if bundle.TargetTxHash != env.txs[env.tcount-1].Hash() {
+			return true, fmt.Errorf("target tx %s does not precede the bundle", bundle.TargetTxHash.Hex())
+		}
+		if env.receipts[env.tcount-1].Status != types.ReceiptStatusSuccessful {
+			return true, fmt.Errorf("target tx %s failed with status %d", bundle.TargetTxHash.Hex(), env.receipts[env.tcount-1].Status)
+		}
+	}
+	return false, nil
+}
+
+func (env *Task) flattenTxOrBundle(tx *types.Transaction, bundle *builder.Bundle, nodeAddr common.Address) []*types.Transaction {
+	var txsWillBeExecuted []*types.Transaction
+	if len(bundle.BundleTxs) != 0 {
+		for _, txOrGen := range bundle.BundleTxs {
+			tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
+			if err != nil {
+				// ignore error in this point since it will be handled later as tx generation error in commitBundleTransaction
+				continue
+			}
+			txsWillBeExecuted = append(txsWillBeExecuted, tx)
+		}
+	} else {
+		txsWillBeExecuted = []*types.Transaction{tx}
+	}
+	return txsWillBeExecuted
+}
+
+// hasBlobSpace checks if the task has enough blob space for the given transaction and bundle.
+// It has already been validated in the pool,
+// but as a precaution it will also return false if the BlobTx does not have a Sidecar.
+func (env *Task) hasBlobSpace(tx *types.Transaction, bundle *builder.Bundle, nodeAddr common.Address) bool {
+	txsWillBeExecuted := env.flattenTxOrBundle(tx, bundle, nodeAddr)
+	blobsWillBeExecuted := 0
+	for _, tx := range txsWillBeExecuted {
+		if tx.Type() == types.TxTypeEthereumBlob {
+			sc := tx.BlobTxSidecar()
+			if sc == nil {
+				logger.Trace("Blob transaction without sidecar", "hash", tx.Hash())
+				return false
+			}
+			blobsWillBeExecuted += len(sc.Blobs)
+		}
+	}
+
+	left := eip4844.MaxBlobsPerBlock(env.config, env.header.Number) - env.blobs
+	if left < blobsWillBeExecuted {
+		logger.Trace("Not enough blob space left for transaction", "hash", tx.Hash(), "left", left, "needed", len(tx.BlobHashes()))
 		return false
 	}
 
-	if env.tcount == 0 {
-		return bundle.TargetTxHash != common.Hash{}
-	} else {
-		return !(bundle.TargetTxHash == env.txs[env.tcount-1].Hash() &&
-			env.receipts[env.tcount-1].Status == types.ReceiptStatusSuccessful)
-	}
+	return true
 }
 
 func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.StateDB, header *types.Header) *Task {
@@ -985,6 +1157,7 @@ func NewTask(config *params.ChainConfig, signer types.Signer, statedb *state.Sta
 		config:    config,
 		signer:    signer,
 		state:     statedb,
+		size:      uint64(header.Size()),
 		header:    header,
 		createdAt: time.Now(),
 	}

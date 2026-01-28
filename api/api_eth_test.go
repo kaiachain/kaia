@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,10 +13,12 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/accounts"
 	mock_accounts "github.com/kaiachain/kaia/accounts/mocks"
 	mock_api "github.com/kaiachain/kaia/api/mocks"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/forkid"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -24,8 +27,10 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -60,6 +65,8 @@ var (
 	floorDataGasTestCode = hexutil.Bytes(common.Hex2Bytes("6080604052348015600e575f5ffd5b50600436106026575f3560e01c80632e64cec114602a575b5f5ffd5b60306044565b604051603b91906062565b60405180910390f35b5f5f54905090565b5f819050919050565b605c81604c565b82525050565b5f60208201905060735f8301846055565b9291505056fea26469706673582212206aeab8d313a899d42a212113167e622ff770e746a3c3d0596d15fe2551d2c97464736f6c634300081e0033"))
 	// retrieve() with long junk to increase floor data gas. 104 nonzero tokens = 4160 floor data gas = 25160 intrinsic gas
 	floorDataGasTestData = hexutil.Bytes(append(common.Hex2Bytes("2e64cec1"), bytes.Repeat([]byte{0xff}, 100)...))
+
+	excessBlobGas = uint64(1000000)
 )
 
 // TestEthereumAPI_Etherbase tests Etherbase.
@@ -270,7 +277,7 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 		"parentHash": "0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348",
 		"receiptsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 		"sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
-		"size": "0x244",
+		"size": "0x254",
 		"stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
 		"timestamp": "0x61d53854",
 		"transactionsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
@@ -283,7 +290,7 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 		expected["randomReveal"] = "0x94516a8bc695b5bf43aa077cd682d9475a3a6bed39a633395b78ed8f276e7c5bb00bb26a77825013c6718579f1b3ee2275b158801705ea77989e3acc849ee9c524bd1822bde3cba7be2aae04347f0d91508b7b7ce2f11ec36cbf763173421ae7"
 		expected["mixHash"] = "0xdf117d1245dceaae0a47f05371b23cd0d0db963ff9d5c8ba768dc989f4c31883"
 		expected["hash"] = "0x36f1c36d1723049abf1202a1cda828eec6399edd654dae12b72a1642097a29e4"
-		expected["size"] = "0x2c4"
+		expected["size"] = "0x2d4"
 	}
 	assert.Equal(t, stringifyMap(expected), stringifyMap(ethHeader))
 }
@@ -317,17 +324,18 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
 	// Create dummy header
 	header := types.CopyHeader(&types.Header{
 		ParentHash: common.HexToHash("0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348"), Rewardbase: common.Address{}, TxHash: types.EmptyTxRootOriginal,
-		Root:        common.HexToHash("0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9"),
-		ReceiptHash: types.EmptyTxRootOriginal,
-		Bloom:       types.Bloom{},
-		BlockScore:  new(big.Int).SetUint64(1),
-		Number:      new(big.Int).SetUint64(4),
-		GasUsed:     uint64(10000),
-		Time:        new(big.Int).SetUint64(1641363540),
-		TimeFoS:     uint8(85),
-		Extra:       common.Hex2Bytes("0xd983010701846b6c617988676f312e31362e338664617277696e000000000000f89ed5949712f943b296758aaae79944ec975884188d3a96b8415a0614be7fd5ea40f11ce558e02993bd55f11ae72a3cfbc861875a57483ec5ec3adda3e5845fd7ab271d670c755480f9ef5b8dd731f4e1f032fff5d165b763ac01f843b8418867d3733167a0c737fa5b62dcc59ec3b0af5748bcc894e7990a0b5a642da4546713c9127b3358cdfe7894df1ca1db5a97560599986d7f1399003cd63660b98200"),
-		Governance:  []byte{},
-		Vote:        []byte{},
+		Root:          common.HexToHash("0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9"),
+		ReceiptHash:   types.EmptyTxRootOriginal,
+		Bloom:         types.Bloom{},
+		BlockScore:    new(big.Int).SetUint64(1),
+		Number:        new(big.Int).SetUint64(4),
+		GasUsed:       uint64(10000),
+		Time:          new(big.Int).SetUint64(1641363540),
+		TimeFoS:       uint8(85),
+		Extra:         common.Hex2Bytes("0xd983010701846b6c617988676f312e31362e338664617277696e000000000000f89ed5949712f943b296758aaae79944ec975884188d3a96b8415a0614be7fd5ea40f11ce558e02993bd55f11ae72a3cfbc861875a57483ec5ec3adda3e5845fd7ab271d670c755480f9ef5b8dd731f4e1f032fff5d165b763ac01f843b8418867d3733167a0c737fa5b62dcc59ec3b0af5748bcc894e7990a0b5a642da4546713c9127b3358cdfe7894df1ca1db5a97560599986d7f1399003cd63660b98200"),
+		ExcessBlobGas: &excessBlobGas,
+		Governance:    []byte{},
+		Vote:          []byte{},
 	})
 	block, _, _, _, _ := createTestData(t, header)
 	var blockParam interface{}
@@ -360,21 +368,21 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
         "extraData": "0x",
         "gasLimit": "0xe8d4a50fff",
         "gasUsed": "0x2710",
-        "hash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+        "hash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
         "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         "miner": "0x9712f943b296758aaae79944ec975884188d3a96",
         "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "nonce": "0x0000000000000000",
         "number": "0x4",
         "parentHash": "0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348",
-        "receiptsRoot": "0xf6278dd71ffc1637f78dc2ee54f6f9e64d4b1633c1179dfdbc8c3b482efbdbec",
+        "receiptsRoot": "0x7ef08df185ad9cd68f6428b6c32a344250bbf7dd9681c016ccbe349a6f9ccc5a",
         "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
-        "size": "0xe44",
+        "size": "0x22976",
         "stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
         "timestamp": "0x61d53854",
         "transactions": [
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x0000000000000000000000000000000000000000",
               "gas": "0x1c9c380",
@@ -391,7 +399,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3036656164333031646165616636376537376538",
               "gas": "0x989680",
@@ -408,7 +416,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3730323366383135666136613633663761613063",
               "gas": "0x1312d00",
@@ -425,7 +433,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x1312d00",
@@ -442,7 +450,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x5f5e100",
@@ -459,7 +467,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -476,7 +484,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -493,7 +501,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -510,7 +518,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3036656164333031646165616636376537376538",
               "gas": "0x989680",
@@ -527,7 +535,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3730323366383135666136613633663761613063",
               "gas": "0x1312d00",
@@ -544,7 +552,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x1312d00",
@@ -561,7 +569,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x5f5e100",
@@ -578,7 +586,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -595,7 +603,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -612,7 +620,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -629,7 +637,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3036656164333031646165616636376537376538",
               "gas": "0x989680",
@@ -646,7 +654,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3730323366383135666136613633663761613063",
               "gas": "0x1312d00",
@@ -663,7 +671,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x1312d00",
@@ -680,7 +688,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x5f5e100",
@@ -697,7 +705,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -714,7 +722,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -731,7 +739,7 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "s": "0x3"
             },
             {
-              "blockHash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
               "blockNumber": "0x4",
               "from": "0x3936663364636533666637396132333733653330",
               "gas": "0x2faf080",
@@ -746,9 +754,139 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
               "v": "0x1",
               "r": "0x2",
               "s": "0x3"
+            },
+			{
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
+              "blockNumber": "0x4",
+              "from": "0xd2cf1be6309647d3fb68cd1578a350fbf9579365",
+              "gas": "0x2faf080",
+			  "chainId": "0x1",
+              "gasPrice": "0x5d21dba00",
+              "hash": "0xc7df054d6a9815f3502f75290058ebc454ebfbd1ec4a845e57835de58859df79",
+              "input": "0x",
+              "nonce": "0x16",
+              "to": "0x3336623562313539333066323466653862616538",
+			  "transactionIndex": "0x16",
+			  "value": "0xa",
+			  "type": "0x1",
+			  "accessList": [
+				{
+					"address": "0x3337333936313332333333373333363533333330",
+					"storageKeys": [
+						"0xa145cd642157a5df01f5bc3837a1bb59b3dcefbbfad5ec435919780aebeaba2b",
+						"0x12e2c26dca2fb2b8879f54a5ea1604924edf0e37965c2be8aa6133b75818da40"
+					]
+				}
+			  ],
+			  "chainId": "0x1",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+			{
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
+              "blockNumber": "0x4",
+              "from": "0x99ece38c38250d5a366886bb319003a2c43a6652",
+              "gas": "0x2faf080",
+              "gasPrice": "0x5d21dba00",
+			  "maxFeePerGas": "0x5d21dba00",
+			  "maxPriorityFeePerGas": "0x5d21dba00",
+              "hash": "0x75d228540a72ae7fab2cca049fc7456ff4b7c39ec04d9d0399851e4590dd01fd",
+              "input": "0x",
+              "nonce": "0x17",
+              "to": "0x3336623562313539333066323466653862616538",
+			  "transactionIndex": "0x17",
+              "value": "0x3",
+              "type": "0x2",
+			  "accessList": [
+				{
+					"address": "0x3337333936313332333333373333363533333330",
+					"storageKeys": [
+						"0xa145cd642157a5df01f5bc3837a1bb59b3dcefbbfad5ec435919780aebeaba2b",
+						"0x12e2c26dca2fb2b8879f54a5ea1604924edf0e37965c2be8aa6133b75818da40"
+					]
+				}
+			  ],
+			  "chainId": "0x1",
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+			{
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
+              "blockNumber": "0x4",
+              "from": "0xd4ce9909ab4e4c80852f52ac01d39eefaf70014a",
+			  "chainId": "0x1",
+              "gas": "0x989680",
+              "gasPrice": "0x19",
+			  "maxFeePerBlobGas": "0x19",
+			  "maxFeePerGas": "0x19",
+			  "maxPriorityFeePerGas": "0x19",
+              "hash": "0xeb1c26e494ecd699ad51b1695de42c83ff815442760610b82d2baf57c4b01488",
+              "input": "0x",
+              "nonce": "0x18",
+              "to": "0x3336623562313539333066323466653862616538",
+              "transactionIndex": "0x18",
+              "value": "0x0",
+              "type": "0x3",
+			  "accessList": [
+				{
+					"address": "0x3337333936313332333333373333363533333330",
+					"storageKeys": [
+						"0xa145cd642157a5df01f5bc3837a1bb59b3dcefbbfad5ec435919780aebeaba2b",
+						"0x12e2c26dca2fb2b8879f54a5ea1604924edf0e37965c2be8aa6133b75818da40"
+					]
+				}
+			  ],
+			  "blobVersionedHashes": [
+				"0x010657f37554c781402a22917dee2f75def7ab966d7b770905398eba3c444014"
+			  ],
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
+            },
+			{
+              "blockHash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
+              "blockNumber": "0x4",
+              "from": "0x3e00e20175e3efe9190bcfa24b4bca6b1ea6f582",
+			  "chainId": "0x1",
+              "gas": "0x2faf080",
+              "gasPrice": "0x5d21dba00",
+			  "maxFeePerGas": "0x5d21dba00",
+			  "maxPriorityFeePerGas": "0x5d21dba00",
+              "hash": "0x59b20492615e0a314b5de568bb061c2099d731d1a238455c9a55cb0f5a6f1f9d",
+              "input": "0x",
+              "nonce": "0x19",
+              "to": "0x3336623562313539333066323466653862616538",
+			  "transactionIndex": "0x19",
+              "value": "0x3",
+              "type": "0x4",
+			  "accessList": [
+				{
+					"address": "0x3337333936313332333333373333363533333330",
+					"storageKeys": [
+						"0xa145cd642157a5df01f5bc3837a1bb59b3dcefbbfad5ec435919780aebeaba2b",
+						"0x12e2c26dca2fb2b8879f54a5ea1604924edf0e37965c2be8aa6133b75818da40"
+					]
+				}
+			  ],
+			  "chainId": "0x1",
+			  "authorizationList": [
+				{
+					"chainId": "0x1",
+					"address": "0x3337333936313332333333373333363533333330",
+					"nonce": "0x0",
+					"yParity": "0x0",
+					"r": "0x0",
+					"s": "0x0"
+				}
+			  ],
+              "v": "0x1",
+              "r": "0x2",
+              "s": "0x3"
             }
         ],
-        "transactionsRoot": "0x0a83e34ab7302f42f4a9203e8295f545517645989da6555d8cbdc1e9599df85b",
+        "transactionsRoot": "0x764e25fbdb4a2cd43fe4a079cdd3555154f4c92d69debab4d3fb3f36bcb6b8d1",
         "uncles": []
     }
     `,
@@ -761,16 +899,16 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
         "extraData": "0x",
         "gasLimit": "0xe8d4a50fff",
         "gasUsed": "0x2710",
-        "hash": "0xc74d8c04d4d2f2e4ed9cd1731387248367cea7f149731b7a015371b220ffa0fb",
+        "hash": "0x5366032373baa2caed887c8f94459ddf916b94d4cf0abe34e09c63cff5803224",
         "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         "miner": "0x9712f943b296758aaae79944ec975884188d3a96",
         "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
         "nonce": "0x0000000000000000",
         "number": "0x4",
         "parentHash": "0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348",
-        "receiptsRoot": "0xf6278dd71ffc1637f78dc2ee54f6f9e64d4b1633c1179dfdbc8c3b482efbdbec",
+        "receiptsRoot": "0x7ef08df185ad9cd68f6428b6c32a344250bbf7dd9681c016ccbe349a6f9ccc5a",
         "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
-        "size": "0xe44",
+        "size": "0x22976",
         "stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
         "timestamp": "0x61d53854",
         "transactions": [
@@ -795,9 +933,13 @@ func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
             "0xa354fe3fdde6292e85545e6327c314827a20e0d7a1525398b38526fe28fd36e1",
             "0x5bb64e885f196f7b515e62e3b90496864d960e2f5e0d7ad88550fa1c875ca691",
             "0x6f4308b3c98db2db215d02c0df24472a215df7aa283261fcb06a6c9f796df9af",
-            "0x1df88d113f0c5833c1f7264687cd6ac43888c232600ffba8d3a7d89bb5013e71"
+            "0x1df88d113f0c5833c1f7264687cd6ac43888c232600ffba8d3a7d89bb5013e71",
+            "0xc7df054d6a9815f3502f75290058ebc454ebfbd1ec4a845e57835de58859df79",
+            "0x75d228540a72ae7fab2cca049fc7456ff4b7c39ec04d9d0399851e4590dd01fd",
+            "0xeb1c26e494ecd699ad51b1695de42c83ff815442760610b82d2baf57c4b01488",
+            "0x59b20492615e0a314b5de568bb061c2099d731d1a238455c9a55cb0f5a6f1f9d"
         ],
-        "transactionsRoot": "0x0a83e34ab7302f42f4a9203e8295f545517645989da6555d8cbdc1e9599df85b",
+        "transactionsRoot": "0x764e25fbdb4a2cd43fe4a079cdd3555154f4c92d69debab4d3fb3f36bcb6b8d1",
         "uncles": []
     }
     `,
@@ -821,7 +963,7 @@ func TestEthAPI_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().BlockByNumber(gomock.Any(), gomock.Any()).Return(block, nil).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("ethTxType")).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
 	// Get transaction by block number and index for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
 		ethTx := api.GetTransactionByBlockNumberAndIndex(context.Background(), rpc.BlockNumber(block.NumberU64()), hexutil.Uint(i))
@@ -938,7 +1080,7 @@ func TestEthAPI_PendingTransactions(t *testing.T) {
 // TestEthAPI_GetTransactionReceipt tests GetTransactionReceipt.
 func TestEthAPI_GetTransactionReceipt(t *testing.T) {
 	mockCtrl, mockBackend, api := testInitForEthApi(t)
-	block, txs, txHashMap, receiptMap, receipts := createTestData(t, nil)
+	block, txs, txHashMap, receiptMap, receipts := createTestData(t, &types.Header{Number: big.NewInt(1), ExcessBlobGas: &excessBlobGas, BaseFee: big.NewInt(1)})
 
 	// Mock Backend functions.
 	mockBackend.EXPECT().GetTxLookupInfoAndReceipt(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -950,7 +1092,7 @@ func TestEthAPI_GetTransactionReceipt(t *testing.T) {
 	).Times(txs.Len())
 	mockBackend.EXPECT().GetBlockReceipts(gomock.Any(), gomock.Any()).Return(receipts).Times(txs.Len())
 	mockBackend.EXPECT().HeaderByHash(gomock.Any(), block.Hash()).Return(block.Header(), nil).Times(txs.Len())
-	mockBackend.EXPECT().ChainConfig().Return(params.TestChainConfig.Copy()).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
 
 	// Get receipt for each transaction types.
 	for i := 0; i < txs.Len(); i++ {
@@ -959,7 +1101,7 @@ func TestEthAPI_GetTransactionReceipt(t *testing.T) {
 			t.Fatal(err)
 		}
 		txIdx := uint64(i)
-		checkEthTransactionReceiptFormat(t, block, receipts, receipt, RpcOutputReceipt(block.Header(), txs[i], block.Hash(), block.NumberU64(), txIdx, receiptMap[txs[i].Hash()], params.TestChainConfig), txIdx)
+		checkEthTransactionReceiptFormat(t, block, receipts, receipt, RpcOutputReceipt(block.Header(), txs[i], block.Hash(), block.NumberU64(), txIdx, receiptMap[txs[i].Hash()], params.TestKaiaConfig("osaka")), txIdx)
 	}
 
 	mockCtrl.Finish()
@@ -980,8 +1122,13 @@ func testInitForEthApi(t *testing.T) (*gomock.Controller, *mock_api.MockBackend,
 }
 
 func checkEthRPCTransactionFormat(t *testing.T, block *types.Block, ethTx *EthRPCTransaction, tx *types.Transaction, expectedIndex hexutil.Uint64) {
-	// All Kaia transaction types must be returned as TxTypeLegacyTransaction types.
-	assert.Equal(t, types.TxType(ethTx.Type), types.TxTypeLegacyTransaction)
+	isEthTyped := tx.IsEthTypedTransaction()
+	if isEthTyped {
+		assert.Equal(t, types.TxType(ethTx.Type), types.TxType(tx.Type()&0x00FF)) // The eth receipt is compared with the 0x78 prefix masked.
+	} else {
+		// All Kaia transaction types must be returned as TxTypeLegacyTransaction types.
+		assert.Equal(t, types.TxType(ethTx.Type), types.TxTypeLegacyTransaction)
+	}
 
 	// Check the data of common fields of the transaction.
 	from := getFrom(tx)
@@ -1017,12 +1164,14 @@ func checkEthRPCTransactionFormat(t *testing.T, block *types.Block, ethTx *EthRP
 		assert.Equal(t, expectedIndex, *ethTx.TransactionIndex)
 	}
 
-	// Fields additionally used for Ethereum transaction types are not used
-	// when returning Kaia transactions.
-	assert.Equal(t, true, reflect.ValueOf(ethTx.Accesses).IsNil())
-	assert.Equal(t, true, reflect.ValueOf(ethTx.ChainID).IsNil())
-	assert.Equal(t, true, reflect.ValueOf(ethTx.GasFeeCap).IsNil())
-	assert.Equal(t, true, reflect.ValueOf(ethTx.GasTipCap).IsNil())
+	if !isEthTyped {
+		// Fields additionally used for Ethereum transaction types are not used
+		// when returning Kaia transactions.
+		assert.Equal(t, true, reflect.ValueOf(ethTx.Accesses).IsNil())
+		assert.Equal(t, true, reflect.ValueOf(ethTx.ChainID).IsNil())
+		assert.Equal(t, true, reflect.ValueOf(ethTx.GasFeeCap).IsNil())
+		assert.Equal(t, true, reflect.ValueOf(ethTx.GasTipCap).IsNil())
+	}
 }
 
 func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts []*types.Receipt, ethReceipt map[string]interface{}, kReceipt map[string]interface{}, idx uint64) {
@@ -1116,13 +1265,31 @@ func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts
 	if !ok {
 		t.Fatal("type is not defined in Ethereum transaction receipt format.")
 	}
-	assert.Equal(t, types.TxType(typeInt.(hexutil.Uint)), types.TxTypeLegacyTransaction)
+	if tx.IsEthTypedTransaction() {
+		assert.Equal(t, types.TxType(typeInt.(hexutil.Uint)), types.TxType(tx.Type()&0x00FF)) // The eth receipt is compared with the 0x78 prefix masked.
+	} else {
+		assert.Equal(t, types.TxType(typeInt.(hexutil.Uint)), types.TxTypeLegacyTransaction)
+	}
 
 	effectiveGasPrice, ok := ethReceipt["effectiveGasPrice"]
 	if !ok {
 		t.Fatal("effectiveGasPrice is not defined in Ethereum transaction receipt format.")
 	}
 	assert.Equal(t, effectiveGasPrice, hexutil.Uint64(kReceipt["gasPrice"].(*hexutil.Big).ToInt().Uint64()))
+
+	if tx.Type() == types.TxTypeEthereumBlob {
+		blobGasUsed, ok := ethReceipt["blobGasUsed"]
+		if !ok {
+			t.Fatal("blobGasUsed is not defined in Ethereum transaction receipt format.")
+		}
+		assert.Equal(t, blobGasUsed, hexutil.Uint64(tx.BlobGas()))
+
+		blobGasPrice, ok := ethReceipt["blobGasPrice"]
+		if !ok {
+			t.Fatal("blobGasPrice is not defined in Ethereum transaction receipt format.")
+		}
+		assert.Equal(t, blobGasPrice, hexutil.Uint64(eip4844.CalcBlobFee(block.Header().BaseFee).Uint64()))
+	}
 
 	status, ok := ethReceipt["status"]
 	if !ok {
@@ -1149,6 +1316,26 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 	deployData := "0x60806040526000805534801561001457600080fd5b506101ea806100246000396000f30060806040526004361061006d576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806306661abd1461007257806342cbb15c1461009d578063767800de146100c8578063b22636271461011f578063d14e62b814610150575b600080fd5b34801561007e57600080fd5b5061008761017d565b6040518082815260200191505060405180910390f35b3480156100a957600080fd5b506100b2610183565b6040518082815260200191505060405180910390f35b3480156100d457600080fd5b506100dd61018b565b604051808273ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff16815260200191505060405180910390f35b34801561012b57600080fd5b5061014e60048036038101908080356000191690602001909291905050506101b1565b005b34801561015c57600080fd5b5061017b600480360381019080803590602001909291905050506101b4565b005b60005481565b600043905090565b600160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1681565b50565b80600081905550505600a165627a7a7230582053c65686a3571c517e2cf4f741d842e5ee6aa665c96ce70f46f9a594794f11eb0029"
 	executeData := "0xa9059cbb0000000000000000000000008a4c9c443bb0645df646a2d5bb55def0ed1e885a0000000000000000000000000000000000000000000000000000000000003039"
 	var anchorData []byte
+
+	accessList := types.AccessList{
+		types.AccessTuple{
+			Address: common.StringToAddress("0x3936663364636533666637396132333733653330"),
+			StorageKeys: []common.Hash{
+				common.HexToHash("0xa145cd642157a5df01f5bc3837a1bb59b3dcefbbfad5ec435919780aebeaba2b"),
+				common.HexToHash("0x12e2c26dca2fb2b8879f54a5ea1604924edf0e37965c2be8aa6133b75818da40"),
+			},
+		},
+	}
+	authorizationList := []types.SetCodeAuthorization{
+		{
+			ChainID: *uint256.MustFromBig(params.TestChainConfig.ChainID),
+			Address: common.StringToAddress("0x3936663364636533666637396132333733653330"),
+			Nonce:   0,
+			V:       0,
+			R:       *uint256.NewInt(0),
+			S:       *uint256.NewInt(0),
+		},
+	}
 
 	txHashMap := make(map[common.Hash]*types.Transaction)
 	receiptMap := make(map[common.Hash]*types.Receipt)
@@ -1296,7 +1483,7 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 		if err != nil {
 			t.Fatal(err)
 		}
-		tx.FillContractAddress(fromAddress, r)
+		r.ContractAddress = crypto.CreateAddress(fromAddress, tx.Nonce())
 		receiptMap[tx.Hash()] = r
 		receipts = append(receipts, receiptMap[tx.Hash()])
 	}
@@ -1507,7 +1694,7 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 		if err != nil {
 			t.Fatal(err)
 		}
-		tx.FillContractAddress(fromAddress, r)
+		r.ContractAddress = crypto.CreateAddress(fromAddress, tx.Nonce())
 		receiptMap[tx.Hash()] = r
 		receipts = append(receipts, receiptMap[tx.Hash()])
 	}
@@ -1743,7 +1930,7 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 		if err != nil {
 			t.Fatal(err)
 		}
-		tx.FillContractAddress(fromAddress, r)
+		r.ContractAddress = crypto.CreateAddress(fromAddress, tx.Nonce())
 		receiptMap[tx.Hash()] = r
 		receipts = append(receipts, receiptMap[tx.Hash()])
 	}
@@ -1844,6 +2031,130 @@ func createTestData(t *testing.T, header *types.Header) (*types.Block, types.Tra
 		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
 		receipts = append(receipts, receiptMap[tx.Hash()])
 	}
+	// Make test transactions data
+	{
+		// TxTypeEthereumAccessList
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      uint64(txs.Len()),
+			types.TxValueKeyTo:         &to,
+			types.TxValueKeyAmount:     big.NewInt(10),
+			types.TxValueKeyGasLimit:   uint64(50000000),
+			types.TxValueKeyData:       []byte{},
+			types.TxValueKeyGasPrice:   gasPrice,
+			types.TxValueKeyAccessList: accessList,
+			types.TxValueKeyChainID:    params.TestChainConfig.ChainID,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumAccessList, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+		}
+		tx.SetSignature(signatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
+	{
+		// TxTypeEthereumDynamicFee
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      uint64(txs.Len()),
+			types.TxValueKeyTo:         &to,
+			types.TxValueKeyAmount:     big.NewInt(3),
+			types.TxValueKeyGasLimit:   uint64(50000000),
+			types.TxValueKeyData:       []byte{},
+			types.TxValueKeyGasTipCap:  gasPrice,
+			types.TxValueKeyGasFeeCap:  gasPrice,
+			types.TxValueKeyAccessList: accessList,
+			types.TxValueKeyChainID:    params.TestChainConfig.ChainID,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumDynamicFee, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+		}
+		tx.SetSignature(signatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
+	{
+		// TxTypeEthereumBlob
+		emptyBlob := kzg4844.Blob{}
+		emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
+		cellProofs, _ := kzg4844.ComputeCellProofs(&emptyBlob)
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      uint64(txs.Len()),
+			types.TxValueKeyTo:         to,
+			types.TxValueKeyAmount:     big.NewInt(0),
+			types.TxValueKeyGasLimit:   uint64(10000000),
+			types.TxValueKeyGasFeeCap:  big.NewInt(25),
+			types.TxValueKeyGasTipCap:  big.NewInt(25),
+			types.TxValueKeyData:       []byte{},
+			types.TxValueKeyAccessList: accessList,
+			types.TxValueKeyBlobFeeCap: big.NewInt(25),
+			types.TxValueKeyBlobHashes: []common.Hash{common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &emptyBlobCommit))},
+			types.TxValueKeySidecar: &types.BlobTxSidecar{
+				Version:     types.BlobSidecarVersion1,
+				Blobs:       []kzg4844.Blob{emptyBlob},
+				Commitments: []kzg4844.Commitment{emptyBlobCommit},
+				Proofs:      cellProofs,
+			},
+			types.TxValueKeyChainID: params.TestChainConfig.ChainID,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+		}
+		tx.SetSignature(signatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
+	{
+		// TxTypeEthereumSetCode
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:             uint64(txs.Len()),
+			types.TxValueKeyTo:                to,
+			types.TxValueKeyAmount:            big.NewInt(3),
+			types.TxValueKeyGasLimit:          uint64(50000000),
+			types.TxValueKeyData:              []byte{},
+			types.TxValueKeyGasTipCap:         gasPrice,
+			types.TxValueKeyGasFeeCap:         gasPrice,
+			types.TxValueKeyAccessList:        accessList,
+			types.TxValueKeyAuthorizationList: authorizationList,
+			types.TxValueKeyChainID:           params.TestChainConfig.ChainID,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumSetCode, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+		}
+		tx.SetSignature(signatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
 
 	// Create a block which includes all transaction data.
 	var block *types.Block
@@ -1868,6 +2179,16 @@ func createEthereumTypedTestData(t *testing.T, header *types.Header) (*types.Blo
 				common.HexToHash("0xa145cd642157a5df01f5bc3837a1bb59b3dcefbbfad5ec435919780aebeaba2b"),
 				common.HexToHash("0x12e2c26dca2fb2b8879f54a5ea1604924edf0e37965c2be8aa6133b75818da40"),
 			},
+		},
+	}
+	authorizationList := []types.SetCodeAuthorization{
+		{
+			ChainID: *uint256.MustFromBig(params.TestChainConfig.ChainID),
+			Address: common.StringToAddress("0x23a519a88e79fbc0bab796f3dce3ff79a2373e30"),
+			Nonce:   0,
+			V:       0,
+			R:       *uint256.NewInt(0),
+			S:       *uint256.NewInt(0),
 		},
 	}
 	chainId := new(big.Int).SetUint64(2019)
@@ -1923,6 +2244,74 @@ func createEthereumTypedTestData(t *testing.T, header *types.Header) (*types.Blo
 
 		signatures := types.TxSignatures{
 			&types.TxSignature{V: big.NewInt(2), R: big.NewInt(3), S: big.NewInt(4)},
+		}
+		tx.SetSignature(signatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
+	{
+		// TxTypeEthereumBlob
+		emptyBlob := kzg4844.Blob{}
+		emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
+		cellProofs, _ := kzg4844.ComputeCellProofs(&emptyBlob)
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:      uint64(txs.Len()),
+			types.TxValueKeyTo:         to,
+			types.TxValueKeyAmount:     big.NewInt(0),
+			types.TxValueKeyGasLimit:   uint64(10000000),
+			types.TxValueKeyGasFeeCap:  big.NewInt(25),
+			types.TxValueKeyGasTipCap:  big.NewInt(25),
+			types.TxValueKeyData:       common.Hex2Bytes(deployData),
+			types.TxValueKeyAccessList: accessList,
+			types.TxValueKeyBlobFeeCap: big.NewInt(25),
+			types.TxValueKeyBlobHashes: []common.Hash{common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &emptyBlobCommit))},
+			types.TxValueKeySidecar: &types.BlobTxSidecar{
+				Version:     types.BlobSidecarVersion1,
+				Blobs:       []kzg4844.Blob{emptyBlob},
+				Commitments: []kzg4844.Commitment{emptyBlobCommit},
+				Proofs:      cellProofs,
+			},
+			types.TxValueKeyChainID: params.TestChainConfig.ChainID,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+		}
+		tx.SetSignature(signatures)
+
+		txs = append(txs, tx)
+		txHashMap[tx.Hash()] = tx
+		// For testing, set GasUsed with tx.Gas()
+		receiptMap[tx.Hash()] = createReceipt(t, tx, tx.Gas())
+		receipts = append(receipts, receiptMap[tx.Hash()])
+	}
+	{
+		// TxTypeEthereumSetCode
+		to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+		values := map[types.TxValueKeyType]interface{}{
+			types.TxValueKeyNonce:             uint64(txs.Len()),
+			types.TxValueKeyTo:                to,
+			types.TxValueKeyAmount:            big.NewInt(3),
+			types.TxValueKeyGasLimit:          uint64(50000000),
+			types.TxValueKeyData:              common.Hex2Bytes(deployData),
+			types.TxValueKeyGasTipCap:         gasPrice,
+			types.TxValueKeyGasFeeCap:         gasPrice,
+			types.TxValueKeyAccessList:        accessList,
+			types.TxValueKeyAuthorizationList: authorizationList,
+			types.TxValueKeyChainID:           chainId,
+		}
+		tx, err := types.NewTransactionWithMap(types.TxTypeEthereumSetCode, values)
+		assert.Equal(t, nil, err)
+
+		signatures := types.TxSignatures{
+			&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
 		}
 		tx.SetSignature(signatures)
 
@@ -2413,12 +2802,44 @@ type testChainContext struct {
 	header *types.Header
 }
 
+func (mc *testChainContext) Config() *params.ChainConfig {
+	return &params.ChainConfig{}
+}
+
+func (mc *testChainContext) CurrentHeader() *types.Header {
+	return mc.header
+}
+
+func (mc *testChainContext) CurrentBlock() *types.Block {
+	return types.NewBlock(mc.header, nil, nil)
+}
+
 func (mc *testChainContext) Engine() consensus.Engine {
 	return faker.NewFaker()
 }
 
 func (mc *testChainContext) GetHeader(common.Hash, uint64) *types.Header {
 	return mc.header
+}
+
+func (mc *testChainContext) GetHeaderByNumber(number uint64) *types.Header {
+	return mc.header
+}
+
+func (mc *testChainContext) GetHeaderByHash(hash common.Hash) *types.Header {
+	return mc.header
+}
+
+func (mc *testChainContext) GetBlock(hash common.Hash, number uint64) *types.Block {
+	return types.NewBlock(mc.header, nil, nil)
+}
+
+func (mc *testChainContext) State() (*state.StateDB, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (mc *testChainContext) StateAt(root common.Hash) (*state.StateDB, error) {
+	return nil, errors.New("not implemented")
 }
 
 // Contract C { constructor() { revert("hello"); } }
@@ -2619,4 +3040,889 @@ func TestEthAPI_EstimateGas(t *testing.T) {
 	testEstimateGas(t, mockBackend, func(args EthTransactionArgs, overrides *EthStateOverride) (hexutil.Uint64, error) {
 		return api.EstimateGas(context.Background(), args, nil, overrides)
 	})
+}
+
+// TestEthAPI_Config tests the eth_config method.
+func TestEthAPI_Config(t *testing.T) {
+	expectedChainConfig := params.TestChainConfig.Copy()
+	expectedChainConfig.IstanbulCompatibleBlock = big.NewInt(75373312)
+	expectedChainConfig.LondonCompatibleBlock = big.NewInt(80295291)
+	expectedChainConfig.PragueCompatibleBlock = big.NewInt(187930000)
+	expectedChainConfig.OsakaCompatibleBlock = big.NewInt(195000000)
+	expectedChainConfig.BlobScheduleConfig = &params.BlobScheduleConfig{
+		Osaka: params.DefaultOsakaBlobConfig,
+	}
+	genesisHeader := &types.Header{
+		Number: big.NewInt(0),
+		Root:   common.HexToHash("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"),
+	}
+	genesisForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 0).Hash
+	istanbulForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 75373312).Hash
+	lonondonForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 80295291).Hash
+	pragueForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 187930000).Hash
+	osakaForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 195000000).Hash
+	var (
+		genesisRules        = expectedChainConfig.Rules(big.NewInt(0))
+		istanbulRules       = expectedChainConfig.Rules(big.NewInt(75373312))
+		lonondonRules       = expectedChainConfig.Rules(big.NewInt(80295291))
+		pragueRules         = expectedChainConfig.Rules(big.NewInt(187930000))
+		osakaRules          = expectedChainConfig.Rules(big.NewInt(195000000))
+		genesisPrecompiles  = make(map[string]common.Address)
+		istanbulPrecompiles = make(map[string]common.Address)
+		lonondonPrecompiles = make(map[string]common.Address)
+		praguePrecompiles   = make(map[string]common.Address)
+		osakaPrecompiles    = make(map[string]common.Address)
+	)
+	for addr, c := range vm.ActivePrecompiledContracts(genesisRules) {
+		genesisPrecompiles[c.Name()] = addr
+	}
+	for addr, c := range vm.ActivePrecompiledContracts(istanbulRules) {
+		istanbulPrecompiles[c.Name()] = addr
+	}
+	for addr, c := range vm.ActivePrecompiledContracts(lonondonRules) {
+		lonondonPrecompiles[c.Name()] = addr
+	}
+	for addr, c := range vm.ActivePrecompiledContracts(pragueRules) {
+		praguePrecompiles[c.Name()] = addr
+	}
+	for addr, c := range vm.ActivePrecompiledContracts(osakaRules) {
+		osakaPrecompiles[c.Name()] = addr
+	}
+	tests := []struct {
+		name            string
+		blockNumber     uint64
+		expectedCurrent *Kip276Config
+		expectedNext    *Kip276Config
+		expectedLast    *Kip276Config
+	}{
+		{
+			name:        "Genesis block",
+			blockNumber: 0,
+			expectedCurrent: &Kip276Config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          genesisForkID[:],
+				Precompiles:     genesisPrecompiles,
+				SystemContracts: nil,
+			},
+			expectedNext: &Kip276Config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          istanbulForkID[:],
+				Precompiles:     istanbulPrecompiles,
+				SystemContracts: nil,
+			},
+			expectedLast: &Kip276Config{
+				BlobSchedule:    params.DefaultOsakaBlobConfig,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          osakaForkID[:],
+				Precompiles:     osakaPrecompiles,
+				SystemContracts: nil,
+			},
+		},
+		{
+			name:        "Istanbul block",
+			blockNumber: 75373312,
+			expectedCurrent: &Kip276Config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          istanbulForkID[:],
+				Precompiles:     istanbulPrecompiles,
+				SystemContracts: nil,
+			},
+			expectedNext: &Kip276Config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          lonondonForkID[:],
+				Precompiles:     lonondonPrecompiles,
+				SystemContracts: nil,
+			},
+			expectedLast: &Kip276Config{
+				BlobSchedule:    params.DefaultOsakaBlobConfig,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          osakaForkID[:],
+				Precompiles:     osakaPrecompiles,
+				SystemContracts: nil,
+			},
+		},
+		{
+			name:        "Prague fork block",
+			blockNumber: 187930000,
+			expectedCurrent: &Kip276Config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          pragueForkID[:],
+				Precompiles:     praguePrecompiles,
+				SystemContracts: nil,
+			},
+			expectedNext: &Kip276Config{
+				BlobSchedule:    params.DefaultOsakaBlobConfig,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          osakaForkID[:],
+				Precompiles:     osakaPrecompiles,
+				SystemContracts: nil,
+			},
+			expectedLast: &Kip276Config{
+				BlobSchedule:    params.DefaultOsakaBlobConfig,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          osakaForkID[:],
+				Precompiles:     osakaPrecompiles,
+				SystemContracts: nil,
+			},
+		},
+		{
+			name:        "Latest fork block (Osaka)",
+			blockNumber: 195000000,
+			expectedCurrent: &Kip276Config{
+				BlobSchedule:    params.DefaultOsakaBlobConfig,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          osakaForkID[:],
+				Precompiles:     osakaPrecompiles,
+				SystemContracts: nil,
+			},
+			expectedNext: nil, // No more forks
+			expectedLast: nil, // Should be nil when Next is nil
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtrl, mockBackend, api := testInitForEthApi(t)
+			defer mockCtrl.Finish()
+
+			// Mock chain config
+			mockBackend.EXPECT().ChainConfig().Return(expectedChainConfig).AnyTimes()
+
+			// Mock genesis block (block 0) - this is called first in Config method
+			mockBackend.EXPECT().HeaderByNumber(gomock.Any(), gomock.Any()).Return(
+				genesisHeader,
+				nil,
+			)
+
+			// Mock current block - this is called after genesis
+			mockBackend.EXPECT().CurrentBlock().Return(
+				types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(tt.blockNumber)}),
+			)
+			mockBackend.EXPECT().GetActiveSystemContracts(gomock.Any(), gomock.Any(), gomock.Any()).Return(
+				nil,
+			).AnyTimes()
+
+			// Call the method
+			config, err := api.Config(context.Background())
+			require.NoError(t, err)
+			require.NotNil(t, config)
+
+			// Validate configs
+			assert.Equal(t, tt.expectedCurrent, config.Current)
+			assert.Equal(t, tt.expectedNext, config.Next)
+			assert.Equal(t, tt.expectedLast, config.Last)
+		})
+	}
+}
+
+func TestEthAPI_Config_ErrorCases(t *testing.T) {
+	t.Run("Genesis block not found", func(t *testing.T) {
+		mockCtrl, mockBackend, api := testInitForEthApi(t)
+		defer mockCtrl.Finish()
+
+		mockBackend.EXPECT().ChainConfig().Return(params.KairosChainConfig).AnyTimes()
+		mockBackend.EXPECT().HeaderByNumber(gomock.Any(), gomock.Any()).Return(
+			nil, errors.New("genesis block not found"),
+		)
+
+		config, err := api.Config(context.Background())
+		assert.Error(t, err)
+		assert.Nil(t, config)
+		assert.Contains(t, err.Error(), "unable to load genesis")
+	})
+}
+
+func TestEthAPI_GetBlobSidecars(t *testing.T) {
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
+	defer mockCtrl.Finish()
+
+	// Create test blob transaction
+	emptyBlob := kzg4844.Blob{}
+	emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
+	cellProofs, _ := kzg4844.ComputeCellProofs(&emptyBlob)
+	to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+	accessList := types.AccessList{}
+
+	blobTxValues := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:      uint64(0),
+		types.TxValueKeyTo:         to,
+		types.TxValueKeyAmount:     big.NewInt(0),
+		types.TxValueKeyGasLimit:   uint64(10000000),
+		types.TxValueKeyGasFeeCap:  big.NewInt(25),
+		types.TxValueKeyGasTipCap:  big.NewInt(25),
+		types.TxValueKeyData:       []byte{},
+		types.TxValueKeyAccessList: accessList,
+		types.TxValueKeyBlobFeeCap: big.NewInt(25),
+		types.TxValueKeyBlobHashes: []common.Hash{common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &emptyBlobCommit))},
+		types.TxValueKeySidecar: &types.BlobTxSidecar{
+			Version:     types.BlobSidecarVersion1,
+			Blobs:       []kzg4844.Blob{emptyBlob},
+			Commitments: []kzg4844.Commitment{emptyBlobCommit},
+			Proofs:      cellProofs,
+		},
+		types.TxValueKeyChainID: params.TestChainConfig.ChainID,
+	}
+	blobTx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, blobTxValues)
+	require.NoError(t, err)
+	blobTx.SetSignature(types.TxSignatures{
+		&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+	})
+
+	// Create regular transaction
+	regularTxValues := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    uint64(1),
+		types.TxValueKeyTo:       to,
+		types.TxValueKeyAmount:   big.NewInt(10),
+		types.TxValueKeyGasLimit: uint64(21000),
+		types.TxValueKeyGasPrice: big.NewInt(25),
+		types.TxValueKeyData:     []byte{},
+	}
+	regularTx, err := types.NewTransactionWithMap(types.TxTypeLegacyTransaction, regularTxValues)
+	require.NoError(t, err)
+	regularTx.SetSignature(types.TxSignatures{
+		&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+	})
+
+	// Create blocks with different scenarios
+	blockWithBlobTx := types.NewBlock(
+		&types.Header{Number: big.NewInt(1)},
+		[]*types.Transaction{blobTx},
+		nil,
+	)
+
+	blockWithoutBlobTx := types.NewBlock(
+		&types.Header{Number: big.NewInt(2)},
+		[]*types.Transaction{regularTx},
+		nil,
+	)
+
+	blockWithMultipleBlobTxs := types.NewBlock(
+		&types.Header{Number: big.NewInt(3)},
+		[]*types.Transaction{blobTx, regularTx, blobTx},
+		nil,
+	)
+
+	// Create sidecar for blob transactions
+	sidecar := &types.BlobTxSidecar{
+		Version:     types.BlobSidecarVersion1,
+		Blobs:       []kzg4844.Blob{emptyBlob},
+		Commitments: []kzg4844.Commitment{emptyBlobCommit},
+		Proofs:      cellProofs,
+	}
+
+	testcases := []struct {
+		name          string
+		blockNumber   rpc.BlockNumber
+		fullBlob      bool
+		setupMock     func()
+		expectedCount int
+		expectedErr   string
+		validate      func(*testing.T, []*map[string]interface{})
+	}{
+		{
+			name:        "success with blob tx and fullBlob=true",
+			blockNumber: rpc.BlockNumber(1),
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(1)).Return(blockWithBlobTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				mockBackend.EXPECT().GetBlobSidecar(big.NewInt(1), 0).Return(sidecar, nil)
+			},
+			expectedCount: 1,
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 1)
+				result := *results[0]
+				assert.Equal(t, blockWithBlobTx.Hash(), result["blockHash"])
+				assert.Equal(t, hexutil.Big(*big.NewInt(1)), result["blockNumber"])
+				assert.Equal(t, blobTx.Hash(), result["txHash"])
+				assert.Equal(t, hexutil.Uint(0), result["txIndex"])
+				sidecarResult := result["blobSidecar"].(map[string]interface{})
+				assert.Equal(t, types.BlobSidecarVersion1, byte(sidecarResult["version"].(uint8)))
+				blobs := sidecarResult["blobs"].([]kzg4844.Blob)
+				assert.Len(t, blobs, 1)
+				// With fullBlob=true, blob should be full size (131072 bytes)
+				assert.Len(t, blobs[0], 131072)
+			},
+		},
+		{
+			name:        "success with blob tx and fullBlob=false",
+			blockNumber: rpc.BlockNumber(1),
+			fullBlob:    false,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(1)).Return(blockWithBlobTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				mockBackend.EXPECT().GetBlobSidecar(big.NewInt(1), 0).Return(sidecar, nil)
+			},
+			expectedCount: 1,
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 1)
+				result := *results[0]
+				sidecarResult := result["blobSidecar"].(map[string]interface{})
+				blobs := sidecarResult["blobs"].([]hexutil.Bytes)
+				require.Len(t, blobs, 1)
+				// With fullBlob=false, blob should be truncated to 32 bytes
+				assert.Len(t, blobs[0], 32)
+				// Check that first 32 bytes match the original blob's first 32 bytes
+				originalBlob := emptyBlob
+				assert.Equal(t, originalBlob[:32], []byte(blobs[0]))
+			},
+		},
+		{
+			name:        "success with no blob tx",
+			blockNumber: rpc.BlockNumber(2),
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(2)).Return(blockWithoutBlobTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+			},
+			expectedCount: 0,
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 0)
+			},
+		},
+		{
+			name:        "success with non-contiguous blob txs capped at MaxBlobsPerBlock",
+			blockNumber: rpc.BlockNumber(3),
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(3)).Return(blockWithMultipleBlobTxs, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				// MaxBlobsPerBlock for Osaka is 1, so only first blob tx should be processed
+				mockBackend.EXPECT().GetBlobSidecar(big.NewInt(3), 0).Return(sidecar, nil)
+				// GetBlobSidecar(3, 2) should not be called because MaxBlobsPerBlock=1
+			},
+			expectedCount: 1, // Capped at MaxBlobsPerBlock (1 for Osaka)
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 1)
+				// First blob tx at index 0
+				result0 := *results[0]
+				assert.Equal(t, blobTx.Hash(), result0["txHash"])
+				assert.Equal(t, hexutil.Uint(0), result0["txIndex"])
+			},
+		},
+		{
+			name:        "success with contiguous blob txs exceeding MaxBlobsPerBlock",
+			blockNumber: rpc.BlockNumber(4),
+			fullBlob:    true,
+			setupMock: func() {
+				// Create a block with 3 blob transactions (exceeding Max=1 for Osaka)
+				txs := make([]*types.Transaction, 3)
+				for i := 0; i < 3; i++ {
+					txs[i] = blobTx
+				}
+				blockWithManyBlobTxs := types.NewBlock(
+					&types.Header{Number: big.NewInt(4)},
+					txs,
+					nil,
+				)
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(4)).Return(blockWithManyBlobTxs, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				// MaxBlobsPerBlock for Osaka is 1, so only first blob tx should be processed
+				mockBackend.EXPECT().GetBlobSidecar(big.NewInt(4), 0).Return(sidecar, nil)
+				// GetBlobSidecar(4, 1) and GetBlobSidecar(4, 2) should not be called
+			},
+			expectedCount: 1, // Should be capped at MaxBlobsPerBlock (1 for Osaka)
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 1)
+				// Verify that only the first result is returned
+				result0 := *results[0]
+				assert.Equal(t, hexutil.Big(*big.NewInt(4)), result0["blockNumber"])
+				assert.Equal(t, hexutil.Uint(0), result0["txIndex"])
+				sidecarResult := result0["blobSidecar"].(map[string]interface{})
+				assert.Equal(t, types.BlobSidecarVersion1, byte(sidecarResult["version"].(uint8)))
+			},
+		},
+		{
+			name:        "error when block not found",
+			blockNumber: rpc.BlockNumber(999),
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(999)).Return(nil, fmt.Errorf("the block does not exist (block number: %d)", 999))
+			},
+			expectedErr: "the block does not exist",
+		},
+		{
+			name:        "error when GetBlobSidecar fails",
+			blockNumber: rpc.BlockNumber(1),
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.BlockNumber(1)).Return(blockWithBlobTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				mockBackend.EXPECT().GetBlobSidecar(big.NewInt(1), 0).Return(nil, blockchain.ErrBlobNotFound)
+			},
+			expectedErr: "blob file not found",
+		},
+		{
+			name:        "success with latest block and blob tx",
+			blockNumber: rpc.LatestBlockNumber,
+			fullBlob:    true,
+			setupMock: func() {
+				mockBackend.EXPECT().BlockByNumber(gomock.Any(), rpc.LatestBlockNumber).Return(blockWithBlobTx, nil)
+				mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("osaka")).AnyTimes()
+				mockBackend.EXPECT().GetBlobSidecar(big.NewInt(1), 0).Return(sidecar, nil)
+			},
+			expectedCount: 1,
+			validate: func(t *testing.T, results []*map[string]interface{}) {
+				require.Len(t, results, 1)
+				result := *results[0]
+				assert.Equal(t, blockWithBlobTx.Hash(), result["blockHash"])
+				assert.Equal(t, hexutil.Big(*big.NewInt(1)), result["blockNumber"])
+				assert.Equal(t, blobTx.Hash(), result["txHash"])
+				sidecarResult := result["blobSidecar"].(map[string]interface{})
+				assert.Equal(t, types.BlobSidecarVersion1, byte(sidecarResult["version"].(uint8)))
+				blobs := sidecarResult["blobs"].([]kzg4844.Blob)
+				assert.Len(t, blobs, 1)
+				assert.Len(t, blobs[0], 131072)
+			},
+		},
+		{
+			name:        "error when pending block is requested",
+			blockNumber: rpc.PendingBlockNumber,
+			fullBlob:    true,
+			setupMock: func() {
+				// No mock expectations needed as the function returns early
+			},
+			expectedErr: "pending block not supported",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.setupMock()
+			results, err := api.GetBlobSidecars(context.Background(), &tc.blockNumber, tc.fullBlob)
+
+			if tc.expectedErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedErr)
+			} else {
+				require.NoError(t, err)
+				assert.Len(t, results, tc.expectedCount)
+				if tc.validate != nil {
+					tc.validate(t, results)
+				}
+			}
+		})
+	}
+}
+
+func TestEthAPI_GetBlobSidecarByTxHash(t *testing.T) {
+	mockCtrl, mockBackend, api := testInitForEthApi(t)
+	defer mockCtrl.Finish()
+
+	// Create test blob transaction
+	emptyBlob := kzg4844.Blob{}
+	emptyBlobCommit, _ := kzg4844.BlobToCommitment(&emptyBlob)
+	cellProofs, _ := kzg4844.ComputeCellProofs(&emptyBlob)
+	to := common.StringToAddress("0xb5a2d79e9228f3d278cb36b5b15930f24fe8bae8")
+	accessList := types.AccessList{}
+
+	blobTxValues := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:      uint64(0),
+		types.TxValueKeyTo:         to,
+		types.TxValueKeyAmount:     big.NewInt(0),
+		types.TxValueKeyGasLimit:   uint64(10000000),
+		types.TxValueKeyGasFeeCap:  big.NewInt(25),
+		types.TxValueKeyGasTipCap:  big.NewInt(25),
+		types.TxValueKeyData:       []byte{},
+		types.TxValueKeyAccessList: accessList,
+		types.TxValueKeyBlobFeeCap: big.NewInt(25),
+		types.TxValueKeyBlobHashes: []common.Hash{common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &emptyBlobCommit))},
+		types.TxValueKeySidecar: &types.BlobTxSidecar{
+			Version:     types.BlobSidecarVersion1,
+			Blobs:       []kzg4844.Blob{emptyBlob},
+			Commitments: []kzg4844.Commitment{emptyBlobCommit},
+			Proofs:      cellProofs,
+		},
+		types.TxValueKeyChainID: params.TestChainConfig.ChainID,
+	}
+	blobTx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, blobTxValues)
+	require.NoError(t, err)
+	blobTx.SetSignature(types.TxSignatures{
+		&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+	})
+
+	// Create regular transaction
+	regularTxValues := map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:    uint64(1),
+		types.TxValueKeyTo:       to,
+		types.TxValueKeyAmount:   big.NewInt(10),
+		types.TxValueKeyGasLimit: uint64(21000),
+		types.TxValueKeyGasPrice: big.NewInt(25),
+		types.TxValueKeyData:     []byte{},
+	}
+	regularTx, err := types.NewTransactionWithMap(types.TxTypeLegacyTransaction, regularTxValues)
+	require.NoError(t, err)
+	regularTx.SetSignature(types.TxSignatures{
+		&types.TxSignature{V: big.NewInt(1), R: big.NewInt(2), S: big.NewInt(3)},
+	})
+
+	// Create block with blob transaction
+	blockWithBlobTx := types.NewBlock(
+		&types.Header{Number: big.NewInt(1)},
+		[]*types.Transaction{blobTx},
+		nil,
+	)
+
+	// Create sidecar for blob transactions
+	sidecar := &types.BlobTxSidecar{
+		Version:     types.BlobSidecarVersion1,
+		Blobs:       []kzg4844.Blob{emptyBlob},
+		Commitments: []kzg4844.Commitment{emptyBlobCommit},
+		Proofs:      cellProofs,
+	}
+
+	blockHash := blockWithBlobTx.Hash()
+	blockNumber := big.NewInt(1)
+	txIndex := 0
+
+	testcases := []struct {
+		name        string
+		txHash      common.Hash
+		fullBlob    bool
+		setupMock   func()
+		expected    *map[string]interface{}
+		expectedErr string
+	}{
+		{
+			name:     "success with blob tx and fullBlob=true",
+			txHash:   blobTx.Hash(),
+			fullBlob: true,
+			setupMock: func() {
+				mockBackend.EXPECT().GetTxAndLookupInfo(blobTx.Hash()).Return(blobTx, blockHash, uint64(blockNumber.Int64()), uint64(txIndex))
+				mockBackend.EXPECT().GetBlobSidecar(blockNumber, txIndex).Return(sidecar, nil)
+			},
+			expected: &map[string]interface{}{
+				"blobSidecar": map[string]interface{}{
+					"version":     types.BlobSidecarVersion1,
+					"blobs":       []kzg4844.Blob{emptyBlob},
+					"commitments": []kzg4844.Commitment{emptyBlobCommit},
+					"proofs":      cellProofs,
+				},
+				"blockHash":   blockHash,
+				"blockNumber": hexutil.Big(*blockNumber),
+				"txHash":      blobTx.Hash(),
+				"txIndex":     hexutil.Uint(txIndex),
+			},
+		},
+		{
+			name:     "success with blob tx and fullBlob=false",
+			txHash:   blobTx.Hash(),
+			fullBlob: false,
+			setupMock: func() {
+				mockBackend.EXPECT().GetTxAndLookupInfo(blobTx.Hash()).Return(blobTx, blockHash, uint64(blockNumber.Int64()), uint64(txIndex))
+				mockBackend.EXPECT().GetBlobSidecar(blockNumber, txIndex).Return(sidecar, nil)
+			},
+			expected: &map[string]interface{}{
+				"blobSidecar": map[string]interface{}{
+					"version":     types.BlobSidecarVersion1,
+					"blobs":       []hexutil.Bytes{hexutil.Bytes(emptyBlob[:32])},
+					"commitments": []kzg4844.Commitment{emptyBlobCommit},
+					"proofs":      cellProofs,
+				},
+				"blockHash":   blockHash,
+				"blockNumber": hexutil.Big(*blockNumber),
+				"txHash":      blobTx.Hash(),
+				"txIndex":     hexutil.Uint(txIndex),
+			},
+		},
+		{
+			name:   "error when transaction not found",
+			txHash: common.HexToHash("0x1234567890123456789012345678901234567890123456789012345678901234"),
+			setupMock: func() {
+				mockBackend.EXPECT().GetTxAndLookupInfo(gomock.Any()).Return(nil, common.Hash{}, uint64(0), uint64(0))
+			},
+			expectedErr: "transaction not found",
+		},
+		{
+			name:   "error when transaction is not a blob transaction",
+			txHash: regularTx.Hash(),
+			setupMock: func() {
+				mockBackend.EXPECT().GetTxAndLookupInfo(regularTx.Hash()).Return(regularTx, blockHash, uint64(blockNumber.Int64()), uint64(0))
+			},
+			expectedErr: "transaction is not a blob transaction",
+		},
+		{
+			name:     "error when GetBlobSidecarByBlockNumberAndIndex fails",
+			txHash:   blobTx.Hash(),
+			fullBlob: true,
+			setupMock: func() {
+				mockBackend.EXPECT().GetTxAndLookupInfo(blobTx.Hash()).Return(blobTx, blockHash, uint64(blockNumber.Int64()), uint64(txIndex))
+				mockBackend.EXPECT().GetBlobSidecar(blockNumber, txIndex).Return(nil, blockchain.ErrBlobNotFound)
+			},
+			expectedErr: "blob file not found",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.setupMock()
+			result, err := api.GetBlobSidecarByTxHash(context.Background(), tc.txHash, tc.fullBlob)
+
+			if tc.expectedErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedErr)
+				assert.Nil(t, result)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				require.NotNil(t, tc.expected)
+
+				// Verify basic fields
+				assert.Equal(t, (*tc.expected)["blockHash"], (*result)["blockHash"])
+				assert.Equal(t, (*tc.expected)["blockNumber"], (*result)["blockNumber"])
+				assert.Equal(t, (*tc.expected)["txHash"], (*result)["txHash"])
+				assert.Equal(t, (*tc.expected)["txIndex"], (*result)["txIndex"])
+
+				// Verify blobSidecar
+				expectedSidecar := (*tc.expected)["blobSidecar"].(map[string]interface{})
+				resultSidecar := (*result)["blobSidecar"].(map[string]interface{})
+				assert.Equal(t, expectedSidecar["version"], resultSidecar["version"])
+				assert.Equal(t, expectedSidecar["commitments"], resultSidecar["commitments"])
+				assert.Equal(t, expectedSidecar["proofs"], resultSidecar["proofs"])
+
+				// Verify blobs based on fullBlob flag
+				if tc.fullBlob {
+					expectedBlobs := expectedSidecar["blobs"].([]kzg4844.Blob)
+					resultBlobs := resultSidecar["blobs"].([]kzg4844.Blob)
+					assert.Len(t, resultBlobs, len(expectedBlobs))
+					if len(resultBlobs) > 0 {
+						assert.Len(t, resultBlobs[0], 131072)
+						assert.Equal(t, expectedBlobs[0], resultBlobs[0])
+					}
+				} else {
+					expectedBlobs := expectedSidecar["blobs"].([]hexutil.Bytes)
+					resultBlobs := resultSidecar["blobs"].([]hexutil.Bytes)
+					assert.Len(t, resultBlobs, len(expectedBlobs))
+					if len(resultBlobs) > 0 {
+						assert.Len(t, resultBlobs[0], 32)
+						assert.Equal(t, expectedBlobs[0], resultBlobs[0])
+					}
+				}
+			}
+		})
+	}
+}
+
+// TestEthAPI_FeeHistory tests the FeeHistory method.
+func TestEthAPI_FeeHistory(t *testing.T) {
+	testcases := []struct {
+		name              string
+		blockCount        DecimalOrHex
+		lastBlock         rpc.BlockNumber
+		rewardPercentiles []float64
+		setupMock         func(*mock_api.MockBackend)
+		expected          *FeeHistoryResult
+		expectedErr       string
+	}{
+		{
+			name:              "success with valid parameters",
+			blockCount:        DecimalOrHex(2),
+			lastBlock:         rpc.LatestBlockNumber,
+			rewardPercentiles: []float64{50.0, 90.0},
+			setupMock: func(mockBackend *mock_api.MockBackend) {
+				oldestBlock := big.NewInt(100)
+				reward := [][]*big.Int{
+					{big.NewInt(1000000000), big.NewInt(2000000000)},
+					{big.NewInt(1500000000), big.NewInt(2500000000)},
+				}
+				baseFee := []*big.Int{
+					big.NewInt(25000000000),
+					big.NewInt(30000000000),
+				}
+				gasUsedRatio := []float64{0.5, 0.6}
+				mockBackend.EXPECT().FeeHistory(
+					gomock.Any(),
+					uint64(2),
+					rpc.LatestBlockNumber,
+					[]float64{50.0, 90.0},
+				).Return(oldestBlock, reward, baseFee, gasUsedRatio, nil)
+			},
+			expected: &FeeHistoryResult{
+				OldestBlock: (*hexutil.Big)(big.NewInt(100)),
+				Reward: [][]*hexutil.Big{
+					{(*hexutil.Big)(big.NewInt(1000000000)), (*hexutil.Big)(big.NewInt(2000000000))},
+					{(*hexutil.Big)(big.NewInt(1500000000)), (*hexutil.Big)(big.NewInt(2500000000))},
+				},
+				BaseFee: []*hexutil.Big{
+					(*hexutil.Big)(big.NewInt(25000000000)),
+					(*hexutil.Big)(big.NewInt(30000000000)),
+				},
+				BlobBaseFee: []*hexutil.Big{
+					(*hexutil.Big)(eip4844.CalcBlobFee(big.NewInt(25000000000))),
+					(*hexutil.Big)(eip4844.CalcBlobFee(big.NewInt(30000000000))),
+				},
+				GasUsedRatio: []float64{0.5, 0.6},
+			},
+		},
+		{
+			name:              "success with no baseFee",
+			blockCount:        DecimalOrHex(1),
+			lastBlock:         rpc.BlockNumber(100),
+			rewardPercentiles: nil,
+			setupMock: func(mockBackend *mock_api.MockBackend) {
+				oldestBlock := big.NewInt(100)
+				var reward [][]*big.Int
+				var baseFee []*big.Int
+				gasUsedRatio := []float64{0.5}
+				mockBackend.EXPECT().FeeHistory(
+					gomock.Any(),
+					uint64(1),
+					rpc.BlockNumber(100),
+					[]float64(nil),
+				).Return(oldestBlock, reward, baseFee, gasUsedRatio, nil)
+			},
+			expected: &FeeHistoryResult{
+				OldestBlock:  (*hexutil.Big)(big.NewInt(100)),
+				Reward:       nil,
+				BaseFee:      nil,
+				BlobBaseFee:  nil,
+				GasUsedRatio: []float64{0.5},
+			},
+		},
+		{
+			name:              "error when FeeHistory fails",
+			blockCount:        DecimalOrHex(1),
+			lastBlock:         rpc.LatestBlockNumber,
+			rewardPercentiles: []float64{50.0},
+			setupMock: func(mockBackend *mock_api.MockBackend) {
+				mockBackend.EXPECT().FeeHistory(
+					gomock.Any(),
+					uint64(1),
+					rpc.LatestBlockNumber,
+					[]float64{50.0},
+				).Return(nil, nil, nil, nil, errors.New("fee history error"))
+			},
+			expectedErr: "fee history error",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl, mockBackend, api := testInitForEthApi(t)
+			defer mockCtrl.Finish()
+
+			tc.setupMock(mockBackend)
+
+			result, err := api.FeeHistory(context.Background(), tc.blockCount, tc.lastBlock, tc.rewardPercentiles)
+
+			if tc.expectedErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedErr)
+				assert.Nil(t, result)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				require.NotNil(t, tc.expected)
+
+				assert.Equal(t, tc.expected.OldestBlock, result.OldestBlock)
+				assert.Equal(t, tc.expected.GasUsedRatio, result.GasUsedRatio)
+
+				if tc.expected.Reward != nil {
+					require.NotNil(t, result.Reward)
+					assert.Equal(t, len(tc.expected.Reward), len(result.Reward))
+					for i, expectedReward := range tc.expected.Reward {
+						require.NotNil(t, result.Reward[i])
+						assert.Equal(t, len(expectedReward), len(result.Reward[i]))
+						for j, expectedVal := range expectedReward {
+							assert.Equal(t, expectedVal, result.Reward[i][j])
+						}
+					}
+				} else {
+					assert.Nil(t, result.Reward)
+				}
+
+				if tc.expected.BaseFee != nil {
+					require.NotNil(t, result.BaseFee)
+					require.NotNil(t, result.BlobBaseFee)
+					assert.Equal(t, len(tc.expected.BaseFee), len(result.BaseFee))
+					assert.Equal(t, len(tc.expected.BlobBaseFee), len(result.BlobBaseFee))
+					for i, expectedBaseFee := range tc.expected.BaseFee {
+						assert.Equal(t, expectedBaseFee, result.BaseFee[i])
+						assert.Equal(t, tc.expected.BlobBaseFee[i], result.BlobBaseFee[i])
+					}
+				} else {
+					assert.Nil(t, result.BaseFee)
+					assert.Nil(t, result.BlobBaseFee)
+				}
+			}
+		})
+	}
+}
+
+// TestEthAPI_BlobBaseFee tests the BlobBaseFee method.
+func TestEthAPI_BlobBaseFee(t *testing.T) {
+	testcases := []struct {
+		name        string
+		setupMock   func(*mock_api.MockBackend)
+		expected    *hexutil.Big
+		expectedErr string
+	}{
+		{
+			name: "success with valid baseFee",
+			setupMock: func(mockBackend *mock_api.MockBackend) {
+				baseFee := big.NewInt(25000000000) // 25 gwei
+				header := &types.Header{
+					Number:  big.NewInt(100),
+					BaseFee: baseFee,
+				}
+				mockBackend.EXPECT().HeaderByNumber(
+					gomock.Any(),
+					rpc.LatestBlockNumber,
+				).Return(header, nil)
+			},
+			expected: (*hexutil.Big)(eip4844.CalcBlobFee(big.NewInt(25000000000))),
+		},
+		{
+			name: "success with zero baseFee",
+			setupMock: func(mockBackend *mock_api.MockBackend) {
+				baseFee := big.NewInt(0)
+				header := &types.Header{
+					Number:  big.NewInt(100),
+					BaseFee: baseFee,
+				}
+				mockBackend.EXPECT().HeaderByNumber(
+					gomock.Any(),
+					rpc.LatestBlockNumber,
+				).Return(header, nil)
+			},
+			expected: (*hexutil.Big)(eip4844.CalcBlobFee(big.NewInt(0))),
+		},
+		{
+			name: "error when HeaderByNumber fails",
+			setupMock: func(mockBackend *mock_api.MockBackend) {
+				mockBackend.EXPECT().HeaderByNumber(
+					gomock.Any(),
+					rpc.LatestBlockNumber,
+				).Return(nil, errors.New("header not found"))
+			},
+			expectedErr: "header not found",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl, mockBackend, api := testInitForEthApi(t)
+			defer mockCtrl.Finish()
+
+			tc.setupMock(mockBackend)
+
+			result, err := api.BlobBaseFee(context.Background())
+
+			if tc.expectedErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.expectedErr)
+				assert.Nil(t, result)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				require.NotNil(t, tc.expected)
+				assert.Equal(t, tc.expected.ToInt(), result.ToInt())
+			}
+		})
+	}
 }

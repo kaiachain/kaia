@@ -19,10 +19,9 @@
 package core
 
 import (
-	"encoding/hex"
-	"fmt"
-	"math"
-	"math/big"
+	"slices"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/kaiachain/kaia/common"
@@ -31,254 +30,286 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-type Vrank struct {
-	startTime             time.Time
-	view                  istanbul.View
-	committee             []common.Address
-	threshold             time.Duration
-	firstCommit           int64
-	quorumCommit          int64
-	avgCommitWithinQuorum int64
-	lastCommit            int64
-	commitArrivalTimeMap  map[common.Address]time.Duration
+type vrank struct {
+	miningStartTime time.Time
+	view            istanbul.View
+	committee       []common.Address
+	quorum          int
+	maxRound        uint64 // highest round with RC data received
+	timestamps      [MaxRoundChangeCount]msgArrivalTimes
 }
+
+type msgArrivalTimes struct {
+	preprepareArrivalTime     time.Duration // node receives only one preprepare from proposer
+	commitArrivalTimeMap      sync.Map      // map[common.Address]time.Duration
+	myRoundChangeTime         time.Duration
+	roundChangeArrivalTimeMap sync.Map // map[common.Address]time.Duration
+}
+
+const (
+	DefaultVRankLogFrequency = uint64(60)
+	MaxRoundChangeCount      = uint64(8)
+)
 
 var (
 	// VRank metrics
+	vrankFirstPreprepareArrivalTimeGauge       = metrics.NewRegisteredGauge("vrank/first_preprepare", nil)
 	vrankFirstCommitArrivalTimeGauge           = metrics.NewRegisteredGauge("vrank/first_commit", nil)
 	vrankQuorumCommitArrivalTimeGauge          = metrics.NewRegisteredGauge("vrank/quorum_commit", nil)
 	vrankAvgCommitArrivalTimeWithinQuorumGauge = metrics.NewRegisteredGauge("vrank/avg_commit_within_quorum", nil)
 	vrankLastCommitArrivalTimeGauge            = metrics.NewRegisteredGauge("vrank/last_commit", nil)
 
-	vrankDefaultThreshold = "300ms" // the time to receive 2f+1 commits in an ideal network
+	VRankLogFrequency = DefaultVRankLogFrequency // Will be set to the value of VRankLogFrequencyFlag in SetKaiaConfig()
 
-	VRankLogFrequency = uint64(0) // Will be set to the value of VRankLogFrequencyFlag in SetKaiaConfig()
-
-	vrank *Vrank
+	Vrank = NewVrank()
 )
 
-const (
-	vrankArrivedEarly = iota
-	vrankArrivedLate
-	vrankNotArrived
-)
+func NewVrank() *vrank {
+	ret := &vrank{
+		view:       istanbul.View{},
+		committee:  []common.Address{},
+		timestamps: [MaxRoundChangeCount]msgArrivalTimes{},
+	}
+	for i := range ret.timestamps {
+		ret.timestamps[i] = *NewMsgArrivalTimes()
+	}
+	return ret
+}
 
-const (
-	vrankNotArrivedPlaceholder = -1
-)
-
-func NewVrank(view istanbul.View, committee []common.Address) *Vrank {
-	threshold, _ := time.ParseDuration(vrankDefaultThreshold)
-	return &Vrank{
-		startTime:             time.Now(),
-		view:                  view,
-		committee:             committee,
-		threshold:             threshold,
-		firstCommit:           int64(0),
-		quorumCommit:          int64(0),
-		avgCommitWithinQuorum: int64(0),
-		lastCommit:            int64(0),
-		commitArrivalTimeMap:  make(map[common.Address]time.Duration),
+func NewMsgArrivalTimes() *msgArrivalTimes {
+	return &msgArrivalTimes{
+		preprepareArrivalTime: time.Duration(0),
+		myRoundChangeTime:     time.Duration(0),
+		// sync.Map has usable zero value, no initialization needed
 	}
 }
 
-func (v *Vrank) TimeSinceStart() time.Duration {
-	return time.Now().Sub(v.startTime)
-}
-
-func (v *Vrank) AddCommit(msg *istanbul.Subject, src common.Address) {
-	if v.isTargetCommit(msg, src) {
-		t := v.TimeSinceStart()
-		v.commitArrivalTimeMap[src] = t
+func (v *vrank) StartTimer() {
+	v.miningStartTime = time.Now()
+	v.view = istanbul.View{}
+	v.committee = []common.Address{}
+	v.quorum = 0
+	v.maxRound = 0
+	for i := range v.timestamps {
+		v.timestamps[i] = *NewMsgArrivalTimes()
 	}
 }
 
-func (v *Vrank) HandleCommitted(blockNum *big.Int) {
-	if v.view.Sequence.Cmp(blockNum) != 0 {
+func (v *vrank) SetLatestView(view istanbul.View, committee []common.Address, quorum int) {
+	v.view = view
+	v.committee = committee
+	v.quorum = quorum
+}
+
+func (v *vrank) AddPreprepare(src common.Address, round uint64, timestamp time.Time) {
+	if round >= MaxRoundChangeCount {
 		return
 	}
-
-	if len(v.commitArrivalTimeMap) != 0 {
-		sum := int64(0)
-		firstCommitTime := time.Duration(math.MaxInt64)
-		quorumCommitTime := time.Duration(0)
-		for _, arrivalTime := range v.commitArrivalTimeMap {
-			sum += int64(arrivalTime)
-			if firstCommitTime > arrivalTime {
-				firstCommitTime = arrivalTime
-			}
-			if quorumCommitTime < arrivalTime {
-				quorumCommitTime = arrivalTime
-			}
-		}
-		avg := sum / int64(len(v.commitArrivalTimeMap))
-		v.avgCommitWithinQuorum = avg
-		v.firstCommit = int64(firstCommitTime)
-		v.quorumCommit = int64(quorumCommitTime)
-
-		if quorumCommitTime != time.Duration(0) && v.threshold > quorumCommitTime {
-			v.threshold = quorumCommitTime
-		}
+	if v.timestamps[round].preprepareArrivalTime == time.Duration(0) {
+		v.timestamps[round].preprepareArrivalTime = timestamp.Sub(v.miningStartTime)
 	}
 }
 
-func (v *Vrank) Bitmap() string {
-	serialized := serialize(v.committee, v.commitArrivalTimeMap)
-	assessed := assessBatch(serialized, v.threshold)
-	compressed := compress(assessed)
-	return hex.EncodeToString(compressed)
+func (v *vrank) AddCommit(src common.Address, round uint64, timestamp time.Time) {
+	if round >= MaxRoundChangeCount {
+		return
+	}
+	// LoadOrStore stores only if key doesn't exist (first write wins)
+	v.timestamps[round].commitArrivalTimeMap.LoadOrStore(src, timestamp.Sub(v.miningStartTime))
 }
 
-func (v *Vrank) LateCommits() []time.Duration {
-	serialized := serialize(v.committee, v.commitArrivalTimeMap)
-	lateCommits := make([]time.Duration, 0)
-	for _, t := range serialized {
-		if assess(t, v.threshold) == vrankArrivedLate {
-			lateCommits = append(lateCommits, t)
-		}
+func (v *vrank) AddMyRoundChange(round uint64, timestamp time.Time) {
+	if round >= MaxRoundChangeCount {
+		return
 	}
-	return lateCommits
+	if v.timestamps[round].myRoundChangeTime == time.Duration(0) {
+		v.timestamps[round].myRoundChangeTime = timestamp.Sub(v.miningStartTime)
+	}
+}
+
+func (v *vrank) AddRoundChange(src common.Address, round uint64, timestamp time.Time) {
+	if round >= MaxRoundChangeCount {
+		return
+	}
+	// LoadOrStore stores only if key doesn't exist (first write wins)
+	v.timestamps[round].roundChangeArrivalTimeMap.LoadOrStore(src, timestamp.Sub(v.miningStartTime))
+	// Track max round for logging future RC messages
+	if round > v.maxRound {
+		v.maxRound = round
+	}
+}
+
+func (v *vrank) shouldEmitLog() bool {
+	// Always log at round change
+	if v.view.Round.Uint64() > 0 {
+		return true
+	}
+
+	// Skip logging if VRankLogFrequency is 0 or not in the logging frequency
+	if VRankLogFrequency != 0 && v.view.Sequence.Uint64()%VRankLogFrequency == 0 {
+		return true
+	}
+
+	return false
 }
 
 // Log logs accumulated data in a compressed form
-func (v *Vrank) Log() {
-	var (
-		lastCommit  = time.Duration(0)
-		lateCommits = v.LateCommits()
-	)
-
-	// lastCommit = max(lateCommits)
-	for _, t := range lateCommits {
-		if lastCommit < t {
-			lastCommit = t
-		}
-	}
-	v.lastCommit = int64(lastCommit)
-
-	v.updateMetrics()
-
-	// Skip logging if VRankLogFrequency is 0 or not in the logging frequency
-	if VRankLogFrequency == 0 || v.view.Sequence.Uint64()%VRankLogFrequency != 0 {
+func (v *vrank) Log() {
+	// Skip if no data collected (view not set)
+	if v.view.Sequence == nil || v.view.Round == nil {
 		return
 	}
 
-	logger.Info("VRank", "seq", v.view.Sequence.Int64(),
-		"round", v.view.Round.Int64(),
-		"bitmap", v.Bitmap(),
-		"late", encodeDurationBatch(lateCommits),
-	)
-}
+	v.updateMetrics()
 
-func (v *Vrank) updateMetrics() {
-	if v.firstCommit != int64(0) {
-		vrankFirstCommitArrivalTimeGauge.Update(v.firstCommit)
-	}
-	if v.quorumCommit != int64(0) {
-		vrankQuorumCommitArrivalTimeGauge.Update(v.quorumCommit)
-	}
-	if v.avgCommitWithinQuorum != int64(0) {
-		vrankAvgCommitArrivalTimeWithinQuorumGauge.Update(v.avgCommitWithinQuorum)
-	}
-	if v.lastCommit != int64(0) {
-		vrankLastCommitArrivalTimeGauge.Update(v.lastCommit)
+	if v.shouldEmitLog() {
+		seq, round, preprepareArrivalTime, commitArrivalTimes, myRoundChangeTimes, roundChangeArrivalTimes := v.buildLogData()
+		logger.Warn("VRank", "seq", seq, "round", round,
+			"preprepareArrivalTime", preprepareArrivalTime,
+			"commitArrivalTimes", commitArrivalTimes,
+			"myRoundChangeTimes", myRoundChangeTimes,
+			"roundChangeArrivalTimes", roundChangeArrivalTimes)
 	}
 }
 
-func (v *Vrank) isTargetCommit(msg *istanbul.Subject, src common.Address) bool {
-	if msg.View == nil || msg.View.Sequence == nil || msg.View.Round == nil {
-		return false
+func (v *vrank) buildLogData() (seq int64, round int64, preprepareArrivalTimes string, commitArrivalTimes []string, myRoundChangeTimes string, roundChangeArrivalTimes []string) {
+	if v.view.Round == nil {
+		return 0, 0, "", []string{}, "", []string{}
 	}
-	if msg.View.Cmp(&v.view) != 0 {
-		return false
-	}
-	_, ok := v.commitArrivalTimeMap[src]
-	if ok {
-		return false
-	}
-	return true
-}
+	sortedCommittee := valset.NewAddressSet(v.committee).List()
 
-// assess determines if given time is early, late, or not arrived
-func assess(t, threshold time.Duration) uint8 {
-	if t == vrankNotArrivedPlaceholder {
-		return vrankNotArrived
-	}
+	// To log future RC messages, use the max round received
+	maxRound := min(max(v.view.Round.Uint64(), v.maxRound), MaxRoundChangeCount-1)
 
-	if t > threshold {
-		return vrankArrivedLate
-	} else {
-		return vrankArrivedEarly
-	}
-}
+	// Initialize per-validator arrays
+	commitArrivalTimes = make([]string, len(sortedCommittee))
+	roundChangeArrivalTimes = make([]string, len(sortedCommittee))
 
-func assessBatch(ts []time.Duration, threshold time.Duration) []uint8 {
-	ret := make([]uint8, len(ts))
-	for i, t := range ts {
-		ret[i] = assess(t, threshold)
-	}
-	return ret
-}
-
-// serialize serializes arrivalTime hashmap into array.
-// If committee is sorted, we can simply figure out the validator position in the output array
-// by sorting the output of `kaia.getCommittee()`
-func serialize(committee []common.Address, arrivalTimeMap map[common.Address]time.Duration) []time.Duration {
-	sortedCommittee := valset.NewAddressSet(committee).List()
-
-	serialized := make([]time.Duration, len(sortedCommittee))
-	for i, v := range sortedCommittee {
-		val, ok := arrivalTimeMap[v]
-		if ok {
-			serialized[i] = val
-		} else {
-			serialized[i] = vrankNotArrivedPlaceholder
+	// Build incrementally: each round appends with comma
+	// round 0: [a1 b1 c1], round 1: [a1,a2 b1,b2 c1,c2], etc.
+	for r := uint64(0); r <= maxRound; r++ {
+		pp, commits, myRC, rcs := v.timestamps[r].buildLogData(sortedCommittee)
+		preprepareArrivalTimes = appendTime(preprepareArrivalTimes, pp)
+		myRoundChangeTimes = appendTime(myRoundChangeTimes, myRC)
+		for i := range sortedCommittee {
+			commitArrivalTimes[i] = appendTime(commitArrivalTimes[i], commits[i])
+			roundChangeArrivalTimes[i] = appendTime(roundChangeArrivalTimes[i], rcs[i])
 		}
-
 	}
-	return serialized
+
+	return v.view.Sequence.Int64(), v.view.Round.Int64(), preprepareArrivalTimes, commitArrivalTimes, myRoundChangeTimes, roundChangeArrivalTimes
 }
 
-// compress compresses data into 2-bit bitmap
-// e.g., [1, 0, 2] => [0b01_00_10_00]
-func compress(arr []uint8) []byte {
-	zip := func(a, b, c, d uint8) byte {
-		a &= 0b11
-		b &= 0b11
-		c &= 0b11
-		d &= 0b11
-		return byte(a<<6 | b<<4 | c<<2 | d<<0)
+// appendTime appends a time value to an existing string with comma separator
+func appendTime(existing, newVal string) string {
+	if existing == "" {
+		return newVal
+	}
+	return existing + "," + newVal
+}
+
+func (m *msgArrivalTimes) buildLogData(sortedCommittee []common.Address) (preprepareArrivalTime string, commitArrivalTimes []string, myRoundChangeTime string, roundChangeArrivalTimes []string) {
+	// preprepareArrivalTime
+	preprepareArrivalTime = "-"
+	if m.preprepareArrivalTime != time.Duration(0) {
+		preprepareArrivalTime = encodeDuration(m.preprepareArrivalTime)
 	}
 
-	// pad zero to make len(arr)%4 == 0
-	for len(arr)%4 != 0 {
-		arr = append(arr, 0)
+	// commitArrivalTimes, roundChangeArrivalTimes: one per validator
+	commitArrivalTimes = make([]string, len(sortedCommittee))
+	roundChangeArrivalTimes = make([]string, len(sortedCommittee))
+	for i, addr := range sortedCommittee {
+		commitArrivalTimes[i] = "-"
+		if val, ok := m.commitArrivalTimeMap.Load(addr); ok {
+			if t := val.(time.Duration); t != time.Duration(0) {
+				commitArrivalTimes[i] = encodeDuration(t)
+			}
+		}
+		roundChangeArrivalTimes[i] = "-"
+		if val, ok := m.roundChangeArrivalTimeMap.Load(addr); ok {
+			if t := val.(time.Duration); t != time.Duration(0) {
+				roundChangeArrivalTimes[i] = encodeDuration(t)
+			}
+		}
 	}
 
-	ret := make([]byte, len(arr)/4)
-
-	for i := 0; i < len(arr)/4; i++ {
-		chunk := arr[4*i : 4*(i+1)]
-		ret[i] = zip(chunk[0], chunk[1], chunk[2], chunk[3])
+	// myRoundChangeTime
+	myRoundChangeTime = "-"
+	if m.myRoundChangeTime != time.Duration(0) {
+		myRoundChangeTime = encodeDuration(m.myRoundChangeTime)
 	}
-	return ret
+
+	return preprepareArrivalTime, commitArrivalTimes, myRoundChangeTime, roundChangeArrivalTimes
+}
+
+func (v *vrank) calcMetrics() (int64, int64, int64, int64) {
+	if v.view.Round == nil {
+		return 0, 0, 0, 0
+	}
+	round := min(v.view.Round.Uint64(), MaxRoundChangeCount-1)
+
+	// Convert sync.Map to regular map for sorting
+	commitMap := make(map[common.Address]time.Duration)
+	v.timestamps[round].commitArrivalTimeMap.Range(func(key, value any) bool {
+		commitMap[key.(common.Address)] = value.(time.Duration)
+		return true
+	})
+
+	var firstCommit, lastCommit, quorumCommit, avgCommitWithinQuorum int64
+	if len(commitMap) > 0 {
+		arrivalTimes := sortByArrivalTimes(commitMap)
+		firstCommit = arrivalTimes[0]
+		lastCommit = arrivalTimes[len(arrivalTimes)-1]
+		if v.quorum > 0 && len(arrivalTimes) >= v.quorum {
+			quorumCommit = arrivalTimes[v.quorum-1]
+			sum := int64(0)
+			for _, arrivalTime := range arrivalTimes[:v.quorum] {
+				sum += int64(arrivalTime)
+			}
+			avgCommitWithinQuorum = sum / int64(v.quorum)
+		}
+	}
+
+	return firstCommit, lastCommit, quorumCommit, avgCommitWithinQuorum
+}
+
+func (v *vrank) updateMetrics() {
+	if v.view.Round == nil {
+		return
+	}
+	round := v.view.Round.Uint64()
+	if round >= MaxRoundChangeCount {
+		round = MaxRoundChangeCount - 1
+	}
+	if v.timestamps[round].preprepareArrivalTime != time.Duration(0) {
+		vrankFirstPreprepareArrivalTimeGauge.Update(int64(v.timestamps[round].preprepareArrivalTime))
+	}
+	firstCommit, lastCommit, quorumCommit, avgCommitWithinQuorum := v.calcMetrics()
+	if firstCommit != 0 {
+		vrankFirstCommitArrivalTimeGauge.Update(firstCommit)
+	}
+	if lastCommit != 0 {
+		vrankLastCommitArrivalTimeGauge.Update(lastCommit)
+	}
+	if quorumCommit != 0 {
+		vrankQuorumCommitArrivalTimeGauge.Update(quorumCommit)
+	}
+	if avgCommitWithinQuorum != 0 {
+		vrankAvgCommitArrivalTimeWithinQuorumGauge.Update(avgCommitWithinQuorum)
+	}
 }
 
 // encodeDuration encodes given duration into string
-// The returned string is at most 4 bytes
 func encodeDuration(d time.Duration) string {
-	if d > 10*time.Second {
-		return fmt.Sprintf("%.0fs", d.Seconds())
-	} else if d > time.Second {
-		return fmt.Sprintf("%.1fs", d.Seconds())
-	} else {
-		return fmt.Sprintf("%d", d.Milliseconds())
-	}
+	return strconv.FormatInt(d.Milliseconds(), 10)
 }
 
-func encodeDurationBatch(ds []time.Duration) []string {
-	ret := make([]string, len(ds))
-	for i, d := range ds {
-		ret[i] = encodeDuration(d)
+func sortByArrivalTimes(arrivalTimeMap map[common.Address]time.Duration) []int64 {
+	// Convert to []int64 and sort
+	result := make([]int64, 0, len(arrivalTimeMap))
+	for _, v := range arrivalTimeMap {
+		result = append(result, int64(v))
 	}
-	return ret
+	slices.Sort(result)
+	return result
 }

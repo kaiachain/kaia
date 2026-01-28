@@ -51,6 +51,20 @@ func (mr *MockPeerSetMockRecorder) BestPeer() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BestPeer", reflect.TypeOf((*MockPeerSet)(nil).BestPeer))
 }
 
+// BestPeerForBlobSidecar mocks base method.
+func (m *MockPeerSet) BestPeerForBlobSidecar(arg0 int) Peer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BestPeerForBlobSidecar", arg0)
+	ret0, _ := ret[0].(Peer)
+	return ret0
+}
+
+// BestPeerForBlobSidecar indicates an expected call of BestPeerForBlobSidecar.
+func (mr *MockPeerSetMockRecorder) BestPeerForBlobSidecar(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BestPeerForBlobSidecar", reflect.TypeOf((*MockPeerSet)(nil).BestPeerForBlobSidecar), arg0)
+}
+
 // CNPeers mocks base method.
 func (m *MockPeerSet) CNPeers() map[common.Address]Peer {
 	m.ctrl.T.Helper()

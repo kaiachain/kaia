@@ -73,7 +73,7 @@ instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}
 
 // Tests that a console can be attached to a running node via various means.
 func TestIPCAttachWelcome(t *testing.T) {
-	// Configure the instance for IPC attachement
+	// Configure the instance for IPC attachment
 	var ipc string
 	if runtime.GOOS == "windows" {
 		ipc = `\\.\pipe\klay` + strconv.Itoa(trulyRandInt(100000, 999999))
@@ -153,7 +153,7 @@ instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}{{if ipc}}
 }
 
 // trulyRandInt generates a crypto random integer used by the console tests to
-// not clash network ports with other tests running cocurrently.
+// not clash network ports with other tests running concurrently.
 func trulyRandInt(lo, hi int) int {
 	num, _ := rand.Int(rand.Reader, big.NewInt(int64(hi-lo)))
 	return int(num.Int64()) + lo

@@ -45,14 +45,15 @@ import (
 )
 
 var (
-	MaxHashFetch        = 512 // Amount of hashes to be fetched per retrieval request
-	MaxBlockFetch       = 128 // Amount of blocks to be fetched per retrieval request
-	MaxHeaderFetch      = 192 // Amount of block headers to be fetched per retrieval request
-	MaxSkeletonSize     = 128 // Number of header fetches to need for a skeleton assembly
-	MaxBodyFetch        = 128 // Amount of block bodies to be fetched per retrieval request
-	MaxReceiptFetch     = 256 // Amount of transaction receipts to allow fetching per request
-	MaxStakingInfoFetch = 128 // Amount of staking information to allow fetching per request
-	MaxStateFetch       = 384 // Amount of node state values to allow fetching per request
+	MaxHashFetch         = 512 // Amount of hashes to be fetched per retrieval request
+	MaxBlockFetch        = 128 // Amount of blocks to be fetched per retrieval request
+	MaxHeaderFetch       = 192 // Amount of block headers to be fetched per retrieval request
+	MaxSkeletonSize      = 128 // Number of header fetches to need for a skeleton assembly
+	MaxBodyFetch         = 128 // Amount of block bodies to be fetched per retrieval request
+	MaxReceiptFetch      = 256 // Amount of transaction receipts to allow fetching per request
+	MaxStakingInfoFetch  = 128 // Amount of staking information to allow fetching per request
+	MaxStateFetch        = 384 // Amount of node state values to allow fetching per request
+	MaxBlobSidecarsFetch = 4   // Amount of blob sidecars to allow fetching per request
 
 	MaxForkAncestry  = 3 * params.EpochDuration // Maximum chain reorganisation
 	rttMinEstimate   = 2 * time.Second          // Minimum round-trip time to target for download requests
@@ -606,8 +607,12 @@ func (d *Downloader) SyncStakingInfo(id string, from, to uint64) error {
 		blockNums   []uint64
 		blockHashes []common.Hash
 	)
-	from = params.CalcStakingBlockNumber(from)
-	for i := from; i <= to; i += params.StakingUpdateInterval() {
+	stakingUpdateInterval := params.DefaultStakeUpdateInterval
+	if config != nil && config.Governance != nil && config.Governance.Reward != nil {
+		stakingUpdateInterval = config.Governance.Reward.StakingUpdateInterval
+	}
+	from = calcStakingBlockNumber(from, stakingUpdateInterval)
+	for i := from; i <= to; i += stakingUpdateInterval {
 		blockHash := d.stateDB.ReadCanonicalHash(i)
 		if blockHash == (common.Hash{}) {
 			d.isStakingInfoRecovery = false
@@ -1972,6 +1977,7 @@ func (d *Downloader) DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) erro
 	}
 }
 
+
 // deliver injects a new batch of data received from a remote node.
 func (d *Downloader) deliver(id string, destCh chan dataPack, packet dataPack, inMeter, dropMeter metrics.Meter) (err error) {
 	// Update the delivery metrics for both good and failed deliveries
@@ -2069,4 +2075,19 @@ func (d *Downloader) requestTTL() time.Duration {
 		ttl = ttlLimit
 	}
 	return ttl
+}
+
+func calcStakingBlockNumber(blockNum uint64, stakingUpdateInterval uint64) uint64 {
+	if blockNum <= 2*stakingUpdateInterval {
+		// Just return genesis block number.
+		return 0
+	}
+
+	var number uint64
+	if (blockNum % stakingUpdateInterval) == 0 {
+		number = blockNum - 2*stakingUpdateInterval
+	} else {
+		number = blockNum - stakingUpdateInterval - (blockNum % stakingUpdateInterval)
+	}
+	return number
 }

@@ -34,12 +34,14 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/forkid"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -282,12 +284,12 @@ func decodeHash(s string) (h common.Hash, inputLength int, err error) {
 	if (len(s) & 1) > 0 {
 		s = "0" + s
 	}
+	if len(s) > 64 {
+		return common.Hash{}, len(s) / 2, errors.New("hex string too long, want at most 32 bytes")
+	}
 	b, err := hex.DecodeString(s)
 	if err != nil {
 		return common.Hash{}, 0, errors.New("hex string invalid")
-	}
-	if len(b) > 32 {
-		return common.Hash{}, len(b), errors.New("hex string too long, want at most 32 bytes")
 	}
 	return common.BytesToHash(b), len(b), nil
 }
@@ -605,26 +607,28 @@ func (api *EthAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash
 // RPCTransaction in go-ethereum has been renamed to EthRPCTransaction.
 // RPCTransaction is defined in go-ethereum's internal package, so RPCTransaction is redefined here as EthRPCTransaction.
 type EthRPCTransaction struct {
-	BlockHash         *common.Hash                 `json:"blockHash"`
-	BlockNumber       *hexutil.Big                 `json:"blockNumber"`
-	From              common.Address               `json:"from"`
-	Gas               hexutil.Uint64               `json:"gas"`
-	GasPrice          *hexutil.Big                 `json:"gasPrice"`
-	GasFeeCap         *hexutil.Big                 `json:"maxFeePerGas,omitempty"`
-	GasTipCap         *hexutil.Big                 `json:"maxPriorityFeePerGas,omitempty"`
-	Hash              common.Hash                  `json:"hash"`
-	Input             hexutil.Bytes                `json:"input"`
-	Nonce             hexutil.Uint64               `json:"nonce"`
-	To                *common.Address              `json:"to"`
-	TransactionIndex  *hexutil.Uint64              `json:"transactionIndex"`
-	Value             *hexutil.Big                 `json:"value"`
-	Type              hexutil.Uint64               `json:"type"`
-	Accesses          *types.AccessList            `json:"accessList,omitempty"`
-	ChainID           *hexutil.Big                 `json:"chainId,omitempty"`
-	AuthorizationList []types.SetCodeAuthorization `json:"authorizationList,omitempty"`
-	V                 *hexutil.Big                 `json:"v"`
-	R                 *hexutil.Big                 `json:"r"`
-	S                 *hexutil.Big                 `json:"s"`
+	BlockHash           *common.Hash                 `json:"blockHash"`
+	BlockNumber         *hexutil.Big                 `json:"blockNumber"`
+	From                common.Address               `json:"from"`
+	Gas                 hexutil.Uint64               `json:"gas"`
+	GasPrice            *hexutil.Big                 `json:"gasPrice"`
+	GasFeeCap           *hexutil.Big                 `json:"maxFeePerGas,omitempty"`
+	GasTipCap           *hexutil.Big                 `json:"maxPriorityFeePerGas,omitempty"`
+	MaxFeePerBlobGas    *hexutil.Big                 `json:"maxFeePerBlobGas,omitempty"`
+	Hash                common.Hash                  `json:"hash"`
+	Input               hexutil.Bytes                `json:"input"`
+	Nonce               hexutil.Uint64               `json:"nonce"`
+	To                  *common.Address              `json:"to"`
+	TransactionIndex    *hexutil.Uint64              `json:"transactionIndex"`
+	Value               *hexutil.Big                 `json:"value"`
+	Type                hexutil.Uint64               `json:"type"`
+	Accesses            *types.AccessList            `json:"accessList,omitempty"`
+	ChainID             *hexutil.Big                 `json:"chainId,omitempty"`
+	BlobVersionedHashes []common.Hash                `json:"blobVersionedHashes,omitempty"`
+	AuthorizationList   []types.SetCodeAuthorization `json:"authorizationList,omitempty"`
+	V                   *hexutil.Big                 `json:"v"`
+	R                   *hexutil.Big                 `json:"r"`
+	S                   *hexutil.Big                 `json:"s"`
 }
 
 // ethTxJSON is the JSON representation of Ethereum transaction.
@@ -653,6 +657,10 @@ type ethTxJSON struct {
 	// Access list transaction fields:
 	ChainID    *hexutil.Big      `json:"chainId,omitempty"`
 	AccessList *types.AccessList `json:"accessList,omitempty"`
+
+	// Blob transaction fields:
+	MaxFeePerBlobGas    *hexutil.Big  `json:"maxFeePerBlobGas,omitempty"`
+	BlobVersionedHashes []common.Hash `json:"blobVersionedHashes,omitempty"`
 
 	// Set code transaction fields:
 	AuthorizationList []types.SetCodeAuthorization `json:"authorizationList,omitempty"`
@@ -750,6 +758,20 @@ func newEthRPCTransaction(block *types.Block, tx *types.Transaction, blockHash c
 			// transaction is not processed yet
 			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(nil, nil))
 		}
+	case types.TxTypeEthereumBlob:
+		al := tx.AccessList()
+		result.Accesses = &al
+		result.ChainID = (*hexutil.Big)(tx.ChainId())
+		result.GasFeeCap = (*hexutil.Big)(tx.GasFeeCap())
+		result.GasTipCap = (*hexutil.Big)(tx.GasTipCap())
+		// if the transaction has been mined, compute the effective gas price
+		if block != nil {
+			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(block.Header(), config))
+		} else {
+			result.GasPrice = (*hexutil.Big)(tx.EffectiveGasPrice(nil, nil))
+		}
+		result.MaxFeePerBlobGas = (*hexutil.Big)(tx.BlobGasFeeCap())
+		result.BlobVersionedHashes = tx.BlobHashes()
 	case types.TxTypeEthereumSetCode:
 		al := tx.AccessList()
 		result.Accesses = &al
@@ -818,6 +840,14 @@ func formatTxToEthTxJSON(tx *types.Transaction) *ethTxJSON {
 		enc.ChainID = (*hexutil.Big)(tx.ChainId())
 		enc.MaxFeePerGas = (*hexutil.Big)(tx.GasFeeCap())
 		enc.MaxPriorityFeePerGas = (*hexutil.Big)(tx.GasTipCap())
+	case types.TxTypeEthereumBlob:
+		al := tx.AccessList()
+		enc.AccessList = &al
+		enc.ChainID = (*hexutil.Big)(tx.ChainId())
+		enc.MaxFeePerGas = (*hexutil.Big)(tx.GasFeeCap())
+		enc.MaxPriorityFeePerGas = (*hexutil.Big)(tx.GasTipCap())
+		enc.MaxFeePerBlobGas = (*hexutil.Big)(tx.BlobGasFeeCap())
+		enc.BlobVersionedHashes = tx.BlobHashes()
 	case types.TxTypeEthereumSetCode:
 		al := tx.AccessList()
 		enc.AccessList = &al
@@ -1007,6 +1037,12 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 	//  return gas price of tx.
 	// Before EthTxType hard fork : return gas price of tx. (typed ethereum txs are not available.)
 	fields["effectiveGasPrice"] = hexutil.Uint64(tx.EffectiveGasPrice(header, b.ChainConfig()).Uint64())
+
+	// After Osaka fork : return blob gas used and blob gas price when the tx is a blob transaction.
+	if tx.Type() == types.TxTypeEthereumBlob {
+		fields["blobGasUsed"] = hexutil.Uint64(tx.BlobGas())
+		fields["blobGasPrice"] = hexutil.Uint64(eip4844.CalcBlobFee(header.BaseFee).Uint64())
+	}
 
 	// Always use the "status" field and Ignore the "root" field.
 	if receipt.Status != types.ReceiptStatusSuccessful {
@@ -1226,6 +1262,10 @@ func RpcMarshalEthHeader(head *types.Header, engine consensus.Engine, chainConfi
 	if chainConfig.IsRandaoForkEnabled(head.Number) {
 		result["randomReveal"] = hexutil.Bytes(head.RandomReveal)
 		result["mixHash"] = hexutil.Bytes(head.MixHash)
+	}
+	if chainConfig.IsOsakaForkEnabled(head.Number) {
+		result["excessBlobGas"] = (*hexutil.Big)(new(big.Int).SetUint64(*head.ExcessBlobGas))
+		result["blobGasUsed"] = hexutil.Uint64(*head.BlobGasUsed)
 	}
 	return result, nil
 }
@@ -1547,4 +1587,146 @@ func AccessList(ctx context.Context, b Backend, blockNrOrHash rpc.BlockNumberOrH
 		}
 		prevTracer = tracer
 	}
+}
+
+type Kip276Config struct {
+	// As mentioned in KIP-276, Kaia doesn't include ActivationTime as a field.
+	// ActivationTime  uint64                    `json:"activationTime"`
+	BlobSchedule    *params.BlobConfig        `json:"blobSchedule"`
+	ChainId         *hexutil.Big              `json:"chainId"`
+	ForkId          hexutil.Bytes             `json:"forkId"`
+	Precompiles     map[string]common.Address `json:"precompiles"`
+	SystemContracts map[string]common.Address `json:"systemContracts"`
+}
+
+type ConfigResponse struct {
+	Current *Kip276Config `json:"current"`
+	Next    *Kip276Config `json:"next"`
+	Last    *Kip276Config `json:"last"`
+}
+
+// Config implements the KIP-276(EIP-7910) eth_config method.
+func (api *EthAPI) Config(ctx context.Context) (*ConfigResponse, error) {
+	b := api.kaiaBlockChainAPI.b
+	genesis, err := b.HeaderByNumber(ctx, 0)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load genesis: %w", err)
+	}
+	assemble := func(c *params.ChainConfig, head *big.Int) *Kip276Config {
+		if head == nil {
+			return nil
+		}
+
+		var (
+			rules       = c.Rules(head)
+			precompiles = make(map[string]common.Address)
+		)
+		for addr, c := range vm.ActivePrecompiledContracts(rules) {
+			precompiles[c.Name()] = addr
+		}
+
+		id := forkid.NewID(c, genesis.Hash(), head.Uint64()).Hash
+		return &Kip276Config{
+			BlobSchedule:    c.BlobConfig(head),
+			ChainId:         (*hexutil.Big)(c.ChainID),
+			ForkId:          id[:],
+			Precompiles:     precompiles,
+			SystemContracts: b.GetActiveSystemContracts(c, genesis.Hash(), head),
+		}
+	}
+	var (
+		c  = b.ChainConfig()
+		bn = b.CurrentBlock().Number()
+	)
+	currentForkCompatibleBlock := forkid.LatestForkCompatibleBlock(c, bn)
+	nextForkCompatibleBlock := forkid.NextForkCompatibleBlock(c, bn)
+	lastForkCompatibleBlock := forkid.LastForkCompatibleBlock(c)
+	resp := ConfigResponse{
+		Next:    assemble(c, nextForkCompatibleBlock),
+		Current: assemble(c, currentForkCompatibleBlock),
+		Last:    assemble(c, lastForkCompatibleBlock),
+	}
+	// Nil out last if no future-fork is configured.
+	if resp.Next == nil {
+		resp.Last = nil
+	}
+	return &resp, nil
+}
+
+func (api *EthAPI) GetBlobSidecars(ctx context.Context, number *rpc.BlockNumber, fullBlob bool) ([]*map[string]interface{}, error) {
+	if *number == rpc.PendingBlockNumber {
+		return nil, errors.New("pending block not supported")
+	}
+	block, err := api.kaiaBlockChainAPI.b.BlockByNumber(ctx, *number)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]*map[string]interface{}, 0, eip4844.MaxBlobsPerBlock(api.kaiaBlockChainAPI.b.ChainConfig(), block.Number()))
+	for txIndex, tx := range block.Transactions() {
+		if tx.Type() != types.TxTypeEthereumBlob {
+			continue
+		}
+		sidecar, err := api.kaiaBlockChainAPI.b.GetBlobSidecar(block.Number(), txIndex)
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, api.RpcMarshalBlobSidecar(sidecar, fullBlob, block.Hash(), block.Number(), tx.Hash(), txIndex))
+		if len(results) == cap(results) {
+			break
+		}
+	}
+
+	return results, nil
+}
+
+func (api *EthAPI) GetBlobSidecarByTxHash(ctx context.Context, txHash common.Hash, fullBlob bool) (*map[string]interface{}, error) {
+	tx, blockHash, number, index := api.kaiaBlockChainAPI.b.GetTxAndLookupInfo(txHash)
+	if tx == nil {
+		return nil, fmt.Errorf("transaction not found: %s", txHash.String())
+	}
+	if tx.Type() != types.TxTypeEthereumBlob {
+		return nil, fmt.Errorf("transaction is not a blob transaction: %s", txHash.String())
+	}
+	blockNumber := big.NewInt(int64(number))
+	txIndex := int(index)
+	sidecar, err := api.kaiaBlockChainAPI.b.GetBlobSidecar(blockNumber, txIndex)
+	if err != nil {
+		return nil, err
+	}
+	return api.RpcMarshalBlobSidecar(sidecar, fullBlob, blockHash, blockNumber, txHash, txIndex), nil
+}
+
+func (api *EthAPI) RpcMarshalBlobSidecar(sidecar *types.BlobTxSidecar, fullBlob bool, blockHash common.Hash, blockNumber *big.Int, txHash common.Hash, txIndex int) *map[string]interface{} {
+	sidecarMap := map[string]interface{}{
+		"version":     sidecar.Version,
+		"commitments": sidecar.Commitments,
+		"proofs":      sidecar.Proofs,
+	}
+	if fullBlob {
+		sidecarMap["blobs"] = sidecar.Blobs
+	} else {
+		// Truncate blobs to 32 bytes
+		truncatedBlobs := make([]hexutil.Bytes, len(sidecar.Blobs))
+		for i, blob := range sidecar.Blobs {
+			truncatedBlobs[i] = hexutil.Bytes(blob[:32])
+		}
+		sidecarMap["blobs"] = truncatedBlobs
+	}
+	result := make(map[string]interface{})
+	result["blobSidecar"] = sidecarMap
+	result["blockHash"] = blockHash
+	result["blockNumber"] = hexutil.Big(*blockNumber)
+	result["txHash"] = txHash
+	result["txIndex"] = hexutil.Uint(txIndex)
+	return &result
+}
+
+func (api *EthAPI) BlobBaseFee(ctx context.Context) (*hexutil.Big, error) {
+	header, err := api.kaiaBlockChainAPI.b.HeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if err != nil {
+		return nil, err
+	}
+	return (*hexutil.Big)(eip4844.CalcBlobFee(header.BaseFee)), nil
 }

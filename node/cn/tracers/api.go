@@ -140,6 +140,26 @@ type chainContext struct {
 	ctx     context.Context
 }
 
+func (context *chainContext) Config() *params.ChainConfig {
+	return context.backend.ChainConfig()
+}
+
+func (context *chainContext) CurrentHeader() *types.Header {
+	header, err := context.backend.HeaderByNumber(context.ctx, rpc.LatestBlockNumber)
+	if err != nil {
+		return nil
+	}
+	return header
+}
+
+func (context *chainContext) CurrentBlock() *types.Block {
+	block, err := context.backend.BlockByNumber(context.ctx, rpc.LatestBlockNumber)
+	if err != nil {
+		return nil
+	}
+	return block
+}
+
 func (context *chainContext) Engine() consensus.Engine {
 	return context.backend.Engine()
 }
@@ -159,9 +179,48 @@ func (context *chainContext) GetHeader(hash common.Hash, number uint64) *types.H
 	return header
 }
 
+func (context *chainContext) GetHeaderByNumber(number uint64) *types.Header {
+	header, err := context.backend.HeaderByNumber(context.ctx, rpc.BlockNumber(number))
+	if err != nil {
+		return nil
+	}
+	return header
+}
+
+func (context *chainContext) GetHeaderByHash(hash common.Hash) *types.Header {
+	header, err := context.backend.HeaderByHash(context.ctx, hash)
+	if err != nil {
+		return nil
+	}
+	return header
+}
+
+func (context *chainContext) GetBlock(hash common.Hash, number uint64) *types.Block {
+	block, err := context.backend.BlockByNumber(context.ctx, rpc.BlockNumber(number))
+	if err != nil {
+		return nil
+	}
+	if block.Hash() == hash {
+		return block
+	}
+	block, err = context.backend.BlockByHash(context.ctx, hash)
+	if err != nil {
+		return nil
+	}
+	return block
+}
+
+func (context *chainContext) State() (*state.StateDB, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (context *chainContext) StateAt(root common.Hash) (*state.StateDB, error) {
+	return nil, errors.New("not implemented")
+}
+
 // chainContext constructs the context reader which is used by the evm for reading
 // the necessary chain context.
-func newChainContext(ctx context.Context, backend Backend) blockchain.ChainContext {
+func newChainContext(ctx context.Context, backend Backend) consensus.ChainReader {
 	return &chainContext{backend: backend, ctx: ctx}
 }
 
@@ -332,9 +391,7 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 		reler    = new(releaser)
 	)
 	for th := 0; th < threads; th++ {
-		pend.Add(1)
-		go func() {
-			defer pend.Done()
+		pend.Go(func() {
 
 			// Fetch and execute the block trace tasks
 			for task := range tasks {
@@ -376,7 +433,7 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 					results <- task
 				}
 			}
-		}()
+		})
 	}
 	// Start a goroutine to feed all the blocks into the tracers
 
@@ -607,7 +664,7 @@ func (api *UnsafeAPI) StandardTraceBadBlockToFile(ctx context.Context, hash comm
 
 // traceBlock configures a new tracer according to the provided configuration, and
 // executes all the transactions contained within. The return value will be one item
-// per transaction, dependent on the requestd tracer.
+// per transaction, dependent on the requested tracer.
 func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config *TraceConfig) ([]*txTraceResult, error) {
 	if !api.unsafeTrace {
 		if atomic.LoadInt32(&heavyAPIRequestCount) >= HeavyAPIRequestLimit {
@@ -648,9 +705,7 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 		threads = len(txs)
 	}
 	for th := 0; th < threads; th++ {
-		pend.Add(1)
-		go func() {
-			defer pend.Done()
+		pend.Go(func() {
 
 			// Fetch and execute the next transaction trace tasks
 			for task := range jobs {
@@ -669,7 +724,7 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 				}
 				results[task.index] = &txTraceResult{TxHash: txs[task.index].Hash(), Result: res}
 			}
-		}()
+		})
 	}
 	// Feed the transactions into the tracers and return
 	var failed error

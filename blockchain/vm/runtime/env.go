@@ -29,8 +29,9 @@ import (
 
 func NewEnv(cfg *Config) *vm.EVM {
 	txContext := vm.TxContext{
-		Origin:   cfg.Origin,
-		GasPrice: cfg.GasPrice,
+		Origin:     cfg.Origin,
+		GasPrice:   cfg.GasPrice,
+		BlobHashes: cfg.BlobHashes,
 	}
 	blockContext := vm.BlockContext{
 		CanTransfer: blockchain.CanTransfer,
@@ -44,6 +45,7 @@ func NewEnv(cfg *Config) *vm.EVM {
 		BlockScore:  cfg.BlockScore,
 		GasLimit:    cfg.GasLimit,
 		BaseFee:     cfg.BaseFee,
+		BlobBaseFee: cfg.BlobBaseFee,
 	}
 	return vm.NewEVM(blockContext, txContext, cfg.State, cfg.ChainConfig, &cfg.EVMConfig)
 }

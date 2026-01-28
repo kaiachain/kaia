@@ -27,6 +27,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/holiman/uint256"
+	mock_bc "github.com/kaiachain/kaia/blockchain/mocks"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -419,6 +420,593 @@ func TestStateTransition_applyAuthorization(t *testing.T) {
 			auth := tt.makeAuthorization()
 			actual := NewStateTransition(evm, tt.msg).applyAuthorization(&auth, rules)
 			require.Equal(t, tt.expectedError, actual)
+		})
+	}
+}
+
+func TestStateTransition_preCheck(t *testing.T) {
+	var (
+		addr              = common.HexToAddress("0x1234567890123456789012345678901234567890")
+		to                = common.HexToAddress("0x000000000000000000000000000000000000aaaa")
+		baseFee           = big.NewInt(10 * params.Gkei)
+		blobBaseFee       = big.NewInt(10 * params.Gkei)
+		nonce             = uint64(5)
+		gasLimit          = uint64(100000)
+		kaiaChainConfig   = params.TestKaiaConfig("kaia")
+		pragueChainConfig = params.TestKaiaConfig("prague")
+		osakaChainConfig  = params.TestKaiaConfig("osaka")
+	)
+
+	// Generate valid versioned hashes for testing
+	validBlobHash := common.Hash{}
+	validBlobHash[0] = 0x01 // Version 1 blob hash
+
+	invalidBlobHash := common.Hash{}
+	invalidBlobHash[0] = 0xFF // Invalid version
+
+	// Test cases for preCheck
+	tests := []struct {
+		name               string
+		config             *params.ChainConfig
+		expectedError      error
+		prefetching        bool
+		setupMockMsg       func(ctrl *gomock.Controller) *mock_bc.MockMessage
+		setupStateMockCall func(m *mock_vm.MockStateDB)
+	}{
+		// === Successful preCheck ===
+		{
+			name:          "successful preCheck with legacy tx",
+			config:        kaiaChainConfig,
+			expectedError: nil,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().ValidatedFeePayer().Return(addr).AnyTimes()
+				mockMsg.EXPECT().FeeRatio().Return(types.FeeRatio(0), false).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().AuthList().Return(nil).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+				m.EXPECT().GetBalance(addr).Return(big.NewInt(params.KAIA))
+				m.EXPECT().SubBalance(addr, gomock.Any())
+			},
+		},
+		// === Prefetching mode ===
+		{
+			name:          "prefetching mode skips nonce and balance checks",
+			config:        kaiaChainConfig,
+			expectedError: nil,
+			prefetching:   true,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				// No calls expected in prefetching mode
+			},
+		},
+		// === Nonce checks ===
+		{
+			name:          "nonce too high",
+			config:        kaiaChainConfig,
+			expectedError: ErrNonceTooHigh,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce - 1) // state nonce < tx nonce
+			},
+		},
+		{
+			name:          "nonce too low",
+			config:        kaiaChainConfig,
+			expectedError: ErrNonceTooLow,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce + 1) // state nonce > tx nonce
+			},
+		},
+		{
+			name:          "nonce max overflow",
+			config:        kaiaChainConfig,
+			expectedError: ErrNonceMax,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(^uint64(0)).AnyTimes() // max uint64
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(^uint64(0))
+			},
+		},
+		{
+			name:          "check nonce disabled - nonce mismatch allowed",
+			config:        kaiaChainConfig,
+			expectedError: nil,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(false).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().ValidatedFeePayer().Return(addr).AnyTimes()
+				mockMsg.EXPECT().FeeRatio().Return(types.FeeRatio(0), false).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().AuthList().Return(nil).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetBalance(addr).Return(big.NewInt(params.KAIA))
+				m.EXPECT().SubBalance(addr, gomock.Any())
+			},
+		},
+		// === Prague gas fee checks ===
+		{
+			name:          "Prague: gasFeeCap bit length too high",
+			config:        pragueChainConfig,
+			expectedError: ErrFeeCapVeryHigh,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				hugeGasFeeCap := new(big.Int).Lsh(big.NewInt(1), 257) // 2^257
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(hugeGasFeeCap).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(1)).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
+		{
+			name:          "Prague: gasTipCap bit length too high",
+			config:        pragueChainConfig,
+			expectedError: ErrTipVeryHigh,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				hugeGasTipCap := new(big.Int).Lsh(big.NewInt(1), 257) // 2^257
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(params.KAIA)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(hugeGasTipCap).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
+		{
+			name:          "Prague: tip above fee cap",
+			config:        pragueChainConfig,
+			expectedError: ErrTipAboveFeeCap,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(10 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(20 * params.Gkei)).AnyTimes() // tip > feeCap
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
+		{
+			name:          "Prague: fee cap too low (below baseFee)",
+			config:        pragueChainConfig,
+			expectedError: ErrFeeCapTooLow,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(1 * params.Gkei)).AnyTimes() // below baseFee
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
+		{
+			name:          "Prague: skip check when gasFeeCap and gasTipCap are both zero",
+			config:        pragueChainConfig,
+			expectedError: nil,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().ValidatedFeePayer().Return(addr).AnyTimes()
+				mockMsg.EXPECT().FeeRatio().Return(types.FeeRatio(0), false).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(0)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().AuthList().Return(nil).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(0)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+				m.EXPECT().GetBalance(addr).Return(big.NewInt(params.KAIA))
+				m.EXPECT().SubBalance(addr, gomock.Any())
+			},
+		},
+		// === Blob validation ===
+		{
+			name:          "blob tx with nil to (create contract) returns error",
+			config:        osakaChainConfig,
+			expectedError: ErrBlobTxCreate,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(1 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return([]common.Hash{validBlobHash}).AnyTimes()
+				mockMsg.EXPECT().To().Return(nil).AnyTimes() // nil to
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
+		{
+			name:          "blob tx with empty blob hashes",
+			config:        osakaChainConfig,
+			expectedError: ErrMissingBlobHashes,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(1 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return([]common.Hash{}).AnyTimes() // empty but not nil
+				mockMsg.EXPECT().To().Return(&to).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
+		{
+			name:          "Osaka: too many blobs",
+			config:        osakaChainConfig,
+			expectedError: ErrTooManyBlobs,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				blobHashes := make([]common.Hash, params.BlobTxMaxBlobs+1)
+				for i := range blobHashes {
+					blobHashes[i] = validBlobHash
+				}
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(1 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(blobHashes).AnyTimes()
+				mockMsg.EXPECT().To().Return(&to).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
+		{
+			name:          "invalid blob hash version",
+			config:        osakaChainConfig,
+			expectedError: errors.New("blob 0 has invalid hash version"),
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(1 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return([]common.Hash{invalidBlobHash}).AnyTimes()
+				mockMsg.EXPECT().To().Return(&to).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
+		{
+			name:          "Osaka: blob fee cap too low",
+			config:        osakaChainConfig,
+			expectedError: ErrBlobFeeCapTooLow,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(1 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return([]common.Hash{validBlobHash}).AnyTimes()
+				mockMsg.EXPECT().BlobGasFeeCap().Return(big.NewInt(1)).AnyTimes() // too low
+				mockMsg.EXPECT().To().Return(&to).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
+		{
+			name:          "Osaka: blob fee cap too low when blobGasFeeCap is zero",
+			config:        osakaChainConfig,
+			expectedError: ErrBlobFeeCapTooLow,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(1 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return([]common.Hash{validBlobHash}).AnyTimes()
+				mockMsg.EXPECT().BlobGasFeeCap().Return(big.NewInt(0)).AnyTimes() // zero - skip check
+				mockMsg.EXPECT().To().Return(&to).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
+		// === EIP-7702 Authorization List checks ===
+		{
+			name:          "EIP-7702: setcode tx cannot create contract (to is nil)",
+			config:        pragueChainConfig,
+			expectedError: ErrSetCodeTxCreate,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(1 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().AuthList().Return([]types.SetCodeAuthorization{{}}).AnyTimes() // non-empty
+				mockMsg.EXPECT().To().Return(nil).AnyTimes()                                    // nil to
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
+		{
+			name:          "EIP-7702: empty auth list",
+			config:        pragueChainConfig,
+			expectedError: ErrEmptyAuthList,
+			prefetching:   false,
+			setupMockMsg: func(ctrl *gomock.Controller) *mock_bc.MockMessage {
+				mockMsg := mock_bc.NewMockMessage(ctrl)
+				mockMsg.EXPECT().CheckNonce().Return(true).AnyTimes()
+				mockMsg.EXPECT().ValidatedSender().Return(addr).AnyTimes()
+				mockMsg.EXPECT().Nonce().Return(nonce).AnyTimes()
+				mockMsg.EXPECT().Hash().Return(common.Hash{}).AnyTimes()
+				mockMsg.EXPECT().Gas().Return(gasLimit).AnyTimes()
+				mockMsg.EXPECT().GasPrice().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasFeeCap().Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().GasTipCap().Return(big.NewInt(1 * params.Gkei)).AnyTimes()
+				mockMsg.EXPECT().BlobHashes().Return(nil).AnyTimes()
+				mockMsg.EXPECT().AuthList().Return([]types.SetCodeAuthorization{}).AnyTimes() // empty
+				mockMsg.EXPECT().To().Return(&to).AnyTimes()
+				mockMsg.EXPECT().Value().Return(big.NewInt(100)).AnyTimes()
+				mockMsg.EXPECT().Data().Return(nil).AnyTimes()
+				mockMsg.EXPECT().EffectiveGasPrice(gomock.Any(), gomock.Any()).Return(big.NewInt(25 * params.Gkei)).AnyTimes()
+				return mockMsg
+			},
+			setupStateMockCall: func(m *mock_vm.MockStateDB) {
+				m.EXPECT().GetNonce(addr).Return(nonce)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockStateDB := mock_vm.NewMockStateDB(mockCtrl)
+			tt.setupStateMockCall(mockStateDB)
+
+			mockMsg := tt.setupMockMsg(mockCtrl)
+
+			fork.SetHardForkBlockNumberConfig(tt.config)
+
+			header := &types.Header{
+				Number:     big.NewInt(0),
+				Time:       big.NewInt(0),
+				BlockScore: big.NewInt(0),
+				BaseFee:    baseFee,
+			}
+			// Create block context manually to avoid nil chain issue
+			blockContext := vm.BlockContext{
+				CanTransfer: CanTransfer,
+				Transfer:    Transfer,
+				GetHash:     func(n uint64) common.Hash { return common.Hash{} },
+				Coinbase:    common.Address{},
+				BlockNumber: new(big.Int).Set(header.Number),
+				Time:        new(big.Int).Set(header.Time),
+				BlockScore:  new(big.Int).Set(header.BlockScore),
+				BaseFee:     baseFee,
+				BlobBaseFee: blobBaseFee,
+			}
+
+			txContext := NewEVMTxContext(mockMsg, header, tt.config)
+			evm := vm.NewEVM(blockContext, txContext, mockStateDB, tt.config, &vm.Config{Prefetching: tt.prefetching})
+
+			st := NewStateTransition(evm, mockMsg)
+			err := st.preCheck()
+
+			if tt.expectedError != nil {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError.Error())
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

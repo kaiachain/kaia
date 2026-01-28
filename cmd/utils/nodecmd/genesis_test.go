@@ -23,6 +23,7 @@
 package nodecmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -165,28 +166,31 @@ var customGenesisTests = []struct {
 // work properly.
 func TestCustomGenesis(t *testing.T) {
 	for i, tt := range customGenesisTests {
-		// Create a temporary data directory to use and inspect later
-		datadir := tmpdir(t)
-		defer os.RemoveAll(datadir)
+		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
+			// Create a temporary data directory to use and inspect later
+			datadir := tmpdir(t)
+			defer os.RemoveAll(datadir)
 
-		// Initialize the data directory with the custom genesis block
-		json := filepath.Join(datadir, "genesis.json")
-		if err := os.WriteFile(json, []byte(tt.genesis), 0o600); err != nil {
-			t.Fatalf("test %d: failed to write genesis file: %v", i, err)
-		}
-		runKaia(t, "kaia-test", "--datadir", datadir, "--verbosity", "0", "init", json).WaitExit()
+			// Initialize the data directory with the custom genesis block
+			json := filepath.Join(datadir, "genesis.json")
+			if err := os.WriteFile(json, []byte(tt.genesis), 0o600); err != nil {
+				t.Fatalf("test %d: failed to write genesis file: %v", i, err)
+			}
+			runKaia(t, "kaia-test", "--datadir", datadir, "--verbosity", "0", "init", json).WaitExit()
 
-		// Query the custom genesis block
-		if len(tt.query) != len(tt.result) {
-			t.Errorf("Test cases are wrong, #query: %v, #result, %v", len(tt.query), len(tt.result))
-		}
-		for idx, query := range tt.query {
-			kaia := runKaia(t,
-				"kaia-test", "--datadir", datadir, "--maxconnections", "0", "--port", "0",
-				"--nodiscover", "--nat", "none", "--ipcdisable", "--ntp.disable",
-				"--exec", query, "--verbosity", "0", "console")
-			kaia.ExpectRegexp(tt.result[idx])
-			kaia.ExpectExit()
-		}
+			// Query the custom genesis block
+			if len(tt.query) != len(tt.result) {
+				t.Errorf("Test cases are wrong, #query: %v, #result, %v", len(tt.query), len(tt.result))
+			}
+			for idx, query := range tt.query {
+				kaia := runKaia(t,
+					"kaia-test", "--datadir", datadir, "--maxconnections", "0", "--port", "0",
+					"--nodiscover", "--nat", "none", "--ipcdisable", "--ntp.disable", "--networkid", "123",
+					"--exec", query, "--verbosity", "0", "console")
+				t.Log("query", query, "expected result", tt.result[idx], "actual result", kaia.StderrText())
+				kaia.ExpectRegexp(tt.result[idx])
+				kaia.ExpectExit()
+			}
+		})
 	}
 }

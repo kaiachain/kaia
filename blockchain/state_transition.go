@@ -29,9 +29,11 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
 )
@@ -74,6 +76,8 @@ type StateTransition struct {
 }
 
 // Message represents a message sent to a contract.
+//
+//go:generate mockgen -destination=./mocks/message_mock.go -package=mock_bc github.com/kaiachain/kaia/blockchain Message
 type Message interface {
 	// ValidatedSender returns the sender of the transaction.
 	// It should be set by calling AsMessageAccountKeyPicker().
@@ -119,12 +123,14 @@ type Message interface {
 	Type() types.TxType
 
 	// Validate performs additional validation for each transaction type
-	Validate(stateDB types.StateDB, currentBlockNumber uint64) error
+	Validate(stateDB types.StateDB, signer types.Signer, currentBlockNumber uint64, checkMutableValue bool) error
 
 	// Execute performs execution of the transaction according to the transaction type.
 	Execute(vm types.VM, stateDB types.StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) ([]byte, uint64, error)
 
 	AccessList() types.AccessList
+	BlobHashes() []common.Hash
+	BlobGasFeeCap() *big.Int
 	AuthList() []types.SetCodeAuthorization
 }
 
@@ -228,43 +234,138 @@ func (st *StateTransition) to() common.Address {
 	return *st.msg.To()
 }
 
+func (st *StateTransition) checkBalanceOverflow(address common.Address, balance *big.Int) error {
+	_, overflow := uint256.FromBig(balance)
+	if overflow {
+		return fmt.Errorf("%w: address %v required balance exceeds 256 bits", ErrInsufficientFunds, address.Hex())
+	}
+	return nil
+}
+
+func (st *StateTransition) checkFeePayerBalance(balanceCheck *big.Int, checkOverflow, checkWithValue bool) error {
+	feePayerAddress := st.msg.ValidatedFeePayer()
+	actualBalance := st.state.GetBalance(feePayerAddress)
+	balanceCheckWithValue := new(big.Int).Add(balanceCheck, st.msg.Value())
+	if checkOverflow {
+		balance := balanceCheck
+		if checkWithValue {
+			balance = balanceCheckWithValue
+		}
+		if err := st.checkBalanceOverflow(feePayerAddress, balance); err != nil {
+			return err
+		}
+	}
+	if actualBalance.Cmp(balanceCheck) < 0 {
+		logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", feePayerAddress.String(),
+			"feePayerBalance", actualBalance.Uint64(), "feePayerFee", balanceCheck.Uint64(),
+			"txHash", st.msg.Hash().String())
+		return errInsufficientBalanceForGasFeePayer
+	} else if checkWithValue && actualBalance.Cmp(balanceCheckWithValue) < 0 { // Error due to insufficient Value must be vm.ErrInsufficientBalance.
+		return vm.ErrInsufficientBalance
+	}
+	return nil
+}
+
+func (st *StateTransition) checkSenderBalance(balanceCheck *big.Int, checkOverflow, checkWithValue bool) error {
+	senderAddress := st.msg.ValidatedSender()
+	actualBalance := st.state.GetBalance(senderAddress)
+	balanceCheckWithValue := new(big.Int).Add(balanceCheck, st.msg.Value())
+	if checkOverflow {
+		balance := balanceCheck
+		if checkWithValue {
+			balance = balanceCheckWithValue
+		}
+		if err := st.checkBalanceOverflow(senderAddress, balance); err != nil {
+			return err
+		}
+	}
+	if actualBalance.Cmp(balanceCheck) < 0 {
+		logger.Debug(errInsufficientBalanceForGas.Error(), "sender", senderAddress.String(),
+			"senderBalance", actualBalance.Uint64(), "senderFee", balanceCheck.Uint64(),
+			"txHash", st.msg.Hash().String())
+		return errInsufficientBalanceForGas
+	} else if checkWithValue && actualBalance.Cmp(balanceCheckWithValue) < 0 { // Error due to insufficient Value must be vm.ErrInsufficientBalance.
+		return vm.ErrInsufficientBalance
+	}
+	return nil
+}
+
 func (st *StateTransition) buyGas() error {
-	// st.gasPrice : gasPrice user set before magma hardfork
-	// st.gasPrice : BaseFee after magma hardfork
+	var (
+		validatedFeePayer = st.msg.ValidatedFeePayer()
+		validatedSender   = st.msg.ValidatedSender()
+		feeRatio, _       = st.msg.FeeRatio()
+		isOsaka           = st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka
+	)
+
+	// mgval is the maximum gas fee that can actually be paid in the worst case (e.g., revert)
+	// st.gasPrice = tx.gasPrice (before Magma) or effectiveGasPrice (since Magma)
 	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
 
-	validatedFeePayer := st.msg.ValidatedFeePayer()
-	validatedSender := st.msg.ValidatedSender()
-	feeRatio, isRatioTx := st.msg.FeeRatio()
-	if isRatioTx {
+	// feeCap is the maximum gas fee the sender was willing to pay
+	// GasFeeCap = tx.maxFeePerGas (if exists) or tx.gasPrice
+	feeCap := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.msg.GasFeeCap())
+
+	if isOsaka {
+		if blobGas := st.blobGasUsed(); blobGas > 0 {
+			// Check that the user has enough funds to cover blobGasUsed * tx.BlobGasFeeCap
+			blobFeeCap := new(big.Int).SetUint64(blobGas)
+			blobFeeCap.Mul(blobFeeCap, st.msg.BlobGasFeeCap())
+			feeCap.Add(feeCap, blobFeeCap)
+			// Pay for blobGasUsed * actual blob fee
+			blobFee := new(big.Int).SetUint64(blobGas)
+			blobFee.Mul(blobFee, st.evm.Context.BlobBaseFee)
+			mgval.Add(mgval, blobFee)
+		}
+	}
+
+	if validatedFeePayer == validatedSender {
+		// 1. Non fee-delegated tx
+		// 2. FeeDelegatedWithRatio with sender == feePayer
+		// 3. FeeDelegated          with sender == feePayer
+
+		// Before Osaka, only the check of the amount to be deducted is applied.
+		// Therefore, all options are false.
+		checkOverflow, checkWithValue := false, false
+		balanceCheck := mgval
+		if isOsaka {
+			// Overflow will be checked from osaka onwards.
+			// A value check is also performed.
+			checkOverflow, checkWithValue = true, true
+			balanceCheck = feeCap
+		}
+		if err := st.checkFeePayerBalance(balanceCheck, checkOverflow, checkWithValue); err != nil {
+			return err
+		}
+		st.state.SubBalance(validatedFeePayer, mgval)
+	} else {
+		// 1. FeeDelegatedWithRatio with sender != feePayer
+		// 2. FeeDelegated          with sender != feePayer
+
+		// Before Osaka, only the check of the amount to be deducted is applied.
+		// Therefore, all options are false.
+		feePayerCheckOverflow, feePayerCheckWithValue := false, false
+		senderCheckOverflow, senderCheckWithValue := false, false
+
+		// For 2, feeRatio will be always 100 (feePayer pays all fee)
 		feePayerFee, senderFee := types.CalcFeeWithRatio(feeRatio, mgval)
+		feePayerBalanceCheck, senderBalanceCheck := feePayerFee, senderFee
+		if isOsaka {
+			// Overflow will be checked from osaka onwards.
+			// Since the value is paid entirely by the sender, value checks only apply to sender.
+			feePayerCheckOverflow, feePayerCheckWithValue = true, false
+			senderCheckOverflow, senderCheckWithValue = true, true
 
-		if st.state.GetBalance(validatedFeePayer).Cmp(feePayerFee) < 0 {
-			logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
-				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", feePayerFee.Uint64(),
-				"txHash", st.msg.Hash().String())
-			return errInsufficientBalanceForGasFeePayer
+			feePayerBalanceCheck, senderBalanceCheck = types.CalcFeeWithRatio(feeRatio, feeCap)
 		}
-
-		if st.state.GetBalance(validatedSender).Cmp(senderFee) < 0 {
-			logger.Debug(errInsufficientBalanceForGas.Error(), "sender", validatedSender.String(),
-				"senderBalance", st.state.GetBalance(validatedSender).Uint64(), "senderFee", senderFee.Uint64(),
-				"txHash", st.msg.Hash().String())
-			return errInsufficientBalanceForGas
+		if err := st.checkFeePayerBalance(feePayerBalanceCheck, feePayerCheckOverflow, feePayerCheckWithValue); err != nil {
+			return err
 		}
-
+		if err := st.checkSenderBalance(senderBalanceCheck, senderCheckOverflow, senderCheckWithValue); err != nil {
+			return err
+		}
 		st.state.SubBalance(validatedFeePayer, feePayerFee)
 		st.state.SubBalance(validatedSender, senderFee)
-	} else {
-		// to make a short circuit, process the special case feeRatio == MaxFeeRatio
-		if st.state.GetBalance(validatedFeePayer).Cmp(mgval) < 0 {
-			logger.Debug(errInsufficientBalanceForGasFeePayer.Error(), "feePayer", validatedFeePayer.String(),
-				"feePayerBalance", st.state.GetBalance(validatedFeePayer).Uint64(), "feePayerFee", mgval.Uint64(),
-				"txHash", st.msg.Hash().String())
-			return errInsufficientBalanceForGasFeePayer
-		}
-
-		st.state.SubBalance(validatedFeePayer, mgval)
 	}
 
 	st.gas += st.msg.Gas()
@@ -322,6 +423,38 @@ func (st *StateTransition) preCheck() error {
 			if st.msg.GasFeeCap().Cmp(st.evm.Context.BaseFee) < 0 {
 				return fmt.Errorf("%w: address %v, maxFeePerGas: %s, baseFee: %s", ErrFeeCapTooLow,
 					st.msg.ValidatedSender().Hex(), st.msg.GasFeeCap(), st.evm.Context.BaseFee)
+			}
+		}
+	}
+
+	// Check the blob version validity
+	if st.msg.BlobHashes() != nil {
+		// The to field of a blob tx type is mandatory, and a `BlobTx` transaction internally
+		// has it as a non-nillable value, so any msg derived from blob transaction has it non-nil.
+		// However, messages created through RPC (eth_call) don't have this restriction.
+		if st.msg.To() == nil {
+			return ErrBlobTxCreate
+		}
+		if len(st.msg.BlobHashes()) == 0 {
+			return ErrMissingBlobHashes
+		}
+		if st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka && len(st.msg.BlobHashes()) > params.BlobTxMaxBlobs {
+			return ErrTooManyBlobs
+		}
+		for i, hash := range st.msg.BlobHashes() {
+			if !kzg4844.IsValidVersionedHash(hash[:]) {
+				return fmt.Errorf("blob %d has invalid hash version", i)
+			}
+		}
+	}
+	// Check that the user is paying at least the current blob fee
+	if st.evm.ChainConfig().Rules(st.evm.Context.BlockNumber).IsOsaka {
+		if st.blobGasUsed() > 0 {
+			// This will panic if blobBaseFee is nil, but blobBaseFee presence
+			// is verified as part of header validation.
+			if st.msg.BlobGasFeeCap().Cmp(st.evm.Context.BlobBaseFee) < 0 {
+				return fmt.Errorf("%w: address %v blobGasFeeCap: %v, blobBaseFee: %v", ErrBlobFeeCapTooLow,
+					st.msg.ValidatedSender().Hex(), st.msg.BlobGasFeeCap(), st.evm.Context.BlobBaseFee)
 			}
 		}
 	}
@@ -578,7 +711,7 @@ func (st *StateTransition) validateAuthorization(auth *types.SetCodeAuthorizatio
 		return authority, fmt.Errorf("%w: %v", ErrAuthorizationInvalidSignature, err)
 	}
 	// Check the authority account
-	//  1) doesn't have code or has exisiting delegation
+	//  1) doesn't have code or has existing delegation
 	//  2) matches the auth's nonce
 	//
 	// Note it is added to the access list even if the authorization is invalid.
@@ -664,6 +797,11 @@ func (st *StateTransition) returnGas() {
 // gasUsed returns the amount of gas used up by the state transition.
 func (st *StateTransition) gasUsed() uint64 {
 	return st.initialGas - st.gas
+}
+
+// blobGasUsed returns the amount of blob gas used by the message.
+func (st *StateTransition) blobGasUsed() uint64 {
+	return uint64(len(st.msg.BlobHashes()) * params.BlobTxBlobGasPerBlob)
 }
 
 // FloorDataGas calculates the minimum gas required for a transaction

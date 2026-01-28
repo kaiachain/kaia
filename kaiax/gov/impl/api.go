@@ -87,46 +87,40 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 		blocknum = num.Uint64()
 	}
 
-	latestConfig := g.Chain.Config()
+	ret := g.Chain.Config().Copy()
 	pset := g.GetParamSet(blocknum)
-	rule := latestConfig.Rules(new(big.Int).SetUint64(blocknum))
+	rule := ret.Rules(new(big.Int).SetUint64(blocknum))
 	pset = patchDeprecatedParams(pset, rule)
-	config := pset.ToGovParamSet().ToChainConfig()
-	config.ChainID = latestConfig.ChainID
-	config.IstanbulCompatibleBlock = latestConfig.IstanbulCompatibleBlock
-	config.LondonCompatibleBlock = latestConfig.LondonCompatibleBlock
-	config.EthTxTypeCompatibleBlock = latestConfig.EthTxTypeCompatibleBlock
-	config.MagmaCompatibleBlock = latestConfig.MagmaCompatibleBlock
-	config.KoreCompatibleBlock = latestConfig.KoreCompatibleBlock
-	config.ShanghaiCompatibleBlock = latestConfig.ShanghaiCompatibleBlock
-	config.CancunCompatibleBlock = latestConfig.CancunCompatibleBlock
-	config.KaiaCompatibleBlock = latestConfig.KaiaCompatibleBlock
-	config.Kip103CompatibleBlock = latestConfig.Kip103CompatibleBlock
-	config.Kip103ContractAddress = latestConfig.Kip103ContractAddress
-	config.Kip160CompatibleBlock = latestConfig.Kip160CompatibleBlock
-	config.Kip160ContractAddress = latestConfig.Kip160ContractAddress
-	config.RandaoCompatibleBlock = latestConfig.RandaoCompatibleBlock
-	config.PragueCompatibleBlock = latestConfig.PragueCompatibleBlock
-	return config
-}
 
-// checkStateForStakingInfo checks the state of block for the given block number for staking info
-func checkStateForStakingInfo(g *GovModule, blockNumber uint64) error {
-	if blockNumber == 0 {
-		return nil
+	// patch governance parameters
+	ret.Istanbul.Epoch = pset.Epoch
+	ret.Istanbul.ProposerPolicy = pset.ProposerPolicy
+	ret.Istanbul.SubGroupSize = pset.CommitteeSize
+	ret.UnitPrice = pset.UnitPrice
+	ret.DeriveShaImpl = int(pset.DeriveShaImpl)
+	ret.Governance = &params.GovernanceConfig{
+		GoverningNode:    pset.GoverningNode,
+		GovernanceMode:   pset.GovernanceMode,
+		GovParamContract: pset.GovParamContract,
+		Reward: &params.RewardConfig{
+			MintingAmount:          pset.MintingAmount,
+			Ratio:                  pset.Ratio,
+			Kip82Ratio:             pset.Kip82Ratio,
+			UseGiniCoeff:           pset.UseGiniCoeff,
+			DeferredTxFee:          pset.DeferredTxFee,
+			StakingUpdateInterval:  pset.StakingUpdateInterval,
+			ProposerUpdateInterval: pset.ProposerUpdateInterval,
+			MinimumStake:           pset.MinimumStake,
+		},
+		KIP71: &params.KIP71Config{
+			LowerBoundBaseFee:         pset.LowerBoundBaseFee,
+			UpperBoundBaseFee:         pset.UpperBoundBaseFee,
+			GasTarget:                 pset.GasTarget,
+			MaxBlockGasUsedForBaseFee: pset.MaxBlockGasUsedForBaseFee,
+			BaseFeeDenominator:        pset.BaseFeeDenominator,
+		},
 	}
-
-	// The staking info at blockNumber is calculated by the state of previous block
-	blockNumber--
-	if !g.Chain.Config().IsKaiaForkEnabled(big.NewInt(int64(blockNumber + 1))) {
-		return nil
-	}
-	header := g.Chain.GetHeaderByNumber(blockNumber)
-	if header == nil {
-		return gov.ErrUnknownBlock
-	}
-	_, err := g.Chain.StateAt(header.Root)
-	return err
+	return ret
 }
 
 func getParams(g *GovModule, num *rpc.BlockNumber) (gov.PartialParamSet, error) {

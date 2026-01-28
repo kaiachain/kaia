@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"reflect"
 	"testing"
 	"time"
 
@@ -95,6 +96,10 @@ func genMapForTxTypes(from TestAccount, to TestAccount, txType types.TxType) (tx
 
 	if txType == types.TxTypeEthereumDynamicFee {
 		valueMap, gas = genMapForDynamicFeeTransaction(from, to, gasPrice, txType)
+	}
+
+	if txType == types.TxTypeEthereumBlob {
+		valueMap, gas = genMapForBlobTransaction(from, to, gasPrice, txType)
 	}
 
 	if txType == types.TxTypeEthereumSetCode {
@@ -460,7 +465,7 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 		authorizationList := []types.SetCodeAuthorization{auth}
 
 		tx := types.NewMessage(reservoir.Addr, &eoaWithCode.Addr, reservoir.GetNonce(), nil, gasLimit,
-			nil, big.NewInt(25*params.Gkei), big.NewInt(25*params.Gkei), nil, false, uint64(0), nil, bcdata.bc.Config().ChainID, authorizationList)
+			nil, big.NewInt(25*params.Gkei), big.NewInt(25*params.Gkei), nil, nil, false, uint64(0), nil, bcdata.bc.Config().ChainID, nil, nil, authorizationList)
 		err = tx.SignWithKeys(signer, reservoir.Keys)
 		assert.Equal(t, nil, err)
 
@@ -509,7 +514,7 @@ func TestValidationPoolInsertPrague(t *testing.T) {
 			}
 
 			err = txpool.AddRemote(tx)
-			assert.Equal(t, expectedErr, err, txType, invalidCase.Name)
+			assert.Equal(t, expectedErr, err, txType.String(), invalidCase.Name)
 			if expectedErr == nil {
 				reservoir.Nonce += 1
 			}
@@ -546,7 +551,7 @@ func TestValidationBlockTx(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Osaka"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -630,7 +635,7 @@ func TestValidationBlockTx(t *testing.T) {
 			}
 
 			receipt, err := applyTransaction(t, bcdata, tx)
-			assert.Equal(t, expectedErr, err)
+			assert.Equal(t, expectedErr, err, txType.String(), invalidCase.Name)
 			if expectedErr == nil {
 				assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 			}
@@ -641,6 +646,10 @@ func TestValidationBlockTx(t *testing.T) {
 type invalidCasesFn func(bcdata *BCData, txType types.TxType, values txValueMap, addr common.Address) (txValueMap, error)
 
 func unsupportedTxType(bcdata *BCData, txType types.TxType, values txValueMap, _ common.Address) (txValueMap, error) {
+	if txType == types.TxTypeEthereumBlob &&
+		!bcdata.bc.Config().IsOsakaForkEnabled(bcdata.bc.CurrentBlock().Number()) {
+		return values, types.ErrTxTypeNotSupported
+	}
 	if txType == types.TxTypeEthereumSetCode &&
 		!bcdata.bc.Config().IsPragueForkEnabled(bcdata.bc.CurrentBlock().Number()) {
 		return values, types.ErrTxTypeNotSupported
@@ -776,6 +785,10 @@ func executeToEOAWithoutCode(bcdata *BCData, txType types.TxType, values txValue
 
 // keyUpdateFromEOAWithCode changes the sender of key update txs to an EOA with code address.
 func keyUpdateFromEOAWithCode(bcdata *BCData, txType types.TxType, values txValueMap, EOAWithCode common.Address) (txValueMap, error) {
+	if values, err := unsupportedTxType(bcdata, txType, values, EOAWithCode); err != nil {
+		return values, err
+	}
+
 	txType = toBasicType(txType)
 	if txType == types.TxTypeAccountUpdate {
 		values[types.TxValueKeyFrom] = EOAWithCode
@@ -1040,7 +1053,7 @@ func TestInvalidBalance(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Osaka"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1434,7 +1447,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Osaka"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1463,11 +1476,18 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	testAcc, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
 	assert.Equal(t, nil, err)
 
+	// test account for blob tx will be lack of KAIA
+	testAccBlob, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
+	assert.Equal(t, nil, err)
+
 	gasLimit := uint64(100000000000)
 	gasPrice := big.NewInt(25 * params.Gkei)
 	amount := uint64(25 * params.Gkei)
 	cost := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), gasPrice)
 	cost.Add(cost, new(big.Int).SetUint64(amount))
+	blobGasPrice := new(big.Int).Mul(gasPrice, new(big.Int).SetUint64(params.BlobBaseFeeMultiplier))
+	blobFee := new(big.Int).Mul(blobGasPrice, new(big.Int).SetUint64(params.BlobTxBlobGasPerBlob)) // expect 1 blob
+	costBlob := new(big.Int).Add(cost, blobFee)
 
 	// deploy a contract for contract execution tx type
 	{
@@ -1523,11 +1543,36 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 		reservoir.AddNonce()
 	}
 
+	// generate a test account for blob tx with a specific amount of KAIA
+	{
+		var txs types.Transactions
+
+		valueMapForCreation, _ := genMapForTxTypes(reservoir, testAccBlob, types.TxTypeValueTransfer)
+		valueMapForCreation[types.TxValueKeyAmount] = costBlob
+
+		tx, err := types.NewTransactionWithMap(types.TxTypeValueTransfer, valueMapForCreation)
+		assert.Equal(t, nil, err)
+
+		err = tx.SignWithKeys(signer, reservoir.Keys)
+		assert.Equal(t, nil, err)
+
+		txs = append(txs, tx)
+
+		if err := bcdata.GenABlockWithTransactions(accountMap, txs, prof); err != nil {
+			t.Fatal(err)
+		}
+		reservoir.AddNonce()
+	}
+
 	// test for all tx types
 	for _, testTxType := range testTxTypes {
 		txType := testTxType.txType
 
 		if !txType.IsFeeDelegatedTransaction() {
+			testAcc := testAcc
+			if txType == types.TxTypeEthereumBlob {
+				testAcc = testAccBlob
+			}
 			// tx with a specific amount or a gasLimit requiring more KAIA than the sender has.
 			{
 				var expectedErr error
@@ -1674,7 +1719,7 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 					valueMap[types.TxValueKeyTo] = contract.Addr
 				}
 				valueMap[types.TxValueKeyFeePayer] = testAcc.Addr
-				valueMap[types.TxValueKeyGasLimit] = gasLimit + (amount / gasPrice.Uint64())
+				valueMap[types.TxValueKeyGasLimit] = gasLimit
 
 				tx, err := types.NewTransactionWithMap(txType, valueMap)
 				assert.Equal(t, nil, err)
@@ -1835,7 +1880,7 @@ func TestValidationTxSizeAfterRLP(t *testing.T) {
 		tx, err := types.NewTxInternalData(i)
 		if err == nil {
 			// Since this test is for payload size, tx types without payload field will not be tested.
-			if _, ok := tx.(types.TxInternalDataPayload); ok {
+			if _, found := reflect.TypeOf(tx).Elem().FieldByName("Payload"); found {
 				testTxTypes = append(testTxTypes, i)
 			}
 		}
@@ -1999,7 +2044,7 @@ func TestValidationTxSizeAfterRLPPrague(t *testing.T) {
 		tx, err := types.NewTxInternalData(i)
 		if err == nil {
 			// Since this test is for payload size, tx types without payload field will not be tested.
-			if _, ok := tx.(types.TxInternalDataPayload); ok {
+			if _, found := reflect.TypeOf(tx).Elem().FieldByName("Payload"); found {
 				testTxTypes = append(testTxTypes, i)
 			}
 		}
@@ -2171,7 +2216,7 @@ func TestValidationPoolResetAfterSenderKeyChange(t *testing.T) {
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
-	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Prague"], nil)
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Osaka"], nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -19,10 +19,7 @@
 package types
 
 import (
-	"bytes"
-	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -175,39 +172,15 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetRoleTypeForValidation
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetPayload() []byte {
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataFeeDelegatedSmartContractDeploy)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.From == ta.From &&
-		bytes.Equal(t.Payload, ta.Payload) &&
-		t.HumanReadable == ta.HumanReadable &&
-		t.TxSignatures.equal(ta.TxSignatures) &&
-		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignatures.equal(ta.FeePayerSignatures) &&
-		t.CodeFormat == ta.CodeFormat
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -215,20 +188,16 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetTo() *common.Address {
 	return t.Recipient
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetFrom() common.Address {
 	return t.From
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetHash() *common.Hash {
-	return t.Hash
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetFeePayer() common.Address {
@@ -243,7 +212,7 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) GetFeePayerRawSignatureV
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
@@ -253,54 +222,6 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SetSignature(s TxSignatu
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SetFeePayerSignatures(s TxSignatures) {
 	t.FeePayerSignatures = s
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) String() string {
-	var to common.Address
-	if t.Recipient != nil {
-		to = *t.Recipient
-	} else {
-		to = crypto.CreateAddress(t.From, t.AccountNonce)
-	}
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	To:            %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Value:         %#x
-	Data:          %x
-	HumanReadable: %v
-	CodeFormat:    %s
-	Signature:     %s
-	FeePayer:      %s
-	FeePayerSig:   %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		to.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Amount,
-		common.Bytes2Hex(t.Payload),
-		t.HumanReadable,
-		t.CodeFormat.String(),
-		t.TxSignatures.string(),
-		t.FeePayer.String(),
-		t.FeePayerSignatures.string(),
-		enc)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
@@ -345,19 +266,8 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SerializeForSignToBytes(
 	return b
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-		t.HumanReadable,
-		t.CodeFormat,
-	}
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SenderTxHash() common.Hash {
@@ -383,40 +293,34 @@ func (t *TxInternalDataFeeDelegatedSmartContractDeploy) SenderTxHash() common.Ha
 	return h
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	var to common.Address
-	if t.Recipient != nil {
-		return kerrors.ErrInvalidContractAddress
-	} else {
-		to = crypto.CreateAddress(t.From, t.AccountNonce)
-	}
-	if common.IsPrecompiledContractAddress(to, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-		return kerrors.ErrPrecompiledContractAddress
-	}
-	if t.HumanReadable {
-		return kerrors.ErrHumanReadableNotSupported
-	}
-	// Fail if the codeFormat is invalid.
-	if !t.CodeFormat.Validate() {
-		return kerrors.ErrInvalidCodeFormat
-	}
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
+	if !onlyMutableChecks {
+		var to common.Address
+		if t.Recipient != nil {
+			return kerrors.ErrInvalidContractAddress
+		} else {
+			to = crypto.CreateAddress(t.From, t.AccountNonce)
+		}
+		if common.IsPrecompiledContractAddress(to, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+			return kerrors.ErrPrecompiledContractAddress
+		}
+		if t.HumanReadable {
+			return kerrors.ErrHumanReadableNotSupported
+		}
+		// Fail if the codeFormat is invalid.
+		if !t.CodeFormat.Validate() {
+			return kerrors.ErrInvalidCodeFormat
+		}
+	}
 	// Fail if the address is already created.
 	if t.Recipient != nil && stateDB.Exist(*t.Recipient) {
 		return kerrors.ErrAccountAlreadyExists
 	}
 	return nil
-}
-
-func (t *TxInternalDataFeeDelegatedSmartContractDeploy) FillContractAddress(from common.Address, r *Receipt) {
-	if t.Recipient == nil {
-		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce)
-	} else {
-		r.ContractAddress = *t.Recipient
-	}
 }
 
 func (t *TxInternalDataFeeDelegatedSmartContractDeploy) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

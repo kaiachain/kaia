@@ -19,14 +19,12 @@
 package core
 
 import (
-	"encoding/hex"
 	"math/big"
+	"math/rand"
 	"testing"
 	"time"
 
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,101 +33,67 @@ func TestVrank(t *testing.T) {
 		N            = 6
 		quorum       = 4
 		committee, _ = genValidators(N)
-		view         = istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)}
-		msg          = &istanbul.Subject{View: &view}
-		vrank        = NewVrank(view, committee)
-
-		expectedAssessList  []uint8
-		expectedLateCommits []time.Duration
+		testRound    = uint64(2)
+		view         = istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(int64(testRound))}
+		vrank        = NewVrank()
 	)
 
-	committee = valset.NewAddressSet(committee).List() // sort it
-	for i := 0; i < quorum; i++ {
-		vrank.AddCommit(msg, committee[i])
-		expectedAssessList = append(expectedAssessList, vrankArrivedEarly)
-	}
-	vrank.HandleCommitted(view.Sequence)
-	for i := quorum; i < N; i++ {
-		vrank.AddCommit(msg, committee[i])
-		expectedAssessList = append(expectedAssessList, vrankArrivedLate)
-		expectedLateCommits = append(expectedLateCommits, vrank.commitArrivalTimeMap[committee[i]])
-	}
+	vrank.StartTimer()
+	vrank.SetLatestView(view, committee, quorum)
+	time.Sleep(1 * time.Millisecond)
 
-	bitmap, late := vrank.Bitmap(), vrank.LateCommits()
-	assert.Equal(t, hex.EncodeToString(compress(expectedAssessList)), bitmap)
-	assert.Equal(t, expectedLateCommits, late)
-}
+	// Simulate messages for each round up to testRound
+	for round := uint64(0); round <= testRound; round++ {
+		for i := 0; i < quorum; i++ {
+			r := (1 + time.Duration(rand.Int63n(10))) * time.Millisecond
+			time.Sleep(r)
+			vrank.AddPreprepare(committee[i], round, time.Now())
+			time.Sleep(r)
+			vrank.AddCommit(committee[i], round, time.Now())
+		}
 
-func TestVrankAssessBatch(t *testing.T) {
-	arr := []time.Duration{0, 4, 1, vrankNotArrivedPlaceholder, 2}
-	threshold := time.Duration(2)
-	expected := []uint8{
-		vrankArrivedEarly, vrankArrivedLate, vrankArrivedEarly, vrankNotArrived, vrankArrivedEarly,
-	}
-	assert.Equal(t, expected, assessBatch(arr, threshold))
-}
+		// late messages
+		for i := quorum; i < N; i++ {
+			r := (1 + time.Duration(rand.Int63n(10))) * time.Millisecond
+			time.Sleep(r)
+			vrank.AddPreprepare(committee[i], round, time.Now())
+			time.Sleep(r)
+			vrank.AddCommit(committee[i], round, time.Now())
+		}
 
-func TestVrankSerialize(t *testing.T) {
-	var (
-		N            = 6
-		committee, _ = genValidators(N)
-		timeMap      = make(map[common.Address]time.Duration)
-		expected     = make([]time.Duration, len(committee))
-	)
-
-	committee = valset.NewAddressSet(committee).List() // sort it
-	for i, val := range committee {
-		t := time.Duration((i * 100) * int(time.Millisecond))
-		timeMap[val] = t
-		expected[i] = t
+		// round change messages (not for round 0)
+		if round > 0 {
+			for i := 0; i < N; i++ {
+				r := time.Duration(round*10+uint64(rand.Int63n(10))) * time.Millisecond
+				vrank.AddRoundChange(committee[i], round, time.Now().Add(r))
+			}
+			r := time.Duration(round*10+uint64(rand.Int63n(10))) * time.Millisecond
+			vrank.AddMyRoundChange(round, time.Now().Add(r))
+		}
 	}
 
-	assert.Equal(t, expected, serialize(committee, timeMap))
-}
+	vrank.Log()
 
-func TestVrankCompress(t *testing.T) {
-	tcs := []struct {
-		input    []uint8
-		expected []byte
-	}{
-		{
-			input:    []uint8{2},
-			expected: []byte{0b10_000000},
-		},
-		{
-			input:    []uint8{2, 1},
-			expected: []byte{0b10_01_0000},
-		},
-		{
-			input:    []uint8{0, 2, 1},
-			expected: []byte{0b00_10_01_00},
-		},
-		{
-			input:    []uint8{0, 2, 1, 1},
-			expected: []byte{0b00_10_01_01},
-		},
-		{
-			input:    []uint8{1, 2, 1, 2, 1},
-			expected: []byte{0b01_10_01_10, 0b01_000000},
-		},
-		{
-			input:    []uint8{1, 2, 1, 2, 1, 2},
-			expected: []byte{0b01_10_01_10, 0b01_10_0000},
-		},
-		{
-			input:    []uint8{1, 2, 1, 2, 1, 2, 1},
-			expected: []byte{0b01_10_01_10, 0b01_10_01_00},
-		},
-		{
-			input:    []uint8{1, 2, 1, 2, 1, 2, 0, 2},
-			expected: []byte{0b01_10_01_10, 0b01_10_00_10},
-		},
-		{
-			input:    []uint8{1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1},
-			expected: []byte{0b01011010, 0b01011010, 0b01011010, 0b01011010, 0b01010000},
-		},
-	}
-	for i, tc := range tcs {
-		assert.Equal(t, tc.expected, compress(tc.input), "tc %d failed", i)
-	}
+	assert.NotEqual(t, vrank.timestamps[testRound].preprepareArrivalTime, int64(0))
+
+	firstCommit, lastCommit, quorumCommit, avgCommitWithinQuorum := vrank.calcMetrics()
+	assert.NotEqual(t, firstCommit, int64(0))
+	assert.NotEqual(t, quorumCommit, int64(0))
+	assert.NotEqual(t, avgCommitWithinQuorum, int64(0))
+	assert.NotEqual(t, lastCommit, int64(0))
+	// Count entries in sync.Map
+	commitCount := 0
+	vrank.timestamps[testRound].commitArrivalTimeMap.Range(func(_, _ any) bool {
+		commitCount++
+		return true
+	})
+	assert.Equal(t, N, commitCount)
+
+	seq, round, preprepareArrivalTimes, commitArrivalTimes, myRoundChangeTimes, roundChangeArrivalTimes := vrank.buildLogData()
+	assert.Equal(t, view.Sequence.Int64(), seq)
+	assert.Equal(t, view.Round.Int64(), round)
+	t.Logf("preprepareArrivalTimes: %v", preprepareArrivalTimes)
+	t.Logf("commitArrivalTimes: %v", commitArrivalTimes)
+	t.Logf("myRoundChangeTimes: %v", myRoundChangeTimes)
+	t.Logf("roundChangeArrivalTimes: %v", roundChangeArrivalTimes)
 }

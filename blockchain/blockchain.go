@@ -31,6 +31,7 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -276,9 +277,9 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		return nil, err
 	}
 
-	bc.validator = NewBlockValidator(chainConfig, bc, engine)
-	bc.prefetcher = newStatePrefetcher(chainConfig, bc, engine)
-	bc.processor = NewStateProcessor(chainConfig, bc, engine)
+	bc.validator = NewBlockValidator(chainConfig, bc)
+	bc.prefetcher = newStatePrefetcher(bc)
+	bc.processor = NewStateProcessor(chainConfig, bc)
 
 	var err error
 	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.getProcInterrupt)
@@ -374,11 +375,9 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 			"dir", bc.cacheConfig.TrieNodeCacheConfig.FastCacheFileDir,
 			"period", bc.cacheConfig.TrieNodeCacheConfig.FastCacheSavePeriod)
 		trieDB := bc.stateCache.TrieDB()
-		bc.wg.Add(1)
-		go func() {
-			defer bc.wg.Done()
+		bc.wg.Go(func() {
 			trieDB.SaveCachePeriodically(bc.cacheConfig.TrieNodeCacheConfig, bc.quit)
-		}()
+		})
 	}
 
 	return bc, nil
@@ -1353,6 +1352,9 @@ type TransactionLookup struct {
 // writeBlock writes block to persistent database.
 // If write through caching is enabled, it also writes block to the cache.
 func (bc *BlockChain) writeBlock(block *types.Block) {
+	// Remove the sidecars from the blob transactions.
+	// This prevents the sidecars from being saved to the database.
+	block = block.WithoutBlobSidecars()
 	bc.db.WriteBlock(block)
 }
 
@@ -1459,9 +1461,7 @@ func (bc *BlockChain) triesInMemory() uint64 {
 func (bc *BlockChain) gcCachedNodeLoop() {
 	trieDB := bc.stateCache.TrieDB()
 
-	bc.wg.Add(1)
-	go func() {
-		defer bc.wg.Done()
+	bc.wg.Go(func() {
 		for {
 			select {
 			case block := <-bc.chBlock:
@@ -1490,7 +1490,7 @@ func (bc *BlockChain) gcCachedNodeLoop() {
 				return
 			}
 		}
-	}()
+	})
 }
 
 func (bc *BlockChain) pruneTrieNodeLoop() {
@@ -1498,9 +1498,7 @@ func (bc *BlockChain) pruneTrieNodeLoop() {
 	// ReadPruningMarks(start, limit) is much faster because it only iterates a small range.
 	startNum := uint64(1)
 
-	bc.wg.Add(1)
-	go func() {
-		defer bc.wg.Done()
+	bc.wg.Go(func() {
 		for {
 			select {
 			case num := <-bc.chPrune:
@@ -1523,7 +1521,7 @@ func (bc *BlockChain) pruneTrieNodeLoop() {
 				return
 			}
 		}
-	}()
+	})
 }
 
 func (bc *BlockChain) IsLivePruningRequired() bool {
@@ -1542,7 +1540,7 @@ func isCommitTrieRequired(bc *BlockChain, blockNum uint64) bool {
 
 	if bc.chainConfig.Istanbul != nil {
 		return bc.chainConfig.Istanbul.ProposerPolicy == params.WeightedRandom &&
-			params.IsStakingUpdateInterval(blockNum)
+			blockNum%bc.chainConfig.Governance.Reward.StakingUpdateInterval == 0
 	}
 	return false
 }
@@ -2594,13 +2592,13 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 	badBlockCounter.Inc(1)
 	bc.db.WriteBadBlock(block)
 
-	var receiptString string
+	var receiptString strings.Builder
 	for i, receipt := range receipts {
-		receiptString += fmt.Sprintf("\t %d: tx: %v status: %v gas: %v contract: %v bloom: %x logs: %v\n",
+		receiptString.WriteString(fmt.Sprintf("\t %d: tx: %v status: %v gas: %v contract: %v bloom: %x logs: %v\n",
 			i, receipt.TxHash.Hex(), receipt.Status, receipt.GasUsed, receipt.ContractAddress.Hex(),
-			receipt.Bloom, receipt.Logs)
+			receipt.Bloom, receipt.Logs))
 	}
-	logger.Error(fmt.Sprintf(`########## BAD BLOCK ######### Chain config: %v Number: %v Hash: 0x%x Receipt: %v Error: %v`, bc.chainConfig, block.Number(), block.Hash(), receiptString, err))
+	logger.Error(fmt.Sprintf(`########## BAD BLOCK ######### Chain config: %v Number: %v Hash: 0x%x Receipt: %v Error: %v`, bc.chainConfig, block.Number(), block.Hash(), receiptString.String(), err))
 }
 
 // InsertHeaderChain attempts to insert the given header chain in to the local
@@ -2757,13 +2755,14 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	*/
 
 	blockNumber := header.Number.Uint64()
+	signer := types.MakeSigner(chainConfig, header.Number)
 
 	// validation for each transaction before execution
-	if err := tx.Validate(statedb, blockNumber); err != nil {
+	if err := tx.Validate(statedb, signer, blockNumber, false); err != nil {
 		return nil, nil, err
 	}
 
-	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(chainConfig, header.Number), statedb, blockNumber)
+	msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, blockNumber)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -2802,7 +2801,9 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 
 	receipt := types.NewReceipt(result.VmExecutionStatus, tx.Hash(), result.UsedGas)
 	// if the transaction created a contract, store the creation address in the receipt.
-	msg.FillContractAddress(vmenv.Origin, receipt)
+	if msg.To() == nil {
+		receipt.ContractAddress = crypto.CreateAddress(vmenv.Origin, tx.Nonce())
+	}
 	// Set the receipt logs and create a bloom for filtering
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})

@@ -21,7 +21,6 @@
 // Modified and improved for the Kaia development.
 
 //go:build nacl || js || !cgo || gofuzz
-// +build nacl js !cgo gofuzz
 
 package crypto
 
@@ -48,6 +47,9 @@ func Ecrecover(hash, sig []byte) ([]byte, error) {
 func sigToPub(hash, sig []byte) (*btcec.PublicKey, error) {
 	if len(sig) != SignatureLength {
 		return nil, errors.New("invalid signature")
+	}
+	if len(hash) != DigestLength {
+		return nil, fmt.Errorf("hash is required to be exactly %d bytes (%d)", DigestLength, len(hash))
 	}
 	// Convert to btcec input format with 'recovery id' v at the beginning.
 	btcsig := make([]byte, SignatureLength)
@@ -82,8 +84,8 @@ func SigToPub(hash, sig []byte) (*ecdsa.PublicKey, error) {
 //
 // The produced signature is in the [R || S || V] format where V is 0 or 1.
 func Sign(hash []byte, prv *ecdsa.PrivateKey) ([]byte, error) {
-	if len(hash) != 32 {
-		return nil, fmt.Errorf("hash is required to be exactly 32 bytes (%d)", len(hash))
+	if len(hash) != DigestLength {
+		return nil, fmt.Errorf("hash is required to be exactly %d bytes (%d)", DigestLength, len(hash))
 	}
 	if prv.Curve != btcec.S256() {
 		return nil, errors.New("private key curve is not secp256k1")

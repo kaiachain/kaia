@@ -79,14 +79,7 @@ func (h *headerGovModule) VerifyVote(header *types.Header) error {
 	}
 
 	// check if the voter is in council
-	found := false
-	for _, addr := range council {
-		if addr == vote.Voter() {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !slices.Contains(council, vote.Voter()) {
 		return ErrInvalidKeyValue
 	}
 
@@ -164,10 +157,8 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 			return err
 		}
 
-		for _, addr := range council {
-			if addr == params.GoverningNode {
-				return nil
-			}
+		if slices.Contains(council, params.GoverningNode) {
+			return nil
 		}
 		return ErrGovNodeNotInValSetList
 	case gov.GovernanceGovParamContract:
@@ -205,10 +196,8 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 		if params.GovernanceMode != "single" {
 			return nil
 		}
-		for _, address := range vote.Value().([]common.Address) {
-			if address == params.GoverningNode {
-				return ErrGovNodeInValSetVoteValue
-			}
+		if slices.Contains(vote.Value().([]common.Address), params.GoverningNode) {
+			return ErrGovNodeInValSetVoteValue
 		}
 		return nil
 		// These votes are valid as long as it passes the format checks in NewVoteData(). No more checks here.

@@ -121,7 +121,7 @@ func (fb *filterLocalBackend) BloomStatus() (uint64, uint64) {
 }
 
 func (fb *filterLocalBackend) ServiceFilter(_dummyCtx context.Context, session *bloombits.MatcherSession) {
-	// TODO-Kaia this method should implmentation to support indexed tag in solidity
+	// TODO-Kaia this method should implementation to support indexed tag in solidity
 	//for i := 0; i < bloomFilterThreads; i++ {
 	//	go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, backend.bloomRequests)
 	//}

@@ -359,7 +359,7 @@ func TestTraceCall(t *testing.T) {
 	}
 	for _, testspec := range testSuite {
 		result, err := api.TraceCall(context.Background(), testspec.call, rpc.BlockNumberOrHash{BlockNumber: &testspec.blockNumber}, testspec.config)
-		assert.Equal(t, err, testspec.expectErr)
+		assert.Equal(t, testspec.expectErr, err)
 		assert.Equal(t, result, testspec.expect)
 	}
 }

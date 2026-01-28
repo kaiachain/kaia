@@ -19,10 +19,7 @@
 package types
 
 import (
-	"bytes"
-	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -137,53 +134,6 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetRoleTypeForValidation(
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataFeeDelegatedChainDataAnchoring)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.From == tb.From &&
-		bytes.Equal(t.Payload, tb.Payload) &&
-		t.TxSignatures.equal(tb.TxSignatures) &&
-		t.FeePayer == tb.FeePayer &&
-		t.FeePayerSignatures.equal(tb.FeePayerSignatures)
-}
-
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	enc, _ := rlp.EncodeToBytes(ser)
-	tx := Transaction{data: t}
-
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	AnchoredData:  %s
-	Signature:     %s
-	FeePayer:      %s
-	FeePayerSig:   %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		common.Bytes2Hex(t.Payload),
-		t.TxSignatures.string(),
-		t.FeePayer.String(),
-		t.FeePayerSignatures.string(),
-		enc)
-}
-
 func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SerializeForSignToBytes() []byte {
 	b, _ := rlp.EncodeToBytes(struct {
 		Txtype       TxType
@@ -204,15 +154,8 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SerializeForSignToBytes()
 	return b
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		t.Payload,
-	}
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SenderTxHash() common.Hash {
@@ -234,15 +177,15 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SenderTxHash() common.Has
 	return h
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) IsLegacyTransaction() bool {
-	return false
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -250,11 +193,11 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -262,11 +205,7 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetFrom() common.Address 
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetPayload() []byte {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetData() []byte {
 	return t.Payload
 }
 
@@ -278,7 +217,7 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) GetFeePayerRawSignatureVa
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
@@ -288,10 +227,6 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SetSignature(s TxSignatur
 
 func (t *TxInternalDataFeeDelegatedChainDataAnchoring) SetFeePayerSignatures(s TxSignatures) {
 	t.FeePayerSignatures = s
-}
-
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedChainDataAnchoring) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
@@ -310,11 +245,7 @@ func (t *TxInternalDataFeeDelegatedChainDataAnchoring) IntrinsicGas(currentBlock
 	return gasPayloadWithGas, nil
 }
 
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataFeeDelegatedChainDataAnchoring) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataFeeDelegatedChainDataAnchoring) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	return nil
 }
 

@@ -20,20 +20,62 @@ package kzg4844
 import (
 	"embed"
 	"errors"
+	"hash"
+	"reflect"
 	"sync/atomic"
+
+	"github.com/kaiachain/kaia/common/hexutil"
 )
 
 //go:embed trusted_setup.json
 var content embed.FS
 
+var (
+	blobT       = reflect.TypeFor[Blob]()
+	commitmentT = reflect.TypeFor[Commitment]()
+	proofT      = reflect.TypeFor[Proof]()
+)
+
+const CellProofsPerBlob = 128
+
 // Blob represents a 4844 data blob.
 type Blob [131072]byte
+
+// UnmarshalJSON parses a blob in hex syntax.
+func (b *Blob) UnmarshalJSON(input []byte) error {
+	return hexutil.UnmarshalFixedJSON(blobT, input, b[:])
+}
+
+// MarshalText returns the hex representation of b.
+func (b *Blob) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(b[:]).MarshalText()
+}
 
 // Commitment is a serialized commitment to a polynomial.
 type Commitment [48]byte
 
+// UnmarshalJSON parses a commitment in hex syntax.
+func (c *Commitment) UnmarshalJSON(input []byte) error {
+	return hexutil.UnmarshalFixedJSON(commitmentT, input, c[:])
+}
+
+// MarshalText returns the hex representation of c.
+func (c Commitment) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(c[:]).MarshalText()
+}
+
 // Proof is a serialized commitment to the quotient polynomial.
 type Proof [48]byte
+
+// UnmarshalJSON parses a proof in hex syntax.
+func (p *Proof) UnmarshalJSON(input []byte) error {
+	return hexutil.UnmarshalFixedJSON(proofT, input, p[:])
+}
+
+// MarshalText returns the hex representation of p.
+func (p Proof) MarshalText() ([]byte, error) {
+	return hexutil.Bytes(p[:]).MarshalText()
+}
 
 // Point is a BLS field element.
 type Point [32]byte
@@ -45,7 +87,7 @@ type Claim [32]byte
 var useCKZG atomic.Bool
 
 // UseCKZG can be called to switch the default Go implementation of KZG to the C
-// library if fo some reason the user wishes to do so (e.g. consensus bug in one
+// library if for some reason the user wishes to do so (e.g. consensus bug in one
 // or the other).
 func UseCKZG(use bool) error {
 	if use && !ckzgAvailable {
@@ -109,6 +151,16 @@ func VerifyBlobProof(blob *Blob, commitment Commitment, proof Proof) error {
 	return gokzgVerifyBlobProof(blob, commitment, proof)
 }
 
+// VerifyCellProofs verifies a batch of proofs corresponding to the blobs and commitments.
+// Expects length of blobs and commitments to be equal.
+// Expects length of proofs be 128 * length of blobs.
+func VerifyCellProofs(blobs []Blob, commitments []Commitment, proofs []Proof) error {
+	if useCKZG.Load() {
+		return ckzgVerifyCellProofBatch(blobs, commitments, proofs)
+	}
+	return gokzgVerifyCellProofBatch(blobs, commitments, proofs)
+}
+
 // ComputeCellProofs returns the KZG cell proofs that are used to verify the blob against
 // the commitment.
 //
@@ -118,4 +170,22 @@ func ComputeCellProofs(blob *Blob) ([]Proof, error) {
 		return ckzgComputeCellProofs(blob)
 	}
 	return gokzgComputeCellProofs(blob)
+}
+
+// CalcBlobHashV1 calculates the 'versioned blob hash' of a commitment.
+// The given hasher must be a sha256 hash instance, otherwise the result will be invalid!
+func CalcBlobHashV1(hasher hash.Hash, commit *Commitment) (vh [32]byte) {
+	if hasher.Size() != 32 {
+		panic("wrong hash size")
+	}
+	hasher.Reset()
+	hasher.Write(commit[:])
+	hasher.Sum(vh[:0])
+	vh[0] = 0x01 // version
+	return vh
+}
+
+// IsValidVersionedHash checks that h is a structurally-valid versioned blob hash.
+func IsValidVersionedHash(h []byte) bool {
+	return len(h) == 32 && h[0] == 0x01
 }

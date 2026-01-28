@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"maps"
 	"math/big"
 	"testing"
 
@@ -51,7 +52,13 @@ func testPragueForkChainConfig(forkNum *big.Int) *params.ChainConfig {
 	config.KoreCompatibleBlock = big.NewInt(0)
 	config.ShanghaiCompatibleBlock = big.NewInt(0)
 	config.CancunCompatibleBlock = big.NewInt(0)
-	config.RandaoCompatibleBlock = nil
+	config.RandaoCompatibleBlock = big.NewInt(0)
+	config.RandaoRegistry = &params.RegistryConfig{
+		Records: map[string]common.Address{
+			"KIP113": system.Kip113LogicAddrMock,
+		},
+		Owner: common.HexToAddress("0x0000000000000000000000000000000000000000"),
+	}
 	config.KaiaCompatibleBlock = big.NewInt(0)
 	config.PragueCompatibleBlock = forkNum
 
@@ -60,9 +67,7 @@ func testPragueForkChainConfig(forkNum *big.Int) *params.ChainConfig {
 
 func copyAlloc(alloc blockchain.GenesisAlloc) blockchain.GenesisAlloc {
 	copiedAlloc := blockchain.GenesisAlloc{}
-	for addr, acc := range alloc {
-		copiedAlloc[addr] = acc
-	}
+	maps.Copy(copiedAlloc, alloc)
 	return copiedAlloc
 }
 

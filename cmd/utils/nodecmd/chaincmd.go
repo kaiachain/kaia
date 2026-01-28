@@ -25,7 +25,9 @@ package nodecmd
 import (
 	"encoding/json"
 	"errors"
+	"math/big"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/kaiachain/kaia/blockchain"
@@ -33,7 +35,6 @@ import (
 	"github.com/kaiachain/kaia/cmd/utils"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/urfave/cli/v2"
 )
@@ -68,7 +69,7 @@ var (
 			utils.RocksDBDisableMetricsFlag,
 			utils.RocksDBMaxOpenFilesFlag,
 			utils.RocksDBCacheIndexAndFilterFlag,
-			utils.OverwriteGenesisFlag,
+			utils.OverrideOsaka,
 			utils.LivePruningFlag,
 			utils.FlatTrieFlag,
 		},
@@ -119,6 +120,12 @@ func initGenesis(ctx *cli.Context) error {
 		logger.Crit("Genesis config is not set")
 	}
 
+	var overrides blockchain.ChainOverrides
+	if ctx.IsSet(utils.OverrideOsaka.Name) {
+		v := ctx.Uint64(utils.OverrideOsaka.Name)
+		overrides.OverrideOsaka = new(big.Int).SetUint64(v)
+	}
+
 	// Update undefined config with default values
 	genesis.Config.SetDefaultsForGenesis()
 
@@ -129,15 +136,12 @@ func initGenesis(ctx *cli.Context) error {
 
 	// Set genesis.Governance and reward intervals
 	genesis.Governance = headergov_impl.GetGenesisGovBytes(genesis.Config)
-	params.SetStakingUpdateInterval(genesis.Config.Governance.Reward.StakingUpdateInterval)
-	params.SetProposerUpdateInterval(genesis.Config.Governance.Reward.ProposerUpdateInterval)
 
 	// Open an initialise both full and light databases
 	stack := MakeFullNode(ctx)
 	parallelDBWrite := !ctx.Bool(utils.NoParallelDBWriteFlag.Name)
 	singleDB := ctx.Bool(utils.SingleDBFlag.Name)
 	numStateTrieShards := ctx.Uint(utils.NumStateTrieShardsFlag.Name)
-	overwriteGenesis := ctx.Bool(utils.OverwriteGenesisFlag.Name)
 	livePruning := ctx.Bool(utils.LivePruningFlag.Name)
 	useFlatTrie := ctx.Bool(utils.FlatTrieFlag.Name)
 
@@ -185,7 +189,7 @@ func initGenesis(ctx *cli.Context) error {
 		// Initialize DeriveSha implementation
 		blockchain.InitDeriveSha(genesis.Config)
 
-		_, hash, err := blockchain.SetupGenesisBlock(chainDB, genesis, params.UnusedNetworkId, false, overwriteGenesis)
+		_, hash, err := blockchain.SetupGenesisBlockWithOverride(chainDB, genesis, &overrides)
 		if err != nil {
 			logger.Crit("Failed to write genesis block", "err", err)
 		}
@@ -246,20 +250,13 @@ func ValidateGenesisConfig(g *blockchain.Genesis) error {
 		// TODO-Kaia: Add validation logic for other GovernanceModes
 		// Check if governingNode is properly set
 		if strings.ToLower(g.Config.Governance.GovernanceMode) == "single" {
-			var found bool
 
 			istanbulExtra, err := types.ExtractIstanbulExtra(&types.Header{Extra: g.ExtraData})
 			if err != nil {
 				return err
 			}
 
-			for _, v := range istanbulExtra.Validators {
-				if v == g.Config.Governance.GoverningNode {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if !slices.Contains(istanbulExtra.Validators, g.Config.Governance.GoverningNode) {
 				return errors.New("governingNode is not in the validator list")
 			}
 		}

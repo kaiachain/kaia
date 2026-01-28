@@ -195,10 +195,6 @@ func (c *core) commit() {
 			c.sendNextRoundChange("commit failure")
 			return
 		}
-
-		if vrank != nil {
-			vrank.HandleCommitted(proposal.Number())
-		}
 	} else {
 		// TODO-Kaia never happen, but if proposal is nil, mining is not working.
 		logger.Error("istanbul.core current.Proposal is NULL")

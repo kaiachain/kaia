@@ -170,9 +170,7 @@ func (m *Matcher) Start(ctx context.Context, begin, end uint64, results chan uin
 	sink := m.run(begin, end, cap(results), session)
 
 	// Read the output from the result sink and deliver to the user
-	session.pend.Add(1)
-	go func() {
-		defer session.pend.Done()
+	session.pend.Go(func() {
 		defer close(results)
 
 		for {
@@ -211,7 +209,7 @@ func (m *Matcher) Start(ctx context.Context, begin, end uint64, results chan uin
 				}
 			}
 		}
-	}()
+	})
 	return session, nil
 }
 
@@ -226,9 +224,7 @@ func (m *Matcher) run(begin, end uint64, buffer int, session *MatcherSession) ch
 	// Create the source channel and feed section indexes into
 	source := make(chan *partialMatches, buffer)
 
-	session.pend.Add(1)
-	go func() {
-		defer session.pend.Done()
+	session.pend.Go(func() {
 		defer close(source)
 
 		for i := begin / m.sectionSize; i <= end/m.sectionSize; i++ {
@@ -238,7 +234,7 @@ func (m *Matcher) run(begin, end uint64, buffer int, session *MatcherSession) ch
 			case source <- &partialMatches{i, bytes.Repeat([]byte{0xff}, int(m.sectionSize/8))}:
 			}
 		}
-	}()
+	})
 	// Assemble the daisy-chained filtering pipeline
 	next := source
 	dist := make(chan *request, buffer)

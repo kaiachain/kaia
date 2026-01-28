@@ -73,6 +73,9 @@ func NewChannelManager(channelSize int) *ChannelManager {
 
 	channelMgr.RegisterMsgCode(MiscChannel, BidMsg)
 
+	channelMgr.RegisterMsgCode(MiscChannel, BlobSidecarsRequestMsg)
+	channelMgr.RegisterMsgCode(MiscChannel, BlobSidecarsMsg)
+
 	return channelMgr
 }
 

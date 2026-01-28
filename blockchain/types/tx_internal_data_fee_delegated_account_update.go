@@ -19,9 +19,7 @@
 package types
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"io"
 	"math/big"
 
@@ -248,11 +246,11 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) GetRoleTypeForValidation() acc
 	return accountkey.RoleAccountUpdate
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedAccountUpdate) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedAccountUpdate) GetGasPrice() *big.Int {
 	return t.Price
 }
 
@@ -260,11 +258,11 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedAccountUpdate) GetTo() *common.Address {
 	return nil
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedAccountUpdate) GetValue() *big.Int {
 	return common.Big0
 }
 
@@ -272,8 +270,8 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) GetHash() *common.Hash {
-	return t.Hash
+func (t *TxInternalDataFeeDelegatedAccountUpdate) GetData() []byte {
+	return []byte{}
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) GetFeePayer() common.Address {
@@ -284,58 +282,8 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) GetFeePayerRawSignatureValues(
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedAccountUpdate) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
-}
-
-func (t *TxInternalDataFeeDelegatedAccountUpdate) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedAccountUpdate) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataFeeDelegatedAccountUpdate)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.From == ta.From &&
-		t.Key.Equal(ta.Key) &&
-		t.TxSignatures.equal(ta.TxSignatures) &&
-		t.FeePayer == ta.FeePayer &&
-		t.FeePayerSignatures.equal(ta.FeePayerSignatures)
-}
-
-func (t *TxInternalDataFeeDelegatedAccountUpdate) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Key:           %s
-	Signature:     %s
-	FeePayer:      %s
-	FeePayerSig:   %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Key.String(),
-		t.TxSignatures.string(),
-		t.FeePayer.String(),
-		t.FeePayerSignatures.string(),
-		enc)
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) SetSignature(s TxSignatures) {
@@ -344,10 +292,6 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) SetSignature(s TxSignatures) {
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) SetFeePayerSignatures(s TxSignatures) {
 	t.FeePayerSignatures = s
-}
-
-func (t *TxInternalDataFeeDelegatedAccountUpdate) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
@@ -377,18 +321,8 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) SerializeForSignToBytes() []by
 	return b
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) SerializeForSign() []interface{} {
-	serializer := accountkey.NewAccountKeySerializerWithAccountKey(t.Key)
-	keyEnc, _ := rlp.EncodeToBytes(serializer)
-
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.From,
-		keyEnc,
-	}
+func (t *TxInternalDataFeeDelegatedAccountUpdate) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedAccountUpdate) SenderTxHash() common.Hash {
@@ -413,11 +347,11 @@ func (t *TxInternalDataFeeDelegatedAccountUpdate) SenderTxHash() common.Hash {
 	return h
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
+func (t *TxInternalDataFeeDelegatedAccountUpdate) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedAccountUpdate) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataFeeDelegatedAccountUpdate) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	oldKey := stateDB.GetKey(t.From)
 	if err := accountkey.CheckReplacable(oldKey, t.Key, currentBlockNumber); err != nil {
 		return err

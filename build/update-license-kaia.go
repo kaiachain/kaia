@@ -19,7 +19,6 @@
 // Modified and improved for the klaytn development.
 
 //go:build none
-// +build none
 
 /*
 This command generates GPL license headers on top of all source files.

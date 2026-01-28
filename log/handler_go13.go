@@ -5,7 +5,6 @@
 // See LICENSE in the top directory for the original copyright and license.
 // Modified and improved for the Kaia development.
 //go:build !go1.4
-// +build !go1.4
 
 package log
 

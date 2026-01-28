@@ -19,15 +19,12 @@
 package types
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/rlp"
@@ -142,35 +139,15 @@ func (t *TxInternalDataSmartContractExecution) GetRoleTypeForValidation() accoun
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataSmartContractExecution) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataSmartContractExecution)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		t.Recipient == ta.Recipient &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.From == ta.From &&
-		bytes.Equal(t.Payload, ta.Payload) &&
-		t.TxSignatures.equal(ta.TxSignatures)
-}
-
-func (t *TxInternalDataSmartContractExecution) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataSmartContractExecution) GetPayload() []byte {
+func (t *TxInternalDataSmartContractExecution) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataSmartContractExecution) GetAccountNonce() uint64 {
+func (t *TxInternalDataSmartContractExecution) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataSmartContractExecution) GetPrice() *big.Int {
+func (t *TxInternalDataSmartContractExecution) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -178,7 +155,7 @@ func (t *TxInternalDataSmartContractExecution) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataSmartContractExecution) GetRecipient() *common.Address {
+func (t *TxInternalDataSmartContractExecution) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -187,7 +164,7 @@ func (t *TxInternalDataSmartContractExecution) GetRecipient() *common.Address {
 	return &to
 }
 
-func (t *TxInternalDataSmartContractExecution) GetAmount() *big.Int {
+func (t *TxInternalDataSmartContractExecution) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -195,46 +172,12 @@ func (t *TxInternalDataSmartContractExecution) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataSmartContractExecution) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataSmartContractExecution) SetHash(h *common.Hash) {
+func (t *TxInternalDataSmartContractExecution) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
 func (t *TxInternalDataSmartContractExecution) SetSignature(s TxSignatures) {
 	t.TxSignatures = s
-}
-
-func (t *TxInternalDataSmartContractExecution) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	To:            %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Value:         %#x
-	Signature:     %s
-	Data:          %x
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.Recipient.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Amount,
-		t.TxSignatures.string(),
-		common.Bytes2Hex(t.Payload),
-		enc)
 }
 
 func (t *TxInternalDataSmartContractExecution) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
@@ -275,45 +218,11 @@ func (t *TxInternalDataSmartContractExecution) SerializeForSignToBytes() []byte 
 	return b
 }
 
-func (t *TxInternalDataSmartContractExecution) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-	}
+func (t *TxInternalDataSmartContractExecution) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
-func (t *TxInternalDataSmartContractExecution) SenderTxHash() common.Hash {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, t.Type())
-	rlp.Encode(hw, []interface{}{
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-		t.Payload,
-		t.TxSignatures,
-	})
-
-	h := common.Hash{}
-
-	hw.Sum(h[:0])
-
-	return h
-}
-
-func (t *TxInternalDataSmartContractExecution) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataSmartContractExecution) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataSmartContractExecution) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
 	if err := validate7702(stateDB, t.Type(), t.From, t.Recipient); err != nil {
 		return err
 	}

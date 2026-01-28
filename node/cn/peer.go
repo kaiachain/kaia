@@ -183,6 +183,10 @@ type Peer interface {
 	// ones requested from an already RLP encoded format.
 	SendStakingInfoRLP(stakingInfos []rlp.RawValue) error
 
+	// SendBlobSidecarsRLP sends a batch of blob sidecars, corresponding to the
+	// ones requested from an already RLP encoded format.
+	SendBlobSidecarsRLP(blobSidecars []rlp.RawValue) error
+
 	// FetchBlockHeader is a wrapper around the header query functions to fetch a
 	// single header. It is used solely by the fetcher.
 	FetchBlockHeader(hash common.Hash) error
@@ -244,6 +248,9 @@ type Peer interface {
 
 	// Peer encapsulates the methods required to synchronise with a remote full peer.
 	downloader.Peer
+
+	// RequestBlobSidecars fetches a batch of blob sidecars from a remote node.
+	RequestBlobSidecars([]blobSidecarsRequestData) error
 
 	// RegisterConsensusMsgCode registers the channel of consensus msg.
 	RegisterConsensusMsgCode(msgCode uint64) error
@@ -354,6 +361,10 @@ var ChannelOfMessage = map[uint64]int{
 
 	// Protocol messages belonging to kaia/66
 	BidMsg: p2p.ConnDefault,
+
+	// Protocol messages belonging to kaia/67
+	BlobSidecarsRequestMsg: p2p.ConnDefault,
+	BlobSidecarsMsg:        p2p.ConnDefault,
 }
 
 var ConcurrentOfChannel = []int{
@@ -551,7 +562,11 @@ func (p *basePeer) AsyncSendNewBlockHash(block *types.Block) {
 // SendNewBlock propagates an entire block to a remote peer.
 func (p *basePeer) SendNewBlock(block *types.Block, td *big.Int) error {
 	p.AddToKnownBlocks(block.Hash())
-	return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td})
+	if p.ConnType() == common.CONSENSUSNODE {
+		return p2p.Send(p.rw, NewBlockMsg, []interface{}{block, td})
+	} else {
+		return p2p.Send(p.rw, NewBlockMsg, []interface{}{block.WithoutBlobSidecars(), td})
+	}
 }
 
 // AsyncSendNewBlock queues an entire block for propagation to a remote peer. If
@@ -624,6 +639,12 @@ func (p *basePeer) SendBid(bid *auction.Bid) error {
 	return p2p.Send(p.rw, BidMsg, bid)
 }
 
+// SendBlobSidecarsRLP sends a batch of blob sidecars to the remote peer from
+// ones requested from an already RLP encoded format.
+func (p *basePeer) SendBlobSidecarsRLP(blobSidecars []rlp.RawValue) error {
+	return p2p.Send(p.rw, BlobSidecarsMsg, blobSidecars)
+}
+
 // FetchBlockHeader is a wrapper around the header query functions to fetch a
 // single header. It is used solely by the fetcher.
 func (p *basePeer) FetchBlockHeader(hash common.Hash) error {
@@ -676,6 +697,12 @@ func (p *basePeer) RequestReceipts(hashes []common.Hash) error {
 func (p *basePeer) RequestStakingInfo(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of staking infos", "count", len(hashes))
 	return p2p.Send(p.rw, StakingInfoRequestMsg, hashes)
+}
+
+// RequestBlobSidecars fetches a batch of blob sidecars from a remote node.
+func (p *basePeer) RequestBlobSidecars(request []blobSidecarsRequestData) error {
+	p.Log().Debug("Fetching batch of blob sidecars", "count", len(request))
+	return p2p.Send(p.rw, BlobSidecarsRequestMsg, request)
 }
 
 // Handshake executes the Kaia protocol handshake, negotiating version number,
@@ -947,7 +974,11 @@ func (p *multiChannelPeer) SendNewBlockHashes(hashes []common.Hash, numbers []ui
 // SendNewBlock propagates an entire block to a remote peer.
 func (p *multiChannelPeer) SendNewBlock(block *types.Block, td *big.Int) error {
 	p.AddToKnownBlocks(block.Hash())
-	return p.msgSender(NewBlockMsg, []interface{}{block, td})
+	if p.ConnType() == common.CONSENSUSNODE {
+		return p.msgSender(NewBlockMsg, []interface{}{block, td})
+	} else {
+		return p.msgSender(NewBlockMsg, []interface{}{block.WithoutBlobSidecars(), td})
+	}
 }
 
 // SendBlockHeaders sends a batch of block headers to the remote peer.
@@ -999,6 +1030,12 @@ func (p *multiChannelPeer) SendStakingInfoRLP(stakingInfos []rlp.RawValue) error
 func (p *multiChannelPeer) SendBid(bid *auction.Bid) error {
 	p.AddToKnownBids(bid.Hash())
 	return p.msgSender(BidMsg, bid)
+}
+
+// SendBlobSidecarsRLP sends a batch of blob sidecars to the remote peer from
+// ones requested from an already RLP encoded format.
+func (p *multiChannelPeer) SendBlobSidecarsRLP(blobSidecars []rlp.RawValue) error {
+	return p.msgSender(BlobSidecarsMsg, blobSidecars)
 }
 
 // FetchBlockHeader is a wrapper around the header query functions to fetch a
@@ -1053,6 +1090,12 @@ func (p *multiChannelPeer) RequestReceipts(hashes []common.Hash) error {
 func (p *multiChannelPeer) RequestStakingInfo(hashes []common.Hash) error {
 	p.Log().Debug("Fetching batch of staking infos", "count", len(hashes))
 	return p.msgSender(StakingInfoRequestMsg, hashes)
+}
+
+// RequestBlobSidecars fetches a batch of blob sidecars from a remote node.
+func (p *multiChannelPeer) RequestBlobSidecars(request []blobSidecarsRequestData) error {
+	p.Log().Debug("Fetching batch of blob sidecars", "count", len(request))
+	return p.msgSender(BlobSidecarsRequestMsg, request)
 }
 
 // msgSender sends data to the peer.

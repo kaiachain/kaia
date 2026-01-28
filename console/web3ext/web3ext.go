@@ -184,6 +184,26 @@ web3._extend({
 			params: 3,
 			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter, null]
 		}),
+		new web3._extend.Method({
+			name: 'config',
+			call: 'eth_config',
+			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'blobBaseFee',
+			call: 'eth_blobBaseFee',
+			params: 0,
+		}),
+		new web3._extend.Method({
+			name: 'getBlobSidecars',
+			call: 'eth_getBlobSidecars',
+			params: 2,
+		}),
+		new web3._extend.Method({
+			name: 'getBlobSidecarByTxHash',
+			call: 'eth_getBlobSidecarByTxHash',
+			params: 2,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

@@ -66,6 +66,20 @@ func (mr *MockBlockChainMockRecorder) CurrentBlock() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBlock", reflect.TypeOf((*MockBlockChain)(nil).CurrentBlock))
 }
 
+// CurrentHeader mocks base method.
+func (m *MockBlockChain) CurrentHeader() *types.Header {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CurrentHeader")
+	ret0, _ := ret[0].(*types.Header)
+	return ret0
+}
+
+// CurrentHeader indicates an expected call of CurrentHeader.
+func (mr *MockBlockChainMockRecorder) CurrentHeader() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentHeader", reflect.TypeOf((*MockBlockChain)(nil).CurrentHeader))
+}
+
 // Engine mocks base method.
 func (m *MockBlockChain) Engine() consensus.Engine {
 	m.ctrl.T.Helper()
@@ -108,6 +122,20 @@ func (mr *MockBlockChainMockRecorder) GetHeader(arg0, arg1 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeader", reflect.TypeOf((*MockBlockChain)(nil).GetHeader), arg0, arg1)
 }
 
+// GetHeaderByHash mocks base method.
+func (m *MockBlockChain) GetHeaderByHash(arg0 common.Hash) *types.Header {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHeaderByHash", arg0)
+	ret0, _ := ret[0].(*types.Header)
+	return ret0
+}
+
+// GetHeaderByHash indicates an expected call of GetHeaderByHash.
+func (mr *MockBlockChainMockRecorder) GetHeaderByHash(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeaderByHash", reflect.TypeOf((*MockBlockChain)(nil).GetHeaderByHash), arg0)
+}
+
 // GetHeaderByNumber mocks base method.
 func (m *MockBlockChain) GetHeaderByNumber(arg0 uint64) *types.Header {
 	m.ctrl.T.Helper()
@@ -120,20 +148,6 @@ func (m *MockBlockChain) GetHeaderByNumber(arg0 uint64) *types.Header {
 func (mr *MockBlockChainMockRecorder) GetHeaderByNumber(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeaderByNumber", reflect.TypeOf((*MockBlockChain)(nil).GetHeaderByNumber), arg0)
-}
-
-// GetReceiptsByBlockHash mocks base method.
-func (m *MockBlockChain) GetReceiptsByBlockHash(arg0 common.Hash) types.Receipts {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetReceiptsByBlockHash", arg0)
-	ret0, _ := ret[0].(types.Receipts)
-	return ret0
-}
-
-// GetReceiptsByBlockHash indicates an expected call of GetReceiptsByBlockHash.
-func (mr *MockBlockChainMockRecorder) GetReceiptsByBlockHash(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReceiptsByBlockHash", reflect.TypeOf((*MockBlockChain)(nil).GetReceiptsByBlockHash), arg0)
 }
 
 // State mocks base method.

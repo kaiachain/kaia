@@ -20,7 +20,6 @@ package types
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"math"
@@ -64,10 +63,9 @@ const (
 	TxTypeKaiaLast, _, _
 	TxTypeEthereumAccessList = TxType(0x7801)
 	TxTypeEthereumDynamicFee = TxType(0x7802)
-	// EIP-4844 BLOB_TX_TYPE not supported in Kaia.
-	_                     = TxType(0x7803)
-	TxTypeEthereumSetCode = TxType(0x7804)
-	TxTypeEthereumLast    = TxType(0x7805)
+	TxTypeEthereumBlob       = TxType(0x7803)
+	TxTypeEthereumSetCode    = TxType(0x7804)
+	TxTypeEthereumLast       = TxType(0x7805)
 )
 
 type TxValueKeyType uint
@@ -92,6 +90,9 @@ const (
 	TxValueKeyChainID
 	TxValueKeyGasTipCap
 	TxValueKeyGasFeeCap
+	TxValueKeyBlobFeeCap
+	TxValueKeyBlobHashes
+	TxValueKeySidecar
 	TxValueKeyAuthorizationList
 )
 
@@ -125,6 +126,8 @@ var (
 	errValueKeyFeeRatioMustUint8         = errors.New("FeeRatio must be a type of uint8")
 	errValueKeyCodeFormatInvalid         = errors.New("The smart contract code format is invalid")
 	errValueKeyAccessListInvalid         = errors.New("AccessList must be a type of AccessList")
+	errValueKeyBlobFeeCapMustBigInt      = errors.New("BlobFeeCap must be a type of *big.Int")
+	errValueKeySidecarInvalid            = errors.New("Sidecar must be a type of *BlobTxSidecar")
 	errValueKeyAuthorizationListInvalid  = errors.New("AuthorizationList must be a type of AuthorizationList")
 	errValueKeyChainIDInvalid            = errors.New("ChainID must be a type of ChainID")
 	errValueKeyGasTipCapMustBigInt       = errors.New("GasTipCap must be a type of *big.Int")
@@ -175,6 +178,12 @@ func (t TxValueKeyType) String() string {
 		return "TxValueKeyGasTipCap"
 	case TxValueKeyGasFeeCap:
 		return "TxValueKeyGasFeeCap"
+	case TxValueKeyBlobFeeCap:
+		return "TxValueKeyBlobFeeCap"
+	case TxValueKeyBlobHashes:
+		return "TxValueKeyBlobHashes"
+	case TxValueKeySidecar:
+		return "TxValueKeySidecar"
 	case TxValueKeyAuthorizationList:
 		return "TxValueKeyAuthorizationList"
 	}
@@ -236,6 +245,8 @@ func (t TxType) String() string {
 		return "TxTypeEthereumAccessList"
 	case TxTypeEthereumDynamicFee:
 		return "TxTypeEthereumDynamicFee"
+	case TxTypeEthereumBlob:
+		return "TxTypeEthereumBlob"
 	case TxTypeEthereumSetCode:
 		return "TxTypeEthereumSetCode"
 	}
@@ -294,14 +305,14 @@ func (f FeeRatio) IsValid() bool {
 type TxInternalData interface {
 	Type() TxType
 
-	GetAccountNonce() uint64
-	GetPrice() *big.Int
+	GetNonce() uint64
+	GetGasPrice() *big.Int
 	GetGasLimit() uint64
-	GetRecipient() *common.Address
-	GetAmount() *big.Int
-	GetHash() *common.Hash
+	GetTo() *common.Address
+	GetValue() *big.Int
+	GetData() []byte
 
-	SetHash(*common.Hash)
+	setHashForMarshaling(*common.Hash)
 	SetSignature(TxSignatures)
 
 	// RawSignatureValues returns signatures as a slice of `*big.Int`.
@@ -309,64 +320,25 @@ type TxInternalData interface {
 	// The format would be something like [["V":v, "R":r, "S":s}, {"V":v, "R":r, "S":s}].
 	RawSignatureValues() TxSignatures
 
-	// ValidateSignature returns true if the signature is valid.
-	ValidateSignature() bool
-
-	// RecoverAddress returns address derived from txhash and signatures(r, s, v).
-	// Since EIP155Signer modifies V value during recovering while other signers don't, it requires vfunc for the treatment.
-	RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error)
-
-	// RecoverPubkey returns a public key derived from txhash and signatures(r, s, v).
-	// Since EIP155Signer modifies V value during recovering while other signers don't, it requires vfunc for the treatment.
-	RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error)
-
 	// ChainId returns which chain id this transaction was signed for (if at all)
 	ChainId() *big.Int
-
-	// Equal returns true if all attributes are the same.
-	Equal(t TxInternalData) bool
 
 	// IntrinsicGas computes additional 'intrinsic gas' based on tx types.
 	IntrinsicGas(currentBlockNumber uint64) (uint64, error)
 
-	// SerializeForSign returns a slice containing attributes to make its tx signature.
-	SerializeForSign() []interface{}
-
-	// SenderTxHash returns a hash of the tx without the fee payer's address and signature.
-	SenderTxHash() common.Hash
+	// SigHash returns a hash of RLP encoded attributes to make its tx signature.
+	SigHash(chainId *big.Int) common.Hash
 
 	// Validate returns nil if tx is validated with the given stateDB and currentBlockNumber.
 	// Otherwise, it returns an error.
-	// This function is called in TxPool.validateTx() and TxInternalData.Execute().
-	Validate(stateDB StateDB, currentBlockNumber uint64) error
-
-	// ValidateMutableValue returns nil if tx is validated. Otherwise, it returns an error.
-	// The function validates tx values associated with mutable values in the state.
-	// MutableValues: accountKey, the existence of creating address, feePayer's balance, etc.
-	ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error
-
-	// IsLegacyTransaction returns true if the tx type is a legacy transaction (TxInternalDataLegacy) object.
-	IsLegacyTransaction() bool
-
-	// GetRoleTypeForValidation returns RoleType to validate this transaction.
-	GetRoleTypeForValidation() accountkey.RoleType
-
-	// String returns a string containing information about the fields of the object.
-	String() string
+	// if onlyMutableChecks, skip some immutable constraint checks
+	// TODO-Kaia: align the onlyMutableChecks flag with Transaction.Validate(checkMutableValue).
+	Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error
 
 	// Execute performs execution of the transaction according to the transaction type.
 	Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error)
 
 	MakeRPCOutput() map[string]interface{}
-}
-
-type TxInternalDataContractAddressFiller interface {
-	// FillContractAddress fills contract address to receipt. This only works for types deploying a smart contract.
-	FillContractAddress(from common.Address, r *Receipt)
-}
-
-type TxInternalDataSerializeForSignToByte interface {
-	SerializeForSignToBytes() []byte
 }
 
 // TxInternalDataFeePayer has functions related to fee delegated transactions.
@@ -378,10 +350,13 @@ type TxInternalDataFeePayer interface {
 	// The format would be something like [["V":v, "R":r, "S":s}, {"V":v, "R":r, "S":s}].
 	GetFeePayerRawSignatureValues() TxSignatures
 
-	// RecoverFeePayerPubkey returns the fee payer's public key derived from txhash and signatures(r, s, v).
-	RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error)
-
 	SetFeePayerSignatures(s TxSignatures)
+
+	// SenderTxHash returns a hash of the tx without the fee payer's address and signature.
+	SenderTxHash() common.Hash
+
+	// FeePayerSigHash returns a hash of RLP encoded attributes to make its fee payer's tx signature.
+	FeePayerSigHash(chainId *big.Int) common.Hash
 }
 
 // TxInternalDataFeeRatio has a function `GetFeeRatio`.
@@ -400,19 +375,21 @@ type TxInternalDataFrom interface {
 	GetFrom() common.Address
 }
 
-// TxInternalDataPayload has a function `GetPayload()`.
-// Since the payload field is not a common field for all tx types, we provide
-// an interface `TxInternalDataPayload` to obtain the payload.
-type TxInternalDataPayload interface {
-	GetPayload() []byte
-}
-
 // TxInternalDataEthTyped has a function related to EIP-2718 Ethereum typed transaction.
 // For supporting new typed transaction defined EIP-2718, We provide an interface `TxInternalDataEthTyped `
 type TxInternalDataEthTyped interface {
-	setSignatureValues(chainID, v, r, s *big.Int)
+	// Legacy and Kaia typed transactions contain the chainId in its signature V value according to EIP-155.
+	// Eth typed transactions have separate chainId field so SetSignature([]{v,r,s}) is not enough.
+	SetChainId(chainID *big.Int)
+
+	// EthTxHash returns the Ethereum-compatible transaction hash.
+	// i.e. Hash of the transaction RLP without the EthereumTxTypeEnvelope prefix (0x78)
+	EthTxHash() common.Hash
+}
+
+// TxInternalDataAccessList has a function related to EIP-2930 Ethereum access list transactions.
+type TxInternalDataAccessList interface {
 	GetAccessList() AccessList
-	TxHash() common.Hash
 }
 
 // TxInternalDataBaseFee has a function related to EIP-1559 Ethereum typed transaction.
@@ -497,6 +474,8 @@ func NewTxInternalData(t TxType) (TxInternalData, error) {
 		return newTxInternalDataEthereumAccessList(), nil
 	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataEthereumDynamicFee(), nil
+	case TxTypeEthereumBlob:
+		return newTxInternalDataEthereumBlob(), nil
 	case TxTypeEthereumSetCode:
 		return newTxInternalDataEthereumSetCode(), nil
 	}
@@ -556,6 +535,8 @@ func NewTxInternalDataWithMap(t TxType, values map[TxValueKeyType]interface{}) (
 		return newTxInternalDataEthereumAccessListWithMap(values)
 	case TxTypeEthereumDynamicFee:
 		return newTxInternalDataEthereumDynamicFeeWithMap(values)
+	case TxTypeEthereumBlob:
+		return newTxInternalDataEthereumBlobWithMap(values)
 	case TxTypeEthereumSetCode:
 		return newTxInternalDataEthereumSetCodeWithMap(values)
 	}
@@ -704,6 +685,7 @@ var txTypeToGasMap = map[TxType]uint64{
 	TxTypeFeeDelegatedChainDataAnchoring:          params.TxChainDataAnchoringGas + params.TxGasFeeDelegated,
 	TxTypeFeeDelegatedChainDataAnchoringWithRatio: params.TxChainDataAnchoringGas + params.TxGasFeeDelegatedWithRatio,
 	TxTypeEthereumAccessList:                      params.TxGas,
+	TxTypeEthereumBlob:                            params.TxGas,
 	TxTypeEthereumDynamicFee:                      params.TxGas,
 	TxTypeEthereumSetCode:                         params.TxGas,
 }
@@ -836,4 +818,38 @@ func validate7702(stateDB StateDB, txType TxType, from, to common.Address) error
 	default:
 		return nil
 	}
+}
+
+// Called by SigHash() of Kaia tx types
+// sigHashRLP = RLP([ [ type, fields... ], chainId, 0, 0 ])
+func sigHashKaia(inner []byte, chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte    []byte
+		ChainId *big.Int
+		R       uint
+		S       uint
+	}{
+		inner,
+		chainId,
+		uint(0),
+		uint(0),
+	})
+}
+
+// Called by FeePayerSigHash() of Kaia tx types
+// feePayerSigHashRLP = RLP([ [ type, fields... ], feePayer, chainId, 0, 0 ])
+func feePayerSigHash(inner []byte, feePayer common.Address, chainId *big.Int) common.Hash {
+	return rlpHash(struct {
+		Byte     []byte
+		FeePayer common.Address
+		ChainId  *big.Int
+		R        uint
+		S        uint
+	}{
+		inner,
+		feePayer,
+		chainId,
+		uint(0),
+		uint(0),
+	})
 }

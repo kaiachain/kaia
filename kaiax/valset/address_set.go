@@ -20,12 +20,41 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/rand"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/common"
 )
+
+type addressHexCache interface {
+	Get(addr common.Address) string
+}
+
+type addressHexCacheArc struct {
+	cache *lru.ARCCache
+}
+
+func (c *addressHexCacheArc) Get(addr common.Address) string {
+	if val, ok := c.cache.Get(addr); ok {
+		return val.(string)
+	}
+	hex := addr.String()
+	c.cache.Add(addr, hex)
+	return hex
+}
+
+var (
+	hexCacheSize = 200
+	hexCache     addressHexCache
+)
+
+func init() {
+	arc, _ := lru.NewARC(hexCacheSize)
+	hexCache = &addressHexCacheArc{cache: arc}
+}
 
 type sortableAddressList []common.Address
 
@@ -36,7 +65,7 @@ func (sa sortableAddressList) Len() int {
 func (sa sortableAddressList) Less(i, j int) bool {
 	// Sort by the EIP-155 mixed-case checksummed representation. It differs from the lower-case sorted order.
 	// This order is somewhat counterintuitive, but keeping it for backward compatibility.
-	return strings.Compare(sa[i].String(), sa[j].String()) < 0
+	return strings.Compare(hexCache.Get(sa[i]), hexCache.Get(sa[j])) < 0
 }
 
 func (sa sortableAddressList) Swap(i, j int) {
@@ -114,10 +143,8 @@ func (as *AddressSet) Add(addr common.Address) {
 	as.mu.Lock()
 	defer as.mu.Unlock()
 
-	for _, a := range as.list {
-		if a == addr {
-			return
-		}
+	if slices.Contains(as.list, addr) {
+		return
 	}
 	as.list = append(as.list, addr)
 	sort.Sort(as.list)

@@ -197,8 +197,8 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	cfg.NoDiscovery = ctx.Bool(NoDiscoverFlag.Name)
 
 	if ctx.IsSet(DiscoverTypesFlag.Name) {
-		nodetypes := strings.Split(ctx.String(DiscoverTypesFlag.Name), ",")
-		for _, nodetype := range nodetypes {
+		nodetypes := strings.SplitSeq(ctx.String(DiscoverTypesFlag.Name), ",")
+		for nodetype := range nodetypes {
 			switch strings.ToLower(nodetype) {
 			case "auto":
 				setDefaultDiscoverTypes(cfg)
@@ -381,7 +381,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	}
 }
 
-// setNodeConfig applies node-related command line flags to the config.
+// SetNodeConfig applies node-related command line flags to the config.
 func (kCfg *KaiaConfig) SetNodeConfig(ctx *cli.Context) {
 	cfg := &kCfg.Node
 	// ntp check enable with remote server
@@ -579,6 +579,12 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	}
 
 	cfg.NetworkId, cfg.IsPrivate = getNetworkId(ctx)
+	switch {
+	case ctx.Bool(MainnetFlag.Name), cfg.NetworkId == params.MainnetNetworkId:
+		cfg.Genesis = blockchain.DefaultGenesisBlock()
+	case ctx.Bool(KairosFlag.Name), cfg.NetworkId == params.KairosNetworkId:
+		cfg.Genesis = blockchain.DefaultKairosGenesisBlock()
+	}
 
 	if dbtype := database.DBType(ctx.String(DbTypeFlag.Name)).ToValid(); len(dbtype) != 0 {
 		cfg.DBType = dbtype
@@ -591,7 +597,12 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 		log.Fatalf("%v should be power of 2 but %v is not!", NumStateTrieShardsFlag.Name, cfg.NumStateTrieShards)
 	}
 
-	cfg.OverwriteGenesis = ctx.Bool(OverwriteGenesisFlag.Name)
+	var overrides blockchain.ChainOverrides
+	if ctx.IsSet(OverrideOsaka.Name) {
+		v := ctx.Uint64(OverrideOsaka.Name)
+		overrides.OverrideOsaka = new(big.Int).SetUint64(v)
+	}
+	cfg.Overrides = &overrides
 	cfg.StartBlockNumber = ctx.Uint64(StartBlockNumberFlag.Name)
 
 	cfg.LevelDBCompression = database.LevelDBCompressionType(ctx.Int(LevelDBCompressionTypeFlag.Name))
@@ -813,7 +824,7 @@ func setRewardbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *cn.Config) {
 	}
 }
 
-// makeAddress converts an account specified directly as a hex encoded string or
+// MakeAddress converts an account specified directly as a hex encoded string or
 // a key index in the key store to an internal account representation.
 func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
 	// If the specified account is a valid address, return it

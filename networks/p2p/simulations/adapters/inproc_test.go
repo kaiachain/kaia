@@ -88,7 +88,7 @@ func TestTCPPipeBidirections(t *testing.T) {
 		msgs := 50
 		size := 7
 		for i := 0; i < msgs; i++ {
-			msg := []byte(fmt.Sprintf("ping %02d", i))
+			msg := fmt.Appendf(nil, "ping %02d", i)
 
 			_, err := c1.Write(msg)
 			if err != nil {
@@ -98,7 +98,7 @@ func TestTCPPipeBidirections(t *testing.T) {
 		}
 
 		for i := 0; i < msgs; i++ {
-			expected := []byte(fmt.Sprintf("ping %02d", i))
+			expected := fmt.Appendf(nil, "ping %02d", i)
 
 			out := make([]byte, size)
 			_, err := c2.Read(out)
@@ -111,7 +111,7 @@ func TestTCPPipeBidirections(t *testing.T) {
 				t.Errorf("expected %#v, got %#v", out, expected)
 				return
 			} else {
-				msg := []byte(fmt.Sprintf("pong %02d", i))
+				msg := fmt.Appendf(nil, "pong %02d", i)
 				_, err := c2.Write(msg)
 				if err != nil {
 					t.Error(err)
@@ -121,7 +121,7 @@ func TestTCPPipeBidirections(t *testing.T) {
 		}
 
 		for i := 0; i < msgs; i++ {
-			expected := []byte(fmt.Sprintf("pong %02d", i))
+			expected := fmt.Appendf(nil, "pong %02d", i)
 
 			out := make([]byte, size)
 			_, err := c1.Read(out)
@@ -214,7 +214,7 @@ func TestNetPipeBidirections(t *testing.T) {
 		// netPipe is blocking, so writes are emitted asynchronously
 		go func() {
 			for i := 0; i < msgs; i++ {
-				msg := []byte(fmt.Sprintf(pingTemplate, i))
+				msg := fmt.Appendf(nil, pingTemplate, i)
 
 				_, err := c1.Write(msg)
 				if err != nil {
@@ -227,7 +227,7 @@ func TestNetPipeBidirections(t *testing.T) {
 		// netPipe is blocking, so reads for pong are emitted asynchronously
 		go func() {
 			for i := 0; i < msgs; i++ {
-				expected := []byte(fmt.Sprintf(pongTemplate, i))
+				expected := fmt.Appendf(nil, pongTemplate, i)
 
 				out := make([]byte, size)
 				_, err := c1.Read(out)
@@ -247,7 +247,7 @@ func TestNetPipeBidirections(t *testing.T) {
 
 		// expect to read pings, and respond with pongs to the alternate connection
 		for i := 0; i < msgs; i++ {
-			expected := []byte(fmt.Sprintf(pingTemplate, i))
+			expected := fmt.Appendf(nil, pingTemplate, i)
 
 			out := make([]byte, size)
 			_, err := c2.Read(out)
@@ -260,7 +260,7 @@ func TestNetPipeBidirections(t *testing.T) {
 				t.Errorf("expected %#v, got %#v", expected, out)
 				return
 			} else {
-				msg := []byte(fmt.Sprintf(pongTemplate, i))
+				msg := fmt.Appendf(nil, pongTemplate, i)
 
 				_, err := c2.Write(msg)
 				if err != nil {

@@ -31,6 +31,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kafka"
 	"github.com/kaiachain/kaia/datasync/dbsyncer"
@@ -133,6 +134,12 @@ var (
 		EnvVars:  []string{"KLAYTN_KEYSTORE", "KAIA_KEYSTORE"},
 		Category: "ACCOUNT",
 	}
+	KeyStoreV3Flag = &cli.BoolFlag{
+		Name:     "v3",
+		Usage:    "Create v3 keystore instead of the default v4 for new account",
+		EnvVars:  []string{"KLAYTN_KEYSTORE_V3", "KAIA_KEYSTORE_V3"},
+		Category: "ACCOUNT",
+	}
 	// TODO-Kaia-Bootnode: redefine networkid
 	NetworkIdFlag = &cli.Uint64Flag{
 		Name:     "networkid",
@@ -182,11 +189,9 @@ var (
 		EnvVars:  []string{"KLAYTN_LIGHTKDF", "KAIA_LIGHTKDF"},
 		Category: "ACCOUNT",
 	}
-	OverwriteGenesisFlag = &cli.BoolFlag{
-		Name:     "overwrite-genesis",
-		Usage:    "Overwrites genesis block with the given new genesis block for testing purpose",
-		Aliases:  []string{"common.overwrite-genesis"},
-		EnvVars:  []string{"KLAYTN_OVERWRITE_GENESIS", "KAIA_OVERWRITE_GENESIS"},
+	OverrideOsaka = &cli.Uint64Flag{
+		Name:     "override.osaka",
+		Usage:    "Manually specify the Osaka fork block, overriding the bundled setting",
 		Category: "KAIA",
 	}
 	StartBlockNumberFlag = &cli.Uint64Flag{
@@ -659,6 +664,12 @@ var (
 		Aliases:  []string{},
 		EnvVars:  []string{"KLAYTN_STATE_TRIE_CACHE_SAVE_PERIOD", "KAIA_STATE_TRIE_CACHE_SAVE_PERIOD"},
 		Category: "CACHE",
+	}
+	CryptoKZGFlag = &cli.StringFlag{
+		Name:     "crypto.kzg",
+		Usage:    "KZG library implementation to use; gokzg (recommended) or ckzg",
+		Value:    "gokzg",
+		Category: "PERFORMANCE TUNING",
 	}
 
 	ChildChainIndexingFlag = &cli.BoolFlag{
@@ -1155,6 +1166,13 @@ var (
 		EnvVars:  []string{"KLAYTN_NODEKEY", "KAIA_NODEKEY"},
 		Category: "NETWORK",
 	}
+	NodeKeystoreFileFlag = &cli.StringFlag{
+		Name:     "nodekeystore",
+		Usage:    "P2P node keystore file",
+		Aliases:  []string{"p2p.node-keystore"},
+		EnvVars:  []string{"KLAYTN_NODEKEYSTORE", "KAIA_NODEKEYSTORE"},
+		Category: "NETWORK",
+	}
 	NodeKeyHexFlag = &cli.StringFlag{
 		Name:     "nodekeyhex",
 		Usage:    "P2P node key as hex (for testing)",
@@ -1423,7 +1441,7 @@ var (
 	}
 	KASServiceChainAnchorRequestTimeoutFlag = &cli.DurationFlag{
 		Name:     "kas.sc.anchor.request.timeout",
-		Usage:    "The reuqest timeout for KAS Anchoring API call",
+		Usage:    "The request timeout for KAS Anchoring API call",
 		Value:    500 * time.Millisecond,
 		Aliases:  []string{},
 		EnvVars:  []string{"KLAYTN_KAS_SC_ANCHOR_REQUEST_TIMEOUT", "KAIA_KAS_SC_ANCHOR_REQUEST_TIMEOUT"},
@@ -2033,7 +2051,7 @@ var (
 	VRankLogFrequencyFlag = &cli.Uint64Flag{
 		Name:     "vrank.log-frequency",
 		Usage:    "Frequency of VRank logging in blocks (0=disabled, 1=every block, 60=every 60 blocks, ...)",
-		Value:    uint64(0),
+		Value:    core.DefaultVRankLogFrequency,
 		Category: "VRANK",
 	}
 
@@ -2156,7 +2174,7 @@ func MakeConsolePreloads(ctx *cli.Context) []string {
 	var preloads []string
 
 	assets := ctx.String(JSpathFlag.Name)
-	for _, file := range strings.Split(ctx.String(PreloadJSFlag.Name), ",") {
+	for file := range strings.SplitSeq(ctx.String(PreloadJSFlag.Name), ",") {
 		preloads = append(preloads, common.AbsolutePath(assets, strings.TrimSpace(file)))
 	}
 	return preloads

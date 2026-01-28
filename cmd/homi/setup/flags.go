@@ -263,7 +263,7 @@ var (
 		Name:    "txgen-conn",
 		Usage:   "(docker only) txgen's connection size option [default : 100]",
 		Value:   100,
-		Aliases: []string{"deploy.docker.tx-gen.connetions"},
+		Aliases: []string{"deploy.docker.tx-gen.connections"},
 	}
 	txGenDurFlag = &cli.StringFlag{
 		Name:    "txgen-dur",
@@ -540,6 +540,13 @@ var (
 		Usage:   "pragueCompatible blockNumber",
 		Value:   0,
 		Aliases: []string{"genesis.hardfork.prague-compatible-blocknumber"},
+	}
+
+	osakaCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "osaka-compatible-blocknumber",
+		Usage:   "osakaCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.osaka-compatible-blocknumber"},
 	}
 
 	kip113ProxyAddressFlag = &cli.StringFlag{

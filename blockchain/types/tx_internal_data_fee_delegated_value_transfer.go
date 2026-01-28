@@ -19,9 +19,7 @@
 package types
 
 import (
-	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
@@ -147,32 +145,11 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) GetRoleTypeForValidation() acc
 	return accountkey.RoleTransaction
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) Equal(b TxInternalData) bool {
-	tb, ok := b.(*TxInternalDataFeeDelegatedValueTransfer)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == tb.AccountNonce &&
-		t.Price.Cmp(tb.Price) == 0 &&
-		t.GasLimit == tb.GasLimit &&
-		t.Recipient == tb.Recipient &&
-		t.Amount.Cmp(tb.Amount) == 0 &&
-		t.From == tb.From &&
-		t.TxSignatures.equal(tb.TxSignatures) &&
-		t.FeePayer == tb.FeePayer &&
-		t.FeePayerSignatures.equal(tb.FeePayerSignatures)
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransfer) IsLegacyTransaction() bool {
-	return false
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransfer) GetAccountNonce() uint64 {
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) GetPrice() *big.Int {
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -180,7 +157,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) GetRecipient() *common.Address {
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetTo() *common.Address {
 	if t.Recipient == (common.Address{}) {
 		return nil
 	}
@@ -189,7 +166,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) GetRecipient() *common.Address
 	return &to
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) GetAmount() *big.Int {
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
@@ -197,8 +174,8 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) GetFrom() common.Address {
 	return t.From
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) GetHash() *common.Hash {
-	return t.Hash
+func (t *TxInternalDataFeeDelegatedValueTransfer) GetData() []byte {
+	return []byte{}
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) GetFeePayer() common.Address {
@@ -209,7 +186,7 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) GetFeePayerRawSignatureValues(
 	return t.FeePayerSignatures.RawSignatureValues()
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) SetHash(h *common.Hash) {
+func (t *TxInternalDataFeeDelegatedValueTransfer) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
@@ -219,42 +196,6 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) SetSignature(s TxSignatures) {
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) SetFeePayerSignatures(s TxSignatures) {
 	t.FeePayerSignatures = s
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransfer) RecoverFeePayerPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	return t.FeePayerSignatures.RecoverPubkey(txhash, homestead, vfunc)
-}
-
-func (t *TxInternalDataFeeDelegatedValueTransfer) String() string {
-	ser := newTxInternalDataSerializerWithValues(t)
-	tx := Transaction{data: t}
-	enc, _ := rlp.EncodeToBytes(ser)
-	return fmt.Sprintf(`
-	TX(%x)
-	Type:          %s
-	From:          %s
-	To:            %s
-	Nonce:         %v
-	GasPrice:      %#x
-	GasLimit:      %#x
-	Value:         %#x
-	Signature:     %s
-	FeePayer:      %s
-	FeePayerSig:   %s
-	Hex:           %x
-`,
-		tx.Hash(),
-		t.Type().String(),
-		t.From.String(),
-		t.Recipient.String(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Amount,
-		t.TxSignatures.string(),
-		t.FeePayer.String(),
-		t.FeePayerSignatures.string(),
-		enc)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
@@ -283,16 +224,8 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) SerializeForSignToBytes() []by
 	return b
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) SerializeForSign() []interface{} {
-	return []interface{}{
-		t.Type(),
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.From,
-	}
+func (t *TxInternalDataFeeDelegatedValueTransfer) SigHash(chainId *big.Int) common.Hash {
+	return sigHashKaia(t.SerializeForSignToBytes(), chainId)
 }
 
 func (t *TxInternalDataFeeDelegatedValueTransfer) SenderTxHash() common.Hash {
@@ -315,14 +248,16 @@ func (t *TxInternalDataFeeDelegatedValueTransfer) SenderTxHash() common.Hash {
 	return h
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-		return kerrors.ErrPrecompiledContractAddress
-	}
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
+func (t *TxInternalDataFeeDelegatedValueTransfer) FeePayerSigHash(chainId *big.Int) common.Hash {
+	return feePayerSigHash(t.SerializeForSignToBytes(), t.GetFeePayer(), chainId)
 }
 
-func (t *TxInternalDataFeeDelegatedValueTransfer) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
+func (t *TxInternalDataFeeDelegatedValueTransfer) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
+	if !onlyMutableChecks {
+		if common.IsPrecompiledContractAddress(t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+			return kerrors.ErrPrecompiledContractAddress
+		}
+	}
 	if err := validate7702(stateDB, t.Type(), t.From, t.Recipient); err != nil {
 		return err
 	}

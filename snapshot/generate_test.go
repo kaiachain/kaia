@@ -708,7 +708,7 @@ func TestGenerateWithManyExtraAccounts(t *testing.T) {
 		for i := 0; i < 1000; i++ {
 			acc, _ := genExternallyOwnedAccount(uint64(i), big.NewInt(int64(i)))
 			val, _ := rlp.EncodeToBytes(acc)
-			key := hashData([]byte(fmt.Sprintf("acc-%d", i)))
+			key := hashData(fmt.Appendf(nil, "acc-%d", i))
 			diskdb.WriteAccountSnapshot(key, val)
 		}
 	}

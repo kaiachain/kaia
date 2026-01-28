@@ -44,7 +44,7 @@ var (
 	validatorAddressListCanonicalizer canonicalizerT = func(v any) (any, error) {
 		stringToAddressList := func(v string) ([]common.Address, error) {
 			ret := []common.Address{}
-			for _, address := range strings.Split(v, ",") {
+			for address := range strings.SplitSeq(v, ",") {
 				if !common.IsHexAddress(address) {
 					return nil, ErrCanonicalizeStringToAddress
 				}

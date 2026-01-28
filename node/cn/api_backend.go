@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/bloombits"
 	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
@@ -70,6 +71,10 @@ func (b *CNAPIBackend) GetBlockReceiptsInCache(blockHash common.Hash) types.Rece
 // GetTxLookupInfoAndReceiptInCache retrieves a tx and lookup info and receipt for a given transaction hash in cache.
 func (b *CNAPIBackend) GetTxLookupInfoAndReceiptInCache(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt) {
 	return b.cn.blockchain.GetTxLookupInfoAndReceiptInCache(txHash)
+}
+
+func (b *CNAPIBackend) GetActiveSystemContracts(c *params.ChainConfig, genesis common.Hash, head *big.Int) map[string]common.Address {
+	return system.ActiveSystemContracts(c, genesis, head)
 }
 
 func (b *CNAPIBackend) ChainConfig() *params.ChainConfig {
@@ -399,4 +404,13 @@ func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Bloc
 
 func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount uint64, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
 	return b.gpo.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
+}
+
+// GetBlobSidecar retrieves a blob sidecar from blob storage by block number and transaction index.
+func (b *CNAPIBackend) GetBlobSidecar(blockNum *big.Int, txIndex int) (*types.BlobTxSidecar, error) {
+	sidecar, err := b.cn.txPool.GetBlobSidecarFromStorage(blockNum, txIndex)
+	if err != nil {
+		return nil, err
+	}
+	return sidecar, nil
 }

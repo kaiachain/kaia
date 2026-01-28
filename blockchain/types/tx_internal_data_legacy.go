@@ -19,21 +19,15 @@
 package types
 
 import (
-	"bytes"
-	"crypto/ecdsa"
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
 )
 
 type TxInternalDataLegacy struct {
@@ -169,11 +163,11 @@ func (t *TxInternalDataLegacy) ChainId() *big.Int {
 	return deriveChainId(t.V)
 }
 
-func (t *TxInternalDataLegacy) GetAccountNonce() uint64 {
+func (t *TxInternalDataLegacy) GetNonce() uint64 {
 	return t.AccountNonce
 }
 
-func (t *TxInternalDataLegacy) GetPrice() *big.Int {
+func (t *TxInternalDataLegacy) GetGasPrice() *big.Int {
 	return new(big.Int).Set(t.Price)
 }
 
@@ -181,23 +175,19 @@ func (t *TxInternalDataLegacy) GetGasLimit() uint64 {
 	return t.GasLimit
 }
 
-func (t *TxInternalDataLegacy) GetRecipient() *common.Address {
+func (t *TxInternalDataLegacy) GetTo() *common.Address {
 	return t.Recipient
 }
 
-func (t *TxInternalDataLegacy) GetAmount() *big.Int {
+func (t *TxInternalDataLegacy) GetValue() *big.Int {
 	return new(big.Int).Set(t.Amount)
 }
 
-func (t *TxInternalDataLegacy) GetHash() *common.Hash {
-	return t.Hash
-}
-
-func (t *TxInternalDataLegacy) GetPayload() []byte {
+func (t *TxInternalDataLegacy) GetData() []byte {
 	return t.Payload
 }
 
-func (t *TxInternalDataLegacy) SetHash(h *common.Hash) {
+func (t *TxInternalDataLegacy) setHashForMarshaling(h *common.Hash) {
 	t.Hash = h
 }
 
@@ -215,167 +205,32 @@ func (t *TxInternalDataLegacy) RawSignatureValues() TxSignatures {
 	return TxSignatures{&TxSignature{t.V, t.R, t.S}}
 }
 
-func (t *TxInternalDataLegacy) ValidateSignature() bool {
-	return validateSignature(t.V, t.R, t.S)
-}
-
-func (t *TxInternalDataLegacy) RecoverAddress(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) (common.Address, error) {
-	V := vfunc(t.V)
-	return recoverPlain(txhash, t.R, t.S, V, homestead)
-}
-
-func (t *TxInternalDataLegacy) RecoverPubkey(txhash common.Hash, homestead bool, vfunc func(*big.Int) *big.Int) ([]*ecdsa.PublicKey, error) {
-	V := vfunc(t.V)
-
-	pk, err := recoverPlainPubkey(txhash, t.R, t.S, V, homestead)
-	if err != nil {
-		return nil, err
-	}
-
-	return []*ecdsa.PublicKey{pk}, nil
-}
-
 func (t *TxInternalDataLegacy) IntrinsicGas(currentBlockNumber uint64) (uint64, error) {
 	return IntrinsicGas(t.Payload, nil, nil, t.Recipient == nil, *fork.Rules(big.NewInt(int64(currentBlockNumber))))
 }
 
-func (t *TxInternalDataLegacy) SerializeForSign() []interface{} {
-	return []interface{}{
+func (t *TxInternalDataLegacy) SigHash(chainId *big.Int) common.Hash {
+	infs := []interface{}{
 		t.AccountNonce,
 		t.Price,
 		t.GasLimit,
 		t.Recipient,
 		t.Amount,
 		t.Payload,
+		chainId, uint(0), uint(0),
 	}
+	return rlpHash(infs)
 }
 
-func (t *TxInternalDataLegacy) SenderTxHash() common.Hash {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, []interface{}{
-		t.AccountNonce,
-		t.Price,
-		t.GasLimit,
-		t.Recipient,
-		t.Amount,
-		t.Payload,
-		t.V,
-		t.R,
-		t.S,
-	})
-
-	h := common.Hash{}
-
-	hw.Sum(h[:0])
-
-	return h
-}
-
-func (t *TxInternalDataLegacy) IsLegacyTransaction() bool {
-	return true
-}
-
-func (t *TxInternalDataLegacy) equalHash(a *TxInternalDataLegacy) bool {
-	if t.GetHash() == nil && a.GetHash() == nil {
-		return true
-	}
-
-	if t.GetHash() != nil && a.GetHash() != nil &&
-		bytes.Equal(t.GetHash().Bytes(), a.GetHash().Bytes()) {
-		return true
-	}
-
-	return false
-}
-
-func (t *TxInternalDataLegacy) Equal(a TxInternalData) bool {
-	ta, ok := a.(*TxInternalDataLegacy)
-	if !ok {
-		return false
-	}
-
-	return t.AccountNonce == ta.AccountNonce &&
-		t.Price.Cmp(ta.Price) == 0 &&
-		t.GasLimit == ta.GasLimit &&
-		equalRecipient(t.Recipient, ta.Recipient) &&
-		t.Amount.Cmp(ta.Amount) == 0 &&
-		t.V.Cmp(ta.V) == 0 &&
-		t.R.Cmp(ta.R) == 0 &&
-		t.S.Cmp(ta.S) == 0
-}
-
-func (t *TxInternalDataLegacy) String() string {
-	var from, to string
-	tx := &Transaction{data: t}
-
-	v, r, s := t.V, t.R, t.S
-	if v != nil {
-		// make a best guess about the signer and use that to derive
-		// the sender.
-		signer := deriveSigner(v)
-		if f, err := Sender(signer, tx); err != nil { // derive but don't cache
-			from = "[invalid sender: invalid sig]"
-		} else {
-			from = fmt.Sprintf("%x", f[:])
-		}
-	} else {
-		from = "[invalid sender: nil V field]"
-	}
-
-	if t.GetRecipient() == nil {
-		to = "[contract creation]"
-	} else {
-		to = fmt.Sprintf("%x", t.GetRecipient().Bytes())
-	}
-	enc, _ := rlp.EncodeToBytes(t)
-	return fmt.Sprintf(`
-	TX(%x)
-	Contract: %v
-	From:     %s
-	To:       %s
-	Nonce:    %v
-	GasPrice: %#x
-	GasLimit  %#x
-	Value:    %#x
-	Data:     0x%x
-	V:        %#x
-	R:        %#x
-	S:        %#x
-	Hex:      %x
-`,
-		tx.Hash(),
-		t.GetRecipient() == nil,
-		from,
-		to,
-		t.GetAccountNonce(),
-		t.GetPrice(),
-		t.GetGasLimit(),
-		t.GetAmount(),
-		t.GetPayload(),
-		v,
-		r,
-		s,
-		enc,
-	)
-}
-
-func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint64) error {
-	if t.Recipient != nil {
-		if common.IsPrecompiledContractAddress(*t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
-			return kerrors.ErrPrecompiledContractAddress
+func (t *TxInternalDataLegacy) Validate(stateDB StateDB, currentBlockNumber uint64, onlyMutableChecks bool) error {
+	if !onlyMutableChecks {
+		if t.Recipient != nil {
+			if common.IsPrecompiledContractAddress(*t.Recipient, *fork.Rules(big.NewInt(int64(currentBlockNumber)))) {
+				return kerrors.ErrPrecompiledContractAddress
+			}
 		}
 	}
-	return t.ValidateMutableValue(stateDB, currentBlockNumber)
-}
-
-func (t *TxInternalDataLegacy) ValidateMutableValue(stateDB StateDB, currentBlockNumber uint64) error {
 	return nil
-}
-
-func (t *TxInternalDataLegacy) FillContractAddress(from common.Address, r *Receipt) {
-	if t.Recipient == nil {
-		r.ContractAddress = crypto.CreateAddress(from, t.AccountNonce)
-	}
 }
 
 func (t *TxInternalDataLegacy) Execute(sender ContractRef, vm VM, stateDB StateDB, currentBlockNumber uint64, gas uint64, value *big.Int) (ret []byte, usedGas uint64, err error) {

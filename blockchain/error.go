@@ -32,6 +32,10 @@ var (
 	// ErrKnownBlock is returned when a block to import is already known locally.
 	ErrKnownBlock = errors.New("block already known")
 
+	// ErrBlockOversized is returned if the size of the RLP-encoded block
+	// exceeds the cap established by EIP 7934
+	ErrBlockOversized = errors.New("block RLP-encoded size exceeds maximum")
+
 	// ErrGasLimitReached is returned by the gas pool if the amount of gas required
 	// by a transaction is higher than what's left in the block.
 	ErrGasLimitReached = errors.New("gas limit reached")
@@ -66,6 +70,10 @@ var (
 	// ErrReplaceUnderpriced is returned if a transaction is attempted to be replaced
 	// with a different one without the required price bump.
 	ErrReplaceUnderpriced = errors.New("replacement transaction underpriced")
+
+	// ErrTxGasPriceTooLow is returned if a transaction's gas price is below the
+	// minimum configured for the transaction pool.
+	ErrTxGasPriceTooLow = errors.New("transaction gas price below minimum")
 
 	// ErrAlreadyNonceExistInPool is returned if there is another tx with the same nonce in the tx pool.
 	ErrAlreadyNonceExistInPool = errors.New("there is another tx which has the same nonce in the tx pool")
@@ -106,6 +114,10 @@ var (
 	// than some meaningful limit a user might use. This is not a consensus error
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")
+
+	// ErrTxBlobLimitExceeded is returned if a transaction would exceed the number
+	// of blobs allowed by blobpool.
+	ErrTxBlobLimitExceeded = errors.New("transaction blob limit exceeded")
 
 	// ErrInvlidUnitPrice is returned if gas price of transaction is not equal to UnitPrice
 	ErrInvalidUnitPrice = errors.New("invalid unit price")
@@ -159,6 +171,21 @@ var (
 
 	// ErrGasPriceBelowBaseFee is returned if gas price of transaction is lower than gas unit price.
 	ErrGasPriceBelowBaseFee = errors.New("invalid gas price. It must be set to value greater than or equal to baseFee")
+
+	// -- EIP-4844 errors --
+
+	// ErrBlobFeeCapTooLow is returned if the transaction fee cap is less than the
+	// blob gas fee of the block.
+	ErrBlobFeeCapTooLow = errors.New("max fee per blob gas less than block blob gas fee")
+
+	// ErrMissingBlobHashes is returned if a blob transaction has no blob hashes.
+	ErrMissingBlobHashes = errors.New("blob transaction missing blob hashes")
+
+	// ErrTooManyBlobs is returned if a blob transaction exceeds the maximum number of blobs.
+	ErrTooManyBlobs = errors.New("blob transaction has too many blobs")
+
+	// ErrBlobTxCreate is returned if a blob transaction has no explicit to field.
+	ErrBlobTxCreate = errors.New("blob transaction of type create")
 
 	// -- EIP-7702 errors --
 
