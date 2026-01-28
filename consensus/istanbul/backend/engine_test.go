@@ -578,7 +578,8 @@ func TestVerifyHeader(t *testing.T) {
 					return
 				}
 
-				err := engine.chain.Validator().ValidateHeader(tc.header)
+				validator := blockchain.NewBlockValidatorWithHeaderChain(chain.Config(), chain)
+				err := validator.ValidateHeader(tc.header)
 				if tc.expectedErr != nil {
 					if err.Error() != tc.expectedErr.Error() {
 						t.Errorf("error mismatch: have %v, want %v", err, tc.expectedErr)

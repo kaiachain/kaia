@@ -19,6 +19,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto/bls"
@@ -73,10 +74,11 @@ func TestRandao_Verify(t *testing.T) {
 	config := testRandaoConfig.Copy()
 
 	ctx := newTestContext(1, config, nil)
-	chain, engine := ctx.chain, ctx.engine
+	chain := ctx.chain
 	defer ctx.Cleanup()
 
 	block := ctx.MakeBlockWithCommittedSeals(chain.Genesis())
 	header := block.Header()
-	assert.Nil(t, engine.chain.Validator().ValidateHeader(header))
+	validator := blockchain.NewBlockValidatorWithHeaderChain(chain.Config(), chain)
+	assert.Nil(t, validator.ValidateHeader(header))
 }

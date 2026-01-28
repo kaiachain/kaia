@@ -54,7 +54,7 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain) *Bloc
 	return validator
 }
 
-func NewBlockValidatorWithHeaderChain(config *params.ChainConfig, hc *HeaderChain) *BlockValidator {
+func NewBlockValidatorWithHeaderChain(config *params.ChainConfig, hc consensus.ChainReader) *BlockValidator {
 	validator := &BlockValidator{
 		config: config,
 		hc:     hc,
