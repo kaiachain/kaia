@@ -34,6 +34,10 @@ import (
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/fork"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	mock_gov "github.com/kaiachain/kaia/kaiax/gov/mock"
+	"github.com/kaiachain/kaia/kaiax/valset"
+	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/log/term"
 	"github.com/kaiachain/kaia/params"
@@ -43,8 +47,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// newMockBackend create a mock-backend initialized with default values
-func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanbul.MockBackend, *gomock.Controller) {
+// newMockBackend create a mock-backend and mock valset/gov modules initialized with default values.
+// Caller must call istCore.RegisterKaiaxModules(mockValset, mockGov) after New().
+func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanbul.MockBackend, *gomock.Controller, *valset_mock.MockValsetModule, *mock_gov.MockGovModule) {
 	committeeSize := uint64(len(validatorAddrs) / 3)
 
 	istExtra := &types.IstanbulExtra{
@@ -69,24 +74,28 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 	eventMux := new(event.TypeMux)
 
 	mockCtrl := gomock.NewController(t)
-	mockValset := istanbul.NewBlockValSet(validatorAddrs, []common.Address{})
+	mockValsetModule := valset_mock.NewMockValsetModule(mockCtrl)
+	mockGovModule := mock_gov.NewMockGovModule(mockCtrl)
 	mockBackend := mock_istanbul.NewMockBackend(mockCtrl)
 
-	// Consider the last proposal is "initBlock" and the owner of mockBackend is validatorAddrs[0]
+	// Valset module: used by core startRound (no BlockValSet)
+	mockValsetModule.EXPECT().GetCouncil(gomock.Any()).Return(validatorAddrs, nil).AnyTimes()
+	mockValsetModule.EXPECT().GetDemotedValidators(gomock.Any()).Return([]common.Address{}, nil).AnyTimes()
+	mockValsetModule.EXPECT().GetCommittee(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(num uint64, round uint64) ([]common.Address, error) {
+			if round == 2 {
+				return validatorAddrs[2 : committeeSize+2], nil
+			}
+			return validatorAddrs[0:committeeSize], nil
+		}).AnyTimes()
+	mockValsetModule.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(validatorAddrs[0], nil).AnyTimes()
 
+	// Gov module: used by core for committee size
+	mockGovModule.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{CommitteeSize: committeeSize}).AnyTimes()
+
+	// Consider the last proposal is "initBlock" and the owner of mockBackend is validatorAddrs[0]
 	mockBackend.EXPECT().Address().Return(validatorAddrs[0]).AnyTimes()
 	mockBackend.EXPECT().LastProposal().Return(initBlock, validatorAddrs[0]).AnyTimes()
-	mockBackend.EXPECT().GetCommitteeStateByRound(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(num uint64, round uint64) (*istanbul.RoundCommitteeState, error) {
-			if round == 2 {
-				return istanbul.NewRoundCommitteeState(
-					mockValset, committeeSize, validatorAddrs[2:committeeSize+2], validatorAddrs[0],
-				), nil
-			}
-			return istanbul.NewRoundCommitteeState(
-				mockValset, committeeSize, validatorAddrs[0:committeeSize], validatorAddrs[0],
-			), nil
-		}).AnyTimes()
 	mockBackend.EXPECT().GetProposerByRound(gomock.Any(), gomock.Any()).Return(validatorAddrs[0], nil).AnyTimes()
 	mockBackend.EXPECT().NodeType().Return(common.CONSENSUSNODE).AnyTimes()
 
@@ -104,7 +113,22 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 	// Verify checks whether the proposal of the preprepare message is a valid block. Consider it valid.
 	mockBackend.EXPECT().Verify(gomock.Any()).Return(time.Duration(0), nil).AnyTimes()
 
-	return mockBackend, mockCtrl
+	return mockBackend, mockCtrl, mockValsetModule, mockGovModule
+}
+
+// getTestCommitteeState returns qualified, committee, proposer, nonCommittee for tests using the same logic as newMockBackend
+func getTestCommitteeState(validatorAddrs []common.Address, committeeSize uint64, seq, round uint64) (qualified, committee *valset.AddressSet, proposer common.Address, nonCommittee *valset.AddressSet) {
+	qualified = valset.NewAddressSet(validatorAddrs).Subtract(valset.NewAddressSet([]common.Address{}))
+	var committeeAddrs []common.Address
+	if round == 2 {
+		committeeAddrs = validatorAddrs[2 : committeeSize+2]
+	} else {
+		committeeAddrs = validatorAddrs[0:committeeSize]
+	}
+	committee = valset.NewAddressSet(committeeAddrs)
+	proposer = validatorAddrs[0]
+	nonCommittee = qualified.Subtract(committee)
+	return qualified, committee, proposer, nonCommittee
 }
 
 // genValidators returns a set of addresses and corresponding keys used for generating a validator set
@@ -241,7 +265,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 	defer fork.ClearHardForkBlockNumberConfig()
 
 	validatorAddrs, validatorKeyMap := genValidators(30)
-	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs)
 	defer mockCtrl.Finish()
 
 	istConfig := istanbul.DefaultConfig
@@ -249,6 +273,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// When the istanbul core started, a message handling loop in `handleEvents()` waits istanbul messages
 	istCore := New(mockBackend, istConfig).(*core)
+	istCore.RegisterKaiaxModules(mockValset, mockGov)
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -258,12 +283,12 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 	eventMux := mockBackend.EventMux()
 	lastProposal, _ := mockBackend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
-	cState, err := mockBackend.GetCommitteeStateByRound(istCore.currentView().Sequence.Uint64(), istCore.currentView().Round.Uint64())
-	assert.NoError(t, err)
+	committeeSize := uint64(len(validatorAddrs) / 3)
+	_, _, _, nonCommittee := getTestCommitteeState(validatorAddrs, committeeSize, istCore.currentView().Sequence.Uint64(), istCore.currentView().Round.Uint64())
 
 	// Preprepare message originated from invalid sender
 	{
-		msgSender := cState.NonCommittee().At(rand.Int() % (cState.NonCommittee().Len() - 1))
+		msgSender := nonCommittee.At(rand.Int() % (nonCommittee.Len() - 1))
 		msgSenderKey := validatorKeyMap[msgSender]
 
 		newProposal, err := genBlock(lastBlock, msgSenderKey)
@@ -286,7 +311,8 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Preprepare message originated from valid sender and set a new proposal in the istanbul core
 	{
-		msgSender := cState.Proposer()
+		_, _, proposer, _ := getTestCommitteeState(validatorAddrs, committeeSize, istCore.currentView().Sequence.Uint64(), istCore.currentView().Round.Uint64())
+		msgSender := proposer
 		msgSenderKey := validatorKeyMap[msgSender]
 
 		newProposal, err := genBlock(lastBlock, msgSenderKey)
@@ -310,7 +336,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Prepare message originated from invalid sender
 	{
-		msgSender := cState.NonCommittee().At(rand.Int() % (cState.NonCommittee().Len() - 1))
+		msgSender := nonCommittee.At(rand.Int() % (nonCommittee.Len() - 1))
 		msgSenderKey := validatorKeyMap[msgSender]
 
 		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
@@ -328,7 +354,8 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Prepare message originated from valid sender
 	{
-		msgSender := cState.Committee().At(rand.Int() % (cState.Committee().Len() - 1))
+		_, committee, _, _ := getTestCommitteeState(validatorAddrs, committeeSize, istCore.currentView().Sequence.Uint64(), istCore.currentView().Round.Uint64())
+		msgSender := committee.At(rand.Int() % (committee.Len() - 1))
 		msgSenderKey := validatorKeyMap[msgSender]
 
 		istanbulMsg, err := genIstanbulMsg(msgPrepare, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
@@ -346,7 +373,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Commit message originated from invalid sender
 	{
-		msgSender := cState.NonCommittee().At(rand.Int() % (cState.NonCommittee().Len() - 1))
+		msgSender := nonCommittee.At(rand.Int() % (nonCommittee.Len() - 1))
 		msgSenderKey := validatorKeyMap[msgSender]
 
 		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
@@ -364,7 +391,8 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// Commit message originated from valid sender
 	{
-		msgSender := cState.Committee().At(rand.Int() % (cState.Committee().Len() - 1))
+		_, committee, _, _ := getTestCommitteeState(validatorAddrs, committeeSize, istCore.currentView().Sequence.Uint64(), istCore.currentView().Round.Uint64())
+		msgSender := committee.At(rand.Int() % (committee.Len() - 1))
 		msgSenderKey := validatorKeyMap[msgSender]
 
 		istanbulMsg, err := genIstanbulMsg(msgCommit, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
@@ -400,7 +428,7 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 
 	// RoundChange message originated from valid sender
 	{
-		msgSender := cState.NonCommittee().At(rand.Int() % (cState.NonCommittee().Len() - 1))
+		msgSender := nonCommittee.At(rand.Int() % (nonCommittee.Len() - 1))
 		msgSenderKey := validatorKeyMap[msgSender]
 
 		istanbulMsg, err := genIstanbulMsg(msgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
@@ -422,13 +450,14 @@ func TestCore_handlerMsg(t *testing.T) {
 	defer fork.ClearHardForkBlockNumberConfig()
 
 	validatorAddrs, validatorKeyMap := genValidators(10)
-	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs)
 	defer mockCtrl.Finish()
 
 	istConfig := istanbul.DefaultConfig.Copy()
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 
 	istCore := New(mockBackend, istConfig).(*core)
+	istCore.RegisterKaiaxModules(mockValset, mockGov)
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -436,7 +465,8 @@ func TestCore_handlerMsg(t *testing.T) {
 
 	lastProposal, _ := mockBackend.LastProposal()
 	lastBlock := lastProposal.(*types.Block)
-	cState, _ := mockBackend.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
+	committeeSize := uint64(len(validatorAddrs) / 3)
+	_, _, proposer, _ := getTestCommitteeState(validatorAddrs, committeeSize, lastBlock.NumberU64()+1, 0)
 
 	// invalid format
 	{
@@ -467,7 +497,7 @@ func TestCore_handlerMsg(t *testing.T) {
 
 	// valid message
 	{
-		msgSender := cState.Proposer()
+		msgSender := proposer
 		msgSenderKey := validatorKeyMap[msgSender]
 
 		newProposal, err := genBlock(lastBlock, msgSenderKey)
@@ -534,20 +564,20 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	validatorAddrs, validatorKeyMap := genValidators(numValidators * 3)
 
 	// Add more EXPECT()s to remove unexpected call error
-	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs)
 	mockBackend.EXPECT().Commit(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	mockBackend.EXPECT().HasBadProposal(gomock.Any()).Return(true).AnyTimes()
 	defer mockCtrl.Finish()
 
+	committeeSize := uint64(len(validatorAddrs) / 3)
 	var (
 		// it creates two pre-defined blocks: one for benign CNs, the other for the malicious
 		// newProposal is a block which the proposer has created
 		// malProposal is an incorrect block that malicious CNs use to try stop consensus
-		lastProposal, _ = mockBackend.LastProposal()
-		lastBlock       = lastProposal.(*types.Block)
-		cState, _       = mockBackend.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
-		proposer        = cState.Proposer()
-		proposerKey     = validatorKeyMap[proposer]
+		lastProposal, _   = mockBackend.LastProposal()
+		lastBlock         = lastProposal.(*types.Block)
+		_, _, proposer, _ = getTestCommitteeState(validatorAddrs, committeeSize, lastBlock.NumberU64()+1, 0)
+		proposerKey       = validatorKeyMap[proposer]
 		// the proposer generates a block as newProposal
 		// malicious CNs does not accept the proposer's block and use malProposal's hash value for consensus
 		newProposal, _ = genBlockParams(lastBlock, proposerKey, 0, 1, 1)
@@ -558,6 +588,7 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 	istCore := New(mockBackend, istConfig).(*core)
+	istCore.RegisterKaiaxModules(mockValset, mockGov)
 	require.Nil(t, istCore.Start())
 	defer istCore.Stop()
 
@@ -572,7 +603,8 @@ func simulateMaliciousCN(t *testing.T, numValidators int, numMalicious int) Stat
 	require.Nil(t, err)
 
 	// splitSubList split current committee into benign CNs and malicious CNs
-	subList := cState.Committee().List()
+	_, committee, _, _ := getTestCommitteeState(validatorAddrs, committeeSize, lastBlock.NumberU64()+1, 0)
+	subList := committee.List()
 	maliciousCNs, benignCNs := splitSubList(subList, numMalicious, proposer)
 	benignCNs = append(benignCNs, proposer)
 
@@ -628,17 +660,17 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	validatorAddrs, validatorKeyMap := genValidators(numValidators * 3)
 
 	// Add more EXPECT()s to remove unexpected call error
-	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs)
 	mockBackend.EXPECT().Commit(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	mockBackend.EXPECT().HasBadProposal(gomock.Any()).Return(true).AnyTimes()
 	defer mockCtrl.Finish()
 
+	committeeSize := uint64(len(validatorAddrs) / 3)
 	var (
-		lastProposal, _ = mockBackend.LastProposal()
-		lastBlock       = lastProposal.(*types.Block)
-		cState, _       = mockBackend.GetCommitteeStateByRound(lastBlock.NumberU64()+1, 0)
-		proposer        = cState.Proposer()
-		proposerKey     = validatorKeyMap[proposer]
+		lastProposal, _   = mockBackend.LastProposal()
+		lastBlock         = lastProposal.(*types.Block)
+		_, _, proposer, _ = getTestCommitteeState(validatorAddrs, committeeSize, lastBlock.NumberU64()+1, 0)
+		proposerKey       = validatorKeyMap[proposer]
 	)
 
 	// Start istanbul core
@@ -647,6 +679,9 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	coreProposer := New(mockBackend, istConfig).(*core)
 	coreA := New(mockBackend, istConfig).(*core)
 	coreB := New(mockBackend, istConfig).(*core)
+	coreProposer.RegisterKaiaxModules(mockValset, mockGov)
+	coreA.RegisterKaiaxModules(mockValset, mockGov)
+	coreB.RegisterKaiaxModules(mockValset, mockGov)
 	require.Nil(t,
 		coreProposer.Start(),
 		coreA.Start(),
@@ -659,7 +694,8 @@ func simulateChainSplit(t *testing.T, numValidators int) (State, State) {
 	// the number of group size is (numValidators-1/2) + 1
 	// groupA consists of proposer, coreA, unnamed node(s)
 	// groupB consists of proposer, coreB, unnamed node(s)
-	subList := cState.Committee().List()
+	_, committee, _, _ := getTestCommitteeState(validatorAddrs, committeeSize, lastBlock.NumberU64()+1, 0)
+	subList := committee.List()
 	groupA, groupB := splitSubList(subList, (numValidators-1)/2, proposer)
 	groupA = append(groupA, proposer)
 	groupB = append(groupB, proposer)
@@ -763,13 +799,14 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 	}
 
 	validatorAddrs, validatorKeys := genValidators(10)
-	mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+	mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs)
 	defer mockCtrl.Finish()
 
 	istConfig := istanbul.DefaultConfig
 	istConfig.ProposerPolicy = istanbul.WeightedRandom
 
 	istCore := New(mockBackend, istConfig).(*core)
+	istCore.RegisterKaiaxModules(mockValset, mockGov)
 	if err := istCore.Start(); err != nil {
 		t.Fatal(err)
 	}

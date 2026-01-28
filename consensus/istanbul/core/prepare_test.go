@@ -45,7 +45,7 @@ func TestCore_sendPrepare(t *testing.T) {
 		{"valid case", 0, true},
 		{"invalid case - not committee", 2, false},
 	} {
-		mockBackend, mockCtrl := newMockBackend(t, validatorAddrs)
+		mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs)
 		if tc.valid {
 			mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).AnyTimes()
 			mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -55,6 +55,7 @@ func TestCore_sendPrepare(t *testing.T) {
 		istConfig.ProposerPolicy = istanbul.WeightedRandom
 
 		istCore := New(mockBackend, istConfig).(*core)
+		istCore.RegisterKaiaxModules(mockValset, mockGov)
 		assert.NoError(t, istCore.Start())
 
 		lastProposal, _ := mockBackend.LastProposal()
