@@ -39,8 +39,9 @@ import (
 //
 // BlockValidator implements Validator.
 type BlockValidator struct {
-	config *params.ChainConfig // Chain configuration options
-	bc     *BlockChain         // Canonical block chain
+	config *params.ChainConfig   // Chain configuration options
+	bc     *BlockChain           // Canonical block chain
+	hc     consensus.ChainReader // Header chain
 }
 
 // NewBlockValidator returns a new block validator which is safe for re-use
@@ -48,6 +49,15 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain) *Bloc
 	validator := &BlockValidator{
 		config: config,
 		bc:     blockchain,
+		hc:     blockchain,
+	}
+	return validator
+}
+
+func NewBlockValidatorWithHeaderChain(config *params.ChainConfig, hc *HeaderChain) *BlockValidator {
+	validator := &BlockValidator{
+		config: config,
+		hc:     hc,
 	}
 	return validator
 }
@@ -56,9 +66,9 @@ func (v *BlockValidator) ValidateHeader(header *types.Header) error {
 	var parent []*types.Header
 	if header.Number.Sign() == 0 {
 		// If current block is genesis, the parent is also genesis
-		parent = append(parent, v.bc.GetHeaderByNumber(0))
+		parent = append(parent, v.hc.GetHeaderByNumber(0))
 	} else {
-		parent = append(parent, v.bc.GetHeader(header.ParentHash, header.Number.Uint64()-1))
+		parent = append(parent, v.hc.GetHeader(header.ParentHash, header.Number.Uint64()-1))
 	}
 	return v.validateHeader(header, parent)
 }
@@ -115,7 +125,7 @@ func (v *BlockValidator) validateHeader(header *types.Header, parents []*types.H
 	if len(parents) > 0 {
 		parent = parents[len(parents)-1]
 	} else {
-		parent = v.bc.GetHeader(header.ParentHash, number-1)
+		parent = v.hc.GetHeader(header.ParentHash, number-1)
 	}
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
@@ -137,13 +147,16 @@ func (v *BlockValidator) validateHeader(header *types.Header, parents []*types.H
 	}
 
 	// Validate consensus-dependent properties via the consensus engine
-	return v.bc.Engine().VerifyHeader(v.bc, header, parents)
+	return v.hc.Engine().VerifyHeader(v.hc, header, parents)
 }
 
 // ValidateBody verifies the block
 // header's transaction. The headers are assumed to be already
 // validated at this point.
 func (v *BlockValidator) ValidateBody(block *types.Block) error {
+	if v.bc == nil {
+		return errors.New("block validator with header chain is not supported")
+	}
 	// check EIP 7934 RLP-encoded block size cap
 	if v.config.IsOsakaForkEnabled(block.Number()) && block.Size() > params.MaxBlockSize {
 		return ErrBlockOversized

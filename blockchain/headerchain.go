@@ -59,6 +59,8 @@ type HeaderChain struct {
 
 	rand   *mrand.Rand
 	engine consensus.Engine
+
+	validator interfaces.Validator
 }
 
 // NewHeaderChain creates a new HeaderChain structure.
@@ -97,6 +99,8 @@ func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, engi
 		}
 	}
 	hc.currentHeaderHash = hc.CurrentHeader().Hash()
+
+	hc.validator = NewBlockValidatorWithHeaderChain(config, hc)
 
 	return hc, nil
 }
@@ -214,8 +218,7 @@ func (hc *HeaderChain) ValidateHeaderChain(chain []*types.Header, checkFreq int)
 		results <-chan error
 	)
 	if hc.engine.CanVerifyHeadersConcurrently() {
-		// TODO: no validator
-		// abort, results = hc.engine.VerifyHeaders(hc, chain, seals)
+		abort, results = hc.validator.ValidateHeaders(chain)
 	} else {
 		abort, results = hc.engine.PreprocessHeaderVerification(chain)
 	}
@@ -265,10 +268,9 @@ func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCa
 			continue
 		}
 		if !hc.engine.CanVerifyHeadersConcurrently() {
-			// TODO: no validator
-			// if err := hc.engine.VerifyHeader(hc, header, nil); err != nil {
-			// 	return i, err
-			// }
+			if err := hc.validator.ValidateHeader(header); err != nil {
+				return i, err
+			}
 		}
 		if err := writeHeader(header); err != nil {
 			return i, err
@@ -470,5 +472,5 @@ func (hc *HeaderChain) StateAt(root common.Hash) (*state.StateDB, error) {
 }
 
 func (hc *HeaderChain) Validator() interfaces.Validator {
-	return nil
+	return hc.validator
 }
