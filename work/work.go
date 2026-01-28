@@ -30,7 +30,6 @@ import (
 
 	"github.com/kaiachain/kaia/accounts"
 	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/interfaces"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -311,7 +310,7 @@ type BlockChain interface {
 	GetTxAndLookupInfo(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	GetLogsByHash(hash common.Hash) [][]*types.Log
 	ResetWithGenesisBlock(gb *types.Block) error
-	Validator() interfaces.Validator
+	Validator() blockchain.Validator
 	HasBadBlock(hash common.Hash) bool
 	WriteBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (blockchain.WriteResult, error)
 	PostChainEvents(events []interface{}, logs []*types.Log)

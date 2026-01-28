@@ -31,7 +31,6 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/asm"
-	"github.com/kaiachain/kaia/blockchain/interfaces"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -282,7 +281,7 @@ func (d *dummyChain) StateAt(root common.Hash) (*state.StateDB, error) {
 }
 
 // Validator retrieves a validator
-func (d *dummyChain) Validator() interfaces.Validator {
+func (d *dummyChain) Validator() blockchain.Validator {
 	return nil
 }
 

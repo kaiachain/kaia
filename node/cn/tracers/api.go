@@ -36,7 +36,6 @@ import (
 
 	kaiaapi "github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/interfaces"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -219,7 +218,7 @@ func (context *chainContext) StateAt(root common.Hash) (*state.StateDB, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (context *chainContext) Validator() interfaces.Validator {
+func (context *chainContext) Validator() blockchain.Validator {
 	return nil
 }
 

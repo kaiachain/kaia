@@ -32,7 +32,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain/interfaces"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -60,7 +59,7 @@ type HeaderChain struct {
 	rand   *mrand.Rand
 	engine consensus.Engine
 
-	validator interfaces.Validator
+	validator Validator
 }
 
 // NewHeaderChain creates a new HeaderChain structure.
@@ -471,6 +470,6 @@ func (hc *HeaderChain) StateAt(root common.Hash) (*state.StateDB, error) {
 	return nil, errors.New("HeaderChain does not support StateAt() method")
 }
 
-func (hc *HeaderChain) Validator() interfaces.Validator {
+func (hc *HeaderChain) Validator() Validator {
 	return hc.validator
 }

@@ -38,7 +38,6 @@ import (
 
 	"github.com/go-redis/redis/v7"
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/blockchain/interfaces"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -196,9 +195,9 @@ type BlockChain struct {
 	wg            sync.WaitGroup // chain processing wait group for shutting down
 
 	engine     consensus.Engine
-	processor  Processor            // block processor interface
-	prefetcher Prefetcher           // Block state prefetcher interface
-	validator  interfaces.Validator // block and state validator interface
+	processor  Processor  // block processor interface
+	prefetcher Prefetcher // Block state prefetcher interface
+	validator  Validator  // block and state validator interface
 	vmConfig   vm.Config
 
 	parallelDBWrite bool // TODO-Kaia-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
@@ -729,7 +728,7 @@ func (bc *BlockChain) CurrentFastBlock() *types.Block {
 }
 
 // Validator returns the current validator.
-func (bc *BlockChain) Validator() interfaces.Validator {
+func (bc *BlockChain) Validator() Validator {
 	return bc.validator
 }
 
