@@ -137,36 +137,9 @@ func (sb *backend) computeSignatureAddrs(header *types.Header) error {
 	return nil
 }
 
-// VerifyHeader checks whether a header conforms to the consensus rules of a
-// given engine. Verifying the seal may be done optionally here, or explicitly
-// via the VerifySeal method.
-func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
-	var parent []*types.Header
-	if header.Number.Sign() == 0 {
-		// If current block is genesis, the parent is also genesis
-		parent = append(parent, chain.GetHeaderByNumber(0))
-	} else {
-		parent = append(parent, chain.GetHeader(header.ParentHash, header.Number.Uint64()-1))
-	}
-
-	return sb.verifyHeader(chain, header, parent)
-}
-
-// verifyHeader checks whether a header conforms to the consensus rules.The
-// caller may optionally pass in a batch of parents (ascending order) to avoid
-// looking those up from the database. This is useful for concurrently verifying
-// a batch of new headers.
-func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return consensus.ErrUnknownBlock
-	}
-
-	if chain.Validator() == nil {
-		return istanbul.ErrNoValidator
-	}
-
-	if err := chain.Validator().ValidateHeader(header, parents); err != nil {
-		return err
 	}
 
 	// Header verify before/after magma fork
@@ -194,16 +167,17 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	if number == 0 {
 		return nil
 	}
-	// Ensure that the block's timestamp isn't too close to it's parent
+	// Get parent header for consensus-dependent checks
 	var parent *types.Header
 	if len(parents) > 0 {
 		parent = parents[len(parents)-1]
 	} else {
 		parent = chain.GetHeader(header.ParentHash, number-1)
 	}
-	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
+	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
+	// Ensure that the block's timestamp isn't too close to it's parent
 	if parent.Time.Uint64()+sb.config.BlockPeriod > header.Time.Uint64() {
 		return istanbul.ErrInvalidTimestamp
 	}
@@ -232,37 +206,6 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	}
 
 	return nil
-}
-
-// VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
-// concurrently. The method returns a quit channel to abort the operations and
-// a results channel to retrieve the async verifications (the order is that of
-// the input slice).
-func (sb *backend) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	abort := make(chan struct{})
-	results := make(chan error, len(headers))
-	go func() {
-		errored := false
-		for i, header := range headers {
-			var err error
-			if errored { // If errored once in the batch, skip the rest
-				err = consensus.ErrUnknownAncestor
-			} else {
-				err = sb.verifyHeader(chain, header, headers[:i])
-			}
-
-			if err != nil {
-				errored = true
-			}
-
-			select {
-			case <-abort:
-				return
-			case results <- err:
-			}
-		}
-	}()
-	return abort, results
 }
 
 // verifySigner checks whether the signer is in parent's validator set

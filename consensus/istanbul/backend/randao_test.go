@@ -78,5 +78,5 @@ func TestRandao_Verify(t *testing.T) {
 
 	block := ctx.MakeBlockWithCommittedSeals(chain.Genesis())
 	header := block.Header()
-	assert.Nil(t, engine.VerifyHeader(chain, header, false))
+	assert.Nil(t, engine.chain.Validator().ValidateHeader(header))
 }

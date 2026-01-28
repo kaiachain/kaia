@@ -517,7 +517,8 @@ func TestVerifyHeader(t *testing.T) {
 		chain, engine := newBlockChain(1, configItems...)
 		defer engine.Stop()
 
-		testCases := []struct {
+		// Tests for consensus-dependent validations (tested via engine.VerifyHeader)
+		consensusDependentTests := []struct {
 			name        string
 			header      *types.Header
 			expectedErr error
@@ -558,17 +559,6 @@ func TestVerifyHeader(t *testing.T) {
 				targetFork:  "kore",
 			},
 			{
-				name: "invalid difficulty",
-				header: func() *types.Header {
-					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-					header := block.Header()
-					header.BlockScore = big.NewInt(2)
-					return header
-				}(),
-				expectedErr: consensus.ErrInvalidBlockScore,
-				targetFork:  "kore",
-			},
-			{
 				name: "invalid timestamp",
 				header: func() *types.Header {
 					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
@@ -577,6 +567,46 @@ func TestVerifyHeader(t *testing.T) {
 					return header
 				}(),
 				expectedErr: istanbul.ErrInvalidTimestamp,
+				targetFork:  "kore",
+			},
+			// TODO-Kaia: add more tests for header.Governance, header.Rewardbase, header.Vote
+		}
+
+		for _, tc := range consensusDependentTests {
+			t.Run(tc.name, func(t *testing.T) {
+				if tc.targetFork != fork {
+					return
+				}
+
+				err := engine.chain.Validator().ValidateHeader(tc.header)
+				if tc.expectedErr != nil {
+					if err.Error() != tc.expectedErr.Error() {
+						t.Errorf("error mismatch: have %v, want %v", err, tc.expectedErr)
+					}
+				} else {
+					if err != nil {
+						t.Errorf("unexpected error: have %v, want nil", err)
+					}
+				}
+			})
+		}
+
+		// Tests for consensus-agnostic validations (tested via chain.Validator().ValidateHeader)
+		consensusAgnosticTests := []struct {
+			name        string
+			header      *types.Header
+			expectedErr error
+			targetFork  string
+		}{
+			{
+				name: "invalid difficulty",
+				header: func() *types.Header {
+					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+					header := block.Header()
+					header.BlockScore = big.NewInt(2)
+					return header
+				}(),
+				expectedErr: consensus.ErrInvalidBlockScore,
 				targetFork:  "kore",
 			},
 			{
@@ -625,16 +655,15 @@ func TestVerifyHeader(t *testing.T) {
 				expectedErr: errors.New("header is missing excessBlobGas"),
 				targetFork:  "osaka",
 			},
-			// TODO-Kaia: add more tests for header.Governance, header.Rewardbase, header.Vote
 		}
 
-		for _, tc := range testCases {
+		for _, tc := range consensusAgnosticTests {
 			t.Run(tc.name, func(t *testing.T) {
 				if tc.targetFork != fork {
 					return
 				}
 
-				err := engine.VerifyHeader(chain, tc.header, false)
+				err := chain.Validator().ValidateHeader(tc.header)
 				if tc.expectedErr != nil {
 					if err.Error() != tc.expectedErr.Error() {
 						t.Errorf("error mismatch: have %v, want %v", err, tc.expectedErr)
@@ -729,7 +758,7 @@ func TestVerifyHeaders(t *testing.T) {
 
 	// Helper function to verify headers and collect results
 	verifyHeadersAndCollectResults := func(t *testing.T, testHeaders []*types.Header, expectErrors bool) int {
-		abort, results := engine.VerifyHeaders(chain, testHeaders, nil)
+		abort, results := chain.Validator().ValidateHeaders(testHeaders)
 		defer close(abort)
 
 		timeout := time.NewTimer(2 * time.Second)

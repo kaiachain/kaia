@@ -1900,7 +1900,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		results <-chan error
 	)
 	if bc.engine.CanVerifyHeadersConcurrently() {
-		abort, results = bc.engine.VerifyHeaders(bc, headers, seals)
+		abort, results = bc.validator.ValidateHeaders(headers)
 	} else {
 		abort, results = bc.engine.PreprocessHeaderVerification(headers)
 	}
@@ -1981,7 +1981,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 
 		err := <-results
 		if !bc.engine.CanVerifyHeadersConcurrently() && err == nil {
-			err = bc.engine.VerifyHeader(bc, block.Header(), true)
+			err = bc.validator.ValidateHeader(block.Header())
 		}
 
 		if err == nil {

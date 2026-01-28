@@ -52,9 +52,45 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain) *Bloc
 	return validator
 }
 
-// ValidateHeader validates header's consensus-agnostic properties, such as the block number, parent hash, time, block score, etc.
-// This method is used by the consensus engine to validate the header.
-func (v *BlockValidator) ValidateHeader(header *types.Header, parents []*types.Header) error {
+func (v *BlockValidator) ValidateHeader(header *types.Header) error {
+	var parent []*types.Header
+	if header.Number.Sign() == 0 {
+		// If current block is genesis, the parent is also genesis
+		parent = append(parent, v.bc.GetHeaderByNumber(0))
+	} else {
+		parent = append(parent, v.bc.GetHeader(header.ParentHash, header.Number.Uint64()-1))
+	}
+	return v.validateHeader(header, parent)
+}
+
+func (v *BlockValidator) ValidateHeaders(headers []*types.Header) (chan<- struct{}, <-chan error) {
+	abort := make(chan struct{})
+	results := make(chan error, len(headers))
+	go func() {
+		errored := false
+		for i, header := range headers {
+			var err error
+			if errored { // If errored once in the batch, skip the rest
+				err = consensus.ErrUnknownAncestor
+			} else {
+				err = v.validateHeader(header, headers[:i])
+			}
+
+			if err != nil {
+				errored = true
+			}
+
+			select {
+			case <-abort:
+				return
+			case results <- err:
+			}
+		}
+	}()
+	return abort, results
+}
+
+func (v *BlockValidator) validateHeader(header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return consensus.ErrUnknownBlock
 	}
@@ -100,7 +136,8 @@ func (v *BlockValidator) ValidateHeader(header *types.Header, parents []*types.H
 		}
 	}
 
-	return nil
+	// Validate consensus-dependent properties via the consensus engine
+	return v.bc.Engine().VerifyHeader(v.bc, header, parents)
 }
 
 // ValidateBody verifies the block

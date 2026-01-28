@@ -214,7 +214,8 @@ func (hc *HeaderChain) ValidateHeaderChain(chain []*types.Header, checkFreq int)
 		results <-chan error
 	)
 	if hc.engine.CanVerifyHeadersConcurrently() {
-		abort, results = hc.engine.VerifyHeaders(hc, chain, seals)
+		// TODO: no validator
+		// abort, results = hc.engine.VerifyHeaders(hc, chain, seals)
 	} else {
 		abort, results = hc.engine.PreprocessHeaderVerification(chain)
 	}
@@ -264,9 +265,10 @@ func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCa
 			continue
 		}
 		if !hc.engine.CanVerifyHeadersConcurrently() {
-			if err := hc.engine.VerifyHeader(hc, header, true); err != nil {
-				return i, err
-			}
+			// TODO: no validator
+			// if err := hc.engine.VerifyHeader(hc, header, nil); err != nil {
+			// 	return i, err
+			// }
 		}
 		if err := writeHeader(header); err != nil {
 			return i, err

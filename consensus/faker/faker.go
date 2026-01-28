@@ -87,7 +87,7 @@ func (f *Faker) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, e
 }
 
 // VerifyHeader checks whether a header conforms to the consensus rules.
-func (f *Faker) VerifyHeader(chain consensus.ChainReader, header *types.Header, seal bool) error {
+func (f *Faker) VerifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	// If we're running a full engine faking, accept any input as valid
 	if f.fullFake {
 		return nil
