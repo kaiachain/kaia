@@ -733,7 +733,7 @@ func (s *Syncer) loadSyncStatus() {
 			return
 		}
 	}
-	// Either we've failed to decode the previus state, or there was none.
+	// Either we've failed to decode the previous state, or there was none.
 	// Start a fresh sync by chunking up the account range and scheduling
 	// them for retrieval.
 	s.tasks = nil
@@ -2017,7 +2017,7 @@ func (s *Syncer) processStorageResponse(res *storageResponse) {
 				s.storageBytes += nodeSize
 			}
 		}
-		// Persist the received storage segements. These flat state maybe
+		// Persist the received storage segments. These flat state maybe
 		// outdated during the sync, but it can be fixed later during the
 		// snapshot generation.
 		for j := 0; j < len(res.hashes[i]); j++ {
@@ -2153,7 +2153,7 @@ func (s *Syncer) forwardAccountTask(task *accountTask) {
 	}
 	task.res = nil
 
-	// Persist the received account segements. These flat state maybe
+	// Persist the received account segments. These flat state maybe
 	// outdated during the sync, but it can be fixed later during the
 	// snapshot generation.
 	oldAccountBytes := s.accountBytes
@@ -2760,7 +2760,7 @@ func (s *Syncer) onHealByteCodes(peer SyncPeer, id uint64, bytecodes [][]byte) e
 }
 
 // onHealState is a callback method to invoke when a flat state(account
-// or storage slot) is downloded during the healing stage. The flat states
+// or storage slot) is downloaded during the healing stage. The flat states
 // can be persisted blindly and can be fixed later in the generation stage.
 // Note it's not concurrent safe, please handle the concurrent issue outside.
 func (s *Syncer) onHealState(paths [][]byte, value []byte) error {

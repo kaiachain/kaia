@@ -71,7 +71,7 @@ func newBridgeAddrJournal(path string) *bridgeAddrJournal {
 func (journal *bridgeAddrJournal) load(add func(journal BridgeJournal) error) error {
 	journal.writerMu.Lock()
 	defer journal.writerMu.Unlock()
-	// Skip the parsing if the journal file doens't exist at all
+	// Skip the parsing if the journal file doesn't exist at all
 	if _, err := os.Stat(journal.path); os.IsNotExist(err) {
 		return nil
 	}
