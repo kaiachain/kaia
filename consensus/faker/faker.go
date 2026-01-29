@@ -111,67 +111,11 @@ func (f *Faker) VerifyHeader(chain consensus.ChainReader, header *types.Header, 
 	}
 
 	// Check parent existence
-	parent := chain.GetHeader(header.ParentHash, number-1)
-	if parent == nil {
-		return consensus.ErrUnknownAncestor
-	}
-
-	// All other headers are valid in fake mode
-	return nil
-}
-
-// VerifyHeaders verifies a batch of headers concurrently.
-func (f *Faker) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	abort, results := make(chan struct{}), make(chan error, len(headers))
-	// If we're running a full engine faking, accept all headers as valid
-	if f.fullFake || len(headers) == 0 {
-		go func() {
-			for i := 0; i < len(headers); i++ {
-				results <- nil
-			}
-		}()
-		return abort, results
-	}
-	go func() {
-		for i := range headers {
-			select {
-			case <-abort:
-				return
-			default:
-				err := f.verifyHeaderWorker(chain, headers, seals, i)
-				results <- err
-			}
-		}
-	}()
-	return abort, results
-}
-
-// verifyHeaderWorker is a helper for batch header verification.
-func (f *Faker) verifyHeaderWorker(chain consensus.ChainReader, headers []*types.Header, seals []bool, index int) error {
-	header := headers[index]
-	number := header.Number.Uint64()
-
-	// Check if we should fail this block
-	if f.failBlock != 0 && number == f.failBlock {
-		return consensus.ErrUnknownAncestor
-	}
-
-	// Short circuit if the header is known
-	if chain.GetHeader(header.Hash(), number) != nil {
-		return nil
-	}
-
-	// For genesis block, skip parent check
-	if number == 0 {
-		return nil
-	}
-
-	// Find parent - either from previous header in batch or from chain
 	var parent *types.Header
-	if index == 0 {
+	if len(parents) == 0 {
 		parent = chain.GetHeader(header.ParentHash, number-1)
-	} else if headers[index-1].Hash() == header.ParentHash {
-		parent = headers[index-1]
+	} else if parents[len(parents)-1] != nil && parents[len(parents)-1].Hash() == header.ParentHash {
+		parent = parents[len(parents)-1]
 	} else {
 		parent = chain.GetHeader(header.ParentHash, number-1)
 	}

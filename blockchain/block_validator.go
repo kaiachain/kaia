@@ -42,6 +42,7 @@ type BlockValidator struct {
 	config *params.ChainConfig   // Chain configuration options
 	bc     *BlockChain           // Canonical block chain
 	hc     consensus.ChainReader // Header chain
+	engine consensus.Engine      // Consensus engine
 }
 
 // NewBlockValidator returns a new block validator which is safe for re-use
@@ -50,6 +51,7 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain) *Bloc
 		config: config,
 		bc:     blockchain,
 		hc:     blockchain,
+		engine: blockchain.Engine(),
 	}
 	return validator
 }
@@ -58,6 +60,7 @@ func NewBlockValidatorWithHeaderChain(config *params.ChainConfig, hc consensus.C
 	validator := &BlockValidator{
 		config: config,
 		hc:     hc,
+		engine: hc.Engine(),
 	}
 	return validator
 }
@@ -69,6 +72,10 @@ func (v *BlockValidator) ValidateHeader(header *types.Header) error {
 		parent = append(parent, v.hc.GetHeaderByNumber(0))
 	} else {
 		parent = append(parent, v.hc.GetHeader(header.ParentHash, header.Number.Uint64()-1))
+	}
+	if _, ok := v.engine.(consensus.Istanbul); !ok {
+		// TODO: this is ad-hoc fix for faker engine, should be removed
+		return v.engine.VerifyHeader(v.hc, header, parent)
 	}
 	return v.validateHeader(header, parent)
 }
@@ -82,6 +89,9 @@ func (v *BlockValidator) ValidateHeaders(headers []*types.Header) (chan<- struct
 			var err error
 			if errored { // If errored once in the batch, skip the rest
 				err = consensus.ErrUnknownAncestor
+			} else if _, ok := v.engine.(consensus.Istanbul); !ok {
+				// TODO: this is ad-hoc fix for faker engine, should be removed
+				err = v.engine.VerifyHeader(v.hc, header, headers[:i])
 			} else {
 				err = v.validateHeader(header, headers[:i])
 			}
@@ -147,7 +157,7 @@ func (v *BlockValidator) validateHeader(header *types.Header, parents []*types.H
 	}
 
 	// Validate consensus-dependent properties via the consensus engine
-	return v.hc.Engine().VerifyHeader(v.hc, header, parents)
+	return v.engine.VerifyHeader(v.hc, header, parents)
 }
 
 // ValidateBody verifies the block

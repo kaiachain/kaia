@@ -60,11 +60,19 @@ func TestHeaderVerification(t *testing.T) {
 			var results <-chan error
 
 			if valid {
-				engine := faker.NewFaker()
-				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
+				validator := &BlockValidator{
+					config: chain.Config(),
+					hc:     chain,
+					engine: faker.NewFaker(),
+				}
+				_, results = validator.ValidateHeaders([]*types.Header{headers[i]})
 			} else {
-				engine := faker.NewFakeFailer(headers[i].Number.Uint64())
-				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
+				validator := &BlockValidator{
+					config: chain.Config(),
+					hc:     chain,
+					engine: faker.NewFakeFailer(headers[i].Number.Uint64()),
+				}
+				_, results = validator.ValidateHeaders([]*types.Header{headers[i]})
 			}
 			// Wait for the verification result
 			select {

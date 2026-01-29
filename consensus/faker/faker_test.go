@@ -167,35 +167,6 @@ func TestVerifySeal(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// TestVerifyHeaders tests batch header verification
-func TestVerifyHeaders(t *testing.T) {
-	f := NewFaker()
-
-	// Test with empty headers
-	headers := []*types.Header{}
-	seals := []bool{}
-	abort, results := f.VerifyHeaders(nil, headers, seals)
-	assert.NotNil(t, abort)
-	assert.NotNil(t, results)
-
-	// Test with fullFake mode
-	f2 := NewFullFaker()
-	headers = []*types.Header{
-		{Number: big.NewInt(1)},
-		{Number: big.NewInt(2)},
-	}
-	seals = []bool{true, true}
-	abort, results = f2.VerifyHeaders(nil, headers, seals)
-	assert.NotNil(t, abort)
-	assert.NotNil(t, results)
-
-	// Read results
-	for i := 0; i < len(headers); i++ {
-		err := <-results
-		assert.NoError(t, err)
-	}
-}
-
 // TestNewShared tests the NewShared constructor
 func TestNewShared(t *testing.T) {
 	f := NewShared()
