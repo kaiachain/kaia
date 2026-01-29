@@ -218,10 +218,6 @@ func (context *chainContext) StateAt(root common.Hash) (*state.StateDB, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (context *chainContext) Validator() blockchain.Validator {
-	return nil
-}
-
 // chainContext constructs the context reader which is used by the evm for reading
 // the necessary chain context.
 func newChainContext(ctx context.Context, backend Backend) consensus.ChainReader {

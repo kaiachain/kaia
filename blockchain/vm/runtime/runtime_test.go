@@ -280,11 +280,6 @@ func (d *dummyChain) StateAt(root common.Hash) (*state.StateDB, error) {
 	return nil, nil
 }
 
-// Validator retrieves a validator
-func (d *dummyChain) Validator() blockchain.Validator {
-	return nil
-}
-
 // TestBlockhash tests the blockhash operation. It's a bit special, since it internally
 // requires access to a chain reader.
 func TestBlockhash(t *testing.T) {

@@ -2842,10 +2842,6 @@ func (mc *testChainContext) StateAt(root common.Hash) (*state.StateDB, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (mc *testChainContext) Validator() blockchain.Validator {
-	return nil
-}
-
 // Contract C { constructor() { revert("hello"); } }
 var codeRevertHello = "0x6080604052348015600f57600080fd5b5060405162461bcd60e51b815260206004820152600560248201526468656c6c6f60d81b604482015260640160405180910390fdfe"
 
