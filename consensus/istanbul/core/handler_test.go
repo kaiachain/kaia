@@ -426,7 +426,8 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 	//	assert.Nil(t, istCore.roundChangeSet.roundChanges[0]) // round is set to 0 in this test
 	//}
 
-	// RoundChange message originated from valid sender
+	// RoundChange message originated from valid sender even though using non-committee sender because there is no checking for committee in round change
+	// See: TODO-Kaia-Istanbul: establish round change messaging policy and then apply it
 	{
 		msgSender := nonCommittee.At(rand.Int() % (nonCommittee.Len() - 1))
 		msgSenderKey := validatorKeyMap[msgSender]
