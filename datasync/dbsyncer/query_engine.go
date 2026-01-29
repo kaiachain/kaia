@@ -183,10 +183,7 @@ func (qe *QueryEngine) executeBulkInsert(bulkInserts []*BulkInsertQuery, result 
 	}
 
 	// Ensure we have meaningful task sizes and schedule the recoveries
-	tasks := qe.insertQueue
-	if len(bulkInserts) < tasks {
-		tasks = len(bulkInserts)
-	}
+	tasks := min(len(bulkInserts), qe.insertQueue)
 	for i := 0; i < tasks; i++ {
 		qe.inserts <- &BulkInsertRequest{
 			bulkInserts: bulkInserts[i:],

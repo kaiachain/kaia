@@ -932,10 +932,7 @@ func setTxResendConfig(ctx *cli.Context, cfg *cn.Config) {
 		cfg.TxResendInterval = cn.DefaultTxResendInterval
 	}
 
-	cfg.TxResendCount = ctx.Int(TxResendCountFlag.Name)
-	if cfg.TxResendCount < cn.DefaultMaxResendTxCount {
-		cfg.TxResendCount = cn.DefaultMaxResendTxCount
-	}
+	cfg.TxResendCount = max(ctx.Int(TxResendCountFlag.Name), cn.DefaultMaxResendTxCount)
 	cfg.TxResendUseLegacy = ctx.Bool(TxResendUseLegacyFlag.Name)
 	logger.Debug("TxResend config", "Interval", cfg.TxResendInterval, "TxResendCount", cfg.TxResendCount, "UseLegacy", cfg.TxResendUseLegacy)
 }

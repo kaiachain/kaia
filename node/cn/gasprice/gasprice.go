@@ -83,14 +83,8 @@ type Oracle struct {
 
 // NewOracle returns a new oracle.
 func NewOracle(backend OracleBackend, config Config, txPool TxPool, govModule gov.GovModule) *Oracle {
-	blocks := config.Blocks
-	if blocks < 1 {
-		blocks = 1
-	}
-	percent := config.Percentile
-	if percent < 0 {
-		percent = 0
-	}
+	blocks := max(config.Blocks, 1)
+	percent := max(config.Percentile, 0)
 	if percent > 100 {
 		percent = 100
 	}
