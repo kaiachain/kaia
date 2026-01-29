@@ -223,7 +223,11 @@ func (c *core) currentView() *istanbul.View {
 }
 
 func (c *core) isProposer() bool {
-	return c.current.proposer == c.backend.Address()
+	v := c.current
+	if v == nil {
+		return false
+	}
+	return v.proposer == c.backend.Address()
 }
 
 func (c *core) commit() {
