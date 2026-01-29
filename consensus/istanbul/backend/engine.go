@@ -706,6 +706,8 @@ func (sb *backend) RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.Sta
 	sb.RegisterStakingModule(mStaking)
 	sb.valsetModule = mValset
 	sb.randaoModule = mRandao
+
+	sb.core.RegisterKaiaxModules(mValset, mGov)
 }
 
 func (sb *backend) RegisterStakingModule(module staking.StakingModule) {

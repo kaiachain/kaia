@@ -29,6 +29,7 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
 // sendNextRoundChange sends the ROUND CHANGE message with current round + 1
@@ -85,10 +86,14 @@ func (c *core) sendRoundChange(round *big.Int) {
 		Msg:  payload,
 	})
 
+	committeeList := []common.Address{}
+	if c.current.committee != nil {
+		committeeList = c.current.committee.List()
+	}
 	Vrank.SetLatestView(istanbul.View{
 		Round:    new(big.Int).Set(round),
 		Sequence: new(big.Int).Set(cv.Sequence),
-	}, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+	}, committeeList, c.current.requiredMessageCount)
 	Vrank.AddMyRoundChange(round.Uint64(), timestamp)
 }
 
@@ -123,12 +128,12 @@ func (c *core) handleRoundChange(msg *message, src common.Address) error {
 		return err
 	}
 
-	Vrank.SetLatestView(*cv, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+	Vrank.SetLatestView(*cv, c.current.committee.List(), c.current.requiredMessageCount)
 	Vrank.AddRoundChange(src, roundView.Round.Uint64(), timestamp)
 
 	var numCatchUp, numStartNewRound int
-	n := c.currentCommittee.RequiredMessageCount()
-	f := c.currentCommittee.F()
+	n := c.current.requiredMessageCount
+	f := c.current.f
 	// N ROUND CHANGE messages can start new round.
 	numStartNewRound = n
 	// F + 1 ROUND CHANGE messages can start catch up the round.
@@ -165,16 +170,16 @@ func (c *core) handleRoundChange(msg *message, src common.Address) error {
 
 // ----------------------------------------------------------------------------
 
-func newRoundChangeSet(councilState *istanbul.BlockValSet) *roundChangeSet {
+func newRoundChangeSet(qualified *valset.AddressSet) *roundChangeSet {
 	return &roundChangeSet{
-		valSet:       councilState,
+		qualified:    qualified,
 		roundChanges: make(map[uint64]*messageSet),
 		mu:           new(sync.Mutex),
 	}
 }
 
 type roundChangeSet struct {
-	valSet       *istanbul.BlockValSet
+	qualified    *valset.AddressSet
 	roundChanges map[uint64]*messageSet
 	mu           *sync.Mutex
 }
@@ -186,7 +191,7 @@ func (rcs *roundChangeSet) Add(r *big.Int, msg *message) (int, error) {
 
 	round := r.Uint64()
 	if rcs.roundChanges[round] == nil {
-		rcs.roundChanges[round] = newMessageSet(rcs.valSet)
+		rcs.roundChanges[round] = newMessageSet(rcs.qualified)
 	}
 	err := rcs.roundChanges[round].Add(msg)
 	if err != nil {

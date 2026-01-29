@@ -30,10 +30,11 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
 // Construct a new message set to accumulate messages for given sequence/view number.
-func newMessageSet(valSet *istanbul.BlockValSet) *messageSet {
+func newMessageSet(qualified *valset.AddressSet) *messageSet {
 	return &messageSet{
 		view: &istanbul.View{
 			Round:    new(big.Int),
@@ -41,7 +42,7 @@ func newMessageSet(valSet *istanbul.BlockValSet) *messageSet {
 		},
 		messagesMu: new(sync.Mutex),
 		messages:   make(map[common.Address]*message),
-		valSet:     valSet,
+		qualified:  qualified,
 	}
 }
 
@@ -49,7 +50,7 @@ func newMessageSet(valSet *istanbul.BlockValSet) *messageSet {
 
 type messageSet struct {
 	view       *istanbul.View
-	valSet     *istanbul.BlockValSet
+	qualified  *valset.AddressSet
 	messagesMu *sync.Mutex
 	messages   map[common.Address]*message
 }
@@ -107,7 +108,7 @@ func (ms *messageSet) Get(addr common.Address) *message {
 
 func (ms *messageSet) verify(msg *message) error {
 	// verify if the message comes from one of the validators
-	if !ms.valSet.Qualified().Contains(msg.Address) {
+	if !ms.qualified.Contains(msg.Address) {
 		return istanbul.ErrUnauthorizedAddress
 	}
 

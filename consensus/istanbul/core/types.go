@@ -29,12 +29,15 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/rlp"
 )
 
 type Engine interface {
 	Start() error
 	Stop() error
+	RegisterKaiaxModules(mValset valset.ValsetModule, mGov gov.GovModule)
 }
 
 type State uint64

@@ -106,7 +106,7 @@ func (c *core) handleEvents() {
 					// c.backend.Gossip(c.valSet, ev.Payload)
 				}
 			case backlogEvent:
-				if !c.currentCommittee.Qualified().Contains(ev.src) {
+				if !c.current.qualified.Contains(ev.src) {
 					c.logger.Error("Invalid address in valSet", "addr", ev.src)
 					continue
 				}
@@ -176,7 +176,7 @@ func (c *core) handleMsg(payload []byte) error {
 	}
 
 	// Only accept message if the address is valid
-	if !c.currentCommittee.Qualified().Contains(msg.Address) {
+	if !c.current.qualified.Contains(msg.Address) {
 		logger.Error("Invalid address in message", "msg", msg)
 		return istanbul.ErrUnauthorizedAddress
 	}
@@ -236,7 +236,7 @@ func (c *core) handleTimeoutMsg(nextView *istanbul.View) {
 	// the max round with F+1 round change message. We only need to catch up
 	// if the max round is larger than current round.
 	if !c.waitingForRoundChange {
-		maxRound := c.roundChangeSet.MaxRound(c.currentCommittee.F() + 1)
+		maxRound := c.roundChangeSet.MaxRound(c.current.f + 1)
 		if maxRound != nil && maxRound.Cmp(c.current.Round()) > 0 {
 			logger.Warn("[RC] Send round change because of timeout event")
 			c.sendRoundChange(maxRound)
