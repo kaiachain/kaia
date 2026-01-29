@@ -592,6 +592,12 @@ func testInsertNonceError(t *testing.T, full bool) {
 			failNum = blocks[failAt].NumberU64()
 
 			blockchain.engine = faker.NewFakeFailer(failNum)
+			blockchain.validator = &BlockValidator{
+				config: blockchain.Config(),
+				bc:     blockchain,
+				hc:     blockchain,
+				engine: blockchain.engine,
+			}
 			failRes, err = blockchain.InsertChain(blocks)
 		} else {
 			headers := MakeHeaderChain(blockchain.CurrentHeader(), i, faker.NewFaker(), db, 0)
@@ -601,6 +607,11 @@ func testInsertNonceError(t *testing.T, full bool) {
 
 			blockchain.engine = faker.NewFakeFailer(failNum)
 			blockchain.hc.engine = blockchain.engine
+			blockchain.hc.validator = &BlockValidator{
+				config: blockchain.Config(),
+				hc:     blockchain.hc,
+				engine: blockchain.engine,
+			}
 			failRes, err = blockchain.InsertHeaderChain(headers, 1)
 		}
 		// Check that the returned error indicates the failure.
