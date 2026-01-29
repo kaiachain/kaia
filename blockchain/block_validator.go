@@ -25,10 +25,12 @@ package blockchain
 import (
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -37,8 +39,10 @@ import (
 //
 // BlockValidator implements Validator.
 type BlockValidator struct {
-	config *params.ChainConfig // Chain configuration options
-	bc     *BlockChain         // Canonical block chain
+	config *params.ChainConfig   // Chain configuration options
+	bc     *BlockChain           // Canonical block chain
+	hc     consensus.ChainReader // Header chain
+	engine consensus.Engine      // Consensus engine
 }
 
 // NewBlockValidator returns a new block validator which is safe for re-use
@@ -46,14 +50,123 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain) *Bloc
 	validator := &BlockValidator{
 		config: config,
 		bc:     blockchain,
+		hc:     blockchain,
+		engine: blockchain.Engine(),
 	}
 	return validator
+}
+
+func NewBlockValidatorWithHeaderChain(config *params.ChainConfig, hc consensus.ChainReader) *BlockValidator {
+	validator := &BlockValidator{
+		config: config,
+		hc:     hc,
+		engine: hc.Engine(),
+	}
+	return validator
+}
+
+func (v *BlockValidator) ValidateHeader(header *types.Header) error {
+	var parent []*types.Header
+	if header.Number.Sign() == 0 {
+		// If current block is genesis, the parent is also genesis
+		parent = append(parent, v.hc.GetHeaderByNumber(0))
+	} else {
+		parent = append(parent, v.hc.GetHeader(header.ParentHash, header.Number.Uint64()-1))
+	}
+	if _, ok := v.engine.(consensus.Istanbul); !ok {
+		// TODO: this is ad-hoc fix for faker engine, should be removed
+		return v.engine.VerifyHeader(v.hc, header, parent)
+	}
+	return v.validateHeader(header, parent)
+}
+
+func (v *BlockValidator) ValidateHeaders(headers []*types.Header) (chan<- struct{}, <-chan error) {
+	abort := make(chan struct{})
+	results := make(chan error, len(headers))
+	go func() {
+		errored := false
+		for i, header := range headers {
+			var err error
+			if errored { // If errored once in the batch, skip the rest
+				err = consensus.ErrUnknownAncestor
+			} else if _, ok := v.engine.(consensus.Istanbul); !ok {
+				// TODO: this is ad-hoc fix for faker engine, should be removed
+				err = v.engine.VerifyHeader(v.hc, header, headers[:i])
+			} else {
+				err = v.validateHeader(header, headers[:i])
+			}
+
+			if err != nil {
+				errored = true
+			}
+
+			select {
+			case <-abort:
+				return
+			case results <- err:
+			}
+		}
+	}()
+	return abort, results
+}
+
+func (v *BlockValidator) validateHeader(header *types.Header, parents []*types.Header) error {
+	if header.Number == nil {
+		return consensus.ErrUnknownBlock
+	}
+
+	// Don't waste time checking blocks from the future
+	if header.Time.Cmp(big.NewInt(consensus.Now().Add(consensus.AllowedFutureBlockTime).Unix())) > 0 {
+		return consensus.ErrFutureBlock
+	}
+
+	// Ensure that the block's blockscore is meaningful (may not be correct at this point)
+	if header.BlockScore == nil || header.BlockScore.Cmp(consensus.DefaultBlockScore) != 0 {
+		return consensus.ErrInvalidBlockScore
+	}
+
+	// The genesis block is the always valid dead-end
+	number := header.Number.Uint64()
+	if number == 0 {
+		return nil
+	}
+	// Ensure that the block's timestamp isn't too close to it's parent
+	var parent *types.Header
+	if len(parents) > 0 {
+		parent = parents[len(parents)-1]
+	} else {
+		parent = v.hc.GetHeader(header.ParentHash, number-1)
+	}
+	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
+		return consensus.ErrUnknownAncestor
+	}
+
+	// Verify the existence / non-existence of osaka-specific header fields
+	osaka := v.config.IsOsakaForkEnabled(header.Number)
+	if !osaka {
+		switch {
+		case header.ExcessBlobGas != nil:
+			return consensus.ErrUnexpectedExcessBlobGasBeforeOsaka
+		case header.BlobGasUsed != nil:
+			return consensus.ErrUnexpectedBlobGasUsedBeforeOsaka
+		}
+	} else {
+		if err := eip4844.VerifyEIP4844Header(v.config, parent, header); err != nil {
+			return err
+		}
+	}
+
+	// Validate consensus-dependent properties via the consensus engine
+	return v.engine.VerifyHeader(v.hc, header, parents)
 }
 
 // ValidateBody verifies the block
 // header's transaction. The headers are assumed to be already
 // validated at this point.
 func (v *BlockValidator) ValidateBody(block *types.Block) error {
+	if v.bc == nil {
+		return errors.New("block validator with header chain is not supported")
+	}
 	// check EIP 7934 RLP-encoded block size cap
 	if v.config.IsOsakaForkEnabled(block.Number()) && block.Size() > params.MaxBlockSize {
 		return ErrBlockOversized

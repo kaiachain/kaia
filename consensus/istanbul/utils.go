@@ -23,6 +23,9 @@
 package istanbul
 
 import (
+	"math/big"
+	"time"
+
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
@@ -30,7 +33,14 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-var logger = log.NewModuleLogger(log.ConsensusIstanbul)
+const AllowedFutureBlockTime = 1 * time.Second // Max time from current time allowed for blocks, before they're considered future blocks
+
+var (
+	DefaultBlockScore = big.NewInt(1)
+	Now               = time.Now
+
+	logger = log.NewModuleLogger(log.ConsensusIstanbul)
+)
 
 func RLPHash(v interface{}) (h common.Hash) {
 	hw := sha3.NewKeccak256()
