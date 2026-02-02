@@ -53,7 +53,7 @@ func (api *API) GetDemotedValidators(number *rpc.BlockNumber) ([]common.Address,
 		return nil, err
 	}
 	if api.istanbul.valsetModule == nil {
-		return nil, errUnknownBlock
+		return nil, errNoEssentialModule
 	}
 	return api.istanbul.valsetModule.GetDemotedValidators(num)
 }

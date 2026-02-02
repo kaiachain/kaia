@@ -210,7 +210,7 @@ func (sb *backend) Gossip(payload []byte) error {
 // getQualified returns qualified validators (council minus demoted) for the given block number.
 func (sb *backend) getQualified(num uint64) ([]common.Address, error) {
 	if sb.valsetModule == nil {
-		return nil, errUnknownBlock
+		return nil, errNoEssentialModule
 	}
 	council, err := sb.valsetModule.GetCouncil(num)
 	if err != nil {

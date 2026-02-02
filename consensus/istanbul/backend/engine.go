@@ -66,6 +66,8 @@ var (
 	// errInvalidSignature is returned when given signature is not signed by given
 	// address.
 	errInvalidSignature = errors.New("invalid signature")
+	// errNoEssentialModule is returned when essential module is not registered.
+	errNoEssentialModule = errors.New("no essential module")
 	// errUnknownBlock is returned when the list of validators is requested for a block
 	// that is not part of the local blockchain.
 	errUnknownBlock = errors.New("unknown block")
@@ -388,7 +390,7 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		return nil
 	}
 	if sb.valsetModule == nil || sb.govModule == nil {
-		return errUnknownBlock
+		return errNoEssentialModule
 	}
 
 	// Retrieve the snapshot needed to verify this header and cache it
