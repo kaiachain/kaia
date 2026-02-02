@@ -37,7 +37,7 @@ func (c *core) sendCommit() {
 	}
 
 	// Do not send message if the owner of the core is not a member of the committee for the current view
-	if !c.currentCommittee.Committee().Contains(c.Address()) {
+	if !c.current.committee.Contains(c.Address()) {
 		return
 	}
 
@@ -91,7 +91,7 @@ func (c *core) handleCommit(msg *message, src common.Address) error {
 		return err
 	}
 
-	if !c.currentCommittee.Committee().Contains(src) {
+	if !c.current.committee.Contains(src) {
 		logger.Warn("received an istanbul commit message from non-committee",
 			"currentSequence", c.current.sequence.Uint64(), "sender", src.String(), "msgView", commit.View.String())
 		return errNotFromCommittee
@@ -109,8 +109,8 @@ func (c *core) handleCommit(msg *message, src common.Address) error {
 			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", msgCommit)
 			c.setState(StatePrepared)
 			c.sendCommit()
-		} else if c.current.GetPrepareOrCommitSize() >= c.currentCommittee.RequiredMessageCount() {
-			logger.Info("received a quorum of the messages and change state to prepared", "msgType", msgCommit, "valSet", c.currentCommittee.Qualified().Len())
+		} else if c.current.GetPrepareOrCommitSize() >= c.current.requiredMessageCount {
+			logger.Info("received a quorum of the messages and change state to prepared", "msgType", msgCommit, "valSet", c.current.qualified.Len())
 			c.current.LockHash()
 			c.setState(StatePrepared)
 			c.sendCommit()
@@ -122,7 +122,7 @@ func (c *core) handleCommit(msg *message, src common.Address) error {
 	// If we already have a proposal, we may have chance to speed up the consensus process
 	// by committing the proposal without PREPARE messages.
 	//logger.Error("### consensus check","len(commits)",c.current.Commits.Size(),"f(2/3)",2*c.valSet.F(),"state",c.state.Cmp(StateCommitted))
-	if c.state.Cmp(StateCommitted) < 0 && c.current.Commits.Size() >= c.currentCommittee.RequiredMessageCount() {
+	if c.state.Cmp(StateCommitted) < 0 && c.current.Commits.Size() >= c.current.requiredMessageCount {
 		// Still need to call LockHash here since state can skip Prepared state and jump directly to the Committed state.
 		c.current.LockHash()
 		c.commit()

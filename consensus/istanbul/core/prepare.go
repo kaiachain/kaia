@@ -31,7 +31,7 @@ func (c *core) sendPrepare() {
 	logger := c.logger.NewWith("state", c.state)
 
 	// Do not send message if the owner of the core is not a member of the committee for the current view
-	if !c.currentCommittee.Committee().Contains(c.Address()) {
+	if !c.current.committee.Contains(c.Address()) {
 		return
 	}
 
@@ -69,7 +69,7 @@ func (c *core) handlePrepare(msg *message, src common.Address) error {
 		return err
 	}
 
-	if !c.currentCommittee.Committee().Contains(src) {
+	if !c.current.committee.Contains(src) {
 		logger.Warn("received an istanbul prepare message from non-committee",
 			"currentSequence", c.current.sequence.Uint64(), "sender", src.String(), "msgView", prepare.View.String())
 		return errNotFromCommittee
@@ -86,10 +86,10 @@ func (c *core) handlePrepare(msg *message, src common.Address) error {
 			logger.Warn("received prepare of the hash locked proposal and change state to prepared", "msgType", msgPrepare)
 			c.setState(StatePrepared)
 			c.sendCommit()
-		} else if c.current.GetPrepareOrCommitSize() >= c.currentCommittee.RequiredMessageCount() {
+		} else if c.current.GetPrepareOrCommitSize() >= c.current.requiredMessageCount {
 			logger.Info("received a quorum of the messages and change state to prepared", "msgType", msgPrepare,
 				"prepareMsgNum", c.current.Prepares.Size(), "commitMsgNum", c.current.Commits.Size(),
-				"valSet", c.currentCommittee.Qualified().Len())
+				"valSet", c.current.qualified.Len())
 			c.current.LockHash()
 			c.setState(StatePrepared)
 			c.sendCommit()

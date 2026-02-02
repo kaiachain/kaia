@@ -74,15 +74,14 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 	// If it is old message, see if we need to broadcast COMMIT
 	if err := c.checkMessage(msgPreprepare, preprepare.View); err != nil {
 		if err == errOldMessage {
-			// Get validator set for the given proposal
-			councilState, getCouncilError := c.backend.GetCommitteeStateByRound(preprepare.View.Sequence.Uint64(), preprepare.View.Round.Uint64())
-			if getCouncilError != nil {
-				return getCouncilError
-			}
 			// Broadcast COMMIT if it is an existing block
-			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
+			// 1. The proposer needs to match the given (Sequence + Round)
 			// 2. The given block must exist
-			if councilState.IsProposer(src) && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
+			proposer, getProposerErr := c.valsetModule.GetProposer(preprepare.View.Sequence.Uint64(), preprepare.View.Round.Uint64())
+			if getProposerErr != nil {
+				return getProposerErr
+			}
+			if proposer == src && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
 				c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash(), preprepare.Proposal.ParentHash())
 				return nil
 			}
@@ -91,7 +90,7 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 	}
 
 	// Check if the message comes from current proposer
-	if !c.currentCommittee.IsProposer(src) {
+	if c.current.proposer != src {
 		logger.Warn("Ignore preprepare messages from non-proposer")
 		return errNotFromProposer
 	}
@@ -125,7 +124,7 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
 				logger.Warn("Received preprepare message of the hash locked proposal and change state to prepared")
 				// Broadcast COMMIT and enters Prepared state directly
-				Vrank.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+				Vrank.SetLatestView(*preprepare.View, c.current.committee.List(), c.current.requiredMessageCount)
 				Vrank.AddPreprepare(src, preprepare.View.Round.Uint64(), timestamp)
 				c.acceptPreprepare(preprepare)
 				c.setState(StatePrepared)
@@ -135,7 +134,7 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 				c.sendNextRoundChange("handlePreprepare. HashLocked, but received hash is different from locked hash")
 			}
 		} else {
-			Vrank.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+			Vrank.SetLatestView(*preprepare.View, c.current.committee.List(), c.current.requiredMessageCount)
 			Vrank.AddPreprepare(src, preprepare.View.Round.Uint64(), timestamp)
 			// Either
 			//   1. the locked proposal and the received proposal match

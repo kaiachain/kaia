@@ -29,19 +29,20 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/rlp"
 )
 
 // newRoundState creates a new roundState instance with the given view and validatorSet
 // lockedHash and preprepare are for round change when lock exists,
 // we need to keep a reference of preprepare in order to propose locked proposal when there is a lock and itself is the proposer
-func newRoundState(view *istanbul.View, valSet *istanbul.BlockValSet, lockedHash common.Hash, preprepare *istanbul.Preprepare, pendingRequest *istanbul.Request, hasBadProposal func(hash common.Hash) bool) *roundState {
+func newRoundState(view *istanbul.View, qualified *valset.AddressSet, lockedHash common.Hash, preprepare *istanbul.Preprepare, pendingRequest *istanbul.Request, hasBadProposal func(hash common.Hash) bool) *roundState {
 	return &roundState{
 		round:          view.Round,
 		sequence:       view.Sequence,
 		Preprepare:     preprepare,
-		Prepares:       newMessageSet(valSet),
-		Commits:        newMessageSet(valSet),
+		Prepares:       newMessageSet(qualified),
+		Commits:        newMessageSet(qualified),
 		lockedHash:     lockedHash,
 		mu:             new(sync.RWMutex),
 		pendingRequest: pendingRequest,
@@ -61,6 +62,14 @@ type roundState struct {
 
 	mu             *sync.RWMutex
 	hasBadProposal func(hash common.Hash) bool
+
+	// Ignore RLP ----------------------------------------------------------------------------
+	qualified            *valset.AddressSet
+	committee            *valset.AddressSet
+	proposer             common.Address
+	committeeSize        uint64
+	requiredMessageCount int
+	f                    int
 }
 
 func (s *roundState) GetPrepareOrCommitSize() int {
