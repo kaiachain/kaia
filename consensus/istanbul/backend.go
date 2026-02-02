@@ -81,11 +81,5 @@ type Backend interface {
 
 	NodeType() common.ConnType
 
-	GetValidatorSet(num uint64) (*BlockValSet, error)
-
-	GetCommitteeState(num uint64) (*RoundCommitteeState, error)
-
-	GetCommitteeStateByRound(num uint64, round uint64) (*RoundCommitteeState, error)
-
 	GetProposerByRound(num uint64, round uint64) (common.Address, error)
 }

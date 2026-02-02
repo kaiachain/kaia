@@ -1196,14 +1196,16 @@ func Test_AfterMinimumStakingVotes(t *testing.T) {
 
 		for _, e := range tc.expected {
 			for _, num := range e.blocks {
-				valSet, err := engine.GetValidatorSet(num + 1)
+				qualified, err := engine.getQualified(num + 1)
+				assert.NoError(t, err)
+				demoted, err := engine.valsetModule.GetDemotedValidators(num + 1)
 				assert.NoError(t, err)
 
 				expectedValidators := makeExpectedResult(e.validators, addrs)
 				expectedDemoted := makeExpectedResult(e.demoted, addrs)
 
-				assert.Equal(t, expectedValidators, valSet.Qualified().List(), "blockNum:%d", num+1)
-				assert.Equal(t, expectedDemoted, valSet.Demoted().List(), "blockNum:%d", num+1)
+				assert.Equal(t, expectedValidators, qualified, "blockNum:%d", num+1)
+				assert.Equal(t, expectedDemoted, demoted, "blockNum:%d", num+1)
 			}
 		}
 
@@ -1279,14 +1281,16 @@ func Test_AfterKaia_BasedOnStaking(t *testing.T) {
 		_, err := chain.InsertChain(types.Blocks{block})
 		assert.NoError(t, err)
 
-		valSet, err := engine.GetValidatorSet(block.NumberU64() + 1)
+		qualified, err := engine.getQualified(block.NumberU64() + 1)
+		assert.NoError(t, err)
+		demoted, err := engine.valsetModule.GetDemotedValidators(block.NumberU64() + 1)
 		assert.NoError(t, err)
 
 		expectedValidators := makeExpectedResult(tc.expectedValidators, addrs)
 		expectedDemoted := makeExpectedResult(tc.expectedDemoted, addrs)
 
-		assert.Equal(t, expectedValidators, valSet.Qualified().List())
-		assert.Equal(t, expectedDemoted, valSet.Demoted().List())
+		assert.Equal(t, expectedValidators, qualified)
+		assert.Equal(t, expectedDemoted, demoted)
 
 		mockCtrl.Finish()
 		engine.Stop()
@@ -1454,14 +1458,16 @@ func Test_BasedOnStaking(t *testing.T) {
 		_, err := chain.InsertChain(types.Blocks{block})
 		assert.NoError(t, err)
 
-		councilState, err := engine.GetValidatorSet(block.NumberU64() + 1)
+		qualified, err := engine.getQualified(block.NumberU64() + 1)
+		assert.NoError(t, err)
+		demoted, err := engine.valsetModule.GetDemotedValidators(block.NumberU64() + 1)
 		assert.NoError(t, err)
 
 		expectedValidators := makeExpectedResult(tc.expectedValidators, addrs)
 		expectedDemoted := makeExpectedResult(tc.expectedDemoted, addrs)
 
-		assert.Equal(t, expectedValidators, councilState.Qualified().List())
-		assert.Equal(t, expectedDemoted, councilState.Demoted().List())
+		assert.Equal(t, expectedValidators, qualified)
+		assert.Equal(t, expectedDemoted, demoted)
 
 		mockCtrl.Finish()
 		engine.Stop()
@@ -1673,11 +1679,11 @@ func Test_AddRemove(t *testing.T) {
 			if _, ok := tc.expected[i]; !ok {
 				continue
 			}
-			valSet, err := engine.GetValidatorSet(uint64(i) + 1)
+			qualified, err := engine.getQualified(uint64(i) + 1)
 			assert.NoError(t, err)
 
 			expectedValidators := makeExpectedResult(tc.expected[i].validators, allAddrs)
-			assert.Equal(t, expectedValidators, valSet.Qualified().List())
+			assert.Equal(t, expectedValidators, qualified)
 		}
 
 		ctrl.Finish()

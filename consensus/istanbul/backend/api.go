@@ -43,12 +43,7 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 	if err != nil {
 		return nil, err
 	}
-
-	valSet, err := api.istanbul.GetValidatorSet(num)
-	if err != nil {
-		return nil, err
-	}
-	return valSet.Qualified().List(), nil
+	return api.istanbul.getQualified(num)
 }
 
 // GetDemotedValidators retrieves the list of authorized, but demoted validators with the given block number.
@@ -57,12 +52,10 @@ func (api *API) GetDemotedValidators(number *rpc.BlockNumber) ([]common.Address,
 	if err != nil {
 		return nil, err
 	}
-
-	valSet, err := api.istanbul.GetValidatorSet(num)
-	if err != nil {
-		return nil, err
+	if api.istanbul.valsetModule == nil {
+		return nil, errUnknownBlock
 	}
-	return valSet.Demoted().List(), nil
+	return api.istanbul.valsetModule.GetDemotedValidators(num)
 }
 
 // GetValidatorsAtHash retrieves the list of authorized validators with the given block hash.

@@ -207,27 +207,49 @@ func (sb *backend) Gossip(payload []byte) error {
 	return nil
 }
 
+// getQualified returns qualified validators (council minus demoted) for the given block number.
+func (sb *backend) getQualified(num uint64) ([]common.Address, error) {
+	if sb.valsetModule == nil {
+		return nil, errUnknownBlock
+	}
+	council, err := sb.valsetModule.GetCouncil(num)
+	if err != nil {
+		return nil, err
+	}
+	demoted, err := sb.valsetModule.GetDemotedValidators(num)
+	if err != nil {
+		return nil, err
+	}
+	return valset.NewAddressSet(council).Subtract(valset.NewAddressSet(demoted)).List(), nil
+}
+
 // getTargetReceivers returns a map of nodes which need to receive a message
 func (sb *backend) getTargetReceivers() map[common.Address]bool {
+	if sb.valsetModule == nil {
+		return nil
+	}
 	cv, ok := sb.currentView.Load().(*istanbul.View)
 	if !ok {
 		logger.Error("Failed to assert type from sb.currentView!!", "cv", cv)
 		return nil
 	}
 
+	num := cv.Sequence.Uint64()
 	// calculates a map of target nodes which need to receive a message
 	// committee[currentView].Union(committee[nextView]) => targets
 	targets := make(map[common.Address]bool)
 	for i := 0; i < 2; i++ {
-		roundCommittee, err := sb.GetCommitteeStateByRound(cv.Sequence.Uint64(), cv.Round.Uint64()+uint64(i))
+		round := cv.Round.Uint64() + uint64(i)
+		committee, err := sb.valsetModule.GetCommittee(num, round)
 		if err != nil {
 			return nil
 		}
+		committeeSet := valset.NewAddressSet(committee)
 		// i == 0: get current round's committee. additionally, check if the node is in the current view's committee
-		if i == 0 && !roundCommittee.Committee().Contains(sb.Address()) {
+		if i == 0 && !committeeSet.Contains(sb.Address()) {
 			return nil
 		}
-		for _, val := range roundCommittee.Committee().List() {
+		for _, val := range committee {
 			if val != sb.Address() {
 				targets[val] = true
 			}
@@ -408,49 +430,6 @@ func (sb *backend) HasBadProposal(hash common.Hash) bool {
 		return false
 	}
 	return sb.hasBadBlock(hash)
-}
-
-func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
-	council, err := sb.valsetModule.GetCouncil(num)
-	if err != nil {
-		return nil, err
-	}
-
-	demoted, err := sb.valsetModule.GetDemotedValidators(num)
-	if err != nil {
-		return nil, err
-	}
-
-	return istanbul.NewBlockValSet(council, demoted), nil
-}
-
-func (sb *backend) GetCommitteeState(num uint64) (*istanbul.RoundCommitteeState, error) {
-	header := sb.chain.GetHeaderByNumber(num)
-	if header == nil {
-		return nil, errUnknownBlock
-	}
-
-	return sb.GetCommitteeStateByRound(num, uint64(header.Round()))
-}
-
-func (sb *backend) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul.RoundCommitteeState, error) {
-	blockValSet, err := sb.GetValidatorSet(num)
-	if err != nil {
-		return nil, err
-	}
-
-	committee, err := sb.valsetModule.GetCommittee(num, round)
-	if err != nil {
-		return nil, err
-	}
-
-	proposer, err := sb.valsetModule.GetProposer(num, round)
-	if err != nil {
-		return nil, err
-	}
-
-	committeeSize := sb.govModule.GetParamSet(num).CommitteeSize
-	return istanbul.NewRoundCommitteeState(blockValSet, committeeSize, committee, proposer), nil
 }
 
 func (sb *backend) GetProposerByRound(num uint64, round uint64) (common.Address, error) {
