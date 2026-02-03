@@ -128,23 +128,22 @@ func TestSeal(t *testing.T) {
 	// Test normal seal
 	f := NewFaker()
 	block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
-	stop := make(chan struct{})
 
-	sealed, err := f.Seal(nil, block, stop)
+	sealed, err := f.Seal(nil, block)
 	assert.NoError(t, err)
 	assert.Equal(t, block, sealed)
 
 	// Test seal with failure
 	f2 := NewFakeFailer(5)
 	block2 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(5)})
-	sealed, err = f2.Seal(nil, block2, stop)
+	sealed, err = f2.Seal(nil, block2)
 	assert.Error(t, err)
 	assert.Nil(t, sealed)
 
 	// Test seal with delay
 	f3 := NewFakeDelayer(100 * time.Millisecond)
 	start := time.Now()
-	sealed, err = f3.Seal(nil, block, stop)
+	sealed, err = f3.Seal(nil, block)
 	elapsed := time.Since(start)
 	assert.NoError(t, err)
 	assert.NotNil(t, sealed)

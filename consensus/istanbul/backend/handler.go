@@ -142,6 +142,6 @@ func (sb *backend) NewChainHead() error {
 		return istanbul.ErrStoppedEngine
 	}
 
-	go sb.istanbulEventMux.Post(istanbul.FinalCommittedEvent{})
+	go sb.istanbulEventMux.Post(istanbul.ChainHeadEvent{})
 	return nil
 }

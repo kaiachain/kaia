@@ -162,7 +162,14 @@ func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, [
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.
-func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backend) {
+func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.BlockChain, *backend) {
+	// Disable block time waiting in tests
+	oldInterval := params.BlockGenerationInterval
+	params.BlockGenerationInterval = 0
+	t.Cleanup(func() {
+		params.BlockGenerationInterval = oldInterval
+	})
+
 	// generate a genesis block
 	genesis := blockchain.DefaultTestGenesisBlock()
 	genesis.Config = params.TestChainConfig.Copy()
@@ -405,8 +412,7 @@ func makeHeader(parent *types.Block, config *istanbul.Config, chainConfig *param
 
 func makeBlock(chain *blockchain.BlockChain, engine *backend, parent *types.Block) *types.Block {
 	block := makeBlockWithoutSeal(chain, engine, parent)
-	stopCh := make(chan struct{})
-	result, err := engine.Seal(chain, block, stopCh)
+	result, err := engine.Seal(chain, block)
 	if err != nil {
 		panic(err)
 	}
@@ -456,7 +462,7 @@ func sealBlock(engine *backend, blockWithoutSeal *types.Block) *types.Block {
 }
 
 func TestPrepare(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	chain, engine := newBlockChain(t, 1)
 	defer engine.Stop()
 
 	header := makeHeader(chain.Genesis(), engine.config, chain.Config())
@@ -472,39 +478,14 @@ func TestPrepare(t *testing.T) {
 	}
 }
 
-func TestSealStopChannel(t *testing.T) {
-	chain, engine := newBlockChain(4)
-	defer engine.Stop()
-
-	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	stop := make(chan struct{}, 1)
-	eventSub := engine.EventMux().Subscribe(istanbul.RequestEvent{})
-	eventLoop := func() {
-		select {
-		case ev := <-eventSub.Chan():
-			_, ok := ev.Data.(istanbul.RequestEvent)
-			if !ok {
-				t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
-			}
-			stop <- struct{}{}
-		}
-		eventSub.Unsubscribe()
-	}
-	go eventLoop()
-
-	finalBlock, err := engine.Seal(chain, block, stop)
-	assert.NoError(t, err)
-	assert.Nil(t, finalBlock)
-}
-
 func TestSealCommitted(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	chain, engine := newBlockChain(t, 1)
 	defer engine.Stop()
 
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	expectedBlock, _ := engine.updateBlock(block)
 
-	actualBlock, err := engine.Seal(chain, block, make(chan struct{}))
+	actualBlock, err := engine.Seal(chain, block)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedBlock.Hash(), actualBlock.Hash())
 }
@@ -515,7 +496,7 @@ func TestVerifyHeader(t *testing.T) {
 	for _, fork := range testForks {
 		var configItems []interface{}
 		configItems = append(configItems, params.TestKaiaConfig(fork))
-		chain, engine := newBlockChain(1, configItems...)
+		chain, engine := newBlockChain(t, 1, configItems...)
 		defer engine.Stop()
 
 		// Tests for consensus-dependent validations (tested via engine.VerifyHeader)
@@ -683,7 +664,7 @@ func TestVerifyHeader(t *testing.T) {
 func TestVerifySeal(t *testing.T) {
 	ctrl, mStaking := makeMockStakingManager(t, nil, 0)
 	defer ctrl.Finish()
-	chain, engine := newBlockChain(1, mStaking)
+	chain, engine := newBlockChain(t, 1, mStaking)
 	defer engine.Stop()
 
 	genesis := chain.Genesis()
@@ -729,7 +710,7 @@ func TestVerifyHeaders(t *testing.T) {
 	ctrl, mStaking := makeMockStakingManager(t, nil, 0)
 	ctrl.Finish()
 
-	chain, engine := newBlockChain(1, append(configItems, mStaking)...)
+	chain, engine := newBlockChain(t, 1, append(configItems, mStaking)...)
 	chain.RegisterExecutionModule(engine.govModule)
 	defer engine.Stop()
 
@@ -984,7 +965,7 @@ func TestRewardDistribution(t *testing.T) {
 	configItems = append(configItems, osakaCompatibleBlock(new(big.Int).SetUint64(koreBlock)))
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 
-	chain, engine := newBlockChain(1, configItems...)
+	chain, engine := newBlockChain(t, 1, configItems...)
 	chain.RegisterExecutionModule(engine.govModule)
 	defer engine.Stop()
 
@@ -1192,7 +1173,7 @@ func Test_AfterMinimumStakingVotes(t *testing.T) {
 
 	for _, tc := range testcases {
 		ctrl, mStaking := makeMockStakingManager(t, tc.stakingAmounts, 0)
-		chain, engine := newBlockChain(len(tc.stakingAmounts), append(configItems, mStaking)...)
+		chain, engine := newBlockChain(t, len(tc.stakingAmounts), append(configItems, mStaking)...)
 		chain.RegisterExecutionModule(engine.govModule)
 
 		var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
@@ -1306,7 +1287,7 @@ func Test_AfterKaia_BasedOnStaking(t *testing.T) {
 			mStaking.EXPECT().GetStakingInfo(uint64(2)).Return(makeTestStakingInfo(genesisStakingAmounts, 0), nil).AnyTimes()
 		}
 
-		chain, engine := newBlockChain(testNum, append(configItems, mStaking)...)
+		chain, engine := newBlockChain(t, testNum, append(configItems, mStaking)...)
 
 		block := makeBlockWithSeal(chain, engine, chain.Genesis())
 		_, err := chain.InsertChain(types.Blocks{block})
@@ -1483,7 +1464,7 @@ func Test_BasedOnStaking(t *testing.T) {
 		if tc.isIstanbulCompatible {
 			mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(makeTestStakingInfo(tc.stakingAmounts, 0), nil).AnyTimes()
 		}
-		chain, engine := newBlockChain(len(tc.stakingAmounts), append(configItems, mStaking)...)
+		chain, engine := newBlockChain(t, len(tc.stakingAmounts), append(configItems, mStaking)...)
 
 		block := makeBlockWithSeal(chain, engine, chain.Genesis())
 		_, err := chain.InsertChain(types.Blocks{block})
@@ -1650,7 +1631,7 @@ func Test_AddRemove(t *testing.T) {
 	for _, tc := range testcases {
 		// Create test blockchain
 		ctrl, mStaking := makeMockStakingManager(t, stakes, 0)
-		chain, engine := newBlockChain(len(stakes), append(configItems, mStaking)...)
+		chain, engine := newBlockChain(t, len(stakes), append(configItems, mStaking)...)
 		chain.RegisterExecutionModule(engine.valsetModule, engine.govModule)
 
 		// Backup the globals. The globals `nodeKeys` and `addrs` will be
@@ -1946,7 +1927,7 @@ func TestGovernance_Votes(t *testing.T) {
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	for _, tc := range testcases {
 		mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
-		chain, engine := newBlockChain(1, append(configItems, mStaking)...)
+		chain, engine := newBlockChain(t, 1, append(configItems, mStaking)...)
 		chain.RegisterExecutionModule(engine.valsetModule, engine.govModule)
 
 		// test initial governance items
@@ -2053,7 +2034,7 @@ func TestGovernance_GovModule(t *testing.T) {
 	for _, tc := range testcases {
 		// Create test blockchain
 		mockCtrl, mStaking := makeMockStakingManager(t, stakes, 0)
-		chain, engine := newBlockChain(len(stakes), append(configItems, mStaking)...)
+		chain, engine := newBlockChain(t, len(stakes), append(configItems, mStaking)...)
 		chain.RegisterExecutionModule(engine.valsetModule, engine.govModule)
 
 		var previousBlock, currentBlock *types.Block = nil, chain.Genesis()

@@ -29,12 +29,13 @@ import (
 
 // Start implements core.Engine.Start
 func (c *core) Start() error {
-	// Start a new round from last sequence + 1
-	c.startNewRound(common.Big0)
-
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
 	c.subscribeEvents()
+
+	// Start a new round from last sequence + 1
+	c.startNewRound(common.Big0)
+
 	c.handlerWg.Add(1)
 	go c.handleEvents()
 
@@ -65,8 +66,8 @@ func (c *core) subscribeEvents() {
 	c.timeoutSub = c.backend.EventMux().Subscribe(
 		timeoutEvent{},
 	)
-	c.finalCommittedSub = c.backend.EventMux().Subscribe(
-		istanbul.FinalCommittedEvent{},
+	c.chainHeadSub = c.backend.EventMux().Subscribe(
+		istanbul.ChainHeadEvent{},
 	)
 }
 
@@ -74,7 +75,7 @@ func (c *core) subscribeEvents() {
 func (c *core) unsubscribeEvents() {
 	c.events.Unsubscribe()
 	c.timeoutSub.Unsubscribe()
-	c.finalCommittedSub.Unsubscribe()
+	c.chainHeadSub.Unsubscribe()
 }
 
 func (c *core) handleEvents() {
@@ -132,13 +133,13 @@ func (c *core) handleEvents() {
 				return
 			}
 			c.handleTimeoutMsg(data.nextView)
-		case event, ok := <-c.finalCommittedSub.Chan():
+		case event, ok := <-c.chainHeadSub.Chan():
 			if !ok {
 				return
 			}
 			switch event.Data.(type) {
-			case istanbul.FinalCommittedEvent:
-				c.handleFinalCommitted()
+			case istanbul.ChainHeadEvent:
+				c.handleChainHead()
 			}
 		}
 	}
@@ -187,10 +188,18 @@ func (c *core) handleMsg(payload []byte) error {
 func (c *core) handleCheckedMsg(msg *message, src common.Address) error {
 	logger := c.logger.NewWith("address", c.address, "from", src)
 
-	// Store the message if it's a future message
+	// Store the message if it's a future message, or catch up if we're behind
 	testBacklog := func(err error) error {
 		if err == errFutureMessage {
 			c.storeBacklog(msg, src)
+
+			lastProposal, _ := c.backend.LastProposal()
+			if lastProposal != nil && lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
+				// We're behind, catch up to the latest sequence
+				// startNewRound will call processBacklog() to handle this message
+				logger.Trace("Catching up to latest sequence on future message", "lastProposal", lastProposal.Number().Uint64())
+				c.startNewRound(common.Big0)
+			}
 		}
 
 		return err
@@ -249,5 +258,26 @@ func (c *core) handleTimeoutMsg(nextView *istanbul.View) {
 		c.startNewRound(common.Big0)
 	} else {
 		c.sendRoundChange(nextView.Round)
+	}
+}
+
+func (c *core) handleChainHead() {
+	lastProposal, _ := c.backend.LastProposal()
+	if lastProposal == nil {
+		return
+	}
+
+	// Core not initialized yet (during startup)
+	if c.current == nil {
+		c.logger.Trace("Chain head event skipped, core not initialized", "lastProposal", lastProposal.Number().Uint64())
+		return
+	}
+
+	// Only start new round if the chain has advanced beyond current sequence.
+	// When commit() calls startNewRound() synchronously, sequence is already advanced,
+	// so this check will fail and prevent duplicate calls.
+	if lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
+		c.logger.Info("Chain head event, catch up to latest sequence", "lastProposal", lastProposal.Number().Uint64(), "currentSeq", c.current.Sequence())
+		c.startNewRound(common.Big0)
 	}
 }

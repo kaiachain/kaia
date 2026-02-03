@@ -27,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 )
@@ -39,31 +40,32 @@ type Faker struct {
 	failBlock uint64        // Block number to fail at (0 = no failure)
 	failDelay time.Duration // Delay before returning in Seal
 	fullFake  bool          // Accept all blocks without validation
+	eventMux  *event.TypeMux
 }
 
 // NewFaker creates a fake consensus engine that accepts all blocks.
 func NewFaker() *Faker {
-	return &Faker{}
+	return &Faker{eventMux: new(event.TypeMux)}
 }
 
 // NewFakeFailer creates a fake consensus engine that fails at a specific block.
 func NewFakeFailer(fail uint64) *Faker {
-	return &Faker{failBlock: fail}
+	return &Faker{failBlock: fail, eventMux: new(event.TypeMux)}
 }
 
 // NewFakeDelayer creates a fake consensus engine that delays block sealing.
 func NewFakeDelayer(delay time.Duration) *Faker {
-	return &Faker{failDelay: delay}
+	return &Faker{failDelay: delay, eventMux: new(event.TypeMux)}
 }
 
 // NewFullFaker creates a fake consensus engine that accepts all blocks without any validation.
 func NewFullFaker() *Faker {
-	return &Faker{fullFake: true}
+	return &Faker{fullFake: true, eventMux: new(event.TypeMux)}
 }
 
 // NewShared creates a shared fake consensus engine.
 func NewShared() *Faker {
-	return &Faker{}
+	return &Faker{eventMux: new(event.TypeMux)}
 }
 
 // Author returns a fixed address for testing.
@@ -173,14 +175,10 @@ func (f *Faker) accumulateRewards(state *state.StateDB, header *types.Header) {
 }
 
 // Seal generates a new sealing request for the given block.
-func (f *Faker) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+func (f *Faker) Seal(chain consensus.ChainReader, block *types.Block) (*types.Block, error) {
 	// Add delay if configured
 	if f.failDelay > 0 {
-		select {
-		case <-time.After(f.failDelay):
-		case <-stop:
-			return nil, nil
-		}
+		time.Sleep(f.failDelay)
 	}
 
 	// Check if we should fail
@@ -209,4 +207,18 @@ func (f *Faker) Protocol() consensus.Protocol {
 // PurgeCache is a no-op for faker.
 func (f *Faker) PurgeCache() {
 	// No cache to purge for faker
+}
+
+// SubmitTransactions is not implemented for faker - it uses push() flow instead.
+func (f *Faker) SubmitTransactions(txs types.Transactions, state *state.StateDB, header *types.Header) (finalizeCh <-chan *consensus.ExecutionResult) {
+	// Return nil channel - faker uses the legacy push() flow
+	return nil
+}
+
+// fakerSequenceEvent is a dummy event for Faker's SubscribeNewSequence.
+type fakerSequenceEvent struct{}
+
+// SubscribeNewSequence returns a subscription that never receives events.
+func (f *Faker) SubscribeNewSequence() *event.TypeMuxSubscription {
+	return f.eventMux.Subscribe(fakerSequenceEvent{})
 }
