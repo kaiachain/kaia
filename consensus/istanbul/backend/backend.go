@@ -480,7 +480,7 @@ func (sb *backend) GetRewardAddress(num uint64, nodeId common.Address) common.Ad
 // Returns a channel that will receive the execution result when consensus is complete.
 // In Istanbul: execute first → then consensus → finalize → send result
 // In Kaia-BFT: consensus + execute in parallel → committed → send result
-func (sb *backend) SubmitTransactions(txs types.Transactions, statedb *state.StateDB, header *types.Header) (finalizeCh <-chan *consensus.ExecutionResult) {
+func (sb *backend) SubmitTransactions(txs types.Transactions, statedb *state.StateDB, header *types.Header, onPrepared func(*consensus.ExecutionResult)) (finalizeCh <-chan *consensus.ExecutionResult) {
 	resultCh := make(chan *consensus.ExecutionResult, 1)
 
 	go func() {
@@ -514,6 +514,12 @@ func (sb *backend) SubmitTransactions(txs types.Transactions, statedb *state.Sta
 			return
 		}
 		result.FinalizeTime = time.Since(finalizeStart)
+		result.Block = block
+
+		// Notify caller that block is prepared (for pending block API)
+		if onPrepared != nil {
+			onPrepared(result)
+		}
 
 		// Trigger consensus (Seal) - this will run BFT consensus
 		// Seal is blocking until consensus is complete

@@ -107,7 +107,8 @@ func (b *CNAPIBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumb
 	if blockNr == rpc.PendingBlockNumber {
 		block := b.cn.miner.PendingBlock()
 		if block == nil {
-			return nil, fmt.Errorf("pending block is not prepared yet")
+			// Fallback to latest block (for PN/EN or when pending is not ready)
+			return b.cn.blockchain.CurrentBlock().Header(), nil
 		}
 		return block.Header(), nil
 	}
@@ -148,7 +149,8 @@ func (b *CNAPIBackend) BlockByNumber(ctx context.Context, blockNr rpc.BlockNumbe
 	if blockNr == rpc.PendingBlockNumber {
 		block := b.cn.miner.PendingBlock()
 		if block == nil {
-			return nil, fmt.Errorf("pending block is not prepared yet")
+			// Fallback to latest block (for PN/EN or when pending is not ready)
+			return b.cn.blockchain.CurrentBlock(), nil
 		}
 		return block, nil
 	}
@@ -186,7 +188,10 @@ func (b *CNAPIBackend) StateAndHeaderByNumber(ctx context.Context, blockNr rpc.B
 	if blockNr == rpc.PendingBlockNumber {
 		block, _, state := b.cn.miner.Pending()
 		if block == nil || state == nil {
-			return nil, nil, fmt.Errorf("pending block is not prepared yet")
+			// Fallback to latest block (for PN/EN or when pending is not ready)
+			header := b.cn.blockchain.CurrentBlock().Header()
+			stateDb, err := b.cn.BlockChain().StateAt(header.Root)
+			return stateDb, header, err
 		}
 		return state, block.Header(), nil
 	}
