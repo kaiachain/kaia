@@ -451,6 +451,15 @@ func (self *worker) commitNewWork() {
 
 	// Callback to update snapshot when block is prepared (before consensus sealing)
 	onPrepared := func(result *consensus.ExecutionResult) {
+		// Log block preparation completion (all validators log this, before seal)
+		logger.Info("Prepared new block",
+			"number", result.Block.Number(),
+			"hash", result.Block.Hash(),
+			"txs", len(result.Txs),
+			"elapsed", common.PrettyDuration(result.ExecuteTime+result.FinalizeTime),
+			"executeTime", common.PrettyDuration(result.ExecuteTime),
+			"finalizeTime", common.PrettyDuration(result.FinalizeTime))
+
 		self.snapshotMu.Lock()
 		defer self.snapshotMu.Unlock()
 		self.snapshotBlock = result.Block
@@ -526,12 +535,6 @@ func (self *worker) handleFinalizedBlock(result *consensus.ExecutionResult) {
 		blockMiningCommitTxTimer.Update(result.ExecuteTime)
 		blockMiningExecuteTxTimer.Update(result.ExecuteTime - trieAccess)
 		blockMiningFinalizeTimer.Update(result.FinalizeTime)
-		logger.Info("Commit new mining work",
-			"number", work.Block.Number(), "hash", work.Block.Hash(),
-			"txs", work.tcount, "elapsed", common.PrettyDuration(blockMiningTime),
-			"execute", common.PrettyDuration(result.ExecuteTime),
-			"finalize", common.PrettyDuration(result.FinalizeTime),
-			"seal", common.PrettyDuration(result.SealTime))
 	}
 
 	// Clear pending work

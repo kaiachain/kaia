@@ -526,16 +526,21 @@ func (sb *backend) SubmitTransactions(txs types.Transactions, statedb *state.Sta
 		// Stop signal is handled via commitCh close
 		sealStart := time.Now()
 		sealedBlock, err := sb.Seal(sb.chain, block)
+		result.SealTime = time.Since(sealStart)
+
 		if err != nil {
+			logger.Error("Failed to seal block", "err", err, "sealTime", result.SealTime)
 			resultCh <- nil
 			return
 		}
 		if sealedBlock == nil {
 			// Not the proposer - this is expected, block will be received via ChainHeadEvent
+			logger.Info("Seal skipped. Not the proposer for block", "number", block.Number(), "sealTime", result.SealTime)
 			resultCh <- nil
 			return
 		}
-		result.SealTime = time.Since(sealStart)
+
+		logger.Info("Successfully sealed new block", "number", sealedBlock.Number(), "hash", sealedBlock.Hash(), "sealTime", result.SealTime)
 
 		result.Block = sealedBlock
 		resultCh <- result

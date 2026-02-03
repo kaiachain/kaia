@@ -342,7 +342,6 @@ func (c *core) startNewRound(round *big.Int) {
 
 	// For new sequences, notify worker to start new block
 	if !roundChange {
-		logger.Info("Posting NewSequenceEvent", "seq", newView.Sequence)
 		c.backend.EventMux().Post(istanbul.NewSequenceEvent{})
 	}
 	c.newRoundChangeTimer()

@@ -277,7 +277,6 @@ func (c *core) handleChainHead() {
 	// When commit() calls startNewRound() synchronously, sequence is already advanced,
 	// so this check will fail and prevent duplicate calls.
 	if lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
-		c.logger.Info("Chain head event, catch up to latest sequence", "lastProposal", lastProposal.Number().Uint64(), "currentSeq", c.current.Sequence())
 		c.startNewRound(common.Big0)
 	}
 }
