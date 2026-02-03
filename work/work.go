@@ -165,7 +165,7 @@ func (self *Miner) Start() {
 		logger.Info("Starting mining operation")
 	}
 	self.worker.start()
-	self.worker.commitNewWork()
+	// commitNewWork() is triggered by NewSequenceEvent from startNewRound()
 }
 
 func (self *Miner) Stop() {

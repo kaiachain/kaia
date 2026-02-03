@@ -71,7 +71,7 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	configItems = append(configItems, mStaking)
 
-	chain, istBackend := newBlockChain(len(stakes), configItems...)
+	chain, istBackend := newBlockChain(t, len(stakes), configItems...)
 	chain.RegisterExecutionModule(istBackend.govModule)
 	defer istBackend.Stop()
 
@@ -213,7 +213,7 @@ func TestCommit(t *testing.T) {
 			nil,
 		},
 	} {
-		chain, engine := newBlockChain(1)
+		chain, engine := newBlockChain(t, 1)
 
 		block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 		expBlock, _ := engine.updateBlock(block)
@@ -240,4 +240,20 @@ func TestCommit(t *testing.T) {
 		}
 		engine.Stop()
 	}
+}
+
+func TestGetProposer(t *testing.T) {
+	ctrl, mStaking := makeMockStakingManager(t, nil, 0)
+	defer ctrl.Finish()
+
+	configItems := []interface{}{mStaking}
+	configItems = append(configItems, lowerBoundBaseFee(2))
+	configItems = append(configItems, upperBoundBaseFee(10))
+	chain, engine := newBlockChain(t, 1, configItems...)
+	defer engine.Stop()
+
+	block := makeBlockWithSeal(chain, engine, chain.Genesis())
+	_, err := chain.InsertChain(types.Blocks{block})
+	assert.NoError(t, err)
+	assert.Equal(t, engine.GetProposer(1), engine.Address())
 }

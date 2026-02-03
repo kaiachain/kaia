@@ -39,5 +39,9 @@ type CommitEvent struct {
 	Payload []byte
 }
 
-// FinalCommittedEvent is posted when a proposal is committed
-type FinalCommittedEvent struct{}
+// ChainHeadEvent is posted when a new block is added to the chain
+type ChainHeadEvent struct{}
+
+// NewSequenceEvent is posted when a new sequence (block number) starts.
+// This signals the worker to start preparing the next block.
+type NewSequenceEvent struct{}

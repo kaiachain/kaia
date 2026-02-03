@@ -27,7 +27,9 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/randao"
@@ -72,6 +74,16 @@ type ChainReader interface {
 	StateAt(root common.Hash) (*state.StateDB, error)
 }
 
+// ChainContext extends ChainReader with transaction execution capability.
+// This interface is used by components that need to execute transactions.
+type ChainContext interface {
+	ChainReader
+
+	// ApplyTransaction applies a transaction to the given state and returns the receipt.
+	ApplyTransaction(config *params.ChainConfig, author *common.Address, statedb *state.StateDB,
+		header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, *vm.InternalTxTrace, error)
+}
+
 // Engine is an algorithm agnostic consensus engine.
 //
 //go:generate mockgen -destination=./mocks/engine_mock.go -package=mocks github.com/kaiachain/kaia/consensus Engine
@@ -85,6 +97,10 @@ type Engine interface {
 
 	// PreprocessHeaderVerification prepares header verification for heavy computation before synchronous header verification such as ecrecover.
 	PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error)
+
+	// SubmitTransactions submits transactions for execution and consensus.
+	// Returns finalizeCh which receives the execution result when block is finalized (for DB write and broadcast).
+	SubmitTransactions(txs types.Transactions, state *state.StateDB, header *types.Header) (finalizeCh <-chan *ExecutionResult)
 
 	// VerifyHeader checks whether a header conforms to the consensus rules of a
 	// given engine. Verifying the seal may be done optionally here, or explicitly
@@ -109,10 +125,6 @@ type Engine interface {
 	Finalize(chain ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 		receipts []*types.Receipt) (*types.Block, error)
 
-	// Seal generates a new block for the given input block with the local miner's
-	// seal place on top.
-	Seal(chain ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error)
-
 	// CalcBlockScore is the blockscore adjustment algorithm. It returns the blockscore
 	// that a new block should have.
 	CalcBlockScore(chain ChainReader, time uint64, parent *types.Header) *big.Int
@@ -127,6 +139,10 @@ type Engine interface {
 	GetConsensusInfo(block *types.Block) (ConsensusInfo, error)
 
 	PurgeCache()
+
+	// SubscribeNewSequence subscribes to new sequence events.
+	// Returns nil for non-Istanbul engines.
+	SubscribeNewSequence() *event.TypeMuxSubscription
 }
 
 // PoW is a consensus engine based on proof-of-work.
