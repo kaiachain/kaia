@@ -218,15 +218,18 @@ func TestCommit(t *testing.T) {
 		block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 		expBlock, _ := engine.updateBlock(block)
 
-		go func() {
-			select {
-			case result := <-engine.commitCh:
-				commitCh <- result.Block
-				return
-			}
-		}()
+		// Initialize commitCh via initSealState (simulating Seal() setup)
+		sealCommitCh := engine.initSealState(expBlock.NumberU64(), expBlock.Hash())
 
-		engine.proposedBlockHash = expBlock.Hash()
+		if test.expectedErr == nil {
+			go func() {
+				result := <-sealCommitCh
+				if result != nil {
+					commitCh <- result.Block
+				}
+			}()
+		}
+
 		assert.Equal(t, test.expectedErr, engine.Commit(expBlock, test.expectedSignature))
 
 		if test.expectedErr == nil {
