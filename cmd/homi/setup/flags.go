@@ -549,6 +549,13 @@ var (
 		Aliases: []string{"genesis.hardfork.osaka-compatible-blocknumber"},
 	}
 
+	permissionlessCompatibleBlockNumberFlag = &cli.Int64Flag{
+		Name:    "permissionless-compatible-blocknumber",
+		Usage:   "permissionlessCompatible blockNumber",
+		Value:   0,
+		Aliases: []string{"genesis.hardfork.permissionless-compatible-blocknumber"},
+	}
+
 	kip113ProxyAddressFlag = &cli.StringFlag{
 		Name:    "kip113-proxy-contract-address",
 		Usage:   "kip113 proxy contract address",
