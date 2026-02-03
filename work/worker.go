@@ -52,7 +52,6 @@ import (
 )
 
 const (
-	resultQueueSize  = 10
 	miningLogAtDepth = 5
 
 	// txChanSize is the size of channel listening to NewTxsEvent.
@@ -70,8 +69,6 @@ var (
 	// Metrics for miner
 	timeLimitReachedCounter = metrics.NewRegisteredCounter("miner/timelimitreached", nil)
 	tooLongTxCounter        = metrics.NewRegisteredCounter("miner/toolongtx", nil)
-	ResultChGauge           = metrics.NewRegisteredGauge("miner/resultch", nil)
-	resentTxGauge           = metrics.NewRegisteredGauge("miner/tx/resend/gauge", nil)
 	usedAllTxsCounter       = metrics.NewRegisteredCounter("miner/usedalltxs", nil)
 	checkedTxsGauge         = metrics.NewRegisteredGauge("miner/checkedtxs", nil)
 	tCountGauge             = metrics.NewRegisteredGauge("miner/tcount", nil)
@@ -102,15 +99,6 @@ var (
 	snapshotStorageReadTimer = metrics.NewRegisteredTimer("miner/snapshot/storage/reads", nil)
 	snapshotCommitTimer      = metrics.NewRegisteredTimer("miner/snapshot/commits", nil)
 )
-
-// Agent can register themself with the worker
-type Agent interface {
-	Work() chan<- *Task
-	SetReturnCh(chan<- *Result)
-	Stop()
-	Start()
-	GetHashRate() int64
-}
 
 // Task is the workers current environment and holds
 // all of the current state information
@@ -156,11 +144,6 @@ func (env *Task) txFitsSizeForBundle(nodeAddr common.Address, bundle *builder.Bu
 // maximum size with auxiliary data added into the block.
 const maxBlockSizeBufferZone = 1_000_000
 
-type Result struct {
-	Task  *Task
-	Block *types.Block
-}
-
 // worker is the main object which takes care of applying messages to the new state
 type worker struct {
 	config *params.ChainConfig
@@ -177,9 +160,6 @@ type worker struct {
 	chainSideCh  chan blockchain.ChainSideEvent
 	chainSideSub event.Subscription
 	wg           sync.WaitGroup
-
-	agents map[Agent]struct{}
-	recv   chan *Result
 
 	backend           Backend
 	chain             BlockChain
@@ -201,7 +181,6 @@ type worker struct {
 
 	// atomic status counters
 	mining int32
-	atWork int32
 
 	nodetype common.ConnType
 }
@@ -216,9 +195,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, nodeAddr com
 		chainHeadCh: make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh: make(chan blockchain.ChainSideEvent, chainSideChanSize),
 		chainDB:     backend.ChainDB(),
-		recv:        make(chan *Result, resultQueueSize),
 		chain:       backend.BlockChain(),
-		agents:      make(map[Agent]struct{}),
 		nodetype:    nodetype,
 		nodeAddr:    nodeAddr,
 		govModule:   govModule,
@@ -231,7 +208,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, nodeAddr com
 	worker.chainSideSub = backend.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
 	go worker.update()
 
-	go worker.wait(TxResendUseLegacy)
 	return worker
 }
 
@@ -285,11 +261,6 @@ func (self *worker) start() {
 	if istanbul, ok := self.engine.(consensus.Istanbul); ok {
 		istanbul.Start(self.chain, self.chain.CurrentBlock, self.chain.HasBadBlock)
 	}
-
-	// spin up agents
-	for agent := range self.agents {
-		agent.Start()
-	}
 }
 
 func (self *worker) stop() {
@@ -297,11 +268,6 @@ func (self *worker) stop() {
 
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	if atomic.LoadInt32(&self.mining) == 1 {
-		for agent := range self.agents {
-			agent.Stop()
-		}
-	}
 
 	// istanbul BFT
 	if istanbul, ok := self.engine.(consensus.Istanbul); ok {
@@ -309,21 +275,6 @@ func (self *worker) stop() {
 	}
 
 	atomic.StoreInt32(&self.mining, 0)
-	atomic.StoreInt32(&self.atWork, 0)
-}
-
-func (self *worker) register(agent Agent) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-	self.agents[agent] = struct{}{}
-	agent.SetReturnCh(self.recv)
-}
-
-func (self *worker) unregister(agent Agent) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-	delete(self.agents, agent)
-	agent.Stop()
 }
 
 func (self *worker) handleTxsCh(quitByErr chan bool) {
@@ -377,133 +328,6 @@ func (self *worker) update() {
 		case <-self.chainSideSub.Err():
 			quitByErr <- true
 			return
-		}
-	}
-}
-
-func (self *worker) wait(TxResendUseLegacy bool) {
-	for {
-		mustCommitNewWork := true
-		for result := range self.recv {
-			atomic.AddInt32(&self.atWork, -1)
-			ResultChGauge.Update(ResultChGauge.Value() - 1)
-			if result == nil {
-				continue
-			}
-
-			// TODO-Kaia drop or missing tx
-			if self.nodetype != common.CONSENSUSNODE {
-				if !TxResendUseLegacy {
-					continue
-				}
-				pending, err := self.backend.TxPool().Pending()
-				if err != nil {
-					logger.Error("Failed to fetch pending transactions", "err", err)
-					continue
-				}
-
-				if len(pending) > 0 {
-					accounts := len(pending)
-					resendTxSize := maxResendTxSize / accounts
-					if resendTxSize == 0 {
-						resendTxSize = 1
-					}
-					var resendTxs []*types.Transaction
-					for _, sortedTxs := range pending {
-						if len(sortedTxs) >= resendTxSize {
-							resendTxs = append(resendTxs, sortedTxs[:resendTxSize]...)
-						} else {
-							resendTxs = append(resendTxs, sortedTxs...)
-						}
-					}
-					if len(resendTxs) > 0 {
-						resentTxGauge.Update(int64(len(resendTxs)))
-						self.backend.ReBroadcastTxs(resendTxs)
-					}
-				}
-				continue
-			}
-
-			block := result.Block
-			work := result.Task
-
-			// Update the block hash in all logs since it is now available and not when the
-			// receipt/log of individual transactions were created.
-			for _, r := range work.receipts {
-				for _, l := range r.Logs {
-					l.BlockHash = block.Hash()
-				}
-			}
-			work.stateMu.Lock()
-			for _, log := range work.state.Logs() {
-				log.BlockHash = block.Hash()
-			}
-
-			start := time.Now()
-			result, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
-			work.stateMu.Unlock()
-			if err != nil {
-				if err == blockchain.ErrKnownBlock {
-					logger.Debug("Tried to insert already known block", "num", block.NumberU64(), "hash", block.Hash().String())
-				} else {
-					logger.Error("Failed writing block to chain", "err", err)
-				}
-				continue
-			}
-			blockWriteTime := time.Since(start)
-
-			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
-			//         Later we may be able to refine below code.
-
-			// check if canon block and write transactions
-			if result.Status == blockchain.CanonStatTy {
-				// implicit by posting ChainHeadEvent
-				mustCommitNewWork = false
-			}
-
-			// Broadcast the block and announce chain insertion event
-			self.mux.Post(blockchain.NewMinedBlockEvent{Block: block})
-
-			var events []interface{}
-
-			work.stateMu.RLock()
-			logs := work.state.Logs()
-			work.stateMu.RUnlock()
-
-			events = append(events, blockchain.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
-			if result.Status == blockchain.CanonStatTy {
-				events = append(events, blockchain.ChainHeadEvent{Block: block})
-			}
-
-			// Invoke ExecutionModules after executing a block.
-			for _, module := range self.executionModules {
-				if err := module.PostInsertBlock(block); err != nil {
-					logger.Error("Failed to call PostInsertBlock", "err", err)
-				}
-			}
-
-			logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
-				"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
-			self.chain.PostChainEvents(events, logs)
-
-			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
-			//         Later we may be able to refine below code.
-			if mustCommitNewWork {
-				self.commitNewWork()
-			}
-		}
-	}
-}
-
-// push sends a new work task to currently live work agents.
-func (self *worker) push(work *Task) {
-	if atomic.LoadInt32(&self.mining) != 1 {
-		return
-	}
-	for agent := range self.agents {
-		atomic.AddInt32(&self.atWork, 1)
-		if ch := agent.Work(); ch != nil {
-			ch <- work
 		}
 	}
 }

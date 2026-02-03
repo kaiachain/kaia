@@ -85,7 +85,6 @@ type LesServer interface {
 type Miner interface {
 	Start()
 	Stop()
-	Register(agent work.Agent)
 	Mining() bool
 	HashRate() (tot int64)
 	SetExtra(extra []byte) error
@@ -376,7 +375,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 
 	// set worker
-	if config.WorkerDisable {
+	if ctx.NodeType() != common.CONSENSUSNODE || config.WorkerDisable {
 		cn.miner = work.NewFakeWorker()
 		// Istanbul backend can be accessed by APIs to call its methods even though the core of the
 		// consensus engine doesn't run.
@@ -386,7 +385,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	} else {
 		// TODO-Kaia improve to handle drop transaction on network traffic in PN and EN
-		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy, cn.govModule)
+		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.govModule)
 	}
 
 	// istanbul BFT
