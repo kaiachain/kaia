@@ -385,7 +385,7 @@ func makeHeader(parent *types.Block, config *istanbul.Config, chainConfig *param
 		GasUsed:    0,
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(config.BlockPeriod)),
-		BlockScore: defaultBlockScore,
+		BlockScore: istanbul.DefaultBlockScore,
 	}
 	if parent.Header().BaseFee != nil {
 		// We don't have chainConfig so the BaseFee of the current block is set by parent's for test
@@ -517,7 +517,8 @@ func TestVerifyHeader(t *testing.T) {
 		chain, engine := newBlockChain(1, configItems...)
 		defer engine.Stop()
 
-		testCases := []struct {
+		// Tests for consensus-dependent validations (tested via engine.VerifyHeader)
+		consensusDependentTests := []struct {
 			name        string
 			header      *types.Header
 			expectedErr error
@@ -530,7 +531,7 @@ func TestVerifyHeader(t *testing.T) {
 					block, _ = engine.updateBlock(block)
 					return block.Header()
 				}(),
-				expectedErr: errEmptyCommittedSeals,
+				expectedErr: istanbul.ErrEmptyCommittedSeals,
 				targetFork:  "kore",
 			},
 			{
@@ -542,7 +543,7 @@ func TestVerifyHeader(t *testing.T) {
 					header.Extra = []byte{}
 					return header
 				}(),
-				expectedErr: errInvalidExtraDataFormat,
+				expectedErr: istanbul.ErrInvalidExtraDataFormat,
 				targetFork:  "kore",
 			},
 			{
@@ -554,18 +555,7 @@ func TestVerifyHeader(t *testing.T) {
 					header.Extra = []byte("0000000000000000000000000000000012300000000000000000000000000000000000000000000000000000000000000000")
 					return header
 				}(),
-				expectedErr: errInvalidExtraDataFormat,
-				targetFork:  "kore",
-			},
-			{
-				name: "invalid difficulty",
-				header: func() *types.Header {
-					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-					header := block.Header()
-					header.BlockScore = big.NewInt(2)
-					return header
-				}(),
-				expectedErr: errInvalidBlockScore,
+				expectedErr: istanbul.ErrInvalidExtraDataFormat,
 				targetFork:  "kore",
 			},
 			{
@@ -576,7 +566,48 @@ func TestVerifyHeader(t *testing.T) {
 					header.Time = new(big.Int).Add(chain.Genesis().Time(), new(big.Int).SetUint64(engine.config.BlockPeriod-1))
 					return header
 				}(),
-				expectedErr: errInvalidTimestamp,
+				expectedErr: istanbul.ErrInvalidTimestamp,
+				targetFork:  "kore",
+			},
+			// TODO-Kaia: add more tests for header.Governance, header.Rewardbase, header.Vote
+		}
+
+		for _, tc := range consensusDependentTests {
+			t.Run(tc.name, func(t *testing.T) {
+				if tc.targetFork != fork {
+					return
+				}
+
+				validator := blockchain.NewBlockValidatorWithHeaderChain(chain.Config(), chain)
+				err := validator.ValidateHeader(tc.header)
+				if tc.expectedErr != nil {
+					if err.Error() != tc.expectedErr.Error() {
+						t.Errorf("error mismatch: have %v, want %v", err, tc.expectedErr)
+					}
+				} else {
+					if err != nil {
+						t.Errorf("unexpected error: have %v, want nil", err)
+					}
+				}
+			})
+		}
+
+		// Tests for consensus-agnostic validations (tested via chain.Validator().ValidateHeader)
+		consensusAgnosticTests := []struct {
+			name        string
+			header      *types.Header
+			expectedErr error
+			targetFork  string
+		}{
+			{
+				name: "invalid difficulty",
+				header: func() *types.Header {
+					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+					header := block.Header()
+					header.BlockScore = big.NewInt(2)
+					return header
+				}(),
+				expectedErr: consensus.ErrInvalidBlockScore,
 				targetFork:  "kore",
 			},
 			{
@@ -584,7 +615,7 @@ func TestVerifyHeader(t *testing.T) {
 				header: func() *types.Header {
 					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 					header := block.Header()
-					header.Time = new(big.Int).Add(big.NewInt(now().Unix()), new(big.Int).SetUint64(10))
+					header.Time = new(big.Int).Add(big.NewInt(istanbul.Now().Unix()), new(big.Int).SetUint64(10))
 					return header
 				}(),
 				expectedErr: consensus.ErrFutureBlock,
@@ -599,7 +630,7 @@ func TestVerifyHeader(t *testing.T) {
 					}))
 					return block.Header()
 				}(),
-				expectedErr: errUnexpectedExcessBlobGasBeforeOsaka,
+				expectedErr: consensus.ErrUnexpectedExcessBlobGasBeforeOsaka,
 				targetFork:  "kore",
 			},
 			{
@@ -611,7 +642,7 @@ func TestVerifyHeader(t *testing.T) {
 					}))
 					return block.Header()
 				}(),
-				expectedErr: errUnexpectedBlobGasUsedBeforeOsaka,
+				expectedErr: consensus.ErrUnexpectedBlobGasUsedBeforeOsaka,
 				targetFork:  "kore",
 			},
 			{
@@ -625,16 +656,15 @@ func TestVerifyHeader(t *testing.T) {
 				expectedErr: errors.New("header is missing excessBlobGas"),
 				targetFork:  "osaka",
 			},
-			// TODO-Kaia: add more tests for header.Governance, header.Rewardbase, header.Vote
 		}
 
-		for _, tc := range testCases {
+		for _, tc := range consensusAgnosticTests {
 			t.Run(tc.name, func(t *testing.T) {
 				if tc.targetFork != fork {
 					return
 				}
 
-				err := engine.VerifyHeader(chain, tc.header, false)
+				err := chain.Validator().ValidateHeader(tc.header)
 				if tc.expectedErr != nil {
 					if err.Error() != tc.expectedErr.Error() {
 						t.Errorf("error mismatch: have %v, want %v", err, tc.expectedErr)
@@ -659,8 +689,8 @@ func TestVerifySeal(t *testing.T) {
 
 	// cannot verify genesis
 	err := engine.VerifySeal(chain, genesis.Header())
-	if err != errUnknownBlock {
-		t.Errorf("error mismatch: have %v, want %v", err, errUnknownBlock)
+	if err != consensus.ErrUnknownBlock {
+		t.Errorf("error mismatch: have %v, want %v", err, consensus.ErrUnknownBlock)
 	}
 	block := makeBlock(chain, engine, genesis)
 
@@ -672,8 +702,8 @@ func TestVerifySeal(t *testing.T) {
 	header.Number = big.NewInt(4)
 	block1 := block.WithSeal(header)
 	err = engine.VerifySeal(chain, block1.Header())
-	if err != errUnauthorized {
-		t.Errorf("error mismatch: have %v, want %v", err, errUnauthorized)
+	if err != istanbul.ErrUnauthorized {
+		t.Errorf("error mismatch: have %v, want %v", err, istanbul.ErrUnauthorized)
 	}
 
 	// clean cache before testing
@@ -720,16 +750,16 @@ func TestVerifyHeaders(t *testing.T) {
 	}
 
 	// Set time to avoid future block errors
-	now = func() time.Time {
+	istanbul.Now = func() time.Time {
 		return time.Unix(headers[size-1].Time.Int64(), 0)
 	}
 	defer func() {
-		now = time.Now
+		istanbul.Now = time.Now
 	}()
 
 	// Helper function to verify headers and collect results
 	verifyHeadersAndCollectResults := func(t *testing.T, testHeaders []*types.Header, expectErrors bool) int {
-		abort, results := engine.VerifyHeaders(chain, testHeaders, nil)
+		abort, results := chain.Validator().ValidateHeaders(testHeaders)
 		defer close(abort)
 
 		timeout := time.NewTimer(2 * time.Second)
@@ -743,7 +773,7 @@ func TestVerifyHeaders(t *testing.T) {
 				if err != nil {
 					errorCount++
 					// These errors are expected in the test setup
-					if err != errEmptyCommittedSeals && err != errInvalidCommittedSeals && err != consensus.ErrUnknownAncestor {
+					if err != istanbul.ErrEmptyCommittedSeals && err != istanbul.ErrInvalidCommittedSeals && err != consensus.ErrUnknownAncestor {
 						if !expectErrors {
 							t.Errorf("unexpected error: %v", err)
 						}
@@ -852,8 +882,8 @@ func TestWriteSeal(t *testing.T) {
 	// invalid seal
 	unexpectedSeal := append(expectedSeal, make([]byte, 1)...)
 	err = writeSeal(h, unexpectedSeal)
-	if err != errInvalidSignature {
-		t.Errorf("error mismatch: have %v, want %v", err, errInvalidSignature)
+	if err != istanbul.ErrInvalidSignature {
+		t.Errorf("error mismatch: have %v, want %v", err, istanbul.ErrInvalidSignature)
 	}
 }
 
@@ -895,8 +925,8 @@ func TestWriteCommittedSeals(t *testing.T) {
 	// invalid seal
 	unexpectedCommittedSeal := append(expectedCommittedSeal, make([]byte, 1)...)
 	err = writeCommittedSeals(h, [][]byte{unexpectedCommittedSeal})
-	if err != errInvalidCommittedSeals {
-		t.Errorf("error mismatch: have %v, want %v", err, errInvalidCommittedSeals)
+	if err != istanbul.ErrInvalidCommittedSeals {
+		t.Errorf("error mismatch: have %v, want %v", err, istanbul.ErrInvalidCommittedSeals)
 	}
 }
 

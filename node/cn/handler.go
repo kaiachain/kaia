@@ -338,7 +338,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.fetcher = fetcher.NewFakeFetcher()
 	} else {
 		validator := func(header *types.Header) error {
-			return engine.VerifyHeader(blockchain, header, true)
+			return blockchain.Validator().ValidateHeader(header)
 		}
 		heighter := func() uint64 {
 			return blockchain.CurrentBlock().NumberU64()
