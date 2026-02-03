@@ -868,6 +868,10 @@ func RPCMarshalHeader(head *types.Header, rules params.Rules) map[string]interfa
 		result["randomReveal"] = hexutil.Bytes(head.RandomReveal)
 		result["mixhash"] = hexutil.Bytes(head.MixHash)
 	}
+	if rules.IsOsaka {
+		result["excessBlobGas"] = (*hexutil.Big)(new(big.Int).SetUint64(*head.ExcessBlobGas))
+		result["blobGasUsed"] = hexutil.Uint64(*head.BlobGasUsed)
+	}
 
 	return result
 }
