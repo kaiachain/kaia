@@ -89,16 +89,16 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 	for i := int64(0); i < maxBlockNum; i++ {
 		// Test for round 0 to round 14
 		for round := int64(0); round < 14; round++ {
-			currentCouncilState, err := istBackend.GetCommitteeStateByRound(uint64(i), uint64(round))
+			currentCommittee, err := istBackend.valsetModule.GetCommittee(uint64(i), uint64(round))
 			assert.NoError(t, err)
 
 			// skip if the testing node is not in a committee
-			isInSubList := currentCouncilState.Committee().Contains(istBackend.Address())
-			if isInSubList == false {
+			isInSubList := valset.NewAddressSet(currentCommittee).Contains(istBackend.Address())
+			if !isInSubList {
 				continue
 			}
 
-			nextCouncilState, err := istBackend.GetCommitteeStateByRound(uint64(i), uint64(round)+1)
+			nextCommittee, err := istBackend.valsetModule.GetCommittee(uint64(i), uint64(round)+1)
 			assert.NoError(t, err)
 
 			// Receiving the receiver list of a message
@@ -112,7 +112,8 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 			// committees[0]: current round's committee
 			// committees[1]: next view's committee
 			committees := make([]*valset.AddressSet, 2)
-			committees[0], committees[1] = currentCouncilState.Committee(), nextCouncilState.Committee()
+			committees[0] = valset.NewAddressSet(currentCommittee)
+			committees[1] = valset.NewAddressSet(nextCommittee)
 			assert.True(t, len(targets) <= committees[0].Len()+committees[1].Len())
 
 			// Check all nodes in the current and the next round are included in the target list
@@ -193,35 +194,6 @@ func TestCheckSignature(t *testing.T) {
 	assert.Equal(t, istanbul.ErrInvalidSignature, b.CheckSignature(testSigningData, testInvalidAddr, sig))
 }
 
-func TestCheckValidatorSignature(t *testing.T) {
-	// generate validators
-	setNodeKeys(5, nil)
-	valSet := istanbul.NewBlockValSet(addrs, []common.Address{})
-
-	// 1. Positive test: sign with validator's key should succeed
-	hashData := crypto.Keccak256(testSigningData)
-	for i, k := range nodeKeys {
-		// Sign
-		sig, err := crypto.Sign(hashData, k)
-		assert.NoError(t, err)
-		// CheckValidatorSignature should succeed
-		addr, err := valSet.CheckValidatorSignature(testSigningData, sig)
-		assert.NoError(t, err)
-		assert.Equal(t, addrs[i], addr)
-	}
-
-	// 2. Negative test: sign with any key other than validator's key should return error
-	key, err := crypto.GenerateKey()
-	assert.NoError(t, err)
-	// Sign
-	sig, err := crypto.Sign(hashData, key)
-	assert.NoError(t, err)
-	// CheckValidatorSignature should return ErrUnauthorizedAddress
-	addr, err := valSet.CheckValidatorSignature(testSigningData, sig)
-	assert.Equal(t, istanbul.ErrUnauthorizedAddress, err)
-	assert.True(t, common.EmptyAddress(addr))
-}
-
 func TestCommit(t *testing.T) {
 	commitCh := make(chan *types.Block)
 
@@ -268,20 +240,4 @@ func TestCommit(t *testing.T) {
 		}
 		engine.Stop()
 	}
-}
-
-func TestGetProposer(t *testing.T) {
-	ctrl, mStaking := makeMockStakingManager(t, nil, 0)
-	defer ctrl.Finish()
-
-	configItems := []interface{}{mStaking}
-	configItems = append(configItems, lowerBoundBaseFee(2))
-	configItems = append(configItems, upperBoundBaseFee(10))
-	chain, engine := newBlockChain(1, configItems...)
-	defer engine.Stop()
-
-	block := makeBlockWithSeal(chain, engine, chain.Genesis())
-	_, err := chain.InsertChain(types.Blocks{block})
-	assert.NoError(t, err)
-	assert.Equal(t, engine.GetProposer(1), engine.Address())
 }

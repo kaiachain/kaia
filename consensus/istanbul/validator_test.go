@@ -1,9 +1,12 @@
 package istanbul
 
 import (
+	"crypto/ecdsa"
 	"strconv"
 	"testing"
 
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -69,4 +72,39 @@ func TestRequiredMessageCountAndF(t *testing.T) {
 		},
 		)
 	}
+}
+
+func TestBlockValSet_CheckValidatorSignature(t *testing.T) {
+	testSigningData := []byte("dummy data")
+
+	// Generate 5 validators
+	nodeKeys := make([]*ecdsa.PrivateKey, 5)
+	addrs := make([]common.Address, 5)
+	for i := range nodeKeys {
+		key, err := crypto.GenerateKey()
+		assert.NoError(t, err)
+		nodeKeys[i] = key
+		addrs[i] = crypto.PubkeyToAddress(key.PublicKey)
+	}
+
+	valSet := NewBlockValSet(addrs, []common.Address{})
+
+	// 1. Positive test: sign with validator's key should succeed
+	hashData := crypto.Keccak256([]byte(testSigningData))
+	for i, k := range nodeKeys {
+		sig, err := crypto.Sign(hashData, k)
+		assert.NoError(t, err)
+		addr, err := valSet.CheckValidatorSignature(testSigningData, sig)
+		assert.NoError(t, err)
+		assert.Equal(t, addrs[i], addr)
+	}
+
+	// 2. Negative test: sign with any key other than validator's key should return error
+	key, err := crypto.GenerateKey()
+	assert.NoError(t, err)
+	sig, err := crypto.Sign(hashData, key)
+	assert.NoError(t, err)
+	addr, err := valSet.CheckValidatorSignature(testSigningData, sig)
+	assert.Equal(t, ErrUnauthorizedAddress, err)
+	assert.True(t, common.EmptyAddress(addr))
 }

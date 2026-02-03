@@ -33,6 +33,8 @@ var (
 	ErrInvalidSignature = errors.New("invalid signature")
 	// errNoValidator is returned when the validator is not set.
 	ErrNoValidator = errors.New("no validator")
+	// errNoEssentialModule is returned when essential module is not registered.
+	ErrNoEssentialModule = errors.New("no essential module")
 	// errUnauthorized is returned if a header is signed by a non authorized entity.
 	ErrUnauthorized = errors.New("unauthorized")
 	// errInvalidExtraDataFormat is returned when the extra data format is incorrect

@@ -29,6 +29,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/p2p"
 )
 
@@ -106,11 +107,14 @@ func (sb *backend) ValidatePeerType(addr common.Address) error {
 	for sb.chain == nil {
 		return errNoChainReader
 	}
-	valSet, err := sb.GetValidatorSet(sb.chain.CurrentHeader().Number.Uint64() + 1)
+	if sb.valsetModule == nil {
+		return errInvalidPeerAddress
+	}
+	council, err := sb.valsetModule.GetCouncil(sb.chain.CurrentHeader().Number.Uint64() + 1)
 	if err != nil {
 		return errInvalidPeerAddress
 	}
-	if valSet.Council().Contains(addr) {
+	if valset.NewAddressSet(council).Contains(addr) {
 		return nil
 	}
 	return errInvalidPeerAddress
