@@ -203,25 +203,7 @@ func (e *eestEngine) Initialize(chain consensus.ChainReader, header *types.Heade
 	}
 }
 
-// VerifyHeaders verifies a batch of headers concurrently.
-func (e *eestEngine) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	abort, results := make(chan struct{}), make(chan error, len(headers))
-	go func() {
-		for i := range headers {
-			select {
-			case <-abort:
-				return
-			default:
-				err := e.verifyHeaderWorker(chain, headers, seals, i)
-				results <- err
-			}
-		}
-	}()
-	return abort, results
-}
-
-func (e *eestEngine) verifyHeaderWorker(chain consensus.ChainReader, headers []*types.Header, seals []bool, index int) error {
-	header := headers[index]
+func (e *eestEngine) VerifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	number := header.Number.Uint64()
 
 	// Short circuit if the header is known
@@ -236,10 +218,10 @@ func (e *eestEngine) verifyHeaderWorker(chain consensus.ChainReader, headers []*
 
 	// Find parent - either from previous header in batch or from chain
 	var parent *types.Header
-	if index == 0 {
+	if len(parents) == 0 {
 		parent = chain.GetHeader(header.ParentHash, number-1)
-	} else if headers[index-1].Hash() == header.ParentHash {
-		parent = headers[index-1]
+	} else if parents[len(parents)-1].Hash() == header.ParentHash {
+		parent = parents[len(parents)-1]
 	} else {
 		parent = chain.GetHeader(header.ParentHash, number-1)
 	}

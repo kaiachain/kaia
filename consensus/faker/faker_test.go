@@ -72,13 +72,13 @@ func TestVerifyHeader(t *testing.T) {
 
 	// Test with fullFake mode - should accept everything
 	f2 := NewFullFaker()
-	err := f2.VerifyHeader(nil, &types.Header{Number: big.NewInt(1)}, true)
+	err := f2.VerifyHeader(nil, &types.Header{Number: big.NewInt(1)}, nil)
 	assert.NoError(t, err)
 
 	// Test with failBlock
 	f3 := NewFakeFailer(5)
 	header := &types.Header{Number: big.NewInt(5)}
-	err = f3.VerifyHeader(nil, header, true)
+	err = f3.VerifyHeader(nil, header, nil)
 	assert.Equal(t, consensus.ErrUnknownAncestor, err)
 
 	// Test normal case - should pass
@@ -94,7 +94,7 @@ func TestVerifyHeader(t *testing.T) {
 		Number:     big.NewInt(1),
 		ParentHash: chain.CurrentBlock().Hash(),
 	}
-	err = f.VerifyHeader(chain, header, true)
+	err = f.VerifyHeader(chain, header, nil)
 	assert.NoError(t, err)
 }
 
@@ -165,35 +165,6 @@ func TestVerifySeal(t *testing.T) {
 	header2 := &types.Header{Number: big.NewInt(5)}
 	err = f2.VerifySeal(nil, header2)
 	assert.Error(t, err)
-}
-
-// TestVerifyHeaders tests batch header verification
-func TestVerifyHeaders(t *testing.T) {
-	f := NewFaker()
-
-	// Test with empty headers
-	headers := []*types.Header{}
-	seals := []bool{}
-	abort, results := f.VerifyHeaders(nil, headers, seals)
-	assert.NotNil(t, abort)
-	assert.NotNil(t, results)
-
-	// Test with fullFake mode
-	f2 := NewFullFaker()
-	headers = []*types.Header{
-		{Number: big.NewInt(1)},
-		{Number: big.NewInt(2)},
-	}
-	seals = []bool{true, true}
-	abort, results = f2.VerifyHeaders(nil, headers, seals)
-	assert.NotNil(t, abort)
-	assert.NotNil(t, results)
-
-	// Read results
-	for i := 0; i < len(headers); i++ {
-		err := <-results
-		assert.NoError(t, err)
-	}
 }
 
 // TestNewShared tests the NewShared constructor
@@ -271,7 +242,7 @@ func TestHeaderValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.faker.VerifyHeader(tt.chain, tt.header, true)
+			err := tt.faker.VerifyHeader(tt.chain, tt.header, nil)
 			if tt.expectErr {
 				assert.Error(t, err)
 			} else {
