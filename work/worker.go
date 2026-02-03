@@ -229,37 +229,18 @@ func (self *worker) setExtra(extra []byte) {
 }
 
 func (self *worker) pending() (*types.Block, types.Receipts, *state.StateDB) {
-	if atomic.LoadInt32(&self.mining) == 0 {
-		// return a snapshot to avoid contention on currentMu mutex
-		self.snapshotMu.RLock()
-		defer self.snapshotMu.RUnlock()
-		if self.snapshotState == nil {
-			return nil, nil, nil
-		}
-		return self.snapshotBlock, self.snapshotReceipts, self.snapshotState.Copy()
+	self.snapshotMu.RLock()
+	defer self.snapshotMu.RUnlock()
+	if self.snapshotState == nil {
+		return nil, nil, nil
 	}
-
-	self.currentMu.Lock()
-	defer self.currentMu.Unlock()
-	self.current.stateMu.Lock()
-	defer self.current.stateMu.Unlock()
-	return self.current.Block, self.current.receipts, self.current.state.Copy()
+	return self.snapshotBlock, self.snapshotReceipts, self.snapshotState.Copy()
 }
 
 func (self *worker) pendingBlock() *types.Block {
-	if atomic.LoadInt32(&self.mining) == 0 {
-		// return a snapshot to avoid contention on currentMu mutex
-		self.snapshotMu.RLock()
-		defer self.snapshotMu.RUnlock()
-		return self.snapshotBlock
-	}
-
-	self.currentMu.Lock()
-	defer self.currentMu.Unlock()
-	if self.current == nil {
-		return nil
-	}
-	return self.current.Block
+	self.snapshotMu.RLock()
+	defer self.snapshotMu.RUnlock()
+	return self.snapshotBlock
 }
 
 func (self *worker) start() {
@@ -358,11 +339,6 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		return err
 	}
 	work := NewTask(self.config, types.MakeSigner(self.config, header.Number), stateDB, header)
-	if self.nodetype != common.CONSENSUSNODE {
-		// set the current block and header as pending block and header to support APIs requesting a pending block.
-		work.Block = parent
-		work.header = parent.Header()
-	}
 
 	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0
@@ -472,7 +448,17 @@ func (self *worker) commitNewWork() {
 	// Store pending work context and submit to consensus
 	self.pendingWork = self.current
 	self.pendingWorkStart = tstart
-	self.finalizeCh = self.engine.SubmitTransactions(txSlice, self.current.state, self.current.header)
+
+	// Callback to update snapshot when block is prepared (before consensus sealing)
+	onPrepared := func(result *consensus.ExecutionResult) {
+		self.snapshotMu.Lock()
+		defer self.snapshotMu.Unlock()
+		self.snapshotBlock = result.Block
+		self.snapshotReceipts = result.Receipts
+		self.snapshotState = result.State.Copy()
+	}
+
+	self.finalizeCh = self.engine.SubmitTransactions(txSlice, self.current.state, self.current.header, onPrepared)
 
 	// Results will be handled in update() loop:
 	// - finalizeCh -> handleFinalizedBlock() for DB write and broadcast
