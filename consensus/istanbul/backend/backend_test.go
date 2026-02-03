@@ -190,7 +190,7 @@ func TestCheckSignature(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.NoError(t, b.CheckSignature(testSigningData, testAddr, sig))
-	assert.Equal(t, errInvalidSignature, b.CheckSignature(testSigningData, testInvalidAddr, sig))
+	assert.Equal(t, istanbul.ErrInvalidSignature, b.CheckSignature(testSigningData, testInvalidAddr, sig))
 }
 
 func TestCheckValidatorSignature(t *testing.T) {
@@ -237,7 +237,7 @@ func TestCommit(t *testing.T) {
 		},
 		{
 			// invalid signature
-			errInvalidCommittedSeals,
+			istanbul.ErrInvalidCommittedSeals,
 			nil,
 		},
 	} {

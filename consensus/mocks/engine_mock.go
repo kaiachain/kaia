@@ -209,7 +209,7 @@ func (mr *MockEngineMockRecorder) Seal(arg0, arg1, arg2 interface{}) *gomock.Cal
 }
 
 // VerifyHeader mocks base method.
-func (m *MockEngine) VerifyHeader(arg0 consensus.ChainReader, arg1 *types.Header, arg2 bool) error {
+func (m *MockEngine) VerifyHeader(arg0 consensus.ChainReader, arg1 *types.Header, arg2 []*types.Header) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VerifyHeader", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)

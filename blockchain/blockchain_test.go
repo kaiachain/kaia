@@ -159,8 +159,9 @@ func printChain(bc *BlockChain) {
 // the database if successful.
 func testBlockChainImport(chain types.Blocks, blockchain *BlockChain) error {
 	for _, block := range chain {
-		// Try and process the block
-		err := blockchain.engine.VerifyHeader(blockchain, block.Header(), true)
+		// Try and process the block using engine directly for testing purposes
+		// This bypasses consensus-agnostic checks since faker engine is used.
+		err := blockchain.validator.ValidateHeader(block.Header())
 		if err == nil {
 			err = blockchain.validator.ValidateBody(block)
 		}
@@ -197,8 +198,9 @@ func testBlockChainImport(chain types.Blocks, blockchain *BlockChain) error {
 // the database if successful.
 func testHeaderChainImport(chain []*types.Header, blockchain *BlockChain) error {
 	for _, header := range chain {
-		// Try and validate the header
-		if err := blockchain.engine.VerifyHeader(blockchain, header, false); err != nil {
+		// Try and validate the header using engine directly for testing purposes
+		// This bypasses consensus-agnostic checks since faker engine is used.
+		if err := blockchain.validator.ValidateHeader(header); err != nil {
 			return err
 		}
 		// Manually insert the header into the database, but don't reorganise (allows subsequent testing)
@@ -590,6 +592,7 @@ func testInsertNonceError(t *testing.T, full bool) {
 			failNum = blocks[failAt].NumberU64()
 
 			blockchain.engine = faker.NewFakeFailer(failNum)
+			blockchain.validator = NewBlockValidator(blockchain.Config(), blockchain)
 			failRes, err = blockchain.InsertChain(blocks)
 		} else {
 			headers := MakeHeaderChain(blockchain.CurrentHeader(), i, faker.NewFaker(), db, 0)
@@ -599,6 +602,7 @@ func testInsertNonceError(t *testing.T, full bool) {
 
 			blockchain.engine = faker.NewFakeFailer(failNum)
 			blockchain.hc.engine = blockchain.engine
+			blockchain.hc.validator = NewBlockValidatorWithHeaderChain(blockchain.Config(), blockchain.hc)
 			failRes, err = blockchain.InsertHeaderChain(headers, 1)
 		}
 		// Check that the returned error indicates the failure.

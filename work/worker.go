@@ -183,7 +183,6 @@ type worker struct {
 
 	backend           Backend
 	chain             BlockChain
-	proc              blockchain.Validator
 	chainDB           database.DBManager
 	govModule         gov.GovModule
 	executionModules  []kaiax.ExecutionModule
@@ -219,7 +218,6 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, nodeAddr com
 		chainDB:     backend.ChainDB(),
 		recv:        make(chan *Result, resultQueueSize),
 		chain:       backend.BlockChain(),
-		proc:        backend.BlockChain().Validator(),
 		agents:      make(map[Agent]struct{}),
 		nodetype:    nodetype,
 		nodeAddr:    nodeAddr,
