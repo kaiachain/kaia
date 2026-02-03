@@ -769,6 +769,9 @@ func RpcOutputBlock(b *types.Block, inclTx bool, fullTx bool, config *params.Cha
 		fields["excessBlobGas"] = (*hexutil.Big)(new(big.Int).SetUint64(*head.ExcessBlobGas))
 		fields["blobGasUsed"] = hexutil.Uint64(*head.BlobGasUsed)
 	}
+	if rules.IsPermissionless {
+		fields["vrank"] = hexutil.Bytes(head.VRank)
+	}
 
 	return fields, nil
 }
@@ -871,6 +874,9 @@ func RPCMarshalHeader(head *types.Header, rules params.Rules) map[string]interfa
 	if rules.IsOsaka {
 		result["excessBlobGas"] = (*hexutil.Big)(new(big.Int).SetUint64(*head.ExcessBlobGas))
 		result["blobGasUsed"] = hexutil.Uint64(*head.BlobGasUsed)
+	}
+	if rules.IsPermissionless {
+		result["vrank"] = hexutil.Bytes(head.VRank)
 	}
 
 	return result
