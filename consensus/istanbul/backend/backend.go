@@ -432,23 +432,6 @@ func (sb *backend) HasBadProposal(hash common.Hash) bool {
 	return sb.hasBadBlock(hash)
 }
 
-func (sb *backend) GetProposerByRound(num uint64, round uint64) (common.Address, error) {
-	proposer, err := sb.valsetModule.GetProposer(num, round)
-	if err != nil {
-		return common.Address{}, err
-	}
-	return proposer, nil
-}
-
-// GetProposer implements istanbul.Backend.GetProposer
-func (sb *backend) GetProposer(number uint64) common.Address {
-	if h := sb.chain.GetHeaderByNumber(number); h != nil {
-		a, _ := sb.Author(h)
-		return a
-	}
-	return common.Address{}
-}
-
 func (sb *backend) GetRewardAddress(num uint64, nodeId common.Address) common.Address {
 	sInfo, err := sb.stakingModule.GetStakingInfo(num)
 	if err != nil {

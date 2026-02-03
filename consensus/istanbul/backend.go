@@ -69,9 +69,6 @@ type Backend interface {
 	// HasPropsal checks if the combination of the given hash and height matches any existing blocks
 	HasPropsal(hash common.Hash, number *big.Int) bool
 
-	// GetProposer returns the proposer of the given block height
-	GetProposer(number uint64) common.Address
-
 	// HasBadProposal returns whether the proposal with the hash is a bad proposal
 	HasBadProposal(hash common.Hash) bool
 
@@ -80,6 +77,4 @@ type Backend interface {
 	SetCurrentView(view *View)
 
 	NodeType() common.ConnType
-
-	GetProposerByRound(num uint64, round uint64) (common.Address, error)
 }

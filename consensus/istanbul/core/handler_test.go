@@ -96,7 +96,6 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 	// Consider the last proposal is "initBlock" and the owner of mockBackend is validatorAddrs[0]
 	mockBackend.EXPECT().Address().Return(validatorAddrs[0]).AnyTimes()
 	mockBackend.EXPECT().LastProposal().Return(initBlock, validatorAddrs[0]).AnyTimes()
-	mockBackend.EXPECT().GetProposerByRound(gomock.Any(), gomock.Any()).Return(validatorAddrs[0], nil).AnyTimes()
 	mockBackend.EXPECT().NodeType().Return(common.CONSENSUSNODE).AnyTimes()
 
 	// Set an eventMux in which istanbul core will subscribe istanbul events

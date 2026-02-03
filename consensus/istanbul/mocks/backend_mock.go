@@ -108,35 +108,6 @@ func (mr *MockBackendMockRecorder) EventMux() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EventMux", reflect.TypeOf((*MockBackend)(nil).EventMux))
 }
 
-// GetProposer mocks base method.
-func (m *MockBackend) GetProposer(arg0 uint64) common.Address {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProposer", arg0)
-	ret0, _ := ret[0].(common.Address)
-	return ret0
-}
-
-// GetProposer indicates an expected call of GetProposer.
-func (mr *MockBackendMockRecorder) GetProposer(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProposer", reflect.TypeOf((*MockBackend)(nil).GetProposer), arg0)
-}
-
-// GetProposerByRound mocks base method.
-func (m *MockBackend) GetProposerByRound(arg0, arg1 uint64) (common.Address, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProposerByRound", arg0, arg1)
-	ret0, _ := ret[0].(common.Address)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetProposerByRound indicates an expected call of GetProposerByRound.
-func (mr *MockBackendMockRecorder) GetProposerByRound(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProposerByRound", reflect.TypeOf((*MockBackend)(nil).GetProposerByRound), arg0, arg1)
-}
-
 // GetRewardBase mocks base method.
 func (m *MockBackend) GetRewardBase() common.Address {
 	m.ctrl.T.Helper()
