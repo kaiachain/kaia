@@ -590,7 +590,6 @@ func (self *worker) handleFinalizedBlock(result *consensus.ExecutionResult) {
 	self.chain.PostChainEvents(events, logs)
 
 	self.updateSnapshot()
-	// Note: next block work is triggered via NewSequenceEvent from consensus startNewRound
 }
 
 func (self *worker) updateSnapshot() {

@@ -241,7 +241,6 @@ func (c *core) commit() {
 		c.sendNextRoundChange("commit failure. proposal is nil")
 		return
 	}
-	c.startNewRound(common.Big0)
 }
 
 // startNewRound starts a new round. if round equals to 0, it means to starts a new sequence
