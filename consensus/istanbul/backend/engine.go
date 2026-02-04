@@ -218,7 +218,10 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// Retrieve the snapshot needed to verify this header and cache it
-	qualified, err := sb.getQualified(number)
+	if sb.valsetModule == nil {
+		return istanbul.ErrNoEssentialModule
+	}
+	qualified, err := sb.valsetModule.GetQualifiedValidators(number)
 	if err != nil {
 		return err
 	}
@@ -261,7 +264,7 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		return err
 	}
 	committeeSize := sb.govModule.GetParamSet(number).CommitteeSize
-	qualified, err := sb.getQualified(number)
+	qualified, err := sb.valsetModule.GetQualifiedValidators(number)
 	if err != nil {
 		return err
 	}
@@ -345,7 +348,10 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// add qualified validators to extraData's validators section
-	qualified, err := sb.getQualified(number)
+	if sb.valsetModule == nil {
+		return istanbul.ErrNoEssentialModule
+	}
+	qualified, err := sb.valsetModule.GetQualifiedValidators(number)
 	if err != nil {
 		return err
 	}
@@ -412,7 +418,10 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 				rewardAddress = sb.GetRewardAddress(blockNum, sb.address)
 			)
 
-			qualified, err := sb.getQualified(blockNum)
+			if sb.valsetModule == nil {
+				return nil, istanbul.ErrNoEssentialModule
+			}
+			qualified, err := sb.valsetModule.GetQualifiedValidators(blockNum)
 			if err != nil {
 				return nil, err
 			}
@@ -486,7 +495,10 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 	number := header.Number.Uint64()
 
 	// Bail out if we're unauthorized to sign a block
-	qualified, err := sb.getQualified(number)
+	if sb.valsetModule == nil {
+		return nil, istanbul.ErrNoEssentialModule
+	}
+	qualified, err := sb.valsetModule.GetQualifiedValidators(number)
 	if err != nil {
 		return nil, err
 	}

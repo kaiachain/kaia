@@ -1226,7 +1226,7 @@ func Test_AfterMinimumStakingVotes(t *testing.T) {
 
 		for _, e := range tc.expected {
 			for _, num := range e.blocks {
-				qualified, err := engine.getQualified(num + 1)
+				qualified, err := engine.valsetModule.GetQualifiedValidators(num + 1)
 				assert.NoError(t, err)
 				demoted, err := engine.valsetModule.GetDemotedValidators(num + 1)
 				assert.NoError(t, err)
@@ -1311,7 +1311,7 @@ func Test_AfterKaia_BasedOnStaking(t *testing.T) {
 		_, err := chain.InsertChain(types.Blocks{block})
 		assert.NoError(t, err)
 
-		qualified, err := engine.getQualified(block.NumberU64() + 1)
+		qualified, err := engine.valsetModule.GetQualifiedValidators(block.NumberU64() + 1)
 		assert.NoError(t, err)
 		demoted, err := engine.valsetModule.GetDemotedValidators(block.NumberU64() + 1)
 		assert.NoError(t, err)
@@ -1488,7 +1488,7 @@ func Test_BasedOnStaking(t *testing.T) {
 		_, err := chain.InsertChain(types.Blocks{block})
 		assert.NoError(t, err)
 
-		qualified, err := engine.getQualified(block.NumberU64() + 1)
+		qualified, err := engine.valsetModule.GetQualifiedValidators(block.NumberU64() + 1)
 		assert.NoError(t, err)
 		demoted, err := engine.valsetModule.GetDemotedValidators(block.NumberU64() + 1)
 		assert.NoError(t, err)
@@ -1709,7 +1709,7 @@ func Test_AddRemove(t *testing.T) {
 			if _, ok := tc.expected[i]; !ok {
 				continue
 			}
-			qualified, err := engine.getQualified(uint64(i) + 1)
+			qualified, err := engine.valsetModule.GetQualifiedValidators(uint64(i) + 1)
 			assert.NoError(t, err)
 
 			expectedValidators := makeExpectedResult(tc.expected[i].validators, allAddrs)

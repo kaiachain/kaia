@@ -53,6 +53,7 @@ func getRoundCommitteeState(c *core, seq, r uint64) (qualified *valset.AddressSe
 	if err != nil {
 		return nil, nil, common.Address{}, 0, 0, 0, err
 	}
+	// NOTE: don't use GetQualifiedValidators here because it duplicates the logic of GetDemotedValidators.
 	qualified = valset.NewAddressSet(council).Subtract(valset.NewAddressSet(demoted))
 	committeeAddrs, err := c.valsetModule.GetCommittee(seq, r)
 	if err != nil {
