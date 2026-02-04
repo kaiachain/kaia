@@ -53,11 +53,11 @@ const (
 
 var (
 	// VRank metrics
-	vrankFirstPreprepareArrivalTimeGauge       = metrics.NewRegisteredGauge("vrank/first_preprepare", nil)
-	vrankFirstCommitArrivalTimeGauge           = metrics.NewRegisteredGauge("vrank/first_commit", nil)
-	vrankQuorumCommitArrivalTimeGauge          = metrics.NewRegisteredGauge("vrank/quorum_commit", nil)
-	vrankAvgCommitArrivalTimeWithinQuorumGauge = metrics.NewRegisteredGauge("vrank/avg_commit_within_quorum", nil)
-	vrankLastCommitArrivalTimeGauge            = metrics.NewRegisteredGauge("vrank/last_commit", nil)
+	vrankFirstPreprepareArrivalTimeGauge       = metrics.NewRegisteredGauge("vrank/preprepare/first", nil)
+	vrankFirstCommitArrivalTimeGauge           = metrics.NewRegisteredGauge("vrank/commit/first", nil)
+	vrankQuorumCommitArrivalTimeGauge          = metrics.NewRegisteredGauge("vrank/commit/quorumreached", nil)
+	vrankAvgCommitArrivalTimeWithinQuorumGauge = metrics.NewRegisteredGauge("vrank/commit/quorumaverage", nil)
+	vrankLastCommitArrivalTimeGauge            = metrics.NewRegisteredGauge("vrank/commit/last", nil)
 
 	VRankLogFrequency = DefaultVRankLogFrequency // Will be set to the value of VRankLogFrequencyFlag in SetKaiaConfig()
 
