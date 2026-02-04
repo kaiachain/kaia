@@ -210,7 +210,7 @@ func (f *Faker) PurgeCache() {
 }
 
 // SubmitTransactions is not implemented for faker - it uses push() flow instead.
-func (f *Faker) SubmitTransactions(txs types.Transactions, state *state.StateDB, header *types.Header, onPrepared func(*consensus.ExecutionResult)) (finalizeCh <-chan *consensus.ExecutionResult) {
+func (f *Faker) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, state *state.StateDB, header *types.Header, mux *event.TypeMux, onPrepared func(*consensus.ExecutionResult)) (finalizeCh <-chan *consensus.ExecutionResult) {
 	// Return nil channel - faker uses the legacy push() flow
 	return nil
 }

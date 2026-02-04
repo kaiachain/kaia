@@ -603,6 +603,10 @@ func (sb *backend) UnregisterConsensusModule(module kaiax.ConsensusModule) {
 	}
 }
 
+func (sb *backend) RegisterTxBundlingModule(modules ...kaiax.TxBundlingModule) {
+	sb.txBundlingModules = append(sb.txBundlingModules, modules...)
+}
+
 // Start implements consensus.Istanbul.Start
 func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	sb.coreMu.Lock()

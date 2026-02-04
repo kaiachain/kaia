@@ -48,6 +48,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/work/builder"
 )
 
 const (
@@ -145,6 +146,9 @@ type backend struct {
 
 	// Executor for transaction execution
 	executor consensus.Executor
+
+	// Transaction bundling modules for gasless transactions
+	txBundlingModules []kaiax.TxBundlingModule
 }
 
 func (sb *backend) NodeType() common.ConnType {
@@ -480,7 +484,7 @@ func (sb *backend) GetRewardAddress(num uint64, nodeId common.Address) common.Ad
 // Returns a channel that will receive the execution result when consensus is complete.
 // In Istanbul: execute first → then consensus → finalize → send result
 // In Kaia-BFT: consensus + execute in parallel → committed → send result
-func (sb *backend) SubmitTransactions(txs types.Transactions, statedb *state.StateDB, header *types.Header, onPrepared func(*consensus.ExecutionResult)) (finalizeCh <-chan *consensus.ExecutionResult) {
+func (sb *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, statedb *state.StateDB, header *types.Header, mux *event.TypeMux, onPrepared func(*consensus.ExecutionResult)) (finalizeCh <-chan *consensus.ExecutionResult) {
 	resultCh := make(chan *consensus.ExecutionResult, 1)
 
 	go func() {
@@ -493,11 +497,19 @@ func (sb *backend) SubmitTransactions(txs types.Transactions, statedb *state.Sta
 
 		// Initialize executor if not already done
 		if sb.executor == nil {
-			sb.executor = shared.NewDefaultExecutor(sb.chain.Config(), sb.chain.(consensus.ChainContext), sb.rewardbase)
+			sb.executor = shared.NewDefaultExecutor(sb.chain.Config(), sb.chain.(shared.BlockChain), sb.rewardbase)
 		}
 
 		// Reset executor with current state and header
 		if executor, ok := sb.executor.(*shared.DefaultExecutor); ok {
+			// Always sync bundling modules (they might be registered after executor creation)
+			if len(sb.txBundlingModules) > 0 {
+				modules := make([]builder.TxBundlingModule, len(sb.txBundlingModules))
+				for i, m := range sb.txBundlingModules {
+					modules[i] = m.(builder.TxBundlingModule)
+				}
+				executor.SetTxBundlingModules(modules)
+			}
 			if err := executor.ResetWithState(statedb, header); err != nil {
 				resultCh <- nil
 				return
@@ -506,7 +518,7 @@ func (sb *backend) SubmitTransactions(txs types.Transactions, statedb *state.Sta
 
 		// Execute transactions
 		executeStart := time.Now()
-		result, err := sb.executor.Execute(txs)
+		result, err := sb.executor.Execute(txs, mux)
 		if err != nil {
 			resultCh <- nil
 			return

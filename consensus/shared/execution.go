@@ -26,8 +26,11 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/work"
+	"github.com/kaiachain/kaia/work/builder"
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbul)
@@ -37,13 +40,20 @@ var (
 	ErrStateRootMismatch      = errors.New("state root mismatch")
 )
 
+// BlockChain interface for transaction execution.
+// This is compatible with work.BlockChain.
+type BlockChain interface {
+	consensus.ChainContext
+	Config() *params.ChainConfig
+}
+
 // DefaultExecutor implements the consensus.Executor interface.
 // It provides transaction execution functionality that can be used by consensus engines.
 type DefaultExecutor struct {
 	mu sync.RWMutex
 
 	config   *params.ChainConfig
-	chain    consensus.ChainContext
+	chain    BlockChain
 	signer   types.Signer
 	nodeAddr common.Address
 
@@ -55,18 +65,28 @@ type DefaultExecutor struct {
 	logs     []*types.Log
 	usedGas  uint64
 
+	// Transaction bundling modules for gasless transactions
+	txBundlingModules []builder.TxBundlingModule
+
 	// initialized indicates whether Reset has been called
 	initialized bool
 }
 
 // NewDefaultExecutor creates a new DefaultExecutor instance.
-func NewDefaultExecutor(config *params.ChainConfig, chain consensus.ChainContext, nodeAddr common.Address) *DefaultExecutor {
+func NewDefaultExecutor(config *params.ChainConfig, chain BlockChain, nodeAddr common.Address) *DefaultExecutor {
 	return &DefaultExecutor{
 		config:   config,
 		chain:    chain,
 		nodeAddr: nodeAddr,
 		signer:   types.MakeSigner(config, nil),
 	}
+}
+
+// SetTxBundlingModules sets the transaction bundling modules for gasless transactions.
+func (e *DefaultExecutor) SetTxBundlingModules(modules []builder.TxBundlingModule) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.txBundlingModules = modules
 }
 
 // Reset initializes the executor for a new block, setting up the state
@@ -133,7 +153,8 @@ func (e *DefaultExecutor) ResetWithState(statedb *state.StateDB, header *types.H
 }
 
 // Execute executes a batch of transactions and returns the execution result.
-func (e *DefaultExecutor) Execute(txs types.Transactions) (*consensus.ExecutionResult, error) {
+// This uses work.Task.CommitTransactions for full transaction execution with bundle handling.
+func (e *DefaultExecutor) Execute(txs *types.TransactionsByPriceAndNonce, mux *event.TypeMux) (*consensus.ExecutionResult, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -141,23 +162,16 @@ func (e *DefaultExecutor) Execute(txs types.Transactions) (*consensus.ExecutionR
 		return nil, ErrExecutorNotInitialized
 	}
 
-	vmConfig := &vm.Config{}
+	// Create Task for transaction execution with bundle handling and time limits
+	task := work.NewTask(e.config, e.signer, e.state, e.header)
 
-	for _, tx := range txs {
-		e.state.SetTxContext(tx.Hash(), common.Hash{}, len(e.txs))
+	// Execute transactions using CommitTransactions (includes posting pending events)
+	task.CommitTransactions(mux, txs, e.chain.(work.BlockChain), e.nodeAddr, e.txBundlingModules)
 
-		receipt, logs, err := e.applyTransaction(tx, vmConfig)
-		if err != nil {
-			// Skip failed transactions but continue with others
-			logger.Trace("Transaction execution failed", "hash", tx.Hash(), "err", err)
-			continue
-		}
-
-		e.txs = append(e.txs, tx)
-		e.receipts = append(e.receipts, receipt)
-		e.logs = append(e.logs, logs...)
-		e.usedGas = e.header.GasUsed
-	}
+	// Get results from task
+	e.txs = task.Transactions()
+	e.receipts = task.Receipts()
+	e.usedGas = e.header.GasUsed
 
 	return e.buildResult(), nil
 }
