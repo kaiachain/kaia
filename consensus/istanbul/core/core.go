@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
+	consensuscommon "github.com/kaiachain/kaia/consensus/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -66,23 +67,9 @@ func getRoundCommitteeState(c *core, seq, r uint64) (qualified *valset.AddressSe
 	committeeSet = valset.NewAddressSet(committeeAddrs)
 	committeeSize = c.govModule.GetParamSet(seq).CommitteeSize
 
-	// requiredMessageCount: minimum messages to proceed (QBFT quorum)
 	qLen := qualified.Len()
-	size := qLen
-	if size > int(committeeSize) {
-		size = int(committeeSize)
-	}
-	if size < 4 {
-		requiredMsgCnt = size
-	} else {
-		requiredMsgCnt = int(math.Ceil(float64(2*size) / 3))
-	}
-	// f: maximum endurable byzantine fault nodes
-	if qLen > int(committeeSize) {
-		fNum = int(math.Ceil(float64(committeeSize)/3)) - 1
-	} else {
-		fNum = int(math.Ceil(float64(qLen)/3)) - 1
-	}
+	requiredMsgCnt = consensuscommon.CalcQuorumSize(qLen, committeeSize)
+	fNum = consensuscommon.CalcFaultTolerance(qLen, committeeSize)
 	return qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum, nil
 }
 

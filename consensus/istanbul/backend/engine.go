@@ -26,7 +26,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"math"
 	"math/big"
 	"time"
 
@@ -38,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	consensuscommon "github.com/kaiachain/kaia/consensus/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/consensus/misc"
@@ -239,14 +239,6 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 	return nil
 }
 
-// byzantineFaultTolerance returns the maximum endurable number of byzantine fault nodes.
-func byzantineFaultTolerance(qualifiedSize int, committeeSize uint64) int {
-	if qualifiedSize > int(committeeSize) {
-		return int(math.Ceil(float64(committeeSize)/3)) - 1
-	}
-	return int(math.Ceil(float64(qualifiedSize)/3)) - 1
-}
-
 // verifyCommittedSeals checks whether every committed seal is signed by one of the parent's validators
 func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	number := header.Number.Uint64()
@@ -268,7 +260,7 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 	if err != nil {
 		return err
 	}
-	f := byzantineFaultTolerance(len(qualified), committeeSize)
+	f := consensuscommon.CalcFaultTolerance(len(qualified), committeeSize)
 
 	extra, err := types.ExtractIstanbulExtra(header)
 	if err != nil {
