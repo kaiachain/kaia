@@ -443,7 +443,6 @@ func (self *worker) commitNewWork() {
 
 	// Sort txs and submit to consensus for execution
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending, self.current.header.BaseFee)
-	txSlice := builder.Arrayify(txs)
 
 	// Store pending work context and submit to consensus
 	self.pendingWork = self.current
@@ -467,7 +466,7 @@ func (self *worker) commitNewWork() {
 		self.snapshotState = result.State.Copy()
 	}
 
-	self.finalizeCh = self.engine.SubmitTransactions(txSlice, self.current.state, self.current.header, onPrepared)
+	self.finalizeCh = self.engine.SubmitTransactions(txs, self.current.state, self.current.header, self.mux, onPrepared)
 
 	// Results will be handled in update() loop:
 	// - finalizeCh -> handleFinalizedBlock() for DB write and broadcast
@@ -623,7 +622,7 @@ func getBalanceForGauge(state *state.StateDB, nodeAddr common.Address) int64 {
 	}
 }
 
-func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) {
+func (env *Task) CommitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) {
 	coalescedLogs := env.ApplyTransactions(txs, bc, nodeAddr, txBundlingModules)
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {

@@ -22,6 +22,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/event"
 )
 
 // ExecutionResult contains the results of executing a batch of transactions.
@@ -59,5 +60,6 @@ func (r *ExecutionResult) Transactions() []*types.Transaction {
 //go:generate mockgen -destination=./mocks/executor_mock.go -package=mocks github.com/kaiachain/kaia/consensus Executor
 type Executor interface {
 	// Execute executes a batch of transactions and returns the execution result.
-	Execute(txs types.Transactions) (*ExecutionResult, error)
+	// mux is used to post PendingLogsEvent and PendingStateEvent for APIs.
+	Execute(txs *types.TransactionsByPriceAndNonce, mux *event.TypeMux) (*ExecutionResult, error)
 }

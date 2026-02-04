@@ -102,7 +102,7 @@ type Engine interface {
 	// Returns finalizeCh which receives the execution result when block is finalized (for DB write and broadcast).
 	// onPrepared is called after transactions are executed and block is finalized but before consensus sealing.
 	// This allows the caller to update pending block state for APIs.
-	SubmitTransactions(txs types.Transactions, state *state.StateDB, header *types.Header, onPrepared func(*ExecutionResult)) (finalizeCh <-chan *ExecutionResult)
+	SubmitTransactions(txs *types.TransactionsByPriceAndNonce, state *state.StateDB, header *types.Header, mux *event.TypeMux, onPrepared func(*ExecutionResult)) (finalizeCh <-chan *ExecutionResult)
 
 	// VerifyHeader checks whether a header conforms to the consensus rules of a
 	// given engine. Verifying the seal may be done optionally here, or explicitly
@@ -186,6 +186,7 @@ type Istanbul interface {
 	RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule, mRandao randao.RandaoModule)
 
 	kaiax.ConsensusModuleHost
+	kaiax.TxBundlingModuleHost
 	staking.StakingModuleHost
 }
 
