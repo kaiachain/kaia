@@ -484,6 +484,13 @@ func (sb *backend) SubmitTransactions(txs types.Transactions, statedb *state.Sta
 	resultCh := make(chan *consensus.ExecutionResult, 1)
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error("SubmitTransactions panic", "err", r)
+				resultCh <- nil
+			}
+		}()
+
 		// Initialize executor if not already done
 		if sb.executor == nil {
 			sb.executor = shared.NewDefaultExecutor(sb.chain.Config(), sb.chain.(consensus.ChainContext), sb.rewardbase)
