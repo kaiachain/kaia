@@ -26,7 +26,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	"math"
 	"math/big"
 	"time"
 
@@ -38,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	consensuscommon "github.com/kaiachain/kaia/consensus/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/consensus/misc"
@@ -218,7 +218,10 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// Retrieve the snapshot needed to verify this header and cache it
-	qualified, err := sb.getQualified(number)
+	if sb.valsetModule == nil {
+		return istanbul.ErrNoEssentialModule
+	}
+	qualified, err := sb.valsetModule.GetQualifiedValidators(number)
 	if err != nil {
 		return err
 	}
@@ -234,14 +237,6 @@ func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Heade
 		return istanbul.ErrUnauthorized
 	}
 	return nil
-}
-
-// byzantineFaultTolerance returns the maximum endurable number of byzantine fault nodes.
-func byzantineFaultTolerance(qualifiedSize int, committeeSize uint64) int {
-	if qualifiedSize > int(committeeSize) {
-		return int(math.Ceil(float64(committeeSize)/3)) - 1
-	}
-	return int(math.Ceil(float64(qualifiedSize)/3)) - 1
 }
 
 // verifyCommittedSeals checks whether every committed seal is signed by one of the parent's validators
@@ -261,11 +256,11 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 		return err
 	}
 	committeeSize := sb.govModule.GetParamSet(number).CommitteeSize
-	qualified, err := sb.getQualified(number)
+	qualified, err := sb.valsetModule.GetQualifiedValidators(number)
 	if err != nil {
 		return err
 	}
-	f := byzantineFaultTolerance(len(qualified), committeeSize)
+	f := consensuscommon.CalcFaultTolerance(len(qualified), committeeSize)
 
 	extra, err := types.ExtractIstanbulExtra(header)
 	if err != nil {
@@ -345,7 +340,10 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// add qualified validators to extraData's validators section
-	qualified, err := sb.getQualified(number)
+	if sb.valsetModule == nil {
+		return istanbul.ErrNoEssentialModule
+	}
+	qualified, err := sb.valsetModule.GetQualifiedValidators(number)
 	if err != nil {
 		return err
 	}
@@ -412,7 +410,10 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 				rewardAddress = sb.GetRewardAddress(blockNum, sb.address)
 			)
 
-			qualified, err := sb.getQualified(blockNum)
+			if sb.valsetModule == nil {
+				return nil, istanbul.ErrNoEssentialModule
+			}
+			qualified, err := sb.valsetModule.GetQualifiedValidators(blockNum)
 			if err != nil {
 				return nil, err
 			}
@@ -486,7 +487,10 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 	number := header.Number.Uint64()
 
 	// Bail out if we're unauthorized to sign a block
-	qualified, err := sb.getQualified(number)
+	if sb.valsetModule == nil {
+		return nil, istanbul.ErrNoEssentialModule
+	}
+	qualified, err := sb.valsetModule.GetQualifiedValidators(number)
 	if err != nil {
 		return nil, err
 	}
