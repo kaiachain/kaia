@@ -49,6 +49,11 @@ type Config struct {
 	// ComputationCostLimit is the limit of the total computation cost of a transaction. Set infinite to disable the computation cost limit.
 	ComputationCostLimit uint64
 
+	// FirstTxGasLimit is the gas usage limit for the first transaction in a block.
+	// This is a temporary mitigation for DoS attacks. Set 0 to disable.
+	// TODO: Remove after implementing block-level computation cost limit.
+	FirstTxGasLimit uint64
+
 	// UseConsoleLog enables console.log() in solidity for local network
 	UseConsoleLog bool
 
@@ -290,6 +295,13 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 				return nil, kerrors.ErrOutOfGas // TODO-Klaytn-Issue615
 			}
 		}
+
+		// Check first tx gas limit (temporary DoS mitigation)
+		in.evm.gasConsumedSum += cost
+		if in.evm.Config.FirstTxGasLimit > 0 && in.evm.gasConsumedSum > in.evm.Config.FirstTxGasLimit {
+			return nil, ErrFirstTxLimitReached
+		}
+
 		if extraSize > 0 {
 			mem.Increase(extraSize)
 			allocatedMemorySize = uint64(mem.Len())
@@ -315,6 +327,9 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 	abort := atomic.LoadInt32(&in.evm.abort)
 	if (abort & CancelByTotalTimeLimit) != 0 {
 		return nil, ErrTotalTimeLimitReached // TODO-Klaytn-Issue615
+	}
+	if (abort & CancelByFirstTxLimit) != 0 {
+		return nil, ErrFirstTxLimitReached
 	}
 	if err == errStopToken {
 		err = nil // clear stop token error

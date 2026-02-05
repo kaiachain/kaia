@@ -50,6 +50,7 @@ var (
 const (
 	CancelByCtxDone = 1 << iota
 	CancelByTotalTimeLimit
+	CancelByFirstTxLimit // First tx exceeded gas usage or time limit
 )
 
 type (
@@ -170,6 +171,10 @@ type EVM struct {
 
 	// opcodeComputationCostSum is the sum of computation cost of opcodes.
 	opcodeComputationCostSum uint64
+
+	// gasConsumedSum is the sum of gas consumed by opcodes.
+	// Used for first tx gas limit check.
+	gasConsumedSum uint64
 
 	// jumpDests stores results of JUMPDEST analysis.
 	jumpDests JumpDestCache

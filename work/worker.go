@@ -64,6 +64,16 @@ const (
 	chainSideChanSize = 10
 	// maxResendSize is the size of resending transactions to peer in order to prevent the txs from missing.
 	maxResendTxSize = 1000
+
+	// First transaction gas usage limit (Step 1: temporary mitigation for DoS attack).
+	// The first tx is exempt from 250ms block generation time limit, so we need a separate limit.
+	// Users can check this with estimateGas before sending.
+	// TODO: Remove after implementing block-level computation cost limit.
+	firstTxGasUsageLimit = 30_000_000 // 30M gas
+
+	// skippedTxLifetime is the duration to keep skipped transactions in the skip list.
+	// Set to 15 minutes (3x default txpool lifetime of 5 minutes).
+	skippedTxLifetime = 15 * time.Minute
 )
 
 var (
@@ -101,7 +111,45 @@ var (
 	snapshotAccountReadTimer = metrics.NewRegisteredTimer("miner/snapshot/account/reads", nil)
 	snapshotStorageReadTimer = metrics.NewRegisteredTimer("miner/snapshot/storage/reads", nil)
 	snapshotCommitTimer      = metrics.NewRegisteredTimer("miner/snapshot/commits", nil)
+
+	// skippedTxs tracks transactions that exceeded the first tx gas limit.
+	// These transactions are skipped immediately when encountered again.
+	// Key: tx hash, Value: timestamp when skipped
+	skippedTxs   = make(map[common.Hash]time.Time)
+	skippedTxsMu sync.Mutex
 )
+
+// isSkippedTx checks if a transaction should be skipped due to previous first tx gas limit violation.
+// Only applies to first tx (non-bundle). Returns true if the tx should be skipped.
+// If skipped, refreshes the timestamp. If expired, removes from skip list.
+func isSkippedTx(txHash common.Hash, isFirstTx bool) bool {
+	if !isFirstTx {
+		return false
+	}
+
+	skippedTxsMu.Lock()
+	defer skippedTxsMu.Unlock()
+
+	skippedTime, ok := skippedTxs[txHash]
+	if !ok {
+		return false
+	}
+	if time.Since(skippedTime) > skippedTxLifetime {
+		delete(skippedTxs, txHash)
+		return false
+	}
+	skippedTxs[txHash] = time.Now()
+
+	return true
+}
+
+// addSkippedTx adds a transaction to the skip list.
+func addSkippedTx(txHash common.Hash) {
+	skippedTxsMu.Lock()
+	defer skippedTxsMu.Unlock()
+
+	skippedTxs[txHash] = time.Now()
+}
 
 // Agent can register themself with the worker
 type Agent interface {
@@ -845,6 +893,16 @@ CommitTransactionLoop:
 			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 			continue
 		}
+
+		// Skip if this is first tx and it previously exceeded first tx gas limit
+		isFirstTx := env.tcount == 0 && len(targetBundle.BundleTxs) == 0
+		if isSkippedTx(tx.Hash(), isFirstTx) {
+			logger.Debug("Skipping previously skipped transaction", "hash", tx.Hash().String(), "workerTxPtr", fmt.Sprintf("%p", tx))
+			tx.MarkUnexecutable(true)
+			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
+			continue
+		}
+
 		if len(targetBundle.BundleTxs) != 0 {
 			// if inclusion of the transaction would put the block size over the
 			// maximum we allow, don't add any more txs to the payload.
@@ -888,6 +946,13 @@ CommitTransactionLoop:
 		//	continue
 		//}
 		// Start executing the transaction
+		// Set first tx gas limit for DoS mitigation (only for first non-bundle tx)
+		if isFirstTx {
+			vmConfig.FirstTxGasLimit = firstTxGasUsageLimit
+		} else {
+			vmConfig.FirstTxGasLimit = 0
+		}
+
 		if len(targetBundle.BundleTxs) != 0 {
 			atomic.StoreInt32(&isExecutingBundleTxs, 1)
 			err, tx, logs = env.commitBundleTransaction(targetBundle, bc, nodeAddr, vmConfig)
@@ -917,6 +982,14 @@ CommitTransactionLoop:
 			logger.Warn("Transaction aborted due to time limit", "hash", tx.Hash().String())
 			// NOTE-Kaia Exit for loop immediately without checking abort variable again.
 			break CommitTransactionLoop
+
+		case vm.ErrFirstTxLimitReached:
+			// First tx exceeded gas usage limit.
+			// Don't use MarkUnexecutable here - if tx is re-added from network with new object,
+			// the mark won't be on the new object. Use skippedTxs (hash-based) instead.
+			logger.Info("First transaction exceeded gas usage limit", "hash", tx.Hash().String(), "limit", firstTxGasUsageLimit)
+			addSkippedTx(tx.Hash())
+			builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 
 		case blockchain.ErrTxTypeNotSupported:
 			// Pop the unsupported transaction without shifting in the next from the account

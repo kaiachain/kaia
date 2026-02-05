@@ -603,6 +603,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		return nil, vm.ErrTotalTimeLimitReached
 	}
 
+	// First tx gas limit error - same as time-limit error, tx should be skipped, not included in block.
+	if vmerr == vm.ErrFirstTxLimitReached {
+		return nil, vm.ErrFirstTxLimitReached
+	}
+
 	// Compute refund
 	gasRefund := st.calcRefund()
 	st.gas += gasRefund

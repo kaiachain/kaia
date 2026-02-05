@@ -34,6 +34,7 @@ var (
 	ErrInsufficientBalance               = errors.New("insufficient balance for transfer")
 	ErrContractAddressCollision          = errors.New("contract address collision")
 	ErrTotalTimeLimitReached             = errors.New("reached the total execution time limit for txs in a block")
+	ErrFirstTxLimitReached               = errors.New("first transaction exceeded gas usage limit")
 	ErrOpcodeComputationCostLimitReached = errors.New("reached the opcode computation cost limit")
 	ErrFailedOnSetCode                   = errors.New("failed on setting code to an account")
 
