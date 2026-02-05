@@ -43,7 +43,10 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 	if err != nil {
 		return nil, err
 	}
-	return api.istanbul.getQualified(num)
+	if api.istanbul.valsetModule == nil {
+		return nil, istanbul.ErrNoEssentialModule
+	}
+	return api.istanbul.valsetModule.GetQualifiedValidators(num)
 }
 
 // GetDemotedValidators retrieves the list of authorized, but demoted validators with the given block number.

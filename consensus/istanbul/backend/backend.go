@@ -207,22 +207,6 @@ func (sb *backend) Gossip(payload []byte) error {
 	return nil
 }
 
-// getQualified returns qualified validators (council minus demoted) for the given block number.
-func (sb *backend) getQualified(num uint64) ([]common.Address, error) {
-	if sb.valsetModule == nil {
-		return nil, istanbul.ErrNoEssentialModule
-	}
-	council, err := sb.valsetModule.GetCouncil(num)
-	if err != nil {
-		return nil, err
-	}
-	demoted, err := sb.valsetModule.GetDemotedValidators(num)
-	if err != nil {
-		return nil, err
-	}
-	return valset.NewAddressSet(council).Subtract(valset.NewAddressSet(demoted)).List(), nil
-}
-
 // getTargetReceivers returns a map of nodes which need to receive a message
 func (sb *backend) getTargetReceivers() map[common.Address]bool {
 	if sb.valsetModule == nil {

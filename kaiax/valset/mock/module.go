@@ -110,6 +110,21 @@ func (mr *MockValsetModuleMockRecorder) GetProposer(arg0, arg1 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProposer", reflect.TypeOf((*MockValsetModule)(nil).GetProposer), arg0, arg1)
 }
 
+// GetQualifiedValidators mocks base method.
+func (m *MockValsetModule) GetQualifiedValidators(arg0 uint64) ([]common.Address, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetQualifiedValidators", arg0)
+	ret0, _ := ret[0].([]common.Address)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetQualifiedValidators indicates an expected call of GetQualifiedValidators.
+func (mr *MockValsetModuleMockRecorder) GetQualifiedValidators(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQualifiedValidators", reflect.TypeOf((*MockValsetModule)(nil).GetQualifiedValidators), arg0)
+}
+
 // PostInsertBlock mocks base method.
 func (m *MockValsetModule) PostInsertBlock(arg0 *types.Block) error {
 	m.ctrl.T.Helper()
