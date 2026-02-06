@@ -59,6 +59,9 @@ func (r *ExecutionResult) Transactions() []*types.Transaction {
 //
 //go:generate mockgen -destination=./mocks/executor_mock.go -package=mocks github.com/kaiachain/kaia/consensus Executor
 type Executor interface {
+	// ResetWithState initializes the executor with a pre-existing state and header.
+	ResetWithState(statedb *state.StateDB, header *types.Header) error
+
 	// Execute executes a batch of transactions and returns the execution result.
 	// mux is used to post PendingLogsEvent and PendingStateEvent for APIs.
 	Execute(txs *types.TransactionsByPriceAndNonce, mux *event.TypeMux) (*ExecutionResult, error)

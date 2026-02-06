@@ -37,7 +37,6 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
-	"github.com/kaiachain/kaia/consensus/shared"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/event"
@@ -48,7 +47,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
-	"github.com/kaiachain/kaia/work/builder"
 )
 
 const (
@@ -495,25 +493,10 @@ func (sb *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, st
 			}
 		}()
 
-		// Initialize executor if not already done
-		if sb.executor == nil {
-			sb.executor = shared.NewDefaultExecutor(sb.chain.Config(), sb.chain.(shared.BlockChain), sb.rewardbase)
-		}
-
 		// Reset executor with current state and header
-		if executor, ok := sb.executor.(*shared.DefaultExecutor); ok {
-			// Always sync bundling modules (they might be registered after executor creation)
-			if len(sb.txBundlingModules) > 0 {
-				modules := make([]builder.TxBundlingModule, len(sb.txBundlingModules))
-				for i, m := range sb.txBundlingModules {
-					modules[i] = m.(builder.TxBundlingModule)
-				}
-				executor.SetTxBundlingModules(modules)
-			}
-			if err := executor.ResetWithState(statedb, header); err != nil {
-				resultCh <- nil
-				return
-			}
+		if err := sb.executor.ResetWithState(statedb, header); err != nil {
+			resultCh <- nil
+			return
 		}
 
 		// Execute transactions
