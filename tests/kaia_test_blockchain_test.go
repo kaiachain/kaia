@@ -177,7 +177,7 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 	}
 	engine.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
 	engine.RegisterConsensusModule(mReward)
-	if err = engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock); err != nil {
+	if err = engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock, nil); err != nil {
 		return nil, err
 	}
 
