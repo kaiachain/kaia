@@ -768,6 +768,9 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 	if args.Gas != nil {
 		gas = uint64(*args.Gas)
 	}
+	if gas > params.UpperGasLimit {
+		return nil, fmt.Errorf("gas limit %v exceeds the upper limit %v", gas, params.UpperGasLimit)
+	}
 	if globalGasCap != 0 && globalGasCap < gas {
 		logger.Warn("Caller gas above allowance, capping", "requested", gas, "cap", globalGasCap)
 		gas = globalGasCap

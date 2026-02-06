@@ -809,6 +809,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction) error {
 		return fmt.Errorf("%w: code size %v, limit %v", ErrMaxInitCodeSizeExceeded, len(tx.Data()), params.MaxInitCodeSize)
 	}
 
+	// Sanity check for gas limit
+	if tx.Gas() > params.UpperGasLimit {
+		return fmt.Errorf("%w: gas %v, limit %v", ErrGasLimit, tx.Gas(), params.UpperGasLimit)
+	}
+
 	// Check chain Id first.
 	if tx.Protected() && tx.ChainId().Cmp(pool.chainconfig.ChainID) != 0 {
 		return ErrInvalidChainId
