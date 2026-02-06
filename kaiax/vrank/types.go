@@ -1,4 +1,4 @@
-// Copyright 2024 The Kaia Authors
+// Copyright 2026 The Kaia Authors
 // This file is part of the Kaia library.
 //
 // The Kaia library is free software: you can redistribute it and/or modify
@@ -14,23 +14,45 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
-package valset
+package vrank
 
 import (
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/rlp"
 )
 
-//go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/valset ValsetModule
-type ValsetModule interface {
-	kaiax.BaseModule
-	kaiax.JsonRpcModule
-	kaiax.ExecutionModule
-	kaiax.RewindableModule
+type CfReport []common.Address
 
-	GetCouncil(num uint64) ([]common.Address, error)
-	GetCommittee(num uint64, round uint64) ([]common.Address, error)
-	GetCandidates(num uint64) ([]common.Address, error)
-	GetDemotedValidators(num uint64) ([]common.Address, error)
-	GetProposer(num uint64, round uint64) (common.Address, error)
+type BroadcastRequest struct {
+	Targets []common.Address
+	Code    int
+	Msg     any
+}
+
+type VRankPreprepare struct {
+	Block *types.Block
+}
+
+type VRankCandidate struct {
+	BlockNumber uint64
+	Round       uint8
+	BlockHash   common.Hash
+	Sig         []byte
+}
+
+func EncodeCfReport(cfReport CfReport) ([]byte, error) {
+	if len(cfReport) == 0 {
+		return nil, nil
+	}
+
+	return rlp.EncodeToBytes(cfReport)
+}
+
+func DecodeCfReport(data []byte) (CfReport, error) {
+	var cfReport []common.Address
+	if err := rlp.DecodeBytes(data, &cfReport); err != nil {
+		return nil, err
+	}
+	return cfReport, nil
 }
