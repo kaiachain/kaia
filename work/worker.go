@@ -251,7 +251,9 @@ func (self *worker) start() {
 
 	// istanbul BFT
 	if istanbul, ok := self.engine.(consensus.Istanbul); ok {
-		istanbul.Start(self.chain, self.chain.CurrentBlock, self.chain.HasBadBlock)
+		executor := NewDefaultExecutor(self.config, self.chain, self.nodeAddr)
+		executor.SetTxBundlingModules(self.txBundlingModules)
+		istanbul.Start(self.chain, self.chain.CurrentBlock, self.chain.HasBadBlock, executor)
 	}
 }
 

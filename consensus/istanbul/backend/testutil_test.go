@@ -231,7 +231,7 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	}
 	engine.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
 	// Start the engine
-	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock); err != nil {
+	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock, nil); err != nil {
 		panic(err)
 	}
 
