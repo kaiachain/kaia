@@ -71,7 +71,7 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	configItems = append(configItems, mStaking)
 
-	chain, istBackend := newBlockChain(len(stakes), configItems...)
+	chain, istBackend := newBlockChain(t, len(stakes), configItems...)
 	chain.RegisterExecutionModule(istBackend.govModule)
 	defer istBackend.Stop()
 
@@ -213,20 +213,23 @@ func TestCommit(t *testing.T) {
 			nil,
 		},
 	} {
-		chain, engine := newBlockChain(1)
+		chain, engine := newBlockChain(t, 1)
 
 		block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 		expBlock, _ := engine.updateBlock(block)
 
-		go func() {
-			select {
-			case result := <-engine.commitCh:
-				commitCh <- result.Block
-				return
-			}
-		}()
+		// Initialize commitCh via initSealState (simulating Seal() setup)
+		sealCommitCh := engine.initSealState(expBlock.NumberU64(), expBlock.Hash())
 
-		engine.proposedBlockHash = expBlock.Hash()
+		if test.expectedErr == nil {
+			go func() {
+				result := <-sealCommitCh
+				if result != nil {
+					commitCh <- result.Block
+				}
+			}()
+		}
+
 		assert.Equal(t, test.expectedErr, engine.Commit(expBlock, test.expectedSignature))
 
 		if test.expectedErr == nil {

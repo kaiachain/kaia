@@ -481,7 +481,7 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.
-func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block) (*types.Block, error) {
 	// update the block header timestamp and signature and propose the block to core engine
 	header := block.Header()
 	number := header.Number.Uint64()
@@ -507,31 +507,24 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 		return nil, err
 	}
 
-	// wait for the timestamp of header, use this to adjust the block period
-	delay := time.Unix(block.Header().Time.Int64(), 0).Sub(istanbul.Now())
-	select {
-	case <-time.After(delay):
-	case <-stop:
+	// Initialize seal state; returns nil if block was already committed before Seal started
+	commitCh := sb.initSealState(number, block.Hash())
+	if commitCh == nil {
 		return nil, nil
 	}
-
-	// get the proposed block hash and clear it if the seal() is completed.
-	sb.sealMu.Lock()
-	sb.proposedBlockHash = block.Hash()
-	clear := func() {
-		sb.proposedBlockHash = common.Hash{}
-		sb.sealMu.Unlock()
-	}
-	defer clear()
+	defer sb.cleanupSealState()
 
 	// post block into Istanbul engine
 	go sb.EventMux().Post(istanbul.RequestEvent{
 		Proposal: block,
 	})
 
+	logger.Debug("[Seal] Waiting for commitCh", "blockNum", number)
+
 	for {
 		select {
-		case result := <-sb.commitCh:
+		case result := <-commitCh:
+			logger.Debug("[Seal] Received from commitCh", "blockNum", number, "resultNil", result == nil)
 			if result == nil {
 				return nil, nil
 			}
@@ -541,8 +534,6 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 			if block.Hash() == result.Block.Hash() {
 				return result.Block, nil
 			}
-		case <-stop:
-			return nil, nil
 		}
 	}
 }
@@ -612,8 +603,12 @@ func (sb *backend) UnregisterConsensusModule(module kaiax.ConsensusModule) {
 	}
 }
 
+func (sb *backend) RegisterTxBundlingModule(modules ...kaiax.TxBundlingModule) {
+	sb.txBundlingModules = append(sb.txBundlingModules, modules...)
+}
+
 // Start implements consensus.Istanbul.Start
-func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
+func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool, executor consensus.Executor) error {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
 	if sb.coreStarted {
@@ -621,15 +616,19 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	}
 
 	// clear previous data
+	sb.sealMu.Lock()
 	sb.proposedBlockHash = common.Hash{}
+	sb.sealSkippedNum = 0
 	if sb.commitCh != nil {
 		close(sb.commitCh)
+		sb.commitCh = nil
 	}
-	sb.commitCh = make(chan *types.Result, 1)
+	sb.sealMu.Unlock()
 
 	sb.SetChain(chain)
 	sb.currentBlock = currentBlock
 	sb.hasBadBlock = hasBadBlock
+	sb.executor = executor
 
 	if err := sb.core.Start(); err != nil {
 		return err
@@ -646,6 +645,13 @@ func (sb *backend) Stop() error {
 	if !sb.coreStarted {
 		return istanbul.ErrStoppedEngine
 	}
+	// Close commitCh to stop any pending Seal() calls
+	sb.sealMu.Lock()
+	if sb.commitCh != nil {
+		close(sb.commitCh)
+		sb.commitCh = nil
+	}
+	sb.sealMu.Unlock()
 	if err := sb.core.Stop(); err != nil {
 		return err
 	}

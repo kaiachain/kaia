@@ -231,7 +231,7 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	}
 	engine.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
 	// Start the engine
-	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock); err != nil {
+	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock, nil); err != nil {
 		panic(err)
 	}
 
@@ -278,7 +278,7 @@ func (ctx *testContext) MakeBlock(parent *types.Block) *types.Block {
 func (ctx *testContext) MakeBlockWithSeal(parent *types.Block) *types.Block {
 	chain, engine := ctx.chain, ctx.engine
 	block := ctx.MakeBlock(parent)
-	result, err := engine.Seal(chain, block, make(chan struct{}))
+	result, err := engine.Seal(chain, block)
 	if err != nil {
 		panic(err)
 	}

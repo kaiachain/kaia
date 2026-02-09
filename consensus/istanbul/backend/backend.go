@@ -31,6 +31,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
@@ -113,6 +114,7 @@ type backend struct {
 	commitCh          chan *types.Result
 	proposedBlockHash common.Hash
 	sealMu            sync.Mutex
+	sealSkippedNum    uint64 // block number that was committed before Seal started (0 = none)
 	coreStarted       bool
 	coreMu            sync.RWMutex
 
@@ -139,10 +141,40 @@ type backend struct {
 	nodetype common.ConnType
 
 	isRestoringSnapshots atomic.Bool
+
+	// Executor for transaction execution
+	executor consensus.Executor
+
+	// Transaction bundling modules for gasless transactions
+	txBundlingModules []kaiax.TxBundlingModule
 }
 
 func (sb *backend) NodeType() common.ConnType {
 	return sb.nodetype
+}
+
+// initSealState initializes state for Seal operation.
+// Returns the commitCh channel to wait on, or nil if the block was already committed.
+func (sb *backend) initSealState(number uint64, blockHash common.Hash) chan *types.Result {
+	sb.sealMu.Lock()
+	defer sb.sealMu.Unlock()
+
+	if sb.sealSkippedNum == number {
+		sb.sealSkippedNum = 0
+		return nil
+	}
+	sb.proposedBlockHash = blockHash
+	sb.commitCh = make(chan *types.Result, 1)
+	return sb.commitCh
+}
+
+// cleanupSealState cleans up state after Seal completes.
+func (sb *backend) cleanupSealState() {
+	sb.sealMu.Lock()
+	defer sb.sealMu.Unlock()
+
+	sb.proposedBlockHash = common.Hash{}
+	sb.commitCh = nil
 }
 
 func (sb *backend) GetRewardBase() common.Address {
@@ -306,11 +338,25 @@ func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
 	// -- if success, the ChainHeadEvent event will be broadcasted, try to build
 	//    the next block and the previous Seal() will be stopped.
 	// -- otherwise, a error will be returned and a round change event will be fired.
+
+	sb.sealMu.Lock()
 	if sb.proposedBlockHash == block.Hash() {
-		// feed block hash to Seal() and wait the Seal() result
-		sb.commitCh <- &types.Result{Block: block, Round: round}
+		// Proposer: feed block hash to Seal() and wait the Seal() result
+		if sb.commitCh != nil {
+			sb.commitCh <- &types.Result{Block: block, Round: round}
+		}
+		sb.sealMu.Unlock()
 		return nil
 	}
+
+	// Non-proposer: send nil to unblock Seal() waiting on commitCh
+	if sb.commitCh != nil {
+		sb.commitCh <- nil
+	} else {
+		// Seal hasn't started yet, record block number so it returns immediately when it starts
+		sb.sealSkippedNum = proposal.Number().Uint64()
+	}
+	sb.sealMu.Unlock()
 
 	if sb.broadcaster != nil {
 		sb.broadcaster.Enqueue(fetcherID, block)
@@ -429,4 +475,84 @@ func (sb *backend) GetRewardAddress(num uint64, nodeId common.Address) common.Ad
 		}
 	}
 	return common.Address{}
+}
+
+// SubmitTransactions executes transactions and returns the execution result.
+// This moves transaction execution responsibility from worker to consensus.
+// Returns a channel that will receive the execution result when consensus is complete.
+// In Istanbul: execute first → then consensus → finalize → send result
+// In Kaia-BFT: consensus + execute in parallel → committed → send result
+func (sb *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, statedb *state.StateDB, header *types.Header, mux *event.TypeMux, onPrepared func(*consensus.ExecutionResult)) (finalizeCh <-chan *consensus.ExecutionResult) {
+	resultCh := make(chan *consensus.ExecutionResult, 1)
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error("SubmitTransactions panic", "err", r)
+				resultCh <- nil
+			}
+		}()
+
+		// Reset executor with current state and header
+		if err := sb.executor.ResetWithState(statedb, header); err != nil {
+			resultCh <- nil
+			return
+		}
+
+		// Execute transactions
+		executeStart := time.Now()
+		result, err := sb.executor.Execute(txs, mux)
+		if err != nil {
+			resultCh <- nil
+			return
+		}
+		result.ExecuteTime = time.Since(executeStart)
+
+		// Finalize the block
+		finalizeStart := time.Now()
+		block, err := sb.Finalize(sb.chain, header, result.State, result.Txs, result.Receipts)
+		if err != nil {
+			resultCh <- nil
+			return
+		}
+		result.FinalizeTime = time.Since(finalizeStart)
+		result.Block = block
+
+		// Notify caller that block is prepared (for pending block API)
+		if onPrepared != nil {
+			onPrepared(result)
+		}
+
+		// Trigger consensus (Seal) - this will run BFT consensus
+		// Seal is blocking until consensus is complete
+		// Stop signal is handled via commitCh close
+		sealStart := time.Now()
+		sealedBlock, err := sb.Seal(sb.chain, block)
+		result.SealTime = time.Since(sealStart)
+
+		if err != nil {
+			logger.Error("Failed to seal block", "err", err, "sealTime", result.SealTime)
+			resultCh <- nil
+			return
+		}
+		if sealedBlock == nil {
+			// Not the proposer - this is expected, block will be received via ChainHeadEvent
+			logger.Info("Seal skipped. Not the proposer for block", "number", block.Number(), "sealTime", result.SealTime)
+			resultCh <- nil
+			return
+		}
+
+		logger.Info("Successfully sealed new block", "number", sealedBlock.Number(), "hash", sealedBlock.Hash(), "sealTime", result.SealTime)
+
+		result.Block = sealedBlock
+		resultCh <- result
+	}()
+
+	return resultCh
+}
+
+// SubscribeNewSequence subscribes to new sequence events.
+// When a new block sequence starts (not round change), this subscription receives a signal.
+func (sb *backend) SubscribeNewSequence() *event.TypeMuxSubscription {
+	return sb.istanbulEventMux.Subscribe(istanbul.NewSequenceEvent{})
 }

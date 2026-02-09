@@ -13,6 +13,7 @@ import (
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	consensus "github.com/kaiachain/kaia/consensus"
+	event "github.com/kaiachain/kaia/event"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -48,7 +49,7 @@ func (m *MockEngine) APIs(arg0 consensus.ChainReader) []rpc.API {
 }
 
 // APIs indicates an expected call of APIs.
-func (mr *MockEngineMockRecorder) APIs(arg0 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) APIs(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockEngine)(nil).APIs), arg0)
 }
@@ -63,7 +64,7 @@ func (m *MockEngine) Author(arg0 *types.Header) (common.Address, error) {
 }
 
 // Author indicates an expected call of Author.
-func (mr *MockEngineMockRecorder) Author(arg0 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) Author(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Author", reflect.TypeOf((*MockEngine)(nil).Author), arg0)
 }
@@ -77,7 +78,7 @@ func (m *MockEngine) CalcBlockScore(arg0 consensus.ChainReader, arg1 uint64, arg
 }
 
 // CalcBlockScore indicates an expected call of CalcBlockScore.
-func (mr *MockEngineMockRecorder) CalcBlockScore(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) CalcBlockScore(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalcBlockScore", reflect.TypeOf((*MockEngine)(nil).CalcBlockScore), arg0, arg1, arg2)
 }
@@ -106,7 +107,7 @@ func (m *MockEngine) Finalize(arg0 consensus.ChainReader, arg1 *types.Header, ar
 }
 
 // Finalize indicates an expected call of Finalize.
-func (mr *MockEngineMockRecorder) Finalize(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) Finalize(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Finalize", reflect.TypeOf((*MockEngine)(nil).Finalize), arg0, arg1, arg2, arg3, arg4)
 }
@@ -121,7 +122,7 @@ func (m *MockEngine) GetConsensusInfo(arg0 *types.Block) (consensus.ConsensusInf
 }
 
 // GetConsensusInfo indicates an expected call of GetConsensusInfo.
-func (mr *MockEngineMockRecorder) GetConsensusInfo(arg0 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) GetConsensusInfo(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConsensusInfo", reflect.TypeOf((*MockEngine)(nil).GetConsensusInfo), arg0)
 }
@@ -133,7 +134,7 @@ func (m *MockEngine) Initialize(arg0 consensus.ChainReader, arg1 *types.Header, 
 }
 
 // Initialize indicates an expected call of Initialize.
-func (mr *MockEngineMockRecorder) Initialize(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) Initialize(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockEngine)(nil).Initialize), arg0, arg1, arg2)
 }
@@ -147,7 +148,7 @@ func (m *MockEngine) Prepare(arg0 consensus.ChainReader, arg1 *types.Header) err
 }
 
 // Prepare indicates an expected call of Prepare.
-func (mr *MockEngineMockRecorder) Prepare(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) Prepare(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Prepare", reflect.TypeOf((*MockEngine)(nil).Prepare), arg0, arg1)
 }
@@ -162,7 +163,7 @@ func (m *MockEngine) PreprocessHeaderVerification(arg0 []*types.Header) (chan<- 
 }
 
 // PreprocessHeaderVerification indicates an expected call of PreprocessHeaderVerification.
-func (mr *MockEngineMockRecorder) PreprocessHeaderVerification(arg0 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) PreprocessHeaderVerification(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreprocessHeaderVerification", reflect.TypeOf((*MockEngine)(nil).PreprocessHeaderVerification), arg0)
 }
@@ -193,19 +194,32 @@ func (mr *MockEngineMockRecorder) PurgeCache() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurgeCache", reflect.TypeOf((*MockEngine)(nil).PurgeCache))
 }
 
-// Seal mocks base method.
-func (m *MockEngine) Seal(arg0 consensus.ChainReader, arg1 *types.Block, arg2 <-chan struct{}) (*types.Block, error) {
+// SubmitTransactions mocks base method.
+func (m *MockEngine) SubmitTransactions(arg0 *types.TransactionsByPriceAndNonce, arg1 *state.StateDB, arg2 *types.Header, arg3 *event.TypeMux, arg4 func(*consensus.ExecutionResult)) <-chan *consensus.ExecutionResult {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Seal", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*types.Block)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "SubmitTransactions", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(<-chan *consensus.ExecutionResult)
+	return ret0
 }
 
-// Seal indicates an expected call of Seal.
-func (mr *MockEngineMockRecorder) Seal(arg0, arg1, arg2 interface{}) *gomock.Call {
+// SubmitTransactions indicates an expected call of SubmitTransactions.
+func (mr *MockEngineMockRecorder) SubmitTransactions(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Seal", reflect.TypeOf((*MockEngine)(nil).Seal), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitTransactions", reflect.TypeOf((*MockEngine)(nil).SubmitTransactions), arg0, arg1, arg2, arg3, arg4)
+}
+
+// SubscribeNewSequence mocks base method.
+func (m *MockEngine) SubscribeNewSequence() *event.TypeMuxSubscription {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubscribeNewSequence")
+	ret0, _ := ret[0].(*event.TypeMuxSubscription)
+	return ret0
+}
+
+// SubscribeNewSequence indicates an expected call of SubscribeNewSequence.
+func (mr *MockEngineMockRecorder) SubscribeNewSequence() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeNewSequence", reflect.TypeOf((*MockEngine)(nil).SubscribeNewSequence))
 }
 
 // VerifyHeader mocks base method.
@@ -217,7 +231,7 @@ func (m *MockEngine) VerifyHeader(arg0 consensus.ChainReader, arg1 *types.Header
 }
 
 // VerifyHeader indicates an expected call of VerifyHeader.
-func (mr *MockEngineMockRecorder) VerifyHeader(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) VerifyHeader(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockEngine)(nil).VerifyHeader), arg0, arg1, arg2)
 }
@@ -232,7 +246,7 @@ func (m *MockEngine) VerifyHeaders(arg0 consensus.ChainReader, arg1 []*types.Hea
 }
 
 // VerifyHeaders indicates an expected call of VerifyHeaders.
-func (mr *MockEngineMockRecorder) VerifyHeaders(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) VerifyHeaders(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeaders", reflect.TypeOf((*MockEngine)(nil).VerifyHeaders), arg0, arg1, arg2)
 }
@@ -246,7 +260,7 @@ func (m *MockEngine) VerifySeal(arg0 consensus.ChainReader, arg1 *types.Header) 
 }
 
 // VerifySeal indicates an expected call of VerifySeal.
-func (mr *MockEngineMockRecorder) VerifySeal(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) VerifySeal(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifySeal", reflect.TypeOf((*MockEngine)(nil).VerifySeal), arg0, arg1)
 }

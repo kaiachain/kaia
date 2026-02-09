@@ -149,7 +149,7 @@ func TestNewProtocolManager(t *testing.T) {
 		mockEngine.EXPECT().Protocol().Return(consensus.Protocol{}).Times(1)
 
 		pm, err := NewProtocolManager(nil, downloader.FastSync, 0, nil, mockTxPool,
-			mockEngine, mockBlockChain, nil, 1, -1, &Config{})
+			mockEngine, mockBlockChain, nil, 1, common.ConnTypeUndefined, &Config{})
 
 		assert.Nil(t, pm)
 		assert.Equal(t, errIncompatibleConfig, err)
@@ -718,29 +718,6 @@ func TestReBroadcastTxs_EN(t *testing.T) {
 		pm.ReBroadcastTxs(txs)
 
 		mockCtrl.Finish()
-	}
-}
-
-func TestUseTxResend(t *testing.T) {
-	testSet := [...]struct {
-		pm     *ProtocolManager
-		result bool
-	}{
-		{&ProtocolManager{nodetype: common.CONSENSUSNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: common.ENDPOINTNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: common.PROXYNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: common.BOOTNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: common.UNKNOWNNODE, txResendUseLegacy: true}, false},
-
-		{&ProtocolManager{nodetype: common.CONSENSUSNODE, txResendUseLegacy: false}, false},
-		{&ProtocolManager{nodetype: common.ENDPOINTNODE, txResendUseLegacy: false}, true},
-		{&ProtocolManager{nodetype: common.PROXYNODE, txResendUseLegacy: false}, true},
-		{&ProtocolManager{nodetype: common.BOOTNODE, txResendUseLegacy: false}, true},
-		{&ProtocolManager{nodetype: common.UNKNOWNNODE, txResendUseLegacy: false}, true},
-	}
-
-	for _, tc := range testSet {
-		assert.Equal(t, tc.result, tc.pm.useTxResend())
 	}
 }
 

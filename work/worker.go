@@ -52,7 +52,6 @@ import (
 )
 
 const (
-	resultQueueSize  = 10
 	miningLogAtDepth = 5
 
 	// txChanSize is the size of channel listening to NewTxsEvent.
@@ -70,8 +69,6 @@ var (
 	// Metrics for miner
 	timeLimitReachedCounter = metrics.NewRegisteredCounter("miner/timelimitreached", nil)
 	tooLongTxCounter        = metrics.NewRegisteredCounter("miner/toolongtx", nil)
-	ResultChGauge           = metrics.NewRegisteredGauge("miner/resultch", nil)
-	resentTxGauge           = metrics.NewRegisteredGauge("miner/tx/resend/gauge", nil)
 	usedAllTxsCounter       = metrics.NewRegisteredCounter("miner/usedalltxs", nil)
 	checkedTxsGauge         = metrics.NewRegisteredGauge("miner/checkedtxs", nil)
 	tCountGauge             = metrics.NewRegisteredGauge("miner/tcount", nil)
@@ -102,15 +99,6 @@ var (
 	snapshotStorageReadTimer = metrics.NewRegisteredTimer("miner/snapshot/storage/reads", nil)
 	snapshotCommitTimer      = metrics.NewRegisteredTimer("miner/snapshot/commits", nil)
 )
-
-// Agent can register themself with the worker
-type Agent interface {
-	Work() chan<- *Task
-	SetReturnCh(chan<- *Result)
-	Stop()
-	Start()
-	GetHashRate() int64
-}
 
 // Task is the workers current environment and holds
 // all of the current state information
@@ -156,11 +144,6 @@ func (env *Task) txFitsSizeForBundle(nodeAddr common.Address, bundle *builder.Bu
 // maximum size with auxiliary data added into the block.
 const maxBlockSizeBufferZone = 1_000_000
 
-type Result struct {
-	Task  *Task
-	Block *types.Block
-}
-
 // worker is the main object which takes care of applying messages to the new state
 type worker struct {
 	config *params.ChainConfig
@@ -178,15 +161,21 @@ type worker struct {
 	chainSideSub event.Subscription
 	wg           sync.WaitGroup
 
-	agents map[Agent]struct{}
-	recv   chan *Result
-
 	backend           Backend
 	chain             BlockChain
 	chainDB           database.DBManager
 	govModule         gov.GovModule
 	executionModules  []kaiax.ExecutionModule
 	txBundlingModules []builder.TxBundlingModule
+
+	// Channels for consensus-worker communication
+	// finalizeCh receives finalized block results for DB write and broadcast
+	finalizeCh <-chan *consensus.ExecutionResult
+	// newSequenceSub receives signals when a new block sequence starts (not round change)
+	newSequenceSub *event.TypeMuxSubscription
+	// Pending work context for async execution
+	pendingWork      *Task
+	pendingWorkStart time.Time
 
 	extra []byte
 
@@ -201,12 +190,11 @@ type worker struct {
 
 	// atomic status counters
 	mining int32
-	atWork int32
 
 	nodetype common.ConnType
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, nodeAddr common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool, govModule gov.GovModule) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, nodeAddr common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, govModule gov.GovModule) *worker {
 	worker := &worker{
 		config:      config,
 		engine:      engine,
@@ -216,9 +204,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, nodeAddr com
 		chainHeadCh: make(chan blockchain.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh: make(chan blockchain.ChainSideEvent, chainSideChanSize),
 		chainDB:     backend.ChainDB(),
-		recv:        make(chan *Result, resultQueueSize),
 		chain:       backend.BlockChain(),
-		agents:      make(map[Agent]struct{}),
 		nodetype:    nodetype,
 		nodeAddr:    nodeAddr,
 		govModule:   govModule,
@@ -229,9 +215,10 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, nodeAddr com
 	// Subscribe events for blockchain
 	worker.chainHeadSub = backend.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	worker.chainSideSub = backend.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
+	worker.newSequenceSub = engine.SubscribeNewSequence()
+
 	go worker.update()
 
-	go worker.wait(TxResendUseLegacy)
 	return worker
 }
 
@@ -242,37 +229,18 @@ func (self *worker) setExtra(extra []byte) {
 }
 
 func (self *worker) pending() (*types.Block, types.Receipts, *state.StateDB) {
-	if atomic.LoadInt32(&self.mining) == 0 {
-		// return a snapshot to avoid contention on currentMu mutex
-		self.snapshotMu.RLock()
-		defer self.snapshotMu.RUnlock()
-		if self.snapshotState == nil {
-			return nil, nil, nil
-		}
-		return self.snapshotBlock, self.snapshotReceipts, self.snapshotState.Copy()
+	self.snapshotMu.RLock()
+	defer self.snapshotMu.RUnlock()
+	if self.snapshotState == nil {
+		return nil, nil, nil
 	}
-
-	self.currentMu.Lock()
-	defer self.currentMu.Unlock()
-	self.current.stateMu.Lock()
-	defer self.current.stateMu.Unlock()
-	return self.current.Block, self.current.receipts, self.current.state.Copy()
+	return self.snapshotBlock, self.snapshotReceipts, self.snapshotState.Copy()
 }
 
 func (self *worker) pendingBlock() *types.Block {
-	if atomic.LoadInt32(&self.mining) == 0 {
-		// return a snapshot to avoid contention on currentMu mutex
-		self.snapshotMu.RLock()
-		defer self.snapshotMu.RUnlock()
-		return self.snapshotBlock
-	}
-
-	self.currentMu.Lock()
-	defer self.currentMu.Unlock()
-	if self.current == nil {
-		return nil
-	}
-	return self.current.Block
+	self.snapshotMu.RLock()
+	defer self.snapshotMu.RUnlock()
+	return self.snapshotBlock
 }
 
 func (self *worker) start() {
@@ -283,12 +251,9 @@ func (self *worker) start() {
 
 	// istanbul BFT
 	if istanbul, ok := self.engine.(consensus.Istanbul); ok {
-		istanbul.Start(self.chain, self.chain.CurrentBlock, self.chain.HasBadBlock)
-	}
-
-	// spin up agents
-	for agent := range self.agents {
-		agent.Start()
+		executor := NewDefaultExecutor(self.config, self.chain, self.nodeAddr)
+		executor.SetTxBundlingModules(self.txBundlingModules)
+		istanbul.Start(self.chain, self.chain.CurrentBlock, self.chain.HasBadBlock, executor)
 	}
 }
 
@@ -297,11 +262,6 @@ func (self *worker) stop() {
 
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	if atomic.LoadInt32(&self.mining) == 1 {
-		for agent := range self.agents {
-			agent.Stop()
-		}
-	}
 
 	// istanbul BFT
 	if istanbul, ok := self.engine.(consensus.Istanbul); ok {
@@ -309,21 +269,6 @@ func (self *worker) stop() {
 	}
 
 	atomic.StoreInt32(&self.mining, 0)
-	atomic.StoreInt32(&self.atWork, 0)
-}
-
-func (self *worker) register(agent Agent) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-	self.agents[agent] = struct{}{}
-	agent.SetReturnCh(self.recv)
-}
-
-func (self *worker) unregister(agent Agent) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-	delete(self.agents, agent)
-	agent.Stop()
 }
 
 func (self *worker) handleTxsCh(quitByErr chan bool) {
@@ -345,21 +290,29 @@ func (self *worker) handleTxsCh(quitByErr chan bool) {
 }
 
 func (self *worker) update() {
-	defer self.chainHeadSub.Unsubscribe()
-	defer self.chainSideSub.Unsubscribe()
+	defer func() {
+		self.chainHeadSub.Unsubscribe()
+		self.chainSideSub.Unsubscribe()
+		self.newSequenceSub.Unsubscribe()
+	}()
 
 	quitByErr := make(chan bool, 1)
 	go self.handleTxsCh(quitByErr)
 
 	for {
-		// A real event arrived, process interesting content
 		select {
-		// Handle ChainHeadEvent
+		// Handle ChainHeadEvent - triggers consensus state update
 		case <-self.chainHeadCh:
-			// istanbul BFT
 			if h, ok := self.engine.(consensus.Handler); ok {
 				h.NewChainHead()
 			}
+
+		// Handle finalized block from consensus (for DB write and broadcast)
+		case result := <-self.finalizeCh:
+			self.handleFinalizedBlock(result)
+
+		// Handle new sequence event from consensus - start mining next block
+		case <-self.newSequenceSub.Chan():
 			self.commitNewWork()
 
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
@@ -381,133 +334,6 @@ func (self *worker) update() {
 	}
 }
 
-func (self *worker) wait(TxResendUseLegacy bool) {
-	for {
-		mustCommitNewWork := true
-		for result := range self.recv {
-			atomic.AddInt32(&self.atWork, -1)
-			ResultChGauge.Update(ResultChGauge.Value() - 1)
-			if result == nil {
-				continue
-			}
-
-			// TODO-Kaia drop or missing tx
-			if self.nodetype != common.CONSENSUSNODE {
-				if !TxResendUseLegacy {
-					continue
-				}
-				pending, err := self.backend.TxPool().Pending()
-				if err != nil {
-					logger.Error("Failed to fetch pending transactions", "err", err)
-					continue
-				}
-
-				if len(pending) > 0 {
-					accounts := len(pending)
-					resendTxSize := maxResendTxSize / accounts
-					if resendTxSize == 0 {
-						resendTxSize = 1
-					}
-					var resendTxs []*types.Transaction
-					for _, sortedTxs := range pending {
-						if len(sortedTxs) >= resendTxSize {
-							resendTxs = append(resendTxs, sortedTxs[:resendTxSize]...)
-						} else {
-							resendTxs = append(resendTxs, sortedTxs...)
-						}
-					}
-					if len(resendTxs) > 0 {
-						resentTxGauge.Update(int64(len(resendTxs)))
-						self.backend.ReBroadcastTxs(resendTxs)
-					}
-				}
-				continue
-			}
-
-			block := result.Block
-			work := result.Task
-
-			// Update the block hash in all logs since it is now available and not when the
-			// receipt/log of individual transactions were created.
-			for _, r := range work.receipts {
-				for _, l := range r.Logs {
-					l.BlockHash = block.Hash()
-				}
-			}
-			work.stateMu.Lock()
-			for _, log := range work.state.Logs() {
-				log.BlockHash = block.Hash()
-			}
-
-			start := time.Now()
-			result, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
-			work.stateMu.Unlock()
-			if err != nil {
-				if err == blockchain.ErrKnownBlock {
-					logger.Debug("Tried to insert already known block", "num", block.NumberU64(), "hash", block.Hash().String())
-				} else {
-					logger.Error("Failed writing block to chain", "err", err)
-				}
-				continue
-			}
-			blockWriteTime := time.Since(start)
-
-			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
-			//         Later we may be able to refine below code.
-
-			// check if canon block and write transactions
-			if result.Status == blockchain.CanonStatTy {
-				// implicit by posting ChainHeadEvent
-				mustCommitNewWork = false
-			}
-
-			// Broadcast the block and announce chain insertion event
-			self.mux.Post(blockchain.NewMinedBlockEvent{Block: block})
-
-			var events []interface{}
-
-			work.stateMu.RLock()
-			logs := work.state.Logs()
-			work.stateMu.RUnlock()
-
-			events = append(events, blockchain.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
-			if result.Status == blockchain.CanonStatTy {
-				events = append(events, blockchain.ChainHeadEvent{Block: block})
-			}
-
-			// Invoke ExecutionModules after executing a block.
-			for _, module := range self.executionModules {
-				if err := module.PostInsertBlock(block); err != nil {
-					logger.Error("Failed to call PostInsertBlock", "err", err)
-				}
-			}
-
-			logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
-				"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
-			self.chain.PostChainEvents(events, logs)
-
-			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
-			//         Later we may be able to refine below code.
-			if mustCommitNewWork {
-				self.commitNewWork()
-			}
-		}
-	}
-}
-
-// push sends a new work task to currently live work agents.
-func (self *worker) push(work *Task) {
-	if atomic.LoadInt32(&self.mining) != 1 {
-		return
-	}
-	for agent := range self.agents {
-		atomic.AddInt32(&self.atWork, 1)
-		if ch := agent.Work(); ch != nil {
-			ch <- work
-		}
-	}
-}
-
 // makeCurrent creates a new environment for the current cycle.
 func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error {
 	stateDB, err := self.chain.StateAt(parent.Root())
@@ -515,16 +341,28 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		return err
 	}
 	work := NewTask(self.config, types.MakeSigner(self.config, header.Number), stateDB, header)
-	if self.nodetype != common.CONSENSUSNODE {
-		// set the current block and header as pending block and header to support APIs requesting a pending block.
-		work.Block = parent
-		work.header = parent.Header()
-	}
 
 	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0
 	self.current = work
 	return nil
+}
+
+// waitForIdealBlockTime sleeps until the ideal block time for the next block.
+// This ensures blocks are produced at consistent intervals.
+func (self *worker) waitForIdealBlockTime(parent *types.Block) {
+	if parent == nil {
+		return
+	}
+	parentTimestamp := parent.Time().Int64()
+	ideal := time.Unix(parentTimestamp+params.BlockGenerationInterval, 0)
+	now := time.Now()
+
+	if now.Before(ideal) {
+		wait := ideal.Sub(now)
+		logger.Debug("Waiting for ideal block time", "wait", wait)
+		time.Sleep(wait)
+	}
 }
 
 func (self *worker) commitNewWork() {
@@ -536,61 +374,39 @@ func (self *worker) commitNewWork() {
 	parent := self.chain.CurrentBlock()
 	nextBlockNum := new(big.Int).Add(parent.Number(), common.Big1)
 
-	// TODO-Kaia drop or missing tx
+	// Wait for ideal block time to ensure consistent block intervals
+	self.waitForIdealBlockTime(parent)
 	tstart := time.Now()
-	tstamp := tstart.Unix()
-	if self.nodetype == common.CONSENSUSNODE {
-		parentTimestamp := parent.Time().Int64()
-		ideal := time.Unix(parentTimestamp+params.BlockGenerationInterval, 0)
-		// If a timestamp of this block is faster than the ideal timestamp,
-		// wait for a while and get a new timestamp
-		if tstart.Before(ideal) {
-			wait := ideal.Sub(tstart)
-			logger.Debug("Mining too far in the future", "wait", common.PrettyDuration(wait))
-			time.Sleep(wait)
-			tstart = time.Now()    // refresh for metrics
-			tstamp = tstart.Unix() // refresh for block timestamp
-		} else if tstart.After(ideal) {
-			logger.Info("Mining start for new block is later than expected",
-				"nextBlockNum", nextBlockNum,
-				"delay", tstart.Sub(ideal),
-				"parentBlockTimestamp", parentTimestamp,
-				"nextBlockTimestamp", tstamp,
-			)
-		}
 
-		core.Vrank.Log()
-		core.Vrank.StartTimer()
-	}
+	core.Vrank.Log()
+	core.Vrank.StartTimer()
 
 	var pending map[common.Address]types.Transactions
 	var err error
 	var nextBaseFee *big.Int
-	if self.nodetype == common.CONSENSUSNODE {
-		// Check any fork transitions needed
-		pending, err = self.backend.TxPool().Pending()
-		if err != nil {
-			logger.Error("Failed to fetch pending transactions", "err", err)
-			return
-		}
-
-		if self.config.IsMagmaForkEnabled(nextBlockNum) {
-			// NOTE-Kaia NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
-			// So above code, TxPool().Pending(), is separated with this and can be refactored later.
-			pset := self.govModule.GetParamSet(nextBlockNum.Uint64())
-			nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), pset.ToKip71Config())
-			pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
-		}
-
-		// Filter txs with txBundlingModules
-		builder.FilterTxs(pending, self.txBundlingModules)
+	// Check any fork transitions needed
+	pending, err = self.backend.TxPool().Pending()
+	if err != nil {
+		logger.Error("Failed to fetch pending transactions", "err", err)
+		return
 	}
+
+	if self.config.IsMagmaForkEnabled(nextBlockNum) {
+		// NOTE-Kaia NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
+		// So above code, TxPool().Pending(), is separated with this and can be refactored later.
+		pset := self.govModule.GetParamSet(nextBlockNum.Uint64())
+		nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), pset.ToKip71Config())
+		pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
+	}
+
+	// Filter txs with txBundlingModules
+	builder.FilterTxs(pending, self.txBundlingModules)
 
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     nextBlockNum,
 		Extra:      self.extra,
-		Time:       big.NewInt(tstamp),
+		Time:       big.NewInt(tstart.Unix()),
 	}
 	if self.config.IsMagmaForkEnabled(nextBlockNum) {
 		header.BaseFee = nextBaseFee
@@ -624,64 +440,156 @@ func (self *worker) commitNewWork() {
 	self.engine.Initialize(self.chain, header, self.current.state)
 
 	// Create the current work task
-	work := self.current
-	if self.nodetype == common.CONSENSUSNODE {
-		// measure miner balance before executing txs
-		minerBalanceGauge.Update(getBalanceForGauge(work.state, self.nodeAddr))
+	// measure miner balance before executing txs
+	minerBalanceGauge.Update(getBalanceForGauge(self.current.state, self.nodeAddr))
 
-		// Sort txs then execute them
-		txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending, work.header.BaseFee)
-		work.commitTransactions(self.mux, txs, self.chain, self.nodeAddr, self.txBundlingModules)
-		finishedCommitTx := time.Now()
+	// Sort txs and submit to consensus for execution
+	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending, self.current.header.BaseFee)
 
-		// Create the new block to seal with the consensus engine
-		if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {
-			logger.Error("Failed to finalize block for sealing", "err", err)
-			return
+	// Store pending work context and submit to consensus
+	self.pendingWork = self.current
+	self.pendingWorkStart = tstart
+
+	// Callback to update snapshot when block is prepared (before consensus sealing)
+	onPrepared := func(result *consensus.ExecutionResult) {
+		// Log block preparation completion (all validators log this, before seal)
+		logger.Info("Prepared new block",
+			"number", result.Block.Number(),
+			"hash", result.Block.Hash(),
+			"txs", len(result.Txs),
+			"elapsed", common.PrettyDuration(result.ExecuteTime+result.FinalizeTime),
+			"executeTime", common.PrettyDuration(result.ExecuteTime),
+			"finalizeTime", common.PrettyDuration(result.FinalizeTime))
+
+		self.snapshotMu.Lock()
+		defer self.snapshotMu.Unlock()
+		self.snapshotBlock = result.Block
+		self.snapshotReceipts = result.Receipts
+		self.snapshotState = result.State.Copy()
+	}
+
+	self.finalizeCh = self.engine.SubmitTransactions(txs, self.current.state, self.current.header, self.mux, onPrepared)
+
+	// Results will be handled in update() loop:
+	// - finalizeCh -> handleFinalizedBlock() for DB write and broadcast
+	// - newSequenceSub -> commitNewWork() for next block (triggered from consensus startNewRound)
+}
+
+// handleExecutionResult processes the execution result from consensus
+func (self *worker) handleFinalizedBlock(result *consensus.ExecutionResult) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+	self.currentMu.Lock()
+	defer self.currentMu.Unlock()
+
+	if result == nil || result.Block == nil {
+		// Not the proposer - block will be received via ChainHeadEvent
+		logger.Debug("Not proposer, waiting for block via ChainHeadEvent")
+		return
+	}
+
+	work := self.pendingWork
+	if work == nil {
+		logger.Error("No pending work for execution result")
+		return
+	}
+	tstart := self.pendingWorkStart
+
+	work.stateMu.Lock()
+	defer work.stateMu.Unlock()
+
+	// Update work with results from consensus
+	work.txs = result.Transactions()
+	work.tcount = len(work.txs)
+	work.receipts = result.Receipts
+	work.state = result.State
+	work.Block = result.Block
+
+	// We only care about logging if we're actually mining.
+	if atomic.LoadInt32(&self.mining) == 1 {
+		// Update the metrics subsystem with all the measurements
+		accountReadTimer.Update(work.state.AccountReads)
+		accountHashTimer.Update(work.state.AccountHashes)
+		accountUpdateTimer.Update(work.state.AccountUpdates)
+		accountCommitTimer.Update(work.state.AccountCommits)
+
+		storageReadTimer.Update(work.state.StorageReads)
+		storageHashTimer.Update(work.state.StorageHashes)
+		storageUpdateTimer.Update(work.state.StorageUpdates)
+		storageCommitTimer.Update(work.state.StorageCommits)
+
+		snapshotAccountReadTimer.Update(work.state.SnapshotAccountReads)
+		snapshotStorageReadTimer.Update(work.state.SnapshotStorageReads)
+		snapshotCommitTimer.Update(work.state.SnapshotCommits)
+
+		trieAccess := work.state.AccountReads + work.state.AccountHashes + work.state.AccountUpdates + work.state.AccountCommits
+		trieAccess += work.state.StorageReads + work.state.StorageHashes + work.state.StorageUpdates + work.state.StorageCommits
+
+		tCountGauge.Update(int64(work.tcount))
+		blockMiningTime := time.Since(tstart)
+
+		if work.header.BaseFee != nil {
+			blockBaseFee.Update(work.header.BaseFee.Int64() / int64(params.Gkei))
 		}
-		finishedFinalize := time.Now()
+		blobsGauge.Update(int64(work.blobs))
+		blockMiningTimer.Update(blockMiningTime)
+		blockMiningCommitTxTimer.Update(result.ExecuteTime)
+		blockMiningExecuteTxTimer.Update(result.ExecuteTime - trieAccess)
+		blockMiningFinalizeTimer.Update(result.FinalizeTime)
+	}
 
-		// We only care about logging if we're actually mining.
-		if atomic.LoadInt32(&self.mining) == 1 {
-			// Update the metrics subsystem with all the measurements
-			accountReadTimer.Update(work.state.AccountReads)
-			accountHashTimer.Update(work.state.AccountHashes)
-			accountUpdateTimer.Update(work.state.AccountUpdates)
-			accountCommitTimer.Update(work.state.AccountCommits)
+	// Clear pending work
+	self.pendingWork = nil
+	self.finalizeCh = nil
 
-			storageReadTimer.Update(work.state.StorageReads)
-			storageHashTimer.Update(work.state.StorageHashes)
-			storageUpdateTimer.Update(work.state.StorageUpdates)
-			storageCommitTimer.Update(work.state.StorageCommits)
+	// Write block to chain (moved from wait() since Seal is already done)
+	block := work.Block
 
-			snapshotAccountReadTimer.Update(work.state.SnapshotAccountReads)
-			snapshotStorageReadTimer.Update(work.state.SnapshotStorageReads)
-			snapshotCommitTimer.Update(work.state.SnapshotCommits)
+	// Update the block hash in all logs
+	for _, r := range work.receipts {
+		for _, l := range r.Logs {
+			l.BlockHash = block.Hash()
+		}
+	}
+	for _, log := range work.state.Logs() {
+		log.BlockHash = block.Hash()
+	}
 
-			trieAccess := work.state.AccountReads + work.state.AccountHashes + work.state.AccountUpdates + work.state.AccountCommits
-			trieAccess += work.state.StorageReads + work.state.StorageHashes + work.state.StorageUpdates + work.state.StorageCommits
+	// Write block to database
+	writeStart := time.Now()
+	writeResult, err := self.chain.WriteBlockWithState(block, work.receipts, work.state)
+	if err != nil {
+		if err == blockchain.ErrKnownBlock {
+			logger.Debug("Tried to insert already known block", "num", block.NumberU64(), "hash", block.Hash().String())
+		} else {
+			logger.Error("Failed writing block to chain", "err", err)
+		}
+		return
+	}
+	blockWriteTime := time.Since(writeStart)
 
-			tCountGauge.Update(int64(work.tcount))
-			blockMiningTime := time.Since(tstart)
-			commitTxTime := finishedCommitTx.Sub(tstart)
-			finalizeTime := finishedFinalize.Sub(finishedCommitTx)
+	// Broadcast the block and announce chain insertion event
+	self.mux.Post(blockchain.NewMinedBlockEvent{Block: block})
 
-			if header.BaseFee != nil {
-				blockBaseFee.Update(header.BaseFee.Int64() / int64(params.Gkei))
-			}
-			blobsGauge.Update(int64(work.blobs))
-			blockMiningTimer.Update(blockMiningTime)
-			blockMiningCommitTxTimer.Update(commitTxTime)
-			blockMiningExecuteTxTimer.Update(commitTxTime - trieAccess)
-			blockMiningFinalizeTimer.Update(finalizeTime)
-			logger.Info("Commit new mining work",
-				"number", work.Block.Number(), "hash", work.Block.Hash(),
-				"txs", work.tcount, "elapsed", common.PrettyDuration(blockMiningTime),
-				"commitTime", common.PrettyDuration(commitTxTime), "finalizeTime", common.PrettyDuration(finalizeTime))
+	var events []interface{}
+	logs := work.state.Logs()
+
+	events = append(events, blockchain.ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
+	if writeResult.Status == blockchain.CanonStatTy {
+		events = append(events, blockchain.ChainHeadEvent{Block: block})
+	}
+
+	// Invoke ExecutionModules after executing a block
+	for _, module := range self.executionModules {
+		if err := module.PostInsertBlock(block); err != nil {
+			logger.Error("Failed to call PostInsertBlock", "err", err)
 		}
 	}
 
-	self.push(work)
+	logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
+		"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
+	self.chain.PostChainEvents(events, logs)
+
 	self.updateSnapshot()
 }
 
@@ -716,7 +624,7 @@ func getBalanceForGauge(state *state.StateDB, nodeAddr common.Address) int64 {
 	}
 }
 
-func (env *Task) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) {
+func (env *Task) CommitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) {
 	coalescedLogs := env.ApplyTransactions(txs, bc, nodeAddr, txBundlingModules)
 
 	if len(coalescedLogs) > 0 || env.tcount > 0 {

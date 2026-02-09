@@ -107,16 +107,14 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, nodeAddr common.Address, TxResendUseLegacy bool, govModule gov.GovModule) *Miner {
+func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, nodeAddr common.Address, govModule gov.GovModule) *Miner {
 	miner := &Miner{
 		backend:  backend,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, nodeAddr, backend, mux, nodetype, TxResendUseLegacy, govModule),
+		worker:   newWorker(config, engine, nodeAddr, backend, mux, nodetype, govModule),
 		canStart: 1,
 	}
-	// TODO-Kaia drop or missing tx
-	miner.Register(NewCpuAgent(backend.BlockChain(), engine, nodetype))
 	go miner.update()
 
 	return miner
@@ -167,24 +165,13 @@ func (self *Miner) Start() {
 		logger.Info("Starting mining operation")
 	}
 	self.worker.start()
-	self.worker.commitNewWork()
+	// commitNewWork() is triggered by NewSequenceEvent from startNewRound()
 }
 
 func (self *Miner) Stop() {
 	self.worker.stop()
 	atomic.StoreInt32(&self.mining, 0)
 	atomic.StoreInt32(&self.shouldStart, 0)
-}
-
-func (self *Miner) Register(agent Agent) {
-	if self.Mining() {
-		agent.Start()
-	}
-	self.worker.register(agent)
-}
-
-func (self *Miner) Unregister(agent Agent) {
-	self.worker.unregister(agent)
 }
 
 func (self *Miner) Mining() bool {
@@ -194,14 +181,6 @@ func (self *Miner) Mining() bool {
 func (self *Miner) HashRate() (tot int64) {
 	if pow, ok := self.engine.(consensus.PoW); ok {
 		tot += int64(pow.Hashrate())
-	}
-	// do we care this might race? is it worth we're rewriting some
-	// aspects of the worker/locking up agents so we can get an accurate
-	// hashrate?
-	for agent := range self.worker.agents {
-		if _, ok := agent.(*CpuAgent); !ok {
-			tot += agent.GetHashRate()
-		}
 	}
 	return
 }

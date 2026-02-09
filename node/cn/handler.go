@@ -355,7 +355,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, manager.BroadcastBlockHash, heighter, inserter, manager.removePeer)
 	}
 
-	if manager.useTxResend() {
+	if manager.nodetype != common.CONSENSUSNODE {
 		go manager.txResendLoop(cnconfig.TxResendInterval, cnconfig.TxResendCount)
 	}
 	return manager, nil
@@ -450,7 +450,7 @@ func (pm *ProtocolManager) Stop() {
 	// After this send has completed, no new peers will be accepted.
 	pm.noMorePeers <- struct{}{}
 
-	if pm.useTxResend() {
+	if pm.nodetype != common.CONSENSUSNODE {
 		// Quit resend loop
 		pm.quitResendCh <- struct{}{}
 	}
@@ -1737,13 +1737,6 @@ func (pm *ProtocolManager) txResend(pending types.Transactions) {
 		logger.Debug("Tx Resend", "count", len(pending))
 		pm.ReBroadcastTxs(pending)
 	}
-}
-
-func (pm *ProtocolManager) useTxResend() bool {
-	if pm.nodetype != common.CONSENSUSNODE && !pm.txResendUseLegacy {
-		return true
-	}
-	return false
 }
 
 // NodeInfo represents a short summary of the Kaia sub-protocol metadata

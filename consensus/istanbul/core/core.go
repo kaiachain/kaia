@@ -113,8 +113,8 @@ type core struct {
 
 	backend               istanbul.Backend
 	events                *event.TypeMuxSubscription
-	finalCommittedSub     *event.TypeMuxSubscription
 	timeoutSub            *event.TypeMuxSubscription
+	chainHeadSub          *event.TypeMuxSubscription
 	futurePreprepareTimer *time.Timer
 
 	waitingForRoundChange bool
@@ -253,9 +253,7 @@ func (c *core) startNewRound(round *big.Int) {
 	}
 
 	roundChange := false
-	// Try to get last proposal
 	lastProposal, _ := c.backend.LastProposal()
-
 	if c.current == nil {
 		logger.Trace("Start to the initial round")
 	} else if lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
@@ -280,7 +278,6 @@ func (c *core) startNewRound(round *big.Int) {
 		logger.Warn("New sequence should be larger than current sequence", "new_seq", lastProposal.Number().Int64())
 		return
 	}
-	//}
 
 	var (
 		newView     *istanbul.View
@@ -340,6 +337,11 @@ func (c *core) startNewRound(round *big.Int) {
 		} else if c.current.pendingRequest != nil {
 			c.sendPreprepare(c.current.pendingRequest)
 		}
+	}
+
+	// For new sequences, notify worker to start new block
+	if !roundChange {
+		c.backend.EventMux().Post(istanbul.NewSequenceEvent{})
 	}
 	c.newRoundChangeTimer()
 
