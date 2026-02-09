@@ -29,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/kaiachain/kaia/crypto"
@@ -199,6 +200,7 @@ type udp struct {
 
 	closing chan struct{}
 	nat     nat.Interface
+	wg      sync.WaitGroup
 
 	Discovery
 }
@@ -326,15 +328,16 @@ func newUDP(cfg *Config) (Discovery, *udp, error) {
 		return nil, nil, err
 	}
 	go udp.Discovery.(*Table).loop() // TODO-Kaia-Node There is only one concrete type(Table) for Discovery. Refactor Discovery interface for their proper objective.
+	udp.wg.Add(2)
 	go udp.loop()
 	go udp.readLoop(cfg.Unhandled)
 	return udp.Discovery, udp, nil
 }
 
 func (t *udp) close() {
-	close(t.closing)
-	t.conn.Close()
-	// TODO: wait for the loops to end.
+	close(t.closing) // shuts down the loop()
+	t.conn.Close()   // shuts down the readLoop()
+	t.wg.Wait()
 }
 
 // ping sends a ping message to the given node and waits for a reply.
@@ -433,6 +436,7 @@ func (t *udp) handleReply(from NodeID, ptype byte, req packet) bool {
 // loop runs in its own goroutine. it keeps track of
 // the refresh timer and the pending reply queue.
 func (t *udp) loop() {
+	defer t.wg.Done()
 	var (
 		plist        = list.New()
 		timeout      = time.NewTimer(0)
@@ -607,6 +611,7 @@ func encodePacket(priv *ecdsa.PrivateKey, ptype byte, req interface{}) (packet, 
 
 // readLoop runs in its own goroutine. it handles incoming UDP packets.
 func (t *udp) readLoop(unhandled chan<- ReadPacket) {
+	defer t.wg.Done()
 	defer t.conn.Close()
 	if unhandled != nil {
 		defer close(unhandled)
