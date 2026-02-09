@@ -206,6 +206,8 @@ type udp struct {
 	nat     nat.Interface
 	wg      sync.WaitGroup
 
+	tab2 *table
+
 	Discovery
 }
 
@@ -333,6 +335,13 @@ func newUDP(cfg *Config) (Discovery, *udp, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+
+	tab2, err := newTable2(cfg, udp)
+	if err != nil {
+		return nil, nil, err
+	}
+	udp.tab2 = tab2
+
 	go udp.Discovery.(*Table).loop() // TODO-Kaia-Node There is only one concrete type(Table) for Discovery. Refactor Discovery interface for their proper objective.
 	udp.wg.Add(2)
 	go udp.loop()
@@ -352,6 +361,13 @@ func (t *udp) isAuthorized(fromID NodeID, nType NodeType) bool {
 
 func (t *udp) hasBond(fromID NodeID) bool {
 	return t.Discovery.HasBond(fromID)
+}
+
+func (t *udp) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16, nType NodeType) (*Node, error) {
+	n := NewNode(id, addr.IP, uint16(addr.Port), tcpPort, nil, nType)
+	err := t.tab2.Bond(pinged, n)
+	return n, err
+	// return t.Discovery.Bond(pinged, id, addr, tcpPort, nType)
 }
 
 // ping sends a ping message to the given node and waits for a reply.
@@ -500,9 +516,10 @@ func (t *udp) loop() {
 		case p := <-t.addpending:
 			p.deadline = time.Now().Add(respTimeout)
 			plist.PushBack(p)
-			if p.ptype == pongPacket {
+			switch p.ptype {
+			case pongPacket:
 				pendingPongCounter.Inc(1)
-			} else if p.ptype == neighborsPacket {
+			case neighborsPacket:
 				pendingNeighborsCounter.Inc(1)
 			}
 
@@ -727,7 +744,7 @@ func (req *ping) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 		logger.Trace("unauthorized node.", "nodeid", fromID, "nodetype", req.From.NType)
 		return errUnauthorized
 	}
-	logger.Debug("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
+	logger.Trace("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
 	return nil
 }
 
@@ -743,7 +760,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 	})
 	if !t.handleReply(fromID, from.IP, pingPacket, req) {
 		// Note: we're ignoring the provided IP address right now
-		go t.Bond(true, fromID, from, req.From.TCP, req.From.NType)
+		go t.bond(true, fromID, from, req.From.TCP, req.From.NType)
 	}
 	return nil
 }
