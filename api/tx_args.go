@@ -760,7 +760,12 @@ func (args *EthTransactionArgs) ToMessage(globalGasCap uint64, baseFee *big.Int,
 		return nil, errors.New("SetCodeTx must have a non-nil recipient address")
 	}
 
-	// Set default gas & gas price if none were set
+	// Set default gas & gas price if none were set.
+	// globalGasCap is configured by the node operator via --rpc.gascap flag.
+	// It must not exceed the protocol-level UpperGasLimit.
+	if globalGasCap > params.UpperGasLimit {
+		globalGasCap = params.UpperGasLimit
+	}
 	gas := globalGasCap
 	if gas == 0 {
 		gas = params.UpperGasLimit

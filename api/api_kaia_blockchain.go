@@ -908,7 +908,12 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	// Set sender address or use zero address if none specified.
 	addr := args.From
 
-	// Set default gas & gas price if none were set
+	// Set default gas & gas price if none were set.
+	// globalGasCap is configured by the node operator via --rpc.gascap flag.
+	// It must not exceed the protocol-level UpperGasLimit.
+	if globalGasCap > params.UpperGasLimit {
+		globalGasCap = params.UpperGasLimit
+	}
 	gas := globalGasCap
 	if gas == 0 {
 		gas = params.UpperGasLimit

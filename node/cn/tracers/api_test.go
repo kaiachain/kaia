@@ -134,7 +134,7 @@ func (b *testBackend) GetTxAndLookupInfo(txHash common.Hash) (*types.Transaction
 }
 
 func (b *testBackend) RPCGasCap() *big.Int {
-	return big.NewInt(250 * params.Gkei)
+	return big.NewInt(int64(params.UpperGasLimit))
 }
 
 func (b *testBackend) ChainConfig() *params.ChainConfig {
