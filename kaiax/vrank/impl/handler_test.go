@@ -65,12 +65,21 @@ func createCN(t *testing.T, valset valset.ValsetModule) *CN {
 	}
 }
 
-func ensurePop(t *testing.T, sub chan *vrank.BroadcastRequest) *vrank.BroadcastRequest {
+func mustPop(t *testing.T, sub chan *vrank.BroadcastRequest) *vrank.BroadcastRequest {
 	select {
 	case req := <-sub:
 		return req
 	case <-time.After(2 * time.Second):
 		t.Fatal("should broadcast")
+	}
+	return nil
+}
+
+func mustNotPop(t *testing.T, sub chan *vrank.BroadcastRequest) *vrank.BroadcastRequest {
+	select {
+	case <-sub:
+		t.Fatal("should not broadcast")
+	default:
 	}
 	return nil
 }
@@ -86,7 +95,7 @@ func TestVRankModule(t *testing.T) {
 		sig, _ = crypto.Sign(crypto.Keccak256(block.Hash().Bytes()), cand.Key)
 
 		pppMsg  = vrank.VRankPreprepare{Block: block, View: view}
-		candMsg = vrank.VRankCandidate{BlockNumber: block.NumberU64(), Round: uint8(view.Round.Uint64()), BlockHash: block.Hash(), Sig: sig}
+		candMsg = vrank.VRankCandidate{block.NumberU64(), uint8(view.Round.Uint64()), block.Hash(), sig}
 	)
 
 	t.Logf("val.Addr: %s, cand.Addr: %s", val.Addr.Hex(), cand.Addr.Hex())
@@ -98,15 +107,15 @@ func TestVRankModule(t *testing.T) {
 	// validator correctly broadcast VRankPreprepare upon receiving IstanbulPreprepare
 	assert.Equal(t, time.Time{}, val.VRankModule.prepreparedTime)
 	val.VRankModule.HandleIstanbulPreprepare(block, view)
-	assert.NotEqual(t, time.Time{}, val.VRankModule.prepreparedTime)
-	req := ensurePop(t, val.sub)
+	assert.Greater(t, val.VRankModule.prepreparedTime.UnixMilli(), int64(0))
+	req := mustPop(t, val.sub)
 	assert.Equal(t, []common.Address{cand.Addr}, req.Targets)
 	assert.Equal(t, VRankPreprepareMsg, req.Code)
 	assert.Equal(t, &pppMsg, req.Msg)
 
 	// candidate correctly broadcast VRankCandidate upon receiving VRankPreprepare
 	cand.VRankModule.HandleVRankPreprepare(&pppMsg)
-	req = ensurePop(t, cand.sub)
+	req = mustPop(t, cand.sub)
 	assert.Equal(t, []common.Address{val.Addr}, req.Targets)
 	assert.Equal(t, VRankCandidateMsg, req.Code)
 	assert.Equal(t, &candMsg, req.Msg)
@@ -131,44 +140,210 @@ func TestHandleIstanbulPreprepare(t *testing.T) {
 		val.VRankModule.ChainConfig.PermissionlessCompatibleBlock = nil
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 		assert.Equal(t, time.Time{}, val.VRankModule.prepreparedTime)
-		select {
-		case <-val.sub:
-			t.Fatal("under disabled permissionless fork, it should not broadcast")
-		default:
-		}
+		mustNotPop(t, val.sub)
 	})
 
-	t.Run("non-proposers should not broadcast", func(t *testing.T) {
+	t.Run("the proposer should not start collection when not in the next council", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		var vals []*CN
-		for i := 0; i < 3; i++ {
-			vals = append(vals, createCN(t, valset))
-		}
-		proposer := vals[0]
-		nonProposer := vals[1]
-		candidate := vals[2]
+		proposer, validator, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
 
-		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(len(vals))
-		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(len(vals))
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(len(vals))
+		// proposer is not in the next council, so it should only broadcast and does not start collection.
+		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{validator.Addr}, nil).Times(2)
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(2)
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(2)
+
+		proposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
+		assert.Equal(t, time.Time{}, proposer.VRankModule.prepreparedTime)
+		mustPop(t, proposer.sub) // proposer should broadcast
+
+		validator.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
+		assert.Greater(t, validator.VRankModule.prepreparedTime.UnixMilli(), int64(0))
+		mustNotPop(t, validator.sub)
+	})
+
+	t.Run("non-proposers including candidate should not broadcast", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		proposer, nonProposer, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
+
+		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(3)
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(3)
 
 		proposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 		nonProposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 		candidate.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
-		assert.NotEqual(t, time.Time{}, proposer.VRankModule.prepreparedTime)
-		assert.NotEqual(t, time.Time{}, nonProposer.VRankModule.prepreparedTime)
-		assert.Equal(t, time.Time{}, candidate.VRankModule.prepreparedTime) // candidate should not preprepare
+		assert.Greater(t, proposer.VRankModule.prepreparedTime.UnixMilli(), int64(0))
+		assert.Greater(t, nonProposer.VRankModule.prepreparedTime.UnixMilli(), int64(0))
+		assert.Equal(t, time.Time{}, candidate.VRankModule.prepreparedTime)
 
-		req := ensurePop(t, proposer.sub)
+		req := mustPop(t, proposer.sub)
 		assert.Equal(t, []common.Address{candidate.Addr}, req.Targets)
 
-		select {
-		case <-nonProposer.sub:
-			t.Fatal("non-proposer should not broadcast")
-		case <-candidate.sub:
-			t.Fatal("candidate should not broadcast")
-		default:
+		mustNotPop(t, nonProposer.sub)
+		mustNotPop(t, candidate.sub)
+	})
+}
+
+func TestHandleVRankPreprepare(t *testing.T) {
+	var (
+		block1  = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+		view1_0 = &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
+	)
+
+	t.Run("permissionless fork is disabled", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		cand := createCN(t, valset)
+		cand.VRankModule.ChainConfig.PermissionlessCompatibleBlock = nil
+		cand.VRankModule.HandleVRankPreprepare(&vrank.VRankPreprepare{Block: block1, View: view1_0})
+		mustNotPop(t, cand.sub)
+	})
+
+	t.Run("validators should not broadcast", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		proposer, nonProposer, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
+
+		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(3)
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(3)
+
+		proposer.VRankModule.HandleVRankPreprepare(&vrank.VRankPreprepare{Block: block1, View: view1_0})
+		nonProposer.VRankModule.HandleVRankPreprepare(&vrank.VRankPreprepare{Block: block1, View: view1_0})
+		candidate.VRankModule.HandleVRankPreprepare(&vrank.VRankPreprepare{Block: block1, View: view1_0})
+
+		req := mustPop(t, candidate.sub)
+		assert.Equal(t, []common.Address{proposer.Addr, nonProposer.Addr}, req.Targets)
+
+		mustNotPop(t, nonProposer.sub)
+		mustNotPop(t, proposer.sub)
+	})
+}
+
+func TestHandleVRankCandidate(t *testing.T) {
+	var (
+		block1  = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+		view1_0 = &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
+	)
+
+	t.Run("permissionless fork is disabled", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		val := createCN(t, valset)
+		val.VRankModule.ChainConfig.PermissionlessCompatibleBlock = nil
+		val.VRankModule.HandleVRankCandidate(&vrank.VRankCandidate{block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash(), []byte{}})
+		mustNotPop(t, val.sub)
+	})
+
+	t.Run("no nodes should broadcast", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		proposer, nonProposer, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
+		msg := vrank.VRankCandidate{block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash(), []byte{}}
+
+		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(3)
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(3)
+
+		proposer.VRankModule.HandleVRankCandidate(&msg)
+		nonProposer.VRankModule.HandleVRankCandidate(&msg)
+		candidate.VRankModule.HandleVRankCandidate(&msg)
+
+		mustNotPop(t, proposer.sub)
+		mustNotPop(t, nonProposer.sub)
+		mustNotPop(t, candidate.sub)
+	})
+
+	t.Run("the proposer should not collect when not in the next council", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		proposer, validator, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
+		sig, _ := crypto.Sign(crypto.Keccak256(block1.Hash().Bytes()), candidate.Key)
+		msg := vrank.VRankCandidate{block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash(), sig}
+
+		// proposer is not in the next council, so it should only broadcast and does not start collection.
+		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{validator.Addr}, nil).Times(2)
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(2)
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(2)
+
+		proposer.VRankModule.startNewCollection(block1, view1_0) // this won't happen in production
+		proposer.VRankModule.HandleVRankCandidate(&msg)
+		_, ok := proposer.VRankModule.candResponses.Load(candidate.Addr)
+		assert.False(t, ok)
+
+		validator.VRankModule.startNewCollection(block1, view1_0)
+		validator.VRankModule.HandleVRankCandidate(&msg)
+		_, ok = validator.VRankModule.candResponses.Load(candidate.Addr)
+		assert.True(t, ok)
+	})
+
+	t.Run("invalid message", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		val, cand := createCN(t, valset), createCN(t, valset)
+
+		sig, _ := crypto.Sign(crypto.Keccak256(block1.Hash().Bytes()), cand.Key)
+		block2 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(2)})
+		invalidSig, _ := crypto.Sign(crypto.Keccak256(block2.Hash().Bytes()), cand.Key)
+
+		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
+
+		val.VRankModule.startNewCollection(block1, view1_0)
+
+		tcs := []struct {
+			name    string
+			msg     *vrank.VRankCandidate
+			wantErr error
+		}{
+			{
+				name: "blockNum mismatch",
+				msg:  &vrank.VRankCandidate{2, 0, block1.Hash(), sig}, wantErr: vrank.ErrViewMismatch,
+			},
+			{
+				name: "round mismatch",
+				msg:  &vrank.VRankCandidate{1, 1, block1.Hash(), sig}, wantErr: vrank.ErrViewMismatch,
+			},
+			{
+				name: "blockHash mismatch",
+				msg:  &vrank.VRankCandidate{1, 0, common.Hash{}, sig}, wantErr: vrank.ErrBlockHashMismatch,
+			},
+			{
+				name: "signature and message mismatch",
+				msg:  &vrank.VRankCandidate{1, 0, block1.Hash(), invalidSig}, wantErr: vrank.ErrMsgFromNonCandidate,
+			},
+			{
+				name: "invalid signature (signature of block 2)",
+				msg:  &vrank.VRankCandidate{2, 0, block1.Hash(), invalidSig}, wantErr: vrank.ErrViewMismatch,
+			},
 		}
+
+		for _, tc := range tcs {
+			t.Run(tc.name, func(t *testing.T) {
+				err := val.VRankModule.HandleVRankCandidate(tc.msg)
+				assert.Equal(t, tc.wantErr, err)
+			})
+		}
+	})
+
+	t.Run("duplicate message", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		val, cand := createCN(t, valset), createCN(t, valset)
+
+		sig, _ := crypto.Sign(crypto.Keccak256(block1.Hash().Bytes()), cand.Key)
+		msg := vrank.VRankCandidate{block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash(), sig}
+
+		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
+
+		val.VRankModule.startNewCollection(block1, view1_0)
+
+		err := val.VRankModule.HandleVRankCandidate(&msg)
+		assert.NoError(t, err)
+		elapsed1, ok := val.VRankModule.candResponses.Load(cand.Addr)
+		assert.True(t, ok)
+		assert.Greater(t, elapsed1.(time.Duration), time.Duration(0))
+
+		err = val.VRankModule.HandleVRankCandidate(&msg)
+		assert.NoError(t, err)
+		elapsed2, ok := val.VRankModule.candResponses.Load(cand.Addr)
+		assert.True(t, ok)
+		assert.Equal(t, elapsed1.(time.Duration), elapsed2.(time.Duration))
 	})
 }

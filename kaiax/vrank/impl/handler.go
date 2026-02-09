@@ -83,40 +83,46 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 
 	elapsed := time.Since(v.prepreparedTime)
 	// if I'm a validator for the next block, then I need to collect VRankCandidate
-	if v.isValidator(v.prepreparedView.Sequence.Uint64() + 1) {
+	if v.prepreparedView.Sequence != nil && v.isValidator(v.prepreparedView.Sequence.Uint64()+1) {
 		sender, err := v.verifyVRankCandidate(msg)
 		if err != nil {
 			return err
 		}
 
-		logger.Trace("HandleVRankCandidate", "sender", sender.Hex(), "elapsed", elapsed, "blockHash", msg.BlockHash.Hex())
-		v.candResponses.Store(sender, elapsed)
+		if _, ok := v.candResponses.Load(sender); !ok {
+			logger.Trace("HandleVRankCandidate", "sender", sender.Hex(), "elapsed", elapsed, "blockHash", msg.BlockHash.Hex())
+			v.candResponses.Store(sender, elapsed)
+		}
 	}
 	return nil
 }
 
 func (v *VRankModule) verifyVRankCandidate(msg *vrank.VRankCandidate) (common.Address, error) {
-	if msg.BlockNumber != v.prepreparedView.Sequence.Uint64() || msg.Round != uint8(v.prepreparedView.Round.Uint64()) {
-		logger.Error("Round mismatch", "expected", v.prepreparedView.Round.Uint64(), "got", msg.Round)
+	if msg.BlockNumber != v.prepreparedView.Sequence.Uint64() {
+		logger.Debug("sequence mismatch", "expected", v.prepreparedView.Sequence.Uint64(), "got", msg.BlockNumber)
+		return common.Address{}, vrank.ErrViewMismatch
+	}
+	if msg.Round != uint8(v.prepreparedView.Round.Uint64()) {
+		logger.Debug("round mismatch", "expected", v.prepreparedView.Round.Uint64(), "got", msg.Round)
 		return common.Address{}, vrank.ErrViewMismatch
 	}
 	if msg.BlockHash != v.prepreparedBlockHash {
-		logger.Error("BlockHash mismatch", "expected", v.prepreparedBlockHash.Hex(), "got", msg.BlockHash.Hex())
+		logger.Debug("BlockHash mismatch", "expected", v.prepreparedBlockHash.Hex(), "got", msg.BlockHash.Hex())
 		return common.Address{}, vrank.ErrBlockHashMismatch
 	}
 
 	sender, err := istanbul.GetSignatureAddress(msg.BlockHash.Bytes(), msg.Sig)
 	if err != nil {
-		logger.Error("GetSignatureAddress failed", "err", err, "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
+		logger.Debug("GetSignatureAddress failed", "err", err, "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
 		return common.Address{}, err
 	}
 	candidates, err := v.Valset.GetCandidates(msg.BlockNumber)
 	if err != nil || candidates == nil {
-		logger.Error("GetCandidates failed", "err", err, "blockNum", msg.BlockNumber)
+		logger.Debug("GetCandidates failed", "err", err, "blockNum", msg.BlockNumber)
 		return common.Address{}, err
 	}
 	if !slices.Contains(candidates, sender) {
-		logger.Error("Sender is not a candidate", "sender", sender.Hex(), "blockNum", msg.BlockNumber)
+		logger.Debug("Sender is not a candidate", "sender", sender.Hex(), "blockNum", msg.BlockNumber)
 		return common.Address{}, vrank.ErrMsgFromNonCandidate
 	}
 	return sender, nil
