@@ -98,7 +98,7 @@ func BenchmarkEvmOp(t *testing.B) {
 	}
 
 	gasPrice := new(big.Int).SetUint64(25 * params.Gkei)
-	gasLimit := uint64(100000000000)
+	gasLimit := uint64(100000000)
 
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 

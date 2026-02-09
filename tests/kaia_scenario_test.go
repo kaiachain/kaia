@@ -54,7 +54,7 @@ import (
 
 const (
 	nonce    = uint64(1234)
-	gasLimit = uint64(params.UpperGasLimit / 5)
+	gasLimit = uint64(params.UpperGasLimit / 15)
 )
 
 type TestAccountType struct {
@@ -335,7 +335,6 @@ func TestSmartContractDeployAddress(t *testing.T) {
 	contractAddr := common.Address{}
 
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(100000000000)
 
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
@@ -582,7 +581,6 @@ func TestSmartContractSign(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(100000000000)
 
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
@@ -726,7 +724,6 @@ func TestFeeDelegatedSmartContractScenario(t *testing.T) {
 	contractAddr := common.Address{}
 
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(100000000000)
 
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
@@ -905,7 +902,6 @@ func TestFeeDelegatedSmartContractScenarioWithRatio(t *testing.T) {
 	contractAddr := common.Address{}
 
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(100000000000)
 
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 
@@ -1707,7 +1703,6 @@ func TestValidateSender(t *testing.T) {
 
 	signer := types.MakeSigner(params.TestChainConfig, big.NewInt(32))
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(100000000000)
 	amount := new(big.Int).SetUint64(10000)
 
 	// LegacyTransaction
