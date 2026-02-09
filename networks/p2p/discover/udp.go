@@ -627,8 +627,10 @@ func (t *udp) readLoop(unhandled chan<- ReadPacket) {
 			logger.Debug("Temporary UDP read error", "err", err)
 			continue
 		} else if err != nil {
-			// Shut down the loop for permanent errors.
-			logger.Warn("UDP read error", "err", err)
+			if !errors.Is(err, net.ErrClosed) { // net.ErrClosed is expected at the program shutdown.
+				// Shut down the readLoop() for unexpected permanent errors.
+				logger.Warn("UDP read error", "err", err)
+			}
 			return
 		}
 		if t.handlePacket(from, buf[:nbytes]) != nil && unhandled != nil {
