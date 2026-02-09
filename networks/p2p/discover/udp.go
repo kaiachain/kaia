@@ -346,6 +346,14 @@ func (t *udp) close() {
 	t.wg.Wait()
 }
 
+func (t *udp) isAuthorized(fromID NodeID, nType NodeType) bool {
+	return t.Discovery.IsAuthorized(fromID, nType)
+}
+
+func (t *udp) hasBond(fromID NodeID) bool {
+	return t.Discovery.HasBond(fromID)
+}
+
 // ping sends a ping message to the given node and waits for a reply.
 func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 	req := &ping{
@@ -715,7 +723,7 @@ func (req *ping) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 		mismatchNetworkCounter.Mark(1)
 		return errMismatchNetwork
 	}
-	if !t.Discovery.IsAuthorized(fromID, req.From.NType) {
+	if !t.isAuthorized(fromID, req.From.NType) {
 		logger.Trace("unauthorized node.", "nodeid", fromID, "nodetype", req.From.NType)
 		return errUnauthorized
 	}
@@ -762,7 +770,7 @@ func (req *findnode) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
-	if !t.HasBond(fromID) {
+	if !t.hasBond(fromID) {
 		// No bond exists, we don't process the packet. This prevents
 		// an attack vector where the discovery protocol could be used
 		// to amplify traffic in a DDOS attack. A malicious actor
