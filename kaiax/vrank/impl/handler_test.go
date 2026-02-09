@@ -96,7 +96,7 @@ func TestVRankModule(t *testing.T) {
 		sig, _ = crypto.Sign(crypto.Keccak256(block.Hash().Bytes()), cand.Key)
 
 		pppMsg  = vrank.VRankPreprepare{Block: block, View: view}
-		candMsg = vrank.VRankCandidate{block.NumberU64(), uint8(view.Round.Uint64()), block.Hash(), sig}
+		candMsg = vrank.VRankCandidate{BlockNumber: block.NumberU64(), Round: uint8(view.Round.Uint64()), BlockHash: block.Hash(), Sig: sig}
 	)
 
 	t.Logf("val.Addr: %s, cand.Addr: %s", val.Addr.Hex(), cand.Addr.Hex())
@@ -234,14 +234,14 @@ func TestHandleVRankCandidate(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
 		val.VRankModule.ChainConfig.PermissionlessCompatibleBlock = nil
-		val.VRankModule.HandleVRankCandidate(&vrank.VRankCandidate{block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash(), []byte{}})
+		val.VRankModule.HandleVRankCandidate(&vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: []byte{}})
 		mustNotPop(t, val.sub)
 	})
 
 	t.Run("no nodes should broadcast", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		proposer, nonProposer, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
-		msg := vrank.VRankCandidate{block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash(), []byte{}}
+		msg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: []byte{}}
 
 		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(3)
@@ -260,7 +260,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		proposer, validator, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
 		sig, _ := crypto.Sign(crypto.Keccak256(block1.Hash().Bytes()), candidate.Key)
-		msg := vrank.VRankCandidate{block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash(), sig}
+		msg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: sig}
 
 		// proposer is not in the next council, so it should only broadcast and does not start collection.
 		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{validator.Addr}, nil).Times(2)
@@ -299,23 +299,23 @@ func TestHandleVRankCandidate(t *testing.T) {
 		}{
 			{
 				name: "blockNum mismatch",
-				msg:  &vrank.VRankCandidate{2, 0, block1.Hash(), sig}, wantErr: vrank.ErrViewMismatch,
+				msg:  &vrank.VRankCandidate{BlockNumber: 2, Round: 0, BlockHash: block1.Hash(), Sig: sig}, wantErr: vrank.ErrViewMismatch,
 			},
 			{
 				name: "round mismatch",
-				msg:  &vrank.VRankCandidate{1, 1, block1.Hash(), sig}, wantErr: vrank.ErrViewMismatch,
+				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 1, BlockHash: block1.Hash(), Sig: sig}, wantErr: vrank.ErrViewMismatch,
 			},
 			{
 				name: "blockHash mismatch",
-				msg:  &vrank.VRankCandidate{1, 0, common.Hash{}, sig}, wantErr: vrank.ErrBlockHashMismatch,
+				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 0, BlockHash: common.Hash{}, Sig: sig}, wantErr: vrank.ErrBlockHashMismatch,
 			},
 			{
 				name: "signature and message mismatch",
-				msg:  &vrank.VRankCandidate{1, 0, block1.Hash(), invalidSig}, wantErr: vrank.ErrMsgFromNonCandidate,
+				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 0, BlockHash: block1.Hash(), Sig: invalidSig}, wantErr: vrank.ErrMsgFromNonCandidate,
 			},
 			{
 				name: "invalid signature (signature of block 2)",
-				msg:  &vrank.VRankCandidate{2, 0, block1.Hash(), invalidSig}, wantErr: vrank.ErrViewMismatch,
+				msg:  &vrank.VRankCandidate{BlockNumber: 2, Round: 0, BlockHash: block1.Hash(), Sig: invalidSig}, wantErr: vrank.ErrViewMismatch,
 			},
 		}
 
@@ -332,7 +332,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		val, cand := createCN(t, valset), createCN(t, valset)
 
 		sig, _ := crypto.Sign(crypto.Keccak256(block1.Hash().Bytes()), cand.Key)
-		msg := vrank.VRankCandidate{block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash(), sig}
+		msg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: sig}
 
 		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{val.Addr}, nil).Times(2)
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).Times(2)
@@ -377,7 +377,7 @@ func TestGetCfReport(t *testing.T) {
 
 	for i := 0; i < 6; i++ {
 		sig, _ := crypto.Sign(crypto.Keccak256(block1.Hash().Bytes()), candidates[i].Key)
-		candMsgs[i] = vrank.VRankCandidate{block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash(), sig}
+		candMsgs[i] = vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: sig}
 	}
 
 	for _, v := range validators {
