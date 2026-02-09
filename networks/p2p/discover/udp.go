@@ -176,7 +176,11 @@ func nodeToRPC(n *Node) rpcNode {
 }
 
 type packet interface {
+	// preverify checks whether the packet is valid and should be handled at all.
+	preverify(t *udp, from *net.UDPAddr, fromID NodeID) error
+	// handle handles the packet.
 	handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error
+	// name returns the name of the packet for logging purposes.
 	name() string
 }
 
@@ -658,6 +662,11 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 		logger.Warn("Bad discv4 packet", "addr", from, "err", err)
 		return err
 	}
+	// Preverify the packet before handling
+	if err = packet.preverify(t, from, fromID); err != nil {
+		logger.Trace("<< "+packet.name(), "addr", from, "err", err)
+		return err
+	}
 	logger.Trace("<< "+packet.name(), "addr", from, "err", err)
 	logger.Trace("[udp] handlePacket", "name", packet.name(), "packet", packet)
 	err = packet.handle(t, from, fromID, hash)
@@ -697,28 +706,27 @@ func decodePacket(buf []byte) (packet, NodeID, []byte, error) {
 	return req, fromID, hash, err
 }
 
-func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
-	logger.Trace("udp: ping: received", "from", fromID, "req.NetworkId", req.NetworkID,
-		"myNetworkId", t.networkID)
-
-	logger.Trace("udp: ping: send pong", "to", fromID)
-	if !t.Discovery.IsAuthorized(fromID, req.From.NType) {
-		logger.Trace("unauthorized node.", "nodeid", fromID, "nodetype", req.From.NType)
-		return errUnauthorized
-	} else {
-		logger.Debug("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
+func (req *ping) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
+	if expired(req.Expiration) {
+		return errExpired
 	}
-
 	if req.NetworkID != t.networkID {
 		logger.Debug("udp: ping: mismatch networkid", "local", t.networkID, "remote", req.NetworkID)
 		mismatchNetworkCounter.Mark(1)
 		return errMismatchNetwork
 	}
-
-	if expired(req.Expiration) {
-		logger.Trace("udp: ping: expired", "from", fromID)
-		return errExpired
+	if !t.Discovery.IsAuthorized(fromID, req.From.NType) {
+		logger.Trace("unauthorized node.", "nodeid", fromID, "nodetype", req.From.NType)
+		return errUnauthorized
 	}
+	logger.Debug("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
+	return nil
+}
+
+func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+	logger.Trace("udp: ping: received", "from", fromID, "req.NetworkId", req.NetworkID,
+		"myNetworkId", t.networkID)
+	logger.Trace("udp: ping: send pong", "to", fromID)
 
 	t.send(from, pongPacket, &pong{
 		To:         makeEndpoint(from, req.From.TCP, req.From.NType),
@@ -734,10 +742,14 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 
 func (req *ping) name() string { return "PING/v4" }
 
-func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+func (req *pong) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
+	return nil
+}
+
+func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
 	if !t.handleReply(fromID, from.IP, pongPacket, req) {
 		return errUnsolicitedReply
 	}
@@ -746,7 +758,7 @@ func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 
 func (req *pong) name() string { return "PONG/v4" }
 
-func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+func (req *findnode) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
@@ -760,7 +772,10 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 		// (which is a much bigger packet than findnode) to the victim.
 		return errUnknownNode
 	}
+	return nil
+}
 
+func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
 	// Determine "closest" nodes. The result will be the closest nodes for KademliaStorage, but random nodes for SimpleStorage.
 	target := crypto.Keccak256Hash(req.Target[:])
 	retrieveSize := findnodeRetrieveSize(req.TargetType)
@@ -788,10 +803,14 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 
 func (req *findnode) name() string { return "FINDNODE/v4" }
 
-func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+func (req *neighbors) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
+	return nil
+}
+
+func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
 	if !t.handleReply(fromID, from.IP, neighborsPacket, req) {
 		return errUnsolicitedReply
 	}
