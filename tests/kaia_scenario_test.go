@@ -54,7 +54,7 @@ import (
 
 const (
 	nonce    = uint64(1234)
-	gasLimit = uint64(100000000000)
+	gasLimit = uint64(params.UpperGasLimit / 5)
 )
 
 type TestAccountType struct {
