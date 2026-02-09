@@ -19,6 +19,7 @@ package impl
 import (
 	"crypto/ecdsa"
 	"math/big"
+	"slices"
 	"testing"
 	"time"
 
@@ -126,6 +127,10 @@ func TestVRankModule(t *testing.T) {
 	d, ok := val.VRankModule.candResponses.Load(cand.Addr)
 	assert.True(t, ok)
 	assert.NotEqual(t, time.Duration(0), d.(time.Duration))
+
+	cfReport, err := val.VRankModule.GetCfReport(1)
+	assert.NoError(t, err)
+	assert.Nil(t, cfReport) // because candidate responsed in a timely manner
 }
 
 func TestHandleIstanbulPreprepare(t *testing.T) {
@@ -329,8 +334,8 @@ func TestHandleVRankCandidate(t *testing.T) {
 		sig, _ := crypto.Sign(crypto.Keccak256(block1.Hash().Bytes()), cand.Key)
 		msg := vrank.VRankCandidate{block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash(), sig}
 
-		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{val.Addr}, nil).Times(2)
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).Times(2)
 
 		val.VRankModule.startNewCollection(block1, view1_0)
 
@@ -346,4 +351,57 @@ func TestHandleVRankCandidate(t *testing.T) {
 		assert.True(t, ok)
 		assert.Equal(t, elapsed1.(time.Duration), elapsed2.(time.Duration))
 	})
+}
+
+func TestGetCfReport(t *testing.T) {
+	var (
+		valset                 = mock_valset.NewMockValsetModule(gomock.NewController(t))
+		block1                 = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+		view1_0                = &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
+		validators, candidates []*CN
+		valAddrs, candAddrs    = make([]common.Address, 3), make([]common.Address, 6)
+		candMsgs               = make([]vrank.VRankCandidate, 6)
+	)
+
+	for i := 0; i < 3; i++ {
+		validators = append(validators, createCN(t, valset))
+		valAddrs[i] = validators[i].Addr
+	}
+	for i := 0; i < 6; i++ {
+		candidates = append(candidates, createCN(t, valset))
+		candAddrs[i] = candidates[i].Addr
+	}
+
+	valset.EXPECT().GetCouncil(uint64(2)).Return(valAddrs, nil).AnyTimes()
+	valset.EXPECT().GetCandidates(uint64(1)).Return(candAddrs, nil).AnyTimes()
+
+	for i := 0; i < 6; i++ {
+		sig, _ := crypto.Sign(crypto.Keccak256(block1.Hash().Bytes()), candidates[i].Key)
+		candMsgs[i] = vrank.VRankCandidate{block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash(), sig}
+	}
+
+	for _, v := range validators {
+		v.VRankModule.startNewCollection(block1, view1_0)
+	}
+
+	arrivalTimesMs := []int{0, 50, 100, 300, 400, 500}
+	for i := range arrivalTimesMs {
+		for _, v := range validators {
+			err := v.VRankModule.HandleVRankCandidate(&candMsgs[i])
+			assert.NoError(t, err)
+		}
+		if i < len(arrivalTimesMs)-1 {
+			delta := time.Duration(arrivalTimesMs[i+1]-arrivalTimesMs[i]) * time.Millisecond
+			time.Sleep(delta)
+		}
+	}
+
+	for _, v := range validators {
+		report, err := v.VRankModule.GetCfReport(1)
+		assert.NoError(t, err)
+		assert.Len(t, report, 3, "cfReport should contain 3 entries (candidates 3,4,5 is late)")
+		for i := 3; i < 6; i++ {
+			assert.True(t, slices.Contains(report, candAddrs[i]), "report should only contain candidates 3, 4, 5")
+		}
+	}
 }
