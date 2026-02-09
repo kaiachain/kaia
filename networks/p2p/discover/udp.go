@@ -217,6 +217,7 @@ type udp struct {
 type pending struct {
 	// these fields must match in the reply.
 	from       NodeID
+	fromIP     net.IP // IP address of the node we're waiting for (nil for ANY)
 	ptype      byte
 	targetType NodeType
 
@@ -248,13 +249,14 @@ func (p *pending) String() string {
 	default:
 		typeStr = "UNKNOWN"
 	}
-	return fmt.Sprintf("pending [from:%s, type:%s, targetType:%d, deadline:%s]", p.from, typeStr, p.targetType, p.deadline)
+	return fmt.Sprintf("pending [from:%s, fromIP:%s, type:%s, targetType:%d, deadline:%s]", p.from, p.fromIP, typeStr, p.targetType, p.deadline)
 }
 
 type reply struct {
-	from  NodeID
-	ptype byte
-	data  interface{}
+	from   NodeID
+	fromIP net.IP // IP address of the node sent the reply
+	ptype  byte
+	data   interface{}
 	// loop indicates whether there was
 	// a matching request by sending on this channel.
 	matched chan<- bool
@@ -353,7 +355,8 @@ func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 	if err != nil {
 		return err
 	}
-	errc := t.pending(toid, pongPacket, NodeTypeUnknown, func(p interface{}) bool {
+	// Wait for the PONG from the exact toaddr.IP address.
+	errc := t.pending(toid, toaddr.IP, pongPacket, NodeTypeUnknown, func(p interface{}) bool {
 		return bytes.Equal(p.(*pong).ReplyTok, hash)
 	})
 	pingMeter.Mark(1)
@@ -366,7 +369,8 @@ func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 }
 
 func (t *udp) waitping(from NodeID) error {
-	return <-t.pending(from, pingPacket, NodeTypeUnknown, func(interface{}) bool { return true })
+	// Wait for PING from any IP address.
+	return <-t.pending(from, nil, pingPacket, NodeTypeUnknown, func(interface{}) bool { return true })
 }
 
 // findnode sends a findnode request to the given node and waits until
@@ -376,7 +380,7 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT
 		"targetNodeType", targetNT)
 	nodes := make([]*Node, 0, bucketSize)
 	nreceived := 0
-	errc := t.pending(toid, neighborsPacket, targetNT, func(r interface{}) bool {
+	errc := t.pending(toid, toaddr.IP, neighborsPacket, targetNT, func(r interface{}) bool {
 		reply := r.(*neighbors)
 		for _, rn := range reply.Nodes {
 			nreceived++
@@ -410,9 +414,10 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT
 
 // pending adds a reply callback to the pending reply queue.
 // see the documentation of type pending for a detailed explanation.
-func (t *udp) pending(id NodeID, ptype byte, targetType NodeType, callback func(interface{}) bool) <-chan error {
+// fromIP can be nil if the IP address is unknown (e.g., for waitping).
+func (t *udp) pending(id NodeID, fromIP net.IP, ptype byte, targetType NodeType, callback func(interface{}) bool) <-chan error {
 	ch := make(chan error, 1)
-	p := &pending{from: id, ptype: ptype, targetType: targetType, callback: callback, errc: ch}
+	p := &pending{from: id, fromIP: fromIP, ptype: ptype, targetType: targetType, callback: callback, errc: ch}
 	select {
 	case t.addpending <- p:
 		// loop will handle it
@@ -422,10 +427,11 @@ func (t *udp) pending(id NodeID, ptype byte, targetType NodeType, callback func(
 	return ch
 }
 
-func (t *udp) handleReply(from NodeID, ptype byte, req packet) bool {
+// Handle the 'reply' type packet, namely PONG and NEIGHBORS.
+func (t *udp) handleReply(from NodeID, fromIP net.IP, ptype byte, req packet) bool {
 	matched := make(chan bool, 1)
 	select {
-	case t.gotreply <- reply{from, ptype, req, matched}:
+	case t.gotreply <- reply{from, fromIP, ptype, req, matched}:
 		// loop will handle it
 		return <-matched
 	case <-t.closing:
@@ -492,7 +498,11 @@ func (t *udp) loop() {
 			var matched bool
 			for el := plist.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
-				if p.from == r.from && p.ptype == r.ptype {
+				// Find the reply that matches one of the expectations in the pending queue (from && fromIP && ptype).
+				idMatch := p.from == r.from
+				ipMatch := p.fromIP == nil || r.fromIP == nil || p.fromIP.Equal(r.fromIP)
+				typeMatch := p.ptype == r.ptype
+				if idMatch && ipMatch && typeMatch {
 					if p.ptype == pongPacket {
 						pendingPongCounter.Dec(1)
 					} else if p.ptype == neighborsPacket {
@@ -715,7 +725,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 		ReplyTok:   mac,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
-	if !t.handleReply(fromID, pingPacket, req) {
+	if !t.handleReply(fromID, from.IP, pingPacket, req) {
 		// Note: we're ignoring the provided IP address right now
 		go t.Bond(true, fromID, from, req.From.TCP, req.From.NType)
 	}
@@ -728,7 +738,7 @@ func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 	if expired(req.Expiration) {
 		return errExpired
 	}
-	if !t.handleReply(fromID, pongPacket, req) {
+	if !t.handleReply(fromID, from.IP, pongPacket, req) {
 		return errUnsolicitedReply
 	}
 	return nil
@@ -782,7 +792,7 @@ func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byt
 	if expired(req.Expiration) {
 		return errExpired
 	}
-	if !t.handleReply(fromID, neighborsPacket, req) {
+	if !t.handleReply(fromID, from.IP, neighborsPacket, req) {
 		return errUnsolicitedReply
 	}
 	return nil
