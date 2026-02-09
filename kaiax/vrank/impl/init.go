@@ -57,6 +57,7 @@ type VRankModule struct {
 
 	broadcastCh   chan *vrank.BroadcastRequest
 	broadcastFeed event.Feed
+	stopCh        chan struct{}
 
 	nodeId common.Address
 
@@ -70,6 +71,7 @@ type VRankModule struct {
 func NewVRankModule() *VRankModule {
 	return &VRankModule{
 		broadcastCh: make(chan *vrank.BroadcastRequest, broadcastChSize),
+		stopCh:      make(chan struct{}),
 	}
 }
 
@@ -91,4 +93,5 @@ func (v *VRankModule) Start() error {
 
 func (v *VRankModule) Stop() {
 	logger.Info("VRankModule stopped")
+	close(v.stopCh)
 }

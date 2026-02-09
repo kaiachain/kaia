@@ -220,7 +220,12 @@ func (v *VRankModule) GetCfReport(blockNum uint64) (vrank.CfReport, error) {
 }
 
 func (v *VRankModule) handleBroadcastLoop() {
-	for req := range v.broadcastCh {
-		v.broadcastFeed.Send(req)
+	for {
+		select {
+		case req := <-v.broadcastCh:
+			v.broadcastFeed.Send(req)
+		case <-v.stopCh:
+			return
+		}
 	}
 }
