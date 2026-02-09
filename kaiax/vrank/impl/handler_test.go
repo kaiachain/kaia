@@ -72,10 +72,11 @@ func TestVRankModule(t *testing.T) {
 		cand   = createCN(t, valset)
 
 		block  = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+		view   = &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
 		sig, _ = crypto.Sign(crypto.Keccak256(block.Hash().Bytes()), cand.Key)
 
-		pppMsg  = vrank.VRankPreprepare{Block: block}
-		candMsg = vrank.VRankCandidate{BlockNumber: block.NumberU64(), Round: 0, BlockHash: block.Hash(), Sig: sig}
+		pppMsg  = vrank.VRankPreprepare{Block: block, View: view}
+		candMsg = vrank.VRankCandidate{BlockNumber: block.NumberU64(), Round: uint8(view.Round.Uint64()), BlockHash: block.Hash(), Sig: sig}
 	)
 
 	t.Logf("val.Addr: %s, cand.Addr: %s", val.Addr.Hex(), cand.Addr.Hex())
@@ -86,7 +87,7 @@ func TestVRankModule(t *testing.T) {
 
 	// validator correctly broadcast VRankPreprepare upon receiving IstanbulPreprepare
 	assert.Equal(t, time.Time{}, val.VRankModule.prepreparedTime)
-	val.VRankModule.HandleIstanbulPreprepare(block, &istanbul.View{Round: common.Big0})
+	val.VRankModule.HandleIstanbulPreprepare(block, view)
 	assert.NotEqual(t, time.Time{}, val.VRankModule.prepreparedTime)
 	req := <-val.sub
 	assert.Equal(t, []common.Address{cand.Addr}, req.Targets)
@@ -94,7 +95,7 @@ func TestVRankModule(t *testing.T) {
 	assert.Equal(t, &pppMsg, req.Msg)
 
 	// candidate correctly broadcast VRankCandidate upon receiving VRankPreprepare
-	cand.VRankModule.HandleVRankPreprepare(&vrank.VRankPreprepare{Block: block})
+	cand.VRankModule.HandleVRankPreprepare(&pppMsg)
 	req = <-cand.sub
 	assert.Equal(t, []common.Address{val.Addr}, req.Targets)
 	assert.Equal(t, VRankCandidateMsg, req.Code)

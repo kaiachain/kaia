@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/valset"
@@ -46,11 +46,6 @@ var (
 	logger = log.NewModuleLogger(log.KaiaxVrank)
 )
 
-//go:generate mockgen -destination=./mock/protocol_manager_mock.go -package=impl github.com/kaiachain/kaia/kaiax/vrank/impl ProtocolManager
-type ProtocolManager interface {
-	FindCNPeers(map[common.Address]bool) map[common.Address]consensus.Peer
-}
-
 type InitOpts struct {
 	Valset      valset.ValsetModule
 	NodeKey     *ecdsa.PrivateKey
@@ -65,12 +60,17 @@ type VRankModule struct {
 
 	nodeId common.Address
 
-	prepreparedTime time.Time
-	candResponses   sync.Map // map[common.Address]time.Duration
+	// only for validators
+	prepreparedTime      time.Time
+	prepreparedView      istanbul.View
+	prepreparedBlockHash common.Hash
+	candResponses        sync.Map // map[common.Address]time.Duration
 }
 
 func NewVRankModule() *VRankModule {
-	return &VRankModule{}
+	return &VRankModule{
+		broadcastCh: make(chan *vrank.BroadcastRequest, broadcastChSize),
+	}
 }
 
 func (v *VRankModule) Init(opts *InitOpts) error {
@@ -79,7 +79,6 @@ func (v *VRankModule) Init(opts *InitOpts) error {
 	}
 	v.InitOpts = *opts
 	v.nodeId = crypto.PubkeyToAddress(opts.NodeKey.PublicKey)
-	v.broadcastCh = make(chan *vrank.BroadcastRequest, broadcastChSize)
 	return nil
 }
 

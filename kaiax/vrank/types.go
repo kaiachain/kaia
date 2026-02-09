@@ -19,6 +19,7 @@ package vrank
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -32,6 +33,7 @@ type BroadcastRequest struct {
 
 type VRankPreprepare struct {
 	Block *types.Block
+	View  *istanbul.View
 }
 
 type VRankCandidate struct {

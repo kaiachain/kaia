@@ -28,52 +28,49 @@ import (
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
-// HandleIstanbulPreprepare is executed by validators for timer start, andthe proposer for broadcast
+// HandleIstanbulPreprepare starts timer and broadcasts VRankPreprepare to candidates
 func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *istanbul.View) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(block.Number()) {
 		return
 	}
 
 	blockNum := block.NumberU64()
-	if v.isValidator(blockNum) {
-		v.candResponses.Clear()
-		v.prepreparedTime = time.Now()
+	// if I'm a validator for the next block, then I need to collect VRankCandidate
+	if v.isValidator(blockNum + 1) {
+		v.startNewCollection(block, view)
 	}
+	// if I'm the proposer that broadcasted IstsanbulPreprepare to other validators,
+	// then I need to broadcast VRankPreprepare as well
 	if v.isProposer(blockNum, view.Round.Uint64()) {
-		vrankPreprepare := &vrank.VRankPreprepare{Block: block}
-		v.BroadcastVRankPreprepare(vrankPreprepare)
+		v.BroadcastVRankPreprepare(&vrank.VRankPreprepare{Block: block, View: view})
 	}
 }
 
-// HandleVRankPreprepare is executed by candidates
-func (v *VRankModule) HandleVRankPreprepare(preprepare *vrank.VRankPreprepare) error {
-	block := preprepare.Block
+// HandleVRankPreprepare broadcasts VRankCandidate to validators
+func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
+	block := msg.Block
+	view := msg.View
 	if !v.ChainConfig.IsPermissionlessForkEnabled(block.Number()) {
 		return nil
-	}
-	if preprepare == nil || preprepare.Block == nil {
-		logger.Error("VRankPreprepare is nil")
-		return vrank.ErrVRankPreprepareNil
 	}
 
 	if v.isCandidate(block.NumberU64()) {
 		sig, err := crypto.Sign(crypto.Keccak256(block.Hash().Bytes()), v.NodeKey)
 		if err != nil {
-			logger.Error("Sign failed", "blockNum", block.NumberU64())
+			logger.Error("Sign failed", "blockNum", block.NumberU64(), "blockHash", block.Hash().Hex())
 			return err
 		}
-		msg := &vrank.VRankCandidate{
+		v.BroadcastVRankCandidate(&vrank.VRankCandidate{
 			BlockNumber: block.NumberU64(),
-			Round:       0,
+			Round:       uint8(view.Round.Uint64()),
 			BlockHash:   block.Hash(),
 			Sig:         sig,
-		}
-		v.BroadcastVRankCandidate(msg)
+		})
 	}
 	return nil
 }
 
-// HandleVRankCandidate is executed by validators
+// HandleVRankCandidate collects VRankCandidate from candidates
 func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(msg.BlockNumber)) {
 		return nil
@@ -85,16 +82,51 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	}
 
 	elapsed := time.Since(v.prepreparedTime)
-	if v.isValidator(msg.BlockNumber) {
-		cand, err := istanbul.GetSignatureAddress(msg.BlockHash.Bytes(), msg.Sig)
+	// if I'm a validator for the next block, then I need to collect VRankCandidate
+	if v.isValidator(v.prepreparedView.Sequence.Uint64() + 1) {
+		sender, err := v.verifyVRankCandidate(msg)
 		if err != nil {
-			logger.Error("GetSignatureAddress failed", "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
 			return err
 		}
-		logger.Trace("HandleVRankCandidate", "cand", cand, "elapsed", elapsed, "blockHash", msg.BlockHash.Hex())
-		v.candResponses.Store(cand, elapsed)
+
+		logger.Trace("HandleVRankCandidate", "sender", sender.Hex(), "elapsed", elapsed, "blockHash", msg.BlockHash.Hex())
+		v.candResponses.Store(sender, elapsed)
 	}
 	return nil
+}
+
+func (v *VRankModule) verifyVRankCandidate(msg *vrank.VRankCandidate) (common.Address, error) {
+	if msg.BlockNumber != v.prepreparedView.Sequence.Uint64() || msg.Round != uint8(v.prepreparedView.Round.Uint64()) {
+		logger.Error("Round mismatch", "expected", v.prepreparedView.Round.Uint64(), "got", msg.Round)
+		return common.Address{}, vrank.ErrViewMismatch
+	}
+	if msg.BlockHash != v.prepreparedBlockHash {
+		logger.Error("BlockHash mismatch", "expected", v.prepreparedBlockHash.Hex(), "got", msg.BlockHash.Hex())
+		return common.Address{}, vrank.ErrBlockHashMismatch
+	}
+
+	sender, err := istanbul.GetSignatureAddress(msg.BlockHash.Bytes(), msg.Sig)
+	if err != nil {
+		logger.Error("GetSignatureAddress failed", "err", err, "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
+		return common.Address{}, err
+	}
+	candidates, err := v.Valset.GetCandidates(msg.BlockNumber)
+	if err != nil || candidates == nil {
+		logger.Error("GetCandidates failed", "err", err, "blockNum", msg.BlockNumber)
+		return common.Address{}, err
+	}
+	if !slices.Contains(candidates, sender) {
+		logger.Error("Sender is not a candidate", "sender", sender.Hex(), "blockNum", msg.BlockNumber)
+		return common.Address{}, vrank.ErrMsgFromNonCandidate
+	}
+	return sender, nil
+}
+
+func (v *VRankModule) startNewCollection(block *types.Block, view *istanbul.View) {
+	v.prepreparedTime = time.Now()
+	v.prepreparedView = *view
+	v.prepreparedBlockHash = block.Hash()
+	v.candResponses.Clear()
 }
 
 // BroadcastVRankPreprepare is called by the proposer
@@ -110,7 +142,7 @@ func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPrepr
 
 // BroadcastVRankPreprepare is called by candidates
 func (v *VRankModule) BroadcastVRankCandidate(vrankCandidate *vrank.VRankCandidate) {
-	validators, err := v.Valset.GetCouncil(vrankCandidate.BlockNumber)
+	validators, err := v.Valset.GetCouncil(vrankCandidate.BlockNumber + 1)
 	if err != nil || validators == nil {
 		logger.Error("GetCouncil failed", "blockNum", vrankCandidate.BlockNumber)
 		return
@@ -151,7 +183,7 @@ func (v *VRankModule) isCandidate(blockNum uint64) bool {
 func (v *VRankModule) isValidator(blockNum uint64) bool {
 	validators, err := v.Valset.GetCouncil(blockNum)
 	if err != nil || validators == nil {
-		logger.Error("GetCandidates failed", "blockNum", blockNum)
+		logger.Error("GetCouncil failed", "blockNum", blockNum)
 		return false
 	}
 
@@ -182,13 +214,7 @@ func (v *VRankModule) GetCfReport(blockNum uint64) (vrank.CfReport, error) {
 }
 
 func (v *VRankModule) handleBroadcastLoop() {
-	for {
-		select {
-		case req, ok := <-v.broadcastCh:
-			if !ok {
-				return
-			}
-			v.broadcastFeed.Send(req)
-		}
+	for req := range v.broadcastCh {
+		v.broadcastFeed.Send(req)
 	}
 }
