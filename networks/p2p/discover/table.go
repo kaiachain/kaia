@@ -140,7 +140,7 @@ type bondproc struct {
 // sockets and without generating a private key.
 type transport interface {
 	ping(toid NodeID, toaddr *net.UDPAddr) error
-	waitping(NodeID) error
+	waitping(fromID NodeID, fromIP net.IP) error
 	findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT NodeType, max int) ([]*Node, error)
 	close()
 }
@@ -760,7 +760,7 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, addr *net.UDPAdd
 		// sending findnode requests. If they still remember us,
 		// waitping will simply time out.
 		tab.localLogger.Trace("pingpong-waitping", "to", id)
-		tab.net.waitping(id)
+		tab.net.waitping(id, addr.IP)
 	}
 	// Bonding succeeded, update the node database.
 	w.n = NewNode(id, addr.IP, uint16(addr.Port), tcpPort, nil, nType)

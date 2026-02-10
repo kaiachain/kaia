@@ -380,9 +380,9 @@ func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 	return err
 }
 
-func (t *udp) waitping(from NodeID) error {
-	// Wait for PING from any IP address.
-	return <-t.pending(from, nil, pingPacket, NodeTypeUnknown, func(interface{}) bool { return true })
+func (t *udp) waitping(fromID NodeID, fromIP net.IP) error {
+	// Wait for PING from the given IP address.
+	return <-t.pending(fromID, fromIP, pingPacket, NodeTypeUnknown, func(interface{}) bool { return true })
 }
 
 // findnode sends a findnode request to the given node and waits until
