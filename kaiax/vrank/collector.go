@@ -23,13 +23,13 @@ import (
 	"github.com/kaiachain/kaia/common"
 )
 
-// ViewKey identifies a (sequence, round) for collection.
+// ViewKey identifies a view (sequence N, round R) for collection.
 type ViewKey struct {
 	N uint64
 	R uint8
 }
 
-// Cmp returns -1 if a < b, 0 if a == b, 1 if a > b (order: Seq then Round).
+// Cmp returns -1 if a < b, 0 if a == b, 1 if a > b (order: N then R).
 func (a ViewKey) Cmp(b ViewKey) int {
 	if a.N != b.N {
 		if a.N < b.N {
@@ -56,13 +56,15 @@ type CandidateMsg struct {
 type Collector struct {
 	mu             sync.RWMutex
 	prepreparedMap map[ViewKey]time.Time
+	blockHashMap   map[ViewKey]common.Hash // expected block hash per view (for validation at report time)
 	viewMap        map[ViewKey]map[common.Address]CandidateMsg
 }
 
-// NewCollector creates a collector. maxWindow limits how far ahead of currentView messages are accepted (0 = unbounded).
+// NewCollector creates a collector.
 func NewCollector() *Collector {
 	return &Collector{
 		prepreparedMap: make(map[ViewKey]time.Time),
+		blockHashMap:   make(map[ViewKey]common.Hash),
 		viewMap:        make(map[ViewKey]map[common.Address]CandidateMsg),
 	}
 }
@@ -76,6 +78,11 @@ func (c *Collector) RemoveOldViews(threshold ViewKey) {
 			delete(c.prepreparedMap, vk)
 		}
 	}
+	for vk := range c.blockHashMap {
+		if vk.Cmp(threshold) < 0 {
+			delete(c.blockHashMap, vk)
+		}
+	}
 	for vk := range c.viewMap {
 		if vk.Cmp(threshold) < 0 {
 			delete(c.viewMap, vk)
@@ -83,14 +90,17 @@ func (c *Collector) RemoveOldViews(threshold ViewKey) {
 	}
 }
 
-func (c *Collector) AddPrepreparedTime(vk ViewKey, prepreparedAt time.Time) {
+// AddPrepreparedTime records the start time and expected block hash for the view.
+// expectedBlockHash is used at GetViewData/report time to validate VRankCandidate.BlockHash (reject liars).
+func (c *Collector) AddPrepreparedTime(vk ViewKey, prepreparedAt time.Time, expectedBlockHash common.Hash) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.prepreparedMap[vk] = prepreparedAt
+	c.blockHashMap[vk] = expectedBlockHash
 }
 
 // AddCandMsg stores a VRankCandidate message for the given view. No verification is done here.
-// Returns false if msg is nil or vk is too far (behind currentView or beyond currentView+maxWindow).
+// Returns false if the sender already has a message stored for this view (duplicate).
 func (c *Collector) AddCandMsg(vk ViewKey, sender common.Address, receivedAt time.Time, msg *VRankCandidate) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -108,11 +118,13 @@ func (c *Collector) AddCandMsg(vk ViewKey, sender common.Address, receivedAt tim
 	return true
 }
 
-// GetViewData returns the raw data for the view: start time and all stored messages.
-func (c *Collector) GetViewData(vk ViewKey) (time.Time, map[common.Address]CandidateMsg) {
+// GetViewData returns the raw data for the view: start time, expected block hash, and all stored messages.
+// Caller should only count a message as valid/on-time if msg.Msg.BlockHash == expectedBlockHash.
+func (c *Collector) GetViewData(vk ViewKey) (prepreparedAt time.Time, expectedBlockHash common.Hash, candMap map[common.Address]CandidateMsg) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	prepreparedAt := c.prepreparedMap[vk]
-	candMap := c.viewMap[vk]
-	return prepreparedAt, candMap
+	prepreparedAt = c.prepreparedMap[vk]
+	expectedBlockHash = c.blockHashMap[vk]
+	candMap = c.viewMap[vk]
+	return prepreparedAt, expectedBlockHash, candMap
 }

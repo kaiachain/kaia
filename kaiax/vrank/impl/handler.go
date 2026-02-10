@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"bytes"
 	"math/big"
 	"slices"
 	"time"
@@ -28,7 +29,8 @@ import (
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
-// HandleIstanbulPreprepare starts timer and broadcasts VRankPreprepare to candidates
+// HandleIstanbulPreprepare records the view when this node is a validator for the next block.
+// When proposer, it broadcasts VRankPreprepare to candidates.
 func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *istanbul.View) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(block.Number()) {
 		return
@@ -39,9 +41,9 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *istanbu
 	// if I'm a validator for the next block, then I need to collect VRankCandidate
 	if v.isValidator(blockNum + 1) {
 		v.prepreparedView = *view
-		v.collector.AddPrepreparedTime(vrank.ViewKey{N: blockNum, R: uint8(view.Round.Uint64())}, prepreparedAt)
+		v.collector.AddPrepreparedTime(vrank.ViewKey{N: blockNum, R: uint8(view.Round.Uint64())}, prepreparedAt, block.Hash())
 	}
-	// if I'm the proposer that broadcasted IstsanbulPreprepare to other validators,
+	// if I'm the proposer that broadcast IstanbulPreprepare to other validators,
 	// then I need to broadcast VRankPreprepare as well
 	if v.isProposer(blockNum, view.Round.Uint64()) {
 		v.BroadcastVRankPreprepare(&vrank.VRankPreprepare{Block: block, View: view})
@@ -52,7 +54,7 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *istanbu
 	}
 }
 
-// HandleVRankPreprepare broadcasts VRankCandidate to validators
+// HandleVRankPreprepare processes VRankPreprepare; if this node is a candidate, it broadcasts VRankCandidate.
 func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 	block := msg.Block
 	view := msg.View
@@ -132,7 +134,7 @@ func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPrepr
 	v.broadcast(candidates, VRankPreprepareMsg, vrankPreprepare)
 }
 
-// BroadcastVRankPreprepare is called by candidates
+// BroadcastVRankCandidate is called by candidates.
 func (v *VRankModule) BroadcastVRankCandidate(vrankCandidate *vrank.VRankCandidate) {
 	validators, err := v.Valset.GetCouncil(vrankCandidate.BlockNumber + 1)
 	if err != nil || validators == nil {
@@ -193,7 +195,7 @@ func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.CfReport, error
 	}
 
 	vk := vrank.ViewKey{N: blockNum, R: uint8(round)}
-	prepreparedAt, viewMap := v.collector.GetViewData(vk)
+	prepreparedAt, expectedBlockHash, viewMap := v.collector.GetViewData(vk)
 	if prepreparedAt.IsZero() {
 		return nil, vrank.ErrPrepreparedTimeNotSet
 	}
@@ -202,23 +204,29 @@ func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.CfReport, error
 		logger.Error("GetCandidates failed", "blockNum", blockNum)
 		return nil, vrank.ErrGetCandidateFailed
 	}
-	if viewMap == nil {
-		// No data for this view: no candidate sent any message
-		return candidates, nil
-	}
-
-	var cfReport vrank.CfReport
+	// Report = candidates who did not respond, responded after deadline, or lied (wrong BlockHash).
+	safeCands := make(map[common.Address]struct{})
 	for sender, msgWithTime := range viewMap {
 		if !slices.Contains(candidates, sender) {
-			// sender is not a candidate
+			continue
+		}
+		if msgWithTime.Msg == nil || msgWithTime.Msg.BlockHash != expectedBlockHash {
 			continue
 		}
 		elapsed := msgWithTime.ReceivedAt.Sub(prepreparedAt).Milliseconds()
-		if elapsed > candidatePrepareDeadlineMs {
-			cfReport = append(cfReport, sender)
+		if elapsed <= candidatePrepareDeadlineMs {
+			safeCands[sender] = struct{}{}
 		}
 	}
 
+	// cfReport = candidates - safeCands (sorted for determinism)
+	var cfReport vrank.CfReport
+	for _, addr := range candidates {
+		if _, ok := safeCands[addr]; !ok {
+			cfReport = append(cfReport, addr)
+		}
+	}
+	slices.SortFunc(cfReport, func(a, b common.Address) int { return bytes.Compare(a.Bytes(), b.Bytes()) })
 	return cfReport, nil
 }
 

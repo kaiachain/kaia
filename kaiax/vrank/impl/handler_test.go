@@ -107,7 +107,7 @@ func TestVRankModule(t *testing.T) {
 
 	// validator correctly broadcast VRankPreprepare upon receiving IstanbulPreprepare
 	val.VRankModule.HandleIstanbulPreprepare(block, view)
-	prepreparedTime, _ := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+	prepreparedTime, _, _ := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 	assert.False(t, prepreparedTime.IsZero())
 	req := mustPop(t, val.sub)
 	assert.Equal(t, []common.Address{cand.Addr}, req.Targets)
@@ -124,7 +124,7 @@ func TestVRankModule(t *testing.T) {
 	// validator correctly collects VRankCandidate upon receiving VRankCandidate
 	err := val.VRankModule.HandleVRankCandidate(&candMsg)
 	assert.NoError(t, err)
-	prepreparedTime, collected := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+	prepreparedTime, _, collected := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 	assert.False(t, prepreparedTime.IsZero())
 	assert.False(t, collected[cand.Addr].ReceivedAt.IsZero())
 	assert.Equal(t, &candMsg, collected[cand.Addr].Msg)
@@ -145,7 +145,7 @@ func TestHandleIstanbulPreprepare(t *testing.T) {
 		val := createCN(t, valset)
 		val.VRankModule.ChainConfig.PermissionlessCompatibleBlock = nil
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
-		prepreparedTime, _ := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		prepreparedTime, _, _ := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.True(t, prepreparedTime.IsZero())
 		mustNotPop(t, val.sub)
 	})
@@ -160,12 +160,12 @@ func TestHandleIstanbulPreprepare(t *testing.T) {
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(2)
 
 		proposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
-		prepreparedTime, _ := proposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		prepreparedTime, _, _ := proposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.True(t, prepreparedTime.IsZero())
 		mustPop(t, proposer.sub) // proposer should broadcast
 
 		validator.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
-		prepreparedTime, _ = validator.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		prepreparedTime, _, _ = validator.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.False(t, prepreparedTime.IsZero())
 		mustNotPop(t, validator.sub)
 	})
@@ -182,11 +182,11 @@ func TestHandleIstanbulPreprepare(t *testing.T) {
 		nonProposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 		candidate.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
-		prepreparedTime, _ := proposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		prepreparedTime, _, _ := proposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.False(t, prepreparedTime.IsZero())
-		prepreparedTime, _ = nonProposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		prepreparedTime, _, _ = nonProposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.False(t, prepreparedTime.IsZero())
-		prepreparedTime, _ = candidate.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		prepreparedTime, _, _ = candidate.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.True(t, prepreparedTime.IsZero())
 
 		req := mustPop(t, proposer.sub)
@@ -276,18 +276,18 @@ func TestHandleVRankCandidate(t *testing.T) {
 
 		proposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0) // this won't happen in production
 		proposer.VRankModule.HandleVRankCandidate(&msg)
-		prepreparedTime, candMap := proposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		prepreparedTime, _, candMap := proposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.True(t, prepreparedTime.IsZero())
 		assert.Nil(t, candMap)
 
 		validator.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 		validator.VRankModule.HandleVRankCandidate(&msg)
-		prepreparedTime, candMap = validator.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		prepreparedTime, _, candMap = validator.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.False(t, prepreparedTime.IsZero())
 		assert.Equal(t, 1, len(candMap))
 	})
 
-	t.Run("invalid message", func(t *testing.T) {
+	t.Run("future messages", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val, cand := createCN(t, valset), createCN(t, valset)
 
@@ -315,11 +315,11 @@ func TestHandleVRankCandidate(t *testing.T) {
 				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 1, BlockHash: block1.Hash(), Sig: sig}, wantErr: nil,
 			},
 			{
-				name: "invalid blockHash",
-				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 0, BlockHash: common.Hash{}, Sig: sig}, wantErr: vrank.ErrMsgFromNonCandidate,
+				name: "future block hashh",
+				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 0, BlockHash: block2.Hash(), Sig: sig}, wantErr: vrank.ErrMsgFromNonCandidate,
 			},
 			{
-				name: "signature and message mismatch",
+				name: "future signature and message mismatch",
 				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 0, BlockHash: block1.Hash(), Sig: invalidSig}, wantErr: vrank.ErrMsgFromNonCandidate,
 			},
 			{
@@ -345,7 +345,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 
 		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).Times(1)
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
@@ -353,7 +353,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		for range 3 {
 			err := val.VRankModule.HandleVRankCandidate(&msg)
 			assert.NoError(t, err)
-			prepreparedTime, candMap := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+			prepreparedTime, _, candMap := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 			assert.False(t, prepreparedTime.IsZero())
 			assert.Equal(t, 1, len(candMap))
 			cm := candMap[cand.Addr]
@@ -373,7 +373,8 @@ func TestGetCfReport(t *testing.T) {
 		block1                 = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 		view1_0                = &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
 		validators, candidates []*CN
-		valAddrs, candAddrs    = make([]common.Address, 3), make([]common.Address, 6)
+		valAddrs               = make([]common.Address, 3)
+		candAddrs              = make([]common.Address, 6)
 		candMsgs               = make([]vrank.VRankCandidate, 6)
 	)
 
@@ -385,6 +386,9 @@ func TestGetCfReport(t *testing.T) {
 		candidates = append(candidates, createCN(t, valset))
 		candAddrs[i] = candidates[i].Addr
 	}
+	safeCands := candAddrs[:2]
+	liarCands := candAddrs[2:4]
+	lateCands := candAddrs[4:6]
 
 	valset.EXPECT().GetCouncil(uint64(2)).Return(valAddrs, nil).AnyTimes()
 	valset.EXPECT().GetCandidates(uint64(1)).Return(candAddrs, nil).AnyTimes()
@@ -399,24 +403,44 @@ func TestGetCfReport(t *testing.T) {
 		v.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 	}
 
-	arrivalTimesMs := []int{0, 50, 100, 300, 400, 500}
-	for i := range arrivalTimesMs {
+	for i := 0; i < 2; i++ {
 		for _, v := range validators {
 			err := v.VRankModule.HandleVRankCandidate(&candMsgs[i])
 			assert.NoError(t, err)
 		}
-		if i < len(arrivalTimesMs)-1 {
-			delta := time.Duration(arrivalTimesMs[i+1]-arrivalTimesMs[i]) * time.Millisecond
-			time.Sleep(delta)
+	}
+	for i := 2; i < 4; i++ {
+		liarHash := common.Hash{byte(i)}
+		sig, _ := crypto.Sign(crypto.Keccak256(liarHash.Bytes()), candidates[i].Key)
+		liarMsg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: liarHash, Sig: sig}
+		for _, v := range validators {
+			err := v.VRankModule.HandleVRankCandidate(&liarMsg)
+			assert.NoError(t, err)
+		}
+	}
+	time.Sleep(candidatePrepareDeadlineMs * time.Millisecond)
+	for i := 4; i < 6; i++ {
+		for _, v := range validators {
+			err := v.VRankModule.HandleVRankCandidate(&candMsgs[i])
+			assert.NoError(t, err)
 		}
 	}
 
 	for _, v := range validators {
 		report, err := v.VRankModule.GetCfReport(1, 0)
 		assert.NoError(t, err)
-		assert.Len(t, report, 3, "cfReport should contain 3 entries (candidates 3,4,5 is late)")
-		for i := 3; i < 6; i++ {
-			assert.True(t, slices.Contains(report, candAddrs[i]), "report should only contain candidates 3, 4, 5")
+		assert.Len(t, report, 4, "cfReport: 2 liars + 2 late")
+		for _, addr := range safeCands {
+			assert.False(t, slices.Contains(report, addr))
 		}
+		for _, addr := range liarCands {
+			assert.True(t, slices.Contains(report, addr))
+		}
+		for _, addr := range lateCands {
+			assert.True(t, slices.Contains(report, addr))
+		}
+		report2, err := v.VRankModule.GetCfReport(1, 0)
+		assert.NoError(t, err)
+		assert.Equal(t, report, report2, "GetCfReport must be deterministic")
 	}
 }

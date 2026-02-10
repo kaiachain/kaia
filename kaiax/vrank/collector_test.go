@@ -26,7 +26,7 @@ import (
 
 func TestCollector_GetViewData_UnknownView(t *testing.T) {
 	c := NewCollector()
-	at, m := c.GetViewData(ViewKey{N: 1, R: 0})
+	at, _, m := c.GetViewData(ViewKey{N: 1, R: 0})
 	assert.True(t, at.IsZero())
 	assert.Nil(t, m)
 }
@@ -37,12 +37,11 @@ func TestCollector_GetViewData_NoCandMsgAdded(t *testing.T) {
 		vk  = ViewKey{N: 1, R: 0}
 		now = time.Now()
 	)
-	c.AddPrepreparedTime(vk, now)
-	at, m := c.GetViewData(vk)
+	c.AddPrepreparedTime(vk, now, common.Hash{})
+	at, _, m := c.GetViewData(vk)
 	assert.False(t, at.IsZero())
 	assert.Equal(t, now.UnixNano(), at.UnixNano())
 	assert.Nil(t, m)
-	assert.Len(t, m, 0)
 }
 
 func TestCollector_AddCandMsg_DuplicateRejected(t *testing.T) {
@@ -56,13 +55,13 @@ func TestCollector_AddCandMsg_DuplicateRejected(t *testing.T) {
 
 	ok := c.AddCandMsg(vk, addr, when, msg)
 	assert.True(t, ok)
-	_, m := c.GetViewData(vk)
+	_, _, m := c.GetViewData(vk)
 	assert.Len(t, m, 1)
 	assert.Equal(t, msg, m[addr].Msg)
 
 	ok = c.AddCandMsg(vk, addr, when.Add(time.Second), msg)
 	assert.False(t, ok)
-	_, m = c.GetViewData(vk)
+	_, _, m = c.GetViewData(vk)
 	assert.Len(t, m, 1)
 }
 
@@ -75,13 +74,13 @@ func TestCollector_RemoveOldViews(t *testing.T) {
 	)
 
 	for _, v := range views {
-		c.AddPrepreparedTime(v, time.Now())
+		c.AddPrepreparedTime(v, time.Now(), common.Hash{})
 		c.AddCandMsg(v, common.HexToAddress("0x01"), time.Now(), &VRankCandidate{BlockNumber: v.N, Round: v.R})
 	}
 
 	c.RemoveOldViews(threshold)
 	for i, v := range views {
-		at, m := c.GetViewData(v)
+		at, _, m := c.GetViewData(v)
 		if wantGone[i] {
 			assert.True(t, at.IsZero(), "view %v should be removed", v)
 			assert.Nil(t, m)
