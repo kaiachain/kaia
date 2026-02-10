@@ -178,6 +178,7 @@ func TestUDP_responseTimeouts(t *testing.T) {
 		// For all other requests, a reply is scheduled to arrive
 		// within the timeout window.
 		p := &pending{
+			fromIP:   net.IPv4(127, 0, 0, 1),
 			ptype:    byte(rand.Intn(255)),
 			callback: func(interface{}) bool { return true },
 		}
@@ -190,7 +191,7 @@ func TestUDP_responseTimeouts(t *testing.T) {
 			p.errc = nilErr
 			test.udp.addpending <- p
 			time.AfterFunc(randomDuration(60*time.Millisecond), func() {
-				if !test.udp.handleReply(p.from, p.ptype, nil) {
+				if !test.udp.handleReply(p.from, p.fromIP, p.ptype, nil) {
 					t.Logf("not matched: %v", p)
 				}
 			})

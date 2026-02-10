@@ -29,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/kaiachain/kaia/crypto"
@@ -175,7 +176,11 @@ func nodeToRPC(n *Node) rpcNode {
 }
 
 type packet interface {
+	// preverify checks whether the packet is valid and should be handled at all.
+	preverify(t *udp, from *net.UDPAddr, fromID NodeID) error
+	// handle handles the packet.
 	handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error
+	// name returns the name of the packet for logging purposes.
 	name() string
 }
 
@@ -199,6 +204,7 @@ type udp struct {
 
 	closing chan struct{}
 	nat     nat.Interface
+	wg      sync.WaitGroup
 
 	Discovery
 }
@@ -215,6 +221,7 @@ type udp struct {
 type pending struct {
 	// these fields must match in the reply.
 	from       NodeID
+	fromIP     net.IP // IP address of the node we're waiting for (nil for ANY)
 	ptype      byte
 	targetType NodeType
 
@@ -246,13 +253,14 @@ func (p *pending) String() string {
 	default:
 		typeStr = "UNKNOWN"
 	}
-	return fmt.Sprintf("pending [from:%s, type:%s, targetType:%d, deadline:%s]", p.from, typeStr, p.targetType, p.deadline)
+	return fmt.Sprintf("pending [from:%s, fromIP:%s, type:%s, targetType:%d, deadline:%s]", p.from, p.fromIP, typeStr, p.targetType, p.deadline)
 }
 
 type reply struct {
-	from  NodeID
-	ptype byte
-	data  interface{}
+	from   NodeID
+	fromIP net.IP // IP address of the node sent the reply
+	ptype  byte
+	data   interface{}
 	// loop indicates whether there was
 	// a matching request by sending on this channel.
 	matched chan<- bool
@@ -326,15 +334,24 @@ func newUDP(cfg *Config) (Discovery, *udp, error) {
 		return nil, nil, err
 	}
 	go udp.Discovery.(*Table).loop() // TODO-Kaia-Node There is only one concrete type(Table) for Discovery. Refactor Discovery interface for their proper objective.
+	udp.wg.Add(2)
 	go udp.loop()
 	go udp.readLoop(cfg.Unhandled)
 	return udp.Discovery, udp, nil
 }
 
 func (t *udp) close() {
-	close(t.closing)
-	t.conn.Close()
-	// TODO: wait for the loops to end.
+	close(t.closing) // shuts down the loop()
+	t.conn.Close()   // shuts down the readLoop()
+	t.wg.Wait()
+}
+
+func (t *udp) isAuthorized(fromID NodeID, nType NodeType) bool {
+	return t.Discovery.IsAuthorized(fromID, nType)
+}
+
+func (t *udp) hasBond(fromID NodeID) bool {
+	return t.Discovery.HasBond(fromID)
 }
 
 // ping sends a ping message to the given node and waits for a reply.
@@ -350,7 +367,8 @@ func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 	if err != nil {
 		return err
 	}
-	errc := t.pending(toid, pongPacket, NodeTypeUnknown, func(p interface{}) bool {
+	// Wait for the PONG from the exact toaddr.IP address.
+	errc := t.pending(toid, toaddr.IP, pongPacket, NodeTypeUnknown, func(p interface{}) bool {
 		return bytes.Equal(p.(*pong).ReplyTok, hash)
 	})
 	pingMeter.Mark(1)
@@ -362,8 +380,9 @@ func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
 	return err
 }
 
-func (t *udp) waitping(from NodeID) error {
-	return <-t.pending(from, pingPacket, NodeTypeUnknown, func(interface{}) bool { return true })
+func (t *udp) waitping(fromID NodeID, fromIP net.IP) error {
+	// Wait for PING from the given IP address.
+	return <-t.pending(fromID, fromIP, pingPacket, NodeTypeUnknown, func(interface{}) bool { return true })
 }
 
 // findnode sends a findnode request to the given node and waits until
@@ -373,7 +392,7 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT
 		"targetNodeType", targetNT)
 	nodes := make([]*Node, 0, bucketSize)
 	nreceived := 0
-	errc := t.pending(toid, neighborsPacket, targetNT, func(r interface{}) bool {
+	errc := t.pending(toid, toaddr.IP, neighborsPacket, targetNT, func(r interface{}) bool {
 		reply := r.(*neighbors)
 		for _, rn := range reply.Nodes {
 			nreceived++
@@ -407,9 +426,10 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT
 
 // pending adds a reply callback to the pending reply queue.
 // see the documentation of type pending for a detailed explanation.
-func (t *udp) pending(id NodeID, ptype byte, targetType NodeType, callback func(interface{}) bool) <-chan error {
+// fromIP can be nil if the IP address is unknown (e.g., for waitping).
+func (t *udp) pending(id NodeID, fromIP net.IP, ptype byte, targetType NodeType, callback func(interface{}) bool) <-chan error {
 	ch := make(chan error, 1)
-	p := &pending{from: id, ptype: ptype, targetType: targetType, callback: callback, errc: ch}
+	p := &pending{from: id, fromIP: fromIP, ptype: ptype, targetType: targetType, callback: callback, errc: ch}
 	select {
 	case t.addpending <- p:
 		// loop will handle it
@@ -419,10 +439,11 @@ func (t *udp) pending(id NodeID, ptype byte, targetType NodeType, callback func(
 	return ch
 }
 
-func (t *udp) handleReply(from NodeID, ptype byte, req packet) bool {
+// Handle the 'reply' type packet, namely PONG and NEIGHBORS.
+func (t *udp) handleReply(from NodeID, fromIP net.IP, ptype byte, req packet) bool {
 	matched := make(chan bool, 1)
 	select {
-	case t.gotreply <- reply{from, ptype, req, matched}:
+	case t.gotreply <- reply{from, fromIP, ptype, req, matched}:
 		// loop will handle it
 		return <-matched
 	case <-t.closing:
@@ -433,6 +454,7 @@ func (t *udp) handleReply(from NodeID, ptype byte, req packet) bool {
 // loop runs in its own goroutine. it keeps track of
 // the refresh timer and the pending reply queue.
 func (t *udp) loop() {
+	defer t.wg.Done()
 	var (
 		plist        = list.New()
 		timeout      = time.NewTimer(0)
@@ -488,7 +510,11 @@ func (t *udp) loop() {
 			var matched bool
 			for el := plist.Front(); el != nil; el = el.Next() {
 				p := el.Value.(*pending)
-				if p.from == r.from && p.ptype == r.ptype {
+				// Find the reply that matches one of the expectations in the pending queue (from && fromIP && ptype).
+				idMatch := p.from == r.from
+				ipMatch := p.fromIP == nil || r.fromIP == nil || p.fromIP.Equal(r.fromIP)
+				typeMatch := p.ptype == r.ptype
+				if idMatch && ipMatch && typeMatch {
 					if p.ptype == pongPacket {
 						pendingPongCounter.Dec(1)
 					} else if p.ptype == neighborsPacket {
@@ -607,6 +633,7 @@ func encodePacket(priv *ecdsa.PrivateKey, ptype byte, req interface{}) (packet, 
 
 // readLoop runs in its own goroutine. it handles incoming UDP packets.
 func (t *udp) readLoop(unhandled chan<- ReadPacket) {
+	defer t.wg.Done()
 	defer t.conn.Close()
 	if unhandled != nil {
 		defer close(unhandled)
@@ -622,8 +649,10 @@ func (t *udp) readLoop(unhandled chan<- ReadPacket) {
 			logger.Debug("Temporary UDP read error", "err", err)
 			continue
 		} else if err != nil {
-			// Shut down the loop for permanent errors.
-			logger.Warn("UDP read error", "err", err)
+			if !errors.Is(err, net.ErrClosed) { // net.ErrClosed is expected at the program shutdown.
+				// Shut down the readLoop() for unexpected permanent errors.
+				logger.Warn("UDP read error", "err", err)
+			}
 			return
 		}
 		if t.handlePacket(from, buf[:nbytes]) != nil && unhandled != nil {
@@ -639,6 +668,11 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	packet, fromID, hash, err := decodePacket(buf)
 	if err != nil {
 		logger.Warn("Bad discv4 packet", "addr", from, "err", err)
+		return err
+	}
+	// Preverify the packet before handling
+	if err = packet.preverify(t, from, fromID); err != nil {
+		logger.Trace("<< "+packet.name(), "addr", from, "err", err)
 		return err
 	}
 	logger.Trace("<< "+packet.name(), "addr", from, "err", err)
@@ -680,35 +714,34 @@ func decodePacket(buf []byte) (packet, NodeID, []byte, error) {
 	return req, fromID, hash, err
 }
 
-func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
-	logger.Trace("udp: ping: received", "from", fromID, "req.NetworkId", req.NetworkID,
-		"myNetworkId", t.networkID)
-
-	logger.Trace("udp: ping: send pong", "to", fromID)
-	if !t.Discovery.IsAuthorized(fromID, req.From.NType) {
-		logger.Trace("unauthorized node.", "nodeid", fromID, "nodetype", req.From.NType)
-		return errUnauthorized
-	} else {
-		logger.Debug("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
+func (req *ping) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
+	if expired(req.Expiration) {
+		return errExpired
 	}
-
 	if req.NetworkID != t.networkID {
 		logger.Debug("udp: ping: mismatch networkid", "local", t.networkID, "remote", req.NetworkID)
 		mismatchNetworkCounter.Mark(1)
 		return errMismatchNetwork
 	}
-
-	if expired(req.Expiration) {
-		logger.Trace("udp: ping: expired", "from", fromID)
-		return errExpired
+	if !t.isAuthorized(fromID, req.From.NType) {
+		logger.Trace("unauthorized node.", "nodeid", fromID, "nodetype", req.From.NType)
+		return errUnauthorized
 	}
+	logger.Debug("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
+	return nil
+}
+
+func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+	logger.Trace("udp: ping: received", "from", fromID, "req.NetworkId", req.NetworkID,
+		"myNetworkId", t.networkID)
+	logger.Trace("udp: ping: send pong", "to", fromID)
 
 	t.send(from, pongPacket, &pong{
 		To:         makeEndpoint(from, req.From.TCP, req.From.NType),
 		ReplyTok:   mac,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
-	if !t.handleReply(fromID, pingPacket, req) {
+	if !t.handleReply(fromID, from.IP, pingPacket, req) {
 		// Note: we're ignoring the provided IP address right now
 		go t.Bond(true, fromID, from, req.From.TCP, req.From.NType)
 	}
@@ -717,11 +750,15 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 
 func (req *ping) name() string { return "PING/v4" }
 
-func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+func (req *pong) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
-	if !t.handleReply(fromID, pongPacket, req) {
+	return nil
+}
+
+func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+	if !t.handleReply(fromID, from.IP, pongPacket, req) {
 		return errUnsolicitedReply
 	}
 	return nil
@@ -729,11 +766,11 @@ func (req *pong) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 
 func (req *pong) name() string { return "PONG/v4" }
 
-func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+func (req *findnode) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
-	if !t.HasBond(fromID) {
+	if !t.hasBond(fromID) {
 		// No bond exists, we don't process the packet. This prevents
 		// an attack vector where the discovery protocol could be used
 		// to amplify traffic in a DDOS attack. A malicious actor
@@ -743,7 +780,10 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 		// (which is a much bigger packet than findnode) to the victim.
 		return errUnknownNode
 	}
+	return nil
+}
 
+func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
 	// Determine "closest" nodes. The result will be the closest nodes for KademliaStorage, but random nodes for SimpleStorage.
 	target := crypto.Keccak256Hash(req.Target[:])
 	retrieveSize := findnodeRetrieveSize(req.TargetType)
@@ -771,11 +811,15 @@ func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte
 
 func (req *findnode) name() string { return "FINDNODE/v4" }
 
-func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+func (req *neighbors) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
-	if !t.handleReply(fromID, neighborsPacket, req) {
+	return nil
+}
+
+func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
+	if !t.handleReply(fromID, from.IP, neighborsPacket, req) {
 		return errUnsolicitedReply
 	}
 	return nil

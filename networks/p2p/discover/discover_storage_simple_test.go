@@ -119,7 +119,7 @@ func (tn *simpleTestnet) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeI
 }
 
 func (*simpleTestnet) close()                                      {}
-func (*simpleTestnet) waitping(from NodeID) error                  { return nil }
+func (*simpleTestnet) waitping(from NodeID, fromIP net.IP) error   { return nil }
 func (*simpleTestnet) ping(toid NodeID, toaddr *net.UDPAddr) error { return nil }
 
 func isIn(candidate *Node, list []*Node) bool {

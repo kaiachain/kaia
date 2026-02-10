@@ -243,7 +243,7 @@ func (t *pingRecorder) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID,
 	return nil, nil
 }
 func (t *pingRecorder) close() {}
-func (t *pingRecorder) waitping(from NodeID) error {
+func (t *pingRecorder) waitping(from NodeID, fromIP net.IP) error {
 	return nil // remote always pings
 }
 
@@ -642,7 +642,7 @@ func (tn *preminedTestnet) findnode(toid NodeID, toaddr *net.UDPAddr, target Nod
 }
 
 func (*preminedTestnet) close()                                      {}
-func (*preminedTestnet) waitping(from NodeID) error                  { return nil }
+func (*preminedTestnet) waitping(from NodeID, fromIP net.IP) error   { return nil }
 func (*preminedTestnet) ping(toid NodeID, toaddr *net.UDPAddr) error { return nil }
 
 // mine generates a testnet struct literal with nodes at
