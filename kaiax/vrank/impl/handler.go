@@ -161,7 +161,7 @@ func (v *VRankModule) isProposer(blockNum, round uint64) bool {
 		return false
 	}
 
-	return proposer == v.nodeId
+	return proposer == v.nodeID
 }
 
 func (v *VRankModule) isCandidate(blockNum uint64) bool {
@@ -171,7 +171,7 @@ func (v *VRankModule) isCandidate(blockNum uint64) bool {
 		return false
 	}
 
-	return slices.Contains(candidates, v.nodeId)
+	return slices.Contains(candidates, v.nodeID)
 }
 
 func (v *VRankModule) isValidator(blockNum uint64) bool {
@@ -181,7 +181,7 @@ func (v *VRankModule) isValidator(blockNum uint64) bool {
 		return false
 	}
 
-	return slices.Contains(validators, v.nodeId)
+	return slices.Contains(validators, v.nodeID)
 }
 
 // for building N-th header's VRank field, caller should query N-1 with the previous block's round.

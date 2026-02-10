@@ -60,7 +60,7 @@ type VRankModule struct {
 	broadcastFeed event.Feed
 	stopCh        chan struct{}
 
-	nodeId common.Address
+	nodeID common.Address
 
 	// only for validators
 	prepreparedView istanbul.View // for collection window management
@@ -80,7 +80,7 @@ func (v *VRankModule) Init(opts *InitOpts) error {
 		return vrank.ErrInitUnexpectedNil
 	}
 	v.InitOpts = *opts
-	v.nodeId = crypto.PubkeyToAddress(opts.NodeKey.PublicKey)
+	v.nodeID = crypto.PubkeyToAddress(opts.NodeKey.PublicKey)
 	return nil
 }
 
