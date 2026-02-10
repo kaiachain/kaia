@@ -28,7 +28,7 @@ type VRankModule interface {
 	HandleIstanbulPreprepare(block *types.Block, view *istanbul.View)
 	HandleVRankPreprepare(msg *VRankPreprepare) error
 	HandleVRankCandidate(msg *VRankCandidate) error
-	GetCfReport(blockNum uint64) (CfReport, error)
+	GetCfReport(blockNum, round uint64) (CfReport, error)
 }
 
 type VRankModuleHost interface {

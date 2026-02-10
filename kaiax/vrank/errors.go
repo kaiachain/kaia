@@ -19,11 +19,15 @@ package vrank
 import "errors"
 
 var (
-	ErrInitUnexpectedNil   = errors.New("unexpected nil during module init")
-	ErrVRankPreprepareNil  = errors.New("VRankPreprepare is nil")
-	ErrVRankCandidateNil   = errors.New("VRankCandidate is nil")
-	ErrGetCandidateFailed  = errors.New("valset.GetCandidates failed")
-	ErrViewMismatch        = errors.New("view mismatch")
-	ErrBlockHashMismatch   = errors.New("block hash mismatch")
-	ErrMsgFromNonCandidate = errors.New("message from non-candidate")
+	ErrInitUnexpectedNil     = errors.New("unexpected nil during module init")
+	ErrVRankPreprepareNil    = errors.New("VRankPreprepare is nil")
+	ErrVRankCandidateNil     = errors.New("VRankCandidate is nil")
+	ErrGetCandidateFailed    = errors.New("valset.GetCandidates failed")
+	ErrPrepreparedTimeNotSet = errors.New("preprepared time is not set")
+	ErrPrepreparedViewNotSet = errors.New("preprepared view is not set")
+	ErrViewMismatch          = errors.New("view mismatch")
+	ErrBlockHashMismatch     = errors.New("block hash mismatch")
+	ErrMsgFromNonCandidate   = errors.New("message from non-candidate")
+	ErrTooFar                = errors.New("too far in the future")
+	ErrRoundOutOfRange       = errors.New("round out of range")
 )

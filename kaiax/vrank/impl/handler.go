@@ -34,15 +34,21 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *istanbu
 		return
 	}
 
+	prepreparedAt := time.Now()
 	blockNum := block.NumberU64()
 	// if I'm a validator for the next block, then I need to collect VRankCandidate
 	if v.isValidator(blockNum + 1) {
-		v.startNewCollection(block, view)
+		v.prepreparedView = *view
+		v.collector.AddPrepreparedTime(vrank.ViewKey{N: blockNum, R: uint8(view.Round.Uint64())}, prepreparedAt)
 	}
 	// if I'm the proposer that broadcasted IstsanbulPreprepare to other validators,
 	// then I need to broadcast VRankPreprepare as well
 	if v.isProposer(blockNum, view.Round.Uint64()) {
 		v.BroadcastVRankPreprepare(&vrank.VRankPreprepare{Block: block, View: view})
+	}
+
+	if blockNum > maxCollectorWindow {
+		v.collector.RemoveOldViews(vrank.ViewKey{N: blockNum - maxCollectorWindow, R: maxRound})
 	}
 }
 
@@ -70,53 +76,40 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 	return nil
 }
 
-// HandleVRankCandidate collects VRankCandidate from candidates
+// HandleVRankCandidate stores VRankCandidate from candidates. Verification is deferred until GetCfReport.
 func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(msg.BlockNumber)) {
 		return nil
 	}
 
-	if msg == nil {
-		logger.Error("Unexpected nil")
-		return vrank.ErrVRankCandidateNil
+	receivedAt := time.Now()
+	if v.prepreparedView.Sequence == nil {
+		return vrank.ErrPrepreparedViewNotSet
 	}
-
-	elapsed := time.Since(v.prepreparedTime)
-	// if I'm a validator for the next block, then I need to collect VRankCandidate
-	if v.prepreparedView.Sequence != nil && v.isValidator(v.prepreparedView.Sequence.Uint64()+1) {
+	if v.isValidator(v.prepreparedView.Sequence.Uint64() + 1) {
 		sender, err := v.verifyVRankCandidate(msg)
 		if err != nil {
 			return err
 		}
-
-		if _, ok := v.candResponses.Load(sender); !ok {
-			logger.Trace("HandleVRankCandidate", "sender", sender.Hex(), "elapsed", elapsed, "blockHash", msg.BlockHash.Hex())
-			v.candResponses.Store(sender, elapsed)
-		}
+		vk := vrank.ViewKey{N: msg.BlockNumber, R: msg.Round}
+		v.collector.AddCandMsg(vk, sender, receivedAt, msg)
 	}
 	return nil
 }
 
 func (v *VRankModule) verifyVRankCandidate(msg *vrank.VRankCandidate) (common.Address, error) {
-	if msg.BlockNumber != v.prepreparedView.Sequence.Uint64() {
-		logger.Debug("sequence mismatch", "expected", v.prepreparedView.Sequence.Uint64(), "got", msg.BlockNumber)
-		return common.Address{}, vrank.ErrViewMismatch
+	if msg.BlockNumber > v.prepreparedView.Sequence.Uint64()+maxCollectorWindow {
+		return common.Address{}, vrank.ErrTooFar
 	}
-	if msg.Round != uint8(v.prepreparedView.Round.Uint64()) {
-		logger.Debug("round mismatch", "expected", v.prepreparedView.Round.Uint64(), "got", msg.Round)
-		return common.Address{}, vrank.ErrViewMismatch
+	if msg.Round > maxRound {
+		return common.Address{}, vrank.ErrRoundOutOfRange
 	}
-	if msg.BlockHash != v.prepreparedBlockHash {
-		logger.Debug("BlockHash mismatch", "expected", v.prepreparedBlockHash.Hex(), "got", msg.BlockHash.Hex())
-		return common.Address{}, vrank.ErrBlockHashMismatch
-	}
-
 	sender, err := istanbul.GetSignatureAddress(msg.BlockHash.Bytes(), msg.Sig)
 	if err != nil {
 		logger.Debug("GetSignatureAddress failed", "err", err, "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
 		return common.Address{}, err
 	}
-	candidates, err := v.Valset.GetCandidates(msg.BlockNumber)
+	candidates, err := v.Valset.GetCandidates(v.prepreparedView.Sequence.Uint64())
 	if err != nil || candidates == nil {
 		logger.Debug("GetCandidates failed", "err", err, "blockNum", msg.BlockNumber)
 		return common.Address{}, err
@@ -126,13 +119,6 @@ func (v *VRankModule) verifyVRankCandidate(msg *vrank.VRankCandidate) (common.Ad
 		return common.Address{}, vrank.ErrMsgFromNonCandidate
 	}
 	return sender, nil
-}
-
-func (v *VRankModule) startNewCollection(block *types.Block, view *istanbul.View) {
-	v.prepreparedTime = time.Now()
-	v.prepreparedView = *view
-	v.prepreparedBlockHash = block.Hash()
-	v.candResponses.Clear()
 }
 
 // BroadcastVRankPreprepare is called by the proposer
@@ -196,23 +182,40 @@ func (v *VRankModule) isValidator(blockNum uint64) bool {
 	return slices.Contains(validators, v.nodeId)
 }
 
-func (v *VRankModule) GetCfReport(blockNum uint64) (vrank.CfReport, error) {
-	if blockNum == 0 {
+// for building N-th header's VRank field, caller should query N-1 with the previous block's round.
+func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.CfReport, error) {
+	// epoch header's VRank should be nil
+	if (blockNum+1)%vrankEpoch == 0 {
 		return vrank.CfReport{}, nil
 	}
+	if round > maxRound {
+		return nil, vrank.ErrRoundOutOfRange
+	}
 
+	vk := vrank.ViewKey{N: blockNum, R: uint8(round)}
+	prepreparedAt, viewMap := v.collector.GetViewData(vk)
+	if prepreparedAt.IsZero() {
+		return nil, vrank.ErrPrepreparedTimeNotSet
+	}
 	candidates, err := v.Valset.GetCandidates(blockNum)
-
 	if err != nil || candidates == nil {
 		logger.Error("GetCandidates failed", "blockNum", blockNum)
 		return nil, vrank.ErrGetCandidateFailed
 	}
+	if viewMap == nil {
+		// No data for this view: no candidate sent any message
+		return candidates, nil
+	}
 
 	var cfReport vrank.CfReport
-	for _, addr := range candidates {
-		elapsed, ok := v.candResponses.Load(addr)
-		if !ok || elapsed.(time.Duration) > candidatePrepareDeadlineMs {
-			cfReport = append(cfReport, addr)
+	for sender, msgWithTime := range viewMap {
+		if !slices.Contains(candidates, sender) {
+			// sender is not a candidate
+			continue
+		}
+		elapsed := msgWithTime.ReceivedAt.Sub(prepreparedAt).Milliseconds()
+		if elapsed > candidatePrepareDeadlineMs {
+			cfReport = append(cfReport, sender)
 		}
 	}
 

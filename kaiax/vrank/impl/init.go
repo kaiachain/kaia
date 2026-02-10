@@ -18,8 +18,6 @@ package impl
 
 import (
 	"crypto/ecdsa"
-	"sync"
-	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
@@ -32,12 +30,15 @@ import (
 )
 
 const (
-	candidatePrepareDeadlineMs = 200 * time.Millisecond
+	candidatePrepareDeadlineMs = 200
 
 	VRankPreprepareMsg = 0x17
 	VRankCandidateMsg  = 0x18
 
-	broadcastChSize = 2048
+	broadcastChSize    = 2048
+	vrankEpoch         = 86400
+	maxRound           = 10 // round range [0, 10]
+	maxCollectorWindow = 10 // max collection window [N-10, N+10]
 )
 
 var (
@@ -62,16 +63,15 @@ type VRankModule struct {
 	nodeId common.Address
 
 	// only for validators
-	prepreparedTime      time.Time
-	prepreparedView      istanbul.View
-	prepreparedBlockHash common.Hash
-	candResponses        sync.Map // map[common.Address]time.Duration
+	prepreparedView istanbul.View // for collection window management
+	collector       *vrank.Collector
 }
 
 func NewVRankModule() *VRankModule {
 	return &VRankModule{
 		broadcastCh: make(chan *vrank.BroadcastRequest, broadcastChSize),
 		stopCh:      make(chan struct{}),
+		collector:   vrank.NewCollector(),
 	}
 }
 

@@ -106,9 +106,9 @@ func TestVRankModule(t *testing.T) {
 	valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(val.Addr, nil).AnyTimes()
 
 	// validator correctly broadcast VRankPreprepare upon receiving IstanbulPreprepare
-	assert.Equal(t, time.Time{}, val.VRankModule.prepreparedTime)
 	val.VRankModule.HandleIstanbulPreprepare(block, view)
-	assert.Greater(t, val.VRankModule.prepreparedTime.UnixMilli(), int64(0))
+	prepreparedTime, _ := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+	assert.False(t, prepreparedTime.IsZero())
 	req := mustPop(t, val.sub)
 	assert.Equal(t, []common.Address{cand.Addr}, req.Targets)
 	assert.Equal(t, VRankPreprepareMsg, req.Code)
@@ -124,11 +124,12 @@ func TestVRankModule(t *testing.T) {
 	// validator correctly collects VRankCandidate upon receiving VRankCandidate
 	err := val.VRankModule.HandleVRankCandidate(&candMsg)
 	assert.NoError(t, err)
-	d, ok := val.VRankModule.candResponses.Load(cand.Addr)
-	assert.True(t, ok)
-	assert.NotEqual(t, time.Duration(0), d.(time.Duration))
+	prepreparedTime, collected := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+	assert.False(t, prepreparedTime.IsZero())
+	assert.False(t, collected[cand.Addr].ReceivedAt.IsZero())
+	assert.Equal(t, &candMsg, collected[cand.Addr].Msg)
 
-	cfReport, err := val.VRankModule.GetCfReport(1)
+	cfReport, err := val.VRankModule.GetCfReport(1, 0)
 	assert.NoError(t, err)
 	assert.Nil(t, cfReport) // because candidate responsed in a timely manner
 }
@@ -144,7 +145,8 @@ func TestHandleIstanbulPreprepare(t *testing.T) {
 		val := createCN(t, valset)
 		val.VRankModule.ChainConfig.PermissionlessCompatibleBlock = nil
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
-		assert.Equal(t, time.Time{}, val.VRankModule.prepreparedTime)
+		prepreparedTime, _ := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		assert.True(t, prepreparedTime.IsZero())
 		mustNotPop(t, val.sub)
 	})
 
@@ -158,11 +160,13 @@ func TestHandleIstanbulPreprepare(t *testing.T) {
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(2)
 
 		proposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
-		assert.Equal(t, time.Time{}, proposer.VRankModule.prepreparedTime)
+		prepreparedTime, _ := proposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		assert.True(t, prepreparedTime.IsZero())
 		mustPop(t, proposer.sub) // proposer should broadcast
 
 		validator.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
-		assert.Greater(t, validator.VRankModule.prepreparedTime.UnixMilli(), int64(0))
+		prepreparedTime, _ = validator.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		assert.False(t, prepreparedTime.IsZero())
 		mustNotPop(t, validator.sub)
 	})
 
@@ -178,9 +182,12 @@ func TestHandleIstanbulPreprepare(t *testing.T) {
 		nonProposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 		candidate.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
-		assert.Greater(t, proposer.VRankModule.prepreparedTime.UnixMilli(), int64(0))
-		assert.Greater(t, nonProposer.VRankModule.prepreparedTime.UnixMilli(), int64(0))
-		assert.Equal(t, time.Time{}, candidate.VRankModule.prepreparedTime)
+		prepreparedTime, _ := proposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		assert.False(t, prepreparedTime.IsZero())
+		prepreparedTime, _ = nonProposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		assert.False(t, prepreparedTime.IsZero())
+		prepreparedTime, _ = candidate.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		assert.True(t, prepreparedTime.IsZero())
 
 		req := mustPop(t, proposer.sub)
 		assert.Equal(t, []common.Address{candidate.Addr}, req.Targets)
@@ -263,19 +270,21 @@ func TestHandleVRankCandidate(t *testing.T) {
 		msg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: sig}
 
 		// proposer is not in the next council, so it should only broadcast and does not start collection.
-		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{validator.Addr}, nil).Times(2)
+		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{validator.Addr}, nil).Times(3)
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(2)
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(2)
 
-		proposer.VRankModule.startNewCollection(block1, view1_0) // this won't happen in production
+		proposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0) // this won't happen in production
 		proposer.VRankModule.HandleVRankCandidate(&msg)
-		_, ok := proposer.VRankModule.candResponses.Load(candidate.Addr)
-		assert.False(t, ok)
+		prepreparedTime, candMap := proposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		assert.True(t, prepreparedTime.IsZero())
+		assert.Nil(t, candMap)
 
-		validator.VRankModule.startNewCollection(block1, view1_0)
+		validator.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 		validator.VRankModule.HandleVRankCandidate(&msg)
-		_, ok = validator.VRankModule.candResponses.Load(candidate.Addr)
-		assert.True(t, ok)
+		prepreparedTime, candMap = validator.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		assert.False(t, prepreparedTime.IsZero())
+		assert.Equal(t, 1, len(candMap))
 	})
 
 	t.Run("invalid message", func(t *testing.T) {
@@ -290,7 +299,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
 
-		val.VRankModule.startNewCollection(block1, view1_0)
+		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
 		tcs := []struct {
 			name    string
@@ -298,16 +307,16 @@ func TestHandleVRankCandidate(t *testing.T) {
 			wantErr error
 		}{
 			{
-				name: "blockNum mismatch",
-				msg:  &vrank.VRankCandidate{BlockNumber: 2, Round: 0, BlockHash: block1.Hash(), Sig: sig}, wantErr: vrank.ErrViewMismatch,
+				name: "future block number",
+				msg:  &vrank.VRankCandidate{BlockNumber: 2, Round: 0, BlockHash: block1.Hash(), Sig: sig}, wantErr: nil,
 			},
 			{
-				name: "round mismatch",
-				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 1, BlockHash: block1.Hash(), Sig: sig}, wantErr: vrank.ErrViewMismatch,
+				name: "future round",
+				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 1, BlockHash: block1.Hash(), Sig: sig}, wantErr: nil,
 			},
 			{
-				name: "blockHash mismatch",
-				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 0, BlockHash: common.Hash{}, Sig: sig}, wantErr: vrank.ErrBlockHashMismatch,
+				name: "invalid blockHash",
+				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 0, BlockHash: common.Hash{}, Sig: sig}, wantErr: vrank.ErrMsgFromNonCandidate,
 			},
 			{
 				name: "signature and message mismatch",
@@ -315,7 +324,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 			},
 			{
 				name: "invalid signature (signature of block 2)",
-				msg:  &vrank.VRankCandidate{BlockNumber: 2, Round: 0, BlockHash: block1.Hash(), Sig: invalidSig}, wantErr: vrank.ErrViewMismatch,
+				msg:  &vrank.VRankCandidate{BlockNumber: 2, Round: 0, BlockHash: block1.Hash(), Sig: invalidSig}, wantErr: vrank.ErrMsgFromNonCandidate,
 			},
 		}
 
@@ -334,22 +343,27 @@ func TestHandleVRankCandidate(t *testing.T) {
 		sig, _ := crypto.Sign(crypto.Keccak256(block1.Hash().Bytes()), cand.Key)
 		msg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: sig}
 
-		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{val.Addr}, nil).Times(2)
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).Times(2)
+		valset.EXPECT().GetCouncil(uint64(2)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).Times(1)
 
-		val.VRankModule.startNewCollection(block1, view1_0)
+		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
-		err := val.VRankModule.HandleVRankCandidate(&msg)
-		assert.NoError(t, err)
-		elapsed1, ok := val.VRankModule.candResponses.Load(cand.Addr)
-		assert.True(t, ok)
-		assert.Greater(t, elapsed1.(time.Duration), time.Duration(0))
-
-		err = val.VRankModule.HandleVRankCandidate(&msg)
-		assert.NoError(t, err)
-		elapsed2, ok := val.VRankModule.candResponses.Load(cand.Addr)
-		assert.True(t, ok)
-		assert.Equal(t, elapsed1.(time.Duration), elapsed2.(time.Duration))
+		var receivedAt time.Time
+		for range 3 {
+			err := val.VRankModule.HandleVRankCandidate(&msg)
+			assert.NoError(t, err)
+			prepreparedTime, candMap := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+			assert.False(t, prepreparedTime.IsZero())
+			assert.Equal(t, 1, len(candMap))
+			cm := candMap[cand.Addr]
+			assert.Greater(t, cm.ReceivedAt.Sub(prepreparedTime), time.Duration(0))
+			if receivedAt.IsZero() {
+				receivedAt = cm.ReceivedAt
+			} else {
+				assert.Equal(t, receivedAt, cm.ReceivedAt, "ReceivedAt should not change on duplicate")
+			}
+		}
 	})
 }
 
@@ -374,6 +388,7 @@ func TestGetCfReport(t *testing.T) {
 
 	valset.EXPECT().GetCouncil(uint64(2)).Return(valAddrs, nil).AnyTimes()
 	valset.EXPECT().GetCandidates(uint64(1)).Return(candAddrs, nil).AnyTimes()
+	valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(validators[0].Addr, nil).AnyTimes()
 
 	for i := 0; i < 6; i++ {
 		sig, _ := crypto.Sign(crypto.Keccak256(block1.Hash().Bytes()), candidates[i].Key)
@@ -381,7 +396,7 @@ func TestGetCfReport(t *testing.T) {
 	}
 
 	for _, v := range validators {
-		v.VRankModule.startNewCollection(block1, view1_0)
+		v.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 	}
 
 	arrivalTimesMs := []int{0, 50, 100, 300, 400, 500}
@@ -397,7 +412,7 @@ func TestGetCfReport(t *testing.T) {
 	}
 
 	for _, v := range validators {
-		report, err := v.VRankModule.GetCfReport(1)
+		report, err := v.VRankModule.GetCfReport(1, 0)
 		assert.NoError(t, err)
 		assert.Len(t, report, 3, "cfReport should contain 3 entries (candidates 3,4,5 is late)")
 		for i := 3; i < 6; i++ {
