@@ -38,8 +38,9 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *istanbu
 
 	prepreparedAt := time.Now()
 	blockNum := block.NumberU64()
-	// if I'm a validator for the next block, then I need to collect VRankCandidate
-	if v.isValidator(blockNum + 1) {
+	// if I'm a validator, then I need to collect VRankCandidate
+	// should be isValidator(blockNum + 1), but validators are not finalized during `blockNum` consensus.
+	if v.isValidator(blockNum) {
 		v.prepreparedView = *view
 		v.collector.AddPrepreparedTime(vrank.ViewKey{N: blockNum, R: uint8(view.Round.Uint64())}, prepreparedAt, block.Hash())
 	}
@@ -88,7 +89,8 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if v.prepreparedView.Sequence == nil {
 		return vrank.ErrPrepreparedViewNotSet
 	}
-	if v.isValidator(v.prepreparedView.Sequence.Uint64() + 1) {
+	// should be isValidator(v.prepreparedView.Sequence.Uint64() + 1), but validators are not finalized during `seq` consensus.
+	if v.isValidator(v.prepreparedView.Sequence.Uint64()) {
 		sender, err := v.verifyVRankCandidate(msg)
 		if err != nil {
 			return err
@@ -136,7 +138,8 @@ func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPrepr
 
 // BroadcastVRankCandidate is called by candidates.
 func (v *VRankModule) BroadcastVRankCandidate(vrankCandidate *vrank.VRankCandidate) {
-	validators, err := v.Valset.GetCouncil(vrankCandidate.BlockNumber + 1)
+	// should be GetCouncil(blockNum + 1), but validators are not finalized during `blockNum` consensus.
+	validators, err := v.Valset.GetCouncil(vrankCandidate.BlockNumber)
 	if err != nil || validators == nil {
 		logger.Error("GetCouncil failed", "blockNum", vrankCandidate.BlockNumber)
 		return
