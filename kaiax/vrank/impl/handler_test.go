@@ -444,3 +444,69 @@ func TestGetCfReport(t *testing.T) {
 		assert.Equal(t, report, report2, "GetCfReport must be deterministic")
 	}
 }
+
+func TestGetCfReport_Errors(t *testing.T) {
+	block1 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+	view1_0 := &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
+
+	t.Run("epoch header returns empty report", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		val := createCN(t, valset)
+		valset.EXPECT().GetCouncil(uint64(vrankEpoch-1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(vrankEpoch-1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+
+		report, err := val.VRankModule.GetCfReport(vrankEpoch-1, 0)
+		require.NoError(t, err)
+		assert.Empty(t, report)
+	})
+
+	t.Run("round out of range returns error", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		val := createCN(t, valset)
+		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+
+		report, err := val.VRankModule.GetCfReport(1, 11) // maxRound is 10
+		require.ErrorIs(t, err, vrank.ErrRoundOutOfRange)
+		assert.Nil(t, report)
+
+		report, err = val.VRankModule.GetCfReport(1, 10)
+		assert.NotErrorIs(t, err, vrank.ErrRoundOutOfRange)
+	})
+
+	t.Run("non-validator returns empty report", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		val, otherVal := createCN(t, valset), createCN(t, valset)
+		// This node is not in the council for block 1
+		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{otherVal.Addr}, nil).AnyTimes()
+
+		report, err := val.VRankModule.GetCfReport(1, 0)
+		require.NoError(t, err)
+		assert.Empty(t, report)
+	})
+
+	t.Run("preprepared time not set returns error", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		val := createCN(t, valset)
+		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		// Never call HandleIstanbulPreprepare, so preprepared time is not set for view (1,0)
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{}, nil).AnyTimes()
+
+		report, err := val.VRankModule.GetCfReport(1, 0)
+		require.ErrorIs(t, err, vrank.ErrPrepreparedTimeNotSet)
+		assert.Nil(t, report)
+	})
+
+	t.Run("GetCandidates failed returns error", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		val := createCN(t, valset)
+		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(1)).Return(nil, assert.AnError).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
+
+		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
+
+		report, err := val.VRankModule.GetCfReport(1, 0)
+		require.ErrorIs(t, err, vrank.ErrGetCandidateFailed)
+		assert.Nil(t, report)
+	})
+}

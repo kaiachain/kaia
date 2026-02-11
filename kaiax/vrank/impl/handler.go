@@ -197,6 +197,11 @@ func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.CfReport, error
 		return nil, vrank.ErrRoundOutOfRange
 	}
 
+	// if I was not a validator for blockNum, I couldn't have collected cfReport for blockNum.
+	if !v.isValidator(blockNum) {
+		return vrank.CfReport{}, nil
+	}
+
 	vk := vrank.ViewKey{N: blockNum, R: uint8(round)}
 	prepreparedAt, expectedBlockHash, viewMap := v.collector.GetViewData(vk)
 	if prepreparedAt.IsZero() {
