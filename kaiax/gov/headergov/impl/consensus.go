@@ -50,7 +50,7 @@ func (h *headerGovModule) FinalizeHeader(header *types.Header, state *state.Stat
 	return nil
 }
 
-// VerifyVote checks the followings:
+// VerifyVote checks the following:
 // (1) voter must be in valset,
 // (2) integrity of the voter (the voter must be the block proposer),
 // (3) the vote value must be consistent compared to the latest ParamSet.
@@ -94,7 +94,7 @@ func (h *headerGovModule) VerifyVote(header *types.Header) error {
 	return h.checkConsistency(blockNum, vote)
 }
 
-// VerifyGov checks the followings:
+// VerifyGov checks the following:
 // (1) governance must be empty in non-epoch block,
 // (2) if there are no votes in the previous epoch, governance must be empty,
 // (3) if any vote exists in the previous epoch, governance must not be empty,

@@ -20,7 +20,7 @@ Package sc implements an auxiliary blockchain called Service Chain.
 Service Chains in Kaia are auxiliary blockchains independent from the Kaia main chain.
 They mostly act like normal Kaia blockchains but has additional features to connect them to another Kaia network.
 They can be used as separate public/private blockchains or child chains of a Kaia chain (or another Service Chain).
-The followings describe main features of Service chain.
+The following describe main features of Service chain.
   - Anchoring block data of Service Chain
   - Value Transfer (KAIA, KCT)
   - Various bridge contract configurations
