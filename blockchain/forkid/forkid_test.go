@@ -55,8 +55,10 @@ func TestCreation(t *testing.T) {
 				{162900479, ID{Hash: checksumToBytes(0x75771543), Next: 162900480}}, // Last Cancun+Randao block
 				{162900480, ID{Hash: checksumToBytes(0x3ab6dcda), Next: 190670000}}, // First Kaia+Kip160 block
 				{190669999, ID{Hash: checksumToBytes(0x3ab6dcda), Next: 190670000}}, // Last Kaia+Kip160 block
-				{190670000, ID{Hash: checksumToBytes(0xc00bab0e), Next: 0}},         // First Prague block
-				{198489578, ID{Hash: checksumToBytes(0xc00bab0e), Next: 0}},         // Today Prague block
+				{190670000, ID{Hash: checksumToBytes(0xc00bab0e), Next: 211090000}}, // First Prague block
+				{211089999, ID{Hash: checksumToBytes(0xc00bab0e), Next: 211090000}}, // Last Prague block
+				{211090000, ID{Hash: checksumToBytes(0x8322a580), Next: 0}},         // First Osaka block
+				{198489578, ID{Hash: checksumToBytes(0xc00bab0e), Next: 211090000}}, // Today Prague block
 			},
 		},
 		// Kairos test cases
@@ -117,14 +119,15 @@ func TestCheckForkCompatibleBlock(t *testing.T) {
 		{
 			params.MainnetChainConfig,
 			[]testcase{
-				{0, expectedNums{big.NewInt(0), big.NewInt(86816005), big.NewInt(190670000)}},                  // head is Genesis block
-				{86816005, expectedNums{big.NewInt(86816005), big.NewInt(99841497), big.NewInt(190670000)}},    // head is Istanbul+London+EthTxType block
-				{99841497, expectedNums{big.NewInt(99841497), big.NewInt(119750400), big.NewInt(190670000)}},   // head is Magma block
-				{119750400, expectedNums{big.NewInt(119750400), big.NewInt(135456000), big.NewInt(190670000)}}, // head is Kore+Kip103 block
-				{135456000, expectedNums{big.NewInt(135456000), big.NewInt(147534000), big.NewInt(190670000)}}, // head is Shanghai block
-				{147534000, expectedNums{big.NewInt(147534000), big.NewInt(162900480), big.NewInt(190670000)}}, // head is Cancun+Randao block
-				{162900480, expectedNums{big.NewInt(162900480), big.NewInt(190670000), big.NewInt(190670000)}}, // head is Kaia+Kip160 block
-				{190670000, expectedNums{big.NewInt(190670000), nil, big.NewInt(190670000)}},                   // head is Prague block
+				{0, expectedNums{big.NewInt(0), big.NewInt(86816005), big.NewInt(211090000)}},                  // head is Genesis block
+				{86816005, expectedNums{big.NewInt(86816005), big.NewInt(99841497), big.NewInt(211090000)}},    // head is Istanbul+London+EthTxType block
+				{99841497, expectedNums{big.NewInt(99841497), big.NewInt(119750400), big.NewInt(211090000)}},   // head is Magma block
+				{119750400, expectedNums{big.NewInt(119750400), big.NewInt(135456000), big.NewInt(211090000)}}, // head is Kore+Kip103 block
+				{135456000, expectedNums{big.NewInt(135456000), big.NewInt(147534000), big.NewInt(211090000)}}, // head is Shanghai block
+				{147534000, expectedNums{big.NewInt(147534000), big.NewInt(162900480), big.NewInt(211090000)}}, // head is Cancun+Randao block
+				{162900480, expectedNums{big.NewInt(162900480), big.NewInt(190670000), big.NewInt(211090000)}}, // head is Kaia+Kip160 block
+				{190670000, expectedNums{big.NewInt(190670000), big.NewInt(211090000), big.NewInt(211090000)}}, // head is Prague block
+				{211090000, expectedNums{big.NewInt(211090000), nil, big.NewInt(211090000)}},                   // head is Osaka block
 			},
 		},
 		// Kairos test cases

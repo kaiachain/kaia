@@ -61,7 +61,7 @@ var (
 		},
 		KaiaCompatibleBlock:   big.NewInt(162900480),
 		PragueCompatibleBlock: big.NewInt(190670000),
-		OsakaCompatibleBlock:  nil, // TODO-kaia-osaka: set Mainnet's OsakaCompatibleBlock
+		OsakaCompatibleBlock:  big.NewInt(211090000),
 		// Optional forks
 		Kip103CompatibleBlock: big.NewInt(119750400),
 		Kip103ContractAddress: common.HexToAddress("0xD5ad6D61Dd87EdabE2332607C328f5cc96aeCB95"),
