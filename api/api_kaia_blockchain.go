@@ -911,13 +911,7 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	// Set default gas & gas price if none were set.
 	// globalGasCap is configured by the node operator via --rpc.gascap flag.
 	// It must not exceed the protocol-level UpperGasLimit.
-	if globalGasCap > params.UpperGasLimit {
-		globalGasCap = params.UpperGasLimit
-	}
-	gas := globalGasCap
-	if gas == 0 {
-		gas = params.UpperGasLimit
-	}
+	gas := params.UpperGasLimit
 	if args.Gas != nil {
 		gas = uint64(*args.Gas)
 	}
@@ -925,7 +919,6 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 		return nil, fmt.Errorf("gas limit %v exceeds the upper limit %v", gas, params.UpperGasLimit)
 	}
 	if globalGasCap != 0 && globalGasCap < gas {
-		logger.Warn("Caller gas above allowance, capping", "requested", gas, "cap", globalGasCap)
 		gas = globalGasCap
 	}
 
