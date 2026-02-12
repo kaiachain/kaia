@@ -18,6 +18,8 @@
 pragma solidity 0.8.19;
 
 interface IAddressBook {
+    function VERSION() external view returns (uint256);
+
     function isActivated() external view returns (bool);
 
     function getAllAddress()
@@ -65,8 +67,21 @@ contract MultiCallContract {
     /* ========== STAKING INFORMATION ========== */
 
     // multiCallStakingInfo returns the staking information of all CNs.
-    function multiCallStakingInfo()
+    function multiCallStakingInfo(bool kip290Enabled, bool ignoreAbookVersion)
         external
+        view
+        returns (
+            uint8[] memory typeList,
+            address[] memory addressList,
+            uint256[] memory stakingAmounts
+        )
+    {
+        return _multiCallStakingInfo(kip290Enabled, ignoreAbookVersion);
+    }
+
+    /// NOTE: the variable `ignoreAbookVersion` will be removed once ABookV2 is introduced
+    function _multiCallStakingInfo(bool kip290Enabled, bool ignoreAbookVersion)
+        private
         view
         returns (
             uint8[] memory typeList,
@@ -90,16 +105,34 @@ contract MultiCallContract {
         stakingAmounts = new uint256[](lenCnAddress / 3);
 
         for (uint256 i = 0; i < lenCnAddress; i += 3) {
-            stakingAmounts[i / 3] = _getCnStakingAmounts(addressList[i + 1]);
+            stakingAmounts[i / 3] = _getCnStakingAmounts(kip290Enabled, ignoreAbookVersion, addressList[i + 1]);
         }
 
         return (typeList, addressList, stakingAmounts);
     }
 
     function _getCnStakingAmounts(
+        bool kip290Enabled,
+        bool ignoreAbookVersion,
+        address cnStaking
+    ) private view returns (uint256) {
+        if (kip290Enabled && (ignoreAbookVersion || IAddressBook(ADDRESS_BOOK_ADDRESS).VERSION() >= 2)) {
+            return _getCnStakingAmountsKIP290(cnStaking);
+        } else {
+            return _getCnStakingAmountsLegacy(cnStaking);
+        }
+    }
+
+    function _getCnStakingAmountsLegacy(
         address cnStaking
     ) private view returns (uint256) {
         return cnStaking.balance;
+    }
+
+    function _getCnStakingAmountsKIP290(
+        address cnStaking
+    ) private view returns (uint256) {
+        return ICnStaking(cnStaking).staking() - ICnStaking(cnStaking).unstaking();
     }
 
     function multiCallDPStakingInfo()
@@ -143,6 +176,5 @@ contract MultiCallContract {
         }
         tokens = IGaslessSwapRouter(gsr).getSupportedTokens();
     }
-
     /* ========== MORE FUNCTIONS TBA ========== */
 }
