@@ -21,6 +21,7 @@ package discover
 import (
 	"crypto/rand"
 	"net"
+	"slices"
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
@@ -123,12 +124,7 @@ func (*simpleTestnet) waitping(from NodeID) error                  { return nil 
 func (*simpleTestnet) ping(toid NodeID, toaddr *net.UDPAddr) error { return nil }
 
 func isIn(candidate *Node, list []*Node) bool {
-	for _, node := range list {
-		if candidate.CompareNode(node) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(list, candidate.CompareNode)
 }
 
 func TestShuffle(t *testing.T) {

@@ -25,6 +25,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"slices"
 	"testing"
 	"time"
 
@@ -928,9 +929,9 @@ func TestGetPeers_AddrExists(t *testing.T) {
 	foundAddrs := pm.GetPeers()
 
 	assert.Equal(t, 3, len(foundAddrs))
-	assert.True(t, contains(foundAddrs, addrs[0]))
-	assert.True(t, contains(foundAddrs, addrs[1]))
-	assert.True(t, contains(foundAddrs, addrs[2]))
+	assert.True(t, slices.Contains(foundAddrs, addrs[0]))
+	assert.True(t, slices.Contains(foundAddrs, addrs[1]))
+	assert.True(t, slices.Contains(foundAddrs, addrs[2]))
 }
 
 func TestGetPeers_AddrNotExists(t *testing.T) {
@@ -964,9 +965,9 @@ func TestGetPeers_AddrNotExists(t *testing.T) {
 	foundAddrs := pm.GetPeers()
 
 	assert.Equal(t, 3, len(foundAddrs))
-	assert.True(t, contains(foundAddrs, addrs[0]))
-	assert.True(t, contains(foundAddrs, addrs[1]))
-	assert.True(t, contains(foundAddrs, addrs[2]))
+	assert.True(t, slices.Contains(foundAddrs, addrs[0]))
+	assert.True(t, slices.Contains(foundAddrs, addrs[1]))
+	assert.True(t, slices.Contains(foundAddrs, addrs[2]))
 }
 
 func TestEnqueue(t *testing.T) {
@@ -1144,15 +1145,6 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 		assert.Equal(t, sortedTxs[i].Hash(), tx.Hash())
 		assert.False(t, sortedTxs[i].Time().Equal(tx.Time()))
 	}
-}
-
-func contains(addrs []common.Address, item common.Address) bool {
-	for _, a := range addrs {
-		if a == item {
-			return true
-		}
-	}
-	return false
 }
 
 func createAndRegisterPeers(mockCtrl *gomock.Controller, peers *peerSet) (*MockPeer, *MockPeer, *MockPeer) {

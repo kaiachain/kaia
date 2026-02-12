@@ -19,6 +19,7 @@
 package discover
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
@@ -153,14 +154,7 @@ func TestTable_GetBucketEntries(t *testing.T) {
 			t.Error("the length of actual data is different from the result of GetBucketEntries")
 		}
 		for _, node := range storage.data {
-			existed := false
-			for _, node2 := range entries {
-				if node.CompareNode(node2) {
-					existed = true
-					break
-				}
-			}
-			if !existed {
+			if !slices.ContainsFunc(entries, node.CompareNode) {
 				t.Error("node does not existed", "nodeid", node.ID)
 			}
 		}
