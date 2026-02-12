@@ -85,53 +85,161 @@ func mustNotPop(t *testing.T, sub chan *vrank.BroadcastRequest) *vrank.Broadcast
 	return nil
 }
 
+// VRankScenario defines a single-block scenario for the full VRank cycle (optimistic: all messages delivered).
+// If UnresponsiveCands is set, HandleVRankCandidate is not called for those candidates (message dropped),
+// so they appear in cfReport for validators.
+type VRankScenario struct {
+	Name              string
+	Nodes             []string   // all node names, e.g. ["N1", "N2", "N3"]
+	Council           []string   // Council(1)
+	Candidates        []string   // Candidates(1)
+	Proposer          string     // Proposer(1, 0)
+	UnresponsiveCands []string   // optional: candidates whose message is not delivered to validators
+	ExpectedCfReports [][]string // ExpectedCfReports[i] = expected GetCfReport(1, 0) for Nodes[i]
+}
+
+// runVRankScenario runs the full cycle for block 1 and asserts GetCfReport(1, 0) for each node matches ExpectedCfReports[i].
+func runVRankScenario(t *testing.T, s VRankScenario) {
+	const blockNum = uint64(1)
+	require.Len(t, s.ExpectedCfReports, len(s.Nodes), "ExpectedCfReports must have one entry per node")
+
+	ctrl := gomock.NewController(t)
+	valset := mock_valset.NewMockValsetModule(ctrl)
+
+	nameToCN := make(map[string]*CN)
+	for _, name := range s.Nodes {
+		nameToCN[name] = createCN(t, valset)
+	}
+
+	councilAddrs := make([]common.Address, 0, len(s.Council))
+	for _, name := range s.Council {
+		councilAddrs = append(councilAddrs, nameToCN[name].Addr)
+	}
+	candAddrs := make([]common.Address, 0, len(s.Candidates))
+	for _, name := range s.Candidates {
+		candAddrs = append(candAddrs, nameToCN[name].Addr)
+	}
+	proposerAddr := nameToCN[s.Proposer].Addr
+	valset.EXPECT().GetCouncil(blockNum).Return(councilAddrs, nil).AnyTimes()
+	valset.EXPECT().GetCandidates(blockNum).Return(candAddrs, nil).AnyTimes()
+	valset.EXPECT().GetProposer(blockNum, uint64(0)).Return(proposerAddr, nil).AnyTimes()
+
+	block1 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+	view1_0 := &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
+	pppMsg := &vrank.VRankPreprepare{Block: block1, View: view1_0}
+
+	// 1. HandleIstanbulPreprepare: every council member
+	for _, name := range s.Council {
+		nameToCN[name].VRankModule.HandleIstanbulPreprepare(block1, view1_0)
+	}
+
+	// 2. HandleVRankPreprepare: each candidate receives preprepare (optimistic: we deliver directly)
+	// 3. HandleVRankCandidate: each validator receives each candidate's message (unless in UnresponsiveCands)
+	notDelivered := make(map[string]bool)
+	for _, name := range s.UnresponsiveCands {
+		notDelivered[name] = true
+	}
+	for _, candName := range s.Candidates {
+		cand := nameToCN[candName]
+		_ = cand.VRankModule.HandleVRankPreprepare(pppMsg)
+		if notDelivered[candName] {
+			continue
+		}
+		sig, _ := crypto.Sign(crypto.Keccak256(block1.Hash().Bytes()), cand.Key)
+		candMsg := &vrank.VRankCandidate{
+			BlockNumber: blockNum,
+			Round:       uint8(view1_0.Round.Uint64()),
+			BlockHash:   block1.Hash(),
+			Sig:         sig,
+		}
+		for _, valName := range s.Council {
+			err := nameToCN[valName].VRankModule.HandleVRankCandidate(candMsg)
+			require.NoError(t, err)
+		}
+	}
+
+	// 4. GetCfReport(1, 0) from each node and assert ExpectedCfReports[i]
+	for i, nodeName := range s.Nodes {
+		report, err := nameToCN[nodeName].VRankModule.GetCfReport(blockNum, 0)
+		require.NoError(t, err)
+		expectedNames := s.ExpectedCfReports[i]
+		expectedAddrs := make([]common.Address, 0, len(expectedNames))
+		for _, name := range expectedNames {
+			expectedAddrs = append(expectedAddrs, nameToCN[name].Addr)
+		}
+		if len(expectedAddrs) == 0 {
+			assert.Empty(t, report, "node %s: expected empty cfReport", nodeName)
+		} else {
+			require.Len(t, report, len(expectedAddrs), "node %s: cfReport length", nodeName)
+			for _, addr := range expectedAddrs {
+				assert.True(t, slices.Contains(report, addr), "node %s: cfReport should contain %s", nodeName, addr.Hex())
+			}
+		}
+	}
+}
+
 func TestVRankModule(t *testing.T) {
-	var (
-		valset = mock_valset.NewMockValsetModule(gomock.NewController(t))
-		val    = createCN(t, valset)
-		cand   = createCN(t, valset)
+	scenarios := []VRankScenario{
+		{
+			Name:       "happy path and non-council get empty report",
+			Nodes:      []string{"N1", "N2", "N3"},
+			Council:    []string{"N1"},
+			Candidates: []string{"N2"},
+			Proposer:   "N1",
+			ExpectedCfReports: [][]string{
+				{}, // N1: Council(1), valid CfReport
+				{}, // N2: not in Council(1)
+				{}, // N3: not in Council(1)
+			},
+		},
+		{
+			Name:              "Unresponsive N3 should be in cfReport",
+			Nodes:             []string{"N1", "N2", "N3"},
+			Council:           []string{"N1", "N2"},
+			Candidates:        []string{"N3"},
+			Proposer:          "N1",
+			UnresponsiveCands: []string{"N3"},
+			ExpectedCfReports: [][]string{
+				{"N3"}, // N1: Council(1), cfReport contains N3
+				{"N3"}, // N2: Council(1), cfReport contains N3
+				{},     // N3: not in Council(1)
+			},
+		},
+		{
+			Name:              "Unresponsive N4 should be in cfReport",
+			Nodes:             []string{"N1", "N2", "N3", "N4"},
+			Council:           []string{"N1", "N2"},
+			Candidates:        []string{"N3", "N4"},
+			Proposer:          "N1",
+			UnresponsiveCands: []string{"N4"},
+			ExpectedCfReports: [][]string{
+				{"N4"}, // N1: Council(1)
+				{"N4"}, // N2: Council(1)
+				{},     // N3: not in Council(1)
+				{},     // N4: not in Council(1)
+			},
+		},
+		{
+			Name:              "Unresponsive N3 and N4 should be in cfReport",
+			Nodes:             []string{"N1", "N2", "N3", "N4"},
+			Council:           []string{"N1", "N2"},
+			Candidates:        []string{"N3", "N4"},
+			Proposer:          "N1",
+			UnresponsiveCands: []string{"N3", "N4"},
+			ExpectedCfReports: [][]string{
+				{"N3", "N4"}, // N1: Council(1)
+				{"N3", "N4"}, // N2: Council(1)
+				{},           // N3: not in Council(1)
+				{},           // N4: not in Council(1)
+			},
+		},
+	}
 
-		block  = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
-		view   = &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
-		sig, _ = crypto.Sign(crypto.Keccak256(block.Hash().Bytes()), cand.Key)
-
-		pppMsg  = vrank.VRankPreprepare{Block: block, View: view}
-		candMsg = vrank.VRankCandidate{BlockNumber: block.NumberU64(), Round: uint8(view.Round.Uint64()), BlockHash: block.Hash(), Sig: sig}
-	)
-
-	t.Logf("val.Addr: %s, cand.Addr: %s", val.Addr.Hex(), cand.Addr.Hex())
-
-	valset.EXPECT().GetCouncil(gomock.Any()).Return([]common.Address{val.Addr}, nil).AnyTimes()
-	valset.EXPECT().GetCandidates(gomock.Any()).Return([]common.Address{cand.Addr}, nil).AnyTimes()
-	valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(val.Addr, nil).AnyTimes()
-
-	// validator correctly broadcast VRankPreprepare upon receiving IstanbulPreprepare
-	val.VRankModule.HandleIstanbulPreprepare(block, view)
-	prepreparedTime, _, _ := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
-	assert.False(t, prepreparedTime.IsZero())
-	req := mustPop(t, val.sub)
-	assert.Equal(t, []common.Address{cand.Addr}, req.Targets)
-	assert.Equal(t, VRankPreprepareMsg, req.Code)
-	assert.Equal(t, &pppMsg, req.Msg)
-
-	// candidate correctly broadcast VRankCandidate upon receiving VRankPreprepare
-	cand.VRankModule.HandleVRankPreprepare(&pppMsg)
-	req = mustPop(t, cand.sub)
-	assert.Equal(t, []common.Address{val.Addr}, req.Targets)
-	assert.Equal(t, VRankCandidateMsg, req.Code)
-	assert.Equal(t, &candMsg, req.Msg)
-
-	// validator correctly collects VRankCandidate upon receiving VRankCandidate
-	err := val.VRankModule.HandleVRankCandidate(&candMsg)
-	assert.NoError(t, err)
-	prepreparedTime, _, collected := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
-	assert.False(t, prepreparedTime.IsZero())
-	assert.False(t, collected[cand.Addr].ReceivedAt.IsZero())
-	assert.Equal(t, &candMsg, collected[cand.Addr].Msg)
-
-	cfReport, err := val.VRankModule.GetCfReport(1, 0)
-	assert.NoError(t, err)
-	assert.Nil(t, cfReport) // because candidate responsed in a timely manner
+	for _, s := range scenarios {
+		t.Run(s.Name, func(t *testing.T) {
+			runVRankScenario(t, s)
+		})
+	}
 }
 
 func TestHandleIstanbulPreprepare(t *testing.T) {
@@ -315,7 +423,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 1, BlockHash: block1.Hash(), Sig: sig}, wantErr: nil,
 			},
 			{
-				name: "future block hashh",
+				name: "future block hash",
 				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 0, BlockHash: block2.Hash(), Sig: sig}, wantErr: vrank.ErrMsgFromNonCandidate,
 			},
 			{
@@ -472,12 +580,30 @@ func TestGetCfReport(t *testing.T) {
 func TestGetCfReport_Errors(t *testing.T) {
 	block1 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	view1_0 := &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
+	candAddr := common.HexToAddress("0xc4nd1d473")
+
+	t.Run("CfReport should contain candAddr", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		val := createCN(t, valset)
+		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
+		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
+
+		report, err := val.VRankModule.GetCfReport(1, 0)
+		require.NoError(t, err)
+		assert.True(t, slices.Contains(report, candAddr))
+	})
 
 	t.Run("epoch header returns empty report", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
 		valset.EXPECT().GetCouncil(uint64(vrankEpoch-1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(vrankEpoch-1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(vrankEpoch-1)).Return([]common.Address{candAddr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(vrankEpoch-1), uint64(0)).Return(val.Addr, nil).AnyTimes()
+		block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(vrankEpoch - 1))})
+		view := &istanbul.View{Sequence: big.NewInt(vrankEpoch - 1), Round: common.Big0}
+		val.VRankModule.HandleIstanbulPreprepare(block, view)
 
 		report, err := val.VRankModule.GetCfReport(vrankEpoch-1, 0)
 		require.NoError(t, err)
@@ -488,6 +614,9 @@ func TestGetCfReport_Errors(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
 		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
+		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
 		report, err := val.VRankModule.GetCfReport(1, 11) // maxRound is 10
 		require.ErrorIs(t, err, vrank.ErrRoundOutOfRange)
@@ -500,8 +629,11 @@ func TestGetCfReport_Errors(t *testing.T) {
 	t.Run("non-validator returns empty report", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val, otherVal := createCN(t, valset), createCN(t, valset)
-		// This node is not in the council for block 1
+		// This node is not in the council for block 1.
 		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{otherVal.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
+		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
 		report, err := val.VRankModule.GetCfReport(1, 0)
 		require.NoError(t, err)
@@ -512,9 +644,11 @@ func TestGetCfReport_Errors(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
 		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		// Never call HandleIstanbulPreprepare, so preprepared time is not set for view (1,0)
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
+		// skip HandleIstanbulPreprepare
 
+		prepreparedTime, _, _ := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		assert.True(t, prepreparedTime.IsZero())
 		report, err := val.VRankModule.GetCfReport(1, 0)
 		require.ErrorIs(t, err, vrank.ErrPrepreparedTimeNotSet)
 		assert.Nil(t, report)
@@ -526,7 +660,6 @@ func TestGetCfReport_Errors(t *testing.T) {
 		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return(nil, assert.AnError).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
-
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
 		report, err := val.VRankModule.GetCfReport(1, 0)
