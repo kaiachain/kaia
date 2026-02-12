@@ -139,6 +139,7 @@ const (
 	KaiaxGasless
 	Builder
 	KaiaxAuction
+	KaiaxVrank
 
 	// ModuleNameLen should be placed at the end of the list.
 	ModuleNameLen
@@ -227,4 +228,5 @@ var moduleNames = [ModuleNameLen]string{
 	"kaiax/gasless",
 	"builder",
 	"kaiax/auction",
+	"kaiax/vrank",
 }
