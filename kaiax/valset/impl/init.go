@@ -22,6 +22,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
@@ -55,6 +56,7 @@ type chain interface {
 	CurrentBlock() *types.Block
 	Config() *params.ChainConfig
 	Engine() consensus.Engine
+	backends.BlockChainForCaller
 }
 
 type InitOpts struct {
@@ -73,10 +75,11 @@ type ValsetModule struct {
 	// cache for weightedRandom and uniformRandom proposerLists.
 	proposerListCache *lru.Cache // uint64 -> []common.Address
 	removeVotesCache  *lru.Cache // uint64 -> removeVoteList
-	councilCache      *lru.Cache // uint64 -> *valset.AddressSet
+	councilCache      *lru.Cache // uint64 -> *ValidatorList
 
-	validatorVoteBlockNumsCache []uint64
-	lowestScannedVoteNumCache   *uint64
+	validatorVoteBlockNumsCache        []uint64
+	validatorStateChangeBlockNumsCache []uint64
+	lowestScannedVoteNumCache          *uint64
 }
 
 func NewValsetModule() *ValsetModule {
@@ -101,16 +104,24 @@ func (v *ValsetModule) Init(opts *InitOpts) error {
 
 func (v *ValsetModule) initSchema() error {
 	// Ensure mandatory schema at block 0
-	if voteBlockNums := ReadValidatorVoteBlockNums(v.ChainKv); voteBlockNums == nil {
-		writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
-		v.validatorVoteBlockNumsCache = nil
+	curBlockNum := v.Chain.CurrentBlock().Number()
+	if v.Chain.Config().Rules(curBlockNum).IsPermissionless {
+		if stateChangeBlockNums := ReadValidatorStateChangeBlockNums(v.ChainKv); stateChangeBlockNums == nil {
+			writeValidatorStateChangeBlockNums(v.ChainKv, []uint64{0})
+			v.validatorStateChangeBlockNumsCache = nil
+		}
+	} else {
+		if voteBlockNums := ReadValidatorVoteBlockNums(v.ChainKv); voteBlockNums == nil {
+			writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
+			v.validatorVoteBlockNumsCache = nil
+		}
 	}
 	if council := ReadCouncil(v.ChainKv, 0); council == nil {
 		genesisCouncil, err := v.getCouncilGenesis()
 		if err != nil {
 			return err
 		}
-		writeCouncil(v.ChainKv, 0, genesisCouncil.List())
+		writeCouncil(v.ChainKv, 0, genesisCouncil)
 	}
 
 	// Ensure mandatory schema lowestScannedCheckpointInterval
