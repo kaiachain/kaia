@@ -20,6 +20,7 @@ package cn
 
 import (
 	"math/big"
+	"slices"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -1005,12 +1006,7 @@ func TestPeerSet_TypePeersWithoutBlock(t *testing.T) {
 }
 
 func containsPeer(target Peer, peers []Peer) bool {
-	for _, peer := range peers {
-		if target == peer {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(peers, target)
 }
 
 func countPeerType(t common.ConnType, peers []Peer) int {

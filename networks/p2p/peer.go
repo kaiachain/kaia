@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"slices"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -151,10 +152,8 @@ func (p *Peer) Name() string {
 // versions is supported by both this node and the peer p.
 func (p *Peer) RunningCap(protocol string, versions []uint) bool {
 	if protos, ok := p.running[protocol]; ok {
-		for _, ver := range versions {
-			if protos[ConnDefault].Version == ver {
-				return true
-			}
+		if slices.Contains(versions, protos[ConnDefault].Version) {
+			return true
 		}
 	}
 	return false
