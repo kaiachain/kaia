@@ -208,6 +208,20 @@ func (mr *MockEngineMockRecorder) Seal(arg0, arg1, arg2 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Seal", reflect.TypeOf((*MockEngine)(nil).Seal), arg0, arg1, arg2)
 }
 
+// SetExtra mocks base method.
+func (m *MockEngine) SetExtra(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetExtra", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetExtra indicates an expected call of SetExtra.
+func (mr *MockEngineMockRecorder) SetExtra(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetExtra", reflect.TypeOf((*MockEngine)(nil).SetExtra), arg0)
+}
+
 // VerifyHeader mocks base method.
 func (m *MockEngine) VerifyHeader(arg0 consensus.ChainReader, arg1 *types.Header, arg2 bool) error {
 	m.ctrl.T.Helper()
