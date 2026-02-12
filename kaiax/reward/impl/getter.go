@@ -359,7 +359,7 @@ func calcRemainder(total *big.Int, parts ...*big.Int) *big.Int {
 // Returns the allocation and the remainder.
 func assignStakingRewards(config *reward.RewardConfig, stakersReward *big.Int, si *staking.StakingInfo) (map[common.Address]*big.Int, *big.Int) {
 	var (
-		cns               = si.ConsolidatedNodes()
+		cns               = si.ConsolidatedNodes(&config.Rules, nil)
 		minStake          = config.MinimumStake.Uint64()
 		totalExcessInt    = uint64(0) // sum of excess stakes (the amount over minStake) over all stakers
 		cnTotalStakingMap = make(map[common.Address]uint64)
@@ -434,7 +434,7 @@ func specWithProposerAndFunds(spec *reward.RewardSpec, config *reward.RewardConf
 	}
 
 	// Handle CLStakingInfo for proposer after Prague
-	cns := si.ConsolidatedNodes()
+	cns := si.ConsolidatedNodes(&config.Rules, nil)
 	for _, cn := range cns {
 		if cn.RewardAddr != config.Rewardbase {
 			continue
