@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -76,6 +77,39 @@ func (s *StakingModule) GetStakingInfo(num uint64) (*staking.StakingInfo, error)
 	return si, nil
 }
 
+func (s *StakingModule) GetStakingInfoFromState(num uint64, statedb *state.StateDB) (*staking.StakingInfo, error) {
+	isKaia := s.ChainConfig.IsKaiaForkEnabled(new(big.Int).SetUint64(num))
+	sourceNum := sourceBlockNum(num, isKaia, s.stakingInterval)
+
+	// Try cache first
+	if si, ok := s.stakingInfoCache.Get(sourceNum); ok {
+		return si.(*staking.StakingInfo), nil
+	}
+
+	// Only before Kaia, try the database
+	if !isKaia {
+		if si := ReadStakingInfo(s.ChainKv, sourceNum); si != nil {
+			s.stakingInfoCache.Add(sourceNum, si)
+			return si, nil
+		}
+	}
+
+	// Read from the state
+	si, err := s.getFromStateByNumberFromState(sourceNum, statedb)
+	if err != nil {
+		return nil, err
+	}
+
+	// Only before Kaia, write to database
+	if !isKaia {
+		WriteStakingInfo(s.ChainKv, sourceNum, si)
+	}
+
+	// Cache it
+	s.stakingInfoCache.Add(sourceNum, si)
+	return si, nil
+}
+
 // Read the staking status from the blockchain state.
 func (s *StakingModule) getFromStateByNumber(num uint64) (*staking.StakingInfo, error) {
 	header := s.Chain.GetHeaderByNumber(num)
@@ -96,10 +130,26 @@ func (s *StakingModule) getFromStateByNumber(num uint64) (*staking.StakingInfo, 
 	return s.getFromState(header, statedb)
 }
 
+func (s *StakingModule) getFromStateByNumberFromState(num uint64, statedb *state.StateDB) (*staking.StakingInfo, error) {
+	if statedb == nil {
+		return nil, errors.New("empty statedb")
+	}
+	header := s.Chain.GetHeaderByNumber(num)
+	if header == nil {
+		return nil, fmt.Errorf("failed to get header for block number %d", num)
+	}
+	// If found in side state, no bother getting from the state.
+	if si := s.preloadBuffer.GetInfo(header.Root); si != nil { // Try side state
+		return si, nil
+	}
+	return s.getFromState(header, statedb)
+}
+
 // Efficiently read addresses and balances from the AddressBook in one EVM call.
 // Works by temporarily injecting the MultiCallContract to a copied state.
 func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateDB) (*staking.StakingInfo, error) {
 	isForPrague := s.ChainConfig.IsPragueForkEnabled(new(big.Int).Add(header.Number, common.Big1))
+	isForPermissionless := s.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).Add(header.Number, common.Big1))
 	num := header.Number.Uint64()
 
 	// Bail out if AddressBook is not installed.
@@ -117,7 +167,7 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 
 	// Get staking info from AddressBook
 	callOpts := &bind.CallOpts{BlockNumber: header.Number}
-	abRes, err := contract.MultiCallStakingInfo(callOpts)
+	abRes, err := contract.MultiCallStakingInfo(callOpts, isForPermissionless, true)
 	if err != nil {
 		return nil, staking.ErrAddressBookCall(err)
 	}

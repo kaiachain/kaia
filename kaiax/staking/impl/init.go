@@ -74,7 +74,6 @@ func (s *StakingModule) Init(opts *InitOpts) error {
 	s.stakingInterval = s.ChainConfig.Governance.Reward.StakingUpdateInterval
 	s.useGiniCoeff = s.ChainConfig.Governance.Reward.UseGiniCoeff
 	s.minimumStake = s.ChainConfig.Governance.Reward.MinimumStake
-
 	return nil
 }
 

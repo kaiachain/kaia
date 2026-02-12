@@ -27,6 +27,8 @@ import (
 
 type stakingInfoTC struct {
 	stakingInfo          *StakingInfo
+	rules                *params.Rules
+	council              []common.Address
 	expectedConsolidated []consolidatedNode
 	expectedGini         float64
 }
@@ -78,6 +80,7 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 	return map[string]stakingInfoTC{
 		"empty": {
 			stakingInfo:          &StakingInfo{},
+			rules:                nil,
 			expectedConsolidated: []consolidatedNode{},
 			expectedGini:         EmptyGini,
 		},
@@ -91,8 +94,10 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 				KIFAddr:          kif,
 				StakingAmounts:   []uint64{a1},
 			},
+			rules:   nil,
+			council: []common.Address{n1},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1}, []common.Address{s1}, r1, a1, nil},
+				{n1, r1, a1, nil},
 			},
 			expectedGini: 0.0,
 		},
@@ -106,11 +111,13 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 				KIFAddr:          kif,
 				StakingAmounts:   []uint64{a1, a2, a3, a4},
 			},
+			rules:   nil,
+			council: []common.Address{n1, n2, n3, n4},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1}, []common.Address{s1}, r1, a1, nil},
-				{[]common.Address{n2}, []common.Address{s2}, r2, a2, nil},
-				{[]common.Address{n3}, []common.Address{s3}, r3, a3, nil},
-				{[]common.Address{n4}, []common.Address{s4}, r4, a4, nil},
+				{n1, r1, a1, nil},
+				{n2, r2, a2, nil},
+				{n3, r3, a3, nil},
+				{n4, r4, a4, nil},
 			},
 			expectedGini: 0.38,
 		},
@@ -124,9 +131,11 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 				KIFAddr:          kif,
 				StakingAmounts:   []uint64{a1, a2, a3, a4},
 			},
+			rules:   nil,
+			council: []common.Address{n1, n2},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, nil},
-				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, nil},
+				{n1, r1, a1 + a3, nil},
+				{n2, r2, a2 + a4, nil},
 			},
 			expectedGini: 0.17,
 		},
@@ -140,11 +149,13 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 				KIFAddr:          kif,
 				StakingAmounts:   []uint64{a2, aM, aL, a0}, // aL and a0 should be ignored in Gini calculation
 			},
+			rules:   nil,
+			council: []common.Address{n1, n2, n3, n4},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1}, []common.Address{s1}, r1, a2, nil},
-				{[]common.Address{n2}, []common.Address{s2}, r2, aM, nil},
-				{[]common.Address{n3}, []common.Address{s3}, r3, aL, nil},
-				{[]common.Address{n4}, []common.Address{s4}, r4, a0, nil},
+				{n1, r1, a2, nil},
+				{n2, r2, aM, nil},
+				{n3, r3, aL, nil},
+				{n4, r4, a0, nil},
 			},
 			expectedGini: 0.41,
 		},
@@ -170,11 +181,13 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 					},
 				},
 			},
+			rules:   nil,
+			council: []common.Address{n1, n2, n3, n4},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1}, []common.Address{s1}, r1, a2, nil},
-				{[]common.Address{n2}, []common.Address{s2}, r2, aM, nil},
-				{[]common.Address{n3}, []common.Address{s3}, r3, aL, &CLStakingInfo{n3, clPool1, clStakingAmount2}},
-				{[]common.Address{n4}, []common.Address{s4}, r4, a0, &CLStakingInfo{n4, clPool2, clStakingAmount2}},
+				{n1, r1, a2, nil},
+				{n2, r2, aM, nil},
+				{n3, r3, aL, &CLStakingInfo{n3, clPool1, clStakingAmount2}},
+				{n4, r4, a0, &CLStakingInfo{n4, clPool2, clStakingAmount2}},
 			},
 			expectedGini: 0.41,
 		},
@@ -200,9 +213,11 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 					},
 				},
 			},
+			rules:   nil,
+			council: []common.Address{n1, n2},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
-				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, &CLStakingInfo{n4, clPool2, clStakingAmount2}},
+				{n1, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
+				{n2, r2, a2 + a4, &CLStakingInfo{n4, clPool2, clStakingAmount2}},
 			},
 			expectedGini: 0.17,
 		},
@@ -234,9 +249,11 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 					},
 				},
 			},
+			rules:   nil,
+			council: []common.Address{n1, n2},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
-				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, &CLStakingInfo{n2, clPool2, clStakingAmount2}},
+				{n1, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
+				{n2, r2, a2 + a4, &CLStakingInfo{n2, clPool2, clStakingAmount2}},
 			},
 			expectedGini: 0.17,
 		},
@@ -263,9 +280,72 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 					},
 				},
 			},
+			rules:   nil,
+			council: []common.Address{n1, n2},
 			expectedConsolidated: []consolidatedNode{
-				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n3, clPool2, clStakingAmount2}},
-				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, nil},
+				{n1, r1, a1 + a3, &CLStakingInfo{n3, clPool2, clStakingAmount2}},
+				{n2, r2, a2 + a4, nil},
+			},
+			expectedGini: 0.15,
+		},
+		"[permissionless] only unique N,S,R exists": {
+			stakingInfo: &StakingInfo{
+				SourceBlockNum:   3 * 86400,
+				NodeIds:          []common.Address{n1, n2},
+				StakingContracts: []common.Address{s1, s2},
+				RewardAddrs:      []common.Address{r1, r2},
+				KEFAddr:          kef,
+				KIFAddr:          kif,
+				StakingAmounts:   []uint64{a1, a2},
+			},
+			rules:   &params.Rules{IsPermissionless: true},
+			council: []common.Address{n1, n2},
+			expectedConsolidated: []consolidatedNode{
+				{n1, r1, a1, nil},
+				{n2, r2, a2, nil},
+			},
+			expectedGini: 0.17,
+		},
+		"[permissionless] (infeasible path) no consolidated awareness => ignore the duplicated values (FCFS)": {
+			stakingInfo: &StakingInfo{
+				SourceBlockNum:   3 * 86400,
+				NodeIds:          []common.Address{n1, n2, n3, n4},
+				StakingContracts: []common.Address{s1, s2, s3, s4},
+				RewardAddrs:      []common.Address{r1, r2, r1, r2}, // r1 and r2 used twice each
+				KEFAddr:          kef,
+				KIFAddr:          kif,
+				StakingAmounts:   []uint64{a1, a2, a3, a4},
+			},
+			rules:   &params.Rules{IsPermissionless: true},
+			council: []common.Address{n1, n2},
+			expectedConsolidated: []consolidatedNode{
+				{n1, r1, a1, nil},
+				{n2, r2, a2, nil},
+			},
+			expectedGini: 0.17,
+		},
+		"[permissionless] 2 nodes with 1CLs": {
+			stakingInfo: &StakingInfo{
+				SourceBlockNum:   3 * 86400,
+				NodeIds:          []common.Address{n1, n2},
+				StakingContracts: []common.Address{s1, s2},
+				RewardAddrs:      []common.Address{r1, r2},
+				KEFAddr:          kef,
+				KIFAddr:          kif,
+				StakingAmounts:   []uint64{a1, a2},
+				CLStakingInfos: CLStakingInfos{
+					{
+						CLNodeId:        n1,
+						CLPoolAddr:      clPool1,
+						CLStakingAmount: clStakingAmount1,
+					},
+				},
+			},
+			rules:   &params.Rules{IsPermissionless: true},
+			council: []common.Address{n1, n2},
+			expectedConsolidated: []consolidatedNode{
+				{n1, r1, a1, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
+				{n2, r2, a2, nil},
 			},
 			expectedGini: 0.15,
 		},
@@ -274,8 +354,8 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 
 func TestComputedFields(t *testing.T) {
 	for _, tc := range stakingInfoTCs {
-		assert.Equal(t, tc.stakingInfo.ConsolidatedNodes(), tc.expectedConsolidated)
-		assert.Equal(t, tc.stakingInfo.Gini(2000000), tc.expectedGini)
+		assert.Equal(t, tc.stakingInfo.ConsolidatedNodes(tc.rules, tc.council), tc.expectedConsolidated)
+		assert.Equal(t, tc.stakingInfo.Gini(tc.rules, 2000000), tc.expectedGini)
 	}
 }
 
@@ -315,7 +395,7 @@ func TestLegacy(t *testing.T) {
 
 func TestResponse(t *testing.T) {
 	for _, tc := range stakingInfoTCs {
-		sr := tc.stakingInfo.ToResponse(true, 2000000)
+		sr := tc.stakingInfo.ToResponse(tc.rules, true, 2000000)
 
 		assert.Equal(t, tc.stakingInfo.KEFAddr, sr.KIRAddr)
 		assert.Equal(t, tc.stakingInfo.KEFAddr, sr.KCFAddr)

@@ -58,13 +58,17 @@ func (api *stakingAPI) GetStakingInfo(num rpc.BlockNumber) (*staking.StakingInfo
 		return nil, err
 	}
 
-	var useGini bool
+	var (
+		useGini bool
+		numBig  = new(big.Int).SetUint64(num.Uint64())
+	)
 	// Gini option deprecated since Kore, as All committee members have an equal chance
-	if api.s.ChainConfig.IsKoreForkEnabled(new(big.Int).SetUint64(num.Uint64())) {
+	if api.s.ChainConfig.IsKoreForkEnabled(numBig) {
 		useGini = false
 	} else {
 		useGini = api.s.useGiniCoeff
 	}
 	// Calculate Gini coefficient regardless of useGini flag
-	return si.ToResponse(useGini, api.s.minimumStake.Uint64()), nil
+	rules := api.s.ChainConfig.Rules(numBig)
+	return si.ToResponse(&rules, useGini, api.s.minimumStake.Uint64()), nil
 }
