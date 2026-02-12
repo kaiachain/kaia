@@ -118,6 +118,9 @@ func (vs *ValidatorList) Copy() *ValidatorList {
 }
 
 func (vs *ValidatorList) List() []common.Address {
+	if vs == nil {
+		return []common.Address{}
+	}
 	if vs.isLegacy {
 		return vs.permissionedVals.List()
 	}
@@ -135,6 +138,9 @@ func (vs *ValidatorList) List() []common.Address {
 }
 
 func (vs *ValidatorList) Len() int {
+	if vs == nil {
+		return 0
+	}
 	if vs.isLegacy {
 		return vs.permissionedVals.Len()
 	}
@@ -145,6 +151,9 @@ func (vs *ValidatorList) Len() int {
 }
 
 func (vs *ValidatorList) Contains(targetAddr common.Address) bool {
+	if vs == nil {
+		return false
+	}
 	if vs.isLegacy {
 		return vs.permissionedVals.Contains(targetAddr)
 	}
@@ -156,6 +165,9 @@ func (vs *ValidatorList) Contains(targetAddr common.Address) bool {
 }
 
 func (vs *ValidatorList) Add(addr common.Address) {
+	if vs == nil {
+		return
+	}
 	if vs.isLegacy {
 		vs.permissionedVals.Add(addr)
 		return
@@ -164,6 +176,9 @@ func (vs *ValidatorList) Add(addr common.Address) {
 }
 
 func (vs *ValidatorList) Remove(targetAddr common.Address) bool {
+	if vs == nil {
+		return false
+	}
 	if vs.isLegacy {
 		return vs.permissionedVals.Remove(targetAddr)
 	}
@@ -176,6 +191,9 @@ func (vs *ValidatorList) Remove(targetAddr common.Address) bool {
 }
 
 func (vs *ValidatorList) Subtract(other *valset.AddressSet) *valset.AddressSet {
+	if vs == nil {
+		return valset.NewAddressSet([]common.Address{})
+	}
 	if vs.isLegacy {
 		return vs.permissionedVals.Subtract(other)
 	}
@@ -194,6 +212,9 @@ func (vs *ValidatorList) Subtract(other *valset.AddressSet) *valset.AddressSet {
 
 // GetDemoted returns all state of validators where the state is not `ValActive`
 func (vs *ValidatorList) GetDemoted() *valset.AddressSet {
+	if vs == nil {
+		return valset.NewAddressSet([]common.Address{})
+	}
 	demoted := valset.NewAddressSet(nil)
 	if vs.isLegacy {
 		return demoted
