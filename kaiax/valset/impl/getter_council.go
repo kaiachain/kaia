@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"math/big"
 	"sort"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -26,7 +27,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
-func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
+func (v *ValsetModule) getCouncil(num uint64) (*ValidatorList, error) {
 	if num == 0 {
 		return v.getCouncilGenesis()
 	}
@@ -44,7 +45,7 @@ func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
 }
 
 // getCouncilGenesis parses the genesis council from the header's extraData.
-func (v *ValsetModule) getCouncilGenesis() (*valset.AddressSet, error) {
+func (v *ValsetModule) getCouncilGenesis() (*ValidatorList, error) {
 	header := v.Chain.GetHeaderByNumber(0)
 	if header == nil {
 		return nil, errNoHeader
@@ -53,28 +54,59 @@ func (v *ValsetModule) getCouncilGenesis() (*valset.AddressSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	return valset.NewAddressSet(istanbulExtra.Validators), nil
+	// return ConvertLegacyToValidatorList(istanbulExtra.Validators), nil
+	validators := ConvertLegacyToValidatorList(istanbulExtra.Validators)
+	if v.Chain.Config().Rules(header.Number).IsPermissionless {
+		// Genesis council is not legacy in permissionless compatible block number zero
+		validators.SetLegacyFalse()
+	}
+	return validators, nil
 }
 
-func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, bool, error) {
-	pMinVoteNum := v.readLowestScannedVoteNumCached()
-	if pMinVoteNum == nil {
-		return nil, false, errNoLowestScannedNum
-	}
-	nums := v.readValidatorVoteBlockNumsCached()
-	if nums == nil {
-		return nil, false, errNoVoteBlockNums
+func (v *ValsetModule) getCouncilDB(num uint64) (*ValidatorList, bool, error) {
+	var (
+		nums             []uint64
+		voteNum          uint64
+		stateChangeNum   uint64
+		isPermissionless = v.Chain.Config().Rules(new(big.Int).SetUint64(num)).IsPermissionless
+	)
+	if isPermissionless {
+		nums = v.readValidatorStateChangeBlockNumsCached()
+		if nums == nil {
+			return nil, false, errNoStateChangeBlockNums
+		}
+		stateChangeNum = lastNumLessThan(nums, num)
+	} else {
+		pMinVoteNum := v.readLowestScannedVoteNumCached()
+		if pMinVoteNum == nil {
+			return nil, false, errNoLowestScannedNum
+		}
+		nums = v.readValidatorVoteBlockNumsCached()
+		if nums == nil {
+			return nil, false, errNoVoteBlockNums
+		}
+		voteNum = lastNumLessThan(nums, num)
+		if voteNum < *pMinVoteNum {
+			// found voteNum is not one of the scanned vote nums, i.e. the migration is not yet complete.
+			// Return false to indicate that the data is not yet available.
+			return nil, false, nil
+		}
 	}
 
-	voteNum := lastNumLessThan(nums, num)
-	if voteNum < *pMinVoteNum {
-		// found voteNum is not one of the scanned vote nums, i.e. the migration is not yet complete.
-		// Return false to indicate that the data is not yet available.
-		return nil, false, nil
-	} else {
-		council := valset.NewAddressSet(ReadCouncil(v.ChainKv, voteNum))
-		return council, true, nil
+	var (
+		council *ValidatorList
+		readNum = voteNum
+	)
+	if isPermissionless {
+		curNum := v.Chain.CurrentBlock().Number().Uint64()
+		if stateChangeNum > curNum {
+			stateChangeNum = curNum
+		}
+		readNum = stateChangeNum
 	}
+	council = ReadCouncil(v.ChainKv, readNum)
+
+	return council, true, nil
 }
 
 func (v *ValsetModule) readLowestScannedVoteNumCached() *uint64 {
@@ -94,6 +126,19 @@ func (v *ValsetModule) readValidatorVoteBlockNumsCached() []uint64 {
 
 	nums := make([]uint64, len(v.validatorVoteBlockNumsCache))
 	copy(nums, v.validatorVoteBlockNumsCache)
+	return nums
+}
+
+func (v *ValsetModule) readValidatorStateChangeBlockNumsCached() []uint64 {
+	if v.validatorStateChangeBlockNumsCache == nil {
+		v.validatorStateChangeBlockNumsCache = ReadValidatorStateChangeBlockNums(v.ChainKv)
+		if v.validatorStateChangeBlockNumsCache == nil {
+			return nil
+		}
+	}
+
+	nums := make([]uint64, len(v.validatorStateChangeBlockNumsCache))
+	copy(nums, v.validatorStateChangeBlockNumsCache)
 	return nums
 }
 
@@ -125,7 +170,7 @@ func lastNumLessThan(nums []uint64, num uint64) uint64 {
 // [snapshotNum+1, targetNum] are written to the database. Note that this time
 // the targetNum is included in the range for completeness. This property is
 // useful for snapshot interval-wise migration.
-func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bool) (*valset.AddressSet, uint64, error) {
+func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bool) (*ValidatorList, uint64, error) {
 	if targetNum == 0 {
 		council, err := v.getCouncilGenesis()
 		return council, 0, err
@@ -135,12 +180,12 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 	// applying the votes up to the snapshotNum.
 	snapshotNum := roundDown(targetNum-1, istanbulCheckpointInterval)
 
-	var council *valset.AddressSet
+	var council *ValidatorList
 	var err error
 	// Try to get from cache first
 	cached, ok := v.councilCache.Get(targetNum - 1)
 	if ok {
-		council = cached.(*valset.AddressSet)
+		council = cached.(*ValidatorList)
 		if err := v.applyBlock(council, targetNum-1, write); err != nil {
 			return nil, 0, err
 		}
@@ -186,7 +231,7 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 //
 // Although 4096 would be closest to 5005, it is no longer available post-migration.
 // Therefore, 3072 is used as the fallback to avoid referencing a missing snapshot.
-func (v *ValsetModule) getValidIstanbulSnapshotBefore(snapshotNum uint64) (*valset.AddressSet, error) {
+func (v *ValsetModule) getValidIstanbulSnapshotBefore(snapshotNum uint64) (*ValidatorList, error) {
 	if snapshotNum == 0 {
 		return v.getCouncilGenesis()
 	}
@@ -213,18 +258,19 @@ func (v *ValsetModule) getValidIstanbulSnapshotBefore(snapshotNum uint64) (*vals
 	if council.Len() == 0 {
 		return nil, ErrNoIstanbulSnapshot(snapshotNum)
 	}
-	return council, nil
+	return ConvertLegacySetToValidatorList(council), nil
 }
 
-func (v *ValsetModule) applyBlock(council *valset.AddressSet, num uint64, write bool) error {
+func (v *ValsetModule) applyBlock(council *ValidatorList, num uint64, write bool) error {
 	header := v.Chain.GetHeaderByNumber(num)
 	if header == nil {
 		return errNoHeader
 	}
 	governingNode := v.GovModule.GetParamSet(num).GoverningNode
+	// TODO-Permissionless: Revisit me and refine
 	if applyVote(header, council, governingNode) && write {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
-		writeCouncil(v.ChainKv, num, council.List())
+		writeCouncil(v.ChainKv, num, council)
 		v.validatorVoteBlockNumsCache = nil
 	}
 	return nil
@@ -233,7 +279,7 @@ func (v *ValsetModule) applyBlock(council *valset.AddressSet, num uint64, write 
 // applyVote modifies the given council *in-place* by the validator vote in the given header.
 // governingNode, if specified, is not affected by the vote.
 // Returns true if the council is modified, false otherwise.
-func applyVote(header *types.Header, council *valset.AddressSet, governingNode common.Address) bool {
+func applyVote(header *types.Header, council *ValidatorList, governingNode common.Address) bool {
 	voteKey, addresses, ok := parseValidatorVote(header)
 	if !ok {
 		return false

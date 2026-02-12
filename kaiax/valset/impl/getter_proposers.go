@@ -8,6 +8,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/params"
 )
 
 func (v *ValsetModule) getProposerList(c *blockContext) ([]common.Address, uint64, error) {
@@ -48,7 +49,7 @@ func (v *ValsetModule) calcBaseProposers(c *blockContext, updateNum uint64, useG
 		if err != nil {
 			return nil, err
 		}
-		list = generateProposerListWeighted(c.qualified, si, useGini, updateHeader.Hash())
+		list = generateProposerListWeighted(&c.rules, c.qualified, si, useGini, updateHeader.Hash())
 	}
 	logger.Debug("GetProposerList", "number", c.num, "list", valset.NewAddressSet(list).String())
 
@@ -202,10 +203,10 @@ func computeGini(amounts map[common.Address]float64) float64 {
 
 // generateProposerList generates a proposer list at a certain block (i.e. proposer update interval),
 // whose qualified validators are `qualified`, staking amounts are in `si`, parameters are `pset` and its block hash is `blockHash`.
-func generateProposerListWeighted(qualified *valset.AddressSet, si *staking.StakingInfo, useGini bool, blockHash common.Hash) []common.Address {
+func generateProposerListWeighted(rules *params.Rules, qualified *valset.AddressSet, si *staking.StakingInfo, useGini bool, blockHash common.Hash) []common.Address {
 	var (
 		addrs          = qualified.List()
-		stakingAmounts = collectStakingAmounts(addrs, si)
+		stakingAmounts = collectStakingAmounts(rules, addrs, si)
 		gini           = computeGini(stakingAmounts) // si.Gini is computed over every CN. But we want gini among validators, so we calculate here.
 		exponent       = 1.0 / (1 + gini)
 		totalStakes    = float64(0)

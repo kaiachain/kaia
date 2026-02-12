@@ -33,10 +33,11 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 	if err != nil {
 		return err
 	}
+	// TODO-Permissionless: Revisit me and refine
 	governingNode := v.GovModule.GetParamSet(num).GoverningNode
 	if applyVote(header, council, governingNode) {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
-		writeCouncil(v.ChainKv, num, council.List())
+		writeCouncil(v.ChainKv, num, council)
 		v.validatorVoteBlockNumsCache = nil
 	}
 
@@ -45,7 +46,9 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 
 func (v *ValsetModule) RewindTo(block *types.Block) {
 	trimValidatorVoteBlockNums(v.ChainKv, block.Header().Number.Uint64())
+	trimValidatorStateChangeBlockNums(v.ChainKv, block.Header().Number.Uint64())
 	v.validatorVoteBlockNumsCache = nil
+	v.validatorStateChangeBlockNumsCache = nil
 }
 
 func (v *ValsetModule) RewindDelete(hash common.Hash, num uint64) {
