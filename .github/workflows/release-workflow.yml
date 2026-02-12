@@ -274,6 +274,8 @@ jobs:
       id-token: write
     container:
       image: kaiachain/circleci-rpmbuild:1.23.7-gcc11
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
       - name: Get AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

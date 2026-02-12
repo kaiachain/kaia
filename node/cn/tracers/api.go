@@ -379,10 +379,7 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 	}
 	// Execute all the transaction contained within the chain concurrently for each block
 	blocks := int(end.NumberU64() - start.NumberU64())
-	threads := runtime.NumCPU()
-	if threads > blocks {
-		threads = blocks
-	}
+	threads := min(runtime.NumCPU(), blocks)
 	var (
 		pend     = new(sync.WaitGroup)
 		tasks    = make(chan *blockTraceTask, threads)
@@ -700,10 +697,7 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 		blockCtx = blockchain.NewEVMBlockContext(header, newChainContext(ctx, api.backend), nil)
 	)
 
-	threads := runtime.NumCPU()
-	if threads > len(txs) {
-		threads = len(txs)
-	}
+	threads := min(runtime.NumCPU(), len(txs))
 	for th := 0; th < threads; th++ {
 		pend.Go(func() {
 

@@ -171,6 +171,9 @@ func DoEstimateGas(ctx context.Context, gasLimit, rpcGasCap uint64, txValue, gas
 		balance = big.NewInt(0)
 	}
 
+	if gasLimit > params.UpperGasLimit {
+		return 0, fmt.Errorf("gas limit %v exceeds the upper limit %v", gasLimit, params.UpperGasLimit)
+	}
 	if gasLimit >= params.TxGas {
 		hi = gasLimit
 	}

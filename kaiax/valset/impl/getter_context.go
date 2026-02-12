@@ -193,18 +193,12 @@ func (v *ValsetModule) getProposer(c *blockContext, round uint64) (common.Addres
 }
 
 func selectRoundRobinProposer(qualified *valset.AddressSet, prevProposer common.Address, round uint64) common.Address {
-	prevIdx := qualified.IndexOf(prevProposer)
-	if prevIdx < 0 {
-		prevIdx = 0
-	}
+	prevIdx := max(qualified.IndexOf(prevProposer), 0)
 	return qualified.At((prevIdx + int(round) + 1) % qualified.Len())
 }
 
 func selectStickyProposer(qualified *valset.AddressSet, prevProposer common.Address, round uint64) common.Address {
-	prevIdx := qualified.IndexOf(prevProposer)
-	if prevIdx < 0 {
-		prevIdx = 0
-	}
+	prevIdx := max(qualified.IndexOf(prevProposer), 0)
 	return qualified.At((prevIdx + int(round)) % qualified.Len())
 }
 

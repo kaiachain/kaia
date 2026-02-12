@@ -829,10 +829,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	p.logger.Debug("Looking for common ancestor", "local", ceil, "remote", height)
 
 	// Request the topmost blocks to short circuit binary ancestor lookup
-	head := ceil
-	if head > height {
-		head = height
-	}
+	head := min(ceil, height)
 	from := int64(head) - int64(MaxHeaderFetch)
 	if from < 0 {
 		if head < 16 {
@@ -843,10 +840,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 	}
 	// Span out with 15 block gaps into the future to catch bad head reports
 	limit := 2 * MaxHeaderFetch / 16
-	count := 1 + int((int64(ceil)-from)/16)
-	if count > limit {
-		count = limit
-	}
+	count := min(1+int((int64(ceil)-from)/16), limit)
 	go p.peer.RequestHeadersByNumber(uint64(from), count, 15, false)
 
 	// Wait for the remote response to the head fetch
@@ -1592,10 +1586,7 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 				default:
 				}
 				// Select the next chunk of headers to import
-				limit := maxHeadersProcess
-				if limit > len(headers) {
-					limit = len(headers)
-				}
+				limit := min(maxHeadersProcess, len(headers))
 				chunk := headers[:limit]
 
 				// In case of header only syncing, validate the chunk immediately
@@ -1977,7 +1968,6 @@ func (d *Downloader) DeliverSnapPacket(peer *snap.Peer, packet snap.Packet) erro
 	}
 }
 
-
 // deliver injects a new batch of data received from a remote node.
 func (d *Downloader) deliver(id string, destCh chan dataPack, packet dataPack, inMeter, dropMeter metrics.Meter) (err error) {
 	// Update the delivery metrics for both good and failed deliveries
@@ -2070,11 +2060,7 @@ func (d *Downloader) requestTTL() time.Duration {
 		rtt  = time.Duration(atomic.LoadUint64(&d.rttEstimate))
 		conf = float64(atomic.LoadUint64(&d.rttConfidence)) / 1000000.0
 	)
-	ttl := time.Duration(ttlScaling) * time.Duration(float64(rtt)/conf)
-	if ttl > ttlLimit {
-		ttl = ttlLimit
-	}
-	return ttl
+	return min(time.Duration(ttlScaling)*time.Duration(float64(rtt)/conf), ttlLimit)
 }
 
 func calcStakingBlockNumber(blockNum uint64, stakingUpdateInterval uint64) uint64 {

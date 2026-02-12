@@ -85,13 +85,13 @@ const (
 	ExtraNonSnapPeers = 5
 )
 
-// errIncompatibleConfig is returned if the requested protocols and configs are
-// not compatible (low protocol version restrictions and high requirements).
-var errIncompatibleConfig = errors.New("incompatible configuration")
-
 var (
+	// errIncompatibleConfig is returned if the requested protocols and configs are
+	// not compatible (low protocol version restrictions and high requirements).
+	errIncompatibleConfig      = errors.New("incompatible configuration")
 	errUnknownProcessingError  = errors.New("unknown error during the msg processing")
 	errUnsupportedEnginePolicy = errors.New("unsupported engine or policy")
+	errKZGVerificationError    = errors.New("KZG verification error")
 )
 
 func errResp(code errCode, format string, v ...interface{}) error {
@@ -1462,6 +1462,21 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		if tx == nil {
 			err = errResp(ErrDecode, "transaction %d is nil", i)
 			continue
+		}
+		// Validate blob transactions to detect KZG verification errors early
+		// KZG verification is computationally expensive, so this acts as a
+		// defensive measure against potential DoS attacks.
+		if tx.Type() == types.TxTypeEthereumBlob {
+			sidecar := tx.BlobTxSidecar()
+			if sidecar != nil {
+				// If any of the transaction contains invalid KZG sidecar, terminate transaction processing immediately.
+				// KZG verification is computationally expensive, so this acts as a
+				// defensive measure against potential DoS attacks.
+				if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
+					logger.Warn("Disconnect peer for protocol violation", "peer", p.GetID(), "error", err)
+					return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errKZGVerificationError)
+				}
+			}
 		}
 		p.AddToKnownTxs(tx.Hash())
 		validTxs = append(validTxs, tx)

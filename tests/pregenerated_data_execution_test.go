@@ -225,10 +225,7 @@ func dataExecutionTest(b *testing.B, tc *preGeneratedTC) {
 // there is no transaction left.
 func executeTxs(bcData *BCData, txPool *blockchain.TxPool, txs types.Transactions) error {
 	for i := 0; i < len(txs); i += txPoolSize {
-		end := i + txPoolSize
-		if end > len(txs) {
-			end = len(txs)
-		}
+		end := min(i+txPoolSize, len(txs))
 		txPool.AddRemotes(txs[i:end])
 		for {
 			if err := bcData.GenABlockWithTxPoolWithoutAccountMap(txPool); err != nil {

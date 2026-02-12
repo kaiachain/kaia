@@ -19,6 +19,7 @@
 package cn
 
 import (
+	"crypto/sha256"
 	"errors"
 	"math/big"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	auction_mock "github.com/kaiachain/kaia/kaiax/auction/mock"
@@ -41,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var expectedErr = errors.New("some error")
@@ -285,6 +288,61 @@ func TestHandleTxMsg(t *testing.T) {
 		mockPeer.EXPECT().AddToKnownTxs(txs[0].Hash()).Times(1)
 		assert.NoError(t, pm.handleMsg(mockPeer, addrs[0], msg))
 	}
+}
+
+func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pm := &ProtocolManager{}
+	atomic.StoreUint32(&pm.acceptTxs, 1)
+	mockTxPool := mocks.NewMockTxPool(mockCtrl)
+	pm.txpool = mockTxPool
+
+	mockPeer := NewMockPeer(mockCtrl)
+	mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
+	mockPeer.EXPECT().GetID().Return("test-peer").AnyTimes()
+
+	// Generate a blob transaction with invalid KZG proof
+	var (
+		addr          = crypto.PubkeyToAddress(keys[0].PublicKey)
+		signer        = types.MakeSigner(params.TestChainConfig, common.Big0)
+		blob          = kzg4844.Blob{}
+		commitment, _ = kzg4844.BlobToCommitment(&blob)
+		proofs, _     = kzg4844.ComputeCellProofs(&blob)
+		blobhash      = common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commitment))
+	)
+	// corrupt a byte in the commitment
+	commitment[0] = commitment[0] ^ 0xFF
+	blobTx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, map[types.TxValueKeyType]interface{}{
+		types.TxValueKeyNonce:      uint64(0),
+		types.TxValueKeyTo:         addr,
+		types.TxValueKeyAmount:     big.NewInt(0),
+		types.TxValueKeyGasLimit:   uint64(10000000),
+		types.TxValueKeyGasFeeCap:  big.NewInt(25),
+		types.TxValueKeyGasTipCap:  big.NewInt(25),
+		types.TxValueKeyData:       []byte{},
+		types.TxValueKeyAccessList: types.AccessList{},
+		types.TxValueKeyBlobFeeCap: big.NewInt(25),
+		types.TxValueKeyBlobHashes: []common.Hash{blobhash},
+		types.TxValueKeySidecar: &types.BlobTxSidecar{
+			Version:     types.BlobSidecarVersion1,
+			Blobs:       []kzg4844.Blob{blob},
+			Commitments: []kzg4844.Commitment{commitment},
+			Proofs:      proofs,
+		},
+		types.TxValueKeyChainID: params.TestChainConfig.ChainID,
+	})
+	require.NoError(t, err)
+	require.NoError(t, blobTx.Sign(signer, keys[0]))
+
+	txs := types.Transactions{blobTx}
+	msg := generateMsg(t, TxMsg, txs)
+
+	// Should return error and disconnect peer
+	err = handleTxMsg(pm, mockPeer, msg)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), errKZGVerificationError.Error())
 }
 
 func prepareTestHandleBlockHeaderFetchRequestMsg(t *testing.T) (*gomock.Controller, *MockPeer, *mocks.MockBlockChain, *ProtocolManager) {
