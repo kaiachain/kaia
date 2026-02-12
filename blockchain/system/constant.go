@@ -46,6 +46,7 @@ var (
 	Kip160Name            = "KIP160"
 	CLRegistryName        = "CLRegistry"
 	AuctionEntryPointName = "AuctionEntryPoint"
+	ValidatorStateName    = "ValidatorState"
 
 	AllContractNames = []string{
 		AddressBookName,

@@ -1124,20 +1124,23 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 		if header == nil {
 			continue
 		}
-		number := header.Number.Uint64()
-		var result *staking.P2PStakingInfo
+		var (
+			number = header.Number.Uint64()
+			rules  = pm.chainconfig.Rules(header.Number)
+			result *staking.P2PStakingInfo
+		)
 		if pm.chainconfig.IsKaiaForkEnabled(header.Number) {
 			st, err := pm.stakingModule.GetStakingInfo(number)
 			if st == nil || err != nil {
 				continue
 			}
-			result = staking.FromStakingInfoWithGini(st, false, pm.chainconfig.Governance.Reward.MinimumStake.Uint64())
+			result = staking.FromStakingInfoWithGini(&rules, st, false, pm.chainconfig.Governance.Reward.MinimumStake.Uint64())
 		} else {
 			st := pm.stakingModule.GetStakingInfoFromDB(number)
 			if st == nil {
 				continue
 			}
-			result = staking.FromStakingInfoWithGini(st, pm.chainconfig.Governance.Reward.UseGiniCoeff, pm.chainconfig.Governance.Reward.MinimumStake.Uint64())
+			result = staking.FromStakingInfoWithGini(&rules, st, pm.chainconfig.Governance.Reward.UseGiniCoeff, pm.chainconfig.Governance.Reward.MinimumStake.Uint64())
 		}
 
 		// If known, encode and queue for response packet
