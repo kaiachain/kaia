@@ -95,7 +95,6 @@ describe("Multicall", function () {
       nodeIds.push(cnV2.address);
       rewardAddresses.push(cnV2.address);
     }
-
     for (let i = 0; i < 3; i++) {
       const cnV3 = await smock.fake<CnStakingV3MultiSig>(
         CnStakingV3MultiSig__factory.abi
@@ -111,7 +110,6 @@ describe("Multicall", function () {
       nodeIds.push(cnV3.address);
       rewardAddresses.push(cnV3.address);
     }
-
     await addressBook.mockRegisterCnStakingContracts(
       nodeIds,
       cn,
@@ -127,7 +125,7 @@ describe("Multicall", function () {
 
     await addressBook.activateAddressBook();
 
-    const stakingInfo = await multiCall.multiCallStakingInfo();
+    const stakingInfo = await multiCall.multiCallStakingInfo(false, true);
 
     const stakingAmounts = stakingInfo[2];
 
@@ -138,7 +136,7 @@ describe("Multicall", function () {
   it("Mutlcall returns early if AB not activated", async function () {
     const { multiCall } = multiCallFixture;
 
-    const stakingInfo = await multiCall.multiCallStakingInfo();
+    const stakingInfo = await multiCall.multiCallStakingInfo(false, true);
 
     const stakingAmounts = stakingInfo[2];
 
@@ -223,3 +221,84 @@ describe("Multicall", function () {
     ]);
   });
 });
+
+describe("Multicall with ABookV2", function () {
+  let multiCallFixture: UnPromisify<ReturnType<typeof multiCallTestFixture>>;
+
+  const expectedStakingAmounts = [
+    toPeb(3000n),
+    toPeb(5500n),
+    toPeb(8000n),
+    toPeb(4500n),
+    toPeb(9000n),
+    toPeb(13500n),
+  ];
+
+  beforeEach(async function () {
+    multiCallFixture = await loadFixture(multiCallTestFixture);
+
+    // Assume that initialization has been done
+    const { addressBook, deployer } = multiCallFixture;
+
+    const cn = [];
+    const nodeIds = [];
+    const rewardAddresses = [];
+
+    // Prepare following CNStaking contracts
+    // Note that unstaking amount will be ignored
+    // V2: staking(3)   - 3000 KAIA,  6000  KAIA,  9000 KAIA
+    //     unstaking(3) -    0 KAIA,   500  KAIA,  1000 KAIA
+    //     total(3)     - 3000 KAIA,  5500  KAIA,  8000 KAIA
+    // V3: staking(3)   - 5000 KAIA, 10000  KAIA, 15000 KAIA
+    //     unstaking(3) -  500 KAIA,  1000  KAIA,  1500 KAIA
+    //     total(3)     - 4500 KAIA,  9000  KAIA, 13500 KAIA
+
+    const setupFunction = (contract: any, version: number, address: string) => {
+      contract.VERSION.returns(version);
+      contract.nodeId.returns(address);
+      contract.rewardAddress.returns(address);
+    };
+
+    for (let i = 0; i < 3; i++) {
+      const cnV2 = await smock.fake<CnStakingV2>(CnStakingV2__factory.abi);
+      setupFunction(cnV2, 2, cnV2.address);
+      cnV2.staking.returns(toPeb(3000n * (BigInt(i) + 1n)));
+      cnV2.unstaking.returns(toPeb(500n * BigInt(i)));
+      cn.push(cnV2.address);
+      nodeIds.push(cnV2.address);
+      rewardAddresses.push(cnV2.address);
+    }
+    for (let i = 0; i < 3; i++) {
+      const cnV3 = await smock.fake<CnStakingV3MultiSig>(
+        CnStakingV3MultiSig__factory.abi
+      );
+      setupFunction(cnV3, 3, cnV3.address);
+      cnV3.staking.returns(toPeb(5000n * (BigInt(i) + 1n)));
+      cnV3.unstaking.returns(toPeb(500n * (BigInt(i) + 1n)));
+      cn.push(cnV3.address);
+      nodeIds.push(cnV3.address);
+      rewardAddresses.push(cnV3.address);
+    }
+    await addressBook.mockRegisterCnStakingContracts(
+      nodeIds,
+      cn,
+      rewardAddresses
+    );
+    await addressBook.submitUpdatePocContract(deployer.address, 1);
+    await addressBook.submitUpdateKirContract(deployer.address, 1);
+    // set ABook version to two
+    await addressBook.setVersion(2)
+  });
+
+  it("Multicall returns staking info", async function () {
+    const { addressBook, multiCall } = multiCallFixture;
+    await addressBook.activateAddressBook();
+
+    const stakingInfo = await multiCall.multiCallStakingInfo(true, true);
+    const stakingAmounts = stakingInfo[2];
+
+    for (let i = 0; i < 7; i++) {
+      expect(stakingAmounts[i]).to.equal(expectedStakingAmounts[i]);
+    }
+  });
+})
