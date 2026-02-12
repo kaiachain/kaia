@@ -44,7 +44,7 @@ func TestContractCallerForMultiCall(t *testing.T) {
 
 	state, _ := backend.BlockChain().StateAt(header.Root)
 	caller, _ := NewMultiCallContractCaller(state, chain, header)
-	ret, err := caller.MultiCallStakingInfo(&bind.CallOpts{BlockNumber: header.Number})
+	ret, err := caller.MultiCallStakingInfo(&bind.CallOpts{BlockNumber: header.Number}, false, false)
 	assert.Nil(t, err)
 
 	// Does not affect the original state

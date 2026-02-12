@@ -22,7 +22,7 @@ import "../../system_contracts/kip113/IAddressBook.sol";
 contract MultiCallContractMock {
     address private constant ADDRESS_BOOK_ADDRESS = 0x0000000000000000000000000000000000000400;
 
-    function multiCallStakingInfo()
+    function multiCallStakingInfo(bool _kip290Enabled, bool _ignoreAbookVersion)
         external
         view
         returns (uint8[] memory typeList, address[] memory addressList, uint256[] memory stakingAmounts)
