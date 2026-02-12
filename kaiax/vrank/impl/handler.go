@@ -113,6 +113,7 @@ func (v *VRankModule) verifyVRankCandidate(msg *vrank.VRankCandidate) (common.Ad
 		logger.Debug("GetSignatureAddress failed", "err", err, "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
 		return common.Address{}, err
 	}
+	// should be GetCandidates(msg.BlockNumber), but candidates are not finalized during `Sequence` consensus.
 	candidates, err := v.Valset.GetCandidates(v.prepreparedView.Sequence.Uint64())
 	if err != nil || candidates == nil {
 		logger.Debug("GetCandidates failed", "err", err, "blockNum", msg.BlockNumber)
@@ -212,7 +213,7 @@ func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.CfReport, error
 		logger.Error("GetCandidates failed", "blockNum", blockNum)
 		return nil, vrank.ErrGetCandidateFailed
 	}
-	// Report = candidates who did not respond, responded after deadline, or lied (wrong BlockHash).
+	// safeCands = candidates who responded with expectedBlockHash before deadline.
 	safeCands := make(map[common.Address]struct{})
 	for sender, msgWithTime := range viewMap {
 		if !slices.Contains(candidates, sender) {
@@ -222,12 +223,13 @@ func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.CfReport, error
 			continue
 		}
 		elapsed := msgWithTime.ReceivedAt.Sub(prepreparedAt).Milliseconds()
+		// early birds who sent before validator preprepared are safe
 		if elapsed <= candidatePrepareDeadlineMs {
 			safeCands[sender] = struct{}{}
 		}
 	}
 
-	// cfReport = candidates - safeCands (sorted for determinism)
+	// cfReport = candidates - safeCands = candidates who did not respond, responded after deadline, or lied (wrong BlockHash).
 	var cfReport vrank.CfReport
 	for _, addr := range candidates {
 		if _, ok := safeCands[addr]; !ok {

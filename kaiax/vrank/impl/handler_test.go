@@ -371,66 +371,90 @@ func TestGetCfReport(t *testing.T) {
 	var (
 		valset                 = mock_valset.NewMockValsetModule(gomock.NewController(t))
 		block1                 = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+		block2                 = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(2)})
 		view1_0                = &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
+		view2_0                = &istanbul.View{Sequence: big.NewInt(2), Round: common.Big0}
 		validators, candidates []*CN
 		valAddrs               = make([]common.Address, 3)
-		candAddrs              = make([]common.Address, 6)
-		candMsgs               = make([]vrank.VRankCandidate, 6)
+		candAddrs              = make([]common.Address, 8)
+		candMsgsBlock2         = make([]vrank.VRankCandidate, 8)
+		earlybirdCands         = candAddrs[0:2] // sent VRankCandidate for block2 before validator preprepared block2
+		ontimeCands            = candAddrs[2:4]
+		liarCands              = candAddrs[4:6]
+		lateCands              = candAddrs[6:8]
 	)
 
 	for i := 0; i < 3; i++ {
 		validators = append(validators, createCN(t, valset))
 		valAddrs[i] = validators[i].Addr
 	}
-	for i := 0; i < 6; i++ {
+	for i := 0; i < 8; i++ {
 		candidates = append(candidates, createCN(t, valset))
 		candAddrs[i] = candidates[i].Addr
 	}
-	safeCands := candAddrs[:2]
-	liarCands := candAddrs[2:4]
-	lateCands := candAddrs[4:6]
 
-	valset.EXPECT().GetCouncil(uint64(1)).Return(valAddrs, nil).AnyTimes()
-	valset.EXPECT().GetCandidates(uint64(1)).Return(candAddrs, nil).AnyTimes()
-	valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(validators[0].Addr, nil).AnyTimes()
+	valset.EXPECT().GetCouncil(gomock.Any()).Return(valAddrs, nil).AnyTimes()
+	valset.EXPECT().GetCandidates(gomock.Any()).Return(candAddrs, nil).AnyTimes()
+	valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(validators[0].Addr, nil).AnyTimes()
 
-	for i := 0; i < 6; i++ {
-		sig, _ := crypto.Sign(crypto.Keccak256(block1.Hash().Bytes()), candidates[i].Key)
-		candMsgs[i] = vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: sig}
+	for i := 0; i < 8; i++ {
+		sig, _ := crypto.Sign(crypto.Keccak256(block2.Hash().Bytes()), candidates[i].Key)
+		candMsgsBlock2[i] = vrank.VRankCandidate{BlockNumber: block2.NumberU64(), Round: uint8(view2_0.Round.Uint64()), BlockHash: block2.Hash(), Sig: sig}
 	}
 
+	// Initialize prepreparedView at least once to set `v.prepreparedView`.
 	for _, v := range validators {
 		v.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 	}
 
+	// Earlybirds: candidates send VRankCandidate for block2 before validator has preprepared block2.
 	for i := 0; i < 2; i++ {
 		for _, v := range validators {
-			err := v.VRankModule.HandleVRankCandidate(&candMsgs[i])
+			err := v.VRankModule.HandleVRankCandidate(&candMsgsBlock2[i])
 			assert.NoError(t, err)
 		}
 	}
+
+	// Now validator preprepares for block2.
+	for _, v := range validators {
+		v.VRankModule.HandleIstanbulPreprepare(block2, view2_0)
+	}
+
+	// On-time: candidates send VRankCandidate for block2 after validator has preprepared block2 and before deadline.
 	for i := 2; i < 4; i++ {
+		for _, v := range validators {
+			err := v.VRankModule.HandleVRankCandidate(&candMsgsBlock2[i])
+			assert.NoError(t, err)
+		}
+	}
+
+	// Liars: candidates send VRankCandidate for block2 with wrong BlockHash.
+	for i := 4; i < 6; i++ {
 		liarHash := common.Hash{byte(i)}
 		sig, _ := crypto.Sign(crypto.Keccak256(liarHash.Bytes()), candidates[i].Key)
-		liarMsg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: liarHash, Sig: sig}
+		liarMsg := vrank.VRankCandidate{BlockNumber: block2.NumberU64(), Round: uint8(view2_0.Round.Uint64()), BlockHash: liarHash, Sig: sig}
 		for _, v := range validators {
 			err := v.VRankModule.HandleVRankCandidate(&liarMsg)
 			assert.NoError(t, err)
 		}
 	}
 	time.Sleep(candidatePrepareDeadlineMs * time.Millisecond)
-	for i := 4; i < 6; i++ {
+	// Late: candidates send VRankCandidate for block2 after deadline.
+	for i := 6; i < 8; i++ {
 		for _, v := range validators {
-			err := v.VRankModule.HandleVRankCandidate(&candMsgs[i])
+			err := v.VRankModule.HandleVRankCandidate(&candMsgsBlock2[i])
 			assert.NoError(t, err)
 		}
 	}
 
 	for _, v := range validators {
-		report, err := v.VRankModule.GetCfReport(1, 0)
+		report, err := v.VRankModule.GetCfReport(2, 0)
 		assert.NoError(t, err)
 		assert.Len(t, report, 4, "cfReport: 2 liars + 2 late")
-		for _, addr := range safeCands {
+		for _, addr := range ontimeCands {
+			assert.False(t, slices.Contains(report, addr))
+		}
+		for _, addr := range earlybirdCands {
 			assert.False(t, slices.Contains(report, addr))
 		}
 		for _, addr := range liarCands {
@@ -439,7 +463,7 @@ func TestGetCfReport(t *testing.T) {
 		for _, addr := range lateCands {
 			assert.True(t, slices.Contains(report, addr))
 		}
-		report2, err := v.VRankModule.GetCfReport(1, 0)
+		report2, err := v.VRankModule.GetCfReport(2, 0)
 		assert.NoError(t, err)
 		assert.Equal(t, report, report2, "GetCfReport must be deterministic")
 	}
