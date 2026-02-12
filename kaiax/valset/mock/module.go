@@ -50,6 +50,20 @@ func (mr *MockValsetModuleMockRecorder) APIs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockValsetModule)(nil).APIs))
 }
 
+// EpochTransition mocks base method.
+func (m *MockValsetModule) EpochTransition(arg0 uint64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EpochTransition", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EpochTransition indicates an expected call of EpochTransition.
+func (mr *MockValsetModuleMockRecorder) EpochTransition(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EpochTransition", reflect.TypeOf((*MockValsetModule)(nil).EpochTransition), arg0)
+}
+
 // GetCommittee mocks base method.
 func (m *MockValsetModule) GetCommittee(arg0, arg1 uint64) ([]common.Address, error) {
 	m.ctrl.T.Helper()

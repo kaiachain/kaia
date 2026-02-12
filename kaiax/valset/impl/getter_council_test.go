@@ -25,7 +25,9 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
@@ -39,6 +41,7 @@ func TestGetCouncilGenesis(t *testing.T) {
 	)
 	defer ctrl.Finish()
 	// Kairos block 0
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(&types.Header{
 		Extra: hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f89af8549499fb17d324fa0e07f23b49d09028ac0919414db694b74ff9dea397fe9e231df545eb53fe2adf776cb294571e53df607be97431a5bbefca1dffe5aef56f4d945cb1a7dccbd0dc446e3640898ede8820368554c8b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"),
 	}).AnyTimes()
@@ -71,16 +74,20 @@ func TestGetCouncilDB(t *testing.T) {
 		// num              0  1  2  3  4  5  6
 		// council          A  A  A  B  B  C  C
 		// lastNumLessThan  0  0  0  2  2  4  4
-		voteNums = []uint64{0, 2, 4}
-		setA     = numsToAddrs(1)
-		setB     = numsToAddrs(1, 2)
-		setC     = numsToAddrs(1, 2, 3)
-		db       = database.NewMemDB()
+		voteNums    = []uint64{0, 2, 4}
+		setA        = numsToAddrs(1)
+		setB        = numsToAddrs(1, 2)
+		setC        = numsToAddrs(1, 2, 3)
+		db          = database.NewMemDB()
+		ctrl        = gomock.NewController(t)
+		mockChain   = chain_mock.NewMockBlockChain(ctrl)
+		mockStaking = staking_mock.NewMockStakingModule(ctrl)
 	)
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
 	writeValidatorVoteBlockNums(db, voteNums)
-	writeCouncil(db, 0, setA)
-	writeCouncil(db, 2, setB)
-	writeCouncil(db, 4, setC)
+	writeCouncil(db, 0, ConvertLegacyToValidatorList(setA))
+	writeCouncil(db, 2, ConvertLegacyToValidatorList(setB))
+	writeCouncil(db, 4, ConvertLegacyToValidatorList(setC))
 
 	// Test getCouncilDB under various LowestScannedVoteNum.
 	type expected struct { // expected result of getCouncilDB()
@@ -104,7 +111,13 @@ func TestGetCouncilDB(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		v := &ValsetModule{InitOpts: InitOpts{ChainKv: db}}
+		v := &ValsetModule{
+			InitOpts: InitOpts{
+				Chain:         mockChain,
+				ChainKv:       db,
+				StakingModule: mockStaking,
+			},
+		}
 		writeLowestScannedVoteNum(db, tc.lowestScannedVoteNum)
 
 		for i := uint64(0); i < 7; i++ {
@@ -194,7 +207,7 @@ func TestApplyVote(t *testing.T) {
 		header := &types.Header{
 			Vote: tc.voteData,
 		}
-		council := valset.NewAddressSet(initialCouncil)
+		council := ConvertLegacySetToValidatorList(valset.NewAddressSet(initialCouncil))
 		modified := applyVote(header, council, governingNode)
 		assert.Equal(t, tc.modified, modified)
 		assert.Equal(t, tc.council, council.List(), i) // council is modified in-place

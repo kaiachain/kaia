@@ -334,7 +334,7 @@ func TestCollectStakingAmounts(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		stakingAmounts := collectStakingAmounts(tc.validators, tc.stakingInfo)
+		stakingAmounts := collectStakingAmounts(nil, tc.validators, tc.stakingInfo)
 		for idx, nodeId := range tc.validators {
 			assert.Equal(t, stakingAmounts[nodeId], tc.expectedStakingAmounts[idx])
 		}

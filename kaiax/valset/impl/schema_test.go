@@ -42,10 +42,12 @@ func TestSchema_ValsetVoteBlockNums(t *testing.T) {
 func TestSchema_Council(t *testing.T) {
 	db := database.NewMemDB()
 	num := uint64(10)
-	addrs := []common.Address{
-		common.HexToAddress("0x1234"),
-		common.HexToAddress("0x5678"),
-	}
+	addrs := ConvertLegacyToValidatorList(
+		[]common.Address{
+			common.HexToAddress("0x1234"),
+			common.HexToAddress("0x5678"),
+		},
+	)
 	writeCouncil(db, num, addrs)
 	assert.Equal(t, addrs, ReadCouncil(db, num))
 }
