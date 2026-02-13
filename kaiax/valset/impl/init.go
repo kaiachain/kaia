@@ -104,17 +104,13 @@ func (v *ValsetModule) Init(opts *InitOpts) error {
 
 func (v *ValsetModule) initSchema() error {
 	// Ensure mandatory schema at block 0
-	curBlockNum := v.Chain.CurrentBlock().Number()
-	if v.Chain.Config().Rules(curBlockNum).IsPermissionless {
-		if stateChangeBlockNums := ReadValidatorStateChangeBlockNums(v.ChainKv); stateChangeBlockNums == nil {
-			writeValidatorStateChangeBlockNums(v.ChainKv, []uint64{0})
-			v.validatorStateChangeBlockNumsCache = nil
-		}
-	} else {
-		if voteBlockNums := ReadValidatorVoteBlockNums(v.ChainKv); voteBlockNums == nil {
-			writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
-			v.validatorVoteBlockNumsCache = nil
-		}
+	if stateChangeBlockNums := ReadValidatorStateChangeBlockNums(v.ChainKv); stateChangeBlockNums == nil {
+		writeValidatorStateChangeBlockNums(v.ChainKv, []uint64{0})
+		v.validatorStateChangeBlockNumsCache = nil
+	}
+	if voteBlockNums := ReadValidatorVoteBlockNums(v.ChainKv); voteBlockNums == nil {
+		writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
+		v.validatorVoteBlockNumsCache = nil
 	}
 	if council := ReadCouncil(v.ChainKv, 0); council == nil {
 		genesisCouncil, err := v.getCouncilGenesis()
