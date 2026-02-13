@@ -78,3 +78,5 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 //go:generate ./abigenw --pkg gasless --sol ./contracts/testing/system_contracts/gasless/TestToken.sol --out ./contracts/testing/system_contracts/gasless/TestToken.go --ver 0.8.25
 
 //go:generate ./abigenw --pkg auction --sol ./contracts/system_contracts/auction/Kip249.sol --out ./contracts/system_contracts/auction/Kip249.go --ver 0.8.25
+
+//go:generate ./abigenw --pkg valset --sol ./contracts/system_contracts/vrank/ValidatorState.sol --out ./contracts/system_contracts/vrank/ValidatorState.go --ver 0.8.25

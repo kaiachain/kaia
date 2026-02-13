@@ -26,6 +26,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
@@ -35,7 +36,7 @@ func TestPostInsertBlock(t *testing.T) {
 	var (
 		governingNode  = numToAddr(3)
 		pset           = gov.ParamSet{GoverningNode: governingNode}
-		genesisCouncil = numsToAddrs(1, 2, 3)
+		genesisCouncil = ConvertLegacyToValidatorList(numsToAddrs(1, 2, 3))
 
 		voteAdd1, _ = headergov.NewVoteData(governingNode, string(gov.AddValidator), numToAddr(1)).ToVoteBytes()
 		block1      = types.NewBlockWithHeader(&types.Header{
@@ -65,7 +66,8 @@ func TestPostInsertBlock(t *testing.T) {
 	writeCouncil(db, 0, genesisCouncil)
 	writeValidatorVoteBlockNums(db, []uint64{0})
 	writeLowestScannedVoteNum(db, 0)
-	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(makeGenesisBlock(genesisCouncil).Header()).AnyTimes()
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
+	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(makeGenesisBlock(genesisCouncil.List()).Header()).AnyTimes()
 	mockGov.EXPECT().GetParamSet(uint64(1)).Return(pset).AnyTimes()
 	mockGov.EXPECT().GetParamSet(uint64(2)).Return(pset).AnyTimes()
 
@@ -77,5 +79,5 @@ func TestPostInsertBlock(t *testing.T) {
 
 	// Check the DB
 	assert.Equal(t, []uint64{0, 2}, ReadValidatorVoteBlockNums(db))
-	assert.Equal(t, numsToAddrs(1, 2, 3, 6), ReadCouncil(db, 2))
+	assert.Equal(t, numsToAddrs(1, 2, 3, 6), ReadCouncil(db, 2).List())
 }

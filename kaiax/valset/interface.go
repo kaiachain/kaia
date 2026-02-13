@@ -17,6 +17,9 @@
 package valset
 
 import (
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
 )
@@ -32,4 +35,11 @@ type ValsetModule interface {
 	GetCommittee(num uint64, round uint64) ([]common.Address, error)
 	GetDemotedValidators(num uint64) ([]common.Address, error)
 	GetProposer(num uint64, round uint64) (common.Address, error)
+
+	// Permissionless transition handlers
+	GetEpochTransition(validators ValidatorChartMap, num uint64, statedb *state.StateDB) (ValidatorChartMap, error)
+	GetVrankViolationTransition(validators ValidatorChartMap, num uint64, state *state.StateDB) (ValidatorChartMap, error)
+	GetTimeoutTransition(validators ValidatorChartMap) ValidatorChartMap
+	GetCandidates(num uint64) ([]common.Address, error)
+	ProcessTransition(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 }

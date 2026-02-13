@@ -492,12 +492,33 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	return nil
 }
 
+func (sb *backend) SetExtra(header *types.Header) error {
+	valSet, err := sb.GetValidatorSet(header.Number.Uint64())
+	if err != nil {
+		return err
+	}
+	extra, err := prepareExtra(header, valSet.Qualified().List())
+	if err != nil {
+		return err
+	}
+	header.Extra = extra
+	return nil
+}
+
 func (sb *backend) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
 	// [EIP-2935] stores the parent block hash in the history storage contract
 	if chain.Config().IsPragueForkEnabled(header.Number) {
 		context := blockchain.NewEVMBlockContext(header, chain, nil)
 		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
 		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
+	}
+
+	if chain.Config().IsPermissionlessForkEnabled(header.Number) {
+		context := blockchain.NewEVMBlockContext(header, chain, nil)
+		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
+		if err := sb.valsetModule.ProcessTransition(vmenv, header, state); err != nil {
+			logger.Error("Failed to process transition", "number", header.Number.Uint64(), "err", err.Error())
+		}
 	}
 }
 

@@ -625,6 +625,14 @@ func (self *worker) commitNewWork() {
 
 	self.engine.Initialize(self.chain, header, self.current.state)
 
+	// `engine.Prepare()` sets extra field with incorrect qualified validators
+	// because `engine.Initialize()` has not been called yet at the time fo call of `engien.Prepare()`.
+	// we overwrite the extra field again after `engine.Initialize()` call
+	if err := self.engine.SetExtra(header); err != nil {
+		logger.Error("Failed to set extra field", "err", err)
+		return
+	}
+
 	// Create the current work task
 	work := self.current
 	if self.nodetype == common.CONSENSUSNODE {

@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
@@ -85,4 +86,32 @@ func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
 		return common.Address{}, err
 	}
 	return v.getProposer(c, round)
+}
+
+func (v *ValsetModule) GetEpochTransition(validators valset.ValidatorChartMap, num uint64, state *state.StateDB) (valset.ValidatorChartMap, error) {
+	si, err := v.StakingModule.GetStakingInfoFromState(num, state)
+	if err != nil {
+		return nil, err
+	}
+	return v.getEpochTransition(si, num, validators), nil
+}
+
+func (v *ValsetModule) GetVrankViolationTransition(validators valset.ValidatorChartMap, num uint64, state *state.StateDB) (valset.ValidatorChartMap, error) {
+	si, err := v.StakingModule.GetStakingInfoFromState(num, state)
+	if err != nil {
+		return nil, err
+	}
+	return v.deactiveStakersLessMinStakingAmount(si, num, validators), nil
+}
+
+func (v *ValsetModule) GetTimeoutTransition(validators valset.ValidatorChartMap) valset.ValidatorChartMap {
+	return v.getTimeoutTransition(validators)
+}
+
+func (v *ValsetModule) GetCandidates(num uint64) ([]common.Address, error) {
+	council, err := v.getCouncil(num)
+	if err != nil {
+		return nil, err
+	}
+	return v.getCandidates(council.permlessVals), nil
 }

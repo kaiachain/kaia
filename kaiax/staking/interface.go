@@ -32,6 +32,7 @@ type StakingModule interface {
 	// GetStakingInfo returns the staking info to be used for the given block number.
 	// This is the most commonly used getter.
 	GetStakingInfo(num uint64) (*StakingInfo, error)
+	GetStakingInfoFromState(num uint64, statedb *state.StateDB) (*StakingInfo, error)
 
 	// Directly access the database.
 	// Note that db access is only effective before Kaia hardfork.

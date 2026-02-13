@@ -29,6 +29,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
@@ -55,6 +56,7 @@ func TestStartStop(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{}).AnyTimes()
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
 	mockChain.EXPECT().CurrentBlock().Return(current).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesis).AnyTimes()
 	for i := uint64(1); i <= current.NumberU64(); i++ {
@@ -150,8 +152,11 @@ func TestMigration(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(pset).AnyTimes()
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
+	mockChain.EXPECT().CurrentBlock().Return(block2050).AnyTimes()
 	mockChain.EXPECT().CurrentBlock().Return(block2050).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesis).AnyTimes()
+	mockStaking.EXPECT().GetStakingInfo(block2050.Number().Uint64()).Return(nil, nil).AnyTimes()
 	for i := uint64(1); i <= 2050; i++ {
 		header := &types.Header{Number: big.NewInt(int64(i)), Vote: votes[i]}
 		mockChain.EXPECT().GetHeaderByNumber(i).Return(header).AnyTimes()
@@ -171,8 +176,8 @@ func TestMigration(t *testing.T) {
 	// After initSchema: DB has mandatory schema + last istanbul snapshot interval (2048..2050)
 	assert.Equal(t, []uint64{0, 2049}, ReadValidatorVoteBlockNums(db))
 	assert.Equal(t, uint64(2049), *ReadLowestScannedVoteNum(db))
-	assert.Equal(t, numsToAddrs(2, 3, 5), ReadCouncil(db, 0))
-	assert.Equal(t, numsToAddrs(1, 2, 3, 4, 5), ReadCouncil(db, 2049))
+	assert.Equal(t, numsToAddrs(2, 3, 5), ReadCouncil(db, 0).List())
+	assert.Equal(t, numsToAddrs(1, 2, 3, 4, 5), ReadCouncil(db, 2049).List())
 
 	// 3. Before migration, check GetCouncil() results
 	for _, tc := range expectedCouncils {
@@ -187,11 +192,11 @@ func TestMigration(t *testing.T) {
 	v.migrate()
 	assert.Equal(t, []uint64{0, 1024, 1025, 1027, 2049}, ReadValidatorVoteBlockNums(db)) // valid votes
 	assert.Equal(t, uint64(0), *ReadLowestScannedVoteNum(db))
-	assert.Equal(t, numsToAddrs(2, 3, 5), ReadCouncil(db, 0))          // genesis council
-	assert.Equal(t, numsToAddrs(1, 2, 3, 5), ReadCouncil(db, 1024))    // after vote at 1024 (+1)
-	assert.Equal(t, numsToAddrs(1, 3, 5), ReadCouncil(db, 1025))       // after vote at 1025 (-2)
-	assert.Equal(t, numsToAddrs(1, 3, 4, 5), ReadCouncil(db, 1027))    // after vote at 1027 (+4)
-	assert.Equal(t, numsToAddrs(1, 2, 3, 4, 5), ReadCouncil(db, 2049)) // after vote at 2049 (+2)
+	assert.Equal(t, numsToAddrs(2, 3, 5), ReadCouncil(db, 0).List())          // genesis council
+	assert.Equal(t, numsToAddrs(1, 2, 3, 5), ReadCouncil(db, 1024).List())    // after vote at 1024 (+1)
+	assert.Equal(t, numsToAddrs(1, 3, 5), ReadCouncil(db, 1025).List())       // after vote at 1025 (-2)
+	assert.Equal(t, numsToAddrs(1, 3, 4, 5), ReadCouncil(db, 1027).List())    // after vote at 1027 (+4)
+	assert.Equal(t, numsToAddrs(1, 2, 3, 4, 5), ReadCouncil(db, 2049).List()) // after vote at 2049 (+2)
 
 	// 5. After migration, check GetCouncil() results
 	for _, tc := range expectedCouncils {
