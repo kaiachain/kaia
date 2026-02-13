@@ -48,10 +48,15 @@ interface IValidatorState {
         uint256 pausedTimeout;
     }
 
+    struct SystemValidatorUpdateRequest {
+        address addr;
+        State state;
+    }
+
     event StateTranstiion(State oldStatw, State newState);
     event SetIdleTimeout(address addr, uint256 timestamp);
     event SetPausedTimeout(address addr, uint256 timestamp);
 
-    function setValidatorStates(ValidatorState[] memory) external;
+    function setValidatorStates(SystemValidatorUpdateRequest[] memory) external;
     function getAllValidators() external view returns (ValidatorState[] memory);
 }

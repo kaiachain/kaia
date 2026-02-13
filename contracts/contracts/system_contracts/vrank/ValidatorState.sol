@@ -54,12 +54,12 @@ contract ValidatorState is IValidatorState {
         _;
     }
 
-    constructor(ValidatorState[] memory valStates) {
+    constructor(SystemValidatorUpdateRequest[] memory valStates) {
         owner = msg.sender;
         _setValidatorStates(valStates);
     }
 
-    function _setValidatorStates(ValidatorState[] memory valStates) internal  {
+    function _setValidatorStates(SystemValidatorUpdateRequest[] memory valStates) internal  {
         for (uint256 i=0; i<valStates.length; i++) {
             address addr = valStates[i].addr;
             State state = valStates[i].state;
@@ -91,7 +91,7 @@ contract ValidatorState is IValidatorState {
     }
 
     // system tx (setter)
-    function setValidatorStates(ValidatorState[] memory valStates) external onlyOwner {
+    function setValidatorStates(SystemValidatorUpdateRequest[] memory valStates) external onlyOwner {
         _setValidatorStates(valStates);
     }
 
