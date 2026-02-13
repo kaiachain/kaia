@@ -107,19 +107,6 @@ type ValidatorChart struct {
 	PausedTimeout time.Time `json:"pausedTimeout"`
 }
 
-func (v *ValidatorChart) IsDeepEqual(other *ValidatorChart) bool {
-	if v == other {
-		return true
-	}
-	if v == nil || other == nil {
-		return false
-	}
-	return v.State == other.State &&
-		v.StakingAmount == other.StakingAmount &&
-		v.IdleTimeout.Equal(other.IdleTimeout) &&
-		v.PausedTimeout.Equal(other.PausedTimeout)
-}
-
 type ValidatorChartMap map[common.Address]*ValidatorChart
 
 func (v ValidatorChartMap) String() string {
@@ -147,16 +134,23 @@ func (v ValidatorChartMap) Copy() ValidatorChartMap {
 	return cp
 }
 
-func (v ValidatorChartMap) Equal(other ValidatorChartMap) bool {
+func (v ValidatorChartMap) EqualState(other ValidatorChartMap) bool {
 	if len(v) != len(other) {
 		return false
 	}
+
 	for addr, val := range v {
 		otherVal, exists := other[addr]
 		if !exists {
 			return false
 		}
-		if !val.IsDeepEqual(otherVal) {
+		if val == nil || otherVal == nil {
+			if val != otherVal {
+				return false
+			}
+			continue
+		}
+		if val.State != otherVal.State {
 			return false
 		}
 	}

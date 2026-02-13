@@ -66,12 +66,7 @@ func getDemotedValidatorsIstanbul(rules *params.Rules, council *ValidatorList, s
 	)
 
 	if rules.IsPermissionless {
-		// return council.GetDemoted()
-		d := council.GetDemoted()
-		// if d.Len() > 0 {
-		// 	fmt.Println("PERM@", d)
-		// }
-		return d
+		demoted = council.GetDemoted()
 	} else {
 		// First filter by staking amounts.
 		for _, node := range council.List() {
@@ -79,18 +74,16 @@ func getDemotedValidatorsIstanbul(rules *params.Rules, council *ValidatorList, s
 				demoted.Add(node)
 			}
 		}
-
 		// If all validators are demoted, then no one is demoted.
 		if demoted.Len() == len(council.List()) {
 			demoted = valset.NewAddressSet(nil)
 		}
-
-		// Under single governance mode, governing node cannot be demoted.
-		if singleMode && demoted.Contains(governingNode) {
-			demoted.Remove(governingNode)
-		}
-		return demoted
 	}
+	// Under single governance mode, governing node cannot be demoted.
+	if singleMode && demoted.Contains(governingNode) {
+		demoted.Remove(governingNode)
+	}
+	return demoted
 }
 
 // TODO-kaiax: move the feature into staking_info.go

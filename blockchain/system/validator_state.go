@@ -28,6 +28,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/vrank"
+	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
@@ -38,10 +39,8 @@ var (
 )
 
 type ValidatorState struct {
-	Addr          common.Address `abi:"addr"`
-	State         uint8          `abi:"state"`
-	IdleTimeout   *big.Int       `abi:"idleTimeout"`
-	PausedTimeout *big.Int       `abi:"pausedTimeout"`
+	Addr  common.Address `abi:"addr"`
+	State uint8          `abi:"state"`
 }
 
 func ReadValidatorStateAddr(backend *backends.StateBlockchainContractBackend, num *big.Int) (common.Address, error) {
@@ -58,7 +57,6 @@ func ReadValidatorStateAddr(backend *backends.StateBlockchainContractBackend, nu
 func EncodeWriteValidators(
 	backend *backends.StateBlockchainContractBackend,
 	rules params.Rules,
-	num *big.Int,
 	validatorStateAddr common.Address,
 	validators valset.ValidatorChartMap,
 ) (common.Address, *types.Transaction, error) {
@@ -75,16 +73,10 @@ func EncodeWriteValidators(
 	// Prepare contract input
 	valStates := make([]ValidatorState, len(validators))
 	for idx, addr := range keys {
-		var (
-			state         = validators[addr].State.ToUint8()
-			idleTimeout   = big.NewInt(validators[addr].IdleTimeout.Unix())
-			pausedTimeout = big.NewInt(validators[addr].PausedTimeout.Unix())
-		)
+		state := validators[addr].State.ToUint8()
 		valStates[idx] = ValidatorState{
-			Addr:          addr,
-			State:         state,
-			IdleTimeout:   idleTimeout,
-			PausedTimeout: pausedTimeout,
+			Addr:  addr,
+			State: state,
 		}
 	}
 	data, err := ValidatorStateABI.Pack("setValidatorStates", valStates)
@@ -121,7 +113,12 @@ func EncodeWriteValidators(
 	return from, msg, nil
 }
 
-func ReadGetAllValidators(backend *backends.StateBlockchainContractBackend, validatorStateAddr common.Address, num *big.Int) (valset.ValidatorChartMap, error) {
+func ReadGetAllValidators(
+	backend *backends.StateBlockchainContractBackend,
+	validatorStateAddr common.Address,
+	si *staking.StakingInfo,
+	num *big.Int,
+) (valset.ValidatorChartMap, error) {
 	// Prepare caller
 	caller, err := contracts.NewIValidatorStateCaller(validatorStateAddr, backend)
 	if err != nil {
@@ -135,12 +132,19 @@ func ReadGetAllValidators(backend *backends.StateBlockchainContractBackend, vali
 		return nil, err
 	}
 
-	// Parse the result
-	validators := make(valset.ValidatorChartMap)
+	// Parse the result and calculate staking amount
+	var (
+		validators     = make(valset.ValidatorChartMap)
+		stakingAmountM = make(map[common.Address]float64)
+	)
+	for i, nodeId := range si.NodeIds {
+		stakingAmountM[nodeId] = float64(si.StakingAmounts[i])
+	}
 	for _, valState := range valStates {
 		addr, state, pausedTimeout, idleTimeout := valState.Addr, valState.State, valState.PausedTimeout, valState.IdleTimeout
 		validators[addr] = &valset.ValidatorChart{
 			State:         valset.State(state),
+			StakingAmount: stakingAmountM[addr],
 			IdleTimeout:   time.Unix(idleTimeout.Int64(), 0),
 			PausedTimeout: time.Unix(pausedTimeout.Int64(), 0),
 		}

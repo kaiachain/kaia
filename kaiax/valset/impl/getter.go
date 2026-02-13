@@ -17,6 +17,8 @@
 package impl
 
 import (
+	"fmt"
+
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
@@ -88,15 +90,15 @@ func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
 	return v.getProposer(c, round)
 }
 
-func (v *ValsetModule) EpochTransition(validators valset.ValidatorChartMap, num uint64, state *state.StateDB) (valset.ValidatorChartMap, error) {
+func (v *ValsetModule) GetEpochTransition(validators valset.ValidatorChartMap, num uint64, state *state.StateDB) (valset.ValidatorChartMap, error) {
 	si, err := v.StakingModule.GetStakingInfoFromState(num, state)
 	if err != nil {
 		return nil, err
 	}
-	return v.epochTransition(si, num, validators), nil
+	return v.getEpochTransition(si, num, validators), nil
 }
 
-func (v *ValsetModule) VrankViolationTransition(validators valset.ValidatorChartMap, num uint64, state *state.StateDB) (valset.ValidatorChartMap, error) {
+func (v *ValsetModule) GetVrankViolationTransition(validators valset.ValidatorChartMap, num uint64, state *state.StateDB) (valset.ValidatorChartMap, error) {
 	si, err := v.StakingModule.GetStakingInfoFromState(num, state)
 	if err != nil {
 		return nil, err
@@ -104,6 +106,16 @@ func (v *ValsetModule) VrankViolationTransition(validators valset.ValidatorChart
 	return v.deactiveStakersLessMinStakingAmount(si, num, validators), nil
 }
 
-func (v *ValsetModule) TimeoutTransition(validators valset.ValidatorChartMap) valset.ValidatorChartMap {
-	return v.timeoutTransition(validators)
+func (v *ValsetModule) GetTimeoutTransition(validators valset.ValidatorChartMap) valset.ValidatorChartMap {
+	return v.getTimeoutTransition(validators)
+}
+
+func (v *ValsetModule) GetCandidates(num uint64) ([]common.Address, error) {
+	council, err := v.getCouncil(num)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("NN", num, council == nil)
+
+	return v.getCandidates(council.permlessVals), nil
 }

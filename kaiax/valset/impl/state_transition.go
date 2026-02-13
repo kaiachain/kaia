@@ -18,7 +18,6 @@ package impl
 
 import (
 	"math/big"
-	"sort"
 	"sync"
 	"time"
 
@@ -29,13 +28,12 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
 
 const (
-	VRankEpoch           = 50
+	VRankEpoch           = 20
 	ValPausedTimeout     = time.Hour * 8
 	ActiveValidatorCount = 50
 )
@@ -97,16 +95,10 @@ func (vs *ValidatorList) Copy() *ValidatorList {
 	vs.permlessMu.RLock()
 	defer vs.permlessMu.RUnlock()
 
-	permlessVals := make(valset.ValidatorChartMap, len(vs.permlessVals))
-	for addr, chart := range vs.permlessVals {
-		chartCopy := &valset.ValidatorChart{
-			State: chart.State,
-			// PausedDuration: chart.PausedDuration,
-			StakingAmount: chart.StakingAmount,
-		}
-		permlessVals[addr] = chartCopy
-	}
-	var permissionedVals *valset.AddressSet
+	var (
+		permissionedVals *valset.AddressSet
+		permlessVals     = vs.permlessVals.Copy()
+	)
 	if vs.permissionedVals != nil {
 		permissionedVals = vs.permissionedVals.Copy()
 	}
@@ -119,6 +111,7 @@ func (vs *ValidatorList) Copy() *ValidatorList {
 
 func (vs *ValidatorList) List() []common.Address {
 	if vs == nil {
+		logger.Error("ValidatorList is nil")
 		return []common.Address{}
 	}
 	if vs.isLegacy {
@@ -139,6 +132,7 @@ func (vs *ValidatorList) List() []common.Address {
 
 func (vs *ValidatorList) Len() int {
 	if vs == nil {
+		logger.Error("ValidatorList is nil")
 		return 0
 	}
 	if vs.isLegacy {
@@ -152,6 +146,7 @@ func (vs *ValidatorList) Len() int {
 
 func (vs *ValidatorList) Contains(targetAddr common.Address) bool {
 	if vs == nil {
+		logger.Error("ValidatorList is nil")
 		return false
 	}
 	if vs.isLegacy {
@@ -166,6 +161,7 @@ func (vs *ValidatorList) Contains(targetAddr common.Address) bool {
 
 func (vs *ValidatorList) Add(addr common.Address) {
 	if vs == nil {
+		logger.Error("ValidatorList is nil")
 		return
 	}
 	if vs.isLegacy {
@@ -177,6 +173,7 @@ func (vs *ValidatorList) Add(addr common.Address) {
 
 func (vs *ValidatorList) Remove(targetAddr common.Address) bool {
 	if vs == nil {
+		logger.Error("ValidatorList is nil")
 		return false
 	}
 	if vs.isLegacy {
@@ -185,13 +182,16 @@ func (vs *ValidatorList) Remove(targetAddr common.Address) bool {
 	vs.permlessMu.Lock()
 	defer vs.permlessMu.Unlock()
 
-	_, exist := vs.permlessVals[targetAddr]
-	delete(vs.permlessVals, targetAddr)
+	val, exist := vs.permlessVals[targetAddr]
+	if exist {
+		val.State = valset.CandInactive
+	}
 	return exist
 }
 
 func (vs *ValidatorList) Subtract(other *valset.AddressSet) *valset.AddressSet {
 	if vs == nil {
+		logger.Error("ValidatorList is nil")
 		return valset.NewAddressSet([]common.Address{})
 	}
 	if vs.isLegacy {
@@ -213,6 +213,7 @@ func (vs *ValidatorList) Subtract(other *valset.AddressSet) *valset.AddressSet {
 // GetDemoted returns all state of validators where the state is not `ValActive`
 func (vs *ValidatorList) GetDemoted() *valset.AddressSet {
 	if vs == nil {
+		logger.Error("ValidatorList is nil")
 		return valset.NewAddressSet([]common.Address{})
 	}
 	demoted := valset.NewAddressSet(nil)
@@ -228,98 +229,6 @@ func (vs *ValidatorList) GetDemoted() *valset.AddressSet {
 		}
 	}
 	return demoted
-}
-
-func updateStakingAmount(si *staking.StakingInfo, validators valset.ValidatorChartMap) {
-	if si == nil {
-		return
-	}
-	stakingAmountM := make(map[common.Address]float64)
-	for i, nodeId := range si.NodeIds {
-		stakingAmountM[nodeId] = float64(si.StakingAmounts[i])
-	}
-	for addr, val := range validators {
-		val.StakingAmount = stakingAmountM[addr]
-	}
-}
-
-// at vrank epoch:
-//   - [O] ValExiting -> ValInactive
-//   - [O] CandReady -> CandTesting
-//   - [O] CandTesting -> CandInactive
-
-// - [O] CandTesting -> CandInactive
-// - [O] ValReady -> ValInactive
-// - [O] ValActive -> ValInactive
-// - [O] ValPaused -> ValInactive
-// - [O] CandTesting -> ValActive
-// - [O] ValReady -> ValActive
-// - [O] ValActive -> ValActive
-func (v *ValsetModule) epochTransition(si *staking.StakingInfo, num uint64, validators valset.ValidatorChartMap) valset.ValidatorChartMap {
-	defer func() {
-		for addr, val := range validators {
-			logger.Info("TODO-Permissionless: Remove this log", "num", num, "addr", addr.String(), "state", val.State.String(), "stakingamount", val.StakingAmount, "idleTimeout", val.IdleTimeout.String(), "pausedtimeout", val.PausedTimeout.String())
-		}
-	}()
-	if !isVrankEpoch(num) {
-		// return early if the `num` is not vrank epoch number
-		return validators
-	}
-	if len(si.NodeIds) == 0 && len(si.StakingContracts) == 0 && len(si.RewardAddrs) == 0 {
-		// Not ABook activated yet
-		return nil
-	}
-
-	newValidators := validators.Copy()
-	// update staking amount of council
-	updateStakingAmount(si, newValidators)
-
-	var (
-		potentialActiveValSet []*valset.ValidatorChart
-		pset                  = v.GovModule.GetParamSet(num - 1)    // read gov param from parent number
-		minStake              = float64(pset.MinimumStake.Uint64()) // in KAIA
-	)
-	for _, val := range newValidators {
-		switch val.State {
-		case valset.ValExiting:
-			val.State = valset.ValInactive
-		case valset.CandReady:
-			if val.StakingAmount >= minStake {
-				val.State = valset.CandTesting
-			} else {
-				val.State = valset.CandInactive
-			}
-		case valset.CandTesting:
-			if v.isPassVrankTest() {
-				if val.StakingAmount >= minStake {
-					potentialActiveValSet = append(potentialActiveValSet, val)
-				} else {
-					val.State = valset.ValInactive
-				}
-			} else {
-				val.State = valset.CandInactive
-			}
-		case valset.ValReady, valset.ValActive, valset.ValPaused:
-			if val.StakingAmount >= minStake {
-				potentialActiveValSet = append(potentialActiveValSet, val)
-			} else {
-				val.State = valset.ValInactive
-			}
-		}
-	}
-	sort.Slice(potentialActiveValSet, func(i, j int) bool {
-		return potentialActiveValSet[i].StakingAmount > potentialActiveValSet[j].StakingAmount
-	})
-	for idx, potentialActiveVal := range potentialActiveValSet {
-		if idx < ActiveValidatorCount {
-			if potentialActiveVal.State != valset.ValPaused {
-				potentialActiveVal.State = valset.ValActive
-			}
-		} else {
-			potentialActiveVal.State = valset.ValInactive
-		}
-	}
-	return newValidators
 }
 
 func (v *ValsetModule) writeValidators(num uint64, validators valset.ValidatorChartMap) {
@@ -339,47 +248,6 @@ func isVrankEpoch(num uint64) bool {
 	return num%VRankEpoch == 0
 }
 
-func (v *ValsetModule) timeoutTransition(validators valset.ValidatorChartMap) valset.ValidatorChartMap {
-	newValidators := validators.Copy()
-	for _, val := range newValidators {
-		switch val.State {
-		case valset.ValReady, valset.ValInactive:
-			if time.Now().After(val.IdleTimeout) {
-				val.State = valset.CandInactive
-			}
-		case valset.ValPaused:
-			if time.Now().After(val.PausedTimeout) {
-				val.State = valset.ValInactive
-			}
-		}
-	}
-	return newValidators
-}
-
-func (v *ValsetModule) deactiveStakersLessMinStakingAmount(si *staking.StakingInfo, num uint64, validators valset.ValidatorChartMap) valset.ValidatorChartMap {
-	if len(si.NodeIds) == 0 && len(si.StakingContracts) == 0 && len(si.RewardAddrs) == 0 {
-		// Not ABook activated yet
-		return nil
-	}
-
-	var (
-		pset          = v.GovModule.GetParamSet(num - 1)    // read gov param from parent number
-		minStake      = float64(pset.MinimumStake.Uint64()) // in KAIA
-		newValidators = validators.Copy()
-	)
-
-	// update staking amount of council
-	updateStakingAmount(si, newValidators)
-	for _, val := range newValidators {
-		if val.State == valset.ValActive {
-			if val.StakingAmount < minStake {
-				val.State = valset.ValExiting
-			}
-		}
-	}
-	return newValidators
-}
-
 func (v *ValsetModule) ProcessTransition(
 	vmenv *vm.EVM,
 	header *types.Header,
@@ -387,12 +255,17 @@ func (v *ValsetModule) ProcessTransition(
 ) error {
 	config := v.Chain.Config()
 	if config.IsPermissionlessForkEnabled(header.Number) {
-		// 0 self-state transition(user tx) might have been executed header.Number - 1
-		// 1. TODO-Permissionless: read all validators from contrcat on every block
+		// 0. self-state transition(user tx) might have been executed at header.Number - 1
+		// 1. read all validators from contrcat on every block
 		var (
 			parentNum = new(big.Int).Sub(header.Number, common.Big1)
 			backend   = backends.NewStateBlockchainContractBackend(v.Chain, nil, nil, state)
 		)
+
+		prevCouncil, err := v.getCouncil(parentNum.Uint64())
+		if err != nil {
+			return err
+		}
 
 		validatorStateAddr, err := readValidatorStateAddr(backend, parentNum)
 		if err != nil {
@@ -400,34 +273,45 @@ func (v *ValsetModule) ProcessTransition(
 			logger.Error("Failed to fetch ValidatorState contract adress", "number", header.Number.Uint64(), "err", err.Error())
 			return err
 		}
-		validators, err := system.ReadGetAllValidators(backend, validatorStateAddr, parentNum)
+		si, err := v.StakingModule.GetStakingInfoFromState(header.Number.Uint64(), state)
+		if err != nil {
+			return nil
+		}
+		validators, err := system.ReadGetAllValidators(backend, validatorStateAddr, si, parentNum)
 		if err != nil {
 			logger.Error("Failed to fetch all validators' state", "number", header.Number.Uint64(), "err", err.Error())
 			return err
 		}
 
-		// 2. check VRank violation
-		newValidators, err := v.VrankViolationTransition(validators, header.Number.Uint64(), state)
+		// 2. vote transition
+		newValidators, err := v.voteTransition(parentNum.Uint64(), validators)
+		if err != nil {
+			logger.Error("Failed to handle vote data", "number", header.Number.Uint64(), "err", err.Error())
+			return err
+		}
+
+		// 3. check VRank violation
+		newValidators, err = v.GetVrankViolationTransition(newValidators, header.Number.Uint64(), state)
 		if err != nil {
 			logger.Error("Failed to process vrank violation", "number", header.Number.Uint64(), "err", err.Error())
 			return err
 		}
 
-		// 3. timeout transition
-		newValidators = v.TimeoutTransition(newValidators)
+		// 4. timeout transition
+		newValidators = v.GetTimeoutTransition(newValidators)
 
-		// 4. epoch transition
-		newValidators, err = v.EpochTransition(newValidators, header.Number.Uint64(), state)
+		// 5. epoch transition
+		newValidators, err = v.GetEpochTransition(newValidators, header.Number.Uint64(), state)
 		if err != nil {
 			logger.Error("Failed to process epoch transition", "number", header.Number.Uint64(), "err", err.Error())
 			return err
 		}
 
-		if !validators.Equal(newValidators) {
-			// 5. write updated validators' state into checkpoint db
+		if !prevCouncil.permlessVals.EqualState(newValidators) {
+			// 6. write updated validators' state into checkpoint db
 			v.writeValidators(header.Number.Uint64(), newValidators)
-			// 6. write updated validators' state into contract
-			msg, from, err := prepareValidatorWrite(backend, config, state, header, parentNum, validatorStateAddr, newValidators)
+			// 7. write updated validators' state into contract
+			msg, from, err := prepareValidatorWrite(backend, config, state, header, validatorStateAddr, newValidators)
 			if err == nil {
 				blockchain.WriteValidators(msg, from, header, vmenv, state, config.Rules(header.Number))
 			}
@@ -449,14 +333,12 @@ func prepareValidatorWrite(
 	config *params.ChainConfig,
 	statedb *state.StateDB,
 	header *types.Header,
-	parentNum *big.Int,
 	validatorStateAddr common.Address,
 	validators valset.ValidatorChartMap,
 ) (*types.Transaction, common.Address, error) {
 	from, msg, err := system.EncodeWriteValidators(
 		backend,
-		config.Rules(parentNum),
-		parentNum,
+		config.Rules(header.Number),
 		validatorStateAddr,
 		validators,
 	)

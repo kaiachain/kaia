@@ -75,7 +75,7 @@ func (v *ValsetModule) getCouncilDB(num uint64) (*ValidatorList, bool, error) {
 		if nums == nil {
 			return nil, false, errNoStateChangeBlockNums
 		}
-		stateChangeNum = lastNumLessThan(nums, num)
+		stateChangeNum = lastNumLessEqualThan(nums, num)
 	} else {
 		pMinVoteNum := v.readLowestScannedVoteNumCached()
 		if pMinVoteNum == nil {
@@ -98,10 +98,6 @@ func (v *ValsetModule) getCouncilDB(num uint64) (*ValidatorList, bool, error) {
 		readNum = voteNum
 	)
 	if isPermissionless {
-		curNum := v.Chain.CurrentBlock().Number().Uint64()
-		if stateChangeNum > curNum {
-			stateChangeNum = curNum
-		}
 		readNum = stateChangeNum
 	}
 	council = ReadCouncil(v.ChainKv, readNum)
@@ -150,6 +146,17 @@ func lastNumLessThan(nums []uint64, num uint64) uint64 {
 	// idx-1 is the largest index that is less than `num`.
 	idx := sort.Search(len(nums), func(i int) bool {
 		return nums[i] >= num
+	})
+	if idx > 0 {
+		return nums[idx-1]
+	} else {
+		return 0
+	}
+}
+
+func lastNumLessEqualThan(nums []uint64, num uint64) uint64 {
+	idx := sort.Search(len(nums), func(i int) bool {
+		return nums[i] > num
 	})
 	if idx > 0 {
 		return nums[idx-1]
@@ -267,7 +274,6 @@ func (v *ValsetModule) applyBlock(council *ValidatorList, num uint64, write bool
 		return errNoHeader
 	}
 	governingNode := v.GovModule.GetParamSet(num).GoverningNode
-	// TODO-Permissionless: Revisit me and refine
 	if applyVote(header, council, governingNode) && write {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
 		writeCouncil(v.ChainKv, num, council)

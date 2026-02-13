@@ -37,8 +37,9 @@ type ValsetModule interface {
 	GetProposer(num uint64, round uint64) (common.Address, error)
 
 	// Permissionless transition handlers
-	EpochTransition(validators ValidatorChartMap, num uint64, statedb *state.StateDB) (ValidatorChartMap, error)
-	VrankViolationTransition(validators ValidatorChartMap, num uint64, state *state.StateDB) (ValidatorChartMap, error)
-	TimeoutTransition(validators ValidatorChartMap) ValidatorChartMap
+	GetEpochTransition(validators ValidatorChartMap, num uint64, statedb *state.StateDB) (ValidatorChartMap, error)
+	GetVrankViolationTransition(validators ValidatorChartMap, num uint64, state *state.StateDB) (ValidatorChartMap, error)
+	GetTimeoutTransition(validators ValidatorChartMap) ValidatorChartMap
+	GetCandidates(num uint64) ([]common.Address, error)
 	ProcessTransition(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 }
