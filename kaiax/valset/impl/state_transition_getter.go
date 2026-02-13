@@ -50,28 +50,28 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 	for _, val := range newValidators {
 		switch val.State {
 		case valset.ValExiting:
-			val.State = valset.ValInactive
+			val.State = valset.ValInactive // T1
 		case valset.CandReady:
 			if val.StakingAmount >= minStake {
-				val.State = valset.CandTesting
+				val.State = valset.CandTesting // T4a
 			} else {
-				val.State = valset.CandInactive
+				val.State = valset.CandInactive // T4b
 			}
 		case valset.CandTesting:
 			if v.isPassVrankTest() {
 				if val.StakingAmount >= minStake {
-					potentialActiveValSet = append(potentialActiveValSet, val)
+					potentialActiveValSet = append(potentialActiveValSet, val) // T3a
 				} else {
-					val.State = valset.ValInactive
+					val.State = valset.ValInactive // T3b
 				}
 			} else {
-				val.State = valset.CandInactive
+				val.State = valset.CandInactive // T2
 			}
 		case valset.ValReady, valset.ValActive, valset.ValPaused:
 			if val.StakingAmount >= minStake {
-				potentialActiveValSet = append(potentialActiveValSet, val)
+				potentialActiveValSet = append(potentialActiveValSet, val) // T3a
 			} else {
-				val.State = valset.ValInactive
+				val.State = valset.ValInactive // T3b
 			}
 		}
 	}
