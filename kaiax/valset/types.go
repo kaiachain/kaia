@@ -102,7 +102,7 @@ func (s State) MarshalJSON() ([]byte, error) {
 
 type ValidatorChart struct {
 	State         State     `json:"state"`
-	StakingAmount float64   `json:"stakingAmount"` // in KAIA unit
+	StakingAmount uint64    `json:"stakingAmount"` // in KAIA unit
 	IdleTimeout   time.Time `json:"idleTimeout"`
 	PausedTimeout time.Time `json:"pausedTimeout"`
 }

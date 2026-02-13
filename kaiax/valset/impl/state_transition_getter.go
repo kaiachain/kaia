@@ -34,7 +34,7 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 	}()
 	if !isVrankEpoch(num) {
 		// return early if the `num` is not vrank epoch number
-		return validators
+		return validators.Copy()
 	}
 	if len(si.NodeIds) == 0 && len(si.StakingContracts) == 0 && len(si.RewardAddrs) == 0 {
 		// Not ABook activated yet
@@ -44,8 +44,8 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 	var (
 		newValidators         = validators.Copy()
 		potentialActiveValSet []*valset.ValidatorChart
-		pset                  = v.GovModule.GetParamSet(num - 1)    // read gov param from parent number
-		minStake              = float64(pset.MinimumStake.Uint64()) // in KAIA
+		pset                  = v.GovModule.GetParamSet(num - 1) // read gov param from parent number
+		minStake              = pset.MinimumStake.Uint64()       // in KAIA
 	)
 	for _, val := range newValidators {
 		switch val.State {
@@ -126,8 +126,8 @@ func (v *ValsetModule) deactiveStakersLessMinStakingAmount(si *staking.StakingIn
 	}
 
 	var (
-		pset          = v.GovModule.GetParamSet(num - 1)    // read gov param from parent number
-		minStake      = float64(pset.MinimumStake.Uint64()) // in KAIA
+		pset          = v.GovModule.GetParamSet(num - 1) // read gov param from parent number
+		minStake      = pset.MinimumStake.Uint64()       // in KAIA
 		newValidators = validators.Copy()
 	)
 

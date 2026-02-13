@@ -17,8 +17,6 @@
 package impl
 
 import (
-	"fmt"
-
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
@@ -115,7 +113,5 @@ func (v *ValsetModule) GetCandidates(num uint64) ([]common.Address, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("NN", num, council == nil)
-
 	return v.getCandidates(council.permlessVals), nil
 }

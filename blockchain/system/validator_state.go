@@ -135,10 +135,10 @@ func ReadGetAllValidators(
 	// Parse the result and calculate staking amount
 	var (
 		validators     = make(valset.ValidatorChartMap)
-		stakingAmountM = make(map[common.Address]float64)
+		stakingAmountM = make(map[common.Address]uint64)
 	)
 	for i, nodeId := range si.NodeIds {
-		stakingAmountM[nodeId] = float64(si.StakingAmounts[i])
+		stakingAmountM[nodeId] = si.StakingAmounts[i]
 	}
 	for _, valState := range valStates {
 		addr, state, pausedTimeout, idleTimeout := valState.Addr, valState.State, valState.PausedTimeout, valState.IdleTimeout
