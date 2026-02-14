@@ -40,6 +40,7 @@ func TestTable2_Bond(t *testing.T) {
 	transport := newPingRecorder()
 	tab, err := newTable2(config, transport)
 	require.NoError(t, err)
+	defer tab.Close()
 
 	aliveNode := NewNode(MustHexID("a502af0f59b2aab7746995408c79e9ca312d2793cc997e44fc55eda62f0150bbb8c59a6f9269ba3a081518b62699ee807c7c19c20125ddfccca872608af9e370"),
 		net.IP{}, 99, 99, nil, NodeTypeUnknown)
@@ -117,12 +118,9 @@ func TestTable_KairosExample(t *testing.T) {
 		NodeType:   NodeTypeEN,
 		Bootnodes:  []*Node{bn},
 	}
-	_, udp, err := newUDP(config)
+	d, err := newDiscovery(config)
 	require.NoError(t, err)
-	defer udp.tab2.Close()
-
-	udp.tab2.Refresh()
-	t.Log("Refreshed")
+	defer d.Close()
 
 	time.Sleep(30 * time.Second)
 

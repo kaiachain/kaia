@@ -171,9 +171,11 @@ func (tab *table) refreshLoop() {
 	for {
 		select {
 		case <-refreshTicker.C:
+			logger.Debug("Discovery refresh ticker")
 			tab.rand.Seed() // reseed the randomness before consuming it during refresh.
 			tab.doRefresh()
 		case wait := <-tab.refreshReq:
+			logger.Debug("Discovery refresh requested")
 			tab.doRefresh()
 			close(wait) // Notify the Refresh() caller.
 		case <-tab.closeReq:
@@ -218,12 +220,11 @@ func (tab *table) Refresh() {
 
 func (tab *table) doRefresh() {
 	logger.Info("Discovery table refreshing", "counts", tab.lenByNodeTypes())
-	defer logger.Info("Discovery table refreshed", "counts", tab.lenByNodeTypes())
-
 	tab.kademliaRefresh(NodeTypeEN)
 	tab.simpleRefresh(NodeTypeCN)
 	tab.simpleRefresh(NodeTypePN)
 	tab.simpleRefresh(NodeTypeBN)
+	logger.Info("Discovery table refreshed", "counts", tab.lenByNodeTypes())
 }
 
 func (tab *table) kademliaRefresh(targetType NodeType) {
@@ -285,16 +286,18 @@ func (tab *table) findNodes(seeds []*Node, targetID NodeID, targetType NodeType,
 	var (
 		excludeBn = targetType != NodeTypeBN && targetType != NodeTypeUnknown // Result can include bootnodes.
 
-		pool    = make(map[NodeID]*Node)    // All nodes being processed in this function. Append only.
-		isBn    = make(map[NodeID]bool)     // Bootnodes in the pool.
-		unasked = make(map[NodeID]bool)     // Nodes in the pool that we did not ask yet.
-		resCh   = make(chan []*Node, alpha) // Replies from findnode requests.
-		running = 0
+		pool      = make(map[NodeID]*Node)    // All nodes being processed in this function. Append only.
+		bootnodes = make(map[NodeID]struct{}) // Bootnodes in the pool.
+		unasked   = make(map[NodeID]struct{}) // Nodes in the pool that we did not ask yet.
+		resCh     = make(chan []*Node, alpha) // Replies from findnode requests.
+		running   = 0
 	)
 	for _, seed := range seeds {
 		pool[seed.ID] = seed
-		isBn[seed.ID] = seed.NType == NodeTypeBN
-		unasked[seed.ID] = true
+		if seed.NType == NodeTypeBN {
+			bootnodes[seed.ID] = struct{}{}
+		}
+		unasked[seed.ID] = struct{}{}
 	}
 
 	// Launch the first round of up to alpha findnode requests.
@@ -306,6 +309,7 @@ func (tab *table) findNodes(seeds []*Node, targetID NodeID, targetType NodeType,
 		running++
 		target := pool[id]
 		go func() { resCh <- tab.findNodesOnce(target, targetID, targetType, max) }()
+		logger.Trace("Discovery request sent", "targetType", targetType, "have", len(pool), "max", max)
 	}
 
 	for running > 0 { // Wait for all running requests to finish.
@@ -313,27 +317,33 @@ func (tab *table) findNodes(seeds []*Node, targetID NodeID, targetType NodeType,
 		running--
 
 		// Add the nodes to the pool.
+		fresh := 0
 		for _, n := range res {
 			if _, ok := pool[n.ID]; !ok {
 				pool[n.ID] = n
-				isBn[n.ID] = n.NType == NodeTypeBN
-				unasked[n.ID] = true
+				if n.NType == NodeTypeBN {
+					bootnodes[n.ID] = struct{}{}
+				}
+				unasked[n.ID] = struct{}{}
+				fresh++
 			}
 		}
+		logger.Trace("Discovery response received", "targetType", targetType, "response", len(res), "fresh", fresh, "pool", len(pool), "bootnodes", len(bootnodes), "unasked", len(unasked))
 
 		// If we need more and willing to recursively ask, launch a new findnode request.
-		var enough bool
+		var have int
 		if excludeBn {
-			enough = len(pool)-len(isBn) >= max
+			have = len(pool) - len(bootnodes)
 		} else {
-			enough = len(pool) >= max
+			have = len(pool)
 		}
-		if recurse && !enough {
+		if recurse && have < max {
 			for id := range unasked { // pick a random node to ask.
 				delete(unasked, id)
 				running++
 				target := pool[id]
 				go func() { resCh <- tab.findNodesOnce(target, targetID, targetType, max) }()
+				logger.Trace("Discovery recursive request sent", "targetType", targetType, "have", have, "max", max)
 				break // Launch only one new request.
 			}
 		}
@@ -343,11 +353,14 @@ func (tab *table) findNodes(seeds []*Node, targetID NodeID, targetType NodeType,
 	targetHash := crypto.Keccak256Hash(targetID[:])
 	ordered := &nodesByDistance{target: targetHash}
 	for id, n := range pool {
-		if excludeBn && isBn[id] {
-			continue
+		if excludeBn {
+			if _, ok := bootnodes[id]; ok {
+				continue
+			}
 		}
 		ordered.push(n, max)
 	}
+	logger.Debug("Discovery result", "self", targetID == tab.self.ID, "targetType", targetType, "recurse", recurse, "count", len(ordered.entries))
 	return ordered.entries
 }
 
@@ -531,6 +544,14 @@ func (tab *table) ClosestNodes(targetID NodeID, targetType NodeType, max int) []
 	} else {
 		return s.closest(crypto.Keccak256Hash(targetID[:]), max).entries
 	}
+}
+
+func (tab *table) IsAuthorized(id NodeID, nType NodeType) bool {
+	return true // TODO: read or mem
+}
+
+func (tab *table) IsBonded(id NodeID) bool {
+	return true // TODO: read db
 }
 
 // Count of all nodes in the table.

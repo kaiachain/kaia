@@ -206,7 +206,7 @@ type udp struct {
 	nat     nat.Interface
 	wg      sync.WaitGroup
 
-	tab2 *table
+	tab *table
 
 	Discovery
 }
@@ -336,17 +336,14 @@ func newUDP(cfg *Config) (Discovery, *udp, error) {
 		return nil, nil, err
 	}
 
-	tab2, err := newTable2(cfg, udp)
-	if err != nil {
-		return nil, nil, err
-	}
-	udp.tab2 = tab2
-
-	go udp.Discovery.(*Table).loop() // TODO-Kaia-Node There is only one concrete type(Table) for Discovery. Refactor Discovery interface for their proper objective.
-	udp.wg.Add(2)
-	go udp.loop()
-	go udp.readLoop(cfg.Unhandled)
 	return udp.Discovery, udp, nil
+}
+
+func (t *udp) Start(tab *table, unhandled chan<- ReadPacket) {
+	t.tab = tab
+	t.wg.Add(2)
+	go t.loop()
+	go t.readLoop(unhandled)
 }
 
 func (t *udp) close() {
@@ -355,19 +352,22 @@ func (t *udp) close() {
 	t.wg.Wait()
 }
 
-func (t *udp) isAuthorized(fromID NodeID, nType NodeType) bool {
-	return t.Discovery.IsAuthorized(fromID, nType)
+func (t *udp) isAuthorized(id NodeID, nodeType NodeType) bool {
+	return t.tab.IsAuthorized(id, nodeType)
 }
 
-func (t *udp) hasBond(fromID NodeID) bool {
-	return t.Discovery.HasBond(fromID)
+func (t *udp) hasBond(id NodeID) bool {
+	return t.tab.IsBonded(id)
 }
 
 func (t *udp) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16, nType NodeType) (*Node, error) {
 	n := NewNode(id, addr.IP, uint16(addr.Port), tcpPort, nil, nType)
-	err := t.tab2.Bond(pinged, n)
+	err := t.tab.Bond(pinged, n)
 	return n, err
-	// return t.Discovery.Bond(pinged, id, addr, tcpPort, nType)
+}
+
+func (t *udp) closestNodes(targetID NodeID, targetType NodeType, max int) []*Node {
+	return t.tab.ClosestNodes(targetID, targetType, max)
 }
 
 // ping sends a ping message to the given node and waits for a reply.
@@ -801,10 +801,8 @@ func (req *findnode) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 }
 
 func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
-	// Determine "closest" nodes. The result will be the closest nodes for KademliaStorage, but random nodes for SimpleStorage.
-	target := crypto.Keccak256Hash(req.Target[:])
 	retrieveSize := findnodeRetrieveSize(req.TargetType)
-	closest := t.RetrieveNodes(target, req.TargetType, retrieveSize)
+	closest := t.closestNodes(req.Target, req.TargetType, retrieveSize)
 
 	// Send neighbors in chunks with at most maxNeighbors per packet
 	// to stay below the 1280 byte limit.
