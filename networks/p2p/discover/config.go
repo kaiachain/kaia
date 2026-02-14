@@ -31,7 +31,7 @@ var (
 
 // Returns the number of nodes to actively discover depending of self node type.
 // Note that this number is not the number of connections to maintain.
-func getRefreshTargets(cfg *Config) map[NodeType]int {
+func getDiscoverTargets(cfg *Config) map[NodeType]int {
 	switch cfg.NodeType {
 	case NodeTypeCN:
 		// Try to discover all CNs and BNs

@@ -40,9 +40,12 @@ type table struct {
 	udp  transport
 
 	// Node addresses
-	nursery        []*Node
-	storages       map[NodeType]tableStorage
-	refreshTargets map[NodeType]int // target number of nodes to obtain for each node type. set 0 to disable discovery (i.e. only accept inbound connections).
+	nursery  []*Node
+	storages map[NodeType]tableStorage
+	// target number of nodes to obtain for each node type.
+	// Set discoverTargets[T] = 0 to disable discovery of node type T (i.e. only accept inbound connections).
+	// See also: p2p.DialSched.connTargets.
+	discoverTargets map[NodeType]int
 
 	// UDP bonding
 	bondmu    sync.Mutex
@@ -73,8 +76,8 @@ func newTable2(cfg *Config, udp transport) (*table, error) {
 			NodeTypeEN: newKademliaStorage(self, rand),
 			NodeTypeBN: newSimpleStorage2(rand),
 		}
-		refreshTargets = getRefreshTargets(cfg)
-		bondslots      = make(chan struct{}, maxBondingPingPongs)
+		discoverTargets = getDiscoverTargets(cfg)
+		bondslots       = make(chan struct{}, maxBondingPingPongs)
 
 		err error
 	)
@@ -93,9 +96,9 @@ func newTable2(cfg *Config, udp transport) (*table, error) {
 		rand: rand,
 		udp:  udp,
 
-		nursery:        nursery,
-		storages:       storages,
-		refreshTargets: refreshTargets,
+		nursery:         nursery,
+		storages:        storages,
+		discoverTargets: discoverTargets,
 
 		bonding:   make(map[NodeID]*bondtask),
 		bondslots: bondslots,
@@ -228,7 +231,7 @@ func (tab *table) doRefresh() {
 }
 
 func (tab *table) kademliaRefresh(targetType NodeType) {
-	if tab.refreshTargets[targetType] <= 0 {
+	if tab.discoverTargets[targetType] <= 0 {
 		return
 	}
 	// Run self lookup to discover new neighbor nodes.
@@ -248,10 +251,10 @@ func (tab *table) kademliaRefresh(targetType NodeType) {
 }
 
 func (tab *table) simpleRefresh(targetType NodeType) {
-	if tab.refreshTargets[targetType] <= 0 {
+	if tab.discoverTargets[targetType] <= 0 {
 		return
 	}
-	tab.lookup(tab.self.ID, targetType, false, tab.refreshTargets[targetType])
+	tab.lookup(tab.self.ID, targetType, false, tab.discoverTargets[targetType])
 }
 
 // Query more nodes from the network by sending FINDNODE requests.
