@@ -206,6 +206,8 @@ type udp struct {
 	nat     nat.Interface
 	wg      sync.WaitGroup
 
+	tab *table
+
 	Discovery
 }
 
@@ -333,11 +335,15 @@ func newUDP(cfg *Config) (Discovery, *udp, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	go udp.Discovery.(*Table).loop() // TODO-Kaia-Node There is only one concrete type(Table) for Discovery. Refactor Discovery interface for their proper objective.
-	udp.wg.Add(2)
-	go udp.loop()
-	go udp.readLoop(cfg.Unhandled)
+
 	return udp.Discovery, udp, nil
+}
+
+func (t *udp) Start(tab *table, unhandled chan<- ReadPacket) {
+	t.tab = tab
+	t.wg.Add(2)
+	go t.loop()
+	go t.readLoop(unhandled)
 }
 
 func (t *udp) close() {
@@ -346,12 +352,22 @@ func (t *udp) close() {
 	t.wg.Wait()
 }
 
-func (t *udp) isAuthorized(fromID NodeID, nType NodeType) bool {
-	return t.Discovery.IsAuthorized(fromID, nType)
+func (t *udp) isAuthorized(id NodeID, nodeType NodeType) bool {
+	return t.tab.IsAuthorized(id, nodeType)
 }
 
-func (t *udp) hasBond(fromID NodeID) bool {
-	return t.Discovery.HasBond(fromID)
+func (t *udp) hasBond(id NodeID) bool {
+	return t.tab.IsBonded(id)
+}
+
+func (t *udp) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16, nType NodeType) (*Node, error) {
+	n := NewNode(id, addr.IP, uint16(addr.Port), tcpPort, nil, nType)
+	err := t.tab.Bond(pinged, n)
+	return n, err
+}
+
+func (t *udp) closestNodes(targetID NodeID, targetType NodeType, max int) []*Node {
+	return t.tab.ClosestNodes(targetID, targetType, max)
 }
 
 // ping sends a ping message to the given node and waits for a reply.
@@ -500,9 +516,10 @@ func (t *udp) loop() {
 		case p := <-t.addpending:
 			p.deadline = time.Now().Add(respTimeout)
 			plist.PushBack(p)
-			if p.ptype == pongPacket {
+			switch p.ptype {
+			case pongPacket:
 				pendingPongCounter.Inc(1)
-			} else if p.ptype == neighborsPacket {
+			case neighborsPacket:
 				pendingNeighborsCounter.Inc(1)
 			}
 
@@ -727,7 +744,7 @@ func (req *ping) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 		logger.Trace("unauthorized node.", "nodeid", fromID, "nodetype", req.From.NType)
 		return errUnauthorized
 	}
-	logger.Debug("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
+	logger.Trace("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
 	return nil
 }
 
@@ -743,7 +760,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 	})
 	if !t.handleReply(fromID, from.IP, pingPacket, req) {
 		// Note: we're ignoring the provided IP address right now
-		go t.Bond(true, fromID, from, req.From.TCP, req.From.NType)
+		go t.bond(true, fromID, from, req.From.TCP, req.From.NType)
 	}
 	return nil
 }
@@ -784,10 +801,8 @@ func (req *findnode) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 }
 
 func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
-	// Determine "closest" nodes. The result will be the closest nodes for KademliaStorage, but random nodes for SimpleStorage.
-	target := crypto.Keccak256Hash(req.Target[:])
 	retrieveSize := findnodeRetrieveSize(req.TargetType)
-	closest := t.RetrieveNodes(target, req.TargetType, retrieveSize)
+	closest := t.closestNodes(req.Target, req.TargetType, retrieveSize)
 
 	// Send neighbors in chunks with at most maxNeighbors per packet
 	// to stay below the 1280 byte limit.

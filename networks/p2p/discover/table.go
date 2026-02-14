@@ -81,11 +81,6 @@ type Discovery interface {
 	Lookup(target NodeID, targetType NodeType) []*Node
 	GetNodes(targetType NodeType, max int) []*Node
 	ReadRandomNodes([]*Node, NodeType) int
-	RetrieveNodes(target common.Hash, nType NodeType, nresults int) []*Node // replace of closest():Table
-
-	HasBond(id NodeID) bool
-	Bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16, nType NodeType) (*Node, error)
-	IsAuthorized(fromID NodeID, nType NodeType) bool
 
 	// interfaces for API
 	Name() string

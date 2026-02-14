@@ -436,8 +436,7 @@ type bucket struct {
 }
 
 // bump moves the given node to the front of the bucket entry list
-// if it is contained in that list.
-// caller
+// if it is contained in that list. Returns true if n was found and moved to the front.
 func (b *bucket) bump(n *Node) bool {
 	for i := range b.entries {
 		if b.entries[i].ID == n.ID {

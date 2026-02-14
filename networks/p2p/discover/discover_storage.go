@@ -72,6 +72,27 @@ func deleteNode(list []*Node, n *Node) []*Node {
 	return list
 }
 
+func hasNode(list []*Node, n *Node) bool {
+	for _, e := range list {
+		if e.ID == n.ID {
+			return true
+		}
+	}
+	return false
+}
+
+func bumpNode(list []*Node, n *Node) bool {
+	for i := range list {
+		if list[i].ID == n.ID {
+			// move it to the front
+			copy(list[1:], list[:i])
+			list[0] = n
+			return true
+		}
+	}
+	return false
+}
+
 // nodeTypeName converts NodeType to string.
 func nodeTypeName(nt NodeType) string { // TODO-Kaia-Node Consolidate p2p.NodeType and common.ConnType
 	switch nt {
