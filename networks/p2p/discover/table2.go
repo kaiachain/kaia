@@ -58,7 +58,6 @@ type table struct {
 
 	// Init and close
 	wg       sync.WaitGroup // to wait for maintenance loops to complete.
-	closemu  sync.Mutex
 	init     atomic.Bool
 	closed   atomic.Bool
 	closeReq chan struct{} // closed to stop loops.
@@ -147,16 +146,13 @@ func (tab *table) Start() {
 }
 
 func (tab *table) Close() {
-	tab.closemu.Lock()
-	defer tab.closemu.Unlock()
-	if tab.closed.Load() {
+	if tab.closed.Swap(true) {
 		return
 	}
 
 	logger.Info("Discovery table closing")
 	close(tab.closeReq) // Notify the loops to stop.
 	tab.wg.Wait()       // Wait for the loops to finish.
-	tab.closed.Store(true)
 	logger.Info("Discovery table closed")
 }
 

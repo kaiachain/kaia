@@ -18,15 +18,24 @@
 
 package discover
 
+var _ Discovery2 = (*discovery)(nil)
+
 type Discovery2 interface {
+	Refresh()
 	RandomNodes(buf []*Node, targetType NodeType) int
-	ClosestNodes(targetID NodeID, targetType NodeType, max int) []*Node
+
+	// AddAuthorized
+	// DeleteAuthorized
 	Close()
 }
 
 type discovery struct {
 	udp *udp
 	tab *table
+}
+
+func NewDiscovery2(cfg *Config) (*discovery, error) {
+	return newDiscovery(cfg)
 }
 
 func newDiscovery(cfg *Config) (*discovery, error) {
@@ -46,6 +55,14 @@ func newDiscovery(cfg *Config) (*discovery, error) {
 		udp: udp,
 		tab: tab,
 	}, nil
+}
+
+func (d *discovery) Refresh() {
+	d.tab.Refresh()
+}
+
+func (d *discovery) RandomNodes(buf []*Node, targetType NodeType) int {
+	return d.tab.RandomNodes(buf, targetType)
 }
 
 func (d *discovery) Close() {

@@ -52,26 +52,3 @@ func StringNodeType(nType NodeType) string { // TODO-Kaia-Node Consolidate p2p.N
 		return "unknown"
 	}
 }
-
-type NodeSet map[NodeID]struct{}
-
-func NewNodeSet() NodeSet {
-	return make(map[NodeID]struct{})
-}
-
-func (ns NodeSet) Add(id NodeID) {
-	ns[id] = struct{}{}
-}
-
-func (ns NodeSet) Delete(id NodeID) {
-	delete(ns, id)
-}
-
-func (ns NodeSet) Contains(id NodeID) bool {
-	_, ok := ns[id]
-	return ok
-}
-
-func (ns NodeSet) Len() int {
-	return len(ns)
-}
