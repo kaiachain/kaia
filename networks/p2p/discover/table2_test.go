@@ -19,6 +19,7 @@
 package discover
 
 import (
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -121,6 +122,9 @@ func TestTable_KairosExample(t *testing.T) {
 	d, err := newDiscovery(config)
 	require.NoError(t, err)
 	defer d.Close()
+
+	d.tab.Refresh()
+	fmt.Println("Refresh done")
 
 	time.Sleep(30 * time.Second)
 

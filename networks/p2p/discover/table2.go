@@ -52,13 +52,16 @@ type table struct {
 	bonding   map[NodeID]*bondtask // prevents concurrent bonding of the same node
 	bondslots chan struct{}        // Semaphore to limit total number of active bonding processes
 
-	// Coordination
-	wg         sync.WaitGroup // to wait for maintenance loops to complete.
-	closemu    sync.Mutex
-	init       atomic.Bool
-	closed     atomic.Bool
-	refreshReq chan chan struct{} // to request a discretionary refresh, apart from the periodic refresh.
-	closeReq   chan struct{}      // closed to stop loops.
+	// UDP refresh
+	refreshmu   sync.Mutex
+	refreshDone chan struct{}
+
+	// Init and close
+	wg       sync.WaitGroup // to wait for maintenance loops to complete.
+	closemu  sync.Mutex
+	init     atomic.Bool
+	closed   atomic.Bool
+	closeReq chan struct{} // closed to stop loops.
 }
 
 type bondtask struct {
@@ -103,8 +106,7 @@ func newTable2(cfg *Config, udp transport) (*table, error) {
 		bonding:   make(map[NodeID]*bondtask),
 		bondslots: bondslots,
 
-		refreshReq: make(chan chan struct{}),
-		closeReq:   make(chan struct{}),
+		closeReq: make(chan struct{}),
 	}
 
 	// Insert the initial seeds into all storages.
@@ -168,19 +170,14 @@ func (tab *table) refreshLoop() {
 	defer refreshTicker.Stop()
 
 	// Initial refresh.
-	tab.doRefresh()
+	tab.Refresh()
 	tab.init.Store(true)
 
 	for {
 		select {
 		case <-refreshTicker.C:
-			logger.Debug("Discovery refresh ticker")
 			tab.rand.Seed() // reseed the randomness before consuming it during refresh.
-			tab.doRefresh()
-		case wait := <-tab.refreshReq:
-			logger.Debug("Discovery refresh requested")
-			tab.doRefresh()
-			close(wait) // Notify the Refresh() caller.
+			tab.doRefreshOnce()
 		case <-tab.closeReq:
 			return
 		}
@@ -208,17 +205,34 @@ func (tab *table) revalidateLoop() {
 //// Refresh and lookup
 
 func (tab *table) Refresh() {
-	wait := make(chan struct{})
-	select {
-	case <-tab.closeReq:
+	if tab.closed.Load() {
 		return
-	case tab.refreshReq <- wait:
 	}
+	tab.doRefreshOnce()
+}
 
-	select {
-	case <-tab.closeReq:
-	case <-wait:
+// Wraps the doRefresh() to ensure only one refresh is running at a time. Deduplicates the request.
+func (tab *table) doRefreshOnce() {
+	// Check for already running refresh
+	tab.refreshmu.Lock()
+	if tab.refreshDone != nil {
+		// Wait for already running refresh to complete
+		done := tab.refreshDone // capture the channel before unlocking (otherwise tab.refreshDone may become nil)
+		tab.refreshmu.Unlock()
+		<-done
+		return
 	}
+	// Register a new refresh completion channel
+	refreshDone := make(chan struct{})
+	tab.refreshDone = refreshDone
+	tab.refreshmu.Unlock()
+
+	tab.doRefresh()
+	close(refreshDone)
+
+	tab.refreshmu.Lock()
+	tab.refreshDone = nil
+	tab.refreshmu.Unlock()
 }
 
 func (tab *table) doRefresh() {
