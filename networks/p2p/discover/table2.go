@@ -22,6 +22,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/kaiachain/kaia/crypto"
@@ -49,10 +50,12 @@ type table struct {
 	bondslots chan struct{}        // Semaphore to limit total number of active bonding processes
 
 	// Coordination
-	initDone   chan struct{}      // to signal the initial refresh is done.
+	wg         sync.WaitGroup // to wait for maintenance loops to complete.
+	closemu    sync.Mutex
+	init       atomic.Bool
+	closed     atomic.Bool
 	refreshReq chan chan struct{} // to request a discretionary refresh, apart from the periodic refresh.
-	closeReq   chan struct{}      // to stop the loop().
-	closed     chan struct{}      // to signal loop() is done.
+	closeReq   chan struct{}      // closed to stop loops.
 }
 
 type bondtask struct {
@@ -97,19 +100,14 @@ func newTable2(cfg *Config, udp transport) (*table, error) {
 		bonding:   make(map[NodeID]*bondtask),
 		bondslots: bondslots,
 
-		initDone:   make(chan struct{}),
 		refreshReq: make(chan chan struct{}),
 		closeReq:   make(chan struct{}),
-		closed:     make(chan struct{}),
 	}
 
 	// Insert the initial seeds into all storages.
 	for _, n := range nursery {
 		tab.addNode(n)
 	}
-
-	// Start the maintenance loop.
-	go tab.loop()
 
 	return tab, nil
 }
@@ -132,146 +130,95 @@ func getBootnodes(cfg *Config) ([]*Node, error) {
 	return nursery, nil
 }
 
-//// Storage and database access wrappers
-
-// Adds a node to one of the storages of the node's type.
-// If the node is a bootstrap node, it is added to all storages.
-func (tab *table) addNode(n *Node) {
-	if n.NType == NodeTypeBN {
-		for _, s := range tab.storages {
-			s.add(n)
-		}
-		return
-	} else {
-		if s := tab.storages[n.NType]; s != nil {
-			s.add(n)
-		}
-	}
+// Returns whether the table's initial seeding procedure has completed.
+func (tab *table) initialized() bool {
+	return tab.init.Load()
 }
 
-//// Periodic maintenance loop
-
-// isInitDone returns whether the table's initial seeding procedure has completed.
-func (tab *table) isInitDone() bool {
-	select {
-	case <-tab.initDone:
-		return true
-	default:
-		return false
-	}
-}
-
-func (tab *table) loop() {
-	var (
-		// A refresh may be triggered by both periodic timer and discretionary request.
-		// The refreshDone mechanism prevents multiple refreshes from running concurrently.
-		// If a refresh is already in progress (refreshDone != nil), do not start a new one.
-		// Instead, add the request to the waiting list.
-		refresh     = time.NewTicker(refreshInterval)
-		refreshDone = make(chan struct{})           // where doRefresh reports completion
-		waiting     = []chan struct{}{tab.initDone} // holds waiting callers while doRefresh runs
-
-		// Wait for a random amount of time before the next revalidation.
-		// Rescheduled after finishing every revalidation.
-		revalidate     = time.NewTimer(tab.nextRevalidateTime())
-		revalidateDone = make(chan struct{})
-		revalidating   = false
-
-		// Periodically reseed the random number generator.
-		reseed = time.NewTicker(reseedInterval)
-	)
-	defer refresh.Stop()
-	defer revalidate.Stop()
-	defer reseed.Stop()
-
-	// Start the initial refresh.
-	go tab.doRefresh(refreshDone)
-
-loop:
-	for {
-		select {
-		case <-refresh.C:
-			if refreshDone == nil { // only if no other refresh is in progress
-				refreshDone = make(chan struct{})
-				go tab.doRefresh(refreshDone)
-			}
-
-		case req := <-tab.refreshReq:
-			waiting = append(waiting, req)
-			if refreshDone == nil { // only if no other refresh is in progress
-				refreshDone = make(chan struct{})
-				go tab.doRefresh(refreshDone)
-			}
-
-		case <-refreshDone:
-			// signal all waiting callers that the refresh is done.
-			for _, ch := range waiting {
-				close(ch)
-			}
-			waiting, refreshDone = nil, nil
-
-		case <-revalidate.C:
-			logger.Trace("Discovery revalidation triggered")
-			go tab.doRevalidate(revalidateDone)
-
-		case <-revalidateDone:
-			dt := tab.nextRevalidateTime()
-			revalidate.Reset(dt)
-			revalidateDone = make(chan struct{})
-			logger.Trace("Discovery revalidation scheduled", "after", dt)
-
-		case <-reseed.C:
-			tab.rand.Seed()
-
-		case <-tab.closeReq:
-			break loop
-		}
-	}
-
-	// If a refresh is still running, wait for it and notify waiters.
-	if refreshDone != nil {
-		<-refreshDone
-		for _, ch := range waiting {
-			close(ch)
-		}
-	}
-	// If a revalidation is still running, wait for it.
-	if revalidating {
-		<-revalidateDone
-	}
-
-	close(tab.closed)
-}
-
-func (tab *table) nextRevalidateTime() time.Duration {
-	return time.Duration(tab.rand.Int63n(int64(maxRevalidateInterval-minRevalidateInterval)) + int64(minRevalidateInterval))
+func (tab *table) Start() {
+	tab.wg.Add(2)
+	go tab.refreshLoop()
+	go tab.revalidateLoop()
 }
 
 func (tab *table) Close() {
-	select {
-	case <-tab.closed:
-		// already closed.
-	case tab.closeReq <- struct{}{}:
-		<-tab.closed // wait for loop() to end.
+	tab.closemu.Lock()
+	defer tab.closemu.Unlock()
+	if tab.closed.Load() {
+		return
+	}
+
+	logger.Info("Discovery table closing")
+	close(tab.closeReq) // Notify the loops to stop.
+	tab.wg.Wait()       // Wait for the loops to finish.
+	tab.closed.Store(true)
+	logger.Info("Discovery table closed")
+}
+
+//// Periodic maintenance loops
+
+func (tab *table) refreshLoop() {
+	var (
+		refreshTicker = time.NewTicker(refreshInterval)
+	)
+	defer tab.wg.Done()
+	defer refreshTicker.Stop()
+
+	// Initial refresh.
+	tab.doRefresh()
+	tab.init.Store(true)
+
+	for {
+		select {
+		case <-refreshTicker.C:
+			tab.rand.Seed() // reseed the randomness before consuming it during refresh.
+			tab.doRefresh()
+		case wait := <-tab.refreshReq:
+			tab.doRefresh()
+			close(wait) // Notify the Refresh() caller.
+		case <-tab.closeReq:
+			return
+		}
+	}
+}
+
+func (tab *table) revalidateLoop() {
+	var (
+		timer = time.NewTimer(revalidateInterval)
+	)
+	defer tab.wg.Done()
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-timer.C:
+			tab.doRevalidate()
+			timer.Reset(revalidateInterval)
+		case <-tab.closeReq:
+			return
+		}
 	}
 }
 
 //// Refresh and lookup
 
 func (tab *table) Refresh() {
-	done := make(chan struct{})
+	wait := make(chan struct{})
 	select {
-	case tab.refreshReq <- done: // Send our `done` channel to the refresh loop, to be closed when the refresh is done.
-	case <-tab.closeReq: // Table loop isn't running. Immediately return.
-		close(done)
+	case <-tab.closeReq:
+		return
+	case tab.refreshReq <- wait:
 	}
-	<-done // Wait for the refresh to complete.
+
+	select {
+	case <-tab.closeReq:
+	case <-wait:
+	}
 }
 
-func (tab *table) doRefresh(done chan struct{}) {
+func (tab *table) doRefresh() {
 	logger.Info("Discovery table refreshing", "counts", tab.lenByNodeTypes())
 	defer logger.Info("Discovery table refreshed", "counts", tab.lenByNodeTypes())
-	defer close(done)
 
 	tab.kademliaRefresh(NodeTypeEN)
 	tab.simpleRefresh(NodeTypeCN)
@@ -463,7 +410,7 @@ func (tab *table) Bond(pinged bool, n *Node) error {
 	}
 	// Do not accept inbound (i.e. remote pinged me) bonding requests before
 	// populating from my seeds. It prevents remote nodes from filling up the table.
-	if pinged && !tab.isInitDone() {
+	if pinged && !tab.initialized() {
 		return errTableNotInitialized
 	}
 
@@ -526,8 +473,7 @@ func (tab *table) pingpong(task *bondtask, pinged bool, n *Node) {
 
 //// Revalidate
 
-func (tab *table) doRevalidate(done chan struct{}) {
-	defer close(done)
+func (tab *table) doRevalidate() {
 	for _, s := range tab.storages {
 		tab.revalidateOnce(s)
 	}
@@ -549,6 +495,23 @@ func (tab *table) revalidateOnce(s tableStorage) {
 	} else {
 		logger.Debug("Discovery revalidation failed", "node", n.addr())
 		s.delete(n)
+	}
+}
+
+//// Storage and database access wrappers
+
+// Adds a node to one of the storages of the node's type.
+// If the node is a bootstrap node, it is added to all storages.
+func (tab *table) addNode(n *Node) {
+	if n.NType == NodeTypeBN {
+		for _, s := range tab.storages {
+			s.add(n)
+		}
+		return
+	} else {
+		if s := tab.storages[n.NType]; s != nil {
+			s.add(n)
+		}
 	}
 }
 

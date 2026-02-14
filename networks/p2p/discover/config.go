@@ -19,17 +19,11 @@ package discover
 import (
 	"errors"
 	"math"
-	"time"
 )
 
 var (
 	errSelfBonding         = errors.New("cannot bond with self")
 	errTableNotInitialized = errors.New("table not yet initialized")
-
-	minRevalidateInterval = 5 * time.Second
-	maxRevalidateInterval = 10 * time.Second
-
-	reseedInterval = 10 * time.Minute
 )
 
 // TODO: bring udp.go:Config
