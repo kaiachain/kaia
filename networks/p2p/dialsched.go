@@ -65,14 +65,14 @@ func NewDialSched(cfg DialConfig, tab discover.Discovery2) *DialSched {
 	return ds
 }
 
-func (ds *DialSched) Close() {
-	for _, typedSched := range ds.typedSchedulers {
+func (d *DialSched) Close() {
+	for _, typedSched := range d.typedSchedulers {
 		typedSched.Close()
 	}
 }
 
-func (ds *DialSched) AddStatic(n *discover.Node) {
-	if tds := ds.typedSchedulers[n.NType]; tds != nil {
+func (d *DialSched) AddStatic(n *discover.Node) {
+	if tds := d.typedSchedulers[n.NType]; tds != nil {
 		tds.AddStatic(n)
 	}
 }
@@ -144,61 +144,61 @@ func newTypedDialSched(selfID discover.NodeID, targetType discover.NodeType, tar
 	}
 }
 
-func (ds *TypedDialSched) Close() {
-	if ds.closed.Swap(true) {
+func (td *TypedDialSched) Close() {
+	if td.closed.Swap(true) {
 		return
 	}
 
-	close(ds.closeReq)
-	ds.wg.Wait()
+	close(td.closeReq)
+	td.wg.Wait()
 }
 
-func (ds *TypedDialSched) AddStatic(n *discover.Node) {
-	ds.mu.Lock()
-	defer ds.mu.Unlock()
+func (td *TypedDialSched) AddStatic(n *discover.Node) {
+	td.mu.Lock()
+	defer td.mu.Unlock()
 
-	ds.static[n.ID] = n
+	td.static[n.ID] = n
 }
 
-func (ds *TypedDialSched) RemoveStatic(id discover.NodeID) {
-	ds.mu.Lock()
-	defer ds.mu.Unlock()
+func (td *TypedDialSched) RemoveStatic(id discover.NodeID) {
+	td.mu.Lock()
+	defer td.mu.Unlock()
 
-	delete(ds.static, id)
+	delete(td.static, id)
 }
 
 // Intake a dial success event.
-func (ds *TypedDialSched) OnSuccess(id discover.NodeID) {
-	ds.mu.Lock()
-	defer ds.mu.Unlock()
+func (td *TypedDialSched) OnSuccess(id discover.NodeID) {
+	td.mu.Lock()
+	defer td.mu.Unlock()
 
-	ds.connected[id] = true
-	delete(ds.dialing, id)
-	delete(ds.fails, id)
+	td.connected[id] = true
+	delete(td.dialing, id)
+	delete(td.fails, id)
 }
 
 // Intake a dial failure or disconnection event.
-func (ds *TypedDialSched) OnFailure(id discover.NodeID) {
-	ds.mu.Lock()
-	defer ds.mu.Unlock()
+func (td *TypedDialSched) OnFailure(id discover.NodeID) {
+	td.mu.Lock()
+	defer td.mu.Unlock()
 
-	delete(ds.connected, id)
-	delete(ds.dialing, id)
-	ds.fails[id]++
+	delete(td.connected, id)
+	delete(td.dialing, id)
+	td.fails[id]++
 }
 
-func (ds *TypedDialSched) dialLoop() {
-	defer ds.wg.Done()
-	resCh := make(chan error, ds.targetConn)
+func (td *TypedDialSched) dialLoop() {
+	defer td.wg.Done()
+	resCh := make(chan error, td.targetConn)
 
 	for {
-		ds.launchDialTasks(resCh)
+		td.launchDialTasks(resCh)
 
 		// Only back off when no dials are currently running.
 		var idle <-chan time.Time
-		ds.mu.RLock()
-		running := len(ds.dialing)
-		ds.mu.RUnlock()
+		td.mu.RLock()
+		running := len(td.dialing)
+		td.mu.RUnlock()
 		if running == 0 {
 			idle = time.After(10 * time.Second)
 		}
@@ -206,82 +206,82 @@ func (ds *TypedDialSched) dialLoop() {
 		select {
 		case <-resCh: // wait for a dial result
 		case <-idle:
-		case <-ds.closeReq:
+		case <-td.closeReq:
 			return
 		}
 	}
 }
 
 // Launch dial tasks to reach the targetConn count.
-func (ds *TypedDialSched) launchDialTasks(resCh chan error) {
-	ds.mu.RLock()
+func (td *TypedDialSched) launchDialTasks(resCh chan error) {
+	td.mu.RLock()
 	var (
-		connected = len(ds.connected)
-		dialing   = len(ds.dialing)
-		want      = ds.targetConn - connected - dialing
+		connected = len(td.connected)
+		dialing   = len(td.dialing)
+		want      = td.targetConn - connected - dialing
 	)
-	ds.mu.RUnlock()
+	td.mu.RUnlock()
 	if want <= 0 {
 		return
 	}
 
 	launched := 0
-	candidates := ds.candidates(want)
+	candidates := td.candidates(want)
 	for _, n := range candidates {
 		if launched >= want {
 			break
 		}
-		ds.mu.Lock()
+		td.mu.Lock()
 		// Skip duplicates and already active/connected nodes.
-		if ds.connected[n.ID] || ds.dialing[n.ID] {
-			ds.mu.Unlock()
+		if td.connected[n.ID] || td.dialing[n.ID] {
+			td.mu.Unlock()
 			continue
 		}
-		ds.dialing[n.ID] = true
-		ds.mu.Unlock()
+		td.dialing[n.ID] = true
+		td.mu.Unlock()
 
 		launched++
 		nn := n
-		go func() { resCh <- ds.dialOnce(nn) }()
+		go func() { resCh <- td.dialOnce(nn) }()
 	}
 
 	if launched > 0 {
-		logger.Debug("DialSched launched", "target", ds.targetConn, "connected", connected, "dialing", dialing, "want", want,
+		logger.Debug("DialSched launched", "target", td.targetConn, "connected", connected, "dialing", dialing, "want", want,
 			"candidates", len(candidates), "launched", launched)
 	}
 }
 
 // Returns the nodes to dial.
-func (ds *TypedDialSched) candidates(want int) []*discover.Node {
+func (td *TypedDialSched) candidates(want int) []*discover.Node {
 	if want <= 0 {
 		return nil
 	}
 
 	// Overfetch because some candidates may be ineligible (already connected or dialing)
-	ds.mu.RLock()
-	candidates := make([]*discover.Node, 0, len(ds.static)+want*2)
+	td.mu.RLock()
+	candidates := make([]*discover.Node, 0, len(td.static)+want*2)
 
 	// Prioritize static nodes.
-	for _, n := range ds.static {
+	for _, n := range td.static {
 		candidates = append(candidates, n)
 	}
-	ds.mu.RUnlock()
+	td.mu.RUnlock()
 
 	// Add random nodes.
 	random := make([]*discover.Node, want*2)
-	if ds.tab != nil {
-		numRandom := ds.tab.RandomNodes(random, ds.targetType)
+	if td.tab != nil {
+		numRandom := td.tab.RandomNodes(random, td.targetType)
 		candidates = append(candidates, random[:numRandom]...)
 	}
 
 	return candidates
 }
 
-func (ds *TypedDialSched) dialOnce(n *discover.Node) error {
+func (td *TypedDialSched) dialOnce(n *discover.Node) error {
 	// TODO: srv.SetupConn
 	time.Sleep(time.Second)
 
-	ds.OnSuccess(n.ID) // TODO: it should be called inside srv.SetupConn. Calling here temporarily.
+	td.OnSuccess(n.ID) // TODO: it should be called inside srv.SetupConn. Calling here temporarily.
 	logger.Debug("DialSched connected", "node", n.ID, "nType", n.NType)
 	return nil
 }
