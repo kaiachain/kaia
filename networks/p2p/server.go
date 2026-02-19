@@ -379,7 +379,8 @@ func (srv *MultiChannelServer) Start() (err error) {
 	srv.dialsched = srv.newDialSched()
 
 	// handshake
-	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: true}
+	srv.selfNodeID = discover.PubkeyID(&srv.PrivateKey.PublicKey)
+	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: srv.selfNodeID, Multichannel: true}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
@@ -492,11 +493,6 @@ func (srv *MultiChannelServer) listenLoop(listener net.Listener) {
 // as a peer. It returns when the connection has been added as a peer
 // or the handshakes have failed.
 func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
-	self := srv.Self()
-	if self == nil {
-		return errors.New("shutdown")
-	}
-
 	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, portOrder: PortOrderUndefined}
 
 	if dialDest != nil {
@@ -708,6 +704,9 @@ type BaseServer struct {
 
 	lock    sync.Mutex // protects running
 	running bool
+	// selfNodeID is the node ID of this server. Set once during Start() and never changes.
+	// Cached here to avoid calling Self() (which acquires srv.lock) while holding peerMu.
+	selfNodeID discover.NodeID
 
 	ntab         discover.Discovery
 	listener     net.Listener
@@ -1107,7 +1106,8 @@ func (srv *BaseServer) Start() (err error) {
 	srv.dialsched = srv.newDialSched()
 
 	// handshake
-	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: false}
+	srv.selfNodeID = discover.PubkeyID(&srv.PrivateKey.PublicKey)
+	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: srv.selfNodeID, Multichannel: false}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
@@ -1365,7 +1365,7 @@ func (srv *BaseServer) encHandshakeChecksUnlocked(c *conn) error {
 		return DiscTooManyPeers
 	case srv.peers[c.id] != nil:
 		return DiscAlreadyConnected
-	case c.id == srv.Self().ID:
+	case c.id == srv.selfNodeID:
 		return DiscSelf
 	default:
 		return nil
@@ -1516,11 +1516,6 @@ func (srv *BaseServer) listenLoop() {
 // as a peer. It returns when the connection has been added as a peer
 // or the handshakes have failed.
 func (srv *BaseServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
-	self := srv.Self()
-	if self == nil {
-		return errors.New("shutdown")
-	}
-
 	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, portOrder: ConnDefault}
 
 	// if err occurs, dialPubkey is automatically set as nil
