@@ -1227,12 +1227,6 @@ func (srv *BaseServer) handlePostHandshake(c *conn) error {
 }
 
 func (srv *BaseServer) handleAddPeer(c *conn) error {
-	select {
-	case <-srv.quit:
-		return errServerStopped
-	default:
-	}
-
 	// At this point the connection is past the protocol handshake.
 	// Its capabilities are known and the remote identity is verified.
 	err := srv.protoHandshakeChecks(c)
@@ -1251,6 +1245,12 @@ func (srv *BaseServer) handleAddPeer(c *conn) error {
 	}
 
 	srv.peerMu.Lock()
+	select {
+	case <-srv.quit:
+		srv.peerMu.Unlock()
+		return errServerStopped
+	default:
+	}
 	// Repeat the capacity check because the peer set might have changed between the handshakes.
 	if err := srv.encHandshakeChecksUnlocked(c); err != nil {
 		srv.peerMu.Unlock()
@@ -1270,12 +1270,6 @@ func (srv *BaseServer) handleAddPeer(c *conn) error {
 }
 
 func (srv *MultiChannelServer) handleAddPeer(c *conn) error {
-	select {
-	case <-srv.quit:
-		return errServerStopped
-	default:
-	}
-
 	// At this point the connection is past the protocol handshake.
 	// Its capabilities are known and the remote identity is verified.
 	if err := srv.protoHandshakeChecks(c); err != nil {
@@ -1316,6 +1310,12 @@ func (srv *MultiChannelServer) handleAddPeer(c *conn) error {
 	}
 
 	srv.peerMu.Lock()
+	select {
+	case <-srv.quit:
+		srv.peerMu.Unlock()
+		return errServerStopped
+	default:
+	}
 	// Repeat the capacity check because the peer set might have changed between the handshakes.
 	if err := srv.encHandshakeChecksUnlocked(c); err != nil {
 		srv.peerMu.Unlock()
