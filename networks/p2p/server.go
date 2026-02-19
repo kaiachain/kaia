@@ -1214,23 +1214,15 @@ type dialer interface {
 	removeStatic(*discover.Node)
 }
 
-func (srv *BaseServer) isTrusted(id discover.NodeID) bool {
+func (srv *BaseServer) handlePostHandshake(c *conn) error {
 	srv.peerMu.RLock()
 	defer srv.peerMu.RUnlock()
-	return srv.trusted[id]
-}
 
-func (srv *BaseServer) handlePostHandshake(c *conn) error {
-	// A connection has passed the encryption handshake so
-	// the remote identity is known (but hasn't been verified yet).
-	if srv.isTrusted(c.id) {
+	if srv.trusted[c.id] {
 		// Ensure that the trusted flag is set before checking against MaxPhysicalConnections.
 		c.flags |= trustedConn
 	}
-	// TODO: track in-progress inbound node IDs (pre-Peer) to avoid dialing them.
 
-	srv.peerMu.RLock()
-	defer srv.peerMu.RUnlock()
 	return srv.encHandshakeChecksUnlocked(c)
 }
 
@@ -1373,21 +1365,6 @@ func (srv *MultiChannelServer) collectMultiChannelConns(c *conn) ([]*conn, error
 }
 
 func (srv *BaseServer) handlePeerDrop(pd peerDrop) {
-	// A peer disconnected.
-	d := common.PrettyDuration(mclock.Now() - pd.created)
-
-	srv.peerMu.Lock()
-	delete(srv.peers, pd.ID())
-	srv.decrementConnectionCounts(pd.Peer)
-	peerCount := len(srv.peers)
-	srv.peerMu.Unlock()
-
-	pd.logger.Debug("Removing p2p peer", "duration", d, "peers", peerCount, "req", pd.requested, "err", pd.err)
-	srv.reportPeerMetric()
-	srv.signalSchedule()
-}
-
-func (srv *MultiChannelServer) handlePeerDrop(pd peerDrop) {
 	// A peer disconnected.
 	d := common.PrettyDuration(mclock.Now() - pd.created)
 
