@@ -17,13 +17,20 @@
 package impl
 
 import (
-	"sort"
+	"bytes"
+	"cmp"
+	"slices"
 	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
+
+type sortableValidator struct {
+	addr common.Address
+	*valset.ValidatorChart
+}
 
 // getEpochTransition returns new validators after applying epoch transition
 func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, validators valset.ValidatorChartMap) valset.ValidatorChartMap {
@@ -42,12 +49,12 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 	}
 
 	var (
-		newValidators         = validators.Copy()
-		potentialActiveValSet []*valset.ValidatorChart
-		pset                  = v.GovModule.GetParamSet(num - 1) // read gov param from parent number
-		minStake              = pset.MinimumStake.Uint64()       // in KAIA
+		newValidators           = validators.Copy()
+		activeValSetCompetitors []sortableValidator
+		pset                    = v.GovModule.GetParamSet(num - 1) // read gov param from parent number
+		minStake                = pset.MinimumStake.Uint64()       // in KAIA
 	)
-	for _, val := range newValidators {
+	for addr, val := range newValidators {
 		switch val.State {
 		case valset.ValExiting:
 			val.State = valset.ValInactive // T1
@@ -60,7 +67,7 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 		case valset.CandTesting:
 			if v.isPassVrankTest() {
 				if val.StakingAmount >= minStake {
-					potentialActiveValSet = append(potentialActiveValSet, val) // T3a
+					activeValSetCompetitors = append(activeValSetCompetitors, sortableValidator{addr, val}) // T3a
 				} else {
 					val.State = valset.ValInactive // T3b
 				}
@@ -69,16 +76,19 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 			}
 		case valset.ValReady, valset.ValActive, valset.ValPaused:
 			if val.StakingAmount >= minStake {
-				potentialActiveValSet = append(potentialActiveValSet, val) // T3a
+				activeValSetCompetitors = append(activeValSetCompetitors, sortableValidator{addr, val}) // T3a
 			} else {
 				val.State = valset.ValInactive // T3b
 			}
 		}
 	}
-	sort.Slice(potentialActiveValSet, func(i, j int) bool {
-		return potentialActiveValSet[i].StakingAmount > potentialActiveValSet[j].StakingAmount
+	slices.SortFunc(activeValSetCompetitors, func(a, b sortableValidator) int {
+		return cmp.Or(
+			cmp.Compare(b.StakingAmount, a.StakingAmount),
+			bytes.Compare(a.addr[:], b.addr[:]), // tie-breaking: address order
+		)
 	})
-	for idx, potentialActiveVal := range potentialActiveValSet {
+	for idx, potentialActiveVal := range activeValSetCompetitors {
 		if idx < ActiveValidatorCount {
 			if potentialActiveVal.State != valset.ValPaused {
 				potentialActiveVal.State = valset.ValActive
