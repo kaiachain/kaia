@@ -149,7 +149,17 @@ func (ds *DialSched) Close() {
 		return
 	}
 	close(ds.closeReq)
-	ds.wg.Wait()
+
+	done := make(chan struct{})
+	go func() {
+		ds.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		logger.Warn("DialSched.Close: timed out waiting for dial tasks to finish")
+	}
 }
 
 func (ds *DialSched) AddStatic(n *discover.Node) {
@@ -272,7 +282,9 @@ func (ds *DialSched) launchDialTasks(candidates []*discover.Node, resCh chan str
 		}
 		ds.markDialingStart(n)
 		nn := cloneNode(n)
+		ds.wg.Add(1)
 		go func() {
+			defer ds.wg.Done()
 			ds.dialOnce(nn)
 			ds.signalResult(resCh)
 		}()
@@ -307,9 +319,8 @@ func (ds *DialSched) dialOnce(n *discover.Node) {
 
 	if err != nil {
 		ds.markConnFailure(n.ID)
-	} else {
-		ds.markConnSuccess(n, false)
 	}
+	// We don't call markConnSuccess() here. If dial()-SetupConn() succeeds, the Server will call OnPeerConnected()-markConnSuccess().
 }
 
 func (ds *DialSched) dial(dest *discover.Node, flags connFlag) error {
@@ -352,7 +363,9 @@ func (ds *DialSched) refreshOnce(resCh chan struct{}) {
 	if ds.tab == nil {
 		return
 	}
+	ds.wg.Add(1)
 	go func() {
+		defer ds.wg.Done()
 		ds.tab.Lookup(ds.selfID, discover.NodeTypeCN)
 		ds.tab.Lookup(ds.selfID, discover.NodeTypePN)
 		ds.tab.Lookup(ds.selfID, discover.NodeTypeEN)

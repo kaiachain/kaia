@@ -94,9 +94,10 @@ type setupConnArg struct {
 }
 
 type mockSetupBackend struct {
-	mu       sync.Mutex
-	setupErr map[discover.NodeID]error // injected errors, discriminated by NodeID.
-	calls    []setupConnArg            // recorded SetupConn calls.
+	mu        sync.Mutex
+	dialsched *DialSched
+	setupErr  map[discover.NodeID]error // injected errors, discriminated by NodeID.
+	calls     []setupConnArg            // recorded SetupConn calls.
 }
 
 func (m *mockSetupBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
@@ -116,15 +117,18 @@ func (m *mockSetupBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *disc
 		}
 	}
 	m.calls = append(m.calls, call)
+	m.dialsched.markConnSuccess(dialDest, false)
 	return nil
 }
 
 // A SetupConn backend that returns errUpdateDial, telling me (the dialsched) to use different ports.
+// Returns errUpdateDial at first call, then succeeds afterwards.
 type updateToMultiBackend struct {
-	mu      sync.Mutex
-	updated bool
-	ports   []uint16
-	calls   []setupConnArg
+	mu         sync.Mutex
+	dialsched  *DialSched
+	calledOnce bool
+	ports      []uint16
+	calls      []setupConnArg
 }
 
 func (m *updateToMultiBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
@@ -141,13 +145,14 @@ func (m *updateToMultiBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *
 	}
 	m.calls = append(m.calls, call)
 
-	if !m.updated {
-		m.updated = true
+	if !m.calledOnce {
+		m.calledOnce = true
 		if dialDest != nil {
 			dialDest.TCPs = append([]uint16(nil), m.ports...)
 		}
 		return errUpdateDial
 	}
+	m.dialsched.markConnSuccess(dialDest, false)
 	return nil
 }
 
@@ -429,6 +434,7 @@ func TestDialSched_LaunchDialTasks(t *testing.T) {
 		resCh = make(chan struct{}, 2)
 	)
 	ds.dialer = md
+	mb.dialsched = ds
 
 	// Launch and wait for both dial tasks to complete.
 	ds.launchDialTasks([]*discover.Node{staticNode, dynNode}, resCh)
@@ -469,6 +475,7 @@ func TestDialSched_SetupConn(t *testing.T) {
 		}, nil, mb)
 	)
 	ds.dialer = md
+	mb.dialsched = ds
 
 	ds.dialOnce(staticNode)
 	ds.dialOnce(dynNode)
@@ -499,6 +506,7 @@ func TestDialSched_Dial_DialFailure(t *testing.T) {
 		}, nil, mb)
 	)
 	ds.dialer = md
+	mb.dialsched = ds
 
 	ds.dialOnce(staticNode)
 
@@ -520,6 +528,7 @@ func TestDialSched_Dial_RetryOnErrUpdateDial(t *testing.T) {
 		ds = NewDialSched(DialConfig{}, nil, mb)
 	)
 	ds.dialer = md
+	mb.dialsched = ds
 
 	ds.dialOnce(node)
 
@@ -550,6 +559,7 @@ func TestDialSched_DialMulti(t *testing.T) {
 		ds        = NewDialSched(DialConfig{}, nil, mb)
 	)
 	ds.dialer = md
+	mb.dialsched = ds
 
 	ds.dialOnce(multiNode)
 

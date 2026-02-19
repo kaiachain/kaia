@@ -323,7 +323,6 @@ func (srv *MultiChannelServer) Start() (err error) {
 		srv.Dialer = TCPDialer{&net.Dialer{Timeout: defaultDialTimeout}}
 	}
 	srv.quit = make(chan struct{})
-	srv.schedWake = make(chan struct{}, 1)
 	srv.initPeerState()
 
 	var (
@@ -377,7 +376,7 @@ func (srv *MultiChannelServer) Start() (err error) {
 		srv.ntab = ntab
 	}
 
-	srv.dialstate = newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.maxDialedConns(), srv.NetRestrict, srv.PrivateKey, srv.getTypeStatics())
+	srv.dialsched = srv.newDialSched()
 
 	// handshake
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: true}
@@ -407,8 +406,7 @@ func (srv *MultiChannelServer) Start() (err error) {
 		}
 	}
 
-	srv.loopWG.Add(1)
-	go srv.run()
+	srv.dialsched.Start()
 	srv.running = true
 	srv.logger.Info("Started P2P server", "id", discover.PubkeyID(&srv.PrivateKey.PublicKey), "multichannel", true)
 	return nil
@@ -605,71 +603,9 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 		return err
 	}
 	// If the checks completed successfully, runPeer has now been
-	// launched by run.
+	// launched by handleAddPeer.
 	clog.Trace("connection set up", "inbound", dialDest == nil)
 	return nil
-}
-
-// run is the main loop that the server runs.
-func (srv *MultiChannelServer) run() {
-	logger.Debug("[p2p.Server] start MultiChannel p2p server")
-	defer srv.loopWG.Done()
-	var (
-		taskdone     = make(chan task, maxActiveDialTasks)
-		runningTasks []task
-		queuedTasks  []task // tasks that can't run yet
-	)
-
-	// removes t from runningTasks
-	delTask := func(t task) {
-		for i := range runningTasks {
-			if runningTasks[i] == t {
-				runningTasks = append(runningTasks[:i], runningTasks[i+1:]...)
-				break
-			}
-		}
-	}
-	// starts until max number of active tasks is satisfied
-	startTasks := func(ts []task) (rest []task) {
-		i := 0
-		for ; len(runningTasks) < maxActiveDialTasks && i < len(ts); i++ {
-			t := ts[i]
-			srv.logger.Trace("New dial task", "task", t)
-			go func() { t.Do(srv); taskdone <- t }()
-			runningTasks = append(runningTasks, t)
-		}
-		return ts[i:]
-	}
-	scheduleTasks := func() {
-		// Start from queue first.
-		queuedTasks = append(queuedTasks[:0], startTasks(queuedTasks)...)
-		// Query dialer for new tasks and start as many as possible now.
-		if len(runningTasks) < maxActiveDialTasks {
-			nt := srv.dialstate.newTasks(len(runningTasks)+len(queuedTasks), srv.allPeers(), time.Now())
-			queuedTasks = append(queuedTasks, startTasks(nt)...)
-		}
-	}
-
-running:
-	for {
-		scheduleTasks()
-
-		select {
-		case <-srv.quit:
-			// The server was stopped. Run the cleanup logic.
-			break running
-		case t := <-taskdone:
-			// A task got done. Tell dialstate about it so it
-			// can update its state and remove it from the active
-			// tasks list.
-			srv.logger.Trace("Dial task done", "task", t)
-			srv.dialstate.taskDone(t, time.Now())
-			delTask(t)
-		case <-srv.schedWake:
-		}
-	}
-
-	srv.cleanupAfterRun()
 }
 
 // Stop terminates the server and all active peer connections.
@@ -688,7 +624,14 @@ func (srv *MultiChannelServer) Stop() {
 	for _, listener := range srv.listeners {
 		listener.Close()
 	}
+	if srv.dialsched != nil {
+		srv.dialsched.Close()
+	}
+	if srv.ntab != nil {
+		srv.ntab.Close()
+	}
 	close(srv.quit)
+	srv.disconnectAllPeers()
 	srv.loopWG.Wait()
 }
 
@@ -779,7 +722,7 @@ type BaseServer struct {
 	outboundCount int
 	trusted       map[discover.NodeID]bool
 	// peerCond is broadcast whenever a peer is removed from peers.
-	// cleanupAfterRun waits on it until the peer map is empty.
+	// disconnectAllPeers() waits on it until the peer map is empty.
 	// peerCond.L is &peerMu (write lock).
 	peerCond *sync.Cond
 	// stopping is set to true during shutdown to prevent new peers from being added.
@@ -787,8 +730,7 @@ type BaseServer struct {
 	stopping bool
 
 	quit      chan struct{}
-	schedWake chan struct{}
-	dialstate dialer
+	dialsched *DialSched
 	loopWG    sync.WaitGroup // loop, listenLoop
 	peerFeed  event.Feed
 	logger    log.Logger
@@ -818,13 +760,6 @@ func (srv *BaseServer) allPeers() map[discover.NodeID]*Peer {
 		peers[id] = p
 	}
 	return peers
-}
-
-func (srv *BaseServer) signalSchedule() {
-	select {
-	case srv.schedWake <- struct{}{}:
-	default:
-	}
 }
 
 type peerDrop struct {
@@ -966,9 +901,8 @@ func (srv *BaseServer) AddPeer(node *discover.Node) {
 	default:
 	}
 
-	srv.dialstate.addStatic(node)
+	srv.dialsched.AddStatic(node)
 	srv.logger.Debug("Adding static node", "node", node)
-	srv.signalSchedule()
 }
 
 // RemovePeer disconnects from the given node.
@@ -982,9 +916,8 @@ func (srv *BaseServer) RemovePeer(node *discover.Node) {
 	default:
 	}
 
-	srv.dialstate.removeStatic(node)
+	srv.dialsched.RemoveStatic(node.ID)
 	srv.logger.Debug("Removing static node", "node", node)
-	srv.signalSchedule()
 
 	srv.peerMu.RLock()
 	p := srv.peers[node.ID]
@@ -1043,7 +976,14 @@ func (srv *BaseServer) Stop() {
 		// this unblocks listener Accept
 		srv.listener.Close()
 	}
+	if srv.dialsched != nil {
+		srv.dialsched.Close()
+	}
+	if srv.ntab != nil {
+		srv.ntab.Close()
+	}
 	close(srv.quit)
+	srv.disconnectAllPeers()
 	srv.loopWG.Wait()
 }
 
@@ -1106,7 +1046,6 @@ func (srv *BaseServer) Start() (err error) {
 		srv.Dialer = TCPDialer{&net.Dialer{Timeout: defaultDialTimeout}}
 	}
 	srv.quit = make(chan struct{})
-	srv.schedWake = make(chan struct{}, 1)
 	srv.initPeerState()
 
 	var (
@@ -1165,7 +1104,7 @@ func (srv *BaseServer) Start() (err error) {
 		srv.ntab = ntab
 	}
 
-	srv.dialstate = newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.maxDialedConns(), srv.NetRestrict, srv.PrivateKey, srv.getTypeStatics())
+	srv.dialsched = srv.newDialSched()
 
 	// handshake
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: false}
@@ -1186,8 +1125,7 @@ func (srv *BaseServer) Start() (err error) {
 		}
 	}
 
-	srv.loopWG.Add(1)
-	go srv.run()
+	srv.dialsched.Start()
 	srv.running = true
 	srv.logger.Info("Started P2P server", "id", discover.PubkeyID(&srv.PrivateKey.PublicKey), "multichannel", false)
 	return nil
@@ -1211,13 +1149,6 @@ func (srv *BaseServer) startListening() error {
 		})
 	}
 	return nil
-}
-
-type dialer interface {
-	newTasks(running int, peers map[discover.NodeID]*Peer, now time.Time) []task
-	taskDone(task, time.Time)
-	addStatic(*discover.Node)
-	removeStatic(*discover.Node)
 }
 
 func (srv *BaseServer) handlePostHandshake(c *conn) error {
@@ -1264,6 +1195,8 @@ func (srv *BaseServer) handleAddPeer(c *conn) error {
 	srv.incrementConnectionCounts(p)
 	peerCount := len(srv.peers)
 	srv.peerMu.Unlock()
+
+	srv.dialsched.OnPeerConnected(&discover.Node{ID: c.id, NType: ConvertNodeType(c.conntype)}, c.Inbound())
 
 	go srv.runPeer(p)
 
@@ -1327,6 +1260,8 @@ func (srv *MultiChannelServer) handleAddPeer(c *conn) error {
 	peerCount := len(srv.peers)
 	srv.peerMu.Unlock()
 
+	srv.dialsched.OnPeerConnected(&discover.Node{ID: c.id, NType: ConvertNodeType(c.conntype)}, c.Inbound())
+
 	go srv.runPeer(p)
 
 	srv.logger.Debug("Adding p2p peer", "name", truncateName(c.name), "addr", c.fd.RemoteAddr(), "peers", peerCount)
@@ -1374,12 +1309,13 @@ func (srv *BaseServer) handlePeerDrop(pd peerDrop) {
 	peerCount := len(srv.peers)
 	srv.peerMu.Unlock()
 
-	// Wake up cleanupAfterRun if it is waiting for the peer map to drain.
+	srv.dialsched.OnPeerDisconnected(pd.ID(), ConvertNodeType(pd.ConnType()))
+
+	// Wake up disconnectAllPeers() if it is waiting for the peer map to drain.
 	srv.peerCond.Broadcast()
 
 	pd.logger.Debug("Removing p2p peer", "duration", d, "peers", peerCount, "req", pd.requested, "err", pd.err)
 	srv.reportPeerMetric()
-	srv.signalSchedule()
 }
 
 func (srv *BaseServer) handleDisconnectRequest(nid discover.NodeID) {
@@ -1392,13 +1328,8 @@ func (srv *BaseServer) handleDisconnectRequest(nid discover.NodeID) {
 	}
 }
 
-func (srv *BaseServer) cleanupAfterRun() {
+func (srv *BaseServer) disconnectAllPeers() {
 	srv.logger.Trace("P2P networking is spinning down")
-
-	// Terminate discovery. If there is a running lookup it will terminate soon.
-	if srv.ntab != nil {
-		srv.ntab.Close()
-	}
 
 	// Set stopping=true under the lock so that handleAddPeer sees it atomically,
 	// then disconnect all current peers and wait for them to finish.
@@ -1414,66 +1345,6 @@ func (srv *BaseServer) cleanupAfterRun() {
 		srv.peerCond.Wait() // sleep until someone calls peerCond.Broadcast()
 	}
 	srv.peerMu.Unlock()
-}
-
-func (srv *BaseServer) run() {
-	defer srv.loopWG.Done()
-	var (
-		taskdone     = make(chan task, maxActiveDialTasks)
-		runningTasks []task
-		queuedTasks  []task // tasks that can't run yet
-	)
-
-	// removes t from runningTasks
-	delTask := func(t task) {
-		for i := range runningTasks {
-			if runningTasks[i] == t {
-				runningTasks = append(runningTasks[:i], runningTasks[i+1:]...)
-				break
-			}
-		}
-	}
-	// starts until max number of active tasks is satisfied
-	startTasks := func(ts []task) (rest []task) {
-		i := 0
-		for ; len(runningTasks) < maxActiveDialTasks && i < len(ts); i++ {
-			t := ts[i]
-			srv.logger.Trace("New dial task", "task", t)
-			go func() { t.Do(srv); taskdone <- t }()
-			runningTasks = append(runningTasks, t)
-		}
-		return ts[i:]
-	}
-	scheduleTasks := func() {
-		// Start from queue first.
-		queuedTasks = append(queuedTasks[:0], startTasks(queuedTasks)...)
-		// Query dialer for new tasks and start as many as possible now.
-		if len(runningTasks) < maxActiveDialTasks {
-			nt := srv.dialstate.newTasks(len(runningTasks)+len(queuedTasks), srv.allPeers(), time.Now())
-			queuedTasks = append(queuedTasks, startTasks(nt)...)
-		}
-	}
-
-running:
-	for {
-		scheduleTasks()
-
-		select {
-		case <-srv.quit:
-			// The server was stopped. Run the cleanup logic.
-			break running
-		case t := <-taskdone:
-			// A task got done. Tell dialstate about it so it
-			// can update its state and remove it from the active
-			// tasks list.
-			srv.logger.Trace("Dial task done", "task", t)
-			srv.dialstate.taskDone(t, time.Now())
-			delTask(t)
-		case <-srv.schedWake:
-		}
-	}
-
-	srv.cleanupAfterRun()
 }
 
 func (srv *BaseServer) protoHandshakeChecks(c *conn) error {
@@ -1528,32 +1399,17 @@ func (srv *BaseServer) maxDialedConns() int {
 	}
 }
 
-func (srv *BaseServer) getTypeStatics() map[dialType]typedStatic {
-	switch srv.ConnectionType {
-	case common.CONSENSUSNODE:
-		tsMap := make(map[dialType]typedStatic)
-		if srv.DiscoverTypes.CN {
-			tsMap[DT_CN] = typedStatic{discover.MaxCNCNCount, typedStaticRetry}
-		}
-		return tsMap
-	case common.PROXYNODE:
-		tsMap := make(map[dialType]typedStatic)
-		if srv.DiscoverTypes.PN {
-			tsMap[DT_PN] = typedStatic{discover.MaxPNPNCount, typedStaticRetry}
-		}
-		return tsMap
-	case common.ENDPOINTNODE:
-		tsMap := make(map[dialType]typedStatic)
-		if srv.DiscoverTypes.PN {
-			tsMap[DT_PN] = typedStatic{discover.MaxENPNCount, typedStaticRetry}
-		}
-		return tsMap
-	case common.BOOTNODE:
-		return nil
-	default:
-		logger.Crit("[p2p.Server] UnSupported Connection Type:", "ConnectionType", srv.ConnectionType)
-		return nil
+func (srv *BaseServer) newDialSched() *DialSched {
+	ds := NewDialSched(DialConfig{
+		selfID:      discover.PubkeyID(&srv.PrivateKey.PublicKey),
+		selfType:    ConvertNodeType(srv.ConnectionType),
+		staticNodes: srv.StaticNodes,
+		netrestrict: srv.NetRestrict,
+	}, srv.ntab, srv)
+	if srv.Dialer != nil {
+		ds.dialer = srv.Dialer
 	}
+	return ds
 }
 
 // Caller must hold the peerMu Lock.
@@ -1748,7 +1604,7 @@ func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Nod
 		return err
 	}
 	// If the checks completed successfully, runPeer has now been
-	// launched by run.
+	// launched by handleAddPeer.
 	clog.Trace("connection set up", "inbound", dialDest == nil)
 	return nil
 }
