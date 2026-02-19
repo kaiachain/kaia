@@ -19,6 +19,7 @@ package vrank
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 )
 
@@ -29,6 +30,8 @@ type VRankModule interface {
 	HandleVRankPreprepare(msg *VRankPreprepare) error
 	HandleVRankCandidate(msg *VRankCandidate) error
 	GetCfReport(blockNum, round uint64) (CfReport, error)
+
+	SubscribeVRank(sink chan<- *VRankBroadcastEvent) event.Subscription
 }
 
 type VRankModuleHost interface {

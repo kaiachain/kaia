@@ -134,7 +134,7 @@ func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPrepr
 		logger.Error("GetCandidates failed", "blockNum", block.NumberU64())
 		return
 	}
-	v.broadcast(candidates, VRankPreprepareMsg, vrankPreprepare)
+	v.broadcast(candidates, vrank.VRankPreprepareMsg, vrankPreprepare)
 }
 
 // BroadcastVRankCandidate is called by candidates.
@@ -146,11 +146,11 @@ func (v *VRankModule) BroadcastVRankCandidate(vrankCandidate *vrank.VRankCandida
 		return
 	}
 
-	v.broadcast(validators, VRankCandidateMsg, vrankCandidate)
+	v.broadcast(validators, vrank.VRankCandidateMsg, vrankCandidate)
 }
 
 func (v *VRankModule) broadcast(targets []common.Address, code int, msg any) {
-	req := &vrank.BroadcastRequest{
+	req := &vrank.VRankBroadcastEvent{
 		Targets: targets,
 		Code:    code,
 		Msg:     msg,
