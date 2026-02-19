@@ -49,10 +49,10 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 	}
 
 	var (
-		newValidators           = validators.Copy()
-		activeValSetCompetitors []sortableValidator
-		pset                    = v.GovModule.GetParamSet(num - 1) // read gov param from parent number
-		minStake                = pset.MinimumStake.Uint64()       // in KAIA
+		newValidators        = validators.Copy()
+		activeValCompetitors []sortableValidator
+		pset                 = v.GovModule.GetParamSet(num - 1) // read gov param from parent number
+		minStake             = pset.MinimumStake.Uint64()       // in KAIA
 	)
 	for addr, val := range newValidators {
 		switch val.State {
@@ -67,7 +67,7 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 		case valset.CandTesting:
 			if v.isPassVrankTest() {
 				if val.StakingAmount >= minStake {
-					activeValSetCompetitors = append(activeValSetCompetitors, sortableValidator{addr, val}) // T3a
+					activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
 				} else {
 					val.State = valset.ValInactive // T3b
 				}
@@ -76,19 +76,19 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 			}
 		case valset.ValReady, valset.ValActive, valset.ValPaused:
 			if val.StakingAmount >= minStake {
-				activeValSetCompetitors = append(activeValSetCompetitors, sortableValidator{addr, val}) // T3a
+				activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
 			} else {
 				val.State = valset.ValInactive // T3b
 			}
 		}
 	}
-	slices.SortFunc(activeValSetCompetitors, func(a, b sortableValidator) int {
+	slices.SortFunc(activeValCompetitors, func(a, b sortableValidator) int {
 		return cmp.Or(
 			cmp.Compare(b.StakingAmount, a.StakingAmount),
 			bytes.Compare(a.addr[:], b.addr[:]), // tie-breaking: address order
 		)
 	})
-	for idx, potentialActiveVal := range activeValSetCompetitors {
+	for idx, potentialActiveVal := range activeValCompetitors {
 		if idx < ActiveValidatorCount {
 			if potentialActiveVal.State != valset.ValPaused {
 				potentialActiveVal.State = valset.ValActive
