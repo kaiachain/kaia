@@ -701,8 +701,6 @@ func (srv *MultiChannelServer) GetListenAddress() []string {
 // it waits until the Peer logic returns and removes
 // the peer.
 func (srv *MultiChannelServer) runPeer(p *Peer) {
-	defer srv.peerWG.Done()
-
 	if srv.newPeerHook != nil {
 		srv.newPeerHook(p)
 	}
@@ -780,7 +778,13 @@ type BaseServer struct {
 	inboundCount  int
 	outboundCount int
 	trusted       map[discover.NodeID]bool
-	peerWG        sync.WaitGroup
+	// peerCond is broadcast whenever a peer is removed from peers.
+	// cleanupAfterRun waits on it until the peer map is empty.
+	// peerCond.L is &peerMu (write lock).
+	peerCond *sync.Cond
+	// stopping is set to true during shutdown to prevent new peers from being added.
+	// Protected by peerMu.
+	stopping bool
 
 	quit      chan struct{}
 	schedWake chan struct{}
@@ -797,10 +801,12 @@ func (srv *BaseServer) initPeerState() {
 	srv.peers = make(map[discover.NodeID]*Peer)
 	srv.inboundCount = 0
 	srv.outboundCount = 0
+	srv.stopping = false
 	srv.trusted = make(map[discover.NodeID]bool, len(srv.TrustedNodes))
 	for _, n := range srv.TrustedNodes {
 		srv.trusted[n.ID] = true
 	}
+	srv.peerCond = sync.NewCond(&srv.peerMu)
 }
 
 func (srv *BaseServer) allPeers() map[discover.NodeID]*Peer {
@@ -1245,11 +1251,9 @@ func (srv *BaseServer) handleAddPeer(c *conn) error {
 	}
 
 	srv.peerMu.Lock()
-	select {
-	case <-srv.quit:
+	if srv.stopping {
 		srv.peerMu.Unlock()
 		return errServerStopped
-	default:
 	}
 	// Repeat the capacity check because the peer set might have changed between the handshakes.
 	if err := srv.encHandshakeChecksUnlocked(c); err != nil {
@@ -1261,7 +1265,6 @@ func (srv *BaseServer) handleAddPeer(c *conn) error {
 	peerCount := len(srv.peers)
 	srv.peerMu.Unlock()
 
-	srv.peerWG.Add(1)
 	go srv.runPeer(p)
 
 	srv.logger.Debug("Adding p2p peer", "name", truncateName(c.name), "addr", c.fd.RemoteAddr(), "peers", peerCount)
@@ -1310,11 +1313,9 @@ func (srv *MultiChannelServer) handleAddPeer(c *conn) error {
 	}
 
 	srv.peerMu.Lock()
-	select {
-	case <-srv.quit:
+	if srv.stopping {
 		srv.peerMu.Unlock()
 		return errServerStopped
-	default:
 	}
 	// Repeat the capacity check because the peer set might have changed between the handshakes.
 	if err := srv.encHandshakeChecksUnlocked(c); err != nil {
@@ -1326,7 +1327,6 @@ func (srv *MultiChannelServer) handleAddPeer(c *conn) error {
 	peerCount := len(srv.peers)
 	srv.peerMu.Unlock()
 
-	srv.peerWG.Add(1)
 	go srv.runPeer(p)
 
 	srv.logger.Debug("Adding p2p peer", "name", truncateName(c.name), "addr", c.fd.RemoteAddr(), "peers", peerCount)
@@ -1374,6 +1374,9 @@ func (srv *BaseServer) handlePeerDrop(pd peerDrop) {
 	peerCount := len(srv.peers)
 	srv.peerMu.Unlock()
 
+	// Wake up cleanupAfterRun if it is waiting for the peer map to drain.
+	srv.peerCond.Broadcast()
+
 	pd.logger.Debug("Removing p2p peer", "duration", d, "peers", peerCount, "req", pd.requested, "err", pd.err)
 	srv.reportPeerMetric()
 	srv.signalSchedule()
@@ -1396,18 +1399,21 @@ func (srv *BaseServer) cleanupAfterRun() {
 	if srv.ntab != nil {
 		srv.ntab.Close()
 	}
-	//if srv.DiscV5 != nil {
-	//	srv.DiscV5.Close()
-	//}
 
-	// Disconnect all peers.
-	for _, p := range srv.allPeers() {
+	// Set stopping=true under the lock so that handleAddPeer sees it atomically,
+	// then disconnect all current peers and wait for them to finish.
+	// peerCond.Wait() releases the write lock while sleeping, allowing
+	// handlePeerDrop to acquire it and delete peers from the map.
+	srv.peerMu.Lock()
+	srv.stopping = true
+	for _, p := range srv.peers {
 		p.Disconnect(DiscQuitting)
 	}
-	// Wait for peers to shut down. Pending connections and tasks are
-	// not handled here and will terminate soon-ish because srv.quit
-	// is closed.
-	srv.peerWG.Wait()
+	for len(srv.peers) > 0 {
+		logger.Warn("Waiting for peers to finish", "peers", len(srv.peers))
+		srv.peerCond.Wait() // sleep until someone calls peerCond.Broadcast()
+	}
+	srv.peerMu.Unlock()
 }
 
 func (srv *BaseServer) run() {
@@ -1758,8 +1764,6 @@ func truncateName(s string) string {
 // it waits until the Peer logic returns and removes
 // the peer.
 func (srv *BaseServer) runPeer(p *Peer) {
-	defer srv.peerWG.Done()
-
 	if srv.newPeerHook != nil {
 		srv.newPeerHook(p)
 	}
