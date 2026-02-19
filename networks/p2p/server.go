@@ -697,33 +697,6 @@ func (srv *MultiChannelServer) GetListenAddress() []string {
 	return srv.ListenAddrs
 }
 
-// decreasesConnectionMetric decreases the metric of the number of peer connections.
-func decreasesConnectionMetric(inboundCount int, outboundCount int, p *Peer) (int, int) {
-	pInbound, pOutbound := p.GetNumberInboundAndOutbound()
-	inboundCount -= pInbound
-	outboundCount -= pOutbound
-
-	updatesConnectionMetric(inboundCount, outboundCount)
-	return inboundCount, outboundCount
-}
-
-// increasesConnectionMetric increases the metric of the number of peer connections.
-func increasesConnectionMetric(inboundCount int, outboundCount int, p *Peer) (int, int) {
-	pInbound, pOutbound := p.GetNumberInboundAndOutbound()
-	inboundCount += pInbound
-	outboundCount += pOutbound
-
-	updatesConnectionMetric(inboundCount, outboundCount)
-	return inboundCount, outboundCount
-}
-
-// updatesConnectionMetric updates the metric of the number of peer connections.
-func updatesConnectionMetric(inboundCount int, outboundCount int) {
-	connectionCountGauge.Update(int64(outboundCount + inboundCount))
-	connectionInCountGauge.Update(int64(inboundCount))
-	connectionOutCountGauge.Update(int64(outboundCount))
-}
-
 // runPeer runs in its own goroutine for each peer.
 // it waits until the Peer logic returns and removes
 // the peer.
@@ -1284,7 +1257,6 @@ func (srv *BaseServer) handleAddPeer(c *conn) error {
 	if srv.EnableMsgEvents {
 		p.events = &srv.peerFeed
 	}
-	name := truncateName(c.name)
 
 	srv.peerMu.Lock()
 	// Repeat the capacity check because the peer set might have changed between the handshakes.
@@ -1293,22 +1265,15 @@ func (srv *BaseServer) handleAddPeer(c *conn) error {
 		return err
 	}
 	srv.peers[c.id] = p
-	if p.Inbound() {
-		srv.inboundCount++
-	} else {
-		srv.outboundCount++
-	}
+	srv.incrementConnectionCounts(p)
 	peerCount := len(srv.peers)
-	inboundCount := srv.inboundCount
 	srv.peerMu.Unlock()
 
 	srv.peerWG.Add(1)
 	go srv.runPeer(p)
 
-	srv.logger.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", peerCount)
-	peerCountGauge.Update(int64(peerCount))
-	peerInCountGauge.Update(int64(inboundCount))
-	peerOutCountGauge.Update(int64(peerCount - inboundCount))
+	srv.logger.Debug("Adding p2p peer", "name", truncateName(c.name), "addr", c.fd.RemoteAddr(), "peers", peerCount)
+	srv.reportPeerMetric()
 	return nil
 }
 
@@ -1369,7 +1334,6 @@ func (srv *MultiChannelServer) handleAddPeer(c *conn) error {
 	if srv.EnableMsgEvents {
 		p.events = &srv.peerFeed
 	}
-	name := truncateName(c.name)
 
 	srv.peerMu.Lock()
 	// Repeat the capacity check because the peer set might have changed between the handshakes.
@@ -1378,15 +1342,15 @@ func (srv *MultiChannelServer) handleAddPeer(c *conn) error {
 		return err
 	}
 	srv.peers[c.id] = p
+	srv.incrementConnectionCounts(p)
 	peerCount := len(srv.peers)
-	srv.inboundCount, srv.outboundCount = increasesConnectionMetric(srv.inboundCount, srv.outboundCount, p)
 	srv.peerMu.Unlock()
 
 	srv.peerWG.Add(1)
 	go srv.runPeer(p)
 
-	srv.logger.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", peerCount)
-	peerCountGauge.Update(int64(peerCount))
+	srv.logger.Debug("Adding p2p peer", "name", truncateName(c.name), "addr", c.fd.RemoteAddr(), "peers", peerCount)
+	srv.reportPeerMetric()
 	return nil
 }
 
@@ -1396,19 +1360,12 @@ func (srv *BaseServer) handlePeerDrop(pd peerDrop) {
 
 	srv.peerMu.Lock()
 	delete(srv.peers, pd.ID())
-	if pd.Inbound() {
-		srv.inboundCount--
-	} else {
-		srv.outboundCount--
-	}
+	srv.decrementConnectionCounts(pd.Peer)
 	peerCount := len(srv.peers)
-	inboundCount := srv.inboundCount
 	srv.peerMu.Unlock()
 
 	pd.logger.Debug("Removing p2p peer", "duration", d, "peers", peerCount, "req", pd.requested, "err", pd.err)
-	peerCountGauge.Update(int64(peerCount))
-	peerInCountGauge.Update(int64(inboundCount))
-	peerOutCountGauge.Update(int64(peerCount - inboundCount))
+	srv.reportPeerMetric()
 	srv.signalSchedule()
 }
 
@@ -1418,12 +1375,12 @@ func (srv *MultiChannelServer) handlePeerDrop(pd peerDrop) {
 
 	srv.peerMu.Lock()
 	delete(srv.peers, pd.ID())
+	srv.decrementConnectionCounts(pd.Peer)
 	peerCount := len(srv.peers)
-	srv.inboundCount, srv.outboundCount = decreasesConnectionMetric(srv.inboundCount, srv.outboundCount, pd.Peer)
 	srv.peerMu.Unlock()
 
 	pd.logger.Debug("Removing p2p peer", "duration", d, "peers", peerCount, "req", pd.requested, "err", pd.err)
-	peerCountGauge.Update(int64(peerCount))
+	srv.reportPeerMetric()
 	srv.signalSchedule()
 }
 
@@ -1596,6 +1553,48 @@ func (srv *BaseServer) getTypeStatics() map[dialType]typedStatic {
 		logger.Crit("[p2p.Server] UnSupported Connection Type:", "ConnectionType", srv.ConnectionType)
 		return nil
 	}
+}
+
+// Caller must hold the peerMu Lock.
+func (srv *BaseServer) incrementConnectionCounts(p *Peer) {
+	peerInbound, peerOutbound := p.GetNumberInboundAndOutbound()
+	srv.inboundCount += peerInbound
+	srv.outboundCount += peerOutbound
+}
+
+// Caller must hold the peerMu Lock.
+func (srv *BaseServer) decrementConnectionCounts(p *Peer) {
+	peerInbound, peerOutbound := p.GetNumberInboundAndOutbound()
+	srv.inboundCount -= peerInbound
+	srv.outboundCount -= peerOutbound
+}
+
+func (srv *BaseServer) reportPeerMetric() {
+	srv.peerMu.RLock()
+	defer srv.peerMu.RUnlock()
+
+	peerCountGauge.Update(int64(len(srv.peers)))
+	peerInCountGauge.Update(int64(srv.inboundCount))
+	peerOutCountGauge.Update(int64(srv.outboundCount))
+
+	connectionCountGauge.Update(int64(srv.outboundCount + srv.inboundCount))
+	connectionInCountGauge.Update(int64(srv.inboundCount))
+	connectionOutCountGauge.Update(int64(srv.outboundCount))
+}
+
+func (srv *MultiChannelServer) reportPeerMetric() {
+	srv.peerMu.RLock()
+	defer srv.peerMu.RUnlock()
+
+	peerCountGauge.Update(int64(len(srv.peers)))
+	// In multi-channel, one peer may contain both inbound and outbound connections,
+	// if two parties happened to dial each other at the same time. In this case,
+	// it is unclear whether the peer should be counted as inbound or outbound.
+	// Therefore, we do not report the peerIn and peerOut metrics for multi-channel.
+
+	connectionCountGauge.Update(int64(srv.outboundCount + srv.inboundCount))
+	connectionInCountGauge.Update(int64(srv.inboundCount))
+	connectionOutCountGauge.Update(int64(srv.outboundCount))
 }
 
 type tempError interface {
