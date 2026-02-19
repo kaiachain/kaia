@@ -1255,7 +1255,10 @@ func (srv *BaseServer) handlePostHandshake(c *conn) error {
 		c.flags |= trustedConn
 	}
 	// TODO: track in-progress inbound node IDs (pre-Peer) to avoid dialing them.
-	return srv.encHandshakeChecks(c)
+
+	srv.peerMu.RLock()
+	defer srv.peerMu.RUnlock()
+	return srv.encHandshakeChecksUnlocked(c)
 }
 
 func (srv *BaseServer) handleAddPeer(c *conn) error {
@@ -1282,10 +1285,13 @@ func (srv *BaseServer) handleAddPeer(c *conn) error {
 		p.events = &srv.peerFeed
 	}
 	name := truncateName(c.name)
-	srv.peerWG.Add(1)
-	go srv.runPeer(p)
 
 	srv.peerMu.Lock()
+	// Repeat the capacity check because the peer set might have changed between the handshakes.
+	if err := srv.encHandshakeChecksUnlocked(c); err != nil {
+		srv.peerMu.Unlock()
+		return err
+	}
 	srv.peers[c.id] = p
 	if p.Inbound() {
 		srv.inboundCount++
@@ -1295,6 +1301,9 @@ func (srv *BaseServer) handleAddPeer(c *conn) error {
 	peerCount := len(srv.peers)
 	inboundCount := srv.inboundCount
 	srv.peerMu.Unlock()
+
+	srv.peerWG.Add(1)
+	go srv.runPeer(p)
 
 	srv.logger.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", peerCount)
 	peerCountGauge.Update(int64(peerCount))
@@ -1312,8 +1321,7 @@ func (srv *MultiChannelServer) handleAddPeer(c *conn) error {
 
 	// At this point the connection is past the protocol handshake.
 	// Its capabilities are known and the remote identity is verified.
-	err := srv.protoHandshakeChecks(c)
-	if err != nil {
+	if err := srv.protoHandshakeChecks(c); err != nil {
 		return err
 	}
 
@@ -1362,14 +1370,20 @@ func (srv *MultiChannelServer) handleAddPeer(c *conn) error {
 		p.events = &srv.peerFeed
 	}
 	name := truncateName(c.name)
-	srv.peerWG.Add(1)
-	go srv.runPeer(p)
 
 	srv.peerMu.Lock()
+	// Repeat the capacity check because the peer set might have changed between the handshakes.
+	if err := srv.encHandshakeChecksUnlocked(c); err != nil {
+		srv.peerMu.Unlock()
+		return err
+	}
 	srv.peers[c.id] = p
 	peerCount := len(srv.peers)
 	srv.inboundCount, srv.outboundCount = increasesConnectionMetric(srv.inboundCount, srv.outboundCount, p)
 	srv.peerMu.Unlock()
+
+	srv.peerWG.Add(1)
+	go srv.runPeer(p)
 
 	srv.logger.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", peerCount)
 	peerCountGauge.Update(int64(peerCount))
@@ -1509,24 +1523,18 @@ func (srv *BaseServer) protoHandshakeChecks(c *conn) error {
 	if len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0 {
 		return DiscUselessPeer
 	}
-	// Repeat the encryption handshake checks because the
-	// peer set might have changed between the handshakes.
-	return srv.encHandshakeChecks(c)
+	return nil
 }
 
-func (srv *BaseServer) encHandshakeChecks(c *conn) error {
-	srv.peerMu.RLock()
-	peerCount := len(srv.peers)
-	inboundCount := srv.inboundCount
-	_, connected := srv.peers[c.id]
-	srv.peerMu.RUnlock()
-
+// This function is used to check the capacity of the peer set.
+// Caller must hold the peerMu Lock or RLock.
+func (srv *BaseServer) encHandshakeChecksUnlocked(c *conn) error {
 	switch {
-	case !c.is(trustedConn|staticDialedConn) && peerCount >= srv.Config.MaxPhysicalConnections:
+	case !c.is(trustedConn|staticDialedConn) && len(srv.peers) >= srv.Config.MaxPhysicalConnections:
 		return DiscTooManyPeers
-	case !c.is(trustedConn) && c.is(inboundConn) && inboundCount >= srv.maxInboundConns():
+	case !c.is(trustedConn) && c.is(inboundConn) && srv.inboundCount >= srv.maxInboundConns():
 		return DiscTooManyPeers
-	case connected:
+	case srv.peers[c.id] != nil:
 		return DiscAlreadyConnected
 	case c.id == srv.Self().ID:
 		return DiscSelf
