@@ -23,9 +23,12 @@
 package tests
 
 import (
+	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/params"
 )
 
 func TestVM(t *testing.T) {
@@ -43,4 +46,34 @@ func TestVM(t *testing.T) {
 			return vmt.checkFailure(t, name, test.Run(vmconfig))
 		})
 	})
+}
+
+// Transactions with gasLimit above this value will not get a VM trace on failure.
+const traceErrorLimit = 400000
+
+func withTrace(t *testing.T, gasLimit uint64, test func(vm.Config) error) {
+	// Set ComputationCostLimit as infinite
+	err := test(vm.Config{ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
+	if err == nil {
+		return
+	}
+	t.Error(err)
+	if gasLimit > traceErrorLimit {
+		t.Log("gas limit too high for EVM trace")
+		return
+	}
+	tracer := vm.NewStructLogger(nil)
+	err2 := test(vm.Config{Debug: true, Tracer: tracer, ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
+	if !reflect.DeepEqual(err, err2) {
+		t.Errorf("different error for second run: %v", err2)
+	}
+	buf := new(bytes.Buffer)
+	vm.WriteTrace(buf, tracer.StructLogs())
+	if buf.Len() == 0 {
+		t.Log("no EVM operation logs generated")
+	} else {
+		t.Log("EVM operation log:\n" + buf.String())
+	}
+	t.Logf("EVM output: 0x%x", tracer.Output())
+	t.Logf("EVM error: %v", tracer.Error())
 }

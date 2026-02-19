@@ -20,6 +20,8 @@
 // Modified and improved for the klaytn development.
 // Modified and improved for the Kaia development.
 
+//go:build spec_tests
+
 package tests
 
 import (
