@@ -19,6 +19,7 @@
 package p2p
 
 import (
+	"errors"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -35,6 +36,8 @@ var (
 	dialBackoff      = 30 * time.Second // Minimum interval between the dial for the same node ID.
 	refreshBackoff   = 4 * time.Second  // Minimum interval between discretionary discovery table refreshes.
 	idleDialInterval = 10 * time.Second // Spins down the dial loop when there are no ongoing dial attempts.
+
+	errUpdateDial = errors.New("updated to be multichannel peer")
 )
 
 // DialBackend is the minimal server-side API dialsched needs for outbound dial execution.
