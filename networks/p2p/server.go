@@ -1295,28 +1295,16 @@ func (srv *MultiChannelServer) handleAddPeer(c *conn) error {
 		e error
 	)
 	if c.multiChannel {
-		srv.peerMu.Lock()
-		connSet := srv.CandidateConns[c.id]
-		if connSet == nil {
-			connSet = make([]*conn, len(srv.ListenAddrs))
-			srv.CandidateConns[c.id] = connSet
+		readyConns, err := srv.collectMultiChannelConns(c)
+		if err != nil {
+			return err
 		}
-
-		if int(c.portOrder) < len(connSet) {
-			connSet[c.portOrder] = c
+		if len(readyConns) == 0 {
+			// The connections for the peer is not yet ready.
+			// Revisit after another connection is established (and handleAddPeer() is called again).
+			return nil
 		}
-
-		remaining := len(connSet)
-		for _, conn := range connSet {
-			if conn != nil {
-				remaining--
-			}
-		}
-		if remaining == 0 {
-			p, e = newPeer(connSet, srv.Protocols, srv.Config.RWTimerConfig)
-			srv.CandidateConns[c.id] = nil
-		}
-		srv.peerMu.Unlock()
+		p, e = newPeer(readyConns, srv.Protocols, srv.Config.RWTimerConfig)
 	} else {
 		// The handshakes are done and it passed all checks.
 		p, e = newPeer([]*conn{c}, srv.Protocols, srv.Config.RWTimerConfig)
@@ -1352,6 +1340,36 @@ func (srv *MultiChannelServer) handleAddPeer(c *conn) error {
 	srv.logger.Debug("Adding p2p peer", "name", truncateName(c.name), "addr", c.fd.RemoteAddr(), "peers", peerCount)
 	srv.reportPeerMetric()
 	return nil
+}
+
+// collectMultiChannelConns collects multi-channel connections that is required to launch a peer.
+// If the required number of connections are collected, return the list of connections for the peer.
+// If the required number of connections are not collected, return nil.
+// If the given new connection has a problem, return an error.
+func (srv *MultiChannelServer) collectMultiChannelConns(c *conn) ([]*conn, error) {
+	srv.peerMu.Lock()
+	defer srv.peerMu.Unlock()
+
+	connSet := srv.CandidateConns[c.id]
+	if connSet == nil {
+		connSet = make([]*conn, len(srv.ListenAddrs))
+		srv.CandidateConns[c.id] = connSet
+	}
+	if c.portOrder < 0 || int(c.portOrder) >= len(connSet) {
+		return nil, fmt.Errorf("invalid multi-channel port order: %d", c.portOrder)
+	}
+	connSet[c.portOrder] = c
+
+	for _, conn := range connSet {
+		if conn == nil {
+			return nil, nil
+		}
+	}
+
+	readyConns := make([]*conn, len(connSet))
+	copy(readyConns, connSet)
+	delete(srv.CandidateConns, c.id)
+	return readyConns, nil
 }
 
 func (srv *BaseServer) handlePeerDrop(pd peerDrop) {
