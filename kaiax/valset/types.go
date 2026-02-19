@@ -8,6 +8,24 @@ import (
 	"github.com/kaiachain/kaia/common"
 )
 
+type CommonAddressSet interface {
+	String() string
+	Copy() CommonAddressSet
+	List() []common.Address
+	Len() int
+	Contains(addr common.Address) bool
+	Subtract(other *AddressSet) *AddressSet
+	Add(addr common.Address)
+	Remove(addr common.Address) bool
+	Marshal() ([]byte, error)
+	EqualState(ValidatorStateMap) bool
+	GetDemoted(CommonAddressSet, map[common.Address]float64, uint64) *AddressSet
+}
+
+func NewCommonAddressSet(addrs []common.Address) CommonAddressSet {
+	return NewAddressSet(addrs)
+}
+
 type State uint8
 
 const (
@@ -100,29 +118,29 @@ func (s State) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf("%q", s.String())), nil
 }
 
-type ValidatorChart struct {
+type ValidatorState struct {
 	State         State     `json:"state"`
 	StakingAmount uint64    `json:"stakingAmount"` // in KAIA unit
 	IdleTimeout   time.Time `json:"idleTimeout"`
 	PausedTimeout time.Time `json:"pausedTimeout"`
 }
 
-type ValidatorChartMap map[common.Address]*ValidatorChart
+type ValidatorStateMap map[common.Address]*ValidatorState
 
-func (v ValidatorChartMap) String() string {
+func (v ValidatorStateMap) String() string {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		return fmt.Sprintf("ValidatorChartMap error: %v", err)
+		return fmt.Sprintf("ValidatorStateMap error: %v", err)
 	}
 	return string(b)
 }
 
-func (v ValidatorChartMap) Copy() ValidatorChartMap {
+func (v ValidatorStateMap) Copy() ValidatorStateMap {
 	if v == nil {
 		return nil
 	}
 
-	cp := make(ValidatorChartMap, len(v))
+	cp := make(ValidatorStateMap, len(v))
 	for key, value := range v {
 		if value == nil {
 			cp[key] = nil
@@ -134,7 +152,7 @@ func (v ValidatorChartMap) Copy() ValidatorChartMap {
 	return cp
 }
 
-func (v ValidatorChartMap) EqualState(other ValidatorChartMap) bool {
+func (v ValidatorStateMap) EqualState(other ValidatorStateMap) bool {
 	if len(v) != len(other) {
 		return false
 	}

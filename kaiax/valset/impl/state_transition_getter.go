@@ -29,11 +29,11 @@ import (
 
 type sortableValidator struct {
 	addr common.Address
-	*valset.ValidatorChart
+	*valset.ValidatorState
 }
 
 // getEpochTransition returns new validators after applying epoch transition
-func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, validators valset.ValidatorChartMap) valset.ValidatorChartMap {
+func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, validators valset.ValidatorStateMap) valset.ValidatorStateMap {
 	defer func() {
 		for addr, val := range validators {
 			logger.Info("TODO-Permissionless: Remove this log", "num", num, "addr", addr.String(), "state", val.State.String(), "stakingamount", val.StakingAmount, "idleTimeout", val.IdleTimeout.String(), "pausedtimeout", val.PausedTimeout.String())
@@ -101,7 +101,7 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 }
 
 // getTimeoutTransition returns new validators after applying timeout transition
-func (v *ValsetModule) getTimeoutTransition(validators valset.ValidatorChartMap) valset.ValidatorChartMap {
+func (v *ValsetModule) getTimeoutTransition(validators valset.ValidatorStateMap) valset.ValidatorStateMap {
 	newValidators := validators.Copy()
 	for _, val := range newValidators {
 		switch val.State {
@@ -119,17 +119,19 @@ func (v *ValsetModule) getTimeoutTransition(validators valset.ValidatorChartMap)
 }
 
 // getCandidates returns validators which have `CandTesting` state
-func (v *ValsetModule) getCandidates(validators valset.ValidatorChartMap) []common.Address {
+func (v *ValsetModule) getCandidates(validators valset.CommonAddressSet) []common.Address {
 	var candTestings []common.Address
-	for addr, val := range validators {
-		if val.State == valset.CandTesting {
-			candTestings = append(candTestings, addr)
+	if vals, ok := validators.(*ValidatorList); ok {
+		for addr, val := range vals.permlessVals {
+			if val.State == valset.CandTesting {
+				candTestings = append(candTestings, addr)
+			}
 		}
 	}
 	return candTestings
 }
 
-func (v *ValsetModule) deactiveStakersLessMinStakingAmount(si *staking.StakingInfo, num uint64, validators valset.ValidatorChartMap) valset.ValidatorChartMap {
+func (v *ValsetModule) deactiveStakersLessMinStakingAmount(si *staking.StakingInfo, num uint64, validators valset.ValidatorStateMap) valset.ValidatorStateMap {
 	if len(si.NodeIds) == 0 && len(si.StakingContracts) == 0 && len(si.RewardAddrs) == 0 {
 		// Not ABook activated yet
 		return nil
@@ -150,17 +152,4 @@ func (v *ValsetModule) deactiveStakersLessMinStakingAmount(si *staking.StakingIn
 		}
 	}
 	return newValidators
-}
-
-func (v *ValsetModule) voteTransition(num uint64, council valset.ValidatorChartMap) (valset.ValidatorChartMap, error) {
-	header := v.Chain.GetHeaderByNumber(num)
-	if header == nil {
-		return nil, errNoHeader
-	}
-	var (
-		newCouncil    = NewValidatorList(council.Copy())
-		governingNode = v.GovModule.GetParamSet(num).GoverningNode
-	)
-	applyVote(header, newCouncil, governingNode)
-	return newCouncil.permlessVals, nil
 }

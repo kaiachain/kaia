@@ -17,6 +17,8 @@
 package impl
 
 import (
+	"encoding/json"
+	"errors"
 	"math/big"
 	"sync"
 	"time"
@@ -39,16 +41,18 @@ const (
 )
 
 type ValidatorList struct {
-	permlessMu       sync.RWMutex
-	isLegacy         bool
-	permissionedVals *valset.AddressSet
-	permlessVals     valset.ValidatorChartMap
+	permlessMu   sync.RWMutex
+	permlessVals valset.ValidatorStateMap
 }
 
-func convertToChartMap(nodeAddrs []common.Address) valset.ValidatorChartMap {
-	validators := make(valset.ValidatorChartMap)
+func newValidatorList(validatorChartMap valset.ValidatorStateMap) *ValidatorList {
+	return &ValidatorList{permlessVals: validatorChartMap}
+}
+
+func convertToChartMap(nodeAddrs []common.Address) valset.ValidatorStateMap {
+	validators := make(valset.ValidatorStateMap)
 	for _, addr := range nodeAddrs {
-		validators[addr] = &valset.ValidatorChart{
+		validators[addr] = &valset.ValidatorState{
 			// assign `ValActive` state in the permissioned operation
 			State: valset.ValActive,
 		}
@@ -56,66 +60,36 @@ func convertToChartMap(nodeAddrs []common.Address) valset.ValidatorChartMap {
 	return validators
 }
 
-func ConvertLegacyToValidatorList(nodeAddrs []common.Address) *ValidatorList {
-	if len(nodeAddrs) == 0 {
-		// zero council
-		return nil
-	}
-	return &ValidatorList{
-		isLegacy:         true,
-		permissionedVals: valset.NewAddressSet(nodeAddrs),
-		permlessVals:     convertToChartMap(nodeAddrs),
-	}
-}
-
-func ConvertLegacySetToValidatorList(set *valset.AddressSet) *ValidatorList {
-	if set == nil || set.Len() == 0 {
-		return nil
-	}
-	return &ValidatorList{
-		isLegacy:         true,
-		permissionedVals: set,
-		permlessVals:     convertToChartMap(set.List()),
-	}
-}
-
-func NewValidatorList(validatorChartMap valset.ValidatorChartMap) *ValidatorList {
-	return &ValidatorList{
-		isLegacy:         false,
-		permissionedVals: nil,
-		permlessVals:     validatorChartMap,
-	}
-}
-
-func (vs *ValidatorList) SetLegacyFalse() {
-	vs.isLegacy = false
-}
-
-func (vs *ValidatorList) Copy() *ValidatorList {
+func (vs *ValidatorList) EqualState(other valset.ValidatorStateMap) bool {
 	vs.permlessMu.RLock()
 	defer vs.permlessMu.RUnlock()
+	return vs.permlessVals.EqualState(other)
+}
 
-	var (
-		permissionedVals *valset.AddressSet
-		permlessVals     = vs.permlessVals.Copy()
-	)
-	if vs.permissionedVals != nil {
-		permissionedVals = vs.permissionedVals.Copy()
+func (vs *ValidatorList) String() string {
+	if vs == nil {
+		return ""
 	}
-	return &ValidatorList{
-		isLegacy:         vs.isLegacy,
-		permissionedVals: permissionedVals,
-		permlessVals:     permlessVals,
+	return vs.permlessVals.String()
+}
+
+func (vs *ValidatorList) Marshal() ([]byte, error) {
+	if vs == nil {
+		return nil, errors.New("permeless valset empty")
 	}
+	return json.Marshal(vs.permlessVals)
+}
+
+func (vs *ValidatorList) Copy() valset.CommonAddressSet {
+	vs.permlessMu.RLock()
+	defer vs.permlessMu.RUnlock()
+	return &ValidatorList{permlessVals: vs.permlessVals.Copy()}
 }
 
 func (vs *ValidatorList) List() []common.Address {
 	if vs == nil {
 		logger.Error("ValidatorList is nil")
 		return []common.Address{}
-	}
-	if vs.isLegacy {
-		return vs.permissionedVals.List()
 	}
 	// return all state of validtaors execept for candidate states
 	vs.permlessMu.RLock()
@@ -135,9 +109,6 @@ func (vs *ValidatorList) Len() int {
 		logger.Error("ValidatorList is nil")
 		return 0
 	}
-	if vs.isLegacy {
-		return vs.permissionedVals.Len()
-	}
 	// return the length of all state of validtaors
 	vs.permlessMu.RLock()
 	defer vs.permlessMu.RUnlock()
@@ -149,9 +120,6 @@ func (vs *ValidatorList) Contains(targetAddr common.Address) bool {
 		logger.Error("ValidatorList is nil")
 		return false
 	}
-	if vs.isLegacy {
-		return vs.permissionedVals.Contains(targetAddr)
-	}
 	// return all state of validtaors
 	vs.permlessMu.RLock()
 	defer vs.permlessMu.RUnlock()
@@ -160,33 +128,12 @@ func (vs *ValidatorList) Contains(targetAddr common.Address) bool {
 }
 
 func (vs *ValidatorList) Add(addr common.Address) {
-	if vs == nil {
-		logger.Error("ValidatorList is nil")
-		return
-	}
-	if vs.isLegacy {
-		vs.permissionedVals.Add(addr)
-		return
-	}
 	// In permissionless operation, `governance.vote('addvalidator', 0x...)` is not the expected usage. Thus, do nothing
 }
 
 func (vs *ValidatorList) Remove(targetAddr common.Address) bool {
-	if vs == nil {
-		logger.Error("ValidatorList is nil")
-		return false
-	}
-	if vs.isLegacy {
-		return vs.permissionedVals.Remove(targetAddr)
-	}
-	vs.permlessMu.Lock()
-	defer vs.permlessMu.Unlock()
-
-	val, exist := vs.permlessVals[targetAddr]
-	if exist {
-		val.State = valset.CandInactive
-	}
-	return exist
+	// Permissionless: NO-OP
+	return false
 }
 
 func (vs *ValidatorList) Subtract(other *valset.AddressSet) *valset.AddressSet {
@@ -194,12 +141,8 @@ func (vs *ValidatorList) Subtract(other *valset.AddressSet) *valset.AddressSet {
 		logger.Error("ValidatorList is nil")
 		return valset.NewAddressSet([]common.Address{})
 	}
-	if vs.isLegacy {
-		return vs.permissionedVals.Subtract(other)
-	}
-
 	// do not read lock because of the manipluation on copied data
-	copied := vs.Copy().permlessVals
+	copied := vs.Copy().(*ValidatorList).permlessVals
 	for _, addr := range other.List() {
 		delete(copied, addr)
 	}
@@ -211,18 +154,19 @@ func (vs *ValidatorList) Subtract(other *valset.AddressSet) *valset.AddressSet {
 }
 
 // GetDemoted returns all state of validators where the state is not `ValActive`
-func (vs *ValidatorList) GetDemoted() *valset.AddressSet {
+func (vs *ValidatorList) GetDemoted(
+	_ valset.CommonAddressSet,
+	_ map[common.Address]float64,
+	_ uint64,
+) *valset.AddressSet {
 	if vs == nil {
 		logger.Error("ValidatorList is nil")
 		return valset.NewAddressSet([]common.Address{})
 	}
-	demoted := valset.NewAddressSet(nil)
-	if vs.isLegacy {
-		return demoted
-	}
 	vs.permlessMu.RLock()
 	defer vs.permlessMu.RUnlock()
 
+	demoted := valset.NewAddressSet(nil)
 	for addr, val := range vs.permlessVals {
 		if val.State != valset.ValActive {
 			demoted.Add(addr)
@@ -231,9 +175,9 @@ func (vs *ValidatorList) GetDemoted() *valset.AddressSet {
 	return demoted
 }
 
-func (v *ValsetModule) writeValidators(num uint64, validators valset.ValidatorChartMap) {
+func (v *ValsetModule) writeValidators(num uint64, validators valset.ValidatorStateMap) {
 	if validators != nil {
-		writeCouncil(v.ChainKv, num, NewValidatorList(validators))
+		writeCouncil(v.Chain.Config(), v.ChainKv, num, newValidatorList(validators))
 		insertValidatorStateChangeBlockNum(v.ChainKv, num)
 		v.validatorStateChangeBlockNumsCache = nil
 	}
@@ -283,34 +227,27 @@ func (v *ValsetModule) ProcessTransition(
 			return err
 		}
 
-		// 2. vote transition
-		newValidators, err := v.voteTransition(parentNum.Uint64(), validators)
-		if err != nil {
-			logger.Error("Failed to handle vote data", "number", header.Number.Uint64(), "err", err.Error())
-			return err
-		}
-
-		// 3. check VRank violation
-		newValidators, err = v.GetVrankViolationTransition(newValidators, header.Number.Uint64(), state)
+		// 2. check VRank violation
+		newValidators, err := v.GetVrankViolationTransition(validators, header.Number.Uint64(), state)
 		if err != nil {
 			logger.Error("Failed to process vrank violation", "number", header.Number.Uint64(), "err", err.Error())
 			return err
 		}
 
-		// 4. timeout transition
+		// 3. timeout transition
 		newValidators = v.GetTimeoutTransition(newValidators)
 
-		// 5. epoch transition
+		// 4. epoch transition
 		newValidators, err = v.GetEpochTransition(newValidators, header.Number.Uint64(), state)
 		if err != nil {
 			logger.Error("Failed to process epoch transition", "number", header.Number.Uint64(), "err", err.Error())
 			return err
 		}
 
-		if !prevCouncil.permlessVals.EqualState(newValidators) {
-			// 6. write updated validators' state into checkpoint db
+		if !prevCouncil.EqualState(newValidators) {
+			// 5. write updated validators' state into checkpoint db
 			v.writeValidators(header.Number.Uint64(), newValidators)
-			// 7. write updated validators' state into contract
+			// 6. write updated validators' state into contract
 			msg, from, err := prepareValidatorWrite(backend, config, state, header, validatorStateAddr, newValidators)
 			if err == nil {
 				blockchain.WriteValidators(msg, from, header, vmenv, state, config.Rules(header.Number))
@@ -334,7 +271,7 @@ func prepareValidatorWrite(
 	statedb *state.StateDB,
 	header *types.Header,
 	validatorStateAddr common.Address,
-	validators valset.ValidatorChartMap,
+	validators valset.ValidatorStateMap,
 ) (*types.Transaction, common.Address, error) {
 	from, msg, err := system.EncodeWriteValidators(
 		backend,

@@ -142,7 +142,7 @@ func (v *ValsetModule) getNextDistinctProposer(c *blockContext, currProposer com
 }
 
 func selectRandomCommittee(qualified *valset.AddressSet, committeeSize uint64, prevBlockHash common.Hash, currProposer, nextDistinctProposer common.Address) []common.Address {
-	qualified = qualified.Copy()
+	qualified = qualified.Copy().(*valset.AddressSet)
 	qualified.Remove(currProposer)
 	qualified.Remove(nextDistinctProposer)
 

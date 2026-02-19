@@ -18,6 +18,7 @@ package valset
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"slices"
@@ -98,7 +99,8 @@ func (as *AddressSet) String() string {
 	return fmt.Sprintf("[%s]", strings.Join(addrs, ","))
 }
 
-func (as *AddressSet) Copy() *AddressSet {
+// func (as *AddressSet) Copy() *AddressSet {
+func (as *AddressSet) Copy() CommonAddressSet {
 	as.mu.RLock()
 	defer as.mu.RUnlock()
 	return NewAddressSet(as.list)
@@ -133,6 +135,33 @@ func (as *AddressSet) IndexOf(addr common.Address) int {
 		}
 	}
 	return -1
+}
+
+func (as *AddressSet) GetDemoted(
+	council CommonAddressSet,
+	stakingAmounts map[common.Address]float64,
+	minStake uint64,
+) *AddressSet {
+	demoted := NewAddressSet(nil)
+	// First filter by staking amounts.
+	for _, node := range council.List() {
+		if uint64(stakingAmounts[node]) < minStake {
+			demoted.Add(node)
+		}
+	}
+	// If all validators are demoted, then no one is demoted.
+	if demoted.Len() == len(council.List()) {
+		demoted = NewAddressSet(nil)
+	}
+	return demoted
+}
+
+func (as *AddressSet) EqualState(other ValidatorStateMap) bool {
+	return false
+}
+
+func (as *AddressSet) Marshal() ([]byte, error) {
+	return json.Marshal(as.List())
 }
 
 func (as *AddressSet) Contains(addr common.Address) bool {

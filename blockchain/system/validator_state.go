@@ -58,7 +58,7 @@ func EncodeWriteValidators(
 	backend *backends.StateBlockchainContractBackend,
 	rules params.Rules,
 	validatorStateAddr common.Address,
-	validators valset.ValidatorChartMap,
+	validators valset.ValidatorStateMap,
 ) (common.Address, *types.Transaction, error) {
 	// Generate order validator addresses to prevent invalid merkle roots
 	// The order is important becasue of the solidity set type `EnumerableSet.AddressSet`
@@ -118,7 +118,7 @@ func ReadGetAllValidators(
 	validatorStateAddr common.Address,
 	si *staking.StakingInfo,
 	num *big.Int,
-) (valset.ValidatorChartMap, error) {
+) (valset.ValidatorStateMap, error) {
 	// Prepare caller
 	caller, err := contracts.NewIValidatorStateCaller(validatorStateAddr, backend)
 	if err != nil {
@@ -134,7 +134,7 @@ func ReadGetAllValidators(
 
 	// Parse the result and calculate staking amount
 	var (
-		validators     = make(valset.ValidatorChartMap)
+		validators     = make(valset.ValidatorStateMap)
 		stakingAmountM = make(map[common.Address]uint64)
 	)
 	for i, nodeId := range si.NodeIds {
@@ -142,7 +142,7 @@ func ReadGetAllValidators(
 	}
 	for _, valState := range valStates {
 		addr, state, pausedTimeout, idleTimeout := valState.Addr, valState.State, valState.PausedTimeout, valState.IdleTimeout
-		validators[addr] = &valset.ValidatorChart{
+		validators[addr] = &valset.ValidatorState{
 			State:         valset.State(state),
 			StakingAmount: stakingAmountM[addr],
 			IdleTimeout:   time.Unix(idleTimeout.Int64(), 0),

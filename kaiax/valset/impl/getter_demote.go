@@ -28,7 +28,7 @@ import (
 )
 
 // getDemotedValidators returns the demoted validators at the given block number.
-func (v *ValsetModule) getDemotedValidators(council *ValidatorList, num uint64) (*valset.AddressSet, error) {
+func (v *ValsetModule) getDemotedValidators(council valset.CommonAddressSet, num uint64) (*valset.AddressSet, error) {
 	if num == 0 {
 		return valset.NewAddressSet(nil), nil
 	}
@@ -56,32 +56,19 @@ func (v *ValsetModule) getDemotedValidators(council *ValidatorList, num uint64) 
 	}
 }
 
-func getDemotedValidatorsIstanbul(rules *params.Rules, council *ValidatorList, si *staking.StakingInfo, pset gov.ParamSet) *valset.AddressSet {
+func getDemotedValidatorsIstanbul(rules *params.Rules, council valset.CommonAddressSet, si *staking.StakingInfo, pset gov.ParamSet) *valset.AddressSet {
 	var (
-		demoted        = valset.NewAddressSet(nil)
 		singleMode     = pset.GovernanceMode == "single"
 		governingNode  = pset.GoverningNode
 		minStake       = pset.MinimumStake.Uint64() // in KAIA
 		stakingAmounts = collectStakingAmounts(rules, council.List(), si)
+		demoted        = council.GetDemoted(council, stakingAmounts, minStake)
 	)
-
-	if rules.IsPermissionless {
-		demoted = council.GetDemoted()
-	} else {
-		// First filter by staking amounts.
-		for _, node := range council.List() {
-			if uint64(stakingAmounts[node]) < minStake {
-				demoted.Add(node)
-			}
+	// Under single governance mode, governing node cannot be demoted before permissionless HF
+	if !rules.IsPermissionless {
+		if singleMode && demoted.Contains(governingNode) {
+			demoted.Remove(governingNode)
 		}
-		// If all validators are demoted, then no one is demoted.
-		if demoted.Len() == len(council.List()) {
-			demoted = valset.NewAddressSet(nil)
-		}
-	}
-	// Under single governance mode, governing node cannot be demoted.
-	if singleMode && demoted.Contains(governingNode) {
-		demoted.Remove(governingNode)
 	}
 	return demoted
 }

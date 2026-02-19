@@ -20,11 +20,13 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"slices"
 	"sync"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -162,12 +164,17 @@ func ReadPermissionlessCouncilKeyExist(db database.Database, num uint64) bool {
 	return true
 }
 
-func ReadCouncil(db database.Database, num uint64) *ValidatorList {
-	if council := readCouncilPermissionless(db, num); council != nil {
-		return NewValidatorList(council)
+func ReadCouncil(db database.Database, permissionedNum, permlessNum uint64) valset.CommonAddressSet {
+	permlessCouncil := readCouncilPermissionless(db, permlessNum)
+	if permlessCouncil != nil {
+		return newValidatorList(permlessCouncil)
 	}
-	// if no validator of permissionless format is not returned, fallback to legacy format without hardfork branch
-	return ConvertLegacyToValidatorList(readCouncilPermissioned(db, num))
+	// if permless council are empty, return legacy council
+	permissionedCouncil := readCouncilPermissioned(db, permissionedNum)
+	if permissionedCouncil == nil {
+		return nil
+	}
+	return valset.NewCommonAddressSet(permissionedCouncil)
 }
 
 func readCouncilPermissioned(db database.Database, num uint64) []common.Address {
@@ -184,13 +191,13 @@ func readCouncilPermissioned(db database.Database, num uint64) []common.Address 
 	return addrs
 }
 
-func readCouncilPermissionless(db database.Database, num uint64) valset.ValidatorChartMap {
+func readCouncilPermissionless(db database.Database, num uint64) valset.ValidatorStateMap {
 	b, err := db.Get(councilKeyPermissionless(num))
 	if err != nil || len(b) == 0 {
 		return nil
 	}
 
-	var result valset.ValidatorChartMap
+	var result valset.ValidatorStateMap
 	if err = json.Unmarshal(b, &result); err != nil {
 		logger.Error("Malformed council", "num", num, "err", err)
 		return nil
@@ -198,17 +205,12 @@ func readCouncilPermissionless(db database.Database, num uint64) valset.Validato
 	return result
 }
 
-func writeCouncil(db database.Database, num uint64, validators *ValidatorList) {
+func writeCouncil(config *params.ChainConfig, db database.Database, num uint64, validators valset.CommonAddressSet) {
 	var (
-		b   []byte
-		key []byte
-		err error
+		key    = councilKey(num)
+		b, err = validators.Marshal()
 	)
-	if validators.isLegacy {
-		b, err = json.Marshal(validators.List())
-		key = councilKey(num)
-	} else {
-		b, err = json.Marshal(validators.permlessVals)
+	if config.IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
 		key = councilKeyPermissionless(num)
 	}
 	if err != nil {
