@@ -91,7 +91,7 @@ func TestGetDemotedValidators(t *testing.T) {
 		mockGov.EXPECT().GetParamSet(gomock.Any()).Return(pset).Times(1)
 		mockStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
 
-		demoted, err := v.getDemotedValidators(ConvertLegacySetToValidatorList(valset.NewAddressSet(council)), 1)
+		demoted, err := v.getDemotedValidators(valset.NewCommonAddressSet(valset.NewAddressSet(council).List()), 1)
 		assert.NoError(t, err)
 		assert.Equal(t, tc.demoted, demoted.List(), tc.desc)
 	}
@@ -186,7 +186,7 @@ func TestFilterValidators(t *testing.T) {
 			pset.GovernanceMode = "none"
 		}
 
-		demoted := getDemotedValidatorsIstanbul(&params.Rules{}, ConvertLegacySetToValidatorList(council), si, pset)
+		demoted := getDemotedValidatorsIstanbul(&params.Rules{}, valset.NewCommonAddressSet(council.List()), si, pset)
 		assert.Equal(t, tc.demoted, demoted.List(), tc.desc)
 	}
 }

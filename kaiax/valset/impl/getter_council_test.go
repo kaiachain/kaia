@@ -85,9 +85,9 @@ func TestGetCouncilDB(t *testing.T) {
 	)
 	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
 	writeValidatorVoteBlockNums(db, voteNums)
-	writeCouncil(db, 0, ConvertLegacyToValidatorList(setA))
-	writeCouncil(db, 2, ConvertLegacyToValidatorList(setB))
-	writeCouncil(db, 4, ConvertLegacyToValidatorList(setC))
+	writeCouncil(mockChain.Config(), db, 0, valset.NewCommonAddressSet(setA))
+	writeCouncil(mockChain.Config(), db, 2, valset.NewCommonAddressSet(setB))
+	writeCouncil(mockChain.Config(), db, 4, valset.NewCommonAddressSet(setC))
 
 	// Test getCouncilDB under various LowestScannedVoteNum.
 	type expected struct { // expected result of getCouncilDB()
@@ -207,7 +207,7 @@ func TestApplyVote(t *testing.T) {
 		header := &types.Header{
 			Vote: tc.voteData,
 		}
-		council := ConvertLegacySetToValidatorList(valset.NewAddressSet(initialCouncil))
+		council := valset.NewCommonAddressSet(valset.NewAddressSet(initialCouncil).List())
 		modified := applyVote(header, council, governingNode)
 		assert.Equal(t, tc.modified, modified)
 		assert.Equal(t, tc.council, council.List(), i) // council is modified in-place

@@ -19,9 +19,13 @@ package impl
 import (
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
+	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,14 +46,17 @@ func TestSchema_ValsetVoteBlockNums(t *testing.T) {
 func TestSchema_Council(t *testing.T) {
 	db := database.NewMemDB()
 	num := uint64(10)
-	addrs := ConvertLegacyToValidatorList(
+	addrs := valset.NewCommonAddressSet(
 		[]common.Address{
 			common.HexToAddress("0x1234"),
 			common.HexToAddress("0x5678"),
 		},
 	)
-	writeCouncil(db, num, addrs)
-	assert.Equal(t, addrs, ReadCouncil(db, num))
+	ctrl := gomock.NewController(t)
+	mockChain := chain_mock.NewMockBlockChain(ctrl)
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
+	writeCouncil(mockChain.Config(), db, num, addrs)
+	assert.Equal(t, addrs, ReadCouncil(db, num, num))
 }
 
 func TestSchema_IstanbulSnapshot(t *testing.T) {

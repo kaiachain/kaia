@@ -55,7 +55,7 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 	// 3609 (R 3,7) |  1,2,3,6 |  1,2,3,6 |    -    |  1,2,3    <---- 3 requalified
 	// 3610         |  1,2,6   |  1,2,6   |    -    |  1,2
 	var (
-		genesisCouncil          = ConvertLegacyToValidatorList(numsToAddrs(1, 2, 3, 4))
+		genesisCouncil          = valset.NewCommonAddressSet(numsToAddrs(1, 2, 3, 4))
 		mockQualifiedValidators = map[uint64][]common.Address{
 			3600: numsToAddrs(1, 2, 3, 4),
 			3604: numsToAddrs(1, 2, 4), // 3 demoted
@@ -94,13 +94,13 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 			3611: numsToAddrs(1, 2),
 		}
 	)
+	// Mock chainConfig
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}).AnyTimes()
+
 	// Mock v.InitSchema
 	writeLowestScannedVoteNum(v.ChainKv, 0)
 	writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
-	writeCouncil(v.ChainKv, 0, genesisCouncil)
-
-	// Mock chainConfig
-	mockChain.EXPECT().Config().Return(&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}).AnyTimes()
+	writeCouncil(mockChain.Config(), v.ChainKv, 0, genesisCouncil)
 
 	// Mock gov module
 	mockGovModule.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{

@@ -176,8 +176,8 @@ func TestMigration(t *testing.T) {
 	// After initSchema: DB has mandatory schema + last istanbul snapshot interval (2048..2050)
 	assert.Equal(t, []uint64{0, 2049}, ReadValidatorVoteBlockNums(db))
 	assert.Equal(t, uint64(2049), *ReadLowestScannedVoteNum(db))
-	assert.Equal(t, numsToAddrs(2, 3, 5), ReadCouncil(db, 0).List())
-	assert.Equal(t, numsToAddrs(1, 2, 3, 4, 5), ReadCouncil(db, 2049).List())
+	assert.Equal(t, numsToAddrs(2, 3, 5), ReadCouncil(db, 0, 0).List())
+	assert.Equal(t, numsToAddrs(1, 2, 3, 4, 5), ReadCouncil(db, 2049, 2049).List())
 
 	// 3. Before migration, check GetCouncil() results
 	for _, tc := range expectedCouncils {
@@ -192,11 +192,11 @@ func TestMigration(t *testing.T) {
 	v.migrate()
 	assert.Equal(t, []uint64{0, 1024, 1025, 1027, 2049}, ReadValidatorVoteBlockNums(db)) // valid votes
 	assert.Equal(t, uint64(0), *ReadLowestScannedVoteNum(db))
-	assert.Equal(t, numsToAddrs(2, 3, 5), ReadCouncil(db, 0).List())          // genesis council
-	assert.Equal(t, numsToAddrs(1, 2, 3, 5), ReadCouncil(db, 1024).List())    // after vote at 1024 (+1)
-	assert.Equal(t, numsToAddrs(1, 3, 5), ReadCouncil(db, 1025).List())       // after vote at 1025 (-2)
-	assert.Equal(t, numsToAddrs(1, 3, 4, 5), ReadCouncil(db, 1027).List())    // after vote at 1027 (+4)
-	assert.Equal(t, numsToAddrs(1, 2, 3, 4, 5), ReadCouncil(db, 2049).List()) // after vote at 2049 (+2)
+	assert.Equal(t, numsToAddrs(2, 3, 5), ReadCouncil(db, 0, 0).List())             // genesis council
+	assert.Equal(t, numsToAddrs(1, 2, 3, 5), ReadCouncil(db, 1024, 1024).List())    // after vote at 1024 (+1)
+	assert.Equal(t, numsToAddrs(1, 3, 5), ReadCouncil(db, 1025, 1025).List())       // after vote at 1025 (-2)
+	assert.Equal(t, numsToAddrs(1, 3, 4, 5), ReadCouncil(db, 1027, 1027).List())    // after vote at 1027 (+4)
+	assert.Equal(t, numsToAddrs(1, 2, 3, 4, 5), ReadCouncil(db, 2049, 2049).List()) // after vote at 2049 (+2)
 
 	// 5. After migration, check GetCouncil() results
 	for _, tc := range expectedCouncils {

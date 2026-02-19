@@ -42,7 +42,7 @@ func TestAddressSet_List(t *testing.T) {
 
 	as := NewAddressSet(unsorted)
 	assert.Equal(t, sorted, []common.Address(as.list))
-	assert.Equal(t, sorted, []common.Address(as.Copy().list))
+	assert.Equal(t, sorted, []common.Address(as.Copy().(*AddressSet).list))
 	assert.Equal(t, sorted, as.List())
 	assert.Equal(t, 3, as.Len())
 
