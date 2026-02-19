@@ -443,6 +443,8 @@ func (ds *DialSched) shouldDial(n *discover.Node) bool {
 }
 
 func (ds *DialSched) markDialingStart(n *discover.Node) {
+	dialTryCounter.Inc(1)
+
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
@@ -478,6 +480,8 @@ func (ds *DialSched) markConnSuccess(n *discover.Node, inbound bool) {
 }
 
 func (ds *DialSched) markConnFailure(id discover.NodeID) {
+	dialFailCounter.Inc(1)
+
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 

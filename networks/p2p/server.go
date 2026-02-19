@@ -55,9 +55,6 @@ const (
 
 	// Maximum amount of time allowed for writing a complete message.
 	frameWriteTimeout = 20 * time.Second
-
-	// Maximum number of times to retry typed static node discovery.
-	typedStaticRetry = 3
 )
 
 var errServerStopped = errors.New("server stopped")
@@ -210,29 +207,6 @@ type Server interface {
 	// or the handshakes have failed.
 	SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error
 
-	// AddLastLookup adds lastLookup to duration.
-	AddLastLookup() time.Time
-
-	// SetLastLookupToNow sets LastLookup to the current time.
-	SetLastLookupToNow()
-
-	// CheckNilNetworkTable returns whether network table is nil.
-	CheckNilNetworkTable() bool
-
-	// GetNodes returns up to max alive nodes which a NodeType is nType
-	GetNodes(nType discover.NodeType, max int) []*discover.Node
-
-	// Lookup performs a network search for nodes close
-	// to the given target. It approaches the target by querying
-	// nodes that are closer to it on each iteration.
-	// The given target does not need to be an actual node
-	// identifier.
-	Lookup(target discover.NodeID, nType discover.NodeType) []*discover.Node
-
-	// Resolve searches for a specific node with the given ID and NodeType.
-	// It returns nil if the node could not be found.
-	Resolve(target discover.NodeID, nType discover.NodeType) *discover.Node
-
 	// Start starts running the server.
 	// Servers can not be re-used after stopping.
 	Start() (err error)
@@ -278,10 +252,6 @@ type Server interface {
 
 	// Peers returns all connected peers.
 	Peers() []*Peer
-
-	// NodeDialer is used to connect to nodes in the network, typically by using
-	// an underlying net.Dialer but also using net.Pipe in tests.
-	NodeDialer
 }
 
 // MultiChannelServer is a server that uses a multi channel.
@@ -680,30 +650,6 @@ type SingleChannelServer struct {
 	*BaseServer
 }
 
-// AddLastLookup adds lastLookup to duration.
-func (srv *BaseServer) AddLastLookup() time.Time {
-	srv.lastLookupMu.Lock()
-	defer srv.lastLookupMu.Unlock()
-	return srv.lastLookup.Add(lookupInterval)
-}
-
-// SetLastLookupToNow sets LastLookup to the current time.
-func (srv *BaseServer) SetLastLookupToNow() {
-	srv.lastLookupMu.Lock()
-	defer srv.lastLookupMu.Unlock()
-	srv.lastLookup = time.Now()
-}
-
-// Dial creates a TCP connection to the node.
-func (srv *BaseServer) Dial(dest *discover.Node) (net.Conn, error) {
-	return srv.Dialer.Dial(dest)
-}
-
-// Dial creates a TCP connection to the node.
-func (srv *BaseServer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
-	return srv.Dialer.DialMulti(dest)
-}
-
 // BaseServer is a common data structure used by implementation of Server.
 type BaseServer struct {
 	// Config fields may not be modified while the server is running.
@@ -723,9 +669,6 @@ type BaseServer struct {
 	ntab         discover.Discovery
 	listener     net.Listener
 	ourHandshake *protoHandshake
-	lastLookup   time.Time
-	lastLookupMu sync.Mutex
-	// DiscV5       *discv5.Network
 
 	peerMu        sync.RWMutex
 	peers         map[discover.NodeID]*Peer
@@ -1728,30 +1671,6 @@ func (srv *BaseServer) PeersInfo() []*PeerInfo {
 // Disconnect tries to disconnect peer.
 func (srv *BaseServer) Disconnect(destID discover.NodeID) {
 	srv.handleDisconnectRequest(destID)
-}
-
-// CheckNilNetworkTable returns whether network table is nil.
-func (srv *BaseServer) CheckNilNetworkTable() bool {
-	return srv.ntab == nil
-}
-
-// Lookup performs a network search for nodes close
-// to the given target. It approaches the target by querying
-// nodes that are closer to it on each iteration.
-// The given target does not need to be an actual node
-// identifier.
-func (srv *BaseServer) Lookup(target discover.NodeID, nType discover.NodeType) []*discover.Node {
-	return srv.ntab.Lookup(target, nType)
-}
-
-// Resolve searches for a specific node with the given ID and NodeType.
-// It returns nil if the node could not be found.
-func (srv *BaseServer) Resolve(target discover.NodeID, nType discover.NodeType) *discover.Node {
-	return srv.ntab.Resolve(target, nType)
-}
-
-func (srv *BaseServer) GetNodes(nType discover.NodeType, max int) []*discover.Node {
-	return srv.ntab.GetNodes(nType, max)
 }
 
 // Name returns name of server.
