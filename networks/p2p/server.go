@@ -300,7 +300,6 @@ func (srv *MultiChannelServer) Start() (err error) {
 	if srv.running {
 		return errors.New("server already running")
 	}
-	srv.running = true
 	srv.logger = srv.Config.Logger
 	if srv.logger == nil {
 		srv.logger = logger.NewWith()
@@ -608,26 +607,39 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 // It blocks until all active connections are closed.
 func (srv *MultiChannelServer) Stop() {
 	srv.lock.Lock()
-	defer srv.lock.Unlock()
 	if !srv.running {
+		srv.lock.Unlock()
 		return
 	}
 	srv.running = false
+	srv.lock.Unlock()
+
+	// Signal in-progress handshakes to abort.
+	close(srv.quit)
+
+	// Stop accepting new connections
 	if srv.listener != nil {
-		// this unblocks listener Accept
 		srv.listener.Close()
 	}
 	for _, listener := range srv.listeners {
 		listener.Close()
 	}
+
+	// Stop outbound dialing
+	// srv.lock is released above so dialOnce goroutines can progress through setupConn.
 	if srv.dialsched != nil {
 		srv.dialsched.Close()
 	}
+
+	// Stop discovery
 	if srv.ntab != nil {
 		srv.ntab.Close()
 	}
-	close(srv.quit)
+
+	// Disconnect all remaining peers and wait for them to finish.
 	srv.disconnectAllPeers()
+
+	// Wait for listenLoop goroutines to exit.
 	srv.loopWG.Wait()
 }
 
@@ -966,23 +978,36 @@ func (srv *BaseServer) makeSelf(listener net.Listener, discovery discover.Discov
 // It blocks until all active connections are closed.
 func (srv *BaseServer) Stop() {
 	srv.lock.Lock()
-	defer srv.lock.Unlock()
 	if !srv.running {
+		srv.lock.Unlock()
 		return
 	}
 	srv.running = false
+	srv.lock.Unlock()
+
+	// Signal in-progress handshakes to abort.
+	close(srv.quit)
+
+	// Stop accepting new connections
 	if srv.listener != nil {
-		// this unblocks listener Accept
 		srv.listener.Close()
 	}
+
+	// Stop outbound dialing
+	// srv.lock is released above so dialOnce goroutines can progress through setupConn.
 	if srv.dialsched != nil {
 		srv.dialsched.Close()
 	}
+
+	// Stop discovery
 	if srv.ntab != nil {
 		srv.ntab.Close()
 	}
-	close(srv.quit)
+
+	// Disconnect all remaining peers and wait for them to finish.
 	srv.disconnectAllPeers()
+
+	// Wait for listenLoop goroutine to exit.
 	srv.loopWG.Wait()
 }
 
@@ -1022,7 +1047,6 @@ func (srv *BaseServer) Start() (err error) {
 	if srv.running {
 		return errors.New("server already running")
 	}
-	srv.running = true
 	srv.logger = srv.Config.Logger
 	if srv.logger == nil {
 		srv.logger = logger.NewWith()

@@ -252,7 +252,7 @@ func (ds *DialSched) getCandidates() (candidates []*discover.Node, needRefresh b
 		needRefresh = needRefresh || refresh
 	}
 
-	logger.Warn("Dialing candidates", "needs", needs, "candidates", len(candidates))
+	logger.Debug("Dialing candidates", "needs", needs, "candidates", len(candidates))
 	return candidates, needRefresh
 }
 
@@ -315,7 +315,7 @@ func (ds *DialSched) dialOnce(n *discover.Node) {
 	if err == errUpdateDial {
 		err = ds.dialMulti(n, flags)
 	}
-	logger.Warn("Dialed node", "id", n.ID, "type", n.NType, "addresses", n.TCPs, "err", err)
+	logger.Debug("Dialed node", "id", n.ID, "type", n.NType, "addresses", n.TCPs, "err", err)
 
 	if err != nil {
 		ds.markConnFailure(n.ID)
