@@ -54,9 +54,8 @@ contract ValidatorState is IValidatorState {
         _;
     }
 
-    constructor(SystemValidatorUpdateRequest[] memory valStates) {
+    constructor() {
         owner = msg.sender;
-        _setValidatorStates(valStates);
     }
 
     function _setValidatorStates(SystemValidatorUpdateRequest[] memory valStates) internal  {
