@@ -146,7 +146,7 @@ func (v *ValsetModule) deactiveStakersLessMinStakingAmount(si *staking.StakingIn
 		newValidators = validators.Copy()
 	)
 
-	// update staking amount of council
+	// rule1: check if staking amount become less than minimum staking amount
 	for _, val := range newValidators {
 		if val.State == valset.ValActive {
 			if val.StakingAmount < minStake {
@@ -154,5 +154,7 @@ func (v *ValsetModule) deactiveStakersLessMinStakingAmount(si *staking.StakingIn
 			}
 		}
 	}
+	// rule2: RC
+	// TODO-Permissionless: implement me
 	return newValidators
 }

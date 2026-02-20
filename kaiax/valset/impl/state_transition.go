@@ -128,7 +128,7 @@ func (vs *ValidatorList) Contains(targetAddr common.Address) bool {
 }
 
 func (vs *ValidatorList) Add(addr common.Address) {
-	// In permissionless operation, `governance.vote('addvalidator', 0x...)` is not the expected usage. Thus, do nothing
+	// Permissionless: NO-OP
 }
 
 func (vs *ValidatorList) Remove(targetAddr common.Address) bool {
