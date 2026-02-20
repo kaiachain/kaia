@@ -197,15 +197,38 @@ func (v *ValsetModule) ProcessTransition(
 	header *types.Header,
 	state *state.StateDB,
 ) error {
-	config := v.Chain.Config()
+	var (
+		config    = v.Chain.Config()
+		parentNum = new(big.Int).Sub(header.Number, common.Big1)
+		nextNum   = new(big.Int).Add(header.Number, common.Big1)
+	)
+
+	// initialize permissioned validators at `permless HF-1`
+	// all validators are registered to `ValActive` state
+	if config.IsPermissionlessForBlockParent(parentNum) {
+		backend := backends.NewStateBlockchainContractBackend(v.Chain, nil, nil, state)
+		council, err := v.getCouncil(header.Number.Uint64())
+		if err != nil {
+			return err
+		}
+		validatorStateAddr, err := readValidatorStateAddr(backend, parentNum)
+		if err != nil {
+			// TODO-Permissionless: Change the log level to Debug
+			logger.Error("Failed to fetch ValidatorState contract adress", "number", header.Number.Uint64(), "err", err.Error())
+			return err
+		}
+		valStateMap := convertToChartMap(council.List())
+		v.writeValidators(nextNum.Uint64(), valStateMap)
+		msg, from, err := prepareValidatorWrite(backend, config, state, nextNum, validatorStateAddr, valStateMap)
+		if err == nil {
+			blockchain.WriteValidators(msg, from, header, vmenv, state, config.Rules(header.Number))
+		}
+	}
+
 	if config.IsPermissionlessForkEnabled(header.Number) {
 		// 0. self-state transition(user tx) might have been executed at header.Number - 1
 		// 1. read all validators from contrcat on every block
-		var (
-			parentNum = new(big.Int).Sub(header.Number, common.Big1)
-			backend   = backends.NewStateBlockchainContractBackend(v.Chain, nil, nil, state)
-		)
-
+		backend := backends.NewStateBlockchainContractBackend(v.Chain, nil, nil, state)
 		prevCouncil, err := v.getCouncil(parentNum.Uint64())
 		if err != nil {
 			return err
@@ -245,10 +268,19 @@ func (v *ValsetModule) ProcessTransition(
 		}
 
 		if !prevCouncil.EqualState(newValidators) {
+			// if contract returns empty for validator query, it's a circumstance
+			// where ValidatorState contract is deployed after permless HF
+			newValidatorState := newValidators
+			// no `Copy()` is required because no mutation on it
+			if len(validators) == 0 {
+				if prevCouncilVals, ok := prevCouncil.(*ValidatorList); ok {
+					newValidatorState = prevCouncilVals.permlessVals
+				}
+			}
 			// 5. write updated validators' state into checkpoint db
-			v.writeValidators(header.Number.Uint64(), newValidators)
+			v.writeValidators(header.Number.Uint64(), newValidatorState)
 			// 6. write updated validators' state into contract
-			msg, from, err := prepareValidatorWrite(backend, config, state, header, validatorStateAddr, newValidators)
+			msg, from, err := prepareValidatorWrite(backend, config, state, header.Number, validatorStateAddr, newValidatorState)
 			if err == nil {
 				blockchain.WriteValidators(msg, from, header, vmenv, state, config.Rules(header.Number))
 			}
@@ -269,18 +301,18 @@ func prepareValidatorWrite(
 	backend *backends.StateBlockchainContractBackend,
 	config *params.ChainConfig,
 	statedb *state.StateDB,
-	header *types.Header,
+	num *big.Int,
 	validatorStateAddr common.Address,
 	validators valset.ValidatorStateMap,
 ) (*types.Transaction, common.Address, error) {
 	from, msg, err := system.EncodeWriteValidators(
 		backend,
-		config.Rules(header.Number),
+		config.Rules(num),
 		validatorStateAddr,
 		validators,
 	)
 	if err != nil {
-		logger.Error("Failed to encode WriteValidators", "number", header.Number.Uint64(), "err", err.Error(), "validators", validators.String())
+		logger.Error("Failed to encode WriteValidators", "number", num.Uint64(), "err", err.Error(), "validators", validators.String())
 		return nil, common.Address{}, err
 	}
 	return msg, from, err

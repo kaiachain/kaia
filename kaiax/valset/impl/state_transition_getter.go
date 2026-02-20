@@ -34,16 +34,18 @@ type sortableValidator struct {
 
 // getEpochTransition returns new validators after applying epoch transition
 func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, validators valset.ValidatorStateMap) valset.ValidatorStateMap {
-	defer func() {
-		for addr, val := range validators {
+	devLog := func(vals valset.ValidatorStateMap) {
+		for addr, val := range vals {
 			logger.Info("TODO-Permissionless: Remove this log", "num", num, "addr", addr.String(), "state", val.State.String(), "stakingamount", val.StakingAmount, "idleTimeout", val.IdleTimeout.String(), "pausedtimeout", val.PausedTimeout.String())
 		}
-	}()
+	}
 	if !isVrankEpoch(num) {
 		// return early if the `num` is not vrank epoch number
+		devLog(validators)
 		return validators.Copy()
 	}
 	if len(si.NodeIds) == 0 && len(si.StakingContracts) == 0 && len(si.RewardAddrs) == 0 {
+		devLog(validators)
 		// Not ABook activated yet
 		return nil
 	}
@@ -54,6 +56,7 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 		pset                 = v.GovModule.GetParamSet(num - 1) // read gov param from parent number
 		minStake             = pset.MinimumStake.Uint64()       // in KAIA
 	)
+	defer devLog(newValidators)
 	for addr, val := range newValidators {
 		switch val.State {
 		case valset.ValExiting:
