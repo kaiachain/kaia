@@ -225,6 +225,7 @@ func (v *ValsetModule) ProcessTransition(
 		}
 	}
 
+	// TODO-Permissionless: Store canddiate scores once ABV2 and VRank interface is finalized
 	if config.IsPermissionlessForkEnabled(header.Number) {
 		// 0. self-state transition(user tx) might have been executed at header.Number - 1
 		// 1. read all validators from contrcat on every block
