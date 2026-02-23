@@ -1,4 +1,4 @@
-// Copyright 2024 The Kaia Authors
+// Copyright 2026 The Kaia Authors
 // This file is part of the Kaia library.
 //
 // The Kaia library is free software: you can redistribute it and/or modify
@@ -14,23 +14,23 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
-package valset
+package vrank
 
 import (
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/kaiax"
 )
 
-//go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/valset ValsetModule
-type ValsetModule interface {
+type VRankModule interface {
 	kaiax.BaseModule
-	kaiax.JsonRpcModule
-	kaiax.ExecutionModule
-	kaiax.RewindableModule
 
-	GetCouncil(num uint64) ([]common.Address, error)
-	GetCommittee(num uint64, round uint64) ([]common.Address, error)
-	GetCandidates(num uint64) ([]common.Address, error)
-	GetDemotedValidators(num uint64) ([]common.Address, error)
-	GetProposer(num uint64, round uint64) (common.Address, error)
+	HandleIstanbulPreprepare(block *types.Block, view *istanbul.View)
+	HandleVRankPreprepare(msg *VRankPreprepare) error
+	HandleVRankCandidate(msg *VRankCandidate) error
+	GetCfReport(blockNum, round uint64) (CfReport, error)
+}
+
+type VRankModuleHost interface {
+	RegisterVRankModule(module VRankModule)
 }
