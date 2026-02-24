@@ -1352,7 +1352,7 @@ func handleVRankPreprepareMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 	if err := pm.vrankModule.HandleVRankPreprepare(vrankPreprepare); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
+		logger.Debug("Ignored VRankPreprepare handler error", "peer", p.GetID(), "err", err)
 	}
 	return nil
 }
@@ -1367,7 +1367,7 @@ func handleVRankCandidateMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 	if err := pm.vrankModule.HandleVRankCandidate(vrankCandidate); err != nil {
-		return errResp(ErrDecode, "msg %v: %v", msg, err)
+		logger.Debug("Ignored VRankCandidate handler error", "peer", p.GetID(), "err", err)
 	}
 	return nil
 }
