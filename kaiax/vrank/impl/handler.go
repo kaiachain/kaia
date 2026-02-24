@@ -93,17 +93,23 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	}
 	// should be isValidator(v.prepreparedView.Sequence.Uint64() + 1), but validators are not finalized during `seq` consensus.
 	if v.isValidator(v.prepreparedView.Sequence.Uint64()) {
-		sender, err := v.verifyVRankCandidate(msg)
+		sender, err := v.recoverVRankCandidateSender(msg)
 		if err != nil {
 			return err
 		}
 		vk := vrank.ViewKey{N: msg.BlockNumber, R: msg.Round}
+		if v.collector.HasCandMsg(vk, sender) {
+			return nil
+		}
+		if err := v.verifyVRankCandidateSender(msg, sender); err != nil {
+			return err
+		}
 		v.collector.AddCandMsg(vk, sender, receivedAt, msg)
 	}
 	return nil
 }
 
-func (v *VRankModule) verifyVRankCandidate(msg *vrank.VRankCandidate) (common.Address, error) {
+func (v *VRankModule) recoverVRankCandidateSender(msg *vrank.VRankCandidate) (common.Address, error) {
 	if msg.BlockNumber > v.prepreparedView.Sequence.Uint64()+maxCollectorWindow {
 		return common.Address{}, vrank.ErrTooFar
 	}
@@ -117,17 +123,21 @@ func (v *VRankModule) verifyVRankCandidate(msg *vrank.VRankCandidate) (common.Ad
 		return common.Address{}, err
 	}
 	sender := crypto.PubkeyToAddress(*pubkey)
+	return sender, nil
+}
+
+func (v *VRankModule) verifyVRankCandidateSender(msg *vrank.VRankCandidate, sender common.Address) error {
 	// should be GetCandidates(msg.BlockNumber), but candidates are not finalized during `Sequence` consensus.
 	candidates, err := v.Valset.GetCandidates(v.prepreparedView.Sequence.Uint64())
 	if err != nil || candidates == nil {
 		logger.Debug("GetCandidates failed", "err", err, "blockNum", msg.BlockNumber)
-		return common.Address{}, err
+		return err
 	}
 	if !slices.Contains(candidates, sender) {
 		logger.Debug("Sender is not a candidate", "sender", sender.Hex(), "blockNum", msg.BlockNumber)
-		return common.Address{}, vrank.ErrMsgFromNonCandidate
+		return vrank.ErrMsgFromNonCandidate
 	}
-	return sender, nil
+	return nil
 }
 
 func (v *VRankModule) vrankCandidateSigHash(blockNum uint64, round uint8, blockHash common.Hash) common.Hash {

@@ -480,6 +480,48 @@ func TestHandleVRankCandidate(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("duplicate message with invalid signature should not overwrite", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		val, cand := createCN(t, valset), createCN(t, valset)
+
+		sig := signVRankCandidate(t, cand.VRankModule, cand.Key, block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash())
+		msg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: sig}
+
+		// signature for a different block is invalid for (block1, round0, block1Hash)
+		block2 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(2)})
+		invalidSig := signVRankCandidate(t, cand.VRankModule, cand.Key, block2.NumberU64(), uint8(view1_0.Round.Uint64()), block2.Hash())
+		dupInvalidMsg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: invalidSig}
+
+		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
+
+		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
+
+		err := val.VRankModule.HandleVRankCandidate(&msg)
+		require.NoError(t, err)
+
+		_, _, candMap := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		assert.Len(t, candMap, 1)
+		first := candMap[cand.Addr]
+		assert.Equal(t, msg.BlockHash, first.Msg.BlockHash)
+		assert.Equal(t, msg.BlockNumber, first.Msg.BlockNumber)
+		assert.Equal(t, msg.Round, first.Msg.Round)
+		assert.Equal(t, msg.Sig, first.Msg.Sig)
+
+		err = val.VRankModule.HandleVRankCandidate(&dupInvalidMsg)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, vrank.ErrMsgFromNonCandidate)
+
+		// dupInvalidMsg is gone
+		_, _, candMap = val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		assert.Len(t, candMap, 1)
+		assert.Equal(t, msg.BlockHash, candMap[cand.Addr].Msg.BlockHash)
+		assert.Equal(t, msg.BlockNumber, candMap[cand.Addr].Msg.BlockNumber)
+		assert.Equal(t, msg.Round, candMap[cand.Addr].Msg.Round)
+		assert.Equal(t, msg.Sig, candMap[cand.Addr].Msg.Sig)
+	})
 }
 
 func TestGetCfReport(t *testing.T) {
