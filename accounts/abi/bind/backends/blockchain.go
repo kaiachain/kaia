@@ -20,19 +20,14 @@ package backends
 
 import (
 	"context"
-	"errors"
 	"math/big"
 
 	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/accounts/abi/bind"
-	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/node/cn/filters"
 )
 
@@ -60,9 +55,8 @@ type TxPoolForCaller interface {
 // Note that SimulatedBackend creates a new temporary BlockChain for testing,
 // whereas BlockchainContractBackend uses an existing BlockChain with existing database.
 type BlockchainContractBackend struct {
-	bc     BlockChainForCaller
-	txPool TxPoolForCaller
-	events *filters.EventSystem
+	bc              BlockChainForCaller
+	bcCommonBackend *BlockchainContractCommonBackend
 }
 
 // This nil assignment ensures at compile time that BlockchainContractBackend implements bind.Contract* and bind.DeployBackend.
@@ -78,92 +72,8 @@ var (
 // If `tp=nil`, bind.ContractTransactor methods could return errors.
 // If `es=nil`, bind.ContractFilterer methods could return errors.
 func NewBlockchainContractBackend(bc BlockChainForCaller, tp TxPoolForCaller, es *filters.EventSystem) *BlockchainContractBackend {
-	return &BlockchainContractBackend{bc, tp, es}
-}
-
-// bind.ContractCaller defined methods
-
-func (b *BlockchainContractBackend) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
-	if _, state, err := b.getBlockAndState(blockNumber); err != nil {
-		return nil, err
-	} else {
-		return state.GetCode(account), nil
-	}
-}
-
-// Executes a read-only function call with respect to the specified block's state, or latest state if not specified.
-//
-// Returns call result in []byte.
-// Returns error when:
-// - cannot find the corresponding block or stateDB
-// - VM revert error
-// - VM other errors (e.g. NotProgramAccount, OutOfGas)
-// - Error outside VM
-func (b *BlockchainContractBackend) CallContract(ctx context.Context, call kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
-	block, state, err := b.getBlockAndState(blockNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := b.callContract(call, block, state)
-	if err != nil {
-		return nil, err
-	}
-	if len(res.Revert()) > 0 {
-		return nil, blockchain.NewRevertError(res)
-	}
-	return res.Return(), res.Unwrap()
-}
-
-func (b *BlockchainContractBackend) callContract(call kaia.CallMsg, block *types.Block, state *state.StateDB) (*blockchain.ExecutionResult, error) {
-	gasPrice := common.Big0
-	if call.GasPrice != nil && (call.GasFeeCap != nil || call.GasTipCap != nil) {
-		return nil, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
-	}
-	if !b.bc.Config().IsKaiaForkEnabled(block.Number()) { // before KIP-162
-		if call.GasPrice != nil {
-			gasPrice = call.GasPrice
-		}
-	} else { // after KIP-162
-		if call.GasPrice != nil {
-			gasPrice = call.GasPrice
-		} else {
-			if call.GasFeeCap == nil {
-				call.GasFeeCap = big.NewInt(0)
-			}
-			if call.GasTipCap == nil {
-				call.GasTipCap = big.NewInt(0)
-			}
-			gasPrice = math.BigMin(new(big.Int).Add(call.GasTipCap, block.Header().BaseFee), call.GasFeeCap)
-		}
-	}
-
-	if call.Gas == 0 {
-		call.Gas = uint64(3e8) // enough gas for ordinary contract calls
-	}
-
-	var accessList types.AccessList
-	if call.AccessList != nil {
-		accessList = *call.AccessList
-	}
-	intrinsicGas, err := types.IntrinsicGas(call.Data, accessList, nil, call.To == nil, b.bc.Config().Rules(block.Number()))
-	if err != nil {
-		return nil, err
-	}
-
-	msg := types.NewMessage(call.From, call.To, 0, call.Value, call.Gas, gasPrice, nil, nil, nil, call.Data,
-		false, intrinsicGas, accessList, nil, nil, nil, nil)
-
-	txContext := blockchain.NewEVMTxContext(msg, block.Header(), b.bc.Config())
-	blockContext := blockchain.NewEVMBlockContext(block.Header(), b.bc, nil)
-
-	// EVM demands the sender to have enough KAIA balance (gasPrice * gasLimit) in buyGas()
-	// After KIP-71, gasPrice is nonzero baseFee, regardless of the msg.gasPrice (usually 0)
-	// But our sender (usually 0x0) won't have enough balance. Instead we override gasPrice = 0 here
-	txContext.GasPrice = big.NewInt(0)
-	evm := vm.NewEVM(blockContext, txContext, state, b.bc.Config(), &vm.Config{})
-
-	return blockchain.ApplyMessage(evm, msg)
+	bcCommonBackend := newBlockchainContractCommonBackend(bc, tp, es)
+	return &BlockchainContractBackend{bc, bcCommonBackend}
 }
 
 func (b *BlockchainContractBackend) getBlockAndState(num *big.Int) (*types.Block, *state.StateDB, error) {
@@ -185,184 +95,84 @@ func (b *BlockchainContractBackend) getBlockAndState(num *big.Int) (*types.Block
 	return block, state, err
 }
 
-// bind.ContractTransactor defined methods
+// bind.ContractCaller defined methods
 
-func (b *BlockchainContractBackend) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
-	// TODO-Kaia this is not pending code but latest code
-	state, err := b.bc.State()
+func (b *BlockchainContractBackend) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
+	_, state, err := b.getBlockAndState(blockNumber)
 	if err != nil {
 		return nil, err
 	}
-	return state.GetCode(account), nil
+	return b.bcCommonBackend.CodeAt(ctx, state, account, blockNumber)
+}
+
+// Executes a read-only function call with respect to the specified block's state, or latest state if not specified.
+//
+// Returns call result in []byte.
+// Returns error when:
+// - cannot find the corresponding block or stateDB
+// - VM revert error
+// - VM other errors (e.g. NotProgramAccount, OutOfGas)
+// - Error outside VM
+func (b *BlockchainContractBackend) CallContract(ctx context.Context, call kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
+	block, state, err := b.getBlockAndState(blockNumber)
+	if err != nil {
+		return nil, err
+	}
+	return b.bcCommonBackend.CallContract(ctx, state, block, call, blockNumber)
+}
+
+// bind.ContractTransactor defined methods
+
+func (b *BlockchainContractBackend) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
+	return b.bcCommonBackend.PendingCodeAt(ctx, account)
 }
 
 func (b *BlockchainContractBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
-	if b.txPool != nil {
-		return b.txPool.GetPendingNonce(account), nil
-	}
-	// TODO-Kaia this is not pending nonce but latest nonce
-	state, err := b.bc.State()
-	if err != nil {
-		return 0, err
-	}
-	return state.GetNonce(account), nil
+	return b.bcCommonBackend.PendingNonceAt(ctx, account)
 }
 
 func (b *BlockchainContractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	if b.bc.Config().IsMagmaForkEnabled(b.bc.CurrentBlock().Number()) {
-		if b.txPool != nil {
-			return new(big.Int).Mul(b.txPool.GasPrice(), big.NewInt(2)), nil
-		} else {
-			return new(big.Int).Mul(b.bc.CurrentBlock().Header().BaseFee, big.NewInt(2)), nil
-		}
-	} else {
-		// This is used for sending txs, so it's ok to use the genesis value instead of the latest value from governance.
-		return new(big.Int).SetUint64(b.bc.Config().UnitPrice), nil
-	}
+	return b.bcCommonBackend.SuggestGasPrice(ctx)
 }
 
 func (b *BlockchainContractBackend) EstimateGas(ctx context.Context, call kaia.CallMsg) (uint64, error) {
-	state, err := b.bc.State()
-	if err != nil {
-		return 0, err
-	}
-	balance := state.GetBalance(call.From) // from can't be nil
-
-	// Create a helper to check if a gas allowance results in an executable transaction
-	executable := func(gas uint64) (bool, *blockchain.ExecutionResult, error) {
-		call.Gas = gas
-
-		currentState, err := b.bc.State()
-		if err != nil {
-			return true, nil, nil
-		}
-		res, err := b.callContract(call, b.bc.CurrentBlock(), currentState)
-		if err != nil {
-			if errors.Is(err, blockchain.ErrIntrinsicGas) {
-				return true, nil, nil // Special case, raise gas limit
-			}
-			return true, nil, err // Bail out
-		}
-		return res.Failed(), res, nil
-	}
-
-	gasPrice := common.Big0
-	if call.GasPrice != nil && (call.GasFeeCap != nil || call.GasTipCap != nil) {
-		return 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
-	} else if call.GasPrice != nil {
-		gasPrice = call.GasPrice
-	} else if call.GasFeeCap != nil {
-		gasPrice = call.GasFeeCap
-	}
-
-	estimated, err := blockchain.DoEstimateGas(ctx, call.Gas, 0, call.Value, gasPrice, balance, executable)
-	return uint64(estimated), err
+	return b.bcCommonBackend.EstimateGas(ctx, call)
 }
 
 func (b *BlockchainContractBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	if b.txPool == nil {
-		return errors.New("tx pool not configured")
-	}
-	return b.txPool.AddLocal(tx)
+	return b.bcCommonBackend.SendTransaction(ctx, tx)
 }
 
 func (b *BlockchainContractBackend) ChainID(ctx context.Context) (*big.Int, error) {
-	return b.bc.Config().ChainID, nil
+	return b.bcCommonBackend.ChainID(ctx)
 }
 
 // bind.ContractFilterer defined methods
 
 func (b *BlockchainContractBackend) FilterLogs(ctx context.Context, query kaia.FilterQuery) ([]types.Log, error) {
-	// Convert the current block numbers into internal representations
-	if query.FromBlock == nil {
-		query.FromBlock = big.NewInt(b.bc.CurrentBlock().Number().Int64())
-	}
-	if query.ToBlock == nil {
-		query.ToBlock = big.NewInt(b.bc.CurrentBlock().Number().Int64())
-	}
-	from := query.FromBlock.Int64()
-	to := query.ToBlock.Int64()
-
-	state, err := b.bc.State()
-	if err != nil {
-		return nil, err
-	}
-	bc, ok := b.bc.(*blockchain.BlockChain)
-	if !ok {
-		return nil, errors.New("BlockChainForCaller is not blockchain.BlockChain")
-	}
-	filter := filters.NewRangeFilter(&filterBackend{state.Database().TrieDB().DiskDB(), bc, nil}, from, to, query.Addresses, query.Topics)
-
-	logs, err := filter.Logs(ctx)
-	if err != nil {
-		return nil, err
-	}
-	res := make([]types.Log, len(logs))
-	for i, log := range logs {
-		res[i] = *log
-	}
-	return res, nil
+	return b.bcCommonBackend.FilterLogs(ctx, query)
 }
 
 func (b *BlockchainContractBackend) SubscribeFilterLogs(ctx context.Context, query kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
-	// Subscribe to contract events
-	sink := make(chan []*types.Log)
-
-	if b.events == nil {
-		return nil, errors.New("events system not configured")
-	}
-	sub, err := b.events.SubscribeLogs(query, sink)
-	if err != nil {
-		return nil, err
-	}
-	// Since we're getting logs in batches, we need to flatten them into a plain stream
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case logs := <-sink:
-				for _, log := range logs {
-					select {
-					case ch <- *log:
-					case err := <-sub.Err():
-						return err
-					case <-quit:
-						return nil
-					}
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
+	return b.bcCommonBackend.SubscribeFilterLogs(ctx, query, ch)
 }
 
 // bind.DeployBackend defined methods
 
 func (b *BlockchainContractBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	bc, ok := b.bc.(*blockchain.BlockChain)
-	if !ok {
-		return nil, errors.New("BlockChainForCaller is not blockchain.BlockChain")
-	}
-	receipt := bc.GetReceiptByTxHash(txHash)
-	if receipt != nil {
-		return receipt, nil
-	}
-	return nil, errors.New("receipt does not exist")
+	return b.bcCommonBackend.TransactionReceipt(ctx, txHash)
 }
 
 // sc.Backend requires BalanceAt and CurrentBlockNumber
 
 func (b *BlockchainContractBackend) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
-	if _, state, err := b.getBlockAndState(blockNumber); err != nil {
+	_, state, err := b.getBlockAndState(blockNumber)
+	if err != nil {
 		return nil, err
-	} else {
-		return state.GetBalance(account), nil
 	}
+	return b.bcCommonBackend.BalanceAt(ctx, state, account, blockNumber)
 }
 
 func (b *BlockchainContractBackend) CurrentBlockNumber(ctx context.Context) (uint64, error) {
-	return b.bc.CurrentBlock().NumberU64(), nil
+	return b.bcCommonBackend.CurrentBlockNumber(ctx)
 }
