@@ -30,4 +30,6 @@ var (
 	ErrMsgFromNonCandidate   = errors.New("message from non-candidate")
 	ErrTooFar                = errors.New("too far in the future")
 	ErrRoundOutOfRange       = errors.New("round out of range")
+	ErrHeaderNotFound        = errors.New("header not found")
+	ErrHeaderExtraTooShort   = errors.New("header extra is too short")
 )

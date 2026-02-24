@@ -19,6 +19,7 @@ package impl
 import (
 	"crypto/ecdsa"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
@@ -49,6 +50,11 @@ type InitOpts struct {
 	Valset      valset.ValsetModule
 	NodeKey     *ecdsa.PrivateKey
 	ChainConfig *params.ChainConfig
+	Chain       chain
+}
+
+type chain interface {
+	GetHeaderByNumber(number uint64) *types.Header
 }
 
 type VRankModule struct {
@@ -74,7 +80,7 @@ func NewVRankModule() *VRankModule {
 }
 
 func (v *VRankModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.Valset == nil || opts.NodeKey == nil || opts.ChainConfig == nil {
+	if opts == nil || opts.Valset == nil || opts.NodeKey == nil || opts.ChainConfig == nil || opts.Chain == nil {
 		return vrank.ErrInitUnexpectedNil
 	}
 	v.InitOpts = *opts

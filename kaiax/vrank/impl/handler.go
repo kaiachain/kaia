@@ -17,7 +17,6 @@
 package impl
 
 import (
-	"bytes"
 	"encoding/binary"
 	"math/big"
 	"slices"
@@ -218,58 +217,6 @@ func (v *VRankModule) isValidator(blockNum uint64) bool {
 	}
 
 	return slices.Contains(validators, v.nodeID)
-}
-
-// for building N-th header's VRank field, caller should query N-1 with the previous block's round.
-func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.CfReport, error) {
-	// epoch header's VRank should be nil
-	if (blockNum+1)%vrankEpoch == 0 {
-		return vrank.CfReport{}, nil
-	}
-	if round > maxRound {
-		return nil, vrank.ErrRoundOutOfRange
-	}
-
-	// if I was not a validator for blockNum, I couldn't have collected cfReport for blockNum.
-	if !v.isValidator(blockNum) {
-		return vrank.CfReport{}, nil
-	}
-
-	vk := vrank.ViewKey{N: blockNum, R: uint8(round)}
-	prepreparedAt, expectedBlockHash, viewMap := v.collector.GetViewData(vk)
-	if prepreparedAt.IsZero() {
-		return nil, vrank.ErrPrepreparedTimeNotSet
-	}
-	candidates, err := v.Valset.GetCandidates(blockNum)
-	if err != nil || candidates == nil {
-		logger.Error("GetCandidates failed", "blockNum", blockNum)
-		return nil, vrank.ErrGetCandidateFailed
-	}
-	// safeCands = candidates who responded with expectedBlockHash before deadline.
-	safeCands := make(map[common.Address]struct{})
-	for sender, msgWithTime := range viewMap {
-		if !slices.Contains(candidates, sender) {
-			continue
-		}
-		if msgWithTime.Msg == nil || msgWithTime.Msg.BlockHash != expectedBlockHash {
-			continue
-		}
-		elapsed := msgWithTime.ReceivedAt.Sub(prepreparedAt).Milliseconds()
-		// early birds who sent before validator preprepared are safe
-		if elapsed <= candidatePrepareDeadlineMs {
-			safeCands[sender] = struct{}{}
-		}
-	}
-
-	// cfReport = candidates - safeCands = candidates who did not respond, responded after deadline, or lied (wrong BlockHash).
-	var cfReport vrank.CfReport
-	for _, addr := range candidates {
-		if _, ok := safeCands[addr]; !ok {
-			cfReport = append(cfReport, addr)
-		}
-	}
-	slices.SortFunc(cfReport, func(a, b common.Address) int { return bytes.Compare(a.Bytes(), b.Bytes()) })
-	return cfReport, nil
 }
 
 func (v *VRankModule) handleBroadcastLoop() {
