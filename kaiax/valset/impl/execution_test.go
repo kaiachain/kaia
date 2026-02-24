@@ -65,7 +65,7 @@ func TestPostInsertBlock(t *testing.T) {
 		}}
 	)
 	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
-	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(makeGenesisBlock(genesisCouncil.List()).Header()).AnyTimes()
+	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(makeGenesisBlock(genesisCouncil.Council()).Header()).AnyTimes()
 
 	writeCouncilPermissioned(db, 0, genesisCouncil)
 	writeValidatorVoteBlockNums(db, []uint64{0})
