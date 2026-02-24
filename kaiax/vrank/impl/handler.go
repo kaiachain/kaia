@@ -18,6 +18,7 @@ package impl
 
 import (
 	"bytes"
+	"encoding/binary"
 	"math/big"
 	"slices"
 	"time"
@@ -64,7 +65,8 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 	}
 
 	if v.isCandidate(block.NumberU64()) {
-		sig, err := crypto.Sign(crypto.Keccak256(block.Hash().Bytes()), v.NodeKey)
+		sigHash := v.vrankCandidateSigHash(block.NumberU64(), uint8(view.Round.Uint64()), block.Hash())
+		sig, err := crypto.Sign(sigHash.Bytes(), v.NodeKey)
 		if err != nil {
 			logger.Error("Sign failed", "blockNum", block.NumberU64(), "blockHash", block.Hash().Hex())
 			return err
@@ -108,11 +110,13 @@ func (v *VRankModule) verifyVRankCandidate(msg *vrank.VRankCandidate) (common.Ad
 	if msg.Round > maxRound {
 		return common.Address{}, vrank.ErrRoundOutOfRange
 	}
-	sender, err := istanbul.GetSignatureAddress(msg.BlockHash.Bytes(), msg.Sig)
+	sigHash := v.vrankCandidateSigHash(msg.BlockNumber, msg.Round, msg.BlockHash)
+	pubkey, err := crypto.SigToPub(sigHash.Bytes(), msg.Sig)
 	if err != nil {
-		logger.Debug("GetSignatureAddress failed", "err", err, "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
+		logger.Debug("SigToPub failed", "err", err, "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
 		return common.Address{}, err
 	}
+	sender := crypto.PubkeyToAddress(*pubkey)
 	// should be GetCandidates(msg.BlockNumber), but candidates are not finalized during `Sequence` consensus.
 	candidates, err := v.Valset.GetCandidates(v.prepreparedView.Sequence.Uint64())
 	if err != nil || candidates == nil {
@@ -124,6 +128,24 @@ func (v *VRankModule) verifyVRankCandidate(msg *vrank.VRankCandidate) (common.Ad
 		return common.Address{}, vrank.ErrMsgFromNonCandidate
 	}
 	return sender, nil
+}
+
+func (v *VRankModule) vrankCandidateSigHash(blockNum uint64, round uint8, blockHash common.Hash) common.Hash {
+	chainID := uint64(0)
+	if v.ChainConfig != nil && v.ChainConfig.ChainID != nil {
+		chainID = v.ChainConfig.ChainID.Uint64()
+	} else {
+		logger.Error("ChainConfig.ChainID is nil")
+	}
+	// Canonical encoding:
+	// domain separator || chain_id(uint64 BE) || block_number(uint64 BE) || round(uint8) || block_hash(32 bytes)
+	payload := make([]byte, 0, len(vrankCandidateSigDomain)+8+8+1+len(blockHash))
+	payload = append(payload, []byte(vrankCandidateSigDomain)...)
+	payload = binary.BigEndian.AppendUint64(payload, chainID)
+	payload = binary.BigEndian.AppendUint64(payload, blockNum)
+	payload = append(payload, round)
+	payload = append(payload, blockHash[:]...)
+	return crypto.Keccak256Hash(payload)
 }
 
 // BroadcastVRankPreprepare is called by the proposer

@@ -31,6 +31,7 @@ import (
 
 const (
 	candidatePrepareDeadlineMs = 200
+	vrankCandidateSigDomain    = "VRANK_CANDIDATE_V1"
 
 	broadcastChSize    = 2048
 	vrankEpoch         = 86400
