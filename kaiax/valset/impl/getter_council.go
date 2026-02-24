@@ -27,13 +27,27 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
-func (v *ValsetModule) getCouncil(num uint64) (valset.CommonAddressSet, error) {
+func (v *ValsetModule) getCouncilPermissionless(num uint64) (valset.CommonAddressSet, error) {
 	if num == 0 {
-		return v.getCouncilGenesis()
+		return v.getCouncilGenesisPermissionless()
+	}
+
+	council, _, err := v.getCouncilDBPermissionless(num)
+	if err == nil && council != nil {
+		return council, err
+	}
+	// if permissionless platform (ABV2, VRank, Registry) is not ready yet, fallbback to legacy getter
+	council, _, err = v.getCouncilDBPermissioned(num)
+	return council, err
+}
+
+func (v *ValsetModule) getCouncilPermissioned(num uint64) (valset.CommonAddressSet, error) {
+	if num == 0 {
+		return v.getCouncilGenesisPermissioned()
 	}
 
 	// First try to get from the (migrated) DB.
-	if council, ok, err := v.getCouncilDB(num); err != nil {
+	if council, ok, err := v.getCouncilDBPermissioned(num); err != nil {
 		return nil, err
 	} else if ok {
 		return council, nil
@@ -44,56 +58,55 @@ func (v *ValsetModule) getCouncil(num uint64) (valset.CommonAddressSet, error) {
 	}
 }
 
-// getCouncilGenesis parses the genesis council from the header's extraData.
-func (v *ValsetModule) getCouncilGenesis() (valset.CommonAddressSet, error) {
+func (v *ValsetModule) getIstanbul() (*types.IstanbulExtra, error) {
 	header := v.Chain.GetHeaderByNumber(0)
 	if header == nil {
 		return nil, errNoHeader
 	}
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	return types.ExtractIstanbulExtra(header)
+}
+
+func (v *ValsetModule) getCouncilGenesisPermissioned() (valset.CommonAddressSet, error) {
+	istanbulExtra, err := v.getIstanbul()
 	if err != nil {
 		return nil, err
 	}
-
-	var validators valset.CommonAddressSet
-	if v.Chain.Config().IsPermissionlessForkEnabled(header.Number) {
-		validators = newValidatorList(convertToChartMap(istanbulExtra.Validators))
-	} else {
-		validators = valset.NewCommonAddressSet(istanbulExtra.Validators)
-	}
-	return validators, nil
+	return valset.NewCommonAddressSet(istanbulExtra.Validators), nil
 }
 
-func (v *ValsetModule) getCouncilDB(num uint64) (valset.CommonAddressSet, bool, error) {
-	var (
-		nums             []uint64
-		voteNum          uint64
-		stateChangeNum   uint64
-		isPermissionless = v.Chain.Config().Rules(new(big.Int).SetUint64(num)).IsPermissionless
-	)
-	if isPermissionless {
-		nums = v.readValidatorStateChangeBlockNumsCached()
-		if nums == nil {
-			return nil, false, errNoStateChangeBlockNums
-		}
-		stateChangeNum = lastNumLessEqualThan(nums, num)
-	} else {
-		pMinVoteNum := v.readLowestScannedVoteNumCached()
-		if pMinVoteNum == nil {
-			return nil, false, errNoLowestScannedNum
-		}
-		nums = v.readValidatorVoteBlockNumsCached()
-		if nums == nil {
-			return nil, false, errNoVoteBlockNums
-		}
-		voteNum = lastNumLessThan(nums, num)
-		if voteNum < *pMinVoteNum {
-			// found voteNum is not one of the scanned vote nums, i.e. the migration is not yet complete.
-			// Return false to indicate that the data is not yet available.
-			return nil, false, nil
-		}
+func (v *ValsetModule) getCouncilGenesisPermissionless() (valset.CommonAddressSet, error) {
+	istanbulExtra, err := v.getIstanbul()
+	if err != nil {
+		return nil, err
 	}
-	council := ReadCouncil(v.ChainKv, voteNum, stateChangeNum)
+	return newValidatorList(convertToChartMap(istanbulExtra.Validators)), nil
+}
+
+func (v *ValsetModule) getCouncilDBPermissioned(num uint64) (valset.CommonAddressSet, bool, error) {
+	pMinVoteNum := v.readLowestScannedVoteNumCached()
+	if pMinVoteNum == nil {
+		return nil, false, errNoLowestScannedNum
+	}
+	nums := v.readValidatorVoteBlockNumsCached()
+	if nums == nil {
+		return nil, false, errNoVoteBlockNums
+	}
+	voteNum := lastNumLessThan(nums, num)
+	if voteNum < *pMinVoteNum {
+		// found voteNum is not one of the scanned vote nums, i.e. the migration is not yet complete.
+		// Return false to indicate that the data is not yet available.
+		return nil, false, nil
+	}
+	return ReadCouncilPermissiond(v.ChainKv, voteNum), true, nil
+}
+
+func (v *ValsetModule) getCouncilDBPermissionless(num uint64) (valset.CommonAddressSet, bool, error) {
+	nums := v.readValidatorStateChangeBlockNumsCached()
+	if nums == nil {
+		return nil, false, errNoStateChangeBlockNums
+	}
+	stateChangeNum := lastNumLessEqualThan(nums, num)
+	council := ReadCouncilPermissionless(v.ChainKv, stateChangeNum)
 	return council, true, nil
 }
 
@@ -171,7 +184,7 @@ func lastNumLessEqualThan(nums []uint64, num uint64) uint64 {
 // useful for snapshot interval-wise migration.
 func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bool) (valset.CommonAddressSet, uint64, error) {
 	if targetNum == 0 {
-		council, err := v.getCouncilGenesis()
+		council, err := v.getCouncilGenesisPermissioned()
 		return council, 0, err
 	}
 
@@ -232,7 +245,7 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 // Therefore, 3072 is used as the fallback to avoid referencing a missing snapshot.
 func (v *ValsetModule) getValidIstanbulSnapshotBefore(snapshotNum uint64) (valset.CommonAddressSet, error) {
 	if snapshotNum == 0 {
-		return v.getCouncilGenesis()
+		return v.getCouncilGenesisPermissioned()
 	}
 
 	nums := v.readValidatorVoteBlockNumsCached()
@@ -268,7 +281,11 @@ func (v *ValsetModule) applyBlock(council valset.CommonAddressSet, num uint64, w
 	governingNode := v.GovModule.GetParamSet(num).GoverningNode
 	if applyVote(header, council, governingNode) && write {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
-		writeCouncil(v.Chain.Config(), v.ChainKv, num, council)
+		if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+			writeCouncilPermissionless(v.ChainKv, num, council)
+		} else {
+			writeCouncilPermissioned(v.ChainKv, num, council)
+		}
 		v.validatorVoteBlockNumsCache = nil
 	}
 	return nil

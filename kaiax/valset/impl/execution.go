@@ -17,8 +17,11 @@
 package impl
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
 func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
@@ -29,7 +32,15 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 	}
 
 	// Ingest validator vote
-	council, err := v.getCouncil(num)
+	var (
+		council valset.CommonAddressSet
+		err     error
+	)
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		council, err = v.getCouncilPermissionless(num)
+	} else {
+		council, err = v.getCouncilPermissioned(num)
+	}
 	if err != nil {
 		return err
 	}
@@ -37,7 +48,11 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 	governingNode := v.GovModule.GetParamSet(num).GoverningNode
 	if applyVote(header, council, governingNode) {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
-		writeCouncil(v.Chain.Config(), v.ChainKv, num, council)
+		if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+			writeCouncilPermissionless(v.ChainKv, num, council)
+		} else {
+			writeCouncilPermissioned(v.ChainKv, num, council)
+		}
 		v.validatorVoteBlockNumsCache = nil
 	}
 

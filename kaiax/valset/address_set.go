@@ -99,7 +99,6 @@ func (as *AddressSet) String() string {
 	return fmt.Sprintf("[%s]", strings.Join(addrs, ","))
 }
 
-// func (as *AddressSet) Copy() *AddressSet {
 func (as *AddressSet) Copy() CommonAddressSet {
 	as.mu.RLock()
 	defer as.mu.RUnlock()

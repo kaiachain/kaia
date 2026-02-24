@@ -20,13 +20,11 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"slices"
 	"sync"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -164,17 +162,20 @@ func ReadPermissionlessCouncilKeyExist(db database.Database, num uint64) bool {
 	return true
 }
 
-func ReadCouncil(db database.Database, permissionedNum, permlessNum uint64) valset.CommonAddressSet {
-	permlessCouncil := readCouncilPermissionless(db, permlessNum)
-	if permlessCouncil != nil {
-		return newValidatorList(permlessCouncil)
-	}
-	// if permless council are empty, return legacy council
+func ReadCouncilPermissiond(db database.Database, permissionedNum uint64) valset.CommonAddressSet {
 	permissionedCouncil := readCouncilPermissioned(db, permissionedNum)
 	if permissionedCouncil == nil {
 		return nil
 	}
 	return valset.NewCommonAddressSet(permissionedCouncil)
+}
+
+func ReadCouncilPermissionless(db database.Database, permlessNum uint64) valset.CommonAddressSet {
+	permlessCouncil := readCouncilPermissionless(db, permlessNum)
+	if permlessCouncil == nil {
+		return nil
+	}
+	return newValidatorList(permlessCouncil)
 }
 
 func readCouncilPermissioned(db database.Database, num uint64) []common.Address {
@@ -205,21 +206,24 @@ func readCouncilPermissionless(db database.Database, num uint64) valset.Validato
 	return result
 }
 
-func writeCouncil(config *params.ChainConfig, db database.Database, num uint64, validators valset.CommonAddressSet) {
-	var (
-		key    = councilKey(num)
-		b, err = validators.Marshal()
-	)
-	if config.IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		key = councilKeyPermissionless(num)
-	}
+func writeCouncilPermissioned(db database.Database, num uint64, validators valset.CommonAddressSet) {
+	key := councilKey(num)
+	marshalAndWrite(db, num, key, validators)
+}
+
+func writeCouncilPermissionless(db database.Database, num uint64, validators valset.CommonAddressSet) {
+	key := councilKeyPermissionless(num)
+	marshalAndWrite(db, num, key, validators)
+}
+
+func marshalAndWrite(db database.Database, num uint64, key []byte, validators valset.CommonAddressSet) {
+	b, err := validators.Marshal()
 	if err != nil {
 		logger.Crit("Failed to marshal council", "num", num, "err", err)
 	}
 	if err = db.Put(key, b); err != nil {
 		logger.Crit("Failed to write council", "num", num, "err", err)
 	}
-	return
 }
 
 func deleteCouncil(db database.Database, num uint64) {

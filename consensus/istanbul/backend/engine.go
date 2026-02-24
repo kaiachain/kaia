@@ -513,12 +513,10 @@ func (sb *backend) Initialize(chain consensus.ChainReader, header *types.Header,
 		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
 	}
 
-	if chain.Config().IsPermissionlessForkEnabled(header.Number) {
-		context := blockchain.NewEVMBlockContext(header, chain, nil)
-		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
-		if err := sb.valsetModule.ProcessTransition(vmenv, header, state); err != nil {
-			logger.Error("Failed to process transition", "number", header.Number.Uint64(), "err", err.Error())
-		}
+	context := blockchain.NewEVMBlockContext(header, chain, nil)
+	vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
+	if err := sb.valsetModule.ProcessTransition(vmenv, header, state); err != nil {
+		logger.Error("Failed to process transition", "number", header.Number.Uint64(), "err", err.Error())
 	}
 }
 

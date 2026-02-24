@@ -17,6 +17,8 @@
 package impl
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
@@ -24,7 +26,15 @@ import (
 
 // GetCouncil returns the whole validator list for validating the block `num`.
 func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
-	council, err := v.getCouncil(num)
+	var (
+		council valset.CommonAddressSet
+		err     error
+	)
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		council, err = v.getCouncilPermissionless(num)
+	} else {
+		council, err = v.getCouncilPermissioned(num)
+	}
 	if err != nil {
 		return nil, err
 	} else {
@@ -34,7 +44,15 @@ func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 
 // GetDemotedValidators are subtract of qualified from council(N)
 func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error) {
-	council, err := v.getCouncil(num)
+	var (
+		council valset.CommonAddressSet
+		err     error
+	)
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		council, err = v.getCouncilPermissionless(num)
+	} else {
+		council, err = v.getCouncilPermissioned(num)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +64,15 @@ func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error
 }
 
 func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, error) {
-	council, err := v.getCouncil(num)
+	var (
+		council valset.CommonAddressSet
+		err     error
+	)
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		council, err = v.getCouncilPermissionless(num)
+	} else {
+		council, err = v.getCouncilPermissioned(num)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +135,15 @@ func (v *ValsetModule) GetTimeoutTransition(validators valset.ValidatorStateMap)
 }
 
 func (v *ValsetModule) GetCandidates(num uint64) ([]common.Address, error) {
-	council, err := v.getCouncil(num)
+	var (
+		council valset.CommonAddressSet
+		err     error
+	)
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		council, err = v.getCouncilPermissionless(num)
+	} else {
+		council, err = v.getCouncilPermissioned(num)
+	}
 	if err != nil {
 		return nil, err
 	}

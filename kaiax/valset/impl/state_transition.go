@@ -19,6 +19,7 @@ package impl
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -177,7 +178,12 @@ func (vs *ValidatorList) GetDemoted(
 
 func (v *ValsetModule) writeValidators(num uint64, validators valset.ValidatorStateMap) {
 	if validators != nil {
-		writeCouncil(v.Chain.Config(), v.ChainKv, num, newValidatorList(validators))
+		if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+			writeCouncilPermissionless(v.ChainKv, num, newValidatorList(validators))
+		} else {
+			writeCouncilPermissioned(v.ChainKv, num, newValidatorList(validators))
+		}
+		// writeCouncil(v.Chain.Config(), v.ChainKv, num, newValidatorList(validators))
 		insertValidatorStateChangeBlockNum(v.ChainKv, num)
 		v.validatorStateChangeBlockNumsCache = nil
 	}
@@ -192,6 +198,38 @@ func isVrankEpoch(num uint64) bool {
 	return num%VRankEpoch == 0
 }
 
+func (v *ValsetModule) initialPromoteLegacyValidators(header *types.Header, vmenv *vm.EVM, state *state.StateDB) error {
+	var (
+		config    = v.Chain.Config()
+		parentNum = new(big.Int).Sub(header.Number, common.Big1)
+		nextNum   = new(big.Int).Add(header.Number, common.Big1)
+	)
+	backend := backends.NewStateBlockchainContractBackend(v.Chain, nil, nil, state)
+	council, err := v.getCouncilPermissioned(header.Number.Uint64())
+	if err != nil {
+		logger.Error("Failed to get council", "number", header.Number.Uint64(), "err", err.Error())
+		return err
+	}
+	validatorStateAddr, err := readValidatorStateAddr(backend, parentNum)
+	if err != nil {
+		// TODO-Permissionless: Change the log level to Debug
+		logger.Error("Failed to fetch ValidatorState contract adress", "number", header.Number.Uint64(), "err", err.Error())
+		return err
+	}
+	valStateMap := convertToChartMap(council.List())
+	v.writeValidators(nextNum.Uint64(), valStateMap)
+	msg, from, err := prepareValidatorWrite(backend, config, state, nextNum, validatorStateAddr, valStateMap)
+	if err == nil {
+		blockchain.WriteValidators(msg, from, header, vmenv, state, config.Rules(header.Number))
+	}
+	return nil
+}
+
+// TODO-Permissionless: implement contract and align with it
+func (v *ValsetModule) isInitializedABv2(validators valset.ValidatorStateMap) bool {
+	return len(validators) > 0
+}
+
 func (v *ValsetModule) ProcessTransition(
 	vmenv *vm.EVM,
 	header *types.Header,
@@ -200,28 +238,14 @@ func (v *ValsetModule) ProcessTransition(
 	var (
 		config    = v.Chain.Config()
 		parentNum = new(big.Int).Sub(header.Number, common.Big1)
-		nextNum   = new(big.Int).Add(header.Number, common.Big1)
 	)
 
+	// [Promoting Legacy Validator #1]
 	// initialize permissioned validators at `permless HF-1`
 	// all validators are registered to `ValActive` state
-	if config.IsPermissionlessForBlockParent(parentNum) {
-		backend := backends.NewStateBlockchainContractBackend(v.Chain, nil, nil, state)
-		council, err := v.getCouncil(header.Number.Uint64())
-		if err != nil {
-			return err
-		}
-		validatorStateAddr, err := readValidatorStateAddr(backend, parentNum)
-		if err != nil {
-			// TODO-Permissionless: Change the log level to Debug
-			logger.Error("Failed to fetch ValidatorState contract adress", "number", header.Number.Uint64(), "err", err.Error())
-			return err
-		}
-		valStateMap := convertToChartMap(council.List())
-		v.writeValidators(nextNum.Uint64(), valStateMap)
-		msg, from, err := prepareValidatorWrite(backend, config, state, nextNum, validatorStateAddr, valStateMap)
-		if err == nil {
-			blockchain.WriteValidators(msg, from, header, vmenv, state, config.Rules(header.Number))
+	if config.IsPermissionlessForBlockParent(header.Number) {
+		if err := v.initialPromoteLegacyValidators(header, vmenv, state); err != nil {
+			logger.Error("Failed to promote legacy validators", "number", header.Number, "err", err.Error())
 		}
 	}
 
@@ -230,8 +254,9 @@ func (v *ValsetModule) ProcessTransition(
 		// 0. self-state transition(user tx) might have been executed at header.Number - 1
 		// 1. read all validators from contrcat on every block
 		backend := backends.NewStateBlockchainContractBackend(v.Chain, nil, nil, state)
-		prevCouncil, err := v.getCouncil(parentNum.Uint64())
+		prevCouncil, err := v.getCouncilPermissionless(parentNum.Uint64())
 		if err != nil {
+			logger.Error("Failed to get council", "number", parentNum, "err", err.Error())
 			return err
 		}
 
@@ -249,6 +274,21 @@ func (v *ValsetModule) ProcessTransition(
 		if err != nil {
 			logger.Error("Failed to fetch all validators' state", "number", header.Number.Uint64(), "err", err.Error())
 			return err
+		}
+
+		// [Promoting Legacy Validator #2]
+		// if ABv2 is not initialized yet, promote legacy validators to the state of `ValActive`
+		// this code is reachable when HF is passed && registry had not been set before HF
+		if !v.isInitializedABv2(validators) {
+			// the promote updates the state, thus the timing of promoting must be aligned with all nodes
+			// which is selected as epoch number
+			if isVrankEpoch(header.Number.Uint64()) {
+				if err := v.initialPromoteLegacyValidators(header, vmenv, state); err != nil {
+					logger.Error("Failed to promote legacy validators", "number", header.Number, "err", err.Error())
+				}
+				fmt.Println("HERE??", len(validators))
+			}
+			return nil
 		}
 
 		// 2. check VRank violation

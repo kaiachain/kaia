@@ -112,12 +112,22 @@ func (v *ValsetModule) initSchema() error {
 		writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
 		v.validatorVoteBlockNumsCache = nil
 	}
-	if council := ReadCouncil(v.ChainKv, 0, 0); council == nil {
-		genesisCouncil, err := v.getCouncilGenesis()
-		if err != nil {
-			return err
+	// Calling either `ReadCouncilPermissiond()` or `ReadCouncilPermissionless()` is okay
+	// because the returned council is the same at the genesis block
+	if council := ReadCouncilPermissiond(v.ChainKv, 0); council == nil {
+		if v.Chain.Config().IsPermissionlessForkEnabled(common.Big0) {
+			genesisCouncil, err := v.getCouncilGenesisPermissionless()
+			if err != nil {
+				return err
+			}
+			writeCouncilPermissionless(v.ChainKv, 0, genesisCouncil)
+		} else {
+			genesisCouncil, err := v.getCouncilGenesisPermissioned()
+			if err != nil {
+				return err
+			}
+			writeCouncilPermissioned(v.ChainKv, 0, genesisCouncil)
 		}
-		writeCouncil(v.Chain.Config(), v.ChainKv, 0, genesisCouncil)
 	}
 
 	// Ensure mandatory schema lowestScannedCheckpointInterval
