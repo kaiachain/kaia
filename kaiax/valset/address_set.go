@@ -113,6 +113,10 @@ func (as *AddressSet) List() []common.Address {
 	return result
 }
 
+func (as *AddressSet) Council() []common.Address {
+	return as.List()
+}
+
 func (as *AddressSet) Len() int {
 	as.mu.RLock()
 	defer as.mu.RUnlock()
@@ -143,13 +147,13 @@ func (as *AddressSet) GetDemoted(
 ) *AddressSet {
 	demoted := NewAddressSet(nil)
 	// First filter by staking amounts.
-	for _, node := range council.List() {
+	for _, node := range council.Council() {
 		if uint64(stakingAmounts[node]) < minStake {
 			demoted.Add(node)
 		}
 	}
 	// If all validators are demoted, then no one is demoted.
-	if demoted.Len() == len(council.List()) {
+	if demoted.Len() == len(council.Council()) {
 		demoted = NewAddressSet(nil)
 	}
 	return demoted

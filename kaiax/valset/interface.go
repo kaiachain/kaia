@@ -31,6 +31,16 @@ type ValsetModule interface {
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
 
+	// NOTE: In permissioned, the entities are defined as below
+	// Council = {Demoted Validators} ∪ {Validators with Staking >= 5M}
+	// Committee = Council - {Demoted Validators}
+
+	// NOTE: In permissionless, the entities are defined as below
+	// Validator = ValActive + ValReady + ValPaused + ValExiting + ValInactive
+	// Council = ValActive + ValReady + ValPaused
+	// Committee = ValActive
+	// Candidate = CandTesting
+
 	GetCouncil(num uint64) ([]common.Address, error)
 	GetCommittee(num uint64, round uint64) ([]common.Address, error)
 	GetDemotedValidators(num uint64) ([]common.Address, error)

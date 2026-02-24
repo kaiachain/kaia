@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"errors"
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -38,7 +39,7 @@ func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 	if err != nil {
 		return nil, err
 	} else {
-		return council.List(), nil
+		return council.Council(), nil
 	}
 }
 
@@ -112,6 +113,40 @@ func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
 		return common.Address{}, err
 	}
 	return v.getProposer(c, round)
+}
+
+func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset.ValidatorStateMap, error) {
+	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return nil, errors.New("permissionless fork is not enabled")
+	}
+	allNodes, err := v.getAllStateNodes(num)
+	if err != nil {
+		return nil, err
+	}
+	validatorList, ok := allNodes.(*ValidatorList)
+	if !ok {
+		return nil, errors.New("not a permissionless council object")
+	}
+
+	validatorList.permlessMu.RLock()
+	defer validatorList.permlessMu.RUnlock()
+
+	// empty states means return all
+	if len(states) == 0 {
+		return validatorList.permlessVals.Copy(), nil
+	}
+
+	desiredStates := make(map[valset.State]struct{}, len(states))
+	for _, s := range states {
+		desiredStates[s] = struct{}{}
+	}
+	filtered := make(valset.ValidatorStateMap)
+	for addr, val := range validatorList.permlessVals {
+		if _, ok := desiredStates[val.State]; ok {
+			filtered[addr] = val
+		}
+	}
+	return filtered.Copy(), nil
 }
 
 func (v *ValsetModule) GetEpochTransition(validators valset.ValidatorStateMap, num uint64, state *state.StateDB) (valset.ValidatorStateMap, error) {

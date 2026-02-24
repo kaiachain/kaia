@@ -11,7 +11,7 @@ import (
 type CommonAddressSet interface {
 	String() string
 	Copy() CommonAddressSet
-	List() []common.Address
+	Council() []common.Address
 	Len() int
 	Contains(addr common.Address) bool
 	Subtract(other *AddressSet) *AddressSet

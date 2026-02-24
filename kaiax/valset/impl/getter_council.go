@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"errors"
 	"math/big"
 	"sort"
 
@@ -27,7 +28,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
-func (v *ValsetModule) getCouncilPermissionless(num uint64) (valset.CommonAddressSet, error) {
+func (v *ValsetModule) getAllStateNodes(num uint64) (valset.CommonAddressSet, error) {
 	if num == 0 {
 		return v.getCouncilGenesisPermissionless()
 	}
@@ -39,6 +40,18 @@ func (v *ValsetModule) getCouncilPermissionless(num uint64) (valset.CommonAddres
 	// if permissionless platform (ABV2, VRank, Registry) is not ready yet, fallbback to legacy getter
 	council, _, err = v.getCouncilDBPermissioned(num)
 	return council, err
+}
+
+func (v *ValsetModule) getCouncilPermissionless(num uint64) (valset.CommonAddressSet, error) {
+	council, err := v.getAllStateNodes(num)
+	if err != nil {
+		return nil, err
+	}
+	if permlessCouncil, ok := council.(*ValidatorList); ok {
+		return permlessCouncil.getPermlessCouncil(), nil
+	} else {
+		return nil, errors.New("not a permissionless council object")
+	}
 }
 
 func (v *ValsetModule) getCouncilPermissioned(num uint64) (valset.CommonAddressSet, error) {

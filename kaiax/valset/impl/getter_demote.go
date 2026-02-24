@@ -61,7 +61,7 @@ func getDemotedValidatorsIstanbul(rules *params.Rules, council valset.CommonAddr
 		singleMode     = pset.GovernanceMode == "single"
 		governingNode  = pset.GoverningNode
 		minStake       = pset.MinimumStake.Uint64() // in KAIA
-		stakingAmounts = collectStakingAmounts(rules, council.List(), si)
+		stakingAmounts = collectStakingAmounts(rules, council.Council(), si)
 		demoted        = council.GetDemoted(council, stakingAmounts, minStake)
 	)
 	// Under single governance mode, governing node cannot be demoted before permissionless HF

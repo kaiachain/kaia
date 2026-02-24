@@ -121,6 +121,25 @@ func (v *ValsetModule) getTimeoutTransition(validators valset.ValidatorStateMap)
 	return newValidators
 }
 
+// getPermlessCouncil returns a new ValidatorList containing only council members
+// (validators with ValActive, ValReady, or ValPaused state).
+func (vs *ValidatorList) getPermlessCouncil() *ValidatorList {
+	if vs == nil {
+		logger.Error("ValidatorList is nil")
+		return newValidatorList(valset.ValidatorStateMap{})
+	}
+	vs.permlessMu.RLock()
+	defer vs.permlessMu.RUnlock()
+	councilVals := make(valset.ValidatorStateMap)
+	for addr, val := range vs.permlessVals {
+		switch val.State {
+		case valset.ValPaused, valset.ValReady, valset.ValActive:
+			councilVals[addr] = val
+		}
+	}
+	return newValidatorList(councilVals.Copy())
+}
+
 // getCandidates returns validators which have `CandTesting` state
 func (v *ValsetModule) getCandidates(validators valset.CommonAddressSet) []common.Address {
 	var candTestings []common.Address

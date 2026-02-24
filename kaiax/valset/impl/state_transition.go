@@ -19,7 +19,6 @@ package impl
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -36,7 +35,7 @@ import (
 )
 
 const (
-	VRankEpoch           = 20
+	VRankEpoch           = 10
 	ValPausedTimeout     = time.Hour * 8
 	ActiveValidatorCount = 50
 )
@@ -87,7 +86,8 @@ func (vs *ValidatorList) Copy() valset.CommonAddressSet {
 	return &ValidatorList{permlessVals: vs.permlessVals.Copy()}
 }
 
-func (vs *ValidatorList) List() []common.Address {
+// Council returns council where includes `ValActive`, `ValReady`, and `ValPaused`
+func (vs *ValidatorList) Council() []common.Address {
 	if vs == nil {
 		logger.Error("ValidatorList is nil")
 		return []common.Address{}
@@ -98,7 +98,7 @@ func (vs *ValidatorList) List() []common.Address {
 	var ret []common.Address
 	for addr, val := range vs.permlessVals {
 		switch val.State {
-		case valset.ValInactive, valset.ValPaused, valset.ValExiting, valset.ValReady, valset.ValActive:
+		case valset.ValPaused, valset.ValReady, valset.ValActive:
 			ret = append(ret, addr)
 		}
 	}
@@ -144,7 +144,7 @@ func (vs *ValidatorList) Subtract(other *valset.AddressSet) *valset.AddressSet {
 	}
 	// do not read lock because of the manipluation on copied data
 	copied := vs.Copy().(*ValidatorList).permlessVals
-	for _, addr := range other.List() {
+	for _, addr := range other.Council() {
 		delete(copied, addr)
 	}
 	result := valset.NewAddressSet(nil)
@@ -183,7 +183,6 @@ func (v *ValsetModule) writeValidators(num uint64, validators valset.ValidatorSt
 		} else {
 			writeCouncilPermissioned(v.ChainKv, num, newValidatorList(validators))
 		}
-		// writeCouncil(v.Chain.Config(), v.ChainKv, num, newValidatorList(validators))
 		insertValidatorStateChangeBlockNum(v.ChainKv, num)
 		v.validatorStateChangeBlockNumsCache = nil
 	}
@@ -216,7 +215,7 @@ func (v *ValsetModule) initialPromoteLegacyValidators(header *types.Header, vmen
 		logger.Error("Failed to fetch ValidatorState contract adress", "number", header.Number.Uint64(), "err", err.Error())
 		return err
 	}
-	valStateMap := convertToChartMap(council.List())
+	valStateMap := convertToChartMap(council.Council())
 	v.writeValidators(nextNum.Uint64(), valStateMap)
 	msg, from, err := prepareValidatorWrite(backend, config, state, nextNum, validatorStateAddr, valStateMap)
 	if err == nil {
@@ -286,7 +285,6 @@ func (v *ValsetModule) ProcessTransition(
 				if err := v.initialPromoteLegacyValidators(header, vmenv, state); err != nil {
 					logger.Error("Failed to promote legacy validators", "number", header.Number, "err", err.Error())
 				}
-				fmt.Println("HERE??", len(validators))
 			}
 			return nil
 		}
