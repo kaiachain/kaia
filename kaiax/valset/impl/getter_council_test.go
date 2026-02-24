@@ -46,7 +46,7 @@ func TestGetCouncilGenesis(t *testing.T) {
 		Extra: hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f89af8549499fb17d324fa0e07f23b49d09028ac0919414db694b74ff9dea397fe9e231df545eb53fe2adf776cb294571e53df607be97431a5bbefca1dffe5aef56f4d945cb1a7dccbd0dc446e3640898ede8820368554c8b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"),
 	}).AnyTimes()
 
-	council, err := v.getCouncilGenesis()
+	council, err := v.getCouncilGenesisPermissioned()
 	assert.NoError(t, err)
 	assert.Equal(t, hexToAddrs(
 		"0x571e53df607be97431a5bbefca1dffe5aef56f4d",
@@ -85,9 +85,9 @@ func TestGetCouncilDB(t *testing.T) {
 	)
 	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
 	writeValidatorVoteBlockNums(db, voteNums)
-	writeCouncil(mockChain.Config(), db, 0, valset.NewCommonAddressSet(setA))
-	writeCouncil(mockChain.Config(), db, 2, valset.NewCommonAddressSet(setB))
-	writeCouncil(mockChain.Config(), db, 4, valset.NewCommonAddressSet(setC))
+	writeCouncilPermissioned(db, 0, valset.NewCommonAddressSet(setA))
+	writeCouncilPermissioned(db, 2, valset.NewCommonAddressSet(setB))
+	writeCouncilPermissioned(db, 4, valset.NewCommonAddressSet(setC))
 
 	// Test getCouncilDB under various LowestScannedVoteNum.
 	type expected struct { // expected result of getCouncilDB()
@@ -121,7 +121,7 @@ func TestGetCouncilDB(t *testing.T) {
 		writeLowestScannedVoteNum(db, tc.lowestScannedVoteNum)
 
 		for i := uint64(0); i < 7; i++ {
-			council, ok, err := v.getCouncilDB(i)
+			council, ok, err := v.getCouncilDBPermissioned(i)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expected[i].ok, ok)
 			if ok {

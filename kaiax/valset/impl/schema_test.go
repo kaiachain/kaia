@@ -19,13 +19,10 @@ package impl
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
-	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -52,11 +49,8 @@ func TestSchema_Council(t *testing.T) {
 			common.HexToAddress("0x5678"),
 		},
 	)
-	ctrl := gomock.NewController(t)
-	mockChain := chain_mock.NewMockBlockChain(ctrl)
-	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
-	writeCouncil(mockChain.Config(), db, num, addrs)
-	assert.Equal(t, addrs, ReadCouncil(db, num, num))
+	writeCouncilPermissioned(db, num, addrs)
+	assert.Equal(t, addrs, ReadCouncilPermissiond(db, num))
 }
 
 func TestSchema_IstanbulSnapshot(t *testing.T) {

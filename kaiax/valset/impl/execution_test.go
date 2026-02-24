@@ -67,7 +67,7 @@ func TestPostInsertBlock(t *testing.T) {
 	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(makeGenesisBlock(genesisCouncil.List()).Header()).AnyTimes()
 
-	writeCouncil(mockChain.Config(), db, 0, genesisCouncil)
+	writeCouncilPermissioned(db, 0, genesisCouncil)
 	writeValidatorVoteBlockNums(db, []uint64{0})
 	writeLowestScannedVoteNum(db, 0)
 
@@ -82,5 +82,5 @@ func TestPostInsertBlock(t *testing.T) {
 
 	// Check the DB
 	assert.Equal(t, []uint64{0, 2}, ReadValidatorVoteBlockNums(db))
-	assert.Equal(t, numsToAddrs(1, 2, 3, 6), ReadCouncil(db, 2, 2).List())
+	assert.Equal(t, numsToAddrs(1, 2, 3, 6), readCouncilPermissioned(db, 2))
 }
