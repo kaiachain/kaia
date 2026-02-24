@@ -194,7 +194,7 @@ func TestVRankModule(t *testing.T) {
 			Candidates: []string{"N2"},
 			Proposer:   "N1",
 			ExpectedCfReports: [][]string{
-				{}, // N1: Council(1), valid CfReport
+				{}, // N1: Council(1), valid Report
 				{}, // N2: not in Council(1)
 				{}, // N3: not in Council(1)
 			},
@@ -631,7 +631,7 @@ func TestGetCfReport_Errors(t *testing.T) {
 	view1_0 := &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
 	candAddr := common.HexToAddress("0xc4nd1d473")
 
-	t.Run("CfReport should contain candAddr", func(t *testing.T) {
+	t.Run("Report should contain candAddr", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
 		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()

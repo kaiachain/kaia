@@ -23,7 +23,7 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-type CfReport []common.Address
+type Report []common.Address
 
 const (
 	VRankPreprepareMsg = 0x17
@@ -48,18 +48,18 @@ type VRankCandidate struct {
 	Sig         []byte
 }
 
-func EncodeCfReport(cfReport CfReport) ([]byte, error) {
-	if len(cfReport) == 0 {
+func EncodeReport(report Report) ([]byte, error) {
+	if len(report) == 0 {
 		return nil, nil
 	}
 
-	return rlp.EncodeToBytes(cfReport)
+	return rlp.EncodeToBytes(report)
 }
 
-func DecodeCfReport(data []byte) (CfReport, error) {
-	var cfReport []common.Address
-	if err := rlp.DecodeBytes(data, &cfReport); err != nil {
+func DecodeReport(data []byte) (Report, error) {
+	var report []common.Address
+	if err := rlp.DecodeBytes(data, &report); err != nil {
 		return nil, err
 	}
-	return cfReport, nil
+	return report, nil
 }

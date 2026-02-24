@@ -26,10 +26,10 @@ import (
 )
 
 // for building N-th header's VRank field, caller should query N-1 with the previous block's round.
-func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.CfReport, error) {
+func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.Report, error) {
 	// epoch header's VRank should be nil
 	if (blockNum+1)%vrankEpoch == 0 {
-		return vrank.CfReport{}, nil
+		return vrank.Report{}, nil
 	}
 	if round > maxRound {
 		return nil, vrank.ErrRoundOutOfRange
@@ -37,7 +37,7 @@ func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.CfReport, error
 
 	// if I was not a validator for blockNum, I couldn't have collected cfReport for blockNum.
 	if !v.isValidator(blockNum) {
-		return vrank.CfReport{}, nil
+		return vrank.Report{}, nil
 	}
 
 	vk := vrank.ViewKey{N: blockNum, R: uint8(round)}
@@ -67,7 +67,7 @@ func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.CfReport, error
 	}
 
 	// cfReport = candidates - safeCands = candidates who did not respond, responded after deadline, or lied (wrong BlockHash).
-	var cfReport vrank.CfReport
+	var cfReport vrank.Report
 	for _, addr := range candidates {
 		if _, ok := safeCands[addr]; !ok {
 			cfReport = append(cfReport, addr)
@@ -77,7 +77,7 @@ func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.CfReport, error
 	return cfReport, nil
 }
 
-func (v *VRankModule) GetPfReport(blockNum uint64) ([]common.Address, error) {
+func (v *VRankModule) GetPfReport(blockNum uint64) (vrank.Report, error) {
 	header := v.Chain.GetHeaderByNumber(blockNum)
 	if header == nil {
 		return nil, vrank.ErrHeaderNotFound
@@ -88,10 +88,10 @@ func (v *VRankModule) GetPfReport(blockNum uint64) ([]common.Address, error) {
 
 	round := uint64(header.Round())
 	if round == 0 {
-		return []common.Address{}, nil
+		return vrank.Report{}, nil
 	}
 
-	pfReport := make([]common.Address, 0, round)
+	pfReport := make(vrank.Report, 0, round)
 	for r := uint64(0); r < round; r++ {
 		proposer, err := v.Valset.GetProposer(blockNum, r)
 		if err != nil {
