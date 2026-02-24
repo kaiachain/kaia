@@ -33,9 +33,8 @@ import (
 // `StateBlockchainContractBackend` has the same internal behavior with BlockchainContractBackend
 // execpt for the `ContractCaller` interface functions i.e., `CodeAt()` and `CallContract()`
 type StateBlockchainContractBackend struct {
-	bc              BlockChainForCaller
-	state           *state.StateDB
-	bcCommonBackend *BlockchainContractCommonBackend
+	state *state.StateDB
+	*BlockchainContractCommonBackend
 }
 
 var (
@@ -48,7 +47,7 @@ var (
 
 func NewStateBlockchainContractBackend(bc BlockChainForCaller, tp TxPoolForCaller, es *filters.EventSystem, state *state.StateDB) *StateBlockchainContractBackend {
 	bcCommonBackend := newBlockchainContractCommonBackend(bc, tp, es)
-	return &StateBlockchainContractBackend{bc, state, bcCommonBackend}
+	return &StateBlockchainContractBackend{state, bcCommonBackend}
 }
 
 func (b *StateBlockchainContractBackend) getBlock(num *big.Int) (*types.Block, error) {
@@ -71,7 +70,7 @@ func (b *StateBlockchainContractBackend) getBlock(num *big.Int) (*types.Block, e
 // bind.ContractCaller defined methods
 
 func (b *StateBlockchainContractBackend) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
-	return b.bcCommonBackend.CodeAt(ctx, b.state, account, blockNumber)
+	return b.BlockchainContractCommonBackend.CodeAt(ctx, b.state, account, blockNumber)
 }
 
 func (b *StateBlockchainContractBackend) CallContract(ctx context.Context, call kaia.CallMsg, blockNumber *big.Int) ([]byte, error) {
@@ -79,57 +78,5 @@ func (b *StateBlockchainContractBackend) CallContract(ctx context.Context, call 
 	if err != nil {
 		return nil, err
 	}
-	return b.bcCommonBackend.CallContract(ctx, b.state, block, call, blockNumber)
-}
-
-// bind.ContractTransactor defined methods
-
-func (b *StateBlockchainContractBackend) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
-	return b.bcCommonBackend.PendingCodeAt(ctx, account)
-}
-
-func (b *StateBlockchainContractBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
-	return b.bcCommonBackend.PendingNonceAt(ctx, account)
-}
-
-func (b *StateBlockchainContractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	return b.bcCommonBackend.SuggestGasPrice(ctx)
-}
-
-func (b *StateBlockchainContractBackend) EstimateGas(ctx context.Context, call kaia.CallMsg) (uint64, error) {
-	return b.bcCommonBackend.EstimateGas(ctx, call)
-}
-
-func (b *StateBlockchainContractBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	return b.bcCommonBackend.SendTransaction(ctx, tx)
-}
-
-func (b *StateBlockchainContractBackend) ChainID(ctx context.Context) (*big.Int, error) {
-	return b.bcCommonBackend.ChainID(ctx)
-}
-
-// bind.ContractFilterer defined methods
-
-func (b *StateBlockchainContractBackend) FilterLogs(ctx context.Context, query kaia.FilterQuery) ([]types.Log, error) {
-	return b.bcCommonBackend.FilterLogs(ctx, query)
-}
-
-func (b *StateBlockchainContractBackend) SubscribeFilterLogs(ctx context.Context, query kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
-	return b.bcCommonBackend.SubscribeFilterLogs(ctx, query, ch)
-}
-
-// bind.DeployBackend defined methods
-
-func (b *StateBlockchainContractBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	return b.bcCommonBackend.TransactionReceipt(ctx, txHash)
-}
-
-// sc.Backend requires BalanceAt and CurrentBlockNumber
-
-func (b *StateBlockchainContractBackend) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
-	return b.bcCommonBackend.BalanceAt(ctx, b.state, account, blockNumber)
-}
-
-func (b *StateBlockchainContractBackend) CurrentBlockNumber(ctx context.Context) (uint64, error) {
-	return b.bcCommonBackend.CurrentBlockNumber(ctx)
+	return b.BlockchainContractCommonBackend.CallContract(ctx, b.state, block, call, blockNumber)
 }

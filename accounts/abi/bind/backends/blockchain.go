@@ -55,8 +55,7 @@ type TxPoolForCaller interface {
 // Note that SimulatedBackend creates a new temporary BlockChain for testing,
 // whereas BlockchainContractBackend uses an existing BlockChain with existing database.
 type BlockchainContractBackend struct {
-	bc              BlockChainForCaller
-	bcCommonBackend *BlockchainContractCommonBackend
+	*BlockchainContractCommonBackend
 }
 
 // This nil assignment ensures at compile time that BlockchainContractBackend implements bind.Contract* and bind.DeployBackend.
@@ -73,7 +72,7 @@ var (
 // If `es=nil`, bind.ContractFilterer methods could return errors.
 func NewBlockchainContractBackend(bc BlockChainForCaller, tp TxPoolForCaller, es *filters.EventSystem) *BlockchainContractBackend {
 	bcCommonBackend := newBlockchainContractCommonBackend(bc, tp, es)
-	return &BlockchainContractBackend{bc, bcCommonBackend}
+	return &BlockchainContractBackend{bcCommonBackend}
 }
 
 func (b *BlockchainContractBackend) getBlockAndState(num *big.Int) (*types.Block, *state.StateDB, error) {
@@ -102,7 +101,7 @@ func (b *BlockchainContractBackend) CodeAt(ctx context.Context, account common.A
 	if err != nil {
 		return nil, err
 	}
-	return b.bcCommonBackend.CodeAt(ctx, state, account, blockNumber)
+	return b.BlockchainContractCommonBackend.CodeAt(ctx, state, account, blockNumber)
 }
 
 // Executes a read-only function call with respect to the specified block's state, or latest state if not specified.
@@ -118,61 +117,19 @@ func (b *BlockchainContractBackend) CallContract(ctx context.Context, call kaia.
 	if err != nil {
 		return nil, err
 	}
-	return b.bcCommonBackend.CallContract(ctx, state, block, call, blockNumber)
-}
-
-// bind.ContractTransactor defined methods
-
-func (b *BlockchainContractBackend) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
-	return b.bcCommonBackend.PendingCodeAt(ctx, account)
-}
-
-func (b *BlockchainContractBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
-	return b.bcCommonBackend.PendingNonceAt(ctx, account)
-}
-
-func (b *BlockchainContractBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	return b.bcCommonBackend.SuggestGasPrice(ctx)
-}
-
-func (b *BlockchainContractBackend) EstimateGas(ctx context.Context, call kaia.CallMsg) (uint64, error) {
-	return b.bcCommonBackend.EstimateGas(ctx, call)
-}
-
-func (b *BlockchainContractBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	return b.bcCommonBackend.SendTransaction(ctx, tx)
-}
-
-func (b *BlockchainContractBackend) ChainID(ctx context.Context) (*big.Int, error) {
-	return b.bcCommonBackend.ChainID(ctx)
-}
-
-// bind.ContractFilterer defined methods
-
-func (b *BlockchainContractBackend) FilterLogs(ctx context.Context, query kaia.FilterQuery) ([]types.Log, error) {
-	return b.bcCommonBackend.FilterLogs(ctx, query)
-}
-
-func (b *BlockchainContractBackend) SubscribeFilterLogs(ctx context.Context, query kaia.FilterQuery, ch chan<- types.Log) (kaia.Subscription, error) {
-	return b.bcCommonBackend.SubscribeFilterLogs(ctx, query, ch)
-}
-
-// bind.DeployBackend defined methods
-
-func (b *BlockchainContractBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	return b.bcCommonBackend.TransactionReceipt(ctx, txHash)
+	return b.BlockchainContractCommonBackend.CallContract(ctx, state, block, call, blockNumber)
 }
 
 // sc.Backend requires BalanceAt and CurrentBlockNumber
 
 func (b *BlockchainContractBackend) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
-	_, state, err := b.getBlockAndState(blockNumber)
-	if err != nil {
+	if _, state, err := b.getBlockAndState(blockNumber); err != nil {
 		return nil, err
+	} else {
+		return state.GetBalance(account), nil
 	}
-	return b.bcCommonBackend.BalanceAt(ctx, state, account, blockNumber)
 }
 
 func (b *BlockchainContractBackend) CurrentBlockNumber(ctx context.Context) (uint64, error) {
-	return b.bcCommonBackend.CurrentBlockNumber(ctx)
+	return b.bc.CurrentBlock().NumberU64(), nil
 }
