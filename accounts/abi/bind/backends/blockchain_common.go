@@ -1,4 +1,4 @@
-// Modifications Copyright 2026Kaia Authors
+// Modifications Copyright 2026 The Kaia Authors
 // Copyright 2023 The klaytn Authors
 // This file is part of the klaytn library.
 //
