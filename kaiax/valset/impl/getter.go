@@ -43,21 +43,18 @@ func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 	}
 }
 
-// GetDemotedValidators are subtract of qualified from council(N)
+// GetDemotedValidators returns the demoted validators at block `num`.
+// In permissionless: demoted = council - committee = ValReady + ValPaused
+// In permissioned: demoted = council members with staking < minimum
 func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error) {
-	var (
-		council valset.CommonAddressSet
-		err     error
-	)
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		council, err = v.getCouncilPermissionless(num)
-	} else {
-		council, err = v.getCouncilPermissioned(num)
+		m, err := v.GetNodeByState(num, []valset.State{valset.ValReady, valset.ValPaused})
+		if err != nil {
+			return nil, err
+		}
+		return m.Addresses(), nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	demoted, err := v.getDemotedValidators(council, num)
+	_, demoted, err := v.getCouncilAndDemotedPermissioned(num)
 	if err != nil {
 		return nil, err
 	}
@@ -65,23 +62,31 @@ func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error
 }
 
 func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, error) {
-	var (
-		council valset.CommonAddressSet
-		err     error
-	)
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		council, err = v.getCouncilPermissionless(num)
-	} else {
-		council, err = v.getCouncilPermissioned(num)
+		// qualified = council - demoted = ValActive
+		m, err := v.GetNodeByState(num, []valset.State{valset.ValActive})
+		if err != nil {
+			return nil, err
+		}
+		return valset.NewAddressSet(m.Addresses()), nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	demoted, err := v.getDemotedValidators(council, num)
+	council, demoted, err := v.getCouncilAndDemotedPermissioned(num)
 	if err != nil {
 		return nil, err
 	}
 	return council.Subtract(demoted), nil
+}
+
+func (v *ValsetModule) getCouncilAndDemotedPermissioned(num uint64) (valset.CommonAddressSet, *valset.AddressSet, error) {
+	council, err := v.getCouncilPermissioned(num)
+	if err != nil {
+		return nil, nil, err
+	}
+	demoted, err := v.getDemotedValidators(council, num)
+	if err != nil {
+		return nil, nil, err
+	}
+	return council, demoted, nil
 }
 
 // GetCommittee returns the current block's committee.
@@ -170,17 +175,9 @@ func (v *ValsetModule) GetTimeoutTransition(validators valset.ValidatorStateMap)
 }
 
 func (v *ValsetModule) GetCandidates(num uint64) ([]common.Address, error) {
-	var (
-		council valset.CommonAddressSet
-		err     error
-	)
-	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		council, err = v.getCouncilPermissionless(num)
-	} else {
-		council, err = v.getCouncilPermissioned(num)
-	}
+	candTestings, err := v.GetNodeByState(num, []valset.State{valset.CandTesting})
 	if err != nil {
 		return nil, err
 	}
-	return v.getCandidates(council), nil
+	return candTestings.Addresses(), nil
 }

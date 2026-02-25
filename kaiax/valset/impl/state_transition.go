@@ -154,28 +154,6 @@ func (vs *ValidatorList) Subtract(other *valset.AddressSet) *valset.AddressSet {
 	return result
 }
 
-// GetDemoted returns all state of validators where the state is not `ValActive`
-func (vs *ValidatorList) GetDemoted(
-	_ valset.CommonAddressSet,
-	_ map[common.Address]float64,
-	_ uint64,
-) *valset.AddressSet {
-	if vs == nil {
-		logger.Error("ValidatorList is nil")
-		return valset.NewAddressSet([]common.Address{})
-	}
-	vs.permlessMu.RLock()
-	defer vs.permlessMu.RUnlock()
-
-	demoted := valset.NewAddressSet(nil)
-	for addr, val := range vs.permlessVals {
-		if val.State != valset.ValActive {
-			demoted.Add(addr)
-		}
-	}
-	return demoted
-}
-
 func (v *ValsetModule) writeValidators(num uint64, validators valset.ValidatorStateMap) {
 	if validators != nil {
 		if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {

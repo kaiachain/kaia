@@ -140,24 +140,6 @@ func (as *AddressSet) IndexOf(addr common.Address) int {
 	return -1
 }
 
-func (as *AddressSet) GetDemoted(
-	council CommonAddressSet,
-	stakingAmounts map[common.Address]float64,
-	minStake uint64,
-) *AddressSet {
-	demoted := NewAddressSet(nil)
-	// First filter by staking amounts.
-	for _, node := range council.Council() {
-		if uint64(stakingAmounts[node]) < minStake {
-			demoted.Add(node)
-		}
-	}
-	// If all validators are demoted, then no one is demoted.
-	if demoted.Len() == len(council.Council()) {
-		demoted = NewAddressSet(nil)
-	}
-	return demoted
-}
 
 func (as *AddressSet) EqualState(other ValidatorStateMap) bool {
 	return false

@@ -62,13 +62,27 @@ func getDemotedValidatorsIstanbul(rules *params.Rules, council valset.CommonAddr
 		governingNode  = pset.GoverningNode
 		minStake       = pset.MinimumStake.Uint64() // in KAIA
 		stakingAmounts = collectStakingAmounts(rules, council.Council(), si)
-		demoted        = council.GetDemoted(council, stakingAmounts, minStake)
+		demoted        = demotedByStaking(council, stakingAmounts, minStake)
 	)
 	// Under single governance mode, governing node cannot be demoted before permissionless HF
 	if !rules.IsPermissionless {
 		if singleMode && demoted.Contains(governingNode) {
 			demoted.Remove(governingNode)
 		}
+	}
+	return demoted
+}
+
+func demotedByStaking(council valset.CommonAddressSet, stakingAmounts map[common.Address]float64, minStake uint64) *valset.AddressSet {
+	demoted := valset.NewAddressSet(nil)
+	for _, node := range council.Council() {
+		if uint64(stakingAmounts[node]) < minStake {
+			demoted.Add(node)
+		}
+	}
+	// If all validators are demoted, then no one is demoted.
+	if demoted.Len() == len(council.Council()) {
+		demoted = valset.NewAddressSet(nil)
 	}
 	return demoted
 }

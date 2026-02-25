@@ -3,6 +3,8 @@ package valset
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/kaiachain/kaia/common"
@@ -19,7 +21,6 @@ type CommonAddressSet interface {
 	Remove(addr common.Address) bool
 	Marshal() ([]byte, error)
 	EqualState(ValidatorStateMap) bool
-	GetDemoted(CommonAddressSet, map[common.Address]float64, uint64) *AddressSet
 }
 
 func NewCommonAddressSet(addrs []common.Address) CommonAddressSet {
@@ -173,4 +174,8 @@ func (v ValidatorStateMap) EqualState(other ValidatorStateMap) bool {
 		}
 	}
 	return true
+}
+
+func (v ValidatorStateMap) Addresses() []common.Address {
+	return slices.Collect(maps.Keys(v))
 }

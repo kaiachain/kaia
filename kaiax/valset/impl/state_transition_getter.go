@@ -133,24 +133,11 @@ func (vs *ValidatorList) getPermlessCouncil() *ValidatorList {
 	councilVals := make(valset.ValidatorStateMap)
 	for addr, val := range vs.permlessVals {
 		switch val.State {
-		case valset.ValPaused, valset.ValReady, valset.ValActive:
+		case valset.ValActive, valset.ValReady, valset.ValPaused:
 			councilVals[addr] = val
 		}
 	}
 	return newValidatorList(councilVals.Copy())
-}
-
-// getCandidates returns validators which have `CandTesting` state
-func (v *ValsetModule) getCandidates(validators valset.CommonAddressSet) []common.Address {
-	var candTestings []common.Address
-	if vals, ok := validators.(*ValidatorList); ok {
-		for addr, val := range vals.permlessVals {
-			if val.State == valset.CandTesting {
-				candTestings = append(candTestings, addr)
-			}
-		}
-	}
-	return candTestings
 }
 
 func (v *ValsetModule) deactiveStakersLessMinStakingAmount(si *staking.StakingInfo, num uint64, validators valset.ValidatorStateMap) valset.ValidatorStateMap {

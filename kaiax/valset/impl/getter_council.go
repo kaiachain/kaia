@@ -43,11 +43,11 @@ func (v *ValsetModule) getAllStateNodes(num uint64) (valset.CommonAddressSet, er
 }
 
 func (v *ValsetModule) getCouncilPermissionless(num uint64) (valset.CommonAddressSet, error) {
-	council, err := v.getAllStateNodes(num)
+	allStateNodes, err := v.getAllStateNodes(num)
 	if err != nil {
 		return nil, err
 	}
-	if permlessCouncil, ok := council.(*ValidatorList); ok {
+	if permlessCouncil, ok := allStateNodes.(*ValidatorList); ok {
 		return permlessCouncil.getPermlessCouncil(), nil
 	} else {
 		return nil, errors.New("not a permissionless council object")
