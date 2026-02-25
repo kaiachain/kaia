@@ -31,7 +31,7 @@ import (
 )
 
 // `StateBlockchainContractBackend` has the same internal behavior with BlockchainContractBackend
-// execpt for the `ContractCaller` interface functions i.e., `CodeAt()` and `CallContract()`
+// except for the `ContractCaller` interface functions i.e., `CodeAt()` and `CallContract()`
 type StateBlockchainContractBackend struct {
 	state *state.StateDB
 	*BlockchainContractCommonBackend
