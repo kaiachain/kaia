@@ -140,7 +140,6 @@ func (as *AddressSet) IndexOf(addr common.Address) int {
 	return -1
 }
 
-
 func (as *AddressSet) EqualState(other ValidatorStateMap) bool {
 	return false
 }
