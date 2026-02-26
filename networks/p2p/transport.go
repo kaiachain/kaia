@@ -45,6 +45,21 @@ const (
 	discWriteTimeout = 1 * time.Second
 )
 
+type transport interface {
+	doConnTypeHandshake(myConnType common.ConnType) (common.ConnType, error)
+	// The two handshakes.
+	doEncHandshake(prv *ecdsa.PrivateKey) (*ecdsa.PublicKey, error)
+	doProtoHandshake(our *protoHandshake) (*protoHandshake, error)
+	// The MsgReadWriter can only be used after the encryption
+	// handshake has completed. The code uses conn.id to track this
+	// by setting it to a non-nil value after the encryption handshake.
+	MsgReadWriter
+	// transports must provide Close because we use MsgPipe in some of
+	// the tests. Closing the actual network connection doesn't do
+	// anything in those tests because NsgPipe doesn't use it.
+	close(err error)
+}
+
 // rlpxTransport is the transport used by actual (non-test) connections.
 // It wraps an RLPx connection with locks and read/write deadlines.
 type rlpxTransport struct {
