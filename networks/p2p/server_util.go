@@ -23,7 +23,7 @@
 package p2p
 
 import (
-	"fmt"
+	"errors"
 	"net"
 	"strings"
 
@@ -145,7 +145,7 @@ type sharedUDPConn struct {
 func (s *sharedUDPConn) ReadFromUDP(b []byte) (n int, addr *net.UDPAddr, err error) {
 	packet, ok := <-s.unhandled
 	if !ok {
-		return 0, nil, fmt.Errorf("Connection was closed")
+		return 0, nil, errors.New("Connection was closed")
 	}
 	l := min(len(packet.Data), len(b))
 	copy(b[:l], packet.Data[:l])
