@@ -23,6 +23,7 @@
 package p2p
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"errors"
 	"net"
@@ -220,7 +221,8 @@ func (srv *BaseServer) Start() (err error) {
 
 func (srv *BaseServer) startListening() error {
 	// Launch the TCP listener.
-	listener, err := net.Listen("tcp", srv.ListenAddr)
+	var lc net.ListenConfig
+	listener, err := lc.Listen(context.Background(), "tcp", srv.ListenAddr)
 	if err != nil {
 		return err
 	}

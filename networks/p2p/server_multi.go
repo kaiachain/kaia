@@ -23,6 +23,7 @@
 package p2p
 
 import (
+	"context"
 	"errors"
 	"net"
 	"strconv"
@@ -196,7 +197,8 @@ func (srv *MultiChannelServer) Start() (err error) {
 func (srv *MultiChannelServer) startListening() error {
 	// Launch the TCP listener.
 	for i, listenAddr := range srv.ListenAddrs {
-		listener, err := net.Listen("tcp", listenAddr)
+		var lc net.ListenConfig
+		listener, err := lc.Listen(context.Background(), "tcp", listenAddr)
 		if err != nil {
 			return err
 		}
