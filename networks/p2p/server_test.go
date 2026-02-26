@@ -23,6 +23,7 @@
 package p2p
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"errors"
 	"math/rand"
@@ -156,7 +157,8 @@ func TestServerListen(t *testing.T) {
 	defer srv.Stop()
 
 	// dial the test server
-	conn, err := net.DialTimeout("tcp", srv.GetListenAddress()[ConnDefault], 5*time.Second)
+	dialer := net.Dialer{Timeout: 5 * time.Second}
+	conn, err := dialer.Dial("tcp", srv.GetListenAddress()[ConnDefault])
 	if err != nil {
 		t.Fatalf("could not dial: %v", err)
 	}
@@ -202,7 +204,8 @@ func TestMultiChannelServerListen(t *testing.T) {
 	var defaultConn net.Conn
 
 	for i, address := range srv.GetListenAddress() {
-		conn, err := net.DialTimeout("tcp", address, 5*time.Second)
+		dialer := net.Dialer{Timeout: 5 * time.Second}
+		conn, err := dialer.Dial("tcp", address)
 		defer conn.Close()
 
 		if i == ConnDefault {
@@ -247,7 +250,8 @@ func TestServerNoListen(t *testing.T) {
 	defer srv.Stop()
 
 	// dial the test server that will be failed
-	_, err := net.DialTimeout("tcp", srv.GetListenAddress()[ConnDefault], 10*time.Millisecond)
+	dialer := net.Dialer{Timeout: 10 * time.Millisecond}
+	_, err := dialer.Dial("tcp", srv.GetListenAddress()[ConnDefault])
 	if err == nil {
 		t.Fatalf("server started with listening")
 	}
@@ -255,7 +259,8 @@ func TestServerNoListen(t *testing.T) {
 
 func TestServerDial(t *testing.T) {
 	// run a one-shot TCP server to handle the connection.
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	var lc net.ListenConfig
+	listener, err := lc.Listen(context.Background(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("could not setup listener: %v", err)
 	}
