@@ -622,18 +622,18 @@ func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 			// otherwise. The calling protocol code should exit for errors
 			// as well but we don't want to rely on that.
 		case <-rw.closed:
-			err = fmt.Errorf("shutting down")
+			err = errors.New("shutting down")
 			return err
 		case <-timer.C:
 			writeMsgTimeOutCounter.Inc(1)
-			err = fmt.Errorf("failed to write message for %v", rw.tc.WaitTime)
+			err = errors.New(fmt.Sprintf("failed to write message for %v", rw.tc.WaitTime))
 		}
 	} else {
 		select {
 		case <-rw.wstart:
 			err = rw.w.WriteMsg(msg)
 		case <-rw.closed:
-			err = fmt.Errorf("shutting down")
+			err = errors.New("shutting down")
 			return err
 		}
 	}
@@ -678,7 +678,7 @@ type PeerInfo struct {
 // Info gathers and returns a collection of metadata known about a peer.
 func (p *Peer) Info() *PeerInfo {
 	// Gather the protocol capabilities
-	var caps []string
+	caps := make([]string, 0, len(p.Caps()))
 	for _, cap := range p.Caps() {
 		caps = append(caps, cap.String())
 	}
