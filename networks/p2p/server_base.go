@@ -25,7 +25,6 @@ package p2p
 import (
 	"crypto/ecdsa"
 	"errors"
-	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -112,11 +111,11 @@ func (srv *BaseServer) Start() (err error) {
 
 	// static fields
 	if srv.PrivateKey == nil {
-		return fmt.Errorf("Server.PrivateKey must be set to a non-nil key")
+		return errors.New("Server.PrivateKey must be set to a non-nil key")
 	}
 
 	if !srv.ConnectionType.Valid() {
-		return fmt.Errorf("Invalid connection type speficied")
+		return errors.New("Invalid connection type speficied")
 	}
 
 	if srv.newTransport == nil {
@@ -386,7 +385,7 @@ running:
 		case nid := <-srv.discpeer:
 			if p, ok := peers[nid]; ok {
 				p.Disconnect(DiscRequested)
-				p.logger.Debug(fmt.Sprintf("disconnect peer"))
+				p.logger.Debug("disconnect peer")
 			}
 		}
 	}
