@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	big "math/big"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -67,20 +66,6 @@ func (m *MockEngine) Author(arg0 *types.Header) (common.Address, error) {
 func (mr *MockEngineMockRecorder) Author(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Author", reflect.TypeOf((*MockEngine)(nil).Author), arg0)
-}
-
-// CalcBlockScore mocks base method.
-func (m *MockEngine) CalcBlockScore(arg0 consensus.ChainReader, arg1 uint64, arg2 *types.Header) *big.Int {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CalcBlockScore", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*big.Int)
-	return ret0
-}
-
-// CalcBlockScore indicates an expected call of CalcBlockScore.
-func (mr *MockEngineMockRecorder) CalcBlockScore(arg0, arg1, arg2 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalcBlockScore", reflect.TypeOf((*MockEngine)(nil).CalcBlockScore), arg0, arg1, arg2)
 }
 
 // CanVerifyHeadersConcurrently mocks base method.
@@ -234,21 +219,6 @@ func (m *MockEngine) VerifyHeader(arg0 consensus.ChainReader, arg1 *types.Header
 func (mr *MockEngineMockRecorder) VerifyHeader(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockEngine)(nil).VerifyHeader), arg0, arg1, arg2)
-}
-
-// VerifyHeaders mocks base method.
-func (m *MockEngine) VerifyHeaders(arg0 consensus.ChainReader, arg1 []*types.Header, arg2 []bool) (chan<- struct{}, <-chan error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyHeaders", arg0, arg1, arg2)
-	ret0, _ := ret[0].(chan<- struct{})
-	ret1, _ := ret[1].(<-chan error)
-	return ret0, ret1
-}
-
-// VerifyHeaders indicates an expected call of VerifyHeaders.
-func (mr *MockEngineMockRecorder) VerifyHeaders(arg0, arg1, arg2 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeaders", reflect.TypeOf((*MockEngine)(nil).VerifyHeaders), arg0, arg1, arg2)
 }
 
 // VerifySeal mocks base method.

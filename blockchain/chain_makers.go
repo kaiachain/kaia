@@ -187,15 +187,14 @@ func (b *BlockGen) PrevBlock(index int) *types.Block {
 	return b.chain[index]
 }
 
-// OffsetTime modifies the time instance of a block, implicitly changing its
-// associated blockscore. It's useful to test scenarios where forking is not
+// OffsetTime modifies the time instance of a block. It's useful to test scenarios where forking is not
 // tied to chain length directly.
 func (b *BlockGen) OffsetTime(seconds int64) {
 	b.header.Time.Add(b.header.Time, new(big.Int).SetInt64(seconds))
 	if b.header.Time.Cmp(b.parent.Header().Time) <= 0 {
 		panic("block time out of range")
 	}
-	b.header.BlockScore = b.engine.CalcBlockScore(b.chainReader, b.header.Time.Uint64(), b.parent.Header())
+	b.header.BlockScore = consensus.DefaultBlockScore
 }
 
 // GenerateChain creates a chain of n blocks. The first block's
@@ -230,7 +229,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		defer blockchain.Stop()
 
 		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: stateDB, config: config, engine: engine}
-		b.header = makeHeader(b.chainReader, parent, stateDB, b.engine)
+		b.header = makeHeader(b.chainReader, parent, stateDB)
 
 		engine.Initialize(blockchain, b.header, stateDB)
 
@@ -269,7 +268,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 	return blocks, receipts
 }
 
-func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.StateDB, engine consensus.Engine) *types.Header {
+func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.StateDB) *types.Header {
 	var time *big.Int
 	if parent.Time() == nil {
 		time = big.NewInt(10)
@@ -280,13 +279,9 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 	header := &types.Header{
 		Root:       state.IntermediateRoot(true),
 		ParentHash: parent.Hash(),
-		BlockScore: engine.CalcBlockScore(chain, time.Uint64(), &types.Header{
-			Number:     parent.Number(),
-			Time:       new(big.Int).Sub(time, big.NewInt(10)),
-			BlockScore: parent.BlockScore(),
-		}),
-		Number: new(big.Int).Add(parent.Number(), common.Big1),
-		Time:   time,
+		BlockScore: consensus.DefaultBlockScore,
+		Number:     new(big.Int).Add(parent.Number(), common.Big1),
+		Time:       time,
 	}
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
 		header.BaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), chain.Config().Governance.KIP71)

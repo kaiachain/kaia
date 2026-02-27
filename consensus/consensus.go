@@ -23,8 +23,6 @@
 package consensus
 
 import (
-	"math/big"
-
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -126,10 +124,6 @@ type Engine interface {
 	// consensus rules that happen at finalization (e.g. block rewards).
 	Finalize(chain ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 		receipts []*types.Receipt) (*types.Block, error)
-
-	// CalcBlockScore is the blockscore adjustment algorithm. It returns the blockscore
-	// that a new block should have.
-	CalcBlockScore(chain ChainReader, time uint64, parent *types.Header) *big.Int
 
 	// APIs returns the RPC APIs this consensus engine provides.
 	APIs(chain ChainReader) []rpc.API
