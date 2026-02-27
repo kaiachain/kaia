@@ -86,7 +86,6 @@ type Miner interface {
 	Start()
 	Stop()
 	Mining() bool
-	HashRate() (tot int64)
 	SetExtra(extra []byte) error
 	Pending() (*types.Block, types.Receipts, *state.StateDB)
 	PendingBlock() *types.Block
