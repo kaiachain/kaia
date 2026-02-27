@@ -36,20 +36,6 @@ func (m *MockMiner) EXPECT() *MockMinerMockRecorder {
 	return m.recorder
 }
 
-// HashRate mocks base method.
-func (m *MockMiner) HashRate() int64 {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HashRate")
-	ret0, _ := ret[0].(int64)
-	return ret0
-}
-
-// HashRate indicates an expected call of HashRate.
-func (mr *MockMinerMockRecorder) HashRate() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HashRate", reflect.TypeOf((*MockMiner)(nil).HashRate))
-}
-
 // Mining mocks base method.
 func (m *MockMiner) Mining() bool {
 	m.ctrl.T.Helper()

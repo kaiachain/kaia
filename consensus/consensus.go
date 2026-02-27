@@ -147,14 +147,6 @@ type Engine interface {
 	SubscribeNewSequence() *event.TypeMuxSubscription
 }
 
-// PoW is a consensus engine based on proof-of-work.
-type PoW interface {
-	Engine
-
-	// Hashrate returns the current mining hashrate of a PoW consensus engine.
-	Hashrate() float64
-}
-
 // Handler should be implemented is the consensus needs to handle and send peer's message
 type Handler interface {
 	// NewChainHead handles a new head block comes
