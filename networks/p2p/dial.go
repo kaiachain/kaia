@@ -54,40 +54,11 @@ const (
 	maxResolveDelay     = time.Hour
 )
 
-// NodeDialer is used to connect to nodes in the network, typically by using
-// an underlying net.Dialer but also using net.Pipe in tests.
-type NodeDialer interface {
-	Dial(*discover.Node) (net.Conn, error)
-	DialMulti(*discover.Node) ([]net.Conn, error)
-}
-
-// TCPDialer implements the NodeDialer interface by using a net.Dialer to
-// create TCP connections to nodes in the network.
-type TCPDialer struct {
-	*net.Dialer
-}
-
-// Dial creates a TCP connection to the node.
-func (t TCPDialer) Dial(dest *discover.Node) (net.Conn, error) {
-	addr := &net.TCPAddr{IP: dest.IP, Port: int(dest.TCP)}
-	return t.Dialer.Dial("tcp", addr.String())
-}
-
-// DialMulti creates TCP connections to the node.
-func (t TCPDialer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
-	var conns []net.Conn
-	if dest.TCPs != nil || len(dest.TCPs) != 0 {
-		conns = make([]net.Conn, 0, len(dest.TCPs))
-		for _, tcp := range dest.TCPs {
-			addr := &net.TCPAddr{IP: dest.IP, Port: int(tcp)}
-			conn, err := t.Dialer.Dial("tcp", addr.String())
-			conns = append(conns, conn)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-	return conns, nil
+type dialer interface {
+	newTasks(running int, peers map[discover.NodeID]*Peer, now time.Time) []task
+	taskDone(task, time.Time)
+	addStatic(*discover.Node)
+	removeStatic(*discover.Node)
 }
 
 // dialstate schedules dials and discovery lookups.

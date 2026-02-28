@@ -350,14 +350,13 @@ func (t *BlockTest) Run() error {
 		return fmt.Errorf("genesis block state root does not match test: computed=%x, test=%x", simulatedRoot.Bytes()[:6], t.json.Genesis.Root[:6])
 	}
 
-	tracer := vm.NewStructLogger(nil)
-	chain, err := blockchain.NewBlockChain(db, nil, config, &eestEngine{Faker: faker.NewShared()}, vm.Config{Debug: true, Tracer: tracer, ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
+	chain, err := blockchain.NewBlockChain(db, nil, config, &eestEngine{Faker: faker.NewShared()}, vm.Config{Debug: false, ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
 	if err != nil {
 		return err
 	}
 	defer chain.Stop()
 
-	_, err = t.insertBlocks(chain, *gblock, db, tracer)
+	_, err = t.insertBlocks(chain, *gblock, db)
 	if err != nil {
 		return err
 	}
@@ -408,7 +407,7 @@ See https://github.com/ethereum/tests/wiki/Blockchain-Tests-II
 	transaction RLP encoding, so kaia blocks are created by GenerateChain using eth
 	block RLP information.
 */
-func (t *BlockTest) insertBlocks(bc *blockchain.BlockChain, gBlock types.Block, db database.DBManager, tracer *vm.StructLogger) ([]btBlock, error) {
+func (t *BlockTest) insertBlocks(bc *blockchain.BlockChain, gBlock types.Block, db database.DBManager) ([]btBlock, error) {
 	validBlocks := make([]btBlock, 0)
 	preBlock := &gBlock
 

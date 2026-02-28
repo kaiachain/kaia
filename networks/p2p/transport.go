@@ -22,6 +22,7 @@ package p2p
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -44,6 +45,21 @@ const (
 	// to wait if the connection is known to be bad anyway.
 	discWriteTimeout = 1 * time.Second
 )
+
+type transport interface {
+	doConnTypeHandshake(myConnType common.ConnType) (common.ConnType, error)
+	// The two handshakes.
+	doEncHandshake(prv *ecdsa.PrivateKey) (*ecdsa.PublicKey, error)
+	doProtoHandshake(our *protoHandshake) (*protoHandshake, error)
+	// The MsgReadWriter can only be used after the encryption
+	// handshake has completed. The code uses conn.id to track this
+	// by setting it to a non-nil value after the encryption handshake.
+	MsgReadWriter
+	// transports must provide Close because we use MsgPipe in some of
+	// the tests. Closing the actual network connection doesn't do
+	// anything in those tests because NsgPipe doesn't use it.
+	close(err error)
+}
 
 // rlpxTransport is the transport used by actual (non-test) connections.
 // It wraps an RLPx connection with locks and read/write deadlines.
@@ -152,7 +168,7 @@ func readProtocolHandshake(rw MsgReader) (*protoHandshake, error) {
 		return nil, err
 	}
 	if msg.Size > baseProtocolMaxMsgSize {
-		return nil, fmt.Errorf("message too big")
+		return nil, errors.New("message too big")
 	}
 	if msg.Code == discMsg {
 		// Disconnect before protocol handshake is valid according to the
