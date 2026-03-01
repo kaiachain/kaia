@@ -577,6 +577,11 @@ func (srv *MultiChannelServer) RemovePeer(node *discover.Node) {
 	}
 }
 
+// Disconnect tries to disconnect peer.
+func (srv *MultiChannelServer) Disconnect(destID discover.NodeID) {
+	srv.discpeer <- destID
+}
+
 // PeersInfo returns an array of metadata objects describing connected peers.
 func (srv *MultiChannelServer) PeersInfo() []*PeerInfo {
 	infos := make([]*PeerInfo, 0, srv.PeerCount())

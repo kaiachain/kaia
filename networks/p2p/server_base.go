@@ -330,13 +330,6 @@ running:
 			dialstate.taskDone(t, time.Now())
 			srv.lock.Unlock()
 			delTask(t)
-		case nid := <-srv.discpeer:
-			srv.lock.Lock()
-			if p, ok := peers[nid]; ok {
-				p.Disconnect(DiscRequested)
-				p.logger.Debug("disconnect peer")
-			}
-			srv.lock.Unlock()
 		}
 	}
 
@@ -716,7 +709,18 @@ func (srv *BaseServer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
 
 // Disconnect tries to disconnect peer.
 func (srv *BaseServer) Disconnect(destID discover.NodeID) {
-	srv.discpeer <- destID
+	srv.lock.Lock()
+	if !srv.running {
+		srv.lock.Unlock()
+		return
+	}
+	p := srv.peers[destID]
+	srv.lock.Unlock()
+
+	if p != nil {
+		p.Disconnect(DiscRequested)
+		p.logger.Debug("disconnect peer")
+	}
 }
 
 // GetProtocols returns a slice of protocols.
