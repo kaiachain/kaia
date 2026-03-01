@@ -273,7 +273,6 @@ func (srv *BaseServer) run(dialstate dialer) {
 	defer srv.loopWG.Done()
 	var (
 		peers        = srv.peers
-		trusted      = srv.trusted
 		taskdone     = make(chan task, maxActiveDialTasks)
 		runningTasks []task
 		queuedTasks  []task // tasks that can't run yet
@@ -325,19 +324,6 @@ running:
 			srv.logger.Trace("Dial task done", "task", t)
 			dialstate.taskDone(t, time.Now())
 			delTask(t)
-		case c := <-srv.posthandshake:
-			// A connection has passed the encryption handshake so
-			// the remote identity is known (but hasn't been verified yet).
-			if trusted[c.id] {
-				// Ensure that the trusted flag is set before checking against MaxPhysicalConnections.
-				c.flags |= trustedConn
-			}
-			// TODO: track in-progress inbound node IDs (pre-Peer) to avoid dialing them.
-			select {
-			case c.cont <- srv.encHandshakeChecks(peers, srv.inboundCount, c):
-			case <-srv.quit:
-				break running
-			}
 		case c := <-srv.addpeer:
 			// At this point the connection is past the protocol handshake.
 			// Its capabilities are known and the remote identity is verified.
@@ -446,7 +432,7 @@ func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, inbou
 		return DiscTooManyPeers
 	case peers[c.id] != nil:
 		return DiscAlreadyConnected
-	case c.id == srv.Self().ID:
+	case c.id == srv.selfID:
 		return DiscSelf
 	default:
 		return nil
@@ -621,7 +607,7 @@ func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Nod
 		clog.Trace("Dialed identity mismatch", "want", c, dialDest.ID)
 		return DiscUnexpectedIdentity
 	}
-	err = srv.checkpoint(c, srv.posthandshake)
+	err = srv.handlePostHandshake(c)
 	if err != nil {
 		clog.Trace("Rejected peer before protocol handshake", "err", err)
 		return err
@@ -647,6 +633,19 @@ func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Nod
 	// launched by run.
 	clog.Trace("connection set up", "inbound", dialDest == nil)
 	return nil
+}
+
+func (srv *BaseServer) handlePostHandshake(c *conn) error {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+
+	if !srv.running {
+		return errServerStopped
+	}
+	if srv.trusted[c.id] {
+		c.flags |= trustedConn
+	}
+	return srv.encHandshakeChecks(srv.peers, srv.inboundCount, c)
 }
 
 // checkpoint sends the conn to run, which performs the
