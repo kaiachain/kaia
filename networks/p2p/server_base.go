@@ -318,10 +318,6 @@ running:
 			// The server was stopped. Run the cleanup logic.
 			break running
 		case <-srv.wakeup:
-		case op := <-srv.peerOp:
-			// This channel is used by Peers and PeerCount.
-			op(peers)
-			srv.peerOpDone <- struct{}{}
 		case t := <-taskdone:
 			// A task got done. Tell dialstate about it so it
 			// can update its state and remove it from the active
@@ -824,46 +820,42 @@ func (srv *BaseServer) PeersInfo() []*PeerInfo {
 
 // PeerCount returns the number of connected peers.
 func (srv *BaseServer) PeerCount() int {
-	var count int
-	select {
-	case srv.peerOp <- func(ps map[discover.NodeID]*Peer) { count = len(ps) }:
-		<-srv.peerOpDone
-	case <-srv.quit:
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+
+	if !srv.running {
+		return 0
 	}
-	return count
+	return len(srv.peers)
 }
 
 func (srv *BaseServer) PeerCountByType() map[string]uint {
-	pc := make(map[string]uint)
-	pc["total"] = 0
-	select {
-	case srv.peerOp <- func(ps map[discover.NodeID]*Peer) {
-		for _, peer := range ps {
-			key := ConvertConnTypeToString(peer.ConnType())
-			pc[key]++
-			pc["total"]++
-		}
-	}:
-		<-srv.peerOpDone
-	case <-srv.quit:
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+
+	pc := map[string]uint{"total": 0}
+	if !srv.running {
+		return pc
+	}
+	for _, peer := range srv.peers {
+		key := ConvertConnTypeToString(peer.ConnType())
+		pc[key]++
+		pc["total"]++
 	}
 	return pc
 }
 
 // Peers returns all connected peers.
 func (srv *BaseServer) Peers() []*Peer {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+
 	var ps []*Peer
-	select {
-	// Note: We'd love to put this function into a variable but
-	// that seems to cause a weird compiler error in some
-	// environments.
-	case srv.peerOp <- func(peers map[discover.NodeID]*Peer) {
-		for _, p := range peers {
-			ps = append(ps, p)
-		}
-	}:
-		<-srv.peerOpDone
-	case <-srv.quit:
+	if !srv.running {
+		return ps
+	}
+	for _, p := range srv.peers {
+		ps = append(ps, p)
 	}
 	return ps
 }

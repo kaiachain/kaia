@@ -577,6 +577,67 @@ func (srv *MultiChannelServer) RemovePeer(node *discover.Node) {
 	}
 }
 
+// PeersInfo returns an array of metadata objects describing connected peers.
+func (srv *MultiChannelServer) PeersInfo() []*PeerInfo {
+	infos := make([]*PeerInfo, 0, srv.PeerCount())
+	for _, peer := range srv.Peers() {
+		if peer != nil {
+			infos = append(infos, peer.Info())
+		}
+	}
+	for i := 0; i < len(infos); i++ {
+		for j := i + 1; j < len(infos); j++ {
+			if infos[i].ID > infos[j].ID {
+				infos[i], infos[j] = infos[j], infos[i]
+			}
+		}
+	}
+	return infos
+}
+
+// PeerCount returns the number of connected peers.
+func (srv *MultiChannelServer) PeerCount() int {
+	var count int
+	select {
+	case srv.peerOp <- func(ps map[discover.NodeID]*Peer) { count = len(ps) }:
+		<-srv.peerOpDone
+	case <-srv.quit:
+	}
+	return count
+}
+
+// PeerCountByType returns the number of connected peers by type.
+func (srv *MultiChannelServer) PeerCountByType() map[string]uint {
+	pc := map[string]uint{"total": 0}
+	select {
+	case srv.peerOp <- func(ps map[discover.NodeID]*Peer) {
+		for _, peer := range ps {
+			key := ConvertConnTypeToString(peer.ConnType())
+			pc[key]++
+			pc["total"]++
+		}
+	}:
+		<-srv.peerOpDone
+	case <-srv.quit:
+	}
+	return pc
+}
+
+// Peers returns all connected peers.
+func (srv *MultiChannelServer) Peers() []*Peer {
+	var ps []*Peer
+	select {
+	case srv.peerOp <- func(peers map[discover.NodeID]*Peer) {
+		for _, p := range peers {
+			ps = append(ps, p)
+		}
+	}:
+		<-srv.peerOpDone
+	case <-srv.quit:
+	}
+	return ps
+}
+
 // GetListenAddress returns the listen addresses of the server.
 func (srv *MultiChannelServer) GetListenAddress() []string {
 	return srv.ListenAddrs
