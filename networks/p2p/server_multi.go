@@ -569,6 +569,14 @@ func (srv *MultiChannelServer) AddPeer(node *discover.Node) {
 	}
 }
 
+// RemovePeer disconnects from the given node.
+func (srv *MultiChannelServer) RemovePeer(node *discover.Node) {
+	select {
+	case srv.removestatic <- node:
+	case <-srv.quit:
+	}
+}
+
 // GetListenAddress returns the listen addresses of the server.
 func (srv *MultiChannelServer) GetListenAddress() []string {
 	return srv.ListenAddrs
