@@ -33,129 +33,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockTable struct {
-	getNodesByType map[discover.NodeType][]*discover.Node
-	randomByType   map[discover.NodeType][]*discover.Node
-	lookupCalls    int
-}
-
-func (m *mockTable) Lookup(target discover.NodeID, targetType discover.NodeType) []*discover.Node {
-	m.lookupCalls++
-	return nil
-}
-
-func (m *mockTable) GetNodes(targetType discover.NodeType, max int) []*discover.Node {
-	nodes := m.getNodesByType[targetType]
-	if max < len(nodes) {
-		return nodes[:max]
-	}
-	return nodes
-}
-
-func (m *mockTable) ReadRandomNodes(buf []*discover.Node, nType discover.NodeType) int {
-	return copy(buf, m.randomByType[nType])
-}
-
-type mockDialer struct {
-	mu      sync.Mutex
-	dialErr map[discover.NodeID]error // injected errors, discriminated by NodeID.
-}
-
-func (m *mockDialer) Dial(dest *discover.Node) (net.Conn, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if err := m.dialErr[dest.ID]; err != nil {
-		return nil, err
-	}
-	c1, c2 := net.Pipe()
-	_ = c2.Close()
-	return c1, nil
-}
-
-func (m *mockDialer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if err := m.dialErr[dest.ID]; err != nil {
-		return nil, err
-	}
-	conns := make([]net.Conn, 0, len(dest.TCPs))
-	for range dest.TCPs {
-		c1, c2 := net.Pipe()
-		_ = c2.Close()
-		conns = append(conns, c1)
-	}
-	return conns, nil
-}
-
-type setupConnArg struct {
-	id    discover.NodeID
-	flags connFlag
-	port  uint16
-}
-
-type mockSetupBackend struct {
-	mu        sync.Mutex
-	dialsched *DialSched
-	setupErr  map[discover.NodeID]error // injected errors, discriminated by NodeID.
-	calls     []setupConnArg            // recorded SetupConn calls.
-}
-
-func (m *mockSetupBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
-	if fd != nil {
-		_ = fd.Close()
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	call := setupConnArg{flags: flags}
-	if dialDest != nil {
-		call.id = dialDest.ID
-		call.port = dialDest.PortOrder
-		if err := m.setupErr[dialDest.ID]; err != nil {
-			m.calls = append(m.calls, call)
-			return err
-		}
-	}
-	m.calls = append(m.calls, call)
-	m.dialsched.markConnSuccess(dialDest.ID, dialDest.NType, false)
-	return nil
-}
-
-// A SetupConn backend that returns errUpdateDial, telling me (the dialsched) to use different ports.
-// Returns errUpdateDial at first call, then succeeds afterwards.
-type updateToMultiBackend struct {
-	mu         sync.Mutex
-	dialsched  *DialSched
-	calledOnce bool
-	ports      []uint16
-	calls      []setupConnArg
-}
-
-func (m *updateToMultiBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
-	if fd != nil {
-		_ = fd.Close()
-	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	call := setupConnArg{flags: flags}
-	if dialDest != nil {
-		call.id = dialDest.ID
-		call.port = dialDest.PortOrder
-	}
-	m.calls = append(m.calls, call)
-
-	if !m.calledOnce {
-		m.calledOnce = true
-		if dialDest != nil {
-			dialDest.TCPs = append([]uint16(nil), m.ports...)
-		}
-		return errUpdateDial
-	}
-	m.dialsched.markConnSuccess(dialDest.ID, dialDest.NType, false)
-	return nil
-}
-
 func testNodeID(i uint32) discover.NodeID {
 	var id discover.NodeID
 	binary.BigEndian.PutUint32(id[:], i)
@@ -172,6 +49,7 @@ func hasNodeID(nodes []*discover.Node, id discover.NodeID) bool {
 	})
 }
 
+// Start and Close are idempotent.
 func TestDialSched_Lifecycle_StartCloseTwice(t *testing.T) {
 	var (
 		ds = NewDialSched(DialConfig{
@@ -199,6 +77,7 @@ func TestDialSched_Lifecycle_StartCloseTwice(t *testing.T) {
 	assert.True(t, ds.closed.Load(), "closed should be true after Close")
 }
 
+// Rejects incomplete static nodes.
 func TestDialSched_StaticNode_RejectIncomplete(t *testing.T) {
 	var (
 		incomplete = &discover.Node{ID: testNodeID(1), NType: discover.NodeTypePN}
@@ -213,6 +92,7 @@ func TestDialSched_StaticNode_RejectIncomplete(t *testing.T) {
 	assert.True(t, ds.static.contains(complete.ID), "complete static node should be added")
 }
 
+// Correctly accounts for static node failures.
 func TestDialSched_StaticNode_Retry(t *testing.T) {
 	staticNode := testNode(1, "10.0.0.1", discover.NodeTypeEN)
 	ds := NewDialSched(DialConfig{
@@ -232,6 +112,7 @@ func TestDialSched_StaticNode_Retry(t *testing.T) {
 	assert.False(t, ds.static.contains(staticNode.ID), "static node must be removed by failure events")
 }
 
+// Special feature: Removing and re-adding a static node re-dials immediately1.
 func TestDialSched_StaticNode_RedialImmediatelyAfterReAdd(t *testing.T) {
 	node := testNode(51, "10.0.0.51", discover.NodeTypePN)
 	ds := NewDialSched(DialConfig{
@@ -251,6 +132,7 @@ func TestDialSched_StaticNode_RedialImmediatelyAfterReAdd(t *testing.T) {
 	assert.True(t, ds.shouldDial(node), "re-added static node should be dialable immediately")
 }
 
+// Updates accounting for inbound and outbound peers.
 func TestDialSched_OnPeerConnected(t *testing.T) {
 	var (
 		candidate = testNode(1, "10.0.0.1", discover.NodeTypePN)
@@ -283,6 +165,7 @@ func TestDialSched_OnPeerConnected(t *testing.T) {
 	assert.Len(t, cands, 0, "expected no outbound candidate when outbound PN target is already met")
 }
 
+// Correctly enforces discovery table refresh throttling.
 func TestDialSched_ShouldRefresh_RefreshBackoff(t *testing.T) {
 	var (
 		tab = &mockTable{
@@ -318,6 +201,7 @@ func TestDialSched_ShouldRefresh_RefreshBackoff(t *testing.T) {
 	assert.Equal(t, 6, tab.lookupCalls, "expected second refresh to perform 6 lookups (CN, PN, EN)")
 }
 
+// Static nodes are always candidates, even if connTarget is met.
 func TestDialSched_Candidates_StaticNodes(t *testing.T) {
 	var (
 		staticNode = testNode(61, "10.0.0.61", discover.NodeTypePN)
@@ -333,6 +217,7 @@ func TestDialSched_Candidates_StaticNodes(t *testing.T) {
 	assert.Equal(t, staticNode.ID, cands[0].ID, "static node should be the only candidate")
 }
 
+// Dynamic nodes are candidates if connTarget is not met.
 func TestDialSched_GetCandidates_FromDiscovery(t *testing.T) {
 	var (
 		pn  = testNode(201, "10.0.0.201", discover.NodeTypePN)
@@ -360,6 +245,7 @@ func TestDialSched_GetCandidates_FromDiscovery(t *testing.T) {
 	assert.False(t, needRefresh, "No need to refresh when candidates are enough")
 }
 
+// Skips discovery when connTarget is met.
 func TestDialSched_GetCandidates_SkipDiscovery(t *testing.T) {
 	var (
 		pn  = testNode(211, "10.0.0.211", discover.NodeTypePN)
@@ -383,6 +269,7 @@ func TestDialSched_GetCandidates_SkipDiscovery(t *testing.T) {
 	assert.False(t, needRefresh, "needRefresh should remain false when demand is already satisfied")
 }
 
+// Various conditions that determine whether a node should be dialed.
 func TestDialSched_ShouldDial(t *testing.T) {
 	var (
 		ds = NewDialSched(DialConfig{
@@ -422,6 +309,7 @@ func TestDialSched_ShouldDial(t *testing.T) {
 	}
 }
 
+// Launches dial tasks and waits for them to complete.
 func TestDialSched_LaunchDialTasks(t *testing.T) {
 	var (
 		staticNode = testNode(11, "10.0.0.11", discover.NodeTypeEN)
@@ -464,34 +352,7 @@ func TestDialSched_LaunchDialTasks(t *testing.T) {
 	assert.True(t, ds.connectedOutbound.contains(dynNode.ID))
 }
 
-func TestDialSched_SetupConn(t *testing.T) {
-	var (
-		staticNode = testNode(11, "10.0.0.11", discover.NodeTypeEN)
-		dynNode    = testNode(21, "10.0.0.21", discover.NodeTypeEN)
-		md         = &mockDialer{dialErr: make(map[discover.NodeID]error)}
-		mb         = &mockSetupBackend{setupErr: make(map[discover.NodeID]error)}
-		ds         = NewDialSched(DialConfig{
-			staticNodes: []*discover.Node{staticNode},
-		}, nil, mb)
-	)
-	ds.dialer = md
-	mb.dialsched = ds
-
-	ds.dialOnce(staticNode)
-	ds.dialOnce(dynNode)
-
-	// Inspect the SetupConn() arguments
-	require.Len(t, mb.calls, 2)
-	assert.Equal(t, setupConnArg{id: staticNode.ID, flags: staticDialedConn, port: 0}, mb.calls[0])
-	assert.Equal(t, setupConnArg{id: dynNode.ID, flags: dynDialedConn, port: 0}, mb.calls[1])
-
-	// Inspect the internal states
-	assert.True(t, ds.connectedAll.contains(staticNode.ID))
-	assert.True(t, ds.connectedAll.contains(dynNode.ID))
-	assert.True(t, ds.connectedOutbound.contains(staticNode.ID))
-	assert.True(t, ds.connectedOutbound.contains(dynNode.ID))
-}
-
+// Updates accounting for dial failures.
 func TestDialSched_Dial_DialFailure(t *testing.T) {
 	var (
 		staticNode = testNode(301, "10.0.1.31", discover.NodeTypePN)
@@ -518,6 +379,7 @@ func TestDialSched_Dial_DialFailure(t *testing.T) {
 	assert.False(t, ds.connectedOutbound.contains(staticNode.ID), "static node should not be counted as connected")
 }
 
+// Special feature: Retries dial after upgrading from single-channel to multi-channel.
 func TestDialSched_Dial_RetryOnErrUpdateDial(t *testing.T) {
 	var (
 		node = testNode(321, "10.0.1.32", discover.NodeTypePN)
@@ -551,6 +413,7 @@ func TestDialSched_Dial_RetryOnErrUpdateDial(t *testing.T) {
 	assert.True(t, ds.connectedOutbound.contains(node.ID))
 }
 
+// Correctly dials multi-channel peers.
 func TestDialSched_DialMulti(t *testing.T) {
 	var (
 		multiNode = discover.NewNode(testNodeID(401), net.ParseIP("10.0.0.41"), 30303, 30303, []uint16{30304, 30305}, discover.NodeTypeEN)
@@ -576,4 +439,259 @@ func mustParseNetlist(t *testing.T, s string) *netutil.Netlist {
 	nl, err := netutil.ParseNetlist(s)
 	require.NoError(t, err)
 	return nl
+}
+
+// TestDialSched_Close_BlockedDial verifies that Close() returns promptly even when
+// the dialOnce() is blocked at dialer.Dial(). Close() should not wait for the in-flight dialOnce.
+func TestDialSched_Close_BlockedDial(t *testing.T) {
+	invokedCh := make(chan struct{}, 1)
+	unblockCh := make(chan struct{})
+
+	node := testNode(1, "10.0.0.1", discover.NodeTypeEN)
+	ds := NewDialSched(DialConfig{
+		staticNodes: []*discover.Node{node},
+		dialer:      &blockingDialer{invokedCh: invokedCh, unblockCh: unblockCh}, // Dial() blocks until unblockCh.
+	}, nil, &rejectBackend{}) // SetupConn() always immediatelyreturns an error.
+	ds.Start()
+
+	select {
+	case <-invokedCh:
+	case <-time.After(2 * time.Second):
+		require.Fail(t, "Dial() was not invoked")
+	}
+
+	closeDone := make(chan struct{})
+	go func() {
+		ds.Close()
+		close(closeDone)
+	}()
+	select {
+	case <-closeDone:
+	case <-time.After(2 * time.Second):
+		require.Fail(t, "Close() must return quickly without waiting for the in-flight Dial()")
+	}
+
+	// Unblock so the blocked goroutine can finish.
+	// Note that Close() didn't wait for the dialOnce goroutine to finish.
+	close(unblockCh)
+}
+
+// TestDialSched_Close_BlockedSetupConn verifies that Close() returns promptly even when
+// the dialOnce() is blocked at backend.SetupConn(). Close() should not wait for the in-flight dialOnce.
+func TestDialSched_Close_BlockedSetupConn(t *testing.T) {
+	invokedCh := make(chan struct{}, 1)
+	unblockCh := make(chan struct{})
+
+	node := testNode(2, "10.0.0.2", discover.NodeTypeEN)
+	ds := NewDialSched(DialConfig{
+		staticNodes: []*discover.Node{node},
+		dialer:      &mockDialer{dialErr: make(map[discover.NodeID]error)}, // Dial() succeeds immediately
+	}, nil, &blockingBackend{invokedCh: invokedCh, unblockCh: unblockCh}) // SetupConn() blocks until unblockCh.
+	ds.Start()
+
+	select {
+	case <-invokedCh:
+	case <-time.After(2 * time.Second):
+		require.Fail(t, "SetupConn was not invoked")
+	}
+
+	closeDone := make(chan struct{})
+	go func() {
+		ds.Close()
+		close(closeDone)
+	}()
+	select {
+	case <-closeDone:
+	case <-time.After(2 * time.Second):
+		require.Fail(t, "Close() must return without waiting for the in-flight SetupConn()")
+	}
+
+	// Unblock so the blocked goroutine can finish.
+	// Note that Close() didn't wait for the dialOnce goroutine to finish.
+	close(unblockCh)
+}
+
+//// Discovery table mocks.
+
+// Generic mock discovery table.
+type mockTable struct {
+	getNodesByType map[discover.NodeType][]*discover.Node
+	randomByType   map[discover.NodeType][]*discover.Node
+	lookupCalls    int
+}
+
+func (m *mockTable) Lookup(target discover.NodeID, targetType discover.NodeType) []*discover.Node {
+	m.lookupCalls++
+	return nil
+}
+
+func (m *mockTable) GetNodes(targetType discover.NodeType, max int) []*discover.Node {
+	nodes := m.getNodesByType[targetType]
+	if max < len(nodes) {
+		return nodes[:max]
+	}
+	return nodes
+}
+
+func (m *mockTable) ReadRandomNodes(buf []*discover.Node, nType discover.NodeType) int {
+	return copy(buf, m.randomByType[nType])
+}
+
+//// Dialer (Dial, DialMulti) mocks.
+
+type mockDialer struct {
+	mu      sync.Mutex
+	dialErr map[discover.NodeID]error // injected errors, discriminated by NodeID.
+}
+
+func (m *mockDialer) Dial(dest *discover.Node) (net.Conn, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.dialErr[dest.ID]; err != nil {
+		return nil, err
+	}
+	c1, c2 := net.Pipe()
+	_ = c2.Close()
+	return c1, nil
+}
+
+func (m *mockDialer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if err := m.dialErr[dest.ID]; err != nil {
+		return nil, err
+	}
+	conns := make([]net.Conn, 0, len(dest.TCPs))
+	for range dest.TCPs {
+		c1, c2 := net.Pipe()
+		_ = c2.Close()
+		conns = append(conns, c1)
+	}
+	return conns, nil
+}
+
+// blockingDialer blocks inside Dial() until dialCh is closed.
+// It signals the first call on startedCh (capacity-1 non-blocking send).
+type blockingDialer struct {
+	invokedCh chan struct{} // receives once when the first Dial() is entered
+	unblockCh chan struct{} // Dial() returns when closed
+}
+
+func (m *blockingDialer) Dial(dest *discover.Node) (net.Conn, error) {
+	select {
+	case m.invokedCh <- struct{}{}:
+	default:
+	}
+	<-m.unblockCh
+	return nil, errors.New("dial unblocked")
+}
+
+func (m *blockingDialer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
+	select {
+	case m.invokedCh <- struct{}{}:
+	default:
+	}
+	<-m.unblockCh
+	return nil, errors.New("dial unblocked")
+}
+
+//// Backend (SetupConn) mocks.
+
+type setupConnArg struct {
+	id    discover.NodeID
+	flags connFlag
+	port  uint16
+}
+
+type mockSetupBackend struct {
+	mu        sync.Mutex
+	dialsched *DialSched
+	setupErr  map[discover.NodeID]error // injected errors, discriminated by NodeID.
+	calls     []setupConnArg            // recorded SetupConn calls.
+}
+
+func (m *mockSetupBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
+	if fd != nil {
+		_ = fd.Close()
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	call := setupConnArg{flags: flags}
+	if dialDest != nil {
+		call.id = dialDest.ID
+		call.port = dialDest.PortOrder
+		if err := m.setupErr[dialDest.ID]; err != nil {
+			m.calls = append(m.calls, call)
+			return err
+		}
+	}
+	m.calls = append(m.calls, call)
+	m.dialsched.markConnSuccess(dialDest.ID, dialDest.NType, false)
+	return nil
+}
+
+// rejectBackend always returns an error from SetupConn. Used when the test only
+// cares about the dialing side, not the connection setup side.
+type rejectBackend struct{}
+
+func (m *rejectBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
+	if fd != nil {
+		fd.Close()
+	}
+	return errors.New("rejectBackend: connection rejected")
+}
+
+// blockingBackend blocks inside SetupConn() until unblock is closed.
+// It signals the first call on startedCh (capacity-1 non-blocking send).
+type blockingBackend struct {
+	invokedCh chan struct{} // receives once when the first SetupConn() is entered
+	unblockCh chan struct{} // SetupConn() returns when closed
+}
+
+func (m *blockingBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
+	if fd != nil {
+		fd.Close()
+	}
+	select {
+	case m.invokedCh <- struct{}{}:
+	default:
+	}
+	<-m.unblockCh
+	return errors.New("SetupConn unblocked")
+}
+
+// A SetupConn backend that returns errUpdateDial, telling me (the dialsched) to use different ports.
+// Returns errUpdateDial at first call, then succeeds afterwards.
+type updateToMultiBackend struct {
+	mu         sync.Mutex
+	dialsched  *DialSched
+	calledOnce bool
+	ports      []uint16
+	calls      []setupConnArg
+}
+
+func (m *updateToMultiBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
+	if fd != nil {
+		_ = fd.Close()
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	call := setupConnArg{flags: flags}
+	if dialDest != nil {
+		call.id = dialDest.ID
+		call.port = dialDest.PortOrder
+	}
+	m.calls = append(m.calls, call)
+
+	if !m.calledOnce {
+		m.calledOnce = true
+		if dialDest != nil {
+			dialDest.TCPs = append([]uint16(nil), m.ports...)
+		}
+		return errUpdateDial
+	}
+	m.dialsched.markConnSuccess(dialDest.ID, dialDest.NType, false)
+	return nil
 }
