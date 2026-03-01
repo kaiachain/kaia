@@ -324,43 +324,6 @@ running:
 			srv.logger.Trace("Dial task done", "task", t)
 			dialstate.taskDone(t, time.Now())
 			delTask(t)
-		case c := <-srv.addpeer:
-			// At this point the connection is past the protocol handshake.
-			// Its capabilities are known and the remote identity is verified.
-			var err error
-			err = srv.protoHandshakeChecks(peers, srv.inboundCount, c)
-			if err == nil {
-				// The handshakes are done and it passed all checks.
-				p, err := newPeer([]*conn{c}, srv.Protocols, srv.Config.RWTimerConfig)
-				if err != nil {
-					srv.logger.Error("Fail make a new peer", "err", err)
-				} else {
-					// If message events are enabled, pass the peerFeed
-					// to the peer
-					if srv.EnableMsgEvents {
-						p.events = &srv.peerFeed
-					}
-					name := truncateName(c.name)
-					srv.logger.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
-					go srv.runPeer(p)
-					peers[c.id] = p
-
-					if p.Inbound() {
-						srv.inboundCount++
-					}
-					peerCountGauge.Update(int64(len(peers)))
-					peerInCountGauge.Update(int64(srv.inboundCount))
-					peerOutCountGauge.Update(int64(len(peers) - srv.inboundCount))
-				}
-			}
-			// The dialer logic relies on the assumption that
-			// dial tasks complete after the peer has been added or
-			// discarded. Unblock the task last.
-			select {
-			case c.cont <- err:
-			case <-srv.quit:
-				break running
-			}
 		case pd := <-srv.delpeer:
 			// A peer disconnected.
 			d := common.PrettyDuration(mclock.Now() - pd.created)
@@ -624,13 +587,13 @@ func (srv *BaseServer) setupConn(c *conn, flags connFlag, dialDest *discover.Nod
 	}
 	c.caps, c.name, c.multiChannel = phs.Caps, phs.Name, phs.Multichannel
 
-	err = srv.checkpoint(c, srv.addpeer)
+	err = srv.handleAddPeerConn(c)
 	if err != nil {
 		clog.Trace("Rejected peer", "err", err)
 		return err
 	}
 	// If the checks completed successfully, runPeer has now been
-	// launched by run.
+	// launched by handleAddPeerConn.
 	clog.Trace("connection set up", "inbound", dialDest == nil)
 	return nil
 }
@@ -646,6 +609,42 @@ func (srv *BaseServer) handlePostHandshake(c *conn) error {
 		c.flags |= trustedConn
 	}
 	return srv.encHandshakeChecks(srv.peers, srv.inboundCount, c)
+}
+
+func (srv *BaseServer) handleAddPeerConn(c *conn) error {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+
+	if !srv.running {
+		return errServerStopped
+	}
+	err := srv.protoHandshakeChecks(srv.peers, srv.inboundCount, c)
+	if err != nil {
+		return err
+	}
+
+	p, err := newPeer([]*conn{c}, srv.Protocols, srv.Config.RWTimerConfig)
+	if err != nil {
+		srv.logger.Error("Fail make a new peer", "err", err)
+		return err
+	}
+
+	if srv.EnableMsgEvents {
+		p.events = &srv.peerFeed
+	}
+	name := truncateName(c.name)
+	srv.logger.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(srv.peers)+1)
+
+	srv.peers[c.id] = p
+	if p.Inbound() {
+		srv.inboundCount++
+	}
+	peerCountGauge.Update(int64(len(srv.peers)))
+	peerInCountGauge.Update(int64(srv.inboundCount))
+	peerOutCountGauge.Update(int64(len(srv.peers) - srv.inboundCount))
+
+	go srv.runPeer(p)
+	return nil
 }
 
 // checkpoint sends the conn to run, which performs the

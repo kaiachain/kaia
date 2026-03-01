@@ -494,7 +494,7 @@ func TestServerAtCap(t *testing.T) {
 	// Inject a few connections to fill up the peer set.
 	for i := range 10 {
 		c := newconn(randomID())
-		if err := srv.checkpoint(c, srv.addpeer); err != nil {
+		if err := srv.handleAddPeerConn(c); err != nil {
 			t.Fatalf("could not add conn %d: %v", i, err)
 		}
 	}
