@@ -44,7 +44,6 @@ type MultiChannelServer struct {
 	listeners      []net.Listener              // Extended TCP listener
 	ListenAddrs    []string                    // Extended TCP listen addresses
 	CandidateConns map[discover.NodeID][]*conn // Subset of connections towards a premature peer
-	outboundCount  int
 }
 
 // Stop terminates the server and all active peer connections.
@@ -130,7 +129,6 @@ func (srv *MultiChannelServer) initialize() error {
 	srv.ListenAddrs = append(srv.ListenAddrs, srv.ListenAddr)
 	srv.ListenAddrs = append(srv.ListenAddrs, srv.SubListenAddr...)
 	srv.CandidateConns = make(map[discover.NodeID][]*conn)
-	srv.outboundCount = 0
 	return nil
 }
 
@@ -386,12 +384,10 @@ func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
 	if srv.EnableMsgEvents {
 		p.events = &srv.peerFeed
 	}
-	name := truncateName(c.name)
-	srv.logger.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(srv.peers)+1)
-
 	srv.peers[c.id] = p
-	peerCountGauge.Update(int64(len(srv.peers)))
-	srv.inboundCount, srv.outboundCount = increasesConnectionMetric(srv.inboundCount, srv.outboundCount, p)
+	srv.incrementConnectionCounts(p)
+	srv.reportPeerMetric()
+	srv.logger.Debug("Adding p2p peer", "name", truncateName(c.name), "addr", c.fd.RemoteAddr(), "peers", len(srv.peers))
 
 	srv.peerWG.Add(1)
 	go srv.runPeer(p)
@@ -518,13 +514,24 @@ func (srv *MultiChannelServer) handleDelPeer(pd peerDrop) {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 
-	d := common.PrettyDuration(mclock.Now() - pd.created)
-	pd.logger.Debug("Removing p2p peer", "duration", d, "peers", len(srv.peers)-1, "req", pd.requested, "err", pd.err)
 	delete(srv.peers, pd.ID())
 
-	peerCountGauge.Update(int64(len(srv.peers)))
-	srv.inboundCount, srv.outboundCount = decreasesConnectionMetric(srv.inboundCount, srv.outboundCount, pd.Peer)
+	d := common.PrettyDuration(mclock.Now() - pd.created)
+	pd.logger.Debug("Removing p2p peer", "duration", d, "peers", len(srv.peers), "req", pd.requested, "err", pd.err)
+	srv.decrementConnectionCounts(pd.Peer)
+	srv.reportPeerMetric()
 	srv.wakeupDialer()
+}
+
+func (srv *MultiChannelServer) reportPeerMetric() {
+	peerCountGauge.Update(int64(len(srv.peers)))
+	// In multi-channel, one peer may contain both inbound and outbound connections,
+	// if two parties happened to dial each other at the same time. In this case,
+	// it is unclear whether the peer should be counted as inbound or outbound.
+	// Therefore, we do not report the peerIn and peerOut metrics for multi-channel.
+	connectionCountGauge.Update(int64(srv.outboundCount + srv.inboundCount))
+	connectionInCountGauge.Update(int64(srv.inboundCount))
+	connectionOutCountGauge.Update(int64(srv.outboundCount))
 }
 
 // GetListenAddress returns the listen addresses of the server.

@@ -31,33 +31,6 @@ import (
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 )
 
-// decreasesConnectionMetric decreases the metric of the number of peer connections.
-func decreasesConnectionMetric(inboundCount int, outboundCount int, p *Peer) (int, int) {
-	pInbound, pOutbound := p.GetNumberInboundAndOutbound()
-	inboundCount -= pInbound
-	outboundCount -= pOutbound
-
-	updatesConnectionMetric(inboundCount, outboundCount)
-	return inboundCount, outboundCount
-}
-
-// increasesConnectionMetric increases the metric of the number of peer connections.
-func increasesConnectionMetric(inboundCount int, outboundCount int, p *Peer) (int, int) {
-	pInbound, pOutbound := p.GetNumberInboundAndOutbound()
-	inboundCount += pInbound
-	outboundCount += pOutbound
-
-	updatesConnectionMetric(inboundCount, outboundCount)
-	return inboundCount, outboundCount
-}
-
-// updatesConnectionMetric updates the metric of the number of peer connections.
-func updatesConnectionMetric(inboundCount int, outboundCount int) {
-	connectionCountGauge.Update(int64(outboundCount + inboundCount))
-	connectionInCountGauge.Update(int64(inboundCount))
-	connectionOutCountGauge.Update(int64(outboundCount))
-}
-
 type peerDrop struct {
 	*Peer
 	err       error
