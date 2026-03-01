@@ -65,6 +65,13 @@ type BaseServer struct {
 	lastLookup   time.Time
 	lastLookupMu sync.Mutex
 
+	// Peer lifecycle state
+	selfID       discover.NodeID // precompulted Self().ID
+	peers        map[discover.NodeID]*Peer
+	inboundCount int
+	trusted      map[discover.NodeID]bool
+	dialstate    dialer
+
 	// Request channels
 	addstatic     chan *discover.Node
 	removestatic  chan *discover.Node
@@ -141,9 +148,9 @@ func (srv *BaseServer) Start() (err error) {
 	}
 
 	// Start dialing. TODO: Only if !NoDial, start DialSched.
-	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.maxDialedConns(), srv.NetRestrict, srv.PrivateKey, srv.getTypeStatics())
+	srv.dialstate = newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.maxDialedConns(), srv.NetRestrict, srv.PrivateKey, srv.getTypeStatics())
 	srv.loopWG.Add(1)
-	go srv.run(dialer)
+	go srv.run(srv.dialstate)
 
 	srv.logger.Info("Started P2P server", "id", discover.PubkeyID(&srv.PrivateKey.PublicKey), "multichannel", false)
 	return nil
@@ -177,6 +184,14 @@ func (srv *BaseServer) initialize() error {
 	srv.peerOp = make(chan peerOpFunc)
 	srv.peerOpDone = make(chan struct{})
 	srv.discpeer = make(chan discover.NodeID)
+
+	srv.selfID = discover.PubkeyID(&srv.PrivateKey.PublicKey)
+	srv.peers = make(map[discover.NodeID]*Peer)
+	srv.inboundCount = 0
+	srv.trusted = make(map[discover.NodeID]bool, len(srv.TrustedNodes))
+	for _, n := range srv.TrustedNodes {
+		srv.trusted[n.ID] = true
+	}
 
 	return nil
 }
@@ -255,19 +270,12 @@ func (srv *BaseServer) startListening() error {
 func (srv *BaseServer) run(dialstate dialer) {
 	defer srv.loopWG.Done()
 	var (
-		peers        = make(map[discover.NodeID]*Peer)
-		inboundCount = 0
-		trusted      = make(map[discover.NodeID]bool, len(srv.TrustedNodes))
+		peers        = srv.peers
+		trusted      = srv.trusted
 		taskdone     = make(chan task, maxActiveDialTasks)
 		runningTasks []task
 		queuedTasks  []task // tasks that can't run yet
 	)
-	// Put trusted nodes into a map to speed up checks.
-	// Trusted peers are loaded on startup and cannot be
-	// modified while the server is running.
-	for _, n := range srv.TrustedNodes {
-		trusted[n.ID] = true
-	}
 
 	// removes t from runningTasks
 	delTask := func(t task) {
@@ -342,7 +350,7 @@ running:
 			}
 			// TODO: track in-progress inbound node IDs (pre-Peer) to avoid dialing them.
 			select {
-			case c.cont <- srv.encHandshakeChecks(peers, inboundCount, c):
+			case c.cont <- srv.encHandshakeChecks(peers, srv.inboundCount, c):
 			case <-srv.quit:
 				break running
 			}
@@ -350,7 +358,7 @@ running:
 			// At this point the connection is past the protocol handshake.
 			// Its capabilities are known and the remote identity is verified.
 			var err error
-			err = srv.protoHandshakeChecks(peers, inboundCount, c)
+			err = srv.protoHandshakeChecks(peers, srv.inboundCount, c)
 			if err == nil {
 				// The handshakes are done and it passed all checks.
 				p, err := newPeer([]*conn{c}, srv.Protocols, srv.Config.RWTimerConfig)
@@ -368,11 +376,11 @@ running:
 					peers[c.id] = p
 
 					if p.Inbound() {
-						inboundCount++
+						srv.inboundCount++
 					}
 					peerCountGauge.Update(int64(len(peers)))
-					peerInCountGauge.Update(int64(inboundCount))
-					peerOutCountGauge.Update(int64(len(peers) - inboundCount))
+					peerInCountGauge.Update(int64(srv.inboundCount))
+					peerOutCountGauge.Update(int64(len(peers) - srv.inboundCount))
 				}
 			}
 			// The dialer logic relies on the assumption that
@@ -390,12 +398,12 @@ running:
 			delete(peers, pd.ID())
 
 			if pd.Inbound() {
-				inboundCount--
+				srv.inboundCount--
 			}
 
 			peerCountGauge.Update(int64(len(peers)))
-			peerInCountGauge.Update(int64(inboundCount))
-			peerOutCountGauge.Update(int64(len(peers) - inboundCount))
+			peerInCountGauge.Update(int64(srv.inboundCount))
+			peerOutCountGauge.Update(int64(len(peers) - srv.inboundCount))
 		case nid := <-srv.discpeer:
 			if p, ok := peers[nid]; ok {
 				p.Disconnect(DiscRequested)
