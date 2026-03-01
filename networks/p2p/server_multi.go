@@ -38,15 +38,17 @@ import (
 
 // MultiChannelServer is a server that uses a multi channel.
 // It inherits BaseServer. This file only contains overriding methods.
+// There must be a reason to override BaseServer methods.
 type MultiChannelServer struct {
 	*BaseServer
-	listeners      []net.Listener
-	ListenAddrs    []string
-	CandidateConns map[discover.NodeID][]*conn
+	listeners      []net.Listener              // Extended TCP listener
+	ListenAddrs    []string                    // Extended TCP listen addresses
+	CandidateConns map[discover.NodeID][]*conn // Subset of connections towards a premature peer
 }
 
 // Stop terminates the server and all active peer connections.
 // It blocks until all active connections are closed.
+// Overrides BaseServer.Stop() to close multiple TCP listeners.
 func (srv *MultiChannelServer) Stop() {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
@@ -54,6 +56,8 @@ func (srv *MultiChannelServer) Stop() {
 		return
 	}
 	srv.running = false
+
+	// Stop TCP listeners
 	if srv.listener != nil {
 		// this unblocks listener Accept
 		srv.listener.Close()
@@ -61,8 +65,10 @@ func (srv *MultiChannelServer) Stop() {
 	for _, listener := range srv.listeners {
 		listener.Close()
 	}
-	close(srv.quit)
-	srv.loopWG.Wait()
+
+	close(srv.quit)   // Ask loops to terminate
+	srv.loopWG.Wait() // Wait for loops to terminate
+	srv.logger.Info("Stopped P2P server")
 }
 
 // Start starts running the MultiChannelServer.
@@ -74,110 +80,26 @@ func (srv *MultiChannelServer) Start() (err error) {
 		return errors.New("server already running")
 	}
 	srv.running = true
-	srv.logger = srv.Config.Logger
-	if srv.logger == nil {
-		srv.logger = logger.NewWith()
-	}
-	srv.logger.Info("Starting P2P networking")
 
-	// static fields
-	if srv.PrivateKey == nil {
-		return errors.New("Server.PrivateKey must be set to a non-nil key")
+	if err := srv.initialize(); err != nil {
+		return err
 	}
-
-	if !srv.ConnectionType.Valid() {
-		return errors.New("Invalid connection type speficied")
-	}
-
-	if srv.newTransport == nil {
-		srv.newTransport = newRLPX
-	}
-	if srv.Dialer == nil {
-		srv.Dialer = TCPDialer{&net.Dialer{Timeout: defaultDialTimeout}}
-	}
-	srv.quit = make(chan struct{})
-	srv.addpeer = make(chan *conn)
-	srv.delpeer = make(chan peerDrop)
-	srv.posthandshake = make(chan *conn)
-	srv.addstatic = make(chan *discover.Node)
-	srv.removestatic = make(chan *discover.Node)
-	srv.peerOp = make(chan peerOpFunc)
-	srv.peerOpDone = make(chan struct{})
-	srv.discpeer = make(chan discover.NodeID)
-
-	var (
-		conn      *net.UDPConn
-		realaddr  *net.UDPAddr
-		unhandled chan discover.ReadPacket
-	)
 
 	if !srv.NoDiscovery {
-		addr, err := net.ResolveUDPAddr("udp", srv.ListenAddrs[ConnDefault])
-		if err != nil {
+		if err := srv.startDiscovery(srv.ListenAddrs[ConnDefault]); err != nil {
 			return err
 		}
-		conn, err = net.ListenUDP("udp", addr)
-		if err != nil {
-			return err
-		}
-		realaddr = conn.LocalAddr().(*net.UDPAddr)
-		if srv.NAT != nil {
-			if !realaddr.IP.IsLoopback() {
-				go nat.Map(srv.NAT, srv.quit, "udp", realaddr.Port, realaddr.Port, "klaytn discovery")
-			}
-			// TODO: react to external IP changes over time.
-			if ext, err := srv.NAT.ExternalIP(); err == nil {
-				realaddr = &net.UDPAddr{IP: ext, Port: realaddr.Port}
-			}
-		}
 	}
 
-	// node table
-	if !srv.NoDiscovery {
-		cfg := discover.Config{
-			PrivateKey:    srv.PrivateKey,
-			AnnounceAddr:  realaddr,
-			NodeDBPath:    srv.NodeDatabase,
-			NetRestrict:   srv.NetRestrict,
-			Bootnodes:     srv.BootstrapNodes,
-			Unhandled:     unhandled,
-			Conn:          conn,
-			Addr:          realaddr,
-			Id:            discover.PubkeyID(&srv.PrivateKey.PublicKey),
-			NodeType:      ConvertNodeType(srv.ConnectionType),
-			NetworkID:     srv.NetworkID,
-			DiscoverTypes: srv.DiscoverTypes,
-		}
+	srv.ourHandshake = srv.makeOurHandshakeMsg()
 
-		ntab, err := discover.ListenUDP(&cfg)
-		if err != nil {
-			return err
-		}
-		srv.ntab = ntab
-	}
-
-	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.maxDialedConns(), srv.NetRestrict, srv.PrivateKey, srv.getTypeStatics())
-
-	// handshake
-	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: true}
-	for _, p := range srv.Protocols {
-		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
-	}
-	for _, l := range srv.ListenAddrs {
-		s := strings.Split(l, ":")
-		if len(s) == 2 {
-			if port, err := strconv.Atoi(s[1]); err == nil {
-				srv.ourHandshake.ListenPort = append(srv.ourHandshake.ListenPort, uint64(port))
-			}
-		}
-	}
-
-	// listen/dial
 	if srv.NoDial && srv.NoListen {
 		srv.logger.Error("P2P server will be useless, neither dialing nor listening")
 	}
+
+	// Start listening
 	if !srv.NoListen {
-		if srv.ListenAddrs != nil && len(srv.ListenAddrs) != 0 && srv.ListenAddrs[ConnDefault] != "" {
+		if len(srv.ListenAddrs) != 0 && srv.ListenAddrs[ConnDefault] != "" {
 			if err := srv.startListening(); err != nil {
 				return err
 			}
@@ -186,11 +108,43 @@ func (srv *MultiChannelServer) Start() (err error) {
 		}
 	}
 
+	// Start dialing. TODO: Only if !NoDial, start DialSched.
+	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.maxDialedConns(), srv.NetRestrict, srv.PrivateKey, srv.getTypeStatics())
 	srv.loopWG.Add(1)
 	go srv.run(dialer)
-	srv.running = true
+
 	srv.logger.Info("Started P2P server", "id", discover.PubkeyID(&srv.PrivateKey.PublicKey), "multichannel", true)
 	return nil
+}
+
+// Overrides BaseServer.initialize() to add multi channel specific fields.
+func (srv *MultiChannelServer) initialize() error {
+	if err := srv.BaseServer.initialize(); err != nil {
+		return err
+	}
+	srv.listeners = make([]net.Listener, 0, len(srv.SubListenAddr)+1)
+	srv.ListenAddrs = make([]string, 0, len(srv.SubListenAddr)+1)
+	srv.ListenAddrs = append(srv.ListenAddrs, srv.ListenAddr)
+	srv.ListenAddrs = append(srv.ListenAddrs, srv.SubListenAddr...)
+	srv.CandidateConns = make(map[discover.NodeID][]*conn)
+	return nil
+}
+
+// Overrides BaseServer.makeOurHandshakeMsg() to advertise the multiple listen ports.
+func (srv *MultiChannelServer) makeOurHandshakeMsg() *protoHandshake {
+	hs := &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: true}
+	for _, p := range srv.Protocols {
+		hs.Caps = append(hs.Caps, p.cap())
+	}
+	for _, l := range srv.ListenAddrs {
+		s := strings.Split(l, ":")
+		if len(s) == 2 {
+			if port, err := strconv.Atoi(s[1]); err == nil {
+				hs.ListenPort = append(hs.ListenPort, uint64(port))
+			}
+		}
+	}
+	return hs
 }
 
 // startListening starts listening on the specified port on the server.

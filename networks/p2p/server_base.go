@@ -48,29 +48,32 @@ type BaseServer struct {
 	newTransport func(net.Conn, *ecdsa.PublicKey) transport
 	newPeerHook  func(*Peer)
 
-	lock    sync.Mutex // protects running
+	// Lifecycle
+	lock    sync.Mutex
 	running bool
+	quit    chan struct{}
+	loopWG  sync.WaitGroup // loop, listenLoop
 
-	ntab         discover.Discovery
-	listener     net.Listener
-	ourHandshake *protoHandshake
+	// Relying components
+	logger       log.Logger
+	ntab         discover.Discovery // UDP discovery
+	ourHandshake *protoHandshake    // our TCP handshake message
+	listener     net.Listener       // TCP listener
+	peerFeed     event.Feed         // Peer event feed as in peer.go:PeerEventType.
+
+	// LastLookup memory TODO: dialsched should manage it inside.
 	lastLookup   time.Time
 	lastLookupMu sync.Mutex
 
-	// These are for Peers, PeerCount (and nothing else).
-	peerOp     chan peerOpFunc
-	peerOpDone chan struct{}
-
-	quit          chan struct{}
+	// Request channels
 	addstatic     chan *discover.Node
 	removestatic  chan *discover.Node
+	peerOp        chan peerOpFunc
+	peerOpDone    chan struct{}
 	posthandshake chan *conn
 	addpeer       chan *conn
 	delpeer       chan peerDrop
 	discpeer      chan discover.NodeID
-	loopWG        sync.WaitGroup // loop, listenLoop
-	peerFeed      event.Feed
-	logger        log.Logger
 }
 
 // SingleChannelServer is a server that uses a single channel.
@@ -87,12 +90,16 @@ func (srv *BaseServer) Stop() {
 		return
 	}
 	srv.running = false
+
+	// Stop TCP listeners
 	if srv.listener != nil {
 		// this unblocks listener Accept
 		srv.listener.Close()
 	}
-	close(srv.quit)
-	srv.loopWG.Wait()
+
+	close(srv.quit)   // Ask loops to terminate
+	srv.loopWG.Wait() // Wait for loops to terminate
+	srv.logger.Info("Stopped P2P server")
 }
 
 // Start starts running the server.
@@ -104,21 +111,56 @@ func (srv *BaseServer) Start() (err error) {
 		return errors.New("server already running")
 	}
 	srv.running = true
+
+	if err := srv.initialize(); err != nil {
+		return err
+	}
+
+	if !srv.NoDiscovery {
+		if err := srv.startDiscovery(srv.ListenAddr); err != nil {
+			return err
+		}
+	}
+
+	srv.ourHandshake = srv.makeOurHandshakeMsg()
+
+	if srv.NoDial && srv.NoListen {
+		srv.logger.Error("P2P server will be useless, neither dialing nor listening")
+	}
+
+	// Start listening
+	if !srv.NoListen {
+		if srv.ListenAddr != "" {
+			if err := srv.startListening(); err != nil {
+				return err
+			}
+		} else {
+			srv.logger.Error("P2P server might be useless, listening address is missing")
+		}
+	}
+
+	// Start dialing. TODO: Only if !NoDial, start DialSched.
+	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.maxDialedConns(), srv.NetRestrict, srv.PrivateKey, srv.getTypeStatics())
+	srv.loopWG.Add(1)
+	go srv.run(dialer)
+
+	srv.logger.Info("Started P2P server", "id", discover.PubkeyID(&srv.PrivateKey.PublicKey), "multichannel", false)
+	return nil
+}
+
+func (srv *BaseServer) initialize() error {
 	srv.logger = srv.Config.Logger
 	if srv.logger == nil {
 		srv.logger = logger.NewWith()
 	}
 	srv.logger.Info("Starting P2P networking")
 
-	// static fields
 	if srv.PrivateKey == nil {
 		return errors.New("Server.PrivateKey must be set to a non-nil key")
 	}
-
 	if !srv.ConnectionType.Valid() {
 		return errors.New("Invalid connection type speficied")
 	}
-
 	if srv.newTransport == nil {
 		srv.newTransport = newRLPX
 	}
@@ -135,88 +177,57 @@ func (srv *BaseServer) Start() (err error) {
 	srv.peerOpDone = make(chan struct{})
 	srv.discpeer = make(chan discover.NodeID)
 
-	var (
-		conn      *net.UDPConn
-		realaddr  *net.UDPAddr
-		unhandled chan discover.ReadPacket
-	)
-
-	if !srv.NoDiscovery {
-		addr, err := net.ResolveUDPAddr("udp", srv.ListenAddr)
-		if err != nil {
-			return err
-		}
-		conn, err = net.ListenUDP("udp", addr)
-		if err != nil {
-			return err
-		}
-		realaddr = conn.LocalAddr().(*net.UDPAddr)
-		if srv.NAT != nil {
-			if !realaddr.IP.IsLoopback() {
-				go nat.Map(srv.NAT, srv.quit, "udp", realaddr.Port, realaddr.Port, "klaytn discovery")
-			}
-			// TODO: react to external IP changes over time.
-			if ext, err := srv.NAT.ExternalIP(); err == nil {
-				realaddr = &net.UDPAddr{IP: ext, Port: realaddr.Port}
-			}
-		}
-	}
-
-	// node table
-	if !srv.NoDiscovery {
-		cfg := discover.Config{
-			PrivateKey:    srv.PrivateKey,
-			AnnounceAddr:  realaddr,
-			NodeDBPath:    srv.NodeDatabase,
-			NetRestrict:   srv.NetRestrict,
-			Bootnodes:     srv.BootstrapNodes,
-			Unhandled:     unhandled,
-			Conn:          conn,
-			Addr:          realaddr,
-			Id:            discover.PubkeyID(&srv.PrivateKey.PublicKey),
-			NodeType:      ConvertNodeType(srv.ConnectionType),
-			NetworkID:     srv.NetworkID,
-			DiscoverTypes: srv.DiscoverTypes,
-		}
-
-		cfgForLog := cfg
-		cfgForLog.PrivateKey = nil
-
-		logger.Info("Create udp", "config", cfgForLog)
-
-		ntab, err := discover.ListenUDP(&cfg)
-		if err != nil {
-			return err
-		}
-		srv.ntab = ntab
-	}
-
-	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.maxDialedConns(), srv.NetRestrict, srv.PrivateKey, srv.getTypeStatics())
-
-	// handshake
-	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: false}
-	for _, p := range srv.Protocols {
-		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
-	}
-	// listen/dial
-	if srv.NoDial && srv.NoListen {
-		srv.logger.Error("P2P server will be useless, neither dialing nor listening")
-	}
-	if !srv.NoListen {
-		if srv.ListenAddr != "" {
-			if err := srv.startListening(); err != nil {
-				return err
-			}
-		} else {
-			srv.logger.Error("P2P server might be useless, listening address is missing")
-		}
-	}
-
-	srv.loopWG.Add(1)
-	go srv.run(dialer)
-	srv.running = true
-	srv.logger.Info("Started P2P server", "id", discover.PubkeyID(&srv.PrivateKey.PublicKey), "multichannel", false)
 	return nil
+}
+
+func (srv *BaseServer) startDiscovery(listenAddr string) error {
+	addr, err := net.ResolveUDPAddr("udp", listenAddr)
+	if err != nil {
+		return err
+	}
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		return err
+	}
+	realaddr := conn.LocalAddr().(*net.UDPAddr)
+	if srv.NAT != nil {
+		if !realaddr.IP.IsLoopback() {
+			go nat.Map(srv.NAT, srv.quit, "udp", realaddr.Port, realaddr.Port, "klaytn discovery")
+		}
+		// TODO: react to external IP changes over time.
+		if ext, err := srv.NAT.ExternalIP(); err == nil {
+			realaddr = &net.UDPAddr{IP: ext, Port: realaddr.Port}
+		}
+	}
+	cfg := discover.Config{
+		PrivateKey:    srv.PrivateKey,
+		AnnounceAddr:  realaddr,
+		NodeDBPath:    srv.NodeDatabase,
+		NetRestrict:   srv.NetRestrict,
+		Bootnodes:     srv.BootstrapNodes,
+		Unhandled:     nil,
+		Conn:          conn,
+		Addr:          realaddr,
+		Id:            discover.PubkeyID(&srv.PrivateKey.PublicKey),
+		NodeType:      ConvertNodeType(srv.ConnectionType),
+		NetworkID:     srv.NetworkID,
+		DiscoverTypes: srv.DiscoverTypes,
+	}
+
+	ntab, err := discover.ListenUDP(&cfg)
+	if err != nil {
+		return err
+	}
+	srv.ntab = ntab
+	return nil
+}
+
+func (srv *BaseServer) makeOurHandshakeMsg() *protoHandshake {
+	hs := &protoHandshake{Version: baseProtocolVersion, Name: srv.Name(), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey), Multichannel: false}
+	for _, p := range srv.Protocols {
+		hs.Caps = append(hs.Caps, p.cap())
+	}
+	return hs
 }
 
 func (srv *BaseServer) startListening() error {
