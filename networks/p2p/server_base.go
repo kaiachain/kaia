@@ -67,11 +67,12 @@ type BaseServer struct {
 	lastLookupMu sync.Mutex
 
 	// Peer lifecycle state
-	selfID       discover.NodeID // precompulted Self().ID
-	peers        map[discover.NodeID]*Peer
-	inboundCount int
-	trusted      map[discover.NodeID]bool
-	dialstate    dialer
+	selfID        discover.NodeID // precompulted Self().ID
+	peers         map[discover.NodeID]*Peer
+	inboundCount  int
+	outboundCount int
+	trusted       map[discover.NodeID]bool
+	dialstate     dialer
 
 	// Wake the dial loop when peer lifecycle changes affect scheduling.
 	wakeup chan struct{} // TODO: dialsched should react to the peer changes.
@@ -175,7 +176,6 @@ func (srv *BaseServer) initialize() error {
 
 	srv.selfID = discover.PubkeyID(&srv.PrivateKey.PublicKey)
 	srv.peers = make(map[discover.NodeID]*Peer)
-	srv.inboundCount = 0
 	srv.trusted = make(map[discover.NodeID]bool, len(srv.TrustedNodes))
 	for _, n := range srv.TrustedNodes {
 		srv.trusted[n.ID] = true
@@ -602,16 +602,10 @@ func (srv *BaseServer) handleAddPeerConn(c *conn) error {
 	if srv.EnableMsgEvents {
 		p.events = &srv.peerFeed
 	}
-	name := truncateName(c.name)
-	srv.logger.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(srv.peers)+1)
-
 	srv.peers[c.id] = p
-	if p.Inbound() {
-		srv.inboundCount++
-	}
-	peerCountGauge.Update(int64(len(srv.peers)))
-	peerInCountGauge.Update(int64(srv.inboundCount))
-	peerOutCountGauge.Update(int64(len(srv.peers) - srv.inboundCount))
+	srv.incrementConnectionCounts(p)
+	srv.reportPeerMetric()
+	srv.logger.Debug("Adding p2p peer", "name", truncateName(c.name), "addr", c.fd.RemoteAddr(), "peers", len(srv.peers))
 
 	srv.peerWG.Add(1)
 	go srv.runPeer(p)
@@ -651,18 +645,34 @@ func (srv *BaseServer) handleDelPeer(pd peerDrop) {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 
-	d := common.PrettyDuration(mclock.Now() - pd.created)
-	pd.logger.Debug("Removing p2p peer", "duration", d, "peers", len(srv.peers)-1, "req", pd.requested, "err", pd.err)
 	delete(srv.peers, pd.ID())
 
-	if pd.Inbound() {
-		srv.inboundCount--
-	}
+	d := common.PrettyDuration(mclock.Now() - pd.created)
+	pd.logger.Debug("Removing p2p peer", "duration", d, "peers", len(srv.peers), "req", pd.requested, "err", pd.err)
+	srv.decrementConnectionCounts(pd.Peer)
+	srv.reportPeerMetric()
+	srv.wakeupDialer()
+}
 
+func (srv *BaseServer) incrementConnectionCounts(p *Peer) {
+	peerInbound, peerOutbound := p.GetNumberInboundAndOutbound()
+	srv.inboundCount += peerInbound
+	srv.outboundCount += peerOutbound
+}
+
+func (srv *BaseServer) decrementConnectionCounts(p *Peer) {
+	peerInbound, peerOutbound := p.GetNumberInboundAndOutbound()
+	srv.inboundCount -= peerInbound
+	srv.outboundCount -= peerOutbound
+}
+
+func (srv *BaseServer) reportPeerMetric() {
 	peerCountGauge.Update(int64(len(srv.peers)))
 	peerInCountGauge.Update(int64(srv.inboundCount))
-	peerOutCountGauge.Update(int64(len(srv.peers) - srv.inboundCount))
-	srv.wakeupDialer()
+	peerOutCountGauge.Update(int64(srv.outboundCount))
+	connectionCountGauge.Update(int64(srv.outboundCount + srv.inboundCount))
+	connectionInCountGauge.Update(int64(srv.inboundCount))
+	connectionOutCountGauge.Update(int64(srv.outboundCount))
 }
 
 // Dial creates a TCP connection to the node.
