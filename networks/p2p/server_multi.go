@@ -44,6 +44,7 @@ type MultiChannelServer struct {
 	listeners      []net.Listener              // Extended TCP listener
 	ListenAddrs    []string                    // Extended TCP listen addresses
 	CandidateConns map[discover.NodeID][]*conn // Subset of connections towards a premature peer
+	outboundCount  int
 }
 
 // Stop terminates the server and all active peer connections.
@@ -69,6 +70,7 @@ func (srv *MultiChannelServer) Stop() {
 	close(srv.quit)   // Ask loops to terminate
 	srv.lock.Unlock() // Unlock to allow loops to finish their remaining jobs.
 	srv.loopWG.Wait() // Wait for loops to terminate
+	srv.peerWG.Wait() // Wait for peers to terminate
 	srv.logger.Info("Stopped P2P server")
 }
 
@@ -110,9 +112,9 @@ func (srv *MultiChannelServer) Start() (err error) {
 	}
 
 	// Start dialing. TODO: Only if !NoDial, start DialSched.
-	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.maxDialedConns(), srv.NetRestrict, srv.PrivateKey, srv.getTypeStatics())
+	srv.dialstate = newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.maxDialedConns(), srv.NetRestrict, srv.PrivateKey, srv.getTypeStatics())
 	srv.loopWG.Add(1)
-	go srv.run(dialer)
+	go srv.run(srv.dialstate)
 
 	srv.logger.Info("Started P2P server", "id", discover.PubkeyID(&srv.PrivateKey.PublicKey), "multichannel", true)
 	return nil
@@ -128,6 +130,7 @@ func (srv *MultiChannelServer) initialize() error {
 	srv.ListenAddrs = append(srv.ListenAddrs, srv.ListenAddr)
 	srv.ListenAddrs = append(srv.ListenAddrs, srv.SubListenAddr...)
 	srv.CandidateConns = make(map[discover.NodeID][]*conn)
+	srv.outboundCount = 0
 	return nil
 }
 
@@ -261,9 +264,8 @@ func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *
 	return err
 }
 
-// setupConn runs the handshakes and attempts to add the connection
-// as a peer. It returns when the connection has been added as a peer
-// or the handshakes have failed.
+// Overrides BaseServer.setupConn() to preserve multichannel port-order handling
+// while moving the peer admission stages off the event loop.
 func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *discover.Node) error {
 	// Prevent leftover pending conns from entering the handshake.
 	srv.lock.Lock()
@@ -296,7 +298,7 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 		clog.Trace("Dialed identity mismatch", "want", c, dialDest.ID)
 		return DiscUnexpectedIdentity
 	}
-	err = srv.checkpoint(c, srv.posthandshake)
+	err = srv.handlePostHandshake(c)
 	if err != nil {
 		clog.Trace("Rejected peer before protocol handshake", "err", err)
 		return err
@@ -324,36 +326,89 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 		return errUpdateDial
 	}
 
-	err = srv.checkpoint(c, srv.addpeer)
+	err = srv.handleAddPeerConn(c)
 	if err != nil {
 		clog.Trace("Rejected peer", "err", err)
 		return err
 	}
 	// If the checks completed successfully, runPeer has now been
-	// launched by run.
+	// launched by handleAddPeerConn.
 	clog.Trace("connection set up", "inbound", dialDest == nil)
 	return nil
 }
 
-// run is the main loop that the server runs.
+// Override BaseServer.handleAddPeerConn because multichannel peer admission
+// waits for the full candidate connection set and updates outbound metrics.
+func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+
+	if !srv.running {
+		return errServerStopped
+	}
+	err := srv.protoHandshakeChecks(srv.peers, srv.inboundCount, c)
+	if err != nil {
+		return err
+	}
+
+	var p *Peer
+	if c.multiChannel {
+		connSet := srv.CandidateConns[c.id]
+		if connSet == nil {
+			connSet = make([]*conn, len(srv.ListenAddrs))
+			srv.CandidateConns[c.id] = connSet
+		}
+
+		if int(c.portOrder) < len(connSet) {
+			connSet[c.portOrder] = c
+		}
+
+		pending := len(connSet)
+		for _, conn := range connSet {
+			if conn != nil {
+				pending--
+			}
+		}
+		if pending != 0 {
+			return nil
+		}
+
+		p, err = newPeer(connSet, srv.Protocols, srv.Config.RWTimerConfig)
+		srv.CandidateConns[c.id] = nil
+	} else {
+		p, err = newPeer([]*conn{c}, srv.Protocols, srv.Config.RWTimerConfig)
+	}
+	if err != nil {
+		srv.logger.Error("Fail make a new peer", "err", err)
+		return err
+	}
+
+	if srv.EnableMsgEvents {
+		p.events = &srv.peerFeed
+	}
+	name := truncateName(c.name)
+	srv.logger.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(srv.peers)+1)
+
+	srv.peers[c.id] = p
+	peerCountGauge.Update(int64(len(srv.peers)))
+	srv.inboundCount, srv.outboundCount = increasesConnectionMetric(srv.inboundCount, srv.outboundCount, p)
+
+	srv.peerWG.Add(1)
+	go srv.runPeer(p)
+	return nil
+}
+
+// Overrides BaseServer.run() to keep multichannel dialing while peer lifecycle
+// serialization moves to the direct handlers.
 func (srv *MultiChannelServer) run(dialstate dialer) {
 	logger.Debug("[p2p.Server] start MultiChannel p2p server")
 	defer srv.loopWG.Done()
 	var (
-		peers         = make(map[discover.NodeID]*Peer)
-		inboundCount  = 0
-		outboundCount = 0
-		trusted       = make(map[discover.NodeID]bool, len(srv.TrustedNodes))
-		taskdone      = make(chan task, maxActiveDialTasks)
-		runningTasks  []task
-		queuedTasks   []task // tasks that can't run yet
+		peers        = srv.peers
+		taskdone     = make(chan task, maxActiveDialTasks)
+		runningTasks []task
+		queuedTasks  []task // tasks that can't run yet
 	)
-	// Put trusted nodes into a map to speed up checks.
-	// Trusted peers are loaded on startup and cannot be
-	// modified while the server is running.
-	for _, n := range srv.TrustedNodes {
-		trusted[n.ID] = true
-	}
 
 	// removes t from runningTasks
 	delTask := func(t task) {
@@ -380,7 +435,9 @@ func (srv *MultiChannelServer) run(dialstate dialer) {
 		queuedTasks = append(queuedTasks[:0], startTasks(queuedTasks)...)
 		// Query dialer for new tasks and start as many as possible now.
 		if len(runningTasks) < maxActiveDialTasks {
+			srv.lock.Lock()
 			nt := dialstate.newTasks(len(runningTasks)+len(queuedTasks), peers, time.Now())
+			srv.lock.Unlock()
 			queuedTasks = append(queuedTasks, startTasks(nt)...)
 		}
 	}
@@ -393,117 +450,16 @@ running:
 		case <-srv.quit:
 			// The server was stopped. Run the cleanup logic.
 			break running
-		case n := <-srv.addstatic:
-			// This channel is used by AddPeer to add to the
-			// ephemeral static peer list. Add it to the dialer,
-			// it will keep the node connected.
-			srv.logger.Debug("Adding static node", "node", n)
-			dialstate.addStatic(n)
-		case n := <-srv.removestatic:
-			// This channel is used by RemovePeer to send a
-			// disconnect request to a peer and begin the
-			// stop keeping the node connected
-			srv.logger.Debug("Removing static node", "node", n)
-			dialstate.removeStatic(n)
-			if p, ok := peers[n.ID]; ok {
-				p.Disconnect(DiscRequested)
-			}
-		case op := <-srv.peerOp:
-			// This channel is used by Peers and PeerCount.
-			op(peers)
-			srv.peerOpDone <- struct{}{}
+		case <-srv.wakeup:
 		case t := <-taskdone:
 			// A task got done. Tell dialstate about it so it
 			// can update its state and remove it from the active
 			// tasks list.
 			srv.logger.Trace("Dial task done", "task", t)
+			srv.lock.Lock()
 			dialstate.taskDone(t, time.Now())
+			srv.lock.Unlock()
 			delTask(t)
-		case c := <-srv.posthandshake:
-			// A connection has passed the encryption handshake so
-			// the remote identity is known (but hasn't been verified yet).
-			if trusted[c.id] {
-				// Ensure that the trusted flag is set before checking against MaxPhysicalConnections.
-				c.flags |= trustedConn
-			}
-			// TODO: track in-progress inbound node IDs (pre-Peer) to avoid dialing them.
-			select {
-			case c.cont <- srv.encHandshakeChecks(peers, inboundCount, c):
-			case <-srv.quit:
-				break running
-			}
-		case c := <-srv.addpeer:
-			var p *Peer
-			var e error
-			// At this point the connection is past the protocol handshake.
-			// Its capabilities are known and the remote identity is verified.
-			err := srv.protoHandshakeChecks(peers, inboundCount, c)
-			if err == nil {
-				if c.multiChannel {
-					connSet := srv.CandidateConns[c.id]
-					if connSet == nil {
-						connSet = make([]*conn, len(srv.ListenAddrs))
-						srv.CandidateConns[c.id] = connSet
-					}
-
-					if int(c.portOrder) < len(connSet) {
-						connSet[c.portOrder] = c
-					}
-
-					count := len(connSet)
-					for _, conn := range connSet {
-						if conn != nil {
-							count--
-						}
-					}
-
-					if count == 0 {
-						p, e = newPeer(connSet, srv.Protocols, srv.Config.RWTimerConfig)
-						srv.CandidateConns[c.id] = nil
-					}
-				} else {
-					// The handshakes are done and it passed all checks.
-					p, e = newPeer([]*conn{c}, srv.Protocols, srv.Config.RWTimerConfig)
-				}
-
-				if e != nil {
-					srv.logger.Error("Fail make a new peer", "err", e)
-				} else if p != nil {
-					// If message events are enabled, pass the peerFeed
-					// to the peer
-					if srv.EnableMsgEvents {
-						p.events = &srv.peerFeed
-					}
-					name := truncateName(c.name)
-					srv.logger.Debug("Adding p2p peer", "name", name, "addr", c.fd.RemoteAddr(), "peers", len(peers)+1)
-					go srv.runPeer(p)
-					peers[c.id] = p
-
-					peerCountGauge.Update(int64(len(peers)))
-					inboundCount, outboundCount = increasesConnectionMetric(inboundCount, outboundCount, p)
-				}
-			}
-			// The dialer logic relies on the assumption that
-			// dial tasks complete after the peer has been added or
-			// discarded. Unblock the task last.
-			select {
-			case c.cont <- err:
-			case <-srv.quit:
-				break running
-			}
-		case pd := <-srv.delpeer:
-			// A peer disconnected.
-			d := common.PrettyDuration(mclock.Now() - pd.created)
-			pd.logger.Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
-			delete(peers, pd.ID())
-
-			peerCountGauge.Update(int64(len(peers)))
-			inboundCount, outboundCount = decreasesConnectionMetric(inboundCount, outboundCount, pd.Peer)
-		case nid := <-srv.discpeer:
-			if p, ok := peers[nid]; ok {
-				p.Disconnect(DiscRequested)
-				p.logger.Debug("disconnect peer")
-			}
 		}
 	}
 
@@ -517,23 +473,22 @@ running:
 	//	srv.DiscV5.Close()
 	//}
 	// Disconnect all peers.
-	for _, p := range peers {
-		p.Disconnect(DiscQuitting)
+	srv.lock.Lock()
+	shutdownPeers := make([]*Peer, 0, len(srv.peers))
+	for _, p := range srv.peers {
+		shutdownPeers = append(shutdownPeers, p)
 	}
-	// Wait for peers to shut down. Pending connections and tasks are
-	// not handled here and will terminate soon-ish because srv.quit
-	// is closed.
-	for len(peers) > 0 {
-		p := <-srv.delpeer
-		p.logger.Trace("<-delpeer (spindown)", "remainingTasks", len(runningTasks))
-		delete(peers, p.ID())
+	srv.lock.Unlock()
+	for _, p := range shutdownPeers {
+		p.Disconnect(DiscQuitting)
 	}
 }
 
-// runPeer runs in its own goroutine for each peer.
-// it waits until the Peer logic returns and removes
-// the peer.
+// Overrides BaseServer.runPeer() because multichannel peers run all socket
+// read-writers and need multichannel-specific removal accounting.
 func (srv *MultiChannelServer) runPeer(p *Peer) {
+	defer srv.peerWG.Done()
+
 	if srv.newPeerHook != nil {
 		srv.newPeerHook(p)
 	}
@@ -554,93 +509,22 @@ func (srv *MultiChannelServer) runPeer(p *Peer) {
 		Error: err.Error(),
 	})
 
-	// Note: run waits for existing peers to be sent on srv.delpeer
-	// before returning, so this send should not select on srv.quit.
-	srv.delpeer <- peerDrop{p, err, remoteRequested}
+	srv.handleDelPeer(peerDrop{p, err, remoteRequested})
 }
 
-// AddPeer connects to the given node and maintains the connection until the
-// server is shut down. If the connection fails for any reason, the server will
-// attempt to reconnect the peer.
-func (srv *MultiChannelServer) AddPeer(node *discover.Node) {
-	select {
-	case srv.addstatic <- node:
-	case <-srv.quit:
-	}
-}
+// Override BaseServer.handleDelPeer because multichannel teardown updates both
+// inbound and outbound connection metrics.
+func (srv *MultiChannelServer) handleDelPeer(pd peerDrop) {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
 
-// RemovePeer disconnects from the given node.
-func (srv *MultiChannelServer) RemovePeer(node *discover.Node) {
-	select {
-	case srv.removestatic <- node:
-	case <-srv.quit:
-	}
-}
+	d := common.PrettyDuration(mclock.Now() - pd.created)
+	pd.logger.Debug("Removing p2p peer", "duration", d, "peers", len(srv.peers)-1, "req", pd.requested, "err", pd.err)
+	delete(srv.peers, pd.ID())
 
-// Disconnect tries to disconnect peer.
-func (srv *MultiChannelServer) Disconnect(destID discover.NodeID) {
-	srv.discpeer <- destID
-}
-
-// PeersInfo returns an array of metadata objects describing connected peers.
-func (srv *MultiChannelServer) PeersInfo() []*PeerInfo {
-	infos := make([]*PeerInfo, 0, srv.PeerCount())
-	for _, peer := range srv.Peers() {
-		if peer != nil {
-			infos = append(infos, peer.Info())
-		}
-	}
-	for i := 0; i < len(infos); i++ {
-		for j := i + 1; j < len(infos); j++ {
-			if infos[i].ID > infos[j].ID {
-				infos[i], infos[j] = infos[j], infos[i]
-			}
-		}
-	}
-	return infos
-}
-
-// PeerCount returns the number of connected peers.
-func (srv *MultiChannelServer) PeerCount() int {
-	var count int
-	select {
-	case srv.peerOp <- func(ps map[discover.NodeID]*Peer) { count = len(ps) }:
-		<-srv.peerOpDone
-	case <-srv.quit:
-	}
-	return count
-}
-
-// PeerCountByType returns the number of connected peers by type.
-func (srv *MultiChannelServer) PeerCountByType() map[string]uint {
-	pc := map[string]uint{"total": 0}
-	select {
-	case srv.peerOp <- func(ps map[discover.NodeID]*Peer) {
-		for _, peer := range ps {
-			key := ConvertConnTypeToString(peer.ConnType())
-			pc[key]++
-			pc["total"]++
-		}
-	}:
-		<-srv.peerOpDone
-	case <-srv.quit:
-	}
-	return pc
-}
-
-// Peers returns all connected peers.
-func (srv *MultiChannelServer) Peers() []*Peer {
-	var ps []*Peer
-	select {
-	case srv.peerOp <- func(peers map[discover.NodeID]*Peer) {
-		for _, p := range peers {
-			ps = append(ps, p)
-		}
-	}:
-		<-srv.peerOpDone
-	case <-srv.quit:
-	}
-	return ps
+	peerCountGauge.Update(int64(len(srv.peers)))
+	srv.inboundCount, srv.outboundCount = decreasesConnectionMetric(srv.inboundCount, srv.outboundCount, pd.Peer)
+	srv.wakeupDialer()
 }
 
 // GetListenAddress returns the listen addresses of the server.
