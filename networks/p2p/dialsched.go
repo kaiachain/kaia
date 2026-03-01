@@ -298,9 +298,7 @@ func (ds *DialSched) launchDialTasks(candidates []*discover.Node, resCh chan str
 		}
 		ds.markDialingStart(n)
 		nn := cloneNode(n)
-		ds.wg.Add(1)
 		go func() {
-			defer ds.wg.Done()
 			ds.dialOnce(nn)
 			ds.signalResult(resCh)
 		}()
@@ -379,9 +377,7 @@ func (ds *DialSched) refreshOnce(resCh chan struct{}) {
 	if ds.tab == nil {
 		return
 	}
-	ds.wg.Add(1)
 	go func() {
-		defer ds.wg.Done()
 		// TODO: use tab.Refresh()
 		ds.tab.Lookup(ds.selfID, discover.NodeTypeCN)
 		ds.tab.Lookup(ds.selfID, discover.NodeTypePN)
@@ -428,6 +424,9 @@ func (ds *DialSched) shouldDial(n *discover.Node) bool {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
+	if ds.closed.Load() {
+		return false
+	}
 	if n == nil {
 		return false
 	}

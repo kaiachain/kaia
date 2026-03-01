@@ -65,11 +65,14 @@ func (srv *MultiChannelServer) Stop() {
 		listener.Close()
 	}
 
-	close(srv.quit)   // Ask loops to terminate
+	close(srv.quit) // Ask loops to terminate
+
+	// Unlock here to allow Server loops and dialsched loop to finish their remaining jobs, dialsched to finish its dial goroutines.
+	srv.lock.Unlock()
+
 	if srv.dialSched != nil {
-		srv.dialSched.Close()
+		srv.dialSched.Close() // Wait for dial attempts to finish.
 	}
-	srv.lock.Unlock() // Unlock to allow loops to finish their remaining jobs.
 	srv.loopWG.Wait() // Wait for loops to terminate
 	srv.peerWG.Wait() // Wait for peers to terminate
 	srv.logger.Info("Stopped P2P server")
