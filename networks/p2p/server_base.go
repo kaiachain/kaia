@@ -148,6 +148,7 @@ func (srv *BaseServer) Start() (err error) {
 			staticNodes: srv.StaticNodes,
 			netrestrict: srv.NetRestrict,
 			maxDynDials: srv.maxDialedConns(),
+			dialer:      srv.Dialer,
 		}, srv.ntab, srv)
 		srv.dialSched.Start()
 	}
@@ -171,9 +172,6 @@ func (srv *BaseServer) initialize() error {
 	}
 	if srv.newTransport == nil {
 		srv.newTransport = newRLPX
-	}
-	if srv.Dialer == nil {
-		srv.Dialer = TCPDialer{&net.Dialer{Timeout: defaultDialTimeout}}
 	}
 	srv.quit = make(chan struct{})
 
@@ -331,7 +329,6 @@ func (srv *BaseServer) maxDialedConns() int {
 		return 0
 	}
 }
-
 
 // listenLoop runs in its own goroutine and accepts
 // inbound connections.
@@ -584,16 +581,6 @@ func (srv *BaseServer) reportPeerMetric() {
 	connectionCountGauge.Update(int64(srv.outboundCount + srv.inboundCount))
 	connectionInCountGauge.Update(int64(srv.inboundCount))
 	connectionOutCountGauge.Update(int64(srv.outboundCount))
-}
-
-// Dial creates a TCP connection to the node.
-func (srv *BaseServer) Dial(dest *discover.Node) (net.Conn, error) {
-	return srv.Dialer.Dial(dest)
-}
-
-// Dial creates a TCP connection to the node.
-func (srv *BaseServer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
-	return srv.Dialer.DialMulti(dest)
 }
 
 // Disconnect tries to disconnect peer.
