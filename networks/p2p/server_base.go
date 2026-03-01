@@ -85,8 +85,8 @@ type SingleChannelServer struct {
 // It blocks until all active connections are closed.
 func (srv *BaseServer) Stop() {
 	srv.lock.Lock()
-	defer srv.lock.Unlock()
 	if !srv.running {
+		srv.lock.Unlock()
 		return
 	}
 	srv.running = false
@@ -98,6 +98,7 @@ func (srv *BaseServer) Stop() {
 	}
 
 	close(srv.quit)   // Ask loops to terminate
+	srv.lock.Unlock() // Unlock to allow loops to finish their remaining jobs.
 	srv.loopWG.Wait() // Wait for loops to terminate
 	srv.logger.Info("Stopped P2P server")
 }
