@@ -40,7 +40,6 @@ const (
 	defaultDialTimeout = 15 * time.Second
 
 	// Connectivity defaults.
-	maxActiveDialTasks     = 16
 	defaultMaxPendingPeers = 50
 	defaultDialRatio       = 3
 
@@ -50,12 +49,12 @@ const (
 
 	// Maximum amount of time allowed for writing a complete message.
 	frameWriteTimeout = 20 * time.Second
-
-	// Maximum number of times to retry typed static node discovery.
-	typedStaticRetry = 3
 )
 
-var errServerStopped = errors.New("server stopped")
+var (
+	errServerStopped = errors.New("server stopped")
+	errUpdateDial    = errors.New("updated to be multichannel peer")
+)
 
 // Config holds Server options.
 type Config struct {
@@ -194,16 +193,6 @@ type Server interface {
 	// Underlying protocol handlers
 	GetProtocols() []Protocol
 	AddProtocols(p []Protocol)
-
-	// LastLookup memory TODO: dialsched should manage it inside.
-	AddLastLookup() time.Time
-	SetLastLookupToNow()
-
-	// Wrapper to discovery methods TODO: dialsched should call these directly, not through server.
-	CheckNilNetworkTable() bool
-	GetNodes(nType discover.NodeType, max int) []*discover.Node
-	Lookup(target discover.NodeID, nType discover.NodeType) []*discover.Node
-	Resolve(target discover.NodeID, nType discover.NodeType) *discover.Node
 
 	// Inject static nodes to connect to
 	// AddPeer connects to the given node and maintains the connection until the

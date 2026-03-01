@@ -28,7 +28,6 @@ import (
 	"errors"
 	"net"
 	"sync"
-	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/mclock"
@@ -61,10 +60,6 @@ type BaseServer struct {
 	ourHandshake *protoHandshake    // our TCP handshake message
 	listener     net.Listener       // TCP listener
 	peerFeed     event.Feed         // Peer event feed as in peer.go:PeerEventType.
-
-	// LastLookup memory TODO: dialsched should manage it inside.
-	lastLookup   time.Time
-	lastLookupMu sync.Mutex
 
 	// Peer lifecycle state
 	selfID        discover.NodeID // precompulted Self().ID
@@ -337,33 +332,6 @@ func (srv *BaseServer) maxDialedConns() int {
 	}
 }
 
-func (srv *BaseServer) getTypeStatics() map[dialType]typedStatic {
-	switch srv.ConnectionType {
-	case common.CONSENSUSNODE:
-		tsMap := make(map[dialType]typedStatic)
-		if srv.DiscoverTypes.CN {
-			tsMap[DT_CN] = typedStatic{discover.MaxCNCNCount, typedStaticRetry}
-		}
-		return tsMap
-	case common.PROXYNODE:
-		tsMap := make(map[dialType]typedStatic)
-		if srv.DiscoverTypes.PN {
-			tsMap[DT_PN] = typedStatic{discover.MaxPNPNCount, typedStaticRetry}
-		}
-		return tsMap
-	case common.ENDPOINTNODE:
-		tsMap := make(map[dialType]typedStatic)
-		if srv.DiscoverTypes.PN {
-			tsMap[DT_PN] = typedStatic{discover.MaxENPNCount, typedStaticRetry}
-		}
-		return tsMap
-	case common.BOOTNODE:
-		return nil
-	default:
-		logger.Crit("[p2p.Server] UnSupported Connection Type:", "ConnectionType", srv.ConnectionType)
-		return nil
-	}
-}
 
 // listenLoop runs in its own goroutine and accepts
 // inbound connections.
@@ -652,46 +620,6 @@ func (srv *BaseServer) GetProtocols() []Protocol {
 // AddProtocols adds protocols to the server.
 func (srv *BaseServer) AddProtocols(p []Protocol) {
 	srv.Protocols = append(srv.Protocols, p...)
-}
-
-// AddLastLookup adds lastLookup to duration.
-func (srv *BaseServer) AddLastLookup() time.Time {
-	srv.lastLookupMu.Lock()
-	defer srv.lastLookupMu.Unlock()
-	return srv.lastLookup.Add(lookupInterval)
-}
-
-// SetLastLookupToNow sets LastLookup to the current time.
-func (srv *BaseServer) SetLastLookupToNow() {
-	srv.lastLookupMu.Lock()
-	defer srv.lastLookupMu.Unlock()
-	srv.lastLookup = time.Now()
-}
-
-//// Wrapper to discovery methods
-
-// CheckNilNetworkTable returns whether network table is nil.
-func (srv *BaseServer) CheckNilNetworkTable() bool {
-	return srv.ntab == nil
-}
-
-func (srv *BaseServer) GetNodes(nType discover.NodeType, max int) []*discover.Node {
-	return srv.ntab.GetNodes(nType, max)
-}
-
-// Lookup performs a network search for nodes close
-// to the given target. It approaches the target by querying
-// nodes that are closer to it on each iteration.
-// The given target does not need to be an actual node
-// identifier.
-func (srv *BaseServer) Lookup(target discover.NodeID, nType discover.NodeType) []*discover.Node {
-	return srv.ntab.Lookup(target, nType)
-}
-
-// Resolve searches for a specific node with the given ID and NodeType.
-// It returns nil if the node could not be found.
-func (srv *BaseServer) Resolve(target discover.NodeID, nType discover.NodeType) *discover.Node {
-	return srv.ntab.Resolve(target, nType)
 }
 
 //// Inject static nodes to connect to
