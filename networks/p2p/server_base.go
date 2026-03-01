@@ -73,6 +73,7 @@ type BaseServer struct {
 	dialstate    dialer
 
 	// Request channels
+	wakeup        chan struct{} // TODO: dialsched should react to the peer changes.
 	addstatic     chan *discover.Node
 	removestatic  chan *discover.Node
 	peerOp        chan peerOpFunc
@@ -176,6 +177,7 @@ func (srv *BaseServer) initialize() error {
 		srv.Dialer = TCPDialer{&net.Dialer{Timeout: defaultDialTimeout}}
 	}
 	srv.quit = make(chan struct{})
+	srv.wakeup = make(chan struct{}, 1)
 	srv.addpeer = make(chan *conn)
 	srv.delpeer = make(chan peerDrop)
 	srv.posthandshake = make(chan *conn)
@@ -315,12 +317,7 @@ running:
 		case <-srv.quit:
 			// The server was stopped. Run the cleanup logic.
 			break running
-		case n := <-srv.addstatic:
-			// This channel is used by AddPeer to add to the
-			// ephemeral static peer list. Add it to the dialer,
-			// it will keep the node connected.
-			srv.logger.Debug("Adding static node", "node", n)
-			dialstate.addStatic(n)
+		case <-srv.wakeup:
 		case n := <-srv.removestatic:
 			// This channel is used by RemovePeer to send a
 			// disconnect request to a peer and begin the
@@ -432,6 +429,15 @@ running:
 		p := <-srv.delpeer
 		p.logger.Trace("<-delpeer (spindown)", "remainingTasks", len(runningTasks))
 		delete(peers, p.ID())
+	}
+}
+
+// Signal the dialer loop in run() to wake up upon peer changes.
+// TODO: dialsched should react to the peer changes.
+func (srv *BaseServer) wakeupDialer() {
+	select {
+	case srv.wakeup <- struct{}{}:
+	default:
 	}
 }
 
@@ -772,10 +778,15 @@ func (srv *BaseServer) Resolve(target discover.NodeID, nType discover.NodeType) 
 // server is shut down. If the connection fails for any reason, the server will
 // attempt to reconnect the peer.
 func (srv *BaseServer) AddPeer(node *discover.Node) {
-	select {
-	case srv.addstatic <- node:
-	case <-srv.quit:
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+
+	if !srv.running {
+		return
 	}
+	srv.logger.Debug("Adding static node", "node", node)
+	srv.dialstate.addStatic(node)
+	srv.wakeupDialer()
 }
 
 // RemovePeer disconnects from the given node.

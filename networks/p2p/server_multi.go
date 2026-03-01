@@ -559,6 +559,16 @@ func (srv *MultiChannelServer) runPeer(p *Peer) {
 	srv.delpeer <- peerDrop{p, err, remoteRequested}
 }
 
+// AddPeer connects to the given node and maintains the connection until the
+// server is shut down. If the connection fails for any reason, the server will
+// attempt to reconnect the peer.
+func (srv *MultiChannelServer) AddPeer(node *discover.Node) {
+	select {
+	case srv.addstatic <- node:
+	case <-srv.quit:
+	}
+}
+
 // GetListenAddress returns the listen addresses of the server.
 func (srv *MultiChannelServer) GetListenAddress() []string {
 	return srv.ListenAddrs
