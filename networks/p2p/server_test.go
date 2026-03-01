@@ -131,13 +131,13 @@ func startTestMultiChannelServer(t *testing.T, id discover.NodeID, pf func(*Peer
 func makeconn(fd net.Conn, id discover.NodeID) *conn {
 	dialDest, _ := id.Pubkey()
 	tx := newTestTransport(id, fd, dialDest, false)
-	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error)}
+	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: common.ConnTypeUndefined, id: id}
 }
 
 func makeMultiChannelConn(fd net.Conn, id discover.NodeID) *conn {
 	dialDest, _ := id.Pubkey()
 	tx := newTestTransport(id, fd, dialDest, true)
-	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error), multiChannel: true}
+	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: common.ConnTypeUndefined, id: id, multiChannel: true}
 }
 
 func TestServerListen(t *testing.T) {
@@ -488,7 +488,7 @@ func TestServerAtCap(t *testing.T) {
 	newconn := func(id discover.NodeID) *conn {
 		fd, _ := net.Pipe()
 		tx := newTestTransport(id, fd, nil, false)
-		return &conn{fd: fd, transport: tx, flags: inboundConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error)}
+		return &conn{fd: fd, transport: tx, flags: inboundConn, conntype: common.ConnTypeUndefined, id: id}
 	}
 
 	// Inject a few connections to fill up the peer set.

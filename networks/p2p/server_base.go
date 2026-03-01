@@ -73,16 +73,8 @@ type BaseServer struct {
 	trusted      map[discover.NodeID]bool
 	dialstate    dialer
 
-	// Request channels
-	wakeup        chan struct{} // TODO: dialsched should react to the peer changes.
-	addstatic     chan *discover.Node
-	removestatic  chan *discover.Node
-	peerOp        chan peerOpFunc
-	peerOpDone    chan struct{}
-	posthandshake chan *conn
-	addpeer       chan *conn
-	delpeer       chan peerDrop
-	discpeer      chan discover.NodeID
+	// Wake the dial loop when peer lifecycle changes affect scheduling.
+	wakeup chan struct{} // TODO: dialsched should react to the peer changes.
 }
 
 // SingleChannelServer is a server that uses a single channel.
@@ -180,14 +172,6 @@ func (srv *BaseServer) initialize() error {
 	}
 	srv.quit = make(chan struct{})
 	srv.wakeup = make(chan struct{}, 1)
-	srv.addpeer = make(chan *conn)
-	srv.delpeer = make(chan peerDrop)
-	srv.posthandshake = make(chan *conn)
-	srv.addstatic = make(chan *discover.Node)
-	srv.removestatic = make(chan *discover.Node)
-	srv.peerOp = make(chan peerOpFunc)
-	srv.peerOpDone = make(chan struct{})
-	srv.discpeer = make(chan discover.NodeID)
 
 	srv.selfID = discover.PubkeyID(&srv.PrivateKey.PublicKey)
 	srv.peers = make(map[discover.NodeID]*Peer)
@@ -506,7 +490,7 @@ func (srv *BaseServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover
 		return errors.New("shutdown")
 	}
 
-	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, cont: make(chan error), portOrder: ConnDefault}
+	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, portOrder: ConnDefault}
 
 	// if err occurs, dialPubkey is automatically set as nil
 	if dialDest != nil {
@@ -632,22 +616,6 @@ func (srv *BaseServer) handleAddPeerConn(c *conn) error {
 	srv.peerWG.Add(1)
 	go srv.runPeer(p)
 	return nil
-}
-
-// checkpoint sends the conn to run, which performs the
-// post-handshake checks for the stage (posthandshake, addpeer).
-func (srv *BaseServer) checkpoint(c *conn, stage chan<- *conn) error {
-	select {
-	case stage <- c:
-	case <-srv.quit:
-		return errServerStopped
-	}
-	select {
-	case err := <-c.cont:
-		return err
-	case <-srv.quit:
-		return errServerStopped
-	}
 }
 
 // runPeer runs in its own goroutine for each peer.

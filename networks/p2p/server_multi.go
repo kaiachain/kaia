@@ -237,7 +237,7 @@ func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *
 		return errors.New("shutdown")
 	}
 
-	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, cont: make(chan error), portOrder: PortOrderUndefined}
+	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, portOrder: PortOrderUndefined}
 
 	if dialDest != nil {
 		// retrieve pubkey. if err occurs, dialPubkey is automatically set as nil
