@@ -437,6 +437,38 @@ func TestServerManyTasks(t *testing.T) {
 	}
 }
 
+func TestServerStopWaitsForPeerWG(t *testing.T) {
+	srv := &SingleChannelServer{
+		&BaseServer{
+			quit:    make(chan struct{}),
+			running: true,
+			logger:  logger.NewWith(),
+		},
+	}
+
+	srv.peerWG.Add(1)
+
+	stopped := make(chan struct{})
+	go func() {
+		srv.Stop()
+		close(stopped)
+	}()
+
+	select {
+	case <-stopped:
+		t.Fatal("Stop returned before peer goroutines finished")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	srv.peerWG.Done()
+
+	select {
+	case <-stopped:
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("Stop did not return after peer goroutines finished")
+	}
+}
+
 type taskgen struct {
 	newFunc  func(running int, peers map[discover.NodeID]*Peer) []task
 	doneFunc func(task)

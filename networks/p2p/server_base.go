@@ -53,6 +53,7 @@ type BaseServer struct {
 	running bool
 	quit    chan struct{}
 	loopWG  sync.WaitGroup // loop, listenLoop
+	peerWG  sync.WaitGroup // peer goroutines
 
 	// Relying components
 	logger       log.Logger
@@ -108,6 +109,7 @@ func (srv *BaseServer) Stop() {
 	close(srv.quit)   // Ask loops to terminate
 	srv.lock.Unlock() // Unlock to allow loops to finish their remaining jobs.
 	srv.loopWG.Wait() // Wait for loops to terminate
+	srv.peerWG.Wait() // Wait for peers to terminate
 	srv.logger.Info("Stopped P2P server")
 }
 
@@ -303,7 +305,9 @@ func (srv *BaseServer) run(dialstate dialer) {
 		queuedTasks = append(queuedTasks[:0], startTasks(queuedTasks)...)
 		// Query dialer for new tasks and start as many as possible now.
 		if len(runningTasks) < maxActiveDialTasks {
+			srv.lock.Lock()
 			nt := dialstate.newTasks(len(runningTasks)+len(queuedTasks), peers, time.Now())
+			srv.lock.Unlock()
 			queuedTasks = append(queuedTasks, startTasks(nt)...)
 		}
 	}
@@ -322,26 +326,17 @@ running:
 			// can update its state and remove it from the active
 			// tasks list.
 			srv.logger.Trace("Dial task done", "task", t)
+			srv.lock.Lock()
 			dialstate.taskDone(t, time.Now())
+			srv.lock.Unlock()
 			delTask(t)
-		case pd := <-srv.delpeer:
-			// A peer disconnected.
-			d := common.PrettyDuration(mclock.Now() - pd.created)
-			pd.logger.Debug("Removing p2p peer", "duration", d, "peers", len(peers)-1, "req", pd.requested, "err", pd.err)
-			delete(peers, pd.ID())
-
-			if pd.Inbound() {
-				srv.inboundCount--
-			}
-
-			peerCountGauge.Update(int64(len(peers)))
-			peerInCountGauge.Update(int64(srv.inboundCount))
-			peerOutCountGauge.Update(int64(len(peers) - srv.inboundCount))
 		case nid := <-srv.discpeer:
+			srv.lock.Lock()
 			if p, ok := peers[nid]; ok {
 				p.Disconnect(DiscRequested)
 				p.logger.Debug("disconnect peer")
 			}
+			srv.lock.Unlock()
 		}
 	}
 
@@ -355,16 +350,14 @@ running:
 	//	srv.DiscV5.Close()
 	//}
 	// Disconnect all peers.
-	for _, p := range peers {
-		p.Disconnect(DiscQuitting)
+	srv.lock.Lock()
+	shutdownPeers := make([]*Peer, 0, len(srv.peers))
+	for _, p := range srv.peers {
+		shutdownPeers = append(shutdownPeers, p)
 	}
-	// Wait for peers to shut down. Pending connections and tasks are
-	// not handled here and will terminate soon-ish because srv.quit
-	// is closed.
-	for len(peers) > 0 {
-		p := <-srv.delpeer
-		p.logger.Trace("<-delpeer (spindown)", "remainingTasks", len(runningTasks))
-		delete(peers, p.ID())
+	srv.lock.Unlock()
+	for _, p := range shutdownPeers {
+		p.Disconnect(DiscQuitting)
 	}
 }
 
@@ -643,6 +636,7 @@ func (srv *BaseServer) handleAddPeerConn(c *conn) error {
 	peerInCountGauge.Update(int64(srv.inboundCount))
 	peerOutCountGauge.Update(int64(len(srv.peers) - srv.inboundCount))
 
+	srv.peerWG.Add(1)
 	go srv.runPeer(p)
 	return nil
 }
@@ -667,6 +661,8 @@ func (srv *BaseServer) checkpoint(c *conn, stage chan<- *conn) error {
 // it waits until the Peer logic returns and removes
 // the peer.
 func (srv *BaseServer) runPeer(p *Peer) {
+	defer srv.peerWG.Done()
+
 	if srv.newPeerHook != nil {
 		srv.newPeerHook(p)
 	}
@@ -687,9 +683,25 @@ func (srv *BaseServer) runPeer(p *Peer) {
 		Error: err.Error(),
 	})
 
-	// Note: run waits for existing peers to be sent on srv.delpeer
-	// before returning, so this send should not select on srv.quit.
-	srv.delpeer <- peerDrop{p, err, remoteRequested}
+	srv.handleDelPeer(peerDrop{p, err, remoteRequested})
+}
+
+func (srv *BaseServer) handleDelPeer(pd peerDrop) {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+
+	d := common.PrettyDuration(mclock.Now() - pd.created)
+	pd.logger.Debug("Removing p2p peer", "duration", d, "peers", len(srv.peers)-1, "req", pd.requested, "err", pd.err)
+	delete(srv.peers, pd.ID())
+
+	if pd.Inbound() {
+		srv.inboundCount--
+	}
+
+	peerCountGauge.Update(int64(len(srv.peers)))
+	peerInCountGauge.Update(int64(srv.inboundCount))
+	peerOutCountGauge.Update(int64(len(srv.peers) - srv.inboundCount))
+	srv.wakeupDialer()
 }
 
 // Dial creates a TCP connection to the node.
