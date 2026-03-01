@@ -318,15 +318,6 @@ running:
 			// The server was stopped. Run the cleanup logic.
 			break running
 		case <-srv.wakeup:
-		case n := <-srv.removestatic:
-			// This channel is used by RemovePeer to send a
-			// disconnect request to a peer and begin the
-			// stop keeping the node connected
-			srv.logger.Debug("Removing static node", "node", n)
-			dialstate.removeStatic(n)
-			if p, ok := peers[n.ID]; ok {
-				p.Disconnect(DiscRequested)
-			}
 		case op := <-srv.peerOp:
 			// This channel is used by Peers and PeerCount.
 			op(peers)
@@ -780,10 +771,10 @@ func (srv *BaseServer) Resolve(target discover.NodeID, nType discover.NodeType) 
 func (srv *BaseServer) AddPeer(node *discover.Node) {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
-
 	if !srv.running {
 		return
 	}
+
 	srv.logger.Debug("Adding static node", "node", node)
 	srv.dialstate.addStatic(node)
 	srv.wakeupDialer()
@@ -791,9 +782,16 @@ func (srv *BaseServer) AddPeer(node *discover.Node) {
 
 // RemovePeer disconnects from the given node.
 func (srv *BaseServer) RemovePeer(node *discover.Node) {
-	select {
-	case srv.removestatic <- node:
-	case <-srv.quit:
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+	if !srv.running {
+		return
+	}
+
+	srv.logger.Debug("Removing static node", "node", node)
+	srv.dialstate.removeStatic(node)
+	if p, ok := srv.peers[node.ID]; ok {
+		p.Disconnect(DiscRequested)
 	}
 }
 
