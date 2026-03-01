@@ -58,8 +58,6 @@ func updatesConnectionMetric(inboundCount int, outboundCount int) {
 	connectionOutCountGauge.Update(int64(outboundCount))
 }
 
-type peerOpFunc func(map[discover.NodeID]*Peer)
-
 type peerDrop struct {
 	*Peer
 	err       error
@@ -108,7 +106,6 @@ type conn struct {
 	transport
 	flags        connFlag
 	conntype     common.ConnType // valid after the encryption handshake at the inbound connection case
-	cont         chan error      // The run loop uses cont to signal errors to SetupConn.
 	id           discover.NodeID // valid after the encryption handshake
 	caps         []Cap           // valid after the protocol handshake
 	name         string          // valid after the protocol handshake
