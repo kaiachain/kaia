@@ -66,6 +66,9 @@ type DialConfig struct {
 	// Used only when connTarget is nil, to compute the default EN-EN target.
 	// Pass the result of Server.maxDialedConns() here.
 	maxDynDials int
+
+	// Hooks for testing.
+	dialer NodeDialer
 }
 
 // DialSched schedules outbound dial attempts to fulfill the desired amount of connections for each node type.
@@ -118,10 +121,15 @@ func NewDialSched(cfg DialConfig, tab discovery, backend DialBackend) *DialSched
 		connTarget = defaultConnTarget(cfg)
 	}
 
+	dialer := cfg.dialer
+	if dialer == nil {
+		dialer = TCPDialer{Dialer: &net.Dialer{Timeout: defaultDialTimeout}}
+	}
+
 	ds := &DialSched{
 		selfID:            cfg.selfID,
 		connTarget:        connTarget,
-		dialer:            TCPDialer{Dialer: &net.Dialer{Timeout: defaultDialTimeout}},
+		dialer:            dialer,
 		backend:           backend,
 		static:            newTypedNodeSet(),
 		tab:               tab,

@@ -182,11 +182,6 @@ type Server interface {
 	// or the handshakes have failed.
 	SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error
 
-	// NodeDialer is used to connect to nodes in the network, typically by using
-	// an underlying net.Dialer but also using net.Pipe in tests.
-	// TODO: dialsched should have NodeDialer inside, not through server.
-	NodeDialer
-
 	// Disconnect tries to disconnect peer.
 	Disconnect(destID discover.NodeID)
 
