@@ -99,8 +99,12 @@ func (srv *BaseServer) Stop() {
 	if srv.dialSched != nil {
 		srv.dialSched.Close() // Wait for dial attempts to finish.
 	}
-	srv.loopWG.Wait() // Wait for loops to terminate
-	srv.peerWG.Wait() // Wait for peers to terminate
+	if srv.ntab != nil {
+		srv.ntab.Close() // Terminate discovery now that dialsched does not need it.
+	}
+	srv.disconnectAllPeers() // Disconnect all peers. Now that dialsched stopped, no more connections will be established.
+	srv.loopWG.Wait()        // Wait for loops to terminate
+	srv.peerWG.Wait()        // Wait for peers to terminate
 	srv.logger.Info("Stopped P2P server")
 }
 
@@ -140,9 +144,6 @@ func (srv *BaseServer) Start() (err error) {
 			srv.logger.Error("P2P server might be useless, listening address is missing")
 		}
 	}
-
-	srv.loopWG.Add(1)
-	go srv.run()
 
 	if !srv.NoDial {
 		srv.dialSched = NewDialSched(DialConfig{
@@ -257,28 +258,6 @@ func (srv *BaseServer) startListening() error {
 		})
 	}
 	return nil
-}
-
-func (srv *BaseServer) run() {
-	defer srv.loopWG.Done()
-	<-srv.quit
-
-	srv.logger.Trace("P2P networking is spinning down")
-
-	// Terminate discovery. If there is a running lookup it will terminate soon.
-	if srv.ntab != nil {
-		srv.ntab.Close()
-	}
-	// Disconnect all peers.
-	srv.lock.Lock()
-	shutdownPeers := make([]*Peer, 0, len(srv.peers))
-	for _, p := range srv.peers {
-		shutdownPeers = append(shutdownPeers, p)
-	}
-	srv.lock.Unlock()
-	for _, p := range shutdownPeers {
-		p.Disconnect(DiscQuitting)
-	}
 }
 
 func (srv *BaseServer) protoHandshakeChecks(peers map[discover.NodeID]*Peer, inboundCount int, c *conn) error {
@@ -647,6 +626,19 @@ func (srv *BaseServer) RemovePeer(node *discover.Node) {
 
 	if p != nil {
 		p.Disconnect(DiscRequested)
+	}
+}
+
+func (srv *BaseServer) disconnectAllPeers() {
+	srv.lock.Lock()
+	ps := make([]*Peer, 0, len(srv.peers))
+	for _, p := range srv.peers {
+		ps = append(ps, p)
+	}
+	srv.lock.Unlock()
+
+	for _, p := range ps {
+		p.Disconnect(DiscQuitting)
 	}
 }
 
