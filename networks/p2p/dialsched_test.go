@@ -570,8 +570,8 @@ func (m *mockDialer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
 	return conns, nil
 }
 
-// blockingDialer blocks inside Dial() until dialCh is closed.
-// It signals the first call on startedCh (capacity-1 non-blocking send).
+// blockingDialer blocks inside Dial() until unblockCh is closed.
+// It signals the first call on invokedCh, so the test can inspect the invocation.
 type blockingDialer struct {
 	invokedCh chan struct{} // receives once when the first Dial() is entered
 	unblockCh chan struct{} // Dial() returns when closed
@@ -642,8 +642,8 @@ func (m *rejectBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *discove
 	return errors.New("rejectBackend: connection rejected")
 }
 
-// blockingBackend blocks inside SetupConn() until unblock is closed.
-// It signals the first call on startedCh (capacity-1 non-blocking send).
+// blockingBackend blocks inside SetupConn() until unblockCh is closed.
+// It signals the first call on invokedCh, so the test can inspect the invocation.
 type blockingBackend struct {
 	invokedCh chan struct{} // receives once when the first SetupConn() is entered
 	unblockCh chan struct{} // SetupConn() returns when closed
