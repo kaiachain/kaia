@@ -393,7 +393,7 @@ func (ds *DialSched) addStatic(n *discover.Node) {
 		return
 	}
 	if n.Incomplete() {
-		logger.Warn("Rejecting incomplete static node", "id", n.ID, "type", n.NType)
+		logger.Warn("Rejecting incomplete static node", "node", n.String())
 		return
 	}
 	ds.mu.Lock()
@@ -431,7 +431,7 @@ func (ds *DialSched) shouldDial(n *discover.Node) bool {
 		return false
 	}
 	if n.Incomplete() {
-		logger.Warn("Rejecting incomplete dial candidate", "id", n.ID, "type", n.NType)
+		logger.Warn("Rejecting incomplete dial candidate", "node", n.String())
 		return false
 	}
 	if ds.dialing.len() >= maxConcurrentDials {
@@ -506,9 +506,10 @@ func (ds *DialSched) markConnFailure(id discover.NodeID) {
 
 	ds.connectedAll.remove(id)
 	ds.connectedOutbound.remove(id)
-	if ds.static.contains(id) {
+	if n := ds.static.get(id); n != nil {
 		ds.connFails[id]++
 		if ds.connFails[id] > dialMaxRetries {
+			logger.Warn("Removing static node after too many connection failures", "node", n.String())
 			ds.static.remove(id)
 		}
 	}

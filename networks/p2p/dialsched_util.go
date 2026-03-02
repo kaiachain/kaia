@@ -65,6 +65,15 @@ func (t *typedNodeSet) add(n *discover.Node) {
 	}
 }
 
+func (t *typedNodeSet) get(id discover.NodeID) *discover.Node {
+	for nType := range t.nodes {
+		if n, ok := t.nodes[nType][id]; ok {
+			return n
+		}
+	}
+	return nil
+}
+
 func (t *typedNodeSet) remove(id discover.NodeID) {
 	for nType := range t.nodes {
 		delete(t.nodes[nType], id)
