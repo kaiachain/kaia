@@ -56,10 +56,10 @@ type BaseServer struct {
 
 	// Relying components
 	logger       log.Logger
-	ntab         discover.Discovery // UDP discovery
-	ourHandshake *protoHandshake    // our TCP handshake message
-	listener     net.Listener       // TCP listener
-	peerFeed     event.Feed         // Peer event feed as in peer.go:PeerEventType.
+	ntab         discovery       // UDP discovery
+	ourHandshake *protoHandshake // our TCP handshake message
+	listener     net.Listener    // TCP listener
+	peerFeed     event.Feed      // Peer event feed as in peer.go:PeerEventType.
 
 	// Peer lifecycle state
 	selfID        discover.NodeID // precompulted Self().ID

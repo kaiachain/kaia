@@ -47,6 +47,7 @@ type discovery interface {
 	GetNodes(targetType discover.NodeType, max int) []*discover.Node
 	ReadRandomNodes(buf []*discover.Node, nType discover.NodeType) int
 	Lookup(target discover.NodeID, targetType discover.NodeType) []*discover.Node
+	Close()
 }
 
 type DialConfig struct {
