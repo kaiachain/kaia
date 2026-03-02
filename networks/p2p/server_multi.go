@@ -73,8 +73,12 @@ func (srv *MultiChannelServer) Stop() {
 	if srv.dialSched != nil {
 		srv.dialSched.Close() // Wait for dial attempts to finish.
 	}
-	srv.loopWG.Wait() // Wait for loops to terminate
-	srv.peerWG.Wait() // Wait for peers to terminate
+	if srv.ntab != nil {
+		srv.ntab.Close() // Terminate discovery now that dialsched does not need it.
+	}
+	srv.disconnectAllPeers() // Disconnect all peers. Now that dialsched stopped, no more connections will be established.
+	srv.loopWG.Wait()        // Wait for loops to terminate
+	srv.peerWG.Wait()        // Wait for peers to terminate
 	srv.logger.Info("Stopped P2P server")
 }
 
@@ -114,9 +118,6 @@ func (srv *MultiChannelServer) Start() (err error) {
 			srv.logger.Error("P2P server might be useless, listening address is missing")
 		}
 	}
-
-	srv.loopWG.Add(1)
-	go srv.run()
 
 	if !srv.NoDial {
 		srv.dialSched = NewDialSched(DialConfig{
