@@ -298,7 +298,7 @@ func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header)
 	}
 
 	// ensure that the blockscore equals to defaultBlockScore
-	if header.BlockScore.Cmp(istanbul.DefaultBlockScore) != 0 {
+	if header.BlockScore.Cmp(params.DefaultBlockScore) != 0 {
 		return consensus.ErrInvalidBlockScore
 	}
 	return sb.verifySigner(chain, header, nil)
@@ -315,7 +315,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// use the same blockscore for all blocks
-	header.BlockScore = istanbul.DefaultBlockScore
+	header.BlockScore = params.DefaultBlockScore
 
 	// add qualified validators to extraData's validators section
 	if sb.valsetModule == nil {

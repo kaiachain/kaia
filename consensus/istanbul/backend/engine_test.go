@@ -396,7 +396,7 @@ func makeHeader(parent *types.Block, config *istanbul.Config, chainConfig *param
 		GasUsed:    0,
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(config.BlockPeriod)),
-		BlockScore: istanbul.DefaultBlockScore,
+		BlockScore: params.DefaultBlockScore,
 	}
 	if parent.Header().BaseFee != nil {
 		// We don't have chainConfig so the BaseFee of the current block is set by parent's for test
@@ -600,7 +600,7 @@ func TestVerifyHeader(t *testing.T) {
 				header: func() *types.Header {
 					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 					header := block.Header()
-					header.Time = new(big.Int).Add(big.NewInt(istanbul.Now().Unix()), new(big.Int).SetUint64(10))
+					header.Time = new(big.Int).Add(big.NewInt(time.Now().Unix()), new(big.Int).SetUint64(10))
 					return header
 				}(),
 				expectedErr: consensus.ErrFutureBlock,
@@ -733,14 +733,6 @@ func TestVerifyHeaders(t *testing.T) {
 		blocks = append(blocks, currentBlock)
 		headers = append(headers, blocks[i].Header())
 	}
-
-	// Set time to avoid future block errors
-	istanbul.Now = func() time.Time {
-		return time.Unix(headers[size-1].Time.Int64(), 0)
-	}
-	defer func() {
-		istanbul.Now = time.Now
-	}()
 
 	// Helper function to verify headers and collect results
 	verifyHeadersAndCollectResults := func(t *testing.T, testHeaders []*types.Header, expectErrors bool) int {
