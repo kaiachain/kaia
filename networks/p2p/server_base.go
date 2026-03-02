@@ -771,14 +771,17 @@ func (srv *BaseServer) AddPeer(node *discover.Node) {
 // RemovePeer disconnects from the given node.
 func (srv *BaseServer) RemovePeer(node *discover.Node) {
 	srv.lock.Lock()
-	defer srv.lock.Unlock()
 	if !srv.running {
+		srv.lock.Unlock()
 		return
 	}
 
 	srv.logger.Debug("Removing static node", "node", node)
 	srv.dialstate.removeStatic(node)
-	if p, ok := srv.peers[node.ID]; ok {
+	p := srv.peers[node.ID]
+	srv.lock.Unlock()
+
+	if p != nil {
 		p.Disconnect(DiscRequested)
 	}
 }
