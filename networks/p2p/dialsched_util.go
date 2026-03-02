@@ -19,8 +19,6 @@
 package p2p
 
 import (
-	"sync"
-
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 )
 
@@ -46,39 +44,34 @@ func defaultConnTarget(cfg DialConfig) map[discover.NodeType]int {
 	}
 }
 
+// typedNodeSet is a set of discover.Nodes organised by NType.
+// It is not safe for concurrent use; callers must hold DialSched.mu.
 type typedNodeSet struct {
-	mu    sync.RWMutex
 	nodes map[discover.NodeType]map[discover.NodeID]*discover.Node
 }
 
 func newTypedNodeSet() typedNodeSet {
 	ns := make(map[discover.NodeType]map[discover.NodeID]*discover.Node)
+	// NodeTypeUnknown is needed to represent the static nodes without node type specified.
 	for _, nType := range []discover.NodeType{discover.NodeTypeCN, discover.NodeTypePN, discover.NodeTypeEN, discover.NodeTypeBN, discover.NodeTypeUnknown} {
 		ns[nType] = make(map[discover.NodeID]*discover.Node)
 	}
-	return typedNodeSet{
-		mu:    sync.RWMutex{},
-		nodes: ns,
-	}
+	return typedNodeSet{nodes: ns}
 }
 
 func (t *typedNodeSet) add(n *discover.Node) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.nodes[n.NType][n.ID] = n
+	if m, ok := t.nodes[n.NType]; ok {
+		m[n.ID] = n
+	}
 }
 
 func (t *typedNodeSet) remove(id discover.NodeID) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
 	for nType := range t.nodes {
 		delete(t.nodes[nType], id)
 	}
 }
 
 func (t *typedNodeSet) len() int {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
 	count := 0
 	for nType := range t.nodes {
 		count += len(t.nodes[nType])
@@ -87,8 +80,6 @@ func (t *typedNodeSet) len() int {
 }
 
 func (t *typedNodeSet) all() []*discover.Node {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
 	nodes := make([]*discover.Node, 0, len(t.nodes))
 	for nType := range t.nodes {
 		for _, n := range t.nodes[nType] {
@@ -99,8 +90,6 @@ func (t *typedNodeSet) all() []*discover.Node {
 }
 
 func (t *typedNodeSet) contains(id discover.NodeID) bool {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
 	for nType := range t.nodes {
 		if _, ok := t.nodes[nType][id]; ok {
 			return true
@@ -110,7 +99,5 @@ func (t *typedNodeSet) contains(id discover.NodeID) bool {
 }
 
 func (t *typedNodeSet) count(nType discover.NodeType) int {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
 	return len(t.nodes[nType])
 }

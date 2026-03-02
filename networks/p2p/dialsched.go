@@ -231,7 +231,7 @@ func (ds *DialSched) dialLoop() {
 		}
 
 		var idle <-chan time.Time
-		if ds.dialing.len() == 0 {
+		if !ds.isDialing() { // There is no ongoing dial attempt. Come back after idling.
 			idle = time.After(idleDialInterval)
 		}
 
@@ -453,6 +453,12 @@ func (ds *DialSched) shouldDial(n *discover.Node) bool {
 		return false
 	}
 	return true
+}
+
+func (ds *DialSched) isDialing() bool {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+	return ds.dialing.len() > 0
 }
 
 func (ds *DialSched) markDialingStart(n *discover.Node) {
