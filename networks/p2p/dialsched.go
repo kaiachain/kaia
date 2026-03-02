@@ -506,6 +506,7 @@ func (ds *DialSched) markConnFailure(id discover.NodeID) {
 
 	ds.connectedAll.remove(id)
 	ds.connectedOutbound.remove(id)
+
 	if n := ds.static.get(id); n != nil {
 		ds.connFails[id]++
 		if ds.connFails[id] > dialMaxRetries {
