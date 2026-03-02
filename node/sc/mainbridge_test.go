@@ -71,7 +71,6 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	prvKey, _ := crypto.GenerateKey()
 	engine := backend.New(&backend.BackendOpts{
 		IstanbulConfig: istanbul.DefaultConfig,
-		Rewardbase:     common.Address{},
 		PrivateKey:     prvKey,
 		DB:             db,
 		NodeType:       common.CONSENSUSNODE,

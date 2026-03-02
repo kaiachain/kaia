@@ -373,7 +373,6 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	// Setup istanbul consensus backend
 	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
 		IstanbulConfig: istanbul.DefaultConfig,
-		Rewardbase:     genesisAddr,
 		PrivateKey:     validatorPrivKeys[0],
 		DB:             chainDB,
 		NodeType:       common.CONSENSUSNODE,

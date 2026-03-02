@@ -150,7 +150,6 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 
 	backend := New(&BackendOpts{
 		IstanbulConfig: istanbulConfig,
-		Rewardbase:     common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
 		PrivateKey:     key,
 		DB:             dbm,
 		NodeType:       common.CONSENSUSNODE,

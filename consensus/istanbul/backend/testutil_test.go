@@ -180,7 +180,6 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	mRandao := randao_impl.NewRandaoModule()
 	engine := New(&BackendOpts{
 		IstanbulConfig: istanbulConfig,
-		Rewardbase:     common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
 		PrivateKey:     nodeKeys[0],
 		DB:             dbm,
 		GovModule:      mGov,

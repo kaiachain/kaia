@@ -83,12 +83,6 @@ func TestHardForkBlock(t *testing.T) {
 	genesisKey, err := crypto.HexToECDSA("42eb1412d77987043716f425964b1c8d4c27ce9fb3e9a5b9ab243bc9882fe731")
 	require.Equal(t, nil, err)
 
-	var genesisAddr common.Address
-	for addr := range genesis.Alloc {
-		genesisAddr = addr
-		break
-	}
-
 	dir := "chaindata-hardfork"
 	os.RemoveAll(dir)
 
@@ -108,7 +102,6 @@ func TestHardForkBlock(t *testing.T) {
 	require.NoError(t, err)
 	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
 		IstanbulConfig: istanbul.DefaultConfig,
-		Rewardbase:     genesisAddr,
 		PrivateKey:     genesisKey,
 		DB:             chainDb,
 		GovModule:      govModule,
@@ -134,6 +127,7 @@ func TestHardForkBlock(t *testing.T) {
 			Chain:         chain,
 			GovModule:     govModule,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+			ValsetModule:  mValset,
 		}),
 		mValset.Init(&valset_impl.InitOpts{
 			ChainKv:       chainDb.GetMiscDB(),

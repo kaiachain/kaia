@@ -528,6 +528,9 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Chain:         s.blockchain,
 			GovModule:     s.govModule,
 			StakingModule: s.stakingModule,
+			ValsetModule:  mValset,
+			NodeAddress:   s.nodeAddress,
+			Rewardbase:    s.rewardbase,
 		}),
 		mSupply.Init(&supply_impl.InitOpts{
 			ChainKv:      s.chainDB.GetMiscDB(),
@@ -655,7 +658,6 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 	}
 	return istanbulBackend.New(&istanbulBackend.BackendOpts{
 		IstanbulConfig: &config.Istanbul,
-		Rewardbase:     config.Rewardbase,
 		PrivateKey:     ctx.NodeKey(),
 		DB:             db,
 		GovModule:      govModule,
