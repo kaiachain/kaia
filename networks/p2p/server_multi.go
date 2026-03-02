@@ -372,7 +372,7 @@ func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
 		}
 
 		p, err = newPeer(connSet, srv.Protocols, srv.Config.RWTimerConfig)
-		srv.CandidateConns[c.id] = nil
+		delete(srv.CandidateConns, c.id)
 	} else {
 		p, err = newPeer([]*conn{c}, srv.Protocols, srv.Config.RWTimerConfig)
 	}
