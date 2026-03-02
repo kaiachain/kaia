@@ -664,44 +664,6 @@ func TestVerifyHeader(t *testing.T) {
 	}
 }
 
-func TestVerifySeal(t *testing.T) {
-	ctrl, mStaking := makeMockStakingManager(t, nil, 0)
-	defer ctrl.Finish()
-	chain, engine := newBlockChain(t, 1, mStaking)
-	defer engine.Stop()
-
-	genesis := chain.Genesis()
-
-	// cannot verify genesis
-	err := engine.VerifySeal(chain, genesis.Header())
-	if err != consensus.ErrUnknownBlock {
-		t.Errorf("error mismatch: have %v, want %v", err, consensus.ErrUnknownBlock)
-	}
-	block := makeBlock(chain, engine, genesis)
-
-	// clean cache before testing
-	signatureAddresses.Purge()
-
-	// change block content
-	header := block.Header()
-	header.Number = big.NewInt(4)
-	block1 := block.WithSeal(header)
-	err = engine.VerifySeal(chain, block1.Header())
-	if err != istanbul.ErrUnauthorized {
-		t.Errorf("error mismatch: have %v, want %v", err, istanbul.ErrUnauthorized)
-	}
-
-	// clean cache before testing
-	signatureAddresses.Purge()
-
-	// unauthorized users but still can get correct signer address
-	engine.privateKey, _ = crypto.GenerateKey()
-	err = engine.VerifySeal(chain, block.Header())
-	if err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
-}
-
 func TestVerifyHeaders(t *testing.T) {
 	var configItems []interface{}
 	configItems = append(configItems, proposerUpdateInterval(1))

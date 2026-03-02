@@ -221,16 +221,17 @@ func (mr *MockEngineMockRecorder) VerifyHeader(arg0, arg1, arg2 any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockEngine)(nil).VerifyHeader), arg0, arg1, arg2)
 }
 
-// VerifySeal mocks base method.
-func (m *MockEngine) VerifySeal(arg0 consensus.ChainReader, arg1 *types.Header) error {
+// VerifyHeaders mocks base method.
+func (m *MockEngine) VerifyHeaders(arg0 consensus.ChainReader, arg1 []*types.Header, arg2 []bool) (chan<- struct{}, <-chan error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifySeal", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "VerifyHeaders", arg0, arg1, arg2)
+	ret0, _ := ret[0].(chan<- struct{})
+	ret1, _ := ret[1].(<-chan error)
+	return ret0, ret1
 }
 
-// VerifySeal indicates an expected call of VerifySeal.
-func (mr *MockEngineMockRecorder) VerifySeal(arg0, arg1 any) *gomock.Call {
+// VerifyHeaders indicates an expected call of VerifyHeaders.
+func (mr *MockEngineMockRecorder) VerifyHeaders(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifySeal", reflect.TypeOf((*MockEngine)(nil).VerifySeal), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeaders", reflect.TypeOf((*MockEngine)(nil).VerifyHeaders), arg0, arg1, arg2)
 }
