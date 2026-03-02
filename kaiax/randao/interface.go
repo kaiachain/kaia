@@ -27,6 +27,7 @@ import (
 type RandaoModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
+	kaiax.ConsensusModule
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
 

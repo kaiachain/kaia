@@ -38,11 +38,9 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/randao"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
@@ -60,7 +58,6 @@ type BackendOpts struct {
 	IstanbulConfig *istanbul.Config // Istanbul consensus core config
 	Rewardbase     common.Address
 	PrivateKey     *ecdsa.PrivateKey // Consensus message signing key
-	BlsSecretKey   bls.SecretKey     // Randao signing key. Required since Randao fork
 	DB             database.DBManager
 	GovModule      gov.GovModule
 	NodeType       common.ConnType
@@ -74,7 +71,6 @@ func New(opts *BackendOpts) consensus.Istanbul {
 		istanbulEventMux: new(event.TypeMux),
 		privateKey:       opts.PrivateKey,
 		address:          crypto.PubkeyToAddress(opts.PrivateKey.PublicKey),
-		blsSecretKey:     opts.BlsSecretKey,
 		logger:           logger.NewWith(),
 		db:               opts.DB,
 		commitCh:         make(chan *types.Result, 1),
@@ -99,7 +95,6 @@ type backend struct {
 	istanbulEventMux *event.TypeMux
 	privateKey       *ecdsa.PrivateKey
 	address          common.Address
-	blsSecretKey     bls.SecretKey
 	core             istanbulCore.Engine
 	logger           log.Logger
 	db               database.DBManager
@@ -134,8 +129,6 @@ type backend struct {
 
 	// Reference to the governance.Engine
 	govModule gov.GovModule
-
-	randaoModule randao.RandaoModule
 
 	// Node type
 	nodetype common.ConnType

@@ -50,14 +50,6 @@ var (
 	ErrEmptyCommittedSeals = errors.New("zero committed seals")
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	ErrMismatchTxhashes = errors.New("mismatch transactions hashes")
-	// errNoBlsKey is returned if the BLS secret key is not configured.
-	ErrNoBlsKey = errors.New("bls key not configured")
-	// errNoBlsPub is returned if the BLS public key is not found for the proposer.
-	ErrNoBlsPub = errors.New("bls pubkey not found for the proposer")
-	// errInvalidRandaoFields is returned if the Randao fields randomReveal or mixHash are invalid.
-	ErrInvalidRandaoFields = errors.New("invalid randao fields")
-	// errUnexpectedRandao is returned if the Randao fields randomReveal or mixHash are present when must not.
-	ErrUnexpectedRandao = errors.New("unexpected randao fields")
 	// errInternalError is returned when an internal error occurs.
 	ErrInternalError = errors.New("internal error")
 	// errPendingNotAllowed is returned when pending block is not allowed.

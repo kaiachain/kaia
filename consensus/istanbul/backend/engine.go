@@ -45,7 +45,6 @@ import (
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/randao"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -187,16 +186,6 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 		return err
 	}
 
-	// VerifyRandao must be after verifySigner because it needs the signer (proposer) address
-	if chain.Config().IsRandaoForkEnabled(header.Number) {
-		prevMixHash := headerMixHash(chain, parent)
-		if err := sb.VerifyRandao(chain, header, prevMixHash); err != nil {
-			return err
-		}
-	} else if header.RandomReveal != nil || header.MixHash != nil {
-		return istanbul.ErrUnexpectedRandao
-	}
-
 	if err := sb.verifyCommittedSeals(chain, header, nil); err != nil {
 		return err
 	}
@@ -330,16 +319,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	// use the same blockscore for all blocks
 	header.BlockScore = istanbul.DefaultBlockScore
 
-	if chain.Config().IsRandaoForkEnabled(header.Number) {
-		prevMixHash := headerMixHash(chain, parent)
-		randomReveal, mixHash, err := sb.CalcRandao(header.Number, prevMixHash)
-		if err != nil {
-			return err
-		}
-		header.RandomReveal = randomReveal
-		header.MixHash = mixHash
-	}
-
 	// add qualified validators to extraData's validators section
 	if sb.valsetModule == nil {
 		return istanbul.ErrNoEssentialModule
@@ -453,14 +432,6 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			// Leave the memo in the log for later contract finalization
 			isKIP103 := chain.Config().IsKIP103ForkBlock(header.Number) // because memo format differs between KIP-103 and KIP-160
 			logger.Info("successfully executed treasury rebalancing", "memo", string(rebalanceResult.Memo(isKIP103)))
-		}
-	}
-
-	// The Registry contract are installed at RandaoCompatibleBlock with a KIP113 record
-	if chain.Config().IsRandaoForkBlock(header.Number) {
-		err := system.InstallRegistry(state, chain.Config().RandaoRegistry)
-		if err != nil {
-			return nil, err
 		}
 	}
 
@@ -584,11 +555,10 @@ func (sb *backend) SetChain(chain consensus.ChainReader) {
 }
 
 // RegisterKaiaxModules sets kaiax modules of the Istanbul backend
-func (sb *backend) RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule, mRandao randao.RandaoModule) {
+func (sb *backend) RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule) {
 	sb.govModule = mGov
 	sb.RegisterStakingModule(mStaking)
 	sb.valsetModule = mValset
-	sb.randaoModule = mRandao
 
 	sb.core.RegisterKaiaxModules(mValset, mGov)
 }
