@@ -192,7 +192,7 @@ func (srv *MultiChannelServer) startListening() error {
 // listenLoop waits for an external connection and connects it.
 func (srv *MultiChannelServer) listenLoop(listener net.Listener) {
 	defer srv.loopWG.Done()
-	srv.logger.Info("RLPx listener up", "self", srv.makeSelf(listener, srv.ntab))
+	srv.logger.Info("RLPx listener up", "self", srv.makeSelf(listener))
 
 	tokens := defaultMaxPendingPeers
 	if srv.MaxPendingPeers > 0 {
@@ -246,11 +246,6 @@ func (srv *MultiChannelServer) listenLoop(listener net.Listener) {
 // as a peer. It returns when the connection has been added as a peer
 // or the handshakes have failed.
 func (srv *MultiChannelServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
-	self := srv.Self()
-	if self == nil {
-		return errors.New("shutdown")
-	}
-
 	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, portOrder: PortOrderUndefined}
 
 	if dialDest != nil {

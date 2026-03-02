@@ -306,7 +306,7 @@ func ListenUDP(cfg *Config) (Discovery, error) {
 	if err != nil {
 		return nil, err
 	}
-	logger.Info("UDP listener up", "self", discv.Self())
+	logger.Info("UDP listener up", "id", cfg.Id, "addr", cfg.Addr, "type", cfg.NodeType)
 	return discv, nil
 }
 
