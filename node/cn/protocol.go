@@ -46,6 +46,7 @@ const (
 	kaia65 = 65
 	kaia66 = 66
 	kaia67 = 67
+	kaia68 = 68
 )
 
 const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
@@ -88,7 +89,11 @@ const (
 	BlobSidecarsRequestMsg = 0x15
 	BlobSidecarsMsg        = 0x16
 
-	MsgCodeEnd = 0x17
+	// Protocol messages belonging to kaia/68
+	VRankPreprepareMsg = 0x17
+	VRankCandidateMsg  = 0x18
+
+	MsgCodeEnd = 0x19
 )
 
 type errCode int

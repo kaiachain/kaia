@@ -32,9 +32,6 @@ import (
 const (
 	candidatePrepareDeadlineMs = 200
 
-	VRankPreprepareMsg = 0x17
-	VRankCandidateMsg  = 0x18
-
 	broadcastChSize    = 2048
 	vrankEpoch         = 86400
 	maxRound           = 10 // round range [0, 10]
@@ -56,7 +53,7 @@ type InitOpts struct {
 type VRankModule struct {
 	InitOpts
 
-	broadcastCh   chan *vrank.BroadcastRequest
+	broadcastCh   chan *vrank.VRankBroadcastEvent
 	broadcastFeed event.Feed
 	stopCh        chan struct{}
 
@@ -69,7 +66,7 @@ type VRankModule struct {
 
 func NewVRankModule() *VRankModule {
 	return &VRankModule{
-		broadcastCh: make(chan *vrank.BroadcastRequest, broadcastChSize),
+		broadcastCh: make(chan *vrank.VRankBroadcastEvent, broadcastChSize),
 		stopCh:      make(chan struct{}),
 		collector:   vrank.NewCollector(),
 	}
@@ -94,4 +91,9 @@ func (v *VRankModule) Start() error {
 func (v *VRankModule) Stop() {
 	logger.Info("VRankModule stopped")
 	close(v.stopCh)
+	close(v.broadcastCh)
+}
+
+func (v *VRankModule) SubscribeVRank(sink chan<- *vrank.VRankBroadcastEvent) event.Subscription {
+	return v.broadcastFeed.Subscribe(sink)
 }

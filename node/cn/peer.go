@@ -36,6 +36,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/auction"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/node/cn/snap"
@@ -75,6 +76,10 @@ const (
 	// maxQueuedBids is the maximum number of bid lists to queue up before
 	// dropping broadcasts.
 	maxQueuedBids = 128
+
+	// maxQueuedVRanks is the maximum number of vrank messages to queue up before
+	// dropping broadcasts.
+	maxQueuedVRanks = 256
 
 	handshakeTimeout = 5 * time.Second
 )
@@ -146,6 +151,20 @@ type Peer interface {
 	// AsyncSendBid queues the availability of a bid for propagation to a remote peer.
 	// If the peer's broadcast queue is full, the event is silently dropped.
 	AsyncSendBid(bid *auction.Bid)
+
+	// SendVRankPreprepare sends a vrank preprepare message to a remote peer.
+	SendVRankPreprepare(msg *vrank.VRankPreprepare) error
+
+	// SendVRankCandidate sends a vrank candidate message to a remote peer.
+	SendVRankCandidate(msg *vrank.VRankCandidate) error
+
+	// AsyncSendVRankPreprepare queues a vrank preprepare message for propagation to a remote peer.
+	// If the peer's broadcast queue is full, the event is silently dropped.
+	AsyncSendVRankPreprepare(msg *vrank.VRankPreprepare)
+
+	// AsyncSendVRankCandidate queues a vrank candidate message for propagation to a remote peer.
+	// If the peer's broadcast queue is full, the event is silently dropped.
+	AsyncSendVRankCandidate(msg *vrank.VRankCandidate)
 
 	// SendNewBlock propagates an entire block to a remote peer.
 	SendNewBlock(block *types.Block, td *big.Int) error
@@ -283,14 +302,16 @@ type basePeer struct {
 	td   *big.Int
 	lock sync.RWMutex
 
-	knownTxsCache    common.Cache              // FIFO cache of transaction hashes known to be known by this peer
-	knownBlocksCache common.Cache              // FIFO cache of block hashes known to be known by this peer
-	knownBidsCache   common.Cache              // FIFO cache of bid hashes known to be known by this peer
-	queuedTxs        chan []*types.Transaction // Queue of transactions to broadcast to the peer
-	queuedProps      chan *propEvent           // Queue of blocks to broadcast to the peer
-	queuedAnns       chan *types.Block         // Queue of blocks to announce to the peer
-	queuedBids       chan *auction.Bid         // Queue of bids to broadcast to the peer
-	term             chan struct{}             // Termination channel to stop the broadcaster
+	knownTxsCache         common.Cache                // FIFO cache of transaction hashes known to be known by this peer
+	knownBlocksCache      common.Cache                // FIFO cache of block hashes known to be known by this peer
+	knownBidsCache        common.Cache                // FIFO cache of bid hashes known to be known by this peer
+	queuedTxs             chan []*types.Transaction   // Queue of transactions to broadcast to the peer
+	queuedProps           chan *propEvent             // Queue of blocks to broadcast to the peer
+	queuedAnns            chan *types.Block           // Queue of blocks to announce to the peer
+	queuedBids            chan *auction.Bid           // Queue of bids to broadcast to the peer
+	queuedVRankPreprepare chan *vrank.VRankPreprepare // Queue of vrank preprepare messages to broadcast to the peer
+	queuedVRankCandidate  chan *vrank.VRankCandidate  // Queue of vrank candidate messages to broadcast to the peer
+	term                  chan struct{}               // Termination channel to stop the broadcaster
 
 	chainID *big.Int // ChainID to sign a transaction
 
@@ -318,18 +339,20 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 
 	return &singleChannelPeer{
 		basePeer: &basePeer{
-			Peer:             p,
-			rw:               rw,
-			version:          version,
-			id:               fmt.Sprintf("%x", id[:8]),
-			knownTxsCache:    newKnownTxCache(),
-			knownBlocksCache: newKnownBlockCache(),
-			knownBidsCache:   newKnownBidCache(),
-			queuedTxs:        make(chan []*types.Transaction, maxQueuedTxs),
-			queuedProps:      make(chan *propEvent, maxQueuedProps),
-			queuedAnns:       make(chan *types.Block, maxQueuedAnns),
-			queuedBids:       make(chan *auction.Bid, maxQueuedBids),
-			term:             make(chan struct{}),
+			Peer:                  p,
+			rw:                    rw,
+			version:               version,
+			id:                    fmt.Sprintf("%x", id[:8]),
+			knownTxsCache:         newKnownTxCache(),
+			knownBlocksCache:      newKnownBlockCache(),
+			knownBidsCache:        newKnownBidCache(),
+			queuedTxs:             make(chan []*types.Transaction, maxQueuedTxs),
+			queuedProps:           make(chan *propEvent, maxQueuedProps),
+			queuedAnns:            make(chan *types.Block, maxQueuedAnns),
+			queuedBids:            make(chan *auction.Bid, maxQueuedBids),
+			queuedVRankPreprepare: make(chan *vrank.VRankPreprepare, maxQueuedVRanks),
+			queuedVRankCandidate:  make(chan *vrank.VRankCandidate, maxQueuedVRanks),
+			term:                  make(chan struct{}),
 		},
 	}
 }
@@ -365,6 +388,10 @@ var ChannelOfMessage = map[uint64]int{
 	// Protocol messages belonging to kaia/67
 	BlobSidecarsRequestMsg: p2p.ConnDefault,
 	BlobSidecarsMsg:        p2p.ConnDefault,
+
+	// Protocol messages belonging to kaia/68
+	VRankPreprepareMsg: p2p.ConnDefault,
+	VRankCandidateMsg:  p2p.ConnDefault,
 }
 
 var ConcurrentOfChannel = []int{
@@ -381,18 +408,20 @@ func newPeerWithRWs(version int, p *p2p.Peer, rws []p2p.MsgReadWriter) (Peer, er
 		return newPeer(version, p, rws[p2p.ConnDefault]), nil
 	} else if lenRWs > 1 {
 		bPeer := &basePeer{
-			Peer:             p,
-			rw:               rws[p2p.ConnDefault],
-			version:          version,
-			id:               fmt.Sprintf("%x", id[:8]),
-			knownTxsCache:    newKnownTxCache(),
-			knownBlocksCache: newKnownBlockCache(),
-			knownBidsCache:   newKnownBidCache(),
-			queuedTxs:        make(chan []*types.Transaction, maxQueuedTxs),
-			queuedProps:      make(chan *propEvent, maxQueuedProps),
-			queuedAnns:       make(chan *types.Block, maxQueuedAnns),
-			queuedBids:       make(chan *auction.Bid, maxQueuedBids),
-			term:             make(chan struct{}),
+			Peer:                  p,
+			rw:                    rws[p2p.ConnDefault],
+			version:               version,
+			id:                    fmt.Sprintf("%x", id[:8]),
+			knownTxsCache:         newKnownTxCache(),
+			knownBlocksCache:      newKnownBlockCache(),
+			knownBidsCache:        newKnownBidCache(),
+			queuedTxs:             make(chan []*types.Transaction, maxQueuedTxs),
+			queuedProps:           make(chan *propEvent, maxQueuedProps),
+			queuedAnns:            make(chan *types.Block, maxQueuedAnns),
+			queuedBids:            make(chan *auction.Bid, maxQueuedBids),
+			queuedVRankPreprepare: make(chan *vrank.VRankPreprepare, maxQueuedVRanks),
+			queuedVRankCandidate:  make(chan *vrank.VRankCandidate, maxQueuedVRanks),
+			term:                  make(chan struct{}),
 		}
 		return &multiChannelPeer{
 			basePeer: bPeer,
@@ -441,6 +470,20 @@ func (p *basePeer) Broadcast() {
 				// return
 			}
 			p.Log().Trace("Broadcast bid", "peer", p.id, "hash", bid.Hash())
+
+		case vrankPreprepare := <-p.queuedVRankPreprepare:
+			if err := p.SendVRankPreprepare(vrankPreprepare); err != nil {
+				logger.Error("fail to SendVRankPreprepare", "peer", p.id, "err", err)
+				continue
+			}
+			p.Log().Trace("Broadcast vrank preprepare", "peer", p.id, "block", vrankPreprepare.Block.Hash())
+
+		case vrankCandidate := <-p.queuedVRankCandidate:
+			if err := p.SendVRankCandidate(vrankCandidate); err != nil {
+				logger.Error("fail to SendVRankCandidate", "peer", p.id, "err", err)
+				continue
+			}
+			p.Log().Trace("Broadcast vrank candidate", "peer", p.id, "block", vrankCandidate.BlockHash)
 
 		case <-p.term:
 			p.Log().Debug("Peer broadcast loop end", "peer", p.id)
@@ -586,6 +629,36 @@ func (p *basePeer) AsyncSendBid(bid *auction.Bid) {
 		p.AddToKnownBids(bid.Hash())
 	default:
 		p.Log().Debug("Dropping bid propagation", "hash", bid.Hash())
+	}
+}
+
+func (p *basePeer) SendVRankPreprepare(msg *vrank.VRankPreprepare) error {
+	return p2p.Send(p.rw, VRankPreprepareMsg, msg)
+}
+
+func (p *basePeer) SendVRankCandidate(msg *vrank.VRankCandidate) error {
+	return p2p.Send(p.rw, VRankCandidateMsg, msg)
+}
+
+func (p *basePeer) AsyncSendVRankPreprepare(msg *vrank.VRankPreprepare) {
+	select {
+	case p.queuedVRankPreprepare <- msg:
+	default:
+		if msg == nil || msg.Block == nil {
+			return
+		}
+		p.Log().Debug("Dropping vrank preprepare propagation", "block", msg.Block.Hash())
+	}
+}
+
+func (p *basePeer) AsyncSendVRankCandidate(msg *vrank.VRankCandidate) {
+	select {
+	case p.queuedVRankCandidate <- msg:
+	default:
+		if msg == nil {
+			return
+		}
+		p.Log().Debug("Dropping vrank candidate propagation", "hash", msg.BlockHash)
 	}
 }
 
@@ -935,6 +1008,22 @@ func (p *multiChannelPeer) Broadcast() {
 				// return
 			}
 			p.Log().Trace("Broadcast bid", "peer", p.id, "hash", bid.Hash())
+
+		case vrankPreprepare := <-p.queuedVRankPreprepare:
+			if err := p.SendVRankPreprepare(vrankPreprepare); err != nil {
+				logger.Error("fail to SendVRankPreprepare", "peer", p.id, "err", err)
+				continue
+				// return
+			}
+			p.Log().Trace("Broadcast vrank preprepare", "peer", p.id, "block", vrankPreprepare.Block.Hash())
+
+		case vrankCandidate := <-p.queuedVRankCandidate:
+			if err := p.SendVRankCandidate(vrankCandidate); err != nil {
+				logger.Error("fail to SendVRankCandidate", "peer", p.id, "err", err)
+				continue
+				// return
+			}
+			p.Log().Trace("Broadcast vrank candidate", "peer", p.id, "block", vrankCandidate.BlockHash)
 
 		case <-p.term:
 			p.Log().Debug("Peer broadcast loop end", "peer", p.id)

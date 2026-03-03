@@ -40,13 +40,13 @@ type CN struct {
 	Key         *ecdsa.PrivateKey
 	Addr        common.Address
 	VRankModule *VRankModule
-	sub         chan *vrank.BroadcastRequest
+	sub         chan *vrank.VRankBroadcastEvent
 }
 
 func createCN(t *testing.T, valset valset.ValsetModule) *CN {
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)
-	sub := make(chan *vrank.BroadcastRequest)
+	sub := make(chan *vrank.VRankBroadcastEvent)
 	module := NewVRankModule()
 	err := module.Init(&InitOpts{
 		NodeKey:     key,
@@ -66,7 +66,7 @@ func createCN(t *testing.T, valset valset.ValsetModule) *CN {
 	}
 }
 
-func mustPop(t *testing.T, sub chan *vrank.BroadcastRequest) *vrank.BroadcastRequest {
+func mustPop(t *testing.T, sub chan *vrank.VRankBroadcastEvent) *vrank.VRankBroadcastEvent {
 	select {
 	case req := <-sub:
 		return req
@@ -76,7 +76,7 @@ func mustPop(t *testing.T, sub chan *vrank.BroadcastRequest) *vrank.BroadcastReq
 	return nil
 }
 
-func mustNotPop(t *testing.T, sub chan *vrank.BroadcastRequest) *vrank.BroadcastRequest {
+func mustNotPop(t *testing.T, sub chan *vrank.VRankBroadcastEvent) *vrank.VRankBroadcastEvent {
 	select {
 	case <-sub:
 		t.Fatal("should not broadcast")

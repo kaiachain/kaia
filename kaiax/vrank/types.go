@@ -25,10 +25,15 @@ import (
 
 type CfReport []common.Address
 
-type BroadcastRequest struct {
+const (
+	VRankPreprepareMsg = 0x17
+	VRankCandidateMsg  = 0x18
+)
+
+type VRankBroadcastEvent struct {
 	Targets []common.Address
-	Code    int
-	Msg     any
+	Code    int // VRankPreprepareMsg or VRankCandidateMsg
+	Msg     any // VRankPreprepare or VRankCandidate
 }
 
 type VRankPreprepare struct {
