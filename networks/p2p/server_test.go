@@ -131,13 +131,13 @@ func startTestMultiChannelServer(t *testing.T, id discover.NodeID, pf func(*Peer
 func makeconn(fd net.Conn, id discover.NodeID) *conn {
 	dialDest, _ := id.Pubkey()
 	tx := newTestTransport(id, fd, dialDest, false)
-	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error)}
+	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: common.ConnTypeUndefined, id: id}
 }
 
 func makeMultiChannelConn(fd net.Conn, id discover.NodeID) *conn {
 	dialDest, _ := id.Pubkey()
 	tx := newTestTransport(id, fd, dialDest, true)
-	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error), multiChannel: true}
+	return &conn{fd: fd, transport: tx, flags: staticDialedConn, conntype: common.ConnTypeUndefined, id: id, multiChannel: true}
 }
 
 func TestServerListen(t *testing.T) {
@@ -488,24 +488,24 @@ func TestServerAtCap(t *testing.T) {
 	newconn := func(id discover.NodeID) *conn {
 		fd, _ := net.Pipe()
 		tx := newTestTransport(id, fd, nil, false)
-		return &conn{fd: fd, transport: tx, flags: inboundConn, conntype: common.ConnTypeUndefined, id: id, cont: make(chan error)}
+		return &conn{fd: fd, transport: tx, flags: inboundConn, conntype: common.ConnTypeUndefined, id: id}
 	}
 
 	// Inject a few connections to fill up the peer set.
 	for i := 0; i < 10; i++ {
 		c := newconn(randomID())
-		if err := srv.checkpoint(c, srv.addpeer); err != nil {
+		if err := srv.handleAddPeerConn(c); err != nil {
 			t.Fatalf("could not add conn %d: %v", i, err)
 		}
 	}
 	// Try inserting a non-trusted connection.
 	c := newconn(randomID())
-	if err := srv.checkpoint(c, srv.posthandshake); err != DiscTooManyPeers {
+	if err := srv.handlePostHandshake(c); err != DiscTooManyPeers {
 		t.Error("wrong error for insert:", err)
 	}
 	// Try inserting a trusted connection.
 	c = newconn(trustedID)
-	if err := srv.checkpoint(c, srv.posthandshake); err != nil {
+	if err := srv.handlePostHandshake(c); err != nil {
 		t.Error("unexpected error for trusted conn @posthandshake:", err)
 	}
 	if !c.is(trustedConn) {

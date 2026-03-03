@@ -234,15 +234,8 @@ func NewServer(config Config) Server {
 	}
 
 	if config.EnableMultiChannelServer {
-		listeners := make([]net.Listener, 0, len(config.SubListenAddr)+1)
-		listenAddrs := make([]string, 0, len(config.SubListenAddr)+1)
-		listenAddrs = append(listenAddrs, config.ListenAddr)
-		listenAddrs = append(listenAddrs, config.SubListenAddr...)
 		return &MultiChannelServer{
-			BaseServer:     bServer,
-			listeners:      listeners,
-			ListenAddrs:    listenAddrs,
-			CandidateConns: make(map[discover.NodeID][]*conn),
+			BaseServer: bServer,
 		}
 	} else {
 		return &SingleChannelServer{
