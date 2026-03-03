@@ -91,6 +91,7 @@ func (v *VRankModule) Start() error {
 func (v *VRankModule) Stop() {
 	logger.Info("VRankModule stopped")
 	close(v.stopCh)
+	close(v.broadcastCh)
 }
 
 func (v *VRankModule) SubscribeVRank(sink chan<- *vrank.VRankBroadcastEvent) event.Subscription {

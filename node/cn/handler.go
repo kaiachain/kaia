@@ -442,7 +442,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	}
 
 	if !pm.IsVRankModuleDisabled() {
-		// broadcast vrank preprepares
+		// broadcast vrank messages
 		pm.vrankCh = make(chan *vrank.VRankBroadcastEvent, vrankChanSize)
 		pm.vrankSub = pm.vrankModule.SubscribeVRank(pm.vrankCh)
 		go pm.vrankBroadcastLoop()
@@ -464,6 +464,9 @@ func (pm *ProtocolManager) Stop() {
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
 	if !pm.IsAuctionModuleDisabled() {
 		pm.bidSub.Unsubscribe() // quits bidBroadcastLoop
+	}
+	if !pm.IsVRankModuleDisabled() {
+		pm.vrankSub.Unsubscribe() // quits vrankBroadcastLoop
 	}
 
 	// Quit the sync loop.
@@ -1631,12 +1634,12 @@ func (pm *ProtocolManager) BroadcastVRank(ev *vrank.VRankBroadcastEvent) {
 			continue
 		}
 		switch ev.Code {
-		case vrank.VRankPreprepareMsg:
+		case VRankPreprepareMsg:
 			if !preprepareOK {
 				return
 			}
 			peer.AsyncSendVRankPreprepare(preprepare)
-		case vrank.VRankCandidateMsg:
+		case VRankCandidateMsg:
 			if !candidateOK {
 				return
 			}

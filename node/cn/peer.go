@@ -475,7 +475,6 @@ func (p *basePeer) Broadcast() {
 			if err := p.SendVRankPreprepare(vrankPreprepare); err != nil {
 				logger.Error("fail to SendVRankPreprepare", "peer", p.id, "err", err)
 				continue
-				// return
 			}
 			p.Log().Trace("Broadcast vrank preprepare", "peer", p.id, "block", vrankPreprepare.Block.Hash())
 
@@ -483,7 +482,6 @@ func (p *basePeer) Broadcast() {
 			if err := p.SendVRankCandidate(vrankCandidate); err != nil {
 				logger.Error("fail to SendVRankCandidate", "peer", p.id, "err", err)
 				continue
-				// return
 			}
 			p.Log().Trace("Broadcast vrank candidate", "peer", p.id, "block", vrankCandidate.BlockHash)
 
@@ -646,6 +644,9 @@ func (p *basePeer) AsyncSendVRankPreprepare(msg *vrank.VRankPreprepare) {
 	select {
 	case p.queuedVRankPreprepare <- msg:
 	default:
+		if msg == nil || msg.Block == nil {
+			return
+		}
 		p.Log().Debug("Dropping vrank preprepare propagation", "block", msg.Block.Hash())
 	}
 }
@@ -654,6 +655,9 @@ func (p *basePeer) AsyncSendVRankCandidate(msg *vrank.VRankCandidate) {
 	select {
 	case p.queuedVRankCandidate <- msg:
 	default:
+		if msg == nil {
+			return
+		}
 		p.Log().Debug("Dropping vrank candidate propagation", "hash", msg.BlockHash)
 	}
 }
