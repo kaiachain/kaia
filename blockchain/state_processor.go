@@ -72,7 +72,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		processStats     ProcessStats
 	)
 
-	p.bc.Engine().Initialize(p.bc, header, statedb)
+	p.bc.Initialize(header, statedb)
 
 	// Extract author from the header
 	author, _ := p.bc.Engine().Author(header) // Ignore error, we're past header validation
@@ -98,6 +98,16 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	processStats.AfterFinalize = time.Now()
 
 	return receipts, allLogs, *usedGas, internalTxTraces, processStats, nil
+}
+
+// Initialize runs pre-transaction state modifications.
+func (bc *BlockChain) Initialize(header *types.Header, statedb *state.StateDB) {
+	// [EIP-2935] stores the parent block hash in the history storage contract.
+	if bc.chainConfig.IsPragueForkEnabled(header.Number) {
+		context := NewEVMBlockContext(header, bc, nil)
+		vmenv := vm.NewEVM(context, vm.TxContext{}, statedb, bc.chainConfig, &vm.Config{})
+		ProcessParentBlockHash(header, vmenv, statedb, bc.chainConfig.Rules(header.Number))
+	}
 }
 
 // ProcessParentBlockHash stores the parent block hash in the history storage contract

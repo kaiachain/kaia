@@ -437,7 +437,7 @@ func (self *worker) commitNewWork() {
 	self.current.stateMu.Lock()
 	defer self.current.stateMu.Unlock()
 
-	self.engine.Initialize(self.chain, header, self.current.state)
+	self.chain.Initialize(header, self.current.state)
 
 	// Create the current work task
 	// measure miner balance before executing txs

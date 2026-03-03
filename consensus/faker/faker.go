@@ -141,11 +141,6 @@ func (f *Faker) Prepare(chain consensus.ChainReader, header *types.Header) error
 	return nil
 }
 
-// Initialize runs any pre-transaction state modifications.
-func (f *Faker) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
-	// No initialization needed for faker
-}
-
 // Finalize processes the block without modifying state.
 func (f *Faker) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
 	// Accumulate block rewards
