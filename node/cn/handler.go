@@ -1621,30 +1621,39 @@ func (pm *ProtocolManager) BroadcastVRank(ev *vrank.VRankBroadcastEvent) {
 		return
 	}
 
-	preprepare, preprepareOK := ev.Msg.(*vrank.VRankPreprepare)
-	candidate, candidateOK := ev.Msg.(*vrank.VRankCandidate)
-
 	targets := make(map[common.Address]bool, len(ev.Targets))
 	for _, target := range ev.Targets {
 		targets[target] = true
+	}
+
+	var asyncSendMsg func(peer Peer)
+
+	switch ev.Code {
+	case VRankPreprepareMsg:
+		preprepare, preprepareOK := ev.Msg.(*vrank.VRankPreprepare)
+		if !preprepareOK {
+			return
+		}
+		asyncSendMsg = func(peer Peer) {
+			peer.AsyncSendVRankPreprepare(preprepare)
+		}
+	case VRankCandidateMsg:
+		candidate, candidateOK := ev.Msg.(*vrank.VRankCandidate)
+		if !candidateOK {
+			return
+		}
+		asyncSendMsg = func(peer Peer) {
+			peer.AsyncSendVRankCandidate(candidate)
+		}
+	default:
+		return
 	}
 
 	for addr, peer := range pm.peers.CNPeers() {
 		if !targets[addr] || peer.GetVersion() < kaia68 {
 			continue
 		}
-		switch ev.Code {
-		case VRankPreprepareMsg:
-			if !preprepareOK {
-				return
-			}
-			peer.AsyncSendVRankPreprepare(preprepare)
-		case VRankCandidateMsg:
-			if !candidateOK {
-				return
-			}
-			peer.AsyncSendVRankCandidate(candidate)
-		}
+		asyncSendMsg(peer)
 	}
 }
 
