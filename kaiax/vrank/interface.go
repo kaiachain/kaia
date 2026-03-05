@@ -18,6 +18,7 @@ package vrank
 
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
@@ -29,8 +30,11 @@ type VRankModule interface {
 	HandleIstanbulPreprepare(block *types.Block, view *istanbul.View)
 	HandleVRankPreprepare(msg *VRankPreprepare) error
 	HandleVRankCandidate(msg *VRankCandidate) error
-	GetCfReport(blockNum, round uint64) (Report, error)
+	GetCfReport(blockNum uint64) (Report, error)
 	GetPfReport(blockNum uint64) (Report, error)
+	TallyCfReport(blockNum, round uint64) (Report, error)
+	GetPFS(blockNum uint64) (map[common.Address]uint64, error)
+	GetCFS(blockNum uint64) (map[common.Address]uint64, error)
 
 	SubscribeVRank(sink chan<- *VRankBroadcastEvent) event.Subscription
 }

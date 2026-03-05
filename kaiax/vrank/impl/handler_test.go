@@ -52,6 +52,7 @@ func createCN(t *testing.T, valset valset.ValsetModule) *CN {
 		NodeKey:     key,
 		Valset:      valset,
 		ChainConfig: params.TestKaiaConfig("permissionless"),
+		Chain:       &testChain{headers: map[uint64]*types.Header{}},
 	})
 	require.NoError(t, err)
 
@@ -102,10 +103,10 @@ type VRankScenario struct {
 	Candidates        []string   // Candidates(1)
 	Proposer          string     // Proposer(1, 0)
 	UnresponsiveCands []string   // optional: candidates whose message is not delivered to validators
-	ExpectedCfReports [][]string // ExpectedCfReports[i] = expected GetCfReport(1, 0) for Nodes[i]
+	ExpectedCfReports [][]string // ExpectedCfReports[i] = expected TallyCfReport(1, 0) for Nodes[i]
 }
 
-// runVRankScenario runs the full cycle for block 1 and asserts GetCfReport(1, 0) for each node matches ExpectedCfReports[i].
+// runVRankScenario runs the full cycle for block 1 and asserts TallyCfReport(1, 0) for each node matches ExpectedCfReports[i].
 func runVRankScenario(t *testing.T, s VRankScenario) {
 	const blockNum = uint64(1)
 	require.Len(t, s.ExpectedCfReports, len(s.Nodes), "ExpectedCfReports must have one entry per node")
@@ -165,9 +166,9 @@ func runVRankScenario(t *testing.T, s VRankScenario) {
 		}
 	}
 
-	// 4. GetCfReport(1, 0) from each node and assert ExpectedCfReports[i]
+	// 4. TallyCfReport(1, 0) from each node and assert ExpectedCfReports[i]
 	for i, nodeName := range s.Nodes {
-		report, err := nameToCN[nodeName].VRankModule.GetCfReport(blockNum, 0)
+		report, err := nameToCN[nodeName].VRankModule.TallyCfReport(blockNum, 0)
 		require.NoError(t, err)
 		expectedNames := s.ExpectedCfReports[i]
 		expectedAddrs := make([]common.Address, 0, len(expectedNames))

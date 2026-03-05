@@ -32,4 +32,5 @@ var (
 	ErrRoundOutOfRange       = errors.New("round out of range")
 	ErrHeaderNotFound        = errors.New("header not found")
 	ErrHeaderExtraTooShort   = errors.New("header extra is too short")
+	ErrFutureBlock           = errors.New("block number is beyond the current chain head")
 )

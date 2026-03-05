@@ -80,7 +80,7 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 	return nil
 }
 
-// HandleVRankCandidate stores VRankCandidate from candidates. Verification is deferred until GetCfReport.
+// HandleVRankCandidate stores VRankCandidate from candidates. Verification is performed at TallyCfReport.
 func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(msg.BlockNumber)) {
 		return nil
@@ -128,7 +128,7 @@ func (v *VRankModule) recoverVRankCandidateSender(msg *vrank.VRankCandidate) (co
 func (v *VRankModule) verifyVRankCandidateSender(msg *vrank.VRankCandidate, sender common.Address) error {
 	// should be GetCandidates(msg.BlockNumber), but candidates are not finalized during `Sequence` consensus.
 	candidates, err := v.Valset.GetCandidates(v.prepreparedView.Sequence.Uint64())
-	if err != nil || candidates == nil {
+	if err != nil {
 		logger.Debug("GetCandidates failed", "err", err, "blockNum", msg.BlockNumber)
 		return err
 	}

@@ -31,8 +31,8 @@ import (
 )
 
 const (
-	candidatePrepareDeadlineMs = 200
-	vrankCandidateSigDomain    = "VRANK_CANDIDATE_V1"
+	candidateMsgTimeoutMs   = 500
+	vrankCandidateSigDomain = "VRANK_CANDIDATE_V1"
 
 	broadcastChSize    = 2048
 	vrankEpoch         = 86400
@@ -54,6 +54,7 @@ type InitOpts struct {
 }
 
 type chain interface {
+	CurrentHeader() *types.Header
 	GetHeaderByNumber(number uint64) *types.Header
 }
 

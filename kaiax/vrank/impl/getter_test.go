@@ -36,6 +36,16 @@ type testChain struct {
 	headers map[uint64]*types.Header
 }
 
+func (c *testChain) CurrentHeader() *types.Header {
+	var result *types.Header
+	for num, h := range c.headers {
+		if result == nil || num > result.Number.Uint64() {
+			result = h
+		}
+	}
+	return result
+}
+
 func (c *testChain) GetHeaderByNumber(number uint64) *types.Header {
 	return c.headers[number]
 }
@@ -48,7 +58,61 @@ func makeHeaderWithRound(number uint64, round int64) *types.Header {
 	return types.SetRoundToHeader(h, round)
 }
 
+// ---------------------------------------------------------------------------
+// TestGetCfReport – read-only, reads from header.VRank
+// ---------------------------------------------------------------------------
+
 func TestGetCfReport(t *testing.T) {
+	t.Run("returns decoded report from header.VRank", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		v := createCN(t, valset).VRankModule
+		c1 := common.HexToAddress("0x0000000000000000000000000000000000000001")
+		c2 := common.HexToAddress("0x0000000000000000000000000000000000000002")
+		encoded, err := vrank.EncodeReport(vrank.Report{c1, c2})
+		require.NoError(t, err)
+		h := makeHeaderWithRound(10, 0)
+		h.VRank = encoded
+		v.Chain = &testChain{headers: map[uint64]*types.Header{10: h}}
+
+		report, err := v.GetCfReport(10)
+		require.NoError(t, err)
+		assert.Equal(t, vrank.Report{c1, c2}, report)
+
+		report2, err := v.GetCfReport(10)
+		require.NoError(t, err)
+		assert.Equal(t, report, report2, "GetCfReport must be deterministic")
+	})
+
+	t.Run("nil header.VRank returns empty report", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		v := createCN(t, valset).VRankModule
+		v.Chain = &testChain{headers: map[uint64]*types.Header{
+			5: makeHeaderWithRound(5, 0), // header.VRank is nil
+		}}
+
+		report, err := v.GetCfReport(5)
+		require.NoError(t, err)
+		assert.Empty(t, report)
+	})
+}
+
+func TestGetCfReport_Errors(t *testing.T) {
+	t.Run("header not found returns error", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		v := createCN(t, valset).VRankModule
+		v.Chain = &testChain{headers: map[uint64]*types.Header{}}
+
+		report, err := v.GetCfReport(99)
+		assert.ErrorIs(t, err, vrank.ErrHeaderNotFound)
+		assert.Nil(t, report)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// TestTallyCfReport – live generation from in-memory collector
+// ---------------------------------------------------------------------------
+
+func TestTallyCfReport(t *testing.T) {
 	var (
 		valset                 = mock_valset.NewMockValsetModule(gomock.NewController(t))
 		block1                 = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
@@ -119,7 +183,7 @@ func TestGetCfReport(t *testing.T) {
 			assert.NoError(t, err)
 		}
 	}
-	time.Sleep(candidatePrepareDeadlineMs * time.Millisecond)
+	time.Sleep(candidateMsgTimeoutMs * time.Millisecond)
 	// Late: candidates send VRankCandidate for block2 after deadline.
 	for i := 6; i < 8; i++ {
 		for _, v := range validators {
@@ -129,7 +193,7 @@ func TestGetCfReport(t *testing.T) {
 	}
 
 	for _, v := range validators {
-		report, err := v.VRankModule.GetCfReport(2, 0)
+		report, err := v.VRankModule.TallyCfReport(2, 0)
 		assert.NoError(t, err)
 		assert.Len(t, report, 4, "cfReport: 2 liars + 2 late")
 		for _, addr := range ontimeCands {
@@ -144,13 +208,13 @@ func TestGetCfReport(t *testing.T) {
 		for _, addr := range lateCands {
 			assert.True(t, slices.Contains(report, addr))
 		}
-		report2, err := v.VRankModule.GetCfReport(2, 0)
+		report2, err := v.VRankModule.TallyCfReport(2, 0)
 		assert.NoError(t, err)
-		assert.Equal(t, report, report2, "GetCfReport must be deterministic")
+		assert.Equal(t, report, report2, "TallyCfReport must be deterministic")
 	}
 }
 
-func TestGetCfReport_Errors(t *testing.T) {
+func TestTallyCfReport_Errors(t *testing.T) {
 	block1 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	view1_0 := &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
 	candAddr := common.HexToAddress("0xc4nd1d473")
@@ -163,7 +227,7 @@ func TestGetCfReport_Errors(t *testing.T) {
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
-		report, err := val.VRankModule.GetCfReport(1, 0)
+		report, err := val.VRankModule.TallyCfReport(1, 0)
 		require.NoError(t, err)
 		assert.True(t, slices.Contains(report, candAddr))
 	})
@@ -178,7 +242,7 @@ func TestGetCfReport_Errors(t *testing.T) {
 		view := &istanbul.View{Sequence: big.NewInt(vrankEpoch - 1), Round: common.Big0}
 		val.VRankModule.HandleIstanbulPreprepare(block, view)
 
-		report, err := val.VRankModule.GetCfReport(vrankEpoch-1, 0)
+		report, err := val.VRankModule.TallyCfReport(vrankEpoch-1, 0)
 		require.NoError(t, err)
 		assert.Empty(t, report)
 	})
@@ -191,11 +255,11 @@ func TestGetCfReport_Errors(t *testing.T) {
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
-		report, err := val.VRankModule.GetCfReport(1, 11) // maxRound is 10
+		report, err := val.VRankModule.TallyCfReport(1, 11) // maxRound is 10
 		require.ErrorIs(t, err, vrank.ErrRoundOutOfRange)
 		assert.Nil(t, report)
 
-		report, err = val.VRankModule.GetCfReport(1, 10)
+		report, err = val.VRankModule.TallyCfReport(1, 10)
 		assert.NotErrorIs(t, err, vrank.ErrRoundOutOfRange)
 	})
 
@@ -208,7 +272,7 @@ func TestGetCfReport_Errors(t *testing.T) {
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
-		report, err := val.VRankModule.GetCfReport(1, 0)
+		report, err := val.VRankModule.TallyCfReport(1, 0)
 		require.NoError(t, err)
 		assert.Empty(t, report)
 	})
@@ -222,7 +286,7 @@ func TestGetCfReport_Errors(t *testing.T) {
 
 		prepreparedTime, _, _ := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.True(t, prepreparedTime.IsZero())
-		report, err := val.VRankModule.GetCfReport(1, 0)
+		report, err := val.VRankModule.TallyCfReport(1, 0)
 		require.ErrorIs(t, err, vrank.ErrPrepreparedTimeNotSet)
 		assert.Nil(t, report)
 	})
@@ -235,11 +299,15 @@ func TestGetCfReport_Errors(t *testing.T) {
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
-		report, err := val.VRankModule.GetCfReport(1, 0)
+		report, err := val.VRankModule.TallyCfReport(1, 0)
 		require.ErrorIs(t, err, vrank.ErrGetCandidateFailed)
 		assert.Nil(t, report)
 	})
 }
+
+// ---------------------------------------------------------------------------
+// TestGetPfReport
+// ---------------------------------------------------------------------------
 
 func TestGetPfReport(t *testing.T) {
 	t.Run("round zero returns empty report", func(t *testing.T) {

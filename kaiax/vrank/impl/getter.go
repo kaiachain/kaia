@@ -25,8 +25,50 @@ import (
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
-// for building N-th header's VRank field, caller should query N-1 with the previous block's round.
-func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.Report, error) {
+// GetCfReport reads the committed cfReport for block blockNum from header.VRank.
+// Returns an empty report if header.VRank is nil (e.g. epoch-start block).
+func (v *VRankModule) GetCfReport(blockNum uint64) (vrank.Report, error) {
+	header := v.Chain.GetHeaderByNumber(blockNum)
+	if header == nil {
+		return nil, vrank.ErrHeaderNotFound
+	}
+	if len(header.VRank) == 0 {
+		return vrank.Report{}, nil
+	}
+	return vrank.DecodeReport(header.VRank)
+}
+
+// GetPfReport reads the committed pfReport for block blockNum from header.Extra.
+// Returns an empty report if the block was finalized at round 0.
+func (v *VRankModule) GetPfReport(blockNum uint64) (vrank.Report, error) {
+	header := v.Chain.GetHeaderByNumber(blockNum)
+	if header == nil {
+		return nil, vrank.ErrHeaderNotFound
+	}
+	if len(header.Extra) < types.IstanbulExtraVanity {
+		return nil, vrank.ErrHeaderExtraTooShort
+	}
+
+	round := uint64(header.Round())
+	if round == 0 {
+		return vrank.Report{}, nil
+	}
+
+	pfReport := make(vrank.Report, 0, round)
+	for r := uint64(0); r < round; r++ {
+		proposer, err := v.Valset.GetProposer(blockNum, r)
+		if err != nil {
+			return nil, err
+		}
+		pfReport = append(pfReport, proposer)
+	}
+
+	return pfReport, nil
+}
+
+// TallyCfReport computes the cfReport for block blockNum at the given round from in-memory collector state.
+// To fill `header(N).VRank`, the proposer of block N must use `TallyCfReport(N-1, last round of N-1)`.
+func (v *VRankModule) TallyCfReport(blockNum, round uint64) (vrank.Report, error) {
 	// epoch header's VRank should be nil
 	if (blockNum+1)%vrankEpoch == 0 {
 		return vrank.Report{}, nil
@@ -61,7 +103,7 @@ func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.Report, error) 
 		}
 		elapsed := msgWithTime.ReceivedAt.Sub(prepreparedAt).Milliseconds()
 		// early birds who sent before validator preprepared are safe
-		if elapsed <= candidatePrepareDeadlineMs {
+		if elapsed <= candidateMsgTimeoutMs {
 			safeCands[sender] = struct{}{}
 		}
 	}
@@ -75,30 +117,4 @@ func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.Report, error) 
 	}
 	slices.SortFunc(cfReport, func(a, b common.Address) int { return bytes.Compare(a.Bytes(), b.Bytes()) })
 	return cfReport, nil
-}
-
-func (v *VRankModule) GetPfReport(blockNum uint64) (vrank.Report, error) {
-	header := v.Chain.GetHeaderByNumber(blockNum)
-	if header == nil {
-		return nil, vrank.ErrHeaderNotFound
-	}
-	if len(header.Extra) < types.IstanbulExtraVanity {
-		return nil, vrank.ErrHeaderExtraTooShort
-	}
-
-	round := uint64(header.Round())
-	if round == 0 {
-		return vrank.Report{}, nil
-	}
-
-	pfReport := make(vrank.Report, 0, round)
-	for r := uint64(0); r < round; r++ {
-		proposer, err := v.Valset.GetProposer(blockNum, r)
-		if err != nil {
-			return nil, err
-		}
-		pfReport = append(pfReport, proposer)
-	}
-
-	return pfReport, nil
 }
