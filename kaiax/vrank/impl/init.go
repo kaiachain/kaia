@@ -81,7 +81,7 @@ func NewVRankModule() *VRankModule {
 }
 
 func (v *VRankModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.Valset == nil || opts.NodeKey == nil || opts.ChainConfig == nil || opts.Chain == nil {
+	if opts == nil || opts.Valset == nil || opts.NodeKey == nil || opts.ChainConfig == nil || opts.ChainConfig.ChainID == nil || opts.Chain == nil {
 		return vrank.ErrInitUnexpectedNil
 	}
 	v.InitOpts = *opts

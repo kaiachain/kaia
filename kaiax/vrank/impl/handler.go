@@ -92,6 +92,13 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	}
 	// should be isValidator(v.prepreparedView.Sequence.Uint64() + 1), but validators are not finalized during `seq` consensus.
 	if v.isValidator(v.prepreparedView.Sequence.Uint64()) {
+		if msg.BlockNumber > v.prepreparedView.Sequence.Uint64()+maxCollectorWindow {
+			return vrank.ErrTooFar
+		}
+		if msg.Round > maxRound {
+			return vrank.ErrRoundOutOfRange
+		}
+
 		sender, err := v.recoverVRankCandidateSender(msg)
 		if err != nil {
 			return err
@@ -109,12 +116,6 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 }
 
 func (v *VRankModule) recoverVRankCandidateSender(msg *vrank.VRankCandidate) (common.Address, error) {
-	if msg.BlockNumber > v.prepreparedView.Sequence.Uint64()+maxCollectorWindow {
-		return common.Address{}, vrank.ErrTooFar
-	}
-	if msg.Round > maxRound {
-		return common.Address{}, vrank.ErrRoundOutOfRange
-	}
 	sigHash := v.vrankCandidateSigHash(msg.BlockNumber, msg.Round, msg.BlockHash)
 	pubkey, err := crypto.SigToPub(sigHash.Bytes(), msg.Sig)
 	if err != nil {
@@ -140,12 +141,8 @@ func (v *VRankModule) verifyVRankCandidateSender(msg *vrank.VRankCandidate, send
 }
 
 func (v *VRankModule) vrankCandidateSigHash(blockNum uint64, round uint8, blockHash common.Hash) common.Hash {
-	chainID := uint64(0)
-	if v.ChainConfig != nil && v.ChainConfig.ChainID != nil {
-		chainID = v.ChainConfig.ChainID.Uint64()
-	} else {
-		logger.Error("ChainConfig.ChainID is nil")
-	}
+	chainID := v.ChainConfig.ChainID.Uint64()
+
 	// Canonical encoding:
 	// domain separator || chain_id(uint64 BE) || block_number(uint64 BE) || round(uint8) || block_hash(32 bytes)
 	payload := make([]byte, 0, len(vrankCandidateSigDomain)+8+8+1+len(blockHash))
