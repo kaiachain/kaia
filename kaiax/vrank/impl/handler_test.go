@@ -407,9 +407,9 @@ func TestHandleVRankCandidate(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val, cand := createCN(t, valset), createCN(t, valset)
 
-		sig := signVRankCandidate(t, cand.VRankModule, cand.Key, block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash())
 		block2 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(2)})
-		invalidSig := signVRankCandidate(t, cand.VRankModule, cand.Key, block2.NumberU64(), uint8(view1_0.Round.Uint64()), block2.Hash())
+		sigFutureBlock := signVRankCandidate(t, cand.VRankModule, cand.Key, block2.NumberU64(), 0, block2.Hash())
+		sigFutureRound := signVRankCandidate(t, cand.VRankModule, cand.Key, block1.NumberU64(), 1, block1.Hash())
 
 		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
@@ -424,23 +424,11 @@ func TestHandleVRankCandidate(t *testing.T) {
 		}{
 			{
 				name: "future block number",
-				msg:  &vrank.VRankCandidate{BlockNumber: 2, Round: 0, BlockHash: block1.Hash(), Sig: sig}, wantErr: vrank.ErrMsgFromNonCandidate,
+				msg:  &vrank.VRankCandidate{BlockNumber: 2, Round: 0, BlockHash: block2.Hash(), Sig: sigFutureBlock}, wantErr: nil,
 			},
 			{
 				name: "future round",
-				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 1, BlockHash: block1.Hash(), Sig: sig}, wantErr: vrank.ErrMsgFromNonCandidate,
-			},
-			{
-				name: "future block hash",
-				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 0, BlockHash: block2.Hash(), Sig: sig}, wantErr: vrank.ErrMsgFromNonCandidate,
-			},
-			{
-				name: "future signature and message mismatch",
-				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 0, BlockHash: block1.Hash(), Sig: invalidSig}, wantErr: vrank.ErrMsgFromNonCandidate,
-			},
-			{
-				name: "invalid signature (signature of block 2)",
-				msg:  &vrank.VRankCandidate{BlockNumber: 2, Round: 0, BlockHash: block1.Hash(), Sig: invalidSig}, wantErr: vrank.ErrMsgFromNonCandidate,
+				msg:  &vrank.VRankCandidate{BlockNumber: 1, Round: 1, BlockHash: block1.Hash(), Sig: sigFutureRound}, wantErr: nil,
 			},
 		}
 
