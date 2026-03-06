@@ -21,16 +21,18 @@ pragma solidity 0.8.19;
 /// @dev See https://github.com/klaytn/kips/issues/113
 interface IKIP113 {
     struct BlsPublicKeyInfo {
-        /// @dev compressed BLS12-381 public key (48 bytes)
+        /// @dev uncompressed BLS12-381 G1 public key in EIP-2537 format (128 bytes)
+        ///  Encoding: 16 zero bytes || X (48 bytes) || 16 zero bytes || Y (48 bytes)
         bytes publicKey;
-        /// @dev proof-of-possession (96 bytes)
+        /// @dev proof-of-possession in EIP-2537 G2 format (256 bytes)
         ///  must be a result of PopProve algorithm as per
         ///  draft-irtf-cfrg-bls-signature-05 section 3.3.3.
         ///  with ciphersuite "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_"
+        ///  Encoding: 16 zero bytes || X0 (48 bytes) || 16 zero bytes || X1 (48 bytes)
+        ///           || 16 zero bytes || Y0 (48 bytes) || 16 zero bytes || Y1 (48 bytes)
         bytes pop;
     }
 
     /// @dev Returns all the stored addresses, public keys, and proof-of-possessions at once.
-    ///  _Note_ The function is not able to verify the validity of the public key and the proof-of-possession due to the lack of [EIP-2537](https://eips.ethereum.org/EIPS/eip-2537). See [validation](https://kips.klaytn.foundation/KIPs/kip-113#validation) for off-chain validation.
     function getAllBlsInfo() external view returns (address[] memory nodeIdList, BlsPublicKeyInfo[] memory pubkeyList);
 }

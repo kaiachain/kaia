@@ -83,8 +83,6 @@ func (r *RandaoModule) getAllCached(num *big.Int) (system.BlsPublicKeyInfos, err
 
 		backend := backends.NewBlockchainContractBackend(r.Chain, nil, nil)
 
-		var kip113Addr common.Address
-
 		// Early check for before-fork blocks
 		if !r.ChainConfig.IsRandaoForkEnabled(num) {
 			return nil, randao.ErrBeforeRandaoFork
@@ -96,9 +94,36 @@ func (r *RandaoModule) getAllCached(num *big.Int) (system.BlsPublicKeyInfos, err
 			return nil, err
 		}
 
+		// Semantically, bls keys are fetched from N-1.
+		// ABv2 is installed at HF. `RandoModule.PostInsertBlock` calls with `getAllCAched(HF)` at HF-1
+		// At HF, no committed ABv2 migration yet. Thus fallback to legacy fetcher, SBR.
+		// From HF+1, fetches bls keys from ABv2
+		if r.ChainConfig.IsPermissionlessForkEnabled(parentNum) {
+			abv2Root := statedb.GetStorageRoot(system.AddressBookAddr)
+			storageKey := abv2Root.Hex()
+
+			if item, ok := r.storageRootCache.Get(storageKey); ok {
+				logger.Trace("BlsPublicKeyInfos storage root cache hit (ABv2)", "number", num.Uint64(), "abv2Root", abv2Root.Hex())
+				infos := item.(system.BlsPublicKeyInfos)
+				r.blsPubkeyCache.Add(num.Uint64(), infos)
+				return infos, nil
+			}
+
+			infos, err := system.ReadAddressBookV2BlsAll(backend, parentNum)
+			if err != nil {
+				return nil, err
+			}
+			logger.Trace("BlsPublicKeyInfos cache miss (ABv2)", "number", num.Uint64(), "abv2Root", abv2Root.Hex(), "elapsed", time.Since(start))
+			r.blsPubkeyCache.Add(num.Uint64(), infos)
+			r.storageRootCache.Add(storageKey, infos)
+			return infos, nil
+		}
+
+		// Permissioned: BLS info is stored in KIP113.
 		// Because the system contract Registry is installed at Finalize() of RandaoForkBlock,
 		// it is not possible to read KIP113 address from the Registry at RandaoForkBlock.
 		// Hence the ChainConfig fallback.
+		var kip113Addr common.Address
 		if r.ChainConfig.IsRandaoForkBlock(num) {
 			// For fork block, get kip113Addr from ChainConfig
 			var ok bool

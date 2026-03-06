@@ -17,8 +17,6 @@
 package impl
 
 import (
-	"errors"
-	"math/big"
 	"sort"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -28,18 +26,16 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
-func (v *ValsetModule) getAllStateNodes(num uint64) (valset.CommonAddressSet, error) {
+func (v *ValsetModule) getAllStateNodes(num uint64) (*ValidatorList, error) {
 	if num == 0 {
 		return v.getCouncilGenesisPermissionless()
 	}
 
-	council, _, err := v.getCouncilDBPermissionless(num)
-	if err == nil && council != nil {
-		return council, err
+	nodes, err := v.getOrComputeNodeStates(num, nil)
+	if err != nil {
+		return nil, err
 	}
-	// if permissionless platform (ABV2, VRank, Registry) is not ready yet, fallbback to legacy getter
-	council, _, err = v.getCouncilDBPermissioned(num)
-	return council, err
+	return newValidatorList(nodes), nil
 }
 
 func (v *ValsetModule) getCouncilPermissionless(num uint64) (valset.CommonAddressSet, error) {
@@ -47,11 +43,7 @@ func (v *ValsetModule) getCouncilPermissionless(num uint64) (valset.CommonAddres
 	if err != nil {
 		return nil, err
 	}
-	if permlessCouncil, ok := allStateNodes.(*ValidatorList); ok {
-		return permlessCouncil.getPermlessCouncil(), nil
-	} else {
-		return nil, errors.New("not a permissionless council object")
-	}
+	return allStateNodes.getPermlessCouncil(), nil
 }
 
 func (v *ValsetModule) getCouncilPermissioned(num uint64) (valset.CommonAddressSet, error) {
@@ -87,7 +79,7 @@ func (v *ValsetModule) getCouncilGenesisPermissioned() (valset.CommonAddressSet,
 	return valset.NewCommonAddressSet(istanbulExtra.Validators), nil
 }
 
-func (v *ValsetModule) getCouncilGenesisPermissionless() (valset.CommonAddressSet, error) {
+func (v *ValsetModule) getCouncilGenesisPermissionless() (*ValidatorList, error) {
 	istanbulExtra, err := v.getIstanbul()
 	if err != nil {
 		return nil, err
@@ -113,15 +105,6 @@ func (v *ValsetModule) getCouncilDBPermissioned(num uint64) (valset.CommonAddres
 	return ReadCouncilPermissiond(v.ChainKv, voteNum), true, nil
 }
 
-func (v *ValsetModule) getCouncilDBPermissionless(num uint64) (valset.CommonAddressSet, bool, error) {
-	nums := v.readValidatorStateChangeBlockNumsCached()
-	if nums == nil {
-		return nil, false, errNoStateChangeBlockNums
-	}
-	stateChangeNum := lastNumLessEqualThan(nums, num)
-	council := ReadCouncilPermissionless(v.ChainKv, stateChangeNum)
-	return council, true, nil
-}
 
 func (v *ValsetModule) readLowestScannedVoteNumCached() *uint64 {
 	if v.lowestScannedVoteNumCache == nil {
@@ -143,18 +126,6 @@ func (v *ValsetModule) readValidatorVoteBlockNumsCached() []uint64 {
 	return nums
 }
 
-func (v *ValsetModule) readValidatorStateChangeBlockNumsCached() []uint64 {
-	if v.validatorStateChangeBlockNumsCache == nil {
-		v.validatorStateChangeBlockNumsCache = ReadValidatorStateChangeBlockNums(v.ChainKv)
-		if v.validatorStateChangeBlockNumsCache == nil {
-			return nil
-		}
-	}
-
-	nums := make([]uint64, len(v.validatorStateChangeBlockNumsCache))
-	copy(nums, v.validatorStateChangeBlockNumsCache)
-	return nums
-}
 
 // lastNumLessThan returns the last (rightmost) number in the list that is less than the given number.
 // If no such number exists, it returns 0.
@@ -294,11 +265,7 @@ func (v *ValsetModule) applyBlock(council valset.CommonAddressSet, num uint64, w
 	governingNode := v.GovModule.GetParamSet(num).GoverningNode
 	if applyVote(header, council, governingNode) && write {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
-		if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-			writeCouncilPermissionless(v.ChainKv, num, council)
-		} else {
-			writeCouncilPermissioned(v.ChainKv, num, council)
-		}
+		writeCouncilPermissioned(v.ChainKv, num, council)
 		v.validatorVoteBlockNumsCache = nil
 	}
 	return nil

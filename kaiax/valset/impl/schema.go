@@ -32,21 +32,13 @@ var (
 	validatorVoteBlockNums           = []byte("validatorVoteBlockNums")
 	lowestScannedValidatorVoteNumKey = []byte("lowestScannedValidatorVoteNum")
 	councilPermissionedPrefix        = []byte("council")
-	councilPermissionlessPrefix      = []byte("councilPermissionless")
-	istanbulSnapshotKeyPrefix        = []byte("snapshot")
+	istanbulSnapshotKeyPrefix = []byte("snapshot")
 
-	validatorStateChangeBlockNums = []byte("validatorStateChangeBlockNums")
-
-	voteNumMu        = &sync.RWMutex{}
-	stateChangeNumMu = &sync.RWMutex{}
+	voteNumMu = &sync.RWMutex{}
 )
 
 func councilKey(num uint64) []byte {
 	return append(councilPermissionedPrefix, common.Int64ToByteLittleEndian(num)...)
-}
-
-func councilKeyPermissionless(num uint64) []byte {
-	return append(councilPermissionlessPrefix, common.Int64ToByteLittleEndian(num)...)
 }
 
 func istanbulSnapshotKey(hash common.Hash) []byte {
@@ -71,9 +63,6 @@ func ReadValidatorVoteBlockNums(db database.Database) []uint64 {
 	return readVoteOrStateChangeBlockNums(db, validatorVoteBlockNums)
 }
 
-func ReadValidatorStateChangeBlockNums(db database.Database) []uint64 {
-	return readVoteOrStateChangeBlockNums(db, validatorStateChangeBlockNums)
-}
 
 func writeVoteOrStageChangeBlockNums(db database.Database, key []byte, nums []uint64) {
 	slices.Sort(nums)
@@ -90,9 +79,6 @@ func writeValidatorVoteBlockNums(db database.Database, nums []uint64) {
 	writeVoteOrStageChangeBlockNums(db, validatorVoteBlockNums, nums)
 }
 
-func writeValidatorStateChangeBlockNums(db database.Database, nums []uint64) {
-	writeVoteOrStageChangeBlockNums(db, validatorStateChangeBlockNums, nums)
-}
 
 // insertValidatorVoteBlockNums inserts a new block num into the validator vote block nums.
 func insertValidatorVoteBlockNums(db database.Database, num uint64) {
@@ -110,22 +96,6 @@ func insertValidatorVoteBlockNums(db database.Database, num uint64) {
 	writeValidatorVoteBlockNums(db, nums)
 }
 
-// insertValidatorStateChangeBlockNum inserts a new block num where validator set has been updated
-func insertValidatorStateChangeBlockNum(db database.Database, num uint64) {
-	stateChangeNumMu.Lock()
-	defer stateChangeNumMu.Unlock()
-
-	nums := ReadValidatorStateChangeBlockNums(db)
-
-	// Skip if num already exists in the array
-	if slices.Contains(nums, num) {
-		return
-	}
-
-	nums = append(nums, num)
-	writeValidatorStateChangeBlockNums(db, nums)
-}
-
 // trimValidatorVoteBlockNums deletes all block nums greater than or equal to `since`.
 func trimValidatorVoteBlockNums(db database.Database, since uint64) {
 	voteNumMu.Lock()
@@ -140,42 +110,12 @@ func trimValidatorVoteBlockNums(db database.Database, since uint64) {
 	writeValidatorVoteBlockNums(db, nums)
 }
 
-// trimValidatorStateChangeBlockNums deletes all block nums greater than or equal to `since`.
-func trimValidatorStateChangeBlockNums(db database.Database, since uint64) {
-	stateChangeNumMu.Lock()
-	defer stateChangeNumMu.Unlock()
-
-	nums := ReadValidatorStateChangeBlockNums(db)
-	if nums == nil {
-		return
-	}
-
-	nums = slices.DeleteFunc(nums, func(n uint64) bool { return n >= since })
-	writeValidatorStateChangeBlockNums(db, nums)
-}
-
-func ReadPermissionlessCouncilKeyExist(db database.Database, num uint64) bool {
-	b, err := db.Get(councilKeyPermissionless(num))
-	if err != nil || len(b) == 0 {
-		return false
-	}
-	return true
-}
-
 func ReadCouncilPermissiond(db database.Database, permissionedNum uint64) valset.CommonAddressSet {
 	permissionedCouncil := readCouncilPermissioned(db, permissionedNum)
 	if permissionedCouncil == nil {
 		return nil
 	}
 	return valset.NewCommonAddressSet(permissionedCouncil)
-}
-
-func ReadCouncilPermissionless(db database.Database, permlessNum uint64) valset.CommonAddressSet {
-	permlessCouncil := readCouncilPermissionless(db, permlessNum)
-	if permlessCouncil == nil {
-		return nil
-	}
-	return newValidatorList(permlessCouncil)
 }
 
 func readCouncilPermissioned(db database.Database, num uint64) []common.Address {
@@ -192,27 +132,8 @@ func readCouncilPermissioned(db database.Database, num uint64) []common.Address 
 	return addrs
 }
 
-func readCouncilPermissionless(db database.Database, num uint64) valset.ValidatorStateMap {
-	b, err := db.Get(councilKeyPermissionless(num))
-	if err != nil || len(b) == 0 {
-		return nil
-	}
-
-	var result valset.ValidatorStateMap
-	if err = json.Unmarshal(b, &result); err != nil {
-		logger.Error("Malformed council", "num", num, "err", err)
-		return nil
-	}
-	return result
-}
-
 func writeCouncilPermissioned(db database.Database, num uint64, validators valset.CommonAddressSet) {
 	key := councilKey(num)
-	marshalAndWrite(db, num, key, validators)
-}
-
-func writeCouncilPermissionless(db database.Database, num uint64, validators valset.CommonAddressSet) {
-	key := councilKeyPermissionless(num)
 	marshalAndWrite(db, num, key, validators)
 }
 
@@ -228,9 +149,6 @@ func marshalAndWrite(db database.Database, num uint64, key []byte, validators va
 
 func deleteCouncil(db database.Database, num uint64) {
 	if err := db.Delete(councilKey(num)); err != nil {
-		logger.Crit("Failed to delete council", "num", num, "err", err)
-	}
-	if err := db.Delete(councilKeyPermissionless(num)); err != nil {
 		logger.Crit("Failed to delete council", "num", num, "err", err)
 	}
 }

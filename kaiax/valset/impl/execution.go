@@ -21,49 +21,51 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
+func (v *ValsetModule) postInsertBlockPermissionless(block *types.Block) error {
+	num := block.Header().Number.Uint64()
+
+	// Compute and cache node states for N+1
+	_, err := v.getOrComputeNodeStates(num+1, nil)
+	return err
+}
+
 func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
-	header := block.Header()
-	num := header.Number.Uint64()
+	var (
+		header = block.Header()
+		num    = header.Number.Uint64()
+	)
 	if num == 0 {
 		return nil
 	}
 
-	// Ingest validator vote
-	var (
-		council valset.CommonAddressSet
-		err     error
-	)
-	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		council, err = v.getCouncilPermissionless(num)
-	} else {
-		council, err = v.getCouncilPermissioned(num)
+	config := v.Chain.Config()
+
+	if config.IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return v.postInsertBlockPermissionless(block)
 	}
+
+	// Permissioned: get council for vote handling
+	council, err := v.getCouncilPermissioned(num)
 	if err != nil {
 		return err
 	}
-	// TODO-Permissionless: Revisit me and refine
+
+	// The header gov handler for {add,remove} validator is only processed in the permissioned network
 	governingNode := v.GovModule.GetParamSet(num).GoverningNode
 	if applyVote(header, council, governingNode) {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
-		if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-			writeCouncilPermissionless(v.ChainKv, num, council)
-		} else {
-			writeCouncilPermissioned(v.ChainKv, num, council)
-		}
+		writeCouncilPermissioned(v.ChainKv, num, council)
 		v.validatorVoteBlockNumsCache = nil
 	}
-
 	return nil
 }
 
 func (v *ValsetModule) RewindTo(block *types.Block) {
 	trimValidatorVoteBlockNums(v.ChainKv, block.Header().Number.Uint64())
-	trimValidatorStateChangeBlockNums(v.ChainKv, block.Header().Number.Uint64())
 	v.validatorVoteBlockNumsCache = nil
-	v.validatorStateChangeBlockNumsCache = nil
+	v.nodeStatesCache.Purge()
 }
 
 func (v *ValsetModule) RewindDelete(hash common.Hash, num uint64) {

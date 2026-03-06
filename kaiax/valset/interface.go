@@ -46,9 +46,7 @@ type ValsetModule interface {
 	GetDemotedValidators(num uint64) ([]common.Address, error)
 	GetProposer(num uint64, round uint64) (common.Address, error)
 
-	// Permissionless transition handlers
-	GetEpochTransition(validators ValidatorStateMap, num uint64, statedb *state.StateDB) (ValidatorStateMap, error)
-	GetVrankViolationTransition(validators ValidatorStateMap, num uint64, state *state.StateDB) (ValidatorStateMap, error)
-	GetTimeoutTransition(validators ValidatorStateMap) ValidatorStateMap
-	ProcessTransition(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
+	// Permissionless
+	WriteStatesToContract(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
+	InstallABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 }

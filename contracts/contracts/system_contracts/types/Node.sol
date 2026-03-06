@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 /// @notice A list of possible states for a node
 /// @dev Please refer to KIP-286 for more details
-enum NodeState {
+enum State {
     Unknown,      // 0
     CandInactive, // 1
     CandReady,    // 2
@@ -29,6 +29,8 @@ struct BlsPublicKeyInfo {
 
 /// @notice A struct to store the node info
 struct NodeInfo {
+    /// @dev The manager address that controls this node
+    address manager;
     /// @dev Used to stake and unstake, immutable
     address stakingContract;
     /// @dev Used to receive rewards, immutable if PD=on
@@ -44,7 +46,7 @@ struct NodeInfo {
     /// @dev Used to store the metadata of the validator, in JSON format
     string metadata;
     /// @dev Used to store the current state of the node
-    NodeState state;
+    State state;
 }
 
 /// @notice Lightweight struct for getAllProfiles() — no BLS data
@@ -53,5 +55,5 @@ struct Profile {
     address stakingContract;
     address rewardAddress;
     uint256 timeoutAt;
-    NodeState state;
+    State state;
 }

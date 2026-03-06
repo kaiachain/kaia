@@ -33,8 +33,8 @@ type sortableValidator struct {
 }
 
 // getEpochTransition returns new validators after applying epoch transition
-func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, validators valset.ValidatorStateMap) valset.ValidatorStateMap {
-	devLog := func(vals valset.ValidatorStateMap) {
+func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, validators valset.NodeStateMap, idleTimeout time.Duration, maxValidatorCount int) valset.NodeStateMap {
+	devLog := func(vals valset.NodeStateMap) {
 		for addr, val := range vals {
 			logger.Info("TODO-Permissionless: Remove this log", "num", num, "addr", addr.String(), "state", val.State.String(), "stakingamount", val.StakingAmount, "idleTimeout", val.IdleTimeout.String(), "pausedtimeout", val.PausedTimeout.String())
 		}
@@ -51,6 +51,7 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 	}
 
 	var (
+		now                  = time.Now()
 		newValidators        = validators.Copy()
 		activeValCompetitors []sortableValidator
 		pset                 = v.GovModule.GetParamSet(num - 1) // read gov param from parent number
@@ -61,6 +62,7 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 		switch val.State {
 		case valset.ValExiting:
 			val.State = valset.ValInactive // T1
+			val.IdleTimeout = now.Add(idleTimeout)
 		case valset.CandReady:
 			if val.StakingAmount >= minStake {
 				val.State = valset.CandTesting // T4a
@@ -73,6 +75,7 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 					activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
 				} else {
 					val.State = valset.ValInactive // T3b
+					val.IdleTimeout = now.Add(idleTimeout)
 				}
 			} else {
 				val.State = valset.CandInactive // T2
@@ -82,6 +85,7 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 				activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
 			} else {
 				val.State = valset.ValInactive // T3b
+				val.IdleTimeout = now.Add(idleTimeout)
 			}
 		}
 	}
@@ -92,30 +96,47 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 		)
 	})
 	for idx, potentialActiveVal := range activeValCompetitors {
-		if idx < ActiveValidatorCount {
+		if idx < maxValidatorCount {
 			if potentialActiveVal.State != valset.ValPaused {
 				potentialActiveVal.State = valset.ValActive
 			}
 		} else {
 			potentialActiveVal.State = valset.ValInactive
+			potentialActiveVal.IdleTimeout = now.Add(idleTimeout)
 		}
 	}
 	return newValidators
 }
 
-// getTimeoutTransition returns new validators after applying timeout transition
-func (v *ValsetModule) getTimeoutTransition(validators valset.ValidatorStateMap) valset.ValidatorStateMap {
+// getTimeoutTransition returns new validators after applying timeout transition.
+// For nodes newly entering ValReady/ValInactive or ValPaused (timeout not yet set),
+// it sets the timeout. If from state was already ValReady/ValInactive/ValPaused,
+// the existing timeout is preserved.
+func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, pauseTimeout, idleTimeout time.Duration) valset.NodeStateMap {
 	newValidators := validators.Copy()
+	now := time.Now()
 	for _, val := range newValidators {
 		switch val.State {
 		case valset.ValReady, valset.ValInactive:
-			if time.Now().After(val.IdleTimeout) {
+			if val.IdleTimeout.IsZero() {
+				val.IdleTimeout = now.Add(idleTimeout)
+			}
+			if now.After(val.IdleTimeout) {
 				val.State = valset.CandInactive
+				val.IdleTimeout = time.Time{}
 			}
 		case valset.ValPaused:
-			if time.Now().After(val.PausedTimeout) {
-				val.State = valset.ValInactive
+			if val.PausedTimeout.IsZero() {
+				val.PausedTimeout = now.Add(pauseTimeout)
 			}
+			if now.After(val.PausedTimeout) {
+				val.State = valset.ValInactive
+				val.PausedTimeout = time.Time{}
+				val.IdleTimeout = now.Add(idleTimeout)
+			}
+		default:
+			val.IdleTimeout = time.Time{}
+			val.PausedTimeout = time.Time{}
 		}
 	}
 	return newValidators
@@ -126,11 +147,11 @@ func (v *ValsetModule) getTimeoutTransition(validators valset.ValidatorStateMap)
 func (vs *ValidatorList) getPermlessCouncil() *ValidatorList {
 	if vs == nil {
 		logger.Error("ValidatorList is nil")
-		return newValidatorList(valset.ValidatorStateMap{})
+		return newValidatorList(valset.NodeStateMap{})
 	}
 	vs.permlessMu.RLock()
 	defer vs.permlessMu.RUnlock()
-	councilVals := make(valset.ValidatorStateMap)
+	councilVals := make(valset.NodeStateMap)
 	for addr, val := range vs.permlessVals {
 		switch val.State {
 		case valset.ValActive, valset.ValReady, valset.ValPaused:
@@ -140,7 +161,7 @@ func (vs *ValidatorList) getPermlessCouncil() *ValidatorList {
 	return newValidatorList(councilVals.Copy())
 }
 
-func (v *ValsetModule) deactiveStakersLessMinStakingAmount(si *staking.StakingInfo, num uint64, validators valset.ValidatorStateMap) valset.ValidatorStateMap {
+func (v *ValsetModule) deactiveStakersLessMinStakingAmount(si *staking.StakingInfo, num uint64, validators valset.NodeStateMap) valset.NodeStateMap {
 	if len(si.NodeIds) == 0 && len(si.StakingContracts) == 0 && len(si.RewardAddrs) == 0 {
 		// Not ABook activated yet
 		return nil

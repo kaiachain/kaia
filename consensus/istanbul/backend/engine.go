@@ -515,9 +515,17 @@ func (sb *backend) Initialize(chain consensus.ChainReader, header *types.Header,
 
 	context := blockchain.NewEVMBlockContext(header, chain, nil)
 	vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
-	if err := sb.valsetModule.ProcessTransition(vmenv, header, state); err != nil {
+	if err := sb.valsetModule.WriteStatesToContract(vmenv, header, state); err != nil {
 		logger.Error("Failed to process transition", "number", header.Number.Uint64(), "err", err.Error())
 	}
+
+	// {
+	// 	candTestings, err := sb.valsetModule.GetCandidates(header.Number.Uint64())
+	// 	fmt.Println("###", err)
+	// 	for _, addr := range candTestings {
+	// 		fmt.Println("@@@", header.Number.Uint64(), addr.String())
+	// 	}
+	// }
 }
 
 // Finalize runs any post-transaction state modifications (e.g. block rewards)
@@ -607,6 +615,16 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 				return nil, err
 			}
 			logger.Info("Replaced CypressCredit with CypressCreditV2", "blockNum", header.Number.Uint64())
+		}
+	}
+
+	// Install and initialize ABv2 at Finalize(HF-1).
+	// ABv2 state is included in block HF-1's state root, and used starting from Initialize(HF).
+	if chain.Config().IsPermissionlessForBlockParent(header.Number) {
+		context := blockchain.NewEVMBlockContext(header, chain, nil)
+		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
+		if err := sb.valsetModule.InstallABv2(vmenv, header, state); err != nil {
+			return nil, err
 		}
 	}
 

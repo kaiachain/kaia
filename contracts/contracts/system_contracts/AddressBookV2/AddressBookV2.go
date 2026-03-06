@@ -35,8 +35,24 @@ type BlsPublicKeyInfo struct {
 	Pop       []byte
 }
 
+// IABv2DataContractInitData is an auto generated low-level Go binding around an user-defined struct.
+type IABv2DataContractInitData struct {
+	InitialOwner           common.Address
+	ExitThreshold          *big.Int
+	PauseTimeout           *big.Int
+	IdleTimeout            *big.Int
+	MaxValidatorCount      *big.Int
+	MaxReadyCandidateCount *big.Int
+	KefAddress             common.Address
+	KifAddress             common.Address
+	KpfAddress             common.Address
+	NodeIds                []common.Address
+	Infos                  []NodeInfo
+}
+
 // NodeInfo is an auto generated low-level Go binding around an user-defined struct.
 type NodeInfo struct {
+	Manager         common.Address
 	StakingContract common.Address
 	RewardAddress   common.Address
 	VoterAddress    common.Address
@@ -56,4942 +72,15 @@ type Profile struct {
 	State           uint8
 }
 
-// AddressBookBaseMetaData contains all meta data concerning the AddressBookBase contract.
-var AddressBookBaseMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"name\":\"AlreadyActivated\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadyInitialized\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadySuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInput\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidState\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeAlreadyExists\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeNotFound\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyEpochBlock\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyManager\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlySystemTx\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SlotsFull\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StakingTooLow\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TimeoutExpired\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"Activated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateActivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateDeactivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"epochValCount\",\"type\":\"uint256\"}],\"name\":\"EpochTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldThreshold\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newThreshold\",\"type\":\"uint256\"}],\"name\":\"ExitThresholdUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldIdleTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"IdleTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldManager\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"ManagerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxReadyCandidateCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxValidatorCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"}],\"name\":\"NodeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"NodeDeleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldPauseTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"PauseTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"ScoresUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"enumNodeState\",\"name\":\"fromState\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"enumNodeState\",\"name\":\"toState\",\"type\":\"uint8\"}],\"name\":\"StateChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"enumNodeState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"}],\"name\":\"SystemTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorSuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorUnsuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"ValidatorsInitialized\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"EPOCH_BLOCK_INTERVAL\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MIN_STAKE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SYSTEM_SENDER\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"activate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"activateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"}],\"name\":\"createNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentEpoch\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deactivateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deleteNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"exit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getActiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllBlsInfo\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIdList\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo[]\",\"name\":\"pubkeyList\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllProfiles\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structProfile[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCandInactiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getEpochValCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getExitThreshold\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getManager\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getMaxCounts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"maxValidatorCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxReadyCandidateCount\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"getNodeInfos\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeState\",\"outputs\":[{\"internalType\":\"enumNodeState\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getScore\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getStakingContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"name\":\"getStateCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getSuspendedValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getTimeoutAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTimeouts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"pauseTimeout\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"idleTimeout\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo[]\",\"name\":\"infos\",\"type\":\"tuple[]\"}],\"name\":\"initializeValidators\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isActivated\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isCandInactive\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isInActiveSet\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isRegistered\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isValidatorsInitialized\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"offboard\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"enumNodeState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"},{\"internalType\":\"uint256[]\",\"name\":\"timeoutAts\",\"type\":\"uint256[]\"}],\"name\":\"processSystemTransition\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"readyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"resume\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"suspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unreadyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unsuspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newExitThreshold\",\"type\":\"uint256\"}],\"name\":\"updateExitThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"updateIdleTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"updateManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxReadyCandidateCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxReadyCandidateCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxValidatorCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxValidatorCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"updatePauseTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"updateScores\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
-	Sigs: map[string]string{
-		"de244059": "EPOCH_BLOCK_INTERVAL()",
-		"cb1c2b5c": "MIN_STAKE()",
-		"87b7b8fd": "SYSTEM_SENDER()",
-		"0f15f4c0": "activate()",
-		"ef6bdade": "activateCandidate(address)",
-		"4429d720": "createNode(address,address,address,address,(bytes,bytes),string)",
-		"76671808": "currentEpoch()",
-		"171a6cdc": "deactivateCandidate(address)",
-		"2d4ede93": "deleteNode(address)",
-		"b42652e9": "exit(address)",
-		"6b75b7a8": "getActiveSetLength()",
-		"6968b53f": "getAllBlsInfo()",
-		"0b1fe784": "getAllProfiles()",
-		"94a64d98": "getCandInactiveSetLength()",
-		"7d7b127f": "getEpochValCount()",
-		"3aea9faf": "getExitThreshold()",
-		"3d584063": "getManager(address)",
-		"03e6689d": "getMaxCounts()",
-		"582115fb": "getNodeInfo(address)",
-		"8beeb439": "getNodeInfos(address[])",
-		"229bb823": "getNodeState(address)",
-		"80f2ff25": "getScore(uint256,address)",
-		"5300f9b4": "getStakingContract(address)",
-		"1b1a478b": "getStateCount(uint8)",
-		"1ba3fd58": "getSuspendedValidators()",
-		"277f3dc3": "getTimeoutAt(address)",
-		"e70c38f1": "getTimeouts()",
-		"58199d01": "initializeValidators(address[],(address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])",
-		"4a8c1fb4": "isActivated()",
-		"45ce8110": "isCandInactive(address)",
-		"5334cf44": "isInActiveSet(address)",
-		"c3c5a547": "isRegistered(address)",
-		"551ec9b5": "isValidatorsInitialized()",
-		"b9f96f40": "offboard(address)",
-		"8da5cb5b": "owner()",
-		"76a67a51": "pause(address)",
-		"45527e44": "processSystemTransition(address[],uint8[],uint256[])",
-		"52d1902d": "proxiableUUID()",
-		"656f5869": "readyValidator(address)",
-		"715018a6": "renounceOwnership()",
-		"793c1946": "resume(address)",
-		"a41b6000": "suspendValidator(address)",
-		"f2fde38b": "transferOwnership(address)",
-		"d9abb38b": "unreadyValidator(address)",
-		"78b84a5c": "unsuspendValidator(address)",
-		"2c1d4895": "updateExitThreshold(uint256)",
-		"e59d7a84": "updateIdleTimeout(uint256)",
-		"07ecec3e": "updateManager(address,address)",
-		"76714282": "updateMaxReadyCandidateCount(uint256)",
-		"7e134fc6": "updateMaxValidatorCount(uint256)",
-		"9d0e234d": "updatePauseTimeout(uint256)",
-		"27f94c3d": "updateScores(address[],uint256[])",
-		"3659cfe6": "upgradeTo(address)",
-		"4f1ef286": "upgradeToAndCall(address,bytes)",
-	},
-}
-
-// AddressBookBaseABI is the input ABI used to generate the binding from.
-// Deprecated: Use AddressBookBaseMetaData.ABI instead.
-var AddressBookBaseABI = AddressBookBaseMetaData.ABI
-
-// AddressBookBaseBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const AddressBookBaseBinRuntime = ``
-
-// Deprecated: Use AddressBookBaseMetaData.Sigs instead.
-// AddressBookBaseFuncSigs maps the 4-byte function signature to its string representation.
-var AddressBookBaseFuncSigs = AddressBookBaseMetaData.Sigs
-
-// AddressBookBase is an auto generated Go binding around a Kaia contract.
-type AddressBookBase struct {
-	AddressBookBaseCaller     // Read-only binding to the contract
-	AddressBookBaseTransactor // Write-only binding to the contract
-	AddressBookBaseFilterer   // Log filterer for contract events
-}
-
-// AddressBookBaseCaller is an auto generated read-only Go binding around a Kaia contract.
-type AddressBookBaseCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// AddressBookBaseTransactor is an auto generated write-only Go binding around a Kaia contract.
-type AddressBookBaseTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// AddressBookBaseFilterer is an auto generated log filtering Go binding around a Kaia contract events.
-type AddressBookBaseFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// AddressBookBaseSession is an auto generated Go binding around a Kaia contract,
-// with pre-set call and transact options.
-type AddressBookBaseSession struct {
-	Contract     *AddressBookBase  // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts     // Call options to use throughout this session
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
-}
-
-// AddressBookBaseCallerSession is an auto generated read-only Go binding around a Kaia contract,
-// with pre-set call options.
-type AddressBookBaseCallerSession struct {
-	Contract *AddressBookBaseCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts          // Call options to use throughout this session
-}
-
-// AddressBookBaseTransactorSession is an auto generated write-only Go binding around a Kaia contract,
-// with pre-set transact options.
-type AddressBookBaseTransactorSession struct {
-	Contract     *AddressBookBaseTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
-}
-
-// AddressBookBaseRaw is an auto generated low-level Go binding around a Kaia contract.
-type AddressBookBaseRaw struct {
-	Contract *AddressBookBase // Generic contract binding to access the raw methods on
-}
-
-// AddressBookBaseCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
-type AddressBookBaseCallerRaw struct {
-	Contract *AddressBookBaseCaller // Generic read-only contract binding to access the raw methods on
-}
-
-// AddressBookBaseTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
-type AddressBookBaseTransactorRaw struct {
-	Contract *AddressBookBaseTransactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewAddressBookBase creates a new instance of AddressBookBase, bound to a specific deployed contract.
-func NewAddressBookBase(address common.Address, backend bind.ContractBackend) (*AddressBookBase, error) {
-	contract, err := bindAddressBookBase(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBase{AddressBookBaseCaller: AddressBookBaseCaller{contract: contract}, AddressBookBaseTransactor: AddressBookBaseTransactor{contract: contract}, AddressBookBaseFilterer: AddressBookBaseFilterer{contract: contract}}, nil
-}
-
-// NewAddressBookBaseCaller creates a new read-only instance of AddressBookBase, bound to a specific deployed contract.
-func NewAddressBookBaseCaller(address common.Address, caller bind.ContractCaller) (*AddressBookBaseCaller, error) {
-	contract, err := bindAddressBookBase(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseCaller{contract: contract}, nil
-}
-
-// NewAddressBookBaseTransactor creates a new write-only instance of AddressBookBase, bound to a specific deployed contract.
-func NewAddressBookBaseTransactor(address common.Address, transactor bind.ContractTransactor) (*AddressBookBaseTransactor, error) {
-	contract, err := bindAddressBookBase(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseTransactor{contract: contract}, nil
-}
-
-// NewAddressBookBaseFilterer creates a new log filterer instance of AddressBookBase, bound to a specific deployed contract.
-func NewAddressBookBaseFilterer(address common.Address, filterer bind.ContractFilterer) (*AddressBookBaseFilterer, error) {
-	contract, err := bindAddressBookBase(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseFilterer{contract: contract}, nil
-}
-
-// bindAddressBookBase binds a generic wrapper to an already deployed contract.
-func bindAddressBookBase(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := AddressBookBaseMetaData.GetAbi()
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_AddressBookBase *AddressBookBaseRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _AddressBookBase.Contract.AddressBookBaseCaller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_AddressBookBase *AddressBookBaseRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.AddressBookBaseTransactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_AddressBookBase *AddressBookBaseRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.AddressBookBaseTransactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_AddressBookBase *AddressBookBaseCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _AddressBookBase.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_AddressBookBase *AddressBookBaseTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_AddressBookBase *AddressBookBaseTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.contract.Transact(opts, method, params...)
-}
-
-// EPOCHBLOCKINTERVAL is a free data retrieval call binding the contract method 0xde244059.
-//
-// Solidity: function EPOCH_BLOCK_INTERVAL() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCaller) EPOCHBLOCKINTERVAL(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "EPOCH_BLOCK_INTERVAL")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// EPOCHBLOCKINTERVAL is a free data retrieval call binding the contract method 0xde244059.
-//
-// Solidity: function EPOCH_BLOCK_INTERVAL() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseSession) EPOCHBLOCKINTERVAL() (*big.Int, error) {
-	return _AddressBookBase.Contract.EPOCHBLOCKINTERVAL(&_AddressBookBase.CallOpts)
-}
-
-// EPOCHBLOCKINTERVAL is a free data retrieval call binding the contract method 0xde244059.
-//
-// Solidity: function EPOCH_BLOCK_INTERVAL() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCallerSession) EPOCHBLOCKINTERVAL() (*big.Int, error) {
-	return _AddressBookBase.Contract.EPOCHBLOCKINTERVAL(&_AddressBookBase.CallOpts)
-}
-
-// MINSTAKE is a free data retrieval call binding the contract method 0xcb1c2b5c.
-//
-// Solidity: function MIN_STAKE() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCaller) MINSTAKE(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "MIN_STAKE")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// MINSTAKE is a free data retrieval call binding the contract method 0xcb1c2b5c.
-//
-// Solidity: function MIN_STAKE() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseSession) MINSTAKE() (*big.Int, error) {
-	return _AddressBookBase.Contract.MINSTAKE(&_AddressBookBase.CallOpts)
-}
-
-// MINSTAKE is a free data retrieval call binding the contract method 0xcb1c2b5c.
-//
-// Solidity: function MIN_STAKE() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCallerSession) MINSTAKE() (*big.Int, error) {
-	return _AddressBookBase.Contract.MINSTAKE(&_AddressBookBase.CallOpts)
-}
-
-// SYSTEMSENDER is a free data retrieval call binding the contract method 0x87b7b8fd.
-//
-// Solidity: function SYSTEM_SENDER() view returns(address)
-func (_AddressBookBase *AddressBookBaseCaller) SYSTEMSENDER(opts *bind.CallOpts) (common.Address, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "SYSTEM_SENDER")
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// SYSTEMSENDER is a free data retrieval call binding the contract method 0x87b7b8fd.
-//
-// Solidity: function SYSTEM_SENDER() view returns(address)
-func (_AddressBookBase *AddressBookBaseSession) SYSTEMSENDER() (common.Address, error) {
-	return _AddressBookBase.Contract.SYSTEMSENDER(&_AddressBookBase.CallOpts)
-}
-
-// SYSTEMSENDER is a free data retrieval call binding the contract method 0x87b7b8fd.
-//
-// Solidity: function SYSTEM_SENDER() view returns(address)
-func (_AddressBookBase *AddressBookBaseCallerSession) SYSTEMSENDER() (common.Address, error) {
-	return _AddressBookBase.Contract.SYSTEMSENDER(&_AddressBookBase.CallOpts)
-}
-
-// CurrentEpoch is a free data retrieval call binding the contract method 0x76671808.
-//
-// Solidity: function currentEpoch() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCaller) CurrentEpoch(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "currentEpoch")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// CurrentEpoch is a free data retrieval call binding the contract method 0x76671808.
-//
-// Solidity: function currentEpoch() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseSession) CurrentEpoch() (*big.Int, error) {
-	return _AddressBookBase.Contract.CurrentEpoch(&_AddressBookBase.CallOpts)
-}
-
-// CurrentEpoch is a free data retrieval call binding the contract method 0x76671808.
-//
-// Solidity: function currentEpoch() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCallerSession) CurrentEpoch() (*big.Int, error) {
-	return _AddressBookBase.Contract.CurrentEpoch(&_AddressBookBase.CallOpts)
-}
-
-// GetActiveSetLength is a free data retrieval call binding the contract method 0x6b75b7a8.
-//
-// Solidity: function getActiveSetLength() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCaller) GetActiveSetLength(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getActiveSetLength")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// GetActiveSetLength is a free data retrieval call binding the contract method 0x6b75b7a8.
-//
-// Solidity: function getActiveSetLength() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseSession) GetActiveSetLength() (*big.Int, error) {
-	return _AddressBookBase.Contract.GetActiveSetLength(&_AddressBookBase.CallOpts)
-}
-
-// GetActiveSetLength is a free data retrieval call binding the contract method 0x6b75b7a8.
-//
-// Solidity: function getActiveSetLength() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCallerSession) GetActiveSetLength() (*big.Int, error) {
-	return _AddressBookBase.Contract.GetActiveSetLength(&_AddressBookBase.CallOpts)
-}
-
-// GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
-//
-// Solidity: function getAllBlsInfo() view returns(address[] nodeIdList, (bytes,bytes)[] pubkeyList)
-func (_AddressBookBase *AddressBookBaseCaller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
-	NodeIdList []common.Address
-	PubkeyList []BlsPublicKeyInfo
-}, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getAllBlsInfo")
-
-	outstruct := new(struct {
-		NodeIdList []common.Address
-		PubkeyList []BlsPublicKeyInfo
-	})
-	if err != nil {
-		return *outstruct, err
-	}
-
-	outstruct.NodeIdList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
-	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]BlsPublicKeyInfo)).(*[]BlsPublicKeyInfo)
-
-	return *outstruct, err
-
-}
-
-// GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
-//
-// Solidity: function getAllBlsInfo() view returns(address[] nodeIdList, (bytes,bytes)[] pubkeyList)
-func (_AddressBookBase *AddressBookBaseSession) GetAllBlsInfo() (struct {
-	NodeIdList []common.Address
-	PubkeyList []BlsPublicKeyInfo
-}, error) {
-	return _AddressBookBase.Contract.GetAllBlsInfo(&_AddressBookBase.CallOpts)
-}
-
-// GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
-//
-// Solidity: function getAllBlsInfo() view returns(address[] nodeIdList, (bytes,bytes)[] pubkeyList)
-func (_AddressBookBase *AddressBookBaseCallerSession) GetAllBlsInfo() (struct {
-	NodeIdList []common.Address
-	PubkeyList []BlsPublicKeyInfo
-}, error) {
-	return _AddressBookBase.Contract.GetAllBlsInfo(&_AddressBookBase.CallOpts)
-}
-
-// GetAllProfiles is a free data retrieval call binding the contract method 0x0b1fe784.
-//
-// Solidity: function getAllProfiles() view returns((address,address,address,uint256,uint8)[])
-func (_AddressBookBase *AddressBookBaseCaller) GetAllProfiles(opts *bind.CallOpts) ([]Profile, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getAllProfiles")
-
-	if err != nil {
-		return *new([]Profile), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new([]Profile)).(*[]Profile)
-
-	return out0, err
-
-}
-
-// GetAllProfiles is a free data retrieval call binding the contract method 0x0b1fe784.
-//
-// Solidity: function getAllProfiles() view returns((address,address,address,uint256,uint8)[])
-func (_AddressBookBase *AddressBookBaseSession) GetAllProfiles() ([]Profile, error) {
-	return _AddressBookBase.Contract.GetAllProfiles(&_AddressBookBase.CallOpts)
-}
-
-// GetAllProfiles is a free data retrieval call binding the contract method 0x0b1fe784.
-//
-// Solidity: function getAllProfiles() view returns((address,address,address,uint256,uint8)[])
-func (_AddressBookBase *AddressBookBaseCallerSession) GetAllProfiles() ([]Profile, error) {
-	return _AddressBookBase.Contract.GetAllProfiles(&_AddressBookBase.CallOpts)
-}
-
-// GetCandInactiveSetLength is a free data retrieval call binding the contract method 0x94a64d98.
-//
-// Solidity: function getCandInactiveSetLength() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCaller) GetCandInactiveSetLength(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getCandInactiveSetLength")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// GetCandInactiveSetLength is a free data retrieval call binding the contract method 0x94a64d98.
-//
-// Solidity: function getCandInactiveSetLength() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseSession) GetCandInactiveSetLength() (*big.Int, error) {
-	return _AddressBookBase.Contract.GetCandInactiveSetLength(&_AddressBookBase.CallOpts)
-}
-
-// GetCandInactiveSetLength is a free data retrieval call binding the contract method 0x94a64d98.
-//
-// Solidity: function getCandInactiveSetLength() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCallerSession) GetCandInactiveSetLength() (*big.Int, error) {
-	return _AddressBookBase.Contract.GetCandInactiveSetLength(&_AddressBookBase.CallOpts)
-}
-
-// GetEpochValCount is a free data retrieval call binding the contract method 0x7d7b127f.
-//
-// Solidity: function getEpochValCount() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCaller) GetEpochValCount(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getEpochValCount")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// GetEpochValCount is a free data retrieval call binding the contract method 0x7d7b127f.
-//
-// Solidity: function getEpochValCount() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseSession) GetEpochValCount() (*big.Int, error) {
-	return _AddressBookBase.Contract.GetEpochValCount(&_AddressBookBase.CallOpts)
-}
-
-// GetEpochValCount is a free data retrieval call binding the contract method 0x7d7b127f.
-//
-// Solidity: function getEpochValCount() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCallerSession) GetEpochValCount() (*big.Int, error) {
-	return _AddressBookBase.Contract.GetEpochValCount(&_AddressBookBase.CallOpts)
-}
-
-// GetExitThreshold is a free data retrieval call binding the contract method 0x3aea9faf.
-//
-// Solidity: function getExitThreshold() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCaller) GetExitThreshold(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getExitThreshold")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// GetExitThreshold is a free data retrieval call binding the contract method 0x3aea9faf.
-//
-// Solidity: function getExitThreshold() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseSession) GetExitThreshold() (*big.Int, error) {
-	return _AddressBookBase.Contract.GetExitThreshold(&_AddressBookBase.CallOpts)
-}
-
-// GetExitThreshold is a free data retrieval call binding the contract method 0x3aea9faf.
-//
-// Solidity: function getExitThreshold() view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCallerSession) GetExitThreshold() (*big.Int, error) {
-	return _AddressBookBase.Contract.GetExitThreshold(&_AddressBookBase.CallOpts)
-}
-
-// GetManager is a free data retrieval call binding the contract method 0x3d584063.
-//
-// Solidity: function getManager(address nodeId) view returns(address)
-func (_AddressBookBase *AddressBookBaseCaller) GetManager(opts *bind.CallOpts, nodeId common.Address) (common.Address, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getManager", nodeId)
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// GetManager is a free data retrieval call binding the contract method 0x3d584063.
-//
-// Solidity: function getManager(address nodeId) view returns(address)
-func (_AddressBookBase *AddressBookBaseSession) GetManager(nodeId common.Address) (common.Address, error) {
-	return _AddressBookBase.Contract.GetManager(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// GetManager is a free data retrieval call binding the contract method 0x3d584063.
-//
-// Solidity: function getManager(address nodeId) view returns(address)
-func (_AddressBookBase *AddressBookBaseCallerSession) GetManager(nodeId common.Address) (common.Address, error) {
-	return _AddressBookBase.Contract.GetManager(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// GetMaxCounts is a free data retrieval call binding the contract method 0x03e6689d.
-//
-// Solidity: function getMaxCounts() view returns(uint256 maxValidatorCount, uint256 maxReadyCandidateCount)
-func (_AddressBookBase *AddressBookBaseCaller) GetMaxCounts(opts *bind.CallOpts) (struct {
-	MaxValidatorCount      *big.Int
-	MaxReadyCandidateCount *big.Int
-}, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getMaxCounts")
-
-	outstruct := new(struct {
-		MaxValidatorCount      *big.Int
-		MaxReadyCandidateCount *big.Int
-	})
-	if err != nil {
-		return *outstruct, err
-	}
-
-	outstruct.MaxValidatorCount = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-	outstruct.MaxReadyCandidateCount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
-
-	return *outstruct, err
-
-}
-
-// GetMaxCounts is a free data retrieval call binding the contract method 0x03e6689d.
-//
-// Solidity: function getMaxCounts() view returns(uint256 maxValidatorCount, uint256 maxReadyCandidateCount)
-func (_AddressBookBase *AddressBookBaseSession) GetMaxCounts() (struct {
-	MaxValidatorCount      *big.Int
-	MaxReadyCandidateCount *big.Int
-}, error) {
-	return _AddressBookBase.Contract.GetMaxCounts(&_AddressBookBase.CallOpts)
-}
-
-// GetMaxCounts is a free data retrieval call binding the contract method 0x03e6689d.
-//
-// Solidity: function getMaxCounts() view returns(uint256 maxValidatorCount, uint256 maxReadyCandidateCount)
-func (_AddressBookBase *AddressBookBaseCallerSession) GetMaxCounts() (struct {
-	MaxValidatorCount      *big.Int
-	MaxReadyCandidateCount *big.Int
-}, error) {
-	return _AddressBookBase.Contract.GetMaxCounts(&_AddressBookBase.CallOpts)
-}
-
-// GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
-//
-// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
-func (_AddressBookBase *AddressBookBaseCaller) GetNodeInfo(opts *bind.CallOpts, nodeId common.Address) (NodeInfo, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getNodeInfo", nodeId)
-
-	if err != nil {
-		return *new(NodeInfo), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(NodeInfo)).(*NodeInfo)
-
-	return out0, err
-
-}
-
-// GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
-//
-// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
-func (_AddressBookBase *AddressBookBaseSession) GetNodeInfo(nodeId common.Address) (NodeInfo, error) {
-	return _AddressBookBase.Contract.GetNodeInfo(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
-//
-// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
-func (_AddressBookBase *AddressBookBaseCallerSession) GetNodeInfo(nodeId common.Address) (NodeInfo, error) {
-	return _AddressBookBase.Contract.GetNodeInfo(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
-//
-// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
-func (_AddressBookBase *AddressBookBaseCaller) GetNodeInfos(opts *bind.CallOpts, nodeIds []common.Address) ([]NodeInfo, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getNodeInfos", nodeIds)
-
-	if err != nil {
-		return *new([]NodeInfo), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new([]NodeInfo)).(*[]NodeInfo)
-
-	return out0, err
-
-}
-
-// GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
-//
-// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
-func (_AddressBookBase *AddressBookBaseSession) GetNodeInfos(nodeIds []common.Address) ([]NodeInfo, error) {
-	return _AddressBookBase.Contract.GetNodeInfos(&_AddressBookBase.CallOpts, nodeIds)
-}
-
-// GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
-//
-// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
-func (_AddressBookBase *AddressBookBaseCallerSession) GetNodeInfos(nodeIds []common.Address) ([]NodeInfo, error) {
-	return _AddressBookBase.Contract.GetNodeInfos(&_AddressBookBase.CallOpts, nodeIds)
-}
-
-// GetNodeState is a free data retrieval call binding the contract method 0x229bb823.
-//
-// Solidity: function getNodeState(address nodeId) view returns(uint8)
-func (_AddressBookBase *AddressBookBaseCaller) GetNodeState(opts *bind.CallOpts, nodeId common.Address) (uint8, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getNodeState", nodeId)
-
-	if err != nil {
-		return *new(uint8), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
-
-	return out0, err
-
-}
-
-// GetNodeState is a free data retrieval call binding the contract method 0x229bb823.
-//
-// Solidity: function getNodeState(address nodeId) view returns(uint8)
-func (_AddressBookBase *AddressBookBaseSession) GetNodeState(nodeId common.Address) (uint8, error) {
-	return _AddressBookBase.Contract.GetNodeState(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// GetNodeState is a free data retrieval call binding the contract method 0x229bb823.
-//
-// Solidity: function getNodeState(address nodeId) view returns(uint8)
-func (_AddressBookBase *AddressBookBaseCallerSession) GetNodeState(nodeId common.Address) (uint8, error) {
-	return _AddressBookBase.Contract.GetNodeState(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// GetScore is a free data retrieval call binding the contract method 0x80f2ff25.
-//
-// Solidity: function getScore(uint256 epoch, address nodeId) view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCaller) GetScore(opts *bind.CallOpts, epoch *big.Int, nodeId common.Address) (*big.Int, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getScore", epoch, nodeId)
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// GetScore is a free data retrieval call binding the contract method 0x80f2ff25.
-//
-// Solidity: function getScore(uint256 epoch, address nodeId) view returns(uint256)
-func (_AddressBookBase *AddressBookBaseSession) GetScore(epoch *big.Int, nodeId common.Address) (*big.Int, error) {
-	return _AddressBookBase.Contract.GetScore(&_AddressBookBase.CallOpts, epoch, nodeId)
-}
-
-// GetScore is a free data retrieval call binding the contract method 0x80f2ff25.
-//
-// Solidity: function getScore(uint256 epoch, address nodeId) view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCallerSession) GetScore(epoch *big.Int, nodeId common.Address) (*big.Int, error) {
-	return _AddressBookBase.Contract.GetScore(&_AddressBookBase.CallOpts, epoch, nodeId)
-}
-
-// GetStakingContract is a free data retrieval call binding the contract method 0x5300f9b4.
-//
-// Solidity: function getStakingContract(address nodeId) view returns(address)
-func (_AddressBookBase *AddressBookBaseCaller) GetStakingContract(opts *bind.CallOpts, nodeId common.Address) (common.Address, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getStakingContract", nodeId)
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// GetStakingContract is a free data retrieval call binding the contract method 0x5300f9b4.
-//
-// Solidity: function getStakingContract(address nodeId) view returns(address)
-func (_AddressBookBase *AddressBookBaseSession) GetStakingContract(nodeId common.Address) (common.Address, error) {
-	return _AddressBookBase.Contract.GetStakingContract(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// GetStakingContract is a free data retrieval call binding the contract method 0x5300f9b4.
-//
-// Solidity: function getStakingContract(address nodeId) view returns(address)
-func (_AddressBookBase *AddressBookBaseCallerSession) GetStakingContract(nodeId common.Address) (common.Address, error) {
-	return _AddressBookBase.Contract.GetStakingContract(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// GetStateCount is a free data retrieval call binding the contract method 0x1b1a478b.
-//
-// Solidity: function getStateCount(uint8 state) view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCaller) GetStateCount(opts *bind.CallOpts, state uint8) (*big.Int, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getStateCount", state)
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// GetStateCount is a free data retrieval call binding the contract method 0x1b1a478b.
-//
-// Solidity: function getStateCount(uint8 state) view returns(uint256)
-func (_AddressBookBase *AddressBookBaseSession) GetStateCount(state uint8) (*big.Int, error) {
-	return _AddressBookBase.Contract.GetStateCount(&_AddressBookBase.CallOpts, state)
-}
-
-// GetStateCount is a free data retrieval call binding the contract method 0x1b1a478b.
-//
-// Solidity: function getStateCount(uint8 state) view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCallerSession) GetStateCount(state uint8) (*big.Int, error) {
-	return _AddressBookBase.Contract.GetStateCount(&_AddressBookBase.CallOpts, state)
-}
-
-// GetSuspendedValidators is a free data retrieval call binding the contract method 0x1ba3fd58.
-//
-// Solidity: function getSuspendedValidators() view returns(address[])
-func (_AddressBookBase *AddressBookBaseCaller) GetSuspendedValidators(opts *bind.CallOpts) ([]common.Address, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getSuspendedValidators")
-
-	if err != nil {
-		return *new([]common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
-
-	return out0, err
-
-}
-
-// GetSuspendedValidators is a free data retrieval call binding the contract method 0x1ba3fd58.
-//
-// Solidity: function getSuspendedValidators() view returns(address[])
-func (_AddressBookBase *AddressBookBaseSession) GetSuspendedValidators() ([]common.Address, error) {
-	return _AddressBookBase.Contract.GetSuspendedValidators(&_AddressBookBase.CallOpts)
-}
-
-// GetSuspendedValidators is a free data retrieval call binding the contract method 0x1ba3fd58.
-//
-// Solidity: function getSuspendedValidators() view returns(address[])
-func (_AddressBookBase *AddressBookBaseCallerSession) GetSuspendedValidators() ([]common.Address, error) {
-	return _AddressBookBase.Contract.GetSuspendedValidators(&_AddressBookBase.CallOpts)
-}
-
-// GetTimeoutAt is a free data retrieval call binding the contract method 0x277f3dc3.
-//
-// Solidity: function getTimeoutAt(address nodeId) view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCaller) GetTimeoutAt(opts *bind.CallOpts, nodeId common.Address) (*big.Int, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getTimeoutAt", nodeId)
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// GetTimeoutAt is a free data retrieval call binding the contract method 0x277f3dc3.
-//
-// Solidity: function getTimeoutAt(address nodeId) view returns(uint256)
-func (_AddressBookBase *AddressBookBaseSession) GetTimeoutAt(nodeId common.Address) (*big.Int, error) {
-	return _AddressBookBase.Contract.GetTimeoutAt(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// GetTimeoutAt is a free data retrieval call binding the contract method 0x277f3dc3.
-//
-// Solidity: function getTimeoutAt(address nodeId) view returns(uint256)
-func (_AddressBookBase *AddressBookBaseCallerSession) GetTimeoutAt(nodeId common.Address) (*big.Int, error) {
-	return _AddressBookBase.Contract.GetTimeoutAt(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// GetTimeouts is a free data retrieval call binding the contract method 0xe70c38f1.
-//
-// Solidity: function getTimeouts() view returns(uint256 pauseTimeout, uint256 idleTimeout)
-func (_AddressBookBase *AddressBookBaseCaller) GetTimeouts(opts *bind.CallOpts) (struct {
-	PauseTimeout *big.Int
-	IdleTimeout  *big.Int
-}, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "getTimeouts")
-
-	outstruct := new(struct {
-		PauseTimeout *big.Int
-		IdleTimeout  *big.Int
-	})
-	if err != nil {
-		return *outstruct, err
-	}
-
-	outstruct.PauseTimeout = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-	outstruct.IdleTimeout = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
-
-	return *outstruct, err
-
-}
-
-// GetTimeouts is a free data retrieval call binding the contract method 0xe70c38f1.
-//
-// Solidity: function getTimeouts() view returns(uint256 pauseTimeout, uint256 idleTimeout)
-func (_AddressBookBase *AddressBookBaseSession) GetTimeouts() (struct {
-	PauseTimeout *big.Int
-	IdleTimeout  *big.Int
-}, error) {
-	return _AddressBookBase.Contract.GetTimeouts(&_AddressBookBase.CallOpts)
-}
-
-// GetTimeouts is a free data retrieval call binding the contract method 0xe70c38f1.
-//
-// Solidity: function getTimeouts() view returns(uint256 pauseTimeout, uint256 idleTimeout)
-func (_AddressBookBase *AddressBookBaseCallerSession) GetTimeouts() (struct {
-	PauseTimeout *big.Int
-	IdleTimeout  *big.Int
-}, error) {
-	return _AddressBookBase.Contract.GetTimeouts(&_AddressBookBase.CallOpts)
-}
-
-// IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
-//
-// Solidity: function isActivated() view returns(bool)
-func (_AddressBookBase *AddressBookBaseCaller) IsActivated(opts *bind.CallOpts) (bool, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "isActivated")
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
-//
-// Solidity: function isActivated() view returns(bool)
-func (_AddressBookBase *AddressBookBaseSession) IsActivated() (bool, error) {
-	return _AddressBookBase.Contract.IsActivated(&_AddressBookBase.CallOpts)
-}
-
-// IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
-//
-// Solidity: function isActivated() view returns(bool)
-func (_AddressBookBase *AddressBookBaseCallerSession) IsActivated() (bool, error) {
-	return _AddressBookBase.Contract.IsActivated(&_AddressBookBase.CallOpts)
-}
-
-// IsCandInactive is a free data retrieval call binding the contract method 0x45ce8110.
-//
-// Solidity: function isCandInactive(address nodeId) view returns(bool)
-func (_AddressBookBase *AddressBookBaseCaller) IsCandInactive(opts *bind.CallOpts, nodeId common.Address) (bool, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "isCandInactive", nodeId)
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// IsCandInactive is a free data retrieval call binding the contract method 0x45ce8110.
-//
-// Solidity: function isCandInactive(address nodeId) view returns(bool)
-func (_AddressBookBase *AddressBookBaseSession) IsCandInactive(nodeId common.Address) (bool, error) {
-	return _AddressBookBase.Contract.IsCandInactive(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// IsCandInactive is a free data retrieval call binding the contract method 0x45ce8110.
-//
-// Solidity: function isCandInactive(address nodeId) view returns(bool)
-func (_AddressBookBase *AddressBookBaseCallerSession) IsCandInactive(nodeId common.Address) (bool, error) {
-	return _AddressBookBase.Contract.IsCandInactive(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// IsInActiveSet is a free data retrieval call binding the contract method 0x5334cf44.
-//
-// Solidity: function isInActiveSet(address nodeId) view returns(bool)
-func (_AddressBookBase *AddressBookBaseCaller) IsInActiveSet(opts *bind.CallOpts, nodeId common.Address) (bool, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "isInActiveSet", nodeId)
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// IsInActiveSet is a free data retrieval call binding the contract method 0x5334cf44.
-//
-// Solidity: function isInActiveSet(address nodeId) view returns(bool)
-func (_AddressBookBase *AddressBookBaseSession) IsInActiveSet(nodeId common.Address) (bool, error) {
-	return _AddressBookBase.Contract.IsInActiveSet(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// IsInActiveSet is a free data retrieval call binding the contract method 0x5334cf44.
-//
-// Solidity: function isInActiveSet(address nodeId) view returns(bool)
-func (_AddressBookBase *AddressBookBaseCallerSession) IsInActiveSet(nodeId common.Address) (bool, error) {
-	return _AddressBookBase.Contract.IsInActiveSet(&_AddressBookBase.CallOpts, nodeId)
-}
-
-// IsRegistered is a free data retrieval call binding the contract method 0xc3c5a547.
-//
-// Solidity: function isRegistered(address addr) view returns(bool)
-func (_AddressBookBase *AddressBookBaseCaller) IsRegistered(opts *bind.CallOpts, addr common.Address) (bool, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "isRegistered", addr)
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// IsRegistered is a free data retrieval call binding the contract method 0xc3c5a547.
-//
-// Solidity: function isRegistered(address addr) view returns(bool)
-func (_AddressBookBase *AddressBookBaseSession) IsRegistered(addr common.Address) (bool, error) {
-	return _AddressBookBase.Contract.IsRegistered(&_AddressBookBase.CallOpts, addr)
-}
-
-// IsRegistered is a free data retrieval call binding the contract method 0xc3c5a547.
-//
-// Solidity: function isRegistered(address addr) view returns(bool)
-func (_AddressBookBase *AddressBookBaseCallerSession) IsRegistered(addr common.Address) (bool, error) {
-	return _AddressBookBase.Contract.IsRegistered(&_AddressBookBase.CallOpts, addr)
-}
-
-// IsValidatorsInitialized is a free data retrieval call binding the contract method 0x551ec9b5.
-//
-// Solidity: function isValidatorsInitialized() view returns(bool)
-func (_AddressBookBase *AddressBookBaseCaller) IsValidatorsInitialized(opts *bind.CallOpts) (bool, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "isValidatorsInitialized")
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// IsValidatorsInitialized is a free data retrieval call binding the contract method 0x551ec9b5.
-//
-// Solidity: function isValidatorsInitialized() view returns(bool)
-func (_AddressBookBase *AddressBookBaseSession) IsValidatorsInitialized() (bool, error) {
-	return _AddressBookBase.Contract.IsValidatorsInitialized(&_AddressBookBase.CallOpts)
-}
-
-// IsValidatorsInitialized is a free data retrieval call binding the contract method 0x551ec9b5.
-//
-// Solidity: function isValidatorsInitialized() view returns(bool)
-func (_AddressBookBase *AddressBookBaseCallerSession) IsValidatorsInitialized() (bool, error) {
-	return _AddressBookBase.Contract.IsValidatorsInitialized(&_AddressBookBase.CallOpts)
-}
-
-// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
-//
-// Solidity: function owner() view returns(address)
-func (_AddressBookBase *AddressBookBaseCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "owner")
-
-	if err != nil {
-		return *new(common.Address), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
-
-	return out0, err
-
-}
-
-// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
-//
-// Solidity: function owner() view returns(address)
-func (_AddressBookBase *AddressBookBaseSession) Owner() (common.Address, error) {
-	return _AddressBookBase.Contract.Owner(&_AddressBookBase.CallOpts)
-}
-
-// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
-//
-// Solidity: function owner() view returns(address)
-func (_AddressBookBase *AddressBookBaseCallerSession) Owner() (common.Address, error) {
-	return _AddressBookBase.Contract.Owner(&_AddressBookBase.CallOpts)
-}
-
-// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
-//
-// Solidity: function proxiableUUID() view returns(bytes32)
-func (_AddressBookBase *AddressBookBaseCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
-	var out []interface{}
-	err := _AddressBookBase.contract.Call(opts, &out, "proxiableUUID")
-
-	if err != nil {
-		return *new([32]byte), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
-
-	return out0, err
-
-}
-
-// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
-//
-// Solidity: function proxiableUUID() view returns(bytes32)
-func (_AddressBookBase *AddressBookBaseSession) ProxiableUUID() ([32]byte, error) {
-	return _AddressBookBase.Contract.ProxiableUUID(&_AddressBookBase.CallOpts)
-}
-
-// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
-//
-// Solidity: function proxiableUUID() view returns(bytes32)
-func (_AddressBookBase *AddressBookBaseCallerSession) ProxiableUUID() ([32]byte, error) {
-	return _AddressBookBase.Contract.ProxiableUUID(&_AddressBookBase.CallOpts)
-}
-
-// Activate is a paid mutator transaction binding the contract method 0x0f15f4c0.
-//
-// Solidity: function activate() returns()
-func (_AddressBookBase *AddressBookBaseTransactor) Activate(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "activate")
-}
-
-// Activate is a paid mutator transaction binding the contract method 0x0f15f4c0.
-//
-// Solidity: function activate() returns()
-func (_AddressBookBase *AddressBookBaseSession) Activate() (*types.Transaction, error) {
-	return _AddressBookBase.Contract.Activate(&_AddressBookBase.TransactOpts)
-}
-
-// Activate is a paid mutator transaction binding the contract method 0x0f15f4c0.
-//
-// Solidity: function activate() returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) Activate() (*types.Transaction, error) {
-	return _AddressBookBase.Contract.Activate(&_AddressBookBase.TransactOpts)
-}
-
-// ActivateCandidate is a paid mutator transaction binding the contract method 0xef6bdade.
-//
-// Solidity: function activateCandidate(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) ActivateCandidate(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "activateCandidate", nodeId)
-}
-
-// ActivateCandidate is a paid mutator transaction binding the contract method 0xef6bdade.
-//
-// Solidity: function activateCandidate(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseSession) ActivateCandidate(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.ActivateCandidate(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// ActivateCandidate is a paid mutator transaction binding the contract method 0xef6bdade.
-//
-// Solidity: function activateCandidate(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) ActivateCandidate(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.ActivateCandidate(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// CreateNode is a paid mutator transaction binding the contract method 0x4429d720.
-//
-// Solidity: function createNode(address nodeId, address stakingContract, address rewardAddress, address voterAddress, (bytes,bytes) blsInfo, string metadata) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) CreateNode(opts *bind.TransactOpts, nodeId common.Address, stakingContract common.Address, rewardAddress common.Address, voterAddress common.Address, blsInfo BlsPublicKeyInfo, metadata string) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "createNode", nodeId, stakingContract, rewardAddress, voterAddress, blsInfo, metadata)
-}
-
-// CreateNode is a paid mutator transaction binding the contract method 0x4429d720.
-//
-// Solidity: function createNode(address nodeId, address stakingContract, address rewardAddress, address voterAddress, (bytes,bytes) blsInfo, string metadata) returns()
-func (_AddressBookBase *AddressBookBaseSession) CreateNode(nodeId common.Address, stakingContract common.Address, rewardAddress common.Address, voterAddress common.Address, blsInfo BlsPublicKeyInfo, metadata string) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.CreateNode(&_AddressBookBase.TransactOpts, nodeId, stakingContract, rewardAddress, voterAddress, blsInfo, metadata)
-}
-
-// CreateNode is a paid mutator transaction binding the contract method 0x4429d720.
-//
-// Solidity: function createNode(address nodeId, address stakingContract, address rewardAddress, address voterAddress, (bytes,bytes) blsInfo, string metadata) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) CreateNode(nodeId common.Address, stakingContract common.Address, rewardAddress common.Address, voterAddress common.Address, blsInfo BlsPublicKeyInfo, metadata string) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.CreateNode(&_AddressBookBase.TransactOpts, nodeId, stakingContract, rewardAddress, voterAddress, blsInfo, metadata)
-}
-
-// DeactivateCandidate is a paid mutator transaction binding the contract method 0x171a6cdc.
-//
-// Solidity: function deactivateCandidate(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) DeactivateCandidate(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "deactivateCandidate", nodeId)
-}
-
-// DeactivateCandidate is a paid mutator transaction binding the contract method 0x171a6cdc.
-//
-// Solidity: function deactivateCandidate(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseSession) DeactivateCandidate(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.DeactivateCandidate(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// DeactivateCandidate is a paid mutator transaction binding the contract method 0x171a6cdc.
-//
-// Solidity: function deactivateCandidate(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) DeactivateCandidate(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.DeactivateCandidate(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// DeleteNode is a paid mutator transaction binding the contract method 0x2d4ede93.
-//
-// Solidity: function deleteNode(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) DeleteNode(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "deleteNode", nodeId)
-}
-
-// DeleteNode is a paid mutator transaction binding the contract method 0x2d4ede93.
-//
-// Solidity: function deleteNode(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseSession) DeleteNode(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.DeleteNode(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// DeleteNode is a paid mutator transaction binding the contract method 0x2d4ede93.
-//
-// Solidity: function deleteNode(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) DeleteNode(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.DeleteNode(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// Exit is a paid mutator transaction binding the contract method 0xb42652e9.
-//
-// Solidity: function exit(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) Exit(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "exit", nodeId)
-}
-
-// Exit is a paid mutator transaction binding the contract method 0xb42652e9.
-//
-// Solidity: function exit(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseSession) Exit(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.Exit(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// Exit is a paid mutator transaction binding the contract method 0xb42652e9.
-//
-// Solidity: function exit(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) Exit(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.Exit(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// InitializeValidators is a paid mutator transaction binding the contract method 0x58199d01.
-//
-// Solidity: function initializeValidators(address[] nodeIds, (address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) InitializeValidators(opts *bind.TransactOpts, nodeIds []common.Address, infos []NodeInfo) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "initializeValidators", nodeIds, infos)
-}
-
-// InitializeValidators is a paid mutator transaction binding the contract method 0x58199d01.
-//
-// Solidity: function initializeValidators(address[] nodeIds, (address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos) returns()
-func (_AddressBookBase *AddressBookBaseSession) InitializeValidators(nodeIds []common.Address, infos []NodeInfo) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.InitializeValidators(&_AddressBookBase.TransactOpts, nodeIds, infos)
-}
-
-// InitializeValidators is a paid mutator transaction binding the contract method 0x58199d01.
-//
-// Solidity: function initializeValidators(address[] nodeIds, (address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) InitializeValidators(nodeIds []common.Address, infos []NodeInfo) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.InitializeValidators(&_AddressBookBase.TransactOpts, nodeIds, infos)
-}
-
-// Offboard is a paid mutator transaction binding the contract method 0xb9f96f40.
-//
-// Solidity: function offboard(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) Offboard(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "offboard", nodeId)
-}
-
-// Offboard is a paid mutator transaction binding the contract method 0xb9f96f40.
-//
-// Solidity: function offboard(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseSession) Offboard(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.Offboard(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// Offboard is a paid mutator transaction binding the contract method 0xb9f96f40.
-//
-// Solidity: function offboard(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) Offboard(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.Offboard(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// Pause is a paid mutator transaction binding the contract method 0x76a67a51.
-//
-// Solidity: function pause(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) Pause(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "pause", nodeId)
-}
-
-// Pause is a paid mutator transaction binding the contract method 0x76a67a51.
-//
-// Solidity: function pause(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseSession) Pause(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.Pause(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// Pause is a paid mutator transaction binding the contract method 0x76a67a51.
-//
-// Solidity: function pause(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) Pause(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.Pause(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// ProcessSystemTransition is a paid mutator transaction binding the contract method 0x45527e44.
-//
-// Solidity: function processSystemTransition(address[] nodeIds, uint8[] newStates, uint256[] timeoutAts) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) ProcessSystemTransition(opts *bind.TransactOpts, nodeIds []common.Address, newStates []uint8, timeoutAts []*big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "processSystemTransition", nodeIds, newStates, timeoutAts)
-}
-
-// ProcessSystemTransition is a paid mutator transaction binding the contract method 0x45527e44.
-//
-// Solidity: function processSystemTransition(address[] nodeIds, uint8[] newStates, uint256[] timeoutAts) returns()
-func (_AddressBookBase *AddressBookBaseSession) ProcessSystemTransition(nodeIds []common.Address, newStates []uint8, timeoutAts []*big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.ProcessSystemTransition(&_AddressBookBase.TransactOpts, nodeIds, newStates, timeoutAts)
-}
-
-// ProcessSystemTransition is a paid mutator transaction binding the contract method 0x45527e44.
-//
-// Solidity: function processSystemTransition(address[] nodeIds, uint8[] newStates, uint256[] timeoutAts) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) ProcessSystemTransition(nodeIds []common.Address, newStates []uint8, timeoutAts []*big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.ProcessSystemTransition(&_AddressBookBase.TransactOpts, nodeIds, newStates, timeoutAts)
-}
-
-// ReadyValidator is a paid mutator transaction binding the contract method 0x656f5869.
-//
-// Solidity: function readyValidator(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) ReadyValidator(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "readyValidator", nodeId)
-}
-
-// ReadyValidator is a paid mutator transaction binding the contract method 0x656f5869.
-//
-// Solidity: function readyValidator(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseSession) ReadyValidator(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.ReadyValidator(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// ReadyValidator is a paid mutator transaction binding the contract method 0x656f5869.
-//
-// Solidity: function readyValidator(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) ReadyValidator(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.ReadyValidator(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
-//
-// Solidity: function renounceOwnership() returns()
-func (_AddressBookBase *AddressBookBaseTransactor) RenounceOwnership(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "renounceOwnership")
-}
-
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
-//
-// Solidity: function renounceOwnership() returns()
-func (_AddressBookBase *AddressBookBaseSession) RenounceOwnership() (*types.Transaction, error) {
-	return _AddressBookBase.Contract.RenounceOwnership(&_AddressBookBase.TransactOpts)
-}
-
-// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
-//
-// Solidity: function renounceOwnership() returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) RenounceOwnership() (*types.Transaction, error) {
-	return _AddressBookBase.Contract.RenounceOwnership(&_AddressBookBase.TransactOpts)
-}
-
-// Resume is a paid mutator transaction binding the contract method 0x793c1946.
-//
-// Solidity: function resume(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) Resume(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "resume", nodeId)
-}
-
-// Resume is a paid mutator transaction binding the contract method 0x793c1946.
-//
-// Solidity: function resume(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseSession) Resume(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.Resume(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// Resume is a paid mutator transaction binding the contract method 0x793c1946.
-//
-// Solidity: function resume(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) Resume(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.Resume(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// SuspendValidator is a paid mutator transaction binding the contract method 0xa41b6000.
-//
-// Solidity: function suspendValidator(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) SuspendValidator(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "suspendValidator", nodeId)
-}
-
-// SuspendValidator is a paid mutator transaction binding the contract method 0xa41b6000.
-//
-// Solidity: function suspendValidator(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseSession) SuspendValidator(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.SuspendValidator(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// SuspendValidator is a paid mutator transaction binding the contract method 0xa41b6000.
-//
-// Solidity: function suspendValidator(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) SuspendValidator(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.SuspendValidator(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) TransferOwnership(opts *bind.TransactOpts, newOwner common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "transferOwnership", newOwner)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_AddressBookBase *AddressBookBaseSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.TransferOwnership(&_AddressBookBase.TransactOpts, newOwner)
-}
-
-// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
-//
-// Solidity: function transferOwnership(address newOwner) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.TransferOwnership(&_AddressBookBase.TransactOpts, newOwner)
-}
-
-// UnreadyValidator is a paid mutator transaction binding the contract method 0xd9abb38b.
-//
-// Solidity: function unreadyValidator(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) UnreadyValidator(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "unreadyValidator", nodeId)
-}
-
-// UnreadyValidator is a paid mutator transaction binding the contract method 0xd9abb38b.
-//
-// Solidity: function unreadyValidator(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseSession) UnreadyValidator(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UnreadyValidator(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// UnreadyValidator is a paid mutator transaction binding the contract method 0xd9abb38b.
-//
-// Solidity: function unreadyValidator(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) UnreadyValidator(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UnreadyValidator(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// UnsuspendValidator is a paid mutator transaction binding the contract method 0x78b84a5c.
-//
-// Solidity: function unsuspendValidator(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) UnsuspendValidator(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "unsuspendValidator", nodeId)
-}
-
-// UnsuspendValidator is a paid mutator transaction binding the contract method 0x78b84a5c.
-//
-// Solidity: function unsuspendValidator(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseSession) UnsuspendValidator(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UnsuspendValidator(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// UnsuspendValidator is a paid mutator transaction binding the contract method 0x78b84a5c.
-//
-// Solidity: function unsuspendValidator(address nodeId) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) UnsuspendValidator(nodeId common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UnsuspendValidator(&_AddressBookBase.TransactOpts, nodeId)
-}
-
-// UpdateExitThreshold is a paid mutator transaction binding the contract method 0x2c1d4895.
-//
-// Solidity: function updateExitThreshold(uint256 newExitThreshold) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) UpdateExitThreshold(opts *bind.TransactOpts, newExitThreshold *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "updateExitThreshold", newExitThreshold)
-}
-
-// UpdateExitThreshold is a paid mutator transaction binding the contract method 0x2c1d4895.
-//
-// Solidity: function updateExitThreshold(uint256 newExitThreshold) returns()
-func (_AddressBookBase *AddressBookBaseSession) UpdateExitThreshold(newExitThreshold *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdateExitThreshold(&_AddressBookBase.TransactOpts, newExitThreshold)
-}
-
-// UpdateExitThreshold is a paid mutator transaction binding the contract method 0x2c1d4895.
-//
-// Solidity: function updateExitThreshold(uint256 newExitThreshold) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) UpdateExitThreshold(newExitThreshold *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdateExitThreshold(&_AddressBookBase.TransactOpts, newExitThreshold)
-}
-
-// UpdateIdleTimeout is a paid mutator transaction binding the contract method 0xe59d7a84.
-//
-// Solidity: function updateIdleTimeout(uint256 newIdleTimeout) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) UpdateIdleTimeout(opts *bind.TransactOpts, newIdleTimeout *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "updateIdleTimeout", newIdleTimeout)
-}
-
-// UpdateIdleTimeout is a paid mutator transaction binding the contract method 0xe59d7a84.
-//
-// Solidity: function updateIdleTimeout(uint256 newIdleTimeout) returns()
-func (_AddressBookBase *AddressBookBaseSession) UpdateIdleTimeout(newIdleTimeout *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdateIdleTimeout(&_AddressBookBase.TransactOpts, newIdleTimeout)
-}
-
-// UpdateIdleTimeout is a paid mutator transaction binding the contract method 0xe59d7a84.
-//
-// Solidity: function updateIdleTimeout(uint256 newIdleTimeout) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) UpdateIdleTimeout(newIdleTimeout *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdateIdleTimeout(&_AddressBookBase.TransactOpts, newIdleTimeout)
-}
-
-// UpdateManager is a paid mutator transaction binding the contract method 0x07ecec3e.
-//
-// Solidity: function updateManager(address nodeId, address newManager) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) UpdateManager(opts *bind.TransactOpts, nodeId common.Address, newManager common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "updateManager", nodeId, newManager)
-}
-
-// UpdateManager is a paid mutator transaction binding the contract method 0x07ecec3e.
-//
-// Solidity: function updateManager(address nodeId, address newManager) returns()
-func (_AddressBookBase *AddressBookBaseSession) UpdateManager(nodeId common.Address, newManager common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdateManager(&_AddressBookBase.TransactOpts, nodeId, newManager)
-}
-
-// UpdateManager is a paid mutator transaction binding the contract method 0x07ecec3e.
-//
-// Solidity: function updateManager(address nodeId, address newManager) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) UpdateManager(nodeId common.Address, newManager common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdateManager(&_AddressBookBase.TransactOpts, nodeId, newManager)
-}
-
-// UpdateMaxReadyCandidateCount is a paid mutator transaction binding the contract method 0x76714282.
-//
-// Solidity: function updateMaxReadyCandidateCount(uint256 newMaxReadyCandidateCount) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) UpdateMaxReadyCandidateCount(opts *bind.TransactOpts, newMaxReadyCandidateCount *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "updateMaxReadyCandidateCount", newMaxReadyCandidateCount)
-}
-
-// UpdateMaxReadyCandidateCount is a paid mutator transaction binding the contract method 0x76714282.
-//
-// Solidity: function updateMaxReadyCandidateCount(uint256 newMaxReadyCandidateCount) returns()
-func (_AddressBookBase *AddressBookBaseSession) UpdateMaxReadyCandidateCount(newMaxReadyCandidateCount *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdateMaxReadyCandidateCount(&_AddressBookBase.TransactOpts, newMaxReadyCandidateCount)
-}
-
-// UpdateMaxReadyCandidateCount is a paid mutator transaction binding the contract method 0x76714282.
-//
-// Solidity: function updateMaxReadyCandidateCount(uint256 newMaxReadyCandidateCount) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) UpdateMaxReadyCandidateCount(newMaxReadyCandidateCount *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdateMaxReadyCandidateCount(&_AddressBookBase.TransactOpts, newMaxReadyCandidateCount)
-}
-
-// UpdateMaxValidatorCount is a paid mutator transaction binding the contract method 0x7e134fc6.
-//
-// Solidity: function updateMaxValidatorCount(uint256 newMaxValidatorCount) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) UpdateMaxValidatorCount(opts *bind.TransactOpts, newMaxValidatorCount *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "updateMaxValidatorCount", newMaxValidatorCount)
-}
-
-// UpdateMaxValidatorCount is a paid mutator transaction binding the contract method 0x7e134fc6.
-//
-// Solidity: function updateMaxValidatorCount(uint256 newMaxValidatorCount) returns()
-func (_AddressBookBase *AddressBookBaseSession) UpdateMaxValidatorCount(newMaxValidatorCount *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdateMaxValidatorCount(&_AddressBookBase.TransactOpts, newMaxValidatorCount)
-}
-
-// UpdateMaxValidatorCount is a paid mutator transaction binding the contract method 0x7e134fc6.
-//
-// Solidity: function updateMaxValidatorCount(uint256 newMaxValidatorCount) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) UpdateMaxValidatorCount(newMaxValidatorCount *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdateMaxValidatorCount(&_AddressBookBase.TransactOpts, newMaxValidatorCount)
-}
-
-// UpdatePauseTimeout is a paid mutator transaction binding the contract method 0x9d0e234d.
-//
-// Solidity: function updatePauseTimeout(uint256 newPauseTimeout) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) UpdatePauseTimeout(opts *bind.TransactOpts, newPauseTimeout *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "updatePauseTimeout", newPauseTimeout)
-}
-
-// UpdatePauseTimeout is a paid mutator transaction binding the contract method 0x9d0e234d.
-//
-// Solidity: function updatePauseTimeout(uint256 newPauseTimeout) returns()
-func (_AddressBookBase *AddressBookBaseSession) UpdatePauseTimeout(newPauseTimeout *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdatePauseTimeout(&_AddressBookBase.TransactOpts, newPauseTimeout)
-}
-
-// UpdatePauseTimeout is a paid mutator transaction binding the contract method 0x9d0e234d.
-//
-// Solidity: function updatePauseTimeout(uint256 newPauseTimeout) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) UpdatePauseTimeout(newPauseTimeout *big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdatePauseTimeout(&_AddressBookBase.TransactOpts, newPauseTimeout)
-}
-
-// UpdateScores is a paid mutator transaction binding the contract method 0x27f94c3d.
-//
-// Solidity: function updateScores(address[] nodeIds, uint256[] scores) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) UpdateScores(opts *bind.TransactOpts, nodeIds []common.Address, scores []*big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "updateScores", nodeIds, scores)
-}
-
-// UpdateScores is a paid mutator transaction binding the contract method 0x27f94c3d.
-//
-// Solidity: function updateScores(address[] nodeIds, uint256[] scores) returns()
-func (_AddressBookBase *AddressBookBaseSession) UpdateScores(nodeIds []common.Address, scores []*big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdateScores(&_AddressBookBase.TransactOpts, nodeIds, scores)
-}
-
-// UpdateScores is a paid mutator transaction binding the contract method 0x27f94c3d.
-//
-// Solidity: function updateScores(address[] nodeIds, uint256[] scores) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) UpdateScores(nodeIds []common.Address, scores []*big.Int) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpdateScores(&_AddressBookBase.TransactOpts, nodeIds, scores)
-}
-
-// UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
-//
-// Solidity: function upgradeTo(address newImplementation) returns()
-func (_AddressBookBase *AddressBookBaseTransactor) UpgradeTo(opts *bind.TransactOpts, newImplementation common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "upgradeTo", newImplementation)
-}
-
-// UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
-//
-// Solidity: function upgradeTo(address newImplementation) returns()
-func (_AddressBookBase *AddressBookBaseSession) UpgradeTo(newImplementation common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpgradeTo(&_AddressBookBase.TransactOpts, newImplementation)
-}
-
-// UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
-//
-// Solidity: function upgradeTo(address newImplementation) returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) UpgradeTo(newImplementation common.Address) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpgradeTo(&_AddressBookBase.TransactOpts, newImplementation)
-}
-
-// UpgradeToAndCall is a paid mutator transaction binding the contract method 0x4f1ef286.
-//
-// Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
-func (_AddressBookBase *AddressBookBaseTransactor) UpgradeToAndCall(opts *bind.TransactOpts, newImplementation common.Address, data []byte) (*types.Transaction, error) {
-	return _AddressBookBase.contract.Transact(opts, "upgradeToAndCall", newImplementation, data)
-}
-
-// UpgradeToAndCall is a paid mutator transaction binding the contract method 0x4f1ef286.
-//
-// Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
-func (_AddressBookBase *AddressBookBaseSession) UpgradeToAndCall(newImplementation common.Address, data []byte) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpgradeToAndCall(&_AddressBookBase.TransactOpts, newImplementation, data)
-}
-
-// UpgradeToAndCall is a paid mutator transaction binding the contract method 0x4f1ef286.
-//
-// Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
-func (_AddressBookBase *AddressBookBaseTransactorSession) UpgradeToAndCall(newImplementation common.Address, data []byte) (*types.Transaction, error) {
-	return _AddressBookBase.Contract.UpgradeToAndCall(&_AddressBookBase.TransactOpts, newImplementation, data)
-}
-
-// AddressBookBaseActivatedIterator is returned from FilterActivated and is used to iterate over the raw logs and unpacked data for Activated events raised by the AddressBookBase contract.
-type AddressBookBaseActivatedIterator struct {
-	Event *AddressBookBaseActivated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseActivatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseActivated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseActivated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseActivatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseActivatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseActivated represents a Activated event raised by the AddressBookBase contract.
-type AddressBookBaseActivated struct {
-	Raw types.Log // Blockchain specific contextual infos
-}
-
-// FilterActivated is a free log retrieval operation binding the contract event 0xed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0.
-//
-// Solidity: event Activated()
-func (_AddressBookBase *AddressBookBaseFilterer) FilterActivated(opts *bind.FilterOpts) (*AddressBookBaseActivatedIterator, error) {
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "Activated")
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseActivatedIterator{contract: _AddressBookBase.contract, event: "Activated", logs: logs, sub: sub}, nil
-}
-
-// WatchActivated is a free log subscription operation binding the contract event 0xed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0.
-//
-// Solidity: event Activated()
-func (_AddressBookBase *AddressBookBaseFilterer) WatchActivated(opts *bind.WatchOpts, sink chan<- *AddressBookBaseActivated) (event.Subscription, error) {
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "Activated")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseActivated)
-				if err := _AddressBookBase.contract.UnpackLog(event, "Activated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseActivated is a log parse operation binding the contract event 0xed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0.
-//
-// Solidity: event Activated()
-func (_AddressBookBase *AddressBookBaseFilterer) ParseActivated(log types.Log) (*AddressBookBaseActivated, error) {
-	event := new(AddressBookBaseActivated)
-	if err := _AddressBookBase.contract.UnpackLog(event, "Activated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseAdminChangedIterator is returned from FilterAdminChanged and is used to iterate over the raw logs and unpacked data for AdminChanged events raised by the AddressBookBase contract.
-type AddressBookBaseAdminChangedIterator struct {
-	Event *AddressBookBaseAdminChanged // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseAdminChangedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseAdminChanged)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseAdminChanged)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseAdminChangedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseAdminChangedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseAdminChanged represents a AdminChanged event raised by the AddressBookBase contract.
-type AddressBookBaseAdminChanged struct {
-	PreviousAdmin common.Address
-	NewAdmin      common.Address
-	Raw           types.Log // Blockchain specific contextual infos
-}
-
-// FilterAdminChanged is a free log retrieval operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
-//
-// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*AddressBookBaseAdminChangedIterator, error) {
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "AdminChanged")
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseAdminChangedIterator{contract: _AddressBookBase.contract, event: "AdminChanged", logs: logs, sub: sub}, nil
-}
-
-// WatchAdminChanged is a free log subscription operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
-//
-// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *AddressBookBaseAdminChanged) (event.Subscription, error) {
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "AdminChanged")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseAdminChanged)
-				if err := _AddressBookBase.contract.UnpackLog(event, "AdminChanged", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseAdminChanged is a log parse operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
-//
-// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseAdminChanged(log types.Log) (*AddressBookBaseAdminChanged, error) {
-	event := new(AddressBookBaseAdminChanged)
-	if err := _AddressBookBase.contract.UnpackLog(event, "AdminChanged", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseBeaconUpgradedIterator is returned from FilterBeaconUpgraded and is used to iterate over the raw logs and unpacked data for BeaconUpgraded events raised by the AddressBookBase contract.
-type AddressBookBaseBeaconUpgradedIterator struct {
-	Event *AddressBookBaseBeaconUpgraded // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseBeaconUpgradedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseBeaconUpgraded)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseBeaconUpgraded)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseBeaconUpgradedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseBeaconUpgradedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseBeaconUpgraded represents a BeaconUpgraded event raised by the AddressBookBase contract.
-type AddressBookBaseBeaconUpgraded struct {
-	Beacon common.Address
-	Raw    types.Log // Blockchain specific contextual infos
-}
-
-// FilterBeaconUpgraded is a free log retrieval operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
-//
-// Solidity: event BeaconUpgraded(address indexed beacon)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*AddressBookBaseBeaconUpgradedIterator, error) {
-
-	var beaconRule []interface{}
-	for _, beaconItem := range beacon {
-		beaconRule = append(beaconRule, beaconItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "BeaconUpgraded", beaconRule)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseBeaconUpgradedIterator{contract: _AddressBookBase.contract, event: "BeaconUpgraded", logs: logs, sub: sub}, nil
-}
-
-// WatchBeaconUpgraded is a free log subscription operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
-//
-// Solidity: event BeaconUpgraded(address indexed beacon)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *AddressBookBaseBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
-	var beaconRule []interface{}
-	for _, beaconItem := range beacon {
-		beaconRule = append(beaconRule, beaconItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "BeaconUpgraded", beaconRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseBeaconUpgraded)
-				if err := _AddressBookBase.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseBeaconUpgraded is a log parse operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
-//
-// Solidity: event BeaconUpgraded(address indexed beacon)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseBeaconUpgraded(log types.Log) (*AddressBookBaseBeaconUpgraded, error) {
-	event := new(AddressBookBaseBeaconUpgraded)
-	if err := _AddressBookBase.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseCandidateActivatedIterator is returned from FilterCandidateActivated and is used to iterate over the raw logs and unpacked data for CandidateActivated events raised by the AddressBookBase contract.
-type AddressBookBaseCandidateActivatedIterator struct {
-	Event *AddressBookBaseCandidateActivated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseCandidateActivatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseCandidateActivated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseCandidateActivated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseCandidateActivatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseCandidateActivatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseCandidateActivated represents a CandidateActivated event raised by the AddressBookBase contract.
-type AddressBookBaseCandidateActivated struct {
-	NodeId common.Address
-	Raw    types.Log // Blockchain specific contextual infos
-}
-
-// FilterCandidateActivated is a free log retrieval operation binding the contract event 0x759721961c23d02140d70249a00d7bbc893592166a3ef92468e7208cf41a45e3.
-//
-// Solidity: event CandidateActivated(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterCandidateActivated(opts *bind.FilterOpts, nodeId []common.Address) (*AddressBookBaseCandidateActivatedIterator, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "CandidateActivated", nodeIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseCandidateActivatedIterator{contract: _AddressBookBase.contract, event: "CandidateActivated", logs: logs, sub: sub}, nil
-}
-
-// WatchCandidateActivated is a free log subscription operation binding the contract event 0x759721961c23d02140d70249a00d7bbc893592166a3ef92468e7208cf41a45e3.
-//
-// Solidity: event CandidateActivated(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchCandidateActivated(opts *bind.WatchOpts, sink chan<- *AddressBookBaseCandidateActivated, nodeId []common.Address) (event.Subscription, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "CandidateActivated", nodeIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseCandidateActivated)
-				if err := _AddressBookBase.contract.UnpackLog(event, "CandidateActivated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseCandidateActivated is a log parse operation binding the contract event 0x759721961c23d02140d70249a00d7bbc893592166a3ef92468e7208cf41a45e3.
-//
-// Solidity: event CandidateActivated(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseCandidateActivated(log types.Log) (*AddressBookBaseCandidateActivated, error) {
-	event := new(AddressBookBaseCandidateActivated)
-	if err := _AddressBookBase.contract.UnpackLog(event, "CandidateActivated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseCandidateDeactivatedIterator is returned from FilterCandidateDeactivated and is used to iterate over the raw logs and unpacked data for CandidateDeactivated events raised by the AddressBookBase contract.
-type AddressBookBaseCandidateDeactivatedIterator struct {
-	Event *AddressBookBaseCandidateDeactivated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseCandidateDeactivatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseCandidateDeactivated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseCandidateDeactivated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseCandidateDeactivatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseCandidateDeactivatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseCandidateDeactivated represents a CandidateDeactivated event raised by the AddressBookBase contract.
-type AddressBookBaseCandidateDeactivated struct {
-	NodeId common.Address
-	Raw    types.Log // Blockchain specific contextual infos
-}
-
-// FilterCandidateDeactivated is a free log retrieval operation binding the contract event 0xbaea727dfffa01fdb952c2b313510033b0a631d0cc04c818a313b75060683e5a.
-//
-// Solidity: event CandidateDeactivated(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterCandidateDeactivated(opts *bind.FilterOpts, nodeId []common.Address) (*AddressBookBaseCandidateDeactivatedIterator, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "CandidateDeactivated", nodeIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseCandidateDeactivatedIterator{contract: _AddressBookBase.contract, event: "CandidateDeactivated", logs: logs, sub: sub}, nil
-}
-
-// WatchCandidateDeactivated is a free log subscription operation binding the contract event 0xbaea727dfffa01fdb952c2b313510033b0a631d0cc04c818a313b75060683e5a.
-//
-// Solidity: event CandidateDeactivated(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchCandidateDeactivated(opts *bind.WatchOpts, sink chan<- *AddressBookBaseCandidateDeactivated, nodeId []common.Address) (event.Subscription, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "CandidateDeactivated", nodeIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseCandidateDeactivated)
-				if err := _AddressBookBase.contract.UnpackLog(event, "CandidateDeactivated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseCandidateDeactivated is a log parse operation binding the contract event 0xbaea727dfffa01fdb952c2b313510033b0a631d0cc04c818a313b75060683e5a.
-//
-// Solidity: event CandidateDeactivated(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseCandidateDeactivated(log types.Log) (*AddressBookBaseCandidateDeactivated, error) {
-	event := new(AddressBookBaseCandidateDeactivated)
-	if err := _AddressBookBase.contract.UnpackLog(event, "CandidateDeactivated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseEpochTransitionProcessedIterator is returned from FilterEpochTransitionProcessed and is used to iterate over the raw logs and unpacked data for EpochTransitionProcessed events raised by the AddressBookBase contract.
-type AddressBookBaseEpochTransitionProcessedIterator struct {
-	Event *AddressBookBaseEpochTransitionProcessed // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseEpochTransitionProcessedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseEpochTransitionProcessed)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseEpochTransitionProcessed)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseEpochTransitionProcessedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseEpochTransitionProcessedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseEpochTransitionProcessed represents a EpochTransitionProcessed event raised by the AddressBookBase contract.
-type AddressBookBaseEpochTransitionProcessed struct {
-	EpochValCount *big.Int
-	Raw           types.Log // Blockchain specific contextual infos
-}
-
-// FilterEpochTransitionProcessed is a free log retrieval operation binding the contract event 0xd45be950fd3aceb65c6059b131cc8e06ab2390da6780d464b82c153e84816052.
-//
-// Solidity: event EpochTransitionProcessed(uint256 epochValCount)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterEpochTransitionProcessed(opts *bind.FilterOpts) (*AddressBookBaseEpochTransitionProcessedIterator, error) {
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "EpochTransitionProcessed")
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseEpochTransitionProcessedIterator{contract: _AddressBookBase.contract, event: "EpochTransitionProcessed", logs: logs, sub: sub}, nil
-}
-
-// WatchEpochTransitionProcessed is a free log subscription operation binding the contract event 0xd45be950fd3aceb65c6059b131cc8e06ab2390da6780d464b82c153e84816052.
-//
-// Solidity: event EpochTransitionProcessed(uint256 epochValCount)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchEpochTransitionProcessed(opts *bind.WatchOpts, sink chan<- *AddressBookBaseEpochTransitionProcessed) (event.Subscription, error) {
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "EpochTransitionProcessed")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseEpochTransitionProcessed)
-				if err := _AddressBookBase.contract.UnpackLog(event, "EpochTransitionProcessed", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseEpochTransitionProcessed is a log parse operation binding the contract event 0xd45be950fd3aceb65c6059b131cc8e06ab2390da6780d464b82c153e84816052.
-//
-// Solidity: event EpochTransitionProcessed(uint256 epochValCount)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseEpochTransitionProcessed(log types.Log) (*AddressBookBaseEpochTransitionProcessed, error) {
-	event := new(AddressBookBaseEpochTransitionProcessed)
-	if err := _AddressBookBase.contract.UnpackLog(event, "EpochTransitionProcessed", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseExitThresholdUpdatedIterator is returned from FilterExitThresholdUpdated and is used to iterate over the raw logs and unpacked data for ExitThresholdUpdated events raised by the AddressBookBase contract.
-type AddressBookBaseExitThresholdUpdatedIterator struct {
-	Event *AddressBookBaseExitThresholdUpdated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseExitThresholdUpdatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseExitThresholdUpdated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseExitThresholdUpdated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseExitThresholdUpdatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseExitThresholdUpdatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseExitThresholdUpdated represents a ExitThresholdUpdated event raised by the AddressBookBase contract.
-type AddressBookBaseExitThresholdUpdated struct {
-	OldThreshold *big.Int
-	NewThreshold *big.Int
-	Raw          types.Log // Blockchain specific contextual infos
-}
-
-// FilterExitThresholdUpdated is a free log retrieval operation binding the contract event 0x350feb2acced9171b9d250e5771e5ecd6940594484b98efc4fc7daddcaa42f2a.
-//
-// Solidity: event ExitThresholdUpdated(uint256 oldThreshold, uint256 newThreshold)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterExitThresholdUpdated(opts *bind.FilterOpts) (*AddressBookBaseExitThresholdUpdatedIterator, error) {
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "ExitThresholdUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseExitThresholdUpdatedIterator{contract: _AddressBookBase.contract, event: "ExitThresholdUpdated", logs: logs, sub: sub}, nil
-}
-
-// WatchExitThresholdUpdated is a free log subscription operation binding the contract event 0x350feb2acced9171b9d250e5771e5ecd6940594484b98efc4fc7daddcaa42f2a.
-//
-// Solidity: event ExitThresholdUpdated(uint256 oldThreshold, uint256 newThreshold)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchExitThresholdUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookBaseExitThresholdUpdated) (event.Subscription, error) {
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "ExitThresholdUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseExitThresholdUpdated)
-				if err := _AddressBookBase.contract.UnpackLog(event, "ExitThresholdUpdated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseExitThresholdUpdated is a log parse operation binding the contract event 0x350feb2acced9171b9d250e5771e5ecd6940594484b98efc4fc7daddcaa42f2a.
-//
-// Solidity: event ExitThresholdUpdated(uint256 oldThreshold, uint256 newThreshold)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseExitThresholdUpdated(log types.Log) (*AddressBookBaseExitThresholdUpdated, error) {
-	event := new(AddressBookBaseExitThresholdUpdated)
-	if err := _AddressBookBase.contract.UnpackLog(event, "ExitThresholdUpdated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseIdleTimeoutUpdatedIterator is returned from FilterIdleTimeoutUpdated and is used to iterate over the raw logs and unpacked data for IdleTimeoutUpdated events raised by the AddressBookBase contract.
-type AddressBookBaseIdleTimeoutUpdatedIterator struct {
-	Event *AddressBookBaseIdleTimeoutUpdated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseIdleTimeoutUpdatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseIdleTimeoutUpdated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseIdleTimeoutUpdated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseIdleTimeoutUpdatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseIdleTimeoutUpdatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseIdleTimeoutUpdated represents a IdleTimeoutUpdated event raised by the AddressBookBase contract.
-type AddressBookBaseIdleTimeoutUpdated struct {
-	OldIdleTimeout *big.Int
-	NewIdleTimeout *big.Int
-	Raw            types.Log // Blockchain specific contextual infos
-}
-
-// FilterIdleTimeoutUpdated is a free log retrieval operation binding the contract event 0xe10ca6f253a2344c11c8e060dca53f2a3397c1f5c3b6314104a42b376c42d08f.
-//
-// Solidity: event IdleTimeoutUpdated(uint256 oldIdleTimeout, uint256 newIdleTimeout)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterIdleTimeoutUpdated(opts *bind.FilterOpts) (*AddressBookBaseIdleTimeoutUpdatedIterator, error) {
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "IdleTimeoutUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseIdleTimeoutUpdatedIterator{contract: _AddressBookBase.contract, event: "IdleTimeoutUpdated", logs: logs, sub: sub}, nil
-}
-
-// WatchIdleTimeoutUpdated is a free log subscription operation binding the contract event 0xe10ca6f253a2344c11c8e060dca53f2a3397c1f5c3b6314104a42b376c42d08f.
-//
-// Solidity: event IdleTimeoutUpdated(uint256 oldIdleTimeout, uint256 newIdleTimeout)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchIdleTimeoutUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookBaseIdleTimeoutUpdated) (event.Subscription, error) {
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "IdleTimeoutUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseIdleTimeoutUpdated)
-				if err := _AddressBookBase.contract.UnpackLog(event, "IdleTimeoutUpdated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseIdleTimeoutUpdated is a log parse operation binding the contract event 0xe10ca6f253a2344c11c8e060dca53f2a3397c1f5c3b6314104a42b376c42d08f.
-//
-// Solidity: event IdleTimeoutUpdated(uint256 oldIdleTimeout, uint256 newIdleTimeout)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseIdleTimeoutUpdated(log types.Log) (*AddressBookBaseIdleTimeoutUpdated, error) {
-	event := new(AddressBookBaseIdleTimeoutUpdated)
-	if err := _AddressBookBase.contract.UnpackLog(event, "IdleTimeoutUpdated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseInitializedIterator is returned from FilterInitialized and is used to iterate over the raw logs and unpacked data for Initialized events raised by the AddressBookBase contract.
-type AddressBookBaseInitializedIterator struct {
-	Event *AddressBookBaseInitialized // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseInitializedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseInitialized)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseInitialized)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseInitializedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseInitializedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseInitialized represents a Initialized event raised by the AddressBookBase contract.
-type AddressBookBaseInitialized struct {
-	Version uint8
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterInitialized is a free log retrieval operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
-//
-// Solidity: event Initialized(uint8 version)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterInitialized(opts *bind.FilterOpts) (*AddressBookBaseInitializedIterator, error) {
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "Initialized")
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseInitializedIterator{contract: _AddressBookBase.contract, event: "Initialized", logs: logs, sub: sub}, nil
-}
-
-// WatchInitialized is a free log subscription operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
-//
-// Solidity: event Initialized(uint8 version)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *AddressBookBaseInitialized) (event.Subscription, error) {
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "Initialized")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseInitialized)
-				if err := _AddressBookBase.contract.UnpackLog(event, "Initialized", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseInitialized is a log parse operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
-//
-// Solidity: event Initialized(uint8 version)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseInitialized(log types.Log) (*AddressBookBaseInitialized, error) {
-	event := new(AddressBookBaseInitialized)
-	if err := _AddressBookBase.contract.UnpackLog(event, "Initialized", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseManagerUpdatedIterator is returned from FilterManagerUpdated and is used to iterate over the raw logs and unpacked data for ManagerUpdated events raised by the AddressBookBase contract.
-type AddressBookBaseManagerUpdatedIterator struct {
-	Event *AddressBookBaseManagerUpdated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseManagerUpdatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseManagerUpdated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseManagerUpdated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseManagerUpdatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseManagerUpdatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseManagerUpdated represents a ManagerUpdated event raised by the AddressBookBase contract.
-type AddressBookBaseManagerUpdated struct {
-	NodeId     common.Address
-	OldManager common.Address
-	NewManager common.Address
-	Raw        types.Log // Blockchain specific contextual infos
-}
-
-// FilterManagerUpdated is a free log retrieval operation binding the contract event 0x8df26d30992ecfde135bbe59c1f267d82e2aae9d32fdae41551a38fe8b7bda87.
-//
-// Solidity: event ManagerUpdated(address indexed nodeId, address indexed oldManager, address indexed newManager)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterManagerUpdated(opts *bind.FilterOpts, nodeId []common.Address, oldManager []common.Address, newManager []common.Address) (*AddressBookBaseManagerUpdatedIterator, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-	var oldManagerRule []interface{}
-	for _, oldManagerItem := range oldManager {
-		oldManagerRule = append(oldManagerRule, oldManagerItem)
-	}
-	var newManagerRule []interface{}
-	for _, newManagerItem := range newManager {
-		newManagerRule = append(newManagerRule, newManagerItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "ManagerUpdated", nodeIdRule, oldManagerRule, newManagerRule)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseManagerUpdatedIterator{contract: _AddressBookBase.contract, event: "ManagerUpdated", logs: logs, sub: sub}, nil
-}
-
-// WatchManagerUpdated is a free log subscription operation binding the contract event 0x8df26d30992ecfde135bbe59c1f267d82e2aae9d32fdae41551a38fe8b7bda87.
-//
-// Solidity: event ManagerUpdated(address indexed nodeId, address indexed oldManager, address indexed newManager)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchManagerUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookBaseManagerUpdated, nodeId []common.Address, oldManager []common.Address, newManager []common.Address) (event.Subscription, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-	var oldManagerRule []interface{}
-	for _, oldManagerItem := range oldManager {
-		oldManagerRule = append(oldManagerRule, oldManagerItem)
-	}
-	var newManagerRule []interface{}
-	for _, newManagerItem := range newManager {
-		newManagerRule = append(newManagerRule, newManagerItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "ManagerUpdated", nodeIdRule, oldManagerRule, newManagerRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseManagerUpdated)
-				if err := _AddressBookBase.contract.UnpackLog(event, "ManagerUpdated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseManagerUpdated is a log parse operation binding the contract event 0x8df26d30992ecfde135bbe59c1f267d82e2aae9d32fdae41551a38fe8b7bda87.
-//
-// Solidity: event ManagerUpdated(address indexed nodeId, address indexed oldManager, address indexed newManager)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseManagerUpdated(log types.Log) (*AddressBookBaseManagerUpdated, error) {
-	event := new(AddressBookBaseManagerUpdated)
-	if err := _AddressBookBase.contract.UnpackLog(event, "ManagerUpdated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseMaxReadyCandidateCountUpdatedIterator is returned from FilterMaxReadyCandidateCountUpdated and is used to iterate over the raw logs and unpacked data for MaxReadyCandidateCountUpdated events raised by the AddressBookBase contract.
-type AddressBookBaseMaxReadyCandidateCountUpdatedIterator struct {
-	Event *AddressBookBaseMaxReadyCandidateCountUpdated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseMaxReadyCandidateCountUpdatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseMaxReadyCandidateCountUpdated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseMaxReadyCandidateCountUpdated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseMaxReadyCandidateCountUpdatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseMaxReadyCandidateCountUpdatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseMaxReadyCandidateCountUpdated represents a MaxReadyCandidateCountUpdated event raised by the AddressBookBase contract.
-type AddressBookBaseMaxReadyCandidateCountUpdated struct {
-	OldCount *big.Int
-	NewCount *big.Int
-	Raw      types.Log // Blockchain specific contextual infos
-}
-
-// FilterMaxReadyCandidateCountUpdated is a free log retrieval operation binding the contract event 0x6b4e484c27a9904fed5187e90d13d161869e9801b709cc3077f8222bef0030a1.
-//
-// Solidity: event MaxReadyCandidateCountUpdated(uint256 oldCount, uint256 newCount)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterMaxReadyCandidateCountUpdated(opts *bind.FilterOpts) (*AddressBookBaseMaxReadyCandidateCountUpdatedIterator, error) {
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "MaxReadyCandidateCountUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseMaxReadyCandidateCountUpdatedIterator{contract: _AddressBookBase.contract, event: "MaxReadyCandidateCountUpdated", logs: logs, sub: sub}, nil
-}
-
-// WatchMaxReadyCandidateCountUpdated is a free log subscription operation binding the contract event 0x6b4e484c27a9904fed5187e90d13d161869e9801b709cc3077f8222bef0030a1.
-//
-// Solidity: event MaxReadyCandidateCountUpdated(uint256 oldCount, uint256 newCount)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchMaxReadyCandidateCountUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookBaseMaxReadyCandidateCountUpdated) (event.Subscription, error) {
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "MaxReadyCandidateCountUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseMaxReadyCandidateCountUpdated)
-				if err := _AddressBookBase.contract.UnpackLog(event, "MaxReadyCandidateCountUpdated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseMaxReadyCandidateCountUpdated is a log parse operation binding the contract event 0x6b4e484c27a9904fed5187e90d13d161869e9801b709cc3077f8222bef0030a1.
-//
-// Solidity: event MaxReadyCandidateCountUpdated(uint256 oldCount, uint256 newCount)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseMaxReadyCandidateCountUpdated(log types.Log) (*AddressBookBaseMaxReadyCandidateCountUpdated, error) {
-	event := new(AddressBookBaseMaxReadyCandidateCountUpdated)
-	if err := _AddressBookBase.contract.UnpackLog(event, "MaxReadyCandidateCountUpdated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseMaxValidatorCountUpdatedIterator is returned from FilterMaxValidatorCountUpdated and is used to iterate over the raw logs and unpacked data for MaxValidatorCountUpdated events raised by the AddressBookBase contract.
-type AddressBookBaseMaxValidatorCountUpdatedIterator struct {
-	Event *AddressBookBaseMaxValidatorCountUpdated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseMaxValidatorCountUpdatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseMaxValidatorCountUpdated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseMaxValidatorCountUpdated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseMaxValidatorCountUpdatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseMaxValidatorCountUpdatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseMaxValidatorCountUpdated represents a MaxValidatorCountUpdated event raised by the AddressBookBase contract.
-type AddressBookBaseMaxValidatorCountUpdated struct {
-	OldCount *big.Int
-	NewCount *big.Int
-	Raw      types.Log // Blockchain specific contextual infos
-}
-
-// FilterMaxValidatorCountUpdated is a free log retrieval operation binding the contract event 0xa8fbc5c083100f8025c9c33578c3292432f17b77b633fb69fa7773ff60d46667.
-//
-// Solidity: event MaxValidatorCountUpdated(uint256 oldCount, uint256 newCount)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterMaxValidatorCountUpdated(opts *bind.FilterOpts) (*AddressBookBaseMaxValidatorCountUpdatedIterator, error) {
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "MaxValidatorCountUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseMaxValidatorCountUpdatedIterator{contract: _AddressBookBase.contract, event: "MaxValidatorCountUpdated", logs: logs, sub: sub}, nil
-}
-
-// WatchMaxValidatorCountUpdated is a free log subscription operation binding the contract event 0xa8fbc5c083100f8025c9c33578c3292432f17b77b633fb69fa7773ff60d46667.
-//
-// Solidity: event MaxValidatorCountUpdated(uint256 oldCount, uint256 newCount)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchMaxValidatorCountUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookBaseMaxValidatorCountUpdated) (event.Subscription, error) {
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "MaxValidatorCountUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseMaxValidatorCountUpdated)
-				if err := _AddressBookBase.contract.UnpackLog(event, "MaxValidatorCountUpdated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseMaxValidatorCountUpdated is a log parse operation binding the contract event 0xa8fbc5c083100f8025c9c33578c3292432f17b77b633fb69fa7773ff60d46667.
-//
-// Solidity: event MaxValidatorCountUpdated(uint256 oldCount, uint256 newCount)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseMaxValidatorCountUpdated(log types.Log) (*AddressBookBaseMaxValidatorCountUpdated, error) {
-	event := new(AddressBookBaseMaxValidatorCountUpdated)
-	if err := _AddressBookBase.contract.UnpackLog(event, "MaxValidatorCountUpdated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseNodeCreatedIterator is returned from FilterNodeCreated and is used to iterate over the raw logs and unpacked data for NodeCreated events raised by the AddressBookBase contract.
-type AddressBookBaseNodeCreatedIterator struct {
-	Event *AddressBookBaseNodeCreated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseNodeCreatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseNodeCreated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseNodeCreated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseNodeCreatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseNodeCreatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseNodeCreated represents a NodeCreated event raised by the AddressBookBase contract.
-type AddressBookBaseNodeCreated struct {
-	NodeId common.Address
-	GcId   *big.Int
-	Raw    types.Log // Blockchain specific contextual infos
-}
-
-// FilterNodeCreated is a free log retrieval operation binding the contract event 0xe410d169249157b2af8ca2d602f2bdd8721034902d3228d318aaba02cacbac6b.
-//
-// Solidity: event NodeCreated(address indexed nodeId, uint256 gcId)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterNodeCreated(opts *bind.FilterOpts, nodeId []common.Address) (*AddressBookBaseNodeCreatedIterator, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "NodeCreated", nodeIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseNodeCreatedIterator{contract: _AddressBookBase.contract, event: "NodeCreated", logs: logs, sub: sub}, nil
-}
-
-// WatchNodeCreated is a free log subscription operation binding the contract event 0xe410d169249157b2af8ca2d602f2bdd8721034902d3228d318aaba02cacbac6b.
-//
-// Solidity: event NodeCreated(address indexed nodeId, uint256 gcId)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchNodeCreated(opts *bind.WatchOpts, sink chan<- *AddressBookBaseNodeCreated, nodeId []common.Address) (event.Subscription, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "NodeCreated", nodeIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseNodeCreated)
-				if err := _AddressBookBase.contract.UnpackLog(event, "NodeCreated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseNodeCreated is a log parse operation binding the contract event 0xe410d169249157b2af8ca2d602f2bdd8721034902d3228d318aaba02cacbac6b.
-//
-// Solidity: event NodeCreated(address indexed nodeId, uint256 gcId)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseNodeCreated(log types.Log) (*AddressBookBaseNodeCreated, error) {
-	event := new(AddressBookBaseNodeCreated)
-	if err := _AddressBookBase.contract.UnpackLog(event, "NodeCreated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseNodeDeletedIterator is returned from FilterNodeDeleted and is used to iterate over the raw logs and unpacked data for NodeDeleted events raised by the AddressBookBase contract.
-type AddressBookBaseNodeDeletedIterator struct {
-	Event *AddressBookBaseNodeDeleted // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseNodeDeletedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseNodeDeleted)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseNodeDeleted)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseNodeDeletedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseNodeDeletedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseNodeDeleted represents a NodeDeleted event raised by the AddressBookBase contract.
-type AddressBookBaseNodeDeleted struct {
-	NodeId common.Address
-	Raw    types.Log // Blockchain specific contextual infos
-}
-
-// FilterNodeDeleted is a free log retrieval operation binding the contract event 0x1629bfc36423a1b4749d3fe1d6970b9d32d42bbee47dd5540670696ab6b9a4ad.
-//
-// Solidity: event NodeDeleted(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterNodeDeleted(opts *bind.FilterOpts, nodeId []common.Address) (*AddressBookBaseNodeDeletedIterator, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "NodeDeleted", nodeIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseNodeDeletedIterator{contract: _AddressBookBase.contract, event: "NodeDeleted", logs: logs, sub: sub}, nil
-}
-
-// WatchNodeDeleted is a free log subscription operation binding the contract event 0x1629bfc36423a1b4749d3fe1d6970b9d32d42bbee47dd5540670696ab6b9a4ad.
-//
-// Solidity: event NodeDeleted(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchNodeDeleted(opts *bind.WatchOpts, sink chan<- *AddressBookBaseNodeDeleted, nodeId []common.Address) (event.Subscription, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "NodeDeleted", nodeIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseNodeDeleted)
-				if err := _AddressBookBase.contract.UnpackLog(event, "NodeDeleted", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseNodeDeleted is a log parse operation binding the contract event 0x1629bfc36423a1b4749d3fe1d6970b9d32d42bbee47dd5540670696ab6b9a4ad.
-//
-// Solidity: event NodeDeleted(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseNodeDeleted(log types.Log) (*AddressBookBaseNodeDeleted, error) {
-	event := new(AddressBookBaseNodeDeleted)
-	if err := _AddressBookBase.contract.UnpackLog(event, "NodeDeleted", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseOwnershipTransferredIterator is returned from FilterOwnershipTransferred and is used to iterate over the raw logs and unpacked data for OwnershipTransferred events raised by the AddressBookBase contract.
-type AddressBookBaseOwnershipTransferredIterator struct {
-	Event *AddressBookBaseOwnershipTransferred // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseOwnershipTransferredIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseOwnershipTransferred)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseOwnershipTransferred)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseOwnershipTransferredIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseOwnershipTransferredIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseOwnershipTransferred represents a OwnershipTransferred event raised by the AddressBookBase contract.
-type AddressBookBaseOwnershipTransferred struct {
-	PreviousOwner common.Address
-	NewOwner      common.Address
-	Raw           types.Log // Blockchain specific contextual infos
-}
-
-// FilterOwnershipTransferred is a free log retrieval operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
-//
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*AddressBookBaseOwnershipTransferredIterator, error) {
-
-	var previousOwnerRule []interface{}
-	for _, previousOwnerItem := range previousOwner {
-		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
-	}
-	var newOwnerRule []interface{}
-	for _, newOwnerItem := range newOwner {
-		newOwnerRule = append(newOwnerRule, newOwnerItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseOwnershipTransferredIterator{contract: _AddressBookBase.contract, event: "OwnershipTransferred", logs: logs, sub: sub}, nil
-}
-
-// WatchOwnershipTransferred is a free log subscription operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
-//
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *AddressBookBaseOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
-
-	var previousOwnerRule []interface{}
-	for _, previousOwnerItem := range previousOwner {
-		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
-	}
-	var newOwnerRule []interface{}
-	for _, newOwnerItem := range newOwner {
-		newOwnerRule = append(newOwnerRule, newOwnerItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseOwnershipTransferred)
-				if err := _AddressBookBase.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseOwnershipTransferred is a log parse operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
-//
-// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseOwnershipTransferred(log types.Log) (*AddressBookBaseOwnershipTransferred, error) {
-	event := new(AddressBookBaseOwnershipTransferred)
-	if err := _AddressBookBase.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBasePauseTimeoutUpdatedIterator is returned from FilterPauseTimeoutUpdated and is used to iterate over the raw logs and unpacked data for PauseTimeoutUpdated events raised by the AddressBookBase contract.
-type AddressBookBasePauseTimeoutUpdatedIterator struct {
-	Event *AddressBookBasePauseTimeoutUpdated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBasePauseTimeoutUpdatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBasePauseTimeoutUpdated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBasePauseTimeoutUpdated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBasePauseTimeoutUpdatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBasePauseTimeoutUpdatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBasePauseTimeoutUpdated represents a PauseTimeoutUpdated event raised by the AddressBookBase contract.
-type AddressBookBasePauseTimeoutUpdated struct {
-	OldPauseTimeout *big.Int
-	NewPauseTimeout *big.Int
-	Raw             types.Log // Blockchain specific contextual infos
-}
-
-// FilterPauseTimeoutUpdated is a free log retrieval operation binding the contract event 0xbb7cd41bd6435b6f6da7e832527c2adf48fe9783423fecedb8c8c625acbc92d0.
-//
-// Solidity: event PauseTimeoutUpdated(uint256 oldPauseTimeout, uint256 newPauseTimeout)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterPauseTimeoutUpdated(opts *bind.FilterOpts) (*AddressBookBasePauseTimeoutUpdatedIterator, error) {
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "PauseTimeoutUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBasePauseTimeoutUpdatedIterator{contract: _AddressBookBase.contract, event: "PauseTimeoutUpdated", logs: logs, sub: sub}, nil
-}
-
-// WatchPauseTimeoutUpdated is a free log subscription operation binding the contract event 0xbb7cd41bd6435b6f6da7e832527c2adf48fe9783423fecedb8c8c625acbc92d0.
-//
-// Solidity: event PauseTimeoutUpdated(uint256 oldPauseTimeout, uint256 newPauseTimeout)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchPauseTimeoutUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookBasePauseTimeoutUpdated) (event.Subscription, error) {
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "PauseTimeoutUpdated")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBasePauseTimeoutUpdated)
-				if err := _AddressBookBase.contract.UnpackLog(event, "PauseTimeoutUpdated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParsePauseTimeoutUpdated is a log parse operation binding the contract event 0xbb7cd41bd6435b6f6da7e832527c2adf48fe9783423fecedb8c8c625acbc92d0.
-//
-// Solidity: event PauseTimeoutUpdated(uint256 oldPauseTimeout, uint256 newPauseTimeout)
-func (_AddressBookBase *AddressBookBaseFilterer) ParsePauseTimeoutUpdated(log types.Log) (*AddressBookBasePauseTimeoutUpdated, error) {
-	event := new(AddressBookBasePauseTimeoutUpdated)
-	if err := _AddressBookBase.contract.UnpackLog(event, "PauseTimeoutUpdated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseScoresUpdatedIterator is returned from FilterScoresUpdated and is used to iterate over the raw logs and unpacked data for ScoresUpdated events raised by the AddressBookBase contract.
-type AddressBookBaseScoresUpdatedIterator struct {
-	Event *AddressBookBaseScoresUpdated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseScoresUpdatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseScoresUpdated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseScoresUpdated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseScoresUpdatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseScoresUpdatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseScoresUpdated represents a ScoresUpdated event raised by the AddressBookBase contract.
-type AddressBookBaseScoresUpdated struct {
-	Epoch   *big.Int
-	NodeIds []common.Address
-	Scores  []*big.Int
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterScoresUpdated is a free log retrieval operation binding the contract event 0x3ed42d8976ef09fbee43ae76e0be2ed8e9af501530fd0155d90beeb551c1b301.
-//
-// Solidity: event ScoresUpdated(uint256 indexed epoch, address[] nodeIds, uint256[] scores)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterScoresUpdated(opts *bind.FilterOpts, epoch []*big.Int) (*AddressBookBaseScoresUpdatedIterator, error) {
-
-	var epochRule []interface{}
-	for _, epochItem := range epoch {
-		epochRule = append(epochRule, epochItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "ScoresUpdated", epochRule)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseScoresUpdatedIterator{contract: _AddressBookBase.contract, event: "ScoresUpdated", logs: logs, sub: sub}, nil
-}
-
-// WatchScoresUpdated is a free log subscription operation binding the contract event 0x3ed42d8976ef09fbee43ae76e0be2ed8e9af501530fd0155d90beeb551c1b301.
-//
-// Solidity: event ScoresUpdated(uint256 indexed epoch, address[] nodeIds, uint256[] scores)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchScoresUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookBaseScoresUpdated, epoch []*big.Int) (event.Subscription, error) {
-
-	var epochRule []interface{}
-	for _, epochItem := range epoch {
-		epochRule = append(epochRule, epochItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "ScoresUpdated", epochRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseScoresUpdated)
-				if err := _AddressBookBase.contract.UnpackLog(event, "ScoresUpdated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseScoresUpdated is a log parse operation binding the contract event 0x3ed42d8976ef09fbee43ae76e0be2ed8e9af501530fd0155d90beeb551c1b301.
-//
-// Solidity: event ScoresUpdated(uint256 indexed epoch, address[] nodeIds, uint256[] scores)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseScoresUpdated(log types.Log) (*AddressBookBaseScoresUpdated, error) {
-	event := new(AddressBookBaseScoresUpdated)
-	if err := _AddressBookBase.contract.UnpackLog(event, "ScoresUpdated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseStateChangedIterator is returned from FilterStateChanged and is used to iterate over the raw logs and unpacked data for StateChanged events raised by the AddressBookBase contract.
-type AddressBookBaseStateChangedIterator struct {
-	Event *AddressBookBaseStateChanged // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseStateChangedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseStateChanged)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseStateChanged)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseStateChangedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseStateChangedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseStateChanged represents a StateChanged event raised by the AddressBookBase contract.
-type AddressBookBaseStateChanged struct {
-	NodeId    common.Address
-	FromState uint8
-	ToState   uint8
-	Raw       types.Log // Blockchain specific contextual infos
-}
-
-// FilterStateChanged is a free log retrieval operation binding the contract event 0xcfb25346bbf2c2f19e20af8b4b4d54cbc6c83057934c1f28539760e8f8065dee.
-//
-// Solidity: event StateChanged(address indexed nodeId, uint8 indexed fromState, uint8 indexed toState)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterStateChanged(opts *bind.FilterOpts, nodeId []common.Address, fromState []uint8, toState []uint8) (*AddressBookBaseStateChangedIterator, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-	var fromStateRule []interface{}
-	for _, fromStateItem := range fromState {
-		fromStateRule = append(fromStateRule, fromStateItem)
-	}
-	var toStateRule []interface{}
-	for _, toStateItem := range toState {
-		toStateRule = append(toStateRule, toStateItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "StateChanged", nodeIdRule, fromStateRule, toStateRule)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseStateChangedIterator{contract: _AddressBookBase.contract, event: "StateChanged", logs: logs, sub: sub}, nil
-}
-
-// WatchStateChanged is a free log subscription operation binding the contract event 0xcfb25346bbf2c2f19e20af8b4b4d54cbc6c83057934c1f28539760e8f8065dee.
-//
-// Solidity: event StateChanged(address indexed nodeId, uint8 indexed fromState, uint8 indexed toState)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchStateChanged(opts *bind.WatchOpts, sink chan<- *AddressBookBaseStateChanged, nodeId []common.Address, fromState []uint8, toState []uint8) (event.Subscription, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-	var fromStateRule []interface{}
-	for _, fromStateItem := range fromState {
-		fromStateRule = append(fromStateRule, fromStateItem)
-	}
-	var toStateRule []interface{}
-	for _, toStateItem := range toState {
-		toStateRule = append(toStateRule, toStateItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "StateChanged", nodeIdRule, fromStateRule, toStateRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseStateChanged)
-				if err := _AddressBookBase.contract.UnpackLog(event, "StateChanged", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseStateChanged is a log parse operation binding the contract event 0xcfb25346bbf2c2f19e20af8b4b4d54cbc6c83057934c1f28539760e8f8065dee.
-//
-// Solidity: event StateChanged(address indexed nodeId, uint8 indexed fromState, uint8 indexed toState)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseStateChanged(log types.Log) (*AddressBookBaseStateChanged, error) {
-	event := new(AddressBookBaseStateChanged)
-	if err := _AddressBookBase.contract.UnpackLog(event, "StateChanged", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseSystemTransitionProcessedIterator is returned from FilterSystemTransitionProcessed and is used to iterate over the raw logs and unpacked data for SystemTransitionProcessed events raised by the AddressBookBase contract.
-type AddressBookBaseSystemTransitionProcessedIterator struct {
-	Event *AddressBookBaseSystemTransitionProcessed // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseSystemTransitionProcessedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseSystemTransitionProcessed)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseSystemTransitionProcessed)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseSystemTransitionProcessedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseSystemTransitionProcessedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseSystemTransitionProcessed represents a SystemTransitionProcessed event raised by the AddressBookBase contract.
-type AddressBookBaseSystemTransitionProcessed struct {
-	NodeIds   []common.Address
-	NewStates []uint8
-	Raw       types.Log // Blockchain specific contextual infos
-}
-
-// FilterSystemTransitionProcessed is a free log retrieval operation binding the contract event 0xab95e7867bd336dde387ba31a71307c75dcc78b0344b873a5e993eb4470eb37e.
-//
-// Solidity: event SystemTransitionProcessed(address[] nodeIds, uint8[] newStates)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterSystemTransitionProcessed(opts *bind.FilterOpts) (*AddressBookBaseSystemTransitionProcessedIterator, error) {
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "SystemTransitionProcessed")
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseSystemTransitionProcessedIterator{contract: _AddressBookBase.contract, event: "SystemTransitionProcessed", logs: logs, sub: sub}, nil
-}
-
-// WatchSystemTransitionProcessed is a free log subscription operation binding the contract event 0xab95e7867bd336dde387ba31a71307c75dcc78b0344b873a5e993eb4470eb37e.
-//
-// Solidity: event SystemTransitionProcessed(address[] nodeIds, uint8[] newStates)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchSystemTransitionProcessed(opts *bind.WatchOpts, sink chan<- *AddressBookBaseSystemTransitionProcessed) (event.Subscription, error) {
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "SystemTransitionProcessed")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseSystemTransitionProcessed)
-				if err := _AddressBookBase.contract.UnpackLog(event, "SystemTransitionProcessed", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseSystemTransitionProcessed is a log parse operation binding the contract event 0xab95e7867bd336dde387ba31a71307c75dcc78b0344b873a5e993eb4470eb37e.
-//
-// Solidity: event SystemTransitionProcessed(address[] nodeIds, uint8[] newStates)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseSystemTransitionProcessed(log types.Log) (*AddressBookBaseSystemTransitionProcessed, error) {
-	event := new(AddressBookBaseSystemTransitionProcessed)
-	if err := _AddressBookBase.contract.UnpackLog(event, "SystemTransitionProcessed", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseUpgradedIterator is returned from FilterUpgraded and is used to iterate over the raw logs and unpacked data for Upgraded events raised by the AddressBookBase contract.
-type AddressBookBaseUpgradedIterator struct {
-	Event *AddressBookBaseUpgraded // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseUpgradedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseUpgraded)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseUpgraded)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseUpgradedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseUpgradedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseUpgraded represents a Upgraded event raised by the AddressBookBase contract.
-type AddressBookBaseUpgraded struct {
-	Implementation common.Address
-	Raw            types.Log // Blockchain specific contextual infos
-}
-
-// FilterUpgraded is a free log retrieval operation binding the contract event 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b.
-//
-// Solidity: event Upgraded(address indexed implementation)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*AddressBookBaseUpgradedIterator, error) {
-
-	var implementationRule []interface{}
-	for _, implementationItem := range implementation {
-		implementationRule = append(implementationRule, implementationItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "Upgraded", implementationRule)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseUpgradedIterator{contract: _AddressBookBase.contract, event: "Upgraded", logs: logs, sub: sub}, nil
-}
-
-// WatchUpgraded is a free log subscription operation binding the contract event 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b.
-//
-// Solidity: event Upgraded(address indexed implementation)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *AddressBookBaseUpgraded, implementation []common.Address) (event.Subscription, error) {
-
-	var implementationRule []interface{}
-	for _, implementationItem := range implementation {
-		implementationRule = append(implementationRule, implementationItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "Upgraded", implementationRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseUpgraded)
-				if err := _AddressBookBase.contract.UnpackLog(event, "Upgraded", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseUpgraded is a log parse operation binding the contract event 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b.
-//
-// Solidity: event Upgraded(address indexed implementation)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseUpgraded(log types.Log) (*AddressBookBaseUpgraded, error) {
-	event := new(AddressBookBaseUpgraded)
-	if err := _AddressBookBase.contract.UnpackLog(event, "Upgraded", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseValidatorSuspendedIterator is returned from FilterValidatorSuspended and is used to iterate over the raw logs and unpacked data for ValidatorSuspended events raised by the AddressBookBase contract.
-type AddressBookBaseValidatorSuspendedIterator struct {
-	Event *AddressBookBaseValidatorSuspended // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseValidatorSuspendedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseValidatorSuspended)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseValidatorSuspended)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseValidatorSuspendedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseValidatorSuspendedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseValidatorSuspended represents a ValidatorSuspended event raised by the AddressBookBase contract.
-type AddressBookBaseValidatorSuspended struct {
-	NodeId common.Address
-	Raw    types.Log // Blockchain specific contextual infos
-}
-
-// FilterValidatorSuspended is a free log retrieval operation binding the contract event 0xb102f7913267c344ac15011acd7185602a74269c32e7783833f5311450fb43dd.
-//
-// Solidity: event ValidatorSuspended(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterValidatorSuspended(opts *bind.FilterOpts, nodeId []common.Address) (*AddressBookBaseValidatorSuspendedIterator, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "ValidatorSuspended", nodeIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseValidatorSuspendedIterator{contract: _AddressBookBase.contract, event: "ValidatorSuspended", logs: logs, sub: sub}, nil
-}
-
-// WatchValidatorSuspended is a free log subscription operation binding the contract event 0xb102f7913267c344ac15011acd7185602a74269c32e7783833f5311450fb43dd.
-//
-// Solidity: event ValidatorSuspended(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchValidatorSuspended(opts *bind.WatchOpts, sink chan<- *AddressBookBaseValidatorSuspended, nodeId []common.Address) (event.Subscription, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "ValidatorSuspended", nodeIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseValidatorSuspended)
-				if err := _AddressBookBase.contract.UnpackLog(event, "ValidatorSuspended", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseValidatorSuspended is a log parse operation binding the contract event 0xb102f7913267c344ac15011acd7185602a74269c32e7783833f5311450fb43dd.
-//
-// Solidity: event ValidatorSuspended(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseValidatorSuspended(log types.Log) (*AddressBookBaseValidatorSuspended, error) {
-	event := new(AddressBookBaseValidatorSuspended)
-	if err := _AddressBookBase.contract.UnpackLog(event, "ValidatorSuspended", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseValidatorUnsuspendedIterator is returned from FilterValidatorUnsuspended and is used to iterate over the raw logs and unpacked data for ValidatorUnsuspended events raised by the AddressBookBase contract.
-type AddressBookBaseValidatorUnsuspendedIterator struct {
-	Event *AddressBookBaseValidatorUnsuspended // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseValidatorUnsuspendedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseValidatorUnsuspended)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseValidatorUnsuspended)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseValidatorUnsuspendedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseValidatorUnsuspendedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseValidatorUnsuspended represents a ValidatorUnsuspended event raised by the AddressBookBase contract.
-type AddressBookBaseValidatorUnsuspended struct {
-	NodeId common.Address
-	Raw    types.Log // Blockchain specific contextual infos
-}
-
-// FilterValidatorUnsuspended is a free log retrieval operation binding the contract event 0x814c4b6f6fc147ebb6fbe4ffcd3554d0309170fd0a70e66cc4e4c0784f4aa32e.
-//
-// Solidity: event ValidatorUnsuspended(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterValidatorUnsuspended(opts *bind.FilterOpts, nodeId []common.Address) (*AddressBookBaseValidatorUnsuspendedIterator, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "ValidatorUnsuspended", nodeIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseValidatorUnsuspendedIterator{contract: _AddressBookBase.contract, event: "ValidatorUnsuspended", logs: logs, sub: sub}, nil
-}
-
-// WatchValidatorUnsuspended is a free log subscription operation binding the contract event 0x814c4b6f6fc147ebb6fbe4ffcd3554d0309170fd0a70e66cc4e4c0784f4aa32e.
-//
-// Solidity: event ValidatorUnsuspended(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchValidatorUnsuspended(opts *bind.WatchOpts, sink chan<- *AddressBookBaseValidatorUnsuspended, nodeId []common.Address) (event.Subscription, error) {
-
-	var nodeIdRule []interface{}
-	for _, nodeIdItem := range nodeId {
-		nodeIdRule = append(nodeIdRule, nodeIdItem)
-	}
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "ValidatorUnsuspended", nodeIdRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseValidatorUnsuspended)
-				if err := _AddressBookBase.contract.UnpackLog(event, "ValidatorUnsuspended", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseValidatorUnsuspended is a log parse operation binding the contract event 0x814c4b6f6fc147ebb6fbe4ffcd3554d0309170fd0a70e66cc4e4c0784f4aa32e.
-//
-// Solidity: event ValidatorUnsuspended(address indexed nodeId)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseValidatorUnsuspended(log types.Log) (*AddressBookBaseValidatorUnsuspended, error) {
-	event := new(AddressBookBaseValidatorUnsuspended)
-	if err := _AddressBookBase.contract.UnpackLog(event, "ValidatorUnsuspended", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// AddressBookBaseValidatorsInitializedIterator is returned from FilterValidatorsInitialized and is used to iterate over the raw logs and unpacked data for ValidatorsInitialized events raised by the AddressBookBase contract.
-type AddressBookBaseValidatorsInitializedIterator struct {
-	Event *AddressBookBaseValidatorsInitialized // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookBaseValidatorsInitializedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookBaseValidatorsInitialized)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookBaseValidatorsInitialized)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookBaseValidatorsInitializedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookBaseValidatorsInitializedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookBaseValidatorsInitialized represents a ValidatorsInitialized event raised by the AddressBookBase contract.
-type AddressBookBaseValidatorsInitialized struct {
-	NodeIds []common.Address
-	Raw     types.Log // Blockchain specific contextual infos
-}
-
-// FilterValidatorsInitialized is a free log retrieval operation binding the contract event 0x820f68b9d060f5d911b3243881ada086c3768ea90e97a10f7f5023d84b94d952.
-//
-// Solidity: event ValidatorsInitialized(address[] nodeIds)
-func (_AddressBookBase *AddressBookBaseFilterer) FilterValidatorsInitialized(opts *bind.FilterOpts) (*AddressBookBaseValidatorsInitializedIterator, error) {
-
-	logs, sub, err := _AddressBookBase.contract.FilterLogs(opts, "ValidatorsInitialized")
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookBaseValidatorsInitializedIterator{contract: _AddressBookBase.contract, event: "ValidatorsInitialized", logs: logs, sub: sub}, nil
-}
-
-// WatchValidatorsInitialized is a free log subscription operation binding the contract event 0x820f68b9d060f5d911b3243881ada086c3768ea90e97a10f7f5023d84b94d952.
-//
-// Solidity: event ValidatorsInitialized(address[] nodeIds)
-func (_AddressBookBase *AddressBookBaseFilterer) WatchValidatorsInitialized(opts *bind.WatchOpts, sink chan<- *AddressBookBaseValidatorsInitialized) (event.Subscription, error) {
-
-	logs, sub, err := _AddressBookBase.contract.WatchLogs(opts, "ValidatorsInitialized")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookBaseValidatorsInitialized)
-				if err := _AddressBookBase.contract.UnpackLog(event, "ValidatorsInitialized", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseValidatorsInitialized is a log parse operation binding the contract event 0x820f68b9d060f5d911b3243881ada086c3768ea90e97a10f7f5023d84b94d952.
-//
-// Solidity: event ValidatorsInitialized(address[] nodeIds)
-func (_AddressBookBase *AddressBookBaseFilterer) ParseValidatorsInitialized(log types.Log) (*AddressBookBaseValidatorsInitialized, error) {
-	event := new(AddressBookBaseValidatorsInitialized)
-	if err := _AddressBookBase.contract.UnpackLog(event, "ValidatorsInitialized", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
 // AddressBookV2MetaData contains all meta data concerning the AddressBookV2 contract.
 var AddressBookV2MetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"AddressAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadyActivated\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadyInitialized\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadySuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInput\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInput\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidState\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeAlreadyExists\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeNotFound\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyEpochBlock\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyManager\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlySystemTx\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SlotsFull\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StakingTooLow\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TimeoutExpired\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"Activated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateActivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateDeactivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"epochValCount\",\"type\":\"uint256\"}],\"name\":\"EpochTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldThreshold\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newThreshold\",\"type\":\"uint256\"}],\"name\":\"ExitThresholdUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldIdleTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"IdleTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldManager\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"ManagerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxReadyCandidateCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxValidatorCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"}],\"name\":\"NodeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"NodeDeleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldPauseTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"PauseTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"ScoresUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"enumNodeState\",\"name\":\"fromState\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"enumNodeState\",\"name\":\"toState\",\"type\":\"uint8\"}],\"name\":\"StateChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"enumNodeState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"}],\"name\":\"SystemTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorSuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorUnsuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"ValidatorsInitialized\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"CONTRACT_TYPE\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"EPOCH_BLOCK_INTERVAL\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MIN_STAKE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SYSTEM_SENDER\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"VERSION\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"activate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"activateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"}],\"name\":\"createNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentEpoch\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deactivateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deleteNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"exit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getActiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllBlsInfo\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIdList\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo[]\",\"name\":\"pubkeyList\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllProfiles\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structProfile[]\",\"name\":\"profiles\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCandInactiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getEpochValCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getExitThreshold\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getManager\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getMaxCounts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"getNodeInfos\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo[]\",\"name\":\"infos\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeState\",\"outputs\":[{\"internalType\":\"enumNodeState\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getScore\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getStakingContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"name\":\"getStateCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getSuspendedValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getTimeoutAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTimeouts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"initialOwner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_exitThreshold\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_pauseTimeout\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_idleTimeout\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxValidatorCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_maxReadyCandidateCount\",\"type\":\"uint256\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo[]\",\"name\":\"infos\",\"type\":\"tuple[]\"}],\"name\":\"initializeValidators\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isActivated\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isCandInactive\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isInActiveSet\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isRegistered\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isValidatorsInitialized\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"offboard\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"enumNodeState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"},{\"internalType\":\"uint256[]\",\"name\":\"timeoutAts\",\"type\":\"uint256[]\"}],\"name\":\"processSystemTransition\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"readyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"resume\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"suspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unreadyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unsuspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newExitThreshold\",\"type\":\"uint256\"}],\"name\":\"updateExitThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"updateIdleTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"updateManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxReadyCandidateCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxReadyCandidateCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxValidatorCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxValidatorCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"updatePauseTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"updateScores\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"AddressAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadySuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInput\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInput\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidState\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeAlreadyExists\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeNotFound\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyEpochBlock\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyManager\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlySystemTx\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SlotsFull\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StakingTooLow\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TimeoutExpired\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateActivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateDeactivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"epochValCount\",\"type\":\"uint256\"}],\"name\":\"EpochTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldThreshold\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newThreshold\",\"type\":\"uint256\"}],\"name\":\"ExitThresholdUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldIdleTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"IdleTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAddress\",\"type\":\"address\"}],\"name\":\"KefAddressUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAddress\",\"type\":\"address\"}],\"name\":\"KifAddressUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAddress\",\"type\":\"address\"}],\"name\":\"KpfAddressUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldManager\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"ManagerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxReadyCandidateCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxValidatorCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"}],\"name\":\"NodeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"NodeDeleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldPauseTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"PauseTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"ScoresUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"enumState\",\"name\":\"fromState\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"enumState\",\"name\":\"toState\",\"type\":\"uint8\"}],\"name\":\"StateChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"enumState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"}],\"name\":\"SystemTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorSuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorUnsuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"ValidatorsInitialized\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"CONTRACT_TYPE\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"EPOCH_BLOCK_INTERVAL\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MIN_STAKE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SYSTEM_SENDER\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"VERSION\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"activateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"}],\"name\":\"createNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentEpoch\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deactivateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deleteNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"exit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getActiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllBlsInfo\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIdList\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo[]\",\"name\":\"pubkeyList\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllProfiles\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structProfile[]\",\"name\":\"profiles\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCandInactiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getEpochValCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getExitThreshold\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getFundAddresses\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getManager\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getMaxCounts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"manager\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"getNodeInfos\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"manager\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo[]\",\"name\":\"infos\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeState\",\"outputs\":[{\"internalType\":\"enumState\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getScore\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getStakingContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"name\":\"getStateCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getSuspendedValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getTimeoutAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTimeouts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isCandInactive\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isInActiveSet\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isRegistered\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"offboard\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"enumState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"},{\"internalType\":\"uint256[]\",\"name\":\"timeoutAts\",\"type\":\"uint256[]\"}],\"name\":\"processSystemTransition\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"readyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"resume\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"suspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unreadyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unsuspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newExitThreshold\",\"type\":\"uint256\"}],\"name\":\"updateExitThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"updateIdleTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newKefAddress\",\"type\":\"address\"}],\"name\":\"updateKefAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newKifAddress\",\"type\":\"address\"}],\"name\":\"updateKifAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newKpfAddress\",\"type\":\"address\"}],\"name\":\"updateKpfAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"updateManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxReadyCandidateCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxReadyCandidateCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxValidatorCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxValidatorCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"updatePauseTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"updateScores\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
 	Sigs: map[string]string{
 		"4b6a94cc": "CONTRACT_TYPE()",
 		"de244059": "EPOCH_BLOCK_INTERVAL()",
 		"cb1c2b5c": "MIN_STAKE()",
 		"87b7b8fd": "SYSTEM_SENDER()",
 		"ffa1ad74": "VERSION()",
-		"0f15f4c0": "activate()",
 		"ef6bdade": "activateCandidate(address)",
 		"4429d720": "createNode(address,address,address,address,(bytes,bytes),string)",
 		"76671808": "currentEpoch()",
@@ -5004,6 +93,7 @@ var AddressBookV2MetaData = &bind.MetaData{
 		"94a64d98": "getCandInactiveSetLength()",
 		"7d7b127f": "getEpochValCount()",
 		"3aea9faf": "getExitThreshold()",
+		"25cf0943": "getFundAddresses()",
 		"3d584063": "getManager(address)",
 		"03e6689d": "getMaxCounts()",
 		"582115fb": "getNodeInfo(address)",
@@ -5015,13 +105,10 @@ var AddressBookV2MetaData = &bind.MetaData{
 		"1ba3fd58": "getSuspendedValidators()",
 		"277f3dc3": "getTimeoutAt(address)",
 		"e70c38f1": "getTimeouts()",
-		"45ff4c80": "initialize(address,uint256,uint256,uint256,uint256,uint256)",
-		"58199d01": "initializeValidators(address[],(address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])",
-		"4a8c1fb4": "isActivated()",
+		"8129fc1c": "initialize()",
 		"45ce8110": "isCandInactive(address)",
 		"5334cf44": "isInActiveSet(address)",
 		"c3c5a547": "isRegistered(address)",
-		"551ec9b5": "isValidatorsInitialized()",
 		"b9f96f40": "offboard(address)",
 		"8da5cb5b": "owner()",
 		"76a67a51": "pause(address)",
@@ -5036,6 +123,9 @@ var AddressBookV2MetaData = &bind.MetaData{
 		"78b84a5c": "unsuspendValidator(address)",
 		"2c1d4895": "updateExitThreshold(uint256)",
 		"e59d7a84": "updateIdleTimeout(uint256)",
+		"9d8cf08f": "updateKefAddress(address)",
+		"7df40c62": "updateKifAddress(address)",
+		"c9a86af2": "updateKpfAddress(address)",
 		"07ecec3e": "updateManager(address,address)",
 		"76714282": "updateMaxReadyCandidateCount(uint256)",
 		"7e134fc6": "updateMaxValidatorCount(uint256)",
@@ -5044,7 +134,7 @@ var AddressBookV2MetaData = &bind.MetaData{
 		"3659cfe6": "upgradeTo(address)",
 		"4f1ef286": "upgradeToAndCall(address,bytes)",
 	},
-	Bin: "0x60a060405230608052348015610013575f80fd5b5061001c610021565b6100dd565b5f54610100900460ff161561008c5760405162461bcd60e51b815260206004820152602760248201527f496e697469616c697a61626c653a20636f6e747261637420697320696e697469604482015266616c697a696e6760c81b606482015260840160405180910390fd5b5f5460ff908116146100db575f805460ff191660ff9081179091556040519081527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a15b565b60805161523a6101115f395f818161113b01528181611184015281816116050152818161164501526116d6015261523a5ff3fe608060405260043610610366575f3560e01c8063656f5869116101c85780638da5cb5b116100fd578063cb1c2b5c1161009d578063e70c38f11161006d578063e70c38f1146109e3578063ef6bdade146109f7578063f2fde38b14610a16578063ffa1ad7414610a35575f80fd5b8063cb1c2b5c14610971578063d9abb38b1461098f578063de244059146109ae578063e59d7a84146109c4575f80fd5b8063a41b6000116100d8578063a41b6000146108f5578063b42652e914610914578063b9f96f4014610933578063c3c5a54714610952575f80fd5b80638da5cb5b146108a557806394a64d98146108c25780639d0e234d146108d6575f80fd5b806378b84a5c116101685780637e134fc6116101435780637e134fc61461082157806380f2ff251461084057806387b7b8fd1461085f5780638beeb43914610879575f80fd5b806378b84a5c146107cf578063793c1946146107ee5780637d7b127f1461080d575f80fd5b8063715018a6116101a3578063715018a614610769578063766718081461077d578063767142821461079157806376a67a51146107b0575f80fd5b8063656f5869146107145780636968b53f146107335780636b75b7a814610755575f80fd5b80633d5840631161029e5780634f1ef2861161023e5780635334cf44116102195780635334cf4414610696578063551ec9b5146106b557806358199d01146106c9578063582115fb146106e8575f80fd5b80634f1ef2861461065057806352d1902d146106635780635300f9b414610677575f80fd5b806345ce81101161027957806345ce8110146105ab57806345ff4c80146105da5780634a8c1fb4146105f95780634b6a94cc1461060d575f80fd5b80633d584063146105365780634429d7201461056d57806345527e441461058c575f80fd5b8063229bb823116103095780632c1d4895116102e45780632c1d4895146104c55780632d4ede93146104e45780633659cfe6146105035780633aea9faf14610522575f80fd5b8063229bb8231461045b578063277f3dc31461048757806327f94c3d146104a6575f80fd5b80630f15f4c0116103445780630f15f4c0146103da578063171a6cdc146103ee5780631b1a478b1461040d5780631ba3fd581461043a575f80fd5b806303e6689d1461036a57806307ecec3e146103985780630b1fe784146103b9575b5f80fd5b348015610375575f80fd5b5061037e610a49565b604080519283526020830191909152015b60405180910390f35b3480156103a3575f80fd5b506103b76103b23660046142c2565b610a69565b005b3480156103c4575f80fd5b506103cd610b06565b60405161038f919061432d565b3480156103e5575f80fd5b506103b7610d45565b3480156103f9575f80fd5b506103b76104083660046143b4565b610dc0565b348015610418575f80fd5b5061042c6104273660046143db565b610e35565b60405190815260200161038f565b348015610445575f80fd5b5061044e610e7a565b60405161038f9190614439565b348015610466575f80fd5b5061047a6104753660046143b4565b610e94565b60405161038f919061444b565b348015610492575f80fd5b5061042c6104a13660046143b4565b610ec1565b3480156104b1575f80fd5b506103b76104c03660046144a0565b610eeb565b3480156104d0575f80fd5b506103b76104df366004614506565b610ff7565b3480156104ef575f80fd5b506103b76104fe3660046143b4565b611076565b34801561050e575f80fd5b506103b761051d3660046143b4565b611131565b34801561052d575f80fd5b5061042c611217565b348015610541575f80fd5b506105556105503660046143b4565b611229565b6040516001600160a01b03909116815260200161038f565b348015610578575f80fd5b506103b7610587366004614646565b611254565b348015610597575f80fd5b506103b76105a63660046146ff565b611328565b3480156105b6575f80fd5b506105ca6105c53660046143b4565b611428565b604051901515815260200161038f565b3480156105e5575f80fd5b506103b76105f4366004614791565b611444565b348015610604575f80fd5b506105ca6115e1565b348015610618575f80fd5b506106436040518060400160405280600b81526020016a41646472657373426f6f6b60a81b81525081565b60405161038f9190614807565b6103b761065e366004614819565b6115fb565b34801561066e575f80fd5b5061042c6116ca565b348015610682575f80fd5b506105556106913660046143b4565b61177b565b3480156106a1575f80fd5b506105ca6106b03660046143b4565b611784565b3480156106c0575f80fd5b506105ca61179a565b3480156106d4575f80fd5b506103b76106e33660046144a0565b6117af565b3480156106f3575f80fd5b506107076107023660046143b4565b6119e6565b60405161038f919061491e565b34801561071f575f80fd5b506103b761072e3660046143b4565b611ca2565b34801561073e575f80fd5b50610747611d0e565b60405161038f929190614930565b348015610760575f80fd5b5061042c612181565b348015610774575f80fd5b506103b7612195565b348015610788575f80fd5b5061042c6121a8565b34801561079c575f80fd5b506103b76107ab366004614506565b6121b1565b3480156107bb575f80fd5b506103b76107ca3660046143b4565b612227565b3480156107da575f80fd5b506103b76107e93660046143b4565b6122ed565b3480156107f9575f80fd5b506103b76108083660046143b4565b612361565b348015610818575f80fd5b5061042c6123a8565b34801561082c575f80fd5b506103b761083b366004614506565b6123ba565b34801561084b575f80fd5b5061042c61085a3660046149a0565b612430565b34801561086a575f80fd5b506105556002600160a01b0381565b348015610884575f80fd5b506108986108933660046149c3565b612462565b60405161038f9190614a01565b3480156108b0575f80fd5b506033546001600160a01b0316610555565b3480156108cd575f80fd5b5061042c61277b565b3480156108e1575f80fd5b506103b76108f0366004614506565b61278f565b348015610900575f80fd5b506103b761090f3660046143b4565b612805565b34801561091f575f80fd5b506103b761092e3660046143b4565b612879565b34801561093e575f80fd5b506103b761094d3660046143b4565b612982565b34801561095d575f80fd5b506105ca61096c3660046143b4565b6129c0565b34801561097c575f80fd5b5061042c6a0422ca8b0a00a42500000081565b34801561099a575f80fd5b506103b76109a93660046143b4565b6129ed565b3480156109b9575f80fd5b5061042c6201518081565b3480156109cf575f80fd5b506103b76109de366004614506565b612a2e565b3480156109ee575f80fd5b5061037e612aa4565b348015610a02575f80fd5b506103b7610a113660046143b4565b612ac4565b348015610a21575f80fd5b506103b7610a303660046143b4565b612bc3565b348015610a40575f80fd5b5061042c600281565b5f805f610a54612c39565b90508060060154816007015492509250509091565b81610a7381612c5d565b6001600160a01b038216610a9a5760405163b4fa3fb360e01b815260040160405180910390fd5b5f610aa3612c39565b6001600160a01b038086165f8181526020849052604080822080548986166001600160a01b03198216811790925591519596509316938492917f8df26d30992ecfde135bbe59c1f267d82e2aae9d32fdae41551a38fe8b7bda8791a45050505050565b60605f610b11612ca0565b90505f610b2082600101612cc4565b90505f610b2f83600301612cc4565b9050610b3b8183614a77565b6001600160401b03811115610b5257610b5261451d565b604051908082528060200260200182016040528015610bb157816020015b610b9e6040805160a0810182525f808252602082018190529181018290526060810182905290608082015290565b815260200190600190039081610b705790505b5093505f805b83811015610c77575f610bcd6001870183612ccd565b9050610bdc6005870182612cdf565b610c6e576001600160a01b038082165f8181526020898152604091829020825160a081018452938452805485169184019190915260018101549093169082015260038201546060820152600880830154608083019160ff90911690811115610c4657610c466142f9565b815250888581518110610c5b57610c5b614a8a565b6020026020010181905250836001019350505b50600101610bb7565b505f5b82811015610d3a575f610c906003870183612ccd565b9050610c9f6005870182612cdf565b610d31576001600160a01b038082165f8181526020898152604091829020825160a081018452938452805485169184019190915260018101549093169082015260038201546060820152600880830154608083019160ff90911690811115610d0957610d096142f9565b815250888581518110610d1e57610d1e614a8a565b6020026020010181905250836001019350505b50600101610c7a565b508085525050505090565b610d4d612d00565b5f610d56612c39565b6009810154909150610100900460ff1615610d845760405163ef65161f60e01b815260040160405180910390fd5b60098101805461ff0019166101001790556040517fed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0905f90a150565b80610dca81612c5d565b610dd5826002612d5a565b610df25760405163baf3f0f760e01b815260040160405180910390fd5b610dfe8260015f612d8f565b6040516001600160a01b038316907fbaea727dfffa01fdb952c2b313510033b0a631d0cc04c818a313b75060683e5a905f90a25050565b5f610e3e612ca0565b6008015f836008811115610e5457610e546142f9565b6008811115610e6557610e656142f9565b81526020019081526020015f20549050919050565b6060610e8f610e87612ca0565b600501612ff6565b905090565b5f610e9d612ca0565b6001600160a01b039092165f90815260209290925250604090206008015460ff1690565b5f610eca612ca0565b6001600160a01b039092165f90815260209290925250604090206003015490565b610ef3613002565b610efb613029565b828114610f1b5760405163b4fa3fb360e01b815260040160405180910390fd5b5f610f24612c39565b90505f610f2f613054565b90505f5b85811015610fb057848482818110610f4d57610f4d614a8a565b90506020020135836002015f8481526020019081526020015f205f898985818110610f7a57610f7a614a8a565b9050602002016020810190610f8f91906143b4565b6001600160a01b0316815260208101919091526040015f2055600101610f33565b50807f3ed42d8976ef09fbee43ae76e0be2ed8e9af501530fd0155d90beeb551c1b30187878787604051610fe79493929190614ada565b60405180910390a2505050505050565b610fff612d00565b805f0361101f5760405163b4fa3fb360e01b815260040160405180910390fd5b5f611028612c39565b60038101805490849055604080518281526020810186905292935090917f350feb2acced9171b9d250e5771e5ecd6940594484b98efc4fc7daddcaa42f2a91015b60405180910390a1505050565b8061108081612c5d565b61108b826001612d5a565b6110a85760405163baf3f0f760e01b815260040160405180910390fd5b5f6110b1612c39565b90505f6110bd84613062565b80546001808301546001600160a01b038881165f81815293880160209081526040808620805460ff19908116909155968416865280862080548816905592909316845281842080549095169094559282528590522080546001600160a01b0319169055905061112b84613088565b50505050565b6001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001630036111825760405162461bcd60e51b815260040161117990614b24565b60405180910390fd5b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166111ca5f805160206151be833981519152546001600160a01b031690565b6001600160a01b0316146111f05760405162461bcd60e51b815260040161117990614b70565b6111f9816131cd565b604080515f80825260208201909252611214918391906131d5565b50565b5f611220612c39565b60030154905090565b5f611232612c39565b6001600160a01b039283165f9081526020919091526040902054909116919050565b5f61125e87610e94565b600881111561126f5761126f6142f9565b1461128d5760405163731918fb60e11b815260040160405180910390fd5b5f611296612c39565b90506112a88160010188888887613344565b6001600160a01b038781165f9081526020838152604080832080546001600160a01b031916331790558051610100810182528a85168152898516928101929092529287169281019290925260608201819052608082015260a0810184905260c08101839052600160e082015261131e888261357b565b5050505050505050565b611330613002565b8483811415806113405750808214155b1561135e5760405163b4fa3fb360e01b815260040160405180910390fd5b801561137257611372878787878787613769565b61137a613818565b156113e2575f61138a6007610e35565b6113946006610e35565b61139e9190614a77565b9050806113a9612c39565b600801556040518181527fd45be950fd3aceb65c6059b131cc8e06ab2390da6780d464b82c153e848160529060200160405180910390a1505b7fab95e7867bd336dde387ba31a71307c75dcc78b0344b873a5e993eb4470eb37e878787876040516114179493929190614bbc565b60405180910390a150505050505050565b5f61143e82611435612ca0565b60030190612cdf565b92915050565b5f54610100900460ff161580801561146257505f54600160ff909116105b8061147b5750303b15801561147b57505f5460ff166001145b6114de5760405162461bcd60e51b815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201526d191e481a5b9a5d1a585b1a5e995960921b6064820152608401611179565b5f805460ff1916600117905580156114ff575f805461ff0019166101001790555b61150761382c565b6115108761385a565b85158061151b575084155b80611524575083155b156115425760405163b4fa3fb360e01b815260040160405180910390fd5b82158061154d575081155b1561156b5760405163b4fa3fb360e01b815260040160405180910390fd5b5f611574612c39565b600381018890556004810187905560058101869055600681018590556007018390555080156115d8575f805461ff0019169055604051600181527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb384740249890602001611417565b50505050505050565b5f6115ea612c39565b60090154610100900460ff16919050565b6001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001630036116435760405162461bcd60e51b815260040161117990614b24565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031661168b5f805160206151be833981519152546001600160a01b031690565b6001600160a01b0316146116b15760405162461bcd60e51b815260040161117990614b70565b6116ba826131cd565b6116c6828260016131d5565b5050565b5f306001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016146117695760405162461bcd60e51b815260206004820152603860248201527f555550535570677261646561626c653a206d757374206e6f742062652063616c60448201527f6c6564207468726f7567682064656c656761746563616c6c00000000000000006064820152608401611179565b505f805160206151be83398151915290565b5f611232612ca0565b5f61143e82611791612ca0565b60010190612cdf565b5f6117a3612c39565b6009015460ff16919050565b6117b7613002565b5f6117c0612c39565b600981015490915060ff16156117e85760405162dc149f60e41b815260040160405180910390fd5b60098101805460ff19166001179055838281146118185760405163b4fa3fb360e01b815260040160405180910390fd5b5f5b8181101561197f576118f78360010188888481811061183b5761183b614a8a565b905060200201602081019061185091906143b4565b87878581811061186257611862614a8a565b90506020028101906118749190614c1f565b6118829060208101906143b4565b88888681811061189457611894614a8a565b90506020028101906118a69190614c1f565b6118b79060408101906020016143b4565b8989878181106118c9576118c9614a8a565b90506020028101906118db9190614c1f565b6118e99060a0810190614c3d565b6118f290614c51565b613344565b86868281811061190957611909614a8a565b905060200201602081019061191e91906143b4565b835f89898581811061193257611932614a8a565b905060200201602081019061194791906143b4565b6001600160a01b03908116825260208201929092526040015f2080546001600160a01b0319169290911691909117905560010161181a565b5061198c868686866138ab565b80826008015f82825461199f9190614a77565b90915550506040517f820f68b9d060f5d911b3243881ada086c3768ea90e97a10f7f5023d84b94d952906119d69088908890614c5c565b60405180910390a1505050505050565b6119ee6141f0565b5f6119f7612ca0565b90505f6001600160a01b0384165f90815260208390526040902060089081015460ff1690811115611a2a57611a2a6142f9565b03611a4857604051634825e09360e01b815260040160405180910390fd5b6001600160a01b038084165f908152602083815260409182902082516101008101845281548516815260018201548516928101929092526002810154909316818301526003830154606082015260048301546080820152815180830190925260058301805491939260a085019290919082908290611ac590614c6f565b80601f0160208091040260200160405190810160405280929190818152602001828054611af190614c6f565b8015611b3c5780601f10611b1357610100808354040283529160200191611b3c565b820191905f5260205f20905b815481529060010190602001808311611b1f57829003601f168201915b50505050508152602001600182018054611b5590614c6f565b80601f0160208091040260200160405190810160405280929190818152602001828054611b8190614c6f565b8015611bcc5780601f10611ba357610100808354040283529160200191611bcc565b820191905f5260205f20905b815481529060010190602001808311611baf57829003601f168201915b5050505050815250508152602001600782018054611be990614c6f565b80601f0160208091040260200160405190810160405280929190818152602001828054611c1590614c6f565b8015611c605780601f10611c3757610100808354040283529160200191611c60565b820191905f5260205f20905b815481529060010190602001808311611c4357829003601f168201915b505050918352505060088281015460209092019160ff1690811115611c8757611c876142f9565b6008811115611c9857611c986142f9565b9052509392505050565b80611cac81612c5d565b611cb7826004612d5a565b611cd45760405163baf3f0f760e01b815260040160405180910390fd5b611cdd82613ba4565b611cfa5760405163bf74735560e01b815260040160405180910390fd5b6116c6826005611d0985610ec1565b612d8f565b6060805f611d1a612ca0565b90505f611d2982600101612cc4565b90505f611d3883600301612cc4565b9050611d448183614a77565b6001600160401b03811115611d5b57611d5b61451d565b604051908082528060200260200182016040528015611d84578160200160208202803683370190505b509450611d918183614a77565b6001600160401b03811115611da857611da861451d565b604051908082528060200260200182016040528015611ded57816020015b6040805180820190915260608082526020820152815260200190600190039081611dc65790505b5093505f805b83811015611fb1575f611e096001870183612ccd565b9050611e186005870182612cdf565b611fa85780888481518110611e2f57611e2f614a8a565b6001600160a01b039283166020918202929092018101919091529082165f908152908790526040908190208151808301909252600501805482908290611e7490614c6f565b80601f0160208091040260200160405190810160405280929190818152602001828054611ea090614c6f565b8015611eeb5780601f10611ec257610100808354040283529160200191611eeb565b820191905f5260205f20905b815481529060010190602001808311611ece57829003601f168201915b50505050508152602001600182018054611f0490614c6f565b80601f0160208091040260200160405190810160405280929190818152602001828054611f3090614c6f565b8015611f7b5780601f10611f5257610100808354040283529160200191611f7b565b820191905f5260205f20905b815481529060010190602001808311611f5e57829003601f168201915b505050505081525050878481518110611f9657611f96614a8a565b60200260200101819052508260010192505b50600101611df3565b505f5b82811015612172575f611fca6003870183612ccd565b9050611fd96005870182612cdf565b6121695780888481518110611ff057611ff0614a8a565b6001600160a01b039283166020918202929092018101919091529082165f90815290879052604090819020815180830190925260050180548290829061203590614c6f565b80601f016020809104026020016040519081016040528092919081815260200182805461206190614c6f565b80156120ac5780601f10612083576101008083540402835291602001916120ac565b820191905f5260205f20905b81548152906001019060200180831161208f57829003601f168201915b505050505081526020016001820180546120c590614c6f565b80601f01602080910402602001604051908101604052809291908181526020018280546120f190614c6f565b801561213c5780601f106121135761010080835404028352916020019161213c565b820191905f5260205f20905b81548152906001019060200180831161211f57829003601f168201915b50505050508152505087848151811061215757612157614a8a565b60200260200101819052508260010192505b50600101611fb4565b50808652808552505050509091565b5f610e8f61218d612ca0565b600101612cc4565b61219d612d00565b6121a65f61385a565b565b5f610e8f613054565b6121b9612d00565b805f036121d95760405163b4fa3fb360e01b815260040160405180910390fd5b5f6121e2612c39565b60078101805490849055604080518281526020810186905292935090917f6b4e484c27a9904fed5187e90d13d161869e9801b709cc3077f8222bef0030a19101611069565b8061223181612c5d565b61223c826006612d5a565b6122595760405163baf3f0f760e01b815260040160405180910390fd5b5f612262612c39565b90506122718160080154613c92565b61227b6007610e35565b106122995760405163848084dd60e01b815260040160405180910390fd5b6122a68160080154613cd2565b6122b06006610e35565b116122ce5760405163848084dd60e01b815260040160405180910390fd5b5f8160040154426122df9190614a77565b905061112b84600783612d8f565b6122f5612d00565b5f6122fe612ca0565b905061230d6005820183613d50565b61232a5760405163d33ff8c160e01b815260040160405180910390fd5b6040516001600160a01b038316907f814c4b6f6fc147ebb6fbe4ffcd3554d0309170fd0a70e66cc4e4c0784f4aa32e905f90a25050565b8061236b81612c5d565b612376826007612d5a565b6123935760405163baf3f0f760e01b815260040160405180910390fd5b61239c82613d64565b6116c68260065f612d8f565b5f6123b1612c39565b60080154905090565b6123c2612d00565b805f036123e25760405163b4fa3fb360e01b815260040160405180910390fd5b5f6123eb612c39565b60068101805490849055604080518281526020810186905292935090917fa8fbc5c083100f8025c9c33578c3292432f17b77b633fb69fa7773ff60d466679101611069565b5f612439612c39565b5f938452600201602090815260408085206001600160a01b039490941685529290525090205490565b60605f61246d612ca0565b905082806001600160401b038111156124885761248861451d565b6040519080825280602002602001820160405280156124c157816020015b6124ae6141f0565b8152602001906001900390816124a65790505b5092505f5b8181101561277257825f8787848181106124e2576124e2614a8a565b90506020020160208101906124f791906143b4565b6001600160a01b03908116825260208083019390935260409182015f20825161010081018452815483168152600182015483169481019490945260028101549091168383015260038101546060840152600481015460808401528151808301909252600581018054919260a08501929091908290829061257690614c6f565b80601f01602080910402602001604051908101604052809291908181526020018280546125a290614c6f565b80156125ed5780601f106125c4576101008083540402835291602001916125ed565b820191905f5260205f20905b8154815290600101906020018083116125d057829003601f168201915b5050505050815260200160018201805461260690614c6f565b80601f016020809104026020016040519081016040528092919081815260200182805461263290614c6f565b801561267d5780601f106126545761010080835404028352916020019161267d565b820191905f5260205f20905b81548152906001019060200180831161266057829003601f168201915b505050505081525050815260200160078201805461269a90614c6f565b80601f01602080910402602001604051908101604052809291908181526020018280546126c690614c6f565b80156127115780601f106126e857610100808354040283529160200191612711565b820191905f5260205f20905b8154815290600101906020018083116126f457829003601f168201915b505050918352505060088281015460209092019160ff1690811115612738576127386142f9565b6008811115612749576127496142f9565b8152505084828151811061275f5761275f614a8a565b60209081029190910101526001016124c6565b50505092915050565b5f610e8f612787612ca0565b600301612cc4565b612797612d00565b805f036127b75760405163b4fa3fb360e01b815260040160405180910390fd5b5f6127c0612c39565b60048101805490849055604080518281526020810186905292935090917fbb7cd41bd6435b6f6da7e832527c2adf48fe9783423fecedb8c8c625acbc92d09101611069565b61280d612d00565b5f612816612ca0565b90506128256005820183613d9d565b61284257604051633ad2b1bb60e11b815260040160405180910390fd5b6040516001600160a01b038316907fb102f7913267c344ac15011acd7185602a74269c32e7783833f5311450fb43dd905f90a25050565b8061288381612c5d565b5f61288d83610e94565b905060078160088111156128a3576128a36142f9565b036128b6576128b183613d64565b6128e8565b60068160088111156128ca576128ca6142f9565b146128e85760405163baf3f0f760e01b815260040160405180910390fd5b5f6128f1612c39565b90506129008160080154613c92565b61290a6008610e35565b106129285760405163848084dd60e01b815260040160405180910390fd5b600682600881111561293c5761293c6142f9565b036129765761294e8160080154613cd2565b6129586006610e35565b116129765760405163848084dd60e01b815260040160405180910390fd5b61112b8460085f612d8f565b8061298c81612c5d565b612997826004612d5a565b6129b45760405163baf3f0f760e01b815260040160405180910390fd5b6116c68260015f612d8f565b5f6129c9612c39565b6001600160a01b039092165f90815260019290920160205250604090205460ff1690565b806129f781612c5d565b612a02826005612d5a565b612a1f5760405163baf3f0f760e01b815260040160405180910390fd5b6116c6826004611d0985610ec1565b612a36612d00565b805f03612a565760405163b4fa3fb360e01b815260040160405180910390fd5b5f612a5f612c39565b60058101805490849055604080518281526020810186905292935090917fe10ca6f253a2344c11c8e060dca53f2a3397c1f5c3b6314104a42b376c42d08f9101611069565b5f805f612aaf612c39565b90508060040154816005015492509250509091565b80612ace81612c5d565b612ad9826001612d5a565b612af65760405163baf3f0f760e01b815260040160405180910390fd5b612aff82613ba4565b612b1c5760405163bf74735560e01b815260040160405180910390fd5b5f612b25612c39565b90508060070154612b366002610e35565b10612b545760405163848084dd60e01b815260040160405180910390fd5b8060060154612b61612181565b10612b7f5760405163848084dd60e01b815260040160405180910390fd5b612b8b8360025f612d8f565b6040516001600160a01b038416907f759721961c23d02140d70249a00d7bbc893592166a3ef92468e7208cf41a45e3905f90a2505050565b612bcb612d00565b6001600160a01b038116612c305760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401611179565b6112148161385a565b7f9114bff6fc2186e0cb5fe9e5ced5765c61f7dbcd47451c215ce8da2cac3ed80090565b612c65612c39565b6001600160a01b038281165f9081526020929092526040909120541633146112145760405163605919ad60e11b815260040160405180910390fd5b7f2a6c4f9950bdac880731815408ac22648e61e86a4c1659ca1864add32c0e290090565b5f61143e825490565b5f612cd88383613db1565b9392505050565b6001600160a01b0381165f9081526001830160205260408120541515612cd8565b6033546001600160a01b031633146121a65760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401611179565b5f816008811115612d6d57612d6d6142f9565b612d7684610e94565b6008811115612d8757612d876142f9565b149392505050565b5f612d98612ca0565b6001600160a01b0385165f90815260208290526040812060088101549293509160ff1690816008811115612dce57612dce6142f9565b1480612dea57505f856008811115612de857612de86142f9565b145b80612e165750846008811115612e0257612e026142f9565b816008811115612e1457612e146142f9565b145b15612e2357505050505050565b826008015f826008811115612e3a57612e3a6142f9565b6008811115612e4b57612e4b6142f9565b81526020019081526020015f205f815480929190612e6890614ca7565b9190505550826008015f866008811115612e8457612e846142f9565b6008811115612e9557612e956142f9565b81526020019081526020015f205f815480929190612eb290614cbc565b9091555060019050816008811115612ecc57612ecc6142f9565b148015612eeb57506001856008811115612ee857612ee86142f9565b14155b15612f1157612efd6003840187613d50565b50612f0b6001840187613d9d565b50612f66565b6001816008811115612f2557612f256142f9565b14158015612f4457506001856008811115612f4257612f426142f9565b145b15612f6657612f566001840187613d50565b50612f646003840187613d9d565b505b84826008015f6101000a81548160ff02191690836008811115612f8b57612f8b6142f9565b021790555060038201849055846008811115612fa957612fa96142f9565b816008811115612fbb57612fbb6142f9565b6040516001600160a01b038916907fcfb25346bbf2c2f19e20af8b4b4d54cbc6c83057934c1f28539760e8f8065dee905f90a4505050505050565b60605f612cd883613dd7565b336002600160a01b03146121a6576040516354d325c360e01b815260040160405180910390fd5b6130366201518043614ce8565b156121a657604051632312acbd60e01b815260040160405180910390fd5b5f610e8f6201518043614cfb565b5f61306b612ca0565b6001600160a01b039092165f908152602092909252506040902090565b5f613091612ca0565b905060016001600160a01b0383165f90815260208390526040902060089081015460ff16908111156130c5576130c56142f9565b146130e35760405163baf3f0f760e01b815260040160405180910390fd5b6130f06003820183613d50565b5060015f908152600882016020526040812080549161310e83614ca7565b90915550506001600160a01b0382165f90815260208290526040812080546001600160a01b03199081168255600182018054821690556002820180549091169055600381018290556004810182905590600582018161316d8282614264565b61317a600183015f614264565b5061318a9050600783015f614264565b50600801805460ff191690556040516001600160a01b038316907f1629bfc36423a1b4749d3fe1d6970b9d32d42bbee47dd5540670696ab6b9a4ad905f90a25050565b611214612d00565b7f4910fdfa16fed3260ed0e7147f7cc6da11a60208b5b9406d12a635614ffd91435460ff161561320d5761320883613e30565b505050565b826001600160a01b03166352d1902d6040518163ffffffff1660e01b8152600401602060405180830381865afa925050508015613267575060408051601f3d908101601f1916820190925261326491810190614d0e565b60015b6132ca5760405162461bcd60e51b815260206004820152602e60248201527f45524331393637557067726164653a206e657720696d706c656d656e7461746960448201526d6f6e206973206e6f74205555505360901b6064820152608401611179565b5f805160206151be83398151915281146133385760405162461bcd60e51b815260206004820152602960248201527f45524331393637557067726164653a20756e737570706f727465642070726f786044820152681a58589b195555525160ba1b6064820152608401611179565b50613208838383613ecb565b6001600160a01b038416158061336157506001600160a01b038316155b8061337357506001600160a01b038216155b156133915760405163b4fa3fb360e01b815260040160405180910390fd5b826001600160a01b0316846001600160a01b031614806133c25750816001600160a01b0316836001600160a01b0316145b806133de5750816001600160a01b0316846001600160a01b0316145b156133fc5760405163b4fa3fb360e01b815260040160405180910390fd5b80515160301415806134145750806020015151606014155b156134325760405163b4fa3fb360e01b815260040160405180910390fd5b805180516020909101207fc980e59163ce244bb4bb6211f48c7b46f88a4f40943e84eb99bdc41e129bd2931480613492575060208082015180519101207f46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c21145b156134b05760405163b4fa3fb360e01b815260040160405180910390fd5b6001600160a01b0384165f9081526020869052604090205460ff16806134ed57506001600160a01b0383165f9081526020869052604090205460ff165b8061350f57506001600160a01b0382165f9081526020869052604090205460ff165b1561352d576040516316a163b960e11b815260040160405180910390fd5b506001600160a01b039283165f90815260209490945260408085208054600160ff19918216811790925593851686528186208054851682179055919093168452919092208054909216179055565b5f613584612ca0565b90505f6001600160a01b0384165f90815260208390526040902060089081015460ff16908111156135b7576135b76142f9565b146135d55760405163731918fb60e11b815260040160405180910390fd5b5f816007015f81546135e690614cbc565b91829055506001600160a01b038086165f9081526020858152604091829020875181549085166001600160a01b0319918216178255918801516001820180549186169184169190911790559187015160028301805491909416911617909155606085015160038201556080850151600482015560a085015180519293508592600583019081906136769082614d84565b506020820151600182019061368b9082614d84565b50505060c082015160078201906136a29082614d84565b5060e0820151816008015f6101000a81548160ff021916908360088111156136cc576136cc6142f9565b021790555050506001600160a01b0384165f9081526020839052604090206004018190556136fd6003830185613d9d565b5060015f908152600883016020526040812080549161371b83614cbc565b9190505550836001600160a01b03167fe410d169249157b2af8ca2d602f2bdd8721034902d3228d318aaba02cacbac6b8260405161375b91815260200190565b60405180910390a250505050565b8483811415806137795750808214155b156137975760405163b4fa3fb360e01b815260040160405180910390fd5b5f5b8181101561131e576138108888838181106137b6576137b6614a8a565b90506020020160208101906137cb91906143b4565b8787848181106137dd576137dd614a8a565b90506020020160208101906137f291906143db565b86868581811061380457613804614a8a565b90506020020135612d8f565b600101613799565b5f6138266201518043614ce8565b15919050565b5f54610100900460ff166138525760405162461bcd60e51b815260040161117990614e3e565b6121a6613eef565b603380546001600160a01b038381166001600160a01b0319831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0905f90a35050565b5f6138b4612ca0565b9050835f5b81811015613b75575f835f8989858181106138d6576138d6614a8a565b90506020020160208101906138eb91906143b4565b6001600160a01b0316815260208101919091526040015f2060089081015460ff169081111561391c5761391c6142f9565b1461393a5760405163731918fb60e11b815260040160405180910390fd5b5f836007015f815461394b90614cbc565b9182905550905085858381811061396457613964614a8a565b90506020028101906139769190614c1f565b845f8a8a8681811061398a5761398a614a8a565b905060200201602081019061399f91906143b4565b6001600160a01b0316815260208101919091526040015f206139c182826150bd565b50819050845f8a8a868181106139d9576139d9614a8a565b90506020020160208101906139ee91906143b4565b6001600160a01b03166001600160a01b031681526020019081526020015f20600401819055506006845f015f8a8a86818110613a2c57613a2c614a8a565b9050602002016020810190613a4191906143b4565b6001600160a01b03166001600160a01b031681526020019081526020015f206008015f6101000a81548160ff02191690836008811115613a8357613a836142f9565b02179055505f84818a8a86818110613a9d57613a9d614a8a565b9050602002016020810190613ab291906143b4565b6001600160a01b0316815260208101919091526040015f2060030155613b02888884818110613ae357613ae3614a8a565b9050602002016020810190613af891906143b4565b6001860190613d9d565b50878783818110613b1557613b15614a8a565b9050602002016020810190613b2a91906143b4565b6001600160a01b03167fe410d169249157b2af8ca2d602f2bdd8721034902d3228d318aaba02cacbac6b82604051613b6491815260200190565b60405180910390a2506001016138b9565b5060065f90815260088301602052604081208054839290613b97908490614a77565b9091555050505050505050565b5f80613baf8361177b565b90505f816001600160a01b031663630b11466040518163ffffffff1660e01b8152600401602060405180830381865afa158015613bee573d5f803e3d5ffd5b505050506040513d601f19601f82011682018060405250810190613c129190614d0e565b826001600160a01b0316634cf088d96040518163ffffffff1660e01b8152600401602060405180830381865afa158015613c4e573d5f803e3d5ffd5b505050506040513d601f19601f82011682018060405250810190613c729190614d0e565b613c7c9190615169565b6a0422ca8b0a00a4250000001115949350505050565b5f6002821015613ca357505f919050565b5f6002613caf84613f1e565b613cb99190614cfb565b905060018110613cc95780612cd8565b60019392505050565b5f815f03613ce157505f919050565b5f613ceb83613f1e565b613cf690600261517c565b613d01906001614a77565b90505f613d0d84613c92565b613d1890600261517c565b613d229085615169565b90505f818311613d325781613d34565b825b905060018110613d445780613d47565b60015b95945050505050565b5f612cd8836001600160a01b038416613f44565b5f613d6e82610ec1565b90508015801590613d7f5750804210155b156116c65760405163b48d5fc760e01b815260040160405180910390fd5b5f612cd8836001600160a01b038416614027565b5f825f018281548110613dc657613dc6614a8a565b905f5260205f200154905092915050565b6060815f01805480602002602001604051908101604052809291908181526020018280548015613e2457602002820191905f5260205f20905b815481526020019060010190808311613e10575b50505050509050919050565b6001600160a01b0381163b613e9d5760405162461bcd60e51b815260206004820152602d60248201527f455243313936373a206e657720696d706c656d656e746174696f6e206973206e60448201526c1bdd08184818dbdb9d1c9858dd609a1b6064820152608401611179565b5f805160206151be83398151915280546001600160a01b0319166001600160a01b0392909216919091179055565b613ed483614073565b5f82511180613ee05750805b156132085761112b83836140b2565b5f54610100900460ff16613f155760405162461bcd60e51b815260040161117990614e3e565b6121a63361385a565b5f815f03613f2d57505f919050565b6003613f3a600184615169565b61143e9190614cfb565b5f818152600183016020526040812054801561401e575f613f66600183615169565b85549091505f90613f7990600190615169565b9050818114613fd8575f865f018281548110613f9757613f97614a8a565b905f5260205f200154905080875f018481548110613fb757613fb7614a8a565b5f918252602080832090910192909255918252600188019052604090208390555b8554869080613fe957613fe9615193565b600190038181905f5260205f20015f90559055856001015f8681526020019081526020015f205f90556001935050505061143e565b5f91505061143e565b5f81815260018301602052604081205461406c57508154600181810184555f84815260208082209093018490558454848252828601909352604090209190915561143e565b505f61143e565b61407c81613e30565b6040516001600160a01b038216907fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b905f90a250565b6060612cd883836040518060600160405280602781526020016151de6027913960605f80856001600160a01b0316856040516140ee91906151a7565b5f60405180830381855af49150503d805f8114614126576040519150601f19603f3d011682016040523d82523d5f602084013e61412b565b606091505b509150915061413c86838387614146565b9695505050505050565b606083156141b45782515f036141ad576001600160a01b0385163b6141ad5760405162461bcd60e51b815260206004820152601d60248201527f416464726573733a2063616c6c20746f206e6f6e2d636f6e74726163740000006044820152606401611179565b50816141be565b6141be83836141c6565b949350505050565b8151156141d65781518083602001fd5b8060405162461bcd60e51b81526004016111799190614807565b6040518061010001604052805f6001600160a01b031681526020015f6001600160a01b031681526020015f6001600160a01b031681526020015f81526020015f8152602001614252604051806040016040528060608152602001606081525090565b8152606060208201526040015f905290565b50805461427090614c6f565b5f825580601f1061427f575050565b601f0160209004905f5260205f209081019061121491905b808211156142aa575f8155600101614297565b5090565b6001600160a01b0381168114611214575f80fd5b5f80604083850312156142d3575f80fd5b82356142de816142ae565b915060208301356142ee816142ae565b809150509250929050565b634e487b7160e01b5f52602160045260245ffd5b6009811061432957634e487b7160e01b5f52602160045260245ffd5b9052565b602080825282518282018190525f919060409081850190868401855b828110156143a757815180516001600160a01b0390811686528782015181168887015286820151168686015260608082015190860152608090810151906143928187018361430d565b505060a0939093019290850190600101614349565b5091979650505050505050565b5f602082840312156143c4575f80fd5b8135612cd8816142ae565b60098110611214575f80fd5b5f602082840312156143eb575f80fd5b8135612cd8816143cf565b5f815180845260208085019450602084015f5b8381101561442e5781516001600160a01b031687529582019590820190600101614409565b509495945050505050565b602081525f612cd860208301846143f6565b6020810161143e828461430d565b5f8083601f840112614469575f80fd5b5081356001600160401b0381111561447f575f80fd5b6020830191508360208260051b8501011115614499575f80fd5b9250929050565b5f805f80604085870312156144b3575f80fd5b84356001600160401b03808211156144c9575f80fd5b6144d588838901614459565b909650945060208701359150808211156144ed575f80fd5b506144fa87828801614459565b95989497509550505050565b5f60208284031215614516575f80fd5b5035919050565b634e487b7160e01b5f52604160045260245ffd5b5f6001600160401b038084111561454a5761454a61451d565b604051601f8501601f19908116603f011681019082821181831017156145725761457261451d565b8160405280935085815286868601111561458a575f80fd5b858560208301375f602087830101525050509392505050565b5f82601f8301126145b2575f80fd5b612cd883833560208501614531565b5f604082840312156145d1575f80fd5b604051604081016001600160401b0382821081831117156145f4576145f461451d565b81604052829350843591508082111561460b575f80fd5b614617868387016145a3565b8352602085013591508082111561462c575f80fd5b50614639858286016145a3565b6020830152505092915050565b5f805f805f8060c0878903121561465b575f80fd5b8635614666816142ae565b95506020870135614676816142ae565b94506040870135614686816142ae565b93506060870135614696816142ae565b925060808701356001600160401b03808211156146b1575f80fd5b6146bd8a838b016145c1565b935060a08901359150808211156146d2575f80fd5b508701601f810189136146e3575f80fd5b6146f289823560208401614531565b9150509295509295509295565b5f805f805f8060608789031215614714575f80fd5b86356001600160401b038082111561472a575f80fd5b6147368a838b01614459565b9098509650602089013591508082111561474e575f80fd5b61475a8a838b01614459565b90965094506040890135915080821115614772575f80fd5b5061477f89828a01614459565b979a9699509497509295939492505050565b5f805f805f8060c087890312156147a6575f80fd5b86356147b1816142ae565b9860208801359850604088013597606081013597506080810135965060a00135945092505050565b5f81518084528060208401602086015e5f602082860101526020601f19601f83011685010191505092915050565b602081525f612cd860208301846147d9565b5f806040838503121561482a575f80fd5b8235614835816142ae565b915060208301356001600160401b0381111561484f575f80fd5b61485b858286016145a3565b9150509250929050565b5f81516040845261487960408501826147d9565b905060208301518482036020860152613d4782826147d9565b5f61010060018060a01b0380845116855280602085015116602086015280604085015116604086015250606083015160608501526080830151608085015260a08301518160a08601526148e782860182614865565b91505060c083015184820360c086015261490182826147d9565b91505060e083015161491660e086018261430d565b509392505050565b602081525f612cd86020830184614892565b604081525f61494260408301856143f6565b6020838203818501528185518084528284019150828160051b8501018388015f5b8381101561499157601f1987840301855261497f838351614865565b94860194925090850190600101614963565b50909998505050505050505050565b5f80604083850312156149b1575f80fd5b8235915060208301356142ee816142ae565b5f80602083850312156149d4575f80fd5b82356001600160401b038111156149e9575f80fd5b6149f585828601614459565b90969095509350505050565b5f60208083016020845280855180835260408601915060408160051b8701019250602087015f5b82811015614a5657603f19888603018452614a44858351614892565b94509285019290850190600101614a28565b5092979650505050505050565b634e487b7160e01b5f52601160045260245ffd5b8082018082111561143e5761143e614a63565b634e487b7160e01b5f52603260045260245ffd5b8183525f60208085019450825f5b8581101561442e578135614abf816142ae565b6001600160a01b031687529582019590820190600101614aac565b604081525f614aed604083018688614a9e565b82810360208401528381526001600160fb1b03841115614b0b575f80fd5b8360051b80866020840137016020019695505050505050565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b19195b1959d85d1958d85b1b60a21b606082015260800190565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b6163746976652070726f787960a01b606082015260800190565b604081525f614bcf604083018688614a9e565b828103602084810191909152848252859181015f5b86811015614c12578335614bf7816143cf565b614c01838261430d565b509282019290820190600101614be4565b5098975050505050505050565b5f823560fe19833603018112614c33575f80fd5b9190910192915050565b5f8235603e19833603018112614c33575f80fd5b5f61143e36836145c1565b602081525f6141be602083018486614a9e565b600181811c90821680614c8357607f821691505b602082108103614ca157634e487b7160e01b5f52602260045260245ffd5b50919050565b5f81614cb557614cb5614a63565b505f190190565b5f60018201614ccd57614ccd614a63565b5060010190565b634e487b7160e01b5f52601260045260245ffd5b5f82614cf657614cf6614cd4565b500690565b5f82614d0957614d09614cd4565b500490565b5f60208284031215614d1e575f80fd5b5051919050565b601f82111561320857805f5260205f20601f840160051c81016020851015614d4a5750805b601f840160051c820191505b81811015614d69575f8155600101614d56565b5050505050565b5f19600383901b1c191660019190911b1790565b81516001600160401b03811115614d9d57614d9d61451d565b614db181614dab8454614c6f565b84614d25565b602080601f831160018114614ddf575f8415614dcd5750858301515b614dd78582614d70565b865550614e36565b5f85815260208120601f198616915b82811015614e0d57888601518255948401946001909101908401614dee565b5085821015614e2a57878501515f19600388901b60f8161c191681555b505060018460011b0185555b505050505050565b6020808252602b908201527f496e697469616c697a61626c653a20636f6e7472616374206973206e6f74206960408201526a6e697469616c697a696e6760a81b606082015260800190565b5f813561143e816142ae565b80546001600160a01b0319166001600160a01b0392909216919091179055565b5f808335601e19843603018112614eca575f80fd5b8301803591506001600160401b03821115614ee3575f80fd5b602001915036819003821315614499575f80fd5b6001600160401b03831115614f0e57614f0e61451d565b614f2283614f1c8354614c6f565b83614d25565b5f601f841160018114614f4e575f8515614f3c5750838201355b614f468682614d70565b845550614d69565b5f83815260208120601f198716915b82811015614f7d5786850135825560209485019460019092019101614f5d565b5086821015614f99575f1960f88860031b161c19848701351681555b505060018560011b0183555050505050565b614fb58283614eb5565b6001600160401b03811115614fcc57614fcc61451d565b614fe081614fda8554614c6f565b85614d25565b5f601f82116001811461500c575f8315614ffa5750838201355b6150048482614d70565b865550615063565b5f85815260208120601f198516915b8281101561503b578685013582556020948501946001909201910161501b565b5084821015615057575f1960f88660031b161c19848701351681555b505060018360011b0185555b505050506150746020830183614eb5565b61112b818360018601614ef7565b5f813561143e816143cf565b600982106150aa57634e487b7160e01b5f52602160045260245ffd5b60ff1981541660ff831681178255505050565b81356150c8816142ae565b6150d28183614e95565b5060208201356150e1816142ae565b6150ee8160018401614e95565b506151076150fe60408401614e89565b60028301614e95565b606082013560038201556080820135600482015561513461512b60a0840184614c3d565b60058301614fab565b61514160c0830183614eb5565b61514f818360078601614ef7565b50506116c661516060e08401615082565b6008830161508e565b8181038181111561143e5761143e614a63565b808202811582820484141761143e5761143e614a63565b634e487b7160e01b5f52603160045260245ffd5b5f82518060208501845e5f92019182525091905056fe360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc416464726573733a206c6f772d6c6576656c2064656c65676174652063616c6c206661696c6564a2646970667358221220f87e0e649c758775e2f7df8be94effc45d26d994a9ef2d3c14c675eede26f11664736f6c63430008190033",
+	Bin: "0x60a060405230608052348015610013575f80fd5b5061001c610021565b6100dd565b5f54610100900460ff161561008c5760405162461bcd60e51b815260206004820152602760248201527f496e697469616c697a61626c653a20636f6e747261637420697320696e697469604482015266616c697a696e6760c81b606482015260840160405180910390fd5b5f5460ff908116146100db575f805460ff191660ff9081179091556040519081527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a15b565b6080516154406101115f395f81816111160152818161115f0152818161143501528181611475015261150601526154405ff3fe608060405260043610610366575f3560e01c806376671808116101c85780639d0e234d116100fd578063cb1c2b5c1161009d578063e70c38f11161006d578063e70c38f114610a18578063ef6bdade14610a2c578063f2fde38b14610a4b578063ffa1ad7414610a6a575f80fd5b8063cb1c2b5c146109a6578063d9abb38b146109c4578063de244059146109e3578063e59d7a84146109f9575f80fd5b8063b42652e9116100d8578063b42652e91461092a578063b9f96f4014610949578063c3c5a54714610968578063c9a86af214610987575f80fd5b80639d0e234d146108cd5780639d8cf08f146108ec578063a41b60001461090b575f80fd5b80637e134fc61161016857806387b7b8fd1161014357806387b7b8fd146108565780638beeb439146108705780638da5cb5b1461089c57806394a64d98146108b9575f80fd5b80637e134fc61461080457806380f2ff25146108235780638129fc1c14610842575f80fd5b806378b84a5c116101a357806378b84a5c14610793578063793c1946146107b25780637d7b127f146107d15780637df40c62146107e5575f80fd5b80637667180814610741578063767142821461075557806376a67a5114610774575f80fd5b80633d5840631161029e5780635300f9b41161023e578063656f586911610219578063656f5869146106d85780636968b53f146106f75780636b75b7a814610719578063715018a61461072d575f80fd5b80635300f9b41461066e5780635334cf441461068d578063582115fb146106ac575f80fd5b806345ce81101161027957806345ce8110146105d55780634b6a94cc146106045780634f1ef2861461064757806352d1902d1461065a575f80fd5b80633d584063146105605780634429d7201461059757806345527e44146105b6575f80fd5b806325cf0943116103095780632c1d4895116102e45780632c1d4895146104ef5780632d4ede931461050e5780633659cfe61461052d5780633aea9faf1461054c575f80fd5b806325cf094314610473578063277f3dc3146104b157806327f94c3d146104d0575f80fd5b8063171a6cdc11610344578063171a6cdc146103da5780631b1a478b146103f95780631ba3fd5814610426578063229bb82314610447575f80fd5b806303e6689d1461036a57806307ecec3e146103985780630b1fe784146103b9575b5f80fd5b348015610375575f80fd5b5061037e610a7e565b604080519283526020830191909152015b60405180910390f35b3480156103a3575f80fd5b506103b76103b2366004614409565b610a9e565b005b3480156103c4575f80fd5b506103cd610b3b565b60405161038f9190614474565b3480156103e5575f80fd5b506103b76103f43660046144fb565b610d7c565b348015610404575f80fd5b50610418610413366004614522565b610df1565b60405190815260200161038f565b348015610431575f80fd5b5061043a610e36565b60405161038f9190614580565b348015610452575f80fd5b506104666104613660046144fb565b610e50565b60405161038f9190614592565b34801561047e575f80fd5b50610487610e7d565b604080516001600160a01b039485168152928416602084015292169181019190915260600161038f565b3480156104bc575f80fd5b506104186104cb3660046144fb565b610eb2565b3480156104db575f80fd5b506103b76104ea3660046145e7565b610edc565b3480156104fa575f80fd5b506103b761050936600461464d565b610fe8565b348015610519575f80fd5b506103b76105283660046144fb565b611067565b348015610538575f80fd5b506103b76105473660046144fb565b61110c565b348015610557575f80fd5b506104186111f2565b34801561056b575f80fd5b5061057f61057a3660046144fb565b611204565b6040516001600160a01b03909116815260200161038f565b3480156105a2575f80fd5b506103b76105b136600461478e565b61122f565b3480156105c1575f80fd5b506103b76105d0366004614883565b61130f565b3480156105e0575f80fd5b506105f46105ef3660046144fb565b61140f565b604051901515815260200161038f565b34801561060f575f80fd5b5061063a6040518060400160405280600b81526020016a41646472657373426f6f6b60a81b81525081565b60405161038f9190614943565b6103b7610655366004614955565b61142b565b348015610665575f80fd5b506104186114fa565b348015610679575f80fd5b5061057f6106883660046144fb565b6115ab565b348015610698575f80fd5b506105f46106a73660046144fb565b6115d9565b3480156106b7575f80fd5b506106cb6106c63660046144fb565b6115ef565b60405161038f9190614a95565b3480156106e3575f80fd5b506103b76106f23660046144fb565b6118b6565b348015610702575f80fd5b5061070b611922565b60405161038f929190614aa7565b348015610724575f80fd5b50610418611d95565b348015610738575f80fd5b506103b7611da9565b34801561074c575f80fd5b50610418611dbc565b348015610760575f80fd5b506103b761076f36600461464d565b611dc5565b34801561077f575f80fd5b506103b761078e3660046144fb565b611e3b565b34801561079e575f80fd5b506103b76107ad3660046144fb565b611f01565b3480156107bd575f80fd5b506103b76107cc3660046144fb565b611f75565b3480156107dc575f80fd5b50610418611fbc565b3480156107f0575f80fd5b506103b76107ff3660046144fb565b611fce565b34801561080f575f80fd5b506103b761081e36600461464d565b612066565b34801561082e575f80fd5b5061041861083d366004614b17565b6120dc565b34801561084d575f80fd5b506103b761210e565b348015610861575f80fd5b5061057f6002600160a01b0381565b34801561087b575f80fd5b5061088f61088a366004614b3a565b61253e565b60405161038f9190614b78565b3480156108a7575f80fd5b506033546001600160a01b031661057f565b3480156108c4575f80fd5b50610418612863565b3480156108d8575f80fd5b506103b76108e736600461464d565b612877565b3480156108f7575f80fd5b506103b76109063660046144fb565b6128ed565b348015610916575f80fd5b506103b76109253660046144fb565b612985565b348015610935575f80fd5b506103b76109443660046144fb565b6129f9565b348015610954575f80fd5b506103b76109633660046144fb565b612b02565b348015610973575f80fd5b506105f46109823660046144fb565b612b40565b348015610992575f80fd5b506103b76109a13660046144fb565b612b6d565b3480156109b1575f80fd5b506104186a0422ca8b0a00a42500000081565b3480156109cf575f80fd5b506103b76109de3660046144fb565b612c05565b3480156109ee575f80fd5b506104186201518081565b348015610a04575f80fd5b506103b7610a1336600461464d565b612c46565b348015610a23575f80fd5b5061037e612cbc565b348015610a37575f80fd5b506103b7610a463660046144fb565b612cdc565b348015610a56575f80fd5b506103b7610a653660046144fb565b612ddb565b348015610a75575f80fd5b50610418600281565b5f805f610a89612e51565b905080600e015481600f015492509250509091565b81610aa881612e75565b6001600160a01b038216610acf5760405163b4fa3fb360e01b815260040160405180910390fd5b5f610ad8612e51565b6001600160a01b038086165f8181526020849052604080822080548986166001600160a01b03198216811790925591519596509316938492917f8df26d30992ecfde135bbe59c1f267d82e2aae9d32fdae41551a38fe8b7bda8791a45050505050565b60605f610b46612e51565b90505f610b5582600101612eb8565b90505f610b6483600301612eb8565b9050610b708183614bee565b6001600160401b03811115610b8757610b87614664565b604051908082528060200260200182016040528015610be657816020015b610bd36040805160a0810182525f808252602082018190529181018290526060810182905290608082015290565b815260200190600190039081610ba55790505b5093505f805b83811015610cad575f610c026001870183612ec1565b9050610c116005870182612ed3565b610ca4576001600160a01b038082165f8181526020898152604091829020825160a0810184529384526001810154851691840191909152600281015490931690820152600482015460608201526009820154608082019060ff166008811115610c7c57610c7c614440565b815250888581518110610c9157610c91614c01565b6020026020010181905250836001019350505b50600101610bec565b505f5b82811015610d71575f610cc66003870183612ec1565b9050610cd56005870182612ed3565b610d68576001600160a01b038082165f8181526020898152604091829020825160a0810184529384526001810154851691840191909152600281015490931690820152600482015460608201526009820154608082019060ff166008811115610d4057610d40614440565b815250888581518110610d5557610d55614c01565b6020026020010181905250836001019350505b50600101610cb0565b508085525050505090565b80610d8681612e75565b610d91826002612ef4565b610dae5760405163baf3f0f760e01b815260040160405180910390fd5b610dba8260015f612f29565b6040516001600160a01b038316907fbaea727dfffa01fdb952c2b313510033b0a631d0cc04c818a313b75060683e5a905f90a25050565b5f610dfa612e51565b6008015f836008811115610e1057610e10614440565b6008811115610e2157610e21614440565b81526020019081526020015f20549050919050565b6060610e4b610e43612e51565b60050161318c565b905090565b5f610e59612e51565b6001600160a01b039092165f90815260209290925250604090206009015460ff1690565b5f805f80610e89612e51565b601181015460128201546013909201546001600160a01b03918216979282169650169350915050565b5f610ebb612e51565b6001600160a01b039092165f90815260209290925250604090206004015490565b610ee4613198565b610eec6131bf565b828114610f0c5760405163b4fa3fb360e01b815260040160405180910390fd5b5f610f15612e51565b90505f610f206131ea565b90505f5b85811015610fa157848482818110610f3e57610f3e614c01565b9050602002013583600a015f8481526020019081526020015f205f898985818110610f6b57610f6b614c01565b9050602002016020810190610f8091906144fb565b6001600160a01b0316815260208101919091526040015f2055600101610f24565b50807f3ed42d8976ef09fbee43ae76e0be2ed8e9af501530fd0155d90beeb551c1b30187878787604051610fd89493929190614c51565b60405180910390a2505050505050565b610ff06131f8565b805f036110105760405163b4fa3fb360e01b815260040160405180910390fd5b5f611019612e51565b600b8101805490849055604080518281526020810186905292935090917f350feb2acced9171b9d250e5771e5ecd6940594484b98efc4fc7daddcaa42f2a91015b60405180910390a1505050565b8061107181612e75565b61107c826001612ef4565b6110995760405163baf3f0f760e01b815260040160405180910390fd5b5f6110a2612e51565b90505f6110ae84613252565b600181015460028201546001600160a01b038088165f908152600987016020526040808220805460ff199081169091559483168252808220805486169055919092168252902080549091169055905061110684613278565b50505050565b6001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016300361115d5760405162461bcd60e51b815260040161115490614c9b565b60405180910390fd5b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166111a55f805160206153c4833981519152546001600160a01b031690565b6001600160a01b0316146111cb5760405162461bcd60e51b815260040161115490614ce7565b6111d4816133c6565b604080515f808252602082019092526111ef918391906133ce565b50565b5f6111fb612e51565b600b0154905090565b5f61120d612e51565b6001600160a01b039283165f9081526020919091526040902054909116919050565b5f61123987610e50565b600881111561124a5761124a614440565b146112685760405163731918fb60e11b815260040160405180910390fd5b5f611271612e51565b9050611283816009018888888761353d565b5f604051806101200160405280336001600160a01b03168152602001886001600160a01b03168152602001876001600160a01b03168152602001866001600160a01b031681526020015f81526020015f8152602001858152602001848152602001600160088111156112f7576112f7614440565b905290506113058882613774565b5050505050505050565b611317613198565b8483811415806113275750808214155b156113455760405163b4fa3fb360e01b815260040160405180910390fd5b801561135957611359878787878787613925565b6113616139a7565b156113c9575f6113716007610df1565b61137b6006610df1565b6113859190614bee565b905080611390612e51565b601001556040518181527fd45be950fd3aceb65c6059b131cc8e06ab2390da6780d464b82c153e848160529060200160405180910390a1505b7fab95e7867bd336dde387ba31a71307c75dcc78b0344b873a5e993eb4470eb37e878787876040516113fe9493929190614d33565b60405180910390a150505050505050565b5f6114258261141c612e51565b60030190612ed3565b92915050565b6001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001630036114735760405162461bcd60e51b815260040161115490614c9b565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166114bb5f805160206153c4833981519152546001600160a01b031690565b6001600160a01b0316146114e15760405162461bcd60e51b815260040161115490614ce7565b6114ea826133c6565b6114f6828260016133ce565b5050565b5f306001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016146115995760405162461bcd60e51b815260206004820152603860248201527f555550535570677261646561626c653a206d757374206e6f742062652063616c60448201527f6c6564207468726f7567682064656c656761746563616c6c00000000000000006064820152608401611154565b505f805160206153c483398151915290565b5f6115b4612e51565b6001600160a01b039283165f9081526020919091526040902060010154909116919050565b5f611425826115e6612e51565b60010190612ed3565b6115f7614328565b5f611600612e51565b90505f6001600160a01b0384165f9081526020839052604090206009015460ff16600881111561163257611632614440565b0361165057604051634825e09360e01b815260040160405180910390fd5b6001600160a01b038084165f9081526020838152604091829020825161012081018452815485168152600182015485169281019290925260028101548416828401526003810154909316606082015260048301546080820152600583015460a0820152815180830190925260068301805491939260c0850192909190829082906116d990614d96565b80601f016020809104026020016040519081016040528092919081815260200182805461170590614d96565b80156117505780601f1061172757610100808354040283529160200191611750565b820191905f5260205f20905b81548152906001019060200180831161173357829003601f168201915b5050505050815260200160018201805461176990614d96565b80601f016020809104026020016040519081016040528092919081815260200182805461179590614d96565b80156117e05780601f106117b7576101008083540402835291602001916117e0565b820191905f5260205f20905b8154815290600101906020018083116117c357829003601f168201915b50505050508152505081526020016008820180546117fd90614d96565b80601f016020809104026020016040519081016040528092919081815260200182805461182990614d96565b80156118745780601f1061184b57610100808354040283529160200191611874565b820191905f5260205f20905b81548152906001019060200180831161185757829003601f168201915b5050509183525050600982015460209091019060ff16600881111561189b5761189b614440565b60088111156118ac576118ac614440565b9052509392505050565b806118c081612e75565b6118cb826004612ef4565b6118e85760405163baf3f0f760e01b815260040160405180910390fd5b6118f1826139bb565b61190e5760405163bf74735560e01b815260040160405180910390fd5b6114f682600561191d85610eb2565b612f29565b6060805f61192e612e51565b90505f61193d82600101612eb8565b90505f61194c83600301612eb8565b90506119588183614bee565b6001600160401b0381111561196f5761196f614664565b604051908082528060200260200182016040528015611998578160200160208202803683370190505b5094506119a58183614bee565b6001600160401b038111156119bc576119bc614664565b604051908082528060200260200182016040528015611a0157816020015b60408051808201909152606080825260208201528152602001906001900390816119da5790505b5093505f805b83811015611bc5575f611a1d6001870183612ec1565b9050611a2c6005870182612ed3565b611bbc5780888481518110611a4357611a43614c01565b6001600160a01b039283166020918202929092018101919091529082165f908152908790526040908190208151808301909252600601805482908290611a8890614d96565b80601f0160208091040260200160405190810160405280929190818152602001828054611ab490614d96565b8015611aff5780601f10611ad657610100808354040283529160200191611aff565b820191905f5260205f20905b815481529060010190602001808311611ae257829003601f168201915b50505050508152602001600182018054611b1890614d96565b80601f0160208091040260200160405190810160405280929190818152602001828054611b4490614d96565b8015611b8f5780601f10611b6657610100808354040283529160200191611b8f565b820191905f5260205f20905b815481529060010190602001808311611b7257829003601f168201915b505050505081525050878481518110611baa57611baa614c01565b60200260200101819052508260010192505b50600101611a07565b505f5b82811015611d86575f611bde6003870183612ec1565b9050611bed6005870182612ed3565b611d7d5780888481518110611c0457611c04614c01565b6001600160a01b039283166020918202929092018101919091529082165f908152908790526040908190208151808301909252600601805482908290611c4990614d96565b80601f0160208091040260200160405190810160405280929190818152602001828054611c7590614d96565b8015611cc05780601f10611c9757610100808354040283529160200191611cc0565b820191905f5260205f20905b815481529060010190602001808311611ca357829003601f168201915b50505050508152602001600182018054611cd990614d96565b80601f0160208091040260200160405190810160405280929190818152602001828054611d0590614d96565b8015611d505780601f10611d2757610100808354040283529160200191611d50565b820191905f5260205f20905b815481529060010190602001808311611d3357829003601f168201915b505050505081525050878481518110611d6b57611d6b614c01565b60200260200101819052508260010192505b50600101611bc8565b50808652808552505050509091565b5f610e4b611da1612e51565b600101612eb8565b611db16131f8565b611dba5f613aa9565b565b5f610e4b6131ea565b611dcd6131f8565b805f03611ded5760405163b4fa3fb360e01b815260040160405180910390fd5b5f611df6612e51565b600f8101805490849055604080518281526020810186905292935090917f6b4e484c27a9904fed5187e90d13d161869e9801b709cc3077f8222bef0030a1910161105a565b80611e4581612e75565b611e50826006612ef4565b611e6d5760405163baf3f0f760e01b815260040160405180910390fd5b5f611e76612e51565b9050611e858160100154613afa565b611e8f6007610df1565b10611ead5760405163848084dd60e01b815260040160405180910390fd5b611eba8160100154613b3a565b611ec46006610df1565b11611ee25760405163848084dd60e01b815260040160405180910390fd5b5f81600c015442611ef39190614bee565b905061110684600783612f29565b611f096131f8565b5f611f12612e51565b9050611f216005820183613bb8565b611f3e5760405163d33ff8c160e01b815260040160405180910390fd5b6040516001600160a01b038316907f814c4b6f6fc147ebb6fbe4ffcd3554d0309170fd0a70e66cc4e4c0784f4aa32e905f90a25050565b80611f7f81612e75565b611f8a826007612ef4565b611fa75760405163baf3f0f760e01b815260040160405180910390fd5b611fb082613bcc565b6114f68260065f612f29565b5f611fc5612e51565b60100154905090565b611fd66131f8565b6001600160a01b038116611ffd5760405163b4fa3fb360e01b815260040160405180910390fd5b5f612006612e51565b6012810180546001600160a01b031981166001600160a01b03868116918217909355604080519390921680845260208401919091529293507fc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c910161105a565b61206e6131f8565b805f0361208e5760405163b4fa3fb360e01b815260040160405180910390fd5b5f612097612e51565b600e8101805490849055604080518281526020810186905292935090917fa8fbc5c083100f8025c9c33578c3292432f17b77b633fb69fa7773ff60d46667910161105a565b5f6120e5612e51565b5f938452600a01602090815260408085206001600160a01b039490941685529290525090205490565b5f54610100900460ff161580801561212c57505f54600160ff909116105b806121455750303b15801561214557505f5460ff166001145b6121a85760405162461bcd60e51b815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201526d191e481a5b9a5d1a585b1a5e995960921b6064820152608401611154565b5f805460ff1916600117905580156121c9575f805461ff0019166101001790555b60405163e2693e3f60e01b815260206004820152601060248201526f10509d8c91185d1850dbdb9d1c9858dd60821b60448201525f906104019063e2693e3f90606401602060405180830381865afa158015612227573d5f803e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061224b9190614dde565b90506001600160a01b0381166122745760405163aed5959560e01b815260040160405180910390fd5b5f816001600160a01b0316633bc5de306040518163ffffffff1660e01b81526004015f60405180830381865afa1580156122b0573d5f803e3d5ffd5b505050506040513d5f823e601f3d908101601f191682016040526122d79190810190615094565b90505f6122e2612e51565b90506122ec613c05565b81516122f790612ddb565b6020820151600b8201556040820151600c8201556060820151600d8201556080820151600e82015560a0820151600f82015560c08201516011820180546001600160a01b039283166001600160a01b03199182161790915560e0840151601284018054918416918316919091179055610100840151601384018054919093169116179055610120820151515f5b818110156124a2576001836009015f86610120015184815181106123aa576123aa614c01565b60200260200101516001600160a01b03166001600160a01b031681526020019081526020015f205f6101000a81548160ff0219169083151502179055506001836009015f866101400151848151811061240557612405614c01565b6020026020010151602001516001600160a01b03166001600160a01b031681526020019081526020015f205f6101000a81548160ff0219169083151502179055506001836009015f866101400151848151811061246457612464614c01565b6020908102919091018101516040908101516001600160a01b0316835290820192909252015f20805460ff1916911515919091179055600101612384565b506124b7836101200151846101400151613c33565b7f820f68b9d060f5d911b3243881ada086c3768ea90e97a10f7f5023d84b94d9528361012001516040516124eb9190614580565b60405180910390a15050505080156111ef575f805461ff0019169055604051600181527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a150565b60605f612549612e51565b905082806001600160401b0381111561256457612564614664565b60405190808252806020026020018201604052801561259d57816020015b61258a614328565b8152602001906001900390816125825790505b5092505f5b8181101561285a57825f8787848181106125be576125be614c01565b90506020020160208101906125d391906144fb565b6001600160a01b03908116825260208083019390935260409182015f20825161012081018452815483168152600182015483169481019490945260028101548216848401526003810154909116606084015260048101546080840152600581015460a08401528151808301909252600681018054919260c08501929091908290829061265e90614d96565b80601f016020809104026020016040519081016040528092919081815260200182805461268a90614d96565b80156126d55780601f106126ac576101008083540402835291602001916126d5565b820191905f5260205f20905b8154815290600101906020018083116126b857829003601f168201915b505050505081526020016001820180546126ee90614d96565b80601f016020809104026020016040519081016040528092919081815260200182805461271a90614d96565b80156127655780601f1061273c57610100808354040283529160200191612765565b820191905f5260205f20905b81548152906001019060200180831161274857829003601f168201915b505050505081525050815260200160088201805461278290614d96565b80601f01602080910402602001604051908101604052809291908181526020018280546127ae90614d96565b80156127f95780601f106127d0576101008083540402835291602001916127f9565b820191905f5260205f20905b8154815290600101906020018083116127dc57829003601f168201915b5050509183525050600982015460209091019060ff16600881111561282057612820614440565b600881111561283157612831614440565b8152505084828151811061284757612847614c01565b60209081029190910101526001016125a2565b50505092915050565b5f610e4b61286f612e51565b600301612eb8565b61287f6131f8565b805f0361289f5760405163b4fa3fb360e01b815260040160405180910390fd5b5f6128a8612e51565b600c8101805490849055604080518281526020810186905292935090917fbb7cd41bd6435b6f6da7e832527c2adf48fe9783423fecedb8c8c625acbc92d0910161105a565b6128f56131f8565b6001600160a01b03811661291c5760405163b4fa3fb360e01b815260040160405180910390fd5b5f612925612e51565b6011810180546001600160a01b031981166001600160a01b03868116918217909355604080519390921680845260208401919091529293507fdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c910161105a565b61298d6131f8565b5f612996612e51565b90506129a56005820183613ed5565b6129c257604051633ad2b1bb60e11b815260040160405180910390fd5b6040516001600160a01b038316907fb102f7913267c344ac15011acd7185602a74269c32e7783833f5311450fb43dd905f90a25050565b80612a0381612e75565b5f612a0d83610e50565b90506007816008811115612a2357612a23614440565b03612a3657612a3183613bcc565b612a68565b6006816008811115612a4a57612a4a614440565b14612a685760405163baf3f0f760e01b815260040160405180910390fd5b5f612a71612e51565b9050612a808160100154613afa565b612a8a6008610df1565b10612aa85760405163848084dd60e01b815260040160405180910390fd5b6006826008811115612abc57612abc614440565b03612af657612ace8160100154613b3a565b612ad86006610df1565b11612af65760405163848084dd60e01b815260040160405180910390fd5b6111068460085f612f29565b80612b0c81612e75565b612b17826004612ef4565b612b345760405163baf3f0f760e01b815260040160405180910390fd5b6114f68260015f612f29565b5f612b49612e51565b6001600160a01b039092165f90815260099290920160205250604090205460ff1690565b612b756131f8565b6001600160a01b038116612b9c5760405163b4fa3fb360e01b815260040160405180910390fd5b5f612ba5612e51565b6013810180546001600160a01b031981166001600160a01b03868116918217909355604080519390921680845260208401919091529293507f7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41910161105a565b80612c0f81612e75565b612c1a826005612ef4565b612c375760405163baf3f0f760e01b815260040160405180910390fd5b6114f682600461191d85610eb2565b612c4e6131f8565b805f03612c6e5760405163b4fa3fb360e01b815260040160405180910390fd5b5f612c77612e51565b600d8101805490849055604080518281526020810186905292935090917fe10ca6f253a2344c11c8e060dca53f2a3397c1f5c3b6314104a42b376c42d08f910161105a565b5f805f612cc7612e51565b905080600c015481600d015492509250509091565b80612ce681612e75565b612cf1826001612ef4565b612d0e5760405163baf3f0f760e01b815260040160405180910390fd5b612d17826139bb565b612d345760405163bf74735560e01b815260040160405180910390fd5b5f612d3d612e51565b905080600f0154612d4e6002610df1565b10612d6c5760405163848084dd60e01b815260040160405180910390fd5b80600e0154612d79611d95565b10612d975760405163848084dd60e01b815260040160405180910390fd5b612da38360025f612f29565b6040516001600160a01b038416907f759721961c23d02140d70249a00d7bbc893592166a3ef92468e7208cf41a45e3905f90a2505050565b612de36131f8565b6001600160a01b038116612e485760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401611154565b6111ef81613aa9565b7f1b0484cbd0fba815b5886ffd853c75e18f4b5720362abf431d1f348b59d4ff0090565b612e7d612e51565b6001600160a01b038281165f9081526020929092526040909120541633146111ef5760405163605919ad60e11b815260040160405180910390fd5b5f611425825490565b5f612ecc8383613ee9565b9392505050565b6001600160a01b0381165f9081526001830160205260408120541515612ecc565b5f816008811115612f0757612f07614440565b612f1084610e50565b6008811115612f2157612f21614440565b149392505050565b5f612f32612e51565b6001600160a01b0385165f90815260208290526040812060098101549293509160ff1690816008811115612f6857612f68614440565b1480612f8457505f856008811115612f8257612f82614440565b145b80612fb05750846008811115612f9c57612f9c614440565b816008811115612fae57612fae614440565b145b15612fbd57505050505050565b826008015f826008811115612fd457612fd4614440565b6008811115612fe557612fe5614440565b81526020019081526020015f205f8154809291906130029061519c565b9190505550826008015f86600881111561301e5761301e614440565b600881111561302f5761302f614440565b81526020019081526020015f205f81548092919061304c906151b1565b909155506001905081600881111561306657613066614440565b1480156130855750600185600881111561308257613082614440565b14155b156130ab576130976003840187613bb8565b506130a56001840187613ed5565b50613100565b60018160088111156130bf576130bf614440565b141580156130de575060018560088111156130dc576130dc614440565b145b15613100576130f06001840187613bb8565b506130fe6003840187613ed5565b505b60098201805486919060ff1916600183600881111561312157613121614440565b02179055506004820184905584600881111561313f5761313f614440565b81600881111561315157613151614440565b6040516001600160a01b038916907fcfb25346bbf2c2f19e20af8b4b4d54cbc6c83057934c1f28539760e8f8065dee905f90a4505050505050565b60605f612ecc83613f0f565b336002600160a01b0314611dba576040516354d325c360e01b815260040160405180910390fd5b6131cc62015180436151dd565b15611dba57604051632312acbd60e01b815260040160405180910390fd5b5f610e4b62015180436151f0565b6033546001600160a01b03163314611dba5760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401611154565b5f61325b612e51565b6001600160a01b039092165f908152602092909252506040902090565b5f613281612e51565b905060016001600160a01b0383165f9081526020839052604090206009015460ff1660088111156132b4576132b4614440565b146132d25760405163baf3f0f760e01b815260040160405180910390fd5b6132df6003820183613bb8565b5060015f90815260088201602052604081208054916132fd8361519c565b90915550506001600160a01b0382165f90815260208290526040812080546001600160a01b0319908116825560018201805482169055600282018054821690556003820180549091169055600481018290556005810182905590600682018161336682826143ab565b613373600183015f6143ab565b506133839050600883015f6143ab565b50600901805460ff191690556040516001600160a01b038316907f1629bfc36423a1b4749d3fe1d6970b9d32d42bbee47dd5540670696ab6b9a4ad905f90a25050565b6111ef6131f8565b7f4910fdfa16fed3260ed0e7147f7cc6da11a60208b5b9406d12a635614ffd91435460ff16156134065761340183613f68565b505050565b826001600160a01b03166352d1902d6040518163ffffffff1660e01b8152600401602060405180830381865afa925050508015613460575060408051601f3d908101601f1916820190925261345d91810190615203565b60015b6134c35760405162461bcd60e51b815260206004820152602e60248201527f45524331393637557067726164653a206e657720696d706c656d656e7461746960448201526d6f6e206973206e6f74205555505360901b6064820152608401611154565b5f805160206153c483398151915281146135315760405162461bcd60e51b815260206004820152602960248201527f45524331393637557067726164653a20756e737570706f727465642070726f786044820152681a58589b195555525160ba1b6064820152608401611154565b50613401838383614003565b6001600160a01b038416158061355a57506001600160a01b038316155b8061356c57506001600160a01b038216155b1561358a5760405163b4fa3fb360e01b815260040160405180910390fd5b826001600160a01b0316846001600160a01b031614806135bb5750816001600160a01b0316836001600160a01b0316145b806135d75750816001600160a01b0316846001600160a01b0316145b156135f55760405163b4fa3fb360e01b815260040160405180910390fd5b805151603014158061360d5750806020015151606014155b1561362b5760405163b4fa3fb360e01b815260040160405180910390fd5b805180516020909101207fc980e59163ce244bb4bb6211f48c7b46f88a4f40943e84eb99bdc41e129bd293148061368b575060208082015180519101207f46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c21145b156136a95760405163b4fa3fb360e01b815260040160405180910390fd5b6001600160a01b0384165f9081526020869052604090205460ff16806136e657506001600160a01b0383165f9081526020869052604090205460ff165b8061370857506001600160a01b0382165f9081526020869052604090205460ff165b15613726576040516316a163b960e11b815260040160405180910390fd5b506001600160a01b039283165f90815260209490945260408085208054600160ff19918216811790925593851686528186208054851682179055919093168452919092208054909216179055565b5f61377d612e51565b90505f816007015f8154613790906151b1565b91829055506001600160a01b038086165f9081526020858152604091829020875181549085166001600160a01b031991821617825591880151600182018054918616918416919091179055918701516002830180549185169183169190911790556060870151600383018054919094169116179091556080850151600482015560a0850151600582015560c085015180519293508592600683019081906138379082615265565b506020820151600182019061384c9082615265565b50505060e082015160088201906138639082615265565b5061010082015160098201805460ff1916600183600881111561388857613888614440565b021790555050506001600160a01b0384165f9081526020839052604090206005018190556138b96003830185613ed5565b5060015f90815260088301602052604081208054916138d7836151b1565b9190505550836001600160a01b03167fe410d169249157b2af8ca2d602f2bdd8721034902d3228d318aaba02cacbac6b8260405161391791815260200190565b60405180910390a250505050565b845f5b818110156113055761399f88888381811061394557613945614c01565b905060200201602081019061395a91906144fb565b87878481811061396c5761396c614c01565b90506020020160208101906139819190614522565b86868581811061399357613993614c01565b90506020020135612f29565b600101613928565b5f6139b562015180436151dd565b15919050565b5f806139c6836115ab565b90505f816001600160a01b031663630b11466040518163ffffffff1660e01b8152600401602060405180830381865afa158015613a05573d5f803e3d5ffd5b505050506040513d601f19601f82011682018060405250810190613a299190615203565b826001600160a01b0316634cf088d96040518163ffffffff1660e01b8152600401602060405180830381865afa158015613a65573d5f803e3d5ffd5b505050506040513d601f19601f82011682018060405250810190613a899190615203565b613a939190615324565b6a0422ca8b0a00a4250000001115949350505050565b603380546001600160a01b038381166001600160a01b0319831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0905f90a35050565b5f6002821015613b0b57505f919050565b5f6002613b1784614027565b613b2191906151f0565b905060018110613b315780612ecc565b60019392505050565b5f815f03613b4957505f919050565b5f613b5383614027565b613b5e906002615337565b613b69906001614bee565b90505f613b7584613afa565b613b80906002615337565b613b8a9085615324565b90505f818311613b9a5781613b9c565b825b905060018110613bac5780613baf565b60015b95945050505050565b5f612ecc836001600160a01b03841661404d565b5f613bd682610eb2565b90508015801590613be75750804210155b156114f65760405163b48d5fc760e01b815260040160405180910390fd5b5f54610100900460ff16613c2b5760405162461bcd60e51b81526004016111549061534e565b611dba614130565b5f613c3c612e51565b83519091505f5b81811015613eb6575f836007015f8154613c5c906151b1565b9190508190559050848281518110613c7657613c76614c01565b6020026020010151845f015f888581518110613c9457613c94614c01565b6020908102919091018101516001600160a01b0390811683528282019390935260409182015f20845181549085166001600160a01b031991821617825591850151600182018054918616918416919091179055918401516002830180549185169183169190911790556060840151600383018054919094169116179091556080820151600482015560a0820151600582015560c0820151805160068301908190613d3e9082615265565b5060208201516001820190613d539082615265565b50505060e08201516008820190613d6a9082615265565b5061010082015160098201805460ff19166001836008811115613d8f57613d8f614440565b021790555090505080845f015f888581518110613dae57613dae614c01565b60200260200101516001600160a01b03166001600160a01b031681526020019081526020015f20600501819055506006845f015f888581518110613df457613df4614c01565b6020908102919091018101516001600160a01b031682528101919091526040015f20600901805460ff19166001836008811115613e3357613e33614440565b02179055505f845f015f888581518110613e4f57613e4f614c01565b60200260200101516001600160a01b03166001600160a01b031681526020019081526020015f2060040181905550613eac868381518110613e9257613e92614c01565b602002602001015185600101613ed590919063ffffffff16565b5050600101613c43565b5060065f90815260088301602052604090208190556010909101555050565b5f612ecc836001600160a01b03841661415f565b5f825f018281548110613efe57613efe614c01565b905f5260205f200154905092915050565b6060815f01805480602002602001604051908101604052809291908181526020018280548015613f5c57602002820191905f5260205f20905b815481526020019060010190808311613f48575b50505050509050919050565b6001600160a01b0381163b613fd55760405162461bcd60e51b815260206004820152602d60248201527f455243313936373a206e657720696d706c656d656e746174696f6e206973206e60448201526c1bdd08184818dbdb9d1c9858dd609a1b6064820152608401611154565b5f805160206153c483398151915280546001600160a01b0319166001600160a01b0392909216919091179055565b61400c836141ab565b5f825111806140185750805b156134015761110683836141ea565b5f815f0361403657505f919050565b6003614043600184615324565b61142591906151f0565b5f8181526001830160205260408120548015614127575f61406f600183615324565b85549091505f9061408290600190615324565b90508181146140e1575f865f0182815481106140a0576140a0614c01565b905f5260205f200154905080875f0184815481106140c0576140c0614c01565b5f918252602080832090910192909255918252600188019052604090208390555b85548690806140f2576140f2615399565b600190038181905f5260205f20015f90559055856001015f8681526020019081526020015f205f905560019350505050611425565b5f915050611425565b5f54610100900460ff166141565760405162461bcd60e51b81526004016111549061534e565b611dba33613aa9565b5f8181526001830160205260408120546141a457508154600181810184555f848152602080822090930184905584548482528286019093526040902091909155611425565b505f611425565b6141b481613f68565b6040516001600160a01b038216907fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b905f90a250565b6060612ecc83836040518060600160405280602781526020016153e46027913960605f80856001600160a01b03168560405161422691906153ad565b5f60405180830381855af49150503d805f811461425e576040519150601f19603f3d011682016040523d82523d5f602084013e614263565b606091505b50915091506142748683838761427e565b9695505050505050565b606083156142ec5782515f036142e5576001600160a01b0385163b6142e55760405162461bcd60e51b815260206004820152601d60248201527f416464726573733a2063616c6c20746f206e6f6e2d636f6e74726163740000006044820152606401611154565b50816142f6565b6142f683836142fe565b949350505050565b81511561430e5781518083602001fd5b8060405162461bcd60e51b81526004016111549190614943565b6040518061012001604052805f6001600160a01b031681526020015f6001600160a01b031681526020015f6001600160a01b031681526020015f6001600160a01b031681526020015f81526020015f8152602001614399604051806040016040528060608152602001606081525090565b8152606060208201526040015f905290565b5080546143b790614d96565b5f825580601f106143c6575050565b601f0160209004905f5260205f20908101906111ef91905b808211156143f1575f81556001016143de565b5090565b6001600160a01b03811681146111ef575f80fd5b5f806040838503121561441a575f80fd5b8235614425816143f5565b91506020830135614435816143f5565b809150509250929050565b634e487b7160e01b5f52602160045260245ffd5b6009811061447057634e487b7160e01b5f52602160045260245ffd5b9052565b602080825282518282018190525f919060409081850190868401855b828110156144ee57815180516001600160a01b0390811686528782015181168887015286820151168686015260608082015190860152608090810151906144d981870183614454565b505060a0939093019290850190600101614490565b5091979650505050505050565b5f6020828403121561450b575f80fd5b8135612ecc816143f5565b600981106111ef575f80fd5b5f60208284031215614532575f80fd5b8135612ecc81614516565b5f815180845260208085019450602084015f5b838110156145755781516001600160a01b031687529582019590820190600101614550565b509495945050505050565b602081525f612ecc602083018461453d565b602081016114258284614454565b5f8083601f8401126145b0575f80fd5b5081356001600160401b038111156145c6575f80fd5b6020830191508360208260051b85010111156145e0575f80fd5b9250929050565b5f805f80604085870312156145fa575f80fd5b84356001600160401b0380821115614610575f80fd5b61461c888389016145a0565b90965094506020870135915080821115614634575f80fd5b50614641878288016145a0565b95989497509550505050565b5f6020828403121561465d575f80fd5b5035919050565b634e487b7160e01b5f52604160045260245ffd5b604080519081016001600160401b038111828210171561469a5761469a614664565b60405290565b60405161012081016001600160401b038111828210171561469a5761469a614664565b60405161016081016001600160401b038111828210171561469a5761469a614664565b604051601f8201601f191681016001600160401b038111828210171561470e5761470e614664565b604052919050565b5f6001600160401b0382111561472e5761472e614664565b50601f01601f191660200190565b5f82601f83011261474b575f80fd5b813561475e61475982614716565b6146e6565b818152846020838601011115614772575f80fd5b816020850160208301375f918101602001919091529392505050565b5f805f805f8060c087890312156147a3575f80fd5b86356147ae816143f5565b955060208701356147be816143f5565b945060408701356147ce816143f5565b935060608701356147de816143f5565b925060808701356001600160401b03808211156147f9575f80fd5b908801906040828b03121561480c575f80fd5b614814614678565b823582811115614822575f80fd5b61482e8c82860161473c565b825250602083013582811115614842575f80fd5b61484e8c82860161473c565b602083015250935060a0890135915080821115614869575f80fd5b5061487689828a0161473c565b9150509295509295509295565b5f805f805f8060608789031215614898575f80fd5b86356001600160401b03808211156148ae575f80fd5b6148ba8a838b016145a0565b909850965060208901359150808211156148d2575f80fd5b6148de8a838b016145a0565b909650945060408901359150808211156148f6575f80fd5b5061490389828a016145a0565b979a9699509497509295939492505050565b5f81518084528060208401602086015e5f602082860101526020601f19601f83011685010191505092915050565b602081525f612ecc6020830184614915565b5f8060408385031215614966575f80fd5b8235614971816143f5565b915060208301356001600160401b0381111561498b575f80fd5b6149978582860161473c565b9150509250929050565b5f8151604084526149b56040850182614915565b905060208301518482036020860152613baf8282614915565b80516001600160a01b031682525f61012060208301516149f960208601826001600160a01b03169052565b506040830151614a1460408601826001600160a01b03169052565b506060830151614a2f60608601826001600160a01b03169052565b506080830151608085015260a083015160a085015260c08301518160c0860152614a5b828601826149a1565b91505060e083015184820360e0860152614a758282614915565b91505061010080840151614a8b82870182614454565b5090949350505050565b602081525f612ecc60208301846149ce565b604081525f614ab9604083018561453d565b6020838203818501528185518084528284019150828160051b8501018388015f5b83811015614b0857601f19878403018552614af68383516149a1565b94860194925090850190600101614ada565b50909998505050505050505050565b5f8060408385031215614b28575f80fd5b823591506020830135614435816143f5565b5f8060208385031215614b4b575f80fd5b82356001600160401b03811115614b60575f80fd5b614b6c858286016145a0565b90969095509350505050565b5f60208083016020845280855180835260408601915060408160051b8701019250602087015f5b82811015614bcd57603f19888603018452614bbb8583516149ce565b94509285019290850190600101614b9f565b5092979650505050505050565b634e487b7160e01b5f52601160045260245ffd5b8082018082111561142557611425614bda565b634e487b7160e01b5f52603260045260245ffd5b8183525f60208085019450825f5b85811015614575578135614c36816143f5565b6001600160a01b031687529582019590820190600101614c23565b604081525f614c64604083018688614c15565b82810360208401528381526001600160fb1b03841115614c82575f80fd5b8360051b80866020840137016020019695505050505050565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b19195b1959d85d1958d85b1b60a21b606082015260800190565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b6163746976652070726f787960a01b606082015260800190565b604081525f614d46604083018688614c15565b828103602084810191909152848252859181015f5b86811015614d89578335614d6e81614516565b614d788382614454565b509282019290820190600101614d5b565b5098975050505050505050565b600181811c90821680614daa57607f821691505b602082108103614dc857634e487b7160e01b5f52602260045260245ffd5b50919050565b8051614dd9816143f5565b919050565b5f60208284031215614dee575f80fd5b8151612ecc816143f5565b5f6001600160401b03821115614e1157614e11614664565b5060051b60200190565b5f82601f830112614e2a575f80fd5b81516020614e3a61475983614df9565b8083825260208201915060208460051b870101935086841115614e5b575f80fd5b602086015b84811015614e80578051614e73816143f5565b8352918301918301614e60565b509695505050505050565b5f82601f830112614e9a575f80fd5b8151614ea861475982614716565b818152846020838601011115614ebc575f80fd5b8160208501602083015e5f918101602001919091529392505050565b5f60408284031215614ee8575f80fd5b614ef0614678565b905081516001600160401b0380821115614f08575f80fd5b614f1485838601614e8b565b83526020840151915080821115614f29575f80fd5b50614f3684828501614e8b565b60208301525092915050565b8051614dd981614516565b5f82601f830112614f5c575f80fd5b81516020614f6c61475983614df9565b82815260059290921b84018101918181019086841115614f8a575f80fd5b8286015b84811015614e805780516001600160401b0380821115614fac575f80fd5b90880190610120828b03601f1901811315614fc5575f80fd5b614fcd6146a0565b614fd8888501614dce565b81526040614fe7818601614dce565b898301526060614ff8818701614dce565b828401526080915061500b828701614dce565b818401525060a0808601518284015260c0915081860151818401525060e08086015185811115615039575f80fd5b6150478f8c838a0101614ed8565b838501525061010091508186015185811115615061575f80fd5b61506f8f8c838a0101614e8b565b828501525050615080838601614f42565b908201528652505050918301918301614f8e565b5f602082840312156150a4575f80fd5b81516001600160401b03808211156150ba575f80fd5b9083019061016082860312156150ce575f80fd5b6150d66146c3565b6150df83614dce565b81526020830151602082015260408301516040820152606083015160608201526080830151608082015260a083015160a082015261511f60c08401614dce565b60c082015261513060e08401614dce565b60e0820152610100615143818501614dce565b90820152610120838101518381111561515a575f80fd5b61516688828701614e1b565b828401525050610140808401518381111561517f575f80fd5b61518b88828701614f4d565b918301919091525095945050505050565b5f816151aa576151aa614bda565b505f190190565b5f600182016151c2576151c2614bda565b5060010190565b634e487b7160e01b5f52601260045260245ffd5b5f826151eb576151eb6151c9565b500690565b5f826151fe576151fe6151c9565b500490565b5f60208284031215615213575f80fd5b5051919050565b601f82111561340157805f5260205f20601f840160051c8101602085101561523f5750805b601f840160051c820191505b8181101561525e575f815560010161524b565b5050505050565b81516001600160401b0381111561527e5761527e614664565b6152928161528c8454614d96565b8461521a565b602080601f8311600181146152c5575f84156152ae5750858301515b5f19600386901b1c1916600185901b17855561531c565b5f85815260208120601f198616915b828110156152f3578886015182559484019460019091019084016152d4565b508582101561531057878501515f19600388901b60f8161c191681555b505060018460011b0185555b505050505050565b8181038181111561142557611425614bda565b808202811582820484141761142557611425614bda565b6020808252602b908201527f496e697469616c697a61626c653a20636f6e7472616374206973206e6f74206960408201526a6e697469616c697a696e6760a81b606082015260800190565b634e487b7160e01b5f52603160045260245ffd5b5f82518060208501845e5f92019182525091905056fe360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc416464726573733a206c6f772d6c6576656c2064656c65676174652063616c6c206661696c6564a2646970667358221220639417d149cdeade434235ba3e1d71017bb1cb5e584b848c0a8c19e4eb6387fa64736f6c63430008190033",
 }
 
 // AddressBookV2ABI is the input ABI used to generate the binding from.
@@ -5052,7 +142,7 @@ var AddressBookV2MetaData = &bind.MetaData{
 var AddressBookV2ABI = AddressBookV2MetaData.ABI
 
 // AddressBookV2BinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const AddressBookV2BinRuntime = `608060405260043610610366575f3560e01c8063656f5869116101c85780638da5cb5b116100fd578063cb1c2b5c1161009d578063e70c38f11161006d578063e70c38f1146109e3578063ef6bdade146109f7578063f2fde38b14610a16578063ffa1ad7414610a35575f80fd5b8063cb1c2b5c14610971578063d9abb38b1461098f578063de244059146109ae578063e59d7a84146109c4575f80fd5b8063a41b6000116100d8578063a41b6000146108f5578063b42652e914610914578063b9f96f4014610933578063c3c5a54714610952575f80fd5b80638da5cb5b146108a557806394a64d98146108c25780639d0e234d146108d6575f80fd5b806378b84a5c116101685780637e134fc6116101435780637e134fc61461082157806380f2ff251461084057806387b7b8fd1461085f5780638beeb43914610879575f80fd5b806378b84a5c146107cf578063793c1946146107ee5780637d7b127f1461080d575f80fd5b8063715018a6116101a3578063715018a614610769578063766718081461077d578063767142821461079157806376a67a51146107b0575f80fd5b8063656f5869146107145780636968b53f146107335780636b75b7a814610755575f80fd5b80633d5840631161029e5780634f1ef2861161023e5780635334cf44116102195780635334cf4414610696578063551ec9b5146106b557806358199d01146106c9578063582115fb146106e8575f80fd5b80634f1ef2861461065057806352d1902d146106635780635300f9b414610677575f80fd5b806345ce81101161027957806345ce8110146105ab57806345ff4c80146105da5780634a8c1fb4146105f95780634b6a94cc1461060d575f80fd5b80633d584063146105365780634429d7201461056d57806345527e441461058c575f80fd5b8063229bb823116103095780632c1d4895116102e45780632c1d4895146104c55780632d4ede93146104e45780633659cfe6146105035780633aea9faf14610522575f80fd5b8063229bb8231461045b578063277f3dc31461048757806327f94c3d146104a6575f80fd5b80630f15f4c0116103445780630f15f4c0146103da578063171a6cdc146103ee5780631b1a478b1461040d5780631ba3fd581461043a575f80fd5b806303e6689d1461036a57806307ecec3e146103985780630b1fe784146103b9575b5f80fd5b348015610375575f80fd5b5061037e610a49565b604080519283526020830191909152015b60405180910390f35b3480156103a3575f80fd5b506103b76103b23660046142c2565b610a69565b005b3480156103c4575f80fd5b506103cd610b06565b60405161038f919061432d565b3480156103e5575f80fd5b506103b7610d45565b3480156103f9575f80fd5b506103b76104083660046143b4565b610dc0565b348015610418575f80fd5b5061042c6104273660046143db565b610e35565b60405190815260200161038f565b348015610445575f80fd5b5061044e610e7a565b60405161038f9190614439565b348015610466575f80fd5b5061047a6104753660046143b4565b610e94565b60405161038f919061444b565b348015610492575f80fd5b5061042c6104a13660046143b4565b610ec1565b3480156104b1575f80fd5b506103b76104c03660046144a0565b610eeb565b3480156104d0575f80fd5b506103b76104df366004614506565b610ff7565b3480156104ef575f80fd5b506103b76104fe3660046143b4565b611076565b34801561050e575f80fd5b506103b761051d3660046143b4565b611131565b34801561052d575f80fd5b5061042c611217565b348015610541575f80fd5b506105556105503660046143b4565b611229565b6040516001600160a01b03909116815260200161038f565b348015610578575f80fd5b506103b7610587366004614646565b611254565b348015610597575f80fd5b506103b76105a63660046146ff565b611328565b3480156105b6575f80fd5b506105ca6105c53660046143b4565b611428565b604051901515815260200161038f565b3480156105e5575f80fd5b506103b76105f4366004614791565b611444565b348015610604575f80fd5b506105ca6115e1565b348015610618575f80fd5b506106436040518060400160405280600b81526020016a41646472657373426f6f6b60a81b81525081565b60405161038f9190614807565b6103b761065e366004614819565b6115fb565b34801561066e575f80fd5b5061042c6116ca565b348015610682575f80fd5b506105556106913660046143b4565b61177b565b3480156106a1575f80fd5b506105ca6106b03660046143b4565b611784565b3480156106c0575f80fd5b506105ca61179a565b3480156106d4575f80fd5b506103b76106e33660046144a0565b6117af565b3480156106f3575f80fd5b506107076107023660046143b4565b6119e6565b60405161038f919061491e565b34801561071f575f80fd5b506103b761072e3660046143b4565b611ca2565b34801561073e575f80fd5b50610747611d0e565b60405161038f929190614930565b348015610760575f80fd5b5061042c612181565b348015610774575f80fd5b506103b7612195565b348015610788575f80fd5b5061042c6121a8565b34801561079c575f80fd5b506103b76107ab366004614506565b6121b1565b3480156107bb575f80fd5b506103b76107ca3660046143b4565b612227565b3480156107da575f80fd5b506103b76107e93660046143b4565b6122ed565b3480156107f9575f80fd5b506103b76108083660046143b4565b612361565b348015610818575f80fd5b5061042c6123a8565b34801561082c575f80fd5b506103b761083b366004614506565b6123ba565b34801561084b575f80fd5b5061042c61085a3660046149a0565b612430565b34801561086a575f80fd5b506105556002600160a01b0381565b348015610884575f80fd5b506108986108933660046149c3565b612462565b60405161038f9190614a01565b3480156108b0575f80fd5b506033546001600160a01b0316610555565b3480156108cd575f80fd5b5061042c61277b565b3480156108e1575f80fd5b506103b76108f0366004614506565b61278f565b348015610900575f80fd5b506103b761090f3660046143b4565b612805565b34801561091f575f80fd5b506103b761092e3660046143b4565b612879565b34801561093e575f80fd5b506103b761094d3660046143b4565b612982565b34801561095d575f80fd5b506105ca61096c3660046143b4565b6129c0565b34801561097c575f80fd5b5061042c6a0422ca8b0a00a42500000081565b34801561099a575f80fd5b506103b76109a93660046143b4565b6129ed565b3480156109b9575f80fd5b5061042c6201518081565b3480156109cf575f80fd5b506103b76109de366004614506565b612a2e565b3480156109ee575f80fd5b5061037e612aa4565b348015610a02575f80fd5b506103b7610a113660046143b4565b612ac4565b348015610a21575f80fd5b506103b7610a303660046143b4565b612bc3565b348015610a40575f80fd5b5061042c600281565b5f805f610a54612c39565b90508060060154816007015492509250509091565b81610a7381612c5d565b6001600160a01b038216610a9a5760405163b4fa3fb360e01b815260040160405180910390fd5b5f610aa3612c39565b6001600160a01b038086165f8181526020849052604080822080548986166001600160a01b03198216811790925591519596509316938492917f8df26d30992ecfde135bbe59c1f267d82e2aae9d32fdae41551a38fe8b7bda8791a45050505050565b60605f610b11612ca0565b90505f610b2082600101612cc4565b90505f610b2f83600301612cc4565b9050610b3b8183614a77565b6001600160401b03811115610b5257610b5261451d565b604051908082528060200260200182016040528015610bb157816020015b610b9e6040805160a0810182525f808252602082018190529181018290526060810182905290608082015290565b815260200190600190039081610b705790505b5093505f805b83811015610c77575f610bcd6001870183612ccd565b9050610bdc6005870182612cdf565b610c6e576001600160a01b038082165f8181526020898152604091829020825160a081018452938452805485169184019190915260018101549093169082015260038201546060820152600880830154608083019160ff90911690811115610c4657610c466142f9565b815250888581518110610c5b57610c5b614a8a565b6020026020010181905250836001019350505b50600101610bb7565b505f5b82811015610d3a575f610c906003870183612ccd565b9050610c9f6005870182612cdf565b610d31576001600160a01b038082165f8181526020898152604091829020825160a081018452938452805485169184019190915260018101549093169082015260038201546060820152600880830154608083019160ff90911690811115610d0957610d096142f9565b815250888581518110610d1e57610d1e614a8a565b6020026020010181905250836001019350505b50600101610c7a565b508085525050505090565b610d4d612d00565b5f610d56612c39565b6009810154909150610100900460ff1615610d845760405163ef65161f60e01b815260040160405180910390fd5b60098101805461ff0019166101001790556040517fed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0905f90a150565b80610dca81612c5d565b610dd5826002612d5a565b610df25760405163baf3f0f760e01b815260040160405180910390fd5b610dfe8260015f612d8f565b6040516001600160a01b038316907fbaea727dfffa01fdb952c2b313510033b0a631d0cc04c818a313b75060683e5a905f90a25050565b5f610e3e612ca0565b6008015f836008811115610e5457610e546142f9565b6008811115610e6557610e656142f9565b81526020019081526020015f20549050919050565b6060610e8f610e87612ca0565b600501612ff6565b905090565b5f610e9d612ca0565b6001600160a01b039092165f90815260209290925250604090206008015460ff1690565b5f610eca612ca0565b6001600160a01b039092165f90815260209290925250604090206003015490565b610ef3613002565b610efb613029565b828114610f1b5760405163b4fa3fb360e01b815260040160405180910390fd5b5f610f24612c39565b90505f610f2f613054565b90505f5b85811015610fb057848482818110610f4d57610f4d614a8a565b90506020020135836002015f8481526020019081526020015f205f898985818110610f7a57610f7a614a8a565b9050602002016020810190610f8f91906143b4565b6001600160a01b0316815260208101919091526040015f2055600101610f33565b50807f3ed42d8976ef09fbee43ae76e0be2ed8e9af501530fd0155d90beeb551c1b30187878787604051610fe79493929190614ada565b60405180910390a2505050505050565b610fff612d00565b805f0361101f5760405163b4fa3fb360e01b815260040160405180910390fd5b5f611028612c39565b60038101805490849055604080518281526020810186905292935090917f350feb2acced9171b9d250e5771e5ecd6940594484b98efc4fc7daddcaa42f2a91015b60405180910390a1505050565b8061108081612c5d565b61108b826001612d5a565b6110a85760405163baf3f0f760e01b815260040160405180910390fd5b5f6110b1612c39565b90505f6110bd84613062565b80546001808301546001600160a01b038881165f81815293880160209081526040808620805460ff19908116909155968416865280862080548816905592909316845281842080549095169094559282528590522080546001600160a01b0319169055905061112b84613088565b50505050565b6001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001630036111825760405162461bcd60e51b815260040161117990614b24565b60405180910390fd5b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166111ca5f805160206151be833981519152546001600160a01b031690565b6001600160a01b0316146111f05760405162461bcd60e51b815260040161117990614b70565b6111f9816131cd565b604080515f80825260208201909252611214918391906131d5565b50565b5f611220612c39565b60030154905090565b5f611232612c39565b6001600160a01b039283165f9081526020919091526040902054909116919050565b5f61125e87610e94565b600881111561126f5761126f6142f9565b1461128d5760405163731918fb60e11b815260040160405180910390fd5b5f611296612c39565b90506112a88160010188888887613344565b6001600160a01b038781165f9081526020838152604080832080546001600160a01b031916331790558051610100810182528a85168152898516928101929092529287169281019290925260608201819052608082015260a0810184905260c08101839052600160e082015261131e888261357b565b5050505050505050565b611330613002565b8483811415806113405750808214155b1561135e5760405163b4fa3fb360e01b815260040160405180910390fd5b801561137257611372878787878787613769565b61137a613818565b156113e2575f61138a6007610e35565b6113946006610e35565b61139e9190614a77565b9050806113a9612c39565b600801556040518181527fd45be950fd3aceb65c6059b131cc8e06ab2390da6780d464b82c153e848160529060200160405180910390a1505b7fab95e7867bd336dde387ba31a71307c75dcc78b0344b873a5e993eb4470eb37e878787876040516114179493929190614bbc565b60405180910390a150505050505050565b5f61143e82611435612ca0565b60030190612cdf565b92915050565b5f54610100900460ff161580801561146257505f54600160ff909116105b8061147b5750303b15801561147b57505f5460ff166001145b6114de5760405162461bcd60e51b815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201526d191e481a5b9a5d1a585b1a5e995960921b6064820152608401611179565b5f805460ff1916600117905580156114ff575f805461ff0019166101001790555b61150761382c565b6115108761385a565b85158061151b575084155b80611524575083155b156115425760405163b4fa3fb360e01b815260040160405180910390fd5b82158061154d575081155b1561156b5760405163b4fa3fb360e01b815260040160405180910390fd5b5f611574612c39565b600381018890556004810187905560058101869055600681018590556007018390555080156115d8575f805461ff0019169055604051600181527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb384740249890602001611417565b50505050505050565b5f6115ea612c39565b60090154610100900460ff16919050565b6001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001630036116435760405162461bcd60e51b815260040161117990614b24565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b031661168b5f805160206151be833981519152546001600160a01b031690565b6001600160a01b0316146116b15760405162461bcd60e51b815260040161117990614b70565b6116ba826131cd565b6116c6828260016131d5565b5050565b5f306001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016146117695760405162461bcd60e51b815260206004820152603860248201527f555550535570677261646561626c653a206d757374206e6f742062652063616c60448201527f6c6564207468726f7567682064656c656761746563616c6c00000000000000006064820152608401611179565b505f805160206151be83398151915290565b5f611232612ca0565b5f61143e82611791612ca0565b60010190612cdf565b5f6117a3612c39565b6009015460ff16919050565b6117b7613002565b5f6117c0612c39565b600981015490915060ff16156117e85760405162dc149f60e41b815260040160405180910390fd5b60098101805460ff19166001179055838281146118185760405163b4fa3fb360e01b815260040160405180910390fd5b5f5b8181101561197f576118f78360010188888481811061183b5761183b614a8a565b905060200201602081019061185091906143b4565b87878581811061186257611862614a8a565b90506020028101906118749190614c1f565b6118829060208101906143b4565b88888681811061189457611894614a8a565b90506020028101906118a69190614c1f565b6118b79060408101906020016143b4565b8989878181106118c9576118c9614a8a565b90506020028101906118db9190614c1f565b6118e99060a0810190614c3d565b6118f290614c51565b613344565b86868281811061190957611909614a8a565b905060200201602081019061191e91906143b4565b835f89898581811061193257611932614a8a565b905060200201602081019061194791906143b4565b6001600160a01b03908116825260208201929092526040015f2080546001600160a01b0319169290911691909117905560010161181a565b5061198c868686866138ab565b80826008015f82825461199f9190614a77565b90915550506040517f820f68b9d060f5d911b3243881ada086c3768ea90e97a10f7f5023d84b94d952906119d69088908890614c5c565b60405180910390a1505050505050565b6119ee6141f0565b5f6119f7612ca0565b90505f6001600160a01b0384165f90815260208390526040902060089081015460ff1690811115611a2a57611a2a6142f9565b03611a4857604051634825e09360e01b815260040160405180910390fd5b6001600160a01b038084165f908152602083815260409182902082516101008101845281548516815260018201548516928101929092526002810154909316818301526003830154606082015260048301546080820152815180830190925260058301805491939260a085019290919082908290611ac590614c6f565b80601f0160208091040260200160405190810160405280929190818152602001828054611af190614c6f565b8015611b3c5780601f10611b1357610100808354040283529160200191611b3c565b820191905f5260205f20905b815481529060010190602001808311611b1f57829003601f168201915b50505050508152602001600182018054611b5590614c6f565b80601f0160208091040260200160405190810160405280929190818152602001828054611b8190614c6f565b8015611bcc5780601f10611ba357610100808354040283529160200191611bcc565b820191905f5260205f20905b815481529060010190602001808311611baf57829003601f168201915b5050505050815250508152602001600782018054611be990614c6f565b80601f0160208091040260200160405190810160405280929190818152602001828054611c1590614c6f565b8015611c605780601f10611c3757610100808354040283529160200191611c60565b820191905f5260205f20905b815481529060010190602001808311611c4357829003601f168201915b505050918352505060088281015460209092019160ff1690811115611c8757611c876142f9565b6008811115611c9857611c986142f9565b9052509392505050565b80611cac81612c5d565b611cb7826004612d5a565b611cd45760405163baf3f0f760e01b815260040160405180910390fd5b611cdd82613ba4565b611cfa5760405163bf74735560e01b815260040160405180910390fd5b6116c6826005611d0985610ec1565b612d8f565b6060805f611d1a612ca0565b90505f611d2982600101612cc4565b90505f611d3883600301612cc4565b9050611d448183614a77565b6001600160401b03811115611d5b57611d5b61451d565b604051908082528060200260200182016040528015611d84578160200160208202803683370190505b509450611d918183614a77565b6001600160401b03811115611da857611da861451d565b604051908082528060200260200182016040528015611ded57816020015b6040805180820190915260608082526020820152815260200190600190039081611dc65790505b5093505f805b83811015611fb1575f611e096001870183612ccd565b9050611e186005870182612cdf565b611fa85780888481518110611e2f57611e2f614a8a565b6001600160a01b039283166020918202929092018101919091529082165f908152908790526040908190208151808301909252600501805482908290611e7490614c6f565b80601f0160208091040260200160405190810160405280929190818152602001828054611ea090614c6f565b8015611eeb5780601f10611ec257610100808354040283529160200191611eeb565b820191905f5260205f20905b815481529060010190602001808311611ece57829003601f168201915b50505050508152602001600182018054611f0490614c6f565b80601f0160208091040260200160405190810160405280929190818152602001828054611f3090614c6f565b8015611f7b5780601f10611f5257610100808354040283529160200191611f7b565b820191905f5260205f20905b815481529060010190602001808311611f5e57829003601f168201915b505050505081525050878481518110611f9657611f96614a8a565b60200260200101819052508260010192505b50600101611df3565b505f5b82811015612172575f611fca6003870183612ccd565b9050611fd96005870182612cdf565b6121695780888481518110611ff057611ff0614a8a565b6001600160a01b039283166020918202929092018101919091529082165f90815290879052604090819020815180830190925260050180548290829061203590614c6f565b80601f016020809104026020016040519081016040528092919081815260200182805461206190614c6f565b80156120ac5780601f10612083576101008083540402835291602001916120ac565b820191905f5260205f20905b81548152906001019060200180831161208f57829003601f168201915b505050505081526020016001820180546120c590614c6f565b80601f01602080910402602001604051908101604052809291908181526020018280546120f190614c6f565b801561213c5780601f106121135761010080835404028352916020019161213c565b820191905f5260205f20905b81548152906001019060200180831161211f57829003601f168201915b50505050508152505087848151811061215757612157614a8a565b60200260200101819052508260010192505b50600101611fb4565b50808652808552505050509091565b5f610e8f61218d612ca0565b600101612cc4565b61219d612d00565b6121a65f61385a565b565b5f610e8f613054565b6121b9612d00565b805f036121d95760405163b4fa3fb360e01b815260040160405180910390fd5b5f6121e2612c39565b60078101805490849055604080518281526020810186905292935090917f6b4e484c27a9904fed5187e90d13d161869e9801b709cc3077f8222bef0030a19101611069565b8061223181612c5d565b61223c826006612d5a565b6122595760405163baf3f0f760e01b815260040160405180910390fd5b5f612262612c39565b90506122718160080154613c92565b61227b6007610e35565b106122995760405163848084dd60e01b815260040160405180910390fd5b6122a68160080154613cd2565b6122b06006610e35565b116122ce5760405163848084dd60e01b815260040160405180910390fd5b5f8160040154426122df9190614a77565b905061112b84600783612d8f565b6122f5612d00565b5f6122fe612ca0565b905061230d6005820183613d50565b61232a5760405163d33ff8c160e01b815260040160405180910390fd5b6040516001600160a01b038316907f814c4b6f6fc147ebb6fbe4ffcd3554d0309170fd0a70e66cc4e4c0784f4aa32e905f90a25050565b8061236b81612c5d565b612376826007612d5a565b6123935760405163baf3f0f760e01b815260040160405180910390fd5b61239c82613d64565b6116c68260065f612d8f565b5f6123b1612c39565b60080154905090565b6123c2612d00565b805f036123e25760405163b4fa3fb360e01b815260040160405180910390fd5b5f6123eb612c39565b60068101805490849055604080518281526020810186905292935090917fa8fbc5c083100f8025c9c33578c3292432f17b77b633fb69fa7773ff60d466679101611069565b5f612439612c39565b5f938452600201602090815260408085206001600160a01b039490941685529290525090205490565b60605f61246d612ca0565b905082806001600160401b038111156124885761248861451d565b6040519080825280602002602001820160405280156124c157816020015b6124ae6141f0565b8152602001906001900390816124a65790505b5092505f5b8181101561277257825f8787848181106124e2576124e2614a8a565b90506020020160208101906124f791906143b4565b6001600160a01b03908116825260208083019390935260409182015f20825161010081018452815483168152600182015483169481019490945260028101549091168383015260038101546060840152600481015460808401528151808301909252600581018054919260a08501929091908290829061257690614c6f565b80601f01602080910402602001604051908101604052809291908181526020018280546125a290614c6f565b80156125ed5780601f106125c4576101008083540402835291602001916125ed565b820191905f5260205f20905b8154815290600101906020018083116125d057829003601f168201915b5050505050815260200160018201805461260690614c6f565b80601f016020809104026020016040519081016040528092919081815260200182805461263290614c6f565b801561267d5780601f106126545761010080835404028352916020019161267d565b820191905f5260205f20905b81548152906001019060200180831161266057829003601f168201915b505050505081525050815260200160078201805461269a90614c6f565b80601f01602080910402602001604051908101604052809291908181526020018280546126c690614c6f565b80156127115780601f106126e857610100808354040283529160200191612711565b820191905f5260205f20905b8154815290600101906020018083116126f457829003601f168201915b505050918352505060088281015460209092019160ff1690811115612738576127386142f9565b6008811115612749576127496142f9565b8152505084828151811061275f5761275f614a8a565b60209081029190910101526001016124c6565b50505092915050565b5f610e8f612787612ca0565b600301612cc4565b612797612d00565b805f036127b75760405163b4fa3fb360e01b815260040160405180910390fd5b5f6127c0612c39565b60048101805490849055604080518281526020810186905292935090917fbb7cd41bd6435b6f6da7e832527c2adf48fe9783423fecedb8c8c625acbc92d09101611069565b61280d612d00565b5f612816612ca0565b90506128256005820183613d9d565b61284257604051633ad2b1bb60e11b815260040160405180910390fd5b6040516001600160a01b038316907fb102f7913267c344ac15011acd7185602a74269c32e7783833f5311450fb43dd905f90a25050565b8061288381612c5d565b5f61288d83610e94565b905060078160088111156128a3576128a36142f9565b036128b6576128b183613d64565b6128e8565b60068160088111156128ca576128ca6142f9565b146128e85760405163baf3f0f760e01b815260040160405180910390fd5b5f6128f1612c39565b90506129008160080154613c92565b61290a6008610e35565b106129285760405163848084dd60e01b815260040160405180910390fd5b600682600881111561293c5761293c6142f9565b036129765761294e8160080154613cd2565b6129586006610e35565b116129765760405163848084dd60e01b815260040160405180910390fd5b61112b8460085f612d8f565b8061298c81612c5d565b612997826004612d5a565b6129b45760405163baf3f0f760e01b815260040160405180910390fd5b6116c68260015f612d8f565b5f6129c9612c39565b6001600160a01b039092165f90815260019290920160205250604090205460ff1690565b806129f781612c5d565b612a02826005612d5a565b612a1f5760405163baf3f0f760e01b815260040160405180910390fd5b6116c6826004611d0985610ec1565b612a36612d00565b805f03612a565760405163b4fa3fb360e01b815260040160405180910390fd5b5f612a5f612c39565b60058101805490849055604080518281526020810186905292935090917fe10ca6f253a2344c11c8e060dca53f2a3397c1f5c3b6314104a42b376c42d08f9101611069565b5f805f612aaf612c39565b90508060040154816005015492509250509091565b80612ace81612c5d565b612ad9826001612d5a565b612af65760405163baf3f0f760e01b815260040160405180910390fd5b612aff82613ba4565b612b1c5760405163bf74735560e01b815260040160405180910390fd5b5f612b25612c39565b90508060070154612b366002610e35565b10612b545760405163848084dd60e01b815260040160405180910390fd5b8060060154612b61612181565b10612b7f5760405163848084dd60e01b815260040160405180910390fd5b612b8b8360025f612d8f565b6040516001600160a01b038416907f759721961c23d02140d70249a00d7bbc893592166a3ef92468e7208cf41a45e3905f90a2505050565b612bcb612d00565b6001600160a01b038116612c305760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401611179565b6112148161385a565b7f9114bff6fc2186e0cb5fe9e5ced5765c61f7dbcd47451c215ce8da2cac3ed80090565b612c65612c39565b6001600160a01b038281165f9081526020929092526040909120541633146112145760405163605919ad60e11b815260040160405180910390fd5b7f2a6c4f9950bdac880731815408ac22648e61e86a4c1659ca1864add32c0e290090565b5f61143e825490565b5f612cd88383613db1565b9392505050565b6001600160a01b0381165f9081526001830160205260408120541515612cd8565b6033546001600160a01b031633146121a65760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401611179565b5f816008811115612d6d57612d6d6142f9565b612d7684610e94565b6008811115612d8757612d876142f9565b149392505050565b5f612d98612ca0565b6001600160a01b0385165f90815260208290526040812060088101549293509160ff1690816008811115612dce57612dce6142f9565b1480612dea57505f856008811115612de857612de86142f9565b145b80612e165750846008811115612e0257612e026142f9565b816008811115612e1457612e146142f9565b145b15612e2357505050505050565b826008015f826008811115612e3a57612e3a6142f9565b6008811115612e4b57612e4b6142f9565b81526020019081526020015f205f815480929190612e6890614ca7565b9190505550826008015f866008811115612e8457612e846142f9565b6008811115612e9557612e956142f9565b81526020019081526020015f205f815480929190612eb290614cbc565b9091555060019050816008811115612ecc57612ecc6142f9565b148015612eeb57506001856008811115612ee857612ee86142f9565b14155b15612f1157612efd6003840187613d50565b50612f0b6001840187613d9d565b50612f66565b6001816008811115612f2557612f256142f9565b14158015612f4457506001856008811115612f4257612f426142f9565b145b15612f6657612f566001840187613d50565b50612f646003840187613d9d565b505b84826008015f6101000a81548160ff02191690836008811115612f8b57612f8b6142f9565b021790555060038201849055846008811115612fa957612fa96142f9565b816008811115612fbb57612fbb6142f9565b6040516001600160a01b038916907fcfb25346bbf2c2f19e20af8b4b4d54cbc6c83057934c1f28539760e8f8065dee905f90a4505050505050565b60605f612cd883613dd7565b336002600160a01b03146121a6576040516354d325c360e01b815260040160405180910390fd5b6130366201518043614ce8565b156121a657604051632312acbd60e01b815260040160405180910390fd5b5f610e8f6201518043614cfb565b5f61306b612ca0565b6001600160a01b039092165f908152602092909252506040902090565b5f613091612ca0565b905060016001600160a01b0383165f90815260208390526040902060089081015460ff16908111156130c5576130c56142f9565b146130e35760405163baf3f0f760e01b815260040160405180910390fd5b6130f06003820183613d50565b5060015f908152600882016020526040812080549161310e83614ca7565b90915550506001600160a01b0382165f90815260208290526040812080546001600160a01b03199081168255600182018054821690556002820180549091169055600381018290556004810182905590600582018161316d8282614264565b61317a600183015f614264565b5061318a9050600783015f614264565b50600801805460ff191690556040516001600160a01b038316907f1629bfc36423a1b4749d3fe1d6970b9d32d42bbee47dd5540670696ab6b9a4ad905f90a25050565b611214612d00565b7f4910fdfa16fed3260ed0e7147f7cc6da11a60208b5b9406d12a635614ffd91435460ff161561320d5761320883613e30565b505050565b826001600160a01b03166352d1902d6040518163ffffffff1660e01b8152600401602060405180830381865afa925050508015613267575060408051601f3d908101601f1916820190925261326491810190614d0e565b60015b6132ca5760405162461bcd60e51b815260206004820152602e60248201527f45524331393637557067726164653a206e657720696d706c656d656e7461746960448201526d6f6e206973206e6f74205555505360901b6064820152608401611179565b5f805160206151be83398151915281146133385760405162461bcd60e51b815260206004820152602960248201527f45524331393637557067726164653a20756e737570706f727465642070726f786044820152681a58589b195555525160ba1b6064820152608401611179565b50613208838383613ecb565b6001600160a01b038416158061336157506001600160a01b038316155b8061337357506001600160a01b038216155b156133915760405163b4fa3fb360e01b815260040160405180910390fd5b826001600160a01b0316846001600160a01b031614806133c25750816001600160a01b0316836001600160a01b0316145b806133de5750816001600160a01b0316846001600160a01b0316145b156133fc5760405163b4fa3fb360e01b815260040160405180910390fd5b80515160301415806134145750806020015151606014155b156134325760405163b4fa3fb360e01b815260040160405180910390fd5b805180516020909101207fc980e59163ce244bb4bb6211f48c7b46f88a4f40943e84eb99bdc41e129bd2931480613492575060208082015180519101207f46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c21145b156134b05760405163b4fa3fb360e01b815260040160405180910390fd5b6001600160a01b0384165f9081526020869052604090205460ff16806134ed57506001600160a01b0383165f9081526020869052604090205460ff165b8061350f57506001600160a01b0382165f9081526020869052604090205460ff165b1561352d576040516316a163b960e11b815260040160405180910390fd5b506001600160a01b039283165f90815260209490945260408085208054600160ff19918216811790925593851686528186208054851682179055919093168452919092208054909216179055565b5f613584612ca0565b90505f6001600160a01b0384165f90815260208390526040902060089081015460ff16908111156135b7576135b76142f9565b146135d55760405163731918fb60e11b815260040160405180910390fd5b5f816007015f81546135e690614cbc565b91829055506001600160a01b038086165f9081526020858152604091829020875181549085166001600160a01b0319918216178255918801516001820180549186169184169190911790559187015160028301805491909416911617909155606085015160038201556080850151600482015560a085015180519293508592600583019081906136769082614d84565b506020820151600182019061368b9082614d84565b50505060c082015160078201906136a29082614d84565b5060e0820151816008015f6101000a81548160ff021916908360088111156136cc576136cc6142f9565b021790555050506001600160a01b0384165f9081526020839052604090206004018190556136fd6003830185613d9d565b5060015f908152600883016020526040812080549161371b83614cbc565b9190505550836001600160a01b03167fe410d169249157b2af8ca2d602f2bdd8721034902d3228d318aaba02cacbac6b8260405161375b91815260200190565b60405180910390a250505050565b8483811415806137795750808214155b156137975760405163b4fa3fb360e01b815260040160405180910390fd5b5f5b8181101561131e576138108888838181106137b6576137b6614a8a565b90506020020160208101906137cb91906143b4565b8787848181106137dd576137dd614a8a565b90506020020160208101906137f291906143db565b86868581811061380457613804614a8a565b90506020020135612d8f565b600101613799565b5f6138266201518043614ce8565b15919050565b5f54610100900460ff166138525760405162461bcd60e51b815260040161117990614e3e565b6121a6613eef565b603380546001600160a01b038381166001600160a01b0319831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0905f90a35050565b5f6138b4612ca0565b9050835f5b81811015613b75575f835f8989858181106138d6576138d6614a8a565b90506020020160208101906138eb91906143b4565b6001600160a01b0316815260208101919091526040015f2060089081015460ff169081111561391c5761391c6142f9565b1461393a5760405163731918fb60e11b815260040160405180910390fd5b5f836007015f815461394b90614cbc565b9182905550905085858381811061396457613964614a8a565b90506020028101906139769190614c1f565b845f8a8a8681811061398a5761398a614a8a565b905060200201602081019061399f91906143b4565b6001600160a01b0316815260208101919091526040015f206139c182826150bd565b50819050845f8a8a868181106139d9576139d9614a8a565b90506020020160208101906139ee91906143b4565b6001600160a01b03166001600160a01b031681526020019081526020015f20600401819055506006845f015f8a8a86818110613a2c57613a2c614a8a565b9050602002016020810190613a4191906143b4565b6001600160a01b03166001600160a01b031681526020019081526020015f206008015f6101000a81548160ff02191690836008811115613a8357613a836142f9565b02179055505f84818a8a86818110613a9d57613a9d614a8a565b9050602002016020810190613ab291906143b4565b6001600160a01b0316815260208101919091526040015f2060030155613b02888884818110613ae357613ae3614a8a565b9050602002016020810190613af891906143b4565b6001860190613d9d565b50878783818110613b1557613b15614a8a565b9050602002016020810190613b2a91906143b4565b6001600160a01b03167fe410d169249157b2af8ca2d602f2bdd8721034902d3228d318aaba02cacbac6b82604051613b6491815260200190565b60405180910390a2506001016138b9565b5060065f90815260088301602052604081208054839290613b97908490614a77565b9091555050505050505050565b5f80613baf8361177b565b90505f816001600160a01b031663630b11466040518163ffffffff1660e01b8152600401602060405180830381865afa158015613bee573d5f803e3d5ffd5b505050506040513d601f19601f82011682018060405250810190613c129190614d0e565b826001600160a01b0316634cf088d96040518163ffffffff1660e01b8152600401602060405180830381865afa158015613c4e573d5f803e3d5ffd5b505050506040513d601f19601f82011682018060405250810190613c729190614d0e565b613c7c9190615169565b6a0422ca8b0a00a4250000001115949350505050565b5f6002821015613ca357505f919050565b5f6002613caf84613f1e565b613cb99190614cfb565b905060018110613cc95780612cd8565b60019392505050565b5f815f03613ce157505f919050565b5f613ceb83613f1e565b613cf690600261517c565b613d01906001614a77565b90505f613d0d84613c92565b613d1890600261517c565b613d229085615169565b90505f818311613d325781613d34565b825b905060018110613d445780613d47565b60015b95945050505050565b5f612cd8836001600160a01b038416613f44565b5f613d6e82610ec1565b90508015801590613d7f5750804210155b156116c65760405163b48d5fc760e01b815260040160405180910390fd5b5f612cd8836001600160a01b038416614027565b5f825f018281548110613dc657613dc6614a8a565b905f5260205f200154905092915050565b6060815f01805480602002602001604051908101604052809291908181526020018280548015613e2457602002820191905f5260205f20905b815481526020019060010190808311613e10575b50505050509050919050565b6001600160a01b0381163b613e9d5760405162461bcd60e51b815260206004820152602d60248201527f455243313936373a206e657720696d706c656d656e746174696f6e206973206e60448201526c1bdd08184818dbdb9d1c9858dd609a1b6064820152608401611179565b5f805160206151be83398151915280546001600160a01b0319166001600160a01b0392909216919091179055565b613ed483614073565b5f82511180613ee05750805b156132085761112b83836140b2565b5f54610100900460ff16613f155760405162461bcd60e51b815260040161117990614e3e565b6121a63361385a565b5f815f03613f2d57505f919050565b6003613f3a600184615169565b61143e9190614cfb565b5f818152600183016020526040812054801561401e575f613f66600183615169565b85549091505f90613f7990600190615169565b9050818114613fd8575f865f018281548110613f9757613f97614a8a565b905f5260205f200154905080875f018481548110613fb757613fb7614a8a565b5f918252602080832090910192909255918252600188019052604090208390555b8554869080613fe957613fe9615193565b600190038181905f5260205f20015f90559055856001015f8681526020019081526020015f205f90556001935050505061143e565b5f91505061143e565b5f81815260018301602052604081205461406c57508154600181810184555f84815260208082209093018490558454848252828601909352604090209190915561143e565b505f61143e565b61407c81613e30565b6040516001600160a01b038216907fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b905f90a250565b6060612cd883836040518060600160405280602781526020016151de6027913960605f80856001600160a01b0316856040516140ee91906151a7565b5f60405180830381855af49150503d805f8114614126576040519150601f19603f3d011682016040523d82523d5f602084013e61412b565b606091505b509150915061413c86838387614146565b9695505050505050565b606083156141b45782515f036141ad576001600160a01b0385163b6141ad5760405162461bcd60e51b815260206004820152601d60248201527f416464726573733a2063616c6c20746f206e6f6e2d636f6e74726163740000006044820152606401611179565b50816141be565b6141be83836141c6565b949350505050565b8151156141d65781518083602001fd5b8060405162461bcd60e51b81526004016111799190614807565b6040518061010001604052805f6001600160a01b031681526020015f6001600160a01b031681526020015f6001600160a01b031681526020015f81526020015f8152602001614252604051806040016040528060608152602001606081525090565b8152606060208201526040015f905290565b50805461427090614c6f565b5f825580601f1061427f575050565b601f0160209004905f5260205f209081019061121491905b808211156142aa575f8155600101614297565b5090565b6001600160a01b0381168114611214575f80fd5b5f80604083850312156142d3575f80fd5b82356142de816142ae565b915060208301356142ee816142ae565b809150509250929050565b634e487b7160e01b5f52602160045260245ffd5b6009811061432957634e487b7160e01b5f52602160045260245ffd5b9052565b602080825282518282018190525f919060409081850190868401855b828110156143a757815180516001600160a01b0390811686528782015181168887015286820151168686015260608082015190860152608090810151906143928187018361430d565b505060a0939093019290850190600101614349565b5091979650505050505050565b5f602082840312156143c4575f80fd5b8135612cd8816142ae565b60098110611214575f80fd5b5f602082840312156143eb575f80fd5b8135612cd8816143cf565b5f815180845260208085019450602084015f5b8381101561442e5781516001600160a01b031687529582019590820190600101614409565b509495945050505050565b602081525f612cd860208301846143f6565b6020810161143e828461430d565b5f8083601f840112614469575f80fd5b5081356001600160401b0381111561447f575f80fd5b6020830191508360208260051b8501011115614499575f80fd5b9250929050565b5f805f80604085870312156144b3575f80fd5b84356001600160401b03808211156144c9575f80fd5b6144d588838901614459565b909650945060208701359150808211156144ed575f80fd5b506144fa87828801614459565b95989497509550505050565b5f60208284031215614516575f80fd5b5035919050565b634e487b7160e01b5f52604160045260245ffd5b5f6001600160401b038084111561454a5761454a61451d565b604051601f8501601f19908116603f011681019082821181831017156145725761457261451d565b8160405280935085815286868601111561458a575f80fd5b858560208301375f602087830101525050509392505050565b5f82601f8301126145b2575f80fd5b612cd883833560208501614531565b5f604082840312156145d1575f80fd5b604051604081016001600160401b0382821081831117156145f4576145f461451d565b81604052829350843591508082111561460b575f80fd5b614617868387016145a3565b8352602085013591508082111561462c575f80fd5b50614639858286016145a3565b6020830152505092915050565b5f805f805f8060c0878903121561465b575f80fd5b8635614666816142ae565b95506020870135614676816142ae565b94506040870135614686816142ae565b93506060870135614696816142ae565b925060808701356001600160401b03808211156146b1575f80fd5b6146bd8a838b016145c1565b935060a08901359150808211156146d2575f80fd5b508701601f810189136146e3575f80fd5b6146f289823560208401614531565b9150509295509295509295565b5f805f805f8060608789031215614714575f80fd5b86356001600160401b038082111561472a575f80fd5b6147368a838b01614459565b9098509650602089013591508082111561474e575f80fd5b61475a8a838b01614459565b90965094506040890135915080821115614772575f80fd5b5061477f89828a01614459565b979a9699509497509295939492505050565b5f805f805f8060c087890312156147a6575f80fd5b86356147b1816142ae565b9860208801359850604088013597606081013597506080810135965060a00135945092505050565b5f81518084528060208401602086015e5f602082860101526020601f19601f83011685010191505092915050565b602081525f612cd860208301846147d9565b5f806040838503121561482a575f80fd5b8235614835816142ae565b915060208301356001600160401b0381111561484f575f80fd5b61485b858286016145a3565b9150509250929050565b5f81516040845261487960408501826147d9565b905060208301518482036020860152613d4782826147d9565b5f61010060018060a01b0380845116855280602085015116602086015280604085015116604086015250606083015160608501526080830151608085015260a08301518160a08601526148e782860182614865565b91505060c083015184820360c086015261490182826147d9565b91505060e083015161491660e086018261430d565b509392505050565b602081525f612cd86020830184614892565b604081525f61494260408301856143f6565b6020838203818501528185518084528284019150828160051b8501018388015f5b8381101561499157601f1987840301855261497f838351614865565b94860194925090850190600101614963565b50909998505050505050505050565b5f80604083850312156149b1575f80fd5b8235915060208301356142ee816142ae565b5f80602083850312156149d4575f80fd5b82356001600160401b038111156149e9575f80fd5b6149f585828601614459565b90969095509350505050565b5f60208083016020845280855180835260408601915060408160051b8701019250602087015f5b82811015614a5657603f19888603018452614a44858351614892565b94509285019290850190600101614a28565b5092979650505050505050565b634e487b7160e01b5f52601160045260245ffd5b8082018082111561143e5761143e614a63565b634e487b7160e01b5f52603260045260245ffd5b8183525f60208085019450825f5b8581101561442e578135614abf816142ae565b6001600160a01b031687529582019590820190600101614aac565b604081525f614aed604083018688614a9e565b82810360208401528381526001600160fb1b03841115614b0b575f80fd5b8360051b80866020840137016020019695505050505050565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b19195b1959d85d1958d85b1b60a21b606082015260800190565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b6163746976652070726f787960a01b606082015260800190565b604081525f614bcf604083018688614a9e565b828103602084810191909152848252859181015f5b86811015614c12578335614bf7816143cf565b614c01838261430d565b509282019290820190600101614be4565b5098975050505050505050565b5f823560fe19833603018112614c33575f80fd5b9190910192915050565b5f8235603e19833603018112614c33575f80fd5b5f61143e36836145c1565b602081525f6141be602083018486614a9e565b600181811c90821680614c8357607f821691505b602082108103614ca157634e487b7160e01b5f52602260045260245ffd5b50919050565b5f81614cb557614cb5614a63565b505f190190565b5f60018201614ccd57614ccd614a63565b5060010190565b634e487b7160e01b5f52601260045260245ffd5b5f82614cf657614cf6614cd4565b500690565b5f82614d0957614d09614cd4565b500490565b5f60208284031215614d1e575f80fd5b5051919050565b601f82111561320857805f5260205f20601f840160051c81016020851015614d4a5750805b601f840160051c820191505b81811015614d69575f8155600101614d56565b5050505050565b5f19600383901b1c191660019190911b1790565b81516001600160401b03811115614d9d57614d9d61451d565b614db181614dab8454614c6f565b84614d25565b602080601f831160018114614ddf575f8415614dcd5750858301515b614dd78582614d70565b865550614e36565b5f85815260208120601f198616915b82811015614e0d57888601518255948401946001909101908401614dee565b5085821015614e2a57878501515f19600388901b60f8161c191681555b505060018460011b0185555b505050505050565b6020808252602b908201527f496e697469616c697a61626c653a20636f6e7472616374206973206e6f74206960408201526a6e697469616c697a696e6760a81b606082015260800190565b5f813561143e816142ae565b80546001600160a01b0319166001600160a01b0392909216919091179055565b5f808335601e19843603018112614eca575f80fd5b8301803591506001600160401b03821115614ee3575f80fd5b602001915036819003821315614499575f80fd5b6001600160401b03831115614f0e57614f0e61451d565b614f2283614f1c8354614c6f565b83614d25565b5f601f841160018114614f4e575f8515614f3c5750838201355b614f468682614d70565b845550614d69565b5f83815260208120601f198716915b82811015614f7d5786850135825560209485019460019092019101614f5d565b5086821015614f99575f1960f88860031b161c19848701351681555b505060018560011b0183555050505050565b614fb58283614eb5565b6001600160401b03811115614fcc57614fcc61451d565b614fe081614fda8554614c6f565b85614d25565b5f601f82116001811461500c575f8315614ffa5750838201355b6150048482614d70565b865550615063565b5f85815260208120601f198516915b8281101561503b578685013582556020948501946001909201910161501b565b5084821015615057575f1960f88660031b161c19848701351681555b505060018360011b0185555b505050506150746020830183614eb5565b61112b818360018601614ef7565b5f813561143e816143cf565b600982106150aa57634e487b7160e01b5f52602160045260245ffd5b60ff1981541660ff831681178255505050565b81356150c8816142ae565b6150d28183614e95565b5060208201356150e1816142ae565b6150ee8160018401614e95565b506151076150fe60408401614e89565b60028301614e95565b606082013560038201556080820135600482015561513461512b60a0840184614c3d565b60058301614fab565b61514160c0830183614eb5565b61514f818360078601614ef7565b50506116c661516060e08401615082565b6008830161508e565b8181038181111561143e5761143e614a63565b808202811582820484141761143e5761143e614a63565b634e487b7160e01b5f52603160045260245ffd5b5f82518060208501845e5f92019182525091905056fe360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc416464726573733a206c6f772d6c6576656c2064656c65676174652063616c6c206661696c6564a2646970667358221220f87e0e649c758775e2f7df8be94effc45d26d994a9ef2d3c14c675eede26f11664736f6c63430008190033`
+const AddressBookV2BinRuntime = `608060405260043610610366575f3560e01c806376671808116101c85780639d0e234d116100fd578063cb1c2b5c1161009d578063e70c38f11161006d578063e70c38f114610a18578063ef6bdade14610a2c578063f2fde38b14610a4b578063ffa1ad7414610a6a575f80fd5b8063cb1c2b5c146109a6578063d9abb38b146109c4578063de244059146109e3578063e59d7a84146109f9575f80fd5b8063b42652e9116100d8578063b42652e91461092a578063b9f96f4014610949578063c3c5a54714610968578063c9a86af214610987575f80fd5b80639d0e234d146108cd5780639d8cf08f146108ec578063a41b60001461090b575f80fd5b80637e134fc61161016857806387b7b8fd1161014357806387b7b8fd146108565780638beeb439146108705780638da5cb5b1461089c57806394a64d98146108b9575f80fd5b80637e134fc61461080457806380f2ff25146108235780638129fc1c14610842575f80fd5b806378b84a5c116101a357806378b84a5c14610793578063793c1946146107b25780637d7b127f146107d15780637df40c62146107e5575f80fd5b80637667180814610741578063767142821461075557806376a67a5114610774575f80fd5b80633d5840631161029e5780635300f9b41161023e578063656f586911610219578063656f5869146106d85780636968b53f146106f75780636b75b7a814610719578063715018a61461072d575f80fd5b80635300f9b41461066e5780635334cf441461068d578063582115fb146106ac575f80fd5b806345ce81101161027957806345ce8110146105d55780634b6a94cc146106045780634f1ef2861461064757806352d1902d1461065a575f80fd5b80633d584063146105605780634429d7201461059757806345527e44146105b6575f80fd5b806325cf0943116103095780632c1d4895116102e45780632c1d4895146104ef5780632d4ede931461050e5780633659cfe61461052d5780633aea9faf1461054c575f80fd5b806325cf094314610473578063277f3dc3146104b157806327f94c3d146104d0575f80fd5b8063171a6cdc11610344578063171a6cdc146103da5780631b1a478b146103f95780631ba3fd5814610426578063229bb82314610447575f80fd5b806303e6689d1461036a57806307ecec3e146103985780630b1fe784146103b9575b5f80fd5b348015610375575f80fd5b5061037e610a7e565b604080519283526020830191909152015b60405180910390f35b3480156103a3575f80fd5b506103b76103b2366004614409565b610a9e565b005b3480156103c4575f80fd5b506103cd610b3b565b60405161038f9190614474565b3480156103e5575f80fd5b506103b76103f43660046144fb565b610d7c565b348015610404575f80fd5b50610418610413366004614522565b610df1565b60405190815260200161038f565b348015610431575f80fd5b5061043a610e36565b60405161038f9190614580565b348015610452575f80fd5b506104666104613660046144fb565b610e50565b60405161038f9190614592565b34801561047e575f80fd5b50610487610e7d565b604080516001600160a01b039485168152928416602084015292169181019190915260600161038f565b3480156104bc575f80fd5b506104186104cb3660046144fb565b610eb2565b3480156104db575f80fd5b506103b76104ea3660046145e7565b610edc565b3480156104fa575f80fd5b506103b761050936600461464d565b610fe8565b348015610519575f80fd5b506103b76105283660046144fb565b611067565b348015610538575f80fd5b506103b76105473660046144fb565b61110c565b348015610557575f80fd5b506104186111f2565b34801561056b575f80fd5b5061057f61057a3660046144fb565b611204565b6040516001600160a01b03909116815260200161038f565b3480156105a2575f80fd5b506103b76105b136600461478e565b61122f565b3480156105c1575f80fd5b506103b76105d0366004614883565b61130f565b3480156105e0575f80fd5b506105f46105ef3660046144fb565b61140f565b604051901515815260200161038f565b34801561060f575f80fd5b5061063a6040518060400160405280600b81526020016a41646472657373426f6f6b60a81b81525081565b60405161038f9190614943565b6103b7610655366004614955565b61142b565b348015610665575f80fd5b506104186114fa565b348015610679575f80fd5b5061057f6106883660046144fb565b6115ab565b348015610698575f80fd5b506105f46106a73660046144fb565b6115d9565b3480156106b7575f80fd5b506106cb6106c63660046144fb565b6115ef565b60405161038f9190614a95565b3480156106e3575f80fd5b506103b76106f23660046144fb565b6118b6565b348015610702575f80fd5b5061070b611922565b60405161038f929190614aa7565b348015610724575f80fd5b50610418611d95565b348015610738575f80fd5b506103b7611da9565b34801561074c575f80fd5b50610418611dbc565b348015610760575f80fd5b506103b761076f36600461464d565b611dc5565b34801561077f575f80fd5b506103b761078e3660046144fb565b611e3b565b34801561079e575f80fd5b506103b76107ad3660046144fb565b611f01565b3480156107bd575f80fd5b506103b76107cc3660046144fb565b611f75565b3480156107dc575f80fd5b50610418611fbc565b3480156107f0575f80fd5b506103b76107ff3660046144fb565b611fce565b34801561080f575f80fd5b506103b761081e36600461464d565b612066565b34801561082e575f80fd5b5061041861083d366004614b17565b6120dc565b34801561084d575f80fd5b506103b761210e565b348015610861575f80fd5b5061057f6002600160a01b0381565b34801561087b575f80fd5b5061088f61088a366004614b3a565b61253e565b60405161038f9190614b78565b3480156108a7575f80fd5b506033546001600160a01b031661057f565b3480156108c4575f80fd5b50610418612863565b3480156108d8575f80fd5b506103b76108e736600461464d565b612877565b3480156108f7575f80fd5b506103b76109063660046144fb565b6128ed565b348015610916575f80fd5b506103b76109253660046144fb565b612985565b348015610935575f80fd5b506103b76109443660046144fb565b6129f9565b348015610954575f80fd5b506103b76109633660046144fb565b612b02565b348015610973575f80fd5b506105f46109823660046144fb565b612b40565b348015610992575f80fd5b506103b76109a13660046144fb565b612b6d565b3480156109b1575f80fd5b506104186a0422ca8b0a00a42500000081565b3480156109cf575f80fd5b506103b76109de3660046144fb565b612c05565b3480156109ee575f80fd5b506104186201518081565b348015610a04575f80fd5b506103b7610a1336600461464d565b612c46565b348015610a23575f80fd5b5061037e612cbc565b348015610a37575f80fd5b506103b7610a463660046144fb565b612cdc565b348015610a56575f80fd5b506103b7610a653660046144fb565b612ddb565b348015610a75575f80fd5b50610418600281565b5f805f610a89612e51565b905080600e015481600f015492509250509091565b81610aa881612e75565b6001600160a01b038216610acf5760405163b4fa3fb360e01b815260040160405180910390fd5b5f610ad8612e51565b6001600160a01b038086165f8181526020849052604080822080548986166001600160a01b03198216811790925591519596509316938492917f8df26d30992ecfde135bbe59c1f267d82e2aae9d32fdae41551a38fe8b7bda8791a45050505050565b60605f610b46612e51565b90505f610b5582600101612eb8565b90505f610b6483600301612eb8565b9050610b708183614bee565b6001600160401b03811115610b8757610b87614664565b604051908082528060200260200182016040528015610be657816020015b610bd36040805160a0810182525f808252602082018190529181018290526060810182905290608082015290565b815260200190600190039081610ba55790505b5093505f805b83811015610cad575f610c026001870183612ec1565b9050610c116005870182612ed3565b610ca4576001600160a01b038082165f8181526020898152604091829020825160a0810184529384526001810154851691840191909152600281015490931690820152600482015460608201526009820154608082019060ff166008811115610c7c57610c7c614440565b815250888581518110610c9157610c91614c01565b6020026020010181905250836001019350505b50600101610bec565b505f5b82811015610d71575f610cc66003870183612ec1565b9050610cd56005870182612ed3565b610d68576001600160a01b038082165f8181526020898152604091829020825160a0810184529384526001810154851691840191909152600281015490931690820152600482015460608201526009820154608082019060ff166008811115610d4057610d40614440565b815250888581518110610d5557610d55614c01565b6020026020010181905250836001019350505b50600101610cb0565b508085525050505090565b80610d8681612e75565b610d91826002612ef4565b610dae5760405163baf3f0f760e01b815260040160405180910390fd5b610dba8260015f612f29565b6040516001600160a01b038316907fbaea727dfffa01fdb952c2b313510033b0a631d0cc04c818a313b75060683e5a905f90a25050565b5f610dfa612e51565b6008015f836008811115610e1057610e10614440565b6008811115610e2157610e21614440565b81526020019081526020015f20549050919050565b6060610e4b610e43612e51565b60050161318c565b905090565b5f610e59612e51565b6001600160a01b039092165f90815260209290925250604090206009015460ff1690565b5f805f80610e89612e51565b601181015460128201546013909201546001600160a01b03918216979282169650169350915050565b5f610ebb612e51565b6001600160a01b039092165f90815260209290925250604090206004015490565b610ee4613198565b610eec6131bf565b828114610f0c5760405163b4fa3fb360e01b815260040160405180910390fd5b5f610f15612e51565b90505f610f206131ea565b90505f5b85811015610fa157848482818110610f3e57610f3e614c01565b9050602002013583600a015f8481526020019081526020015f205f898985818110610f6b57610f6b614c01565b9050602002016020810190610f8091906144fb565b6001600160a01b0316815260208101919091526040015f2055600101610f24565b50807f3ed42d8976ef09fbee43ae76e0be2ed8e9af501530fd0155d90beeb551c1b30187878787604051610fd89493929190614c51565b60405180910390a2505050505050565b610ff06131f8565b805f036110105760405163b4fa3fb360e01b815260040160405180910390fd5b5f611019612e51565b600b8101805490849055604080518281526020810186905292935090917f350feb2acced9171b9d250e5771e5ecd6940594484b98efc4fc7daddcaa42f2a91015b60405180910390a1505050565b8061107181612e75565b61107c826001612ef4565b6110995760405163baf3f0f760e01b815260040160405180910390fd5b5f6110a2612e51565b90505f6110ae84613252565b600181015460028201546001600160a01b038088165f908152600987016020526040808220805460ff199081169091559483168252808220805486169055919092168252902080549091169055905061110684613278565b50505050565b6001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016300361115d5760405162461bcd60e51b815260040161115490614c9b565b60405180910390fd5b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166111a55f805160206153c4833981519152546001600160a01b031690565b6001600160a01b0316146111cb5760405162461bcd60e51b815260040161115490614ce7565b6111d4816133c6565b604080515f808252602082019092526111ef918391906133ce565b50565b5f6111fb612e51565b600b0154905090565b5f61120d612e51565b6001600160a01b039283165f9081526020919091526040902054909116919050565b5f61123987610e50565b600881111561124a5761124a614440565b146112685760405163731918fb60e11b815260040160405180910390fd5b5f611271612e51565b9050611283816009018888888761353d565b5f604051806101200160405280336001600160a01b03168152602001886001600160a01b03168152602001876001600160a01b03168152602001866001600160a01b031681526020015f81526020015f8152602001858152602001848152602001600160088111156112f7576112f7614440565b905290506113058882613774565b5050505050505050565b611317613198565b8483811415806113275750808214155b156113455760405163b4fa3fb360e01b815260040160405180910390fd5b801561135957611359878787878787613925565b6113616139a7565b156113c9575f6113716007610df1565b61137b6006610df1565b6113859190614bee565b905080611390612e51565b601001556040518181527fd45be950fd3aceb65c6059b131cc8e06ab2390da6780d464b82c153e848160529060200160405180910390a1505b7fab95e7867bd336dde387ba31a71307c75dcc78b0344b873a5e993eb4470eb37e878787876040516113fe9493929190614d33565b60405180910390a150505050505050565b5f6114258261141c612e51565b60030190612ed3565b92915050565b6001600160a01b037f00000000000000000000000000000000000000000000000000000000000000001630036114735760405162461bcd60e51b815260040161115490614c9b565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03166114bb5f805160206153c4833981519152546001600160a01b031690565b6001600160a01b0316146114e15760405162461bcd60e51b815260040161115490614ce7565b6114ea826133c6565b6114f6828260016133ce565b5050565b5f306001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016146115995760405162461bcd60e51b815260206004820152603860248201527f555550535570677261646561626c653a206d757374206e6f742062652063616c60448201527f6c6564207468726f7567682064656c656761746563616c6c00000000000000006064820152608401611154565b505f805160206153c483398151915290565b5f6115b4612e51565b6001600160a01b039283165f9081526020919091526040902060010154909116919050565b5f611425826115e6612e51565b60010190612ed3565b6115f7614328565b5f611600612e51565b90505f6001600160a01b0384165f9081526020839052604090206009015460ff16600881111561163257611632614440565b0361165057604051634825e09360e01b815260040160405180910390fd5b6001600160a01b038084165f9081526020838152604091829020825161012081018452815485168152600182015485169281019290925260028101548416828401526003810154909316606082015260048301546080820152600583015460a0820152815180830190925260068301805491939260c0850192909190829082906116d990614d96565b80601f016020809104026020016040519081016040528092919081815260200182805461170590614d96565b80156117505780601f1061172757610100808354040283529160200191611750565b820191905f5260205f20905b81548152906001019060200180831161173357829003601f168201915b5050505050815260200160018201805461176990614d96565b80601f016020809104026020016040519081016040528092919081815260200182805461179590614d96565b80156117e05780601f106117b7576101008083540402835291602001916117e0565b820191905f5260205f20905b8154815290600101906020018083116117c357829003601f168201915b50505050508152505081526020016008820180546117fd90614d96565b80601f016020809104026020016040519081016040528092919081815260200182805461182990614d96565b80156118745780601f1061184b57610100808354040283529160200191611874565b820191905f5260205f20905b81548152906001019060200180831161185757829003601f168201915b5050509183525050600982015460209091019060ff16600881111561189b5761189b614440565b60088111156118ac576118ac614440565b9052509392505050565b806118c081612e75565b6118cb826004612ef4565b6118e85760405163baf3f0f760e01b815260040160405180910390fd5b6118f1826139bb565b61190e5760405163bf74735560e01b815260040160405180910390fd5b6114f682600561191d85610eb2565b612f29565b6060805f61192e612e51565b90505f61193d82600101612eb8565b90505f61194c83600301612eb8565b90506119588183614bee565b6001600160401b0381111561196f5761196f614664565b604051908082528060200260200182016040528015611998578160200160208202803683370190505b5094506119a58183614bee565b6001600160401b038111156119bc576119bc614664565b604051908082528060200260200182016040528015611a0157816020015b60408051808201909152606080825260208201528152602001906001900390816119da5790505b5093505f805b83811015611bc5575f611a1d6001870183612ec1565b9050611a2c6005870182612ed3565b611bbc5780888481518110611a4357611a43614c01565b6001600160a01b039283166020918202929092018101919091529082165f908152908790526040908190208151808301909252600601805482908290611a8890614d96565b80601f0160208091040260200160405190810160405280929190818152602001828054611ab490614d96565b8015611aff5780601f10611ad657610100808354040283529160200191611aff565b820191905f5260205f20905b815481529060010190602001808311611ae257829003601f168201915b50505050508152602001600182018054611b1890614d96565b80601f0160208091040260200160405190810160405280929190818152602001828054611b4490614d96565b8015611b8f5780601f10611b6657610100808354040283529160200191611b8f565b820191905f5260205f20905b815481529060010190602001808311611b7257829003601f168201915b505050505081525050878481518110611baa57611baa614c01565b60200260200101819052508260010192505b50600101611a07565b505f5b82811015611d86575f611bde6003870183612ec1565b9050611bed6005870182612ed3565b611d7d5780888481518110611c0457611c04614c01565b6001600160a01b039283166020918202929092018101919091529082165f908152908790526040908190208151808301909252600601805482908290611c4990614d96565b80601f0160208091040260200160405190810160405280929190818152602001828054611c7590614d96565b8015611cc05780601f10611c9757610100808354040283529160200191611cc0565b820191905f5260205f20905b815481529060010190602001808311611ca357829003601f168201915b50505050508152602001600182018054611cd990614d96565b80601f0160208091040260200160405190810160405280929190818152602001828054611d0590614d96565b8015611d505780601f10611d2757610100808354040283529160200191611d50565b820191905f5260205f20905b815481529060010190602001808311611d3357829003601f168201915b505050505081525050878481518110611d6b57611d6b614c01565b60200260200101819052508260010192505b50600101611bc8565b50808652808552505050509091565b5f610e4b611da1612e51565b600101612eb8565b611db16131f8565b611dba5f613aa9565b565b5f610e4b6131ea565b611dcd6131f8565b805f03611ded5760405163b4fa3fb360e01b815260040160405180910390fd5b5f611df6612e51565b600f8101805490849055604080518281526020810186905292935090917f6b4e484c27a9904fed5187e90d13d161869e9801b709cc3077f8222bef0030a1910161105a565b80611e4581612e75565b611e50826006612ef4565b611e6d5760405163baf3f0f760e01b815260040160405180910390fd5b5f611e76612e51565b9050611e858160100154613afa565b611e8f6007610df1565b10611ead5760405163848084dd60e01b815260040160405180910390fd5b611eba8160100154613b3a565b611ec46006610df1565b11611ee25760405163848084dd60e01b815260040160405180910390fd5b5f81600c015442611ef39190614bee565b905061110684600783612f29565b611f096131f8565b5f611f12612e51565b9050611f216005820183613bb8565b611f3e5760405163d33ff8c160e01b815260040160405180910390fd5b6040516001600160a01b038316907f814c4b6f6fc147ebb6fbe4ffcd3554d0309170fd0a70e66cc4e4c0784f4aa32e905f90a25050565b80611f7f81612e75565b611f8a826007612ef4565b611fa75760405163baf3f0f760e01b815260040160405180910390fd5b611fb082613bcc565b6114f68260065f612f29565b5f611fc5612e51565b60100154905090565b611fd66131f8565b6001600160a01b038116611ffd5760405163b4fa3fb360e01b815260040160405180910390fd5b5f612006612e51565b6012810180546001600160a01b031981166001600160a01b03868116918217909355604080519390921680845260208401919091529293507fc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c910161105a565b61206e6131f8565b805f0361208e5760405163b4fa3fb360e01b815260040160405180910390fd5b5f612097612e51565b600e8101805490849055604080518281526020810186905292935090917fa8fbc5c083100f8025c9c33578c3292432f17b77b633fb69fa7773ff60d46667910161105a565b5f6120e5612e51565b5f938452600a01602090815260408085206001600160a01b039490941685529290525090205490565b5f54610100900460ff161580801561212c57505f54600160ff909116105b806121455750303b15801561214557505f5460ff166001145b6121a85760405162461bcd60e51b815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201526d191e481a5b9a5d1a585b1a5e995960921b6064820152608401611154565b5f805460ff1916600117905580156121c9575f805461ff0019166101001790555b60405163e2693e3f60e01b815260206004820152601060248201526f10509d8c91185d1850dbdb9d1c9858dd60821b60448201525f906104019063e2693e3f90606401602060405180830381865afa158015612227573d5f803e3d5ffd5b505050506040513d601f19601f8201168201806040525081019061224b9190614dde565b90506001600160a01b0381166122745760405163aed5959560e01b815260040160405180910390fd5b5f816001600160a01b0316633bc5de306040518163ffffffff1660e01b81526004015f60405180830381865afa1580156122b0573d5f803e3d5ffd5b505050506040513d5f823e601f3d908101601f191682016040526122d79190810190615094565b90505f6122e2612e51565b90506122ec613c05565b81516122f790612ddb565b6020820151600b8201556040820151600c8201556060820151600d8201556080820151600e82015560a0820151600f82015560c08201516011820180546001600160a01b039283166001600160a01b03199182161790915560e0840151601284018054918416918316919091179055610100840151601384018054919093169116179055610120820151515f5b818110156124a2576001836009015f86610120015184815181106123aa576123aa614c01565b60200260200101516001600160a01b03166001600160a01b031681526020019081526020015f205f6101000a81548160ff0219169083151502179055506001836009015f866101400151848151811061240557612405614c01565b6020026020010151602001516001600160a01b03166001600160a01b031681526020019081526020015f205f6101000a81548160ff0219169083151502179055506001836009015f866101400151848151811061246457612464614c01565b6020908102919091018101516040908101516001600160a01b0316835290820192909252015f20805460ff1916911515919091179055600101612384565b506124b7836101200151846101400151613c33565b7f820f68b9d060f5d911b3243881ada086c3768ea90e97a10f7f5023d84b94d9528361012001516040516124eb9190614580565b60405180910390a15050505080156111ef575f805461ff0019169055604051600181527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a150565b60605f612549612e51565b905082806001600160401b0381111561256457612564614664565b60405190808252806020026020018201604052801561259d57816020015b61258a614328565b8152602001906001900390816125825790505b5092505f5b8181101561285a57825f8787848181106125be576125be614c01565b90506020020160208101906125d391906144fb565b6001600160a01b03908116825260208083019390935260409182015f20825161012081018452815483168152600182015483169481019490945260028101548216848401526003810154909116606084015260048101546080840152600581015460a08401528151808301909252600681018054919260c08501929091908290829061265e90614d96565b80601f016020809104026020016040519081016040528092919081815260200182805461268a90614d96565b80156126d55780601f106126ac576101008083540402835291602001916126d5565b820191905f5260205f20905b8154815290600101906020018083116126b857829003601f168201915b505050505081526020016001820180546126ee90614d96565b80601f016020809104026020016040519081016040528092919081815260200182805461271a90614d96565b80156127655780601f1061273c57610100808354040283529160200191612765565b820191905f5260205f20905b81548152906001019060200180831161274857829003601f168201915b505050505081525050815260200160088201805461278290614d96565b80601f01602080910402602001604051908101604052809291908181526020018280546127ae90614d96565b80156127f95780601f106127d0576101008083540402835291602001916127f9565b820191905f5260205f20905b8154815290600101906020018083116127dc57829003601f168201915b5050509183525050600982015460209091019060ff16600881111561282057612820614440565b600881111561283157612831614440565b8152505084828151811061284757612847614c01565b60209081029190910101526001016125a2565b50505092915050565b5f610e4b61286f612e51565b600301612eb8565b61287f6131f8565b805f0361289f5760405163b4fa3fb360e01b815260040160405180910390fd5b5f6128a8612e51565b600c8101805490849055604080518281526020810186905292935090917fbb7cd41bd6435b6f6da7e832527c2adf48fe9783423fecedb8c8c625acbc92d0910161105a565b6128f56131f8565b6001600160a01b03811661291c5760405163b4fa3fb360e01b815260040160405180910390fd5b5f612925612e51565b6011810180546001600160a01b031981166001600160a01b03868116918217909355604080519390921680845260208401919091529293507fdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c910161105a565b61298d6131f8565b5f612996612e51565b90506129a56005820183613ed5565b6129c257604051633ad2b1bb60e11b815260040160405180910390fd5b6040516001600160a01b038316907fb102f7913267c344ac15011acd7185602a74269c32e7783833f5311450fb43dd905f90a25050565b80612a0381612e75565b5f612a0d83610e50565b90506007816008811115612a2357612a23614440565b03612a3657612a3183613bcc565b612a68565b6006816008811115612a4a57612a4a614440565b14612a685760405163baf3f0f760e01b815260040160405180910390fd5b5f612a71612e51565b9050612a808160100154613afa565b612a8a6008610df1565b10612aa85760405163848084dd60e01b815260040160405180910390fd5b6006826008811115612abc57612abc614440565b03612af657612ace8160100154613b3a565b612ad86006610df1565b11612af65760405163848084dd60e01b815260040160405180910390fd5b6111068460085f612f29565b80612b0c81612e75565b612b17826004612ef4565b612b345760405163baf3f0f760e01b815260040160405180910390fd5b6114f68260015f612f29565b5f612b49612e51565b6001600160a01b039092165f90815260099290920160205250604090205460ff1690565b612b756131f8565b6001600160a01b038116612b9c5760405163b4fa3fb360e01b815260040160405180910390fd5b5f612ba5612e51565b6013810180546001600160a01b031981166001600160a01b03868116918217909355604080519390921680845260208401919091529293507f7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41910161105a565b80612c0f81612e75565b612c1a826005612ef4565b612c375760405163baf3f0f760e01b815260040160405180910390fd5b6114f682600461191d85610eb2565b612c4e6131f8565b805f03612c6e5760405163b4fa3fb360e01b815260040160405180910390fd5b5f612c77612e51565b600d8101805490849055604080518281526020810186905292935090917fe10ca6f253a2344c11c8e060dca53f2a3397c1f5c3b6314104a42b376c42d08f910161105a565b5f805f612cc7612e51565b905080600c015481600d015492509250509091565b80612ce681612e75565b612cf1826001612ef4565b612d0e5760405163baf3f0f760e01b815260040160405180910390fd5b612d17826139bb565b612d345760405163bf74735560e01b815260040160405180910390fd5b5f612d3d612e51565b905080600f0154612d4e6002610df1565b10612d6c5760405163848084dd60e01b815260040160405180910390fd5b80600e0154612d79611d95565b10612d975760405163848084dd60e01b815260040160405180910390fd5b612da38360025f612f29565b6040516001600160a01b038416907f759721961c23d02140d70249a00d7bbc893592166a3ef92468e7208cf41a45e3905f90a2505050565b612de36131f8565b6001600160a01b038116612e485760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401611154565b6111ef81613aa9565b7f1b0484cbd0fba815b5886ffd853c75e18f4b5720362abf431d1f348b59d4ff0090565b612e7d612e51565b6001600160a01b038281165f9081526020929092526040909120541633146111ef5760405163605919ad60e11b815260040160405180910390fd5b5f611425825490565b5f612ecc8383613ee9565b9392505050565b6001600160a01b0381165f9081526001830160205260408120541515612ecc565b5f816008811115612f0757612f07614440565b612f1084610e50565b6008811115612f2157612f21614440565b149392505050565b5f612f32612e51565b6001600160a01b0385165f90815260208290526040812060098101549293509160ff1690816008811115612f6857612f68614440565b1480612f8457505f856008811115612f8257612f82614440565b145b80612fb05750846008811115612f9c57612f9c614440565b816008811115612fae57612fae614440565b145b15612fbd57505050505050565b826008015f826008811115612fd457612fd4614440565b6008811115612fe557612fe5614440565b81526020019081526020015f205f8154809291906130029061519c565b9190505550826008015f86600881111561301e5761301e614440565b600881111561302f5761302f614440565b81526020019081526020015f205f81548092919061304c906151b1565b909155506001905081600881111561306657613066614440565b1480156130855750600185600881111561308257613082614440565b14155b156130ab576130976003840187613bb8565b506130a56001840187613ed5565b50613100565b60018160088111156130bf576130bf614440565b141580156130de575060018560088111156130dc576130dc614440565b145b15613100576130f06001840187613bb8565b506130fe6003840187613ed5565b505b60098201805486919060ff1916600183600881111561312157613121614440565b02179055506004820184905584600881111561313f5761313f614440565b81600881111561315157613151614440565b6040516001600160a01b038916907fcfb25346bbf2c2f19e20af8b4b4d54cbc6c83057934c1f28539760e8f8065dee905f90a4505050505050565b60605f612ecc83613f0f565b336002600160a01b0314611dba576040516354d325c360e01b815260040160405180910390fd5b6131cc62015180436151dd565b15611dba57604051632312acbd60e01b815260040160405180910390fd5b5f610e4b62015180436151f0565b6033546001600160a01b03163314611dba5760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e65726044820152606401611154565b5f61325b612e51565b6001600160a01b039092165f908152602092909252506040902090565b5f613281612e51565b905060016001600160a01b0383165f9081526020839052604090206009015460ff1660088111156132b4576132b4614440565b146132d25760405163baf3f0f760e01b815260040160405180910390fd5b6132df6003820183613bb8565b5060015f90815260088201602052604081208054916132fd8361519c565b90915550506001600160a01b0382165f90815260208290526040812080546001600160a01b0319908116825560018201805482169055600282018054821690556003820180549091169055600481018290556005810182905590600682018161336682826143ab565b613373600183015f6143ab565b506133839050600883015f6143ab565b50600901805460ff191690556040516001600160a01b038316907f1629bfc36423a1b4749d3fe1d6970b9d32d42bbee47dd5540670696ab6b9a4ad905f90a25050565b6111ef6131f8565b7f4910fdfa16fed3260ed0e7147f7cc6da11a60208b5b9406d12a635614ffd91435460ff16156134065761340183613f68565b505050565b826001600160a01b03166352d1902d6040518163ffffffff1660e01b8152600401602060405180830381865afa925050508015613460575060408051601f3d908101601f1916820190925261345d91810190615203565b60015b6134c35760405162461bcd60e51b815260206004820152602e60248201527f45524331393637557067726164653a206e657720696d706c656d656e7461746960448201526d6f6e206973206e6f74205555505360901b6064820152608401611154565b5f805160206153c483398151915281146135315760405162461bcd60e51b815260206004820152602960248201527f45524331393637557067726164653a20756e737570706f727465642070726f786044820152681a58589b195555525160ba1b6064820152608401611154565b50613401838383614003565b6001600160a01b038416158061355a57506001600160a01b038316155b8061356c57506001600160a01b038216155b1561358a5760405163b4fa3fb360e01b815260040160405180910390fd5b826001600160a01b0316846001600160a01b031614806135bb5750816001600160a01b0316836001600160a01b0316145b806135d75750816001600160a01b0316846001600160a01b0316145b156135f55760405163b4fa3fb360e01b815260040160405180910390fd5b805151603014158061360d5750806020015151606014155b1561362b5760405163b4fa3fb360e01b815260040160405180910390fd5b805180516020909101207fc980e59163ce244bb4bb6211f48c7b46f88a4f40943e84eb99bdc41e129bd293148061368b575060208082015180519101207f46700b4d40ac5c35af2c22dda2787a91eb567b06c924a8fb8ae9a05b20c08c21145b156136a95760405163b4fa3fb360e01b815260040160405180910390fd5b6001600160a01b0384165f9081526020869052604090205460ff16806136e657506001600160a01b0383165f9081526020869052604090205460ff165b8061370857506001600160a01b0382165f9081526020869052604090205460ff165b15613726576040516316a163b960e11b815260040160405180910390fd5b506001600160a01b039283165f90815260209490945260408085208054600160ff19918216811790925593851686528186208054851682179055919093168452919092208054909216179055565b5f61377d612e51565b90505f816007015f8154613790906151b1565b91829055506001600160a01b038086165f9081526020858152604091829020875181549085166001600160a01b031991821617825591880151600182018054918616918416919091179055918701516002830180549185169183169190911790556060870151600383018054919094169116179091556080850151600482015560a0850151600582015560c085015180519293508592600683019081906138379082615265565b506020820151600182019061384c9082615265565b50505060e082015160088201906138639082615265565b5061010082015160098201805460ff1916600183600881111561388857613888614440565b021790555050506001600160a01b0384165f9081526020839052604090206005018190556138b96003830185613ed5565b5060015f90815260088301602052604081208054916138d7836151b1565b9190505550836001600160a01b03167fe410d169249157b2af8ca2d602f2bdd8721034902d3228d318aaba02cacbac6b8260405161391791815260200190565b60405180910390a250505050565b845f5b818110156113055761399f88888381811061394557613945614c01565b905060200201602081019061395a91906144fb565b87878481811061396c5761396c614c01565b90506020020160208101906139819190614522565b86868581811061399357613993614c01565b90506020020135612f29565b600101613928565b5f6139b562015180436151dd565b15919050565b5f806139c6836115ab565b90505f816001600160a01b031663630b11466040518163ffffffff1660e01b8152600401602060405180830381865afa158015613a05573d5f803e3d5ffd5b505050506040513d601f19601f82011682018060405250810190613a299190615203565b826001600160a01b0316634cf088d96040518163ffffffff1660e01b8152600401602060405180830381865afa158015613a65573d5f803e3d5ffd5b505050506040513d601f19601f82011682018060405250810190613a899190615203565b613a939190615324565b6a0422ca8b0a00a4250000001115949350505050565b603380546001600160a01b038381166001600160a01b0319831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0905f90a35050565b5f6002821015613b0b57505f919050565b5f6002613b1784614027565b613b2191906151f0565b905060018110613b315780612ecc565b60019392505050565b5f815f03613b4957505f919050565b5f613b5383614027565b613b5e906002615337565b613b69906001614bee565b90505f613b7584613afa565b613b80906002615337565b613b8a9085615324565b90505f818311613b9a5781613b9c565b825b905060018110613bac5780613baf565b60015b95945050505050565b5f612ecc836001600160a01b03841661404d565b5f613bd682610eb2565b90508015801590613be75750804210155b156114f65760405163b48d5fc760e01b815260040160405180910390fd5b5f54610100900460ff16613c2b5760405162461bcd60e51b81526004016111549061534e565b611dba614130565b5f613c3c612e51565b83519091505f5b81811015613eb6575f836007015f8154613c5c906151b1565b9190508190559050848281518110613c7657613c76614c01565b6020026020010151845f015f888581518110613c9457613c94614c01565b6020908102919091018101516001600160a01b0390811683528282019390935260409182015f20845181549085166001600160a01b031991821617825591850151600182018054918616918416919091179055918401516002830180549185169183169190911790556060840151600383018054919094169116179091556080820151600482015560a0820151600582015560c0820151805160068301908190613d3e9082615265565b5060208201516001820190613d539082615265565b50505060e08201516008820190613d6a9082615265565b5061010082015160098201805460ff19166001836008811115613d8f57613d8f614440565b021790555090505080845f015f888581518110613dae57613dae614c01565b60200260200101516001600160a01b03166001600160a01b031681526020019081526020015f20600501819055506006845f015f888581518110613df457613df4614c01565b6020908102919091018101516001600160a01b031682528101919091526040015f20600901805460ff19166001836008811115613e3357613e33614440565b02179055505f845f015f888581518110613e4f57613e4f614c01565b60200260200101516001600160a01b03166001600160a01b031681526020019081526020015f2060040181905550613eac868381518110613e9257613e92614c01565b602002602001015185600101613ed590919063ffffffff16565b5050600101613c43565b5060065f90815260088301602052604090208190556010909101555050565b5f612ecc836001600160a01b03841661415f565b5f825f018281548110613efe57613efe614c01565b905f5260205f200154905092915050565b6060815f01805480602002602001604051908101604052809291908181526020018280548015613f5c57602002820191905f5260205f20905b815481526020019060010190808311613f48575b50505050509050919050565b6001600160a01b0381163b613fd55760405162461bcd60e51b815260206004820152602d60248201527f455243313936373a206e657720696d706c656d656e746174696f6e206973206e60448201526c1bdd08184818dbdb9d1c9858dd609a1b6064820152608401611154565b5f805160206153c483398151915280546001600160a01b0319166001600160a01b0392909216919091179055565b61400c836141ab565b5f825111806140185750805b156134015761110683836141ea565b5f815f0361403657505f919050565b6003614043600184615324565b61142591906151f0565b5f8181526001830160205260408120548015614127575f61406f600183615324565b85549091505f9061408290600190615324565b90508181146140e1575f865f0182815481106140a0576140a0614c01565b905f5260205f200154905080875f0184815481106140c0576140c0614c01565b5f918252602080832090910192909255918252600188019052604090208390555b85548690806140f2576140f2615399565b600190038181905f5260205f20015f90559055856001015f8681526020019081526020015f205f905560019350505050611425565b5f915050611425565b5f54610100900460ff166141565760405162461bcd60e51b81526004016111549061534e565b611dba33613aa9565b5f8181526001830160205260408120546141a457508154600181810184555f848152602080822090930184905584548482528286019093526040902091909155611425565b505f611425565b6141b481613f68565b6040516001600160a01b038216907fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b905f90a250565b6060612ecc83836040518060600160405280602781526020016153e46027913960605f80856001600160a01b03168560405161422691906153ad565b5f60405180830381855af49150503d805f811461425e576040519150601f19603f3d011682016040523d82523d5f602084013e614263565b606091505b50915091506142748683838761427e565b9695505050505050565b606083156142ec5782515f036142e5576001600160a01b0385163b6142e55760405162461bcd60e51b815260206004820152601d60248201527f416464726573733a2063616c6c20746f206e6f6e2d636f6e74726163740000006044820152606401611154565b50816142f6565b6142f683836142fe565b949350505050565b81511561430e5781518083602001fd5b8060405162461bcd60e51b81526004016111549190614943565b6040518061012001604052805f6001600160a01b031681526020015f6001600160a01b031681526020015f6001600160a01b031681526020015f6001600160a01b031681526020015f81526020015f8152602001614399604051806040016040528060608152602001606081525090565b8152606060208201526040015f905290565b5080546143b790614d96565b5f825580601f106143c6575050565b601f0160209004905f5260205f20908101906111ef91905b808211156143f1575f81556001016143de565b5090565b6001600160a01b03811681146111ef575f80fd5b5f806040838503121561441a575f80fd5b8235614425816143f5565b91506020830135614435816143f5565b809150509250929050565b634e487b7160e01b5f52602160045260245ffd5b6009811061447057634e487b7160e01b5f52602160045260245ffd5b9052565b602080825282518282018190525f919060409081850190868401855b828110156144ee57815180516001600160a01b0390811686528782015181168887015286820151168686015260608082015190860152608090810151906144d981870183614454565b505060a0939093019290850190600101614490565b5091979650505050505050565b5f6020828403121561450b575f80fd5b8135612ecc816143f5565b600981106111ef575f80fd5b5f60208284031215614532575f80fd5b8135612ecc81614516565b5f815180845260208085019450602084015f5b838110156145755781516001600160a01b031687529582019590820190600101614550565b509495945050505050565b602081525f612ecc602083018461453d565b602081016114258284614454565b5f8083601f8401126145b0575f80fd5b5081356001600160401b038111156145c6575f80fd5b6020830191508360208260051b85010111156145e0575f80fd5b9250929050565b5f805f80604085870312156145fa575f80fd5b84356001600160401b0380821115614610575f80fd5b61461c888389016145a0565b90965094506020870135915080821115614634575f80fd5b50614641878288016145a0565b95989497509550505050565b5f6020828403121561465d575f80fd5b5035919050565b634e487b7160e01b5f52604160045260245ffd5b604080519081016001600160401b038111828210171561469a5761469a614664565b60405290565b60405161012081016001600160401b038111828210171561469a5761469a614664565b60405161016081016001600160401b038111828210171561469a5761469a614664565b604051601f8201601f191681016001600160401b038111828210171561470e5761470e614664565b604052919050565b5f6001600160401b0382111561472e5761472e614664565b50601f01601f191660200190565b5f82601f83011261474b575f80fd5b813561475e61475982614716565b6146e6565b818152846020838601011115614772575f80fd5b816020850160208301375f918101602001919091529392505050565b5f805f805f8060c087890312156147a3575f80fd5b86356147ae816143f5565b955060208701356147be816143f5565b945060408701356147ce816143f5565b935060608701356147de816143f5565b925060808701356001600160401b03808211156147f9575f80fd5b908801906040828b03121561480c575f80fd5b614814614678565b823582811115614822575f80fd5b61482e8c82860161473c565b825250602083013582811115614842575f80fd5b61484e8c82860161473c565b602083015250935060a0890135915080821115614869575f80fd5b5061487689828a0161473c565b9150509295509295509295565b5f805f805f8060608789031215614898575f80fd5b86356001600160401b03808211156148ae575f80fd5b6148ba8a838b016145a0565b909850965060208901359150808211156148d2575f80fd5b6148de8a838b016145a0565b909650945060408901359150808211156148f6575f80fd5b5061490389828a016145a0565b979a9699509497509295939492505050565b5f81518084528060208401602086015e5f602082860101526020601f19601f83011685010191505092915050565b602081525f612ecc6020830184614915565b5f8060408385031215614966575f80fd5b8235614971816143f5565b915060208301356001600160401b0381111561498b575f80fd5b6149978582860161473c565b9150509250929050565b5f8151604084526149b56040850182614915565b905060208301518482036020860152613baf8282614915565b80516001600160a01b031682525f61012060208301516149f960208601826001600160a01b03169052565b506040830151614a1460408601826001600160a01b03169052565b506060830151614a2f60608601826001600160a01b03169052565b506080830151608085015260a083015160a085015260c08301518160c0860152614a5b828601826149a1565b91505060e083015184820360e0860152614a758282614915565b91505061010080840151614a8b82870182614454565b5090949350505050565b602081525f612ecc60208301846149ce565b604081525f614ab9604083018561453d565b6020838203818501528185518084528284019150828160051b8501018388015f5b83811015614b0857601f19878403018552614af68383516149a1565b94860194925090850190600101614ada565b50909998505050505050505050565b5f8060408385031215614b28575f80fd5b823591506020830135614435816143f5565b5f8060208385031215614b4b575f80fd5b82356001600160401b03811115614b60575f80fd5b614b6c858286016145a0565b90969095509350505050565b5f60208083016020845280855180835260408601915060408160051b8701019250602087015f5b82811015614bcd57603f19888603018452614bbb8583516149ce565b94509285019290850190600101614b9f565b5092979650505050505050565b634e487b7160e01b5f52601160045260245ffd5b8082018082111561142557611425614bda565b634e487b7160e01b5f52603260045260245ffd5b8183525f60208085019450825f5b85811015614575578135614c36816143f5565b6001600160a01b031687529582019590820190600101614c23565b604081525f614c64604083018688614c15565b82810360208401528381526001600160fb1b03841115614c82575f80fd5b8360051b80866020840137016020019695505050505050565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b19195b1959d85d1958d85b1b60a21b606082015260800190565b6020808252602c908201527f46756e6374696f6e206d7573742062652063616c6c6564207468726f7567682060408201526b6163746976652070726f787960a01b606082015260800190565b604081525f614d46604083018688614c15565b828103602084810191909152848252859181015f5b86811015614d89578335614d6e81614516565b614d788382614454565b509282019290820190600101614d5b565b5098975050505050505050565b600181811c90821680614daa57607f821691505b602082108103614dc857634e487b7160e01b5f52602260045260245ffd5b50919050565b8051614dd9816143f5565b919050565b5f60208284031215614dee575f80fd5b8151612ecc816143f5565b5f6001600160401b03821115614e1157614e11614664565b5060051b60200190565b5f82601f830112614e2a575f80fd5b81516020614e3a61475983614df9565b8083825260208201915060208460051b870101935086841115614e5b575f80fd5b602086015b84811015614e80578051614e73816143f5565b8352918301918301614e60565b509695505050505050565b5f82601f830112614e9a575f80fd5b8151614ea861475982614716565b818152846020838601011115614ebc575f80fd5b8160208501602083015e5f918101602001919091529392505050565b5f60408284031215614ee8575f80fd5b614ef0614678565b905081516001600160401b0380821115614f08575f80fd5b614f1485838601614e8b565b83526020840151915080821115614f29575f80fd5b50614f3684828501614e8b565b60208301525092915050565b8051614dd981614516565b5f82601f830112614f5c575f80fd5b81516020614f6c61475983614df9565b82815260059290921b84018101918181019086841115614f8a575f80fd5b8286015b84811015614e805780516001600160401b0380821115614fac575f80fd5b90880190610120828b03601f1901811315614fc5575f80fd5b614fcd6146a0565b614fd8888501614dce565b81526040614fe7818601614dce565b898301526060614ff8818701614dce565b828401526080915061500b828701614dce565b818401525060a0808601518284015260c0915081860151818401525060e08086015185811115615039575f80fd5b6150478f8c838a0101614ed8565b838501525061010091508186015185811115615061575f80fd5b61506f8f8c838a0101614e8b565b828501525050615080838601614f42565b908201528652505050918301918301614f8e565b5f602082840312156150a4575f80fd5b81516001600160401b03808211156150ba575f80fd5b9083019061016082860312156150ce575f80fd5b6150d66146c3565b6150df83614dce565b81526020830151602082015260408301516040820152606083015160608201526080830151608082015260a083015160a082015261511f60c08401614dce565b60c082015261513060e08401614dce565b60e0820152610100615143818501614dce565b90820152610120838101518381111561515a575f80fd5b61516688828701614e1b565b828401525050610140808401518381111561517f575f80fd5b61518b88828701614f4d565b918301919091525095945050505050565b5f816151aa576151aa614bda565b505f190190565b5f600182016151c2576151c2614bda565b5060010190565b634e487b7160e01b5f52601260045260245ffd5b5f826151eb576151eb6151c9565b500690565b5f826151fe576151fe6151c9565b500490565b5f60208284031215615213575f80fd5b5051919050565b601f82111561340157805f5260205f20601f840160051c8101602085101561523f5750805b601f840160051c820191505b8181101561525e575f815560010161524b565b5050505050565b81516001600160401b0381111561527e5761527e614664565b6152928161528c8454614d96565b8461521a565b602080601f8311600181146152c5575f84156152ae5750858301515b5f19600386901b1c1916600185901b17855561531c565b5f85815260208120601f198616915b828110156152f3578886015182559484019460019091019084016152d4565b508582101561531057878501515f19600388901b60f8161c191681555b505060018460011b0185555b505050505050565b8181038181111561142557611425614bda565b808202811582820484141761142557611425614bda565b6020808252602b908201527f496e697469616c697a61626c653a20636f6e7472616374206973206e6f74206960408201526a6e697469616c697a696e6760a81b606082015260800190565b634e487b7160e01b5f52603160045260245ffd5b5f82518060208501845e5f92019182525091905056fe360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc416464726573733a206c6f772d6c6576656c2064656c65676174652063616c6c206661696c6564a2646970667358221220639417d149cdeade434235ba3e1d71017bb1cb5e584b848c0a8c19e4eb6387fa64736f6c63430008190033`
 
 // Deprecated: Use AddressBookV2MetaData.Sigs instead.
 // AddressBookV2FuncSigs maps the 4-byte function signature to its string representation.
@@ -5607,6 +697,39 @@ func (_AddressBookV2 *AddressBookV2CallerSession) GetExitThreshold() (*big.Int, 
 	return _AddressBookV2.Contract.GetExitThreshold(&_AddressBookV2.CallOpts)
 }
 
+// GetFundAddresses is a free data retrieval call binding the contract method 0x25cf0943.
+//
+// Solidity: function getFundAddresses() view returns(address, address, address)
+func (_AddressBookV2 *AddressBookV2Caller) GetFundAddresses(opts *bind.CallOpts) (common.Address, common.Address, common.Address, error) {
+	var out []interface{}
+	err := _AddressBookV2.contract.Call(opts, &out, "getFundAddresses")
+
+	if err != nil {
+		return *new(common.Address), *new(common.Address), *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	out1 := *abi.ConvertType(out[1], new(common.Address)).(*common.Address)
+	out2 := *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
+
+	return out0, out1, out2, err
+
+}
+
+// GetFundAddresses is a free data retrieval call binding the contract method 0x25cf0943.
+//
+// Solidity: function getFundAddresses() view returns(address, address, address)
+func (_AddressBookV2 *AddressBookV2Session) GetFundAddresses() (common.Address, common.Address, common.Address, error) {
+	return _AddressBookV2.Contract.GetFundAddresses(&_AddressBookV2.CallOpts)
+}
+
+// GetFundAddresses is a free data retrieval call binding the contract method 0x25cf0943.
+//
+// Solidity: function getFundAddresses() view returns(address, address, address)
+func (_AddressBookV2 *AddressBookV2CallerSession) GetFundAddresses() (common.Address, common.Address, common.Address, error) {
+	return _AddressBookV2.Contract.GetFundAddresses(&_AddressBookV2.CallOpts)
+}
+
 // GetManager is a free data retrieval call binding the contract method 0x3d584063.
 //
 // Solidity: function getManager(address nodeId) view returns(address)
@@ -5672,7 +795,7 @@ func (_AddressBookV2 *AddressBookV2CallerSession) GetMaxCounts() (*big.Int, *big
 
 // GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
 //
-// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
+// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
 func (_AddressBookV2 *AddressBookV2Caller) GetNodeInfo(opts *bind.CallOpts, nodeId common.Address) (NodeInfo, error) {
 	var out []interface{}
 	err := _AddressBookV2.contract.Call(opts, &out, "getNodeInfo", nodeId)
@@ -5689,21 +812,21 @@ func (_AddressBookV2 *AddressBookV2Caller) GetNodeInfo(opts *bind.CallOpts, node
 
 // GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
 //
-// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
+// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
 func (_AddressBookV2 *AddressBookV2Session) GetNodeInfo(nodeId common.Address) (NodeInfo, error) {
 	return _AddressBookV2.Contract.GetNodeInfo(&_AddressBookV2.CallOpts, nodeId)
 }
 
 // GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
 //
-// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
+// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
 func (_AddressBookV2 *AddressBookV2CallerSession) GetNodeInfo(nodeId common.Address) (NodeInfo, error) {
 	return _AddressBookV2.Contract.GetNodeInfo(&_AddressBookV2.CallOpts, nodeId)
 }
 
 // GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
 //
-// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos)
+// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos)
 func (_AddressBookV2 *AddressBookV2Caller) GetNodeInfos(opts *bind.CallOpts, nodeIds []common.Address) ([]NodeInfo, error) {
 	var out []interface{}
 	err := _AddressBookV2.contract.Call(opts, &out, "getNodeInfos", nodeIds)
@@ -5720,14 +843,14 @@ func (_AddressBookV2 *AddressBookV2Caller) GetNodeInfos(opts *bind.CallOpts, nod
 
 // GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
 //
-// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos)
+// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos)
 func (_AddressBookV2 *AddressBookV2Session) GetNodeInfos(nodeIds []common.Address) ([]NodeInfo, error) {
 	return _AddressBookV2.Contract.GetNodeInfos(&_AddressBookV2.CallOpts, nodeIds)
 }
 
 // GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
 //
-// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos)
+// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos)
 func (_AddressBookV2 *AddressBookV2CallerSession) GetNodeInfos(nodeIds []common.Address) ([]NodeInfo, error) {
 	return _AddressBookV2.Contract.GetNodeInfos(&_AddressBookV2.CallOpts, nodeIds)
 }
@@ -5950,37 +1073,6 @@ func (_AddressBookV2 *AddressBookV2CallerSession) GetTimeouts() (*big.Int, *big.
 	return _AddressBookV2.Contract.GetTimeouts(&_AddressBookV2.CallOpts)
 }
 
-// IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
-//
-// Solidity: function isActivated() view returns(bool)
-func (_AddressBookV2 *AddressBookV2Caller) IsActivated(opts *bind.CallOpts) (bool, error) {
-	var out []interface{}
-	err := _AddressBookV2.contract.Call(opts, &out, "isActivated")
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
-//
-// Solidity: function isActivated() view returns(bool)
-func (_AddressBookV2 *AddressBookV2Session) IsActivated() (bool, error) {
-	return _AddressBookV2.Contract.IsActivated(&_AddressBookV2.CallOpts)
-}
-
-// IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
-//
-// Solidity: function isActivated() view returns(bool)
-func (_AddressBookV2 *AddressBookV2CallerSession) IsActivated() (bool, error) {
-	return _AddressBookV2.Contract.IsActivated(&_AddressBookV2.CallOpts)
-}
-
 // IsCandInactive is a free data retrieval call binding the contract method 0x45ce8110.
 //
 // Solidity: function isCandInactive(address nodeId) view returns(bool)
@@ -6074,37 +1166,6 @@ func (_AddressBookV2 *AddressBookV2CallerSession) IsRegistered(addr common.Addre
 	return _AddressBookV2.Contract.IsRegistered(&_AddressBookV2.CallOpts, addr)
 }
 
-// IsValidatorsInitialized is a free data retrieval call binding the contract method 0x551ec9b5.
-//
-// Solidity: function isValidatorsInitialized() view returns(bool)
-func (_AddressBookV2 *AddressBookV2Caller) IsValidatorsInitialized(opts *bind.CallOpts) (bool, error) {
-	var out []interface{}
-	err := _AddressBookV2.contract.Call(opts, &out, "isValidatorsInitialized")
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// IsValidatorsInitialized is a free data retrieval call binding the contract method 0x551ec9b5.
-//
-// Solidity: function isValidatorsInitialized() view returns(bool)
-func (_AddressBookV2 *AddressBookV2Session) IsValidatorsInitialized() (bool, error) {
-	return _AddressBookV2.Contract.IsValidatorsInitialized(&_AddressBookV2.CallOpts)
-}
-
-// IsValidatorsInitialized is a free data retrieval call binding the contract method 0x551ec9b5.
-//
-// Solidity: function isValidatorsInitialized() view returns(bool)
-func (_AddressBookV2 *AddressBookV2CallerSession) IsValidatorsInitialized() (bool, error) {
-	return _AddressBookV2.Contract.IsValidatorsInitialized(&_AddressBookV2.CallOpts)
-}
-
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
 //
 // Solidity: function owner() view returns(address)
@@ -6165,27 +1226,6 @@ func (_AddressBookV2 *AddressBookV2Session) ProxiableUUID() ([32]byte, error) {
 // Solidity: function proxiableUUID() view returns(bytes32)
 func (_AddressBookV2 *AddressBookV2CallerSession) ProxiableUUID() ([32]byte, error) {
 	return _AddressBookV2.Contract.ProxiableUUID(&_AddressBookV2.CallOpts)
-}
-
-// Activate is a paid mutator transaction binding the contract method 0x0f15f4c0.
-//
-// Solidity: function activate() returns()
-func (_AddressBookV2 *AddressBookV2Transactor) Activate(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _AddressBookV2.contract.Transact(opts, "activate")
-}
-
-// Activate is a paid mutator transaction binding the contract method 0x0f15f4c0.
-//
-// Solidity: function activate() returns()
-func (_AddressBookV2 *AddressBookV2Session) Activate() (*types.Transaction, error) {
-	return _AddressBookV2.Contract.Activate(&_AddressBookV2.TransactOpts)
-}
-
-// Activate is a paid mutator transaction binding the contract method 0x0f15f4c0.
-//
-// Solidity: function activate() returns()
-func (_AddressBookV2 *AddressBookV2TransactorSession) Activate() (*types.Transaction, error) {
-	return _AddressBookV2.Contract.Activate(&_AddressBookV2.TransactOpts)
 }
 
 // ActivateCandidate is a paid mutator transaction binding the contract method 0xef6bdade.
@@ -6293,46 +1333,25 @@ func (_AddressBookV2 *AddressBookV2TransactorSession) Exit(nodeId common.Address
 	return _AddressBookV2.Contract.Exit(&_AddressBookV2.TransactOpts, nodeId)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0x45ff4c80.
+// Initialize is a paid mutator transaction binding the contract method 0x8129fc1c.
 //
-// Solidity: function initialize(address initialOwner, uint256 _exitThreshold, uint256 _pauseTimeout, uint256 _idleTimeout, uint256 _maxValidatorCount, uint256 _maxReadyCandidateCount) returns()
-func (_AddressBookV2 *AddressBookV2Transactor) Initialize(opts *bind.TransactOpts, initialOwner common.Address, _exitThreshold *big.Int, _pauseTimeout *big.Int, _idleTimeout *big.Int, _maxValidatorCount *big.Int, _maxReadyCandidateCount *big.Int) (*types.Transaction, error) {
-	return _AddressBookV2.contract.Transact(opts, "initialize", initialOwner, _exitThreshold, _pauseTimeout, _idleTimeout, _maxValidatorCount, _maxReadyCandidateCount)
+// Solidity: function initialize() returns()
+func (_AddressBookV2 *AddressBookV2Transactor) Initialize(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _AddressBookV2.contract.Transact(opts, "initialize")
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0x45ff4c80.
+// Initialize is a paid mutator transaction binding the contract method 0x8129fc1c.
 //
-// Solidity: function initialize(address initialOwner, uint256 _exitThreshold, uint256 _pauseTimeout, uint256 _idleTimeout, uint256 _maxValidatorCount, uint256 _maxReadyCandidateCount) returns()
-func (_AddressBookV2 *AddressBookV2Session) Initialize(initialOwner common.Address, _exitThreshold *big.Int, _pauseTimeout *big.Int, _idleTimeout *big.Int, _maxValidatorCount *big.Int, _maxReadyCandidateCount *big.Int) (*types.Transaction, error) {
-	return _AddressBookV2.Contract.Initialize(&_AddressBookV2.TransactOpts, initialOwner, _exitThreshold, _pauseTimeout, _idleTimeout, _maxValidatorCount, _maxReadyCandidateCount)
+// Solidity: function initialize() returns()
+func (_AddressBookV2 *AddressBookV2Session) Initialize() (*types.Transaction, error) {
+	return _AddressBookV2.Contract.Initialize(&_AddressBookV2.TransactOpts)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0x45ff4c80.
+// Initialize is a paid mutator transaction binding the contract method 0x8129fc1c.
 //
-// Solidity: function initialize(address initialOwner, uint256 _exitThreshold, uint256 _pauseTimeout, uint256 _idleTimeout, uint256 _maxValidatorCount, uint256 _maxReadyCandidateCount) returns()
-func (_AddressBookV2 *AddressBookV2TransactorSession) Initialize(initialOwner common.Address, _exitThreshold *big.Int, _pauseTimeout *big.Int, _idleTimeout *big.Int, _maxValidatorCount *big.Int, _maxReadyCandidateCount *big.Int) (*types.Transaction, error) {
-	return _AddressBookV2.Contract.Initialize(&_AddressBookV2.TransactOpts, initialOwner, _exitThreshold, _pauseTimeout, _idleTimeout, _maxValidatorCount, _maxReadyCandidateCount)
-}
-
-// InitializeValidators is a paid mutator transaction binding the contract method 0x58199d01.
-//
-// Solidity: function initializeValidators(address[] nodeIds, (address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos) returns()
-func (_AddressBookV2 *AddressBookV2Transactor) InitializeValidators(opts *bind.TransactOpts, nodeIds []common.Address, infos []NodeInfo) (*types.Transaction, error) {
-	return _AddressBookV2.contract.Transact(opts, "initializeValidators", nodeIds, infos)
-}
-
-// InitializeValidators is a paid mutator transaction binding the contract method 0x58199d01.
-//
-// Solidity: function initializeValidators(address[] nodeIds, (address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos) returns()
-func (_AddressBookV2 *AddressBookV2Session) InitializeValidators(nodeIds []common.Address, infos []NodeInfo) (*types.Transaction, error) {
-	return _AddressBookV2.Contract.InitializeValidators(&_AddressBookV2.TransactOpts, nodeIds, infos)
-}
-
-// InitializeValidators is a paid mutator transaction binding the contract method 0x58199d01.
-//
-// Solidity: function initializeValidators(address[] nodeIds, (address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos) returns()
-func (_AddressBookV2 *AddressBookV2TransactorSession) InitializeValidators(nodeIds []common.Address, infos []NodeInfo) (*types.Transaction, error) {
-	return _AddressBookV2.Contract.InitializeValidators(&_AddressBookV2.TransactOpts, nodeIds, infos)
+// Solidity: function initialize() returns()
+func (_AddressBookV2 *AddressBookV2TransactorSession) Initialize() (*types.Transaction, error) {
+	return _AddressBookV2.Contract.Initialize(&_AddressBookV2.TransactOpts)
 }
 
 // Offboard is a paid mutator transaction binding the contract method 0xb9f96f40.
@@ -6587,6 +1606,69 @@ func (_AddressBookV2 *AddressBookV2TransactorSession) UpdateIdleTimeout(newIdleT
 	return _AddressBookV2.Contract.UpdateIdleTimeout(&_AddressBookV2.TransactOpts, newIdleTimeout)
 }
 
+// UpdateKefAddress is a paid mutator transaction binding the contract method 0x9d8cf08f.
+//
+// Solidity: function updateKefAddress(address newKefAddress) returns()
+func (_AddressBookV2 *AddressBookV2Transactor) UpdateKefAddress(opts *bind.TransactOpts, newKefAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2.contract.Transact(opts, "updateKefAddress", newKefAddress)
+}
+
+// UpdateKefAddress is a paid mutator transaction binding the contract method 0x9d8cf08f.
+//
+// Solidity: function updateKefAddress(address newKefAddress) returns()
+func (_AddressBookV2 *AddressBookV2Session) UpdateKefAddress(newKefAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2.Contract.UpdateKefAddress(&_AddressBookV2.TransactOpts, newKefAddress)
+}
+
+// UpdateKefAddress is a paid mutator transaction binding the contract method 0x9d8cf08f.
+//
+// Solidity: function updateKefAddress(address newKefAddress) returns()
+func (_AddressBookV2 *AddressBookV2TransactorSession) UpdateKefAddress(newKefAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2.Contract.UpdateKefAddress(&_AddressBookV2.TransactOpts, newKefAddress)
+}
+
+// UpdateKifAddress is a paid mutator transaction binding the contract method 0x7df40c62.
+//
+// Solidity: function updateKifAddress(address newKifAddress) returns()
+func (_AddressBookV2 *AddressBookV2Transactor) UpdateKifAddress(opts *bind.TransactOpts, newKifAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2.contract.Transact(opts, "updateKifAddress", newKifAddress)
+}
+
+// UpdateKifAddress is a paid mutator transaction binding the contract method 0x7df40c62.
+//
+// Solidity: function updateKifAddress(address newKifAddress) returns()
+func (_AddressBookV2 *AddressBookV2Session) UpdateKifAddress(newKifAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2.Contract.UpdateKifAddress(&_AddressBookV2.TransactOpts, newKifAddress)
+}
+
+// UpdateKifAddress is a paid mutator transaction binding the contract method 0x7df40c62.
+//
+// Solidity: function updateKifAddress(address newKifAddress) returns()
+func (_AddressBookV2 *AddressBookV2TransactorSession) UpdateKifAddress(newKifAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2.Contract.UpdateKifAddress(&_AddressBookV2.TransactOpts, newKifAddress)
+}
+
+// UpdateKpfAddress is a paid mutator transaction binding the contract method 0xc9a86af2.
+//
+// Solidity: function updateKpfAddress(address newKpfAddress) returns()
+func (_AddressBookV2 *AddressBookV2Transactor) UpdateKpfAddress(opts *bind.TransactOpts, newKpfAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2.contract.Transact(opts, "updateKpfAddress", newKpfAddress)
+}
+
+// UpdateKpfAddress is a paid mutator transaction binding the contract method 0xc9a86af2.
+//
+// Solidity: function updateKpfAddress(address newKpfAddress) returns()
+func (_AddressBookV2 *AddressBookV2Session) UpdateKpfAddress(newKpfAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2.Contract.UpdateKpfAddress(&_AddressBookV2.TransactOpts, newKpfAddress)
+}
+
+// UpdateKpfAddress is a paid mutator transaction binding the contract method 0xc9a86af2.
+//
+// Solidity: function updateKpfAddress(address newKpfAddress) returns()
+func (_AddressBookV2 *AddressBookV2TransactorSession) UpdateKpfAddress(newKpfAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2.Contract.UpdateKpfAddress(&_AddressBookV2.TransactOpts, newKpfAddress)
+}
+
 // UpdateManager is a paid mutator transaction binding the contract method 0x07ecec3e.
 //
 // Solidity: function updateManager(address nodeId, address newManager) returns()
@@ -6732,139 +1814,6 @@ func (_AddressBookV2 *AddressBookV2Session) UpgradeToAndCall(newImplementation c
 // Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
 func (_AddressBookV2 *AddressBookV2TransactorSession) UpgradeToAndCall(newImplementation common.Address, data []byte) (*types.Transaction, error) {
 	return _AddressBookV2.Contract.UpgradeToAndCall(&_AddressBookV2.TransactOpts, newImplementation, data)
-}
-
-// AddressBookV2ActivatedIterator is returned from FilterActivated and is used to iterate over the raw logs and unpacked data for Activated events raised by the AddressBookV2 contract.
-type AddressBookV2ActivatedIterator struct {
-	Event *AddressBookV2Activated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *AddressBookV2ActivatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(AddressBookV2Activated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(AddressBookV2Activated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *AddressBookV2ActivatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *AddressBookV2ActivatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// AddressBookV2Activated represents a Activated event raised by the AddressBookV2 contract.
-type AddressBookV2Activated struct {
-	Raw types.Log // Blockchain specific contextual infos
-}
-
-// FilterActivated is a free log retrieval operation binding the contract event 0xed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0.
-//
-// Solidity: event Activated()
-func (_AddressBookV2 *AddressBookV2Filterer) FilterActivated(opts *bind.FilterOpts) (*AddressBookV2ActivatedIterator, error) {
-
-	logs, sub, err := _AddressBookV2.contract.FilterLogs(opts, "Activated")
-	if err != nil {
-		return nil, err
-	}
-	return &AddressBookV2ActivatedIterator{contract: _AddressBookV2.contract, event: "Activated", logs: logs, sub: sub}, nil
-}
-
-// WatchActivated is a free log subscription operation binding the contract event 0xed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0.
-//
-// Solidity: event Activated()
-func (_AddressBookV2 *AddressBookV2Filterer) WatchActivated(opts *bind.WatchOpts, sink chan<- *AddressBookV2Activated) (event.Subscription, error) {
-
-	logs, sub, err := _AddressBookV2.contract.WatchLogs(opts, "Activated")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(AddressBookV2Activated)
-				if err := _AddressBookV2.contract.UnpackLog(event, "Activated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseActivated is a log parse operation binding the contract event 0xed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0.
-//
-// Solidity: event Activated()
-func (_AddressBookV2 *AddressBookV2Filterer) ParseActivated(log types.Log) (*AddressBookV2Activated, error) {
-	event := new(AddressBookV2Activated)
-	if err := _AddressBookV2.contract.UnpackLog(event, "Activated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
 }
 
 // AddressBookV2AdminChangedIterator is returned from FilterAdminChanged and is used to iterate over the raw logs and unpacked data for AdminChanged events raised by the AddressBookV2 contract.
@@ -7966,6 +2915,411 @@ func (_AddressBookV2 *AddressBookV2Filterer) WatchInitialized(opts *bind.WatchOp
 func (_AddressBookV2 *AddressBookV2Filterer) ParseInitialized(log types.Log) (*AddressBookV2Initialized, error) {
 	event := new(AddressBookV2Initialized)
 	if err := _AddressBookV2.contract.UnpackLog(event, "Initialized", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2KefAddressUpdatedIterator is returned from FilterKefAddressUpdated and is used to iterate over the raw logs and unpacked data for KefAddressUpdated events raised by the AddressBookV2 contract.
+type AddressBookV2KefAddressUpdatedIterator struct {
+	Event *AddressBookV2KefAddressUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2KefAddressUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2KefAddressUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2KefAddressUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2KefAddressUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2KefAddressUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2KefAddressUpdated represents a KefAddressUpdated event raised by the AddressBookV2 contract.
+type AddressBookV2KefAddressUpdated struct {
+	OldAddress common.Address
+	NewAddress common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterKefAddressUpdated is a free log retrieval operation binding the contract event 0xdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c.
+//
+// Solidity: event KefAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2 *AddressBookV2Filterer) FilterKefAddressUpdated(opts *bind.FilterOpts) (*AddressBookV2KefAddressUpdatedIterator, error) {
+
+	logs, sub, err := _AddressBookV2.contract.FilterLogs(opts, "KefAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2KefAddressUpdatedIterator{contract: _AddressBookV2.contract, event: "KefAddressUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchKefAddressUpdated is a free log subscription operation binding the contract event 0xdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c.
+//
+// Solidity: event KefAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2 *AddressBookV2Filterer) WatchKefAddressUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookV2KefAddressUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2.contract.WatchLogs(opts, "KefAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2KefAddressUpdated)
+				if err := _AddressBookV2.contract.UnpackLog(event, "KefAddressUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseKefAddressUpdated is a log parse operation binding the contract event 0xdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c.
+//
+// Solidity: event KefAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2 *AddressBookV2Filterer) ParseKefAddressUpdated(log types.Log) (*AddressBookV2KefAddressUpdated, error) {
+	event := new(AddressBookV2KefAddressUpdated)
+	if err := _AddressBookV2.contract.UnpackLog(event, "KefAddressUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2KifAddressUpdatedIterator is returned from FilterKifAddressUpdated and is used to iterate over the raw logs and unpacked data for KifAddressUpdated events raised by the AddressBookV2 contract.
+type AddressBookV2KifAddressUpdatedIterator struct {
+	Event *AddressBookV2KifAddressUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2KifAddressUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2KifAddressUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2KifAddressUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2KifAddressUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2KifAddressUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2KifAddressUpdated represents a KifAddressUpdated event raised by the AddressBookV2 contract.
+type AddressBookV2KifAddressUpdated struct {
+	OldAddress common.Address
+	NewAddress common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterKifAddressUpdated is a free log retrieval operation binding the contract event 0xc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c.
+//
+// Solidity: event KifAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2 *AddressBookV2Filterer) FilterKifAddressUpdated(opts *bind.FilterOpts) (*AddressBookV2KifAddressUpdatedIterator, error) {
+
+	logs, sub, err := _AddressBookV2.contract.FilterLogs(opts, "KifAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2KifAddressUpdatedIterator{contract: _AddressBookV2.contract, event: "KifAddressUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchKifAddressUpdated is a free log subscription operation binding the contract event 0xc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c.
+//
+// Solidity: event KifAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2 *AddressBookV2Filterer) WatchKifAddressUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookV2KifAddressUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2.contract.WatchLogs(opts, "KifAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2KifAddressUpdated)
+				if err := _AddressBookV2.contract.UnpackLog(event, "KifAddressUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseKifAddressUpdated is a log parse operation binding the contract event 0xc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c.
+//
+// Solidity: event KifAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2 *AddressBookV2Filterer) ParseKifAddressUpdated(log types.Log) (*AddressBookV2KifAddressUpdated, error) {
+	event := new(AddressBookV2KifAddressUpdated)
+	if err := _AddressBookV2.contract.UnpackLog(event, "KifAddressUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2KpfAddressUpdatedIterator is returned from FilterKpfAddressUpdated and is used to iterate over the raw logs and unpacked data for KpfAddressUpdated events raised by the AddressBookV2 contract.
+type AddressBookV2KpfAddressUpdatedIterator struct {
+	Event *AddressBookV2KpfAddressUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2KpfAddressUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2KpfAddressUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2KpfAddressUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2KpfAddressUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2KpfAddressUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2KpfAddressUpdated represents a KpfAddressUpdated event raised by the AddressBookV2 contract.
+type AddressBookV2KpfAddressUpdated struct {
+	OldAddress common.Address
+	NewAddress common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterKpfAddressUpdated is a free log retrieval operation binding the contract event 0x7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41.
+//
+// Solidity: event KpfAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2 *AddressBookV2Filterer) FilterKpfAddressUpdated(opts *bind.FilterOpts) (*AddressBookV2KpfAddressUpdatedIterator, error) {
+
+	logs, sub, err := _AddressBookV2.contract.FilterLogs(opts, "KpfAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2KpfAddressUpdatedIterator{contract: _AddressBookV2.contract, event: "KpfAddressUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchKpfAddressUpdated is a free log subscription operation binding the contract event 0x7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41.
+//
+// Solidity: event KpfAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2 *AddressBookV2Filterer) WatchKpfAddressUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookV2KpfAddressUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2.contract.WatchLogs(opts, "KpfAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2KpfAddressUpdated)
+				if err := _AddressBookV2.contract.UnpackLog(event, "KpfAddressUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseKpfAddressUpdated is a log parse operation binding the contract event 0x7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41.
+//
+// Solidity: event KpfAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2 *AddressBookV2Filterer) ParseKpfAddressUpdated(log types.Log) (*AddressBookV2KpfAddressUpdated, error) {
+	event := new(AddressBookV2KpfAddressUpdated)
+	if err := _AddressBookV2.contract.UnpackLog(event, "KpfAddressUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -9990,6 +5344,5213 @@ func (_AddressBookV2 *AddressBookV2Filterer) ParseValidatorsInitialized(log type
 	return event, nil
 }
 
+// AddressBookV2BaseMetaData contains all meta data concerning the AddressBookV2Base contract.
+var AddressBookV2BaseMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"name\":\"AlreadySuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInput\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidState\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeAlreadyExists\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeNotFound\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyEpochBlock\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyManager\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlySystemTx\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SlotsFull\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StakingTooLow\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TimeoutExpired\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateActivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateDeactivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"epochValCount\",\"type\":\"uint256\"}],\"name\":\"EpochTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldThreshold\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newThreshold\",\"type\":\"uint256\"}],\"name\":\"ExitThresholdUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldIdleTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"IdleTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAddress\",\"type\":\"address\"}],\"name\":\"KefAddressUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAddress\",\"type\":\"address\"}],\"name\":\"KifAddressUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAddress\",\"type\":\"address\"}],\"name\":\"KpfAddressUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldManager\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"ManagerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxReadyCandidateCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxValidatorCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"}],\"name\":\"NodeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"NodeDeleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldPauseTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"PauseTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"ScoresUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"enumState\",\"name\":\"fromState\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"enumState\",\"name\":\"toState\",\"type\":\"uint8\"}],\"name\":\"StateChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"enumState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"}],\"name\":\"SystemTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorSuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorUnsuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"ValidatorsInitialized\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"EPOCH_BLOCK_INTERVAL\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MIN_STAKE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SYSTEM_SENDER\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"activateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"}],\"name\":\"createNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentEpoch\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deactivateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deleteNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"exit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getActiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllBlsInfo\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIdList\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo[]\",\"name\":\"pubkeyList\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllProfiles\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structProfile[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCandInactiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getEpochValCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getExitThreshold\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getFundAddresses\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"kefAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"kifAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"kpfAddress\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getManager\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getMaxCounts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"maxValidatorCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxReadyCandidateCount\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"manager\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"getNodeInfos\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"manager\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeState\",\"outputs\":[{\"internalType\":\"enumState\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getScore\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getStakingContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"name\":\"getStateCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getSuspendedValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getTimeoutAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTimeouts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"pauseTimeout\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"idleTimeout\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isCandInactive\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isInActiveSet\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isRegistered\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"offboard\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"enumState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"},{\"internalType\":\"uint256[]\",\"name\":\"timeoutAts\",\"type\":\"uint256[]\"}],\"name\":\"processSystemTransition\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"readyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"resume\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"suspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unreadyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unsuspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newExitThreshold\",\"type\":\"uint256\"}],\"name\":\"updateExitThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"updateIdleTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newKefAddress\",\"type\":\"address\"}],\"name\":\"updateKefAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newKifAddress\",\"type\":\"address\"}],\"name\":\"updateKifAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newKpfAddress\",\"type\":\"address\"}],\"name\":\"updateKpfAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"updateManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxReadyCandidateCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxReadyCandidateCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxValidatorCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxValidatorCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"updatePauseTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"updateScores\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
+	Sigs: map[string]string{
+		"de244059": "EPOCH_BLOCK_INTERVAL()",
+		"cb1c2b5c": "MIN_STAKE()",
+		"87b7b8fd": "SYSTEM_SENDER()",
+		"ef6bdade": "activateCandidate(address)",
+		"4429d720": "createNode(address,address,address,address,(bytes,bytes),string)",
+		"76671808": "currentEpoch()",
+		"171a6cdc": "deactivateCandidate(address)",
+		"2d4ede93": "deleteNode(address)",
+		"b42652e9": "exit(address)",
+		"6b75b7a8": "getActiveSetLength()",
+		"6968b53f": "getAllBlsInfo()",
+		"0b1fe784": "getAllProfiles()",
+		"94a64d98": "getCandInactiveSetLength()",
+		"7d7b127f": "getEpochValCount()",
+		"3aea9faf": "getExitThreshold()",
+		"25cf0943": "getFundAddresses()",
+		"3d584063": "getManager(address)",
+		"03e6689d": "getMaxCounts()",
+		"582115fb": "getNodeInfo(address)",
+		"8beeb439": "getNodeInfos(address[])",
+		"229bb823": "getNodeState(address)",
+		"80f2ff25": "getScore(uint256,address)",
+		"5300f9b4": "getStakingContract(address)",
+		"1b1a478b": "getStateCount(uint8)",
+		"1ba3fd58": "getSuspendedValidators()",
+		"277f3dc3": "getTimeoutAt(address)",
+		"e70c38f1": "getTimeouts()",
+		"45ce8110": "isCandInactive(address)",
+		"5334cf44": "isInActiveSet(address)",
+		"c3c5a547": "isRegistered(address)",
+		"b9f96f40": "offboard(address)",
+		"8da5cb5b": "owner()",
+		"76a67a51": "pause(address)",
+		"45527e44": "processSystemTransition(address[],uint8[],uint256[])",
+		"52d1902d": "proxiableUUID()",
+		"656f5869": "readyValidator(address)",
+		"715018a6": "renounceOwnership()",
+		"793c1946": "resume(address)",
+		"a41b6000": "suspendValidator(address)",
+		"f2fde38b": "transferOwnership(address)",
+		"d9abb38b": "unreadyValidator(address)",
+		"78b84a5c": "unsuspendValidator(address)",
+		"2c1d4895": "updateExitThreshold(uint256)",
+		"e59d7a84": "updateIdleTimeout(uint256)",
+		"9d8cf08f": "updateKefAddress(address)",
+		"7df40c62": "updateKifAddress(address)",
+		"c9a86af2": "updateKpfAddress(address)",
+		"07ecec3e": "updateManager(address,address)",
+		"76714282": "updateMaxReadyCandidateCount(uint256)",
+		"7e134fc6": "updateMaxValidatorCount(uint256)",
+		"9d0e234d": "updatePauseTimeout(uint256)",
+		"27f94c3d": "updateScores(address[],uint256[])",
+		"3659cfe6": "upgradeTo(address)",
+		"4f1ef286": "upgradeToAndCall(address,bytes)",
+	},
+}
+
+// AddressBookV2BaseABI is the input ABI used to generate the binding from.
+// Deprecated: Use AddressBookV2BaseMetaData.ABI instead.
+var AddressBookV2BaseABI = AddressBookV2BaseMetaData.ABI
+
+// AddressBookV2BaseBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const AddressBookV2BaseBinRuntime = ``
+
+// Deprecated: Use AddressBookV2BaseMetaData.Sigs instead.
+// AddressBookV2BaseFuncSigs maps the 4-byte function signature to its string representation.
+var AddressBookV2BaseFuncSigs = AddressBookV2BaseMetaData.Sigs
+
+// AddressBookV2Base is an auto generated Go binding around a Kaia contract.
+type AddressBookV2Base struct {
+	AddressBookV2BaseCaller     // Read-only binding to the contract
+	AddressBookV2BaseTransactor // Write-only binding to the contract
+	AddressBookV2BaseFilterer   // Log filterer for contract events
+}
+
+// AddressBookV2BaseCaller is an auto generated read-only Go binding around a Kaia contract.
+type AddressBookV2BaseCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// AddressBookV2BaseTransactor is an auto generated write-only Go binding around a Kaia contract.
+type AddressBookV2BaseTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// AddressBookV2BaseFilterer is an auto generated log filtering Go binding around a Kaia contract events.
+type AddressBookV2BaseFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// AddressBookV2BaseSession is an auto generated Go binding around a Kaia contract,
+// with pre-set call and transact options.
+type AddressBookV2BaseSession struct {
+	Contract     *AddressBookV2Base // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts      // Call options to use throughout this session
+	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
+}
+
+// AddressBookV2BaseCallerSession is an auto generated read-only Go binding around a Kaia contract,
+// with pre-set call options.
+type AddressBookV2BaseCallerSession struct {
+	Contract *AddressBookV2BaseCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts            // Call options to use throughout this session
+}
+
+// AddressBookV2BaseTransactorSession is an auto generated write-only Go binding around a Kaia contract,
+// with pre-set transact options.
+type AddressBookV2BaseTransactorSession struct {
+	Contract     *AddressBookV2BaseTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts            // Transaction auth options to use throughout this session
+}
+
+// AddressBookV2BaseRaw is an auto generated low-level Go binding around a Kaia contract.
+type AddressBookV2BaseRaw struct {
+	Contract *AddressBookV2Base // Generic contract binding to access the raw methods on
+}
+
+// AddressBookV2BaseCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
+type AddressBookV2BaseCallerRaw struct {
+	Contract *AddressBookV2BaseCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// AddressBookV2BaseTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
+type AddressBookV2BaseTransactorRaw struct {
+	Contract *AddressBookV2BaseTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewAddressBookV2Base creates a new instance of AddressBookV2Base, bound to a specific deployed contract.
+func NewAddressBookV2Base(address common.Address, backend bind.ContractBackend) (*AddressBookV2Base, error) {
+	contract, err := bindAddressBookV2Base(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2Base{AddressBookV2BaseCaller: AddressBookV2BaseCaller{contract: contract}, AddressBookV2BaseTransactor: AddressBookV2BaseTransactor{contract: contract}, AddressBookV2BaseFilterer: AddressBookV2BaseFilterer{contract: contract}}, nil
+}
+
+// NewAddressBookV2BaseCaller creates a new read-only instance of AddressBookV2Base, bound to a specific deployed contract.
+func NewAddressBookV2BaseCaller(address common.Address, caller bind.ContractCaller) (*AddressBookV2BaseCaller, error) {
+	contract, err := bindAddressBookV2Base(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseCaller{contract: contract}, nil
+}
+
+// NewAddressBookV2BaseTransactor creates a new write-only instance of AddressBookV2Base, bound to a specific deployed contract.
+func NewAddressBookV2BaseTransactor(address common.Address, transactor bind.ContractTransactor) (*AddressBookV2BaseTransactor, error) {
+	contract, err := bindAddressBookV2Base(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseTransactor{contract: contract}, nil
+}
+
+// NewAddressBookV2BaseFilterer creates a new log filterer instance of AddressBookV2Base, bound to a specific deployed contract.
+func NewAddressBookV2BaseFilterer(address common.Address, filterer bind.ContractFilterer) (*AddressBookV2BaseFilterer, error) {
+	contract, err := bindAddressBookV2Base(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseFilterer{contract: contract}, nil
+}
+
+// bindAddressBookV2Base binds a generic wrapper to an already deployed contract.
+func bindAddressBookV2Base(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := AddressBookV2BaseMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_AddressBookV2Base *AddressBookV2BaseRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _AddressBookV2Base.Contract.AddressBookV2BaseCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_AddressBookV2Base *AddressBookV2BaseRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.AddressBookV2BaseTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_AddressBookV2Base *AddressBookV2BaseRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.AddressBookV2BaseTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_AddressBookV2Base *AddressBookV2BaseCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _AddressBookV2Base.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_AddressBookV2Base *AddressBookV2BaseTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_AddressBookV2Base *AddressBookV2BaseTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.contract.Transact(opts, method, params...)
+}
+
+// EPOCHBLOCKINTERVAL is a free data retrieval call binding the contract method 0xde244059.
+//
+// Solidity: function EPOCH_BLOCK_INTERVAL() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) EPOCHBLOCKINTERVAL(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "EPOCH_BLOCK_INTERVAL")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// EPOCHBLOCKINTERVAL is a free data retrieval call binding the contract method 0xde244059.
+//
+// Solidity: function EPOCH_BLOCK_INTERVAL() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseSession) EPOCHBLOCKINTERVAL() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.EPOCHBLOCKINTERVAL(&_AddressBookV2Base.CallOpts)
+}
+
+// EPOCHBLOCKINTERVAL is a free data retrieval call binding the contract method 0xde244059.
+//
+// Solidity: function EPOCH_BLOCK_INTERVAL() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) EPOCHBLOCKINTERVAL() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.EPOCHBLOCKINTERVAL(&_AddressBookV2Base.CallOpts)
+}
+
+// MINSTAKE is a free data retrieval call binding the contract method 0xcb1c2b5c.
+//
+// Solidity: function MIN_STAKE() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) MINSTAKE(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "MIN_STAKE")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// MINSTAKE is a free data retrieval call binding the contract method 0xcb1c2b5c.
+//
+// Solidity: function MIN_STAKE() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseSession) MINSTAKE() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.MINSTAKE(&_AddressBookV2Base.CallOpts)
+}
+
+// MINSTAKE is a free data retrieval call binding the contract method 0xcb1c2b5c.
+//
+// Solidity: function MIN_STAKE() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) MINSTAKE() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.MINSTAKE(&_AddressBookV2Base.CallOpts)
+}
+
+// SYSTEMSENDER is a free data retrieval call binding the contract method 0x87b7b8fd.
+//
+// Solidity: function SYSTEM_SENDER() view returns(address)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) SYSTEMSENDER(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "SYSTEM_SENDER")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// SYSTEMSENDER is a free data retrieval call binding the contract method 0x87b7b8fd.
+//
+// Solidity: function SYSTEM_SENDER() view returns(address)
+func (_AddressBookV2Base *AddressBookV2BaseSession) SYSTEMSENDER() (common.Address, error) {
+	return _AddressBookV2Base.Contract.SYSTEMSENDER(&_AddressBookV2Base.CallOpts)
+}
+
+// SYSTEMSENDER is a free data retrieval call binding the contract method 0x87b7b8fd.
+//
+// Solidity: function SYSTEM_SENDER() view returns(address)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) SYSTEMSENDER() (common.Address, error) {
+	return _AddressBookV2Base.Contract.SYSTEMSENDER(&_AddressBookV2Base.CallOpts)
+}
+
+// CurrentEpoch is a free data retrieval call binding the contract method 0x76671808.
+//
+// Solidity: function currentEpoch() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) CurrentEpoch(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "currentEpoch")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// CurrentEpoch is a free data retrieval call binding the contract method 0x76671808.
+//
+// Solidity: function currentEpoch() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseSession) CurrentEpoch() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.CurrentEpoch(&_AddressBookV2Base.CallOpts)
+}
+
+// CurrentEpoch is a free data retrieval call binding the contract method 0x76671808.
+//
+// Solidity: function currentEpoch() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) CurrentEpoch() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.CurrentEpoch(&_AddressBookV2Base.CallOpts)
+}
+
+// GetActiveSetLength is a free data retrieval call binding the contract method 0x6b75b7a8.
+//
+// Solidity: function getActiveSetLength() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetActiveSetLength(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getActiveSetLength")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetActiveSetLength is a free data retrieval call binding the contract method 0x6b75b7a8.
+//
+// Solidity: function getActiveSetLength() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetActiveSetLength() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetActiveSetLength(&_AddressBookV2Base.CallOpts)
+}
+
+// GetActiveSetLength is a free data retrieval call binding the contract method 0x6b75b7a8.
+//
+// Solidity: function getActiveSetLength() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetActiveSetLength() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetActiveSetLength(&_AddressBookV2Base.CallOpts)
+}
+
+// GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
+//
+// Solidity: function getAllBlsInfo() view returns(address[] nodeIdList, (bytes,bytes)[] pubkeyList)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetAllBlsInfo(opts *bind.CallOpts) (struct {
+	NodeIdList []common.Address
+	PubkeyList []BlsPublicKeyInfo
+}, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getAllBlsInfo")
+
+	outstruct := new(struct {
+		NodeIdList []common.Address
+		PubkeyList []BlsPublicKeyInfo
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.NodeIdList = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
+	outstruct.PubkeyList = *abi.ConvertType(out[1], new([]BlsPublicKeyInfo)).(*[]BlsPublicKeyInfo)
+
+	return *outstruct, err
+
+}
+
+// GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
+//
+// Solidity: function getAllBlsInfo() view returns(address[] nodeIdList, (bytes,bytes)[] pubkeyList)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetAllBlsInfo() (struct {
+	NodeIdList []common.Address
+	PubkeyList []BlsPublicKeyInfo
+}, error) {
+	return _AddressBookV2Base.Contract.GetAllBlsInfo(&_AddressBookV2Base.CallOpts)
+}
+
+// GetAllBlsInfo is a free data retrieval call binding the contract method 0x6968b53f.
+//
+// Solidity: function getAllBlsInfo() view returns(address[] nodeIdList, (bytes,bytes)[] pubkeyList)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetAllBlsInfo() (struct {
+	NodeIdList []common.Address
+	PubkeyList []BlsPublicKeyInfo
+}, error) {
+	return _AddressBookV2Base.Contract.GetAllBlsInfo(&_AddressBookV2Base.CallOpts)
+}
+
+// GetAllProfiles is a free data retrieval call binding the contract method 0x0b1fe784.
+//
+// Solidity: function getAllProfiles() view returns((address,address,address,uint256,uint8)[])
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetAllProfiles(opts *bind.CallOpts) ([]Profile, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getAllProfiles")
+
+	if err != nil {
+		return *new([]Profile), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]Profile)).(*[]Profile)
+
+	return out0, err
+
+}
+
+// GetAllProfiles is a free data retrieval call binding the contract method 0x0b1fe784.
+//
+// Solidity: function getAllProfiles() view returns((address,address,address,uint256,uint8)[])
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetAllProfiles() ([]Profile, error) {
+	return _AddressBookV2Base.Contract.GetAllProfiles(&_AddressBookV2Base.CallOpts)
+}
+
+// GetAllProfiles is a free data retrieval call binding the contract method 0x0b1fe784.
+//
+// Solidity: function getAllProfiles() view returns((address,address,address,uint256,uint8)[])
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetAllProfiles() ([]Profile, error) {
+	return _AddressBookV2Base.Contract.GetAllProfiles(&_AddressBookV2Base.CallOpts)
+}
+
+// GetCandInactiveSetLength is a free data retrieval call binding the contract method 0x94a64d98.
+//
+// Solidity: function getCandInactiveSetLength() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetCandInactiveSetLength(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getCandInactiveSetLength")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetCandInactiveSetLength is a free data retrieval call binding the contract method 0x94a64d98.
+//
+// Solidity: function getCandInactiveSetLength() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetCandInactiveSetLength() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetCandInactiveSetLength(&_AddressBookV2Base.CallOpts)
+}
+
+// GetCandInactiveSetLength is a free data retrieval call binding the contract method 0x94a64d98.
+//
+// Solidity: function getCandInactiveSetLength() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetCandInactiveSetLength() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetCandInactiveSetLength(&_AddressBookV2Base.CallOpts)
+}
+
+// GetEpochValCount is a free data retrieval call binding the contract method 0x7d7b127f.
+//
+// Solidity: function getEpochValCount() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetEpochValCount(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getEpochValCount")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetEpochValCount is a free data retrieval call binding the contract method 0x7d7b127f.
+//
+// Solidity: function getEpochValCount() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetEpochValCount() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetEpochValCount(&_AddressBookV2Base.CallOpts)
+}
+
+// GetEpochValCount is a free data retrieval call binding the contract method 0x7d7b127f.
+//
+// Solidity: function getEpochValCount() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetEpochValCount() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetEpochValCount(&_AddressBookV2Base.CallOpts)
+}
+
+// GetExitThreshold is a free data retrieval call binding the contract method 0x3aea9faf.
+//
+// Solidity: function getExitThreshold() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetExitThreshold(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getExitThreshold")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetExitThreshold is a free data retrieval call binding the contract method 0x3aea9faf.
+//
+// Solidity: function getExitThreshold() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetExitThreshold() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetExitThreshold(&_AddressBookV2Base.CallOpts)
+}
+
+// GetExitThreshold is a free data retrieval call binding the contract method 0x3aea9faf.
+//
+// Solidity: function getExitThreshold() view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetExitThreshold() (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetExitThreshold(&_AddressBookV2Base.CallOpts)
+}
+
+// GetFundAddresses is a free data retrieval call binding the contract method 0x25cf0943.
+//
+// Solidity: function getFundAddresses() view returns(address kefAddress, address kifAddress, address kpfAddress)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetFundAddresses(opts *bind.CallOpts) (struct {
+	KefAddress common.Address
+	KifAddress common.Address
+	KpfAddress common.Address
+}, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getFundAddresses")
+
+	outstruct := new(struct {
+		KefAddress common.Address
+		KifAddress common.Address
+		KpfAddress common.Address
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.KefAddress = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.KifAddress = *abi.ConvertType(out[1], new(common.Address)).(*common.Address)
+	outstruct.KpfAddress = *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
+
+	return *outstruct, err
+
+}
+
+// GetFundAddresses is a free data retrieval call binding the contract method 0x25cf0943.
+//
+// Solidity: function getFundAddresses() view returns(address kefAddress, address kifAddress, address kpfAddress)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetFundAddresses() (struct {
+	KefAddress common.Address
+	KifAddress common.Address
+	KpfAddress common.Address
+}, error) {
+	return _AddressBookV2Base.Contract.GetFundAddresses(&_AddressBookV2Base.CallOpts)
+}
+
+// GetFundAddresses is a free data retrieval call binding the contract method 0x25cf0943.
+//
+// Solidity: function getFundAddresses() view returns(address kefAddress, address kifAddress, address kpfAddress)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetFundAddresses() (struct {
+	KefAddress common.Address
+	KifAddress common.Address
+	KpfAddress common.Address
+}, error) {
+	return _AddressBookV2Base.Contract.GetFundAddresses(&_AddressBookV2Base.CallOpts)
+}
+
+// GetManager is a free data retrieval call binding the contract method 0x3d584063.
+//
+// Solidity: function getManager(address nodeId) view returns(address)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetManager(opts *bind.CallOpts, nodeId common.Address) (common.Address, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getManager", nodeId)
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// GetManager is a free data retrieval call binding the contract method 0x3d584063.
+//
+// Solidity: function getManager(address nodeId) view returns(address)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetManager(nodeId common.Address) (common.Address, error) {
+	return _AddressBookV2Base.Contract.GetManager(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// GetManager is a free data retrieval call binding the contract method 0x3d584063.
+//
+// Solidity: function getManager(address nodeId) view returns(address)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetManager(nodeId common.Address) (common.Address, error) {
+	return _AddressBookV2Base.Contract.GetManager(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// GetMaxCounts is a free data retrieval call binding the contract method 0x03e6689d.
+//
+// Solidity: function getMaxCounts() view returns(uint256 maxValidatorCount, uint256 maxReadyCandidateCount)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetMaxCounts(opts *bind.CallOpts) (struct {
+	MaxValidatorCount      *big.Int
+	MaxReadyCandidateCount *big.Int
+}, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getMaxCounts")
+
+	outstruct := new(struct {
+		MaxValidatorCount      *big.Int
+		MaxReadyCandidateCount *big.Int
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.MaxValidatorCount = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.MaxReadyCandidateCount = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+
+	return *outstruct, err
+
+}
+
+// GetMaxCounts is a free data retrieval call binding the contract method 0x03e6689d.
+//
+// Solidity: function getMaxCounts() view returns(uint256 maxValidatorCount, uint256 maxReadyCandidateCount)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetMaxCounts() (struct {
+	MaxValidatorCount      *big.Int
+	MaxReadyCandidateCount *big.Int
+}, error) {
+	return _AddressBookV2Base.Contract.GetMaxCounts(&_AddressBookV2Base.CallOpts)
+}
+
+// GetMaxCounts is a free data retrieval call binding the contract method 0x03e6689d.
+//
+// Solidity: function getMaxCounts() view returns(uint256 maxValidatorCount, uint256 maxReadyCandidateCount)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetMaxCounts() (struct {
+	MaxValidatorCount      *big.Int
+	MaxReadyCandidateCount *big.Int
+}, error) {
+	return _AddressBookV2Base.Contract.GetMaxCounts(&_AddressBookV2Base.CallOpts)
+}
+
+// GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
+//
+// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetNodeInfo(opts *bind.CallOpts, nodeId common.Address) (NodeInfo, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getNodeInfo", nodeId)
+
+	if err != nil {
+		return *new(NodeInfo), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(NodeInfo)).(*NodeInfo)
+
+	return out0, err
+
+}
+
+// GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
+//
+// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetNodeInfo(nodeId common.Address) (NodeInfo, error) {
+	return _AddressBookV2Base.Contract.GetNodeInfo(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
+//
+// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetNodeInfo(nodeId common.Address) (NodeInfo, error) {
+	return _AddressBookV2Base.Contract.GetNodeInfo(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
+//
+// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetNodeInfos(opts *bind.CallOpts, nodeIds []common.Address) ([]NodeInfo, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getNodeInfos", nodeIds)
+
+	if err != nil {
+		return *new([]NodeInfo), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]NodeInfo)).(*[]NodeInfo)
+
+	return out0, err
+
+}
+
+// GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
+//
+// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetNodeInfos(nodeIds []common.Address) ([]NodeInfo, error) {
+	return _AddressBookV2Base.Contract.GetNodeInfos(&_AddressBookV2Base.CallOpts, nodeIds)
+}
+
+// GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
+//
+// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetNodeInfos(nodeIds []common.Address) ([]NodeInfo, error) {
+	return _AddressBookV2Base.Contract.GetNodeInfos(&_AddressBookV2Base.CallOpts, nodeIds)
+}
+
+// GetNodeState is a free data retrieval call binding the contract method 0x229bb823.
+//
+// Solidity: function getNodeState(address nodeId) view returns(uint8)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetNodeState(opts *bind.CallOpts, nodeId common.Address) (uint8, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getNodeState", nodeId)
+
+	if err != nil {
+		return *new(uint8), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
+
+	return out0, err
+
+}
+
+// GetNodeState is a free data retrieval call binding the contract method 0x229bb823.
+//
+// Solidity: function getNodeState(address nodeId) view returns(uint8)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetNodeState(nodeId common.Address) (uint8, error) {
+	return _AddressBookV2Base.Contract.GetNodeState(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// GetNodeState is a free data retrieval call binding the contract method 0x229bb823.
+//
+// Solidity: function getNodeState(address nodeId) view returns(uint8)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetNodeState(nodeId common.Address) (uint8, error) {
+	return _AddressBookV2Base.Contract.GetNodeState(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// GetScore is a free data retrieval call binding the contract method 0x80f2ff25.
+//
+// Solidity: function getScore(uint256 epoch, address nodeId) view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetScore(opts *bind.CallOpts, epoch *big.Int, nodeId common.Address) (*big.Int, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getScore", epoch, nodeId)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetScore is a free data retrieval call binding the contract method 0x80f2ff25.
+//
+// Solidity: function getScore(uint256 epoch, address nodeId) view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetScore(epoch *big.Int, nodeId common.Address) (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetScore(&_AddressBookV2Base.CallOpts, epoch, nodeId)
+}
+
+// GetScore is a free data retrieval call binding the contract method 0x80f2ff25.
+//
+// Solidity: function getScore(uint256 epoch, address nodeId) view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetScore(epoch *big.Int, nodeId common.Address) (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetScore(&_AddressBookV2Base.CallOpts, epoch, nodeId)
+}
+
+// GetStakingContract is a free data retrieval call binding the contract method 0x5300f9b4.
+//
+// Solidity: function getStakingContract(address nodeId) view returns(address)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetStakingContract(opts *bind.CallOpts, nodeId common.Address) (common.Address, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getStakingContract", nodeId)
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// GetStakingContract is a free data retrieval call binding the contract method 0x5300f9b4.
+//
+// Solidity: function getStakingContract(address nodeId) view returns(address)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetStakingContract(nodeId common.Address) (common.Address, error) {
+	return _AddressBookV2Base.Contract.GetStakingContract(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// GetStakingContract is a free data retrieval call binding the contract method 0x5300f9b4.
+//
+// Solidity: function getStakingContract(address nodeId) view returns(address)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetStakingContract(nodeId common.Address) (common.Address, error) {
+	return _AddressBookV2Base.Contract.GetStakingContract(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// GetStateCount is a free data retrieval call binding the contract method 0x1b1a478b.
+//
+// Solidity: function getStateCount(uint8 state) view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetStateCount(opts *bind.CallOpts, state uint8) (*big.Int, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getStateCount", state)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetStateCount is a free data retrieval call binding the contract method 0x1b1a478b.
+//
+// Solidity: function getStateCount(uint8 state) view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetStateCount(state uint8) (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetStateCount(&_AddressBookV2Base.CallOpts, state)
+}
+
+// GetStateCount is a free data retrieval call binding the contract method 0x1b1a478b.
+//
+// Solidity: function getStateCount(uint8 state) view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetStateCount(state uint8) (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetStateCount(&_AddressBookV2Base.CallOpts, state)
+}
+
+// GetSuspendedValidators is a free data retrieval call binding the contract method 0x1ba3fd58.
+//
+// Solidity: function getSuspendedValidators() view returns(address[])
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetSuspendedValidators(opts *bind.CallOpts) ([]common.Address, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getSuspendedValidators")
+
+	if err != nil {
+		return *new([]common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
+
+	return out0, err
+
+}
+
+// GetSuspendedValidators is a free data retrieval call binding the contract method 0x1ba3fd58.
+//
+// Solidity: function getSuspendedValidators() view returns(address[])
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetSuspendedValidators() ([]common.Address, error) {
+	return _AddressBookV2Base.Contract.GetSuspendedValidators(&_AddressBookV2Base.CallOpts)
+}
+
+// GetSuspendedValidators is a free data retrieval call binding the contract method 0x1ba3fd58.
+//
+// Solidity: function getSuspendedValidators() view returns(address[])
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetSuspendedValidators() ([]common.Address, error) {
+	return _AddressBookV2Base.Contract.GetSuspendedValidators(&_AddressBookV2Base.CallOpts)
+}
+
+// GetTimeoutAt is a free data retrieval call binding the contract method 0x277f3dc3.
+//
+// Solidity: function getTimeoutAt(address nodeId) view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetTimeoutAt(opts *bind.CallOpts, nodeId common.Address) (*big.Int, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getTimeoutAt", nodeId)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetTimeoutAt is a free data retrieval call binding the contract method 0x277f3dc3.
+//
+// Solidity: function getTimeoutAt(address nodeId) view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetTimeoutAt(nodeId common.Address) (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetTimeoutAt(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// GetTimeoutAt is a free data retrieval call binding the contract method 0x277f3dc3.
+//
+// Solidity: function getTimeoutAt(address nodeId) view returns(uint256)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetTimeoutAt(nodeId common.Address) (*big.Int, error) {
+	return _AddressBookV2Base.Contract.GetTimeoutAt(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// GetTimeouts is a free data retrieval call binding the contract method 0xe70c38f1.
+//
+// Solidity: function getTimeouts() view returns(uint256 pauseTimeout, uint256 idleTimeout)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) GetTimeouts(opts *bind.CallOpts) (struct {
+	PauseTimeout *big.Int
+	IdleTimeout  *big.Int
+}, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "getTimeouts")
+
+	outstruct := new(struct {
+		PauseTimeout *big.Int
+		IdleTimeout  *big.Int
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.PauseTimeout = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.IdleTimeout = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+
+	return *outstruct, err
+
+}
+
+// GetTimeouts is a free data retrieval call binding the contract method 0xe70c38f1.
+//
+// Solidity: function getTimeouts() view returns(uint256 pauseTimeout, uint256 idleTimeout)
+func (_AddressBookV2Base *AddressBookV2BaseSession) GetTimeouts() (struct {
+	PauseTimeout *big.Int
+	IdleTimeout  *big.Int
+}, error) {
+	return _AddressBookV2Base.Contract.GetTimeouts(&_AddressBookV2Base.CallOpts)
+}
+
+// GetTimeouts is a free data retrieval call binding the contract method 0xe70c38f1.
+//
+// Solidity: function getTimeouts() view returns(uint256 pauseTimeout, uint256 idleTimeout)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) GetTimeouts() (struct {
+	PauseTimeout *big.Int
+	IdleTimeout  *big.Int
+}, error) {
+	return _AddressBookV2Base.Contract.GetTimeouts(&_AddressBookV2Base.CallOpts)
+}
+
+// IsCandInactive is a free data retrieval call binding the contract method 0x45ce8110.
+//
+// Solidity: function isCandInactive(address nodeId) view returns(bool)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) IsCandInactive(opts *bind.CallOpts, nodeId common.Address) (bool, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "isCandInactive", nodeId)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// IsCandInactive is a free data retrieval call binding the contract method 0x45ce8110.
+//
+// Solidity: function isCandInactive(address nodeId) view returns(bool)
+func (_AddressBookV2Base *AddressBookV2BaseSession) IsCandInactive(nodeId common.Address) (bool, error) {
+	return _AddressBookV2Base.Contract.IsCandInactive(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// IsCandInactive is a free data retrieval call binding the contract method 0x45ce8110.
+//
+// Solidity: function isCandInactive(address nodeId) view returns(bool)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) IsCandInactive(nodeId common.Address) (bool, error) {
+	return _AddressBookV2Base.Contract.IsCandInactive(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// IsInActiveSet is a free data retrieval call binding the contract method 0x5334cf44.
+//
+// Solidity: function isInActiveSet(address nodeId) view returns(bool)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) IsInActiveSet(opts *bind.CallOpts, nodeId common.Address) (bool, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "isInActiveSet", nodeId)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// IsInActiveSet is a free data retrieval call binding the contract method 0x5334cf44.
+//
+// Solidity: function isInActiveSet(address nodeId) view returns(bool)
+func (_AddressBookV2Base *AddressBookV2BaseSession) IsInActiveSet(nodeId common.Address) (bool, error) {
+	return _AddressBookV2Base.Contract.IsInActiveSet(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// IsInActiveSet is a free data retrieval call binding the contract method 0x5334cf44.
+//
+// Solidity: function isInActiveSet(address nodeId) view returns(bool)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) IsInActiveSet(nodeId common.Address) (bool, error) {
+	return _AddressBookV2Base.Contract.IsInActiveSet(&_AddressBookV2Base.CallOpts, nodeId)
+}
+
+// IsRegistered is a free data retrieval call binding the contract method 0xc3c5a547.
+//
+// Solidity: function isRegistered(address addr) view returns(bool)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) IsRegistered(opts *bind.CallOpts, addr common.Address) (bool, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "isRegistered", addr)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// IsRegistered is a free data retrieval call binding the contract method 0xc3c5a547.
+//
+// Solidity: function isRegistered(address addr) view returns(bool)
+func (_AddressBookV2Base *AddressBookV2BaseSession) IsRegistered(addr common.Address) (bool, error) {
+	return _AddressBookV2Base.Contract.IsRegistered(&_AddressBookV2Base.CallOpts, addr)
+}
+
+// IsRegistered is a free data retrieval call binding the contract method 0xc3c5a547.
+//
+// Solidity: function isRegistered(address addr) view returns(bool)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) IsRegistered(addr common.Address) (bool, error) {
+	return _AddressBookV2Base.Contract.IsRegistered(&_AddressBookV2Base.CallOpts, addr)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "owner")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_AddressBookV2Base *AddressBookV2BaseSession) Owner() (common.Address, error) {
+	return _AddressBookV2Base.Contract.Owner(&_AddressBookV2Base.CallOpts)
+}
+
+// Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
+//
+// Solidity: function owner() view returns(address)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) Owner() (common.Address, error) {
+	return _AddressBookV2Base.Contract.Owner(&_AddressBookV2Base.CallOpts)
+}
+
+// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
+//
+// Solidity: function proxiableUUID() view returns(bytes32)
+func (_AddressBookV2Base *AddressBookV2BaseCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _AddressBookV2Base.contract.Call(opts, &out, "proxiableUUID")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
+//
+// Solidity: function proxiableUUID() view returns(bytes32)
+func (_AddressBookV2Base *AddressBookV2BaseSession) ProxiableUUID() ([32]byte, error) {
+	return _AddressBookV2Base.Contract.ProxiableUUID(&_AddressBookV2Base.CallOpts)
+}
+
+// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
+//
+// Solidity: function proxiableUUID() view returns(bytes32)
+func (_AddressBookV2Base *AddressBookV2BaseCallerSession) ProxiableUUID() ([32]byte, error) {
+	return _AddressBookV2Base.Contract.ProxiableUUID(&_AddressBookV2Base.CallOpts)
+}
+
+// ActivateCandidate is a paid mutator transaction binding the contract method 0xef6bdade.
+//
+// Solidity: function activateCandidate(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) ActivateCandidate(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "activateCandidate", nodeId)
+}
+
+// ActivateCandidate is a paid mutator transaction binding the contract method 0xef6bdade.
+//
+// Solidity: function activateCandidate(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) ActivateCandidate(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.ActivateCandidate(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// ActivateCandidate is a paid mutator transaction binding the contract method 0xef6bdade.
+//
+// Solidity: function activateCandidate(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) ActivateCandidate(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.ActivateCandidate(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// CreateNode is a paid mutator transaction binding the contract method 0x4429d720.
+//
+// Solidity: function createNode(address nodeId, address stakingContract, address rewardAddress, address voterAddress, (bytes,bytes) blsInfo, string metadata) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) CreateNode(opts *bind.TransactOpts, nodeId common.Address, stakingContract common.Address, rewardAddress common.Address, voterAddress common.Address, blsInfo BlsPublicKeyInfo, metadata string) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "createNode", nodeId, stakingContract, rewardAddress, voterAddress, blsInfo, metadata)
+}
+
+// CreateNode is a paid mutator transaction binding the contract method 0x4429d720.
+//
+// Solidity: function createNode(address nodeId, address stakingContract, address rewardAddress, address voterAddress, (bytes,bytes) blsInfo, string metadata) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) CreateNode(nodeId common.Address, stakingContract common.Address, rewardAddress common.Address, voterAddress common.Address, blsInfo BlsPublicKeyInfo, metadata string) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.CreateNode(&_AddressBookV2Base.TransactOpts, nodeId, stakingContract, rewardAddress, voterAddress, blsInfo, metadata)
+}
+
+// CreateNode is a paid mutator transaction binding the contract method 0x4429d720.
+//
+// Solidity: function createNode(address nodeId, address stakingContract, address rewardAddress, address voterAddress, (bytes,bytes) blsInfo, string metadata) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) CreateNode(nodeId common.Address, stakingContract common.Address, rewardAddress common.Address, voterAddress common.Address, blsInfo BlsPublicKeyInfo, metadata string) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.CreateNode(&_AddressBookV2Base.TransactOpts, nodeId, stakingContract, rewardAddress, voterAddress, blsInfo, metadata)
+}
+
+// DeactivateCandidate is a paid mutator transaction binding the contract method 0x171a6cdc.
+//
+// Solidity: function deactivateCandidate(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) DeactivateCandidate(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "deactivateCandidate", nodeId)
+}
+
+// DeactivateCandidate is a paid mutator transaction binding the contract method 0x171a6cdc.
+//
+// Solidity: function deactivateCandidate(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) DeactivateCandidate(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.DeactivateCandidate(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// DeactivateCandidate is a paid mutator transaction binding the contract method 0x171a6cdc.
+//
+// Solidity: function deactivateCandidate(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) DeactivateCandidate(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.DeactivateCandidate(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// DeleteNode is a paid mutator transaction binding the contract method 0x2d4ede93.
+//
+// Solidity: function deleteNode(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) DeleteNode(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "deleteNode", nodeId)
+}
+
+// DeleteNode is a paid mutator transaction binding the contract method 0x2d4ede93.
+//
+// Solidity: function deleteNode(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) DeleteNode(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.DeleteNode(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// DeleteNode is a paid mutator transaction binding the contract method 0x2d4ede93.
+//
+// Solidity: function deleteNode(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) DeleteNode(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.DeleteNode(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// Exit is a paid mutator transaction binding the contract method 0xb42652e9.
+//
+// Solidity: function exit(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) Exit(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "exit", nodeId)
+}
+
+// Exit is a paid mutator transaction binding the contract method 0xb42652e9.
+//
+// Solidity: function exit(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) Exit(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.Exit(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// Exit is a paid mutator transaction binding the contract method 0xb42652e9.
+//
+// Solidity: function exit(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) Exit(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.Exit(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// Offboard is a paid mutator transaction binding the contract method 0xb9f96f40.
+//
+// Solidity: function offboard(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) Offboard(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "offboard", nodeId)
+}
+
+// Offboard is a paid mutator transaction binding the contract method 0xb9f96f40.
+//
+// Solidity: function offboard(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) Offboard(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.Offboard(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// Offboard is a paid mutator transaction binding the contract method 0xb9f96f40.
+//
+// Solidity: function offboard(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) Offboard(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.Offboard(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// Pause is a paid mutator transaction binding the contract method 0x76a67a51.
+//
+// Solidity: function pause(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) Pause(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "pause", nodeId)
+}
+
+// Pause is a paid mutator transaction binding the contract method 0x76a67a51.
+//
+// Solidity: function pause(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) Pause(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.Pause(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// Pause is a paid mutator transaction binding the contract method 0x76a67a51.
+//
+// Solidity: function pause(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) Pause(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.Pause(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// ProcessSystemTransition is a paid mutator transaction binding the contract method 0x45527e44.
+//
+// Solidity: function processSystemTransition(address[] nodeIds, uint8[] newStates, uint256[] timeoutAts) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) ProcessSystemTransition(opts *bind.TransactOpts, nodeIds []common.Address, newStates []uint8, timeoutAts []*big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "processSystemTransition", nodeIds, newStates, timeoutAts)
+}
+
+// ProcessSystemTransition is a paid mutator transaction binding the contract method 0x45527e44.
+//
+// Solidity: function processSystemTransition(address[] nodeIds, uint8[] newStates, uint256[] timeoutAts) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) ProcessSystemTransition(nodeIds []common.Address, newStates []uint8, timeoutAts []*big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.ProcessSystemTransition(&_AddressBookV2Base.TransactOpts, nodeIds, newStates, timeoutAts)
+}
+
+// ProcessSystemTransition is a paid mutator transaction binding the contract method 0x45527e44.
+//
+// Solidity: function processSystemTransition(address[] nodeIds, uint8[] newStates, uint256[] timeoutAts) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) ProcessSystemTransition(nodeIds []common.Address, newStates []uint8, timeoutAts []*big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.ProcessSystemTransition(&_AddressBookV2Base.TransactOpts, nodeIds, newStates, timeoutAts)
+}
+
+// ReadyValidator is a paid mutator transaction binding the contract method 0x656f5869.
+//
+// Solidity: function readyValidator(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) ReadyValidator(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "readyValidator", nodeId)
+}
+
+// ReadyValidator is a paid mutator transaction binding the contract method 0x656f5869.
+//
+// Solidity: function readyValidator(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) ReadyValidator(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.ReadyValidator(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// ReadyValidator is a paid mutator transaction binding the contract method 0x656f5869.
+//
+// Solidity: function readyValidator(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) ReadyValidator(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.ReadyValidator(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+//
+// Solidity: function renounceOwnership() returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) RenounceOwnership(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "renounceOwnership")
+}
+
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+//
+// Solidity: function renounceOwnership() returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) RenounceOwnership() (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.RenounceOwnership(&_AddressBookV2Base.TransactOpts)
+}
+
+// RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
+//
+// Solidity: function renounceOwnership() returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) RenounceOwnership() (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.RenounceOwnership(&_AddressBookV2Base.TransactOpts)
+}
+
+// Resume is a paid mutator transaction binding the contract method 0x793c1946.
+//
+// Solidity: function resume(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) Resume(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "resume", nodeId)
+}
+
+// Resume is a paid mutator transaction binding the contract method 0x793c1946.
+//
+// Solidity: function resume(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) Resume(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.Resume(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// Resume is a paid mutator transaction binding the contract method 0x793c1946.
+//
+// Solidity: function resume(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) Resume(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.Resume(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// SuspendValidator is a paid mutator transaction binding the contract method 0xa41b6000.
+//
+// Solidity: function suspendValidator(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) SuspendValidator(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "suspendValidator", nodeId)
+}
+
+// SuspendValidator is a paid mutator transaction binding the contract method 0xa41b6000.
+//
+// Solidity: function suspendValidator(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) SuspendValidator(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.SuspendValidator(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// SuspendValidator is a paid mutator transaction binding the contract method 0xa41b6000.
+//
+// Solidity: function suspendValidator(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) SuspendValidator(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.SuspendValidator(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+//
+// Solidity: function transferOwnership(address newOwner) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) TransferOwnership(opts *bind.TransactOpts, newOwner common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "transferOwnership", newOwner)
+}
+
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+//
+// Solidity: function transferOwnership(address newOwner) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.TransferOwnership(&_AddressBookV2Base.TransactOpts, newOwner)
+}
+
+// TransferOwnership is a paid mutator transaction binding the contract method 0xf2fde38b.
+//
+// Solidity: function transferOwnership(address newOwner) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) TransferOwnership(newOwner common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.TransferOwnership(&_AddressBookV2Base.TransactOpts, newOwner)
+}
+
+// UnreadyValidator is a paid mutator transaction binding the contract method 0xd9abb38b.
+//
+// Solidity: function unreadyValidator(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UnreadyValidator(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "unreadyValidator", nodeId)
+}
+
+// UnreadyValidator is a paid mutator transaction binding the contract method 0xd9abb38b.
+//
+// Solidity: function unreadyValidator(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UnreadyValidator(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UnreadyValidator(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// UnreadyValidator is a paid mutator transaction binding the contract method 0xd9abb38b.
+//
+// Solidity: function unreadyValidator(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UnreadyValidator(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UnreadyValidator(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// UnsuspendValidator is a paid mutator transaction binding the contract method 0x78b84a5c.
+//
+// Solidity: function unsuspendValidator(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UnsuspendValidator(opts *bind.TransactOpts, nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "unsuspendValidator", nodeId)
+}
+
+// UnsuspendValidator is a paid mutator transaction binding the contract method 0x78b84a5c.
+//
+// Solidity: function unsuspendValidator(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UnsuspendValidator(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UnsuspendValidator(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// UnsuspendValidator is a paid mutator transaction binding the contract method 0x78b84a5c.
+//
+// Solidity: function unsuspendValidator(address nodeId) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UnsuspendValidator(nodeId common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UnsuspendValidator(&_AddressBookV2Base.TransactOpts, nodeId)
+}
+
+// UpdateExitThreshold is a paid mutator transaction binding the contract method 0x2c1d4895.
+//
+// Solidity: function updateExitThreshold(uint256 newExitThreshold) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UpdateExitThreshold(opts *bind.TransactOpts, newExitThreshold *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "updateExitThreshold", newExitThreshold)
+}
+
+// UpdateExitThreshold is a paid mutator transaction binding the contract method 0x2c1d4895.
+//
+// Solidity: function updateExitThreshold(uint256 newExitThreshold) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UpdateExitThreshold(newExitThreshold *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateExitThreshold(&_AddressBookV2Base.TransactOpts, newExitThreshold)
+}
+
+// UpdateExitThreshold is a paid mutator transaction binding the contract method 0x2c1d4895.
+//
+// Solidity: function updateExitThreshold(uint256 newExitThreshold) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UpdateExitThreshold(newExitThreshold *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateExitThreshold(&_AddressBookV2Base.TransactOpts, newExitThreshold)
+}
+
+// UpdateIdleTimeout is a paid mutator transaction binding the contract method 0xe59d7a84.
+//
+// Solidity: function updateIdleTimeout(uint256 newIdleTimeout) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UpdateIdleTimeout(opts *bind.TransactOpts, newIdleTimeout *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "updateIdleTimeout", newIdleTimeout)
+}
+
+// UpdateIdleTimeout is a paid mutator transaction binding the contract method 0xe59d7a84.
+//
+// Solidity: function updateIdleTimeout(uint256 newIdleTimeout) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UpdateIdleTimeout(newIdleTimeout *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateIdleTimeout(&_AddressBookV2Base.TransactOpts, newIdleTimeout)
+}
+
+// UpdateIdleTimeout is a paid mutator transaction binding the contract method 0xe59d7a84.
+//
+// Solidity: function updateIdleTimeout(uint256 newIdleTimeout) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UpdateIdleTimeout(newIdleTimeout *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateIdleTimeout(&_AddressBookV2Base.TransactOpts, newIdleTimeout)
+}
+
+// UpdateKefAddress is a paid mutator transaction binding the contract method 0x9d8cf08f.
+//
+// Solidity: function updateKefAddress(address newKefAddress) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UpdateKefAddress(opts *bind.TransactOpts, newKefAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "updateKefAddress", newKefAddress)
+}
+
+// UpdateKefAddress is a paid mutator transaction binding the contract method 0x9d8cf08f.
+//
+// Solidity: function updateKefAddress(address newKefAddress) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UpdateKefAddress(newKefAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateKefAddress(&_AddressBookV2Base.TransactOpts, newKefAddress)
+}
+
+// UpdateKefAddress is a paid mutator transaction binding the contract method 0x9d8cf08f.
+//
+// Solidity: function updateKefAddress(address newKefAddress) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UpdateKefAddress(newKefAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateKefAddress(&_AddressBookV2Base.TransactOpts, newKefAddress)
+}
+
+// UpdateKifAddress is a paid mutator transaction binding the contract method 0x7df40c62.
+//
+// Solidity: function updateKifAddress(address newKifAddress) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UpdateKifAddress(opts *bind.TransactOpts, newKifAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "updateKifAddress", newKifAddress)
+}
+
+// UpdateKifAddress is a paid mutator transaction binding the contract method 0x7df40c62.
+//
+// Solidity: function updateKifAddress(address newKifAddress) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UpdateKifAddress(newKifAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateKifAddress(&_AddressBookV2Base.TransactOpts, newKifAddress)
+}
+
+// UpdateKifAddress is a paid mutator transaction binding the contract method 0x7df40c62.
+//
+// Solidity: function updateKifAddress(address newKifAddress) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UpdateKifAddress(newKifAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateKifAddress(&_AddressBookV2Base.TransactOpts, newKifAddress)
+}
+
+// UpdateKpfAddress is a paid mutator transaction binding the contract method 0xc9a86af2.
+//
+// Solidity: function updateKpfAddress(address newKpfAddress) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UpdateKpfAddress(opts *bind.TransactOpts, newKpfAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "updateKpfAddress", newKpfAddress)
+}
+
+// UpdateKpfAddress is a paid mutator transaction binding the contract method 0xc9a86af2.
+//
+// Solidity: function updateKpfAddress(address newKpfAddress) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UpdateKpfAddress(newKpfAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateKpfAddress(&_AddressBookV2Base.TransactOpts, newKpfAddress)
+}
+
+// UpdateKpfAddress is a paid mutator transaction binding the contract method 0xc9a86af2.
+//
+// Solidity: function updateKpfAddress(address newKpfAddress) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UpdateKpfAddress(newKpfAddress common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateKpfAddress(&_AddressBookV2Base.TransactOpts, newKpfAddress)
+}
+
+// UpdateManager is a paid mutator transaction binding the contract method 0x07ecec3e.
+//
+// Solidity: function updateManager(address nodeId, address newManager) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UpdateManager(opts *bind.TransactOpts, nodeId common.Address, newManager common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "updateManager", nodeId, newManager)
+}
+
+// UpdateManager is a paid mutator transaction binding the contract method 0x07ecec3e.
+//
+// Solidity: function updateManager(address nodeId, address newManager) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UpdateManager(nodeId common.Address, newManager common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateManager(&_AddressBookV2Base.TransactOpts, nodeId, newManager)
+}
+
+// UpdateManager is a paid mutator transaction binding the contract method 0x07ecec3e.
+//
+// Solidity: function updateManager(address nodeId, address newManager) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UpdateManager(nodeId common.Address, newManager common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateManager(&_AddressBookV2Base.TransactOpts, nodeId, newManager)
+}
+
+// UpdateMaxReadyCandidateCount is a paid mutator transaction binding the contract method 0x76714282.
+//
+// Solidity: function updateMaxReadyCandidateCount(uint256 newMaxReadyCandidateCount) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UpdateMaxReadyCandidateCount(opts *bind.TransactOpts, newMaxReadyCandidateCount *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "updateMaxReadyCandidateCount", newMaxReadyCandidateCount)
+}
+
+// UpdateMaxReadyCandidateCount is a paid mutator transaction binding the contract method 0x76714282.
+//
+// Solidity: function updateMaxReadyCandidateCount(uint256 newMaxReadyCandidateCount) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UpdateMaxReadyCandidateCount(newMaxReadyCandidateCount *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateMaxReadyCandidateCount(&_AddressBookV2Base.TransactOpts, newMaxReadyCandidateCount)
+}
+
+// UpdateMaxReadyCandidateCount is a paid mutator transaction binding the contract method 0x76714282.
+//
+// Solidity: function updateMaxReadyCandidateCount(uint256 newMaxReadyCandidateCount) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UpdateMaxReadyCandidateCount(newMaxReadyCandidateCount *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateMaxReadyCandidateCount(&_AddressBookV2Base.TransactOpts, newMaxReadyCandidateCount)
+}
+
+// UpdateMaxValidatorCount is a paid mutator transaction binding the contract method 0x7e134fc6.
+//
+// Solidity: function updateMaxValidatorCount(uint256 newMaxValidatorCount) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UpdateMaxValidatorCount(opts *bind.TransactOpts, newMaxValidatorCount *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "updateMaxValidatorCount", newMaxValidatorCount)
+}
+
+// UpdateMaxValidatorCount is a paid mutator transaction binding the contract method 0x7e134fc6.
+//
+// Solidity: function updateMaxValidatorCount(uint256 newMaxValidatorCount) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UpdateMaxValidatorCount(newMaxValidatorCount *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateMaxValidatorCount(&_AddressBookV2Base.TransactOpts, newMaxValidatorCount)
+}
+
+// UpdateMaxValidatorCount is a paid mutator transaction binding the contract method 0x7e134fc6.
+//
+// Solidity: function updateMaxValidatorCount(uint256 newMaxValidatorCount) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UpdateMaxValidatorCount(newMaxValidatorCount *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateMaxValidatorCount(&_AddressBookV2Base.TransactOpts, newMaxValidatorCount)
+}
+
+// UpdatePauseTimeout is a paid mutator transaction binding the contract method 0x9d0e234d.
+//
+// Solidity: function updatePauseTimeout(uint256 newPauseTimeout) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UpdatePauseTimeout(opts *bind.TransactOpts, newPauseTimeout *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "updatePauseTimeout", newPauseTimeout)
+}
+
+// UpdatePauseTimeout is a paid mutator transaction binding the contract method 0x9d0e234d.
+//
+// Solidity: function updatePauseTimeout(uint256 newPauseTimeout) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UpdatePauseTimeout(newPauseTimeout *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdatePauseTimeout(&_AddressBookV2Base.TransactOpts, newPauseTimeout)
+}
+
+// UpdatePauseTimeout is a paid mutator transaction binding the contract method 0x9d0e234d.
+//
+// Solidity: function updatePauseTimeout(uint256 newPauseTimeout) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UpdatePauseTimeout(newPauseTimeout *big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdatePauseTimeout(&_AddressBookV2Base.TransactOpts, newPauseTimeout)
+}
+
+// UpdateScores is a paid mutator transaction binding the contract method 0x27f94c3d.
+//
+// Solidity: function updateScores(address[] nodeIds, uint256[] scores) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UpdateScores(opts *bind.TransactOpts, nodeIds []common.Address, scores []*big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "updateScores", nodeIds, scores)
+}
+
+// UpdateScores is a paid mutator transaction binding the contract method 0x27f94c3d.
+//
+// Solidity: function updateScores(address[] nodeIds, uint256[] scores) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UpdateScores(nodeIds []common.Address, scores []*big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateScores(&_AddressBookV2Base.TransactOpts, nodeIds, scores)
+}
+
+// UpdateScores is a paid mutator transaction binding the contract method 0x27f94c3d.
+//
+// Solidity: function updateScores(address[] nodeIds, uint256[] scores) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UpdateScores(nodeIds []common.Address, scores []*big.Int) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpdateScores(&_AddressBookV2Base.TransactOpts, nodeIds, scores)
+}
+
+// UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
+//
+// Solidity: function upgradeTo(address newImplementation) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UpgradeTo(opts *bind.TransactOpts, newImplementation common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "upgradeTo", newImplementation)
+}
+
+// UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
+//
+// Solidity: function upgradeTo(address newImplementation) returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UpgradeTo(newImplementation common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpgradeTo(&_AddressBookV2Base.TransactOpts, newImplementation)
+}
+
+// UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
+//
+// Solidity: function upgradeTo(address newImplementation) returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UpgradeTo(newImplementation common.Address) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpgradeTo(&_AddressBookV2Base.TransactOpts, newImplementation)
+}
+
+// UpgradeToAndCall is a paid mutator transaction binding the contract method 0x4f1ef286.
+//
+// Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactor) UpgradeToAndCall(opts *bind.TransactOpts, newImplementation common.Address, data []byte) (*types.Transaction, error) {
+	return _AddressBookV2Base.contract.Transact(opts, "upgradeToAndCall", newImplementation, data)
+}
+
+// UpgradeToAndCall is a paid mutator transaction binding the contract method 0x4f1ef286.
+//
+// Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
+func (_AddressBookV2Base *AddressBookV2BaseSession) UpgradeToAndCall(newImplementation common.Address, data []byte) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpgradeToAndCall(&_AddressBookV2Base.TransactOpts, newImplementation, data)
+}
+
+// UpgradeToAndCall is a paid mutator transaction binding the contract method 0x4f1ef286.
+//
+// Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
+func (_AddressBookV2Base *AddressBookV2BaseTransactorSession) UpgradeToAndCall(newImplementation common.Address, data []byte) (*types.Transaction, error) {
+	return _AddressBookV2Base.Contract.UpgradeToAndCall(&_AddressBookV2Base.TransactOpts, newImplementation, data)
+}
+
+// AddressBookV2BaseAdminChangedIterator is returned from FilterAdminChanged and is used to iterate over the raw logs and unpacked data for AdminChanged events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseAdminChangedIterator struct {
+	Event *AddressBookV2BaseAdminChanged // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseAdminChangedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseAdminChanged)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseAdminChanged)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseAdminChangedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseAdminChangedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseAdminChanged represents a AdminChanged event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseAdminChanged struct {
+	PreviousAdmin common.Address
+	NewAdmin      common.Address
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterAdminChanged is a free log retrieval operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
+//
+// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*AddressBookV2BaseAdminChangedIterator, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "AdminChanged")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseAdminChangedIterator{contract: _AddressBookV2Base.contract, event: "AdminChanged", logs: logs, sub: sub}, nil
+}
+
+// WatchAdminChanged is a free log subscription operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
+//
+// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseAdminChanged) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "AdminChanged")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseAdminChanged)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "AdminChanged", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseAdminChanged is a log parse operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
+//
+// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseAdminChanged(log types.Log) (*AddressBookV2BaseAdminChanged, error) {
+	event := new(AddressBookV2BaseAdminChanged)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "AdminChanged", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseBeaconUpgradedIterator is returned from FilterBeaconUpgraded and is used to iterate over the raw logs and unpacked data for BeaconUpgraded events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseBeaconUpgradedIterator struct {
+	Event *AddressBookV2BaseBeaconUpgraded // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseBeaconUpgradedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseBeaconUpgraded)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseBeaconUpgraded)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseBeaconUpgradedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseBeaconUpgradedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseBeaconUpgraded represents a BeaconUpgraded event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseBeaconUpgraded struct {
+	Beacon common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterBeaconUpgraded is a free log retrieval operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
+//
+// Solidity: event BeaconUpgraded(address indexed beacon)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*AddressBookV2BaseBeaconUpgradedIterator, error) {
+
+	var beaconRule []interface{}
+	for _, beaconItem := range beacon {
+		beaconRule = append(beaconRule, beaconItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "BeaconUpgraded", beaconRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseBeaconUpgradedIterator{contract: _AddressBookV2Base.contract, event: "BeaconUpgraded", logs: logs, sub: sub}, nil
+}
+
+// WatchBeaconUpgraded is a free log subscription operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
+//
+// Solidity: event BeaconUpgraded(address indexed beacon)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
+
+	var beaconRule []interface{}
+	for _, beaconItem := range beacon {
+		beaconRule = append(beaconRule, beaconItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "BeaconUpgraded", beaconRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseBeaconUpgraded)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseBeaconUpgraded is a log parse operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
+//
+// Solidity: event BeaconUpgraded(address indexed beacon)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseBeaconUpgraded(log types.Log) (*AddressBookV2BaseBeaconUpgraded, error) {
+	event := new(AddressBookV2BaseBeaconUpgraded)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseCandidateActivatedIterator is returned from FilterCandidateActivated and is used to iterate over the raw logs and unpacked data for CandidateActivated events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseCandidateActivatedIterator struct {
+	Event *AddressBookV2BaseCandidateActivated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseCandidateActivatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseCandidateActivated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseCandidateActivated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseCandidateActivatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseCandidateActivatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseCandidateActivated represents a CandidateActivated event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseCandidateActivated struct {
+	NodeId common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterCandidateActivated is a free log retrieval operation binding the contract event 0x759721961c23d02140d70249a00d7bbc893592166a3ef92468e7208cf41a45e3.
+//
+// Solidity: event CandidateActivated(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterCandidateActivated(opts *bind.FilterOpts, nodeId []common.Address) (*AddressBookV2BaseCandidateActivatedIterator, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "CandidateActivated", nodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseCandidateActivatedIterator{contract: _AddressBookV2Base.contract, event: "CandidateActivated", logs: logs, sub: sub}, nil
+}
+
+// WatchCandidateActivated is a free log subscription operation binding the contract event 0x759721961c23d02140d70249a00d7bbc893592166a3ef92468e7208cf41a45e3.
+//
+// Solidity: event CandidateActivated(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchCandidateActivated(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseCandidateActivated, nodeId []common.Address) (event.Subscription, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "CandidateActivated", nodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseCandidateActivated)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "CandidateActivated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseCandidateActivated is a log parse operation binding the contract event 0x759721961c23d02140d70249a00d7bbc893592166a3ef92468e7208cf41a45e3.
+//
+// Solidity: event CandidateActivated(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseCandidateActivated(log types.Log) (*AddressBookV2BaseCandidateActivated, error) {
+	event := new(AddressBookV2BaseCandidateActivated)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "CandidateActivated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseCandidateDeactivatedIterator is returned from FilterCandidateDeactivated and is used to iterate over the raw logs and unpacked data for CandidateDeactivated events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseCandidateDeactivatedIterator struct {
+	Event *AddressBookV2BaseCandidateDeactivated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseCandidateDeactivatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseCandidateDeactivated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseCandidateDeactivated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseCandidateDeactivatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseCandidateDeactivatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseCandidateDeactivated represents a CandidateDeactivated event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseCandidateDeactivated struct {
+	NodeId common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterCandidateDeactivated is a free log retrieval operation binding the contract event 0xbaea727dfffa01fdb952c2b313510033b0a631d0cc04c818a313b75060683e5a.
+//
+// Solidity: event CandidateDeactivated(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterCandidateDeactivated(opts *bind.FilterOpts, nodeId []common.Address) (*AddressBookV2BaseCandidateDeactivatedIterator, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "CandidateDeactivated", nodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseCandidateDeactivatedIterator{contract: _AddressBookV2Base.contract, event: "CandidateDeactivated", logs: logs, sub: sub}, nil
+}
+
+// WatchCandidateDeactivated is a free log subscription operation binding the contract event 0xbaea727dfffa01fdb952c2b313510033b0a631d0cc04c818a313b75060683e5a.
+//
+// Solidity: event CandidateDeactivated(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchCandidateDeactivated(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseCandidateDeactivated, nodeId []common.Address) (event.Subscription, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "CandidateDeactivated", nodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseCandidateDeactivated)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "CandidateDeactivated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseCandidateDeactivated is a log parse operation binding the contract event 0xbaea727dfffa01fdb952c2b313510033b0a631d0cc04c818a313b75060683e5a.
+//
+// Solidity: event CandidateDeactivated(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseCandidateDeactivated(log types.Log) (*AddressBookV2BaseCandidateDeactivated, error) {
+	event := new(AddressBookV2BaseCandidateDeactivated)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "CandidateDeactivated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseEpochTransitionProcessedIterator is returned from FilterEpochTransitionProcessed and is used to iterate over the raw logs and unpacked data for EpochTransitionProcessed events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseEpochTransitionProcessedIterator struct {
+	Event *AddressBookV2BaseEpochTransitionProcessed // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseEpochTransitionProcessedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseEpochTransitionProcessed)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseEpochTransitionProcessed)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseEpochTransitionProcessedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseEpochTransitionProcessedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseEpochTransitionProcessed represents a EpochTransitionProcessed event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseEpochTransitionProcessed struct {
+	EpochValCount *big.Int
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterEpochTransitionProcessed is a free log retrieval operation binding the contract event 0xd45be950fd3aceb65c6059b131cc8e06ab2390da6780d464b82c153e84816052.
+//
+// Solidity: event EpochTransitionProcessed(uint256 epochValCount)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterEpochTransitionProcessed(opts *bind.FilterOpts) (*AddressBookV2BaseEpochTransitionProcessedIterator, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "EpochTransitionProcessed")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseEpochTransitionProcessedIterator{contract: _AddressBookV2Base.contract, event: "EpochTransitionProcessed", logs: logs, sub: sub}, nil
+}
+
+// WatchEpochTransitionProcessed is a free log subscription operation binding the contract event 0xd45be950fd3aceb65c6059b131cc8e06ab2390da6780d464b82c153e84816052.
+//
+// Solidity: event EpochTransitionProcessed(uint256 epochValCount)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchEpochTransitionProcessed(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseEpochTransitionProcessed) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "EpochTransitionProcessed")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseEpochTransitionProcessed)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "EpochTransitionProcessed", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseEpochTransitionProcessed is a log parse operation binding the contract event 0xd45be950fd3aceb65c6059b131cc8e06ab2390da6780d464b82c153e84816052.
+//
+// Solidity: event EpochTransitionProcessed(uint256 epochValCount)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseEpochTransitionProcessed(log types.Log) (*AddressBookV2BaseEpochTransitionProcessed, error) {
+	event := new(AddressBookV2BaseEpochTransitionProcessed)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "EpochTransitionProcessed", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseExitThresholdUpdatedIterator is returned from FilterExitThresholdUpdated and is used to iterate over the raw logs and unpacked data for ExitThresholdUpdated events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseExitThresholdUpdatedIterator struct {
+	Event *AddressBookV2BaseExitThresholdUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseExitThresholdUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseExitThresholdUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseExitThresholdUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseExitThresholdUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseExitThresholdUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseExitThresholdUpdated represents a ExitThresholdUpdated event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseExitThresholdUpdated struct {
+	OldThreshold *big.Int
+	NewThreshold *big.Int
+	Raw          types.Log // Blockchain specific contextual infos
+}
+
+// FilterExitThresholdUpdated is a free log retrieval operation binding the contract event 0x350feb2acced9171b9d250e5771e5ecd6940594484b98efc4fc7daddcaa42f2a.
+//
+// Solidity: event ExitThresholdUpdated(uint256 oldThreshold, uint256 newThreshold)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterExitThresholdUpdated(opts *bind.FilterOpts) (*AddressBookV2BaseExitThresholdUpdatedIterator, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "ExitThresholdUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseExitThresholdUpdatedIterator{contract: _AddressBookV2Base.contract, event: "ExitThresholdUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchExitThresholdUpdated is a free log subscription operation binding the contract event 0x350feb2acced9171b9d250e5771e5ecd6940594484b98efc4fc7daddcaa42f2a.
+//
+// Solidity: event ExitThresholdUpdated(uint256 oldThreshold, uint256 newThreshold)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchExitThresholdUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseExitThresholdUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "ExitThresholdUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseExitThresholdUpdated)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "ExitThresholdUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseExitThresholdUpdated is a log parse operation binding the contract event 0x350feb2acced9171b9d250e5771e5ecd6940594484b98efc4fc7daddcaa42f2a.
+//
+// Solidity: event ExitThresholdUpdated(uint256 oldThreshold, uint256 newThreshold)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseExitThresholdUpdated(log types.Log) (*AddressBookV2BaseExitThresholdUpdated, error) {
+	event := new(AddressBookV2BaseExitThresholdUpdated)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "ExitThresholdUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseIdleTimeoutUpdatedIterator is returned from FilterIdleTimeoutUpdated and is used to iterate over the raw logs and unpacked data for IdleTimeoutUpdated events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseIdleTimeoutUpdatedIterator struct {
+	Event *AddressBookV2BaseIdleTimeoutUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseIdleTimeoutUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseIdleTimeoutUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseIdleTimeoutUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseIdleTimeoutUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseIdleTimeoutUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseIdleTimeoutUpdated represents a IdleTimeoutUpdated event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseIdleTimeoutUpdated struct {
+	OldIdleTimeout *big.Int
+	NewIdleTimeout *big.Int
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterIdleTimeoutUpdated is a free log retrieval operation binding the contract event 0xe10ca6f253a2344c11c8e060dca53f2a3397c1f5c3b6314104a42b376c42d08f.
+//
+// Solidity: event IdleTimeoutUpdated(uint256 oldIdleTimeout, uint256 newIdleTimeout)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterIdleTimeoutUpdated(opts *bind.FilterOpts) (*AddressBookV2BaseIdleTimeoutUpdatedIterator, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "IdleTimeoutUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseIdleTimeoutUpdatedIterator{contract: _AddressBookV2Base.contract, event: "IdleTimeoutUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchIdleTimeoutUpdated is a free log subscription operation binding the contract event 0xe10ca6f253a2344c11c8e060dca53f2a3397c1f5c3b6314104a42b376c42d08f.
+//
+// Solidity: event IdleTimeoutUpdated(uint256 oldIdleTimeout, uint256 newIdleTimeout)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchIdleTimeoutUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseIdleTimeoutUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "IdleTimeoutUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseIdleTimeoutUpdated)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "IdleTimeoutUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseIdleTimeoutUpdated is a log parse operation binding the contract event 0xe10ca6f253a2344c11c8e060dca53f2a3397c1f5c3b6314104a42b376c42d08f.
+//
+// Solidity: event IdleTimeoutUpdated(uint256 oldIdleTimeout, uint256 newIdleTimeout)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseIdleTimeoutUpdated(log types.Log) (*AddressBookV2BaseIdleTimeoutUpdated, error) {
+	event := new(AddressBookV2BaseIdleTimeoutUpdated)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "IdleTimeoutUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseInitializedIterator is returned from FilterInitialized and is used to iterate over the raw logs and unpacked data for Initialized events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseInitializedIterator struct {
+	Event *AddressBookV2BaseInitialized // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseInitializedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseInitialized)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseInitialized)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseInitializedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseInitializedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseInitialized represents a Initialized event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseInitialized struct {
+	Version uint8
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterInitialized is a free log retrieval operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
+//
+// Solidity: event Initialized(uint8 version)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterInitialized(opts *bind.FilterOpts) (*AddressBookV2BaseInitializedIterator, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "Initialized")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseInitializedIterator{contract: _AddressBookV2Base.contract, event: "Initialized", logs: logs, sub: sub}, nil
+}
+
+// WatchInitialized is a free log subscription operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
+//
+// Solidity: event Initialized(uint8 version)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseInitialized) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "Initialized")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseInitialized)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "Initialized", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseInitialized is a log parse operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
+//
+// Solidity: event Initialized(uint8 version)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseInitialized(log types.Log) (*AddressBookV2BaseInitialized, error) {
+	event := new(AddressBookV2BaseInitialized)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "Initialized", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseKefAddressUpdatedIterator is returned from FilterKefAddressUpdated and is used to iterate over the raw logs and unpacked data for KefAddressUpdated events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseKefAddressUpdatedIterator struct {
+	Event *AddressBookV2BaseKefAddressUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseKefAddressUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseKefAddressUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseKefAddressUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseKefAddressUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseKefAddressUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseKefAddressUpdated represents a KefAddressUpdated event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseKefAddressUpdated struct {
+	OldAddress common.Address
+	NewAddress common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterKefAddressUpdated is a free log retrieval operation binding the contract event 0xdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c.
+//
+// Solidity: event KefAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterKefAddressUpdated(opts *bind.FilterOpts) (*AddressBookV2BaseKefAddressUpdatedIterator, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "KefAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseKefAddressUpdatedIterator{contract: _AddressBookV2Base.contract, event: "KefAddressUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchKefAddressUpdated is a free log subscription operation binding the contract event 0xdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c.
+//
+// Solidity: event KefAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchKefAddressUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseKefAddressUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "KefAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseKefAddressUpdated)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "KefAddressUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseKefAddressUpdated is a log parse operation binding the contract event 0xdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c.
+//
+// Solidity: event KefAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseKefAddressUpdated(log types.Log) (*AddressBookV2BaseKefAddressUpdated, error) {
+	event := new(AddressBookV2BaseKefAddressUpdated)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "KefAddressUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseKifAddressUpdatedIterator is returned from FilterKifAddressUpdated and is used to iterate over the raw logs and unpacked data for KifAddressUpdated events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseKifAddressUpdatedIterator struct {
+	Event *AddressBookV2BaseKifAddressUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseKifAddressUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseKifAddressUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseKifAddressUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseKifAddressUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseKifAddressUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseKifAddressUpdated represents a KifAddressUpdated event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseKifAddressUpdated struct {
+	OldAddress common.Address
+	NewAddress common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterKifAddressUpdated is a free log retrieval operation binding the contract event 0xc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c.
+//
+// Solidity: event KifAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterKifAddressUpdated(opts *bind.FilterOpts) (*AddressBookV2BaseKifAddressUpdatedIterator, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "KifAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseKifAddressUpdatedIterator{contract: _AddressBookV2Base.contract, event: "KifAddressUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchKifAddressUpdated is a free log subscription operation binding the contract event 0xc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c.
+//
+// Solidity: event KifAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchKifAddressUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseKifAddressUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "KifAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseKifAddressUpdated)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "KifAddressUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseKifAddressUpdated is a log parse operation binding the contract event 0xc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c.
+//
+// Solidity: event KifAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseKifAddressUpdated(log types.Log) (*AddressBookV2BaseKifAddressUpdated, error) {
+	event := new(AddressBookV2BaseKifAddressUpdated)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "KifAddressUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseKpfAddressUpdatedIterator is returned from FilterKpfAddressUpdated and is used to iterate over the raw logs and unpacked data for KpfAddressUpdated events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseKpfAddressUpdatedIterator struct {
+	Event *AddressBookV2BaseKpfAddressUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseKpfAddressUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseKpfAddressUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseKpfAddressUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseKpfAddressUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseKpfAddressUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseKpfAddressUpdated represents a KpfAddressUpdated event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseKpfAddressUpdated struct {
+	OldAddress common.Address
+	NewAddress common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterKpfAddressUpdated is a free log retrieval operation binding the contract event 0x7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41.
+//
+// Solidity: event KpfAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterKpfAddressUpdated(opts *bind.FilterOpts) (*AddressBookV2BaseKpfAddressUpdatedIterator, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "KpfAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseKpfAddressUpdatedIterator{contract: _AddressBookV2Base.contract, event: "KpfAddressUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchKpfAddressUpdated is a free log subscription operation binding the contract event 0x7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41.
+//
+// Solidity: event KpfAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchKpfAddressUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseKpfAddressUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "KpfAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseKpfAddressUpdated)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "KpfAddressUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseKpfAddressUpdated is a log parse operation binding the contract event 0x7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41.
+//
+// Solidity: event KpfAddressUpdated(address oldAddress, address newAddress)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseKpfAddressUpdated(log types.Log) (*AddressBookV2BaseKpfAddressUpdated, error) {
+	event := new(AddressBookV2BaseKpfAddressUpdated)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "KpfAddressUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseManagerUpdatedIterator is returned from FilterManagerUpdated and is used to iterate over the raw logs and unpacked data for ManagerUpdated events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseManagerUpdatedIterator struct {
+	Event *AddressBookV2BaseManagerUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseManagerUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseManagerUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseManagerUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseManagerUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseManagerUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseManagerUpdated represents a ManagerUpdated event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseManagerUpdated struct {
+	NodeId     common.Address
+	OldManager common.Address
+	NewManager common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterManagerUpdated is a free log retrieval operation binding the contract event 0x8df26d30992ecfde135bbe59c1f267d82e2aae9d32fdae41551a38fe8b7bda87.
+//
+// Solidity: event ManagerUpdated(address indexed nodeId, address indexed oldManager, address indexed newManager)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterManagerUpdated(opts *bind.FilterOpts, nodeId []common.Address, oldManager []common.Address, newManager []common.Address) (*AddressBookV2BaseManagerUpdatedIterator, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+	var oldManagerRule []interface{}
+	for _, oldManagerItem := range oldManager {
+		oldManagerRule = append(oldManagerRule, oldManagerItem)
+	}
+	var newManagerRule []interface{}
+	for _, newManagerItem := range newManager {
+		newManagerRule = append(newManagerRule, newManagerItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "ManagerUpdated", nodeIdRule, oldManagerRule, newManagerRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseManagerUpdatedIterator{contract: _AddressBookV2Base.contract, event: "ManagerUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchManagerUpdated is a free log subscription operation binding the contract event 0x8df26d30992ecfde135bbe59c1f267d82e2aae9d32fdae41551a38fe8b7bda87.
+//
+// Solidity: event ManagerUpdated(address indexed nodeId, address indexed oldManager, address indexed newManager)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchManagerUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseManagerUpdated, nodeId []common.Address, oldManager []common.Address, newManager []common.Address) (event.Subscription, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+	var oldManagerRule []interface{}
+	for _, oldManagerItem := range oldManager {
+		oldManagerRule = append(oldManagerRule, oldManagerItem)
+	}
+	var newManagerRule []interface{}
+	for _, newManagerItem := range newManager {
+		newManagerRule = append(newManagerRule, newManagerItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "ManagerUpdated", nodeIdRule, oldManagerRule, newManagerRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseManagerUpdated)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "ManagerUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseManagerUpdated is a log parse operation binding the contract event 0x8df26d30992ecfde135bbe59c1f267d82e2aae9d32fdae41551a38fe8b7bda87.
+//
+// Solidity: event ManagerUpdated(address indexed nodeId, address indexed oldManager, address indexed newManager)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseManagerUpdated(log types.Log) (*AddressBookV2BaseManagerUpdated, error) {
+	event := new(AddressBookV2BaseManagerUpdated)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "ManagerUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseMaxReadyCandidateCountUpdatedIterator is returned from FilterMaxReadyCandidateCountUpdated and is used to iterate over the raw logs and unpacked data for MaxReadyCandidateCountUpdated events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseMaxReadyCandidateCountUpdatedIterator struct {
+	Event *AddressBookV2BaseMaxReadyCandidateCountUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseMaxReadyCandidateCountUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseMaxReadyCandidateCountUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseMaxReadyCandidateCountUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseMaxReadyCandidateCountUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseMaxReadyCandidateCountUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseMaxReadyCandidateCountUpdated represents a MaxReadyCandidateCountUpdated event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseMaxReadyCandidateCountUpdated struct {
+	OldCount *big.Int
+	NewCount *big.Int
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterMaxReadyCandidateCountUpdated is a free log retrieval operation binding the contract event 0x6b4e484c27a9904fed5187e90d13d161869e9801b709cc3077f8222bef0030a1.
+//
+// Solidity: event MaxReadyCandidateCountUpdated(uint256 oldCount, uint256 newCount)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterMaxReadyCandidateCountUpdated(opts *bind.FilterOpts) (*AddressBookV2BaseMaxReadyCandidateCountUpdatedIterator, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "MaxReadyCandidateCountUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseMaxReadyCandidateCountUpdatedIterator{contract: _AddressBookV2Base.contract, event: "MaxReadyCandidateCountUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchMaxReadyCandidateCountUpdated is a free log subscription operation binding the contract event 0x6b4e484c27a9904fed5187e90d13d161869e9801b709cc3077f8222bef0030a1.
+//
+// Solidity: event MaxReadyCandidateCountUpdated(uint256 oldCount, uint256 newCount)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchMaxReadyCandidateCountUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseMaxReadyCandidateCountUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "MaxReadyCandidateCountUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseMaxReadyCandidateCountUpdated)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "MaxReadyCandidateCountUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseMaxReadyCandidateCountUpdated is a log parse operation binding the contract event 0x6b4e484c27a9904fed5187e90d13d161869e9801b709cc3077f8222bef0030a1.
+//
+// Solidity: event MaxReadyCandidateCountUpdated(uint256 oldCount, uint256 newCount)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseMaxReadyCandidateCountUpdated(log types.Log) (*AddressBookV2BaseMaxReadyCandidateCountUpdated, error) {
+	event := new(AddressBookV2BaseMaxReadyCandidateCountUpdated)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "MaxReadyCandidateCountUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseMaxValidatorCountUpdatedIterator is returned from FilterMaxValidatorCountUpdated and is used to iterate over the raw logs and unpacked data for MaxValidatorCountUpdated events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseMaxValidatorCountUpdatedIterator struct {
+	Event *AddressBookV2BaseMaxValidatorCountUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseMaxValidatorCountUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseMaxValidatorCountUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseMaxValidatorCountUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseMaxValidatorCountUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseMaxValidatorCountUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseMaxValidatorCountUpdated represents a MaxValidatorCountUpdated event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseMaxValidatorCountUpdated struct {
+	OldCount *big.Int
+	NewCount *big.Int
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterMaxValidatorCountUpdated is a free log retrieval operation binding the contract event 0xa8fbc5c083100f8025c9c33578c3292432f17b77b633fb69fa7773ff60d46667.
+//
+// Solidity: event MaxValidatorCountUpdated(uint256 oldCount, uint256 newCount)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterMaxValidatorCountUpdated(opts *bind.FilterOpts) (*AddressBookV2BaseMaxValidatorCountUpdatedIterator, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "MaxValidatorCountUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseMaxValidatorCountUpdatedIterator{contract: _AddressBookV2Base.contract, event: "MaxValidatorCountUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchMaxValidatorCountUpdated is a free log subscription operation binding the contract event 0xa8fbc5c083100f8025c9c33578c3292432f17b77b633fb69fa7773ff60d46667.
+//
+// Solidity: event MaxValidatorCountUpdated(uint256 oldCount, uint256 newCount)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchMaxValidatorCountUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseMaxValidatorCountUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "MaxValidatorCountUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseMaxValidatorCountUpdated)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "MaxValidatorCountUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseMaxValidatorCountUpdated is a log parse operation binding the contract event 0xa8fbc5c083100f8025c9c33578c3292432f17b77b633fb69fa7773ff60d46667.
+//
+// Solidity: event MaxValidatorCountUpdated(uint256 oldCount, uint256 newCount)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseMaxValidatorCountUpdated(log types.Log) (*AddressBookV2BaseMaxValidatorCountUpdated, error) {
+	event := new(AddressBookV2BaseMaxValidatorCountUpdated)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "MaxValidatorCountUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseNodeCreatedIterator is returned from FilterNodeCreated and is used to iterate over the raw logs and unpacked data for NodeCreated events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseNodeCreatedIterator struct {
+	Event *AddressBookV2BaseNodeCreated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseNodeCreatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseNodeCreated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseNodeCreated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseNodeCreatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseNodeCreatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseNodeCreated represents a NodeCreated event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseNodeCreated struct {
+	NodeId common.Address
+	GcId   *big.Int
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterNodeCreated is a free log retrieval operation binding the contract event 0xe410d169249157b2af8ca2d602f2bdd8721034902d3228d318aaba02cacbac6b.
+//
+// Solidity: event NodeCreated(address indexed nodeId, uint256 gcId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterNodeCreated(opts *bind.FilterOpts, nodeId []common.Address) (*AddressBookV2BaseNodeCreatedIterator, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "NodeCreated", nodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseNodeCreatedIterator{contract: _AddressBookV2Base.contract, event: "NodeCreated", logs: logs, sub: sub}, nil
+}
+
+// WatchNodeCreated is a free log subscription operation binding the contract event 0xe410d169249157b2af8ca2d602f2bdd8721034902d3228d318aaba02cacbac6b.
+//
+// Solidity: event NodeCreated(address indexed nodeId, uint256 gcId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchNodeCreated(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseNodeCreated, nodeId []common.Address) (event.Subscription, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "NodeCreated", nodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseNodeCreated)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "NodeCreated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseNodeCreated is a log parse operation binding the contract event 0xe410d169249157b2af8ca2d602f2bdd8721034902d3228d318aaba02cacbac6b.
+//
+// Solidity: event NodeCreated(address indexed nodeId, uint256 gcId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseNodeCreated(log types.Log) (*AddressBookV2BaseNodeCreated, error) {
+	event := new(AddressBookV2BaseNodeCreated)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "NodeCreated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseNodeDeletedIterator is returned from FilterNodeDeleted and is used to iterate over the raw logs and unpacked data for NodeDeleted events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseNodeDeletedIterator struct {
+	Event *AddressBookV2BaseNodeDeleted // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseNodeDeletedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseNodeDeleted)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseNodeDeleted)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseNodeDeletedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseNodeDeletedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseNodeDeleted represents a NodeDeleted event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseNodeDeleted struct {
+	NodeId common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterNodeDeleted is a free log retrieval operation binding the contract event 0x1629bfc36423a1b4749d3fe1d6970b9d32d42bbee47dd5540670696ab6b9a4ad.
+//
+// Solidity: event NodeDeleted(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterNodeDeleted(opts *bind.FilterOpts, nodeId []common.Address) (*AddressBookV2BaseNodeDeletedIterator, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "NodeDeleted", nodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseNodeDeletedIterator{contract: _AddressBookV2Base.contract, event: "NodeDeleted", logs: logs, sub: sub}, nil
+}
+
+// WatchNodeDeleted is a free log subscription operation binding the contract event 0x1629bfc36423a1b4749d3fe1d6970b9d32d42bbee47dd5540670696ab6b9a4ad.
+//
+// Solidity: event NodeDeleted(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchNodeDeleted(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseNodeDeleted, nodeId []common.Address) (event.Subscription, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "NodeDeleted", nodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseNodeDeleted)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "NodeDeleted", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseNodeDeleted is a log parse operation binding the contract event 0x1629bfc36423a1b4749d3fe1d6970b9d32d42bbee47dd5540670696ab6b9a4ad.
+//
+// Solidity: event NodeDeleted(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseNodeDeleted(log types.Log) (*AddressBookV2BaseNodeDeleted, error) {
+	event := new(AddressBookV2BaseNodeDeleted)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "NodeDeleted", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseOwnershipTransferredIterator is returned from FilterOwnershipTransferred and is used to iterate over the raw logs and unpacked data for OwnershipTransferred events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseOwnershipTransferredIterator struct {
+	Event *AddressBookV2BaseOwnershipTransferred // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseOwnershipTransferredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseOwnershipTransferred)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseOwnershipTransferred)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseOwnershipTransferredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseOwnershipTransferredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseOwnershipTransferred represents a OwnershipTransferred event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseOwnershipTransferred struct {
+	PreviousOwner common.Address
+	NewOwner      common.Address
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterOwnershipTransferred is a free log retrieval operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+//
+// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*AddressBookV2BaseOwnershipTransferredIterator, error) {
+
+	var previousOwnerRule []interface{}
+	for _, previousOwnerItem := range previousOwner {
+		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
+	}
+	var newOwnerRule []interface{}
+	for _, newOwnerItem := range newOwner {
+		newOwnerRule = append(newOwnerRule, newOwnerItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseOwnershipTransferredIterator{contract: _AddressBookV2Base.contract, event: "OwnershipTransferred", logs: logs, sub: sub}, nil
+}
+
+// WatchOwnershipTransferred is a free log subscription operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+//
+// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
+	var previousOwnerRule []interface{}
+	for _, previousOwnerItem := range previousOwner {
+		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
+	}
+	var newOwnerRule []interface{}
+	for _, newOwnerItem := range newOwner {
+		newOwnerRule = append(newOwnerRule, newOwnerItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "OwnershipTransferred", previousOwnerRule, newOwnerRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseOwnershipTransferred)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseOwnershipTransferred is a log parse operation binding the contract event 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0.
+//
+// Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseOwnershipTransferred(log types.Log) (*AddressBookV2BaseOwnershipTransferred, error) {
+	event := new(AddressBookV2BaseOwnershipTransferred)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BasePauseTimeoutUpdatedIterator is returned from FilterPauseTimeoutUpdated and is used to iterate over the raw logs and unpacked data for PauseTimeoutUpdated events raised by the AddressBookV2Base contract.
+type AddressBookV2BasePauseTimeoutUpdatedIterator struct {
+	Event *AddressBookV2BasePauseTimeoutUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BasePauseTimeoutUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BasePauseTimeoutUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BasePauseTimeoutUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BasePauseTimeoutUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BasePauseTimeoutUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BasePauseTimeoutUpdated represents a PauseTimeoutUpdated event raised by the AddressBookV2Base contract.
+type AddressBookV2BasePauseTimeoutUpdated struct {
+	OldPauseTimeout *big.Int
+	NewPauseTimeout *big.Int
+	Raw             types.Log // Blockchain specific contextual infos
+}
+
+// FilterPauseTimeoutUpdated is a free log retrieval operation binding the contract event 0xbb7cd41bd6435b6f6da7e832527c2adf48fe9783423fecedb8c8c625acbc92d0.
+//
+// Solidity: event PauseTimeoutUpdated(uint256 oldPauseTimeout, uint256 newPauseTimeout)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterPauseTimeoutUpdated(opts *bind.FilterOpts) (*AddressBookV2BasePauseTimeoutUpdatedIterator, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "PauseTimeoutUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BasePauseTimeoutUpdatedIterator{contract: _AddressBookV2Base.contract, event: "PauseTimeoutUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchPauseTimeoutUpdated is a free log subscription operation binding the contract event 0xbb7cd41bd6435b6f6da7e832527c2adf48fe9783423fecedb8c8c625acbc92d0.
+//
+// Solidity: event PauseTimeoutUpdated(uint256 oldPauseTimeout, uint256 newPauseTimeout)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchPauseTimeoutUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookV2BasePauseTimeoutUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "PauseTimeoutUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BasePauseTimeoutUpdated)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "PauseTimeoutUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParsePauseTimeoutUpdated is a log parse operation binding the contract event 0xbb7cd41bd6435b6f6da7e832527c2adf48fe9783423fecedb8c8c625acbc92d0.
+//
+// Solidity: event PauseTimeoutUpdated(uint256 oldPauseTimeout, uint256 newPauseTimeout)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParsePauseTimeoutUpdated(log types.Log) (*AddressBookV2BasePauseTimeoutUpdated, error) {
+	event := new(AddressBookV2BasePauseTimeoutUpdated)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "PauseTimeoutUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseScoresUpdatedIterator is returned from FilterScoresUpdated and is used to iterate over the raw logs and unpacked data for ScoresUpdated events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseScoresUpdatedIterator struct {
+	Event *AddressBookV2BaseScoresUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseScoresUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseScoresUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseScoresUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseScoresUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseScoresUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseScoresUpdated represents a ScoresUpdated event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseScoresUpdated struct {
+	Epoch   *big.Int
+	NodeIds []common.Address
+	Scores  []*big.Int
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterScoresUpdated is a free log retrieval operation binding the contract event 0x3ed42d8976ef09fbee43ae76e0be2ed8e9af501530fd0155d90beeb551c1b301.
+//
+// Solidity: event ScoresUpdated(uint256 indexed epoch, address[] nodeIds, uint256[] scores)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterScoresUpdated(opts *bind.FilterOpts, epoch []*big.Int) (*AddressBookV2BaseScoresUpdatedIterator, error) {
+
+	var epochRule []interface{}
+	for _, epochItem := range epoch {
+		epochRule = append(epochRule, epochItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "ScoresUpdated", epochRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseScoresUpdatedIterator{contract: _AddressBookV2Base.contract, event: "ScoresUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchScoresUpdated is a free log subscription operation binding the contract event 0x3ed42d8976ef09fbee43ae76e0be2ed8e9af501530fd0155d90beeb551c1b301.
+//
+// Solidity: event ScoresUpdated(uint256 indexed epoch, address[] nodeIds, uint256[] scores)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchScoresUpdated(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseScoresUpdated, epoch []*big.Int) (event.Subscription, error) {
+
+	var epochRule []interface{}
+	for _, epochItem := range epoch {
+		epochRule = append(epochRule, epochItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "ScoresUpdated", epochRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseScoresUpdated)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "ScoresUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseScoresUpdated is a log parse operation binding the contract event 0x3ed42d8976ef09fbee43ae76e0be2ed8e9af501530fd0155d90beeb551c1b301.
+//
+// Solidity: event ScoresUpdated(uint256 indexed epoch, address[] nodeIds, uint256[] scores)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseScoresUpdated(log types.Log) (*AddressBookV2BaseScoresUpdated, error) {
+	event := new(AddressBookV2BaseScoresUpdated)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "ScoresUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseStateChangedIterator is returned from FilterStateChanged and is used to iterate over the raw logs and unpacked data for StateChanged events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseStateChangedIterator struct {
+	Event *AddressBookV2BaseStateChanged // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseStateChangedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseStateChanged)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseStateChanged)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseStateChangedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseStateChangedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseStateChanged represents a StateChanged event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseStateChanged struct {
+	NodeId    common.Address
+	FromState uint8
+	ToState   uint8
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterStateChanged is a free log retrieval operation binding the contract event 0xcfb25346bbf2c2f19e20af8b4b4d54cbc6c83057934c1f28539760e8f8065dee.
+//
+// Solidity: event StateChanged(address indexed nodeId, uint8 indexed fromState, uint8 indexed toState)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterStateChanged(opts *bind.FilterOpts, nodeId []common.Address, fromState []uint8, toState []uint8) (*AddressBookV2BaseStateChangedIterator, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+	var fromStateRule []interface{}
+	for _, fromStateItem := range fromState {
+		fromStateRule = append(fromStateRule, fromStateItem)
+	}
+	var toStateRule []interface{}
+	for _, toStateItem := range toState {
+		toStateRule = append(toStateRule, toStateItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "StateChanged", nodeIdRule, fromStateRule, toStateRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseStateChangedIterator{contract: _AddressBookV2Base.contract, event: "StateChanged", logs: logs, sub: sub}, nil
+}
+
+// WatchStateChanged is a free log subscription operation binding the contract event 0xcfb25346bbf2c2f19e20af8b4b4d54cbc6c83057934c1f28539760e8f8065dee.
+//
+// Solidity: event StateChanged(address indexed nodeId, uint8 indexed fromState, uint8 indexed toState)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchStateChanged(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseStateChanged, nodeId []common.Address, fromState []uint8, toState []uint8) (event.Subscription, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+	var fromStateRule []interface{}
+	for _, fromStateItem := range fromState {
+		fromStateRule = append(fromStateRule, fromStateItem)
+	}
+	var toStateRule []interface{}
+	for _, toStateItem := range toState {
+		toStateRule = append(toStateRule, toStateItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "StateChanged", nodeIdRule, fromStateRule, toStateRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseStateChanged)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "StateChanged", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseStateChanged is a log parse operation binding the contract event 0xcfb25346bbf2c2f19e20af8b4b4d54cbc6c83057934c1f28539760e8f8065dee.
+//
+// Solidity: event StateChanged(address indexed nodeId, uint8 indexed fromState, uint8 indexed toState)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseStateChanged(log types.Log) (*AddressBookV2BaseStateChanged, error) {
+	event := new(AddressBookV2BaseStateChanged)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "StateChanged", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseSystemTransitionProcessedIterator is returned from FilterSystemTransitionProcessed and is used to iterate over the raw logs and unpacked data for SystemTransitionProcessed events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseSystemTransitionProcessedIterator struct {
+	Event *AddressBookV2BaseSystemTransitionProcessed // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseSystemTransitionProcessedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseSystemTransitionProcessed)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseSystemTransitionProcessed)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseSystemTransitionProcessedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseSystemTransitionProcessedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseSystemTransitionProcessed represents a SystemTransitionProcessed event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseSystemTransitionProcessed struct {
+	NodeIds   []common.Address
+	NewStates []uint8
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterSystemTransitionProcessed is a free log retrieval operation binding the contract event 0xab95e7867bd336dde387ba31a71307c75dcc78b0344b873a5e993eb4470eb37e.
+//
+// Solidity: event SystemTransitionProcessed(address[] nodeIds, uint8[] newStates)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterSystemTransitionProcessed(opts *bind.FilterOpts) (*AddressBookV2BaseSystemTransitionProcessedIterator, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "SystemTransitionProcessed")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseSystemTransitionProcessedIterator{contract: _AddressBookV2Base.contract, event: "SystemTransitionProcessed", logs: logs, sub: sub}, nil
+}
+
+// WatchSystemTransitionProcessed is a free log subscription operation binding the contract event 0xab95e7867bd336dde387ba31a71307c75dcc78b0344b873a5e993eb4470eb37e.
+//
+// Solidity: event SystemTransitionProcessed(address[] nodeIds, uint8[] newStates)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchSystemTransitionProcessed(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseSystemTransitionProcessed) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "SystemTransitionProcessed")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseSystemTransitionProcessed)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "SystemTransitionProcessed", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseSystemTransitionProcessed is a log parse operation binding the contract event 0xab95e7867bd336dde387ba31a71307c75dcc78b0344b873a5e993eb4470eb37e.
+//
+// Solidity: event SystemTransitionProcessed(address[] nodeIds, uint8[] newStates)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseSystemTransitionProcessed(log types.Log) (*AddressBookV2BaseSystemTransitionProcessed, error) {
+	event := new(AddressBookV2BaseSystemTransitionProcessed)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "SystemTransitionProcessed", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseUpgradedIterator is returned from FilterUpgraded and is used to iterate over the raw logs and unpacked data for Upgraded events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseUpgradedIterator struct {
+	Event *AddressBookV2BaseUpgraded // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseUpgradedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseUpgraded)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseUpgraded)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseUpgradedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseUpgradedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseUpgraded represents a Upgraded event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseUpgraded struct {
+	Implementation common.Address
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterUpgraded is a free log retrieval operation binding the contract event 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b.
+//
+// Solidity: event Upgraded(address indexed implementation)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*AddressBookV2BaseUpgradedIterator, error) {
+
+	var implementationRule []interface{}
+	for _, implementationItem := range implementation {
+		implementationRule = append(implementationRule, implementationItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "Upgraded", implementationRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseUpgradedIterator{contract: _AddressBookV2Base.contract, event: "Upgraded", logs: logs, sub: sub}, nil
+}
+
+// WatchUpgraded is a free log subscription operation binding the contract event 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b.
+//
+// Solidity: event Upgraded(address indexed implementation)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseUpgraded, implementation []common.Address) (event.Subscription, error) {
+
+	var implementationRule []interface{}
+	for _, implementationItem := range implementation {
+		implementationRule = append(implementationRule, implementationItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "Upgraded", implementationRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseUpgraded)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "Upgraded", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseUpgraded is a log parse operation binding the contract event 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b.
+//
+// Solidity: event Upgraded(address indexed implementation)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseUpgraded(log types.Log) (*AddressBookV2BaseUpgraded, error) {
+	event := new(AddressBookV2BaseUpgraded)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "Upgraded", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseValidatorSuspendedIterator is returned from FilterValidatorSuspended and is used to iterate over the raw logs and unpacked data for ValidatorSuspended events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseValidatorSuspendedIterator struct {
+	Event *AddressBookV2BaseValidatorSuspended // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseValidatorSuspendedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseValidatorSuspended)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseValidatorSuspended)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseValidatorSuspendedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseValidatorSuspendedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseValidatorSuspended represents a ValidatorSuspended event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseValidatorSuspended struct {
+	NodeId common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterValidatorSuspended is a free log retrieval operation binding the contract event 0xb102f7913267c344ac15011acd7185602a74269c32e7783833f5311450fb43dd.
+//
+// Solidity: event ValidatorSuspended(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterValidatorSuspended(opts *bind.FilterOpts, nodeId []common.Address) (*AddressBookV2BaseValidatorSuspendedIterator, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "ValidatorSuspended", nodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseValidatorSuspendedIterator{contract: _AddressBookV2Base.contract, event: "ValidatorSuspended", logs: logs, sub: sub}, nil
+}
+
+// WatchValidatorSuspended is a free log subscription operation binding the contract event 0xb102f7913267c344ac15011acd7185602a74269c32e7783833f5311450fb43dd.
+//
+// Solidity: event ValidatorSuspended(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchValidatorSuspended(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseValidatorSuspended, nodeId []common.Address) (event.Subscription, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "ValidatorSuspended", nodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseValidatorSuspended)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "ValidatorSuspended", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseValidatorSuspended is a log parse operation binding the contract event 0xb102f7913267c344ac15011acd7185602a74269c32e7783833f5311450fb43dd.
+//
+// Solidity: event ValidatorSuspended(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseValidatorSuspended(log types.Log) (*AddressBookV2BaseValidatorSuspended, error) {
+	event := new(AddressBookV2BaseValidatorSuspended)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "ValidatorSuspended", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseValidatorUnsuspendedIterator is returned from FilterValidatorUnsuspended and is used to iterate over the raw logs and unpacked data for ValidatorUnsuspended events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseValidatorUnsuspendedIterator struct {
+	Event *AddressBookV2BaseValidatorUnsuspended // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseValidatorUnsuspendedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseValidatorUnsuspended)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseValidatorUnsuspended)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseValidatorUnsuspendedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseValidatorUnsuspendedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseValidatorUnsuspended represents a ValidatorUnsuspended event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseValidatorUnsuspended struct {
+	NodeId common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterValidatorUnsuspended is a free log retrieval operation binding the contract event 0x814c4b6f6fc147ebb6fbe4ffcd3554d0309170fd0a70e66cc4e4c0784f4aa32e.
+//
+// Solidity: event ValidatorUnsuspended(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterValidatorUnsuspended(opts *bind.FilterOpts, nodeId []common.Address) (*AddressBookV2BaseValidatorUnsuspendedIterator, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "ValidatorUnsuspended", nodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseValidatorUnsuspendedIterator{contract: _AddressBookV2Base.contract, event: "ValidatorUnsuspended", logs: logs, sub: sub}, nil
+}
+
+// WatchValidatorUnsuspended is a free log subscription operation binding the contract event 0x814c4b6f6fc147ebb6fbe4ffcd3554d0309170fd0a70e66cc4e4c0784f4aa32e.
+//
+// Solidity: event ValidatorUnsuspended(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchValidatorUnsuspended(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseValidatorUnsuspended, nodeId []common.Address) (event.Subscription, error) {
+
+	var nodeIdRule []interface{}
+	for _, nodeIdItem := range nodeId {
+		nodeIdRule = append(nodeIdRule, nodeIdItem)
+	}
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "ValidatorUnsuspended", nodeIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseValidatorUnsuspended)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "ValidatorUnsuspended", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseValidatorUnsuspended is a log parse operation binding the contract event 0x814c4b6f6fc147ebb6fbe4ffcd3554d0309170fd0a70e66cc4e4c0784f4aa32e.
+//
+// Solidity: event ValidatorUnsuspended(address indexed nodeId)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseValidatorUnsuspended(log types.Log) (*AddressBookV2BaseValidatorUnsuspended, error) {
+	event := new(AddressBookV2BaseValidatorUnsuspended)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "ValidatorUnsuspended", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AddressBookV2BaseValidatorsInitializedIterator is returned from FilterValidatorsInitialized and is used to iterate over the raw logs and unpacked data for ValidatorsInitialized events raised by the AddressBookV2Base contract.
+type AddressBookV2BaseValidatorsInitializedIterator struct {
+	Event *AddressBookV2BaseValidatorsInitialized // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AddressBookV2BaseValidatorsInitializedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AddressBookV2BaseValidatorsInitialized)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AddressBookV2BaseValidatorsInitialized)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AddressBookV2BaseValidatorsInitializedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AddressBookV2BaseValidatorsInitializedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AddressBookV2BaseValidatorsInitialized represents a ValidatorsInitialized event raised by the AddressBookV2Base contract.
+type AddressBookV2BaseValidatorsInitialized struct {
+	NodeIds []common.Address
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterValidatorsInitialized is a free log retrieval operation binding the contract event 0x820f68b9d060f5d911b3243881ada086c3768ea90e97a10f7f5023d84b94d952.
+//
+// Solidity: event ValidatorsInitialized(address[] nodeIds)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) FilterValidatorsInitialized(opts *bind.FilterOpts) (*AddressBookV2BaseValidatorsInitializedIterator, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.FilterLogs(opts, "ValidatorsInitialized")
+	if err != nil {
+		return nil, err
+	}
+	return &AddressBookV2BaseValidatorsInitializedIterator{contract: _AddressBookV2Base.contract, event: "ValidatorsInitialized", logs: logs, sub: sub}, nil
+}
+
+// WatchValidatorsInitialized is a free log subscription operation binding the contract event 0x820f68b9d060f5d911b3243881ada086c3768ea90e97a10f7f5023d84b94d952.
+//
+// Solidity: event ValidatorsInitialized(address[] nodeIds)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) WatchValidatorsInitialized(opts *bind.WatchOpts, sink chan<- *AddressBookV2BaseValidatorsInitialized) (event.Subscription, error) {
+
+	logs, sub, err := _AddressBookV2Base.contract.WatchLogs(opts, "ValidatorsInitialized")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AddressBookV2BaseValidatorsInitialized)
+				if err := _AddressBookV2Base.contract.UnpackLog(event, "ValidatorsInitialized", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseValidatorsInitialized is a log parse operation binding the contract event 0x820f68b9d060f5d911b3243881ada086c3768ea90e97a10f7f5023d84b94d952.
+//
+// Solidity: event ValidatorsInitialized(address[] nodeIds)
+func (_AddressBookV2Base *AddressBookV2BaseFilterer) ParseValidatorsInitialized(log types.Log) (*AddressBookV2BaseValidatorsInitialized, error) {
+	event := new(AddressBookV2BaseValidatorsInitialized)
+	if err := _AddressBookV2Base.contract.UnpackLog(event, "ValidatorsInitialized", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
 // AddressUpgradeableMetaData contains all meta data concerning the AddressUpgradeable contract.
 var AddressUpgradeableMetaData = &bind.MetaData{
 	ABI: "[]",
@@ -11341,11 +11902,202 @@ func (_EnumerableSet *EnumerableSetTransactorRaw) Transact(opts *bind.TransactOp
 	return _EnumerableSet.Contract.contract.Transact(opts, method, params...)
 }
 
+// IABv2DataContractMetaData contains all meta data concerning the IABv2DataContract contract.
+var IABv2DataContractMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"name\":\"getData\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"initialOwner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"exitThreshold\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"pauseTimeout\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"idleTimeout\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxValidatorCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxReadyCandidateCount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"kefAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"kifAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"kpfAddress\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"manager\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo[]\",\"name\":\"infos\",\"type\":\"tuple[]\"}],\"internalType\":\"structIABv2DataContract.InitData\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Sigs: map[string]string{
+		"3bc5de30": "getData()",
+	},
+}
+
+// IABv2DataContractABI is the input ABI used to generate the binding from.
+// Deprecated: Use IABv2DataContractMetaData.ABI instead.
+var IABv2DataContractABI = IABv2DataContractMetaData.ABI
+
+// IABv2DataContractBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const IABv2DataContractBinRuntime = ``
+
+// Deprecated: Use IABv2DataContractMetaData.Sigs instead.
+// IABv2DataContractFuncSigs maps the 4-byte function signature to its string representation.
+var IABv2DataContractFuncSigs = IABv2DataContractMetaData.Sigs
+
+// IABv2DataContract is an auto generated Go binding around a Kaia contract.
+type IABv2DataContract struct {
+	IABv2DataContractCaller     // Read-only binding to the contract
+	IABv2DataContractTransactor // Write-only binding to the contract
+	IABv2DataContractFilterer   // Log filterer for contract events
+}
+
+// IABv2DataContractCaller is an auto generated read-only Go binding around a Kaia contract.
+type IABv2DataContractCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IABv2DataContractTransactor is an auto generated write-only Go binding around a Kaia contract.
+type IABv2DataContractTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IABv2DataContractFilterer is an auto generated log filtering Go binding around a Kaia contract events.
+type IABv2DataContractFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IABv2DataContractSession is an auto generated Go binding around a Kaia contract,
+// with pre-set call and transact options.
+type IABv2DataContractSession struct {
+	Contract     *IABv2DataContract // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts      // Call options to use throughout this session
+	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
+}
+
+// IABv2DataContractCallerSession is an auto generated read-only Go binding around a Kaia contract,
+// with pre-set call options.
+type IABv2DataContractCallerSession struct {
+	Contract *IABv2DataContractCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts            // Call options to use throughout this session
+}
+
+// IABv2DataContractTransactorSession is an auto generated write-only Go binding around a Kaia contract,
+// with pre-set transact options.
+type IABv2DataContractTransactorSession struct {
+	Contract     *IABv2DataContractTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts            // Transaction auth options to use throughout this session
+}
+
+// IABv2DataContractRaw is an auto generated low-level Go binding around a Kaia contract.
+type IABv2DataContractRaw struct {
+	Contract *IABv2DataContract // Generic contract binding to access the raw methods on
+}
+
+// IABv2DataContractCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
+type IABv2DataContractCallerRaw struct {
+	Contract *IABv2DataContractCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// IABv2DataContractTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
+type IABv2DataContractTransactorRaw struct {
+	Contract *IABv2DataContractTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewIABv2DataContract creates a new instance of IABv2DataContract, bound to a specific deployed contract.
+func NewIABv2DataContract(address common.Address, backend bind.ContractBackend) (*IABv2DataContract, error) {
+	contract, err := bindIABv2DataContract(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &IABv2DataContract{IABv2DataContractCaller: IABv2DataContractCaller{contract: contract}, IABv2DataContractTransactor: IABv2DataContractTransactor{contract: contract}, IABv2DataContractFilterer: IABv2DataContractFilterer{contract: contract}}, nil
+}
+
+// NewIABv2DataContractCaller creates a new read-only instance of IABv2DataContract, bound to a specific deployed contract.
+func NewIABv2DataContractCaller(address common.Address, caller bind.ContractCaller) (*IABv2DataContractCaller, error) {
+	contract, err := bindIABv2DataContract(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IABv2DataContractCaller{contract: contract}, nil
+}
+
+// NewIABv2DataContractTransactor creates a new write-only instance of IABv2DataContract, bound to a specific deployed contract.
+func NewIABv2DataContractTransactor(address common.Address, transactor bind.ContractTransactor) (*IABv2DataContractTransactor, error) {
+	contract, err := bindIABv2DataContract(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IABv2DataContractTransactor{contract: contract}, nil
+}
+
+// NewIABv2DataContractFilterer creates a new log filterer instance of IABv2DataContract, bound to a specific deployed contract.
+func NewIABv2DataContractFilterer(address common.Address, filterer bind.ContractFilterer) (*IABv2DataContractFilterer, error) {
+	contract, err := bindIABv2DataContract(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &IABv2DataContractFilterer{contract: contract}, nil
+}
+
+// bindIABv2DataContract binds a generic wrapper to an already deployed contract.
+func bindIABv2DataContract(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := IABv2DataContractMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IABv2DataContract *IABv2DataContractRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _IABv2DataContract.Contract.IABv2DataContractCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IABv2DataContract *IABv2DataContractRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IABv2DataContract.Contract.IABv2DataContractTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IABv2DataContract *IABv2DataContractRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IABv2DataContract.Contract.IABv2DataContractTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IABv2DataContract *IABv2DataContractCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _IABv2DataContract.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IABv2DataContract *IABv2DataContractTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IABv2DataContract.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IABv2DataContract *IABv2DataContractTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IABv2DataContract.Contract.contract.Transact(opts, method, params...)
+}
+
+// GetData is a free data retrieval call binding the contract method 0x3bc5de30.
+//
+// Solidity: function getData() view returns((address,uint256,uint256,uint256,uint256,uint256,address,address,address,address[],(address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[]))
+func (_IABv2DataContract *IABv2DataContractCaller) GetData(opts *bind.CallOpts) (IABv2DataContractInitData, error) {
+	var out []interface{}
+	err := _IABv2DataContract.contract.Call(opts, &out, "getData")
+
+	if err != nil {
+		return *new(IABv2DataContractInitData), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(IABv2DataContractInitData)).(*IABv2DataContractInitData)
+
+	return out0, err
+
+}
+
+// GetData is a free data retrieval call binding the contract method 0x3bc5de30.
+//
+// Solidity: function getData() view returns((address,uint256,uint256,uint256,uint256,uint256,address,address,address,address[],(address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[]))
+func (_IABv2DataContract *IABv2DataContractSession) GetData() (IABv2DataContractInitData, error) {
+	return _IABv2DataContract.Contract.GetData(&_IABv2DataContract.CallOpts)
+}
+
+// GetData is a free data retrieval call binding the contract method 0x3bc5de30.
+//
+// Solidity: function getData() view returns((address,uint256,uint256,uint256,uint256,uint256,address,address,address,address[],(address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[]))
+func (_IABv2DataContract *IABv2DataContractCallerSession) GetData() (IABv2DataContractInitData, error) {
+	return _IABv2DataContract.Contract.GetData(&_IABv2DataContract.CallOpts)
+}
+
 // IAddressBookV2MetaData contains all meta data concerning the IAddressBookV2 contract.
 var IAddressBookV2MetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"name\":\"AlreadyActivated\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadyInitialized\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadySuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInput\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidState\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeAlreadyExists\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeNotFound\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyManager\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SlotsFull\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StakingTooLow\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TimeoutExpired\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"Activated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateActivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateDeactivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"epochValCount\",\"type\":\"uint256\"}],\"name\":\"EpochTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldThreshold\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newThreshold\",\"type\":\"uint256\"}],\"name\":\"ExitThresholdUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldIdleTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"IdleTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldManager\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"ManagerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxReadyCandidateCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxValidatorCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"}],\"name\":\"NodeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"NodeDeleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldPauseTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"PauseTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"ScoresUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"enumNodeState\",\"name\":\"fromState\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"enumNodeState\",\"name\":\"toState\",\"type\":\"uint8\"}],\"name\":\"StateChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"enumNodeState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"}],\"name\":\"SystemTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorSuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorUnsuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"ValidatorsInitialized\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"activate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"activateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"}],\"name\":\"createNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentEpoch\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deactivateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deleteNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"exit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getActiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllBlsInfo\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIdList\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo[]\",\"name\":\"pubkeyList\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllProfiles\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structProfile[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCandInactiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getEpochValCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getExitThreshold\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getManager\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getMaxCounts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"maxValidatorCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxReadyCandidateCount\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"getNodeInfos\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeState\",\"outputs\":[{\"internalType\":\"enumNodeState\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getScore\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getStakingContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"name\":\"getStateCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getSuspendedValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getTimeoutAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTimeouts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"pauseTimeout\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"idleTimeout\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo[]\",\"name\":\"infos\",\"type\":\"tuple[]\"}],\"name\":\"initializeValidators\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isActivated\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isCandInactive\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isInActiveSet\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isRegistered\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isValidatorsInitialized\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"offboard\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"enumNodeState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"},{\"internalType\":\"uint256[]\",\"name\":\"timeoutAts\",\"type\":\"uint256[]\"}],\"name\":\"processSystemTransition\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"readyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"resume\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"suspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unreadyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unsuspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newExitThreshold\",\"type\":\"uint256\"}],\"name\":\"updateExitThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"updateIdleTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"updateManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxReadyCandidateCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxReadyCandidateCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxValidatorCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxValidatorCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"updatePauseTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"updateScores\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"name\":\"AlreadySuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInput\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidState\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeAlreadyExists\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeNotFound\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyManager\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SlotsFull\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StakingTooLow\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TimeoutExpired\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateActivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateDeactivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"epochValCount\",\"type\":\"uint256\"}],\"name\":\"EpochTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldThreshold\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newThreshold\",\"type\":\"uint256\"}],\"name\":\"ExitThresholdUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldIdleTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"IdleTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAddress\",\"type\":\"address\"}],\"name\":\"KefAddressUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAddress\",\"type\":\"address\"}],\"name\":\"KifAddressUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAddress\",\"type\":\"address\"}],\"name\":\"KpfAddressUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldManager\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"ManagerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxReadyCandidateCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxValidatorCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"}],\"name\":\"NodeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"NodeDeleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldPauseTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"PauseTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"ScoresUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"enumState\",\"name\":\"fromState\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"enumState\",\"name\":\"toState\",\"type\":\"uint8\"}],\"name\":\"StateChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"enumState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"}],\"name\":\"SystemTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorSuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorUnsuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"ValidatorsInitialized\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"activateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"}],\"name\":\"createNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentEpoch\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deactivateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deleteNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"exit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getActiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllBlsInfo\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIdList\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo[]\",\"name\":\"pubkeyList\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllProfiles\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structProfile[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCandInactiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getEpochValCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getExitThreshold\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getFundAddresses\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"kefAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"kifAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"kpfAddress\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getManager\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getMaxCounts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"maxValidatorCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxReadyCandidateCount\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"manager\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"getNodeInfos\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"manager\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeState\",\"outputs\":[{\"internalType\":\"enumState\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getScore\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getStakingContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"name\":\"getStateCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getSuspendedValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getTimeoutAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTimeouts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"pauseTimeout\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"idleTimeout\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isCandInactive\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isInActiveSet\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isRegistered\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"offboard\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"enumState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"},{\"internalType\":\"uint256[]\",\"name\":\"timeoutAts\",\"type\":\"uint256[]\"}],\"name\":\"processSystemTransition\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"readyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"resume\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"suspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unreadyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unsuspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newExitThreshold\",\"type\":\"uint256\"}],\"name\":\"updateExitThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"updateIdleTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newKefAddress\",\"type\":\"address\"}],\"name\":\"updateKefAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newKifAddress\",\"type\":\"address\"}],\"name\":\"updateKifAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newKpfAddress\",\"type\":\"address\"}],\"name\":\"updateKpfAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"updateManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxReadyCandidateCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxReadyCandidateCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxValidatorCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxValidatorCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"updatePauseTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"updateScores\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 	Sigs: map[string]string{
-		"0f15f4c0": "activate()",
 		"ef6bdade": "activateCandidate(address)",
 		"4429d720": "createNode(address,address,address,address,(bytes,bytes),string)",
 		"76671808": "currentEpoch()",
@@ -11358,6 +12110,7 @@ var IAddressBookV2MetaData = &bind.MetaData{
 		"94a64d98": "getCandInactiveSetLength()",
 		"7d7b127f": "getEpochValCount()",
 		"3aea9faf": "getExitThreshold()",
+		"25cf0943": "getFundAddresses()",
 		"3d584063": "getManager(address)",
 		"03e6689d": "getMaxCounts()",
 		"582115fb": "getNodeInfo(address)",
@@ -11369,12 +12122,9 @@ var IAddressBookV2MetaData = &bind.MetaData{
 		"1ba3fd58": "getSuspendedValidators()",
 		"277f3dc3": "getTimeoutAt(address)",
 		"e70c38f1": "getTimeouts()",
-		"58199d01": "initializeValidators(address[],(address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])",
-		"4a8c1fb4": "isActivated()",
 		"45ce8110": "isCandInactive(address)",
 		"5334cf44": "isInActiveSet(address)",
 		"c3c5a547": "isRegistered(address)",
-		"551ec9b5": "isValidatorsInitialized()",
 		"b9f96f40": "offboard(address)",
 		"76a67a51": "pause(address)",
 		"45527e44": "processSystemTransition(address[],uint8[],uint256[])",
@@ -11385,6 +12135,9 @@ var IAddressBookV2MetaData = &bind.MetaData{
 		"78b84a5c": "unsuspendValidator(address)",
 		"2c1d4895": "updateExitThreshold(uint256)",
 		"e59d7a84": "updateIdleTimeout(uint256)",
+		"9d8cf08f": "updateKefAddress(address)",
+		"7df40c62": "updateKifAddress(address)",
+		"c9a86af2": "updateKpfAddress(address)",
 		"07ecec3e": "updateManager(address,address)",
 		"76714282": "updateMaxReadyCandidateCount(uint256)",
 		"7e134fc6": "updateMaxValidatorCount(uint256)",
@@ -11777,6 +12530,56 @@ func (_IAddressBookV2 *IAddressBookV2CallerSession) GetExitThreshold() (*big.Int
 	return _IAddressBookV2.Contract.GetExitThreshold(&_IAddressBookV2.CallOpts)
 }
 
+// GetFundAddresses is a free data retrieval call binding the contract method 0x25cf0943.
+//
+// Solidity: function getFundAddresses() view returns(address kefAddress, address kifAddress, address kpfAddress)
+func (_IAddressBookV2 *IAddressBookV2Caller) GetFundAddresses(opts *bind.CallOpts) (struct {
+	KefAddress common.Address
+	KifAddress common.Address
+	KpfAddress common.Address
+}, error) {
+	var out []interface{}
+	err := _IAddressBookV2.contract.Call(opts, &out, "getFundAddresses")
+
+	outstruct := new(struct {
+		KefAddress common.Address
+		KifAddress common.Address
+		KpfAddress common.Address
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.KefAddress = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.KifAddress = *abi.ConvertType(out[1], new(common.Address)).(*common.Address)
+	outstruct.KpfAddress = *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
+
+	return *outstruct, err
+
+}
+
+// GetFundAddresses is a free data retrieval call binding the contract method 0x25cf0943.
+//
+// Solidity: function getFundAddresses() view returns(address kefAddress, address kifAddress, address kpfAddress)
+func (_IAddressBookV2 *IAddressBookV2Session) GetFundAddresses() (struct {
+	KefAddress common.Address
+	KifAddress common.Address
+	KpfAddress common.Address
+}, error) {
+	return _IAddressBookV2.Contract.GetFundAddresses(&_IAddressBookV2.CallOpts)
+}
+
+// GetFundAddresses is a free data retrieval call binding the contract method 0x25cf0943.
+//
+// Solidity: function getFundAddresses() view returns(address kefAddress, address kifAddress, address kpfAddress)
+func (_IAddressBookV2 *IAddressBookV2CallerSession) GetFundAddresses() (struct {
+	KefAddress common.Address
+	KifAddress common.Address
+	KpfAddress common.Address
+}, error) {
+	return _IAddressBookV2.Contract.GetFundAddresses(&_IAddressBookV2.CallOpts)
+}
+
 // GetManager is a free data retrieval call binding the contract method 0x3d584063.
 //
 // Solidity: function getManager(address nodeId) view returns(address)
@@ -11855,7 +12658,7 @@ func (_IAddressBookV2 *IAddressBookV2CallerSession) GetMaxCounts() (struct {
 
 // GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
 //
-// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
+// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
 func (_IAddressBookV2 *IAddressBookV2Caller) GetNodeInfo(opts *bind.CallOpts, nodeId common.Address) (NodeInfo, error) {
 	var out []interface{}
 	err := _IAddressBookV2.contract.Call(opts, &out, "getNodeInfo", nodeId)
@@ -11872,21 +12675,21 @@ func (_IAddressBookV2 *IAddressBookV2Caller) GetNodeInfo(opts *bind.CallOpts, no
 
 // GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
 //
-// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
+// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
 func (_IAddressBookV2 *IAddressBookV2Session) GetNodeInfo(nodeId common.Address) (NodeInfo, error) {
 	return _IAddressBookV2.Contract.GetNodeInfo(&_IAddressBookV2.CallOpts, nodeId)
 }
 
 // GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
 //
-// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
+// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
 func (_IAddressBookV2 *IAddressBookV2CallerSession) GetNodeInfo(nodeId common.Address) (NodeInfo, error) {
 	return _IAddressBookV2.Contract.GetNodeInfo(&_IAddressBookV2.CallOpts, nodeId)
 }
 
 // GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
 //
-// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
+// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
 func (_IAddressBookV2 *IAddressBookV2Caller) GetNodeInfos(opts *bind.CallOpts, nodeIds []common.Address) ([]NodeInfo, error) {
 	var out []interface{}
 	err := _IAddressBookV2.contract.Call(opts, &out, "getNodeInfos", nodeIds)
@@ -11903,14 +12706,14 @@ func (_IAddressBookV2 *IAddressBookV2Caller) GetNodeInfos(opts *bind.CallOpts, n
 
 // GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
 //
-// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
+// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
 func (_IAddressBookV2 *IAddressBookV2Session) GetNodeInfos(nodeIds []common.Address) ([]NodeInfo, error) {
 	return _IAddressBookV2.Contract.GetNodeInfos(&_IAddressBookV2.CallOpts, nodeIds)
 }
 
 // GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
 //
-// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
+// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
 func (_IAddressBookV2 *IAddressBookV2CallerSession) GetNodeInfos(nodeIds []common.Address) ([]NodeInfo, error) {
 	return _IAddressBookV2.Contract.GetNodeInfos(&_IAddressBookV2.CallOpts, nodeIds)
 }
@@ -12146,37 +12949,6 @@ func (_IAddressBookV2 *IAddressBookV2CallerSession) GetTimeouts() (struct {
 	return _IAddressBookV2.Contract.GetTimeouts(&_IAddressBookV2.CallOpts)
 }
 
-// IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
-//
-// Solidity: function isActivated() view returns(bool)
-func (_IAddressBookV2 *IAddressBookV2Caller) IsActivated(opts *bind.CallOpts) (bool, error) {
-	var out []interface{}
-	err := _IAddressBookV2.contract.Call(opts, &out, "isActivated")
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
-//
-// Solidity: function isActivated() view returns(bool)
-func (_IAddressBookV2 *IAddressBookV2Session) IsActivated() (bool, error) {
-	return _IAddressBookV2.Contract.IsActivated(&_IAddressBookV2.CallOpts)
-}
-
-// IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
-//
-// Solidity: function isActivated() view returns(bool)
-func (_IAddressBookV2 *IAddressBookV2CallerSession) IsActivated() (bool, error) {
-	return _IAddressBookV2.Contract.IsActivated(&_IAddressBookV2.CallOpts)
-}
-
 // IsCandInactive is a free data retrieval call binding the contract method 0x45ce8110.
 //
 // Solidity: function isCandInactive(address nodeId) view returns(bool)
@@ -12268,58 +13040,6 @@ func (_IAddressBookV2 *IAddressBookV2Session) IsRegistered(addr common.Address) 
 // Solidity: function isRegistered(address addr) view returns(bool)
 func (_IAddressBookV2 *IAddressBookV2CallerSession) IsRegistered(addr common.Address) (bool, error) {
 	return _IAddressBookV2.Contract.IsRegistered(&_IAddressBookV2.CallOpts, addr)
-}
-
-// IsValidatorsInitialized is a free data retrieval call binding the contract method 0x551ec9b5.
-//
-// Solidity: function isValidatorsInitialized() view returns(bool)
-func (_IAddressBookV2 *IAddressBookV2Caller) IsValidatorsInitialized(opts *bind.CallOpts) (bool, error) {
-	var out []interface{}
-	err := _IAddressBookV2.contract.Call(opts, &out, "isValidatorsInitialized")
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// IsValidatorsInitialized is a free data retrieval call binding the contract method 0x551ec9b5.
-//
-// Solidity: function isValidatorsInitialized() view returns(bool)
-func (_IAddressBookV2 *IAddressBookV2Session) IsValidatorsInitialized() (bool, error) {
-	return _IAddressBookV2.Contract.IsValidatorsInitialized(&_IAddressBookV2.CallOpts)
-}
-
-// IsValidatorsInitialized is a free data retrieval call binding the contract method 0x551ec9b5.
-//
-// Solidity: function isValidatorsInitialized() view returns(bool)
-func (_IAddressBookV2 *IAddressBookV2CallerSession) IsValidatorsInitialized() (bool, error) {
-	return _IAddressBookV2.Contract.IsValidatorsInitialized(&_IAddressBookV2.CallOpts)
-}
-
-// Activate is a paid mutator transaction binding the contract method 0x0f15f4c0.
-//
-// Solidity: function activate() returns()
-func (_IAddressBookV2 *IAddressBookV2Transactor) Activate(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IAddressBookV2.contract.Transact(opts, "activate")
-}
-
-// Activate is a paid mutator transaction binding the contract method 0x0f15f4c0.
-//
-// Solidity: function activate() returns()
-func (_IAddressBookV2 *IAddressBookV2Session) Activate() (*types.Transaction, error) {
-	return _IAddressBookV2.Contract.Activate(&_IAddressBookV2.TransactOpts)
-}
-
-// Activate is a paid mutator transaction binding the contract method 0x0f15f4c0.
-//
-// Solidity: function activate() returns()
-func (_IAddressBookV2 *IAddressBookV2TransactorSession) Activate() (*types.Transaction, error) {
-	return _IAddressBookV2.Contract.Activate(&_IAddressBookV2.TransactOpts)
 }
 
 // ActivateCandidate is a paid mutator transaction binding the contract method 0xef6bdade.
@@ -12425,27 +13145,6 @@ func (_IAddressBookV2 *IAddressBookV2Session) Exit(nodeId common.Address) (*type
 // Solidity: function exit(address nodeId) returns()
 func (_IAddressBookV2 *IAddressBookV2TransactorSession) Exit(nodeId common.Address) (*types.Transaction, error) {
 	return _IAddressBookV2.Contract.Exit(&_IAddressBookV2.TransactOpts, nodeId)
-}
-
-// InitializeValidators is a paid mutator transaction binding the contract method 0x58199d01.
-//
-// Solidity: function initializeValidators(address[] nodeIds, (address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos) returns()
-func (_IAddressBookV2 *IAddressBookV2Transactor) InitializeValidators(opts *bind.TransactOpts, nodeIds []common.Address, infos []NodeInfo) (*types.Transaction, error) {
-	return _IAddressBookV2.contract.Transact(opts, "initializeValidators", nodeIds, infos)
-}
-
-// InitializeValidators is a paid mutator transaction binding the contract method 0x58199d01.
-//
-// Solidity: function initializeValidators(address[] nodeIds, (address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos) returns()
-func (_IAddressBookV2 *IAddressBookV2Session) InitializeValidators(nodeIds []common.Address, infos []NodeInfo) (*types.Transaction, error) {
-	return _IAddressBookV2.Contract.InitializeValidators(&_IAddressBookV2.TransactOpts, nodeIds, infos)
-}
-
-// InitializeValidators is a paid mutator transaction binding the contract method 0x58199d01.
-//
-// Solidity: function initializeValidators(address[] nodeIds, (address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos) returns()
-func (_IAddressBookV2 *IAddressBookV2TransactorSession) InitializeValidators(nodeIds []common.Address, infos []NodeInfo) (*types.Transaction, error) {
-	return _IAddressBookV2.Contract.InitializeValidators(&_IAddressBookV2.TransactOpts, nodeIds, infos)
 }
 
 // Offboard is a paid mutator transaction binding the contract method 0xb9f96f40.
@@ -12658,6 +13357,69 @@ func (_IAddressBookV2 *IAddressBookV2TransactorSession) UpdateIdleTimeout(newIdl
 	return _IAddressBookV2.Contract.UpdateIdleTimeout(&_IAddressBookV2.TransactOpts, newIdleTimeout)
 }
 
+// UpdateKefAddress is a paid mutator transaction binding the contract method 0x9d8cf08f.
+//
+// Solidity: function updateKefAddress(address newKefAddress) returns()
+func (_IAddressBookV2 *IAddressBookV2Transactor) UpdateKefAddress(opts *bind.TransactOpts, newKefAddress common.Address) (*types.Transaction, error) {
+	return _IAddressBookV2.contract.Transact(opts, "updateKefAddress", newKefAddress)
+}
+
+// UpdateKefAddress is a paid mutator transaction binding the contract method 0x9d8cf08f.
+//
+// Solidity: function updateKefAddress(address newKefAddress) returns()
+func (_IAddressBookV2 *IAddressBookV2Session) UpdateKefAddress(newKefAddress common.Address) (*types.Transaction, error) {
+	return _IAddressBookV2.Contract.UpdateKefAddress(&_IAddressBookV2.TransactOpts, newKefAddress)
+}
+
+// UpdateKefAddress is a paid mutator transaction binding the contract method 0x9d8cf08f.
+//
+// Solidity: function updateKefAddress(address newKefAddress) returns()
+func (_IAddressBookV2 *IAddressBookV2TransactorSession) UpdateKefAddress(newKefAddress common.Address) (*types.Transaction, error) {
+	return _IAddressBookV2.Contract.UpdateKefAddress(&_IAddressBookV2.TransactOpts, newKefAddress)
+}
+
+// UpdateKifAddress is a paid mutator transaction binding the contract method 0x7df40c62.
+//
+// Solidity: function updateKifAddress(address newKifAddress) returns()
+func (_IAddressBookV2 *IAddressBookV2Transactor) UpdateKifAddress(opts *bind.TransactOpts, newKifAddress common.Address) (*types.Transaction, error) {
+	return _IAddressBookV2.contract.Transact(opts, "updateKifAddress", newKifAddress)
+}
+
+// UpdateKifAddress is a paid mutator transaction binding the contract method 0x7df40c62.
+//
+// Solidity: function updateKifAddress(address newKifAddress) returns()
+func (_IAddressBookV2 *IAddressBookV2Session) UpdateKifAddress(newKifAddress common.Address) (*types.Transaction, error) {
+	return _IAddressBookV2.Contract.UpdateKifAddress(&_IAddressBookV2.TransactOpts, newKifAddress)
+}
+
+// UpdateKifAddress is a paid mutator transaction binding the contract method 0x7df40c62.
+//
+// Solidity: function updateKifAddress(address newKifAddress) returns()
+func (_IAddressBookV2 *IAddressBookV2TransactorSession) UpdateKifAddress(newKifAddress common.Address) (*types.Transaction, error) {
+	return _IAddressBookV2.Contract.UpdateKifAddress(&_IAddressBookV2.TransactOpts, newKifAddress)
+}
+
+// UpdateKpfAddress is a paid mutator transaction binding the contract method 0xc9a86af2.
+//
+// Solidity: function updateKpfAddress(address newKpfAddress) returns()
+func (_IAddressBookV2 *IAddressBookV2Transactor) UpdateKpfAddress(opts *bind.TransactOpts, newKpfAddress common.Address) (*types.Transaction, error) {
+	return _IAddressBookV2.contract.Transact(opts, "updateKpfAddress", newKpfAddress)
+}
+
+// UpdateKpfAddress is a paid mutator transaction binding the contract method 0xc9a86af2.
+//
+// Solidity: function updateKpfAddress(address newKpfAddress) returns()
+func (_IAddressBookV2 *IAddressBookV2Session) UpdateKpfAddress(newKpfAddress common.Address) (*types.Transaction, error) {
+	return _IAddressBookV2.Contract.UpdateKpfAddress(&_IAddressBookV2.TransactOpts, newKpfAddress)
+}
+
+// UpdateKpfAddress is a paid mutator transaction binding the contract method 0xc9a86af2.
+//
+// Solidity: function updateKpfAddress(address newKpfAddress) returns()
+func (_IAddressBookV2 *IAddressBookV2TransactorSession) UpdateKpfAddress(newKpfAddress common.Address) (*types.Transaction, error) {
+	return _IAddressBookV2.Contract.UpdateKpfAddress(&_IAddressBookV2.TransactOpts, newKpfAddress)
+}
+
 // UpdateManager is a paid mutator transaction binding the contract method 0x07ecec3e.
 //
 // Solidity: function updateManager(address nodeId, address newManager) returns()
@@ -12761,139 +13523,6 @@ func (_IAddressBookV2 *IAddressBookV2Session) UpdateScores(nodeIds []common.Addr
 // Solidity: function updateScores(address[] nodeIds, uint256[] scores) returns()
 func (_IAddressBookV2 *IAddressBookV2TransactorSession) UpdateScores(nodeIds []common.Address, scores []*big.Int) (*types.Transaction, error) {
 	return _IAddressBookV2.Contract.UpdateScores(&_IAddressBookV2.TransactOpts, nodeIds, scores)
-}
-
-// IAddressBookV2ActivatedIterator is returned from FilterActivated and is used to iterate over the raw logs and unpacked data for Activated events raised by the IAddressBookV2 contract.
-type IAddressBookV2ActivatedIterator struct {
-	Event *IAddressBookV2Activated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *IAddressBookV2ActivatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(IAddressBookV2Activated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(IAddressBookV2Activated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *IAddressBookV2ActivatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *IAddressBookV2ActivatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// IAddressBookV2Activated represents a Activated event raised by the IAddressBookV2 contract.
-type IAddressBookV2Activated struct {
-	Raw types.Log // Blockchain specific contextual infos
-}
-
-// FilterActivated is a free log retrieval operation binding the contract event 0xed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0.
-//
-// Solidity: event Activated()
-func (_IAddressBookV2 *IAddressBookV2Filterer) FilterActivated(opts *bind.FilterOpts) (*IAddressBookV2ActivatedIterator, error) {
-
-	logs, sub, err := _IAddressBookV2.contract.FilterLogs(opts, "Activated")
-	if err != nil {
-		return nil, err
-	}
-	return &IAddressBookV2ActivatedIterator{contract: _IAddressBookV2.contract, event: "Activated", logs: logs, sub: sub}, nil
-}
-
-// WatchActivated is a free log subscription operation binding the contract event 0xed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0.
-//
-// Solidity: event Activated()
-func (_IAddressBookV2 *IAddressBookV2Filterer) WatchActivated(opts *bind.WatchOpts, sink chan<- *IAddressBookV2Activated) (event.Subscription, error) {
-
-	logs, sub, err := _IAddressBookV2.contract.WatchLogs(opts, "Activated")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(IAddressBookV2Activated)
-				if err := _IAddressBookV2.contract.UnpackLog(event, "Activated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseActivated is a log parse operation binding the contract event 0xed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0.
-//
-// Solidity: event Activated()
-func (_IAddressBookV2 *IAddressBookV2Filterer) ParseActivated(log types.Log) (*IAddressBookV2Activated, error) {
-	event := new(IAddressBookV2Activated)
-	if err := _IAddressBookV2.contract.UnpackLog(event, "Activated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
 }
 
 // IAddressBookV2CandidateActivatedIterator is returned from FilterCandidateActivated and is used to iterate over the raw logs and unpacked data for CandidateActivated events raised by the IAddressBookV2 contract.
@@ -13582,6 +14211,411 @@ func (_IAddressBookV2 *IAddressBookV2Filterer) WatchIdleTimeoutUpdated(opts *bin
 func (_IAddressBookV2 *IAddressBookV2Filterer) ParseIdleTimeoutUpdated(log types.Log) (*IAddressBookV2IdleTimeoutUpdated, error) {
 	event := new(IAddressBookV2IdleTimeoutUpdated)
 	if err := _IAddressBookV2.contract.UnpackLog(event, "IdleTimeoutUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// IAddressBookV2KefAddressUpdatedIterator is returned from FilterKefAddressUpdated and is used to iterate over the raw logs and unpacked data for KefAddressUpdated events raised by the IAddressBookV2 contract.
+type IAddressBookV2KefAddressUpdatedIterator struct {
+	Event *IAddressBookV2KefAddressUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IAddressBookV2KefAddressUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IAddressBookV2KefAddressUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IAddressBookV2KefAddressUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IAddressBookV2KefAddressUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IAddressBookV2KefAddressUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IAddressBookV2KefAddressUpdated represents a KefAddressUpdated event raised by the IAddressBookV2 contract.
+type IAddressBookV2KefAddressUpdated struct {
+	OldAddress common.Address
+	NewAddress common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterKefAddressUpdated is a free log retrieval operation binding the contract event 0xdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c.
+//
+// Solidity: event KefAddressUpdated(address oldAddress, address newAddress)
+func (_IAddressBookV2 *IAddressBookV2Filterer) FilterKefAddressUpdated(opts *bind.FilterOpts) (*IAddressBookV2KefAddressUpdatedIterator, error) {
+
+	logs, sub, err := _IAddressBookV2.contract.FilterLogs(opts, "KefAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &IAddressBookV2KefAddressUpdatedIterator{contract: _IAddressBookV2.contract, event: "KefAddressUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchKefAddressUpdated is a free log subscription operation binding the contract event 0xdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c.
+//
+// Solidity: event KefAddressUpdated(address oldAddress, address newAddress)
+func (_IAddressBookV2 *IAddressBookV2Filterer) WatchKefAddressUpdated(opts *bind.WatchOpts, sink chan<- *IAddressBookV2KefAddressUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _IAddressBookV2.contract.WatchLogs(opts, "KefAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IAddressBookV2KefAddressUpdated)
+				if err := _IAddressBookV2.contract.UnpackLog(event, "KefAddressUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseKefAddressUpdated is a log parse operation binding the contract event 0xdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c.
+//
+// Solidity: event KefAddressUpdated(address oldAddress, address newAddress)
+func (_IAddressBookV2 *IAddressBookV2Filterer) ParseKefAddressUpdated(log types.Log) (*IAddressBookV2KefAddressUpdated, error) {
+	event := new(IAddressBookV2KefAddressUpdated)
+	if err := _IAddressBookV2.contract.UnpackLog(event, "KefAddressUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// IAddressBookV2KifAddressUpdatedIterator is returned from FilterKifAddressUpdated and is used to iterate over the raw logs and unpacked data for KifAddressUpdated events raised by the IAddressBookV2 contract.
+type IAddressBookV2KifAddressUpdatedIterator struct {
+	Event *IAddressBookV2KifAddressUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IAddressBookV2KifAddressUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IAddressBookV2KifAddressUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IAddressBookV2KifAddressUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IAddressBookV2KifAddressUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IAddressBookV2KifAddressUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IAddressBookV2KifAddressUpdated represents a KifAddressUpdated event raised by the IAddressBookV2 contract.
+type IAddressBookV2KifAddressUpdated struct {
+	OldAddress common.Address
+	NewAddress common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterKifAddressUpdated is a free log retrieval operation binding the contract event 0xc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c.
+//
+// Solidity: event KifAddressUpdated(address oldAddress, address newAddress)
+func (_IAddressBookV2 *IAddressBookV2Filterer) FilterKifAddressUpdated(opts *bind.FilterOpts) (*IAddressBookV2KifAddressUpdatedIterator, error) {
+
+	logs, sub, err := _IAddressBookV2.contract.FilterLogs(opts, "KifAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &IAddressBookV2KifAddressUpdatedIterator{contract: _IAddressBookV2.contract, event: "KifAddressUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchKifAddressUpdated is a free log subscription operation binding the contract event 0xc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c.
+//
+// Solidity: event KifAddressUpdated(address oldAddress, address newAddress)
+func (_IAddressBookV2 *IAddressBookV2Filterer) WatchKifAddressUpdated(opts *bind.WatchOpts, sink chan<- *IAddressBookV2KifAddressUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _IAddressBookV2.contract.WatchLogs(opts, "KifAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IAddressBookV2KifAddressUpdated)
+				if err := _IAddressBookV2.contract.UnpackLog(event, "KifAddressUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseKifAddressUpdated is a log parse operation binding the contract event 0xc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c.
+//
+// Solidity: event KifAddressUpdated(address oldAddress, address newAddress)
+func (_IAddressBookV2 *IAddressBookV2Filterer) ParseKifAddressUpdated(log types.Log) (*IAddressBookV2KifAddressUpdated, error) {
+	event := new(IAddressBookV2KifAddressUpdated)
+	if err := _IAddressBookV2.contract.UnpackLog(event, "KifAddressUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// IAddressBookV2KpfAddressUpdatedIterator is returned from FilterKpfAddressUpdated and is used to iterate over the raw logs and unpacked data for KpfAddressUpdated events raised by the IAddressBookV2 contract.
+type IAddressBookV2KpfAddressUpdatedIterator struct {
+	Event *IAddressBookV2KpfAddressUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IAddressBookV2KpfAddressUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IAddressBookV2KpfAddressUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IAddressBookV2KpfAddressUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IAddressBookV2KpfAddressUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IAddressBookV2KpfAddressUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IAddressBookV2KpfAddressUpdated represents a KpfAddressUpdated event raised by the IAddressBookV2 contract.
+type IAddressBookV2KpfAddressUpdated struct {
+	OldAddress common.Address
+	NewAddress common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterKpfAddressUpdated is a free log retrieval operation binding the contract event 0x7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41.
+//
+// Solidity: event KpfAddressUpdated(address oldAddress, address newAddress)
+func (_IAddressBookV2 *IAddressBookV2Filterer) FilterKpfAddressUpdated(opts *bind.FilterOpts) (*IAddressBookV2KpfAddressUpdatedIterator, error) {
+
+	logs, sub, err := _IAddressBookV2.contract.FilterLogs(opts, "KpfAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &IAddressBookV2KpfAddressUpdatedIterator{contract: _IAddressBookV2.contract, event: "KpfAddressUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchKpfAddressUpdated is a free log subscription operation binding the contract event 0x7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41.
+//
+// Solidity: event KpfAddressUpdated(address oldAddress, address newAddress)
+func (_IAddressBookV2 *IAddressBookV2Filterer) WatchKpfAddressUpdated(opts *bind.WatchOpts, sink chan<- *IAddressBookV2KpfAddressUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _IAddressBookV2.contract.WatchLogs(opts, "KpfAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IAddressBookV2KpfAddressUpdated)
+				if err := _IAddressBookV2.contract.UnpackLog(event, "KpfAddressUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseKpfAddressUpdated is a log parse operation binding the contract event 0x7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41.
+//
+// Solidity: event KpfAddressUpdated(address oldAddress, address newAddress)
+func (_IAddressBookV2 *IAddressBookV2Filterer) ParseKpfAddressUpdated(log types.Log) (*IAddressBookV2KpfAddressUpdated, error) {
+	event := new(IAddressBookV2KpfAddressUpdated)
+	if err := _IAddressBookV2.contract.UnpackLog(event, "KpfAddressUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -16526,6 +17560,198 @@ func (_IERC1967Upgradeable *IERC1967UpgradeableFilterer) ParseUpgraded(log types
 	return event, nil
 }
 
+// IRegistryMetaData contains all meta data concerning the IRegistry contract.
+var IRegistryMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"}],\"name\":\"getActiveAddr\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Sigs: map[string]string{
+		"e2693e3f": "getActiveAddr(string)",
+	},
+}
+
+// IRegistryABI is the input ABI used to generate the binding from.
+// Deprecated: Use IRegistryMetaData.ABI instead.
+var IRegistryABI = IRegistryMetaData.ABI
+
+// IRegistryBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const IRegistryBinRuntime = ``
+
+// Deprecated: Use IRegistryMetaData.Sigs instead.
+// IRegistryFuncSigs maps the 4-byte function signature to its string representation.
+var IRegistryFuncSigs = IRegistryMetaData.Sigs
+
+// IRegistry is an auto generated Go binding around a Kaia contract.
+type IRegistry struct {
+	IRegistryCaller     // Read-only binding to the contract
+	IRegistryTransactor // Write-only binding to the contract
+	IRegistryFilterer   // Log filterer for contract events
+}
+
+// IRegistryCaller is an auto generated read-only Go binding around a Kaia contract.
+type IRegistryCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IRegistryTransactor is an auto generated write-only Go binding around a Kaia contract.
+type IRegistryTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IRegistryFilterer is an auto generated log filtering Go binding around a Kaia contract events.
+type IRegistryFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// IRegistrySession is an auto generated Go binding around a Kaia contract,
+// with pre-set call and transact options.
+type IRegistrySession struct {
+	Contract     *IRegistry        // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// IRegistryCallerSession is an auto generated read-only Go binding around a Kaia contract,
+// with pre-set call options.
+type IRegistryCallerSession struct {
+	Contract *IRegistryCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts    // Call options to use throughout this session
+}
+
+// IRegistryTransactorSession is an auto generated write-only Go binding around a Kaia contract,
+// with pre-set transact options.
+type IRegistryTransactorSession struct {
+	Contract     *IRegistryTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
+}
+
+// IRegistryRaw is an auto generated low-level Go binding around a Kaia contract.
+type IRegistryRaw struct {
+	Contract *IRegistry // Generic contract binding to access the raw methods on
+}
+
+// IRegistryCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
+type IRegistryCallerRaw struct {
+	Contract *IRegistryCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// IRegistryTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
+type IRegistryTransactorRaw struct {
+	Contract *IRegistryTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewIRegistry creates a new instance of IRegistry, bound to a specific deployed contract.
+func NewIRegistry(address common.Address, backend bind.ContractBackend) (*IRegistry, error) {
+	contract, err := bindIRegistry(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &IRegistry{IRegistryCaller: IRegistryCaller{contract: contract}, IRegistryTransactor: IRegistryTransactor{contract: contract}, IRegistryFilterer: IRegistryFilterer{contract: contract}}, nil
+}
+
+// NewIRegistryCaller creates a new read-only instance of IRegistry, bound to a specific deployed contract.
+func NewIRegistryCaller(address common.Address, caller bind.ContractCaller) (*IRegistryCaller, error) {
+	contract, err := bindIRegistry(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IRegistryCaller{contract: contract}, nil
+}
+
+// NewIRegistryTransactor creates a new write-only instance of IRegistry, bound to a specific deployed contract.
+func NewIRegistryTransactor(address common.Address, transactor bind.ContractTransactor) (*IRegistryTransactor, error) {
+	contract, err := bindIRegistry(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &IRegistryTransactor{contract: contract}, nil
+}
+
+// NewIRegistryFilterer creates a new log filterer instance of IRegistry, bound to a specific deployed contract.
+func NewIRegistryFilterer(address common.Address, filterer bind.ContractFilterer) (*IRegistryFilterer, error) {
+	contract, err := bindIRegistry(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &IRegistryFilterer{contract: contract}, nil
+}
+
+// bindIRegistry binds a generic wrapper to an already deployed contract.
+func bindIRegistry(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := IRegistryMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IRegistry *IRegistryRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _IRegistry.Contract.IRegistryCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IRegistry *IRegistryRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IRegistry.Contract.IRegistryTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IRegistry *IRegistryRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IRegistry.Contract.IRegistryTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_IRegistry *IRegistryCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _IRegistry.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_IRegistry *IRegistryTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IRegistry.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_IRegistry *IRegistryTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IRegistry.Contract.contract.Transact(opts, method, params...)
+}
+
+// GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
+//
+// Solidity: function getActiveAddr(string name) view returns(address)
+func (_IRegistry *IRegistryCaller) GetActiveAddr(opts *bind.CallOpts, name string) (common.Address, error) {
+	var out []interface{}
+	err := _IRegistry.contract.Call(opts, &out, "getActiveAddr", name)
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
+//
+// Solidity: function getActiveAddr(string name) view returns(address)
+func (_IRegistry *IRegistrySession) GetActiveAddr(name string) (common.Address, error) {
+	return _IRegistry.Contract.GetActiveAddr(&_IRegistry.CallOpts, name)
+}
+
+// GetActiveAddr is a free data retrieval call binding the contract method 0xe2693e3f.
+//
+// Solidity: function getActiveAddr(string name) view returns(address)
+func (_IRegistry *IRegistryCallerSession) GetActiveAddr(name string) (common.Address, error) {
+	return _IRegistry.Contract.GetActiveAddr(&_IRegistry.CallOpts, name)
+}
+
 // InitializableMetaData contains all meta data concerning the Initializable contract.
 var InitializableMetaData = &bind.MetaData{
 	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"}]",
@@ -16816,12 +18042,11 @@ func (_Initializable *InitializableFilterer) ParseInitialized(log types.Log) (*I
 
 // NodeActionsMetaData contains all meta data concerning the NodeActions contract.
 var NodeActionsMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"name\":\"AddressAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadyActivated\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadyInitialized\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadySuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInput\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInput\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidState\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeAlreadyExists\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeNotFound\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyEpochBlock\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyManager\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlySystemTx\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SlotsFull\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StakingTooLow\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TimeoutExpired\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"Activated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateActivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateDeactivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"epochValCount\",\"type\":\"uint256\"}],\"name\":\"EpochTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldThreshold\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newThreshold\",\"type\":\"uint256\"}],\"name\":\"ExitThresholdUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldIdleTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"IdleTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldManager\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"ManagerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxReadyCandidateCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxValidatorCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"}],\"name\":\"NodeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"NodeDeleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldPauseTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"PauseTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"ScoresUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"enumNodeState\",\"name\":\"fromState\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"enumNodeState\",\"name\":\"toState\",\"type\":\"uint8\"}],\"name\":\"StateChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"enumNodeState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"}],\"name\":\"SystemTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorSuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorUnsuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"ValidatorsInitialized\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"EPOCH_BLOCK_INTERVAL\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MIN_STAKE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SYSTEM_SENDER\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"activate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"activateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"}],\"name\":\"createNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentEpoch\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deactivateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deleteNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"exit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getActiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllBlsInfo\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIdList\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo[]\",\"name\":\"pubkeyList\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllProfiles\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structProfile[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCandInactiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getEpochValCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getExitThreshold\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getManager\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getMaxCounts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"maxValidatorCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxReadyCandidateCount\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"getNodeInfos\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeState\",\"outputs\":[{\"internalType\":\"enumNodeState\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getScore\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getStakingContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"name\":\"getStateCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getSuspendedValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getTimeoutAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTimeouts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"pauseTimeout\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"idleTimeout\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumNodeState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo[]\",\"name\":\"infos\",\"type\":\"tuple[]\"}],\"name\":\"initializeValidators\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isActivated\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isCandInactive\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isInActiveSet\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isRegistered\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isValidatorsInitialized\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"offboard\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"enumNodeState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"},{\"internalType\":\"uint256[]\",\"name\":\"timeoutAts\",\"type\":\"uint256[]\"}],\"name\":\"processSystemTransition\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"readyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"resume\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"suspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unreadyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unsuspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newExitThreshold\",\"type\":\"uint256\"}],\"name\":\"updateExitThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"updateIdleTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"updateManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxReadyCandidateCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxReadyCandidateCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxValidatorCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxValidatorCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"updatePauseTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"updateScores\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"name\":\"AddressAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"AlreadySuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInput\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInput\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidState\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeAlreadyExists\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NodeNotFound\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotSuspended\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyEpochBlock\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlyManager\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OnlySystemTx\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SlotsFull\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"StakingTooLow\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TimeoutExpired\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateActivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"CandidateDeactivated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"epochValCount\",\"type\":\"uint256\"}],\"name\":\"EpochTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldThreshold\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newThreshold\",\"type\":\"uint256\"}],\"name\":\"ExitThresholdUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldIdleTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"IdleTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAddress\",\"type\":\"address\"}],\"name\":\"KefAddressUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAddress\",\"type\":\"address\"}],\"name\":\"KifAddressUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAddress\",\"type\":\"address\"}],\"name\":\"KpfAddressUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldManager\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"ManagerUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxReadyCandidateCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldCount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newCount\",\"type\":\"uint256\"}],\"name\":\"MaxValidatorCountUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"}],\"name\":\"NodeCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"NodeDeleted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"oldPauseTimeout\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"PauseTimeoutUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"ScoresUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"enumState\",\"name\":\"fromState\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"enumState\",\"name\":\"toState\",\"type\":\"uint8\"}],\"name\":\"StateChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"enumState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"}],\"name\":\"SystemTransitionProcessed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorSuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"ValidatorUnsuspended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"ValidatorsInitialized\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"EPOCH_BLOCK_INTERVAL\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MIN_STAKE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SYSTEM_SENDER\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"activateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"}],\"name\":\"createNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"currentEpoch\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deactivateCandidate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"deleteNode\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"exit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getActiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllBlsInfo\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIdList\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo[]\",\"name\":\"pubkeyList\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllProfiles\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structProfile[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCandInactiveSetLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getEpochValCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getExitThreshold\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getFundAddresses\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"kefAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"kifAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"kpfAddress\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getManager\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getMaxCounts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"maxValidatorCount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxReadyCandidateCount\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"manager\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"}],\"name\":\"getNodeInfos\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"manager\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakingContract\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"rewardAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"voterAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"timeoutAt\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gcId\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"publicKey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"pop\",\"type\":\"bytes\"}],\"internalType\":\"structBlsPublicKeyInfo\",\"name\":\"blsInfo\",\"type\":\"tuple\"},{\"internalType\":\"string\",\"name\":\"metadata\",\"type\":\"string\"},{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"internalType\":\"structNodeInfo[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getNodeState\",\"outputs\":[{\"internalType\":\"enumState\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"epoch\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getScore\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getStakingContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"enumState\",\"name\":\"state\",\"type\":\"uint8\"}],\"name\":\"getStateCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getSuspendedValidators\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"getTimeoutAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTimeouts\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"pauseTimeout\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"idleTimeout\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isCandInactive\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"isInActiveSet\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isRegistered\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"offboard\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"pause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"enumState[]\",\"name\":\"newStates\",\"type\":\"uint8[]\"},{\"internalType\":\"uint256[]\",\"name\":\"timeoutAts\",\"type\":\"uint256[]\"}],\"name\":\"processSystemTransition\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"readyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"resume\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"suspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unreadyValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"}],\"name\":\"unsuspendValidator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newExitThreshold\",\"type\":\"uint256\"}],\"name\":\"updateExitThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newIdleTimeout\",\"type\":\"uint256\"}],\"name\":\"updateIdleTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newKefAddress\",\"type\":\"address\"}],\"name\":\"updateKefAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newKifAddress\",\"type\":\"address\"}],\"name\":\"updateKifAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newKpfAddress\",\"type\":\"address\"}],\"name\":\"updateKpfAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"nodeId\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newManager\",\"type\":\"address\"}],\"name\":\"updateManager\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxReadyCandidateCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxReadyCandidateCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newMaxValidatorCount\",\"type\":\"uint256\"}],\"name\":\"updateMaxValidatorCount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"newPauseTimeout\",\"type\":\"uint256\"}],\"name\":\"updatePauseTimeout\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"nodeIds\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"scores\",\"type\":\"uint256[]\"}],\"name\":\"updateScores\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
 	Sigs: map[string]string{
 		"de244059": "EPOCH_BLOCK_INTERVAL()",
 		"cb1c2b5c": "MIN_STAKE()",
 		"87b7b8fd": "SYSTEM_SENDER()",
-		"0f15f4c0": "activate()",
 		"ef6bdade": "activateCandidate(address)",
 		"4429d720": "createNode(address,address,address,address,(bytes,bytes),string)",
 		"76671808": "currentEpoch()",
@@ -16834,6 +18059,7 @@ var NodeActionsMetaData = &bind.MetaData{
 		"94a64d98": "getCandInactiveSetLength()",
 		"7d7b127f": "getEpochValCount()",
 		"3aea9faf": "getExitThreshold()",
+		"25cf0943": "getFundAddresses()",
 		"3d584063": "getManager(address)",
 		"03e6689d": "getMaxCounts()",
 		"582115fb": "getNodeInfo(address)",
@@ -16845,12 +18071,9 @@ var NodeActionsMetaData = &bind.MetaData{
 		"1ba3fd58": "getSuspendedValidators()",
 		"277f3dc3": "getTimeoutAt(address)",
 		"e70c38f1": "getTimeouts()",
-		"58199d01": "initializeValidators(address[],(address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])",
-		"4a8c1fb4": "isActivated()",
 		"45ce8110": "isCandInactive(address)",
 		"5334cf44": "isInActiveSet(address)",
 		"c3c5a547": "isRegistered(address)",
-		"551ec9b5": "isValidatorsInitialized()",
 		"b9f96f40": "offboard(address)",
 		"8da5cb5b": "owner()",
 		"76a67a51": "pause(address)",
@@ -16865,6 +18088,9 @@ var NodeActionsMetaData = &bind.MetaData{
 		"78b84a5c": "unsuspendValidator(address)",
 		"2c1d4895": "updateExitThreshold(uint256)",
 		"e59d7a84": "updateIdleTimeout(uint256)",
+		"9d8cf08f": "updateKefAddress(address)",
+		"7df40c62": "updateKifAddress(address)",
+		"c9a86af2": "updateKpfAddress(address)",
 		"07ecec3e": "updateManager(address,address)",
 		"76714282": "updateMaxReadyCandidateCount(uint256)",
 		"7e134fc6": "updateMaxValidatorCount(uint256)",
@@ -17352,6 +18578,56 @@ func (_NodeActions *NodeActionsCallerSession) GetExitThreshold() (*big.Int, erro
 	return _NodeActions.Contract.GetExitThreshold(&_NodeActions.CallOpts)
 }
 
+// GetFundAddresses is a free data retrieval call binding the contract method 0x25cf0943.
+//
+// Solidity: function getFundAddresses() view returns(address kefAddress, address kifAddress, address kpfAddress)
+func (_NodeActions *NodeActionsCaller) GetFundAddresses(opts *bind.CallOpts) (struct {
+	KefAddress common.Address
+	KifAddress common.Address
+	KpfAddress common.Address
+}, error) {
+	var out []interface{}
+	err := _NodeActions.contract.Call(opts, &out, "getFundAddresses")
+
+	outstruct := new(struct {
+		KefAddress common.Address
+		KifAddress common.Address
+		KpfAddress common.Address
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.KefAddress = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.KifAddress = *abi.ConvertType(out[1], new(common.Address)).(*common.Address)
+	outstruct.KpfAddress = *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
+
+	return *outstruct, err
+
+}
+
+// GetFundAddresses is a free data retrieval call binding the contract method 0x25cf0943.
+//
+// Solidity: function getFundAddresses() view returns(address kefAddress, address kifAddress, address kpfAddress)
+func (_NodeActions *NodeActionsSession) GetFundAddresses() (struct {
+	KefAddress common.Address
+	KifAddress common.Address
+	KpfAddress common.Address
+}, error) {
+	return _NodeActions.Contract.GetFundAddresses(&_NodeActions.CallOpts)
+}
+
+// GetFundAddresses is a free data retrieval call binding the contract method 0x25cf0943.
+//
+// Solidity: function getFundAddresses() view returns(address kefAddress, address kifAddress, address kpfAddress)
+func (_NodeActions *NodeActionsCallerSession) GetFundAddresses() (struct {
+	KefAddress common.Address
+	KifAddress common.Address
+	KpfAddress common.Address
+}, error) {
+	return _NodeActions.Contract.GetFundAddresses(&_NodeActions.CallOpts)
+}
+
 // GetManager is a free data retrieval call binding the contract method 0x3d584063.
 //
 // Solidity: function getManager(address nodeId) view returns(address)
@@ -17430,7 +18706,7 @@ func (_NodeActions *NodeActionsCallerSession) GetMaxCounts() (struct {
 
 // GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
 //
-// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
+// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
 func (_NodeActions *NodeActionsCaller) GetNodeInfo(opts *bind.CallOpts, nodeId common.Address) (NodeInfo, error) {
 	var out []interface{}
 	err := _NodeActions.contract.Call(opts, &out, "getNodeInfo", nodeId)
@@ -17447,21 +18723,21 @@ func (_NodeActions *NodeActionsCaller) GetNodeInfo(opts *bind.CallOpts, nodeId c
 
 // GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
 //
-// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
+// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
 func (_NodeActions *NodeActionsSession) GetNodeInfo(nodeId common.Address) (NodeInfo, error) {
 	return _NodeActions.Contract.GetNodeInfo(&_NodeActions.CallOpts, nodeId)
 }
 
 // GetNodeInfo is a free data retrieval call binding the contract method 0x582115fb.
 //
-// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
+// Solidity: function getNodeInfo(address nodeId) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8))
 func (_NodeActions *NodeActionsCallerSession) GetNodeInfo(nodeId common.Address) (NodeInfo, error) {
 	return _NodeActions.Contract.GetNodeInfo(&_NodeActions.CallOpts, nodeId)
 }
 
 // GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
 //
-// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
+// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
 func (_NodeActions *NodeActionsCaller) GetNodeInfos(opts *bind.CallOpts, nodeIds []common.Address) ([]NodeInfo, error) {
 	var out []interface{}
 	err := _NodeActions.contract.Call(opts, &out, "getNodeInfos", nodeIds)
@@ -17478,14 +18754,14 @@ func (_NodeActions *NodeActionsCaller) GetNodeInfos(opts *bind.CallOpts, nodeIds
 
 // GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
 //
-// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
+// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
 func (_NodeActions *NodeActionsSession) GetNodeInfos(nodeIds []common.Address) ([]NodeInfo, error) {
 	return _NodeActions.Contract.GetNodeInfos(&_NodeActions.CallOpts, nodeIds)
 }
 
 // GetNodeInfos is a free data retrieval call binding the contract method 0x8beeb439.
 //
-// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
+// Solidity: function getNodeInfos(address[] nodeIds) view returns((address,address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[])
 func (_NodeActions *NodeActionsCallerSession) GetNodeInfos(nodeIds []common.Address) ([]NodeInfo, error) {
 	return _NodeActions.Contract.GetNodeInfos(&_NodeActions.CallOpts, nodeIds)
 }
@@ -17721,37 +18997,6 @@ func (_NodeActions *NodeActionsCallerSession) GetTimeouts() (struct {
 	return _NodeActions.Contract.GetTimeouts(&_NodeActions.CallOpts)
 }
 
-// IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
-//
-// Solidity: function isActivated() view returns(bool)
-func (_NodeActions *NodeActionsCaller) IsActivated(opts *bind.CallOpts) (bool, error) {
-	var out []interface{}
-	err := _NodeActions.contract.Call(opts, &out, "isActivated")
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
-//
-// Solidity: function isActivated() view returns(bool)
-func (_NodeActions *NodeActionsSession) IsActivated() (bool, error) {
-	return _NodeActions.Contract.IsActivated(&_NodeActions.CallOpts)
-}
-
-// IsActivated is a free data retrieval call binding the contract method 0x4a8c1fb4.
-//
-// Solidity: function isActivated() view returns(bool)
-func (_NodeActions *NodeActionsCallerSession) IsActivated() (bool, error) {
-	return _NodeActions.Contract.IsActivated(&_NodeActions.CallOpts)
-}
-
 // IsCandInactive is a free data retrieval call binding the contract method 0x45ce8110.
 //
 // Solidity: function isCandInactive(address nodeId) view returns(bool)
@@ -17845,37 +19090,6 @@ func (_NodeActions *NodeActionsCallerSession) IsRegistered(addr common.Address) 
 	return _NodeActions.Contract.IsRegistered(&_NodeActions.CallOpts, addr)
 }
 
-// IsValidatorsInitialized is a free data retrieval call binding the contract method 0x551ec9b5.
-//
-// Solidity: function isValidatorsInitialized() view returns(bool)
-func (_NodeActions *NodeActionsCaller) IsValidatorsInitialized(opts *bind.CallOpts) (bool, error) {
-	var out []interface{}
-	err := _NodeActions.contract.Call(opts, &out, "isValidatorsInitialized")
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// IsValidatorsInitialized is a free data retrieval call binding the contract method 0x551ec9b5.
-//
-// Solidity: function isValidatorsInitialized() view returns(bool)
-func (_NodeActions *NodeActionsSession) IsValidatorsInitialized() (bool, error) {
-	return _NodeActions.Contract.IsValidatorsInitialized(&_NodeActions.CallOpts)
-}
-
-// IsValidatorsInitialized is a free data retrieval call binding the contract method 0x551ec9b5.
-//
-// Solidity: function isValidatorsInitialized() view returns(bool)
-func (_NodeActions *NodeActionsCallerSession) IsValidatorsInitialized() (bool, error) {
-	return _NodeActions.Contract.IsValidatorsInitialized(&_NodeActions.CallOpts)
-}
-
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
 //
 // Solidity: function owner() view returns(address)
@@ -17936,27 +19150,6 @@ func (_NodeActions *NodeActionsSession) ProxiableUUID() ([32]byte, error) {
 // Solidity: function proxiableUUID() view returns(bytes32)
 func (_NodeActions *NodeActionsCallerSession) ProxiableUUID() ([32]byte, error) {
 	return _NodeActions.Contract.ProxiableUUID(&_NodeActions.CallOpts)
-}
-
-// Activate is a paid mutator transaction binding the contract method 0x0f15f4c0.
-//
-// Solidity: function activate() returns()
-func (_NodeActions *NodeActionsTransactor) Activate(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _NodeActions.contract.Transact(opts, "activate")
-}
-
-// Activate is a paid mutator transaction binding the contract method 0x0f15f4c0.
-//
-// Solidity: function activate() returns()
-func (_NodeActions *NodeActionsSession) Activate() (*types.Transaction, error) {
-	return _NodeActions.Contract.Activate(&_NodeActions.TransactOpts)
-}
-
-// Activate is a paid mutator transaction binding the contract method 0x0f15f4c0.
-//
-// Solidity: function activate() returns()
-func (_NodeActions *NodeActionsTransactorSession) Activate() (*types.Transaction, error) {
-	return _NodeActions.Contract.Activate(&_NodeActions.TransactOpts)
 }
 
 // ActivateCandidate is a paid mutator transaction binding the contract method 0xef6bdade.
@@ -18062,27 +19255,6 @@ func (_NodeActions *NodeActionsSession) Exit(nodeId common.Address) (*types.Tran
 // Solidity: function exit(address nodeId) returns()
 func (_NodeActions *NodeActionsTransactorSession) Exit(nodeId common.Address) (*types.Transaction, error) {
 	return _NodeActions.Contract.Exit(&_NodeActions.TransactOpts, nodeId)
-}
-
-// InitializeValidators is a paid mutator transaction binding the contract method 0x58199d01.
-//
-// Solidity: function initializeValidators(address[] nodeIds, (address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos) returns()
-func (_NodeActions *NodeActionsTransactor) InitializeValidators(opts *bind.TransactOpts, nodeIds []common.Address, infos []NodeInfo) (*types.Transaction, error) {
-	return _NodeActions.contract.Transact(opts, "initializeValidators", nodeIds, infos)
-}
-
-// InitializeValidators is a paid mutator transaction binding the contract method 0x58199d01.
-//
-// Solidity: function initializeValidators(address[] nodeIds, (address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos) returns()
-func (_NodeActions *NodeActionsSession) InitializeValidators(nodeIds []common.Address, infos []NodeInfo) (*types.Transaction, error) {
-	return _NodeActions.Contract.InitializeValidators(&_NodeActions.TransactOpts, nodeIds, infos)
-}
-
-// InitializeValidators is a paid mutator transaction binding the contract method 0x58199d01.
-//
-// Solidity: function initializeValidators(address[] nodeIds, (address,address,address,uint256,uint256,(bytes,bytes),string,uint8)[] infos) returns()
-func (_NodeActions *NodeActionsTransactorSession) InitializeValidators(nodeIds []common.Address, infos []NodeInfo) (*types.Transaction, error) {
-	return _NodeActions.Contract.InitializeValidators(&_NodeActions.TransactOpts, nodeIds, infos)
 }
 
 // Offboard is a paid mutator transaction binding the contract method 0xb9f96f40.
@@ -18337,6 +19509,69 @@ func (_NodeActions *NodeActionsTransactorSession) UpdateIdleTimeout(newIdleTimeo
 	return _NodeActions.Contract.UpdateIdleTimeout(&_NodeActions.TransactOpts, newIdleTimeout)
 }
 
+// UpdateKefAddress is a paid mutator transaction binding the contract method 0x9d8cf08f.
+//
+// Solidity: function updateKefAddress(address newKefAddress) returns()
+func (_NodeActions *NodeActionsTransactor) UpdateKefAddress(opts *bind.TransactOpts, newKefAddress common.Address) (*types.Transaction, error) {
+	return _NodeActions.contract.Transact(opts, "updateKefAddress", newKefAddress)
+}
+
+// UpdateKefAddress is a paid mutator transaction binding the contract method 0x9d8cf08f.
+//
+// Solidity: function updateKefAddress(address newKefAddress) returns()
+func (_NodeActions *NodeActionsSession) UpdateKefAddress(newKefAddress common.Address) (*types.Transaction, error) {
+	return _NodeActions.Contract.UpdateKefAddress(&_NodeActions.TransactOpts, newKefAddress)
+}
+
+// UpdateKefAddress is a paid mutator transaction binding the contract method 0x9d8cf08f.
+//
+// Solidity: function updateKefAddress(address newKefAddress) returns()
+func (_NodeActions *NodeActionsTransactorSession) UpdateKefAddress(newKefAddress common.Address) (*types.Transaction, error) {
+	return _NodeActions.Contract.UpdateKefAddress(&_NodeActions.TransactOpts, newKefAddress)
+}
+
+// UpdateKifAddress is a paid mutator transaction binding the contract method 0x7df40c62.
+//
+// Solidity: function updateKifAddress(address newKifAddress) returns()
+func (_NodeActions *NodeActionsTransactor) UpdateKifAddress(opts *bind.TransactOpts, newKifAddress common.Address) (*types.Transaction, error) {
+	return _NodeActions.contract.Transact(opts, "updateKifAddress", newKifAddress)
+}
+
+// UpdateKifAddress is a paid mutator transaction binding the contract method 0x7df40c62.
+//
+// Solidity: function updateKifAddress(address newKifAddress) returns()
+func (_NodeActions *NodeActionsSession) UpdateKifAddress(newKifAddress common.Address) (*types.Transaction, error) {
+	return _NodeActions.Contract.UpdateKifAddress(&_NodeActions.TransactOpts, newKifAddress)
+}
+
+// UpdateKifAddress is a paid mutator transaction binding the contract method 0x7df40c62.
+//
+// Solidity: function updateKifAddress(address newKifAddress) returns()
+func (_NodeActions *NodeActionsTransactorSession) UpdateKifAddress(newKifAddress common.Address) (*types.Transaction, error) {
+	return _NodeActions.Contract.UpdateKifAddress(&_NodeActions.TransactOpts, newKifAddress)
+}
+
+// UpdateKpfAddress is a paid mutator transaction binding the contract method 0xc9a86af2.
+//
+// Solidity: function updateKpfAddress(address newKpfAddress) returns()
+func (_NodeActions *NodeActionsTransactor) UpdateKpfAddress(opts *bind.TransactOpts, newKpfAddress common.Address) (*types.Transaction, error) {
+	return _NodeActions.contract.Transact(opts, "updateKpfAddress", newKpfAddress)
+}
+
+// UpdateKpfAddress is a paid mutator transaction binding the contract method 0xc9a86af2.
+//
+// Solidity: function updateKpfAddress(address newKpfAddress) returns()
+func (_NodeActions *NodeActionsSession) UpdateKpfAddress(newKpfAddress common.Address) (*types.Transaction, error) {
+	return _NodeActions.Contract.UpdateKpfAddress(&_NodeActions.TransactOpts, newKpfAddress)
+}
+
+// UpdateKpfAddress is a paid mutator transaction binding the contract method 0xc9a86af2.
+//
+// Solidity: function updateKpfAddress(address newKpfAddress) returns()
+func (_NodeActions *NodeActionsTransactorSession) UpdateKpfAddress(newKpfAddress common.Address) (*types.Transaction, error) {
+	return _NodeActions.Contract.UpdateKpfAddress(&_NodeActions.TransactOpts, newKpfAddress)
+}
+
 // UpdateManager is a paid mutator transaction binding the contract method 0x07ecec3e.
 //
 // Solidity: function updateManager(address nodeId, address newManager) returns()
@@ -18482,139 +19717,6 @@ func (_NodeActions *NodeActionsSession) UpgradeToAndCall(newImplementation commo
 // Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
 func (_NodeActions *NodeActionsTransactorSession) UpgradeToAndCall(newImplementation common.Address, data []byte) (*types.Transaction, error) {
 	return _NodeActions.Contract.UpgradeToAndCall(&_NodeActions.TransactOpts, newImplementation, data)
-}
-
-// NodeActionsActivatedIterator is returned from FilterActivated and is used to iterate over the raw logs and unpacked data for Activated events raised by the NodeActions contract.
-type NodeActionsActivatedIterator struct {
-	Event *NodeActionsActivated // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *NodeActionsActivatedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(NodeActionsActivated)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(NodeActionsActivated)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *NodeActionsActivatedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *NodeActionsActivatedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// NodeActionsActivated represents a Activated event raised by the NodeActions contract.
-type NodeActionsActivated struct {
-	Raw types.Log // Blockchain specific contextual infos
-}
-
-// FilterActivated is a free log retrieval operation binding the contract event 0xed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0.
-//
-// Solidity: event Activated()
-func (_NodeActions *NodeActionsFilterer) FilterActivated(opts *bind.FilterOpts) (*NodeActionsActivatedIterator, error) {
-
-	logs, sub, err := _NodeActions.contract.FilterLogs(opts, "Activated")
-	if err != nil {
-		return nil, err
-	}
-	return &NodeActionsActivatedIterator{contract: _NodeActions.contract, event: "Activated", logs: logs, sub: sub}, nil
-}
-
-// WatchActivated is a free log subscription operation binding the contract event 0xed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0.
-//
-// Solidity: event Activated()
-func (_NodeActions *NodeActionsFilterer) WatchActivated(opts *bind.WatchOpts, sink chan<- *NodeActionsActivated) (event.Subscription, error) {
-
-	logs, sub, err := _NodeActions.contract.WatchLogs(opts, "Activated")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(NodeActionsActivated)
-				if err := _NodeActions.contract.UnpackLog(event, "Activated", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseActivated is a log parse operation binding the contract event 0xed1cd0670ee0c0017f550451a038818c696d0b6a9d6ce5b369e44275573cf9b0.
-//
-// Solidity: event Activated()
-func (_NodeActions *NodeActionsFilterer) ParseActivated(log types.Log) (*NodeActionsActivated, error) {
-	event := new(NodeActionsActivated)
-	if err := _NodeActions.contract.UnpackLog(event, "Activated", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
 }
 
 // NodeActionsAdminChangedIterator is returned from FilterAdminChanged and is used to iterate over the raw logs and unpacked data for AdminChanged events raised by the NodeActions contract.
@@ -19716,6 +20818,411 @@ func (_NodeActions *NodeActionsFilterer) WatchInitialized(opts *bind.WatchOpts, 
 func (_NodeActions *NodeActionsFilterer) ParseInitialized(log types.Log) (*NodeActionsInitialized, error) {
 	event := new(NodeActionsInitialized)
 	if err := _NodeActions.contract.UnpackLog(event, "Initialized", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// NodeActionsKefAddressUpdatedIterator is returned from FilterKefAddressUpdated and is used to iterate over the raw logs and unpacked data for KefAddressUpdated events raised by the NodeActions contract.
+type NodeActionsKefAddressUpdatedIterator struct {
+	Event *NodeActionsKefAddressUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *NodeActionsKefAddressUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(NodeActionsKefAddressUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(NodeActionsKefAddressUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *NodeActionsKefAddressUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *NodeActionsKefAddressUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// NodeActionsKefAddressUpdated represents a KefAddressUpdated event raised by the NodeActions contract.
+type NodeActionsKefAddressUpdated struct {
+	OldAddress common.Address
+	NewAddress common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterKefAddressUpdated is a free log retrieval operation binding the contract event 0xdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c.
+//
+// Solidity: event KefAddressUpdated(address oldAddress, address newAddress)
+func (_NodeActions *NodeActionsFilterer) FilterKefAddressUpdated(opts *bind.FilterOpts) (*NodeActionsKefAddressUpdatedIterator, error) {
+
+	logs, sub, err := _NodeActions.contract.FilterLogs(opts, "KefAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &NodeActionsKefAddressUpdatedIterator{contract: _NodeActions.contract, event: "KefAddressUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchKefAddressUpdated is a free log subscription operation binding the contract event 0xdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c.
+//
+// Solidity: event KefAddressUpdated(address oldAddress, address newAddress)
+func (_NodeActions *NodeActionsFilterer) WatchKefAddressUpdated(opts *bind.WatchOpts, sink chan<- *NodeActionsKefAddressUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _NodeActions.contract.WatchLogs(opts, "KefAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(NodeActionsKefAddressUpdated)
+				if err := _NodeActions.contract.UnpackLog(event, "KefAddressUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseKefAddressUpdated is a log parse operation binding the contract event 0xdd77bbc80d94d1aaa32e24aa287ecc8ac8144876c99f002cf41e952b874a701c.
+//
+// Solidity: event KefAddressUpdated(address oldAddress, address newAddress)
+func (_NodeActions *NodeActionsFilterer) ParseKefAddressUpdated(log types.Log) (*NodeActionsKefAddressUpdated, error) {
+	event := new(NodeActionsKefAddressUpdated)
+	if err := _NodeActions.contract.UnpackLog(event, "KefAddressUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// NodeActionsKifAddressUpdatedIterator is returned from FilterKifAddressUpdated and is used to iterate over the raw logs and unpacked data for KifAddressUpdated events raised by the NodeActions contract.
+type NodeActionsKifAddressUpdatedIterator struct {
+	Event *NodeActionsKifAddressUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *NodeActionsKifAddressUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(NodeActionsKifAddressUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(NodeActionsKifAddressUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *NodeActionsKifAddressUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *NodeActionsKifAddressUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// NodeActionsKifAddressUpdated represents a KifAddressUpdated event raised by the NodeActions contract.
+type NodeActionsKifAddressUpdated struct {
+	OldAddress common.Address
+	NewAddress common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterKifAddressUpdated is a free log retrieval operation binding the contract event 0xc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c.
+//
+// Solidity: event KifAddressUpdated(address oldAddress, address newAddress)
+func (_NodeActions *NodeActionsFilterer) FilterKifAddressUpdated(opts *bind.FilterOpts) (*NodeActionsKifAddressUpdatedIterator, error) {
+
+	logs, sub, err := _NodeActions.contract.FilterLogs(opts, "KifAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &NodeActionsKifAddressUpdatedIterator{contract: _NodeActions.contract, event: "KifAddressUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchKifAddressUpdated is a free log subscription operation binding the contract event 0xc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c.
+//
+// Solidity: event KifAddressUpdated(address oldAddress, address newAddress)
+func (_NodeActions *NodeActionsFilterer) WatchKifAddressUpdated(opts *bind.WatchOpts, sink chan<- *NodeActionsKifAddressUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _NodeActions.contract.WatchLogs(opts, "KifAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(NodeActionsKifAddressUpdated)
+				if err := _NodeActions.contract.UnpackLog(event, "KifAddressUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseKifAddressUpdated is a log parse operation binding the contract event 0xc1b791b31054140b19d078a05fed0609fe69479b252f199bedf83a06f5a53d4c.
+//
+// Solidity: event KifAddressUpdated(address oldAddress, address newAddress)
+func (_NodeActions *NodeActionsFilterer) ParseKifAddressUpdated(log types.Log) (*NodeActionsKifAddressUpdated, error) {
+	event := new(NodeActionsKifAddressUpdated)
+	if err := _NodeActions.contract.UnpackLog(event, "KifAddressUpdated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// NodeActionsKpfAddressUpdatedIterator is returned from FilterKpfAddressUpdated and is used to iterate over the raw logs and unpacked data for KpfAddressUpdated events raised by the NodeActions contract.
+type NodeActionsKpfAddressUpdatedIterator struct {
+	Event *NodeActionsKpfAddressUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log    // Log channel receiving the found contract events
+	sub  kaia.Subscription // Subscription for errors, completion and termination
+	done bool              // Whether the subscription completed delivering logs
+	fail error             // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *NodeActionsKpfAddressUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(NodeActionsKpfAddressUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(NodeActionsKpfAddressUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *NodeActionsKpfAddressUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *NodeActionsKpfAddressUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// NodeActionsKpfAddressUpdated represents a KpfAddressUpdated event raised by the NodeActions contract.
+type NodeActionsKpfAddressUpdated struct {
+	OldAddress common.Address
+	NewAddress common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterKpfAddressUpdated is a free log retrieval operation binding the contract event 0x7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41.
+//
+// Solidity: event KpfAddressUpdated(address oldAddress, address newAddress)
+func (_NodeActions *NodeActionsFilterer) FilterKpfAddressUpdated(opts *bind.FilterOpts) (*NodeActionsKpfAddressUpdatedIterator, error) {
+
+	logs, sub, err := _NodeActions.contract.FilterLogs(opts, "KpfAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return &NodeActionsKpfAddressUpdatedIterator{contract: _NodeActions.contract, event: "KpfAddressUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchKpfAddressUpdated is a free log subscription operation binding the contract event 0x7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41.
+//
+// Solidity: event KpfAddressUpdated(address oldAddress, address newAddress)
+func (_NodeActions *NodeActionsFilterer) WatchKpfAddressUpdated(opts *bind.WatchOpts, sink chan<- *NodeActionsKpfAddressUpdated) (event.Subscription, error) {
+
+	logs, sub, err := _NodeActions.contract.WatchLogs(opts, "KpfAddressUpdated")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(NodeActionsKpfAddressUpdated)
+				if err := _NodeActions.contract.UnpackLog(event, "KpfAddressUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseKpfAddressUpdated is a log parse operation binding the contract event 0x7ab094c79b0b1461c96d9eb81fccfede1ddfcc617d4a508d261045a57a2f5c41.
+//
+// Solidity: event KpfAddressUpdated(address oldAddress, address newAddress)
+func (_NodeActions *NodeActionsFilterer) ParseKpfAddressUpdated(log types.Log) (*NodeActionsKpfAddressUpdated, error) {
+	event := new(NodeActionsKpfAddressUpdated)
+	if err := _NodeActions.contract.UnpackLog(event, "KpfAddressUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -21743,7 +23250,7 @@ func (_NodeActions *NodeActionsFilterer) ParseValidatorsInitialized(log types.Lo
 // NodeVerifierMetaData contains all meta data concerning the NodeVerifier contract.
 var NodeVerifierMetaData = &bind.MetaData{
 	ABI: "[{\"inputs\":[],\"name\":\"AddressAlreadyRegistered\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInput\",\"type\":\"error\"}]",
-	Bin: "0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea26469706673582212205f62a85d11dbf41c65354d3d568e42da10f06a7d63a0ff310d5540c7450fadf464736f6c63430008190033",
+	Bin: "0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220ebacf735a4018ae1dbb410d4e7c1172de005d5e9e93cd8703a068ccaf1b338d164736f6c63430008190033",
 }
 
 // NodeVerifierABI is the input ABI used to generate the binding from.
@@ -21751,7 +23258,7 @@ var NodeVerifierMetaData = &bind.MetaData{
 var NodeVerifierABI = NodeVerifierMetaData.ABI
 
 // NodeVerifierBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const NodeVerifierBinRuntime = `730000000000000000000000000000000000000000301460806040525f80fdfea26469706673582212205f62a85d11dbf41c65354d3d568e42da10f06a7d63a0ff310d5540c7450fadf464736f6c63430008190033`
+const NodeVerifierBinRuntime = `730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220ebacf735a4018ae1dbb410d4e7c1172de005d5e9e93cd8703a068ccaf1b338d164736f6c63430008190033`
 
 // NodeVerifierBin is the compiled bytecode used for deploying new contracts.
 // Deprecated: Use NodeVerifierMetaData.Bin instead.

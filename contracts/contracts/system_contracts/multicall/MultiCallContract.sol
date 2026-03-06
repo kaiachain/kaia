@@ -17,6 +17,8 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.19;
 
+import {Profile} from "../types/Node.sol";
+
 interface IAddressBook {
     function VERSION() external view returns (uint256);
 
@@ -55,6 +57,11 @@ interface IGaslessSwapRouter {
     function getSupportedTokens() external view returns (address[] memory);
 }
 
+interface IAddressBookV2 {
+    function getAllProfiles() external view returns (Profile[] memory);
+    function getFundAddresses() external view returns (address, address, address);
+}
+
 // MultiCallContract provides a function to retrieve the any information needed for the Kaia client.
 // It will be temporarily injected into state to be used by the Kaia client.
 // After retrieving the information, the contract will be removed from the state.
@@ -67,7 +74,7 @@ contract MultiCallContract {
     /* ========== STAKING INFORMATION ========== */
 
     // multiCallStakingInfo returns the staking information of all CNs.
-    function multiCallStakingInfo(bool kip290Enabled, bool ignoreAbookVersion)
+    function multiCallStakingInfo()
         external
         view
         returns (
@@ -76,11 +83,10 @@ contract MultiCallContract {
             uint256[] memory stakingAmounts
         )
     {
-        return _multiCallStakingInfo(kip290Enabled, ignoreAbookVersion);
-    }
+        return _multiCallStakingInfoPermissioned();
+    } 
 
-    /// NOTE: the variable `ignoreAbookVersion` will be removed once ABookV2 is introduced
-    function _multiCallStakingInfo(bool kip290Enabled, bool ignoreAbookVersion)
+    function _multiCallStakingInfoPermissioned()
         private
         view
         returns (
@@ -105,22 +111,26 @@ contract MultiCallContract {
         stakingAmounts = new uint256[](lenCnAddress / 3);
 
         for (uint256 i = 0; i < lenCnAddress; i += 3) {
-            stakingAmounts[i / 3] = _getCnStakingAmounts(kip290Enabled, ignoreAbookVersion, addressList[i + 1]);
+            stakingAmounts[i / 3] = _getCnStakingAmountsLegacy(addressList[i + 1]);
         }
 
         return (typeList, addressList, stakingAmounts);
     }
 
-    function _getCnStakingAmounts(
-        bool kip290Enabled,
-        bool ignoreAbookVersion,
-        address cnStaking
-    ) private view returns (uint256) {
-        if (kip290Enabled && (ignoreAbookVersion || IAddressBook(ADDRESS_BOOK_ADDRESS).VERSION() >= 2)) {
-            return _getCnStakingAmountsKIP290(cnStaking);
-        } else {
-            return _getCnStakingAmountsLegacy(cnStaking);
+    function multiCallStakingInfoPermissionless()
+        external
+        view
+        returns (Profile[] memory profiles, uint256[] memory stakingAmounts, address kefAddr, address kifAddr)
+    {
+        // fork number is checked by caller side
+        IAddressBookV2 abv2 = IAddressBookV2(ADDRESS_BOOK_ADDRESS);
+        profiles = abv2.getAllProfiles();
+        uint256 len = profiles.length;
+        stakingAmounts = new uint256[](len);
+        for (uint256 i = 0; i < len; i++) {
+            stakingAmounts[i] = _getCnStakingAmountsKIP290(profiles[i].stakingContract);
         }
+        (kefAddr, kifAddr, ) = abv2.getFundAddresses();
     }
 
     function _getCnStakingAmountsLegacy(

@@ -542,6 +542,11 @@ web3._extend({
 			name: 'syncStakingInfoStatus',
 			call: 'admin_syncStakingInfoStatus',
 		}),
+		new web3._extend.Method({
+			name: 'setPermissionlessForkBlock',
+			call: 'admin_setPermissionlessForkBlock',
+			params: 1,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

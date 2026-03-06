@@ -76,20 +76,22 @@ type ValsetModule struct {
 	proposerListCache *lru.Cache // uint64 -> []common.Address
 	removeVotesCache  *lru.Cache // uint64 -> removeVoteList
 	councilCache      *lru.Cache // uint64 -> valset.CommonAddressSet
+	nodeStatesCache   *lru.Cache // uint64 -> valset.NodeStateMap (permissionless node states)
 
-	validatorVoteBlockNumsCache        []uint64
-	validatorStateChangeBlockNumsCache []uint64
-	lowestScannedVoteNumCache          *uint64
+	validatorVoteBlockNumsCache []uint64
+	lowestScannedVoteNumCache   *uint64
 }
 
 func NewValsetModule() *ValsetModule {
 	pListCache, _ := lru.New(128)
 	rVoteCache, _ := lru.New(128)
 	councilCache, _ := lru.New(128)
+	nodeStatesCache, _ := lru.New(128)
 	return &ValsetModule{
 		proposerListCache: pListCache,
 		removeVotesCache:  rVoteCache,
 		councilCache:      councilCache,
+		nodeStatesCache:   nodeStatesCache,
 	}
 }
 
@@ -104,30 +106,16 @@ func (v *ValsetModule) Init(opts *InitOpts) error {
 
 func (v *ValsetModule) initSchema() error {
 	// Ensure mandatory schema at block 0
-	if stateChangeBlockNums := ReadValidatorStateChangeBlockNums(v.ChainKv); stateChangeBlockNums == nil {
-		writeValidatorStateChangeBlockNums(v.ChainKv, []uint64{0})
-		v.validatorStateChangeBlockNumsCache = nil
-	}
 	if voteBlockNums := ReadValidatorVoteBlockNums(v.ChainKv); voteBlockNums == nil {
 		writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
 		v.validatorVoteBlockNumsCache = nil
 	}
-	// Calling either `ReadCouncilPermissiond()` or `ReadCouncilPermissionless()` is okay
-	// because the returned council is the same at the genesis block
 	if council := ReadCouncilPermissiond(v.ChainKv, 0); council == nil {
-		if v.Chain.Config().IsPermissionlessForkEnabled(common.Big0) {
-			genesisCouncil, err := v.getCouncilGenesisPermissionless()
-			if err != nil {
-				return err
-			}
-			writeCouncilPermissionless(v.ChainKv, 0, genesisCouncil)
-		} else {
-			genesisCouncil, err := v.getCouncilGenesisPermissioned()
-			if err != nil {
-				return err
-			}
-			writeCouncilPermissioned(v.ChainKv, 0, genesisCouncil)
+		genesisCouncil, err := v.getCouncilGenesisPermissioned()
+		if err != nil {
+			return err
 		}
+		writeCouncilPermissioned(v.ChainKv, 0, genesisCouncil)
 	}
 
 	// Ensure mandatory schema lowestScannedCheckpointInterval

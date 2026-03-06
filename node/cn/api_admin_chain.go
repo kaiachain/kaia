@@ -29,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"strings"
 
@@ -254,4 +255,14 @@ func (api *AdminChainCNAPI) GetSpamThrottlerCandidateList(ctx context.Context) (
 
 func (s *AdminChainCNAPI) NodeConfig(ctx context.Context) interface{} {
 	return *s.cn.config
+}
+
+// SetPermissionlessForkBlock overrides the permissionless hardfork block number
+// in the chain config and persists it to the chain database. For testing purposes only.
+func (api *AdminChainCNAPI) SetPermissionlessForkBlock(blockNumber uint64) (uint64, error) {
+	cfg := api.cn.blockchain.Config()
+	cfg.PermissionlessCompatibleBlock = new(big.Int).SetUint64(blockNumber)
+	genesisHash := api.cn.blockchain.Genesis().Hash()
+	api.cn.chainDB.WriteChainConfig(genesisHash, cfg)
+	return blockNumber, nil
 }

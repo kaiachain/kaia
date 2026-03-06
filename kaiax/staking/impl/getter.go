@@ -26,6 +26,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/multicall"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/params"
 )
@@ -165,33 +166,93 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 		return nil, staking.ErrMultiCallCall(err)
 	}
 
-	// Get staking info from AddressBook
 	callOpts := &bind.CallOpts{BlockNumber: header.Number}
-	abRes, err := contract.MultiCallStakingInfo(callOpts, isForPermissionless, true)
-	if err != nil {
-		return nil, staking.ErrAddressBookCall(err)
-	}
 
-	// Get CL registry info if staking info is for Prague block
-	var clRes clRegistryResult
-	if isForPrague {
+	// Helper to read CL registry info, shared by permissioned and permissionless paths.
+	// Permissionless is ordered after Prague (Randao <= Kaia <= Prague <= Permissionless),
+	// so permissionless blocks always need CL registry info too.
+	readCLInfo := func() (clRegistryResult, error) {
+		var clRes clRegistryResult
 		// If Registry is not installed, do not handle CL staking info.
 		// In private network, Randao and Prague hardfork can be activated at the same block.
 		// It leads to staking info inconsistency between block processing and rpc query since the Registry hasn't been installed when finalizing the header.
 		// Note that Randao can't be activated after Prague according to fork ordering (Randao <= Kaia <= Prague).
 		if statedb.GetCode(system.RegistryAddr) == nil || s.ChainConfig.IsRandaoForkBlockParent(header.Number) {
 			logger.Trace("Registry not installed", "sourceNum", num)
-		} else {
-			// Note that if CLRegistry is not registered in Registry,
-			// it will return empty result and no error.
-			clRes, err = contract.MultiCallDPStakingInfo(callOpts)
-			if err != nil {
-				return nil, staking.ErrCLRegistryCall(err)
-			}
+			return clRes, nil
+		}
+		// Note that if CLRegistry is not registered in Registry,
+		// it will return empty result and no error.
+		clRes, err = contract.MultiCallDPStakingInfo(callOpts)
+		if err != nil {
+			return clRes, staking.ErrCLRegistryCall(err)
+		}
+		return clRes, nil
+	}
+
+	// Permissionless: read from AddressBookV2 via MultiCallStakingInfoPermissionless.
+	if isForPermissionless {
+		res, err := contract.MultiCallStakingInfoPermissionless(callOpts)
+		if err != nil {
+			return nil, staking.ErrAddressBookCall(err)
+		}
+		clRes, err := readCLInfo()
+		if err != nil {
+			return nil, err
+		}
+		return parsePermissionlessCallResult(num, res.Profiles, res.StakingAmounts, res.KefAddr, res.KifAddr, clRes)
+	}
+
+	// Permissioned: read from legacy AddressBook.
+	abRes, err := contract.MultiCallStakingInfo(callOpts)
+	if err != nil {
+		return nil, staking.ErrAddressBookCall(err)
+	}
+
+	var clRes clRegistryResult
+	if isForPrague {
+		clRes, err = readCLInfo()
+		if err != nil {
+			return nil, err
 		}
 	}
 
 	return parseCallResult(num, abRes.TypeList, abRes.AddressList, abRes.StakingAmounts, clRes)
+}
+
+func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amounts []*big.Int, kefAddr, kifAddr common.Address, clRes clRegistryResult) (*staking.StakingInfo, error) {
+	if len(profiles) == 0 {
+		return emptyStakingInfo(num), nil
+	}
+	if len(profiles) != len(amounts) {
+		return nil, staking.ErrAddressBookResult
+	}
+	if len(clRes.NodeIds) != len(clRes.ClPools) || len(clRes.NodeIds) != len(clRes.StakingAmounts) {
+		logger.Error("length of CL registry result fields differ", "sourceNum", num, "nodeLen", len(clRes.NodeIds), "poolLen", len(clRes.ClPools), "amountLen", len(clRes.StakingAmounts))
+		return nil, staking.ErrCLRegistryResult
+	}
+	var (
+		nodeIds          = make([]common.Address, len(profiles))
+		stakingContracts = make([]common.Address, len(profiles))
+		rewardAddrs      = make([]common.Address, len(profiles))
+		stakingAmounts   = make([]uint64, len(profiles))
+	)
+	for i, p := range profiles {
+		nodeIds[i] = p.NodeId
+		stakingContracts[i] = p.StakingContract
+		rewardAddrs[i] = p.RewardAddress
+		stakingAmounts[i] = new(big.Int).Div(amounts[i], big.NewInt(params.KAIA)).Uint64()
+	}
+	return &staking.StakingInfo{
+		SourceBlockNum:   num,
+		NodeIds:          nodeIds,
+		StakingContracts: stakingContracts,
+		RewardAddrs:      rewardAddrs,
+		KEFAddr:          kefAddr,
+		KIFAddr:          kifAddr,
+		StakingAmounts:   stakingAmounts,
+		CLStakingInfos:   parseCLResult(clRes),
+	}, nil
 }
 
 func parseCallResult(num uint64, types []uint8, addrs []common.Address, amounts []*big.Int, clRes clRegistryResult) (*staking.StakingInfo, error) {
@@ -242,20 +303,6 @@ func parseCallResult(num uint64, types []uint8, addrs []common.Address, amounts 
 		stakingAmounts[i] = big.NewInt(0).Div(a, big.NewInt(params.KAIA)).Uint64()
 	}
 
-	// Collect the CL registry results to StakingInfo fields.
-	// If there is no CL registry result, it will be nil.
-	var clStakingInfos staking.CLStakingInfos
-	if len(clRes.NodeIds) > 0 {
-		clStakingInfos = make(staking.CLStakingInfos, len(clRes.NodeIds))
-		for i := range clRes.NodeIds {
-			clStakingInfos[i] = &staking.CLStakingInfo{
-				CLNodeId:        clRes.NodeIds[i],
-				CLPoolAddr:      clRes.ClPools[i],
-				CLStakingAmount: big.NewInt(0).Div(clRes.StakingAmounts[i], big.NewInt(params.KAIA)).Uint64(),
-			}
-		}
-	}
-
 	// Sanity check
 	if len(nodeIds) != len(stakingContracts) || len(nodeIds) != len(rewardAddrs) || len(nodeIds) != len(amounts) ||
 		common.EmptyAddress(kefAddr) || common.EmptyAddress(kifAddr) {
@@ -272,8 +319,23 @@ func parseCallResult(num uint64, types []uint8, addrs []common.Address, amounts 
 		KEFAddr:          kefAddr,
 		KIFAddr:          kifAddr,
 		StakingAmounts:   stakingAmounts,
-		CLStakingInfos:   clStakingInfos,
+		CLStakingInfos:   parseCLResult(clRes),
 	}, nil
+}
+
+func parseCLResult(clRes clRegistryResult) staking.CLStakingInfos {
+	if len(clRes.NodeIds) == 0 {
+		return nil
+	}
+	clStakingInfos := make(staking.CLStakingInfos, len(clRes.NodeIds))
+	for i := range clRes.NodeIds {
+		clStakingInfos[i] = &staking.CLStakingInfo{
+			CLNodeId:        clRes.NodeIds[i],
+			CLPoolAddr:      clRes.ClPools[i],
+			CLStakingAmount: big.NewInt(0).Div(clRes.StakingAmounts[i], big.NewInt(params.KAIA)).Uint64(),
+		}
+	}
+	return clStakingInfos
 }
 
 func emptyStakingInfo(num uint64) *staking.StakingInfo {

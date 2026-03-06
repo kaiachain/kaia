@@ -19,6 +19,7 @@ package impl
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -35,32 +36,33 @@ import (
 )
 
 const (
-	VRankEpoch           = 10
-	ValPausedTimeout     = time.Hour * 8
-	ActiveValidatorCount = 50
+	VRankEpoch                  = 10
+	DefaultValPausedTimeout     = time.Hour * 8
+	DefaultValIdleTimeout       = 30 * 24 * time.Hour
+	DefaultActiveValidatorCount = 50
 )
 
 type ValidatorList struct {
 	permlessMu   sync.RWMutex
-	permlessVals valset.ValidatorStateMap
+	permlessVals valset.NodeStateMap
 }
 
-func newValidatorList(validatorChartMap valset.ValidatorStateMap) *ValidatorList {
+func newValidatorList(validatorChartMap valset.NodeStateMap) *ValidatorList {
 	return &ValidatorList{permlessVals: validatorChartMap}
 }
 
-func convertToChartMap(nodeAddrs []common.Address) valset.ValidatorStateMap {
-	validators := make(valset.ValidatorStateMap)
+func convertToChartMap(nodeAddrs []common.Address) valset.NodeStateMap {
+	nodes := make(valset.NodeStateMap)
 	for _, addr := range nodeAddrs {
-		validators[addr] = &valset.ValidatorState{
+		nodes[addr] = &valset.ValidatorState{
 			// assign `ValActive` state in the permissioned operation
 			State: valset.ValActive,
 		}
 	}
-	return validators
+	return nodes
 }
 
-func (vs *ValidatorList) EqualState(other valset.ValidatorStateMap) bool {
+func (vs *ValidatorList) EqualState(other valset.NodeStateMap) bool {
 	vs.permlessMu.RLock()
 	defer vs.permlessMu.RUnlock()
 	return vs.permlessVals.EqualState(other)
@@ -154,16 +156,91 @@ func (vs *ValidatorList) Subtract(other *valset.AddressSet) *valset.AddressSet {
 	return result
 }
 
-func (v *ValsetModule) writeValidators(num uint64, validators valset.ValidatorStateMap) {
-	if validators != nil {
-		if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-			writeCouncilPermissionless(v.ChainKv, num, newValidatorList(validators))
-		} else {
-			writeCouncilPermissioned(v.ChainKv, num, newValidatorList(validators))
-		}
-		insertValidatorStateChangeBlockNum(v.ChainKv, num)
-		v.validatorStateChangeBlockNumsCache = nil
+// getOrComputeNodeStates returns the node states for block `num`.
+// If parentStatedb is provided, it is used as the parent state (avoids StateAt which may fail on pruned state).
+// 1. Cache hit → return cached value.
+// 2. Block N committed (header exists) → read ABv2(N) directly.
+// 3. Block N not committed or state pruned → read ABv2(N-1) + apply transitions.
+func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.StateDB) (valset.NodeStateMap, error) {
+	// 1. Cache hit
+	if cached, ok := v.nodeStatesCache.Get(num); ok {
+		return cached.(valset.NodeStateMap), nil
 	}
+
+	// 2. Block N committed → read ABv2(N) directly (optimization: skip transition computation)
+	// Falls through to case 3 if state is pruned.
+	if parentStatedb == nil {
+		if header := v.Chain.GetHeaderByNumber(num); header != nil {
+			if statedb, err := v.Chain.StateAt(header.Root); err == nil {
+				validators, err := system.ReadGetAllValidators(statedb, v.Chain, header)
+				if err == nil {
+					v.nodeStatesCache.Add(num, validators)
+					return validators, nil
+				}
+			}
+		}
+	}
+
+	// 3. Block N not committed or state pruned → read ABv2(N-1) + apply transitions
+	if num == 0 {
+		return nil, errors.New("block 0 has no committed state for permissionless")
+	}
+	parentHeader := v.Chain.GetHeaderByNumber(num - 1)
+	if parentHeader == nil {
+		return nil, fmt.Errorf("parent header not found for block %d", num)
+	}
+	if parentStatedb == nil {
+		var err error
+		parentStatedb, err = v.Chain.StateAt(parentHeader.Root)
+		if err != nil {
+			return nil, err
+		}
+	}
+	parentValidators, err := system.ReadGetAllValidators(parentStatedb, v.Chain, parentHeader)
+	if err != nil {
+		return nil, err
+	}
+
+	newValidators, err := v.applyAllTransitions(parentValidators, num, parentStatedb, parentHeader)
+	if err != nil {
+		return nil, err
+	}
+	v.nodeStatesCache.Add(num, newValidators)
+	return newValidators, nil
+}
+
+// applyAllTransitions applies VrankViolation → Timeout → Epoch transitions.
+func (v *ValsetModule) applyAllTransitions(
+	validators valset.NodeStateMap,
+	num uint64,
+	statedb *state.StateDB,
+	header *types.Header,
+) (valset.NodeStateMap, error) {
+	si, err := v.StakingModule.GetStakingInfoFromState(num, statedb)
+	if err != nil {
+		return nil, err
+	}
+	newValidators := v.deactiveStakersLessMinStakingAmount(si, num, validators)
+
+	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb.Copy())
+	if err != nil {
+		return nil, err
+	}
+
+	pauseTimeout, idleTimeout, err := system.ReadABv2Timeouts(backend, header.Number)
+	if err != nil {
+		logger.Error("Failed to read ABv2 timeouts, using defaults", "number", num, "err", err)
+		pauseTimeout, idleTimeout = DefaultValPausedTimeout, DefaultValIdleTimeout
+	}
+	newValidators = v.getTimeoutTransition(newValidators, pauseTimeout, idleTimeout)
+
+	maxValCount, _, err := system.ReadABv2MaxCounts(backend, header.Number)
+	if err != nil {
+		logger.Error("Failed to read ABv2 max counts, using defaults", "number", num, "err", err)
+		maxValCount = DefaultActiveValidatorCount
+	}
+	newValidators = v.getEpochTransition(si, num, newValidators, idleTimeout, int(maxValCount))
+	return newValidators, nil
 }
 
 // TODO-Permissionless: Replace with KIP-227 implementation
@@ -175,161 +252,99 @@ func isVrankEpoch(num uint64) bool {
 	return num%VRankEpoch == 0
 }
 
-func (v *ValsetModule) initialPromoteLegacyValidators(header *types.Header, vmenv *vm.EVM, state *state.StateDB) error {
-	var (
-		config    = v.Chain.Config()
-		parentNum = new(big.Int).Sub(header.Number, common.Big1)
-		nextNum   = new(big.Int).Add(header.Number, common.Big1)
-	)
-	backend := backends.NewStateBlockchainContractBackend(v.Chain, nil, nil, state)
-	council, err := v.getCouncilPermissioned(header.Number.Uint64())
-	if err != nil {
-		logger.Error("Failed to get council", "number", header.Number.Uint64(), "err", err.Error())
-		return err
-	}
-	validatorStateAddr, err := readValidatorStateAddr(backend, parentNum)
-	if err != nil {
-		// TODO-Permissionless: Change the log level to Debug
-		logger.Error("Failed to fetch ValidatorState contract adress", "number", header.Number.Uint64(), "err", err.Error())
-		return err
-	}
-	valStateMap := convertToChartMap(council.Council())
-	v.writeValidators(nextNum.Uint64(), valStateMap)
-	msg, from, err := prepareValidatorWrite(backend, config, state, nextNum, validatorStateAddr, valStateMap)
-	if err == nil {
-		blockchain.WriteValidators(msg, from, header, vmenv, state, config.Rules(header.Number))
-	}
-	return nil
-}
-
-// TODO-Permissionless: implement contract and align with it
-func (v *ValsetModule) isInitializedABv2(validators valset.ValidatorStateMap) bool {
-	return len(validators) > 0
-}
-
-func (v *ValsetModule) ProcessTransition(
+func (v *ValsetModule) WriteStatesToContract(
 	vmenv *vm.EVM,
 	header *types.Header,
 	state *state.StateDB,
 ) error {
-	var (
-		config    = v.Chain.Config()
-		parentNum = new(big.Int).Sub(header.Number, common.Big1)
-	)
+	config := v.Chain.Config()
 
-	// [Promoting Legacy Validator #1]
-	// initialize permissioned validators at `permless HF-1`
-	// all validators are registered to `ValActive` state
-	if config.IsPermissionlessForBlockParent(header.Number) {
-		if err := v.initialPromoteLegacyValidators(header, vmenv, state); err != nil {
-			logger.Error("Failed to promote legacy validators", "number", header.Number, "err", err.Error())
-		}
-	}
-
-	// TODO-Permissionless: Store canddiate scores once ABV2 and VRank interface is finalized
 	if config.IsPermissionlessForkEnabled(header.Number) {
-		// 0. self-state transition(user tx) might have been executed at header.Number - 1
-		// 1. read all validators from contrcat on every block
-		backend := backends.NewStateBlockchainContractBackend(v.Chain, nil, nil, state)
-		prevCouncil, err := v.getCouncilPermissionless(parentNum.Uint64())
-		if err != nil {
-			logger.Error("Failed to get council", "number", parentNum, "err", err.Error())
+		if err := v.writeNodesToContract(vmenv, header, state); err != nil {
 			return err
-		}
-
-		validatorStateAddr, err := readValidatorStateAddr(backend, parentNum)
-		if err != nil {
-			// TODO-Permissionless: Change the log level to Debug
-			logger.Error("Failed to fetch ValidatorState contract adress", "number", header.Number.Uint64(), "err", err.Error())
-			return err
-		}
-		si, err := v.StakingModule.GetStakingInfoFromState(header.Number.Uint64(), state)
-		if err != nil {
-			return nil
-		}
-		validators, err := system.ReadGetAllValidators(backend, validatorStateAddr, si, parentNum)
-		if err != nil {
-			logger.Error("Failed to fetch all validators' state", "number", header.Number.Uint64(), "err", err.Error())
-			return err
-		}
-
-		// [Promoting Legacy Validator #2]
-		// if ABv2 is not initialized yet, promote legacy validators to the state of `ValActive`
-		// this code is reachable when HF is passed && registry had not been set before HF
-		if !v.isInitializedABv2(validators) {
-			// the promote updates the state, thus the timing of promoting must be aligned with all nodes
-			// which is selected as epoch number
-			if isVrankEpoch(header.Number.Uint64()) {
-				if err := v.initialPromoteLegacyValidators(header, vmenv, state); err != nil {
-					logger.Error("Failed to promote legacy validators", "number", header.Number, "err", err.Error())
-				}
-			}
-			return nil
-		}
-
-		// 2. check VRank violation
-		newValidators, err := v.GetVrankViolationTransition(validators, header.Number.Uint64(), state)
-		if err != nil {
-			logger.Error("Failed to process vrank violation", "number", header.Number.Uint64(), "err", err.Error())
-			return err
-		}
-
-		// 3. timeout transition
-		newValidators = v.GetTimeoutTransition(newValidators)
-
-		// 4. epoch transition
-		newValidators, err = v.GetEpochTransition(newValidators, header.Number.Uint64(), state)
-		if err != nil {
-			logger.Error("Failed to process epoch transition", "number", header.Number.Uint64(), "err", err.Error())
-			return err
-		}
-
-		if !prevCouncil.EqualState(newValidators) {
-			// if contract returns empty for validator query, it's a circumstance
-			// where ValidatorState contract is deployed after permless HF
-			newValidatorState := newValidators
-			// no `Copy()` is required because no mutation on it
-			if len(validators) == 0 {
-				if prevCouncilVals, ok := prevCouncil.(*ValidatorList); ok {
-					newValidatorState = prevCouncilVals.permlessVals
-				}
-			}
-			// 5. write updated validators' state into checkpoint db
-			v.writeValidators(header.Number.Uint64(), newValidatorState)
-			// 6. write updated validators' state into contract
-			msg, from, err := prepareValidatorWrite(backend, config, state, header.Number, validatorStateAddr, newValidatorState)
-			if err == nil {
-				blockchain.WriteValidators(msg, from, header, vmenv, state, config.Rules(header.Number))
-			}
 		}
 	}
 	return nil
 }
 
-func readValidatorStateAddr(backend *backends.StateBlockchainContractBackend, num *big.Int) (common.Address, error) {
-	validatorStateAddr, err := system.ReadValidatorStateAddr(backend, num)
-	if err != nil {
-		return common.Address{}, err
+// InstallABv2 installs and initializes ABv2 at the HF-1 block's Finalize.
+func (v *ValsetModule) InstallABv2(
+	vmenv *vm.EVM,
+	header *types.Header,
+	statedb *state.StateDB,
+) error {
+	config := v.Chain.Config()
+	if config.IsPermissionlessForBlockParent(header.Number) {
+		return v.installAndInitializeABv2(vmenv, header, statedb)
 	}
-	return validatorStateAddr, nil
+	return nil
 }
 
-func prepareValidatorWrite(
-	backend *backends.StateBlockchainContractBackend,
-	config *params.ChainConfig,
+// writeNodesToContract reads node state from the in-memory cache and writes it to the AddressBookV2 contract.
+// PostInsertBlock(N-1) computes transitions and caches nodeStates[N]; Initialize(N) reads cache and writes to contract.
+func (v *ValsetModule) writeNodesToContract(
+	vmenv *vm.EVM,
+	header *types.Header,
 	statedb *state.StateDB,
+) error {
+	num := header.Number.Uint64()
+	nodes, err := v.getOrComputeNodeStates(num, statedb)
+	if err != nil {
+		logger.Error("Failed to get node states", "number", num, "err", err)
+		return nil
+	}
+	config := v.Chain.Config()
+	msg, from, err := prepareNodeWrite(config, header.Number, nodes)
+	if err == nil {
+		if ret, evmErr := blockchain.SystemTxCall(msg, from, header, vmenv, statedb, config.Rules(header.Number)); evmErr != nil {
+			logger.Error("Failed to call processSystemTransition", "number", header.Number, "err", evmErr, "ret", common.Bytes2Hex(ret))
+		}
+	}
+	return nil
+}
+
+func (v *ValsetModule) installAndInitializeABv2(
+	vmenv *vm.EVM,
+	header *types.Header,
+	statedb *state.StateDB,
+) error {
+	config := v.Chain.Config()
+
+	if err := system.InstallAddressBookV2(statedb); err != nil {
+		logger.Error("Failed to install AddressBookV2", "number", header.Number, "err", err.Error())
+		return err
+	}
+	// Commit slot-0 clear (SetState) to pendingStorage so EVM sees original=0,
+	// avoiding a SubRefund underflow in SSTORE refund accounting.
+	statedb.Finalise(true, true)
+	logger.Info("Installed AddressBookV2", "number", header.Number)
+
+	// ABv2.initialize() reads all genesis data from ABv2DataContract via Registry(0x401).
+	from, msg, err := system.EncodeInitializeABv2(config.Rules(header.Number))
+	if err != nil {
+		logger.Error("Failed to encode initialize ABv2", "number", header.Number, "err", err.Error())
+		return err
+	}
+	if ret, evmErr := blockchain.SystemTxCall(msg, from, header, vmenv, statedb, config.Rules(header.Number)); evmErr != nil {
+		logger.Error("Failed to call initialize ABv2", "number", header.Number, "err", evmErr, "ret", common.Bytes2Hex(ret))
+		return evmErr
+	}
+
+	logger.Info("Initialized AddressBookV2", "number", header.Number)
+	return nil
+}
+
+func prepareNodeWrite(
+	config *params.ChainConfig,
 	num *big.Int,
-	validatorStateAddr common.Address,
-	validators valset.ValidatorStateMap,
+	nodes valset.NodeStateMap,
 ) (*types.Transaction, common.Address, error) {
-	from, msg, err := system.EncodeWriteValidators(
-		backend,
+	from, msg, err := system.EncodeWriteNodes(
 		config.Rules(num),
-		validatorStateAddr,
-		validators,
+		nodes,
 	)
 	if err != nil {
-		logger.Error("Failed to encode WriteValidators", "number", num.Uint64(), "err", err.Error(), "validators", validators.String())
+		logger.Error("Failed to encode processSystemTransition", "number", num.Uint64(), "err", err.Error(), "nodes", nodes.String())
 		return nil, common.Address{}, err
 	}
 	return msg, from, err

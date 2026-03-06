@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity ^0.8.0;
 
-import {NodeState, BlsPublicKeyInfo, NodeInfo, Profile} from "../../types/Node.sol";
+import {State, BlsPublicKeyInfo, NodeInfo, Profile} from "../../types/Node.sol";
 
 /// @title IAddressBookV2
 /// @notice Unified interface for AddressBookV2 — the sole entry point for all node operations at 0x400.
 ///         Combines node storage, state management, scoring, configuration, and suspension.
 interface IAddressBookV2 {
     /* ========== ERRORS ========== */
+
+    error NotInitializable();
 
     /// @notice Thrown when caller is not the node's registered manager
     error OnlyManager();
@@ -30,9 +32,6 @@ interface IAddressBookV2 {
     /// @notice Thrown when operating on a node that does not exist (state == Unknown)
     error NodeNotFound();
 
-    /// @notice Thrown when initializeValidators is called more than once
-    error AlreadyInitialized();
-
     /// @notice Thrown when a user action is attempted after the node's timeout has expired
     error TimeoutExpired();
 
@@ -48,7 +47,7 @@ interface IAddressBookV2 {
     /// @param nodeId The address of the node
     /// @param fromState The previous state
     /// @param toState The new state
-    event StateChanged(address indexed nodeId, NodeState indexed fromState, NodeState indexed toState);
+    event StateChanged(address indexed nodeId, State indexed fromState, State indexed toState);
 
     /// @notice Emitted when a new node is created
     /// @param nodeId The address of the newly created node
@@ -90,7 +89,7 @@ interface IAddressBookV2 {
     /// @notice Emitted when system transitions are processed
     /// @param nodeIds The addresses of the transitioned nodes
     /// @param newStates The new states for each node
-    event SystemTransitionProcessed(address[] nodeIds, NodeState[] newStates);
+    event SystemTransitionProcessed(address[] nodeIds, State[] newStates);
 
     /// @notice Emitted when the epoch transition is processed
     /// @param epochValCount The epoch validator count
@@ -120,6 +119,21 @@ interface IAddressBookV2 {
     /// @param oldCount The previous count
     /// @param newCount The new count
     event MaxReadyCandidateCountUpdated(uint256 oldCount, uint256 newCount);
+
+    /// @notice Emitted when the KEF address is updated
+    /// @param oldAddress The previous address
+    /// @param newAddress The new address
+    event KefAddressUpdated(address oldAddress, address newAddress);
+
+    /// @notice Emitted when the KIF address is updated
+    /// @param oldAddress The previous address
+    /// @param newAddress The new address
+    event KifAddressUpdated(address oldAddress, address newAddress);
+
+    /// @notice Emitted when the KPF address is updated
+    /// @param oldAddress The previous address
+    /// @param newAddress The new address
+    event KpfAddressUpdated(address oldAddress, address newAddress);
 
     /// @notice Emitted when genesis validators are initialized
     /// @param nodeIds The addresses of the initialized validators
@@ -186,13 +200,6 @@ interface IAddressBookV2 {
 
     /* ========== SYSTEM FUNCTIONS ========== */
 
-    /// @notice Initializes genesis validators directly as ValActive. Can only be called once.
-    /// @dev Validates inputs via NodeVerifier (zero addresses, BLS keys, uniqueness).
-    ///      Bypasses staking and slot checks. Manager for each node is set to the nodeId itself.
-    /// @param nodeIds The addresses of the genesis validator nodes
-    /// @param infos The NodeInfo structs (state and timeoutAt fields are overridden internally)
-    function initializeValidators(address[] calldata nodeIds, NodeInfo[] calldata infos) external;
-
     /// @notice Processes system-triggered state transitions for nodes.
     /// @dev Core client computes all timeout/violation/epoch logic; this function just records results.
     ///      Updates epochValCount only at epoch boundaries (block.number % EPOCH_BLOCK_INTERVAL == 0).
@@ -201,7 +208,7 @@ interface IAddressBookV2 {
     /// @param timeoutAts Array of timeout timestamps for each node (0 = no timeout)
     function processSystemTransition(
         address[] calldata nodeIds,
-        NodeState[] calldata newStates,
+        State[] calldata newStates,
         uint256[] calldata timeoutAts
     ) external;
 
@@ -240,6 +247,18 @@ interface IAddressBookV2 {
     /// @param newExitThreshold The new threshold
     function updateExitThreshold(uint256 newExitThreshold) external;
 
+    /// @notice Updates the KEF address
+    /// @param newKefAddress The new KEF address
+    function updateKefAddress(address newKefAddress) external;
+
+    /// @notice Updates the KIF address
+    /// @param newKifAddress The new KIF address
+    function updateKifAddress(address newKifAddress) external;
+
+    /// @notice Updates the KPF address
+    /// @param newKpfAddress The new KPF address
+    function updateKpfAddress(address newKpfAddress) external;
+
     /* ========== GETTERS (node management) ========== */
 
     /// @notice Returns the manager address of a node
@@ -266,6 +285,12 @@ interface IAddressBookV2 {
     /// @return The exit threshold
     function getExitThreshold() external view returns (uint256);
 
+    /// @notice Returns the fund addresses (KEF, KIF, KPF)
+    /// @return kefAddress The Kaia Ecosystem Fund address
+    /// @return kifAddress The Kaia Infrastructure Fund address
+    /// @return kpfAddress The Kaia Protocol Fund address
+    function getFundAddresses() external view returns (address kefAddress, address kifAddress, address kpfAddress);
+
     /// @notice Returns the score for a node in a specific epoch
     /// @param epoch The epoch number
     /// @param nodeId The address of the node
@@ -279,10 +304,6 @@ interface IAddressBookV2 {
     /// @notice Returns the epoch validator count snapshot (ValActive + ValPaused at last epoch)
     /// @return The epoch validator count used for mid-epoch slot math
     function getEpochValCount() external view returns (uint256);
-
-    /// @notice Returns whether genesis validators have been initialized
-    /// @return True if initializeValidators has been called
-    function isValidatorsInitialized() external view returns (bool);
 
     /* ========== GETTERS (node info) ========== */
 
@@ -306,15 +327,12 @@ interface IAddressBookV2 {
     /// @dev Iterates activeSet + candInactiveSet. Matches SimpleBlsRegistry interface.
     /// @return nodeIdList Array of node addresses
     /// @return pubkeyList Array of BlsPublicKeyInfo structs in the same order
-    function getAllBlsInfo()
-        external
-        view
-        returns (address[] memory nodeIdList, BlsPublicKeyInfo[] memory pubkeyList);
+    function getAllBlsInfo() external view returns (address[] memory nodeIdList, BlsPublicKeyInfo[] memory pubkeyList);
 
     /// @notice Returns the current state of a node
     /// @param nodeId The address of the node
-    /// @return The node's current NodeState
-    function getNodeState(address nodeId) external view returns (NodeState);
+    /// @return The node's current State
+    function getNodeState(address nodeId) external view returns (State);
 
     /// @notice Checks if a node is in the CandInactive set
     /// @param nodeId The address of the node
@@ -350,7 +368,7 @@ interface IAddressBookV2 {
 
     /// @notice Returns the number of nodes in a given state
     /// @dev Atomically maintained inside _transition(), _createNode(), _deleteNode().
-    /// @param state The NodeState to query
+    /// @param state The State to query
     /// @return The count of nodes in that state
-    function getStateCount(NodeState state) external view returns (uint256);
+    function getStateCount(State state) external view returns (uint256);
 }

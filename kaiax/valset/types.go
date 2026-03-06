@@ -20,7 +20,7 @@ type CommonAddressSet interface {
 	Add(addr common.Address)
 	Remove(addr common.Address) bool
 	Marshal() ([]byte, error)
-	EqualState(ValidatorStateMap) bool
+	EqualState(NodeStateMap) bool
 }
 
 func NewCommonAddressSet(addrs []common.Address) CommonAddressSet {
@@ -30,15 +30,15 @@ func NewCommonAddressSet(addrs []common.Address) CommonAddressSet {
 type State uint8
 
 const (
-	Unknown State = iota
-	CandInactive
-	CandReady
-	CandTesting
-	ValInactive
-	ValPaused
-	ValExiting
-	ValReady
-	ValActive
+	Unknown      State = iota // 0
+	CandInactive              // 1
+	CandReady                 // 2
+	CandTesting               // 3
+	ValInactive               // 4
+	ValReady                  // 5
+	ValActive                 // 6
+	ValPaused                 // 7
+	ValExiting                // 8
 )
 
 const (
@@ -126,22 +126,22 @@ type ValidatorState struct {
 	PausedTimeout time.Time `json:"pausedTimeout"`
 }
 
-type ValidatorStateMap map[common.Address]*ValidatorState
+type NodeStateMap map[common.Address]*ValidatorState
 
-func (v ValidatorStateMap) String() string {
+func (v NodeStateMap) String() string {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		return fmt.Sprintf("ValidatorStateMap error: %v", err)
+		return fmt.Sprintf("NodeStateMap error: %v", err)
 	}
 	return string(b)
 }
 
-func (v ValidatorStateMap) Copy() ValidatorStateMap {
+func (v NodeStateMap) Copy() NodeStateMap {
 	if v == nil {
 		return nil
 	}
 
-	cp := make(ValidatorStateMap, len(v))
+	cp := make(NodeStateMap, len(v))
 	for key, value := range v {
 		if value == nil {
 			cp[key] = nil
@@ -153,7 +153,7 @@ func (v ValidatorStateMap) Copy() ValidatorStateMap {
 	return cp
 }
 
-func (v ValidatorStateMap) EqualState(other ValidatorStateMap) bool {
+func (v NodeStateMap) EqualState(other NodeStateMap) bool {
 	if len(v) != len(other) {
 		return false
 	}
@@ -176,6 +176,6 @@ func (v ValidatorStateMap) EqualState(other ValidatorStateMap) bool {
 	return true
 }
 
-func (v ValidatorStateMap) Addresses() []common.Address {
+func (v NodeStateMap) Addresses() []common.Address {
 	return slices.Collect(maps.Keys(v))
 }

@@ -20,7 +20,6 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
@@ -120,17 +119,13 @@ func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
 	return v.getProposer(c, round)
 }
 
-func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset.ValidatorStateMap, error) {
+func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset.NodeStateMap, error) {
 	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
 		return nil, errors.New("permissionless fork is not enabled")
 	}
-	allNodes, err := v.getAllStateNodes(num)
+	validatorList, err := v.getAllStateNodes(num)
 	if err != nil {
 		return nil, err
-	}
-	validatorList, ok := allNodes.(*ValidatorList)
-	if !ok {
-		return nil, errors.New("not a permissionless council object")
 	}
 
 	validatorList.permlessMu.RLock()
@@ -145,33 +140,13 @@ func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset
 	for _, s := range states {
 		desiredStates[s] = struct{}{}
 	}
-	filtered := make(valset.ValidatorStateMap)
+	filtered := make(valset.NodeStateMap)
 	for addr, val := range validatorList.permlessVals {
 		if _, ok := desiredStates[val.State]; ok {
 			filtered[addr] = val
 		}
 	}
 	return filtered.Copy(), nil
-}
-
-func (v *ValsetModule) GetEpochTransition(validators valset.ValidatorStateMap, num uint64, state *state.StateDB) (valset.ValidatorStateMap, error) {
-	si, err := v.StakingModule.GetStakingInfoFromState(num, state)
-	if err != nil {
-		return nil, err
-	}
-	return v.getEpochTransition(si, num, validators), nil
-}
-
-func (v *ValsetModule) GetVrankViolationTransition(validators valset.ValidatorStateMap, num uint64, state *state.StateDB) (valset.ValidatorStateMap, error) {
-	si, err := v.StakingModule.GetStakingInfoFromState(num, state)
-	if err != nil {
-		return nil, err
-	}
-	return v.deactiveStakersLessMinStakingAmount(si, num, validators), nil
-}
-
-func (v *ValsetModule) GetTimeoutTransition(validators valset.ValidatorStateMap) valset.ValidatorStateMap {
-	return v.getTimeoutTransition(validators)
 }
 
 func (v *ValsetModule) GetCandidates(num uint64) ([]common.Address, error) {

@@ -141,17 +141,18 @@ func ProcessParentBlockHash(header *types.Header, vmenv *vm.EVM, statedb vm.Stat
 	return nil
 }
 
-func WriteValidators(
+func SystemTxCall(
 	msg *types.Transaction,
 	from common.Address,
 	header *types.Header,
 	vmenv *vm.EVM,
 	statedb vm.StateDB,
 	rules params.Rules,
-) {
+) ([]byte, error) {
 	gasLimit := params.UpperGasLimit
 	vmenv.Reset(NewEVMTxContext(msg, header, vmenv.ChainConfig()), statedb)
 	statedb.AddAddressToAccessList(*msg.To())
-	vmenv.Call(vm.AccountRef(from), *msg.To(), msg.Data(), gasLimit, common.Big0)
+	ret, _, err := vmenv.Call(vm.AccountRef(from), *msg.To(), msg.Data(), gasLimit, common.Big0)
 	statedb.Finalise(true, true)
+	return ret, err
 }
