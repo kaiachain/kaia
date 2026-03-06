@@ -399,6 +399,12 @@ func (ds *DialSched) addStatic(n *discover.Node) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 	ds.static.add(cloneNode(n))
+
+	// Additionally cleanup the dial speed bumps.
+	// This allows admin_addPeer to force an immediate reconnect,
+	// even if the node was previously removed due to repeated dial failures.
+	delete(ds.dialBackoff, n.ID)
+	delete(ds.connFails, n.ID)
 }
 
 func (ds *DialSched) removeStatic(id discover.NodeID) {
