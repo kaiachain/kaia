@@ -296,26 +296,21 @@ func (ds *DialSched) launchDialTasks(candidates []*discover.Node, resCh chan str
 		if !ds.shouldDial(n) {
 			continue
 		}
-		ds.markDialingStart(n)
+		flags := ds.markDialingStart(n)
 		nn := cloneNode(n)
 		go func() {
-			ds.dialOnce(nn)
+			ds.dialOnce(nn, flags)
 			ds.signalResult(resCh)
 		}()
 	}
 }
 
-func (ds *DialSched) dialOnce(n *discover.Node) {
+func (ds *DialSched) dialOnce(n *discover.Node, flags connFlag) {
 	defer ds.markDialingEnd(n.ID)
 
 	if ds.dialer == nil || ds.backend == nil {
 		ds.markDialFailure(n.ID)
 		return
-	}
-
-	flags := dynDialedConn
-	if ds.static.contains(n.ID) {
-		flags = staticDialedConn
 	}
 
 	var err error
@@ -467,13 +462,18 @@ func (ds *DialSched) isDialing() bool {
 	return ds.dialing.len() > 0
 }
 
-func (ds *DialSched) markDialingStart(n *discover.Node) {
+// Returns the connection flag to be used for dialing this node.
+func (ds *DialSched) markDialingStart(n *discover.Node) connFlag {
 	dialTryCounter.Inc(1)
 
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
 	ds.dialing.add(n)
+	if ds.static.contains(n.ID) {
+		return staticDialedConn
+	}
+	return dynDialedConn
 }
 
 func (ds *DialSched) markDialingEnd(id discover.NodeID) {
