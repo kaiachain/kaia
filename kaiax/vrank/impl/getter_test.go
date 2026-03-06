@@ -59,7 +59,7 @@ func makeHeaderWithRound(number uint64, round int64) *types.Header {
 }
 
 // ---------------------------------------------------------------------------
-// TestGetCfReport – read-only, reads from header.VRank
+// TestGetCfReport
 // ---------------------------------------------------------------------------
 
 func TestGetCfReport(t *testing.T) {
@@ -109,7 +109,94 @@ func TestGetCfReport_Errors(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// TestTallyCfReport – live generation from in-memory collector
+// TestGetPfReport
+// ---------------------------------------------------------------------------
+
+func TestGetPfReport(t *testing.T) {
+	t.Run("round zero returns empty report", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		v := createCN(t, valset).VRankModule
+		v.Chain = &testChain{
+			headers: map[uint64]*types.Header{
+				10: makeHeaderWithRound(10, 0),
+			},
+		}
+
+		report, err := v.GetPfReport(10)
+		require.NoError(t, err)
+		assert.Empty(t, report)
+	})
+
+	t.Run("round greater than zero returns proposers in round order", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		v := createCN(t, valset).VRankModule
+		v.Chain = &testChain{
+			headers: map[uint64]*types.Header{
+				20: makeHeaderWithRound(20, 3),
+			},
+		}
+		p0 := common.HexToAddress("0x0000000000000000000000000000000000000001")
+		p1 := common.HexToAddress("0x0000000000000000000000000000000000000002")
+		p2 := common.HexToAddress("0x0000000000000000000000000000000000000003")
+		valset.EXPECT().GetProposer(uint64(20), uint64(0)).Return(p0, nil).Times(2)
+		valset.EXPECT().GetProposer(uint64(20), uint64(1)).Return(p1, nil).Times(2)
+		valset.EXPECT().GetProposer(uint64(20), uint64(2)).Return(p2, nil).Times(2)
+
+		report, err := v.GetPfReport(20)
+		require.NoError(t, err)
+		assert.Equal(t, vrank.Report{p0, p1, p2}, report)
+
+		report2, err := v.GetPfReport(20)
+		require.NoError(t, err)
+		assert.Equal(t, report, report2, "GetPfReport must be deterministic")
+	})
+}
+
+func TestGetPfReport_Errors(t *testing.T) {
+	t.Run("header not found returns error", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		v := createCN(t, valset).VRankModule
+		v.Chain = &testChain{headers: map[uint64]*types.Header{}}
+
+		report, err := v.GetPfReport(30)
+		require.ErrorIs(t, err, vrank.ErrHeaderNotFound)
+		assert.Nil(t, report)
+	})
+
+	t.Run("short extra returns error", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		v := createCN(t, valset).VRankModule
+		v.Chain = &testChain{
+			headers: map[uint64]*types.Header{
+				40: {Number: big.NewInt(40), Extra: make([]byte, types.IstanbulExtraVanity-1)},
+			},
+		}
+
+		report, err := v.GetPfReport(40)
+		require.ErrorIs(t, err, vrank.ErrHeaderExtraTooShort)
+		assert.Nil(t, report)
+	})
+
+	t.Run("GetProposer error is propagated", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		v := createCN(t, valset).VRankModule
+		v.Chain = &testChain{
+			headers: map[uint64]*types.Header{
+				50: makeHeaderWithRound(50, 2),
+			},
+		}
+		p0 := common.HexToAddress("0x0000000000000000000000000000000000000011")
+		valset.EXPECT().GetProposer(uint64(50), uint64(0)).Return(p0, nil).Times(1)
+		valset.EXPECT().GetProposer(uint64(50), uint64(1)).Return(common.Address{}, assert.AnError).Times(1)
+
+		report, err := v.GetPfReport(50)
+		require.ErrorIs(t, err, assert.AnError)
+		assert.Nil(t, report)
+	})
+}
+
+// ---------------------------------------------------------------------------
+// TestTallyCfReport
 // ---------------------------------------------------------------------------
 
 func TestTallyCfReport(t *testing.T) {
@@ -301,93 +388,6 @@ func TestTallyCfReport_Errors(t *testing.T) {
 
 		report, err := val.VRankModule.TallyCfReport(1, 0)
 		require.ErrorIs(t, err, vrank.ErrGetCandidateFailed)
-		assert.Nil(t, report)
-	})
-}
-
-// ---------------------------------------------------------------------------
-// TestGetPfReport
-// ---------------------------------------------------------------------------
-
-func TestGetPfReport(t *testing.T) {
-	t.Run("round zero returns empty report", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		v := createCN(t, valset).VRankModule
-		v.Chain = &testChain{
-			headers: map[uint64]*types.Header{
-				10: makeHeaderWithRound(10, 0),
-			},
-		}
-
-		report, err := v.GetPfReport(10)
-		require.NoError(t, err)
-		assert.Empty(t, report)
-	})
-
-	t.Run("round greater than zero returns proposers in round order", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		v := createCN(t, valset).VRankModule
-		v.Chain = &testChain{
-			headers: map[uint64]*types.Header{
-				20: makeHeaderWithRound(20, 3),
-			},
-		}
-		p0 := common.HexToAddress("0x0000000000000000000000000000000000000001")
-		p1 := common.HexToAddress("0x0000000000000000000000000000000000000002")
-		p2 := common.HexToAddress("0x0000000000000000000000000000000000000003")
-		valset.EXPECT().GetProposer(uint64(20), uint64(0)).Return(p0, nil).Times(2)
-		valset.EXPECT().GetProposer(uint64(20), uint64(1)).Return(p1, nil).Times(2)
-		valset.EXPECT().GetProposer(uint64(20), uint64(2)).Return(p2, nil).Times(2)
-
-		report, err := v.GetPfReport(20)
-		require.NoError(t, err)
-		assert.Equal(t, vrank.Report{p0, p1, p2}, report)
-
-		report2, err := v.GetPfReport(20)
-		require.NoError(t, err)
-		assert.Equal(t, report, report2, "GetPfReport must be deterministic")
-	})
-}
-
-func TestGetPfReport_Errors(t *testing.T) {
-	t.Run("header not found returns error", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		v := createCN(t, valset).VRankModule
-		v.Chain = &testChain{headers: map[uint64]*types.Header{}}
-
-		report, err := v.GetPfReport(30)
-		require.ErrorIs(t, err, vrank.ErrHeaderNotFound)
-		assert.Nil(t, report)
-	})
-
-	t.Run("short extra returns error", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		v := createCN(t, valset).VRankModule
-		v.Chain = &testChain{
-			headers: map[uint64]*types.Header{
-				40: {Number: big.NewInt(40), Extra: make([]byte, types.IstanbulExtraVanity-1)},
-			},
-		}
-
-		report, err := v.GetPfReport(40)
-		require.ErrorIs(t, err, vrank.ErrHeaderExtraTooShort)
-		assert.Nil(t, report)
-	})
-
-	t.Run("GetProposer error is propagated", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		v := createCN(t, valset).VRankModule
-		v.Chain = &testChain{
-			headers: map[uint64]*types.Header{
-				50: makeHeaderWithRound(50, 2),
-			},
-		}
-		p0 := common.HexToAddress("0x0000000000000000000000000000000000000011")
-		valset.EXPECT().GetProposer(uint64(50), uint64(0)).Return(p0, nil).Times(1)
-		valset.EXPECT().GetProposer(uint64(50), uint64(1)).Return(common.Address{}, assert.AnError).Times(1)
-
-		report, err := v.GetPfReport(50)
-		require.ErrorIs(t, err, assert.AnError)
 		assert.Nil(t, report)
 	})
 }
