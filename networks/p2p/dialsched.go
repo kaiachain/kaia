@@ -83,6 +83,21 @@ type DialConfig struct {
 //
 // Note that NodeTypeUnknown is also a valid static node here. NodeTypeUnknown occurs when user-supplied KNI is missing the `?ntype=` parameter.
 // In this case, the node's type is determined after the dialing and connection handshake.
+//
+// All mutable fields are protected by the mutex `mu`.
+// DialSched responds to the events from the Server, or make its own changes in the dialLoop().
+// In both cases, any data modifications must go through the accessors with the `mu` held.
+// The srv.lock - ds.mu order is always maintained, so there is no deadlock risk.
+//
+// [ Server layer ]                     [ dialLoop layer ]
+//   - holds srv.lock                     - does not hold mu at the loop level (but subroutines do)
+//   - AddPeer, RemovePeer                - getCandidates, launchDialTasks, go dialOnce, go refreshOnce
+//     handleAddPeerConn, handleDelPeer
+//
+// [ Internal critical sections ]
+//   - holds ds.mu
+//   - addStatic, removeStatic, shouldRefresh, markRefreshStart, shouldDial, isDialing,
+//     markDialStart, markDialEnd, markPeerConnected, markDialFailure, markPeerDisconnected
 type DialSched struct {
 	mu         sync.RWMutex
 	selfID     discover.NodeID
@@ -200,6 +215,7 @@ func (ds *DialSched) OnPeerDisconnected(id discover.NodeID, nType discover.NodeT
 }
 
 // Let the dialLoop know that the situation has changed and it should check again.
+// This operation is non-blocking. Silently skips when ds.wakeDial is full or closed.
 func (ds *DialSched) signalDial() {
 	select {
 	case ds.wakeDial <- struct{}{}:
@@ -365,9 +381,7 @@ func (ds *DialSched) dialMulti(dest *discover.Node, flags connFlag) error {
 }
 
 func (ds *DialSched) refreshOnce(resCh chan struct{}) {
-	ds.mu.Lock()
-	ds.refreshBackoff = time.Now().Add(refreshBackoff)
-	ds.mu.Unlock()
+	ds.markRefreshStart()
 
 	if ds.tab == nil {
 		return
@@ -419,6 +433,13 @@ func (ds *DialSched) shouldRefresh() bool {
 	defer ds.mu.RUnlock()
 
 	return ds.refreshBackoff.Before(time.Now())
+}
+
+func (ds *DialSched) markRefreshStart() {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
+	ds.refreshBackoff = time.Now().Add(refreshBackoff)
 }
 
 func (ds *DialSched) shouldDial(n *discover.Node) bool {
