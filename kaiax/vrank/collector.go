@@ -130,13 +130,19 @@ func (c *Collector) HasCandMsg(vk ViewKey, sender common.Address) bool {
 	return exists
 }
 
-// GetViewData returns the raw data for the view: start time, expected block hash, and all stored messages.
+// GetViewData returns snapshot data for the view: start time, expected block hash, and a copy of stored messages.
 // Caller should only count a message as valid/on-time if msg.Msg.BlockHash == expectedBlockHash.
 func (c *Collector) GetViewData(vk ViewKey) (prepreparedAt time.Time, expectedBlockHash common.Hash, candMap map[common.Address]CandidateMsg) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	prepreparedAt = c.prepreparedMap[vk]
 	expectedBlockHash = c.blockHashMap[vk]
-	candMap = c.viewMap[vk]
+	src := c.viewMap[vk]
+	if src != nil {
+		candMap = make(map[common.Address]CandidateMsg, len(src))
+		for addr, msg := range src {
+			candMap[addr] = msg
+		}
+	}
 	return prepreparedAt, expectedBlockHash, candMap
 }
