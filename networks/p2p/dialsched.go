@@ -195,7 +195,7 @@ func (ds *DialSched) OnPeerConnected(id discover.NodeID, nType discover.NodeType
 
 // OnPeerDisconnected updates the `connected*` bookkeeping when it was disconnected.
 func (ds *DialSched) OnPeerDisconnected(id discover.NodeID, nType discover.NodeType) {
-	ds.markConnDisconnected(id)
+	ds.markPeerDisconnected(id)
 	ds.signalDial()
 }
 
@@ -296,7 +296,7 @@ func (ds *DialSched) launchDialTasks(candidates []*discover.Node, resCh chan str
 		if !ds.shouldDial(n) {
 			continue
 		}
-		flags := ds.markDialingStart(n)
+		flags := ds.markDialStart(n)
 		nn := cloneNode(n)
 		go func() {
 			ds.dialOnce(nn, flags)
@@ -306,7 +306,7 @@ func (ds *DialSched) launchDialTasks(candidates []*discover.Node, resCh chan str
 }
 
 func (ds *DialSched) dialOnce(n *discover.Node, flags connFlag) {
-	defer ds.markDialingEnd(n.ID)
+	defer ds.markDialEnd(n.ID)
 
 	if ds.dialer == nil || ds.backend == nil {
 		ds.markDialFailure(n.ID)
@@ -463,7 +463,7 @@ func (ds *DialSched) isDialing() bool {
 }
 
 // Returns the connection flag to be used for dialing this node.
-func (ds *DialSched) markDialingStart(n *discover.Node) connFlag {
+func (ds *DialSched) markDialStart(n *discover.Node) connFlag {
 	dialTryCounter.Inc(1)
 
 	ds.mu.Lock()
@@ -476,7 +476,7 @@ func (ds *DialSched) markDialingStart(n *discover.Node) connFlag {
 	return dynDialedConn
 }
 
-func (ds *DialSched) markDialingEnd(id discover.NodeID) {
+func (ds *DialSched) markDialEnd(id discover.NodeID) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
@@ -522,7 +522,7 @@ func (ds *DialSched) markDialFailure(id discover.NodeID) {
 	}
 }
 
-func (ds *DialSched) markConnDisconnected(id discover.NodeID) {
+func (ds *DialSched) markPeerDisconnected(id discover.NodeID) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
