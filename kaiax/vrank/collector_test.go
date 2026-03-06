@@ -68,12 +68,12 @@ func TestCollector_AddCandMsg_DuplicateRejected(t *testing.T) {
 
 func TestCollector_GetViewData_ReturnsSnapshotCopy(t *testing.T) {
 	var (
-		c      = NewCollector()
-		vk     = ViewKey{N: 1, R: 0}
-		addr1  = common.HexToAddress("0x01")
-		addr2  = common.HexToAddress("0x02")
-		msg    = &VRankCandidate{BlockNumber: 1, Round: 0}
-		when   = time.Now()
+		c     = NewCollector()
+		vk    = ViewKey{N: 1, R: 0}
+		addr1 = common.HexToAddress("0x01")
+		addr2 = common.HexToAddress("0x02")
+		msg   = &VRankCandidate{BlockNumber: 1, Round: 0}
+		when  = time.Now()
 	)
 
 	c.AddCandMsg(vk, addr1, when, msg)
