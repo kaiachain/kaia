@@ -107,12 +107,12 @@ func TestDialSched_StaticNode_Retry(t *testing.T) {
 
 	// But Failure does remove the static node.
 	for i := 0; i < dialMaxRetries+2; i++ {
-		ds.markConnFailure(staticNode.ID)
+		ds.markDialFailure(staticNode.ID)
 	}
 	assert.False(t, ds.static.contains(staticNode.ID), "static node must be removed by failure events")
 }
 
-// Special feature: Removing and re-adding a static node re-dials immediately1.
+// Special feature: Removing and re-adding a static node re-dials immediately.
 func TestDialSched_StaticNode_RedialImmediatelyAfterReAdd(t *testing.T) {
 	node := testNode(51, "10.0.0.51", discover.NodeTypePN)
 	ds := NewDialSched(DialConfig{
@@ -627,7 +627,7 @@ func (m *mockSetupBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *disc
 		}
 	}
 	m.calls = append(m.calls, call)
-	m.dialsched.markConnSuccess(dialDest.ID, dialDest.NType, false)
+	m.dialsched.markPeerConnected(dialDest.ID, dialDest.NType, false)
 	return nil
 }
 
@@ -692,6 +692,6 @@ func (m *updateToMultiBackend) SetupConn(fd net.Conn, flags connFlag, dialDest *
 		}
 		return errUpdateDial
 	}
-	m.dialsched.markConnSuccess(dialDest.ID, dialDest.NType, false)
+	m.dialsched.markPeerConnected(dialDest.ID, dialDest.NType, false)
 	return nil
 }
