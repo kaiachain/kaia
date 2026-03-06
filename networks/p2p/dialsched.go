@@ -189,13 +189,13 @@ func (ds *DialSched) RemoveStatic(id discover.NodeID) {
 // If the peer is inbound (i.e. via Server.listenLoop()), it does not affect the `connTarget`.
 // If the peer is outbound (i.e. via DialSched.dialOnce()), it counts towards the `connTarget` accounting.
 func (ds *DialSched) OnPeerConnected(id discover.NodeID, nType discover.NodeType, inbound bool) {
-	ds.markConnSuccess(id, nType, inbound)
+	ds.markPeerConnected(id, nType, inbound)
 	ds.signalDial()
 }
 
 // OnPeerDisconnected updates the `connected*` bookkeeping when it was disconnected.
 func (ds *DialSched) OnPeerDisconnected(id discover.NodeID, nType discover.NodeType) {
-	ds.markConnDisconnect(id)
+	ds.markConnDisconnected(id)
 	ds.signalDial()
 }
 
@@ -309,7 +309,7 @@ func (ds *DialSched) dialOnce(n *discover.Node) {
 	defer ds.markDialingEnd(n.ID)
 
 	if ds.dialer == nil || ds.backend == nil {
-		ds.markConnFailure(n.ID)
+		ds.markDialFailure(n.ID)
 		return
 	}
 
@@ -332,9 +332,9 @@ func (ds *DialSched) dialOnce(n *discover.Node) {
 	logger.Debug("Dialed node", "id", n.ID, "type", n.NType, "addresses", n.TCPs, "err", err)
 
 	if err != nil {
-		ds.markConnFailure(n.ID)
+		ds.markDialFailure(n.ID)
 	}
-	// We don't call markConnSuccess() here. If dial()-SetupConn() succeeds, the Server will call OnPeerConnected()-markConnSuccess().
+	// We don't call markPeerConnected() here. If dial()-SetupConn() succeeds, the Server will call OnPeerConnected()-markPeerConnected().
 }
 
 func (ds *DialSched) dial(dest *discover.Node, flags connFlag) error {
@@ -478,7 +478,7 @@ func (ds *DialSched) markDialingEnd(id discover.NodeID) {
 	ds.dialBackoff[id] = time.Now().Add(dialBackoff)
 }
 
-func (ds *DialSched) markConnSuccess(id discover.NodeID, nType discover.NodeType, inbound bool) {
+func (ds *DialSched) markPeerConnected(id discover.NodeID, nType discover.NodeType, inbound bool) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
@@ -498,7 +498,7 @@ func (ds *DialSched) markConnSuccess(id discover.NodeID, nType discover.NodeType
 	delete(ds.connFails, id)
 }
 
-func (ds *DialSched) markConnFailure(id discover.NodeID) {
+func (ds *DialSched) markDialFailure(id discover.NodeID) {
 	dialFailCounter.Inc(1)
 
 	ds.mu.Lock()
@@ -516,7 +516,7 @@ func (ds *DialSched) markConnFailure(id discover.NodeID) {
 	}
 }
 
-func (ds *DialSched) markConnDisconnect(id discover.NodeID) {
+func (ds *DialSched) markConnDisconnected(id discover.NodeID) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
