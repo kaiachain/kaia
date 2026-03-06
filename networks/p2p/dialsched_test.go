@@ -369,7 +369,7 @@ func TestDialSched_Dial_DialFailure(t *testing.T) {
 	ds.dialer = md
 	mb.dialsched = ds
 
-	ds.dialOnce(staticNode)
+	ds.dialOnce(staticNode, staticDialedConn)
 
 	require.Len(t, mb.calls, 1)
 	assert.Equal(t, staticNode.ID, mb.calls[0].id)
@@ -392,7 +392,7 @@ func TestDialSched_Dial_RetryOnErrUpdateDial(t *testing.T) {
 	ds.dialer = md
 	mb.dialsched = ds
 
-	ds.dialOnce(node)
+	ds.dialOnce(node, dynDialedConn)
 
 	require.Len(t, mb.calls, 3, "should retry with DialMulti after errUpdateDial")
 
@@ -424,7 +424,7 @@ func TestDialSched_DialMulti(t *testing.T) {
 	ds.dialer = md
 	mb.dialsched = ds
 
-	ds.dialOnce(multiNode)
+	ds.dialOnce(multiNode, dynDialedConn)
 
 	require.Len(t, mb.calls, len(multiNode.TCPs), "SetupConn should be called for each dialed connection")
 	for i := range mb.calls {
