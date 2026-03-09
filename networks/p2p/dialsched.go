@@ -262,6 +262,22 @@ func (ds *DialSched) dialLoop() {
 }
 
 // Return the candidates for dialing from the mixture of static and dynamic nodes.
+//
+// Capacity math tells us that the dialing is unlikely to be saturated, so we don't separate the candidates by node type.
+//
+// The candidates are composed of [ static | dynamic CNs | dynamic PNs | dynamic ENs ], and they are consumed from the left.
+// - The candidates are first filtered with shouldDial() and then dialed up to maxConcurrentDials (16) at once.
+// - Even if the leftmost candidates are unfortunately unreachable, they are skipped in later iterations because of the dialBackoff and connFails.
+//
+// If there are too many static nodes, the dynamic candidate dialing can be delayed. But it is reasonable and expected.
+// - You don't need dynamic candidates when you have enough static nodes.
+//
+// If there are too many dynamic CN/PN candidates, EN dialing can be delayed. But it is unlikely under the connTarget settings.
+// - CN's connTarget = {CN: 100}. No starvation possible.
+// - PN's connTarget = {PN: 1}. No starvation possible.
+// - EN's connTarget = {PN: 2, EN: maxDynDials}.
+// EN dialing is delayed only if there are [8+ undialing/unconnected static nodes] + [2*4 dynamic PN candidates] = 16 dialable candidates.
+// But in reality, there are much less static nodes, and even so they will be filtered out by shouldDial() in later iterations quite soon.
 func (ds *DialSched) getCandidates() (candidates []*discover.Node, needRefresh bool) {
 	ds.mu.RLock()
 
