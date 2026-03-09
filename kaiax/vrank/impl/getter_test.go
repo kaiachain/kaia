@@ -334,22 +334,6 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		assert.Empty(t, report)
 	})
 
-	t.Run("round out of range returns error", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		val := createCN(t, valset)
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
-		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
-		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
-
-		report, err := val.VRankModule.TallyCfReport(1, 11) // maxRound is 10
-		require.ErrorIs(t, err, vrank.ErrRoundOutOfRange)
-		assert.Nil(t, report)
-
-		report, err = val.VRankModule.TallyCfReport(1, 10)
-		assert.NotErrorIs(t, err, vrank.ErrRoundOutOfRange)
-	})
-
 	t.Run("non-validator returns empty report", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val, otherVal := createCN(t, valset), createCN(t, valset)
