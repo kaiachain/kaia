@@ -130,6 +130,8 @@ func (tab *Table2) Close() {
 
 	close(tab.closeReq) // Ask the loops to terminate.
 	tab.wg.Wait()       // Wait for the loops to terminate.
+	tab.udp.close()
+	tab.db.close()
 	logger.Info("Discovery table closed")
 }
 

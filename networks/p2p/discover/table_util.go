@@ -66,7 +66,11 @@ func (s *sharedRand) Seed() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var b [8]byte
-	crand.Read(b[:])
+	if _, err := crand.Read(b[:]); err != nil {
+		// If crypto/rand seed fails, fall back to time seed
+		s.rand.Seed(time.Now().UnixNano())
+		return
+	}
 	s.rand.Seed(int64(binary.BigEndian.Uint64(b[:])))
 }
 
