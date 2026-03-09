@@ -33,7 +33,6 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/networks/p2p/nat"
 	"github.com/kaiachain/kaia/networks/p2p/netutil"
 	"github.com/kaiachain/kaia/rlp"
 )
@@ -203,7 +202,6 @@ type udp struct {
 	gotreply   chan reply
 
 	closing chan struct{}
-	nat     nat.Interface
 	wg      sync.WaitGroup
 
 	Discovery
@@ -279,11 +277,10 @@ type Config struct {
 	PrivateKey *ecdsa.PrivateKey
 
 	// These settings are optional:
-	AnnounceAddr *net.UDPAddr      // local address announced in the DHT
-	NodeDBPath   string            // if set, the node database is stored at this filesystem location
-	NetRestrict  *netutil.Netlist  // network whitelist
-	Bootnodes    []*Node           // list of bootstrap nodes
-	Unhandled    chan<- ReadPacket // unhandled packets are sent on this channel
+	AnnounceAddr *net.UDPAddr     // local address announced in the DHT
+	NodeDBPath   string           // if set, the node database is stored at this filesystem location
+	NetRestrict  *netutil.Netlist // network whitelist
+	Bootnodes    []*Node          // list of bootstrap nodes
 
 	// These settings are required for create Table and UDP
 	Id       NodeID
@@ -336,7 +333,7 @@ func newUDP(cfg *Config) (Discovery, *udp, error) {
 	go udp.Discovery.(*Table).loop() // TODO-Kaia-Node There is only one concrete type(Table) for Discovery. Refactor Discovery interface for their proper objective.
 	udp.wg.Add(2)
 	go udp.loop()
-	go udp.readLoop(cfg.Unhandled)
+	go udp.readLoop(nil)
 	return udp.Discovery, udp, nil
 }
 
