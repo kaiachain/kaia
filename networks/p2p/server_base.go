@@ -214,7 +214,6 @@ func (srv *BaseServer) startDiscovery(listenAddr string) error {
 		NodeDBPath:    srv.NodeDatabase,
 		NetRestrict:   srv.NetRestrict,
 		Bootnodes:     srv.BootstrapNodes,
-		Unhandled:     nil,
 		Conn:          conn,
 		Addr:          realaddr,
 		Id:            discover.PubkeyID(&srv.PrivateKey.PublicKey),
