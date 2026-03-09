@@ -44,69 +44,60 @@ func defaultConnTarget(cfg DialConfig) map[discover.NodeType]int {
 	}
 }
 
-// typedNodeSet is a set of discover.Nodes organised by NType.
-// It is not safe for concurrent use; callers must hold DialSched.mu.
+// typedNodeSet is a set of discover.Nodes, which are counted by NodeType.
 type typedNodeSet struct {
-	nodes map[discover.NodeType]map[discover.NodeID]*discover.Node
+	nodes  map[discover.NodeID]*discover.Node
+	counts map[discover.NodeType]int
 }
 
 func newTypedNodeSet() typedNodeSet {
-	ns := make(map[discover.NodeType]map[discover.NodeID]*discover.Node)
-	// NodeTypeUnknown is needed to represent the static nodes without node type specified.
-	for _, nType := range []discover.NodeType{discover.NodeTypeCN, discover.NodeTypePN, discover.NodeTypeEN, discover.NodeTypeBN, discover.NodeTypeUnknown} {
-		ns[nType] = make(map[discover.NodeID]*discover.Node)
+	return typedNodeSet{
+		nodes:  make(map[discover.NodeID]*discover.Node),
+		counts: make(map[discover.NodeType]int),
 	}
-	return typedNodeSet{nodes: ns}
 }
 
+// Adding the same node ID with different NodeType is allowed, in which case the counts are adjusted.
+// This can happen when the static node KNI given without/wrong node type, later connected with different node type.
 func (t *typedNodeSet) add(n *discover.Node) {
-	if m, ok := t.nodes[n.NType]; ok {
-		m[n.ID] = n
+	if n == nil {
+		return
 	}
+	if old := t.nodes[n.ID]; old != nil {
+		t.counts[old.NType]--
+	}
+	t.nodes[n.ID] = n
+	t.counts[n.NType]++
 }
 
 func (t *typedNodeSet) get(id discover.NodeID) *discover.Node {
-	for nType := range t.nodes {
-		if n, ok := t.nodes[nType][id]; ok {
-			return n
-		}
-	}
-	return nil
+	return t.nodes[id]
 }
 
 func (t *typedNodeSet) remove(id discover.NodeID) {
-	for nType := range t.nodes {
-		delete(t.nodes[nType], id)
+	if n := t.nodes[id]; n != nil {
+		delete(t.nodes, id)
+		t.counts[n.NType]--
 	}
 }
 
 func (t *typedNodeSet) len() int {
-	count := 0
-	for nType := range t.nodes {
-		count += len(t.nodes[nType])
-	}
-	return count
+	return len(t.nodes)
 }
 
 func (t *typedNodeSet) all() []*discover.Node {
 	nodes := make([]*discover.Node, 0, len(t.nodes))
-	for nType := range t.nodes {
-		for _, n := range t.nodes[nType] {
-			nodes = append(nodes, n)
-		}
+	for _, n := range t.nodes {
+		nodes = append(nodes, n)
 	}
 	return nodes
 }
 
 func (t *typedNodeSet) contains(id discover.NodeID) bool {
-	for nType := range t.nodes {
-		if _, ok := t.nodes[nType][id]; ok {
-			return true
-		}
-	}
-	return false
+	_, ok := t.nodes[id]
+	return ok
 }
 
 func (t *typedNodeSet) count(nType discover.NodeType) int {
-	return len(t.nodes[nType])
+	return t.counts[nType]
 }
