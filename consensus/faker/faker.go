@@ -145,8 +145,7 @@ func (f *Faker) Prepare(chain consensus.ChainReader, header *types.Header) error
 		return errors.New("header number is nil")
 	}
 
-	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-	header.BlockScore = f.CalcBlockScore(chain, header.Time.Uint64(), parent)
+	header.BlockScore = big.NewInt(1) // Simplified difficulty for testing
 	return nil
 }
 
@@ -187,11 +186,6 @@ func (f *Faker) Seal(chain consensus.ChainReader, block *types.Block) (*types.Bl
 	}
 
 	return block, nil
-}
-
-// CalcBlockScore calculates the block score.
-func (f *Faker) CalcBlockScore(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	return big.NewInt(1)
 }
 
 // APIs returns RPC APIs (none for faker).

@@ -280,7 +280,6 @@ func rebalanceAlloc(t *testing.T, blockNum uint64, addr common.Address, code []b
 
 func setupMockEngine(engine *consensus_mock.MockEngine, chain *blockchain.BlockChain, mReward reward.RewardModule) {
 	engine.EXPECT().Author(gomock.Any()).Return(addrProposer, nil).AnyTimes()
-	engine.EXPECT().CalcBlockScore(gomock.Any(), gomock.Any(), gomock.Any()).Return(common.Big0).AnyTimes()
 	engine.EXPECT().CanVerifyHeadersConcurrently().Return(false).AnyTimes()
 	engine.EXPECT().Initialize(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 

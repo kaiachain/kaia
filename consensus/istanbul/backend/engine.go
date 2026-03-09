@@ -566,10 +566,6 @@ func (sb *backend) updateBlock(block *types.Block) (*types.Block, error) {
 	return block.WithSeal(header), nil
 }
 
-func (sb *backend) CalcBlockScore(chain consensus.ChainReader, time uint64, parent *types.Header) *big.Int {
-	return big.NewInt(0)
-}
-
 // APIs returns the RPC APIs this consensus engine provides.
 func (sb *backend) APIs(chain consensus.ChainReader) []rpc.API {
 	return []rpc.API{
