@@ -314,9 +314,6 @@ func (v *ValsetModule) installAndInitializeABv2(
 		logger.Error("Failed to install AddressBookV2", "number", header.Number, "err", err.Error())
 		return err
 	}
-	// Commit slot-0 clear (SetState) to pendingStorage so EVM sees original=0,
-	// avoiding a SubRefund underflow in SSTORE refund accounting.
-	statedb.Finalise(true, true)
 	logger.Info("Installed AddressBookV2", "number", header.Number)
 
 	// ABv2.initialize() reads all genesis data from ABv2DataContract via Registry(0x401).

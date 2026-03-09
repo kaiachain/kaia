@@ -60,15 +60,11 @@ func InstallAddressBookV2(state *state.StateDB) error {
 	}
 	// Point proxy's implementation slot to the logic contract
 	state.SetState(AddressBookAddr, common.BytesToHash(ImplementationSlot), lpad32(logicAddr))
-	// Clear slot 0 (_initialized) which legacy AddressBook may have set non-zero
-	state.SetState(AddressBookAddr, lpad32(0), common.Hash{})
 
 	// Deploy logic contract
 	if err := state.SetCode(logicAddr, AddressBookV2Code); err != nil {
 		return err
 	}
-	// Prevent direct initialization of the logic contract
-	state.SetState(logicAddr, lpad32(0), lpad32([]byte{0xff}))
 
 	return nil
 }
