@@ -744,7 +744,9 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	sb.currentBlock = currentBlock
 	sb.hasBadBlock = hasBadBlock
 
+	sb.startPrepreparedRelay()
 	if err := sb.core.Start(); err != nil {
+		sb.stopPrepreparedRelay()
 		return err
 	}
 
@@ -759,6 +761,7 @@ func (sb *backend) Stop() error {
 	if !sb.coreStarted {
 		return istanbul.ErrStoppedEngine
 	}
+	sb.stopPrepreparedRelay()
 	if err := sb.core.Stop(); err != nil {
 		return err
 	}

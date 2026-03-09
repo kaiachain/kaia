@@ -44,6 +44,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/randao"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -134,6 +135,11 @@ type backend struct {
 	govModule gov.GovModule
 
 	randaoModule randao.RandaoModule
+
+	vrankModule    vrank.VRankModule
+	prepreparedSub *event.TypeMuxSubscription
+	prepreparedCh  chan struct{}
+	prepreparedWg  sync.WaitGroup
 
 	// Node type
 	nodetype common.ConnType

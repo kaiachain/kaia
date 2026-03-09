@@ -22,7 +22,10 @@
 
 package istanbul
 
-import "github.com/kaiachain/kaia/common"
+import (
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
+)
 
 // RequestEvent is posted to propose a proposal
 type RequestEvent struct {
@@ -33,6 +36,11 @@ type RequestEvent struct {
 type MessageEvent struct {
 	Hash    common.Hash
 	Payload []byte
+}
+
+type PrepreparedEvent struct {
+	Block *types.Block
+	View  *View
 }
 
 type CommitEvent struct {

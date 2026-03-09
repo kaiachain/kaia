@@ -602,6 +602,9 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	if ctx.NodeType() == common.CONSENSUSNODE {
 		mBase = append(mBase, mVRank)
 		s.protocolManager.RegisterVRankModule(mVRank)
+		if host, ok := s.engine.(vrank.VRankModuleHost); ok {
+			host.RegisterVRankModule(mVRank)
+		}
 	}
 
 	// Register modules to respective components

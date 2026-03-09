@@ -29,6 +29,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/log"
 )
 
 func (c *core) sendPreprepare(request *istanbul.Request) {
@@ -128,6 +129,7 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 				Vrank.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
 				Vrank.AddPreprepare(src, preprepare.View.Round.Uint64(), timestamp)
 				c.acceptPreprepare(preprepare)
+				c.postPrepreparedEvent(preprepare, logger)
 				c.setState(StatePrepared)
 				c.sendCommit()
 			} else {
@@ -141,6 +143,7 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 			//   1. the locked proposal and the received proposal match
 			//   2. we have no locked proposal
 			c.acceptPreprepare(preprepare)
+			c.postPrepreparedEvent(preprepare, logger)
 			c.setState(StatePreprepared)
 			c.sendPrepare()
 		}
@@ -152,4 +155,13 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 func (c *core) acceptPreprepare(preprepare *istanbul.Preprepare) {
 	c.consensusTimestamp = time.Now()
 	c.current.SetPreprepare(preprepare)
+}
+
+func (c *core) postPrepreparedEvent(preprepare *istanbul.Preprepare, logger log.Logger) {
+	block, ok := preprepare.Proposal.(*types.Block)
+	if !ok {
+		logger.Warn("Failed to post preprepared event due to unexpected proposal type")
+		return
+	}
+	c.sendEvent(istanbul.PrepreparedEvent{Block: block, View: preprepare.View})
 }
