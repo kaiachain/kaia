@@ -528,12 +528,10 @@ func (ds *DialSched) markPeerConnected(id discover.NodeID, nType discover.NodeTy
 	// A placeholder to populate the typedNodeSet. Other fields are irrelevant in DialSched.
 	n := &discover.Node{ID: id, NType: nType}
 
-	// Retype existing entry (if any) to fix the source type vs. connected type discrepancy.
-	ds.connectedAll.remove(id)
 	ds.connectedAll.add(n)
-
-	ds.connectedOutbound.remove(id)
-	if !inbound {
+	if inbound {
+		ds.connectedOutbound.remove(id)
+	} else {
 		ds.connectedOutbound.add(n)
 	}
 
