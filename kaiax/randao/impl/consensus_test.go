@@ -137,3 +137,41 @@ func TestVerifyHeaderRejectsInvalidRandaoFields(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, randao.ErrInvalidRandaoFields)
 }
+
+func TestVerifyHeaderRejectsInvalidPrevMixHashLength(t *testing.T) {
+	m, chain, header := setupConsensusTestModule(t, big.NewInt(0))
+	require.NoError(t, m.PrepareHeader(header))
+
+	// With forkNum=0, VerifyHeader would query the registry path for pubkeys.
+	// Seed the cache so we can focus this test on parent MixHash validation.
+	m.blsPubkeyCache.Add(header.Number.Uint64(), system.BlsPublicKeyInfos{
+		params.AuthorAddressForTesting: {
+			PublicKey: m.BlsSecretKey.PublicKey().Marshal(),
+			Pop:       bls.PopProve(m.BlsSecretKey).Marshal(),
+		},
+	})
+
+	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+	require.NotNil(t, parent)
+
+	testCases := []struct {
+		name    string
+		mixHash []byte
+	}{
+		{name: "nil", mixHash: nil},
+		{name: "short", mixHash: []byte{0x01}},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			parent.MixHash = tc.mixHash
+
+			var err error
+			assert.NotPanics(t, func() {
+				err = m.VerifyHeader(header)
+			})
+			require.Error(t, err)
+			assert.ErrorIs(t, err, randao.ErrInvalidRandaoFields)
+		})
+	}
+}

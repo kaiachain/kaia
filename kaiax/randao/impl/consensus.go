@@ -79,6 +79,9 @@ func (r *RandaoModule) VerifyHeader(header *types.Header) error {
 	}
 
 	prevMixHash := headerMixHash(r.ChainConfig, parent)
+	if len(prevMixHash) != 32 {
+		return randao.ErrInvalidRandaoFields
+	}
 	mixHash := calcMixHash(header.RandomReveal, prevMixHash)
 	if !bytes.Equal(header.MixHash, mixHash) {
 		return randao.ErrInvalidRandaoFields
