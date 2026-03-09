@@ -309,7 +309,10 @@ func (s *flatStorage) random(buf []*Node) int {
 	defer s.mu.RUnlock()
 
 	count := min(len(buf), len(s.nodes))
-	indices := s.rand.Perm(count)
+	if count == 0 {
+		return 0
+	}
+	indices := s.rand.Perm(len(s.nodes))
 	for i := 0; i < count; i++ {
 		buf[i] = s.nodes[indices[i]]
 	}
