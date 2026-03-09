@@ -33,7 +33,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -149,14 +148,10 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 		Timeout:        10000,
 	}
 
-	// Derive BLS key from ECDSA key for Randao fork support
-	blsKey, _ := bls.DeriveFromECDSA(key)
-
 	backend := New(&BackendOpts{
 		IstanbulConfig: istanbulConfig,
 		Rewardbase:     common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
 		PrivateKey:     key,
-		BlsSecretKey:   blsKey,
 		DB:             dbm,
 		NodeType:       common.CONSENSUSNODE,
 	}).(*backend)

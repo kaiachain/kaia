@@ -41,6 +41,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax"
@@ -124,6 +125,10 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup istanbul consensus backend
 	mGov := gov_impl.NewGovModule()
+	blsSecretKey, err := bls.DeriveFromECDSA(validatorPrivKeys[0])
+	if err != nil {
+		return nil, err
+	}
 	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
 		IstanbulConfig: istanbul.DefaultConfig,
 		Rewardbase:     genesisAddr,
@@ -167,16 +172,17 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 			StakingModule: mStaking,
 		}),
 		mRandao.Init(&randao_impl.InitOpts{
-			ChainConfig: genesis.Config,
-			Chain:       bc,
-			Downloader:  fakeDownloader,
+			ChainConfig:  genesis.Config,
+			Chain:        bc,
+			Downloader:   fakeDownloader,
+			BlsSecretKey: blsSecretKey,
 		}),
 	)
 	if err != nil {
 		return nil, err
 	}
-	engine.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
-	engine.RegisterConsensusModule(mReward)
+	engine.RegisterKaiaxModules(mGov, mStaking, mValset)
+	engine.RegisterConsensusModule(mReward, mRandao)
 	if err = engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock, nil); err != nil {
 		return nil, err
 	}

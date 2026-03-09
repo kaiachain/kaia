@@ -182,7 +182,6 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		IstanbulConfig: istanbulConfig,
 		Rewardbase:     common.HexToAddress("0x2A35FE72F847aa0B509e4055883aE90c87558AaD"),
 		PrivateKey:     nodeKeys[0],
-		BlsSecretKey:   nodeBlsKeys[0],
 		DB:             dbm,
 		GovModule:      mGov,
 		NodeType:       common.CONSENSUSNODE,
@@ -223,13 +222,15 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 			GovModule:     mGov,
 		}),
 		mRandao.Init(&randao_impl.InitOpts{
-			ChainConfig: config,
-			Chain:       chain,
-			Downloader:  fakeDownloader,
+			ChainConfig:  config,
+			Chain:        chain,
+			Downloader:   fakeDownloader,
+			BlsSecretKey: nodeBlsKeys[0],
 		})); err != nil {
 		panic(err)
 	}
-	engine.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
+	engine.RegisterKaiaxModules(mGov, mStaking, mValset)
+	engine.RegisterConsensusModule(mRandao)
 	// Start the engine
 	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock, nil); err != nil {
 		panic(err)

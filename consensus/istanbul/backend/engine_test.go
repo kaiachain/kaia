@@ -316,6 +316,7 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	if mStaking == nil {
 		mStaking = staking_impl.NewStakingModule()
 	}
+	blsSecretKey, _ := bls.DeriveFromECDSA(b.privateKey)
 
 	fakeDownloader := downloader.NewFakeDownloader()
 	if err = errors.Join(
@@ -339,9 +340,10 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 			StakingModule: mStaking,
 		}),
 		mRandao.Init(&randao_impl.InitOpts{
-			ChainConfig: bc.Config(),
-			Chain:       bc,
-			Downloader:  fakeDownloader,
+			ChainConfig:  bc.Config(),
+			Chain:        bc,
+			Downloader:   fakeDownloader,
+			BlsSecretKey: blsSecretKey,
 		}),
 		func() error {
 			if stakingImpl, ok := mStaking.(*staking_impl.StakingModule); ok {
@@ -357,8 +359,8 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 		panic(err)
 	}
 
-	b.RegisterKaiaxModules(mGov, mStaking, mValset, mRandao)
-	b.RegisterConsensusModule(mReward, mGov)
+	b.RegisterKaiaxModules(mGov, mStaking, mValset)
+	b.RegisterConsensusModule(mReward, mGov, mRandao)
 
 	if b.Start(bc, bc.CurrentBlock, bc.HasBadBlock, nil) != nil {
 		panic(err)

@@ -30,7 +30,6 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/randao"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -169,7 +168,7 @@ type Istanbul interface {
 	// SetChain sets chain of the Istanbul backend
 	SetChain(chain ChainReader)
 
-	RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule, mRandao randao.RandaoModule)
+	RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule)
 
 	kaiax.ConsensusModuleHost
 	kaiax.TxBundlingModuleHost

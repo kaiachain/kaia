@@ -536,9 +536,10 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			RewardModule: mReward,
 		}),
 		mRandao.Init(&randao_impl.InitOpts{
-			ChainConfig: s.chainConfig,
-			Chain:       s.blockchain,
-			Downloader:  s.protocolManager.Downloader(),
+			ChainConfig:  s.chainConfig,
+			Chain:        s.blockchain,
+			Downloader:   s.protocolManager.Downloader(),
+			BlsSecretKey: ctx.BlsNodeKey(),
 		}),
 		mGasless.Init(&gasless_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
@@ -597,8 +598,8 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	s.blockchain.RegisterRewindableModule(mRewindable...)
 	s.txPool.RegisterTxPoolModule(mTxPool...)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
-		engine.RegisterKaiaxModules(s.govModule, s.stakingModule, mValset, mRandao)
-		engine.RegisterConsensusModule(mReward, s.govModule)
+		engine.RegisterKaiaxModules(s.govModule, s.stakingModule, mValset)
+		engine.RegisterConsensusModule(mReward, s.govModule, mRandao)
 		engine.RegisterTxBundlingModule(mTxBundling...)
 	}
 	s.protocolManager.RegisterStakingModule(s.stakingModule)
@@ -656,7 +657,6 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 		IstanbulConfig: &config.Istanbul,
 		Rewardbase:     config.Rewardbase,
 		PrivateKey:     ctx.NodeKey(),
-		BlsSecretKey:   ctx.BlsNodeKey(),
 		DB:             db,
 		GovModule:      govModule,
 		NodeType:       nodetype,
