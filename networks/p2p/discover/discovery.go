@@ -16,6 +16,13 @@
 
 package discover
 
+import (
+	"crypto/ecdsa"
+	"net"
+
+	"github.com/kaiachain/kaia/networks/p2p/netutil"
+)
+
 type Discovery2 interface {
 	// Lifecycle. Used by p2p.Server.
 	Close()
@@ -28,6 +35,33 @@ type Discovery2 interface {
 
 	// Update authorized nodes. To be used by permless.
 	PutAuthorizedNodes(nodes []*Node)
+}
+
+// Config holds Table-related settings.
+type Config struct {
+	NetworkID uint64
+	// These settings are required and configure the UDP listener:
+	PrivateKey *ecdsa.PrivateKey
+
+	// These settings are optional:
+	AnnounceAddr *net.UDPAddr     // local address announced in the DHT
+	NodeDBPath   string           // if set, the node database is stored at this filesystem location
+	NetRestrict  *netutil.Netlist // network whitelist
+	Bootnodes    []*Node          // list of bootstrap nodes
+
+	// These settings are required for create Table and UDP
+	Id       NodeID
+	Addr     *net.UDPAddr
+	udp      transport
+	Conn     conn
+	NodeType NodeType
+
+	// These settings are required for discovery packet control
+	MaxNeighborsNode uint
+	AuthorizedNodes  []*Node
+
+	// DiscoverNodetype is list of node type to enable discovery.
+	DiscoverTypes DiscoverTypesConfig
 }
 
 func NewDiscovery2(cfg *Config) (Discovery2, error) {
