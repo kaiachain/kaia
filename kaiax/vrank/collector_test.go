@@ -22,6 +22,7 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCollector_GetViewData_UnknownView(t *testing.T) {
@@ -63,6 +64,30 @@ func TestCollector_AddCandMsg_DuplicateRejected(t *testing.T) {
 	assert.False(t, ok)
 	_, _, m = c.GetViewData(vk)
 	assert.Len(t, m, 1)
+}
+
+func TestCollector_GetViewData_ReturnsSnapshotCopy(t *testing.T) {
+	var (
+		c     = NewCollector()
+		vk    = ViewKey{N: 1, R: 0}
+		addr1 = common.HexToAddress("0x01")
+		addr2 = common.HexToAddress("0x02")
+		msg   = &VRankCandidate{BlockNumber: 1, Round: 0}
+		when  = time.Now()
+	)
+
+	c.AddCandMsg(vk, addr1, when, msg)
+	_, _, m1 := c.GetViewData(vk)
+	require.Len(t, m1, 1)
+
+	// Mutate returned map; this must not affect collector internals.
+	m1[addr2] = CandidateMsg{ReceivedAt: when, Msg: msg}
+	delete(m1, addr1)
+
+	_, _, m2 := c.GetViewData(vk)
+	assert.Len(t, m2, 1)
+	assert.Contains(t, m2, addr1)
+	assert.NotContains(t, m2, addr2)
 }
 
 func TestCollector_RemoveOldViews(t *testing.T) {

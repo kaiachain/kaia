@@ -17,7 +17,7 @@
 package impl
 
 import (
-	"bytes"
+	"encoding/binary"
 	"math/big"
 	"slices"
 	"time"
@@ -64,7 +64,8 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 	}
 
 	if v.isCandidate(block.NumberU64()) {
-		sig, err := crypto.Sign(crypto.Keccak256(block.Hash().Bytes()), v.NodeKey)
+		sigHash := v.vrankCandidateSigHash(block.NumberU64(), uint8(view.Round.Uint64()), block.Hash())
+		sig, err := crypto.Sign(sigHash.Bytes(), v.NodeKey)
 		if err != nil {
 			logger.Error("Sign failed", "blockNum", block.NumberU64(), "blockHash", block.Hash().Hex())
 			return err
@@ -79,7 +80,7 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 	return nil
 }
 
-// HandleVRankCandidate stores VRankCandidate from candidates. Verification is deferred until GetCfReport.
+// HandleVRankCandidate stores VRankCandidate from candidates. Verification is performed at TallyCfReport.
 func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(msg.BlockNumber)) {
 		return nil
@@ -91,39 +92,66 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	}
 	// should be isValidator(v.prepreparedView.Sequence.Uint64() + 1), but validators are not finalized during `seq` consensus.
 	if v.isValidator(v.prepreparedView.Sequence.Uint64()) {
-		sender, err := v.verifyVRankCandidate(msg)
+		if msg.BlockNumber > v.prepreparedView.Sequence.Uint64()+maxCollectorWindow {
+			return vrank.ErrTooFar
+		}
+		if msg.Round > maxRound {
+			return vrank.ErrRoundOutOfRange
+		}
+
+		sender, err := v.recoverVRankCandidateSender(msg)
 		if err != nil {
 			return err
 		}
 		vk := vrank.ViewKey{N: msg.BlockNumber, R: msg.Round}
+		if v.collector.HasCandMsg(vk, sender) {
+			return nil
+		}
+		if err := v.verifyVRankCandidateSender(msg, sender); err != nil {
+			return err
+		}
 		v.collector.AddCandMsg(vk, sender, receivedAt, msg)
 	}
 	return nil
 }
 
-func (v *VRankModule) verifyVRankCandidate(msg *vrank.VRankCandidate) (common.Address, error) {
-	if msg.BlockNumber > v.prepreparedView.Sequence.Uint64()+maxCollectorWindow {
-		return common.Address{}, vrank.ErrTooFar
-	}
-	if msg.Round > maxRound {
-		return common.Address{}, vrank.ErrRoundOutOfRange
-	}
-	sender, err := istanbul.GetSignatureAddress(msg.BlockHash.Bytes(), msg.Sig)
+func (v *VRankModule) recoverVRankCandidateSender(msg *vrank.VRankCandidate) (common.Address, error) {
+	sigHash := v.vrankCandidateSigHash(msg.BlockNumber, msg.Round, msg.BlockHash)
+	pubkey, err := crypto.SigToPub(sigHash.Bytes(), msg.Sig)
 	if err != nil {
-		logger.Debug("GetSignatureAddress failed", "err", err, "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
+		logger.Debug("SigToPub failed", "err", err, "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
 		return common.Address{}, err
 	}
+	sender := crypto.PubkeyToAddress(*pubkey)
+	return sender, nil
+}
+
+func (v *VRankModule) verifyVRankCandidateSender(msg *vrank.VRankCandidate, sender common.Address) error {
 	// should be GetCandidates(msg.BlockNumber), but candidates are not finalized during `Sequence` consensus.
 	candidates, err := v.Valset.GetCandidates(v.prepreparedView.Sequence.Uint64())
-	if err != nil || candidates == nil {
+	if err != nil {
 		logger.Debug("GetCandidates failed", "err", err, "blockNum", msg.BlockNumber)
-		return common.Address{}, err
+		return err
 	}
 	if !slices.Contains(candidates, sender) {
 		logger.Debug("Sender is not a candidate", "sender", sender.Hex(), "blockNum", msg.BlockNumber)
-		return common.Address{}, vrank.ErrMsgFromNonCandidate
+		return vrank.ErrMsgFromNonCandidate
 	}
-	return sender, nil
+	return nil
+}
+
+func (v *VRankModule) vrankCandidateSigHash(blockNum uint64, round uint8, blockHash common.Hash) common.Hash {
+	chainID := v.ChainConfig.ChainID.Uint64()
+
+	// Canonical encoding:
+	// domain separator || chain_id(uint64 BE) || block_number(uint64 BE) || round(uint8) || block_hash(32 bytes)
+	payload := make([]byte, 0, len(vrankCandidateSigDomain)+8+8+1+len(blockHash))
+	payload = append(payload, []byte(vrankCandidateSigDomain)...)
+	payload = binary.BigEndian.AppendUint64(payload, chainID)
+	payload = binary.BigEndian.AppendUint64(payload, blockNum)
+	payload = append(payload, round)
+	payload = append(payload, blockHash[:]...)
+	return crypto.Keccak256Hash(payload)
 }
 
 // BroadcastVRankPreprepare is called by the proposer
@@ -186,58 +214,6 @@ func (v *VRankModule) isValidator(blockNum uint64) bool {
 	}
 
 	return slices.Contains(validators, v.nodeID)
-}
-
-// for building N-th header's VRank field, caller should query N-1 with the previous block's round.
-func (v *VRankModule) GetCfReport(blockNum, round uint64) (vrank.CfReport, error) {
-	// epoch header's VRank should be nil
-	if (blockNum+1)%vrankEpoch == 0 {
-		return vrank.CfReport{}, nil
-	}
-	if round > maxRound {
-		return nil, vrank.ErrRoundOutOfRange
-	}
-
-	// if I was not a validator for blockNum, I couldn't have collected cfReport for blockNum.
-	if !v.isValidator(blockNum) {
-		return vrank.CfReport{}, nil
-	}
-
-	vk := vrank.ViewKey{N: blockNum, R: uint8(round)}
-	prepreparedAt, expectedBlockHash, viewMap := v.collector.GetViewData(vk)
-	if prepreparedAt.IsZero() {
-		return nil, vrank.ErrPrepreparedTimeNotSet
-	}
-	candidates, err := v.Valset.GetCandidates(blockNum)
-	if err != nil || candidates == nil {
-		logger.Error("GetCandidates failed", "blockNum", blockNum)
-		return nil, vrank.ErrGetCandidateFailed
-	}
-	// safeCands = candidates who responded with expectedBlockHash before deadline.
-	safeCands := make(map[common.Address]struct{})
-	for sender, msgWithTime := range viewMap {
-		if !slices.Contains(candidates, sender) {
-			continue
-		}
-		if msgWithTime.Msg == nil || msgWithTime.Msg.BlockHash != expectedBlockHash {
-			continue
-		}
-		elapsed := msgWithTime.ReceivedAt.Sub(prepreparedAt).Milliseconds()
-		// early birds who sent before validator preprepared are safe
-		if elapsed <= candidatePrepareDeadlineMs {
-			safeCands[sender] = struct{}{}
-		}
-	}
-
-	// cfReport = candidates - safeCands = candidates who did not respond, responded after deadline, or lied (wrong BlockHash).
-	var cfReport vrank.CfReport
-	for _, addr := range candidates {
-		if _, ok := safeCands[addr]; !ok {
-			cfReport = append(cfReport, addr)
-		}
-	}
-	slices.SortFunc(cfReport, func(a, b common.Address) int { return bytes.Compare(a.Bytes(), b.Bytes()) })
-	return cfReport, nil
 }
 
 func (v *VRankModule) handleBroadcastLoop() {

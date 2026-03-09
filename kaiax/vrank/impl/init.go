@@ -19,6 +19,7 @@ package impl
 import (
 	"crypto/ecdsa"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
@@ -30,7 +31,8 @@ import (
 )
 
 const (
-	candidatePrepareDeadlineMs = 200
+	candidateMsgTimeoutMs   = 500
+	vrankCandidateSigDomain = "VRANK_CANDIDATE_V1"
 
 	broadcastChSize    = 2048
 	vrankEpoch         = 86400
@@ -48,6 +50,12 @@ type InitOpts struct {
 	Valset      valset.ValsetModule
 	NodeKey     *ecdsa.PrivateKey
 	ChainConfig *params.ChainConfig
+	Chain       chain
+}
+
+type chain interface {
+	CurrentHeader() *types.Header
+	GetHeaderByNumber(number uint64) *types.Header
 }
 
 type VRankModule struct {
@@ -73,7 +81,7 @@ func NewVRankModule() *VRankModule {
 }
 
 func (v *VRankModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.Valset == nil || opts.NodeKey == nil || opts.ChainConfig == nil {
+	if opts == nil || opts.Valset == nil || opts.NodeKey == nil || opts.ChainConfig == nil || opts.ChainConfig.ChainID == nil || opts.Chain == nil {
 		return vrank.ErrInitUnexpectedNil
 	}
 	v.InitOpts = *opts
