@@ -28,7 +28,6 @@ import (
 	"errors"
 	"net"
 	"sync"
-	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/mclock"
@@ -62,20 +61,13 @@ type BaseServer struct {
 	listener     net.Listener       // TCP listener
 	peerFeed     event.Feed         // Peer event feed as in peer.go:PeerEventType.
 
-	// LastLookup memory TODO: dialsched should manage it inside.
-	lastLookup   time.Time
-	lastLookupMu sync.Mutex
-
 	// Peer lifecycle state
 	selfID        discover.NodeID // precompulted Self().ID
 	peers         map[discover.NodeID]*Peer
 	inboundCount  int
 	outboundCount int
 	trusted       map[discover.NodeID]bool
-	dialstate     dialer
-
-	// Wake the dial loop when peer lifecycle changes affect scheduling.
-	wakeup chan struct{} // TODO: dialsched should react to the peer changes.
+	dialSched     *DialSched
 }
 
 // SingleChannelServer is a server that uses a single channel.
@@ -99,10 +91,20 @@ func (srv *BaseServer) Stop() {
 		srv.listener.Close()
 	}
 
-	close(srv.quit)   // Ask loops to terminate
-	srv.lock.Unlock() // Unlock to allow loops to finish their remaining jobs.
-	srv.loopWG.Wait() // Wait for loops to terminate
-	srv.peerWG.Wait() // Wait for peers to terminate
+	close(srv.quit) // Ask loops to terminate
+
+	// Unlock here to allow Server loops and dialsched loop to finish their remaining jobs, dialsched to finish its dial goroutines.
+	srv.lock.Unlock()
+
+	if srv.dialSched != nil {
+		srv.dialSched.Close() // Wait for dial attempts to finish.
+	}
+	if srv.ntab != nil {
+		srv.ntab.Close() // Terminate discovery now that dialsched does not need it.
+	}
+	srv.disconnectAllPeers() // Disconnect all peers. Now that dialsched stopped, no more connections will be established.
+	srv.loopWG.Wait()        // Wait for loops to terminate
+	srv.peerWG.Wait()        // Wait for peers to terminate
 	srv.logger.Info("Stopped P2P server")
 }
 
@@ -143,10 +145,17 @@ func (srv *BaseServer) Start() (err error) {
 		}
 	}
 
-	// Start dialing. TODO: Only if !NoDial, start DialSched.
-	srv.dialstate = newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, srv.maxDialedConns(), srv.NetRestrict, srv.PrivateKey, srv.getTypeStatics())
-	srv.loopWG.Add(1)
-	go srv.run(srv.dialstate)
+	if !srv.NoDial {
+		srv.dialSched = NewDialSched(DialConfig{
+			selfID:      srv.selfID,
+			selfType:    ConvertNodeType(srv.ConnectionType),
+			staticNodes: srv.StaticNodes,
+			netrestrict: srv.NetRestrict,
+			maxDynDials: srv.maxDialedConns(),
+			dialer:      srv.Dialer,
+		}, srv.ntab, srv)
+		srv.dialSched.Start()
+	}
 
 	srv.logger.Info("Started P2P server", "id", discover.PubkeyID(&srv.PrivateKey.PublicKey), "multichannel", false)
 	return nil
@@ -168,11 +177,7 @@ func (srv *BaseServer) initialize() error {
 	if srv.newTransport == nil {
 		srv.newTransport = newRLPX
 	}
-	if srv.Dialer == nil {
-		srv.Dialer = TCPDialer{&net.Dialer{Timeout: defaultDialTimeout}}
-	}
 	srv.quit = make(chan struct{})
-	srv.wakeup = make(chan struct{}, 1)
 
 	srv.selfID = discover.PubkeyID(&srv.PrivateKey.PublicKey)
 	srv.peers = make(map[discover.NodeID]*Peer)
@@ -255,98 +260,6 @@ func (srv *BaseServer) startListening() error {
 	return nil
 }
 
-func (srv *BaseServer) run(dialstate dialer) {
-	defer srv.loopWG.Done()
-	var (
-		peers        = srv.peers
-		taskdone     = make(chan task, maxActiveDialTasks)
-		runningTasks []task
-		queuedTasks  []task // tasks that can't run yet
-	)
-
-	// removes t from runningTasks
-	delTask := func(t task) {
-		for i := range runningTasks {
-			if runningTasks[i] == t {
-				runningTasks = append(runningTasks[:i], runningTasks[i+1:]...)
-				break
-			}
-		}
-	}
-	// starts until max number of active tasks is satisfied
-	startTasks := func(ts []task) (rest []task) {
-		i := 0
-		for ; len(runningTasks) < maxActiveDialTasks && i < len(ts); i++ {
-			t := ts[i]
-			srv.logger.Trace("New dial task", "task", t)
-			go func() { t.Do(srv); taskdone <- t }()
-			runningTasks = append(runningTasks, t)
-		}
-		return ts[i:]
-	}
-	scheduleTasks := func() {
-		// Start from queue first.
-		queuedTasks = append(queuedTasks[:0], startTasks(queuedTasks)...)
-		// Query dialer for new tasks and start as many as possible now.
-		if len(runningTasks) < maxActiveDialTasks {
-			srv.lock.Lock()
-			nt := dialstate.newTasks(len(runningTasks)+len(queuedTasks), peers, time.Now())
-			srv.lock.Unlock()
-			queuedTasks = append(queuedTasks, startTasks(nt)...)
-		}
-	}
-
-running:
-	for {
-		scheduleTasks()
-
-		select {
-		case <-srv.quit:
-			// The server was stopped. Run the cleanup logic.
-			break running
-		case <-srv.wakeup:
-		case t := <-taskdone:
-			// A task got done. Tell dialstate about it so it
-			// can update its state and remove it from the active
-			// tasks list.
-			srv.logger.Trace("Dial task done", "task", t)
-			srv.lock.Lock()
-			dialstate.taskDone(t, time.Now())
-			srv.lock.Unlock()
-			delTask(t)
-		}
-	}
-
-	srv.logger.Trace("P2P networking is spinning down")
-
-	// Terminate discovery. If there is a running lookup it will terminate soon.
-	if srv.ntab != nil {
-		srv.ntab.Close()
-	}
-	//if srv.DiscV5 != nil {
-	//	srv.DiscV5.Close()
-	//}
-	// Disconnect all peers.
-	srv.lock.Lock()
-	shutdownPeers := make([]*Peer, 0, len(srv.peers))
-	for _, p := range srv.peers {
-		shutdownPeers = append(shutdownPeers, p)
-	}
-	srv.lock.Unlock()
-	for _, p := range shutdownPeers {
-		p.Disconnect(DiscQuitting)
-	}
-}
-
-// Signal the dialer loop in run() to wake up upon peer changes.
-// TODO: dialsched should react to the peer changes.
-func (srv *BaseServer) wakeupDialer() {
-	select {
-	case srv.wakeup <- struct{}{}:
-	default:
-	}
-}
-
 func (srv *BaseServer) protoHandshakeChecks(peers map[discover.NodeID]*Peer, inboundCount int, c *conn) error {
 	// Drop connections with no matching protocols.
 	if len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0 {
@@ -396,34 +309,6 @@ func (srv *BaseServer) maxDialedConns() int {
 	default:
 		logger.Crit("[p2p.Server] UnSupported Connection Type:", "ConnectionType", srv.ConnectionType)
 		return 0
-	}
-}
-
-func (srv *BaseServer) getTypeStatics() map[dialType]typedStatic {
-	switch srv.ConnectionType {
-	case common.CONSENSUSNODE:
-		tsMap := make(map[dialType]typedStatic)
-		if srv.DiscoverTypes.CN {
-			tsMap[DT_CN] = typedStatic{discover.MaxCNCNCount, typedStaticRetry}
-		}
-		return tsMap
-	case common.PROXYNODE:
-		tsMap := make(map[dialType]typedStatic)
-		if srv.DiscoverTypes.PN {
-			tsMap[DT_PN] = typedStatic{discover.MaxPNPNCount, typedStaticRetry}
-		}
-		return tsMap
-	case common.ENDPOINTNODE:
-		tsMap := make(map[dialType]typedStatic)
-		if srv.DiscoverTypes.PN {
-			tsMap[DT_PN] = typedStatic{discover.MaxENPNCount, typedStaticRetry}
-		}
-		return tsMap
-	case common.BOOTNODE:
-		return nil
-	default:
-		logger.Crit("[p2p.Server] UnSupported Connection Type:", "ConnectionType", srv.ConnectionType)
-		return nil
 	}
 }
 
@@ -606,6 +491,9 @@ func (srv *BaseServer) handleAddPeerConn(c *conn) error {
 	srv.incrementConnectionCounts(p)
 	srv.reportPeerMetric()
 	srv.logger.Debug("Adding p2p peer", "name", truncateName(c.name), "addr", c.fd.RemoteAddr(), "peers", len(srv.peers))
+	if srv.dialSched != nil {
+		srv.dialSched.OnPeerConnected(c.id, ConvertNodeType(c.conntype), c.Inbound())
+	}
 
 	srv.peerWG.Add(1)
 	go srv.runPeer(p)
@@ -651,7 +539,9 @@ func (srv *BaseServer) handleDelPeer(pd peerDrop) {
 	pd.logger.Debug("Removing p2p peer", "duration", d, "peers", len(srv.peers), "req", pd.requested, "err", pd.err)
 	srv.decrementConnectionCounts(pd.Peer)
 	srv.reportPeerMetric()
-	srv.wakeupDialer()
+	if srv.dialSched != nil {
+		srv.dialSched.OnPeerDisconnected(pd.ID(), ConvertNodeType(pd.ConnType()))
+	}
 }
 
 func (srv *BaseServer) incrementConnectionCounts(p *Peer) {
@@ -673,16 +563,6 @@ func (srv *BaseServer) reportPeerMetric() {
 	connectionCountGauge.Update(int64(srv.outboundCount + srv.inboundCount))
 	connectionInCountGauge.Update(int64(srv.inboundCount))
 	connectionOutCountGauge.Update(int64(srv.outboundCount))
-}
-
-// Dial creates a TCP connection to the node.
-func (srv *BaseServer) Dial(dest *discover.Node) (net.Conn, error) {
-	return srv.Dialer.Dial(dest)
-}
-
-// Dial creates a TCP connection to the node.
-func (srv *BaseServer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
-	return srv.Dialer.DialMulti(dest)
 }
 
 // Disconnect tries to disconnect peer.
@@ -711,46 +591,6 @@ func (srv *BaseServer) AddProtocols(p []Protocol) {
 	srv.Protocols = append(srv.Protocols, p...)
 }
 
-// AddLastLookup adds lastLookup to duration.
-func (srv *BaseServer) AddLastLookup() time.Time {
-	srv.lastLookupMu.Lock()
-	defer srv.lastLookupMu.Unlock()
-	return srv.lastLookup.Add(lookupInterval)
-}
-
-// SetLastLookupToNow sets LastLookup to the current time.
-func (srv *BaseServer) SetLastLookupToNow() {
-	srv.lastLookupMu.Lock()
-	defer srv.lastLookupMu.Unlock()
-	srv.lastLookup = time.Now()
-}
-
-//// Wrapper to discovery methods
-
-// CheckNilNetworkTable returns whether network table is nil.
-func (srv *BaseServer) CheckNilNetworkTable() bool {
-	return srv.ntab == nil
-}
-
-func (srv *BaseServer) GetNodes(nType discover.NodeType, max int) []*discover.Node {
-	return srv.ntab.GetNodes(nType, max)
-}
-
-// Lookup performs a network search for nodes close
-// to the given target. It approaches the target by querying
-// nodes that are closer to it on each iteration.
-// The given target does not need to be an actual node
-// identifier.
-func (srv *BaseServer) Lookup(target discover.NodeID, nType discover.NodeType) []*discover.Node {
-	return srv.ntab.Lookup(target, nType)
-}
-
-// Resolve searches for a specific node with the given ID and NodeType.
-// It returns nil if the node could not be found.
-func (srv *BaseServer) Resolve(target discover.NodeID, nType discover.NodeType) *discover.Node {
-	return srv.ntab.Resolve(target, nType)
-}
-
 //// Inject static nodes to connect to
 
 // AddPeer connects to the given node and maintains the connection until the
@@ -764,8 +604,9 @@ func (srv *BaseServer) AddPeer(node *discover.Node) {
 	}
 
 	srv.logger.Debug("Adding static node", "node", node)
-	srv.dialstate.addStatic(node)
-	srv.wakeupDialer()
+	if srv.dialSched != nil {
+		srv.dialSched.AddStatic(node)
+	}
 }
 
 // RemovePeer disconnects from the given node.
@@ -777,12 +618,27 @@ func (srv *BaseServer) RemovePeer(node *discover.Node) {
 	}
 
 	srv.logger.Debug("Removing static node", "node", node)
-	srv.dialstate.removeStatic(node)
+	if srv.dialSched != nil {
+		srv.dialSched.RemoveStatic(node.ID)
+	}
 	p := srv.peers[node.ID]
 	srv.lock.Unlock()
 
 	if p != nil {
 		p.Disconnect(DiscRequested)
+	}
+}
+
+func (srv *BaseServer) disconnectAllPeers() {
+	srv.lock.Lock()
+	ps := make([]*Peer, 0, len(srv.peers))
+	for _, p := range srv.peers {
+		ps = append(ps, p)
+	}
+	srv.lock.Unlock()
+
+	for _, p := range ps {
+		p.Disconnect(DiscQuitting)
 	}
 }
 
@@ -845,7 +701,7 @@ func (srv *BaseServer) Peers() []*Peer {
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 
-	var ps []*Peer
+	ps := make([]*Peer, 0, len(srv.peers))
 	if !srv.running {
 		return ps
 	}
