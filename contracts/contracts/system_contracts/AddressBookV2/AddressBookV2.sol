@@ -44,8 +44,7 @@ contract AddressBookV2 is NodeActions {
         ABv2Storage storage $ = _getStorage();
 
         // Set owner and config
-        __Ownable_init();
-        transferOwnership(d.initialOwner);
+        __Ownable_init(d.initialOwner);
         $.exitThreshold = d.exitThreshold;
         $.pauseTimeout = d.pauseTimeout;
         $.idleTimeout = d.idleTimeout;
