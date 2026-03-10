@@ -37,7 +37,7 @@ func (sb *backend) startPrepreparedRelay() {
 	queue := make(chan istanbul.PrepreparedEvent, relayQueueSize)
 
 	sb.prepreparedSub = sub
-	sb.prepreparedCh = stopCh
+	sb.prepreparedStopCh = stopCh
 	sb.prepreparedWg.Add(1)
 	go func() {
 		defer close(queue)
@@ -75,9 +75,9 @@ func (sb *backend) startPrepreparedRelay() {
 }
 
 func (sb *backend) stopPrepreparedRelay() {
-	if sb.prepreparedCh != nil {
-		close(sb.prepreparedCh)
-		sb.prepreparedCh = nil
+	if sb.prepreparedStopCh != nil {
+		close(sb.prepreparedStopCh)
+		sb.prepreparedStopCh = nil
 	}
 	if sb.prepreparedSub != nil {
 		sb.prepreparedSub.Unsubscribe()

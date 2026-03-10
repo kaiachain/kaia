@@ -136,10 +136,10 @@ type backend struct {
 
 	randaoModule randao.RandaoModule
 
-	vrankModule    vrank.VRankModule
-	prepreparedSub *event.TypeMuxSubscription
-	prepreparedCh  chan struct{}
-	prepreparedWg  sync.WaitGroup
+	vrankModule       vrank.VRankModule
+	prepreparedSub    *event.TypeMuxSubscription
+	prepreparedStopCh chan struct{}
+	prepreparedWg     sync.WaitGroup
 
 	// Node type
 	nodetype common.ConnType

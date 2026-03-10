@@ -1360,7 +1360,7 @@ func handleVRankPreprepareMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	}
 
 	if err := pm.vrankModule.HandleVRankPreprepare(vrankPreprepare); err != nil {
-		return err
+		logger.Debug("Ignored VRankPreprepare handler error", "peer", p.GetID(), "err", err)
 	}
 	return nil
 }
@@ -1380,7 +1380,10 @@ func handleVRankCandidateMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	}
 
 	if err := pm.vrankModule.HandleVRankCandidate(vrankCandidate); err != nil {
-		return err
+		if errors.Is(err, vrank.ErrRoundOutOfRange) || errors.Is(err, vrank.ErrInvalidCandidateSig) {
+			return err
+		}
+		logger.Debug("Ignored VRankCandidate handler error", "peer", p.GetID(), "err", err)
 	}
 	return nil
 }

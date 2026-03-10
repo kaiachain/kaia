@@ -18,6 +18,7 @@ package impl
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math/big"
 	"slices"
 	"time"
@@ -133,7 +134,7 @@ func (v *VRankModule) recoverVRankCandidateSender(msg *vrank.VRankCandidate) (co
 	pubkey, err := crypto.SigToPub(sigHash.Bytes(), msg.Sig)
 	if err != nil {
 		logger.Debug("SigToPub failed", "err", err, "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
-		return common.Address{}, err
+		return common.Address{}, fmt.Errorf("%w: %v", vrank.ErrInvalidCandidateSig, err)
 	}
 	sender := crypto.PubkeyToAddress(*pubkey)
 	return sender, nil
