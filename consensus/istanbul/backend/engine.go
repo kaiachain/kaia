@@ -47,6 +47,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/randao"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -105,6 +106,10 @@ var (
 	errUnexpectedExcessBlobGasBeforeOsaka = errors.New("unexpected excessBlobGas before osaka")
 	// errUnexpectedBlobGasUsedBeforeOsaka is returned if the blobGasUsed is present before the osaka fork.
 	errUnexpectedBlobGasUsedBeforeOsaka = errors.New("unexpected blobGasUsed before osaka")
+	// errUnexpectedVRankBeforePermissionless is returned if VRank exists before permissionless fork.
+	errUnexpectedVRankBeforePermissionless = errors.New("unexpected vrank before permissionless fork")
+	// errInvalidVRankFormat is returned if header.VRank is not a valid encoded report.
+	errInvalidVRankFormat = errors.New("invalid vrank format")
 )
 
 var (
@@ -307,6 +312,18 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	} else {
 		if err := eip4844.VerifyEIP4844Header(chain.Config(), parent, header); err != nil {
 			return err
+		}
+	}
+
+	// Ensure VRank field is only present after permissionless fork and has valid encoding.
+	permissionless := chain.Config().IsPermissionlessForkEnabled(header.Number)
+	if !permissionless {
+		if len(header.VRank) > 0 {
+			return errUnexpectedVRankBeforePermissionless
+		}
+	} else if len(header.VRank) > 0 {
+		if _, err := vrank.DecodeReport(header.VRank); err != nil {
+			return errInvalidVRankFormat
 		}
 	}
 
