@@ -131,7 +131,6 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 	}
 	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
 		IstanbulConfig: istanbul.DefaultConfig,
-		Rewardbase:     genesisAddr,
 		PrivateKey:     validatorPrivKeys[0],
 		DB:             chainDb,
 		GovModule:      mGov,
@@ -164,6 +163,8 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 			Chain:         bc,
 			GovModule:     mGov,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+			ValsetModule:  mValset,
+			Rewardbase:    genesisAddr,
 		}),
 		mValset.Init(&valset_impl.InitOpts{
 			Chain:         bc,
@@ -397,6 +398,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	// Apply reward
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
+	mValset := valset_impl.NewValsetModule()
 	mGov := gov_impl.NewGovModule()
 	err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
@@ -409,6 +411,8 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 			Chain:         bcdata.bc,
 			GovModule:     mGov,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+			ValsetModule:  mValset,
+			Rewardbase:    *bcdata.rewardBase,
 		}),
 	)
 	if err != nil {
@@ -505,6 +509,7 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 	// Apply reward
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
+	mValset := valset_impl.NewValsetModule()
 	mGov := gov_impl.NewGovModule()
 	err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
@@ -517,6 +522,8 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 			Chain:         bcdata.bc,
 			GovModule:     mGov,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+			ValsetModule:  mValset,
+			Rewardbase:    *bcdata.rewardBase,
 		}),
 	)
 	// Because we have AccountMap instead of StateDB, explicitly call AddBalance here.

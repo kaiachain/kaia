@@ -108,20 +108,6 @@ func (mr *MockBackendMockRecorder) EventMux() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EventMux", reflect.TypeOf((*MockBackend)(nil).EventMux))
 }
 
-// GetRewardBase mocks base method.
-func (m *MockBackend) GetRewardBase() common.Address {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRewardBase")
-	ret0, _ := ret[0].(common.Address)
-	return ret0
-}
-
-// GetRewardBase indicates an expected call of GetRewardBase.
-func (mr *MockBackendMockRecorder) GetRewardBase() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRewardBase", reflect.TypeOf((*MockBackend)(nil).GetRewardBase))
-}
-
 // Gossip mocks base method.
 func (m *MockBackend) Gossip(arg0 []byte) error {
 	m.ctrl.T.Helper()

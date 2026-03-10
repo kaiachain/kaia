@@ -314,8 +314,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 		return consensus.ErrUnknownAncestor
 	}
 
-	// unused fields, force to set to empty
-	header.Rewardbase = sb.rewardbase
 	// use the same blockscore for all blocks
 	header.BlockScore = istanbul.DefaultBlockScore
 
@@ -377,40 +375,6 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 	} else if header.BaseFee != nil {
 		logger.Error("A block before Magma hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
 		return nil, consensus.ErrInvalidBaseFee
-	}
-
-	// TODO-kaiax: Simplify header.Rewardbase setting using kaiax/valset
-	// If sb.chain is nil, it means backend is not initialized yet.
-	if sb.chain != nil && sb.chain.Config().Istanbul.ProposerPolicy == uint64(istanbul.WeightedRandom) {
-		// Determine and update Rewardbase when mining. When mining, state root is not yet determined and will be determined at the end of this Finalize below.
-		if common.EmptyHash(header.Root) {
-			// TODO-Kaia Let's redesign below logic and remove dependency between block reward and istanbul consensus.
-			var (
-				blockNum      = header.Number.Uint64()
-				rewardAddress = sb.GetRewardAddress(blockNum, sb.address)
-			)
-
-			if sb.valsetModule == nil {
-				return nil, istanbul.ErrNoEssentialModule
-			}
-			qualified, err := sb.valsetModule.GetQualifiedValidators(blockNum)
-			if err != nil {
-				return nil, err
-			}
-
-			var logMsg string
-			if !valset.NewAddressSet(qualified).Contains(sb.address) || (rewardAddress == common.Address{}) {
-				logMsg = "No reward address for nodeValidator. Use node's rewardbase."
-			} else {
-				// use reward address of current node.
-				// only a block made by proposer will be accepted. However, due to round change any node can be the proposer of a block.
-				// so need to write reward address of current node to receive reward when it becomes proposer.
-				// if current node does not become proposer, the block will be abandoned
-				header.Rewardbase = rewardAddress
-				logMsg = "Use reward address for nodeValidator."
-			}
-			logger.Trace(logMsg, "header.Number", header.Number.Uint64(), "node address", sb.address, "rewardbase", header.Rewardbase)
-		}
 	}
 
 	// TODO-kaiax: Reward distribution must be before KIP160,103. When we moved KIP103,160,Randao,Credit to kaiax modules,

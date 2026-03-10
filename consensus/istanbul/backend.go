@@ -72,8 +72,6 @@ type Backend interface {
 	// HasBadProposal returns whether the proposal with the hash is a bad proposal
 	HasBadProposal(hash common.Hash) bool
 
-	GetRewardBase() common.Address
-
 	SetCurrentView(view *View)
 
 	NodeType() common.ConnType

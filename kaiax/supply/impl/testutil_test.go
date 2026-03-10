@@ -45,6 +45,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/kaiax/supply"
+	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -153,6 +154,7 @@ func (s *SupplyTestSuite) SetupTest() {
 		engine   = consensus_mock.NewMockEngine(mockCtrl)
 		mGov     = gov_mock.NewMockGovModule(mockCtrl)
 		mStaking = staking_mock.NewMockStakingModule(mockCtrl)
+		mValset  = valset_mock.NewMockValsetModule(mockCtrl)
 		mReward  = reward_impl.NewRewardModule()
 		mSupply  = NewSupplyModule()
 
@@ -178,6 +180,7 @@ func (s *SupplyTestSuite) SetupTest() {
 		Chain:         chain,
 		GovModule:     mGov,
 		StakingModule: mStaking,
+		ValsetModule:  mValset,
 	})
 	mSupply.Init(&InitOpts{
 		ChainKv:      dbm.GetMiscDB(),

@@ -55,8 +55,7 @@ const (
 var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 
 type BackendOpts struct {
-	IstanbulConfig *istanbul.Config // Istanbul consensus core config
-	Rewardbase     common.Address
+	IstanbulConfig *istanbul.Config  // Istanbul consensus core config
 	PrivateKey     *ecdsa.PrivateKey // Consensus message signing key
 	DB             database.DBManager
 	GovModule      gov.GovModule
@@ -78,7 +77,6 @@ func New(opts *BackendOpts) consensus.Istanbul {
 		coreStarted:      false,
 		recentMessages:   recentMessages,
 		knownMessages:    knownMessages,
-		rewardbase:       opts.Rewardbase,
 		govModule:        opts.GovModule,
 		nodetype:         opts.NodeType,
 	}
@@ -124,7 +122,6 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	rewardbase  common.Address
 	currentView atomic.Value //*istanbul.View
 
 	// Reference to the governance.Engine
@@ -168,10 +165,6 @@ func (sb *backend) cleanupSealState() {
 
 	sb.proposedBlockHash = common.Hash{}
 	sb.commitCh = nil
-}
-
-func (sb *backend) GetRewardBase() common.Address {
-	return sb.rewardbase
 }
 
 func (sb *backend) SetCurrentView(view *istanbul.View) {
@@ -454,20 +447,6 @@ func (sb *backend) HasBadProposal(hash common.Hash) bool {
 		return false
 	}
 	return sb.hasBadBlock(hash)
-}
-
-func (sb *backend) GetRewardAddress(num uint64, nodeId common.Address) common.Address {
-	sInfo, err := sb.stakingModule.GetStakingInfo(num)
-	if err != nil {
-		return common.Address{}
-	}
-
-	for idx, id := range sInfo.NodeIds {
-		if id == nodeId {
-			return sInfo.RewardAddrs[idx]
-		}
-	}
-	return common.Address{}
 }
 
 // SubmitTransactions executes transactions and returns the execution result.

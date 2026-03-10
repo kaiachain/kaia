@@ -31,6 +31,7 @@ import (
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
+	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 )
@@ -58,6 +59,7 @@ func makeTestRewardModule(t *testing.T,
 		chain    = chain_mock.NewMockBlockChain(mockCtrl)
 		mStaking = staking_mock.NewMockStakingModule(mockCtrl)
 		mGov     = gov_mock.NewMockGovModule(mockCtrl)
+		mValset  = valset_mock.NewMockValsetModule(mockCtrl)
 		engine   = consensus_mock.NewMockEngine(mockCtrl)
 
 		chainConfig = &params.ChainConfig{
@@ -96,6 +98,7 @@ func makeTestRewardModule(t *testing.T,
 		Chain:         chain,
 		GovModule:     mGov,
 		StakingModule: mStaking,
+		ValsetModule:  mValset,
 	})
 
 	chain.EXPECT().GetBlockByNumber(header.Number.Uint64()).Return(block).AnyTimes()
