@@ -1354,8 +1354,13 @@ func handleVRankPreprepareMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	if err := msg.Decode(&vrankPreprepare); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
+
+	if vrankPreprepare == nil || vrankPreprepare.Block == nil || vrankPreprepare.View == nil || vrankPreprepare.View.Sequence == nil || vrankPreprepare.View.Round == nil {
+		return errResp(ErrDecode, "msg %v: malformed VRankPreprepare payload", msg)
+	}
+
 	if err := pm.vrankModule.HandleVRankPreprepare(vrankPreprepare); err != nil {
-		logger.Debug("Ignored VRankPreprepare handler error", "peer", p.GetID(), "err", err)
+		return err
 	}
 	return nil
 }
@@ -1369,8 +1374,13 @@ func handleVRankCandidateMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	if err := msg.Decode(&vrankCandidate); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
+
+	if vrankCandidate == nil || len(vrankCandidate.Sig) == 0 {
+		return errResp(ErrDecode, "msg %v: malformed VRankCandidate payload", msg)
+	}
+
 	if err := pm.vrankModule.HandleVRankCandidate(vrankCandidate); err != nil {
-		logger.Debug("Ignored VRankCandidate handler error", "peer", p.GetID(), "err", err)
+		return err
 	}
 	return nil
 }

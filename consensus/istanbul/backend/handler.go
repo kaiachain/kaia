@@ -117,6 +117,9 @@ func (sb *backend) ValidatePeerType(addr common.Address) error {
 	}
 
 	// KIP-227: accept candidates (CandTesting) so they can connect for VRankPreprepare/VRankCandidate P2P
+	if sb.valsetModule == nil {
+		return errInvalidPeerAddress
+	}
 	candidates, err := sb.valsetModule.GetCandidates(num)
 	if err != nil {
 		return errInvalidPeerAddress

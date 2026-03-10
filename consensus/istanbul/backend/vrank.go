@@ -30,13 +30,17 @@ func (sb *backend) startPrepreparedRelay() {
 	if sb.vrankModule == nil || sb.prepreparedSub != nil {
 		return
 	}
+	const relayQueueSize = 32
+
 	sub := sb.istanbulEventMux.Subscribe(istanbul.PrepreparedEvent{})
 	stopCh := make(chan struct{})
+	queue := make(chan istanbul.PrepreparedEvent, relayQueueSize)
 
 	sb.prepreparedSub = sub
 	sb.prepreparedCh = stopCh
 	sb.prepreparedWg.Add(1)
 	go func() {
+		defer close(queue)
 		defer sb.prepreparedWg.Done()
 		for {
 			select {
@@ -48,10 +52,24 @@ func (sb *backend) startPrepreparedRelay() {
 				if !ok || preprepared.Block == nil || preprepared.View == nil {
 					continue
 				}
-				sb.vrankModule.HandleIstanbulPreprepare(preprepared.Block, preprepared.View)
+
+				// Keep TypeMux subscriber reads non-blocking to avoid backpressure on Post path.
+				select {
+				case queue <- preprepared:
+				default:
+					logger.Warn("Dropping PrepreparedEvent due to full relay queue", "blockNum", preprepared.Block.NumberU64(), "round", preprepared.View.Round.Uint64())
+				}
 			case <-stopCh:
 				return
 			}
+		}
+	}()
+
+	sb.prepreparedWg.Add(1)
+	go func() {
+		defer sb.prepreparedWg.Done()
+		for preprepared := range queue {
+			sb.vrankModule.HandleIstanbulPreprepare(preprepared.Block, preprepared.View)
 		}
 	}()
 }
