@@ -29,7 +29,6 @@ func (r *RewardModule) VerifyHeader(header *types.Header) error {
 }
 
 func (r *RewardModule) PrepareHeader(header *types.Header) error {
-	// unused fields, force to set to empty
 	header.Rewardbase = r.Rewardbase
 	return nil
 }
