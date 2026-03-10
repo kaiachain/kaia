@@ -23,6 +23,7 @@
 package core
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -163,5 +164,9 @@ func (c *core) postPrepreparedEvent(preprepare *istanbul.Preprepare, logger log.
 		logger.Warn("Failed to post preprepared event due to unexpected proposal type")
 		return
 	}
-	c.sendEvent(istanbul.PrepreparedEvent{Block: block, View: preprepare.View})
+	view := &istanbul.View{
+		Round:    new(big.Int).Set(preprepare.View.Round),
+		Sequence: new(big.Int).Set(preprepare.View.Sequence),
+	}
+	c.sendEvent(istanbul.PrepreparedEvent{Block: block, View: view})
 }
