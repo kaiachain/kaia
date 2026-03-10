@@ -298,7 +298,8 @@ type udp struct {
 	closing chan struct{}
 	wg      sync.WaitGroup
 
-	Discovery
+	Discovery         // old path (used by ListenUDP -> newUDP)
+	tab       *Table2 // new path (used by NewDiscovery2)
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
@@ -342,6 +343,31 @@ func newUDP(cfg *Config) (Discovery, *udp, error) {
 	return udp.Discovery, udp, nil
 }
 
+func newUDPv4(cfg *Config) *udp {
+	u := &udp{
+		networkID:   cfg.NetworkID,
+		conn:        cfg.Conn,
+		priv:        cfg.PrivateKey,
+		netrestrict: cfg.NetRestrict,
+		closing:     make(chan struct{}),
+		gotreply:    make(chan reply),
+		addpending:  make(chan *pending),
+	}
+	realaddr := cfg.Addr
+	if cfg.AnnounceAddr != nil {
+		realaddr = cfg.AnnounceAddr
+	}
+	u.ourEndpoint = makeEndpoint(realaddr, uint16(realaddr.Port), cfg.NodeType)
+	return u
+}
+
+func (t *udp) Start(tab *Table2) {
+	t.tab = tab
+	t.wg.Add(2)
+	go t.loop()
+	go t.readLoop(nil)
+}
+
 func (t *udp) close() {
 	close(t.closing) // shuts down the loop()
 	t.conn.Close()   // shuts down the readLoop()
@@ -349,11 +375,33 @@ func (t *udp) close() {
 }
 
 func (t *udp) isAuthorized(fromID NodeID, nType NodeType) bool {
+	if t.tab != nil {
+		return t.tab.IsAuthorized(fromID, nType)
+	}
 	return t.Discovery.IsAuthorized(fromID, nType)
 }
 
 func (t *udp) hasBond(fromID NodeID) bool {
+	if t.tab != nil {
+		return t.tab.IsBonded(fromID)
+	}
 	return t.Discovery.HasBond(fromID)
+}
+
+func (t *udp) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16, nType NodeType) {
+	if t.tab != nil {
+		n := NewNode(id, addr.IP, uint16(addr.Port), tcpPort, nil, nType)
+		t.tab.Bond(pinged, n)
+		return
+	}
+	t.Discovery.Bond(pinged, id, addr, tcpPort, nType)
+}
+
+func (t *udp) closestNodes(target NodeID, targetType NodeType, max int) []*Node {
+	if t.tab != nil {
+		return t.tab.ClosestNodes(target, targetType, max)
+	}
+	return t.Discovery.RetrieveNodes(crypto.Keccak256Hash(target[:]), targetType, max)
 }
 
 // #region High-level APIs
@@ -744,7 +792,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 	})
 	if !t.handleReply(fromID, from.IP, pingPacket, req) {
 		// Note: we're ignoring the provided IP address right now
-		go t.Bond(true, fromID, from, req.From.TCP, req.From.NType)
+		go t.bond(true, fromID, from, req.From.TCP, req.From.NType)
 	}
 	return nil
 }
@@ -786,9 +834,8 @@ func (req *findnode) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 
 func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
 	// Determine "closest" nodes. The result will be the closest nodes for KademliaStorage, but random nodes for SimpleStorage.
-	target := crypto.Keccak256Hash(req.Target[:])
 	retrieveSize := findnodeRetrieveSize(req.TargetType)
-	closest := t.RetrieveNodes(target, req.TargetType, retrieveSize)
+	closest := t.closestNodes(req.Target, req.TargetType, retrieveSize)
 
 	// Send neighbors in chunks with at most maxNeighbors per packet
 	// to stay below the 1280 byte limit.

@@ -64,6 +64,36 @@ type Config struct {
 	DiscoverTypes DiscoverTypesConfig
 }
 
+// discovery2 combines a UDP transport and a Table2 into a Discovery2 implementation.
+type discovery2 struct {
+	tab *Table2
+	udp *udp
+}
+
 func NewDiscovery2(cfg *Config) (Discovery2, error) {
-	return nil, nil
+	udp := newUDPv4(cfg)
+	tab, err := newTable2(cfg, udp)
+	if err != nil {
+		return nil, err
+	}
+	udp.Start(tab)
+	tab.Start()
+	return &discovery2{tab: tab, udp: udp}, nil
+}
+
+func (d *discovery2) Close() {
+	d.tab.Close()
+	d.udp.close()
+}
+
+func (d *discovery2) Refresh() {
+	d.tab.Refresh()
+}
+
+func (d *discovery2) RandomNodes(buf []*Node, nType NodeType) int {
+	return d.tab.RandomNodes(buf, nType)
+}
+
+func (d *discovery2) PutAuthorizedNodes(nodes []*Node) {
+	d.tab.PutAuthorizedNodes(nodes)
 }
