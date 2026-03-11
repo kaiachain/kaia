@@ -74,7 +74,7 @@ func (v *VRankModule) TallyCfReport(blockNum, round uint64) (vrank.Report, error
 		return vrank.Report{}, nil
 	}
 	if round > maxRound {
-		return vrank.Report{}, nil
+		return nil, vrank.ErrRoundOutOfRange
 	}
 
 	// if I was not a validator for blockNum, I couldn't have collected cfReport for blockNum.
