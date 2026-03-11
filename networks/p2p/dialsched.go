@@ -44,9 +44,8 @@ type DialBackend interface {
 
 // discovery is the minimal table API dialsched needs.
 type discovery interface {
-	GetNodes(targetType discover.NodeType, max int) []*discover.Node
-	ReadRandomNodes(buf []*discover.Node, nType discover.NodeType) int
-	Lookup(target discover.NodeID, targetType discover.NodeType) []*discover.Node
+	RandomNodes(buf []*discover.Node, nType discover.NodeType) int
+	Refresh()
 	Close()
 }
 
@@ -301,7 +300,7 @@ func (ds *DialSched) getCandidates() (candidates []*discover.Node, needRefresh b
 		needRefresh = needRefresh || refresh
 	}
 
-	logger.Debug("Dialing candidates", "needs", needs, "candidates", len(candidates))
+	logger.Debug("Dialing candidates", "needs", needs, "connectedOutbound", ds.connectedOutbound.len(), "dialing", ds.dialing.len(), "candidates", len(candidates))
 	return candidates, needRefresh
 }
 
@@ -310,18 +309,10 @@ func (ds *DialSched) getDynamicCandidates(targetType discover.NodeType, need int
 		return nil, false
 	}
 	oversample := need * 4 // Oversample in case some nodes are not reachable.
-	switch targetType {    // TODO: to be unified with tab.RandomNodes() and tab.Refresh()
-	case discover.NodeTypeCN, discover.NodeTypePN:
-		nodes = ds.tab.GetNodes(targetType, oversample)
-		return nodes, len(nodes) < need
-	case discover.NodeTypeEN:
-		random := make([]*discover.Node, oversample)
-		num := ds.tab.ReadRandomNodes(random, targetType)
-		nodes := random[:min(num, len(random))]
-		return nodes, len(nodes) < need
-	default:
-		return nil, false
-	}
+	buf := make([]*discover.Node, oversample)
+	num := ds.tab.RandomNodes(buf, targetType)
+	nodes = buf[:num]
+	return nodes, len(nodes) < need
 }
 
 func (ds *DialSched) launchDialTasks(candidates []*discover.Node, resCh chan struct{}) {
@@ -404,10 +395,7 @@ func (ds *DialSched) refreshOnce(resCh chan struct{}) {
 		return
 	}
 	go func() {
-		// TODO: use tab.Refresh()
-		ds.tab.Lookup(ds.selfID, discover.NodeTypeCN)
-		ds.tab.Lookup(ds.selfID, discover.NodeTypePN)
-		ds.tab.Lookup(ds.selfID, discover.NodeTypeEN)
+		ds.tab.Refresh()
 		ds.signalResult(resCh)
 	}()
 }

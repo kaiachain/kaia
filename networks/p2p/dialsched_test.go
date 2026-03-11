@@ -139,10 +139,9 @@ func TestDialSched_OnPeerConnected(t *testing.T) {
 		inbound   = testNode(2, "10.0.0.2", discover.NodeTypePN)
 		outbound  = testNode(3, "10.0.0.3", discover.NodeTypePN)
 		tab       = &mockTable{
-			getNodesByType: map[discover.NodeType][]*discover.Node{
+			nodesByType: map[discover.NodeType][]*discover.Node{
 				discover.NodeTypePN: {candidate},
 			},
-			randomByType: map[discover.NodeType][]*discover.Node{},
 		}
 		ds = NewDialSched(DialConfig{
 			connTarget: map[discover.NodeType]int{
@@ -169,8 +168,7 @@ func TestDialSched_OnPeerConnected(t *testing.T) {
 func TestDialSched_ShouldRefresh_RefreshBackoff(t *testing.T) {
 	var (
 		tab = &mockTable{
-			getNodesByType: map[discover.NodeType][]*discover.Node{},
-			randomByType:   map[discover.NodeType][]*discover.Node{},
+			nodesByType: map[discover.NodeType][]*discover.Node{},
 		}
 		ds = NewDialSched(DialConfig{
 			selfID: testNodeID(1),
@@ -185,7 +183,7 @@ func TestDialSched_ShouldRefresh_RefreshBackoff(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		require.Fail(t, "refreshOnce did not finish in time")
 	}
-	assert.Equal(t, 3, tab.lookupCalls, "expected one refresh to perform 3 lookups (CN, PN, EN)")
+	assert.Equal(t, 1, tab.refreshCalls, "expected one Refresh call")
 
 	// Forcibly set the refresh backoff to be in the past.
 	assert.False(t, ds.shouldRefresh(), "expected refresh to be throttled immediately after refreshOnce")
@@ -198,7 +196,7 @@ func TestDialSched_ShouldRefresh_RefreshBackoff(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		require.Fail(t, "second refreshOnce did not finish in time")
 	}
-	assert.Equal(t, 6, tab.lookupCalls, "expected second refresh to perform 6 lookups (CN, PN, EN)")
+	assert.Equal(t, 2, tab.refreshCalls, "expected two Refresh calls total")
 }
 
 // Static nodes are always candidates, even if connTarget is met.
@@ -223,10 +221,8 @@ func TestDialSched_GetCandidates_FromDiscovery(t *testing.T) {
 		pn  = testNode(201, "10.0.0.201", discover.NodeTypePN)
 		en  = testNode(202, "10.0.0.202", discover.NodeTypeEN)
 		tab = &mockTable{
-			getNodesByType: map[discover.NodeType][]*discover.Node{
+			nodesByType: map[discover.NodeType][]*discover.Node{
 				discover.NodeTypePN: {pn},
-			},
-			randomByType: map[discover.NodeType][]*discover.Node{
 				discover.NodeTypeEN: {en},
 			},
 		}
@@ -515,26 +511,16 @@ func TestDialSched_Close_BlockedSetupConn(t *testing.T) {
 
 // Generic mock discovery table.
 type mockTable struct {
-	getNodesByType map[discover.NodeType][]*discover.Node
-	randomByType   map[discover.NodeType][]*discover.Node
-	lookupCalls    int
+	nodesByType   map[discover.NodeType][]*discover.Node
+	refreshCalls  int
 }
 
-func (m *mockTable) Lookup(target discover.NodeID, targetType discover.NodeType) []*discover.Node {
-	m.lookupCalls++
-	return nil
+func (m *mockTable) RandomNodes(buf []*discover.Node, nType discover.NodeType) int {
+	return copy(buf, m.nodesByType[nType])
 }
 
-func (m *mockTable) GetNodes(targetType discover.NodeType, max int) []*discover.Node {
-	nodes := m.getNodesByType[targetType]
-	if max < len(nodes) {
-		return nodes[:max]
-	}
-	return nodes
-}
-
-func (m *mockTable) ReadRandomNodes(buf []*discover.Node, nType discover.NodeType) int {
-	return copy(buf, m.randomByType[nType])
+func (m *mockTable) Refresh() {
+	m.refreshCalls++
 }
 
 func (m *mockTable) Close() {
