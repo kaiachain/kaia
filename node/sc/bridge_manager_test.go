@@ -20,6 +20,7 @@ package sc
 
 import (
 	"context"
+	"crypto/ecdsa"
 	crand "crypto/rand"
 	"encoding/hex"
 	"log"
@@ -27,6 +28,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"runtime"
 	"strconv"
 	"sync"
 	"testing"
@@ -53,6 +55,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	bridgeManagerPreGeneratedKeys = []*ecdsa.PrivateKey{
+		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000001"); return k }(),
+		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000002"); return k }(),
+		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000003"); return k }(),
+		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000004"); return k }(),
+		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000005"); return k }(),
+		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000006"); return k }(),
+		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000007"); return k }(),
+		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000008"); return k }(),
+		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000009"); return k }(),
+		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("000000000000000000000000000000000000000000000000000000000000000a"); return k }(),
+		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("000000000000000000000000000000000000000000000000000000000000000b"); return k }(),
+		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("000000000000000000000000000000000000000000000000000000000000000c"); return k }(),
+		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("000000000000000000000000000000000000000000000000000000000000000d"); return k }(),
+	}
+)
+
 // WaitGroupWithTimeOut waits the given wait group until the timeout duration.
 func WaitGroupWithTimeOut(wg *sync.WaitGroup, duration time.Duration, t *testing.T) {
 	c := make(chan struct{})
@@ -77,6 +97,44 @@ func CheckReceipt(b bind.DeployBackend, tx *types.Transaction, duration time.Dur
 	receipt, err := bind.WaitMined(timeoutContext, b, tx)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, expectedStatus, receipt.Status)
+}
+
+func CreateLightScryptAccountFixture(t *testing.T, keystoreDir string) string {
+	t.Helper()
+
+	if err := os.MkdirAll(keystoreDir, 0o755); err != nil {
+		t.Fatalf("failed to create keystore dir: %v", err)
+	}
+	ks := keystore.NewKeyStore(keystoreDir, keystore.LightScryptN, keystore.LightScryptP)
+	password := "test-password"
+	acc, err := ks.NewAccount(password)
+	if err != nil {
+		t.Fatalf("failed to create light-scrypt account: %v", err)
+	}
+	if err := os.WriteFile(path.Join(keystoreDir, acc.Address.String()), []byte(password), 0o600); err != nil {
+		t.Fatalf("failed to write password file: %v", err)
+	}
+	return password
+}
+
+func newBridgeAccountsForTest(t *testing.T, am *accounts.Manager, dataDir string) (*BridgeAccounts, string, string) {
+	t.Helper()
+
+	pPwd := CreateLightScryptAccountFixture(t, path.Join(dataDir, ParentBridgeAccountName))
+	cPwd := CreateLightScryptAccountFixture(t, path.Join(dataDir, ChildBridgeAccountName))
+	bAcc, err := NewBridgeAccounts(
+		am,
+		dataDir,
+		database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}),
+		DefaultBridgeTxGasLimit,
+		DefaultBridgeTxGasLimit,
+	)
+	if err != nil {
+		t.Fatalf("failed to create bridge accounts: %v", err)
+	}
+	bAcc.pAccount.chainID = params.TestChainConfig.ChainID
+	bAcc.cAccount.chainID = params.TestChainConfig.ChainID
+	return bAcc, pPwd, cPwd
 }
 
 func handleValueTransfer(t *testing.T, ev IRequestValueTransferEvent, bridgeInfo *BridgeInfo, wg *sync.WaitGroup, backend *backends.SimulatedBackend) {
@@ -136,18 +194,16 @@ func TestBridgeManager(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = params.TestChainConfig.ChainID
-	bacc.cAccount.chainID = params.TestChainConfig.ChainID
+	bacc, _, _ := newBridgeAccountsForTest(t, nil, config.DataDir)
 
 	pAuth := bacc.cAccount.GenerateTransactOpts()
 	cAuth := bacc.pAccount.GenerateTransactOpts()
 
 	// Generate a new random account and a funded simulator
-	aliceKey, _ := crypto.GenerateKey()
+	aliceKey := bridgeManagerPreGeneratedKeys[0]
 	alice := bind.NewKeyedTransactor(aliceKey)
 
-	bobKey, _ := crypto.GenerateKey()
+	bobKey := bridgeManagerPreGeneratedKeys[1]
 	bob := bind.NewKeyedTransactor(bobKey)
 
 	// Create Simulated backend
@@ -365,18 +421,16 @@ func TestBridgeManagerERC721_notSupportURI(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = params.TestChainConfig.ChainID
-	bacc.cAccount.chainID = params.TestChainConfig.ChainID
+	bacc, _, _ := newBridgeAccountsForTest(t, nil, config.DataDir)
 
 	// pAuth := bacc.cAccount.GenerateTransactOpts()
 	cAuth := bacc.pAccount.GenerateTransactOpts()
 
 	// Generate a new random account and a funded simulator
-	aliceKey, _ := crypto.GenerateKey()
+	aliceKey := bridgeManagerPreGeneratedKeys[0]
 	alice := bind.NewKeyedTransactor(aliceKey)
 
-	bobKey, _ := crypto.GenerateKey()
+	bobKey := bridgeManagerPreGeneratedKeys[1]
 	bob := bind.NewKeyedTransactor(bobKey)
 
 	// Create Simulated backend
@@ -532,21 +586,19 @@ func TestBridgeManagerWithFee(t *testing.T) {
 	wg.Add(7 * 2)
 
 	// Generate a new random account and a funded simulator
-	AliceKey, _ := crypto.GenerateKey()
+	AliceKey := bridgeManagerPreGeneratedKeys[0]
 	Alice := bind.NewKeyedTransactor(AliceKey)
 
-	BobKey, _ := crypto.GenerateKey()
+	BobKey := bridgeManagerPreGeneratedKeys[1]
 	Bob := bind.NewKeyedTransactor(BobKey)
 
-	receiverKey, _ := crypto.GenerateKey()
+	receiverKey := bridgeManagerPreGeneratedKeys[2]
 	receiver := bind.NewKeyedTransactor(receiverKey)
 
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = params.TestChainConfig.ChainID
-	bacc.cAccount.chainID = params.TestChainConfig.ChainID
+	bacc, _, _ := newBridgeAccountsForTest(t, nil, config.DataDir)
 
 	pAuth := bacc.cAccount.GenerateTransactOpts()
 	cAuth := bacc.pAccount.GenerateTransactOpts()
@@ -935,22 +987,20 @@ func TestBasicJournal(t *testing.T) {
 	wg.Add(2)
 
 	// Generate a new random account and a funded simulator
-	key, _ := crypto.GenerateKey()
+	key := bridgeManagerPreGeneratedKeys[0]
 	auth := bind.NewKeyedTransactor(key)
 
-	key2, _ := crypto.GenerateKey()
+	key2 := bridgeManagerPreGeneratedKeys[1]
 	auth2 := bind.NewKeyedTransactor(key2)
 
-	key4, _ := crypto.GenerateKey()
+	key4 := bridgeManagerPreGeneratedKeys[2]
 	auth4 := bind.NewKeyedTransactor(key4)
 
 	config := &SCConfig{}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = params.TestChainConfig.ChainID
-	bacc.cAccount.chainID = params.TestChainConfig.ChainID
+	bacc, _, _ := newBridgeAccountsForTest(t, nil, tempDir)
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:             {Balance: big.NewInt(params.KAIA)},
@@ -1016,22 +1066,20 @@ func TestMethodRestoreBridges(t *testing.T) {
 	wg.Add(2)
 
 	// Generate a new random account and a funded simulator
-	key, _ := crypto.GenerateKey()
+	key := bridgeManagerPreGeneratedKeys[0]
 	auth := bind.NewKeyedTransactor(key)
 
-	key2, _ := crypto.GenerateKey()
+	key2 := bridgeManagerPreGeneratedKeys[1]
 	auth2 := bind.NewKeyedTransactor(key2)
 
-	key4, _ := crypto.GenerateKey()
+	key4 := bridgeManagerPreGeneratedKeys[2]
 	auth4 := bind.NewKeyedTransactor(key4)
 	config := &SCConfig{}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 	config.VTRecoveryInterval = 60
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = params.TestChainConfig.ChainID
-	bacc.cAccount.chainID = params.TestChainConfig.ChainID
+	bacc, _, _ := newBridgeAccountsForTest(t, nil, tempDir)
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:             {Balance: big.NewInt(params.KAIA)},
@@ -1242,21 +1290,19 @@ func TestErrorDuplicatedSetBridgeInfo(t *testing.T) {
 	wg.Add(2)
 
 	// Generate a new random account and a funded simulator
-	key, _ := crypto.GenerateKey()
+	key := bridgeManagerPreGeneratedKeys[0]
 	auth := bind.NewKeyedTransactor(key)
 
-	key2, _ := crypto.GenerateKey()
+	key2 := bridgeManagerPreGeneratedKeys[1]
 	auth2 := bind.NewKeyedTransactor(key2)
 
-	key4, _ := crypto.GenerateKey()
+	key4 := bridgeManagerPreGeneratedKeys[2]
 	auth4 := bind.NewKeyedTransactor(key4)
 	config := &SCConfig{}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = params.TestChainConfig.ChainID
-	bacc.cAccount.chainID = params.TestChainConfig.ChainID
+	bacc, _, _ := newBridgeAccountsForTest(t, nil, tempDir)
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:             {Balance: big.NewInt(params.KAIA)},
@@ -1309,21 +1355,19 @@ func TestScenarioSubUnsub(t *testing.T) {
 	wg.Add(2)
 
 	// Generate a new random account and a funded simulator
-	key, _ := crypto.GenerateKey()
+	key := bridgeManagerPreGeneratedKeys[0]
 	auth := bind.NewKeyedTransactor(key)
 
-	key2, _ := crypto.GenerateKey()
+	key2 := bridgeManagerPreGeneratedKeys[1]
 	auth2 := bind.NewKeyedTransactor(key2)
 
-	key4, _ := crypto.GenerateKey()
+	key4 := bridgeManagerPreGeneratedKeys[2]
 	auth4 := bind.NewKeyedTransactor(key4)
 	config := &SCConfig{}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = params.TestChainConfig.ChainID
-	bacc.cAccount.chainID = params.TestChainConfig.ChainID
+	bacc, _, _ := newBridgeAccountsForTest(t, nil, tempDir)
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:             {Balance: big.NewInt(params.KAIA)},
@@ -1415,21 +1459,19 @@ func TestErrorDupSubscription(t *testing.T) {
 	wg.Add(2)
 
 	// Generate a new random account and a funded simulator
-	key, _ := crypto.GenerateKey()
+	key := bridgeManagerPreGeneratedKeys[0]
 	auth := bind.NewKeyedTransactor(key)
 
-	key2, _ := crypto.GenerateKey()
+	key2 := bridgeManagerPreGeneratedKeys[1]
 	auth2 := bind.NewKeyedTransactor(key2)
 
-	key4, _ := crypto.GenerateKey()
+	key4 := bridgeManagerPreGeneratedKeys[2]
 	auth4 := bind.NewKeyedTransactor(key4)
 	config := &SCConfig{}
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = params.TestChainConfig.ChainID
-	bacc.cAccount.chainID = params.TestChainConfig.ChainID
+	bacc, _, _ := newBridgeAccountsForTest(t, nil, tempDir)
 
 	alloc := blockchain.GenesisAlloc{
 		auth.From:             {Balance: big.NewInt(params.KAIA)},
@@ -1660,17 +1702,15 @@ func generateAnchoringEnv(t *testing.T, tempDir string) (*backends.SimulatedBack
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	ks := keystore.NewKeyStore(tempDir, keystore.StandardScryptN, keystore.StandardScryptP)
+	ks := keystore.NewKeyStore(tempDir, keystore.LightScryptN, keystore.LightScryptP)
 	back := []accounts.Backend{
 		ks,
 	}
 	am := accounts.NewManager(back...)
-	bAcc, _ := NewBridgeAccounts(am, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bAcc.pAccount.chainID = params.TestChainConfig.ChainID
-	bAcc.cAccount.chainID = params.TestChainConfig.ChainID
+	bAcc, _, _ := newBridgeAccountsForTest(t, am, tempDir)
 	parentOperator := bAcc.pAccount
 
-	aliceKey, _ := crypto.GenerateKey()
+	aliceKey := bridgeManagerPreGeneratedKeys[0]
 	alice := bind.NewKeyedTransactor(aliceKey)
 
 	initBal := new(big.Int).Exp(big.NewInt(10), big.NewInt(50), nil)
@@ -1748,9 +1788,7 @@ func TestAnchoringStart(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bAcc.pAccount.chainID = params.TestChainConfig.ChainID
-	bAcc.cAccount.chainID = params.TestChainConfig.ChainID
+	bAcc, _, _ := newBridgeAccountsForTest(t, nil, tempDir)
 
 	alloc := blockchain.GenesisAlloc{}
 	sim := backends.NewSimulatedBackend(alloc)
@@ -1831,9 +1869,7 @@ func TestAnchoringPeriod(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bAcc.pAccount.chainID = params.TestChainConfig.ChainID
-	bAcc.cAccount.chainID = params.TestChainConfig.ChainID
+	bAcc, _, _ := newBridgeAccountsForTest(t, nil, tempDir)
 
 	alloc := blockchain.GenesisAlloc{}
 	sim := backends.NewSimulatedBackend(alloc)
@@ -1955,9 +1991,7 @@ func TestDecodingLegacyAnchoringTx(t *testing.T) {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bAcc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bAcc.pAccount.chainID = params.TestChainConfig.ChainID
-	bAcc.cAccount.chainID = params.TestChainConfig.ChainID
+	bAcc, _, _ := newBridgeAccountsForTest(t, nil, tempDir)
 
 	alloc := blockchain.GenesisAlloc{}
 	sim := backends.NewSimulatedBackend(alloc)
@@ -2011,17 +2045,15 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	}()
 
 	// Generate a new random account and a funded simulator
-	aliceKey, _ := crypto.GenerateKey()
+	aliceKey := bridgeManagerPreGeneratedKeys[0]
 	alice := bind.NewKeyedTransactor(aliceKey)
-	bobKey, _ := crypto.GenerateKey()
+	bobKey := bridgeManagerPreGeneratedKeys[1]
 	bob := bind.NewKeyedTransactor(bobKey)
 
 	config := &SCConfig{}
 	config.DataDir = tempDir
 
-	bacc, _ := NewBridgeAccounts(nil, tempDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = params.TestChainConfig.ChainID
-	bacc.cAccount.chainID = params.TestChainConfig.ChainID
+	bacc, _, _ := newBridgeAccountsForTest(t, nil, tempDir)
 
 	alloc := blockchain.GenesisAlloc{
 		alice.From:            {Balance: big.NewInt(params.KAIA)},
@@ -2483,9 +2515,7 @@ func TestBridgeAddressType(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = params.TestChainConfig.ChainID
-	bacc.cAccount.chainID = params.TestChainConfig.ChainID
+	bacc, _, _ := newBridgeAccountsForTest(t, nil, config.DataDir)
 
 	// Create Simulated backend
 	alloc := blockchain.GenesisAlloc{
@@ -2579,20 +2609,34 @@ func TestBridgeAddressType(t *testing.T) {
 	}
 }
 
+func commitOnPendingBlockChange(backend *backends.SimulatedBackend) func() {
+	done := make(chan struct{})
+	pendingBlock := backend.PendingBlock()
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				if pendingBlock != backend.PendingBlock() {
+					backend.Commit()
+					return
+				}
+				runtime.Gosched()
+			}
+		}
+	}()
+	return func() { close(done) }
+}
+
 // DeployBridgeTest is a test-only function which deploys a bridge contract with some amount of KAIA.
 func (bm *BridgeManager) DeployBridgeTest(backend *backends.SimulatedBackend, amountOfDeposit int64, local bool) (common.Address, error) {
 	var acc *accountInfo
 
 	// When the pending block of backend is updated, commit it
 	// bm.DeployBridge will be waiting until the block is committed
-	pendingBlock := backend.PendingBlock()
-	go func() {
-		for pendingBlock == backend.PendingBlock() {
-			time.Sleep(100 * time.Millisecond)
-		}
-		backend.Commit()
-		return
-	}()
+	cancel := commitOnPendingBlockChange(backend)
+	defer cancel()
 
 	// Set transfer value of the bridge account
 	if local {
@@ -2624,14 +2668,8 @@ func deployBridge(t *testing.T, bm *BridgeManager, backend *backends.SimulatedBa
 
 	// When the pending block of backend is updated, commit it
 	// bm.DeployBridge will be waiting until the block is committed
-	pendingBlock := backend.PendingBlock()
-	go func() {
-		for pendingBlock == backend.PendingBlock() {
-			time.Sleep(100 * time.Millisecond)
-		}
-		backend.Commit()
-		return
-	}()
+	cancel := commitOnPendingBlockChange(backend)
+	defer cancel()
 
 	// Set transfer value of the bridge account
 	if local {
@@ -2673,9 +2711,7 @@ func TestGetBridgeContractBalance(t *testing.T) {
 	// Config Bridge Account Manager
 	config := &SCConfig{}
 	config.DataDir = tempDir
-	bacc, _ := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	bacc.pAccount.chainID = params.TestChainConfig.ChainID
-	bacc.cAccount.chainID = params.TestChainConfig.ChainID
+	bacc, _, _ := newBridgeAccountsForTest(t, nil, config.DataDir)
 
 	// Create Simulated backend
 	alloc := blockchain.GenesisAlloc{

@@ -22,6 +22,7 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -188,52 +189,47 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 		}
 	})
 	defer info.sim.Close()
-	// TODO-Kaia need to remove sleep
-	time.Sleep(1 * time.Second)
-	info.sim.Commit()
 
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 
-	err := vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
+	steps := []struct {
+		doRecover    bool
+		expectedHint uint64
+	}{
+		{doRecover: false, expectedHint: uint64(testTxCount - testPendingCount)},
+		{doRecover: true, expectedHint: uint64(testTxCount - testPendingCount + maxPendingTxs)},
+		{doRecover: true, expectedHint: uint64(testTxCount)},
 	}
-	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
-	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.child2parentHint.handleNonce)
 
-	// 2. first recovery.
-	info.recoveryCh <- true
-	err = vtr.Recover()
-	if err != nil {
-		t.Fatal("fail to recover the value transfer")
-	}
-	// TODO-Kaia need to remove sleep
-	time.Sleep(1 * time.Second)
-	info.sim.Commit()
+	for i, step := range steps {
+		if step.doRecover {
+			if i == 1 {
+				info.recoveryCh <- true
+			}
+			err := vtr.Recover()
+			if err != nil {
+				t.Fatal("fail to recover the value transfer")
+			}
+		}
 
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update value transfer hint")
+		deadline := time.Now().Add(testTimeout)
+		for {
+			info.sim.Commit()
+			if err := vtr.updateRecoveryHint(); err != nil {
+				t.Fatal("fail to update value transfer hint")
+			}
+			if vtr.child2parentHint.requestNonce == uint64(testTxCount) &&
+				vtr.child2parentHint.handleNonce == step.expectedHint {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatal("timeout waiting for child2parent hint update")
+			}
+			runtime.Gosched()
+		}
+		assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
+		assert.Equal(t, step.expectedHint, vtr.child2parentHint.handleNonce)
 	}
-	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
-	assert.Equal(t, uint64(testTxCount-testPendingCount+maxPendingTxs), vtr.child2parentHint.handleNonce)
-
-	// 3. second recovery.
-	err = vtr.Recover()
-	if err != nil {
-		t.Fatal("fail to recover the value transfer")
-	}
-	// TODO-Kaia need to remove sleep
-	time.Sleep(1 * time.Second)
-	info.sim.Commit()
-
-	// 4. Check if recovery is done.
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update value transfer hint")
-	}
-	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
-	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.handleNonce)
 }
 
 // TestBasicTokenTransferRecovery tests the token transfer recovery.
@@ -614,11 +610,22 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 	assert.Equal(t, nil, vtr.recoverPendingEvents())
 	info.remoteInfo.account = info.localInfo.account // other operator
 	ops[KAIA].dummyHandle(info, info.remoteInfo)
-	if info.sim.BlockChain().CurrentBlock().Transactions().Len() == 0 {
-		// sometimes recovered pending requests are already acquired by BridgeInfo loop, not dummyHandle
-		// for this case, give enough time for the BridgeInfo loop process the pending requests
-		time.Sleep(10 * time.Second)
+	deadline := time.Now().Add(testTimeout)
+	for {
 		info.sim.Commit()
+		if err := vtr.updateRecoveryHint(); err != nil {
+			t.Fatal("fail to update value transfer hint")
+		}
+		if err := vtr.retrievePendingEvents(); err != nil {
+			t.Fatal("fail to retrieve pending events from the bridge contract")
+		}
+		if len(vtr.childEvents) == 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("timeout waiting for recovered pending requests to be drained")
+		}
+		runtime.Gosched()
 	}
 
 	// 9. Check results.
@@ -648,10 +655,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	assert.NoError(t, err)
-	bacc.pAccount.chainID = params.TestChainConfig.ChainID
-	bacc.cAccount.chainID = params.TestChainConfig.ChainID
+	bacc, _, _ := newBridgeAccountsForTest(t, nil, config.DataDir)
 
 	cAcc := bacc.cAccount.GenerateTransactOpts()
 	pAcc := bacc.pAccount.GenerateTransactOpts()
