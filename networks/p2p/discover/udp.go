@@ -776,7 +776,7 @@ func (req *ping) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 		logger.Trace("unauthorized node.", "nodeid", fromID, "nodetype", req.From.NType)
 		return errUnauthorized
 	}
-	logger.Debug("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
+	logger.Trace("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
 	return nil
 }
 
