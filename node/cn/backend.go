@@ -604,6 +604,8 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		s.protocolManager.RegisterVRankModule(mVRank)
 		if host, ok := s.engine.(vrank.VRankModuleHost); ok {
 			host.RegisterVRankModule(mVRank)
+		} else {
+			logger.Crit("engine does not implement VRankModuleHost")
 		}
 	}
 
