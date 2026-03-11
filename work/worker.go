@@ -716,6 +716,7 @@ func (self *worker) RegisterTxBundlingModule(modules ...builder.TxBundlingModule
 	self.txBundlingModules = append(self.txBundlingModules, modules...)
 }
 
+// generateVRankField returns nil when tallying cfReport fails.
 func (self *worker) generateVRankField(parent *types.Block) []byte {
 	if self.vrankModule == nil {
 		logger.Error("VRankModule is not registered")
