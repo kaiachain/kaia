@@ -73,6 +73,8 @@ var (
 	}
 )
 
+const DefaultBridgeTxGasLimit = uint64(10000000)
+
 // WaitGroupWithTimeOut waits the given wait group until the timeout duration.
 func WaitGroupWithTimeOut(wg *sync.WaitGroup, duration time.Duration, t *testing.T) {
 	c := make(chan struct{})
