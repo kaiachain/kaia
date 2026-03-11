@@ -55,23 +55,60 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	bridgeManagerPreGeneratedKeys = []*ecdsa.PrivateKey{
-		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000001"); return k }(),
-		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000002"); return k }(),
-		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000003"); return k }(),
-		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000004"); return k }(),
-		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000005"); return k }(),
-		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000006"); return k }(),
-		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000007"); return k }(),
-		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000008"); return k }(),
-		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000009"); return k }(),
-		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("000000000000000000000000000000000000000000000000000000000000000a"); return k }(),
-		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("000000000000000000000000000000000000000000000000000000000000000b"); return k }(),
-		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("000000000000000000000000000000000000000000000000000000000000000c"); return k }(),
-		func() *ecdsa.PrivateKey { k, _ := crypto.HexToECDSA("000000000000000000000000000000000000000000000000000000000000000d"); return k }(),
-	}
-)
+var bridgeManagerPreGeneratedKeys = []*ecdsa.PrivateKey{
+	func() *ecdsa.PrivateKey {
+		k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000001")
+		return k
+	}(),
+	func() *ecdsa.PrivateKey {
+		k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000002")
+		return k
+	}(),
+	func() *ecdsa.PrivateKey {
+		k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000003")
+		return k
+	}(),
+	func() *ecdsa.PrivateKey {
+		k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000004")
+		return k
+	}(),
+	func() *ecdsa.PrivateKey {
+		k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000005")
+		return k
+	}(),
+	func() *ecdsa.PrivateKey {
+		k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000006")
+		return k
+	}(),
+	func() *ecdsa.PrivateKey {
+		k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000007")
+		return k
+	}(),
+	func() *ecdsa.PrivateKey {
+		k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000008")
+		return k
+	}(),
+	func() *ecdsa.PrivateKey {
+		k, _ := crypto.HexToECDSA("0000000000000000000000000000000000000000000000000000000000000009")
+		return k
+	}(),
+	func() *ecdsa.PrivateKey {
+		k, _ := crypto.HexToECDSA("000000000000000000000000000000000000000000000000000000000000000a")
+		return k
+	}(),
+	func() *ecdsa.PrivateKey {
+		k, _ := crypto.HexToECDSA("000000000000000000000000000000000000000000000000000000000000000b")
+		return k
+	}(),
+	func() *ecdsa.PrivateKey {
+		k, _ := crypto.HexToECDSA("000000000000000000000000000000000000000000000000000000000000000c")
+		return k
+	}(),
+	func() *ecdsa.PrivateKey {
+		k, _ := crypto.HexToECDSA("000000000000000000000000000000000000000000000000000000000000000d")
+		return k
+	}(),
+}
 
 const DefaultBridgeTxGasLimit = uint64(10000000)
 
@@ -1064,18 +1101,6 @@ func TestMethodRestoreBridges(t *testing.T) {
 		}
 	}()
 
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
-	// Generate a new random account and a funded simulator
-	key := bridgeManagerPreGeneratedKeys[0]
-	auth := bind.NewKeyedTransactor(key)
-
-	key2 := bridgeManagerPreGeneratedKeys[1]
-	auth2 := bind.NewKeyedTransactor(key2)
-
-	key4 := bridgeManagerPreGeneratedKeys[2]
-	auth4 := bind.NewKeyedTransactor(key4)
 	config := &SCConfig{}
 	config.DataDir = tempDir
 	config.VTRecovery = true
@@ -1084,9 +1109,6 @@ func TestMethodRestoreBridges(t *testing.T) {
 	bacc, _, _ := newBridgeAccountsForTest(t, nil, tempDir)
 
 	alloc := blockchain.GenesisAlloc{
-		auth.From:             {Balance: big.NewInt(params.KAIA)},
-		auth2.From:            {Balance: big.NewInt(params.KAIA)},
-		auth4.From:            {Balance: big.NewInt(params.KAIA)},
 		bacc.pAccount.address: {Balance: big.NewInt(params.KAIA)},
 		bacc.cAccount.address: {Balance: big.NewInt(params.KAIA)},
 	}
@@ -1112,18 +1134,21 @@ func TestMethodRestoreBridges(t *testing.T) {
 	assert.NoError(t, err)
 
 	var bridgeAddrs [4]common.Address
+
+	bridgeTxs := make([]*types.Transaction, 0, len(bridgeAddrs))
 	for i := range 4 {
+		var tx *types.Transaction
 		if i%2 == 0 {
-			bridgeAddrs[i], err = bm.DeployBridgeTest(sim, 10000, true)
+			bridgeAddrs[i], tx = deployBridgeTxForTest(t, bacc.cAccount.GenerateTransactOpts(), sim, true)
 		} else {
-			bridgeAddrs[i], err = bm.DeployBridgeTest(sim, 10000, false)
+			bridgeAddrs[i], tx = deployBridgeTxForTest(t, bacc.pAccount.GenerateTransactOpts(), sim, false)
 		}
-		if err != nil {
-			t.Fatal("deploy bridge test failed", bridgeAddrs[i])
-		}
-		bm.DeleteBridgeInfo(bridgeAddrs[i])
+		bridgeTxs = append(bridgeTxs, tx)
 	}
 	sim.Commit()
+	for _, tx := range bridgeTxs {
+		assert.NoError(t, bind.CheckWaitMined(sim, tx))
+	}
 
 	// Set journal
 	bm.SetJournal("", bridgeAddrs[0], bridgeAddrs[1])
@@ -2083,16 +2108,21 @@ func TestBridgeAliasAPIs(t *testing.T) {
 	assert.NoError(t, err)
 	sc.handler.subbridge.bridgeManager = bm
 
-	// 1. Deploy bridge contracts and register them
-	cBridgeAddr := deployBridge(t, bm, sim, true)
-	pBridgeAddr := deployBridge(t, bm, sim, false)
+	// 1. Deploy bridge contracts in one block.
+	cBridgeAddr, cBridgeTx := deployBridgeTxForTest(t, bacc.cAccount.GenerateTransactOpts(), sim, true)
+	pBridgeAddr, pBridgeTx := deployBridgeTxForTest(t, bacc.pAccount.GenerateTransactOpts(), sim, false)
+	sim.Commit()
+	assert.NoError(t, bind.CheckWaitMined(sim, cBridgeTx))
+	assert.NoError(t, bind.CheckWaitMined(sim, pBridgeTx))
 
-	// 2. Deploy token Contracts
-	cTokenAddr, _, _, err := sctoken.DeployServiceChainToken(alice, sim, cBridgeAddr)
+	// 2. Deploy token contracts in one block.
+	cTokenAddr, cTokenTx, _, err := sctoken.DeployServiceChainToken(alice, sim, cBridgeAddr)
 	assert.NoError(t, err)
-	pTokenAddr, _, _, err := sctoken.DeployServiceChainToken(alice, sim, pBridgeAddr)
+	pTokenAddr, pTokenTx, _, err := sctoken.DeployServiceChainToken(alice, sim, pBridgeAddr)
 	assert.NoError(t, err)
 	sim.Commit() // block
+	assert.NoError(t, bind.CheckWaitMined(sim, cTokenTx))
+	assert.NoError(t, bind.CheckWaitMined(sim, pTokenTx))
 
 	cBridgeAddrStr := cBridgeAddr.String()
 	pBridgeAddrStr := pBridgeAddr.String()
@@ -2196,24 +2226,44 @@ func TestBridgeAliasAPIs(t *testing.T) {
 		contractPairLen := 10
 		bridgeAddrs := make([]common.Address, contractPairLen)
 		tokenAddrs := make([]common.Address, contractPairLen)
+		bridgeDeployTxs := make([]*types.Transaction, 0, contractPairLen+2)
+		tokenDeployTxs := make([]*types.Transaction, 0, contractPairLen)
 		t.Logf("Prepare %d contracts\n", contractPairLen)
-		// Preparation: Deploy bridge and token contracts
+		// Preparation 1: Deploy bridge contracts
 		for i := 0; i < contractPairLen/2; i++ {
-			cBridgeAddr, pBridgeAddr = deployBridge(t, bm, sim, true), deployBridge(t, bm, sim, false)
+			cBridgeAddr, cBridgeTx = deployBridgeTxForTest(t, bacc.cAccount.GenerateTransactOpts(), sim, true)
+			pBridgeAddr, pBridgeTx = deployBridgeTxForTest(t, bacc.pAccount.GenerateTransactOpts(), sim, false)
 			cIdx, pIdx := i*2, i*2+1
 			bridgeAddrs[cIdx], bridgeAddrs[pIdx] = cBridgeAddr, pBridgeAddr
-
-			cTokenAddr, _, _, err := sctoken.DeployServiceChainToken(alice, sim, cBridgeAddr)
-			assert.NoError(t, err)
-			pTokenAddr, _, _, err := sctoken.DeployServiceChainToken(alice, sim, pBridgeAddr)
-			assert.NoError(t, err)
-			tokenAddrs[cIdx], tokenAddrs[pIdx] = cTokenAddr, pTokenAddr
-
-			t.Logf("Deployed bridge contracts %d, %d\n", cIdx, pIdx)
+			bridgeDeployTxs = append(bridgeDeployTxs, cBridgeTx, pBridgeTx)
+			t.Logf("Prepared bridge contracts %d, %d\n", cIdx, pIdx)
 		}
 
-		// Declare another bridge and token contracts that did not initialize
-		fixedChildBridgeAddr, fixedParentBridgeAddr := deployBridge(t, bm, sim, true), deployBridge(t, bm, sim, false)
+		// Declare another bridge contracts that did not initialize
+		fixedChildBridgeAddr, fixedChildBridgeTx := deployBridgeTxForTest(t, bacc.cAccount.GenerateTransactOpts(), sim, true)
+		fixedParentBridgeAddr, fixedParentBridgeTx := deployBridgeTxForTest(t, bacc.pAccount.GenerateTransactOpts(), sim, false)
+		bridgeDeployTxs = append(bridgeDeployTxs, fixedChildBridgeTx, fixedParentBridgeTx)
+		sim.Commit()
+		for _, tx := range bridgeDeployTxs {
+			assert.NoError(t, bind.CheckWaitMined(sim, tx))
+		}
+
+		// Preparation 2: Deploy token contracts
+		for i := 0; i < contractPairLen/2; i++ {
+			cIdx, pIdx := i*2, i*2+1
+			cBridgeAddr, pBridgeAddr = bridgeAddrs[cIdx], bridgeAddrs[pIdx]
+			cTokenAddr, cTokenTx, _, err := sctoken.DeployServiceChainToken(alice, sim, cBridgeAddr)
+			assert.NoError(t, err)
+			pTokenAddr, pTokenTx, _, err := sctoken.DeployServiceChainToken(alice, sim, pBridgeAddr)
+			assert.NoError(t, err)
+			tokenAddrs[cIdx], tokenAddrs[pIdx] = cTokenAddr, pTokenAddr
+			tokenDeployTxs = append(tokenDeployTxs, cTokenTx, pTokenTx)
+			t.Logf("Prepared token contracts %d, %d\n", cIdx, pIdx)
+		}
+		sim.Commit()
+		for _, tx := range tokenDeployTxs {
+			assert.NoError(t, bind.CheckWaitMined(sim, tx))
+		}
 
 		const (
 			BRIDGE_SETUP = iota
@@ -2701,6 +2751,26 @@ func isExpectedBalance(t *testing.T, bridgeManager *BridgeManager,
 	assert.Equal(t, cBridgeBalance.Int64(), expectedChildBridgeBalance)
 }
 
+func deployBridgeTxForBalanceTest(t *testing.T, auth *bind.TransactOpts, sim *backends.SimulatedBackend, amount int64, modeMintBurn bool) (common.Address, *types.Transaction) {
+	t.Helper()
+
+	auth.Value = big.NewInt(amount)
+	addr, tx, _, err := bridge.DeployBridge(auth, sim, modeMintBurn)
+	auth.Value = nil
+	assert.NoError(t, err)
+	return addr, tx
+}
+
+func deployBridgeTxForTest(t *testing.T, auth *bind.TransactOpts, sim *backends.SimulatedBackend, modeMintBurn bool) (common.Address, *types.Transaction) {
+	t.Helper()
+
+	auth.Value = big.NewInt(10000)
+	addr, tx, _, err := bridge.DeployBridge(auth, sim, modeMintBurn)
+	auth.Value = nil
+	assert.NoError(t, err)
+	return addr, tx
+}
+
 func TestGetBridgeContractBalance(t *testing.T) {
 	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
 	assert.NoError(t, err)
@@ -2742,31 +2812,37 @@ func TestGetBridgeContractBalance(t *testing.T) {
 	assert.NoError(t, err)
 	sc.handler.subbridge.bridgeManager = bm
 
-	// Case 1 - Success
-	{
-		initialChildbridgeBalance, initialParentbridgeBalance := int64(100), int64(100)
-		cBridgeAddr, err := bm.DeployBridgeTest(sim, initialChildbridgeBalance, true)
-		assert.NoError(t, err)
-		pBridgeAddr, err := bm.DeployBridgeTest(sim, initialParentbridgeBalance, false)
-		assert.NoError(t, err)
-		bm.SetJournal("", cBridgeAddr, pBridgeAddr)
-		assert.NoError(t, err)
-		sim.Commit()
-		isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
+	cases := []struct {
+		childBalance  int64
+		parentBalance int64
+	}{
+		{childBalance: 100, parentBalance: 100},
+	}
+	for i := 0; i < 10; i++ {
+		cases = append(cases, struct {
+			childBalance  int64
+			parentBalance int64
+		}{
+			childBalance:  rand.Int63n(10000),
+			parentBalance: rand.Int63n(10000),
+		})
 	}
 
-	// Case 2 - ? (Random)
-	{
-		for range 10 {
-			initialChildbridgeBalance, initialParentbridgeBalance := rand.Int63n(10000), rand.Int63n(10000)
-			cBridgeAddr, err := bm.DeployBridgeTest(sim, initialChildbridgeBalance, true)
-			assert.NoError(t, err)
-			pBridgeAddr, err := bm.DeployBridgeTest(sim, initialParentbridgeBalance, false)
-			assert.NoError(t, err)
-			bm.SetJournal("", cBridgeAddr, pBridgeAddr)
-			assert.NoError(t, err)
-			sim.Commit()
-			isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, initialParentbridgeBalance, initialChildbridgeBalance)
-		}
+	for _, tc := range cases {
+		childAuth := bacc.cAccount.GenerateTransactOpts()
+		parentAuth := bacc.pAccount.GenerateTransactOpts()
+
+		cBridgeAddr, cTx := deployBridgeTxForBalanceTest(t, childAuth, sim, tc.childBalance, true)
+		pBridgeAddr, pTx := deployBridgeTxForBalanceTest(t, parentAuth, sim, tc.parentBalance, false)
+
+		// Mine both deployments in a single block.
+		sim.Commit()
+		assert.NoError(t, bind.CheckWaitMined(sim, cTx))
+		assert.NoError(t, bind.CheckWaitMined(sim, pTx))
+
+		err = bm.SetJournal("", cBridgeAddr, pBridgeAddr)
+		assert.NoError(t, err)
+
+		isExpectedBalance(t, bm, pBridgeAddr, cBridgeAddr, tc.parentBalance, tc.childBalance)
 	}
 }

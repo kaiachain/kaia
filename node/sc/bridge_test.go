@@ -41,8 +41,7 @@ import (
 )
 
 const (
-	timeOut                 = 3 * time.Second // timeout of context and event loop for simulated backend.
-	DefaultBridgeTxGasLimit = uint64(10000000)
+	timeOut = 3 * time.Second // timeout of context and event loop for simulated backend.
 )
 
 // WaitMined waits the tx receipt until the timeout.
