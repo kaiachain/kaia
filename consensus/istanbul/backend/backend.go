@@ -24,6 +24,7 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -428,6 +429,17 @@ func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
 	}
 
 	return istanbul.NewBlockValSet(council, demoted), nil
+}
+
+func (sb *backend) GetCandidates(num uint64) ([]common.Address, error) {
+	if sb.valsetModule == nil {
+		return nil, errors.New("valsetModule is nil")
+	}
+	candidates, err := sb.valsetModule.GetCandidates(num)
+	if err != nil {
+		return nil, err
+	}
+	return candidates, nil
 }
 
 func (sb *backend) GetCommitteeState(num uint64) (*istanbul.RoundCommitteeState, error) {
