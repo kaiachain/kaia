@@ -22,6 +22,8 @@ import (
 	"math"
 	"sync"
 	"sync/atomic"
+
+	"golang.org/x/sync/singleflight"
 )
 
 var errBadBootnode = errors.New("bad bootstrap node")
@@ -54,13 +56,11 @@ type Table2 struct {
 	discoverTargets map[NodeType]int
 
 	// UDP bonding
-	bondmu    sync.Mutex
-	bonding   map[NodeID]*bondtask // prevents concurrent bonding of the same node
-	bondslots chan struct{}        // semaphore to limit total number of active bonding processes
+	bondGroup singleflight.Group // deduplicates concurrent Bond() calls for the same node.
+	bondslots chan struct{}      // semaphore to limit total number of active bonding processes
 
 	// UDP refresh
-	refreshmu   sync.Mutex
-	refreshDone chan struct{} // prevents concurrent refresh. refreshDone is nil when no refresh is running.
+	refreshGroup singleflight.Group // deduplicates concurrent Refresh() calls.
 }
 
 func newTable2(cfg *Config, udp transport) (*Table2, error) {
@@ -102,7 +102,6 @@ func newTable2(cfg *Config, udp transport) (*Table2, error) {
 		nursery:         nursery,
 		storages:        storages,
 		discoverTargets: discoverTargets,
-		bonding:         make(map[NodeID]*bondtask),
 		bondslots:       bondslots,
 	}
 
