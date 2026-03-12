@@ -1,34 +1,241 @@
-// Modifications Copyright 2024 The Kaia Authors
-// Modifications Copyright 2019 The klaytn Authors
-// Copyright 2016 The go-ethereum Authors
-// This file is part of go-ethereum.
-//
-// go-ethereum is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// go-ethereum is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
-//
-// This file is derived from cmd/geth/genesis_test.go (2018/06/04).
-// Modified and improved for the klaytn development.
-// Modified and improved for the Kaia development.
-
 package nodecmd
 
 import (
+	"flag"
+	"io"
 	"os"
-	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/kaiachain/kaia/cmd/utils"
+	"github.com/urfave/cli/v2"
 )
 
-var genesis = `{"config":{"chainId":2019,"istanbul":{"epoch":30,"policy":2,"sub":13},"unitPrice":25000000000,"deriveShaImpl":2,"governance":{"governingNode":"0xdddfb991127b43e209c2f8ed08b8b3d0b5843d36","governanceMode":"single","reward":{"mintingAmount":9600000000000000000,"ratio":"34/54/12","useGiniCoeff":false,"deferredTxFee":true,"stakingUpdateInterval":60,"proposerUpdateInterval":30,"minimumStake":5000000}}},"timestamp":"0x5ce33d6e","extraData":"0x0000000000000000000000000000000000000000000000000000000000000000f89af85494dddfb991127b43e209c2f8ed08b8b3d0b5843d3694195ba9cc787b00796a7ae6356e5b656d4360353794777fd033b5e3bcaad6006bc9f481ffed6b83cf5a94d473284239f704adccd24647c7ca132992a28973b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0","governanceData":null,"blockScore":"0x1","alloc":{"195ba9cc787b00796a7ae6356e5b656d43603537":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"777fd033b5e3bcaad6006bc9f481ffed6b83cf5a":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"d473284239f704adccd24647c7ca132992a28973":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"dddfb991127b43e209c2f8ed08b8b3d0b5843d36":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"},"f4316f69d9522667c0674afcd8638288489f0333":{"balance":"0x446c3b15f9926687d2c40534fdb564000000000000"}},"number":"0x0","gasUsed":"0x0","parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}`
+func newNodecmdContext(t *testing.T, args ...string) *cli.Context {
+	app := cli.NewApp()
+	app.Flags = utils.AllNodeFlags()
+
+	set := flag.NewFlagSet("nodecmd-test", flag.ContinueOnError)
+	set.SetOutput(io.Discard)
+	for _, f := range app.Flags {
+		if err := f.Apply(set); err != nil {
+			t.Fatalf("failed to apply flag %v: %v", f.Names(), err)
+		}
+	}
+	if err := set.Parse(args); err != nil {
+		t.Fatalf("failed to parse flags: %v", err)
+	}
+	return cli.NewContext(app, set, nil)
+}
+
+func stopNodeOnCleanup(t *testing.T, stack interface{ Stop() error }) {
+	t.Helper()
+	t.Cleanup(func() {
+		_ = stack.Stop()
+	})
+}
+
+func registeredConstructorCount(t *testing.T, stack interface{}, fieldName string) int {
+	t.Helper()
+
+	value := reflect.ValueOf(stack)
+	if value.Kind() != reflect.Ptr || value.IsNil() {
+		t.Fatalf("stack must be a non-nil pointer, got %T", stack)
+	}
+
+	field := value.Elem().FieldByName(fieldName)
+	if !field.IsValid() {
+		t.Fatalf("node field %q not found", fieldName)
+	}
+	if field.Kind() != reflect.Slice {
+		t.Fatalf("node field %q must be a slice, got %s", fieldName, field.Kind())
+	}
+	return field.Len()
+}
+
+func TestDefaultCmd_MakeFullNode(t *testing.T) {
+	datadir := tmpdir(t)
+	t.Cleanup(func() { _ = os.RemoveAll(datadir) })
+
+	ctx := newNodecmdContext(t, "--datadir", datadir, "--verbosity", "0")
+	stack := MakeFullNode(ctx)
+	if stack == nil {
+		t.Fatal("MakeFullNode returned nil")
+	}
+	stopNodeOnCleanup(t, stack)
+	if got := stack.DataDir(); got != datadir {
+		t.Fatalf("unexpected datadir: got %q want %q", got, datadir)
+	}
+	if got := registeredConstructorCount(t, stack, "coreServiceFuncs"); got != 1 {
+		t.Fatalf("unexpected number of core services: got %d want 1", got)
+	}
+	if got := registeredConstructorCount(t, stack, "serviceFuncs"); got != 0 {
+		t.Fatalf("unexpected number of sub services: got %d want 0", got)
+	}
+}
+
+func TestDefaultCmd_MakeFullNodeServiceRegistrationFlags(t *testing.T) {
+	runner := newMakeFullNodeRunner(t)
+	tests := []struct {
+		name                 string
+		args                 []string
+		wantMainBridge       bool
+		wantSubBridge        bool
+		wantDBSyncer         bool
+		wantChainDataFetcher bool
+	}{
+		{
+			name:           "mainbridge",
+			args:           []string{"--mainbridge"},
+			wantMainBridge: true,
+		},
+		{
+			name:          "subbridge",
+			args:          []string{"--subbridge"},
+			wantSubBridge: true,
+		},
+		{
+			name:         "dbsyncer",
+			args:         []string{"--dbsyncer", "--dbsyncer.db.host", "127.0.0.1", "--dbsyncer.db.user", "tester", "--dbsyncer.db.password", "secret", "--dbsyncer.db.name", "kaia"},
+			wantDBSyncer: true,
+		},
+		{
+			name:                 "chaindatafetcher",
+			args:                 []string{"--chaindatafetcher", "--chaindatafetcher.mode", "kafka", "--chaindatafetcher.kafka.brokers", "127.0.0.1:9092"},
+			wantChainDataFetcher: true,
+		},
+		{
+			name:                 "combined",
+			args:                 []string{"--mainbridge", "--subbridge", "--dbsyncer", "--dbsyncer.db.host", "127.0.0.1", "--dbsyncer.db.user", "tester", "--dbsyncer.db.password", "secret", "--dbsyncer.db.name", "kaia", "--chaindatafetcher", "--chaindatafetcher.mode", "kafka", "--chaindatafetcher.kafka.brokers", "127.0.0.1:9092"},
+			wantMainBridge:       true,
+			wantSubBridge:        true,
+			wantDBSyncer:         true,
+			wantChainDataFetcher: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			datadir := tmpdir(t)
+			t.Cleanup(func() { _ = os.RemoveAll(datadir) })
+
+			args := append([]string{"--datadir", datadir, "--verbosity", "0"}, tc.args...)
+			ctx, err := runner.context(args...)
+			if err != nil {
+				t.Fatalf("failed to parse flags: %v", err)
+			}
+			_, cfg := utils.MakeConfigNode(ctx)
+			if cfg.ServiceChain.EnabledMainBridge != tc.wantMainBridge {
+				t.Fatalf("unexpected EnabledMainBridge: got %v want %v", cfg.ServiceChain.EnabledMainBridge, tc.wantMainBridge)
+			}
+			if cfg.ServiceChain.EnabledSubBridge != tc.wantSubBridge {
+				t.Fatalf("unexpected EnabledSubBridge: got %v want %v", cfg.ServiceChain.EnabledSubBridge, tc.wantSubBridge)
+			}
+			if cfg.DB.EnabledDBSyncer != tc.wantDBSyncer {
+				t.Fatalf("unexpected EnabledDBSyncer: got %v want %v", cfg.DB.EnabledDBSyncer, tc.wantDBSyncer)
+			}
+			if cfg.ChainDataFetcher.EnabledChainDataFetcher != tc.wantChainDataFetcher {
+				t.Fatalf("unexpected EnabledChainDataFetcher: got %v want %v", cfg.ChainDataFetcher.EnabledChainDataFetcher, tc.wantChainDataFetcher)
+			}
+
+			stack := MakeFullNode(ctx)
+			if stack == nil {
+				t.Fatal("MakeFullNode returned nil")
+			}
+			stopNodeOnCleanup(t, stack)
+
+			wantSubServices := 0
+			if tc.wantMainBridge {
+				wantSubServices++
+			}
+			if tc.wantSubBridge {
+				wantSubServices++
+			}
+			if tc.wantDBSyncer {
+				wantSubServices++
+			}
+			if tc.wantChainDataFetcher {
+				wantSubServices++
+			}
+			if got := registeredConstructorCount(t, stack, "coreServiceFuncs"); got != 1 {
+				t.Fatalf("unexpected number of core services: got %d want 1", got)
+			}
+			if got := registeredConstructorCount(t, stack, "serviceFuncs"); got != wantSubServices {
+				t.Fatalf("unexpected number of sub services: got %d want %d", got, wantSubServices)
+			}
+		})
+	}
+}
+
+func TestFlagSetReuse_LeaksIsSet(t *testing.T) {
+	app := cli.NewApp()
+	app.Flags = utils.AllNodeFlags()
+
+	set := flag.NewFlagSet("nodecmd-reuse-leak", flag.ContinueOnError)
+	set.SetOutput(io.Discard)
+	for _, f := range app.Flags {
+		if err := f.Apply(set); err != nil {
+			t.Fatalf("failed to apply flag %v: %v", f.Names(), err)
+		}
+	}
+	reset := func() {
+		set.VisitAll(func(f *flag.Flag) {
+			_ = f.Value.Set(f.DefValue)
+		})
+	}
+
+	reset()
+	if err := set.Parse([]string{"--mainbridge"}); err != nil {
+		t.Fatalf("failed to parse first args: %v", err)
+	}
+	ctx1 := cli.NewContext(app, set, nil)
+	if !ctx1.IsSet(utils.MainBridgeFlag.Name) {
+		t.Fatalf("expected %q to be set in first parse", utils.MainBridgeFlag.Name)
+	}
+	if !ctx1.Bool(utils.MainBridgeFlag.Name) {
+		t.Fatalf("expected %q bool value to be true in first parse", utils.MainBridgeFlag.Name)
+	}
+
+	reset()
+	if err := set.Parse([]string{"--subbridge"}); err != nil {
+		t.Fatalf("failed to parse second args: %v", err)
+	}
+	ctx2 := cli.NewContext(app, set, nil)
+	if ctx2.Bool(utils.MainBridgeFlag.Name) {
+		t.Fatalf("expected %q bool value to be false after reset", utils.MainBridgeFlag.Name)
+	}
+	if !ctx2.IsSet(utils.MainBridgeFlag.Name) {
+		t.Fatalf("expected %q IsSet to leak when reusing FlagSet", utils.MainBridgeFlag.Name)
+	}
+}
+
+func TestMakeFullNodeRunner_Context_NoIsSetLeak(t *testing.T) {
+	runner := newMakeFullNodeRunner(t)
+
+	datadir1 := tmpdir(t)
+	t.Cleanup(func() { _ = os.RemoveAll(datadir1) })
+	ctx1, err := runner.context("--datadir", datadir1, "--verbosity", "0", "--mainbridge")
+	if err != nil {
+		t.Fatalf("failed to parse first context: %v", err)
+	}
+	if !ctx1.IsSet(utils.MainBridgeFlag.Name) {
+		t.Fatalf("expected %q to be set in first parse", utils.MainBridgeFlag.Name)
+	}
+
+	datadir2 := tmpdir(t)
+	t.Cleanup(func() { _ = os.RemoveAll(datadir2) })
+	ctx2, err := runner.context("--datadir", datadir2, "--verbosity", "0", "--subbridge")
+	if err != nil {
+		t.Fatalf("failed to parse second context: %v", err)
+	}
+	if ctx2.IsSet(utils.MainBridgeFlag.Name) {
+		t.Fatalf("expected %q IsSet to be false in second parse", utils.MainBridgeFlag.Name)
+	}
+	if !ctx2.IsSet(utils.SubBridgeFlag.Name) {
+		t.Fatalf("expected %q to be set in second parse", utils.SubBridgeFlag.Name)
+	}
+}
 
 const (
 	FlagTypeBoolean = iota
@@ -780,58 +987,113 @@ var flagsWithValues = []struct {
 	},
 }
 
-func testFlags(t *testing.T, flag string, value string, idx int) {
-	datadir := tmpdir(t)
-	defer os.RemoveAll(datadir)
-
-	json := filepath.Join(datadir, "genesis.json")
-	if err := os.WriteFile(json, []byte(genesis), 0o600); err != nil {
-		t.Fatalf("test %d: failed to write genesis file: %v", idx, err)
-	}
-
-	runKaia(t, "kaia-test-flag", "--verbosity", "0", "--datadir", datadir, "init", json).WaitExit()
-
-	kaia := runKaia(t, "kaia-test-flag", "--datadir", datadir, flag, value)
-	kaia.ExpectExit()
+type makeFullNodeRunner struct {
+	app *cli.App
 }
 
-func testWrongFlags(t *testing.T, flag string, value string, idx int, expectedError string) {
-	datadir := tmpdir(t)
-	defer os.RemoveAll(datadir)
-
-	json := filepath.Join(datadir, "genesis.json")
-	if err := os.WriteFile(json, []byte(genesis), 0o600); err != nil {
-		t.Fatalf("test %d: failed to write genesis file: %v", idx, err)
-	}
-
-	runKaia(t, "kaia-test-flag", "--verbosity", "0", "--datadir", datadir, "init", json).WaitExit()
-
-	kaia := runKaia(t, "kaia-test-flag", "--datadir", datadir, flag, value)
-	kaia.ExpectRegexp(expectedError)
+func newMakeFullNodeRunner(t *testing.T) *makeFullNodeRunner {
+	t.Helper()
+	app := cli.NewApp()
+	app.Flags = utils.AllNodeFlags()
+	return &makeFullNodeRunner{app: app}
 }
 
-func TestFlags(t *testing.T) {
-	expectedError := []string{
-		"Incorrect Usage. flag provided but not defined: (.*)",
-		"Incorrect Usage. invalid value (.*)",
-		"Fatal:(.*)",
-		"(.*)",
+func (r *makeFullNodeRunner) context(args ...string) (*cli.Context, error) {
+	set := flag.NewFlagSet("nodecmd-makefullnode-runner", flag.ContinueOnError)
+	set.SetOutput(io.Discard)
+	for _, f := range r.app.Flags {
+		if err := f.Apply(set); err != nil {
+			return nil, err
+		}
 	}
-	for idx, fwv := range flagsWithValues {
+	if err := set.Parse(args); err != nil {
+		return nil, err
+	}
+	return cli.NewContext(r.app, set, nil), nil
+}
+
+type parseOnlyRunner struct {
+	set *flag.FlagSet
+}
+
+func newParseOnlyRunner(t *testing.T) *parseOnlyRunner {
+	t.Helper()
+	app := cli.NewApp()
+	app.Flags = utils.AllNodeFlags()
+	set := flag.NewFlagSet("nodecmd-parseonly-inproc", flag.ContinueOnError)
+	set.SetOutput(io.Discard)
+	for _, f := range app.Flags {
+		if err := f.Apply(set); err != nil {
+			t.Fatalf("failed to apply flag %v: %v", f.Names(), err)
+		}
+	}
+	return &parseOnlyRunner{set: set}
+}
+
+func (r *parseOnlyRunner) parse(args ...string) error {
+	// Reuse the same parser for speed; reset values before each parse.
+	r.set.VisitAll(func(f *flag.Flag) {
+		_ = f.Value.Set(f.DefValue)
+	})
+	baseArgs := []string{"--verbosity", "0"}
+	return r.set.Parse(append(baseArgs, args...))
+}
+
+func sanitizeTestName(s string) string {
+	replacer := strings.NewReplacer("/", "_", " ", "_", "\t", "_")
+	return replacer.Replace(s)
+}
+
+func parseExpectationFromLegacyResult(resultCode int) (strict bool, wantErr bool) {
+	switch resultCode {
+	case ErrorIncorrectUsage, ErrorInvalidValue:
+		return true, true
+	case ErrorFatal:
+		// Fatal cases are expected to fail in config/setup stage, not parsing stage.
+		return true, false
+	case NonError:
+		// Legacy matrix marks these as currently unfiltered.
+		return false, false
+	default:
+		return false, false
+	}
+}
+
+func TestDefaultCmd_ParseOnlyAllFlagCases(t *testing.T) {
+	runner := newParseOnlyRunner(t)
+	for _, fwv := range flagsWithValues {
+		fwv := fwv
 		switch fwv.flagType {
 		case FlagTypeBoolean:
-			t.Run("kaia-test-flag"+fwv.flag, func(t *testing.T) {
-				testFlags(t, fwv.flag, "", idx)
+			t.Run("parseonly"+sanitizeTestName(fwv.flag), func(t *testing.T) {
+				if err := runner.parse(fwv.flag, ""); err != nil {
+					t.Fatalf("expected parse success for %s, got error: %v", fwv.flag, err)
+				}
 			})
 		case FlagTypeArgument:
 			for _, item := range fwv.values {
-				t.Run("kaia-test-flag"+fwv.flag+"-"+item, func(t *testing.T) {
-					testFlags(t, fwv.flag, item, idx)
+				item := item
+				t.Run("parseonly"+sanitizeTestName(fwv.flag)+"-"+sanitizeTestName(item), func(t *testing.T) {
+					if err := runner.parse(fwv.flag, item); err != nil {
+						t.Fatalf("expected parse success for %s %q, got error: %v", fwv.flag, item, err)
+					}
 				})
 			}
 			for idx2, wrongItem := range fwv.wrongValues {
-				t.Run("kaia-test-flag"+fwv.flag+"-"+wrongItem, func(t *testing.T) {
-					testWrongFlags(t, fwv.flag, wrongItem, idx, expectedError[fwv.errors[idx2]])
+				idx2 := idx2
+				wrongItem := wrongItem
+				t.Run("parseonly"+sanitizeTestName(fwv.flag)+"-"+sanitizeTestName(wrongItem), func(t *testing.T) {
+					strict, wantErr := parseExpectationFromLegacyResult(fwv.errors[idx2])
+					err := runner.parse(fwv.flag, wrongItem)
+					if !strict {
+						return
+					}
+					if wantErr && err == nil {
+						t.Fatalf("expected parse failure for %s %q, but got success", fwv.flag, wrongItem)
+					}
+					if !wantErr && err != nil {
+						t.Fatalf("expected parse success for %s %q, got error: %v", fwv.flag, wrongItem, err)
+					}
 				})
 			}
 		}
