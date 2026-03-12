@@ -25,8 +25,8 @@ import (
 var (
 	revalidateBackoff = 10 * time.Second // Do not revalidate (ping) a node within this duration.
 
-	errSelfBonding         = errors.New("cannot bond with self")
-	errTableNotInitialized = errors.New("table not yet initialized")
+	errSelfBonding   = errors.New("cannot bond with self")
+	errTableNotReady = errors.New("table not ready")
 )
 
 //// Periodic revalidation
@@ -132,8 +132,14 @@ func (tab *Table2) Bond(pinged bool, n *Node) error {
 	// Do not accept inbound (i.e. remote pinged me) bonding requests before
 	// populating from my seeds. It prevents remote nodes from filling up the table by spamming.
 	if pinged && !tab.initialized() {
-		return errTableNotInitialized
+		return errTableNotReady
 	}
+	// Do not attempt bonding if the table is closed. Could happen after tab.Close() and before udp.close()
+	// You can't write to the closed DB.
+	if tab.closed.Load() {
+		return errTableNotReady
+	}
+
 	// Skip if we're really sure that this node is reachable and completed the bonding process.
 	if tab.canAssumeBonded(n.ID) {
 		return nil
