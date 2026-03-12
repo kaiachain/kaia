@@ -33,10 +33,11 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/networks/p2p/nat"
 	"github.com/kaiachain/kaia/networks/p2p/netutil"
 	"github.com/kaiachain/kaia/rlp"
 )
+
+// #region Constants
 
 const Version = 4
 
@@ -81,8 +82,50 @@ const (
 	NodeTypeBN
 )
 
-// RPC request structures
+const (
+	macSize  = 256 / 8
+	sigSize  = 520 / 8
+	headSize = macSize + sigSize // space of packet frame data
+)
+
+var (
+	headSpace = make([]byte, headSize)
+
+	// Neighbors replies are sent across multiple packets to
+	// stay below the 1280 byte limit. We compute the maximum number
+	// of entries by stuffing a packet until it grows too large.
+	maxNeighbors int
+)
+
+func init() {
+	p := neighbors{Expiration: ^uint64(0)}
+	maxSizeNode := rpcNode{IP: make(net.IP, 16), UDP: ^uint16(0), TCP: ^uint16(0)}
+	for n := 0; ; n++ {
+		p.Nodes = append(p.Nodes, maxSizeNode)
+		size, _, err := rlp.EncodeToReader(p)
+		if err != nil {
+			// If this ever happens, it will be caught by the unit tests.
+			panic("cannot encode: " + err.Error())
+		}
+		if headSize+size+1 >= 1280 {
+			maxNeighbors = n
+			break
+		}
+	}
+}
+
+// #region Packet types
+
 type (
+	packet interface {
+		// preverify checks whether the packet is valid and should be handled at all.
+		preverify(t *udp, from *net.UDPAddr, fromID NodeID) error
+		// handle handles the packet.
+		handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error
+		// name returns the name of the packet for logging purposes.
+		name() string
+	}
+
 	ping struct {
 		NetworkID  uint64
 		Version    uint
@@ -148,41 +191,7 @@ type (
 	}
 )
 
-func makeEndpoint(addr *net.UDPAddr, tcpPort uint16, nType NodeType) rpcEndpoint {
-	ip := addr.IP.To4()
-	if ip == nil {
-		ip = addr.IP.To16()
-	}
-	return rpcEndpoint{IP: ip, UDP: uint16(addr.Port), TCP: tcpPort, NType: nType}
-}
-
-func (t *udp) nodeFromRPC(sender *net.UDPAddr, rn rpcNode) (*Node, error) {
-	if rn.UDP <= 1024 {
-		return nil, errors.New("low port")
-	}
-	if err := netutil.CheckRelayIP(sender.IP, rn.IP); err != nil {
-		return nil, err
-	}
-	if t.netrestrict != nil && !t.netrestrict.Contains(rn.IP) {
-		return nil, errors.New("not contained in netrestrict whitelist")
-	}
-	n := NewNode(rn.ID, rn.IP, rn.UDP, rn.TCP, nil, rn.NType)
-	err := n.validateComplete()
-	return n, err
-}
-
-func nodeToRPC(n *Node) rpcNode {
-	return rpcNode{ID: n.ID, IP: n.IP, UDP: n.UDP, TCP: n.TCP, NType: n.NType}
-}
-
-type packet interface {
-	// preverify checks whether the packet is valid and should be handled at all.
-	preverify(t *udp, from *net.UDPAddr, fromID NodeID) error
-	// handle handles the packet.
-	handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error
-	// name returns the name of the packet for logging purposes.
-	name() string
-}
+// #region Helper types
 
 type conn interface {
 	ReadFromUDP(b []byte) (n int, addr *net.UDPAddr, err error)
@@ -191,22 +200,12 @@ type conn interface {
 	LocalAddr() net.Addr
 }
 
-// udp implements the RPC protocol.
-type udp struct {
-	networkID   uint64
-	conn        conn
-	netrestrict *netutil.Netlist
-	priv        *ecdsa.PrivateKey
-	ourEndpoint rpcEndpoint
-
-	addpending chan *pending
-	gotreply   chan reply
-
-	closing chan struct{}
-	nat     nat.Interface
-	wg      sync.WaitGroup
-
-	Discovery
+func makeEndpoint(addr *net.UDPAddr, tcpPort uint16, nType NodeType) rpcEndpoint {
+	ip := addr.IP.To4()
+	if ip == nil {
+		ip = addr.IP.To16()
+	}
+	return rpcEndpoint{IP: ip, UDP: uint16(addr.Port), TCP: tcpPort, NType: nType}
 }
 
 // pending represents a pending reply.
@@ -272,32 +271,35 @@ type ReadPacket struct {
 	Addr *net.UDPAddr
 }
 
-// Config holds Table-related settings.
-type Config struct {
-	NetworkID uint64
-	// These settings are required and configure the UDP listener:
-	PrivateKey *ecdsa.PrivateKey
+// #region Main UDP struct
 
-	// These settings are optional:
-	AnnounceAddr *net.UDPAddr      // local address announced in the DHT
-	NodeDBPath   string            // if set, the node database is stored at this filesystem location
-	NetRestrict  *netutil.Netlist  // network whitelist
-	Bootnodes    []*Node           // list of bootstrap nodes
-	Unhandled    chan<- ReadPacket // unhandled packets are sent on this channel
+// udp implements the RPC protocol.
+// It launches two goroutines:
+//   - loop() to manage pending replies (PONG, NEIGHBORS) related to the requests sent (PING, FINDNODE).
+//     Here, pending() registers a callback function, and handleReply() calls the callback when a reply arrives.
+//   - readLoop() to catch incoming packets (PING, PONG, FINDNODE, NEIGHBORS) and dispatch to type-specific handlers.
+//     sometimes the packet handler calls handleReply(), notifying loop() to call the callback function.
+//
+// While there are four packet types (PING, PONG, FINDNODE, NEIGHBORS), only these methods are exposed:
+//   - ping() actively sends a PING packet, and wait for PONG.
+//   - waitping() passively waits for a PING packet
+//   - findnode() actively sends a FINDNODE packet, and wait for NEIGHBORS.
+//   - You do not actively send a PONG or NEIGHBORS packets. They are send only in response to incoming requests.
+type udp struct {
+	networkID   uint64
+	conn        conn
+	netrestrict *netutil.Netlist
+	priv        *ecdsa.PrivateKey
+	ourEndpoint rpcEndpoint
 
-	// These settings are required for create Table and UDP
-	Id       NodeID
-	Addr     *net.UDPAddr
-	udp      transport
-	Conn     conn
-	NodeType NodeType
+	addpending chan *pending
+	gotreply   chan reply
 
-	// These settings are required for discovery packet control
-	MaxNeighborsNode uint
-	AuthorizedNodes  []*Node
+	closing chan struct{}
+	wg      sync.WaitGroup
 
-	// DiscoverNodetype is list of node type to enable discovery.
-	DiscoverTypes DiscoverTypesConfig
+	Discovery         // old path (used by ListenUDP -> newUDP)
+	tab       *Table2 // new path (used by NewDiscovery2)
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
@@ -306,10 +308,11 @@ func ListenUDP(cfg *Config) (Discovery, error) {
 	if err != nil {
 		return nil, err
 	}
-	logger.Info("UDP listener up", "self", discv.Self())
+	logger.Info("UDP listener up", "id", cfg.Id, "addr", cfg.Addr, "type", cfg.NodeType)
 	return discv, nil
 }
 
+// #region UDP Init
 func newUDP(cfg *Config) (Discovery, *udp, error) {
 	udp := &udp{
 		networkID:   cfg.NetworkID,
@@ -336,8 +339,33 @@ func newUDP(cfg *Config) (Discovery, *udp, error) {
 	go udp.Discovery.(*Table).loop() // TODO-Kaia-Node There is only one concrete type(Table) for Discovery. Refactor Discovery interface for their proper objective.
 	udp.wg.Add(2)
 	go udp.loop()
-	go udp.readLoop(cfg.Unhandled)
+	go udp.readLoop(nil)
 	return udp.Discovery, udp, nil
+}
+
+func newUDPv4(cfg *Config) *udp {
+	u := &udp{
+		networkID:   cfg.NetworkID,
+		conn:        cfg.Conn,
+		priv:        cfg.PrivateKey,
+		netrestrict: cfg.NetRestrict,
+		closing:     make(chan struct{}),
+		gotreply:    make(chan reply),
+		addpending:  make(chan *pending),
+	}
+	realaddr := cfg.Addr
+	if cfg.AnnounceAddr != nil {
+		realaddr = cfg.AnnounceAddr
+	}
+	u.ourEndpoint = makeEndpoint(realaddr, uint16(realaddr.Port), cfg.NodeType)
+	return u
+}
+
+func (t *udp) Start(tab *Table2) {
+	t.tab = tab
+	t.wg.Add(2)
+	go t.loop()
+	go t.readLoop(nil)
 }
 
 func (t *udp) close() {
@@ -347,12 +375,37 @@ func (t *udp) close() {
 }
 
 func (t *udp) isAuthorized(fromID NodeID, nType NodeType) bool {
+	if t.tab != nil {
+		return t.tab.IsAuthorized(fromID, nType)
+	}
 	return t.Discovery.IsAuthorized(fromID, nType)
 }
 
 func (t *udp) hasBond(fromID NodeID) bool {
+	if t.tab != nil {
+		return t.tab.IsBonded(fromID)
+	}
 	return t.Discovery.HasBond(fromID)
 }
+
+func (t *udp) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16, nType NodeType) {
+	if t.tab != nil {
+		n := NewNode(id, addr.IP, uint16(addr.Port), tcpPort, nil, nType)
+		t.tab.Bond(pinged, n)
+		return
+	}
+	t.Discovery.Bond(pinged, id, addr, tcpPort, nType)
+}
+
+func (t *udp) closestNodes(target NodeID, targetType NodeType, max int) []*Node {
+	if t.tab != nil {
+		return t.tab.ClosestNodes(target, targetType, max)
+	}
+	return t.Discovery.RetrieveNodes(crypto.Keccak256Hash(target[:]), targetType, max)
+}
+
+// #region High-level APIs
+// Sends requests and waits for replies.
 
 // ping sends a ping message to the given node and waits for a reply.
 func (t *udp) ping(toid NodeID, toaddr *net.UDPAddr) error {
@@ -423,6 +476,66 @@ func (t *udp) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT
 		target, "targetNodeType", targetNT)
 	return nodes, err
 }
+
+func (t *udp) nodeFromRPC(sender *net.UDPAddr, rn rpcNode) (*Node, error) {
+	if rn.UDP <= 1024 {
+		return nil, errors.New("low port")
+	}
+	if err := netutil.CheckRelayIP(sender.IP, rn.IP); err != nil {
+		return nil, err
+	}
+	if t.netrestrict != nil && !t.netrestrict.Contains(rn.IP) {
+		return nil, errors.New("not contained in netrestrict whitelist")
+	}
+	n := NewNode(rn.ID, rn.IP, rn.UDP, rn.TCP, nil, rn.NType)
+	err := n.validateComplete()
+	return n, err
+}
+
+func nodeToRPC(n *Node) rpcNode {
+	return rpcNode{ID: n.ID, IP: n.IP, UDP: n.UDP, TCP: n.TCP, NType: n.NType}
+}
+
+// #region Send requests
+
+func (t *udp) send(toaddr *net.UDPAddr, ptype byte, req packet) ([]byte, error) {
+	packet, hash, err := encodePacket(t.priv, ptype, req)
+	if err != nil {
+		return hash, err
+	}
+	return hash, t.write(toaddr, req.name(), packet)
+}
+
+func (t *udp) write(toaddr *net.UDPAddr, what string, packet []byte) error {
+	_, err := t.conn.WriteToUDP(packet, toaddr)
+	logger.Trace(">> "+what, "addr", toaddr, "err", err)
+	return err
+}
+
+func encodePacket(priv *ecdsa.PrivateKey, ptype byte, req interface{}) (packet, hash []byte, err error) {
+	b := new(bytes.Buffer)
+	b.Write(headSpace)
+	b.WriteByte(ptype)
+	if err := rlp.Encode(b, req); err != nil {
+		logger.Error("Can't encode discv4 packet", "err", err)
+		return nil, nil, err
+	}
+	packet = b.Bytes()
+	sig, err := crypto.Sign(crypto.Keccak256(packet[headSize:]), priv)
+	if err != nil {
+		logger.Error("Can't sign discv4 packet", "err", err)
+		return nil, nil, err
+	}
+	copy(packet[macSize:], sig)
+	// add the hash to the front. Note: this doesn't protect the
+	// packet in any way. Our public key will be part of this hash in
+	// The future.
+	hash = crypto.Keccak256(packet[macSize:])
+	copy(packet, hash)
+	return packet, hash, nil
+}
+
+// #region Wait for replies
 
 // pending adds a reply callback to the pending reply queue.
 // see the documentation of type pending for a detailed explanation.
@@ -500,9 +613,10 @@ func (t *udp) loop() {
 		case p := <-t.addpending:
 			p.deadline = time.Now().Add(respTimeout)
 			plist.PushBack(p)
-			if p.ptype == pongPacket {
+			switch p.ptype {
+			case pongPacket:
 				pendingPongCounter.Inc(1)
-			} else if p.ptype == neighborsPacket {
+			case neighborsPacket:
 				pendingNeighborsCounter.Inc(1)
 			}
 
@@ -562,74 +676,7 @@ func (t *udp) loop() {
 	}
 }
 
-const (
-	macSize  = 256 / 8
-	sigSize  = 520 / 8
-	headSize = macSize + sigSize // space of packet frame data
-)
-
-var (
-	headSpace = make([]byte, headSize)
-
-	// Neighbors replies are sent across multiple packets to
-	// stay below the 1280 byte limit. We compute the maximum number
-	// of entries by stuffing a packet until it grows too large.
-	maxNeighbors int
-)
-
-func init() {
-	p := neighbors{Expiration: ^uint64(0)}
-	maxSizeNode := rpcNode{IP: make(net.IP, 16), UDP: ^uint16(0), TCP: ^uint16(0)}
-	for n := 0; ; n++ {
-		p.Nodes = append(p.Nodes, maxSizeNode)
-		size, _, err := rlp.EncodeToReader(p)
-		if err != nil {
-			// If this ever happens, it will be caught by the unit tests.
-			panic("cannot encode: " + err.Error())
-		}
-		if headSize+size+1 >= 1280 {
-			maxNeighbors = n
-			break
-		}
-	}
-}
-
-func (t *udp) send(toaddr *net.UDPAddr, ptype byte, req packet) ([]byte, error) {
-	packet, hash, err := encodePacket(t.priv, ptype, req)
-	if err != nil {
-		return hash, err
-	}
-	return hash, t.write(toaddr, req.name(), packet)
-}
-
-func (t *udp) write(toaddr *net.UDPAddr, what string, packet []byte) error {
-	_, err := t.conn.WriteToUDP(packet, toaddr)
-	logger.Trace(">> "+what, "addr", toaddr, "err", err)
-	return err
-}
-
-func encodePacket(priv *ecdsa.PrivateKey, ptype byte, req interface{}) (packet, hash []byte, err error) {
-	b := new(bytes.Buffer)
-	b.Write(headSpace)
-	b.WriteByte(ptype)
-	if err := rlp.Encode(b, req); err != nil {
-		logger.Error("Can't encode discv4 packet", "err", err)
-		return nil, nil, err
-	}
-	packet = b.Bytes()
-	sig, err := crypto.Sign(crypto.Keccak256(packet[headSize:]), priv)
-	if err != nil {
-		logger.Error("Can't sign discv4 packet", "err", err)
-		return nil, nil, err
-	}
-	copy(packet[macSize:], sig)
-	// add the hash to the front. Note: this doesn't protect the
-	// packet in any way. Our public key will be part of this hash in
-	// The future.
-	hash = crypto.Keccak256(packet[macSize:])
-	copy(packet, hash)
-	return packet, hash, nil
-}
+// #region Packet dispatcher
 
 // readLoop runs in its own goroutine. it handles incoming UDP packets.
 func (t *udp) readLoop(unhandled chan<- ReadPacket) {
@@ -714,6 +761,8 @@ func decodePacket(buf []byte) (packet, NodeID, []byte, error) {
 	return req, fromID, hash, err
 }
 
+// #region Packet handlers
+
 func (req *ping) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 	if expired(req.Expiration) {
 		return errExpired
@@ -727,7 +776,7 @@ func (req *ping) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 		logger.Trace("unauthorized node.", "nodeid", fromID, "nodetype", req.From.NType)
 		return errUnauthorized
 	}
-	logger.Debug("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
+	logger.Trace("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
 	return nil
 }
 
@@ -743,7 +792,7 @@ func (req *ping) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) er
 	})
 	if !t.handleReply(fromID, from.IP, pingPacket, req) {
 		// Note: we're ignoring the provided IP address right now
-		go t.Bond(true, fromID, from, req.From.TCP, req.From.NType)
+		go t.bond(true, fromID, from, req.From.TCP, req.From.NType)
 	}
 	return nil
 }
@@ -785,9 +834,8 @@ func (req *findnode) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 
 func (req *findnode) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byte) error {
 	// Determine "closest" nodes. The result will be the closest nodes for KademliaStorage, but random nodes for SimpleStorage.
-	target := crypto.Keccak256Hash(req.Target[:])
 	retrieveSize := findnodeRetrieveSize(req.TargetType)
-	closest := t.RetrieveNodes(target, req.TargetType, retrieveSize)
+	closest := t.closestNodes(req.Target, req.TargetType, retrieveSize)
 
 	// Send neighbors in chunks with at most maxNeighbors per packet
 	// to stay below the 1280 byte limit.

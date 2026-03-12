@@ -56,10 +56,10 @@ type BaseServer struct {
 
 	// Relying components
 	logger       log.Logger
-	ntab         discover.Discovery // UDP discovery
-	ourHandshake *protoHandshake    // our TCP handshake message
-	listener     net.Listener       // TCP listener
-	peerFeed     event.Feed         // Peer event feed as in peer.go:PeerEventType.
+	ntab         discovery       // UDP discovery
+	ourHandshake *protoHandshake // our TCP handshake message
+	listener     net.Listener    // TCP listener
+	peerFeed     event.Feed      // Peer event feed as in peer.go:PeerEventType.
 
 	// Peer lifecycle state
 	selfID        discover.NodeID // precompulted Self().ID
@@ -214,7 +214,6 @@ func (srv *BaseServer) startDiscovery(listenAddr string) error {
 		NodeDBPath:    srv.NodeDatabase,
 		NetRestrict:   srv.NetRestrict,
 		Bootnodes:     srv.BootstrapNodes,
-		Unhandled:     nil,
 		Conn:          conn,
 		Addr:          realaddr,
 		Id:            discover.PubkeyID(&srv.PrivateKey.PublicKey),
@@ -316,7 +315,7 @@ func (srv *BaseServer) maxDialedConns() int {
 // inbound connections.
 func (srv *BaseServer) listenLoop() {
 	defer srv.loopWG.Done()
-	srv.logger.Info("RLPx listener up", "self", srv.makeSelf(srv.listener, srv.ntab))
+	srv.logger.Info("RLPx listener up", "self", srv.makeSelf(srv.listener))
 
 	tokens := defaultMaxPendingPeers
 	if srv.MaxPendingPeers > 0 {
@@ -370,11 +369,6 @@ func (srv *BaseServer) listenLoop() {
 // as a peer. It returns when the connection has been added as a peer
 // or the handshakes have failed.
 func (srv *BaseServer) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) error {
-	self := srv.Self()
-	if self == nil {
-		return errors.New("shutdown")
-	}
-
 	c := &conn{fd: fd, flags: flags, conntype: common.ConnTypeUndefined, portOrder: ConnDefault}
 
 	// if err occurs, dialPubkey is automatically set as nil
@@ -721,27 +715,20 @@ func (srv *BaseServer) Self() *discover.Node {
 	if !srv.running {
 		return &discover.Node{IP: net.ParseIP("0.0.0.0")}
 	}
-	return srv.makeSelf(srv.listener, srv.ntab)
+	return srv.makeSelf(srv.listener)
 }
 
-func (srv *BaseServer) makeSelf(listener net.Listener, discovery discover.Discovery) *discover.Node {
-	// If the server's not running, return an empty node.
-	// If the node is running but discovery is off, manually assemble the node infos.
-	if discovery == nil {
-		// Inbound connections disabled, use zero address.
-		if listener == nil {
-			return &discover.Node{IP: net.ParseIP("0.0.0.0"), ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
-		}
-		// Otherwise inject the listener address too
+// makeSelf returns the local node's TCP endpoint information.
+// The `listener` shall be the single listener (srv.listener) for BaseServer,
+// and one of the listeners (srv.listeners[*]) for MultiChannelServer.
+func (srv *BaseServer) makeSelf(listener net.Listener) *discover.Node {
+	id := discover.PubkeyID(&srv.PrivateKey.PublicKey)
+	if listener == nil {
+		return &discover.Node{IP: net.ParseIP("0.0.0.0"), ID: id}
+	} else {
 		addr := listener.Addr().(*net.TCPAddr)
-		return &discover.Node{
-			ID:  discover.PubkeyID(&srv.PrivateKey.PublicKey),
-			IP:  addr.IP,
-			TCP: uint16(addr.Port),
-		}
+		return discover.NewNode(id, addr.IP, uint16(addr.Port), uint16(addr.Port), nil, ConvertNodeType(srv.ConnectionType))
 	}
-	// Otherwise return the discovery node.
-	return discovery.Self()
 }
 
 // NodeInfo represents a short summary of the information known about the host.

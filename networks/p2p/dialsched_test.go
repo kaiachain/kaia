@@ -537,6 +537,9 @@ func (m *mockTable) ReadRandomNodes(buf []*discover.Node, nType discover.NodeTyp
 	return copy(buf, m.randomByType[nType])
 }
 
+func (m *mockTable) Close() {
+}
+
 //// Dialer (Dial, DialMulti) mocks.
 
 type mockDialer struct {
