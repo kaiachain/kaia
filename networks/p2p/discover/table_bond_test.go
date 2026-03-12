@@ -182,7 +182,7 @@ func Test_Table_Bond_duplicate(t *testing.T) {
 	}()
 	<-pingEntered // Wait until the first Bond has registered its task and is executing ping.
 
-	// The second Bond call should find the in-flight task and wait on task.done.
+	// The second Bond call should join the in-flight singleflight call and wait for it.
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -195,12 +195,6 @@ func Test_Table_Bond_duplicate(t *testing.T) {
 		runtime.Gosched()
 	}
 
-	// Verify the bonding map still holds the task.
-	// Thread 1 is stuck at pingpong() waiting for transport.ping(), Thread 2 is stuck at Bond() waiting for task.done.
-	tab.bondmu.Lock()
-	assert.NotNil(t, tab.bonding[n.ID], "bonding task should be registered")
-	tab.bondmu.Unlock()
-
 	// If duplicate suppression is broken, a second ping enters while the first is blocked.
 	select {
 	case <-pingEntered:
@@ -210,11 +204,6 @@ func Test_Table_Bond_duplicate(t *testing.T) {
 
 	close(pingBlocker) // release the in-flight ping
 	wg.Wait()
-
-	// The bonding map must be cleared after completion.
-	tab.bondmu.Lock()
-	assert.Nil(t, tab.bonding[n.ID], "bonding task should be removed after completion")
-	tab.bondmu.Unlock()
 
 	// Both callers should receive the same (nil) error.
 	assert.NoError(t, err1)

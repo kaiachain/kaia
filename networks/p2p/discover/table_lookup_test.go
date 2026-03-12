@@ -239,19 +239,14 @@ func Test_Table_doRefreshOnce_dedup(t *testing.T) {
 	g1.Add(1)
 	go func() {
 		defer g1.Done()
-		tab.doRefreshOnce()
+		tab.doRefresh()
 	}()
-	<-firstFindnode // g1 is now blocking; refreshDone is registered
-
-	// The in-progress refresh channel must exist.
-	tab.refreshmu.Lock()
-	assert.NotNil(t, tab.refreshDone, "refresh should be in progress")
-	tab.refreshmu.Unlock()
+	<-firstFindnode // g1 is now blocking inside the refresh
 
 	// g2 should join g1's refresh and not start a new one.
 	g2done := make(chan struct{})
 	go func() {
-		tab.doRefreshOnce()
+		tab.doRefresh()
 		close(g2done)
 	}()
 
@@ -273,9 +268,4 @@ func Test_Table_doRefreshOnce_dedup(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Error("g2 did not complete within 1 s after g1 finished")
 	}
-
-	// refreshDone must be cleared after completion.
-	tab.refreshmu.Lock()
-	assert.Nil(t, tab.refreshDone)
-	tab.refreshmu.Unlock()
 }

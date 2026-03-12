@@ -145,41 +145,16 @@ func (tab *Table2) Bond(pinged bool, n *Node) error {
 		return nil
 	}
 
-	// Check for already ongoing bonding task.
-	tab.bondmu.Lock()
-	task := tab.bonding[n.ID]
-	if task != nil {
-		// Wait for an existing bonding task to complete.
-		tab.bondmu.Unlock()
-		<-task.done
-		return task.err
-	} else {
-		// Or register a new bonding task.
-		task = &bondtask{done: make(chan struct{})}
-		tab.bonding[n.ID] = task
-		tab.bondmu.Unlock()
-	}
-
-	// Execute the bonding task.
-	// Work outside of bondmu because pingpong might take a while.
-	tab.pingpong(task, pinged, n)
-
-	// Persist the bond result before unregistering the task.
-	// This order matters: recordBonded must be called while bonding[n.ID] is
-	// still registered so that any concurrent Bond() caller that unblocks from
-	// <-task.done and then immediately calls Bond() again will see
-	// canAssumeBonded=true and skip pingpong, avoiding a double-ping race.
-	if task.err == nil {
-		tab.addNode(n)
-		tab.recordBonded(n)
-	}
-
-	// Unregister the task after the bond result is persisted.
-	tab.bondmu.Lock()
-	delete(tab.bonding, n.ID)
-	tab.bondmu.Unlock()
-
-	return task.err
+	// Deduplicate concurrent Bond() calls for the same node.
+	_, err, _ := tab.bondGroup.Do(n.ID.String(), func() (interface{}, error) {
+		err := tab.pingpong(pinged, n)
+		if err == nil {
+			tab.addNode(n)
+			tab.recordBonded(n)
+		}
+		return nil, err
+	})
+	return err
 }
 
 // Finish the 4-way handshake:
@@ -187,14 +162,13 @@ func (tab *Table2) Bond(pinged bool, n *Node) error {
 // 2. self <-PONG-- remote udp.ping():pending(pong)
 // 3. self <-PING-- remote udp.waitping():pending(ping)  if !pinged
 // 4. self --PONG-> remote ping.handle()                 if !pinged
-func (tab *Table2) pingpong(task *bondtask, pinged bool, n *Node) {
+func (tab *Table2) pingpong(pinged bool, n *Node) error {
 	<-tab.bondslots                                // Acquire a bonding slot to limit network usage.
 	defer func() { tab.bondslots <- struct{}{} }() // Release the bonding slot.
-	defer close(task.done)
 
 	// Ping the remote side and wait for a pong.
-	if task.err = tab.udp.ping(n.ID, n.addr()); task.err != nil {
-		return
+	if err := tab.udp.ping(n.ID, n.addr()); err != nil {
+		return err
 	}
 	if !pinged {
 		// Give the remote node a chance to ping us before we start
@@ -202,6 +176,7 @@ func (tab *Table2) pingpong(task *bondtask, pinged bool, n *Node) {
 		// waitping will simply time out.
 		tab.udp.waitping(n.ID, n.IP)
 	}
+	return nil
 }
 
 // A node is assumed to be bonded if all values are recently written by recordBonded().
@@ -219,11 +194,4 @@ func (tab *Table2) recordBonded(n *Node) {
 
 	bucketEntriesGauge.Update(int64(tab.len()))
 	bucketReplacementsGauge.Update(int64(tab.numReplacements()))
-}
-
-type bondtask struct {
-	// Task caller (Bond) waits for this channel to be closed, then harvest the result (err).
-	// Task worker (pingpong) closes this channel when done.
-	done chan struct{}
-	err  error
 }

@@ -35,7 +35,7 @@ func (tab *Table2) refreshLoop() {
 		select {
 		case <-refreshTicker.C:
 			tab.rand.Seed() // reseed the randomness before consuming it during refresh.
-			tab.doRefreshOnce()
+			tab.doRefresh()
 		case <-tab.closeReq:
 			return
 		}
@@ -46,41 +46,20 @@ func (tab *Table2) Refresh() {
 	if tab.closed.Load() {
 		return
 	}
-	tab.doRefreshOnce()
-}
-
-// Wraps the doRefresh() to ensure only one refresh is running at a time. Deduplicates the request.
-func (tab *Table2) doRefreshOnce() {
-	// Check for already running refresh
-	tab.refreshmu.Lock()
-	if tab.refreshDone != nil {
-		// Wait for already running refresh to complete
-		done := tab.refreshDone // capture the channel before unlocking (otherwise tab.refreshDone may become nil)
-		tab.refreshmu.Unlock()
-		<-done
-		return
-	}
-
-	// Register a new refresh completion channel
-	refreshDone := make(chan struct{})
-	tab.refreshDone = refreshDone
-	tab.refreshmu.Unlock()
-
 	tab.doRefresh()
-	close(refreshDone)
-
-	tab.refreshmu.Lock()
-	tab.refreshDone = nil
-	tab.refreshmu.Unlock()
 }
 
+// doRefresh performs a full table refresh. Concurrent calls are deduplicated and wait for the single in-flight refresh.
 func (tab *Table2) doRefresh() {
-	logger.Debug("Discovery table refreshing", "counts", tab.lenByNodeTypes())
-	tab.kademliaRefresh(NodeTypeEN)
-	tab.simpleRefresh(NodeTypeCN)
-	tab.simpleRefresh(NodeTypePN)
-	tab.simpleRefresh(NodeTypeBN)
-	logger.Info("Discovery table refreshed", "counts", tab.lenByNodeTypes())
+	tab.refreshGroup.Do("refresh", func() (interface{}, error) {
+		logger.Debug("Discovery table refreshing", "counts", tab.lenByNodeTypes())
+		tab.kademliaRefresh(NodeTypeEN)
+		tab.simpleRefresh(NodeTypeCN)
+		tab.simpleRefresh(NodeTypePN)
+		tab.simpleRefresh(NodeTypeBN)
+		logger.Info("Discovery table refreshed", "counts", tab.lenByNodeTypes())
+		return nil, nil
+	})
 }
 
 func (tab *Table2) kademliaRefresh(targetType NodeType) {
