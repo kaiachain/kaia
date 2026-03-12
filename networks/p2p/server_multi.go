@@ -126,6 +126,7 @@ func (srv *MultiChannelServer) Start() (err error) {
 			staticNodes: srv.StaticNodes,
 			netrestrict: srv.NetRestrict,
 			maxDynDials: srv.maxDialedConns(),
+			maxPeers:    srv.MaxPeers(),
 			dialer:      srv.Dialer,
 		}, srv.ntab, srv)
 		srv.dialSched.Start()
