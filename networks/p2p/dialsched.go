@@ -35,6 +35,8 @@ var (
 	dialBackoff      = 30 * time.Second // Minimum interval between the dial for the same node ID.
 	refreshBackoff   = 4 * time.Second  // Minimum interval between discretionary discovery table refreshes.
 	idleDialInterval = 10 * time.Second // Spins down the dial loop when there are no ongoing dial attempts.
+
+	candidateQueueSize = 100 // Number of nodes to fetch per dynamic candidate queue refill.
 )
 
 // DialBackend is the minimal server-side API dialsched needs for outbound dial execution.
@@ -66,6 +68,12 @@ type DialConfig struct {
 	// Used only when connTarget is nil, to compute the default EN-EN target.
 	// Pass the result of Server.maxDialedConns() here.
 	maxDynDials int
+
+	// maxPeers is the total peer capacity (inbound + outbound).
+	// Dynamic dials are suppressed when connectedAll reaches this limit,
+	// mirroring the server-side check in encHandshakeChecks.
+	// Pass srv.Config.MaxPhysicalConnections here. 0 means no limit.
+	maxPeers int
 
 	// Hooks for testing.
 	dialer NodeDialer
@@ -102,12 +110,16 @@ type DialSched struct {
 	mu         sync.RWMutex
 	selfID     discover.NodeID
 	connTarget map[discover.NodeType]int // Number of outbound connections to maintain for each node type
+	maxPeers   int                       // Total peer capacity (inbound + outbound). 0 = no limit.
 	dialer     NodeDialer
 	backend    DialBackend
 
 	// Node sources
 	static typedNodeSet // The static nodes.
 	tab    discovery    // The provider of dynamic nodes.
+	// candidateQueue is a per-type queue of discovery candidates, drained sequentially across loop
+	// iterations. This avoids re-offering the same unreachable nodes before their dialBackoff expires.
+	candidateQueue map[discover.NodeType][]*discover.Node
 
 	// Controls the discretionary discovery table refresh.
 	refreshBackoff time.Time // Earliest time allowed to refresh the discovery table. Counted since the refresh started.
@@ -130,6 +142,8 @@ type DialSched struct {
 	wg       sync.WaitGroup
 }
 
+// #region public interfaces
+
 func NewDialSched(cfg DialConfig, tab discovery, backend DialBackend) *DialSched {
 	connTarget := cfg.connTarget
 	if connTarget == nil {
@@ -144,10 +158,12 @@ func NewDialSched(cfg DialConfig, tab discovery, backend DialBackend) *DialSched
 	ds := &DialSched{
 		selfID:            cfg.selfID,
 		connTarget:        connTarget,
+		maxPeers:          cfg.maxPeers,
 		dialer:            dialer,
 		backend:           backend,
 		static:            newTypedNodeSet(),
 		tab:               tab,
+		candidateQueue:    make(map[discover.NodeType][]*discover.Node),
 		dialing:           newTypedNodeSet(),
 		dialBackoff:       make(map[discover.NodeID]time.Time),
 		netrestrict:       cfg.netrestrict,
@@ -214,6 +230,8 @@ func (ds *DialSched) OnPeerDisconnected(id discover.NodeID, nType discover.NodeT
 	ds.signalDial()
 }
 
+// #region dial loop
+
 // Let the dialLoop know that the situation has changed and it should check again.
 // This operation is non-blocking. Silently skips when ds.wakeDial is full or closed.
 func (ds *DialSched) signalDial() {
@@ -233,17 +251,16 @@ func (ds *DialSched) signalResult(resCh chan struct{}) {
 	}
 }
 
-//// Dial task loop
-
 func (ds *DialSched) dialLoop() {
 	defer ds.wg.Done()
-	resCh := make(chan struct{}, maxConcurrentDials)
+	dialResCh := make(chan struct{}, maxConcurrentDials)
+	refreshResCh := make(chan struct{}, 1)
 
 	for {
 		candidates, needRefresh := ds.getCandidates()
-		ds.launchDialTasks(candidates, resCh)
+		ds.launchDialTasks(candidates, dialResCh)
 		if needRefresh && ds.shouldRefresh() {
-			ds.refreshOnce(resCh)
+			ds.refreshOnce(refreshResCh)
 		}
 
 		var idle <-chan time.Time
@@ -253,13 +270,17 @@ func (ds *DialSched) dialLoop() {
 
 		select { // Loop upon any of the following signals.
 		case <-ds.wakeDial: // situation changed
-		case <-resCh: // one dial task completed (either success or failure)
+		case <-dialResCh: // one dial task completed (either success or failure)
+		case <-refreshResCh: // discovery refresh completed; refill the candidate queue
+			ds.refillCandidates()
 		case <-idle: // done idling
 		case <-ds.closeReq:
 			return
 		}
 	}
 }
+
+// #region candidate collection
 
 // Return the candidates for dialing from the mixture of static and dynamic nodes.
 //
@@ -293,14 +314,21 @@ func (ds *DialSched) getCandidates() (candidates []*discover.Node, needRefresh b
 	candidates = ds.static.all()
 	ds.mu.RUnlock()
 
-	// 3. Dynamic nodes
-	for targetType, need := range needs {
-		dynamicNodes, refresh := ds.getDynamicCandidates(targetType, need)
-		candidates = append(candidates, dynamicNodes...)
-		needRefresh = needRefresh || refresh
+	// 3. Dynamic nodes — skip when already at total peer capacity.
+	// Even if we want more outbound peers (needs > 0), the total capacity might be reached (maxPeers) due to inbound peers.
+	// Static dials (added above) bypass this check, mirroring the Server's capacity check.
+	if ds.maxPeers == 0 || ds.connectedAll.len() < ds.maxPeers {
+		for targetType, need := range needs {
+			dynamicNodes, refresh := ds.getDynamicCandidates(targetType, need)
+			candidates = append(candidates, dynamicNodes...)
+			needRefresh = needRefresh || refresh
+		}
 	}
 
-	logger.Debug("Dialing candidates", "needs", needs, "connectedOutbound", ds.connectedOutbound.len(), "dialing", ds.dialing.len(), "candidates", len(candidates))
+	if len(candidates) > 0 {
+		logger.Debug("Dialing candidates", "needs", needs, "static", ds.static.len(),
+			"connectedOutbound", ds.connectedOutbound.len(), "dialing", ds.dialing.len(), "candidates", len(candidates))
+	}
 	return candidates, needRefresh
 }
 
@@ -308,12 +336,29 @@ func (ds *DialSched) getDynamicCandidates(targetType discover.NodeType, need int
 	if ds.tab == nil || need <= 0 {
 		return nil, false
 	}
-	oversample := need * 4 // Oversample in case some nodes are not reachable.
-	buf := make([]*discover.Node, oversample)
-	num := ds.tab.RandomNodes(buf, targetType)
-	nodes = buf[:num]
-	return nodes, len(nodes) < need
+
+	// Empty queue: signal the dial loop to run a discovery refresh.
+	// We'll come back after the refresh completes and refill the queue.
+	if len(ds.candidateQueue[targetType]) == 0 {
+		return nil, true
+	}
+
+	// Scan the queue, advancing past undialable entries, until we have collected `need` candidates.
+	// shouldDial() called here as an inaccurate screening to reject hopeless candidates.
+	// shouldDial() called later as an accurate enforcement before launching the dialOnce goroutine.
+	q := ds.candidateQueue[targetType]
+	i := 0
+	for i < len(q) && len(nodes) < need {
+		if ds.shouldDial(q[i]) {
+			nodes = append(nodes, q[i])
+		}
+		i++
+	}
+	ds.candidateQueue[targetType] = q[i:]
+	return nodes, false
 }
+
+// #region dial task
 
 func (ds *DialSched) launchDialTasks(candidates []*discover.Node, resCh chan struct{}) {
 	for _, n := range candidates {
@@ -388,7 +433,9 @@ func (ds *DialSched) dialMulti(dest *discover.Node, flags connFlag) error {
 	return errBackup
 }
 
-func (ds *DialSched) refreshOnce(resCh chan struct{}) {
+// #region refresh task
+
+func (ds *DialSched) refreshOnce(refreshResCh chan struct{}) {
 	ds.markRefreshStart()
 
 	if ds.tab == nil {
@@ -396,11 +443,24 @@ func (ds *DialSched) refreshOnce(resCh chan struct{}) {
 	}
 	go func() {
 		ds.tab.Refresh()
-		ds.signalResult(resCh)
+		ds.signalResult(refreshResCh)
 	}()
 }
 
-//// Internal variable accessors
+// refillCandidates refills empty per-type candidate queues from the discovery table.
+// Called by dialLoop after a refresh completes, so the table has fresh nodes.
+// Accessed only by the dialLoop goroutine; no mutex required.
+func (ds *DialSched) refillCandidates() {
+	for targetType := range ds.connTarget {
+		if len(ds.candidateQueue[targetType]) == 0 {
+			buf := make([]*discover.Node, candidateQueueSize)
+			n := ds.tab.RandomNodes(buf, targetType)
+			ds.candidateQueue[targetType] = buf[:n]
+		}
+	}
+}
+
+// #region internal variable accessors
 
 func (ds *DialSched) addStatic(n *discover.Node) {
 	if n == nil {
