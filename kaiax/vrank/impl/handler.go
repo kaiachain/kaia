@@ -18,6 +18,7 @@ package impl
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math/big"
 	"slices"
 	"time"
@@ -41,7 +42,13 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *istanbu
 	// if I'm a validator, then I need to collect VRankCandidate
 	// should be isValidator(blockNum + 1), but validators are not finalized during `blockNum` consensus.
 	if v.isValidator(blockNum) {
-		v.prepreparedView = *view
+		copiedView := istanbul.View{
+			Sequence: new(big.Int).Set(view.Sequence),
+			Round:    new(big.Int).Set(view.Round),
+		}
+		v.prepreparedViewMu.Lock()
+		v.prepreparedView = copiedView
+		v.prepreparedViewMu.Unlock()
 		v.collector.AddPrepreparedTime(vrank.ViewKey{N: blockNum, R: uint8(view.Round.Uint64())}, prepreparedAt, block.Hash())
 	}
 	// if I'm the proposer that broadcast IstanbulPreprepare to other validators,
@@ -87,12 +94,19 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	}
 
 	receivedAt := time.Now()
-	if v.prepreparedView.Sequence == nil {
+	v.prepreparedViewMu.RLock()
+	prepreparedSeqNum := uint64(0)
+	hasPrepreparedSeq := v.prepreparedView.Sequence != nil
+	if hasPrepreparedSeq {
+		prepreparedSeqNum = v.prepreparedView.Sequence.Uint64()
+	}
+	v.prepreparedViewMu.RUnlock()
+	if !hasPrepreparedSeq {
 		return vrank.ErrPrepreparedViewNotSet
 	}
 	// should be isValidator(v.prepreparedView.Sequence.Uint64() + 1), but validators are not finalized during `seq` consensus.
-	if v.isValidator(v.prepreparedView.Sequence.Uint64()) {
-		if msg.BlockNumber > v.prepreparedView.Sequence.Uint64()+maxCollectorWindow {
+	if v.isValidator(prepreparedSeqNum) {
+		if msg.BlockNumber > prepreparedSeqNum+maxCollectorWindow {
 			return vrank.ErrTooFar
 		}
 		if msg.Round > maxRound {
@@ -107,7 +121,7 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 		if v.collector.HasCandMsg(vk, sender) {
 			return nil
 		}
-		if err := v.verifyVRankCandidateSender(msg, sender); err != nil {
+		if err := v.verifyVRankCandidateSender(msg, sender, prepreparedSeqNum); err != nil {
 			return err
 		}
 		v.collector.AddCandMsg(vk, sender, receivedAt, msg)
@@ -120,15 +134,15 @@ func (v *VRankModule) recoverVRankCandidateSender(msg *vrank.VRankCandidate) (co
 	pubkey, err := crypto.SigToPub(sigHash.Bytes(), msg.Sig)
 	if err != nil {
 		logger.Debug("SigToPub failed", "err", err, "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
-		return common.Address{}, err
+		return common.Address{}, fmt.Errorf("%w: %v", vrank.ErrInvalidCandidateSig, err)
 	}
 	sender := crypto.PubkeyToAddress(*pubkey)
 	return sender, nil
 }
 
-func (v *VRankModule) verifyVRankCandidateSender(msg *vrank.VRankCandidate, sender common.Address) error {
+func (v *VRankModule) verifyVRankCandidateSender(msg *vrank.VRankCandidate, sender common.Address, prepreparedSeqNum uint64) error {
 	// should be GetCandidates(msg.BlockNumber), but candidates are not finalized during `Sequence` consensus.
-	candidates, err := v.Valset.GetCandidates(v.prepreparedView.Sequence.Uint64())
+	candidates, err := v.Valset.GetCandidates(prepreparedSeqNum)
 	if err != nil {
 		logger.Debug("GetCandidates failed", "err", err, "blockNum", msg.BlockNumber)
 		return err

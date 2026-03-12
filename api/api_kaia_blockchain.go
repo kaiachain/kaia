@@ -729,6 +729,7 @@ func RpcOutputBlock(b *types.Block, inclTx bool, fullTx bool, config *params.Cha
 		"timestampFoS":     (hexutil.Uint)(head.TimeFoS),
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
+		"vrank":            hexutil.Bytes(head.VRank),
 	}
 
 	if inclTx {

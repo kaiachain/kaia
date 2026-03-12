@@ -24,6 +24,7 @@ package backend
 
 import (
 	"errors"
+	"slices"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/common"
@@ -45,8 +46,8 @@ var (
 	// TODO-Kaia-Istanbul: define Versions and Lengths with correct values.
 	IstanbulProtocol = consensus.Protocol{
 		Name:     "istanbul",
-		Versions: []uint{67, 66, 65, 64},
-		Lengths:  []uint64{26, 24, 23, 21},
+		Versions: []uint{68, 67, 66, 65, 64},
+		Lengths:  []uint64{28, 26, 24, 23, 21},
 	}
 )
 
@@ -106,11 +107,20 @@ func (sb *backend) ValidatePeerType(addr common.Address) error {
 	for sb.chain == nil {
 		return errNoChainReader
 	}
-	valSet, err := sb.GetValidatorSet(sb.chain.CurrentHeader().Number.Uint64() + 1)
+	num := sb.chain.CurrentHeader().Number.Uint64() + 1
+	valSet, err := sb.GetValidatorSet(num)
 	if err != nil {
 		return errInvalidPeerAddress
 	}
 	if valSet.Council().Contains(addr) {
+		return nil
+	}
+
+	candidates, err := sb.GetCandidates(num)
+	if err != nil {
+		return errInvalidPeerAddress
+	}
+	if slices.Contains(candidates, addr) {
 		return nil
 	}
 	return errInvalidPeerAddress

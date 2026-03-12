@@ -28,6 +28,7 @@ var (
 	ErrViewMismatch          = errors.New("view mismatch")
 	ErrBlockHashMismatch     = errors.New("block hash mismatch")
 	ErrMsgFromNonCandidate   = errors.New("message from non-candidate")
+	ErrInvalidCandidateSig   = errors.New("invalid candidate signature")
 	ErrTooFar                = errors.New("too far in the future")
 	ErrRoundOutOfRange       = errors.New("round out of range")
 	ErrHeaderNotFound        = errors.New("header not found")

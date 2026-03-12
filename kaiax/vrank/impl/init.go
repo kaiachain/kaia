@@ -18,6 +18,7 @@ package impl
 
 import (
 	"crypto/ecdsa"
+	"sync"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -68,8 +69,9 @@ type VRankModule struct {
 	nodeID common.Address
 
 	// only for validators
-	prepreparedView istanbul.View // for collection window management
-	collector       *vrank.Collector
+	prepreparedView   istanbul.View // for collection window management
+	prepreparedViewMu sync.RWMutex
+	collector         *vrank.Collector
 }
 
 func NewVRankModule() *VRankModule {

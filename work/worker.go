@@ -43,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/kerrors"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
@@ -186,6 +187,7 @@ type worker struct {
 	proc              blockchain.Validator
 	chainDB           database.DBManager
 	govModule         gov.GovModule
+	vrankModule       vrank.VRankModule
 	executionModules  []kaiax.ExecutionModule
 	txBundlingModules []builder.TxBundlingModule
 
@@ -207,7 +209,7 @@ type worker struct {
 	nodetype common.ConnType
 }
 
-func newWorker(config *params.ChainConfig, engine consensus.Engine, nodeAddr common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool, govModule gov.GovModule) *worker {
+func newWorker(config *params.ChainConfig, engine consensus.Engine, nodeAddr common.Address, backend Backend, mux *event.TypeMux, nodetype common.ConnType, TxResendUseLegacy bool, govModule gov.GovModule, vrankModule vrank.VRankModule) *worker {
 	worker := &worker{
 		config:      config,
 		engine:      engine,
@@ -224,6 +226,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, nodeAddr com
 		nodetype:    nodetype,
 		nodeAddr:    nodeAddr,
 		govModule:   govModule,
+		vrankModule: vrankModule,
 	}
 
 	// Subscribe NewTxsEvent for tx pool
@@ -597,6 +600,11 @@ func (self *worker) commitNewWork() {
 	if self.config.IsMagmaForkEnabled(nextBlockNum) {
 		header.BaseFee = nextBaseFee
 	}
+
+	if self.config.IsPermissionlessForkEnabled(nextBlockNum) {
+		header.VRank = self.generateVRankField(parent)
+	}
+
 	if err := self.engine.Prepare(self.chain, header); err != nil {
 		logger.Error("Failed to prepare header for mining", "err", err)
 		return
@@ -706,6 +714,31 @@ func (self *worker) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
 
 func (self *worker) RegisterTxBundlingModule(modules ...builder.TxBundlingModule) {
 	self.txBundlingModules = append(self.txBundlingModules, modules...)
+}
+
+// generateVRankField returns nil when tallying cfReport fails.
+func (self *worker) generateVRankField(parent *types.Block) []byte {
+	if self.vrankModule == nil {
+		logger.Error("VRankModule is not registered")
+		return nil
+	}
+	prevBlockNum := parent.Number().Uint64()
+	prevRound := uint64(parent.Header().Round())
+	cfReport, err := self.vrankModule.TallyCfReport(prevBlockNum, prevRound)
+	if err != nil {
+		logger.Error("Failed to tally cfReport", "err", err, "prevBlockNum", prevBlockNum, "prevRound", prevRound)
+		return nil
+	}
+	if len(cfReport) == 0 {
+		return nil
+	}
+
+	ret, err := vrank.EncodeReport(cfReport)
+	if err != nil {
+		logger.Error("Failed to encode cfReport", "err", err, "cfReport", cfReport)
+		return nil
+	}
+	return ret
 }
 
 // Return the balance of the address in KAIA, in int64. If the balance is greater (often happens in private net), return MaxInt64.

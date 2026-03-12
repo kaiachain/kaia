@@ -57,6 +57,8 @@ import (
 	supply_impl "github.com/kaiachain/kaia/kaiax/supply/impl"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
+	"github.com/kaiachain/kaia/kaiax/vrank"
+	vrank_impl "github.com/kaiachain/kaia/kaiax/vrank/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node"
@@ -111,6 +113,7 @@ type BackendProtocolManager interface {
 	SetSyncStop(flag bool)
 	staking.StakingModuleHost
 	auction.AuctionModuleHost
+	vrank.VRankModuleHost
 }
 
 // CN implements the Kaia consensus node service.
@@ -240,6 +243,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		mGov     = gov_impl.NewGovModule()
 		mValset  = valset_impl.NewValsetModule()
 		mStaking = staking_impl.NewStakingModule()
+		mVRank   = vrank_impl.NewVRankModule()
 	)
 	cn := &CN{
 		config:            config,
@@ -386,7 +390,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	} else {
 		// TODO-Kaia improve to handle drop transaction on network traffic in PN and EN
-		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy, cn.govModule)
+		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy, cn.govModule, mVRank)
 	}
 
 	// istanbul BFT
@@ -404,7 +408,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
 
-	if err := cn.SetupKaiaxModules(ctx, mValset); err != nil {
+	if err := cn.SetupKaiaxModules(ctx, mValset, mVRank); err != nil {
 		logger.Error("Failed to setup kaiax modules", "err", err)
 	}
 
@@ -515,7 +519,7 @@ func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.
 	)
 }
 
-func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetModule) error {
+func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetModule, mVRank *vrank_impl.VRankModule) error {
 	var (
 		mRandao  = randao_impl.NewRandaoModule()
 		mReward  = reward_impl.NewRewardModule()
@@ -557,6 +561,12 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Downloader:    s.protocolManager.Downloader(),
 			NodeKey:       ctx.NodeKey(),
 		}),
+		mVRank.Init(&vrank_impl.InitOpts{
+			Valset:      mValset,
+			NodeKey:     ctx.NodeKey(),
+			ChainConfig: s.chainConfig,
+			Chain:       s.blockchain,
+		}),
 	)
 	if err != nil {
 		return err
@@ -586,6 +596,16 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 
 		if !mGasless.IsDisabled() {
 			mAuction.RegisterGaslessModule(mGasless)
+		}
+	}
+
+	if ctx.NodeType() == common.CONSENSUSNODE {
+		mBase = append(mBase, mVRank)
+		s.protocolManager.RegisterVRankModule(mVRank)
+		if host, ok := s.engine.(vrank.VRankModuleHost); ok {
+			host.RegisterVRankModule(mVRank)
+		} else {
+			logger.Crit("engine does not implement VRankModuleHost")
 		}
 	}
 

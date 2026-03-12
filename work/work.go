@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -107,12 +108,12 @@ type Miner struct {
 	shouldStart int32 // should start indicates whether we should start after sync
 }
 
-func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, nodeAddr common.Address, TxResendUseLegacy bool, govModule gov.GovModule) *Miner {
+func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, nodeAddr common.Address, TxResendUseLegacy bool, govModule gov.GovModule, vrankModule vrank.VRankModule) *Miner {
 	miner := &Miner{
 		backend:  backend,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, nodeAddr, backend, mux, nodetype, TxResendUseLegacy, govModule),
+		worker:   newWorker(config, engine, nodeAddr, backend, mux, nodetype, TxResendUseLegacy, govModule, vrankModule),
 		canStart: 1,
 	}
 	// TODO-Kaia drop or missing tx
