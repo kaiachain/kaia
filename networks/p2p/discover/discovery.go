@@ -65,6 +65,20 @@ type Config struct {
 }
 
 // discovery2 combines a UDP transport and a Table2 into a Discovery2 implementation.
+//
+// Lifecycle: UDP is started before Table (udp.Start -> tab.Start) and stopped after
+// (tab.Close -> udp.close), treating UDP as the transport layer and Table as the application.
+//
+// Table -> UDP calls (originating from the maintenance loops):
+//   - revalidateLoop tick -> revalidateOnce()     -> udp.ping()
+//   - refreshLoop         -> Bond() -> pingpong() -> udp.ping(), udp.waitping()
+//   - refreshLoop         -> findNodesOnce()      -> udp.findnode()
+//
+// UDP -> Table calls (originating from udp.readLoop dispatching packet handlers):
+//   - incoming PING     -> ping.preverify()     -> tab.IsAuthorized()  works even before tab.Start or after tab.Close
+//   - incoming FINDNODE -> findnode.preverify() -> tab.IsBonded()      same as above
+//   - incoming FINDNODE -> findnode.handle()    -> tab.ClosestNodes()  same as above
+//   - incoming PING     -> go t.bond(...)       -> go tab.Bond()       no-op before tab.Start or after tab.Close
 type discovery2 struct {
 	tab *Table2
 	udp *udp

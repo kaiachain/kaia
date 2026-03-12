@@ -138,7 +138,7 @@ func Test_Table_Bond_notInitialized(t *testing.T) {
 	// init is false by default; pinged=true triggers the check.
 	n := newTestNode(t, NodeTypeEN)
 	err := tab.Bond(true, n)
-	assert.ErrorIs(t, err, errTableNotInitialized)
+	assert.ErrorIs(t, err, errTableNotReady)
 }
 
 func Test_Table_Bond_happy(t *testing.T) {
