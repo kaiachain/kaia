@@ -80,12 +80,12 @@ func newTable2(cfg *Config, udp transport) (*Table2, error) {
 	)
 
 	rand.Seed()
-	db, err := newNodeDB(cfg.NodeDBPath, Version, cfg.Id)
+	nursery, err := getBootnodes(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	nursery, err := getBootnodes(cfg)
+	db, err := newNodeDB(cfg.NodeDBPath, Version, cfg.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +98,7 @@ func newTable2(cfg *Config, udp transport) (*Table2, error) {
 		db:              db,
 		udp:             udp,
 		closeReq:        make(chan struct{}),
+		selfID:          cfg.Id,
 		nursery:         nursery,
 		storages:        storages,
 		discoverTargets: discoverTargets,

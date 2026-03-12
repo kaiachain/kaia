@@ -75,7 +75,7 @@ func (tab *Table2) doRefreshOnce() {
 }
 
 func (tab *Table2) doRefresh() {
-	logger.Info("Discovery table refreshing", "counts", tab.lenByNodeTypes())
+	logger.Debug("Discovery table refreshing", "counts", tab.lenByNodeTypes())
 	tab.kademliaRefresh(NodeTypeEN)
 	tab.simpleRefresh(NodeTypeCN)
 	tab.simpleRefresh(NodeTypePN)
@@ -150,12 +150,12 @@ func (tab *Table2) findNodes(seeds []*Node, targetID NodeID, targetType NodeType
 
 	// Launch the first round of findnode requests.
 	for running < alpha {
-		target := pool.popUnasked()
-		if target == nil {
+		seed := pool.popUnasked()
+		if seed == nil {
 			break
 		}
 		running++
-		go func() { resCh <- tab.findNodesOnce(target, targetID, targetType, max) }()
+		go func() { resCh <- tab.findNodesOnce(seed, targetID, targetType, max) }()
 		logger.Trace("Discovery request sent", "targetType", targetType, "have", pool.count(excludeBn), "max", max)
 	}
 
@@ -170,9 +170,9 @@ func (tab *Table2) findNodes(seeds []*Node, targetID NodeID, targetType NodeType
 
 		// If we don't have enough nodes and willing to recursively ask, launch a new findnode request.
 		if recurse && pool.count(excludeBn) < max {
-			if target := pool.popUnasked(); target != nil {
+			if seed := pool.popUnasked(); seed != nil {
 				running++
-				go func() { resCh <- tab.findNodesOnce(target, targetID, targetType, max) }()
+				go func() { resCh <- tab.findNodesOnce(seed, targetID, targetType, max) }()
 				logger.Trace("Discovery recursive request sent", "targetType", targetType, "have", pool.count(excludeBn), "max", max)
 			}
 		}
