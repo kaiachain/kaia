@@ -17,6 +17,7 @@
 package discover
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -87,25 +88,39 @@ func (api *DiscoveryAPI) DeleteNode(kni string) error {
 	return api.tab.db.deleteNode(n.ID)
 }
 
-// GetAuthorized returns the list of authorized nodes.
-func (api *DiscoveryAPI) GetAuthorized() []*Node {
-	// TODO: implement when Table2 authorized node storage is ready
-	return nil
+// GetAuthorizedNodes returns the list of authorized nodes.
+func (api *DiscoveryAPI) GetAuthorizedNodes() []*Node {
+	return api.tab.GetAuthorizedNodes()
 }
 
-// PutAuthorized adds a node to the authorized list.
-func (api *DiscoveryAPI) PutAuthorized(kni string) error {
-	n, err := ParseNode(kni)
+// PutAuthorizedNodes adds nodes to the authorized list. knis is a comma-separated list of KNI URIs.
+func (api *DiscoveryAPI) PutAuthorizedNodes(knis string) error {
+	nodes, err := parseNodeList(knis)
 	if err != nil {
 		return err
 	}
-	api.tab.PutAuthorizedNodes([]*Node{n})
+	api.tab.PutAuthorizedNodes(nodes)
 	return nil
 }
 
-// DeleteAuthorized removes a node from the authorized list.
-func (api *DiscoveryAPI) DeleteAuthorized(kni string) error {
-	// TODO: implement when Table2 authorized node storage is ready
-	_ = kni
+// DeleteAuthorizedNodes removes nodes from the authorized list. knis is a comma-separated list of KNI URIs.
+func (api *DiscoveryAPI) DeleteAuthorizedNodes(knis string) error {
+	nodes, err := parseNodeList(knis)
+	if err != nil {
+		return err
+	}
+	api.tab.DeleteAuthorizedNodes(nodes)
 	return nil
+}
+
+func parseNodeList(knis string) ([]*Node, error) {
+	var nodes []*Node
+	for _, kni := range strings.Split(knis, ",") {
+		n, err := ParseNode(strings.TrimSpace(kni))
+		if err != nil {
+			return nil, fmt.Errorf("invalid KNI: %s: %v", kni, err)
+		}
+		nodes = append(nodes, n)
+	}
+	return nodes, nil
 }

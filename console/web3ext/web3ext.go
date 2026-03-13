@@ -306,18 +306,18 @@ web3._extend({
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'getAuthorized',
-			call: 'bootnode_getAuthorized',
+			name: 'getAuthorizedNodes',
+			call: 'bootnode_getAuthorizedNodes',
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'putAuthorized',
-			call: 'bootnode_putAuthorized',
+			name: 'putAuthorizedNodes',
+			call: 'bootnode_putAuthorizedNodes',
 			params: 1
 		}),
 		new web3._extend.Method({
-			name: 'deleteAuthorized',
-			call: 'bootnode_deleteAuthorized',
+			name: 'deleteAuthorizedNodes',
+			call: 'bootnode_deleteAuthorizedNodes',
 			params: 1
 		})
 	],
