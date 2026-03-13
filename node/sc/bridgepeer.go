@@ -25,6 +25,7 @@ package sc
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
 	"sync"
 	"time"
@@ -450,9 +451,7 @@ func (ps *bridgePeerSet) Peers() map[string]BridgePeer {
 	defer ps.lock.RUnlock()
 
 	set := make(map[string]BridgePeer)
-	for id, p := range ps.peers {
-		set[id] = p
-	}
+	maps.Copy(set, ps.peers)
 	return set
 }
 

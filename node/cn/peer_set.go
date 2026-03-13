@@ -25,6 +25,7 @@ package cn
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"math/big"
 	"sort"
 	"sync"
@@ -210,9 +211,7 @@ func (ps *peerSet) Peers() map[string]Peer {
 	defer ps.lock.RUnlock()
 
 	set := make(map[string]Peer)
-	for id, p := range ps.peers {
-		set[id] = p
-	}
+	maps.Copy(set, ps.peers)
 	return set
 }
 
@@ -221,9 +220,7 @@ func (ps *peerSet) CNPeers() map[common.Address]Peer {
 	defer ps.lock.RUnlock()
 
 	set := make(map[common.Address]Peer)
-	for addr, p := range ps.cnpeers {
-		set[addr] = p
-	}
+	maps.Copy(set, ps.cnpeers)
 	return set
 }
 
@@ -232,9 +229,7 @@ func (ps *peerSet) ENPeers() map[common.Address]Peer {
 	defer ps.lock.RUnlock()
 
 	set := make(map[common.Address]Peer)
-	for addr, p := range ps.enpeers {
-		set[addr] = p
-	}
+	maps.Copy(set, ps.enpeers)
 	return set
 }
 
@@ -243,9 +238,7 @@ func (ps *peerSet) PNPeers() map[common.Address]Peer {
 	defer ps.lock.RUnlock()
 
 	set := make(map[common.Address]Peer)
-	for addr, p := range ps.pnpeers {
-		set[addr] = p
-	}
+	maps.Copy(set, ps.pnpeers)
 	return set
 }
 
