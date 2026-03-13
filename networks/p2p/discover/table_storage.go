@@ -44,6 +44,8 @@ type tableStorage interface {
 	closest(target common.Hash, max int) *nodesByDistance
 	// oldest returns the oldest node, subject to revalidation.
 	oldest() *Node
+	// all returns all nodes in the table.
+	all() []*Node
 	// len returns the number of nodes in the table.
 	len() int
 	// numReplacements returns the number of replacements in the KademliaStorage. 0 for FlatStorage.
@@ -192,6 +194,16 @@ func (s *kademliaStorage) oldest() *Node {
 	return nil
 }
 
+func (s *kademliaStorage) all() []*Node {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var nodes []*Node
+	for _, b := range s.buckets {
+		nodes = append(nodes, b.entries...)
+	}
+	return nodes
+}
+
 func (s *kademliaStorage) len() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -338,6 +350,14 @@ func (s *flatStorage) oldest() *Node {
 	} else {
 		return s.nodes[len(s.nodes)-1]
 	}
+}
+
+func (s *flatStorage) all() []*Node {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	nodes := make([]*Node, len(s.nodes))
+	copy(nodes, s.nodes)
+	return nodes
 }
 
 func (s *flatStorage) len() int {
