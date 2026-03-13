@@ -256,14 +256,14 @@ func SetupGenesisBlockWithOverride(db database.DBManager, genesis *Genesis, over
 		if hash != ghash {
 			return nil, common.Hash{}, &GenesisMismatchError{ghash, hash}
 		}
-	}
 
-	// The genesis block is present in the database but the corresponding state might not.
-	// Because the trie can be partially corrupted, we always commit the trie.
-	// It can happen in a state migrated database or live pruned database.
-	if db.GetDomainsManager() == nil { // FlatTrie disallows re-commiting the block lower than the head block.
-		if err := commitGenesisState(genesis, db, overrides); err != nil {
-			return nil, common.Hash{}, err
+		// The genesis block is present in the database but the corresponding state might not.
+		// Because the trie can be partially corrupted, we always commit the trie.
+		// It can happen in a state migrated database or live pruned database.
+		if db.GetDomainsManager() == nil { // FlatTrie disallows re-commiting the block lower than the head block.
+			if err := commitGenesisState(genesis, db, overrides); err != nil {
+				return nil, common.Hash{}, err
+			}
 		}
 	}
 
@@ -522,9 +522,6 @@ func decodePrealloc(data string) GenesisAlloc {
 }
 
 func commitGenesisState(genesis *Genesis, db database.DBManager, overrides *ChainOverrides) error {
-	if genesis == nil {
-		genesis = DefaultGenesisBlock()
-	}
 	if err := overrides.apply(genesis.Config); err != nil {
 		return err
 	}
