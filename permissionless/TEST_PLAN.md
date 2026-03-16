@@ -68,7 +68,3 @@ Files: `blockchain/system/addressbook_v2_test.go`, `kaiax/valset/impl/state_tran
 - `getAllStateNodes`: removed `num == 0` branch, unified to `getOrComputeNodeStates`
 - `NodeStateMap.Addresses()`: added `bytes.Compare` sorting (eliminates map iteration non-determinism)
 - `ValidatorList`: removed `permlessMu` (not shared across goroutines), added defensive copy in `newValidatorList`
-
-## TODO (Refactoring)
-
-- Remove `CommonAddressSet` interface: NO-OP methods (`Add`/`Remove`), semantic mismatch (`Council()`), interface pollution (`EqualState`). Each path should return `[]common.Address`/`NodeStateMap` directly, eliminating the `ValidatorList` wrapper. Touches permissioned path — separate task.
