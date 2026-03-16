@@ -27,10 +27,6 @@ import (
 )
 
 func (v *ValsetModule) getAllStateNodes(num uint64) (*ValidatorList, error) {
-	if num == 0 {
-		return v.getCouncilGenesisPermissionless()
-	}
-
 	nodes, err := v.getOrComputeNodeStates(num, nil)
 	if err != nil {
 		return nil, err
@@ -79,13 +75,6 @@ func (v *ValsetModule) getCouncilGenesisPermissioned() (valset.CommonAddressSet,
 	return valset.NewCommonAddressSet(istanbulExtra.Validators), nil
 }
 
-func (v *ValsetModule) getCouncilGenesisPermissionless() (*ValidatorList, error) {
-	istanbulExtra, err := v.getIstanbul()
-	if err != nil {
-		return nil, err
-	}
-	return newValidatorList(convertToChartMap(istanbulExtra.Validators)), nil
-}
 
 func (v *ValsetModule) getCouncilDBPermissioned(num uint64) (valset.CommonAddressSet, bool, error) {
 	pMinVoteNum := v.readLowestScannedVoteNumCached()
@@ -104,7 +93,6 @@ func (v *ValsetModule) getCouncilDBPermissioned(num uint64) (valset.CommonAddres
 	}
 	return ReadCouncilPermissiond(v.ChainKv, voteNum), true, nil
 }
-
 
 func (v *ValsetModule) readLowestScannedVoteNumCached() *uint64 {
 	if v.lowestScannedVoteNumCache == nil {
@@ -125,7 +113,6 @@ func (v *ValsetModule) readValidatorVoteBlockNumsCached() []uint64 {
 	copy(nums, v.validatorVoteBlockNumsCache)
 	return nums
 }
-
 
 // lastNumLessThan returns the last (rightmost) number in the list that is less than the given number.
 // If no such number exists, it returns 0.

@@ -1,6 +1,7 @@
 package valset
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -176,6 +177,11 @@ func (v NodeStateMap) EqualState(other NodeStateMap) bool {
 	return true
 }
 
+// Addresses returns a deterministically sorted list of addresses in the map.
 func (v NodeStateMap) Addresses() []common.Address {
-	return slices.Collect(maps.Keys(v))
+	addrs := slices.Collect(maps.Keys(v))
+	slices.SortFunc(addrs, func(a, b common.Address) int {
+		return bytes.Compare(a[:], b[:])
+	})
+	return addrs
 }

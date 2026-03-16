@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
@@ -33,7 +32,12 @@ type sortableValidator struct {
 }
 
 // getEpochTransition returns new validators after applying epoch transition
-func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, validators valset.NodeStateMap, idleTimeout time.Duration, maxValidatorCount int) valset.NodeStateMap {
+func (v *ValsetModule) getEpochTransition(
+	num uint64,
+	validators valset.NodeStateMap,
+	idleTimeout time.Duration,
+	maxValidatorCount int,
+) valset.NodeStateMap {
 	devLog := func(vals valset.NodeStateMap) {
 		for addr, val := range vals {
 			logger.Info("TODO-Permissionless: Remove this log", "num", num, "addr", addr.String(), "state", val.State.String(), "stakingamount", val.StakingAmount, "idleTimeout", val.IdleTimeout.String(), "pausedtimeout", val.PausedTimeout.String())
@@ -44,12 +48,6 @@ func (v *ValsetModule) getEpochTransition(si *staking.StakingInfo, num uint64, v
 		devLog(validators)
 		return validators.Copy()
 	}
-	if len(si.NodeIds) == 0 && len(si.StakingContracts) == 0 && len(si.RewardAddrs) == 0 {
-		devLog(validators)
-		// Not ABook activated yet
-		return nil
-	}
-
 	var (
 		now                  = time.Now()
 		newValidators        = validators.Copy()
@@ -149,8 +147,6 @@ func (vs *ValidatorList) getPermlessCouncil() *ValidatorList {
 		logger.Error("ValidatorList is nil")
 		return newValidatorList(valset.NodeStateMap{})
 	}
-	vs.permlessMu.RLock()
-	defer vs.permlessMu.RUnlock()
 	councilVals := make(valset.NodeStateMap)
 	for addr, val := range vs.permlessVals {
 		switch val.State {
@@ -161,12 +157,9 @@ func (vs *ValidatorList) getPermlessCouncil() *ValidatorList {
 	return newValidatorList(councilVals.Copy())
 }
 
-func (v *ValsetModule) deactiveStakersLessMinStakingAmount(si *staking.StakingInfo, num uint64, validators valset.NodeStateMap) valset.NodeStateMap {
-	if len(si.NodeIds) == 0 && len(si.StakingContracts) == 0 && len(si.RewardAddrs) == 0 {
-		// Not ABook activated yet
-		return nil
-	}
-
+// getViolationTransition transitions ValActive validators to ValExiting when they violate rules:
+// rule1: staking amount dropped below MinimumStake, rule2: vrank violation (TODO).
+func (v *ValsetModule) getViolationTransition(num uint64, validators valset.NodeStateMap) valset.NodeStateMap {
 	var (
 		pset          = v.GovModule.GetParamSet(num - 1) // read gov param from parent number
 		minStake      = pset.MinimumStake.Uint64()       // in KAIA

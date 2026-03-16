@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"sync"
 	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
@@ -43,28 +42,15 @@ const (
 )
 
 type ValidatorList struct {
-	permlessMu   sync.RWMutex
 	permlessVals valset.NodeStateMap
 }
 
-func newValidatorList(validatorChartMap valset.NodeStateMap) *ValidatorList {
-	return &ValidatorList{permlessVals: validatorChartMap}
-}
-
-func convertToChartMap(nodeAddrs []common.Address) valset.NodeStateMap {
-	nodes := make(valset.NodeStateMap)
-	for _, addr := range nodeAddrs {
-		nodes[addr] = &valset.ValidatorState{
-			// assign `ValActive` state in the permissioned operation
-			State: valset.ValActive,
-		}
-	}
-	return nodes
+// newValidatorList creates a ValidatorList with a defensive copy of the given map.
+func newValidatorList(validators valset.NodeStateMap) *ValidatorList {
+	return &ValidatorList{permlessVals: validators.Copy()}
 }
 
 func (vs *ValidatorList) EqualState(other valset.NodeStateMap) bool {
-	vs.permlessMu.RLock()
-	defer vs.permlessMu.RUnlock()
 	return vs.permlessVals.EqualState(other)
 }
 
@@ -77,14 +63,12 @@ func (vs *ValidatorList) String() string {
 
 func (vs *ValidatorList) Marshal() ([]byte, error) {
 	if vs == nil {
-		return nil, errors.New("permeless valset empty")
+		return nil, errors.New("permissionless valset empty")
 	}
 	return json.Marshal(vs.permlessVals)
 }
 
 func (vs *ValidatorList) Copy() valset.CommonAddressSet {
-	vs.permlessMu.RLock()
-	defer vs.permlessMu.RUnlock()
 	return &ValidatorList{permlessVals: vs.permlessVals.Copy()}
 }
 
@@ -94,9 +78,6 @@ func (vs *ValidatorList) Council() []common.Address {
 		logger.Error("ValidatorList is nil")
 		return []common.Address{}
 	}
-	// return all state of validtaors execept for candidate states
-	vs.permlessMu.RLock()
-	defer vs.permlessMu.RUnlock()
 	var ret []common.Address
 	for addr, val := range vs.permlessVals {
 		switch val.State {
@@ -112,9 +93,6 @@ func (vs *ValidatorList) Len() int {
 		logger.Error("ValidatorList is nil")
 		return 0
 	}
-	// return the length of all state of validtaors
-	vs.permlessMu.RLock()
-	defer vs.permlessMu.RUnlock()
 	return len(vs.permlessVals)
 }
 
@@ -123,9 +101,6 @@ func (vs *ValidatorList) Contains(targetAddr common.Address) bool {
 		logger.Error("ValidatorList is nil")
 		return false
 	}
-	// return all state of validtaors
-	vs.permlessMu.RLock()
-	defer vs.permlessMu.RUnlock()
 	_, exists := vs.permlessVals[targetAddr]
 	return exists
 }
@@ -144,7 +119,6 @@ func (vs *ValidatorList) Subtract(other *valset.AddressSet) *valset.AddressSet {
 		logger.Error("ValidatorList is nil")
 		return valset.NewAddressSet([]common.Address{})
 	}
-	// do not read lock because of the manipluation on copied data
 	copied := vs.Copy().(*ValidatorList).permlessVals
 	for _, addr := range other.Council() {
 		delete(copied, addr)
@@ -216,11 +190,7 @@ func (v *ValsetModule) applyAllTransitions(
 	statedb *state.StateDB,
 	header *types.Header,
 ) (valset.NodeStateMap, error) {
-	si, err := v.StakingModule.GetStakingInfoFromState(num, statedb)
-	if err != nil {
-		return nil, err
-	}
-	newValidators := v.deactiveStakersLessMinStakingAmount(si, num, validators)
+	newValidators := v.getViolationTransition(num, validators)
 
 	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb.Copy())
 	if err != nil {
@@ -239,7 +209,7 @@ func (v *ValsetModule) applyAllTransitions(
 		logger.Error("Failed to read ABv2 max counts, using defaults", "number", num, "err", err)
 		maxValCount = DefaultActiveValidatorCount
 	}
-	newValidators = v.getEpochTransition(si, num, newValidators, idleTimeout, int(maxValCount))
+	newValidators = v.getEpochTransition(num, newValidators, idleTimeout, int(maxValCount))
 	return newValidators, nil
 }
 
@@ -280,27 +250,51 @@ func (v *ValsetModule) InstallABv2(
 	return nil
 }
 
-// writeNodesToContract reads node state from the in-memory cache and writes it to the AddressBookV2 contract.
-// PostInsertBlock(N-1) computes transitions and caches nodeStates[N]; Initialize(N) reads cache and writes to contract.
+// writeNodesToContract computes the diff between parent(N-1) and current(N) node states,
+// and writes only the changed nodes to the AddressBookV2 contract via processSystemTransition.
+// At epoch blocks, the call is always made (even with empty diff) to update epochValCount.
 func (v *ValsetModule) writeNodesToContract(
 	vmenv *vm.EVM,
 	header *types.Header,
 	statedb *state.StateDB,
 ) error {
 	num := header.Number.Uint64()
-	nodes, err := v.getOrComputeNodeStates(num, statedb)
+	currentNodes, err := v.getOrComputeNodeStates(num, statedb)
 	if err != nil {
 		logger.Error("Failed to get node states", "number", num, "err", err)
 		return nil
 	}
+
+	// Compute diff: only nodes whose state or timeout changed.
+	// Error is ignored: if parent is unavailable (nil), diffNodeStates treats all current nodes as changed (fallback to full write).
+	parentNodes, _ := v.getOrComputeNodeStates(num-1, nil)
+	diff := diffNodeStates(parentNodes, currentNodes)
+
+	// Skip call if no changes and not an epoch block (epoch blocks need epochValCount update)
+	if len(diff) == 0 && !isVrankEpoch(num) {
+		return nil
+	}
+
 	config := v.Chain.Config()
-	msg, from, err := prepareNodeWrite(config, header.Number, nodes)
+	msg, from, err := prepareNodeWrite(config, header.Number, diff)
 	if err == nil {
 		if ret, evmErr := blockchain.SystemTxCall(msg, from, header, vmenv, statedb, config.Rules(header.Number)); evmErr != nil {
 			logger.Error("Failed to call processSystemTransition", "number", header.Number, "err", evmErr, "ret", common.Bytes2Hex(ret))
 		}
 	}
 	return nil
+}
+
+// diffNodeStates returns nodes whose state or timeout changed between parent and current.
+func diffNodeStates(parent, current valset.NodeStateMap) valset.NodeStateMap {
+	diff := make(valset.NodeStateMap)
+	for addr, cur := range current {
+		prev, exists := parent[addr]
+		if !exists || prev.State != cur.State || prev.IdleTimeout != cur.IdleTimeout || prev.PausedTimeout != cur.PausedTimeout {
+			diff[addr] = cur
+		}
+	}
+	return diff
 }
 
 func (v *ValsetModule) installAndInitializeABv2(
@@ -310,11 +304,23 @@ func (v *ValsetModule) installAndInitializeABv2(
 ) error {
 	config := v.Chain.Config()
 
-	if err := system.InstallAddressBookV2(statedb); err != nil {
+	// Read ABv2 implementation address from ABv2DataContract (pre-deployed by governance)
+	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb)
+	if err != nil {
+		return fmt.Errorf("create contract backend: %w", err)
+	}
+	// nil uses CurrentBlock (parent), since the current block isn't committed yet
+	implAddr, err := system.ReadABv2Implementation(backend, nil)
+	if err != nil {
+		logger.Error("Failed to read ABv2 implementation", "number", header.Number, "err", err)
+		return err
+	}
+
+	if err := system.InstallAddressBookV2(statedb, implAddr); err != nil {
 		logger.Error("Failed to install AddressBookV2", "number", header.Number, "err", err.Error())
 		return err
 	}
-	logger.Info("Installed AddressBookV2", "number", header.Number)
+	logger.Info("Installed AddressBookV2", "number", header.Number, "impl", implAddr.Hex())
 
 	// ABv2.initialize() reads all genesis data from ABv2DataContract via Registry(0x401).
 	from, msg, err := system.EncodeInitializeABv2(config.Rules(header.Number))

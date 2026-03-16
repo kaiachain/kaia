@@ -128,9 +128,6 @@ func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset
 		return nil, err
 	}
 
-	validatorList.permlessMu.RLock()
-	defer validatorList.permlessMu.RUnlock()
-
 	// empty states means return all
 	if len(states) == 0 {
 		return validatorList.permlessVals.Copy(), nil

@@ -137,6 +137,12 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 			}
 		}
 	}
+	// fmt.Println("FFF", current.Number())
+	{
+		// parent := cn.blockchain.GetBlock(current.ParentHash(), current.NumberU64()-1)
+		// _, err := state.New(parent.Root(), database, nil, nil)
+		// fmt.Println("FFF-1", err)
+	}
 	// State is available at historical point, re-execute the blocks on top for
 	// the desired state.
 	var (

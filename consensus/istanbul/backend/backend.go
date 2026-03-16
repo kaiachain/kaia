@@ -415,7 +415,6 @@ func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	demoted, err := sb.valsetModule.GetDemotedValidators(num)
 	if err != nil {
 		return nil, err

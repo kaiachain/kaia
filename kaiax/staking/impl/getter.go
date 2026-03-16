@@ -200,7 +200,7 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 		if err != nil {
 			return nil, err
 		}
-		return parsePermissionlessCallResult(num, res.Profiles, res.StakingAmounts, res.KefAddr, res.KifAddr, clRes)
+		return parsePermissionlessCallResult(num, res.Profiles, res.StakingAmounts, res.KefAddr, res.KifAddr, res.KpfAddr, clRes)
 	}
 
 	// Permissioned: read from legacy AddressBook.
@@ -220,7 +220,7 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 	return parseCallResult(num, abRes.TypeList, abRes.AddressList, abRes.StakingAmounts, clRes)
 }
 
-func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amounts []*big.Int, kefAddr, kifAddr common.Address, clRes clRegistryResult) (*staking.StakingInfo, error) {
+func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amounts []*big.Int, kefAddr, kifAddr, kpfAddr common.Address, clRes clRegistryResult) (*staking.StakingInfo, error) {
 	if len(profiles) == 0 {
 		return emptyStakingInfo(num), nil
 	}
@@ -250,6 +250,7 @@ func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amo
 		RewardAddrs:      rewardAddrs,
 		KEFAddr:          kefAddr,
 		KIFAddr:          kifAddr,
+		KPFAddr:          kpfAddr,
 		StakingAmounts:   stakingAmounts,
 		CLStakingInfos:   parseCLResult(clRes),
 	}, nil

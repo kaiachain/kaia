@@ -152,7 +152,7 @@ func (ps *peerSet) Register(p Peer, ext *snap.Peer) error {
 	}
 
 	if err := peerTypeValidator.ValidatePeerType(p.GetAddr()); err != nil {
-		return fmt.Errorf("fail to validate peer type: %s", err)
+		return fmt.Errorf("fail to validate peer type: %s(%s)", p.GetAddr().String(), err)
 	}
 
 	if ext != nil {

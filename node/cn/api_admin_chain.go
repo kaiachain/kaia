@@ -258,7 +258,8 @@ func (s *AdminChainCNAPI) NodeConfig(ctx context.Context) interface{} {
 }
 
 // SetPermissionlessForkBlock overrides the permissionless hardfork block number
-// in the chain config and persists it to the chain database. For testing purposes only.
+// in the chain config and persists it to the chain database.
+// TODO-Permissionless: Testing only. Remove before production release.
 func (api *AdminChainCNAPI) SetPermissionlessForkBlock(blockNumber uint64) (uint64, error) {
 	cfg := api.cn.blockchain.Config()
 	cfg.PermissionlessCompatibleBlock = new(big.Int).SetUint64(blockNumber)

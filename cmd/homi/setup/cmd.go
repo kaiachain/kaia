@@ -41,15 +41,20 @@ import (
 	"github.com/kaiachain/kaia/cmd/homi/docker/service"
 	"github.com/kaiachain/kaia/cmd/homi/genesis"
 	"github.com/kaiachain/kaia/common"
+	addressbookv2contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/AddressBookV2"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/kaiax/gasless"
+	valsetimpl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/params"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
 )
+
+const defaultMaxReadyCandidateCount = 3
+const defaultExitThreshold = 2
 
 type ValidatorInfo struct {
 	Address  common.Address
@@ -546,6 +551,63 @@ func useAddressBookMock(ctx *cli.Context, genesisJson *blockchain.Genesis) {
 	allocationFunction(genesisJson)
 }
 
+func allocatePermissionless(ctx *cli.Context, genesisJson *blockchain.Genesis, validatorAddrs []common.Address, kip113Init system.AllocKip113Init) {
+	owner := validatorAddrs[0]
+	numValidators := len(validatorAddrs)
+	stakeAmt := new(big.Int).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA))
+
+	// Build NodeInfos — StakingContract is filled by AllocPermissionless after deployment
+	nodeInfos := make([]addressbookv2contract.NodeInfo, numValidators)
+	for i, addr := range validatorAddrs {
+		blsInfo := kip113Init.Infos[addr]
+		nodeInfos[i] = addressbookv2contract.NodeInfo{
+			Manager:       addr,
+			RewardAddress: common.BytesToAddress(crypto.Keccak256(addr.Bytes())), // Deterministic, distinct from nodeId
+			VoterAddress:  addr,
+			TimeoutAt:     new(big.Int),
+			GcId:          big.NewInt(int64(i + 1)),
+			BlsInfo: addressbookv2contract.BlsPublicKeyInfo{
+				PublicKey: blsInfo.PublicKey,
+				Pop:       blsInfo.Pop,
+			},
+			State: 6, // ValActive
+		}
+	}
+
+	stakeAmts := make([]*big.Int, numValidators)
+	for i := range stakeAmts {
+		stakeAmts[i] = new(big.Int).Set(stakeAmt)
+	}
+
+	config := &system.AllocPermissionlessConfig{
+		Owner:     owner,
+		NodeIds:   validatorAddrs,
+		NodeInfos: nodeInfos,
+		StakeAmts: stakeAmts,
+		DataConfig: addressbookv2contract.IABv2DataContractInitData{
+			InitialOwner:           owner,
+			ExitThreshold:          big.NewInt(defaultExitThreshold),
+			PauseTimeout:           big.NewInt(int64(valsetimpl.DefaultValPausedTimeout.Seconds())),
+			IdleTimeout:            big.NewInt(int64(valsetimpl.DefaultValIdleTimeout.Seconds())),
+			MaxValidatorCount:      big.NewInt(int64(valsetimpl.DefaultActiveValidatorCount)),
+			MaxReadyCandidateCount: big.NewInt(defaultMaxReadyCandidateCount),
+			KefAddress:             owner,
+			KifAddress:             owner,
+			KpfAddress:             owner,
+		},
+	}
+
+	alloc, err := system.AllocPermissionless(config)
+	if err != nil {
+		log.Fatalf("Failed to allocate permissionless contracts: %v", err)
+	}
+
+	// Merge into genesis alloc
+	for addr, account := range alloc {
+		genesisJson.Alloc[addr] = account
+	}
+}
+
 func allocateRegistry(ctx *cli.Context, genesisJson *blockchain.Genesis, owner common.Address, kip113Addr *common.Address) {
 	if randaoCompatibleBlock := ctx.Int64(randaoCompatibleBlockNumberFlag.Name); randaoCompatibleBlock != 0 {
 		return
@@ -744,11 +806,17 @@ func Gen(ctx *cli.Context) error {
 	patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
 	useAddressBookMock(ctx, genesisJson)
 
-	// Randao hardfork related system contracts
-	kip113ProxyAddr, kip113LogicAddr := allocateKip113(ctx, genesisJson, kip113Init)
-	allocateRegistry(ctx, genesisJson, nodeAddrs[0], kip113ProxyAddr)
-	useKip113Mock(ctx, genesisJson, kip113LogicAddr)
-	useRegistryMock(ctx, genesisJson)
+	// Permissionless includes Registry allocation and does not use KIP113
+	// (BLS keys are stored in ABv2DataContract instead).
+	if permissionlessBlock := ctx.Int64(permissionlessCompatibleBlockNumberFlag.Name); permissionlessBlock == 0 {
+		allocatePermissionless(ctx, genesisJson, validatorNodeAddrs, kip113Init)
+	} else {
+		// Randao hardfork related system contracts
+		kip113ProxyAddr, kip113LogicAddr := allocateKip113(ctx, genesisJson, kip113Init)
+		allocateRegistry(ctx, genesisJson, nodeAddrs[0], kip113ProxyAddr)
+		useKip113Mock(ctx, genesisJson, kip113LogicAddr)
+		useRegistryMock(ctx, genesisJson)
+	}
 
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))

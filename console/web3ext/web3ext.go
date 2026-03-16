@@ -542,6 +542,7 @@ web3._extend({
 			name: 'syncStakingInfoStatus',
 			call: 'admin_syncStakingInfoStatus',
 		}),
+		// TODO-Permissionless: Testing only. Remove before production release.
 		new web3._extend.Method({
 			name: 'setPermissionlessForkBlock',
 			call: 'admin_setPermissionlessForkBlock',

@@ -28,43 +28,35 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	abv2contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/AddressBookV2"
-	"github.com/kaiachain/kaia/crypto"
+	abv2data "github.com/kaiachain/kaia/contracts/contracts/system_contracts/AddressBookV2/abv2data"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
 
-// deriveAddressBookV2LogicAddr derives a collision-free logic contract address
-// from the AddressBookV2 bytecode hash. If the derived address is already occupied,
-// it increments a nonce and retries until an empty address is found.
-func deriveAddressBookV2LogicAddr(state *state.StateDB) common.Address {
-	for nonce := uint64(0); ; nonce++ {
-		input := make([]byte, 0, len(AddressBookV2Code)+8)
-		input = append(input, AddressBookV2Code...)
-		input = append(input, new(big.Int).SetUint64(nonce).Bytes()...)
-		addr := common.BytesToAddress(crypto.Keccak256(input)[12:])
-		if state.Empty(addr) {
-			return addr
-		}
+// ReadABv2Implementation reads the ABv2 logic contract address from ABv2DataContract.
+// ABv2DataContract is resolved from Registry and stores the implementation as an immutable.
+func ReadABv2Implementation(backend bind.ContractCaller, num *big.Int) (common.Address, error) {
+	dataContractAddr, err := ReadActiveAddressFromRegistry(backend, "ABv2DataContract", num)
+	if err != nil {
+		return common.Address{}, err
 	}
+	caller, err := abv2data.NewABv2DataContractCaller(dataContractAddr, backend)
+	if err != nil {
+		return common.Address{}, err
+	}
+	return caller.Implementation(&bind.CallOpts{BlockNumber: num})
 }
 
-// InstallAddressBookV2 deploys the AddressBookV2 UUPS proxy at AddressBookAddr (0x400),
-// replacing the existing AddressBookV1. The logic contract is deployed at a
-// collision-free address derived from the bytecode hash.
-func InstallAddressBookV2(state *state.StateDB) error {
-	logicAddr := deriveAddressBookV2LogicAddr(state)
-
+// InstallAddressBookV2 sets up the AddressBookV2 UUPS proxy at AddressBookAddr (0x400).
+// logicAddr is the pre-deployed ABv2 implementation contract address
+// (stored in ABv2DataContract.implementation()).
+func InstallAddressBookV2(state *state.StateDB, logicAddr common.Address) error {
 	// Set ERC1967 proxy code at 0x400
 	if err := state.SetCode(AddressBookAddr, ERC1967ProxyCode); err != nil {
 		return err
 	}
 	// Point proxy's implementation slot to the logic contract
 	state.SetState(AddressBookAddr, common.BytesToHash(ImplementationSlot), lpad32(logicAddr))
-
-	// Deploy logic contract
-	if err := state.SetCode(logicAddr, AddressBookV2Code); err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -93,22 +85,21 @@ func EncodeWriteNodes(
 	rules params.Rules,
 	validators valset.NodeStateMap,
 ) (common.Address, *types.Transaction, error) {
-	keys := make([]common.Address, 0, len(validators))
+	nodeIds := make([]common.Address, 0, len(validators))
 	for addr := range validators {
-		keys = append(keys, addr)
+		nodeIds = append(nodeIds, addr)
 	}
-	sort.Slice(keys, func(i, j int) bool {
-		return bytes.Compare(keys[i].Bytes(), keys[j].Bytes()) < 0
+	// Sort for deterministic ABI encoding across all nodes
+	sort.Slice(nodeIds, func(i, j int) bool {
+		return bytes.Compare(nodeIds[i].Bytes(), nodeIds[j].Bytes()) < 0
 	})
 
 	var (
-		nodeIds    = make([]common.Address, len(keys))
-		newStates  = make([]uint8, len(keys))
-		timeoutAts = make([]*big.Int, len(keys))
+		newStates  = make([]uint8, len(nodeIds))
+		timeoutAts = make([]*big.Int, len(nodeIds))
 	)
-	for idx, addr := range keys {
+	for idx, addr := range nodeIds {
 		vs := validators[addr]
-		nodeIds[idx] = addr
 		newStates[idx] = vs.State.ToUint8()
 		var timeout time.Time
 		switch vs.State {
