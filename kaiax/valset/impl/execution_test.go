@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
@@ -83,4 +84,50 @@ func TestPostInsertBlock(t *testing.T) {
 	// Check the DB
 	assert.Equal(t, []uint64{0, 2}, ReadValidatorVoteBlockNums(db))
 	assert.Equal(t, numsToAddrs(1, 2, 3, 6), readCouncilPermissioned(db, 2))
+}
+
+// TestPostInsertBlock_PermissionlessIgnoresVote verifies that header votes
+// (add/remove validator) are ignored when permissionless fork is enabled.
+func TestPostInsertBlock_PermissionlessIgnoresVote(t *testing.T) {
+	var (
+		governingNode = numToAddr(3)
+
+		voteAdd6, _ = headergov.NewVoteData(governingNode, string(gov.AddValidator), numToAddr(6)).ToVoteBytes()
+		block1      = types.NewBlockWithHeader(&types.Header{
+			Number: big.NewInt(1),
+			Vote:   voteAdd6,
+		})
+	)
+
+	var (
+		ctrl               = gomock.NewController(t)
+		db                 = database.NewMemDB()
+		mockChain          = chain_mock.NewMockBlockChain(ctrl)
+		nodeStatesCache, _ = lru.New(128)
+		v                  = &ValsetModule{
+			InitOpts: InitOpts{
+				ChainKv: db,
+				Chain:   mockChain,
+			},
+			nodeStatesCache: nodeStatesCache,
+		}
+	)
+
+	// PermissionlessCompatibleBlock=0 → all blocks are permissionless
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{
+		PermissionlessCompatibleBlock: big.NewInt(0),
+	}).AnyTimes()
+	// getOrComputeNodeStates will fail (no header/state), but that's fine —
+	// the point is that applyVote is never reached.
+	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(nil).AnyTimes()
+
+	// Seed initial vote state so we can verify it's unchanged
+	writeValidatorVoteBlockNums(db, []uint64{0})
+
+	// PostInsertBlock takes the permissionless path; vote is ignored
+	_ = v.PostInsertBlock(block1)
+
+	// Vote was NOT applied — DB unchanged
+	assert.Equal(t, []uint64{0}, ReadValidatorVoteBlockNums(db))
+	assert.Nil(t, readCouncilPermissioned(db, 1))
 }

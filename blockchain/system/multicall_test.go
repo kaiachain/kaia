@@ -21,30 +21,40 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/multicall"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestContractCallerForMultiCall(t *testing.T) {
+// setupMultiCallMock creates a SimulatedBackend with MultiCallMockCode injected,
+// and returns the caller, call opts, state, and a cleanup function.
+func setupMultiCallMock(t *testing.T) (*multicall.MultiCallContractCaller, *bind.CallOpts, *state.StateDB, func()) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	backend := backends.NewSimulatedBackend(nil)
 	originCode := MultiCallCode
-	defer func() {
-		MultiCallCode = originCode
-		backend.Close()
-	}()
-
-	// Temporary code injection
 	MultiCallCode = MultiCallMockCode
 
 	header := backend.BlockChain().CurrentHeader()
 	chain := backend.BlockChain()
+	st, _ := backend.BlockChain().StateAt(header.Root)
+	caller, _ := NewMultiCallContractCaller(st, chain, header)
+	callOpts := &bind.CallOpts{BlockNumber: header.Number}
 
-	state, _ := backend.BlockChain().StateAt(header.Root)
-	caller, _ := NewMultiCallContractCaller(state, chain, header)
-	ret, err := caller.MultiCallStakingInfo(&bind.CallOpts{BlockNumber: header.Number}, false, false)
+	cleanup := func() {
+		MultiCallCode = originCode
+		backend.Close()
+	}
+	return caller, callOpts, st, cleanup
+}
+
+func TestContractCallerForMultiCall(t *testing.T) {
+	caller, callOpts, state, cleanup := setupMultiCallMock(t)
+	defer cleanup()
+
+	ret, err := caller.MultiCallStakingInfo(callOpts)
 	assert.Nil(t, err)
 
 	// Does not affect the original state
@@ -67,4 +77,37 @@ func TestContractCallerForMultiCall(t *testing.T) {
 		assert.Equal(t, expectedAddress[i], ret.AddressList[i])
 	}
 	assert.Equal(t, new(big.Int).Mul(big.NewInt(7_000_000), big.NewInt(params.KAIA)), ret.StakingAmounts[0])
+}
+
+func TestMultiCallStakingInfoPermissionless(t *testing.T) {
+	caller, callOpts, state, cleanup := setupMultiCallMock(t)
+	defer cleanup()
+
+	ret, err := caller.MultiCallStakingInfoPermissionless(callOpts)
+	assert.Nil(t, err)
+
+	// Does not affect the original state
+	assert.Equal(t, []byte(nil), state.GetCode(MultiCallAddr))
+
+	// Verify profiles
+	assert.Equal(t, 2, len(ret.Profiles))
+	assert.Equal(t, common.HexToAddress("0xF00"), ret.Profiles[0].NodeId)
+	assert.Equal(t, common.HexToAddress("0xF01"), ret.Profiles[0].StakingContract)
+	assert.Equal(t, common.HexToAddress("0xF02"), ret.Profiles[0].RewardAddress)
+	assert.Equal(t, uint8(6), ret.Profiles[0].State) // ValActive
+
+	assert.Equal(t, common.HexToAddress("0xF03"), ret.Profiles[1].NodeId)
+	assert.Equal(t, common.HexToAddress("0xF04"), ret.Profiles[1].StakingContract)
+	assert.Equal(t, common.HexToAddress("0xF05"), ret.Profiles[1].RewardAddress)
+	assert.Equal(t, uint8(2), ret.Profiles[1].State) // CandReady
+
+	// Verify staking amounts
+	assert.Equal(t, 2, len(ret.StakingAmounts))
+	assert.Equal(t, new(big.Int).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA)), ret.StakingAmounts[0])
+	assert.Equal(t, new(big.Int).Mul(big.NewInt(10_000_000), big.NewInt(params.KAIA)), ret.StakingAmounts[1])
+
+	// Verify fund addresses
+	assert.Equal(t, common.HexToAddress("0x0a01"), ret.KefAddr)
+	assert.Equal(t, common.HexToAddress("0x0a02"), ret.KifAddr)
+	assert.Equal(t, common.HexToAddress("0x0a03"), ret.KpfAddr)
 }
