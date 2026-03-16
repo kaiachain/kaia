@@ -56,7 +56,6 @@ type Config struct {
 	// These settings are required for create Table and UDP
 	Id       NodeID
 	Addr     *net.UDPAddr
-	udp      transport
 	Conn     conn
 	NodeType NodeType
 

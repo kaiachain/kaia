@@ -225,8 +225,20 @@ func (s *sharedRand) Read(p []byte) (n int, err error) {
 
 // #region NodeType helpers
 
-func NewDiscovery(cfg *Config) (Discovery, error) {
-	return newTable(cfg)
+// nodeTypeName converts NodeType to string for logging.
+func nodeTypeName(nt NodeType) string { // TODO-Kaia-Node Consolidate p2p.NodeType and common.ConnType
+	switch nt {
+	case NodeTypeCN:
+		return "CN"
+	case NodeTypePN:
+		return "PN"
+	case NodeTypeEN:
+		return "EN"
+	case NodeTypeBN:
+		return "BN"
+	default:
+		return "Unknown Node Type"
+	}
 }
 
 func ParseNodeType(nt string) NodeType {
