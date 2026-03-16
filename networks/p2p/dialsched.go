@@ -271,8 +271,7 @@ func (ds *DialSched) dialLoop() {
 		select { // Loop upon any of the following signals.
 		case <-ds.wakeDial: // situation changed
 		case <-dialResCh: // one dial task completed (either success or failure)
-		case <-refreshResCh: // discovery refresh completed; refill the candidate queue
-			ds.refillCandidates()
+		case <-refreshResCh: // discovery refresh completed; next getCandidates will
 		case <-idle: // done idling
 		case <-ds.closeReq:
 			return
@@ -337,16 +336,17 @@ func (ds *DialSched) getDynamicCandidates(targetType discover.NodeType, need int
 		return nil, false
 	}
 
-	// Empty queue: signal the dial loop to run a discovery refresh.
-	// We'll come back after the refresh completes and refill the queue.
-	if len(ds.candidateQueue[targetType]) == 0 {
-		return nil, true
+	// Try to refill from the table if the queue can't satisfy the demand.
+	// The table may already have nodes (e.g. from local nodeDB) without needing a refresh
+	if len(ds.candidateQueue[targetType]) < need {
+		ds.refillCandidates()
 	}
 
 	// Pop up to `need` candidates from the queue.
 	q := ds.candidateQueue[targetType]
 	end := min(need, len(q))
 	nodes, ds.candidateQueue[targetType] = q[:end], q[end:]
+	// If the queue is short even after a refill, signal the dial loop to run a discovery refresh.
 	return nodes, len(q) < need
 }
 

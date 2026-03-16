@@ -153,7 +153,6 @@ func TestDialSched_OnPeerConnected(t *testing.T) {
 	ds.OnPeerConnected(inbound.ID, inbound.NType, true)
 	assert.False(t, ds.connectedOutbound.contains(inbound.ID), "inbound peer should not be counted as connected outbound")
 	assert.True(t, ds.connectedAll.contains(inbound.ID), "inbound peer should be counted as connected")
-	ds.refillCandidates()
 	cands, _ := ds.getCandidates()
 	require.Len(t, cands, 1, "expected one outbound candidate for PN when only inbound PN exists")
 	assert.Equal(t, candidate.ID, cands[0].ID)
@@ -235,7 +234,6 @@ func TestDialSched_GetCandidates_FromDiscovery(t *testing.T) {
 		}, tab, nil)
 	)
 
-	ds.refillCandidates()
 	cands, needRefresh := ds.getCandidates()
 
 	assert.True(t, hasNodeID(cands, pn.ID), "PN candidates should include GetNodes result")
