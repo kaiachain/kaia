@@ -193,6 +193,16 @@ type (
 
 // #region Helper types
 
+// transport is implemented by the UDP transport.
+// it is an interface so we can test without opening lots of UDP
+// sockets and without generating a private key.
+type transport interface {
+	ping(toid NodeID, toaddr *net.UDPAddr) error
+	waitping(fromID NodeID, fromIP net.IP) error
+	findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT NodeType, max int) ([]*Node, error)
+	close()
+}
+
 type conn interface {
 	ReadFromUDP(b []byte) (n int, addr *net.UDPAddr, err error)
 	WriteToUDP(b []byte, addr *net.UDPAddr) (n int, err error)
@@ -285,6 +295,9 @@ type ReadPacket struct {
 //   - waitping() passively waits for a PING packet
 //   - findnode() actively sends a FINDNODE packet, and wait for NEIGHBORS.
 //   - You do not actively send a PONG or NEIGHBORS packets. They are send only in response to incoming requests.
+// Compile-time assertion: *udp implements transport.
+var _ transport = (*udp)(nil)
+
 type udp struct {
 	networkID   uint64
 	conn        conn

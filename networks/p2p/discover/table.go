@@ -122,16 +122,6 @@ type bondproc struct {
 	done chan struct{}
 }
 
-// transport is implemented by the UDP transport.
-// it is an interface so we can test without opening lots of UDP
-// sockets and without generating a private key.
-type transport interface {
-	ping(toid NodeID, toaddr *net.UDPAddr) error
-	waitping(fromID NodeID, fromIP net.IP) error
-	findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, targetNT NodeType, max int) ([]*Node, error)
-	close()
-}
-
 func newTable(cfg *Config) (Discovery, error) {
 	// If no node database was given, use an in-memory one
 	db, err := newNodeDB(cfg.NodeDBPath, Version, cfg.Id)
