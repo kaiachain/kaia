@@ -21,8 +21,8 @@ import "./IHolderVerifier.sol";
 import "./FnsaVerify.sol";
 import "./IOperator.sol";
 import "./IBridge.sol";
-import "openzeppelin-contracts-5.0/access/Ownable.sol";
-import {ReentrancyGuard} from "openzeppelin-contracts-5.0/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract HolderVerifier is Ownable, ReentrancyGuard, IHolderVerifier {
     /* ========== CONSTANTS ========== */

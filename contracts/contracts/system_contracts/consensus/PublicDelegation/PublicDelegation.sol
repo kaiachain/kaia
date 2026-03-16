@@ -21,10 +21,10 @@ import "../../../libs/ValidContract.sol";
 import "../CnV3/ICnStakingV3.sol";
 import "./IPublicDelegation.sol";
 import "./PublicDelegationStorage.sol";
-import "openzeppelin-contracts-5.0/access/Ownable.sol";
-import "openzeppelin-contracts-5.0/utils/Address.sol";
-import "openzeppelin-contracts-5.0/utils/math/Math.sol";
-import "openzeppelin-contracts-5.0/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 // Implementation of public delegation of Kaia.
 //

@@ -51,7 +51,7 @@ export async function votingTestFixture() {
   const adminListB = [admin2];
   const adminListC = [admin3];
   const adminListD = [admin4];
-  const unLockTimes = [now + 100, now + 200];
+  const unLockTimes = [now + 1000, now + 2000];
   const unLockAmounts = [2_000_000n, 4_000_000n].map((x) => toPeb(x));
   const requirement = 1;
   const gcIdA = 700;

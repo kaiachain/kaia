@@ -18,8 +18,8 @@
 pragma solidity 0.8.25;
 
 import "./IAirdrop.sol";
-import "openzeppelin-contracts-5.0/utils/structs/EnumerableSet.sol";
-import "openzeppelin-contracts-5.0/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Airdrop is Ownable, IAirdrop {
     using EnumerableSet for EnumerableSet.AddressSet;

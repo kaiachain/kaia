@@ -31,8 +31,8 @@ var (
 
 // AddressMetaData contains all meta data concerning the Address contract.
 var AddressMetaData = &bind.MetaData{
-	ABI: "[]",
-	Bin: "0x60566037600b82828239805160001a607314602a57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea26469706673582212206a5ffe3918ffd67bc8201cd7c53cdf8cf8012872ab683529e81e227957132c4364736f6c63430008130033",
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"}]",
+	Bin: "0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea26469706673582212206d20bff17dc7a186180f241e0975b1633a8914ef132d046516045de0e07e8d0c64736f6c63430008190033",
 }
 
 // AddressABI is the input ABI used to generate the binding from.
@@ -40,7 +40,7 @@ var AddressMetaData = &bind.MetaData{
 var AddressABI = AddressMetaData.ABI
 
 // AddressBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const AddressBinRuntime = `73000000000000000000000000000000000000000030146080604052600080fdfea26469706673582212206a5ffe3918ffd67bc8201cd7c53cdf8cf8012872ab683529e81e227957132c4364736f6c63430008130033`
+const AddressBinRuntime = `730000000000000000000000000000000000000000301460806040525f80fdfea26469706673582212206d20bff17dc7a186180f241e0975b1633a8914ef132d046516045de0e07e8d0c64736f6c63430008190033`
 
 // AddressBin is the compiled bytecode used for deploying new contracts.
 // Deprecated: Use AddressMetaData.Bin instead.
@@ -207,8 +207,8 @@ func (_Address *AddressTransactorRaw) Transact(opts *bind.TransactOpts, method s
 
 // ERC1967ProxyMetaData contains all meta data concerning the ERC1967Proxy contract.
 var ERC1967ProxyMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_logic\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
-	Bin: "0x60806040526040516104e13803806104e1833981016040819052610022916102de565b61002e82826000610035565b50506103fb565b61003e83610061565b60008251118061004b5750805b1561005c5761005a83836100a1565b505b505050565b61006a816100cd565b6040516001600160a01b038216907fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b90600090a250565b60606100c683836040518060600160405280602781526020016104ba60279139610180565b9392505050565b6001600160a01b0381163b61013f5760405162461bcd60e51b815260206004820152602d60248201527f455243313936373a206e657720696d706c656d656e746174696f6e206973206e60448201526c1bdd08184818dbdb9d1c9858dd609a1b60648201526084015b60405180910390fd5b7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc80546001600160a01b0319166001600160a01b0392909216919091179055565b6060600080856001600160a01b03168560405161019d91906103ac565b600060405180830381855af49150503d80600081146101d8576040519150601f19603f3d011682016040523d82523d6000602084013e6101dd565b606091505b5090925090506101ef868383876101f9565b9695505050505050565b60608315610268578251600003610261576001600160a01b0385163b6102615760405162461bcd60e51b815260206004820152601d60248201527f416464726573733a2063616c6c20746f206e6f6e2d636f6e74726163740000006044820152606401610136565b5081610272565b610272838361027a565b949350505050565b81511561028a5781518083602001fd5b8060405162461bcd60e51b815260040161013691906103c8565b634e487b7160e01b600052604160045260246000fd5b60005b838110156102d55781810151838201526020016102bd565b50506000910152565b600080604083850312156102f157600080fd5b82516001600160a01b038116811461030857600080fd5b60208401519092506001600160401b038082111561032557600080fd5b818501915085601f83011261033957600080fd5b81518181111561034b5761034b6102a4565b604051601f8201601f19908116603f01168101908382118183101715610373576103736102a4565b8160405282815288602084870101111561038c57600080fd5b61039d8360208301602088016102ba565b80955050505050509250929050565b600082516103be8184602087016102ba565b9190910192915050565b60208152600082518060208401526103e78160408501602087016102ba565b601f01601f19169190910160400192915050565b60b1806104096000396000f3fe608060405236601057600e6013565b005b600e5b601f601b6021565b6058565b565b600060537f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc546001600160a01b031690565b905090565b3660008037600080366000845af43d6000803e8080156076573d6000f35b3d6000fdfea26469706673582212205d6a8985a07624eb030e02ca1492718ebe851f42cfdc725208d8f797b3b0befa64736f6c63430008130033416464726573733a206c6f772d6c6576656c2064656c65676174652063616c6c206661696c6564",
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"_data\",\"type\":\"bytes\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967NonPayable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967ProxyUninitialized\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"}]",
+	Bin: "0x60806040526040516103b03803806103b083398101604081905261002291610238565b8051610041576040516330a289cf60e21b815260040160405180910390fd5b61004b8282610052565b5050610301565b61005b826100b0565b6040516001600160a01b038316907fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b905f90a28051156100a45761009f828261012b565b505050565b6100ac6101cc565b5050565b806001600160a01b03163b5f036100ea57604051634c9c8ce360e01b81526001600160a01b03821660048201526024015b60405180910390fd5b7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc80546001600160a01b0319166001600160a01b0392909216919091179055565b60605f61013884846101ed565b905080801561015957505f3d118061015957505f846001600160a01b03163b115b1561016e57610166610200565b9150506101c6565b801561019857604051639996b31560e01b81526001600160a01b03851660048201526024016100e1565b3d156101ab576101a6610219565b6101c4565b60405163d6bda27560e01b815260040160405180910390fd5b505b92915050565b34156101eb5760405163b398979f60e01b815260040160405180910390fd5b565b5f805f835160208501865af49392505050565b6040513d81523d5f602083013e3d602001810160405290565b6040513d5f823e3d81fd5b634e487b7160e01b5f52604160045260245ffd5b5f8060408385031215610249575f80fd5b82516001600160a01b038116811461025f575f80fd5b60208401519092506001600160401b038082111561027b575f80fd5b818501915085601f83011261028e575f80fd5b8151818111156102a0576102a0610224565b604051601f8201601f19908116603f011681019083821181831017156102c8576102c8610224565b816040528281528860208487010111156102e0575f80fd5b8260208601602083015e5f6020848301015280955050505050509250929050565b60a38061030d5f395ff3fe6080604052600a600c565b005b60186014601a565b6050565b565b5f604b7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc546001600160a01b031690565b905090565b365f80375f80365f845af43d5f803e8080156069573d5ff35b3d5ffdfea2646970667358221220d6e0dd77c92a276b53cc924621634c02a16b313c6dfeb0f93faabbbb53b30c3b64736f6c63430008190033",
 }
 
 // ERC1967ProxyABI is the input ABI used to generate the binding from.
@@ -216,14 +216,14 @@ var ERC1967ProxyMetaData = &bind.MetaData{
 var ERC1967ProxyABI = ERC1967ProxyMetaData.ABI
 
 // ERC1967ProxyBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const ERC1967ProxyBinRuntime = `608060405236601057600e6013565b005b600e5b601f601b6021565b6058565b565b600060537f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc546001600160a01b031690565b905090565b3660008037600080366000845af43d6000803e8080156076573d6000f35b3d6000fdfea26469706673582212205d6a8985a07624eb030e02ca1492718ebe851f42cfdc725208d8f797b3b0befa64736f6c63430008130033`
+const ERC1967ProxyBinRuntime = `6080604052600a600c565b005b60186014601a565b6050565b565b5f604b7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc546001600160a01b031690565b905090565b365f80375f80365f845af43d5f803e8080156069573d5ff35b3d5ffdfea2646970667358221220d6e0dd77c92a276b53cc924621634c02a16b313c6dfeb0f93faabbbb53b30c3b64736f6c63430008190033`
 
 // ERC1967ProxyBin is the compiled bytecode used for deploying new contracts.
 // Deprecated: Use ERC1967ProxyMetaData.Bin instead.
 var ERC1967ProxyBin = ERC1967ProxyMetaData.Bin
 
 // DeployERC1967Proxy deploys a new Kaia contract, binding an instance of ERC1967Proxy to it.
-func DeployERC1967Proxy(auth *bind.TransactOpts, backend bind.ContractBackend, _logic common.Address, _data []byte) (common.Address, *types.Transaction, *ERC1967Proxy, error) {
+func DeployERC1967Proxy(auth *bind.TransactOpts, backend bind.ContractBackend, implementation common.Address, _data []byte) (common.Address, *types.Transaction, *ERC1967Proxy, error) {
 	parsed, err := ERC1967ProxyMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
@@ -232,7 +232,7 @@ func DeployERC1967Proxy(auth *bind.TransactOpts, backend bind.ContractBackend, _
 		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
 	}
 
-	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(ERC1967ProxyBin), backend, _logic, _data)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(ERC1967ProxyBin), backend, implementation, _data)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -402,306 +402,6 @@ func (_ERC1967Proxy *ERC1967ProxyTransactorSession) Fallback(calldata []byte) (*
 	return _ERC1967Proxy.Contract.Fallback(&_ERC1967Proxy.TransactOpts, calldata)
 }
 
-// Receive is a paid mutator transaction binding the contract receive function.
-//
-// Solidity: receive() payable returns()
-func (_ERC1967Proxy *ERC1967ProxyTransactor) Receive(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ERC1967Proxy.contract.RawTransact(opts, nil) // calldata is disallowed for receive function
-}
-
-// Receive is a paid mutator transaction binding the contract receive function.
-//
-// Solidity: receive() payable returns()
-func (_ERC1967Proxy *ERC1967ProxySession) Receive() (*types.Transaction, error) {
-	return _ERC1967Proxy.Contract.Receive(&_ERC1967Proxy.TransactOpts)
-}
-
-// Receive is a paid mutator transaction binding the contract receive function.
-//
-// Solidity: receive() payable returns()
-func (_ERC1967Proxy *ERC1967ProxyTransactorSession) Receive() (*types.Transaction, error) {
-	return _ERC1967Proxy.Contract.Receive(&_ERC1967Proxy.TransactOpts)
-}
-
-// ERC1967ProxyAdminChangedIterator is returned from FilterAdminChanged and is used to iterate over the raw logs and unpacked data for AdminChanged events raised by the ERC1967Proxy contract.
-type ERC1967ProxyAdminChangedIterator struct {
-	Event *ERC1967ProxyAdminChanged // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC1967ProxyAdminChangedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC1967ProxyAdminChanged)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC1967ProxyAdminChanged)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC1967ProxyAdminChangedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC1967ProxyAdminChangedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC1967ProxyAdminChanged represents a AdminChanged event raised by the ERC1967Proxy contract.
-type ERC1967ProxyAdminChanged struct {
-	PreviousAdmin common.Address
-	NewAdmin      common.Address
-	Raw           types.Log // Blockchain specific contextual infos
-}
-
-// FilterAdminChanged is a free log retrieval operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
-//
-// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
-func (_ERC1967Proxy *ERC1967ProxyFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*ERC1967ProxyAdminChangedIterator, error) {
-
-	logs, sub, err := _ERC1967Proxy.contract.FilterLogs(opts, "AdminChanged")
-	if err != nil {
-		return nil, err
-	}
-	return &ERC1967ProxyAdminChangedIterator{contract: _ERC1967Proxy.contract, event: "AdminChanged", logs: logs, sub: sub}, nil
-}
-
-// WatchAdminChanged is a free log subscription operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
-//
-// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
-func (_ERC1967Proxy *ERC1967ProxyFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *ERC1967ProxyAdminChanged) (event.Subscription, error) {
-
-	logs, sub, err := _ERC1967Proxy.contract.WatchLogs(opts, "AdminChanged")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC1967ProxyAdminChanged)
-				if err := _ERC1967Proxy.contract.UnpackLog(event, "AdminChanged", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseAdminChanged is a log parse operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
-//
-// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
-func (_ERC1967Proxy *ERC1967ProxyFilterer) ParseAdminChanged(log types.Log) (*ERC1967ProxyAdminChanged, error) {
-	event := new(ERC1967ProxyAdminChanged)
-	if err := _ERC1967Proxy.contract.UnpackLog(event, "AdminChanged", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// ERC1967ProxyBeaconUpgradedIterator is returned from FilterBeaconUpgraded and is used to iterate over the raw logs and unpacked data for BeaconUpgraded events raised by the ERC1967Proxy contract.
-type ERC1967ProxyBeaconUpgradedIterator struct {
-	Event *ERC1967ProxyBeaconUpgraded // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC1967ProxyBeaconUpgradedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC1967ProxyBeaconUpgraded)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC1967ProxyBeaconUpgraded)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC1967ProxyBeaconUpgradedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC1967ProxyBeaconUpgradedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC1967ProxyBeaconUpgraded represents a BeaconUpgraded event raised by the ERC1967Proxy contract.
-type ERC1967ProxyBeaconUpgraded struct {
-	Beacon common.Address
-	Raw    types.Log // Blockchain specific contextual infos
-}
-
-// FilterBeaconUpgraded is a free log retrieval operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
-//
-// Solidity: event BeaconUpgraded(address indexed beacon)
-func (_ERC1967Proxy *ERC1967ProxyFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*ERC1967ProxyBeaconUpgradedIterator, error) {
-
-	var beaconRule []interface{}
-	for _, beaconItem := range beacon {
-		beaconRule = append(beaconRule, beaconItem)
-	}
-
-	logs, sub, err := _ERC1967Proxy.contract.FilterLogs(opts, "BeaconUpgraded", beaconRule)
-	if err != nil {
-		return nil, err
-	}
-	return &ERC1967ProxyBeaconUpgradedIterator{contract: _ERC1967Proxy.contract, event: "BeaconUpgraded", logs: logs, sub: sub}, nil
-}
-
-// WatchBeaconUpgraded is a free log subscription operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
-//
-// Solidity: event BeaconUpgraded(address indexed beacon)
-func (_ERC1967Proxy *ERC1967ProxyFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967ProxyBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
-	var beaconRule []interface{}
-	for _, beaconItem := range beacon {
-		beaconRule = append(beaconRule, beaconItem)
-	}
-
-	logs, sub, err := _ERC1967Proxy.contract.WatchLogs(opts, "BeaconUpgraded", beaconRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC1967ProxyBeaconUpgraded)
-				if err := _ERC1967Proxy.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseBeaconUpgraded is a log parse operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
-//
-// Solidity: event BeaconUpgraded(address indexed beacon)
-func (_ERC1967Proxy *ERC1967ProxyFilterer) ParseBeaconUpgraded(log types.Log) (*ERC1967ProxyBeaconUpgraded, error) {
-	event := new(ERC1967ProxyBeaconUpgraded)
-	if err := _ERC1967Proxy.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
 // ERC1967ProxyUpgradedIterator is returned from FilterUpgraded and is used to iterate over the raw logs and unpacked data for Upgraded events raised by the ERC1967Proxy contract.
 type ERC1967ProxyUpgradedIterator struct {
 	Event *ERC1967ProxyUpgraded // Event containing the contract specifics and raw log
@@ -846,116 +546,138 @@ func (_ERC1967Proxy *ERC1967ProxyFilterer) ParseUpgraded(log types.Log) (*ERC196
 	return event, nil
 }
 
-// ERC1967UpgradeMetaData contains all meta data concerning the ERC1967Upgrade contract.
-var ERC1967UpgradeMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"}]",
+// ERC1967UtilsMetaData contains all meta data concerning the ERC1967Utils contract.
+var ERC1967UtilsMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"admin\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidAdmin\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidBeacon\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967NonPayable\",\"type\":\"error\"}]",
+	Bin: "0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220dd033e6377b33b7a96b145f6c106e3ab52adadbda2ef4b30b7d04a45d2523b7464736f6c63430008190033",
 }
 
-// ERC1967UpgradeABI is the input ABI used to generate the binding from.
-// Deprecated: Use ERC1967UpgradeMetaData.ABI instead.
-var ERC1967UpgradeABI = ERC1967UpgradeMetaData.ABI
+// ERC1967UtilsABI is the input ABI used to generate the binding from.
+// Deprecated: Use ERC1967UtilsMetaData.ABI instead.
+var ERC1967UtilsABI = ERC1967UtilsMetaData.ABI
 
-// ERC1967UpgradeBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const ERC1967UpgradeBinRuntime = ``
+// ERC1967UtilsBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const ERC1967UtilsBinRuntime = `730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220dd033e6377b33b7a96b145f6c106e3ab52adadbda2ef4b30b7d04a45d2523b7464736f6c63430008190033`
 
-// ERC1967Upgrade is an auto generated Go binding around a Kaia contract.
-type ERC1967Upgrade struct {
-	ERC1967UpgradeCaller     // Read-only binding to the contract
-	ERC1967UpgradeTransactor // Write-only binding to the contract
-	ERC1967UpgradeFilterer   // Log filterer for contract events
+// ERC1967UtilsBin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use ERC1967UtilsMetaData.Bin instead.
+var ERC1967UtilsBin = ERC1967UtilsMetaData.Bin
+
+// DeployERC1967Utils deploys a new Kaia contract, binding an instance of ERC1967Utils to it.
+func DeployERC1967Utils(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ERC1967Utils, error) {
+	parsed, err := ERC1967UtilsMetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(ERC1967UtilsBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &ERC1967Utils{ERC1967UtilsCaller: ERC1967UtilsCaller{contract: contract}, ERC1967UtilsTransactor: ERC1967UtilsTransactor{contract: contract}, ERC1967UtilsFilterer: ERC1967UtilsFilterer{contract: contract}}, nil
 }
 
-// ERC1967UpgradeCaller is an auto generated read-only Go binding around a Kaia contract.
-type ERC1967UpgradeCaller struct {
+// ERC1967Utils is an auto generated Go binding around a Kaia contract.
+type ERC1967Utils struct {
+	ERC1967UtilsCaller     // Read-only binding to the contract
+	ERC1967UtilsTransactor // Write-only binding to the contract
+	ERC1967UtilsFilterer   // Log filterer for contract events
+}
+
+// ERC1967UtilsCaller is an auto generated read-only Go binding around a Kaia contract.
+type ERC1967UtilsCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC1967UpgradeTransactor is an auto generated write-only Go binding around a Kaia contract.
-type ERC1967UpgradeTransactor struct {
+// ERC1967UtilsTransactor is an auto generated write-only Go binding around a Kaia contract.
+type ERC1967UtilsTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC1967UpgradeFilterer is an auto generated log filtering Go binding around a Kaia contract events.
-type ERC1967UpgradeFilterer struct {
+// ERC1967UtilsFilterer is an auto generated log filtering Go binding around a Kaia contract events.
+type ERC1967UtilsFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC1967UpgradeSession is an auto generated Go binding around a Kaia contract,
+// ERC1967UtilsSession is an auto generated Go binding around a Kaia contract,
 // with pre-set call and transact options.
-type ERC1967UpgradeSession struct {
-	Contract     *ERC1967Upgrade   // Generic contract binding to set the session for
+type ERC1967UtilsSession struct {
+	Contract     *ERC1967Utils     // Generic contract binding to set the session for
 	CallOpts     bind.CallOpts     // Call options to use throughout this session
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
-// ERC1967UpgradeCallerSession is an auto generated read-only Go binding around a Kaia contract,
+// ERC1967UtilsCallerSession is an auto generated read-only Go binding around a Kaia contract,
 // with pre-set call options.
-type ERC1967UpgradeCallerSession struct {
-	Contract *ERC1967UpgradeCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts         // Call options to use throughout this session
+type ERC1967UtilsCallerSession struct {
+	Contract *ERC1967UtilsCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts       // Call options to use throughout this session
 }
 
-// ERC1967UpgradeTransactorSession is an auto generated write-only Go binding around a Kaia contract,
+// ERC1967UtilsTransactorSession is an auto generated write-only Go binding around a Kaia contract,
 // with pre-set transact options.
-type ERC1967UpgradeTransactorSession struct {
-	Contract     *ERC1967UpgradeTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts         // Transaction auth options to use throughout this session
+type ERC1967UtilsTransactorSession struct {
+	Contract     *ERC1967UtilsTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
 }
 
-// ERC1967UpgradeRaw is an auto generated low-level Go binding around a Kaia contract.
-type ERC1967UpgradeRaw struct {
-	Contract *ERC1967Upgrade // Generic contract binding to access the raw methods on
+// ERC1967UtilsRaw is an auto generated low-level Go binding around a Kaia contract.
+type ERC1967UtilsRaw struct {
+	Contract *ERC1967Utils // Generic contract binding to access the raw methods on
 }
 
-// ERC1967UpgradeCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
-type ERC1967UpgradeCallerRaw struct {
-	Contract *ERC1967UpgradeCaller // Generic read-only contract binding to access the raw methods on
+// ERC1967UtilsCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
+type ERC1967UtilsCallerRaw struct {
+	Contract *ERC1967UtilsCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ERC1967UpgradeTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
-type ERC1967UpgradeTransactorRaw struct {
-	Contract *ERC1967UpgradeTransactor // Generic write-only contract binding to access the raw methods on
+// ERC1967UtilsTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
+type ERC1967UtilsTransactorRaw struct {
+	Contract *ERC1967UtilsTransactor // Generic write-only contract binding to access the raw methods on
 }
 
-// NewERC1967Upgrade creates a new instance of ERC1967Upgrade, bound to a specific deployed contract.
-func NewERC1967Upgrade(address common.Address, backend bind.ContractBackend) (*ERC1967Upgrade, error) {
-	contract, err := bindERC1967Upgrade(address, backend, backend, backend)
+// NewERC1967Utils creates a new instance of ERC1967Utils, bound to a specific deployed contract.
+func NewERC1967Utils(address common.Address, backend bind.ContractBackend) (*ERC1967Utils, error) {
+	contract, err := bindERC1967Utils(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &ERC1967Upgrade{ERC1967UpgradeCaller: ERC1967UpgradeCaller{contract: contract}, ERC1967UpgradeTransactor: ERC1967UpgradeTransactor{contract: contract}, ERC1967UpgradeFilterer: ERC1967UpgradeFilterer{contract: contract}}, nil
+	return &ERC1967Utils{ERC1967UtilsCaller: ERC1967UtilsCaller{contract: contract}, ERC1967UtilsTransactor: ERC1967UtilsTransactor{contract: contract}, ERC1967UtilsFilterer: ERC1967UtilsFilterer{contract: contract}}, nil
 }
 
-// NewERC1967UpgradeCaller creates a new read-only instance of ERC1967Upgrade, bound to a specific deployed contract.
-func NewERC1967UpgradeCaller(address common.Address, caller bind.ContractCaller) (*ERC1967UpgradeCaller, error) {
-	contract, err := bindERC1967Upgrade(address, caller, nil, nil)
+// NewERC1967UtilsCaller creates a new read-only instance of ERC1967Utils, bound to a specific deployed contract.
+func NewERC1967UtilsCaller(address common.Address, caller bind.ContractCaller) (*ERC1967UtilsCaller, error) {
+	contract, err := bindERC1967Utils(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &ERC1967UpgradeCaller{contract: contract}, nil
+	return &ERC1967UtilsCaller{contract: contract}, nil
 }
 
-// NewERC1967UpgradeTransactor creates a new write-only instance of ERC1967Upgrade, bound to a specific deployed contract.
-func NewERC1967UpgradeTransactor(address common.Address, transactor bind.ContractTransactor) (*ERC1967UpgradeTransactor, error) {
-	contract, err := bindERC1967Upgrade(address, nil, transactor, nil)
+// NewERC1967UtilsTransactor creates a new write-only instance of ERC1967Utils, bound to a specific deployed contract.
+func NewERC1967UtilsTransactor(address common.Address, transactor bind.ContractTransactor) (*ERC1967UtilsTransactor, error) {
+	contract, err := bindERC1967Utils(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &ERC1967UpgradeTransactor{contract: contract}, nil
+	return &ERC1967UtilsTransactor{contract: contract}, nil
 }
 
-// NewERC1967UpgradeFilterer creates a new log filterer instance of ERC1967Upgrade, bound to a specific deployed contract.
-func NewERC1967UpgradeFilterer(address common.Address, filterer bind.ContractFilterer) (*ERC1967UpgradeFilterer, error) {
-	contract, err := bindERC1967Upgrade(address, nil, nil, filterer)
+// NewERC1967UtilsFilterer creates a new log filterer instance of ERC1967Utils, bound to a specific deployed contract.
+func NewERC1967UtilsFilterer(address common.Address, filterer bind.ContractFilterer) (*ERC1967UtilsFilterer, error) {
+	contract, err := bindERC1967Utils(address, nil, nil, filterer)
 	if err != nil {
 		return nil, err
 	}
-	return &ERC1967UpgradeFilterer{contract: contract}, nil
+	return &ERC1967UtilsFilterer{contract: contract}, nil
 }
 
-// bindERC1967Upgrade binds a generic wrapper to an already deployed contract.
-func bindERC1967Upgrade(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := ERC1967UpgradeMetaData.GetAbi()
+// bindERC1967Utils binds a generic wrapper to an already deployed contract.
+func bindERC1967Utils(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := ERC1967UtilsMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
@@ -966,461 +688,214 @@ func bindERC1967Upgrade(address common.Address, caller bind.ContractCaller, tran
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ERC1967Upgrade *ERC1967UpgradeRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _ERC1967Upgrade.Contract.ERC1967UpgradeCaller.contract.Call(opts, result, method, params...)
+func (_ERC1967Utils *ERC1967UtilsRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _ERC1967Utils.Contract.ERC1967UtilsCaller.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_ERC1967Upgrade *ERC1967UpgradeRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ERC1967Upgrade.Contract.ERC1967UpgradeTransactor.contract.Transfer(opts)
+func (_ERC1967Utils *ERC1967UtilsRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ERC1967Utils.Contract.ERC1967UtilsTransactor.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_ERC1967Upgrade *ERC1967UpgradeRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ERC1967Upgrade.Contract.ERC1967UpgradeTransactor.contract.Transact(opts, method, params...)
+func (_ERC1967Utils *ERC1967UtilsRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ERC1967Utils.Contract.ERC1967UtilsTransactor.contract.Transact(opts, method, params...)
 }
 
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ERC1967Upgrade *ERC1967UpgradeCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _ERC1967Upgrade.Contract.contract.Call(opts, result, method, params...)
+func (_ERC1967Utils *ERC1967UtilsCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _ERC1967Utils.Contract.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_ERC1967Upgrade *ERC1967UpgradeTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ERC1967Upgrade.Contract.contract.Transfer(opts)
+func (_ERC1967Utils *ERC1967UtilsTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ERC1967Utils.Contract.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_ERC1967Upgrade *ERC1967UpgradeTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ERC1967Upgrade.Contract.contract.Transact(opts, method, params...)
+func (_ERC1967Utils *ERC1967UtilsTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ERC1967Utils.Contract.contract.Transact(opts, method, params...)
 }
 
-// ERC1967UpgradeAdminChangedIterator is returned from FilterAdminChanged and is used to iterate over the raw logs and unpacked data for AdminChanged events raised by the ERC1967Upgrade contract.
-type ERC1967UpgradeAdminChangedIterator struct {
-	Event *ERC1967UpgradeAdminChanged // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
+// ErrorsMetaData contains all meta data concerning the Errors contract.
+var ErrorsMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedDeployment\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"needed\",\"type\":\"uint256\"}],\"name\":\"InsufficientBalance\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"MissingPrecompile\",\"type\":\"error\"}]",
+	Bin: "0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea264697066735822122045bd5ccaa497192dc3cf7cf9c42324c6699541b8e1c440fb85f637fcb9bb93ba64736f6c63430008190033",
 }
 
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC1967UpgradeAdminChangedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
+// ErrorsABI is the input ABI used to generate the binding from.
+// Deprecated: Use ErrorsMetaData.ABI instead.
+var ErrorsABI = ErrorsMetaData.ABI
+
+// ErrorsBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const ErrorsBinRuntime = `730000000000000000000000000000000000000000301460806040525f80fdfea264697066735822122045bd5ccaa497192dc3cf7cf9c42324c6699541b8e1c440fb85f637fcb9bb93ba64736f6c63430008190033`
+
+// ErrorsBin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use ErrorsMetaData.Bin instead.
+var ErrorsBin = ErrorsMetaData.Bin
+
+// DeployErrors deploys a new Kaia contract, binding an instance of Errors to it.
+func DeployErrors(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Errors, error) {
+	parsed, err := ErrorsMetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
 	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC1967UpgradeAdminChanged)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
 	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC1967UpgradeAdminChanged)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
 
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(ErrorsBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
 	}
+	return address, tx, &Errors{ErrorsCaller: ErrorsCaller{contract: contract}, ErrorsTransactor: ErrorsTransactor{contract: contract}, ErrorsFilterer: ErrorsFilterer{contract: contract}}, nil
 }
 
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC1967UpgradeAdminChangedIterator) Error() error {
-	return it.fail
+// Errors is an auto generated Go binding around a Kaia contract.
+type Errors struct {
+	ErrorsCaller     // Read-only binding to the contract
+	ErrorsTransactor // Write-only binding to the contract
+	ErrorsFilterer   // Log filterer for contract events
 }
 
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC1967UpgradeAdminChangedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
+// ErrorsCaller is an auto generated read-only Go binding around a Kaia contract.
+type ErrorsCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ERC1967UpgradeAdminChanged represents a AdminChanged event raised by the ERC1967Upgrade contract.
-type ERC1967UpgradeAdminChanged struct {
-	PreviousAdmin common.Address
-	NewAdmin      common.Address
-	Raw           types.Log // Blockchain specific contextual infos
+// ErrorsTransactor is an auto generated write-only Go binding around a Kaia contract.
+type ErrorsTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// FilterAdminChanged is a free log retrieval operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
-//
-// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
-func (_ERC1967Upgrade *ERC1967UpgradeFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*ERC1967UpgradeAdminChangedIterator, error) {
+// ErrorsFilterer is an auto generated log filtering Go binding around a Kaia contract events.
+type ErrorsFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
 
-	logs, sub, err := _ERC1967Upgrade.contract.FilterLogs(opts, "AdminChanged")
+// ErrorsSession is an auto generated Go binding around a Kaia contract,
+// with pre-set call and transact options.
+type ErrorsSession struct {
+	Contract     *Errors           // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// ErrorsCallerSession is an auto generated read-only Go binding around a Kaia contract,
+// with pre-set call options.
+type ErrorsCallerSession struct {
+	Contract *ErrorsCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts // Call options to use throughout this session
+}
+
+// ErrorsTransactorSession is an auto generated write-only Go binding around a Kaia contract,
+// with pre-set transact options.
+type ErrorsTransactorSession struct {
+	Contract     *ErrorsTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// ErrorsRaw is an auto generated low-level Go binding around a Kaia contract.
+type ErrorsRaw struct {
+	Contract *Errors // Generic contract binding to access the raw methods on
+}
+
+// ErrorsCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
+type ErrorsCallerRaw struct {
+	Contract *ErrorsCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// ErrorsTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
+type ErrorsTransactorRaw struct {
+	Contract *ErrorsTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewErrors creates a new instance of Errors, bound to a specific deployed contract.
+func NewErrors(address common.Address, backend bind.ContractBackend) (*Errors, error) {
+	contract, err := bindErrors(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &ERC1967UpgradeAdminChangedIterator{contract: _ERC1967Upgrade.contract, event: "AdminChanged", logs: logs, sub: sub}, nil
+	return &Errors{ErrorsCaller: ErrorsCaller{contract: contract}, ErrorsTransactor: ErrorsTransactor{contract: contract}, ErrorsFilterer: ErrorsFilterer{contract: contract}}, nil
 }
 
-// WatchAdminChanged is a free log subscription operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
-//
-// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
-func (_ERC1967Upgrade *ERC1967UpgradeFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeAdminChanged) (event.Subscription, error) {
-
-	logs, sub, err := _ERC1967Upgrade.contract.WatchLogs(opts, "AdminChanged")
+// NewErrorsCaller creates a new read-only instance of Errors, bound to a specific deployed contract.
+func NewErrorsCaller(address common.Address, caller bind.ContractCaller) (*ErrorsCaller, error) {
+	contract, err := bindErrors(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC1967UpgradeAdminChanged)
-				if err := _ERC1967Upgrade.contract.UnpackLog(event, "AdminChanged", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
+	return &ErrorsCaller{contract: contract}, nil
 }
 
-// ParseAdminChanged is a log parse operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
-//
-// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
-func (_ERC1967Upgrade *ERC1967UpgradeFilterer) ParseAdminChanged(log types.Log) (*ERC1967UpgradeAdminChanged, error) {
-	event := new(ERC1967UpgradeAdminChanged)
-	if err := _ERC1967Upgrade.contract.UnpackLog(event, "AdminChanged", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// ERC1967UpgradeBeaconUpgradedIterator is returned from FilterBeaconUpgraded and is used to iterate over the raw logs and unpacked data for BeaconUpgraded events raised by the ERC1967Upgrade contract.
-type ERC1967UpgradeBeaconUpgradedIterator struct {
-	Event *ERC1967UpgradeBeaconUpgraded // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC1967UpgradeBeaconUpgradedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC1967UpgradeBeaconUpgraded)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC1967UpgradeBeaconUpgraded)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC1967UpgradeBeaconUpgradedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC1967UpgradeBeaconUpgradedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC1967UpgradeBeaconUpgraded represents a BeaconUpgraded event raised by the ERC1967Upgrade contract.
-type ERC1967UpgradeBeaconUpgraded struct {
-	Beacon common.Address
-	Raw    types.Log // Blockchain specific contextual infos
-}
-
-// FilterBeaconUpgraded is a free log retrieval operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
-//
-// Solidity: event BeaconUpgraded(address indexed beacon)
-func (_ERC1967Upgrade *ERC1967UpgradeFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*ERC1967UpgradeBeaconUpgradedIterator, error) {
-
-	var beaconRule []interface{}
-	for _, beaconItem := range beacon {
-		beaconRule = append(beaconRule, beaconItem)
-	}
-
-	logs, sub, err := _ERC1967Upgrade.contract.FilterLogs(opts, "BeaconUpgraded", beaconRule)
+// NewErrorsTransactor creates a new write-only instance of Errors, bound to a specific deployed contract.
+func NewErrorsTransactor(address common.Address, transactor bind.ContractTransactor) (*ErrorsTransactor, error) {
+	contract, err := bindErrors(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &ERC1967UpgradeBeaconUpgradedIterator{contract: _ERC1967Upgrade.contract, event: "BeaconUpgraded", logs: logs, sub: sub}, nil
+	return &ErrorsTransactor{contract: contract}, nil
 }
 
-// WatchBeaconUpgraded is a free log subscription operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
-//
-// Solidity: event BeaconUpgraded(address indexed beacon)
-func (_ERC1967Upgrade *ERC1967UpgradeFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
-
-	var beaconRule []interface{}
-	for _, beaconItem := range beacon {
-		beaconRule = append(beaconRule, beaconItem)
-	}
-
-	logs, sub, err := _ERC1967Upgrade.contract.WatchLogs(opts, "BeaconUpgraded", beaconRule)
+// NewErrorsFilterer creates a new log filterer instance of Errors, bound to a specific deployed contract.
+func NewErrorsFilterer(address common.Address, filterer bind.ContractFilterer) (*ErrorsFilterer, error) {
+	contract, err := bindErrors(address, nil, nil, filterer)
 	if err != nil {
 		return nil, err
 	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC1967UpgradeBeaconUpgraded)
-				if err := _ERC1967Upgrade.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
+	return &ErrorsFilterer{contract: contract}, nil
 }
 
-// ParseBeaconUpgraded is a log parse operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
-//
-// Solidity: event BeaconUpgraded(address indexed beacon)
-func (_ERC1967Upgrade *ERC1967UpgradeFilterer) ParseBeaconUpgraded(log types.Log) (*ERC1967UpgradeBeaconUpgraded, error) {
-	event := new(ERC1967UpgradeBeaconUpgraded)
-	if err := _ERC1967Upgrade.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// ERC1967UpgradeUpgradedIterator is returned from FilterUpgraded and is used to iterate over the raw logs and unpacked data for Upgraded events raised by the ERC1967Upgrade contract.
-type ERC1967UpgradeUpgradedIterator struct {
-	Event *ERC1967UpgradeUpgraded // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log    // Log channel receiving the found contract events
-	sub  kaia.Subscription // Subscription for errors, completion and termination
-	done bool              // Whether the subscription completed delivering logs
-	fail error             // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ERC1967UpgradeUpgradedIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ERC1967UpgradeUpgraded)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ERC1967UpgradeUpgraded)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ERC1967UpgradeUpgradedIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ERC1967UpgradeUpgradedIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ERC1967UpgradeUpgraded represents a Upgraded event raised by the ERC1967Upgrade contract.
-type ERC1967UpgradeUpgraded struct {
-	Implementation common.Address
-	Raw            types.Log // Blockchain specific contextual infos
-}
-
-// FilterUpgraded is a free log retrieval operation binding the contract event 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b.
-//
-// Solidity: event Upgraded(address indexed implementation)
-func (_ERC1967Upgrade *ERC1967UpgradeFilterer) FilterUpgraded(opts *bind.FilterOpts, implementation []common.Address) (*ERC1967UpgradeUpgradedIterator, error) {
-
-	var implementationRule []interface{}
-	for _, implementationItem := range implementation {
-		implementationRule = append(implementationRule, implementationItem)
-	}
-
-	logs, sub, err := _ERC1967Upgrade.contract.FilterLogs(opts, "Upgraded", implementationRule)
+// bindErrors binds a generic wrapper to an already deployed contract.
+func bindErrors(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := ErrorsMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
-	return &ERC1967UpgradeUpgradedIterator{contract: _ERC1967Upgrade.contract, event: "Upgraded", logs: logs, sub: sub}, nil
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 }
 
-// WatchUpgraded is a free log subscription operation binding the contract event 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b.
-//
-// Solidity: event Upgraded(address indexed implementation)
-func (_ERC1967Upgrade *ERC1967UpgradeFilterer) WatchUpgraded(opts *bind.WatchOpts, sink chan<- *ERC1967UpgradeUpgraded, implementation []common.Address) (event.Subscription, error) {
-
-	var implementationRule []interface{}
-	for _, implementationItem := range implementation {
-		implementationRule = append(implementationRule, implementationItem)
-	}
-
-	logs, sub, err := _ERC1967Upgrade.contract.WatchLogs(opts, "Upgraded", implementationRule)
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ERC1967UpgradeUpgraded)
-				if err := _ERC1967Upgrade.contract.UnpackLog(event, "Upgraded", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Errors *ErrorsRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _Errors.Contract.ErrorsCaller.contract.Call(opts, result, method, params...)
 }
 
-// ParseUpgraded is a log parse operation binding the contract event 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b.
-//
-// Solidity: event Upgraded(address indexed implementation)
-func (_ERC1967Upgrade *ERC1967UpgradeFilterer) ParseUpgraded(log types.Log) (*ERC1967UpgradeUpgraded, error) {
-	event := new(ERC1967UpgradeUpgraded)
-	if err := _ERC1967Upgrade.contract.UnpackLog(event, "Upgraded", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Errors *ErrorsRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Errors.Contract.ErrorsTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Errors *ErrorsRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Errors.Contract.ErrorsTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Errors *ErrorsCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _Errors.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Errors *ErrorsTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Errors.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Errors *ErrorsTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Errors.Contract.contract.Transact(opts, method, params...)
 }
 
 // IBeaconMetaData contains all meta data concerning the IBeacon contract.
@@ -1613,198 +1088,6 @@ func (_IBeacon *IBeaconSession) Implementation() (common.Address, error) {
 // Solidity: function implementation() view returns(address)
 func (_IBeacon *IBeaconCallerSession) Implementation() (common.Address, error) {
 	return _IBeacon.Contract.Implementation(&_IBeacon.CallOpts)
-}
-
-// IERC1822ProxiableMetaData contains all meta data concerning the IERC1822Proxiable contract.
-var IERC1822ProxiableMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
-	Sigs: map[string]string{
-		"52d1902d": "proxiableUUID()",
-	},
-}
-
-// IERC1822ProxiableABI is the input ABI used to generate the binding from.
-// Deprecated: Use IERC1822ProxiableMetaData.ABI instead.
-var IERC1822ProxiableABI = IERC1822ProxiableMetaData.ABI
-
-// IERC1822ProxiableBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const IERC1822ProxiableBinRuntime = ``
-
-// Deprecated: Use IERC1822ProxiableMetaData.Sigs instead.
-// IERC1822ProxiableFuncSigs maps the 4-byte function signature to its string representation.
-var IERC1822ProxiableFuncSigs = IERC1822ProxiableMetaData.Sigs
-
-// IERC1822Proxiable is an auto generated Go binding around a Kaia contract.
-type IERC1822Proxiable struct {
-	IERC1822ProxiableCaller     // Read-only binding to the contract
-	IERC1822ProxiableTransactor // Write-only binding to the contract
-	IERC1822ProxiableFilterer   // Log filterer for contract events
-}
-
-// IERC1822ProxiableCaller is an auto generated read-only Go binding around a Kaia contract.
-type IERC1822ProxiableCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// IERC1822ProxiableTransactor is an auto generated write-only Go binding around a Kaia contract.
-type IERC1822ProxiableTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// IERC1822ProxiableFilterer is an auto generated log filtering Go binding around a Kaia contract events.
-type IERC1822ProxiableFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
-}
-
-// IERC1822ProxiableSession is an auto generated Go binding around a Kaia contract,
-// with pre-set call and transact options.
-type IERC1822ProxiableSession struct {
-	Contract     *IERC1822Proxiable // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts      // Call options to use throughout this session
-	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
-}
-
-// IERC1822ProxiableCallerSession is an auto generated read-only Go binding around a Kaia contract,
-// with pre-set call options.
-type IERC1822ProxiableCallerSession struct {
-	Contract *IERC1822ProxiableCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts            // Call options to use throughout this session
-}
-
-// IERC1822ProxiableTransactorSession is an auto generated write-only Go binding around a Kaia contract,
-// with pre-set transact options.
-type IERC1822ProxiableTransactorSession struct {
-	Contract     *IERC1822ProxiableTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts            // Transaction auth options to use throughout this session
-}
-
-// IERC1822ProxiableRaw is an auto generated low-level Go binding around a Kaia contract.
-type IERC1822ProxiableRaw struct {
-	Contract *IERC1822Proxiable // Generic contract binding to access the raw methods on
-}
-
-// IERC1822ProxiableCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
-type IERC1822ProxiableCallerRaw struct {
-	Contract *IERC1822ProxiableCaller // Generic read-only contract binding to access the raw methods on
-}
-
-// IERC1822ProxiableTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
-type IERC1822ProxiableTransactorRaw struct {
-	Contract *IERC1822ProxiableTransactor // Generic write-only contract binding to access the raw methods on
-}
-
-// NewIERC1822Proxiable creates a new instance of IERC1822Proxiable, bound to a specific deployed contract.
-func NewIERC1822Proxiable(address common.Address, backend bind.ContractBackend) (*IERC1822Proxiable, error) {
-	contract, err := bindIERC1822Proxiable(address, backend, backend, backend)
-	if err != nil {
-		return nil, err
-	}
-	return &IERC1822Proxiable{IERC1822ProxiableCaller: IERC1822ProxiableCaller{contract: contract}, IERC1822ProxiableTransactor: IERC1822ProxiableTransactor{contract: contract}, IERC1822ProxiableFilterer: IERC1822ProxiableFilterer{contract: contract}}, nil
-}
-
-// NewIERC1822ProxiableCaller creates a new read-only instance of IERC1822Proxiable, bound to a specific deployed contract.
-func NewIERC1822ProxiableCaller(address common.Address, caller bind.ContractCaller) (*IERC1822ProxiableCaller, error) {
-	contract, err := bindIERC1822Proxiable(address, caller, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &IERC1822ProxiableCaller{contract: contract}, nil
-}
-
-// NewIERC1822ProxiableTransactor creates a new write-only instance of IERC1822Proxiable, bound to a specific deployed contract.
-func NewIERC1822ProxiableTransactor(address common.Address, transactor bind.ContractTransactor) (*IERC1822ProxiableTransactor, error) {
-	contract, err := bindIERC1822Proxiable(address, nil, transactor, nil)
-	if err != nil {
-		return nil, err
-	}
-	return &IERC1822ProxiableTransactor{contract: contract}, nil
-}
-
-// NewIERC1822ProxiableFilterer creates a new log filterer instance of IERC1822Proxiable, bound to a specific deployed contract.
-func NewIERC1822ProxiableFilterer(address common.Address, filterer bind.ContractFilterer) (*IERC1822ProxiableFilterer, error) {
-	contract, err := bindIERC1822Proxiable(address, nil, nil, filterer)
-	if err != nil {
-		return nil, err
-	}
-	return &IERC1822ProxiableFilterer{contract: contract}, nil
-}
-
-// bindIERC1822Proxiable binds a generic wrapper to an already deployed contract.
-func bindIERC1822Proxiable(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := IERC1822ProxiableMetaData.GetAbi()
-	if err != nil {
-		return nil, err
-	}
-	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_IERC1822Proxiable *IERC1822ProxiableRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _IERC1822Proxiable.Contract.IERC1822ProxiableCaller.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_IERC1822Proxiable *IERC1822ProxiableRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IERC1822Proxiable.Contract.IERC1822ProxiableTransactor.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_IERC1822Proxiable *IERC1822ProxiableRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _IERC1822Proxiable.Contract.IERC1822ProxiableTransactor.contract.Transact(opts, method, params...)
-}
-
-// Call invokes the (constant) contract method with params as input values and
-// sets the output to result. The result type might be a single field for simple
-// returns, a slice of interfaces for anonymous returns and a struct for named
-// returns.
-func (_IERC1822Proxiable *IERC1822ProxiableCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _IERC1822Proxiable.Contract.contract.Call(opts, result, method, params...)
-}
-
-// Transfer initiates a plain transaction to move funds to the contract, calling
-// its default method if one is available.
-func (_IERC1822Proxiable *IERC1822ProxiableTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IERC1822Proxiable.Contract.contract.Transfer(opts)
-}
-
-// Transact invokes the (paid) contract method with params as input values.
-func (_IERC1822Proxiable *IERC1822ProxiableTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _IERC1822Proxiable.Contract.contract.Transact(opts, method, params...)
-}
-
-// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
-//
-// Solidity: function proxiableUUID() view returns(bytes32)
-func (_IERC1822Proxiable *IERC1822ProxiableCaller) ProxiableUUID(opts *bind.CallOpts) ([32]byte, error) {
-	var out []interface{}
-	err := _IERC1822Proxiable.contract.Call(opts, &out, "proxiableUUID")
-
-	if err != nil {
-		return *new([32]byte), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
-
-	return out0, err
-
-}
-
-// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
-//
-// Solidity: function proxiableUUID() view returns(bytes32)
-func (_IERC1822Proxiable *IERC1822ProxiableSession) ProxiableUUID() ([32]byte, error) {
-	return _IERC1822Proxiable.Contract.ProxiableUUID(&_IERC1822Proxiable.CallOpts)
-}
-
-// ProxiableUUID is a free data retrieval call binding the contract method 0x52d1902d.
-//
-// Solidity: function proxiableUUID() view returns(bytes32)
-func (_IERC1822Proxiable *IERC1822ProxiableCallerSession) ProxiableUUID() ([32]byte, error) {
-	return _IERC1822Proxiable.Contract.ProxiableUUID(&_IERC1822Proxiable.CallOpts)
 }
 
 // IERC1967MetaData contains all meta data concerning the IERC1967 contract.
@@ -2384,9 +1667,185 @@ func (_IERC1967 *IERC1967Filterer) ParseUpgraded(log types.Log) (*IERC1967Upgrad
 	return event, nil
 }
 
+// LowLevelCallMetaData contains all meta data concerning the LowLevelCall contract.
+var LowLevelCallMetaData = &bind.MetaData{
+	ABI: "[]",
+	Bin: "0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220a9c01c846acbeb4f949683453874c8f22300476e0b9b9d6e7875a98789c479a464736f6c63430008190033",
+}
+
+// LowLevelCallABI is the input ABI used to generate the binding from.
+// Deprecated: Use LowLevelCallMetaData.ABI instead.
+var LowLevelCallABI = LowLevelCallMetaData.ABI
+
+// LowLevelCallBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
+const LowLevelCallBinRuntime = `730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220a9c01c846acbeb4f949683453874c8f22300476e0b9b9d6e7875a98789c479a464736f6c63430008190033`
+
+// LowLevelCallBin is the compiled bytecode used for deploying new contracts.
+// Deprecated: Use LowLevelCallMetaData.Bin instead.
+var LowLevelCallBin = LowLevelCallMetaData.Bin
+
+// DeployLowLevelCall deploys a new Kaia contract, binding an instance of LowLevelCall to it.
+func DeployLowLevelCall(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *LowLevelCall, error) {
+	parsed, err := LowLevelCallMetaData.GetAbi()
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(LowLevelCallBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &LowLevelCall{LowLevelCallCaller: LowLevelCallCaller{contract: contract}, LowLevelCallTransactor: LowLevelCallTransactor{contract: contract}, LowLevelCallFilterer: LowLevelCallFilterer{contract: contract}}, nil
+}
+
+// LowLevelCall is an auto generated Go binding around a Kaia contract.
+type LowLevelCall struct {
+	LowLevelCallCaller     // Read-only binding to the contract
+	LowLevelCallTransactor // Write-only binding to the contract
+	LowLevelCallFilterer   // Log filterer for contract events
+}
+
+// LowLevelCallCaller is an auto generated read-only Go binding around a Kaia contract.
+type LowLevelCallCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// LowLevelCallTransactor is an auto generated write-only Go binding around a Kaia contract.
+type LowLevelCallTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// LowLevelCallFilterer is an auto generated log filtering Go binding around a Kaia contract events.
+type LowLevelCallFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// LowLevelCallSession is an auto generated Go binding around a Kaia contract,
+// with pre-set call and transact options.
+type LowLevelCallSession struct {
+	Contract     *LowLevelCall     // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// LowLevelCallCallerSession is an auto generated read-only Go binding around a Kaia contract,
+// with pre-set call options.
+type LowLevelCallCallerSession struct {
+	Contract *LowLevelCallCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts       // Call options to use throughout this session
+}
+
+// LowLevelCallTransactorSession is an auto generated write-only Go binding around a Kaia contract,
+// with pre-set transact options.
+type LowLevelCallTransactorSession struct {
+	Contract     *LowLevelCallTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
+}
+
+// LowLevelCallRaw is an auto generated low-level Go binding around a Kaia contract.
+type LowLevelCallRaw struct {
+	Contract *LowLevelCall // Generic contract binding to access the raw methods on
+}
+
+// LowLevelCallCallerRaw is an auto generated low-level read-only Go binding around a Kaia contract.
+type LowLevelCallCallerRaw struct {
+	Contract *LowLevelCallCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// LowLevelCallTransactorRaw is an auto generated low-level write-only Go binding around a Kaia contract.
+type LowLevelCallTransactorRaw struct {
+	Contract *LowLevelCallTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewLowLevelCall creates a new instance of LowLevelCall, bound to a specific deployed contract.
+func NewLowLevelCall(address common.Address, backend bind.ContractBackend) (*LowLevelCall, error) {
+	contract, err := bindLowLevelCall(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &LowLevelCall{LowLevelCallCaller: LowLevelCallCaller{contract: contract}, LowLevelCallTransactor: LowLevelCallTransactor{contract: contract}, LowLevelCallFilterer: LowLevelCallFilterer{contract: contract}}, nil
+}
+
+// NewLowLevelCallCaller creates a new read-only instance of LowLevelCall, bound to a specific deployed contract.
+func NewLowLevelCallCaller(address common.Address, caller bind.ContractCaller) (*LowLevelCallCaller, error) {
+	contract, err := bindLowLevelCall(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &LowLevelCallCaller{contract: contract}, nil
+}
+
+// NewLowLevelCallTransactor creates a new write-only instance of LowLevelCall, bound to a specific deployed contract.
+func NewLowLevelCallTransactor(address common.Address, transactor bind.ContractTransactor) (*LowLevelCallTransactor, error) {
+	contract, err := bindLowLevelCall(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &LowLevelCallTransactor{contract: contract}, nil
+}
+
+// NewLowLevelCallFilterer creates a new log filterer instance of LowLevelCall, bound to a specific deployed contract.
+func NewLowLevelCallFilterer(address common.Address, filterer bind.ContractFilterer) (*LowLevelCallFilterer, error) {
+	contract, err := bindLowLevelCall(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &LowLevelCallFilterer{contract: contract}, nil
+}
+
+// bindLowLevelCall binds a generic wrapper to an already deployed contract.
+func bindLowLevelCall(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := LowLevelCallMetaData.GetAbi()
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_LowLevelCall *LowLevelCallRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _LowLevelCall.Contract.LowLevelCallCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_LowLevelCall *LowLevelCallRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _LowLevelCall.Contract.LowLevelCallTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_LowLevelCall *LowLevelCallRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _LowLevelCall.Contract.LowLevelCallTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_LowLevelCall *LowLevelCallCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _LowLevelCall.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_LowLevelCall *LowLevelCallTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _LowLevelCall.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_LowLevelCall *LowLevelCallTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _LowLevelCall.Contract.contract.Transact(opts, method, params...)
+}
+
 // ProxyMetaData contains all meta data concerning the Proxy contract.
 var ProxyMetaData = &bind.MetaData{
-	ABI: "[{\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
+	ABI: "[{\"stateMutability\":\"payable\",\"type\":\"fallback\"}]",
 }
 
 // ProxyABI is the input ABI used to generate the binding from.
@@ -2559,31 +2018,10 @@ func (_Proxy *ProxyTransactorSession) Fallback(calldata []byte) (*types.Transact
 	return _Proxy.Contract.Fallback(&_Proxy.TransactOpts, calldata)
 }
 
-// Receive is a paid mutator transaction binding the contract receive function.
-//
-// Solidity: receive() payable returns()
-func (_Proxy *ProxyTransactor) Receive(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Proxy.contract.RawTransact(opts, nil) // calldata is disallowed for receive function
-}
-
-// Receive is a paid mutator transaction binding the contract receive function.
-//
-// Solidity: receive() payable returns()
-func (_Proxy *ProxySession) Receive() (*types.Transaction, error) {
-	return _Proxy.Contract.Receive(&_Proxy.TransactOpts)
-}
-
-// Receive is a paid mutator transaction binding the contract receive function.
-//
-// Solidity: receive() payable returns()
-func (_Proxy *ProxyTransactorSession) Receive() (*types.Transaction, error) {
-	return _Proxy.Contract.Receive(&_Proxy.TransactOpts)
-}
-
 // StorageSlotMetaData contains all meta data concerning the StorageSlot contract.
 var StorageSlotMetaData = &bind.MetaData{
 	ABI: "[]",
-	Bin: "0x60566037600b82828239805160001a607314602a57634e487b7160e01b600052600060045260246000fd5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea26469706673582212200d7c79cc0d2dc5a13cd1f9ec7db59a64db211d68e514f0971fff90f2f3fff0a564736f6c63430008130033",
+	Bin: "0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220f2ed8da391a97d25a7979584f89d4134e64cc7d5147560095d1bcd8063085ba264736f6c63430008190033",
 }
 
 // StorageSlotABI is the input ABI used to generate the binding from.
@@ -2591,7 +2029,7 @@ var StorageSlotMetaData = &bind.MetaData{
 var StorageSlotABI = StorageSlotMetaData.ABI
 
 // StorageSlotBinRuntime is the compiled bytecode used for adding genesis block without deploying code.
-const StorageSlotBinRuntime = `73000000000000000000000000000000000000000030146080604052600080fdfea26469706673582212200d7c79cc0d2dc5a13cd1f9ec7db59a64db211d68e514f0971fff90f2f3fff0a564736f6c63430008130033`
+const StorageSlotBinRuntime = `730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220f2ed8da391a97d25a7979584f89d4134e64cc7d5147560095d1bcd8063085ba264736f6c63430008190033`
 
 // StorageSlotBin is the compiled bytecode used for deploying new contracts.
 // Deprecated: Use StorageSlotMetaData.Bin instead.

@@ -17,7 +17,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.25;
 
-import "openzeppelin-contracts-5.0/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IStakingTrackerV2.sol";
 
 contract StakingTrackerV2 is IStakingTrackerV2, Ownable {

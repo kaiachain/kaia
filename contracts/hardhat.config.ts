@@ -4,6 +4,13 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 
 const config: HardhatUserConfig = {
+  networks: {
+    hardhat: {
+      hardfork: "cancun",
+      gas: 50_000_000,
+      blockGasLimit: 50_000_000,
+    },
+  },
   solidity: {
     compilers: [
       {
@@ -24,11 +31,11 @@ const config: HardhatUserConfig = {
       },
       {
         version: "0.8.24",
-        settings: { optimizer: { enabled: true, runs: 1000 }, viaIR: true },
+        settings: { evmVersion: "cancun", optimizer: { enabled: true, runs: 1000 }, viaIR: true },
       },
       {
         version: "0.8.25",
-        settings: { optimizer: { enabled: true, runs: 200 } },
+        settings: { evmVersion: "cancun", optimizer: { enabled: true, runs: 200 } },
       },
     ],
   },

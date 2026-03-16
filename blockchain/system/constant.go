@@ -25,11 +25,12 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/factory"
 	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/router"
+	addressbookv2contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/AddressBookV2"
+	proxycontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/Proxy"
 	kip113contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip113"
 	kip149contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip149"
 	misccontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/misc"
 	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/multicall"
-	proxycontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/proxy"
 	"github.com/kaiachain/kaia/contracts/contracts/testing/reward"
 	testcontract "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
 	"github.com/kaiachain/kaia/log"
@@ -66,9 +67,9 @@ var (
 	RegistryAddr      = common.HexToAddress("0x0000000000000000000000000000000000000401")
 	MultiCallAddr     = common.HexToAddress("0x0000000000000000000000000000000000000402")
 	// The following addresses are only used for testing.
-	Kip113ProxyAddrMock       = common.HexToAddress("0x0000000000000000000000000000000000000402")
-	Kip113LogicAddrMock       = common.HexToAddress("0x0000000000000000000000000000000000000403")
-	AuctionEntryPointAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000404")
+	Kip113ProxyAddrMock       = common.HexToAddress("0x0000000000000000000000000000000000000403")
+	Kip113LogicAddrMock       = common.HexToAddress("0x0000000000000000000000000000000000000404")
+	AuctionEntryPointAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000405")
 
 	// Registry will return zero address for non-existent system contract.
 	NonExistentAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
@@ -88,6 +89,9 @@ var (
 
 	AddressBookMockTwoCNCode = hexutil.MustDecode("0x" + reward.AddressBookMockTwoCNBinRuntime)
 	Kip113MockThreeCNCode    = hexutil.MustDecode("0x" + testcontract.KIP113MockThreeCNBinRuntime)
+
+	AddressBookV2Code   = hexutil.MustDecode("0x" + addressbookv2contract.AddressBookV2BinRuntime)
+	AddressBookV2ABI, _ = addressbookv2contract.AddressBookV2MetaData.GetAbi()
 
 	MultiCallCode     = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
 	MultiCallMockCode = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)

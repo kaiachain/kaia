@@ -57,14 +57,18 @@ if [ -n "$VER" ]; then
 fi
 
 # abigen can't handle node_modules imports, so we symlink them
+# @openzeppelin/contracts and @openzeppelin/contracts-upgradeable are v5 (default)
+# openzeppelin-contracts-4.0 and openzeppelin-contracts-upgradeable-4.0 are v4 aliases
 ln -sf node_modules/@openzeppelin ./@openzeppelin
 ln -sf node_modules/@uniswap ./@uniswap
-ln -sf node_modules/openzeppelin-contracts-5.0 ./openzeppelin-contracts-5.0
+ln -sf node_modules/openzeppelin-contracts-4.0 ./openzeppelin-contracts-4.0
+ln -sf node_modules/openzeppelin-contracts-upgradeable-4.0 ./openzeppelin-contracts-upgradeable-4.0
 cleanup() {
-  # This symlink interferes with hardhat; delete after abigen.
-  rm -f ./@openzeppelin
+  # These symlinks interfere with hardhat; delete after abigen.
+  rm -rf ./@openzeppelin
   rm -f ./@uniswap
-  rm -f ./openzeppelin-contracts-5.0
+  rm -f ./openzeppelin-contracts-4.0
+  rm -f ./openzeppelin-contracts-upgradeable-4.0
 }
 trap cleanup EXIT
 

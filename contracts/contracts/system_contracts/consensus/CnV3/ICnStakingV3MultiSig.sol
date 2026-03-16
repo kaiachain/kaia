@@ -17,7 +17,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.25;
 
-import {EnumerableSet} from "openzeppelin-contracts-5.0/utils/structs/EnumerableSet.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 interface ICnStakingV3MultiSig {
     /* ========== STRUCT ========== */

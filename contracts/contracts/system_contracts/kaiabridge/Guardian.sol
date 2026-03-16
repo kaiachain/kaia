@@ -17,10 +17,10 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "openzeppelin-contracts-upgradeable-4.0/proxy/utils/Initializable.sol";
 import "./ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "openzeppelin-contracts-4.0/utils/introspection/IERC165.sol";
+import "openzeppelin-contracts-upgradeable-4.0/proxy/utils/UUPSUpgradeable.sol";
 import "./IGuardian.sol";
 
 contract Guardian is Initializable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IERC165, IGuardian {

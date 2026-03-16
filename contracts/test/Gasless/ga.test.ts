@@ -1275,7 +1275,8 @@ describe("GaslessSwapRouter: Error Handling & Mock Contract Tests", function () 
       const swapAmount = parseEther("1.0");
       await testToken.connect(testUser).approve(gaslessRouter.address, swapAmount);
 
-      const pastDeadline = Math.floor(Date.now() / 1000) - 60;
+      const block = await ethers.provider.getBlock("latest");
+      const pastDeadline = block.timestamp - 60;
 
       await expect(
         gaslessRouter

@@ -23,8 +23,8 @@ import "../PublicDelegation/IKIP163.sol";
 import "../PublicDelegation/IPublicDelegationFactory.sol";
 import "./ICnStakingV3.sol";
 import "./CnStakingV3Storage.sol";
-import "openzeppelin-contracts-5.0/access/IAccessControl.sol";
-import "openzeppelin-contracts-5.0/access/extensions/AccessControlEnumerable.sol";
+import "@openzeppelin/contracts/access/IAccessControl.sol";
+import "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 
 // Features
 // Note that extra multisig operations are implemented in the `CnStakingV3MultiSig` contract.

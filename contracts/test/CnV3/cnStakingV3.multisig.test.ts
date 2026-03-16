@@ -1094,7 +1094,7 @@ describe("CnStakingV3MultiSig", function () {
       it("#submitWithdrawLockupStaking: Wrong msg.sender", async function () {
         const { cnStakingV3, other1 } = fixture;
 
-        await jumpTime(105);
+        await jumpTime(1005);
 
         const submitWithdrawLockupStakingTx = cnStakingV3
           .connect(other1)
@@ -1104,7 +1104,7 @@ describe("CnStakingV3MultiSig", function () {
       it("#submitWithdrawLockupStaking: Receiver can't be zero address", async function () {
         const { adminList, cnStakingV3 } = fixture;
 
-        await jumpTime(105);
+        await jumpTime(1005);
 
         const submitWithdrawLockupStakingTx = cnStakingV3
           .connect(adminList[0])
@@ -1114,7 +1114,7 @@ describe("CnStakingV3MultiSig", function () {
       it("#submitWithdrawLockupStaking: Value can't be zero", async function () {
         const { adminList, cnStakingV3, other1 } = fixture;
 
-        await jumpTime(105);
+        await jumpTime(1005);
 
         await expect(
           cnStakingV3.connect(adminList[0]).submitWithdrawLockupStaking(other1.address, toPeb(0n)),
@@ -1128,7 +1128,7 @@ describe("CnStakingV3MultiSig", function () {
           cnStakingV3.connect(adminList[0]).submitWithdrawLockupStaking(other1.address, toPeb(100n)),
         ).to.be.revertedWith("Invalid value.");
 
-        await jumpTime(105);
+        await jumpTime(1005);
 
         // 2. unlockTime[0] < now < unlockTime[1]: unlockAmount[0] = 200 KAIA
         await expect(
@@ -1143,7 +1143,7 @@ describe("CnStakingV3MultiSig", function () {
           cnStakingV3.connect(adminList[0]).submitWithdrawLockupStaking(other1.address, toPeb(150n)),
         ).to.be.revertedWith("Invalid value.");
 
-        await jumpTime(105);
+        await jumpTime(1005);
 
         // 3. unlockTime[1] < now: unlockAmount[0] + unlockAmount[1] - 100 KAIA = 500 KAIA
         await expect(
@@ -1166,7 +1166,7 @@ describe("CnStakingV3MultiSig", function () {
           cnStakingV3.connect(adminList[0]).submitWithdrawLockupStaking(other1.address, toPeb(100n)),
         ).to.be.revertedWith("Invalid value.");
 
-        await jumpTime(105);
+        await jumpTime(1005);
 
         // 2. unlockTime[0] < now < unlockTime[1]: unlockAmount[0] = 200 KAIA
         lockupStakingInfo = await cnStakingV3.getLockupStakingInfo();
@@ -1190,7 +1190,7 @@ describe("CnStakingV3MultiSig", function () {
         expect(lockupStakingInfo[3]).to.equal(BigInt(toPeb(400n)));
         expect(lockupStakingInfo[4]).to.equal(BigInt(toPeb(0n)));
 
-        await jumpTime(105);
+        await jumpTime(1005);
 
         // 3. unlockTime[1] < now: unlockAmount[0] + unlockAmount[1] - 200 KAIA = 400 KAIA
         lockupStakingInfo = await cnStakingV3.getLockupStakingInfo();

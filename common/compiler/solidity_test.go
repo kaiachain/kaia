@@ -84,7 +84,7 @@ func TestCompileSolidityOrLoad(t *testing.T) {
 	// Usually only one version of solc is installed, if any.
 	// But CompileSolidityOrLoad will work in all cases.
 
-	versions := []string{"0.4.24", "0.8.13"}
+	versions := []string{"0.4.24", "0.8.25"}
 	for _, version := range versions {
 		t.Logf("testing version %s", version)
 

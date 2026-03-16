@@ -36,7 +36,7 @@ contract AddressBookMock {
     uint8 public constant KIR_CONTRACT_TYPE = 4;
     uint256 public constant ONE_WEEK = 1 weeks;
     uint256 public constant TWO_WEEKS = 2 weeks;
-    uint256 public constant VERSION = 0;
+    uint256 public VERSION = 0;
 
     enum Functions {
         Unknown,
@@ -77,6 +77,10 @@ contract AddressBookMock {
         adminList = _adminList;
         requirement = _requirement;
         isConstructed = true;
+    }
+    
+    function setVersion(uint256 _version) external {
+        VERSION = _version;
     }
 
     function updateRequirement(uint256 _requirement) public {

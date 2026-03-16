@@ -29,10 +29,10 @@ func TestRuntimeCodeRegression(t *testing.T) {
 	}{
 		{MainnetCreditCode, "0x24dccf9f86d49ffe0385d6fd43ceed51a71d53d9e72df9d7943a24128b4916ec"},
 		{MainnetCreditV2Code, "0xb45837dfb0d4edd411a8962780361c0b984e2a25a5a03be465ae9731a5d5c0ab"},
-		{RegistryCode, "0xfd3c2152828579b98068570231554ed4bacf528f50ff1bf9fce6300ec023f720"},
-		{Kip113Code, "0x236841ea654b0f18e83e934ba0f69b4ab215f0b6ffbeee288797ce67c89aea25"},
-		{ERC1967ProxyCode, "0x7bd49b148f3b1ffd97fb2ef2fdc773271822fa8306d3bcba626fbd412ed21c12"},
-		{UniswapV2FactoryCode, "0xbab145d02e7005f0d84c6c1639d39b799b0ea16df99ebbdaf5a14d9da820b4e0"},
+		{RegistryCode, "0x81e4d72a5f324997e38f750704bd64dcce9b2c4901f843b3c35457e178e904b8"},
+		{Kip113Code, "0x3454be181730d70863b44c6e6a4089808908dd497e50d6c425777b1b8566700c"},
+		{ERC1967ProxyCode, "0x3426e8c58f22c64051f94b923a1ceff79723296d2d5e578be030b91d24d6eb2a"},
+		{UniswapV2FactoryCode, "0xf81ae5cf2f10963f6d768077d89e938fcfbaa4c14872776babcf0dee4328810a"},
 		{UniswapV2Router02Code, "0x8078c0090b05e0bee0587064947604e217146cc295dcb119a2c0217d6e88dac5"},
 	}
 
