@@ -32,7 +32,7 @@ var (
 	validatorVoteBlockNums           = []byte("validatorVoteBlockNums")
 	lowestScannedValidatorVoteNumKey = []byte("lowestScannedValidatorVoteNum")
 	councilPermissionedPrefix        = []byte("council")
-	istanbulSnapshotKeyPrefix = []byte("snapshot")
+	istanbulSnapshotKeyPrefix        = []byte("snapshot")
 
 	voteNumMu = &sync.RWMutex{}
 )
@@ -63,7 +63,6 @@ func ReadValidatorVoteBlockNums(db database.Database) []uint64 {
 	return readVoteOrStateChangeBlockNums(db, validatorVoteBlockNums)
 }
 
-
 func writeVoteOrStageChangeBlockNums(db database.Database, key []byte, nums []uint64) {
 	slices.Sort(nums)
 	b, err := json.Marshal(nums)
@@ -78,7 +77,6 @@ func writeVoteOrStageChangeBlockNums(db database.Database, key []byte, nums []ui
 func writeValidatorVoteBlockNums(db database.Database, nums []uint64) {
 	writeVoteOrStageChangeBlockNums(db, validatorVoteBlockNums, nums)
 }
-
 
 // insertValidatorVoteBlockNums inserts a new block num into the validator vote block nums.
 func insertValidatorVoteBlockNums(db database.Database, num uint64) {

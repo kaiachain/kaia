@@ -75,7 +75,6 @@ func (v *ValsetModule) getCouncilGenesisPermissioned() (valset.CommonAddressSet,
 	return valset.NewCommonAddressSet(istanbulExtra.Validators), nil
 }
 
-
 func (v *ValsetModule) getCouncilDBPermissioned(num uint64) (valset.CommonAddressSet, bool, error) {
 	pMinVoteNum := v.readLowestScannedVoteNumCached()
 	if pMinVoteNum == nil {
