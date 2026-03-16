@@ -29,7 +29,6 @@ import (
 	"fmt"
 	mrand "math/rand"
 	"net"
-	"sort"
 	"sync"
 	"time"
 
@@ -40,19 +39,7 @@ import (
 )
 
 const (
-	alpha           = 3  // Kademlia concurrency factor
-	bucketSize      = 16 // Kademlia bucket size
-	maxReplacements = 10 // Size of per-bucket replacement list
-
-	maxBondingPingPongs = 16 // Limit on the number of concurrent ping/pong interactions
-	maxFindnodeFailures = 5  // Nodes exceeding this limit are dropped
-
-	refreshInterval    = 30 * time.Minute
-	revalidateInterval = 10 * time.Second
-	copyNodesInterval  = 30 * time.Second
-
-	seedCount  = 30
-	seedMaxAge = 5 * 24 * time.Hour
+	copyNodesInterval = 30 * time.Second
 )
 
 const (
@@ -459,16 +446,6 @@ func (tab *Table) GetNodes(targetNT NodeType, max int) []*Node {
 	return tab.storages[targetNT].getNodes(max)
 }
 
-func removeBn(nodes []*Node) []*Node {
-	tmp := nodes[:0]
-	for _, n := range nodes {
-		if n.NType != NodeTypeBN {
-			tmp = append(tmp, n)
-		}
-	}
-	return tmp
-}
-
 func (tab *Table) refresh() <-chan struct{} {
 	done := make(chan struct{})
 	select {
@@ -850,32 +827,3 @@ func (tab *Table) HasBond(id NodeID) bool {
 	return tab.db.hasBond(id)
 }
 
-// nodesByDistance is a list of nodes, ordered by
-// distance to target.
-type nodesByDistance struct {
-	entries []*Node
-	target  common.Hash
-}
-
-// push adds the given node to the list, keeping the total size below maxElems.
-func (h *nodesByDistance) push(n *Node, maxElems int) {
-	ix := sort.Search(len(h.entries), func(i int) bool {
-		return distcmp(h.target, h.entries[i].sha, n.sha) > 0
-	})
-	if len(h.entries) < maxElems {
-		h.entries = append(h.entries, n)
-	}
-	if ix == len(h.entries) {
-		// farther away than all nodes we already have.
-		// if there was room for it, the node is now the last element.
-	} else {
-		// slide existing entries down to make room
-		// this will overwrite the entry we just appended.
-		copy(h.entries[ix+1:], h.entries[ix:])
-		h.entries[ix] = n
-	}
-}
-
-func (h *nodesByDistance) String() string {
-	return fmt.Sprintf("nodeByDistance target: %s, entries: %s", h.target, h.entries)
-}
