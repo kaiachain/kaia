@@ -311,50 +311,10 @@ type udp struct {
 	closing chan struct{}
 	wg      sync.WaitGroup
 
-	Discovery         // old path (used by ListenUDP -> newUDP)
-	tab       *Table2 // new path (used by NewDiscovery2)
-}
-
-// ListenUDP returns a new table that listens for UDP packets on laddr.
-func ListenUDP(cfg *Config) (Discovery, error) {
-	discv, _, err := newUDP(cfg)
-	if err != nil {
-		return nil, err
-	}
-	logger.Info("UDP listener up", "id", cfg.Id, "addr", cfg.Addr, "type", cfg.NodeType)
-	return discv, nil
+	tab *Table2
 }
 
 // #region UDP Init
-func newUDP(cfg *Config) (Discovery, *udp, error) {
-	udp := &udp{
-		networkID:   cfg.NetworkID,
-		conn:        cfg.Conn,
-		priv:        cfg.PrivateKey,
-		netrestrict: cfg.NetRestrict,
-		closing:     make(chan struct{}),
-		gotreply:    make(chan reply),
-		addpending:  make(chan *pending),
-	}
-	realaddr := cfg.Addr
-	if cfg.AnnounceAddr != nil {
-		realaddr = cfg.AnnounceAddr
-	}
-	// TODO: separate TCP port
-	udp.ourEndpoint = makeEndpoint(realaddr, uint16(realaddr.Port), cfg.NodeType)
-	cfg.udp = udp
-
-	var err error
-	udp.Discovery, err = NewDiscovery(cfg)
-	if err != nil {
-		return nil, nil, err
-	}
-	go udp.Discovery.(*Table).loop() // TODO-Kaia-Node There is only one concrete type(Table) for Discovery. Refactor Discovery interface for their proper objective.
-	udp.wg.Add(2)
-	go udp.loop()
-	go udp.readLoop(nil)
-	return udp.Discovery, udp, nil
-}
 
 func newUDPv4(cfg *Config) *udp {
 	u := &udp{
@@ -388,33 +348,20 @@ func (t *udp) close() {
 }
 
 func (t *udp) isAuthorized(fromID NodeID, nType NodeType) bool {
-	if t.tab != nil {
-		return t.tab.IsAuthorized(fromID, nType)
-	}
-	return t.Discovery.IsAuthorized(fromID, nType)
+	return t.tab.IsAuthorized(fromID, nType)
 }
 
 func (t *udp) hasBond(fromID NodeID) bool {
-	if t.tab != nil {
-		return t.tab.IsBonded(fromID)
-	}
-	return t.Discovery.HasBond(fromID)
+	return t.tab.IsBonded(fromID)
 }
 
 func (t *udp) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16, nType NodeType) {
-	if t.tab != nil {
-		n := NewNode(id, addr.IP, uint16(addr.Port), tcpPort, nil, nType)
-		t.tab.Bond(pinged, n)
-		return
-	}
-	t.Discovery.Bond(pinged, id, addr, tcpPort, nType)
+	n := NewNode(id, addr.IP, uint16(addr.Port), tcpPort, nil, nType)
+	t.tab.Bond(pinged, n)
 }
 
 func (t *udp) closestNodes(target NodeID, targetType NodeType, max int) []*Node {
-	if t.tab != nil {
-		return t.tab.ClosestNodes(target, targetType, max)
-	}
-	return t.Discovery.RetrieveNodes(crypto.Keccak256Hash(target[:]), targetType, max)
+	return t.tab.ClosestNodes(target, targetType, max)
 }
 
 // #region High-level APIs
