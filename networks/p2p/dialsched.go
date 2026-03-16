@@ -287,8 +287,8 @@ func (ds *DialSched) dialLoop() {
 // Capacity math tells us that the dialing is unlikely to be saturated, so we don't separate the candidates by node type.
 //
 // The candidates are composed of [ static | dynamic CNs | dynamic PNs | dynamic ENs ], and they are consumed from the left.
-// - The candidates are first filtered with shouldDial() and then dialed up to maxConcurrentDials (16) at once.
-// - Even if the leftmost candidates are unfortunately unreachable, they are skipped in later iterations because of the dialBackoff and connFails.
+// - The candidates are filtered with shouldDial() and then dialed up to maxConcurrentDials (16) at once.
+// - Even if some candidates are unfortunately unreachable, they are skipped in later iterations because of the dialBackoff and connFails.
 //
 // If there are too many static nodes, the dynamic candidate dialing can be delayed. But it is reasonable and expected.
 // - You don't need dynamic candidates when you have enough static nodes.
@@ -343,19 +343,11 @@ func (ds *DialSched) getDynamicCandidates(targetType discover.NodeType, need int
 		return nil, true
 	}
 
-	// Scan the queue, advancing past undialable entries, until we have collected `need` candidates.
-	// shouldDial() called here as an inaccurate screening to reject hopeless candidates.
-	// shouldDial() called later as an accurate enforcement before launching the dialOnce goroutine.
+	// Pop up to `need` candidates from the queue.
 	q := ds.candidateQueue[targetType]
-	i := 0
-	for i < len(q) && len(nodes) < need {
-		if ds.shouldDial(q[i]) {
-			nodes = append(nodes, q[i])
-		}
-		i++
-	}
-	ds.candidateQueue[targetType] = q[i:]
-	return nodes, false
+	end := min(need, len(q))
+	nodes, ds.candidateQueue[targetType] = q[:end], q[end:]
+	return nodes, len(q) < need
 }
 
 // #region dial task
