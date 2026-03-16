@@ -53,8 +53,10 @@ import (
 	"github.com/urfave/cli/v2/altsrc"
 )
 
-const defaultMaxReadyCandidateCount = 3
-const defaultExitThreshold = 2
+const (
+	defaultMaxReadyCandidateCount = 3
+	defaultExitThreshold          = 2
+)
 
 type ValidatorInfo struct {
 	Address  common.Address

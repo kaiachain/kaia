@@ -171,4 +171,3 @@ func TestReadGetAllValidators(t *testing.T) {
 		assert.True(t, vs.PausedTimeout.IsZero())
 	}
 }
-
