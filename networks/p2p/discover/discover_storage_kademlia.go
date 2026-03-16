@@ -35,14 +35,6 @@ import (
 )
 
 const (
-	tableIPLimit, tableSubnet   = 10, 24
-	bucketIPLimit, bucketSubnet = 2, 24 // at most 2 addresses from the same /24
-	// We keep buckets for the upper 1/15 of distances because
-	// it's very unlikely we'll ever encounter a node that's closer.
-	hashBits          = len(common.Hash{}) * 8
-	nBuckets          = hashBits / 15       // Number of buckets
-	bucketMinDistance = hashBits - nBuckets // Log distance of closest bucket
-
 	seedMinTableTime = 5 * time.Minute
 )
 
@@ -427,28 +419,6 @@ func (s *KademliaStorage) name() string {
 	return nodeTypeName(s.targetType)
 }
 
-// bucket contains nodes, ordered by their last activity. the entry
-// that was most recently active is the first element in entries.
-type bucket struct {
-	entries      []*Node // live entries, sorted by time of last contact
-	replacements []*Node // recently seen nodes to be used if revalidation fails
-	ips          netutil.DistinctNetSet
-}
-
-// bump moves the given node to the front of the bucket entry list
-// if it is contained in that list.
-// caller
-func (b *bucket) bump(n *Node) bool {
-	for i := range b.entries {
-		if b.entries[i].ID == n.ID {
-			// move it to the front
-			copy(b.entries[1:], b.entries[:i])
-			b.entries[0] = n
-			return true
-		}
-	}
-	return false
-}
 
 func (s *KademliaStorage) isAuthorized(id NodeID) bool { return true }
 func (s *KademliaStorage) getAuthorizedNodes() []*Node { return nil }

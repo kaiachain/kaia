@@ -51,27 +51,6 @@ type discoverStorage interface {
 	deleteAuthorizedNode(id NodeID)
 }
 
-// pushNode adds n to the front of list, keeping at most max items.
-func pushNode(list []*Node, n *Node, max int) ([]*Node, *Node) {
-	if len(list) < max {
-		list = append(list, nil)
-	}
-	removed := list[len(list)-1]
-	copy(list[1:], list)
-	list[0] = n
-	return list, removed
-}
-
-// deleteNode removes n from list.
-func deleteNode(list []*Node, n *Node) []*Node {
-	for i := range list {
-		if list[i].ID == n.ID {
-			return append(list[:i], list[i+1:]...)
-		}
-	}
-	return list
-}
-
 // nodeTypeName converts NodeType to string.
 func nodeTypeName(nt NodeType) string { // TODO-Kaia-Node Consolidate p2p.NodeType and common.ConnType
 	switch nt {
