@@ -377,6 +377,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultTransactorRaw) Transact(opts *b
 func (_IAuctionDepositVault *IAuctionDepositVaultCaller) DepositBalances(opts *bind.CallOpts, searcher common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _IAuctionDepositVault.contract.Call(opts, &out, "depositBalances", searcher)
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -384,6 +385,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultCaller) DepositBalances(opts *b
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // DepositBalances is a free data retrieval call binding the contract method 0x1eb903cf.
@@ -407,8 +409,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultCaller) GetAllAddrsOverMinDepos
 	Searchers      []common.Address
 	DepositAmounts []*big.Int
 	Nonces         []*big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAuctionDepositVault.contract.Call(opts, &out, "getAllAddrsOverMinDeposit", start, limit)
 
@@ -426,6 +427,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultCaller) GetAllAddrsOverMinDepos
 	outstruct.Nonces = *abi.ConvertType(out[2], new([]*big.Int)).(*[]*big.Int)
 
 	return *outstruct, err
+
 }
 
 // GetAllAddrsOverMinDeposit is a free data retrieval call binding the contract method 0x5be1a55e.
@@ -435,8 +437,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultSession) GetAllAddrsOverMinDepo
 	Searchers      []common.Address
 	DepositAmounts []*big.Int
 	Nonces         []*big.Int
-}, error,
-) {
+}, error) {
 	return _IAuctionDepositVault.Contract.GetAllAddrsOverMinDeposit(&_IAuctionDepositVault.CallOpts, start, limit)
 }
 
@@ -447,8 +448,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultCallerSession) GetAllAddrsOverM
 	Searchers      []common.Address
 	DepositAmounts []*big.Int
 	Nonces         []*big.Int
-}, error,
-) {
+}, error) {
 	return _IAuctionDepositVault.Contract.GetAllAddrsOverMinDeposit(&_IAuctionDepositVault.CallOpts, start, limit)
 }
 
@@ -458,6 +458,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultCallerSession) GetAllAddrsOverM
 func (_IAuctionDepositVault *IAuctionDepositVaultCaller) GetDepositAddrs(opts *bind.CallOpts, start *big.Int, limit *big.Int) ([]common.Address, error) {
 	var out []interface{}
 	err := _IAuctionDepositVault.contract.Call(opts, &out, "getDepositAddrs", start, limit)
+
 	if err != nil {
 		return *new([]common.Address), err
 	}
@@ -465,6 +466,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultCaller) GetDepositAddrs(opts *b
 	out0 := *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
 
 	return out0, err
+
 }
 
 // GetDepositAddrs is a free data retrieval call binding the contract method 0xe45076ac.
@@ -487,6 +489,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultCallerSession) GetDepositAddrs(
 func (_IAuctionDepositVault *IAuctionDepositVaultCaller) GetDepositAddrsLength(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IAuctionDepositVault.contract.Call(opts, &out, "getDepositAddrsLength")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -494,6 +497,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultCaller) GetDepositAddrsLength(o
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GetDepositAddrsLength is a free data retrieval call binding the contract method 0x84792e0b.
@@ -516,6 +520,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultCallerSession) GetDepositAddrsL
 func (_IAuctionDepositVault *IAuctionDepositVaultCaller) IsMinDepositOver(opts *bind.CallOpts, searcher common.Address) (bool, error) {
 	var out []interface{}
 	err := _IAuctionDepositVault.contract.Call(opts, &out, "isMinDepositOver", searcher)
+
 	if err != nil {
 		return *new(bool), err
 	}
@@ -523,6 +528,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultCaller) IsMinDepositOver(opts *
 	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
 
 	return out0, err
+
 }
 
 // IsMinDepositOver is a free data retrieval call binding the contract method 0x48f928e8.
@@ -806,6 +812,7 @@ type IAuctionDepositVaultChangeAuctionFeeVault struct {
 //
 // Solidity: event ChangeAuctionFeeVault(address oldFeeVault, address newFeeVault)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterChangeAuctionFeeVault(opts *bind.FilterOpts) (*IAuctionDepositVaultChangeAuctionFeeVaultIterator, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.FilterLogs(opts, "ChangeAuctionFeeVault")
 	if err != nil {
 		return nil, err
@@ -817,6 +824,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterChangeAuctionFe
 //
 // Solidity: event ChangeAuctionFeeVault(address oldFeeVault, address newFeeVault)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) WatchChangeAuctionFeeVault(opts *bind.WatchOpts, sink chan<- *IAuctionDepositVaultChangeAuctionFeeVault) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.WatchLogs(opts, "ChangeAuctionFeeVault")
 	if err != nil {
 		return nil, err
@@ -939,6 +947,7 @@ type IAuctionDepositVaultChangeMinDepositAmount struct {
 //
 // Solidity: event ChangeMinDepositAmount(uint256 oldAmount, uint256 newAmount)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterChangeMinDepositAmount(opts *bind.FilterOpts) (*IAuctionDepositVaultChangeMinDepositAmountIterator, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.FilterLogs(opts, "ChangeMinDepositAmount")
 	if err != nil {
 		return nil, err
@@ -950,6 +959,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterChangeMinDeposi
 //
 // Solidity: event ChangeMinDepositAmount(uint256 oldAmount, uint256 newAmount)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) WatchChangeMinDepositAmount(opts *bind.WatchOpts, sink chan<- *IAuctionDepositVaultChangeMinDepositAmount) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.WatchLogs(opts, "ChangeMinDepositAmount")
 	if err != nil {
 		return nil, err
@@ -1072,6 +1082,7 @@ type IAuctionDepositVaultChangeMinWithdrawLocktime struct {
 //
 // Solidity: event ChangeMinWithdrawLocktime(uint256 oldLocktime, uint256 newLocktime)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterChangeMinWithdrawLocktime(opts *bind.FilterOpts) (*IAuctionDepositVaultChangeMinWithdrawLocktimeIterator, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.FilterLogs(opts, "ChangeMinWithdrawLocktime")
 	if err != nil {
 		return nil, err
@@ -1083,6 +1094,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterChangeMinWithdr
 //
 // Solidity: event ChangeMinWithdrawLocktime(uint256 oldLocktime, uint256 newLocktime)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) WatchChangeMinWithdrawLocktime(opts *bind.WatchOpts, sink chan<- *IAuctionDepositVaultChangeMinWithdrawLocktime) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.WatchLogs(opts, "ChangeMinWithdrawLocktime")
 	if err != nil {
 		return nil, err
@@ -1206,6 +1218,7 @@ type IAuctionDepositVaultInsufficientBalance struct {
 //
 // Solidity: event InsufficientBalance(address searcher, uint256 balance, uint256 amount)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterInsufficientBalance(opts *bind.FilterOpts) (*IAuctionDepositVaultInsufficientBalanceIterator, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.FilterLogs(opts, "InsufficientBalance")
 	if err != nil {
 		return nil, err
@@ -1217,6 +1230,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterInsufficientBal
 //
 // Solidity: event InsufficientBalance(address searcher, uint256 balance, uint256 amount)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) WatchInsufficientBalance(opts *bind.WatchOpts, sink chan<- *IAuctionDepositVaultInsufficientBalance) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.WatchLogs(opts, "InsufficientBalance")
 	if err != nil {
 		return nil, err
@@ -1339,6 +1353,7 @@ type IAuctionDepositVaultTakenBid struct {
 //
 // Solidity: event TakenBid(address searcher, uint256 amount)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterTakenBid(opts *bind.FilterOpts) (*IAuctionDepositVaultTakenBidIterator, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.FilterLogs(opts, "TakenBid")
 	if err != nil {
 		return nil, err
@@ -1350,6 +1365,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterTakenBid(opts *
 //
 // Solidity: event TakenBid(address searcher, uint256 amount)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) WatchTakenBid(opts *bind.WatchOpts, sink chan<- *IAuctionDepositVaultTakenBid) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.WatchLogs(opts, "TakenBid")
 	if err != nil {
 		return nil, err
@@ -1472,6 +1488,7 @@ type IAuctionDepositVaultTakenBidFailed struct {
 //
 // Solidity: event TakenBidFailed(address searcher, uint256 amount)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterTakenBidFailed(opts *bind.FilterOpts) (*IAuctionDepositVaultTakenBidFailedIterator, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.FilterLogs(opts, "TakenBidFailed")
 	if err != nil {
 		return nil, err
@@ -1483,6 +1500,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterTakenBidFailed(
 //
 // Solidity: event TakenBidFailed(address searcher, uint256 amount)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) WatchTakenBidFailed(opts *bind.WatchOpts, sink chan<- *IAuctionDepositVaultTakenBidFailed) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.WatchLogs(opts, "TakenBidFailed")
 	if err != nil {
 		return nil, err
@@ -1605,6 +1623,7 @@ type IAuctionDepositVaultTakenGas struct {
 //
 // Solidity: event TakenGas(address searcher, uint256 gasAmount)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterTakenGas(opts *bind.FilterOpts) (*IAuctionDepositVaultTakenGasIterator, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.FilterLogs(opts, "TakenGas")
 	if err != nil {
 		return nil, err
@@ -1616,6 +1635,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterTakenGas(opts *
 //
 // Solidity: event TakenGas(address searcher, uint256 gasAmount)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) WatchTakenGas(opts *bind.WatchOpts, sink chan<- *IAuctionDepositVaultTakenGas) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.WatchLogs(opts, "TakenGas")
 	if err != nil {
 		return nil, err
@@ -1738,6 +1758,7 @@ type IAuctionDepositVaultTakenGasFailed struct {
 //
 // Solidity: event TakenGasFailed(address searcher, uint256 gasAmount)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterTakenGasFailed(opts *bind.FilterOpts) (*IAuctionDepositVaultTakenGasFailedIterator, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.FilterLogs(opts, "TakenGasFailed")
 	if err != nil {
 		return nil, err
@@ -1749,6 +1770,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterTakenGasFailed(
 //
 // Solidity: event TakenGasFailed(address searcher, uint256 gasAmount)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) WatchTakenGasFailed(opts *bind.WatchOpts, sink chan<- *IAuctionDepositVaultTakenGasFailed) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.WatchLogs(opts, "TakenGasFailed")
 	if err != nil {
 		return nil, err
@@ -1873,6 +1895,7 @@ type IAuctionDepositVaultVaultDeposit struct {
 //
 // Solidity: event VaultDeposit(address searcher, uint256 amount, uint256 totalAmount, uint256 nonce)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterVaultDeposit(opts *bind.FilterOpts) (*IAuctionDepositVaultVaultDepositIterator, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.FilterLogs(opts, "VaultDeposit")
 	if err != nil {
 		return nil, err
@@ -1884,6 +1907,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterVaultDeposit(op
 //
 // Solidity: event VaultDeposit(address searcher, uint256 amount, uint256 totalAmount, uint256 nonce)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) WatchVaultDeposit(opts *bind.WatchOpts, sink chan<- *IAuctionDepositVaultVaultDeposit) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.WatchLogs(opts, "VaultDeposit")
 	if err != nil {
 		return nil, err
@@ -2007,6 +2031,7 @@ type IAuctionDepositVaultVaultReserveWithdraw struct {
 //
 // Solidity: event VaultReserveWithdraw(address searcher, uint256 amount, uint256 nonce)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterVaultReserveWithdraw(opts *bind.FilterOpts) (*IAuctionDepositVaultVaultReserveWithdrawIterator, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.FilterLogs(opts, "VaultReserveWithdraw")
 	if err != nil {
 		return nil, err
@@ -2018,6 +2043,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterVaultReserveWit
 //
 // Solidity: event VaultReserveWithdraw(address searcher, uint256 amount, uint256 nonce)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) WatchVaultReserveWithdraw(opts *bind.WatchOpts, sink chan<- *IAuctionDepositVaultVaultReserveWithdraw) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.WatchLogs(opts, "VaultReserveWithdraw")
 	if err != nil {
 		return nil, err
@@ -2141,6 +2167,7 @@ type IAuctionDepositVaultVaultWithdraw struct {
 //
 // Solidity: event VaultWithdraw(address searcher, uint256 amount, uint256 nonce)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterVaultWithdraw(opts *bind.FilterOpts) (*IAuctionDepositVaultVaultWithdrawIterator, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.FilterLogs(opts, "VaultWithdraw")
 	if err != nil {
 		return nil, err
@@ -2152,6 +2179,7 @@ func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) FilterVaultWithdraw(o
 //
 // Solidity: event VaultWithdraw(address searcher, uint256 amount, uint256 nonce)
 func (_IAuctionDepositVault *IAuctionDepositVaultFilterer) WatchVaultWithdraw(opts *bind.WatchOpts, sink chan<- *IAuctionDepositVaultVaultWithdraw) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionDepositVault.contract.WatchLogs(opts, "VaultWithdraw")
 	if err != nil {
 		return nil, err
@@ -2375,6 +2403,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointTransactorRaw) Transact(opts *bind.
 func (_IAuctionEntryPoint *IAuctionEntryPointCaller) Auctioneer(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAuctionEntryPoint.contract.Call(opts, &out, "auctioneer")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2382,6 +2411,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCaller) Auctioneer(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Auctioneer is a free data retrieval call binding the contract method 0x5ec2c7bf.
@@ -2404,6 +2434,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) Auctioneer() (common
 func (_IAuctionEntryPoint *IAuctionEntryPointCaller) DepositVault(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IAuctionEntryPoint.contract.Call(opts, &out, "depositVault")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -2411,6 +2442,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCaller) DepositVault(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // DepositVault is a free data retrieval call binding the contract method 0xd7cd3949.
@@ -2433,6 +2465,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) DepositVault() (comm
 func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasBufferEstimate(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IAuctionEntryPoint.contract.Call(opts, &out, "gasBufferEstimate")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -2440,6 +2473,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasBufferEstimate(opts *bin
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GasBufferEstimate is a free data retrieval call binding the contract method 0xa5b2ab40.
@@ -2462,6 +2496,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GasBufferEstimate() 
 func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasBufferUnmeasured(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IAuctionEntryPoint.contract.Call(opts, &out, "gasBufferUnmeasured")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -2469,6 +2504,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasBufferUnmeasured(opts *b
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GasBufferUnmeasured is a free data retrieval call binding the contract method 0x145aa6c7.
@@ -2491,6 +2527,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GasBufferUnmeasured(
 func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasContractExecution(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IAuctionEntryPoint.contract.Call(opts, &out, "gasContractExecution")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -2498,6 +2535,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasContractExecution(opts *
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GasContractExecution is a free data retrieval call binding the contract method 0xc62a1105.
@@ -2520,6 +2558,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GasContractExecution
 func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasPerByteEip7623(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IAuctionEntryPoint.contract.Call(opts, &out, "gasPerByteEip7623")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -2527,6 +2566,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasPerByteEip7623(opts *bin
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GasPerByteEip7623 is a free data retrieval call binding the contract method 0x5e155d7a.
@@ -2549,6 +2589,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GasPerByteEip7623() 
 func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasPerByteIntrinsic(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IAuctionEntryPoint.contract.Call(opts, &out, "gasPerByteIntrinsic")
+
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -2556,6 +2597,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GasPerByteIntrinsic(opts *b
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
+
 }
 
 // GasPerByteIntrinsic is a free data retrieval call binding the contract method 0xea147667.
@@ -2578,6 +2620,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GasPerByteIntrinsic(
 func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GetAuctionTxHash(opts *bind.CallOpts, auctionTx IAuctionEntryPointAuctionTx) ([32]byte, error) {
 	var out []interface{}
 	err := _IAuctionEntryPoint.contract.Call(opts, &out, "getAuctionTxHash", auctionTx)
+
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -2585,6 +2628,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GetAuctionTxHash(opts *bind
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
+
 }
 
 // GetAuctionTxHash is a free data retrieval call binding the contract method 0xa8aa9450.
@@ -2607,8 +2651,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GetAuctionTxHash(auc
 func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GetNoncesAndDeposits(opts *bind.CallOpts, searchers []common.Address) (struct {
 	Nonces   []*big.Int
 	Deposits []*big.Int
-}, error,
-) {
+}, error) {
 	var out []interface{}
 	err := _IAuctionEntryPoint.contract.Call(opts, &out, "getNoncesAndDeposits", searchers)
 
@@ -2624,6 +2667,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GetNoncesAndDeposits(opts *
 	outstruct.Deposits = *abi.ConvertType(out[1], new([]*big.Int)).(*[]*big.Int)
 
 	return *outstruct, err
+
 }
 
 // GetNoncesAndDeposits is a free data retrieval call binding the contract method 0x0339ed37.
@@ -2632,8 +2676,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointCaller) GetNoncesAndDeposits(opts *
 func (_IAuctionEntryPoint *IAuctionEntryPointSession) GetNoncesAndDeposits(searchers []common.Address) (struct {
 	Nonces   []*big.Int
 	Deposits []*big.Int
-}, error,
-) {
+}, error) {
 	return _IAuctionEntryPoint.Contract.GetNoncesAndDeposits(&_IAuctionEntryPoint.CallOpts, searchers)
 }
 
@@ -2643,8 +2686,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointSession) GetNoncesAndDeposits(searc
 func (_IAuctionEntryPoint *IAuctionEntryPointCallerSession) GetNoncesAndDeposits(searchers []common.Address) (struct {
 	Nonces   []*big.Int
 	Deposits []*big.Int
-}, error,
-) {
+}, error) {
 	return _IAuctionEntryPoint.Contract.GetNoncesAndDeposits(&_IAuctionEntryPoint.CallOpts, searchers)
 }
 
@@ -2810,6 +2852,7 @@ type IAuctionEntryPointCall struct {
 //
 // Solidity: event Call(address sender, uint256 nonce)
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) FilterCall(opts *bind.FilterOpts) (*IAuctionEntryPointCallIterator, error) {
+
 	logs, sub, err := _IAuctionEntryPoint.contract.FilterLogs(opts, "Call")
 	if err != nil {
 		return nil, err
@@ -2821,6 +2864,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) FilterCall(opts *bind.Fil
 //
 // Solidity: event Call(address sender, uint256 nonce)
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) WatchCall(opts *bind.WatchOpts, sink chan<- *IAuctionEntryPointCall) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionEntryPoint.contract.WatchLogs(opts, "Call")
 	if err != nil {
 		return nil, err
@@ -2943,6 +2987,7 @@ type IAuctionEntryPointCallFailed struct {
 //
 // Solidity: event CallFailed(address sender, uint256 nonce)
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) FilterCallFailed(opts *bind.FilterOpts) (*IAuctionEntryPointCallFailedIterator, error) {
+
 	logs, sub, err := _IAuctionEntryPoint.contract.FilterLogs(opts, "CallFailed")
 	if err != nil {
 		return nil, err
@@ -2954,6 +2999,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) FilterCallFailed(opts *bi
 //
 // Solidity: event CallFailed(address sender, uint256 nonce)
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) WatchCallFailed(opts *bind.WatchOpts, sink chan<- *IAuctionEntryPointCallFailed) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionEntryPoint.contract.WatchLogs(opts, "CallFailed")
 	if err != nil {
 		return nil, err
@@ -3076,6 +3122,7 @@ type IAuctionEntryPointChangeAuctioneer struct {
 //
 // Solidity: event ChangeAuctioneer(address oldAuctioneer, address newAuctioneer)
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) FilterChangeAuctioneer(opts *bind.FilterOpts) (*IAuctionEntryPointChangeAuctioneerIterator, error) {
+
 	logs, sub, err := _IAuctionEntryPoint.contract.FilterLogs(opts, "ChangeAuctioneer")
 	if err != nil {
 		return nil, err
@@ -3087,6 +3134,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) FilterChangeAuctioneer(op
 //
 // Solidity: event ChangeAuctioneer(address oldAuctioneer, address newAuctioneer)
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) WatchChangeAuctioneer(opts *bind.WatchOpts, sink chan<- *IAuctionEntryPointChangeAuctioneer) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionEntryPoint.contract.WatchLogs(opts, "ChangeAuctioneer")
 	if err != nil {
 		return nil, err
@@ -3209,6 +3257,7 @@ type IAuctionEntryPointChangeDepositVault struct {
 //
 // Solidity: event ChangeDepositVault(address oldDepositVault, address newDepositVault)
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) FilterChangeDepositVault(opts *bind.FilterOpts) (*IAuctionEntryPointChangeDepositVaultIterator, error) {
+
 	logs, sub, err := _IAuctionEntryPoint.contract.FilterLogs(opts, "ChangeDepositVault")
 	if err != nil {
 		return nil, err
@@ -3220,6 +3269,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) FilterChangeDepositVault(
 //
 // Solidity: event ChangeDepositVault(address oldDepositVault, address newDepositVault)
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) WatchChangeDepositVault(opts *bind.WatchOpts, sink chan<- *IAuctionEntryPointChangeDepositVault) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionEntryPoint.contract.WatchLogs(opts, "ChangeDepositVault")
 	if err != nil {
 		return nil, err
@@ -3345,6 +3395,7 @@ type IAuctionEntryPointChangeGasParameters struct {
 //
 // Solidity: event ChangeGasParameters(uint256 gasPerByteIntrinsic, uint256 gasPerByteEip7623, uint256 gasContractExecution, uint256 gasBufferEstimate, uint256 gasBufferUnmeasured)
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) FilterChangeGasParameters(opts *bind.FilterOpts) (*IAuctionEntryPointChangeGasParametersIterator, error) {
+
 	logs, sub, err := _IAuctionEntryPoint.contract.FilterLogs(opts, "ChangeGasParameters")
 	if err != nil {
 		return nil, err
@@ -3356,6 +3407,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) FilterChangeGasParameters
 //
 // Solidity: event ChangeGasParameters(uint256 gasPerByteIntrinsic, uint256 gasPerByteEip7623, uint256 gasContractExecution, uint256 gasBufferEstimate, uint256 gasBufferUnmeasured)
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) WatchChangeGasParameters(opts *bind.WatchOpts, sink chan<- *IAuctionEntryPointChangeGasParameters) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionEntryPoint.contract.WatchLogs(opts, "ChangeGasParameters")
 	if err != nil {
 		return nil, err
@@ -3478,6 +3530,7 @@ type IAuctionEntryPointUseNonce struct {
 //
 // Solidity: event UseNonce(address searcher, uint256 nonce)
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) FilterUseNonce(opts *bind.FilterOpts) (*IAuctionEntryPointUseNonceIterator, error) {
+
 	logs, sub, err := _IAuctionEntryPoint.contract.FilterLogs(opts, "UseNonce")
 	if err != nil {
 		return nil, err
@@ -3489,6 +3542,7 @@ func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) FilterUseNonce(opts *bind
 //
 // Solidity: event UseNonce(address searcher, uint256 nonce)
 func (_IAuctionEntryPoint *IAuctionEntryPointFilterer) WatchUseNonce(opts *bind.WatchOpts, sink chan<- *IAuctionEntryPointUseNonce) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionEntryPoint.contract.WatchLogs(opts, "UseNonce")
 	if err != nil {
 		return nil, err
@@ -3706,6 +3760,7 @@ func (_IAuctionFeeVault *IAuctionFeeVaultTransactorRaw) Transact(opts *bind.Tran
 func (_IAuctionFeeVault *IAuctionFeeVaultCaller) GetRewardAddr(opts *bind.CallOpts, nodeId common.Address) (common.Address, error) {
 	var out []interface{}
 	err := _IAuctionFeeVault.contract.Call(opts, &out, "getRewardAddr", nodeId)
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3713,6 +3768,7 @@ func (_IAuctionFeeVault *IAuctionFeeVaultCaller) GetRewardAddr(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // GetRewardAddr is a free data retrieval call binding the contract method 0x27a50f72.
@@ -3935,6 +3991,7 @@ type IAuctionFeeVaultFeeDeposit struct {
 //
 // Solidity: event FeeDeposit(address indexed sender, uint256 amount, uint256 paybackAmount, uint256 validatorPaybackAmount)
 func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterFeeDeposit(opts *bind.FilterOpts, sender []common.Address) (*IAuctionFeeVaultFeeDepositIterator, error) {
+
 	var senderRule []interface{}
 	for _, senderItem := range sender {
 		senderRule = append(senderRule, senderItem)
@@ -3951,6 +4008,7 @@ func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterFeeDeposit(opts *bind.F
 //
 // Solidity: event FeeDeposit(address indexed sender, uint256 amount, uint256 paybackAmount, uint256 validatorPaybackAmount)
 func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) WatchFeeDeposit(opts *bind.WatchOpts, sink chan<- *IAuctionFeeVaultFeeDeposit, sender []common.Address) (event.Subscription, error) {
+
 	var senderRule []interface{}
 	for _, senderItem := range sender {
 		senderRule = append(senderRule, senderItem)
@@ -4078,6 +4136,7 @@ type IAuctionFeeVaultFeePaybackFailed struct {
 //
 // Solidity: event FeePaybackFailed(address indexed receiver, uint256 amount)
 func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterFeePaybackFailed(opts *bind.FilterOpts, receiver []common.Address) (*IAuctionFeeVaultFeePaybackFailedIterator, error) {
+
 	var receiverRule []interface{}
 	for _, receiverItem := range receiver {
 		receiverRule = append(receiverRule, receiverItem)
@@ -4094,6 +4153,7 @@ func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterFeePaybackFailed(opts *
 //
 // Solidity: event FeePaybackFailed(address indexed receiver, uint256 amount)
 func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) WatchFeePaybackFailed(opts *bind.WatchOpts, sink chan<- *IAuctionFeeVaultFeePaybackFailed, receiver []common.Address) (event.Subscription, error) {
+
 	var receiverRule []interface{}
 	for _, receiverItem := range receiver {
 		receiverRule = append(receiverRule, receiverItem)
@@ -4220,6 +4280,7 @@ type IAuctionFeeVaultFeeWithdrawal struct {
 //
 // Solidity: event FeeWithdrawal(uint256 amount)
 func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterFeeWithdrawal(opts *bind.FilterOpts) (*IAuctionFeeVaultFeeWithdrawalIterator, error) {
+
 	logs, sub, err := _IAuctionFeeVault.contract.FilterLogs(opts, "FeeWithdrawal")
 	if err != nil {
 		return nil, err
@@ -4231,6 +4292,7 @@ func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterFeeWithdrawal(opts *bin
 //
 // Solidity: event FeeWithdrawal(uint256 amount)
 func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) WatchFeeWithdrawal(opts *bind.WatchOpts, sink chan<- *IAuctionFeeVaultFeeWithdrawal) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionFeeVault.contract.WatchLogs(opts, "FeeWithdrawal")
 	if err != nil {
 		return nil, err
@@ -4353,6 +4415,7 @@ type IAuctionFeeVaultRewardAddressRegistered struct {
 //
 // Solidity: event RewardAddressRegistered(address indexed nodeId, address indexed reward)
 func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterRewardAddressRegistered(opts *bind.FilterOpts, nodeId []common.Address, reward []common.Address) (*IAuctionFeeVaultRewardAddressRegisteredIterator, error) {
+
 	var nodeIdRule []interface{}
 	for _, nodeIdItem := range nodeId {
 		nodeIdRule = append(nodeIdRule, nodeIdItem)
@@ -4373,6 +4436,7 @@ func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterRewardAddressRegistered
 //
 // Solidity: event RewardAddressRegistered(address indexed nodeId, address indexed reward)
 func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) WatchRewardAddressRegistered(opts *bind.WatchOpts, sink chan<- *IAuctionFeeVaultRewardAddressRegistered, nodeId []common.Address, reward []common.Address) (event.Subscription, error) {
+
 	var nodeIdRule []interface{}
 	for _, nodeIdItem := range nodeId {
 		nodeIdRule = append(nodeIdRule, nodeIdItem)
@@ -4503,6 +4567,7 @@ type IAuctionFeeVaultSearcherPaybackRateUpdated struct {
 //
 // Solidity: event SearcherPaybackRateUpdated(uint256 searcherPaybackRate)
 func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterSearcherPaybackRateUpdated(opts *bind.FilterOpts) (*IAuctionFeeVaultSearcherPaybackRateUpdatedIterator, error) {
+
 	logs, sub, err := _IAuctionFeeVault.contract.FilterLogs(opts, "SearcherPaybackRateUpdated")
 	if err != nil {
 		return nil, err
@@ -4514,6 +4579,7 @@ func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterSearcherPaybackRateUpda
 //
 // Solidity: event SearcherPaybackRateUpdated(uint256 searcherPaybackRate)
 func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) WatchSearcherPaybackRateUpdated(opts *bind.WatchOpts, sink chan<- *IAuctionFeeVaultSearcherPaybackRateUpdated) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionFeeVault.contract.WatchLogs(opts, "SearcherPaybackRateUpdated")
 	if err != nil {
 		return nil, err
@@ -4635,6 +4701,7 @@ type IAuctionFeeVaultValidatorPaybackRateUpdated struct {
 //
 // Solidity: event ValidatorPaybackRateUpdated(uint256 validatorPaybackRate)
 func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterValidatorPaybackRateUpdated(opts *bind.FilterOpts) (*IAuctionFeeVaultValidatorPaybackRateUpdatedIterator, error) {
+
 	logs, sub, err := _IAuctionFeeVault.contract.FilterLogs(opts, "ValidatorPaybackRateUpdated")
 	if err != nil {
 		return nil, err
@@ -4646,6 +4713,7 @@ func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) FilterValidatorPaybackRateUpd
 //
 // Solidity: event ValidatorPaybackRateUpdated(uint256 validatorPaybackRate)
 func (_IAuctionFeeVault *IAuctionFeeVaultFilterer) WatchValidatorPaybackRateUpdated(opts *bind.WatchOpts, sink chan<- *IAuctionFeeVaultValidatorPaybackRateUpdated) (event.Subscription, error) {
+
 	logs, sub, err := _IAuctionFeeVault.contract.WatchLogs(opts, "ValidatorPaybackRateUpdated")
 	if err != nil {
 		return nil, err
@@ -4859,6 +4927,7 @@ func (_Ownable *OwnableTransactorRaw) Transact(opts *bind.TransactOpts, method s
 func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _Ownable.contract.Call(opts, &out, "owner")
+
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4866,6 +4935,7 @@ func (_Ownable *OwnableCaller) Owner(opts *bind.CallOpts) (common.Address, error
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
+
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -5002,6 +5072,7 @@ type OwnableOwnershipTransferred struct {
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpts, previousOwner []common.Address, newOwner []common.Address) (*OwnableOwnershipTransferredIterator, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)
@@ -5022,6 +5093,7 @@ func (_Ownable *OwnableFilterer) FilterOwnershipTransferred(opts *bind.FilterOpt
 //
 // Solidity: event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)
 func (_Ownable *OwnableFilterer) WatchOwnershipTransferred(opts *bind.WatchOpts, sink chan<- *OwnableOwnershipTransferred, previousOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
+
 	var previousOwnerRule []interface{}
 	for _, previousOwnerItem := range previousOwner {
 		previousOwnerRule = append(previousOwnerRule, previousOwnerItem)

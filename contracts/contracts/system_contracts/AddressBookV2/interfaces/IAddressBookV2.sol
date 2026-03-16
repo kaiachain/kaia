@@ -5,7 +5,6 @@ import {State, BlsPublicKeyInfo, NodeInfo, Profile} from "../../types/Node.sol";
 
 /// @title IAddressBookV2
 /// @notice Unified interface for AddressBookV2 — the sole entry point for all node operations at 0x400.
-///         Combines node storage, state management, scoring, configuration, and suspension.
 interface IAddressBookV2 {
     /* ========== ERRORS ========== */
 
@@ -14,10 +13,13 @@ interface IAddressBookV2 {
     /// @notice Thrown when caller is not the node's registered manager
     error OnlyManager();
 
+    /// @notice Thrown when caller is not the node ID itself
+    error OnlyNodeId();
+
     /// @notice Thrown when a node is not in a valid state for the requested operation
     error InvalidState();
 
-    /// @notice Thrown when a slot limit (validator, candidate, pause, exit) would be exceeded
+    /// @notice Thrown when a slot limit (candidate ready, pause, exit) would be exceeded
     error SlotsFull();
 
     /// @notice Thrown when an input parameter is invalid (zero address, mismatched array lengths, etc.)
@@ -40,6 +42,9 @@ interface IAddressBookV2 {
 
     /// @notice Thrown when attempting to unsuspend a validator that is not suspended
     error NotSuspended();
+
+    /// @notice Thrown when attempting to update the reward address while public delegation is enabled
+    error PDEnabled();
 
     /* ========== EVENTS ========== */
 
@@ -72,13 +77,34 @@ interface IAddressBookV2 {
     /// @param newManager The new manager address
     event ManagerUpdated(address indexed nodeId, address indexed oldManager, address indexed newManager);
 
+    /// @notice Emitted when a node's reward address is updated
+    /// @param nodeId The address of the node
+    /// @param oldRewardAddress The old reward address
+    /// @param newRewardAddress The new reward address
+    event RewardAddressUpdated(
+        address indexed nodeId,
+        address indexed oldRewardAddress,
+        address indexed newRewardAddress
+    );
+
+    /// @notice Emitted when a node's voter address is updated
+    /// @param nodeId The address of the node
+    /// @param oldVoterAddress The old voter address
+    /// @param newVoterAddress The new voter address
+    event VoterAddressUpdated(address indexed nodeId, address indexed oldVoterAddress, address indexed newVoterAddress);
+
+    /// @notice Emitted when a node's metadata is updated
+    /// @param nodeId The address of the node
+    /// @param newMetadata The new metadata string
+    event MetadataUpdated(address indexed nodeId, string newMetadata);
+
     /// @notice Emitted when a candidate transitions from CandInactive to CandReady
-    /// @param nodeId The address of the activated candidate
-    event CandidateActivated(address indexed nodeId);
+    /// @param nodeId The address of the readied candidate
+    event CandidateReadied(address indexed nodeId);
 
     /// @notice Emitted when a candidate transitions from CandReady to CandInactive
-    /// @param nodeId The address of the deactivated candidate
-    event CandidateDeactivated(address indexed nodeId);
+    /// @param nodeId The address of the unreadied candidate
+    event CandidateUnreadied(address indexed nodeId);
 
     /// @notice Emitted when scores are updated for an epoch
     /// @param epoch The epoch for which scores were updated
@@ -166,13 +192,28 @@ interface IAddressBookV2 {
     /// @param newManager The new manager address
     function updateManager(address nodeId, address newManager) external;
 
-    /// @notice Activates a candidate: CandInactive → CandReady
-    /// @param nodeId The address of the candidate to activate
-    function activateCandidate(address nodeId) external;
+    /// @notice Updates the reward address of a node (only when public delegation is disabled)
+    /// @param nodeId The address of the node
+    /// @param newRewardAddress The new reward address
+    function updateRewardAddress(address nodeId, address newRewardAddress) external;
 
-    /// @notice Deactivates a candidate: CandReady → CandInactive
-    /// @param nodeId The address of the candidate to deactivate
-    function deactivateCandidate(address nodeId) external;
+    /// @notice Updates the voter address of a node
+    /// @param nodeId The address of the node
+    /// @param newVoterAddress The new voter address
+    function updateVoterAddress(address nodeId, address newVoterAddress) external;
+
+    /// @notice Updates the metadata of a node
+    /// @param nodeId The address of the node
+    /// @param newMetadata The new metadata string
+    function updateMetadata(address nodeId, string calldata newMetadata) external;
+
+    /// @notice Readies a candidate: CandInactive → CandReady
+    /// @param nodeId The address of the candidate to ready
+    function readyCandidate(address nodeId) external;
+
+    /// @notice Unreadies a candidate: CandReady → CandInactive
+    /// @param nodeId The address of the candidate to unready
+    function unreadyCandidate(address nodeId) external;
 
     /// @notice Readies a validator: ValInactive → ValReady
     /// @param nodeId The address of the validator
@@ -201,7 +242,7 @@ interface IAddressBookV2 {
     /* ========== SYSTEM FUNCTIONS ========== */
 
     /// @notice Processes system-triggered state transitions for nodes.
-    /// @dev Core client computes all timeout/violation/epoch logic; this function just records results.
+    /// @dev Core client computes all timeout/violation/epoch logic; AddressBookV2 unconditionally records results.
     ///      Updates epochValCount only at epoch boundaries (block.number % EPOCH_BLOCK_INTERVAL == 0).
     /// @param nodeIds Array of node addresses to transition
     /// @param newStates Array of target states for each node
@@ -319,12 +360,12 @@ interface IAddressBookV2 {
     function getNodeInfos(address[] calldata nodeIds) external view returns (NodeInfo[] memory);
 
     /// @notice Returns lightweight profiles for all registered nodes, excluding suspended validators
-    /// @dev Iterates activeSet + candInactiveSet, skips suspended nodes.
+    /// @dev Iterates activeSet, skips suspended nodes.
     /// @return Array of Profile structs
     function getAllProfiles() external view returns (Profile[] memory);
 
     /// @notice Returns BLS public key info for all registered nodes
-    /// @dev Iterates activeSet + candInactiveSet. Matches SimpleBlsRegistry interface.
+    /// @dev Iterates activeSet. Matches SimpleBlsRegistry interface.
     /// @return nodeIdList Array of node addresses
     /// @return pubkeyList Array of BlsPublicKeyInfo structs in the same order
     function getAllBlsInfo() external view returns (address[] memory nodeIdList, BlsPublicKeyInfo[] memory pubkeyList);
@@ -333,11 +374,6 @@ interface IAddressBookV2 {
     /// @param nodeId The address of the node
     /// @return The node's current State
     function getNodeState(address nodeId) external view returns (State);
-
-    /// @notice Checks if a node is in the CandInactive set
-    /// @param nodeId The address of the node
-    /// @return True if the node is in candInactiveSet
-    function isCandInactive(address nodeId) external view returns (bool);
 
     /// @notice Checks if a node is in the active set (all states except CandInactive)
     /// @param nodeId The address of the node
@@ -361,10 +397,6 @@ interface IAddressBookV2 {
     /// @notice Returns the number of nodes in the active set
     /// @return The active set length
     function getActiveSetLength() external view returns (uint256);
-
-    /// @notice Returns the number of nodes in the CandInactive set
-    /// @return The CandInactive set length
-    function getCandInactiveSetLength() external view returns (uint256);
 
     /// @notice Returns the number of nodes in a given state
     /// @dev Atomically maintained inside _transition(), _createNode(), _deleteNode().

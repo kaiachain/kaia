@@ -2,16 +2,19 @@
 pragma solidity 0.8.25;
 
 import {IAddressBookV2} from "./interfaces/IAddressBookV2.sol";
-import {ICnStaking} from "../CnStaking/interfaces/ICnStaking.sol";
+import {ICnStaking} from "../CnStaking/CnStakingV4/interfaces/ICnStaking.sol";
 import {State, BlsPublicKeyInfo, NodeInfo, Profile} from "../types/Node.sol";
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {IRegistry} from "../system/IRegistry.sol";
+import {IStakingTracker} from "../system/IStakingTracker.sol";
+import {ABv2ConfigLib} from "../libraries/ABv2ConfigLib.sol";
 import {SystemCallable} from "../system/SystemCallable.sol";
-import {Initializable} from "openzeppelin-contracts-upgradeable-5.0/proxy/utils/Initializable.sol";
-import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable-5.0/access/OwnableUpgradeable.sol";
-import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable-5.0/proxy/utils/UUPSUpgradeable.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @title AddressBookV2Base
-/// @notice Abstract base for AddressBookV2. Contains ERC-7201 storage namespace,
+/// @notice Abstract base for AddressBookV2. Contains storage layout,
 ///         constants, access control modifiers, internal helpers, and internal mutators.
 abstract contract AddressBookV2Base is
     IAddressBookV2,
@@ -27,6 +30,9 @@ abstract contract AddressBookV2Base is
     /// @notice Minimum staking amount required for candidate activation and validator readiness (5M KAIA)
     uint256 public constant MIN_STAKE = 5_000_000 ether;
 
+    /// @notice System registry address (0x0...401)
+    address internal constant REGISTRY_ADDRESS = 0x0000000000000000000000000000000000000401;
+
     /* ========== STORAGE ========== */
 
     /// @custom:storage-location erc7201:addressbookv2.storage.ABv2Storage
@@ -34,7 +40,6 @@ abstract contract AddressBookV2Base is
         // Node data
         mapping(address => NodeInfo) nodeInfo;
         EnumerableSet.AddressSet activeSet;
-        EnumerableSet.AddressSet candInactiveSet;
         EnumerableSet.AddressSet suspendedSet;
         uint256 lastAssignedGCId;
         mapping(State => uint256) stateCount;
@@ -52,12 +57,10 @@ abstract contract AddressBookV2Base is
         address kpfAddress;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("addressbookv2.storage.ABv2Storage")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant STORAGE_LOCATION = 0x1b0484cbd0fba815b5886ffd853c75e18f4b5720362abf431d1f348b59d4ff00;
-
     function _getStorage() internal pure returns (ABv2Storage storage $) {
+        bytes32 loc = ABv2ConfigLib.STORAGE_LOCATION;
         assembly {
-            $.slot := STORAGE_LOCATION
+            $.slot := loc
         }
     }
 
@@ -73,10 +76,20 @@ abstract contract AddressBookV2Base is
         if (msg.sender != _getStorage().nodeInfo[nodeId].manager) revert OnlyManager();
     }
 
+    /// @notice Restricts a function to the node ID itself (msg.sender == nodeId)
+    modifier onlyNodeId(address nodeId) {
+        _onlyNodeId(nodeId);
+        _;
+    }
+
+    function _onlyNodeId(address nodeId) private view {
+        if (msg.sender != nodeId) revert OnlyNodeId();
+    }
+
     /* ========== INTERNAL MUTATORS ========== */
 
     /// @notice Stores a new node as CandInactive
-    /// @dev Assigns gcId, stores nodeInfo, adds to candInactiveSet.
+    /// @dev Assigns gcId, stores nodeInfo.
     function _createNode(address nodeId, NodeInfo memory info) internal {
         ABv2Storage storage $ = _getStorage();
 
@@ -85,7 +98,6 @@ abstract contract AddressBookV2Base is
         $.nodeInfo[nodeId] = info;
         $.nodeInfo[nodeId].gcId = gcId;
 
-        $.candInactiveSet.add(nodeId);
         $.stateCount[State.CandInactive]++;
 
         emit NodeCreated(nodeId, gcId);
@@ -98,7 +110,6 @@ abstract contract AddressBookV2Base is
         // Defense-in-depth: caller already checks CandInactive state; this guards against bugs
         if ($.nodeInfo[nodeId].state != State.CandInactive) revert InvalidState();
 
-        $.candInactiveSet.remove(nodeId);
         $.stateCount[State.CandInactive]--;
 
         delete $.nodeInfo[nodeId];
@@ -112,20 +123,13 @@ abstract contract AddressBookV2Base is
         ABv2Storage storage $ = _getStorage();
         uint256 len = nodeIds.length;
 
-        for (uint256 i; i < len; ) {
-            uint256 gcId = ++$.lastAssignedGCId;
-
-            $.nodeInfo[nodeIds[i]] = infos[i];
-            // TODO-permissionless: Set gcID from data contract
-            $.nodeInfo[nodeIds[i]].gcId = gcId;
-            $.nodeInfo[nodeIds[i]].state = State.ValActive;
-            $.nodeInfo[nodeIds[i]].timeoutAt = 0;
+        for (uint256 i; i < len; ++i) {
+            NodeInfo memory info = infos[i];
+            info.state = State.ValActive;
+            info.timeoutAt = 0;
+            $.nodeInfo[nodeIds[i]] = info;
 
             $.activeSet.add(nodeIds[i]);
-
-            unchecked {
-                ++i;
-            }
         }
 
         $.stateCount[State.ValActive] = len;
@@ -139,15 +143,12 @@ abstract contract AddressBookV2Base is
         uint256[] calldata timeouts
     ) internal {
         uint256 len = nodeIds.length;
-        for (uint256 i; i < len; ) {
+        for (uint256 i; i < len; ++i) {
             _transition(nodeIds[i], newStates[i], timeouts[i]);
-            unchecked {
-                ++i;
-            }
         }
     }
 
-    /// @notice Atomic state transition: updates set boundary, state, and timeout
+    /// @notice Atomic state transition: updates activeSet boundary, state, and timeout
     /// @dev No state validation — action functions are responsible for all pre-checks.
     ///      Handles CandInactive <-> activeSet boundary crossing automatically.
     function _transition(address nodeId, State newState, uint256 timeoutAt) internal {
@@ -161,11 +162,9 @@ abstract contract AddressBookV2Base is
         $.stateCount[newState]++;
 
         if (oldState == State.CandInactive && newState != State.CandInactive) {
-            $.candInactiveSet.remove(nodeId);
             $.activeSet.add(nodeId);
         } else if (oldState != State.CandInactive && newState == State.CandInactive) {
             $.activeSet.remove(nodeId);
-            $.candInactiveSet.add(nodeId);
         }
 
         info.state = newState;
@@ -182,7 +181,7 @@ abstract contract AddressBookV2Base is
 
     /// @notice Checks whether a node's effective stake meets MIN_STAKE
     function _isNodeOverMinStake(address nodeId) internal view returns (bool) {
-        address stakingContract = _getStakingContract(nodeId);
+        address payable stakingContract = payable(_getStakingContract(nodeId));
         uint256 effectiveStake = ICnStaking(stakingContract).staking() - ICnStaking(stakingContract).unstaking();
         return effectiveStake >= MIN_STAKE;
     }
@@ -195,6 +194,14 @@ abstract contract AddressBookV2Base is
     function _revertIfTimeoutExpired(address nodeId) internal view {
         uint256 timeoutAt = _getTimeoutAt(nodeId);
         if (timeoutAt != 0 && block.timestamp >= timeoutAt) revert TimeoutExpired();
+    }
+
+    /// @notice Resolve StakingTracker from registry and refresh voter.
+    function _refreshVoter(address staking) internal {
+        address tracker = IRegistry(REGISTRY_ADDRESS).getActiveAddr("StakingTracker");
+        if (tracker != address(0)) {
+            IStakingTracker(tracker).refreshVoter(staking);
+        }
     }
 
     /* ========== INTERNAL GETTERS ========== */
@@ -217,10 +224,6 @@ abstract contract AddressBookV2Base is
 
     function _getActiveSetLength() internal view returns (uint256) {
         return _getStorage().activeSet.length();
-    }
-
-    function _getCandInactiveSetLength() internal view returns (uint256) {
-        return _getStorage().candInactiveSet.length();
     }
 
     function _getNodeInfo(address nodeId) internal view returns (NodeInfo storage) {

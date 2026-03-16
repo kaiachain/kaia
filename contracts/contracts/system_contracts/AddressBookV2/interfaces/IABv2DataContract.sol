@@ -10,23 +10,14 @@ import {NodeInfo} from "../../types/Node.sol";
 interface IABv2DataContract {
     /// @notice Aggregated genesis data for ABv2 initialization
     struct InitData {
-        /// @dev Owner of AddressBookV2 (can upgrade, suspend, update config)
         address initialOwner;
-        /// @dev Proposal failure count that triggers forced exit
         uint256 exitThreshold;
-        /// @dev Duration (seconds) for ValPaused timeout
         uint256 pauseTimeout;
-        /// @dev Duration (seconds) for ValInactive/ValReady timeout
         uint256 idleTimeout;
-        /// @dev Maximum validators in the pipeline (activeSet)
         uint256 maxValidatorCount;
-        /// @dev Maximum candidates in CandReady state
         uint256 maxReadyCandidateCount;
-        /// @dev Kaia Ecosystem Fund address
         address kefAddress;
-        /// @dev Kaia Infrastructure Fund address
         address kifAddress;
-        /// @dev Kaia Protocol Fund address
         address kpfAddress;
         /// @dev Node addresses for initial validators
         address[] nodeIds;
@@ -34,7 +25,11 @@ interface IABv2DataContract {
         NodeInfo[] infos;
     }
 
-    /// @notice Returns all genesis data in a single call
+    /// @notice Returns the ABv2 implementation (logic) contract address.
+    /// @dev Used by the core client to set up the UUPS proxy before calling initialize().
+    function implementation() external view returns (address);
+
+    /// @notice Returns all genesis initialization data in a single call.
     /// @return The complete InitData struct
-    function getData() external view returns (InitData memory);
+    function getInitData() external view returns (InitData memory);
 }

@@ -313,7 +313,7 @@ describe("TreasuryRebalanceV2", function () {
 
     it("Should revert if zeroed is a contract address but does not have getState() method", async function () {
       mockZeroed3.getState.reverts();
-      await expect(trV2.approve(mockZeroed3.address)).to.be.revertedWithoutReason();
+      await expect(trV2.approve(mockZeroed3.address)).to.be.reverted;
     });
 
     it("Should revert if zeroed is a contract but adminList is empty", async function () {

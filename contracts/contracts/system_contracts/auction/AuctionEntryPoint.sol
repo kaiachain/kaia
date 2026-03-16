@@ -18,11 +18,11 @@
 
 pragma solidity 0.8.25;
 
-import "openzeppelin-contracts-5.0/access/Ownable.sol";
-import "openzeppelin-contracts-5.0/utils/cryptography/EIP712.sol";
-import "openzeppelin-contracts-5.0/utils/cryptography/ECDSA.sol";
-import "openzeppelin-contracts-5.0/utils/cryptography/MessageHashUtils.sol";
-import "openzeppelin-contracts-5.0/utils/Nonces.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import "@openzeppelin/contracts/utils/Nonces.sol";
 import "./AuctionError.sol";
 import "./IAuctionEntryPoint.sol";
 import "./IAuctionDepositVault.sol";

@@ -18,7 +18,7 @@
 pragma solidity ^0.8.24;
 
 import {Bech32} from "../kaiabridge/Bech32.sol";
-import {Strings} from "openzeppelin-contracts-5.0/utils/Strings.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 library FnsaVerify {
     /* ========== CONSTANTS ========== */

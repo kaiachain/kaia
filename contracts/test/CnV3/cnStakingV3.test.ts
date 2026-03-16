@@ -711,7 +711,7 @@ describe("CnStakingV3 tests", function () {
         await cnV3s[0].setPublicDelegation(pdFactory.address, testingPsParam);
 
         // Can't delegate if not initialized
-        const pd = await ethers.getContractAt("PublicDelegation", await cnV3s[0].publicDelegation());
+        const pd = await ethers.getContractAt("contracts/system_contracts/consensus/PublicDelegation/PublicDelegation.sol:PublicDelegation", await cnV3s[0].publicDelegation());
         await expect(pd.stake({ value: 100 })).to.be.revertedWith("Contract is not initialized.");
       });
       describe("Redelegation", function () {

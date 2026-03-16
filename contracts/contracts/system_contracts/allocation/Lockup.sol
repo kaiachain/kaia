@@ -19,7 +19,7 @@ pragma solidity 0.8.25;
 
 import "./ILockup.sol";
 import "../consensus/PublicDelegation/IPublicDelegation.sol";
-import "openzeppelin-contracts-5.0/access/extensions/AccessControlEnumerable.sol";
+import "@openzeppelin/contracts/access/extensions/AccessControlEnumerable.sol";
 
 contract Lockup is AccessControlEnumerable, ILockup {
     /* ========== CONSTANTS ========== */

@@ -18,11 +18,12 @@
 pragma solidity ^0.8.18;
 
 import "../../system_contracts/kip113/IAddressBook.sol";
+import {Profile, State} from "../../system_contracts/types/Node.sol";
 
 contract MultiCallContractMock {
     address private constant ADDRESS_BOOK_ADDRESS = 0x0000000000000000000000000000000000000400;
 
-    function multiCallStakingInfo(bool _kip290Enabled, bool _ignoreAbookVersion)
+    function multiCallStakingInfo()
         external
         view
         returns (uint8[] memory typeList, address[] memory addressList, uint256[] memory stakingAmounts)
@@ -51,7 +52,7 @@ contract MultiCallContractMock {
         }
 
         return _returnBakedData();
-    }
+    } 
 
     function _returnBakedData() internal pure returns (uint8[] memory typeList, address[] memory addressList, uint256[] memory stakingAmounts) {
         typeList = new uint8[](5);
@@ -71,5 +72,36 @@ contract MultiCallContractMock {
         addressList[4] = 0x0000000000000000000000000000000000000f04;
 
         stakingAmounts[0] = 7_000_000 ether;
+    }
+
+    function multiCallStakingInfoPermissionless()
+        external
+        pure
+        returns (Profile[] memory profiles, uint256[] memory stakingAmounts, address kefAddr, address kifAddr, address kpfAddr)
+    {
+        profiles = new Profile[](2);
+        stakingAmounts = new uint256[](2);
+
+        profiles[0] = Profile(
+            0x0000000000000000000000000000000000000F00,
+            0x0000000000000000000000000000000000000F01,
+            0x0000000000000000000000000000000000000f02,
+            0,
+            State.ValActive
+        );
+        profiles[1] = Profile(
+            0x0000000000000000000000000000000000000F03,
+            0x0000000000000000000000000000000000000f04,
+            0x0000000000000000000000000000000000000f05,
+            0,
+            State.CandReady
+        );
+
+        stakingAmounts[0] = 5_000_000 ether;
+        stakingAmounts[1] = 10_000_000 ether;
+
+        kefAddr = 0x0000000000000000000000000000000000000a01;
+        kifAddr = 0x0000000000000000000000000000000000000a02;
+        kpfAddr = 0x0000000000000000000000000000000000000a03;
     }
 }

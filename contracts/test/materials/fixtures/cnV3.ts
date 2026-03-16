@@ -18,7 +18,7 @@ export async function cnV3MultiSigUnitTestFixture() {
   const accounts = await ethers.getSigners();
   const [contractValidator, admin1, admin2, admin3, other1, other2, nodeId, rewardAddr] = accounts.slice(0, 8);
   const adminList = [admin1, admin2, admin3];
-  const unLockTimes = [now + 100, now + 200];
+  const unLockTimes = [now + 1000, now + 2000];
   const unLockAmounts = [200n, 400n].map((x) => toPeb(x));
   const requirement = 2;
   const gcId = 700;

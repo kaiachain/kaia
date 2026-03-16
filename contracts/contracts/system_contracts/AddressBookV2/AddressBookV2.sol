@@ -2,26 +2,27 @@
 pragma solidity 0.8.25;
 
 import {NodeActions} from "./NodeActions.sol";
+import {AddressBookLegacy} from "./AddressBookLegacy.sol";
 import {IAddressBookV2} from "./interfaces/IAddressBookV2.sol";
 import {IABv2DataContract} from "./interfaces/IABv2DataContract.sol";
 import {IRegistry} from "../system/IRegistry.sol";
+import {ABv2ConfigLib} from "../libraries/ABv2ConfigLib.sol";
 import {State, BlsPublicKeyInfo, NodeInfo, Profile} from "../types/Node.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 /// @title AddressBookV2
 /// @notice The sole entry point for all node operations, deployed at 0x400.
-///         Inherits all node actions (user, system, admin) from NodeActions and
-///         exposes all public getters in a single UUPS-upgradeable contract.
-contract AddressBookV2 is NodeActions {
+///         Inherits all node actions from NodeActions and exposes all public getters.
+contract AddressBookV2 is NodeActions, AddressBookLegacy {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /* ========== CONSTANTS ========== */
 
+    /// @notice The type of the contract
     string public constant CONTRACT_TYPE = "AddressBook";
-    uint256 public constant VERSION = 2;
 
-    /// @notice System registry address
-    address internal constant REGISTRY = address(0x401);
+    /// @notice The version of the contract
+    uint256 public constant VERSION = 2;
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -38,9 +39,9 @@ contract AddressBookV2 is NodeActions {
     ///      All validation is done at data contract construction time — this function trusts the data.
     function initialize() public initializer {
         // Resolve data contract from system registry
-        address dataContract = IRegistry(REGISTRY).getActiveAddr("ABv2DataContract");
+        address dataContract = IRegistry(REGISTRY_ADDRESS).getActiveAddr("ABv2DataContract");
         if (dataContract == address(0)) revert NotInitializable();
-        IABv2DataContract.InitData memory d = IABv2DataContract(dataContract).getData();
+        IABv2DataContract.InitData memory d = IABv2DataContract(dataContract).getInitData();
         ABv2Storage storage $ = _getStorage();
 
         // Set owner and config
@@ -56,17 +57,18 @@ contract AddressBookV2 is NodeActions {
 
         // Register addresses
         uint256 len = d.nodeIds.length;
-        for (uint256 i; i < len; ) {
+        for (uint256 i; i < len; ++i) {
             $.registeredAddresses[d.nodeIds[i]] = true;
             $.registeredAddresses[d.infos[i].stakingContract] = true;
             $.registeredAddresses[d.infos[i].rewardAddress] = true;
-            unchecked {
-                ++i;
-            }
         }
 
         // Set initial active validators and set epoch count
         _setInitialActiveValidators(d.nodeIds, d.infos);
+
+        // GC IDs for genesis validators come from data contract.
+        // Start counter at 100 so post-init nodes get gcId >= 101.
+        $.lastAssignedGCId = 100;
 
         emit ValidatorsInitialized(d.nodeIds);
     }
@@ -89,74 +91,48 @@ contract AddressBookV2 is NodeActions {
 
     /// @inheritdoc IAddressBookV2
     function updatePauseTimeout(uint256 newPauseTimeout) external onlyOwner {
-        if (newPauseTimeout == 0) revert InvalidInput();
-        ABv2Storage storage $ = _getStorage();
-        uint256 oldPauseTimeout = $.pauseTimeout;
-        $.pauseTimeout = newPauseTimeout;
-        emit PauseTimeoutUpdated(oldPauseTimeout, newPauseTimeout);
+        emit PauseTimeoutUpdated(ABv2ConfigLib.PAUSE_TIMEOUT.updateUint(newPauseTimeout), newPauseTimeout);
     }
 
     /// @inheritdoc IAddressBookV2
     function updateIdleTimeout(uint256 newIdleTimeout) external onlyOwner {
-        if (newIdleTimeout == 0) revert InvalidInput();
-        ABv2Storage storage $ = _getStorage();
-        uint256 oldIdleTimeout = $.idleTimeout;
-        $.idleTimeout = newIdleTimeout;
-        emit IdleTimeoutUpdated(oldIdleTimeout, newIdleTimeout);
+        emit IdleTimeoutUpdated(ABv2ConfigLib.IDLE_TIMEOUT.updateUint(newIdleTimeout), newIdleTimeout);
     }
 
     /// @inheritdoc IAddressBookV2
     function updateMaxValidatorCount(uint256 newMaxValidatorCount) external onlyOwner {
-        if (newMaxValidatorCount == 0) revert InvalidInput();
-        ABv2Storage storage $ = _getStorage();
-        uint256 oldCount = $.maxValidatorCount;
-        $.maxValidatorCount = newMaxValidatorCount;
-        emit MaxValidatorCountUpdated(oldCount, newMaxValidatorCount);
+        emit MaxValidatorCountUpdated(
+            ABv2ConfigLib.MAX_VALIDATOR_COUNT.updateUint(newMaxValidatorCount),
+            newMaxValidatorCount
+        );
     }
 
     /// @inheritdoc IAddressBookV2
     function updateMaxReadyCandidateCount(uint256 newMaxReadyCandidateCount) external onlyOwner {
-        if (newMaxReadyCandidateCount == 0) revert InvalidInput();
-        ABv2Storage storage $ = _getStorage();
-        uint256 oldCount = $.maxReadyCandidateCount;
-        $.maxReadyCandidateCount = newMaxReadyCandidateCount;
-        emit MaxReadyCandidateCountUpdated(oldCount, newMaxReadyCandidateCount);
+        emit MaxReadyCandidateCountUpdated(
+            ABv2ConfigLib.MAX_READY_CANDIDATE_COUNT.updateUint(newMaxReadyCandidateCount),
+            newMaxReadyCandidateCount
+        );
     }
 
     /// @inheritdoc IAddressBookV2
     function updateExitThreshold(uint256 newExitThreshold) external onlyOwner {
-        if (newExitThreshold == 0) revert InvalidInput();
-        ABv2Storage storage $ = _getStorage();
-        uint256 oldThreshold = $.exitThreshold;
-        $.exitThreshold = newExitThreshold;
-        emit ExitThresholdUpdated(oldThreshold, newExitThreshold);
+        emit ExitThresholdUpdated(ABv2ConfigLib.EXIT_THRESHOLD.updateUint(newExitThreshold), newExitThreshold);
     }
 
     /// @inheritdoc IAddressBookV2
     function updateKefAddress(address newKefAddress) external onlyOwner {
-        if (newKefAddress == address(0)) revert InvalidInput();
-        ABv2Storage storage $ = _getStorage();
-        address oldAddress = $.kefAddress;
-        $.kefAddress = newKefAddress;
-        emit KefAddressUpdated(oldAddress, newKefAddress);
+        emit KefAddressUpdated(ABv2ConfigLib.KEF_ADDRESS.updateAddress(newKefAddress), newKefAddress);
     }
 
     /// @inheritdoc IAddressBookV2
     function updateKifAddress(address newKifAddress) external onlyOwner {
-        if (newKifAddress == address(0)) revert InvalidInput();
-        ABv2Storage storage $ = _getStorage();
-        address oldAddress = $.kifAddress;
-        $.kifAddress = newKifAddress;
-        emit KifAddressUpdated(oldAddress, newKifAddress);
+        emit KifAddressUpdated(ABv2ConfigLib.KIF_ADDRESS.updateAddress(newKifAddress), newKifAddress);
     }
 
     /// @inheritdoc IAddressBookV2
     function updateKpfAddress(address newKpfAddress) external onlyOwner {
-        if (newKpfAddress == address(0)) revert InvalidInput();
-        ABv2Storage storage $ = _getStorage();
-        address oldAddress = $.kpfAddress;
-        $.kpfAddress = newKpfAddress;
-        emit KpfAddressUpdated(oldAddress, newKpfAddress);
+        emit KpfAddressUpdated(ABv2ConfigLib.KPF_ADDRESS.updateAddress(newKpfAddress), newKpfAddress);
     }
 
     /* ========== GETTERS ========== */
@@ -211,9 +187,9 @@ contract AddressBookV2 is NodeActions {
 
     /// @inheritdoc IAddressBookV2
     function getNodeInfo(address nodeId) external view override returns (NodeInfo memory) {
-        ABv2Storage storage $ = _getStorage();
-        if ($.nodeInfo[nodeId].state == State.Unknown) revert NodeNotFound();
-        return $.nodeInfo[nodeId];
+        NodeInfo storage info = _getStorage().nodeInfo[nodeId];
+        if (info.state == State.Unknown) revert NodeNotFound();
+        return info;
     }
 
     /// @inheritdoc IAddressBookV2
@@ -221,53 +197,21 @@ contract AddressBookV2 is NodeActions {
         ABv2Storage storage $ = _getStorage();
         uint256 len = nodeIds.length;
         infos = new NodeInfo[](len);
-        for (uint256 i; i < len; ) {
+        for (uint256 i; i < len; ++i) {
             infos[i] = $.nodeInfo[nodeIds[i]];
-            unchecked {
-                ++i;
-            }
         }
     }
 
     /// @inheritdoc IAddressBookV2
     function getAllProfiles() external view override returns (Profile[] memory profiles) {
         ABv2Storage storage $ = _getStorage();
-        uint256 activeLen = $.activeSet.length();
-        uint256 inactiveLen = $.candInactiveSet.length();
-
-        profiles = new Profile[](activeLen + inactiveLen);
-        uint256 idx;
-
-        for (uint256 i; i < activeLen; ) {
-            address nid = $.activeSet.at(i);
-            if (!$.suspendedSet.contains(nid)) {
-                NodeInfo storage info = $.nodeInfo[nid];
-                profiles[idx] = Profile(nid, info.stakingContract, info.rewardAddress, info.timeoutAt, info.state);
-                unchecked {
-                    ++idx;
-                }
-            }
-            unchecked {
-                ++i;
-            }
-        }
-
-        for (uint256 i; i < inactiveLen; ) {
-            address nid = $.candInactiveSet.at(i);
-            if (!$.suspendedSet.contains(nid)) {
-                NodeInfo storage info = $.nodeInfo[nid];
-                profiles[idx] = Profile(nid, info.stakingContract, info.rewardAddress, info.timeoutAt, info.state);
-                unchecked {
-                    ++idx;
-                }
-            }
-            unchecked {
-                ++i;
-            }
-        }
-
-        assembly {
-            mstore(profiles, idx)
+        address[] memory nodeIds = _getNonSuspendedNodeIds();
+        uint256 len = nodeIds.length;
+        profiles = new Profile[](len);
+        for (uint256 i; i < len; ++i) {
+            address nid = nodeIds[i];
+            NodeInfo storage info = $.nodeInfo[nid];
+            profiles[i] = Profile(nid, info.stakingContract, info.rewardAddress, info.timeoutAt, info.state);
         }
     }
 
@@ -279,44 +223,11 @@ contract AddressBookV2 is NodeActions {
         returns (address[] memory nodeIdList, BlsPublicKeyInfo[] memory pubkeyList)
     {
         ABv2Storage storage $ = _getStorage();
-        uint256 activeLen = $.activeSet.length();
-        uint256 inactiveLen = $.candInactiveSet.length();
-
-        nodeIdList = new address[](activeLen + inactiveLen);
-        pubkeyList = new BlsPublicKeyInfo[](activeLen + inactiveLen);
-        uint256 idx;
-
-        for (uint256 i; i < activeLen; ) {
-            address nid = $.activeSet.at(i);
-            if (!$.suspendedSet.contains(nid)) {
-                nodeIdList[idx] = nid;
-                pubkeyList[idx] = $.nodeInfo[nid].blsInfo;
-                unchecked {
-                    ++idx;
-                }
-            }
-            unchecked {
-                ++i;
-            }
-        }
-
-        for (uint256 i; i < inactiveLen; ) {
-            address nid = $.candInactiveSet.at(i);
-            if (!$.suspendedSet.contains(nid)) {
-                nodeIdList[idx] = nid;
-                pubkeyList[idx] = $.nodeInfo[nid].blsInfo;
-                unchecked {
-                    ++idx;
-                }
-            }
-            unchecked {
-                ++i;
-            }
-        }
-
-        assembly {
-            mstore(nodeIdList, idx)
-            mstore(pubkeyList, idx)
+        nodeIdList = _getNonSuspendedNodeIds();
+        uint256 len = nodeIdList.length;
+        pubkeyList = new BlsPublicKeyInfo[](len);
+        for (uint256 i; i < len; ++i) {
+            pubkeyList[i] = $.nodeInfo[nodeIdList[i]].blsInfo;
         }
     }
 
@@ -326,13 +237,18 @@ contract AddressBookV2 is NodeActions {
     }
 
     /// @inheritdoc IAddressBookV2
-    function isCandInactive(address nodeId) external view override returns (bool) {
-        return _getStorage().candInactiveSet.contains(nodeId);
+    function getStateCount(State state) external view override returns (uint256) {
+        return _getStorage().stateCount[state];
     }
 
     /// @inheritdoc IAddressBookV2
     function isInActiveSet(address nodeId) external view override returns (bool) {
         return _getStorage().activeSet.contains(nodeId);
+    }
+
+    /// @inheritdoc IAddressBookV2
+    function getActiveSetLength() external view override returns (uint256) {
+        return _getStorage().activeSet.length();
     }
 
     /// @inheritdoc IAddressBookV2
@@ -350,19 +266,84 @@ contract AddressBookV2 is NodeActions {
         return _getStorage().nodeInfo[nodeId].timeoutAt;
     }
 
-    /// @inheritdoc IAddressBookV2
-    function getActiveSetLength() external view override returns (uint256) {
-        return _getStorage().activeSet.length();
+    /* ========== LEGACY COMPATIBILITY ========== */
+
+    /// @notice Legacy getState() — returns admin list and requirement for backward compatibility.
+    /// @dev Different selector than getState(address) so both coexist.
+    ///      Returns ([owner], 1) to reflect single-owner governance.
+    function getState() external view returns (address[] memory, uint256) {
+        address[] memory admins = new address[](1);
+        admins[0] = owner();
+        return (admins, 1);
     }
 
-    /// @inheritdoc IAddressBookV2
-    function getCandInactiveSetLength() external view override returns (uint256) {
-        return _getStorage().candInactiveSet.length();
+    /// @inheritdoc AddressBookLegacy
+    function _getAllAddressData()
+        internal
+        view
+        override
+        returns (
+            address[] memory nodeIds,
+            address[] memory stakingContracts,
+            address[] memory rewardAddresses,
+            address kifAddress,
+            address kefAddress
+        )
+    {
+        ABv2Storage storage $ = _getStorage();
+        uint256 activeLen = $.activeSet.length();
+
+        nodeIds = new address[](activeLen);
+        stakingContracts = new address[](activeLen);
+        rewardAddresses = new address[](activeLen);
+
+        for (uint256 i; i < activeLen; ++i) {
+            address nid = $.activeSet.at(i);
+            NodeInfo storage info = $.nodeInfo[nid];
+            nodeIds[i] = nid;
+            stakingContracts[i] = info.stakingContract;
+            rewardAddresses[i] = info.rewardAddress;
+        }
+
+        kifAddress = $.kifAddress;
+        kefAddress = $.kefAddress;
     }
 
-    /// @inheritdoc IAddressBookV2
-    function getStateCount(State state) external view override returns (uint256) {
-        return _getStorage().stateCount[state];
+    /// @inheritdoc AddressBookLegacy
+    function _getNodeData(
+        address nodeId
+    ) internal view override returns (address stakingContract, address rewardAddress, bool exists) {
+        ABv2Storage storage $ = _getStorage();
+        NodeInfo storage info = $.nodeInfo[nodeId];
+        if (info.state == State.Unknown) {
+            return (address(0), address(0), false);
+        }
+        return (info.stakingContract, info.rewardAddress, true);
+    }
+
+    /* ========== INTERNAL HELPERS ========== */
+
+    /// @notice Returns all node IDs from activeSet, excluding suspended nodes.
+    function _getNonSuspendedNodeIds() private view returns (address[] memory nodeIds) {
+        ABv2Storage storage $ = _getStorage();
+        uint256 activeLen = $.activeSet.length();
+
+        nodeIds = new address[](activeLen);
+        uint256 idx;
+
+        for (uint256 i; i < activeLen; ++i) {
+            address nid = $.activeSet.at(i);
+            if (!$.suspendedSet.contains(nid)) {
+                nodeIds[idx] = nid;
+                unchecked {
+                    ++idx;
+                }
+            }
+        }
+
+        assembly {
+            mstore(nodeIds, idx)
+        }
     }
 
     /* ========== UPGRADE FUNCTIONS ========== */

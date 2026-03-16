@@ -1,5 +1,5 @@
 import "../../../system_contracts/kip247/IWKAIA.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-contracts-4.0/token/ERC20/IERC20.sol";
 
 contract MaliciousWKAIA is IWKAIA {
     function deposit() external payable override {

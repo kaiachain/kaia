@@ -17,7 +17,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "openzeppelin-contracts-4.0/utils/structs/EnumerableSet.sol";
 
 library EnumerableSetUint64 {
     using EnumerableSet for EnumerableSet.UintSet;

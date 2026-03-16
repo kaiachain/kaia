@@ -67,16 +67,23 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 //go:generate ./abigenw --pkg rebalance --sol ./contracts/system_contracts/rebalance/all.sol --out ./contracts/system_contracts/rebalance/all.go --ver 0.8.19
 //go:generate ./abigenw --pkg kip113 --sol ./contracts/system_contracts/kip113/SimpleBlsRegistry.sol --out ./contracts/system_contracts/kip113/SimpleBlsRegistry.go --ver 0.8.19
 //go:generate ./abigenw --pkg kip149 --sol ./contracts/system_contracts/kip149/Registry.sol --out ./contracts/system_contracts/kip149/Registry.go --ver 0.8.19
-//go:generate ./abigenw --pkg proxy --sol ./contracts/system_contracts/proxy/proxy.sol --out ./contracts/system_contracts/proxy/proxy.go --ver 0.8.19
+//go:generate ./abigenw --pkg proxy --sol ./contracts/system_contracts/Proxy/ERC1967Proxy.sol --out ./contracts/system_contracts/Proxy/Proxy.go --ver 0.8.25
 //go:generate ./abigenw --pkg system_contracts --sol ./contracts/testing/system_contracts/all.sol --out ./contracts/testing/system_contracts/all.go --ver 0.8.19
 //go:generate ./abigenw --pkg multicall --sol ./contracts/system_contracts/multicall/MultiCallContract.sol --out ./contracts/system_contracts/multicall/MultiCallContract.go --ver 0.8.19
 
 // These files were compiled with solidity 0.8.25.
 
 //go:generate ./abigenw --pkg consensus --sol ./contracts/system_contracts/consensus/Kip163.sol --out ./contracts/system_contracts/consensus/Kip163.go --ver 0.8.25
-//go:generate ./abigenw --pkg kip247 --sol ./contracts/system_contracts/kip247/GaslessSwapRouter.sol --out ./contracts/system_contracts/kip247/GaslessSwapRouter.go --ver 0.8.25
-//go:generate ./abigenw --pkg gasless --sol ./contracts/testing/system_contracts/gasless/TestToken.sol --out ./contracts/testing/system_contracts/gasless/TestToken.go --ver 0.8.25
+//go:generate ./abigenw --pkg kip247 --sol ./contracts/system_contracts/kip247/GaslessSwapRouter.sol --out ./contracts/system_contracts/kip247/GaslessSwapRouter.go --ver 0.8.24
+//go:generate ./abigenw --pkg gasless --sol ./contracts/testing/system_contracts/gasless/TestToken.sol --out ./contracts/testing/system_contracts/gasless/TestToken.go --ver 0.8.24
 
 //go:generate ./abigenw --pkg auction --sol ./contracts/system_contracts/auction/Kip249.sol --out ./contracts/system_contracts/auction/Kip249.go --ver 0.8.25
 
 //go:generate ./abigenw --pkg valset --sol ./contracts/system_contracts/vrank/ValidatorState.sol --out ./contracts/system_contracts/vrank/ValidatorState.go --ver 0.8.25
+
+//go:generate ./abigenw --pkg addressbookv2 --sol ./contracts/system_contracts/AddressBookV2/AddressBookV2.sol --out ./contracts/system_contracts/AddressBookV2/AddressBookV2.go --ver 0.8.25
+//go:generate ./abigenw --pkg abv2data --sol ./contracts/system_contracts/AddressBookV2/ABv2DataContract.sol --out ./contracts/system_contracts/AddressBookV2/abv2data/ABv2DataContract.go --ver 0.8.25
+//go:generate ./abigenw --pkg cnstakingv4 --sol ./contracts/system_contracts/CnStaking/CnStakingV4/CnStakingV4.sol --out ./contracts/system_contracts/CnStaking/CnStakingV4/CnStakingV4.go --ver 0.8.25
+//go:generate ./abigenw --pkg cnstakingv4factory --sol ./contracts/system_contracts/CnStaking/CnStakingV4Factory/CnStakingV4Factory.sol --out ./contracts/system_contracts/CnStaking/CnStakingV4Factory/CnStakingV4Factory.go --ver 0.8.25
+//go:generate ./abigenw --pkg publicdelegation --sol ./contracts/system_contracts/PublicDelegation/PublicDelegation.sol --out ./contracts/system_contracts/PublicDelegation/PublicDelegation.go --ver 0.8.25
+//go:generate ./abigenw --pkg beacon --sol ./contracts/system_contracts/Proxy/UpgradeableBeacon.sol --out ./contracts/system_contracts/Proxy/beacon/UpgradeableBeacon.go --ver 0.8.25

@@ -307,7 +307,7 @@ describe("Voting.sol", function () {
         it("#castVote: Need to have votes", async function () {
           const { voting, cnStakingV2A, admin1, voter1, other1 } = fixture;
 
-          await jumpTime(105);
+          await jumpTime(1005);
 
           // CnStakingV2A withdraws KLAY before it starts, becoming a voter with 0 votes
           await submitAndExecuteRequest(cnStakingV2A, [admin1], 1, FuncID.WithdrawLockupStaking, admin1, [
@@ -325,7 +325,7 @@ describe("Voting.sol", function () {
         it("#castVote: After pending, tracker doesn't track staking", async function () {
           const { voting, cnStakingV2A, admin1, voter1, other1 } = fixture;
 
-          await jumpTime(105);
+          await jumpTime(1005);
 
           await jumpBlock(DAY);
 
@@ -720,7 +720,7 @@ describe("Voting.sol", function () {
       // If A withdraws 2m KLAY, then it also affects to D's votes power since
       // votes power is capped by (numEligibles - 1), which is now 2.
 
-      await jumpTime(105);
+      await jumpTime(1005);
 
       // Now A has no votes
       await submitAndExecuteRequest(cnStakingV2A, [admin1], 1, FuncID.WithdrawLockupStaking, admin1, [

@@ -17,7 +17,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/Strings.sol";
+import "openzeppelin-contracts-4.0/utils/Strings.sol";
 import "./IVoting.sol";
 import "./StakingTracker.sol";
 

@@ -9,13 +9,15 @@ import {NodeVerifier} from "../libraries/NodeVerifier.sol";
 /// @notice Read-only data contract holding genesis configuration for AddressBookV2.
 ///         Deployed before hardfork, registered in Registry (0x401) as "ABv2DataContract".
 ///         All validation happens in the constructor — ABv2.initialize() trusts this data.
-/// @dev No mutators, no owner, no upgradability.
 contract ABv2DataContract is IABv2DataContract {
     /* ========== ERRORS ========== */
 
     error InvalidInput();
 
     /* ========== IMMUTABLES (scalars) ========== */
+
+    /// @inheritdoc IABv2DataContract
+    address public immutable override implementation;
 
     address public immutable initialOwner;
     uint256 public immutable exitThreshold;
@@ -38,8 +40,12 @@ contract ABv2DataContract is IABv2DataContract {
     /* ========== CONSTRUCTOR ========== */
 
     /// @notice Validates and stores all genesis data. Reverts on any invalid input.
+    /// @param _implementation The ABv2 logic contract address for proxy deployment
     /// @param data The complete genesis configuration
-    constructor(InitData memory data) {
+    constructor(address _implementation, InitData memory data) {
+        // Validate implementation address
+        if (_implementation == address(0)) revert InvalidInput();
+
         // Validate config
         if (data.initialOwner == address(0)) revert InvalidInput();
         if (data.exitThreshold == 0) revert InvalidInput();
@@ -57,6 +63,7 @@ contract ABv2DataContract is IABv2DataContract {
         if (len > data.maxValidatorCount) revert InvalidInput();
 
         // Store immutables
+        implementation = _implementation;
         initialOwner = data.initialOwner;
         exitThreshold = data.exitThreshold;
         pauseTimeout = data.pauseTimeout;
@@ -68,26 +75,28 @@ contract ABv2DataContract is IABv2DataContract {
         kpfAddress = data.kpfAddress;
 
         // Validate and store nodes
-        for (uint256 i; i < len; ) {
+        for (uint256 i; i < len; ++i) {
             address nodeId = data.nodeIds[i];
             NodeInfo memory info = data.infos[i];
 
             if (info.manager == address(0)) revert InvalidInput();
-            NodeVerifier.registerNode(_registered, nodeId, info.stakingContract, info.rewardAddress, info.blsInfo);
+            NodeVerifier.registerNodeGenesis(
+                _registered,
+                nodeId,
+                info.stakingContract,
+                info.rewardAddress,
+                info.blsInfo
+            );
 
             _nodeIds.push(nodeId);
             _infos.push(info);
-
-            unchecked {
-                ++i;
-            }
         }
     }
 
-    /* ========== GETTER ========== */
+    /* ========== GETTERS ========== */
 
     /// @inheritdoc IABv2DataContract
-    function getData() external view override returns (InitData memory) {
+    function getInitData() external view override returns (InitData memory) {
         return
             InitData({
                 initialOwner: initialOwner,

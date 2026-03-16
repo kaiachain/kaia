@@ -18,7 +18,7 @@
 
 pragma solidity 0.8.25;
 
-import "openzeppelin-contracts-5.0/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./IAuctionDepositVault.sol";
 
 interface IAuctionEntryPoint {

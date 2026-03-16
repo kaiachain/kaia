@@ -120,7 +120,7 @@ contract MultiCallContract {
     function multiCallStakingInfoPermissionless()
         external
         view
-        returns (Profile[] memory profiles, uint256[] memory stakingAmounts, address kefAddr, address kifAddr)
+        returns (Profile[] memory profiles, uint256[] memory stakingAmounts, address kefAddr, address kifAddr, address kpfAddr)
     {
         // fork number is checked by caller side
         IAddressBookV2 abv2 = IAddressBookV2(ADDRESS_BOOK_ADDRESS);
@@ -130,7 +130,7 @@ contract MultiCallContract {
         for (uint256 i = 0; i < len; i++) {
             stakingAmounts[i] = _getCnStakingAmountsKIP290(profiles[i].stakingContract);
         }
-        (kefAddr, kifAddr, ) = abv2.getFundAddresses();
+        (kefAddr, kifAddr, kpfAddr) = abv2.getFundAddresses();
     }
 
     function _getCnStakingAmountsLegacy(

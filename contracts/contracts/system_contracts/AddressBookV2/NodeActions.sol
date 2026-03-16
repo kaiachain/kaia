@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import {AddressBookV2Base} from "./AddressBookV2Base.sol";
 import {IAddressBookV2} from "./interfaces/IAddressBookV2.sol";
+import {ICnStaking} from "../CnStaking/CnStakingV4/interfaces/ICnStaking.sol";
 import {State, NodeInfo, BlsPublicKeyInfo} from "../types/Node.sol";
 import {SlotMath} from "../libraries/SlotMath.sol";
 import {NodeVerifier} from "../libraries/NodeVerifier.sol";
@@ -63,7 +64,43 @@ abstract contract NodeActions is AddressBookV2Base {
     }
 
     /// @inheritdoc IAddressBookV2
-    function activateCandidate(address nodeId) external onlyManager(nodeId) {
+    function updateRewardAddress(address nodeId, address newRewardAddress) external onlyManager(nodeId) {
+        if (newRewardAddress == address(0)) revert InvalidInput();
+
+        ABv2Storage storage $ = _getStorage();
+        NodeInfo storage info = $.nodeInfo[nodeId];
+
+        // Reward address is immutable when public delegation is enabled
+        if (ICnStaking(payable(info.stakingContract)).publicDelegation() != address(0)) revert PDEnabled();
+        if ($.registeredAddresses[newRewardAddress]) revert NodeVerifier.AddressAlreadyRegistered();
+
+        address oldRewardAddress = info.rewardAddress;
+
+        // Swap reward address
+        $.registeredAddresses[oldRewardAddress] = false;
+        $.registeredAddresses[newRewardAddress] = true;
+
+        info.rewardAddress = newRewardAddress;
+        emit RewardAddressUpdated(nodeId, oldRewardAddress, newRewardAddress);
+    }
+
+    /// @inheritdoc IAddressBookV2
+    function updateVoterAddress(address nodeId, address newVoterAddress) external onlyManager(nodeId) {
+        ABv2Storage storage $ = _getStorage();
+        address oldVoterAddress = $.nodeInfo[nodeId].voterAddress;
+        $.nodeInfo[nodeId].voterAddress = newVoterAddress;
+        _refreshVoter($.nodeInfo[nodeId].stakingContract);
+        emit VoterAddressUpdated(nodeId, oldVoterAddress, newVoterAddress);
+    }
+
+    /// @inheritdoc IAddressBookV2
+    function updateMetadata(address nodeId, string calldata newMetadata) external onlyManager(nodeId) {
+        _getStorage().nodeInfo[nodeId].metadata = newMetadata;
+        emit MetadataUpdated(nodeId, newMetadata);
+    }
+
+    /// @inheritdoc IAddressBookV2
+    function readyCandidate(address nodeId) external onlyNodeId(nodeId) {
         if (!_isNodeAtState(nodeId, State.CandInactive)) revert InvalidState();
         if (!_isNodeOverMinStake(nodeId)) revert StakingTooLow();
 
@@ -72,19 +109,19 @@ abstract contract NodeActions is AddressBookV2Base {
         if (_getActiveSetLength() >= $.maxValidatorCount) revert SlotsFull();
 
         _transition(nodeId, State.CandReady, 0);
-        emit CandidateActivated(nodeId);
+        emit CandidateReadied(nodeId);
     }
 
     /// @inheritdoc IAddressBookV2
-    function deactivateCandidate(address nodeId) external onlyManager(nodeId) {
+    function unreadyCandidate(address nodeId) external onlyNodeId(nodeId) {
         if (!_isNodeAtState(nodeId, State.CandReady)) revert InvalidState();
 
         _transition(nodeId, State.CandInactive, 0);
-        emit CandidateDeactivated(nodeId);
+        emit CandidateUnreadied(nodeId);
     }
 
     /// @inheritdoc IAddressBookV2
-    function readyValidator(address nodeId) external onlyManager(nodeId) {
+    function readyValidator(address nodeId) external onlyNodeId(nodeId) {
         if (!_isNodeAtState(nodeId, State.ValInactive)) revert InvalidState();
         if (!_isNodeOverMinStake(nodeId)) revert StakingTooLow();
 
@@ -92,14 +129,14 @@ abstract contract NodeActions is AddressBookV2Base {
     }
 
     /// @inheritdoc IAddressBookV2
-    function unreadyValidator(address nodeId) external onlyManager(nodeId) {
+    function unreadyValidator(address nodeId) external onlyNodeId(nodeId) {
         if (!_isNodeAtState(nodeId, State.ValReady)) revert InvalidState();
 
         _transition(nodeId, State.ValInactive, _getTimeoutAt(nodeId));
     }
 
     /// @inheritdoc IAddressBookV2
-    function pause(address nodeId) external onlyManager(nodeId) {
+    function pause(address nodeId) external onlyNodeId(nodeId) {
         if (!_isNodeAtState(nodeId, State.ValActive)) revert InvalidState();
 
         ABv2Storage storage $ = _getStorage();
@@ -111,7 +148,7 @@ abstract contract NodeActions is AddressBookV2Base {
     }
 
     /// @inheritdoc IAddressBookV2
-    function resume(address nodeId) external onlyManager(nodeId) {
+    function resume(address nodeId) external onlyNodeId(nodeId) {
         if (!_isNodeAtState(nodeId, State.ValPaused)) revert InvalidState();
 
         _revertIfTimeoutExpired(nodeId);
@@ -120,7 +157,7 @@ abstract contract NodeActions is AddressBookV2Base {
     }
 
     /// @inheritdoc IAddressBookV2
-    function exit(address nodeId) external onlyManager(nodeId) {
+    function exit(address nodeId) external onlyNodeId(nodeId) {
         State state = _getNodeState(nodeId);
         if (state == State.ValPaused) {
             _revertIfTimeoutExpired(nodeId);
@@ -138,7 +175,7 @@ abstract contract NodeActions is AddressBookV2Base {
     }
 
     /// @inheritdoc IAddressBookV2
-    function offboard(address nodeId) external onlyManager(nodeId) {
+    function offboard(address nodeId) external onlyNodeId(nodeId) {
         if (!_isNodeAtState(nodeId, State.ValInactive)) revert InvalidState();
         _transition(nodeId, State.CandInactive, 0);
     }
@@ -169,11 +206,8 @@ abstract contract NodeActions is AddressBookV2Base {
         if (nodeIds.length != scores.length) revert InvalidInput();
         ABv2Storage storage $ = _getStorage();
         uint256 epoch = _currentEpoch();
-        for (uint256 i; i < nodeIds.length; ) {
+        for (uint256 i; i < nodeIds.length; ++i) {
             $.scores[epoch][nodeIds[i]] = scores[i];
-            unchecked {
-                ++i;
-            }
         }
         emit ScoresUpdated(epoch, nodeIds, scores);
     }
