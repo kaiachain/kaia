@@ -113,7 +113,6 @@ type StakingInfoResponse struct {
 	Gini    float64 `json:"gini"`    // The gini coefficient at the requested block number. Returned regardless of `UseGini` value.
 }
 
-// func (si *StakingInfo) ConsolidatedNodes(chainConfig *params.ChainConfig, num uint64, nodes []common.Address) []consolidatedNode {
 func (si *StakingInfo) ConsolidatedNodes(rules *params.Rules, nodes []common.Address) []consolidatedNode {
 	if si.consolidatedNodes == nil {
 		if rules != nil && rules.IsPermissionless {
