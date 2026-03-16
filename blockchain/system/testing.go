@@ -96,6 +96,5 @@ func MakeTestBlsKey() (priv, pub, pop []byte) {
 	if len(priv) != 32 || len(pub) != 48 || len(pop) != 96 {
 		panic("bad bls key")
 	}
-
-	return
+	return priv, pub, pop
 }
