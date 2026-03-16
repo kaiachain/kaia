@@ -30,7 +30,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	kip149contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip149"
-	proxycontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/proxy"
+	proxycontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/Proxy"
 	testcontract "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
