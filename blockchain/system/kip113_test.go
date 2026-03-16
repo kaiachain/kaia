@@ -16,6 +16,7 @@
 package system
 
 import (
+	"crypto/rand"
 	"math/big"
 	"testing"
 
@@ -23,10 +24,11 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
-	proxycontracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/Proxy"
 	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip113"
+	proxycontracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/Proxy"
 	testcontracts "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
@@ -180,5 +182,18 @@ func compareStorage(t *testing.T, backend *backends.SimulatedBackend, contractAd
 }
 
 func makeBlsKey() (priv, pub, pop []byte) {
-	return MakeTestBlsKey()
+	ikm := make([]byte, 32)
+	rand.Read(ikm)
+
+	sk, _ := bls.GenerateKey(ikm)
+	pk := sk.PublicKey()
+	sig := bls.PopProve(sk)
+
+	priv = sk.Marshal()
+	pub = pk.Marshal()
+	pop = sig.Marshal()
+	if len(priv) != 32 || len(pub) != 48 || len(pop) != 96 {
+		panic("bad bls key")
+	}
+	return
 }
