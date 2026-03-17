@@ -32,6 +32,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/misc"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
@@ -227,6 +228,10 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		}
 		blockchain, _ := NewBlockChain(db, cacheConfig, config, engine, vm.Config{})
 		defer blockchain.Stop()
+
+		if module, ok := engine.(kaiax.BlockStateModule); ok {
+			blockchain.Processor().RegisterBlockStateModule(module)
+		}
 
 		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: stateDB, config: config, engine: engine}
 		b.header = makeHeader(b.chainReader, parent, stateDB)

@@ -140,6 +140,7 @@ type btBlobConfigMarshaling struct {
 // between Kaia and Ethereum. This includes the distribution of rewards.
 type eestEngine struct {
 	*faker.Faker
+	config        *params.ChainConfig
 	baseFee       *big.Int
 	gasLimit      uint64
 	coinbase      common.Address
@@ -148,6 +149,23 @@ type eestEngine struct {
 }
 
 var _ consensus.Engine = &eestEngine{}
+
+type eestChainReader struct {
+	config *params.ChainConfig
+}
+
+func (r eestChainReader) Config() *params.ChainConfig               { return r.config }
+func (eestChainReader) CurrentHeader() *types.Header                { return nil }
+func (eestChainReader) CurrentBlock() *types.Block                  { return nil }
+func (eestChainReader) Engine() consensus.Engine                    { return nil }
+func (eestChainReader) GetHeader(common.Hash, uint64) *types.Header { return nil }
+func (eestChainReader) GetHeaderByNumber(uint64) *types.Header      { return nil }
+func (eestChainReader) GetHeaderByHash(common.Hash) *types.Header   { return nil }
+func (eestChainReader) GetBlock(common.Hash, uint64) *types.Block   { return nil }
+func (eestChainReader) State() (*state.StateDB, error)              { return nil, errors.New("not implemented") }
+func (eestChainReader) StateAt(common.Hash) (*state.StateDB, error) {
+	return nil, errors.New("not implemented")
+}
 
 // This is called inside blockchain.ApplyTransaction to manipulate the evm configuration and recreate the eth.
 func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
@@ -186,11 +204,11 @@ func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 	evm.GasPrice, _ = calculateEthGasPrice(evm.ChainConfig().Rules(evm.Context.BlockNumber), msg.GasPrice(), e.baseFee, msg.GasFeeCap(), msg.GasTipCap())
 }
 
-func (e *eestEngine) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
-	if chain.Config().IsPragueForkEnabled(header.Number) {
-		context := blockchain.NewEVMBlockContext(header, chain, nil)
-		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
-		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
+func (e *eestEngine) InitializeState(header *types.Header, state *state.StateDB) {
+	if e.config.IsPragueForkEnabled(header.Number) {
+		context := blockchain.NewEVMBlockContext(header, eestChainReader{config: e.config}, &common.Address{})
+		vmenv := vm.NewEVM(context, vm.TxContext{}, state, e.config, &vm.Config{})
+		blockchain.ProcessParentBlockHash(header, vmenv, state, e.config.Rules(header.Number))
 	}
 }
 
@@ -240,7 +258,7 @@ func (e *eestEngine) VerifyHeader(chain consensus.ChainReader, header *types.Hea
 	return nil
 }
 
-func (e *eestEngine) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
+func (e *eestEngine) FinalizeState(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
 	ethReward := common.Big0
 	for _, receipt := range receipts {
 		for _, tx := range txs {
@@ -248,15 +266,13 @@ func (e *eestEngine) Finalize(chain consensus.ChainReader, header *types.Header,
 				continue
 			}
 
-			ethGasPrice, _ := calculateEthGasPrice(chain.Config().Rules(header.Number), tx.GasPrice(), e.baseFee, tx.GasFeeCap(), tx.GasTipCap())
-			ethReward = new(big.Int).Add(ethReward, calculateEthMiningReward(ethGasPrice, tx.GasFeeCap(), tx.GasTipCap(), e.baseFee, receipt.GasUsed, chain.Config().Rules(header.Number)))
+			ethGasPrice, _ := calculateEthGasPrice(e.config.Rules(header.Number), tx.GasPrice(), e.baseFee, tx.GasFeeCap(), tx.GasTipCap())
+			ethReward = new(big.Int).Add(ethReward, calculateEthMiningReward(ethGasPrice, tx.GasFeeCap(), tx.GasTipCap(), e.baseFee, receipt.GasUsed, e.config.Rules(header.Number)))
 		}
 	}
 
 	state.AddBalance(header.Rewardbase, ethReward)
-	header.Root = state.IntermediateRoot(true)
-
-	return types.NewBlock(header, txs, receipts), nil
+	return nil
 }
 
 func (e *eestEngine) Author(header *types.Header) (common.Address, error) {
@@ -324,11 +340,13 @@ func (t *BlockTest) Run() error {
 		return fmt.Errorf("genesis block state root does not match test: computed=%x, test=%x", simulatedRoot.Bytes()[:6], t.json.Genesis.Root[:6])
 	}
 
-	chain, err := blockchain.NewBlockChain(db, nil, config, &eestEngine{Faker: faker.NewShared()}, vm.Config{Debug: false, ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
+	engine := &eestEngine{Faker: faker.NewShared(), config: config}
+	chain, err := blockchain.NewBlockChain(db, nil, config, engine, vm.Config{Debug: false, ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
 	if err != nil {
 		return err
 	}
 	defer chain.Stop()
+	chain.Processor().RegisterBlockStateModule(engine)
 
 	_, err = t.insertBlocks(chain, *gblock, db)
 	if err != nil {
