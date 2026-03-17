@@ -152,6 +152,7 @@ func (srv *BaseServer) Start() (err error) {
 			staticNodes: srv.StaticNodes,
 			netrestrict: srv.NetRestrict,
 			maxDynDials: srv.maxDialedConns(),
+			maxPeers:    srv.MaxPeers(),
 			dialer:      srv.Dialer,
 		}, srv.ntab, srv)
 		srv.dialSched.Start()
@@ -222,7 +223,7 @@ func (srv *BaseServer) startDiscovery(listenAddr string) error {
 		DiscoverTypes: srv.DiscoverTypes,
 	}
 
-	ntab, err := discover.ListenUDP(&cfg)
+	ntab, err := discover.NewDiscovery2(&cfg)
 	if err != nil {
 		return err
 	}
