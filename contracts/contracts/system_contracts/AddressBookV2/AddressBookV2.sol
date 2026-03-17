@@ -16,20 +16,10 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 contract AddressBookV2 is NodeActions, AddressBookLegacy {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    /* ========== CONSTANTS ========== */
-
-    /// @notice The type of the contract
-    string public constant CONTRACT_TYPE = "AddressBook";
-
-    /// @notice The version of the contract
-    uint256 public constant VERSION = 2;
-
     /* ========== CONSTRUCTOR ========== */
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
+    constructor(uint256 _epochBlockInterval) NodeActions(_epochBlockInterval) {}
 
     /* ========== INITIALIZER ========== */
 

@@ -12,6 +12,11 @@ import {NodeVerifier} from "../libraries/NodeVerifier.sol";
 /// @notice Node lifecycle operations: user-triggered (createNode, pause, exit, ...)
 ///         and system-triggered (processSystemTransition, updateScores).
 abstract contract NodeActions is AddressBookV2Base {
+    /* ========== CONSTRUCTOR ========== */
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(uint256 _epochBlockInterval) AddressBookV2Base(_epochBlockInterval) {}
+
     /* ========== USER ACTIONS ========== */
 
     /// @inheritdoc IAddressBookV2
