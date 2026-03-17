@@ -30,12 +30,10 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
-	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	consensuscommon "github.com/kaiachain/kaia/consensus/common"
@@ -288,22 +286,6 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 	return nil
 }
 
-// VerifySeal checks whether the crypto seal on a header is valid according to
-// the consensus rules of the given engine.
-func (sb *backend) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
-	// get parent header and ensure the signer is in parent's validator set
-	number := header.Number.Uint64()
-	if number == 0 {
-		return consensus.ErrUnknownBlock
-	}
-
-	// ensure that the blockscore equals to defaultBlockScore
-	if header.BlockScore.Cmp(istanbul.DefaultBlockScore) != 0 {
-		return consensus.ErrInvalidBlockScore
-	}
-	return sb.verifySigner(chain, header, nil)
-}
-
 // Prepare initializes the consensus fields of a block header according to the
 // rules of a particular engine. The changes are executed inline.
 func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
@@ -315,7 +297,7 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	// use the same blockscore for all blocks
-	header.BlockScore = istanbul.DefaultBlockScore
+	header.BlockScore = params.DefaultBlockScore
 
 	// add qualified validators to extraData's validators section
 	if sb.valsetModule == nil {
@@ -347,15 +329,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	}
 
 	return nil
-}
-
-func (sb *backend) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
-	// [EIP-2935] stores the parent block hash in the history storage contract
-	if chain.Config().IsPragueForkEnabled(header.Number) {
-		context := blockchain.NewEVMBlockContext(header, chain, nil)
-		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
-		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
-	}
 }
 
 // Finalize runs any post-transaction state modifications (e.g. block rewards)

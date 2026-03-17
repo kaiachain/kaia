@@ -150,22 +150,6 @@ func TestSeal(t *testing.T) {
 	assert.True(t, elapsed >= 100*time.Millisecond)
 }
 
-// TestVerifySeal tests seal verification
-func TestVerifySeal(t *testing.T) {
-	f := NewFaker()
-	header := &types.Header{Number: big.NewInt(3)}
-
-	// Normal case - should pass
-	err := f.VerifySeal(nil, header)
-	assert.NoError(t, err)
-
-	// Test with failBlock
-	f2 := NewFakeFailer(5)
-	header2 := &types.Header{Number: big.NewInt(5)}
-	err = f2.VerifySeal(nil, header2)
-	assert.Error(t, err)
-}
-
 // TestNewShared tests the NewShared constructor
 func TestNewShared(t *testing.T) {
 	f := NewShared()

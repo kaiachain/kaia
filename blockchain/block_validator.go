@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -116,12 +117,12 @@ func (v *BlockValidator) validateHeader(header *types.Header, parents []*types.H
 	}
 
 	// Don't waste time checking blocks from the future
-	if header.Time.Cmp(big.NewInt(consensus.Now().Add(consensus.AllowedFutureBlockTime).Unix())) > 0 {
+	if header.Time.Cmp(big.NewInt(time.Now().Add(time.Duration(params.DefaultBlockGenerationInterval)*time.Second).Unix())) > 0 {
 		return consensus.ErrFutureBlock
 	}
 
 	// Ensure that the block's blockscore is meaningful (may not be correct at this point)
-	if header.BlockScore == nil || header.BlockScore.Cmp(consensus.DefaultBlockScore) != 0 {
+	if header.BlockScore == nil || header.BlockScore.Cmp(params.DefaultBlockScore) != 0 {
 		return consensus.ErrInvalidBlockScore
 	}
 

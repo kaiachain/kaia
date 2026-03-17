@@ -253,7 +253,7 @@ func (ctx *testContext) MakeHeader(parent *types.Block) *types.Header {
 		GasUsed:    0,
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(ctx.engine.config.BlockPeriod)),
-		BlockScore: istanbul.DefaultBlockScore,
+		BlockScore: params.DefaultBlockScore,
 	}
 	if parent.Header().BaseFee != nil {
 		// Assume BaseFee does not change

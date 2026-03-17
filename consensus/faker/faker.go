@@ -130,14 +130,6 @@ func (f *Faker) VerifyHeader(chain consensus.ChainReader, header *types.Header, 
 	return nil
 }
 
-// VerifySeal implements consensus.Engine, checking the seal validity.
-func (f *Faker) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
-	if f.failBlock != 0 && header.Number.Uint64() == f.failBlock {
-		return errors.New("seal verification failed")
-	}
-	return nil
-}
-
 // Prepare prepares the header for mining.
 func (f *Faker) Prepare(chain consensus.ChainReader, header *types.Header) error {
 	// Handle nil Number field
@@ -147,11 +139,6 @@ func (f *Faker) Prepare(chain consensus.ChainReader, header *types.Header) error
 
 	header.BlockScore = big.NewInt(1) // Simplified difficulty for testing
 	return nil
-}
-
-// Initialize runs any pre-transaction state modifications.
-func (f *Faker) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
-	// No initialization needed for faker
 }
 
 // Finalize processes the block without modifying state.

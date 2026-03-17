@@ -194,7 +194,7 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 	if b.header.Time.Cmp(b.parent.Header().Time) <= 0 {
 		panic("block time out of range")
 	}
-	b.header.BlockScore = consensus.DefaultBlockScore
+	b.header.BlockScore = params.DefaultBlockScore
 }
 
 // GenerateChain creates a chain of n blocks. The first block's
@@ -231,7 +231,7 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: stateDB, config: config, engine: engine}
 		b.header = makeHeader(b.chainReader, parent, stateDB)
 
-		engine.Initialize(blockchain, b.header, stateDB)
+		blockchain.Initialize(b.header, stateDB)
 
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
@@ -279,7 +279,7 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 	header := &types.Header{
 		Root:       state.IntermediateRoot(true),
 		ParentHash: parent.Hash(),
-		BlockScore: consensus.DefaultBlockScore,
+		BlockScore: params.DefaultBlockScore,
 		Number:     new(big.Int).Add(parent.Number(), common.Big1),
 		Time:       time,
 	}

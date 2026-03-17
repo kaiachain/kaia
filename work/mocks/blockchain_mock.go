@@ -213,6 +213,18 @@ func (mr *MockBlockChainMockRecorder) Engine() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Engine", reflect.TypeOf((*MockBlockChain)(nil).Engine))
 }
 
+// Initialize mocks base method.
+func (m *MockBlockChain) Initialize(arg0 *types.Header, arg1 *state.StateDB) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Initialize", arg0, arg1)
+}
+
+// Initialize indicates an expected call of Initialize.
+func (mr *MockBlockChainMockRecorder) Initialize(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockBlockChain)(nil).Initialize), arg0, arg1)
+}
+
 // Export mocks base method.
 func (m *MockBlockChain) Export(arg0 io.Writer) error {
 	m.ctrl.T.Helper()
