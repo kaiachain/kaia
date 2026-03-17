@@ -32,6 +32,7 @@ import (
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -43,22 +44,36 @@ type CN struct {
 	sub         chan *vrank.VRankBroadcastEvent
 }
 
-func createCN(t *testing.T, valset valset.ValsetModule) *CN {
-	key, _ := crypto.GenerateKey()
-	addr := crypto.PubkeyToAddress(key.PublicKey)
-	sub := make(chan *vrank.VRankBroadcastEvent)
+// newTestModule is the shared low-level constructor for VRank tests.
+// Handler tests wrap it in createCN to add broadcast/subscription fixtures,
+// while scoring tests wrap it to inject a specific chain/db setup.
+func newTestModule(t *testing.T, valset valset.ValsetModule, db database.Database, chain chain) (*ecdsa.PrivateKey, *VRankModule) {
+	t.Helper()
+
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+
 	module := NewVRankModule()
-	err := module.Init(&InitOpts{
+	err = module.Init(&InitOpts{
 		NodeKey:     key,
 		Valset:      valset,
 		ChainConfig: params.TestKaiaConfig("permissionless"),
-		Chain:       &testChain{headers: map[uint64]*types.Header{}},
+		Chain:       chain,
+		ChainKv:     db,
 	})
 	require.NoError(t, err)
+	require.NoError(t, module.Start())
+	t.Cleanup(module.Stop)
+	return key, module
+}
+
+// createCN wraps newTestModule for handler/broadcast tests that need node identity and subscription plumbing.
+func createCN(t *testing.T, valset valset.ValsetModule) *CN {
+	key, module := newTestModule(t, valset, database.NewMemoryDBManager().GetMiscDB(), &testChain{headers: map[uint64]*types.Header{}})
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+	sub := make(chan *vrank.VRankBroadcastEvent)
 
 	module.broadcastFeed.Subscribe(sub)
-	err = module.Start()
-	require.NoError(t, err)
 	return &CN{
 		Key:         key,
 		Addr:        addr,

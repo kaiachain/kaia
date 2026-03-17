@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"sync"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
@@ -29,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 const (
@@ -39,6 +41,9 @@ const (
 	vrankEpoch         = 86400
 	maxRound           = 10 // round range [0, 10]
 	maxCollectorWindow = 10 // max collection window [N-10, N+10]
+
+	scoreCacheSize          = 1024
+	scoreCheckpointInterval = uint64(vrankEpoch / 8) // 10,800 blocks
 )
 
 var (
@@ -52,6 +57,7 @@ type InitOpts struct {
 	NodeKey     *ecdsa.PrivateKey
 	ChainConfig *params.ChainConfig
 	Chain       chain
+	ChainKv     database.Database
 }
 
 type chain interface {
@@ -72,22 +78,32 @@ type VRankModule struct {
 	prepreparedView   istanbul.View // for collection window management
 	prepreparedViewMu sync.RWMutex
 	collector         *vrank.Collector
+
+	pfsCache      *lru.ARCCache // map[proposer]score
+	cpMatrixCache *lru.ARCCache // map[candidate][proposer]score
 }
 
 func NewVRankModule() *VRankModule {
+	pfsCache, _ := lru.NewARC(scoreCacheSize)
+	cpMatrixCache, _ := lru.NewARC(scoreCacheSize)
 	return &VRankModule{
-		broadcastCh: make(chan *vrank.VRankBroadcastEvent, broadcastChSize),
-		stopCh:      make(chan struct{}),
-		collector:   vrank.NewCollector(),
+		broadcastCh:   make(chan *vrank.VRankBroadcastEvent, broadcastChSize),
+		stopCh:        make(chan struct{}),
+		collector:     vrank.NewCollector(),
+		pfsCache:      pfsCache,
+		cpMatrixCache: cpMatrixCache,
 	}
 }
 
 func (v *VRankModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.Valset == nil || opts.NodeKey == nil || opts.ChainConfig == nil || opts.ChainConfig.ChainID == nil || opts.Chain == nil {
+	if opts == nil || opts.Valset == nil || opts.NodeKey == nil || opts.ChainConfig == nil || opts.ChainConfig.ChainID == nil || opts.Chain == nil || opts.ChainKv == nil {
 		return vrank.ErrInitUnexpectedNil
 	}
 	v.InitOpts = *opts
 	v.nodeID = crypto.PubkeyToAddress(opts.NodeKey.PublicKey)
+	if err := v.catchUpScoreCaches(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -106,4 +122,86 @@ func (v *VRankModule) Stop() {
 
 func (v *VRankModule) SubscribeVRank(sink chan<- *vrank.VRankBroadcastEvent) event.Subscription {
 	return v.broadcastFeed.Subscribe(sink)
+}
+
+func (v *VRankModule) catchUpScoreCaches() error {
+	v.pfsCache.Purge()
+	v.cpMatrixCache.Purge()
+
+	head := v.Chain.CurrentHeader()
+	if head == nil || head.Number == nil {
+		return nil
+	}
+	headNum := head.Number.Uint64()
+
+	if err := v.catchUp(headNum); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (v *VRankModule) catchUp(headNum uint64) error {
+	epochStart := calcEpochStart(headNum)
+
+	var (
+		start    uint64
+		pfs      map[common.Address]uint64
+		cpMatrix map[common.Address]map[common.Address]uint64
+	)
+
+	if cpNum, storedPFS, storedCpMatrix, ok := v.loadLatestCheckpoint(headNum); ok {
+		start = cpNum + 1
+		pfs = storedPFS
+		cpMatrix = storedCpMatrix
+		v.pfsCache.Add(cpNum, cloneMap(storedPFS))
+		v.cpMatrixCache.Add(cpNum, cloneCPMatrix(storedCpMatrix))
+	} else {
+		start = epochStart
+		pfs = make(map[common.Address]uint64)
+		var err error
+		cpMatrix, err = v.newCPMatrix(epochStart)
+		if err != nil {
+			return err
+		}
+	}
+
+	for blockNum := start; blockNum <= headNum; blockNum++ {
+		var err error
+		pfs, err = v.computePFS(blockNum, blockNum, pfs)
+		if err != nil {
+			logger.Error("Failed to compute PFS", "blockNum", blockNum, "err", err)
+			return err
+		}
+		v.pfsCache.Add(blockNum, cloneMap(pfs))
+
+		cpMatrix, err = v.computeCPMatrix(blockNum, blockNum, cpMatrix)
+		if err != nil {
+			logger.Error("Failed to compute CFS", "blockNum", blockNum, "err", err)
+			return err
+		}
+		v.cpMatrixCache.Add(blockNum, cloneCPMatrix(cpMatrix))
+
+		if blockNum%scoreCheckpointInterval == 0 {
+			WriteCheckpoint(v.ChainKv, blockNum, pfs, cpMatrix)
+			WriteLastCheckpoint(v.ChainKv, blockNum)
+		}
+	}
+	return nil
+}
+
+func (v *VRankModule) loadLatestCheckpoint(blockNum uint64) (uint64, map[common.Address]uint64, map[common.Address]map[common.Address]uint64, bool) {
+	epochStart := calcEpochStart(blockNum)
+	lastCP, ok := ReadLastCheckpoint(v.ChainKv)
+	if !ok || lastCP < epochStart {
+		return 0, nil, nil, false
+	}
+	cpNum := min(lastCP, calcCheckpointBlock(blockNum))
+	if cpNum < epochStart {
+		return 0, nil, nil, false
+	}
+	pfs, cpMatrix := ReadCheckpoint(v.ChainKv, cpNum)
+	if pfs == nil {
+		return 0, nil, nil, false // safety: checkpoint deleted (e.g. after rewind)
+	}
+	return cpNum, pfs, cpMatrix, true
 }

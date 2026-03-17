@@ -566,6 +566,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			NodeKey:     ctx.NodeKey(),
 			ChainConfig: s.chainConfig,
 			Chain:       s.blockchain,
+			ChainKv:     s.chainDB.GetMiscDB(),
 		}),
 	)
 	if err != nil {
@@ -601,6 +602,8 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 
 	if ctx.NodeType() == common.CONSENSUSNODE {
 		mBase = append(mBase, mVRank)
+		mExecution = append(mExecution, mVRank)
+		mRewindable = append(mRewindable, mVRank)
 		s.protocolManager.RegisterVRankModule(mVRank)
 		if host, ok := s.engine.(vrank.VRankModuleHost); ok {
 			host.RegisterVRankModule(mVRank)
