@@ -34,4 +34,5 @@ var (
 	ErrHeaderNotFound        = errors.New("header not found")
 	ErrHeaderExtraTooShort   = errors.New("header extra is too short")
 	ErrFutureBlock           = errors.New("block number is beyond the current chain head")
+	ErrNotPermissionless     = errors.New("block is before the permissionless fork")
 )

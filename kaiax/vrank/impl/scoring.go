@@ -18,6 +18,7 @@ package impl
 
 import (
 	"maps"
+	"math/big"
 	"slices"
 
 	"github.com/kaiachain/kaia/common"
@@ -32,8 +33,12 @@ func calcEpochStart(blockNum uint64) uint64 {
 
 // GetPFS computes the running Proposal Failure Score up to blockNum.
 // pfs(N) -> map[proposerAddr]score for blocks [epochBegin(N), N].
+// Returns ErrNotPermissionless if blockNum is before the permissionless fork.
 // Returns ErrFutureBlock if blockNum exceeds the current chain head.
 func (v *VRankModule) GetPFS(blockNum uint64) (map[common.Address]uint64, error) {
+	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
+		return nil, vrank.ErrNotPermissionless
+	}
 	cur := v.Chain.CurrentHeader()
 	if cur == nil || blockNum > cur.Number.Uint64() {
 		return nil, vrank.ErrFutureBlock
@@ -77,8 +82,12 @@ func (v *VRankModule) GetPFS(blockNum uint64) (map[common.Address]uint64, error)
 // GetCFS computes the running Candidate Failure Score up to blockNum.
 // cfs(N) -> map[candidateAddr]score for blocks [epochBegin(N), N].
 // For the validator state transition at block N, use GetCFS(N-1).
+// Returns ErrNotPermissionless if blockNum is before the permissionless fork.
 // Returns ErrFutureBlock if blockNum exceeds the current chain head.
 func (v *VRankModule) GetCFS(blockNum uint64) (map[common.Address]uint64, error) {
+	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
+		return nil, vrank.ErrNotPermissionless
+	}
 	cur := v.Chain.CurrentHeader()
 	if cur == nil || blockNum > cur.Number.Uint64() {
 		return nil, vrank.ErrFutureBlock
@@ -130,7 +139,7 @@ func (v *VRankModule) GetCFS(blockNum uint64) (map[common.Address]uint64, error)
 func (v *VRankModule) computePFS(start, end uint64, seed map[common.Address]uint64) (map[common.Address]uint64, error) {
 	pfs := cloneMap(seed)
 	for blockNum := start; blockNum <= end; blockNum++ {
-		report, err := v.GetPfReport(blockNum)
+		report, err := v.pfReport(blockNum)
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +174,7 @@ func (v *VRankModule) computeCPMatrix(start, end uint64, seed map[common.Address
 			return nil, vrank.ErrHeaderNotFound
 		}
 
-		cfReport, err := v.GetCfReport(blockNum)
+		cfReport, err := v.cfReport(blockNum)
 		if err != nil {
 			return nil, err
 		}

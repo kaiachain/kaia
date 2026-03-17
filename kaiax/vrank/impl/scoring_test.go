@@ -25,6 +25,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -173,6 +174,22 @@ func TestGetPFS(t *testing.T) {
 	assert.Equal(t, uint64(1), pfs[P1])
 	assert.NotContains(t, pfs, P2)
 	assert.Len(t, pfs, 2)
+}
+
+// TestGetPFS_ErrNotPermissionless verifies that GetPFS returns ErrNotPermissionless for a
+// block before the permissionless fork when the fork has not been activated.
+func TestGetPFS_ErrNotPermissionless(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	valset := mock_valset.NewMockValsetModule(ctrl)
+
+	// Empty chain at Init so catchUpScoreCaches exits early (nil head), then swap in real state.
+	_, module := newTestModule(t, valset, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
+	// Switch to osaka config (permissionless fork NOT enabled) and inject chain.
+	module.ChainConfig = params.TestKaiaConfig("osaka")
+	module.Chain = &testChain{headers: map[uint64]*types.Header{10: makeHeaderWithRound(10, 0)}}
+
+	_, err := module.GetPFS(10)
+	assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
 }
 
 // TestGetPFS_ErrFutureBlock verifies that GetPFS returns ErrFutureBlock for a block beyond the chain head.
@@ -525,6 +542,22 @@ func TestGetCFS(t *testing.T) {
 		assert.Equal(t, uint64(0), cfs[C3])
 		assert.Len(t, cfs, 3)
 	})
+}
+
+// TestGetCFS_ErrNotPermissionless verifies that GetCFS returns ErrNotPermissionless for a
+// block before the permissionless fork when the fork has not been activated.
+func TestGetCFS_ErrNotPermissionless(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	valset := mock_valset.NewMockValsetModule(ctrl)
+
+	// Empty chain at Init so catchUpScoreCaches exits early (nil head), then swap in real state.
+	_, module := newTestModule(t, valset, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
+	// Switch to osaka config (permissionless fork NOT enabled) and inject chain.
+	module.ChainConfig = params.TestKaiaConfig("osaka")
+	module.Chain = &testChain{headers: map[uint64]*types.Header{10: makeHeaderWithRound(10, 0)}}
+
+	_, err := module.GetCFS(10)
+	assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
 }
 
 // TestGetCFS_ErrFutureBlock verifies that GetCFS returns ErrFutureBlock for a block beyond the chain head.

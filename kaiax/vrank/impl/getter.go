@@ -18,6 +18,7 @@ package impl
 
 import (
 	"bytes"
+	"math/big"
 	"slices"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -25,9 +26,9 @@ import (
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
-// GetCfReport reads the committed cfReport for block blockNum from header.VRank.
-// Returns an empty report if header.VRank is nil (e.g. epoch-start block).
-func (v *VRankModule) GetCfReport(blockNum uint64) (vrank.Report, error) {
+// cfReport is the internal, fork-check-free implementation of GetCfReport.
+// Used by computeCPMatrix so that catchUp can process pre-fork blocks without error.
+func (v *VRankModule) cfReport(blockNum uint64) (vrank.Report, error) {
 	header := v.Chain.GetHeaderByNumber(blockNum)
 	if header == nil {
 		return nil, vrank.ErrHeaderNotFound
@@ -38,9 +39,19 @@ func (v *VRankModule) GetCfReport(blockNum uint64) (vrank.Report, error) {
 	return vrank.DecodeReport(header.VRank)
 }
 
-// GetPfReport reads the committed pfReport for block blockNum from header.Extra.
-// Returns an empty report if the block was finalized at round 0.
-func (v *VRankModule) GetPfReport(blockNum uint64) (vrank.Report, error) {
+// GetCfReport reads the committed cfReport for block blockNum from header.VRank.
+// Returns an empty report if header.VRank is nil (e.g. epoch-start block).
+// Returns ErrNotPermissionless if blockNum is before the permissionless fork.
+func (v *VRankModule) GetCfReport(blockNum uint64) (vrank.Report, error) {
+	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
+		return nil, vrank.ErrNotPermissionless
+	}
+	return v.cfReport(blockNum)
+}
+
+// pfReport is the internal, fork-check-free implementation of GetPfReport.
+// Used by computePFS so that catchUp can process pre-fork blocks without error.
+func (v *VRankModule) pfReport(blockNum uint64) (vrank.Report, error) {
 	header := v.Chain.GetHeaderByNumber(blockNum)
 	if header == nil {
 		return nil, vrank.ErrHeaderNotFound
@@ -66,9 +77,24 @@ func (v *VRankModule) GetPfReport(blockNum uint64) (vrank.Report, error) {
 	return pfReport, nil
 }
 
+// GetPfReport reads the committed pfReport for block blockNum from header.Extra.
+// Returns an empty report if the block was finalized at round 0.
+// Returns ErrNotPermissionless if blockNum is before the permissionless fork.
+func (v *VRankModule) GetPfReport(blockNum uint64) (vrank.Report, error) {
+	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
+		return nil, vrank.ErrNotPermissionless
+	}
+	return v.pfReport(blockNum)
+}
+
 // TallyCfReport computes the cfReport for block blockNum at the given round from in-memory collector state.
 // To fill `header(N).VRank`, the proposer of block N must use `TallyCfReport(N-1, last round of N-1)`.
+// Returns ErrNotPermissionless if header(blockNum+1) is before the permissionless fork.
 func (v *VRankModule) TallyCfReport(blockNum, round uint64) (vrank.Report, error) {
+	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum + 1)) {
+		return nil, vrank.ErrNotPermissionless
+	}
+
 	// epoch header's VRank should be nil
 	if (blockNum+1)%vrankEpoch == 0 {
 		return vrank.Report{}, nil

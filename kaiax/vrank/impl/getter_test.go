@@ -106,6 +106,18 @@ func TestGetCfReport_Errors(t *testing.T) {
 		assert.ErrorIs(t, err, vrank.ErrHeaderNotFound)
 		assert.Nil(t, report)
 	})
+
+	t.Run("pre-fork block returns ErrNotPermissionless", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		v := newPreForkModule(t, valset)
+		v.Chain = &testChain{headers: map[uint64]*types.Header{
+			10: makeHeaderWithRound(10, 0),
+		}}
+
+		report, err := v.GetCfReport(10)
+		assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
+		assert.Nil(t, report)
+	})
 }
 
 // ---------------------------------------------------------------------------
@@ -153,6 +165,18 @@ func TestGetPfReport(t *testing.T) {
 }
 
 func TestGetPfReport_Errors(t *testing.T) {
+	t.Run("pre-fork block returns ErrNotPermissionless", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		v := newPreForkModule(t, valset)
+		v.Chain = &testChain{headers: map[uint64]*types.Header{
+			10: makeHeaderWithRound(10, 0),
+		}}
+
+		report, err := v.GetPfReport(10)
+		assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
+		assert.Nil(t, report)
+	})
+
 	t.Run("header not found returns error", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		v := createCN(t, valset).VRankModule
@@ -305,6 +329,17 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	block1 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	view1_0 := &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
 	candAddr := common.HexToAddress("0xc4nd1d473")
+
+	t.Run("pre-fork block returns ErrNotPermissionless", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		// TallyCfReport(blockNum=0, ...) targets header(1).VRank; fork check is on blockNum+1=1.
+		// With osaka config, fork is never enabled, so block 1 is pre-fork.
+		v := newPreForkModule(t, valset)
+
+		report, err := v.TallyCfReport(0, 0)
+		assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
+		assert.Nil(t, report)
+	})
 
 	t.Run("Report should contain candAddr", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))

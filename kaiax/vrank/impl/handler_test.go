@@ -67,6 +67,24 @@ func newTestModule(t *testing.T, valset valset.ValsetModule, db database.Databas
 	return key, module
 }
 
+// newPreForkModule creates a VRankModule configured for a chain where the permissionless fork
+// has NOT activated (TestKaiaConfig("osaka")). Used to verify ErrNotPermissionless guards.
+func newPreForkModule(t *testing.T, vs valset.ValsetModule) *VRankModule {
+	t.Helper()
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	module := NewVRankModule()
+	err = module.Init(&InitOpts{
+		NodeKey:     key,
+		Valset:      vs,
+		ChainConfig: params.TestKaiaConfig("osaka"), // permissionless fork NOT enabled
+		Chain:       &testChain{headers: map[uint64]*types.Header{}},
+		ChainKv:     database.NewMemoryDBManager().GetMiscDB(),
+	})
+	require.NoError(t, err)
+	return module
+}
+
 // createCN wraps newTestModule for handler/broadcast tests that need node identity and subscription plumbing.
 func createCN(t *testing.T, valset valset.ValsetModule) *CN {
 	key, module := newTestModule(t, valset, database.NewMemoryDBManager().GetMiscDB(), &testChain{headers: map[uint64]*types.Header{}})
