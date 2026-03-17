@@ -51,29 +51,36 @@ type JsonRpcModule interface {
 	APIs() []rpc.API
 }
 
-// ConsensusModule consensus deals with states before block confirmation.
+// HeaderModule deals with header verification and preparation.
 // Therefore these methods MUST NOT modify any persistent states.
 // e.g. VerifyHeader shall not actually record the governance change.
-type ConsensusModule interface {
+type HeaderModule interface {
 	// Additional checks to perform at the end of header verification.
-	VerifyHeader(header *types.Header) error
+	// parent is the direct parent header of header.
+	VerifyHeader(header *types.Header, parent *types.Header) error
 
 	// Additional changes to the new header that is being created.
 	// Headers are modified in-place.
 	PrepareHeader(header *types.Header) error
-
-	// Additional state transitions after block txs have been executed.
-	// Header modifications and state transitions are applied in-place.
-	FinalizeHeader(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error
 }
 
-// Any component or module that accommodate consensus modules.
-type ConsensusModuleHost interface {
-	RegisterConsensusModule(modules ...ConsensusModule)
+// Any component or module that accommodate header modules.
+type HeaderModuleHost interface {
+	RegisterHeaderModule(modules ...HeaderModule)
+}
 
-	// Temporal method to unregister consensus module.
-	// See node/cn/backend.go#createSnapshot() for details.
-	UnregisterConsensusModule(module ConsensusModule)
+// BlockStateModule deals with in-block state transitions before and after txs execution.
+// Header modifications and state transitions are applied in-place.
+type BlockStateModule interface {
+	// Additional changes to apply to state before tx execution begins.
+	InitializeState(header *types.Header, state *state.StateDB)
+
+	FinalizeState(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error
+}
+
+// Any component or module that accommodate block state modules.
+type BlockStateModuleHost interface {
+	RegisterBlockStateModule(modules ...BlockStateModule)
 }
 
 // ExecutionModule deals with execution of confirmed blocks.

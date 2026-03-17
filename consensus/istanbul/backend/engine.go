@@ -25,15 +25,9 @@ package backend
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
-	"math/big"
-	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	consensuscommon "github.com/kaiachain/kaia/consensus/common"
@@ -46,7 +40,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -188,8 +181,8 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 		return err
 	}
 
-	for _, module := range sb.consensusModules {
-		if err := module.VerifyHeader(header); err != nil {
+	for _, module := range sb.headerModules {
+		if err := module.VerifyHeader(header, parent); err != nil {
 			return err
 		}
 	}
@@ -286,116 +279,16 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 	return nil
 }
 
-// Prepare initializes the consensus fields of a block header according to the
-// rules of a particular engine. The changes are executed inline.
-func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) error {
-	// copy the parent extra data as the header extra data
-	number := header.Number.Uint64()
-	parent := chain.GetHeader(header.ParentHash, number-1)
-	if parent == nil {
-		return consensus.ErrUnknownAncestor
-	}
-
-	// use the same blockscore for all blocks
-	header.BlockScore = params.DefaultBlockScore
-
-	// add qualified validators to extraData's validators section
+// PrepareExtra builds Istanbul extra-data validators section for the given header.
+func (sb *backend) PrepareExtra(header *types.Header, _ *types.Header) ([]byte, error) {
 	if sb.valsetModule == nil {
-		return istanbul.ErrNoEssentialModule
+		return nil, istanbul.ErrNoEssentialModule
 	}
-	qualified, err := sb.valsetModule.GetQualifiedValidators(number)
+	qualified, err := sb.valsetModule.GetQualifiedValidators(header.Number.Uint64())
 	if err != nil {
-		return err
+		return nil, err
 	}
-	extra, err := prepareExtra(header, qualified)
-	if err != nil {
-		return err
-	}
-	header.Extra = extra
-
-	// set header's timestamp
-	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(sb.config.BlockPeriod))
-	header.TimeFoS = parent.TimeFoS
-	if header.Time.Int64() < time.Now().Unix() {
-		t := time.Now()
-		header.Time = big.NewInt(t.Unix())
-		header.TimeFoS = uint8((t.UnixNano() / 1000 / 1000 / 10) % 100)
-	}
-
-	for _, module := range sb.consensusModules {
-		if err = module.PrepareHeader(header); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// Finalize runs any post-transaction state modifications (e.g. block rewards)
-// and assembles the final block.
-//
-// Note, the block header and state database might be updated to reflect any
-// consensus rules that happen at finalization (e.g. block rewards).
-func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	receipts []*types.Receipt,
-) (*types.Block, error) {
-	// We can assure that if the magma hard forked block should have the field of base fee
-	if chain.Config().IsMagmaForkEnabled(header.Number) {
-		if header.BaseFee == nil {
-			logger.Error("Magma hard forked block should have baseFee", "blockNum", header.Number.Uint64())
-			return nil, errors.New("Invalid Magma block without baseFee")
-		}
-	} else if header.BaseFee != nil {
-		logger.Error("A block before Magma hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
-		return nil, consensus.ErrInvalidBaseFee
-	}
-
-	// TODO-kaiax: Reward distribution must be before KIP160,103. When we moved KIP103,160,Randao,Credit to kaiax modules,
-	// this module.FinalizeHeader loop should be at the end of this function, like VerifyHeader and PrepareHeader does.
-	for _, module := range sb.consensusModules {
-		if err := module.FinalizeHeader(header, state, txs, receipts); err != nil {
-			return nil, err
-		}
-	}
-
-	// RebalanceTreasury can modify the global state (state),
-	// so the existing state db should be used to apply the rebalancing result.
-	// Only on the KIP-103 or KIP-160 hardfork block, the following logic should be executed
-	if chain.Config().IsKIP160ForkBlock(header.Number) || chain.Config().IsKIP103ForkBlock(header.Number) {
-		rebalanceResult, err := system.RebalanceTreasury(state, chain, header)
-		if err != nil {
-			logger.Error("failed to execute treasury rebalancing. State not changed", "err", err)
-		} else {
-			// Leave the memo in the log for later contract finalization
-			isKIP103 := chain.Config().IsKIP103ForkBlock(header.Number) // because memo format differs between KIP-103 and KIP-160
-			logger.Info("successfully executed treasury rebalancing", "memo", string(rebalanceResult.Memo(isKIP103)))
-		}
-	}
-
-	// Replace the Mainnet credit contract
-	if chain.Config().IsKaiaForkBlockParent(header.Number) {
-		if chain.Config().ChainID.Uint64() == params.MainnetNetworkId && state.GetCode(system.NonExistentAddress) != nil {
-			if err := state.SetCode(system.NonExistentAddress, system.MainnetCreditV2Code); err != nil {
-				return nil, err
-			}
-			logger.Info("Replaced CypressCredit with CypressCreditV2", "blockNum", header.Number.Uint64())
-		}
-	}
-
-	// Restore Mainnet credit contract address (0x0) back to pure EOA at Osaka hardfork.
-	if chain.Config().IsOsakaForkBlockParent(header.Number) {
-		if chain.Config().ChainID.Uint64() == params.MainnetNetworkId && state.GetCode(system.NonExistentAddress) != nil {
-			prevNonce := state.GetNonce(system.NonExistentAddress)
-			state.CreateEOA(system.NonExistentAddress, false, accountkey.NewAccountKeyLegacy())
-			state.SetNonce(system.NonExistentAddress, prevNonce) // Preserve account counters across account type migration.
-			logger.Info("Restored Mainnet credit address to EOA", "blockNum", header.Number.Uint64())
-		}
-	}
-
-	header.Root = state.IntermediateRoot(true)
-
-	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, receipts), nil
+	return prepareExtra(header, qualified)
 }
 
 // Seal generates a new block for the given input block with the local miner's
@@ -504,17 +397,8 @@ func (sb *backend) RegisterStakingModule(module staking.StakingModule) {
 	sb.stakingModule = module
 }
 
-func (sb *backend) RegisterConsensusModule(modules ...kaiax.ConsensusModule) {
-	sb.consensusModules = append(sb.consensusModules, modules...)
-}
-
-func (sb *backend) UnregisterConsensusModule(module kaiax.ConsensusModule) {
-	for i, m := range sb.consensusModules {
-		if m == module {
-			sb.consensusModules = append(sb.consensusModules[:i], sb.consensusModules[i+1:]...)
-			break
-		}
-	}
+func (sb *backend) RegisterHeaderModule(modules ...kaiax.HeaderModule) {
+	sb.headerModules = append(sb.headerModules, modules...)
 }
 
 func (sb *backend) RegisterTxBundlingModule(modules ...kaiax.TxBundlingModule) {

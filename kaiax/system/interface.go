@@ -1,4 +1,4 @@
-// Copyright 2025 The Kaia Authors
+// Copyright 2026 The Kaia Authors
 // This file is part of the Kaia library.
 //
 // The Kaia library is free software: you can redistribute it and/or modify
@@ -14,22 +14,11 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
-package randao
+package system
 
-import (
-	"math/big"
+import "github.com/kaiachain/kaia/kaiax"
 
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto/bls"
-	"github.com/kaiachain/kaia/kaiax"
-)
-
-type RandaoModule interface {
+type SystemModule interface {
 	kaiax.BaseModule
-	kaiax.JsonRpcModule
-	kaiax.HeaderModule
-	kaiax.ExecutionModule
-	kaiax.RewindableModule
-
-	GetBlsPubkey(proposer common.Address, num *big.Int) (bls.PublicKey, error)
+	kaiax.BlockStateModule
 }

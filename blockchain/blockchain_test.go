@@ -1634,9 +1634,10 @@ func TestEIP3651(t *testing.T) {
 
 	state, _ := chain.State()
 
-	// 3: Ensure that miner received only the mining fee (consensus is gxHash, so 3 KAIA is the total reward)
+	// 3: Ensure that deferred tx fee is not immediately credited to the author.
+	// Block reward distribution is handled by kaiax reward modules, which are not registered in this test.
 	actual := state.GetBalance(params.AuthorAddressForTesting)
-	expected := faker.ByzantiumBlockReward
+	expected := common.Big0
 	if actual.Cmp(expected) != 0 {
 		t.Fatalf("miner balance incorrect: expected %d, got %d", expected, actual)
 	}

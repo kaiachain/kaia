@@ -121,6 +121,20 @@ func (e *DefaultExecutor) Execute(txs *types.TransactionsByPriceAndNonce, mux *e
 	return e.buildResult(), nil
 }
 
+// FinalizeState runs post-transaction state modifications and assembles final block.
+func (e *DefaultExecutor) FinalizeState(result *consensus.ExecutionResult) (*types.Block, error) {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	if !e.initialized {
+		return nil, ErrExecutorNotInitialized
+	}
+	if result == nil {
+		return nil, errors.New("execution result is nil")
+	}
+	return e.chain.Processor().FinalizeState(e.header, result.State, result.Txs, result.Receipts)
+}
+
 // buildResult builds and returns the current execution result.
 func (e *DefaultExecutor) buildResult() *consensus.ExecutionResult {
 	stateRoot := e.state.IntermediateRoot(true)

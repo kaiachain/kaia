@@ -231,29 +231,27 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: stateDB, config: config, engine: engine}
 		b.header = makeHeader(b.chainReader, parent, stateDB)
 
-		blockchain.Initialize(b.header, stateDB)
+		processor := blockchain.Processor()
+		processor.InitializeState(b.header, stateDB)
 
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
 			gen(i, b)
 		}
 
-		if b.engine != nil {
-			block, err := b.engine.Finalize(b.chainReader, b.header, stateDB, b.txs, b.receipts)
-			if err != nil {
-				panic(fmt.Sprintf("block finalize error: %v", err))
-			}
-			// Write state changes to db
-			root, err := stateDB.Commit(true)
-			if err != nil {
-				panic(fmt.Sprintf("state write error: %v", err))
-			}
-			if err := stateDB.Database().TrieDB().Commit(root, false, block.NumberU64()); err != nil {
-				panic(fmt.Sprintf("trie write error: %v", err))
-			}
-			return block, b.receipts
+		block, err := processor.FinalizeState(b.header, stateDB, b.txs, b.receipts)
+		if err != nil {
+			panic(fmt.Sprintf("block finalize error: %v", err))
 		}
-		return nil, nil
+		// Write state changes to db
+		root, err := stateDB.Commit(true)
+		if err != nil {
+			panic(fmt.Sprintf("state write error: %v", err))
+		}
+		if err := stateDB.Database().TrieDB().Commit(root, false, block.NumberU64()); err != nil {
+			panic(fmt.Sprintf("trie write error: %v", err))
+		}
+		return block, b.receipts
 	}
 	for i := 0; i < n; i++ {
 		statedb, err := state.New(parent.Root(), state.NewDatabase(db), nil, nil)

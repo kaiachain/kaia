@@ -44,6 +44,7 @@ import (
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -114,6 +115,7 @@ func TestHardForkBlock(t *testing.T) {
 	mReward := reward_impl.NewRewardModule()
 	mValset := valset_impl.NewValsetModule()
 	mRandao := randao_impl.NewRandaoModule()
+	mSystem := system_impl.NewSystemModule()
 	fakeDownloader := downloader.NewFakeDownloader()
 	err = errors.Join(
 		govModule.Init(&gov_impl.InitOpts{
@@ -141,9 +143,14 @@ func TestHardForkBlock(t *testing.T) {
 			Downloader:   fakeDownloader,
 			BlsSecretKey: genesisBlsKey,
 		}),
+		mSystem.Init(&system_impl.InitOpts{
+			Chain: chain,
+		}),
 	)
 	require.NoError(t, err)
-	engine.RegisterConsensusModule(mReward, mRandao)
+	engine.RegisterHeaderModule(mReward, mRandao)
+	chain.RegisterHeaderModule(mReward, mRandao)
+	chain.Processor().RegisterBlockStateModule(mReward, mSystem)
 	engine.RegisterKaiaxModules(govModule, mStaking, mValset)
 	mValset.Start()
 

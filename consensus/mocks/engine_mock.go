@@ -68,6 +68,21 @@ func (mr *MockEngineMockRecorder) Author(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Author", reflect.TypeOf((*MockEngine)(nil).Author), arg0)
 }
 
+// PrepareExtra mocks base method.
+func (m *MockEngine) PrepareExtra(arg0, arg1 *types.Header) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrepareExtra", arg0, arg1)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PrepareExtra indicates an expected call of PrepareExtra.
+func (mr *MockEngineMockRecorder) PrepareExtra(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareExtra", reflect.TypeOf((*MockEngine)(nil).PrepareExtra), arg0, arg1)
+}
+
 // CanVerifyHeadersConcurrently mocks base method.
 func (m *MockEngine) CanVerifyHeadersConcurrently() bool {
 	m.ctrl.T.Helper()

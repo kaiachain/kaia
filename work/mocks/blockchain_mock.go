@@ -213,6 +213,20 @@ func (mr *MockBlockChainMockRecorder) Engine() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Engine", reflect.TypeOf((*MockBlockChain)(nil).Engine))
 }
 
+// PrepareHeader mocks base method.
+func (m *MockBlockChain) PrepareHeader(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrepareHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PrepareHeader indicates an expected call of PrepareHeader.
+func (mr *MockBlockChainMockRecorder) PrepareHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareHeader", reflect.TypeOf((*MockBlockChain)(nil).PrepareHeader), arg0)
+}
+
 // Initialize mocks base method.
 func (m *MockBlockChain) Initialize(arg0 *types.Header, arg1 *state.StateDB) {
 	m.ctrl.T.Helper()
@@ -716,6 +730,22 @@ func (m *MockBlockChain) PrunableStateAt(arg0 common.Hash, arg1 uint64) (*state.
 func (mr *MockBlockChainMockRecorder) PrunableStateAt(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrunableStateAt", reflect.TypeOf((*MockBlockChain)(nil).PrunableStateAt), arg0, arg1)
+}
+
+// RegisterHeaderModule mocks base method.
+func (m *MockBlockChain) RegisterHeaderModule(arg0 ...kaiax.HeaderModule) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "RegisterHeaderModule", varargs...)
+}
+
+// RegisterHeaderModule indicates an expected call of RegisterHeaderModule.
+func (mr *MockBlockChainMockRecorder) RegisterHeaderModule(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterHeaderModule", reflect.TypeOf((*MockBlockChain)(nil).RegisterHeaderModule), arg0...)
 }
 
 // RegisterExecutionModule mocks base method.

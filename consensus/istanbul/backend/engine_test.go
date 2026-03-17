@@ -54,6 +54,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	"github.com/kaiachain/kaia/kaiax/staking/mock"
+	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/params"
@@ -163,9 +164,8 @@ func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, [
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.
 func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.BlockChain, *backend) {
-	// Disable block time waiting in tests
+	// Keep PrepareHeader timestamp logic aligned with Istanbul block period in tests.
 	oldInterval := params.BlockGenerationInterval
-	params.BlockGenerationInterval = 0
 	t.Cleanup(func() {
 		params.BlockGenerationInterval = oldInterval
 	})
@@ -173,7 +173,6 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	// generate a genesis block
 	genesis := blockchain.DefaultTestGenesisBlock()
 	genesis.Config = params.TestChainConfig.Copy()
-	genesis.Timestamp = uint64(time.Now().Unix())
 
 	var (
 		period   = istanbul.DefaultConfig.BlockPeriod
@@ -234,6 +233,14 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 		}
 	}
 	genesis.Config.SetDefaults()
+	params.BlockGenerationInterval = int64(period)
+
+	now := uint64(time.Now().Unix())
+	if now > period {
+		genesis.Timestamp = now - period
+	} else {
+		genesis.Timestamp = 0
+	}
 
 	if len(nodeKeys) != n {
 		setNodeKeys(n, nil)
@@ -313,6 +320,7 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	mReward := reward_impl.NewRewardModule()
 	mValset := valset_impl.NewValsetModule()
 	mRandao := randao_impl.NewRandaoModule()
+	mSystem := system_impl.NewSystemModule()
 	if mStaking == nil {
 		mStaking = staking_impl.NewStakingModule()
 	}
@@ -346,6 +354,9 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 			Downloader:   fakeDownloader,
 			BlsSecretKey: blsSecretKey,
 		}),
+		mSystem.Init(&system_impl.InitOpts{
+			Chain: bc,
+		}),
 		func() error {
 			if stakingImpl, ok := mStaking.(*staking_impl.StakingModule); ok {
 				return stakingImpl.Init(&staking_impl.InitOpts{
@@ -361,7 +372,9 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	}
 
 	b.RegisterKaiaxModules(mGov, mStaking, mValset)
-	b.RegisterConsensusModule(mReward, mGov, mRandao)
+	b.RegisterHeaderModule(mReward, mGov, mRandao)
+	bc.RegisterHeaderModule(mReward, mGov, mRandao)
+	bc.Processor().RegisterBlockStateModule(mReward, mSystem)
 
 	if b.Start(bc, bc.CurrentBlock, bc.HasBadBlock, nil) != nil {
 		panic(err)
@@ -435,14 +448,14 @@ func makeBlockWithoutSeal(chain *blockchain.BlockChain, engine *backend, parent 
 // The modifyHeader function is called before finalization.
 func makeBlockWithoutSealAndModifiedHeader(chain *blockchain.BlockChain, engine *backend, parent *types.Block, modifyHeader func(*types.Header)) *types.Block {
 	header := makeHeader(parent, engine.config, chain.Config())
-	if err := engine.Prepare(chain, header); err != nil {
+	if err := chain.PrepareHeader(header); err != nil {
 		panic(err)
 	}
 	if modifyHeader != nil {
 		modifyHeader(header)
 	}
 	state, _ := chain.StateAt(parent.Root())
-	block, _ := engine.Finalize(chain, header, state, nil, nil)
+	block, _ := chain.Processor().FinalizeState(header, state, nil, nil)
 	return block
 }
 
@@ -469,13 +482,13 @@ func TestPrepare(t *testing.T) {
 	defer engine.Stop()
 
 	header := makeHeader(chain.Genesis(), engine.config, chain.Config())
-	err := engine.Prepare(chain, header)
+	err := chain.PrepareHeader(header)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 
 	header.ParentHash = common.HexToHash("0x1234567890")
-	err = engine.Prepare(chain, header)
+	err = chain.PrepareHeader(header)
 	if err != consensus.ErrUnknownAncestor {
 		t.Errorf("error mismatch: have %v, want %v", err, consensus.ErrUnknownAncestor)
 	}

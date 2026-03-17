@@ -411,7 +411,7 @@ func (self *worker) commitNewWork() {
 	if self.config.IsMagmaForkEnabled(nextBlockNum) {
 		header.BaseFee = nextBaseFee
 	}
-	if err := self.engine.Prepare(self.chain, header); err != nil {
+	if err := self.chain.PrepareHeader(header); err != nil {
 		logger.Error("Failed to prepare header for mining", "err", err)
 		return
 	}
@@ -437,7 +437,7 @@ func (self *worker) commitNewWork() {
 	self.current.stateMu.Lock()
 	defer self.current.stateMu.Unlock()
 
-	self.chain.Initialize(header, self.current.state)
+	self.chain.Processor().InitializeState(header, self.current.state)
 
 	// Create the current work task
 	// measure miner balance before executing txs

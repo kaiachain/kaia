@@ -24,17 +24,10 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
-func (r *RewardModule) VerifyHeader(header *types.Header) error {
-	return nil
-}
+func (r *RewardModule) InitializeState(header *types.Header, state *state.StateDB) {}
 
-func (r *RewardModule) PrepareHeader(header *types.Header) error {
-	header.Rewardbase = r.Rewardbase
-	return nil
-}
-
-// Distribute the deferred rewards at the end of block processing
-func (r *RewardModule) FinalizeHeader(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
+// Distribute the deferred rewards at the end of block processing.
+func (r *RewardModule) FinalizeState(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
 	if r.GovModule.GetParamSet(header.Number.Uint64()).ProposerPolicy == uint64(istanbul.WeightedRandom) && common.EmptyHash(header.Root) {
 		qualified, err := r.ValsetModule.GetQualifiedValidators(header.Number.Uint64())
 		if err != nil {

@@ -219,6 +219,7 @@ type BlockChain struct {
 	prefetchTxCh chan prefetchTx
 
 	// kaiax modules
+	headerModules     []kaiax.HeaderModule
 	executionModules  []kaiax.ExecutionModule
 	rewindableModules []kaiax.RewindableModule
 }
@@ -735,6 +736,42 @@ func (bc *BlockChain) Validator() Validator {
 // Processor returns the current processor.
 func (bc *BlockChain) Processor() Processor {
 	return bc.processor
+}
+
+// PrepareHeader runs proposer-specific header preparation.
+func (bc *BlockChain) PrepareHeader(header *types.Header) error {
+	// copy the parent extra data as the header extra data
+	number := header.Number.Uint64()
+	parent := bc.GetHeader(header.ParentHash, number-1)
+	if parent == nil {
+		return consensus.ErrUnknownAncestor
+	}
+
+	// use the same blockscore for all blocks
+	header.BlockScore = params.DefaultBlockScore
+
+	extra, err := bc.engine.PrepareExtra(header, parent)
+	if err != nil {
+		return err
+	}
+	header.Extra = extra
+
+	// set header's timestamp
+	blockPeriod := uint64(params.BlockGenerationInterval)
+	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(blockPeriod))
+	header.TimeFoS = parent.TimeFoS
+	if header.Time.Int64() < time.Now().Unix() {
+		t := time.Now()
+		header.Time = big.NewInt(t.Unix())
+		header.TimeFoS = uint8((t.UnixNano() / 1000 / 1000 / 10) % 100)
+	}
+
+	for _, module := range bc.headerModules {
+		if err := module.PrepareHeader(header); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // State returns a new mutable state based on the current HEAD block.
@@ -2813,6 +2850,10 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 
 func (bc *BlockChain) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
 	bc.executionModules = append(bc.executionModules, modules...)
+}
+
+func (bc *BlockChain) RegisterHeaderModule(modules ...kaiax.HeaderModule) {
+	bc.headerModules = append(bc.headerModules, modules...)
 }
 
 func (bc *BlockChain) RegisterRewindableModule(modules ...kaiax.RewindableModule) {

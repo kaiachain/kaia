@@ -73,6 +73,11 @@ func (f *Faker) Author(header *types.Header) (common.Address, error) {
 	return params.AuthorAddressForTesting, nil
 }
 
+// PrepareExtra returns consensus-specific extra-data content.
+func (f *Faker) PrepareExtra(header *types.Header, _ *types.Header) ([]byte, error) {
+	return header.Extra, nil
+}
+
 // CanVerifyHeadersConcurrently returns true for concurrent verification.
 func (f *Faker) CanVerifyHeadersConcurrently() bool {
 	return true

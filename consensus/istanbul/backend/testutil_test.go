@@ -38,6 +38,7 @@ import (
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -201,6 +202,7 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 
 	mStaking := staking_impl.NewStakingModule()
 	mValset := valset_impl.NewValsetModule()
+	mSystem := system_impl.NewSystemModule()
 	fakeDownloader := downloader.NewFakeDownloader()
 	if err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
@@ -225,11 +227,16 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 			Chain:        chain,
 			Downloader:   fakeDownloader,
 			BlsSecretKey: nodeBlsKeys[0],
+		}),
+		mSystem.Init(&system_impl.InitOpts{
+			Chain: chain,
 		})); err != nil {
 		panic(err)
 	}
 	engine.RegisterKaiaxModules(mGov, mStaking, mValset)
-	engine.RegisterConsensusModule(mRandao)
+	engine.RegisterHeaderModule(mRandao)
+	chain.RegisterHeaderModule(mRandao)
+	chain.Processor().RegisterBlockStateModule(mSystem)
 	// Start the engine
 	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock, nil); err != nil {
 		panic(err)
@@ -264,13 +271,13 @@ func (ctx *testContext) MakeHeader(parent *types.Block) *types.Header {
 
 // Block with no signature.
 func (ctx *testContext) MakeBlock(parent *types.Block) *types.Block {
-	chain, engine := ctx.chain, ctx.engine
+	chain := ctx.chain
 	header := ctx.MakeHeader(parent)
-	if err := engine.Prepare(chain, header); err != nil {
+	if err := chain.PrepareHeader(header); err != nil {
 		panic(err)
 	}
 	state, _ := chain.StateAt(parent.Root())
-	block, _ := engine.Finalize(chain, header, state, nil, nil)
+	block, _ := chain.Processor().FinalizeState(header, state, nil, nil)
 	return block
 }
 

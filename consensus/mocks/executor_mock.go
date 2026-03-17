@@ -8,8 +8,10 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	consensus "github.com/kaiachain/kaia/consensus"
+	event "github.com/kaiachain/kaia/event"
 )
 
 // MockExecutor is a mock of Executor interface
@@ -36,16 +38,45 @@ func (m *MockExecutor) EXPECT() *MockExecutorMockRecorder {
 }
 
 // Execute mocks base method
-func (m *MockExecutor) Execute(arg0 types.Transactions) (*consensus.ExecutionResult, error) {
+func (m *MockExecutor) Execute(arg0 *types.TransactionsByPriceAndNonce, arg1 *event.TypeMux) (*consensus.ExecutionResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Execute", arg0)
+	ret := m.ctrl.Call(m, "Execute", arg0, arg1)
 	ret0, _ := ret[0].(*consensus.ExecutionResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Execute indicates an expected call of Execute
-func (mr *MockExecutorMockRecorder) Execute(arg0 interface{}) *gomock.Call {
+func (mr *MockExecutorMockRecorder) Execute(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockExecutor)(nil).Execute), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockExecutor)(nil).Execute), arg0, arg1)
+}
+
+// FinalizeState mocks base method
+func (m *MockExecutor) FinalizeState(arg0 *consensus.ExecutionResult) (*types.Block, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FinalizeState", arg0)
+	ret0, _ := ret[0].(*types.Block)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FinalizeState indicates an expected call of FinalizeState
+func (mr *MockExecutorMockRecorder) FinalizeState(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeState", reflect.TypeOf((*MockExecutor)(nil).FinalizeState), arg0)
+}
+
+// ResetWithState mocks base method
+func (m *MockExecutor) ResetWithState(arg0 *state.StateDB, arg1 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResetWithState", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ResetWithState indicates an expected call of ResetWithState
+func (mr *MockExecutorMockRecorder) ResetWithState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetWithState", reflect.TypeOf((*MockExecutor)(nil).ResetWithState), arg0, arg1)
 }

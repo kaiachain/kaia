@@ -89,7 +89,8 @@ func TestGovernance_GovModule(t *testing.T) {
 	// (b) contract engine enabled (via vote)
 
 	govModule := node.GovModule().(*gov_impl.GovModule)
-	chain.Engine().(consensus.Istanbul).RegisterConsensusModule(govModule)
+	chain.Engine().(consensus.Istanbul).RegisterHeaderModule(govModule)
+	chain.RegisterHeaderModule(govModule)
 	chain.RegisterExecutionModule(govModule)
 	node.Miner().RegisterExecutionModule(govModule)
 

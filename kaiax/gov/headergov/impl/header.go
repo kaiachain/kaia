@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
@@ -14,7 +13,7 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-func (h *headerGovModule) VerifyHeader(header *types.Header) error {
+func (h *headerGovModule) VerifyHeader(header *types.Header, _ *types.Header) error {
 	if header.Number.Uint64() == 0 {
 		return nil
 	}
@@ -43,10 +42,6 @@ func (h *headerGovModule) PrepareHeader(header *types.Header) error {
 		}
 	}
 
-	return nil
-}
-
-func (h *headerGovModule) FinalizeHeader(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
 	return nil
 }
 

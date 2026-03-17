@@ -89,6 +89,9 @@ type Engine interface {
 	// block.
 	Author(header *types.Header) (common.Address, error)
 
+	// PrepareExtra builds consensus-specific header.Extra content.
+	PrepareExtra(header *types.Header, parent *types.Header) ([]byte, error)
+
 	// CanVerifyHeadersConcurrently returns true if concurrent header verification possible, otherwise returns false.
 	CanVerifyHeadersConcurrently() bool
 
@@ -104,17 +107,6 @@ type Engine interface {
 	// VerifyHeader checks whether a header conforms to the consensus rules of a
 	// given engine.
 	VerifyHeader(chain ChainReader, header *types.Header, parents []*types.Header) error
-
-	// Prepare initializes the consensus fields of a block header according to the
-	// rules of a particular engine. The changes are executed inline.
-	Prepare(chain ChainReader, header *types.Header) error
-
-	// Finalize runs any post-transaction state modifications (e.g. block rewards)
-	// and assembles the final block.
-	// Note: The block header and state database might be updated to reflect any
-	// consensus rules that happen at finalization (e.g. block rewards).
-	Finalize(chain ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-		receipts []*types.Receipt) (*types.Block, error)
 
 	// APIs returns the RPC APIs this consensus engine provides.
 	APIs(chain ChainReader) []rpc.API
@@ -162,7 +154,7 @@ type Istanbul interface {
 
 	RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule)
 
-	kaiax.ConsensusModuleHost
+	kaiax.HeaderModuleHost
 	kaiax.TxBundlingModuleHost
 	staking.StakingModuleHost
 }

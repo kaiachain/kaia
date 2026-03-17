@@ -275,7 +275,7 @@ type BlockChain interface {
 	Export(w io.Writer) error
 	ExportN(w io.Writer, first, last uint64) error
 	Engine() consensus.Engine
-	Initialize(header *types.Header, statedb *state.StateDB)
+	PrepareHeader(header *types.Header) error
 	GetTxLookupInfoAndReceipt(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 	GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	GetBlockReceiptsInCache(blockHash common.Hash) types.Receipts
@@ -318,6 +318,7 @@ type BlockChain interface {
 	Snapshots() *snapshot.Tree
 
 	// kaiax module host
+	kaiax.HeaderModuleHost
 	kaiax.ExecutionModuleHost
 	kaiax.RewindableModuleHost
 }

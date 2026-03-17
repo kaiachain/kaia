@@ -23,12 +23,15 @@
 package blockchain
 
 import (
+	"errors"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -37,8 +40,9 @@ import (
 //
 // StateProcessor implements Processor.
 type StateProcessor struct {
-	config *params.ChainConfig // Chain configuration options
-	bc     *BlockChain         // Canonical block chain
+	config            *params.ChainConfig      // Chain configuration options
+	bc                *BlockChain              // Canonical block chain
+	blockStateModules []kaiax.BlockStateModule // Post-transaction state transition modules
 }
 
 // ProcessStats includes the time statistics regarding StateProcessor.Process.
@@ -72,7 +76,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		processStats     ProcessStats
 	)
 
-	p.bc.Initialize(header, statedb)
+	p.InitializeState(header, statedb)
 
 	// Extract author from the header
 	author, _ := p.bc.Engine().Author(header) // Ignore error, we're past header validation
@@ -92,7 +96,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	processStats.AfterApplyTxs = time.Now()
 
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
-	if _, err := p.bc.Engine().Finalize(p.bc, header, statedb, block.Transactions(), receipts); err != nil {
+	if _, err := p.FinalizeState(header, statedb, block.Transactions(), receipts); err != nil {
 		return nil, nil, 0, nil, processStats, err
 	}
 	processStats.AfterFinalize = time.Now()
@@ -100,14 +104,48 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	return receipts, allLogs, *usedGas, internalTxTraces, processStats, nil
 }
 
-// Initialize runs pre-transaction state modifications.
-func (bc *BlockChain) Initialize(header *types.Header, statedb *state.StateDB) {
+// InitializeState runs pre-transaction state modifications.
+func (p *StateProcessor) InitializeState(header *types.Header, statedb *state.StateDB) {
 	// [EIP-2935] stores the parent block hash in the history storage contract.
-	if bc.chainConfig.IsPragueForkEnabled(header.Number) {
-		context := NewEVMBlockContext(header, bc, nil)
-		vmenv := vm.NewEVM(context, vm.TxContext{}, statedb, bc.chainConfig, &vm.Config{})
-		ProcessParentBlockHash(header, vmenv, statedb, bc.chainConfig.Rules(header.Number))
+	if p.bc.chainConfig.IsPragueForkEnabled(header.Number) {
+		context := NewEVMBlockContext(header, p.bc, nil)
+		vmenv := vm.NewEVM(context, vm.TxContext{}, statedb, p.bc.chainConfig, &vm.Config{})
+		ProcessParentBlockHash(header, vmenv, statedb, p.bc.chainConfig.Rules(header.Number))
 	}
+
+	for _, module := range p.blockStateModules {
+		module.InitializeState(header, statedb)
+	}
+}
+
+// RegisterBlockStateModule registers state transition modules handled by this processor.
+func (p *StateProcessor) RegisterBlockStateModule(modules ...kaiax.BlockStateModule) {
+	p.blockStateModules = append(p.blockStateModules, modules...)
+}
+
+// FinalizeState runs post-transaction state modifications and assembles final block.
+func (p *StateProcessor) FinalizeState(header *types.Header, statedb *state.StateDB, txs []*types.Transaction, receipts types.Receipts) (*types.Block, error) {
+	// We can assure that if the magma hard forked block should have the field of base fee
+	if p.config.IsMagmaForkEnabled(header.Number) {
+		if header.BaseFee == nil {
+			logger.Error("Magma hard forked block should have baseFee", "blockNum", header.Number.Uint64())
+			return nil, errors.New("Invalid Magma block without baseFee")
+		}
+	} else if header.BaseFee != nil {
+		logger.Error("A block before Magma hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
+		return nil, consensus.ErrInvalidBaseFee
+	}
+
+	for _, module := range p.blockStateModules {
+		if err := module.FinalizeState(header, statedb, txs, receipts); err != nil {
+			return nil, err
+		}
+	}
+
+	header.Root = statedb.IntermediateRoot(true)
+
+	// Assemble and return the final block for sealing
+	return types.NewBlock(header, txs, receipts), nil
 }
 
 // ProcessParentBlockHash stores the parent block hash in the history storage contract

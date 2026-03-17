@@ -53,18 +53,30 @@ func (mr *MockRandaoModuleMockRecorder) APIs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockRandaoModule)(nil).APIs))
 }
 
-// FinalizeHeader mocks base method.
-func (m *MockRandaoModule) FinalizeHeader(arg0 *types.Header, arg1 *state.StateDB, arg2 []*types.Transaction, arg3 []*types.Receipt) error {
+// FinalizeState mocks base method.
+func (m *MockRandaoModule) FinalizeState(arg0 *types.Header, arg1 *state.StateDB, arg2 []*types.Transaction, arg3 []*types.Receipt) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FinalizeHeader", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "FinalizeState", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// FinalizeHeader indicates an expected call of FinalizeHeader.
-func (mr *MockRandaoModuleMockRecorder) FinalizeHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+// FinalizeState indicates an expected call of FinalizeState.
+func (mr *MockRandaoModuleMockRecorder) FinalizeState(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeHeader", reflect.TypeOf((*MockRandaoModule)(nil).FinalizeHeader), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeState", reflect.TypeOf((*MockRandaoModule)(nil).FinalizeState), arg0, arg1, arg2, arg3)
+}
+
+// InitializeState mocks base method.
+func (m *MockRandaoModule) InitializeState(arg0 *types.Header, arg1 *state.StateDB) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "InitializeState", arg0, arg1)
+}
+
+// InitializeState indicates an expected call of InitializeState.
+func (mr *MockRandaoModuleMockRecorder) InitializeState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeState", reflect.TypeOf((*MockRandaoModule)(nil).InitializeState), arg0, arg1)
 }
 
 // GetBlsPubkey mocks base method.
@@ -161,15 +173,15 @@ func (mr *MockRandaoModuleMockRecorder) Stop() *gomock.Call {
 }
 
 // VerifyHeader mocks base method.
-func (m *MockRandaoModule) VerifyHeader(arg0 *types.Header) error {
+func (m *MockRandaoModule) VerifyHeader(arg0, arg1 *types.Header) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyHeader", arg0)
+	ret := m.ctrl.Call(m, "VerifyHeader", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // VerifyHeader indicates an expected call of VerifyHeader.
-func (mr *MockRandaoModuleMockRecorder) VerifyHeader(arg0 interface{}) *gomock.Call {
+func (mr *MockRandaoModuleMockRecorder) VerifyHeader(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockRandaoModule)(nil).VerifyHeader), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockRandaoModule)(nil).VerifyHeader), arg0, arg1)
 }

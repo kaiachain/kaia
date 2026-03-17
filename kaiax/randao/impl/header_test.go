@@ -108,32 +108,38 @@ func setupConsensusTestModule(t *testing.T, forkNum *big.Int) (*RandaoModule, ba
 }
 
 func TestPrepareAndVerifyHeader(t *testing.T) {
-	m, _, header := setupConsensusTestModule(t, big.NewInt(1))
+	m, chain, header := setupConsensusTestModule(t, big.NewInt(1))
 
 	require.NoError(t, m.PrepareHeader(header))
 	assert.Len(t, header.RandomReveal, 96)
 	assert.Len(t, header.MixHash, 32)
 
-	require.NoError(t, m.VerifyHeader(header))
+	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+	require.NotNil(t, parent)
+	require.NoError(t, m.VerifyHeader(header, parent))
 }
 
 func TestVerifyHeaderRejectsUnexpectedRandao(t *testing.T) {
-	m, _, header := setupConsensusTestModule(t, big.NewInt(2))
+	m, chain, header := setupConsensusTestModule(t, big.NewInt(2))
 	header.RandomReveal = make([]byte, 96)
 	header.MixHash = make([]byte, 32)
 
-	err := m.VerifyHeader(header)
+	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+	require.NotNil(t, parent)
+	err := m.VerifyHeader(header, parent)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, randao.ErrUnexpectedRandao)
 }
 
 func TestVerifyHeaderRejectsInvalidRandaoFields(t *testing.T) {
-	m, _, header := setupConsensusTestModule(t, big.NewInt(1))
+	m, chain, header := setupConsensusTestModule(t, big.NewInt(1))
 	require.NoError(t, m.PrepareHeader(header))
 
 	header.MixHash[0] ^= 0xff
 
-	err := m.VerifyHeader(header)
+	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+	require.NotNil(t, parent)
+	err := m.VerifyHeader(header, parent)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, randao.ErrInvalidRandaoFields)
 }
@@ -168,7 +174,7 @@ func TestVerifyHeaderRejectsInvalidPrevMixHashLength(t *testing.T) {
 
 			var err error
 			assert.NotPanics(t, func() {
-				err = m.VerifyHeader(header)
+				err = m.VerifyHeader(header, parent)
 			})
 			require.Error(t, err)
 			assert.ErrorIs(t, err, randao.ErrInvalidRandaoFields)

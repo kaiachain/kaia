@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"math/big"
 
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
@@ -39,7 +37,7 @@ func (r *RandaoModule) CalcRandao(number *big.Int, prevMixHash []byte) ([]byte, 
 	return randomReveal, mixHash, nil
 }
 
-func (r *RandaoModule) VerifyHeader(header *types.Header) error {
+func (r *RandaoModule) VerifyHeader(header *types.Header, parent *types.Header) error {
 	if header.Number.Sign() == 0 {
 		return nil // Do not verify genesis block
 	}
@@ -51,7 +49,6 @@ func (r *RandaoModule) VerifyHeader(header *types.Header) error {
 		return nil
 	}
 
-	parent := r.Chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
@@ -109,13 +106,6 @@ func (r *RandaoModule) PrepareHeader(header *types.Header) error {
 	header.RandomReveal = randomReveal
 	header.MixHash = mixHash
 	return nil
-}
-
-func (r *RandaoModule) FinalizeHeader(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
-	if !r.ChainConfig.IsRandaoForkBlock(header.Number) {
-		return nil
-	}
-	return system.InstallRegistry(state, r.ChainConfig.RandaoRegistry)
 }
 
 // block_num_to_bytes() = num.to_bytes(32, byteorder="big")
