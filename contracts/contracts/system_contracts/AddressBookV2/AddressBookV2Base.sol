@@ -27,11 +27,49 @@ abstract contract AddressBookV2Base is
 
     /* ========== CONSTANTS ========== */
 
+    /// @notice The type of the contract
+    string public constant CONTRACT_TYPE = "AddressBook";
+
+    /// @notice The version of the contract
+    uint256 public constant VERSION = 2;
+
     /// @notice Minimum staking amount required for candidate activation and validator readiness (5M KAIA)
     uint256 public constant MIN_STAKE = 5_000_000 ether;
 
     /// @notice System registry address (0x0...401)
     address internal constant REGISTRY_ADDRESS = 0x0000000000000000000000000000000000000401;
+
+    /* ========== IMMUTABLES ========== */
+
+    /// @notice Number of blocks per epoch, set at deployment time
+    uint256 public immutable epochBlockInterval;
+
+    /* ========== CONSTRUCTOR ========== */
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(uint256 _epochBlockInterval) {
+        epochBlockInterval = _epochBlockInterval;
+        _disableInitializers();
+    }
+
+    /* ========== EPOCH HELPERS ========== */
+
+    modifier onlyEpochBlock() {
+        _onlyEpochBlock();
+        _;
+    }
+
+    function _onlyEpochBlock() private view {
+        if (!_isEpochBlock()) revert OnlyEpochBlock();
+    }
+
+    function _isEpochBlock() internal view returns (bool) {
+        return block.number % epochBlockInterval == 0;
+    }
+
+    function _currentEpoch() internal view returns (uint256) {
+        return block.number / epochBlockInterval;
+    }
 
     /* ========== STORAGE ========== */
 

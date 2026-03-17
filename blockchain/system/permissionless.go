@@ -38,6 +38,9 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 )
 
+// DefaultEpochBlockInterval is the default number of blocks per epoch for ABv2.
+const DefaultEpochBlockInterval = 86400
+
 // AllocPermissionlessConfig holds parameters for genesis permissionless allocation.
 type AllocPermissionlessConfig struct {
 	Owner      common.Address                                  // Owner of beacons, Registry registrant
@@ -191,7 +194,12 @@ func deployBeaconInfra(cfg *runtime.Config, owner common.Address, result *allocP
 	result.pdBeacon = pdBeaconAddr
 
 	// Deploy AddressBookV2 implementation (used by ABv2DataContract and proxy setup)
-	abv2ImplAddr, err := evmCreate(cfg, common.FromHex(addressbookv2contract.AddressBookV2Bin))
+	abv2ABI, _ := addressbookv2contract.AddressBookV2MetaData.GetAbi()
+	abv2ImplInput, err := packConstructor(abv2ABI, common.FromHex(addressbookv2contract.AddressBookV2Bin), big.NewInt(DefaultEpochBlockInterval))
+	if err != nil {
+		return fmt.Errorf("pack ABv2 impl constructor: %w", err)
+	}
+	abv2ImplAddr, err := evmCreate(cfg, abv2ImplInput)
 	if err != nil {
 		return fmt.Errorf("deploy ABv2 impl: %w", err)
 	}

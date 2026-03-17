@@ -10,6 +10,9 @@ interface IAddressBookV2 {
 
     error NotInitializable();
 
+    /// @notice Thrown when a function restricted to epoch boundaries is called at a non-epoch block
+    error OnlyEpochBlock();
+
     /// @notice Thrown when caller is not the node's registered manager
     error OnlyManager();
 
@@ -243,7 +246,7 @@ interface IAddressBookV2 {
 
     /// @notice Processes system-triggered state transitions for nodes.
     /// @dev Core client computes all timeout/violation/epoch logic; AddressBookV2 unconditionally records results.
-    ///      Updates epochValCount only at epoch boundaries (block.number % EPOCH_BLOCK_INTERVAL == 0).
+    ///      Updates epochValCount only at epoch boundaries (block.number % epochBlockInterval == 0).
     /// @param nodeIds Array of node addresses to transition
     /// @param newStates Array of target states for each node
     /// @param timeoutAts Array of timeout timestamps for each node (0 = no timeout)
@@ -345,6 +348,10 @@ interface IAddressBookV2 {
     /// @notice Returns the epoch validator count snapshot (ValActive + ValPaused at last epoch)
     /// @return The epoch validator count used for mid-epoch slot math
     function getEpochValCount() external view returns (uint256);
+
+    /// @notice Returns the number of blocks per epoch (set at deployment, immutable)
+    /// @return The epoch block interval
+    function epochBlockInterval() external view returns (uint256);
 
     /* ========== GETTERS (node info) ========== */
 
