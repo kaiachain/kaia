@@ -114,8 +114,9 @@ func (api *DiscoveryAPI) DeleteAuthorizedNodes(knis string) error {
 }
 
 func parseNodeList(knis string) ([]*Node, error) {
-	var nodes []*Node
-	for _, kni := range strings.Split(knis, ",") {
+	kniList := strings.Split(knis, ",")
+	nodes := make([]*Node, 0, len(kniList))
+	for _, kni := range kniList {
 		n, err := ParseNode(strings.TrimSpace(kni))
 		if err != nil {
 			return nil, fmt.Errorf("invalid KNI: %s: %v", kni, err)
