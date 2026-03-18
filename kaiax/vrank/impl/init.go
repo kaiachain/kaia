@@ -132,6 +132,9 @@ func (v *VRankModule) catchUpScoreCaches() error {
 	if head == nil || head.Number == nil {
 		return nil
 	}
+	if !v.ChainConfig.IsPermissionlessForkEnabled(head.Number) {
+		return nil
+	}
 	headNum := head.Number.Uint64()
 
 	if err := v.catchUp(headNum); err != nil {
@@ -184,6 +187,7 @@ func (v *VRankModule) catchUp(headNum uint64) error {
 		if blockNum%scoreCheckpointInterval == 0 {
 			WriteCheckpoint(v.ChainKv, blockNum, pfs, cpMatrix)
 			WriteLastCheckpoint(v.ChainKv, blockNum)
+			logger.Info("VRank module catchup", "blockNum", blockNum)
 		}
 	}
 	return nil

@@ -17,12 +17,17 @@
 package impl
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 )
 
 func (v *VRankModule) PostInsertBlock(block *types.Block) error {
 	blockNum := block.NumberU64()
+	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
+		return nil
+	}
 
 	// GetPFS/GetCFS populate both caches; capture pfs directly to avoid a second cache lookup.
 	pfs, err := v.GetPFS(blockNum)
@@ -40,7 +45,7 @@ func (v *VRankModule) PostInsertBlock(block *types.Block) error {
 		if hasCPS {
 			cpMatrix = cpRaw.(map[common.Address]map[common.Address]uint64)
 		} else {
-			// should never happen: GetCFS just populated the cache. This is for safety.
+			// unlikely to happen: perform exhaustive re-calculation.
 			cpMatrix, err = v.newCPMatrix(calcEpochStart(blockNum))
 			if err != nil {
 				return err
