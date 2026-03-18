@@ -190,8 +190,8 @@ func (v *VRankModule) computeCPMatrix(start, end uint64, seed map[common.Address
 
 		for _, candidate := range cfReport {
 			if _, ok := cpMatrix[candidate]; !ok {
-				logger.Warn("cfReport contains candidate not in GetCandidates list", "blockNum", blockNum, "candidate", candidate.Hex())
-				cpMatrix[candidate] = make(map[common.Address]uint64)
+				logger.Warn("cfReport contains address not in candidates list; skipping", "blockNum", blockNum, "candidate", candidate.Hex())
+				continue
 			}
 			cpMatrix[candidate][reporter]++
 		}

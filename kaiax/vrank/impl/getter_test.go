@@ -249,7 +249,7 @@ func TestTallyCfReport(t *testing.T) {
 		candAddrs[i] = candidates[i].Addr
 	}
 
-	valset.EXPECT().GetCouncil(gomock.Any()).Return(valAddrs, nil).AnyTimes()
+	valset.EXPECT().GetCommittee(gomock.Any(), gomock.Any()).Return(valAddrs, nil).AnyTimes()
 	valset.EXPECT().GetCandidates(gomock.Any()).Return(candAddrs, nil).AnyTimes()
 	valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(validators[0].Addr, nil).AnyTimes()
 
@@ -344,8 +344,9 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	t.Run("Report should contain candAddr", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes() // BroadcastVRankPreprepare
+		valset.EXPECT().GetCandidates(uint64(0)).Return([]common.Address{candAddr}, nil).AnyTimes() // TallyCfReport: calcEpochStart(1+1)=0
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
@@ -357,11 +358,11 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	t.Run("epoch header returns empty report", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
-		valset.EXPECT().GetCouncil(uint64(vrankEpoch-1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(vrankEpoch-1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(vrankEpoch-1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(vrankEpoch-1), uint64(0)).Return(val.Addr, nil).AnyTimes()
-		block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(vrankEpoch - 1))})
-		view := &istanbul.View{Sequence: big.NewInt(vrankEpoch - 1), Round: common.Big0}
+		block := types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(vrankEpoch - 1)})
+		view := &istanbul.View{Sequence: new(big.Int).SetUint64(vrankEpoch - 1), Round: common.Big0}
 		val.VRankModule.HandleIstanbulPreprepare(block, view)
 
 		report, err := val.VRankModule.TallyCfReport(vrankEpoch-1, 0)
@@ -372,8 +373,9 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	t.Run("round out of range returns error", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes() // BroadcastVRankPreprepare
+		valset.EXPECT().GetCandidates(uint64(0)).Return([]common.Address{candAddr}, nil).AnyTimes() // TallyCfReport: calcEpochStart(1+1)=0
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
@@ -389,7 +391,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val, otherVal := createCN(t, valset), createCN(t, valset)
 		// This node is not in the council for block 1.
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{otherVal.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{otherVal.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
@@ -399,25 +401,24 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		assert.Empty(t, report)
 	})
 
-	t.Run("preprepared time not set returns error", func(t *testing.T) {
+	t.Run("no preprepare data returns empty report", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
-		// skip HandleIstanbulPreprepare
+		// skip HandleIstanbulPreprepare — no preprepare data in collector
 
 		prepreparedTime, _, _ := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.True(t, prepreparedTime.IsZero())
 		report, err := val.VRankModule.TallyCfReport(1, 0)
-		require.ErrorIs(t, err, vrank.ErrPrepreparedTimeNotSet)
-		assert.Nil(t, report)
+		require.NoError(t, err)
+		assert.Empty(t, report)
 	})
 
 	t.Run("GetCandidates failed returns error", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return(nil, assert.AnError).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(1)).Return(nil, assert.AnError).AnyTimes() // BroadcastVRankPreprepare
+		valset.EXPECT().GetCandidates(uint64(0)).Return(nil, assert.AnError).AnyTimes() // TallyCfReport: calcEpochStart(1+1)=0
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 

@@ -39,9 +39,9 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *istanbu
 
 	prepreparedAt := time.Now()
 	blockNum := block.NumberU64()
-	// if I'm a validator, then I need to collect VRankCandidate
-	// should be isValidator(blockNum + 1), but validators are not finalized during `blockNum` consensus.
-	if v.isValidator(blockNum) {
+	// if I'm a committee member (ValActive), then I need to collect VRankCandidate
+	// should be isCommitteeMember(blockNum + 1), but committee is not finalized during `blockNum` consensus.
+	if v.isCommitteeMember(blockNum) {
 		copiedView := istanbul.View{
 			Sequence: new(big.Int).Set(view.Sequence),
 			Round:    new(big.Int).Set(view.Round),
@@ -104,8 +104,8 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if !hasPrepreparedSeq {
 		return vrank.ErrPrepreparedViewNotSet
 	}
-	// should be isValidator(v.prepreparedView.Sequence.Uint64() + 1), but validators are not finalized during `seq` consensus.
-	if v.isValidator(prepreparedSeqNum) {
+	// should be isCommitteeMember(prepreparedSeqNum + 1), but committee is not finalized during `seq` consensus.
+	if v.isCommitteeMember(prepreparedSeqNum) {
 		if msg.BlockNumber > prepreparedSeqNum+maxCollectorWindow {
 			return vrank.ErrTooFar
 		}
@@ -181,10 +181,10 @@ func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPrepr
 
 // BroadcastVRankCandidate is called by candidates.
 func (v *VRankModule) BroadcastVRankCandidate(vrankCandidate *vrank.VRankCandidate) {
-	// should be GetCouncil(blockNum + 1), but validators are not finalized during `blockNum` consensus.
-	validators, err := v.Valset.GetCouncil(vrankCandidate.BlockNumber)
+	// should be GetCommittee(blockNum + 1, 0), but committee is not finalized during `blockNum` consensus.
+	validators, err := v.Valset.GetCommittee(vrankCandidate.BlockNumber, 0)
 	if err != nil || validators == nil {
-		logger.Error("GetCouncil failed", "blockNum", vrankCandidate.BlockNumber)
+		logger.Error("GetCommittee failed", "blockNum", vrankCandidate.BlockNumber)
 		return
 	}
 
@@ -220,14 +220,14 @@ func (v *VRankModule) isCandidate(blockNum uint64) bool {
 	return slices.Contains(candidates, v.nodeID)
 }
 
-func (v *VRankModule) isValidator(blockNum uint64) bool {
-	validators, err := v.Valset.GetCouncil(blockNum)
-	if err != nil || validators == nil {
-		logger.Error("GetCouncil failed", "blockNum", blockNum)
+func (v *VRankModule) isCommitteeMember(blockNum uint64) bool {
+	committee, err := v.Valset.GetCommittee(blockNum, 0)
+	if err != nil || committee == nil {
+		logger.Error("GetCommittee failed", "blockNum", blockNum)
 		return false
 	}
 
-	return slices.Contains(validators, v.nodeID)
+	return slices.Contains(committee, v.nodeID)
 }
 
 func (v *VRankModule) handleBroadcastLoop() {

@@ -38,9 +38,9 @@ const (
 	vrankCandidateSigDomain = "VRANK_CANDIDATE_V1"
 
 	broadcastChSize    = 2048
-	vrankEpoch         = 86400
-	maxRound           = 10 // round range [0, 10]
-	maxCollectorWindow = 10 // max collection window [N-10, N+10]
+	vrankEpoch         = vrank.Epoch
+	maxRound           = vrank.MaxRound
+	maxCollectorWindow = uint64(10) // max collection window [N-10, N+10]
 
 	scoreCacheSize          = 1024
 	scoreCheckpointInterval = uint64(vrankEpoch / 8) // 10,800 blocks

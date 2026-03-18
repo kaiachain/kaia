@@ -161,8 +161,9 @@ func runVRankScenario(t *testing.T, s VRankScenario) {
 		candAddrs = append(candAddrs, nameToCN[name].Addr)
 	}
 	proposerAddr := nameToCN[s.Proposer].Addr
-	valset.EXPECT().GetCouncil(blockNum).Return(councilAddrs, nil).AnyTimes()
-	valset.EXPECT().GetCandidates(blockNum).Return(candAddrs, nil).AnyTimes()
+	valset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(councilAddrs, nil).AnyTimes()
+	valset.EXPECT().GetCandidates(blockNum).Return(candAddrs, nil).AnyTimes()                             // BroadcastVRankPreprepare
+	valset.EXPECT().GetCandidates(calcEpochStart(blockNum+1)).Return(candAddrs, nil).AnyTimes()           // TallyCfReport
 	valset.EXPECT().GetProposer(blockNum, uint64(0)).Return(proposerAddr, nil).AnyTimes()
 
 	block1 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
@@ -304,7 +305,7 @@ func TestHandleIstanbulPreprepare(t *testing.T) {
 		proposer, validator, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
 
 		// proposer is not in the next council, so it should only broadcast and does not start collection.
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{validator.Addr}, nil).Times(2)
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{validator.Addr}, nil).Times(2)
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(2)
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(2)
 
@@ -323,7 +324,7 @@ func TestHandleIstanbulPreprepare(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		proposer, nonProposer, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
 
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(3)
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(3)
 
@@ -364,7 +365,7 @@ func TestHandleVRankPreprepare(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		proposer, nonProposer, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
 
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(3)
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(3)
 
@@ -399,7 +400,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		proposer, nonProposer, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
 		msg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: []byte{}}
 
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(3)
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(3)
 
@@ -419,7 +420,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		msg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: sig}
 
 		// proposer is not in the next council, so it should only broadcast and does not start collection.
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{validator.Addr}, nil).Times(3)
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{validator.Addr}, nil).Times(3)
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(2)
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(2)
 
@@ -444,7 +445,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		sigFutureBlock := signVRankCandidate(t, cand.VRankModule, cand.Key, block2.NumberU64(), 0, block2.Hash())
 		sigFutureRound := signVRankCandidate(t, cand.VRankModule, cand.Key, block1.NumberU64(), 1, block1.Hash())
 
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
 
@@ -480,7 +481,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		sig := signVRankCandidate(t, cand.VRankModule, cand.Key, block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash())
 		msg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: sig}
 
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 
@@ -515,7 +516,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		invalidSig := signVRankCandidate(t, cand.VRankModule, cand.Key, block2.NumberU64(), uint8(view1_0.Round.Uint64()), block2.Hash())
 		dupInvalidMsg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: invalidSig}
 
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 

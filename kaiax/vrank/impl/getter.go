@@ -103,17 +103,14 @@ func (v *VRankModule) TallyCfReport(blockNum, round uint64) (vrank.Report, error
 		return nil, vrank.ErrRoundOutOfRange
 	}
 
-	// if I was not a validator for blockNum, I couldn't have collected cfReport for blockNum.
-	if !v.isValidator(blockNum) {
-		return vrank.Report{}, nil
-	}
-
 	vk := vrank.ViewKey{N: blockNum, R: uint8(round)}
 	prepreparedAt, expectedBlockHash, viewMap := v.collector.GetViewData(vk)
 	if prepreparedAt.IsZero() {
-		return nil, vrank.ErrPrepreparedTimeNotSet
+		// No preprepare data — either this node was not a validator for blockNum,
+		// or it missed the PREPREPARE message. Either way, nothing to report.
+		return vrank.Report{}, nil
 	}
-	candidates, err := v.Valset.GetCandidates(blockNum)
+	candidates, err := v.Valset.GetCandidates(calcEpochStart(blockNum + 1))
 	if err != nil || candidates == nil {
 		logger.Error("GetCandidates failed", "blockNum", blockNum)
 		return nil, vrank.ErrGetCandidateFailed
