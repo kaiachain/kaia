@@ -31,25 +31,30 @@ pfReport(x)  = [Proposer(x, 0), Proposer(x, 1), ..., Proposer(x, header(x).Round
 
 `CFS(N)` is the cumulative candidate failure score at block N, covering blocks `[epochStart(N), N]`.
 
-For each block `x` in the range, the proposer of block `x+1` collects VRankCandidate messages from candidates during the consensus of block `x`. Any candidate who did not respond with the correct block hash before the timeout is included in the `cfReport` committed in `header(x+1).VRank`.
+For each block `x` in the range, `header(x).VRank` stores `cfReport(x)`, written by the proposer of block `x`. That report is tallied from candidate responses observed during the consensus of block `x-1`: candidates who did not respond with the correct block hash before the timeout are included in `cfReport(x)`.
 
 The raw per-block cfReports are first aggregated into a candidate-proposer (CP) matrix:
 
 ```
-cpMatrix[candidate][reporter]++ for each (candidate in cfReport(x), reporter = Proposer(x, header(x).Round))
+for each x in [epochStart(N), N]:
+    reporter(x) = Proposer(x, header(x).Round)
+    for each candidate in cfReport(x):
+        cpMatrix_N[candidate][reporter(x)] += 1
 ```
 
 The CP matrix is then passed through a **byzantine filter** before producing the final CFS. The filter discards the top-F reporter totals per candidate, where `F = floor((committeeSize - 1) / 3)`. This protects against up to F malicious proposers falsely accusing candidates.
 
 ```
-CFS(N)[candidate] = sum of cpMatrix[candidate][reporter] scores, excluding the top-F reporters
+scores_N(candidate) = sorted list of cpMatrix_N[candidate][reporter] over all reporters
+filteredScores_N(candidate) = scores_N(candidate) with the largest F entries removed
+CFS(N)[candidate] = sum(filteredScores_N(candidate))
 ```
 
 Candidates are seeded from `GetCandidates(epochStart(N))`, and thus every candidate appears in the output even with a score of zero.
 
 ### Scoring epoch
 
-Both scores are epoch-local. `epochStart(N) = N - (N % epoch)`. The epoch-start block itself (`N % epoch == 0`) always has an empty `header.VRank` and does not contribute to either score.
+Both scores are epoch-local. `epochStart(N) = N - (N % epoch)`. The epoch-start block itself (`N % epoch == 0`) always has an empty `header.VRank` and does not contribute to CFS.
 
 ### Checkpoints
 
@@ -93,7 +98,7 @@ Loads the latest DB checkpoint and replays blocks up to the current chain head t
 | ------------------------- | ------------------------------------ | ------------------------------------------------------------------- |
 | `GetPfReport(N)`          | `GetProposer(N, x)`                  | each `x` in `[0, header(N).Round)`                                  |
 | `GetCfReport(N)`          | —                                    | —                                                                   |
-| `TallyCfReport(N, round)` | `GetCandidates(calcEpochStart(N+1))` | —                                                                   |
+| `TallyCfReport(N, round)` | `GetCandidates(calcEpochStart(N+1))` | `N+1` because `header(N+1).VRank = TallyCfReport(N, R)`             |
 | `GetPFS(blockNum)`        | `GetProposer(x, r)`                  | each `x` in `[start, blockNum]`, each `r` in `[0, header(x).Round)` |
 | `GetCFS(blockNum)`        | `GetCandidates(epochStart)`          | —                                                                   |
 |                           | `GetProposer(x, header(x).Round())`  | each `x` in `[start, blockNum]`                                     |
