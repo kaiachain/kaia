@@ -48,7 +48,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/randao"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -107,20 +106,6 @@ var (
 	errUnexpectedExcessBlobGasBeforeOsaka = errors.New("unexpected excessBlobGas before osaka")
 	// errUnexpectedBlobGasUsedBeforeOsaka is returned if the blobGasUsed is present before the osaka fork.
 	errUnexpectedBlobGasUsedBeforeOsaka = errors.New("unexpected blobGasUsed before osaka")
-	// errUnexpectedVRankBeforePermissionless is returned if VRank exists before permissionless fork.
-	errUnexpectedVRankBeforePermissionless = errors.New("unexpected vrank before permissionless fork")
-	// errUnexpectedVRankAtEpochStart is returned if VRank is non-empty on an epoch-start block.
-	errUnexpectedVRankAtEpochStart = errors.New("unexpected vrank at epoch start block")
-	// errInvalidVRankFormat is returned if header.VRank is not a valid encoded report.
-	errInvalidVRankFormat = errors.New("invalid vrank format")
-	// errInvalidVRankCandidate is returned if header.VRank contains an address that is not a known candidate.
-	errInvalidVRankCandidate = errors.New("invalid vrank: address is not a candidate")
-	// errDuplicateVRankCandidate is returned if header.VRank contains duplicate addresses.
-	errDuplicateVRankCandidate = errors.New("invalid vrank: duplicate candidate address")
-	// errVRankNotSorted is returned if header.VRank addresses are not in ascending order.
-	errVRankNotSorted = errors.New("invalid vrank: addresses not sorted")
-	// errRoundExceedsMaxRound is returned if header.Round exceeds the maximum allowed round.
-	errRoundExceedsMaxRound = errors.New("round exceeds maximum allowed value")
 )
 
 var (
@@ -326,47 +311,9 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		}
 	}
 
-	// Ensure VRank field is only present after permissionless fork and has valid encoding.
-	permissionless := chain.Config().IsPermissionlessForkEnabled(header.Number)
-	if !permissionless {
-		if len(header.VRank) > 0 {
-			return errUnexpectedVRankBeforePermissionless
-		}
-	} else {
-		// Epoch-start blocks must have empty VRank.
-		if number%vrank.Epoch == 0 && len(header.VRank) > 0 {
-			return errUnexpectedVRankAtEpochStart
-		}
-		if len(header.VRank) > 0 {
-			report, err := vrank.DecodeReport(header.VRank)
-			if err != nil {
-				return errInvalidVRankFormat
-			}
-			// Validate every address in the cfReport is an actual candidate for block number-1.
-			// This prevents a malicious proposer from injecting arbitrary addresses (e.g. validator
-			// addresses) into header.VRank to manipulate CFS scores.
-			candidates, err := sb.GetCandidates(number - 1)
-			if err != nil {
-				return err
-			}
-			candSet := make(map[common.Address]struct{}, len(candidates))
-			for _, c := range candidates {
-				candSet[c] = struct{}{}
-			}
-			for i, addr := range report {
-				if _, ok := candSet[addr]; !ok {
-					return errInvalidVRankCandidate
-				}
-				if i > 0 {
-					cmp := bytes.Compare(report[i-1].Bytes(), addr.Bytes())
-					if cmp == 0 {
-						return errDuplicateVRankCandidate
-					}
-					if cmp > 0 {
-						return errVRankNotSorted
-					}
-				}
-			}
+	if sb.vrankModule != nil {
+		if err := sb.vrankModule.VerifyHeader(header); err != nil {
+			return err
 		}
 	}
 

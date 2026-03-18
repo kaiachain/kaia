@@ -27,6 +27,7 @@ import (
 type VRankModule interface {
 	kaiax.BaseModule
 
+	VerifyHeader(header *types.Header) error
 	HandleIstanbulPreprepare(block *types.Block, view *istanbul.View)
 	HandleVRankPreprepare(msg *VRankPreprepare) error
 	HandleVRankCandidate(msg *VRankCandidate) error
