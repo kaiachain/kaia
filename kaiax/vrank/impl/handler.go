@@ -40,7 +40,7 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *istanbu
 	prepreparedAt := time.Now()
 	blockNum := block.NumberU64()
 	// if I'm a committee member (ValActive), then I need to collect VRankCandidate
-	// should be isCommitteeMember(blockNum + 1), but committee is not finalized during `blockNum` consensus.
+	// ideally isCommitteeMember(blockNum + 1, round), but committee is not finalized during `blockNum` consensus, thus (blockNum, round).
 	if v.isCommitteeMember(blockNum, view.Round.Uint64()) {
 		copiedView := istanbul.View{
 			Sequence: new(big.Int).Set(view.Sequence),
@@ -227,7 +227,7 @@ func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPrepr
 
 // BroadcastVRankCandidate is called by candidates.
 func (v *VRankModule) BroadcastVRankCandidate(vrankCandidate *vrank.VRankCandidate) {
-	// should be GetCommittee(blockNum + 1, round), but committee is not finalized during `blockNum` consensus.
+	// ideally GetCommittee(blockNum + 1, round), but committee is not finalized during `blockNum` consensus, thus (blockNum, round).
 	validators, err := v.Valset.GetCommittee(vrankCandidate.BlockNumber, uint64(vrankCandidate.Round))
 	if err != nil || validators == nil {
 		logger.Error("GetCommittee failed", "blockNum", vrankCandidate.BlockNumber)
