@@ -23,7 +23,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
-	addressbookv2contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/AddressBookV2"
+	addressbookv2contract "github.com/kaiachain/kaia/contracts_permissionless/contracts/AddressBookV2"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/stretchr/testify/assert"

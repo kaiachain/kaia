@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
-	addressbookv2contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/AddressBookV2"
+	addressbookv2contract "github.com/kaiachain/kaia/contracts_permissionless/contracts/AddressBookV2"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/kaiax/valset"
