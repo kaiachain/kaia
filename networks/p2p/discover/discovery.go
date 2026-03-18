@@ -21,6 +21,7 @@ import (
 	"net"
 
 	"github.com/kaiachain/kaia/networks/p2p/netutil"
+	"github.com/kaiachain/kaia/networks/rpc"
 )
 
 type Discovery2 interface {
@@ -35,6 +36,9 @@ type Discovery2 interface {
 
 	// Update authorized nodes. To be used by permless.
 	PutAuthorizedNodes(nodes []*Node)
+
+	// APIs returns the RPC APIs for the discovery service.
+	APIs() []rpc.API
 }
 
 // Config holds Table-related settings.

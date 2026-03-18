@@ -37,11 +37,39 @@ func (tab *Table2) ClosestNodes(targetID NodeID, targetType NodeType, max int) [
 }
 
 func (tab *Table2) PutAuthorizedNodes(nodes []*Node) {
-	// TODO: implement
+	tab.authMu.Lock()
+	defer tab.authMu.Unlock()
+	for _, n := range nodes {
+		tab.authNodes[n.ID] = n
+	}
+}
+
+func (tab *Table2) DeleteAuthorizedNodes(nodes []*Node) {
+	tab.authMu.Lock()
+	defer tab.authMu.Unlock()
+	for _, n := range nodes {
+		delete(tab.authNodes, n.ID)
+	}
+}
+
+func (tab *Table2) GetAuthorizedNodes() []*Node {
+	tab.authMu.RLock()
+	defer tab.authMu.RUnlock()
+	nodes := make([]*Node, 0, len(tab.authNodes))
+	for _, n := range tab.authNodes {
+		nodes = append(nodes, n)
+	}
+	return nodes
 }
 
 func (tab *Table2) IsAuthorized(id NodeID, nType NodeType) bool {
-	return true // TODO: read or mem
+	tab.authMu.RLock()
+	defer tab.authMu.RUnlock()
+	if len(tab.authNodes) == 0 {
+		return true // no authorized nodes means no restriction
+	}
+	_, ok := tab.authNodes[id]
+	return ok
 }
 
 func (tab *Table2) IsBonded(id NodeID) bool {
