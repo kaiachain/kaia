@@ -8,7 +8,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	gov "github.com/kaiachain/kaia/kaiax/gov"
@@ -50,32 +49,6 @@ func (m *MockGovModule) APIs() []rpc.API {
 func (mr *MockGovModuleMockRecorder) APIs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockGovModule)(nil).APIs))
-}
-
-// FinalizeState mocks base method.
-func (m *MockGovModule) FinalizeState(arg0 *types.Header, arg1 *state.StateDB, arg2 []*types.Transaction, arg3 []*types.Receipt) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FinalizeState", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// FinalizeState indicates an expected call of FinalizeState.
-func (mr *MockGovModuleMockRecorder) FinalizeState(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeState", reflect.TypeOf((*MockGovModule)(nil).FinalizeState), arg0, arg1, arg2, arg3)
-}
-
-// InitializeState mocks base method.
-func (m *MockGovModule) InitializeState(arg0 *types.Header, arg1 *state.StateDB) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "InitializeState", arg0, arg1)
-}
-
-// InitializeState indicates an expected call of InitializeState.
-func (mr *MockGovModuleMockRecorder) InitializeState(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeState", reflect.TypeOf((*MockGovModule)(nil).InitializeState), arg0, arg1)
 }
 
 // GetParamSet mocks base method.
