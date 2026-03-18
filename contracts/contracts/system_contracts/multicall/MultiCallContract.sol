@@ -17,11 +17,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.19;
 
-import {Profile} from "../types/Node.sol";
-
 interface IAddressBook {
-    function VERSION() external view returns (uint256);
-
     function isActivated() external view returns (bool);
 
     function getAllAddress()
@@ -57,11 +53,6 @@ interface IGaslessSwapRouter {
     function getSupportedTokens() external view returns (address[] memory);
 }
 
-interface IAddressBookV2 {
-    function getAllProfiles() external view returns (Profile[] memory);
-    function getFundAddresses() external view returns (address, address, address);
-}
-
 // MultiCallContract provides a function to retrieve the any information needed for the Kaia client.
 // It will be temporarily injected into state to be used by the Kaia client.
 // After retrieving the information, the contract will be removed from the state.
@@ -76,18 +67,6 @@ contract MultiCallContract {
     // multiCallStakingInfo returns the staking information of all CNs.
     function multiCallStakingInfo()
         external
-        view
-        returns (
-            uint8[] memory typeList,
-            address[] memory addressList,
-            uint256[] memory stakingAmounts
-        )
-    {
-        return _multiCallStakingInfoPermissioned();
-    } 
-
-    function _multiCallStakingInfoPermissioned()
-        private
         view
         returns (
             uint8[] memory typeList,
@@ -111,38 +90,16 @@ contract MultiCallContract {
         stakingAmounts = new uint256[](lenCnAddress / 3);
 
         for (uint256 i = 0; i < lenCnAddress; i += 3) {
-            stakingAmounts[i / 3] = _getCnStakingAmountsLegacy(addressList[i + 1]);
+            stakingAmounts[i / 3] = _getCnStakingAmounts(addressList[i + 1]);
         }
 
         return (typeList, addressList, stakingAmounts);
     }
 
-    function multiCallStakingInfoPermissionless()
-        external
-        view
-        returns (Profile[] memory profiles, uint256[] memory stakingAmounts, address kefAddr, address kifAddr, address kpfAddr)
-    {
-        // fork number is checked by caller side
-        IAddressBookV2 abv2 = IAddressBookV2(ADDRESS_BOOK_ADDRESS);
-        profiles = abv2.getAllProfiles();
-        uint256 len = profiles.length;
-        stakingAmounts = new uint256[](len);
-        for (uint256 i = 0; i < len; i++) {
-            stakingAmounts[i] = _getCnStakingAmountsKIP290(profiles[i].stakingContract);
-        }
-        (kefAddr, kifAddr, kpfAddr) = abv2.getFundAddresses();
-    }
-
-    function _getCnStakingAmountsLegacy(
+    function _getCnStakingAmounts(
         address cnStaking
     ) private view returns (uint256) {
         return cnStaking.balance;
-    }
-
-    function _getCnStakingAmountsKIP290(
-        address cnStaking
-    ) private view returns (uint256) {
-        return ICnStaking(cnStaking).staking() - ICnStaking(cnStaking).unstaking();
     }
 
     function multiCallDPStakingInfo()
@@ -186,5 +143,6 @@ contract MultiCallContract {
         }
         tokens = IGaslessSwapRouter(gsr).getSupportedTokens();
     }
+
     /* ========== MORE FUNCTIONS TBA ========== */
 }

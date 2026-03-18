@@ -289,7 +289,7 @@ describe("StakingTrackerV2.sol", function () {
 
       await setBlock(trackEnd);
 
-      await jumpTime(1005);
+      await jumpTime(105);
 
       // 3. Create tracker 2
       await expect(
@@ -567,7 +567,7 @@ describe("StakingTrackerV2.sol", function () {
 
         expect(trackerSummary[3]).to.equal(3);
 
-        await jumpTime(1005);
+        await jumpTime(105);
 
         // CnStakingV2C withdraws 2m KLAY
         await submitAndExecuteRequest(

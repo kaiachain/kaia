@@ -235,7 +235,7 @@ describe("StakingTracker.sol", function () {
 
       await setBlock(trackEnd);
 
-      await jumpTime(1005);
+      await jumpTime(105);
 
       // 3. Create tracker 2
       await expect(stakingTracker.createTracker(trackStart + trackInterval, trackEnd + trackInterval)).to.emit(
@@ -477,7 +477,7 @@ describe("StakingTracker.sol", function () {
 
         expect(trackerSummary[3]).to.equal(3);
 
-        await jumpTime(1005);
+        await jumpTime(105);
 
         // CnStakingV2C withdraws 2m KLAY
         await submitAndExecuteRequest(cnStakingV2C, [admin3], requirement, FuncID.WithdrawLockupStaking, admin3, [
