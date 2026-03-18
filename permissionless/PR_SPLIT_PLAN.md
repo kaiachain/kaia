@@ -1,59 +1,66 @@
 # PR Split Plan
 
 Current working PR: kaiachain/kaia#748 (state-transition → permissionless)
-- 171 files, ~87K lines changed — too large for a single review
 
 ## Dependency Order
 
 ```
-PR 1 (Contracts) → PR 2 (ABv2 Go) → PR 3 (State Transition) → PR 4 (Integration)
+PR 1 (Contracts) → PR 2 (Go Bindings + System) → PR 3 (State Transition) → PR 4 (Integration)
 ```
 
-Each PR targets `permissionless` branch. Must be merged in order.
+Each PR targets the previous PR's branch. Must be merged in order.
 
 ---
 
-## PR 1: Solidity Contracts (OZ v5 Migration + New Contracts)
+## PR 1: Solidity Contracts — `contracts_permissionless/`
 
-**Scope:** All Solidity, TypeScript tests, Go bindings, build config
+**PR**: kaiachain/kaia#792
+**Branch**: `pr1-contracts` → `permissionless`
+**Scope:** Separate permissionless contracts into independent `contracts_permissionless/` project. No Go binding, no `contracts/` changes.
 
 | Category | Files |
 |----------|-------|
-| ABv2 contracts | `contracts/.../AddressBookV2/*.sol`, `interfaces/`, `mocks/` |
-| ABv2 Go bindings | `contracts/.../AddressBookV2/AddressBookV2.go`, `abv2data/ABv2DataContract.go` |
-| CnStakingV4 | `contracts/.../CnStakingV4/`, `CnStakingV4Factory/` |
-| PublicDelegation | `contracts/.../PublicDelegation/` |
-| Proxy (OZ v5) | `contracts/.../Proxy/` (new), delete `proxy/` (old) |
-| OZ v5 migration | All `.sol` changes across `auction/`, `consensus/`, `kaiabridge/`, `kip113/`, `kip247/`, `gov/`, `libraries/`, `multicall/` |
-| Go bindings | All `.go` under `contracts/` (regenerated) |
-| Build config | `contracts/package.json`, `package-lock.json`, `hardhat.config.ts`, `generate.go`, `abigenw` |
-| TS tests | `contracts/test/**/*.ts`, `contracts/test/materials/fixtures/*.ts` |
-| Constant update | `blockchain/system/constant.go` (bytecode hashes) |
-| Test fix | `blockchain/system/constant_test.go`, `common/compiler/solidity_test.go` |
+| New project | `contracts_permissionless/` — sol, TS tests, hardhat config, `generate.go` |
+| ABv2 | `AddressBookV2/`, `ABv2DataContract`, `AddressBookLegacy`, interfaces |
+| CnStakingV4 | `CnStaking/CnStakingV4/`, `CnStakingV4Factory/` |
+| PublicDelegation | `PublicDelegation/` |
+| Proxy (OZ v5) | `Proxy/ERC1967Proxy.sol`, `UpgradeableBeacon.sol` |
+| Libraries | `ABv2ConfigLib`, `NodeVerifier`, `SlotMath` |
+| MultiCall | `multicall/MultiCallContract.sol` |
+| System interfaces | `system/IRegistry.sol`, `IStakingTracker.sol`, `SystemCallable.sol` |
+| Testing mocks | `testing/AddressBookMock.sol`, `AddressBookV2Mock.sol`, `MultiCallContractMock.sol` |
+| Types | `types/Node.sol` |
+| KIP interfaces | `kip113/IAddressBook.sol`, `kip149/IRegistry.sol`, `Registry.sol` |
 
-**Review focus:** OZ v4→v5 migration correctness, ABv2 contract logic, new contract interfaces
+**Review focus:** OZ v5 contract logic, ABv2 interface, new contract structure
 
 ---
 
-## PR 2: ABv2 Go Layer (Read/Write/Install)
+## PR 2: Go Bindings + ABv2 Go Layer
 
-**Scope:** Go code that interacts with ABv2 contract
+**Branch**: `pr2-go-system` → `pr1-contracts`
+**Scope:** `go generate` bindings + Go code that interacts with ABv2/permissionless contracts
 
 | Category | Files |
 |----------|-------|
+| Go bindings (`go generate`) | `contracts_permissionless/contracts/**/*.go` (8 files) |
 | ABv2 functions | `blockchain/system/addressbook_v2.go` |
 | Genesis alloc | `blockchain/system/permissionless.go` |
 | Test helpers | `blockchain/system/testing.go` |
-| KIP113 changes | `blockchain/system/kip113.go`, `kip113_test.go` (Proxy import) |
-| Multicall | `blockchain/system/multicall_test.go` |
+| Constants | `blockchain/system/constant.go` (ERC1967ProxyV5Code, mock addr, multicall import) |
+| Constants test | `blockchain/system/constant_test.go` |
+| KIP113 changes | `blockchain/system/kip113.go`, `kip113_test.go` |
+| Multicall | `blockchain/system/multicall.go`, `multicall_test.go` |
+| Contract backend | `accounts/abi/bind/backends/blockchain_state.go` |
 | Unit tests | `blockchain/system/addressbook_v2_test.go`, `permissionless_test.go` |
 
-**Review focus:** ABI encoding/decoding, contract read helpers (ReadGetAllValidators, ReadABv2Timeouts, etc.), genesis allocation, InstallAddressBookV2
+**Review focus:** ABI encoding/decoding, contract read helpers, genesis allocation, InstallAddressBookV2, ERC1967Proxy v4/v5 split
 
 ---
 
 ## PR 3: Permissionless State Transition (Core Logic)
 
+**Branch**: `pr3-state-transition` → `pr2-go-system`
 **Scope:** Validator state machine, epoch/timeout/violation transitions
 
 | Category | Files |
@@ -63,21 +70,21 @@ Each PR targets `permissionless` branch. Must be merged in order.
 | Valset getter | `kaiax/valset/impl/getter.go` |
 | Types | `kaiax/valset/types.go`, `kaiax/valset/address_set.go` |
 | Interface | `kaiax/valset/interface.go`, `kaiax/valset/mock/module.go` |
-| Staking (permissionless path) | `kaiax/staking/staking_info.go` (ConsolidatedNodes), `kaiax/staking/p2p_staking_info.go` |
+| Staking (permissionless) | `kaiax/staking/staking_info.go`, `p2p_staking_info.go` |
 | Staking getter | `kaiax/staking/impl/getter.go`, `kaiax/staking/interface.go`, `kaiax/staking/mock/` |
-| Engine hook | `consensus/consensus.go`, `consensus/istanbul/backend/engine.go`, `consensus/faker/faker.go`, `consensus/mocks/engine_mock.go` |
-| State processor | `blockchain/state_processor.go`, `blockchain/state_transition.go` |
+| Engine hook | `consensus/istanbul/backend/engine.go`, `consensus/faker/faker.go`, `consensus/mocks/engine_mock.go` |
 | Worker | `work/worker.go` |
 | Unit tests | `kaiax/valset/impl/state_transition_test.go`, `state_transition_getter_test.go`, `execution_test.go` |
 | Unit tests | `kaiax/valset/impl/getter_council_test.go`, `getter_context_test.go`, `getter_demote_test.go`, `getter_proposers_test.go` |
 | Unit tests | `kaiax/staking/staking_info_test.go` |
 
-**Review focus:** State machine (ValActive/ValReady/ValPaused/ValInactive/ValExiting transitions), epoch transition, timeout transition, violation transition, getOrComputeNodeStates caching
+**Review focus:** State machine transitions, epoch/timeout/violation logic, getOrComputeNodeStates caching
 
 ---
 
 ## PR 4: Integration (Config, API, Misc)
 
+**Branch**: `pr4-integration` → `pr3-state-transition`
 **Scope:** Remaining wiring, config, API, cleanup
 
 | Category | Files |
@@ -100,7 +107,8 @@ Each PR targets `permissionless` branch. Must be merged in order.
 
 ## Notes
 
-- Each PR should compile and pass tests independently (may need stub/no-op where downstream code isn't merged yet)
-- PR 1 is the largest by line count (~70K) but mostly generated Go bindings — actual review is Solidity + build config
+- `contracts/` is untouched — existing bytecodes and Go bindings remain identical to base
+- `contracts_permissionless/` is the new independent project for permissionless contracts (OZ v5, solc 0.8.25)
+- Each PR should compile and pass tests independently
+- PR 2 is largest by line count (Go bindings ~77K) but mostly generated — review focus is `blockchain/system/` Go code
 - PR 3 is the most logic-dense and needs the most careful review
-- PR 4 contains cleanup items listed in `permissionless/TODO.md`
