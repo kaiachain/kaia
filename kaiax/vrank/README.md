@@ -105,20 +105,19 @@ Loads the latest DB checkpoint and replays blocks up to the current chain head t
 |                           | `GetCommittee(epochStart, 0)`        | for byzantine filtering `F` (TODO: remove me)                       |
 
 - handlers
-  - During consensus of block N, block N is not yet committed, but its validator/candidate/proposer set is already determined — so `Get*(N)` is safe and exact for the node-identity checks.
-  - Four calls (`GetCommittee` and `GetCandidates` in `HandleIstanbulPreprepare` and `HandleVRankPreprepare`) use `N` where `N+1` would be semantically precise, but block N+1 is not yet in the DB during active consensus of N.
-  - Two calls in `HandleVRankCandidate` use `prepreparedSeqNum` as an approximation for `prepreparedSeqNum+1` for the same reason.
+  - During consensus of block N, block N is not yet committed, but its validator/candidate/proposer set is already determined — so `Get*(N)` is safe for proposer / candidate / committee identity checks tied to that live view.
+  - `HandleVRankCandidate` deliberately does not perform committee-membership or candidate-membership validation at receive time. It acts as a bounded inbox keyed by `(BlockNumber, Round)`: stale messages are dropped, overly-future messages are rejected, signatures are checked, and duplicate senders per view are ignored.
+  - Canonical semantic validation for candidate messages happens later in `TallyCfReport`, which checks the exact view's preprepare time, expected block hash, canonical epoch-start candidate set, and timeout.
 
-| Function                                  | Valset call                          | Notes                                                 |
-| ----------------------------------------- | ------------------------------------ | ----------------------------------------------------- |
-| `HandleIstanbulPreprepare(block N)`       | `GetCommittee(N, 0)`                 | only committee handles Preprepare                     |
-|                                           | `GetProposer(N, view.Round)`         | only proposer broadcasts VRankPreprepare              |
-|                                           | `GetCandidates(N)`                   | only proposer broadcasts VRankPreprepare              |
-| `HandleVRankPreprepare(block N)`          | `GetCandidates(N)`                   | only candidates handle VRankPreprepare                |
-|                                           | `GetProposer(N, view.Round)`         | verify VRankPreprepare sender is the proposer         |
-|                                           | `GetCommittee(N, 0)`                 | only candidates broadcast VRankCandidate to committee |
-| `HandleVRankCandidate(msg.BlockNumber=M)` | `GetCommittee(prepreparedSeqNum, 0)` | only committee handles VRankCandidate                 |
-|                                           | `GetCandidates(prepreparedSeqNum)`   | verify VRankCandidate message sender                  |
+| Function                                  | Valset call                  | Notes                                                 |
+| ----------------------------------------- | ---------------------------- | ----------------------------------------------------- |
+| `HandleIstanbulPreprepare(block N)`       | `GetCommittee(N, 0)`         | only committee handles Preprepare                     |
+|                                           | `GetProposer(N, view.Round)` | only proposer broadcasts VRankPreprepare              |
+|                                           | `GetCandidates(N)`           | only proposer broadcasts VRankPreprepare              |
+| `HandleVRankPreprepare(block N)`          | `GetCandidates(N)`           | only candidates handle VRankPreprepare                |
+|                                           | `GetProposer(N, view.Round)` | verify VRankPreprepare sender is the proposer         |
+|                                           | `GetCommittee(N, 0)`         | only candidates broadcast VRankCandidate to committee |
+| `HandleVRankCandidate(msg.BlockNumber=M)` | —                            | receive-time path does not query valset               |
 
 ### Start and stop
 
@@ -138,7 +137,15 @@ Called when a VRankPreprepare is received. If this node is a candidate for block
 
 #### HandleVRankCandidate
 
-Called when a VRankCandidate message is received. If this node is a validator, it verifies the sender is a known candidate, checks the signature, and records the message in the collector for later tallying.
+Called when a VRankCandidate message is received. The handler does not try to decide canonical candidate or committee membership for that message's view. Instead, it:
+
+- rejects messages that are too far in the future
+- drops stale messages for already-passed views
+- verifies the candidate signature
+- ignores duplicate senders for the same `(blockNum, round)`
+- records the message in the collector for later tallying
+
+`TallyCfReport` is the stage that applies canonical checks such as expected block hash, candidate membership in `GetCandidates(calcEpochStart(N+1))`, and the timeout rule.
 
 ### Execution
 
@@ -149,7 +156,7 @@ After each canonical block is inserted, proactively calls `GetPFS` and `GetCFS` 
 ### Rewind
 
 - `RewindTo`: Purges both in-memory caches (PFS and CP matrix).
-- `RewindDelete`: Additionally deletes all DB checkpoints strictly above the rewind point and rolls the `lastCheckpoint` pointer back to the highest surviving checkpoint.
+- `RewindDelete`: Handles exactly one deleted block. If that block is a checkpoint, its DB checkpoint is deleted; if it was also the `lastCheckpoint`, the pointer rolls back to the highest surviving earlier checkpoint.
 
 ## Getters
 
