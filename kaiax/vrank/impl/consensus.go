@@ -29,7 +29,7 @@ import (
 //   - Before the permissionless fork: VRank must be empty.
 //   - At epoch-start blocks: VRank must be empty.
 //   - Otherwise: VRank must be a valid encoded report whose addresses are sorted,
-//     deduplicated, and all present in the candidate set for block number-1.
+//     deduplicated, and all present in GetCandidates(calcEpochStart(N)).
 func (v *VRankModule) VerifyHeader(header *types.Header) error {
 	number := header.Number.Uint64()
 	permissionless := v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(number))
@@ -54,10 +54,12 @@ func (v *VRankModule) VerifyHeader(header *types.Header) error {
 		return vrank.ErrInvalidVRankFormat
 	}
 
-	// Validate every address in the cfReport is an actual candidate for block number-1.
+	// Validate every address in the cfReport is an actual candidate.
+	// header(N).VRank is produced by TallyCfReport(N-1, ...) which uses
+	// GetCandidates(calcEpochStart(N)), so mirror that here.
 	// This prevents a malicious proposer from injecting arbitrary addresses (e.g. validator
 	// addresses) into header.VRank to manipulate CFS scores.
-	candidates, err := v.Valset.GetCandidates(number - 1)
+	candidates, err := v.Valset.GetCandidates(calcEpochStart(number))
 	if err != nil {
 		return err
 	}

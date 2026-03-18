@@ -54,11 +54,11 @@ func TestVerifyHeader(t *testing.T) {
 		return mock_valset.NewMockValsetModule(gomock.NewController(t))
 	}
 
-	// withCandidates returns a mock that returns `candidates` for GetCandidates(number-1).
+	// withCandidates returns a mock that returns `candidates` for GetCandidates(calcEpochStart(number)).
 	withCandidates := func(t *testing.T, number uint64) *mock_valset.MockValsetModule {
 		t.Helper()
 		vs := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		vs.EXPECT().GetCandidates(number-1).Return(candidates, nil).Times(1)
+		vs.EXPECT().GetCandidates(calcEpochStart(number)).Return(candidates, nil).Times(1)
 		return vs
 	}
 
