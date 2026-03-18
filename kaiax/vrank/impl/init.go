@@ -153,7 +153,7 @@ func (v *VRankModule) catchUp(headNum uint64) error {
 		cpMatrix map[common.Address]map[common.Address]uint64
 	)
 
-	if cpNum, storedPFS, storedCpMatrix, ok := v.loadLatestCheckpoint(headNum); ok {
+	if cpNum, storedPFS, storedCpMatrix, ok := v.loadCheckpointInEpoch(headNum); ok {
 		start = cpNum + 1
 		pfs = storedPFS
 		cpMatrix = storedCpMatrix
@@ -194,7 +194,7 @@ func (v *VRankModule) catchUp(headNum uint64) error {
 	return nil
 }
 
-func (v *VRankModule) loadLatestCheckpoint(blockNum uint64) (uint64, map[common.Address]uint64, map[common.Address]map[common.Address]uint64, bool) {
+func (v *VRankModule) loadCheckpointInEpoch(blockNum uint64) (uint64, map[common.Address]uint64, map[common.Address]map[common.Address]uint64, bool) {
 	epochStart := calcEpochStart(blockNum)
 	lastCP, ok := ReadLastCheckpoint(v.ChainKv)
 	if !ok || lastCP < epochStart {

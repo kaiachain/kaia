@@ -60,7 +60,7 @@ func (v *VRankModule) GetPFS(blockNum uint64) (map[common.Address]uint64, error)
 		// 2. nearby cache hit - use it as seed
 		start = cachedNum + 1
 		seed = cachedScores
-	} else if cpNum, cpScores, _, ok := v.loadLatestCheckpoint(blockNum); ok {
+	} else if cpNum, cpScores, _, ok := v.loadCheckpointInEpoch(blockNum); ok {
 		// 3. DB checkpoint hit - use it as seed
 		start = cpNum + 1
 		seed = cpScores
@@ -110,7 +110,7 @@ func (v *VRankModule) GetCFS(blockNum uint64) (map[common.Address]uint64, error)
 		// 2. nearby cache hit - use it as seed
 		start = cachedNum + 1
 		seed = cachedCPMatrix
-	} else if cpNum, _, cpMatrix, ok := v.loadLatestCheckpoint(blockNum); ok {
+	} else if cpNum, _, cpMatrix, ok := v.loadCheckpointInEpoch(blockNum); ok {
 		// 3. DB checkpoint hit - use it as seed
 		start = cpNum + 1
 		seed = cpMatrix
