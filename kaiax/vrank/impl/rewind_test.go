@@ -60,9 +60,10 @@ func TestRewindTo_PurgesCache(t *testing.T) {
 	assert.False(t, ok, "cpMatrixCache entry above rewind point must be purged")
 }
 
-// TestRewindDelete_UpdatesLastCheckpoint verifies that after RewindDelete removes
-// the highest checkpoint, the lastCheckpoint pointer rolls back to the previous one,
-// and that removing all checkpoints deletes the pointer entirely.
+// TestRewindDelete_UpdatesLastCheckpoint verifies the real host contract:
+// RewindDelete is called once per deleted block. When the deleted block is a
+// checkpoint and is the latest checkpoint, the pointer must roll back to the
+// previous surviving checkpoint.
 func TestRewindDelete_UpdatesLastCheckpoint(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	valset := mock_valset.NewMockValsetModule(ctrl)
@@ -89,34 +90,30 @@ func TestRewindDelete_UpdatesLastCheckpoint(t *testing.T) {
 	)
 	WriteLastCheckpoint(db, cp2)
 
-	// Rewind to cp1: removes cp2 checkpoint, rolls back last pointer to cp1.
-	v.RewindDelete(common.Hash{}, cp1)
-	pfs2, _ := ReadCheckpoint(db, cp2)
+	// Host deletes block cp2.
+	v.RewindDelete(common.Hash{}, cp2)
+	pfs2, cpMatrix2 := ReadCheckpoint(db, cp2)
 	assert.Nil(t, pfs2, "cp2 checkpoint should be deleted")
+	assert.Nil(t, cpMatrix2, "cp2 cpMatrix checkpoint should be deleted")
 	pfs1, _ := ReadCheckpoint(db, cp1)
 	assert.NotNil(t, pfs1, "cp1 checkpoint should survive")
 	lastCP, hasCP := ReadLastCheckpoint(db)
 	assert.True(t, hasCP)
 	assert.Equal(t, cp1, lastCP)
 
-	// Rewind to cp1-1: removes cp1 checkpoint, no surviving checkpoint → delete pointer.
-	v.RewindDelete(common.Hash{}, cp1-1)
-	pfs1, _ = ReadCheckpoint(db, cp1)
+	// Host then deletes block cp1.
+	v.RewindDelete(common.Hash{}, cp1)
+	pfs1, cpMatrix1 := ReadCheckpoint(db, cp1)
 	assert.Nil(t, pfs1, "cp1 checkpoint should be deleted")
+	assert.Nil(t, cpMatrix1, "cp1 cpMatrix checkpoint should be deleted")
 	_, hasCP = ReadLastCheckpoint(db)
 	assert.False(t, hasCP, "lastCheckpoint should be deleted when no checkpoints survive")
 }
 
-// TestRewindDelete_MultiIntervalReorg is a regression test for the bug where
-// RemoveScoresAfter used CurrentHeader() as the starting point for checkpoint
-// deletion. In production, CurrentHeader() already points to the new (lower)
-// head when RewindDelete is called, so calcCheckpointBlock(CurrentHeader()) ≤
-// blockNum and the deletion loop would exit immediately without removing any
-// stale checkpoints.
-//
-// This test simulates that scenario: the testChain only contains headers up to
-// cp1 (the new head), while checkpoints at cp2 and cp3 remain in the DB from
-// the old (longer) chain. RewindDelete must delete both cp2 and cp3.
+// TestRewindDelete_MultiIntervalReorg verifies the host's actual per-block delete
+// sequence. When rewinding from cp3 to cp1, the host calls RewindDelete(cp3)
+// and then RewindDelete(cp2). Each deleted checkpoint must be removed exactly
+// when its block is deleted.
 func TestRewindDelete_MultiIntervalReorg(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	valset := mock_valset.NewMockValsetModule(ctrl)
@@ -127,7 +124,6 @@ func TestRewindDelete_MultiIntervalReorg(t *testing.T) {
 	cp2 := 2 * scoreCheckpointInterval
 	cp3 := 3 * scoreCheckpointInterval
 
-	// CurrentHeader() returns cp1 — the chain has already rewound to cp1.
 	headers := map[uint64]*types.Header{
 		0:   makeHeaderWithRound(0, 0),
 		cp1: makeHeaderWithRound(cp1, 0),
@@ -140,16 +136,26 @@ func TestRewindDelete_MultiIntervalReorg(t *testing.T) {
 	WriteCheckpoint(db, cp3, map[common.Address]uint64{addrN(0): 3}, nil)
 	WriteLastCheckpoint(db, cp3)
 
-	// Rewind to cp1: cp2 and cp3 must be deleted; cp1 must survive.
-	v.RewindDelete(common.Hash{}, cp1)
-
-	pfs3, _ := ReadCheckpoint(db, cp3)
+	// Host deletes cp3 first.
+	v.RewindDelete(common.Hash{}, cp3)
+	pfs3, cpMatrix3 := ReadCheckpoint(db, cp3)
 	assert.Nil(t, pfs3, "cp3 checkpoint should be deleted after 2-interval reorg")
-	pfs2, _ := ReadCheckpoint(db, cp2)
+	assert.Nil(t, cpMatrix3, "cp3 cpMatrix checkpoint should be deleted after 2-interval reorg")
+	pfs2, cpMatrix2 := ReadCheckpoint(db, cp2)
+	assert.NotNil(t, pfs2, "cp2 checkpoint should still exist until block cp2 is deleted")
+	assert.Empty(t, cpMatrix2, "cp2 cpMatrix checkpoint should remain empty because the test stored no cpMatrix payload")
+	lastCP, hasCP := ReadLastCheckpoint(db)
+	assert.True(t, hasCP)
+	assert.Equal(t, cp2, lastCP)
+
+	// Host deletes cp2 next.
+	v.RewindDelete(common.Hash{}, cp2)
+	pfs2, cpMatrix2 = ReadCheckpoint(db, cp2)
 	assert.Nil(t, pfs2, "cp2 checkpoint should be deleted after 2-interval reorg")
+	assert.Nil(t, cpMatrix2, "cp2 cpMatrix checkpoint should be deleted after 2-interval reorg")
 	pfs1, _ := ReadCheckpoint(db, cp1)
 	assert.NotNil(t, pfs1, "cp1 checkpoint should survive")
-	lastCP, hasCP := ReadLastCheckpoint(db)
+	lastCP, hasCP = ReadLastCheckpoint(db)
 	assert.True(t, hasCP)
 	assert.Equal(t, cp1, lastCP)
 }

@@ -26,41 +26,27 @@ func (v *VRankModule) RewindTo(newBlock *types.Block) {
 	v.cpMatrixCache.Purge()
 }
 
-// RewindDelete removes scores for all blocks strictly above num.
-// num must be the highest block that should survive (the new chain head after the rewind),
-// NOT the block being deleted. The checkpoint at num itself is preserved.
+// RewindDelete removes score state for exactly one deleted block `num`.
+// The blockchain host calls this once per deleted block during hard rewind.
 func (v *VRankModule) RewindDelete(hash common.Hash, num uint64) {
-	v.RemoveScoresAfter(num)
-}
+	pfs, _ := ReadCheckpoint(v.ChainKv, num)
+	if pfs == nil {
+		return
+	}
+	DeleteCheckpoint(v.ChainKv, num)
 
-func (v *VRankModule) RemoveScoresAfter(blockNum uint64) {
-	v.pfsCache.Purge()
-	v.cpMatrixCache.Purge()
+	lastCP, ok := ReadLastCheckpoint(v.ChainKv)
+	if !ok || lastCP != num {
+		return
+	}
 
-	// Walk backward from the last written checkpoint, deleting all that are
-	// above blockNum. CurrentHeader() is NOT used here: by the time RewindDelete
-	// is called the chain head already points to the new (lower) head, making
-	// calcCheckpointBlock(CurrentHeader()) ≤ blockNum and causing the loop to
-	// exit immediately without deleting anything.
-	if lastCP, ok := ReadLastCheckpoint(v.ChainKv); ok {
-		for cpNum := lastCP; ; {
-			if cpNum <= blockNum {
-				break
-			}
-			DeleteCheckpoint(v.ChainKv, cpNum)
-			if cpNum < scoreCheckpointInterval {
-				break
-			}
-			cpNum -= scoreCheckpointInterval
+	for cpNum := num; cpNum >= scoreCheckpointInterval; cpNum -= scoreCheckpointInterval {
+		prevCP := cpNum - scoreCheckpointInterval
+		prevPFS, _ := ReadCheckpoint(v.ChainKv, prevCP)
+		if prevPFS != nil {
+			WriteLastCheckpoint(v.ChainKv, prevCP)
+			return
 		}
 	}
-
-	// Update lastCheckpoint pointer to the highest surviving checkpoint.
-	newLastCP := calcCheckpointBlock(blockNum)
-	pfs, _ := ReadCheckpoint(v.ChainKv, newLastCP)
-	if pfs != nil {
-		WriteLastCheckpoint(v.ChainKv, newLastCP)
-	} else {
-		DeleteLastCheckpoint(v.ChainKv)
-	}
+	DeleteLastCheckpoint(v.ChainKv)
 }
