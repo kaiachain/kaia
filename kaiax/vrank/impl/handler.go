@@ -62,7 +62,8 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *istanbu
 	}
 }
 
-// HandleVRankPreprepare processes VRankPreprepare; if this node is a candidate, it broadcasts VRankCandidate.
+// HandleVRankPreprepare processes VRankPreprepare; if this node is a candidate, it verifies the
+// proposer's signature and broadcasts VRankCandidate.
 func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 	block := msg.Block
 	view := msg.View
@@ -71,6 +72,14 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 	}
 
 	if v.isCandidate(block.NumberU64()) {
+		sender, err := v.recoverVRankPreprepareSender(msg)
+		if err != nil {
+			return err
+		}
+		if err := v.verifyVRankPreprepareSender(msg, sender); err != nil {
+			return err
+		}
+
 		sigHash := v.vrankCandidateSigHash(block.NumberU64(), uint8(view.Round.Uint64()), block.Hash())
 		sig, err := crypto.Sign(sigHash.Bytes(), v.NodeKey)
 		if err != nil {
@@ -129,6 +138,45 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	return nil
 }
 
+func (v *VRankModule) vrankPreprepareSigHash(blockNum uint64, round uint8, blockHash common.Hash) common.Hash {
+	chainID := v.ChainConfig.ChainID.Uint64()
+
+	// Canonical encoding:
+	// domain separator || chain_id(uint64 BE) || block_number(uint64 BE) || round(uint8) || block_hash(32 bytes)
+	payload := make([]byte, 0, len(vrankPreprepareSigDomain)+8+8+1+len(blockHash))
+	payload = append(payload, []byte(vrankPreprepareSigDomain)...)
+	payload = binary.BigEndian.AppendUint64(payload, chainID)
+	payload = binary.BigEndian.AppendUint64(payload, blockNum)
+	payload = append(payload, round)
+	payload = append(payload, blockHash[:]...)
+	return crypto.Keccak256Hash(payload)
+}
+
+func (v *VRankModule) recoverVRankPreprepareSender(msg *vrank.VRankPreprepare) (common.Address, error) {
+	sigHash := v.vrankPreprepareSigHash(msg.Block.NumberU64(), uint8(msg.View.Round.Uint64()), msg.Block.Hash())
+	pubkey, err := crypto.SigToPub(sigHash.Bytes(), msg.Sig)
+	if err != nil {
+		logger.Debug("SigToPub failed for VRankPreprepare", "err", err, "blockNum", msg.Block.NumberU64())
+		return common.Address{}, fmt.Errorf("%w: %v", vrank.ErrInvalidProposerSig, err)
+	}
+	return crypto.PubkeyToAddress(*pubkey), nil
+}
+
+func (v *VRankModule) verifyVRankPreprepareSender(msg *vrank.VRankPreprepare, sender common.Address) error {
+	blockNum := msg.Block.NumberU64()
+	round := msg.View.Round.Uint64()
+	proposer, err := v.Valset.GetProposer(blockNum, round)
+	if err != nil {
+		logger.Debug("GetProposer failed", "err", err, "blockNum", blockNum)
+		return err
+	}
+	if sender != proposer {
+		logger.Debug("VRankPreprepare from non-proposer", "sender", sender.Hex(), "proposer", proposer.Hex(), "blockNum", blockNum)
+		return vrank.ErrMsgFromNonProposer
+	}
+	return nil
+}
+
 func (v *VRankModule) recoverVRankCandidateSender(msg *vrank.VRankCandidate) (common.Address, error) {
 	sigHash := v.vrankCandidateSigHash(msg.BlockNumber, msg.Round, msg.BlockHash)
 	pubkey, err := crypto.SigToPub(sigHash.Bytes(), msg.Sig)
@@ -168,7 +216,7 @@ func (v *VRankModule) vrankCandidateSigHash(blockNum uint64, round uint8, blockH
 	return crypto.Keccak256Hash(payload)
 }
 
-// BroadcastVRankPreprepare is called by the proposer
+// BroadcastVRankPreprepare is called by the proposer. It signs the message before broadcasting.
 func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPreprepare) {
 	block := vrankPreprepare.Block
 	candidates, err := v.Valset.GetCandidates(block.NumberU64())
@@ -176,6 +224,13 @@ func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPrepr
 		logger.Error("GetCandidates failed", "blockNum", block.NumberU64())
 		return
 	}
+	sigHash := v.vrankPreprepareSigHash(block.NumberU64(), uint8(vrankPreprepare.View.Round.Uint64()), block.Hash())
+	sig, err := crypto.Sign(sigHash.Bytes(), v.NodeKey)
+	if err != nil {
+		logger.Error("Sign VRankPreprepare failed", "blockNum", block.NumberU64())
+		return
+	}
+	vrankPreprepare.Sig = sig
 	v.broadcast(candidates, vrank.VRankPreprepareMsg, vrankPreprepare)
 }
 

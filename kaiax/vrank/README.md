@@ -110,11 +110,10 @@ Loads the latest DB checkpoint and replays blocks up to the current chain head t
 |                                           | `GetProposer(N, view.Round)`         | only proposer broadcasts VRankPreprepare              |
 |                                           | `GetCandidates(N)`                   | only proposer broadcasts VRankPreprepare              |
 | `HandleVRankPreprepare(block N)`          | `GetCandidates(N)`                   | only candidates handle VRankPreprepare                |
+|                                           | `GetProposer(N, view.Round)`         | verify VRankPreprepare sender is the proposer         |
 |                                           | `GetCommittee(N, 0)`                 | only candidates broadcast VRankCandidate to committee |
 | `HandleVRankCandidate(msg.BlockNumber=M)` | `GetCommittee(prepreparedSeqNum, 0)` | only committee handles VRankCandidate                 |
 |                                           | `GetCandidates(prepreparedSeqNum)`   | verify VRankCandidate message sender                  |
-
-Handler calls marked _approx_ use the last committed block's state because the block being built is not yet committed during active consensus.
 
 ### Start and stop
 

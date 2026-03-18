@@ -39,6 +39,7 @@ type VRankBroadcastEvent struct {
 type VRankPreprepare struct {
 	Block *types.Block
 	View  *istanbul.View
+	Sig   []byte // proposer's signature over vrankPreprepareSigHash(chainID, blockNum, round, blockHash)
 }
 
 type VRankCandidate struct {

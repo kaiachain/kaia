@@ -34,8 +34,9 @@ import (
 )
 
 const (
-	candidateMsgTimeoutMs   = 500
-	vrankCandidateSigDomain = "VRANK_CANDIDATE_V1"
+	candidateMsgTimeoutMs    = 500
+	vrankPreprepareSigDomain = "VRANK_PREPREPARE_V1"
+	vrankCandidateSigDomain  = "VRANK_CANDIDATE_V1"
 
 	broadcastChSize    = 2048
 	vrankEpoch         = vrank.Epoch

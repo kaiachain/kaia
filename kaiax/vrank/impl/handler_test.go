@@ -126,6 +126,13 @@ func signVRankCandidate(t *testing.T, m *VRankModule, key *ecdsa.PrivateKey, blo
 	return sig
 }
 
+func signVRankPreprepare(t *testing.T, m *VRankModule, key *ecdsa.PrivateKey, blockNum uint64, round uint8, blockHash common.Hash) []byte {
+	sigHash := m.vrankPreprepareSigHash(blockNum, round, blockHash)
+	sig, err := crypto.Sign(sigHash.Bytes(), key)
+	require.NoError(t, err)
+	return sig
+}
+
 // VRankScenario defines a single-block scenario for the full VRank cycle (optimistic: all messages delivered).
 // If UnresponsiveCands is set, HandleVRankCandidate is not called for those candidates (message dropped),
 // so they appear in cfReport for validators.
@@ -168,7 +175,9 @@ func runVRankScenario(t *testing.T, s VRankScenario) {
 
 	block1 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	view1_0 := &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
-	pppMsg := &vrank.VRankPreprepare{Block: block1, View: view1_0}
+	proposerCN := nameToCN[s.Proposer]
+	pppSig := signVRankPreprepare(t, proposerCN.VRankModule, proposerCN.Key, blockNum, 0, block1.Hash())
+	pppMsg := &vrank.VRankPreprepare{Block: block1, View: view1_0, Sig: pppSig}
 
 	// 1. HandleIstanbulPreprepare: every council member
 	for _, name := range s.Council {
@@ -365,19 +374,38 @@ func TestHandleVRankPreprepare(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		proposer, nonProposer, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
 
-		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
-		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(3)
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(3)
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).AnyTimes()
 
-		proposer.VRankModule.HandleVRankPreprepare(&vrank.VRankPreprepare{Block: block1, View: view1_0})
-		nonProposer.VRankModule.HandleVRankPreprepare(&vrank.VRankPreprepare{Block: block1, View: view1_0})
-		candidate.VRankModule.HandleVRankPreprepare(&vrank.VRankPreprepare{Block: block1, View: view1_0})
+		pppSig := signVRankPreprepare(t, proposer.VRankModule, proposer.Key, block1.NumberU64(), 0, block1.Hash())
+		pppMsg := &vrank.VRankPreprepare{Block: block1, View: view1_0, Sig: pppSig}
+
+		proposer.VRankModule.HandleVRankPreprepare(pppMsg)
+		nonProposer.VRankModule.HandleVRankPreprepare(pppMsg)
+		candidate.VRankModule.HandleVRankPreprepare(pppMsg)
 
 		req := mustPop(t, candidate.sub)
 		assert.Equal(t, []common.Address{proposer.Addr, nonProposer.Addr}, req.Targets)
 
 		mustNotPop(t, nonProposer.sub)
 		mustNotPop(t, proposer.sub)
+	})
+
+	t.Run("non-proposer signature should be rejected by candidate", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		proposer, nonProposer, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
+
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).AnyTimes()
+
+		// signed by nonProposer instead of proposer
+		badSig := signVRankPreprepare(t, nonProposer.VRankModule, nonProposer.Key, block1.NumberU64(), 0, block1.Hash())
+		badMsg := &vrank.VRankPreprepare{Block: block1, View: view1_0, Sig: badSig}
+
+		err := candidate.VRankModule.HandleVRankPreprepare(badMsg)
+		assert.ErrorIs(t, err, vrank.ErrMsgFromNonProposer)
+		mustNotPop(t, candidate.sub)
 	})
 }
 
