@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -170,7 +171,7 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 		return consensus.ErrUnknownAncestor
 	}
 	// Ensure that the block's timestamp isn't too close to it's parent
-	if parent.Time.Uint64()+sb.config.BlockPeriod > header.Time.Uint64() {
+	if parent.Time.Uint64()+uint64(params.BlockGenerationInterval) > header.Time.Uint64() {
 		return istanbul.ErrInvalidTimestamp
 	}
 	if err := sb.verifySigner(chain, header, parents); err != nil {

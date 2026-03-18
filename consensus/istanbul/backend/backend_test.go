@@ -127,10 +127,10 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 
 func newTestBackend() (b *backend) {
 	config := params.TestChainConfig.Copy()
-	return newTestBackendWithConfig(config, istanbul.DefaultConfig.BlockPeriod, nil)
+	return newTestBackendWithConfig(config, nil)
 }
 
-func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint64, key *ecdsa.PrivateKey) (b *backend) {
+func newTestBackendWithConfig(chainConfig *params.ChainConfig, key *ecdsa.PrivateKey) (b *backend) {
 	dbm := database.NewMemoryDBManager()
 	if key == nil {
 		// if key is nil, generate new key for a test account
@@ -144,7 +144,6 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, blockPeriod uint6
 		Epoch:          chainConfig.Istanbul.Epoch,
 		ProposerPolicy: istanbul.ProposerPolicy(chainConfig.Istanbul.ProposerPolicy),
 		SubGroupSize:   chainConfig.Istanbul.SubGroupSize,
-		BlockPeriod:    blockPeriod,
 		Timeout:        10000,
 	}
 

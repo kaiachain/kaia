@@ -164,7 +164,7 @@ func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, [
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.
 func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.BlockChain, *backend) {
-	// Keep PrepareHeader timestamp logic aligned with Istanbul block period in tests.
+	// Keep PrepareHeader timestamp logic aligned with block generation interval in tests.
 	oldInterval := params.BlockGenerationInterval
 	t.Cleanup(func() {
 		params.BlockGenerationInterval = oldInterval
@@ -175,7 +175,7 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	genesis.Config = params.TestChainConfig.Copy()
 
 	var (
-		period   = istanbul.DefaultConfig.BlockPeriod
+		period   = uint64(params.DefaultBlockGenerationInterval)
 		mStaking staking.StakingModule
 		err      error
 	)
@@ -247,7 +247,7 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	}
 
 	// if governance mode is single, this address is the governing node address
-	b := newTestBackendWithConfig(genesis.Config, period, nodeKeys[0])
+	b := newTestBackendWithConfig(genesis.Config, nodeKeys[0])
 
 	appendValidators(genesis, addrs)
 
@@ -402,13 +402,14 @@ func appendValidators(genesis *blockchain.Genesis, addrs []common.Address) {
 	genesis.ExtraData = append(genesis.ExtraData, istPayload...)
 }
 
-func makeHeader(parent *types.Block, config *istanbul.Config, chainConfig *params.ChainConfig) *types.Header {
+func makeHeader(parent *types.Block, chainConfig *params.ChainConfig) *types.Header {
+	interval := uint64(params.BlockGenerationInterval)
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     parent.Number().Add(parent.Number(), common.Big1),
 		GasUsed:    0,
 		Extra:      parent.Extra(),
-		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(config.BlockPeriod)),
+		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(interval)),
 		BlockScore: params.DefaultBlockScore,
 	}
 	if parent.Header().BaseFee != nil {
@@ -447,7 +448,7 @@ func makeBlockWithoutSeal(chain *blockchain.BlockChain, engine *backend, parent 
 // makeBlockWithoutSealAndModifiedHeader creates a block without seal, optionally with a modified header.
 // The modifyHeader function is called before finalization.
 func makeBlockWithoutSealAndModifiedHeader(chain *blockchain.BlockChain, engine *backend, parent *types.Block, modifyHeader func(*types.Header)) *types.Block {
-	header := makeHeader(parent, engine.config, chain.Config())
+	header := makeHeader(parent, chain.Config())
 	if err := chain.PrepareHeader(header); err != nil {
 		panic(err)
 	}
@@ -481,7 +482,7 @@ func TestPrepare(t *testing.T) {
 	chain, engine := newBlockChain(t, 1)
 	defer engine.Stop()
 
-	header := makeHeader(chain.Genesis(), engine.config, chain.Config())
+	header := makeHeader(chain.Genesis(), chain.Config())
 	err := chain.PrepareHeader(header)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
@@ -561,7 +562,7 @@ func TestVerifyHeader(t *testing.T) {
 				header: func() *types.Header {
 					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 					header := block.Header()
-					header.Time = new(big.Int).Add(chain.Genesis().Time(), new(big.Int).SetUint64(engine.config.BlockPeriod-1))
+					header.Time = new(big.Int).Add(chain.Genesis().Time(), new(big.Int).SetUint64(uint64(params.BlockGenerationInterval)-1))
 					return header
 				}(),
 				expectedErr: istanbul.ErrInvalidTimestamp,
