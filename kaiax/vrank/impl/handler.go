@@ -227,7 +227,7 @@ func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPrepr
 
 // BroadcastVRankCandidate is called by candidates.
 func (v *VRankModule) BroadcastVRankCandidate(vrankCandidate *vrank.VRankCandidate) {
-	// should be GetCommittee(blockNum + 1, 0), but committee is not finalized during `blockNum` consensus.
+	// should be GetCommittee(blockNum + 1, round), but committee is not finalized during `blockNum` consensus.
 	validators, err := v.Valset.GetCommittee(vrankCandidate.BlockNumber, uint64(vrankCandidate.Round))
 	if err != nil || validators == nil {
 		logger.Error("GetCommittee failed", "blockNum", vrankCandidate.BlockNumber)
