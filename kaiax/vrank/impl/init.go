@@ -188,7 +188,10 @@ func (v *VRankModule) catchUp(headNum uint64) error {
 		if blockNum%scoreCheckpointInterval == 0 {
 			WriteCheckpoint(v.ChainKv, blockNum, pfs, cpMatrix)
 			WriteLastCheckpoint(v.ChainKv, blockNum)
-			logger.Info("VRank module catchup", "blockNum", blockNum)
+		}
+
+		if blockNum%10000 == 0 {
+			logger.Info("VRank module catchup progress", "blockNum", blockNum, "progress", float64(blockNum-start)/float64(headNum-start))
 		}
 	}
 	return nil

@@ -41,7 +41,7 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *istanbu
 	blockNum := block.NumberU64()
 	// if I'm a committee member (ValActive), then I need to collect VRankCandidate
 	// should be isCommitteeMember(blockNum + 1), but committee is not finalized during `blockNum` consensus.
-	if v.isCommitteeMember(blockNum) {
+	if v.isCommitteeMember(blockNum, view.Round.Uint64()) {
 		copiedView := istanbul.View{
 			Sequence: new(big.Int).Set(view.Sequence),
 			Round:    new(big.Int).Set(view.Round),
@@ -104,17 +104,18 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 
 	receivedAt := time.Now()
 	v.prepreparedViewMu.RLock()
-	prepreparedSeqNum := uint64(0)
-	hasPrepreparedSeq := v.prepreparedView.Sequence != nil
-	if hasPrepreparedSeq {
+	prepreparedSeqNum, prepreparedRound := uint64(0), uint64(0)
+	hasPrepreparedView := v.prepreparedView.Sequence != nil && v.prepreparedView.Round != nil
+	if hasPrepreparedView {
 		prepreparedSeqNum = v.prepreparedView.Sequence.Uint64()
+		prepreparedRound = v.prepreparedView.Round.Uint64()
 	}
 	v.prepreparedViewMu.RUnlock()
-	if !hasPrepreparedSeq {
+	if !hasPrepreparedView {
 		return vrank.ErrPrepreparedViewNotSet
 	}
 	// should be isCommitteeMember(prepreparedSeqNum + 1), but committee is not finalized during `seq` consensus.
-	if v.isCommitteeMember(prepreparedSeqNum) {
+	if v.isCommitteeMember(prepreparedSeqNum, prepreparedRound) {
 		if msg.BlockNumber > prepreparedSeqNum+maxCollectorWindow {
 			return vrank.ErrTooFar
 		}
@@ -275,8 +276,8 @@ func (v *VRankModule) isCandidate(blockNum uint64) bool {
 	return slices.Contains(candidates, v.nodeID)
 }
 
-func (v *VRankModule) isCommitteeMember(blockNum uint64) bool {
-	committee, err := v.Valset.GetCommittee(blockNum, 0)
+func (v *VRankModule) isCommitteeMember(blockNum, round uint64) bool {
+	committee, err := v.Valset.GetCommittee(blockNum, round)
 	if err != nil || committee == nil {
 		logger.Error("GetCommittee failed", "blockNum", blockNum)
 		return false
