@@ -26,7 +26,6 @@ var (
 	ErrPrepreparedViewNotSet = errors.New("preprepared view is not set")
 	ErrViewMismatch          = errors.New("view mismatch")
 	ErrBlockHashMismatch     = errors.New("block hash mismatch")
-	ErrMsgFromNonCandidate   = errors.New("message from non-candidate")
 	ErrMsgFromNonProposer    = errors.New("message from non-proposer")
 	ErrInvalidCandidateSig   = errors.New("invalid candidate signature")
 	ErrInvalidProposerSig    = errors.New("invalid proposer signature")

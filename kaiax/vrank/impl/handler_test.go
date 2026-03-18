@@ -169,8 +169,8 @@ func runVRankScenario(t *testing.T, s VRankScenario) {
 	}
 	proposerAddr := nameToCN[s.Proposer].Addr
 	valset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(councilAddrs, nil).AnyTimes()
-	valset.EXPECT().GetCandidates(blockNum).Return(candAddrs, nil).AnyTimes()                             // BroadcastVRankPreprepare
-	valset.EXPECT().GetCandidates(calcEpochStart(blockNum+1)).Return(candAddrs, nil).AnyTimes()           // TallyCfReport
+	valset.EXPECT().GetCandidates(blockNum).Return(candAddrs, nil).AnyTimes()                   // BroadcastVRankPreprepare
+	valset.EXPECT().GetCandidates(calcEpochStart(blockNum+1)).Return(candAddrs, nil).AnyTimes() // TallyCfReport
 	valset.EXPECT().GetProposer(blockNum, uint64(0)).Return(proposerAddr, nil).AnyTimes()
 
 	block1 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
@@ -471,16 +471,18 @@ func TestHandleVRankCandidate(t *testing.T) {
 		// proposer is not in the next council, so it should only broadcast and does not start collection.
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{validator.Addr}, nil).Times(3)
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(2)
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(2)
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(1)
 
 		proposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0) // this won't happen in production
-		proposer.VRankModule.HandleVRankCandidate(&msg)
+		err := proposer.VRankModule.HandleVRankCandidate(&msg)
+		require.ErrorIs(t, err, vrank.ErrPrepreparedViewNotSet)
 		prepreparedTime, _, candMap := proposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.True(t, prepreparedTime.IsZero())
 		assert.Nil(t, candMap)
 
 		validator.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
-		validator.VRankModule.HandleVRankCandidate(&msg)
+		err = validator.VRankModule.HandleVRankCandidate(&msg)
+		require.NoError(t, err)
 		prepreparedTime, _, candMap = validator.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.False(t, prepreparedTime.IsZero())
 		assert.Equal(t, 1, len(candMap))
@@ -553,7 +555,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		}
 	})
 
-	t.Run("duplicate message with invalid signature should not overwrite", func(t *testing.T) {
+	t.Run("message with different recovered sender should not overwrite", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val, cand := createCN(t, valset), createCN(t, valset)
 
@@ -583,15 +585,59 @@ func TestHandleVRankCandidate(t *testing.T) {
 		assert.Equal(t, msg.Sig, first.Msg.Sig)
 
 		err = val.VRankModule.HandleVRankCandidate(&dupInvalidMsg)
-		require.Error(t, err)
-		assert.ErrorIs(t, err, vrank.ErrMsgFromNonCandidate)
+		require.NoError(t, err)
 
-		// dupInvalidMsg is gone
+		// The original sender's stored message must remain unchanged even if a second
+		// signed payload recovers to a different sender for the same view.
 		_, _, candMap = val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
-		assert.Len(t, candMap, 1)
+		assert.Len(t, candMap, 2) // invalid message is accepted
 		assert.Equal(t, msg.BlockHash, candMap[cand.Addr].Msg.BlockHash)
 		assert.Equal(t, msg.BlockNumber, candMap[cand.Addr].Msg.BlockNumber)
 		assert.Equal(t, msg.Round, candMap[cand.Addr].Msg.Round)
 		assert.Equal(t, msg.Sig, candMap[cand.Addr].Msg.Sig)
+	})
+
+	t.Run("stale messages should be discarded", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		val, cand := createCN(t, valset), createCN(t, valset)
+		block2 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(2)})
+		view2_0 := &istanbul.View{Sequence: big.NewInt(2), Round: common.Big0}
+		sig := signVRankCandidate(t, cand.VRankModule, cand.Key, block1.NumberU64(), 0, block1.Hash())
+		msg := &vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: 0, BlockHash: block1.Hash(), Sig: sig}
+
+		valset.EXPECT().GetCommittee(uint64(2), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(2), uint64(0)).Return(common.Address{}, nil).AnyTimes()
+
+		val.VRankModule.HandleIstanbulPreprepare(block2, view2_0)
+
+		err := val.VRankModule.HandleVRankCandidate(msg)
+		require.NoError(t, err)
+
+		_, _, candMap := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
+		assert.Nil(t, candMap, "stale messages should not be stored")
+	})
+
+	t.Run("epoch boundary future messages should be stored until tally", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		val, cand := createCN(t, valset), createCN(t, valset)
+		blockNum := vrank.Epoch - 1
+		nextBlockNum := vrank.Epoch
+		block := types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(blockNum)})
+		nextBlock := types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(nextBlockNum)})
+		view := &istanbul.View{Sequence: new(big.Int).SetUint64(blockNum), Round: common.Big0}
+		sig := signVRankCandidate(t, cand.VRankModule, cand.Key, nextBlockNum, 0, nextBlock.Hash())
+		msg := &vrank.VRankCandidate{BlockNumber: nextBlockNum, Round: 0, BlockHash: nextBlock.Hash(), Sig: sig}
+
+		valset.EXPECT().GetCommittee(blockNum, uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(blockNum, uint64(0)).Return(common.Address{}, nil).AnyTimes()
+
+		val.VRankModule.HandleIstanbulPreprepare(block, view)
+
+		err := val.VRankModule.HandleVRankCandidate(msg)
+		require.NoError(t, err)
+
+		_, _, candMap := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: nextBlockNum, R: 0})
+		require.Len(t, candMap, 1)
+		assert.Equal(t, msg.BlockHash, candMap[cand.Addr].Msg.BlockHash)
 	})
 }

@@ -114,29 +114,33 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if !hasPrepreparedView {
 		return vrank.ErrPrepreparedViewNotSet
 	}
-	// should be isCommitteeMember(prepreparedSeqNum + 1), but committee is not finalized during `seq` consensus.
-	if v.isCommitteeMember(prepreparedSeqNum, prepreparedRound) {
-		if msg.BlockNumber > prepreparedSeqNum+maxCollectorWindow {
-			return vrank.ErrTooFar
-		}
-		if msg.Round > maxRound {
-			return vrank.ErrRoundOutOfRange
-		}
-
-		sender, err := v.recoverVRankCandidateSender(msg)
-		if err != nil {
-			return err
-		}
-		vk := vrank.ViewKey{N: msg.BlockNumber, R: msg.Round}
-		if v.collector.HasCandMsg(vk, sender) {
-			return nil
-		}
-		if err := v.verifyVRankCandidateSender(msg, sender, prepreparedSeqNum); err != nil {
-			return err
-		}
-		v.collector.AddCandMsg(vk, sender, receivedAt, msg)
+	if msg.BlockNumber > prepreparedSeqNum+maxCollectorWindow {
+		return vrank.ErrTooFar
 	}
+	if msg.Round > maxRound {
+		return vrank.ErrRoundOutOfRange
+	}
+	if isStaleVRankCandidate(msg, prepreparedSeqNum, prepreparedRound) {
+		return nil
+	}
+
+	sender, err := v.recoverVRankCandidateSender(msg)
+	if err != nil {
+		return err
+	}
+	vk := vrank.ViewKey{N: msg.BlockNumber, R: msg.Round}
+	if v.collector.HasCandMsg(vk, sender) {
+		return nil
+	}
+	v.collector.AddCandMsg(vk, sender, receivedAt, msg)
 	return nil
+}
+
+func isStaleVRankCandidate(msg *vrank.VRankCandidate, prepreparedSeqNum, prepreparedRound uint64) bool {
+	if msg.BlockNumber < prepreparedSeqNum {
+		return true
+	}
+	return msg.BlockNumber == prepreparedSeqNum && uint64(msg.Round) < prepreparedRound
 }
 
 func (v *VRankModule) vrankPreprepareSigHash(blockNum uint64, round uint8, blockHash common.Hash) common.Hash {
@@ -187,20 +191,6 @@ func (v *VRankModule) recoverVRankCandidateSender(msg *vrank.VRankCandidate) (co
 	}
 	sender := crypto.PubkeyToAddress(*pubkey)
 	return sender, nil
-}
-
-func (v *VRankModule) verifyVRankCandidateSender(msg *vrank.VRankCandidate, sender common.Address, prepreparedSeqNum uint64) error {
-	// should be GetCandidates(msg.BlockNumber), but candidates are not finalized during `Sequence` consensus.
-	candidates, err := v.Valset.GetCandidates(prepreparedSeqNum)
-	if err != nil {
-		logger.Debug("GetCandidates failed", "err", err, "blockNum", msg.BlockNumber)
-		return err
-	}
-	if !slices.Contains(candidates, sender) {
-		logger.Debug("Sender is not a candidate", "sender", sender.Hex(), "blockNum", msg.BlockNumber)
-		return vrank.ErrMsgFromNonCandidate
-	}
-	return nil
 }
 
 func (v *VRankModule) vrankCandidateSigHash(blockNum uint64, round uint8, blockHash common.Hash) common.Hash {
