@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity ^0.8.18;
 
-import {Profile, State} from "../../system_contracts/types/Node.sol";
+import {Profile, State} from "../types/Node.sol";
 
 /// @title AddressBookV2Mock
 /// @notice Minimal mock for testing multiCallStakingInfoPermissionless

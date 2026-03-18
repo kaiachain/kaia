@@ -204,7 +204,6 @@ func (_IERC20 *IERC20TransactorRaw) Transact(opts *bind.TransactOpts, method str
 func (_IERC20 *IERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _IERC20.contract.Call(opts, &out, "allowance", owner, spender)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -212,7 +211,6 @@ func (_IERC20 *IERC20Caller) Allowance(opts *bind.CallOpts, owner common.Address
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
@@ -235,7 +233,6 @@ func (_IERC20 *IERC20CallerSession) Allowance(owner common.Address, spender comm
 func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _IERC20.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -243,7 +240,6 @@ func (_IERC20 *IERC20Caller) BalanceOf(opts *bind.CallOpts, owner common.Address
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -266,7 +262,6 @@ func (_IERC20 *IERC20CallerSession) BalanceOf(owner common.Address) (*big.Int, e
 func (_IERC20 *IERC20Caller) Decimals(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _IERC20.contract.Call(opts, &out, "decimals")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -274,7 +269,6 @@ func (_IERC20 *IERC20Caller) Decimals(opts *bind.CallOpts) (uint8, error) {
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // Decimals is a free data retrieval call binding the contract method 0x313ce567.
@@ -297,7 +291,6 @@ func (_IERC20 *IERC20CallerSession) Decimals() (uint8, error) {
 func (_IERC20 *IERC20Caller) Name(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _IERC20.contract.Call(opts, &out, "name")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -305,7 +298,6 @@ func (_IERC20 *IERC20Caller) Name(opts *bind.CallOpts) (string, error) {
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
@@ -328,7 +320,6 @@ func (_IERC20 *IERC20CallerSession) Name() (string, error) {
 func (_IERC20 *IERC20Caller) Symbol(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _IERC20.contract.Call(opts, &out, "symbol")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -336,7 +327,6 @@ func (_IERC20 *IERC20Caller) Symbol(opts *bind.CallOpts) (string, error) {
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Symbol is a free data retrieval call binding the contract method 0x95d89b41.
@@ -359,7 +349,6 @@ func (_IERC20 *IERC20CallerSession) Symbol() (string, error) {
 func (_IERC20 *IERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IERC20.contract.Call(opts, &out, "totalSupply")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -367,7 +356,6 @@ func (_IERC20 *IERC20Caller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
@@ -526,7 +514,6 @@ type IERC20Approval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_IERC20 *IERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*IERC20ApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -547,7 +534,6 @@ func (_IERC20 *IERC20Filterer) FilterApproval(opts *bind.FilterOpts, owner []com
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_IERC20 *IERC20Filterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *IERC20Approval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -680,7 +666,6 @@ type IERC20Transfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_IERC20 *IERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*IERC20TransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -701,7 +686,6 @@ func (_IERC20 *IERC20Filterer) FilterTransfer(opts *bind.FilterOpts, from []comm
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_IERC20 *IERC20Filterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *IERC20Transfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -929,7 +913,6 @@ func (_IUniswapV2Factory *IUniswapV2FactoryTransactorRaw) Transact(opts *bind.Tr
 func (_IUniswapV2Factory *IUniswapV2FactoryCaller) AllPairs(opts *bind.CallOpts, arg0 *big.Int) (common.Address, error) {
 	var out []interface{}
 	err := _IUniswapV2Factory.contract.Call(opts, &out, "allPairs", arg0)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -937,7 +920,6 @@ func (_IUniswapV2Factory *IUniswapV2FactoryCaller) AllPairs(opts *bind.CallOpts,
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // AllPairs is a free data retrieval call binding the contract method 0x1e3dd18b.
@@ -960,7 +942,6 @@ func (_IUniswapV2Factory *IUniswapV2FactoryCallerSession) AllPairs(arg0 *big.Int
 func (_IUniswapV2Factory *IUniswapV2FactoryCaller) AllPairsLength(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Factory.contract.Call(opts, &out, "allPairsLength")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -968,7 +949,6 @@ func (_IUniswapV2Factory *IUniswapV2FactoryCaller) AllPairsLength(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // AllPairsLength is a free data retrieval call binding the contract method 0x574f2ba3.
@@ -991,7 +971,6 @@ func (_IUniswapV2Factory *IUniswapV2FactoryCallerSession) AllPairsLength() (*big
 func (_IUniswapV2Factory *IUniswapV2FactoryCaller) FeeTo(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IUniswapV2Factory.contract.Call(opts, &out, "feeTo")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -999,7 +978,6 @@ func (_IUniswapV2Factory *IUniswapV2FactoryCaller) FeeTo(opts *bind.CallOpts) (c
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // FeeTo is a free data retrieval call binding the contract method 0x017e7e58.
@@ -1022,7 +1000,6 @@ func (_IUniswapV2Factory *IUniswapV2FactoryCallerSession) FeeTo() (common.Addres
 func (_IUniswapV2Factory *IUniswapV2FactoryCaller) FeeToSetter(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IUniswapV2Factory.contract.Call(opts, &out, "feeToSetter")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1030,7 +1007,6 @@ func (_IUniswapV2Factory *IUniswapV2FactoryCaller) FeeToSetter(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // FeeToSetter is a free data retrieval call binding the contract method 0x094b7415.
@@ -1053,7 +1029,6 @@ func (_IUniswapV2Factory *IUniswapV2FactoryCallerSession) FeeToSetter() (common.
 func (_IUniswapV2Factory *IUniswapV2FactoryCaller) GetPair(opts *bind.CallOpts, tokenA common.Address, tokenB common.Address) (common.Address, error) {
 	var out []interface{}
 	err := _IUniswapV2Factory.contract.Call(opts, &out, "getPair", tokenA, tokenB)
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1061,7 +1036,6 @@ func (_IUniswapV2Factory *IUniswapV2FactoryCaller) GetPair(opts *bind.CallOpts, 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // GetPair is a free data retrieval call binding the contract method 0xe6a43905.
@@ -1221,7 +1195,6 @@ type IUniswapV2FactoryPairCreated struct {
 //
 // Solidity: event PairCreated(address indexed token0, address indexed token1, address pair, uint256 arg3)
 func (_IUniswapV2Factory *IUniswapV2FactoryFilterer) FilterPairCreated(opts *bind.FilterOpts, token0 []common.Address, token1 []common.Address) (*IUniswapV2FactoryPairCreatedIterator, error) {
-
 	var token0Rule []interface{}
 	for _, token0Item := range token0 {
 		token0Rule = append(token0Rule, token0Item)
@@ -1242,7 +1215,6 @@ func (_IUniswapV2Factory *IUniswapV2FactoryFilterer) FilterPairCreated(opts *bin
 //
 // Solidity: event PairCreated(address indexed token0, address indexed token1, address pair, uint256 arg3)
 func (_IUniswapV2Factory *IUniswapV2FactoryFilterer) WatchPairCreated(opts *bind.WatchOpts, sink chan<- *IUniswapV2FactoryPairCreated, token0 []common.Address, token1 []common.Address) (event.Subscription, error) {
-
 	var token0Rule []interface{}
 	for _, token0Item := range token0 {
 		token0Rule = append(token0Rule, token0Item)
@@ -1489,7 +1461,6 @@ func (_IUniswapV2Pair *IUniswapV2PairTransactorRaw) Transact(opts *bind.Transact
 func (_IUniswapV2Pair *IUniswapV2PairCaller) DOMAINSEPARATOR(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "DOMAIN_SEPARATOR")
-
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -1497,7 +1468,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) DOMAINSEPARATOR(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
-
 }
 
 // DOMAINSEPARATOR is a free data retrieval call binding the contract method 0x3644e515.
@@ -1520,7 +1490,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) DOMAINSEPARATOR() ([32]byte,
 func (_IUniswapV2Pair *IUniswapV2PairCaller) MINIMUMLIQUIDITY(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "MINIMUM_LIQUIDITY")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -1528,7 +1497,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) MINIMUMLIQUIDITY(opts *bind.CallOpt
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // MINIMUMLIQUIDITY is a free data retrieval call binding the contract method 0xba9a7a56.
@@ -1551,7 +1519,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) MINIMUMLIQUIDITY() (*big.Int
 func (_IUniswapV2Pair *IUniswapV2PairCaller) PERMITTYPEHASH(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "PERMIT_TYPEHASH")
-
 	if err != nil {
 		return *new([32]byte), err
 	}
@@ -1559,7 +1526,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) PERMITTYPEHASH(opts *bind.CallOpts)
 	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
 
 	return out0, err
-
 }
 
 // PERMITTYPEHASH is a free data retrieval call binding the contract method 0x30adf81f.
@@ -1582,7 +1548,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) PERMITTYPEHASH() ([32]byte, 
 func (_IUniswapV2Pair *IUniswapV2PairCaller) Allowance(opts *bind.CallOpts, owner common.Address, spender common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "allowance", owner, spender)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -1590,7 +1555,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) Allowance(opts *bind.CallOpts, owne
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Allowance is a free data retrieval call binding the contract method 0xdd62ed3e.
@@ -1613,7 +1577,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) Allowance(owner common.Addre
 func (_IUniswapV2Pair *IUniswapV2PairCaller) BalanceOf(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "balanceOf", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -1621,7 +1584,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) BalanceOf(opts *bind.CallOpts, owne
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
@@ -1644,7 +1606,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) BalanceOf(owner common.Addre
 func (_IUniswapV2Pair *IUniswapV2PairCaller) Decimals(opts *bind.CallOpts) (uint8, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "decimals")
-
 	if err != nil {
 		return *new(uint8), err
 	}
@@ -1652,7 +1613,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) Decimals(opts *bind.CallOpts) (uint
 	out0 := *abi.ConvertType(out[0], new(uint8)).(*uint8)
 
 	return out0, err
-
 }
 
 // Decimals is a free data retrieval call binding the contract method 0x313ce567.
@@ -1675,7 +1635,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) Decimals() (uint8, error) {
 func (_IUniswapV2Pair *IUniswapV2PairCaller) Factory(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "factory")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1683,7 +1642,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) Factory(opts *bind.CallOpts) (commo
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Factory is a free data retrieval call binding the contract method 0xc45a0155.
@@ -1707,7 +1665,8 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) GetReserves(opts *bind.CallOpts) (s
 	Reserve0           *big.Int
 	Reserve1           *big.Int
 	BlockTimestampLast uint32
-}, error) {
+}, error,
+) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "getReserves")
 
@@ -1725,7 +1684,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) GetReserves(opts *bind.CallOpts) (s
 	outstruct.BlockTimestampLast = *abi.ConvertType(out[2], new(uint32)).(*uint32)
 
 	return *outstruct, err
-
 }
 
 // GetReserves is a free data retrieval call binding the contract method 0x0902f1ac.
@@ -1735,7 +1693,8 @@ func (_IUniswapV2Pair *IUniswapV2PairSession) GetReserves() (struct {
 	Reserve0           *big.Int
 	Reserve1           *big.Int
 	BlockTimestampLast uint32
-}, error) {
+}, error,
+) {
 	return _IUniswapV2Pair.Contract.GetReserves(&_IUniswapV2Pair.CallOpts)
 }
 
@@ -1746,7 +1705,8 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) GetReserves() (struct {
 	Reserve0           *big.Int
 	Reserve1           *big.Int
 	BlockTimestampLast uint32
-}, error) {
+}, error,
+) {
 	return _IUniswapV2Pair.Contract.GetReserves(&_IUniswapV2Pair.CallOpts)
 }
 
@@ -1756,7 +1716,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) GetReserves() (struct {
 func (_IUniswapV2Pair *IUniswapV2PairCaller) KLast(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "kLast")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -1764,7 +1723,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) KLast(opts *bind.CallOpts) (*big.In
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // KLast is a free data retrieval call binding the contract method 0x7464fc3d.
@@ -1787,7 +1745,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) KLast() (*big.Int, error) {
 func (_IUniswapV2Pair *IUniswapV2PairCaller) Name(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "name")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -1795,7 +1752,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) Name(opts *bind.CallOpts) (string, 
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
@@ -1818,7 +1774,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) Name() (string, error) {
 func (_IUniswapV2Pair *IUniswapV2PairCaller) Nonces(opts *bind.CallOpts, owner common.Address) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "nonces", owner)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -1826,7 +1781,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) Nonces(opts *bind.CallOpts, owner c
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Nonces is a free data retrieval call binding the contract method 0x7ecebe00.
@@ -1849,7 +1803,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) Nonces(owner common.Address)
 func (_IUniswapV2Pair *IUniswapV2PairCaller) Price0CumulativeLast(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "price0CumulativeLast")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -1857,7 +1810,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) Price0CumulativeLast(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Price0CumulativeLast is a free data retrieval call binding the contract method 0x5909c0d5.
@@ -1880,7 +1832,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) Price0CumulativeLast() (*big
 func (_IUniswapV2Pair *IUniswapV2PairCaller) Price1CumulativeLast(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "price1CumulativeLast")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -1888,7 +1839,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) Price1CumulativeLast(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Price1CumulativeLast is a free data retrieval call binding the contract method 0x5a3d5493.
@@ -1911,7 +1861,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) Price1CumulativeLast() (*big
 func (_IUniswapV2Pair *IUniswapV2PairCaller) Symbol(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "symbol")
-
 	if err != nil {
 		return *new(string), err
 	}
@@ -1919,7 +1868,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) Symbol(opts *bind.CallOpts) (string
 	out0 := *abi.ConvertType(out[0], new(string)).(*string)
 
 	return out0, err
-
 }
 
 // Symbol is a free data retrieval call binding the contract method 0x95d89b41.
@@ -1942,7 +1890,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) Symbol() (string, error) {
 func (_IUniswapV2Pair *IUniswapV2PairCaller) Token0(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "token0")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1950,7 +1897,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) Token0(opts *bind.CallOpts) (common
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Token0 is a free data retrieval call binding the contract method 0x0dfe1681.
@@ -1973,7 +1919,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) Token0() (common.Address, er
 func (_IUniswapV2Pair *IUniswapV2PairCaller) Token1(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "token1")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -1981,7 +1926,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) Token1(opts *bind.CallOpts) (common
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Token1 is a free data retrieval call binding the contract method 0xd21220a7.
@@ -2004,7 +1948,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCallerSession) Token1() (common.Address, er
 func (_IUniswapV2Pair *IUniswapV2PairCaller) TotalSupply(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Pair.contract.Call(opts, &out, "totalSupply")
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -2012,7 +1955,6 @@ func (_IUniswapV2Pair *IUniswapV2PairCaller) TotalSupply(opts *bind.CallOpts) (*
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // TotalSupply is a free data retrieval call binding the contract method 0x18160ddd.
@@ -2318,7 +2260,6 @@ type IUniswapV2PairApproval struct {
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_IUniswapV2Pair *IUniswapV2PairFilterer) FilterApproval(opts *bind.FilterOpts, owner []common.Address, spender []common.Address) (*IUniswapV2PairApprovalIterator, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -2339,7 +2280,6 @@ func (_IUniswapV2Pair *IUniswapV2PairFilterer) FilterApproval(opts *bind.FilterO
 //
 // Solidity: event Approval(address indexed owner, address indexed spender, uint256 value)
 func (_IUniswapV2Pair *IUniswapV2PairFilterer) WatchApproval(opts *bind.WatchOpts, sink chan<- *IUniswapV2PairApproval, owner []common.Address, spender []common.Address) (event.Subscription, error) {
-
 	var ownerRule []interface{}
 	for _, ownerItem := range owner {
 		ownerRule = append(ownerRule, ownerItem)
@@ -2473,7 +2413,6 @@ type IUniswapV2PairBurn struct {
 //
 // Solidity: event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to)
 func (_IUniswapV2Pair *IUniswapV2PairFilterer) FilterBurn(opts *bind.FilterOpts, sender []common.Address, to []common.Address) (*IUniswapV2PairBurnIterator, error) {
-
 	var senderRule []interface{}
 	for _, senderItem := range sender {
 		senderRule = append(senderRule, senderItem)
@@ -2495,7 +2434,6 @@ func (_IUniswapV2Pair *IUniswapV2PairFilterer) FilterBurn(opts *bind.FilterOpts,
 //
 // Solidity: event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to)
 func (_IUniswapV2Pair *IUniswapV2PairFilterer) WatchBurn(opts *bind.WatchOpts, sink chan<- *IUniswapV2PairBurn, sender []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var senderRule []interface{}
 	for _, senderItem := range sender {
 		senderRule = append(senderRule, senderItem)
@@ -2629,7 +2567,6 @@ type IUniswapV2PairMint struct {
 //
 // Solidity: event Mint(address indexed sender, uint256 amount0, uint256 amount1)
 func (_IUniswapV2Pair *IUniswapV2PairFilterer) FilterMint(opts *bind.FilterOpts, sender []common.Address) (*IUniswapV2PairMintIterator, error) {
-
 	var senderRule []interface{}
 	for _, senderItem := range sender {
 		senderRule = append(senderRule, senderItem)
@@ -2646,7 +2583,6 @@ func (_IUniswapV2Pair *IUniswapV2PairFilterer) FilterMint(opts *bind.FilterOpts,
 //
 // Solidity: event Mint(address indexed sender, uint256 amount0, uint256 amount1)
 func (_IUniswapV2Pair *IUniswapV2PairFilterer) WatchMint(opts *bind.WatchOpts, sink chan<- *IUniswapV2PairMint, sender []common.Address) (event.Subscription, error) {
-
 	var senderRule []interface{}
 	for _, senderItem := range sender {
 		senderRule = append(senderRule, senderItem)
@@ -2778,7 +2714,6 @@ type IUniswapV2PairSwap struct {
 //
 // Solidity: event Swap(address indexed sender, uint256 amount0In, uint256 amount1In, uint256 amount0Out, uint256 amount1Out, address indexed to)
 func (_IUniswapV2Pair *IUniswapV2PairFilterer) FilterSwap(opts *bind.FilterOpts, sender []common.Address, to []common.Address) (*IUniswapV2PairSwapIterator, error) {
-
 	var senderRule []interface{}
 	for _, senderItem := range sender {
 		senderRule = append(senderRule, senderItem)
@@ -2800,7 +2735,6 @@ func (_IUniswapV2Pair *IUniswapV2PairFilterer) FilterSwap(opts *bind.FilterOpts,
 //
 // Solidity: event Swap(address indexed sender, uint256 amount0In, uint256 amount1In, uint256 amount0Out, uint256 amount1Out, address indexed to)
 func (_IUniswapV2Pair *IUniswapV2PairFilterer) WatchSwap(opts *bind.WatchOpts, sink chan<- *IUniswapV2PairSwap, sender []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var senderRule []interface{}
 	for _, senderItem := range sender {
 		senderRule = append(senderRule, senderItem)
@@ -2933,7 +2867,6 @@ type IUniswapV2PairSync struct {
 //
 // Solidity: event Sync(uint112 reserve0, uint112 reserve1)
 func (_IUniswapV2Pair *IUniswapV2PairFilterer) FilterSync(opts *bind.FilterOpts) (*IUniswapV2PairSyncIterator, error) {
-
 	logs, sub, err := _IUniswapV2Pair.contract.FilterLogs(opts, "Sync")
 	if err != nil {
 		return nil, err
@@ -2945,7 +2878,6 @@ func (_IUniswapV2Pair *IUniswapV2PairFilterer) FilterSync(opts *bind.FilterOpts)
 //
 // Solidity: event Sync(uint112 reserve0, uint112 reserve1)
 func (_IUniswapV2Pair *IUniswapV2PairFilterer) WatchSync(opts *bind.WatchOpts, sink chan<- *IUniswapV2PairSync) (event.Subscription, error) {
-
 	logs, sub, err := _IUniswapV2Pair.contract.WatchLogs(opts, "Sync")
 	if err != nil {
 		return nil, err
@@ -3069,7 +3001,6 @@ type IUniswapV2PairTransfer struct {
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_IUniswapV2Pair *IUniswapV2PairFilterer) FilterTransfer(opts *bind.FilterOpts, from []common.Address, to []common.Address) (*IUniswapV2PairTransferIterator, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -3090,7 +3021,6 @@ func (_IUniswapV2Pair *IUniswapV2PairFilterer) FilterTransfer(opts *bind.FilterO
 //
 // Solidity: event Transfer(address indexed from, address indexed to, uint256 value)
 func (_IUniswapV2Pair *IUniswapV2PairFilterer) WatchTransfer(opts *bind.WatchOpts, sink chan<- *IUniswapV2PairTransfer, from []common.Address, to []common.Address) (event.Subscription, error) {
-
 	var fromRule []interface{}
 	for _, fromItem := range from {
 		fromRule = append(fromRule, fromItem)
@@ -3329,7 +3259,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01TransactorRaw) Transact(opts *bind.
 func (_IUniswapV2Router01 *IUniswapV2Router01Caller) WETH(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IUniswapV2Router01.contract.Call(opts, &out, "WETH")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3337,7 +3266,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01Caller) WETH(opts *bind.CallOpts) (
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // WETH is a free data retrieval call binding the contract method 0xad5c4648.
@@ -3360,7 +3288,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01CallerSession) WETH() (common.Addre
 func (_IUniswapV2Router01 *IUniswapV2Router01Caller) Factory(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IUniswapV2Router01.contract.Call(opts, &out, "factory")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3368,7 +3295,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01Caller) Factory(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Factory is a free data retrieval call binding the contract method 0xc45a0155.
@@ -3391,7 +3317,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01CallerSession) Factory() (common.Ad
 func (_IUniswapV2Router01 *IUniswapV2Router01Caller) GetAmountIn(opts *bind.CallOpts, amountOut *big.Int, reserveIn *big.Int, reserveOut *big.Int) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Router01.contract.Call(opts, &out, "getAmountIn", amountOut, reserveIn, reserveOut)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -3399,7 +3324,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01Caller) GetAmountIn(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetAmountIn is a free data retrieval call binding the contract method 0x85f8c259.
@@ -3422,7 +3346,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01CallerSession) GetAmountIn(amountOu
 func (_IUniswapV2Router01 *IUniswapV2Router01Caller) GetAmountOut(opts *bind.CallOpts, amountIn *big.Int, reserveIn *big.Int, reserveOut *big.Int) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Router01.contract.Call(opts, &out, "getAmountOut", amountIn, reserveIn, reserveOut)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -3430,7 +3353,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01Caller) GetAmountOut(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetAmountOut is a free data retrieval call binding the contract method 0x054d50d4.
@@ -3453,7 +3375,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01CallerSession) GetAmountOut(amountI
 func (_IUniswapV2Router01 *IUniswapV2Router01Caller) GetAmountsIn(opts *bind.CallOpts, amountOut *big.Int, path []common.Address) ([]*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Router01.contract.Call(opts, &out, "getAmountsIn", amountOut, path)
-
 	if err != nil {
 		return *new([]*big.Int), err
 	}
@@ -3461,7 +3382,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01Caller) GetAmountsIn(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
 
 	return out0, err
-
 }
 
 // GetAmountsIn is a free data retrieval call binding the contract method 0x1f00ca74.
@@ -3484,7 +3404,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01CallerSession) GetAmountsIn(amountO
 func (_IUniswapV2Router01 *IUniswapV2Router01Caller) GetAmountsOut(opts *bind.CallOpts, amountIn *big.Int, path []common.Address) ([]*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Router01.contract.Call(opts, &out, "getAmountsOut", amountIn, path)
-
 	if err != nil {
 		return *new([]*big.Int), err
 	}
@@ -3492,7 +3411,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01Caller) GetAmountsOut(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
 
 	return out0, err
-
 }
 
 // GetAmountsOut is a free data retrieval call binding the contract method 0xd06ca61f.
@@ -3515,7 +3433,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01CallerSession) GetAmountsOut(amount
 func (_IUniswapV2Router01 *IUniswapV2Router01Caller) Quote(opts *bind.CallOpts, amountA *big.Int, reserveA *big.Int, reserveB *big.Int) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Router01.contract.Call(opts, &out, "quote", amountA, reserveA, reserveB)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -3523,7 +3440,6 @@ func (_IUniswapV2Router01 *IUniswapV2Router01Caller) Quote(opts *bind.CallOpts, 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Quote is a free data retrieval call binding the contract method 0xad615dec.
@@ -3982,7 +3898,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02TransactorRaw) Transact(opts *bind.
 func (_IUniswapV2Router02 *IUniswapV2Router02Caller) WETH(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IUniswapV2Router02.contract.Call(opts, &out, "WETH")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -3990,7 +3905,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02Caller) WETH(opts *bind.CallOpts) (
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // WETH is a free data retrieval call binding the contract method 0xad5c4648.
@@ -4013,7 +3927,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02CallerSession) WETH() (common.Addre
 func (_IUniswapV2Router02 *IUniswapV2Router02Caller) Factory(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _IUniswapV2Router02.contract.Call(opts, &out, "factory")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -4021,7 +3934,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02Caller) Factory(opts *bind.CallOpts
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Factory is a free data retrieval call binding the contract method 0xc45a0155.
@@ -4044,7 +3956,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02CallerSession) Factory() (common.Ad
 func (_IUniswapV2Router02 *IUniswapV2Router02Caller) GetAmountIn(opts *bind.CallOpts, amountOut *big.Int, reserveIn *big.Int, reserveOut *big.Int) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Router02.contract.Call(opts, &out, "getAmountIn", amountOut, reserveIn, reserveOut)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -4052,7 +3963,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02Caller) GetAmountIn(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetAmountIn is a free data retrieval call binding the contract method 0x85f8c259.
@@ -4075,7 +3985,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02CallerSession) GetAmountIn(amountOu
 func (_IUniswapV2Router02 *IUniswapV2Router02Caller) GetAmountOut(opts *bind.CallOpts, amountIn *big.Int, reserveIn *big.Int, reserveOut *big.Int) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Router02.contract.Call(opts, &out, "getAmountOut", amountIn, reserveIn, reserveOut)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -4083,7 +3992,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02Caller) GetAmountOut(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetAmountOut is a free data retrieval call binding the contract method 0x054d50d4.
@@ -4106,7 +4014,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02CallerSession) GetAmountOut(amountI
 func (_IUniswapV2Router02 *IUniswapV2Router02Caller) GetAmountsIn(opts *bind.CallOpts, amountOut *big.Int, path []common.Address) ([]*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Router02.contract.Call(opts, &out, "getAmountsIn", amountOut, path)
-
 	if err != nil {
 		return *new([]*big.Int), err
 	}
@@ -4114,7 +4021,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02Caller) GetAmountsIn(opts *bind.Cal
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
 
 	return out0, err
-
 }
 
 // GetAmountsIn is a free data retrieval call binding the contract method 0x1f00ca74.
@@ -4137,7 +4043,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02CallerSession) GetAmountsIn(amountO
 func (_IUniswapV2Router02 *IUniswapV2Router02Caller) GetAmountsOut(opts *bind.CallOpts, amountIn *big.Int, path []common.Address) ([]*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Router02.contract.Call(opts, &out, "getAmountsOut", amountIn, path)
-
 	if err != nil {
 		return *new([]*big.Int), err
 	}
@@ -4145,7 +4050,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02Caller) GetAmountsOut(opts *bind.Ca
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
 
 	return out0, err
-
 }
 
 // GetAmountsOut is a free data retrieval call binding the contract method 0xd06ca61f.
@@ -4168,7 +4072,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02CallerSession) GetAmountsOut(amount
 func (_IUniswapV2Router02 *IUniswapV2Router02Caller) Quote(opts *bind.CallOpts, amountA *big.Int, reserveA *big.Int, reserveB *big.Int) (*big.Int, error) {
 	var out []interface{}
 	err := _IUniswapV2Router02.contract.Call(opts, &out, "quote", amountA, reserveA, reserveB)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -4176,7 +4079,6 @@ func (_IUniswapV2Router02 *IUniswapV2Router02Caller) Quote(opts *bind.CallOpts, 
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Quote is a free data retrieval call binding the contract method 0xad615dec.
@@ -5516,7 +5418,6 @@ func (_UniswapV2Router02 *UniswapV2Router02TransactorRaw) Transact(opts *bind.Tr
 func (_UniswapV2Router02 *UniswapV2Router02Caller) WETH(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _UniswapV2Router02.contract.Call(opts, &out, "WETH")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5524,7 +5425,6 @@ func (_UniswapV2Router02 *UniswapV2Router02Caller) WETH(opts *bind.CallOpts) (co
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // WETH is a free data retrieval call binding the contract method 0xad5c4648.
@@ -5547,7 +5447,6 @@ func (_UniswapV2Router02 *UniswapV2Router02CallerSession) WETH() (common.Address
 func (_UniswapV2Router02 *UniswapV2Router02Caller) Factory(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
 	err := _UniswapV2Router02.contract.Call(opts, &out, "factory")
-
 	if err != nil {
 		return *new(common.Address), err
 	}
@@ -5555,7 +5454,6 @@ func (_UniswapV2Router02 *UniswapV2Router02Caller) Factory(opts *bind.CallOpts) 
 	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
-
 }
 
 // Factory is a free data retrieval call binding the contract method 0xc45a0155.
@@ -5578,7 +5476,6 @@ func (_UniswapV2Router02 *UniswapV2Router02CallerSession) Factory() (common.Addr
 func (_UniswapV2Router02 *UniswapV2Router02Caller) GetAmountIn(opts *bind.CallOpts, amountOut *big.Int, reserveIn *big.Int, reserveOut *big.Int) (*big.Int, error) {
 	var out []interface{}
 	err := _UniswapV2Router02.contract.Call(opts, &out, "getAmountIn", amountOut, reserveIn, reserveOut)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5586,7 +5483,6 @@ func (_UniswapV2Router02 *UniswapV2Router02Caller) GetAmountIn(opts *bind.CallOp
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetAmountIn is a free data retrieval call binding the contract method 0x85f8c259.
@@ -5609,7 +5505,6 @@ func (_UniswapV2Router02 *UniswapV2Router02CallerSession) GetAmountIn(amountOut 
 func (_UniswapV2Router02 *UniswapV2Router02Caller) GetAmountOut(opts *bind.CallOpts, amountIn *big.Int, reserveIn *big.Int, reserveOut *big.Int) (*big.Int, error) {
 	var out []interface{}
 	err := _UniswapV2Router02.contract.Call(opts, &out, "getAmountOut", amountIn, reserveIn, reserveOut)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5617,7 +5512,6 @@ func (_UniswapV2Router02 *UniswapV2Router02Caller) GetAmountOut(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // GetAmountOut is a free data retrieval call binding the contract method 0x054d50d4.
@@ -5640,7 +5534,6 @@ func (_UniswapV2Router02 *UniswapV2Router02CallerSession) GetAmountOut(amountIn 
 func (_UniswapV2Router02 *UniswapV2Router02Caller) GetAmountsIn(opts *bind.CallOpts, amountOut *big.Int, path []common.Address) ([]*big.Int, error) {
 	var out []interface{}
 	err := _UniswapV2Router02.contract.Call(opts, &out, "getAmountsIn", amountOut, path)
-
 	if err != nil {
 		return *new([]*big.Int), err
 	}
@@ -5648,7 +5541,6 @@ func (_UniswapV2Router02 *UniswapV2Router02Caller) GetAmountsIn(opts *bind.CallO
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
 
 	return out0, err
-
 }
 
 // GetAmountsIn is a free data retrieval call binding the contract method 0x1f00ca74.
@@ -5671,7 +5563,6 @@ func (_UniswapV2Router02 *UniswapV2Router02CallerSession) GetAmountsIn(amountOut
 func (_UniswapV2Router02 *UniswapV2Router02Caller) GetAmountsOut(opts *bind.CallOpts, amountIn *big.Int, path []common.Address) ([]*big.Int, error) {
 	var out []interface{}
 	err := _UniswapV2Router02.contract.Call(opts, &out, "getAmountsOut", amountIn, path)
-
 	if err != nil {
 		return *new([]*big.Int), err
 	}
@@ -5679,7 +5570,6 @@ func (_UniswapV2Router02 *UniswapV2Router02Caller) GetAmountsOut(opts *bind.Call
 	out0 := *abi.ConvertType(out[0], new([]*big.Int)).(*[]*big.Int)
 
 	return out0, err
-
 }
 
 // GetAmountsOut is a free data retrieval call binding the contract method 0xd06ca61f.
@@ -5702,7 +5592,6 @@ func (_UniswapV2Router02 *UniswapV2Router02CallerSession) GetAmountsOut(amountIn
 func (_UniswapV2Router02 *UniswapV2Router02Caller) Quote(opts *bind.CallOpts, amountA *big.Int, reserveA *big.Int, reserveB *big.Int) (*big.Int, error) {
 	var out []interface{}
 	err := _UniswapV2Router02.contract.Call(opts, &out, "quote", amountA, reserveA, reserveB)
-
 	if err != nil {
 		return *new(*big.Int), err
 	}
@@ -5710,7 +5599,6 @@ func (_UniswapV2Router02 *UniswapV2Router02Caller) Quote(opts *bind.CallOpts, am
 	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
-
 }
 
 // Quote is a free data retrieval call binding the contract method 0xad615dec.

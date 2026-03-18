@@ -1,0 +1,190 @@
+// Copyright 2024 The klaytn Authors
+// This file is part of the klaytn library.
+//
+// The klaytn library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The klaytn library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
+
+// SPDX-License-Identifier: LGPL-3.0-only
+pragma solidity 0.8.25;
+
+import {Profile} from "../types/Node.sol";
+
+interface IAddressBook {
+    function VERSION() external view returns (uint256);
+
+    function isActivated() external view returns (bool);
+
+    function getAllAddress()
+        external
+        view
+        returns (uint8[] memory typeList, address[] memory addressList);
+}
+
+interface IRegistry {
+    function getActiveAddr(string memory name) external view returns (address);
+}
+
+interface ICLRegistry {
+    function getAllCLs()
+        external
+        view
+        returns (address[] memory, uint256[] memory, address[] memory);
+}
+
+interface ICnStaking {
+    function VERSION() external view returns (uint256);
+
+    function staking() external view returns (uint256);
+
+    function unstaking() external view returns (uint256);
+}
+
+interface IERC20 {
+    function balanceOf(address account) external view returns (uint256);
+}
+
+interface IGaslessSwapRouter {
+    function getSupportedTokens() external view returns (address[] memory);
+}
+
+interface IAddressBookV2 {
+    function getAllProfiles() external view returns (Profile[] memory);
+    function getFundAddresses() external view returns (address, address, address);
+}
+
+// MultiCallContract provides a function to retrieve the any information needed for the Kaia client.
+// It will be temporarily injected into state to be used by the Kaia client.
+// After retrieving the information, the contract will be removed from the state.
+contract MultiCallContract {
+    address private constant ADDRESS_BOOK_ADDRESS =
+        0x0000000000000000000000000000000000000400;
+    address private constant REGISTRY_ADDRESS =
+        0x0000000000000000000000000000000000000401;
+
+    /* ========== STAKING INFORMATION ========== */
+
+    // multiCallStakingInfo returns the staking information of all CNs.
+    function multiCallStakingInfo()
+        external
+        view
+        returns (
+            uint8[] memory typeList,
+            address[] memory addressList,
+            uint256[] memory stakingAmounts
+        )
+    {
+        return _multiCallStakingInfoPermissioned();
+    } 
+
+    function _multiCallStakingInfoPermissioned()
+        private
+        view
+        returns (
+            uint8[] memory typeList,
+            address[] memory addressList,
+            uint256[] memory stakingAmounts
+        )
+    {
+        IAddressBook addressBook = IAddressBook(ADDRESS_BOOK_ADDRESS);
+        (typeList, addressList) = addressBook.getAllAddress();
+
+        // Return early if AddressBook hasn't been activated yet or there are no CNs.
+        if (addressList.length < 5) {
+            return (typeList, addressList, stakingAmounts);
+        }
+
+        uint256 lenCnAddress = addressList.length - 2;
+        // Just in case.
+        if (lenCnAddress % 3 != 0) {
+            return (typeList, addressList, stakingAmounts);
+        }
+        stakingAmounts = new uint256[](lenCnAddress / 3);
+
+        for (uint256 i = 0; i < lenCnAddress; i += 3) {
+            stakingAmounts[i / 3] = _getCnStakingAmountsLegacy(addressList[i + 1]);
+        }
+
+        return (typeList, addressList, stakingAmounts);
+    }
+
+    function multiCallStakingInfoPermissionless()
+        external
+        view
+        returns (Profile[] memory profiles, uint256[] memory stakingAmounts, address kefAddr, address kifAddr, address kpfAddr)
+    {
+        // fork number is checked by caller side
+        IAddressBookV2 abv2 = IAddressBookV2(ADDRESS_BOOK_ADDRESS);
+        profiles = abv2.getAllProfiles();
+        uint256 len = profiles.length;
+        stakingAmounts = new uint256[](len);
+        for (uint256 i = 0; i < len; i++) {
+            stakingAmounts[i] = _getCnStakingAmountsKIP290(profiles[i].stakingContract);
+        }
+        (kefAddr, kifAddr, kpfAddr) = abv2.getFundAddresses();
+    }
+
+    function _getCnStakingAmountsLegacy(
+        address cnStaking
+    ) private view returns (uint256) {
+        return cnStaking.balance;
+    }
+
+    function _getCnStakingAmountsKIP290(
+        address cnStaking
+    ) private view returns (uint256) {
+        return ICnStaking(cnStaking).staking() - ICnStaking(cnStaking).unstaking();
+    }
+
+    function multiCallDPStakingInfo()
+        external
+        view
+        returns (
+            address[] memory nodeIds,
+            address[] memory clPools,
+            uint256[] memory stakingAmounts
+        )
+    {
+        address clreg = IRegistry(REGISTRY_ADDRESS).getActiveAddr("CLRegistry");
+        address wKaia = IRegistry(REGISTRY_ADDRESS).getActiveAddr(
+            "WrappedKaia"
+        );
+
+        if (clreg == address(0)) {
+            return (nodeIds, clPools, stakingAmounts);
+        }
+
+        (nodeIds, , clPools) = ICLRegistry(clreg).getAllCLs();
+        uint256 poolLength = clPools.length;
+        stakingAmounts = new uint256[](poolLength);
+
+        if (wKaia != address(0)) {
+            IERC20 wKaiaToken = IERC20(wKaia);
+            for (uint256 i = 0; i < poolLength; i++) {
+                stakingAmounts[i] = wKaiaToken.balanceOf(clPools[i]);
+            }
+        }
+    }
+
+    function multiCallGaslessInfo()
+        external
+        view
+        returns (address gsr, address[] memory tokens)
+    {
+        gsr = IRegistry(REGISTRY_ADDRESS).getActiveAddr("GaslessSwapRouter");
+        if (gsr == address(0)) {
+            return (gsr, tokens);
+        }
+        tokens = IGaslessSwapRouter(gsr).getSupportedTokens();
+    }
+    /* ========== MORE FUNCTIONS TBA ========== */
+}
