@@ -37,19 +37,22 @@ func (v *VRankModule) RemoveScoresAfter(blockNum uint64) {
 	v.pfsCache.Purge()
 	v.cpMatrixCache.Purge()
 
-	head := v.Chain.CurrentHeader()
-	if head == nil || head.Number == nil {
-		return
-	}
-	for cpNum := calcCheckpointBlock(head.Number.Uint64()); ; {
-		if cpNum <= blockNum {
-			break
+	// Walk backward from the last written checkpoint, deleting all that are
+	// above blockNum. CurrentHeader() is NOT used here: by the time RewindDelete
+	// is called the chain head already points to the new (lower) head, making
+	// calcCheckpointBlock(CurrentHeader()) ≤ blockNum and causing the loop to
+	// exit immediately without deleting anything.
+	if lastCP, ok := ReadLastCheckpoint(v.ChainKv); ok {
+		for cpNum := lastCP; ; {
+			if cpNum <= blockNum {
+				break
+			}
+			DeleteCheckpoint(v.ChainKv, cpNum)
+			if cpNum < scoreCheckpointInterval {
+				break
+			}
+			cpNum -= scoreCheckpointInterval
 		}
-		DeleteCheckpoint(v.ChainKv, cpNum)
-		if cpNum < scoreCheckpointInterval {
-			break
-		}
-		cpNum -= scoreCheckpointInterval
 	}
 
 	// Update lastCheckpoint pointer to the highest surviving checkpoint.
