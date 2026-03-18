@@ -52,7 +52,7 @@ func ReadABv2Implementation(backend bind.ContractCaller, num *big.Int) (common.A
 // (stored in ABv2DataContract.implementation()).
 func InstallAddressBookV2(state *state.StateDB, logicAddr common.Address) error {
 	// Set ERC1967 proxy code at 0x400
-	if err := state.SetCode(AddressBookAddr, ERC1967ProxyCode); err != nil {
+	if err := state.SetCode(AddressBookAddr, ERC1967ProxyV5Code); err != nil {
 		return err
 	}
 	// Point proxy's implementation slot to the logic contract

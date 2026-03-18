@@ -46,7 +46,7 @@ func TestInstallAddressBookV2(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify proxy code is set at 0x400
-	assert.Equal(t, ERC1967ProxyCode, statedb.GetCode(AddressBookAddr))
+	assert.Equal(t, ERC1967ProxyV5Code, statedb.GetCode(AddressBookAddr))
 
 	// Verify implementation slot points to logicAddr
 	implSlot := statedb.GetState(AddressBookAddr, common.BytesToHash(ImplementationSlot))

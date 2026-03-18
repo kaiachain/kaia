@@ -79,7 +79,7 @@ func TestInstallAndInitializeABv2(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify: proxy code is set at 0x400
-	assert.Equal(t, system.ERC1967ProxyCode, statedb.GetCode(system.AddressBookAddr))
+	assert.Equal(t, system.ERC1967ProxyV5Code, statedb.GetCode(system.AddressBookAddr))
 
 	// Verify: ABv2 is initialized by querying getAllProfiles
 	// Need to create a backend that can read from the modified statedb
