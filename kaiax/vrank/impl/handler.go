@@ -286,12 +286,12 @@ func (v *VRankModule) isCommitteeMember(blockNum, round uint64) bool {
 	return slices.Contains(committee, v.nodeID)
 }
 
-func (v *VRankModule) handleBroadcastLoop() {
+func (v *VRankModule) handleBroadcastLoop(stopCh <-chan struct{}) {
 	for {
 		select {
 		case req := <-v.broadcastCh:
 			v.broadcastFeed.Send(req)
-		case <-v.stopCh:
+		case <-stopCh:
 			return
 		}
 	}

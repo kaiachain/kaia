@@ -69,6 +69,9 @@ type chain interface {
 type VRankModule struct {
 	InitOpts
 
+	lifecycleMu sync.Mutex
+	running     bool
+
 	broadcastCh   chan *vrank.VRankBroadcastEvent
 	broadcastFeed event.Feed
 	stopCh        chan struct{}
@@ -109,16 +112,33 @@ func (v *VRankModule) Init(opts *InitOpts) error {
 }
 
 func (v *VRankModule) Start() error {
-	go v.handleBroadcastLoop()
+	v.lifecycleMu.Lock()
+	defer v.lifecycleMu.Unlock()
+
+	if v.running {
+		return nil
+	}
+
+	v.stopCh = make(chan struct{})
+	v.running = true
+	go v.handleBroadcastLoop(v.stopCh)
 	logger.Info("VRankModule started")
 
 	return nil
 }
 
 func (v *VRankModule) Stop() {
+	v.lifecycleMu.Lock()
+	if !v.running {
+		v.lifecycleMu.Unlock()
+		return
+	}
+	stopCh := v.stopCh
+	v.running = false
+	v.lifecycleMu.Unlock()
+
 	logger.Info("VRankModule stopped")
-	close(v.stopCh)
-	close(v.broadcastCh)
+	close(stopCh)
 }
 
 func (v *VRankModule) SubscribeVRank(sink chan<- *vrank.VRankBroadcastEvent) event.Subscription {

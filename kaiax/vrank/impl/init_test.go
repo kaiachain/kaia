@@ -18,12 +18,14 @@ package impl
 
 import (
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -94,4 +96,42 @@ func TestInit_CatchUpFromCheckpoint(t *testing.T) {
 	cpMatrix := cpCached.(map[common.Address]map[common.Address]uint64)
 	assert.Equal(t, uint64(1), cpMatrix[C1][P1], "P1 contribution should carry over from checkpoint")
 	assert.Equal(t, uint64(1), cpMatrix[C1][P2], "P2 should be credited as reporter in tail block")
+}
+
+func TestVRankModule_RestartAfterStop(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	valset := mock_valset.NewMockValsetModule(ctrl)
+	db := database.NewMemDB()
+
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+
+	module := NewVRankModule()
+	require.NoError(t, module.Init(&InitOpts{
+		NodeKey:     key,
+		Valset:      valset,
+		ChainConfig: params.TestKaiaConfig("permissionless"),
+		Chain:       &testChain{headers: map[uint64]*types.Header{}},
+		ChainKv:     db,
+	}))
+
+	sink := make(chan *vrank.VRankBroadcastEvent, 1)
+	sub := module.SubscribeVRank(sink)
+	defer sub.Unsubscribe()
+
+	require.NoError(t, module.Start())
+	module.Stop()
+	module.Stop() // idempotent
+
+	require.NoError(t, module.Start())
+	module.broadcast([]common.Address{addrN(0)}, vrank.VRankCandidateMsg, "test")
+
+	select {
+	case req := <-sink:
+		assert.Equal(t, []common.Address{addrN(0)}, req.Targets)
+		assert.Equal(t, vrank.VRankCandidateMsg, req.Code)
+		assert.Equal(t, "test", req.Msg)
+	case <-time.After(time.Second):
+		t.Fatal("broadcast did not resume after restart")
+	}
 }
