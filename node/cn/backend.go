@@ -623,7 +623,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	s.txPool.RegisterTxPoolModule(mTxPool...)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterKaiaxModules(s.govModule, s.stakingModule, mValset, mRandao)
-		engine.RegisterConsensusModule(mReward, s.govModule)
+		engine.RegisterConsensusModule(mReward, s.govModule, mVRank)
 	}
 	s.protocolManager.RegisterStakingModule(s.stakingModule)
 

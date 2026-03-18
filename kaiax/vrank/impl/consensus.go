@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
@@ -78,5 +79,11 @@ func (v *VRankModule) VerifyHeader(header *types.Header) error {
 			}
 		}
 	}
+	return nil
+}
+
+func (v *VRankModule) PrepareHeader(header *types.Header) error { return nil }
+
+func (v *VRankModule) FinalizeHeader(header *types.Header, _ *state.StateDB, _ []*types.Transaction, _ []*types.Receipt) error {
 	return nil
 }

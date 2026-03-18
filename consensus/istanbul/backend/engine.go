@@ -311,12 +311,6 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		}
 	}
 
-	if sb.vrankModule != nil {
-		if err := sb.vrankModule.VerifyHeader(header); err != nil {
-			return err
-		}
-	}
-
 	return sb.verifyCommittedSeals(chain, header, parents)
 }
 
