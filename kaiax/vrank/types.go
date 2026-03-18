@@ -30,6 +30,13 @@ const (
 	VRankCandidateMsg  = 0x18
 )
 
+const (
+	// Epoch is the number of blocks in one VRank scoring epoch.
+	Epoch = uint64(86400)
+	// MaxRound is the maximum allowed consensus round per block (range [0, MaxRound]).
+	MaxRound = 10
+)
+
 type VRankBroadcastEvent struct {
 	Targets []common.Address
 	Code    int // VRankPreprepareMsg or VRankCandidateMsg

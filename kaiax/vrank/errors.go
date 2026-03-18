@@ -18,19 +18,12 @@ package vrank
 
 import "errors"
 
-const (
-	// Epoch is the number of blocks in one VRank scoring epoch.
-	Epoch = uint64(86400)
-	// MaxRound is the maximum allowed consensus round per block (range [0, MaxRound]).
-	MaxRound = 10
-)
-
 var (
 	ErrInitUnexpectedNil     = errors.New("unexpected nil during module init")
 	ErrVRankPreprepareNil    = errors.New("VRankPreprepare is nil")
 	ErrVRankCandidateNil     = errors.New("VRankCandidate is nil")
 	ErrGetCandidateFailed    = errors.New("valset.GetCandidates failed")
-ErrPrepreparedViewNotSet = errors.New("preprepared view is not set")
+	ErrPrepreparedViewNotSet = errors.New("preprepared view is not set")
 	ErrViewMismatch          = errors.New("view mismatch")
 	ErrBlockHashMismatch     = errors.New("block hash mismatch")
 	ErrMsgFromNonCandidate   = errors.New("message from non-candidate")
