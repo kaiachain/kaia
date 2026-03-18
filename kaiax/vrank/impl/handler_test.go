@@ -392,6 +392,27 @@ func TestHandleVRankPreprepare(t *testing.T) {
 		mustNotPop(t, proposer.sub)
 	})
 
+	t.Run("candidate should broadcast to the round-specific committee", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		proposer, candidate := createCN(t, valset), createCN(t, valset)
+		round1Val1, round1Val2 := createCN(t, valset), createCN(t, valset)
+
+		view1_1 := &istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(1)}
+		pppSig := signVRankPreprepare(t, proposer.VRankModule, proposer.Key, block1.NumberU64(), 1, block1.Hash())
+		pppMsg := &vrank.VRankPreprepare{Block: block1, View: view1_1, Sig: pppSig}
+
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(1), uint64(1)).Return(proposer.Addr, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(1)).Return([]common.Address{round1Val1.Addr, round1Val2.Addr}, nil).Times(1)
+
+		err := candidate.VRankModule.HandleVRankPreprepare(pppMsg)
+		require.NoError(t, err)
+
+		req := mustPop(t, candidate.sub)
+		assert.Equal(t, []common.Address{round1Val1.Addr, round1Val2.Addr}, req.Targets)
+		assert.Equal(t, vrank.VRankCandidateMsg, req.Code)
+	})
+
 	t.Run("non-proposer signature should be rejected by candidate", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		proposer, nonProposer, candidate := createCN(t, valset), createCN(t, valset), createCN(t, valset)
