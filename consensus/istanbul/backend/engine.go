@@ -492,19 +492,6 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 	return nil
 }
 
-func (sb *backend) SetExtra(header *types.Header) error {
-	valSet, err := sb.GetValidatorSet(header.Number.Uint64())
-	if err != nil {
-		return err
-	}
-	extra, err := prepareExtra(header, valSet.Qualified().List())
-	if err != nil {
-		return err
-	}
-	header.Extra = extra
-	return nil
-}
-
 func (sb *backend) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
 	// [EIP-2935] stores the parent block hash in the history storage contract
 	if chain.Config().IsPragueForkEnabled(header.Number) {

@@ -204,10 +204,6 @@ func (f *Faker) Prepare(chain consensus.ChainReader, header *types.Header) error
 	return nil
 }
 
-func (f *Faker) SetExtra(header *types.Header) error {
-	return nil
-}
-
 // Initialize runs any pre-transaction state modifications.
 func (f *Faker) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
 	// No initialization needed for faker
