@@ -31,11 +31,15 @@ import (
 
 // setupMultiCallMock creates a SimulatedBackend with MultiCallMockCode injected,
 // and returns the caller, call opts, state, and a cleanup function.
-func setupMultiCallMock(t *testing.T) (*multicall.MultiCallContractCaller, *bind.CallOpts, *state.StateDB, func()) {
+func setupMultiCallMock(t *testing.T, mockCode ...[]byte) (*multicall.MultiCallContractCaller, *bind.CallOpts, *state.StateDB, func()) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	backend := backends.NewSimulatedBackend(nil)
 	originCode := MultiCallCode
-	MultiCallCode = MultiCallMockCode
+	if len(mockCode) > 0 {
+		MultiCallCode = mockCode[0]
+	} else {
+		MultiCallCode = MultiCallMockCode
+	}
 
 	header := backend.BlockChain().CurrentHeader()
 	chain := backend.BlockChain()
@@ -80,7 +84,7 @@ func TestContractCallerForMultiCall(t *testing.T) {
 }
 
 func TestMultiCallStakingInfoPermissionless(t *testing.T) {
-	caller, callOpts, state, cleanup := setupMultiCallMock(t)
+	caller, callOpts, state, cleanup := setupMultiCallMock(t, MultiCallPermlessMockCode)
 	defer cleanup()
 
 	ret, err := caller.MultiCallStakingInfoPermissionless(callOpts)
