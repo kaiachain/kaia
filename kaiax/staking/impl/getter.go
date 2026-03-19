@@ -17,7 +17,6 @@
 package impl
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -78,39 +77,6 @@ func (s *StakingModule) GetStakingInfo(num uint64) (*staking.StakingInfo, error)
 	return si, nil
 }
 
-func (s *StakingModule) GetStakingInfoFromState(num uint64, statedb *state.StateDB) (*staking.StakingInfo, error) {
-	isKaia := s.ChainConfig.IsKaiaForkEnabled(new(big.Int).SetUint64(num))
-	sourceNum := sourceBlockNum(num, isKaia, s.stakingInterval)
-
-	// Try cache first
-	if si, ok := s.stakingInfoCache.Get(sourceNum); ok {
-		return si.(*staking.StakingInfo), nil
-	}
-
-	// Only before Kaia, try the database
-	if !isKaia {
-		if si := ReadStakingInfo(s.ChainKv, sourceNum); si != nil {
-			s.stakingInfoCache.Add(sourceNum, si)
-			return si, nil
-		}
-	}
-
-	// Read from the state
-	si, err := s.getFromStateByNumberFromState(sourceNum, statedb)
-	if err != nil {
-		return nil, err
-	}
-
-	// Only before Kaia, write to database
-	if !isKaia {
-		WriteStakingInfo(s.ChainKv, sourceNum, si)
-	}
-
-	// Cache it
-	s.stakingInfoCache.Add(sourceNum, si)
-	return si, nil
-}
-
 // Read the staking status from the blockchain state.
 func (s *StakingModule) getFromStateByNumber(num uint64) (*staking.StakingInfo, error) {
 	header := s.Chain.GetHeaderByNumber(num)
@@ -127,21 +93,6 @@ func (s *StakingModule) getFromStateByNumber(num uint64) (*staking.StakingInfo, 
 	statedb, err := s.Chain.StateAt(header.Root)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get state for block number %d: %w", num, err)
-	}
-	return s.getFromState(header, statedb)
-}
-
-func (s *StakingModule) getFromStateByNumberFromState(num uint64, statedb *state.StateDB) (*staking.StakingInfo, error) {
-	if statedb == nil {
-		return nil, errors.New("empty statedb")
-	}
-	header := s.Chain.GetHeaderByNumber(num)
-	if header == nil {
-		return nil, fmt.Errorf("failed to get header for block number %d", num)
-	}
-	// If found in side state, no bother getting from the state.
-	if si := s.preloadBuffer.GetInfo(header.Root); si != nil { // Try side state
-		return si, nil
 	}
 	return s.getFromState(header, statedb)
 }
