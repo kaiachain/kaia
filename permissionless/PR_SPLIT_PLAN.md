@@ -5,7 +5,7 @@ Current working PR: kaiachain/kaia#748 (state-transition → permissionless)
 ## Dependency Order
 
 ```
-PR 1 (Contracts) → PR 2 (Go Bindings) → PR 3 (dev sync) → PR 4 (ABv2 + State Transition) → PR 5 (Genesis Alloc + Integration)
+PR 1 (Contracts) → PR 2 (Go Bindings) → PR 3 (dev sync) → PR 4 (ABv2 + State Transition) → PR 5 (Genesis Alloc) → PR 6 (Integration)
 ```
 
 All PRs target `permissionless` branch. Must be merged in order.
@@ -52,22 +52,18 @@ All PRs target `permissionless` branch. Must be merged in order.
 
 ---
 
-## PR 3: dev branch sync + refactoring
+## PR 3: dev branch sync
 
 **Branch**: `pr3-dev-sync` → `permissionless`
 **Status**: Not started
-**Scope:** Merge upstream `dev` (up to `3347c86a5`) + adapt permissionless code to dev changes
+**Scope:** Merge upstream `dev` (up to `3347c86a5`) only. No permissionless-specific refactoring.
 
 | Category | Changes |
 |----------|---------|
-| dev merge | Merge `mainstream/dev` into `permissionless` — includes PR #768 (flex reward), PR #790 (fork override fix), Osaka mainnet fork number, etc. |
+| dev merge | Merge `mainstream/dev` — includes PR #768 (flex reward: KPF, 4-part ratio, SpareAddress), PR #790 (fork override fix), Osaka mainnet/Kairos fork numbers |
 | MultiCall SpareAddress | `contracts_permissionless/multicall/MultiCallContract.sol` + regenerated binding — adds `SpareAddress` (KPF) to `multiCallStakingInfo` return |
-| ConsolidatedNodes refactor | `kaiax/staking/staking_info.go` — revert to original `consolidateNodes()` (no council param), add `consolidateNodesPermissionless()`, `ConsolidatedNodes(rules)` signature |
-| Staking getter | `kaiax/staking/impl/getter.go` — two multicall imports (contracts/ + contracts_permissionless/), `parsePermissionlessCallResult` |
-| collectStakingAmounts | `kaiax/valset/impl/getter_demote.go` — iterate `cn.NodeIds` (plural, original) |
-| Tests | `kaiax/staking/staking_info_test.go` — updated for `NodeIds`/`StakingContracts` struct |
 
-**Review focus:** dev merge conflict resolution, ConsolidatedNodes cache safety, multicall SpareAddress integration
+**Review focus:** dev merge conflict resolution, MultiCall SpareAddress integration
 
 ---
 
@@ -75,7 +71,7 @@ All PRs target `permissionless` branch. Must be merged in order.
 
 **Branch**: `pr4-state-transition` → `permissionless`
 **Status**: Not started
-**Scope:** ABv2 read/write functions + validator state machine
+**Scope:** ABv2 read/write functions + validator state machine + ConsolidatedNodes refactoring
 
 | Category | Files |
 |----------|-------|
@@ -85,6 +81,9 @@ All PRs target `permissionless` branch. Must be merged in order.
 | KIP113 changes | `blockchain/system/kip113.go`, `kip113_test.go` |
 | Multicall | `blockchain/system/multicall.go`, `multicall_test.go` |
 | Contract backend | `accounts/abi/bind/backends/blockchain_state.go` |
+| ConsolidatedNodes refactor | `kaiax/staking/staking_info.go` — `ConsolidatedNodes(rules)`, `consolidateNodesPermissionless()`, `NodeIds` plural |
+| Staking getter | `kaiax/staking/impl/getter.go` — `parsePermissionlessCallResult` |
+| collectStakingAmounts | `kaiax/valset/impl/getter_demote.go` — iterate `cn.NodeIds` (plural) |
 | State transition | `kaiax/valset/impl/state_transition.go` |
 | Transition getters | `kaiax/valset/impl/state_transition_getter.go` |
 | Valset getter | `kaiax/valset/impl/getter.go` |
@@ -99,20 +98,34 @@ All PRs target `permissionless` branch. Must be merged in order.
 | Unit tests | `kaiax/valset/impl/getter_council_test.go`, `getter_context_test.go`, `getter_demote_test.go`, `getter_proposers_test.go` |
 | Unit tests | `kaiax/staking/staking_info_test.go` |
 
-**Review focus:** ABv2 read/write helpers, ERC1967Proxy v4/v5 split, state machine transitions, epoch/timeout/violation logic, getOrComputeNodeStates caching
+**Review focus:** ABv2 read/write helpers, ERC1967Proxy v4/v5 split, ConsolidatedNodes cache safety, state machine transitions, epoch/timeout/violation logic, getOrComputeNodeStates caching
 
 ---
 
-## PR 5: Genesis Alloc + Integration
+## PR 5: Genesis Alloc
 
-**Branch**: `pr5-integration` → `permissionless`
+**Branch**: `pr5-genesis` → `permissionless`
 **Status**: Not started
-**Scope:** Genesis allocation, config wiring, API, cleanup
+**Scope:** Genesis allocation and test helpers
 
 | Category | Files |
 |----------|-------|
 | Genesis alloc | `blockchain/system/permissionless.go` |
 | Test helpers | `blockchain/system/testing.go` |
+| Unit tests | `blockchain/system/permissionless_test.go` |
+
+**Review focus:** Genesis allocation logic, AllocPermissionless, deployBeaconInfra
+
+---
+
+## PR 6: Integration
+
+**Branch**: `pr6-integration` → `permissionless`
+**Status**: Not started
+**Scope:** Config wiring, API, P2P, cleanup
+
+| Category | Files |
+|----------|-------|
 | Chain config | `params/config.go` (PermissionlessCompatibleBlock) |
 | Genesis CLI | `cmd/homi/setup/cmd.go` |
 | Admin API | `node/cn/api_admin_chain.go`, `console/web3ext/web3ext.go` |
@@ -123,10 +136,9 @@ All PRs target `permissionless` branch. Must be merged in order.
 | Reward/Randao | `kaiax/reward/impl/getter.go`, `kaiax/randao/impl/getter.go` |
 | Misc tests | `tests/randao_fork_test.go`, `tests/block_test.go`, `tests/block_test_util.go`, `tests/state_test.go` |
 | Backend | `consensus/istanbul/backend/backend.go`, `api/api_eth_test.go` |
-| Unit tests | `blockchain/system/permissionless_test.go` |
 | Docs | `permissionless/TEST_PLAN.md`, `TODO.md` |
 
-**Review focus:** Genesis allocation logic, config wiring, API correctness, P2P changes
+**Review focus:** Config wiring, API correctness, P2P changes
 
 ---
 
@@ -136,5 +148,6 @@ All PRs target `permissionless` branch. Must be merged in order.
 - `contracts_permissionless/` is the new independent project for permissionless contracts (OZ v5, solc 0.8.25)
 - Each PR should compile and pass tests independently
 - PR 2 is largest by line count (Go bindings ~77K) but mostly generated
+- PR 3 is pure dev sync — no permissionless-specific code changes
 - PR 4 is the most logic-dense and needs the most careful review
 - dev merge (PR 3) syncs up to `3347c86a5` (PR #790)
