@@ -670,13 +670,44 @@ func TestGetCFS_DBCheckpointHit(t *testing.T) {
 	WriteLastCheckpoint(db, cp)
 
 	// With the DB checkpoint, only block cp+1 needs to be computed.
-	// GetCandidates (called in newCPMatrix for epoch start) must NOT be called.
 	valset.EXPECT().GetProposer(cp+1, uint64(0)).Return(P1, nil).Times(1)
 	valset.EXPECT().GetCommittee(uint64(0), uint64(0)).Return([]common.Address{P1}, nil).Times(1)
 
 	cfs, err := v.GetCFS(cp + 1)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(2), cfs[C1])
+}
+
+func TestGetCFS_DBCheckpointHit_PreservesZeroFailureCandidates(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	valset := mock_valset.NewMockValsetModule(ctrl)
+	db := database.NewMemDB()
+
+	P1, C1, C2 := addrN(1), addrN(10), addrN(11)
+	cp := scoreCheckpointInterval
+	headers := map[uint64]*types.Header{
+		cp: makeHeaderWithRound(cp, 0),
+	}
+	v := newTestModuleWithHeaders(t, valset, db, headers)
+
+	WriteCheckpoint(db, cp, map[common.Address]uint64{}, map[common.Address]map[common.Address]uint64{
+		C1: {P1: 1},
+		C2: {},
+	})
+	WriteLastCheckpoint(db, cp)
+
+	valset.EXPECT().GetCommittee(uint64(0), uint64(0)).Return([]common.Address{P1}, nil).Times(1)
+
+	cfs, err := v.GetCFS(cp)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(1), cfs[C1])
+	assert.Equal(t, uint64(0), cfs[C2], "zero-failure candidates must remain in CFS after checkpoint load")
+
+	cpCached, ok := v.cpMatrixCache.Get(cp)
+	require.True(t, ok, "checkpoint-backed cpMatrix must be cached")
+	cpMatrix := cpCached.(map[common.Address]map[common.Address]uint64)
+	assert.Contains(t, cpMatrix, C2)
+	assert.Equal(t, uint64(0), cpMatrix[C2][P1])
 }
 
 // TestGetCFS_EpochScan verifies that with no in-memory cache and no DB checkpoint, GetCFS

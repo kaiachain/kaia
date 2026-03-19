@@ -151,16 +151,14 @@ func (v *VRankModule) computePFS(start, end uint64, seed map[common.Address]uint
 }
 
 func (v *VRankModule) newCPMatrix(epochStart uint64) (map[common.Address]map[common.Address]uint64, error) {
-	// cpMatrix[candidate][proposer] = total failures reported in epoch.
-	cpMatrix := make(map[common.Address]map[common.Address]uint64)
-
-	// Pre-seed all candidates so every candidate appears in the output, even with 0 CFS.
 	candidates, err := v.Valset.GetCandidates(epochStart)
 	if err != nil {
 		return nil, err
 	}
-	for _, cand := range candidates {
-		cpMatrix[cand] = make(map[common.Address]uint64)
+
+	cpMatrix := make(map[common.Address]map[common.Address]uint64, len(candidates))
+	for _, candidate := range candidates {
+		cpMatrix[candidate] = make(map[common.Address]uint64)
 	}
 	return cpMatrix, nil
 }

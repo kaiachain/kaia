@@ -19,6 +19,7 @@ package impl
 import (
 	"bytes"
 	"encoding/binary"
+	"maps"
 	"slices"
 
 	"github.com/kaiachain/kaia/common"
@@ -31,20 +32,20 @@ var (
 	lastCheckpointKey     = []byte("vrankLastCheckpoint") // latest checkpoint block number
 )
 
-type pfsEntry struct {
-	Addr  common.Address
-	Score uint64
+type pfsStorage struct {
+	Addrs  []common.Address
+	Scores []uint64
 }
 
-type cpMatrixEntry struct {
-	Candidate common.Address
-	Reporter  common.Address
-	Score     uint64
+type cpMatrixStorage struct {
+	Candidates []common.Address
+	Reporters  []common.Address
+	Matrix     [][]uint64
 }
 
 type vrankCheckpointStorage struct {
-	PFS      []pfsEntry
-	CPMatrix []cpMatrixEntry
+	PFS      pfsStorage
+	CPMatrix cpMatrixStorage
 }
 
 func scoreCheckpointKey(blockNum uint64) []byte {
@@ -58,57 +59,20 @@ func ReadCheckpoint(db database.Database, blockNum uint64) (map[common.Address]u
 	if err != nil || len(b) == 0 {
 		return nil, nil
 	}
+
 	var stored vrankCheckpointStorage
 	if err := rlp.DecodeBytes(b, &stored); err != nil {
 		logger.Crit("Failed to deserialize checkpoint", "blockNum", blockNum, "err", err)
 	}
-
-	pfs := make(map[common.Address]uint64, len(stored.PFS))
-	for _, entry := range stored.PFS {
-		pfs[entry.Addr] = entry.Score
-	}
-
-	cpMatrix := make(map[common.Address]map[common.Address]uint64)
-	for _, entry := range stored.CPMatrix {
-		if _, ok := cpMatrix[entry.Candidate]; !ok {
-			cpMatrix[entry.Candidate] = make(map[common.Address]uint64)
-		}
-		cpMatrix[entry.Candidate][entry.Reporter] = entry.Score
-	}
-	return pfs, cpMatrix
+	return deserializePFS(stored.PFS), deserializeCFS(stored.CPMatrix)
 }
 
 // WriteCheckpoint persists the PFS map and cpMatrix together at blockNum.
 func WriteCheckpoint(db database.Database, blockNum uint64, pfs map[common.Address]uint64, cpMatrix map[common.Address]map[common.Address]uint64) {
-	pfsEntries := make([]pfsEntry, 0, len(pfs))
-	for addr, score := range pfs {
-		pfsEntries = append(pfsEntries, pfsEntry{Addr: addr, Score: score})
-	}
-	slices.SortFunc(pfsEntries, func(a, b pfsEntry) int { return bytes.Compare(a.Addr.Bytes(), b.Addr.Bytes()) })
-
-	candidates := make([]common.Address, 0, len(cpMatrix))
-	for candidate := range cpMatrix {
-		candidates = append(candidates, candidate)
-	}
-	slices.SortFunc(candidates, func(a, b common.Address) int { return bytes.Compare(a.Bytes(), b.Bytes()) })
-
-	cfsEntries := make([]cpMatrixEntry, 0)
-	for _, candidate := range candidates {
-		reporters := make([]common.Address, 0, len(cpMatrix[candidate]))
-		for reporter := range cpMatrix[candidate] {
-			reporters = append(reporters, reporter)
-		}
-		slices.SortFunc(reporters, func(a, b common.Address) int { return bytes.Compare(a.Bytes(), b.Bytes()) })
-		for _, reporter := range reporters {
-			cfsEntries = append(cfsEntries, cpMatrixEntry{
-				Candidate: candidate,
-				Reporter:  reporter,
-				Score:     cpMatrix[candidate][reporter],
-			})
-		}
-	}
-
-	b, err := rlp.EncodeToBytes(vrankCheckpointStorage{PFS: pfsEntries, CPMatrix: cfsEntries})
+	b, err := rlp.EncodeToBytes(vrankCheckpointStorage{
+		PFS:      serializePFS(pfs),
+		CPMatrix: serializeCFS(cpMatrix),
+	})
 	if err != nil {
 		logger.Crit("Failed to serialize checkpoint", "blockNum", blockNum, "err", err)
 	}
@@ -151,4 +115,74 @@ func DeleteLastCheckpoint(db database.Database) {
 	if err := db.Delete(lastCheckpointKey); err != nil {
 		logger.Crit("Failed to delete last checkpoint", "err", err)
 	}
+}
+
+func serializePFS(pfs map[common.Address]uint64) pfsStorage {
+	addrs := slices.Collect(maps.Keys(pfs))
+	slices.SortFunc(addrs, func(a, b common.Address) int { return bytes.Compare(a.Bytes(), b.Bytes()) })
+	scores := make([]uint64, len(addrs))
+	for i, addr := range addrs {
+		scores[i] = pfs[addr]
+	}
+	return pfsStorage{
+		Addrs:  addrs,
+		Scores: scores,
+	}
+}
+
+func serializeCFS(cpMatrix map[common.Address]map[common.Address]uint64) cpMatrixStorage {
+	candidates := slices.Collect(maps.Keys(cpMatrix))
+	slices.SortFunc(candidates, func(a, b common.Address) int { return bytes.Compare(a.Bytes(), b.Bytes()) })
+
+	reporterSet := make(map[common.Address]struct{})
+	for _, candidate := range candidates {
+		for _, reporter := range slices.Collect(maps.Keys(cpMatrix[candidate])) {
+			reporterSet[reporter] = struct{}{}
+		}
+	}
+	reporters := slices.Collect(maps.Keys(reporterSet))
+	slices.SortFunc(reporters, func(a, b common.Address) int { return bytes.Compare(a.Bytes(), b.Bytes()) })
+
+	matrix := make([][]uint64, len(candidates))
+	for i, candidate := range candidates {
+		matrix[i] = make([]uint64, len(reporters))
+		for j, reporter := range reporters {
+			matrix[i][j] = cpMatrix[candidate][reporter]
+		}
+	}
+
+	return cpMatrixStorage{
+		Candidates: candidates,
+		Reporters:  reporters,
+		Matrix:     matrix,
+	}
+}
+
+func deserializePFS(stored pfsStorage) map[common.Address]uint64 {
+	pfs := make(map[common.Address]uint64, len(stored.Addrs))
+	for i, addr := range stored.Addrs {
+		if i >= len(stored.Scores) {
+			break
+		}
+		pfs[addr] = stored.Scores[i]
+	}
+	return pfs
+}
+
+func deserializeCFS(stored cpMatrixStorage) map[common.Address]map[common.Address]uint64 {
+	cpMatrix := make(map[common.Address]map[common.Address]uint64, len(stored.Candidates))
+	for rowIdx, candidate := range stored.Candidates {
+		cpMatrix[candidate] = make(map[common.Address]uint64)
+		if rowIdx >= len(stored.Matrix) {
+			break
+		}
+		row := stored.Matrix[rowIdx]
+		for colIdx, reporter := range stored.Reporters {
+			if colIdx >= len(row) {
+				break
+			}
+			cpMatrix[candidate][reporter] = row[colIdx]
+		}
+	}
+	return cpMatrix
 }

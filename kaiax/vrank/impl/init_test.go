@@ -65,7 +65,6 @@ func TestInit_CatchUpFromCheckpoint(t *testing.T) {
 	require.NoError(t, err)
 
 	// round=0 → P1 (pfReport proposer); round=1 → P2 (cfReport reporter).
-	// GetCandidates is NOT called: the checkpoint branch skips newCPMatrix.
 	valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ uint64, round uint64) (common.Address, error) {
 			if round == 1 {
@@ -96,6 +95,31 @@ func TestInit_CatchUpFromCheckpoint(t *testing.T) {
 	cpMatrix := cpCached.(map[common.Address]map[common.Address]uint64)
 	assert.Equal(t, uint64(1), cpMatrix[C1][P1], "P1 contribution should carry over from checkpoint")
 	assert.Equal(t, uint64(1), cpMatrix[C1][P2], "P2 should be credited as reporter in tail block")
+}
+
+func TestCheckpointRoundTrip_PreservesZeroScores(t *testing.T) {
+	const checkpoint = scoreCheckpointInterval
+	P1, P2, C1, C2 := addrN(1), addrN(2), addrN(10), addrN(11)
+
+	db := database.NewMemDB()
+	pfsIn := map[common.Address]uint64{
+		P1: 3,
+		P2: 0,
+	}
+	cpMatrixIn := map[common.Address]map[common.Address]uint64{
+		C1: {P1: 1, P2: 0},
+		C2: {P1: 0, P2: 2},
+	}
+	WriteCheckpoint(db, checkpoint,
+		pfsIn,
+		cpMatrixIn,
+	)
+
+	pfsOut, cpMatrixOut := ReadCheckpoint(db, checkpoint)
+	require.NotNil(t, pfsOut)
+	require.NotNil(t, cpMatrixOut)
+	assert.Equal(t, pfsIn, pfsOut)
+	assert.Equal(t, cpMatrixIn, cpMatrixOut)
 }
 
 func TestVRankModule_RestartAfterStop(t *testing.T) {
