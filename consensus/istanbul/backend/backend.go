@@ -24,6 +24,7 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -44,6 +45,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/randao"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -134,6 +136,11 @@ type backend struct {
 	govModule gov.GovModule
 
 	randaoModule randao.RandaoModule
+
+	vrankModule       vrank.VRankModule
+	prepreparedSub    *event.TypeMuxSubscription
+	prepreparedStopCh chan struct{}
+	prepreparedWg     sync.WaitGroup
 
 	// Node type
 	nodetype common.ConnType
@@ -421,6 +428,17 @@ func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
 	}
 
 	return istanbul.NewBlockValSet(council, demoted), nil
+}
+
+func (sb *backend) GetCandidates(num uint64) ([]common.Address, error) {
+	if sb.valsetModule == nil {
+		return nil, errors.New("valsetModule is nil")
+	}
+	candidates, err := sb.valsetModule.GetCandidates(num)
+	if err != nil {
+		return nil, err
+	}
+	return candidates, nil
 }
 
 func (sb *backend) GetCommitteeState(num uint64) (*istanbul.RoundCommitteeState, error) {

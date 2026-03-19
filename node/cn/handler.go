@@ -47,6 +47,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/node/cn/snap"
@@ -67,7 +68,8 @@ const (
 
 	// bidChanSize is the size of channel listening to NewBidEvent.
 	// The number is referenced from the size of bid pool.
-	bidChanSize = 2048
+	bidChanSize   = 2048
+	vrankChanSize = 256
 
 	concurrentPerPeer  = 3
 	channelSizePerPeer = 20
@@ -122,6 +124,8 @@ type ProtocolManager struct {
 	minedBlockSub *event.TypeMuxSubscription
 	bidCh         chan *auction.Bid
 	bidSub        event.Subscription
+	vrankCh       chan *vrank.VRankBroadcastEvent
+	vrankSub      event.Subscription
 
 	// channels for fetcher, syncer, txsyncLoop
 	newPeerCh   chan Peer
@@ -147,6 +151,7 @@ type ProtocolManager struct {
 
 	stakingModule staking.StakingModule
 	auctionModule auction.AuctionModule
+	vrankModule   vrank.VRankModule
 
 	missingBlobSidecarCh  <-chan *kaia_blockchain.MissingBlobSidecar
 	blobSidecarReqManager *sidecarReqManager
@@ -378,6 +383,14 @@ func (pm *ProtocolManager) IsAuctionModuleDisabled() bool {
 	return pm.auctionModule == nil
 }
 
+func (pm *ProtocolManager) RegisterVRankModule(vrankModule vrank.VRankModule) {
+	pm.vrankModule = vrankModule
+}
+
+func (pm *ProtocolManager) IsVRankModuleDisabled() bool {
+	return pm.vrankModule == nil
+}
+
 func (pm *ProtocolManager) getWSEndPoint() string {
 	return pm.wsendpoint
 }
@@ -428,6 +441,13 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 		go pm.bidBroadcastLoop()
 	}
 
+	if !pm.IsVRankModuleDisabled() {
+		// broadcast vrank messages
+		pm.vrankCh = make(chan *vrank.VRankBroadcastEvent, vrankChanSize)
+		pm.vrankSub = pm.vrankModule.SubscribeVRank(pm.vrankCh)
+		go pm.vrankBroadcastLoop()
+	}
+
 	// sync missing blob sidecars
 	pm.missingBlobSidecarCh = pm.txpool.SubscribeMissingBlobSidecars()
 	go pm.blobSidecarSyncLoop()
@@ -444,6 +464,9 @@ func (pm *ProtocolManager) Stop() {
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
 	if !pm.IsAuctionModuleDisabled() {
 		pm.bidSub.Unsubscribe() // quits bidBroadcastLoop
+	}
+	if !pm.IsVRankModuleDisabled() {
+		pm.vrankSub.Unsubscribe() // quits vrankBroadcastLoop
 	}
 
 	// Quit the sync loop.
@@ -776,6 +799,16 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 
 	case p.GetVersion() >= kaia67 && msg.Code == BlobSidecarsMsg:
 		if err := handleBlobSidecarsMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case p.GetVersion() >= kaia68 && msg.Code == VRankPreprepareMsg:
+		if err := handleVRankPreprepareMsg(pm, p, msg); err != nil {
+			return err
+		}
+
+	case p.GetVersion() >= kaia68 && msg.Code == VRankCandidateMsg:
+		if err := handleVRankCandidateMsg(pm, p, msg); err != nil {
 			return err
 		}
 
@@ -1315,6 +1348,49 @@ func (pm *ProtocolManager) blobSidecarSyncLoop() {
 	}
 }
 
+func handleVRankPreprepareMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	if pm.IsVRankModuleDisabled() {
+		return nil
+	}
+
+	var vrankPreprepare *vrank.VRankPreprepare
+	if err := msg.Decode(&vrankPreprepare); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+
+	if vrankPreprepare == nil || vrankPreprepare.Block == nil || vrankPreprepare.View == nil || vrankPreprepare.View.Sequence == nil || vrankPreprepare.View.Round == nil {
+		return errResp(ErrDecode, "msg %v: malformed VRankPreprepare payload", msg)
+	}
+
+	if err := pm.vrankModule.HandleVRankPreprepare(vrankPreprepare); err != nil {
+		logger.Debug("Ignored VRankPreprepare handler error", "peer", p.GetID(), "err", err)
+	}
+	return nil
+}
+
+func handleVRankCandidateMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
+	if pm.IsVRankModuleDisabled() {
+		return nil
+	}
+
+	var vrankCandidate *vrank.VRankCandidate
+	if err := msg.Decode(&vrankCandidate); err != nil {
+		return errResp(ErrDecode, "msg %v: %v", msg, err)
+	}
+
+	if vrankCandidate == nil || len(vrankCandidate.Sig) == 0 {
+		return errResp(ErrDecode, "msg %v: malformed VRankCandidate payload", msg)
+	}
+
+	if err := pm.vrankModule.HandleVRankCandidate(vrankCandidate); err != nil {
+		if errors.Is(err, vrank.ErrRoundOutOfRange) || errors.Is(err, vrank.ErrInvalidCandidateSig) {
+			return err
+		}
+		logger.Debug("Ignored VRankCandidate handler error", "peer", p.GetID(), "err", err)
+	}
+	return nil
+}
+
 // handleNewBlockHashesMsg handles new block hashes message.
 func handleNewBlockHashesMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	var (
@@ -1556,6 +1632,47 @@ func (pm *ProtocolManager) BroadcastBid(bid *auction.Bid) {
 	}
 }
 
+func (pm *ProtocolManager) BroadcastVRank(ev *vrank.VRankBroadcastEvent) {
+	if pm.nodetype != common.CONSENSUSNODE {
+		return
+	}
+
+	targets := make(map[common.Address]bool, len(ev.Targets))
+	for _, target := range ev.Targets {
+		targets[target] = true
+	}
+
+	var asyncSendMsg func(peer Peer)
+
+	switch ev.Code {
+	case VRankPreprepareMsg:
+		preprepare, preprepareOK := ev.Msg.(*vrank.VRankPreprepare)
+		if !preprepareOK {
+			return
+		}
+		asyncSendMsg = func(peer Peer) {
+			peer.AsyncSendVRankPreprepare(preprepare)
+		}
+	case VRankCandidateMsg:
+		candidate, candidateOK := ev.Msg.(*vrank.VRankCandidate)
+		if !candidateOK {
+			return
+		}
+		asyncSendMsg = func(peer Peer) {
+			peer.AsyncSendVRankCandidate(candidate)
+		}
+	default:
+		return
+	}
+
+	for addr, peer := range pm.peers.CNPeers() {
+		if !targets[addr] || peer.GetVersion() < kaia68 {
+			continue
+		}
+		asyncSendMsg(peer)
+	}
+}
+
 // BroadcastTxs propagates a batch of transactions to its peers which are not known to
 // already have the given transaction.
 func (pm *ProtocolManager) BroadcastTxs(txs types.Transactions) {
@@ -1711,6 +1828,17 @@ func (pm *ProtocolManager) bidBroadcastLoop() {
 		case bid := <-pm.bidCh:
 			pm.BroadcastBid(bid)
 		case <-pm.bidSub.Err():
+			return
+		}
+	}
+}
+
+func (pm *ProtocolManager) vrankBroadcastLoop() {
+	for {
+		select {
+		case vrankRequest := <-pm.vrankCh:
+			pm.BroadcastVRank(vrankRequest)
+		case <-pm.vrankSub.Err():
 			return
 		}
 	}
