@@ -45,6 +45,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/kaiax/gasless"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	valsetimpl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
@@ -572,7 +573,7 @@ func allocatePermissionless(ctx *cli.Context, genesisJson *blockchain.Genesis, v
 				PublicKey: blsInfo.PublicKey,
 				Pop:       blsInfo.Pop,
 			},
-			State: 6, // ValActive
+			State: uint8(valset.ValActive),
 		}
 	}
 
