@@ -43,7 +43,7 @@ func (v *VRankModule) PostInsertBlock(block *types.Block) error {
 		cpRaw, hasCPS := v.cpMatrixCache.Get(blockNum)
 		var cpMatrix map[common.Address]map[common.Address]uint64
 		if hasCPS {
-			cpMatrix = cpRaw.(map[common.Address]map[common.Address]uint64)
+			cpMatrix = cloneCPMatrix(cpRaw.(map[common.Address]map[common.Address]uint64))
 		} else {
 			// unlikely to happen: perform exhaustive re-calculation.
 			cpMatrix, err = v.newCPMatrix(calcEpochStart(blockNum))
