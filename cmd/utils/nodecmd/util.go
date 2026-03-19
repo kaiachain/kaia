@@ -180,6 +180,7 @@ func parseHeaderFile(headerFile string) (*types.Header, common.Hash, error) {
 }
 
 func decodeExtra(headerFile string) (map[string]interface{}, error) {
+	// TODO-consensus: Switch to the engine/sealer-provided extra decoding path after sealer introduction.
 	header, sigHash, err := parseHeaderFile(headerFile)
 	if err != nil {
 		return nil, err

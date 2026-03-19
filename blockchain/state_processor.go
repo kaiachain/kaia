@@ -30,7 +30,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/params"
 )
@@ -133,7 +132,7 @@ func (p *StateProcessor) FinalizeState(header *types.Header, statedb *state.Stat
 		}
 	} else if header.BaseFee != nil {
 		logger.Error("A block before Magma hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
-		return nil, consensus.ErrInvalidBaseFee
+		return nil, ErrInvalidBaseFee
 	}
 
 	for _, module := range p.blockStateModules {

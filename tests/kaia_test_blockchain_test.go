@@ -72,7 +72,7 @@ type BCData struct {
 	rewardBase         *common.Address
 	validatorAddresses []common.Address
 	validatorPrivKeys  []*ecdsa.PrivateKey
-	engine             consensus.Istanbul
+	engine             consensus.Engine
 	genesis            *blockchain.Genesis
 	govModule          gov.GovModule
 	isMiner            bool
@@ -185,8 +185,7 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 	if err != nil {
 		return nil, err
 	}
-	engine.RegisterKaiaxModules(mGov, mStaking, mValset)
-	engine.RegisterHeaderModule(mReward, mRandao)
+	engine.RegisterKaiaxModules(mGov, mValset)
 	bc.RegisterHeaderModule(mReward, mRandao)
 	bc.Processor().RegisterBlockStateModule(mReward, mSystem)
 	if err = engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock, nil); err != nil {

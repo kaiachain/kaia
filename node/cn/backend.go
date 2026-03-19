@@ -112,6 +112,10 @@ type BackendProtocolManager interface {
 	auction.AuctionModuleHost
 }
 
+type chainAwareConsensusEngine interface {
+	SetChain(chain consensus.ChainReader)
+}
+
 // CN implements the Kaia consensus node service.
 type CN struct {
 	config      *Config
@@ -353,6 +357,8 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB
+	// TODO-Kaiabft-Refactor: After ProtocolManager is split, pass consensus.Handler
+	// (and protocol metadata) instead of passing the full consensus.Engine here.
 	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, cacheLimit, ctx.NodeType(), config); err != nil {
 		return nil, err
 	}
@@ -377,9 +383,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	// set worker
 	if ctx.NodeType() != common.CONSENSUSNODE || config.WorkerDisable {
 		cn.miner = work.NewFakeWorker()
+		// TODO-Kaiabft-Refactor: Remove this chain-only injection path once runtime
+		// (Start/Stop) and passive engine/handler dependencies are split.
 		// Istanbul backend can be accessed by APIs to call its methods even though the core of the
 		// consensus engine doesn't run.
-		istBackend, ok := cn.engine.(consensus.Istanbul)
+		istBackend, ok := cn.engine.(chainAwareConsensusEngine)
 		if ok {
 			istBackend.SetChain(cn.blockchain)
 		}
@@ -607,13 +615,11 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	s.blockchain.RegisterExecutionModule(mExecution...)
 	s.blockchain.RegisterRewindableModule(mRewindable...)
 	s.blockchain.RegisterHeaderModule(mHeader...)
+	s.blockchain.Validator().RegisterHeaderModules(mHeader...)
+	s.blockchain.Validator().SetupKaiaxModules(s.govModule)
 	s.blockchain.Processor().RegisterBlockStateModule(mBlockState...)
 	s.txPool.RegisterTxPoolModule(mTxPool...)
-	if engine, ok := s.engine.(consensus.Istanbul); ok {
-		engine.RegisterKaiaxModules(s.govModule, s.stakingModule, mValset)
-		engine.RegisterHeaderModule(mHeader...)
-		engine.RegisterTxBundlingModule(mTxBundling...)
-	}
+	s.engine.RegisterKaiaxModules(s.govModule, mValset)
 	s.protocolManager.RegisterStakingModule(s.stakingModule)
 
 	return nil

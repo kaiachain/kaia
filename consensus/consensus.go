@@ -28,9 +28,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -89,14 +87,20 @@ type Engine interface {
 	// block.
 	Author(header *types.Header) (common.Address, error)
 
+	// Start starts any consensus-specific background lifecycle.
+	// Engines without a background runtime should implement this as a no-op.
+	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool, executor Executor) error
+
+	// Stop stops any consensus-specific background lifecycle.
+	// Engines without a background runtime should implement this as a no-op.
+	Stop() error
+
+	// RegisterKaiaxModules wires kaiax modules needed by the engine.
+	// Engines that do not use these modules should implement this as a no-op.
+	RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule)
+
 	// PrepareExtra builds consensus-specific header.Extra content.
 	PrepareExtra(header *types.Header, parent *types.Header) ([]byte, error)
-
-	// CanVerifyHeadersConcurrently returns true if concurrent header verification possible, otherwise returns false.
-	CanVerifyHeadersConcurrently() bool
-
-	// PreprocessHeaderVerification prepares header verification for heavy computation before synchronous header verification such as ecrecover.
-	PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error)
 
 	// SubmitTransactions submits transactions for execution and consensus.
 	// Returns finalizeCh which receives the execution result when block is finalized (for DB write and broadcast).
@@ -104,9 +108,9 @@ type Engine interface {
 	// This allows the caller to update pending block state for APIs.
 	SubmitTransactions(txs *types.TransactionsByPriceAndNonce, state *state.StateDB, header *types.Header, mux *event.TypeMux, onPrepared func(*ExecutionResult)) (finalizeCh <-chan *ExecutionResult)
 
-	// VerifyHeader checks whether a header conforms to the consensus rules of a
-	// given engine.
-	VerifyHeader(chain ChainReader, header *types.Header, parents []*types.Header) error
+	// VerifySeals checks consensus-specific seals for the given header.
+	// When sigCacheMode is true, implementations may run cache-only preprocessing.
+	VerifySeals(header *types.Header, sigCacheMode bool) error
 
 	// APIs returns the RPC APIs this consensus engine provides.
 	APIs(chain ChainReader) []rpc.API
@@ -137,26 +141,6 @@ type Handler interface {
 
 	// RegisterConsensusMsgCode registers the channel of consensus msg.
 	RegisterConsensusMsgCode(Peer)
-}
-
-// Istanbul is a consensus engine to avoid byzantine failure
-type Istanbul interface {
-	Engine
-
-	// Start starts the engine
-	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool, executor Executor) error
-
-	// Stop stops the engine
-	Stop() error
-
-	// SetChain sets chain of the Istanbul backend
-	SetChain(chain ChainReader)
-
-	RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule)
-
-	kaiax.HeaderModuleHost
-	kaiax.TxBundlingModuleHost
-	staking.StakingModuleHost
 }
 
 type ConsensusInfo struct {

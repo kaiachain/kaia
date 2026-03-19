@@ -31,7 +31,27 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/params"
+)
+
+var (
+	// ErrInvalidTimestamp is returned if the timestamp of a block is lower than
+	// the previous block's timestamp plus the minimum block interval.
+	ErrInvalidTimestamp = errors.New("invalid timestamp")
+
+	// ErrInvalidBlockScore is returned if the BlockScore of a block is not 1.
+	ErrInvalidBlockScore = errors.New("invalid blockscore")
+
+	// ErrInvalidBaseFee is returned if a block before Magma has a non-nil base fee.
+	ErrInvalidBaseFee = errors.New("invalid baseFee before fork")
+
+	// ErrUnexpectedExcessBlobGasBeforeOsaka is returned if excessBlobGas exists before Osaka.
+	ErrUnexpectedExcessBlobGasBeforeOsaka = errors.New("unexpected excessBlobGas before osaka")
+
+	// ErrUnexpectedBlobGasUsedBeforeOsaka is returned if blobGasUsed exists before Osaka.
+	ErrUnexpectedBlobGasUsedBeforeOsaka = errors.New("unexpected blobGasUsed before osaka")
 )
 
 // BlockValidator is responsible for validating block headers and
@@ -39,10 +59,12 @@ import (
 //
 // BlockValidator implements Validator.
 type BlockValidator struct {
-	config *params.ChainConfig   // Chain configuration options
-	bc     *BlockChain           // Canonical block chain
-	hc     consensus.ChainReader // Header chain
-	engine consensus.Engine      // Consensus engine
+	config        *params.ChainConfig   // Chain configuration options
+	bc            *BlockChain           // Canonical block chain
+	hc            consensus.ChainReader // Header chain
+	engine        consensus.Engine      // Consensus engine
+	headerModules []kaiax.HeaderModule  // Header modules
+	mGov          gov.GovModule         // Governance module
 }
 
 // NewBlockValidator returns a new block validator which is safe for re-use
@@ -65,35 +87,44 @@ func NewBlockValidatorWithHeaderChain(config *params.ChainConfig, hc consensus.C
 	return validator
 }
 
-func (v *BlockValidator) ValidateHeader(header *types.Header) error {
-	var parent []*types.Header
-	if header.Number.Sign() == 0 {
-		// If current block is genesis, the parent is also genesis
-		parent = append(parent, v.hc.GetHeaderByNumber(0))
-	} else {
-		parent = append(parent, v.hc.GetHeader(header.ParentHash, header.Number.Uint64()-1))
-	}
-	if _, ok := v.engine.(consensus.Istanbul); !ok {
-		// TODO: this is ad-hoc fix for faker engine, should be removed
-		return v.engine.VerifyHeader(v.hc, header, parent)
-	}
-	return v.validateHeader(header, parent)
+func (v *BlockValidator) RegisterHeaderModules(modules ...kaiax.HeaderModule) {
+	v.headerModules = append(v.headerModules, modules...)
 }
 
-func (v *BlockValidator) ValidateHeaders(headers []*types.Header) (chan<- struct{}, <-chan error) {
+func (v *BlockValidator) SetupKaiaxModules(mGov gov.GovModule) {
+	v.mGov = mGov
+}
+
+func (v *BlockValidator) kip71Config(blockNum uint64) (*params.KIP71Config, error) {
+	if v.mGov != nil {
+		pset := v.mGov.GetParamSet(blockNum)
+		return pset.ToKip71Config(), nil
+	}
+	if v.config == nil || v.config.Governance == nil || v.config.Governance.KIP71 == nil {
+		return nil, errors.New("missing KIP-71 config for magma header verification")
+	}
+	return v.config.Governance.KIP71, nil
+}
+
+func (v *BlockValidator) ValidateHeader(header *types.Header) error {
+	if header.Number == nil {
+		return consensus.ErrUnknownBlock
+	}
+
+	return v.validateHeader(header, nil)
+}
+
+func (v *BlockValidator) Preprocess(headers []*types.Header) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
 	results := make(chan error, len(headers))
 	go func() {
 		errored := false
-		for i, header := range headers {
+		for _, header := range headers {
 			var err error
-			if errored { // If errored once in the batch, skip the rest
+			if errored {
 				err = consensus.ErrUnknownAncestor
-			} else if _, ok := v.engine.(consensus.Istanbul); !ok {
-				// TODO: this is ad-hoc fix for faker engine, should be removed
-				err = v.engine.VerifyHeader(v.hc, header, headers[:i])
 			} else {
-				err = v.validateHeader(header, headers[:i])
+				err = v.engine.VerifySeals(header, true)
 			}
 
 			if err != nil {
@@ -110,7 +141,7 @@ func (v *BlockValidator) ValidateHeaders(headers []*types.Header) (chan<- struct
 	return abort, results
 }
 
-func (v *BlockValidator) validateHeader(header *types.Header, parents []*types.Header) error {
+func (v *BlockValidator) validateHeader(header *types.Header, parent *types.Header) error {
 	if header.Number == nil {
 		return consensus.ErrUnknownBlock
 	}
@@ -122,7 +153,7 @@ func (v *BlockValidator) validateHeader(header *types.Header, parents []*types.H
 
 	// Ensure that the block's blockscore is meaningful (may not be correct at this point)
 	if header.BlockScore == nil || header.BlockScore.Cmp(params.DefaultBlockScore) != 0 {
-		return consensus.ErrInvalidBlockScore
+		return ErrInvalidBlockScore
 	}
 
 	// The genesis block is the always valid dead-end
@@ -130,25 +161,26 @@ func (v *BlockValidator) validateHeader(header *types.Header, parents []*types.H
 	if number == 0 {
 		return nil
 	}
+
 	// Ensure that the block's timestamp isn't too close to it's parent
-	var parent *types.Header
-	if len(parents) > 0 {
-		parent = parents[len(parents)-1]
-	} else {
+	if parent == nil {
 		parent = v.hc.GetHeader(header.ParentHash, number-1)
 	}
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
+	if parent.Time.Uint64()+uint64(params.BlockGenerationInterval) > header.Time.Uint64() {
+		return ErrInvalidTimestamp
+	}
 
-	// Verify the existence / non-existence of osaka-specific header fields
+	// Verify the existence / non-existence of osaka-specific header fields.
 	osaka := v.config.IsOsakaForkEnabled(header.Number)
 	if !osaka {
 		switch {
 		case header.ExcessBlobGas != nil:
-			return consensus.ErrUnexpectedExcessBlobGasBeforeOsaka
+			return ErrUnexpectedExcessBlobGasBeforeOsaka
 		case header.BlobGasUsed != nil:
-			return consensus.ErrUnexpectedBlobGasUsedBeforeOsaka
+			return ErrUnexpectedBlobGasUsedBeforeOsaka
 		}
 	} else {
 		if header.Number.Uint64() != parent.Number.Uint64()+1 {
@@ -163,8 +195,31 @@ func (v *BlockValidator) validateHeader(header *types.Header, parents []*types.H
 		}
 	}
 
-	// Validate consensus-dependent properties via the consensus engine
-	return v.engine.VerifyHeader(v.hc, header, parents)
+	// Verify Magma basefee rule from governance paramset.
+	if v.config.IsMagmaForkEnabled(header.Number) {
+		kip71Config, err := v.kip71Config(header.Number.Uint64())
+		if err != nil {
+			return err
+		}
+		if err := kip71Config.VerifyMagmaHeader(header.BaseFee, parent.Number, parent.BaseFee, parent.GasUsed); err != nil {
+			return err
+		}
+	} else if header.BaseFee != nil {
+		return ErrInvalidBaseFee
+	}
+
+	// Verify the header's seal and consensus-specific fields.
+	if err := v.engine.VerifySeals(header, false); err != nil {
+		return err
+	}
+
+	// Verify the header with registered header modules.
+	for _, module := range v.headerModules {
+		if err := module.VerifyHeader(header, parent); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ValidateBody verifies the block

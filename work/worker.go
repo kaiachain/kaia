@@ -247,12 +247,9 @@ func (self *worker) start() {
 
 	atomic.StoreInt32(&self.mining, 1)
 
-	// istanbul BFT
-	if istanbul, ok := self.engine.(consensus.Istanbul); ok {
-		executor := NewDefaultExecutor(self.config, self.chain, self.nodeAddr)
-		executor.SetTxBundlingModules(self.txBundlingModules)
-		istanbul.Start(self.chain, self.chain.CurrentBlock, self.chain.HasBadBlock, executor)
-	}
+	executor := NewDefaultExecutor(self.config, self.chain, self.nodeAddr)
+	executor.SetTxBundlingModules(self.txBundlingModules)
+	self.engine.Start(self.chain, self.chain.CurrentBlock, self.chain.HasBadBlock, executor)
 }
 
 func (self *worker) stop() {
@@ -261,10 +258,7 @@ func (self *worker) stop() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	// istanbul BFT
-	if istanbul, ok := self.engine.(consensus.Istanbul); ok {
-		istanbul.Stop()
-	}
+	self.engine.Stop()
 
 	atomic.StoreInt32(&self.mining, 0)
 }

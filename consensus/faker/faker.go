@@ -28,6 +28,8 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 )
@@ -73,19 +75,22 @@ func (f *Faker) Author(header *types.Header) (common.Address, error) {
 	return params.AuthorAddressForTesting, nil
 }
 
+// Start is a no-op for faker.
+func (f *Faker) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool, executor consensus.Executor) error {
+	return nil
+}
+
+// Stop is a no-op for faker.
+func (f *Faker) Stop() error {
+	return nil
+}
+
+// RegisterKaiaxModules is a no-op for faker.
+func (f *Faker) RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule) {}
+
 // PrepareExtra returns consensus-specific extra-data content.
 func (f *Faker) PrepareExtra(header *types.Header, _ *types.Header) ([]byte, error) {
 	return header.Extra, nil
-}
-
-// CanVerifyHeadersConcurrently returns true for concurrent verification.
-func (f *Faker) CanVerifyHeadersConcurrently() bool {
-	return true
-}
-
-// PreprocessHeaderVerification is not used for faker.
-func (f *Faker) PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error) {
-	panic("not implemented for faker")
 }
 
 // GetConsensusInfo returns empty consensus info.
@@ -93,46 +98,23 @@ func (f *Faker) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, e
 	return consensus.ConsensusInfo{}, nil
 }
 
-// VerifyHeader checks whether a header conforms to the consensus rules.
-func (f *Faker) VerifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
-	// If we're running a full engine faking, accept any input as valid
+func (f *Faker) verifyFailure(header *types.Header) error {
 	if f.fullFake {
 		return nil
 	}
-
-	number := header.Number.Uint64()
-
-	// Check if we should fail this block
-	if f.failBlock != 0 && number == f.failBlock {
+	if header == nil || header.Number == nil {
+		return consensus.ErrUnknownBlock
+	}
+	if f.failBlock != 0 && header.Number.Uint64() == f.failBlock {
 		return consensus.ErrUnknownAncestor
 	}
-
-	// Short circuit if the header is known
-	if chain.GetHeader(header.Hash(), number) != nil {
-		return nil
-	}
-
-	// For genesis block, skip parent check
-	if number == 0 {
-		return nil
-	}
-
-	// Check parent existence
-	var parent *types.Header
-	if len(parents) == 0 {
-		parent = chain.GetHeader(header.ParentHash, number-1)
-	} else if parents[len(parents)-1] != nil && parents[len(parents)-1].Hash() == header.ParentHash {
-		parent = parents[len(parents)-1]
-	} else {
-		parent = chain.GetHeader(header.ParentHash, number-1)
-	}
-
-	if parent == nil {
-		return consensus.ErrUnknownAncestor
-	}
-
-	// All other headers are valid in fake mode
 	return nil
+}
+
+// VerifySeals checks consensus-specific seals for faker.
+func (f *Faker) VerifySeals(header *types.Header, sigCacheMode bool) error {
+	_ = sigCacheMode
+	return f.verifyFailure(header)
 }
 
 // Prepare prepares the header for mining.
