@@ -94,10 +94,6 @@ func (r *RandaoModule) getAllCached(num *big.Int) (system.BlsPublicKeyInfos, err
 			return nil, err
 		}
 
-		// Semantically, bls keys are fetched from N-1.
-		// ABv2 is installed at HF. `RandoModule.PostInsertBlock` calls with `getAllCAched(HF)` at HF-1
-		// At HF, no committed ABv2 migration yet. Thus fallback to legacy fetcher, SBR.
-		// From HF+1, fetches bls keys from ABv2
 		if r.ChainConfig.IsPermissionlessForkEnabled(parentNum) {
 			abv2Root := statedb.GetStorageRoot(system.AddressBookAddr)
 			storageKey := abv2Root.Hex()
