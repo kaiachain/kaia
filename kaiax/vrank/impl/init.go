@@ -218,18 +218,10 @@ func (v *VRankModule) catchUp(headNum uint64) error {
 }
 
 func (v *VRankModule) loadCheckpointInEpoch(blockNum uint64) (uint64, map[common.Address]uint64, map[common.Address]map[common.Address]uint64, bool) {
-	epochStart := calcEpochStart(blockNum)
-	lastCP, ok := ReadLastCheckpoint(v.ChainKv)
-	if !ok || lastCP < epochStart {
-		return 0, nil, nil, false
-	}
-	cpNum := min(lastCP, calcCheckpointBlock(blockNum))
-	if cpNum < epochStart {
-		return 0, nil, nil, false
-	}
+	cpNum := calcCheckpointBlock(blockNum)
 	pfs, cpMatrix := ReadCheckpoint(v.ChainKv, cpNum)
 	if pfs == nil {
-		return 0, nil, nil, false // safety: checkpoint deleted (e.g. after rewind)
+		return 0, nil, nil, false
 	}
 	return cpNum, pfs, cpMatrix, true
 }

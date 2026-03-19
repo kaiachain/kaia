@@ -273,7 +273,6 @@ func TestGetPFS_NearbyCacheHit(t *testing.T) {
 
 // TestGetPFS_DBCheckpointHit verifies that when there is no in-memory cache but a DB checkpoint
 // exists, GetPFS resumes from the checkpoint instead of epoch start.
-// The checkpoint must be at a scoreCheckpointInterval multiple for the O(1) lookup to find it.
 func TestGetPFS_DBCheckpointHit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	valset := mock_valset.NewMockValsetModule(ctrl)
@@ -649,7 +648,6 @@ func TestGetCFS_NearbyCacheHit(t *testing.T) {
 
 // TestGetCFS_DBCheckpointHit verifies that when there is no in-memory cache but a DB checkpoint
 // exists, GetCFS resumes from the checkpoint instead of epoch start.
-// The checkpoint must be at a scoreCheckpointInterval multiple for the O(1) lookup to find it.
 func TestGetCFS_DBCheckpointHit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	valset := mock_valset.NewMockValsetModule(ctrl)
