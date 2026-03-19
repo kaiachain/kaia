@@ -523,14 +523,6 @@ func (sb *backend) Initialize(chain consensus.ChainReader, header *types.Header,
 	if err := sb.valsetModule.WriteStatesToContract(vmenv, header, state); err != nil {
 		logger.Error("Failed to process transition", "number", header.Number.Uint64(), "err", err.Error())
 	}
-
-	// {
-	// 	candTestings, err := sb.valsetModule.GetCandidates(header.Number.Uint64())
-	// 	fmt.Println("###", err)
-	// 	for _, addr := range candTestings {
-	// 		fmt.Println("@@@", header.Number.Uint64(), addr.String())
-	// 	}
-	// }
 }
 
 // Finalize runs any post-transaction state modifications (e.g. block rewards)
