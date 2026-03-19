@@ -101,6 +101,7 @@ contract MultiCallContract {
     {
         IAddressBook addressBook = IAddressBook(ADDRESS_BOOK_ADDRESS);
         (typeList, addressList) = addressBook.getAllAddress();
+        spareAddress = addressBook.spareContractAddress();
 
         // Return early if AddressBook hasn't been activated yet or there are no CNs.
         if (addressList.length < 5) {
