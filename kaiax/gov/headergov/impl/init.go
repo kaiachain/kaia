@@ -179,11 +179,52 @@ func (h *headerGovModule) isKoreHF(num uint64) bool {
 }
 
 func (h *headerGovModule) PushMyVotes(vote headergov.VoteData) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	h.myVotes = append(h.myVotes, vote)
 }
 
 func (h *headerGovModule) PopMyVotes(idx int) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if idx < 0 || idx >= len(h.myVotes) {
+		return
+	}
 	h.myVotes = append(h.myVotes[:idx], h.myVotes[idx+1:]...)
+}
+
+func (h *headerGovModule) peekMyVote() (headergov.VoteData, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	if len(h.myVotes) == 0 {
+		return nil, false
+	}
+	return h.myVotes[0], true
+}
+
+func (h *headerGovModule) myVotesSnapshot() []headergov.VoteData {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	ret := make([]headergov.VoteData, len(h.myVotes))
+	copy(ret, h.myVotes)
+	return ret
+}
+
+func (h *headerGovModule) removeMyVote(vote headergov.VoteData) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for i, myvote := range h.myVotes {
+		if isEqualVotes(myvote, vote) {
+			logger.Debug("Removing myvote", "vote", myvote)
+			h.myVotes = append(h.myVotes[:i], h.myVotes[i+1:]...)
+			return
+		}
+	}
 }
 
 // scanAllVotesInEpoch scans all votes from headers in the given epoch.
@@ -377,6 +418,18 @@ func getGenesisParamNames(config *params.ChainConfig) []gov.ParamName {
 		if config.Governance.Reward != nil &&
 			config.Governance.Reward.Kip82Ratio != "" {
 			genesisParamNames = append(genesisParamNames, gov.RewardKip82Ratio)
+		}
+	}
+
+	if config.IsOsakaForkEnabled(common.Big0) &&
+		config.Governance != nil {
+		if config.Governance.Reward != nil &&
+			config.Governance.Reward.StakingRewardThreshold != nil {
+			genesisParamNames = append(genesisParamNames, gov.RewardStakingRewardThreshold)
+		}
+		if config.Governance.Reward != nil &&
+			config.Governance.Reward.UseFlexReward {
+			genesisParamNames = append(genesisParamNames, gov.RewardUseFlexReward)
 		}
 	}
 

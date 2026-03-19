@@ -103,8 +103,8 @@ var (
 	ErrFloorDataGas = errors.New("insufficient gas for floor data gas cost")
 
 	// ErrGasLimit is returned if a transaction's requested gas limit exceeds the
-	// maximum allowance of the current block.
-	ErrGasLimit = errors.New("exceeds block gas limit")
+	// maximum allowance.
+	ErrGasLimit = errors.New("tx gas limit exceeds the upper limit")
 
 	// ErrNegativeValue is a sanity error to ensure noone is able to specify a
 	// transaction with a negative value.

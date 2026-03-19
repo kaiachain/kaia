@@ -67,7 +67,7 @@ type CLStakingInfo struct {
 type CLStakingInfos []*CLStakingInfo
 
 // consolidatedNode is the refined staking information suitable for proposer selection.
-// Sometimes a node would register multiple NodeIds in AddressBook,
+// Sometimes a node would register multiple NodeIds in AddressBook (permissioned),
 // in which each entry has different StakingAddr and same RewardAddr.
 // We treat those entries with common RewardAddr as one GC node.
 //
@@ -83,12 +83,17 @@ type CLStakingInfos []*CLStakingInfo
 //	CN1 = {[N1,N2], [S1,S2], R1, A1+A2}
 //	CN3 = {[N3],    [S3],    R3, A3}
 //
+// In permissionless mode, ABv2 guarantees unique (NodeId, StakingContract, RewardAddr)
+// tuples, so NodeIds always has length 1. We still use slices to keep a single struct
+// for both permissioned (multiple NodeIds per RewardAddr) and permissionless modes.
+//
 // If the node has CLStakingInfo, it will be added to the consolidatedNode.
 type consolidatedNode struct {
-	NodeId        common.Address
-	RewardAddr    common.Address // The common RewardAddr
-	StakingAmount uint64         // Sum of the staking amounts from CNStaking
-	CLStakingInfo *CLStakingInfo // The CLStakingInfo if any
+	NodeIds          []common.Address
+	StakingContracts []common.Address
+	RewardAddr       common.Address // The common RewardAddr
+	StakingAmount    uint64         // Sum of the staking amounts from CNStaking
+	CLStakingInfo    *CLStakingInfo // The CLStakingInfo if any
 }
 
 // StakingInfoLegacy may have been persisted to database by the past versions.
@@ -113,18 +118,18 @@ type StakingInfoResponse struct {
 	Gini    float64 `json:"gini"`    // The gini coefficient at the requested block number. Returned regardless of `UseGini` value.
 }
 
-func (si *StakingInfo) ConsolidatedNodes(rules *params.Rules, nodes []common.Address) []consolidatedNode {
+func (si *StakingInfo) ConsolidatedNodes(rules *params.Rules) []consolidatedNode {
 	if si.consolidatedNodes == nil {
 		if rules != nil && rules.IsPermissionless {
-			si.consolidatedNodes = si.consolidateNodesPermissionless(nodes)
+			si.consolidatedNodes = si.consolidateNodesPermissionless()
 		} else {
-			si.consolidatedNodes = si.consolidateNodesPermissioned(nodes)
+			si.consolidatedNodes = si.consolidateNodes()
 		}
 	}
 	return *si.consolidatedNodes
 }
 
-func (si *StakingInfo) consolidateNodesPermissionless(council []common.Address) *[]consolidatedNode {
+func (si *StakingInfo) consolidateNodesPermissionless() *[]consolidatedNode {
 	// because Go map is not ordered, rList keeps track of the occurrence order of RewardAddrs.
 	// to later arrange the consolidatedNodes.
 	cmap := make(map[common.Address]*consolidatedNode)
@@ -134,12 +139,12 @@ func (si *StakingInfo) consolidateNodesPermissionless(council []common.Address) 
 	// Unique set of [N,S,R] is guaranteed by AddressBookV2.
 	for i, n := range si.NodeIds {
 		r := si.RewardAddrs[i]
-		// insert if reward addres did not appear before (FCFS)
+		// insert if reward address did not appear before (FCFS)
 		if _, exist := cmap[r]; !exist {
 			nToR[n] = r
 			rList = append(rList, r)
 			cmap[r] = &consolidatedNode{
-				NodeId:        n,
+				NodeIds:       []common.Address{n},
 				RewardAddr:    r,
 				StakingAmount: si.StakingAmounts[i],
 			}
@@ -150,7 +155,8 @@ func (si *StakingInfo) consolidateNodesPermissionless(council []common.Address) 
 	return serializeConsolidation(cmap, rList)
 }
 
-func (si *StakingInfo) consolidateNodesPermissioned(council []common.Address) *[]consolidatedNode {
+// consolidateNodes groups entries by RewardAddr, merging NodeIds and StakingAmounts.
+func (si *StakingInfo) consolidateNodes() *[]consolidatedNode {
 	// because Go map is not ordered, rList keeps track of the occurrence order of RewardAddrs.
 	// to later arrange the consolidatedNodes.
 	cmap := make(map[common.Address]*consolidatedNode)
@@ -158,29 +164,19 @@ func (si *StakingInfo) consolidateNodesPermissioned(council []common.Address) *[
 	nToR := make(map[common.Address]common.Address)
 
 	for i, n := range si.NodeIds {
-		// In the permissioned operation, only one representative node does exist and gauranteed by governing node
-		nodeOvewrite := false
-		for _, councilNode := range council {
-			if councilNode == n {
-				nodeOvewrite = true
-				break
-			}
-		}
 		r := si.RewardAddrs[i]
 		// Unique nodeId is guaranteed by AddressBook.
 		nToR[n] = r
 		if cn, ok := cmap[r]; ok {
-			if nodeOvewrite {
-				cn.NodeId = n
-			}
+			cn.NodeIds = append(cn.NodeIds, n)
+			cn.StakingContracts = append(cn.StakingContracts, si.StakingContracts[i])
 			cn.StakingAmount += si.StakingAmounts[i]
 		} else {
 			cmap[r] = &consolidatedNode{
-				RewardAddr:    r,
-				StakingAmount: si.StakingAmounts[i],
-			}
-			if nodeOvewrite {
-				cmap[r].NodeId = n
+				NodeIds:          []common.Address{n},
+				StakingContracts: []common.Address{si.StakingContracts[i]},
+				RewardAddr:       r,
+				StakingAmount:    si.StakingAmounts[i],
 			}
 			rList = append(rList, r)
 		}
@@ -252,7 +248,7 @@ func (si *StakingInfo) Gini(rules *params.Rules, minStake uint64) float64 {
 }
 
 func (si *StakingInfo) computeGini(rules *params.Rules, minStake uint64) float64 {
-	cnodes := si.ConsolidatedNodes(rules, nil)
+	cnodes := si.ConsolidatedNodes(rules)
 	amounts := make(sort.Float64Slice, 0, len(cnodes))
 
 	for _, cnode := range cnodes {

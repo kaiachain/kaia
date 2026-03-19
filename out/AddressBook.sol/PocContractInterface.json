@@ -1,0 +1,1 @@
+{"abi":[{"type":"function","name":"getPocVersion","inputs":[],"outputs":[{"name":"","type":"uint256"}],"stateMutability":"pure"}],"bytecode":{"object":"0x","sourceMap":"","linkReferences":{}},"deployedBytecode":{"object":"0x","sourceMap":"","linkReferences":{}},"methodIdentifiers":{"getPocVersion()":"0f610072"},"storageLayout":{"storage":[],"types":{}},"id":1}

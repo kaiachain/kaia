@@ -108,14 +108,16 @@ func demotedByStaking(council valset.CommonAddressSet, stakingAmounts map[common
 // If this assumption changes, this logic may need to be revisited.
 
 func collectStakingAmounts(rules *params.Rules, nodes []common.Address, si *staking.StakingInfo) map[common.Address]float64 {
-	cns := si.ConsolidatedNodes(rules, nodes)
+	cns := si.ConsolidatedNodes(rules)
 	stakingAmounts := make(map[common.Address]float64, len(nodes))
 	for _, node := range nodes {
 		stakingAmounts[node] = 0
 	}
 	for _, cn := range cns {
-		if _, ok := stakingAmounts[cn.NodeId]; ok {
-			stakingAmounts[cn.NodeId] = float64(cn.StakingAmount)
+		for _, node := range cn.NodeIds {
+			if _, ok := stakingAmounts[node]; ok {
+				stakingAmounts[node] = float64(cn.StakingAmount)
+			}
 		}
 	}
 	return stakingAmounts

@@ -58,6 +58,7 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 		t.Skipf("directory %s does not exist", executionSpecBlockTestDir)
 	}
 	bt := new(testMatcher)
+	bt.serialFiles = true
 
 	// should be skipped
 	// note: Unsupported EIPs

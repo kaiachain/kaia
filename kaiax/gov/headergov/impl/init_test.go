@@ -163,6 +163,11 @@ func TestGetGenesisParamNames(t *testing.T) {
 	koreGenesisConfig.Governance.GovParamContract = common.HexToAddress("0x123")
 	koreGenesisConfig.Governance.Reward.Kip82Ratio = "20/80"
 
+	osakaGenesisConfig := koreGenesisConfig.Copy()
+	osakaGenesisConfig.OsakaCompatibleBlock = new(big.Int).SetUint64(0)
+	osakaGenesisConfig.Governance.Reward.StakingRewardThreshold = big.NewInt(1000000)
+	osakaGenesisConfig.Governance.Reward.UseFlexReward = true
+
 	testcases := []struct {
 		desc     string
 		config   *params.ChainConfig
@@ -227,7 +232,7 @@ func TestGetGenesisParamNames(t *testing.T) {
 
 	// this prevents forgetting to update getGenesisParamNames after adding a new governance parameter
 	t.Run("getGenesisParamNames must include all governance parameters when all hardforks are enabled", func(t *testing.T) {
-		latestGenesisConfig := koreGenesisConfig.Copy()
+		latestGenesisConfig := osakaGenesisConfig.Copy()
 
 		// Set all *CompatibleBlock fields to zero.
 		configValue := reflect.ValueOf(latestGenesisConfig).Elem()

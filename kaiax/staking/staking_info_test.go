@@ -97,7 +97,7 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 			rules:   nil,
 			council: []common.Address{n1},
 			expectedConsolidated: []consolidatedNode{
-				{n1, r1, a1, nil},
+				{[]common.Address{n1}, []common.Address{s1}, r1, a1, nil},
 			},
 			expectedGini: 0.0,
 		},
@@ -114,10 +114,10 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 			rules:   nil,
 			council: []common.Address{n1, n2, n3, n4},
 			expectedConsolidated: []consolidatedNode{
-				{n1, r1, a1, nil},
-				{n2, r2, a2, nil},
-				{n3, r3, a3, nil},
-				{n4, r4, a4, nil},
+				{[]common.Address{n1}, []common.Address{s1}, r1, a1, nil},
+				{[]common.Address{n2}, []common.Address{s2}, r2, a2, nil},
+				{[]common.Address{n3}, []common.Address{s3}, r3, a3, nil},
+				{[]common.Address{n4}, []common.Address{s4}, r4, a4, nil},
 			},
 			expectedGini: 0.38,
 		},
@@ -134,8 +134,8 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 			rules:   nil,
 			council: []common.Address{n1, n2},
 			expectedConsolidated: []consolidatedNode{
-				{n1, r1, a1 + a3, nil},
-				{n2, r2, a2 + a4, nil},
+				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, nil},
+				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, nil},
 			},
 			expectedGini: 0.17,
 		},
@@ -152,10 +152,10 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 			rules:   nil,
 			council: []common.Address{n1, n2, n3, n4},
 			expectedConsolidated: []consolidatedNode{
-				{n1, r1, a2, nil},
-				{n2, r2, aM, nil},
-				{n3, r3, aL, nil},
-				{n4, r4, a0, nil},
+				{[]common.Address{n1}, []common.Address{s1}, r1, a2, nil},
+				{[]common.Address{n2}, []common.Address{s2}, r2, aM, nil},
+				{[]common.Address{n3}, []common.Address{s3}, r3, aL, nil},
+				{[]common.Address{n4}, []common.Address{s4}, r4, a0, nil},
 			},
 			expectedGini: 0.41,
 		},
@@ -184,10 +184,10 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 			rules:   nil,
 			council: []common.Address{n1, n2, n3, n4},
 			expectedConsolidated: []consolidatedNode{
-				{n1, r1, a2, nil},
-				{n2, r2, aM, nil},
-				{n3, r3, aL, &CLStakingInfo{n3, clPool1, clStakingAmount2}},
-				{n4, r4, a0, &CLStakingInfo{n4, clPool2, clStakingAmount2}},
+				{[]common.Address{n1}, []common.Address{s1}, r1, a2, nil},
+				{[]common.Address{n2}, []common.Address{s2}, r2, aM, nil},
+				{[]common.Address{n3}, []common.Address{s3}, r3, aL, &CLStakingInfo{n3, clPool1, clStakingAmount2}},
+				{[]common.Address{n4}, []common.Address{s4}, r4, a0, &CLStakingInfo{n4, clPool2, clStakingAmount2}},
 			},
 			expectedGini: 0.41,
 		},
@@ -216,8 +216,8 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 			rules:   nil,
 			council: []common.Address{n1, n2},
 			expectedConsolidated: []consolidatedNode{
-				{n1, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
-				{n2, r2, a2 + a4, &CLStakingInfo{n4, clPool2, clStakingAmount2}},
+				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
+				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, &CLStakingInfo{n4, clPool2, clStakingAmount2}},
 			},
 			expectedGini: 0.17,
 		},
@@ -252,8 +252,8 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 			rules:   nil,
 			council: []common.Address{n1, n2},
 			expectedConsolidated: []consolidatedNode{
-				{n1, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
-				{n2, r2, a2 + a4, &CLStakingInfo{n2, clPool2, clStakingAmount2}},
+				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
+				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, &CLStakingInfo{n2, clPool2, clStakingAmount2}},
 			},
 			expectedGini: 0.17,
 		},
@@ -283,8 +283,8 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 			rules:   nil,
 			council: []common.Address{n1, n2},
 			expectedConsolidated: []consolidatedNode{
-				{n1, r1, a1 + a3, &CLStakingInfo{n3, clPool2, clStakingAmount2}},
-				{n2, r2, a2 + a4, nil},
+				{[]common.Address{n1, n3}, []common.Address{s1, s3}, r1, a1 + a3, &CLStakingInfo{n3, clPool2, clStakingAmount2}},
+				{[]common.Address{n2, n4}, []common.Address{s2, s4}, r2, a2 + a4, nil},
 			},
 			expectedGini: 0.15,
 		},
@@ -301,8 +301,8 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 			rules:   &params.Rules{IsPermissionless: true},
 			council: []common.Address{n1, n2},
 			expectedConsolidated: []consolidatedNode{
-				{n1, r1, a1, nil},
-				{n2, r2, a2, nil},
+				{[]common.Address{n1}, nil, r1, a1, nil},
+				{[]common.Address{n2}, nil, r2, a2, nil},
 			},
 			expectedGini: 0.17,
 		},
@@ -319,8 +319,8 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 			rules:   &params.Rules{IsPermissionless: true},
 			council: []common.Address{n1, n2},
 			expectedConsolidated: []consolidatedNode{
-				{n1, r1, a1, nil},
-				{n2, r2, a2, nil},
+				{[]common.Address{n1}, nil, r1, a1, nil},
+				{[]common.Address{n2}, nil, r2, a2, nil},
 			},
 			expectedGini: 0.17,
 		},
@@ -344,8 +344,8 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 			rules:   &params.Rules{IsPermissionless: true},
 			council: []common.Address{n1, n2},
 			expectedConsolidated: []consolidatedNode{
-				{n1, r1, a1, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
-				{n2, r2, a2, nil},
+				{[]common.Address{n1}, nil, r1, a1, &CLStakingInfo{n1, clPool1, clStakingAmount1}},
+				{[]common.Address{n2}, nil, r2, a2, nil},
 			},
 			expectedGini: 0.15,
 		},
@@ -354,7 +354,7 @@ func generateStakingInfoTestCases() map[string]stakingInfoTC {
 
 func TestComputedFields(t *testing.T) {
 	for _, tc := range stakingInfoTCs {
-		assert.Equal(t, tc.stakingInfo.ConsolidatedNodes(tc.rules, tc.council), tc.expectedConsolidated)
+		assert.Equal(t, tc.stakingInfo.ConsolidatedNodes(tc.rules), tc.expectedConsolidated)
 		assert.Equal(t, tc.stakingInfo.Gini(tc.rules, 2000000), tc.expectedGini)
 	}
 }

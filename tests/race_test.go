@@ -44,7 +44,7 @@ func TestRaceBetweenTxpoolAddAndCommitNewWork(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	numAccounts := 2
-	fullNode, node, validator, chainId, workspace := newBlockchain(t)
+	fullNode, node, validator, chainId, workspace := newBlockchain(t, nil, nil)
 	defer os.RemoveAll(workspace)
 
 	// create account
@@ -130,7 +130,7 @@ func TestRaceAsMessageWithAccountPickerForFeePayer(t *testing.T) {
 		tx, _ := genFeeDelegatedChainDataAnchoring(t, signer, from, nil, feePayer, big.NewInt(1234))
 		for i := 0; i < 2; i++ {
 			go func() {
-				stateDB, err := state.New(genesis.Root(), state.NewDatabase(gendb))
+					stateDB, err := state.New(genesis.Root(), state.NewDatabase(gendb), nil, nil)
 				if err != nil {
 					panic(err)
 				}

@@ -84,10 +84,7 @@ type Oracle struct {
 // NewOracle returns a new oracle.
 func NewOracle(backend OracleBackend, config Config, txPool TxPool, govModule gov.GovModule) *Oracle {
 	blocks := max(config.Blocks, 1)
-	percent := max(config.Percentile, 0)
-	if percent > 100 {
-		percent = 100
-	}
+	percent := min(max(config.Percentile, 0), 100)
 	maxPrice := config.MaxPrice
 	if maxPrice == nil || maxPrice.Int64() <= 0 {
 		maxPrice = big.NewInt(params.DefaultGPOMaxPrice)

@@ -28,6 +28,8 @@ interface IAddressBook {
         external
         view
         returns (uint8[] memory typeList, address[] memory addressList);
+    
+    function spareContractAddress() external view returns (address);
 }
 
 interface IRegistry {
@@ -80,7 +82,8 @@ contract MultiCallContract {
         returns (
             uint8[] memory typeList,
             address[] memory addressList,
-            uint256[] memory stakingAmounts
+            uint256[] memory stakingAmounts,
+            address spareAddress
         )
     {
         return _multiCallStakingInfoPermissioned();
@@ -92,7 +95,8 @@ contract MultiCallContract {
         returns (
             uint8[] memory typeList,
             address[] memory addressList,
-            uint256[] memory stakingAmounts
+            uint256[] memory stakingAmounts,
+            address spareAddress
         )
     {
         IAddressBook addressBook = IAddressBook(ADDRESS_BOOK_ADDRESS);
@@ -100,13 +104,13 @@ contract MultiCallContract {
 
         // Return early if AddressBook hasn't been activated yet or there are no CNs.
         if (addressList.length < 5) {
-            return (typeList, addressList, stakingAmounts);
+            return (typeList, addressList, stakingAmounts, spareAddress);
         }
 
         uint256 lenCnAddress = addressList.length - 2;
         // Just in case.
         if (lenCnAddress % 3 != 0) {
-            return (typeList, addressList, stakingAmounts);
+            return (typeList, addressList, stakingAmounts, spareAddress);
         }
         stakingAmounts = new uint256[](lenCnAddress / 3);
 
@@ -114,7 +118,7 @@ contract MultiCallContract {
             stakingAmounts[i / 3] = _getCnStakingAmountsLegacy(addressList[i + 1]);
         }
 
-        return (typeList, addressList, stakingAmounts);
+        return (typeList, addressList, stakingAmounts, spareAddress);
     }
 
     function multiCallStakingInfoPermissionless()

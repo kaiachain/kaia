@@ -217,7 +217,14 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 		}
 	}
 
-	return parseCallResult(num, abRes.TypeList, abRes.AddressList, abRes.StakingAmounts, clRes)
+	return parseCallResult(
+		num,
+		abRes.TypeList,
+		abRes.AddressList,
+		abRes.StakingAmounts,
+		clRes,
+		abRes.SpareAddress,
+	)
 }
 
 func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amounts []*big.Int, kefAddr, kifAddr, kpfAddr common.Address, clRes clRegistryResult) (*staking.StakingInfo, error) {
@@ -256,7 +263,13 @@ func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amo
 	}, nil
 }
 
-func parseCallResult(num uint64, types []uint8, addrs []common.Address, amounts []*big.Int, clRes clRegistryResult) (*staking.StakingInfo, error) {
+func parseCallResult(num uint64,
+	types []uint8,
+	addrs []common.Address,
+	amounts []*big.Int,
+	clRes clRegistryResult,
+	spareAddr common.Address,
+) (*staking.StakingInfo, error) {
 	// Sanity check.
 	if len(types) == 0 && len(addrs) == 0 {
 		// This is an expected behavior when the AddressBook contract is not activated yet.
@@ -305,6 +318,7 @@ func parseCallResult(num uint64, types []uint8, addrs []common.Address, amounts 
 	}
 
 	// Sanity check
+	// Note that kpfAddr (spareAddr) can be empty even after the AddressBook is activated.
 	if len(nodeIds) != len(stakingContracts) || len(nodeIds) != len(rewardAddrs) || len(nodeIds) != len(amounts) ||
 		common.EmptyAddress(kefAddr) || common.EmptyAddress(kifAddr) {
 		// This is an expected behavior when the AddressBook contract is not activated yet.
@@ -319,6 +333,7 @@ func parseCallResult(num uint64, types []uint8, addrs []common.Address, amounts 
 		RewardAddrs:      rewardAddrs,
 		KEFAddr:          kefAddr,
 		KIFAddr:          kifAddr,
+		KPFAddr:          spareAddr,
 		StakingAmounts:   stakingAmounts,
 		CLStakingInfos:   parseCLResult(clRes),
 	}, nil

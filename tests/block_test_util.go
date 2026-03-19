@@ -176,20 +176,11 @@ func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 		r.IsPrague = true
 	}
 	updatedIntrinsicGas, _ := types.IntrinsicGas(msg.Data(), msg.AccessList(), msg.AuthList(), msg.To() == nil, r)
-	sender := msg.ValidatedSender()
-	sigCopy := msg.RawSignatureValues()
-
-	// For tx types 0 and 1, GasFeeCap() and GasTipCap() will return tx.gasPrice even if the tx has no such fields.
-	// But for those tx types, NewMessage() must receive `nil` for those fields to accurately convey the original transaction.
-	var gasFeeCap, gasTipCap *big.Int = nil, nil
-	if te, ok := msg.GetTxInternalData().(types.TxInternalDataBaseFee); ok {
-		gasFeeCap = te.GetGasFeeCap()
-		gasTipCap = te.GetGasTipCap()
+	// Avoid replacing the whole transaction object because sender cacher may
+	// concurrently read transaction caches. Only override intrinsic gas.
+	if validatedGas := msg.ValidatedGas(); validatedGas != nil {
+		validatedGas.IntrinsicGas = updatedIntrinsicGas
 	}
-
-	// Replace msg intrinsic gas with eth intrinsic gas
-	*msg = *types.NewMessage(sender, msg.To(), msg.Nonce(), msg.GetTxInternalData().GetValue(), msg.Gas(), msg.GasPrice(), gasFeeCap, gasTipCap, msg.BlobGasFeeCap(), msg.Data(), true, updatedIntrinsicGas, msg.AccessList(), r.ChainID, msg.BlobHashes(), nil, msg.AuthList())
-	msg.SetSignature(sigCopy)
 
 	// Gas prices are calculated in eth
 	evm.GasPrice, _ = calculateEthGasPrice(evm.ChainConfig().Rules(evm.Context.BlockNumber), msg.GasPrice(), e.baseFee, msg.GasFeeCap(), msg.GasTipCap())
@@ -301,10 +292,11 @@ func (e *eestEngine) applyHeader(parent *types.Header, h btHeader) {
 }
 
 func (t *BlockTest) Run() error {
-	config, ok := Forks[t.json.Network]
+	baseConfig, ok := Forks[t.json.Network]
 	if !ok {
 		return UnsupportedForkError{t.json.Network}
 	}
+	config := baseConfig.Copy()
 	config.SetDefaults()
 	// Since we calculate the baseFee differently than eth, we will set it to 0 to turn off the gas fee.
 	config.Governance.KIP71 = &params.KIP71Config{

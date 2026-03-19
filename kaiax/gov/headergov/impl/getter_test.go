@@ -3,6 +3,8 @@ package impl
 import (
 	"fmt"
 	"math/big"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -126,4 +128,49 @@ func TestPrevEpochStart(t *testing.T) {
 			assert.Equal(t, tc.expectedGov, result, "Incorrect governance data block for block %d", tc.blockNum)
 		})
 	}
+}
+
+func TestGetPartialParamSet_ConcurrentAccess(t *testing.T) {
+	config := getTestChainConfigKore()
+	h := newHeaderGovModule(t, config)
+
+	// Seed initial governance so readers have data from the start.
+	h.AddGov(0, headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(0)}))
+
+	var (
+		wgReader sync.WaitGroup
+		wgWriter sync.WaitGroup
+		stopSig  atomic.Bool
+	)
+
+	// Writer goroutine continuously mutates h.governances under write lock.
+	wgWriter.Add(1)
+	go func() {
+		defer wgWriter.Done()
+		var i uint64 = 1
+		for !stopSig.Load() {
+			h.AddGov(i*100, headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: i}))
+			i++
+			if i > 1000 {
+				i = 1
+			}
+		}
+	}()
+
+	// Reader goroutines continuously call GetPartialParamSet.
+	const readers = 8
+	for r := 0; r < readers; r++ {
+		wgReader.Add(1)
+		go func() {
+			defer wgReader.Done()
+			for i := 0; i < 5000; i++ {
+				ps := h.GetPartialParamSet(1000)
+				_ = ps[gov.GovernanceUnitPrice]
+			}
+		}()
+	}
+
+	wgReader.Wait()
+	stopSig.Store(true)
+	wgWriter.Wait()
 }

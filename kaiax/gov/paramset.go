@@ -26,6 +26,8 @@ type ParamSet struct {
 	StakingUpdateInterval, ProposerUpdateInterval uint64
 	MintingAmount, MinimumStake                   *big.Int
 	UseGiniCoeff, DeferredTxFee                   bool
+	StakingRewardThreshold                        *big.Int
+	UseFlexReward                                 bool
 
 	// KIP-71
 	LowerBoundBaseFee, UpperBoundBaseFee, GasTarget, MaxBlockGasUsedForBaseFee, BaseFeeDenominator uint64
@@ -96,8 +98,14 @@ func (p *ParamSet) Set(name ParamName, cv any) error {
 		p.ProposerUpdateInterval, ok = cv.(uint64)
 	case RewardRatio:
 		p.Ratio, ok = cv.(string)
+	case RewardStakingRewardThreshold:
+		if tmp, ok = cv.(*big.Int); ok {
+			p.StakingRewardThreshold = new(big.Int).Set(tmp)
+		}
 	case RewardStakingUpdateInterval:
 		p.StakingUpdateInterval, ok = cv.(uint64)
+	case RewardUseFlexReward:
+		p.UseFlexReward, ok = cv.(bool)
 	case RewardUseGiniCoeff:
 		p.UseGiniCoeff, ok = cv.(bool)
 	case GovernanceDeriveShaImpl:
@@ -172,8 +180,12 @@ func (p *ParamSet) ToMap() map[ParamName]any {
 			ret[name] = p.ProposerUpdateInterval
 		case RewardRatio:
 			ret[name] = p.Ratio
+		case RewardStakingRewardThreshold:
+			ret[name] = p.StakingRewardThreshold.String()
 		case RewardStakingUpdateInterval:
 			ret[name] = p.StakingUpdateInterval
+		case RewardUseFlexReward:
+			ret[name] = p.UseFlexReward
 		case RewardUseGiniCoeff:
 			ret[name] = p.UseGiniCoeff
 		case GovernanceDeriveShaImpl:

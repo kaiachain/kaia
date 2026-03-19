@@ -58,6 +58,7 @@ type RewardSpec struct {
 	Stakers  *big.Int                    `json:"stakers"`
 	KIF      *big.Int                    `json:"kif"`
 	KEF      *big.Int                    `json:"kef"`
+	KPF      *big.Int                    `json:"kpf"`
 	Rewards  map[common.Address]*big.Int `json:"rewards"`
 }
 
@@ -72,6 +73,7 @@ func NewRewardSpec() *RewardSpec {
 		Stakers:  big.NewInt(0),
 		KIF:      big.NewInt(0),
 		KEF:      big.NewInt(0),
+		KPF:      big.NewInt(0),
 		Rewards:  make(map[common.Address]*big.Int),
 	}
 }
@@ -82,6 +84,7 @@ func (spec *RewardSpec) Add(delta *RewardSpec) {
 	spec.Stakers.Add(spec.Stakers, delta.Stakers)
 	spec.KIF.Add(spec.KIF, delta.KIF)
 	spec.KEF.Add(spec.KEF, delta.KEF)
+	spec.KPF.Add(spec.KPF, delta.KPF)
 
 	for addr, amount := range delta.Rewards {
 		spec.IncRecipient(addr, amount)
@@ -95,6 +98,7 @@ func (spec *RewardSpec) Copy() *RewardSpec {
 		Stakers:       new(big.Int).Set(spec.Stakers),
 		KIF:           new(big.Int).Set(spec.KIF),
 		KEF:           new(big.Int).Set(spec.KEF),
+		KPF:           new(big.Int).Set(spec.KPF),
 		Rewards:       make(map[common.Address]*big.Int),
 	}
 	for addr, amount := range spec.Rewards {
@@ -123,7 +127,7 @@ type AccumulatedRewardsResponse struct {
 	FirstBlock     *big.Int `json:"firstBlock"`
 	LastBlock      *big.Int `json:"lastBlock"`
 
-	// TotalMinted + TotalTxFee - TotalBurntTxFee = TotalProposerRewards + TotalStakingRewards + TotalKIFRewards + TotalKEFRewards
+	// TotalMinted + TotalTxFee - TotalBurntTxFee = TotalProposerRewards + TotalStakingRewards + TotalKIFRewards + TotalKEFRewards + TotalKPFRewards
 	TotalMinted          *big.Int                    `json:"totalMinted"`
 	TotalTxFee           *big.Int                    `json:"totalTxFee"`
 	TotalBurntTxFee      *big.Int                    `json:"totalBurntTxFee"`
@@ -131,6 +135,7 @@ type AccumulatedRewardsResponse struct {
 	TotalStakingRewards  *big.Int                    `json:"totalStakingRewards"`
 	TotalKIFRewards      *big.Int                    `json:"totalKIFRewards"`
 	TotalKEFRewards      *big.Int                    `json:"totalKEFRewards"`
+	TotalKPFRewards      *big.Int                    `json:"totalKPFRewards"`
 	Rewards              map[common.Address]*big.Int `json:"rewards"`
 }
 
@@ -148,6 +153,7 @@ func (spec RewardSpec) ToAccumulatedResponse(firstHeader, lastHeader *types.Head
 		TotalStakingRewards:  spec.Stakers,
 		TotalKIFRewards:      spec.KIF,
 		TotalKEFRewards:      spec.KEF,
+		TotalKPFRewards:      spec.KPF,
 		Rewards:              spec.Rewards,
 	}
 }

@@ -64,6 +64,7 @@ func TestFeePayerContractIndirect(t *testing.T) {
 // 3. Call the given function `fn`.
 // 4. Check the returned value with the specified fee payer.
 func testFeePayerContract(t *testing.T, fn string) {
+	t.Setenv("SOLC_EVM_VERSION", "byzantium")
 	prof := profile.NewProfiler()
 
 	// Initialize blockchain
@@ -142,6 +143,7 @@ func testFeePayerContract(t *testing.T, fn string) {
 // 4. Call the given function `fn`.
 // 5. Check the returned value with the specified fee payer.
 func testFeePayerContractIndirect(t *testing.T, fn string) {
+	t.Setenv("SOLC_EVM_VERSION", "byzantium")
 	prof := profile.NewProfiler()
 
 	callee_path := "../contracts/contracts/testing/feepayer/fee_payer_test.sol"

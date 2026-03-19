@@ -68,7 +68,7 @@ var (
 
 // Expected genesis block hashes for different clients
 var (
-	ethGenesisBlockHash  = common.HexToHash("0x1c6ef781e4f30626053500c374498f78e3138128603e6f9c92bff0292613c5bb")
+	ethGenesisBlockHash  = common.HexToHash("0x3dfc072ca3cee03dd5ecf932a54b762082e5fd5ad6e7d34e7dc0411cfd325e2a")
 	kaiaGenesisBlockHash = common.HexToHash("0x3b624db9bc6547b908e2e78460d2849047b6d28c0c078f09d6a0472ab0e57d0c")
 	genesisChainConfig   = &params.ChainConfig{
 		ChainID:                  big.NewInt(1337),

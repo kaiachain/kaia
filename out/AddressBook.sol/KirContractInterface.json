@@ -1,0 +1,1 @@
+{"abi":[{"type":"function","name":"getKirVersion","inputs":[],"outputs":[{"name":"","type":"uint256"}],"stateMutability":"pure"}],"bytecode":{"object":"0x","sourceMap":"","linkReferences":{}},"deployedBytecode":{"object":"0x","sourceMap":"","linkReferences":{}},"methodIdentifiers":{"getKirVersion()":"44426346"},"storageLayout":{"storage":[],"types":{}},"id":1}

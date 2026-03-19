@@ -422,4 +422,8 @@ contract AddressBookMockTwoCN is MockValues {
         addressList[6] = 0x0000000000000000000000000000000000000F06;
         addressList[7] = 0x0000000000000000000000000000000000000f07;
     }
+
+    function spareContractAddress() external view returns (address) {
+        return address(0);
+    }
 }

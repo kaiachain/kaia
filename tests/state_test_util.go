@@ -180,7 +180,7 @@ func getVMConfig(forkString string) (baseConfig *params.ChainConfig, eips []int,
 			eips = append(eips, eipNum)
 		}
 	}
-	return baseConfig, eips, nil
+	return baseConfig.Copy(), eips, nil
 }
 
 // Subtests returns all valid subtests of the test.

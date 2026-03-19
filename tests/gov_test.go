@@ -58,8 +58,10 @@ func TestMainnetGenesisGovernance(t *testing.T) {
 		"reward.mintingamount":            "9600000000000000000",
 		"reward.proposerupdateinterval":   uint64(3600),
 		"reward.ratio":                    "34/54/12",
+		"reward.stakingrewardthreshold":   "5000000",
 		"reward.stakingupdateinterval":    uint64(86400),
 		"reward.useginicoeff":             true,
+		"reward.useflexreward":            false,
 	}
 
 	pset := govModule.GetParamSet(0)
