@@ -115,29 +115,17 @@ func (v *VRankModule) TallyCfReport(blockNum, round uint64) (vrank.Report, error
 		logger.Error("GetCandidates failed", "blockNum", blockNum)
 		return nil, vrank.ErrGetCandidateFailed
 	}
-	// safeCands = candidates who responded with expectedBlockHash before deadline.
-	safeCands := make(map[common.Address]struct{})
-	for sender, msgWithTime := range viewMap {
-		if !slices.Contains(candidates, sender) {
-			continue
-		}
-		if msgWithTime.Msg == nil || msgWithTime.Msg.BlockHash != expectedBlockHash {
-			continue
-		}
-		elapsed := msgWithTime.ReceivedAt.Sub(prepreparedAt).Milliseconds()
-		// early birds who sent before validator preprepared are safe
-		if elapsed <= candidateMsgTimeoutMs {
-			safeCands[sender] = struct{}{}
-		}
-	}
-
-	// cfReport = candidates - safeCands = candidates who did not respond, responded after deadline, or lied (wrong BlockHash).
 	var cfReport vrank.Report
 	for _, addr := range candidates {
-		if _, ok := safeCands[addr]; !ok {
+		msgWithTime, arrived := viewMap[addr]
+		if !arrived ||
+			msgWithTime.Msg == nil ||
+			msgWithTime.Msg.BlockHash != expectedBlockHash ||
+			msgWithTime.ReceivedAt.Sub(prepreparedAt).Milliseconds() > candidateMsgTimeoutMs {
 			cfReport = append(cfReport, addr)
 		}
 	}
+
 	slices.SortFunc(cfReport, func(a, b common.Address) int { return bytes.Compare(a.Bytes(), b.Bytes()) })
 	return cfReport, nil
 }
