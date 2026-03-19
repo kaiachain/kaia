@@ -30,12 +30,14 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/suite"
 )
 
 // TestKaiaSpecState runs the StateTests fixtures from kaia-core-tests
 func TestKaiaSpecState(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 	t.Parallel()
 
 	st := new(testMatcher)
@@ -213,6 +215,7 @@ func (suite *ExecutionSpecStateTestSuite) TestExecutionSpecState() {
 }
 
 func TestExecutionSpecStateTestSuite(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 	suite.Run(t, new(ExecutionSpecStateTestSuite))
 }
 

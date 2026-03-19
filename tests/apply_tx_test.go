@@ -382,7 +382,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 
 	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
 	gasPrice := new(big.Int).SetUint64(0)
-	gasLimit := uint64(100000000000)
+	gasLimit := uint64(100000000)
 
 	// Deploy smart contract (reservoir -> contract)
 	{

@@ -52,6 +52,7 @@ func TestAPIGetRewards(t *testing.T) {
 			Stakers:  big.NewInt(0),
 			KIF:      big.NewInt(0),
 			KEF:      big.NewInt(0),
+			KPF:      big.NewInt(0),
 			Rewards: map[common.Address]*big.Int{
 				common.HexToAddress("0xfff"): big.NewInt(1.01e18),
 			},
@@ -105,6 +106,7 @@ func TestAPIGetAccumulatedRewards(t *testing.T) {
 			Stakers:  big.NewInt(0),
 			KIF:      big.NewInt(0),
 			KEF:      big.NewInt(0),
+			KPF:      big.NewInt(0),
 			Rewards: map[common.Address]*big.Int{
 				common.HexToAddress("0xfff"): big.NewInt(1.01e18),
 			},
@@ -119,6 +121,7 @@ func TestAPIGetAccumulatedRewards(t *testing.T) {
 			Stakers:  big.NewInt(0),
 			KIF:      big.NewInt(0),
 			KEF:      big.NewInt(0),
+			KPF:      big.NewInt(0),
 			Rewards: map[common.Address]*big.Int{
 				common.HexToAddress("0xfff"): big.NewInt(4.04e18),
 			},

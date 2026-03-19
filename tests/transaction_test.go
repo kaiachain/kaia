@@ -172,9 +172,9 @@ func TestContractDeployWithDisabledAddress(t *testing.T) {
 				err = tx.SignFeePayerWithKeys(signer, reservoir.Keys)
 				assert.Equal(t, nil, err)
 			}
-			// fail to add tx in txPool
+			// fail to add tx in txPool due to high human readable gas (4B) which is higher than UpperGasLimit (500M)
 			err = txpool.AddRemote(tx)
-			assert.Equal(t, kerrors.ErrHumanReadableNotSupported, err)
+			assert.Equal(t, blockchain.ErrIntrinsicGas, err)
 
 			// fail to execute tx
 			receipt, err := applyTransaction(t, bcdata, tx)

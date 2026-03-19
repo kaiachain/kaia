@@ -250,7 +250,7 @@ func (api *AdminNetworkNodeAPI) StartWS(host *string, port *int, allowedOrigins 
 	return true, nil
 }
 
-// StopRPC terminates an already running websocket RPC API endpoint.
+// StopWS stops the WebSocket RPC server if it's running.
 func (api *AdminNetworkNodeAPI) StopWS() (bool, error) {
 	api.node.lock.Lock()
 	defer api.node.lock.Unlock()

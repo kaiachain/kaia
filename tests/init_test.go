@@ -98,6 +98,7 @@ type testMatcher struct {
 	skiploadpat  []*regexp.Regexp
 	skipshortpat []*regexp.Regexp
 	whitelistpat *regexp.Regexp
+	serialFiles  bool
 }
 
 type testConfig struct {
@@ -224,7 +225,9 @@ func (tm *testMatcher) runTestFile(t *testing.T, path, name string, runTest inte
 			t.Skip("Skipped by whitelist")
 		}
 	}
-	t.Parallel()
+	if !tm.serialFiles {
+		t.Parallel()
+	}
 
 	// Load the file as map[string]<testType>.
 	m := makeMapFromTestFunc(runTest)

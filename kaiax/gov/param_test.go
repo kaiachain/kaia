@@ -178,3 +178,37 @@ func TestUint64Canonicalizer(t *testing.T) {
 		})
 	}
 }
+
+func TestRatio_FormatChecker(t *testing.T) {
+	checker := Params[RewardRatio].FormatChecker
+	tcs := []struct {
+		desc  string
+		input any
+		want  bool
+	}{
+		// 3-part: existing format must keep working
+		{desc: "3-part 100/0/0", input: "100/0/0", want: true},
+		{desc: "3-part 34/33/33", input: "34/33/33", want: true},
+		{desc: "3-part sum != 100", input: "34/33/34", want: false},
+		{desc: "3-part negative", input: "-1/51/50", want: false},
+		// 4-part: new flex format
+		{desc: "4-part 80/10/5/5", input: "80/10/5/5", want: true},
+		{desc: "4-part 90/10/0/0", input: "90/10/0/0", want: true},
+		{desc: "4-part all-zero z 100/0/0/0", input: "100/0/0/0", want: true},
+		{desc: "4-part sum != 100", input: "80/10/5/6", want: false},
+		{desc: "4-part negative z", input: "81/10/5/-1", want: false},
+		// wrong part count
+		{desc: "2-part", input: "50/50", want: false},
+		{desc: "5-part", input: "20/20/20/20/20", want: false},
+		// non-numeric
+		{desc: "non-numeric parts", input: "a/b/c", want: false},
+		// wrong type
+		{desc: "wrong type int", input: 100, want: false},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.desc, func(t *testing.T) {
+			assert.Equal(t, tc.want, checker(tc.input))
+		})
+	}
+}

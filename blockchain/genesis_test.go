@@ -729,9 +729,10 @@ func TestSetupGenesis(t *testing.T) {
 // Test that SetupGenesisBlock writes the genesis state trie if not present.
 func TestGenesisRestoreState(t *testing.T) {
 	db := database.NewMemoryDBManager()
+	genesis := DefaultGenesisBlock()
 
 	// Setup first to Commit the Genesis block
-	_, hash, err := SetupGenesisBlock(db, nil)
+	_, hash, err := SetupGenesisBlock(db, genesis)
 	assert.Nil(t, err)
 	assert.Equal(t, params.MainnetGenesisHash, hash)
 
@@ -741,7 +742,7 @@ func TestGenesisRestoreState(t *testing.T) {
 	db.DeleteTrieNode(root)
 
 	// Setup again to restore the state trie
-	_, hash, err = SetupGenesisBlock(db, nil)
+	_, hash, err = SetupGenesisBlock(db, genesis)
 	assert.Nil(t, err)
 	assert.Equal(t, params.MainnetGenesisHash, hash)
 	ok, _ := db.HasTrieNode(root)

@@ -75,6 +75,10 @@ func (s *Solidity) makeArgs() []string {
 		"--optimize",                  // code optimizer switched on
 		"--allow-paths", "., ./, ../", // default to support relative path： ./  ../  .
 	}
+	evmVersion := os.Getenv("SOLC_EVM_VERSION")
+	if evmVersion != "" {
+		p = append(p, "--evm-version", evmVersion)
+	}
 	if s.Major > 0 || s.Minor > 4 || s.Patch > 6 {
 		p[1] += ",metadata,hashes"
 	}

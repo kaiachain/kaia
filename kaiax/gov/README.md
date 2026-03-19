@@ -29,6 +29,8 @@ kip71.upperboundbasefee
 reward.kip82ratio
 reward.mintingamount
 reward.ratio
+reward.stakingrewardthreshold
+reward.useflexreward
 
 <immutable parameters - Mainnet configuration>
 governance.governancemode: single
@@ -134,7 +136,7 @@ The values of deprecated governance parameters (`proposerupdateinterval`, `staki
 
 ```
 curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data '
-  {"jsonrpc":"2.0","id":1,"method":"governance_getChainConfig","params":[]}' | jq '.result'
+  {"jsonrpc":"2.0","id":1,"method":"kaia_getChainConfig","params":[]}' | jq '.result'
 => TODO
 ```
 

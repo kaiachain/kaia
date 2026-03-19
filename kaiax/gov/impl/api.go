@@ -111,6 +111,8 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 			StakingUpdateInterval:  pset.StakingUpdateInterval,
 			ProposerUpdateInterval: pset.ProposerUpdateInterval,
 			MinimumStake:           pset.MinimumStake,
+			StakingRewardThreshold: pset.StakingRewardThreshold,
+			UseFlexReward:          pset.UseFlexReward,
 		},
 		KIP71: &params.KIP71Config{
 			LowerBoundBaseFee:         pset.LowerBoundBaseFee,

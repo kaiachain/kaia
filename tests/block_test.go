@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/suite"
 )
@@ -57,6 +58,7 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 		t.Skipf("directory %s does not exist", executionSpecBlockTestDir)
 	}
 	bt := new(testMatcher)
+	bt.serialFiles = true
 
 	// should be skipped
 	// note: Unsupported EIPs
@@ -261,5 +263,6 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 }
 
 func TestExecutionSpecBlockTestSuite(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 	suite.Run(t, new(ExecutionSpecBlockTestSuite))
 }

@@ -49,13 +49,7 @@ func (h *headerGovModule) HandleVote(blockNum uint64, vote headergov.VoteData) e
 	}
 
 	// if the vote was mine, remove it.
-	for i, myvote := range h.myVotes {
-		if isEqualVotes(myvote, vote) {
-			logger.Debug("Removing myvote", "vote", myvote)
-			h.PopMyVotes(i)
-			break
-		}
-	}
+	h.removeMyVote(vote)
 
 	return nil
 }

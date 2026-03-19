@@ -32,6 +32,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	btc_ecdsa "github.com/btcsuite/btcd/btcec/v2/ecdsa"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 )
 
 // Ecrecover returns the uncompressed public key that created the given signature.
@@ -173,6 +174,13 @@ func S256() EllipticCurve {
 
 type btCurve struct {
 	*btcec.KoblitzCurve
+}
+
+func (curve btCurve) IsOnCurve(x, y *big.Int) bool {
+	if x.Cmp(secp256k1.Params().P) >= 0 || y.Cmp(secp256k1.Params().P) >= 0 {
+		return false
+	}
+	return curve.KoblitzCurve.IsOnCurve(x, y)
 }
 
 // Marshall converts a point given as (x, y) into a byte slice.

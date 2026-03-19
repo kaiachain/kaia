@@ -32,7 +32,9 @@ func TestParametersSetAndAdd(t *testing.T) {
 		{name: RewardMinimumStake, value: new(big.Int).SetUint64(2000000)},
 		{name: RewardProposerUpdateInterval, value: uint64(3600)},
 		{name: RewardRatio, value: "100/0/0"},
+		{name: RewardStakingRewardThreshold, value: new(big.Int).SetUint64(5_000_000)},
 		{name: RewardStakingUpdateInterval, value: uint64(86400)},
+		{name: RewardUseFlexReward, value: false},
 		{name: RewardUseGiniCoeff, value: true},
 	}
 

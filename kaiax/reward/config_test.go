@@ -24,18 +24,28 @@ import (
 )
 
 func TestRatio(t *testing.T) {
+	// 3-part format
 	ratio, err := NewRewardRatio("34/54/12")
 	assert.NoError(t, err)
-	assert.Equal(t, &RewardRatio{34, 54, 12}, ratio)
+	assert.Equal(t, &RewardRatio{34, 54, 12, 0}, ratio)
 
 	ratio, err = NewRewardRatio("100/0/0")
 	assert.NoError(t, err)
-	assert.Equal(t, &RewardRatio{100, 0, 0}, ratio)
+	assert.Equal(t, &RewardRatio{100, 0, 0, 0}, ratio)
+
+	// 4-part format
+	ratio, err = NewRewardRatio("80/10/5/5")
+	assert.NoError(t, err)
+	assert.Equal(t, &RewardRatio{80, 10, 5, 5}, ratio)
+
+	ratio, err = NewRewardRatio("100/0/0/0")
+	assert.NoError(t, err)
+	assert.Equal(t, &RewardRatio{100, 0, 0, 0}, ratio)
 
 	_, err = NewRewardRatio("")
 	assert.Error(t, err)
 
-	_, err = NewRewardRatio("34/54/12/1")
+	_, err = NewRewardRatio("34/54/12/1") // sum=101, error
 	assert.Error(t, err)
 
 	_, err = NewRewardRatio("99/88/77")
@@ -44,12 +54,23 @@ func TestRatio(t *testing.T) {
 	_, err = NewRewardRatio("-1/50/51")
 	assert.Error(t, err)
 
-	ratio = &RewardRatio{50, 25, 25}
+	_, err = NewRewardRatio("81/10/5/-1") // negative z, error
+	assert.Error(t, err)
+
 	mintingAmount, _ := new(big.Int).SetString("9600000000000000000", 10)
+
+	ratio = &RewardRatio{50, 25, 25, 0}
 	g, x, y := ratio.Split(mintingAmount)
 	assert.Equal(t, "4800000000000000000", g.String())
 	assert.Equal(t, "2400000000000000000", x.String())
 	assert.Equal(t, "2400000000000000000", y.String())
+
+	ratio = &RewardRatio{40, 25, 25, 10}
+	g, x, y, z := ratio.SplitFlex(mintingAmount)
+	assert.Equal(t, "3840000000000000000", g.String())
+	assert.Equal(t, "2400000000000000000", x.String())
+	assert.Equal(t, "2400000000000000000", y.String())
+	assert.Equal(t, "960000000000000000", z.String())
 }
 
 func TestKip82Ratio(t *testing.T) {
