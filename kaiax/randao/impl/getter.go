@@ -95,7 +95,8 @@ func (r *RandaoModule) getAllCached(num *big.Int) (system.BlsPublicKeyInfos, err
 		}
 
 		// ABv2 is installed at Finalize(HF-1), so it's available from HF onward.
-		// From HF, fetches bls keys from ABv2 instead of KIP113(SBR).
+		// At num=HF (parentNum=HF-1), this is false — falls through to KIP113 path,
+		// which returns the same BLS keys since ABv2 mirrors KIP113 at migration.
 		if r.ChainConfig.IsPermissionlessForkEnabled(parentNum) {
 			abv2Root := statedb.GetStorageRoot(system.AddressBookAddr)
 			storageKey := abv2Root.Hex()
