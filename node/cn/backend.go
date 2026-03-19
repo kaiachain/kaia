@@ -55,6 +55,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	supply_impl "github.com/kaiachain/kaia/kaiax/supply/impl"
+	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -518,6 +519,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mRandao  = randao_impl.NewRandaoModule()
 		mReward  = reward_impl.NewRewardModule()
 		mSupply  = supply_impl.NewSupplyModule()
+		mSystem  = system_impl.NewSystemModule()
 		mGasless = gasless_impl.NewGaslessModule()
 		mAuction = auction_impl.NewAuctionModule()
 	)
@@ -544,6 +546,9 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Downloader:   s.protocolManager.Downloader(),
 			BlsSecretKey: ctx.BlsNodeKey(),
 		}),
+		mSystem.Init(&system_impl.InitOpts{
+			Chain: s.blockchain,
+		}),
 		mGasless.Init(&gasless_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
 			GaslessConfig: s.config.Gasless,
@@ -564,12 +569,14 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		return err
 	}
 
-	mBase := []kaiax.BaseModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao}
+	mBase := []kaiax.BaseModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao, mSystem}
 	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
 	mTxBundling := []kaiax.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
 	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao}
 	mRewindable := []kaiax.RewindableModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
+	mHeader := []kaiax.HeaderModule{mReward, s.govModule, mRandao}
+	mBlockState := []kaiax.BlockStateModule{mReward, mSystem}
 
 	if !mGasless.IsDisabled() {
 		mExecution = append(mExecution, mGasless)
@@ -599,10 +606,12 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	s.miner.RegisterTxBundlingModule(mTxBundling...)
 	s.blockchain.RegisterExecutionModule(mExecution...)
 	s.blockchain.RegisterRewindableModule(mRewindable...)
+	s.blockchain.RegisterHeaderModule(mHeader...)
+	s.blockchain.Processor().RegisterBlockStateModule(mBlockState...)
 	s.txPool.RegisterTxPoolModule(mTxPool...)
 	if engine, ok := s.engine.(consensus.Istanbul); ok {
 		engine.RegisterKaiaxModules(s.govModule, s.stakingModule, mValset)
-		engine.RegisterConsensusModule(mReward, s.govModule, mRandao)
+		engine.RegisterHeaderModule(mHeader...)
 		engine.RegisterTxBundlingModule(mTxBundling...)
 	}
 	s.protocolManager.RegisterStakingModule(s.stakingModule)

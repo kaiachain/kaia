@@ -305,7 +305,7 @@ func benchmarkTxPerformanceCompatible(b *testing.B, genTx genTx) {
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), common.Big1),
 	}
-	if err := bcdata.engine.Prepare(bcdata.bc, header); err != nil {
+	if err := bcdata.bc.PrepareHeader(header); err != nil {
 		b.Fatal(err)
 	}
 
@@ -432,7 +432,7 @@ func benchmarkTxPerformanceSmartContractExecution(b *testing.B, genTx genTx) {
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), common.Big1),
 	}
-	if err := bcdata.engine.Prepare(bcdata.bc, header); err != nil {
+	if err := bcdata.bc.PrepareHeader(header); err != nil {
 		b.Fatal(err)
 	}
 
@@ -550,7 +550,7 @@ func benchmarkTxPerformanceNew(b *testing.B, genTx genTx, sender *TestAccountTyp
 		Extra:      parent.Extra(),
 		Time:       new(big.Int).Add(parent.Time(), common.Big1),
 	}
-	if err := bcdata.engine.Prepare(bcdata.bc, header); err != nil {
+	if err := bcdata.bc.PrepareHeader(header); err != nil {
 		b.Fatal(err)
 	}
 

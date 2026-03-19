@@ -54,6 +54,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	"github.com/kaiachain/kaia/kaiax/staking/mock"
+	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/params"
@@ -163,9 +164,8 @@ func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, [
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.
 func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.BlockChain, *backend) {
-	// Disable block time waiting in tests
+	// Keep PrepareHeader timestamp logic aligned with block generation interval in tests.
 	oldInterval := params.BlockGenerationInterval
-	params.BlockGenerationInterval = 0
 	t.Cleanup(func() {
 		params.BlockGenerationInterval = oldInterval
 	})
@@ -173,10 +173,9 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	// generate a genesis block
 	genesis := blockchain.DefaultTestGenesisBlock()
 	genesis.Config = params.TestChainConfig.Copy()
-	genesis.Timestamp = uint64(time.Now().Unix())
 
 	var (
-		period   = istanbul.DefaultConfig.BlockPeriod
+		period   = uint64(params.DefaultBlockGenerationInterval)
 		mStaking staking.StakingModule
 		err      error
 	)
@@ -234,13 +233,21 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 		}
 	}
 	genesis.Config.SetDefaults()
+	params.BlockGenerationInterval = int64(period)
+
+	now := uint64(time.Now().Unix())
+	if now > period {
+		genesis.Timestamp = now - period
+	} else {
+		genesis.Timestamp = 0
+	}
 
 	if len(nodeKeys) != n {
 		setNodeKeys(n, nil)
 	}
 
 	// if governance mode is single, this address is the governing node address
-	b := newTestBackendWithConfig(genesis.Config, period, nodeKeys[0])
+	b := newTestBackendWithConfig(genesis.Config, nodeKeys[0])
 
 	appendValidators(genesis, addrs)
 
@@ -313,6 +320,7 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	mReward := reward_impl.NewRewardModule()
 	mValset := valset_impl.NewValsetModule()
 	mRandao := randao_impl.NewRandaoModule()
+	mSystem := system_impl.NewSystemModule()
 	if mStaking == nil {
 		mStaking = staking_impl.NewStakingModule()
 	}
@@ -346,6 +354,9 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 			Downloader:   fakeDownloader,
 			BlsSecretKey: blsSecretKey,
 		}),
+		mSystem.Init(&system_impl.InitOpts{
+			Chain: bc,
+		}),
 		func() error {
 			if stakingImpl, ok := mStaking.(*staking_impl.StakingModule); ok {
 				return stakingImpl.Init(&staking_impl.InitOpts{
@@ -361,7 +372,9 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	}
 
 	b.RegisterKaiaxModules(mGov, mStaking, mValset)
-	b.RegisterConsensusModule(mReward, mGov, mRandao)
+	b.RegisterHeaderModule(mReward, mGov, mRandao)
+	bc.RegisterHeaderModule(mReward, mGov, mRandao)
+	bc.Processor().RegisterBlockStateModule(mReward, mSystem)
 
 	if b.Start(bc, bc.CurrentBlock, bc.HasBadBlock, nil) != nil {
 		panic(err)
@@ -389,13 +402,14 @@ func appendValidators(genesis *blockchain.Genesis, addrs []common.Address) {
 	genesis.ExtraData = append(genesis.ExtraData, istPayload...)
 }
 
-func makeHeader(parent *types.Block, config *istanbul.Config, chainConfig *params.ChainConfig) *types.Header {
+func makeHeader(parent *types.Block, chainConfig *params.ChainConfig) *types.Header {
+	interval := uint64(params.BlockGenerationInterval)
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     parent.Number().Add(parent.Number(), common.Big1),
 		GasUsed:    0,
 		Extra:      parent.Extra(),
-		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(config.BlockPeriod)),
+		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(interval)),
 		BlockScore: params.DefaultBlockScore,
 	}
 	if parent.Header().BaseFee != nil {
@@ -434,15 +448,15 @@ func makeBlockWithoutSeal(chain *blockchain.BlockChain, engine *backend, parent 
 // makeBlockWithoutSealAndModifiedHeader creates a block without seal, optionally with a modified header.
 // The modifyHeader function is called before finalization.
 func makeBlockWithoutSealAndModifiedHeader(chain *blockchain.BlockChain, engine *backend, parent *types.Block, modifyHeader func(*types.Header)) *types.Block {
-	header := makeHeader(parent, engine.config, chain.Config())
-	if err := engine.Prepare(chain, header); err != nil {
+	header := makeHeader(parent, chain.Config())
+	if err := chain.PrepareHeader(header); err != nil {
 		panic(err)
 	}
 	if modifyHeader != nil {
 		modifyHeader(header)
 	}
 	state, _ := chain.StateAt(parent.Root())
-	block, _ := engine.Finalize(chain, header, state, nil, nil)
+	block, _ := chain.Processor().FinalizeState(header, state, nil, nil)
 	return block
 }
 
@@ -468,14 +482,14 @@ func TestPrepare(t *testing.T) {
 	chain, engine := newBlockChain(t, 1)
 	defer engine.Stop()
 
-	header := makeHeader(chain.Genesis(), engine.config, chain.Config())
-	err := engine.Prepare(chain, header)
+	header := makeHeader(chain.Genesis(), chain.Config())
+	err := chain.PrepareHeader(header)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 
 	header.ParentHash = common.HexToHash("0x1234567890")
-	err = engine.Prepare(chain, header)
+	err = chain.PrepareHeader(header)
 	if err != consensus.ErrUnknownAncestor {
 		t.Errorf("error mismatch: have %v, want %v", err, consensus.ErrUnknownAncestor)
 	}
@@ -548,7 +562,7 @@ func TestVerifyHeader(t *testing.T) {
 				header: func() *types.Header {
 					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 					header := block.Header()
-					header.Time = new(big.Int).Add(chain.Genesis().Time(), new(big.Int).SetUint64(engine.config.BlockPeriod-1))
+					header.Time = new(big.Int).Add(chain.Genesis().Time(), new(big.Int).SetUint64(uint64(params.BlockGenerationInterval)-1))
 					return header
 				}(),
 				expectedErr: istanbul.ErrInvalidTimestamp,

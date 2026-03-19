@@ -26,6 +26,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/kaiax"
 )
 
 // Validator is an interface which defines the standard for block validation. It
@@ -57,6 +58,15 @@ type Prefetcher interface {
 
 // Processor is an interface for processing blocks using a given initial state.
 type Processor interface {
+	// InitializeState runs pre-transaction state modifications.
+	InitializeState(header *types.Header, stateDB *state.StateDB)
+
+	// RegisterBlockStateModule registers state transition modules.
+	RegisterBlockStateModule(modules ...kaiax.BlockStateModule)
+
+	// FinalizeState runs post-transaction state modifications and assembles final block.
+	FinalizeState(header *types.Header, stateDB *state.StateDB, txs []*types.Transaction, receipts types.Receipts) (*types.Block, error)
+
 	// Process processes the state changes according to the Kaia rules by running
 	// the transaction messages using the statedb and applying any rewards to
 	// the processor (coinbase).

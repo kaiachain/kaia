@@ -39,7 +39,7 @@ type ExecutionResult struct {
 	UsedGas uint64
 	// Txs contains the executed transactions
 	Txs []*types.Transaction
-	// Block is the finalized block (set after Finalize is called)
+	// Block is the finalized block (set after FinalizeState is called)
 	Block *types.Block
 
 	// Timing information
@@ -65,4 +65,7 @@ type Executor interface {
 	// Execute executes a batch of transactions and returns the execution result.
 	// mux is used to post PendingLogsEvent and PendingStateEvent for APIs.
 	Execute(txs *types.TransactionsByPriceAndNonce, mux *event.TypeMux) (*ExecutionResult, error)
+
+	// FinalizeState runs post-transaction state modifications and assembles final block.
+	FinalizeState(result *ExecutionResult) (*types.Block, error)
 }

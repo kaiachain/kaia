@@ -284,7 +284,7 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 	}
 
 	// Finalize the block.
-	b, err := bcdata.engine.Finalize(bcdata.bc, header, stateDB, newtxs, receipts)
+	b, err := bcdata.bc.Processor().FinalizeState(header, stateDB, newtxs, receipts)
 	if err != nil {
 		return err
 	}

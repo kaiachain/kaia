@@ -29,12 +29,13 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/system"
+	bcsystem "github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/misc"
 	consensus_mock "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
 	"github.com/kaiachain/kaia/crypto"
@@ -45,6 +46,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/kaiax/supply"
+	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -156,6 +158,7 @@ func (s *SupplyTestSuite) SetupTest() {
 		mStaking = staking_mock.NewMockStakingModule(mockCtrl)
 		mValset  = valset_mock.NewMockValsetModule(mockCtrl)
 		mReward  = reward_impl.NewRewardModule()
+		mSystem  = system_impl.NewSystemModule()
 		mSupply  = NewSupplyModule()
 
 		dbm         = database.NewMemoryDBManager()
@@ -181,6 +184,10 @@ func (s *SupplyTestSuite) SetupTest() {
 		GovModule:     mGov,
 		StakingModule: mStaking,
 		ValsetModule:  mValset,
+		Rewardbase:    addrProposer,
+	})
+	mSystem.Init(&system_impl.InitOpts{
+		Chain: chain,
 	})
 	mSupply.Init(&InitOpts{
 		ChainKv:      dbm.GetMiscDB(),
@@ -188,10 +195,12 @@ func (s *SupplyTestSuite) SetupTest() {
 		Chain:        chain,
 		RewardModule: mReward,
 	})
+	chain.RegisterHeaderModule(mReward)
+	chain.Processor().RegisterBlockStateModule(mReward, mSystem)
 	chain.RegisterExecutionModule(mSupply)
 
 	// With every modules ready, generate the blocks
-	blocks := setupBlocks(config, genesisBlock, engine, dbm)
+	blocks := setupBlocks(t, config, genesisBlock, engine, dbm, mGov, mStaking, mValset)
 
 	s.mockCtrl = mockCtrl
 	s.dbm = dbm
@@ -201,7 +210,9 @@ func (s *SupplyTestSuite) SetupTest() {
 }
 
 func (s *SupplyTestSuite) TearDownTest() {
-	s.mockCtrl.Finish()
+	if s.mockCtrl != nil {
+		s.mockCtrl.Finish()
+	}
 }
 
 func (s *SupplyTestSuite) insertBlocks() {
@@ -216,11 +227,11 @@ func (s *SupplyTestSuite) insertBlocks() {
 
 func makeGenesis(t *testing.T, config *params.ChainConfig) *blockchain.Genesis {
 	// Memo taken from the INFO log of blockchain/system/rebalance.go "successfully executed treasury rebalancing"
-	kip103Alloc := rebalanceAlloc(t, 200, addrKip103, system.Kip103MockCode,
+	kip103Alloc := rebalanceAlloc(t, 200, addrKip103, bcsystem.Kip103MockCode,
 		[]*big.Int{bigMult(amount1, big.NewInt(100)), bigMult(amount1, big.NewInt(200))},
 		"{\"retirees\":[{\"retired\":\"0x000000000000000000000000000000000000a000\",\"balance\":770534566500000000000},{\"retired\":\"0x000000000000000000000000000000000000b000\",\"balance\":179976862000000000000}],\"newbies\":[{\"newbie\":\"0x000000000000000000000000000000000000a000\",\"fundAllocated\":100000000000000000000},{\"newbie\":\"0x000000000000000000000000000000000000b000\",\"fundAllocated\":200000000000000000000}],\"burnt\":650511428500000000000,\"success\":true}",
 	)
-	kip160Alloc := rebalanceAlloc(t, 300, addrKip160, system.Kip160MockCode,
+	kip160Alloc := rebalanceAlloc(t, 300, addrKip160, bcsystem.Kip160MockCode,
 		[]*big.Int{bigMult(amount1, big.NewInt(300)), bigMult(amount1, big.NewInt(400))},
 		`{"before": {"allocated": {"0x000000000000000000000000000000000000a000": 226720000000000000000, "0x000000000000000000000000000000000000b000": 390080000000000000000}, "zeroed": {"0x000000000000000000000000000000000000a000": 226720000000000000000, "0x000000000000000000000000000000000000b000": 390080000000000000000}},"after": {"allocated": {"0x000000000000000000000000000000000000a000": 300000000000000000000, "0x000000000000000000000000000000000000b000": 400000000000000000000}, "zeroed": {"0x000000000000000000000000000000000000a000": 0, "0x000000000000000000000000000000000000b000": 0}}, "burnt": -79200000000000000000, "success": true}`,
 	)
@@ -257,7 +268,7 @@ func rebalanceAlloc(t *testing.T, blockNum uint64, addr common.Address, code []b
 		[]common.Address{addrFund1, addrFund2}, // allocated to the same address for simplicity
 		amounts,
 		new(big.Int).SetUint64(blockNum),
-		system.EnumRebalanceStatus_Approved,
+		bcsystem.EnumRebalanceStatus_Approved,
 	)
 	require.NoError(t, err)
 	_, err = contract.TestFinalize( // Set memo before rebalance block number for convenience
@@ -284,6 +295,7 @@ func rebalanceAlloc(t *testing.T, blockNum uint64, addr common.Address, code []b
 func setupMockEngine(engine *consensus_mock.MockEngine, chain *blockchain.BlockChain, mReward reward.RewardModule) {
 	engine.EXPECT().Author(gomock.Any()).Return(addrProposer, nil).AnyTimes()
 	engine.EXPECT().CanVerifyHeadersConcurrently().Return(false).AnyTimes()
+	engine.EXPECT().PrepareExtra(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	engine.EXPECT().PreprocessHeaderVerification(gomock.Any()).DoAndReturn(
 		func(headers []*types.Header) (chan<- struct{}, <-chan error) {
@@ -301,12 +313,12 @@ func setupMockEngine(engine *consensus_mock.MockEngine, chain *blockchain.BlockC
 		func(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
 			header.BlockScore = common.Big1
 			header.Rewardbase = addrProposer
-			if err := mReward.FinalizeHeader(header, state, txs, receipts); err != nil {
+			if err := mReward.FinalizeState(header, state, txs, receipts); err != nil {
 				return nil, err
 			}
 
 			if chain.Config().IsKIP103ForkBlock(header.Number) || chain.Config().IsKIP160ForkBlock(header.Number) {
-				result, err := system.RebalanceTreasury(state, chain, header)
+				result, err := bcsystem.RebalanceTreasury(state, chain, header)
 				_ = result
 				// resultJson, _ := json.MarshalIndent(result, "", "  ")
 				// s.t.Log("RebalanceTreasury", string(resultJson), err)
@@ -385,36 +397,102 @@ func setupMockStaking(mStaking *staking_mock.MockStakingModule) {
 	}, nil).AnyTimes()
 }
 
-func setupBlocks(config *params.ChainConfig, genesisBlock *types.Block, engine *consensus_mock.MockEngine, dbm database.DBManager) []*types.Block {
-	var ( // Generate blocks with 1 tx per block. Send 1 kei from Genesis4 to Genesis3.
+func setupBlocks(t *testing.T, config *params.ChainConfig, genesisBlock *types.Block, engine *consensus_mock.MockEngine, dbm database.DBManager, mGov *gov_mock.MockGovModule, mStaking *staking_mock.MockStakingModule, mValset *valset_mock.MockValsetModule) []*types.Block {
+	cacheConfig := &blockchain.CacheConfig{
+		ArchiveMode:         false,
+		CacheSize:           512,
+		BlockInterval:       128,
+		TriesInMemory:       128,
+		TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
+	}
+	chain, err := blockchain.NewBlockChain(dbm, cacheConfig, config, engine, vm.Config{})
+	require.NoError(t, err)
+	defer chain.Stop()
+
+	mReward := reward_impl.NewRewardModule()
+	require.NoError(t, mReward.Init(&reward_impl.InitOpts{
+		ChainConfig:   config,
+		Chain:         chain,
+		GovModule:     mGov,
+		StakingModule: mStaking,
+		ValsetModule:  mValset,
+		Rewardbase:    addrProposer,
+	}))
+
+	mSystem := system_impl.NewSystemModule()
+	require.NoError(t, mSystem.Init(&system_impl.InitOpts{
+		Chain: chain,
+	}))
+
+	chain.RegisterHeaderModule(mReward)
+	chain.Processor().RegisterBlockStateModule(mReward, mSystem)
+
+	var (
 		signer   = types.LatestSignerForChainID(config.ChainID)
 		key      = keyGenesis4
 		from     = addrGenesis4
 		to       = addrGenesis3
 		amount   = big.NewInt(1)
 		gasLimit = uint64(21000)
-		genFunc  = func(i int, b *blockchain.BlockGen) {
-			num := b.Number().Uint64()
-			var gasPrice *big.Int
-			if num < 100 { // Must be equal to UnitPrice before Magma
-				gasPrice = big.NewInt(25 * params.Gkei)
-			} else if num < 300 { // Double the basefee before kaia
-				gasPrice = big.NewInt(50 * params.Gkei)
-			} else { // Basefee plus recommended tip since Kaia
-				gasPrice = big.NewInt(27 * params.Gkei)
-			}
-			unsignedTx := types.NewTransaction(b.TxNonce(from), to, amount, gasLimit, gasPrice, nil)
-			if unsignedTx != nil {
-				signedTx, err := types.SignTx(unsignedTx, signer, key)
-				if err != nil {
-					panic(err)
-				}
-				b.AddTx(signedTx)
-			}
-		}
+		blocks   = make([]*types.Block, 0, 400)
+		parent   = genesisBlock
 	)
-	blocks, _ := blockchain.GenerateChain(config, genesisBlock, engine, dbm, 400, genFunc)
+
+	for i := 0; i < 400; i++ {
+		stateDB, err := state.New(parent.Root(), state.NewDatabase(dbm), nil, nil)
+		require.NoError(t, err)
+
+		header := makeSupplyHeader(chain, parent, stateDB)
+		extra, err := engine.PrepareExtra(header, parent.Header())
+		require.NoError(t, err)
+		header.Extra = extra
+		require.NoError(t, mReward.PrepareHeader(header))
+		chain.Processor().InitializeState(header, stateDB)
+
+		num := header.Number.Uint64()
+		var gasPrice *big.Int
+		if num < 100 { // Must be equal to UnitPrice before Magma
+			gasPrice = big.NewInt(25 * params.Gkei)
+		} else if num < 300 { // Double the basefee before kaia
+			gasPrice = big.NewInt(50 * params.Gkei)
+		} else { // Basefee plus recommended tip since Kaia
+			gasPrice = big.NewInt(27 * params.Gkei)
+		}
+
+		unsignedTx := types.NewTransaction(stateDB.GetNonce(from), to, amount, gasLimit, gasPrice, nil)
+		signedTx, err := types.SignTx(unsignedTx, signer, key)
+		require.NoError(t, err)
+
+		stateDB.SetTxContext(signedTx.Hash(), common.Hash{}, 0)
+		receipt, _, err := chain.ApplyTransaction(config, &params.AuthorAddressForTesting, stateDB, header, signedTx, &header.GasUsed, &vm.Config{})
+		require.NoError(t, err)
+
+		block, err := chain.Processor().FinalizeState(header, stateDB, []*types.Transaction{signedTx}, []*types.Receipt{receipt})
+		require.NoError(t, err)
+
+		root, err := stateDB.Commit(true)
+		require.NoError(t, err)
+		require.NoError(t, stateDB.Database().TrieDB().Commit(root, false, block.NumberU64()))
+
+		blocks = append(blocks, block)
+		parent = block
+	}
+
 	return blocks
+}
+
+func makeSupplyHeader(chain *blockchain.BlockChain, parent *types.Block, stateDB *state.StateDB) *types.Header {
+	header := &types.Header{
+		Root:       stateDB.IntermediateRoot(true),
+		ParentHash: parent.Hash(),
+		BlockScore: params.DefaultBlockScore,
+		Number:     new(big.Int).Add(parent.Number(), common.Big1),
+		Time:       new(big.Int).Add(parent.Time(), big.NewInt(10)),
+	}
+	if chain.Config().IsMagmaForkEnabled(header.Number) {
+		header.BaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), chain.Config().Governance.KIP71)
+	}
+	return header
 }
 
 func bigEqual(t *testing.T, expected, actual *big.Int, msg ...interface{}) {

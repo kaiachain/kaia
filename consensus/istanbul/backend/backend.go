@@ -99,7 +99,7 @@ type backend struct {
 	chain            consensus.ChainReader
 	stakingModule    staking.StakingModule
 	valsetModule     valset.ValsetModule
-	consensusModules []kaiax.ConsensusModule
+	headerModules    []kaiax.HeaderModule
 	currentBlock     func() *types.Block
 	hasBadBlock      func(hash common.Hash) bool
 
@@ -482,7 +482,7 @@ func (sb *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, st
 
 		// Finalize the block
 		finalizeStart := time.Now()
-		block, err := sb.Finalize(sb.chain, header, result.State, result.Txs, result.Receipts)
+		block, err := sb.executor.FinalizeState(result)
 		if err != nil {
 			resultCh <- nil
 			return

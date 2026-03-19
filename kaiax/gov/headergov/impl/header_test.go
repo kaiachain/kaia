@@ -45,7 +45,7 @@ func TestVerifyHeader(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(tc.desc, func(t *testing.T) {
 			tc.header.Extra = extra
-			err := h.VerifyHeader(tc.header)
+			err := h.VerifyHeader(tc.header, nil)
 			assert.Equal(t, tc.expectedError, err)
 		})
 	}

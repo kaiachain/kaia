@@ -38,6 +38,7 @@ import (
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -73,7 +74,7 @@ func init() {
 type testOverrides struct {
 	node0Key       *ecdsa.PrivateKey // Override node[0] key
 	node0BlsKey    bls.SecretKey     // Override node[0] bls key
-	blockPeriod    *uint64           // Override block period. If not set, 1 second is used.
+	blockPeriod    *uint64           // Override block generation interval. If not set, 1 second is used.
 	stakingAmounts []uint64          // Override staking amounts. If not set, 0 for all nodes.
 }
 
@@ -82,6 +83,7 @@ type testContext struct {
 	nodeKeys    []*ecdsa.PrivateKey // Generated node keys
 	nodeAddrs   []common.Address    // Generated node addrs
 	nodeBlsKeys []bls.SecretKey     // Generated node bls keys
+	oldInterval int64
 
 	chain  *blockchain.BlockChain
 	engine *backend
@@ -107,6 +109,8 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	if overrides.stakingAmounts == nil {
 		overrides.stakingAmounts = make([]uint64, numNodes)
 	}
+	oldInterval := params.BlockGenerationInterval
+	params.BlockGenerationInterval = int64(*overrides.blockPeriod)
 
 	// Create node keys
 	var (
@@ -170,7 +174,6 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	// Create istanbul engine
 	istanbulConfig := &istanbul.Config{
 		Timeout:        10000,
-		BlockPeriod:    *overrides.blockPeriod,
 		ProposerPolicy: istanbul.ProposerPolicy(config.Istanbul.ProposerPolicy),
 		Epoch:          config.Istanbul.Epoch,
 		SubGroupSize:   config.Istanbul.SubGroupSize,
@@ -201,6 +204,7 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 
 	mStaking := staking_impl.NewStakingModule()
 	mValset := valset_impl.NewValsetModule()
+	mSystem := system_impl.NewSystemModule()
 	fakeDownloader := downloader.NewFakeDownloader()
 	if err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
@@ -225,20 +229,26 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 			Chain:        chain,
 			Downloader:   fakeDownloader,
 			BlsSecretKey: nodeBlsKeys[0],
+		}),
+		mSystem.Init(&system_impl.InitOpts{
+			Chain: chain,
 		})); err != nil {
 		panic(err)
 	}
 	engine.RegisterKaiaxModules(mGov, mStaking, mValset)
-	engine.RegisterConsensusModule(mRandao)
+	engine.RegisterHeaderModule(mRandao)
+	chain.RegisterHeaderModule(mRandao)
+	chain.Processor().RegisterBlockStateModule(mSystem)
 	// Start the engine
 	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock, nil); err != nil {
 		panic(err)
 	}
 
 	return &testContext{
-		config:    config,
-		nodeKeys:  nodeKeys,
-		nodeAddrs: nodeAddrs,
+		config:      config,
+		nodeKeys:    nodeKeys,
+		nodeAddrs:   nodeAddrs,
+		oldInterval: oldInterval,
 
 		chain:  chain,
 		engine: engine,
@@ -247,12 +257,13 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 
 // Make empty header
 func (ctx *testContext) MakeHeader(parent *types.Block) *types.Header {
+	interval := uint64(params.BlockGenerationInterval)
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     parent.Number().Add(parent.Number(), common.Big1),
 		GasUsed:    0,
 		Extra:      parent.Extra(),
-		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(ctx.engine.config.BlockPeriod)),
+		Time:       new(big.Int).Add(parent.Time(), new(big.Int).SetUint64(interval)),
 		BlockScore: params.DefaultBlockScore,
 	}
 	if parent.Header().BaseFee != nil {
@@ -264,13 +275,13 @@ func (ctx *testContext) MakeHeader(parent *types.Block) *types.Header {
 
 // Block with no signature.
 func (ctx *testContext) MakeBlock(parent *types.Block) *types.Block {
-	chain, engine := ctx.chain, ctx.engine
+	chain := ctx.chain
 	header := ctx.MakeHeader(parent)
-	if err := engine.Prepare(chain, header); err != nil {
+	if err := chain.PrepareHeader(header); err != nil {
 		panic(err)
 	}
 	state, _ := chain.StateAt(parent.Root())
-	block, _ := engine.Finalize(chain, header, state, nil, nil)
+	block, _ := chain.Processor().FinalizeState(header, state, nil, nil)
 	return block
 }
 
@@ -321,6 +332,7 @@ func (ctx *testContext) MakeCommittedSeals(hash common.Hash) [][]byte {
 func (ctx *testContext) Cleanup() {
 	ctx.chain.Stop()
 	ctx.engine.Stop()
+	params.BlockGenerationInterval = ctx.oldInterval
 }
 
 func makeGenesisExtra(addrs []common.Address) []byte {

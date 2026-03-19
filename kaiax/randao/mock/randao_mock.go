@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	types0 "github.com/kaiachain/kaia/crypto/bls/types"
@@ -53,20 +52,6 @@ func (mr *MockRandaoModuleMockRecorder) APIs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockRandaoModule)(nil).APIs))
 }
 
-// FinalizeHeader mocks base method.
-func (m *MockRandaoModule) FinalizeHeader(arg0 *types.Header, arg1 *state.StateDB, arg2 []*types.Transaction, arg3 []*types.Receipt) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FinalizeHeader", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// FinalizeHeader indicates an expected call of FinalizeHeader.
-func (mr *MockRandaoModuleMockRecorder) FinalizeHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeHeader", reflect.TypeOf((*MockRandaoModule)(nil).FinalizeHeader), arg0, arg1, arg2, arg3)
-}
-
 // GetBlsPubkey mocks base method.
 func (m *MockRandaoModule) GetBlsPubkey(arg0 common.Address, arg1 *big.Int) (types0.PublicKey, error) {
 	m.ctrl.T.Helper()
@@ -82,20 +67,6 @@ func (mr *MockRandaoModuleMockRecorder) GetBlsPubkey(arg0, arg1 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlsPubkey", reflect.TypeOf((*MockRandaoModule)(nil).GetBlsPubkey), arg0, arg1)
 }
 
-// PrepareHeader mocks base method.
-func (m *MockRandaoModule) PrepareHeader(arg0 *types.Header) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrepareHeader", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// PrepareHeader indicates an expected call of PrepareHeader.
-func (mr *MockRandaoModuleMockRecorder) PrepareHeader(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareHeader", reflect.TypeOf((*MockRandaoModule)(nil).PrepareHeader), arg0)
-}
-
 // PostInsertBlock mocks base method.
 func (m *MockRandaoModule) PostInsertBlock(arg0 *types.Block) error {
 	m.ctrl.T.Helper()
@@ -108,6 +79,20 @@ func (m *MockRandaoModule) PostInsertBlock(arg0 *types.Block) error {
 func (mr *MockRandaoModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockRandaoModule)(nil).PostInsertBlock), arg0)
+}
+
+// PrepareHeader mocks base method.
+func (m *MockRandaoModule) PrepareHeader(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrepareHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PrepareHeader indicates an expected call of PrepareHeader.
+func (mr *MockRandaoModuleMockRecorder) PrepareHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareHeader", reflect.TypeOf((*MockRandaoModule)(nil).PrepareHeader), arg0)
 }
 
 // RewindDelete mocks base method.
@@ -161,15 +146,15 @@ func (mr *MockRandaoModuleMockRecorder) Stop() *gomock.Call {
 }
 
 // VerifyHeader mocks base method.
-func (m *MockRandaoModule) VerifyHeader(arg0 *types.Header) error {
+func (m *MockRandaoModule) VerifyHeader(arg0, arg1 *types.Header) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyHeader", arg0)
+	ret := m.ctrl.Call(m, "VerifyHeader", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // VerifyHeader indicates an expected call of VerifyHeader.
-func (mr *MockRandaoModuleMockRecorder) VerifyHeader(arg0 interface{}) *gomock.Call {
+func (mr *MockRandaoModuleMockRecorder) VerifyHeader(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockRandaoModule)(nil).VerifyHeader), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockRandaoModule)(nil).VerifyHeader), arg0, arg1)
 }

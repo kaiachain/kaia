@@ -50,6 +50,7 @@ import (
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -149,6 +150,7 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 	mReward := reward_impl.NewRewardModule()
 	mValset := valset_impl.NewValsetModule()
 	mRandao := randao_impl.NewRandaoModule()
+	mSystem := system_impl.NewSystemModule()
 	fakeDownloader := downloader.NewFakeDownloader()
 	err = errors.Join(
 		mGov.Init(&gov_impl.InitOpts{
@@ -178,12 +180,17 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 			Downloader:   fakeDownloader,
 			BlsSecretKey: blsSecretKey,
 		}),
+		mSystem.Init(&system_impl.InitOpts{
+			Chain: bc,
+		}),
 	)
 	if err != nil {
 		return nil, err
 	}
 	engine.RegisterKaiaxModules(mGov, mStaking, mValset)
-	engine.RegisterConsensusModule(mReward, mRandao)
+	engine.RegisterHeaderModule(mReward, mRandao)
+	bc.RegisterHeaderModule(mReward, mRandao)
+	bc.Processor().RegisterBlockStateModule(mReward, mSystem)
 	if err = engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock, nil); err != nil {
 		return nil, err
 	}
@@ -246,7 +253,7 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 		header.ExcessBlobGas = &excessBlobGas
 	}
 
-	if err := bcdata.engine.Prepare(bcdata.bc, header); err != nil {
+	if err := bcdata.bc.PrepareHeader(header); err != nil {
 		return nil, errors.New(fmt.Sprintf("Failed to prepare header for mining %s.\n", err))
 	}
 
@@ -298,7 +305,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 
 	// Finalize the block
 	start = time.Now()
-	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, newtxs, receipts)
+	b, err := bcdata.bc.Processor().FinalizeState(header, statedb, newtxs, receipts)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -368,7 +375,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 
 	// Finalize the block
 	start = time.Now()
-	b, err := bcdata.engine.Finalize(bcdata.bc, header, statedb, newtxs, receipts)
+	b, err := bcdata.bc.Processor().FinalizeState(header, statedb, newtxs, receipts)
 	if err != nil {
 		return err
 	}
