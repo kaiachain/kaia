@@ -462,10 +462,10 @@ func (st *StateTransition) preCheck() error {
 	// Check that EIP-7702 authorization list signatures are well formed.
 	if st.msg.AuthList() != nil {
 		if st.msg.To() == nil {
-			return fmt.Errorf("%w (sender %v)", ErrSetCodeTxCreate, st.msg.ValidatedSender())
+			return fmt.Errorf("%w (sender %v)", ErrSetCodeTxCreate, st.msg.ValidatedSender().Hex())
 		}
 		if len(st.msg.AuthList()) == 0 {
-			return fmt.Errorf("%w (sender %v)", ErrEmptyAuthList, st.msg.ValidatedSender())
+			return fmt.Errorf("%w (sender %v)", ErrEmptyAuthList, st.msg.ValidatedSender().Hex())
 		}
 	}
 	return st.buyGas()

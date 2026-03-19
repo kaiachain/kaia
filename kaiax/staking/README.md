@@ -39,9 +39,10 @@ This module is responsible for tracking validator staking amounts and their addr
     ```
 
 - StakingInterval a governance parameter (`reward.stakingupdateinterval`) that is first defined in the ChainConfig (`ChainConfig.Reward.StakingUpdateInterval`) at genesis and never changes afterwards.
-- Kaia has two treasury fund addresses.
+- Kaia has three treasury fund addresses.
   - KEF (Kaia Ecosystem Fund). Stored in the AddressBook contract's `kirContractAddress` variable. This variable previously held the KCF, KIR addresses.
   - KIF (Kaia Infrastructure Fund). Stored in the AddressBook contract's `pocContractAddress` variable. This variable previously held the KFF, KGF, PoC addresses.
+  - KPF (Kaia Performance Fund). Stored in the AddressBook contract's `spareContractAddress` variable.
 
 ## Persistent Schema
 
@@ -54,61 +55,11 @@ This module is responsible for tracking validator staking amounts and their addr
 
 ### StakingInfo
 
-The staking info to be used for block processing.
-
-```go
-type StakingInfo struct {
-  // The source block number where the staking info is captured.
-  SourceBlockNum uint64 `json:"blockNum"`
-
-  // The AddressBook triplets
-  NodeIds          []common.Address `json:"councilNodeAddrs"`
-  StakingContracts []common.Address `json:"councilStakingAddrs"`
-  RewardAddrs      []common.Address `json:"councilRewardAddrs"`
-
-  // Treasury fund addresses
-  KEFAddr common.Address `json:"kefAddr"` // KEF contract address (or KCF, KIR)
-  KIFAddr common.Address `json:"kifAddr"` // KIF contract address (or KFF, KGF, PoC)
-
-  // Staking amounts of each staking contracts, in KAIA, rounded down.
-  StakingAmounts []uint64 `json:"councilStakingAmounts"`
-
-  // The consensus liquidity information
-  CLStakingInfos *CLStakingInfos `json:"clStakingInfos"`
-}
-
-type CLStakingInfo struct {
-	CLNodeId        common.Address `json:"clNodeId"`
-	CLPoolAddr      common.Address `json:"clPoolAddr"`
-	CLStakingAmount uint64         `json:"clStakingAmount"`
-}
-
-type CLStakingInfos []*CLStakingInfo
-```
+The staking info to be used for block processing. This module is all about querying a StakingInfo. See [staking_info.go](./staking_info.go)
 
 - `ConsolidatedNodes()` returns the nodes consolidated by the duplicating reward addresses. Note that the AddressBook entries with the same reward address are considered a single validator.
   - If `CLStakingInfo` exists for a validator after the Prague hardfork, the `ConsolidatedNodes()` will consolidate it. Note that `CLStakingInfo` has different reward address so the `CLNodeId` is used to consolidate.
 - `Gini(minStake)` returns the gini coefficient of the staking amounts that are no less than `minStake`.
-
-### StakingInfoResponse
-
-The response type for `kaia_getStakingInfo` and `governance_getStakingInfo`. Adds additional fields for backward compatibility.
-
-```go
-type StakingInfoResponse struct {
-  StakingInfo
-
-  // Legacy treasury fund address fields for backward-compatibility
-  KIRAddr common.Address `json:"KIRAddr"` // = KEFAddr
-  PoCAddr common.Address `json:"PoCAddr"` // = KIFAddr
-  KCFAddr common.Address `json:"kcfAddr"` // = KEFAddr
-  KFFAddr common.Address `json:"kffAddr"` // = KIFAddr
-
-  // Computed fields
-  UseGini bool `json:"useGini"` // Whether the gini coefficient is used at the requested block number
-  Gini float64 `json:"gini"` // The gini coefficient at the requested block number. Returned regardless of `UseGini` value.
-}
-```
 
 ## Module lifecycle
 

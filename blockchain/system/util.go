@@ -42,8 +42,8 @@ func ActiveSystemContracts(c *params.ChainConfig, genesis common.Hash, head *big
 	}
 
 	// These contracts are active from genesis.
-	if genesis == params.MainnetGenesisHash {
-		active["MAINNET_CREDIT"] = MainnetCreditAddr
+	if genesis == params.MainnetGenesisHash && !c.IsOsakaForkEnabled(head) {
+		active["MAINNET_CREDIT"] = NonExistentAddress
 	}
 	active["ADDRESS_BOOK"] = AddressBookAddr
 

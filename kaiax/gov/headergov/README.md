@@ -131,13 +131,10 @@ See [gov.go](./gov.go).
 
 See [history.go](./history.go).
 
-### HeaderCache
+### In-memory caches
 
-`HeaderCache` is used for caching DB data in memory.
-Cache is always fully synced with the DB, so there's no need to write from DB.
-In that sense, writing to the cache will write to DB as well.
-
-See [cache.go](./cache.go).
+This module caches vote/governance/history data in memory (`groupedVotes`, `governances`, `history`)
+while persisting corresponding indexes in DB schema keys.
 
 ### VotesResponse
 
@@ -169,7 +166,8 @@ See [impl/api.go](./impl/api.go).
 
 ### Start and stop
 
-This module does not have any background threads.
+This module starts a background migration goroutine for one-time backfill of historical vote data.
+If migration was already completed (`lowestVoteScannedEpochIdx == 0`), the goroutine exits immediately without scanning.
 
 ## Block processing
 
@@ -232,7 +230,7 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
 
 ### governance_idxCache
 
-Returns all vote block numbers from cache. The API name is retained for legacy compatibility.
+Returns all governance block numbers from cache. The API name is retained for legacy compatibility.
 
 - Parameters: none
 - Returns

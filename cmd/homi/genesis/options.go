@@ -64,7 +64,7 @@ func Alloc(addrs []common.Address, balance *big.Int) Option {
 func AllocWithPremainnetContract(addrs []common.Address, balance *big.Int) Option {
 	return func(genesis *blockchain.Genesis) {
 		alloc := makeGenesisAccount(addrs, balance)
-		alloc[system.MainnetCreditAddr] = blockchain.GenesisAccount{
+		alloc[system.NonExistentAddress] = blockchain.GenesisAccount{
 			Code:    common.FromHex(MainnetCreditBin),
 			Balance: big.NewInt(0),
 		}
@@ -79,7 +79,7 @@ func AllocWithPremainnetContract(addrs []common.Address, balance *big.Int) Optio
 func AllocWithMainnetContract(addrs []common.Address, balance *big.Int) Option {
 	return func(genesis *blockchain.Genesis) {
 		alloc := makeGenesisAccount(addrs, balance)
-		alloc[system.MainnetCreditAddr] = blockchain.GenesisAccount{
+		alloc[system.NonExistentAddress] = blockchain.GenesisAccount{
 			Code:    common.FromHex(MainnetCreditBin),
 			Balance: big.NewInt(0),
 		}

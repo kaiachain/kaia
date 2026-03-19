@@ -42,6 +42,7 @@ type StakingInfo struct {
 	// Treasury fund addresses
 	KEFAddr common.Address `json:"kefAddr"` // KEF contract address (or KCF, KIR)
 	KIFAddr common.Address `json:"kifAddr"` // KIF contract address (or KFF, KGF, PoC)
+	KPFAddr common.Address `json:"kpfAddr"` // KPF contract address
 
 	// Staking amounts of each staking contracts, in KAIA, rounded down. Does not include CL staking amounts.
 	StakingAmounts []uint64 `json:"councilStakingAmounts"`

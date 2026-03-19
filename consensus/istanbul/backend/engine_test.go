@@ -226,6 +226,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			mStaking = v
 		}
 	}
+	genesis.Config.SetDefaults()
 
 	if len(nodeKeys) != n {
 		setNodeKeys(n, nil)

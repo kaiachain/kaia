@@ -17,6 +17,8 @@ type Param struct {
 	Canonicalizer canonicalizerT
 	FormatChecker func(cv any) bool // validation on canonical value.
 
+	// Return the value of the parameter from the ChainConfig.
+	// Assumes that the ChainConfig does not contain nil or empty values since the SetDefaults() call.
 	ChainConfigValue func(c *params.ChainConfig) (any, error)
 	DefaultValue     any
 	VoteForbidden    bool
@@ -183,7 +185,9 @@ const (
 	RewardMinimumStake             ParamName = "reward.minimumstake"
 	RewardProposerUpdateInterval   ParamName = "reward.proposerupdateinterval"
 	RewardRatio                    ParamName = "reward.ratio"
+	RewardStakingRewardThreshold   ParamName = "reward.stakingrewardthreshold"
 	RewardStakingUpdateInterval    ParamName = "reward.stakingupdateinterval"
+	RewardUseFlexReward            ParamName = "reward.useflexreward"
 	RewardUseGiniCoeff             ParamName = "reward.useginicoeff"
 )
 
@@ -413,6 +417,8 @@ var Params = map[ParamName]*Param{
 			return sum == 100
 		},
 		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			// This parameter may be absent in ChainConfig because it was introduced at Kore.
+			// However, ChainConfig.SetDefaults() should have set it to the default value.
 			if c.Governance == nil || c.Governance.Reward == nil {
 				return nil, errors.New("reward is not set")
 			}
@@ -471,7 +477,7 @@ var Params = map[ParamName]*Param{
 				return false
 			}
 			parts := strings.Split(v, "/")
-			if len(parts) != 3 {
+			if len(parts) != 3 && len(parts) != 4 {
 				return false
 			}
 			sum := 0
@@ -509,6 +515,26 @@ var Params = map[ParamName]*Param{
 		DefaultValue:  uint64(86400),
 		VoteForbidden: true,
 	},
+	RewardStakingRewardThreshold: {
+		Canonicalizer: bigIntCanonicalizer,
+		FormatChecker: func(cv any) bool {
+			v, ok := cv.(*big.Int)
+			if !ok {
+				return false
+			}
+			return v.Sign() >= 0
+		},
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			// This parameter may be absent in ChainConfig because it was introduced at Osaka.
+			// However, ChainConfig.SetDefaults() should have set it to the default value.
+			if c.Governance == nil || c.Governance.Reward == nil || c.Governance.Reward.StakingRewardThreshold == nil {
+				return nil, errors.New("reward is not set")
+			}
+			return c.Governance.Reward.StakingRewardThreshold, nil
+		},
+		DefaultValue:  big.NewInt(5_000_000),
+		VoteForbidden: false,
+	},
 	RewardUseGiniCoeff: {
 		Canonicalizer: boolCanonicalizer,
 		FormatChecker: noopFormatChecker,
@@ -520,6 +546,18 @@ var Params = map[ParamName]*Param{
 		},
 		DefaultValue:  false,
 		VoteForbidden: true,
+	},
+	RewardUseFlexReward: {
+		Canonicalizer: boolCanonicalizer,
+		FormatChecker: noopFormatChecker,
+		ChainConfigValue: func(c *params.ChainConfig) (any, error) {
+			if c.Governance == nil || c.Governance.Reward == nil {
+				return nil, errors.New("reward is not set")
+			}
+			return c.Governance.Reward.UseFlexReward, nil
+		},
+		DefaultValue:  false,
+		VoteForbidden: false,
 	},
 }
 

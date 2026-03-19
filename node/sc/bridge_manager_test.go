@@ -2263,7 +2263,7 @@ func TestBridgeAliasAPIs(t *testing.T) {
 				checkBridgeSetup(t, bm, true, 1, contractPairLen/2)
 			case ALIAS_CLEANUP_BRIDGE:
 				checkBridgeSetup(t, bm, false, 0, 0)
-				// Initiailize another two bridge contracts for the test `REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE`
+				// Initialize another two bridge contracts for the test `REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE`
 				err = bm.subBridge.APIBackend.RegisterBridge(fixedChildBridgeAddr, fixedParentBridgeAddr, nil)
 				assert.NoError(t, err)
 			case REGISTER_MULTIPLE_TOKEN_WITH_SINGLE_BRIDGE:

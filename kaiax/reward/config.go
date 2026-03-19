@@ -34,13 +34,15 @@ type RewardConfig struct {
 	Rules      params.Rules
 	Rewardbase common.Address // Proposer's reward recipient address
 
-	IsSimple      bool              // istanbul.policy != WeightedRandom in which case simple rules are used
-	UnitPrice     *big.Int          // governance.unitprice
-	MintingAmount *big.Int          // reward.mintingamount
-	MinimumStake  *big.Int          // reward.minimumstake
-	DeferredTxFee bool              // reward.deferredtxfee
-	RewardRatio   *RewardRatio      // reward.ratio
-	Kip82Ratio    *RewardKip82Ratio // reward.kip82ratio
+	IsSimple               bool              // istanbul.policy != WeightedRandom in which case simple rules are used
+	UnitPrice              *big.Int          // governance.unitprice
+	MintingAmount          *big.Int          // reward.mintingamount
+	MinimumStake           *big.Int          // reward.minimumstake
+	DeferredTxFee          bool              // reward.deferredtxfee
+	RewardRatio            *RewardRatio      // reward.ratio
+	Kip82Ratio             *RewardKip82Ratio // reward.kip82ratio
+	StakingRewardThreshold *big.Int          // reward.stakingrewardthreshold
+	UseFlexReward          bool              // reward.useflexreward
 }
 
 // TODO-kaiax: Restore to gov.GovModule after introducing kaiax/gov
@@ -60,6 +62,8 @@ func NewRewardConfig(chainConfig *params.ChainConfig, govModule GovModule, heade
 	rc.MintingAmount = new(big.Int).Set(paramset.MintingAmount)
 	rc.MinimumStake = new(big.Int).Set(paramset.MinimumStake)
 	rc.DeferredTxFee = paramset.DeferredTxFee
+	rc.StakingRewardThreshold = new(big.Int).Set(paramset.StakingRewardThreshold)
+	rc.UseFlexReward = paramset.UseFlexReward
 
 	if ratio, err := NewRewardRatio(paramset.Ratio); err != nil {
 		return nil, err
@@ -77,28 +81,36 @@ func NewRewardConfig(chainConfig *params.ChainConfig, govModule GovModule, heade
 }
 
 // Parsed and validated reward.ratio parameter.
+// Supports both 3-part (g/x/y) and 4-part (g/x/y/z) formats.
 type RewardRatio struct {
 	g int64 // Validators (GC)
 	x int64 // Fund1 (KIF, KFF, KGF, PoC)
 	y int64 // Fund2 (KEF, KCF, KIR)
+	z int64 // Fund3 (KPF) - optional, used with flexreward.
 }
 
 func NewRewardRatio(ratio string) (*RewardRatio, error) {
 	parts := strings.Split(ratio, "/")
-	if len(parts) != 3 {
+	if len(parts) != 3 && len(parts) != 4 {
 		return nil, errMalformedRewardRatio(ratio)
 	}
 
 	g, err1 := strconv.ParseInt(parts[0], 10, 64)
 	x, err2 := strconv.ParseInt(parts[1], 10, 64)
 	y, err3 := strconv.ParseInt(parts[2], 10, 64)
-	if err1 != nil || err2 != nil || err3 != nil || g+x+y != 100 || g < 0 || x < 0 || y < 0 {
+	z := int64(0)
+	var err4 error
+	if len(parts) == 4 {
+		z, err4 = strconv.ParseInt(parts[3], 10, 64)
+	}
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || g+x+y+z != 100 || g < 0 || x < 0 || y < 0 || z < 0 {
 		return nil, errMalformedRewardRatio(ratio)
 	}
-	return &RewardRatio{g: g, x: x, y: y}, nil
+	return &RewardRatio{g: g, x: x, y: y, z: z}, nil
 }
 
-// Split splits the amount into three parts according to the ratio.
+// Split splits the amount into three parts (g, x, y) according to the ratio.
+// The z (KPF) portion is not included; use SplitFlex() for 4-part splits.
 func (r *RewardRatio) Split(amount *big.Int) (*big.Int, *big.Int, *big.Int) {
 	gAmount := new(big.Int).Mul(amount, big.NewInt(r.g))
 	gAmount = gAmount.Div(gAmount, big100)
@@ -110,6 +122,24 @@ func (r *RewardRatio) Split(amount *big.Int) (*big.Int, *big.Int, *big.Int) {
 	yAmount = yAmount.Div(yAmount, big100)
 
 	return gAmount, xAmount, yAmount
+}
+
+// SplitFlex splits the amount into four parts (g, x, y, z) according to the ratio.
+// For 3-part ratios, z is zero.
+func (r *RewardRatio) SplitFlex(amount *big.Int) (*big.Int, *big.Int, *big.Int, *big.Int) {
+	gAmount := new(big.Int).Mul(amount, big.NewInt(r.g))
+	gAmount = gAmount.Div(gAmount, big100)
+
+	xAmount := new(big.Int).Mul(amount, big.NewInt(r.x))
+	xAmount = xAmount.Div(xAmount, big100)
+
+	yAmount := new(big.Int).Mul(amount, big.NewInt(r.y))
+	yAmount = yAmount.Div(yAmount, big100)
+
+	zAmount := new(big.Int).Mul(amount, big.NewInt(r.z))
+	zAmount = zAmount.Div(zAmount, big100)
+
+	return gAmount, xAmount, yAmount, zAmount
 }
 
 // Parsed and validated reward.kip82ratio parameter.

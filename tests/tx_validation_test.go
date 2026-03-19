@@ -1082,7 +1082,6 @@ func TestInvalidBalance(t *testing.T) {
 	testAcc, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
 	assert.Equal(t, nil, err)
 
-	gasLimit := uint64(100000000000)
 	gasPrice := big.NewInt(25 * params.Gkei)
 	amount := uint64(25 * params.Gkei)
 	cost := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), gasPrice)
@@ -1480,7 +1479,6 @@ func TestInvalidBalanceBlockTx(t *testing.T) {
 	testAccBlob, err := createDefaultAccount(accountkey.AccountKeyTypeLegacy)
 	assert.Equal(t, nil, err)
 
-	gasLimit := uint64(100000000000)
 	gasPrice := big.NewInt(25 * params.Gkei)
 	amount := uint64(25 * params.Gkei)
 	cost := new(big.Int).Mul(new(big.Int).SetUint64(gasLimit), gasPrice)

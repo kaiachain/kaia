@@ -61,10 +61,9 @@ var (
 	ImplementationSlot = common.Hex2Bytes("360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
 
 	// Some system contracts are allocated at special addresses.
-	MainnetCreditAddr = common.HexToAddress("0x0000000000000000000000000000000000000000")
-	AddressBookAddr   = common.HexToAddress("0x0000000000000000000000000000000000000400")
-	RegistryAddr      = common.HexToAddress("0x0000000000000000000000000000000000000401")
-	MultiCallAddr     = common.HexToAddress("0x0000000000000000000000000000000000000402")
+	AddressBookAddr = common.HexToAddress("0x0000000000000000000000000000000000000400")
+	RegistryAddr    = common.HexToAddress("0x0000000000000000000000000000000000000401")
+	MultiCallAddr   = common.HexToAddress("0x0000000000000000000000000000000000000402")
 	// The following addresses are only used for testing.
 	Kip113ProxyAddrMock       = common.HexToAddress("0x0000000000000000000000000000000000000402")
 	Kip113LogicAddrMock       = common.HexToAddress("0x0000000000000000000000000000000000000403")

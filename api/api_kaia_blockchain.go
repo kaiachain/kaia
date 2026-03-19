@@ -28,10 +28,8 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	"strings"
 	"time"
 
-	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
@@ -41,7 +39,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/misc"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -60,6 +57,7 @@ var (
 	errEndLargetThanLatest     = errors.New("end block number should be smaller than the latest block number")
 	errStartLargerThanEnd      = errors.New("start should be smaller than end")
 	errRequestedBlocksTooLarge = errors.New("number of requested blocks should be smaller than 50")
+	errNoCypressCreditContract = errors.New("no mainnet credit contract")
 )
 
 // CreditOutput represents the output structure for GetCypressCredit
@@ -915,16 +913,17 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	// Set sender address or use zero address if none specified.
 	addr := args.From
 
-	// Set default gas & gas price if none were set
-	gas := globalGasCap
-	if gas == 0 {
-		gas = params.UpperGasLimit
-	}
+	// Set default gas & gas price if none were set.
+	// globalGasCap is configured by the node operator via --rpc.gascap flag.
+	// It must not exceed the protocol-level UpperGasLimit.
+	gas := params.UpperGasLimit
 	if args.Gas != nil {
 		gas = uint64(*args.Gas)
 	}
+	if gas > params.UpperGasLimit {
+		return nil, fmt.Errorf("gas limit %v exceeds the upper limit %v", gas, params.UpperGasLimit)
+	}
 	if globalGasCap != 0 && globalGasCap < gas {
-		logger.Warn("Caller gas above allowance, capping", "requested", gas, "cap", globalGasCap)
 		gas = globalGasCap
 	}
 
@@ -954,75 +953,33 @@ func (args *CallArgs) ToMessage(globalGasCap uint64, baseFee *big.Int, intrinsic
 	return types.NewMessage(addr, args.To, 0, value, gas, gasPrice, nil, nil, nil, args.InputData(), false, intrinsicGas, accessList, nil, nil, nil, nil), nil
 }
 
-// MainnetCredit contract is stored in the address zero.
-var (
-	mainnetCreditContractAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
-	latestBlockNrOrHash          = rpc.NewBlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
-	errNoCypressCreditContract   = errors.New("no mainnet credit contract")
-)
-
-// callCypressCreditGetFunc executes funcName in CypressCreditContract and returns the output.
-func (s *KaiaBlockChainAPI) callCypressCreditGetFunc(ctx context.Context, parsed *abi.ABI, funcName string) (*string, error) {
-	abiGet, err := parsed.Pack(funcName)
-	if err != nil {
-		return nil, err
-	}
-
-	args := CallArgs{
-		To:   &mainnetCreditContractAddress,
-		Data: abiGet,
-	}
-	ret, err := s.Call(ctx, args, latestBlockNrOrHash)
-	if err != nil {
-		return nil, err
-	}
-
-	output := new(string)
-	err = parsed.UnpackIntoInterface(output, funcName, ret)
-	if err != nil {
-		return nil, err
-	}
-
-	return output, nil
-}
-
-// GetCypressCredit calls getPhoto and getNames in the CypressCredit contract
-// and returns all the results as a struct.
+// GetCypressCredit returns Cypress credit information stored for mainnet genesis.
 func (s *KaiaBlockChainAPI) GetCypressCredit(ctx context.Context) (*CreditOutput, error) {
-	if ok, err := s.IsContractAccount(ctx, mainnetCreditContractAddress, latestBlockNrOrHash); err != nil {
-		return nil, err
-	} else if !ok {
+	chainConfig := s.b.ChainConfig()
+	if chainConfig == nil {
 		return nil, errNoCypressCreditContract
 	}
 
-	parsed, err := abi.JSON(strings.NewReader(misc.CypressCreditV2ABI))
+	chainID := chainConfig.ChainID
+	if chainID == nil || chainID.Cmp(big.NewInt(int64(params.MainnetNetworkId))) != 0 {
+		return nil, errNoCypressCreditContract
+	}
+
+	genesis, err := s.b.HeaderByNumber(ctx, rpc.BlockNumber(0))
 	if err != nil {
 		return nil, err
 	}
 
-	output := new(CreditOutput)
-
-	// getPhoto and getNames must exist from the Cypress genesis.
-	if str, err := s.callCypressCreditGetFunc(ctx, &parsed, "getPhoto"); err == nil {
-		output.Photo = *str
-	} else {
-		return nil, err
-	}
-	if str, err := s.callCypressCreditGetFunc(ctx, &parsed, "getNames"); err == nil {
-		output.Names = *str
-	} else {
-		return nil, err
+	if genesis.Hash() != params.MainnetGenesisHash {
+		return nil, errNoCypressCreditContract
 	}
 
-	// getEndingPhoto and getEndingNames are added at some nonzero block. They are returned if they exist.
-	if str, err := s.callCypressCreditGetFunc(ctx, &parsed, "getEndingPhoto"); err == nil {
-		output.EndingPhoto = *str
-	}
-	if str, err := s.callCypressCreditGetFunc(ctx, &parsed, "getEndingNames"); err == nil {
-		output.EndingNames = *str
-	}
-
-	return output, nil
+	return &CreditOutput{
+		Photo:       cypressMainnetPhoto,
+		Names:       cypressMainnetNames,
+		EndingPhoto: cypressMainnetEndingPhoto,
+		EndingNames: cypressMainnetEndingNames,
+	}, nil
 }
 
 func (s *KaiaBlockChainAPI) makeRPCBlockOutputWithConsensusInfo(b *types.Block,

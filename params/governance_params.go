@@ -55,6 +55,7 @@ var (
 	DefaultUseGiniCoeff              = false
 	DefaultDeferredTxFee             = false
 	DefaultMinimumStake              = big.NewInt(2000000)
+	DefaultStakingRewardThreshold    = big.NewInt(5_000_000)
 	DefaultStakeUpdateInterval       = uint64(86400) // 1 day
 	DefaultProposerRefreshInterval   = uint64(3600)  // 1 hour
 	DefaultDeriveShaImpl             = uint64(0)     // Orig

@@ -72,6 +72,44 @@ func TestChainConfig_Copy(t *testing.T) {
 	assert.NotEqual(t, a.Governance.Reward.Ratio, b.Governance.Reward.Ratio)
 }
 
+// Make sure that SetDefaults() fills missing values with default values
+// and preserves explicitly configured values.
+func TestChainConfig_SetDefaults(t *testing.T) {
+	t.Run("fill missing nested pointers", func(t *testing.T) {
+		c := &ChainConfig{}
+		c.SetDefaults()
+
+		assert.NotNil(t, c.Istanbul)
+		assert.NotNil(t, c.Governance)
+		assert.NotNil(t, c.Governance.Reward)
+		assert.NotNil(t, c.Governance.KIP71)
+
+		assert.NotNil(t, c.Governance.Reward.MintingAmount)
+		assert.NotNil(t, c.Governance.Reward.MinimumStake)
+		assert.NotNil(t, c.Governance.Reward.StakingRewardThreshold)
+		assert.Equal(t, DefaultKip82Ratio, c.Governance.Reward.Kip82Ratio)
+		assert.Equal(t, DefaultStakingRewardThreshold, c.Governance.Reward.StakingRewardThreshold)
+
+		assert.NotZero(t, c.Governance.Reward.StakingUpdateInterval)
+		assert.NotZero(t, c.Governance.Reward.ProposerUpdateInterval)
+	})
+
+	t.Run("preserve explicitly configured values", func(t *testing.T) {
+		c := &ChainConfig{
+			Governance: &GovernanceConfig{
+				Reward: &RewardConfig{
+					Kip82Ratio:             "33/67",
+					StakingRewardThreshold: big.NewInt(123456),
+				},
+			},
+		}
+		c.SetDefaults()
+
+		assert.Equal(t, "33/67", c.Governance.Reward.Kip82Ratio)
+		assert.Equal(t, int64(123456), c.Governance.Reward.StakingRewardThreshold.Int64())
+	})
+}
+
 func BenchmarkChainConfig_Copy(b *testing.B) {
 	a := MainnetChainConfig
 	for i := 0; i < b.N; i++ {

@@ -34,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
@@ -600,11 +601,21 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 
 	// Replace the Mainnet credit contract
 	if chain.Config().IsKaiaForkBlockParent(header.Number) {
-		if chain.Config().ChainID.Uint64() == params.MainnetNetworkId && state.GetCode(system.MainnetCreditAddr) != nil {
-			if err := state.SetCode(system.MainnetCreditAddr, system.MainnetCreditV2Code); err != nil {
+		if chain.Config().ChainID.Uint64() == params.MainnetNetworkId && state.GetCode(system.NonExistentAddress) != nil {
+			if err := state.SetCode(system.NonExistentAddress, system.MainnetCreditV2Code); err != nil {
 				return nil, err
 			}
 			logger.Info("Replaced CypressCredit with CypressCreditV2", "blockNum", header.Number.Uint64())
+		}
+	}
+
+	// Restore Mainnet credit contract address (0x0) back to pure EOA at Osaka hardfork.
+	if chain.Config().IsOsakaForkBlockParent(header.Number) {
+		if chain.Config().ChainID.Uint64() == params.MainnetNetworkId && state.GetCode(system.NonExistentAddress) != nil {
+			prevNonce := state.GetNonce(system.NonExistentAddress)
+			state.CreateEOA(system.NonExistentAddress, false, accountkey.NewAccountKeyLegacy())
+			state.SetNonce(system.NonExistentAddress, prevNonce) // Preserve account counters across account type migration.
+			logger.Info("Restored Mainnet credit address to EOA", "blockNum", header.Number.Uint64())
 		}
 	}
 

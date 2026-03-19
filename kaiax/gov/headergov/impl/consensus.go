@@ -29,8 +29,8 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 
 func (h *headerGovModule) PrepareHeader(header *types.Header) error {
 	// if this node has a vote waiting to be casted, put Vote field.
-	if len(h.myVotes) > 0 {
-		header.Vote, _ = h.myVotes[0].ToVoteBytes()
+	if vote, ok := h.peekMyVote(); ok {
+		header.Vote, _ = vote.ToVoteBytes()
 		logger.Debug("Prepare header with vote", "num", header.Number.Uint64(), "vote", hexutil.Encode(header.Vote))
 	}
 
@@ -50,7 +50,7 @@ func (h *headerGovModule) FinalizeHeader(header *types.Header, state *state.Stat
 	return nil
 }
 
-// VerifyVote checks the followings:
+// VerifyVote checks the following:
 // (1) voter must be in valset,
 // (2) integrity of the voter (the voter must be the block proposer),
 // (3) the vote value must be consistent compared to the latest ParamSet.
@@ -94,7 +94,7 @@ func (h *headerGovModule) VerifyVote(header *types.Header) error {
 	return h.checkConsistency(blockNum, vote)
 }
 
-// VerifyGov checks the followings:
+// VerifyGov checks the following:
 // (1) governance must be empty in non-epoch block,
 // (2) if there are no votes in the previous epoch, governance must be empty,
 // (3) if any vote exists in the previous epoch, governance must not be empty,
@@ -205,7 +205,8 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 		gov.IstanbulCommitteeSize, gov.IstanbulEpoch, gov.IstanbulPolicy,
 		gov.Kip71BaseFeeDenominator, gov.Kip71GasTarget, gov.Kip71MaxBlockGasUsedForBaseFee,
 		gov.RewardDeferredTxFee, gov.RewardKip82Ratio, gov.RewardMintingAmount, gov.RewardMinimumStake,
-		gov.RewardProposerUpdateInterval, gov.RewardRatio, gov.RewardStakingUpdateInterval, gov.RewardUseGiniCoeff:
+		gov.RewardProposerUpdateInterval, gov.RewardRatio, gov.RewardStakingRewardThreshold,
+		gov.RewardStakingUpdateInterval, gov.RewardUseFlexReward, gov.RewardUseGiniCoeff:
 		return nil
 	default:
 		return ErrInvalidKeyValue

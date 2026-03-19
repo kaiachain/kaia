@@ -769,7 +769,7 @@ func generateBridgeTokenTestEnv(t *testing.T) *bridgeTokenTestENV {
 	}
 }
 
-// TestBridgeContract_RegisterToken checks belows.
+// TestBridgeContract_RegisterToken checks below.
 // - RegisterToken works well
 // - DeregisterToken works well
 func TestBridgeContract_RegisterToken(t *testing.T) {

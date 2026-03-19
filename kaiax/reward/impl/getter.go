@@ -44,8 +44,11 @@ import (
 // - getDeferredReward = MR + DF
 // - - getDeferredRewardSimple   for istanbul.policy != 2
 // - - getDeferredRewardFull     for istanbul.policy == 2
-// - - - getDeferredRewardFullKore    for IsKore
+// - - - getDeferredRewardFullFlex    for IsKore && UseFlexReward
+// - - - getDeferredRewardFullKore    for IsKore && !UseFlexReward
 // - - - getDeferredRewardFullLegacy  for !IsKore
+// - - - - assignStakingRewards
+// - - - - specWithProposerAndFunds
 
 func (r *RewardModule) GetRewardSummary(num uint64) (*reward.RewardSummary, error) {
 	config, _, totalFee, err := r.loadBlockData(num)
@@ -261,11 +264,48 @@ func getDeferredRewardFull(config *reward.RewardConfig, totalFee *big.Int, si *s
 	}
 
 	// Both non-deferred and deferred modes
-	if config.Rules.IsKore {
+	if config.Rules.IsOsaka && config.UseFlexReward {
+		return getDeferredRewardFullFlex(config, totalFee, burntFee, si)
+	} else if config.Rules.IsKore {
 		return getDeferredRewardFullKore(config, totalFee, burntFee, si)
 	} else {
 		return getDeferredRewardFullLegacy(config, totalFee, burntFee, si)
 	}
+}
+
+// getDeferredRewardFullFlex is for non-Simple policy, after Kore, and with UseFlexReward enabled.
+func getDeferredRewardFullFlex(config *reward.RewardConfig, totalFee, burntFee *big.Int, si *staking.StakingInfo) (*reward.RewardSpec, error) {
+	var (
+		spec             = reward.NewRewardSpec()
+		minted           = new(big.Int).Set(config.MintingAmount)
+		distributableFee = new(big.Int).Sub(totalFee, burntFee)
+	)
+
+	// Distribute using RewardRatio (4-part) first. Unlike Legacy, fees are not distributed here
+	// because fees are exclusively allocated to proposer. By the way, remainder goes to KIF.
+	validators, kif, kef, kpf := config.RewardRatio.SplitFlex(minted)
+	proposer, stakers := config.Kip82Ratio.Split(validators)
+	ratioRemainder := calcRemainder(minted, proposer, stakers, kif, kef, kpf)
+	kif.Add(kif, ratioRemainder)
+
+	// Further distribute using Kip82Ratio. By the way, remainder goes to proposer.
+	stakersAlloc, kip82Remainder := assignStakingRewardsFlex(config, stakers, si)
+	proposer.Add(proposer, kip82Remainder)
+	stakers.Sub(stakers, kip82Remainder)
+
+	// Proposer gets the fees.
+	proposer.Add(proposer, distributableFee)
+
+	spec.Minted = minted
+	spec.TotalFee = totalFee
+	spec.BurntFee = burntFee
+	spec.Stakers = stakers
+	for addr, amount := range stakersAlloc {
+		spec.IncRecipient(addr, amount)
+	}
+
+	spec = specWithProposerAndFundsFlex(spec, config, proposer, kif, kef, kpf, si)
+	return spec, nil
 }
 
 // getDeferredRewardFullKore is for non-Simple policy and after Kore.
@@ -355,6 +395,71 @@ func calcRemainder(total *big.Int, parts ...*big.Int) *big.Int {
 	return remaining
 }
 
+// assignStakingRewardsFlex assigns staking rewards to stakers according to their staking amounts.
+// Returns the allocation and the remainder.
+func assignStakingRewardsFlex(config *reward.RewardConfig, budget *big.Int, si *staking.StakingInfo) (map[common.Address]*big.Int, *big.Int) {
+	var (
+		minStake  = config.MinimumStake.Uint64()
+		threshold = config.StakingRewardThreshold.Uint64()
+		isPrague  = config.Rules.IsPrague
+
+		cns            = si.ConsolidatedNodes()
+		excessInt      = make(map[common.Address]uint64)
+		totalExcessInt = uint64(0)
+	)
+
+	// Calculate the excess stakes (the amount over the threshold) for each CN.
+	for _, cn := range cns {
+		// If the CNStaking is less than minStake, skip it. Even if (CNStaking + CLStaking) could be more than minStake,
+		// the CNStaking alone must be at least minStake to be eligible.
+		if cn.StakingAmount < minStake {
+			continue
+		}
+
+		amount := cn.StakingAmount
+		if isPrague && cn.CLStakingInfo != nil {
+			amount += cn.CLStakingInfo.CLStakingAmount
+		}
+
+		// Excess is the amount over the threshold (not over minStake).
+		if amount > threshold {
+			excessInt[cn.RewardAddr] = amount - threshold
+			totalExcessInt += excessInt[cn.RewardAddr]
+		}
+	}
+
+	// Distribute the budget to the CNs based on the excess stakes.
+	var (
+		totalExcess = new(big.Int).SetUint64(totalExcessInt)
+		remaining   = new(big.Int).Set(budget)
+		alloc       = make(map[common.Address]*big.Int)
+	)
+	for _, cn := range cns {
+		if excessInt[cn.RewardAddr] <= 0 {
+			continue
+		}
+		excess := new(big.Int).SetUint64(excessInt[cn.RewardAddr])
+
+		// The KAIA unit will cancel out:
+		// reward (kei) = excess (KAIA) * budget (kei) / totalExcess (KAIA)
+		reward := new(big.Int).Div(new(big.Int).Mul(excess, budget), totalExcess)
+		if reward.Sign() <= 0 {
+			continue
+		}
+
+		// If Prague and CL is configured for this CN, split the reward between CN and CL.
+		if isPrague && cn.CLStakingInfo != nil {
+			cnAmount, clAmount := cn.Split(reward)
+			alloc[cn.RewardAddr] = cnAmount
+			alloc[cn.CLStakingInfo.CLPoolAddr] = clAmount
+		} else {
+			alloc[cn.RewardAddr] = reward
+		}
+		remaining.Sub(remaining, reward)
+	}
+	return alloc, remaining
+}
+
 // assignStakingRewards assigns staking rewards to stakers according to their staking amounts.
 // Returns the allocation and the remainder.
 func assignStakingRewards(config *reward.RewardConfig, stakersReward *big.Int, si *staking.StakingInfo) (map[common.Address]*big.Int, *big.Int) {
@@ -403,6 +508,64 @@ func assignStakingRewards(config *reward.RewardConfig, stakersReward *big.Int, s
 		}
 	}
 	return alloc, remaining
+}
+
+// specWithProposerAndFundsFlex assigns proposer, kif, kef, kpf to the reward spec.
+// This must be the last step of building the RewardSpec as it finalizes the Proposer, KEF, KIF fields.
+func specWithProposerAndFundsFlex(spec *reward.RewardSpec, config *reward.RewardConfig, proposer, kif, kef, kpf *big.Int, si *staking.StakingInfo) *reward.RewardSpec {
+	newSpec := spec.Copy()
+
+	// If KIF, KEF, or KPF address is not set, proposer takes it.
+	if common.EmptyAddress(si.KIFAddr) {
+		newSpec.KIF = common.Big0
+		proposer.Add(proposer, kif)
+	} else {
+		newSpec.KIF = kif
+		newSpec.IncRecipient(si.KIFAddr, kif)
+	}
+
+	if common.EmptyAddress(si.KEFAddr) {
+		newSpec.KEF = common.Big0
+		proposer.Add(proposer, kef)
+	} else {
+		newSpec.KEF = kef
+		newSpec.IncRecipient(si.KEFAddr, kef)
+	}
+
+	if common.EmptyAddress(si.KPFAddr) {
+		newSpec.KPF = common.Big0
+		proposer.Add(proposer, kpf)
+	} else {
+		newSpec.KPF = kpf
+		newSpec.IncRecipient(si.KPFAddr, kpf)
+	}
+
+	newSpec.Proposer = proposer
+	if !config.Rules.IsPrague || si.CLStakingInfos == nil {
+		newSpec.IncRecipient(config.Rewardbase, proposer)
+		return newSpec
+	}
+
+	// Handle CLStakingInfo for proposer after Prague
+	cns := si.ConsolidatedNodes()
+	for _, cn := range cns {
+		if cn.RewardAddr != config.Rewardbase {
+			continue
+		}
+		if cn.CLStakingInfo == nil {
+			// Early exit if there's no CL for proposer
+			break
+		}
+
+		cnAmount, clAmount := cn.Split(proposer)
+
+		newSpec.IncRecipient(cn.RewardAddr, cnAmount)
+		newSpec.IncRecipient(cn.CLStakingInfo.CLPoolAddr, clAmount)
+		return newSpec
+	}
+
+	newSpec.IncRecipient(config.Rewardbase, proposer)
+	return newSpec
 }
 
 // specWithProposerAndFunds assigns proposer, kif, kef to the reward spec.
