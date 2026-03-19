@@ -5,7 +5,7 @@ Current working PR: kaiachain/kaia#748 (state-transition → permissionless)
 ## Dependency Order
 
 ```
-PR 1 (Contracts) → PR 2 (Go Bindings) → PR 3 (ABv2 + State Transition) → PR 4 (Genesis Alloc + Integration)
+PR 1 (Contracts) → PR 2 (Go Bindings) → PR 3 (dev sync) → PR 4 (ABv2 + State Transition) → PR 5 (Genesis Alloc + Integration)
 ```
 
 All PRs target `permissionless` branch. Must be merged in order.
@@ -16,6 +16,7 @@ All PRs target `permissionless` branch. Must be merged in order.
 
 **PR**: kaiachain/kaia#792
 **Branch**: `pr1-contracts` → `permissionless`
+**Status**: Merged
 **Scope:** Separate permissionless contracts into independent `contracts_permissionless/` project. No Go binding, no `contracts/` changes.
 
 | Category | Files |
@@ -40,6 +41,7 @@ All PRs target `permissionless` branch. Must be merged in order.
 
 **PR**: kaiachain/kaia#796
 **Branch**: `pr2-go-system` → `permissionless`
+**Status**: Merged
 **Scope:** `go generate` bindings only
 
 | Category | Files |
@@ -50,9 +52,29 @@ All PRs target `permissionless` branch. Must be merged in order.
 
 ---
 
-## PR 3: ABv2 Go Layer + State Transition (Core Logic)
+## PR 3: dev branch sync + refactoring
 
-**Branch**: `pr3-state-transition` → `permissionless`
+**Branch**: `pr3-dev-sync` → `permissionless`
+**Status**: Not started
+**Scope:** Merge upstream `dev` (up to `3347c86a5`) + adapt permissionless code to dev changes
+
+| Category | Changes |
+|----------|---------|
+| dev merge | Merge `mainstream/dev` into `permissionless` — includes PR #768 (flex reward), PR #790 (fork override fix), Osaka mainnet fork number, etc. |
+| MultiCall SpareAddress | `contracts_permissionless/multicall/MultiCallContract.sol` + regenerated binding — adds `SpareAddress` (KPF) to `multiCallStakingInfo` return |
+| ConsolidatedNodes refactor | `kaiax/staking/staking_info.go` — revert to original `consolidateNodes()` (no council param), add `consolidateNodesPermissionless()`, `ConsolidatedNodes(rules)` signature |
+| Staking getter | `kaiax/staking/impl/getter.go` — two multicall imports (contracts/ + contracts_permissionless/), `parsePermissionlessCallResult` |
+| collectStakingAmounts | `kaiax/valset/impl/getter_demote.go` — iterate `cn.NodeIds` (plural, original) |
+| Tests | `kaiax/staking/staking_info_test.go` — updated for `NodeIds`/`StakingContracts` struct |
+
+**Review focus:** dev merge conflict resolution, ConsolidatedNodes cache safety, multicall SpareAddress integration
+
+---
+
+## PR 4: ABv2 Go Layer + State Transition (Core Logic)
+
+**Branch**: `pr4-state-transition` → `permissionless`
+**Status**: Not started
 **Scope:** ABv2 read/write functions + validator state machine
 
 | Category | Files |
@@ -81,9 +103,10 @@ All PRs target `permissionless` branch. Must be merged in order.
 
 ---
 
-## PR 4: Genesis Alloc + Integration
+## PR 5: Genesis Alloc + Integration
 
-**Branch**: `pr4-integration` → `permissionless`
+**Branch**: `pr5-integration` → `permissionless`
+**Status**: Not started
 **Scope:** Genesis allocation, config wiring, API, cleanup
 
 | Category | Files |
@@ -113,4 +136,5 @@ All PRs target `permissionless` branch. Must be merged in order.
 - `contracts_permissionless/` is the new independent project for permissionless contracts (OZ v5, solc 0.8.25)
 - Each PR should compile and pass tests independently
 - PR 2 is largest by line count (Go bindings ~77K) but mostly generated
-- PR 3 is the most logic-dense and needs the most careful review
+- PR 4 is the most logic-dense and needs the most careful review
+- dev merge (PR 3) syncs up to `3347c86a5` (PR #790)
