@@ -210,7 +210,7 @@ func (v *VRankModule) catchUp(headNum uint64) error {
 			WriteLastCheckpoint(v.ChainKv, blockNum)
 		}
 
-		if blockNum%10000 == 0 {
+		if blockNum%10000 == 0 && start != headNum {
 			logger.Info("VRank module catchup progress", "blockNum", blockNum, "progress", float64(blockNum-start)/float64(headNum-start))
 		}
 	}
