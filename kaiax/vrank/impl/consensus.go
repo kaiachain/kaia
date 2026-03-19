@@ -22,6 +22,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
@@ -63,12 +64,12 @@ func (v *VRankModule) VerifyHeader(header *types.Header) error {
 	if err != nil {
 		return err
 	}
-	candSet := make(map[string]struct{}, len(candidates))
+	candSet := make(map[common.Address]struct{}, len(candidates))
 	for _, c := range candidates {
-		candSet[string(c.Bytes())] = struct{}{}
+		candSet[c] = struct{}{}
 	}
 	for i, addr := range report {
-		if _, ok := candSet[string(addr.Bytes())]; !ok {
+		if _, ok := candSet[addr]; !ok {
 			return vrank.ErrInvalidVRankCandidate
 		}
 		if i > 0 {
