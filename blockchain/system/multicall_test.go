@@ -80,8 +80,20 @@ func TestContractCallerForMultiCall(t *testing.T) {
 }
 
 func TestMultiCallStakingInfoPermissionless(t *testing.T) {
-	caller, callOpts, state, cleanup := setupMultiCallMock(t)
-	defer cleanup()
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	backend := backends.NewSimulatedBackend(nil)
+	originCode := MultiCallCode
+	MultiCallCode = MultiCallPermlessMockCode
+	defer func() {
+		MultiCallCode = originCode
+		backend.Close()
+	}()
+
+	header := backend.BlockChain().CurrentHeader()
+	chain := backend.BlockChain()
+	state, _ := backend.BlockChain().StateAt(header.Root)
+	caller, _ := NewMultiCallContractCaller(state, chain, header)
+	callOpts := &bind.CallOpts{BlockNumber: header.Number}
 
 	ret, err := caller.MultiCallStakingInfoPermissionless(callOpts)
 	assert.Nil(t, err)

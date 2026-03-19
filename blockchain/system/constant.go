@@ -34,6 +34,7 @@ import (
 	addressbookv2contract "github.com/kaiachain/kaia/contracts_permissionless/contracts/AddressBookV2"
 	permlessproxycontract "github.com/kaiachain/kaia/contracts_permissionless/contracts/Proxy"
 	"github.com/kaiachain/kaia/contracts_permissionless/contracts/multicall"
+	permlesstestcontract "github.com/kaiachain/kaia/contracts_permissionless/contracts/testing"
 	"github.com/kaiachain/kaia/log"
 )
 
@@ -95,7 +96,8 @@ var (
 	AddressBookV2ABI, _ = addressbookv2contract.AddressBookV2MetaData.GetAbi()
 
 	MultiCallCode     = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
-	MultiCallMockCode = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)
+	MultiCallMockCode        = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)
+	MultiCallPermlessMockCode = hexutil.MustDecode("0x" + permlesstestcontract.MultiCallContractMockBinRuntime)
 
 	// Mock for CLRegistry testing
 	CLRegistryMockThreeCLAddr = common.HexToAddress("0x0000000000000000000000000000000000000Ff0")
