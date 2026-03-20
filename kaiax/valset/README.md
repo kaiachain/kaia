@@ -548,3 +548,86 @@ This module does not expose APIs.
   ```
   GetProposer(num, round) -> common.Address
   ```
+
+---
+
+## Permissionless Validator Lifecycle
+
+After the permissionless hardfork, the validator management transitions from header-governance-based (permissioned) to contract-based (permissionless) using AddressBookV2 (ABv2). See [KIP-286](https://kips.kaia.io/KIPs/kip-286) and [KIP-290](https://kips.kaia.io/KIPs/kip-290) for the full specification.
+
+### Validator States
+
+Each validator has one of the following states, stored in ABv2:
+
+| State | Value | Description |
+|-------|-------|-------------|
+| CandInactive | 1 | Registered but inactive candidate |
+| CandReady | 2 | Candidate signaling readiness for VRank testing |
+| CandTesting | 3 | Candidate undergoing VRank assessment |
+| ValInactive | 4 | Non-participating validator; must signal readiness or exit before idle timeout |
+| ValReady | 5 | Validator awaiting elevation to ValActive |
+| ValActive | 6 | Active consensus participant earning rewards |
+| ValPaused | 7 | Validator in maintenance/recovery mode |
+| ValExiting | 8 | Transitional state lasting one epoch; becomes ValInactive afterward |
+
+### Council (Permissionless)
+
+In permissionless mode, the council is determined by validator states rather than header votes:
+
+```
+Council(N) = {v ∈ ABv2 | v.State ∈ {ValActive, ValReady, ValPaused}}
+```
+
+- **Qualified (committee-eligible)**: ValActive only
+- **Demoted**: ValReady + ValPaused
+
+This replaces the permissioned model where council membership was governed by `governance.addvalidator` / `governance.removevalidator` votes.
+
+### State Transitions
+
+State transitions are computed at `PostInsertBlock(N-1)` and written to ABv2 at `Initialize(N)`. They fall into three categories:
+
+#### 1. Epoch Transition (every `VRankEpoch` blocks)
+
+Executed in order:
+1. **T1**: ValExiting → ValInactive (clear transitional states)
+2. **T2**: Evaluate VRank for CandTesting candidates (TODO: currently hardcoded pass)
+3. **T3**: Top-N recalculation — promote/demote based on stake ranking (N = `ActiveValidatorCount`)
+4. **T4**: CandReady with MinStake → CandTesting; CandReady below MinStake → CandInactive
+
+#### 2. Timeout Transition (every block)
+
+- ValPaused exceeding `ValPausedTimeout` → ValInactive
+- ValReady/ValInactive exceeding `ValIdleTimeout` → CandInactive
+
+#### 3. Violation Transition (every block)
+
+- Staking below MinStake: ValActive → ValExiting
+- Minor VRank violation: ValActive → ValPaused (TODO — KIP-227)
+- Severe VRank violation: ValActive → ValExiting (TODO — KIP-227)
+
+### Block Processing (Permissionless)
+
+```
+PostInsertBlock(N-1):
+  → getOrComputeNodeStates(N) — compute and cache node states for block N
+
+Initialize(N):
+  → WriteStatesToContract(N) — diff cached states vs parent, write changes to ABv2
+
+Finalize(HF-1):
+  → InstallABv2() — one-time ABv2 proxy installation at hardfork boundary
+```
+
+Node states are computed from the parent block's ABv2 contract state, with epoch/timeout/violation transitions applied. The result is cached in `nodeStatesCache` to avoid recomputation.
+
+### Additional Getters (Permissionless)
+
+- `GetCandidates(num)`: Returns addresses of CandTesting validators.
+  ```
+  GetCandidates(num) -> []common.Address
+  ```
+- `GetNodeByState(num, states)`: Returns validators filtered by the given states.
+  ```
+  GetNodeByState(num, states) -> NodeStateMap
+  ```
