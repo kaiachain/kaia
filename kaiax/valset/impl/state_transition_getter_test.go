@@ -485,13 +485,13 @@ func TestGetCouncilPermissionless(t *testing.T) {
 
 	// Seed cache: 7 validators covering all states
 	nodes := valset.NodeStateMap{
-		config.NodeIds[0]: {State: valset.ValActive},    // included
-		config.NodeIds[1]: {State: valset.ValPaused},    // included
-		config.NodeIds[2]: {State: valset.ValReady},     // included
-		config.NodeIds[3]: {State: valset.ValInactive},  // excluded
-		config.NodeIds[4]: {State: valset.ValExiting},   // excluded
-		config.NodeIds[5]: {State: valset.CandReady},    // excluded
-		config.NodeIds[6]: {State: valset.Registered}, // excluded
+		config.NodeIds[0]: {State: valset.ValActive},   // included
+		config.NodeIds[1]: {State: valset.ValPaused},   // included
+		config.NodeIds[2]: {State: valset.ValReady},    // included
+		config.NodeIds[3]: {State: valset.ValInactive}, // excluded
+		config.NodeIds[4]: {State: valset.ValExiting},  // excluded
+		config.NodeIds[5]: {State: valset.CandReady},   // excluded
+		config.NodeIds[6]: {State: valset.Registered},  // excluded
 	}
 	v.nodeStatesCache.Add(uint64(1), nodes)
 

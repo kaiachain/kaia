@@ -14,26 +14,26 @@ import (
 type State uint8
 
 const (
-	Unknown      State = iota // 0
-	Registered              // 1
-	CandReady                 // 2
-	CandTesting               // 3
-	ValInactive               // 4
-	ValReady                  // 5
-	ValActive                 // 6
-	ValPaused                 // 7
-	ValExiting                // 8
+	Unknown     State = iota // 0
+	Registered               // 1
+	CandReady                // 2
+	CandTesting              // 3
+	ValInactive              // 4
+	ValReady                 // 5
+	ValActive                // 6
+	ValPaused                // 7
+	ValExiting               // 8
 )
 
 const (
-	RegisteredStr = "Registered"
-	CandReadyStr    = "CandReady"
-	CandTestingStr  = "CandTesting"
-	ValInactiveStr  = "ValInactive"
-	ValPausedStr    = "ValPaused"
-	ValExitingStr   = "ValExiting"
-	ValReadyStr     = "ValReady"
-	ValActiveStr    = "ValActive"
+	RegisteredStr  = "Registered"
+	CandReadyStr   = "CandReady"
+	CandTestingStr = "CandTesting"
+	ValInactiveStr = "ValInactive"
+	ValPausedStr   = "ValPaused"
+	ValExitingStr  = "ValExiting"
+	ValReadyStr    = "ValReady"
+	ValActiveStr   = "ValActive"
 )
 
 func (s State) ToUint8() uint8 {
