@@ -57,46 +57,46 @@ contract CnStakingV4Factory is ICnStakingV4Factory {
     /* ========== DEPLOYMENT FUNCTIONS ========== */
 
     /// @inheritdoc ICnStakingV4Factory
-    function deployCnStaking(address _owner) external returns (address proxy) {
+    function deployCnStaking(address _owner) external returns (address cnStakingProxy) {
         bytes32 salt = keccak256(abi.encode(msg.sender, _owner));
-        proxy = address(new BeaconProxy{salt: salt}(cnStakingBeacon, ""));
-        ICnStaking(payable(proxy)).initialize(_owner);
+        cnStakingProxy = address(new BeaconProxy{salt: salt}(cnStakingBeacon, ""));
+        ICnStaking(payable(cnStakingProxy)).initialize(_owner);
 
-        _deployedCnStaking[proxy] = true;
-        _deployer[proxy] = msg.sender;
+        _deployedCnStaking[cnStakingProxy] = true;
+        _deployer[cnStakingProxy] = msg.sender;
 
-        emit DeployCnStakingV4(proxy, _owner);
+        emit DeployCnStakingV4(cnStakingProxy, _owner);
     }
 
     /// @inheritdoc ICnStakingV4Factory
     function deployCnStakingWithPD(
         address _owner,
         IPublicDelegation.PDConstructorArgs memory _pdArgs
-    ) external payable returns (address proxy, address publicDelegation) {
+    ) external payable returns (address cnStakingProxy, address publicDelegationProxy) {
         if (msg.value < INITIAL_LOCKUP) revert InsufficientInitialStake();
 
         bytes32 cnSalt = keccak256(abi.encode(msg.sender, _owner));
         bytes32 pdSalt = keccak256(abi.encode(msg.sender, _owner, _pdArgs));
 
         // Deploy both beacon proxies via CREATE2
-        proxy = address(new BeaconProxy{salt: cnSalt}(cnStakingBeacon, ""));
-        publicDelegation = address(new BeaconProxy{salt: pdSalt}(pdBeacon, ""));
+        cnStakingProxy = address(new BeaconProxy{salt: cnSalt}(cnStakingBeacon, ""));
+        publicDelegationProxy = address(new BeaconProxy{salt: pdSalt}(pdBeacon, ""));
 
         // Initialize PD first (needs CnStaking address)
-        IPublicDelegation(payable(publicDelegation)).initialize(proxy, _pdArgs);
+        IPublicDelegation(payable(publicDelegationProxy)).initialize(cnStakingProxy, _pdArgs);
 
         // Initialize CnStaking (needs PD address)
-        ICnStaking(payable(proxy)).initializeWithPD(_owner, publicDelegation);
+        ICnStaking(payable(cnStakingProxy)).initializeWithPD(_owner, publicDelegationProxy);
 
         // Mint dead shares to prevent inflation attack
-        IPublicDelegation(payable(publicDelegation)).stakeFor{value: msg.value}(DEAD_ADDRESS);
+        IPublicDelegation(payable(publicDelegationProxy)).stakeFor{value: msg.value}(DEAD_ADDRESS);
 
-        _deployedCnStaking[proxy] = true;
-        _deployedPublicDelegation[publicDelegation] = true;
-        _deployer[proxy] = msg.sender;
-        _deployer[publicDelegation] = msg.sender;
+        _deployedCnStaking[cnStakingProxy] = true;
+        _deployedPublicDelegation[publicDelegationProxy] = true;
+        _deployer[cnStakingProxy] = msg.sender;
+        _deployer[publicDelegationProxy] = msg.sender;
 
-        emit DeployCnStakingV4WithPD(proxy, _owner, publicDelegation);
+        emit DeployCnStakingV4WithPD(cnStakingProxy, _owner, publicDelegationProxy);
     }
 
     /* ========== PUBLIC GETTERS ========== */

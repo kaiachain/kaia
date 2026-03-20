@@ -22,8 +22,8 @@ interface ICnStakingV4Factory {
     /// @dev Uses CREATE2 with msg.sender in salt to prevent front-running.
     ///      Same (deployer, owner) combo cannot deploy twice (CREATE2 collision = revert).
     /// @param _owner  The owner of the CnStaking contract.
-    /// @return proxy  The deployed BeaconProxy address.
-    function deployCnStaking(address _owner) external returns (address proxy);
+    /// @return cnStakingProxy  The deployed BeaconProxy address.
+    function deployCnStaking(address _owner) external returns (address cnStakingProxy);
 
     /// @notice Deploy CnStaking + PublicDelegation proxies atomically.
     /// @dev Deploys both beacon proxies via CREATE2, initializes PD with CnStaking address,
@@ -31,12 +31,12 @@ interface ICnStakingV4Factory {
     ///      Salt includes msg.sender to prevent front-running.
     /// @param _owner  The owner of both contracts.
     /// @param _pdArgs PublicDelegation constructor arguments.
-    /// @return proxy            The deployed CnStaking BeaconProxy address.
-    /// @return publicDelegation The deployed PublicDelegation BeaconProxy address.
+    /// @return cnStakingProxy            The deployed CnStaking BeaconProxy address.
+    /// @return publicDelegationProxy The deployed PublicDelegation BeaconProxy address.
     function deployCnStakingWithPD(
         address _owner,
         IPublicDelegation.PDConstructorArgs memory _pdArgs
-    ) external payable returns (address proxy, address publicDelegation);
+    ) external payable returns (address cnStakingProxy, address publicDelegationProxy);
 
     /* ========== GETTERS ========== */
 

@@ -232,11 +232,11 @@ contract CnStakingV4 is ICnStaking, Initializable, OwnableUpgradeable, Reentranc
                 $.unstaking -= value;
             }
 
-            _refreshStake();
-            emit WithdrawApprovedStaking(_id, to, value);
-
             (bool success, ) = to.call{value: value}("");
             if (!success) revert TransferFailed();
+
+            _refreshStake();
+            emit WithdrawApprovedStaking(_id, to, value);
         }
     }
 
@@ -264,10 +264,10 @@ contract CnStakingV4 is ICnStaking, Initializable, OwnableUpgradeable, Reentranc
             $.staking -= _value;
         }
 
+        ICnStaking(payable(_targetCnStaking)).handleRedelegation{value: _value}(_user);
+
         _refreshStake();
         emit Redelegation(_user, _targetCnStaking, _value);
-
-        ICnStaking(payable(_targetCnStaking)).handleRedelegation{value: _value}(_user);
     }
 
     /// @inheritdoc ICnStaking

@@ -101,11 +101,11 @@ interface IAddressBookV2 {
     /// @param newMetadata The new metadata string
     event MetadataUpdated(address indexed nodeId, string newMetadata);
 
-    /// @notice Emitted when a candidate transitions from CandInactive to CandReady
+    /// @notice Emitted when a candidate transitions from Registered to CandReady
     /// @param nodeId The address of the readied candidate
     event CandidateReadied(address indexed nodeId);
 
-    /// @notice Emitted when a candidate transitions from CandReady to CandInactive
+    /// @notice Emitted when a candidate transitions from CandReady to Registered
     /// @param nodeId The address of the unreadied candidate
     event CandidateUnreadied(address indexed nodeId);
 
@@ -170,7 +170,7 @@ interface IAddressBookV2 {
 
     /* ========== USER FUNCTIONS ========== */
 
-    /// @notice Registers a new node as CandInactive
+    /// @notice Registers a new node in the Registered state
     /// @param nodeId The address of the node to register
     /// @param stakingContract The staking contract address
     /// @param rewardAddress The reward address
@@ -186,7 +186,7 @@ interface IAddressBookV2 {
         string memory metadata
     ) external;
 
-    /// @notice Removes a CandInactive node entirely
+    /// @notice Removes a Registered entry entirely
     /// @param nodeId The address of the node to delete
     function deleteNode(address nodeId) external;
 
@@ -210,11 +210,11 @@ interface IAddressBookV2 {
     /// @param newMetadata The new metadata string
     function updateMetadata(address nodeId, string calldata newMetadata) external;
 
-    /// @notice Readies a candidate: CandInactive → CandReady
+    /// @notice Readies a candidate: Registered → CandReady
     /// @param nodeId The address of the candidate to ready
     function readyCandidate(address nodeId) external;
 
-    /// @notice Unreadies a candidate: CandReady → CandInactive
+    /// @notice Unreadies a candidate: CandReady → Registered
     /// @param nodeId The address of the candidate to unready
     function unreadyCandidate(address nodeId) external;
 
@@ -238,7 +238,7 @@ interface IAddressBookV2 {
     /// @param nodeId The address of the validator to exit
     function exit(address nodeId) external;
 
-    /// @notice Offboards a validator: ValInactive → CandInactive
+    /// @notice Offboards a validator: ValInactive → Registered
     /// @param nodeId The address of the validator to offboard
     function offboard(address nodeId) external;
 
@@ -310,10 +310,10 @@ interface IAddressBookV2 {
     /// @return The manager address
     function getManager(address nodeId) external view returns (address);
 
-    /// @notice Checks if an address is registered (nodeId, stakingContract, or rewardAddress)
+    /// @notice Checks if an address is in use (nodeId, stakingContract, or rewardAddress)
     /// @param addr The address to check
-    /// @return True if the address is registered
-    function isRegistered(address addr) external view returns (bool);
+    /// @return True if the address is in use
+    function isUsedAddress(address addr) external view returns (bool);
 
     /// @notice Returns the pause and idle timeout durations
     /// @return pauseTimeout The pause timeout in seconds
@@ -366,13 +366,13 @@ interface IAddressBookV2 {
     /// @return Array of NodeInfo structs in the same order as nodeIds
     function getNodeInfos(address[] calldata nodeIds) external view returns (NodeInfo[] memory);
 
-    /// @notice Returns lightweight profiles for all registered nodes, excluding suspended validators
-    /// @dev Iterates activeSet, skips suspended nodes.
+    /// @notice Returns lightweight profiles for all nodes, excluding suspended validators
+    /// @dev Iterates allNodes, skips suspended nodes.
     /// @return Array of Profile structs
     function getAllProfiles() external view returns (Profile[] memory);
 
-    /// @notice Returns BLS public key info for all registered nodes
-    /// @dev Iterates activeSet. Matches SimpleBlsRegistry interface.
+    /// @notice Returns BLS public key info for all nodes
+    /// @dev Iterates allNodes. Matches SimpleBlsRegistry interface.
     /// @return nodeIdList Array of node addresses
     /// @return pubkeyList Array of BlsPublicKeyInfo structs in the same order
     function getAllBlsInfo() external view returns (address[] memory nodeIdList, BlsPublicKeyInfo[] memory pubkeyList);
@@ -381,11 +381,6 @@ interface IAddressBookV2 {
     /// @param nodeId The address of the node
     /// @return The node's current State
     function getNodeState(address nodeId) external view returns (State);
-
-    /// @notice Checks if a node is in the active set (all states except CandInactive)
-    /// @param nodeId The address of the node
-    /// @return True if the node is in activeSet
-    function isInActiveSet(address nodeId) external view returns (bool);
 
     /// @notice Returns all currently suspended validators
     /// @return Array of suspended node addresses
@@ -401,9 +396,9 @@ interface IAddressBookV2 {
     /// @return The timeout timestamp (0 if no timeout)
     function getTimeoutAt(address nodeId) external view returns (uint256);
 
-    /// @notice Returns the number of nodes in the active set
-    /// @return The active set length
-    function getActiveSetLength() external view returns (uint256);
+    /// @notice Returns the number of nodes (all states except Registered)
+    /// @return The total node count
+    function getAllNodesLength() external view returns (uint256);
 
     /// @notice Returns the number of nodes in a given state
     /// @dev Atomically maintained inside _transition(), _createNode(), _deleteNode().

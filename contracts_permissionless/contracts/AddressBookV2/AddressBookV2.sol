@@ -48,9 +48,9 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
         // Register addresses
         uint256 len = d.nodeIds.length;
         for (uint256 i; i < len; ++i) {
-            $.registeredAddresses[d.nodeIds[i]] = true;
-            $.registeredAddresses[d.infos[i].stakingContract] = true;
-            $.registeredAddresses[d.infos[i].rewardAddress] = true;
+            $.usedAddresses[d.nodeIds[i]] = true;
+            $.usedAddresses[d.infos[i].stakingContract] = true;
+            $.usedAddresses[d.infos[i].rewardAddress] = true;
         }
 
         // Set initial active validators and set epoch count
@@ -156,8 +156,8 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
-    function isRegistered(address addr) external view returns (bool) {
-        return _getStorage().registeredAddresses[addr];
+    function isUsedAddress(address addr) external view returns (bool) {
+        return _getStorage().usedAddresses[addr];
     }
 
     /// @inheritdoc IAddressBookV2
@@ -232,13 +232,8 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
-    function isInActiveSet(address nodeId) external view override returns (bool) {
-        return _getStorage().activeSet.contains(nodeId);
-    }
-
-    /// @inheritdoc IAddressBookV2
-    function getActiveSetLength() external view override returns (uint256) {
-        return _getStorage().activeSet.length();
+    function getAllNodesLength() external view override returns (uint256) {
+        return _getStorage().allNodes.length();
     }
 
     /// @inheritdoc IAddressBookV2
@@ -281,14 +276,14 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
         )
     {
         ABv2Storage storage $ = _getStorage();
-        uint256 activeLen = $.activeSet.length();
+        uint256 activeLen = $.allNodes.length();
 
         nodeIds = new address[](activeLen);
         stakingContracts = new address[](activeLen);
         rewardAddresses = new address[](activeLen);
 
         for (uint256 i; i < activeLen; ++i) {
-            address nid = $.activeSet.at(i);
+            address nid = $.allNodes.at(i);
             NodeInfo storage info = $.nodeInfo[nid];
             nodeIds[i] = nid;
             stakingContracts[i] = info.stakingContract;
@@ -313,16 +308,16 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
 
     /* ========== INTERNAL HELPERS ========== */
 
-    /// @notice Returns all node IDs from activeSet, excluding suspended nodes.
+    /// @notice Returns all node IDs, excluding suspended nodes.
     function _getNonSuspendedNodeIds() private view returns (address[] memory nodeIds) {
         ABv2Storage storage $ = _getStorage();
-        uint256 activeLen = $.activeSet.length();
+        uint256 activeLen = $.allNodes.length();
 
         nodeIds = new address[](activeLen);
         uint256 idx;
 
         for (uint256 i; i < activeLen; ++i) {
-            address nid = $.activeSet.at(i);
+            address nid = $.allNodes.at(i);
             if (!$.suspendedSet.contains(nid)) {
                 nodeIds[idx] = nid;
                 unchecked {
