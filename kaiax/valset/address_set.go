@@ -18,7 +18,6 @@ package valset
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"slices"
@@ -134,10 +133,6 @@ func (as *AddressSet) IndexOf(addr common.Address) int {
 		}
 	}
 	return -1
-}
-
-func (as *AddressSet) Marshal() ([]byte, error) {
-	return json.Marshal(as.List())
 }
 
 func (as *AddressSet) Contains(addr common.Address) bool {
