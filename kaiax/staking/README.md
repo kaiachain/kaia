@@ -162,3 +162,25 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
   ```
   GetStakingInfo(num) -> StakingInfo
   ```
+
+---
+
+## Permissionless Staking (KIP-287)
+
+After the permissionless hardfork, staking information is read from AddressBookV2 (ABv2) via the MultiCall contract instead of the legacy AddressBook. See [KIP-287](https://kips.kaia.io/KIPs/kip-287) for the full specification.
+
+### Key Changes
+
+- **Single staking contract**: Each validator has exactly one CnStakingV4 contract (no consolidated staking).
+- **Effective staking excludes unstaking**: `effectiveStake = staking() - unstaking()`, preventing reward earning during the 7-day withdrawal lockup.
+- **ABv2 as source of truth**: Validator profiles (nodeId, stakingContract, rewardAddress, state) are read from ABv2's `multiCallStakingInfoPermissionless`.
+- **KPF address**: Treasury fund addresses (KEF, KIF, KPF) are read from ABv2's `getFundAddresses()`.
+
+### ConsolidatedNodes
+
+`ConsolidatedNodes(rules)` behavior differs by fork:
+
+- **Permissioned**: Groups entries by RewardAddr — multiple NodeIds can share one RewardAddr, staking amounts are summed. Uses `consolidateNodes()`.
+- **Permissionless**: No grouping — ABv2 guarantees unique `(NodeId, StakingContract, RewardAddr)` tuples, so each entry maps 1:1. Uses `consolidateNodesPermissionless()` with FCFS for duplicate RewardAddr (infeasible path).
+
+Both paths use the same `consolidatedNode` struct with `NodeIds []common.Address` (plural) to avoid cache argument-dependency issues. In permissionless mode, `NodeIds` always has length 1.
