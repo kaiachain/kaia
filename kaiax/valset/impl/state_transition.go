@@ -17,7 +17,6 @@
 package impl
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -40,95 +39,6 @@ const (
 	DefaultValIdleTimeout       = 30 * 24 * time.Hour
 	DefaultActiveValidatorCount = 50
 )
-
-type ValidatorList struct {
-	permlessVals valset.NodeStateMap
-}
-
-// newValidatorList creates a ValidatorList with a defensive copy of the given map.
-func newValidatorList(validators valset.NodeStateMap) *ValidatorList {
-	return &ValidatorList{permlessVals: validators.Copy()}
-}
-
-func (vs *ValidatorList) EqualState(other valset.NodeStateMap) bool {
-	return vs.permlessVals.EqualState(other)
-}
-
-func (vs *ValidatorList) String() string {
-	if vs == nil {
-		return ""
-	}
-	return vs.permlessVals.String()
-}
-
-func (vs *ValidatorList) Marshal() ([]byte, error) {
-	if vs == nil {
-		return nil, errors.New("permissionless valset empty")
-	}
-	return json.Marshal(vs.permlessVals)
-}
-
-func (vs *ValidatorList) Copy() valset.CommonAddressSet {
-	return &ValidatorList{permlessVals: vs.permlessVals.Copy()}
-}
-
-// Council returns council where includes `ValActive`, `ValReady`, and `ValPaused`
-func (vs *ValidatorList) Council() []common.Address {
-	if vs == nil {
-		logger.Error("ValidatorList is nil")
-		return []common.Address{}
-	}
-	var ret []common.Address
-	for addr, val := range vs.permlessVals {
-		switch val.State {
-		case valset.ValPaused, valset.ValReady, valset.ValActive:
-			ret = append(ret, addr)
-		}
-	}
-	return ret
-}
-
-func (vs *ValidatorList) Len() int {
-	if vs == nil {
-		logger.Error("ValidatorList is nil")
-		return 0
-	}
-	return len(vs.permlessVals)
-}
-
-func (vs *ValidatorList) Contains(targetAddr common.Address) bool {
-	if vs == nil {
-		logger.Error("ValidatorList is nil")
-		return false
-	}
-	_, exists := vs.permlessVals[targetAddr]
-	return exists
-}
-
-func (vs *ValidatorList) Add(addr common.Address) {
-	// Permissionless: NO-OP
-}
-
-func (vs *ValidatorList) Remove(targetAddr common.Address) bool {
-	// Permissionless: NO-OP
-	return false
-}
-
-func (vs *ValidatorList) Subtract(other *valset.AddressSet) *valset.AddressSet {
-	if vs == nil {
-		logger.Error("ValidatorList is nil")
-		return valset.NewAddressSet([]common.Address{})
-	}
-	copied := vs.Copy().(*ValidatorList).permlessVals
-	for _, addr := range other.Council() {
-		delete(copied, addr)
-	}
-	result := valset.NewAddressSet(nil)
-	for addr := range copied {
-		result.Add(addr)
-	}
-	return result
-}
 
 // getOrComputeNodeStates returns the node states for block `num`.
 // If parentStatedb is provided, it is used as the parent state (avoids StateAt which may fail on pruned state).

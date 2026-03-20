@@ -75,7 +75,7 @@ type ValsetModule struct {
 	// cache for weightedRandom and uniformRandom proposerLists.
 	proposerListCache *lru.Cache // uint64 -> []common.Address
 	removeVotesCache  *lru.Cache // uint64 -> removeVoteList
-	councilCache      *lru.Cache // uint64 -> valset.CommonAddressSet
+	councilCache      *lru.Cache // uint64 -> *valset.AddressSet
 	nodeStatesCache   *lru.Cache // uint64 -> valset.NodeStateMap (permissionless node states)
 
 	validatorVoteBlockNumsCache []uint64
@@ -115,7 +115,7 @@ func (v *ValsetModule) initSchema() error {
 		if err != nil {
 			return err
 		}
-		writeCouncil(v.ChainKv, 0, genesisCouncil)
+		writeCouncil(v.ChainKv, 0, genesisCouncil.List())
 	}
 
 	// Ensure mandatory schema lowestScannedCheckpointInterval

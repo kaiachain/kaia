@@ -38,7 +38,7 @@ func TestPostInsertBlock(t *testing.T) {
 	var (
 		governingNode  = numToAddr(3)
 		pset           = gov.ParamSet{GoverningNode: governingNode}
-		genesisCouncil = valset.NewCommonAddressSet(numsToAddrs(1, 2, 3))
+		genesisCouncil = valset.NewAddressSet(numsToAddrs(1, 2, 3))
 
 		voteAdd1, _ = headergov.NewVoteData(governingNode, string(gov.AddValidator), numToAddr(1)).ToVoteBytes()
 		block1      = types.NewBlockWithHeader(&types.Header{
@@ -66,9 +66,9 @@ func TestPostInsertBlock(t *testing.T) {
 		}}
 	)
 	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
-	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(makeGenesisBlock(genesisCouncil.Council()).Header()).AnyTimes()
+	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(makeGenesisBlock(genesisCouncil.List()).Header()).AnyTimes()
 
-	writeCouncil(db, 0, genesisCouncil)
+	writeCouncil(db, 0, genesisCouncil.List())
 	writeValidatorVoteBlockNums(db, []uint64{0})
 	writeLowestScannedVoteNum(db, 0)
 
@@ -83,7 +83,7 @@ func TestPostInsertBlock(t *testing.T) {
 
 	// Check the DB
 	assert.Equal(t, []uint64{0, 2}, ReadValidatorVoteBlockNums(db))
-	assert.Equal(t, numsToAddrs(1, 2, 3, 6), readCouncil(db, 2))
+	assert.Equal(t, numsToAddrs(1, 2, 3, 6), ReadCouncil(db, 2))
 }
 
 // TestPostInsertBlock_PermissionlessIgnoresVote verifies that header votes
@@ -129,5 +129,5 @@ func TestPostInsertBlock_PermissionlessIgnoresVote(t *testing.T) {
 
 	// Vote was NOT applied — DB unchanged
 	assert.Equal(t, []uint64{0}, ReadValidatorVoteBlockNums(db))
-	assert.Nil(t, readCouncil(db, 1))
+	assert.Nil(t, ReadCouncil(db, 1))
 }

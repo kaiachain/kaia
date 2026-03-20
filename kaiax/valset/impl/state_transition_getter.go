@@ -140,21 +140,17 @@ func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, paus
 	return newValidators
 }
 
-// getPermlessCouncil returns a new ValidatorList containing only council members
+// filterCouncilFromNodeStates returns addresses of council members
 // (validators with ValActive, ValReady, or ValPaused state).
-func (vs *ValidatorList) getPermlessCouncil() *ValidatorList {
-	if vs == nil {
-		logger.Error("ValidatorList is nil")
-		return newValidatorList(valset.NodeStateMap{})
-	}
-	councilVals := make(valset.NodeStateMap)
-	for addr, val := range vs.permlessVals {
+func filterCouncilFromNodeStates(nodes valset.NodeStateMap) []common.Address {
+	var ret []common.Address
+	for addr, val := range nodes {
 		switch val.State {
 		case valset.ValActive, valset.ValReady, valset.ValPaused:
-			councilVals[addr] = val
+			ret = append(ret, addr)
 		}
 	}
-	return newValidatorList(councilVals.Copy())
+	return ret
 }
 
 // getViolationTransition transitions ValActive validators to ValExiting when they violate rules:

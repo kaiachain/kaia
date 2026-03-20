@@ -99,7 +99,7 @@ func (as *AddressSet) String() string {
 	return fmt.Sprintf("[%s]", strings.Join(addrs, ","))
 }
 
-func (as *AddressSet) Copy() CommonAddressSet {
+func (as *AddressSet) Copy() *AddressSet {
 	as.mu.RLock()
 	defer as.mu.RUnlock()
 	return NewAddressSet(as.list)
@@ -111,10 +111,6 @@ func (as *AddressSet) List() []common.Address {
 	result := make([]common.Address, len(as.list))
 	copy(result, as.list)
 	return result
-}
-
-func (as *AddressSet) Council() []common.Address {
-	return as.List()
 }
 
 func (as *AddressSet) Len() int {
@@ -138,10 +134,6 @@ func (as *AddressSet) IndexOf(addr common.Address) int {
 		}
 	}
 	return -1
-}
-
-func (as *AddressSet) EqualState(other NodeStateMap) bool {
-	return false
 }
 
 func (as *AddressSet) Marshal() ([]byte, error) {
