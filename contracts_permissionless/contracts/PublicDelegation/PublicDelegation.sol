@@ -273,10 +273,17 @@ contract PublicDelegation is
             }
 
             if (_commission > 0) {
-                payable($.commissionTo).sendValue(_commission);
-                emit SendCommission($.commissionTo, _commission);
+                _sendCommission(_commission);
             }
         }
+    }
+
+    /// @dev Send commission to the recipient.
+    ///      Do not revert if sending commission fails.
+    function _sendCommission(uint256 _commission) private {
+        address recipient = _getPDStorage().commissionTo;
+        (bool success, ) = recipient.call{value: _commission}("");
+        emit SendCommission(recipient, _commission, success);
     }
 
     /// @dev Request withdrawal from CnStaking.
