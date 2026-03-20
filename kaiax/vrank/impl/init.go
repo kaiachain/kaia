@@ -177,8 +177,8 @@ func (v *VRankModule) catchUp(headNum uint64) error {
 		start = cpNum + 1
 		pfs = storedPFS
 		cpMatrix = storedCpMatrix
-		v.pfsCache.Add(cpNum, cloneMap(storedPFS))
-		v.cpMatrixCache.Add(cpNum, cloneCPMatrix(storedCpMatrix))
+		v.pfsCache.Add(cpNum, storedPFS)
+		v.cpMatrixCache.Add(cpNum, storedCpMatrix)
 	} else {
 		start = epochStart
 		pfs = make(map[common.Address]uint64)
@@ -196,14 +196,14 @@ func (v *VRankModule) catchUp(headNum uint64) error {
 			logger.Error("Failed to compute PFS", "blockNum", blockNum, "err", err)
 			return err
 		}
-		v.pfsCache.Add(blockNum, cloneMap(pfs))
+		v.pfsCache.Add(blockNum, pfs)
 
 		cpMatrix, err = v.applyBlocksForCPMatrix(blockNum, blockNum, cpMatrix)
 		if err != nil {
 			logger.Error("Failed to compute CFS", "blockNum", blockNum, "err", err)
 			return err
 		}
-		v.cpMatrixCache.Add(blockNum, cloneCPMatrix(cpMatrix))
+		v.cpMatrixCache.Add(blockNum, cpMatrix)
 
 		if blockNum%scoreCheckpointInterval == 0 {
 			WriteCheckpoint(v.ChainKv, blockNum, pfs, cpMatrix)

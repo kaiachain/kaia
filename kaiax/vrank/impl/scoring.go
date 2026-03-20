@@ -53,7 +53,7 @@ func (v *VRankModule) GetPFS(blockNum uint64) (map[common.Address]uint64, error)
 		}
 	}
 
-	v.pfsCache.Add(blockNum, cloneMap(seed))
+	v.pfsCache.Add(blockNum, seed)
 	return cloneMap(seed), nil
 }
 
@@ -87,8 +87,8 @@ func (v *VRankModule) GetCFS(blockNum uint64) (map[common.Address]uint64, error)
 		return nil, err
 	}
 
-	v.cpMatrixCache.Add(blockNum, cloneCPMatrix(seed))
-	return cloneMap(cfs), nil
+	v.cpMatrixCache.Add(blockNum, seed)
+	return cfs, nil
 }
 
 // lookupPFSSeed returns (start, seed) where seed holds PFS accumulated up to start-1.
@@ -239,7 +239,7 @@ func (v *VRankModule) lookupPFSCache(blockNum uint64) (uint64, map[common.Addres
 	for i := uint64(0); i <= scoreCacheProbeLookback && i <= blockNum-epochStart; i++ {
 		candidateNum := blockNum - i
 		if cached, ok := v.pfsCache.Get(candidateNum); ok {
-			return candidateNum, cloneMap(cached.(map[common.Address]uint64)), true
+			return candidateNum, cached.(map[common.Address]uint64), true
 		}
 	}
 	return 0, nil, false
@@ -250,8 +250,7 @@ func (v *VRankModule) lookupCPMatrixCache(blockNum uint64) (uint64, map[common.A
 	for i := uint64(0); i <= scoreCacheProbeLookback && i <= blockNum-epochStart; i++ {
 		candidateNum := blockNum - i
 		if cached, ok := v.cpMatrixCache.Get(candidateNum); ok {
-			cpMatrix := cloneCPMatrix(cached.(map[common.Address]map[common.Address]uint64))
-			return candidateNum, cpMatrix, true
+			return candidateNum, cached.(map[common.Address]map[common.Address]uint64), true
 		}
 	}
 	return 0, nil, false
