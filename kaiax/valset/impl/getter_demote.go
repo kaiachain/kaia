@@ -28,7 +28,7 @@ import (
 )
 
 // getDemotedValidators returns the demoted validators at the given block number.
-func (v *ValsetModule) getDemotedValidators(council valset.CommonAddressSet, num uint64) (*valset.AddressSet, error) {
+func (v *ValsetModule) getDemotedValidators(council *valset.AddressSet, num uint64) (*valset.AddressSet, error) {
 	if num == 0 {
 		return valset.NewAddressSet(nil), nil
 	}
@@ -56,12 +56,12 @@ func (v *ValsetModule) getDemotedValidators(council valset.CommonAddressSet, num
 	}
 }
 
-func getDemotedValidatorsIstanbul(rules *params.Rules, council valset.CommonAddressSet, si *staking.StakingInfo, pset gov.ParamSet) *valset.AddressSet {
+func getDemotedValidatorsIstanbul(rules *params.Rules, council *valset.AddressSet, si *staking.StakingInfo, pset gov.ParamSet) *valset.AddressSet {
 	var (
 		singleMode     = pset.GovernanceMode == "single"
 		governingNode  = pset.GoverningNode
 		minStake       = pset.MinimumStake.Uint64() // in KAIA
-		stakingAmounts = collectStakingAmounts(rules, council.Council(), si)
+		stakingAmounts = collectStakingAmounts(rules, council.List(), si)
 		demoted        = demotedByStaking(council, stakingAmounts, minStake)
 	)
 	// Under single governance mode, governing node cannot be demoted before permissionless HF
@@ -73,15 +73,15 @@ func getDemotedValidatorsIstanbul(rules *params.Rules, council valset.CommonAddr
 	return demoted
 }
 
-func demotedByStaking(council valset.CommonAddressSet, stakingAmounts map[common.Address]float64, minStake uint64) *valset.AddressSet {
+func demotedByStaking(council *valset.AddressSet, stakingAmounts map[common.Address]float64, minStake uint64) *valset.AddressSet {
 	demoted := valset.NewAddressSet(nil)
-	for _, node := range council.Council() {
+	for _, node := range council.List() {
 		if uint64(stakingAmounts[node]) < minStake {
 			demoted.Add(node)
 		}
 	}
 	// If all validators are demoted, then no one is demoted.
-	if demoted.Len() == len(council.Council()) {
+	if demoted.Len() == council.Len() {
 		demoted = valset.NewAddressSet(nil)
 	}
 	return demoted

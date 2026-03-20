@@ -310,33 +310,31 @@ func TestGetViolationTransition_NonActiveNotAffected(t *testing.T) {
 // TestGetPermlessCouncil
 // ============================================================
 
-func TestGetPermlessCouncil_FiltersCorrectly(t *testing.T) {
-	vl := newValidatorList(valset.NodeStateMap{
+func TestFilterCouncilFromNodeStates(t *testing.T) {
+	nodes := valset.NodeStateMap{
 		addr1: {State: valset.ValActive},
 		addr2: {State: valset.ValReady},
 		addr3: {State: valset.ValPaused},
 		addr4: {State: valset.CandReady},
 		addr5: {State: valset.ValInactive},
-	})
-	council := vl.getPermlessCouncil()
-	assert.Equal(t, 3, council.Len())
-	assert.True(t, council.Contains(addr1))
-	assert.True(t, council.Contains(addr2))
-	assert.True(t, council.Contains(addr3))
-	assert.False(t, council.Contains(addr4))
-	assert.False(t, council.Contains(addr5))
+	}
+	council := filterCouncilFromNodeStates(nodes)
+	assert.Equal(t, 3, len(council))
+	assert.Contains(t, council, addr1)
+	assert.Contains(t, council, addr2)
+	assert.Contains(t, council, addr3)
+	assert.NotContains(t, council, addr4)
+	assert.NotContains(t, council, addr5)
 }
 
-func TestGetPermlessCouncil_NilValidatorList(t *testing.T) {
-	var vl *ValidatorList
-	council := vl.getPermlessCouncil()
-	assert.Equal(t, 0, council.Len())
+func TestFilterCouncilFromNodeStates_Nil(t *testing.T) {
+	council := filterCouncilFromNodeStates(nil)
+	assert.Equal(t, 0, len(council))
 }
 
-func TestGetPermlessCouncil_EmptyValidators(t *testing.T) {
-	vl := newValidatorList(valset.NodeStateMap{})
-	council := vl.getPermlessCouncil()
-	assert.Equal(t, 0, council.Len())
+func TestFilterCouncilFromNodeStates_Empty(t *testing.T) {
+	council := filterCouncilFromNodeStates(valset.NodeStateMap{})
+	assert.Equal(t, 0, len(council))
 }
 
 // ============================================================
@@ -501,7 +499,7 @@ func TestGetCouncilPermissionless(t *testing.T) {
 	require.NoError(t, err)
 
 	// Only ValActive, ValPaused, ValReady should be in council (3 of 7)
-	councilAddrs := council.Council()
+	councilAddrs := council
 	assert.Len(t, councilAddrs, 3)
 	assert.Contains(t, councilAddrs, config.NodeIds[0])
 	assert.Contains(t, councilAddrs, config.NodeIds[1])

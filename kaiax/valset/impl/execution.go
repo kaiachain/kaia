@@ -56,7 +56,7 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 	governingNode := v.GovModule.GetParamSet(num).GoverningNode
 	if applyVote(header, council, governingNode) {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
-		writeCouncil(v.ChainKv, num, council)
+		writeCouncil(v.ChainKv, num, council.List())
 		v.validatorVoteBlockNumsCache = nil
 	}
 	return nil

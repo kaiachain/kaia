@@ -11,23 +11,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 )
 
-type CommonAddressSet interface {
-	String() string
-	Copy() CommonAddressSet
-	Council() []common.Address
-	Len() int
-	Contains(addr common.Address) bool
-	Subtract(other *AddressSet) *AddressSet
-	Add(addr common.Address)
-	Remove(addr common.Address) bool
-	Marshal() ([]byte, error)
-	EqualState(NodeStateMap) bool
-}
-
-func NewCommonAddressSet(addrs []common.Address) CommonAddressSet {
-	return NewAddressSet(addrs)
-}
-
 type State uint8
 
 const (

@@ -26,20 +26,14 @@ import (
 
 // GetCouncil returns the whole validator list for validating the block `num`.
 func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
-	var (
-		council valset.CommonAddressSet
-		err     error
-	)
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		council, err = v.getCouncilPermissionless(num)
-	} else {
-		council, err = v.getCouncil(num)
+		return v.getCouncilPermissionless(num)
 	}
+	council, err := v.getCouncil(num)
 	if err != nil {
 		return nil, err
-	} else {
-		return council.Council(), nil
 	}
+	return council.List(), nil
 }
 
 // GetDemotedValidators returns the demoted validators at block `num`.
@@ -76,7 +70,7 @@ func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, e
 	return council.Subtract(demoted), nil
 }
 
-func (v *ValsetModule) getCouncilAndDemoted(num uint64) (valset.CommonAddressSet, *valset.AddressSet, error) {
+func (v *ValsetModule) getCouncilAndDemoted(num uint64) (*valset.AddressSet, *valset.AddressSet, error) {
 	council, err := v.getCouncil(num)
 	if err != nil {
 		return nil, nil, err
@@ -123,14 +117,14 @@ func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset
 	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
 		return nil, errors.New("permissionless fork is not enabled")
 	}
-	validatorList, err := v.getAllStateNodes(num)
+	nodes, err := v.getOrComputeNodeStates(num, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// empty states means return all
 	if len(states) == 0 {
-		return validatorList.permlessVals.Copy(), nil
+		return nodes.Copy(), nil
 	}
 
 	desiredStates := make(map[valset.State]struct{}, len(states))
@@ -138,7 +132,7 @@ func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset
 		desiredStates[s] = struct{}{}
 	}
 	filtered := make(valset.NodeStateMap)
-	for addr, val := range validatorList.permlessVals {
+	for addr, val := range nodes {
 		if _, ok := desiredStates[val.State]; ok {
 			filtered[addr] = val
 		}

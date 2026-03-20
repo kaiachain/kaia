@@ -53,7 +53,7 @@ func TestGetCouncilGenesis(t *testing.T) {
 		"0x5cb1a7dccbd0dc446e3640898ede8820368554c8",
 		"0x99fb17d324fa0e07f23b49d09028ac0919414db6",
 		"0xb74ff9dea397fe9e231df545eb53fe2adf776cb2",
-	), council.Council())
+	), council.List())
 }
 
 func TestLastNumLessThan(t *testing.T) {
@@ -85,9 +85,9 @@ func TestGetCouncilDB(t *testing.T) {
 	)
 	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
 	writeValidatorVoteBlockNums(db, voteNums)
-	writeCouncil(db, 0, valset.NewCommonAddressSet(setA))
-	writeCouncil(db, 2, valset.NewCommonAddressSet(setB))
-	writeCouncil(db, 4, valset.NewCommonAddressSet(setC))
+	writeCouncil(db, 0, setA)
+	writeCouncil(db, 2, setB)
+	writeCouncil(db, 4, setC)
 
 	// Test getCouncilDB under various LowestScannedVoteNum.
 	type expected struct { // expected result of getCouncilDB()
@@ -125,7 +125,7 @@ func TestGetCouncilDB(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expected[i].ok, ok)
 			if ok {
-				assert.Equal(t, tc.expected[i].council, council.Council())
+				assert.Equal(t, tc.expected[i].council, council.List())
 			} else {
 				assert.Nil(t, council)
 			}
@@ -207,9 +207,9 @@ func TestApplyVote(t *testing.T) {
 		header := &types.Header{
 			Vote: tc.voteData,
 		}
-		council := valset.NewCommonAddressSet(valset.NewAddressSet(initialCouncil).List())
+		council := valset.NewAddressSet(initialCouncil)
 		modified := applyVote(header, council, governingNode)
 		assert.Equal(t, tc.modified, modified)
-		assert.Equal(t, tc.council, council.Council(), i) // council is modified in-place
+		assert.Equal(t, tc.council, council.List(), i) // council is modified in-place
 	}
 }

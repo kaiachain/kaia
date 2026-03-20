@@ -26,23 +26,15 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
-func (v *ValsetModule) getAllStateNodes(num uint64) (*ValidatorList, error) {
+func (v *ValsetModule) getCouncilPermissionless(num uint64) ([]common.Address, error) {
 	nodes, err := v.getOrComputeNodeStates(num, nil)
 	if err != nil {
 		return nil, err
 	}
-	return newValidatorList(nodes), nil
+	return filterCouncilFromNodeStates(nodes), nil
 }
 
-func (v *ValsetModule) getCouncilPermissionless(num uint64) (valset.CommonAddressSet, error) {
-	allStateNodes, err := v.getAllStateNodes(num)
-	if err != nil {
-		return nil, err
-	}
-	return allStateNodes.getPermlessCouncil(), nil
-}
-
-func (v *ValsetModule) getCouncil(num uint64) (valset.CommonAddressSet, error) {
+func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
 	if num == 0 {
 		return v.getCouncilGenesis()
 	}
@@ -67,15 +59,15 @@ func (v *ValsetModule) getIstanbul() (*types.IstanbulExtra, error) {
 	return types.ExtractIstanbulExtra(header)
 }
 
-func (v *ValsetModule) getCouncilGenesis() (valset.CommonAddressSet, error) {
+func (v *ValsetModule) getCouncilGenesis() (*valset.AddressSet, error) {
 	istanbulExtra, err := v.getIstanbul()
 	if err != nil {
 		return nil, err
 	}
-	return valset.NewCommonAddressSet(istanbulExtra.Validators), nil
+	return valset.NewAddressSet(istanbulExtra.Validators), nil
 }
 
-func (v *ValsetModule) getCouncilDB(num uint64) (valset.CommonAddressSet, bool, error) {
+func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, bool, error) {
 	pMinVoteNum := v.readLowestScannedVoteNumCached()
 	if pMinVoteNum == nil {
 		return nil, false, errNoLowestScannedNum
@@ -90,7 +82,11 @@ func (v *ValsetModule) getCouncilDB(num uint64) (valset.CommonAddressSet, bool, 
 		// Return false to indicate that the data is not yet available.
 		return nil, false, nil
 	}
-	return ReadCouncil(v.ChainKv, voteNum), true, nil
+	addrs := ReadCouncil(v.ChainKv, voteNum)
+	if addrs == nil {
+		return nil, false, nil
+	}
+	return valset.NewAddressSet(addrs), true, nil
 }
 
 func (v *ValsetModule) readLowestScannedVoteNumCached() *uint64 {
@@ -152,7 +148,7 @@ func lastNumLessEqualThan(nums []uint64, num uint64) uint64 {
 // [snapshotNum+1, targetNum] are written to the database. Note that this time
 // the targetNum is included in the range for completeness. This property is
 // useful for snapshot interval-wise migration.
-func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bool) (valset.CommonAddressSet, uint64, error) {
+func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bool) (*valset.AddressSet, uint64, error) {
 	if targetNum == 0 {
 		council, err := v.getCouncilGenesis()
 		return council, 0, err
@@ -162,12 +158,12 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 	// applying the votes up to the snapshotNum.
 	snapshotNum := roundDown(targetNum-1, istanbulCheckpointInterval)
 
-	var council valset.CommonAddressSet
+	var council *valset.AddressSet
 	var err error
 	// Try to get from cache first
 	cached, ok := v.councilCache.Get(targetNum - 1)
 	if ok {
-		council = cached.(valset.CommonAddressSet)
+		council = cached.(*valset.AddressSet)
 		if err := v.applyBlock(council, targetNum-1, write); err != nil {
 			return nil, 0, err
 		}
@@ -213,7 +209,7 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 //
 // Although 4096 would be closest to 5005, it is no longer available post-migration.
 // Therefore, 3072 is used as the fallback to avoid referencing a missing snapshot.
-func (v *ValsetModule) getValidIstanbulSnapshotBefore(snapshotNum uint64) (valset.CommonAddressSet, error) {
+func (v *ValsetModule) getValidIstanbulSnapshotBefore(snapshotNum uint64) (*valset.AddressSet, error) {
 	if snapshotNum == 0 {
 		return v.getCouncilGenesis()
 	}
@@ -243,7 +239,7 @@ func (v *ValsetModule) getValidIstanbulSnapshotBefore(snapshotNum uint64) (valse
 	return council, nil
 }
 
-func (v *ValsetModule) applyBlock(council valset.CommonAddressSet, num uint64, write bool) error {
+func (v *ValsetModule) applyBlock(council *valset.AddressSet, num uint64, write bool) error {
 	header := v.Chain.GetHeaderByNumber(num)
 	if header == nil {
 		return errNoHeader
@@ -251,7 +247,7 @@ func (v *ValsetModule) applyBlock(council valset.CommonAddressSet, num uint64, w
 	governingNode := v.GovModule.GetParamSet(num).GoverningNode
 	if applyVote(header, council, governingNode) && write {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
-		writeCouncil(v.ChainKv, num, council)
+		writeCouncil(v.ChainKv, num, council.List())
 		v.validatorVoteBlockNumsCache = nil
 	}
 	return nil
@@ -260,7 +256,7 @@ func (v *ValsetModule) applyBlock(council valset.CommonAddressSet, num uint64, w
 // applyVote modifies the given council *in-place* by the validator vote in the given header.
 // governingNode, if specified, is not affected by the vote.
 // Returns true if the council is modified, false otherwise.
-func applyVote(header *types.Header, council valset.CommonAddressSet, governingNode common.Address) bool {
+func applyVote(header *types.Header, council *valset.AddressSet, governingNode common.Address) bool {
 	voteKey, addresses, ok := parseValidatorVote(header)
 	if !ok {
 		return false
