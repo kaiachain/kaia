@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 /// @dev Please refer to KIP-286 for more details
 enum State {
     Unknown,      // 0
-    CandInactive, // 1
+    Registered,   // 1
     CandReady,    // 2
     CandTesting,  // 3
     ValInactive,  // 4

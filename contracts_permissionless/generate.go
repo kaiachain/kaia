@@ -33,3 +33,4 @@ Uses abigenw from contracts/ directory. OZ v5 imports are resolved from this dir
 //go:generate ../contracts/abigenw --pkg proxy --sol ./contracts/Proxy/ERC1967Proxy.sol --out ./contracts/Proxy/Proxy.go --ver 0.8.25
 //go:generate ../contracts/abigenw --pkg beacon --sol ./contracts/Proxy/UpgradeableBeacon.sol --out ./contracts/Proxy/beacon/UpgradeableBeacon.go --ver 0.8.25
 //go:generate ../contracts/abigenw --pkg multicall --sol ./contracts/multicall/MultiCallContract.sol --out ./contracts/multicall/MultiCallContract.go --ver 0.8.25
+//go:generate ../contracts/abigenw --pkg testing --sol ./contracts/testing/MultiCallContractMock.sol --out ./contracts/testing/MultiCallContractMock.go --ver 0.8.19

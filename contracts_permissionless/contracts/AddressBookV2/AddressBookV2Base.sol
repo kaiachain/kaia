@@ -36,6 +36,9 @@ abstract contract AddressBookV2Base is
     /// @notice Minimum staking amount required for candidate activation and validator readiness (5M KAIA)
     uint256 public constant MIN_STAKE = 5_000_000 ether;
 
+    /// @notice Maximum metadata length (2KB)
+    uint256 public constant MAX_METADATA_LENGTH = 2048; // 2KB
+
     /// @notice System registry address (0x0...401)
     address internal constant REGISTRY_ADDRESS = 0x0000000000000000000000000000000000000401;
 
@@ -77,12 +80,12 @@ abstract contract AddressBookV2Base is
     struct ABv2Storage {
         // Node data
         mapping(address => NodeInfo) nodeInfo;
-        EnumerableSet.AddressSet activeSet;
+        EnumerableSet.AddressSet allNodes;
         EnumerableSet.AddressSet suspendedSet;
         uint256 lastAssignedGCId;
         mapping(State => uint256) stateCount;
         // Operations
-        mapping(address => bool) registeredAddresses;
+        mapping(address => bool) usedAddresses;
         mapping(uint256 => mapping(address => uint256)) scores;
         uint256 exitThreshold;
         uint256 pauseTimeout;
@@ -126,7 +129,7 @@ abstract contract AddressBookV2Base is
 
     /* ========== INTERNAL MUTATORS ========== */
 
-    /// @notice Stores a new node as CandInactive
+    /// @notice Stores a new node in the Registered state
     /// @dev Assigns gcId, stores nodeInfo.
     function _createNode(address nodeId, NodeInfo memory info) internal {
         ABv2Storage storage $ = _getStorage();
@@ -136,19 +139,19 @@ abstract contract AddressBookV2Base is
         $.nodeInfo[nodeId] = info;
         $.nodeInfo[nodeId].gcId = gcId;
 
-        $.stateCount[State.CandInactive]++;
+        $.stateCount[State.Registered]++;
 
         emit NodeCreated(nodeId, gcId);
     }
 
-    /// @notice Removes a CandInactive node entirely
+    /// @notice Removes a Registered node entirely
     function _deleteNode(address nodeId) internal {
         ABv2Storage storage $ = _getStorage();
 
-        // Defense-in-depth: caller already checks CandInactive state; this guards against bugs
-        if ($.nodeInfo[nodeId].state != State.CandInactive) revert InvalidState();
+        // Defense-in-depth: caller already checks Registered state; this guards against bugs
+        if ($.nodeInfo[nodeId].state != State.Registered) revert InvalidState();
 
-        $.stateCount[State.CandInactive]--;
+        $.stateCount[State.Registered]--;
 
         delete $.nodeInfo[nodeId];
 
@@ -167,7 +170,7 @@ abstract contract AddressBookV2Base is
             info.timeoutAt = 0;
             $.nodeInfo[nodeIds[i]] = info;
 
-            $.activeSet.add(nodeIds[i]);
+            $.allNodes.add(nodeIds[i]);
         }
 
         $.stateCount[State.ValActive] = len;
@@ -186,9 +189,9 @@ abstract contract AddressBookV2Base is
         }
     }
 
-    /// @notice Atomic state transition: updates activeSet boundary, state, and timeout
+    /// @notice Atomic state transition: updates allNodes boundary, state, and timeout
     /// @dev No state validation — action functions are responsible for all pre-checks.
-    ///      Handles CandInactive <-> activeSet boundary crossing automatically.
+    ///      Handles Registered <-> allNodes boundary crossing automatically.
     function _transition(address nodeId, State newState, uint256 timeoutAt) internal {
         ABv2Storage storage $ = _getStorage();
         NodeInfo storage info = $.nodeInfo[nodeId];
@@ -199,10 +202,10 @@ abstract contract AddressBookV2Base is
         $.stateCount[oldState]--;
         $.stateCount[newState]++;
 
-        if (oldState == State.CandInactive && newState != State.CandInactive) {
-            $.activeSet.add(nodeId);
-        } else if (oldState != State.CandInactive && newState == State.CandInactive) {
-            $.activeSet.remove(nodeId);
+        if (oldState == State.Registered && newState != State.Registered) {
+            $.allNodes.add(nodeId);
+        } else if (oldState != State.Registered && newState == State.Registered) {
+            $.allNodes.remove(nodeId);
         }
 
         info.state = newState;
@@ -260,8 +263,8 @@ abstract contract AddressBookV2Base is
         return _getStorage().stateCount[state];
     }
 
-    function _getActiveSetLength() internal view returns (uint256) {
-        return _getStorage().activeSet.length();
+    function _getAllNodesLength() internal view returns (uint256) {
+        return _getStorage().allNodes.length();
     }
 
     function _getNodeInfo(address nodeId) internal view returns (NodeInfo storage) {

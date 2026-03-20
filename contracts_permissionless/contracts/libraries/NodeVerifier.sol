@@ -22,7 +22,7 @@ library NodeVerifier {
 
     /// @notice Validates node registration inputs, verifies the staking contract deployer, and registers addresses.
     /// @dev Used by NodeActions.createNode() at runtime. Checks that msg.sender deployed the staking contract.
-    /// @param registry The address uniqueness registry
+    /// @param registry The used-address registry for uniqueness checks
     /// @param nodeId The node address
     /// @param stakingContract The staking contract address
     /// @param rewardAddress The reward address
