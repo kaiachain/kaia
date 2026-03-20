@@ -22,8 +22,3 @@
 | 6 | `node/cn/api_admin_chain.go` | Remove `SetPermissionlessForkBlock` API |
 | 7 | `console/web3ext/web3ext.go` | Remove `admin.setPermissionlessForkBlock` web3 method |
 
-## Refactoring
-
-| # | Files | Description | Priority |
-|---|-------|-------------|----------|
-| 8 | `kaiax/valset/types.go`, `kaiax/valset/impl/state_transition.go`, `kaiax/valset/impl/getter.go` | Remove `CommonAddressSet` interface — NO-OP methods (`Add`/`Remove`), semantic mismatch (`Council()`), interface pollution (`EqualState`). Each path should return `[]common.Address`/`NodeStateMap` directly, eliminating the `ValidatorList` wrapper. Touches permissioned path — separate task. | Low |
