@@ -92,7 +92,7 @@ func TestGetEpochTransition_StateTransitions(t *testing.T) {
 	}{
 		{"T1: ValExiting → ValInactive", valset.ValExiting, aboveMinStake, valset.ValInactive, true},
 		{"T4a: CandReady + stake>=min → CandTesting", valset.CandReady, aboveMinStake, valset.CandTesting, false},
-		{"T4b: CandReady + stake<min → CandInactive", valset.CandReady, belowMinStake, valset.CandInactive, false},
+		{"T4b: CandReady + stake<min → Registered", valset.CandReady, belowMinStake, valset.Registered, false},
 		{"T3a: CandTesting + stake>=min → ValActive", valset.CandTesting, aboveMinStake, valset.ValActive, false},
 		{"T3b: CandTesting + stake<min → ValInactive", valset.CandTesting, belowMinStake, valset.ValInactive, true},
 		{"ValReady + stake>=min → ValActive", valset.ValReady, aboveMinStake, valset.ValActive, false},
@@ -213,14 +213,14 @@ func TestGetTimeoutTransition(t *testing.T) {
 			valset.ValReady, true, false, &futureTimeout,
 		},
 		{
-			"ValInactive: idle expired → CandInactive",
+			"ValInactive: idle expired → Registered",
 			&valset.ValidatorState{State: valset.ValInactive, IdleTimeout: expiredTimeout},
-			valset.CandInactive, false, false, nil,
+			valset.Registered, false, false, nil,
 		},
 		{
-			"ValReady: idle expired → CandInactive",
+			"ValReady: idle expired → Registered",
 			&valset.ValidatorState{State: valset.ValReady, IdleTimeout: expiredTimeout},
-			valset.CandInactive, false, false, nil,
+			valset.Registered, false, false, nil,
 		},
 		{
 			"ValPaused: set paused timeout",
@@ -265,7 +265,7 @@ func TestGetTimeoutTransition_DefaultClearsAllTimeouts(t *testing.T) {
 	validators := valset.NodeStateMap{
 		addr1: {State: valset.ValActive, IdleTimeout: now, PausedTimeout: now},
 		addr2: {State: valset.CandReady, IdleTimeout: now, PausedTimeout: now},
-		addr3: {State: valset.CandInactive, IdleTimeout: now, PausedTimeout: now},
+		addr3: {State: valset.Registered, IdleTimeout: now, PausedTimeout: now},
 		addr4: {State: valset.CandTesting, IdleTimeout: now, PausedTimeout: now},
 		addr5: {State: valset.ValExiting, IdleTimeout: now, PausedTimeout: now},
 	}
@@ -407,7 +407,7 @@ func TestApplyAllTransitions(t *testing.T) {
 			// addr2: ValActive+aboveMin  → violation(noop) → timeout(noop) → epoch(ValActive)
 			// addr3: CandReady+aboveMin  → violation(noop) → timeout(noop) → epoch(CandTesting)
 			// addr4: ValPaused+aboveMin  → violation(noop) → timeout(set PausedTimeout) → epoch(ValPaused preserved)
-			// addr5: CandReady+belowMin  → violation(noop) → timeout(noop) → epoch(CandInactive)
+			// addr5: CandReady+belowMin  → violation(noop) → timeout(noop) → epoch(Registered)
 			"mixed states at epoch",
 			testEpochNum,
 			valset.NodeStateMap{
@@ -422,17 +422,17 @@ func TestApplyAllTransitions(t *testing.T) {
 				addr2: valset.ValActive,
 				addr3: valset.CandTesting,
 				addr4: valset.ValPaused,
-				addr5: valset.CandInactive,
+				addr5: valset.Registered,
 			},
 		},
 		{
-			// addr1: ValInactive+expiredIdle → violation(noop) → timeout(CandInactive) → epoch(noop)
-			"timeout fires: expired idle → CandInactive",
+			// addr1: ValInactive+expiredIdle → violation(noop) → timeout(Registered) → epoch(noop)
+			"timeout fires: expired idle → Registered",
 			testEpochNum,
 			valset.NodeStateMap{
 				addr1: {State: valset.ValInactive, StakingAmount: aboveMinStake, IdleTimeout: time.Now().Add(-1 * time.Hour)},
 			},
-			map[common.Address]valset.State{addr1: valset.CandInactive},
+			map[common.Address]valset.State{addr1: valset.Registered},
 		},
 		{
 			// addr1: ValPaused+expiredPause → violation(noop) → timeout(ValInactive+IdleTimeout set) → epoch(noop, non-epoch)
@@ -491,7 +491,7 @@ func TestGetCouncilPermissionless(t *testing.T) {
 		config.NodeIds[3]: {State: valset.ValInactive},  // excluded
 		config.NodeIds[4]: {State: valset.ValExiting},   // excluded
 		config.NodeIds[5]: {State: valset.CandReady},    // excluded
-		config.NodeIds[6]: {State: valset.CandInactive}, // excluded
+		config.NodeIds[6]: {State: valset.Registered}, // excluded
 	}
 	v.nodeStatesCache.Add(uint64(1), nodes)
 
