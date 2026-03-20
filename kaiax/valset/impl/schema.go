@@ -31,14 +31,14 @@ import (
 var (
 	validatorVoteBlockNums           = []byte("validatorVoteBlockNums")
 	lowestScannedValidatorVoteNumKey = []byte("lowestScannedValidatorVoteNum")
-	councilPermissionedPrefix        = []byte("council")
+	councilPrefix                    = []byte("council")
 	istanbulSnapshotKeyPrefix        = []byte("snapshot")
 
 	voteNumMu = &sync.RWMutex{}
 )
 
 func councilKey(num uint64) []byte {
-	return append(councilPermissionedPrefix, common.Int64ToByteLittleEndian(num)...)
+	return append(councilPrefix, common.Int64ToByteLittleEndian(num)...)
 }
 
 func istanbulSnapshotKey(hash common.Hash) []byte {
@@ -108,15 +108,15 @@ func trimValidatorVoteBlockNums(db database.Database, since uint64) {
 	writeValidatorVoteBlockNums(db, nums)
 }
 
-func ReadCouncilPermissiond(db database.Database, permissionedNum uint64) valset.CommonAddressSet {
-	permissionedCouncil := readCouncilPermissioned(db, permissionedNum)
+func ReadCouncil(db database.Database, permissionedNum uint64) valset.CommonAddressSet {
+	permissionedCouncil := readCouncil(db, permissionedNum)
 	if permissionedCouncil == nil {
 		return nil
 	}
 	return valset.NewCommonAddressSet(permissionedCouncil)
 }
 
-func readCouncilPermissioned(db database.Database, num uint64) []common.Address {
+func readCouncil(db database.Database, num uint64) []common.Address {
 	b, err := db.Get(councilKey(num))
 	if err != nil || len(b) == 0 {
 		return nil
@@ -130,7 +130,7 @@ func readCouncilPermissioned(db database.Database, num uint64) []common.Address 
 	return addrs
 }
 
-func writeCouncilPermissioned(db database.Database, num uint64, validators valset.CommonAddressSet) {
+func writeCouncil(db database.Database, num uint64, validators valset.CommonAddressSet) {
 	key := councilKey(num)
 	marshalAndWrite(db, num, key, validators)
 }

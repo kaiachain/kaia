@@ -100,7 +100,7 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 	// Mock v.InitSchema
 	writeLowestScannedVoteNum(v.ChainKv, 0)
 	writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
-	writeCouncilPermissioned(v.ChainKv, 0, genesisCouncil)
+	writeCouncil(v.ChainKv, 0, genesisCouncil)
 
 	// Mock gov module
 	mockGovModule.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{

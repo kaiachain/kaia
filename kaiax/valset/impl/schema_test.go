@@ -49,8 +49,8 @@ func TestSchema_Council(t *testing.T) {
 			common.HexToAddress("0x5678"),
 		},
 	)
-	writeCouncilPermissioned(db, num, addrs)
-	assert.Equal(t, addrs, ReadCouncilPermissiond(db, num))
+	writeCouncil(db, num, addrs)
+	assert.Equal(t, addrs, ReadCouncil(db, num))
 }
 
 func TestSchema_IstanbulSnapshot(t *testing.T) {

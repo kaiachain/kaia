@@ -47,7 +47,7 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 	}
 
 	// Permissioned: get council for vote handling
-	council, err := v.getCouncilPermissioned(num)
+	council, err := v.getCouncil(num)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 	governingNode := v.GovModule.GetParamSet(num).GoverningNode
 	if applyVote(header, council, governingNode) {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
-		writeCouncilPermissioned(v.ChainKv, num, council)
+		writeCouncil(v.ChainKv, num, council)
 		v.validatorVoteBlockNumsCache = nil
 	}
 	return nil

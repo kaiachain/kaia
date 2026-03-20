@@ -33,7 +33,7 @@ func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
 		council, err = v.getCouncilPermissionless(num)
 	} else {
-		council, err = v.getCouncilPermissioned(num)
+		council, err = v.getCouncil(num)
 	}
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error
 		}
 		return m.Addresses(), nil
 	}
-	_, demoted, err := v.getCouncilAndDemotedPermissioned(num)
+	_, demoted, err := v.getCouncilAndDemoted(num)
 	if err != nil {
 		return nil, err
 	}
@@ -69,15 +69,15 @@ func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, e
 		}
 		return valset.NewAddressSet(m.Addresses()), nil
 	}
-	council, demoted, err := v.getCouncilAndDemotedPermissioned(num)
+	council, demoted, err := v.getCouncilAndDemoted(num)
 	if err != nil {
 		return nil, err
 	}
 	return council.Subtract(demoted), nil
 }
 
-func (v *ValsetModule) getCouncilAndDemotedPermissioned(num uint64) (valset.CommonAddressSet, *valset.AddressSet, error) {
-	council, err := v.getCouncilPermissioned(num)
+func (v *ValsetModule) getCouncilAndDemoted(num uint64) (valset.CommonAddressSet, *valset.AddressSet, error) {
+	council, err := v.getCouncil(num)
 	if err != nil {
 		return nil, nil, err
 	}
