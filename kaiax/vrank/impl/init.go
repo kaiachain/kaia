@@ -191,14 +191,14 @@ func (v *VRankModule) catchUp(headNum uint64) error {
 
 	for blockNum := start; blockNum <= headNum; blockNum++ {
 		var err error
-		pfs, err = v.computePFS(blockNum, blockNum, pfs)
+		pfs, err = v.applyBlocksForPFS(blockNum, blockNum, pfs)
 		if err != nil {
 			logger.Error("Failed to compute PFS", "blockNum", blockNum, "err", err)
 			return err
 		}
 		v.pfsCache.Add(blockNum, cloneMap(pfs))
 
-		cpMatrix, err = v.computeCPMatrix(blockNum, blockNum, cpMatrix)
+		cpMatrix, err = v.applyBlocksForCPMatrix(blockNum, blockNum, cpMatrix)
 		if err != nil {
 			logger.Error("Failed to compute CFS", "blockNum", blockNum, "err", err)
 			return err

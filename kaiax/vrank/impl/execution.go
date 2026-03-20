@@ -50,7 +50,7 @@ func (v *VRankModule) PostInsertBlock(block *types.Block) error {
 			if err != nil {
 				return err
 			}
-			cpMatrix, err = v.computeCPMatrix(calcEpochStart(blockNum), blockNum, cpMatrix)
+			cpMatrix, err = v.applyBlocksForCPMatrix(calcEpochStart(blockNum), blockNum, cpMatrix)
 			if err != nil {
 				return err
 			}

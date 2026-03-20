@@ -53,7 +53,7 @@ func computeCFS(v *VRankModule, start, end uint64) (map[common.Address]uint64, e
 	if err != nil {
 		return nil, err
 	}
-	cpMatrix, err = v.computeCPMatrix(start, end, cpMatrix)
+	cpMatrix, err = v.applyBlocksForCPMatrix(start, end, cpMatrix)
 	if err != nil {
 		return nil, err
 	}
@@ -458,7 +458,7 @@ func TestGetPFS_MissingHeader(t *testing.T) {
 	db := database.NewMemDB()
 
 	// Header exists for block 1 (so CurrentHeader()=1 and ErrFutureBlock is not triggered)
-	// but NOT for block 0, which computePFS will try to fetch first.
+	// but NOT for block 0, which applyBlocksForPFS will try to fetch first.
 	headers := map[uint64]*types.Header{
 		1: makeHeaderWithRound(1, 0),
 	}
@@ -844,7 +844,7 @@ func TestGetCFS_GetProposerError(t *testing.T) {
 	C1 := addrN(10)
 	headers := map[uint64]*types.Header{
 		0: makeHeaderWithRound(0, 0),
-		// Block 1 has a non-empty cfReport so computeCPMatrix will call GetProposer for it.
+		// Block 1 has a non-empty cfReport so applyCPMatrix will call GetProposer for it.
 		1: makeHeaderWithVRank(1, 0, []common.Address{C1}),
 	}
 	v := newTestModuleWithHeaders(t, valset, db, headers)
@@ -865,7 +865,7 @@ func TestGetCFS_MissingHeader(t *testing.T) {
 
 	C1 := addrN(10)
 	// Block 1 exists (so CurrentHeader()=1), but block 0 is missing.
-	// computeCPMatrix will try GetHeaderByNumber(0) first and get nil.
+	// applyCPMatrix will try GetHeaderByNumber(0) first and get nil.
 	headers := map[uint64]*types.Header{
 		1: makeHeaderWithRound(1, 0),
 	}
@@ -877,8 +877,8 @@ func TestGetCFS_MissingHeader(t *testing.T) {
 	assert.ErrorIs(t, err, vrank.ErrHeaderNotFound)
 }
 
-// TestComputePFS verifies the raw proposer-failure accumulation over a small block range.
-func TestComputePFS(t *testing.T) {
+// TestApplyBlocksForPFS verifies the raw proposer-failure accumulation over a small block range.
+func TestApplyBlocksForPFS(t *testing.T) {
 	// Set up three consecutive blocks:
 	//   block 10, round 0: no pfReport (first proposer succeeded)
 	//   block 11, round 2: pfReport = [P0, P1]  (rounds 0 and 1 failed)
@@ -905,15 +905,15 @@ func TestComputePFS(t *testing.T) {
 	// block 12, round 1: proposer for round 0
 	valset.EXPECT().GetProposer(uint64(12), uint64(0)).Return(P0, nil)
 
-	pfs, err := v.computePFS(10, 12, make(map[common.Address]uint64))
+	pfs, err := v.applyBlocksForPFS(10, 12, make(map[common.Address]uint64))
 	require.NoError(t, err)
 	assert.Equal(t, uint64(2), pfs[P0])
 	assert.Equal(t, uint64(1), pfs[P1])
 	assert.Len(t, pfs, 2)
 }
 
-// TestComputeCFS verifies CFS computation via computeCPMatrix + generateCFSFromCPMatrix.
-func TestComputeCFS(t *testing.T) {
+// TestApplyBlocksForCFS verifies CFS computation via applyCPMatrix + generateCFSFromCPMatrix.
+func TestApplyBlocksForCFS(t *testing.T) {
 	t.Run("KIP227_Example1", func(t *testing.T) {
 		// Reproduces KIP-227 Example 1 through the chain-reading path.
 		// Blocks 5–9 are the epoch range (matching the example's block numbers).
