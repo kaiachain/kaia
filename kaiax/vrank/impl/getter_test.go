@@ -345,8 +345,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes() // BroadcastVRankPreprepare
-		valset.EXPECT().GetCandidates(uint64(0)).Return([]common.Address{candAddr}, nil).AnyTimes() // TallyCfReport: calcEpochStart(1+1)=0
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
@@ -374,8 +373,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes() // BroadcastVRankPreprepare
-		valset.EXPECT().GetCandidates(uint64(0)).Return([]common.Address{candAddr}, nil).AnyTimes() // TallyCfReport: calcEpochStart(1+1)=0
+		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
@@ -417,8 +415,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return(nil, assert.AnError).AnyTimes() // BroadcastVRankPreprepare
-		valset.EXPECT().GetCandidates(uint64(0)).Return(nil, assert.AnError).AnyTimes() // TallyCfReport: calcEpochStart(1+1)=0
+		valset.EXPECT().GetCandidates(uint64(1)).Return(nil, assert.AnError).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 

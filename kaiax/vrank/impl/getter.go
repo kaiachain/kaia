@@ -110,7 +110,7 @@ func (v *VRankModule) TallyCfReport(blockNum, round uint64) (vrank.Report, error
 		// or it missed the PREPREPARE message. Either way, nothing to report.
 		return vrank.Report{}, nil
 	}
-	candidates, err := v.Valset.GetCandidates(calcEpochStart(blockNum + 1))
+	candidates, err := v.Valset.GetCandidates(blockNum)
 	if err != nil || candidates == nil {
 		logger.Error("GetCandidates failed", "blockNum", blockNum)
 		return nil, vrank.ErrGetCandidateFailed

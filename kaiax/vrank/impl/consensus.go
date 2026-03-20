@@ -57,10 +57,10 @@ func (v *VRankModule) VerifyHeader(header *types.Header) error {
 
 	// Validate every address in the cfReport is an actual candidate.
 	// header(N).VRank is produced by TallyCfReport(N-1, ...) which uses
-	// GetCandidates(calcEpochStart(N)), so mirror that here.
+	// GetCandidates(N), so mirror that here.
 	// This prevents a malicious proposer from injecting arbitrary addresses (e.g. validator
 	// addresses) into header.VRank to manipulate CFS scores.
-	candidates, err := v.Valset.GetCandidates(calcEpochStart(number))
+	candidates, err := v.Valset.GetCandidates(number)
 	if err != nil {
 		return err
 	}

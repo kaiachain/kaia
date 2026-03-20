@@ -104,7 +104,7 @@ func (v *VRankModule) GetCFS(blockNum uint64) (map[common.Address]uint64, error)
 	if cachedNum, cachedCPMatrix, ok := v.loadNearbyCPMatrix(blockNum); ok {
 		// 1. exact cache hit
 		if cachedNum == blockNum {
-			return v.generateCFSFromCPMatrix(epochStart, cachedCPMatrix)
+			return v.generateCFSFromCPMatrix(blockNum, cachedCPMatrix)
 		}
 
 		// 2. nearby cache hit - use it as seed
@@ -117,7 +117,7 @@ func (v *VRankModule) GetCFS(blockNum uint64) (map[common.Address]uint64, error)
 	} else {
 		// 4. no cache or DB checkpoint hit - new seed
 		start = epochStart
-		seed, err = v.newCPMatrix(epochStart)
+		seed, err = v.newCPMatrix(blockNum)
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +127,7 @@ func (v *VRankModule) GetCFS(blockNum uint64) (map[common.Address]uint64, error)
 		return nil, err
 	}
 
-	cfs, err := v.generateCFSFromCPMatrix(epochStart, seed)
+	cfs, err := v.generateCFSFromCPMatrix(blockNum, seed)
 	if err != nil {
 		return nil, err
 	}
@@ -150,8 +150,8 @@ func (v *VRankModule) computePFS(start, end uint64, seed map[common.Address]uint
 	return pfs, nil
 }
 
-func (v *VRankModule) newCPMatrix(epochStart uint64) (map[common.Address]map[common.Address]uint64, error) {
-	candidates, err := v.Valset.GetCandidates(epochStart)
+func (v *VRankModule) newCPMatrix(blockNum uint64) (map[common.Address]map[common.Address]uint64, error) {
+	candidates, err := v.Valset.GetCandidates(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -197,9 +197,9 @@ func (v *VRankModule) computeCPMatrix(start, end uint64, seed map[common.Address
 	return cpMatrix, nil
 }
 
-func (v *VRankModule) generateCFSFromCPMatrix(epochStart uint64, cpMatrix map[common.Address]map[common.Address]uint64) (map[common.Address]uint64, error) {
+func (v *VRankModule) generateCFSFromCPMatrix(blockNum uint64, cpMatrix map[common.Address]map[common.Address]uint64) (map[common.Address]uint64, error) {
 	// Determine F from validator count at epoch start.
-	committee, err := v.Valset.GetCommittee(epochStart, 0) // TODO: fetch value from AddressBookV2
+	committee, err := v.Valset.GetCommittee(blockNum, 0) // TODO: fetch value from AddressBookV2
 	if err != nil {
 		return nil, err
 	}

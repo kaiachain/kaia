@@ -46,11 +46,11 @@ func (v *VRankModule) PostInsertBlock(block *types.Block) error {
 			cpMatrix = cloneCPMatrix(cpRaw.(map[common.Address]map[common.Address]uint64))
 		} else {
 			// unlikely to happen: perform exhaustive re-calculation.
-			cpMatrix, err = v.newCPMatrix(calcEpochStart(blockNum))
+			cpMatrix, err = v.newCPMatrix(blockNum)
 			if err != nil {
 				return err
 			}
-			cpMatrix, err = v.computeCPMatrix(calcEpochStart(blockNum), blockNum, cpMatrix)
+			cpMatrix, err = v.computeCPMatrix(calcEpochStart(blockNum), blockNum-1, cpMatrix)
 			if err != nil {
 				return err
 			}

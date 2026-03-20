@@ -54,7 +54,7 @@ func TestPostInsertBlock(t *testing.T) {
 
 		// Block cp has a non-empty cfReport, so GetProposer is called once.
 		valset.EXPECT().GetProposer(cp, uint64(0)).Return(P1, nil).Times(1)
-		valset.EXPECT().GetCommittee(uint64(0), uint64(0)).Return([]common.Address{P1}, nil).Times(1)
+		valset.EXPECT().GetCommittee(cp, uint64(0)).Return([]common.Address{P1}, nil).Times(1)
 
 		block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(cp))})
 		require.NoError(t, v.PostInsertBlock(block))
@@ -97,7 +97,7 @@ func TestPostInsertBlock(t *testing.T) {
 
 		// Block cp+1 has no VRank → empty cfReport → GetProposer not called.
 		// generateCFSFromCPMatrix still calls GetCommittee to determine F.
-		valset.EXPECT().GetCommittee(uint64(0), uint64(0)).Return([]common.Address{P1}, nil).Times(1)
+		valset.EXPECT().GetCommittee(cp+1, uint64(0)).Return([]common.Address{P1}, nil).Times(1)
 
 		block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(cp + 1))})
 		require.NoError(t, v.PostInsertBlock(block))

@@ -169,8 +169,7 @@ func runVRankScenario(t *testing.T, s VRankScenario) {
 	}
 	proposerAddr := nameToCN[s.Proposer].Addr
 	valset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(councilAddrs, nil).AnyTimes()
-	valset.EXPECT().GetCandidates(blockNum).Return(candAddrs, nil).AnyTimes()                   // BroadcastVRankPreprepare
-	valset.EXPECT().GetCandidates(calcEpochStart(blockNum+1)).Return(candAddrs, nil).AnyTimes() // TallyCfReport
+	valset.EXPECT().GetCandidates(blockNum).Return(candAddrs, nil).AnyTimes()
 	valset.EXPECT().GetProposer(blockNum, uint64(0)).Return(proposerAddr, nil).AnyTimes()
 
 	block1 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
