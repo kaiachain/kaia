@@ -32,7 +32,7 @@ contract ABv2DataContract is IABv2DataContract {
     /* ========== STORAGE (arrays) ========== */
 
     /// @dev Address uniqueness registry (storage mapping as scratch space for constructor validation)
-    mapping(address => bool) private _registered;
+    mapping(address => bool) private _usedAddresses;
 
     address[] private _nodeIds;
     NodeInfo[] private _infos;
@@ -81,7 +81,7 @@ contract ABv2DataContract is IABv2DataContract {
 
             if (info.manager == address(0)) revert InvalidInput();
             NodeVerifier.registerNodeGenesis(
-                _registered,
+                _usedAddresses,
                 nodeId,
                 info.stakingContract,
                 info.rewardAddress,

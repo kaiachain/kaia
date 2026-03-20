@@ -40,8 +40,8 @@ interface IPublicDelegation is IKIP163 {
     event DeployPublicDelegation(string contractType, address indexed baseCnStaking, PDConstructorArgs pdArgs);
     event UpdateCommissionTo(address indexed prevCommissionTo, address indexed commissionTo);
     event UpdateCommissionRate(uint256 indexed prevCommissionRate, uint256 indexed commissionRate);
-    event SendCommission(address indexed commissionTo, uint256 commission);
-    event Staked(address indexed user, uint256 assets, uint256 shares);
+    event SendCommission(address indexed commissionTo, uint256 indexed commission, bool indexed success);
+    event Staked(address indexed user, uint256 indexed assets, uint256 indexed shares);
     event Redeemed(address indexed user, address indexed recipient, uint256 assets, uint256 shares);
     event Redelegated(address indexed user, address indexed targetCnStaking, uint256 assets);
     event RequestWithdrawal(address indexed user, address indexed recipient, uint256 indexed requestId, uint256 assets);

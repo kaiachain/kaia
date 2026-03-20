@@ -29,9 +29,10 @@ abstract contract NodeActions is AddressBookV2Base {
         string memory metadata
     ) external {
         if (_getNodeState(nodeId) != State.Unknown) revert NodeAlreadyExists();
+        if (bytes(metadata).length > MAX_METADATA_LENGTH) revert InvalidInput();
 
         ABv2Storage storage $ = _getStorage();
-        NodeVerifier.registerNode($.registeredAddresses, nodeId, stakingContract, rewardAddress, blsInfo);
+        NodeVerifier.registerNode($.usedAddresses, nodeId, stakingContract, rewardAddress, blsInfo);
 
         NodeInfo memory info = NodeInfo({
             manager: msg.sender,
@@ -42,7 +43,7 @@ abstract contract NodeActions is AddressBookV2Base {
             gcId: 0,
             blsInfo: blsInfo,
             metadata: metadata,
-            state: State.CandInactive
+            state: State.Registered
         });
 
         _createNode(nodeId, info);
@@ -50,11 +51,11 @@ abstract contract NodeActions is AddressBookV2Base {
 
     /// @inheritdoc IAddressBookV2
     function deleteNode(address nodeId) external onlyManager(nodeId) {
-        if (!_isNodeAtState(nodeId, State.CandInactive)) revert InvalidState();
+        if (!_isNodeAtState(nodeId, State.Registered)) revert InvalidState();
 
         ABv2Storage storage $ = _getStorage();
         NodeInfo storage info = _getNodeInfo(nodeId);
-        NodeVerifier.unregisterAddresses($.registeredAddresses, nodeId, info.stakingContract, info.rewardAddress);
+        NodeVerifier.unregisterAddresses($.usedAddresses, nodeId, info.stakingContract, info.rewardAddress);
 
         _deleteNode(nodeId);
     }
@@ -77,13 +78,13 @@ abstract contract NodeActions is AddressBookV2Base {
 
         // Reward address is immutable when public delegation is enabled
         if (ICnStaking(payable(info.stakingContract)).publicDelegation() != address(0)) revert PDEnabled();
-        if ($.registeredAddresses[newRewardAddress]) revert NodeVerifier.AddressAlreadyRegistered();
+        if ($.usedAddresses[newRewardAddress]) revert NodeVerifier.AddressAlreadyRegistered();
 
         address oldRewardAddress = info.rewardAddress;
 
         // Swap reward address
-        $.registeredAddresses[oldRewardAddress] = false;
-        $.registeredAddresses[newRewardAddress] = true;
+        $.usedAddresses[oldRewardAddress] = false;
+        $.usedAddresses[newRewardAddress] = true;
 
         info.rewardAddress = newRewardAddress;
         emit RewardAddressUpdated(nodeId, oldRewardAddress, newRewardAddress);
@@ -100,18 +101,19 @@ abstract contract NodeActions is AddressBookV2Base {
 
     /// @inheritdoc IAddressBookV2
     function updateMetadata(address nodeId, string calldata newMetadata) external onlyManager(nodeId) {
+        if (bytes(newMetadata).length > MAX_METADATA_LENGTH) revert InvalidInput();
         _getStorage().nodeInfo[nodeId].metadata = newMetadata;
         emit MetadataUpdated(nodeId, newMetadata);
     }
 
     /// @inheritdoc IAddressBookV2
     function readyCandidate(address nodeId) external onlyNodeId(nodeId) {
-        if (!_isNodeAtState(nodeId, State.CandInactive)) revert InvalidState();
+        if (!_isNodeAtState(nodeId, State.Registered)) revert InvalidState();
         if (!_isNodeOverMinStake(nodeId)) revert StakingTooLow();
 
         ABv2Storage storage $ = _getStorage();
         if (_getStateCount(State.CandReady) >= $.maxReadyCandidateCount) revert SlotsFull();
-        if (_getActiveSetLength() >= $.maxValidatorCount) revert SlotsFull();
+        if (_getAllNodesLength() >= $.maxValidatorCount) revert SlotsFull();
 
         _transition(nodeId, State.CandReady, 0);
         emit CandidateReadied(nodeId);
@@ -121,7 +123,7 @@ abstract contract NodeActions is AddressBookV2Base {
     function unreadyCandidate(address nodeId) external onlyNodeId(nodeId) {
         if (!_isNodeAtState(nodeId, State.CandReady)) revert InvalidState();
 
-        _transition(nodeId, State.CandInactive, 0);
+        _transition(nodeId, State.Registered, 0);
         emit CandidateUnreadied(nodeId);
     }
 
@@ -182,7 +184,7 @@ abstract contract NodeActions is AddressBookV2Base {
     /// @inheritdoc IAddressBookV2
     function offboard(address nodeId) external onlyNodeId(nodeId) {
         if (!_isNodeAtState(nodeId, State.ValInactive)) revert InvalidState();
-        _transition(nodeId, State.CandInactive, 0);
+        _transition(nodeId, State.Registered, 0);
     }
 
     /* ========== SYSTEM ACTIONS ========== */
