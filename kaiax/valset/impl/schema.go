@@ -24,7 +24,6 @@ import (
 	"sync"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -108,15 +107,7 @@ func trimValidatorVoteBlockNums(db database.Database, since uint64) {
 	writeValidatorVoteBlockNums(db, nums)
 }
 
-func ReadCouncil(db database.Database, permissionedNum uint64) valset.CommonAddressSet {
-	permissionedCouncil := readCouncil(db, permissionedNum)
-	if permissionedCouncil == nil {
-		return nil
-	}
-	return valset.NewCommonAddressSet(permissionedCouncil)
-}
-
-func readCouncil(db database.Database, num uint64) []common.Address {
+func ReadCouncil(db database.Database, num uint64) []common.Address {
 	b, err := db.Get(councilKey(num))
 	if err != nil || len(b) == 0 {
 		return nil
@@ -130,17 +121,12 @@ func readCouncil(db database.Database, num uint64) []common.Address {
 	return addrs
 }
 
-func writeCouncil(db database.Database, num uint64, validators valset.CommonAddressSet) {
-	key := councilKey(num)
-	marshalAndWrite(db, num, key, validators)
-}
-
-func marshalAndWrite(db database.Database, num uint64, key []byte, validators valset.CommonAddressSet) {
-	b, err := validators.Marshal()
+func writeCouncil(db database.Database, num uint64, addrs []common.Address) {
+	b, err := json.Marshal(addrs)
 	if err != nil {
 		logger.Crit("Failed to marshal council", "num", num, "err", err)
 	}
-	if err = db.Put(key, b); err != nil {
+	if err = db.Put(councilKey(num), b); err != nil {
 		logger.Crit("Failed to write council", "num", num, "err", err)
 	}
 }
