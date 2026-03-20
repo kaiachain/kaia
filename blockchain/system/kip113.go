@@ -156,25 +156,24 @@ func ReadKip113All(backend bind.ContractCaller, contractAddr common.Address, num
 	if err != nil {
 		return nil, err
 	}
-
 	opts := &bind.CallOpts{BlockNumber: num}
 	ret, err := caller.GetAllBlsInfo(opts)
 	if err != nil {
 		return nil, err
 	}
+	return buildBlsPublicKeyInfos(ret.NodeIdList, len(ret.PubkeyList), func(i int) ([]byte, []byte) {
+		return ret.PubkeyList[i].PublicKey, ret.PubkeyList[i].Pop
+	})
+}
 
-	if len(ret.NodeIdList) != len(ret.PubkeyList) {
+func buildBlsPublicKeyInfos(nodeIdList []common.Address, pubkeyLen int, getKeyPop func(i int) ([]byte, []byte)) (BlsPublicKeyInfos, error) {
+	if len(nodeIdList) != pubkeyLen {
 		return nil, ErrKip113BadResult
 	}
-
-	infos := make(BlsPublicKeyInfos)
-	for i := 0; i < len(ret.NodeIdList); i++ {
-		addr := ret.NodeIdList[i]
-		infos[addr] = newBlsPublicKeyInfo(
-			ret.PubkeyList[i].PublicKey,
-			ret.PubkeyList[i].Pop,
-		)
+	infos := make(BlsPublicKeyInfos, len(nodeIdList))
+	for i, addr := range nodeIdList {
+		pub, pop := getKeyPop(i)
+		infos[addr] = newBlsPublicKeyInfo(pub, pop)
 	}
-
-	return infos, err
+	return infos, nil
 }
