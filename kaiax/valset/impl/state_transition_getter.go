@@ -65,7 +65,7 @@ func (v *ValsetModule) getEpochTransition(
 			if val.StakingAmount >= minStake {
 				val.State = valset.CandTesting // T4a
 			} else {
-				val.State = valset.CandInactive // T4b
+				val.State = valset.Registered // T4b
 			}
 		case valset.CandTesting:
 			if v.isPassVrankTest() {
@@ -76,7 +76,7 @@ func (v *ValsetModule) getEpochTransition(
 					val.IdleTimeout = now.Add(idleTimeout)
 				}
 			} else {
-				val.State = valset.CandInactive // T2
+				val.State = valset.Registered // T2
 			}
 		case valset.ValReady, valset.ValActive, valset.ValPaused:
 			if val.StakingAmount >= minStake {
@@ -120,7 +120,7 @@ func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, paus
 				val.IdleTimeout = now.Add(idleTimeout)
 			}
 			if now.After(val.IdleTimeout) {
-				val.State = valset.CandInactive
+				val.State = valset.Registered
 				val.IdleTimeout = time.Time{}
 			}
 		case valset.ValPaused:

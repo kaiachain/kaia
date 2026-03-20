@@ -15,7 +15,7 @@ type State uint8
 
 const (
 	Unknown      State = iota // 0
-	CandInactive              // 1
+	Registered              // 1
 	CandReady                 // 2
 	CandTesting               // 3
 	ValInactive               // 4
@@ -26,7 +26,7 @@ const (
 )
 
 const (
-	CandInactiveStr = "CandInactive"
+	RegisteredStr = "Registered"
 	CandReadyStr    = "CandReady"
 	CandTestingStr  = "CandTesting"
 	ValInactiveStr  = "ValInactive"
@@ -42,8 +42,8 @@ func (s State) ToUint8() uint8 {
 
 func (s State) String() string {
 	switch s {
-	case CandInactive:
-		return CandInactiveStr
+	case Registered:
+		return RegisteredStr
 	case CandReady:
 		return CandReadyStr
 	case CandTesting:
@@ -65,8 +65,8 @@ func (s State) String() string {
 
 func ParseState(s string) (State, error) {
 	switch s {
-	case CandInactiveStr:
-		return CandInactive, nil
+	case RegisteredStr:
+		return Registered, nil
 	case CandReadyStr:
 		return CandReady, nil
 	case CandTestingStr:

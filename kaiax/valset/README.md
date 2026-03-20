@@ -561,7 +561,7 @@ Each validator has one of the following states, stored in ABv2:
 
 | State | Value | Description |
 |-------|-------|-------------|
-| CandInactive | 1 | Registered but inactive candidate |
+| Registered | 1 | Registered entity; not yet a candidate or validator |
 | CandReady | 2 | Candidate signaling readiness for VRank testing |
 | CandTesting | 3 | Candidate undergoing VRank assessment |
 | ValInactive | 4 | Non-participating validator; must signal readiness or exit before idle timeout |
@@ -593,12 +593,12 @@ Executed in order:
 1. **T1**: ValExiting → ValInactive (clear transitional states)
 2. **T2**: Evaluate VRank for CandTesting candidates (TODO: currently hardcoded pass)
 3. **T3**: Top-N recalculation — promote/demote based on stake ranking (N = `ActiveValidatorCount`)
-4. **T4**: CandReady with MinStake → CandTesting; CandReady below MinStake → CandInactive
+4. **T4**: CandReady with MinStake → CandTesting; CandReady below MinStake → Registered
 
 #### 2. Timeout Transition (every block)
 
 - ValPaused exceeding `ValPausedTimeout` → ValInactive
-- ValReady/ValInactive exceeding `ValIdleTimeout` → CandInactive
+- ValReady/ValInactive exceeding `ValIdleTimeout` → Registered
 
 #### 3. Violation Transition (every block)
 
