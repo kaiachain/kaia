@@ -110,7 +110,9 @@ func (sb *backend) VerifySeals(header *types.Header, sigCacheMode bool) error {
 	if header.Number.Uint64() == 0 {
 		return nil
 	}
-
+	if _, err := types.ExtractIstanbulExtra(header); err != nil {
+		return istanbul.ErrInvalidExtraDataFormat
+	}
 	number := header.Number.Uint64()
 	signer, err := sb.Author(header)
 	if err != nil {
