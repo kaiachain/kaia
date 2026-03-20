@@ -39,7 +39,7 @@ func (v *VRankModule) PostInsertBlock(block *types.Block) error {
 	}
 
 	if blockNum%scoreCheckpointInterval == 0 {
-		// GetCFS populates cpMatrixCache (not a separate cfsCache), so fetch from there.
+		// GetCFS populates cpMatrixCache, so fetch from there.
 		cpRaw, hasCPS := v.cpMatrixCache.Get(blockNum)
 		var cpMatrix map[common.Address]map[common.Address]uint64
 		if hasCPS {
