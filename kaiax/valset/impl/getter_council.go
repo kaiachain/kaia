@@ -42,13 +42,13 @@ func (v *ValsetModule) getCouncilPermissionless(num uint64) (valset.CommonAddres
 	return allStateNodes.getPermlessCouncil(), nil
 }
 
-func (v *ValsetModule) getCouncilPermissioned(num uint64) (valset.CommonAddressSet, error) {
+func (v *ValsetModule) getCouncil(num uint64) (valset.CommonAddressSet, error) {
 	if num == 0 {
-		return v.getCouncilGenesisPermissioned()
+		return v.getCouncilGenesis()
 	}
 
 	// First try to get from the (migrated) DB.
-	if council, ok, err := v.getCouncilDBPermissioned(num); err != nil {
+	if council, ok, err := v.getCouncilDB(num); err != nil {
 		return nil, err
 	} else if ok {
 		return council, nil
@@ -67,7 +67,7 @@ func (v *ValsetModule) getIstanbul() (*types.IstanbulExtra, error) {
 	return types.ExtractIstanbulExtra(header)
 }
 
-func (v *ValsetModule) getCouncilGenesisPermissioned() (valset.CommonAddressSet, error) {
+func (v *ValsetModule) getCouncilGenesis() (valset.CommonAddressSet, error) {
 	istanbulExtra, err := v.getIstanbul()
 	if err != nil {
 		return nil, err
@@ -75,7 +75,7 @@ func (v *ValsetModule) getCouncilGenesisPermissioned() (valset.CommonAddressSet,
 	return valset.NewCommonAddressSet(istanbulExtra.Validators), nil
 }
 
-func (v *ValsetModule) getCouncilDBPermissioned(num uint64) (valset.CommonAddressSet, bool, error) {
+func (v *ValsetModule) getCouncilDB(num uint64) (valset.CommonAddressSet, bool, error) {
 	pMinVoteNum := v.readLowestScannedVoteNumCached()
 	if pMinVoteNum == nil {
 		return nil, false, errNoLowestScannedNum
@@ -90,7 +90,7 @@ func (v *ValsetModule) getCouncilDBPermissioned(num uint64) (valset.CommonAddres
 		// Return false to indicate that the data is not yet available.
 		return nil, false, nil
 	}
-	return ReadCouncilPermissiond(v.ChainKv, voteNum), true, nil
+	return ReadCouncil(v.ChainKv, voteNum), true, nil
 }
 
 func (v *ValsetModule) readLowestScannedVoteNumCached() *uint64 {
@@ -154,7 +154,7 @@ func lastNumLessEqualThan(nums []uint64, num uint64) uint64 {
 // useful for snapshot interval-wise migration.
 func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bool) (valset.CommonAddressSet, uint64, error) {
 	if targetNum == 0 {
-		council, err := v.getCouncilGenesisPermissioned()
+		council, err := v.getCouncilGenesis()
 		return council, 0, err
 	}
 
@@ -215,7 +215,7 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 // Therefore, 3072 is used as the fallback to avoid referencing a missing snapshot.
 func (v *ValsetModule) getValidIstanbulSnapshotBefore(snapshotNum uint64) (valset.CommonAddressSet, error) {
 	if snapshotNum == 0 {
-		return v.getCouncilGenesisPermissioned()
+		return v.getCouncilGenesis()
 	}
 
 	nums := v.readValidatorVoteBlockNumsCached()
@@ -251,7 +251,7 @@ func (v *ValsetModule) applyBlock(council valset.CommonAddressSet, num uint64, w
 	governingNode := v.GovModule.GetParamSet(num).GoverningNode
 	if applyVote(header, council, governingNode) && write {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
-		writeCouncilPermissioned(v.ChainKv, num, council)
+		writeCouncil(v.ChainKv, num, council)
 		v.validatorVoteBlockNumsCache = nil
 	}
 	return nil
