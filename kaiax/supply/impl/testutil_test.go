@@ -35,7 +35,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/consensus/misc"
 	consensus_mock "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
 	"github.com/kaiachain/kaia/crypto"
@@ -490,7 +489,7 @@ func makeSupplyHeader(chain *blockchain.BlockChain, parent *types.Block, stateDB
 		Time:       new(big.Int).Add(parent.Time(), big.NewInt(10)),
 	}
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
-		header.BaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), chain.Config().Governance.KIP71)
+		header.BaseFee = chain.Config().Governance.KIP71.NextMagmaBlockBaseFee(parent.Header().Number, parent.Header().BaseFee, parent.Header().GasUsed)
 	}
 	return header
 }

@@ -31,7 +31,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -332,8 +331,7 @@ func (oracle *Oracle) getBlockValues(ctx context.Context, blockNum uint64, limit
 // and the next base fee is at the lower bound.
 func (oracle *Oracle) isRelaxedNetwork(header *types.Header) bool {
 	pset := oracle.govModule.GetParamSet(header.Number.Uint64() + 1)
-	kip71 := pset.ToKip71Config()
-	nextBaseFee := misc.NextMagmaBlockBaseFee(header, kip71)
+	nextBaseFee := pset.ToKip71Config().NextMagmaBlockBaseFee(header.Number, header.BaseFee, header.GasUsed)
 	return nextBaseFee.Cmp(big.NewInt(int64(pset.LowerBoundBaseFee))) <= 0
 }
 

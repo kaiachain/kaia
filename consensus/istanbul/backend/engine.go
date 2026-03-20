@@ -33,7 +33,6 @@ import (
 	consensuscommon "github.com/kaiachain/kaia/consensus/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
-	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -141,8 +140,11 @@ func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Heade
 			// the kip71Config used when creating the block number is a previous block config.
 			blockNum := header.Number.Uint64()
 			pset := sb.govModule.GetParamSet(blockNum)
-			kip71 := pset.ToKip71Config()
-			if err := misc.VerifyMagmaHeader(parents[len(parents)-1], header, kip71); err != nil {
+			parent := parents[len(parents)-1]
+			if parent == nil {
+				return consensus.ErrUnknownAncestor
+			}
+			if err := pset.ToKip71Config().VerifyMagmaHeader(header.BaseFee, parent.Number, parent.BaseFee, parent.GasUsed); err != nil {
 				return err
 			}
 		}

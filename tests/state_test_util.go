@@ -40,7 +40,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/params"
@@ -315,7 +314,7 @@ func (t *StateTest) RunNoVerify(subtest StateSubtest, vmconfig vm.Config, isTest
 		blockContext.GasLimit = t.json.Env.GasLimit
 		// For eest, we use blobBaseFee for EIP4844.
 		if config.IsOsakaForkEnabled(block.Header().Number) {
-			blockContext.BlobBaseFee = eip4844.CalcBlobFeeEIP4844(config, block.Header())
+			blockContext.BlobBaseFee = config.LatestBlobConfig(block.Header().Number).BlobBaseFeeEIP4844(*block.Header().ExcessBlobGas)
 		}
 	}
 	evm := vm.NewEVM(blockContext, txContext, st, config, &vmconfig)

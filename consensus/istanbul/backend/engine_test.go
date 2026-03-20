@@ -42,7 +42,6 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/downloader"
@@ -419,7 +418,7 @@ func makeHeader(parent *types.Block, chainConfig *params.ChainConfig) *types.Hea
 	if chainConfig.IsOsakaForkEnabled(header.Number) {
 		var excessBlobGas uint64
 		if chainConfig.IsOsakaForkEnabled(parent.Number()) {
-			excessBlobGas = eip4844.CalcExcessBlobGas(chainConfig, parent.Header(), header.Number)
+			excessBlobGas = chainConfig.LatestBlobConfig(header.Number).CalcExcessBlobGas(parent.ExcessBlobGas(), parent.BlobGasUsed())
 		}
 		header.BlobGasUsed = new(uint64)
 		header.ExcessBlobGas = &excessBlobGas

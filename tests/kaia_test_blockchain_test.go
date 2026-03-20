@@ -38,8 +38,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
-	"github.com/kaiachain/kaia/consensus/misc"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/crypto/sha3"
@@ -242,12 +240,12 @@ func (bcdata *BCData) prepareHeader() (*types.Header, error) {
 		Vote:       common.Hex2Bytes("e194e733cb4d279da696f30d470f8c04decb54fcb0d28565706f6368853330303030"),
 	}
 	if bcdata.bc.Config().IsMagmaForkEnabled(num) {
-		header.BaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), bcdata.bc.Config().Governance.KIP71)
+		header.BaseFee = bcdata.bc.Config().Governance.KIP71.NextMagmaBlockBaseFee(parent.Number(), parent.Header().BaseFee, parent.GasUsed())
 	}
 	if bcdata.bc.Config().IsOsakaForkEnabled(num) {
 		var excessBlobGas uint64
 		if bcdata.bc.Config().IsOsakaForkEnabled(parent.Number()) {
-			excessBlobGas = eip4844.CalcExcessBlobGas(bcdata.bc.Config(), parent.Header(), header.Number)
+			excessBlobGas = bcdata.bc.Config().LatestBlobConfig(num).CalcExcessBlobGas(parent.ExcessBlobGas(), parent.BlobGasUsed())
 		}
 		header.BlobGasUsed = new(uint64)
 		header.ExcessBlobGas = &excessBlobGas

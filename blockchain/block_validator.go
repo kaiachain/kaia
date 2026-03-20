@@ -31,7 +31,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -152,7 +151,14 @@ func (v *BlockValidator) validateHeader(header *types.Header, parents []*types.H
 			return consensus.ErrUnexpectedBlobGasUsedBeforeOsaka
 		}
 	} else {
-		if err := eip4844.VerifyEIP4844Header(v.config, parent, header); err != nil {
+		if header.Number.Uint64() != parent.Number.Uint64()+1 {
+			panic("bad header pair")
+		}
+		bcfg := v.config.LatestBlobConfig(header.Number)
+		if bcfg == nil {
+			panic("called before EIP-4844 is active")
+		}
+		if err := bcfg.VerifyEIP4844Header(parent.ExcessBlobGas, parent.BlobGasUsed, header.ExcessBlobGas, header.BlobGasUsed); err != nil {
 			return err
 		}
 	}
