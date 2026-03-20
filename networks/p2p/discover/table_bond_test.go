@@ -20,7 +20,6 @@ import (
 	"net"
 	"runtime"
 	"sync"
-	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -233,47 +232,3 @@ func Test_Table_Bond_recentlyBonded(t *testing.T) {
 	assert.Equal(t, int32(0), udp.pingCnt.Load(), "ping should be skipped for a recently bonded node")
 }
 
-// mockTransport is a transport whose ping and findnode behaviour is configurable per NodeID.
-type mockTransport struct {
-	// pingFn, if non-nil, is called instead of the per-node error map.
-	// Useful for tests that need blocking, concurrency signals, etc.
-	pingFn func(NodeID, *net.UDPAddr) error
-	// findnodeFn, if non-nil, overrides the default (return nil, nil).
-	findnodeFn func(NodeID, *net.UDPAddr, NodeID, NodeType, int) ([]*Node, error)
-
-	mu      sync.Mutex
-	pingErr map[NodeID]error // nil by default, indicating success
-
-	pingCnt atomic.Int32 // total ping() invocations
-}
-
-func newMockTransport() *mockTransport {
-	return &mockTransport{pingErr: make(map[NodeID]error)}
-}
-
-// setPingErr configures the error returned by ping() for the given node.
-func (m *mockTransport) setPingErr(id NodeID, err error) {
-	m.mu.Lock()
-	m.pingErr[id] = err
-	m.mu.Unlock()
-}
-
-func (m *mockTransport) ping(toid NodeID, toaddr *net.UDPAddr) error {
-	m.pingCnt.Add(1)
-	if m.pingFn != nil {
-		return m.pingFn(toid, toaddr)
-	}
-	m.mu.Lock()
-	err := m.pingErr[toid]
-	m.mu.Unlock()
-	return err
-}
-
-func (m *mockTransport) waitping(from NodeID, fromIP net.IP) error { return nil }
-func (m *mockTransport) findnode(toid NodeID, toaddr *net.UDPAddr, target NodeID, nType NodeType, max int) ([]*Node, error) {
-	if m.findnodeFn != nil {
-		return m.findnodeFn(toid, toaddr, target, nType, max)
-	}
-	return nil, nil
-}
-func (m *mockTransport) close() {}

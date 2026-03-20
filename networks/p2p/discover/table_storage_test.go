@@ -20,7 +20,6 @@ package discover
 
 import (
 	"net"
-	"sync/atomic"
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
@@ -28,37 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	testSelf = NewNode(NodeID{}, net.IP{127, 0, 0, 1}, 30303, 30303, nil, NodeTypeUnknown)
-
-	nodeDistCounter uint32
-)
-
-func newTestKademliaStorage() *kademliaStorage {
-	return newKademliaStorage(testSelf, newSharedRand())
-}
-
-// Create a unique node at the given distance.
-func nodeAtDist(ld int) *Node {
-	n := new(Node)
-	n.sha = hashAtDistance(testSelf.sha, ld)
-	// hashAtDistance randomizes bytes after position (len(hash)-ld/8-1), so for
-	// any ld > 1 the last byte is in the randomized zone. Stamp it with a counter
-	// to guarantee unique IDs; without this, small distances (e.g. ld=10) only
-	// randomize 1 byte (255 values) and collisions cause intermittent test failures.
-	n.sha[31] = byte(atomic.AddUint32(&nodeDistCounter, 1))
-	n.IP = net.IP{172, byte(ld), 1, 0}
-	n.NType = NodeTypeUnknown
-	copy(n.ID[:], n.sha[:])
-	return n
-}
-
-// Note that this function bypasses the IP limit, makes it easier to test.
-func fillBucket2(b *bucket, ld int) {
-	for len(b.entries) < bucketSize {
-		b.entries = append(b.entries, nodeAtDist(ld))
-	}
-}
 
 func TestKademliaStorage_AddBump(t *testing.T) {
 	s := newTestKademliaStorage()
@@ -86,7 +54,7 @@ func TestKademliaStorage_AddBucketFull(t *testing.T) {
 
 	// Fill the bucket.
 	b := s.bucket(targetHash)
-	fillBucket2(b, 10)
+	fillBucket(b, 10)
 	require.Equal(t, bucketSize, len(b.entries), "expected bucket to be full")
 
 	// Add one more - should go to replacements since bucket is full
@@ -155,7 +123,7 @@ func TestKademliaStorage_DeletePromoteReplacements(t *testing.T) {
 
 	// Fill bucket.
 	b := s.bucket(targetHash)
-	fillBucket2(b, 10)
+	fillBucket(b, 10)
 	require.Equal(t, bucketSize, len(b.entries), "expected bucket to be full")
 
 	// Add one more - should go to replacements since bucket is full
@@ -180,9 +148,9 @@ func TestKademliaStorage_Random(t *testing.T) {
 	s := newTestKademliaStorage()
 
 	// 3 different buckets. Note: bucketMinDistance is 239.
-	fillBucket2(s.bucket(hashAtDistance(s.selfSha, 235)), 235)
-	fillBucket2(s.bucket(hashAtDistance(s.selfSha, 245)), 245)
-	fillBucket2(s.bucket(hashAtDistance(s.selfSha, 255)), 255)
+	fillBucket(s.bucket(hashAtDistance(s.selfSha, 235)), 235)
+	fillBucket(s.bucket(hashAtDistance(s.selfSha, 245)), 245)
+	fillBucket(s.bucket(hashAtDistance(s.selfSha, 255)), 255)
 	assert.Equal(t, 3*bucketSize, s.len(), "added all nodes over 3 different distance buckets")
 
 	buf := make([]*Node, 100)
@@ -217,9 +185,9 @@ func TestKademliaStorage_Closest(t *testing.T) {
 	assert.Equal(t, 3, len(out.entries))
 
 	// Add enough nodes to the table.
-	fillBucket2(s.bucket(hashAtDistance(s.selfSha, 235)), 235)
-	fillBucket2(s.bucket(hashAtDistance(s.selfSha, 245)), 245)
-	fillBucket2(s.bucket(hashAtDistance(s.selfSha, 255)), 255)
+	fillBucket(s.bucket(hashAtDistance(s.selfSha, 235)), 235)
+	fillBucket(s.bucket(hashAtDistance(s.selfSha, 245)), 245)
+	fillBucket(s.bucket(hashAtDistance(s.selfSha, 255)), 255)
 	require.Equal(t, 3*bucketSize, s.len())
 
 	// Return as many nodes as requested.
