@@ -20,6 +20,7 @@ jobs:
     name: Test Linter
     uses: ./.github/workflows/test-executor-template.yml
     with:
+      fetch_depth: 0
       test_command: |
         BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
         go run build/ci.go lint -v --new-from-rev="origin/${BASE_BRANCH}"
@@ -52,9 +53,10 @@ jobs:
     name: Test RPC
     permissions:
       contents: write
-    uses: ./.github/workflows/test-other-executor-template.yml
+    uses: ./.github/workflows/test-executor-template.yml
     with:
-      install_python: false
+      runs_on: ubuntu-latest
+      install_python: true
       test_command: |
         make kcn
         git clone https://github.com/kaiachain/kaia-rpc-tester.git
@@ -64,8 +66,6 @@ jobs:
         ./set_CNonly.sh
         cd ..
         cp config_template.json config.json
-        apt update
-        apt install python3-venv -y
         python3 -m venv venv
         source venv/bin/activate
         pip3 install -r requirements.txt
@@ -75,13 +75,17 @@ jobs:
   test-datasync:
     needs: build
     name: Test Datasync
-    uses: ./.github/workflows/test-other-executor-template.yml
+    uses: ./.github/workflows/test-executor-template.yml
     with:
+      runs_on: kaia-xlarge-runner
+      with_services: true
       test_command: make test-datasync
 
   test-others:
     needs: build
     name: Test Others
-    uses: ./.github/workflows/test-other-executor-template.yml
+    uses: ./.github/workflows/test-executor-template.yml
     with:
+      runs_on: kaia-xlarge-runner
+      with_services: true
       test_command: make test-others
