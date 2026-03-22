@@ -46,6 +46,7 @@ jobs:
     name: Test Tests
     uses: ./.github/workflows/test-executor-template.yml
     with:
+      cache_fixtures: true
       test_command: |
         git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
         make test-tests
