@@ -7,14 +7,16 @@ on:
 permissions:
   contents: read
 
+# Run the 'build' job first to update the build cache.
 jobs:
   build:
     name: Build
     uses: ./.github/workflows/test-executor-template.yml
     with:
-      test_command: make all
+      test_command: make kcn && make all -j
 
   test-linter:
+    needs: build
     name: Test Linter
     uses: ./.github/workflows/test-executor-template.yml
     with:
@@ -23,18 +25,21 @@ jobs:
         go run build/ci.go lint -v --new-from-rev="origin/${BASE_BRANCH}"
 
   test-networks:
+    needs: build
     name: Test Networks
     uses: ./.github/workflows/test-executor-template.yml
     with:
       test_command: make test-networks
 
   test-node:
+    needs: build
     name: Test Node
     uses: ./.github/workflows/test-executor-template.yml
     with:
       test_command: make test-node
 
   test-tests:
+    needs: build
     name: Test Tests
     uses: ./.github/workflows/test-executor-template.yml
     with:
@@ -43,6 +48,7 @@ jobs:
         make test-tests
 
   test-rpc:
+    needs: build
     name: Test RPC
     permissions:
       contents: write
@@ -67,12 +73,14 @@ jobs:
 
   # Service-dependent test jobs
   test-datasync:
+    needs: build
     name: Test Datasync
     uses: ./.github/workflows/test-other-executor-template.yml
     with:
       test_command: make test-datasync
 
   test-others:
+    needs: build
     name: Test Others
     uses: ./.github/workflows/test-other-executor-template.yml
     with:
