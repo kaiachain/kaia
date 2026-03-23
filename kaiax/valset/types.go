@@ -36,6 +36,7 @@ const (
 	ValActiveStr   = "ValActive"
 )
 
+// ToUint8 converts the State to its uint8 representation for ABI encoding.
 func (s State) ToUint8() uint8 {
 	return uint8(s)
 }
@@ -63,6 +64,7 @@ func (s State) String() string {
 	}
 }
 
+// ParseState converts a string to a State value.
 func ParseState(s string) (State, error) {
 	switch s {
 	case RegisteredStr:
