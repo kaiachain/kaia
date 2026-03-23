@@ -87,10 +87,10 @@ type ChainDataFetcher struct {
 	checkpointDB CheckpointDB
 	setters      []ComponentSetter
 
-	fetchingStarted      uint32
+	fetchingStarted      atomic.Uint32
 	fetchingStopCh       chan struct{}
 	fetchingWg           sync.WaitGroup
-	rangeFetchingStarted uint32
+	rangeFetchingStarted atomic.Uint32
 	rangeFetchingStopCh  chan struct{}
 	rangeFetchingWg      sync.WaitGroup
 
@@ -226,7 +226,7 @@ func (f *ChainDataFetcher) sendRequests(startBlock, endBlock uint64, reqType cfT
 }
 
 func (f *ChainDataFetcher) startFetching() error {
-	if !atomic.CompareAndSwapUint32(&f.fetchingStarted, stopped, running) {
+	if !f.fetchingStarted.CompareAndSwap(stopped, running) {
 		return errors.New("fetching is already started")
 	}
 
@@ -253,7 +253,7 @@ func (f *ChainDataFetcher) startFetching() error {
 }
 
 func (f *ChainDataFetcher) stopFetching() error {
-	if !atomic.CompareAndSwapUint32(&f.fetchingStarted, running, stopped) {
+	if !f.fetchingStarted.CompareAndSwap(running, stopped) {
 		return errors.New("fetching is not running")
 	}
 
@@ -265,21 +265,21 @@ func (f *ChainDataFetcher) stopFetching() error {
 }
 
 func (f *ChainDataFetcher) startRangeFetching(startBlock, endBlock uint64, reqType cfTypes.RequestType) error {
-	if !atomic.CompareAndSwapUint32(&f.rangeFetchingStarted, stopped, running) {
+	if !f.rangeFetchingStarted.CompareAndSwap(stopped, running) {
 		return errors.New("range fetching is already started")
 	}
 
 	f.rangeFetchingStopCh = make(chan struct{})
 	f.rangeFetchingWg.Go(func() {
 		f.sendRequests(startBlock, endBlock, reqType, false, f.rangeFetchingStopCh)
-		atomic.StoreUint32(&f.rangeFetchingStarted, stopped)
+		f.rangeFetchingStarted.Store(stopped)
 	})
 	logger.Info("range fetching is started", "startBlock", startBlock, "endBlock", endBlock, "reqType", reqType)
 	return nil
 }
 
 func (f *ChainDataFetcher) stopRangeFetching() error {
-	if !atomic.CompareAndSwapUint32(&f.rangeFetchingStarted, running, stopped) {
+	if !f.rangeFetchingStarted.CompareAndSwap(running, stopped) {
 		return errors.New("range fetching is not running")
 	}
 	close(f.rangeFetchingStopCh)
@@ -591,5 +591,5 @@ func (f *ChainDataFetcher) retryFunc(insert HandleChainEventFn) HandleChainEvent
 }
 
 func (f *ChainDataFetcher) status() string {
-	return fmt.Sprintf("{fetching: %v, rangeFetching: %v}", atomic.LoadUint32(&f.fetchingStarted), atomic.LoadUint32(&f.rangeFetchingStarted))
+	return fmt.Sprintf("{fetching: %v, rangeFetching: %v}", f.fetchingStarted.Load(), f.rangeFetchingStarted.Load())
 }

@@ -27,6 +27,7 @@ import (
 	"errors"
 	"math"
 	"math/big"
+	"slices"
 	"strconv"
 
 	"github.com/kaiachain/kaia/blockchain"
@@ -312,13 +313,7 @@ func (f *Filter) checkMatches(ctx context.Context, header *types.Header) (logs [
 }
 
 func includes(addresses []common.Address, a common.Address) bool {
-	for _, addr := range addresses {
-		if addr == a {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(addresses, a)
 }
 
 // filterLogs creates a slice of logs matching the given criteria.
@@ -342,11 +337,8 @@ Logs:
 		}
 		for i, topics := range topics {
 			match := len(topics) == 0 // empty rule set == wildcard
-			for _, topic := range topics {
-				if log.Topics[i] == topic {
-					match = true
-					break
-				}
+			if slices.Contains(topics, log.Topics[i]) {
+				match = true
 			}
 			if !match {
 				continue Logs

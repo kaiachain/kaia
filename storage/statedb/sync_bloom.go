@@ -60,9 +60,9 @@ func (f syncBloomHasher) Sum64() uint64                     { return binary.BigE
 // returning live results once that's finished.
 type SyncBloom struct {
 	bloom  *bloomfilter.Filter
-	inited uint32
+	inited atomic.Uint32
 	closer sync.Once
-	closed uint32
+	closed atomic.Uint32
 	pend   sync.WaitGroup
 }
 
@@ -107,7 +107,7 @@ func (b *SyncBloom) init(db database.Iteratee) {
 		start = time.Now()
 		swap  = time.Now()
 	)
-	for it.Next() && atomic.LoadUint32(&b.closed) == 0 {
+	for it.Next() && b.closed.Load() == 0 {
 		// If the database entry is a trie node, add it to the bloom
 		key := it.Key()
 		if len(key) == common.HashLength {
@@ -135,7 +135,7 @@ func (b *SyncBloom) init(db database.Iteratee) {
 
 	// Mark the bloom filter inited and return
 	logger.Info("Initialized fast sync bloom", "items", b.bloom.N(), "errorrate", b.errorRate(), "elapsed", common.PrettyDuration(time.Since(start)))
-	atomic.StoreUint32(&b.inited, 1)
+	b.inited.Store(1)
 }
 
 // meter periodically recalculates the false positive error rate of the bloom
@@ -147,7 +147,7 @@ func (b *SyncBloom) meter() {
 
 		// Wait one second, but check termination more frequently
 		for i := 0; i < 10; i++ {
-			if atomic.LoadUint32(&b.closed) == 1 {
+			if b.closed.Load() == 1 {
 				return
 			}
 			time.Sleep(100 * time.Millisecond)
@@ -160,13 +160,13 @@ func (b *SyncBloom) meter() {
 func (b *SyncBloom) Close() error {
 	b.closer.Do(func() {
 		// Ensure the initializer is stopped
-		atomic.StoreUint32(&b.closed, 1)
+		b.closed.Store(1)
 		b.pend.Wait()
 
 		// Wipe the bloom, but mark it "uninited" just in case someone attempts an access
 		logger.Info("Deallocated fast sync bloom", "items", b.bloom.N(), "errorrate", b.errorRate())
 
-		atomic.StoreUint32(&b.inited, 0)
+		b.inited.Store(0)
 		b.bloom = nil
 	})
 	return nil
@@ -174,7 +174,7 @@ func (b *SyncBloom) Close() error {
 
 // Add inserts a new trie node hash into the bloom filter.
 func (b *SyncBloom) Add(hash []byte) {
-	if atomic.LoadUint32(&b.closed) == 1 {
+	if b.closed.Load() == 1 {
 		return
 	}
 	b.bloom.Add(syncBloomHasher(hash))
@@ -188,7 +188,7 @@ func (b *SyncBloom) Add(hash []byte) {
 // While the bloom is being initialized, any query will return true.
 func (b *SyncBloom) Contains(hash []byte) bool {
 	bloomTestMeter.Mark(1)
-	if atomic.LoadUint32(&b.inited) == 0 {
+	if b.inited.Load() == 0 {
 		// We didn't load all the trie nodes from the previous run of Geth yet. As
 		// such, we can't say for sure if a hash is not present for anything. Until
 		// the init is done, we're faking "possible presence" for everything.

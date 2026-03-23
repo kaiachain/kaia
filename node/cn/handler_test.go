@@ -25,6 +25,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"slices"
 	"testing"
 	"time"
 
@@ -1147,12 +1148,7 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 }
 
 func contains(addrs []common.Address, item common.Address) bool {
-	for _, a := range addrs {
-		if a == item {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(addrs, item)
 }
 
 func createAndRegisterPeers(mockCtrl *gomock.Controller, peers *peerSet) (*MockPeer, *MockPeer, *MockPeer) {

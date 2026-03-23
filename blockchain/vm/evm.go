@@ -162,7 +162,7 @@ type EVM struct {
 	interpreter *EVMInterpreter
 	// abort is used to abort the EVM calling operations
 	// NOTE: must be set atomically
-	abort int32
+	abort atomic.Int32
 	// callGasTemp holds the gas available for the current call. This is needed because the
 	// available gas is calculated in gasCall* according to the 63/64 rule and later
 	// applied in opCall*.
@@ -219,8 +219,8 @@ func (evm *EVM) Reset(txCtx TxContext, statedb StateDB) {
 // it's safe to be called multiple times.
 func (evm *EVM) Cancel(reason int32) {
 	for {
-		abort := atomic.LoadInt32(&evm.abort)
-		swapped := atomic.CompareAndSwapInt32(&evm.abort, abort, abort|reason)
+		abort := evm.abort.Load()
+		swapped := evm.abort.CompareAndSwap(abort, abort|reason)
 		if swapped {
 			break
 		}
@@ -233,7 +233,7 @@ func (evm *EVM) IsPrefetching() bool {
 
 // Cancelled returns true if Cancel has been called
 func (evm *EVM) Cancelled() bool {
-	return atomic.LoadInt32(&evm.abort) == 1
+	return evm.abort.Load() == 1
 }
 
 // Call executes the contract associated with the addr with the given input as
