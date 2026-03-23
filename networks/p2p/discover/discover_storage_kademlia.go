@@ -155,7 +155,7 @@ func (s *KademliaStorage) doRefresh() {
 	// (not hash-sized) and it is not easily possible to generate a
 	// sha3 preimage that falls into a chosen bucket.
 	// We perform a few lookups with a random target instead.
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		var target NodeID
 		rand.Read(target[:])
 		s.lookup(target, false, s.targetType)
@@ -214,7 +214,7 @@ func (s *KademliaStorage) getReplacements() []*Node {
 	s.bucketsMu.Lock()
 	defer s.bucketsMu.Unlock()
 	var nodes []*Node
-	for i := 0; i < nBuckets; i++ {
+	for i := range nBuckets {
 		nodes = append(nodes, s.buckets[i].replacements...)
 	}
 	return nodes
@@ -225,7 +225,7 @@ func (s *KademliaStorage) getBucketEntries() []*Node {
 	defer s.bucketsMu.Unlock()
 
 	var nodes []*Node
-	for i := 0; i < nBuckets; i++ {
+	for i := range nBuckets {
 		nodes = append(nodes, s.buckets[i].entries...)
 	}
 	return nodes

@@ -63,7 +63,7 @@ func newTxSenderCacher(threads int) *txSenderCacher {
 		tasks:   make(chan *txSenderCacherRequest, threads),
 		threads: threads,
 	}
-	for i := 0; i < threads; i++ {
+	for range threads {
 		go cacher.cache()
 	}
 	return cacher

@@ -1,6 +1,7 @@
 package impl
 
 import (
+	maps0 "maps"
 	"reflect"
 	"slices"
 
@@ -244,9 +245,7 @@ func (h *headerGovModule) getVotesInEpoch(epochIdx uint64) map[uint64]headergov.
 
 		h.mu.RLock()
 		defer h.mu.RUnlock()
-		for blockNum, vote := range h.groupedVotes[epochIdx] {
-			votes[blockNum] = vote
-		}
+		maps0.Copy(votes, h.groupedVotes[epochIdx])
 		return votes
 	} else {
 		logger.Debug("Scanning votes slowpath")

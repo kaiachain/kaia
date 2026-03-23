@@ -1218,7 +1218,7 @@ func TestBridgeRequestHandleGasUsed(t *testing.T) {
 	}
 
 	// handle 0 ~ 499 nonce
-	for i := 0; i < 500; i++ {
+	for i := range 500 {
 		handleFunc(i)
 	}
 
@@ -1323,7 +1323,7 @@ func TestBridgeMaxOperatorHandleTxGasUsed(t *testing.T) {
 		t.Log("Handle value transfer tx receipt", "gasUsed", receipt.GasUsed, "status", receipt.Status)
 	}
 
-	for i := 0; i < maxOperator; i++ {
+	for i := range maxOperator {
 		handleFunc(authList[i], 0)
 	}
 
@@ -1343,7 +1343,7 @@ func TestBridgeThresholdLimit(t *testing.T) {
 	maxOperator := 12
 
 	var authList []*bind.TransactOpts
-	for i := 0; i < maxOperator; i++ {
+	for i := range maxOperator {
 		authKey, _ := crypto.GenerateKey()
 		authList = append(authList, bind.NewKeyedTransactor(authKey))
 		authList[i].GasLimit = DefaultBridgeTxGasLimit

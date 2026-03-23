@@ -795,7 +795,7 @@ func NtpCheckWithLocal(n *Node) error {
 
 	ntpRetryTime := time.Duration(1)
 	var remote *time.Time
-	for i := 0; i < ntpMaxRetry; i++ {
+	for range ntpMaxRetry {
 		time.Sleep(ntpRetryTime)
 		remote, err = ntpclient.GetNetworkTime(url, portNum)
 		if remote != nil {

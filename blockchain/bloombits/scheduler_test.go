@@ -53,7 +53,7 @@ func testScheduler(t *testing.T, clients int, fetchers int, requests int) {
 	defer close(fetch)
 
 	var delivered atomic.Uint32
-	for i := 0; i < fetchers; i++ {
+	for range fetchers {
 		go func() {
 			defer fetchPend.Done()
 
@@ -79,7 +79,7 @@ func testScheduler(t *testing.T, clients int, fetchers int, requests int) {
 	var pend sync.WaitGroup
 	pend.Add(clients)
 
-	for i := 0; i < clients; i++ {
+	for range clients {
 		go func() {
 			defer pend.Done()
 
@@ -89,13 +89,13 @@ func testScheduler(t *testing.T, clients int, fetchers int, requests int) {
 			f.run(in, fetch, out, quit, &pend)
 
 			go func() {
-				for j := 0; j < requests; j++ {
+				for j := range requests {
 					in <- uint64(j)
 				}
 				close(in)
 			}()
 
-			for j := 0; j < requests; j++ {
+			for j := range requests {
 				bits := <-out
 				if want := new(big.Int).SetUint64(uint64(j)).Bytes(); !bytes.Equal(bits, want) {
 					t.Errorf("vector %d: delivered content mismatch: have %x, want %x", j, bits, want)

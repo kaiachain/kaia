@@ -172,7 +172,7 @@ func TestUDP_responseTimeouts(t *testing.T) {
 		nilErr     = make(chan error, nReqs) // for requests that get a reply
 		timeoutErr = make(chan error, nReqs) // for requests that time out
 	)
-	for i := 0; i < nReqs; i++ {
+	for i := range nReqs {
 		// Create a matcher for a random request in udp.loop. Requests
 		// with ptype <= 128 will not get a reply and should time out.
 		// For all other requests, a reply is scheduled to arrive
@@ -204,7 +204,7 @@ func TestUDP_responseTimeouts(t *testing.T) {
 		recvDeadline        = time.After(20 * time.Second)
 		nTimeoutsRecv, nNil = 0, 0
 	)
-	for i := 0; i < nReqs; i++ {
+	for i := range nReqs {
 		select {
 		case err := <-timeoutErr:
 			if err != errTimeout {
@@ -254,7 +254,7 @@ func TestUDP_findnode(t *testing.T) {
 	// take care not to overflow any bucket.
 	targetHash := crypto.Keccak256Hash(testTarget[:])
 	nodes := &nodesByDistance{target: targetHash}
-	for i := 0; i < bucketSize; i++ {
+	for i := range bucketSize {
 		nodes.push(nodeAtDistance(test.table.self.sha, i+2, NodeTypeUnknown), bucketSize)
 	}
 	test.table.stuff(nodes.entries, NodeTypeUnknown)

@@ -631,7 +631,7 @@ func createAccounts(numAccounts int) ([]*common.Address, []*ecdsa.PrivateKey, er
 	accs := make([]*common.Address, numAccounts)
 	privKeys := make([]*ecdsa.PrivateKey, numAccounts)
 
-	for i := 0; i < numAccounts; i++ {
+	for i := range numAccounts {
 		k, err := crypto.GenerateKey()
 		if err != nil {
 			return nil, nil, err

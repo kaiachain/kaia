@@ -571,7 +571,7 @@ func (d *Downloader) spawnSync(fetchers []func() error, peerID string) error {
 	}
 	// Wait for the first error, then terminate the others.
 	var err error
-	for i := 0; i < len(fetchers); i++ {
+	for i := range fetchers {
 		if i == len(fetchers)-1 {
 			// Close the queue when all fetchers have exited.
 			// This will cause the block processor to end when
@@ -867,7 +867,7 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 				return 0, errEmptyHeaderSet
 			}
 			// Make sure the peer's reply conforms to the request
-			for i := 0; i < len(headers); i++ {
+			for i := range headers {
 				if number := headers[i].Number.Int64(); number != from+int64(i)*16 {
 					p.logger.Error("Head headers broke chain ordering", "index", i, "requested", from+int64(i)*16, "received", number)
 					return 0, fmt.Errorf("%w: %v", errInvalidChain, errors.New("head headers broke chain ordering"))

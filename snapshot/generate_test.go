@@ -616,7 +616,7 @@ func TestGenerateCorruptStorageTrie(t *testing.T) {
 
 func getStorageTrie(n int, triedb *statedb.Database) *statedb.SecureTrie {
 	stTrie, _ := statedb.NewSecureTrie(common.Hash{}, triedb, nil)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		k := fmt.Sprintf("key-%d", i)
 		v := fmt.Sprintf("val-%d", i)
 		stTrie.Update([]byte(k), []byte(v))
@@ -705,7 +705,7 @@ func TestGenerateWithManyExtraAccounts(t *testing.T) {
 		diskdb.WriteStorageSnapshot(key, hashData([]byte("key-3")), []byte("val-3"))
 	}
 	{ // 100 accounts exist only in snapshot
-		for i := 0; i < 1000; i++ {
+		for i := range 1000 {
 			acc, _ := genExternallyOwnedAccount(uint64(i), big.NewInt(int64(i)))
 			val, _ := rlp.EncodeToBytes(acc)
 			key := hashData(fmt.Appendf(nil, "acc-%d", i))
@@ -838,7 +838,7 @@ func TestGenerateFromEmptySnap(t *testing.T) {
 	helper := newHelper()
 	stRoot := helper.makeStorageTrie([]string{"key-1", "key-2", "key-3"}, []string{"val-1", "val-2", "val-3"})
 	// Add 1K accounts to the trie
-	for i := 0; i < 400; i++ {
+	for i := range 400 {
 		acc, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addTrieAccount(fmt.Sprintf("acc-%d", i), acc)
 	}
@@ -875,13 +875,13 @@ func TestGenerateWithIncompleteStorage(t *testing.T) {
 	// We add 8 accounts, each one is missing exactly one of the storage slots. This means
 	// we don't have to order the keys and figure out exactly which hash-key winds up
 	// on the sensitive spots at the boundaries
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		accKey := fmt.Sprintf("acc-%d", i)
 		acc, _ := genSmartContractAccount(0, big.NewInt(1), stRoot, types.EmptyCodeHash.Bytes())
 		helper.addAccount(accKey, acc)
 		var moddedKeys []string
 		var moddedVals []string
-		for ii := 0; ii < 8; ii++ {
+		for ii := range 8 {
 			if ii != i {
 				moddedKeys = append(moddedKeys, stKeys[ii])
 				moddedVals = append(moddedVals, stVals[ii])

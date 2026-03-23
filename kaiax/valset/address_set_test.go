@@ -152,11 +152,11 @@ func TestAddressHexCache(t *testing.T) {
 	var wg sync.WaitGroup
 	errCh := make(chan error, 100)
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			for j := 0; j < 100; j++ {
+			for j := range 100 {
 				addr := addrs[(id+j)%len(addrs)]
 				got := hexCache.Get(addr)
 				want := addr.String()

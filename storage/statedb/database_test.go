@@ -120,7 +120,7 @@ func TestCache(t *testing.T) {
 	memDB := database.NewMemoryDBManager()
 	db := NewDatabaseWithNewCache(memDB, &TrieNodeCacheConfig{CacheType: CacheTypeLocal, LocalCacheSizeMiB: 10})
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		key, value := common.MakeRandomBytes(256), common.MakeRandomBytes(63*1024) // fastcache can store entrie under 64KB
 		db.trieNodeCache.Set(key, value)
 		rValue, found := db.trieNodeCache.Has(key)

@@ -82,7 +82,7 @@ func TestNewListStream(t *testing.T) {
 	if size, err := ls.List(); size != 3 || err != nil {
 		t.Errorf("List() returned (%d, %v), expected (3, nil)", size, err)
 	}
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		if val, err := ls.Uint(); val != 1 || err != nil {
 			t.Errorf("Uint() returned (%d, %v), expected (1, nil)", val, err)
 		}
@@ -1236,7 +1236,7 @@ func BenchmarkDecodeU256Ints(b *testing.B) {
 
 func encodeTestSlice(n uint) []byte {
 	s := make([]uint, n)
-	for i := uint(0); i < n; i++ {
+	for i := range n {
 		s[i] = i
 	}
 	b, err := EncodeToBytes(s)

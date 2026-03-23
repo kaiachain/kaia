@@ -252,7 +252,7 @@ func verifyImportEvent(t *testing.T, imported chan *types.Block, arrive bool) {
 // verifyImportCount verifies that exactly count number of events arrive on an
 // import hook channel.
 func verifyImportCount(t *testing.T, imported chan *types.Block, count int) {
-	for i := 0; i < count; i++ {
+	for i := range count {
 		select {
 		case <-imported:
 		case <-time.After(time.Second):
@@ -360,7 +360,7 @@ func testOverlappingAnnouncements(t *testing.T, protocol int) {
 	// Iteratively announce blocks, but overlap them continuously
 	overlap := 16
 	imported := make(chan *types.Block, len(hashes)-1)
-	for i := 0; i < overlap; i++ {
+	for range overlap {
 		imported <- nil
 	}
 	tester.fetcher.importedHook = func(block *types.Block) { imported <- block }
@@ -718,7 +718,7 @@ func testHashMemoryExhaustionAttack(t *testing.T, protocol int) {
 	attackerBodyFetcher := tester.makeBodyFetcher("attacker", nil, 0)
 
 	// Feed the tester a huge hashset from the attacker, and a limited from the valid peer
-	for i := 0; i < len(attack); i++ {
+	for i := range attack {
 		if i < maxQueueDist {
 			tester.fetcher.Notify("valid", hashes[len(hashes)-2-i], uint64(i+1), time.Now(), validHeaderFetcher, validBodyFetcher)
 		}
@@ -773,7 +773,7 @@ func TestBlockMemoryExhaustionAttack(t *testing.T) {
 		t.Fatalf("queued block count mismatch: have %d, want %d", queued, blockLimit)
 	}
 	// Queue up a batch of valid blocks, and check that a new peer is allowed to do so
-	for i := 0; i < maxQueueDist-1; i++ {
+	for i := range maxQueueDist - 1 {
 		tester.fetcher.Enqueue("valid", blocks[hashes[len(hashes)-3-i]])
 	}
 	time.Sleep(100 * time.Millisecond)

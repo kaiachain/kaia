@@ -361,7 +361,7 @@ func (b *CNAPIBackend) BloomStatus() (uint64, uint64) {
 }
 
 func (b *CNAPIBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
-	for i := 0; i < bloomFilterThreads; i++ {
+	for range bloomFilterThreads {
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.cn.bloomRequests)
 	}
 }

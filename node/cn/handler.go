@@ -1682,7 +1682,7 @@ func samplingPeers(peers []Peer, pickSize int) []Peer {
 
 	picker := rand.New(rand.NewSource(time.Now().Unix()))
 	peerCount := len(peers)
-	for i := 0; i < peerCount; i++ {
+	for i := range peerCount {
 		randIndex := picker.Intn(peerCount)
 		peers[i], peers[randIndex] = peers[randIndex], peers[i]
 	}

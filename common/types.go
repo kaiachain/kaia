@@ -386,7 +386,7 @@ func (a Address) Hex() string {
 	hash := sha.Sum(nil)
 
 	result := []byte(unchecksummed)
-	for i := 0; i < len(result); i++ {
+	for i := range result {
 		hashByte := hash[i/2]
 		if i%2 == 0 {
 			hashByte = hashByte >> 4

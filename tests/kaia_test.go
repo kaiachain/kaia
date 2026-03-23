@@ -72,7 +72,7 @@ func makeTransactionsFrom(bcdata *BCData, accountMap *AccountMap, signer types.S
 	txs := make(types.Transactions, 0, numTransactions)
 	nonce := accountMap.GetNonce(from)
 
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		a := toAddrs[i%numAddrs]
 		txamount := amount
 		if txamount == nil {
@@ -110,7 +110,7 @@ func makeIndependentTransactions(bcdata *BCData, accountMap *AccountMap, signer 
 
 	txs := make(types.Transactions, 0, numTransactions)
 
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		idx := i % numAddrs
 
 		txamount := amount
@@ -151,7 +151,7 @@ func makeTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer typ
 
 	txs := make(types.Transactions, 0, numTransactions)
 
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		idx := i % numAddrs
 
 		txamount := amount
@@ -199,7 +199,7 @@ func makeNewTransactionsToRandom(bcdata *BCData, accountMap *AccountMap, signer 
 
 	txs := make(types.Transactions, 0, numTransactions)
 
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		idx := i % numAddrs
 
 		txamount := amount
@@ -265,7 +265,7 @@ func makeNewTransactionsToRing(bcdata *BCData, accountMap *AccountMap, signer ty
 	}
 	var gasLimit uint64 = 1000000
 	gasPrice := new(big.Int).SetInt64(0)
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		fromIdx := i % numAddrs
 
 		toIdx := (fromIdx + 1) % numAddrs

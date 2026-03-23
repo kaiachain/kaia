@@ -45,7 +45,7 @@ func calcBloomIndexes(b []byte) bloomIndexes {
 	b = crypto.Keccak256(b)
 
 	var idxs bloomIndexes
-	for i := 0; i < len(idxs); i++ {
+	for i := range len(idxs) {
 		idxs[i] = (uint(b[2*i])<<8)&2047 + uint(b[2*i+1])
 	}
 	return idxs

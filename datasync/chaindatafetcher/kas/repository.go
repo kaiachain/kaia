@@ -79,7 +79,7 @@ func NewRepository(config *KASConfig) (*repository, error) {
 		db  *gorm.DB
 		err error
 	)
-	for i := 0; i < maxDBRetryCount; i++ {
+	for range maxDBRetryCount {
 		db, err = gorm.Open("mysql", endpoint)
 		if err != nil {
 			logger.Warn("Retrying to connect DB", "endpoint", endpoint, "err", err)
@@ -128,14 +128,14 @@ func (r *repository) HandleChainEvent(event blockchain.ChainEvent, reqType types
 }
 
 func makeEOAListStr(eoaList map[common.Address]struct{}) string {
-	eoaStrList := ""
+	var eoaStrList strings.Builder
 	for key := range eoaList {
-		eoaStrList += "\""
-		eoaStrList += strings.ToLower(key.String())
-		eoaStrList += "\""
-		eoaStrList += ","
+		eoaStrList.WriteString("\"")
+		eoaStrList.WriteString(strings.ToLower(key.String()))
+		eoaStrList.WriteString("\"")
+		eoaStrList.WriteString(",")
 	}
-	return eoaStrList[:len(eoaStrList)-1]
+	return eoaStrList.String()[:len(eoaStrList.String())-1]
 }
 
 func makeBasicAuthWithParam(param string) string {
