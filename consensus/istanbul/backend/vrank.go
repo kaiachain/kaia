@@ -75,13 +75,13 @@ func (sb *backend) startPrepreparedRelay() {
 }
 
 func (sb *backend) stopPrepreparedRelay() {
-	if sb.prepreparedStopCh != nil {
-		close(sb.prepreparedStopCh)
-		sb.prepreparedStopCh = nil
-	}
 	if sb.prepreparedSub != nil {
 		sb.prepreparedSub.Unsubscribe()
 		sb.prepreparedSub = nil
+	}
+	if sb.prepreparedStopCh != nil {
+		close(sb.prepreparedStopCh)
+		sb.prepreparedStopCh = nil
 	}
 	sb.prepreparedWg.Wait()
 }
