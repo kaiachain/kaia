@@ -383,6 +383,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		istBackend, ok := cn.engine.(consensus.Istanbul)
 		if ok {
 			istBackend.SetChain(cn.blockchain)
+			istBackend.SignalPeerRegistrable()
 		}
 	} else {
 		// TODO-Kaia improve to handle drop transaction on network traffic in PN and EN

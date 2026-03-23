@@ -84,6 +84,7 @@ func New(opts *BackendOpts) consensus.Istanbul {
 		rewardbase:       opts.Rewardbase,
 		govModule:        opts.GovModule,
 		nodetype:         opts.NodeType,
+		chainInitCh:      make(chan struct{}),
 	}
 
 	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)})
@@ -137,6 +138,9 @@ type backend struct {
 
 	// Node type
 	nodetype common.ConnType
+
+	chainInitCh   chan struct{} // closed when engine is ready for peer registration
+	chainInitOnce sync.Once
 
 	isRestoringSnapshots atomic.Bool
 }
