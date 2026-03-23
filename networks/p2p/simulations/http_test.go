@@ -230,7 +230,7 @@ func (t *testService) Snapshot() ([]byte, error) {
 type TestAPI struct {
 	state     *atomic.Value
 	peerCount *int64
-	counter   int64
+	counter   atomic.Int64
 	feed      event.Feed
 }
 
@@ -239,11 +239,11 @@ func (t *TestAPI) PeerCount() int64 {
 }
 
 func (t *TestAPI) Get() int64 {
-	return atomic.LoadInt64(&t.counter)
+	return t.counter.Load()
 }
 
 func (t *TestAPI) Add(delta int64) {
-	atomic.AddInt64(&t.counter, delta)
+	t.counter.Add(delta)
 	t.feed.Send(delta)
 }
 

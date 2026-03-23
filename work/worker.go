@@ -201,8 +201,8 @@ type worker struct {
 	snapshotState    *state.StateDB
 
 	// atomic status counters
-	mining int32
-	atWork int32
+	mining atomic.Int32
+	atWork atomic.Int32
 
 	nodetype common.ConnType
 }
@@ -244,7 +244,7 @@ func (self *worker) setExtra(extra []byte) {
 }
 
 func (self *worker) pending() (*types.Block, types.Receipts, *state.StateDB) {
-	if atomic.LoadInt32(&self.mining) == 0 {
+	if self.mining.Load() == 0 {
 		// return a snapshot to avoid contention on currentMu mutex
 		self.snapshotMu.RLock()
 		defer self.snapshotMu.RUnlock()
@@ -262,7 +262,7 @@ func (self *worker) pending() (*types.Block, types.Receipts, *state.StateDB) {
 }
 
 func (self *worker) pendingBlock() *types.Block {
-	if atomic.LoadInt32(&self.mining) == 0 {
+	if self.mining.Load() == 0 {
 		// return a snapshot to avoid contention on currentMu mutex
 		self.snapshotMu.RLock()
 		defer self.snapshotMu.RUnlock()
@@ -281,7 +281,7 @@ func (self *worker) start() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
-	atomic.StoreInt32(&self.mining, 1)
+	self.mining.Store(1)
 
 	// istanbul BFT
 	if istanbul, ok := self.engine.(consensus.Istanbul); ok {
@@ -299,7 +299,7 @@ func (self *worker) stop() {
 
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	if atomic.LoadInt32(&self.mining) == 1 {
+	if self.mining.Load() == 1 {
 		for agent := range self.agents {
 			agent.Stop()
 		}
@@ -310,8 +310,8 @@ func (self *worker) stop() {
 		istanbul.Stop()
 	}
 
-	atomic.StoreInt32(&self.mining, 0)
-	atomic.StoreInt32(&self.atWork, 0)
+	self.mining.Store(0)
+	self.atWork.Store(0)
 }
 
 func (self *worker) register(agent Agent) {
@@ -335,7 +335,7 @@ func (self *worker) handleTxsCh(quitByErr chan bool) {
 		select {
 		// Handle NewTxsEvent
 		case <-self.txsCh:
-			if atomic.LoadInt32(&self.mining) != 0 {
+			if self.mining.Load() != 0 {
 				// If we're mining, but nothing is being processed, wake on new transactions
 				// Clique consensus removed - no longer needed
 			}
@@ -387,7 +387,7 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 	for {
 		mustCommitNewWork := true
 		for result := range self.recv {
-			atomic.AddInt32(&self.atWork, -1)
+			self.atWork.Add(-1)
 			ResultChGauge.Update(ResultChGauge.Value() - 1)
 			if result == nil {
 				continue
@@ -499,11 +499,11 @@ func (self *worker) wait(TxResendUseLegacy bool) {
 
 // push sends a new work task to currently live work agents.
 func (self *worker) push(work *Task) {
-	if atomic.LoadInt32(&self.mining) != 1 {
+	if self.mining.Load() != 1 {
 		return
 	}
 	for agent := range self.agents {
-		atomic.AddInt32(&self.atWork, 1)
+		self.atWork.Add(1)
 		if ch := agent.Work(); ch != nil {
 			ch <- work
 		}
@@ -644,7 +644,7 @@ func (self *worker) commitNewWork() {
 		finishedFinalize := time.Now()
 
 		// We only care about logging if we're actually mining.
-		if atomic.LoadInt32(&self.mining) == 1 {
+		if self.mining.Load() == 1 {
 			// Update the metrics subsystem with all the measurements
 			accountReadTimer.Update(work.state.AccountReads)
 			accountHashTimer.Update(work.state.AccountHashes)
@@ -751,9 +751,9 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	)
 
 	// Limit the execution time of all transactions in a block
-	var abort int32 = 0            // To break the below `CommitTransactionLoop` for loop when timed out
-	var isExecutingBundleTxs int32 // To wait for abort while the bundle is running
-	chDone := make(chan bool)      // To stop the goroutine below when processing txs is completed
+	var abort int32 = 0                   // To break the below `CommitTransactionLoop` for loop when timed out
+	var isExecutingBundleTxs atomic.Int32 // To wait for abort while the bundle is running
+	chDone := make(chan bool)             // To stop the goroutine below when processing txs is completed
 
 	// chEVM is used to notify the below goroutine of the running EVM so it can call evm.Cancel
 	// when timed out.  We use a buffered channel to prevent the main EVM execution routine
@@ -781,7 +781,7 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 			if timeout && evm != nil {
 				// Allow the first transaction to complete although it exceeds the time limit.
 				// Even in this case, the evm will not be canceled if the bundle is running.
-				if env.tcount > 0 && atomic.LoadInt32(&isExecutingBundleTxs) == 0 {
+				if env.tcount > 0 && isExecutingBundleTxs.Load() == 0 {
 					// The total time limit reached, thus we stop the currently running EVM.
 					evm.Cancel(vm.CancelByTotalTimeLimit)
 				} else if env.tcount == 0 && len(arrayTxs) > 0 {
@@ -889,7 +889,7 @@ CommitTransactionLoop:
 		//}
 		// Start executing the transaction
 		if len(targetBundle.BundleTxs) != 0 {
-			atomic.StoreInt32(&isExecutingBundleTxs, 1)
+			isExecutingBundleTxs.Store(1)
 			err, tx, logs = env.commitBundleTransaction(targetBundle, bc, nodeAddr, vmConfig)
 			if err != nil && tx != nil {
 				// override sender to error tx
@@ -948,7 +948,7 @@ CommitTransactionLoop:
 		}
 		if len(targetBundle.BundleTxs) != 0 {
 			// After the last tx in the bundle finishes, set executingBundleTxs back to 0.
-			atomic.StoreInt32(&isExecutingBundleTxs, 0)
+			isExecutingBundleTxs.Store(0)
 		}
 	}
 
