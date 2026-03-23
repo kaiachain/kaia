@@ -152,28 +152,34 @@ func TestBackend_ValidatePeerType(t *testing.T) {
 	}
 }
 
-// TestValidatePeerType_BlocksUntilSignal verifies that ValidatePeerType blocks
-// until SignalPeerRegistrable is called, and unblocks correctly afterward.
-func TestValidatePeerType_BlocksUntilSignal(t *testing.T) {
-	freshBackend := newTestBackend()
-	defer freshBackend.Stop()
+// startBlockedValidatePeer creates a test backend and starts a goroutine that
+// blocks on ValidatePeerType. Returns the backend and a channel that closes
+// when ValidatePeerType returns. Asserts that ValidatePeerType is still
+// blocking after 200ms.
+func startBlockedValidatePeer(t *testing.T) (*backend, chan struct{}) {
+	t.Helper()
+	b := newTestBackend()
 
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
 		defer func() { recover() }() // valsetModule is nil in test backend
-		freshBackend.ValidatePeerType(common.Address{})
+		b.ValidatePeerType(common.Address{})
 	}()
 
-	// Should block while chainInitCh is not closed
 	select {
 	case <-done:
-		t.Fatal("ValidatePeerType should block before SignalPeerRegistrable")
+		t.Fatal("ValidatePeerType should block before engine is ready")
 	case <-time.After(200 * time.Millisecond):
 	}
+	return b, done
+}
 
-	// Signal and verify unblock
-	freshBackend.SignalPeerRegistrable()
+func TestValidatePeerType_BlocksUntilSignal(t *testing.T) {
+	b, done := startBlockedValidatePeer(t)
+	defer b.Stop()
+
+	b.SignalPeerRegistrable()
 	select {
 	case <-done:
 	case <-time.After(2 * time.Second):
@@ -181,28 +187,11 @@ func TestValidatePeerType_BlocksUntilSignal(t *testing.T) {
 	}
 }
 
-// TestValidatePeerType_UnblocksOnStop verifies that Stop() unblocks
-// any goroutine waiting in ValidatePeerType.
 func TestValidatePeerType_UnblocksOnStop(t *testing.T) {
-	freshBackend := newTestBackend()
-	defer freshBackend.Stop()
+	b, done := startBlockedValidatePeer(t)
+	defer b.Stop()
 
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		defer func() { recover() }()
-		freshBackend.ValidatePeerType(common.Address{})
-	}()
-
-	// Should block
-	select {
-	case <-done:
-		t.Fatal("ValidatePeerType should block before Stop")
-	case <-time.After(200 * time.Millisecond):
-	}
-
-	// Stop should unblock
-	freshBackend.Stop()
+	b.Stop()
 	select {
 	case <-done:
 	case <-time.After(2 * time.Second):
