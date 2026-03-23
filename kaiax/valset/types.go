@@ -41,6 +41,7 @@ func (s State) ToUint8() uint8 {
 	return uint8(s)
 }
 
+// String returns the human-readable name of the state.
 func (s State) String() string {
 	switch s {
 	case Registered:
@@ -88,6 +89,7 @@ func ParseState(s string) (State, error) {
 	}
 }
 
+// UnmarshalJSON deserializes a JSON string into a State value.
 func (s *State) UnmarshalJSON(b []byte) error {
 	var str string
 	if err := json.Unmarshal(b, &str); err != nil {
@@ -101,10 +103,12 @@ func (s *State) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// MarshalJSON serializes the State as a JSON string.
 func (s State) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf("%q", s.String())), nil
 }
 
+// ValidatorState represents the current state and metadata of a validator node.
 type ValidatorState struct {
 	State         State     `json:"state"`
 	StakingAmount uint64    `json:"stakingAmount"` // in KAIA unit
@@ -112,6 +116,7 @@ type ValidatorState struct {
 	PausedTimeout time.Time `json:"pausedTimeout"`
 }
 
+// NodeStateMap maps validator addresses to their state. Used for permissionless state transitions.
 type NodeStateMap map[common.Address]*ValidatorState
 
 func (v NodeStateMap) String() string {
@@ -122,6 +127,7 @@ func (v NodeStateMap) String() string {
 	return string(b)
 }
 
+// Copy returns a deep copy of the NodeStateMap.
 func (v NodeStateMap) Copy() NodeStateMap {
 	if v == nil {
 		return nil
@@ -139,6 +145,8 @@ func (v NodeStateMap) Copy() NodeStateMap {
 	return cp
 }
 
+// EqualState returns true if both maps have the same addresses with matching State values.
+// Only compares State field, ignoring StakingAmount and timeouts.
 func (v NodeStateMap) EqualState(other NodeStateMap) bool {
 	if len(v) != len(other) {
 		return false
