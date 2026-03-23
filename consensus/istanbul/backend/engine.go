@@ -765,6 +765,9 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	sb.commitCh = make(chan *types.Result, 1)
 
 	// Ensure peers are unblocked even if Start() fails partway through.
+	// This defer is intentionally placed before SetChain: if Start() fails
+	// before SetChain, sb.chain remains nil, which is safely handled by
+	// the nil guard in ValidatePeerType.
 	defer sb.SignalPeerRegistrable()
 
 	sb.SetChain(chain)
