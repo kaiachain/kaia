@@ -711,9 +711,15 @@ func (sb *backend) SetChain(chain consensus.ChainReader) {
 	sb.chain = chain
 }
 
-// SignalPeerRegistrable unblocks ValidatePeerType.
-// For mining nodes, this is called automatically at the end of Start().
-// For non-mining nodes (WorkerDisable), the caller must invoke this after SetChain.
+// SignalPeerRegistrable unblocks ValidatePeerType so that peers can be registered.
+// It is safe to call multiple times; only the first call has effect (sync.Once).
+//
+// Call sites:
+//   - Mining nodes: called automatically via defer in Start(), after coreStarted=true.
+//     Also covers Start() failure paths to prevent goroutine leaks.
+//   - WorkerDisable nodes: caller must invoke this explicitly after SetChain(),
+//     since Start() is never called.
+//   - Stop(): called to unblock any peers waiting during shutdown.
 func (sb *backend) SignalPeerRegistrable() {
 	sb.chainInitOnce.Do(func() { close(sb.chainInitCh) })
 }

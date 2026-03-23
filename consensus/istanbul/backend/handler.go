@@ -24,6 +24,7 @@ package backend
 
 import (
 	"errors"
+	"time"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/common"
@@ -102,11 +103,16 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 }
 
 func (sb *backend) ValidatePeerType(addr common.Address) error {
-	// Wait for chain initialization instead of immediately rejecting peers.
+	// Wait for engine initialization instead of immediately rejecting peers.
 	// P2P server starts before engine.Start() sets sb.chain, so early peer
 	// connections would be rejected and must wait for the P2P retry interval
 	// (~30s) before reconnecting, delaying the first block consensus.
-	<-sb.chainInitCh
+	// Timeout is a safety net against goroutine leaks if signal is never sent.
+	select {
+	case <-sb.chainInitCh:
+	case <-time.After(30 * time.Second):
+		return errNoChainReader
+	}
 	valSet, err := sb.GetValidatorSet(sb.chain.CurrentHeader().Number.Uint64() + 1)
 	if err != nil {
 		return errInvalidPeerAddress
