@@ -758,6 +758,9 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	}
 	sb.commitCh = make(chan *types.Result, 1)
 
+	// Ensure peers are unblocked even if Start() fails partway through.
+	defer sb.SignalPeerRegistrable()
+
 	sb.SetChain(chain)
 	sb.currentBlock = currentBlock
 	sb.hasBadBlock = hasBadBlock
@@ -767,7 +770,6 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	}
 
 	sb.coreStarted = true
-	sb.SignalPeerRegistrable()
 	return nil
 }
 
@@ -775,6 +777,8 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 func (sb *backend) Stop() error {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
+	// Unblock any peers waiting in ValidatePeerType during shutdown.
+	sb.SignalPeerRegistrable()
 	if !sb.coreStarted {
 		return istanbul.ErrStoppedEngine
 	}

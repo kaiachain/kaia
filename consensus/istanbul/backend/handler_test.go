@@ -150,5 +150,61 @@ func TestBackend_ValidatePeerType(t *testing.T) {
 		err := backend.ValidatePeerType(common.Address{})
 		assert.Equal(t, errInvalidPeerAddress, err)
 	}
+}
 
+// TestValidatePeerType_BlocksUntilSignal verifies that ValidatePeerType blocks
+// until SignalPeerRegistrable is called, and unblocks correctly afterward.
+func TestValidatePeerType_BlocksUntilSignal(t *testing.T) {
+	freshBackend := newTestBackend()
+	defer freshBackend.Stop()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer func() { recover() }() // valsetModule is nil in test backend
+		freshBackend.ValidatePeerType(common.Address{})
+	}()
+
+	// Should block while chainInitCh is not closed
+	select {
+	case <-done:
+		t.Fatal("ValidatePeerType should block before SignalPeerRegistrable")
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	// Signal and verify unblock
+	freshBackend.SignalPeerRegistrable()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("ValidatePeerType should unblock after SignalPeerRegistrable")
+	}
+}
+
+// TestValidatePeerType_UnblocksOnStop verifies that Stop() unblocks
+// any goroutine waiting in ValidatePeerType.
+func TestValidatePeerType_UnblocksOnStop(t *testing.T) {
+	freshBackend := newTestBackend()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer func() { recover() }()
+		freshBackend.ValidatePeerType(common.Address{})
+	}()
+
+	// Should block
+	select {
+	case <-done:
+		t.Fatal("ValidatePeerType should block before Stop")
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	// Stop should unblock
+	freshBackend.Stop()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("ValidatePeerType should unblock after Stop")
+	}
 }
