@@ -592,7 +592,7 @@ func TestHandleStakingInfoRequestMsg(t *testing.T) {
 		mockBlockChain.EXPECT().GetHeaderByHash(gomock.Eq(hashes[1])).Return(&types.Header{Number: big.NewInt(5)}).Times(1) // not on staking interval
 
 		useGini, minStake := testChainConfig.Governance.Reward.UseGiniCoeff, testChainConfig.Governance.Reward.MinimumStake.Uint64()
-		expectedResult := staking.FromStakingInfoWithGini(si, useGini, minStake)
+		expectedResult := staking.FromStakingInfoWithGini(nil, si, useGini, minStake)
 		data, _ := rlp.EncodeToBytes(expectedResult)
 		expectedRlpList := []rlp.RawValue{data}
 		mockPeer.EXPECT().SendStakingInfoRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
@@ -643,8 +643,8 @@ func TestHandleStakingInfoRequestMsgAfterKaia(t *testing.T) {
 		mockBlockChain.EXPECT().GetHeaderByHash(gomock.Eq(hashes[1])).Return(&types.Header{Number: big.NewInt(6)}).Times(1) // should return StakingInfo(5)
 
 		useGini, minStake := testChainConfig.Governance.Reward.UseGiniCoeff, testChainConfig.Governance.Reward.MinimumStake.Uint64()
-		dataBeforeKaia, _ := rlp.EncodeToBytes(staking.FromStakingInfoWithGini(siBeforeKaia, useGini, minStake))
-		dataAfterKaia, _ := rlp.EncodeToBytes(staking.FromStakingInfoWithGini(siAfterKaia, useGini, minStake))
+		dataBeforeKaia, _ := rlp.EncodeToBytes(staking.FromStakingInfoWithGini(nil, siBeforeKaia, useGini, minStake))
+		dataAfterKaia, _ := rlp.EncodeToBytes(staking.FromStakingInfoWithGini(nil, siAfterKaia, useGini, minStake))
 		expectedRlpList := []rlp.RawValue{dataBeforeKaia, dataAfterKaia}
 		mockPeer.EXPECT().SendStakingInfoRLP(gomock.Eq(expectedRlpList)).Return(nil).Times(1)
 
@@ -708,7 +708,7 @@ func TestHandleStakingInfoMsg(t *testing.T) {
 			StakingAmounts:   []uint64{2, 5, 6},
 		}
 		stakingInfos := []*staking.P2PStakingInfo{
-			staking.FromStakingInfoWithGini(si, false, 5000000),
+			staking.FromStakingInfoWithGini(nil, si, false, 5000000),
 		}
 		mockDownloader.EXPECT().DeliverStakingInfos(gomock.Eq(nodeids[0].String()), gomock.Eq(stakingInfos)).Times(1).Return(expectedErr)
 

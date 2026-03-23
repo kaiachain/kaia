@@ -47,6 +47,7 @@ type ValsetModule interface {
 	GetProposer(num uint64, round uint64) (common.Address, error)
 
 	// Permissionless
+	GetCandidates(num uint64) ([]common.Address, error)
 	WriteStatesToContract(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 	InstallABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 }
