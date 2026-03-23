@@ -41,6 +41,8 @@ type StateBlockchainContractCaller struct {
 
 var _ bind.ContractCaller = (*StateBlockchainContractCaller)(nil)
 
+// NewStateBlockchainContractBackend creates a ContractCaller that reads from the given statedb directly.
+// Used when Chain.StateAt is unavailable (e.g., cold start or uncommitted state).
 func NewStateBlockchainContractBackend(bc BlockChainForCaller, state *state.StateDB) (*StateBlockchainContractCaller, error) {
 	if state == nil {
 		return nil, errors.New("statedb is nil")
