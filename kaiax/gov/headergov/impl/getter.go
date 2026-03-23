@@ -1,11 +1,11 @@
 package impl
 
 import (
+	"maps"
 	"slices"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
-	"golang.org/x/exp/maps" // TODO: use "maps"
 )
 
 func (h *headerGovModule) GetParamSet(blockNum uint64) gov.ParamSet {
@@ -29,7 +29,7 @@ func (h *headerGovModule) GetPartialParamSet(blockNum uint64) gov.PartialParamSe
 	prevEpochStart := PrevEpochStart(blockNum, h.epoch, h.isKoreHF(blockNum))
 	ret := make(gov.PartialParamSet)
 
-	blockNums := maps.Keys(h.governances)
+	blockNums := slices.Collect(maps.Keys(h.governances))
 	slices.Sort(blockNums)
 	for _, num := range blockNums {
 		if num > prevEpochStart {
@@ -53,7 +53,7 @@ func (h *headerGovModule) VoteBlockNums() []uint64 {
 
 	blockNums := []uint64{}
 	for _, votes := range h.groupedVotes {
-		blockNums = append(blockNums, maps.Keys(votes)...)
+		blockNums = append(blockNums, slices.Collect(maps.Keys(votes))...)
 	}
 
 	slices.Sort(blockNums)
@@ -64,7 +64,7 @@ func (h *headerGovModule) GovBlockNums() []uint64 {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	blockNums := maps.Keys(h.governances)
+	blockNums := slices.Collect(maps.Keys(h.governances))
 	slices.Sort(blockNums)
 	return blockNums
 }
