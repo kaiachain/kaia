@@ -61,6 +61,20 @@ func InstallAddressBookV2(state *state.StateDB, logicAddr common.Address) error 
 	return nil
 }
 
+// encodeSystemMessage creates a system transaction message for the given target and data.
+func encodeSystemMessage(rules params.Rules, to common.Address, data []byte) (common.Address, *types.Transaction, error) {
+	var (
+		from     = params.SystemAddress
+		gasLimit = params.UpperGasLimit
+	)
+	intrinsicGas, err := types.IntrinsicGas(data, nil, nil, false, rules)
+	if err != nil {
+		return common.Address{}, nil, err
+	}
+	msg := types.NewMessage(from, &to, 0, common.Big0, gasLimit, common.Big0, nil, nil, nil, data, false, intrinsicGas, nil, nil, nil, nil, nil)
+	return from, msg, nil
+}
+
 // EncodeInitializeABv2 encodes the initialize() call for AddressBookV2 proxy.
 // ABv2.initialize() takes no parameters — it reads all genesis data from ABv2DataContract via Registry.
 func EncodeInitializeABv2(rules params.Rules) (common.Address, *types.Transaction, error) {
@@ -68,19 +82,10 @@ func EncodeInitializeABv2(rules params.Rules) (common.Address, *types.Transactio
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	from := params.SystemAddress
-	gasLimit := params.UpperGasLimit
-	intrinsicGas, err := types.IntrinsicGas(data, nil, nil, false, rules)
-	if err != nil {
-		return common.Address{}, nil, err
-	}
-	var (
-		to  = AddressBookAddr
-		msg = types.NewMessage(from, &to, 0, common.Big0, gasLimit, common.Big0, nil, nil, nil, data, false, intrinsicGas, nil, nil, nil, nil, nil)
-	)
-	return from, msg, nil
+	return encodeSystemMessage(rules, AddressBookAddr, data)
 }
 
+// EncodeWriteNodes encodes the processSystemTransition call with the given validator state changes.
 func EncodeWriteNodes(
 	rules params.Rules,
 	validators valset.NodeStateMap,
@@ -119,35 +124,7 @@ func EncodeWriteNodes(
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	var (
-		from     = params.SystemAddress
-		gasLimit = params.UpperGasLimit
-		to       = AddressBookAddr
-	)
-	intrinsicGas, err := types.IntrinsicGas(data, nil, nil, false, rules)
-	if err != nil {
-		return common.Address{}, nil, err
-	}
-	msg := types.NewMessage(
-		from,         // from common.Address,
-		&to,          // to *common.Address,
-		0,            // nonce uint64,
-		common.Big0,  // amount *big.Int,
-		gasLimit,     // gasLimit uint64,
-		common.Big0,  // gasPrice *big.Int
-		nil,          // gasFeeCap *big.Int
-		nil,          // gasTipCap *big.Int
-		nil,          // blobGasFeeCap *big.Int
-		data,         // data []byte
-		false,        // checkNonce bool
-		intrinsicGas, // intrinsicGas uint64
-		nil,          // list AccessList
-		nil,          // chainId *big.Int
-		nil,          // blobHashes []common.Hash
-		nil,          // sidecar *BlobTxSidecar
-		nil,          // auth []SetCodeAuthorization
-	)
-	return from, msg, nil
+	return encodeSystemMessage(rules, AddressBookAddr, data)
 }
 
 // ReadABv2Timeouts reads pauseTimeout and idleTimeout durations from the AddressBookV2 contract.
@@ -186,6 +163,7 @@ func ReadABv2MaxCounts(
 	return valCount.Uint64(), candCount.Uint64(), nil
 }
 
+// ReadGetAllValidators reads all validator profiles and staking amounts from ABv2 via MultiCall.
 func ReadGetAllValidators(
 	statedb *state.StateDB,
 	chain backends.BlockChainForCaller,
