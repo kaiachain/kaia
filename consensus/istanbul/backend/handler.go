@@ -35,6 +35,10 @@ import (
 
 const (
 	IstanbulMsg = 0x11
+
+	// chainInitTimeout is the maximum time ValidatePeerType waits for the
+	// consensus engine to be ready before rejecting the peer connection.
+	chainInitTimeout = 30 * time.Second
 )
 
 var (
@@ -110,7 +114,10 @@ func (sb *backend) ValidatePeerType(addr common.Address) error {
 	// Timeout is a safety net against goroutine leaks if signal is never sent.
 	select {
 	case <-sb.chainInitCh:
-	case <-time.After(30 * time.Second):
+	case <-time.After(chainInitTimeout):
+		return errNoChainReader
+	}
+	if sb.chain == nil {
 		return errNoChainReader
 	}
 	valSet, err := sb.GetValidatorSet(sb.chain.CurrentHeader().Number.Uint64() + 1)

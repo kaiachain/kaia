@@ -185,6 +185,7 @@ func TestValidatePeerType_BlocksUntilSignal(t *testing.T) {
 // any goroutine waiting in ValidatePeerType.
 func TestValidatePeerType_UnblocksOnStop(t *testing.T) {
 	freshBackend := newTestBackend()
+	defer freshBackend.Stop()
 
 	done := make(chan struct{})
 	go func() {
