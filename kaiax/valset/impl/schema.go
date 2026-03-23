@@ -19,6 +19,7 @@ package impl
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"slices"
 	"sync"
 
@@ -32,7 +33,7 @@ var (
 	councilPrefix                    = []byte("council")
 	istanbulSnapshotKeyPrefix        = []byte("snapshot")
 
-	mu = &sync.RWMutex{}
+	voteNumMu = &sync.RWMutex{}
 )
 
 func councilKey(num uint64) []byte {
@@ -43,35 +44,43 @@ func istanbulSnapshotKey(hash common.Hash) []byte {
 	return append(istanbulSnapshotKeyPrefix, hash[:]...)
 }
 
-func ReadValidatorVoteBlockNums(db database.Database) []uint64 {
-	b, err := db.Get(validatorVoteBlockNums)
+func readVoteOrStateChangeBlockNums(db database.Database, key []byte) []uint64 {
+	b, err := db.Get(key)
 	if err != nil || len(b) == 0 {
 		return nil
 	}
 
 	var nums []uint64
 	if err := json.Unmarshal(b, &nums); err != nil {
-		logger.Error("Malformed valset vote block nums", "err", err)
+		logger.Error(fmt.Sprintf("Malformed %s block nums", string(key)), "err", err)
 		return nil
 	}
 	return nums
 }
 
-func writeValidatorVoteBlockNums(db database.Database, nums []uint64) {
+func ReadValidatorVoteBlockNums(db database.Database) []uint64 {
+	return readVoteOrStateChangeBlockNums(db, validatorVoteBlockNums)
+}
+
+func writeVoteOrStageChangeBlockNums(db database.Database, key []byte, nums []uint64) {
 	slices.Sort(nums)
 	b, err := json.Marshal(nums)
 	if err != nil {
-		logger.Crit("Failed to marshal valset vote block nums", "err", err)
+		logger.Crit(fmt.Sprintf("Failed to marshal %s block nums", string(key)), "err", err)
 	}
-	if err = db.Put(validatorVoteBlockNums, b); err != nil {
-		logger.Crit("Failed to write valset vote block nums", "err", err)
+	if err = db.Put(key, b); err != nil {
+		logger.Crit(fmt.Sprintf("Failed to write %s block nums", string(key)), "err", err)
 	}
+}
+
+func writeValidatorVoteBlockNums(db database.Database, nums []uint64) {
+	writeVoteOrStageChangeBlockNums(db, validatorVoteBlockNums, nums)
 }
 
 // insertValidatorVoteBlockNums inserts a new block num into the validator vote block nums.
 func insertValidatorVoteBlockNums(db database.Database, num uint64) {
-	mu.Lock()
-	defer mu.Unlock()
+	voteNumMu.Lock()
+	defer voteNumMu.Unlock()
 
 	nums := ReadValidatorVoteBlockNums(db)
 
@@ -86,8 +95,8 @@ func insertValidatorVoteBlockNums(db database.Database, num uint64) {
 
 // trimValidatorVoteBlockNums deletes all block nums greater than or equal to `since`.
 func trimValidatorVoteBlockNums(db database.Database, since uint64) {
-	mu.Lock()
-	defer mu.Unlock()
+	voteNumMu.Lock()
+	defer voteNumMu.Unlock()
 
 	nums := ReadValidatorVoteBlockNums(db)
 	if nums == nil {

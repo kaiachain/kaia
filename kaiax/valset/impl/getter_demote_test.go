@@ -186,7 +186,7 @@ func TestFilterValidators(t *testing.T) {
 			pset.GovernanceMode = "none"
 		}
 
-		demoted := getDemotedValidatorsIstanbul(council, si, pset)
+		demoted := getDemotedValidatorsIstanbul(&params.Rules{}, council, si, pset)
 		assert.Equal(t, tc.demoted, demoted.List(), tc.desc)
 	}
 }

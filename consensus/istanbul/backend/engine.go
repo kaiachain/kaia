@@ -48,7 +48,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/randao"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -107,10 +106,6 @@ var (
 	errUnexpectedExcessBlobGasBeforeOsaka = errors.New("unexpected excessBlobGas before osaka")
 	// errUnexpectedBlobGasUsedBeforeOsaka is returned if the blobGasUsed is present before the osaka fork.
 	errUnexpectedBlobGasUsedBeforeOsaka = errors.New("unexpected blobGasUsed before osaka")
-	// errUnexpectedVRankBeforePermissionless is returned if VRank exists before permissionless fork.
-	errUnexpectedVRankBeforePermissionless = errors.New("unexpected vrank before permissionless fork")
-	// errInvalidVRankFormat is returned if header.VRank is not a valid encoded report.
-	errInvalidVRankFormat = errors.New("invalid vrank format")
 )
 
 var (
@@ -316,18 +311,6 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 		}
 	}
 
-	// Ensure VRank field is only present after permissionless fork and has valid encoding.
-	permissionless := chain.Config().IsPermissionlessForkEnabled(header.Number)
-	if !permissionless {
-		if len(header.VRank) > 0 {
-			return errUnexpectedVRankBeforePermissionless
-		}
-	} else if len(header.VRank) > 0 {
-		if _, err := vrank.DecodeReport(header.VRank); err != nil {
-			return errInvalidVRankFormat
-		}
-	}
-
 	return sb.verifyCommittedSeals(chain, header, parents)
 }
 
@@ -517,6 +500,12 @@ func (sb *backend) Initialize(chain consensus.ChainReader, header *types.Header,
 		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
 		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
 	}
+
+	context := blockchain.NewEVMBlockContext(header, chain, nil)
+	vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
+	if err := sb.valsetModule.WriteStatesToContract(vmenv, header, state); err != nil {
+		logger.Error("Failed to process transition", "number", header.Number.Uint64(), "err", err.Error())
+	}
 }
 
 // Finalize runs any post-transaction state modifications (e.g. block rewards)
@@ -616,6 +605,16 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			state.CreateEOA(system.NonExistentAddress, false, accountkey.NewAccountKeyLegacy())
 			state.SetNonce(system.NonExistentAddress, prevNonce) // Preserve account counters across account type migration.
 			logger.Info("Restored Mainnet credit address to EOA", "blockNum", header.Number.Uint64())
+		}
+	}
+
+	// Install and initialize ABv2 at Finalize(HF-1).
+	// ABv2 state is included in block HF-1's state root, and used starting from Initialize(HF).
+	if chain.Config().IsPermissionlessForBlockParent(header.Number) {
+		context := blockchain.NewEVMBlockContext(header, chain, nil)
+		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
+		if err := sb.valsetModule.InstallABv2(vmenv, header, state); err != nil {
+			return nil, err
 		}
 	}
 
@@ -791,9 +790,7 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	sb.currentBlock = currentBlock
 	sb.hasBadBlock = hasBadBlock
 
-	sb.startPrepreparedRelay()
 	if err := sb.core.Start(); err != nil {
-		sb.stopPrepreparedRelay()
 		return err
 	}
 
@@ -810,7 +807,6 @@ func (sb *backend) Stop() error {
 	if !sb.coreStarted {
 		return istanbul.ErrStoppedEngine
 	}
-	sb.stopPrepreparedRelay()
 	if err := sb.core.Stop(); err != nil {
 		return err
 	}

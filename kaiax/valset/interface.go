@@ -17,6 +17,9 @@
 package valset
 
 import (
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
 )
@@ -28,9 +31,22 @@ type ValsetModule interface {
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
 
+	// NOTE: In permissioned, the entities are defined as below
+	// Council = {Demoted Validators} ∪ {Validators with Staking >= 5M}
+	// Committee = Council - {Demoted Validators}
+
+	// NOTE: In permissionless, the entities are defined as below
+	// Validator = ValActive + ValReady + ValPaused + ValExiting + ValInactive
+	// Council = ValActive + ValReady + ValPaused
+	// Committee = ValActive
+	// Candidate = CandTesting
+
 	GetCouncil(num uint64) ([]common.Address, error)
 	GetCommittee(num uint64, round uint64) ([]common.Address, error)
-	GetCandidates(num uint64) ([]common.Address, error)
 	GetDemotedValidators(num uint64) ([]common.Address, error)
 	GetProposer(num uint64, round uint64) (common.Address, error)
+
+	// Permissionless
+	WriteStatesToContract(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
+	InstallABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 }

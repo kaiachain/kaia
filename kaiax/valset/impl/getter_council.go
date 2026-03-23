@@ -26,6 +26,14 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
+func (v *ValsetModule) getCouncilPermissionless(num uint64) ([]common.Address, error) {
+	nodes, err := v.getOrComputeNodeStates(num, nil)
+	if err != nil {
+		return nil, err
+	}
+	return filterCouncilFromNodeStates(nodes), nil
+}
+
 func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
 	if num == 0 {
 		return v.getCouncilGenesis()
@@ -43,13 +51,16 @@ func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
 	}
 }
 
-// getCouncilGenesis parses the genesis council from the header's extraData.
-func (v *ValsetModule) getCouncilGenesis() (*valset.AddressSet, error) {
+func (v *ValsetModule) getIstanbul() (*types.IstanbulExtra, error) {
 	header := v.Chain.GetHeaderByNumber(0)
 	if header == nil {
 		return nil, errNoHeader
 	}
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	return types.ExtractIstanbulExtra(header)
+}
+
+func (v *ValsetModule) getCouncilGenesis() (*valset.AddressSet, error) {
+	istanbulExtra, err := v.getIstanbul()
 	if err != nil {
 		return nil, err
 	}
@@ -65,16 +76,17 @@ func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, bool, error
 	if nums == nil {
 		return nil, false, errNoVoteBlockNums
 	}
-
 	voteNum := lastNumLessThan(nums, num)
 	if voteNum < *pMinVoteNum {
 		// found voteNum is not one of the scanned vote nums, i.e. the migration is not yet complete.
 		// Return false to indicate that the data is not yet available.
 		return nil, false, nil
-	} else {
-		council := valset.NewAddressSet(ReadCouncil(v.ChainKv, voteNum))
-		return council, true, nil
 	}
+	addrs := ReadCouncil(v.ChainKv, voteNum)
+	if addrs == nil {
+		return nil, false, nil
+	}
+	return valset.NewAddressSet(addrs), true, nil
 }
 
 func (v *ValsetModule) readLowestScannedVoteNumCached() *uint64 {
@@ -105,6 +117,17 @@ func lastNumLessThan(nums []uint64, num uint64) uint64 {
 	// idx-1 is the largest index that is less than `num`.
 	idx := sort.Search(len(nums), func(i int) bool {
 		return nums[i] >= num
+	})
+	if idx > 0 {
+		return nums[idx-1]
+	} else {
+		return 0
+	}
+}
+
+func lastNumLessEqualThan(nums []uint64, num uint64) uint64 {
+	idx := sort.Search(len(nums), func(i int) bool {
+		return nums[i] > num
 	})
 	if idx > 0 {
 		return nums[idx-1]

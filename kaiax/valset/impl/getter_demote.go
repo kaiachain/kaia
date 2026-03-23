@@ -24,6 +24,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/params"
 )
 
 // getDemotedValidators returns the demoted validators at the given block number.
@@ -49,36 +50,39 @@ func (v *ValsetModule) getDemotedValidators(council *valset.AddressSet, num uint
 		if err != nil {
 			return nil, err
 		}
-		return getDemotedValidatorsIstanbul(council, si, pset), nil
+		return getDemotedValidatorsIstanbul(&rules, council, si, pset), nil
 	default:
 		return nil, errInvalidProposerPolicy
 	}
 }
 
-func getDemotedValidatorsIstanbul(council *valset.AddressSet, si *staking.StakingInfo, pset gov.ParamSet) *valset.AddressSet {
+func getDemotedValidatorsIstanbul(rules *params.Rules, council *valset.AddressSet, si *staking.StakingInfo, pset gov.ParamSet) *valset.AddressSet {
 	var (
-		demoted        = valset.NewAddressSet(nil)
 		singleMode     = pset.GovernanceMode == "single"
 		governingNode  = pset.GoverningNode
 		minStake       = pset.MinimumStake.Uint64() // in KAIA
-		stakingAmounts = collectStakingAmounts(council.List(), si)
+		stakingAmounts = collectStakingAmounts(rules, council.List(), si)
+		demoted        = demotedByStaking(council, stakingAmounts, minStake)
 	)
+	// Under single governance mode, governing node cannot be demoted before permissionless HF
+	if !rules.IsPermissionless {
+		if singleMode && demoted.Contains(governingNode) {
+			demoted.Remove(governingNode)
+		}
+	}
+	return demoted
+}
 
-	// First filter by staking amounts.
+func demotedByStaking(council *valset.AddressSet, stakingAmounts map[common.Address]float64, minStake uint64) *valset.AddressSet {
+	demoted := valset.NewAddressSet(nil)
 	for _, node := range council.List() {
 		if uint64(stakingAmounts[node]) < minStake {
 			demoted.Add(node)
 		}
 	}
-
 	// If all validators are demoted, then no one is demoted.
-	if demoted.Len() == len(council.List()) {
+	if demoted.Len() == council.Len() {
 		demoted = valset.NewAddressSet(nil)
-	}
-
-	// Under single governance mode, governing node cannot be demoted.
-	if singleMode && demoted.Contains(governingNode) {
-		demoted.Remove(governingNode)
 	}
 	return demoted
 }
@@ -102,8 +106,9 @@ func getDemotedValidatorsIstanbul(council *valset.AddressSet, si *staking.Stakin
 // Note: This function assumes that validator registration is controlled,
 // and that only one NodeId per reward address can be part of the validator set.
 // If this assumption changes, this logic may need to be revisited.
-func collectStakingAmounts(nodes []common.Address, si *staking.StakingInfo) map[common.Address]float64 {
-	cns := si.ConsolidatedNodes()
+
+func collectStakingAmounts(rules *params.Rules, nodes []common.Address, si *staking.StakingInfo) map[common.Address]float64 {
+	cns := si.ConsolidatedNodes(rules)
 	stakingAmounts := make(map[common.Address]float64, len(nodes))
 	for _, node := range nodes {
 		stakingAmounts[node] = 0

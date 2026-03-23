@@ -17,35 +17,37 @@
 package impl
 
 import (
+	"errors"
+	"math/big"
+
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
 // GetCouncil returns the whole validator list for validating the block `num`.
 func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return v.getCouncilPermissionless(num)
+	}
 	council, err := v.getCouncil(num)
 	if err != nil {
 		return nil, err
-	} else {
-		return council.List(), nil
 	}
+	return council.List(), nil
 }
 
-func (v *ValsetModule) GetCandidates(num uint64) ([]common.Address, error) {
-	// TODO-permless: implement me
-	return []common.Address{
-		common.HexToAddress("0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65"),
-		common.HexToAddress("0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc"),
-	}, nil
-}
-
-// GetDemotedValidators are subtract of qualified from council(N)
+// GetDemotedValidators returns the demoted validators at block `num`.
+// In permissionless: demoted = council - committee = ValReady + ValPaused
+// In permissioned: demoted = council members with staking < minimum
 func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error) {
-	council, err := v.getCouncil(num)
-	if err != nil {
-		return nil, err
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		m, err := v.GetNodeByState(num, []valset.State{valset.ValReady, valset.ValPaused})
+		if err != nil {
+			return nil, err
+		}
+		return m.Addresses(), nil
 	}
-	demoted, err := v.getDemotedValidators(council, num)
+	_, demoted, err := v.getCouncilAndDemoted(num)
 	if err != nil {
 		return nil, err
 	}
@@ -53,15 +55,31 @@ func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error
 }
 
 func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, error) {
-	council, err := v.getCouncil(num)
-	if err != nil {
-		return nil, err
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		// qualified = council - demoted = ValActive
+		m, err := v.GetNodeByState(num, []valset.State{valset.ValActive})
+		if err != nil {
+			return nil, err
+		}
+		return valset.NewAddressSet(m.Addresses()), nil
 	}
-	demoted, err := v.getDemotedValidators(council, num)
+	council, demoted, err := v.getCouncilAndDemoted(num)
 	if err != nil {
 		return nil, err
 	}
 	return council.Subtract(demoted), nil
+}
+
+func (v *ValsetModule) getCouncilAndDemoted(num uint64) (*valset.AddressSet, *valset.AddressSet, error) {
+	council, err := v.getCouncil(num)
+	if err != nil {
+		return nil, nil, err
+	}
+	demoted, err := v.getDemotedValidators(council, num)
+	if err != nil {
+		return nil, nil, err
+	}
+	return council, demoted, nil
 }
 
 // GetCommittee returns the current block's committee.
@@ -93,4 +111,39 @@ func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
 		return common.Address{}, err
 	}
 	return v.getProposer(c, round)
+}
+
+func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset.NodeStateMap, error) {
+	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return nil, errors.New("permissionless fork is not enabled")
+	}
+	nodes, err := v.getOrComputeNodeStates(num, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// empty states means return all
+	if len(states) == 0 {
+		return nodes.Copy(), nil
+	}
+
+	desiredStates := make(map[valset.State]struct{}, len(states))
+	for _, s := range states {
+		desiredStates[s] = struct{}{}
+	}
+	filtered := make(valset.NodeStateMap)
+	for addr, val := range nodes {
+		if _, ok := desiredStates[val.State]; ok {
+			filtered[addr] = val
+		}
+	}
+	return filtered.Copy(), nil
+}
+
+func (v *ValsetModule) GetCandidates(num uint64) ([]common.Address, error) {
+	candTestings, err := v.GetNodeByState(num, []valset.State{valset.CandTesting})
+	if err != nil {
+		return nil, err
+	}
+	return candTestings.Addresses(), nil
 }

@@ -542,6 +542,12 @@ web3._extend({
 			name: 'syncStakingInfoStatus',
 			call: 'admin_syncStakingInfoStatus',
 		}),
+		// TODO-Permissionless: Testing only. Remove before production release.
+		new web3._extend.Method({
+			name: 'setPermissionlessForkBlock',
+			call: 'admin_setPermissionlessForkBlock',
+			params: 1,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -950,6 +956,12 @@ var klayMethods = [
 		call: 'klay_getCouncilSize',
 		params: 1,
 		inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+	}),
+	new web3._extend.Method({
+		name: 'getNodeByState',
+		call: 'klay_getNodeByState',
+		params: 2,
+		inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, null]
 	}),
 	new web3._extend.Method({
 		name: 'getCommittee',
