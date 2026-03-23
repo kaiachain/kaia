@@ -113,6 +113,8 @@ func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
 	return v.getProposer(c, round)
 }
 
+// GetNodeByState returns validators filtered by the given states at block num.
+// If no states are provided, returns all nodes.
 func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset.NodeStateMap, error) {
 	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
 		return nil, errors.New("permissionless fork is not enabled")

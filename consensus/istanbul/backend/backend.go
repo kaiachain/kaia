@@ -435,6 +435,7 @@ func (sb *backend) GetValidatorSet(num uint64) (*istanbul.BlockValSet, error) {
 	return istanbul.NewBlockValSet(council, demoted), nil
 }
 
+// GetCandidates returns the candidate (CandTesting) addresses at block num.
 func (sb *backend) GetCandidates(num uint64) ([]common.Address, error) {
 	if sb.valsetModule == nil {
 		return nil, errors.New("valsetModule is nil")

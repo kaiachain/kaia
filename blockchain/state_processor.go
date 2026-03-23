@@ -141,6 +141,7 @@ func ProcessParentBlockHash(header *types.Header, vmenv *vm.EVM, statedb vm.Stat
 	return nil
 }
 
+// SystemTxCall executes a system transaction (e.g., state transition contract writes) within the EVM.
 func SystemTxCall(
 	msg *types.Transaction,
 	from common.Address,

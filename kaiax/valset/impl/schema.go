@@ -58,6 +58,7 @@ func readVoteOrStateChangeBlockNums(db database.Database, key []byte) []uint64 {
 	return nums
 }
 
+// ReadValidatorVoteBlockNums reads the sorted list of block numbers where validator votes occurred.
 func ReadValidatorVoteBlockNums(db database.Database) []uint64 {
 	return readVoteOrStateChangeBlockNums(db, validatorVoteBlockNums)
 }

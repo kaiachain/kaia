@@ -131,6 +131,7 @@ func (v *ValsetModule) isVrankEpoch(num uint64) bool {
 	return num%v.vrankEpoch == 0
 }
 
+// WriteStatesToContract computes state transitions and writes updated validator states to ABv2 contract.
 func (v *ValsetModule) WriteStatesToContract(
 	vmenv *vm.EVM,
 	header *types.Header,
@@ -206,6 +207,7 @@ func diffNodeStates(parent, current valset.NodeStateMap) valset.NodeStateMap {
 	return diff
 }
 
+// installAndInitializeABv2 deploys and initializes ABv2 at the hardfork block.
 func (v *ValsetModule) installAndInitializeABv2(
 	vmenv *vm.EVM,
 	header *types.Header,
@@ -246,6 +248,7 @@ func (v *ValsetModule) installAndInitializeABv2(
 	return nil
 }
 
+// prepareNodeWrite builds the ABI-encoded input for writing changed validator states to ABv2.
 func prepareNodeWrite(
 	config *params.ChainConfig,
 	num *big.Int,

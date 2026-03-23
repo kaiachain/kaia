@@ -26,6 +26,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
+// getCouncilPermissionless returns the council (ValActive + ValPaused + ValReady) at block num.
 func (v *ValsetModule) getCouncilPermissionless(num uint64) ([]common.Address, error) {
 	nodes, err := v.getOrComputeNodeStates(num, nil)
 	if err != nil {

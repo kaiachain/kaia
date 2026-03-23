@@ -178,6 +178,7 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 	)
 }
 
+// parsePermissionlessCallResult converts ABv2 multicall results into StakingInfo for permissionless mode.
 func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amounts []*big.Int, kefAddr, kifAddr, kpfAddr common.Address, clRes clRegistryResult) (*staking.StakingInfo, error) {
 	if len(profiles) == 0 {
 		return emptyStakingInfo(num), nil

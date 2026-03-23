@@ -103,6 +103,7 @@ type TotalSupplyResponse struct {
 	Kip160Burn *hexutil.Big `json:"kip160Burn"`
 }
 
+// ToResponse converts TotalSupply to a JSON-serializable response.
 func (ts *TotalSupply) ToResponse(num uint64, err error) *TotalSupplyResponse {
 	var pErrStr *string
 	if err != nil {

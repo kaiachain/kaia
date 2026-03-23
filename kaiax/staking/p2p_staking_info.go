@@ -59,6 +59,7 @@ func FromStakingInfo(si *StakingInfo) *P2PStakingInfo {
 	}
 }
 
+// FromStakingInfoWithGini creates P2PStakingInfo from StakingInfo with Gini coefficient applied.
 func FromStakingInfoWithGini(rules *params.Rules, si *StakingInfo, useGini bool, minStake uint64) *P2PStakingInfo {
 	return &P2PStakingInfo{
 		BlockNum:              si.SourceBlockNum,

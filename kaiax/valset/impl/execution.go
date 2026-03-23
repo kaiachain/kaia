@@ -23,6 +23,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 )
 
+// postInsertBlockPermissionless pre-computes and caches node states for the next block.
 func (v *ValsetModule) postInsertBlockPermissionless(block *types.Block) error {
 	num := block.Header().Number.Uint64()
 
