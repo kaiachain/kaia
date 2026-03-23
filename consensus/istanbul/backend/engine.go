@@ -728,6 +728,19 @@ func (sb *backend) SetChain(chain consensus.ChainReader) {
 	sb.chain = chain
 }
 
+// SignalPeerRegistrable unblocks ValidatePeerType so that peers can be registered.
+// It is safe to call multiple times; only the first call has effect (sync.Once).
+//
+// Call sites:
+//   - Mining nodes: called automatically via defer in Start(), after coreStarted=true.
+//     Also covers Start() failure paths to prevent goroutine leaks.
+//   - WorkerDisable nodes: caller must invoke this explicitly after SetChain(),
+//     since Start() is never called.
+//   - Stop(): called to unblock any peers waiting during shutdown.
+func (sb *backend) SignalPeerRegistrable() {
+	sb.chainInitOnce.Do(func() { close(sb.chainInitCh) })
+}
+
 // RegisterKaiaxModules sets kaiax modules of the Istanbul backend
 func (sb *backend) RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule, mRandao randao.RandaoModule) {
 	sb.govModule = mGov
@@ -768,6 +781,12 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	}
 	sb.commitCh = make(chan *types.Result, 1)
 
+	// Ensure peers are unblocked even if Start() fails partway through.
+	// This defer is intentionally placed before SetChain: if Start() fails
+	// before SetChain, sb.chain remains nil, which is safely handled by
+	// the nil guard in ValidatePeerType.
+	defer sb.SignalPeerRegistrable()
+
 	sb.SetChain(chain)
 	sb.currentBlock = currentBlock
 	sb.hasBadBlock = hasBadBlock
@@ -786,6 +805,8 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 func (sb *backend) Stop() error {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
+	// Unblock any peers waiting in ValidatePeerType during shutdown.
+	sb.SignalPeerRegistrable()
 	if !sb.coreStarted {
 		return istanbul.ErrStoppedEngine
 	}

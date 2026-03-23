@@ -144,9 +144,7 @@ func TestGetPartialParamSet_ConcurrentAccess(t *testing.T) {
 	)
 
 	// Writer goroutine continuously mutates h.governances under write lock.
-	wgWriter.Add(1)
-	go func() {
-		defer wgWriter.Done()
+	wgWriter.Go(func() {
 		var i uint64 = 1
 		for !stopSig.Load() {
 			h.AddGov(i*100, headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: i}))
@@ -155,19 +153,17 @@ func TestGetPartialParamSet_ConcurrentAccess(t *testing.T) {
 				i = 1
 			}
 		}
-	}()
+	})
 
 	// Reader goroutines continuously call GetPartialParamSet.
 	const readers = 8
 	for r := 0; r < readers; r++ {
-		wgReader.Add(1)
-		go func() {
-			defer wgReader.Done()
+		wgReader.Go(func() {
 			for i := 0; i < 5000; i++ {
 				ps := h.GetPartialParamSet(1000)
 				_ = ps[gov.GovernanceUnitPrice]
 			}
-		}()
+		})
 	}
 
 	wgReader.Wait()

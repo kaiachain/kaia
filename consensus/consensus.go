@@ -171,6 +171,12 @@ type Istanbul interface {
 	// SetChain sets chain of the Istanbul backend
 	SetChain(chain ChainReader)
 
+	// SignalPeerRegistrable unblocks ValidatePeerType so that peers can be registered.
+	// For mining nodes, Start() calls this automatically. For non-mining nodes
+	// (e.g., WorkerDisable), the caller must invoke this after SetChain().
+	// Safe to call multiple times.
+	SignalPeerRegistrable()
+
 	RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule, mRandao randao.RandaoModule)
 
 	kaiax.ConsensusModuleHost
