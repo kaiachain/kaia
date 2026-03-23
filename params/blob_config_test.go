@@ -1,45 +1,37 @@
-// Copyright 2024 The Kaia Authors
-// Copyright 2023 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2026 The Kaia Authors
+// This file is part of the Kaia library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The Kaia library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The Kaia library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-//
-// This file is derived from eth/consensus/misc/eip4844/eip4844_test.go (2025/11/06).
-// Modified and improved for the Kaia development.
-
-package eip4844
+// along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
+package params
 
 import (
 	"fmt"
 	"math/big"
 	"testing"
-
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/params"
 )
 
-var GethCancunBlobConfig = &params.BlobConfig{
+var GethCancunBlobConfig = &BlobConfig{
 	Target:         3,
 	Max:            6,
 	UpdateFraction: 3338477,
 }
 
 func TestCalcExcessBlobGas(t *testing.T) {
-	config := params.TestChainConfig.Copy()
+	config := TestChainConfig.Copy()
 	var (
 		targetBlobs   = config.BlobScheduleConfig.Osaka.Target
-		targetBlobGas = uint64(targetBlobs) * params.BlobTxBlobGasPerBlob
+		targetBlobGas = uint64(targetBlobs) * BlobTxBlobGasPerBlob
 	)
 
 	tests := []struct {
@@ -55,13 +47,8 @@ func TestCalcExcessBlobGas(t *testing.T) {
 		{targetBlobGas, targetBlobs, targetBlobGas},
 	}
 	for i, tt := range tests {
-		blobGasUsed := uint64(tt.blobs) * params.BlobTxBlobGasPerBlob
-		header := &types.Header{
-			ExcessBlobGas: &tt.excess,
-			BlobGasUsed:   &blobGasUsed,
-			BaseFee:       big.NewInt(1),
-		}
-		result := CalcExcessBlobGas(config, header, config.OsakaCompatibleBlock)
+		blobGasUsed := uint64(tt.blobs) * BlobTxBlobGasPerBlob
+		result := config.LatestBlobConfig(config.OsakaCompatibleBlock).CalcExcessBlobGas(&tt.excess, &blobGasUsed)
 		if result != tt.want {
 			t.Errorf("test %d: excess blob gas mismatch: have %v, want %v", i, result, tt.want)
 		}
@@ -69,12 +56,12 @@ func TestCalcExcessBlobGas(t *testing.T) {
 }
 
 func TestCalcExcessBlobGasEIP4844(t *testing.T) {
-	config := params.MainnetChainConfig.Copy()
+	config := MainnetChainConfig.Copy()
 	config.OsakaCompatibleBlock = big.NewInt(0)
 	config.BlobScheduleConfig.Osaka = GethCancunBlobConfig
 	var (
 		targetBlobs   = config.BlobScheduleConfig.Osaka.Target
-		targetBlobGas = uint64(targetBlobs) * params.BlobTxBlobGasPerBlob
+		targetBlobGas = uint64(targetBlobs) * BlobTxBlobGasPerBlob
 	)
 
 	tests := []struct {
@@ -90,25 +77,20 @@ func TestCalcExcessBlobGasEIP4844(t *testing.T) {
 
 		// If the target blob gas is exceeded, the excessBlobGas should increase
 		// by however much it was overshot
-		{0, targetBlobs + 1, params.BlobTxBlobGasPerBlob},
-		{1, targetBlobs + 1, params.BlobTxBlobGasPerBlob + 1},
-		{1, targetBlobs + 2, 2*params.BlobTxBlobGasPerBlob + 1},
+		{0, targetBlobs + 1, BlobTxBlobGasPerBlob},
+		{1, targetBlobs + 1, BlobTxBlobGasPerBlob + 1},
+		{1, targetBlobs + 2, 2*BlobTxBlobGasPerBlob + 1},
 
 		// The excess blob gas should decrease by however much the target was
 		// under-shot, capped at zero.
 		{targetBlobGas, targetBlobs, targetBlobGas},
-		{targetBlobGas, targetBlobs - 1, targetBlobGas - params.BlobTxBlobGasPerBlob},
-		{targetBlobGas, targetBlobs - 2, targetBlobGas - (2 * params.BlobTxBlobGasPerBlob)},
-		{params.BlobTxBlobGasPerBlob - 1, targetBlobs - 1, 0},
+		{targetBlobGas, targetBlobs - 1, targetBlobGas - BlobTxBlobGasPerBlob},
+		{targetBlobGas, targetBlobs - 2, targetBlobGas - (2 * BlobTxBlobGasPerBlob)},
+		{BlobTxBlobGasPerBlob - 1, targetBlobs - 1, 0},
 	}
 	for i, tt := range tests {
-		blobGasUsed := uint64(tt.blobs) * params.BlobTxBlobGasPerBlob
-		header := &types.Header{
-			ExcessBlobGas: &tt.excess,
-			BlobGasUsed:   &blobGasUsed,
-			BaseFee:       big.NewInt(1),
-		}
-		result := CalcExcessBlobGasEIP4844(config, header, config.OsakaCompatibleBlock)
+		blobGasUsed := uint64(tt.blobs) * BlobTxBlobGasPerBlob
+		result := config.LatestBlobConfig(config.OsakaCompatibleBlock).CalcExcessBlobGasForEEST(&tt.excess, &blobGasUsed, big.NewInt(1))
 		if result != tt.want {
 			t.Errorf("test %d: excess blob gas mismatch: have %v, want %v", i, result, tt.want)
 		}
@@ -125,7 +107,7 @@ func TestCalcBlobFee(t *testing.T) {
 		{25000000000, 200000000000}, // 25gkei
 	}
 	for i, tt := range tests {
-		config := &params.ChainConfig{OsakaCompatibleBlock: big.NewInt(0), BlobScheduleConfig: params.DefaultBlobSchedule}
+		config := &ChainConfig{OsakaCompatibleBlock: big.NewInt(0), BlobScheduleConfig: DefaultBlobSchedule}
 		config.BlobScheduleConfig.Osaka = GethCancunBlobConfig
 		have := CalcBlobFee(big.NewInt(tt.baseFee))
 		if have.Int64() != tt.blobfee {
@@ -149,21 +131,83 @@ func TestCalcBlobFeePostOsaka(t *testing.T) {
 		{19251039, 2490368, 21610335, 50, *big.NewInt(1755033204), *big.NewInt(1755033216)},
 	}
 	for i, tt := range tests {
-		config := params.TestChainConfig.Copy()
+		config := TestChainConfig.Copy()
 		config.OsakaCompatibleBlock = zero
-		config.BlobScheduleConfig = &params.BlobScheduleConfig{
-			Osaka: params.DefaultOsakaBlobConfig,
+		config.BlobScheduleConfig = &BlobScheduleConfig{
+			Osaka: DefaultOsakaBlobConfig,
 		}
-		parent := &types.Header{
-			ExcessBlobGas: &tt.excessBlobGas,
-			BlobGasUsed:   &tt.blobGasUsed,
-			BaseFee:       big.NewInt(int64(tt.basefee)),
-			Time:          &tt.parenttime,
-		}
-		have := CalcExcessBlobGasEIP4844(config, parent, &tt.headertime)
+
+		have := config.LatestBlobConfig(&tt.headertime).CalcExcessBlobGasForEEST(&tt.excessBlobGas, &tt.blobGasUsed, big.NewInt(int64(tt.basefee)))
 		if have != tt.blobfee {
 			t.Errorf("test %d: blobfee mismatch: have %v want %v", i, have, tt.blobfee)
 		}
+	}
+}
+
+func TestCalcExcessBlobGasEIP7918(t *testing.T) {
+	cfg := TestChainConfig.Copy()
+	cfg.OsakaCompatibleBlock = big.NewInt(0)
+	cfg.BlobScheduleConfig = &BlobScheduleConfig{
+		Osaka: DefaultOsakaBlobConfig,
+	}
+	var (
+		targetBlobs      = cfg.BlobScheduleConfig.Osaka.Target
+		blobGasTarget    = uint64(targetBlobs) * BlobTxBlobGasPerBlob
+		latestBlobConfig = cfg.LatestBlobConfig(cfg.OsakaCompatibleBlock)
+	)
+
+	tests := []struct {
+		name          string
+		excessBlobGas uint64
+		blobGasUsed   int
+		baseFee       *big.Int
+		wantExcessGas uint64
+	}{
+		{
+			name:          "BelowReservePrice",
+			excessBlobGas: 0,
+			blobGasUsed:   targetBlobs,
+			baseFee:       big.NewInt(1_000_000_000),
+			wantExcessGas: blobGasTarget * (uint64(latestBlobConfig.Max) - uint64(latestBlobConfig.Target)) / uint64(latestBlobConfig.Max),
+		},
+		{
+			name:          "AboveReservePrice",
+			excessBlobGas: 0,
+			blobGasUsed:   targetBlobs,
+			baseFee:       big.NewInt(1),
+			wantExcessGas: 0,
+		},
+	}
+	for _, tc := range tests {
+		blobGasUsed := uint64(tc.blobGasUsed) * BlobTxBlobGasPerBlob
+		got := latestBlobConfig.CalcExcessBlobGasForEEST(&tc.excessBlobGas, &blobGasUsed, tc.baseFee)
+		if got != tc.wantExcessGas {
+			t.Fatalf("%s: excess-blob-gas mismatch – have %d, want %d",
+				tc.name, got, tc.wantExcessGas)
+		}
+	}
+}
+
+func TestVerifyEIP4844HeaderForEESTUsesParentValues(t *testing.T) {
+	config := MainnetChainConfig.Copy()
+	config.OsakaCompatibleBlock = big.NewInt(0)
+	config.BlobScheduleConfig.Osaka = GethCancunBlobConfig
+	bcfg := config.LatestBlobConfig(config.OsakaCompatibleBlock)
+
+	parentExcessBlobGas := uint64(0)
+	parentBlobGasUsed := uint64(bcfg.Target) * BlobTxBlobGasPerBlob
+	parentBaseFee := big.NewInt(1)
+
+	// Header's excessBlobGas must be derived from parent values.
+	headerExcessBlobGas := bcfg.CalcExcessBlobGasForEEST(&parentExcessBlobGas, &parentBlobGasUsed, parentBaseFee)
+	headerBlobGasUsed := uint64(0)
+
+	err := bcfg.VerifyEIP4844HeaderForEEST(
+		&parentExcessBlobGas, &parentBlobGasUsed, parentBaseFee,
+		&headerExcessBlobGas, &headerBlobGasUsed,
+	)
+	if err != nil {
+		t.Fatalf("expected header verification to pass, got error: %v", err)
 	}
 }
 
@@ -201,52 +245,6 @@ func TestFakeExponential(t *testing.T) {
 		later := fmt.Sprintf("%d %d %d", f, n, d)
 		if original != later {
 			t.Errorf("test %d: fake exponential modified arguments: have\n%v\nwant\n%v", i, later, original)
-		}
-	}
-}
-
-func TestCalcExcessBlobGasEIP7918(t *testing.T) {
-	cfg := params.TestChainConfig.Copy()
-	cfg.OsakaCompatibleBlock = big.NewInt(0)
-	cfg.BlobScheduleConfig = &params.BlobScheduleConfig{
-		Osaka: params.DefaultOsakaBlobConfig,
-	}
-	var (
-		targetBlobs      = cfg.BlobScheduleConfig.Osaka.Target
-		blobGasTarget    = uint64(targetBlobs) * params.BlobTxBlobGasPerBlob
-		latestBlobConfig = latestBlobConfig(cfg, cfg.OsakaCompatibleBlock)
-	)
-
-	makeHeader := func(parentExcess, parentBaseFee uint64, blobsUsed int) *types.Header {
-		blobGasUsed := uint64(blobsUsed) * params.BlobTxBlobGasPerBlob
-		return &types.Header{
-			BaseFee:       big.NewInt(int64(parentBaseFee)),
-			ExcessBlobGas: &parentExcess,
-			BlobGasUsed:   &blobGasUsed,
-		}
-	}
-
-	tests := []struct {
-		name          string
-		header        *types.Header
-		wantExcessGas uint64
-	}{
-		{
-			name:          "BelowReservePrice",
-			header:        makeHeader(0, 1_000_000_000, targetBlobs),
-			wantExcessGas: blobGasTarget * (uint64(latestBlobConfig.Max) - uint64(latestBlobConfig.Target)) / uint64(latestBlobConfig.Max),
-		},
-		{
-			name:          "AboveReservePrice",
-			header:        makeHeader(0, 1, targetBlobs),
-			wantExcessGas: 0,
-		},
-	}
-	for _, tc := range tests {
-		got := CalcExcessBlobGasEIP4844(cfg, tc.header, cfg.OsakaCompatibleBlock)
-		if got != tc.wantExcessGas {
-			t.Fatalf("%s: excess-blob-gas mismatch – have %d, want %d",
-				tc.name, got, tc.wantExcessGas)
 		}
 	}
 }

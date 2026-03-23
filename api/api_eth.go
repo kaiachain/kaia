@@ -41,7 +41,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -1041,7 +1040,7 @@ func newEthTransactionReceipt(header *types.Header, tx *types.Transaction, b Bac
 	// After Osaka fork : return blob gas used and blob gas price when the tx is a blob transaction.
 	if tx.Type() == types.TxTypeEthereumBlob {
 		fields["blobGasUsed"] = hexutil.Uint64(tx.BlobGas())
-		fields["blobGasPrice"] = hexutil.Uint64(eip4844.CalcBlobFee(header.BaseFee).Uint64())
+		fields["blobGasPrice"] = hexutil.Uint64(params.CalcBlobFee(header.BaseFee).Uint64())
 	}
 
 	// Always use the "status" field and Ignore the "root" field.
@@ -1662,7 +1661,7 @@ func (api *EthAPI) GetBlobSidecars(ctx context.Context, number *rpc.BlockNumber,
 		return nil, err
 	}
 
-	results := make([]*map[string]interface{}, 0, eip4844.MaxBlobsPerBlock(api.kaiaBlockChainAPI.b.ChainConfig(), block.Number()))
+	results := make([]*map[string]interface{}, 0, api.kaiaBlockChainAPI.b.ChainConfig().LatestBlobConfigMax(block.Number()))
 	for txIndex, tx := range block.Transactions() {
 		if tx.Type() != types.TxTypeEthereumBlob {
 			continue
@@ -1728,5 +1727,5 @@ func (api *EthAPI) BlobBaseFee(ctx context.Context) (*hexutil.Big, error) {
 	if err != nil {
 		return nil, err
 	}
-	return (*hexutil.Big)(eip4844.CalcBlobFee(header.BaseFee)), nil
+	return (*hexutil.Big)(params.CalcBlobFee(header.BaseFee)), nil
 }

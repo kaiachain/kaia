@@ -31,7 +31,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/misc"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -287,7 +286,7 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 		Time:       time,
 	}
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
-		header.BaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), chain.Config().Governance.KIP71)
+		header.BaseFee = chain.Config().Governance.KIP71.NextMagmaBlockBaseFee(parent.Number(), parent.Header().BaseFee, parent.GasUsed())
 	}
 	return header
 }

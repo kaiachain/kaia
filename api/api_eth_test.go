@@ -27,7 +27,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
@@ -1288,7 +1287,7 @@ func checkEthTransactionReceiptFormat(t *testing.T, block *types.Block, receipts
 		if !ok {
 			t.Fatal("blobGasPrice is not defined in Ethereum transaction receipt format.")
 		}
-		assert.Equal(t, blobGasPrice, hexutil.Uint64(eip4844.CalcBlobFee(block.Header().BaseFee).Uint64()))
+		assert.Equal(t, blobGasPrice, hexutil.Uint64(params.CalcBlobFee(block.Header().BaseFee).Uint64()))
 	}
 
 	status, ok := ethReceipt["status"]
@@ -3753,8 +3752,8 @@ func TestEthAPI_FeeHistory(t *testing.T) {
 					(*hexutil.Big)(big.NewInt(30000000000)),
 				},
 				BlobBaseFee: []*hexutil.Big{
-					(*hexutil.Big)(eip4844.CalcBlobFee(big.NewInt(25000000000))),
-					(*hexutil.Big)(eip4844.CalcBlobFee(big.NewInt(30000000000))),
+					(*hexutil.Big)(params.CalcBlobFee(big.NewInt(25000000000))),
+					(*hexutil.Big)(params.CalcBlobFee(big.NewInt(30000000000))),
 				},
 				GasUsedRatio: []float64{0.5, 0.6},
 			},
@@ -3875,7 +3874,7 @@ func TestEthAPI_BlobBaseFee(t *testing.T) {
 					rpc.LatestBlockNumber,
 				).Return(header, nil)
 			},
-			expected: (*hexutil.Big)(eip4844.CalcBlobFee(big.NewInt(25000000000))),
+			expected: (*hexutil.Big)(params.CalcBlobFee(big.NewInt(25000000000))),
 		},
 		{
 			name: "success with zero baseFee",
@@ -3890,7 +3889,7 @@ func TestEthAPI_BlobBaseFee(t *testing.T) {
 					rpc.LatestBlockNumber,
 				).Return(header, nil)
 			},
-			expected: (*hexutil.Big)(eip4844.CalcBlobFee(big.NewInt(0))),
+			expected: (*hexutil.Big)(params.CalcBlobFee(big.NewInt(0))),
 		},
 		{
 			name: "error when HeaderByNumber fails",

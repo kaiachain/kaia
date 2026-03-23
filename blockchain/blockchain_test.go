@@ -46,7 +46,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -2600,7 +2599,7 @@ func TestBlobTx(t *testing.T) {
 	}
 
 	// Calculate blob gas cost
-	blobBaseFee := eip4844.CalcBlobFee(block.Header().BaseFee)
+	blobBaseFee := params.CalcBlobFee(block.Header().BaseFee)
 	blobGasCost := new(big.Int).Mul(new(big.Int).SetUint64(blobGas), blobBaseFee)
 
 	// Get the sender's final balance

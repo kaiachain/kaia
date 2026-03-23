@@ -40,7 +40,6 @@ import (
 	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
@@ -174,14 +173,11 @@ func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 	evm.Context.GasLimit = e.gasLimit
 	if evm.ChainConfig().IsOsakaForkEnabled(evm.Context.BlockNumber) {
 		// If the parent header has excess blob gas, calculate the excess blob gas for the current block.
+		bcfg := evm.ChainConfig().LatestBlobConfig(evm.Context.BlockNumber)
 		if e.parentHeader.ExcessBlobGas != nil {
-			e.excessBlobGas = eip4844.CalcExcessBlobGasEIP4844(evm.ChainConfig(), e.parentHeader, evm.Context.BlockNumber)
+			e.excessBlobGas = bcfg.CalcExcessBlobGasForEEST(e.parentHeader.ExcessBlobGas, e.parentHeader.BlobGasUsed, e.parentHeader.BaseFee)
 		}
-		header := &types.Header{
-			Number:        new(big.Int).Set(evm.Context.BlockNumber),
-			ExcessBlobGas: &e.excessBlobGas,
-		}
-		evm.Context.BlobBaseFee = eip4844.CalcBlobFeeEIP4844(evm.ChainConfig(), header)
+		evm.Context.BlobBaseFee = bcfg.BlobBaseFeeEIP4844(e.excessBlobGas)
 	}
 
 	if evm.ChainConfig().Rules(evm.Context.BlockNumber).IsCancun {
@@ -249,7 +245,16 @@ func (e *eestEngine) VerifyHeader(chain consensus.ChainReader, header *types.Hea
 			return errors.New("unexpected blobGasUsed before osaka")
 		}
 	} else {
-		if err := eip4844.VerifyEIP4844HeaderForEEST(chain.Config(), parent, header); err != nil {
+		if header.Number.Uint64() != parent.Number.Uint64()+1 {
+			panic("bad header pair")
+		}
+
+		bcfg := chain.Config().LatestBlobConfig(header.Number)
+		if bcfg == nil {
+			panic("called before EIP-4844 is active")
+		}
+
+		if err := bcfg.VerifyEIP4844HeaderForEEST(parent.ExcessBlobGas, parent.BlobGasUsed, parent.BaseFee, header.ExcessBlobGas, header.BlobGasUsed); err != nil {
 			return err
 		}
 	}

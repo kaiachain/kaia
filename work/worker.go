@@ -38,8 +38,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
-	"github.com/kaiachain/kaia/consensus/misc"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -395,7 +393,7 @@ func (self *worker) commitNewWork() {
 		// NOTE-Kaia NextBlockBaseFee needs the header of parent, self.chain.CurrentBlock
 		// So above code, TxPool().Pending(), is separated with this and can be refactored later.
 		pset := self.govModule.GetParamSet(nextBlockNum.Uint64())
-		nextBaseFee = misc.NextMagmaBlockBaseFee(parent.Header(), pset.ToKip71Config())
+		nextBaseFee = pset.ToKip71Config().NextMagmaBlockBaseFee(parent.Number(), parent.Header().BaseFee, parent.GasUsed())
 		pending = types.FilterTransactionWithBaseFee(pending, nextBaseFee)
 	}
 
@@ -421,7 +419,12 @@ func (self *worker) commitNewWork() {
 		// - ExcessBlobGas = max(0, parent.excessBlobGas + parent.blobGasUsed - TARGET_BLOB_GAS_PER_BLOCK)
 		var excessBlobGas uint64
 		if self.config.IsOsakaForkEnabled(parent.Number()) {
-			excessBlobGas = eip4844.CalcExcessBlobGas(self.config, parent.Header(), header.Number)
+			bcfg := self.config.LatestBlobConfig(header.Number)
+			if bcfg == nil {
+				excessBlobGas = 0
+			} else {
+				excessBlobGas = bcfg.CalcExcessBlobGas(parent.ExcessBlobGas(), parent.BlobGasUsed())
+			}
 		}
 		header.BlobGasUsed = new(uint64)
 		header.ExcessBlobGas = &excessBlobGas
@@ -1049,7 +1052,7 @@ func (env *Task) hasBlobSpace(tx *types.Transaction, bundle *builder.Bundle, nod
 		}
 	}
 
-	left := eip4844.MaxBlobsPerBlock(env.config, env.header.Number) - env.blobs
+	left := env.config.LatestBlobConfigMax(env.header.Number) - env.blobs
 	if left < blobsWillBeExecuted {
 		logger.Trace("Not enough blob space left for transaction", "hash", tx.Hash(), "left", left, "needed", len(tx.BlobHashes()))
 		return false

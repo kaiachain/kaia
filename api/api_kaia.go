@@ -29,8 +29,8 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/networks/rpc"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -102,7 +102,7 @@ func (s *KaiaAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastB
 		results.BlobBaseFee = make([]*hexutil.Big, len(baseFee))
 		for i, v := range baseFee {
 			results.BaseFee[i] = (*hexutil.Big)(v)
-			results.BlobBaseFee[i] = (*hexutil.Big)(eip4844.CalcBlobFee(v))
+			results.BlobBaseFee[i] = (*hexutil.Big)(params.CalcBlobFee(v))
 		}
 	}
 	return results, nil
