@@ -25,6 +25,7 @@ package backend
 import (
 	"errors"
 	"slices"
+	"time"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/common"
@@ -35,6 +36,10 @@ import (
 
 const (
 	IstanbulMsg = 0x11
+
+	// chainInitTimeout is the maximum time ValidatePeerType waits for the
+	// consensus engine to be ready before rejecting the peer connection.
+	chainInitTimeout = 30 * time.Second
 )
 
 var (
@@ -103,8 +108,17 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 }
 
 func (sb *backend) ValidatePeerType(addr common.Address) error {
-	// istanbul.Start vs try to connect by peer
-	for sb.chain == nil {
+	// Wait for engine initialization instead of immediately rejecting peers.
+	// P2P server starts before engine.Start() sets sb.chain, so early peer
+	// connections would be rejected and must wait for the P2P retry interval
+	// (~30s) before reconnecting, delaying the first block consensus.
+	// Timeout is a safety net against goroutine leaks if signal is never sent.
+	select {
+	case <-sb.chainInitCh:
+	case <-time.After(chainInitTimeout):
+		return errNoChainReader
+	}
+	if sb.chain == nil {
 		return errNoChainReader
 	}
 	num := sb.chain.CurrentHeader().Number.Uint64() + 1

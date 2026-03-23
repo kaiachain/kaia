@@ -46,7 +46,12 @@ jobs:
           fetch-depth: 0 # Fetches full history
       - name: Add safe directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
+      # Will override the base image's Go setup. Introduced to cache the builds.
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.3' # The same version as the base image.
+          cache: true
       - name: setup python 3.9
         if: ${{ inputs.install_python == true }}
         uses: actions/setup-python@v5
