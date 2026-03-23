@@ -711,6 +711,13 @@ func (sb *backend) SetChain(chain consensus.ChainReader) {
 	sb.chain = chain
 }
 
+// SignalPeerRegistrable unblocks ValidatePeerType.
+// For mining nodes, this is called automatically at the end of Start().
+// For non-mining nodes (WorkerDisable), the caller must invoke this after SetChain.
+func (sb *backend) SignalPeerRegistrable() {
+	sb.chainInitOnce.Do(func() { close(sb.chainInitCh) })
+}
+
 // RegisterKaiaxModules sets kaiax modules of the Istanbul backend
 func (sb *backend) RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule, mRandao randao.RandaoModule) {
 	sb.govModule = mGov
@@ -760,6 +767,7 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	}
 
 	sb.coreStarted = true
+	sb.SignalPeerRegistrable()
 	return nil
 }
 

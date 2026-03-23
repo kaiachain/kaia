@@ -102,10 +102,11 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 }
 
 func (sb *backend) ValidatePeerType(addr common.Address) error {
-	// istanbul.Start vs try to connect by peer
-	for sb.chain == nil {
-		return errNoChainReader
-	}
+	// Wait for chain initialization instead of immediately rejecting peers.
+	// P2P server starts before engine.Start() sets sb.chain, so early peer
+	// connections would be rejected and must wait for the P2P retry interval
+	// (~30s) before reconnecting, delaying the first block consensus.
+	<-sb.chainInitCh
 	valSet, err := sb.GetValidatorSet(sb.chain.CurrentHeader().Number.Uint64() + 1)
 	if err != nil {
 		return errInvalidPeerAddress

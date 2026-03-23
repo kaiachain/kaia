@@ -151,10 +151,4 @@ func TestBackend_ValidatePeerType(t *testing.T) {
 		assert.Equal(t, errInvalidPeerAddress, err)
 	}
 
-	// Return an error if backend.chain is not set
-	{
-		backend.chain = nil
-		err := backend.ValidatePeerType(backend.address)
-		assert.Equal(t, errNoChainReader, err)
-	}
 }
