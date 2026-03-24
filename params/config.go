@@ -255,9 +255,10 @@ var (
 		Osaka: DefaultOsakaBlobConfig,
 	}
 	// DefaultRegistryConfig is the default registry config for the Randao fork.
+	// NOTE: KIP113 address must match system.Kip113LogicAddrMock in blockchain/system/constant.go.
 	DefaultRegistryConfig = &RegistryConfig{
 		Records: map[string]common.Address{
-			"KIP113": common.HexToAddress("0x0000000000000000000000000000000000000403"),
+			"KIP113": common.HexToAddress("0x0000000000000000000000000000000000000404"),
 		},
 		Owner: common.HexToAddress("0x0000000000000000000000000000000000000000"),
 	}

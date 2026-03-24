@@ -21,7 +21,7 @@ Go binding generation for permissionless contracts.
 Uses abigenw from contracts/ directory. OZ v5 imports are resolved from this directory's node_modules.
 
 	cd contracts_permissionless
-	solc-select install 0.8.25
+	solc-select install 0.8.19 0.8.25
 	go generate
 */
 
@@ -32,5 +32,5 @@ Uses abigenw from contracts/ directory. OZ v5 imports are resolved from this dir
 //go:generate ../contracts/abigenw --pkg publicdelegation --sol ./contracts/PublicDelegation/PublicDelegation.sol --out ./contracts/PublicDelegation/PublicDelegation.go --ver 0.8.25
 //go:generate ../contracts/abigenw --pkg proxy --sol ./contracts/Proxy/ERC1967Proxy.sol --out ./contracts/Proxy/Proxy.go --ver 0.8.25
 //go:generate ../contracts/abigenw --pkg beacon --sol ./contracts/Proxy/UpgradeableBeacon.sol --out ./contracts/Proxy/beacon/UpgradeableBeacon.go --ver 0.8.25
-//go:generate ../contracts/abigenw --pkg multicall --sol ./contracts/multicall/MultiCallContract.sol --out ./contracts/multicall/MultiCallContract.go --ver 0.8.25
+//go:generate ../contracts/abigenw --pkg multicall --sol ./contracts/multicall/MultiCallContract.sol --out ./contracts/multicall/MultiCallContract.go --ver 0.8.19
 //go:generate ../contracts/abigenw --pkg testing --sol ./contracts/testing/MultiCallContractMock.sol --out ./contracts/testing/MultiCallContractMock.go --ver 0.8.19
