@@ -111,14 +111,15 @@ func (v *ValsetModule) applyAllTransitions(
 		logger.Error("Failed to read ABv2 timeouts, using defaults", "number", num, "err", err)
 		pauseTimeout, idleTimeout = DefaultValPausedTimeout, DefaultValIdleTimeout
 	}
-	newValidators = v.getTimeoutTransition(newValidators, pauseTimeout, idleTimeout)
+	blockTime := time.Unix(header.Time.Int64(), 0)
+	newValidators = v.getTimeoutTransition(newValidators, pauseTimeout, idleTimeout, blockTime)
 
 	maxValCount, _, err := system.ReadABv2MaxCounts(backend, header.Number)
 	if err != nil {
 		logger.Error("Failed to read ABv2 max counts, using defaults", "number", num, "err", err)
 		maxValCount = DefaultActiveValidatorCount
 	}
-	newValidators = v.getEpochTransition(num, newValidators, idleTimeout, int(maxValCount))
+	newValidators = v.getEpochTransition(num, newValidators, idleTimeout, int(maxValCount), blockTime)
 	return newValidators, nil
 }
 

@@ -37,6 +37,7 @@ func (v *ValsetModule) getEpochTransition(
 	validators valset.NodeStateMap,
 	idleTimeout time.Duration,
 	maxValidatorCount int,
+	now time.Time,
 ) valset.NodeStateMap {
 	devLog := func(vals valset.NodeStateMap) {
 		for addr, val := range vals {
@@ -49,7 +50,6 @@ func (v *ValsetModule) getEpochTransition(
 		return validators.Copy()
 	}
 	var (
-		now                  = time.Now()
 		newValidators        = validators.Copy()
 		activeValCompetitors []sortableValidator
 		pset                 = v.GovModule.GetParamSet(num - 1) // read gov param from parent number
@@ -110,9 +110,8 @@ func (v *ValsetModule) getEpochTransition(
 // For nodes newly entering ValReady/ValInactive or ValPaused (timeout not yet set),
 // it sets the timeout. If from state was already ValReady/ValInactive/ValPaused,
 // the existing timeout is preserved.
-func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, pauseTimeout, idleTimeout time.Duration) valset.NodeStateMap {
+func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, pauseTimeout, idleTimeout time.Duration, now time.Time) valset.NodeStateMap {
 	newValidators := validators.Copy()
-	now := time.Now()
 	for _, val := range newValidators {
 		switch val.State {
 		case valset.ValReady, valset.ValInactive:

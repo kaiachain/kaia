@@ -57,11 +57,13 @@ const (
 	testMaxValCount = 50
 
 	highStake = uint64(30_000_000)
-	midStake  = uint64(20_000_000)
-	lowStake  = uint64(10_000_000)
 )
 
 var (
+	testBlockTime = time.Unix(1700000000, 0) // fixed block timestamp for deterministic tests
+	midStake      = uint64(20_000_000)
+	lowStake      = uint64(10_000_000)
+
 	testIdleTimeout    = 24 * time.Hour
 	testPauseTimeout   = 8 * time.Hour
 	defaultIdleTimeout = 30 * 24 * time.Hour
@@ -112,7 +114,7 @@ func TestGetEpochTransition_StateTransitions(t *testing.T) {
 			validators := valset.NodeStateMap{
 				addr1: {State: tc.inputState, StakingAmount: tc.stakingAmount},
 			}
-			result := v.getEpochTransition(testEpochNum, validators, testIdleTimeout, testMaxValCount)
+			result := v.getEpochTransition(testEpochNum, validators, testIdleTimeout, testMaxValCount, testBlockTime)
 			assert.Equal(t, tc.expectedState, result[addr1].State)
 			if tc.expectTimeout {
 				assert.False(t, result[addr1].IdleTimeout.IsZero())
@@ -128,7 +130,7 @@ func TestGetEpochTransition_NonEpoch(t *testing.T) {
 	validators := valset.NodeStateMap{
 		addr1: {State: valset.ValActive, StakingAmount: aboveMinStake},
 	}
-	result := v.getEpochTransition(testNonEpochNum, validators, testIdleTimeout, testMaxValCount)
+	result := v.getEpochTransition(testNonEpochNum, validators, testIdleTimeout, testMaxValCount, testBlockTime)
 	assert.Equal(t, valset.ValActive, result[addr1].State)
 }
 
@@ -141,7 +143,7 @@ func TestGetEpochTransition_MaxValidatorCount(t *testing.T) {
 		addr2: {State: valset.ValActive, StakingAmount: midStake},
 		addr3: {State: valset.ValActive, StakingAmount: lowStake},
 	}
-	result := v.getEpochTransition(testEpochNum, validators, testIdleTimeout, 2)
+	result := v.getEpochTransition(testEpochNum, validators, testIdleTimeout, 2, testBlockTime)
 	assert.Equal(t, valset.ValActive, result[addr1].State)
 	assert.Equal(t, valset.ValActive, result[addr2].State)
 	assert.Equal(t, valset.ValInactive, result[addr3].State)
@@ -158,7 +160,7 @@ func TestGetEpochTransition_TieBreakingByAddress(t *testing.T) {
 		addr2: {State: valset.ValActive, StakingAmount: lowStake},
 		addr3: {State: valset.ValActive, StakingAmount: lowStake},
 	}
-	result := v.getEpochTransition(testEpochNum, validators, testIdleTimeout, 2)
+	result := v.getEpochTransition(testEpochNum, validators, testIdleTimeout, 2, testBlockTime)
 
 	// addr1 (0x0001) < addr2 (0x0002) < addr3 (0x0003)
 	assert.Equal(t, valset.ValActive, result[addr1].State)
@@ -173,7 +175,7 @@ func TestGetEpochTransition_DoesNotMutateInput(t *testing.T) {
 	validators := valset.NodeStateMap{
 		addr1: {State: valset.ValExiting, StakingAmount: aboveMinStake},
 	}
-	result := v.getEpochTransition(testEpochNum, validators, testIdleTimeout, testMaxValCount)
+	result := v.getEpochTransition(testEpochNum, validators, testIdleTimeout, testMaxValCount, testBlockTime)
 	assert.Equal(t, valset.ValInactive, result[addr1].State)    // result is transitioned
 	assert.Equal(t, valset.ValExiting, validators[addr1].State) // original is unchanged
 }
@@ -183,8 +185,8 @@ func TestGetEpochTransition_DoesNotMutateInput(t *testing.T) {
 // ============================================================
 
 func TestGetTimeoutTransition(t *testing.T) {
-	expiredTimeout := time.Now().Add(-1 * time.Hour)
-	futureTimeout := time.Now().Add(10 * 24 * time.Hour)
+	expiredTimeout := testBlockTime.Add(-1 * time.Hour)
+	futureTimeout := testBlockTime.Add(10 * 24 * time.Hour)
 
 	testcases := []struct {
 		name                string
@@ -246,7 +248,7 @@ func TestGetTimeoutTransition(t *testing.T) {
 			v := newTestValsetModule(ctrl)
 
 			validators := valset.NodeStateMap{addr1: tc.input}
-			result := v.getTimeoutTransition(validators, testPauseTimeout, defaultIdleTimeout)
+			result := v.getTimeoutTransition(validators, testPauseTimeout, defaultIdleTimeout, testBlockTime)
 			r := result[addr1]
 
 			assert.Equal(t, tc.expectedState, r.State)
@@ -271,7 +273,7 @@ func TestGetTimeoutTransition_DefaultClearsAllTimeouts(t *testing.T) {
 		addr4: {State: valset.CandTesting, IdleTimeout: now, PausedTimeout: now},
 		addr5: {State: valset.ValExiting, IdleTimeout: now, PausedTimeout: now},
 	}
-	result := v.getTimeoutTransition(validators, testPauseTimeout, defaultIdleTimeout)
+	result := v.getTimeoutTransition(validators, testPauseTimeout, defaultIdleTimeout, testBlockTime)
 	for addr, r := range result {
 		assert.True(t, r.IdleTimeout.IsZero(), "IdleTimeout should be cleared for %s", addr.Hex())
 		assert.True(t, r.PausedTimeout.IsZero(), "PausedTimeout should be cleared for %s", addr.Hex())
@@ -433,7 +435,7 @@ func TestApplyAllTransitions(t *testing.T) {
 			"timeout fires: expired idle → Registered",
 			testEpochNum,
 			valset.NodeStateMap{
-				addr1: {State: valset.ValInactive, StakingAmount: aboveMinStake, IdleTimeout: time.Now().Add(-1 * time.Hour)},
+				addr1: {State: valset.ValInactive, StakingAmount: aboveMinStake, IdleTimeout: testBlockTime.Add(-1 * time.Hour)},
 			},
 			map[common.Address]valset.State{addr1: valset.Registered},
 		},
@@ -442,7 +444,7 @@ func TestApplyAllTransitions(t *testing.T) {
 			"timeout chain (non-epoch): expired pause → ValInactive",
 			testNonEpochNum,
 			valset.NodeStateMap{
-				addr1: {State: valset.ValPaused, StakingAmount: aboveMinStake, PausedTimeout: time.Now().Add(-1 * time.Hour)},
+				addr1: {State: valset.ValPaused, StakingAmount: aboveMinStake, PausedTimeout: testBlockTime.Add(-1 * time.Hour)},
 			},
 			map[common.Address]valset.State{addr1: valset.ValInactive},
 		},
@@ -451,7 +453,7 @@ func TestApplyAllTransitions(t *testing.T) {
 			"timeout→epoch chain (epoch): expired pause → ValInactive",
 			testEpochNum,
 			valset.NodeStateMap{
-				addr1: {State: valset.ValPaused, StakingAmount: aboveMinStake, PausedTimeout: time.Now().Add(-1 * time.Hour)},
+				addr1: {State: valset.ValPaused, StakingAmount: aboveMinStake, PausedTimeout: testBlockTime.Add(-1 * time.Hour)},
 			},
 			map[common.Address]valset.State{addr1: valset.ValInactive},
 		},
@@ -460,7 +462,7 @@ func TestApplyAllTransitions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			v, statedb := newTestApplyAllTransitions(ctrl)
-			header := &types.Header{Number: big.NewInt(int64(tc.num))}
+			header := &types.Header{Number: big.NewInt(int64(tc.num)), Time: big.NewInt(testBlockTime.Unix())}
 
 			result, err := v.applyAllTransitions(tc.input, tc.num, statedb, header)
 			assert.NoError(t, err)
