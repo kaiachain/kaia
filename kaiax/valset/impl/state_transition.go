@@ -172,8 +172,7 @@ func (v *ValsetModule) writeNodesToContract(
 	num := header.Number.Uint64()
 	currentNodes, err := v.getOrComputeNodeStates(num, statedb)
 	if err != nil {
-		logger.Error("Failed to get node states", "number", num, "err", err)
-		return nil
+		return err
 	}
 
 	// Compute diff: only nodes whose state or timeout changed.
@@ -188,10 +187,11 @@ func (v *ValsetModule) writeNodesToContract(
 
 	config := v.Chain.Config()
 	msg, from, err := prepareNodeWrite(config, header.Number, diff)
-	if err == nil {
-		if ret, evmErr := blockchain.SystemTxCall(msg, from, header, vmenv, statedb, config.Rules(header.Number)); evmErr != nil {
-			logger.Error("Failed to call processSystemTransition", "number", header.Number, "err", evmErr, "ret", common.Bytes2Hex(ret))
-		}
+	if err != nil {
+		return err
+	}
+	if ret, err := blockchain.SystemTxCall(msg, from, header, vmenv, statedb, config.Rules(header.Number)); err != nil {
+		return fmt.Errorf("processSystemTransition failed: %w (ret=%s)", err, common.Bytes2Hex(ret))
 	}
 	return nil
 }
