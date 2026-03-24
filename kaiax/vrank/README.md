@@ -58,7 +58,7 @@ Both scores are epoch-local. `epochStart(N) = N - (N % epoch)`. The epoch-start 
 
 ### Checkpoints
 
-To avoid replaying the entire epoch on every query, PFS and the CP matrix are periodically persisted to the database every `scoreCheckpointInterval = Epoch / 8 = 10800` blocks. A `lastCheckpoint` pointer enables O(1) lookup of the most recent checkpoint. On startup, `catchUp` replays only the blocks since the latest surviving checkpoint.
+To avoid replaying the entire epoch on every query, PFS and the CP matrix are periodically persisted to the database every `scoreCheckpointInterval = Epoch / 8 = 10800` blocks. A `lastCheckpoint` pointer enables O(1) lookup of the most recent checkpoint. On startup, `Init` calls `GetPFS(head)` and `GetCFS(head)` to warm the caches, which internally replay only the blocks since the latest surviving checkpoint.
 
 ## Persistent schema
 
@@ -77,7 +77,7 @@ All keys are stored in the chain key-value store (`ChainKv`).
 
 ### Init
 
-Loads the latest DB checkpoint and replays blocks up to the current chain head to warm both in-memory caches (PFS and CP matrix).
+Calls `GetPFS(head)` and `GetCFS(head)` to warm both in-memory caches (PFS and CP matrix). Each internally loads the latest DB checkpoint and replays only the blocks since that checkpoint up to the current chain head.
 
 - Dependencies:
   - `ChainKv`: Raw key-value database for checkpoint persistence.
@@ -90,19 +90,19 @@ Loads the latest DB checkpoint and replays blocks up to the current chain head t
 
 - getters
   - For all getters except `TallyCfReport`, `N` must exist in the header DB.
-  - `GetPfReport` and `GetPFS` call `GetProposer` at the block's own number — correct because proposer rotation is per-block, not per-epoch.
-  - `GetCFS` queries `GetCandidates` and `GetCommittee` at `epochStart` — the candidate set and committee size are fixed for the whole epoch.
-  - `TallyCfReport(N, round)` is called by the proposer of block `N+1` to fill `header(N+1).VRank`; it uses `calcEpochStart(N+1)` for candidates because the cfReport belongs to block `N+1`'s epoch.
+  - `GetPfReport` and `GetPFS` call `GetProposer` for each block `x` in `[epochStart(N), N]`. After the Permissionless HF, `GetProposer` reads `header(x).Extra.Validators` directly instead of querying staking, because `VerifyHeader` guarantees `Extra.Validators` matches the staking-derived qualified set for every committed block. This makes `GetProposer` safe for historical blocks within the epoch.
+  - `GetCFS` calls `GetCandidates(N)` (where `N` is the queried block, typically head) to seed the CP matrix, and `GetCommittee(N, 0)` to compute the byzantine filter threshold `F`.
+  - `TallyCfReport(N, round)` is called by the proposer of block `N+1` to fill `header(N+1).VRank`; it queries `GetCandidates(N)` because the cfReport belongs to block `N+1`'s epoch.
 
-| Function                  | Valset call                         | Notes                                                             |
-| ------------------------- | ----------------------------------- | ----------------------------------------------------------------- |
-| `GetPfReport(N)`          | `GetProposer(N, x)`                 | each `x` in `[epochStart, header(N).Round)`                       |
-| `GetCfReport(N)`          | —                                   | —                                                                 |
-| `TallyCfReport(N, round)` | `GetCandidates(N)`                  | `N+1` because `header(N+1).VRank = TallyCfReport(N, R)`           |
-| `GetPFS(N)`               | `GetProposer(x, r)`                 | each `x` in `[epochStart, N]`, each `r` in `[0, header(x).Round)` |
-| `GetCFS(N)`               | `GetCandidates(N)`                  | newCPMatrix                                                       |
-|                           | `GetProposer(x, header(x).Round())` | each `x` in `[epochStart, N]`                                     |
-|                           | `GetCommittee(N, 0)`                | for byzantine filtering `F` (TODO: remove me)                     |
+| Function                  | Valset call                                                               | Notes                                           |
+| ------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------- |
+| `GetPfReport(N)`          | `GetProposer(N, r)`; `r ∈ [0, header(N).Round)`                           | uses `Extra.Validators` after Permissionless HF |
+| `GetCfReport(N)`          | —                                                                         | —                                               |
+| `TallyCfReport(N, round)` | `GetCandidates(N)`                                                        | `N` ≈ head−1                                    |
+| `GetPFS(N)`               | `GetProposer(x, r)`; `x ∈ [epochStart(N), N]`, `r ∈ [0, header(x).Round)` | uses `Extra.Validators` after Permissionless HF |
+| `GetCFS(N)`               | `GetCandidates(N)`                                                        | `N` ≈ head; seeds `newCPMatrix`                 |
+|                           | `GetProposer(x, header(x).Round)`; `x ∈ [epochStart(N), N]`               | fast path: `Engine.Author(header(x))`           |
+|                           | `GetCommittee(N, 0)`                                                      | `N` ≈ head; TODO: replace with AddressBook call |
 
 - handlers
   - During consensus of block N, block N is not yet committed, but its validator/candidate/proposer set is already determined — so `Get*(N)` is safe for proposer / candidate / committee identity checks tied to that live view.
