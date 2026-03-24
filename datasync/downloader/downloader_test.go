@@ -53,9 +53,12 @@ import (
 
 // Reduce some of the parameters to make the tester faster.
 func init() {
-	MaxForkAncestry = uint64(10000)
-	blockCacheMaxItems = 1024
-	fsHeaderContCheck = 500 * time.Millisecond
+	MaxForkAncestry = uint64(512)
+	MaxHashFetch = 64
+	MaxHeaderFetch = 16
+	MaxBlockFetch = 16
+	blockCacheMaxItems = 80
+	fsHeaderContCheck = 200 * time.Millisecond
 }
 
 var (
