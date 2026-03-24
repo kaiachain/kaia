@@ -97,6 +97,8 @@ func (v *ValsetModule) getEpochTransition(
 		if idx < maxValidatorCount {
 			if potentialActiveVal.State != valset.ValPaused {
 				potentialActiveVal.State = valset.ValActive
+				potentialActiveVal.IdleTimeout = time.Time{}
+				potentialActiveVal.PausedTimeout = time.Time{}
 			}
 		} else {
 			potentialActiveVal.State = valset.ValInactive
