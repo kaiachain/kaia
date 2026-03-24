@@ -25,6 +25,7 @@ package tests
 import (
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -36,6 +37,7 @@ type ExecutionSpecBlockTestSuite struct {
 	suite.Suite
 	originalIsPrecompiledContractAddress func(common.Address, interface{}) bool
 	originalBlobTxMaxBlobs               int
+	originalActivePrecompiles            func(params.Rules) []common.Address
 }
 
 func (suite *ExecutionSpecBlockTestSuite) SetupSuite() {
@@ -43,12 +45,15 @@ func (suite *ExecutionSpecBlockTestSuite) SetupSuite() {
 	common.IsPrecompiledContractAddress = isPrecompiledContractAddressForEthTest
 	suite.originalBlobTxMaxBlobs = params.BlobTxMaxBlobs
 	params.BlobTxMaxBlobs = EthBlobTxMaxBlobs
+	suite.originalActivePrecompiles = vm.ActivePrecompiles
+	vm.ActivePrecompiles = activePrecompilesForEthTest
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TearDownSuite() {
 	// Reset global variables for test
 	common.IsPrecompiledContractAddress = suite.originalIsPrecompiledContractAddress
 	params.BlobTxMaxBlobs = suite.originalBlobTxMaxBlobs
+	vm.ActivePrecompiles = suite.originalActivePrecompiles
 }
 
 func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
@@ -110,16 +115,6 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^static/state_tests/stPreCompiledContracts/precompsEIP2929Cancun.json/tests/static/state_tests/stPreCompiledContracts/precompsEIP2929CancunFiller.yml::precompsEIP2929Cancun\[fork_Cancun-blockchain_test_from_state_test-all_then_yes_from_prague-15\]`)
 	bt.skipLoad(`^static/state_tests/stPreCompiledContracts/precompsEIP2929Cancun.json/tests/static/state_tests/stPreCompiledContracts/precompsEIP2929CancunFiller.yml::precompsEIP2929Cancun\[fork_Cancun-blockchain_test_from_state_test-all_then_yes_from_prague-8\]`)
 	bt.skipLoad(`^static/state_tests/stPreCompiledContracts/precompsEIP2929Cancun.json/tests/static/state_tests/stPreCompiledContracts/precompsEIP2929CancunFiller.yml::precompsEIP2929Cancun\[fork_Cancun-blockchain_test_from_state_test-yes.*\]`)
-
-	// should be skipped
-	// note: Different amount of gas is consumed because 0x0b contract is added to access list by ActivePrecompiles although Ethereum's Cancun fork doesn't have it as a precompiled contract.
-	// See https://github.com/kaiachain/kaia/blob/a7cb0f8aef2ce813e7ceda38e38353d63437489d/blockchain/vm/contracts.go#L242-L250.
-	// but the failure happens in only Cancun fork, so we can skip these.
-	bt.skipLoad(`^static/state_tests/stSpecialTest/failed_tx_xcf416c53_Paris.json/tests/static/state_tests/stSpecialTest/failed_tx_xcf416c53_ParisFiller.json::failed_tx_xcf416c53_Paris\[fork_Cancun-blockchain_test_from_state_test-\]`)
-	bt.skipLoad(`^frontier/precompiles/test_precompile_absence.json/tests/frontier/precompiles/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test_from_state_test-31_bytes\]`)
-	bt.skipLoad(`^frontier/precompiles/test_precompile_absence.json/tests/frontier/precompiles/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test_from_state_test-32_bytes\]`)
-	bt.skipLoad(`^frontier/precompiles/test_precompile_absence.json/tests/frontier/precompiles/test_precompile_absence.py::test_precompile_absence\[fork_Cancun-blockchain_test_from_state_test-empty_calldata\]`)
-	bt.skipLoad(`^frontier/precompiles/test_precompiles.json/tests/frontier/precompiles/test_precompiles.py::test_precompiles\[fork_Cancun-address_0x000000000000000000000000000000000000000b-precompile_exists_False-blockchain_test_from_state_test\]`)
 
 	// should be skipped
 	// note: Kaia's Cancun fork allow creating SCA with 0xEF code, but Ethereum's Cancun fork does not.

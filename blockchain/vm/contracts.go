@@ -234,7 +234,9 @@ func init() {
 }
 
 // ActivePrecompiles returns the precompiles enabled with the current configuration.
-func ActivePrecompiles(rules params.Rules) []common.Address {
+// This is a variable so that it can be overridden in tests (e.g. EEST) to exclude
+// the vmversion0 compatibility addresses from the access list.
+var ActivePrecompiles = func(rules params.Rules) []common.Address {
 	var precompiledContractAddrs []common.Address
 	for addr := range ActivePrecompiledContracts(rules) {
 		precompiledContractAddrs = append(precompiledContractAddrs, addr)
