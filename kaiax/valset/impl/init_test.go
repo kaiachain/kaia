@@ -154,7 +154,6 @@ func TestMigration(t *testing.T) {
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(pset).AnyTimes()
 	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
 	mockChain.EXPECT().CurrentBlock().Return(block2050).AnyTimes()
-	mockChain.EXPECT().CurrentBlock().Return(block2050).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesis).AnyTimes()
 	mockStaking.EXPECT().GetStakingInfo(block2050.Number().Uint64()).Return(nil, nil).AnyTimes()
 	for i := uint64(1); i <= 2050; i++ {
