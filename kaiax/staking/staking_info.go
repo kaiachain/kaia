@@ -148,6 +148,7 @@ func (si *StakingInfo) consolidateNodesPermissionless() *[]consolidatedNode {
 				NodeIds:       []common.Address{n},
 				RewardAddr:    r,
 				StakingAmount: si.StakingAmounts[i],
+				// StakingContracts intentionally omitted: not used in permissionless reward distribution.
 			}
 		}
 	}
