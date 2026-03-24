@@ -13,7 +13,7 @@ on:
       install_python: # If true, install python.
         required: false
         type: boolean
-        default: true
+        default: false
       # The fetch depth for the current repo (kaiachain/kaia) clone.
       # 1 = clone the latest commit snapshot. 0 = clone the full history (necessary for test-linter's '--new-from-rev=dev' to work)
       fetch_depth:
@@ -21,6 +21,10 @@ on:
         type: number
         default: 1
       with_services: # If true, launch the mock services (kafka, redis, localstack) in the background.
+        required: false
+        type: boolean
+        default: false
+      cache_fixtures: # If true, cache the spec test fixtures in ./build/cache/.
         required: false
         type: boolean
         default: false
@@ -73,11 +77,25 @@ jobs:
         with:
           go-version: '1.25.3' # The same version as the base image.
           cache: true
-      - name: setup python
+      - name: Setup Python
         if: ${{ inputs.install_python == true }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.10.12' # The same version as the base image.
+      - name: Cache pip packages # Cache the 'pip install' downloaded pip packages.
+        if: ${{ inputs.install_python == true }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
+      - name: Cache spec test fixtures # Cache the 'ci.go --ensure-fixtures' downloaded fixture files.
+        if: ${{ inputs.cache_fixtures == true }}
+        uses: actions/cache@v4
+        with:
+          path: ./build/cache
+          key: spec-fixtures-${{ hashFiles('build/checksums.txt') }}
 
       # region Run test
       - name: Wait for Redis

@@ -7,13 +7,15 @@ on:
 permissions:
   contents: read
 
-# Run the 'build' job first to update the build cache.
+# Run the 'build' job first to populate the build cache.
 jobs:
   build:
     name: Build
     uses: ./.github/workflows/test-executor-template.yml
     with:
-      test_command: make kcn && make all -j
+      test_command: |
+        make kcn && make all -j
+        go vet ./...
 
   test-linter:
     needs: build
@@ -44,6 +46,7 @@ jobs:
     name: Test Tests
     uses: ./.github/workflows/test-executor-template.yml
     with:
+      cache_fixtures: true
       test_command: |
         git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
         make test-tests
@@ -59,7 +62,7 @@ jobs:
       install_python: true
       test_command: |
         make kcn
-        git clone https://github.com/kaiachain/kaia-rpc-tester.git
+        git clone --depth 1 https://github.com/kaiachain/kaia-rpc-tester.git
         cd kaia-rpc-tester
         cp ../build/bin/kcn script/cn/bin/
         cd script
