@@ -112,8 +112,7 @@ func (f *Faker) verifyFailure(header *types.Header) error {
 }
 
 // VerifySeals checks consensus-specific seals for faker.
-func (f *Faker) VerifySeals(header *types.Header, sigCacheMode bool) error {
-	_ = sigCacheMode
+func (f *Faker) VerifySeals(header *types.Header, _ bool) error {
 	return f.verifyFailure(header)
 }
 
