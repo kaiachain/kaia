@@ -94,15 +94,15 @@ Loads the latest DB checkpoint and replays blocks up to the current chain head t
   - `GetCFS` queries `GetCandidates` and `GetCommittee` at `epochStart` — the candidate set and committee size are fixed for the whole epoch.
   - `TallyCfReport(N, round)` is called by the proposer of block `N+1` to fill `header(N+1).VRank`; it uses `calcEpochStart(N+1)` for candidates because the cfReport belongs to block `N+1`'s epoch.
 
-| Function                  | Valset call                         | Notes                                                        |
-| ------------------------- | ----------------------------------- | ------------------------------------------------------------ |
-| `GetPfReport(N)`          | `GetProposer(N, x)`                 | each `x` in `[0, header(N).Round)`                           |
-| `GetCfReport(N)`          | —                                   | —                                                            |
-| `TallyCfReport(N, round)` | `GetCandidates(N)`                  | `N+1` because `header(N+1).VRank = TallyCfReport(N, R)`      |
-| `GetPFS(N)`               | `GetProposer(x, r)`                 | each `x` in `[start, N]`, each `r` in `[0, header(x).Round)` |
-| `GetCFS(N)`               | `GetCandidates(N)`                  | newCPMatrix                                                  |
-|                           | `GetProposer(x, header(x).Round())` | each `x` in `[start, N]`                                     |
-|                           | `GetCommittee(N, 0)`                | for byzantine filtering `F` (TODO: remove me)                |
+| Function                  | Valset call                         | Notes                                                             |
+| ------------------------- | ----------------------------------- | ----------------------------------------------------------------- |
+| `GetPfReport(N)`          | `GetProposer(N, x)`                 | each `x` in `[epochStart, header(N).Round)`                       |
+| `GetCfReport(N)`          | —                                   | —                                                                 |
+| `TallyCfReport(N, round)` | `GetCandidates(N)`                  | `N+1` because `header(N+1).VRank = TallyCfReport(N, R)`           |
+| `GetPFS(N)`               | `GetProposer(x, r)`                 | each `x` in `[epochStart, N]`, each `r` in `[0, header(x).Round)` |
+| `GetCFS(N)`               | `GetCandidates(N)`                  | newCPMatrix                                                       |
+|                           | `GetProposer(x, header(x).Round())` | each `x` in `[epochStart, N]`                                     |
+|                           | `GetCommittee(N, 0)`                | for byzantine filtering `F` (TODO: remove me)                     |
 
 - handlers
   - During consensus of block N, block N is not yet committed, but its validator/candidate/proposer set is already determined — so `Get*(N)` is safe for proposer / candidate / committee identity checks tied to that live view.

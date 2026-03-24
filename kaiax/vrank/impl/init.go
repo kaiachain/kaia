@@ -158,61 +158,11 @@ func (v *VRankModule) catchUpScoreCaches() error {
 	}
 	headNum := head.Number.Uint64()
 
-	if err := v.catchUp(headNum); err != nil {
+	if _, err := v.GetPFS(headNum); err != nil {
 		return err
 	}
-	return nil
-}
-
-func (v *VRankModule) catchUp(headNum uint64) error {
-	epochStart := calcEpochStart(headNum)
-
-	var (
-		start    uint64
-		pfs      map[common.Address]uint64
-		cpMatrix map[common.Address]map[common.Address]uint64
-	)
-
-	if cpNum, storedPFS, storedCpMatrix, ok := v.loadCheckpointInEpoch(headNum); ok {
-		start = cpNum + 1
-		pfs = storedPFS
-		cpMatrix = storedCpMatrix
-		v.pfsCache.Add(cpNum, storedPFS)
-		v.cpMatrixCache.Add(cpNum, storedCpMatrix)
-	} else {
-		start = epochStart
-		pfs = make(map[common.Address]uint64)
-		var err error
-		cpMatrix, err = v.newCPMatrix(epochStart)
-		if err != nil {
-			return err
-		}
-	}
-
-	for blockNum := start; blockNum <= headNum; blockNum++ {
-		var err error
-		pfs, err = v.applyBlocksForPFS(blockNum, blockNum, pfs)
-		if err != nil {
-			logger.Error("Failed to compute PFS", "blockNum", blockNum, "err", err)
-			return err
-		}
-		v.pfsCache.Add(blockNum, pfs)
-
-		cpMatrix, err = v.applyBlocksForCPMatrix(blockNum, blockNum, cpMatrix)
-		if err != nil {
-			logger.Error("Failed to compute CFS", "blockNum", blockNum, "err", err)
-			return err
-		}
-		v.cpMatrixCache.Add(blockNum, cpMatrix)
-
-		if blockNum%scoreCheckpointInterval == 0 {
-			WriteCheckpoint(v.ChainKv, blockNum, pfs, cpMatrix)
-			WriteLastCheckpoint(v.ChainKv, blockNum)
-		}
-
-		if blockNum%10000 == 0 && start != headNum {
-			logger.Info("VRank module catchup progress", "blockNum", blockNum, "progress", float64(blockNum-start)/float64(headNum-start))
-		}
+	if _, err := v.GetCFS(headNum); err != nil {
+		return err
 	}
 	return nil
 }

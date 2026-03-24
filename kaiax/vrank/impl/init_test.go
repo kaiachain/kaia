@@ -73,6 +73,7 @@ func TestInit_CatchUpFromCheckpoint(t *testing.T) {
 			return P1, nil
 		},
 	).AnyTimes()
+	valset.EXPECT().GetCommittee(gomock.Any(), gomock.Any()).Return([]common.Address{P1, P2}, nil).AnyTimes()
 
 	module := NewVRankModule()
 	require.NoError(t, module.Init(&InitOpts{
