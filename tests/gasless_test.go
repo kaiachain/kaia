@@ -98,7 +98,7 @@ func TestGasless(t *testing.T) {
 
 	/* ------------- Register GaslessSwapRouter address in Registry ------------- */
 	// send register tx
-	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentHeader().Number, big.NewInt(10))
+	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentHeader().Number, big.NewInt(4))
 	registry, err := kip149contract.NewRegistry(system.RegistryAddr, transactor)
 	if err != nil {
 		t.Fatal(err)

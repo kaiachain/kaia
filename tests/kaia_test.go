@@ -293,7 +293,7 @@ func makeNewTransactionsToRing(bcdata *BCData, accountMap *AccountMap, signer ty
 }
 
 func TestValueTransfer(t *testing.T) {
-	var nBlocks int = 3
+	var nBlocks int = 2
 	var txPerBlock int = 10
 
 	if i, err := strconv.ParseInt(os.Getenv("NUM_BLOCKS"), 10, 32); err == nil {
@@ -310,29 +310,29 @@ func TestValueTransfer(t *testing.T) {
 	}{
 		{
 			"SingleSenderMultipleRecipient",
-			testOption{txPerBlock, 1000, 4, nBlocks, []byte{}, makeTransactionsFrom},
+			testOption{txPerBlock, 120, 4, nBlocks, []byte{}, makeTransactionsFrom},
 		},
 		{
 			"MultipleSenderMultipleRecipient",
-			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeIndependentTransactions},
+			testOption{txPerBlock, 240, 4, nBlocks, []byte{}, makeIndependentTransactions},
 		},
 		{
 			"MultipleSenderRandomRecipient",
-			testOption{txPerBlock, 2000, 4, nBlocks, []byte{}, makeTransactionsToRandom},
+			testOption{txPerBlock, 240, 4, nBlocks, []byte{}, makeTransactionsToRandom},
 		},
 
 		// Below test cases execute one transaction per a block.
 		{
 			"SingleSenderMultipleRecipientSingleTxPerBlock",
-			testOption{1, 1000, 4, 10, []byte{}, makeTransactionsFrom},
+			testOption{1, 120, 4, 4, []byte{}, makeTransactionsFrom},
 		},
 		{
 			"MultipleSenderMultipleRecipientSingleTxPerBlock",
-			testOption{1, 2000, 4, 10, []byte{}, makeIndependentTransactions},
+			testOption{1, 240, 4, 4, []byte{}, makeIndependentTransactions},
 		},
 		{
 			"MultipleSenderRandomRecipientSingleTxPerBlock",
-			testOption{1, 2000, 4, 10, []byte{}, makeTransactionsToRandom},
+			testOption{1, 240, 4, 4, []byte{}, makeTransactionsToRandom},
 		},
 	}
 

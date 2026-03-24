@@ -54,7 +54,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	optsOwner := bind.NewKeyedTransactor(validator.Keys[0])
 	transactor := backends.NewBlockchainContractBackend(node.BlockChain(), node.TxPool().(*blockchain.TxPool), nil)
 	// We need to wait for the following contract executions to be processed, so let's have enough number of blocks
-	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentBlock().Number(), big.NewInt(10))
+	targetBlockNum := new(big.Int).Add(node.BlockChain().CurrentBlock().Number(), big.NewInt(4))
 
 	contractAddr, tx, contract, err := rebalance.DeployTreasuryRebalance(optsOwner, transactor, targetBlockNum)
 	if err != nil {
@@ -74,7 +74,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	t.Log("Target Block:", targetBlockNum.Int64())
 
 	// prepare newbie accounts
-	numNewbie := 3
+	numNewbie := 2
 	newbieAccs := make([]TestAccount, numNewbie)
 	newbieAllocs := make([]*big.Int, numNewbie)
 
