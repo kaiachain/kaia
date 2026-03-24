@@ -77,12 +77,11 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 	bt.skipLoad(`^static/state_tests/Cancun/stEIP4844_blobtransactions/opcodeBlobhashOutOfRange.json/tests/static/state_tests/Cancun/stEIP4844_blobtransactions/opcodeBlobhashOutOfRangeFiller.yml::opcodeBlobhashOutOfRange\[fork_Cancun-blockchain_test_from_state_test-\]`)
 	bt.skipLoad(`^static/state_tests/Cancun/stEIP4844_blobtransactions/opcodeBlobhBounds.json/tests/static/state_tests/Cancun/stEIP4844_blobtransactions/opcodeBlobhBoundsFiller.yml::opcodeBlobhBounds\[fork_Prague-blockchain_test_from_state_test-\]`)
 	bt.skipLoad(`^static/state_tests/Cancun/stEIP4844_blobtransactions/opcodeBlobhBounds.json/tests/static/state_tests/Cancun/stEIP4844_blobtransactions/opcodeBlobhBoundsFiller.yml::opcodeBlobhBounds\[fork_Cancun-blockchain_test_from_state_test-\]`)
-	bt.skipLoad(`^frontier/scenarios/test_scenarios.json/tests/frontier/scenarios/test_scenarios.py::test_scenarios\[fork_Prague-blockchain_test-test_program_program_BLOBBASEFEE-debug\]`)
-	bt.skipLoad(`^frontier/scenarios/test_scenarios.json/tests/frontier/scenarios/test_scenarios.py::test_scenarios\[fork_Cancun-blockchain_test-test_program_program_BLOBBASEFEE-debug\]`)
+	bt.skipLoad(`^frontier/scenarios/.*fork_(Cancun|Prague)-blockchain_test-.*BLOBBASEFEE`)
 	bt.skipLoad(`^istanbul/eip1344_chainid/test_chainid.json/tests/istanbul/eip1344_chainid/test_chainid.py::test_chainid\[fork_Prague-typed_transaction_3-blockchain_test_from_state_test\]`)
 	bt.skipLoad(`^istanbul/eip1344_chainid/test_chainid.json/tests/istanbul/eip1344_chainid/test_chainid.py::test_chainid\[fork_Cancun-typed_transaction_3-blockchain_test_from_state_test\]`)
 	bt.skipLoad(`^istanbul/eip1344_chainid/.*\[fork_(Cancun|Prague).*typed_transaction_3`)
-	bt.skipLoad(`^cancun/eip4844_blobs/.*\[fork_(Cancun|Prague)`)
+	bt.skipLoad(`^cancun/eip4844_blobs/.*fork_(Cancun|Prague)`)
 	bt.skipLoad(`^prague/eip7702_set_code_tx/test_eoa_tx_after_set_code.json/tests/prague/eip7702_set_code_tx/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Prague-tx_type_3-evm_code_type_LEGACY-blockchain_test-same_block\]`)
 	bt.skipLoad(`^prague/eip7702_set_code_tx/test_eoa_tx_after_set_code.json/tests/prague/eip7702_set_code_tx/test_set_code_txs.py::test_eoa_tx_after_set_code\[fork_Prague-tx_type_3-evm_code_type_LEGACY-blockchain_test-different_block\]`)
 	bt.skipLoad(`^prague/eip7623_increase_calldata_cost/test_transaction_validity_type_3.json/tests/prague/eip7623_increase_calldata_cost/test_transaction_validity.py::test_transaction_validity_type_3\[fork_(Cancun|Prague)`)
@@ -91,9 +90,7 @@ func (suite *ExecutionSpecBlockTestSuite) TestExecutionSpecBlock() {
 
 	// should be skipped
 	// note: Kaia cannot calculate the same block hash as Ethereum.
-	bt.skipLoad(`^frontier/scenarios/test_scenarios.json/tests/frontier/scenarios/test_scenarios.py::test_scenarios\[fork_Cancun-blockchain_test-test_program_program_BLOCKHASH-debug\]`)
-	bt.skipLoad(`^frontier/scenarios/test_scenarios.json/tests/frontier/scenarios/test_scenarios.py::test_scenarios\[fork_Prague-blockchain_test-test_program_program_BLOCKHASH-debug\]`)
-	bt.skipLoad(`^frontier/scenarios/test_scenarios.json/tests/frontier/scenarios/test_scenarios.py::test_scenarios\[fork_Osaka-blockchain_test-test_program_program_BLOCKHASH-debug\]`)
+	bt.skipLoad(`^frontier/scenarios/.*fork_(Cancun|Prague|Osaka)-blockchain_test-.*BLOCKHASH`)
 
 	// should be skipped
 	// note: Kaia's MaxBlockSize (10 MiB) higher than Ethereum's (8 MiB), so max_plus_1 is accepted in Kaia.
