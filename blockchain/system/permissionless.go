@@ -41,7 +41,7 @@ import (
 
 // DefaultEpochBlockInterval is the default number of blocks per epoch for ABv2.
 // Uses valset.DefaultVRankEpoch as the single source of truth.
-var DefaultEpochBlockInterval = int64(valset.DefaultVRankEpoch)
+const DefaultEpochBlockInterval = int64(valset.DefaultVRankEpoch)
 
 // AllocPermissionlessConfig holds parameters for genesis permissionless allocation.
 type AllocPermissionlessConfig struct {
