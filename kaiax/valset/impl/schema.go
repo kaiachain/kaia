@@ -63,7 +63,7 @@ func ReadValidatorVoteBlockNums(db database.Database) []uint64 {
 	return readVoteOrStateChangeBlockNums(db, validatorVoteBlockNums)
 }
 
-func writeVoteOrStageChangeBlockNums(db database.Database, key []byte, nums []uint64) {
+func writeVoteOrStateChangeBlockNums(db database.Database, key []byte, nums []uint64) {
 	slices.Sort(nums)
 	b, err := json.Marshal(nums)
 	if err != nil {
@@ -75,7 +75,7 @@ func writeVoteOrStageChangeBlockNums(db database.Database, key []byte, nums []ui
 }
 
 func writeValidatorVoteBlockNums(db database.Database, nums []uint64) {
-	writeVoteOrStageChangeBlockNums(db, validatorVoteBlockNums, nums)
+	writeVoteOrStateChangeBlockNums(db, validatorVoteBlockNums, nums)
 }
 
 // insertValidatorVoteBlockNums inserts a new block num into the validator vote block nums.
