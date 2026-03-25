@@ -64,7 +64,7 @@ func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.S
 		return nil, err
 	}
 
-	newValidators, err := v.applyAllTransitions(parentValidators, num, parentStatedb, parentHeader)
+	newValidators, err := v.applyAllTransitions(parentValidators, parentStatedb, parentHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -75,11 +75,14 @@ func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.S
 // applyAllTransitions applies VrankViolation → Timeout → Epoch transitions.
 func (v *ValsetModule) applyAllTransitions(
 	validators valset.NodeStateMap,
-	num uint64,
 	statedb *state.StateDB,
 	header *types.Header,
 ) (valset.NodeStateMap, error) {
-	newValidators := v.getViolationTransition(num, validators)
+	var (
+		num     = header.Number.Uint64()
+		nextNum = num + 1
+	)
+	newValidators := v.getViolationTransition(nextNum, validators)
 
 	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb)
 	if err != nil {
@@ -99,7 +102,7 @@ func (v *ValsetModule) applyAllTransitions(
 		logger.Error("Failed to read ABv2 max counts, using defaults", "number", num, "err", err)
 		maxValCount = DefaultActiveValidatorCount
 	}
-	newValidators = v.getEpochTransition(num, newValidators, idleTimeout, int(maxValCount), blockTime)
+	newValidators = v.getEpochTransition(nextNum, newValidators, idleTimeout, int(maxValCount), blockTime)
 	return newValidators, nil
 }
 

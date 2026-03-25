@@ -462,9 +462,9 @@ func TestApplyAllTransitions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			v, statedb := newTestApplyAllTransitions(ctrl)
-			header := &types.Header{Number: big.NewInt(int64(tc.num)), Time: big.NewInt(testBlockTime.Unix())}
+			parentHeader := &types.Header{Number: big.NewInt(int64(tc.num - 1)), Time: big.NewInt(testBlockTime.Unix())}
 
-			result, err := v.applyAllTransitions(tc.input, tc.num, statedb, header)
+			result, err := v.applyAllTransitions(tc.input, statedb, parentHeader)
 			assert.NoError(t, err)
 			for addr, expectedState := range tc.expected {
 				assert.Equal(t, expectedState, result[addr].State, "addr=%s", addr.Hex())
