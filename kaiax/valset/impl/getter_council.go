@@ -126,7 +126,6 @@ func lastNumLessThan(nums []uint64, num uint64) uint64 {
 	}
 }
 
-
 // getCouncilFromIstanbulSnapshot re-generates the council at the given targetNum.
 // Returns the council at targetNum, the nearest snapshot number, and error if any.
 //

@@ -53,7 +53,7 @@ func (v *ValsetModule) getEpochTransition(
 		newValidators        = validators.Copy()
 		activeValCompetitors []sortableValidator
 		pset                 = v.GovModule.GetParamSet(num)
-		minStake             = pset.MinimumStake.Uint64()       // in KAIA
+		minStake             = pset.MinimumStake.Uint64() // in KAIA
 	)
 	defer devLog(newValidators)
 	for addr, val := range newValidators {
@@ -159,7 +159,7 @@ func filterCouncilFromNodeStates(nodes valset.NodeStateMap) []common.Address {
 func (v *ValsetModule) getViolationTransition(num uint64, validators valset.NodeStateMap) valset.NodeStateMap {
 	var (
 		pset          = v.GovModule.GetParamSet(num)
-		minStake      = pset.MinimumStake.Uint64()       // in KAIA
+		minStake      = pset.MinimumStake.Uint64() // in KAIA
 		newValidators = validators.Copy()
 	)
 
