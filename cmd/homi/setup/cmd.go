@@ -818,8 +818,8 @@ func Gen(ctx *cli.Context) error {
 		kip113ProxyAddr, kip113LogicAddr := allocateKip113(ctx, genesisJson, kip113Init)
 		allocateRegistry(ctx, genesisJson, nodeAddrs[0], kip113ProxyAddr)
 		useKip113Mock(ctx, genesisJson, kip113LogicAddr)
-		useRegistryMock(ctx, genesisJson)
 	}
+	useRegistryMock(ctx, genesisJson)
 
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.LondonCompatibleBlock = big.NewInt(ctx.Int64(londonCompatibleBlockNumberFlag.Name))
