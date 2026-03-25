@@ -126,16 +126,6 @@ func lastNumLessThan(nums []uint64, num uint64) uint64 {
 	}
 }
 
-func lastNumLessEqualThan(nums []uint64, num uint64) uint64 {
-	idx := sort.Search(len(nums), func(i int) bool {
-		return nums[i] > num
-	})
-	if idx > 0 {
-		return nums[idx-1]
-	} else {
-		return 0
-	}
-}
 
 // getCouncilFromIstanbulSnapshot re-generates the council at the given targetNum.
 // Returns the council at targetNum, the nearest snapshot number, and error if any.
