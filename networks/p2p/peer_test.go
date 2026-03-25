@@ -82,7 +82,7 @@ func testPeerWithRWs(protos []Protocol, channelSize int) (func(), []*conn, *Peer
 	serverSideConn := make([]*conn, 0, channelSize)
 	peerSideConn := make([]*conn, 0, channelSize)
 
-	for i := 0; i < channelSize; i++ {
+	for range channelSize {
 		var (
 			fd1, fd2   = net.Pipe()
 			id1, id2   = randomID(), randomID()
@@ -214,7 +214,7 @@ func TestPeerDisconnect(t *testing.T) {
 func TestPeerDisconnectRace(t *testing.T) {
 	maybe := func() bool { return rand.Intn(2) == 1 }
 
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		protoclose := make(chan error)
 		protodisc := make(chan DiscReason)
 		closer, rw, p, disc := testPeer([]Protocol{
@@ -340,7 +340,7 @@ func TestMultiChannelPeerPing(t *testing.T) {
 
 func TestMultiChannelPeerDisconnect(t *testing.T) {
 	channelSize := 2
-	for i := 0; i < channelSize; i++ {
+	for i := range channelSize {
 		closer, rws, _, disc := testPeerWithRWs(nil, channelSize)
 		defer closer()
 
@@ -365,7 +365,7 @@ func TestMultiChannelPeerDisconnectRace(t *testing.T) {
 	maybe := func() bool { return rand.Intn(2) == 1 }
 	channelSize := 2
 
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		protoclose := make(chan error)
 		protodisc := make(chan DiscReason)
 		closer, rws, p, disc := testPeerWithRWs([]Protocol{

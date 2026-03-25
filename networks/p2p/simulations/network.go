@@ -801,7 +801,7 @@ type Snapshot struct {
 
 // NodeSnapshot represents the state of a node in the network
 type NodeSnapshot struct {
-	Node Node `json:"node,omitempty"`
+	Node Node `json:"node"`
 
 	// Snapshots is arbitrary data gathered from calling node.Snapshots()
 	Snapshots map[string][]byte `json:"snapshots,omitempty"`

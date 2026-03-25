@@ -55,7 +55,7 @@ func TestHeaderVerification(t *testing.T) {
 	chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, faker.NewFaker(), vm.Config{})
 	defer chain.Stop()
 
-	for i := 0; i < len(blocks); i++ {
+	for i := range blocks {
 		for j, valid := range []bool{true, false} {
 			var results <-chan error
 
@@ -296,7 +296,7 @@ func testHeaderConcurrentVerification(t *testing.T, threads int) {
 		}
 		// Wait for all the verification results
 		checks := make(map[int]error)
-		for j := 0; j < len(blocks); j++ {
+		for j := range blocks {
 			select {
 			case result := <-results:
 				checks[j] = result
@@ -306,7 +306,7 @@ func testHeaderConcurrentVerification(t *testing.T, threads int) {
 			}
 		}
 		// Check nonce check validity
-		for j := 0; j < len(blocks); j++ {
+		for j := range blocks {
 			want := valid || (j < len(blocks)-2) // We chose the last-but-one nonce in the chain to fail
 			if (checks[j] == nil) != want {
 				t.Errorf("test %d.%d: validity mismatch: have %v, want %v", i, j, checks[j], want)

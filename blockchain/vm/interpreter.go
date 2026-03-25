@@ -324,7 +324,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte) (ret []byte, err
 
 func PrintOpCodeExecTime() {
 	logger.Info("Printing the execution time of the opcodes during this node operation")
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		if opCnt[i] > 0 {
 			logger.Info("op "+OpCode(i).String(), "cnt", opCnt[i], "avg", opTime[i]/opCnt[i])
 		}

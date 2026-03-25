@@ -96,7 +96,7 @@ func calcRandaoMsg(number *big.Int) common.Hash {
 func calcMixHash(randomReveal, prevMixHash []byte) []byte {
 	mixHash := make([]byte, 32)
 	revealHash := crypto.Keccak256(randomReveal)
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		mixHash[i] = prevMixHash[i] ^ revealHash[i]
 	}
 	return mixHash

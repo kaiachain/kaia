@@ -77,7 +77,7 @@ func TestMatcherIntermittent(t *testing.T) {
 
 // Tests the matcher pipeline on random input to hopefully catch anomalies.
 func TestMatcherRandom(t *testing.T) {
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		testMatcherBothModes(t, makeRandomIndexes([]int{1}, 50), 0, 10000, 0)
 		testMatcherBothModes(t, makeRandomIndexes([]int{3}, 50), 0, 10000, 0)
 		testMatcherBothModes(t, makeRandomIndexes([]int{2, 2, 2}, 20), 0, 10000, 0)
@@ -113,8 +113,8 @@ func makeRandomIndexes(lengths []int, max int) [][]bloomIndexes {
 	res := make([][]bloomIndexes, len(lengths))
 	for i, topics := range lengths {
 		res[i] = make([]bloomIndexes, topics)
-		for j := 0; j < topics; j++ {
-			for k := 0; k < len(res[i][j]); k++ {
+		for j := range topics {
+			for k := range len(res[i][j]) {
 				res[i][j][k] = uint(rand.Intn(max-1) + 2)
 			}
 		}
@@ -219,7 +219,7 @@ func testMatcher(t *testing.T, filter [][]bloomIndexes, start, blocks uint64, in
 func startRetrievers(session *MatcherSession, quit chan struct{}, retrievals *uint32, batch int) {
 	requests := make(chan chan *Retrieval)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		// Start a multiplexer to test multiple threaded execution
 		go session.Multiplex(batch, 100*time.Microsecond, requests)
 
@@ -252,8 +252,8 @@ func startRetrievers(session *MatcherSession, quit chan struct{}, retrievals *ui
 // numbers.
 func generateBitset(bit uint, section uint64) []byte {
 	bitset := make([]byte, testSectionSize/8)
-	for i := 0; i < len(bitset); i++ {
-		for b := 0; b < 8; b++ {
+	for i := range bitset {
+		for b := range 8 {
 			blockIdx := section*testSectionSize + uint64(i*8+b)
 			bitset[i] += bitset[i]
 			if (blockIdx % uint64(bit)) == 0 {

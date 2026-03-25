@@ -271,7 +271,7 @@ func TestBridgeManager(t *testing.T) {
 	testURIs := []string{"", "testURI", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
 	// 6. Register (Mint) an NFT to Alice
 	{
-		for i := 0; i < len(nftTokenIDs); i++ {
+		for i := range nftTokenIDs {
 			tx, err = nft.MintWithTokenURI(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, alice.From, big.NewInt(int64(nftTokenIDs[i])), testURIs[i])
 			assert.NoError(t, err)
 			t.Log("Register NFT Transaction", tx.Hash().Hex())
@@ -307,7 +307,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 9. Request NFT transfer from Alice to Bob
 	{
-		for i := 0; i < len(nftTokenIDs); i++ {
+		for i := range nftTokenIDs {
 			tx, err = nft.RequestValueTransfer(&bind.TransactOpts{From: alice.From, Signer: alice.Signer, GasLimit: testGasLimit}, big.NewInt(int64(nftTokenIDs[i])), bob.From, nil)
 			assert.NoError(t, err)
 			t.Log("nft.RequestValueTransfer Transaction", tx.Hash().Hex())
@@ -340,7 +340,7 @@ func TestBridgeManager(t *testing.T) {
 
 	// 12. Check NFT owner sent by RequestValueTransfer()
 	{
-		for i := 0; i < len(nftTokenIDs); i++ {
+		for i := range nftTokenIDs {
 			owner, err := nft.OwnerOf(nil, big.NewInt(int64(nftTokenIDs[i])))
 			assert.Equal(t, nil, err)
 			assert.Equal(t, bob.From, owner)
@@ -1062,7 +1062,7 @@ func TestMethodRestoreBridges(t *testing.T) {
 	assert.NoError(t, err)
 
 	var bridgeAddrs [4]common.Address
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		if i%2 == 0 {
 			bridgeAddrs[i], err = bm.DeployBridgeTest(sim, 10000, true)
 		} else {
@@ -1095,13 +1095,13 @@ func TestMethodRestoreBridges(t *testing.T) {
 	}
 
 	// Case 1: check bridge contract creation.
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		info, _ := bm.GetBridgeInfo(bridgeAddrs[i])
 		assert.NotEqual(t, nil, info.bridge)
 	}
 
 	// Case 2: check subscription
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		info, _ := bm.GetBridgeInfo(bridgeAddrs[i])
 		assert.Equal(t, true, info.subscribed)
 	}
@@ -2719,7 +2719,7 @@ func TestGetBridgeContractBalance(t *testing.T) {
 
 	// Case 2 - ? (Random)
 	{
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			initialChildbridgeBalance, initialParentbridgeBalance := rand.Int63n(10000), rand.Int63n(10000)
 			cBridgeAddr, err := bm.DeployBridgeTest(sim, initialChildbridgeBalance, true)
 			assert.NoError(t, err)

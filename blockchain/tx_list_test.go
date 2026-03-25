@@ -40,7 +40,7 @@ func TestStrictTxListAdd(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 
 	txs := make(types.Transactions, 1024)
-	for i := 0; i < len(txs); i++ {
+	for i := range txs {
 		txs[i] = transaction(uint64(i), 0, key)
 	}
 	// Insert the transactions in a random order
@@ -74,7 +74,7 @@ func TestTxListReadyWithGasPriceBasic(t *testing.T) {
 
 	txs := make(types.Transactions, nTxs)
 	nonce := startNonce
-	for i := 0; i < len(txs); i++ {
+	for i := range txs {
 		txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(50), key)
 		nonce++
 	}
@@ -92,7 +92,7 @@ func TestTxListReadyWithGasPriceBasic(t *testing.T) {
 	}
 
 	nonce = startNonce
-	for i := 0; i < len(ready); i++ {
+	for i := range ready {
 		if result := reflect.DeepEqual(ready[i], txs[i]); !result {
 			t.Error("ready hash : ", ready[i].Hash(), "tx[i] hash : ", txs[i].Hash())
 		}
@@ -125,7 +125,7 @@ func TestTxListReadyWithGasPricePartialFilter(t *testing.T) {
 
 	txs := make(types.Transactions, nTxs)
 	nonce := startNonce
-	for i := 0; i < len(txs); i++ {
+	for i := range txs {
 		// Set the gasPrice of transaction lower than expectedBaseFee.
 		if i == 7 {
 			txs[i] = pricedTransaction(uint64(nonce), 0, big.NewInt(10), key)
@@ -151,7 +151,7 @@ func TestTxListReadyWithGasPricePartialFilter(t *testing.T) {
 	}
 
 	nonce = startNonce
-	for i := 0; i < len(ready); i++ {
+	for i := range ready {
 		if result := reflect.DeepEqual(ready[i], txs[i]); result == false {
 			t.Error("ready hash : ", ready[i].Hash(), "tx[i] hash : ", txs[i].Hash())
 		}

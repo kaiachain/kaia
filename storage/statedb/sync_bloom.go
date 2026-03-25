@@ -146,7 +146,7 @@ func (b *SyncBloom) meter() {
 		bloomErrorGauge.Update(int64(b.errorRate() * 100000))
 
 		// Wait one second, but check termination more frequently
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			if b.closed.Load() == 1 {
 				return
 			}

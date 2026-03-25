@@ -126,7 +126,7 @@ func (f *Faker) VerifyHeaders(chain consensus.ChainReader, headers []*types.Head
 	// If we're running a full engine faking, accept all headers as valid
 	if f.fullFake || len(headers) == 0 {
 		go func() {
-			for i := 0; i < len(headers); i++ {
+			for range headers {
 				results <- nil
 			}
 		}()

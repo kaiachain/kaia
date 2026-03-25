@@ -99,7 +99,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
 	batch := dynamo.NewBatch()
 
 	itemNum := 25
-	for i := 0; i < itemNum; i++ {
+	for range itemNum {
 		testKey := common.MakeRandomBytes(32)
 		testVal := common.MakeRandomBytes(500)
 
@@ -111,7 +111,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write() {
 	s.NoError(batch.Write())
 
 	// check if exist
-	for i := 0; i < itemNum; i++ {
+	for i := range itemNum {
 		returnedVal, returnedErr := dynamo.Get(testKeys[i])
 		s.NoError(returnedErr)
 		s.Equal(hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
@@ -128,7 +128,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_LargeData() {
 	batch := dynamo.NewBatch()
 
 	itemNum := 26
-	for i := 0; i < itemNum; i++ {
+	for range itemNum {
 		testKey := common.MakeRandomBytes(32)
 		testVal := common.MakeRandomBytes(500 * 1024)
 
@@ -140,7 +140,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_LargeData() {
 	s.NoError(batch.Write())
 
 	// check if exist
-	for i := 0; i < itemNum; i++ {
+	for i := range itemNum {
 		returnedVal, returnedErr := dynamo.Get(testKeys[i])
 		s.NoError(returnedErr)
 		s.Equal(hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
@@ -157,7 +157,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_DuplicatedKey() {
 	batch := dynamo.NewBatch()
 
 	itemNum := 25
-	for i := 0; i < itemNum; i++ {
+	for range itemNum {
 		testKey := common.MakeRandomBytes(256)
 		testVal := common.MakeRandomBytes(600)
 
@@ -171,7 +171,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_DuplicatedKey() {
 	s.NoError(batch.Write())
 
 	// check if exist
-	for i := 0; i < itemNum; i++ {
+	for i := range itemNum {
 		returnedVal, returnedErr := dynamo.Get(testKeys[i])
 		s.NoError(returnedErr)
 		s.Equal(hexutil.Encode(testVals[i]), hexutil.Encode(returnedVal))
@@ -205,9 +205,9 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_MultiTables() {
 	batch2 := dynamo2.NewBatch()
 
 	itemNum := WorkerNum * 2
-	for i := 0; i < itemNum; i++ {
+	for range itemNum {
 		// write batch items to db1 and db2 in turn
-		for j := 0; j < dynamoBatchSize; j++ {
+		for range dynamoBatchSize {
 			// write key and val to db1
 			testKey := common.MakeRandomBytes(10)
 			testVal := common.MakeRandomBytes(20)
@@ -231,7 +231,7 @@ func (s *SuiteDynamoDB) TestDynamoBatch_Write_MultiTables() {
 	s.NoError(batch2.Write())
 
 	// check if exist
-	for i := 0; i < itemNum; i++ {
+	for i := range itemNum {
 		// dynamodb 1 - check if wrote key and val
 		returnedVal, returnedErr := dynamo.Get(testKeys[i])
 		s.NoError(returnedErr)
@@ -286,7 +286,7 @@ func TestDynamoDB_Retry(t *testing.T) {
 		serverReadyWg.Done()
 
 		// expected request number: dynamoMaxRetry+1. It will wait one more time after all retry done.
-		for i := 0; i < dynamoMaxRetry+1+1; i++ {
+		for range dynamoMaxRetry + 1 + 1 {
 			// Deadline prevents infinite waiting of the fake server
 			// Wait longer than (maxRetries+1) * timeout
 			if err := listen.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {

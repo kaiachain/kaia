@@ -242,7 +242,7 @@ func (a *AccountKeyRoleBased) CheckUpdatable(newKey AccountKey, currentBlockNumb
 		if lenNewKey > (int)(RoleLast) {
 			return kerrors.ErrLengthTooLong
 		}
-		for i := 0; i < lenNewKey; i++ {
+		for i := range lenNewKey {
 			switch {
 			// A composite key is not allowed.
 			case (*newKey)[i].IsCompositeType():
@@ -278,7 +278,7 @@ func (a *AccountKeyRoleBased) Update(newKey AccountKey, currentBlockNumber uint6
 	if lenOldKey < lenNewKey {
 		*a = append(*a, (*newRoleKey)[lenOldKey:]...)
 	}
-	for i := 0; i < lenNewKey; i++ {
+	for i := range lenNewKey {
 		if (*newRoleKey)[i].Type() == AccountKeyTypeNil {
 			continue
 		}

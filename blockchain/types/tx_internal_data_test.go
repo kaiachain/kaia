@@ -337,7 +337,7 @@ func TestSidecar_ValidateWithBlobHashes(t *testing.T) {
 		blobHashes := make([]common.Hash, numBlobs)
 		hasher := sha256.New()
 
-		for i := 0; i < numBlobs; i++ {
+		for i := range numBlobs {
 			blob := kzg4844.Blob{}
 			commitment, _ := kzg4844.BlobToCommitment(&blob)
 			cellProofs, _ := kzg4844.ComputeCellProofs(&blob)

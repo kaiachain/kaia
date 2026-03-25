@@ -131,7 +131,7 @@ func (ctx *blockchainTestContext) setAccounts(count int) {
 	ctx.accountKeys = make([]*ecdsa.PrivateKey, count)
 	ctx.accountAddrs = make([]common.Address, count)
 	ctx.accounts = make([]*bind.TransactOpts, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		privateKey := deriveTestAccount(i)
 		ctx.accountKeys[i] = privateKey
 		ctx.accountAddrs[i] = crypto.PubkeyToAddress(privateKey.PublicKey)
@@ -177,7 +177,7 @@ func (ctx *blockchainTestContext) setWorkspace() {
 
 func (ctx *blockchainTestContext) setNodes(numNodes int) error {
 	ctx.nodes = make([]*blockchainTestNode, numNodes)
-	for i := 0; i < numNodes; i++ {
+	for i := range numNodes {
 		if err := ctx.setNode(i); err != nil {
 			return err
 		}

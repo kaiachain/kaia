@@ -286,7 +286,7 @@ func BenchmarkParallelEcrecover(b *testing.B) {
 func generateBenchmarkMaterial(L int) (data []byte, sigs [][]byte) {
 	data = common.HexToHash("0xabcd").Bytes()
 	sigs = make([][]byte, L)
-	for i := 0; i < L; i++ {
+	for i := range L {
 		// any nonzero integer less than the order is a valid privkey
 		priv := ToECDSAUnsafe(big.NewInt(int64(i + 1)).Bytes())
 		sig, _ := Sign(data, priv)
@@ -305,7 +305,7 @@ func parallelEcrecover(data []byte, sigs [][]byte) {
 		jobs <- sig
 	}
 
-	for i := 0; i < threads; i++ {
+	for range threads {
 		go func() {
 			for sig := range jobs {
 				Ecrecover(data, sig)

@@ -57,14 +57,14 @@ func TestSimpleBlockchain(t *testing.T) {
 	richAccount, accounts, contractAccounts := createAccount(t, numAccounts, validator)
 
 	contractDeployCode := "0x608060405234801561001057600080fd5b506000808190555060646001819055506101848061002f6000396000f300608060405260043610610062576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff16806302e5329e14610067578063197e70e41461009457806349b667d2146100c157806367e0badb146100ec575b600080fd5b34801561007357600080fd5b5061009260048036038101908080359060200190929190505050610117565b005b3480156100a057600080fd5b506100bf60048036038101908080359060200190929190505050610121565b005b3480156100cd57600080fd5b506100d6610145565b6040518082815260200191505060405180910390f35b3480156100f857600080fd5b5061010161014f565b6040518082815260200191505060405180910390f35b8060018190555050565b806000540160008190555060015460005481151561013b57fe5b0660008190555050565b6000600154905090565b600080549050905600a165627a7a72305820ef4e7e564c744de3a36cb74000c35687f7de9ecf1d29abdd3c4bcc66db981c160029"
-	for i := 0; i < numAccounts; i++ {
+	for i := range numAccounts {
 		_, contractAccounts[i].Addr = deployContractDeployTx(t, node.TxPool(), chainId, richAccount, contractDeployCode)
 	}
 	time.Sleep(time.Second) // need to make a block before contract execution
 
 	// deploy
 	calldata := "0x197e70e40000000000000000000000000000000000000000000000000000000000000001"
-	for i := 0; i < numAccounts; i++ {
+	for i := range numAccounts {
 		deployRandomTxs(t, node.TxPool(), chainId, richAccount, 10)
 		deployValueTransferTx(t, node.TxPool(), chainId, richAccount, accounts[i%numAccounts])
 		deployContractExecutionTx(t, node.TxPool(), chainId, richAccount, contractAccounts[i%numAccounts].Addr, calldata)
@@ -132,7 +132,7 @@ func createAccount(t *testing.T, numAccounts int, validator *TestAccountType) (*
 	}
 
 	var err error
-	for i := 0; i < numAccounts; i++ {
+	for i := range numAccounts {
 		if accounts[i], err = createAnonymousAccount(getRandomPrivateKeyString(t)); err != nil {
 			t.Fatal()
 		}
@@ -245,7 +245,7 @@ func deployRandomTxs(t *testing.T, txpool work.TxPool, chainId *big.Int, sender 
 	gasPrice := txpool.GasPrice()
 
 	txNuminABlock := 100
-	for i := 0; i < txNum; i++ {
+	for i := range txNum {
 		if i%txNuminABlock == 0 {
 			time.Sleep(time.Second)
 		}

@@ -6,7 +6,7 @@ import (
 )
 
 func TestRandomG2Marshal(t *testing.T) {
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		n, g2, err := RandomG2(rand.Reader)
 		if err != nil {
 			t.Error(err)

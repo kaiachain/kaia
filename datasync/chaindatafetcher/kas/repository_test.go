@@ -105,7 +105,7 @@ func makeChainEventsWithInternalTraces(numBlocks int, genTxs func(i int, block *
 	}
 
 	var events []blockchain.ChainEvent
-	for i := 0; i < numBlocks; i++ {
+	for i := range numBlocks {
 		timer := time.NewTimer(1 * time.Second)
 		select {
 		case <-timer.C:
@@ -163,7 +163,7 @@ func Test_repository_InvalidateCacheEOAList(t *testing.T) {
 	testAuth := "test-auth"
 	testEOAs := make(map[common.Address]struct{})
 	numEOAs := 10
-	for i := 0; i < numEOAs; i++ {
+	for range numEOAs {
 		testEOAs[*genRandomAddress()] = struct{}{}
 	}
 

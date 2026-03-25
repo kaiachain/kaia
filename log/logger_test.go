@@ -22,7 +22,7 @@ import "testing"
 
 // TestLogModulesLengthCheck checks if all ModuleID have corresponding moduleNames.
 func TestLogModulesLengthCheck(t *testing.T) {
-	for i := 0; i < int(ModuleNameLen); i++ {
+	for i := range int(ModuleNameLen) {
 		if moduleNames[i] == "" {
 			t.Fatalf("Module name should be specified! index: %v", i)
 		}

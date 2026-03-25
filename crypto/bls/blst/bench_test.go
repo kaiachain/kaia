@@ -159,11 +159,11 @@ func BenchmarkParallelVerify(b *testing.B) {
 		wg.Add(threads)
 
 		jobs := make(chan int, len(tc.sigbs))
-		for i := 0; i < L; i++ {
+		for i := range L {
 			jobs <- i
 		}
 
-		for i := 0; i < threads; i++ {
+		for range threads {
 			go func() {
 				for i := range jobs {
 					sig, _ := SignatureFromBytes(tc.sigbs[i])
@@ -235,7 +235,7 @@ func BenchmarkVerifyMultipleNaive(b *testing.B) {
 
 	fn := func() {
 		pks, _ := MultiplePublicKeysFromBytes(tc.pkbs)
-		for i := 0; i < L; i++ {
+		for i := range L {
 			VerifySignature(tc.sigbs[i], tc.msgs[i], pks[i])
 		}
 	}
@@ -264,7 +264,7 @@ func generateBenchmarkMaterial(L int) *benchmarkTestCase {
 
 	rand.Read(tc.msg)
 
-	for i := 0; i < L; i++ {
+	for i := range L {
 		sk, _ := RandKey()
 		pk := sk.PublicKey()
 		sig := Sign(sk, tc.msg)
@@ -296,7 +296,7 @@ func generateBenchmarkMaterialMulti(L int) *benchmarkTestCaseMulti {
 	tc.sigs = make([]types.Signature, L)
 	tc.sigbs = make([][]byte, L)
 
-	for i := 0; i < L; i++ {
+	for i := range L {
 		sk, _ := RandKey()
 		pk := sk.PublicKey()
 		rand.Read(tc.msgs[i][:])

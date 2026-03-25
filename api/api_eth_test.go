@@ -3412,7 +3412,7 @@ func TestEthAPI_GetBlobSidecars(t *testing.T) {
 			setupMock: func() {
 				// Create a block with 3 blob transactions (exceeding Max=1 for Osaka)
 				txs := make([]*types.Transaction, 3)
-				for i := 0; i < 3; i++ {
+				for i := range 3 {
 					txs[i] = blobTx
 				}
 				blockWithManyBlobTxs := types.NewBlock(

@@ -213,7 +213,7 @@ func TestShardedDBIterator_Release(t *testing.T) {
 			defer it.Release()
 
 			// check if data exists
-			for i := 0; i < shardedDBCombineChanSize+1; i++ {
+			for range shardedDBCombineChanSize + 1 {
 				assert.True(t, it.Next())
 			}
 		}
@@ -224,7 +224,7 @@ func TestShardedDBIterator_Release(t *testing.T) {
 			it.Release()
 
 			// flush data in channel
-			for i := 0; i < shardedDBCombineChanSize+1; i++ {
+			for range shardedDBCombineChanSize + 1 {
 				it.Next()
 			}
 
@@ -242,7 +242,7 @@ func TestShardedDBIteratorUnsorted_Release(t *testing.T) {
 			defer it.Release()
 
 			// check if data exists
-			for i := 0; i < shardedDBCombineChanSize+1; i++ {
+			for range shardedDBCombineChanSize + 1 {
 				assert.True(t, it.Next())
 			}
 		}
@@ -253,7 +253,7 @@ func TestShardedDBIteratorUnsorted_Release(t *testing.T) {
 			it.Release()
 
 			// flush data in channel
-			for i := 0; i < shardedDBCombineChanSize+1; i++ {
+			for range shardedDBCombineChanSize + 1 {
 				it.Next()
 			}
 
@@ -274,7 +274,7 @@ func TestShardedDBParallelIterator_Release(t *testing.T) {
 
 				for _, ch := range it.Channels() {
 					// check if channel is not closed
-					for i := 0; i < shardedDBSubChannelSize+1; i++ {
+					for range shardedDBSubChannelSize + 1 {
 						e, ok := <-ch
 						assert.NotNil(t, e)
 						assert.True(t, ok)
@@ -289,7 +289,7 @@ func TestShardedDBParallelIterator_Release(t *testing.T) {
 				for _, ch := range it.Channels() {
 
 					// flush data in channel
-					for i := 0; i < shardedDBSubChannelSize+1; i++ {
+					for range shardedDBSubChannelSize + 1 {
 						<-ch
 					}
 

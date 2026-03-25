@@ -201,7 +201,7 @@ func decodeExtra(headerFile string) (map[string]interface{}, error) {
 		return nil, err
 	}
 	cSeals := make([]string, len(istanbulExtra.CommittedSeal))
-	for i := 0; i < len(cSeals); i++ {
+	for i := range cSeals {
 		cSeals[i] = hexutil.Encode(istanbulExtra.CommittedSeal[i])
 	}
 

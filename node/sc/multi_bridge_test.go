@@ -76,7 +76,7 @@ func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 	accountMap := make(map[common.Address]blockchain.GenesisAccount)
 	res.accounts = make([]*bind.TransactOpts, maxAccounts)
 
-	for i := 0; i < maxAccounts; i++ {
+	for i := range maxAccounts {
 		accKey, _ := crypto.GenerateKey()
 		res.accounts[i] = bind.NewKeyedTransactor(accKey)
 		accountMap[res.accounts[i].From] = blockchain.GenesisAccount{Balance: big.NewInt(params.KAIA)}
@@ -94,7 +94,7 @@ func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 	assert.Nil(t, bind.CheckWaitMined(res.sim, tx))
 
 	owner := res.accounts[0]
-	for i := 0; i < maxAccounts; i++ {
+	for i := range maxAccounts {
 		acc := res.accounts[i]
 		opts := &bind.TransactOpts{From: owner.From, Signer: owner.Signer, GasLimit: DefaultBridgeTxGasLimit}
 		_, _ = b.RegisterOperator(opts, acc.From)
@@ -1206,7 +1206,7 @@ func TestNoncesAndBlockNumberUnordered(t *testing.T) {
 		{3, 400, 3, 4, 400},
 	}
 
-	for i := 0; i < len(testCases); i++ {
+	for i := range testCases {
 		sentNonce := testCases[i].requestNonce
 		sentBlockNumber := testCases[i].requestBlkNum
 		t.Log("test round", "i", i, "nonce", sentNonce, "blk", sentBlockNumber)
@@ -1230,7 +1230,7 @@ func TestNoncesAndBlockNumberUnordered(t *testing.T) {
 	lowerHandleNonce, _ := info.b.LowerHandleNonce(nil)
 	assert.Equal(t, uint64(4), lowerHandleNonce)
 
-	for i := 0; i < len(testCases); i++ {
+	for i := range testCases {
 		sentNonce := testCases[i].requestNonce
 		sentBlockNumber := testCases[i].requestBlkNum
 		t.Log("test round", "i", i, "nonce", sentNonce, "blk", sentBlockNumber)
