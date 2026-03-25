@@ -81,7 +81,7 @@ func (v *ValsetModule) applyAllTransitions(
 ) (valset.NodeStateMap, error) {
 	newValidators := v.getViolationTransition(num, validators)
 
-	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb.Copy())
+	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb)
 	if err != nil {
 		return nil, err
 	}
