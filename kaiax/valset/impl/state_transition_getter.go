@@ -52,7 +52,7 @@ func (v *ValsetModule) getEpochTransition(
 	var (
 		newValidators        = validators.Copy()
 		activeValCompetitors []sortableValidator
-		pset                 = v.GovModule.GetParamSet(num - 1) // read gov param from parent number
+		pset                 = v.GovModule.GetParamSet(num)
 		minStake             = pset.MinimumStake.Uint64()       // in KAIA
 	)
 	defer devLog(newValidators)
@@ -158,7 +158,7 @@ func filterCouncilFromNodeStates(nodes valset.NodeStateMap) []common.Address {
 // rule1: staking amount dropped below MinimumStake, rule2: vrank violation (TODO).
 func (v *ValsetModule) getViolationTransition(num uint64, validators valset.NodeStateMap) valset.NodeStateMap {
 	var (
-		pset          = v.GovModule.GetParamSet(num - 1) // read gov param from parent number
+		pset          = v.GovModule.GetParamSet(num)
 		minStake      = pset.MinimumStake.Uint64()       // in KAIA
 		newValidators = validators.Copy()
 	)
