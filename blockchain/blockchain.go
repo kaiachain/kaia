@@ -735,7 +735,7 @@ func (bc *BlockChain) Validator() Validator {
 
 // SetValidator overrides the blockchain/headerchain validator pair.
 // Intended for tests that need custom header/execution compatibility behavior.
-func (bc *BlockChain) SetValidator(validator Validator) {
+func (bc *BlockChain) SetValidatorForTest(validator Validator) {
 	bc.validator = validator
 	if bc.hc != nil {
 		bc.hc.validator = validator

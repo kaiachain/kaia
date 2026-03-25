@@ -447,7 +447,7 @@ func (t *BlockTest) Run() error {
 	engine.SetChain(chain)
 	defer chain.Stop()
 	chain.Processor().RegisterBlockStateModule(engine)
-	chain.SetValidator(engine)
+	chain.SetValidatorForTest(engine)
 
 	_, err = t.insertBlocks(chain, *gblock, db)
 	if err != nil {
