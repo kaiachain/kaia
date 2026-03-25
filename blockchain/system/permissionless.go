@@ -284,6 +284,8 @@ func installAndInitABv2(cfg *runtime.Config, statedb *state.StateDB, implAddr co
 	if err := evmCallABI(cfg, AddressBookAddr, AddressBookV2ABI, "initialize"); err != nil {
 		return fmt.Errorf("ABv2.initialize: %w", err)
 	}
+	// Set isActivated = true (storage slot 12) so legacy getter getAllAddress() returns data.
+	statedb.SetState(AddressBookAddr, common.BigToHash(big.NewInt(12)), common.BigToHash(big.NewInt(1)))
 	return nil
 }
 
