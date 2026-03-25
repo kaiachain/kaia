@@ -32,7 +32,8 @@ import (
 
 // makeTestPermissionlessConfig delegates to the exported MakeTestPermissionlessConfig.
 func makeTestPermissionlessConfig(t *testing.T, n int) *AllocPermissionlessConfig {
-	return MakeTestPermissionlessConfig(t, n)
+	config, _ := MakeTestPermissionlessConfig(t, n)
+	return config
 }
 
 // verifyPermissionlessAlloc checks alloc-level properties and ABv2 contract state.

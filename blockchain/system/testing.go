@@ -17,6 +17,7 @@
 package system
 
 import (
+	"crypto/ecdsa"
 	"crypto/rand"
 	"math/big"
 	"testing"
@@ -30,12 +31,13 @@ import (
 )
 
 // MakeTestPermissionlessConfig creates a test AllocPermissionlessConfig with n validators.
-func MakeTestPermissionlessConfig(t *testing.T, n int) *AllocPermissionlessConfig {
+func MakeTestPermissionlessConfig(t *testing.T, n int) (*AllocPermissionlessConfig, []*ecdsa.PrivateKey) {
 	t.Helper()
 
 	ownerKey, _ := crypto.GenerateKey()
 	owner := crypto.PubkeyToAddress(ownerKey.PublicKey)
 
+	nodeKeys := make([]*ecdsa.PrivateKey, n)
 	nodeIds := make([]common.Address, n)
 	nodeInfos := make([]addressbookv2contract.NodeInfo, n)
 	stakeAmts := make([]*big.Int, n)
@@ -44,6 +46,7 @@ func MakeTestPermissionlessConfig(t *testing.T, n int) *AllocPermissionlessConfi
 	for i := 0; i < n; i++ {
 		key, _ := crypto.GenerateKey()
 		addr := crypto.PubkeyToAddress(key.PublicKey)
+		nodeKeys[i] = key
 		_, pub, pop := MakeTestBlsKey()
 
 		nodeIds[i] = addr
@@ -78,7 +81,7 @@ func MakeTestPermissionlessConfig(t *testing.T, n int) *AllocPermissionlessConfi
 			KifAddress:             common.HexToAddress("0x2222"),
 			KpfAddress:             common.HexToAddress("0x3333"),
 		},
-	}
+	}, nodeKeys
 }
 
 // MakeTestBlsKey generates a random BLS key pair for testing.

@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
@@ -28,10 +29,14 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/faker"
 	addressbookv2contract "github.com/kaiachain/kaia/contracts_permissionless/contracts/AddressBookV2"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -43,7 +48,7 @@ func TestInstallAndInitializeABv2(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
 	// Build a full alloc via AllocPermissionless, then remove ABv2 proxy to simulate pre-HF state
-	config := system.MakeTestPermissionlessConfig(t, 3)
+	config, _ := system.MakeTestPermissionlessConfig(t, 3)
 	alloc, err := system.AllocPermissionless(config)
 	require.NoError(t, err)
 	delete(alloc, system.AddressBookAddr) // pre-HF: no ABv2 proxy at 0x400
@@ -98,10 +103,115 @@ func TestInstallAndInitializeABv2(t *testing.T) {
 	}
 }
 
+// TestGetOrComputeNodeStates tests getOrComputeNodeStates which should always
+// return ABv2(N-1) + applyTr(N), excluding user transactions at block N.
+// Uses GenerateChain + InsertChain to commit a real pause tx for realistic chain state.
+func TestGetOrComputeNodeStates(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+
+	config, nodeKeys := system.MakeTestPermissionlessConfig(t, 3)
+	alloc, err := system.AllocPermissionless(config)
+	require.NoError(t, err)
+
+	// Build chain with genesis — fund config.NodeIds[0] for pause tx
+	db := database.NewMemoryDBManager()
+	genesisAlloc := blockchain.GenesisAlloc(alloc)
+	genesisAlloc[config.NodeIds[0]] = blockchain.GenesisAccount{Balance: big.NewInt(1_000_000_000)}
+	gspec := &blockchain.Genesis{
+		Config: params.TestChainConfig,
+		Alloc:  genesisAlloc,
+	}
+	genesis := gspec.MustCommit(db)
+
+	// Generate block 1 with a pause tx for config.NodeIds[0]
+	pauseData, err := system.AddressBookV2ABI.Pack("pause", config.NodeIds[0])
+	require.NoError(t, err)
+
+	signer := types.LatestSignerForChainID(params.TestChainConfig.ChainID)
+	blocks, _ := blockchain.GenerateChain(params.TestChainConfig, genesis, faker.NewFaker(), db, 1, func(i int, gen *blockchain.BlockGen) {
+		tx, err := types.SignTx(
+			types.NewTransaction(gen.TxNonce(config.NodeIds[0]), system.AddressBookAddr, common.Big0, 1_000_000, common.Big0, pauseData),
+			signer, nodeKeys[0],
+		)
+		require.NoError(t, err)
+		gen.AddTx(tx)
+	})
+
+	// Insert block 1
+	chain, err := blockchain.NewBlockChain(db, nil, params.TestChainConfig, faker.NewFaker(), vm.Config{})
+	require.NoError(t, err)
+	defer chain.Stop()
+	_, err = chain.InsertChain(blocks)
+	require.NoError(t, err)
+
+	// Verify ABv2(1) has ValPaused from pause tx
+	header1 := chain.GetHeaderByNumber(1)
+	statedb1, err := chain.StateAt(header1.Root)
+	require.NoError(t, err)
+	validators, err := system.ReadGetAllValidators(statedb1, chain, header1)
+	require.NoError(t, err)
+	require.Equal(t, valset.ValPaused, validators[config.NodeIds[0]].State, "ABv2(1) should have ValPaused after pause tx")
+
+	newModule := func(t *testing.T) *ValsetModule {
+		ctrl := gomock.NewController(t)
+		mockGov := gov_mock.NewMockGovModule(ctrl)
+		mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
+			MinimumStake: new(big.Int).SetUint64(5_000_000),
+		}).AnyTimes()
+
+		v := NewValsetModule()
+		v.Chain = chain
+		v.GovModule = mockGov
+		v.vrankEpoch = testVRankEpoch
+		return v
+	}
+
+	t.Run("block 0 returns error (no parent header)", func(t *testing.T) {
+		v := newModule(t)
+		_, err := v.getOrComputeNodeStates(0, nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("cache hit returns cached value", func(t *testing.T) {
+		v := newModule(t)
+		cached := valset.NodeStateMap{
+			config.NodeIds[0]: {State: valset.ValPaused, StakingAmount: 999},
+		}
+		v.nodeStatesCache.Add(uint64(1), cached)
+
+		result, err := v.getOrComputeNodeStates(1, nil)
+		require.NoError(t, err)
+		assert.Equal(t, valset.ValPaused, result[config.NodeIds[0]].State)
+		assert.Equal(t, uint64(999), result[config.NodeIds[0]].StakingAmount)
+	})
+
+	t.Run("excludes userTx at block N from getOrComputeNodeStates(N)", func(t *testing.T) {
+		v := newModule(t)
+		// Block 1 is committed with pause tx → ABv2(1) has ValPaused.
+		// But getOrComputeNodeStates(1) should read ABv2(0) + applyTr(1) = all ValActive.
+		result, err := v.getOrComputeNodeStates(1, nil)
+		require.NoError(t, err)
+		assert.Equal(t, valset.ValActive, result[config.NodeIds[0]].State,
+			"should return ValActive from ABv2(0), not ValPaused from committed ABv2(1)")
+	})
+
+	t.Run("reads committed ABv2(N-1) including userTx from previous block", func(t *testing.T) {
+		v := newModule(t)
+		// Block 2: reads ABv2(1) which has ValPaused from pause tx + applyTr(2) noop
+		result, err := v.getOrComputeNodeStates(2, nil)
+		require.NoError(t, err)
+		assert.Equal(t, valset.ValPaused, result[config.NodeIds[0]].State,
+			"should read ValPaused from committed ABv2(1)")
+		for _, nodeId := range config.NodeIds[1:] {
+			assert.Equal(t, valset.ValActive, result[nodeId].State)
+		}
+	})
+}
+
 // TestReadGetAllValidators tests ReadGetAllValidators before and after a state transition.
 func TestReadGetAllValidators(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
-	config := system.MakeTestPermissionlessConfig(t, 3)
+	config, _ := system.MakeTestPermissionlessConfig(t, 3)
 
 	alloc, err := system.AllocPermissionless(config)
 	require.NoError(t, err)
@@ -153,7 +263,7 @@ func TestReadGetAllValidators(t *testing.T) {
 	err = v.writeNodesToContract(vmenv, hfHeader, statedb)
 	require.NoError(t, err)
 
-	// After transition: nodeIds[0] should be ValPaused
+	// After transition: config.NodeIds[0] should be ValPaused
 	validators, err = system.ReadGetAllValidators(statedb, chain, header)
 	require.NoError(t, err)
 	assert.Len(t, validators, 3)

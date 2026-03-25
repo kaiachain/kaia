@@ -17,7 +17,6 @@
 package impl
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -40,34 +39,15 @@ const (
 )
 
 // getOrComputeNodeStates returns the node states for block `num`.
-// If parentStatedb is provided, it is used as the parent state (avoids StateAt which may fail on pruned state).
-// 1. Cache hit → return cached value.
-// 2. Block N committed (header exists) → read ABv2(N) directly.
-// 3. Block N not committed or state pruned → read ABv2(N-1) + apply transitions.
+// Always computes ABv2(N-1) + applyTr(N) to exclude user transactions at block N.
+// If parentStatedb is provided, it is used as the parent state (avoids StateAt which may fail when trie nodes are not in stateCache, e.g., during historical regeneration).
 func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.StateDB) (valset.NodeStateMap, error) {
 	// 1. Cache hit
 	if cached, ok := v.nodeStatesCache.Get(num); ok {
 		return cached.(valset.NodeStateMap), nil
 	}
 
-	// 2. Block N committed → read ABv2(N) directly (optimization: skip transition computation)
-	// Falls through to case 3 if state is pruned.
-	if parentStatedb == nil {
-		if header := v.Chain.GetHeaderByNumber(num); header != nil {
-			if statedb, err := v.Chain.StateAt(header.Root); err == nil {
-				validators, err := system.ReadGetAllValidators(statedb, v.Chain, header)
-				if err == nil {
-					v.nodeStatesCache.Add(num, validators)
-					return validators, nil
-				}
-			}
-		}
-	}
-
-	// 3. Block N not committed or state pruned → read ABv2(N-1) + apply transitions
-	if num == 0 {
-		return nil, errors.New("block 0 has no committed state for permissionless")
-	}
+	// 2. Read ABv2(N-1) + apply transitions for block N
 	parentHeader := v.Chain.GetHeaderByNumber(num - 1)
 	if parentHeader == nil {
 		return nil, fmt.Errorf("parent header not found for block %d", num)
