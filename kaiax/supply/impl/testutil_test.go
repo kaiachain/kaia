@@ -234,7 +234,7 @@ func makeGenesis(t *testing.T, config *params.ChainConfig) *blockchain.Genesis {
 	)
 
 	return &blockchain.Genesis{
-		Config:     config,
+		Config: config,
 		// Keep genesis time sufficiently in the past so long test chains
 		// (400 blocks * 10s) don't trip future-block validation.
 		Timestamp:  uint64(time.Now().Add(-24 * time.Hour).Unix()),
@@ -293,8 +293,9 @@ func rebalanceAlloc(t *testing.T, blockNum uint64, addr common.Address, code []b
 
 func setupMockEngine(engine *consensus_mock.MockEngine) {
 	engine.EXPECT().Author(gomock.Any()).Return(addrProposer, nil).AnyTimes()
+	engine.EXPECT().Committers(gomock.Any()).Return(nil, nil).AnyTimes()
 	engine.EXPECT().PrepareExtra(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-	engine.EXPECT().VerifySeals(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	engine.EXPECT().VerifySeals(gomock.Any()).Return(nil).AnyTimes()
 }
 
 func setupMockGov(mGov *gov_mock.MockGovModule, config *params.ChainConfig) {

@@ -124,7 +124,14 @@ func (v *BlockValidator) Preprocess(headers []*types.Header) (chan<- struct{}, <
 			if errored {
 				err = consensus.ErrUnknownAncestor
 			} else {
-				err = v.engine.VerifySeals(header, true)
+				if header.Number == nil {
+					err = consensus.ErrUnknownBlock
+				} else if header.Number.Uint64() != 0 {
+					_, err = v.engine.Author(header)
+					if err == nil {
+						_, err = v.engine.Committers(header)
+					}
+				}
 			}
 
 			if err != nil {
@@ -209,7 +216,7 @@ func (v *BlockValidator) validateHeader(header *types.Header, parent *types.Head
 	}
 
 	// Verify the header's seal and consensus-specific fields.
-	if err := v.engine.VerifySeals(header, false); err != nil {
+	if err := v.engine.VerifySeals(header); err != nil {
 		return err
 	}
 

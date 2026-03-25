@@ -103,7 +103,7 @@ func (sb *backend) Committers(header *types.Header) ([]common.Address, error) {
 	return committers, nil
 }
 
-func (sb *backend) VerifySeals(header *types.Header, sigCacheMode bool) error {
+func (sb *backend) VerifySeals(header *types.Header) error {
 	if header.Number == nil {
 		return consensus.ErrUnknownBlock
 	}
@@ -121,10 +121,6 @@ func (sb *backend) VerifySeals(header *types.Header, sigCacheMode bool) error {
 	committers, err := sb.Committers(header)
 	if err != nil {
 		return err
-	}
-
-	if sigCacheMode {
-		return nil
 	}
 
 	if sb.valsetModule == nil || sb.govModule == nil {

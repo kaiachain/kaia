@@ -87,6 +87,10 @@ type Engine interface {
 	// block.
 	Author(header *types.Header) (common.Address, error)
 
+	// Committers extracts committed-seal signer addresses from the given header.
+	// Engines that do not use committed seals may return (nil, nil).
+	Committers(header *types.Header) ([]common.Address, error)
+
 	// Start starts any consensus-specific background lifecycle.
 	// Engines without a background runtime should implement this as a no-op.
 	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool, executor Executor) error
@@ -109,8 +113,7 @@ type Engine interface {
 	SubmitTransactions(txs *types.TransactionsByPriceAndNonce, state *state.StateDB, header *types.Header, mux *event.TypeMux, onPrepared func(*ExecutionResult)) (finalizeCh <-chan *ExecutionResult)
 
 	// VerifySeals checks consensus-specific seals for the given header.
-	// When sigCacheMode is true, implementations may run cache-only preprocessing.
-	VerifySeals(header *types.Header, sigCacheMode bool) error
+	VerifySeals(header *types.Header) error
 
 	// APIs returns the RPC APIs this consensus engine provides.
 	APIs(chain ChainReader) []rpc.API

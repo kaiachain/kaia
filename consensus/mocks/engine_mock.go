@@ -70,6 +70,21 @@ func (mr *MockEngineMockRecorder) Author(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Author", reflect.TypeOf((*MockEngine)(nil).Author), arg0)
 }
 
+// Committers mocks base method.
+func (m *MockEngine) Committers(arg0 *types.Header) ([]common.Address, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Committers", arg0)
+	ret0, _ := ret[0].([]common.Address)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Committers indicates an expected call of Committers.
+func (mr *MockEngineMockRecorder) Committers(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Committers", reflect.TypeOf((*MockEngine)(nil).Committers), arg0)
+}
+
 // GetConsensusInfo mocks base method.
 func (m *MockEngine) GetConsensusInfo(arg0 *types.Block) (consensus.ConsensusInfo, error) {
 	m.ctrl.T.Helper()
@@ -195,15 +210,15 @@ func (mr *MockEngineMockRecorder) SubscribeNewSequence() *gomock.Call {
 }
 
 // VerifySeals mocks base method.
-func (m *MockEngine) VerifySeals(arg0 *types.Header, arg1 bool) error {
+func (m *MockEngine) VerifySeals(arg0 *types.Header) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifySeals", arg0, arg1)
+	ret := m.ctrl.Call(m, "VerifySeals", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // VerifySeals indicates an expected call of VerifySeals.
-func (mr *MockEngineMockRecorder) VerifySeals(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) VerifySeals(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifySeals", reflect.TypeOf((*MockEngine)(nil).VerifySeals), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifySeals", reflect.TypeOf((*MockEngine)(nil).VerifySeals), arg0)
 }

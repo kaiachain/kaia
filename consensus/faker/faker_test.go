@@ -72,13 +72,13 @@ func TestVerifyHeader(t *testing.T) {
 
 	// Test with fullFake mode - should accept everything
 	f2 := NewFullFaker()
-	err := f2.VerifySeals(&types.Header{Number: big.NewInt(1)}, false)
+	err := f2.VerifySeals(&types.Header{Number: big.NewInt(1)})
 	assert.NoError(t, err)
 
 	// Test with failBlock
 	f3 := NewFakeFailer(5)
 	header := &types.Header{Number: big.NewInt(5)}
-	err = f3.VerifySeals(header, false)
+	err = f3.VerifySeals(header)
 	assert.Equal(t, consensus.ErrUnknownAncestor, err)
 
 	// Test normal case - should pass
@@ -94,7 +94,7 @@ func TestVerifyHeader(t *testing.T) {
 		Number:     big.NewInt(1),
 		ParentHash: chain.CurrentBlock().Hash(),
 	}
-	err = f.VerifySeals(header, false)
+	err = f.VerifySeals(header)
 	assert.NoError(t, err)
 }
 
@@ -225,7 +225,7 @@ func TestHeaderValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.faker.VerifySeals(tt.header, false)
+			err := tt.faker.VerifySeals(tt.header)
 			if tt.expectErr {
 				assert.Error(t, err)
 			} else {

@@ -243,7 +243,14 @@ func (e *eestEngine) Preprocess(headers []*types.Header) (chan<- struct{}, <-cha
 			if errored {
 				err = consensus.ErrUnknownAncestor
 			} else {
-				err = e.VerifySeals(header, true)
+				if header.Number == nil {
+					err = consensus.ErrUnknownBlock
+				} else if header.Number.Uint64() != 0 {
+					_, err = e.Author(header)
+					if err == nil {
+						_, err = e.Committers(header)
+					}
+				}
 			}
 			if err != nil {
 				errored = true
@@ -349,8 +356,11 @@ func (e *eestEngine) FinalizeState(header *types.Header, state *state.StateDB, t
 	return nil
 }
 
-func (e *eestEngine) VerifySeals(header *types.Header, sigCacheMode bool) error {
-	_ = sigCacheMode
+func (e *eestEngine) Committers(header *types.Header) ([]common.Address, error) {
+	return nil, nil
+}
+
+func (e *eestEngine) VerifySeals(header *types.Header) error {
 	return nil
 }
 

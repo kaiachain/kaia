@@ -111,8 +111,13 @@ func (f *Faker) verifyFailure(header *types.Header) error {
 	return nil
 }
 
+// Committers checks preprocess-time seal extraction for faker.
+func (f *Faker) Committers(header *types.Header) ([]common.Address, error) {
+	return nil, f.verifyFailure(header)
+}
+
 // VerifySeals checks consensus-specific seals for faker.
-func (f *Faker) VerifySeals(header *types.Header, _ bool) error {
+func (f *Faker) VerifySeals(header *types.Header) error {
 	return f.verifyFailure(header)
 }
 

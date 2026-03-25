@@ -502,7 +502,6 @@ func TestVerifySeals(t *testing.T) {
 			header      *types.Header
 			expectedErr error
 			targetFork  string
-			sigCache    bool
 			unsetMods   bool
 			mutate      func(t *testing.T, header *types.Header)
 		}{
@@ -511,43 +510,30 @@ func TestVerifySeals(t *testing.T) {
 				header:      &types.Header{Number: big.NewInt(1), Extra: append([]byte(nil), emptyCommittedSealsExtra...)},
 				expectedErr: istanbul.ErrEmptyCommittedSeals,
 				targetFork:  "kore",
-				sigCache:    false,
 			},
 			{
 				name:        "short extra data",
 				header:      &types.Header{Number: big.NewInt(1), Extra: []byte{}},
 				expectedErr: istanbul.ErrInvalidExtraDataFormat,
 				targetFork:  "kore",
-				sigCache:    false,
 			},
 			{
 				name:        "incorrect extra format",
 				header:      &types.Header{Number: big.NewInt(1), Extra: invalidExtra},
 				expectedErr: istanbul.ErrInvalidExtraDataFormat,
 				targetFork:  "kore",
-				sigCache:    false,
 			},
 			{
 				name:        "valid header with committed seals",
 				header:      &types.Header{Number: big.NewInt(1), Extra: append([]byte(nil), validExtra...)},
 				expectedErr: nil,
 				targetFork:  "",
-				sigCache:    false,
 			},
 			{
-				name:        "sigCacheMode valid header without modules",
-				header:      &types.Header{Number: big.NewInt(1), Extra: append([]byte(nil), validExtra...)},
-				expectedErr: nil,
-				targetFork:  "",
-				sigCache:    true,
-				unsetMods:   true,
-			},
-			{
-				name:        "sigCacheMode invalid committed seal signature",
+				name:        "invalid committed seal signature",
 				header:      &types.Header{Number: big.NewInt(1), Extra: append([]byte(nil), validExtra...)},
 				expectedErr: istanbul.ErrInvalidSignature,
 				targetFork:  "",
-				sigCache:    true,
 				mutate: func(t *testing.T, header *types.Header) {
 					t.Helper()
 					extra, err := types.ExtractIstanbulExtra(header)
@@ -561,19 +547,11 @@ func TestVerifySeals(t *testing.T) {
 				},
 			},
 			{
-				name:        "full mode without modules",
+				name:        "without modules",
 				header:      &types.Header{Number: big.NewInt(1), Extra: append([]byte(nil), validExtra...)},
 				expectedErr: istanbul.ErrNoEssentialModule,
 				targetFork:  "",
-				sigCache:    false,
 				unsetMods:   true,
-			},
-			{
-				name:        "short extra data in sigCacheMode",
-				header:      &types.Header{Number: big.NewInt(1), Extra: []byte{}},
-				expectedErr: istanbul.ErrInvalidExtraDataFormat,
-				targetFork:  "kore",
-				sigCache:    true,
 			},
 		}
 
@@ -598,7 +576,7 @@ func TestVerifySeals(t *testing.T) {
 					engine.govModule = origGov
 				}()
 
-				err := engine.VerifySeals(header, tc.sigCache)
+				err := engine.VerifySeals(header)
 				if tc.expectedErr == nil {
 					require.NoError(t, err)
 					return
