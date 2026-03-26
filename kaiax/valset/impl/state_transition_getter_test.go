@@ -114,7 +114,7 @@ func TestGetEpochTransition_StateTransitions(t *testing.T) {
 			validators := valset.NodeStateMap{
 				addr1: {State: tc.inputState, StakingAmount: tc.stakingAmount},
 			}
-			result := v.getEpochTransition(testEpochNum, validators, testIdleTimeout, testMaxValCount, testBlockTime)
+			result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime)
 			assert.Equal(t, tc.expectedState, result[addr1].State)
 			if tc.expectTimeout {
 				assert.False(t, result[addr1].IdleTimeout.IsZero())
@@ -123,16 +123,6 @@ func TestGetEpochTransition_StateTransitions(t *testing.T) {
 	}
 }
 
-func TestGetEpochTransition_NonEpoch(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	v := newTestValsetModule(ctrl)
-
-	validators := valset.NodeStateMap{
-		addr1: {State: valset.ValActive, StakingAmount: aboveMinStake},
-	}
-	result := v.getEpochTransition(testNonEpochNum, validators, testIdleTimeout, testMaxValCount, testBlockTime)
-	assert.Equal(t, valset.ValActive, result[addr1].State)
-}
 
 func TestGetEpochTransition_MaxValidatorCount(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -143,7 +133,7 @@ func TestGetEpochTransition_MaxValidatorCount(t *testing.T) {
 		addr2: {State: valset.ValActive, StakingAmount: midStake},
 		addr3: {State: valset.ValActive, StakingAmount: lowStake},
 	}
-	result := v.getEpochTransition(testEpochNum, validators, testIdleTimeout, 2, testBlockTime)
+	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, 2, testBlockTime)
 	assert.Equal(t, valset.ValActive, result[addr1].State)
 	assert.Equal(t, valset.ValActive, result[addr2].State)
 	assert.Equal(t, valset.ValInactive, result[addr3].State)
@@ -160,7 +150,7 @@ func TestGetEpochTransition_TieBreakingByAddress(t *testing.T) {
 		addr2: {State: valset.ValActive, StakingAmount: lowStake},
 		addr3: {State: valset.ValActive, StakingAmount: lowStake},
 	}
-	result := v.getEpochTransition(testEpochNum, validators, testIdleTimeout, 2, testBlockTime)
+	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, 2, testBlockTime)
 
 	// addr1 (0x0001) < addr2 (0x0002) < addr3 (0x0003)
 	assert.Equal(t, valset.ValActive, result[addr1].State)
@@ -175,7 +165,7 @@ func TestGetEpochTransition_DoesNotMutateInput(t *testing.T) {
 	validators := valset.NodeStateMap{
 		addr1: {State: valset.ValExiting, StakingAmount: aboveMinStake},
 	}
-	result := v.getEpochTransition(testEpochNum, validators, testIdleTimeout, testMaxValCount, testBlockTime)
+	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime)
 	assert.Equal(t, valset.ValInactive, result[addr1].State)    // result is transitioned
 	assert.Equal(t, valset.ValExiting, validators[addr1].State) // original is unchanged
 }
@@ -248,7 +238,7 @@ func TestGetTimeoutTransition(t *testing.T) {
 			v := newTestValsetModule(ctrl)
 
 			validators := valset.NodeStateMap{addr1: tc.input}
-			result := v.getTimeoutTransition(validators, testPauseTimeout, defaultIdleTimeout, testBlockTime)
+			result := v.getTimeoutTransition(validators, defaultIdleTimeout, testPauseTimeout, testBlockTime)
 			r := result[addr1]
 
 			assert.Equal(t, tc.expectedState, r.State)
@@ -273,7 +263,7 @@ func TestGetTimeoutTransition_DefaultClearsAllTimeouts(t *testing.T) {
 		addr4: {State: valset.CandTesting, IdleTimeout: now, PausedTimeout: now},
 		addr5: {State: valset.ValExiting, IdleTimeout: now, PausedTimeout: now},
 	}
-	result := v.getTimeoutTransition(validators, testPauseTimeout, defaultIdleTimeout, testBlockTime)
+	result := v.getTimeoutTransition(validators, defaultIdleTimeout, testPauseTimeout, testBlockTime)
 	for addr, r := range result {
 		assert.True(t, r.IdleTimeout.IsZero(), "IdleTimeout should be cleared for %s", addr.Hex())
 		assert.True(t, r.PausedTimeout.IsZero(), "PausedTimeout should be cleared for %s", addr.Hex())
@@ -292,7 +282,7 @@ func TestGetViolationTransition_ValActiveBelowMinStake(t *testing.T) {
 		addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
 		addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
 	}
-	result := v.getViolationTransition(testEpochNum, validators)
+	result := v.getViolationTransition(testMinStake, validators)
 	assert.Equal(t, valset.ValExiting, result[addr1].State)
 	assert.Equal(t, valset.ValActive, result[addr2].State)
 }
@@ -305,7 +295,7 @@ func TestGetViolationTransition_NonActiveNotAffected(t *testing.T) {
 		addr1: {State: valset.CandReady, StakingAmount: belowMinStake},
 		addr2: {State: valset.ValInactive, StakingAmount: belowMinStake},
 	}
-	result := v.getViolationTransition(testEpochNum, validators)
+	result := v.getViolationTransition(testMinStake, validators)
 	assert.Equal(t, valset.CandReady, result[addr1].State)
 	assert.Equal(t, valset.ValInactive, result[addr2].State)
 }

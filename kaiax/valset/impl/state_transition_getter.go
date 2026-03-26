@@ -33,29 +33,16 @@ type sortableValidator struct {
 
 // getEpochTransition returns new validators after applying epoch transition
 func (v *ValsetModule) getEpochTransition(
-	num uint64,
+	minStake uint64,
 	validators valset.NodeStateMap,
 	idleTimeout time.Duration,
 	maxValidatorCount int,
 	now time.Time,
 ) valset.NodeStateMap {
-	devLog := func(vals valset.NodeStateMap) {
-		for addr, val := range vals {
-			logger.Info("TODO-Permissionless: Remove this log", "num", num, "addr", addr.String(), "state", val.State.String(), "stakingamount", val.StakingAmount, "idleTimeout", val.IdleTimeout.String(), "pausedtimeout", val.PausedTimeout.String())
-		}
-	}
-	if !v.isVrankEpoch(num) {
-		// return early if the `num` is not vrank epoch number
-		devLog(validators)
-		return validators.Copy()
-	}
 	var (
 		newValidators        = validators.Copy()
 		activeValCompetitors []sortableValidator
-		pset                 = v.GovModule.GetParamSet(num)
-		minStake             = pset.MinimumStake.Uint64() // in KAIA
 	)
-	defer devLog(newValidators)
 	for addr, val := range newValidators {
 		switch val.State {
 		case valset.ValExiting:
@@ -112,7 +99,7 @@ func (v *ValsetModule) getEpochTransition(
 // For nodes newly entering ValReady/ValInactive or ValPaused (timeout not yet set),
 // it sets the timeout. If from state was already ValReady/ValInactive/ValPaused,
 // the existing timeout is preserved.
-func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, pauseTimeout, idleTimeout time.Duration, now time.Time) valset.NodeStateMap {
+func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, idleTimeout, pauseTimeout time.Duration, now time.Time) valset.NodeStateMap {
 	newValidators := validators.Copy()
 	for _, val := range newValidators {
 		switch val.State {
@@ -156,10 +143,8 @@ func filterCouncilFromNodeStates(nodes valset.NodeStateMap) []common.Address {
 
 // getViolationTransition transitions ValActive validators to ValExiting when they violate rules:
 // rule1: staking amount dropped below MinimumStake, rule2: vrank violation (TODO).
-func (v *ValsetModule) getViolationTransition(num uint64, validators valset.NodeStateMap) valset.NodeStateMap {
+func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset.NodeStateMap) valset.NodeStateMap {
 	var (
-		pset          = v.GovModule.GetParamSet(num)
-		minStake      = pset.MinimumStake.Uint64() // in KAIA
 		newValidators = validators.Copy()
 	)
 

@@ -105,7 +105,7 @@ func TestInstallAndInitializeABv2(t *testing.T) {
 }
 
 // TestGetOrComputeNodeStates tests getOrComputeNodeStates which should always
-// return ABv2(N-1) + applyTr(N), excluding user transactions at block N.
+// return ABv2(N-1) + applyTr(N-1), excluding user transactions at block N.
 // Uses GenerateChain + InsertChain to commit a real pause tx for realistic chain state.
 func TestGetOrComputeNodeStates(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
@@ -194,7 +194,7 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 	t.Run("excludes userTx at block N from getOrComputeNodeStates(N)", func(t *testing.T) {
 		v := newModule(t)
 		// Block 1 is committed with pause tx → ABv2(1) has ValPaused.
-		// But getOrComputeNodeStates(1) should read ABv2(0) + applyTr(1) = all ValActive.
+		// But getOrComputeNodeStates(1) should read ABv2(0) + applyTr(0) = all ValActive.
 		result, err := v.getOrComputeNodeStates(1, genesisStatedb())
 		require.NoError(t, err)
 		assert.Equal(t, valset.ValActive, result[config.NodeIds[0]].State,
@@ -203,7 +203,7 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 
 	t.Run("reads committed ABv2(N-1) including userTx from previous block", func(t *testing.T) {
 		v := newModule(t)
-		// Block 2: reads ABv2(1) which has ValPaused from pause tx + applyTr(2) noop
+		// Block 2: reads ABv2(1) which has ValPaused from pause tx + applyTr(1) noop
 		result, err := v.getOrComputeNodeStates(2, block1Statedb())
 		require.NoError(t, err)
 		assert.Equal(t, valset.ValPaused, result[config.NodeIds[0]].State,
