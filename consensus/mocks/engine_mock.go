@@ -13,6 +13,8 @@ import (
 	common "github.com/kaiachain/kaia/common"
 	consensus "github.com/kaiachain/kaia/consensus"
 	event "github.com/kaiachain/kaia/event"
+	gov "github.com/kaiachain/kaia/kaiax/gov"
+	valset "github.com/kaiachain/kaia/kaiax/valset"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -48,7 +50,7 @@ func (m *MockEngine) APIs(arg0 consensus.ChainReader) []rpc.API {
 }
 
 // APIs indicates an expected call of APIs.
-func (mr *MockEngineMockRecorder) APIs(arg0 any) *gomock.Call {
+func (mr *MockEngineMockRecorder) APIs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockEngine)(nil).APIs), arg0)
 }
@@ -63,53 +65,24 @@ func (m *MockEngine) Author(arg0 *types.Header) (common.Address, error) {
 }
 
 // Author indicates an expected call of Author.
-func (mr *MockEngineMockRecorder) Author(arg0 any) *gomock.Call {
+func (mr *MockEngineMockRecorder) Author(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Author", reflect.TypeOf((*MockEngine)(nil).Author), arg0)
 }
 
-// PrepareExtra mocks base method.
-func (m *MockEngine) PrepareExtra(arg0, arg1 *types.Header) ([]byte, error) {
+// Committers mocks base method.
+func (m *MockEngine) Committers(arg0 *types.Header) ([]common.Address, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrepareExtra", arg0, arg1)
-	ret0, _ := ret[0].([]byte)
+	ret := m.ctrl.Call(m, "Committers", arg0)
+	ret0, _ := ret[0].([]common.Address)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// PrepareExtra indicates an expected call of PrepareExtra.
-func (mr *MockEngineMockRecorder) PrepareExtra(arg0, arg1 any) *gomock.Call {
+// Committers indicates an expected call of Committers.
+func (mr *MockEngineMockRecorder) Committers(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareExtra", reflect.TypeOf((*MockEngine)(nil).PrepareExtra), arg0, arg1)
-}
-
-// CanVerifyHeadersConcurrently mocks base method.
-func (m *MockEngine) CanVerifyHeadersConcurrently() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CanVerifyHeadersConcurrently")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// CanVerifyHeadersConcurrently indicates an expected call of CanVerifyHeadersConcurrently.
-func (mr *MockEngineMockRecorder) CanVerifyHeadersConcurrently() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CanVerifyHeadersConcurrently", reflect.TypeOf((*MockEngine)(nil).CanVerifyHeadersConcurrently))
-}
-
-// Finalize mocks base method.
-func (m *MockEngine) Finalize(arg0 consensus.ChainReader, arg1 *types.Header, arg2 *state.StateDB, arg3 []*types.Transaction, arg4 []*types.Receipt) (*types.Block, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Finalize", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].(*types.Block)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Finalize indicates an expected call of Finalize.
-func (mr *MockEngineMockRecorder) Finalize(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Finalize", reflect.TypeOf((*MockEngine)(nil).Finalize), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Committers", reflect.TypeOf((*MockEngine)(nil).Committers), arg0)
 }
 
 // GetConsensusInfo mocks base method.
@@ -122,38 +95,24 @@ func (m *MockEngine) GetConsensusInfo(arg0 *types.Block) (consensus.ConsensusInf
 }
 
 // GetConsensusInfo indicates an expected call of GetConsensusInfo.
-func (mr *MockEngineMockRecorder) GetConsensusInfo(arg0 any) *gomock.Call {
+func (mr *MockEngineMockRecorder) GetConsensusInfo(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConsensusInfo", reflect.TypeOf((*MockEngine)(nil).GetConsensusInfo), arg0)
 }
 
-// Prepare mocks base method.
-func (m *MockEngine) Prepare(arg0 consensus.ChainReader, arg1 *types.Header) error {
+// PrepareExtra mocks base method.
+func (m *MockEngine) PrepareExtra(arg0, arg1 *types.Header) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Prepare", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Prepare indicates an expected call of Prepare.
-func (mr *MockEngineMockRecorder) Prepare(arg0, arg1 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Prepare", reflect.TypeOf((*MockEngine)(nil).Prepare), arg0, arg1)
-}
-
-// PreprocessHeaderVerification mocks base method.
-func (m *MockEngine) PreprocessHeaderVerification(arg0 []*types.Header) (chan<- struct{}, <-chan error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreprocessHeaderVerification", arg0)
-	ret0, _ := ret[0].(chan<- struct{})
-	ret1, _ := ret[1].(<-chan error)
+	ret := m.ctrl.Call(m, "PrepareExtra", arg0, arg1)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// PreprocessHeaderVerification indicates an expected call of PreprocessHeaderVerification.
-func (mr *MockEngineMockRecorder) PreprocessHeaderVerification(arg0 any) *gomock.Call {
+// PrepareExtra indicates an expected call of PrepareExtra.
+func (mr *MockEngineMockRecorder) PrepareExtra(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreprocessHeaderVerification", reflect.TypeOf((*MockEngine)(nil).PreprocessHeaderVerification), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareExtra", reflect.TypeOf((*MockEngine)(nil).PrepareExtra), arg0, arg1)
 }
 
 // Protocol mocks base method.
@@ -182,6 +141,46 @@ func (mr *MockEngineMockRecorder) PurgeCache() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurgeCache", reflect.TypeOf((*MockEngine)(nil).PurgeCache))
 }
 
+// RegisterKaiaxModules mocks base method.
+func (m *MockEngine) RegisterKaiaxModules(arg0 gov.GovModule, arg1 valset.ValsetModule) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RegisterKaiaxModules", arg0, arg1)
+}
+
+// RegisterKaiaxModules indicates an expected call of RegisterKaiaxModules.
+func (mr *MockEngineMockRecorder) RegisterKaiaxModules(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterKaiaxModules", reflect.TypeOf((*MockEngine)(nil).RegisterKaiaxModules), arg0, arg1)
+}
+
+// Start mocks base method.
+func (m *MockEngine) Start(arg0 consensus.ChainReader, arg1 func() *types.Block, arg2 func(common.Hash) bool, arg3 consensus.Executor) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Start", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockEngineMockRecorder) Start(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockEngine)(nil).Start), arg0, arg1, arg2, arg3)
+}
+
+// Stop mocks base method.
+func (m *MockEngine) Stop() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Stop")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Stop indicates an expected call of Stop.
+func (mr *MockEngineMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockEngine)(nil).Stop))
+}
+
 // SubmitTransactions mocks base method.
 func (m *MockEngine) SubmitTransactions(arg0 *types.TransactionsByPriceAndNonce, arg1 *state.StateDB, arg2 *types.Header, arg3 *event.TypeMux, arg4 func(*consensus.ExecutionResult)) <-chan *consensus.ExecutionResult {
 	m.ctrl.T.Helper()
@@ -191,7 +190,7 @@ func (m *MockEngine) SubmitTransactions(arg0 *types.TransactionsByPriceAndNonce,
 }
 
 // SubmitTransactions indicates an expected call of SubmitTransactions.
-func (mr *MockEngineMockRecorder) SubmitTransactions(arg0, arg1, arg2, arg3, arg4 any) *gomock.Call {
+func (mr *MockEngineMockRecorder) SubmitTransactions(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitTransactions", reflect.TypeOf((*MockEngine)(nil).SubmitTransactions), arg0, arg1, arg2, arg3, arg4)
 }
@@ -210,16 +209,16 @@ func (mr *MockEngineMockRecorder) SubscribeNewSequence() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeNewSequence", reflect.TypeOf((*MockEngine)(nil).SubscribeNewSequence))
 }
 
-// VerifyHeader mocks base method.
-func (m *MockEngine) VerifyHeader(arg0 consensus.ChainReader, arg1 *types.Header, arg2 []*types.Header) error {
+// VerifySeals mocks base method.
+func (m *MockEngine) VerifySeals(arg0 *types.Header) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyHeader", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "VerifySeals", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// VerifyHeader indicates an expected call of VerifyHeader.
-func (mr *MockEngineMockRecorder) VerifyHeader(arg0, arg1, arg2 any) *gomock.Call {
+// VerifySeals indicates an expected call of VerifySeals.
+func (mr *MockEngineMockRecorder) VerifySeals(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockEngine)(nil).VerifyHeader), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifySeals", reflect.TypeOf((*MockEngine)(nil).VerifySeals), arg0)
 }

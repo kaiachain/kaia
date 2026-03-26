@@ -39,9 +39,7 @@ import (
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
@@ -62,7 +60,7 @@ type BackendOpts struct {
 	NodeType       common.ConnType
 }
 
-func New(opts *BackendOpts) consensus.Istanbul {
+func New(opts *BackendOpts) consensus.Engine {
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 	backend := &backend{
@@ -97,9 +95,6 @@ type backend struct {
 	logger           log.Logger
 	db               database.DBManager
 	chain            consensus.ChainReader
-	stakingModule    staking.StakingModule
-	valsetModule     valset.ValsetModule
-	headerModules    []kaiax.HeaderModule
 	currentBlock     func() *types.Block
 	hasBadBlock      func(hash common.Hash) bool
 
@@ -124,19 +119,15 @@ type backend struct {
 
 	currentView atomic.Value //*istanbul.View
 
-	// Reference to the governance.Engine
-	govModule gov.GovModule
+	// Reference to the kaiax modules
+	govModule    gov.GovModule
+	valsetModule valset.ValsetModule
 
 	// Node type
 	nodetype common.ConnType
 
-	isRestoringSnapshots atomic.Bool
-
 	// Executor for transaction execution
 	executor consensus.Executor
-
-	// Transaction bundling modules for gasless transactions
-	txBundlingModules []kaiax.TxBundlingModule
 }
 
 func (sb *backend) NodeType() common.ConnType {

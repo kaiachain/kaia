@@ -733,6 +733,15 @@ func (bc *BlockChain) Validator() Validator {
 	return bc.validator
 }
 
+// SetValidator overrides the blockchain/headerchain validator pair.
+// Intended for tests that need custom header/execution compatibility behavior.
+func (bc *BlockChain) SetValidatorForTest(validator Validator) {
+	bc.validator = validator
+	if bc.hc != nil {
+		bc.hc.validator = validator
+	}
+}
+
 // Processor returns the current processor.
 func (bc *BlockChain) Processor() Processor {
 	return bc.processor
@@ -1935,11 +1944,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		abort   chan<- struct{}
 		results <-chan error
 	)
-	if bc.engine.CanVerifyHeadersConcurrently() {
-		abort, results = bc.validator.ValidateHeaders(headers)
-	} else {
-		abort, results = bc.engine.PreprocessHeaderVerification(headers)
-	}
+	abort, results = bc.validator.Preprocess(headers)
 	defer close(abort)
 
 	// Start a parallel signature recovery (signer will fluke on fork transition, minimal perf loss)
@@ -2016,7 +2021,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		bstart := time.Now()
 
 		err := <-results
-		if !bc.engine.CanVerifyHeadersConcurrently() && err == nil {
+		if err == nil {
 			err = bc.validator.ValidateHeader(block.Header())
 		}
 
@@ -2641,17 +2646,7 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 // InsertHeaderChain attempts to insert the given header chain in to the local
 // chain, possibly creating a reorg. If an error is returned, it will return the
 // index number of the failing header as well an error describing what went wrong.
-//
-// The verify parameter can be used to fine tune whether nonce verification
-// should be done or not. The reason behind the optional check is because some
-// of the header retrieval mechanisms already need to verify nonces, as well as
-// because nonces can be verified sparsely, not needing to check each.
-func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error) {
-	start := time.Now()
-	if i, err := bc.hc.ValidateHeaderChain(chain, checkFreq); err != nil {
-		return i, err
-	}
-
+func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, _ int) (int, error) {
 	// Make sure only one thread manipulates the chain at once
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
@@ -2659,12 +2654,7 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
-	whFunc := func(header *types.Header) error {
-		_, err := bc.hc.WriteHeader(header)
-		return err
-	}
-
-	return bc.hc.InsertHeaderChain(chain, whFunc, start)
+	return bc.hc.InsertHeaderChain(chain)
 }
 
 // CurrentHeader retrieves the current head header of the canonical chain. The

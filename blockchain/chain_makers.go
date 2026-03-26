@@ -288,6 +288,14 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 	if chain.Config().IsMagmaForkEnabled(header.Number) {
 		header.BaseFee = chain.Config().Governance.KIP71.NextMagmaBlockBaseFee(parent.Number(), parent.Header().BaseFee, parent.GasUsed())
 	}
+	if chain.Config().IsOsakaForkEnabled(header.Number) {
+		var excessBlobGas uint64
+		if chain.Config().IsOsakaForkEnabled(parent.Number()) {
+			excessBlobGas = chain.Config().LatestBlobConfig(header.Number).CalcExcessBlobGas(parent.ExcessBlobGas(), parent.BlobGasUsed())
+		}
+		header.BlobGasUsed = new(uint64)
+		header.ExcessBlobGas = &excessBlobGas
+	}
 	return header
 }
 

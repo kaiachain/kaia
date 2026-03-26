@@ -31,7 +31,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	govcontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/gov"
 	"github.com/kaiachain/kaia/crypto"
@@ -89,7 +88,6 @@ func TestGovernance_GovModule(t *testing.T) {
 	// (b) contract engine enabled (via vote)
 
 	govModule := node.GovModule().(*gov_impl.GovModule)
-	chain.Engine().(consensus.Istanbul).RegisterHeaderModule(govModule)
 	chain.RegisterHeaderModule(govModule)
 	chain.RegisterExecutionModule(govModule)
 	node.Miner().RegisterExecutionModule(govModule)

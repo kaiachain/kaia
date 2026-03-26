@@ -33,14 +33,12 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	consensus_mock "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
-	"github.com/kaiachain/kaia/kaiax/reward"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
@@ -173,7 +171,7 @@ func (s *SupplyTestSuite) SetupTest() {
 	chain, err := blockchain.NewBlockChain(dbm, cacheConfig, config, engine, vm.Config{})
 	require.NoError(t, err)
 
-	setupMockEngine(engine, chain, mReward)
+	setupMockEngine(engine)
 	setupMockGov(mGov, config)
 	setupMockStaking(mStaking)
 
@@ -236,8 +234,10 @@ func makeGenesis(t *testing.T, config *params.ChainConfig) *blockchain.Genesis {
 	)
 
 	return &blockchain.Genesis{
-		Config:     config,
-		Timestamp:  uint64(time.Now().Unix()),
+		Config: config,
+		// Keep genesis time sufficiently in the past so long test chains
+		// (400 blocks * 10s) don't trip future-block validation.
+		Timestamp:  uint64(time.Now().Add(-24 * time.Hour).Unix()),
 		BlockScore: common.Big1,
 		Alloc: blockchain.GenesisAlloc{
 			addrGenesis1: {Balance: bigMult(amount1B, big.NewInt(1))},
@@ -291,45 +291,11 @@ func rebalanceAlloc(t *testing.T, blockNum uint64, addr common.Address, code []b
 	}
 }
 
-func setupMockEngine(engine *consensus_mock.MockEngine, chain *blockchain.BlockChain, mReward reward.RewardModule) {
+func setupMockEngine(engine *consensus_mock.MockEngine) {
 	engine.EXPECT().Author(gomock.Any()).Return(addrProposer, nil).AnyTimes()
-	engine.EXPECT().CanVerifyHeadersConcurrently().Return(false).AnyTimes()
+	engine.EXPECT().Committers(gomock.Any()).Return(nil, nil).AnyTimes()
 	engine.EXPECT().PrepareExtra(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-
-	engine.EXPECT().PreprocessHeaderVerification(gomock.Any()).DoAndReturn(
-		func(headers []*types.Header) (chan<- struct{}, <-chan error) {
-			abort := make(chan struct{})
-			results := make(chan error, len(headers))
-			for range headers {
-				results <- nil
-			}
-			return abort, results
-		},
-	).AnyTimes()
-
-	engine.EXPECT().VerifyHeader(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-	engine.EXPECT().Finalize(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-		func(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
-			header.BlockScore = common.Big1
-			header.Rewardbase = addrProposer
-			if err := mReward.FinalizeState(header, state, txs, receipts); err != nil {
-				return nil, err
-			}
-
-			if chain.Config().IsKIP103ForkBlock(header.Number) || chain.Config().IsKIP160ForkBlock(header.Number) {
-				result, err := bcsystem.RebalanceTreasury(state, chain, header)
-				_ = result
-				// resultJson, _ := json.MarshalIndent(result, "", "  ")
-				// s.t.Log("RebalanceTreasury", string(resultJson), err)
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			header.Root = state.IntermediateRoot(true)
-			return types.NewBlock(header, txs, receipts), nil
-		},
-	).AnyTimes()
+	engine.EXPECT().VerifySeals(gomock.Any()).Return(nil).AnyTimes()
 }
 
 func setupMockGov(mGov *gov_mock.MockGovModule, config *params.ChainConfig) {

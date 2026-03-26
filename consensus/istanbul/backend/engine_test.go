@@ -39,7 +39,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
@@ -370,9 +369,10 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 		panic(err)
 	}
 
-	b.RegisterKaiaxModules(mGov, mStaking, mValset)
-	b.RegisterHeaderModule(mReward, mGov, mRandao)
+	b.RegisterKaiaxModules(mGov, mValset)
 	bc.RegisterHeaderModule(mReward, mGov, mRandao)
+	bc.Validator().SetupKaiaxModules(mGov)
+	bc.Validator().RegisterHeaderModules(mReward, mGov, mRandao)
 	bc.Processor().RegisterBlockStateModule(mReward, mSystem)
 
 	if b.Start(bc, bc.CurrentBlock, bc.HasBadBlock, nil) != nil {
@@ -426,15 +426,6 @@ func makeHeader(parent *types.Block, chainConfig *params.ChainConfig) *types.Hea
 	return header
 }
 
-func makeBlock(chain *blockchain.BlockChain, engine *backend, parent *types.Block) *types.Block {
-	block := makeBlockWithoutSeal(chain, engine, parent)
-	result, err := engine.Seal(chain, block)
-	if err != nil {
-		panic(err)
-	}
-	return result
-}
-
 // makeBlockWithSeal creates a block with the proposer seal as well as all committed seals of validators.
 func makeBlockWithSeal(chain *blockchain.BlockChain, engine *backend, parent *types.Block) *types.Block {
 	return sealBlock(engine, makeBlockWithoutSeal(chain, engine, parent))
@@ -477,23 +468,6 @@ func sealBlock(engine *backend, blockWithoutSeal *types.Block) *types.Block {
 	return block.WithSeal(header)
 }
 
-func TestPrepare(t *testing.T) {
-	chain, engine := newBlockChain(t, 1)
-	defer engine.Stop()
-
-	header := makeHeader(chain.Genesis(), chain.Config())
-	err := chain.PrepareHeader(header)
-	if err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
-
-	header.ParentHash = common.HexToHash("0x1234567890")
-	err = chain.PrepareHeader(header)
-	if err != consensus.ErrUnknownAncestor {
-		t.Errorf("error mismatch: have %v, want %v", err, consensus.ErrUnknownAncestor)
-	}
-}
-
 func TestSealCommitted(t *testing.T) {
 	chain, engine := newBlockChain(t, 1)
 	defer engine.Stop()
@@ -506,263 +480,111 @@ func TestSealCommitted(t *testing.T) {
 	assert.Equal(t, expectedBlock.Hash(), actualBlock.Hash())
 }
 
-func TestVerifyHeader(t *testing.T) {
+func TestVerifySeals(t *testing.T) {
 	testForks := []string{"kore", "osaka"}
+	testPrivateKey, err := crypto.HexToECDSA("bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1")
+	require.NoError(t, err)
+	invalidExtra := []byte("0000000000000000000000000000000012300000000000000000000000000000000000000000000000000000000000000000")
+	emptyCommittedSealsExtra := hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f85ad59470524d664ffe731100208a0154e556f9bb679ae6b841b95e2b0cfe1b7a442ed8d1a14a5fbb0fe6c4db429e06ffc3356af3a758be67526377c5aa4e53f0a9e307339df8f3fff1efb7b823b3f11d73168ae20fdda723f600c0")
+	validExtra := hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f89ed59470524d664ffe731100208a0154e556f9bb679ae6b841b95e2b0cfe1b7a442ed8d1a14a5fbb0fe6c4db429e06ffc3356af3a758be67526377c5aa4e53f0a9e307339df8f3fff1efb7b823b3f11d73168ae20fdda723f600f843b84177a8f61df4aedb4e8929369b89c628a283e8210df85b1a78b37b1509e20ded844d56ebd84e9c684030453e02465fab5df6cb75ae32125a00607f6d5635480fd201")
 
 	for _, fork := range testForks {
+		setNodeKeys(1, testPrivateKey)
+
 		var configItems []interface{}
 		configItems = append(configItems, params.TestKaiaConfig(fork))
-		chain, engine := newBlockChain(t, 1, configItems...)
+		_, engine := newBlockChain(t, 1, configItems...)
 		defer engine.Stop()
 
-		// Tests for consensus-dependent validations (tested via engine.VerifyHeader)
+		// Tests for consensus-dependent seal validations (tested via engine.VerifySeals)
 		consensusDependentTests := []struct {
 			name        string
 			header      *types.Header
 			expectedErr error
 			targetFork  string
+			unsetMods   bool
+			mutate      func(t *testing.T, header *types.Header)
 		}{
 			{
-				name: "errEmptyCommittedSeals case",
-				header: func() *types.Header {
-					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-					block, _ = engine.updateBlock(block)
-					return block.Header()
-				}(),
+				name:        "errEmptyCommittedSeals case",
+				header:      &types.Header{Number: big.NewInt(1), Extra: append([]byte(nil), emptyCommittedSealsExtra...)},
 				expectedErr: istanbul.ErrEmptyCommittedSeals,
 				targetFork:  "kore",
 			},
 			{
-				name: "short extra data",
-				header: func() *types.Header {
-					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-					block, _ = engine.updateBlock(block)
-					header := block.Header()
-					header.Extra = []byte{}
-					return header
-				}(),
+				name:        "short extra data",
+				header:      &types.Header{Number: big.NewInt(1), Extra: []byte{}},
 				expectedErr: istanbul.ErrInvalidExtraDataFormat,
 				targetFork:  "kore",
 			},
 			{
-				name: "incorrect extra format",
-				header: func() *types.Header {
-					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-					block, _ = engine.updateBlock(block)
-					header := block.Header()
-					header.Extra = []byte("0000000000000000000000000000000012300000000000000000000000000000000000000000000000000000000000000000")
-					return header
-				}(),
+				name:        "incorrect extra format",
+				header:      &types.Header{Number: big.NewInt(1), Extra: invalidExtra},
 				expectedErr: istanbul.ErrInvalidExtraDataFormat,
 				targetFork:  "kore",
 			},
 			{
-				name: "invalid timestamp",
-				header: func() *types.Header {
-					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-					header := block.Header()
-					header.Time = new(big.Int).Add(chain.Genesis().Time(), new(big.Int).SetUint64(uint64(params.BlockGenerationInterval)-1))
-					return header
-				}(),
-				expectedErr: istanbul.ErrInvalidTimestamp,
-				targetFork:  "kore",
+				name:        "valid header with committed seals",
+				header:      &types.Header{Number: big.NewInt(1), Extra: append([]byte(nil), validExtra...)},
+				expectedErr: nil,
+				targetFork:  "",
 			},
-			// TODO-Kaia: add more tests for header.Governance, header.Rewardbase, header.Vote
+			{
+				name:        "invalid committed seal signature",
+				header:      &types.Header{Number: big.NewInt(1), Extra: append([]byte(nil), validExtra...)},
+				expectedErr: istanbul.ErrInvalidSignature,
+				targetFork:  "",
+				mutate: func(t *testing.T, header *types.Header) {
+					t.Helper()
+					extra, err := types.ExtractIstanbulExtra(header)
+					require.NoError(t, err)
+					require.NotEmpty(t, extra.CommittedSeal)
+					require.GreaterOrEqual(t, len(extra.CommittedSeal[0]), 1)
+					extra.CommittedSeal[0] = extra.CommittedSeal[0][:len(extra.CommittedSeal[0])-1]
+					payload, err := rlp.EncodeToBytes(extra)
+					require.NoError(t, err)
+					header.Extra = append(header.Extra[:types.IstanbulExtraVanity], payload...)
+				},
+			},
+			{
+				name:        "without modules",
+				header:      &types.Header{Number: big.NewInt(1), Extra: append([]byte(nil), validExtra...)},
+				expectedErr: istanbul.ErrNoEssentialModule,
+				targetFork:  "",
+				unsetMods:   true,
+			},
 		}
 
 		for _, tc := range consensusDependentTests {
 			t.Run(tc.name, func(t *testing.T) {
-				if tc.targetFork != fork {
+				if tc.targetFork != "" && tc.targetFork != fork {
 					return
 				}
 
-				validator := blockchain.NewBlockValidatorWithHeaderChain(chain.Config(), chain)
-				err := validator.ValidateHeader(tc.header)
-				if tc.expectedErr != nil {
-					if err.Error() != tc.expectedErr.Error() {
-						t.Errorf("error mismatch: have %v, want %v", err, tc.expectedErr)
-					}
-				} else {
-					if err != nil {
-						t.Errorf("unexpected error: have %v, want nil", err)
-					}
+				header := types.CopyHeader(tc.header)
+				if tc.mutate != nil {
+					tc.mutate(t, header)
 				}
-			})
-		}
 
-		// Tests for consensus-agnostic validations (tested via chain.Validator().ValidateHeader)
-		consensusAgnosticTests := []struct {
-			name        string
-			header      *types.Header
-			expectedErr error
-			targetFork  string
-		}{
-			{
-				name: "invalid difficulty",
-				header: func() *types.Header {
-					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-					header := block.Header()
-					header.BlockScore = big.NewInt(2)
-					return header
-				}(),
-				expectedErr: consensus.ErrInvalidBlockScore,
-				targetFork:  "kore",
-			},
-			{
-				name: "future block",
-				header: func() *types.Header {
-					block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-					header := block.Header()
-					header.Time = new(big.Int).Add(big.NewInt(time.Now().Unix()), new(big.Int).SetUint64(10))
-					return header
-				}(),
-				expectedErr: consensus.ErrFutureBlock,
-				targetFork:  "kore",
-			},
-			{
-				name: "eip4844 header before osaka - excessBlobGas",
-				header: func() *types.Header {
-					block := sealBlock(engine, makeBlockWithoutSealAndModifiedHeader(chain, engine, chain.Genesis(), func(h *types.Header) {
-						excessBlobGas := uint64(0)
-						h.ExcessBlobGas = &excessBlobGas
-					}))
-					return block.Header()
-				}(),
-				expectedErr: consensus.ErrUnexpectedExcessBlobGasBeforeOsaka,
-				targetFork:  "kore",
-			},
-			{
-				name: "eip4844 header before osaka - blobGasUsed",
-				header: func() *types.Header {
-					block := sealBlock(engine, makeBlockWithoutSealAndModifiedHeader(chain, engine, chain.Genesis(), func(h *types.Header) {
-						blobGasUsed := uint64(0)
-						h.BlobGasUsed = &blobGasUsed
-					}))
-					return block.Header()
-				}(),
-				expectedErr: consensus.ErrUnexpectedBlobGasUsedBeforeOsaka,
-				targetFork:  "kore",
-			},
-			{
-				name: "invalid eip4844 header",
-				header: func() *types.Header {
-					block := sealBlock(engine, makeBlockWithoutSealAndModifiedHeader(chain, engine, chain.Genesis(), func(h *types.Header) {
-						h.ExcessBlobGas = nil
-					}))
-					return block.Header()
-				}(),
-				expectedErr: errors.New("header is missing excessBlobGas"),
-				targetFork:  "osaka",
-			},
-		}
+				origValset, origGov := engine.valsetModule, engine.govModule
+				if tc.unsetMods {
+					engine.valsetModule = nil
+					engine.govModule = nil
+				}
+				defer func() {
+					engine.valsetModule = origValset
+					engine.govModule = origGov
+				}()
 
-		for _, tc := range consensusAgnosticTests {
-			t.Run(tc.name, func(t *testing.T) {
-				if tc.targetFork != fork {
+				err := engine.VerifySeals(header)
+				if tc.expectedErr == nil {
+					require.NoError(t, err)
 					return
 				}
-
-				err := chain.Validator().ValidateHeader(tc.header)
-				if tc.expectedErr != nil {
-					if err.Error() != tc.expectedErr.Error() {
-						t.Errorf("error mismatch: have %v, want %v", err, tc.expectedErr)
-					}
-				} else {
-					if err != nil {
-						t.Errorf("unexpected error: have %v, want nil", err)
-					}
-				}
+				require.ErrorIs(t, err, tc.expectedErr)
 			})
 		}
 	}
-}
-
-func TestVerifyHeaders(t *testing.T) {
-	var configItems []interface{}
-	configItems = append(configItems, proposerUpdateInterval(1))
-	configItems = append(configItems, epoch(3))
-	configItems = append(configItems, governanceMode("single"))
-	configItems = append(configItems, minimumStake(new(big.Int).SetUint64(4000000)))
-	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
-
-	ctrl, mStaking := makeMockStakingManager(t, nil, 0)
-	ctrl.Finish()
-
-	chain, engine := newBlockChain(t, 1, append(configItems, mStaking)...)
-	chain.RegisterExecutionModule(engine.govModule)
-	defer engine.Stop()
-
-	// success case
-	headers := []*types.Header{}
-	blocks := []*types.Block{}
-	size := 100
-
-	var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
-	for i := 0; i < size; i++ {
-		// 100 headers with 50 of them empty committed seals, 50 of them invalid committed seals.
-		previousBlock = currentBlock
-		currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
-		_, err := chain.InsertChain(types.Blocks{currentBlock})
-		assert.NoError(t, err)
-
-		blocks = append(blocks, currentBlock)
-		headers = append(headers, blocks[i].Header())
-	}
-
-	// Helper function to verify headers and collect results
-	verifyHeadersAndCollectResults := func(t *testing.T, testHeaders []*types.Header, expectErrors bool) int {
-		abort, results := chain.Validator().ValidateHeaders(testHeaders)
-		defer close(abort)
-
-		timeout := time.NewTimer(2 * time.Second)
-		defer timeout.Stop()
-
-		index := 0
-		errorCount := 0
-		for {
-			select {
-			case err := <-results:
-				if err != nil {
-					errorCount++
-					// These errors are expected in the test setup
-					if err != istanbul.ErrEmptyCommittedSeals && err != istanbul.ErrInvalidCommittedSeals && err != consensus.ErrUnknownAncestor {
-						if !expectErrors {
-							t.Errorf("unexpected error: %v", err)
-						}
-					}
-				}
-				index++
-				if index == len(testHeaders) {
-					return errorCount
-				}
-			case <-timeout.C:
-				t.Error("timeout waiting for header verification results")
-				return errorCount
-			}
-		}
-	}
-
-	// Test 1: Verify valid headers using VerifyHeaders (skip first header to avoid empty parents)
-	t.Run("ValidHeaders", func(t *testing.T) {
-		// Use headers[1:] to skip the first header that causes empty parents slice
-		errorCount := verifyHeadersAndCollectResults(t, headers[1:], false)
-		if errorCount > 0 {
-			t.Logf("Valid headers test completed with %d expected errors", errorCount)
-		}
-	})
-
-	// Test 2: Verify headers with invalid block number using VerifyHeaders
-	t.Run("InvalidBlockNumber", func(t *testing.T) {
-		// Create a copy of headers and modify one
-		testHeaders := make([]*types.Header, len(headers)-1)
-		copy(testHeaders, headers[1:])
-		testHeaders[1].Number = big.NewInt(999999) // Invalid block number
-
-		errorCount := verifyHeadersAndCollectResults(t, testHeaders, true)
-		if errorCount == 0 {
-			t.Error("expected errors for invalid block number, but got none")
-		}
-	})
 }
 
 func TestPrepareExtra(t *testing.T) {

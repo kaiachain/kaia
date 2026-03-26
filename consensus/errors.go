@@ -31,23 +31,7 @@ var (
 	// to the current node.
 	ErrFutureBlock = errors.New("block in the future")
 
-	// ErrInvalidNumber is returned if a block's number doesn't equal it's parent's
-	// plus one.
-	ErrInvalidNumber = errors.New("invalid block number")
-
-	// ErrInvalidBaseFee is returned if a block before fork has a base fee field, not nil
-	ErrInvalidBaseFee = errors.New("invalid baseFee before fork")
-
 	// ErrUnknownBlock is returned when the list of validators is requested for a block
 	// that is not part of the local blockchain.
 	ErrUnknownBlock = errors.New("unknown block")
-
-	// ErrInvalidBlockScore is returned if the BlockScore of a block is not 1
-	ErrInvalidBlockScore = errors.New("invalid blockscore")
-
-	// ErrUnexpectedExcessBlobGasBeforeOsaka is returned if the excessBlobGas is present before the osaka fork.
-	ErrUnexpectedExcessBlobGasBeforeOsaka = errors.New("unexpected excessBlobGas before osaka")
-
-	// ErrUnexpectedBlobGasUsedBeforeOsaka is returned if the blobGasUsed is present before the osaka fork.
-	ErrUnexpectedBlobGasUsedBeforeOsaka = errors.New("unexpected blobGasUsed before osaka")
 )

@@ -148,10 +148,9 @@ func TestHardForkBlock(t *testing.T) {
 		}),
 	)
 	require.NoError(t, err)
-	engine.RegisterHeaderModule(mReward, mRandao)
 	chain.RegisterHeaderModule(mReward, mRandao)
 	chain.Processor().RegisterBlockStateModule(mReward, mSystem)
-	engine.RegisterKaiaxModules(govModule, mStaking, mValset)
+	engine.RegisterKaiaxModules(govModule, mValset)
 	mValset.Start()
 
 	r1, err := hexutil.Decode(string(rawb1))

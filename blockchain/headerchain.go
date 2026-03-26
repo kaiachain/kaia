@@ -181,14 +181,15 @@ func (hc *HeaderChain) WriteHeader(header *types.Header) (status WriteStatus, er
 	return
 }
 
-// WhCallback is a callback function for inserting individual headers.
-// A callback is used for two reasons: first, in a LightChain, status should be
-// processed and light chain events sent, while in a BlockChain this is not
-// necessary since chain events are sent after inserting blocks. Second, the
-// header writes should be protected by the parent chain mutex individually.
-type WhCallback func(*types.Header) error
+// InsertHeaderChain attempts to insert the given header chain in to the local
+// chain, possibly creating a reorg. If an error is returned, it will return the
+// index number of the failing header as well an error describing what went wrong.
+func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header) (int, error) {
+	var (
+		start = time.Now()
+		stats = struct{ processed, ignored int }{}
+	)
 
-func (hc *HeaderChain) ValidateHeaderChain(chain []*types.Header, checkFreq int) (int, error) {
 	// Do a sanity check that the provided chain is actually ordered and linked
 	for i := 1; i < len(chain); i++ {
 		if chain[i].Number.Uint64() != chain[i-1].Number.Uint64()+1 || chain[i].ParentHash != chain[i-1].Hash() {
@@ -201,77 +202,42 @@ func (hc *HeaderChain) ValidateHeaderChain(chain []*types.Header, checkFreq int)
 		}
 	}
 
-	// Generate the list of seal verification requests, and start the parallel verifier
-	seals := make([]bool, len(chain))
-	for i := 0; i < len(seals)/checkFreq; i++ {
-		index := i*checkFreq + hc.rand.Intn(checkFreq)
-		if index >= len(seals) {
-			index = len(seals) - 1
-		}
-		seals[index] = true
-	}
-	seals[len(seals)-1] = true // Last should always be verified to avoid junk
-
-	var (
-		abort   chan<- struct{}
-		results <-chan error
-	)
-	if hc.engine.CanVerifyHeadersConcurrently() {
-		abort, results = hc.validator.ValidateHeaders(chain)
-	} else {
-		abort, results = hc.engine.PreprocessHeaderVerification(chain)
-	}
+	abort, results := hc.validator.Preprocess(chain)
 	defer close(abort)
 
-	// Iterate over the headers and ensure they all check out
-	for i, header := range chain {
-		// If the chain is terminating, stop processing blocks
-		if hc.procInterrupt() {
-			logger.Debug("Premature abort during headers verification")
-			return 0, errors.New("aborted")
-		}
-		// If the header is a banned one, straight out abort
-		if BadHashes[header.Hash()] {
-			return i, ErrBlacklistedHash
-		}
-		// Otherwise wait for headers checks and ensure they pass
-		if err := <-results; err != nil {
-			return i, err
-		}
-	}
-
-	return 0, nil
-}
-
-// InsertHeaderChain attempts to insert the given header chain in to the local
-// chain, possibly creating a reorg. If an error is returned, it will return the
-// index number of the failing header as well an error describing what went wrong.
-//
-// The verify parameter can be used to fine tune whether nonce verification
-// should be done or not. The reason behind the optional check is because some
-// of the header retrieval mechanisms already need to verfy nonces, as well as
-// because nonces can be verified sparsely, not needing to check each.
-func (hc *HeaderChain) InsertHeaderChain(chain []*types.Header, writeHeader WhCallback, start time.Time) (int, error) {
 	// Collect some import statistics to report on
-	stats := struct{ processed, ignored int }{}
-	// All headers passed verification, import them into the database
 	for i, header := range chain {
 		// Short circuit insertion if shutting down
 		if hc.procInterrupt() {
 			logger.Debug("Premature abort during headers import")
 			return i, errors.New("aborted")
 		}
-		// If the header's already known, skip it, otherwise store
-		if hc.HasHeader(header.Hash(), header.Number.Uint64()) {
+
+		// TODO-consensus: Revisit hasHeader-only skip semantics for rollback catch-up cases.
+		skip := hc.HasHeader(header.Hash(), header.Number.Uint64())
+
+		// If the header is a banned one, straight out abort.
+		if BadHashes[header.Hash()] {
+			return i, ErrBlacklistedHash
+		}
+
+		// Wait for seal pre-caching first; keep result ordering aligned with headers.
+		err := <-results
+		if err != nil {
+			return i, err
+		}
+
+		// Skip known headers.
+		if skip {
 			stats.ignored++
 			continue
 		}
-		if !hc.engine.CanVerifyHeadersConcurrently() {
-			if err := hc.validator.ValidateHeader(header); err != nil {
-				return i, err
-			}
+
+		// Run full header validation for unknown headers.
+		if err := hc.validator.ValidateHeader(header); err != nil {
+			return i, err
 		}
-		if err := writeHeader(header); err != nil {
+		if _, err := hc.WriteHeader(header); err != nil {
 			return i, err
 		}
 		stats.processed++

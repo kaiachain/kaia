@@ -34,12 +34,9 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto/sha3"
-	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
-	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/rpc"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -68,206 +65,88 @@ func cacheSignatureAddresses(data []byte, sig []byte) (common.Address, error) {
 	return addr, err
 }
 
-// Author retrieves the Kaia address of the account that minted the given block.
+// Author retrieves/caches the Kaia address of the account that minted the given block.
 func (sb *backend) Author(header *types.Header) (common.Address, error) {
-	return ecrecover(header)
-}
-
-// CanVerifyHeadersConcurrently returns true if concurrent header verification possible, otherwise returns false.
-func (sb *backend) CanVerifyHeadersConcurrently() bool {
-	return false
-}
-
-// PreprocessHeaderVerification prepares header verification for heavy computation before synchronous header verification such as ecrecover.
-func (sb *backend) PreprocessHeaderVerification(headers []*types.Header) (chan<- struct{}, <-chan error) {
-	abort := make(chan struct{})
-	results := make(chan error, inmemoryBlocks)
-	go func() {
-		errored := false
-		for _, header := range headers {
-			var err error
-			if errored { // If errored once in the batch, skip the rest
-				err = consensus.ErrUnknownAncestor
-			} else {
-				err = sb.computeSignatureAddrs(header)
-			}
-
-			if err != nil {
-				errored = true
-			}
-
-			select {
-			case <-abort:
-				return
-			case results <- err:
-			}
-		}
-	}()
-	return abort, results
-}
-
-// computeSignatureAddrs computes the addresses of signer and validators and caches them.
-func (sb *backend) computeSignatureAddrs(header *types.Header) error {
-	_, err := ecrecover(header)
-	if err != nil {
-		return err
-	}
-
 	// Retrieve the signature from the header extra-data
 	istanbulExtra, err := types.ExtractIstanbulExtra(header)
 	if err != nil {
-		return err
+		return common.Address{}, err
 	}
-
-	proposalSeal := istanbulCore.PrepareCommittedSeal(header.Hash())
-	for _, seal := range istanbulExtra.CommittedSeal {
-		_, err := cacheSignatureAddresses(proposalSeal, seal)
-		if err != nil {
-			return istanbul.ErrInvalidSignature
-		}
+	addr, err := cacheSignatureAddresses(sigHash(header).Bytes(), istanbulExtra.Seal)
+	if err != nil {
+		return addr, err
 	}
-	return nil
+	return addr, nil
 }
 
-func (sb *backend) VerifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
+// computeSignatureAddrs extracts/caches signer and committer addresses from header seals.
+func (sb *backend) Committers(header *types.Header) ([]common.Address, error) {
+	// Retrieve the signature from the header extra-data
+	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	if err != nil {
+		return nil, err
+	}
+	// The length of Committed seals should be larger than 0
+	if len(istanbulExtra.CommittedSeal) == 0 {
+		return nil, istanbul.ErrEmptyCommittedSeals
+	}
+
+	committers := make([]common.Address, 0, len(istanbulExtra.CommittedSeal))
+	proposalSeal := istanbulCore.PrepareCommittedSeal(header.Hash())
+	for _, seal := range istanbulExtra.CommittedSeal {
+		addr, err := cacheSignatureAddresses(proposalSeal, seal)
+		if err != nil {
+			return nil, istanbul.ErrInvalidSignature
+		}
+		committers = append(committers, addr)
+	}
+	return committers, nil
+}
+
+func (sb *backend) VerifySeals(header *types.Header) error {
 	if header.Number == nil {
 		return consensus.ErrUnknownBlock
 	}
-
-	// Header verify before/after magma fork
-	if chain.Config().IsMagmaForkEnabled(header.Number) {
-		if len(parents) > 0 {
-			// the kip71Config used when creating the block number is a previous block config.
-			blockNum := header.Number.Uint64()
-			pset := sb.govModule.GetParamSet(blockNum)
-			parent := parents[len(parents)-1]
-			if parent == nil {
-				return consensus.ErrUnknownAncestor
-			}
-			if err := pset.ToKip71Config().VerifyMagmaHeader(header.BaseFee, parent.Number, parent.BaseFee, parent.GasUsed); err != nil {
-				return err
-			}
-		}
-		// For Magma fork, BaseFee is allowed even without parents (first header)
-	} else if header.BaseFee != nil {
-		return consensus.ErrInvalidBaseFee
+	if header.Number.Uint64() == 0 {
+		return nil
 	}
-
-	// Ensure that the extra data format is satisfied
 	if _, err := types.ExtractIstanbulExtra(header); err != nil {
 		return istanbul.ErrInvalidExtraDataFormat
 	}
-
 	number := header.Number.Uint64()
-	if number == 0 {
-		return nil
-	}
-	// Get parent header for consensus-dependent checks
-	var parent *types.Header
-	if len(parents) > 0 {
-		parent = parents[len(parents)-1]
-	} else {
-		parent = chain.GetHeader(header.ParentHash, number-1)
-	}
-	if parent == nil {
-		return consensus.ErrUnknownAncestor
-	}
-	// Ensure that the block's timestamp isn't too close to it's parent
-	if parent.Time.Uint64()+uint64(params.BlockGenerationInterval) > header.Time.Uint64() {
-		return istanbul.ErrInvalidTimestamp
-	}
-	if err := sb.verifySigner(chain, header, parents); err != nil {
+	signer, err := sb.Author(header)
+	if err != nil {
 		return err
 	}
-
-	if err := sb.verifyCommittedSeals(chain, header, nil); err != nil {
-		return err
-	}
-
-	for _, module := range sb.headerModules {
-		if err := module.VerifyHeader(header, parent); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// verifySigner checks whether the signer is in parent's validator set
-func (sb *backend) verifySigner(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
-	// Verifying the genesis block is not supported
-	number := header.Number.Uint64()
-	if number == 0 {
-		return consensus.ErrUnknownBlock
-	}
-
-	// Retrieve the snapshot needed to verify this header and cache it
-	if sb.valsetModule == nil {
-		return istanbul.ErrNoEssentialModule
-	}
-	qualified, err := sb.valsetModule.GetQualifiedValidators(number)
+	committers, err := sb.Committers(header)
 	if err != nil {
 		return err
 	}
 
-	// resolve the authorization key and check against signers
-	signer, err := ecrecover(header)
-	if err != nil {
-		return err
-	}
-
-	// Signer should be in the validator set of previous block's extraData.
-	if !valset.NewAddressSet(qualified).Contains(signer) {
-		return istanbul.ErrUnauthorized
-	}
-	return nil
-}
-
-// verifyCommittedSeals checks whether every committed seal is signed by one of the parent's validators
-func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
-	number := header.Number.Uint64()
-	// We don't need to verify committed seals in the genesis block
-	if number == 0 {
-		return nil
-	}
 	if sb.valsetModule == nil || sb.govModule == nil {
 		return istanbul.ErrNoEssentialModule
 	}
 
-	// Retrieve the snapshot needed to verify this header and cache it
-	council, err := sb.valsetModule.GetCouncil(number)
-	if err != nil {
-		return err
-	}
-	committeeSize := sb.govModule.GetParamSet(number).CommitteeSize
+	// check whether the signer is in the validator set.
 	qualified, err := sb.valsetModule.GetQualifiedValidators(number)
 	if err != nil {
 		return err
 	}
-	f := consensuscommon.CalcFaultTolerance(len(qualified), committeeSize)
+	if !valset.NewAddressSet(qualified).Contains(signer) {
+		return istanbul.ErrUnauthorized
+	}
 
-	extra, err := types.ExtractIstanbulExtra(header)
+	// Retrieve the snapshot needed to verify this header.
+	council, err := sb.valsetModule.GetCouncil(number)
 	if err != nil {
 		return err
 	}
-	// The length of Committed seals should be larger than 0
-	if len(extra.CommittedSeal) == 0 {
-		return istanbul.ErrEmptyCommittedSeals
-	}
 
-	// Check whether the committed seals are generated by parent's validators
+	// Every validator can have only one seal. If more than one seals are signed by a
+	// validator, the validator cannot be found and errInvalidCommittedSeals is returned.
 	councilSet := valset.NewAddressSet(council).Copy()
 	validSeal := 0
-	proposalSeal := istanbulCore.PrepareCommittedSeal(header.Hash())
-	// 1. Get committed seals from current header
-	for _, seal := range extra.CommittedSeal {
-		// 2. Get the original address by seal and parent block hash
-		addr, err := cacheSignatureAddresses(proposalSeal, seal)
-		if err != nil {
-			return istanbul.ErrInvalidSignature
-		}
-		// Every validator can have only one seal. If more than one seals are signed by a
-		// validator, the validator cannot be found and errInvalidCommittedSeals is returned.
+	for _, addr := range committers {
 		if councilSet.Remove(addr) {
 			validSeal++
 		} else {
@@ -276,6 +155,8 @@ func (sb *backend) verifyCommittedSeals(chain consensus.ChainReader, header *typ
 	}
 
 	// The length of validSeal should be larger than number of faulty node + 1
+	committeeSize := sb.govModule.GetParamSet(number).CommitteeSize
+	f := consensuscommon.CalcFaultTolerance(len(qualified), committeeSize)
 	if validSeal <= 2*f {
 		return istanbul.ErrInvalidCommittedSeals
 	}
@@ -388,27 +269,14 @@ func (sb *backend) SetChain(chain consensus.ChainReader) {
 }
 
 // RegisterKaiaxModules sets kaiax modules of the Istanbul backend
-func (sb *backend) RegisterKaiaxModules(mGov gov.GovModule, mStaking staking.StakingModule, mValset valset.ValsetModule) {
+func (sb *backend) RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule) {
 	sb.govModule = mGov
-	sb.RegisterStakingModule(mStaking)
 	sb.valsetModule = mValset
 
 	sb.core.RegisterKaiaxModules(mValset, mGov)
 }
 
-func (sb *backend) RegisterStakingModule(module staking.StakingModule) {
-	sb.stakingModule = module
-}
-
-func (sb *backend) RegisterHeaderModule(modules ...kaiax.HeaderModule) {
-	sb.headerModules = append(sb.headerModules, modules...)
-}
-
-func (sb *backend) RegisterTxBundlingModule(modules ...kaiax.TxBundlingModule) {
-	sb.txBundlingModules = append(sb.txBundlingModules, modules...)
-}
-
-// Start implements consensus.Istanbul.Start
+// Start starts the Istanbul backend core.
 func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool, executor consensus.Executor) error {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
@@ -439,7 +307,7 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	return nil
 }
 
-// Stop implements consensus.Istanbul.Stop
+// Stop stops the Istanbul backend core.
 func (sb *backend) Stop() error {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
@@ -472,13 +340,12 @@ func (sb *backend) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo
 	}
 
 	// get the committers of this block from committed seals
-	extra, err := types.ExtractIstanbulExtra(block.Header())
+	committers, err := sb.Committers(block.Header())
 	if err != nil {
-		return consensus.ConsensusInfo{}, err
-	}
-	committers, err := RecoverCommittedSeals(extra, block.Hash())
-	if err != nil {
-		return consensus.ConsensusInfo{}, err
+		if err != istanbul.ErrEmptyCommittedSeals {
+			return consensus.ConsensusInfo{}, err
+		}
+		committers = []common.Address{}
 	}
 
 	round := block.Header().Round()
@@ -547,21 +414,6 @@ func sigHash(header *types.Header) (hash common.Hash) {
 	rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false))
 	hasher.Sum(hash[:0])
 	return hash
-}
-
-// ecrecover extracts the Kaia account address from a signed header.
-func ecrecover(header *types.Header) (common.Address, error) {
-	// Retrieve the signature from the header extra-data
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
-	if err != nil {
-		return common.Address{}, err
-	}
-	addr, err := cacheSignatureAddresses(sigHash(header).Bytes(), istanbulExtra.Seal)
-	if err != nil {
-		return addr, err
-	}
-
-	return addr, nil
 }
 
 // prepareExtra returns a extra-data of the given header and validators
