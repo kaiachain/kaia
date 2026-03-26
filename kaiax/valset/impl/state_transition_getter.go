@@ -144,9 +144,7 @@ func filterCouncilFromNodeStates(nodes valset.NodeStateMap) []common.Address {
 // getViolationTransition transitions ValActive validators to ValExiting when they violate rules:
 // rule1: staking amount dropped below MinimumStake, rule2: vrank violation (TODO).
 func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset.NodeStateMap) valset.NodeStateMap {
-	var (
-		newValidators = validators.Copy()
-	)
+	newValidators := validators.Copy()
 
 	// rule1: check if staking amount become less than minimum staking amount
 	for _, val := range newValidators {

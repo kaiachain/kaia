@@ -203,7 +203,8 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 
 	t.Run("reads committed ABv2(N-1) including userTx from previous block", func(t *testing.T) {
 		v := newModule(t)
-		// Block 2: reads ABv2(1) which has ValPaused from pause tx + applyTr(1) noop
+		// pause() is an anytime transition (user tx, any block). ABv2(1) has ValPaused written by that tx.
+		// Block 2: reads ABv2(1) with ValPaused + applyTr(1) (no timeout expiry, not epoch block → state unchanged)
 		result, err := v.getOrComputeNodeStates(2, block1Statedb())
 		require.NoError(t, err)
 		assert.Equal(t, valset.ValPaused, result[config.NodeIds[0]].State,
