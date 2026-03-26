@@ -83,7 +83,9 @@ func (v *ValsetModule) applyAllTransitions(
 	nextNum := parentHeader.Number.Uint64() + 1
 	newValidators := v.getViolationTransition(nextNum, validators)
 
-	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, parentStatedb)
+	// Copy statedb because ApplyMessage in contract calls modifies state (e.g., Prepare, SubBalance).
+	// See e51c56ff8 for the same pattern in NewMultiCallContractCaller.
+	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, parentStatedb.Copy())
 	if err != nil {
 		return nil, err
 	}
