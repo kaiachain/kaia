@@ -74,13 +74,13 @@ func TestGetCfReport(t *testing.T) {
 		h.VRank = encoded
 		v.Chain = &testChain{headers: map[uint64]*types.Header{10: h}}
 
-		report, err := v.GetCfReport(10)
+		report, err := v.cfReport(10)
 		require.NoError(t, err)
 		assert.Equal(t, []common.Address{c1, c2}, report)
 
-		report2, err := v.GetCfReport(10)
+		report2, err := v.cfReport(10)
 		require.NoError(t, err)
-		assert.Equal(t, report, report2, "GetCfReport must be deterministic")
+		assert.Equal(t, report, report2, "cfReport must be deterministic")
 	})
 
 	t.Run("nil header.VRank returns empty report", func(t *testing.T) {
@@ -90,7 +90,7 @@ func TestGetCfReport(t *testing.T) {
 			5: makeHeaderWithRound(5, 0), // header.VRank is nil
 		}}
 
-		report, err := v.GetCfReport(5)
+		report, err := v.cfReport(5)
 		require.NoError(t, err)
 		assert.Empty(t, report)
 	})
@@ -102,7 +102,7 @@ func TestGetCfReport_Errors(t *testing.T) {
 		v := createCN(t, valset).VRankModule
 		v.Chain = &testChain{headers: map[uint64]*types.Header{}}
 
-		report, err := v.GetCfReport(99)
+		report, err := v.cfReport(99)
 		assert.ErrorIs(t, err, vrank.ErrHeaderNotFound)
 		assert.Nil(t, report)
 	})
@@ -114,7 +114,7 @@ func TestGetCfReport_Errors(t *testing.T) {
 			10: makeHeaderWithRound(10, 0),
 		}}
 
-		report, err := v.GetCfReport(10)
+		report, err := v.cfReport(10)
 		assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
 		assert.Nil(t, report)
 	})
@@ -134,7 +134,7 @@ func TestGetPfReport(t *testing.T) {
 			},
 		}
 
-		report, err := v.GetPfReport(10)
+		report, err := v.pfReport(10)
 		require.NoError(t, err)
 		assert.Empty(t, report)
 	})
@@ -154,13 +154,13 @@ func TestGetPfReport(t *testing.T) {
 		valset.EXPECT().GetProposer(uint64(20), uint64(1)).Return(p1, nil).Times(2)
 		valset.EXPECT().GetProposer(uint64(20), uint64(2)).Return(p2, nil).Times(2)
 
-		report, err := v.GetPfReport(20)
+		report, err := v.pfReport(20)
 		require.NoError(t, err)
 		assert.Equal(t, []common.Address{p0, p1, p2}, report)
 
-		report2, err := v.GetPfReport(20)
+		report2, err := v.pfReport(20)
 		require.NoError(t, err)
-		assert.Equal(t, report, report2, "GetPfReport must be deterministic")
+		assert.Equal(t, report, report2, "pfReport must be deterministic")
 	})
 }
 
@@ -172,7 +172,7 @@ func TestGetPfReport_Errors(t *testing.T) {
 			10: makeHeaderWithRound(10, 0),
 		}}
 
-		report, err := v.GetPfReport(10)
+		report, err := v.pfReport(10)
 		assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
 		assert.Nil(t, report)
 	})
@@ -182,7 +182,7 @@ func TestGetPfReport_Errors(t *testing.T) {
 		v := createCN(t, valset).VRankModule
 		v.Chain = &testChain{headers: map[uint64]*types.Header{}}
 
-		report, err := v.GetPfReport(30)
+		report, err := v.pfReport(30)
 		require.ErrorIs(t, err, vrank.ErrHeaderNotFound)
 		assert.Nil(t, report)
 	})
@@ -196,7 +196,7 @@ func TestGetPfReport_Errors(t *testing.T) {
 			},
 		}
 
-		report, err := v.GetPfReport(40)
+		report, err := v.pfReport(40)
 		require.ErrorIs(t, err, vrank.ErrHeaderExtraTooShort)
 		assert.Nil(t, report)
 	})
@@ -213,7 +213,7 @@ func TestGetPfReport_Errors(t *testing.T) {
 		valset.EXPECT().GetProposer(uint64(50), uint64(0)).Return(p0, nil).Times(1)
 		valset.EXPECT().GetProposer(uint64(50), uint64(1)).Return(common.Address{}, assert.AnError).Times(1)
 
-		report, err := v.GetPfReport(50)
+		report, err := v.pfReport(50)
 		require.ErrorIs(t, err, assert.AnError)
 		assert.Nil(t, report)
 	})
