@@ -64,7 +64,7 @@ func computeCFS(v *VRankModule, start, end uint64) (map[common.Address]uint64, e
 // cfAddrs may be nil/empty for an empty report.
 func makeHeaderWithVRank(number uint64, round int64, cfAddrs []common.Address) *types.Header {
 	h := makeHeaderWithRound(number, round)
-	encoded, err := vrank.EncodeReport(vrank.Report(cfAddrs))
+	encoded, err := vrank.EncodeReport(cfAddrs)
 	if err != nil {
 		panic(err)
 	}
@@ -286,7 +286,7 @@ func TestGetPFS_DBCheckpointHit(t *testing.T) {
 	}
 	v := newTestModuleWithHeaders(t, valset, db, headers)
 
-	WriteCheckpoint(db, cp, map[common.Address]uint64{}, map[common.Address]map[common.Address]uint64{})
+	WriteCheckpoint(db, cp, map[common.Address]uint64{}, vrank.CPMatrix{})
 	WriteLastCheckpoint(db, cp)
 
 	// With the DB checkpoint, only block cp+1 needs to be computed.
@@ -662,7 +662,7 @@ func TestGetCFS_DBCheckpointHit(t *testing.T) {
 	v := newTestModuleWithHeaders(t, valset, db, headers)
 
 	// Pre-write a DB checkpoint at the first checkpoint block with C1 already having 1 failure.
-	WriteCheckpoint(db, cp, map[common.Address]uint64{}, map[common.Address]map[common.Address]uint64{
+	WriteCheckpoint(db, cp, map[common.Address]uint64{}, vrank.CPMatrix{
 		C1: {P1: 1},
 	})
 	WriteLastCheckpoint(db, cp)
@@ -688,7 +688,7 @@ func TestGetCFS_DBCheckpointHit_PreservesZeroFailureCandidates(t *testing.T) {
 	}
 	v := newTestModuleWithHeaders(t, valset, db, headers)
 
-	WriteCheckpoint(db, cp, map[common.Address]uint64{}, map[common.Address]map[common.Address]uint64{
+	WriteCheckpoint(db, cp, map[common.Address]uint64{}, vrank.CPMatrix{
 		C1: {P1: 1},
 		C2: {},
 	})
@@ -703,7 +703,7 @@ func TestGetCFS_DBCheckpointHit_PreservesZeroFailureCandidates(t *testing.T) {
 
 	cpCached, ok := v.cpMatrixCache.Get(cp)
 	require.True(t, ok, "checkpoint-backed cpMatrix must be cached")
-	cpMatrix := cpCached.(map[common.Address]map[common.Address]uint64)
+	cpMatrix := cpCached.(vrank.CPMatrix)
 	assert.Contains(t, cpMatrix, C2)
 	assert.Equal(t, uint64(0), cpMatrix[C2][P1])
 }
@@ -753,7 +753,7 @@ func TestGetCFS_EpochStart(t *testing.T) {
 	v := newTestModuleWithHeaders(t, valset, db, headers)
 
 	// Seed the previous epoch's last block with large CFS values.
-	v.cpMatrixCache.Add(epochStart-1, map[common.Address]map[common.Address]uint64{
+	v.cpMatrixCache.Add(epochStart-1, vrank.CPMatrix{
 		C1: {P1: 50}, C2: {P1: 50},
 	})
 
@@ -785,7 +785,7 @@ func TestGetCFS_EpochBoundaryClamp(t *testing.T) {
 	v := newTestModuleWithHeaders(t, valset, db, headers)
 
 	// Seed the last block of the previous epoch with a large accumulated value.
-	v.cpMatrixCache.Add(epochStart-1, map[common.Address]map[common.Address]uint64{
+	v.cpMatrixCache.Add(epochStart-1, vrank.CPMatrix{
 		C1: {P1: 99},
 	})
 
@@ -818,11 +818,11 @@ func TestGetCFS_NearbyProbe_SameEpoch(t *testing.T) {
 	v := newTestModuleWithHeaders(t, valset, db, headers)
 
 	// Seed cache at epochStart+1: C1 has 1 failure from that block.
-	v.cpMatrixCache.Add(epochStart+1, map[common.Address]map[common.Address]uint64{
+	v.cpMatrixCache.Add(epochStart+1, vrank.CPMatrix{
 		C1: {P1: 1},
 	})
 	// Also seed the previous epoch to make sure it is NOT used.
-	v.cpMatrixCache.Add(epochStart-1, map[common.Address]map[common.Address]uint64{
+	v.cpMatrixCache.Add(epochStart-1, vrank.CPMatrix{
 		C1: {P1: 99},
 	})
 
@@ -1062,7 +1062,7 @@ func TestByzantineFilter(t *testing.T) {
 		P3, P4 := addrN(12), addrN(13)
 		C1, C2, C3 := addrN(20), addrN(21), addrN(22)
 
-		failuresByCandidate := map[common.Address]map[common.Address]uint64{
+		failuresByCandidate := vrank.CPMatrix{
 			C1: {P3: 1, P4: 2},
 			C2: {P3: 1, P4: 2},
 			C3: {P3: 1},
@@ -1103,7 +1103,7 @@ func TestByzantineFilter(t *testing.T) {
 			{8640, 8637, 8634, 5, 11, 20, 18, 30, 19, 13},  // C5
 		}
 
-		failuresByCandidate := make(map[common.Address]map[common.Address]uint64)
+		failuresByCandidate := make(vrank.CPMatrix)
 		for ci, c := range candidates {
 			for pi, p := range proposers {
 				if raw[ci][pi] > 0 {

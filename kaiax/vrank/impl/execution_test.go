@@ -23,6 +23,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ func TestPostInsertBlock(t *testing.T) {
 		}
 		v := newTestModuleWithHeaders(t, valset, db, headers)
 		v.pfsCache.Add(cp-1, map[common.Address]uint64{})
-		v.cpMatrixCache.Add(cp-1, map[common.Address]map[common.Address]uint64{C1: {}})
+		v.cpMatrixCache.Add(cp-1, vrank.CPMatrix{C1: {}})
 
 		// Block cp has a non-empty cfReport, so GetProposer is called once.
 		valset.EXPECT().GetProposer(cp, uint64(0)).Return(P1, nil).Times(1)
@@ -88,10 +89,10 @@ func TestPostInsertBlock(t *testing.T) {
 
 		// Pre-seed the cache and DB to simulate PostInsertBlock(cp) having already run.
 		v.pfsCache.Add(cp, map[common.Address]uint64{P1: 1})
-		v.cpMatrixCache.Add(cp, map[common.Address]map[common.Address]uint64{C1: {P1: 1}})
+		v.cpMatrixCache.Add(cp, vrank.CPMatrix{C1: {P1: 1}})
 		WriteCheckpoint(db, cp,
 			map[common.Address]uint64{P1: 1},
-			map[common.Address]map[common.Address]uint64{C1: {P1: 1}},
+			vrank.CPMatrix{C1: {P1: 1}},
 		)
 		WriteLastCheckpoint(db, cp)
 

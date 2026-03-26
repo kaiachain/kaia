@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +33,7 @@ func TestCheckpointRoundTrip_PreservesZeroFailureCandidates(t *testing.T) {
 
 	WriteCheckpoint(db, cp,
 		map[common.Address]uint64{P1: 1},
-		map[common.Address]map[common.Address]uint64{
+		vrank.CPMatrix{
 			C1: {P1: 2},
 			C2: {},
 		},

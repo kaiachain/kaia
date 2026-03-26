@@ -23,6 +23,7 @@ import (
 	"slices"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -54,7 +55,7 @@ func scoreCheckpointKey(blockNum uint64) []byte {
 
 // ReadCheckpoint returns the PFS map and cpMatrix stored at blockNum.
 // Returns (nil, nil) if no checkpoint exists for that block.
-func ReadCheckpoint(db database.Database, blockNum uint64) (map[common.Address]uint64, map[common.Address]map[common.Address]uint64) {
+func ReadCheckpoint(db database.Database, blockNum uint64) (map[common.Address]uint64, vrank.CPMatrix) {
 	b, err := db.Get(scoreCheckpointKey(blockNum))
 	if err != nil || len(b) == 0 {
 		return nil, nil
@@ -68,7 +69,7 @@ func ReadCheckpoint(db database.Database, blockNum uint64) (map[common.Address]u
 }
 
 // WriteCheckpoint persists the PFS map and cpMatrix together at blockNum.
-func WriteCheckpoint(db database.Database, blockNum uint64, pfs map[common.Address]uint64, cpMatrix map[common.Address]map[common.Address]uint64) {
+func WriteCheckpoint(db database.Database, blockNum uint64, pfs map[common.Address]uint64, cpMatrix vrank.CPMatrix) {
 	b, err := rlp.EncodeToBytes(vrankCheckpointStorage{
 		PFS:      serializePFS(pfs),
 		CPMatrix: serializeCFS(cpMatrix),
@@ -130,7 +131,7 @@ func serializePFS(pfs map[common.Address]uint64) pfsStorage {
 	}
 }
 
-func serializeCFS(cpMatrix map[common.Address]map[common.Address]uint64) cpMatrixStorage {
+func serializeCFS(cpMatrix vrank.CPMatrix) cpMatrixStorage {
 	candidates := slices.Collect(maps.Keys(cpMatrix))
 	slices.SortFunc(candidates, func(a, b common.Address) int { return bytes.Compare(a.Bytes(), b.Bytes()) })
 
@@ -169,8 +170,8 @@ func deserializePFS(stored pfsStorage) map[common.Address]uint64 {
 	return pfs
 }
 
-func deserializeCFS(stored cpMatrixStorage) map[common.Address]map[common.Address]uint64 {
-	cpMatrix := make(map[common.Address]map[common.Address]uint64, len(stored.Candidates))
+func deserializeCFS(stored cpMatrixStorage) vrank.CPMatrix {
+	cpMatrix := make(vrank.CPMatrix, len(stored.Candidates))
 	for rowIdx, candidate := range stored.Candidates {
 		cpMatrix[candidate] = make(map[common.Address]uint64)
 		if rowIdx >= len(stored.Matrix) {

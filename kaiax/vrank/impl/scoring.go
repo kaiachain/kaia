@@ -105,7 +105,7 @@ func (v *VRankModule) lookupPFSSeed(blockNum uint64) (start uint64, seed map[com
 
 // lookupCFSSeed returns (start, seed) where seed holds the CP matrix accumulated up to start-1.
 // Callers should apply [start, blockNum] on top of seed to reach blockNum.
-func (v *VRankModule) lookupCFSSeed(blockNum uint64) (start uint64, seed map[common.Address]map[common.Address]uint64, err error) {
+func (v *VRankModule) lookupCFSSeed(blockNum uint64) (start uint64, seed vrank.CPMatrix, err error) {
 	if cachedNum, cpMatrix, ok := v.lookupCPMatrixCache(blockNum); ok {
 		return cachedNum + 1, cpMatrix, nil
 	}
@@ -119,17 +119,13 @@ func (v *VRankModule) lookupCFSSeed(blockNum uint64) (start uint64, seed map[com
 	return calcEpochStart(blockNum), cpMatrix, nil
 }
 
-func (v *VRankModule) newCPMatrix(blockNum uint64) (map[common.Address]map[common.Address]uint64, error) {
+func (v *VRankModule) newCPMatrix(blockNum uint64) (vrank.CPMatrix, error) {
 	candidates, err := v.Valset.GetCandidates(blockNum)
 	if err != nil {
 		return nil, err
 	}
 
-	cpMatrix := make(map[common.Address]map[common.Address]uint64, len(candidates))
-	for _, candidate := range candidates {
-		cpMatrix[candidate] = make(map[common.Address]uint64)
-	}
-	return cpMatrix, nil
+	return vrank.NewCPMatrix(candidates), nil
 }
 
 // applyBlocksForPFS accumulates the pfReport for blocks in [start, end].
@@ -148,8 +144,8 @@ func (v *VRankModule) applyBlocksForPFS(start, end uint64, seed map[common.Addre
 }
 
 // applyBlocksForCPMatrix accumulates the candidate-proposer matrix for blocks in [start, end].
-func (v *VRankModule) applyBlocksForCPMatrix(start, end uint64, seed map[common.Address]map[common.Address]uint64) (map[common.Address]map[common.Address]uint64, error) {
-	cpMatrix := cloneCPMatrix(seed)
+func (v *VRankModule) applyBlocksForCPMatrix(start, end uint64, seed vrank.CPMatrix) (vrank.CPMatrix, error) {
+	cpMatrix := seed.Clone()
 	for blockNum := start; blockNum <= end; blockNum++ {
 		header := v.Chain.GetHeaderByNumber(blockNum)
 		if header == nil {
@@ -175,13 +171,13 @@ func (v *VRankModule) applyBlocksForCPMatrix(start, end uint64, seed map[common.
 				logger.Warn("cfReport contains address not in candidates list; skipping", "blockNum", blockNum, "candidate", candidate.Hex())
 				continue
 			}
-			cpMatrix[candidate][reporter]++
+			cpMatrix.Increment(candidate, reporter)
 		}
 	}
 	return cpMatrix, nil
 }
 
-func (v *VRankModule) generateCFSFromCPMatrix(blockNum uint64, cpMatrix map[common.Address]map[common.Address]uint64) (map[common.Address]uint64, error) {
+func (v *VRankModule) generateCFSFromCPMatrix(blockNum uint64, cpMatrix vrank.CPMatrix) (map[common.Address]uint64, error) {
 	// Determine F from validator count at epoch start.
 	committee, err := v.Valset.GetCommittee(blockNum, 0) // TODO: fetch value from AddressBookV2
 	if err != nil {
@@ -198,7 +194,7 @@ func (v *VRankModule) generateCFSFromCPMatrix(blockNum uint64, cpMatrix map[comm
 // candidate in cfReport over the epoch.
 // F is the number of highest reporter totals to discard per candidate (MAX_BYZANTINE_NODES).
 func byzantineFilter(
-	cpMatrix map[common.Address]map[common.Address]uint64,
+	cpMatrix vrank.CPMatrix,
 	F int,
 ) map[common.Address]uint64 {
 	cfs := make(map[common.Address]uint64)
@@ -226,14 +222,6 @@ func cloneMap(src map[common.Address]uint64) map[common.Address]uint64 {
 	return ret
 }
 
-func cloneCPMatrix(src map[common.Address]map[common.Address]uint64) map[common.Address]map[common.Address]uint64 {
-	ret := make(map[common.Address]map[common.Address]uint64, len(src))
-	for candidate, reporterScores := range src {
-		ret[candidate] = cloneMap(reporterScores)
-	}
-	return ret
-}
-
 func (v *VRankModule) lookupPFSCache(blockNum uint64) (uint64, map[common.Address]uint64, bool) {
 	epochStart := calcEpochStart(blockNum)
 	for i := uint64(0); i <= scoreCacheProbeLookback && i <= blockNum-epochStart; i++ {
@@ -245,12 +233,12 @@ func (v *VRankModule) lookupPFSCache(blockNum uint64) (uint64, map[common.Addres
 	return 0, nil, false
 }
 
-func (v *VRankModule) lookupCPMatrixCache(blockNum uint64) (uint64, map[common.Address]map[common.Address]uint64, bool) {
+func (v *VRankModule) lookupCPMatrixCache(blockNum uint64) (uint64, vrank.CPMatrix, bool) {
 	epochStart := calcEpochStart(blockNum)
 	for i := uint64(0); i <= scoreCacheProbeLookback && i <= blockNum-epochStart; i++ {
 		candidateNum := blockNum - i
 		if cached, ok := v.cpMatrixCache.Get(candidateNum); ok {
-			return candidateNum, cached.(map[common.Address]map[common.Address]uint64), true
+			return candidateNum, cached.(vrank.CPMatrix), true
 		}
 	}
 	return 0, nil, false

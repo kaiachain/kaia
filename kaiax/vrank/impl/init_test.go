@@ -55,7 +55,7 @@ func TestInit_CatchUpFromCheckpoint(t *testing.T) {
 	db := database.NewMemDB()
 	WriteCheckpoint(db, checkpoint,
 		map[common.Address]uint64{P1: 1},
-		map[common.Address]map[common.Address]uint64{C1: {P1: 1}},
+		vrank.CPMatrix{C1: {P1: 1}},
 	)
 	WriteLastCheckpoint(db, checkpoint)
 
@@ -93,7 +93,7 @@ func TestInit_CatchUpFromCheckpoint(t *testing.T) {
 	// cpMatrixCache: checkpoint seeded C1:{P1:1}; tail block adds C1:{P2:1} (reporter=P2 at round=1).
 	cpCached, ok := module.cpMatrixCache.Get(checkpoint + 1)
 	require.True(t, ok, "cpMatrixCache should be populated at head")
-	cpMatrix := cpCached.(map[common.Address]map[common.Address]uint64)
+	cpMatrix := cpCached.(vrank.CPMatrix)
 	assert.Equal(t, uint64(1), cpMatrix[C1][P1], "P1 contribution should carry over from checkpoint")
 	assert.Equal(t, uint64(1), cpMatrix[C1][P2], "P2 should be credited as reporter in tail block")
 }
@@ -107,7 +107,7 @@ func TestCheckpointRoundTrip_PreservesZeroScores(t *testing.T) {
 		P1: 3,
 		P2: 0,
 	}
-	cpMatrixIn := map[common.Address]map[common.Address]uint64{
+	cpMatrixIn := vrank.CPMatrix{
 		C1: {P1: 1, P2: 0},
 		C2: {P1: 0, P2: 2},
 	}

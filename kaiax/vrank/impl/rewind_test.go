@@ -24,6 +24,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,8 +46,8 @@ func TestRewindTo_PurgesCache(t *testing.T) {
 
 	v.pfsCache.Add(uint64(1), map[common.Address]uint64{addrN(0): 1})
 	v.pfsCache.Add(scoreCheckpointInterval+1, map[common.Address]uint64{addrN(0): 2})
-	v.cpMatrixCache.Add(uint64(1), map[common.Address]map[common.Address]uint64{addrN(1): {addrN(2): 1}})
-	v.cpMatrixCache.Add(scoreCheckpointInterval+1, map[common.Address]map[common.Address]uint64{addrN(1): {addrN(2): 2}})
+	v.cpMatrixCache.Add(uint64(1), vrank.CPMatrix{addrN(1): {addrN(2): 1}})
+	v.cpMatrixCache.Add(scoreCheckpointInterval+1, vrank.CPMatrix{addrN(1): {addrN(2): 2}})
 
 	v.RewindTo(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(scoreCheckpointInterval))}))
 
@@ -82,11 +83,11 @@ func TestRewindDelete_UpdatesLastCheckpoint(t *testing.T) {
 
 	WriteCheckpoint(db, cp1,
 		map[common.Address]uint64{addrN(0): 1},
-		map[common.Address]map[common.Address]uint64{addrN(1): {addrN(2): 1}},
+		vrank.CPMatrix{addrN(1): {addrN(2): 1}},
 	)
 	WriteCheckpoint(db, cp2,
 		map[common.Address]uint64{addrN(0): 2},
-		map[common.Address]map[common.Address]uint64{addrN(1): {addrN(2): 2}},
+		vrank.CPMatrix{addrN(1): {addrN(2): 2}},
 	)
 	WriteLastCheckpoint(db, cp2)
 

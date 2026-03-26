@@ -28,13 +28,13 @@ import (
 
 // cfReport is the internal, fork-check-free implementation of GetCfReport.
 // Used by computeCPMatrix so that catchUp can process pre-fork blocks without error.
-func (v *VRankModule) cfReport(blockNum uint64) (vrank.Report, error) {
+func (v *VRankModule) cfReport(blockNum uint64) ([]common.Address, error) {
 	header := v.Chain.GetHeaderByNumber(blockNum)
 	if header == nil {
 		return nil, vrank.ErrHeaderNotFound
 	}
 	if len(header.VRank) == 0 {
-		return vrank.Report{}, nil
+		return []common.Address{}, nil
 	}
 	return vrank.DecodeReport(header.VRank)
 }
@@ -42,7 +42,7 @@ func (v *VRankModule) cfReport(blockNum uint64) (vrank.Report, error) {
 // GetCfReport reads the committed cfReport for block blockNum from header.VRank.
 // Returns an empty report if header.VRank is nil (e.g. epoch-start block).
 // Returns ErrNotPermissionless if blockNum is before the permissionless fork.
-func (v *VRankModule) GetCfReport(blockNum uint64) (vrank.Report, error) {
+func (v *VRankModule) GetCfReport(blockNum uint64) ([]common.Address, error) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
 		return nil, vrank.ErrNotPermissionless
 	}
@@ -51,7 +51,7 @@ func (v *VRankModule) GetCfReport(blockNum uint64) (vrank.Report, error) {
 
 // pfReport is the internal, fork-check-free implementation of GetPfReport.
 // Used by computePFS so that catchUp can process pre-fork blocks without error.
-func (v *VRankModule) pfReport(blockNum uint64) (vrank.Report, error) {
+func (v *VRankModule) pfReport(blockNum uint64) ([]common.Address, error) {
 	header := v.Chain.GetHeaderByNumber(blockNum)
 	if header == nil {
 		return nil, vrank.ErrHeaderNotFound
@@ -62,10 +62,10 @@ func (v *VRankModule) pfReport(blockNum uint64) (vrank.Report, error) {
 
 	round := uint64(header.Round())
 	if round == 0 {
-		return vrank.Report{}, nil
+		return []common.Address{}, nil
 	}
 
-	pfReport := make(vrank.Report, 0, round)
+	pfReport := make([]common.Address, 0, round)
 	for r := uint64(0); r < round; r++ {
 		proposer, err := v.Valset.GetProposer(blockNum, r)
 		if err != nil {
@@ -80,7 +80,7 @@ func (v *VRankModule) pfReport(blockNum uint64) (vrank.Report, error) {
 // GetPfReport reads the committed pfReport for block blockNum from header.Extra.
 // Returns an empty report if the block was finalized at round 0.
 // Returns ErrNotPermissionless if blockNum is before the permissionless fork.
-func (v *VRankModule) GetPfReport(blockNum uint64) (vrank.Report, error) {
+func (v *VRankModule) GetPfReport(blockNum uint64) ([]common.Address, error) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
 		return nil, vrank.ErrNotPermissionless
 	}
@@ -90,14 +90,14 @@ func (v *VRankModule) GetPfReport(blockNum uint64) (vrank.Report, error) {
 // TallyCfReport computes the cfReport for block blockNum at the given round from in-memory collector state.
 // To fill `header(N).VRank`, the proposer of block N must use `TallyCfReport(N-1, last round of N-1)`.
 // Returns ErrNotPermissionless if header(blockNum+1) is before the permissionless fork.
-func (v *VRankModule) TallyCfReport(blockNum, round uint64) (vrank.Report, error) {
+func (v *VRankModule) TallyCfReport(blockNum, round uint64) ([]common.Address, error) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum + 1)) {
 		return nil, vrank.ErrNotPermissionless
 	}
 
 	// epoch header's VRank should be nil
 	if (blockNum+1)%vrankEpoch == 0 {
-		return vrank.Report{}, nil
+		return []common.Address{}, nil
 	}
 	if round > maxRound {
 		return nil, vrank.ErrRoundOutOfRange
@@ -108,14 +108,14 @@ func (v *VRankModule) TallyCfReport(blockNum, round uint64) (vrank.Report, error
 	if prepreparedAt.IsZero() {
 		// No preprepare data — either this node was not a validator for blockNum,
 		// or it missed the PREPREPARE message. Either way, nothing to report.
-		return vrank.Report{}, nil
+		return []common.Address{}, nil
 	}
 	candidates, err := v.Valset.GetCandidates(blockNum)
 	if err != nil || candidates == nil {
 		logger.Error("GetCandidates failed", "blockNum", blockNum)
 		return nil, vrank.ErrGetCandidateFailed
 	}
-	var cfReport vrank.Report
+	var cfReport []common.Address
 	for _, addr := range candidates {
 		msgWithTime, arrived := viewMap[addr]
 		if !arrived ||

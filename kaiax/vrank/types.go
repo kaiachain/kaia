@@ -17,13 +17,43 @@
 package vrank
 
 import (
+	"maps"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/rlp"
 )
 
-type Report []common.Address
+// CPMatrix is a candidate-proposer matrix tracking per-block report counts.
+// cpMatrix[candidate][reporter] is the number of times reporter reported candidate.
+type CPMatrix map[common.Address]map[common.Address]uint64
+
+func NewCPMatrix(candidates []common.Address) CPMatrix {
+	cpMatrix := make(CPMatrix, len(candidates))
+	for _, candidate := range candidates {
+		cpMatrix[candidate] = make(map[common.Address]uint64)
+	}
+	return cpMatrix
+}
+
+func (m CPMatrix) Clone() CPMatrix {
+	clone := make(CPMatrix, len(m))
+	for candidate, reporters := range m {
+		inner := make(map[common.Address]uint64, len(reporters))
+		maps.Copy(inner, reporters)
+		maps.Copy(inner, reporters)
+		clone[candidate] = inner
+	}
+	return clone
+}
+
+func (m CPMatrix) Increment(candidate, reporter common.Address) {
+	if m[candidate] == nil {
+		m[candidate] = make(map[common.Address]uint64)
+	}
+	m[candidate][reporter]++
+}
 
 const (
 	VRankPreprepareMsg = 0x17
@@ -56,7 +86,7 @@ type VRankCandidate struct {
 	Sig         []byte
 }
 
-func EncodeReport(report Report) ([]byte, error) {
+func EncodeReport(report []common.Address) ([]byte, error) {
 	if len(report) == 0 {
 		return nil, nil
 	}
@@ -64,7 +94,7 @@ func EncodeReport(report Report) ([]byte, error) {
 	return rlp.EncodeToBytes(report)
 }
 
-func DecodeReport(data []byte) (Report, error) {
+func DecodeReport(data []byte) ([]common.Address, error) {
 	var report []common.Address
 	if err := rlp.DecodeBytes(data, &report); err != nil {
 		return nil, err

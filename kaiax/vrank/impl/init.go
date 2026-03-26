@@ -167,7 +167,7 @@ func (v *VRankModule) catchUpScoreCaches() error {
 	return nil
 }
 
-func (v *VRankModule) loadCheckpointInEpoch(blockNum uint64) (uint64, map[common.Address]uint64, map[common.Address]map[common.Address]uint64, bool) {
+func (v *VRankModule) loadCheckpointInEpoch(blockNum uint64) (uint64, map[common.Address]uint64, vrank.CPMatrix, bool) {
 	cpNum := calcCheckpointBlock(blockNum)
 	pfs, cpMatrix := ReadCheckpoint(v.ChainKv, cpNum)
 	if pfs == nil {

@@ -36,7 +36,7 @@ func makeVRankHeader(t *testing.T, number uint64, cfAddrs []common.Address) *typ
 	t.Helper()
 	h := &types.Header{Number: big.NewInt(int64(number))}
 	if len(cfAddrs) > 0 {
-		encoded, err := vrank.EncodeReport(vrank.Report(cfAddrs))
+		encoded, err := vrank.EncodeReport(cfAddrs)
 		require.NoError(t, err)
 		h.VRank = encoded
 	}

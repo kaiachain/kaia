@@ -20,7 +20,7 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
 func (v *VRankModule) PostInsertBlock(block *types.Block) error {
@@ -41,9 +41,9 @@ func (v *VRankModule) PostInsertBlock(block *types.Block) error {
 	if blockNum%scoreCheckpointInterval == 0 {
 		// GetCFS populates cpMatrixCache, so fetch from there.
 		cpRaw, hasCPS := v.cpMatrixCache.Get(blockNum)
-		var cpMatrix map[common.Address]map[common.Address]uint64
+		var cpMatrix vrank.CPMatrix
 		if hasCPS {
-			cpMatrix = cpRaw.(map[common.Address]map[common.Address]uint64)
+			cpMatrix = cpRaw.(vrank.CPMatrix)
 		} else {
 			// unlikely to happen: perform exhaustive re-calculation.
 			cpMatrix, err = v.newCPMatrix(blockNum)

@@ -68,7 +68,7 @@ func TestGetCfReport(t *testing.T) {
 		v := createCN(t, valset).VRankModule
 		c1 := common.HexToAddress("0x0000000000000000000000000000000000000001")
 		c2 := common.HexToAddress("0x0000000000000000000000000000000000000002")
-		encoded, err := vrank.EncodeReport(vrank.Report{c1, c2})
+		encoded, err := vrank.EncodeReport([]common.Address{c1, c2})
 		require.NoError(t, err)
 		h := makeHeaderWithRound(10, 0)
 		h.VRank = encoded
@@ -76,7 +76,7 @@ func TestGetCfReport(t *testing.T) {
 
 		report, err := v.GetCfReport(10)
 		require.NoError(t, err)
-		assert.Equal(t, vrank.Report{c1, c2}, report)
+		assert.Equal(t, []common.Address{c1, c2}, report)
 
 		report2, err := v.GetCfReport(10)
 		require.NoError(t, err)
@@ -156,7 +156,7 @@ func TestGetPfReport(t *testing.T) {
 
 		report, err := v.GetPfReport(20)
 		require.NoError(t, err)
-		assert.Equal(t, vrank.Report{p0, p1, p2}, report)
+		assert.Equal(t, []common.Address{p0, p1, p2}, report)
 
 		report2, err := v.GetPfReport(20)
 		require.NoError(t, err)

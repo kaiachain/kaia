@@ -31,9 +31,9 @@ type VRankModule interface {
 	HandleIstanbulPreprepare(block *types.Block, view *istanbul.View)
 	HandleVRankPreprepare(msg *VRankPreprepare) error
 	HandleVRankCandidate(msg *VRankCandidate) error
-	GetCfReport(blockNum uint64) (Report, error)
-	GetPfReport(blockNum uint64) (Report, error)
-	TallyCfReport(blockNum, round uint64) (Report, error)
+	GetCfReport(blockNum uint64) ([]common.Address, error)
+	GetPfReport(blockNum uint64) ([]common.Address, error)
+	TallyCfReport(blockNum, round uint64) ([]common.Address, error)
 	GetPFS(blockNum uint64) (map[common.Address]uint64, error)
 	GetCFS(blockNum uint64) (map[common.Address]uint64, error)
 
