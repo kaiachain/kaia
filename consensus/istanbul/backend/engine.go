@@ -511,19 +511,22 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 }
 
 func (sb *backend) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
-	// [EIP-2935] stores the parent block hash in the history storage contract
-	if chain.Config().IsPragueForkEnabled(header.Number) {
-		context := blockchain.NewEVMBlockContext(header, chain, nil)
-		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
-		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
-	}
-
+	// WriteStatesToContract runs before ProcessParentBlockHash so that state is still the committed
+	// parent state (IntermediateRoot == parentHeader.Root). EIP-2935 and permissionless writes are
+	// independent (different contracts), so the order does not affect block validity.
 	if chain.Config().IsPermissionlessForkEnabled(header.Number) {
 		context := blockchain.NewEVMBlockContext(header, chain, nil)
 		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
 		if err := sb.valsetModule.WriteStatesToContract(vmenv, header, state); err != nil {
 			logger.Error("Failed to process transition", "number", header.Number.Uint64(), "err", err.Error())
 		}
+	}
+
+	// [EIP-2935] stores the parent block hash in the history storage contract
+	if chain.Config().IsPragueForkEnabled(header.Number) {
+		context := blockchain.NewEVMBlockContext(header, chain, nil)
+		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
+		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
 	}
 }
 
