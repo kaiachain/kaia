@@ -119,17 +119,22 @@ func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset
 	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
 		return nil, errors.New("permissionless fork is not enabled")
 	}
-	parentHeader := v.Chain.GetHeaderByNumber(num - 1)
-	if parentHeader == nil {
-		return nil, errParentHeaderNotFound(num)
-	}
-	parentStatedb, err := v.Chain.StateAt(parentHeader.Root)
-	if err != nil {
-		return nil, err
-	}
-	nodes, err := v.getOrComputeNodeStates(num, parentStatedb)
-	if err != nil {
-		return nil, err
+	var nodes valset.NodeStateMap
+	if cached, ok := v.nodeStatesCache.Get(num); ok {
+		nodes = cached.(valset.NodeStateMap)
+	} else {
+		parentHeader := v.Chain.GetHeaderByNumber(num - 1)
+		if parentHeader == nil {
+			return nil, errParentHeaderNotFound(num)
+		}
+		parentStatedb, err := v.Chain.StateAt(parentHeader.Root)
+		if err != nil {
+			return nil, err
+		}
+		nodes, err = v.getOrComputeNodeStates(num, parentStatedb)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// empty states means return all
