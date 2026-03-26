@@ -25,10 +25,15 @@ import (
 
 // postInsertBlockPermissionless pre-computes and caches node states for the next block.
 func (v *ValsetModule) postInsertBlockPermissionless(block *types.Block) error {
-	num := block.Header().Number.Uint64()
+	header := block.Header()
+	nextNum := header.Number.Uint64() + 1
 
-	// Compute and cache node states for N+1
-	_, err := v.getOrComputeNodeStates(num+1, nil)
+	// parentStatedb is the committed state of block N, which serves as the parent state for block N+1.
+	parentStatedb, err := v.Chain.StateAt(header.Root)
+	if err != nil {
+		return err
+	}
+	_, err = v.getOrComputeNodeStates(nextNum, parentStatedb)
 	return err
 }
 

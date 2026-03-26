@@ -25,6 +25,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -166,11 +167,16 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 		return v
 	}
 
-	t.Run("block 0 returns error (no parent header)", func(t *testing.T) {
-		v := newModule(t)
-		_, err := v.getOrComputeNodeStates(0, nil)
-		assert.Error(t, err)
-	})
+	genesisStatedb := func() *state.StateDB {
+		s, err := chain.StateAt(chain.GetHeaderByNumber(0).Root)
+		require.NoError(t, err)
+		return s
+	}
+	block1Statedb := func() *state.StateDB {
+		s, err := chain.StateAt(chain.GetHeaderByNumber(1).Root)
+		require.NoError(t, err)
+		return s
+	}
 
 	t.Run("cache hit returns cached value", func(t *testing.T) {
 		v := newModule(t)
@@ -179,7 +185,7 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 		}
 		v.nodeStatesCache.Add(uint64(1), cached)
 
-		result, err := v.getOrComputeNodeStates(1, nil)
+		result, err := v.getOrComputeNodeStates(1, genesisStatedb())
 		require.NoError(t, err)
 		assert.Equal(t, valset.ValPaused, result[config.NodeIds[0]].State)
 		assert.Equal(t, uint64(999), result[config.NodeIds[0]].StakingAmount)
@@ -189,7 +195,7 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 		v := newModule(t)
 		// Block 1 is committed with pause tx → ABv2(1) has ValPaused.
 		// But getOrComputeNodeStates(1) should read ABv2(0) + applyTr(1) = all ValActive.
-		result, err := v.getOrComputeNodeStates(1, nil)
+		result, err := v.getOrComputeNodeStates(1, genesisStatedb())
 		require.NoError(t, err)
 		assert.Equal(t, valset.ValActive, result[config.NodeIds[0]].State,
 			"should return ValActive from ABv2(0), not ValPaused from committed ABv2(1)")
@@ -198,7 +204,7 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 	t.Run("reads committed ABv2(N-1) including userTx from previous block", func(t *testing.T) {
 		v := newModule(t)
 		// Block 2: reads ABv2(1) which has ValPaused from pause tx + applyTr(2) noop
-		result, err := v.getOrComputeNodeStates(2, nil)
+		result, err := v.getOrComputeNodeStates(2, block1Statedb())
 		require.NoError(t, err)
 		assert.Equal(t, valset.ValPaused, result[config.NodeIds[0]].State,
 			"should read ValPaused from committed ABv2(1)")

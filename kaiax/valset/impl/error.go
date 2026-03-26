@@ -49,3 +49,7 @@ var (
 func ErrNoIstanbulSnapshot(num uint64) error {
 	return fmt.Errorf("no istanbul snapshot at block %d", num)
 }
+
+func errParentHeaderNotFound(num uint64) error {
+	return fmt.Errorf("parent header not found for block %d", num)
+}

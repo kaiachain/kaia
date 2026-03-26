@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"errors"
 	"math/big"
 	"testing"
 
@@ -117,8 +118,9 @@ func TestPostInsertBlock_PermissionlessIgnoresVote(t *testing.T) {
 	mockChain.EXPECT().Config().Return(&params.ChainConfig{
 		PermissionlessCompatibleBlock: big.NewInt(0),
 	}).AnyTimes()
-	// getOrComputeNodeStates will fail (no header/state), but that's fine —
+	// getOrComputeNodeStates falls back to StateAt, which will fail (no state), but that's fine —
 	// the point is that applyVote is never reached.
+	mockChain.EXPECT().StateAt(gomock.Any()).Return(nil, errors.New("mock")).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(nil).AnyTimes()
 
 	// Seed initial vote state so we can verify it's unchanged

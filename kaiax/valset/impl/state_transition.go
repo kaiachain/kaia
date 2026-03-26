@@ -40,7 +40,7 @@ const (
 
 // getOrComputeNodeStates returns the node states for block `num`.
 // Always computes ABv2(N-1) + applyTr(N) to exclude user transactions at block N.
-// If parentStatedb is provided, it is used as the parent state (avoids StateAt which may fail when trie nodes are not in stateCache, e.g., during historical regeneration).
+// parentStatedb must be the committed state of block N-1.
 func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.StateDB) (valset.NodeStateMap, error) {
 	// 1. Cache hit
 	if cached, ok := v.nodeStatesCache.Get(num); ok {
@@ -50,21 +50,13 @@ func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.S
 	// 2. Read ABv2(N-1) + apply transitions for block N
 	parentHeader := v.Chain.GetHeaderByNumber(num - 1)
 	if parentHeader == nil {
-		return nil, fmt.Errorf("parent header not found for block %d", num)
+		return nil, errParentHeaderNotFound(num)
 	}
-	if parentStatedb == nil {
-		var err error
-		parentStatedb, err = v.Chain.StateAt(parentHeader.Root)
-		if err != nil {
-			return nil, err
-		}
+	// Assert parentStatedb matches block num-1
+	if root := parentStatedb.IntermediateRoot(false); root != parentHeader.Root {
+		return nil, fmt.Errorf("parentStatedb root mismatch for block %d: got %s, want %s", num-1, root.Hex(), parentHeader.Root.Hex())
 	}
-	parentValidators, err := system.ReadGetAllValidators(parentStatedb, v.Chain, parentHeader)
-	if err != nil {
-		return nil, err
-	}
-
-	newValidators, err := v.applyAllTransitions(parentValidators, parentStatedb, parentHeader)
+	newValidators, err := v.computeNodeStates(parentStatedb, parentHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -72,34 +64,41 @@ func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.S
 	return newValidators, nil
 }
 
-// applyAllTransitions applies VrankViolation → Timeout → Epoch transitions.
+// computeNodeStates reads ABv2 validators from parentStatedb and applies all transitions.
+func (v *ValsetModule) computeNodeStates(parentStatedb *state.StateDB, parentHeader *types.Header) (valset.NodeStateMap, error) {
+	parentValidators, err := system.ReadGetAllValidators(parentStatedb, v.Chain, parentHeader)
+	if err != nil {
+		return nil, err
+	}
+	return v.applyAllTransitions(parentValidators, parentStatedb, parentHeader)
+}
+
+// applyAllTransitions computes state transitions for block N given parent state (N-1).
+// Result: NodeStates(N) = ABv2(N-1) + applyTr(N), where applyTr(N) = VrankViolation → Timeout → Epoch.
 func (v *ValsetModule) applyAllTransitions(
 	validators valset.NodeStateMap,
-	statedb *state.StateDB,
-	header *types.Header,
+	parentStatedb *state.StateDB,
+	parentHeader *types.Header,
 ) (valset.NodeStateMap, error) {
-	var (
-		num     = header.Number.Uint64()
-		nextNum = num + 1
-	)
+	nextNum := parentHeader.Number.Uint64() + 1
 	newValidators := v.getViolationTransition(nextNum, validators)
 
-	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb)
+	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, parentStatedb)
 	if err != nil {
 		return nil, err
 	}
 
-	pauseTimeout, idleTimeout, err := system.ReadABv2Timeouts(backend, header.Number)
+	pauseTimeout, idleTimeout, err := system.ReadABv2Timeouts(backend, parentHeader.Number)
 	if err != nil {
-		logger.Error("Failed to read ABv2 timeouts, using defaults", "number", num, "err", err)
+		logger.Error("Failed to read ABv2 timeouts, using defaults", "number", nextNum, "err", err)
 		pauseTimeout, idleTimeout = DefaultValPausedTimeout, DefaultValIdleTimeout
 	}
-	blockTime := time.Unix(header.Time.Int64(), 0)
+	blockTime := time.Unix(parentHeader.Time.Int64(), 0)
 	newValidators = v.getTimeoutTransition(newValidators, pauseTimeout, idleTimeout, blockTime)
 
-	maxValCount, _, err := system.ReadABv2MaxCounts(backend, header.Number)
+	maxValCount, _, err := system.ReadABv2MaxCounts(backend, parentHeader.Number)
 	if err != nil {
-		logger.Error("Failed to read ABv2 max counts, using defaults", "number", num, "err", err)
+		logger.Error("Failed to read ABv2 max counts, using defaults", "number", nextNum, "err", err)
 		maxValCount = DefaultActiveValidatorCount
 	}
 	newValidators = v.getEpochTransition(nextNum, newValidators, idleTimeout, int(maxValCount), blockTime)
@@ -158,9 +157,15 @@ func (v *ValsetModule) writeNodesToContract(
 		return err
 	}
 
-	// Compute diff: only nodes whose state or timeout changed.
-	// Error is ignored: if parent is unavailable (nil), diffNodeStates treats all current nodes as changed (fallback to full write).
-	parentNodes, _ := v.getOrComputeNodeStates(num-1, nil)
+	// Compute diff against committed ABv2(N-1) to get only applyTr(N) changes.
+	parentHeader := v.Chain.GetHeaderByNumber(num - 1)
+	if parentHeader == nil {
+		return errParentHeaderNotFound(num)
+	}
+	parentNodes, err := system.ReadGetAllValidators(statedb, v.Chain, parentHeader)
+	if err != nil {
+		return fmt.Errorf("failed to read ABv2(N-1): %w", err)
+	}
 	diff := diffNodeStates(parentNodes, currentNodes)
 
 	// Skip call if no changes and not an epoch block (epoch blocks need epochValCount update)

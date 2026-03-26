@@ -28,7 +28,15 @@ import (
 
 // getCouncilPermissionless returns the council (ValActive + ValPaused + ValReady) at block num.
 func (v *ValsetModule) getCouncilPermissionless(num uint64) ([]common.Address, error) {
-	nodes, err := v.getOrComputeNodeStates(num, nil)
+	parentHeader := v.Chain.GetHeaderByNumber(num - 1)
+	if parentHeader == nil {
+		return nil, errParentHeaderNotFound(num)
+	}
+	parentStatedb, err := v.Chain.StateAt(parentHeader.Root)
+	if err != nil {
+		return nil, err
+	}
+	nodes, err := v.getOrComputeNodeStates(num, parentStatedb)
 	if err != nil {
 		return nil, err
 	}
