@@ -38,7 +38,7 @@ func (v *VRankModule) PostInsertBlock(block *types.Block) error {
 		return err
 	}
 
-	if blockNum%scoreCheckpointInterval == 0 {
+	if blockNum%v.scoreCheckpointInterval() == 0 {
 		// GetCFS populates cpMatrixCache, so fetch from there.
 		cpRaw, hasCPS := v.cpMatrixCache.Get(blockNum)
 		var cpMatrix vrank.CPMatrix
@@ -50,7 +50,7 @@ func (v *VRankModule) PostInsertBlock(block *types.Block) error {
 			if err != nil {
 				return err
 			}
-			cpMatrix, err = v.applyBlocksForCPMatrix(calcEpochStart(blockNum), blockNum, cpMatrix)
+			cpMatrix, err = v.applyBlocksForCPMatrix(calcEpochStart(blockNum, v.vrankEpoch()), blockNum, cpMatrix)
 			if err != nil {
 				return err
 			}

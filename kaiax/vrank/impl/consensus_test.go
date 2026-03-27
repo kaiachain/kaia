@@ -25,6 +25,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -77,14 +78,14 @@ func TestVerifyHeader(t *testing.T) {
 	t.Run("epoch-start: empty VRank passes", func(t *testing.T) {
 		vs := noCallValset(t)
 		_, module := newTestModule(t, vs, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
-		h := &types.Header{Number: big.NewInt(int64(vrank.Epoch))}
+		h := &types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}
 		assert.NoError(t, module.VerifyHeader(h))
 	})
 
 	t.Run("epoch-start: non-empty VRank rejected", func(t *testing.T) {
 		vs := noCallValset(t)
 		_, module := newTestModule(t, vs, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
-		assert.ErrorIs(t, module.VerifyHeader(makeVRankHeader(t, vrank.Epoch, []common.Address{C1})),
+		assert.ErrorIs(t, module.VerifyHeader(makeVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C1})),
 			vrank.ErrUnexpectedVRankAtEpochStart)
 	})
 

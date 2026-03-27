@@ -619,8 +619,8 @@ func TestHandleVRankCandidate(t *testing.T) {
 	t.Run("epoch boundary future messages should be stored until tally", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val, cand := createCN(t, valset), createCN(t, valset)
-		blockNum := vrank.Epoch - 1
-		nextBlockNum := vrank.Epoch
+		blockNum := params.DefaultVRankEpoch - 1
+		nextBlockNum := params.DefaultVRankEpoch
 		block := types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(blockNum)})
 		nextBlock := types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(nextBlockNum)})
 		view := &istanbul.View{Sequence: new(big.Int).SetUint64(blockNum), Round: common.Big0}

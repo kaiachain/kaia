@@ -215,6 +215,7 @@ func TestKaiaConfig(maxHardfork string) *ChainConfig {
 		return chainConfig
 	}
 	chainConfig.PermissionlessCompatibleBlock = big.NewInt(0)
+	chainConfig.VRankEpoch = DefaultVRankEpoch
 	if maxHardfork == "permissionless" {
 		return chainConfig
 	}
@@ -243,7 +244,7 @@ const (
 	PasswordLength = 16
 
 	// DefaultVRankEpoch is the default number of blocks per VRank epoch.
-	DefaultVRankEpoch = 86400
+	DefaultVRankEpoch = uint64(86400)
 )
 
 var (

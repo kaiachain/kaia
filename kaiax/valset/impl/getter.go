@@ -20,6 +20,7 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
@@ -126,6 +127,20 @@ func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset
 	var nodes valset.NodeStateMap
 	if cached, ok := v.nodeStatesCache.Get(num); ok {
 		nodes = cached.(valset.NodeStateMap)
+	} else if num == 0 {
+		// Block 0 has no parent; read ABv2 directly from genesis state.
+		genesisHeader := v.Chain.GetHeaderByNumber(0)
+		if genesisHeader == nil {
+			return nil, errParentHeaderNotFound(num)
+		}
+		statedb, err := v.Chain.StateAt(genesisHeader.Root)
+		if err != nil {
+			return nil, err
+		}
+		nodes, _, _, _, _, err = system.ReadNodeStates(statedb, v.Chain, genesisHeader)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		parentHeader := v.Chain.GetHeaderByNumber(num - 1)
 		if parentHeader == nil {

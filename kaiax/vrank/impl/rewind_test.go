@@ -39,25 +39,25 @@ func TestRewindTo_PurgesCache(t *testing.T) {
 
 	headers := map[uint64]*types.Header{
 		0:                           makeHeaderWithRound(0, 0),
-		scoreCheckpointInterval:     makeHeaderWithRound(scoreCheckpointInterval, 0),
-		scoreCheckpointInterval + 1: makeHeaderWithRound(scoreCheckpointInterval+1, 0),
+		testCheckpointInterval:     makeHeaderWithRound(testCheckpointInterval, 0),
+		testCheckpointInterval + 1: makeHeaderWithRound(testCheckpointInterval+1, 0),
 	}
 	v := newTestModuleWithHeaders(t, valset, db, headers)
 
 	v.pfsCache.Add(uint64(1), map[common.Address]uint64{addrN(0): 1})
-	v.pfsCache.Add(scoreCheckpointInterval+1, map[common.Address]uint64{addrN(0): 2})
+	v.pfsCache.Add(testCheckpointInterval+1, map[common.Address]uint64{addrN(0): 2})
 	v.cpMatrixCache.Add(uint64(1), vrank.CPMatrix{addrN(1): {addrN(2): 1}})
-	v.cpMatrixCache.Add(scoreCheckpointInterval+1, vrank.CPMatrix{addrN(1): {addrN(2): 2}})
+	v.cpMatrixCache.Add(testCheckpointInterval+1, vrank.CPMatrix{addrN(1): {addrN(2): 2}})
 
-	v.RewindTo(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(scoreCheckpointInterval))}))
+	v.RewindTo(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(testCheckpointInterval))}))
 
 	_, ok := v.pfsCache.Get(uint64(1))
 	assert.False(t, ok, "pfsCache entry below rewind point must be purged")
-	_, ok = v.pfsCache.Get(scoreCheckpointInterval + 1)
+	_, ok = v.pfsCache.Get(testCheckpointInterval + 1)
 	assert.False(t, ok, "pfsCache entry above rewind point must be purged")
 	_, ok = v.cpMatrixCache.Get(uint64(1))
 	assert.False(t, ok, "cpMatrixCache entry below rewind point must be purged")
-	_, ok = v.cpMatrixCache.Get(scoreCheckpointInterval + 1)
+	_, ok = v.cpMatrixCache.Get(testCheckpointInterval + 1)
 	assert.False(t, ok, "cpMatrixCache entry above rewind point must be purged")
 }
 
@@ -71,8 +71,8 @@ func TestRewindDelete_UpdatesLastCheckpoint(t *testing.T) {
 	_ = valset
 	db := database.NewMemDB()
 
-	cp1 := scoreCheckpointInterval
-	cp2 := 2 * scoreCheckpointInterval
+	cp1 := testCheckpointInterval
+	cp2 := 2 * testCheckpointInterval
 
 	headers := map[uint64]*types.Header{
 		0:   makeHeaderWithRound(0, 0),
@@ -118,9 +118,9 @@ func TestRewindDelete_MultiIntervalReorg(t *testing.T) {
 	_ = valset
 	db := database.NewMemDB()
 
-	cp1 := scoreCheckpointInterval
-	cp2 := 2 * scoreCheckpointInterval
-	cp3 := 3 * scoreCheckpointInterval
+	cp1 := testCheckpointInterval
+	cp2 := 2 * testCheckpointInterval
+	cp3 := 3 * testCheckpointInterval
 
 	headers := map[uint64]*types.Header{
 		0:   makeHeaderWithRound(0, 0),

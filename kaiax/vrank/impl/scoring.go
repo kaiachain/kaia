@@ -27,7 +27,7 @@ import (
 
 const scoreCacheProbeLookback = uint64(64)
 
-func calcEpochStart(blockNum uint64) uint64 {
+func calcEpochStart(blockNum, vrankEpoch uint64) uint64 {
 	return blockNum - (blockNum % vrankEpoch)
 }
 
@@ -100,7 +100,7 @@ func (v *VRankModule) lookupPFSSeed(blockNum uint64) (start uint64, seed map[com
 	if cpNum, pfs, ok := v.loadPFSCheckpointInEpoch(blockNum); ok {
 		return cpNum + 1, pfs
 	}
-	return calcEpochStart(blockNum), make(map[common.Address]uint64)
+	return calcEpochStart(blockNum, v.vrankEpoch()), make(map[common.Address]uint64)
 }
 
 // lookupCFSSeed returns (start, seed) where seed holds the CP matrix accumulated up to start-1.
@@ -116,7 +116,7 @@ func (v *VRankModule) lookupCFSSeed(blockNum uint64) (start uint64, seed vrank.C
 	if err != nil {
 		return 0, nil, err
 	}
-	return calcEpochStart(blockNum), cpMatrix, nil
+	return calcEpochStart(blockNum, v.vrankEpoch()), cpMatrix, nil
 }
 
 func (v *VRankModule) newCPMatrix(blockNum uint64) (vrank.CPMatrix, error) {
@@ -223,7 +223,7 @@ func cloneMap(src map[common.Address]uint64) map[common.Address]uint64 {
 }
 
 func (v *VRankModule) lookupPFSCache(blockNum uint64) (uint64, map[common.Address]uint64, bool) {
-	epochStart := calcEpochStart(blockNum)
+	epochStart := calcEpochStart(blockNum, v.vrankEpoch())
 	for i := uint64(0); i <= min(scoreCacheProbeLookback, blockNum-epochStart); i++ {
 		candidateNum := blockNum - i
 		if cached, ok := v.pfsCache.Get(candidateNum); ok {
@@ -234,7 +234,7 @@ func (v *VRankModule) lookupPFSCache(blockNum uint64) (uint64, map[common.Addres
 }
 
 func (v *VRankModule) lookupCPMatrixCache(blockNum uint64) (uint64, vrank.CPMatrix, bool) {
-	epochStart := calcEpochStart(blockNum)
+	epochStart := calcEpochStart(blockNum, v.vrankEpoch())
 	for i := uint64(0); i <= min(scoreCacheProbeLookback, blockNum-epochStart); i++ {
 		candidateNum := blockNum - i
 		if cached, ok := v.cpMatrixCache.Get(candidateNum); ok {

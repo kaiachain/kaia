@@ -87,7 +87,7 @@ func (v *VRankModule) TallyCfReport(blockNum, round uint64) ([]common.Address, e
 	}
 
 	// epoch header's VRank should be nil
-	if (blockNum+1)%vrankEpoch == 0 {
+	if (blockNum+1)%v.vrankEpoch() == 0 {
 		return []common.Address{}, nil
 	}
 	if round > maxRound {

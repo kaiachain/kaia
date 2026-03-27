@@ -40,8 +40,9 @@ func (v *VRankModule) RewindDelete(hash common.Hash, num uint64) {
 		return
 	}
 
-	for cpNum := num; cpNum >= scoreCheckpointInterval; cpNum -= scoreCheckpointInterval {
-		prevCP := cpNum - scoreCheckpointInterval
+	cpInterval := v.scoreCheckpointInterval()
+	for cpNum := num; cpNum >= cpInterval; cpNum -= cpInterval {
+		prevCP := cpNum - cpInterval
 		prevPFS := ReadCheckpointPFS(v.ChainKv, prevCP)
 		if prevPFS != nil {
 			WriteLastCheckpoint(v.ChainKv, prevCP)
