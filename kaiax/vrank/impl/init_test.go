@@ -42,7 +42,7 @@ import (
 // Both caches are seeded from the checkpoint (P1:1 / C1:{P1:1}) so the assertions
 // confirm both the carry-over from the checkpoint AND the tail-block contribution.
 func TestInit_CatchUpFromCheckpoint(t *testing.T) {
-	var checkpoint = testCheckpointInterval // must be a testCheckpointInterval multiple
+	checkpoint := testCheckpointInterval // must be a testCheckpointInterval multiple
 	P1, P2, C1 := addrN(1), addrN(2), addrN(10)
 
 	// Only the two headers around the tail are needed: catchUp loads from the DB
@@ -99,7 +99,7 @@ func TestInit_CatchUpFromCheckpoint(t *testing.T) {
 }
 
 func TestCheckpointRoundTrip_PreservesZeroScores(t *testing.T) {
-	var checkpoint = testCheckpointInterval
+	checkpoint := testCheckpointInterval
 	P1, P2, C1, C2 := addrN(1), addrN(2), addrN(10), addrN(11)
 
 	db := database.NewMemDB()
