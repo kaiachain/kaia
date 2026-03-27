@@ -14,41 +14,38 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
-package vrank
+package impl
 
 import (
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/vrank"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestEncodeDecodeReport(t *testing.T) {
-	cases := []struct {
-		name   string
-		report []common.Address
-	}{
-		{
-			name:   "addresses",
-			report: []common.Address{common.HexToAddress("0x15d34AAf54267DB7D7cC839724318F2730aC377B"), common.HexToAddress("0x9965507D1a55bcC2695C58ba16FB37d819D0A4DC")},
+func TestCheckpointRoundTrip_PreservesZeroFailureCandidates(t *testing.T) {
+	db := database.NewMemDB()
+	cp := scoreCheckpointInterval
+	P1, C1, C2 := addrN(1), addrN(10), addrN(11)
+
+	WriteCheckpoint(db, cp,
+		map[common.Address]uint64{P1: 1},
+		vrank.CPMatrix{
+			C1: {P1: 2},
+			C2: {},
 		},
-		{
-			name:   "empty",
-			report: []common.Address{},
-		},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			enc, err := EncodeReport(tc.report)
-			assert.NoError(t, err)
-			if len(tc.report) == 0 {
-				assert.Nil(t, enc)
-				return
-			}
-			assert.NotEmpty(t, enc)
-			dec, err := DecodeReport(enc)
-			assert.NoError(t, err)
-			assert.Equal(t, tc.report, dec)
-		})
-	}
+	)
+
+	pfs := ReadCheckpointPFS(db, cp)
+	cpMatrix := ReadCheckpointCPMatrix(db, cp)
+	require.NotNil(t, pfs)
+	require.NotNil(t, cpMatrix)
+	assert.Equal(t, uint64(1), pfs[P1])
+	assert.Contains(t, cpMatrix, C1)
+	assert.Contains(t, cpMatrix, C2)
+	assert.Equal(t, uint64(2), cpMatrix[C1][P1])
+	assert.Equal(t, uint64(0), cpMatrix[C2][P1])
 }

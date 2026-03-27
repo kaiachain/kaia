@@ -688,6 +688,61 @@ func TestVerifySeal(t *testing.T) {
 	}
 }
 
+func TestVerifyHeader_ValidSigNonValidatorInExtra(t *testing.T) {
+	// tamperValidators injects a bogus address into Extra.Validators of an
+	// unsigned block, then re-seals it so that all signatures remain valid.
+	tamperValidators := func(chain *blockchain.BlockChain, engine *backend) *types.Header {
+		blockWithoutSeal := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+
+		header := blockWithoutSeal.Header()
+		istExtra, err := types.ExtractIstanbulExtra(header)
+		require.NoError(t, err)
+		bogus := common.HexToAddress("0x000000000000000000000000000000000000dead")
+		istExtra.Validators = append(istExtra.Validators, bogus)
+		payload, err := rlp.EncodeToBytes(istExtra)
+		require.NoError(t, err)
+		header.Extra = append(header.Extra[:types.IstanbulExtraVanity], payload...)
+
+		block, err := engine.updateBlock(blockWithoutSeal.WithSeal(header))
+		require.NoError(t, err)
+		header = block.Header()
+		committedSeals := makeCommittedSeals(block.Hash())
+		err = writeCommittedSeals(header, committedSeals)
+		require.NoError(t, err)
+		return header
+	}
+
+	t.Run("pre-permissionless HF", func(t *testing.T) {
+		ctrl, mStaking := makeMockStakingManager(t, nil, 0)
+		defer ctrl.Finish()
+		chain, engine := newBlockChain(1, params.TestKaiaConfig("osaka"), mStaking)
+		defer engine.Stop()
+
+		header := tamperValidators(chain, engine)
+
+		signatureAddresses.Purge()
+		err := engine.VerifyHeader(chain, header, false)
+		// Before Permissionless HF, Extra.Validators is not validated against
+		// staking, so a block with a non-validator injected passes verification.
+		require.NoError(t, err)
+	})
+
+	t.Run("permissionless HF", func(t *testing.T) {
+		ctrl, mStaking := makeMockStakingManager(t, nil, 0)
+		defer ctrl.Finish()
+		chain, engine := newBlockChain(1, params.TestKaiaConfig("permissionless"), mStaking)
+		defer engine.Stop()
+
+		header := tamperValidators(chain, engine)
+
+		signatureAddresses.Purge()
+		err := engine.VerifyHeader(chain, header, false)
+		// After Permissionless HF, VerifyHeader validates Extra.Validators against
+		// the staking-derived qualified set, so injecting a non-validator is rejected.
+		require.Equal(t, errInvalidValidatorsInExtra, err)
+	})
+}
+
 func TestVerifyHeaders(t *testing.T) {
 	var configItems []interface{}
 	configItems = append(configItems, proposerUpdateInterval(1))

@@ -42,10 +42,32 @@ type blockContext struct {
 }
 
 func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
-	qualified, err := v.getQualifiedValidators(num)
-	if err != nil {
-		return nil, err
+	var (
+		qualified *valset.AddressSet
+		err       error
+	)
+
+	// After Permissionless HF, VerifyHeader guarantees Extra.Validators ==
+	// getQualifiedValidators(num) for every committed canonical block.
+	// If header[num] is available (i.e. a committed block), use Extra.Validators
+	// directly to avoid staking lookups, making GetProposer safe for historical
+	// blocks. Falls back to staking if the header is not yet in the chain
+	// (e.g. during VerifyHeader before the block is inserted).
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		if header := v.Chain.GetHeaderByNumber(num); header != nil {
+			if istExtra, extractErr := types.ExtractIstanbulExtra(header); extractErr == nil {
+				qualified = valset.NewAddressSet(istExtra.Validators)
+			}
+		}
 	}
+
+	if qualified == nil {
+		qualified, err = v.getQualifiedValidators(num)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	prevHeader := v.Chain.GetHeaderByNumber(num - 1)
 	if prevHeader == nil {
 		return nil, errNoHeader

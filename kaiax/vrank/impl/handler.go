@@ -39,9 +39,9 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *istanbu
 
 	prepreparedAt := time.Now()
 	blockNum := block.NumberU64()
-	// if I'm a validator, then I need to collect VRankCandidate
-	// should be isValidator(blockNum + 1), but validators are not finalized during `blockNum` consensus.
-	if v.isValidator(blockNum) {
+	// if I'm a committee member (ValActive), then I need to collect VRankCandidate
+	// ideally isCommitteeMember(blockNum + 1, round), but committee is not finalized during `blockNum` consensus, thus (blockNum, round).
+	if v.isCommitteeMember(blockNum, view.Round.Uint64()) {
 		copiedView := istanbul.View{
 			Sequence: new(big.Int).Set(view.Sequence),
 			Round:    new(big.Int).Set(view.Round),
@@ -62,7 +62,8 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *istanbu
 	}
 }
 
-// HandleVRankPreprepare processes VRankPreprepare; if this node is a candidate, it broadcasts VRankCandidate.
+// HandleVRankPreprepare processes VRankPreprepare; if this node is a candidate, it verifies the
+// proposer's signature and broadcasts VRankCandidate.
 func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 	block := msg.Block
 	view := msg.View
@@ -71,6 +72,14 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 	}
 
 	if v.isCandidate(block.NumberU64()) {
+		sender, err := v.recoverVRankPreprepareSender(msg)
+		if err != nil {
+			return err
+		}
+		if err := v.verifyVRankPreprepareSender(msg, sender); err != nil {
+			return err
+		}
+
 		sigHash := v.vrankCandidateSigHash(block.NumberU64(), uint8(view.Round.Uint64()), block.Hash())
 		sig, err := crypto.Sign(sigHash.Bytes(), v.NodeKey)
 		if err != nil {
@@ -95,36 +104,80 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 
 	receivedAt := time.Now()
 	v.prepreparedViewMu.RLock()
-	prepreparedSeqNum := uint64(0)
-	hasPrepreparedSeq := v.prepreparedView.Sequence != nil
-	if hasPrepreparedSeq {
+	prepreparedSeqNum, prepreparedRound := uint64(0), uint64(0)
+	hasPrepreparedView := v.prepreparedView.Sequence != nil && v.prepreparedView.Round != nil
+	if hasPrepreparedView {
 		prepreparedSeqNum = v.prepreparedView.Sequence.Uint64()
+		prepreparedRound = v.prepreparedView.Round.Uint64()
 	}
 	v.prepreparedViewMu.RUnlock()
-	if !hasPrepreparedSeq {
+	if !hasPrepreparedView {
 		return vrank.ErrPrepreparedViewNotSet
 	}
-	// should be isValidator(v.prepreparedView.Sequence.Uint64() + 1), but validators are not finalized during `seq` consensus.
-	if v.isValidator(prepreparedSeqNum) {
-		if msg.BlockNumber > prepreparedSeqNum+maxCollectorWindow {
-			return vrank.ErrTooFar
-		}
-		if msg.Round > maxRound {
-			return vrank.ErrRoundOutOfRange
-		}
+	if msg.BlockNumber > prepreparedSeqNum+maxCollectorWindow {
+		return vrank.ErrTooFar
+	}
+	if msg.Round > maxRound {
+		return vrank.ErrRoundOutOfRange
+	}
+	if isStaleVRankCandidate(msg, prepreparedSeqNum, prepreparedRound) {
+		return nil
+	}
 
-		sender, err := v.recoverVRankCandidateSender(msg)
-		if err != nil {
-			return err
-		}
-		vk := vrank.ViewKey{N: msg.BlockNumber, R: msg.Round}
-		if v.collector.HasCandMsg(vk, sender) {
-			return nil
-		}
-		if err := v.verifyVRankCandidateSender(msg, sender, prepreparedSeqNum); err != nil {
-			return err
-		}
-		v.collector.AddCandMsg(vk, sender, receivedAt, msg)
+	sender, err := v.recoverVRankCandidateSender(msg)
+	if err != nil {
+		return err
+	}
+	vk := vrank.ViewKey{N: msg.BlockNumber, R: msg.Round}
+	if v.collector.HasCandMsg(vk, sender) {
+		return nil
+	}
+	v.collector.AddCandMsg(vk, sender, receivedAt, msg)
+	return nil
+}
+
+func isStaleVRankCandidate(msg *vrank.VRankCandidate, prepreparedSeqNum, prepreparedRound uint64) bool {
+	if msg.BlockNumber < prepreparedSeqNum {
+		return true
+	}
+	return msg.BlockNumber == prepreparedSeqNum && uint64(msg.Round) < prepreparedRound
+}
+
+func (v *VRankModule) vrankPreprepareSigHash(blockNum uint64, round uint8, blockHash common.Hash) common.Hash {
+	chainID := v.ChainConfig.ChainID.Uint64()
+
+	// Canonical encoding:
+	// domain separator || chain_id(uint64 BE) || block_number(uint64 BE) || round(uint8) || block_hash(32 bytes)
+	payload := make([]byte, 0, len(vrankPreprepareSigDomain)+8+8+1+len(blockHash))
+	payload = append(payload, []byte(vrankPreprepareSigDomain)...)
+	payload = binary.BigEndian.AppendUint64(payload, chainID)
+	payload = binary.BigEndian.AppendUint64(payload, blockNum)
+	payload = append(payload, round)
+	payload = append(payload, blockHash[:]...)
+	return crypto.Keccak256Hash(payload)
+}
+
+func (v *VRankModule) recoverVRankPreprepareSender(msg *vrank.VRankPreprepare) (common.Address, error) {
+	sigHash := v.vrankPreprepareSigHash(msg.Block.NumberU64(), uint8(msg.View.Round.Uint64()), msg.Block.Hash())
+	pubkey, err := crypto.SigToPub(sigHash.Bytes(), msg.Sig)
+	if err != nil {
+		logger.Debug("SigToPub failed for VRankPreprepare", "err", err, "blockNum", msg.Block.NumberU64())
+		return common.Address{}, fmt.Errorf("%w: %v", vrank.ErrInvalidProposerSig, err)
+	}
+	return crypto.PubkeyToAddress(*pubkey), nil
+}
+
+func (v *VRankModule) verifyVRankPreprepareSender(msg *vrank.VRankPreprepare, sender common.Address) error {
+	blockNum := msg.Block.NumberU64()
+	round := msg.View.Round.Uint64()
+	proposer, err := v.Valset.GetProposer(blockNum, round)
+	if err != nil {
+		logger.Debug("GetProposer failed", "err", err, "blockNum", blockNum)
+		return err
+	}
+	if sender != proposer {
+		logger.Debug("VRankPreprepare from non-proposer", "sender", sender.Hex(), "proposer", proposer.Hex(), "blockNum", blockNum)
+		return vrank.ErrMsgFromNonProposer
 	}
 	return nil
 }
@@ -138,20 +191,6 @@ func (v *VRankModule) recoverVRankCandidateSender(msg *vrank.VRankCandidate) (co
 	}
 	sender := crypto.PubkeyToAddress(*pubkey)
 	return sender, nil
-}
-
-func (v *VRankModule) verifyVRankCandidateSender(msg *vrank.VRankCandidate, sender common.Address, prepreparedSeqNum uint64) error {
-	// should be GetCandidates(msg.BlockNumber), but candidates are not finalized during `Sequence` consensus.
-	candidates, err := v.Valset.GetCandidates(prepreparedSeqNum)
-	if err != nil {
-		logger.Debug("GetCandidates failed", "err", err, "blockNum", msg.BlockNumber)
-		return err
-	}
-	if !slices.Contains(candidates, sender) {
-		logger.Debug("Sender is not a candidate", "sender", sender.Hex(), "blockNum", msg.BlockNumber)
-		return vrank.ErrMsgFromNonCandidate
-	}
-	return nil
 }
 
 func (v *VRankModule) vrankCandidateSigHash(blockNum uint64, round uint8, blockHash common.Hash) common.Hash {
@@ -168,7 +207,7 @@ func (v *VRankModule) vrankCandidateSigHash(blockNum uint64, round uint8, blockH
 	return crypto.Keccak256Hash(payload)
 }
 
-// BroadcastVRankPreprepare is called by the proposer
+// BroadcastVRankPreprepare is called by the proposer. It signs the message before broadcasting.
 func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPreprepare) {
 	block := vrankPreprepare.Block
 	candidates, err := v.Valset.GetCandidates(block.NumberU64())
@@ -176,15 +215,22 @@ func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPrepr
 		logger.Error("GetCandidates failed", "blockNum", block.NumberU64())
 		return
 	}
+	sigHash := v.vrankPreprepareSigHash(block.NumberU64(), uint8(vrankPreprepare.View.Round.Uint64()), block.Hash())
+	sig, err := crypto.Sign(sigHash.Bytes(), v.NodeKey)
+	if err != nil {
+		logger.Error("Sign VRankPreprepare failed", "blockNum", block.NumberU64())
+		return
+	}
+	vrankPreprepare.Sig = sig
 	v.broadcast(candidates, vrank.VRankPreprepareMsg, vrankPreprepare)
 }
 
 // BroadcastVRankCandidate is called by candidates.
 func (v *VRankModule) BroadcastVRankCandidate(vrankCandidate *vrank.VRankCandidate) {
-	// should be GetCouncil(blockNum + 1), but validators are not finalized during `blockNum` consensus.
-	validators, err := v.Valset.GetCouncil(vrankCandidate.BlockNumber)
+	// ideally GetCommittee(blockNum + 1, round), but committee is not finalized during `blockNum` consensus, thus (blockNum, round).
+	validators, err := v.Valset.GetCommittee(vrankCandidate.BlockNumber, uint64(vrankCandidate.Round))
 	if err != nil || validators == nil {
-		logger.Error("GetCouncil failed", "blockNum", vrankCandidate.BlockNumber)
+		logger.Error("GetCommittee failed", "blockNum", vrankCandidate.BlockNumber)
 		return
 	}
 
@@ -220,22 +266,22 @@ func (v *VRankModule) isCandidate(blockNum uint64) bool {
 	return slices.Contains(candidates, v.nodeID)
 }
 
-func (v *VRankModule) isValidator(blockNum uint64) bool {
-	validators, err := v.Valset.GetCouncil(blockNum)
-	if err != nil || validators == nil {
-		logger.Error("GetCouncil failed", "blockNum", blockNum)
+func (v *VRankModule) isCommitteeMember(blockNum, round uint64) bool {
+	committee, err := v.Valset.GetCommittee(blockNum, round)
+	if err != nil || committee == nil {
+		logger.Error("GetCommittee failed", "blockNum", blockNum)
 		return false
 	}
 
-	return slices.Contains(validators, v.nodeID)
+	return slices.Contains(committee, v.nodeID)
 }
 
-func (v *VRankModule) handleBroadcastLoop() {
+func (v *VRankModule) handleBroadcastLoop(stopCh <-chan struct{}) {
 	for {
 		select {
 		case req := <-v.broadcastCh:
 			v.broadcastFeed.Send(req)
-		case <-v.stopCh:
+		case <-stopCh:
 			return
 		}
 	}

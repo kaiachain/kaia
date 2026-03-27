@@ -27,6 +27,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
+	"slices"
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -48,7 +49,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/randao"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -105,12 +105,10 @@ var (
 	errInvalidBlobTxWithSidecar = errors.New("invalid blob transaction with sidecar")
 	// errUnexpectedExcessBlobGasBeforeOsaka is returned if the excessBlobGas is present before the osaka fork.
 	errUnexpectedExcessBlobGasBeforeOsaka = errors.New("unexpected excessBlobGas before osaka")
+	// errInvalidValidatorsInExtra is returned if header.Extra.Validators does not match the expected qualified validator set.
+	errInvalidValidatorsInExtra = errors.New("invalid validators in extra data")
 	// errUnexpectedBlobGasUsedBeforeOsaka is returned if the blobGasUsed is present before the osaka fork.
 	errUnexpectedBlobGasUsedBeforeOsaka = errors.New("unexpected blobGasUsed before osaka")
-	// errUnexpectedVRankBeforePermissionless is returned if VRank exists before permissionless fork.
-	errUnexpectedVRankBeforePermissionless = errors.New("unexpected vrank before permissionless fork")
-	// errInvalidVRankFormat is returned if header.VRank is not a valid encoded report.
-	errInvalidVRankFormat = errors.New("invalid vrank format")
 )
 
 var (
@@ -242,8 +240,21 @@ func (sb *backend) verifyHeader(chain consensus.ChainReader, header *types.Heade
 	}
 
 	// Ensure that the extra data format is satisfied
-	if _, err := types.ExtractIstanbulExtra(header); err != nil {
+	istExtra, err := types.ExtractIstanbulExtra(header)
+	if err != nil {
 		return errInvalidExtraDataFormat
+	}
+	// After Permissionless HF, Extra.Validators must exactly match the qualified
+	// validator set derived from staking. This makes Extra.Validators trustworthy
+	// for use as a substitute for staking lookups on historical blocks.
+	if chain.Config().IsPermissionlessForkEnabled(header.Number) && header.Number.Uint64() > 0 {
+		valSet, err := sb.GetValidatorSet(header.Number.Uint64())
+		if err != nil {
+			return err
+		}
+		if !slices.Equal(istExtra.Validators, valSet.Qualified().List()) {
+			return errInvalidValidatorsInExtra
+		}
 	}
 	// Ensure that the block's blockscore is meaningful (may not be correct at this point)
 	if header.BlockScore == nil || header.BlockScore.Cmp(defaultBlockScore) != 0 {
@@ -313,18 +324,6 @@ func (sb *backend) verifyCascadingFields(chain consensus.ChainReader, header *ty
 	} else {
 		if err := eip4844.VerifyEIP4844Header(chain.Config(), parent, header); err != nil {
 			return err
-		}
-	}
-
-	// Ensure VRank field is only present after permissionless fork and has valid encoding.
-	permissionless := chain.Config().IsPermissionlessForkEnabled(header.Number)
-	if !permissionless {
-		if len(header.VRank) > 0 {
-			return errUnexpectedVRankBeforePermissionless
-		}
-	} else if len(header.VRank) > 0 {
-		if _, err := vrank.DecodeReport(header.VRank); err != nil {
-			return errInvalidVRankFormat
 		}
 	}
 

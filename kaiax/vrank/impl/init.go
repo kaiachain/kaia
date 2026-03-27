@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"sync"
 
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
@@ -29,16 +30,21 @@ import (
 	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 )
 
 const (
-	candidateMsgTimeoutMs   = 500
-	vrankCandidateSigDomain = "VRANK_CANDIDATE_V1"
+	candidateMsgTimeoutMs    = 500
+	vrankPreprepareSigDomain = "VRANK_PREPREPARE_V1"
+	vrankCandidateSigDomain  = "VRANK_CANDIDATE_V1"
 
 	broadcastChSize    = 2048
-	vrankEpoch         = 86400
-	maxRound           = 10 // round range [0, 10]
-	maxCollectorWindow = 10 // max collection window [N-10, N+10]
+	vrankEpoch         = vrank.Epoch
+	maxRound           = vrank.MaxRound
+	maxCollectorWindow = uint64(10) // max collection window [N-10, N+10]
+
+	scoreCacheSize          = 1024
+	scoreCheckpointInterval = uint64(vrankEpoch / 8) // 10,800 blocks
 )
 
 var (
@@ -52,6 +58,7 @@ type InitOpts struct {
 	NodeKey     *ecdsa.PrivateKey
 	ChainConfig *params.ChainConfig
 	Chain       chain
+	ChainKv     database.Database
 }
 
 type chain interface {
@@ -61,6 +68,9 @@ type chain interface {
 
 type VRankModule struct {
 	InitOpts
+
+	lifecycleMu sync.Mutex
+	running     bool
 
 	broadcastCh   chan *vrank.VRankBroadcastEvent
 	broadcastFeed event.Feed
@@ -72,38 +82,105 @@ type VRankModule struct {
 	prepreparedView   istanbul.View // for collection window management
 	prepreparedViewMu sync.RWMutex
 	collector         *vrank.Collector
+
+	pfsCache      *lru.ARCCache // map[proposer]score
+	cpMatrixCache *lru.ARCCache // map[candidate][proposer]score
 }
 
 func NewVRankModule() *VRankModule {
+	pfsCache, _ := lru.NewARC(scoreCacheSize)
+	cpMatrixCache, _ := lru.NewARC(scoreCacheSize)
 	return &VRankModule{
-		broadcastCh: make(chan *vrank.VRankBroadcastEvent, broadcastChSize),
-		stopCh:      make(chan struct{}),
-		collector:   vrank.NewCollector(),
+		broadcastCh:   make(chan *vrank.VRankBroadcastEvent, broadcastChSize),
+		stopCh:        make(chan struct{}),
+		collector:     vrank.NewCollector(),
+		pfsCache:      pfsCache,
+		cpMatrixCache: cpMatrixCache,
 	}
 }
 
 func (v *VRankModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.Valset == nil || opts.NodeKey == nil || opts.ChainConfig == nil || opts.ChainConfig.ChainID == nil || opts.Chain == nil {
+	if opts == nil || opts.Valset == nil || opts.NodeKey == nil || opts.ChainConfig == nil || opts.ChainConfig.ChainID == nil || opts.Chain == nil || opts.ChainKv == nil {
 		return vrank.ErrInitUnexpectedNil
 	}
 	v.InitOpts = *opts
 	v.nodeID = crypto.PubkeyToAddress(opts.NodeKey.PublicKey)
+	if err := v.catchUpScoreCaches(); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (v *VRankModule) Start() error {
-	go v.handleBroadcastLoop()
+	v.lifecycleMu.Lock()
+	defer v.lifecycleMu.Unlock()
+
+	if v.running {
+		return nil
+	}
+
+	v.stopCh = make(chan struct{})
+	v.running = true
+	go v.handleBroadcastLoop(v.stopCh)
 	logger.Info("VRankModule started")
 
 	return nil
 }
 
 func (v *VRankModule) Stop() {
+	v.lifecycleMu.Lock()
+	if !v.running {
+		v.lifecycleMu.Unlock()
+		return
+	}
+	stopCh := v.stopCh
+	v.running = false
+	v.lifecycleMu.Unlock()
+
 	logger.Info("VRankModule stopped")
-	close(v.stopCh)
-	close(v.broadcastCh)
+	close(stopCh)
 }
 
 func (v *VRankModule) SubscribeVRank(sink chan<- *vrank.VRankBroadcastEvent) event.Subscription {
 	return v.broadcastFeed.Subscribe(sink)
+}
+
+func (v *VRankModule) catchUpScoreCaches() error {
+	v.pfsCache.Purge()
+	v.cpMatrixCache.Purge()
+
+	head := v.Chain.CurrentHeader()
+	if head == nil || head.Number == nil {
+		return nil
+	}
+	if !v.ChainConfig.IsPermissionlessForkEnabled(head.Number) {
+		return nil
+	}
+	headNum := head.Number.Uint64()
+
+	if _, err := v.GetPFS(headNum); err != nil {
+		return err
+	}
+	if _, err := v.GetCFS(headNum); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (v *VRankModule) loadPFSCheckpointInEpoch(blockNum uint64) (uint64, map[common.Address]uint64, bool) {
+	cpNum := calcCheckpointBlock(blockNum)
+	pfs := ReadCheckpointPFS(v.ChainKv, cpNum)
+	if pfs == nil {
+		return 0, nil, false
+	}
+	return cpNum, pfs, true
+}
+
+func (v *VRankModule) loadCPMatrixCheckpointInEpoch(blockNum uint64) (uint64, vrank.CPMatrix, bool) {
+	cpNum := calcCheckpointBlock(blockNum)
+	cpMatrix := ReadCheckpointCPMatrix(v.ChainKv, cpNum)
+	if cpMatrix == nil {
+		return 0, nil, false
+	}
+	return cpNum, cpMatrix, true
 }

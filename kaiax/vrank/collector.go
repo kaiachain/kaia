@@ -17,6 +17,7 @@
 package vrank
 
 import (
+	"maps"
 	"sync"
 	"time"
 
@@ -140,9 +141,7 @@ func (c *Collector) GetViewData(vk ViewKey) (prepreparedAt time.Time, expectedBl
 	src := c.viewMap[vk]
 	if src != nil {
 		candMap = make(map[common.Address]CandidateMsg, len(src))
-		for addr, msg := range src {
-			candMap[addr] = msg
-		}
+		maps.Copy(candMap, src)
 	}
 	return prepreparedAt, expectedBlockHash, candMap
 }

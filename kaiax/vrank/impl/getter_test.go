@@ -68,19 +68,19 @@ func TestGetCfReport(t *testing.T) {
 		v := createCN(t, valset).VRankModule
 		c1 := common.HexToAddress("0x0000000000000000000000000000000000000001")
 		c2 := common.HexToAddress("0x0000000000000000000000000000000000000002")
-		encoded, err := vrank.EncodeReport(vrank.Report{c1, c2})
+		encoded, err := vrank.EncodeReport([]common.Address{c1, c2})
 		require.NoError(t, err)
 		h := makeHeaderWithRound(10, 0)
 		h.VRank = encoded
 		v.Chain = &testChain{headers: map[uint64]*types.Header{10: h}}
 
-		report, err := v.GetCfReport(10)
+		report, err := v.cfReport(10)
 		require.NoError(t, err)
-		assert.Equal(t, vrank.Report{c1, c2}, report)
+		assert.Equal(t, []common.Address{c1, c2}, report)
 
-		report2, err := v.GetCfReport(10)
+		report2, err := v.cfReport(10)
 		require.NoError(t, err)
-		assert.Equal(t, report, report2, "GetCfReport must be deterministic")
+		assert.Equal(t, report, report2, "cfReport must be deterministic")
 	})
 
 	t.Run("nil header.VRank returns empty report", func(t *testing.T) {
@@ -90,7 +90,7 @@ func TestGetCfReport(t *testing.T) {
 			5: makeHeaderWithRound(5, 0), // header.VRank is nil
 		}}
 
-		report, err := v.GetCfReport(5)
+		report, err := v.cfReport(5)
 		require.NoError(t, err)
 		assert.Empty(t, report)
 	})
@@ -102,8 +102,20 @@ func TestGetCfReport_Errors(t *testing.T) {
 		v := createCN(t, valset).VRankModule
 		v.Chain = &testChain{headers: map[uint64]*types.Header{}}
 
-		report, err := v.GetCfReport(99)
+		report, err := v.cfReport(99)
 		assert.ErrorIs(t, err, vrank.ErrHeaderNotFound)
+		assert.Nil(t, report)
+	})
+
+	t.Run("pre-fork block returns ErrNotPermissionless", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		v := newPreForkModule(t, valset)
+		v.Chain = &testChain{headers: map[uint64]*types.Header{
+			10: makeHeaderWithRound(10, 0),
+		}}
+
+		report, err := v.cfReport(10)
+		assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
 		assert.Nil(t, report)
 	})
 }
@@ -122,7 +134,7 @@ func TestGetPfReport(t *testing.T) {
 			},
 		}
 
-		report, err := v.GetPfReport(10)
+		report, err := v.pfReport(10)
 		require.NoError(t, err)
 		assert.Empty(t, report)
 	})
@@ -142,23 +154,35 @@ func TestGetPfReport(t *testing.T) {
 		valset.EXPECT().GetProposer(uint64(20), uint64(1)).Return(p1, nil).Times(2)
 		valset.EXPECT().GetProposer(uint64(20), uint64(2)).Return(p2, nil).Times(2)
 
-		report, err := v.GetPfReport(20)
+		report, err := v.pfReport(20)
 		require.NoError(t, err)
-		assert.Equal(t, vrank.Report{p0, p1, p2}, report)
+		assert.Equal(t, []common.Address{p0, p1, p2}, report)
 
-		report2, err := v.GetPfReport(20)
+		report2, err := v.pfReport(20)
 		require.NoError(t, err)
-		assert.Equal(t, report, report2, "GetPfReport must be deterministic")
+		assert.Equal(t, report, report2, "pfReport must be deterministic")
 	})
 }
 
 func TestGetPfReport_Errors(t *testing.T) {
+	t.Run("pre-fork block returns ErrNotPermissionless", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		v := newPreForkModule(t, valset)
+		v.Chain = &testChain{headers: map[uint64]*types.Header{
+			10: makeHeaderWithRound(10, 0),
+		}}
+
+		report, err := v.pfReport(10)
+		assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
+		assert.Nil(t, report)
+	})
+
 	t.Run("header not found returns error", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		v := createCN(t, valset).VRankModule
 		v.Chain = &testChain{headers: map[uint64]*types.Header{}}
 
-		report, err := v.GetPfReport(30)
+		report, err := v.pfReport(30)
 		require.ErrorIs(t, err, vrank.ErrHeaderNotFound)
 		assert.Nil(t, report)
 	})
@@ -172,7 +196,7 @@ func TestGetPfReport_Errors(t *testing.T) {
 			},
 		}
 
-		report, err := v.GetPfReport(40)
+		report, err := v.pfReport(40)
 		require.ErrorIs(t, err, vrank.ErrHeaderExtraTooShort)
 		assert.Nil(t, report)
 	})
@@ -189,7 +213,7 @@ func TestGetPfReport_Errors(t *testing.T) {
 		valset.EXPECT().GetProposer(uint64(50), uint64(0)).Return(p0, nil).Times(1)
 		valset.EXPECT().GetProposer(uint64(50), uint64(1)).Return(common.Address{}, assert.AnError).Times(1)
 
-		report, err := v.GetPfReport(50)
+		report, err := v.pfReport(50)
 		require.ErrorIs(t, err, assert.AnError)
 		assert.Nil(t, report)
 	})
@@ -225,7 +249,7 @@ func TestTallyCfReport(t *testing.T) {
 		candAddrs[i] = candidates[i].Addr
 	}
 
-	valset.EXPECT().GetCouncil(gomock.Any()).Return(valAddrs, nil).AnyTimes()
+	valset.EXPECT().GetCommittee(gomock.Any(), gomock.Any()).Return(valAddrs, nil).AnyTimes()
 	valset.EXPECT().GetCandidates(gomock.Any()).Return(candAddrs, nil).AnyTimes()
 	valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(validators[0].Addr, nil).AnyTimes()
 
@@ -306,10 +330,21 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	view1_0 := &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
 	candAddr := common.HexToAddress("0xc4nd1d473")
 
+	t.Run("pre-fork block returns ErrNotPermissionless", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		// TallyCfReport(blockNum=0, ...) targets header(1).VRank; fork check is on blockNum+1=1.
+		// With osaka config, fork is never enabled, so block 1 is pre-fork.
+		v := newPreForkModule(t, valset)
+
+		report, err := v.TallyCfReport(0, 0)
+		assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
+		assert.Nil(t, report)
+	})
+
 	t.Run("Report should contain candAddr", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
@@ -322,11 +357,11 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	t.Run("epoch header returns empty report", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
-		valset.EXPECT().GetCouncil(uint64(vrankEpoch-1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(vrankEpoch-1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(vrankEpoch-1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(vrankEpoch-1), uint64(0)).Return(val.Addr, nil).AnyTimes()
-		block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(vrankEpoch - 1))})
-		view := &istanbul.View{Sequence: big.NewInt(vrankEpoch - 1), Round: common.Big0}
+		block := types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(vrankEpoch - 1)})
+		view := &istanbul.View{Sequence: new(big.Int).SetUint64(vrankEpoch - 1), Round: common.Big0}
 		val.VRankModule.HandleIstanbulPreprepare(block, view)
 
 		report, err := val.VRankModule.TallyCfReport(vrankEpoch-1, 0)
@@ -337,7 +372,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	t.Run("round out of range returns error", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
@@ -354,7 +389,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val, otherVal := createCN(t, valset), createCN(t, valset)
 		// This node is not in the council for block 1.
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{otherVal.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{otherVal.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
@@ -364,24 +399,22 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		assert.Empty(t, report)
 	})
 
-	t.Run("preprepared time not set returns error", func(t *testing.T) {
+	t.Run("no preprepare data returns empty report", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
-		// skip HandleIstanbulPreprepare
+		// skip HandleIstanbulPreprepare — no preprepare data in collector
 
 		prepreparedTime, _, _ := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.True(t, prepreparedTime.IsZero())
 		report, err := val.VRankModule.TallyCfReport(1, 0)
-		require.ErrorIs(t, err, vrank.ErrPrepreparedTimeNotSet)
-		assert.Nil(t, report)
+		require.NoError(t, err)
+		assert.Empty(t, report)
 	})
 
 	t.Run("GetCandidates failed returns error", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
-		valset.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return(nil, assert.AnError).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
