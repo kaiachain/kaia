@@ -224,7 +224,7 @@ func cloneMap(src map[common.Address]uint64) map[common.Address]uint64 {
 
 func (v *VRankModule) lookupPFSCache(blockNum uint64) (uint64, map[common.Address]uint64, bool) {
 	epochStart := calcEpochStart(blockNum)
-	for i := uint64(0); i <= scoreCacheProbeLookback && i <= blockNum-epochStart; i++ {
+	for i := uint64(0); i <= min(scoreCacheProbeLookback, blockNum-epochStart); i++ {
 		candidateNum := blockNum - i
 		if cached, ok := v.pfsCache.Get(candidateNum); ok {
 			return candidateNum, cached.(map[common.Address]uint64), true

@@ -53,17 +53,42 @@ func scoreCheckpointKey(blockNum uint64) []byte {
 	return append(vrankCheckpointPrefix, common.Int64ToByteBigEndian(blockNum)...)
 }
 
-// ReadCheckpoint returns the PFS map and cpMatrix stored at blockNum.
-// Returns (nil, nil) if no checkpoint exists for that block.
-func ReadCheckpoint(db database.Database, blockNum uint64) (map[common.Address]uint64, vrank.CPMatrix) {
+func readCheckpointStorage(db database.Database, blockNum uint64) *vrankCheckpointStorage {
 	b, err := db.Get(scoreCheckpointKey(blockNum))
 	if err != nil || len(b) == 0 {
-		return nil, nil
+		return nil
 	}
-
 	var stored vrankCheckpointStorage
 	if err := rlp.DecodeBytes(b, &stored); err != nil {
 		logger.Crit("Failed to deserialize checkpoint", "blockNum", blockNum, "err", err)
+	}
+	return &stored
+}
+
+// ReadCheckpointPFS returns the PFS map stored at blockNum, or nil if not found.
+func ReadCheckpointPFS(db database.Database, blockNum uint64) map[common.Address]uint64 {
+	stored := readCheckpointStorage(db, blockNum)
+	if stored == nil {
+		return nil
+	}
+	return deserializePFS(stored.PFS)
+}
+
+// ReadCheckpointCPMatrix returns the CPMatrix stored at blockNum, or nil if not found.
+func ReadCheckpointCPMatrix(db database.Database, blockNum uint64) vrank.CPMatrix {
+	stored := readCheckpointStorage(db, blockNum)
+	if stored == nil {
+		return nil
+	}
+	return deserializeCFS(stored.CPMatrix)
+}
+
+// ReadCheckpoint returns the PFS map and CPMatrix stored at blockNum.
+// Returns (nil, nil) if no checkpoint exists for that block.
+func ReadCheckpoint(db database.Database, blockNum uint64) (map[common.Address]uint64, vrank.CPMatrix) {
+	stored := readCheckpointStorage(db, blockNum)
+	if stored == nil {
+		return nil, nil
 	}
 	return deserializePFS(stored.PFS), deserializeCFS(stored.CPMatrix)
 }

@@ -29,7 +29,7 @@ func (v *VRankModule) RewindTo(newBlock *types.Block) {
 // RewindDelete removes score state for exactly one deleted block `num`.
 // The blockchain host calls this once per deleted block during hard rewind.
 func (v *VRankModule) RewindDelete(hash common.Hash, num uint64) {
-	pfs, _ := ReadCheckpoint(v.ChainKv, num)
+	pfs := ReadCheckpointPFS(v.ChainKv, num)
 	if pfs == nil {
 		return
 	}
@@ -42,7 +42,7 @@ func (v *VRankModule) RewindDelete(hash common.Hash, num uint64) {
 
 	for cpNum := num; cpNum >= scoreCheckpointInterval; cpNum -= scoreCheckpointInterval {
 		prevCP := cpNum - scoreCheckpointInterval
-		prevPFS, _ := ReadCheckpoint(v.ChainKv, prevCP)
+		prevPFS := ReadCheckpointPFS(v.ChainKv, prevCP)
 		if prevPFS != nil {
 			WriteLastCheckpoint(v.ChainKv, prevCP)
 			return
