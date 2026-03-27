@@ -511,6 +511,17 @@ func (sb *backend) Prepare(chain consensus.ChainReader, header *types.Header) er
 }
 
 func (sb *backend) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
+	// WriteStatesToContract runs before ProcessParentBlockHash so that state is still the committed
+	// parent state (IntermediateRoot == parentHeader.Root). EIP-2935 and permissionless writes are
+	// independent (different contracts), so the order does not affect block validity.
+	if chain.Config().IsPermissionlessForkEnabled(header.Number) {
+		context := blockchain.NewEVMBlockContext(header, chain, nil)
+		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
+		if err := sb.valsetModule.WriteStatesToContract(vmenv, header, state); err != nil {
+			logger.Error("Failed to process transition", "number", header.Number.Uint64(), "err", err.Error())
+		}
+	}
+
 	// [EIP-2935] stores the parent block hash in the history storage contract
 	if chain.Config().IsPragueForkEnabled(header.Number) {
 		context := blockchain.NewEVMBlockContext(header, chain, nil)
@@ -616,6 +627,16 @@ func (sb *backend) Finalize(chain consensus.ChainReader, header *types.Header, s
 			state.CreateEOA(system.NonExistentAddress, false, accountkey.NewAccountKeyLegacy())
 			state.SetNonce(system.NonExistentAddress, prevNonce) // Preserve account counters across account type migration.
 			logger.Info("Restored Mainnet credit address to EOA", "blockNum", header.Number.Uint64())
+		}
+	}
+
+	// Install and initialize ABv2 at Finalize(HF-1).
+	// ABv2 state is included in block HF-1's state root, and used starting from Initialize(HF).
+	if chain.Config().IsPermissionlessForBlockParent(header.Number) {
+		context := blockchain.NewEVMBlockContext(header, chain, nil)
+		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
+		if err := sb.valsetModule.InstallABv2(vmenv, header, state); err != nil {
+			return nil, err
 		}
 	}
 

@@ -62,6 +62,8 @@ interface IGaslessSwapRouter {
 interface IAddressBookV2 {
     function getAllProfiles() external view returns (Profile[] memory);
     function getFundAddresses() external view returns (address, address, address);
+    function getTimeouts() external view returns (uint256 pauseTimeout, uint256 idleTimeout);
+    function getMaxCounts() external view returns (uint256 maxValidatorCount, uint256 maxReadyCandidateCount);
 }
 
 // MultiCallContract provides a function to retrieve the any information needed for the Kaia client.
@@ -128,6 +130,30 @@ contract MultiCallContract {
         returns (Profile[] memory profiles, uint256[] memory stakingAmounts, address kefAddr, address kifAddr, address kpfAddr)
     {
         // fork number is checked by caller side
+        (profiles, stakingAmounts) = _getProfilesAndStaking();
+        IAddressBookV2 abv2 = IAddressBookV2(ADDRESS_BOOK_ADDRESS);
+        (kefAddr, kifAddr, kpfAddr) = abv2.getFundAddresses();
+    }
+
+    function multiCallNodeStatesPermissionless()
+        external
+        view
+        returns (
+            Profile[] memory profiles,
+            uint256[] memory stakingAmounts,
+            uint256 pauseTimeout,
+            uint256 idleTimeout,
+            uint256 maxValidatorCount,
+            uint256 maxReadyCandidateCount
+        )
+    {
+        (profiles, stakingAmounts) = _getProfilesAndStaking();
+        IAddressBookV2 abv2 = IAddressBookV2(ADDRESS_BOOK_ADDRESS);
+        (pauseTimeout, idleTimeout) = abv2.getTimeouts();
+        (maxValidatorCount, maxReadyCandidateCount) = abv2.getMaxCounts();
+    }
+
+    function _getProfilesAndStaking() private view returns (Profile[] memory profiles, uint256[] memory stakingAmounts) {
         IAddressBookV2 abv2 = IAddressBookV2(ADDRESS_BOOK_ADDRESS);
         profiles = abv2.getAllProfiles();
         uint256 len = profiles.length;
@@ -135,7 +161,6 @@ contract MultiCallContract {
         for (uint256 i = 0; i < len; i++) {
             stakingAmounts[i] = _getCnStakingAmountsKIP290(profiles[i].stakingContract);
         }
-        (kefAddr, kifAddr, kpfAddr) = abv2.getFundAddresses();
     }
 
     function _getCnStakingAmountsLegacy(
@@ -191,5 +216,6 @@ contract MultiCallContract {
         }
         tokens = IGaslessSwapRouter(gsr).getSupportedTokens();
     }
+
     /* ========== MORE FUNCTIONS TBA ========== */
 }

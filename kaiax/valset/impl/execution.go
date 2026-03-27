@@ -17,35 +17,61 @@
 package impl
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 )
 
-func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
+// postInsertBlockPermissionless pre-computes and caches node states for the next block.
+func (v *ValsetModule) postInsertBlockPermissionless(block *types.Block) error {
 	header := block.Header()
-	num := header.Number.Uint64()
+	nextNum := header.Number.Uint64() + 1
+
+	// parentStatedb is the committed state of block N, which serves as the parent state for block N+1.
+	parentStatedb, err := v.Chain.StateAt(header.Root)
+	if err != nil {
+		return err
+	}
+	_, err = v.getOrComputeNodeStates(nextNum, parentStatedb)
+	return err
+}
+
+func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
+	var (
+		header = block.Header()
+		num    = header.Number.Uint64()
+	)
 	if num == 0 {
 		return nil
 	}
 
-	// Ingest validator vote
+	config := v.Chain.Config()
+
+	if config.IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return v.postInsertBlockPermissionless(block)
+	}
+
+	// Permissioned: get council for vote handling
 	council, err := v.getCouncil(num)
 	if err != nil {
 		return err
 	}
+
+	// The header gov handler for {add,remove} validator is only processed in the permissioned network
 	governingNode := v.GovModule.GetParamSet(num).GoverningNode
 	if applyVote(header, council, governingNode) {
 		insertValidatorVoteBlockNums(v.ChainKv, num)
 		writeCouncil(v.ChainKv, num, council.List())
 		v.validatorVoteBlockNumsCache = nil
 	}
-
 	return nil
 }
 
 func (v *ValsetModule) RewindTo(block *types.Block) {
 	trimValidatorVoteBlockNums(v.ChainKv, block.Header().Number.Uint64())
 	v.validatorVoteBlockNumsCache = nil
+	v.nodeStatesCache.Purge()
 }
 
 func (v *ValsetModule) RewindDelete(hash common.Hash, num uint64) {

@@ -24,6 +24,7 @@ import (
 	"math"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -58,7 +59,8 @@ func FromStakingInfo(si *StakingInfo) *P2PStakingInfo {
 	}
 }
 
-func FromStakingInfoWithGini(si *StakingInfo, useGini bool, minStake uint64) *P2PStakingInfo {
+// FromStakingInfoWithGini creates P2PStakingInfo from StakingInfo with Gini coefficient applied.
+func FromStakingInfoWithGini(rules *params.Rules, si *StakingInfo, useGini bool, minStake uint64) *P2PStakingInfo {
 	return &P2PStakingInfo{
 		BlockNum:              si.SourceBlockNum,
 		CouncilNodeAddrs:      si.NodeIds,
@@ -68,7 +70,7 @@ func FromStakingInfoWithGini(si *StakingInfo, useGini bool, minStake uint64) *P2
 		KIFAddr:               si.KIFAddr,
 		CouncilStakingAmounts: si.StakingAmounts,
 		UseGini:               useGini,
-		Gini:                  si.Gini(minStake),
+		Gini:                  si.Gini(rules, minStake),
 	}
 }
 

@@ -8,7 +8,9 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
+	vm "github.com/kaiachain/kaia/blockchain/vm"
 	common "github.com/kaiachain/kaia/common"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
@@ -48,6 +50,20 @@ func (m *MockValsetModule) APIs() []rpc.API {
 func (mr *MockValsetModuleMockRecorder) APIs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockValsetModule)(nil).APIs))
+}
+
+// InstallABv2 mocks base method.
+func (m *MockValsetModule) InstallABv2(arg0 *vm.EVM, arg1 *types.Header, arg2 *state.StateDB) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstallABv2", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InstallABv2 indicates an expected call of InstallABv2.
+func (mr *MockValsetModuleMockRecorder) InstallABv2(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallABv2", reflect.TypeOf((*MockValsetModule)(nil).InstallABv2), arg0, arg1, arg2)
 }
 
 // GetCandidates mocks base method.
@@ -137,6 +153,20 @@ func (m *MockValsetModule) PostInsertBlock(arg0 *types.Block) error {
 func (mr *MockValsetModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockValsetModule)(nil).PostInsertBlock), arg0)
+}
+
+// WriteStatesToContract mocks base method.
+func (m *MockValsetModule) WriteStatesToContract(arg0 *vm.EVM, arg1 *types.Header, arg2 *state.StateDB) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteStatesToContract", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteStatesToContract indicates an expected call of WriteStatesToContract.
+func (mr *MockValsetModuleMockRecorder) WriteStatesToContract(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteStatesToContract", reflect.TypeOf((*MockValsetModule)(nil).WriteStatesToContract), arg0, arg1, arg2)
 }
 
 // RewindDelete mocks base method.

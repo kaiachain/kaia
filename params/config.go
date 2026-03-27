@@ -586,6 +586,11 @@ func (c *ChainConfig) IsOsakaForkBlockParent(num *big.Int) bool {
 	return isForkBlockParent(c.OsakaCompatibleBlock, num)
 }
 
+// IsPermissionlessForBlockParent returns whether num is equal to the permissonless block.
+func (c *ChainConfig) IsPermissionlessForBlockParent(num *big.Int) bool {
+	return isForkBlockParent(c.PermissionlessCompatibleBlock, num)
+}
+
 // CheckCompatible checks whether scheduled fork transitions have been imported
 // with a mismatching chain configuration.
 func (c *ChainConfig) CheckCompatible(newcfg *ChainConfig, height uint64) *ConfigCompatError {

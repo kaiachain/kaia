@@ -22,6 +22,7 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
@@ -55,6 +56,7 @@ type chain interface {
 	CurrentBlock() *types.Block
 	Config() *params.ChainConfig
 	Engine() consensus.Engine
+	backends.BlockChainForCaller
 }
 
 type InitOpts struct {
@@ -74,6 +76,8 @@ type ValsetModule struct {
 	proposerListCache *lru.Cache // uint64 -> []common.Address
 	removeVotesCache  *lru.Cache // uint64 -> removeVoteList
 	councilCache      *lru.Cache // uint64 -> *valset.AddressSet
+	nodeStatesCache   *lru.Cache // uint64 -> valset.NodeStateMap (permissionless node states)
+	vrankEpoch        uint64     // blocks per VRank epoch; defaults to valset.DefaultVRankEpoch
 
 	validatorVoteBlockNumsCache []uint64
 	lowestScannedVoteNumCache   *uint64
@@ -83,10 +87,13 @@ func NewValsetModule() *ValsetModule {
 	pListCache, _ := lru.New(128)
 	rVoteCache, _ := lru.New(128)
 	councilCache, _ := lru.New(128)
+	nodeStatesCache, _ := lru.New(128)
 	return &ValsetModule{
 		proposerListCache: pListCache,
 		removeVotesCache:  rVoteCache,
 		councilCache:      councilCache,
+		nodeStatesCache:   nodeStatesCache,
+		vrankEpoch:        valset.DefaultVRankEpoch,
 	}
 }
 

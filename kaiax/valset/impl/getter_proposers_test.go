@@ -55,7 +55,7 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 	// 3609 (R 3,7) |  1,2,3,6 |  1,2,3,6 |    -    |  1,2,3    <---- 3 requalified
 	// 3610         |  1,2,6   |  1,2,6   |    -    |  1,2
 	var (
-		genesisCouncil          = numsToAddrs(1, 2, 3, 4)
+		genesisCouncil          = valset.NewAddressSet(numsToAddrs(1, 2, 3, 4))
 		mockQualifiedValidators = map[uint64][]common.Address{
 			3600: numsToAddrs(1, 2, 3, 4),
 			3604: numsToAddrs(1, 2, 4), // 3 demoted
@@ -94,10 +94,13 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 			3611: numsToAddrs(1, 2),
 		}
 	)
+	// Mock chainConfig
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}).AnyTimes()
+
 	// Mock v.InitSchema
 	writeLowestScannedVoteNum(v.ChainKv, 0)
 	writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
-	writeCouncil(v.ChainKv, 0, genesisCouncil)
+	writeCouncil(v.ChainKv, 0, genesisCouncil.List())
 
 	// Mock gov module
 	mockGovModule.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
@@ -119,9 +122,6 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 		assert.NoError(t, v.PostInsertBlock(types.NewBlockWithHeader(header)))
 	}
 	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(&types.Header{}).AnyTimes() // For unused blocks
-
-	// Mock chainConfig
-	mockChain.EXPECT().Config().Return(&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}).AnyTimes()
 
 	// Mock qualified validators
 	for blkNum, data := range mockQualifiedValidators {
@@ -230,7 +230,7 @@ func TestWeightedRandomProposer_ListWeighted(t *testing.T) {
 			RewardAddrs:      tc.qualified,
 			StakingAmounts:   tc.amounts,
 		}
-		proposerList := generateProposerListWeighted(qualified, si, tc.useGini, blockHash)
+		proposerList := generateProposerListWeighted(nil, qualified, si, tc.useGini, blockHash)
 
 		freq := make(map[common.Address]int)
 		for _, addr := range proposerList {

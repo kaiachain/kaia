@@ -127,57 +127,21 @@ func EncodeWriteNodes(
 	return encodeSystemMessage(rules, AddressBookAddr, data)
 }
 
-// ReadABv2Timeouts reads pauseTimeout and idleTimeout durations from the AddressBookV2 contract.
-func ReadABv2Timeouts(
-	backend bind.ContractCaller,
-	num *big.Int,
-) (pauseTimeout, idleTimeout time.Duration, err error) {
-	caller, err := abv2contracts.NewAddressBookV2Caller(AddressBookAddr, backend)
-	if err != nil {
-		return 0, 0, err
-	}
-	opts := &bind.CallOpts{BlockNumber: num}
-	pause, idle, err := caller.GetTimeouts(opts)
-	if err != nil {
-		return 0, 0, err
-	}
-	return time.Duration(pause.Int64()) * time.Second,
-		time.Duration(idle.Int64()) * time.Second,
-		nil
-}
-
-// ReadABv2MaxCounts reads maxValidatorCount and maxReadyCandidateCount from the AddressBookV2 contract.
-func ReadABv2MaxCounts(
-	backend bind.ContractCaller,
-	num *big.Int,
-) (maxValidatorCount, maxReadyCandidateCount uint64, err error) {
-	caller, err := abv2contracts.NewAddressBookV2Caller(AddressBookAddr, backend)
-	if err != nil {
-		return 0, 0, err
-	}
-	opts := &bind.CallOpts{BlockNumber: num}
-	valCount, candCount, err := caller.GetMaxCounts(opts)
-	if err != nil {
-		return 0, 0, err
-	}
-	return valCount.Uint64(), candCount.Uint64(), nil
-}
-
-// ReadGetAllValidators reads all validator profiles and staking amounts from ABv2 via MultiCall.
-func ReadGetAllValidators(
+// ReadNodeStates reads all validator states, timeouts, and max counts from ABv2 in a single MultiCall.
+func ReadNodeStates(
 	statedb *state.StateDB,
 	chain backends.BlockChainForCaller,
 	header *types.Header,
-) (valset.NodeStateMap, error) {
+) (valset.NodeStateMap, time.Duration, time.Duration, uint64, uint64, error) {
 	caller, err := NewMultiCallContractCaller(statedb, chain, header)
 	if err != nil {
-		return nil, err
+		return nil, 0, 0, 0, 0, err
 	}
 	opts := &bind.CallOpts{BlockNumber: header.Number}
 
-	res, err := caller.MultiCallStakingInfoPermissionless(opts)
+	res, err := caller.MultiCallNodeStatesPermissionless(opts)
 	if err != nil {
-		return nil, err
+		return nil, 0, 0, 0, 0, err
 	}
 
 	validators := make(valset.NodeStateMap)
@@ -199,7 +163,14 @@ func ReadGetAllValidators(
 		}
 		validators[p.NodeId] = vs
 	}
-	return validators, nil
+
+	var (
+		pauseTimeout      = time.Duration(res.PauseTimeout.Int64()) * time.Second
+		idleTimeout       = time.Duration(res.IdleTimeout.Int64()) * time.Second
+		maxValCount       = res.MaxValidatorCount.Uint64()
+		maxReadyCandCount = res.MaxReadyCandidateCount.Uint64()
+	)
+	return validators, pauseTimeout, idleTimeout, maxValCount, maxReadyCandCount, nil
 }
 
 // ReadAddressBookV2BlsAll reads BLS public key info for all nodes from AddressBookV2.

@@ -34,12 +34,14 @@ import (
 	cnstakingv4factory "github.com/kaiachain/kaia/contracts_permissionless/contracts/CnStaking/CnStakingV4Factory"
 	beaconcontract "github.com/kaiachain/kaia/contracts_permissionless/contracts/Proxy/beacon"
 	pdcontract "github.com/kaiachain/kaia/contracts_permissionless/contracts/PublicDelegation"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
 // DefaultEpochBlockInterval is the default number of blocks per epoch for ABv2.
-const DefaultEpochBlockInterval = 86400
+// Uses valset.DefaultVRankEpoch as the single source of truth.
+const DefaultEpochBlockInterval = int64(valset.DefaultVRankEpoch)
 
 // AllocPermissionlessConfig holds parameters for genesis permissionless allocation.
 type AllocPermissionlessConfig struct {
@@ -282,6 +284,8 @@ func installAndInitABv2(cfg *runtime.Config, statedb *state.StateDB, implAddr co
 	if err := evmCallABI(cfg, AddressBookAddr, AddressBookV2ABI, "initialize"); err != nil {
 		return fmt.Errorf("ABv2.initialize: %w", err)
 	}
+	// Set isActivated = true (storage slot 12) so legacy getter getAllAddress() returns data.
+	statedb.SetState(AddressBookAddr, common.BigToHash(big.NewInt(12)), common.BigToHash(big.NewInt(1)))
 	return nil
 }
 

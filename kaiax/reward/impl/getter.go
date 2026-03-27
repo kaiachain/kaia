@@ -403,7 +403,7 @@ func assignStakingRewardsFlex(config *reward.RewardConfig, budget *big.Int, si *
 		threshold = config.StakingRewardThreshold.Uint64()
 		isPrague  = config.Rules.IsPrague
 
-		cns            = si.ConsolidatedNodes()
+		cns            = si.ConsolidatedNodes(&config.Rules)
 		excessInt      = make(map[common.Address]uint64)
 		totalExcessInt = uint64(0)
 	)
@@ -464,7 +464,7 @@ func assignStakingRewardsFlex(config *reward.RewardConfig, budget *big.Int, si *
 // Returns the allocation and the remainder.
 func assignStakingRewards(config *reward.RewardConfig, stakersReward *big.Int, si *staking.StakingInfo) (map[common.Address]*big.Int, *big.Int) {
 	var (
-		cns               = si.ConsolidatedNodes()
+		cns               = si.ConsolidatedNodes(&config.Rules)
 		minStake          = config.MinimumStake.Uint64()
 		totalExcessInt    = uint64(0) // sum of excess stakes (the amount over minStake) over all stakers
 		cnTotalStakingMap = make(map[common.Address]uint64)
@@ -547,7 +547,7 @@ func specWithProposerAndFundsFlex(spec *reward.RewardSpec, config *reward.Reward
 	}
 
 	// Handle CLStakingInfo for proposer after Prague
-	cns := si.ConsolidatedNodes()
+	cns := si.ConsolidatedNodes(&config.Rules)
 	for _, cn := range cns {
 		if cn.RewardAddr != config.Rewardbase {
 			continue
@@ -597,7 +597,7 @@ func specWithProposerAndFunds(spec *reward.RewardSpec, config *reward.RewardConf
 	}
 
 	// Handle CLStakingInfo for proposer after Prague
-	cns := si.ConsolidatedNodes()
+	cns := si.ConsolidatedNodes(&config.Rules)
 	for _, cn := range cns {
 		if cn.RewardAddr != config.Rewardbase {
 			continue
