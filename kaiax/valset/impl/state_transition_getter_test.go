@@ -298,37 +298,6 @@ func TestGetViolationTransition_NonActiveNotAffected(t *testing.T) {
 }
 
 // ============================================================
-// TestGetPermlessCouncil
-// ============================================================
-
-func TestFilterCouncilFromNodeStates(t *testing.T) {
-	nodes := valset.NodeStateMap{
-		addr1: {State: valset.ValActive},
-		addr2: {State: valset.ValReady},
-		addr3: {State: valset.ValPaused},
-		addr4: {State: valset.CandReady},
-		addr5: {State: valset.ValInactive},
-	}
-	council := filterCouncilFromNodeStates(nodes)
-	assert.Equal(t, 3, len(council))
-	assert.Contains(t, council, addr1)
-	assert.Contains(t, council, addr2)
-	assert.Contains(t, council, addr3)
-	assert.NotContains(t, council, addr4)
-	assert.NotContains(t, council, addr5)
-}
-
-func TestFilterCouncilFromNodeStates_Nil(t *testing.T) {
-	council := filterCouncilFromNodeStates(nil)
-	assert.Equal(t, 0, len(council))
-}
-
-func TestFilterCouncilFromNodeStates_Empty(t *testing.T) {
-	council := filterCouncilFromNodeStates(valset.NodeStateMap{})
-	assert.Equal(t, 0, len(council))
-}
-
-// ============================================================
 // TestApplyAllTransitions
 // ============================================================
 
@@ -457,7 +426,7 @@ func TestApplyAllTransitions(t *testing.T) {
 	}
 }
 
-// TestGetCouncilPermissionless tests getCouncilPermissionless filters by council states.
+// TestGetCouncilPermissionless tests GetCouncil filters by council states via GetNodeByState.
 func TestGetCouncilPermissionless(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 	config, _ := system.MakeTestPermissionlessConfig(t, 7)
@@ -468,6 +437,7 @@ func TestGetCouncilPermissionless(t *testing.T) {
 	simBackend := backends.NewSimulatedBackend(blockchain.GenesisAlloc(alloc))
 	defer simBackend.Close()
 	chain := simBackend.BlockChain()
+	chain.Config().PermissionlessCompatibleBlock = big.NewInt(0)
 
 	v := NewValsetModule()
 	v.Chain = chain
@@ -484,7 +454,7 @@ func TestGetCouncilPermissionless(t *testing.T) {
 	}
 	v.nodeStatesCache.Add(uint64(1), nodes)
 
-	council, err := v.getCouncilPermissionless(1)
+	council, err := v.GetCouncil(1)
 	require.NoError(t, err)
 
 	// Only ValActive, ValPaused, ValReady should be in council (3 of 7)

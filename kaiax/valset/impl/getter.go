@@ -27,7 +27,11 @@ import (
 // GetCouncil returns the whole validator list for validating the block `num`.
 func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		return v.getCouncilPermissionless(num)
+		nodes, err := v.GetNodeByState(num, []valset.State{valset.ValActive, valset.ValReady, valset.ValPaused})
+		if err != nil {
+			return nil, err
+		}
+		return nodes.Addresses(), nil
 	}
 	council, err := v.getCouncil(num)
 	if err != nil {

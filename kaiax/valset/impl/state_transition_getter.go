@@ -128,19 +128,6 @@ func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, idle
 	return newValidators
 }
 
-// filterCouncilFromNodeStates returns addresses of council members
-// (validators with ValActive, ValReady, or ValPaused state).
-func filterCouncilFromNodeStates(nodes valset.NodeStateMap) []common.Address {
-	var ret []common.Address
-	for addr, val := range nodes {
-		switch val.State {
-		case valset.ValActive, valset.ValReady, valset.ValPaused:
-			ret = append(ret, addr)
-		}
-	}
-	return ret
-}
-
 // getViolationTransition transitions ValActive validators to ValExiting when they violate rules:
 // rule1: staking amount dropped below MinimumStake, rule2: vrank violation (TODO).
 func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset.NodeStateMap) valset.NodeStateMap {
