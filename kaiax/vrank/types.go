@@ -42,7 +42,6 @@ func (m CPMatrix) Clone() CPMatrix {
 	for candidate, reporters := range m {
 		inner := make(map[common.Address]uint64, len(reporters))
 		maps.Copy(inner, reporters)
-		maps.Copy(inner, reporters)
 		clone[candidate] = inner
 	}
 	return clone
