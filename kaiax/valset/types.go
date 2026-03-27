@@ -29,6 +29,18 @@ const (
 	ValExiting               // 8
 )
 
+// State groups for permissionless consensus.
+// Validator = ValActive + ValReady + ValPaused + ValExiting + ValInactive
+// Council = ValActive + ValReady + ValPaused
+// Committee = ValActive
+// Candidate = CandTesting
+var (
+	ValidatorStates = []State{ValActive, ValReady, ValPaused, ValExiting, ValInactive}
+	CouncilStates   = []State{ValActive, ValReady, ValPaused}
+	CommitteeStates = []State{ValActive}
+	CandidateStates = []State{CandTesting}
+)
+
 const (
 	RegisteredStr  = "Registered"
 	CandReadyStr   = "CandReady"
