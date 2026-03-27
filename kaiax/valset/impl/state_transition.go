@@ -64,13 +64,14 @@ func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.S
 	return newValidators, nil
 }
 
-// computeNodeStates reads ABv2 validators from statedb and applies all transitions.
+// computeNodeStates reads ABv2 validators, timeouts, and max counts in a single MultiCall,
+// then applies all transitions.
 func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.Header) (valset.NodeStateMap, error) {
-	validators, err := system.ReadGetAllValidators(statedb, v.Chain, header)
+	validators, pauseTimeout, idleTimeout, maxValCount, _, err := system.ReadNodeStates(statedb, v.Chain, header)
 	if err != nil {
 		return nil, err
 	}
-	return v.applyAllTransitions(validators, statedb, header)
+	return v.applyAllTransitions(validators, header, pauseTimeout, idleTimeout, maxValCount)
 }
 
 // applyAllTransitions computes applyTr(N-1) given ABv2(N-1) validators and block N-1 parameters.
@@ -78,36 +79,19 @@ func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.H
 // header must be the parent header (N-1).
 func (v *ValsetModule) applyAllTransitions(
 	validators valset.NodeStateMap,
-	statedb *state.StateDB,
 	header *types.Header, // parent header (N-1)
+	pauseTimeout, idleTimeout time.Duration,
+	maxValCount uint64,
 ) (valset.NodeStateMap, error) {
 	var (
-		num           = header.Number.Uint64() + 1
-		pset          = v.GovModule.GetParamSet(num)
-		minStake      = pset.MinimumStake.Uint64()
-		newValidators = v.getViolationTransition(minStake, validators)
+		num       = header.Number.Uint64() + 1
+		pset      = v.GovModule.GetParamSet(num)
+		minStake  = pset.MinimumStake.Uint64()
+		blockTime = time.Unix(header.Time.Int64(), 0)
 	)
 
-	// Copy statedb because ApplyMessage in contract calls modifies state (e.g., Prepare, SubBalance).
-	// See e51c56ff8 for the same pattern in NewMultiCallContractCaller.
-	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb.Copy())
-	if err != nil {
-		return nil, err
-	}
-
-	pauseTimeout, idleTimeout, err := system.ReadABv2Timeouts(backend, header.Number)
-	if err != nil {
-		logger.Error("Failed to read ABv2 timeouts, using defaults", "number", num, "err", err)
-		pauseTimeout, idleTimeout = DefaultValPausedTimeout, DefaultValIdleTimeout
-	}
-	blockTime := time.Unix(header.Time.Int64(), 0)
+	newValidators := v.getViolationTransition(minStake, validators)
 	newValidators = v.getTimeoutTransition(newValidators, idleTimeout, pauseTimeout, blockTime)
-
-	maxValCount, _, err := system.ReadABv2MaxCounts(backend, header.Number)
-	if err != nil {
-		logger.Error("Failed to read ABv2 max counts, using defaults", "number", num, "err", err)
-		maxValCount = DefaultActiveValidatorCount
-	}
 	if v.isVrankEpoch(num) {
 		newValidators = v.getEpochTransition(minStake, newValidators, idleTimeout, int(maxValCount), blockTime)
 	}
@@ -171,7 +155,7 @@ func (v *ValsetModule) writeNodesToContract(
 	if parentHeader == nil {
 		return errParentHeaderNotFound(num)
 	}
-	parentNodes, err := system.ReadGetAllValidators(statedb, v.Chain, parentHeader)
+	parentNodes, _, _, _, _, err := system.ReadNodeStates(statedb, v.Chain, parentHeader)
 	if err != nil {
 		return fmt.Errorf("failed to read ABv2(N-1): %w", err)
 	}

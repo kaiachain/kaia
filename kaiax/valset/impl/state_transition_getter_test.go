@@ -24,7 +24,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -33,7 +32,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -334,20 +332,17 @@ func TestFilterCouncilFromNodeStates_Empty(t *testing.T) {
 // TestApplyAllTransitions
 // ============================================================
 
-// newTestApplyAllTransitions creates a ValsetModule with empty statedb (no ABv2 contract → default fallback).
-func newTestApplyAllTransitions(ctrl *gomock.Controller) (*ValsetModule, *state.StateDB) {
+// newTestApplyAllTransitions creates a ValsetModule with default timeouts and max counts.
+func newTestApplyAllTransitions(ctrl *gomock.Controller) *ValsetModule {
 	mockChain := chain_mock.NewMockBlockChain(ctrl)
 	mockGov := gov_mock.NewMockGovModule(ctrl)
 
 	chainConfig := &params.ChainConfig{}
 	mockChain.EXPECT().Config().Return(chainConfig).AnyTimes()
-	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(nil).AnyTimes()
 
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
 		MinimumStake: new(big.Int).SetUint64(testMinStake),
 	}).AnyTimes()
-
-	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
 
 	v := &ValsetModule{
 		InitOpts: InitOpts{
@@ -356,7 +351,7 @@ func newTestApplyAllTransitions(ctrl *gomock.Controller) (*ValsetModule, *state.
 		},
 		vrankEpoch: testVRankEpoch,
 	}
-	return v, statedb
+	return v
 }
 
 func TestApplyAllTransitions(t *testing.T) {
@@ -450,10 +445,10 @@ func TestApplyAllTransitions(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			v, statedb := newTestApplyAllTransitions(ctrl)
+			v := newTestApplyAllTransitions(ctrl)
 			parentHeader := &types.Header{Number: big.NewInt(int64(tc.num - 1)), Time: big.NewInt(testBlockTime.Unix())}
 
-			result, err := v.applyAllTransitions(tc.input, statedb, parentHeader)
+			result, err := v.applyAllTransitions(tc.input, parentHeader, DefaultValPausedTimeout, DefaultValIdleTimeout, DefaultActiveValidatorCount)
 			assert.NoError(t, err)
 			for addr, expectedState := range tc.expected {
 				assert.Equal(t, expectedState, result[addr].State, "addr=%s", addr.Hex())

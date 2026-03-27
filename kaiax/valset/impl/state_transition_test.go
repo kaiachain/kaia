@@ -149,7 +149,7 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 	header1 := chain.GetHeaderByNumber(1)
 	statedb1, err := chain.StateAt(header1.Root)
 	require.NoError(t, err)
-	validators, err := system.ReadGetAllValidators(statedb1, chain, header1)
+	validators, _, _, _, _, err := system.ReadNodeStates(statedb1, chain, header1)
 	require.NoError(t, err)
 	require.Equal(t, valset.ValPaused, validators[config.NodeIds[0]].State, "ABv2(1) should have ValPaused after pause tx")
 
@@ -232,7 +232,7 @@ func TestReadGetAllValidators(t *testing.T) {
 	require.NoError(t, err)
 
 	// Before transition(initial state): all validators are ValActive
-	validators, err := system.ReadGetAllValidators(statedb, chain, header)
+	validators, _, _, _, _, err := system.ReadNodeStates(statedb, chain, header)
 	require.NoError(t, err)
 	assert.Len(t, validators, 3)
 
@@ -271,7 +271,7 @@ func TestReadGetAllValidators(t *testing.T) {
 	require.NoError(t, err)
 
 	// After transition: config.NodeIds[0] should be ValPaused
-	validators, err = system.ReadGetAllValidators(statedb, chain, header)
+	validators, _, _, _, _, err = system.ReadNodeStates(statedb, chain, header)
 	require.NoError(t, err)
 	assert.Len(t, validators, 3)
 
