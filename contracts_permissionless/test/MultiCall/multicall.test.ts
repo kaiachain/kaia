@@ -16,7 +16,7 @@ import { ethers } from "hardhat";
 describe("Multicall permissionless", function () {
   const ABOOK_ADDRESS = "0x0000000000000000000000000000000000000400";
 
-  it("multiCallStakingInfoPermissionless returns profiles, amounts, kef, kif", async function () {
+  async function deployMulticallFixture() {
     const [deployer] = await ethers.getSigners();
 
     // Deploy ABv2Mock at 0x400
@@ -29,17 +29,7 @@ describe("Multicall permissionless", function () {
     });
     const abv2 = await ethers.getContractAt("AddressBookV2Mock", ABOOK_ADDRESS);
 
-    // Set fund addresses
-    await abv2.setFundAddresses(
-      "0x000000000000000000000000000000000000aaa1",
-      "0x000000000000000000000000000000000000aaa2",
-      "0x000000000000000000000000000000000000aaa3"
-    );
-
-    // Create CnStaking fakes with staking/unstaking values
-    // Node 0: staking 5000, unstaking 500 → effective 4500
-    // Node 1: staking 10000, unstaking 1000 → effective 9000
-    // Node 2: staking 15000, unstaking 1500 → effective 13500
+    // Create CnStaking fakes
     const stakingData = [
       { staking: 5000n, unstaking: 500n },
       { staking: 10000n, unstaking: 1000n },
@@ -53,13 +43,12 @@ describe("Multicall permissionless", function () {
       fake.staking.returns(toPeb(stakingData[i].staking));
       fake.unstaking.returns(toPeb(stakingData[i].unstaking));
 
-      // Add profile: nodeId = deployer-derived address, stakingContract = fake, rewardAddress = deployer
       await abv2.addProfile(
-        deployer.address, // nodeId (doesn't matter for this test)
-        fake.address,     // stakingContract
-        deployer.address, // rewardAddress
-        0,                // timeoutAt
-        6                 // State.ValActive
+        deployer.address,
+        fake.address,
+        deployer.address,
+        0,
+        6 // State.ValActive
       );
       cnStakingAddrs.push(fake.address);
     }
@@ -68,7 +57,19 @@ describe("Multicall permissionless", function () {
     const multiCallFactory = await ethers.getContractFactory("MultiCallContract");
     const multiCall = await multiCallFactory.deploy();
 
-    // Call multiCallStakingInfoPermissionless
+    return { deployer, abv2, multiCall, cnStakingAddrs, expectedAmounts };
+  }
+
+  it("multiCallStakingInfoPermissionless returns profiles, amounts, kef, kif", async function () {
+    const { deployer, abv2, multiCall, cnStakingAddrs, expectedAmounts } = await loadFixture(deployMulticallFixture);
+
+    // Set fund addresses
+    await abv2.setFundAddresses(
+      "0x000000000000000000000000000000000000aaa1",
+      "0x000000000000000000000000000000000000aaa2",
+      "0x000000000000000000000000000000000000aaa3"
+    );
+
     const result = await multiCall.multiCallStakingInfoPermissionless();
     const [profiles, stakingAmounts, retKef, retKif, retKpf] = result;
 
@@ -81,13 +82,34 @@ describe("Multicall permissionless", function () {
       expect(profiles[i].stakingContract).to.equal(cnStakingAddrs[i]);
       expect(profiles[i].rewardAddress).to.equal(deployer.address);
       expect(profiles[i].timeoutAt).to.equal(0);
-      expect(profiles[i].state).to.equal(6); // ValActive
+      expect(profiles[i].state).to.equal(6);
       expect(stakingAmounts[i]).to.equal(expectedAmounts[i]);
     }
 
-    // Verify fund addresses
     expect(retKef.toLowerCase()).to.equal("0x000000000000000000000000000000000000aaa1");
     expect(retKif.toLowerCase()).to.equal("0x000000000000000000000000000000000000aaa2");
     expect(retKpf.toLowerCase()).to.equal("0x000000000000000000000000000000000000aaa3");
+  });
+
+  it("multiCallNodeStatesPermissionless returns profiles, amounts, timeouts, maxCounts", async function () {
+    const { abv2, multiCall, cnStakingAddrs, expectedAmounts } = await loadFixture(deployMulticallFixture);
+
+    // Set timeouts and max counts
+    await abv2.setTimeouts(28800, 2592000); // 8h, 30d in seconds
+    await abv2.setMaxCounts(50, 100);
+
+    const result = await multiCall.multiCallNodeStatesPermissionless();
+    const [profiles, stakingAmounts, retPauseTimeout, retIdleTimeout, retMaxValCount, retMaxReadyCandCount] = result;
+
+    expect(profiles.length).to.equal(3);
+    for (let i = 0; i < 3; i++) {
+      expect(profiles[i].stakingContract).to.equal(cnStakingAddrs[i]);
+      expect(stakingAmounts[i]).to.equal(expectedAmounts[i]);
+    }
+
+    expect(retPauseTimeout).to.equal(28800);
+    expect(retIdleTimeout).to.equal(2592000);
+    expect(retMaxValCount).to.equal(50);
+    expect(retMaxReadyCandCount).to.equal(100);
   });
 });

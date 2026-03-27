@@ -10,6 +10,10 @@ contract AddressBookV2Mock {
     address public kefAddress;
     address public kifAddress;
     address public kpfAddress;
+    uint256 public pauseTimeout;
+    uint256 public idleTimeout;
+    uint256 public maxValidatorCount;
+    uint256 public maxReadyCandidateCount;
 
     function addProfile(
         address nodeId,
@@ -33,5 +37,23 @@ contract AddressBookV2Mock {
 
     function getFundAddresses() external view returns (address, address, address) {
         return (kefAddress, kifAddress, kpfAddress);
+    }
+
+    function setTimeouts(uint256 _pauseTimeout, uint256 _idleTimeout) external {
+        pauseTimeout = _pauseTimeout;
+        idleTimeout = _idleTimeout;
+    }
+
+    function setMaxCounts(uint256 _maxValidatorCount, uint256 _maxReadyCandidateCount) external {
+        maxValidatorCount = _maxValidatorCount;
+        maxReadyCandidateCount = _maxReadyCandidateCount;
+    }
+
+    function getTimeouts() external view returns (uint256, uint256) {
+        return (pauseTimeout, idleTimeout);
+    }
+
+    function getMaxCounts() external view returns (uint256, uint256) {
+        return (maxValidatorCount, maxReadyCandidateCount);
     }
 }
