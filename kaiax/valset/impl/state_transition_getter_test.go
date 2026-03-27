@@ -123,7 +123,6 @@ func TestGetEpochTransition_StateTransitions(t *testing.T) {
 	}
 }
 
-
 func TestGetEpochTransition_MaxValidatorCount(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := newTestValsetModule(ctrl)
