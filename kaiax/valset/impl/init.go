@@ -76,7 +76,7 @@ type ValsetModule struct {
 	proposerListCache *lru.Cache // uint64 -> []common.Address
 	removeVotesCache  *lru.Cache // uint64 -> removeVoteList
 	councilCache      *lru.Cache // uint64 -> *valset.AddressSet
-	nodeStatesCache *lru.Cache // uint64 -> valset.NodeStateMap (permissionless node states)
+	nodeStatesCache   *lru.Cache // uint64 -> valset.NodeStateMap (permissionless node states)
 
 	validatorVoteBlockNumsCache []uint64
 	lowestScannedVoteNumCache   *uint64
@@ -91,7 +91,7 @@ func NewValsetModule() *ValsetModule {
 		proposerListCache: pListCache,
 		removeVotesCache:  rVoteCache,
 		councilCache:      councilCache,
-		nodeStatesCache: nodeStatesCache,
+		nodeStatesCache:   nodeStatesCache,
 	}
 }
 
