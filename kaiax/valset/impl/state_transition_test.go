@@ -49,7 +49,7 @@ func TestInstallAndInitializeABv2(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
 	// Build a full alloc via AllocPermissionless, then remove ABv2 proxy to simulate pre-HF state
-	config, _ := system.MakeTestPermissionlessConfig(t, 3)
+	config, _ := system.MakeTestPermissionlessConfig(3)
 	alloc, err := system.AllocPermissionless(config)
 	require.NoError(t, err)
 	delete(alloc, system.AddressBookAddr) // pre-HF: no ABv2 proxy at 0x400
@@ -110,7 +110,7 @@ func TestInstallAndInitializeABv2(t *testing.T) {
 func TestGetOrComputeNodeStates(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
-	config, nodeKeys := system.MakeTestPermissionlessConfig(t, 3)
+	config, nodeKeys := system.MakeTestPermissionlessConfig(3)
 	alloc, err := system.AllocPermissionless(config)
 	require.NoError(t, err)
 
@@ -218,7 +218,7 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 // TestReadGetAllValidators tests ReadGetAllValidators before and after a state transition.
 func TestReadGetAllValidators(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
-	config, _ := system.MakeTestPermissionlessConfig(t, 3)
+	config, _ := system.MakeTestPermissionlessConfig(3)
 
 	alloc, err := system.AllocPermissionless(config)
 	require.NoError(t, err)

@@ -31,8 +31,8 @@ import (
 )
 
 // makeTestPermissionlessConfig delegates to the exported MakeTestPermissionlessConfig.
-func makeTestPermissionlessConfig(t *testing.T, n int) *AllocPermissionlessConfig {
-	config, _ := MakeTestPermissionlessConfig(t, n)
+func makeTestPermissionlessConfig(n int) *AllocPermissionlessConfig {
+	config, _ := MakeTestPermissionlessConfig(n)
 	return config
 }
 
@@ -123,7 +123,7 @@ func verifyPermissionlessAlloc(t *testing.T, config *AllocPermissionlessConfig, 
 
 func TestAllocPermissionless(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
-	config := makeTestPermissionlessConfig(t, 4)
+	config := makeTestPermissionlessConfig(4)
 
 	alloc, err := AllocPermissionless(config)
 	require.NoError(t, err)
@@ -132,7 +132,7 @@ func TestAllocPermissionless(t *testing.T) {
 
 func TestAllocPermissionless_SingleValidator(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
-	config := makeTestPermissionlessConfig(t, 1)
+	config := makeTestPermissionlessConfig(1)
 
 	alloc, err := AllocPermissionless(config)
 	require.NoError(t, err)
@@ -141,7 +141,7 @@ func TestAllocPermissionless_SingleValidator(t *testing.T) {
 
 func TestAllocPermissionless_MismatchedLengths(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
-	config := makeTestPermissionlessConfig(t, 2)
+	config := makeTestPermissionlessConfig(2)
 
 	// Remove one stakeAmt to create mismatch
 	config.StakeAmts = config.StakeAmts[:1]

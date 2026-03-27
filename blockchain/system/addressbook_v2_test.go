@@ -185,7 +185,7 @@ func TestEncodeWriteNodes(t *testing.T) {
 
 // TestReadAddressBookV2BlsAll tests that BLS pub/pop keys can be read from ABv2.
 func TestReadAddressBookV2BlsAll(t *testing.T) {
-	config, _ := MakeTestPermissionlessConfig(t, 3)
+	config, _ := MakeTestPermissionlessConfig(3)
 
 	alloc, err := AllocPermissionless(config)
 	require.NoError(t, err)
