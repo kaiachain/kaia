@@ -27,7 +27,7 @@ import (
 // GetCouncil returns the whole validator list for validating the block `num`.
 func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		nodes, err := v.GetNodeByState(num, []valset.State{valset.ValActive, valset.ValReady, valset.ValPaused})
+		nodes, err := v.GetNodeByState(num, valset.CouncilStates)
 		if err != nil {
 			return nil, err
 		}
@@ -61,7 +61,7 @@ func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error
 func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, error) {
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
 		// qualified = council - demoted = ValActive
-		m, err := v.GetNodeByState(num, []valset.State{valset.ValActive})
+		m, err := v.GetNodeByState(num, valset.CommitteeStates)
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +160,7 @@ func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset
 }
 
 func (v *ValsetModule) GetCandidates(num uint64) ([]common.Address, error) {
-	candTestings, err := v.GetNodeByState(num, []valset.State{valset.CandTesting})
+	candTestings, err := v.GetNodeByState(num, valset.CandidateStates)
 	if err != nil {
 		return nil, err
 	}
