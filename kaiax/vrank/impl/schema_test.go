@@ -28,7 +28,7 @@ import (
 
 func TestCheckpointRoundTrip_PreservesZeroFailureCandidates(t *testing.T) {
 	db := database.NewMemDB()
-	cp := scoreCheckpointInterval
+	cp := testCheckpointInterval
 	P1, C1, C2 := addrN(1), addrN(10), addrN(11)
 
 	WriteCheckpoint(db, cp,

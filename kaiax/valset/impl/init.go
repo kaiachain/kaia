@@ -77,7 +77,6 @@ type ValsetModule struct {
 	removeVotesCache  *lru.Cache // uint64 -> removeVoteList
 	councilCache      *lru.Cache // uint64 -> *valset.AddressSet
 	nodeStatesCache   *lru.Cache // uint64 -> valset.NodeStateMap (permissionless node states)
-	vrankEpoch        uint64     // blocks per VRank epoch; defaults to valset.DefaultVRankEpoch
 
 	validatorVoteBlockNumsCache []uint64
 	lowestScannedVoteNumCache   *uint64
@@ -93,7 +92,6 @@ func NewValsetModule() *ValsetModule {
 		removeVotesCache:  rVoteCache,
 		councilCache:      councilCache,
 		nodeStatesCache:   nodeStatesCache,
-		vrankEpoch:        valset.DefaultVRankEpoch,
 	}
 }
 

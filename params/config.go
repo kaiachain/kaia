@@ -215,6 +215,7 @@ func TestKaiaConfig(maxHardfork string) *ChainConfig {
 		return chainConfig
 	}
 	chainConfig.PermissionlessCompatibleBlock = big.NewInt(0)
+	chainConfig.VRankEpoch = DefaultVRankEpoch
 	if maxHardfork == "permissionless" {
 		return chainConfig
 	}
@@ -241,6 +242,9 @@ const (
 
 const (
 	PasswordLength = 16
+
+	// DefaultVRankEpoch is the default number of blocks per VRank epoch.
+	DefaultVRankEpoch = uint64(86400)
 )
 
 var (
@@ -285,6 +289,7 @@ type ChainConfig struct {
 	PragueCompatibleBlock         *big.Int `json:"pragueCompatibleBlock,omitempty"`         // PragueCompatible switch block (nil = no fork)
 	OsakaCompatibleBlock          *big.Int `json:"osakaCompatibleBlock,omitempty"`          // OsakaCompatible switch block (nil = no fork)
 	PermissionlessCompatibleBlock *big.Int `json:"permissionlessCompatibleBlock,omitempty"` // PermissionlessCompatible switch block (nil = no fork)
+	VRankEpoch                    uint64   `json:"vrankEpoch,omitempty"`                    // Blocks per VRank epoch; defaults to DefaultVRankEpoch (86400). No CLI flag by design; set via genesis.json only.
 
 	// Kip103 is a special purpose hardfork feature that can be executed only once
 	// Both Kip103CompatibleBlock and Kip103ContractAddress should be specified to enable KIP103
@@ -743,6 +748,9 @@ func (c *ChainConfig) SetDefaults() {
 	}
 	if c.Governance.Reward.StakingRewardThreshold == nil {
 		c.Governance.Reward.StakingRewardThreshold = DefaultStakingRewardThreshold
+	}
+	if c.VRankEpoch == 0 {
+		c.VRankEpoch = DefaultVRankEpoch
 	}
 }
 

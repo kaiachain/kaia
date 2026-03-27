@@ -128,7 +128,7 @@ func TestGetPFS(t *testing.T) {
 	var (
 		P0, P1, P2    = addrN(0), addrN(1), addrN(2)
 		proposerList  = []common.Address{P0, P1, P2}
-		epochStart    = uint64(vrankEpoch)
+		epochStart    = uint64(params.DefaultVRankEpoch)
 		proposerCount = uint64(len(proposerList))
 		round1Offset  = proposerCount     // keep (epochStart+round1Offset)%len(proposerList) == 0
 		round2Offset  = proposerCount * 2 // keep (epochStart+round2Offset)%len(proposerList) == 0
@@ -279,7 +279,7 @@ func TestGetPFS_DBCheckpointHit(t *testing.T) {
 	db := database.NewMemDB()
 
 	P0 := addrN(0)
-	cp := scoreCheckpointInterval
+	cp := testCheckpointInterval
 	headers := map[uint64]*types.Header{
 		cp:     makeHeaderWithRound(cp, 0),
 		cp + 1: makeHeaderWithRound(cp+1, 1), // round 1 → pfReport = [P0]
@@ -329,7 +329,7 @@ func TestGetPFS_EpochStart(t *testing.T) {
 	valset := mock_valset.NewMockValsetModule(ctrl)
 	db := database.NewMemDB()
 
-	epochStart := uint64(vrankEpoch)
+	epochStart := uint64(params.DefaultVRankEpoch)
 	v := newTestModuleWithHeaders(t, valset, db, map[uint64]*types.Header{
 		epochStart: makeHeaderWithRound(epochStart, 0),
 	})
@@ -351,7 +351,7 @@ func TestGetPFS_EpochBoundaryClamp(t *testing.T) {
 	valset := mock_valset.NewMockValsetModule(ctrl)
 	db := database.NewMemDB()
 
-	epochStart := uint64(vrankEpoch)
+	epochStart := uint64(params.DefaultVRankEpoch)
 	blockNum := epochStart + 5
 	headers := map[uint64]*types.Header{}
 	for i := epochStart; i <= blockNum; i++ {
@@ -472,15 +472,15 @@ func TestGetPFS_MissingHeader(t *testing.T) {
 func TestGetCFS(t *testing.T) {
 	t.Run("epoch boundary", func(t *testing.T) {
 		P1, C1 := addrN(1), addrN(10)
-		epochStart := uint64(vrankEpoch)
-		epochEnd := uint64(2*vrankEpoch - 1)
+		epochStart := uint64(params.DefaultVRankEpoch)
+		epochEnd := uint64(2*params.DefaultVRankEpoch - 1)
 
 		ctrl := gomock.NewController(t)
 		valset := mock_valset.NewMockValsetModule(ctrl)
 		v := createCN(t, valset).VRankModule
 
-		headers := make(map[uint64]*types.Header, vrankEpoch)
-		for i := uint64(0); i < vrankEpoch; i++ {
+		headers := make(map[uint64]*types.Header, params.DefaultVRankEpoch)
+		for i := uint64(0); i < params.DefaultVRankEpoch; i++ {
 			headers[epochStart+i] = makeHeaderWithRound(epochStart+i, 0)
 		}
 		headers[epochStart+1] = makeHeaderWithVRank(epochStart+1, 0, []common.Address{C1})
@@ -501,7 +501,7 @@ func TestGetCFS(t *testing.T) {
 	})
 
 	t.Run("multi-reporter epoch", func(t *testing.T) {
-		epochStart := uint64(vrankEpoch)
+		epochStart := uint64(params.DefaultVRankEpoch)
 		P1, P2, P3, P4 := addrN(30), addrN(31), addrN(32), addrN(33)
 		C1, C2, C3 := addrN(40), addrN(41), addrN(42)
 		candidates := []common.Address{C1, C2, C3}
@@ -654,7 +654,7 @@ func TestGetCFS_DBCheckpointHit(t *testing.T) {
 	db := database.NewMemDB()
 
 	P1, C1 := addrN(1), addrN(10)
-	cp := scoreCheckpointInterval
+	cp := testCheckpointInterval
 	headers := map[uint64]*types.Header{
 		cp:     makeHeaderWithRound(cp, 0),
 		cp + 1: makeHeaderWithVRank(cp+1, 0, []common.Address{C1}),
@@ -682,7 +682,7 @@ func TestGetCFS_DBCheckpointHit_PreservesZeroFailureCandidates(t *testing.T) {
 	db := database.NewMemDB()
 
 	P1, C1, C2 := addrN(1), addrN(10), addrN(11)
-	cp := scoreCheckpointInterval
+	cp := testCheckpointInterval
 	headers := map[uint64]*types.Header{
 		cp: makeHeaderWithRound(cp, 0),
 	}
@@ -745,7 +745,7 @@ func TestGetCFS_EpochStart(t *testing.T) {
 	valset := mock_valset.NewMockValsetModule(ctrl)
 	db := database.NewMemDB()
 
-	epochStart := uint64(vrankEpoch)
+	epochStart := uint64(params.DefaultVRankEpoch)
 	C1, C2, P1 := addrN(10), addrN(11), addrN(1)
 	headers := map[uint64]*types.Header{
 		epochStart: makeHeaderWithVRank(epochStart, 0, nil), // epoch start: VRank must be nil
@@ -775,7 +775,7 @@ func TestGetCFS_EpochBoundaryClamp(t *testing.T) {
 	valset := mock_valset.NewMockValsetModule(ctrl)
 	db := database.NewMemDB()
 
-	epochStart := uint64(vrankEpoch)
+	epochStart := uint64(params.DefaultVRankEpoch)
 	blockNum := epochStart + 3
 	C1, P1 := addrN(10), addrN(1)
 	headers := map[uint64]*types.Header{}
@@ -807,7 +807,7 @@ func TestGetCFS_NearbyProbe_SameEpoch(t *testing.T) {
 	valset := mock_valset.NewMockValsetModule(ctrl)
 	db := database.NewMemDB()
 
-	epochStart := uint64(vrankEpoch)
+	epochStart := uint64(params.DefaultVRankEpoch)
 	C1, P1 := addrN(10), addrN(1)
 
 	headers := map[uint64]*types.Header{

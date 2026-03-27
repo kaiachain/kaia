@@ -11,10 +11,6 @@ import (
 	"github.com/kaiachain/kaia/common"
 )
 
-// DefaultVRankEpoch is the default number of blocks per VRank epoch.
-// Shared across valset and vrank modules as the single source of truth.
-const DefaultVRankEpoch = 86400
-
 type State uint8
 
 const (

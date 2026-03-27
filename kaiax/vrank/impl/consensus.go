@@ -42,7 +42,7 @@ func (v *VRankModule) VerifyHeader(header *types.Header) error {
 		return nil
 	}
 
-	if number%vrank.Epoch == 0 && len(header.VRank) > 0 {
+	if number%v.vrankEpoch() == 0 && len(header.VRank) > 0 {
 		return vrank.ErrUnexpectedVRankAtEpochStart
 	}
 

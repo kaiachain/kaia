@@ -32,10 +32,10 @@ import (
 
 // TestPostInsertBlock verifies the checkpoint-writing behaviour of PostInsertBlock.
 func TestPostInsertBlock(t *testing.T) {
-	cp := scoreCheckpointInterval
+	cp := testCheckpointInterval
 	P1, C1 := addrN(1), addrN(10)
 
-	// at_interval: block lands exactly on a scoreCheckpointInterval boundary →
+	// at_interval: block lands exactly on a testCheckpointInterval boundary →
 	// combined PFS+CFS checkpoint and lastCheckpoint pointer must be written.
 	t.Run("at_interval", func(t *testing.T) {
 		ctrl := gomock.NewController(t)

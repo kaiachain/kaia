@@ -28,9 +28,12 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
+	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var testCheckpointInterval = params.DefaultVRankEpoch / 8
 
 type testChain struct {
 	headers map[uint64]*types.Header
@@ -357,14 +360,14 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	t.Run("epoch header returns empty report", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		val := createCN(t, valset)
-		valset.EXPECT().GetCommittee(uint64(vrankEpoch-1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(vrankEpoch-1)).Return([]common.Address{candAddr}, nil).AnyTimes()
-		valset.EXPECT().GetProposer(uint64(vrankEpoch-1), uint64(0)).Return(val.Addr, nil).AnyTimes()
-		block := types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(vrankEpoch - 1)})
-		view := &istanbul.View{Sequence: new(big.Int).SetUint64(vrankEpoch - 1), Round: common.Big0}
+		valset.EXPECT().GetCommittee(uint64(params.DefaultVRankEpoch-1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandidates(uint64(params.DefaultVRankEpoch-1)).Return([]common.Address{candAddr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(params.DefaultVRankEpoch-1), uint64(0)).Return(val.Addr, nil).AnyTimes()
+		block := types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(params.DefaultVRankEpoch - 1)})
+		view := &istanbul.View{Sequence: new(big.Int).SetUint64(params.DefaultVRankEpoch - 1), Round: common.Big0}
 		val.VRankModule.HandleIstanbulPreprepare(block, view)
 
-		report, err := val.VRankModule.TallyCfReport(vrankEpoch-1, 0)
+		report, err := val.VRankModule.TallyCfReport(params.DefaultVRankEpoch-1, 0)
 		require.NoError(t, err)
 		assert.Empty(t, report)
 	})

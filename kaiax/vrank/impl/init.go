@@ -39,12 +39,10 @@ const (
 	vrankCandidateSigDomain  = "VRANK_CANDIDATE_V1"
 
 	broadcastChSize    = 2048
-	vrankEpoch         = vrank.Epoch
 	maxRound           = vrank.MaxRound
 	maxCollectorWindow = uint64(10) // max collection window [N-10, N+10]
 
-	scoreCacheSize          = 1024
-	scoreCheckpointInterval = uint64(vrankEpoch / 8) // 10,800 blocks
+	scoreCacheSize = 1024
 )
 
 var (
@@ -99,6 +97,16 @@ func NewVRankModule() *VRankModule {
 	}
 }
 
+func (v *VRankModule) vrankEpoch() uint64 {
+	return v.ChainConfig.VRankEpoch
+}
+
+// scoreCheckpointInterval returns the block interval at which PFS/CFS scores are persisted to disk.
+// Divides VRankEpoch into 8 segments so that cold-start replay covers at most 1/8 of an epoch.
+func (v *VRankModule) scoreCheckpointInterval() uint64 {
+	return v.ChainConfig.VRankEpoch / 8
+}
+
 func (v *VRankModule) Init(opts *InitOpts) error {
 	if opts == nil || opts.Valset == nil || opts.NodeKey == nil || opts.ChainConfig == nil || opts.ChainConfig.ChainID == nil || opts.Chain == nil || opts.ChainKv == nil {
 		return vrank.ErrInitUnexpectedNil
@@ -106,7 +114,7 @@ func (v *VRankModule) Init(opts *InitOpts) error {
 	v.InitOpts = *opts
 	v.nodeID = crypto.PubkeyToAddress(opts.NodeKey.PublicKey)
 	if err := v.catchUpScoreCaches(); err != nil {
-		return err
+		logger.Warn("Failed to catch up score caches, starting cold", "err", err)
 	}
 	return nil
 }
@@ -168,7 +176,7 @@ func (v *VRankModule) catchUpScoreCaches() error {
 }
 
 func (v *VRankModule) loadPFSCheckpointInEpoch(blockNum uint64) (uint64, map[common.Address]uint64, bool) {
-	cpNum := calcCheckpointBlock(blockNum)
+	cpNum := calcCheckpointBlock(blockNum, v.scoreCheckpointInterval())
 	pfs := ReadCheckpointPFS(v.ChainKv, cpNum)
 	if pfs == nil {
 		return 0, nil, false
@@ -177,7 +185,7 @@ func (v *VRankModule) loadPFSCheckpointInEpoch(blockNum uint64) (uint64, map[com
 }
 
 func (v *VRankModule) loadCPMatrixCheckpointInEpoch(blockNum uint64) (uint64, vrank.CPMatrix, bool) {
-	cpNum := calcCheckpointBlock(blockNum)
+	cpNum := calcCheckpointBlock(blockNum, v.scoreCheckpointInterval())
 	cpMatrix := ReadCheckpointCPMatrix(v.ChainKv, cpNum)
 	if cpMatrix == nil {
 		return 0, nil, false

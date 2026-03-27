@@ -104,8 +104,8 @@ func DeleteCheckpoint(db database.Database, blockNum uint64) {
 	}
 }
 
-func calcCheckpointBlock(blockNum uint64) uint64 {
-	return blockNum - (blockNum % scoreCheckpointInterval)
+func calcCheckpointBlock(blockNum, checkpointInterval uint64) uint64 {
+	return blockNum - (blockNum % checkpointInterval)
 }
 
 // ReadLastCheckpoint returns the block number of the most recently written checkpoint and true,
