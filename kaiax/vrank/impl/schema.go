@@ -83,16 +83,6 @@ func ReadCheckpointCPMatrix(db database.Database, blockNum uint64) vrank.CPMatri
 	return deserializeCFS(stored.CPMatrix)
 }
 
-// ReadCheckpoint returns the PFS map and CPMatrix stored at blockNum.
-// Returns (nil, nil) if no checkpoint exists for that block.
-func ReadCheckpoint(db database.Database, blockNum uint64) (map[common.Address]uint64, vrank.CPMatrix) {
-	stored := readCheckpointStorage(db, blockNum)
-	if stored == nil {
-		return nil, nil
-	}
-	return deserializePFS(stored.PFS), deserializeCFS(stored.CPMatrix)
-}
-
 // WriteCheckpoint persists the PFS map and cpMatrix together at blockNum.
 func WriteCheckpoint(db database.Database, blockNum uint64, pfs map[common.Address]uint64, cpMatrix vrank.CPMatrix) {
 	b, err := rlp.EncodeToBytes(vrankCheckpointStorage{

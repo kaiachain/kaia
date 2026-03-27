@@ -39,7 +39,8 @@ func TestCheckpointRoundTrip_PreservesZeroFailureCandidates(t *testing.T) {
 		},
 	)
 
-	pfs, cpMatrix := ReadCheckpoint(db, cp)
+	pfs := ReadCheckpointPFS(db, cp)
+	cpMatrix := ReadCheckpointCPMatrix(db, cp)
 	require.NotNil(t, pfs)
 	require.NotNil(t, cpMatrix)
 	assert.Equal(t, uint64(1), pfs[P1])

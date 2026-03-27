@@ -65,9 +65,8 @@ func TestPostInsertBlock(t *testing.T) {
 		_, ok = v.cpMatrixCache.Get(cp)
 		assert.True(t, ok, "cpMatrixCache should be populated at checkpoint")
 
-		pfsCP, cpMatrixCP := ReadCheckpoint(db, cp)
-		assert.NotNil(t, pfsCP, "checkpoint should be written at checkpoint block")
-		assert.NotNil(t, cpMatrixCP, "checkpoint should be written at checkpoint block")
+		assert.NotNil(t, ReadCheckpointPFS(db, cp), "checkpoint should be written at checkpoint block")
+		assert.NotNil(t, ReadCheckpointCPMatrix(db, cp), "checkpoint should be written at checkpoint block")
 		lastCP, hasCP := ReadLastCheckpoint(db)
 		assert.True(t, hasCP, "lastCheckpoint should be set")
 		assert.Equal(t, cp, lastCP, "lastCheckpoint should point to the checkpoint block")
@@ -103,8 +102,7 @@ func TestPostInsertBlock(t *testing.T) {
 		block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(cp + 1))})
 		require.NoError(t, v.PostInsertBlock(block))
 
-		pfsNone, _ := ReadCheckpoint(db, cp+1)
-		assert.Nil(t, pfsNone, "checkpoint should NOT be written for a non-interval block")
+		assert.Nil(t, ReadCheckpointPFS(db, cp+1), "checkpoint should NOT be written for a non-interval block")
 		lastCP, hasCP := ReadLastCheckpoint(db)
 		assert.True(t, hasCP, "lastCheckpoint pointer should still exist")
 		assert.Equal(t, cp, lastCP, "lastCheckpoint should remain at cp, not advance to cp+1")

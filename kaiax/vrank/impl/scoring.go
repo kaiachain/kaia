@@ -97,7 +97,7 @@ func (v *VRankModule) lookupPFSSeed(blockNum uint64) (start uint64, seed map[com
 	if cachedNum, pfs, ok := v.lookupPFSCache(blockNum); ok {
 		return cachedNum + 1, pfs
 	}
-	if cpNum, pfs, _, ok := v.loadCheckpointInEpoch(blockNum); ok {
+	if cpNum, pfs, ok := v.loadPFSCheckpointInEpoch(blockNum); ok {
 		return cpNum + 1, pfs
 	}
 	return calcEpochStart(blockNum), make(map[common.Address]uint64)
@@ -109,7 +109,7 @@ func (v *VRankModule) lookupCFSSeed(blockNum uint64) (start uint64, seed vrank.C
 	if cachedNum, cpMatrix, ok := v.lookupCPMatrixCache(blockNum); ok {
 		return cachedNum + 1, cpMatrix, nil
 	}
-	if cpNum, _, cpMatrix, ok := v.loadCheckpointInEpoch(blockNum); ok {
+	if cpNum, cpMatrix, ok := v.loadCPMatrixCheckpointInEpoch(blockNum); ok {
 		return cpNum + 1, cpMatrix, nil
 	}
 	cpMatrix, err := v.newCPMatrix(blockNum)

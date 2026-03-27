@@ -116,7 +116,8 @@ func TestCheckpointRoundTrip_PreservesZeroScores(t *testing.T) {
 		cpMatrixIn,
 	)
 
-	pfsOut, cpMatrixOut := ReadCheckpoint(db, checkpoint)
+	pfsOut := ReadCheckpointPFS(db, checkpoint)
+	cpMatrixOut := ReadCheckpointCPMatrix(db, checkpoint)
 	require.NotNil(t, pfsOut)
 	require.NotNil(t, cpMatrixOut)
 	assert.Equal(t, pfsIn, pfsOut)
