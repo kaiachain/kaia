@@ -34,14 +34,12 @@ import (
 	cnstakingv4factory "github.com/kaiachain/kaia/contracts_permissionless/contracts/CnStaking/CnStakingV4Factory"
 	beaconcontract "github.com/kaiachain/kaia/contracts_permissionless/contracts/Proxy/beacon"
 	pdcontract "github.com/kaiachain/kaia/contracts_permissionless/contracts/PublicDelegation"
-	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
 // DefaultEpochBlockInterval is the default number of blocks per epoch for ABv2.
-// Uses valset.DefaultVRankEpoch as the single source of truth.
-const DefaultEpochBlockInterval = int64(valset.DefaultVRankEpoch)
+const DefaultEpochBlockInterval = int64(params.DefaultVRankEpoch)
 
 // AllocPermissionlessConfig holds parameters for genesis permissionless allocation.
 type AllocPermissionlessConfig struct {

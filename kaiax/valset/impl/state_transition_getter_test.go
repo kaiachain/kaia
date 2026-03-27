@@ -72,11 +72,13 @@ func newTestValsetModule(ctrl *gomock.Controller) *ValsetModule {
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
 		MinimumStake: new(big.Int).SetUint64(testMinStake),
 	}).AnyTimes()
+	mockChain := chain_mock.NewMockBlockChain(ctrl)
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{VRankEpoch: testVRankEpoch}).AnyTimes()
 	return &ValsetModule{
 		InitOpts: InitOpts{
+			Chain:     mockChain,
 			GovModule: mockGov,
 		},
-		vrankEpoch: testVRankEpoch,
 	}
 }
 
@@ -306,7 +308,7 @@ func newTestApplyAllTransitions(ctrl *gomock.Controller) *ValsetModule {
 	mockChain := chain_mock.NewMockBlockChain(ctrl)
 	mockGov := gov_mock.NewMockGovModule(ctrl)
 
-	chainConfig := &params.ChainConfig{}
+	chainConfig := &params.ChainConfig{VRankEpoch: testVRankEpoch}
 	mockChain.EXPECT().Config().Return(chainConfig).AnyTimes()
 
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
@@ -318,7 +320,6 @@ func newTestApplyAllTransitions(ctrl *gomock.Controller) *ValsetModule {
 			Chain:     mockChain,
 			GovModule: mockGov,
 		},
-		vrankEpoch: testVRankEpoch,
 	}
 	return v
 }

@@ -104,7 +104,7 @@ func (v *ValsetModule) isPassVrankTest() bool {
 }
 
 func (v *ValsetModule) isVrankEpoch(num uint64) bool {
-	return num%v.vrankEpoch == 0
+	return num%v.Chain.Config().VRankEpoch == 0
 }
 
 // WriteStatesToContract computes state transitions and writes updated validator states to ABv2 contract.
