@@ -120,6 +120,12 @@ func (v *VRankModule) lookupCFSSeed(blockNum uint64) (start uint64, seed vrank.C
 }
 
 func (v *VRankModule) newCPMatrix(blockNum uint64) (vrank.CPMatrix, error) {
+	if blockNum == 0 {
+		// Block 0 is genesis; there is no parent block, so GetCandidates(0) would
+		// underflow to GetHeaderByNumber(MaxUint64). Start with an empty matrix —
+		// the first epoch begins scoring from block 1 onward.
+		return vrank.NewCPMatrix(nil), nil
+	}
 	candidates, err := v.Valset.GetCandidates(blockNum)
 	if err != nil {
 		return nil, err

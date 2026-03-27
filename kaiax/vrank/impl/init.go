@@ -157,6 +157,9 @@ func (v *VRankModule) catchUpScoreCaches() error {
 		return nil
 	}
 	headNum := head.Number.Uint64()
+	if headNum == 0 {
+		return nil
+	}
 
 	if _, err := v.GetPFS(headNum); err != nil {
 		return err
