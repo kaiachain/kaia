@@ -129,8 +129,9 @@ func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, idle
 }
 
 // getViolationTransition transitions ValActive validators to ValExiting when they violate rules:
-// rule1: staking amount dropped below MinimumStake, rule2: vrank violation (TODO).
-func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset.NodeStateMap) valset.NodeStateMap {
+// rule1: staking amount dropped below MinimumStake
+// rule2: PFS >= exitThreshold (vrank violation, anytime)
+func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset.NodeStateMap, num, exitThreshold uint64) valset.NodeStateMap {
 	newValidators := validators.Copy()
 
 	// rule1: check if staking amount become less than minimum staking amount
@@ -141,7 +142,24 @@ func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset
 			}
 		}
 	}
-	// rule2: RC
-	// TODO-Permissionless: implement me
+
+	// rule2: PFS violation — PFS >= exitThreshold → ValActive → ValExiting
+	if exitThreshold > 0 {
+		pfsScores, err := v.VRankModule.GetPFS(num)
+		if err != nil {
+			logger.Warn("getViolationTransition: GetPFS failed", "num", num, "err", err)
+		} else {
+			for addr, val := range newValidators {
+				if val.State == valset.ValActive {
+					if pfs, ok := pfsScores[addr]; ok {
+						if pfs >= exitThreshold {
+							logger.Info("PFS violation: transitioning to ValExiting", "addr", addr, "pfs", pfs, "exitThreshold", exitThreshold, "num", num)
+							val.State = valset.ValExiting
+						}
+					}
+				}
+			}
+		}
+	}
 	return newValidators
 }

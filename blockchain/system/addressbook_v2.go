@@ -127,21 +127,21 @@ func EncodeWriteNodes(
 	return encodeSystemMessage(rules, AddressBookAddr, data)
 }
 
-// ReadNodeStates reads all validator states, timeouts, and max counts from ABv2 in a single MultiCall.
+// ReadNodeStates reads all validator states, timeouts, max counts, and exit threshold from ABv2 in a single MultiCall.
 func ReadNodeStates(
 	statedb *state.StateDB,
 	chain backends.BlockChainForCaller,
 	header *types.Header,
-) (valset.NodeStateMap, time.Duration, time.Duration, uint64, uint64, error) {
+) (valset.NodeStateMap, time.Duration, time.Duration, uint64, uint64, uint64, error) {
 	caller, err := NewMultiCallContractCaller(statedb, chain, header)
 	if err != nil {
-		return nil, 0, 0, 0, 0, err
+		return nil, 0, 0, 0, 0, 0, err
 	}
 	opts := &bind.CallOpts{BlockNumber: header.Number}
 
 	res, err := caller.MultiCallNodeStatesPermissionless(opts)
 	if err != nil {
-		return nil, 0, 0, 0, 0, err
+		return nil, 0, 0, 0, 0, 0, err
 	}
 
 	validators := make(valset.NodeStateMap)
@@ -169,8 +169,9 @@ func ReadNodeStates(
 		idleTimeout       = time.Duration(res.IdleTimeout.Int64()) * time.Second
 		maxValCount       = res.MaxValidatorCount.Uint64()
 		maxReadyCandCount = res.MaxReadyCandidateCount.Uint64()
+		exitThreshold     = res.ExitThreshold.Uint64()
 	)
-	return validators, pauseTimeout, idleTimeout, maxValCount, maxReadyCandCount, nil
+	return validators, pauseTimeout, idleTimeout, maxValCount, maxReadyCandCount, exitThreshold, nil
 }
 
 // ReadAddressBookV2BlsAll reads BLS public key info for all nodes from AddressBookV2.

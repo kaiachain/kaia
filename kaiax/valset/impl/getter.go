@@ -137,7 +137,7 @@ func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset
 		if err != nil {
 			return nil, err
 		}
-		nodes, _, _, _, _, err = system.ReadNodeStates(statedb, v.Chain, genesisHeader)
+		nodes, _, _, _, _, _, err = system.ReadNodeStates(statedb, v.Chain, genesisHeader)
 		if err != nil {
 			return nil, err
 		}

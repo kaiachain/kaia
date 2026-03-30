@@ -67,11 +67,11 @@ func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.S
 // computeNodeStates reads ABv2 validators, timeouts, and max counts in a single MultiCall,
 // then applies all transitions.
 func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.Header) (valset.NodeStateMap, error) {
-	validators, pauseTimeout, idleTimeout, maxValCount, _, err := system.ReadNodeStates(statedb, v.Chain, header)
+	validators, pauseTimeout, idleTimeout, maxValCount, _, exitThreshold, err := system.ReadNodeStates(statedb, v.Chain, header)
 	if err != nil {
 		return nil, err
 	}
-	return v.applyAllTransitions(validators, header, pauseTimeout, idleTimeout, maxValCount)
+	return v.applyAllTransitions(validators, header, pauseTimeout, idleTimeout, maxValCount, exitThreshold)
 }
 
 // applyAllTransitions computes applyTr(N-1) given ABv2(N-1) validators and block N-1 parameters.
@@ -81,7 +81,7 @@ func (v *ValsetModule) applyAllTransitions(
 	validators valset.NodeStateMap,
 	header *types.Header, // parent header (N-1)
 	pauseTimeout, idleTimeout time.Duration,
-	maxValCount uint64,
+	maxValCount, exitThreshold uint64,
 ) (valset.NodeStateMap, error) {
 	var (
 		num       = header.Number.Uint64() + 1
@@ -90,7 +90,7 @@ func (v *ValsetModule) applyAllTransitions(
 		blockTime = time.Unix(header.Time.Int64(), 0)
 	)
 
-	newValidators := v.getViolationTransition(minStake, validators)
+	newValidators := v.getViolationTransition(minStake, validators, header.Number.Uint64(), exitThreshold)
 	newValidators = v.getTimeoutTransition(newValidators, idleTimeout, pauseTimeout, blockTime)
 	if v.isVrankEpoch(num) {
 		newValidators = v.getEpochTransition(minStake, newValidators, idleTimeout, int(maxValCount), blockTime)
@@ -155,7 +155,7 @@ func (v *ValsetModule) writeNodesToContract(
 	if parentHeader == nil {
 		return errParentHeaderNotFound(num)
 	}
-	parentNodes, _, _, _, _, err := system.ReadNodeStates(statedb, v.Chain, parentHeader)
+	parentNodes, _, _, _, _, _, err := system.ReadNodeStates(statedb, v.Chain, parentHeader)
 	if err != nil {
 		return fmt.Errorf("failed to read ABv2(N-1): %w", err)
 	}
