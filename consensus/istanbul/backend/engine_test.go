@@ -160,7 +160,6 @@ func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, [
 	return nodeKeys, addrs
 }
 
-
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.

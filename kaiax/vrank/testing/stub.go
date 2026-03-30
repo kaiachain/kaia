@@ -38,11 +38,12 @@ func (m *StubVRankModule) GetPFS(uint64) (map[common.Address]uint64, error) { re
 func (*StubVRankModule) GetCFS(uint64) (map[common.Address]uint64, error)   { return nil, nil }
 
 func (*StubVRankModule) HandleIstanbulPreprepare(*types.Block, *istanbul.View) {}
-func (*StubVRankModule) HandleVRankPreprepare(*vrank.VRankPreprepare) error     { return nil }
-func (*StubVRankModule) HandleVRankCandidate(*vrank.VRankCandidate) error       { return nil }
+func (*StubVRankModule) HandleVRankPreprepare(*vrank.VRankPreprepare) error    { return nil }
+func (*StubVRankModule) HandleVRankCandidate(*vrank.VRankCandidate) error      { return nil }
 func (*StubVRankModule) TallyCfReport(uint64, uint64) ([]common.Address, error) {
 	return nil, nil
 }
+
 func (*StubVRankModule) SubscribeVRank(chan<- *vrank.VRankBroadcastEvent) event.Subscription {
 	return nil
 }
