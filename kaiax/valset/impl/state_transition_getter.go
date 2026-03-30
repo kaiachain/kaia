@@ -135,9 +135,10 @@ func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset
 	newValidators := validators.Copy()
 
 	// rule1: check if staking amount become less than minimum staking amount
-	for _, val := range newValidators {
+	for addr, val := range newValidators {
 		if val.State == valset.ValActive {
 			if val.StakingAmount < minStake {
+				logger.Info("MinStake violation: transitioning to ValExiting", "addr", addr, "staking", val.StakingAmount, "minStake", minStake, "num", num)
 				val.State = valset.ValExiting
 			}
 		}
