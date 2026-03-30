@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"math/big"
-	"testing"
 
 	"github.com/kaiachain/kaia/common"
 	addressbookv2contract "github.com/kaiachain/kaia/contracts_permissionless/contracts/AddressBookV2"
@@ -31,9 +30,7 @@ import (
 )
 
 // MakeTestPermissionlessConfig creates a test AllocPermissionlessConfig with n validators.
-func MakeTestPermissionlessConfig(t *testing.T, n int) (*AllocPermissionlessConfig, []*ecdsa.PrivateKey) {
-	t.Helper()
-
+func MakeTestPermissionlessConfig(n int) (*AllocPermissionlessConfig, []*ecdsa.PrivateKey) {
 	ownerKey, _ := crypto.GenerateKey()
 	owner := crypto.PubkeyToAddress(ownerKey.PublicKey)
 

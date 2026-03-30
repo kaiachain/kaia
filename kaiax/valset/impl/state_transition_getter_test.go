@@ -430,7 +430,7 @@ func TestApplyAllTransitions(t *testing.T) {
 // TestGetCouncilPermissionless tests GetCouncil filters by council states via GetNodeByState.
 func TestGetCouncilPermissionless(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
-	config, _ := system.MakeTestPermissionlessConfig(t, 7)
+	config, _ := system.MakeTestPermissionlessConfig(7)
 
 	alloc, err := system.AllocPermissionless(config)
 	require.NoError(t, err)
@@ -473,7 +473,7 @@ func TestGetCouncilPermissionless(t *testing.T) {
 // TestGetNodeByState tests GetNodeByState filtering by state.
 func TestGetNodeByState(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
-	config, _ := system.MakeTestPermissionlessConfig(t, 5)
+	config, _ := system.MakeTestPermissionlessConfig(5)
 
 	alloc, err := system.AllocPermissionless(config)
 	require.NoError(t, err)

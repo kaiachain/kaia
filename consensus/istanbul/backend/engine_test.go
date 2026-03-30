@@ -277,6 +277,21 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 		}
 	}
 
+	// Set up ABv2 contracts for Permissionless fork if PermissionlessCompatibleBlock is set
+	if genesis.Config.PermissionlessCompatibleBlock != nil {
+		plConfig, _ := system.MakeTestPermissionlessConfig(n)
+		plAlloc, err := system.AllocPermissionless(plConfig)
+		if err != nil {
+			panic(err)
+		}
+		if genesis.Alloc == nil {
+			genesis.Alloc = make(blockchain.GenesisAlloc)
+		}
+		for addr, account := range plAlloc {
+			genesis.Alloc[addr] = account
+		}
+	}
+
 	genesisGov := make(gov.PartialParamSet)
 	for name, param := range gov.Params {
 		val, err := param.ChainConfigValue(genesis.Config)
