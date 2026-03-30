@@ -1212,6 +1212,18 @@ var klayMethods = [
 		name: 'isConsoleLogEnabled',
 		call: 'klay_isConsoleLogEnabled',
 	}),
+	new web3._extend.Method({
+		name: 'getPFS',
+		call: 'klay_getPFS',
+		params: 1,
+		inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+	}),
+	new web3._extend.Method({
+		name: 'getCFS',
+		call: 'klay_getCFS',
+		params: 1,
+		inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
+	}),
 ];
 `
 

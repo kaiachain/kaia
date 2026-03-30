@@ -602,6 +602,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		}
 	}
 
+	mJsonRpc = append(mJsonRpc, mVRank)
 	if ctx.NodeType() == common.CONSENSUSNODE {
 		mBase = append(mBase, mVRank)
 		mExecution = append(mExecution, mVRank)
