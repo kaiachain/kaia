@@ -316,7 +316,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.blockchain = bc
 
-	if err := cn.InitGovModule(mStaking, mGov, mValset); err != nil {
+	if err := cn.InitGovModule(mStaking, mGov, mValset, mVRank); err != nil {
 		return nil, err
 	}
 
@@ -495,7 +495,7 @@ func (s *CN) SetComponents(component []interface{}) {
 	// do nothing
 }
 
-func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.GovModule, mValset *valset_impl.ValsetModule,
+func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.GovModule, mValset *valset_impl.ValsetModule, mVRank vrank.VRankModule,
 ) error {
 	// Initialize modules
 	return errors.Join(
@@ -516,6 +516,7 @@ func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.
 			Chain:         s.blockchain,
 			GovModule:     mGov,
 			StakingModule: mStaking,
+			VRankModule:   mVRank,
 		}),
 	)
 }
