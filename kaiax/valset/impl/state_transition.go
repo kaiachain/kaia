@@ -183,7 +183,8 @@ func diffNodeStates(parent, current valset.NodeStateMap) valset.NodeStateMap {
 	for addr, cur := range current {
 		prev, exists := parent[addr]
 		if !exists || prev.State != cur.State || prev.IdleTimeout != cur.IdleTimeout || prev.PausedTimeout != cur.PausedTimeout {
-			diff[addr] = cur
+			copied := *cur
+			diff[addr] = &copied
 		}
 	}
 	return diff
