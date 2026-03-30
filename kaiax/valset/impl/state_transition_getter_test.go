@@ -323,11 +323,12 @@ func (s *stubVRankModule) HandleVRankCandidate(*vrank.VRankCandidate) error   { 
 func (s *stubVRankModule) TallyCfReport(uint64, uint64) ([]common.Address, error) {
 	return nil, nil
 }
+
 func (s *stubVRankModule) SubscribeVRank(chan<- *vrank.VRankBroadcastEvent) event.Subscription {
 	return nil
 }
-func (s *stubVRankModule) VerifyHeader(*types.Header) error                             { return nil }
-func (s *stubVRankModule) PrepareHeader(*types.Header) error                            { return nil }
+func (s *stubVRankModule) VerifyHeader(*types.Header) error  { return nil }
+func (s *stubVRankModule) PrepareHeader(*types.Header) error { return nil }
 func (s *stubVRankModule) FinalizeHeader(*types.Header, *state.StateDB, []*types.Transaction, []*types.Receipt) error {
 	return nil
 }
