@@ -24,16 +24,13 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/kaiax/vrank"
+	vrank_testing "github.com/kaiachain/kaia/kaiax/vrank/testing"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
@@ -303,41 +300,12 @@ func TestGetViolationTransition_NonActiveNotAffected(t *testing.T) {
 	assert.Equal(t, valset.ValInactive, result[addr2].State)
 }
 
-// stubVRankModule is a minimal VRankModule stub for testing getViolationTransition.
-// Only GetPFS is functional; all other methods are no-ops.
-type stubVRankModule struct {
-	pfs map[common.Address]uint64
-	err error
-}
-
-func (s *stubVRankModule) GetPFS(uint64) (map[common.Address]uint64, error) { return s.pfs, s.err }
-func (s *stubVRankModule) GetCFS(uint64) (map[common.Address]uint64, error) { return nil, nil }
-
-// unused interface methods — no-op stubs
-func (s *stubVRankModule) Start() error { return nil }
-func (s *stubVRankModule) Stop()        {}
-func (s *stubVRankModule) HandleIstanbulPreprepare(*types.Block, *istanbul.View) {
-}
-func (s *stubVRankModule) HandleVRankPreprepare(*vrank.VRankPreprepare) error { return nil }
-func (s *stubVRankModule) HandleVRankCandidate(*vrank.VRankCandidate) error   { return nil }
-func (s *stubVRankModule) TallyCfReport(uint64, uint64) ([]common.Address, error) {
-	return nil, nil
-}
-
-func (s *stubVRankModule) SubscribeVRank(chan<- *vrank.VRankBroadcastEvent) event.Subscription {
-	return nil
-}
-func (s *stubVRankModule) VerifyHeader(*types.Header) error  { return nil }
-func (s *stubVRankModule) PrepareHeader(*types.Header) error { return nil }
-func (s *stubVRankModule) FinalizeHeader(*types.Header, *state.StateDB, []*types.Transaction, []*types.Receipt) error {
-	return nil
-}
 
 func TestGetViolationTransition_PFSAboveThreshold(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := newTestValsetModule(ctrl)
-	v.VRankModule = &stubVRankModule{
-		pfs: map[common.Address]uint64{addr1: 3, addr2: 1},
+	v.VRankModule = &vrank_testing.StubVRankModule{
+		PFS: map[common.Address]uint64{addr1: 3, addr2: 1},
 	}
 
 	validators := valset.NodeStateMap{
@@ -352,8 +320,8 @@ func TestGetViolationTransition_PFSAboveThreshold(t *testing.T) {
 func TestGetViolationTransition_PFSSkippedWhenZeroThreshold(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := newTestValsetModule(ctrl)
-	v.VRankModule = &stubVRankModule{
-		pfs: map[common.Address]uint64{addr1: 10},
+	v.VRankModule = &vrank_testing.StubVRankModule{
+		PFS: map[common.Address]uint64{addr1: 10},
 	}
 
 	validators := valset.NodeStateMap{
@@ -366,8 +334,8 @@ func TestGetViolationTransition_PFSSkippedWhenZeroThreshold(t *testing.T) {
 func TestGetViolationTransition_PFSNonActiveNotAffected(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := newTestValsetModule(ctrl)
-	v.VRankModule = &stubVRankModule{
-		pfs: map[common.Address]uint64{addr1: 10, addr2: 10},
+	v.VRankModule = &vrank_testing.StubVRankModule{
+		PFS: map[common.Address]uint64{addr1: 10, addr2: 10},
 	}
 
 	validators := valset.NodeStateMap{

@@ -56,6 +56,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
+	vrank_testing "github.com/kaiachain/kaia/kaiax/vrank/testing"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
@@ -158,6 +159,7 @@ func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, [
 	}
 	return nodeKeys, addrs
 }
+
 
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a
 // block by one node. Otherwise, if n is larger than 1, we have to generate
@@ -345,6 +347,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			ChainKv:       bc.StateCache().TrieDB().DiskDB().GetMiscDB(),
 			GovModule:     mGov,
 			StakingModule: mStaking,
+			VRankModule:   &vrank_testing.StubVRankModule{},
 		}),
 		mRandao.Init(&randao_impl.InitOpts{
 			ChainConfig: bc.Config(),

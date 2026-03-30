@@ -35,6 +35,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	vrank_testing "github.com/kaiachain/kaia/kaiax/vrank/testing"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -163,7 +164,7 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 		v := NewValsetModule()
 		v.Chain = chain
 		v.GovModule = mockGov
-		v.VRankModule = &stubVRankModule{}
+		v.VRankModule = &vrank_testing.StubVRankModule{}
 		chain.Config().VRankEpoch = testVRankEpoch
 		return v
 	}
