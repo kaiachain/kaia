@@ -300,7 +300,6 @@ func TestGetViolationTransition_NonActiveNotAffected(t *testing.T) {
 	assert.Equal(t, valset.ValInactive, result[addr2].State)
 }
 
-
 func TestGetViolationTransition_PFSAboveThreshold(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := newTestValsetModule(ctrl)
