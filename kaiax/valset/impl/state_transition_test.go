@@ -163,6 +163,7 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 		v := NewValsetModule()
 		v.Chain = chain
 		v.GovModule = mockGov
+		v.VRankModule = &stubVRankModule{}
 		chain.Config().VRankEpoch = testVRankEpoch
 		return v
 	}
