@@ -208,14 +208,4 @@ abstract contract NodeActions is AddressBookV2Base {
         emit SystemTransitionProcessed(nodeIds, newStates);
     }
 
-    /// @inheritdoc IAddressBookV2
-    function updateScores(address[] calldata nodeIds, uint256[] calldata scores) external onlySystemTx onlyEpochBlock {
-        if (nodeIds.length != scores.length) revert InvalidInput();
-        ABv2Storage storage $ = _getStorage();
-        uint256 epoch = _currentEpoch();
-        for (uint256 i; i < nodeIds.length; ++i) {
-            $.scores[epoch][nodeIds[i]] = scores[i];
-        }
-        emit ScoresUpdated(epoch, nodeIds, scores);
-    }
 }

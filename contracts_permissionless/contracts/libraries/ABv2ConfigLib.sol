@@ -16,7 +16,8 @@ library ABv2ConfigLib {
 
     /* ========== Config slot offsets ========== */
 
-    ConfigSlot internal constant EXIT_THRESHOLD = ConfigSlot.wrap(9);
+    ConfigSlot internal constant EXIT_THRESHOLD = ConfigSlot.wrap(8);
+    ConfigSlot internal constant CFS_THRESHOLD = ConfigSlot.wrap(9);
     ConfigSlot internal constant PAUSE_TIMEOUT = ConfigSlot.wrap(10);
     ConfigSlot internal constant IDLE_TIMEOUT = ConfigSlot.wrap(11);
     ConfigSlot internal constant MAX_VALIDATOR_COUNT = ConfigSlot.wrap(12);

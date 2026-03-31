@@ -21,6 +21,7 @@ contract ABv2DataContract is IABv2DataContract {
 
     address public immutable initialOwner;
     uint256 public immutable exitThreshold;
+    uint256 public immutable cfsThreshold;
     uint256 public immutable pauseTimeout;
     uint256 public immutable idleTimeout;
     uint256 public immutable maxValidatorCount;
@@ -49,6 +50,7 @@ contract ABv2DataContract is IABv2DataContract {
         // Validate config
         if (data.initialOwner == address(0)) revert InvalidInput();
         if (data.exitThreshold == 0) revert InvalidInput();
+        if (data.cfsThreshold == 0) revert InvalidInput();
         if (data.pauseTimeout == 0) revert InvalidInput();
         if (data.idleTimeout == 0) revert InvalidInput();
         if (data.maxValidatorCount == 0) revert InvalidInput();
@@ -66,6 +68,7 @@ contract ABv2DataContract is IABv2DataContract {
         implementation = _implementation;
         initialOwner = data.initialOwner;
         exitThreshold = data.exitThreshold;
+        cfsThreshold = data.cfsThreshold;
         pauseTimeout = data.pauseTimeout;
         idleTimeout = data.idleTimeout;
         maxValidatorCount = data.maxValidatorCount;
@@ -101,6 +104,7 @@ contract ABv2DataContract is IABv2DataContract {
             InitData({
                 initialOwner: initialOwner,
                 exitThreshold: exitThreshold,
+                cfsThreshold: cfsThreshold,
                 pauseTimeout: pauseTimeout,
                 idleTimeout: idleTimeout,
                 maxValidatorCount: maxValidatorCount,

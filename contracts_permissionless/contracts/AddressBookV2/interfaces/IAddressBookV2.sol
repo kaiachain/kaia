@@ -109,12 +109,6 @@ interface IAddressBookV2 {
     /// @param nodeId The address of the unreadied candidate
     event CandidateUnreadied(address indexed nodeId);
 
-    /// @notice Emitted when scores are updated for an epoch
-    /// @param epoch The epoch for which scores were updated
-    /// @param nodeIds The node addresses whose scores were updated
-    /// @param scores The new score values
-    event ScoresUpdated(uint256 indexed epoch, address[] nodeIds, uint256[] scores);
-
     /// @notice Emitted when system transitions are processed
     /// @param nodeIds The addresses of the transitioned nodes
     /// @param newStates The new states for each node
@@ -138,6 +132,11 @@ interface IAddressBookV2 {
     /// @param oldThreshold The previous threshold value
     /// @param newThreshold The new threshold value
     event ExitThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
+
+    /// @notice Emitted when the CFS threshold is updated
+    /// @param oldThreshold The previous threshold value
+    /// @param newThreshold The new threshold value
+    event CfsThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
 
     /// @notice Emitted when the maximum validator count is updated
     /// @param oldCount The previous count
@@ -256,11 +255,6 @@ interface IAddressBookV2 {
         uint256[] calldata timeoutAts
     ) external;
 
-    /// @notice Updates scores for nodes at epoch boundaries
-    /// @param nodeIds Array of node addresses
-    /// @param scores Array of score values
-    function updateScores(address[] calldata nodeIds, uint256[] calldata scores) external;
-
     /* ========== ADMIN FUNCTIONS ========== */
 
     /// @notice Suspends a validator (owner emergency action)
@@ -290,6 +284,10 @@ interface IAddressBookV2 {
     /// @notice Updates the proposal failure exit threshold
     /// @param newExitThreshold The new threshold
     function updateExitThreshold(uint256 newExitThreshold) external;
+
+    /// @notice Updates the CFS threshold for candidate testing
+    /// @param newCfsThreshold The new CFS threshold value
+    function updateCfsThreshold(uint256 newCfsThreshold) external;
 
     /// @notice Updates the KEF address
     /// @param newKefAddress The new KEF address
@@ -329,17 +327,15 @@ interface IAddressBookV2 {
     /// @return The exit threshold
     function getExitThreshold() external view returns (uint256);
 
+    /// @notice Returns the CFS threshold for candidate testing
+    /// @return The CFS threshold
+    function getCfsThreshold() external view returns (uint256);
+
     /// @notice Returns the fund addresses (KEF, KIF, KPF)
     /// @return kefAddress The Kaia Ecosystem Fund address
     /// @return kifAddress The Kaia Infrastructure Fund address
     /// @return kpfAddress The Kaia Protocol Fund address
     function getFundAddresses() external view returns (address kefAddress, address kifAddress, address kpfAddress);
-
-    /// @notice Returns the score for a node in a specific epoch
-    /// @param epoch The epoch number
-    /// @param nodeId The address of the node
-    /// @return The score
-    function getScore(uint256 epoch, address nodeId) external view returns (uint256);
 
     /// @notice Returns the current epoch number
     /// @return The current epoch
