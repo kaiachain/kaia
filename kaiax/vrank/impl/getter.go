@@ -49,6 +49,11 @@ func (v *VRankModule) cfReport(blockNum uint64) ([]common.Address, error) {
 // Returns an empty report if the block was finalized at round 0.
 // Returns ErrNotPermissionless if blockNum is before the permissionless fork.
 // Used by applyBlocksForPFS so that catchUp can process pre-fork blocks without error.
+// GetPfReport returns the proposal failure report for the given block.
+func (v *VRankModule) GetPfReport(blockNum uint64) ([]common.Address, error) {
+	return v.pfReport(blockNum)
+}
+
 func (v *VRankModule) pfReport(blockNum uint64) ([]common.Address, error) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
 		return nil, vrank.ErrNotPermissionless

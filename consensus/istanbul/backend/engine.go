@@ -687,6 +687,12 @@ func (sb *backend) Seal(chain consensus.ChainReader, block *types.Block, stop <-
 	}
 	defer clear()
 
+	// TODO-Permissionless: Testing only. Remove before production release.
+	if sb.skipPropose.Load() {
+		logger.Warn("SkipPropose is enabled, skipping block proposal")
+		return nil, nil
+	}
+
 	// post block into Istanbul engine
 	go sb.EventMux().Post(istanbul.RequestEvent{
 		Proposal: block,

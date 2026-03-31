@@ -267,3 +267,18 @@ func (api *AdminChainCNAPI) SetPermissionlessForkBlock(blockNumber uint64) (uint
 	api.cn.chainDB.WriteChainConfig(genesisHash, cfg)
 	return blockNumber, nil
 }
+
+// SetSkipPropose enables or disables skipping block proposals.
+// When enabled, this node will not propose blocks even when it is the proposer,
+// causing PFS scores to increase for this node.
+// TODO-Permissionless: Testing only. Remove before production release.
+func (api *AdminChainCNAPI) SetSkipPropose(skip bool) (bool, error) {
+	type skipProposer interface {
+		SetSkipPropose(bool)
+	}
+	if sp, ok := api.cn.engine.(skipProposer); ok {
+		sp.SetSkipPropose(skip)
+		return skip, nil
+	}
+	return false, errors.New("engine does not support SetSkipPropose")
+}

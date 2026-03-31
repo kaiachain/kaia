@@ -150,6 +150,14 @@ type backend struct {
 	chainInitOnce sync.Once
 
 	isRestoringSnapshots atomic.Bool
+
+	// TODO-Permissionless: Testing only. Remove before production release.
+	skipPropose atomic.Bool
+}
+
+// TODO-Permissionless: Testing only. Remove before production release.
+func (sb *backend) SetSkipPropose(skip bool) {
+	sb.skipPropose.Store(skip)
 }
 
 func (sb *backend) NodeType() common.ConnType {

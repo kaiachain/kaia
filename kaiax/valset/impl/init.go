@@ -29,6 +29,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -64,6 +65,7 @@ type InitOpts struct {
 	Chain         chain
 	GovModule     gov.GovModule
 	StakingModule staking.StakingModule
+	VRankModule   vrank.VRankModule // optional, nil before permissionless fork
 }
 
 type ValsetModule struct {

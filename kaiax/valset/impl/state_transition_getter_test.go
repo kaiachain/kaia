@@ -30,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	vrank_mock "github.com/kaiachain/kaia/kaiax/vrank/mock"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
@@ -276,12 +277,15 @@ func TestGetTimeoutTransition_DefaultClearsAllTimeouts(t *testing.T) {
 func TestGetViolationTransition_ValActiveBelowMinStake(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := newTestValsetModule(ctrl)
+	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+	mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
+	v.VRankModule = mockVRank
 
 	validators := valset.NodeStateMap{
 		addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
 		addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
 	}
-	result := v.getViolationTransition(testMinStake, validators)
+	result := v.getViolationTransition(testMinStake, validators, 0, 0)
 	assert.Equal(t, valset.ValExiting, result[addr1].State)
 	assert.Equal(t, valset.ValActive, result[addr2].State)
 }
@@ -289,14 +293,65 @@ func TestGetViolationTransition_ValActiveBelowMinStake(t *testing.T) {
 func TestGetViolationTransition_NonActiveNotAffected(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := newTestValsetModule(ctrl)
+	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+	mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
+	v.VRankModule = mockVRank
 
 	validators := valset.NodeStateMap{
 		addr1: {State: valset.CandReady, StakingAmount: belowMinStake},
 		addr2: {State: valset.ValInactive, StakingAmount: belowMinStake},
 	}
-	result := v.getViolationTransition(testMinStake, validators)
+	result := v.getViolationTransition(testMinStake, validators, 0, 0)
 	assert.Equal(t, valset.CandReady, result[addr1].State)
 	assert.Equal(t, valset.ValInactive, result[addr2].State)
+}
+
+func TestGetViolationTransition_PFSAboveThreshold(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	v := newTestValsetModule(ctrl)
+	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+	mockVRank.EXPECT().GetPfReport(uint64(100)).Return([]common.Address{addr1}, nil)
+	mockVRank.EXPECT().GetPFS(uint64(100)).Return(map[common.Address]uint64{addr1: 3, addr2: 1}, nil)
+	v.VRankModule = mockVRank
+
+	validators := valset.NodeStateMap{
+		addr1: {State: valset.ValActive, StakingAmount: aboveMinStake},
+		addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
+	}
+	result := v.getViolationTransition(testMinStake, validators, 100, 2)
+	assert.Equal(t, valset.ValExiting, result[addr1].State, "PFS(3) >= threshold(2) → ValExiting (severe)")
+	assert.Equal(t, valset.ValPaused, result[addr2].State, "PFS(1) > 0, < threshold(2) → ValPaused (minor)")
+}
+
+func TestGetViolationTransition_PFSSkippedWhenZeroThreshold(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	v := newTestValsetModule(ctrl)
+	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+	mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
+	v.VRankModule = mockVRank
+
+	validators := valset.NodeStateMap{
+		addr1: {State: valset.ValActive, StakingAmount: aboveMinStake},
+	}
+	result := v.getViolationTransition(testMinStake, validators, 100, 0)
+	assert.Equal(t, valset.ValActive, result[addr1].State, "exitThreshold=0 → PFS check skipped")
+}
+
+func TestGetViolationTransition_PFSNonActiveNotAffected(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	v := newTestValsetModule(ctrl)
+	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+	mockVRank.EXPECT().GetPfReport(uint64(100)).Return([]common.Address{addr1}, nil)
+	mockVRank.EXPECT().GetPFS(uint64(100)).Return(map[common.Address]uint64{addr1: 10, addr2: 10}, nil)
+	v.VRankModule = mockVRank
+
+	validators := valset.NodeStateMap{
+		addr1: {State: valset.CandReady, StakingAmount: aboveMinStake},
+		addr2: {State: valset.ValPaused, StakingAmount: aboveMinStake},
+	}
+	result := v.getViolationTransition(testMinStake, validators, 100, 2)
+	assert.Equal(t, valset.CandReady, result[addr1].State, "CandReady not affected by PFS")
+	assert.Equal(t, valset.ValPaused, result[addr2].State, "ValPaused not affected by PFS")
 }
 
 // ============================================================
@@ -315,10 +370,15 @@ func newTestApplyAllTransitions(ctrl *gomock.Controller) *ValsetModule {
 		MinimumStake: new(big.Int).SetUint64(testMinStake),
 	}).AnyTimes()
 
+	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+	mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
+	mockVRank.EXPECT().GetPFS(gomock.Any()).Return(nil, nil).AnyTimes()
+
 	v := &ValsetModule{
 		InitOpts: InitOpts{
-			Chain:     mockChain,
-			GovModule: mockGov,
+			Chain:       mockChain,
+			GovModule:   mockGov,
+			VRankModule: mockVRank,
 		},
 	}
 	return v
@@ -418,7 +478,7 @@ func TestApplyAllTransitions(t *testing.T) {
 			v := newTestApplyAllTransitions(ctrl)
 			parentHeader := &types.Header{Number: big.NewInt(int64(tc.num - 1)), Time: big.NewInt(testBlockTime.Unix())}
 
-			result, err := v.applyAllTransitions(tc.input, parentHeader, DefaultValPausedTimeout, DefaultValIdleTimeout, DefaultActiveValidatorCount)
+			result, err := v.applyAllTransitions(tc.input, parentHeader, DefaultValPausedTimeout, DefaultValIdleTimeout, DefaultActiveValidatorCount, 0)
 			assert.NoError(t, err)
 			for addr, expectedState := range tc.expected {
 				assert.Equal(t, expectedState, result[addr].State, "addr=%s", addr.Hex())

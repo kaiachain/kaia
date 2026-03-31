@@ -56,6 +56,8 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking/mock"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
+	"github.com/kaiachain/kaia/kaiax/vrank"
+	vrank_mock "github.com/kaiachain/kaia/kaiax/vrank/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
@@ -169,9 +171,10 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	genesis.Timestamp = uint64(time.Now().Unix())
 
 	var (
-		period   = istanbul.DefaultConfig.BlockPeriod
-		mStaking staking.StakingModule
-		err      error
+		period       = istanbul.DefaultConfig.BlockPeriod
+		mStaking     staking.StakingModule
+		mVRankModule vrank.VRankModule
+		err          error
 	)
 	// force enable Istanbul engine and governance
 	for _, item := range items {
@@ -224,6 +227,8 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			genesis.Config = v
 		case *mock.MockStakingModule:
 			mStaking = v
+		case vrank.VRankModule:
+			mVRankModule = v
 		}
 	}
 	genesis.Config.SetDefaults()
@@ -345,6 +350,7 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 			ChainKv:       bc.StateCache().TrieDB().DiskDB().GetMiscDB(),
 			GovModule:     mGov,
 			StakingModule: mStaking,
+			VRankModule:   mVRankModule,
 		}),
 		mRandao.Init(&randao_impl.InitOpts{
 			ChainConfig: bc.Config(),
@@ -745,7 +751,10 @@ func TestVerifyHeader_ValidSigNonValidatorInExtra(t *testing.T) {
 	t.Run("permissionless HF", func(t *testing.T) {
 		ctrl, mStaking := makeMockStakingManager(t, nil, 0)
 		defer ctrl.Finish()
-		chain, engine := newBlockChain(1, params.TestKaiaConfig("permissionless"), mStaking)
+		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+		mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
+		mockVRank.EXPECT().GetPFS(gomock.Any()).Return(nil, nil).AnyTimes()
+		chain, engine := newBlockChain(1, params.TestKaiaConfig("permissionless"), mStaking, mockVRank)
 		defer engine.Stop()
 
 		header := tamperValidators(chain, engine)
