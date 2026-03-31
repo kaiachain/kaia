@@ -17,6 +17,7 @@
 package impl
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -56,6 +57,9 @@ const (
 	testMaxValCount = 50
 
 	highStake = uint64(30_000_000)
+
+	testCFSBlockNum   = uint64(100)
+	testCFSThreshold  = uint64(10)
 )
 
 var (
@@ -115,7 +119,7 @@ func TestGetEpochTransition_StateTransitions(t *testing.T) {
 			validators := valset.NodeStateMap{
 				addr1: {State: tc.inputState, StakingAmount: tc.stakingAmount},
 			}
-			result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime)
+			result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, 0, 0)
 			assert.Equal(t, tc.expectedState, result[addr1].State)
 			if tc.expectTimeout {
 				assert.False(t, result[addr1].IdleTimeout.IsZero())
@@ -133,7 +137,7 @@ func TestGetEpochTransition_MaxValidatorCount(t *testing.T) {
 		addr2: {State: valset.ValActive, StakingAmount: midStake},
 		addr3: {State: valset.ValActive, StakingAmount: lowStake},
 	}
-	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, 2, testBlockTime)
+	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, 2, testBlockTime, 0, 0)
 	assert.Equal(t, valset.ValActive, result[addr1].State)
 	assert.Equal(t, valset.ValActive, result[addr2].State)
 	assert.Equal(t, valset.ValInactive, result[addr3].State)
@@ -150,7 +154,7 @@ func TestGetEpochTransition_TieBreakingByAddress(t *testing.T) {
 		addr2: {State: valset.ValActive, StakingAmount: lowStake},
 		addr3: {State: valset.ValActive, StakingAmount: lowStake},
 	}
-	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, 2, testBlockTime)
+	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, 2, testBlockTime, 0, 0)
 
 	// addr1 (0x0001) < addr2 (0x0002) < addr3 (0x0003)
 	assert.Equal(t, valset.ValActive, result[addr1].State)
@@ -165,9 +169,101 @@ func TestGetEpochTransition_DoesNotMutateInput(t *testing.T) {
 	validators := valset.NodeStateMap{
 		addr1: {State: valset.ValExiting, StakingAmount: aboveMinStake},
 	}
-	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime)
+	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, 0, 0)
 	assert.Equal(t, valset.ValInactive, result[addr1].State)    // result is transitioned
 	assert.Equal(t, valset.ValExiting, validators[addr1].State) // original is unchanged
+}
+
+// ============================================================
+// TestIsPassVrankTest (CFS threshold check)
+// ============================================================
+
+func TestIsPassVrankTest(t *testing.T) {
+	testcases := []struct {
+		name         string
+		cfsThreshold uint64
+		cfsScores    map[common.Address]uint64
+		cfsErr       error
+		expected     bool
+	}{
+		{
+			"threshold=0 → always pass",
+			0, nil, nil, true,
+		},
+		{
+			"CFS below threshold → pass",
+			testCFSThreshold,
+			map[common.Address]uint64{addr1: testCFSThreshold - 5},
+			nil, true,
+		},
+		{
+			"CFS equals threshold → fail",
+			testCFSThreshold,
+			map[common.Address]uint64{addr1: testCFSThreshold},
+			nil, false,
+		},
+		{
+			"CFS above threshold → fail",
+			testCFSThreshold,
+			map[common.Address]uint64{addr1: testCFSThreshold + 5},
+			nil, false,
+		},
+		{
+			"addr not in CFS scores → pass",
+			testCFSThreshold,
+			map[common.Address]uint64{addr2: testCFSThreshold + 5},
+			nil, true,
+		},
+		{
+			"GetCFS error → pass (fail-open)",
+			testCFSThreshold,
+			nil, fmt.Errorf("some error"), true,
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			v := newTestValsetModule(ctrl)
+			mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+			if tc.cfsThreshold > 0 {
+				mockVRank.EXPECT().GetCFS(testCFSBlockNum).Return(tc.cfsScores, tc.cfsErr)
+			}
+			v.VRankModule = mockVRank
+
+			result := v.isPassVrankTest(addr1, testCFSBlockNum, tc.cfsThreshold)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+// ============================================================
+// TestGetEpochTransition with CFS
+// ============================================================
+
+func TestGetEpochTransition_CandTestingCFS(t *testing.T) {
+	testcases := []struct {
+		name          string
+		cfs           uint64
+		expectedState valset.State
+	}{
+		{"CFS above threshold → Registered", testCFSThreshold + 5, valset.Registered},
+		{"CFS below threshold → ValActive", testCFSThreshold - 5, valset.ValActive},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			v := newTestValsetModule(ctrl)
+			mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+			mockVRank.EXPECT().GetCFS(testCFSBlockNum).Return(map[common.Address]uint64{addr1: tc.cfs}, nil)
+			v.VRankModule = mockVRank
+
+			validators := valset.NodeStateMap{
+				addr1: {State: valset.CandTesting, StakingAmount: aboveMinStake},
+			}
+			result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, testCFSBlockNum, testCFSThreshold)
+			assert.Equal(t, tc.expectedState, result[addr1].State)
+		})
+	}
 }
 
 // ============================================================
@@ -478,7 +574,7 @@ func TestApplyAllTransitions(t *testing.T) {
 			v := newTestApplyAllTransitions(ctrl)
 			parentHeader := &types.Header{Number: big.NewInt(int64(tc.num - 1)), Time: big.NewInt(testBlockTime.Unix())}
 
-			result, err := v.applyAllTransitions(tc.input, parentHeader, DefaultValPausedTimeout, DefaultValIdleTimeout, DefaultActiveValidatorCount, 0)
+			result, err := v.applyAllTransitions(tc.input, parentHeader, DefaultValPausedTimeout, DefaultValIdleTimeout, DefaultActiveValidatorCount, 0, 0)
 			assert.NoError(t, err)
 			for addr, expectedState := range tc.expected {
 				assert.Equal(t, expectedState, result[addr].State, "addr=%s", addr.Hex())
