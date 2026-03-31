@@ -19,6 +19,7 @@ package impl
 import (
 	"crypto/ecdsa"
 	"sync"
+	"sync/atomic"
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -83,6 +84,9 @@ type VRankModule struct {
 
 	pfsCache      *lru.ARCCache // map[proposer]score
 	cpMatrixCache *lru.ARCCache // map[candidate][proposer]score
+
+	// TODO-Permissionless: Testing only. Remove before production release.
+	skipCandidate atomic.Bool
 }
 
 func NewVRankModule() *VRankModule {
@@ -95,6 +99,11 @@ func NewVRankModule() *VRankModule {
 		pfsCache:      pfsCache,
 		cpMatrixCache: cpMatrixCache,
 	}
+}
+
+// TODO-Permissionless: Testing only. Remove before production release.
+func (v *VRankModule) SetSkipCandidate(skip bool) {
+	v.skipCandidate.Store(skip)
 }
 
 func (v *VRankModule) vrankEpoch() uint64 {
