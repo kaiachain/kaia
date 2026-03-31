@@ -85,8 +85,8 @@ func EncodeInitializeABv2(rules params.Rules) (common.Address, *types.Transactio
 	return encodeSystemMessage(rules, AddressBookAddr, data)
 }
 
-// EncodeWriteNodes encodes the processSystemTransition call with the given validator state changes.
-func EncodeWriteNodes(
+// EncodeNodeStateUpdate encodes the processSystemTransition call with the given validator state changes.
+func EncodeNodeStateUpdate(
 	rules params.Rules,
 	validators valset.NodeStateMap,
 ) (common.Address, *types.Transaction, error) {

@@ -116,7 +116,7 @@ func (v *ValsetModule) WriteStatesToContract(
 	config := v.Chain.Config()
 
 	if config.IsPermissionlessForkEnabled(header.Number) {
-		if err := v.writeNodesToContract(vmenv, header, state); err != nil {
+		if err := v.writeNodeStateUpdateToContract(vmenv, header, state); err != nil {
 			return err
 		}
 	}
@@ -136,10 +136,10 @@ func (v *ValsetModule) InstallABv2(
 	return nil
 }
 
-// writeNodesToContract computes the diff between parent(N-1) and current(N) node states,
+// writeNodeStateUpdateToContract computes the diff between parent(N-1) and current(N) node states,
 // and writes only the changed nodes to the AddressBookV2 contract via processSystemTransition.
 // At epoch blocks, the call is always made (even with empty diff) to update epochValCount.
-func (v *ValsetModule) writeNodesToContract(
+func (v *ValsetModule) writeNodeStateUpdateToContract(
 	vmenv *vm.EVM,
 	header *types.Header,
 	statedb *state.StateDB,
@@ -167,7 +167,7 @@ func (v *ValsetModule) writeNodesToContract(
 	}
 
 	config := v.Chain.Config()
-	msg, from, err := prepareNodeWrite(config, header.Number, diff)
+	msg, from, err := prepareNodeStateUpdate(config, header.Number, diff)
 	if err != nil {
 		return err
 	}
@@ -231,13 +231,13 @@ func (v *ValsetModule) installAndInitializeABv2(
 	return nil
 }
 
-// prepareNodeWrite builds the ABI-encoded input for writing changed validator states to ABv2.
-func prepareNodeWrite(
+// prepareNodeStateUpdate builds the ABI-encoded input for writing changed validator states to ABv2.
+func prepareNodeStateUpdate(
 	config *params.ChainConfig,
 	num *big.Int,
 	nodes valset.NodeStateMap,
 ) (*types.Transaction, common.Address, error) {
-	from, msg, err := system.EncodeWriteNodes(
+	from, msg, err := system.EncodeNodeStateUpdate(
 		config.Rules(num),
 		nodes,
 	)

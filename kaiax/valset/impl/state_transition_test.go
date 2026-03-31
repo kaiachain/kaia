@@ -250,7 +250,7 @@ func TestReadGetAllValidators(t *testing.T) {
 		assert.True(t, vs.PausedTimeout.IsZero())
 	}
 
-	// Apply a state transition via writeNodesToContract (core path):
+	// Apply a state transition via writeNodeStateUpdateToContract (core path):
 	// Seed cache with parent(block 0) = current validators, current(block 1) = modified validators
 	v := NewValsetModule()
 	v.Chain = chain
@@ -272,7 +272,7 @@ func TestReadGetAllValidators(t *testing.T) {
 	}
 	blockCtx := blockchain.NewEVMBlockContext(hfHeader, chain, nil)
 	vmenv := vm.NewEVM(blockCtx, vm.TxContext{}, statedb, chain.Config(), &vm.Config{})
-	err = v.writeNodesToContract(vmenv, hfHeader, statedb)
+	err = v.writeNodeStateUpdateToContract(vmenv, hfHeader, statedb)
 	require.NoError(t, err)
 
 	// After transition: config.NodeIds[0] should be ValPaused
