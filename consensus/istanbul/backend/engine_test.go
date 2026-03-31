@@ -171,10 +171,10 @@ func newBlockChain(n int, items ...interface{}) (*blockchain.BlockChain, *backen
 	genesis.Timestamp = uint64(time.Now().Unix())
 
 	var (
-		period      = istanbul.DefaultConfig.BlockPeriod
-		mStaking    staking.StakingModule
+		period       = istanbul.DefaultConfig.BlockPeriod
+		mStaking     staking.StakingModule
 		mVRankModule vrank.VRankModule
-		err         error
+		err          error
 	)
 	// force enable Istanbul engine and governance
 	for _, item := range items {
