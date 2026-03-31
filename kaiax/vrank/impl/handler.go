@@ -211,8 +211,11 @@ func (v *VRankModule) vrankCandidateSigHash(blockNum uint64, round uint8, blockH
 func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPreprepare) {
 	block := vrankPreprepare.Block
 	candidates, err := v.Valset.GetCandidates(block.NumberU64())
-	if err != nil || candidates == nil {
-		logger.Error("GetCandidates failed", "blockNum", block.NumberU64())
+	if err != nil {
+		logger.Error("GetCandidates failed", "blockNum", block.NumberU64(), "err", err)
+		return
+	}
+	if len(candidates) == 0 {
 		return
 	}
 	sigHash := v.vrankPreprepareSigHash(block.NumberU64(), uint8(vrankPreprepare.View.Round.Uint64()), block.Hash())
@@ -258,8 +261,8 @@ func (v *VRankModule) isProposer(blockNum, round uint64) bool {
 
 func (v *VRankModule) isCandidate(blockNum uint64) bool {
 	candidates, err := v.Valset.GetCandidates(blockNum)
-	if err != nil || candidates == nil {
-		logger.Error("GetCandidates failed", "blockNum", blockNum)
+	if err != nil {
+		logger.Error("GetCandidates failed", "blockNum", blockNum, "err", err)
 		return false
 	}
 

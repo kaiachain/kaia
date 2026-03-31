@@ -107,9 +107,12 @@ func (v *VRankModule) TallyCfReport(blockNum, round uint64) ([]common.Address, e
 		return []common.Address{}, nil
 	}
 	candidates, err := v.Valset.GetCandidates(blockNum)
-	if err != nil || candidates == nil {
-		logger.Error("GetCandidates failed", "blockNum", blockNum)
+	if err != nil {
+		logger.Error("GetCandidates failed", "blockNum", blockNum, "err", err)
 		return nil, vrank.ErrGetCandidateFailed
+	}
+	if len(candidates) == 0 {
+		return []common.Address{}, nil
 	}
 	var cfReport []common.Address
 	for _, addr := range candidates {
