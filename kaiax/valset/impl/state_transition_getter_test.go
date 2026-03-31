@@ -17,7 +17,7 @@
 package impl
 
 import (
-	"fmt"
+	"errors"
 	"math/big"
 	"testing"
 	"time"
@@ -58,8 +58,8 @@ const (
 
 	highStake = uint64(30_000_000)
 
-	testCFSBlockNum   = uint64(100)
-	testCFSThreshold  = uint64(10)
+	testCFSBlockNum  = uint64(100)
+	testCFSThreshold = uint64(10)
 )
 
 var (
@@ -217,7 +217,7 @@ func TestIsPassVrankTest(t *testing.T) {
 		{
 			"GetCFS error → pass (fail-open)",
 			testCFSThreshold,
-			nil, fmt.Errorf("some error"), true,
+			nil, errors.New("some error"), true,
 		},
 	}
 	for _, tc := range testcases {
