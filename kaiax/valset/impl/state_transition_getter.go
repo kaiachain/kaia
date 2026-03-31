@@ -144,8 +144,13 @@ func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset
 		}
 	}
 
-	// rule2: PFS violation — PFS >= exitThreshold → ValActive → ValExiting
-	if exitThreshold > 0 {
+	// rule2: PFS violation — only triggered when a proposal failure occurred at this block.
+	// - PFS >= exitThreshold (severe) → ValActive → ValExiting
+	// - PFS > 0 (minor) → ValActive → ValPaused
+	pfReport, err := v.VRankModule.GetPfReport(num)
+	if err != nil {
+		logger.Warn("getViolationTransition: GetPfReport failed", "num", num, "err", err)
+	} else if len(pfReport) > 0 {
 		pfsScores, err := v.VRankModule.GetPFS(num)
 		if err != nil {
 			logger.Warn("getViolationTransition: GetPFS failed", "num", num, "err", err)
@@ -153,9 +158,12 @@ func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset
 			for addr, val := range newValidators {
 				if val.State == valset.ValActive {
 					if pfs, ok := pfsScores[addr]; ok {
-						if pfs >= exitThreshold {
-							logger.Info("PFS violation: transitioning to ValExiting", "addr", addr, "pfs", pfs, "exitThreshold", exitThreshold, "num", num)
+						if exitThreshold > 0 && pfs >= exitThreshold {
+							logger.Info("PFS severe violation: transitioning to ValExiting", "addr", addr, "pfs", pfs, "exitThreshold", exitThreshold, "num", num)
 							val.State = valset.ValExiting
+						} else if pfs > 0 {
+							logger.Info("PFS minor violation: transitioning to ValPaused", "addr", addr, "pfs", pfs, "exitThreshold", exitThreshold, "num", num)
+							val.State = valset.ValPaused
 						}
 					}
 				}

@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
+//go:generate mockgen -destination=./mock/module.go -package=mock github.com/kaiachain/kaia/kaiax/vrank VRankModule
+
 package vrank
 
 import (
@@ -32,6 +34,7 @@ type VRankModule interface {
 	HandleVRankPreprepare(msg *VRankPreprepare) error
 	HandleVRankCandidate(msg *VRankCandidate) error
 	TallyCfReport(blockNum, round uint64) ([]common.Address, error)
+	GetPfReport(blockNum uint64) ([]common.Address, error)
 	GetPFS(blockNum uint64) (map[common.Address]uint64, error)
 	GetCFS(blockNum uint64) (map[common.Address]uint64, error)
 
