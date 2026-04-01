@@ -18,7 +18,6 @@ package system
 
 import (
 	"crypto/ecdsa"
-	"crypto/rand"
 	"math/big"
 
 	"github.com/kaiachain/kaia/common"
@@ -44,7 +43,11 @@ func MakeTestPermissionlessConfig(n int) (*AllocPermissionlessConfig, []*ecdsa.P
 		key, _ := crypto.GenerateKey()
 		addr := crypto.PubkeyToAddress(key.PublicKey)
 		nodeKeys[i] = key
-		_, pub, pop := MakeTestBlsKey()
+		blsSk, _ := bls.DeriveFromECDSA(key)
+		blsPk := blsSk.PublicKey()
+		blsPop := bls.PopProve(blsSk)
+		pub := blsPk.Marshal()
+		pop := blsPop.Marshal()
 
 		nodeIds[i] = addr
 		stakeAmts[i] = new(big.Int).Set(stakeAmt)
@@ -82,20 +85,3 @@ func MakeTestPermissionlessConfig(n int) (*AllocPermissionlessConfig, []*ecdsa.P
 	}, nodeKeys
 }
 
-// MakeTestBlsKey generates a random BLS key pair for testing.
-func MakeTestBlsKey() (priv, pub, pop []byte) {
-	ikm := make([]byte, 32)
-	rand.Read(ikm)
-
-	sk, _ := bls.GenerateKey(ikm)
-	pk := sk.PublicKey()
-	sig := bls.PopProve(sk)
-
-	priv = sk.Marshal()
-	pub = pk.Marshal()
-	pop = sig.Marshal()
-	if len(priv) != 32 || len(pub) != 48 || len(pop) != 96 {
-		panic("bad bls key")
-	}
-	return priv, pub, pop
-}

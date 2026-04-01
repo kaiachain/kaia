@@ -34,6 +34,7 @@ import (
 	cnstakingv4factory "github.com/kaiachain/kaia/contracts_permissionless/contracts/CnStaking/CnStakingV4Factory"
 	beaconcontract "github.com/kaiachain/kaia/contracts_permissionless/contracts/Proxy/beacon"
 	pdcontract "github.com/kaiachain/kaia/contracts_permissionless/contracts/PublicDelegation"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -43,11 +44,12 @@ const DefaultEpochBlockInterval = int64(params.DefaultVRankEpoch)
 
 // AllocPermissionlessConfig holds parameters for genesis permissionless allocation.
 type AllocPermissionlessConfig struct {
-	Owner      common.Address                                  // Owner of beacons, Registry registrant
-	NodeIds    []common.Address                                // Validator node IDs
-	NodeInfos  []addressbookv2contract.NodeInfo                // Validator info — caller fills all fields except StakingContract (set after deployCnStaking)
-	StakeAmts  []*big.Int                                      // Stake amounts per validator
-	DataConfig addressbookv2contract.IABv2DataContractInitData // ABv2DataContract constructor data
+	Owner              common.Address                                  // Owner of beacons, Registry registrant
+	NodeIds            []common.Address                                // Validator node IDs
+	NodeInfos          []addressbookv2contract.NodeInfo                // Validator info — caller fills all fields except StakingContract (set after deployCnStaking)
+	StakeAmts          []*big.Int                                      // Stake amounts per validator
+	DataConfig         addressbookv2contract.IABv2DataContractInitData // ABv2DataContract constructor data
+	EpochBlockInterval int64                                           // Blocks per epoch baked into ABv2 bytecode. 0 = use DefaultEpochBlockInterval.
 }
 
 // allocPermissionlessResult holds intermediate deployed addresses passed between internal steps.
@@ -100,7 +102,7 @@ func AllocPermissionless(config *AllocPermissionlessConfig) (map[common.Address]
 	result := &allocPermissionlessResult{}
 
 	// Step 1: Deploy implementation contracts and their UpgradeableBeacons
-	if err := deployBeaconInfra(cfg, deployer, result); err != nil {
+	if err := deployBeaconInfra(cfg, deployer, config.EpochBlockInterval, result); err != nil {
 		return nil, err
 	}
 
@@ -125,6 +127,13 @@ func AllocPermissionless(config *AllocPermissionlessConfig) (map[common.Address]
 
 	// Step 5: Install ABv2 at 0x400 and call initialize()
 	if err := installAndInitABv2(cfg, statedb, result.abv2Impl); err != nil {
+		return nil, err
+	}
+
+	// Step 5b: Override initial states for nodes that are not ValActive.
+	// ABv2.initialize() always sets all nodes to ValActive; this step applies
+	// custom initial states for testing scenarios (e.g. CandReady, ValExiting).
+	if err := applyInitialNodeStateOverrides(cfg, config); err != nil {
 		return nil, err
 	}
 
@@ -158,7 +167,7 @@ func AllocPermissionless(config *AllocPermissionlessConfig) (map[common.Address]
 
 // deployBeaconInfra deploys CnStakingV4 and PublicDelegation implementations
 // along with their UpgradeableBeacons (step 1).
-func deployBeaconInfra(cfg *runtime.Config, owner common.Address, result *allocPermissionlessResult) error {
+func deployBeaconInfra(cfg *runtime.Config, owner common.Address, epochBlockInterval int64, result *allocPermissionlessResult) error {
 	// Deploy CnStakingV4 implementation
 	cnImplAddr, err := evmCreate(cfg, common.FromHex(cnstakingv4.CnStakingV4Bin))
 	if err != nil {
@@ -195,7 +204,10 @@ func deployBeaconInfra(cfg *runtime.Config, owner common.Address, result *allocP
 
 	// Deploy AddressBookV2 implementation (used by ABv2DataContract and proxy setup)
 	abv2ABI, _ := addressbookv2contract.AddressBookV2MetaData.GetAbi()
-	abv2ImplInput, err := packConstructor(abv2ABI, common.FromHex(addressbookv2contract.AddressBookV2Bin), big.NewInt(DefaultEpochBlockInterval))
+	if epochBlockInterval == 0 {
+		epochBlockInterval = DefaultEpochBlockInterval
+	}
+	abv2ImplInput, err := packConstructor(abv2ABI, common.FromHex(addressbookv2contract.AddressBookV2Bin), big.NewInt(epochBlockInterval))
 	if err != nil {
 		return fmt.Errorf("pack ABv2 impl constructor: %w", err)
 	}
@@ -284,6 +296,40 @@ func installAndInitABv2(cfg *runtime.Config, statedb *state.StateDB, implAddr co
 	}
 	// Set isActivated = true (storage slot 12) so legacy getter getAllAddress() returns data.
 	statedb.SetState(AddressBookAddr, common.BigToHash(big.NewInt(12)), common.BigToHash(big.NewInt(1)))
+	return nil
+}
+
+// applyInitialNodeStateOverrides calls processSystemTransition on ABv2 to set non-ValActive
+// initial states. ABv2.initialize() always resets all nodes to ValActive; this step is needed
+// for test scenarios (e.g., CandReady genesis) where a different starting state is desired.
+// It is a no-op if all nodes have ValActive state (the default).
+func applyInitialNodeStateOverrides(cfg *runtime.Config, config *AllocPermissionlessConfig) error {
+	var (
+		valActiveState = valset.ValActive.ToUint8()
+		nodeIds        []common.Address
+		newStates      []uint8
+		timeoutAts     []*big.Int
+	)
+	for i, info := range config.NodeInfos {
+		if info.State != valActiveState {
+			nodeIds = append(nodeIds, config.NodeIds[i])
+			newStates = append(newStates, info.State)
+			timeoutAts = append(timeoutAts, new(big.Int)) // no timeout at genesis
+		}
+	}
+	if len(nodeIds) == 0 {
+		return nil // all ValActive, nothing to do
+	}
+
+	abv2ABI, _ := addressbookv2contract.AddressBookV2MetaData.GetAbi()
+	// Temporarily use SystemAddress as caller so OnlySystemTx passes.
+	origOrigin := cfg.Origin
+	cfg.Origin = params.SystemAddress
+	defer func() { cfg.Origin = origOrigin }()
+
+	if err := evmCallABI(cfg, AddressBookAddr, abv2ABI, "processSystemTransition", nodeIds, newStates, timeoutAts); err != nil {
+		return fmt.Errorf("applyInitialNodeStateOverrides: %w", err)
+	}
 	return nil
 }
 
