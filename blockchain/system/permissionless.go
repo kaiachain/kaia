@@ -320,7 +320,7 @@ func convertToABv2DataInitData(config *AllocPermissionlessConfig) abv2data.IABv2
 	d := config.DataConfig
 	return abv2data.IABv2DataContractInitData{
 		InitialOwner:           d.InitialOwner,
-		ExitThreshold:          d.ExitThreshold,
+		PfsThreshold:           d.PfsThreshold,
 		CfsThreshold:           d.CfsThreshold,
 		PauseTimeout:           d.PauseTimeout,
 		IdleTimeout:            d.IdleTimeout,

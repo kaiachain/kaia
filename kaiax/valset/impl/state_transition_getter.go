@@ -131,8 +131,8 @@ func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, idle
 
 // getViolationTransition transitions ValActive validators to ValExiting when they violate rules:
 // rule1: staking amount dropped below MinimumStake
-// rule2: PFS >= exitThreshold (vrank violation, anytime)
-func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset.NodeStateMap, num, exitThreshold uint64) valset.NodeStateMap {
+// rule2: PFS >= pfsThreshold (vrank violation, anytime)
+func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset.NodeStateMap, num, pfsThreshold uint64) valset.NodeStateMap {
 	newValidators := validators.Copy()
 
 	// rule1: check if staking amount become less than minimum staking amount
@@ -146,7 +146,7 @@ func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset
 	}
 
 	// rule2: PFS violation — only triggered when a proposal failure occurred at this block.
-	// - PFS >= exitThreshold (severe) → ValActive → ValExiting
+	// - PFS >= pfsThreshold (severe) → ValActive → ValExiting
 	// - PFS > 0 (minor) → ValActive → ValPaused
 	pfReport, err := v.VRankModule.GetPfReport(num)
 	if err != nil {
@@ -159,11 +159,11 @@ func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset
 			for addr, val := range newValidators {
 				if val.State == valset.ValActive {
 					if pfs, ok := pfsScores[addr]; ok {
-						if exitThreshold > 0 && pfs >= exitThreshold {
-							logger.Info("PFS severe violation: transitioning to ValExiting", "addr", addr, "pfs", pfs, "exitThreshold", exitThreshold, "num", num)
+						if pfsThreshold > 0 && pfs >= pfsThreshold {
+							logger.Info("PFS severe violation: transitioning to ValExiting", "addr", addr, "pfs", pfs, "pfsThreshold", pfsThreshold, "num", num)
 							val.State = valset.ValExiting
 						} else if pfs > 0 {
-							logger.Info("PFS minor violation: transitioning to ValPaused", "addr", addr, "pfs", pfs, "exitThreshold", exitThreshold, "num", num)
+							logger.Info("PFS minor violation: transitioning to ValPaused", "addr", addr, "pfs", pfs, "pfsThreshold", pfsThreshold, "num", num)
 							val.State = valset.ValPaused
 						}
 					}
