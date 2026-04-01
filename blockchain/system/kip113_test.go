@@ -27,6 +27,7 @@ import (
 	testcontracts "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
 	proxycontracts "github.com/kaiachain/kaia/contracts_permissionless/contracts/Proxy"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
@@ -180,5 +181,9 @@ func compareStorage(t *testing.T, backend *backends.SimulatedBackend, contractAd
 }
 
 func makeBlsKey() (priv, pub, pop []byte) {
-	return MakeTestBlsKey()
+	key, _ := crypto.GenerateKey()
+	sk, _ := bls.DeriveFromECDSA(key)
+	pk := sk.PublicKey()
+	sig := bls.PopProve(sk)
+	return sk.Marshal(), pk.Marshal(), sig.Marshal()
 }

@@ -304,11 +304,11 @@ func installAndInitABv2(cfg *runtime.Config, statedb *state.StateDB, implAddr co
 // for test scenarios (e.g., CandReady genesis) where a different starting state is desired.
 // It is a no-op if all nodes have ValActive state (the default).
 func applyInitialNodeStateOverrides(cfg *runtime.Config, config *AllocPermissionlessConfig) error {
-	valActiveState := valset.ValActive.ToUint8()
 	var (
-		nodeIds    []common.Address
-		newStates  []uint8
-		timeoutAts []*big.Int
+		valActiveState = valset.ValActive.ToUint8()
+		nodeIds        []common.Address
+		newStates      []uint8
+		timeoutAts     []*big.Int
 	)
 	for i, info := range config.NodeInfos {
 		if info.State != valActiveState {
