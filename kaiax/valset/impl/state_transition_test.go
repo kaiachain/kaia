@@ -294,9 +294,3 @@ func TestReadGetAllValidators(t *testing.T) {
 	}
 }
 
-// invalidateNodeStatesCache purges all cached node state entries.
-// Call this after injecting VRank data (pfReport/PFS/CFS) to ensure
-// getOrComputeNodeStates recomputes rather than returning a stale cache hit.
-func (v *ValsetModule) invalidateNodeStatesCache() {
-	v.nodeStatesCache.Purge()
-}
