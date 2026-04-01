@@ -44,7 +44,11 @@ func MakeTestPermissionlessConfig(n int) (*AllocPermissionlessConfig, []*ecdsa.P
 		key, _ := crypto.GenerateKey()
 		addr := crypto.PubkeyToAddress(key.PublicKey)
 		nodeKeys[i] = key
-		_, pub, pop := MakeTestBlsKey()
+		blsSk, _ := bls.DeriveFromECDSA(key)
+		blsPk := blsSk.PublicKey()
+		blsPop := bls.PopProve(blsSk)
+		pub := blsPk.Marshal()
+		pop := blsPop.Marshal()
 
 		nodeIds[i] = addr
 		stakeAmts[i] = new(big.Int).Set(stakeAmt)
