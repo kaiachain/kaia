@@ -544,12 +544,6 @@ web3._extend({
 		}),
 		// TODO-Permissionless: Testing only. Remove before production release.
 		new web3._extend.Method({
-			name: 'setPermissionlessForkBlock',
-			call: 'admin_setPermissionlessForkBlock',
-			params: 1,
-		}),
-		// TODO-Permissionless: Testing only. Remove before production release.
-		new web3._extend.Method({
 			name: 'setSkipPropose',
 			call: 'admin_setSkipPropose',
 			params: 1,

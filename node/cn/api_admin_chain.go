@@ -29,7 +29,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/big"
 	"os"
 	"strings"
 
@@ -257,16 +256,6 @@ func (s *AdminChainCNAPI) NodeConfig(ctx context.Context) interface{} {
 	return *s.cn.config
 }
 
-// SetPermissionlessForkBlock overrides the permissionless hardfork block number
-// in the chain config and persists it to the chain database.
-// TODO-Permissionless: Testing only. Remove before production release.
-func (api *AdminChainCNAPI) SetPermissionlessForkBlock(blockNumber uint64) (uint64, error) {
-	cfg := api.cn.blockchain.Config()
-	cfg.PermissionlessCompatibleBlock = new(big.Int).SetUint64(blockNumber)
-	genesisHash := api.cn.blockchain.Genesis().Hash()
-	api.cn.chainDB.WriteChainConfig(genesisHash, cfg)
-	return blockNumber, nil
-}
 
 // SetSkipPropose enables or disables skipping block proposals.
 // When enabled, this node will not propose blocks even when it is the proposer,

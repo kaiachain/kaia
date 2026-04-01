@@ -51,6 +51,7 @@ var FlagGroups = []FlagGroup{
 			ExtraDataFlag,
 			ConfigFileFlag,
 			OverrideOsaka,
+			OverridePermissionless,
 			StartBlockNumberFlag,
 			BlockGenerationIntervalFlag,
 			BlockGenerationTimeLimitFlag,

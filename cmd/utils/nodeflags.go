@@ -177,6 +177,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewPathFlag(DataDirFlag),
 	altsrc.NewPathFlag(ChainDataDirFlag),
 	altsrc.NewUint64Flag(OverrideOsaka),
+	altsrc.NewUint64Flag(OverridePermissionless),
 	altsrc.NewUint64Flag(StartBlockNumberFlag),
 	altsrc.NewPathFlag(KeyStoreDirFlag),
 	altsrc.NewBoolFlag(TxPoolNoLocalsFlag),
