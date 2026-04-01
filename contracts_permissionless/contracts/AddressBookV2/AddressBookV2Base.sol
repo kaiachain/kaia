@@ -81,6 +81,7 @@ abstract contract AddressBookV2Base is
         // Node data
         mapping(address => NodeInfo) nodeInfo;
         EnumerableSet.AddressSet allNodes;
+        EnumerableSet.AddressSet registeredNodes;
         EnumerableSet.AddressSet suspendedSet;
         uint256 lastAssignedGCId;
         mapping(State => uint256) stateCount;
@@ -138,6 +139,7 @@ abstract contract AddressBookV2Base is
 
         $.nodeInfo[nodeId] = info;
         $.nodeInfo[nodeId].gcId = gcId;
+        $.registeredNodes.add(nodeId);
 
         $.stateCount[State.Registered]++;
 
@@ -152,6 +154,7 @@ abstract contract AddressBookV2Base is
         if ($.nodeInfo[nodeId].state != State.Registered) revert InvalidState();
 
         $.stateCount[State.Registered]--;
+        $.registeredNodes.remove(nodeId);
 
         delete $.nodeInfo[nodeId];
 
@@ -204,8 +207,10 @@ abstract contract AddressBookV2Base is
 
         if (oldState == State.Registered && newState != State.Registered) {
             $.allNodes.add(nodeId);
+            $.registeredNodes.remove(nodeId);
         } else if (oldState != State.Registered && newState == State.Registered) {
             $.allNodes.remove(nodeId);
+            $.registeredNodes.add(nodeId);
         }
 
         info.state = newState;
