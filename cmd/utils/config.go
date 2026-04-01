@@ -602,6 +602,10 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 		v := ctx.Uint64(OverrideOsaka.Name)
 		overrides.OverrideOsaka = new(big.Int).SetUint64(v)
 	}
+	if ctx.IsSet(OverridePermissionless.Name) {
+		v := ctx.Uint64(OverridePermissionless.Name)
+		overrides.OverridePermissionless = new(big.Int).SetUint64(v)
+	}
 	cfg.Overrides = &overrides
 	cfg.StartBlockNumber = ctx.Uint64(StartBlockNumberFlag.Name)
 

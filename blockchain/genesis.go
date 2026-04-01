@@ -159,7 +159,8 @@ func (e *GenesisMismatchError) Error() string {
 
 // ChainOverrides contains the changes to chain config.
 type ChainOverrides struct {
-	OverrideOsaka *big.Int
+	OverrideOsaka          *big.Int
+	OverridePermissionless *big.Int
 }
 
 // apply applies the chain overrides on the supplied chain config.
@@ -169,6 +170,9 @@ func (o *ChainOverrides) apply(cfg *params.ChainConfig) error {
 	}
 	if o.OverrideOsaka != nil {
 		cfg.OsakaCompatibleBlock = new(big.Int).Set(o.OverrideOsaka)
+	}
+	if o.OverridePermissionless != nil {
+		cfg.PermissionlessCompatibleBlock = new(big.Int).Set(o.OverridePermissionless)
 	}
 	return cfg.CheckConfigForkOrder()
 }

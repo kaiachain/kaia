@@ -194,6 +194,11 @@ var (
 		Usage:    "Manually specify the Osaka fork block, overriding the bundled setting",
 		Category: "KAIA",
 	}
+	OverridePermissionless = &cli.Uint64Flag{
+		Name:     "override.permissionless",
+		Usage:    "Manually specify the permissionless hardfork block, overriding the bundled setting",
+		Category: "KAIA",
+	}
 	StartBlockNumberFlag = &cli.Uint64Flag{
 		Name:     "start-block-num",
 		Usage:    "Starts the node from the given block number. Starting from 0 is not supported.",
