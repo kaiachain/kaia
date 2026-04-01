@@ -21,18 +21,18 @@ package vm
 // There are three distinct "views" of the precompiled contract set, each serving
 // a different purpose:
 //
-//  1. common.IsPrecompiledContractAddress (common/types.go)
+//  1. common.IsPrecompiledContractAddress (common/types.go): coarse address-range check; for fast static check
 //     A fast range-check (0x0001–0x03FF) used for tx validation and the
 //     evm.Call() guard. It does NOT reflect the exact active set for a given
 //     fork or vmversion.
 //
-//  2. ActivePrecompiles / ActivePrecompiledContracts (this file)
+//  2. ActivePrecompiles / ActivePrecompiledContracts (this file): fork-specific (with legacy compat supplement); for access list
 //     Returns the address list / map for the current fork rules, used when
 //     constructing the EIP-2929 access list. After Istanbul, the vmversion0
 //     compat addresses (0x0a, 0x0b) are appended so that old contracts are
 //     not charged cold-access gas for precompiles they can legitimately call.
 //
-//  3. EVM.GetPrecompiledContractMap / getPrecompiledContractForVersion (this file)
+//  3. EVM.GetPrecompiledContractMap / getPrecompiledContractForVersion (this file): caller-vmVersion-specific; for VM execution
 //     Returns the exact map used during EVM execution. The map is keyed on
 //     the caller's address, not the precompile's: if the caller was deployed
 //     before Istanbul (VmVersion0), it always receives the Byzantium map so
