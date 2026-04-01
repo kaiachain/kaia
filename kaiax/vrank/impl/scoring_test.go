@@ -1125,3 +1125,65 @@ func TestByzantineFilter(t *testing.T) {
 		assert.Equal(t, uint64(116), cfs[candidates[4]], "C5")
 	})
 }
+
+// TestForkBoundaryClamping verifies that when the fork block is after epoch start,
+// scoring only covers blocks from the fork block onward (not from epoch start).
+func TestForkBoundaryClamping(t *testing.T) {
+	var (
+		forkBlock  = uint64(50)
+		queryBlock = uint64(60)
+		P0         = addrN(0)
+		C1         = addrN(10)
+	)
+
+	newForkClampedModule := func(t *testing.T, vs *mock_valset.MockValsetModule, headers map[uint64]*types.Header) *VRankModule {
+		t.Helper()
+		v := newTestModuleWithHeaders(t, vs, database.NewMemDB(), headers)
+		v.ChainConfig = params.TestKaiaConfig("permissionless")
+		v.ChainConfig.PermissionlessCompatibleBlock = new(big.Int).SetUint64(forkBlock)
+		v.Chain = &testChain{headers: headers}
+		return v
+	}
+
+	makeHeaders := func(overrides map[uint64]*types.Header) map[uint64]*types.Header {
+		headers := make(map[uint64]*types.Header)
+		for i := forkBlock; i <= queryBlock; i++ {
+			headers[i] = makeHeaderWithRound(i, 0)
+		}
+		for k, v := range overrides {
+			headers[k] = v
+		}
+		return headers
+	}
+
+	t.Run("PFS starts from fork block", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		vs := mock_valset.NewMockValsetModule(ctrl)
+		headers := makeHeaders(map[uint64]*types.Header{
+			forkBlock + 5: makeHeaderWithRound(forkBlock+5, 1),
+		})
+		v := newForkClampedModule(t, vs, headers)
+		vs.EXPECT().GetProposer(forkBlock+5, uint64(0)).Return(P0, nil).Times(1)
+
+		pfs, err := v.GetPFS(queryBlock)
+		require.NoError(t, err)
+		assert.Equal(t, uint64(1), pfs[P0])
+		assert.Len(t, pfs, 1)
+	})
+
+	t.Run("CFS starts from fork block", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		vs := mock_valset.NewMockValsetModule(ctrl)
+		headers := makeHeaders(map[uint64]*types.Header{
+			forkBlock + 3: makeHeaderWithVRank(forkBlock+3, 0, []common.Address{C1}),
+		})
+		v := newForkClampedModule(t, vs, headers)
+		vs.EXPECT().GetCandidates(queryBlock).Return([]common.Address{C1}, nil).Times(1)
+		vs.EXPECT().GetProposer(forkBlock+3, uint64(0)).Return(P0, nil).Times(1)
+		vs.EXPECT().GetCommittee(queryBlock, uint64(0)).Return([]common.Address{P0}, nil).Times(1)
+
+		cfs, err := v.GetCFS(queryBlock)
+		require.NoError(t, err)
+		assert.Equal(t, uint64(1), cfs[C1])
+	})
+}

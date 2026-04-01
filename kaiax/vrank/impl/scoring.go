@@ -31,6 +31,16 @@ func calcEpochStart(blockNum, vrankEpoch uint64) uint64 {
 	return blockNum - (blockNum % vrankEpoch)
 }
 
+// clampToForkStart returns max(start, forkBlock) so that scoring loops
+// never iterate over blocks before the permissionless fork.
+func (v *VRankModule) clampToForkStart(start uint64) uint64 {
+	forkBlock := v.ChainConfig.PermissionlessCompatibleBlock
+	if forkBlock != nil && start < forkBlock.Uint64() {
+		return forkBlock.Uint64()
+	}
+	return start
+}
+
 // GetPFS computes the running Proposal Failure Score up to blockNum.
 // pfs(N) -> map[proposerAddr]score for blocks [epochBegin(N), N].
 // Returns ErrNotPermissionless if blockNum is before the permissionless fork.
@@ -100,7 +110,7 @@ func (v *VRankModule) lookupPFSSeed(blockNum uint64) (start uint64, seed map[com
 	if cpNum, pfs, ok := v.loadPFSCheckpointInEpoch(blockNum); ok {
 		return cpNum + 1, pfs
 	}
-	return calcEpochStart(blockNum, v.vrankEpoch()), make(map[common.Address]uint64)
+	return v.clampToForkStart(calcEpochStart(blockNum, v.vrankEpoch())), make(map[common.Address]uint64)
 }
 
 // lookupCFSSeed returns (start, seed) where seed holds the CP matrix accumulated up to start-1.
@@ -116,7 +126,7 @@ func (v *VRankModule) lookupCFSSeed(blockNum uint64) (start uint64, seed vrank.C
 	if err != nil {
 		return 0, nil, err
 	}
-	return calcEpochStart(blockNum, v.vrankEpoch()), cpMatrix, nil
+	return v.clampToForkStart(calcEpochStart(blockNum, v.vrankEpoch())), cpMatrix, nil
 }
 
 func (v *VRankModule) newCPMatrix(blockNum uint64) (vrank.CPMatrix, error) {
