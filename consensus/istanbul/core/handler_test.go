@@ -31,7 +31,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	mock_istanbul "github.com/kaiachain/kaia/consensus/istanbul/mocks"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -52,7 +51,7 @@ import (
 func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanbul.MockBackend, *gomock.Controller, *valset_mock.MockValsetModule, *mock_gov.MockGovModule) {
 	committeeSize := uint64(len(validatorAddrs) / 3)
 
-	istExtra := &types.IstanbulExtra{
+	istExtra := &istanbul.IstanbulExtra{
 		Validators:    validatorAddrs,
 		Seal:          []byte{},
 		CommittedSeal: [][]byte{},
@@ -66,7 +65,7 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 		ParentHash: common.Hash{},
 		Number:     common.Big0,
 		GasUsed:    0,
-		Extra:      append(make([]byte, types.IstanbulExtraVanity), extra...),
+		Extra:      append(make([]byte, istanbul.IstanbulExtraVanity), extra...),
 		Time:       new(big.Int).SetUint64(1234),
 		BlockScore: common.Big0,
 	})
@@ -95,6 +94,9 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 
 	// Consider the last proposal is "initBlock" and the owner of mockBackend is validatorAddrs[0]
 	mockBackend.EXPECT().Address().Return(validatorAddrs[0]).AnyTimes()
+	sealerKey, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	mockBackend.EXPECT().Sealer().Return(istanbul.NewSealerImpl(sealerKey)).AnyTimes()
 	mockBackend.EXPECT().LastProposal().Return(initBlock, validatorAddrs[0]).AnyTimes()
 	mockBackend.EXPECT().NodeType().Return(common.CONSENSUSNODE).AnyTimes()
 
@@ -145,31 +147,16 @@ func genValidators(n int) ([]common.Address, map[common.Address]*ecdsa.PrivateKe
 
 // signBlock signs the given block with the given private key
 func signBlock(block *types.Block, privateKey *ecdsa.PrivateKey) (*types.Block, error) {
-	var hash common.Hash
 	header := block.Header()
-	hasher := sha3.NewKeccak256()
 
-	// Clean seal is required for calculating proposer seal
-	rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false))
-	hasher.Sum(hash[:0])
-
-	seal, err := crypto.Sign(crypto.Keccak256([]byte(hash.Bytes())), privateKey)
+	testSealer := istanbul.NewSealerImpl(privateKey)
+	authorSeal, err := testSealer.MakeAuthorSeal(header)
 	if err != nil {
 		return nil, err
 	}
-
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
-	if err != nil {
+	if err := testSealer.WriteAuthorSeal(header, authorSeal); err != nil {
 		return nil, err
 	}
-	istanbulExtra.Seal = seal
-
-	payload, err := rlp.EncodeToBytes(&istanbulExtra)
-	if err != nil {
-		return nil, err
-	}
-
-	header.Extra = append(header.Extra[:types.IstanbulExtraVanity], payload...)
 	return block.WithSeal(header), nil
 }
 

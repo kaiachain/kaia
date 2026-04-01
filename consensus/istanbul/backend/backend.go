@@ -76,6 +76,7 @@ func New(opts *BackendOpts) consensus.Engine {
 		recentMessages:   recentMessages,
 		knownMessages:    knownMessages,
 		govModule:        opts.GovModule,
+		sealer:           istanbul.NewSealerImpl(opts.PrivateKey),
 		nodetype:         opts.NodeType,
 	}
 
@@ -122,12 +123,17 @@ type backend struct {
 	// Reference to the kaiax modules
 	govModule    gov.GovModule
 	valsetModule valset.ValsetModule
+	sealer       *istanbul.IstanbulSealer
 
 	// Node type
 	nodetype common.ConnType
 
 	// Executor for transaction execution
 	executor consensus.Executor
+}
+
+func (sb *backend) Sealer() *istanbul.IstanbulSealer {
+	return sb.sealer
 }
 
 func (sb *backend) NodeType() common.ConnType {
@@ -297,12 +303,12 @@ func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
 		sb.logger.Error("Invalid proposal, %v", proposal)
 		return istanbul.ErrInvalidProposal
 	}
+	proposalHash := proposal.Hash()
 	h := block.Header()
 	round := sb.currentView.Load().(*istanbul.View).Round.Int64()
-	h = types.SetRoundToHeader(h, round)
+	sb.sealer.WriteRound(h, round)
 	// Append seals into extra-data
-	err := writeCommittedSeals(h, seals)
-	if err != nil {
+	if err := sb.sealer.WriteCommittedSeals(h, seals); err != nil {
 		return err
 	}
 	// update block's header
@@ -317,7 +323,7 @@ func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
 	// -- otherwise, a error will be returned and a round change event will be fired.
 
 	sb.sealMu.Lock()
-	if sb.proposedBlockHash == block.Hash() {
+	if sb.proposedBlockHash == proposalHash {
 		// Proposer: feed block hash to Seal() and wait the Seal() result
 		if sb.commitCh != nil {
 			sb.commitCh <- &types.Result{Block: block, Round: round}
@@ -404,7 +410,6 @@ func (sb *backend) CheckSignature(data []byte, address common.Address, sig []byt
 		logger.Error("Failed to get signer address", "err", err)
 		return err
 	}
-	// Compare derived addresses
 	if signer != address {
 		return istanbul.ErrInvalidSignature
 	}
@@ -422,7 +427,7 @@ func (sb *backend) LastProposal() (istanbul.Proposal, common.Address) {
 	var proposer common.Address
 	if block.Number().Cmp(common.Big0) > 0 {
 		var err error
-		proposer, err = sb.Author(block.Header())
+		proposer, err = sb.sealer.Author(block.Header())
 		if err != nil {
 			sb.logger.Error("Failed to get block proposer", "err", err)
 			return nil, common.Address{}
@@ -455,6 +460,16 @@ func (sb *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, st
 				resultCh <- nil
 			}
 		}()
+
+		validators, err := sb.valsetModule.GetQualifiedValidators(header.Number.Uint64())
+		if err != nil {
+			resultCh <- nil
+			return
+		}
+		if err := sb.sealer.WriteValidators(header, validators); err != nil {
+			resultCh <- nil
+			return
+		}
 
 		// Reset executor with current state and header
 		if err := sb.executor.ResetWithState(statedb, header); err != nil {

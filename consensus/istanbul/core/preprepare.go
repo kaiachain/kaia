@@ -25,7 +25,6 @@ package core
 import (
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
@@ -34,7 +33,8 @@ import (
 func (c *core) sendPreprepare(request *istanbul.Request) {
 	logger := c.logger.NewWith("state", c.state)
 
-	header := types.SetRoundToHeader(request.Proposal.Header(), c.currentView().Round.Int64())
+	header := request.Proposal.Header()
+	c.backend.Sealer().WriteRound(header, c.currentView().Round.Int64())
 	request.Proposal = request.Proposal.WithSeal(header)
 
 	// If I'm the proposer and I have the same sequence with the proposal
@@ -118,7 +118,8 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 	if c.state == StateAcceptRequest {
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		if c.current.IsHashLocked() {
-			header := types.SetRoundToHeader(c.current.Preprepare.Proposal.Header(), c.currentView().Round.Int64())
+			header := c.current.Preprepare.Proposal.Header()
+			c.backend.Sealer().WriteRound(header, c.currentView().Round.Int64())
 			c.current.Preprepare.Proposal = c.current.Preprepare.Proposal.WithSeal(header)
 
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {

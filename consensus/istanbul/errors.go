@@ -16,7 +16,9 @@
 
 package istanbul
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	// ErrUnauthorizedAddress is returned when given address cannot be found in
@@ -35,13 +37,15 @@ var (
 	ErrNoValidator = errors.New("no validator")
 	// errNoEssentialModule is returned when essential module is not registered.
 	ErrNoEssentialModule = errors.New("no essential module")
-	// errUnauthorized is returned if a header is signed by a non authorized entity.
+	// ErrUnauthorized is returned if a header is signed by a non authorized entity.
 	ErrUnauthorized = errors.New("unauthorized")
 	// errInvalidExtraDataFormat is returned when the extra data format is incorrect
 	ErrInvalidExtraDataFormat = errors.New("invalid extra data format")
 	// errInvalidVotingChain is returned if an authorization list is attempted to
 	// be modified via out-of-range or non-contiguous headers.
 	ErrInvalidVotingChain = errors.New("invalid voting chain")
+	// ErrUnknownBlock is returned when a required block/header context is missing.
+	ErrUnknownBlock = errors.New("unknown block")
 	// errInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
 	ErrInvalidCommittedSeals = errors.New("invalid committed seals")
 	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
