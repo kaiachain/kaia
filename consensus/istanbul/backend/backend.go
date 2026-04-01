@@ -160,6 +160,13 @@ func (sb *backend) SetSkipPropose(skip bool) {
 	sb.skipPropose.Store(skip)
 }
 
+// TODO-Permissionless: Testing only. Remove before production release.
+func (sb *backend) SetSkipCandidate(skip bool) {
+	if sc, ok := sb.vrankModule.(interface{ SetSkipCandidate(bool) }); ok {
+		sc.SetSkipCandidate(skip)
+	}
+}
+
 func (sb *backend) NodeType() common.ConnType {
 	return sb.nodetype
 }

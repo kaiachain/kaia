@@ -86,6 +86,11 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 			logger.Error("Sign failed", "blockNum", block.NumberU64(), "blockHash", block.Hash().Hex())
 			return err
 		}
+		// TODO-Permissionless: Testing only. Remove before production release.
+		if v.skipCandidate.Load() {
+			logger.Warn("SkipCandidate is enabled, skipping VRankCandidate broadcast")
+			return nil
+		}
 		v.BroadcastVRankCandidate(&vrank.VRankCandidate{
 			BlockNumber: block.NumberU64(),
 			Round:       uint8(view.Round.Uint64()),

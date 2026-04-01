@@ -67,11 +67,11 @@ func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.S
 // computeNodeStates reads ABv2 validators, timeouts, and max counts in a single MultiCall,
 // then applies all transitions.
 func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.Header) (valset.NodeStateMap, error) {
-	validators, pauseTimeout, idleTimeout, maxValCount, _, exitThreshold, err := system.ReadNodeStates(statedb, v.Chain, header)
+	validators, pauseTimeout, idleTimeout, maxValCount, _, exitThreshold, cfsThreshold, err := system.ReadNodeStates(statedb, v.Chain, header)
 	if err != nil {
 		return nil, err
 	}
-	return v.applyAllTransitions(validators, header, pauseTimeout, idleTimeout, maxValCount, exitThreshold)
+	return v.applyAllTransitions(validators, header, pauseTimeout, idleTimeout, maxValCount, exitThreshold, cfsThreshold)
 }
 
 // applyAllTransitions computes applyTr(N-1) given ABv2(N-1) validators and block N-1 parameters.
@@ -81,7 +81,7 @@ func (v *ValsetModule) applyAllTransitions(
 	validators valset.NodeStateMap,
 	header *types.Header, // parent header (N-1)
 	pauseTimeout, idleTimeout time.Duration,
-	maxValCount, exitThreshold uint64,
+	maxValCount, exitThreshold, cfsThreshold uint64,
 ) (valset.NodeStateMap, error) {
 	var (
 		num       = header.Number.Uint64() + 1
@@ -93,13 +93,30 @@ func (v *ValsetModule) applyAllTransitions(
 	newValidators := v.getViolationTransition(minStake, validators, header.Number.Uint64(), exitThreshold)
 	newValidators = v.getTimeoutTransition(newValidators, idleTimeout, pauseTimeout, blockTime)
 	if v.isVrankEpoch(num) {
-		newValidators = v.getEpochTransition(minStake, newValidators, idleTimeout, int(maxValCount), blockTime)
+		newValidators = v.getEpochTransition(minStake, newValidators, idleTimeout, int(maxValCount), blockTime, header.Number.Uint64(), cfsThreshold)
 	}
 	return newValidators, nil
 }
 
-// TODO-Permissionless: Replace with KIP-227 implementation
-func (v *ValsetModule) isPassVrankTest() bool {
+// isPassVrankTest returns true if the candidate's CFS is below the threshold.
+// CFS < cfsThreshold → pass (CandTesting → ValActive promotion eligible).
+func (v *ValsetModule) isPassVrankTest(addr common.Address, num, cfsThreshold uint64) bool {
+	if cfsThreshold == 0 { // threshold not configured → skip CFS check
+		return true
+	}
+	cfsScores, err := v.VRankModule.GetCFS(num)
+	if err != nil { // CFS unavailable → pass to avoid blocking promotion
+		logger.Warn("isPassVrankTest: GetCFS failed", "num", num, "err", err)
+		return true
+	}
+	cfs, ok := cfsScores[addr]
+	if !ok {
+		return true // no score recorded → pass
+	}
+	if cfs >= cfsThreshold {
+		logger.Info("CFS test failed: demoting to Registered", "addr", addr, "cfs", cfs, "cfsThreshold", cfsThreshold, "num", num)
+		return false
+	}
 	return true
 }
 
@@ -155,7 +172,7 @@ func (v *ValsetModule) writeNodesToContract(
 	if parentHeader == nil {
 		return errParentHeaderNotFound(num)
 	}
-	parentNodes, _, _, _, _, _, err := system.ReadNodeStates(statedb, v.Chain, parentHeader)
+	parentNodes, _, _, _, _, _, _, err := system.ReadNodeStates(statedb, v.Chain, parentHeader)
 	if err != nil {
 		return fmt.Errorf("failed to read ABv2(N-1): %w", err)
 	}

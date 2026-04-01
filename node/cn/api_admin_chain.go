@@ -282,3 +282,18 @@ func (api *AdminChainCNAPI) SetSkipPropose(skip bool) (bool, error) {
 	}
 	return false, errors.New("engine does not support SetSkipPropose")
 }
+
+// SetSkipCandidate enables or disables skipping VRankCandidate broadcast.
+// When enabled, this node will not respond to VRankPreprepare messages,
+// causing CFS scores to increase for this node.
+// TODO-Permissionless: Testing only. Remove before production release.
+func (api *AdminChainCNAPI) SetSkipCandidate(skip bool) (bool, error) {
+	type skipCandidater interface {
+		SetSkipCandidate(bool)
+	}
+	if sc, ok := api.cn.engine.(skipCandidater); ok {
+		sc.SetSkipCandidate(skip)
+		return skip, nil
+	}
+	return false, errors.New("engine does not support SetSkipCandidate")
+}

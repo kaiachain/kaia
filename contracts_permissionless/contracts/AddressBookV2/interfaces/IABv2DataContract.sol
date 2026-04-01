@@ -12,6 +12,7 @@ interface IABv2DataContract {
     struct InitData {
         address initialOwner;
         uint256 exitThreshold;
+        uint256 cfsThreshold;
         uint256 pauseTimeout;
         uint256 idleTimeout;
         uint256 maxValidatorCount;

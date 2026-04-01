@@ -37,6 +37,7 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
         // Set owner and config
         __Ownable_init(d.initialOwner);
         $.exitThreshold = d.exitThreshold;
+        $.cfsThreshold = d.cfsThreshold;
         $.pauseTimeout = d.pauseTimeout;
         $.idleTimeout = d.idleTimeout;
         $.maxValidatorCount = d.maxValidatorCount;
@@ -111,6 +112,11 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
+    function updateCfsThreshold(uint256 newCfsThreshold) external onlyOwner {
+        emit CfsThresholdUpdated(ABv2ConfigLib.CFS_THRESHOLD.updateUint(newCfsThreshold), newCfsThreshold);
+    }
+
+    /// @inheritdoc IAddressBookV2
     function updateKefAddress(address newKefAddress) external onlyOwner {
         emit KefAddressUpdated(ABv2ConfigLib.KEF_ADDRESS.updateAddress(newKefAddress), newKefAddress);
     }
@@ -145,6 +151,11 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
+    function getCfsThreshold() external view returns (uint256) {
+        return _getStorage().cfsThreshold;
+    }
+
+    /// @inheritdoc IAddressBookV2
     function getFundAddresses() external view returns (address, address, address) {
         ABv2Storage storage $ = _getStorage();
         return ($.kefAddress, $.kifAddress, $.kpfAddress);
@@ -158,11 +169,6 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     /// @inheritdoc IAddressBookV2
     function isUsedAddress(address addr) external view returns (bool) {
         return _getStorage().usedAddresses[addr];
-    }
-
-    /// @inheritdoc IAddressBookV2
-    function getScore(uint256 epoch, address nodeId) external view returns (uint256) {
-        return _getStorage().scores[epoch][nodeId];
     }
 
     /// @inheritdoc IAddressBookV2

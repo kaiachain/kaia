@@ -554,6 +554,12 @@ web3._extend({
 			call: 'admin_setSkipPropose',
 			params: 1,
 		}),
+		// TODO-Permissionless: Testing only. Remove before production release.
+		new web3._extend.Method({
+			name: 'setSkipCandidate',
+			call: 'admin_setSkipCandidate',
+			params: 1,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
