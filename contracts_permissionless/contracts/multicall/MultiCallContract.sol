@@ -64,7 +64,7 @@ interface IAddressBookV2 {
     function getFundAddresses() external view returns (address, address, address);
     function getTimeouts() external view returns (uint256 pauseTimeout, uint256 idleTimeout);
     function getMaxCounts() external view returns (uint256 maxValidatorCount, uint256 maxReadyCandidateCount);
-    function getExitThreshold() external view returns (uint256);
+    function getPfsThreshold() external view returns (uint256);
     function getCfsThreshold() external view returns (uint256);
 }
 
@@ -147,7 +147,7 @@ contract MultiCallContract {
             uint256 idleTimeout,
             uint256 maxValidatorCount,
             uint256 maxReadyCandidateCount,
-            uint256 exitThreshold,
+            uint256 pfsThreshold,
             uint256 cfsThreshold
         )
     {
@@ -155,7 +155,7 @@ contract MultiCallContract {
         IAddressBookV2 abv2 = IAddressBookV2(ADDRESS_BOOK_ADDRESS);
         (pauseTimeout, idleTimeout) = abv2.getTimeouts();
         (maxValidatorCount, maxReadyCandidateCount) = abv2.getMaxCounts();
-        exitThreshold = abv2.getExitThreshold();
+        pfsThreshold = abv2.getPfsThreshold();
         cfsThreshold = abv2.getCfsThreshold();
     }
 

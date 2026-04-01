@@ -36,7 +36,7 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
 
         // Set owner and config
         __Ownable_init(d.initialOwner);
-        $.exitThreshold = d.exitThreshold;
+        $.pfsThreshold = d.pfsThreshold;
         $.cfsThreshold = d.cfsThreshold;
         $.pauseTimeout = d.pauseTimeout;
         $.idleTimeout = d.idleTimeout;
@@ -107,8 +107,8 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
-    function updateExitThreshold(uint256 newExitThreshold) external onlyOwner {
-        emit ExitThresholdUpdated(ABv2ConfigLib.EXIT_THRESHOLD.updateUint(newExitThreshold), newExitThreshold);
+    function updatePfsThreshold(uint256 newPfsThreshold) external onlyOwner {
+        emit PfsThresholdUpdated(ABv2ConfigLib.PFS_THRESHOLD.updateUint(newPfsThreshold), newPfsThreshold);
     }
 
     /// @inheritdoc IAddressBookV2
@@ -146,8 +146,8 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
-    function getExitThreshold() external view returns (uint256) {
-        return _getStorage().exitThreshold;
+    function getPfsThreshold() external view returns (uint256) {
+        return _getStorage().pfsThreshold;
     }
 
     /// @inheritdoc IAddressBookV2

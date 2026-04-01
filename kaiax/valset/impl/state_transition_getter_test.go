@@ -430,7 +430,7 @@ func TestGetViolationTransition_PFSSkippedWhenZeroThreshold(t *testing.T) {
 		addr1: {State: valset.ValActive, StakingAmount: aboveMinStake},
 	}
 	result := v.getViolationTransition(testMinStake, validators, 100, 0)
-	assert.Equal(t, valset.ValActive, result[addr1].State, "exitThreshold=0 → PFS check skipped")
+	assert.Equal(t, valset.ValActive, result[addr1].State, "pfsThreshold=0 → PFS check skipped")
 }
 
 func TestGetViolationTransition_PFSNonActiveNotAffected(t *testing.T) {

@@ -169,10 +169,10 @@ func ReadNodeStates(
 		idleTimeout       = time.Duration(res.IdleTimeout.Int64()) * time.Second
 		maxValCount       = res.MaxValidatorCount.Uint64()
 		maxReadyCandCount = res.MaxReadyCandidateCount.Uint64()
-		exitThreshold     = res.ExitThreshold.Uint64()
+		pfsThreshold      = res.PfsThreshold.Uint64()
 		cfsThreshold      = res.CfsThreshold.Uint64()
 	)
-	return validators, pauseTimeout, idleTimeout, maxValCount, maxReadyCandCount, exitThreshold, cfsThreshold, nil
+	return validators, pauseTimeout, idleTimeout, maxValCount, maxReadyCandCount, pfsThreshold, cfsThreshold, nil
 }
 
 // ReadAddressBookV2BlsAll reads BLS public key info for all nodes from AddressBookV2.

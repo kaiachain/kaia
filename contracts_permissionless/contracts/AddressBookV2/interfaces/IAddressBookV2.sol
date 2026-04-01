@@ -128,10 +128,10 @@ interface IAddressBookV2 {
     /// @param newIdleTimeout The new timeout value
     event IdleTimeoutUpdated(uint256 oldIdleTimeout, uint256 newIdleTimeout);
 
-    /// @notice Emitted when the exit threshold is updated
+    /// @notice Emitted when the PFS threshold is updated
     /// @param oldThreshold The previous threshold value
     /// @param newThreshold The new threshold value
-    event ExitThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
+    event PfsThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
 
     /// @notice Emitted when the CFS threshold is updated
     /// @param oldThreshold The previous threshold value
@@ -281,9 +281,9 @@ interface IAddressBookV2 {
     /// @param newMaxReadyCandidateCount The new maximum
     function updateMaxReadyCandidateCount(uint256 newMaxReadyCandidateCount) external;
 
-    /// @notice Updates the proposal failure exit threshold
-    /// @param newExitThreshold The new threshold
-    function updateExitThreshold(uint256 newExitThreshold) external;
+    /// @notice Updates the PFS threshold for validator exit
+    /// @param newPfsThreshold The new threshold
+    function updatePfsThreshold(uint256 newPfsThreshold) external;
 
     /// @notice Updates the CFS threshold for candidate testing
     /// @param newCfsThreshold The new CFS threshold value
@@ -323,9 +323,9 @@ interface IAddressBookV2 {
     /// @return maxReadyCandidateCount The maximum ready candidate count
     function getMaxCounts() external view returns (uint256 maxValidatorCount, uint256 maxReadyCandidateCount);
 
-    /// @notice Returns the proposal failure exit threshold
-    /// @return The exit threshold
-    function getExitThreshold() external view returns (uint256);
+    /// @notice Returns the PFS threshold for validator exit
+    /// @return The PFS threshold
+    function getPfsThreshold() external view returns (uint256);
 
     /// @notice Returns the CFS threshold for candidate testing
     /// @return The CFS threshold

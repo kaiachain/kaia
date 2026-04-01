@@ -56,7 +56,7 @@ import (
 
 const (
 	defaultMaxReadyCandidateCount = 3
-	defaultExitThreshold          = 2
+	defaultPfsThreshold           = 2
 	defaultCfsThreshold           = 300
 )
 
@@ -590,7 +590,7 @@ func allocatePermissionless(ctx *cli.Context, genesisJson *blockchain.Genesis, v
 		StakeAmts: stakeAmts,
 		DataConfig: addressbookv2contract.IABv2DataContractInitData{
 			InitialOwner:           owner,
-			ExitThreshold:          big.NewInt(defaultExitThreshold),
+			PfsThreshold:           big.NewInt(defaultPfsThreshold),
 			CfsThreshold:           big.NewInt(defaultCfsThreshold),
 			PauseTimeout:           big.NewInt(int64(valsetimpl.DefaultValPausedTimeout.Seconds())),
 			IdleTimeout:            big.NewInt(int64(valsetimpl.DefaultValIdleTimeout.Seconds())),

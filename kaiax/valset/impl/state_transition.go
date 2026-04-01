@@ -67,11 +67,11 @@ func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.S
 // computeNodeStates reads ABv2 validators, timeouts, and max counts in a single MultiCall,
 // then applies all transitions.
 func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.Header) (valset.NodeStateMap, error) {
-	validators, pauseTimeout, idleTimeout, maxValCount, _, exitThreshold, cfsThreshold, err := system.ReadNodeStates(statedb, v.Chain, header)
+	validators, pauseTimeout, idleTimeout, maxValCount, _, pfsThreshold, cfsThreshold, err := system.ReadNodeStates(statedb, v.Chain, header)
 	if err != nil {
 		return nil, err
 	}
-	return v.applyAllTransitions(validators, header, pauseTimeout, idleTimeout, maxValCount, exitThreshold, cfsThreshold)
+	return v.applyAllTransitions(validators, header, pauseTimeout, idleTimeout, maxValCount, pfsThreshold, cfsThreshold)
 }
 
 // applyAllTransitions computes applyTr(N-1) given ABv2(N-1) validators and block N-1 parameters.
@@ -81,7 +81,7 @@ func (v *ValsetModule) applyAllTransitions(
 	validators valset.NodeStateMap,
 	header *types.Header, // parent header (N-1)
 	pauseTimeout, idleTimeout time.Duration,
-	maxValCount, exitThreshold, cfsThreshold uint64,
+	maxValCount, pfsThreshold, cfsThreshold uint64,
 ) (valset.NodeStateMap, error) {
 	var (
 		num       = header.Number.Uint64() + 1
@@ -90,7 +90,7 @@ func (v *ValsetModule) applyAllTransitions(
 		blockTime = time.Unix(header.Time.Int64(), 0)
 	)
 
-	newValidators := v.getViolationTransition(minStake, validators, header.Number.Uint64(), exitThreshold)
+	newValidators := v.getViolationTransition(minStake, validators, header.Number.Uint64(), pfsThreshold)
 	newValidators = v.getTimeoutTransition(newValidators, idleTimeout, pauseTimeout, blockTime)
 	if v.isVrankEpoch(num) {
 		newValidators = v.getEpochTransition(minStake, newValidators, idleTimeout, int(maxValCount), blockTime, header.Number.Uint64(), cfsThreshold)
