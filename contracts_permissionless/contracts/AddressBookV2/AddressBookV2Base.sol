@@ -86,7 +86,7 @@ abstract contract AddressBookV2Base is
         mapping(State => uint256) stateCount;
         // Operations
         mapping(address => bool) usedAddresses;
-        uint256 exitThreshold;
+        uint256 pfsThreshold;
         uint256 cfsThreshold;
         uint256 pauseTimeout;
         uint256 idleTimeout;
