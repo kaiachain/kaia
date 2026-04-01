@@ -67,11 +67,11 @@ func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.S
 // computeNodeStates reads ABv2 validators, timeouts, and max counts in a single MultiCall,
 // then applies all transitions.
 func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.Header) (valset.NodeStateMap, error) {
-	validators, pauseTimeout, idleTimeout, maxValCount, _, pfsThreshold, cfsThreshold, err := system.ReadNodeStates(statedb, v.Chain, header)
+	res, err := system.ReadNodeStates(statedb, v.Chain, header)
 	if err != nil {
 		return nil, err
 	}
-	return v.applyAllTransitions(validators, header, pauseTimeout, idleTimeout, maxValCount, pfsThreshold, cfsThreshold)
+	return v.applyAllTransitions(res.Validators, header, res.PauseTimeout, res.IdleTimeout, res.MaxValCount, res.PfsThreshold, res.CfsThreshold)
 }
 
 // applyAllTransitions computes applyTr(N-1) given ABv2(N-1) validators and block N-1 parameters.
@@ -172,11 +172,11 @@ func (v *ValsetModule) writeNodeStateUpdateToContract(
 	if parentHeader == nil {
 		return errParentHeaderNotFound(num)
 	}
-	parentNodes, _, _, _, _, _, _, err := system.ReadNodeStates(statedb, v.Chain, parentHeader)
+	parentRes, err := system.ReadNodeStates(statedb, v.Chain, parentHeader)
 	if err != nil {
 		return fmt.Errorf("failed to read ABv2(N-1): %w", err)
 	}
-	diff := diffNodeStates(parentNodes, currentNodes)
+	diff := diffNodeStates(parentRes.Validators, currentNodes)
 
 	// Skip call if no changes and not an epoch block (epoch blocks need epochValCount update)
 	if len(diff) == 0 && !v.isVrankEpoch(num) {

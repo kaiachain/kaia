@@ -127,21 +127,32 @@ func EncodeNodeStateUpdate(
 	return encodeSystemMessage(rules, AddressBookAddr, data)
 }
 
+// NodeStatesResult holds the result of ReadNodeStates.
+type NodeStatesResult struct {
+	Validators        valset.NodeStateMap
+	PauseTimeout      time.Duration
+	IdleTimeout       time.Duration
+	MaxValCount       uint64
+	MaxReadyCandCount uint64
+	PfsThreshold      uint64
+	CfsThreshold      uint64
+}
+
 // ReadNodeStates reads all validator states, timeouts, max counts, and thresholds from ABv2 in a single MultiCall.
 func ReadNodeStates(
 	statedb *state.StateDB,
 	chain backends.BlockChainForCaller,
 	header *types.Header,
-) (valset.NodeStateMap, time.Duration, time.Duration, uint64, uint64, uint64, uint64, error) {
+) (*NodeStatesResult, error) {
 	caller, err := NewMultiCallContractCaller(statedb, chain, header)
 	if err != nil {
-		return nil, 0, 0, 0, 0, 0, 0, err
+		return nil, err
 	}
 	opts := &bind.CallOpts{BlockNumber: header.Number}
 
 	res, err := caller.MultiCallNodeStatesPermissionless(opts)
 	if err != nil {
-		return nil, 0, 0, 0, 0, 0, 0, err
+		return nil, err
 	}
 
 	validators := make(valset.NodeStateMap)
@@ -164,15 +175,15 @@ func ReadNodeStates(
 		validators[p.NodeId] = vs
 	}
 
-	var (
-		pauseTimeout      = time.Duration(res.PauseTimeout.Int64()) * time.Second
-		idleTimeout       = time.Duration(res.IdleTimeout.Int64()) * time.Second
-		maxValCount       = res.MaxValidatorCount.Uint64()
-		maxReadyCandCount = res.MaxReadyCandidateCount.Uint64()
-		pfsThreshold      = res.PfsThreshold.Uint64()
-		cfsThreshold      = res.CfsThreshold.Uint64()
-	)
-	return validators, pauseTimeout, idleTimeout, maxValCount, maxReadyCandCount, pfsThreshold, cfsThreshold, nil
+	return &NodeStatesResult{
+		Validators:        validators,
+		PauseTimeout:      time.Duration(res.PauseTimeout.Int64()) * time.Second,
+		IdleTimeout:       time.Duration(res.IdleTimeout.Int64()) * time.Second,
+		MaxValCount:       res.MaxValidatorCount.Uint64(),
+		MaxReadyCandCount: res.MaxReadyCandidateCount.Uint64(),
+		PfsThreshold:      res.PfsThreshold.Uint64(),
+		CfsThreshold:      res.CfsThreshold.Uint64(),
+	}, nil
 }
 
 // ReadAddressBookV2BlsAll reads BLS public key info for all nodes from AddressBookV2.

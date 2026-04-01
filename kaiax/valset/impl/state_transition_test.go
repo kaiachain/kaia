@@ -150,9 +150,9 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 	header1 := chain.GetHeaderByNumber(1)
 	statedb1, err := chain.StateAt(header1.Root)
 	require.NoError(t, err)
-	validators, _, _, _, _, _, _, err := system.ReadNodeStates(statedb1, chain, header1)
+	res, err := system.ReadNodeStates(statedb1, chain, header1)
 	require.NoError(t, err)
-	require.Equal(t, valset.ValPaused, validators[config.NodeIds[0]].State, "ABv2(1) should have ValPaused after pause tx")
+	require.Equal(t, valset.ValPaused, res.Validators[config.NodeIds[0]].State, "ABv2(1) should have ValPaused after pause tx")
 
 	newModule := func(t *testing.T) *ValsetModule {
 		ctrl := gomock.NewController(t)
@@ -237,8 +237,9 @@ func TestReadGetAllValidators(t *testing.T) {
 	require.NoError(t, err)
 
 	// Before transition(initial state): all validators are ValActive
-	validators, _, _, _, _, _, _, err := system.ReadNodeStates(statedb, chain, header)
+	res, err := system.ReadNodeStates(statedb, chain, header)
 	require.NoError(t, err)
+	validators := res.Validators
 	assert.Len(t, validators, 3)
 
 	for _, nodeId := range config.NodeIds {
@@ -276,8 +277,9 @@ func TestReadGetAllValidators(t *testing.T) {
 	require.NoError(t, err)
 
 	// After transition: config.NodeIds[0] should be ValPaused
-	validators, _, _, _, _, _, _, err = system.ReadNodeStates(statedb, chain, header)
+	res, err = system.ReadNodeStates(statedb, chain, header)
 	require.NoError(t, err)
+	validators = res.Validators
 	assert.Len(t, validators, 3)
 
 	vs0 := validators[config.NodeIds[0]]
