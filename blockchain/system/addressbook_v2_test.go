@@ -53,7 +53,7 @@ func TestInstallAddressBookV2(t *testing.T) {
 	assert.Equal(t, lpad32(logicAddr), implSlot)
 }
 
-func TestEncodeWriteNodes(t *testing.T) {
+func TestEncodeNodeStateUpdate(t *testing.T) {
 	rules := params.Rules{IsPrague: true} // enable intrinsic gas calculation
 
 	tests := []struct {
@@ -148,7 +148,7 @@ func TestEncodeWriteNodes(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			from, msg, err := EncodeWriteNodes(rules, tc.validators)
+			from, msg, err := EncodeNodeStateUpdate(rules, tc.validators)
 			require.NoError(t, err)
 
 			// from is always SystemAddress
