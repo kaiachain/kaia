@@ -60,6 +60,10 @@ const (
 
 	testCFSBlockNum  = uint64(100)
 	testCFSThreshold = uint64(10)
+
+	// noSlotLimit disables slot checks in tests that don't test slot math.
+	noSlotLimit = uint64(100)
+	noMinActive = uint64(0)
 )
 
 var (
@@ -381,7 +385,7 @@ func TestGetViolationTransition_ValActiveBelowMinStake(t *testing.T) {
 		addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
 		addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
 	}
-	result := v.getViolationTransition(testMinStake, validators, 0, 0)
+	result := v.getViolationTransition(testMinStake, validators, 0, 0, noSlotLimit, noMinActive)
 	assert.Equal(t, valset.ValExiting, result[addr1].State)
 	assert.Equal(t, valset.ValActive, result[addr2].State)
 }
@@ -397,7 +401,7 @@ func TestGetViolationTransition_NonActiveNotAffected(t *testing.T) {
 		addr1: {State: valset.CandReady, StakingAmount: belowMinStake},
 		addr2: {State: valset.ValInactive, StakingAmount: belowMinStake},
 	}
-	result := v.getViolationTransition(testMinStake, validators, 0, 0)
+	result := v.getViolationTransition(testMinStake, validators, 0, 0, noSlotLimit, noMinActive)
 	assert.Equal(t, valset.CandReady, result[addr1].State)
 	assert.Equal(t, valset.ValInactive, result[addr2].State)
 }
@@ -414,7 +418,7 @@ func TestGetViolationTransition_PFSAboveThreshold(t *testing.T) {
 		addr1: {State: valset.ValActive, StakingAmount: aboveMinStake},
 		addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
 	}
-	result := v.getViolationTransition(testMinStake, validators, 100, 2)
+	result := v.getViolationTransition(testMinStake, validators, 100, 2, noSlotLimit, noMinActive)
 	assert.Equal(t, valset.ValExiting, result[addr1].State, "PFS(3) >= threshold(2) → ValExiting (severe)")
 	assert.Equal(t, valset.ValPaused, result[addr2].State, "PFS(1) > 0, < threshold(2) → ValPaused (minor)")
 }
@@ -429,7 +433,7 @@ func TestGetViolationTransition_PFSSkippedWhenZeroThreshold(t *testing.T) {
 	validators := valset.NodeStateMap{
 		addr1: {State: valset.ValActive, StakingAmount: aboveMinStake},
 	}
-	result := v.getViolationTransition(testMinStake, validators, 100, 0)
+	result := v.getViolationTransition(testMinStake, validators, 100, 0, noSlotLimit, noMinActive)
 	assert.Equal(t, valset.ValActive, result[addr1].State, "pfsThreshold=0 → PFS check skipped")
 }
 
@@ -445,9 +449,117 @@ func TestGetViolationTransition_PFSNonActiveNotAffected(t *testing.T) {
 		addr1: {State: valset.CandReady, StakingAmount: aboveMinStake},
 		addr2: {State: valset.ValPaused, StakingAmount: aboveMinStake},
 	}
-	result := v.getViolationTransition(testMinStake, validators, 100, 2)
+	result := v.getViolationTransition(testMinStake, validators, 100, 2, noSlotLimit, noMinActive)
 	assert.Equal(t, valset.CandReady, result[addr1].State, "CandReady not affected by PFS")
 	assert.Equal(t, valset.ValPaused, result[addr2].State, "ValPaused not affected by PFS")
+}
+
+// ============================================================
+// TestGetViolationTransition with SlotLimits
+//
+// Uses epochValCount=4 (4 validators at epoch start).
+// SlotMath (see contracts/libraries/SlotMath.sol):
+//   f(n)              = (n-1)/3            → f(4)=1
+//   maxSlotAvailable  = max(1, f(n)/2)     → max(1, 0)=1  (up to 1 ValPaused, up to 1 ValExiting independently)
+//   minActiveCount    = max(2f+1, n-2*max) → max(3, 2)=3  (at least 3 ValActive required)
+//
+// With n=4, maxSlot=1 for each but minActive=3 means only 1 total can leave ValActive
+// (either 1 paused or 1 exiting, not both), since 4-2=2 < minActive=3.
+// ============================================================
+
+func countState(validators valset.NodeStateMap, state valset.State) int {
+	count := 0
+	for _, val := range validators {
+		if val.State == state {
+			count++
+		}
+	}
+	return count
+}
+
+func TestGetViolationTransition_SlotLimits(t *testing.T) {
+	const (
+		slotMax      = uint64(1) // maxSlotAvailable(4)
+		minActive    = uint64(3) // minActiveCount(4)
+		pfsThreshold = uint64(2)
+	)
+
+	t.Run("PFS minor: only 1 paused when 2 violate", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		v := newTestValsetModule(ctrl)
+		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+		mockVRank.EXPECT().GetPfReport(uint64(100)).Return([]common.Address{addr1}, nil)
+		mockVRank.EXPECT().GetPFS(uint64(100)).Return(map[common.Address]uint64{addr1: pfsThreshold - 1, addr2: pfsThreshold - 1}, nil)
+		v.VRankModule = mockVRank
+
+		validators := valset.NodeStateMap{
+			addr1: {State: valset.ValActive, StakingAmount: aboveMinStake},
+			addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
+			addr3: {State: valset.ValActive, StakingAmount: aboveMinStake},
+			addr4: {State: valset.ValActive, StakingAmount: aboveMinStake},
+		}
+		result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold, slotMax, minActive)
+
+		assert.Equal(t, 1, countState(result, valset.ValPaused), "only 1 slot available for ValPaused")
+		assert.Equal(t, 3, countState(result, valset.ValActive), "remaining 3 should stay ValActive")
+	})
+
+	t.Run("PFS severe: only 1 exited when 2 violate", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		v := newTestValsetModule(ctrl)
+		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+		mockVRank.EXPECT().GetPfReport(uint64(100)).Return([]common.Address{addr1}, nil)
+		mockVRank.EXPECT().GetPFS(uint64(100)).Return(map[common.Address]uint64{addr1: pfsThreshold + 1, addr2: pfsThreshold + 1}, nil)
+		v.VRankModule = mockVRank
+
+		validators := valset.NodeStateMap{
+			addr1: {State: valset.ValActive, StakingAmount: aboveMinStake},
+			addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
+			addr3: {State: valset.ValActive, StakingAmount: aboveMinStake},
+			addr4: {State: valset.ValActive, StakingAmount: aboveMinStake},
+		}
+		result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold, slotMax, minActive)
+
+		assert.Equal(t, 1, countState(result, valset.ValExiting), "only 1 slot available for ValExiting")
+		assert.Equal(t, 3, countState(result, valset.ValActive), "remaining 3 should stay ValActive")
+	})
+
+	t.Run("minStake violation: skip when slot full", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		v := newTestValsetModule(ctrl)
+		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+		mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
+		v.VRankModule = mockVRank
+
+		validators := valset.NodeStateMap{
+			addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
+			addr2: {State: valset.ValActive, StakingAmount: belowMinStake},
+			addr3: {State: valset.ValActive, StakingAmount: aboveMinStake},
+			addr4: {State: valset.ValActive, StakingAmount: aboveMinStake},
+		}
+		result := v.getViolationTransition(testMinStake, validators, 0, 0, slotMax, minActive)
+
+		assert.Equal(t, 1, countState(result, valset.ValExiting), "only 1 can exit due to slot limit")
+		assert.Equal(t, 3, countState(result, valset.ValActive), "remaining 3 should stay ValActive")
+	})
+
+	t.Run("slot already occupied: no more transitions", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		v := newTestValsetModule(ctrl)
+		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+		mockVRank.EXPECT().GetPfReport(uint64(100)).Return([]common.Address{addr1}, nil)
+		mockVRank.EXPECT().GetPFS(uint64(100)).Return(map[common.Address]uint64{addr1: pfsThreshold - 1}, nil)
+		v.VRankModule = mockVRank
+
+		validators := valset.NodeStateMap{
+			addr1: {State: valset.ValActive, StakingAmount: aboveMinStake},
+			addr2: {State: valset.ValPaused, StakingAmount: aboveMinStake}, // already paused
+			addr3: {State: valset.ValActive, StakingAmount: aboveMinStake},
+			addr4: {State: valset.ValActive, StakingAmount: aboveMinStake},
+		}
+		result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold, slotMax, minActive)
+		assert.Equal(t, valset.ValActive, result[addr1].State, "paused slot full, minor violation skipped")
+	})
 }
 
 // ============================================================
@@ -574,7 +686,7 @@ func TestApplyAllTransitions(t *testing.T) {
 			v := newTestApplyAllTransitions(ctrl)
 			parentHeader := &types.Header{Number: big.NewInt(int64(tc.num - 1)), Time: big.NewInt(testBlockTime.Unix())}
 
-			result, err := v.applyAllTransitions(tc.input, parentHeader, DefaultValPausedTimeout, DefaultValIdleTimeout, DefaultActiveValidatorCount, 0, 0)
+			result, err := v.applyAllTransitions(tc.input, parentHeader, DefaultValPausedTimeout, DefaultValIdleTimeout, DefaultActiveValidatorCount, 0, 0, noSlotLimit, noMinActive)
 			assert.NoError(t, err)
 			for addr, expectedState := range tc.expected {
 				assert.Equal(t, expectedState, result[addr].State, "addr=%s", addr.Hex())

@@ -136,6 +136,8 @@ type NodeStatesResult struct {
 	MaxReadyCandCount uint64
 	PfsThreshold      uint64
 	CfsThreshold      uint64
+	MaxSlotAvailable  uint64
+	MinActiveCount    uint64
 }
 
 // ReadNodeStates reads all validator states, timeouts, max counts, and thresholds from ABv2 in a single MultiCall.
@@ -183,6 +185,8 @@ func ReadNodeStates(
 		MaxReadyCandCount: res.MaxReadyCandidateCount.Uint64(),
 		PfsThreshold:      res.PfsThreshold.Uint64(),
 		CfsThreshold:      res.CfsThreshold.Uint64(),
+		MaxSlotAvailable:  res.MaxSlotAvailable.Uint64(),
+		MinActiveCount:    res.MinActiveCount.Uint64(),
 	}, nil
 }
 
