@@ -556,6 +556,13 @@ var (
 		Aliases: []string{"genesis.hardfork.permissionless-compatible-blocknumber"},
 	}
 
+	vrankEpochFlag = &cli.Uint64Flag{
+		Name:    "vrank-epoch",
+		Usage:   "VRank epoch block interval for permissionless mode (default: 86400)",
+		Value:   params.DefaultVRankEpoch,
+		Aliases: []string{"genesis.vrank-epoch"},
+	}
+
 	kip113ProxyAddressFlag = &cli.StringFlag{
 		Name:    "kip113-proxy-contract-address",
 		Usage:   "kip113 proxy contract address",
