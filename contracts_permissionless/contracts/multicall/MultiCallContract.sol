@@ -66,6 +66,7 @@ interface IAddressBookV2 {
     function getMaxCounts() external view returns (uint256 maxValidatorCount, uint256 maxReadyCandidateCount);
     function getPfsThreshold() external view returns (uint256);
     function getCfsThreshold() external view returns (uint256);
+    function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount);
 }
 
 // MultiCallContract provides a function to retrieve the any information needed for the Kaia client.
@@ -148,7 +149,9 @@ contract MultiCallContract {
             uint256 maxValidatorCount,
             uint256 maxReadyCandidateCount,
             uint256 pfsThreshold,
-            uint256 cfsThreshold
+            uint256 cfsThreshold,
+            uint256 maxSlotAvailable,
+            uint256 minActiveCount
         )
     {
         (profiles, stakingAmounts) = _getProfilesAndStaking();
@@ -157,6 +160,7 @@ contract MultiCallContract {
         (maxValidatorCount, maxReadyCandidateCount) = abv2.getMaxCounts();
         pfsThreshold = abv2.getPfsThreshold();
         cfsThreshold = abv2.getCfsThreshold();
+        (maxSlotAvailable, minActiveCount) = abv2.getSlotLimits();
     }
 
     function _getProfilesAndStaking() private view returns (Profile[] memory profiles, uint256[] memory stakingAmounts) {
