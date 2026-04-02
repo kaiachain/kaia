@@ -138,7 +138,7 @@ func makeRewardTransactions(c *deployedContract, accountMap *AccountMap, bcdata 
 	for i, addr := range bcdata.addrs {
 		fromNonces[i] = accountMap.GetNonce(*addr)
 	}
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		idx := i % numAddrs
 
 		addr := bcdata.addrs[idx]
@@ -183,7 +183,7 @@ func makeBalanceOf(c *deployedContract, accountMap *AccountMap, bcdata *BCData,
 	for i, addr := range bcdata.addrs {
 		fromNonces[i] = accountMap.GetNonce(*addr)
 	}
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		idx := i % numAddrs
 
 		addr := bcdata.addrs[idx]
@@ -245,7 +245,7 @@ func makeQuickSortTransactions(c *deployedContract, accountMap *AccountMap, bcda
 	for i, addr := range bcdata.addrs {
 		fromNonces[i] = accountMap.GetNonce(*addr)
 	}
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		idx := i % numAddrs
 
 		data, err := abii.Pack("sort", big.NewInt(100), big.NewInt(123))
@@ -464,7 +464,7 @@ func makeStorageTrieTransactions(c *deployedContract, accountMap *AccountMap, bc
 	}
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		idx := i % numAddrs
 
 		// function insertIdentity(string _serialNumber, string _publicKey, string _hash)

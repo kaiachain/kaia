@@ -45,7 +45,7 @@ func TestMigration_ContinuousRestartAndMigration(t *testing.T) {
 	stateTriePath := []byte("statetrie")
 
 	numTxs := []int{10, 100}
-	for i := 0; i < len(numTxs); i++ {
+	for i := range numTxs {
 		numTx := numTxs[i%len(numTxs)]
 		t.Log("attempt", strconv.Itoa(i), " : deployRandomTxs of", strconv.Itoa(numTx))
 		deployRandomTxs(t, node.TxPool(), chainID, richAccount, numTx)
@@ -112,7 +112,7 @@ func writeRandomValueToStateTrieDB(t *testing.T, dbm database.DBManager) map[str
 	batch := dbm.NewBatch(database.StateTrieDB)
 	entries := make(map[string]string, 10)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		key, value := common.MakeRandomBytes(common.HashLength), common.MakeRandomBytes(400)
 		dbm.PutTrieNodeToBatch(batch, common.BytesToExtHash(key), value)
 		entries[string(key)] = string(value)
@@ -124,7 +124,7 @@ func writeRandomValueToStateTrieDB(t *testing.T, dbm database.DBManager) map[str
 
 func checkIfStoredInDB(t *testing.T, numShard uint, dir string, entries map[string]string) {
 	dbs := make([]*leveldb.DB, numShard)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		var err error
 		dbs[i], err = leveldb.OpenFile(dir+"/"+strconv.Itoa(i), nil)
 		assert.NoError(t, err)
@@ -132,7 +132,7 @@ func checkIfStoredInDB(t *testing.T, numShard uint, dir string, entries map[stri
 	}
 	for k, v := range entries {
 		datas := make([][]byte, 4)
-		for i := 0; i < 4; i++ {
+		for i := range 4 {
 			datas[i], _ = dbs[i].Get([]byte(k), nil)
 		}
 		assert.Contains(t, datas, []byte(v), "value written in stateDB does not actually exist in DB")

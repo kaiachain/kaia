@@ -194,7 +194,7 @@ func New(getBlock blockRetrievalFn, verifyHeader headerVerifierFn, broadcastBloc
 func (f *Fetcher) Start() {
 	go f.loop()
 
-	for i := 0; i < numInsertWorkers; i++ {
+	for range numInsertWorkers {
 		go f.insertWorker()
 	}
 }

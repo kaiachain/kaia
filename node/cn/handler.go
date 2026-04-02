@@ -103,9 +103,9 @@ func errResp(code errCode, format string, v ...interface{}) error {
 type ProtocolManager struct {
 	networkId uint64
 
-	fastSync  uint32 // Flag whether fast sync is enabled (gets disabled if we already have blocks)
-	snapSync  uint32 // Flag whether fast sync should operate on top of the snap protocol
-	acceptTxs uint32 // Flag whether we're considered synchronised (enables transaction processing)
+	fastSync  uint32        // Flag whether fast sync is enabled (gets disabled if we already have blocks)
+	snapSync  uint32        // Flag whether fast sync should operate on top of the snap protocol
+	acceptTxs atomic.Uint32 // Flag whether we're considered synchronised (enables transaction processing)
 
 	txpool      work.TxPool
 	blockchain  work.BlockChain
@@ -354,7 +354,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 				logger.Warn("Discarded bad propagated block", "number", blocks[0].Number(), "hash", blocks[0].Hash())
 				return 0, nil
 			}
-			atomic.StoreUint32(&manager.acceptTxs, 1) // Mark initial sync done on any fetcher import
+			manager.acceptTxs.Store(1) // Mark initial sync done on any fetcher import
 			return manager.blockchain.InsertChain(blocks)
 		}
 		manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, manager.BroadcastBlockHash, heighter, inserter, manager.removePeer)
@@ -1525,7 +1525,7 @@ func handleNewBlockMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 // handleTxMsg handles transaction-propagating message.
 func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	// Transactions arrived, make sure we have a valid and fresh chain to handle them
-	if atomic.LoadUint32(&pm.acceptTxs) == 0 {
+	if pm.acceptTxs.Load() == 0 {
 		return nil
 	}
 	// Transactions can be processed, parse all of them and deliver to the pool
@@ -1802,7 +1802,7 @@ func samplingPeers(peers []Peer, pickSize int) []Peer {
 
 	picker := rand.New(rand.NewSource(time.Now().Unix()))
 	peerCount := len(peers)
-	for i := 0; i < peerCount; i++ {
+	for i := range peerCount {
 		randIndex := picker.Intn(peerCount)
 		peers[i], peers[randIndex] = peers[randIndex], peers[i]
 	}
@@ -2000,7 +2000,7 @@ func (pm *ProtocolManager) ProtocolVersion() int {
 }
 
 func (pm *ProtocolManager) SetAcceptTxs() {
-	atomic.StoreUint32(&pm.acceptTxs, 1)
+	pm.acceptTxs.Store(1)
 }
 
 func (pm *ProtocolManager) NodeType() common.ConnType {

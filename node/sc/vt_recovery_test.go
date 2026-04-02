@@ -110,7 +110,7 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 
 	// 1. Init dummy chain and do some value transfers.
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
 		}
 	})
@@ -180,9 +180,9 @@ func TestKLAYTransferLongRangeRecovery(t *testing.T) {
 
 	// 1. Init dummy chain and do some value transfers.
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
-			for i := uint64(0); i < filterLogsStride; i++ {
+			for range filterLogsStride {
 				info.sim.Commit()
 			}
 		}
@@ -247,7 +247,7 @@ func TestBasicTokenTransferRecovery(t *testing.T) {
 	}()
 
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[ERC20].request(info, info.localInfo)
 		}
 	})
@@ -287,7 +287,7 @@ func TestBasicNFTTransferRecovery(t *testing.T) {
 	}()
 
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[ERC721].request(info, info.localInfo)
 		}
 	})
@@ -326,7 +326,7 @@ func TestMethodRecover(t *testing.T) {
 	}()
 
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
 		}
 	})
@@ -364,7 +364,7 @@ func TestMethodStop(t *testing.T) {
 	}()
 
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
 		}
 	})
@@ -401,7 +401,7 @@ func TestFlagVTRecovery(t *testing.T) {
 	}()
 
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
 		}
 	})
@@ -428,7 +428,7 @@ func TestAlreadyStartedVTRecovery(t *testing.T) {
 		}
 	}()
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
 		}
 	})
@@ -456,7 +456,7 @@ func TestScenarioMainChainRecovery(t *testing.T) {
 	}()
 
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[KAIA].request(info, info.remoteInfo)
 		}
 	})
@@ -494,7 +494,7 @@ func TestScenarioAutomaticRecovery(t *testing.T) {
 	}()
 
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
 		}
 	})
@@ -535,7 +535,7 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 
 	// 1. Init dummy chain and do some value transfers.
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
 		}
 	})
@@ -754,7 +754,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	assert.Nil(t, bind.CheckWaitMined(sim, tx))
 
 	// Register an NFT to chain account (minting)
-	for i := 0; i < testTxCount; i++ {
+	for i := range testTxCount {
 		opts := &bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}
 		tx, err = nftLocal.MintWithTokenURI(opts, cAcc.From, big.NewInt(testNFT+int64(i)), "testURI")
 		assert.NoError(t, err)

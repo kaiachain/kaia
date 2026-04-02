@@ -42,7 +42,7 @@ func TestTokenPublicVariables(t *testing.T) {
 	}()
 
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
 		}
 	})
@@ -89,7 +89,7 @@ func TestNFTPublicVariables(t *testing.T) {
 	}()
 
 	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
+		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
 		}
 	})

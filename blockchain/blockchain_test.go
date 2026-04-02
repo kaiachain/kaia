@@ -399,11 +399,11 @@ func testReorgShort(t *testing.T, full bool) {
 	// we need a fairly long chain of blocks with different difficulties for a short
 	// one to become heavyer than a long one. The 96 is an empirical value.
 	easy := make([]int64, 96)
-	for i := 0; i < len(easy); i++ {
+	for i := range easy {
 		easy[i] = 60
 	}
 	diff := make([]int64, len(easy)-1)
-	for i := 0; i < len(diff); i++ {
+	for i := range diff {
 		diff[i] = -9
 	}
 	// With faker, the longer chain (96 blocks) wins
@@ -674,7 +674,7 @@ func TestFastVsFullChains(t *testing.T) {
 		t.Fatalf("failed to insert receipt %d: %v", n, err)
 	}
 	// Iterate over all chain data components, and cross reference
-	for i := 0; i < len(blocks); i++ {
+	for i := range blocks {
 		bnum, num, hash := blocks[i].Number(), blocks[i].NumberU64(), blocks[i].Hash()
 
 		if ftd, atd := fast.GetTdByHash(hash), archive.GetTdByHash(hash); ftd.Cmp(atd) != 0 {
@@ -954,7 +954,7 @@ func TestReorgSideEvent(t *testing.T) {
 	const trials = 4
 
 	var lastErr error
-	for i := 0; i < trials; i++ {
+	for range trials {
 		if lastErr = testReorgSideEvent(t); lastErr == nil {
 			return // success
 		}
@@ -1228,7 +1228,7 @@ func TestBlockchainHeaderchainReorgConsistency(t *testing.T) {
 
 	// Generate a bunch of fork blocks, each side forking from the canonical chain
 	forks := make([]*types.Block, len(blocks))
-	for i := 0; i < len(forks); i++ {
+	for i := range forks {
 		parent := genesis
 		if i > 0 {
 			parent = blocks[i-1]
@@ -1245,7 +1245,7 @@ func TestBlockchainHeaderchainReorgConsistency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create tester chain: %v", err)
 	}
-	for i := 0; i < len(blocks); i++ {
+	for i := range blocks {
 		if _, err := chain.InsertChain(blocks[i : i+1]); err != nil {
 			t.Fatalf("block %d: failed to insert into chain: %v", i, err)
 		}
@@ -1273,7 +1273,7 @@ func TestTrieForkGC(t *testing.T) {
 
 	// Generate a bunch of fork blocks, each side forking from the canonical chain
 	forks := make([]*types.Block, len(blocks))
-	for i := 0; i < len(forks); i++ {
+	for i := range forks {
 		parent := genesis
 		if i > 0 {
 			parent = blocks[i-1]
@@ -1289,7 +1289,7 @@ func TestTrieForkGC(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create tester chain: %v", err)
 	}
-	for i := 0; i < len(blocks); i++ {
+	for i := range blocks {
 		if _, err := chain.InsertChain(blocks[i : i+1]); err != nil {
 			t.Fatalf("block %d: failed to insert into chain: %v", i, err)
 		}
@@ -1298,7 +1298,7 @@ func TestTrieForkGC(t *testing.T) {
 		}
 	}
 	// Dereference all the recent tries and ensure no past trie is left in
-	for i := 0; i < DefaultTriesInMemory; i++ {
+	for i := range DefaultTriesInMemory {
 		chain.stateCache.TrieDB().Dereference(blocks[len(blocks)-1-i].Root())
 		chain.stateCache.TrieDB().Dereference(forks[len(blocks)-1-i].Root())
 	}
@@ -1669,7 +1669,7 @@ func benchmarkLargeNumberOfValueToNonexisting(b *testing.B, numTxs, numBlocks in
 	genesis := gspec.MustCommit(db)
 
 	blockGenerator := func(i int, block *BlockGen) {
-		for txi := 0; txi < numTxs; txi++ {
+		for txi := range numTxs {
 			uniq := uint64(i*numTxs + txi)
 			recipient := recipientFn(uniq)
 			// recipient := common.BigToAddress(big.NewInt(0).SetUint64(1337 + uniq))

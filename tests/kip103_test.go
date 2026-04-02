@@ -85,7 +85,7 @@ func TestRebalanceTreasury_EOA(t *testing.T) {
 	totalNewbieAlloc := state.GetBalance(validator.Addr)
 	t.Log("Total Newbie amount: ", totalNewbieAlloc)
 
-	for i := 0; i < numNewbie; i++ {
+	for i := range numNewbie {
 		newbieAccs[i] = genKaiaLegacyAccount(t)
 		newbieAllocs[i] = new(big.Int).Div(totalNewbieAlloc, big.NewInt(2))
 		totalNewbieAlloc.Sub(totalNewbieAlloc, newbieAllocs[i])

@@ -1055,7 +1055,7 @@ func makeValidators(num int, isWorkOnSingleHost bool, nodeAddrs []common.Address
 ) []*ValidatorInfo {
 	var validatorPort uint16
 	var validators []*ValidatorInfo
-	for i := 0; i < num; i++ {
+	for i := range num {
 		if isWorkOnSingleHost {
 			validatorPort = lastIssuedPortNum
 			lastIssuedPortNum++
@@ -1084,7 +1084,7 @@ func makeValidatorsWithIp(num int, isWorkOnSingleHost bool, nodeAddrs []common.A
 ) []*ValidatorInfo {
 	var validatorPort uint16
 	var validators []*ValidatorInfo
-	for i := 0; i < num; i++ {
+	for i := range num {
 		if isWorkOnSingleHost {
 			validatorPort = lastIssuedPortNum
 			lastIssuedPortNum++
@@ -1137,7 +1137,7 @@ func makeProxys(ctx *cli.Context, num int, isWorkOnSingleHost bool) ([]*Validato
 	var p2pPort uint16
 	var proxies []*ValidatorInfo
 	var proxyNodeKeys []string
-	for i := 0; i < num; i++ {
+	for i := range num {
 		if isWorkOnSingleHost {
 			p2pPort = lastIssuedPortNum
 			lastIssuedPortNum++
@@ -1182,7 +1182,7 @@ func makeEndpoints(ctx *cli.Context, num int, isWorkOnSingleHost bool) ([]*Valid
 	var p2pPort uint16
 	var endpoints []*ValidatorInfo
 	var endpointsNodeKeys []string
-	for i := 0; i < num; i++ {
+	for i := range num {
 		if isWorkOnSingleHost {
 			p2pPort = lastIssuedPortNum
 			lastIssuedPortNum++
@@ -1213,7 +1213,7 @@ func makeSCNs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 	var p2pPort uint16
 	var scn []*ValidatorInfo
 	var scnKeys []string
-	for i := 0; i < num; i++ {
+	for i := range num {
 		if isWorkOnSingleHost {
 			p2pPort = lastIssuedPortNum
 			lastIssuedPortNum++
@@ -1244,7 +1244,7 @@ func makeSPNs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 	var p2pPort uint16
 	var proxies []*ValidatorInfo
 	var proxyNodeKeys []string
-	for i := 0; i < num; i++ {
+	for i := range num {
 		if isWorkOnSingleHost {
 			p2pPort = lastIssuedPortNum
 			lastIssuedPortNum++
@@ -1275,7 +1275,7 @@ func makeSENs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 	var p2pPort uint16
 	var endpoints []*ValidatorInfo
 	var endpointsNodeKeys []string
-	for i := 0; i < num; i++ {
+	for i := range num {
 		if isWorkOnSingleHost {
 			p2pPort = lastIssuedPortNum
 			lastIssuedPortNum++

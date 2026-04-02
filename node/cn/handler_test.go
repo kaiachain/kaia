@@ -25,6 +25,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"slices"
 	"testing"
 	"time"
 
@@ -1006,7 +1007,7 @@ func TestProtocolManager_SetWsEndPoint(t *testing.T) {
 func TestBroadcastTxsSortedByPriceAndTime(t *testing.T) {
 	// Generate a batch of accounts to start with
 	keys := make([]*ecdsa.PrivateKey, 10)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 	}
 	signer := types.LatestSignerForChainID(big.NewInt(1))
@@ -1078,7 +1079,7 @@ func TestBroadcastTxsSortedByPriceAndTime(t *testing.T) {
 func TestReBroadcastTxsSortedByTime(t *testing.T) {
 	// Generate a batch of accounts to start with
 	keys := make([]*ecdsa.PrivateKey, 10)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 	}
 	signer := types.LatestSignerForChainID(big.NewInt(1))
@@ -1147,12 +1148,7 @@ func TestReBroadcastTxsSortedByTime(t *testing.T) {
 }
 
 func contains(addrs []common.Address, item common.Address) bool {
-	for _, a := range addrs {
-		if a == item {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(addrs, item)
 }
 
 func createAndRegisterPeers(mockCtrl *gomock.Controller, peers *peerSet) (*MockPeer, *MockPeer, *MockPeer) {
@@ -1226,7 +1222,7 @@ func TestGetBlockHeaders(t *testing.T) {
 		unknown[i] = byte(i)
 	}
 	getHashes := func(from, limit uint64) (hashes []common.Hash) {
-		for i := uint64(0); i < limit; i++ {
+		for i := range limit {
 			hashes = append(hashes, backend.GetBlockByNumber(from-1-i).Hash())
 		}
 		return hashes

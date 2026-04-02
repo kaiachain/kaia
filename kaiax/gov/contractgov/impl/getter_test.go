@@ -25,7 +25,7 @@ func createSimulateBackend(t *testing.T) ([]*bind.TransactOpts, *backends.Simula
 	// Create accounts and simulated blockchain
 	accounts := []*bind.TransactOpts{}
 	alloc := blockchain.GenesisAlloc{}
-	for i := 0; i < 1; i++ {
+	for range 1 {
 		key, _ := crypto.GenerateKey()
 		account := bind.NewKeyedTransactor(key)
 		account.GasLimit = 10000000

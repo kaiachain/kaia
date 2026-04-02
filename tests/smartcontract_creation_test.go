@@ -48,7 +48,7 @@ func makeContractCreationTransactions(bcdata *BCData, accountMap *AccountMap, si
 
 	txs := make(types.Transactions, 0, numTransactions)
 
-	for i := 0; i < numTransactions; i++ {
+	for i := range numTransactions {
 		idx := i % numAddrs
 
 		txamount := new(big.Int).SetInt64(0)

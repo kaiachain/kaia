@@ -1216,7 +1216,7 @@ func SetReceiptsData(config *params.ChainConfig, block *types.Block, receipts ty
 		return errors.New("transaction and receipt count mismatch")
 	}
 
-	for j := 0; j < len(receipts); j++ {
+	for j := range receipts {
 		// The transaction hash can be retrieved from the transaction itself
 		receipts[j].TxHash = transactions[j].Hash()
 

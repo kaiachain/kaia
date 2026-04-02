@@ -175,7 +175,7 @@ func PopVerify(pk types.PublicKey, sig types.Signature) bool {
 
 func FastAggregateVerify(sig types.Signature, msg []byte, pks []types.PublicKey) bool {
 	pubPs := make([]*blstPublicKey, len(pks))
-	for i := 0; i < len(pks); i++ {
+	for i := range pks {
 		pubPs[i] = pks[i].(*publicKey).p
 	}
 
@@ -218,7 +218,7 @@ func VerifyMultipleSignatures(sigbs [][]byte, msgs [][32]byte, pks []types.Publi
 		pkPs  = make([]*blstPublicKey, count)
 		msgPs = make([]blstMessage, count)
 	)
-	for i := 0; i < len(sigs); i++ {
+	for i := range sigs {
 		sigPs[i] = sigs[i].(*signature).p
 		pkPs[i] = pks[i].(*publicKey).p
 		msgPs[i] = msgs[i][:]

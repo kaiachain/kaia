@@ -39,7 +39,7 @@ type resultStore struct {
 	// Internal index of first non-completed entry, updated atomically when needed.
 	// If all items are complete, this will equal length(items), so
 	// *important* : is not safe to use for indexing without checking against length
-	indexIncomplete int32 // atomic access
+	indexIncomplete atomic.Int32 // atomic access
 
 	// throttleThreshold is the limit up to which we _want_ to fill the
 	// results. If blocks are large, we want to limit the results to less
@@ -152,7 +152,7 @@ func (r *resultStore) HasCompletedItems() bool {
 func (r *resultStore) countCompleted() int {
 	// We iterate from the already known complete point, and see
 	// if any more has completed since last count
-	index := atomic.LoadInt32(&r.indexIncomplete)
+	index := r.indexIncomplete.Load()
 	for ; ; index++ {
 		if index >= int32(len(r.items)) {
 			break
@@ -162,7 +162,7 @@ func (r *resultStore) countCompleted() int {
 			break
 		}
 	}
-	atomic.StoreInt32(&r.indexIncomplete, index)
+	r.indexIncomplete.Store(index)
 	return int(index)
 }
 
@@ -185,7 +185,7 @@ func (r *resultStore) GetCompleted(limit int) []*fetchResult {
 	}
 	// Advance the expected block number of the first cache entry
 	r.resultOffset += uint64(limit)
-	atomic.AddInt32(&r.indexIncomplete, int32(-limit))
+	r.indexIncomplete.Add(int32(-limit))
 
 	return results
 }

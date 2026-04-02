@@ -126,7 +126,7 @@ func (api *RewardGovAPI) accumulateRewards(lower, upper uint64) (*reward.RewardS
 	)
 	defer cancel()
 
-	for i := 0; i < numWorkers; i++ {
+	for range numWorkers {
 		wg.Go(func() {
 			for {
 				select {

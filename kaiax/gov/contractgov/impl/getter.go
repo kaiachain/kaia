@@ -91,7 +91,7 @@ func (c *contractGovModule) contractAddrAt(blockNum uint64) (common.Address, err
 
 func ParseContractCall(names []string, values [][]byte) gov.PartialParamSet {
 	ret := make(gov.PartialParamSet)
-	for i := 0; i < len(names); i++ {
+	for i := range names {
 		ret.Add(names[i], values[i])
 	}
 
