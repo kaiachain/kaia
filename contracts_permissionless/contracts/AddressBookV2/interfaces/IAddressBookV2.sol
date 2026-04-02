@@ -382,6 +382,10 @@ interface IAddressBookV2 {
     /// @return Array of suspended node addresses
     function getSuspendedValidators() external view returns (address[] memory);
 
+    /// @notice Returns all nodes in the Registered state
+    /// @return Array of registered node addresses
+    function getRegisteredNodes() external view returns (address[] memory);
+
     /// @notice Returns the staking contract address of a node
     /// @param nodeId The address of the node
     /// @return The staking contract address

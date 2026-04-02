@@ -248,6 +248,11 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
+    function getRegisteredNodes() external view override returns (address[] memory) {
+        return _getStorage().registeredNodes.values();
+    }
+
+    /// @inheritdoc IAddressBookV2
     function getStakingContract(address nodeId) external view override returns (address) {
         return _getStorage().nodeInfo[nodeId].stakingContract;
     }
