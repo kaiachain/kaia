@@ -659,43 +659,6 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 	return evm.create(caller, codeAndHash, gas, value, contractAddr, CREATE, humanReadable, codeFormat)
 }
 
-func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Address]PrecompiledContract {
-	precompiles := evm.getPrecompiledContractForVersion(addr)
-	// If console.log is enabled, add console.log precompile too.
-	if evm.Config.UseConsoleLog {
-		precompiles[consoleLogContractAddress] = &consoleLog{}
-	}
-	return precompiles
-}
-
-func (evm *EVM) getPrecompiledContractForVersion(addr common.Address) map[common.Address]PrecompiledContract {
-	// VmVersion means that the contract uses the precompiled contract map at the deployment time.
-	// Also, it follows old map's gas price & computation cost.
-
-	// Get vmVersion from addr only if the addr is a contract address.
-	// If new "VmVersion" is added, add new if clause below
-	if vmVersion, ok := evm.StateDB.GetVmVersion(addr); ok && vmVersion == params.VmVersion0 {
-		// Without VmVersion0, precompiled contract address 0x09-0x0b won't work properly
-		// with the contracts deployed before istanbulHF
-		return PrecompiledContractsByzantium
-	}
-
-	switch {
-	case evm.chainRules.IsOsaka:
-		return PrecompiledContractsOsaka
-	case evm.chainRules.IsPrague:
-		return PrecompiledContractsPrague
-	case evm.chainRules.IsCancun:
-		return PrecompiledContractsCancun
-	case evm.chainRules.IsKore:
-		return PrecompiledContractsKore
-	case evm.chainRules.IsIstanbul:
-		return PrecompiledContractsIstanbul
-	default:
-		return PrecompiledContractsByzantium
-	}
-}
-
 // resolveCode returns the code associated with the provided account. After
 // Prague, it can also resolve code pointed to by a delegation designator.
 func (evm *EVM) resolveCode(addr common.Address) []byte {
