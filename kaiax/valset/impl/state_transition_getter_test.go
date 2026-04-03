@@ -83,10 +83,13 @@ func newTestValsetModule(ctrl *gomock.Controller) *ValsetModule {
 	}).AnyTimes()
 	mockChain := chain_mock.NewMockBlockChain(ctrl)
 	mockChain.EXPECT().Config().Return(&params.ChainConfig{VRankEpoch: testVRankEpoch}).AnyTimes()
+	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+	mockVRank.EXPECT().GetCFS(gomock.Any()).Return(nil, nil).AnyTimes()
 	return &ValsetModule{
 		InitOpts: InitOpts{
-			Chain:     mockChain,
-			GovModule: mockGov,
+			Chain:       mockChain,
+			GovModule:   mockGov,
+			VRankModule: mockVRank,
 		},
 	}
 }
@@ -191,10 +194,6 @@ func TestIsPassVrankTest(t *testing.T) {
 		expected     bool
 	}{
 		{
-			"threshold=0 → always pass",
-			0, nil, nil, true,
-		},
-		{
 			"CFS below threshold → pass",
 			testCFSThreshold,
 			map[common.Address]uint64{addr1: testCFSThreshold - 5},
@@ -229,9 +228,7 @@ func TestIsPassVrankTest(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			v := newTestValsetModule(ctrl)
 			mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-			if tc.cfsThreshold > 0 {
-				mockVRank.EXPECT().GetCFS(testCFSBlockNum).Return(tc.cfsScores, tc.cfsErr)
-			}
+			mockVRank.EXPECT().GetCFS(testCFSBlockNum).Return(tc.cfsScores, tc.cfsErr)
 			v.VRankModule = mockVRank
 
 			result := v.isPassVrankTest(addr1, testCFSBlockNum, tc.cfsThreshold)
@@ -421,20 +418,6 @@ func TestGetViolationTransition_PFSAboveThreshold(t *testing.T) {
 	result := v.getViolationTransition(testMinStake, validators, 100, 2, noSlotLimit, noMinActive)
 	assert.Equal(t, valset.ValExiting, result[addr1].State, "PFS(3) >= threshold(2) → ValExiting (severe)")
 	assert.Equal(t, valset.ValPaused, result[addr2].State, "PFS(1) > 0, < threshold(2) → ValPaused (minor)")
-}
-
-func TestGetViolationTransition_PFSSkippedWhenZeroThreshold(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	v := newTestValsetModule(ctrl)
-	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-	mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
-	v.VRankModule = mockVRank
-
-	validators := valset.NodeStateMap{
-		addr1: {State: valset.ValActive, StakingAmount: aboveMinStake},
-	}
-	result := v.getViolationTransition(testMinStake, validators, 100, 0, noSlotLimit, noMinActive)
-	assert.Equal(t, valset.ValActive, result[addr1].State, "pfsThreshold=0 → PFS check skipped")
 }
 
 func TestGetViolationTransition_PFSNonActiveNotAffected(t *testing.T) {

@@ -101,9 +101,6 @@ func (v *ValsetModule) applyAllTransitions(
 // isPassVrankTest returns true if the candidate's CFS is below the threshold.
 // CFS < cfsThreshold → pass (CandTesting → ValActive promotion eligible).
 func (v *ValsetModule) isPassVrankTest(addr common.Address, num, cfsThreshold uint64) bool {
-	if cfsThreshold == 0 { // threshold not configured → skip CFS check
-		return true
-	}
 	cfsScores, err := v.VRankModule.GetCFS(num)
 	if err != nil { // CFS unavailable → pass to avoid blocking promotion
 		logger.Warn("isPassVrankTest: GetCFS failed", "num", num, "err", err)
