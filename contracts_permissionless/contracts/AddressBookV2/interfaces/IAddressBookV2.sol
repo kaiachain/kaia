@@ -331,6 +331,11 @@ interface IAddressBookV2 {
     /// @return The CFS threshold
     function getCfsThreshold() external view returns (uint256);
 
+    /// @notice Returns the slot limits for violation transitions based on epochValCount
+    /// @return maxSlotAvailable Maximum number of ValPaused or ValExiting each
+    /// @return minActiveCount Minimum number of ValActive validators required
+    function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount);
+
     /// @notice Returns the fund addresses (KEF, KIF, KPF)
     /// @return kefAddress The Kaia Ecosystem Fund address
     /// @return kifAddress The Kaia Infrastructure Fund address

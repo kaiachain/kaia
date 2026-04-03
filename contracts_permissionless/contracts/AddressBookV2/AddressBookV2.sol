@@ -7,6 +7,7 @@ import {IAddressBookV2} from "./interfaces/IAddressBookV2.sol";
 import {IABv2DataContract} from "./interfaces/IABv2DataContract.sol";
 import {IRegistry} from "../system/IRegistry.sol";
 import {ABv2ConfigLib} from "../libraries/ABv2ConfigLib.sol";
+import {SlotMath} from "../libraries/SlotMath.sol";
 import {State, BlsPublicKeyInfo, NodeInfo, Profile} from "../types/Node.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
@@ -153,6 +154,12 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     /// @inheritdoc IAddressBookV2
     function getCfsThreshold() external view returns (uint256) {
         return _getStorage().cfsThreshold;
+    }
+
+    /// @inheritdoc IAddressBookV2
+    function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount) {
+        uint256 n = _getStorage().epochValCount;
+        return (SlotMath.maxSlotAvailable(n), SlotMath.minActiveCount(n));
     }
 
     /// @inheritdoc IAddressBookV2

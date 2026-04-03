@@ -132,16 +132,33 @@ func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, idle
 // getViolationTransition transitions ValActive validators to ValExiting when they violate rules:
 // rule1: staking amount dropped below MinimumStake
 // rule2: PFS >= pfsThreshold (vrank violation, anytime)
-func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset.NodeStateMap, num, pfsThreshold uint64) valset.NodeStateMap {
-	newValidators := validators.Copy()
-
-	// rule1: check if staking amount become less than minimum staking amount
-	for addr, val := range newValidators {
-		if val.State == valset.ValActive {
-			if val.StakingAmount < minStake {
-				logger.Info("MinStake violation: transitioning to ValExiting", "addr", addr, "staking", val.StakingAmount, "minStake", minStake, "num", num)
-				val.State = valset.ValExiting
+func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset.NodeStateMap, num, pfsThreshold, maxSlotAvailable, minActiveCount uint64) valset.NodeStateMap {
+	var (
+		newValidators = validators.Copy()
+		countByState  = func(state valset.State) uint64 {
+			var count uint64
+			for _, val := range newValidators {
+				if val.State == state {
+					count++
+				}
 			}
+			return count
+		}
+		canTransition = func(targetState valset.State) bool {
+			return countByState(targetState) < maxSlotAvailable && countByState(valset.ValActive) > minActiveCount
+		}
+	)
+
+	// rule1: staking amount dropped below MinimumStake → ValExiting
+	for addr, val := range newValidators {
+		if val.State != valset.ValActive || val.StakingAmount >= minStake {
+			continue
+		}
+		if canTransition(valset.ValExiting) {
+			logger.Info("MinStake violation: transitioning to ValExiting", "addr", addr, "staking", val.StakingAmount, "minStake", minStake, "num", num)
+			val.State = valset.ValExiting
+		} else {
+			logger.Warn("MinStake violation: slot full, skipping transition", "addr", addr, "staking", val.StakingAmount, "num", num)
 		}
 	}
 
@@ -151,23 +168,37 @@ func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset
 	pfReport, err := v.VRankModule.GetPfReport(num)
 	if err != nil {
 		logger.Warn("getViolationTransition: GetPfReport failed", "num", num, "err", err)
-	} else if len(pfReport) > 0 {
-		pfsScores, err := v.VRankModule.GetPFS(num)
-		if err != nil {
-			logger.Warn("getViolationTransition: GetPFS failed", "num", num, "err", err)
+		return newValidators
+	}
+	if len(pfReport) == 0 {
+		return newValidators
+	}
+	pfsScores, err := v.VRankModule.GetPFS(num)
+	if err != nil {
+		logger.Warn("getViolationTransition: GetPFS failed", "num", num, "err", err)
+		return newValidators
+	}
+	for addr, val := range newValidators {
+		if val.State != valset.ValActive {
+			continue
+		}
+		pfs, ok := pfsScores[addr]
+		if !ok || pfs == 0 {
+			continue
+		}
+		if pfs >= pfsThreshold {
+			if canTransition(valset.ValExiting) {
+				logger.Info("PFS severe violation: transitioning to ValExiting", "addr", addr, "pfs", pfs, "pfsThreshold", pfsThreshold, "num", num)
+				val.State = valset.ValExiting
+			} else {
+				logger.Warn("PFS severe violation: slot full, skipping transition", "addr", addr, "pfs", pfs, "num", num)
+			}
 		} else {
-			for addr, val := range newValidators {
-				if val.State == valset.ValActive {
-					if pfs, ok := pfsScores[addr]; ok {
-						if pfsThreshold > 0 && pfs >= pfsThreshold {
-							logger.Info("PFS severe violation: transitioning to ValExiting", "addr", addr, "pfs", pfs, "pfsThreshold", pfsThreshold, "num", num)
-							val.State = valset.ValExiting
-						} else if pfs > 0 {
-							logger.Info("PFS minor violation: transitioning to ValPaused", "addr", addr, "pfs", pfs, "pfsThreshold", pfsThreshold, "num", num)
-							val.State = valset.ValPaused
-						}
-					}
-				}
+			if canTransition(valset.ValPaused) {
+				logger.Info("PFS minor violation: transitioning to ValPaused", "addr", addr, "pfs", pfs, "pfsThreshold", pfsThreshold, "num", num)
+				val.State = valset.ValPaused
+			} else {
+				logger.Warn("PFS minor violation: slot full, skipping transition", "addr", addr, "pfs", pfs, "num", num)
 			}
 		}
 	}
