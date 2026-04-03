@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"slices"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -151,10 +152,8 @@ func (p *Peer) Name() string {
 // versions is supported by both this node and the peer p.
 func (p *Peer) RunningCap(protocol string, versions []uint) bool {
 	if protos, ok := p.running[protocol]; ok {
-		for _, ver := range versions {
-			if protos[ConnDefault].Version == ver {
-				return true
-			}
+		if slices.Contains(versions, protos[ConnDefault].Version) {
+			return true
 		}
 	}
 	return false
@@ -602,7 +601,7 @@ type protoRW struct {
 	werr   chan<- error    // for write results
 	offset uint64
 	w      MsgWriter
-	count  uint64 // count the number of WriteMsg calls
+	count  atomic.Uint64 // count the number of WriteMsg calls
 	tc     RWTimerConfig
 }
 
@@ -611,7 +610,7 @@ func (rw *protoRW) WriteMsg(msg Msg) (err error) {
 		return newPeerError(errInvalidMsgCode, "not handled, (code %x) (size %d)", msg.Code, msg.Size)
 	}
 	msg.Code += rw.offset
-	rwCount := atomic.AddUint64(&rw.count, 1)
+	rwCount := rw.count.Add(1)
 	if rwCount%rw.tc.Interval == 0 {
 		timer := time.NewTimer(rw.tc.WaitTime)
 		defer timer.Stop()

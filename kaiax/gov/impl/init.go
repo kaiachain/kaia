@@ -2,8 +2,10 @@ package impl
 
 import (
 	"errors"
+	"maps"
 	"math/big"
 	"reflect"
+	"slices"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
@@ -16,7 +18,6 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
-	"golang.org/x/exp/maps" // TODO: use "maps"
 )
 
 var (
@@ -110,7 +111,7 @@ func ChainConfigFallback(chainConfig *params.ChainConfig) gov.PartialParamSet {
 		logger.Info("Using Mainnet/Kairos fallback")
 	} else {
 		// on private net, fallback candidates are all params.
-		candidates = maps.Keys(gov.Params)
+		candidates = slices.Collect(maps.Keys(gov.Params))
 		logger.Info("Using default fallback")
 	}
 

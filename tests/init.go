@@ -169,3 +169,21 @@ func isPrecompiledContractAddressForEthTest(addr common.Address, rules interface
 	}
 	return false
 }
+
+// activePrecompilesForEthTest returns the precompile addresses without the vmversion0
+// compatibility addresses ({10}, {11}). In EEST tests, no vmversion0 contracts exist,
+// so the background access list (by statedb.Prepare) should match Ethereum's behavior.
+func activePrecompilesForEthTest(rules params.Rules) []common.Address {
+	switch {
+	case rules.IsOsaka:
+		return vm.PrecompiledAddressOsaka
+	case rules.IsPrague:
+		return vm.PrecompiledAddressPrague
+	case rules.IsCancun:
+		return vm.PrecompiledAddressCancun
+	case rules.IsIstanbul:
+		return vm.PrecompiledAddressIstanbul
+	default:
+		return vm.PrecompiledAddressesByzantium
+	}
+}

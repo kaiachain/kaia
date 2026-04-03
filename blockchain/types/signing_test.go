@@ -146,7 +146,7 @@ type param struct {
 }
 
 func launchSenderGoroutines(signer *EIP155Signer, num int, paramCh chan param, quitCh chan struct{}) {
-	for i := 0; i < num; i++ {
+	for range num {
 		go func() {
 			for {
 				select {
@@ -198,7 +198,7 @@ func BenchmarkDoubleRecoverEIP155SignerReusedGoroutines(b *testing.B) {
 	}
 	b.StopTimer()
 
-	for i := 0; i < numGoroutine; i++ {
+	for range numGoroutine {
 		quitCh <- struct{}{}
 	}
 }

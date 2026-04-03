@@ -33,6 +33,7 @@ import (
 	"net"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -289,10 +290,8 @@ func (n *Node) AddSubport(port uint16) {
 	if n.TCPs == nil {
 		n.TCPs = []uint16{}
 	}
-	for _, val := range n.TCPs {
-		if val == port {
-			return
-		}
+	if slices.Contains(n.TCPs, port) {
+		return
 	}
 	n.TCPs = append(n.TCPs, port)
 }

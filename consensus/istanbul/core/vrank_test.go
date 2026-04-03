@@ -44,7 +44,7 @@ func TestVrank(t *testing.T) {
 
 	// Simulate messages for each round up to testRound
 	for round := uint64(0); round <= testRound; round++ {
-		for i := 0; i < quorum; i++ {
+		for i := range quorum {
 			r := (1 + time.Duration(rand.Int63n(10))) * time.Millisecond
 			time.Sleep(r)
 			vrank.AddPreprepare(committee[i], round, time.Now())
@@ -63,7 +63,7 @@ func TestVrank(t *testing.T) {
 
 		// round change messages (not for round 0)
 		if round > 0 {
-			for i := 0; i < N; i++ {
+			for i := range N {
 				r := time.Duration(round*10+uint64(rand.Int63n(10))) * time.Millisecond
 				vrank.AddRoundChange(committee[i], round, time.Now().Add(r))
 			}

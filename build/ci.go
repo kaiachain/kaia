@@ -264,16 +264,19 @@ func goToolArch(arch string, cc string, subcmd string, args ...string) *exec.Cmd
 
 func doTest(cmdline []string) {
 	var (
-		parallel = flag.Int("p", 0, "The number of parallel test executions (default: the number of CPUs available)")
-		excludes = flag.String("exclude", "", "Comma-separated top-level directories to be excluded in test")
-		cachedir = flag.String("cachedir", "./build/cache", "directory for caching downloads")
+		parallel        = flag.Int("p", 0, "The number of parallel test executions (default: the number of CPUs available)")
+		excludes        = flag.String("exclude", "", "Comma-separated top-level directories to be excluded in test")
+		cachedir        = flag.String("cachedir", "./build/cache", "directory for caching downloads")
+		ensureFixtures  = flag.Bool("ensure-fixtures", false, "download spec test fixtures before running tests")
 	)
 	flag.CommandLine.Parse(cmdline)
 	env := build.Env()
 
 	// Get test fixtures.
 	csdb := build.MustLoadChecksums("build/checksums.txt")
-	downloadSpecTestFixtures(csdb, *cachedir)
+	if *ensureFixtures {
+		downloadSpecTestFixtures(csdb, *cachedir)
+	}
 
 	packages := []string{"./..."}
 	if len(flag.CommandLine.Args()) > 0 {

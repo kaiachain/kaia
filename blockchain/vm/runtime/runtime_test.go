@@ -151,7 +151,7 @@ func BenchmarkCall(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		for j := 0; j < 400; j++ {
+		for range 400 {
 			Execute(code, cpurchase, nil)
 			Execute(code, creceived, nil)
 			Execute(code, refund, nil)

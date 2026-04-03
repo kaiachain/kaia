@@ -399,7 +399,7 @@ func PairingCheck(a []*G1, b []*G2) bool {
 	acc := newGFp12(pool)
 	acc.SetOne()
 
-	for i := 0; i < len(a); i++ {
+	for i := range a {
 		if a[i].p.IsInfinity() || b[i].p.IsInfinity() {
 			continue
 		}

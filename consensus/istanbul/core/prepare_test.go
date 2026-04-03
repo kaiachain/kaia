@@ -137,7 +137,7 @@ func TestSubjectCmp(t *testing.T) {
 	min, max, n := 1, 9999, 10000
 	var identity bool
 	var s1, s2 *istanbul.Subject
-	for i := 0; i < n; i++ {
+	for range n {
 		s1 = genSubject(min, max)
 		if rand.Intn(2) == 0 {
 			identity = true

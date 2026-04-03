@@ -198,7 +198,7 @@ func TestOrderGT(t *testing.T) {
 }
 
 func TestBilinearity(t *testing.T) {
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		a, p1, _ := RandomG1(rand.Reader)
 		b, p2, _ := RandomG2(rand.Reader)
 		e1 := Pair(p1, p2)

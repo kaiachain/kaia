@@ -437,7 +437,7 @@ func (s *TrieSync) children(req *request, object node) ([]*request, error) {
 			depth: req.depth + len(node.Key),
 		}}
 	case *fullNode:
-		for i := 0; i < 17; i++ {
+		for i := range 17 {
 			if node.Children[i] != nil {
 				children = append(children, child{
 					node:  node.Children[i],
@@ -554,7 +554,7 @@ func (s *TrieSync) CalcProgressPercentage() float64 {
 	// 4	 	65,536 	 	0.00153
 	// 5	 	1,048,576 	0.00010
 
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		c, r := s.CommittedByDepth(i), s.RetrievedByDepth(i)
 
 		var progressByDepth float64

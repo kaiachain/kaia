@@ -192,7 +192,7 @@ func testRandao_allocRegistry(ownerAddr, kip113Addr common.Address) blockchain.G
 // Allocate the KIP-113 with all node BLS public keys
 func testRandao_allocKip113(numNodes int, ownerAddr, kip113Addr common.Address) blockchain.GenesisAlloc {
 	infos := make(system.BlsPublicKeyInfos)
-	for i := 0; i < numNodes; i++ {
+	for i := range numNodes {
 		var (
 			key   = deriveTestAccount(i)
 			addr  = crypto.PubkeyToAddress(key.PublicKey)

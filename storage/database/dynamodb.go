@@ -459,7 +459,7 @@ func (dynamo *dynamoDB) NewIterator(prefix []byte, start []byte) Iterator {
 
 func createBatchWriteWorkerPool() {
 	dynamoWriteCh = make(chan *batchWriteWorkerInput, itemChanSize)
-	for i := 0; i < WorkerNum; i++ {
+	for range WorkerNum {
 		go createBatchWriteWorker(dynamoWriteCh)
 	}
 	logger.Info("made dynamo batch write workers", "workerNum", WorkerNum)

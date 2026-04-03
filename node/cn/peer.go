@@ -583,7 +583,7 @@ func (p *basePeer) SendNewBlockHashes(hashes []common.Hash, numbers []uint64) er
 		p.AddToKnownBlocks(hash)
 	}
 	request := make(newBlockHashesData, len(hashes))
-	for i := 0; i < len(hashes); i++ {
+	for i := range hashes {
 		request[i].Hash = hashes[i]
 		request[i].Number = numbers[i]
 	}
@@ -800,7 +800,7 @@ func (p *basePeer) Handshake(network uint64, chainID, td *big.Int, head common.H
 	}()
 	timeout := time.NewTimer(handshakeTimeout)
 	defer timeout.Stop()
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		select {
 		case err := <-errc:
 			if err != nil {
@@ -1053,7 +1053,7 @@ func (p *multiChannelPeer) SendNewBlockHashes(hashes []common.Hash, numbers []ui
 		p.AddToKnownBlocks(hash)
 	}
 	request := make(newBlockHashesData, len(hashes))
-	for i := 0; i < len(hashes); i++ {
+	for i := range hashes {
 		request[i].Hash = hashes[i]
 		request[i].Number = numbers[i]
 	}

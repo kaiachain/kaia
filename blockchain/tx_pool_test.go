@@ -223,7 +223,7 @@ func blobTransaction(nonce uint64, gasLimit uint64, gasFeeCap, gasTipCap, blobFe
 	blobHashes := make([]common.Hash, numBlobs)
 
 	hasher := sha256.New()
-	for i := 0; i < numBlobs; i++ {
+	for i := range numBlobs {
 		// Create an empty blob (all zeros)
 		blob := kzg4844.Blob{}
 		// Optionally fill with some data for testing
@@ -989,7 +989,7 @@ func TestTransactionPostponing(t *testing.T) {
 	keys := make([]*ecdsa.PrivateKey, 2)
 	accs := make([]common.Address, len(keys))
 
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 		accs[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
 
@@ -998,7 +998,7 @@ func TestTransactionPostponing(t *testing.T) {
 	// Add a batch consecutive pending transactions for validation
 	txs := []*types.Transaction{}
 	for i, key := range keys {
-		for j := 0; j < 100; j++ {
+		for j := range 100 {
 			var tx *types.Transaction
 			if (i+j)%2 == 0 {
 				tx = transaction(uint64(j), 25000, key)
@@ -1206,7 +1206,7 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 
 	// Create a number of test accounts and fund them (last one will be the local)
 	keys := make([]*ecdsa.PrivateKey, 5)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
 	}
@@ -1471,7 +1471,7 @@ func TestTransactionPendingGlobalLimiting(t *testing.T) {
 
 	// Create a number of test accounts and fund them
 	keys := make([]*ecdsa.PrivateKey, 5)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
 	}
@@ -1615,7 +1615,7 @@ func TestTransactionPendingMinimumAllowance(t *testing.T) {
 
 	// Create a number of test accounts and fund them
 	keys := make([]*ecdsa.PrivateKey, 5)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 		pool.currentState.AddBalance(crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
 	}
@@ -2511,7 +2511,7 @@ func TestSetCodeTransactions(t *testing.T) {
 			pending: 10,
 			run: func(name string) {
 				var keys []*ecdsa.PrivateKey
-				for i := 0; i < 30; i++ {
+				for range 30 {
 					key, _ := crypto.GenerateKey()
 					keys = append(keys, key)
 					addr := crypto.PubkeyToAddress(key.PublicKey)
@@ -2669,7 +2669,7 @@ func TestTransactionStatusCheck(t *testing.T) {
 
 	// Create the test accounts to check various transaction statuses with
 	keys := make([]*ecdsa.PrivateKey, 3)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
 	}
@@ -2704,7 +2704,7 @@ func TestTransactionStatusCheck(t *testing.T) {
 	statuses := pool.Status(hashes)
 	expect := []TxStatus{TxStatusPending, TxStatusPending, TxStatusQueued, TxStatusQueued, TxStatusUnknown}
 
-	for i := 0; i < len(statuses); i++ {
+	for i := range statuses {
 		if statuses[i] != expect[i] {
 			t.Errorf("transaction %d: status mismatch: have %v, want %v", i, statuses[i], expect[i])
 		}
@@ -3035,7 +3035,7 @@ func TestTransactionsPromotePartial(t *testing.T) {
 	assert.Equal(t, pool.queue[from].Len(), 1)
 
 	// txs[0:2] should be promoted.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		assert.True(t, reflect.DeepEqual(txs[i], pool.pending[from].txs.items[uint64(i)]))
 	}
 
@@ -3055,7 +3055,7 @@ func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 
 	keys := make([]*ecdsa.PrivateKey, 3)
 	froms := make([]common.Address, 3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		keys[i], _ = crypto.GenerateKey()
 		froms[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
 		testAddBalance(pool, froms[i], big.NewInt(1000000000))
@@ -3075,7 +3075,7 @@ func TestTransactionsPromoteMultipleAccount(t *testing.T) {
 	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), keys[2])) // Pending
 	txs = append(txs, pricedTransaction(4, 100000, big.NewInt(10), keys[2])) // Queue
 
-	for i := 0; i < 9; i++ {
+	for i := range 9 {
 		pool.enqueueTx(txs[i].Hash(), txs[i])
 	}
 
@@ -3113,7 +3113,7 @@ func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 
 	keys := make([]*ecdsa.PrivateKey, 3)
 	froms := make([]common.Address, 3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		keys[i], _ = crypto.GenerateKey()
 		froms[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
 		testAddBalance(pool, froms[i], big.NewInt(1000000000))
@@ -3133,7 +3133,7 @@ func TestTransactionsDemotionMultipleAccount(t *testing.T) {
 	txs = append(txs, pricedTransaction(2, 100000, big.NewInt(30), keys[2]))
 	txs = append(txs, pricedTransaction(3, 100000, big.NewInt(10), keys[2]))
 
-	for i := 0; i < 9; i++ {
+	for i := range 9 {
 		pool.enqueueTx(txs[i].Hash(), txs[i])
 	}
 
@@ -3286,7 +3286,7 @@ func TestTransactionJournalingSortedByTime(t *testing.T) {
 
 	// Create the test accounts to check various transaction statuses with
 	keys := make([]*ecdsa.PrivateKey, 3)
-	for i := 0; i < len(keys); i++ {
+	for i := range keys {
 		keys[i], _ = crypto.GenerateKey()
 		testAddBalance(pool, crypto.PubkeyToAddress(keys[i].PublicKey), big.NewInt(1000000))
 	}
@@ -3317,7 +3317,7 @@ func TestTransactionJournalingSortedByTime(t *testing.T) {
 
 	txsFromFile := make(types.Transactions, 4)
 	stream := rlp.NewStream(input, 0)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		tx := new(types.Transaction)
 		if err = stream.Decode(tx); err != nil {
 			if err != io.EOF {
@@ -3372,7 +3372,7 @@ func benchmarkPendingDemotion(b *testing.B, size int) {
 	account := crypto.PubkeyToAddress(key.PublicKey)
 	testAddBalance(pool, account, big.NewInt(1000000))
 
-	for i := 0; i < size; i++ {
+	for i := range size {
 		tx := transaction(uint64(i), 100000, key)
 		pool.promoteTx(account, tx.Hash(), tx)
 	}
@@ -3397,7 +3397,7 @@ func benchmarkFuturePromotion(b *testing.B, size int) {
 	account := crypto.PubkeyToAddress(key.PublicKey)
 	testAddBalance(pool, account, big.NewInt(1000000))
 
-	for i := 0; i < size; i++ {
+	for i := range size {
 		tx := transaction(uint64(1+i), 100000, key)
 		pool.enqueueTx(tx.Hash(), tx)
 	}
@@ -3444,7 +3444,7 @@ func benchmarkPoolBatchInsert(b *testing.B, size int) {
 	batches := make([]types.Transactions, b.N)
 	for i := 0; i < b.N; i++ {
 		batches[i] = make(types.Transactions, size)
-		for j := 0; j < size; j++ {
+		for j := range size {
 			batches[i][j] = transaction(uint64(size*i+j), 100000, key)
 		}
 	}
@@ -3697,7 +3697,7 @@ func TestTxPool_sendMissingBlobSidecar(t *testing.T) {
 		ch := pool.SubscribeMissingBlobSidecars()
 
 		// fill channel
-		for i := 0; i < missingBlobSidecarsChSize; i++ {
+		for i := range missingBlobSidecarsChSize {
 			sidecar := &MissingBlobSidecar{
 				BlockNum: big.NewInt(int64(i)),
 				TxIndex:  i,
@@ -3716,7 +3716,7 @@ func TestTxPool_sendMissingBlobSidecar(t *testing.T) {
 
 		// read all data from channel
 		receivedCount := 0
-		for i := 0; i < missingBlobSidecarsChSize; i++ {
+		for range missingBlobSidecarsChSize {
 			select {
 			case <-ch:
 				receivedCount++

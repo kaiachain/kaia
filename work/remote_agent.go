@@ -51,7 +51,7 @@ type RemoteAgent struct {
 	hashrateMu sync.RWMutex
 	hashrate   map[common.Hash]hashrate
 
-	running int32 // running indicates whether the agent is active. Call atomically
+	running atomic.Int32 // running indicates whether the agent is active. Call atomically
 }
 
 func NewRemoteAgent(chain consensus.ChainReader, engine consensus.Engine) *RemoteAgent {
@@ -79,7 +79,7 @@ func (a *RemoteAgent) SetReturnCh(returnCh chan<- *Result) {
 }
 
 func (a *RemoteAgent) Start() {
-	if !atomic.CompareAndSwapInt32(&a.running, 0, 1) {
+	if !a.running.CompareAndSwap(0, 1) {
 		return
 	}
 	a.quitCh = make(chan struct{})
@@ -88,7 +88,7 @@ func (a *RemoteAgent) Start() {
 }
 
 func (a *RemoteAgent) Stop() {
-	if !atomic.CompareAndSwapInt32(&a.running, 1, 0) {
+	if !a.running.CompareAndSwap(1, 0) {
 		return
 	}
 	close(a.quitCh)

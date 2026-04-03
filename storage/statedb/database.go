@@ -220,7 +220,7 @@ func gatherChildren(n node, children *[]common.ExtHash) {
 		gatherChildren(n.Val, children)
 
 	case rawFullNode:
-		for i := 0; i < 16; i++ {
+		for i := range 16 {
 			gatherChildren(n[i], children)
 		}
 	case hashNode:
@@ -244,7 +244,7 @@ func simplifyNode(n node) node {
 	case *fullNode:
 		// Full nodes discard the flags and cascade
 		node := rawFullNode(n.Children)
-		for i := 0; i < len(node); i++ {
+		for i := range len(node) {
 			if node[i] != nil {
 				node[i] = simplifyNode(node[i])
 			}
@@ -280,7 +280,7 @@ func expandNode(hash hashNode, n node) node {
 				hash: hash,
 			},
 		}
-		for i := 0; i < len(node.Children); i++ {
+		for i := range len(node.Children) {
 			if n[i] != nil {
 				node.Children[i] = expandNode(nil, n[i])
 			}
@@ -394,7 +394,7 @@ func (db *Database) NodeChildren(hash common.ExtHash) ([]common.ExtHash, error) 
 	case *shortNode:
 		children = []node{n.Val}
 	case *fullNode:
-		for i := 0; i < 17; i++ {
+		for i := range 17 {
 			if n.Children[i] != nil {
 				children = append(children, n.Children[i])
 			}

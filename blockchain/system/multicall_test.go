@@ -72,7 +72,7 @@ func TestContractCallerForMultiCall(t *testing.T) {
 		common.HexToAddress("0x0000000000000000000000000000000000000F03"),
 		common.HexToAddress("0x0000000000000000000000000000000000000F04"),
 	}
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		assert.Equal(t, uint8(i), ret.TypeList[i])
 		assert.Equal(t, expectedAddress[i], ret.AddressList[i])
 	}

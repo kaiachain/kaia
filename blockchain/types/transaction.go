@@ -106,7 +106,7 @@ type Transaction struct {
 	// The account's nonce is checked only if `checkNonce` is true.
 	checkNonce bool
 	// This value is set when the tx is invalidated in block tx validation, and is used to remove pending tx in txPool.
-	markedUnexecutable int32
+	markedUnexecutable atomic.Int32
 
 	// lock for protecting fields in Transaction struct
 	mu sync.RWMutex
@@ -873,11 +873,11 @@ func (tx *Transaction) MarkUnexecutable(b bool) {
 	if b {
 		v = 1
 	}
-	atomic.StoreInt32(&tx.markedUnexecutable, v)
+	tx.markedUnexecutable.Store(v)
 }
 
 func (tx *Transaction) IsMarkedUnexecutable() bool {
-	return atomic.LoadInt32(&tx.markedUnexecutable) == 1
+	return tx.markedUnexecutable.Load() == 1
 }
 
 func (tx *Transaction) RawSignatureValues() TxSignatures {

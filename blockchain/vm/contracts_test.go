@@ -374,7 +374,7 @@ func TestPrecompiledModExpOverflow(t *testing.T) {
 	modLen := make([]byte, 32)
 
 	// Set all bytes to 0xFF to get maximum values
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		baseLen[i] = 0xFF
 		expLen[i] = 0xFF
 		modLen[i] = 0xFF
@@ -579,12 +579,12 @@ func TestConsoleLog(t *testing.T) {
 					if len(paramType) > 5 && paramType[:5] == "Bytes" {
 						size, _ := strconv.Atoi(string(paramType[5:]))
 						b := make([]byte, size)
-						for i := 0; i < size; i++ {
+						for i := range size {
 							b[i] = byte(i)
 						}
 						arrayType := reflect.ArrayOf(size, reflect.TypeFor[byte]())
 						array := reflect.New(arrayType).Elem()
-						for i := 0; i < size; i++ {
+						for i := range size {
 							array.Index(i).Set(reflect.ValueOf(byte(i)))
 						}
 						inputs = append(inputs, array.Interface())

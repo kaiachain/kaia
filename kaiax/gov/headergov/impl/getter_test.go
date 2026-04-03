@@ -157,9 +157,9 @@ func TestGetPartialParamSet_ConcurrentAccess(t *testing.T) {
 
 	// Reader goroutines continuously call GetPartialParamSet.
 	const readers = 8
-	for r := 0; r < readers; r++ {
+	for range readers {
 		wgReader.Go(func() {
-			for i := 0; i < 5000; i++ {
+			for range 5000 {
 				ps := h.GetPartialParamSet(1000)
 				_ = ps[gov.GovernanceUnitPrice]
 			}
