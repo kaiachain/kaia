@@ -48,7 +48,7 @@ func newTestModuleWithHeaders(t *testing.T, valset *mock_valset.MockValsetModule
 	return module
 }
 
-func computeCFS(v *VRankModule, start, end uint64) (map[common.Address]uint64, error) {
+func computeCFS(v *VRankModule, start, end uint64, slotFactor uint64) (map[common.Address]uint64, error) {
 	cpMatrix, err := v.newCPMatrix(start)
 	if err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func computeCFS(v *VRankModule, start, end uint64) (map[common.Address]uint64, e
 	if err != nil {
 		return nil, err
 	}
-	return v.generateCFSFromCPMatrix(end, cpMatrix)
+	return generateCFSFromCPMatrix(cpMatrix, slotFactor), nil
 }
 
 // makeHeaderWithVRank creates a header with a specific round and an encoded cfReport in VRank.
@@ -488,15 +488,14 @@ func TestGetCFS(t *testing.T) {
 
 		valset.EXPECT().GetCandidates(gomock.Any()).Return([]common.Address{C1}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(gomock.Any(), uint64(0)).Return(P1, nil).AnyTimes()
-		valset.EXPECT().GetCommittee(gomock.Any(), uint64(0)).Return([]common.Address{addrN(0), P1}, nil).Times(2)
 
-		cfs, err := v.GetCFS(epochStart)
+		cfs, err := v.GetCFSWithSlotFactor(epochStart, 1)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(0), cfs[C1], "C1 should have 0 candidate failures at epoch start")
 
-		cfs, err = v.GetCFS(epochEnd)
+		cfs, err = v.GetCFSWithSlotFactor(epochEnd, 1)
 		require.NoError(t, err)
-		// F = (2-1)/3 = 0, so no filtering; C1 appears once.
+		// F = (1-1)/3 = 0, so no filtering; C1 appears once.
 		assert.Equal(t, uint64(1), cfs[C1], "C1 should have 1 candidate failure")
 	})
 
@@ -505,8 +504,6 @@ func TestGetCFS(t *testing.T) {
 		P1, P2, P3, P4 := addrN(30), addrN(31), addrN(32), addrN(33)
 		C1, C2, C3 := addrN(40), addrN(41), addrN(42)
 		candidates := []common.Address{C1, C2, C3}
-		committee := []common.Address{P1, P2, P3, P4}
-
 		ctrl := gomock.NewController(t)
 		valset := mock_valset.NewMockValsetModule(ctrl)
 		v := createCN(t, valset).VRankModule
@@ -528,9 +525,7 @@ func TestGetCFS(t *testing.T) {
 		valset.EXPECT().GetProposer(epochStart+3, uint64(0)).Return(P3, nil)
 		valset.EXPECT().GetProposer(epochStart+4, uint64(0)).Return(P4, nil)
 		valset.EXPECT().GetProposer(epochStart+5, uint64(0)).Return(P4, nil)
-		valset.EXPECT().GetCommittee(epochStart+5, uint64(0)).Return(committee, nil)
-
-		cfs, err := v.GetCFS(epochStart + 5)
+		cfs, err := v.GetCFSWithSlotFactor(epochStart+5, 4)
 		require.NoError(t, err)
 		// F = 1. Raw totals:
 		// C1: {P1:1, P2:1, P3:1, P4:2} -> drop 2 -> score 3
@@ -555,7 +550,7 @@ func TestGetCFS_ErrNotPermissionless(t *testing.T) {
 	module.ChainConfig = params.TestKaiaConfig("osaka")
 	module.Chain = &testChain{headers: map[uint64]*types.Header{10: makeHeaderWithRound(10, 0)}}
 
-	_, err := module.GetCFS(10)
+	_, err := module.GetCFSWithSlotFactor(10, 0)
 	assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
 }
 
@@ -573,12 +568,11 @@ func TestGetCFS_ErrFutureBlock(t *testing.T) {
 
 	valset.EXPECT().GetCandidates(gomock.Any()).Return(nil, nil).AnyTimes()
 	valset.EXPECT().GetProposer(gomock.Any(), uint64(0)).Return(addrN(0), nil).AnyTimes()
-	valset.EXPECT().GetCommittee(gomock.Any(), uint64(0)).Return([]common.Address{addrN(0)}, nil)
 
-	_, err := v.GetCFS(5)
+	_, err := v.GetCFSWithSlotFactor(5, 1)
 	assert.NoError(t, err)
 
-	_, err = v.GetCFS(6)
+	_, err = v.GetCFSWithSlotFactor(6, 0)
 	assert.ErrorIs(t, err, vrank.ErrFutureBlock)
 }
 
@@ -600,15 +594,14 @@ func TestGetCFS_CacheHit(t *testing.T) {
 	// GetProposer is only called for blocks with non-empty cfReports (block 5 has VRank=[C1]).
 	valset.EXPECT().GetCandidates(uint64(5)).Return([]common.Address{C1}, nil).Times(1)
 	valset.EXPECT().GetProposer(uint64(5), uint64(0)).Return(P1, nil).Times(1)
-	valset.EXPECT().GetCommittee(uint64(5), uint64(0)).Return([]common.Address{P1}, nil).Times(2)
 
-	cfs1, err := v.GetCFS(5)
+	cfs1, err := v.GetCFSWithSlotFactor(5, 1)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), cfs1[C1])
 
 	// Mutating the returned map must not affect the cached copy.
 	cfs1[C1] = 999
-	cfs2, err := v.GetCFS(5)
+	cfs2, err := v.GetCFSWithSlotFactor(5, 1)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), cfs2[C1])
 }
@@ -630,18 +623,17 @@ func TestGetCFS_NearbyCacheHit(t *testing.T) {
 
 	v := newTestModuleWithHeaders(t, valset, db, headers)
 	valset.EXPECT().GetCandidates(gomock.Any()).Return([]common.Address{C1}, nil).AnyTimes()
-	valset.EXPECT().GetCommittee(gomock.Any(), uint64(0)).Return([]common.Address{P1, P2}, nil).Times(2)
 	// GetProposer only called for blocks with non-empty cfReports (blocks 5 and 6).
 	valset.EXPECT().GetProposer(uint64(5), uint64(0)).Return(P1, nil).Times(1)
 	valset.EXPECT().GetProposer(uint64(6), uint64(0)).Return(P2, nil).Times(1)
 
-	cfs5, err := v.GetCFS(5)
+	cfs5, err := v.GetCFSWithSlotFactor(5, 2)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), cfs5[C1])
 	_, ok := v.cpMatrixCache.Get(uint64(5))
 	assert.True(t, ok)
 
-	cfs6, err := v.GetCFS(6)
+	cfs6, err := v.GetCFSWithSlotFactor(6, 2)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(2), cfs6[C1])
 }
@@ -669,9 +661,8 @@ func TestGetCFS_DBCheckpointHit(t *testing.T) {
 
 	// With the DB checkpoint, only block cp+1 needs to be computed.
 	valset.EXPECT().GetProposer(cp+1, uint64(0)).Return(P1, nil).Times(1)
-	valset.EXPECT().GetCommittee(cp+1, uint64(0)).Return([]common.Address{P1}, nil).Times(1)
 
-	cfs, err := v.GetCFS(cp + 1)
+	cfs, err := v.GetCFSWithSlotFactor(cp+1, 1)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(2), cfs[C1])
 }
@@ -694,9 +685,7 @@ func TestGetCFS_DBCheckpointHit_PreservesZeroFailureCandidates(t *testing.T) {
 	})
 	WriteLastCheckpoint(db, cp)
 
-	valset.EXPECT().GetCommittee(cp, uint64(0)).Return([]common.Address{P1}, nil).Times(1)
-
-	cfs, err := v.GetCFS(cp)
+	cfs, err := v.GetCFSWithSlotFactor(cp, 1)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), cfs[C1])
 	assert.Equal(t, uint64(0), cfs[C2], "zero-failure candidates must remain in CFS after checkpoint load")
@@ -730,9 +719,8 @@ func TestGetCFS_EpochScan(t *testing.T) {
 	valset.EXPECT().GetCandidates(uint64(2)).Return([]common.Address{C1}, nil).Times(1)
 	valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(P1, nil).Times(1)
 	valset.EXPECT().GetProposer(uint64(2), uint64(0)).Return(P1, nil).Times(1)
-	valset.EXPECT().GetCommittee(uint64(2), uint64(0)).Return([]common.Address{P1}, nil).Times(1)
 
-	cfs, err := v.GetCFS(2)
+	cfs, err := v.GetCFSWithSlotFactor(2, 1)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(2), cfs[C1])
 }
@@ -759,9 +747,8 @@ func TestGetCFS_EpochStart(t *testing.T) {
 
 	// GetProposer is NOT called: the epoch-start block has a nil/empty cfReport (VRank=nil encoded).
 	valset.EXPECT().GetCandidates(epochStart).Return([]common.Address{C1, C2}, nil).Times(1)
-	valset.EXPECT().GetCommittee(epochStart, uint64(0)).Return([]common.Address{P1}, nil).Times(1)
 
-	cfs, err := v.GetCFS(epochStart)
+	cfs, err := v.GetCFSWithSlotFactor(epochStart, 1)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0), cfs[C1], "C1 must start at 0 in new epoch")
 	assert.Equal(t, uint64(0), cfs[C2], "C2 must start at 0 in new epoch")
@@ -793,9 +780,8 @@ func TestGetCFS_EpochBoundaryClamp(t *testing.T) {
 	// Must call GetCandidates to start a fresh epoch (Times(1)).
 	valset.EXPECT().GetCandidates(blockNum).Return([]common.Address{C1}, nil).Times(1)
 	valset.EXPECT().GetProposer(gomock.Any(), uint64(0)).Return(P1, nil).AnyTimes()
-	valset.EXPECT().GetCommittee(blockNum, uint64(0)).Return([]common.Address{P1}, nil).Times(1)
 
-	cfs, err := v.GetCFS(blockNum)
+	cfs, err := v.GetCFSWithSlotFactor(blockNum, 1)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0), cfs[C1], "previous epoch cpMatrix must not carry over into current epoch")
 }
@@ -828,9 +814,7 @@ func TestGetCFS_NearbyProbe_SameEpoch(t *testing.T) {
 
 	// Nearby hit at epochStart+1 (distance=1). GetCandidates must NOT be called.
 	// epochStart+2 has no cfReport, so GetProposer is NOT called (cfReport checked first).
-	valset.EXPECT().GetCommittee(epochStart+2, uint64(0)).Return([]common.Address{P1}, nil).Times(1)
-
-	cfs, err := v.GetCFS(epochStart + 2)
+	cfs, err := v.GetCFSWithSlotFactor(epochStart+2, 1)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), cfs[C1], "score must come only from same-epoch nearby cache")
 }
@@ -853,7 +837,7 @@ func TestGetCFS_GetProposerError(t *testing.T) {
 	// GetProposer is NOT called for block 0 (empty cfReport); only for block 1.
 	valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(common.Address{}, assert.AnError).Times(1)
 
-	_, err := v.GetCFS(1)
+	_, err := v.GetCFSWithSlotFactor(1, 0)
 	assert.ErrorIs(t, err, assert.AnError)
 }
 
@@ -873,7 +857,7 @@ func TestGetCFS_MissingHeader(t *testing.T) {
 
 	valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{C1}, nil).Times(1)
 
-	_, err := v.GetCFS(1)
+	_, err := v.GetCFSWithSlotFactor(1, 0)
 	assert.ErrorIs(t, err, vrank.ErrHeaderNotFound)
 }
 
@@ -926,9 +910,8 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		//
 		// council size = 4 → F = 1
 		// Expected CFS: C1=1, C2=1, C3=0 (present in map with zero score)
-		P1, P2, P3, P4 := addrN(10), addrN(11), addrN(12), addrN(13)
+		P3, P4 := addrN(12), addrN(13)
 		C1, C2, C3 := addrN(20), addrN(21), addrN(22)
-		council := []common.Address{P1, P2, P3, P4}
 		candidates := []common.Address{C1, C2, C3}
 
 		ctrl := gomock.NewController(t)
@@ -949,9 +932,7 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		valset.EXPECT().GetProposer(uint64(7), uint64(0)).Return(P3, nil)
 		valset.EXPECT().GetProposer(uint64(8), uint64(0)).Return(P4, nil)
 		valset.EXPECT().GetProposer(uint64(9), uint64(0)).Return(P4, nil)
-		valset.EXPECT().GetCommittee(uint64(9), uint64(0)).Return(council, nil)
-
-		cfs, err := computeCFS(v, 5, 9)
+		cfs, err := computeCFS(v, 5, 9, 4)
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), cfs[C1], "C1 should be 1")
@@ -976,8 +957,6 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		for i := range candidates {
 			candidates[i] = addrN(10 + i)
 		}
-		committee := append([]common.Address(nil), proposers...)
-
 		// KIP-227 Example 2 matrix (rows=candidates C1..C5, cols=reporters P1..P10).
 		cpMatrix := [][]uint64{
 			{14, 12, 15, 34, 12, 32, 20, 8640, 8637, 8634}, // C1
@@ -996,7 +975,6 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		v.Chain = &testChain{headers: headers}
 
 		valset.EXPECT().GetCandidates(start).Return(candidates, nil).Times(1)
-		valset.EXPECT().GetCommittee(end, uint64(0)).Return(committee, nil).Times(1)
 		valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).DoAndReturn(
 			func(blockNum, round uint64) (common.Address, error) {
 				if round != 0 {
@@ -1010,7 +988,7 @@ func TestApplyBlocksForCFS(t *testing.T) {
 			},
 		).Times(int(totalBlocks))
 
-		cfs, err := computeCFS(v, start, end)
+		cfs, err := computeCFS(v, start, end, uint64(len(proposers)))
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(139), cfs[candidates[0]], "C1")
@@ -1023,8 +1001,7 @@ func TestApplyBlocksForCFS(t *testing.T) {
 	t.Run("epoch_start", func(t *testing.T) {
 		// Verifies that a range containing only the epoch-start block produces a zero-score
 		// map pre-seeded with all candidates (no failures yet).
-		P1, C1 := addrN(0), addrN(10)
-		council := []common.Address{P1}
+		C1 := addrN(10)
 		candidates := []common.Address{C1}
 
 		ctrl := gomock.NewController(t)
@@ -1039,9 +1016,8 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		}
 		// GetProposer is NOT called: block 0 has no VRank set (nil → empty cfReport).
 		valset.EXPECT().GetCandidates(uint64(0)).Return(candidates, nil)
-		valset.EXPECT().GetCommittee(uint64(0), uint64(0)).Return(council, nil)
 
-		cfs, err := computeCFS(v, 0, 0)
+		cfs, err := computeCFS(v, 0, 0, 1)
 		require.NoError(t, err)
 		// C1 is pre-seeded from GetCandidates but no block reported any failure, so CFS=0.
 		score, hasC1 := cfs[C1]

@@ -115,8 +115,8 @@ interface IAddressBookV2 {
     event SystemTransitionProcessed(address[] nodeIds, State[] newStates);
 
     /// @notice Emitted when the epoch transition is processed
-    /// @param epochValCount The epoch validator count
-    event EpochTransitionProcessed(uint256 epochValCount);
+    /// @param slotFactor The slot factor for the epoch
+    event EpochTransitionProcessed(uint256 slotFactor);
 
     /// @notice Emitted when the pause timeout is updated
     /// @param oldPauseTimeout The previous timeout value
@@ -245,7 +245,7 @@ interface IAddressBookV2 {
 
     /// @notice Processes system-triggered state transitions for nodes.
     /// @dev Core client computes all timeout/violation/epoch logic; AddressBookV2 unconditionally records results.
-    ///      Updates epochValCount only at epoch boundaries (block.number % epochBlockInterval == 0).
+    ///      Updates slotFactor only at epoch boundaries (block.number % epochBlockInterval == 0).
     /// @param nodeIds Array of node addresses to transition
     /// @param newStates Array of target states for each node
     /// @param timeoutAts Array of timeout timestamps for each node (0 = no timeout)
@@ -331,7 +331,7 @@ interface IAddressBookV2 {
     /// @return The CFS threshold
     function getCfsThreshold() external view returns (uint256);
 
-    /// @notice Returns the slot limits for violation transitions based on epochValCount
+    /// @notice Returns the slot limits for violation transitions based on slotFactor
     /// @return maxSlotAvailable Maximum number of ValPaused or ValExiting each
     /// @return minActiveCount Minimum number of ValActive validators required
     function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount);
@@ -348,7 +348,7 @@ interface IAddressBookV2 {
 
     /// @notice Returns the epoch validator count snapshot (ValActive + ValPaused at last epoch)
     /// @return The epoch validator count used for mid-epoch slot math
-    function getEpochValCount() external view returns (uint256);
+    function getSlotFactor() external view returns (uint256);
 
     /// @notice Returns the number of blocks per epoch (set at deployment, immutable)
     /// @return The epoch block interval

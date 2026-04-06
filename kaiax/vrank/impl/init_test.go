@@ -23,6 +23,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	consensus_mocks "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
@@ -73,14 +74,15 @@ func TestInit_CatchUpFromCheckpoint(t *testing.T) {
 			return P1, nil
 		},
 	).AnyTimes()
-	valset.EXPECT().GetCommittee(gomock.Any(), gomock.Any()).Return([]common.Address{P1, P2}, nil).AnyTimes()
+	mockEngine := consensus_mocks.NewMockEngine(ctrl)
+	mockEngine.EXPECT().Author(gomock.Any()).Return(common.Address{}, nil).AnyTimes()
 
 	module := NewVRankModule()
 	require.NoError(t, module.Init(&InitOpts{
 		NodeKey:     key,
 		Valset:      valset,
 		ChainConfig: params.TestKaiaConfig("permissionless"),
-		Chain:       &testChain{headers: headers},
+		Chain:       &testChain{headers: headers, engine: mockEngine},
 		ChainKv:     db,
 	}))
 

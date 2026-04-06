@@ -38,7 +38,7 @@ func (v *ValsetModule) getEpochTransition(
 	idleTimeout time.Duration,
 	maxValidatorCount int,
 	now time.Time,
-	num, cfsThreshold uint64,
+	num, cfsThreshold, slotFactor uint64,
 ) valset.NodeStateMap {
 	var (
 		newValidators        = validators.Copy()
@@ -56,7 +56,7 @@ func (v *ValsetModule) getEpochTransition(
 				val.State = valset.Registered // T4b
 			}
 		case valset.CandTesting:
-			if v.isPassVrankTest(addr, num, cfsThreshold) {
+			if v.isPassVrankTest(addr, num, cfsThreshold, slotFactor) {
 				if val.StakingAmount >= minStake {
 					activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
 				} else {

@@ -84,7 +84,7 @@ func newTestValsetModule(ctrl *gomock.Controller) *ValsetModule {
 	mockChain := chain_mock.NewMockBlockChain(ctrl)
 	mockChain.EXPECT().Config().Return(&params.ChainConfig{VRankEpoch: testVRankEpoch}).AnyTimes()
 	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-	mockVRank.EXPECT().GetCFS(gomock.Any()).Return(nil, nil).AnyTimes()
+	mockVRank.EXPECT().GetCFSWithSlotFactor(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	return &ValsetModule{
 		InitOpts: InitOpts{
 			Chain:       mockChain,
@@ -126,7 +126,7 @@ func TestGetEpochTransition_StateTransitions(t *testing.T) {
 			validators := valset.NodeStateMap{
 				addr1: {State: tc.inputState, StakingAmount: tc.stakingAmount},
 			}
-			result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, 0, 0)
+			result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, 0, 0, 0)
 			assert.Equal(t, tc.expectedState, result[addr1].State)
 			if tc.expectTimeout {
 				assert.False(t, result[addr1].IdleTimeout.IsZero())
@@ -144,7 +144,7 @@ func TestGetEpochTransition_MaxValidatorCount(t *testing.T) {
 		addr2: {State: valset.ValActive, StakingAmount: midStake},
 		addr3: {State: valset.ValActive, StakingAmount: lowStake},
 	}
-	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, 2, testBlockTime, 0, 0)
+	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, 2, testBlockTime, 0, 0, 0)
 	assert.Equal(t, valset.ValActive, result[addr1].State)
 	assert.Equal(t, valset.ValActive, result[addr2].State)
 	assert.Equal(t, valset.ValInactive, result[addr3].State)
@@ -161,7 +161,7 @@ func TestGetEpochTransition_TieBreakingByAddress(t *testing.T) {
 		addr2: {State: valset.ValActive, StakingAmount: lowStake},
 		addr3: {State: valset.ValActive, StakingAmount: lowStake},
 	}
-	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, 2, testBlockTime, 0, 0)
+	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, 2, testBlockTime, 0, 0, 0)
 
 	// addr1 (0x0001) < addr2 (0x0002) < addr3 (0x0003)
 	assert.Equal(t, valset.ValActive, result[addr1].State)
@@ -176,7 +176,7 @@ func TestGetEpochTransition_DoesNotMutateInput(t *testing.T) {
 	validators := valset.NodeStateMap{
 		addr1: {State: valset.ValExiting, StakingAmount: aboveMinStake},
 	}
-	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, 0, 0)
+	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, 0, 0, 0)
 	assert.Equal(t, valset.ValInactive, result[addr1].State)    // result is transitioned
 	assert.Equal(t, valset.ValExiting, validators[addr1].State) // original is unchanged
 }
@@ -228,10 +228,10 @@ func TestIsPassVrankTest(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			v := newTestValsetModule(ctrl)
 			mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-			mockVRank.EXPECT().GetCFS(testCFSBlockNum).Return(tc.cfsScores, tc.cfsErr)
+			mockVRank.EXPECT().GetCFSWithSlotFactor(testCFSBlockNum, uint64(0)).Return(tc.cfsScores, tc.cfsErr)
 			v.VRankModule = mockVRank
 
-			result := v.isPassVrankTest(addr1, testCFSBlockNum, tc.cfsThreshold)
+			result := v.isPassVrankTest(addr1, testCFSBlockNum, tc.cfsThreshold, 0)
 			assert.Equal(t, tc.expected, result)
 		})
 	}
@@ -255,13 +255,13 @@ func TestGetEpochTransition_CandTestingCFS(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			v := newTestValsetModule(ctrl)
 			mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-			mockVRank.EXPECT().GetCFS(testCFSBlockNum).Return(map[common.Address]uint64{addr1: tc.cfs}, nil)
+			mockVRank.EXPECT().GetCFSWithSlotFactor(testCFSBlockNum, uint64(0)).Return(map[common.Address]uint64{addr1: tc.cfs}, nil)
 			v.VRankModule = mockVRank
 
 			validators := valset.NodeStateMap{
 				addr1: {State: valset.CandTesting, StakingAmount: aboveMinStake},
 			}
-			result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, testCFSBlockNum, testCFSThreshold)
+			result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, testCFSBlockNum, testCFSThreshold, 0)
 			assert.Equal(t, tc.expectedState, result[addr1].State)
 		})
 	}
@@ -440,7 +440,7 @@ func TestGetViolationTransition_PFSNonActiveNotAffected(t *testing.T) {
 // ============================================================
 // TestGetViolationTransition with SlotLimits
 //
-// Uses epochValCount=4 (4 validators at epoch start).
+// Uses slotFactor=4 (4 validators at epoch start).
 // SlotMath (see contracts/libraries/SlotMath.sol):
 //   f(n)              = (n-1)/3            → f(4)=1
 //   maxSlotAvailable  = max(1, f(n)/2)     → max(1, 0)=1  (up to 1 ValPaused, up to 1 ValExiting independently)
@@ -564,6 +564,7 @@ func newTestApplyAllTransitions(ctrl *gomock.Controller) *ValsetModule {
 	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
 	mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
 	mockVRank.EXPECT().GetPFS(gomock.Any()).Return(nil, nil).AnyTimes()
+	mockVRank.EXPECT().GetCFSWithSlotFactor(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	v := &ValsetModule{
 		InitOpts: InitOpts{
@@ -669,7 +670,7 @@ func TestApplyAllTransitions(t *testing.T) {
 			v := newTestApplyAllTransitions(ctrl)
 			parentHeader := &types.Header{Number: big.NewInt(int64(tc.num - 1)), Time: big.NewInt(testBlockTime.Unix())}
 
-			result, err := v.applyAllTransitions(tc.input, parentHeader, DefaultValPausedTimeout, DefaultValIdleTimeout, DefaultActiveValidatorCount, 0, 0, noSlotLimit, noMinActive)
+			result, err := v.applyAllTransitions(tc.input, parentHeader, DefaultValPausedTimeout, DefaultValIdleTimeout, DefaultActiveValidatorCount, 0, 0, noSlotLimit, noMinActive, 0)
 			assert.NoError(t, err)
 			for addr, expectedState := range tc.expected {
 				assert.Equal(t, expectedState, result[addr].State, "addr=%s", addr.Hex())

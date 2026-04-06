@@ -66,6 +66,7 @@ interface IAddressBookV2 {
     function getMaxCounts() external view returns (uint256 maxValidatorCount, uint256 maxReadyCandidateCount);
     function getPfsThreshold() external view returns (uint256);
     function getCfsThreshold() external view returns (uint256);
+    function getSlotFactor() external view returns (uint256);
     function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount);
 }
 
@@ -150,6 +151,7 @@ contract MultiCallContract {
             uint256 maxReadyCandidateCount,
             uint256 pfsThreshold,
             uint256 cfsThreshold,
+            uint256 slotFactor,
             uint256 maxSlotAvailable,
             uint256 minActiveCount
         )
@@ -160,6 +162,7 @@ contract MultiCallContract {
         (maxValidatorCount, maxReadyCandidateCount) = abv2.getMaxCounts();
         pfsThreshold = abv2.getPfsThreshold();
         cfsThreshold = abv2.getCfsThreshold();
+        slotFactor = abv2.getSlotFactor();
         (maxSlotAvailable, minActiveCount) = abv2.getSlotLimits();
     }
 

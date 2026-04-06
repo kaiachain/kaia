@@ -167,6 +167,7 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
 		mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
 		mockVRank.EXPECT().GetPFS(gomock.Any()).Return(nil, nil).AnyTimes()
+		mockVRank.EXPECT().GetCFSWithSlotFactor(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 		v.VRankModule = mockVRank
 		chain.Config().VRankEpoch = testVRankEpoch
 		return v

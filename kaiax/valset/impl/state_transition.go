@@ -71,7 +71,7 @@ func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.H
 	if err != nil {
 		return nil, err
 	}
-	return v.applyAllTransitions(res.Validators, header, res.PauseTimeout, res.IdleTimeout, res.MaxValCount, res.PfsThreshold, res.CfsThreshold, res.MaxSlotAvailable, res.MinActiveCount)
+	return v.applyAllTransitions(res.Validators, header, res.PauseTimeout, res.IdleTimeout, res.MaxValCount, res.PfsThreshold, res.CfsThreshold, res.MaxSlotAvailable, res.MinActiveCount, res.SlotFactor)
 }
 
 // applyAllTransitions computes applyTr(N-1) given ABv2(N-1) validators and block N-1 parameters.
@@ -81,7 +81,7 @@ func (v *ValsetModule) applyAllTransitions(
 	validators valset.NodeStateMap,
 	header *types.Header, // parent header (N-1)
 	pauseTimeout, idleTimeout time.Duration,
-	maxValCount, pfsThreshold, cfsThreshold, maxSlotAvailable, minActiveCount uint64,
+	maxValCount, pfsThreshold, cfsThreshold, maxSlotAvailable, minActiveCount, slotFactor uint64,
 ) (valset.NodeStateMap, error) {
 	var (
 		num       = header.Number.Uint64() + 1
@@ -93,17 +93,17 @@ func (v *ValsetModule) applyAllTransitions(
 	newValidators := v.getViolationTransition(minStake, validators, header.Number.Uint64(), pfsThreshold, maxSlotAvailable, minActiveCount)
 	newValidators = v.getTimeoutTransition(newValidators, idleTimeout, pauseTimeout, blockTime)
 	if v.isVrankEpoch(num) {
-		newValidators = v.getEpochTransition(minStake, newValidators, idleTimeout, int(maxValCount), blockTime, header.Number.Uint64(), cfsThreshold)
+		newValidators = v.getEpochTransition(minStake, newValidators, idleTimeout, int(maxValCount), blockTime, header.Number.Uint64(), cfsThreshold, slotFactor)
 	}
 	return newValidators, nil
 }
 
 // isPassVrankTest returns true if the candidate's CFS is below the threshold.
 // CFS < cfsThreshold → pass (CandTesting → ValActive promotion eligible).
-func (v *ValsetModule) isPassVrankTest(addr common.Address, num, cfsThreshold uint64) bool {
-	cfsScores, err := v.VRankModule.GetCFS(num)
+func (v *ValsetModule) isPassVrankTest(addr common.Address, num, cfsThreshold, slotFactor uint64) bool {
+	cfsScores, err := v.VRankModule.GetCFSWithSlotFactor(num, slotFactor)
 	if err != nil { // CFS unavailable → pass to avoid blocking promotion
-		logger.Warn("isPassVrankTest: GetCFS failed", "num", num, "err", err)
+		logger.Warn("isPassVrankTest: GetCFSWithSlotFactor failed", "num", num, "err", err)
 		return true
 	}
 	cfs, ok := cfsScores[addr]
@@ -152,7 +152,7 @@ func (v *ValsetModule) InstallABv2(
 
 // writeNodeStateUpdateToContract computes the diff between parent(N-1) and current(N) node states,
 // and writes only the changed nodes to the AddressBookV2 contract via processSystemTransition.
-// At epoch blocks, the call is always made (even with empty diff) to update epochValCount.
+// At epoch blocks, the call is always made (even with empty diff) to update the slot factor snapshot.
 func (v *ValsetModule) writeNodeStateUpdateToContract(
 	vmenv *vm.EVM,
 	header *types.Header,
@@ -175,7 +175,7 @@ func (v *ValsetModule) writeNodeStateUpdateToContract(
 	}
 	diff := diffNodeStates(parentRes.Validators, currentNodes)
 
-	// Skip call if no changes and not an epoch block (epoch blocks need epochValCount update)
+	// Skip call if no changes and not an epoch block (epoch blocks need slot factor update)
 	if len(diff) == 0 && !v.isVrankEpoch(num) {
 		return nil
 	}

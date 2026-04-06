@@ -136,6 +136,7 @@ type NodeStatesResult struct {
 	MaxReadyCandCount uint64
 	PfsThreshold      uint64
 	CfsThreshold      uint64
+	SlotFactor        uint64
 	MaxSlotAvailable  uint64
 	MinActiveCount    uint64
 }
@@ -185,9 +186,24 @@ func ReadNodeStates(
 		MaxReadyCandCount: res.MaxReadyCandidateCount.Uint64(),
 		PfsThreshold:      res.PfsThreshold.Uint64(),
 		CfsThreshold:      res.CfsThreshold.Uint64(),
+		SlotFactor:        res.SlotFactor.Uint64(),
 		MaxSlotAvailable:  res.MaxSlotAvailable.Uint64(),
 		MinActiveCount:    res.MinActiveCount.Uint64(),
 	}, nil
+}
+
+// ReadSlotFactor reads the slot factor from AddressBookV2.
+func ReadSlotFactor(backend bind.ContractCaller, num *big.Int) (uint64, error) {
+	caller, err := abv2contracts.NewAddressBookV2Caller(AddressBookAddr, backend)
+	if err != nil {
+		return 0, err
+	}
+	opts := &bind.CallOpts{BlockNumber: num}
+	sf, err := caller.GetSlotFactor(opts)
+	if err != nil {
+		return 0, err
+	}
+	return sf.Uint64(), nil
 }
 
 // ReadAddressBookV2BlsAll reads BLS public key info for all nodes from AddressBookV2.

@@ -23,6 +23,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	consensus_mocks "github.com/kaiachain/kaia/consensus/mocks"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/storage/database"
@@ -53,9 +54,13 @@ func TestPostInsertBlock(t *testing.T) {
 		v.pfsCache.Add(cp-1, map[common.Address]uint64{})
 		v.cpMatrixCache.Add(cp-1, vrank.CPMatrix{C1: {}})
 
+		// Inject a mock engine so that NewEVMBlockContext can call Engine().Author().
+		mockEngine := consensus_mocks.NewMockEngine(ctrl)
+		mockEngine.EXPECT().Author(gomock.Any()).Return(common.Address{}, nil).AnyTimes()
+		v.Chain.(*testChain).engine = mockEngine
+
 		// Block cp has a non-empty cfReport, so GetProposer is called once.
 		valset.EXPECT().GetProposer(cp, uint64(0)).Return(P1, nil).Times(1)
-		valset.EXPECT().GetCommittee(cp, uint64(0)).Return([]common.Address{P1}, nil).Times(1)
 
 		block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(cp))})
 		require.NoError(t, v.PostInsertBlock(block))
@@ -86,6 +91,11 @@ func TestPostInsertBlock(t *testing.T) {
 		}
 		v := newTestModuleWithHeaders(t, valset, db, headers)
 
+		// Inject a mock engine so that NewEVMBlockContext can call Engine().Author().
+		mockEngine := consensus_mocks.NewMockEngine(ctrl)
+		mockEngine.EXPECT().Author(gomock.Any()).Return(common.Address{}, nil).AnyTimes()
+		v.Chain.(*testChain).engine = mockEngine
+
 		// Pre-seed the cache and DB to simulate PostInsertBlock(cp) having already run.
 		v.pfsCache.Add(cp, map[common.Address]uint64{P1: 1})
 		v.cpMatrixCache.Add(cp, vrank.CPMatrix{C1: {P1: 1}})
@@ -96,9 +106,6 @@ func TestPostInsertBlock(t *testing.T) {
 		WriteLastCheckpoint(db, cp)
 
 		// Block cp+1 has no VRank → empty cfReport → GetProposer not called.
-		// generateCFSFromCPMatrix still calls GetCommittee to determine F.
-		valset.EXPECT().GetCommittee(cp+1, uint64(0)).Return([]common.Address{P1}, nil).Times(1)
-
 		block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(cp + 1))})
 		require.NoError(t, v.PostInsertBlock(block))
 

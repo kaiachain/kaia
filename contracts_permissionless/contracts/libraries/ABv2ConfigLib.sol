@@ -22,7 +22,7 @@ library ABv2ConfigLib {
     ConfigSlot internal constant IDLE_TIMEOUT = ConfigSlot.wrap(11);
     ConfigSlot internal constant MAX_VALIDATOR_COUNT = ConfigSlot.wrap(12);
     ConfigSlot internal constant MAX_READY_CANDIDATE_COUNT = ConfigSlot.wrap(13);
-    // offset 14 = epochValCount (system-managed, not configurable)
+    // offset 14 = slotFactor (system-managed, not configurable)
     ConfigSlot internal constant KEF_ADDRESS = ConfigSlot.wrap(15);
     ConfigSlot internal constant KIF_ADDRESS = ConfigSlot.wrap(16);
     ConfigSlot internal constant KPF_ADDRESS = ConfigSlot.wrap(17);
