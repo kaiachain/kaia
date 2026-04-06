@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"slices"
 
+	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
@@ -57,12 +58,42 @@ func (v *VRankModule) GetPFS(blockNum uint64) (map[common.Address]uint64, error)
 	return cloneMap(seed), nil
 }
 
+func (v *VRankModule) getSlotFactorAt(blockNum uint64) (uint64, error) {
+	header := v.Chain.GetHeaderByNumber(blockNum)
+	if header == nil {
+		return 0, vrank.ErrHeaderNotFound
+	}
+	statedb, err := v.Chain.StateAt(header.Root)
+	if err != nil {
+		return 0, err
+	}
+	res, err := system.ReadNodeStates(statedb, v.Chain, header)
+	if err != nil {
+		return 0, err
+	}
+	return res.SlotFactor, nil
+}
+
 // GetCFS computes the running Candidate Failure Score up to blockNum.
 // cfs(N) -> map[candidateAddr]score for blocks [epochBegin(N), N].
 // For the validator state transition at block N, use GetCFS(N-1).
 // Returns ErrNotPermissionless if blockNum is before the permissionless fork.
 // Returns ErrFutureBlock if blockNum exceeds the current chain head.
 func (v *VRankModule) GetCFS(blockNum uint64) (map[common.Address]uint64, error) {
+	sf, err := v.getSlotFactorAt(blockNum)
+	if err != nil {
+		return nil, err
+	}
+	return v.getCFS(blockNum, sf)
+}
+
+func (v *VRankModule) GetCFSWithSlotFactor(blockNum uint64, slotFactor uint64) (map[common.Address]uint64, error) {
+	return v.getCFS(blockNum, slotFactor)
+}
+
+// getCPMatrix computes and caches the CP matrix for blockNum without requiring a slotFactor.
+// Use this when only the matrix (not the final CFS scores) is needed, e.g. during cache warm-up.
+func (v *VRankModule) getCPMatrix(blockNum uint64) (vrank.CPMatrix, error) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
 		return nil, vrank.ErrNotPermissionless
 	}
@@ -82,13 +113,16 @@ func (v *VRankModule) GetCFS(blockNum uint64) (map[common.Address]uint64, error)
 		}
 	}
 
-	cfs, err := v.generateCFSFromCPMatrix(blockNum, seed)
+	v.cpMatrixCache.Add(blockNum, seed)
+	return seed, nil
+}
+
+func (v *VRankModule) getCFS(blockNum uint64, slotFactor uint64) (map[common.Address]uint64, error) {
+	cpMatrix, err := v.getCPMatrix(blockNum)
 	if err != nil {
 		return nil, err
 	}
-
-	v.cpMatrixCache.Add(blockNum, seed)
-	return cfs, nil
+	return generateCFSFromCPMatrix(cpMatrix, slotFactor), nil
 }
 
 // lookupPFSSeed returns (start, seed) where seed holds PFS accumulated up to start-1.
@@ -177,15 +211,12 @@ func (v *VRankModule) applyBlocksForCPMatrix(start, end uint64, seed vrank.CPMat
 	return cpMatrix, nil
 }
 
-func (v *VRankModule) generateCFSFromCPMatrix(blockNum uint64, cpMatrix vrank.CPMatrix) (map[common.Address]uint64, error) {
-	// Determine F from validator count at epoch start.
-	committee, err := v.Valset.GetCommittee(blockNum, 0) // TODO: fetch value from AddressBookV2
-	if err != nil {
-		return nil, err
+func generateCFSFromCPMatrix(cpMatrix vrank.CPMatrix, slotFactor uint64) map[common.Address]uint64 {
+	F := 0
+	if slotFactor > 0 {
+		F = int((slotFactor - 1) / 3)
 	}
-	F := max(0, (len(committee)-1)/3) // make sure F>=0, just in case
-
-	return byzantineFilter(cpMatrix, F), nil
+	return byzantineFilter(cpMatrix, F)
 }
 
 // byzantineFilter computes CFS scores from pre-aggregated per-candidate failure data.

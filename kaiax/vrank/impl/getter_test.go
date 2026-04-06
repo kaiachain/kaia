@@ -23,12 +23,15 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -37,6 +40,7 @@ var testCheckpointInterval = params.DefaultVRankEpoch / 8
 
 type testChain struct {
 	headers map[uint64]*types.Header
+	engine  consensus.Engine
 }
 
 func (c *testChain) CurrentHeader() *types.Header {
@@ -53,10 +57,36 @@ func (c *testChain) GetHeaderByNumber(number uint64) *types.Header {
 	return c.headers[number]
 }
 
+func (c *testChain) Config() *params.ChainConfig {
+	return params.TestKaiaConfig("permissionless")
+}
+
+func (c *testChain) CurrentBlock() *types.Block { return nil }
+
+func (c *testChain) Engine() consensus.Engine { return c.engine }
+
+func (c *testChain) GetHeader(hash common.Hash, number uint64) *types.Header {
+	return c.GetHeaderByNumber(number)
+}
+
+func (c *testChain) GetHeaderByHash(hash common.Hash) *types.Header { return nil }
+
+func (c *testChain) GetBlock(hash common.Hash, number uint64) *types.Block { return nil }
+
+func (c *testChain) State() (*state.StateDB, error) {
+	return state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+}
+
+func (c *testChain) StateAt(root common.Hash) (*state.StateDB, error) {
+	return state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+}
+
 func makeHeaderWithRound(number uint64, round int64) *types.Header {
 	h := &types.Header{
-		Number: big.NewInt(int64(number)),
-		Extra:  make([]byte, types.IstanbulExtraVanity),
+		Number:     big.NewInt(int64(number)),
+		Time:       big.NewInt(0),
+		BlockScore: big.NewInt(1),
+		Extra:      make([]byte, types.IstanbulExtraVanity),
 	}
 	return types.SetRoundToHeader(h, round)
 }

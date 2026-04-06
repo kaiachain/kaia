@@ -20,7 +20,6 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
 func (v *VRankModule) PostInsertBlock(block *types.Block) error {
@@ -29,32 +28,16 @@ func (v *VRankModule) PostInsertBlock(block *types.Block) error {
 		return nil
 	}
 
-	// GetPFS/GetCFS populate both caches; capture pfs directly to avoid a second cache lookup.
 	pfs, err := v.GetPFS(blockNum)
 	if err != nil {
 		return err
 	}
-	if _, err := v.GetCFS(blockNum); err != nil {
+	cpMatrix, err := v.getCPMatrix(blockNum)
+	if err != nil {
 		return err
 	}
 
 	if blockNum%v.scoreCheckpointInterval() == 0 {
-		// GetCFS populates cpMatrixCache, so fetch from there.
-		cpRaw, hasCPS := v.cpMatrixCache.Get(blockNum)
-		var cpMatrix vrank.CPMatrix
-		if hasCPS {
-			cpMatrix = cpRaw.(vrank.CPMatrix)
-		} else {
-			// unlikely to happen: perform exhaustive re-calculation.
-			cpMatrix, err = v.newCPMatrix(blockNum)
-			if err != nil {
-				return err
-			}
-			cpMatrix, err = v.applyBlocksForCPMatrix(calcEpochStart(blockNum, v.vrankEpoch()), blockNum, cpMatrix)
-			if err != nil {
-				return err
-			}
-		}
 		WriteCheckpoint(v.ChainKv, blockNum, pfs, cpMatrix)
 		WriteLastCheckpoint(v.ChainKv, blockNum)
 	}

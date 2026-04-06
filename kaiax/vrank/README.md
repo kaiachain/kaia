@@ -42,7 +42,7 @@ for each x in [epochStart(N), N]:
         cpMatrix_N[candidate][reporter(x)] += 1
 ```
 
-The CP matrix is then passed through a **byzantine filter** before producing the final CFS. The filter discards the top-F reporter totals per candidate, where `F = floor((committeeSize - 1) / 3)`. This protects against up to F malicious proposers falsely accusing candidates.
+The CP matrix is then passed through a **byzantine filter** before producing the final CFS. The filter discards the top-F reporter totals per candidate, where `F = floor((slotFactor - 1) / 3)`. Here `slotFactor` is the ABv2 epoch snapshot of `ValActive + ValPaused`, not the live committee length. This protects against up to F malicious proposers falsely accusing candidates.
 
 ```
 scores_N(candidate) = sorted list of cpMatrix_N[candidate][reporter] over all reporters
@@ -91,7 +91,7 @@ Calls `GetPFS(head)` and `GetCFS(head)` to warm both in-memory caches (PFS and C
 - getters
   - For all getters except `TallyCfReport`, `N` must exist in the header DB.
   - `GetPfReport` and `GetPFS` call `GetProposer` for each block `x` in `[epochStart(N), N]`. After the Permissionless HF, `GetProposer` reads `header(x).Extra.Validators` directly instead of querying staking, because `VerifyHeader` guarantees `Extra.Validators` matches the staking-derived qualified set for every committed block. This makes `GetProposer` safe for historical blocks within the epoch.
-  - `GetCFS` calls `GetCandidates(N)` (where `N` is the queried block, typically head) to seed the CP matrix, and `GetCommittee(N, 0)` to compute the byzantine filter threshold `F`.
+  - `GetCFS` calls `GetCandidates(N)` (where `N` is the queried block, typically head) to seed the CP matrix.
   - `TallyCfReport(N, round)` is called by the proposer of block `N+1` to fill `header(N+1).VRank`; it queries `GetCandidates(N)` because the cfReport belongs to block `N+1`'s epoch.
 
 | Function                  | Valset call                                                               | Notes                                           |
@@ -102,7 +102,6 @@ Calls `GetPFS(head)` and `GetCFS(head)` to warm both in-memory caches (PFS and C
 | `GetPFS(N)`               | `GetProposer(x, r)`; `x ∈ [epochStart(N), N]`, `r ∈ [0, header(x).Round)` | uses `Extra.Validators` after Permissionless HF |
 | `GetCFS(N)`               | `GetCandidates(N)`                                                        | `N` ≈ head; seeds `newCPMatrix`                 |
 |                           | `GetProposer(x, header(x).Round)`; `x ∈ [epochStart(N), N]`               | fast path: `Engine.Author(header(x))`           |
-|                           | `GetCommittee(N, 0)`                                                      | `N` ≈ head; TODO: replace with AddressBook call |
 
 - handlers
   - During consensus of block N, block N is not yet committed, but its validator/candidate/proposer set is already determined — so `Get*(N)` is safe for proposer / candidate / committee identity checks tied to that live view.

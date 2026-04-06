@@ -22,7 +22,7 @@ import (
 	"sync/atomic"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
@@ -61,8 +61,7 @@ type InitOpts struct {
 }
 
 type chain interface {
-	CurrentHeader() *types.Header
-	GetHeaderByNumber(number uint64) *types.Header
+	backends.BlockChainForCaller
 }
 
 type VRankModule struct {
@@ -178,7 +177,7 @@ func (v *VRankModule) catchUpScoreCaches() error {
 	if _, err := v.GetPFS(headNum); err != nil {
 		return err
 	}
-	if _, err := v.GetCFS(headNum); err != nil {
+	if _, err := v.getCPMatrix(headNum); err != nil {
 		return err
 	}
 	return nil
