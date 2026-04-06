@@ -62,7 +62,7 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 	networkId, parentChainId int, proxyNodeKeys, enNodeKeys, scnNodeKeys, spnNodeKeys, senNodeKeys []string, txGenOpt service.TxGenOption,
 ) {
 	var validatorNames []string
-	for i := 0; i < number; i++ {
+	for i := range number {
 		s := service.NewValidator(i,
 			genesis,
 			"",
@@ -91,7 +91,7 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 	}
 
 	numPNs := len(proxyNodeKeys)
-	for i := 0; i < numPNs; i++ {
+	for i := range numPNs {
 		s := service.NewValidator(i,
 			genesis,
 			"",
@@ -120,7 +120,7 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 	}
 
 	numENs := len(enNodeKeys)
-	for i := 0; i < len(enNodeKeys); i++ {
+	for i := range enNodeKeys {
 		s := service.NewValidator(i,
 			genesis,
 			"",
@@ -158,7 +158,7 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 		scnParentChainId = 0
 		scnBridgeNodes = ""
 	}
-	for i := 0; i < len(scnNodeKeys); i++ {
+	for i := range scnNodeKeys {
 		s := service.NewValidator(i,
 			"",
 			scGenesis,
@@ -193,7 +193,7 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 		spnParentChainId = 0
 		spnBridgeNodes = ""
 	}
-	for i := 0; i < len(spnNodeKeys); i++ {
+	for i := range spnNodeKeys {
 		s := service.NewValidator(i,
 			"",
 			scGenesis,
@@ -221,7 +221,7 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 		validatorNames = append(validatorNames, s.Name)
 	}
 
-	for i := 0; i < len(senNodeKeys); i++ {
+	for i := range senNodeKeys {
 		s := service.NewValidator(i,
 			"",
 			scGenesis,

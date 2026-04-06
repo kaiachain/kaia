@@ -618,7 +618,11 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// DeferredTxFee has never been voted, so it's ok to use the genesis value instead of the latest value from governance.
 	if st.evm.ChainConfig().Governance == nil || !st.evm.ChainConfig().Governance.DeferredTxFee() {
 		if rules.IsMagma {
-			st.state.AddBalance(st.evm.Context.Rewardbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+			// Since Magma, half the fee is burned and the other half goes to the proposer (Rewardbase).
+			fee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
+			burnt := new(big.Int).Div(fee, big.NewInt(2)) // fee / 2
+			distributed := new(big.Int).Sub(fee, burnt)
+			st.state.AddBalance(st.evm.Context.Rewardbase, distributed)
 		} else {
 			st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 		}

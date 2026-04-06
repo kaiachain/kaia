@@ -51,14 +51,42 @@ func tmpDatadirWithKeystore(t *testing.T) string {
 	return datadir
 }
 
+func waitForStderrContains(t *testing.T, kaia *testKaia, timeout time.Duration, want ...string) {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		text := kaia.StderrText()
+		ok := true
+		for _, w := range want {
+			if !strings.Contains(text, w) {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatalf("stderr did not contain expected strings within %v: %v", timeout, want)
+}
+
+func killOnFailure(t *testing.T, kaia *testKaia) {
+	t.Helper()
+	t.Cleanup(func() {
+		if t.Failed() {
+			kaia.Kill()
+		}
+	})
+}
+
 func TestAccountListEmpty(t *testing.T) {
-	kaia := runKaia(t, "kaia-test", "account", "list")
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "account", "list")
 	kaia.ExpectExit()
 }
 
 func TestAccountList(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	kaia := runKaia(t, "kaia-test", "account", "list", "--datadir", datadir)
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "account", "list", "--datadir", datadir)
 	defer kaia.ExpectExit()
 	if runtime.GOOS == "windows" {
 		kaia.Expect(`
@@ -76,7 +104,7 @@ Account #2: {289d485d9771714cce91d3393d764e1311907acc} keystore://{{.Datadir}}/k
 }
 
 func TestAccountNew(t *testing.T) {
-	kaia := runKaia(t, "kaia-test", "account", "new", "--lightkdf")
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "account", "new", "--lightkdf")
 	defer kaia.ExpectExit()
 	kaia.Expect(`
 Your new account is locked with a password. Please give a password. Do not forget this password.
@@ -88,7 +116,7 @@ Repeat passphrase: {{.InputLine "foobar"}}
 }
 
 func TestAccountNewV3(t *testing.T) {
-	kaia := runKaia(t, "kaia-test", "account", "new", "--v3", "--lightkdf")
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "account", "new", "--v3", "--lightkdf")
 	defer kaia.ExpectExit()
 	kaia.Expect(`
 Your new account is locked with a password. Please give a password. Do not forget this password.
@@ -100,7 +128,7 @@ Repeat passphrase: {{.InputLine "foobar"}}
 }
 
 func TestAccountNewBadRepeat(t *testing.T) {
-	kaia := runKaia(t, "kaia-test", "account", "new", "--lightkdf")
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "account", "new", "--lightkdf")
 	defer kaia.ExpectExit()
 	kaia.Expect(`
 Your new account is locked with a password. Please give a password. Do not forget this password.
@@ -113,7 +141,7 @@ Fatal: Passphrases do not match
 
 func TestAccountUpdate(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	kaia := runKaia(t, "kaia-test", "account", "update",
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "account", "update",
 		"--datadir", datadir, "--lightkdf",
 		"f466859ead1932d743d622cb74fc058882e8648a")
 	defer kaia.ExpectExit()
@@ -141,7 +169,7 @@ func TestAccountImportV3(t *testing.T) {
 	assert.Nil(t, os.WriteFile(testKeyPath, []byte(testKeyHex), 0o400))
 	defer os.Remove(testKeyPath)
 
-	kaia := runKaia(t, "kaia-test", "account", "import", "--v3", testKeyPath)
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "account", "import", "--v3", "--lightkdf", testKeyPath)
 	// Enter password
 	kaia.InputLine("")
 	// Confirm password
@@ -165,15 +193,21 @@ func TestAccountImportV3(t *testing.T) {
 
 func TestUnlockFlag(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	kaia := runKaia(t, "kaia-test",
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a",
 		"js", "testdata/empty.js")
+	killOnFailure(t, kaia)
 	kaia.Expect(`
 Unlocking account f466859ead1932d743d622cb74fc058882e8648a | Attempt 1/3
 !! Unsupported terminal, password will be echoed.
 Passphrase: {{.InputLine "foobar"}}
 `)
+	waitForStderrContains(t, kaia, 5*time.Second,
+		"Unlocked account",
+		"0xf466859eAD1932D743d622CB74FC058882E8648A",
+	)
+	kaia.Interrupt()
 	kaia.ExpectExit()
 
 	wantMessages := []string{
@@ -189,7 +223,7 @@ Passphrase: {{.InputLine "foobar"}}
 
 func TestUnlockFlagWrongPassword(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	kaia := runKaia(t, "kaia-test",
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a")
 	defer kaia.ExpectExit()
@@ -208,10 +242,11 @@ Fatal: Failed to unlock account f466859ead1932d743d622cb74fc058882e8648a (could 
 // https://github.com/ethereum/go-ethereum/issues/1785
 func TestUnlockFlagMultiIndex(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	kaia := runKaia(t, "kaia-test",
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "0,2",
 		"js", "testdata/empty.js")
+	killOnFailure(t, kaia)
 	kaia.Expect(`
 Unlocking account 0 | Attempt 1/3
 !! Unsupported terminal, password will be echoed.
@@ -219,6 +254,12 @@ Passphrase: {{.InputLine "foobar"}}
 Unlocking account 2 | Attempt 1/3
 Passphrase: {{.InputLine "foobar"}}
 `)
+	waitForStderrContains(t, kaia, 5*time.Second,
+		"Unlocked account",
+		"0x7EF5A6135f1FD6a02593eEdC869c6D41D934aef8",
+		"0x289d485D9771714CCe91D3393D764E1311907ACc",
+	)
+	kaia.Interrupt()
 	kaia.ExpectExit()
 
 	wantMessages := []string{
@@ -235,10 +276,17 @@ Passphrase: {{.InputLine "foobar"}}
 
 func TestUnlockFlagPasswordFile(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	kaia := runKaia(t, "kaia-test",
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--password", "testdata/passwords.txt", "--unlock", "0,2",
 		"js", "testdata/empty.js")
+	killOnFailure(t, kaia)
+	waitForStderrContains(t, kaia, 5*time.Second,
+		"Unlocked account",
+		"0x7EF5A6135f1FD6a02593eEdC869c6D41D934aef8",
+		"0x289d485D9771714CCe91D3393D764E1311907ACc",
+	)
+	kaia.Interrupt()
 	kaia.ExpectExit()
 
 	wantMessages := []string{
@@ -255,7 +303,7 @@ func TestUnlockFlagPasswordFile(t *testing.T) {
 
 func TestUnlockFlagPasswordFileWrongPassword(t *testing.T) {
 	datadir := tmpDatadirWithKeystore(t)
-	kaia := runKaia(t, "kaia-test",
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single",
 		"--datadir", datadir, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--password", "testdata/wrong-passwords.txt", "--unlock", "0,2")
 	defer kaia.ExpectExit()
@@ -266,11 +314,11 @@ Fatal: Failed to unlock account 0 (could not decrypt key with given passphrase)
 
 func TestUnlockFlagAmbiguous(t *testing.T) {
 	store := filepath.Join("..", "..", "..", "accounts", "keystore", "testdata", "dupes")
-	kaia := runKaia(t, "kaia-test",
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single",
 		"--keystore", store, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a",
 		"js", "testdata/empty.js")
-	defer kaia.ExpectExit()
+	killOnFailure(t, kaia)
 
 	// Helper for the expect template, returns absolute keystore path.
 	kaia.SetTemplateFunc("keypath", func(file string) string {
@@ -289,6 +337,11 @@ Your passphrase unlocked keystore://{{keypath "1"}}
 In order to avoid this warning, you need to remove the following duplicate key files:
    keystore://{{keypath "2"}}
 `)
+	waitForStderrContains(t, kaia, 5*time.Second,
+		"Unlocked account",
+		"0xf466859eAD1932D743d622CB74FC058882E8648A",
+	)
+	kaia.Interrupt()
 	kaia.ExpectExit()
 
 	wantMessages := []string{
@@ -304,7 +357,7 @@ In order to avoid this warning, you need to remove the following duplicate key f
 
 func TestUnlockFlagAmbiguousWrongPassword(t *testing.T) {
 	store := filepath.Join("..", "..", "..", "accounts", "keystore", "testdata", "dupes")
-	kaia := runKaia(t, "kaia-test",
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single",
 		"--keystore", store, "--nat", "none", "--nodiscover", "--maxconnections", "0", "--port", "0",
 		"--unlock", "f466859ead1932d743d622cb74fc058882e8648a")
 	defer kaia.ExpectExit()
@@ -351,12 +404,14 @@ func TestBlsInfo(t *testing.T) {
 	// Save nodekey before node starts
 	assert.Nil(t, os.MkdirAll(filepath.Join(datadir, "klay"), 0o700))
 	assert.Nil(t, os.WriteFile(nodekeyPath, []byte(nodekeyHex), 0o400))
-	server := runKaia(t, "kaia-test", "--datadir", datadir,
-		"--netrestrict", "127.0.0.1/32", "--port", "0", "--verbosity", "2")
-	time.Sleep(5 * time.Second) // Simple way to wait for the RPC endpoint to open
+	server := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "--datadir", datadir,
+		"--netrestrict", "127.0.0.1/32", "--port", "0", "--maxconnections", "0",
+		"--nodiscover", "--nat", "none", "--verbosity", "0")
+	killOnFailure(t, server)
+	waitForEndpoint(t, filepath.Join(datadir, "klay.ipc"), 20*time.Second)
 
 	os.Remove(outputPath) // delete before test, because otherwise the "already exists" error occurs
-	client := runKaia(t, "kaia-test", "account", "bls-info", "--datadir", datadir)
+	client := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "account", "bls-info", "--datadir", datadir)
 	client.ExpectRegexp(expectPrint)
 
 	content, err := os.ReadFile(outputPath)
@@ -393,7 +448,7 @@ func TestBlsImport(t *testing.T) {
 	assert.Nil(t, os.WriteFile(blsnodekeyPath, []byte(blsnodekeyHex), 0o400))
 
 	os.Remove(outputPath) // delete before test, because otherwise the "already exists" error occurs
-	kaia := runKaia(t, "kaia-test", "account", "bls-import", "--datadir", datadir)
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "account", "bls-import", "--datadir", datadir)
 	kaia.InputLine("1234") // Enter password
 	kaia.InputLine("1234") // Confirm password
 	kaia.ExpectRegexp(expectPrint)
@@ -422,7 +477,7 @@ func TestBlsExport(t *testing.T) {
 	defer os.RemoveAll(datadir)
 	t.Logf("datadir: %s", datadir)
 
-	kaia := runKaia(t, "kaia-test", "account", "bls-export", "--datadir", datadir,
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "account", "bls-export", "--datadir", datadir,
 		"--bls-nodekeystore", keystorePath, "--password", passwordPath)
 	kaia.ExpectRegexp(expectPrint)
 

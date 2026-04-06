@@ -28,6 +28,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/holiman/uint256"
 	mock_bc "github.com/kaiachain/kaia/blockchain/mocks"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/accountkey"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -36,6 +37,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1088,4 +1090,54 @@ func TestStateTransition_EIP7623(t *testing.T) {
 	res, err = NewStateTransition(evm, tx).TransitionDb()
 	assert.NoError(t, err)
 	assert.Equal(t, gaslimit2, res.UsedGas)
+}
+
+// TestStateTransition_NonDeferredMagmaFeeBurn verifies that in non-deferred mode after Magma,
+// exactly half the transaction fee is credited to Rewardbase and the other half is burned
+// (i.e. not credited to anyone).
+func TestStateTransition_NonDeferredMagmaFeeBurn(t *testing.T) {
+	// TestKaiaConfig("magma") has Magma enabled and DeferredTxFee=false (the default).
+	config := params.TestKaiaConfig("magma")
+	fork.SetHardForkBlockNumberConfig(config)
+
+	var (
+		key, _     = crypto.HexToECDSA("8a1f9a8f95be41cd7ccb6168179afb4504aefe388d1e14474d32c45c72ce7b7a")
+		sender     = crypto.PubkeyToAddress(key.PublicKey)
+		to         = common.HexToAddress("0x000000000000000000000000000000000000aaaa")
+		rewardbase = common.HexToAddress("0x000000000000000000000000000000000000beef")
+		gasPrice   = big.NewInt(25 * params.Gkei)
+		gasLimit   = uint64(21000) // basic transfer, all gas consumed
+		signer     = types.LatestSignerForChainID(config.ChainID)
+	)
+
+	fee := new(big.Int).Mul(gasPrice, big.NewInt(int64(gasLimit)))
+	halfFee := new(big.Int).Div(fee, big.NewInt(2))
+
+	// Fund the sender with enough balance to cover gas.
+	statedb, _ := state.New(types.EmptyRootHash, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	statedb.AddBalance(sender, new(big.Int).Mul(fee, big.NewInt(10)))
+
+	tx, err := types.SignTx(
+		types.NewTransaction(0, to, big.NewInt(0), gasLimit, gasPrice, nil),
+		signer, key,
+	)
+	require.NoError(t, err)
+	msg, err := tx.AsMessageWithAccountKeyPicker(signer, statedb, 0)
+	require.NoError(t, err)
+
+	header := &types.Header{
+		Number:     big.NewInt(0),
+		Time:       big.NewInt(0),
+		BlockScore: big.NewInt(0),
+		Rewardbase: rewardbase,
+	}
+	blockContext := NewEVMBlockContext(header, nil, &rewardbase)
+	txContext := NewEVMTxContext(msg, header, config)
+	evm := vm.NewEVM(blockContext, txContext, statedb, config, &vm.Config{})
+
+	_, err = NewStateTransition(evm, msg).TransitionDb()
+	require.NoError(t, err)
+
+	// Rewardbase should receive exactly F/2. The other half is burned (not credited to anyone).
+	assert.Equal(t, halfFee, statedb.GetBalance(rewardbase))
 }

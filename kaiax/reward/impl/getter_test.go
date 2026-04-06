@@ -120,7 +120,7 @@ func TestGetRewardSummary(t *testing.T) {
 		config.IsSimple = tc.simple
 		config.Rules.IsMagma = tc.magma
 		config.Rules.IsKore = tc.kore
-		spec := getRewardSummary(config, tc.totalFee)
+		spec := getRewardSummary(config, tc.totalFee, big.NewInt(0))
 		assert.Equal(t, tc.expected, spec, tc.desc)
 	}
 }
@@ -140,10 +140,10 @@ func TestGetBlockReward(t *testing.T) {
 			&reward.RewardSpec{
 				RewardSummary: reward.RewardSummary{
 					Minted:   big.NewInt(6.4e18),
-					TotalFee: big.NewInt(0.0376e18), // includes non-deferred fee
-					BurntFee: big.NewInt(0.0188e18),
+					TotalFee: big.NewInt(0.0376e18),
+					BurntFee: big.NewInt(0.0188e18), // F/2 burnt in state transition
 				},
-				Proposer: big.NewInt(6.4188e18),
+				Proposer: big.NewInt(6.4188e18), // M + F/2
 				Stakers:  big.NewInt(0),
 				KIF:      big.NewInt(0),
 				KEF:      big.NewInt(0),
@@ -177,7 +177,7 @@ func TestGetBlockReward(t *testing.T) {
 				RewardSummary: reward.RewardSummary{
 					Minted:   big.NewInt(6.4e18),
 					TotalFee: big.NewInt(0.0376e18),
-					BurntFee: big.NewInt(0.0188e18),
+					BurntFee: big.NewInt(0.0188e18), // F/2 burnt in state transition
 				},
 				Proposer: big.NewInt(0.6588e18 + 1), // gpM + remainder + F/2
 				Stakers:  big.NewInt(2.56e18 - 1),   // gsM - remainder
@@ -416,7 +416,7 @@ func TestGetDeferredReward(t *testing.T) {
 	}
 }
 
-func TestGetTotalFee(t *testing.T) {
+func TestGetExecFee(t *testing.T) {
 	testcases := []struct {
 		desc     string
 		config   *reward.RewardConfig
@@ -481,7 +481,7 @@ func TestGetTotalFee(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		totalFee, err := getTotalFee(tc.config, tc.header, tc.txs, tc.receipts)
+		totalFee, err := getExecFee(tc.config, tc.header, tc.txs, tc.receipts)
 		require.Nil(t, err)
 		assert.Equal(t, tc.expected, totalFee, tc.desc)
 	}
@@ -567,7 +567,7 @@ func TestGetDeferredRewardSimple(t *testing.T) {
 		config.DeferredTxFee = tc.deferred
 		config.Rules.IsMagma = tc.magma
 
-		spec, err := getDeferredRewardSimple(config, totalFee)
+		spec, err := getDeferredRewardSimple(config, totalFee, big.NewInt(0))
 		require.Nil(t, err, tc.desc)
 		assert.Equal(t, tc.expected, spec, tc.desc)
 		sanityCheckRewardSpec(t, spec, tc.desc)
@@ -747,7 +747,7 @@ func TestGetDeferredRewardFull(t *testing.T) {
 		config.Rules.IsPrague = tc.prague
 		si := makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, tc.prague) // 1:2:3:0
 
-		spec, err := getDeferredRewardFull(config, tc.totalFee, si)
+		spec, err := getDeferredRewardFull(config, tc.totalFee, big.NewInt(0), si)
 		require.Nil(t, err, tc.desc)
 		assert.Equal(t, tc.expected, spec, tc.desc)
 		sanityCheckRewardSpec(t, spec, tc.desc)
@@ -837,7 +837,7 @@ func TestGetDeferredRewardFullFlex_CompatibleWithKore(t *testing.T) {
 		config.Rules.IsOsaka = true
 		si := makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, true) // 1:2:3:0
 
-		spec, err := getDeferredRewardFull(config, tc.totalFee, si)
+		spec, err := getDeferredRewardFull(config, tc.totalFee, big.NewInt(0), si)
 		require.Nil(t, err, tc.desc)
 		assert.Equal(t, tc.expected, spec, tc.desc)
 		sanityCheckRewardSpec(t, spec, tc.desc)
@@ -1078,7 +1078,7 @@ func TestGetDeferredRewardFullFlex_CustomConfig(t *testing.T) {
 		si := makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 4_000_003, 5_000_000}, tc.hasCL)
 		si.KPFAddr = tc.kpfAddr
 
-		spec, err := getDeferredRewardFull(config, totalFee, si)
+		spec, err := getDeferredRewardFull(config, totalFee, big.NewInt(0), si)
 		require.Nil(t, err, tc.desc)
 		assert.Equal(t, tc.expected, spec, tc.desc)
 		sanityCheckRewardSpec(t, spec, tc.desc)
@@ -1400,4 +1400,225 @@ func sanityCheckRewardSpec(t *testing.T, spec *reward.RewardSpec, msg interface{
 
 	assert.Equal(t, sumSummary, sumParts, msg)
 	assert.Equal(t, sumSummary, sumRewards, msg)
+}
+
+// TestGetBlobFee tests the getBlobFee helper for nil, zero, and one-blob cases.
+func TestGetBlobFee(t *testing.T) {
+	// nil BlobGasUsed → zero
+	assert.Equal(t, big.NewInt(0), getBlobFee(&types.Header{BaseFee: big.NewInt(27e9)}), "nil BlobGasUsed")
+
+	// zero BlobGasUsed → zero
+	zero := uint64(0)
+	assert.Equal(t, big.NewInt(0), getBlobFee(&types.Header{BlobGasUsed: &zero, BaseFee: big.NewInt(27e9)}), "zero BlobGasUsed")
+
+	// nil BaseFee → CalcBlobFee returns nil → zero
+	blobGasUsed := uint64(params.BlobTxBlobGasPerBlob)
+	assert.Equal(t, big.NewInt(0), getBlobFee(&types.Header{BlobGasUsed: &blobGasUsed}), "nil BaseFee")
+
+	// one blob at baseFee=27e9: 131072 * (27e9 * 8) = 28311552000000000
+	assert.Equal(t, big.NewInt(28311552000000000), getBlobFee(&types.Header{BlobGasUsed: &blobGasUsed, BaseFee: big.NewInt(27e9)}), "one blob")
+}
+
+// TestGetRewardSummary_BlobFee verifies that blobFee is added to both TotalFee and BurntFee
+// without affecting the execution-fee burn ratio.
+func TestGetRewardSummary_BlobFee(t *testing.T) {
+	var (
+		mintingAmount  = big.NewInt(6.4e18)
+		rewardRatio, _ = reward.NewRewardRatio("50/20/30")
+		kip82Ratio, _  = reward.NewRewardKip82Ratio("20/80")
+		config         = &reward.RewardConfig{
+			MintingAmount: mintingAmount,
+			RewardRatio:   rewardRatio,
+			Kip82Ratio:    kip82Ratio,
+		}
+		execFee = big.NewInt(7e16)
+		blobFee = big.NewInt(28311552000000000) // one blob at baseFee=27e9
+	)
+
+	testcases := []struct {
+		desc             string
+		magma, kore      bool
+		expectedBurntFee *big.Int
+	}{
+		// pre-Magma: exec burn = 0, blob burn = blobFee
+		{"pre-magma", false, false, blobFee},
+		// Magma: exec burn = F/2 = 3.5e16, blob burn = blobFee
+		{"magma", true, false, new(big.Int).Add(big.NewInt(3.5e16), blobFee)},
+		// Kore low traffic: exec burn = F = 7e16, blob burn = blobFee
+		{"kore", true, true, new(big.Int).Add(execFee, blobFee)},
+	}
+	for _, tc := range testcases {
+		config.Rules.IsMagma = tc.magma
+		config.Rules.IsKore = tc.kore
+		spec := getRewardSummary(config, execFee, blobFee)
+
+		assert.Equal(t, new(big.Int).Add(execFee, blobFee), spec.TotalFee, tc.desc+" TotalFee")
+		assert.Equal(t, tc.expectedBurntFee, spec.BurntFee, tc.desc+" BurntFee")
+	}
+}
+
+// TestGetBlockReward_BlobFee tests that GetBlockReward correctly reflects blob fees
+// in TotalFee and BurntFee for both deferred and non-deferred modes.
+func TestGetBlockReward_BlobFee(t *testing.T) {
+	// blobFee = BlobTxBlobGasPerBlob * baseFee * BlobBaseFeeMultiplier = 131072 * 27e9 * 8
+	blobFee := big.NewInt(28311552000000000)
+	execFee := big.NewInt(0.0376e18)
+
+	testcases := []struct {
+		desc             string
+		deferred         bool
+		expectedTotalFee *big.Int
+		expectedBurntFee *big.Int
+	}{
+		{
+			// Deferred: specWithNonDeferredFee is a no-op; values come from getDeferredReward.
+			"full deferred", true,
+			new(big.Int).Add(execFee, blobFee),
+			new(big.Int).Add(execFee, blobFee),
+		},
+		{
+			// Non-deferred: specWithNonDeferredFee adds execFee+blobFee to TotalFee,
+			// getBurnAmountMagma(execFee)+blobFee to BurntFee, and F/2 to Proposer.
+			"full non-deferred", false,
+			new(big.Int).Add(execFee, blobFee),
+			new(big.Int).Add(big.NewInt(0.0188e18), blobFee), // F/2 + blobFee
+		},
+	}
+	for _, tc := range testcases {
+		header, txs, receipts := makeTestOsakaBlock(61)
+		r := makeTestRewardModule(t, false, tc.deferred, false, header, txs, receipts)
+
+		spec, err := r.GetBlockReward(header.Number.Uint64())
+		require.Nil(t, err, tc.desc)
+		assert.Equal(t, tc.expectedTotalFee, spec.TotalFee, tc.desc+" TotalFee")
+		assert.Equal(t, tc.expectedBurntFee, spec.BurntFee, tc.desc+" BurntFee")
+		sanityCheckRewardSpec(t, spec, tc.desc)
+	}
+}
+
+// TestGetDeferredReward_BlobFee tests that GetDeferredReward correctly reflects blob fees
+// in deferred mode, and correctly shows zero fees in non-deferred mode (where both exec and
+// blob fees are burned during state transition, not at finalization).
+func TestGetDeferredReward_BlobFee(t *testing.T) {
+	// blobFee = BlobTxBlobGasPerBlob * baseFee * BlobBaseFeeMultiplier = 131072 * 27e9 * 8
+	blobFee := big.NewInt(28311552000000000)
+	execFee := big.NewInt(0.0376e18)
+
+	testcases := []struct {
+		desc             string
+		deferred         bool
+		expectedTotalFee *big.Int
+		expectedBurntFee *big.Int
+	}{
+		{
+			// Deferred: all of execFee is burned (Kore low traffic) plus blobFee.
+			"full deferred", true,
+			new(big.Int).Add(execFee, blobFee),
+			new(big.Int).Add(execFee, blobFee),
+		},
+		{
+			// Non-deferred: exec and blob fees are both burned during state transition.
+			// GetDeferredReward represents what happens at finalization only (minting reward).
+			"full non-deferred", false,
+			big.NewInt(0),
+			big.NewInt(0),
+		},
+	}
+	for _, tc := range testcases {
+		header, txs, receipts := makeTestOsakaBlock(61)
+		r := makeTestRewardModule(t, false, tc.deferred, false, header, txs, receipts)
+
+		spec, err := r.GetDeferredReward(header, txs, receipts)
+		require.Nil(t, err, tc.desc)
+		assert.Equal(t, tc.expectedTotalFee, spec.TotalFee, tc.desc+" TotalFee")
+		assert.Equal(t, tc.expectedBurntFee, spec.BurntFee, tc.desc+" BurntFee")
+	}
+}
+
+// TestGetDeferredRewardSimple_BlobFee verifies that in deferred mode blobFee is added to TotalFee
+// and BurntFee, while in non-deferred mode it is left for specWithNonDeferredFee.
+func TestGetDeferredRewardSimple_BlobFee(t *testing.T) {
+	var (
+		mintingAmount = big.NewInt(6.4e18)
+		config        = &reward.RewardConfig{
+			Rewardbase:    common.HexToAddress("0xfff"),
+			MintingAmount: mintingAmount,
+			Rules:         params.Rules{IsMagma: true},
+		}
+		execFee = big.NewInt(7e16)
+		blobFee = big.NewInt(28311552000000000) // one blob at baseFee=27e9
+	)
+
+	// Deferred mode: blobFee is included in TotalFee and BurntFee.
+	// BurntFee = getBurnAmountMagma(execFee) + blobFee = 3.5e16 + blobFee
+	config.DeferredTxFee = true
+	spec, err := getDeferredRewardSimple(config, execFee, blobFee)
+	require.Nil(t, err)
+	assert.Equal(t, new(big.Int).Add(execFee, blobFee), spec.TotalFee, "deferred TotalFee")
+	assert.Equal(t, new(big.Int).Add(big.NewInt(3.5e16), blobFee), spec.BurntFee, "deferred BurntFee")
+	sanityCheckRewardSpec(t, spec, "simple deferred with blob")
+
+	// Non-deferred mode: both exec and blob fees are burned during state transition, not at
+	// finalization. GetDeferredReward reports neither; specWithNonDeferredFee completes the
+	// picture for GetBlockReward only.
+	config.DeferredTxFee = false
+	spec, err = getDeferredRewardSimple(config, execFee, blobFee)
+	require.Nil(t, err)
+	assert.Equal(t, big.NewInt(0), spec.TotalFee, "non-deferred TotalFee")
+	assert.Equal(t, big.NewInt(0), spec.BurntFee, "non-deferred BurntFee")
+	sanityCheckRewardSpec(t, spec, "simple non-deferred with blob")
+}
+
+// TestGetDeferredRewardFull_BlobFee verifies blobFee handling in the Kore and Flex paths,
+// and confirms it is zeroed in non-deferred mode.
+func TestGetDeferredRewardFull_BlobFee(t *testing.T) {
+	var (
+		mintingAmount  = big.NewInt(6.4e18)
+		rewardRatio, _ = reward.NewRewardRatio("50/20/30")
+		kip82Ratio, _  = reward.NewRewardKip82Ratio("20/80")
+		config         = &reward.RewardConfig{
+			DeferredTxFee: true,
+			Rewardbase:    common.HexToAddress("0xfff"),
+			MintingAmount: mintingAmount,
+			MinimumStake:  big.NewInt(5_000_000),
+			RewardRatio:   rewardRatio,
+			Kip82Ratio:    kip82Ratio,
+		}
+		execFee = big.NewInt(7e16)              // low traffic
+		blobFee = big.NewInt(28311552000000000) // one blob at baseFee=27e9
+		si      = makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, false)
+	)
+
+	// Kore deferred: TotalFee and BurntFee both include blobFee.
+	// Kore low traffic: burntKore(execFee) = execFee (all burned), so BurntFee = execFee + blobFee.
+	// Reward distribution (proposer/stakers) is identical to the zero-blob case.
+	config.Rules = params.Rules{IsMagma: true, IsKore: true}
+	spec, err := getDeferredRewardFull(config, execFee, blobFee, si)
+	require.Nil(t, err, "kore deferred")
+	assert.Equal(t, new(big.Int).Add(execFee, blobFee), spec.TotalFee, "kore deferred TotalFee")
+	assert.Equal(t, new(big.Int).Add(execFee, blobFee), spec.BurntFee, "kore deferred BurntFee")
+	assert.Equal(t, big.NewInt(0.64e18+1), spec.Proposer, "kore deferred Proposer unchanged")
+	sanityCheckRewardSpec(t, spec, "kore deferred with blob")
+
+	// Kore non-deferred: both exec and blob fees are burned during state transition, not at
+	// finalization. GetDeferredReward reports neither; specWithNonDeferredFee completes the
+	// picture for GetBlockReward only.
+	config.DeferredTxFee = false
+	spec, err = getDeferredRewardFull(config, execFee, blobFee, si)
+	require.Nil(t, err, "kore non-deferred")
+	assert.Equal(t, big.NewInt(0), spec.TotalFee, "kore non-deferred TotalFee")
+	assert.Equal(t, big.NewInt(0), spec.BurntFee, "kore non-deferred BurntFee")
+	sanityCheckRewardSpec(t, spec, "kore non-deferred with blob")
+
+	// Flex (Osaka + UseFlexReward) deferred: same TotalFee/BurntFee pattern as Kore.
+	siPrague := makeTestStakingInfo([]uint64{5_000_001, 5_000_002, 5_000_003, 5_000_000}, true)
+	config.DeferredTxFee = true
+	config.UseFlexReward = true
+	config.StakingRewardThreshold = big.NewInt(5_000_000)
+	config.Rules = params.Rules{IsMagma: true, IsKore: true, IsPrague: true, IsOsaka: true}
+	spec, err = getDeferredRewardFull(config, execFee, blobFee, siPrague)
+	require.Nil(t, err, "flex deferred")
+	assert.Equal(t, new(big.Int).Add(execFee, blobFee), spec.TotalFee, "flex deferred TotalFee")
+	assert.Equal(t, new(big.Int).Add(execFee, blobFee), spec.BurntFee, "flex deferred BurntFee")
+	sanityCheckRewardSpec(t, spec, "flex deferred with blob")
 }

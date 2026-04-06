@@ -260,7 +260,7 @@ func (hc *HeaderChain) GetBlockHashesFromHash(hash common.Hash, max uint64) []co
 	}
 	// Iterate the headers until enough is collected or the genesis reached
 	chain := make([]common.Hash, 0, max)
-	for i := uint64(0); i < max; i++ {
+	for range max {
 		next := header.ParentHash
 		if header = hc.GetHeader(next, header.Number.Uint64()-1); header == nil {
 			break

@@ -120,7 +120,7 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 	// from non single DB
 	if !dbm.config.SingleDB {
 		errChan := make(chan error, databaseEntryTypeSize)
-		for et := MiscDB; et < databaseEntryTypeSize; et++ {
+		for et := range databaseEntryTypeSize {
 			srcDB := dbm.getDatabase(et)
 
 			dstDB := dstdbm.getDatabase(MiscDB)
@@ -146,7 +146,7 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 			}()
 		}
 
-		for et := MiscDB; et < databaseEntryTypeSize; et++ {
+		for range databaseEntryTypeSize {
 			err := <-errChan
 			if err != nil {
 				logger.Error("copyDB got an error", "err", err)
@@ -170,7 +170,7 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 	// If the current src DB is misc DB, clear all db dir on dst
 	// TODO: If DB Migration supports non-single db, change the checking logic
 	if path.Base(dbm.config.Dir) == dbBaseDirs[MiscDB] {
-		for i := uint8(MiscDB); i < uint8(databaseEntryTypeSize); i++ {
+		for i := range uint8(databaseEntryTypeSize) {
 			dstdbm.setDBDir(DBEntryType(i), "")
 		}
 	}

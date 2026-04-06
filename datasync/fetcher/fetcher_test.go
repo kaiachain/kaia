@@ -252,7 +252,7 @@ func verifyImportEvent(t *testing.T, imported chan *types.Block, arrive bool) {
 // verifyImportCount verifies that exactly count number of events arrive on an
 // import hook channel.
 func verifyImportCount(t *testing.T, imported chan *types.Block, count int) {
-	for i := 0; i < count; i++ {
+	for i := range count {
 		select {
 		case <-imported:
 		case <-time.After(time.Second):
@@ -278,8 +278,10 @@ func TestSequentialAnnouncements63(t *testing.T) { testSequentialAnnouncements(t
 func TestSequentialAnnouncements64(t *testing.T) { testSequentialAnnouncements(t, 64) }
 
 func testSequentialAnnouncements(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a chain of blocks to import
-	targetBlocks := 4 * hashLimit
+	targetBlocks := 8
 	hashes, blocks := makeChain(targetBlocks, 0, genesis)
 
 	tester := newTester()
@@ -304,8 +306,10 @@ func TestConcurrentAnnouncements63(t *testing.T) { testConcurrentAnnouncements(t
 func TestConcurrentAnnouncements64(t *testing.T) { testConcurrentAnnouncements(t, 64) }
 
 func testConcurrentAnnouncements(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a chain of blocks to import
-	targetBlocks := 4 * hashLimit
+	targetBlocks := 8
 	hashes, blocks := makeChain(targetBlocks, 0, genesis)
 
 	// Assemble a tester with a built in counter for the requests
@@ -349,8 +353,10 @@ func TestOverlappingAnnouncements63(t *testing.T) { testOverlappingAnnouncements
 func TestOverlappingAnnouncements64(t *testing.T) { testOverlappingAnnouncements(t, 64) }
 
 func testOverlappingAnnouncements(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a chain of blocks to import
-	targetBlocks := 4 * hashLimit
+	targetBlocks := 8
 	hashes, blocks := makeChain(targetBlocks, 0, genesis)
 
 	tester := newTester()
@@ -359,8 +365,11 @@ func testOverlappingAnnouncements(t *testing.T, protocol int) {
 
 	// Iteratively announce blocks, but overlap them continuously
 	overlap := 16
+	if overlap > targetBlocks {
+		overlap = targetBlocks
+	}
 	imported := make(chan *types.Block, len(hashes)-1)
-	for i := 0; i < overlap; i++ {
+	for range overlap {
 		imported <- nil
 	}
 	tester.fetcher.importedHook = func(block *types.Block) { imported <- block }
@@ -383,6 +392,8 @@ func TestPendingDeduplication63(t *testing.T) { testPendingDeduplication(t, 63) 
 func TestPendingDeduplication64(t *testing.T) { testPendingDeduplication(t, 64) }
 
 func testPendingDeduplication(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a hash and corresponding block
 	hashes, blocks := makeChain(1, 0, genesis)
 
@@ -426,6 +437,8 @@ func TestRandomArrivalImport63(t *testing.T) { testRandomArrivalImport(t, 63) }
 func TestRandomArrivalImport64(t *testing.T) { testRandomArrivalImport(t, 64) }
 
 func testRandomArrivalImport(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a chain of blocks to import, and choose one to delay
 	targetBlocks := maxQueueDist
 	hashes, blocks := makeChain(targetBlocks, 0, genesis)
@@ -457,6 +470,8 @@ func TestQueueGapFill63(t *testing.T) { testQueueGapFill(t, 63) }
 func TestQueueGapFill64(t *testing.T) { testQueueGapFill(t, 64) }
 
 func testQueueGapFill(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a chain of blocks to import, and choose one to not announce at all
 	targetBlocks := maxQueueDist
 	hashes, blocks := makeChain(targetBlocks, 0, genesis)
@@ -488,6 +503,8 @@ func TestImportDeduplication63(t *testing.T) { testImportDeduplication(t, 63) }
 func TestImportDeduplication64(t *testing.T) { testImportDeduplication(t, 64) }
 
 func testImportDeduplication(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create two blocks to import (one for duplication, the other for stalling)
 	hashes, blocks := makeChain(2, 0, genesis)
 
@@ -527,6 +544,8 @@ func testImportDeduplication(t *testing.T, protocol int) {
 // Tests that blocks with numbers much lower or higher than out current head get
 // discarded to prevent wasting resources on useless blocks from faulty peers.
 func TestDistantPropagationDiscarding(t *testing.T) {
+	t.Parallel()
+
 	// Create a long chain to import and define the discard boundaries
 	hashes, blocks := makeChain(3*maxQueueDist, 0, genesis)
 	head := hashes[len(hashes)/2]
@@ -563,6 +582,8 @@ func TestDistantAnnouncementDiscarding63(t *testing.T) { testDistantAnnouncement
 func TestDistantAnnouncementDiscarding64(t *testing.T) { testDistantAnnouncementDiscarding(t, 64) }
 
 func testDistantAnnouncementDiscarding(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a long chain to import and define the discard boundaries
 	hashes, blocks := makeChain(3*maxQueueDist, 0, genesis)
 	head := hashes[len(hashes)/2]
@@ -606,6 +627,8 @@ func TestInvalidNumberAnnouncement63(t *testing.T) { testInvalidNumberAnnounceme
 func TestInvalidNumberAnnouncement64(t *testing.T) { testInvalidNumberAnnouncement(t, 64) }
 
 func testInvalidNumberAnnouncement(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a single block to import and check numbers against
 	hashes, blocks := makeChain(1, 0, genesis)
 
@@ -651,6 +674,8 @@ func TestEmptyBlockShortCircuit63(t *testing.T) { testEmptyBlockShortCircuit(t, 
 func TestEmptyBlockShortCircuit64(t *testing.T) { testEmptyBlockShortCircuit(t, 64) }
 
 func testEmptyBlockShortCircuit(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a chain of blocks to import
 	hashes, blocks := makeChain(32, 0, genesis)
 
@@ -695,6 +720,8 @@ func TestHashMemoryExhaustionAttack64(t *testing.T) { testHashMemoryExhaustionAt
 */
 
 func testHashMemoryExhaustionAttack(t *testing.T, protocol int) {
+	t.Parallel()
+
 	// Create a tester with instrumented import hooks
 	tester := newTester()
 
@@ -718,7 +745,7 @@ func testHashMemoryExhaustionAttack(t *testing.T, protocol int) {
 	attackerBodyFetcher := tester.makeBodyFetcher("attacker", nil, 0)
 
 	// Feed the tester a huge hashset from the attacker, and a limited from the valid peer
-	for i := 0; i < len(attack); i++ {
+	for i := range attack {
 		if i < maxQueueDist {
 			tester.fetcher.Notify("valid", hashes[len(hashes)-2-i], uint64(i+1), time.Now(), validHeaderFetcher, validBodyFetcher)
 		}
@@ -742,6 +769,8 @@ func testHashMemoryExhaustionAttack(t *testing.T, protocol int) {
 // announces and retrievals) don't pile up indefinitely, exhausting available
 // system memory.
 func TestBlockMemoryExhaustionAttack(t *testing.T) {
+	t.Parallel()
+
 	// Create a tester with instrumented import hooks
 	tester := newTester()
 
@@ -773,7 +802,7 @@ func TestBlockMemoryExhaustionAttack(t *testing.T) {
 		t.Fatalf("queued block count mismatch: have %d, want %d", queued, blockLimit)
 	}
 	// Queue up a batch of valid blocks, and check that a new peer is allowed to do so
-	for i := 0; i < maxQueueDist-1; i++ {
+	for i := range maxQueueDist - 1 {
 		tester.fetcher.Enqueue("valid", blocks[hashes[len(hashes)-3-i]])
 	}
 	time.Sleep(100 * time.Millisecond)

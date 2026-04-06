@@ -8,6 +8,7 @@ GORUN = env GOPATH=$(GOPATH) GO111MODULE=on go run
 
 BIN = $(shell pwd)/build/bin
 BUILD_PARAM?=install
+FIXTURE_TEST_REGEX?=^(TestExecutionSpecBlockTestSuite|TestExecutionSpecStateTestSuite|TestKaiaSpecState|TestRLP|TestTransaction|TestVM)$$
 
 OBJECTS=kcn kpn ken kscn kspn ksen kbn kgen homi
 
@@ -33,20 +34,14 @@ test:
 test-seq:
 	$(GORUN) build/ci.go test -p 1
 
-test-datasync:
-	$(GORUN) build/ci.go test -p 1 ./datasync/...
+test-datasync test-networks test-node test-storage test-tests:
+	$(GORUN) build/ci.go test -p 1 ./$(patsubst test-%,%,$@)/...
 
-test-networks:
-	$(GORUN) build/ci.go test -p 1 ./networks/...
-
-test-node:
-	$(GORUN) build/ci.go test -p 1 ./node/...
-
-test-tests:
-	$(GORUN) build/ci.go test -p 1 ./tests/...
+test-eestfixture:
+	$(GORUN) build/ci.go test -ensure-fixtures -p 1 -run '$(FIXTURE_TEST_REGEX)' ./tests/...
 
 test-others:
-	$(GORUN) build/ci.go test -p 1 -exclude datasync,networks,node,tests
+	$(GORUN) build/ci.go test -p 1 -exclude github.com/kaiachain/kaia/datasync,github.com/kaiachain/kaia/networks,github.com/kaiachain/kaia/node,github.com/kaiachain/kaia/storage,github.com/kaiachain/kaia/tests
 
 cover:
 	$(GORUN) build/ci.go cover -p 1 -coverprofile=coverage.out

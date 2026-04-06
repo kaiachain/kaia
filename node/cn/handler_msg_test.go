@@ -23,7 +23,6 @@ import (
 	"errors"
 	"math/big"
 	"strings"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -277,7 +276,7 @@ func TestHandleTxMsg(t *testing.T) {
 	}
 	// If pm.acceptTxs == 1, TxPool.HandleTxMsg is called.
 	{
-		atomic.StoreUint32(&pm.acceptTxs, 1)
+		pm.acceptTxs.Store(1)
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 
 		// The time field in received transaction through pm.handleMsg() has different value from generated transaction(`tx1`).
@@ -295,7 +294,7 @@ func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	pm := &ProtocolManager{}
-	atomic.StoreUint32(&pm.acceptTxs, 1)
+	pm.acceptTxs.Store(1)
 	mockTxPool := mocks.NewMockTxPool(mockCtrl)
 	pm.txpool = mockTxPool
 

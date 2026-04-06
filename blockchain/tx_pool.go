@@ -1367,7 +1367,7 @@ func (pool *TxPool) throttleLoop(spamThrottler *throttler) {
 
 			iterNum := min(len(spamThrottler.throttleCh), throttleNum)
 
-			for i := 0; i < iterNum; i++ {
+			for range iterNum {
 				tx := <-spamThrottler.throttleCh
 				txs = append(txs, tx)
 			}

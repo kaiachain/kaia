@@ -239,7 +239,7 @@ func getValidatorAddrsAndKeys(addrs []*common.Address, privateKeys []*ecdsa.Priv
 	validatorAddresses := make([]common.Address, numValidators)
 	validatorPrivateKeys := make([]*ecdsa.PrivateKey, numValidators)
 
-	for i := 0; i < numValidators; i++ {
+	for i := range numValidators {
 		validatorPrivateKeys[i] = privateKeys[i]
 		validatorAddresses[i] = *addrs[i]
 	}

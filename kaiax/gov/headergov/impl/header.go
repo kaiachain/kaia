@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"maps"
 	"reflect"
 	"slices"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
-	"golang.org/x/exp/maps"
 )
 
 func (h *headerGovModule) VerifyHeader(header *types.Header, _ *types.Header) error {
@@ -214,7 +214,7 @@ func (h *headerGovModule) getExpectedGovernance(blockNum uint64) headergov.GovDa
 	prevEpochVotes := h.getVotesInEpoch(prevEpochIdx)
 	govs := make(gov.PartialParamSet)
 
-	sortedVoteBlocks := maps.Keys(prevEpochVotes)
+	sortedVoteBlocks := slices.Collect(maps.Keys(prevEpochVotes))
 	slices.Sort(sortedVoteBlocks)
 
 	for _, voteBlock := range sortedVoteBlocks {
@@ -239,9 +239,7 @@ func (h *headerGovModule) getVotesInEpoch(epochIdx uint64) map[uint64]headergov.
 
 		h.mu.RLock()
 		defer h.mu.RUnlock()
-		for blockNum, vote := range h.groupedVotes[epochIdx] {
-			votes[blockNum] = vote
-		}
+		maps.Copy(votes, h.groupedVotes[epochIdx])
 		return votes
 	} else {
 		logger.Debug("Scanning votes slowpath")

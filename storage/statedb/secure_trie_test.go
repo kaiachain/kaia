@@ -47,7 +47,7 @@ func makeTestSecureTrie() (*Database, *SecureTrie, map[string][]byte) {
 
 	// Fill it with some arbitrary data
 	content := make(map[string][]byte)
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		// Map the same data under multiple keys
 		key, val := common.LeftPadBytes([]byte{1, i}, 32), []byte{i}
 		content[string(key)] = val
@@ -118,18 +118,18 @@ func TestSecureTrieConcurrency(t *testing.T) {
 
 	threads := runtime.NumCPU()
 	tries := make([]*SecureTrie, threads)
-	for i := 0; i < threads; i++ {
+	for i := range threads {
 		cpy := *trie
 		tries[i] = &cpy
 	}
 	// Start a batch of goroutines interactng with the trie
 	pend := new(sync.WaitGroup)
 	pend.Add(threads)
-	for i := 0; i < threads; i++ {
+	for i := range threads {
 		go func(index int) {
 			defer pend.Done()
 
-			for j := byte(0); j < 255; j++ {
+			for j := range byte(255) {
 				// Map the same data under multiple keys
 				key, val := common.LeftPadBytes([]byte{byte(index), 1, j}, 32), []byte{j}
 				tries[index].Update(key, val)

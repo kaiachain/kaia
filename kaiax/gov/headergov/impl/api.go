@@ -1,6 +1,8 @@
 package impl
 
 import (
+	"maps"
+
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -136,21 +138,15 @@ func (api *headerGovAPI) Status() StatusResponse {
 	groupedVotes := make(map[uint64]headergov.VotesInEpoch, len(api.h.groupedVotes))
 	for epochIdx, votes := range api.h.groupedVotes {
 		copiedVotes := make(headergov.VotesInEpoch, len(votes))
-		for blockNum, vote := range votes {
-			copiedVotes[blockNum] = vote
-		}
+		maps.Copy(copiedVotes, votes)
 		groupedVotes[epochIdx] = copiedVotes
 	}
 
 	governances := make(map[uint64]headergov.GovData, len(api.h.governances))
-	for blockNum, gov := range api.h.governances {
-		governances[blockNum] = gov
-	}
+	maps.Copy(governances, api.h.governances)
 
 	govHistory := make(headergov.History, len(api.h.history))
-	for blockNum, pset := range api.h.history {
-		govHistory[blockNum] = pset
-	}
+	maps.Copy(govHistory, api.h.history)
 
 	myVotes := make([]headergov.VoteData, len(api.h.myVotes))
 	copy(myVotes, api.h.myVotes)

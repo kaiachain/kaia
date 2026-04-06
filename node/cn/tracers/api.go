@@ -387,7 +387,7 @@ func (api *CommonAPI) traceChain(start, end *types.Block, config *TraceConfig, n
 		localctx = context.Background()
 		reler    = new(releaser)
 	)
-	for th := 0; th < threads; th++ {
+	for range threads {
 		pend.Go(func() {
 
 			// Fetch and execute the block trace tasks
@@ -698,7 +698,7 @@ func (api *CommonAPI) traceBlock(ctx context.Context, block *types.Block, config
 	)
 
 	threads := min(runtime.NumCPU(), len(txs))
-	for th := 0; th < threads; th++ {
+	for range threads {
 		pend.Go(func() {
 
 			// Fetch and execute the next transaction trace tasks

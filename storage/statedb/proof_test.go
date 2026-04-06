@@ -108,7 +108,7 @@ func TestRangeProof(t *testing.T) {
 		entries = append(entries, kv)
 	}
 	sort.Sort(entries)
-	for i := 0; i < 500; i++ {
+	for i := range 500 {
 		start := mrand.Intn(len(entries))
 		end := mrand.Intn(len(entries)-start) + start + 1
 
@@ -141,7 +141,7 @@ func TestRangeProofWithNonExistentProof(t *testing.T) {
 		entries = append(entries, kv)
 	}
 	sort.Sort(entries)
-	for i := 0; i < 500; i++ {
+	for i := range 500 {
 		start := mrand.Intn(len(entries))
 		end := mrand.Intn(len(entries)-start) + start + 1
 		proof := database.NewMemoryDBManager()
@@ -400,10 +400,10 @@ func TestAllElementsProof(t *testing.T) {
 
 // TestSingleSideRangeProof tests the range starts from zero.
 func TestSingleSideRangeProof(t *testing.T) {
-	for i := 0; i < 64; i++ {
+	for range 64 {
 		trie := new(Trie)
 		entries := entrySlice{}
-		for i := 0; i < 4096; i++ {
+		for range 4096 {
 			value := &kv{randBytes(32), randBytes(20), false}
 			trie.Update(value.k, value.v)
 			entries = append(entries, value)
@@ -435,10 +435,10 @@ func TestSingleSideRangeProof(t *testing.T) {
 
 // TestReverseSingleSideRangeProof tests the range ends with 0xffff...fff.
 func TestReverseSingleSideRangeProof(t *testing.T) {
-	for i := 0; i < 64; i++ {
+	for range 64 {
 		trie := new(Trie)
 		entries := entrySlice{}
-		for i := 0; i < 4096; i++ {
+		for range 4096 {
 			value := &kv{randBytes(32), randBytes(20), false}
 			trie.Update(value.k, value.v)
 			entries = append(entries, value)
@@ -479,7 +479,7 @@ func TestBadRangeProof(t *testing.T) {
 	}
 	sort.Sort(entries)
 
-	for i := 0; i < 500; i++ {
+	for i := range 500 {
 		start := mrand.Intn(len(entries))
 		end := mrand.Intn(len(entries)-start) + start + 1
 		proof := database.NewMemoryDBManager()
@@ -545,7 +545,7 @@ func TestBadRangeProof(t *testing.T) {
 func TestGappedRangeProof(t *testing.T) {
 	trie := new(Trie)
 	var entries []*kv // Sorted entries
-	for i := byte(0); i < 10; i++ {
+	for i := range byte(10) {
 		value := &kv{common.LeftPadBytes([]byte{i}, 32), []byte{i}, false}
 		trie.Update(value.k, value.v)
 		entries = append(entries, value)
@@ -619,7 +619,7 @@ func TestSameSideProofs(t *testing.T) {
 func TestHasRightElement(t *testing.T) {
 	trie := new(Trie)
 	var entries entrySlice
-	for i := 0; i < 4096; i++ {
+	for range 4096 {
 		value := &kv{randBytes(32), randBytes(20), false}
 		trie.Update(value.k, value.v)
 		entries = append(entries, value)
@@ -829,7 +829,7 @@ func BenchmarkVerifyProof(b *testing.B) {
 func randomTrie(n int) (*Trie, map[string]*kv) {
 	trie := new(Trie)
 	vals := make(map[string]*kv)
-	for i := byte(0); i < 100; i++ {
+	for i := range byte(100) {
 		value := &kv{common.LeftPadBytes([]byte{i}, 32), []byte{i}, false}
 		value2 := &kv{common.LeftPadBytes([]byte{i + 10}, 32), []byte{i}, false}
 		trie.Update(value.k, value.v)
@@ -837,7 +837,7 @@ func randomTrie(n int) (*Trie, map[string]*kv) {
 		vals[string(value.k)] = value
 		vals[string(value2.k)] = value2
 	}
-	for i := 0; i < n; i++ {
+	for range n {
 		value := &kv{randBytes(32), randBytes(20), false}
 		trie.Update(value.k, value.v)
 		vals[string(value.k)] = value

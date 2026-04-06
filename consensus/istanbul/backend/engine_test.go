@@ -147,7 +147,7 @@ func disableVotes(paramNames []gov.ParamName) {
 func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, []common.Address) {
 	nodeKeys = make([]*ecdsa.PrivateKey, n)
 	addrs = make([]common.Address, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if i == 0 && governingNode != nil {
 			nodeKeys[i] = governingNode
 		} else {
@@ -253,7 +253,7 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	if genesis.Config.RandaoCompatibleBlock != nil {
 		// Generate BLS keys for all nodes
 		nodeBlsKeys := make([]bls.SecretKey, n)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			nodeBlsKeys[i], _ = bls.DeriveFromECDSA(nodeKeys[i])
 		}
 
@@ -982,7 +982,7 @@ func Test_AfterMinimumStakingVotes(t *testing.T) {
 			require.NotNil(t, vote, fmt.Sprintf("vote is nil for %v %v", v.key, v.value))
 			engine.govModule.(*gov_impl.GovModule).Hgm.PushMyVotes(vote)
 
-			for i := 0; i < testEpoch; i++ {
+			for range testEpoch {
 				previousBlock = currentBlock
 				currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
 				_, err := chain.InsertChain(types.Blocks{currentBlock})
@@ -1754,7 +1754,7 @@ func TestGovernance_Votes(t *testing.T) {
 		}
 
 		// insert blocks until the vote is applied
-		for i := 0; i < 6; i++ {
+		for range 6 {
 			previousBlock = currentBlock
 			currentBlock = makeBlockWithSeal(chain, engine, previousBlock)
 			_, err = chain.InsertChain(types.Blocks{currentBlock})

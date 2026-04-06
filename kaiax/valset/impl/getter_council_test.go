@@ -107,7 +107,7 @@ func TestGetCouncilDB(t *testing.T) {
 		v := &ValsetModule{InitOpts: InitOpts{ChainKv: db}}
 		writeLowestScannedVoteNum(db, tc.lowestScannedVoteNum)
 
-		for i := uint64(0); i < 7; i++ {
+		for i := range uint64(7) {
 			council, ok, err := v.getCouncilDB(i)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expected[i].ok, ok)

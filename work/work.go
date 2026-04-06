@@ -99,12 +99,12 @@ type Backend interface {
 type Miner struct {
 	mux     *event.TypeMux
 	worker  *worker
-	mining  int32
+	mining  atomic.Int32
 	backend Backend
 	engine  consensus.Engine
 
-	canStart    int32 // can start indicates whether we can start the mining operation
-	shouldStart int32 // should start indicates whether we should start after sync
+	canStart    int32        // can start indicates whether we can start the mining operation
+	shouldStart atomic.Int32 // should start indicates whether we should start after sync
 }
 
 func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, nodeAddr common.Address, govModule gov.GovModule) *Miner {
@@ -133,14 +133,14 @@ out:
 			atomic.StoreInt32(&self.canStart, 0)
 			if self.Mining() {
 				self.Stop()
-				atomic.StoreInt32(&self.shouldStart, 1)
+				self.shouldStart.Store(1)
 				logger.Info("Mining aborted due to sync")
 			}
 		case downloader.DoneEvent, downloader.FailedEvent:
-			shouldStart := atomic.LoadInt32(&self.shouldStart) == 1
+			shouldStart := self.shouldStart.Load() == 1
 
 			atomic.StoreInt32(&self.canStart, 1)
-			atomic.StoreInt32(&self.shouldStart, 0)
+			self.shouldStart.Store(0)
 			if shouldStart {
 				self.Start()
 			}
@@ -153,13 +153,13 @@ out:
 }
 
 func (self *Miner) Start() {
-	atomic.StoreInt32(&self.shouldStart, 1)
+	self.shouldStart.Store(1)
 
 	if atomic.LoadInt32(&self.canStart) == 0 {
 		logger.Info("Network syncing, will start work afterwards")
 		return
 	}
-	atomic.StoreInt32(&self.mining, 1)
+	self.mining.Store(1)
 
 	if self.worker.nodetype == common.CONSENSUSNODE {
 		logger.Info("Starting mining operation")
@@ -170,12 +170,12 @@ func (self *Miner) Start() {
 
 func (self *Miner) Stop() {
 	self.worker.stop()
-	atomic.StoreInt32(&self.mining, 0)
-	atomic.StoreInt32(&self.shouldStart, 0)
+	self.mining.Store(0)
+	self.shouldStart.Store(0)
 }
 
 func (self *Miner) Mining() bool {
-	return atomic.LoadInt32(&self.mining) > 0
+	return self.mining.Load() > 0
 }
 
 func (self *Miner) SetExtra(extra []byte) error {

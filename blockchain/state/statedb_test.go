@@ -54,7 +54,7 @@ func TestUpdateLeaks(t *testing.T) {
 	state, _ := New(common.Hash{}, NewDatabase(memDBManager), nil, nil)
 
 	// Update it with some accounts
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		addr := common.BytesToAddress([]byte{i})
 		if i%2 == 0 {
 			state.SetState(addr, common.BytesToHash([]byte{i, i, i}), common.BytesToHash([]byte{i, i, i, i}))
@@ -100,14 +100,14 @@ func TestIntermediateLeaks(t *testing.T) {
 	}
 
 	// Modify the transient state.
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		modify(transState, common.Address{byte(i)}, i, 0)
 	}
 	// Write modifications to trie.
 	transState.IntermediateRoot(false)
 
 	// Overwrite all the data with new values in the transient database.
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		modify(transState, common.Address{byte(i)}, i, 99)
 		modify(finalState, common.Address{byte(i)}, i, 99)
 	}
@@ -140,7 +140,7 @@ func TestCopy(t *testing.T) {
 	// Create a random state test to copy and modify "independently"
 	orig, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
 
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		obj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		obj.AddBalance(big.NewInt(int64(i)))
 		orig.updateStateObject(obj)
@@ -153,7 +153,7 @@ func TestCopy(t *testing.T) {
 	// Copy the copy state
 	ccopy := copy.Copy()
 
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		origObj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		copyObj := copy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		ccopyObj := ccopy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
@@ -181,7 +181,7 @@ func TestCopy(t *testing.T) {
 	wg.Wait()
 
 	// Verify that the two states have been updated independently
-	for i := byte(0); i < 255; i++ {
+	for i := range byte(255) {
 		origObj := orig.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		copyObj := copy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
 		ccopyObj := ccopy.GetOrNewStateObject(common.BytesToAddress([]byte{i}))
@@ -215,7 +215,7 @@ func TestStateObjects(t *testing.T) {
 	stateDB, _ := New(common.Hash{}, NewDatabase(database.NewMemoryDBManager()), nil, nil)
 
 	// Update each account, it will update StateDB.stateObjects.
-	for i := byte(0); i < 128; i++ {
+	for i := range byte(128) {
 		addr := common.BytesToAddress([]byte{i})
 		stateObj := stateDB.GetOrNewStateObject(addr)
 

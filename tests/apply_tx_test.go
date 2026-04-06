@@ -674,7 +674,7 @@ func genAccountKeyWeightedMultisig() (accountkey.AccountKey, []*ecdsa.PrivateKey
 	keys := make(accountkey.WeightedPublicKeys, numKeys)
 	prvKeys := make([]*ecdsa.PrivateKey, numKeys)
 
-	for i := 0; i < numKeys; i++ {
+	for i := range numKeys {
 		prvKeys[i], _ = crypto.GenerateKey()
 		keys[i] = accountkey.NewWeightedPublicKey(1, (*accountkey.PublicKeySerializable)(&prvKeys[i].PublicKey))
 	}

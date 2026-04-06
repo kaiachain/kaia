@@ -611,7 +611,7 @@ func TestPendingTxFilterDeadlock(t *testing.T) {
 
 	// Create a bunch of filters
 	fids := make([]rpc.ID, 20)
-	for i := 0; i < len(fids); i++ {
+	for i := range fids {
 		fid := api.NewPendingTransactionFilter()
 		fids[i] = fid
 		// Wait for at least one tx to arrive in filter

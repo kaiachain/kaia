@@ -53,10 +53,10 @@ func testChannelManager(t *testing.T, chSize int) {
 	channel := make(chan p2p.Msg, channelSizePerPeer)
 	consensusChannel := make(chan p2p.Msg, channelSizePerPeer)
 
-	for chIdx := 0; chIdx < chSize; chIdx++ {
+	for chIdx := range chSize {
 		// Before calling RegisterChannelWithIndex,
 		// calling GetChannelWithMsgCode with registered MsgCode should return no channel and no error.
-		for i := StatusMsg; i < MsgCodeEnd; i++ {
+		for i := range MsgCodeEnd {
 			if i == Unused10 || i == Unused11 {
 				// skip for dummy messages
 				continue
@@ -77,17 +77,17 @@ func testChannelManager(t *testing.T, chSize int) {
 	}
 
 	// Register channels with the port index.
-	for chIdx := 0; chIdx < chSize; chIdx++ {
+	for chIdx := range chSize {
 		cm.RegisterChannelWithIndex(chIdx, BlockChannel, channel)
 		cm.RegisterChannelWithIndex(chIdx, TxChannel, channel)
 		cm.RegisterChannelWithIndex(chIdx, MiscChannel, channel)
 		cm.RegisterChannelWithIndex(chIdx, ConsensusChannel, consensusChannel)
 	}
 
-	for chIdx := 0; chIdx < chSize; chIdx++ {
+	for chIdx := range chSize {
 		// After calling RegisterChannelWithIndex,
 		// calling GetChannelWithMsgCode with registered MsgCode should return a channel but no error.
-		for i := StatusMsg; i < MsgCodeEnd; i++ {
+		for i := range MsgCodeEnd {
 			if i == Unused10 || i == Unused11 {
 				// skip for dummy messages
 				continue

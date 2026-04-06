@@ -166,7 +166,7 @@ func TestTable_IPLimit(t *testing.T) {
 	go tab.loop()
 	defer tab.Close()
 
-	for i := 0; i < tableIPLimit+1; i++ {
+	for i := range tableIPLimit + 1 {
 		n := nodeAtDistance(tab.self.sha, i, NodeTypeUnknown)
 		n.IP = net.IP{172, 0, 1, byte(i)}
 		tab.add(n)
@@ -193,7 +193,7 @@ func TestTable_BucketIPLimit(t *testing.T) {
 	defer tab.Close()
 
 	d := 3
-	for i := 0; i < bucketIPLimit+1; i++ {
+	for i := range bucketIPLimit + 1 {
 		n := nodeAtDistance(tab.self.sha, d, NodeTypeUnknown)
 		n.NType = NodeTypeUnknown
 		n.IP = net.IP{172, 0, 1, byte(i)}
@@ -347,7 +347,7 @@ func TestTable_ReadRandomNodesGetAll(t *testing.T) {
 		defer tab.Close()
 		<-tab.initDone
 
-		for i := 0; i < len(buf); i++ {
+		for range buf {
 			ld := cfg.Rand.Intn(len(tab.storages[NodeTypeUnknown].(*KademliaStorage).buckets))
 			tab.stuff([]*Node{nodeAtDistance(tab.self.sha, ld, NodeTypeUnknown)}, NodeTypeUnknown)
 		}

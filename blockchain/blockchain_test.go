@@ -36,6 +36,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -43,14 +44,11 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/compiler"
-	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
-	"github.com/kaiachain/kaia/storage"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/stretchr/testify/assert"
@@ -400,11 +398,11 @@ func testReorgShort(t *testing.T, full bool) {
 	// we need a fairly long chain of blocks with different difficulties for a short
 	// one to become heavyer than a long one. The 96 is an empirical value.
 	easy := make([]int64, 96)
-	for i := 0; i < len(easy); i++ {
+	for i := range easy {
 		easy[i] = 60
 	}
 	diff := make([]int64, len(easy)-1)
-	for i := 0; i < len(diff); i++ {
+	for i := range diff {
 		diff[i] = -9
 	}
 	// With faker, the longer chain (96 blocks) wins
@@ -677,7 +675,7 @@ func TestFastVsFullChains(t *testing.T) {
 		t.Fatalf("failed to insert receipt %d: %v", n, err)
 	}
 	// Iterate over all chain data components, and cross reference
-	for i := 0; i < len(blocks); i++ {
+	for i := range blocks {
 		bnum, num, hash := blocks[i].Number(), blocks[i].NumberU64(), blocks[i].Hash()
 
 		if ftd, atd := fast.GetTdByHash(hash), archive.GetTdByHash(hash); ftd.Cmp(atd) != 0 {
@@ -957,7 +955,7 @@ func TestReorgSideEvent(t *testing.T) {
 	const trials = 4
 
 	var lastErr error
-	for i := 0; i < trials; i++ {
+	for range trials {
 		if lastErr = testReorgSideEvent(t); lastErr == nil {
 			return // success
 		}
@@ -1231,7 +1229,7 @@ func TestBlockchainHeaderchainReorgConsistency(t *testing.T) {
 
 	// Generate a bunch of fork blocks, each side forking from the canonical chain
 	forks := make([]*types.Block, len(blocks))
-	for i := 0; i < len(forks); i++ {
+	for i := range forks {
 		parent := genesis
 		if i > 0 {
 			parent = blocks[i-1]
@@ -1248,7 +1246,7 @@ func TestBlockchainHeaderchainReorgConsistency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create tester chain: %v", err)
 	}
-	for i := 0; i < len(blocks); i++ {
+	for i := range blocks {
 		if _, err := chain.InsertChain(blocks[i : i+1]); err != nil {
 			t.Fatalf("block %d: failed to insert into chain: %v", i, err)
 		}
@@ -1276,7 +1274,7 @@ func TestTrieForkGC(t *testing.T) {
 
 	// Generate a bunch of fork blocks, each side forking from the canonical chain
 	forks := make([]*types.Block, len(blocks))
-	for i := 0; i < len(forks); i++ {
+	for i := range forks {
 		parent := genesis
 		if i > 0 {
 			parent = blocks[i-1]
@@ -1292,7 +1290,7 @@ func TestTrieForkGC(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create tester chain: %v", err)
 	}
-	for i := 0; i < len(blocks); i++ {
+	for i := range blocks {
 		if _, err := chain.InsertChain(blocks[i : i+1]); err != nil {
 			t.Fatalf("block %d: failed to insert into chain: %v", i, err)
 		}
@@ -1301,7 +1299,7 @@ func TestTrieForkGC(t *testing.T) {
 		}
 	}
 	// Dereference all the recent tries and ensure no past trie is left in
-	for i := 0; i < DefaultTriesInMemory; i++ {
+	for i := range DefaultTriesInMemory {
 		chain.stateCache.TrieDB().Dereference(blocks[len(blocks)-1-i].Root())
 		chain.stateCache.TrieDB().Dereference(forks[len(blocks)-1-i].Root())
 	}
@@ -1673,7 +1671,7 @@ func benchmarkLargeNumberOfValueToNonexisting(b *testing.B, numTxs, numBlocks in
 	genesis := gspec.MustCommit(db)
 
 	blockGenerator := func(i int, block *BlockGen) {
-		for txi := 0; txi < numTxs; txi++ {
+		for txi := range numTxs {
 			uniq := uint64(i*numTxs + txi)
 			recipient := recipientFn(uniq)
 			// recipient := common.BigToAddress(big.NewInt(0).SetUint64(1337 + uniq))
@@ -1984,54 +1982,34 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 	assert.EqualValues(t, targetBlock, newHeadBlock)
 }
 
-func TestBlockChain_writeBlockLogsToRemoteCache(t *testing.T) {
-	storage.SkipLocalTest(t)
+func TestBlockChain_writeBlockLogsToRemoteCache_WithMiniRedis(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mr.Close()
 
-	// prepare blockchain
+	receipts, _, encodedBlockLogs := getTestLogs(t)
+	key := []byte{1, 2, 3, 4}
+
 	blockchain := &BlockChain{
 		stateCache: state.NewDatabaseWithNewCache(database.NewMemoryDBManager(), &statedb.TrieNodeCacheConfig{
 			CacheType:          statedb.CacheTypeHybrid,
 			LocalCacheSizeMiB:  100,
-			RedisEndpoints:     []string{"redis:6379"},
+			RedisEndpoints:     []string{mr.Addr()},
 			RedisClusterEnable: false,
 		}),
 	}
 
-	// prepare test data to be written in the cache
-	key := []byte{1, 2, 3, 4}
-	log := &types.Log{
-		Address:     common.Address{},
-		Topics:      []common.Hash{common.BytesToHash(hexutil.MustDecode("0x123456789abcdef123456789abcdefffffffffff"))},
-		Data:        []uint8{0x11, 0x22, 0x33, 0x44},
-		BlockNumber: uint64(1000),
-	}
-	receipt := &types.Receipt{
-		TxHash:  common.Hash{},
-		GasUsed: uint64(999999),
-		Status:  types.ReceiptStatusSuccessful,
-		Logs:    []*types.Log{log},
-	}
+	blockchain.writeBlockLogsToRemoteCache(key, receipts)
 
-	// write log to cache
-	blockchain.writeBlockLogsToRemoteCache(key, []*types.Receipt{receipt})
-
-	// get log from cache
 	ret := blockchain.stateCache.TrieDB().TrieNodeCache().Get(key)
 	if ret == nil {
 		t.Fatal("no cache")
 	}
-
-	// decode return data to the original log format
-	storageLog := []*types.LogForStorage{}
-	if err := rlp.DecodeBytes(ret, &storageLog); err != nil {
-		t.Fatal(err)
+	if !bytes.Equal(encodedBlockLogs, ret) {
+		t.Fatal("unexpected encoded logs payload")
 	}
-	logs := make([]*types.Log, len(storageLog))
-	for i, log := range storageLog {
-		logs[i] = (*types.Log)(log)
-	}
-
-	assert.Equal(t, log, logs[0])
 }
 
 // TestDeleteCreateRevert tests a weird state transition corner case that we hit
