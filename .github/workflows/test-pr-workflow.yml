@@ -27,26 +27,27 @@ jobs:
         BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
         go run build/ci.go lint -v --new-from-rev="origin/${BASE_BRANCH}"
 
-  test-networks:
+  test-node-network:
     needs: build
-    name: Test Networks
+    name: Test Node and Networks
     uses: ./.github/workflows/test-executor-template.yml
     with:
-      test_command: make test-networks
+      test_command: |
+        make test-node
+        make test-networks
 
-  test-node:
+  test-eestfixture:
     needs: build
-    name: Test Node
+    name: Test EEST Fixture
     uses: ./.github/workflows/test-executor-template.yml
     with:
-      test_command: make test-node
-
+      cache_fixtures: true
+      test_command: make test-eestfixture
   test-tests:
     needs: build
     name: Test Tests
     uses: ./.github/workflows/test-executor-template.yml
     with:
-      cache_fixtures: true
       test_command: |
         git clone --depth 1 https://github.com/kaiachain/kaia-core-tests.git tests/testdata
         make test-tests
@@ -75,20 +76,21 @@ jobs:
         python3 main.py --protocol rpc
 
   # Service-dependent test jobs
-  test-datasync:
+  test-service-dependent:
     needs: build
-    name: Test Datasync
+    name: Test Service Dependent Tests (e.g. redis,kafka)
     uses: ./.github/workflows/test-executor-template.yml
     with:
       runs_on: kaia-xlarge-runner
       with_services: true
-      test_command: make test-datasync
+      test_command: |
+        make test-datasync
+        make test-storage
 
   test-others:
     needs: build
     name: Test Others
     uses: ./.github/workflows/test-executor-template.yml
     with:
-      runs_on: kaia-xlarge-runner
-      with_services: true
       test_command: make test-others
+

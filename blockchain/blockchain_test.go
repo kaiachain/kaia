@@ -36,6 +36,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/holiman/uint256"
 	"github.com/kaiachain/kaia/accounts/abi"
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -43,15 +44,12 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/compiler"
-	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
-	"github.com/kaiachain/kaia/storage"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/storage/statedb"
 	"github.com/stretchr/testify/assert"
@@ -1980,54 +1978,34 @@ func TestBlockChain_SetCanonicalBlock(t *testing.T) {
 	assert.EqualValues(t, targetBlock, newHeadBlock)
 }
 
-func TestBlockChain_writeBlockLogsToRemoteCache(t *testing.T) {
-	storage.SkipLocalTest(t)
+func TestBlockChain_writeBlockLogsToRemoteCache_WithMiniRedis(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mr.Close()
 
-	// prepare blockchain
+	receipts, _, encodedBlockLogs := getTestLogs(t)
+	key := []byte{1, 2, 3, 4}
+
 	blockchain := &BlockChain{
 		stateCache: state.NewDatabaseWithNewCache(database.NewMemoryDBManager(), &statedb.TrieNodeCacheConfig{
 			CacheType:          statedb.CacheTypeHybrid,
 			LocalCacheSizeMiB:  100,
-			RedisEndpoints:     []string{"redis:6379"},
+			RedisEndpoints:     []string{mr.Addr()},
 			RedisClusterEnable: false,
 		}),
 	}
 
-	// prepare test data to be written in the cache
-	key := []byte{1, 2, 3, 4}
-	log := &types.Log{
-		Address:     common.Address{},
-		Topics:      []common.Hash{common.BytesToHash(hexutil.MustDecode("0x123456789abcdef123456789abcdefffffffffff"))},
-		Data:        []uint8{0x11, 0x22, 0x33, 0x44},
-		BlockNumber: uint64(1000),
-	}
-	receipt := &types.Receipt{
-		TxHash:  common.Hash{},
-		GasUsed: uint64(999999),
-		Status:  types.ReceiptStatusSuccessful,
-		Logs:    []*types.Log{log},
-	}
+	blockchain.writeBlockLogsToRemoteCache(key, receipts)
 
-	// write log to cache
-	blockchain.writeBlockLogsToRemoteCache(key, []*types.Receipt{receipt})
-
-	// get log from cache
 	ret := blockchain.stateCache.TrieDB().TrieNodeCache().Get(key)
 	if ret == nil {
 		t.Fatal("no cache")
 	}
-
-	// decode return data to the original log format
-	storageLog := []*types.LogForStorage{}
-	if err := rlp.DecodeBytes(ret, &storageLog); err != nil {
-		t.Fatal(err)
+	if !bytes.Equal(encodedBlockLogs, ret) {
+		t.Fatal("unexpected encoded logs payload")
 	}
-	logs := make([]*types.Log, len(storageLog))
-	for i, log := range storageLog {
-		logs[i] = (*types.Log)(log)
-	}
-
-	assert.Equal(t, log, logs[0])
 }
 
 // TestDeleteCreateRevert tests a weird state transition corner case that we hit

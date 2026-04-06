@@ -36,14 +36,12 @@ import (
 	"github.com/kaiachain/kaia/contracts/contracts/testing/extbridge"
 	sctoken "github.com/kaiachain/kaia/contracts/contracts/testing/sc_erc20"
 	scnft "github.com/kaiachain/kaia/contracts/contracts/testing/sc_erc721"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
-	timeOut                 = 3 * time.Second // timeout of context and event loop for simulated backend.
-	DefaultBridgeTxGasLimit = uint64(10000000)
+	timeOut = 3 * time.Second // timeout of context and event loop for simulated backend.
 )
 
 // WaitMined waits the tx receipt until the timeout.
@@ -131,7 +129,7 @@ func SendHandleKLAYTransfer(b *bridge.Bridge, auth *bind.TransactOpts, to common
 
 // TestBridgeDeployWithKLAY checks to the state/contract balance of the bridge deployed.
 func TestBridgeDeployWithKLAY(t *testing.T) {
-	bridgeAccountKey, _ := crypto.GenerateKey()
+	bridgeAccountKey := bridgeManagerPreGeneratedKeys[0]
 	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
 
 	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KAIA)}}
@@ -163,10 +161,10 @@ func TestBridgeDeployWithKLAY(t *testing.T) {
 
 // TestBridgeRequestValueTransferNonce checks the bridge emit events with serialized nonce.
 func TestBridgeRequestValueTransferNonce(t *testing.T) {
-	bridgeAccountKey, _ := crypto.GenerateKey()
+	bridgeAccountKey := bridgeManagerPreGeneratedKeys[0]
 	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
 
-	testAccKey, _ := crypto.GenerateKey()
+	testAccKey := bridgeManagerPreGeneratedKeys[1]
 	testAcc := bind.NewKeyedTransactor(testAccKey)
 
 	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KAIA)}}
@@ -229,10 +227,10 @@ loop:
 // - the bridge keeps lower handle nonce for the recovery.
 // - the bridge correctly stores and returns the block number.
 func TestBridgeHandleValueTransferNonceAndBlockNumber(t *testing.T) {
-	bridgeAccountKey, _ := crypto.GenerateKey()
+	bridgeAccountKey := bridgeManagerPreGeneratedKeys[0]
 	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
 
-	testAccKey, _ := crypto.GenerateKey()
+	testAccKey := bridgeManagerPreGeneratedKeys[1]
 	testAcc := bind.NewKeyedTransactor(testAccKey)
 
 	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KAIA)}}
@@ -325,7 +323,7 @@ loop:
 
 // TestBridgePublicVariables checks the results of the public variables.
 func TestBridgePublicVariables(t *testing.T) {
-	bridgeAccountKey, _ := crypto.GenerateKey()
+	bridgeAccountKey := bridgeManagerPreGeneratedKeys[0]
 	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
 
 	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KAIA)}}
@@ -387,14 +385,14 @@ func TestBridgePublicVariables(t *testing.T) {
 // TestExtendedBridgeAndCallbackERC20 checks the following:
 // - the extBridge can call a callback contract method from ERC20 value transfer.
 func TestExtendedBridgeAndCallbackERC20(t *testing.T) {
-	bridgeAccountKey, _ := crypto.GenerateKey()
+	bridgeAccountKey := bridgeManagerPreGeneratedKeys[0]
 	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
 
-	aliceKey, _ := crypto.GenerateKey()
+	aliceKey := bridgeManagerPreGeneratedKeys[1]
 	aliceAcc := bind.NewKeyedTransactor(aliceKey)
 	aliceAcc.GasLimit = DefaultBridgeTxGasLimit
 
-	bobKey, _ := crypto.GenerateKey()
+	bobKey := bridgeManagerPreGeneratedKeys[2]
 	bobAcc := bind.NewKeyedTransactor(bobKey)
 
 	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KAIA)}}
@@ -533,14 +531,14 @@ func TestExtendedBridgeAndCallbackERC20(t *testing.T) {
 // TestExtendedBridgeAndCallbackERC721 checks the following:
 // - the extBridge can call a callback contract method from ERC721 value transfer.
 func TestExtendedBridgeAndCallbackERC721(t *testing.T) {
-	bridgeAccountKey, _ := crypto.GenerateKey()
+	bridgeAccountKey := bridgeManagerPreGeneratedKeys[0]
 	bridgeAccount := bind.NewKeyedTransactor(bridgeAccountKey)
 
-	aliceKey, _ := crypto.GenerateKey()
+	aliceKey := bridgeManagerPreGeneratedKeys[1]
 	aliceAcc := bind.NewKeyedTransactor(aliceKey)
 	aliceAcc.GasLimit = DefaultBridgeTxGasLimit
 
-	bobKey, _ := crypto.GenerateKey()
+	bobKey := bridgeManagerPreGeneratedKeys[2]
 	bobAcc := bind.NewKeyedTransactor(bobKey)
 
 	alloc := blockchain.GenesisAlloc{bridgeAccount.From: {Balance: big.NewInt(params.KAIA)}}
@@ -704,11 +702,11 @@ type bridgeTokenTestENV struct {
 }
 
 func generateBridgeTokenTestEnv(t *testing.T) *bridgeTokenTestENV {
-	key, _ := crypto.GenerateKey()
+	key := bridgeManagerPreGeneratedKeys[0]
 	operator := bind.NewKeyedTransactor(key)
 	operator.GasLimit = DefaultBridgeTxGasLimit
 
-	testKey, _ := crypto.GenerateKey()
+	testKey := bridgeManagerPreGeneratedKeys[1]
 	tester := bind.NewKeyedTransactor(testKey)
 	tester.GasLimit = DefaultBridgeTxGasLimit
 
@@ -1156,14 +1154,14 @@ func TestBridgeContract_CheckValueTransferAfterUnLock(t *testing.T) {
 // with the gap of lowerHandle nonce and handle nonce.
 func TestBridgeRequestHandleGasUsed(t *testing.T) {
 	// Generate a new random account and a funded simulator
-	authKey, _ := crypto.GenerateKey()
+	authKey := bridgeManagerPreGeneratedKeys[0]
 	auth := bind.NewKeyedTransactor(authKey)
 	auth.GasLimit = DefaultBridgeTxGasLimit
 
-	aliceKey, _ := crypto.GenerateKey()
+	aliceKey := bridgeManagerPreGeneratedKeys[1]
 	alice := bind.NewKeyedTransactor(aliceKey)
 
-	bobKey, _ := crypto.GenerateKey()
+	bobKey := bridgeManagerPreGeneratedKeys[2]
 	bob := bind.NewKeyedTransactor(bobKey)
 
 	// Create Simulated backend
@@ -1255,16 +1253,16 @@ func TestBridgeMaxOperatorHandleTxGasUsed(t *testing.T) {
 
 	var authList []*bind.TransactOpts
 	for i := 0; i <= maxOperator; i++ {
-		authKey, _ := crypto.GenerateKey()
+		authKey := bridgeManagerPreGeneratedKeys[i]
 		authList = append(authList, bind.NewKeyedTransactor(authKey))
 		authList[i].GasLimit = DefaultBridgeTxGasLimit
 	}
 	auth := authList[0]
 
-	aliceKey, _ := crypto.GenerateKey()
+	aliceKey := bridgeManagerPreGeneratedKeys[1]
 	alice := bind.NewKeyedTransactor(aliceKey)
 
-	bobKey, _ := crypto.GenerateKey()
+	bobKey := bridgeManagerPreGeneratedKeys[2]
 	bob := bind.NewKeyedTransactor(bobKey)
 
 	// Create Simulated backend
@@ -1344,7 +1342,7 @@ func TestBridgeThresholdLimit(t *testing.T) {
 
 	var authList []*bind.TransactOpts
 	for i := range maxOperator {
-		authKey, _ := crypto.GenerateKey()
+		authKey := bridgeManagerPreGeneratedKeys[i]
 		authList = append(authList, bind.NewKeyedTransactor(authKey))
 		authList[i].GasLimit = DefaultBridgeTxGasLimit
 	}

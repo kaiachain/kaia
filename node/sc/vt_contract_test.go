@@ -45,7 +45,7 @@ func TestTokenPublicVariables(t *testing.T) {
 		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
 		}
-	})
+	}, recoveryFixtureOptions{withToken: true})
 	defer info.sim.Close()
 
 	initSupply, err := info.tokenLocalBridge.INITIALSUPPLY(nil)
@@ -92,7 +92,7 @@ func TestNFTPublicVariables(t *testing.T) {
 		for range testTxCount {
 			ops[KAIA].request(info, info.localInfo)
 		}
-	})
+	}, recoveryFixtureOptions{withNFT: true, mintNFT: true})
 	defer info.sim.Close()
 
 	_, tx, _, err := scnft.DeployServiceChainNFT(info.nodeAuth, info.sim, common.Address{0})

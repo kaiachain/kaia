@@ -54,6 +54,7 @@ type blockchainTestContext struct {
 	accounts     []*bind.TransactOpts // accounts[0:numNodes] are node keys
 	config       *params.ChainConfig
 	genesis      *blockchain.Genesis
+	blockPeriod  *uint64
 
 	workspace string
 	nodes     []*blockchainTestNode
@@ -70,6 +71,7 @@ type blockchainTestOverrides struct {
 	numAccounts int                     // default: numNodes
 	config      *params.ChainConfig     // default: blockchainTestChainConfig
 	alloc       blockchain.GenesisAlloc // default: 10_000_000 KAIA for each account
+	blockPeriod *uint64                 // default: nil (use CN default)
 }
 
 var blockchainTestChainConfig = &params.ChainConfig{
@@ -117,7 +119,8 @@ func newBlockchainTestContext(overrides *blockchainTestOverrides) (*blockchainTe
 	}
 
 	ctx := &blockchainTestContext{
-		numNodes: overrides.numNodes,
+		numNodes:    overrides.numNodes,
+		blockPeriod: overrides.blockPeriod,
 	}
 	ctx.setAccounts(overrides.numAccounts)
 	ctx.setConfig(overrides.config)
@@ -231,6 +234,9 @@ func (ctx *blockchainTestContext) setNode(nodeIndex int) (err error) {
 	cnConf.NetworkId = ctx.config.ChainID.Uint64()
 	cnConf.Genesis = ctx.genesis
 	cnConf.Rewardbase = ctx.accountAddrs[nodeIndex]
+	if ctx.blockPeriod != nil {
+		cnConf.Istanbul.BlockPeriod = *ctx.blockPeriod
+	}
 	cnConf.SingleDB = false       // identical to regular CN
 	cnConf.NumStateTrieShards = 4 // identical to regular CN
 	cnConf.NoPruning = true       // archive mode
