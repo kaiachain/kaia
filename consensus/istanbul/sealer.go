@@ -18,6 +18,7 @@ import (
 )
 
 var _ consensus.Sealer = (*IstanbulSealer)(nil)
+
 var (
 	inmemoryBlocks             = 2048
 	inmemoryValidatorsPerBlock = 30
