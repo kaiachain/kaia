@@ -52,6 +52,20 @@ func (mr *MockBackendMockRecorder) Address() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Address", reflect.TypeOf((*MockBackend)(nil).Address))
 }
 
+// Sealer mocks base method.
+func (m *MockBackend) Sealer() *istanbul.IstanbulSealer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Sealer")
+	ret0, _ := ret[0].(*istanbul.IstanbulSealer)
+	return ret0
+}
+
+// Sealer indicates an expected call of Sealer.
+func (mr *MockBackendMockRecorder) Sealer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sealer", reflect.TypeOf((*MockBackend)(nil).Sealer))
+}
+
 // Broadcast mocks base method.
 func (m *MockBackend) Broadcast(arg0 common.Hash, arg1 []byte) error {
 	m.ctrl.T.Helper()

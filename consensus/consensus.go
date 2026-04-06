@@ -79,6 +79,38 @@ type ChainContext interface {
 		header *types.Header, tx *types.Transaction, usedGas *uint64, cfg *vm.Config) (*types.Receipt, *vm.InternalTxTrace, error)
 }
 
+type ChainReaderWithSealer interface {
+	ChainReader
+	Sealer() Sealer
+}
+
+// Sealer handles seal-related logic independent from consensus networking/runtime.
+type Sealer interface {
+	// Read information from header.Extra.
+	Author(header *types.Header) (common.Address, error)
+	Committers(header *types.Header) ([]common.Address, error)
+	Vanity(header *types.Header) ([]byte, error)
+	RawSeals(header *types.Header) ([]byte, [][]byte, error)
+	Round(header *types.Header) (byte, error)
+	Validators(header *types.Header) ([]common.Address, error)
+
+	// Write information to header.Extra.
+	WriteAuthorSeal(header *types.Header, seal []byte) error
+	WriteCommittedSeals(header *types.Header, committedSeals [][]byte) error
+	WriteRound(header *types.Header, round int64)
+	WriteValidators(header *types.Header, validators []common.Address) error
+
+	// Create seal bytes
+	MakeAuthorSeal(header *types.Header) ([]byte, error)
+	MakeCommittedSeal(header *types.Header) ([]byte, error)
+	HeaderHash(header *types.Header) common.Hash
+	SigHash(header *types.Header) common.Hash
+
+	// Verify seals and derive consensus metadata.
+	F(blockNum uint64, qualifiedlen, committeeSize int) int
+	Quorum(blockNum uint64, qualifiedlen, committeeSize int) int
+}
+
 // Engine is an algorithm agnostic consensus engine.
 //
 //go:generate mockgen -destination=./mocks/engine_mock.go -package=mocks github.com/kaiachain/kaia/consensus Engine
@@ -91,6 +123,9 @@ type Engine interface {
 	// Engines that do not use committed seals may return (nil, nil).
 	Committers(header *types.Header) ([]common.Address, error)
 
+	// RegisterKaiaxModules wires kaiax modules to the consensus engine.
+	RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule)
+
 	// Start starts any consensus-specific background lifecycle.
 	// Engines without a background runtime should implement this as a no-op.
 	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool, executor Executor) error
@@ -98,10 +133,6 @@ type Engine interface {
 	// Stop stops any consensus-specific background lifecycle.
 	// Engines without a background runtime should implement this as a no-op.
 	Stop() error
-
-	// RegisterKaiaxModules wires kaiax modules needed by the engine.
-	// Engines that do not use these modules should implement this as a no-op.
-	RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule)
 
 	// PrepareExtra builds consensus-specific header.Extra content.
 	PrepareExtra(header *types.Header, parent *types.Header) ([]byte, error)
@@ -112,13 +143,13 @@ type Engine interface {
 	// This allows the caller to update pending block state for APIs.
 	SubmitTransactions(txs *types.TransactionsByPriceAndNonce, state *state.StateDB, header *types.Header, mux *event.TypeMux, onPrepared func(*ExecutionResult)) (finalizeCh <-chan *ExecutionResult)
 
-	// VerifySeals checks consensus-specific seals for the given header.
-	VerifySeals(header *types.Header) error
-
 	// APIs returns the RPC APIs this consensus engine provides.
 	APIs(chain ChainReader) []rpc.API
 
-	// Protocol returns the protocol for this consensus
+	// VerifySeals checks consensus-specific seals for the given header.
+	VerifySeals(header *types.Header) error
+
+	// Protocol returns the protocol for this consensus.
 	Protocol() Protocol
 
 	// GetConsensusInfo returns consensus information regarding the given block number.

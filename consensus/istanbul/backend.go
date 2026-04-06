@@ -37,6 +37,9 @@ type Backend interface {
 	// Address returns the owner's address
 	Address() common.Address
 
+	// Sealer returns the seal handler used by this backend.
+	Sealer() *IstanbulSealer
+
 	// EventMux returns the event mux in backend
 	EventMux() *event.TypeMux
 
