@@ -93,7 +93,7 @@ abstract contract AddressBookV2Base is
         uint256 idleTimeout;
         uint256 maxValidatorCount;
         uint256 maxReadyCandidateCount;
-        uint256 epochValCount;
+        uint256 slotFactor;
         address kefAddress;
         address kifAddress;
         address kpfAddress;
@@ -177,7 +177,7 @@ abstract contract AddressBookV2Base is
         }
 
         $.stateCount[State.ValActive] = len;
-        $.epochValCount = len;
+        $.slotFactor = len;
     }
 
     /// @notice Batch state transition for system processing

@@ -158,7 +158,7 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
 
     /// @inheritdoc IAddressBookV2
     function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount) {
-        uint256 n = _getStorage().epochValCount;
+        uint256 n = _getStorage().slotFactor;
         return (SlotMath.maxSlotAvailable(n), SlotMath.minActiveCount(n));
     }
 
@@ -184,8 +184,8 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
-    function getEpochValCount() external view returns (uint256) {
-        return _getStorage().epochValCount;
+    function getSlotFactor() external view returns (uint256) {
+        return _getStorage().slotFactor;
     }
 
     /// @inheritdoc IAddressBookV2

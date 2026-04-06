@@ -136,6 +136,7 @@ type NodeStatesResult struct {
 	MaxReadyCandCount uint64
 	PfsThreshold      uint64
 	CfsThreshold      uint64
+	SlotFactor        uint64
 	MaxSlotAvailable  uint64
 	MinActiveCount    uint64
 }
@@ -185,6 +186,7 @@ func ReadNodeStates(
 		MaxReadyCandCount: res.MaxReadyCandidateCount.Uint64(),
 		PfsThreshold:      res.PfsThreshold.Uint64(),
 		CfsThreshold:      res.CfsThreshold.Uint64(),
+		SlotFactor:        res.SlotFactor.Uint64(),
 		MaxSlotAvailable:  res.MaxSlotAvailable.Uint64(),
 		MinActiveCount:    res.MinActiveCount.Uint64(),
 	}, nil

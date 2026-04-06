@@ -147,8 +147,8 @@ abstract contract NodeActions is AddressBookV2Base {
         if (!_isNodeAtState(nodeId, State.ValActive)) revert InvalidState();
 
         ABv2Storage storage $ = _getStorage();
-        if (_getStateCount(State.ValPaused) >= SlotMath.maxSlotAvailable($.epochValCount)) revert SlotsFull();
-        if (_getStateCount(State.ValActive) <= SlotMath.minActiveCount($.epochValCount)) revert SlotsFull();
+        if (_getStateCount(State.ValPaused) >= SlotMath.maxSlotAvailable($.slotFactor)) revert SlotsFull();
+        if (_getStateCount(State.ValActive) <= SlotMath.minActiveCount($.slotFactor)) revert SlotsFull();
 
         uint256 timeout = block.timestamp + $.pauseTimeout;
         _transition(nodeId, State.ValPaused, timeout);
@@ -173,9 +173,9 @@ abstract contract NodeActions is AddressBookV2Base {
         }
 
         ABv2Storage storage $ = _getStorage();
-        if (_getStateCount(State.ValExiting) >= SlotMath.maxSlotAvailable($.epochValCount)) revert SlotsFull();
+        if (_getStateCount(State.ValExiting) >= SlotMath.maxSlotAvailable($.slotFactor)) revert SlotsFull();
         if (state == State.ValActive) {
-            if (_getStateCount(State.ValActive) <= SlotMath.minActiveCount($.epochValCount)) revert SlotsFull();
+            if (_getStateCount(State.ValActive) <= SlotMath.minActiveCount($.slotFactor)) revert SlotsFull();
         }
 
         _transition(nodeId, State.ValExiting, 0);
@@ -201,9 +201,9 @@ abstract contract NodeActions is AddressBookV2Base {
             _batchTransition(nodeIds, newStates, timeoutAts);
         }
         if (_isEpochBlock()) {
-            uint256 epochValCount = _getStateCount(State.ValActive) + _getStateCount(State.ValPaused);
-            _getStorage().epochValCount = epochValCount;
-            emit EpochTransitionProcessed(epochValCount);
+            uint256 slotFactor = _getStateCount(State.ValActive) + _getStateCount(State.ValPaused);
+            _getStorage().slotFactor = slotFactor;
+            emit EpochTransitionProcessed(slotFactor);
         }
         emit SystemTransitionProcessed(nodeIds, newStates);
     }
