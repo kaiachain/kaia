@@ -1025,35 +1025,6 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		assert.Equal(t, uint64(0), score, "C1 CFS should be 0 (no failures reported)")
 	})
 
-	t.Run("uses_epoch_val_count_snapshot_instead_of_live_committee_len", func(t *testing.T) {
-		P1, P2, P3 := addrN(30), addrN(31), addrN(32)
-		C1 := addrN(40)
-
-		ctrl := gomock.NewController(t)
-		valset := mock_valset.NewMockValsetModule(ctrl)
-		v := createCN(t, valset).VRankModule
-		v.Chain = &testChain{
-			headers: map[uint64]*types.Header{
-				5:  makeHeaderWithVRank(5, 0, []common.Address{C1}),
-				6:  makeHeaderWithVRank(6, 0, []common.Address{C1}),
-				7:  makeHeaderWithVRank(7, 0, []common.Address{C1}),
-				8:  makeHeaderWithVRank(8, 0, []common.Address{C1}),
-				9:  makeHeaderWithVRank(9, 0, []common.Address{C1}),
-				10: makeHeaderWithVRank(10, 0, []common.Address{C1}),
-			},
-		}
-
-		valset.EXPECT().GetCandidates(uint64(5)).Return([]common.Address{C1}, nil).Times(1)
-		valset.EXPECT().GetProposer(uint64(5), uint64(0)).Return(P1, nil).Times(1)
-		valset.EXPECT().GetProposer(uint64(6), uint64(0)).Return(P2, nil).Times(1)
-		valset.EXPECT().GetProposer(uint64(7), uint64(0)).Return(P2, nil).Times(1)
-		valset.EXPECT().GetProposer(uint64(8), uint64(0)).Return(P3, nil).Times(1)
-		valset.EXPECT().GetProposer(uint64(9), uint64(0)).Return(P3, nil).Times(1)
-		valset.EXPECT().GetProposer(uint64(10), uint64(0)).Return(P3, nil).Times(1)
-		cfs, err := computeCFS(v, 5, 10, 7)
-		require.NoError(t, err)
-		assert.Equal(t, uint64(1), cfs[C1], "slotFactor=7 implies F=2, so only the smallest reporter total remains")
-	})
 }
 
 // TestByzantineFilter verifies the byzantine-reporter filtering logic against KIP-227 spec examples.

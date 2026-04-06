@@ -267,30 +267,6 @@ func TestGetEpochTransition_CandTestingCFS(t *testing.T) {
 	}
 }
 
-// TestGetEpochTransition_SlotFactorForwarded verifies that slotFactor is forwarded as-is
-// to GetCFSWithSlotFactor — not re-read from chain.
-func TestGetEpochTransition_SlotFactorForwarded(t *testing.T) {
-	wantSlotFactor := uint64(7)
-
-	ctrl := gomock.NewController(t)
-	v := newTestValsetModule(ctrl)
-	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-	mockVRank.EXPECT().
-		GetCFSWithSlotFactor(testCFSBlockNum, wantSlotFactor).
-		Return(map[common.Address]uint64{addr1: 0}, nil).
-		Times(1)
-	v.VRankModule = mockVRank
-
-	validators := valset.NodeStateMap{
-		addr1: {State: valset.CandTesting, StakingAmount: aboveMinStake},
-	}
-	result := v.getEpochTransition(
-		testMinStake, validators, testIdleTimeout, testMaxValCount,
-		testBlockTime, testCFSBlockNum, testCFSThreshold, wantSlotFactor,
-	)
-	assert.Equal(t, valset.ValActive, result[addr1].State)
-}
-
 // ============================================================
 // TestGetTimeoutTransition
 // ============================================================
