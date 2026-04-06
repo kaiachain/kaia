@@ -192,6 +192,20 @@ func ReadNodeStates(
 	}, nil
 }
 
+// ReadSlotFactor reads the slot factor from AddressBookV2.
+func ReadSlotFactor(backend bind.ContractCaller, num *big.Int) (uint64, error) {
+	caller, err := abv2contracts.NewAddressBookV2Caller(AddressBookAddr, backend)
+	if err != nil {
+		return 0, err
+	}
+	opts := &bind.CallOpts{BlockNumber: num}
+	sf, err := caller.GetSlotFactor(opts)
+	if err != nil {
+		return 0, err
+	}
+	return sf.Uint64(), nil
+}
+
 // ReadAddressBookV2BlsAll reads BLS public key info for all nodes from AddressBookV2.
 // Used for permissionless blocks where ABv2 is the BLS source of truth.
 func ReadAddressBookV2BlsAll(backend bind.ContractCaller, num *big.Int) (BlsPublicKeyInfos, error) {

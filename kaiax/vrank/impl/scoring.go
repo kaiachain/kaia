@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"slices"
 
+	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/vrank"
@@ -67,11 +68,11 @@ func (v *VRankModule) getSlotFactorAt(blockNum uint64) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	res, err := system.ReadNodeStates(statedb, v.Chain, header)
+	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb)
 	if err != nil {
 		return 0, err
 	}
-	return res.SlotFactor, nil
+	return system.ReadSlotFactor(backend, header.Number)
 }
 
 // GetCFS computes the running Candidate Failure Score up to blockNum.
