@@ -114,6 +114,7 @@ type BackendProtocolManager interface {
 
 type chainAwareConsensusEngine interface {
 	SetChain(chain consensus.ChainReader)
+	SignalPeerRegistrable()
 }
 
 // CN implements the Kaia consensus node service.
@@ -390,6 +391,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		istBackend, ok := cn.engine.(chainAwareConsensusEngine)
 		if ok {
 			istBackend.SetChain(cn.blockchain)
+			istBackend.SignalPeerRegistrable()
 		}
 	} else {
 		// TODO-Kaia improve to handle drop transaction on network traffic in PN and EN

@@ -1514,7 +1514,7 @@ func genStacksForLog(size int) []string {
 }
 
 func fillStacks(stacks []string, n int) []string {
-	for i := 0; i < n; i++ {
+	for i := range n {
 		stacks[i] = "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201ffffffff"
 	}
 	return stacks

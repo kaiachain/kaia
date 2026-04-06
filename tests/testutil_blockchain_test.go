@@ -48,12 +48,15 @@ import (
 // Full blockchain test context.
 // TODO: replace newBlockchain()
 type blockchainTestContext struct {
-	numNodes     int
-	accountKeys  []*ecdsa.PrivateKey
-	accountAddrs []common.Address
-	accounts     []*bind.TransactOpts // accounts[0:numNodes] are node keys
-	config       *params.ChainConfig
-	genesis      *blockchain.Genesis
+	numNodes       int
+	accountKeys    []*ecdsa.PrivateKey
+	accountAddrs   []common.Address
+	accounts       []*bind.TransactOpts // accounts[0:numNodes] are node keys
+	config         *params.ChainConfig
+	genesis        *blockchain.Genesis
+	blockPeriod    *uint64
+	oldBlockPeriod int64
+	hasBlockPeriod bool
 
 	workspace string
 	nodes     []*blockchainTestNode
@@ -70,6 +73,7 @@ type blockchainTestOverrides struct {
 	numAccounts int                     // default: numNodes
 	config      *params.ChainConfig     // default: blockchainTestChainConfig
 	alloc       blockchain.GenesisAlloc // default: 10_000_000 KAIA for each account
+	blockPeriod *uint64                 // default: nil (use CN default)
 }
 
 var blockchainTestChainConfig = &params.ChainConfig{
@@ -117,21 +121,30 @@ func newBlockchainTestContext(overrides *blockchainTestOverrides) (*blockchainTe
 	}
 
 	ctx := &blockchainTestContext{
-		numNodes: overrides.numNodes,
+		numNodes:    overrides.numNodes,
+		blockPeriod: overrides.blockPeriod,
+	}
+	if ctx.blockPeriod != nil {
+		ctx.hasBlockPeriod = true
+		ctx.oldBlockPeriod = params.BlockGenerationInterval
+		params.BlockGenerationInterval = int64(*ctx.blockPeriod)
 	}
 	ctx.setAccounts(overrides.numAccounts)
 	ctx.setConfig(overrides.config)
 	ctx.setGenesis(overrides.alloc)
 	ctx.setWorkspace()
-	err := ctx.setNodes(ctx.numNodes)
-	return ctx, err
+	if err := ctx.setNodes(ctx.numNodes); err != nil {
+		ctx.restoreBlockPeriod()
+		return nil, err
+	}
+	return ctx, nil
 }
 
 func (ctx *blockchainTestContext) setAccounts(count int) {
 	ctx.accountKeys = make([]*ecdsa.PrivateKey, count)
 	ctx.accountAddrs = make([]common.Address, count)
 	ctx.accounts = make([]*bind.TransactOpts, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		privateKey := deriveTestAccount(i)
 		ctx.accountKeys[i] = privateKey
 		ctx.accountAddrs[i] = crypto.PubkeyToAddress(privateKey.PublicKey)
@@ -177,7 +190,7 @@ func (ctx *blockchainTestContext) setWorkspace() {
 
 func (ctx *blockchainTestContext) setNodes(numNodes int) error {
 	ctx.nodes = make([]*blockchainTestNode, numNodes)
-	for i := 0; i < numNodes; i++ {
+	for i := range numNodes {
 		if err := ctx.setNode(i); err != nil {
 			return err
 		}
@@ -289,10 +302,19 @@ func (ctx *blockchainTestContext) Restart() error {
 }
 
 func (ctx *blockchainTestContext) Cleanup() error {
+	defer ctx.restoreBlockPeriod()
 	if err := ctx.Stop(); err != nil {
 		return err
 	}
 	return os.RemoveAll(ctx.workspace)
+}
+
+func (ctx *blockchainTestContext) restoreBlockPeriod() {
+	if !ctx.hasBlockPeriod {
+		return
+	}
+	params.BlockGenerationInterval = ctx.oldBlockPeriod
+	ctx.hasBlockPeriod = false
 }
 
 func (ctx *blockchainTestContext) WaitBlock(t *testing.T, num uint64) {

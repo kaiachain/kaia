@@ -126,7 +126,7 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 	// Mock qualified validators
 	for blkNum, data := range mockQualifiedValidators {
 		stakingAmounts := make([]uint64, len(data))
-		for i := 0; i < len(data); i++ {
+		for i := range data {
 			stakingAmounts[i] = uint64(5000000)
 		}
 		mockStaking.EXPECT().GetStakingInfo(blkNum).Return(&staking.StakingInfo{

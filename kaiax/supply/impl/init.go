@@ -64,7 +64,7 @@ type SupplyModule struct {
 	lastAccReward *supply.AccReward // Last AccReward
 
 	// Stops long-running tasks.
-	quit   uint32         // stops the synchronous loop in accumulateCheckpoint
+	quit   atomic.Uint32  // stops the synchronous loop in accumulateCheckpoint
 	quitCh chan struct{}  // stops the goroutine in select loop
 	wg     sync.WaitGroup // wait for the goroutine to finish
 
@@ -101,7 +101,7 @@ func (s *SupplyModule) Start() error {
 	s.memoCache.Purge()
 
 	// Reset the quit state.
-	atomic.StoreUint32(&s.quit, 0)
+	s.quit.Store(0)
 	s.quitCh = make(chan struct{}, 1)
 	s.wg.Add(1)
 	go s.catchup()
@@ -109,7 +109,7 @@ func (s *SupplyModule) Start() error {
 }
 
 func (s *SupplyModule) Stop() {
-	atomic.StoreUint32(&s.quit, 1)
+	s.quit.Store(1)
 	s.quitCh <- struct{}{}
 	s.wg.Wait()
 }

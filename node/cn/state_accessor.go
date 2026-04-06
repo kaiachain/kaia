@@ -113,7 +113,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 			}
 		}
 		// Database does not have the state for the given block, try to regenerate
-		for i := uint64(0); i < reexec; i++ {
+		for range reexec {
 			if current.NumberU64() == 0 {
 				return nil, nil, errors.New("genesis state is missing")
 			}

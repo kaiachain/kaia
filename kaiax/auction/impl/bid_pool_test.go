@@ -562,7 +562,7 @@ func benchmarkAddBidParallel(b *testing.B, numBids int) {
 
 	// Pre-generate bids
 	bids := make([]*auction.Bid, numBids)
-	for i := 0; i < numBids; i++ {
+	for i := range numBids {
 		searcherKey, _ := crypto.GenerateKey()
 		tx := types.NewTransaction(uint64(i), testSearcher1, big.NewInt(10000000), 10000000, big.NewInt(10000000), []byte{})
 		bid := &auction.Bid{BidData: auction.BidData{

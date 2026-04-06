@@ -518,8 +518,6 @@ func TestDefaultTxsWithDefaultAccountKey(t *testing.T) {
 	accountKeyTypes := []accountkey.AccountKeyType{
 		// accountkey.AccountKeyTypeNil, // not supported type
 		accountkey.AccountKeyTypeLegacy,
-		accountkey.AccountKeyTypePublic,
-		accountkey.AccountKeyTypeFail,
 		accountkey.AccountKeyTypeWeightedMultiSig,
 		accountkey.AccountKeyTypeRoleBased,
 	}

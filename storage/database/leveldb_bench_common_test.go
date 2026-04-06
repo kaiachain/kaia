@@ -166,7 +166,7 @@ func benchmarkCacheGetParallel(b *testing.B, cache common.Cache, valueSize int) 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			for i := 0; i < numberOfGet; i++ {
+			for i := range numberOfGet {
 				key := hashKeys[(i*primeNumber)%numDataInsertions]
 				cache.Get(key)
 			}
@@ -218,11 +218,11 @@ func initCacheData(cache common.Cache, valueSize int) []common.Hash {
 func TestLRUShardCacheAddressKey(t *testing.T) {
 	cache := common.NewCache(common.LRUShardConfig{CacheSize: 40960, NumShards: 4096})
 
-	for i := 0; i < 4096; i++ {
+	for i := range 4096 {
 		cache.Add(getAddressKey(i), i)
 	}
 
-	for i := 0; i < 4096; i++ {
+	for i := range 4096 {
 		data, ok := cache.Get(getAddressKey(i))
 		assert.True(t, ok)
 		assert.Equal(t, i, data.(int))
@@ -234,11 +234,11 @@ func TestLRUShardCacheAddressKey(t *testing.T) {
 func TestLRUShardCacheAddressKeyFromFront(t *testing.T) {
 	cache := common.NewCache(common.LRUShardConfig{CacheSize: 40960, NumShards: 4096})
 
-	for i := 0; i < 4096; i++ {
+	for i := range 4096 {
 		cache.Add(getAddressKeyFromFront(i), i)
 	}
 
-	for i := 0; i < 4096; i++ {
+	for i := range 4096 {
 		data, ok := cache.Get(getAddressKeyFromFront(i))
 		assert.True(t, ok)
 		assert.Equal(t, i, data.(int))
@@ -250,11 +250,11 @@ func TestLRUShardCacheAddressKeyFromFront(t *testing.T) {
 func TestLRUShardCacheHashKey(t *testing.T) {
 	cache := common.NewCache(common.LRUShardConfig{CacheSize: 40960, NumShards: 4096})
 
-	for i := 0; i < 4096; i++ {
+	for i := range 4096 {
 		cache.Add(getHashKey(i), i)
 	}
 
-	for i := 0; i < 4096; i++ {
+	for i := range 4096 {
 		data, ok := cache.Get(getHashKey(i))
 		assert.True(t, ok)
 		assert.Equal(t, i, data.(int))

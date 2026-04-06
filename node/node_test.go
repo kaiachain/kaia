@@ -50,7 +50,7 @@ func TestNodeLifeCycle(t *testing.T) {
 		t.Fatalf("failed to create protocol stack: %v", err)
 	}
 	// Ensure that a stopped node can be stopped again
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if err := stack.Stop(); err != ErrNodeStopped {
 			t.Fatalf("iter %d: stop failure mismatch: have %v, want %v", i, err, ErrNodeStopped)
 		}
@@ -63,7 +63,7 @@ func TestNodeLifeCycle(t *testing.T) {
 		t.Fatalf("start failure mismatch: have %v, want %v ", err, ErrNodeRunning)
 	}
 	// Ensure that a node can be restarted arbitrarily many times
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if err := stack.Restart(); err != nil {
 			t.Fatalf("iter %d: failed to restart node: %v", i, err)
 		}
@@ -224,7 +224,7 @@ func TestServiceRestarts(t *testing.T) {
 		t.Fatalf("running/started mismatch: have %v/%d, want true/1", running, started)
 	}
 	// Restart the stack a few times and check successful service restarts
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if err := stack.Restart(); err != nil {
 			t.Fatalf("iter %d: failed to restart stack: %v", i, err)
 		}
@@ -267,7 +267,7 @@ func TestServiceConstructionAbortion(t *testing.T) {
 		t.Fatalf("failer registration failed: %v", err)
 	}
 	// Start the protocol stack and ensure none of the services get started
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		if err := stack.Start(); err != failure {
 			t.Fatalf("iter %d: stack startup failure mismatch: have %v, want %v", i, err, failure)
 		}
@@ -318,7 +318,7 @@ func TestServiceStartupAbortion(t *testing.T) {
 		t.Fatalf("failer registration failed: %v", err)
 	}
 	// Start the protocol stack and ensure all started services stop
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		if err := stack.Start(); err != failure {
 			t.Fatalf("iter %d: stack startup failure mismatch: have %v, want %v", i, err, failure)
 		}
@@ -370,7 +370,7 @@ func TestServiceTerminationGuarantee(t *testing.T) {
 		t.Fatalf("failer registration failed: %v", err)
 	}
 	// Start the protocol stack, and ensure that a failing shut down terminates all
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		// Start the stack and make sure all is online
 		if err := stack.Start(); err != nil {
 			t.Fatalf("iter %d: failed to start protocol stack: %v", i, err)
@@ -459,7 +459,7 @@ func TestProtocolGather(t *testing.T) {
 	}
 	for id, config := range services {
 		protocols := make([]p2p.Protocol, config.Count)
-		for i := 0; i < len(protocols); i++ {
+		for i := range protocols {
 			protocols[i].Name = id
 			protocols[i].Version = uint(i)
 		}
@@ -485,7 +485,7 @@ func TestProtocolGather(t *testing.T) {
 	for id, config := range services {
 		for ver := 0; ver < config.Count; ver++ {
 			launched := false
-			for i := 0; i < len(protocols); i++ {
+			for i := range protocols {
 				if protocols[i].Name == id && protocols[i].Version == uint(ver) {
 					launched = true
 					break

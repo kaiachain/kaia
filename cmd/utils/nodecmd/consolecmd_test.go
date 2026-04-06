@@ -45,8 +45,7 @@ const (
 // then terminated by closing the input stream.
 func TestConsoleWelcome(t *testing.T) {
 	// Start a Kaia console, make sure it's cleaned up and terminate the console
-	kaia := runKaia(t,
-		"kaia-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none",
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none",
 		"console")
 
 	// Gather all the infos the welcome message needs to contain
@@ -72,8 +71,8 @@ instance: Klaytn/{{klayver}}/{{goos}}-{{goarch}}/{{gover}}
 }
 
 // Tests that a console can be attached to a running node via various means.
-func TestIPCAttachWelcome(t *testing.T) {
-	// Configure the instance for IPC attachment
+func TestAttachWelcome(t *testing.T) {
+	// Configure shared node endpoints for IPC/HTTP/WS attachment tests.
 	var ipc string
 	if runtime.GOOS == "windows" {
 		ipc = `\\.\pipe\klay` + strconv.Itoa(trulyRandInt(100000, 999999))
@@ -82,40 +81,28 @@ func TestIPCAttachWelcome(t *testing.T) {
 		defer os.RemoveAll(ws)
 		ipc = filepath.Join(ws, "klay.ipc")
 	}
-	// Note: we need --shh because testAttachWelcome checks for default
-	// list of ipc modules and shh is included there.
-	kaia := runKaia(t,
-		"kaia-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ipcpath", ipc)
+	httpPort := strconv.Itoa(trulyRandInt(1024, 65536))
+	wsPort := strconv.Itoa(trulyRandInt(1024, 65536))
+
+	// Start one node and reuse it for all attach variants.
+	kaia := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none",
+		"--ipcpath", ipc, "--rpc", "--rpcport", httpPort, "--ws", "--wsport", wsPort)
 
 	waitForEndpoint(t, ipc, 10*time.Second)
-	testAttachWelcome(t, kaia, "ipc:"+ipc, ipcAPIs)
+	httpEndpoint := "http://127.0.0.1:" + httpPort
+	wsEndpoint := "ws://127.0.0.1:" + wsPort
+	waitForEndpoint(t, httpEndpoint, 10*time.Second)
+	waitForEndpoint(t, wsEndpoint, 10*time.Second)
 
-	kaia.Interrupt()
-	kaia.Kill()
-}
-
-func TestHTTPAttachWelcome(t *testing.T) {
-	port := strconv.Itoa(trulyRandInt(1024, 65536)) // Yeah, sometimes this will fail, sorry :P
-	kaia := runKaia(t,
-		"kaia-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--rpc", "--rpcport", port)
-
-	endpoint := "http://127.0.0.1:" + port
-	waitForEndpoint(t, endpoint, 10*time.Second)
-	testAttachWelcome(t, kaia, endpoint, httpAPIs)
-
-	kaia.Interrupt()
-	kaia.Kill()
-}
-
-func TestWSAttachWelcome(t *testing.T) {
-	port := strconv.Itoa(trulyRandInt(1024, 65536)) // Yeah, sometimes this will fail, sorry :P
-
-	kaia := runKaia(t,
-		"kaia-test", "--port", "0", "--maxconnections", "0", "--nodiscover", "--nat", "none", "--ws", "--wsport", port)
-
-	endpoint := "ws://127.0.0.1:" + port
-	waitForEndpoint(t, endpoint, 10*time.Second)
-	testAttachWelcome(t, kaia, endpoint, httpAPIs)
+	t.Run("ipc", func(t *testing.T) {
+		testAttachWelcome(t, kaia, "ipc:"+ipc, ipcAPIs)
+	})
+	t.Run("http", func(t *testing.T) {
+		testAttachWelcome(t, kaia, httpEndpoint, httpAPIs)
+	})
+	t.Run("ws", func(t *testing.T) {
+		testAttachWelcome(t, kaia, wsEndpoint, httpAPIs)
+	})
 
 	kaia.Interrupt()
 	kaia.Kill()
@@ -123,7 +110,7 @@ func TestWSAttachWelcome(t *testing.T) {
 
 func testAttachWelcome(t *testing.T, klay *testKaia, endpoint, apis string) {
 	// Attach to a running Kaia node and terminate immediately
-	attach := runKaia(t, "kaia-test", "attach", endpoint)
+	attach := runKaia(t, "kaia-test", "--ntp.disable", "--db.single", "attach", endpoint)
 	defer attach.ExpectExit()
 	attach.CloseStdin()
 

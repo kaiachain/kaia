@@ -78,14 +78,14 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 	// from 0 to 4: before istanbul hard fork
 	// from 5 to 100: after istanbul hard fork
 	var previousBlock, currentBlock *types.Block = nil, chain.CurrentBlock()
-	for i := int64(0); i < maxBlockNum; i++ {
+	for range maxBlockNum {
 		previousBlock = currentBlock
 		currentBlock = makeBlockWithSeal(chain, istBackend, previousBlock)
 		_, err := chain.InsertChain(types.Blocks{currentBlock})
 		assert.NoError(t, err)
 	}
 
-	for i := int64(0); i < maxBlockNum; i++ {
+	for i := range maxBlockNum {
 		// Test for round 0 to round 14
 		for round := int64(0); round < 14; round++ {
 			currentCommittee, err := istBackend.valsetModule.GetCommittee(uint64(i), uint64(round))

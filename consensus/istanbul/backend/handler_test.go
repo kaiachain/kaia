@@ -150,11 +150,51 @@ func TestBackend_ValidatePeerType(t *testing.T) {
 		err := backend.ValidatePeerType(common.Address{})
 		assert.Equal(t, errInvalidPeerAddress, err)
 	}
+}
 
-	// Return an error if backend.chain is not set
-	{
-		backend.chain = nil
-		err := backend.ValidatePeerType(backend.address)
-		assert.Equal(t, errNoChainReader, err)
+// startBlockedValidatePeer creates a test backend and starts a goroutine that
+// blocks on ValidatePeerType. Returns the backend and a channel that closes
+// when ValidatePeerType returns. Asserts that ValidatePeerType is still
+// blocking after 200ms.
+func startBlockedValidatePeer(t *testing.T) (*backend, chan struct{}) {
+	t.Helper()
+	b := newTestBackend()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer func() { recover() }() // valsetModule is nil in test backend
+		b.ValidatePeerType(common.Address{})
+	}()
+
+	select {
+	case <-done:
+		t.Fatal("ValidatePeerType should block before engine is ready")
+	case <-time.After(200 * time.Millisecond):
+	}
+	return b, done
+}
+
+func TestValidatePeerType_BlocksUntilSignal(t *testing.T) {
+	b, done := startBlockedValidatePeer(t)
+	defer b.Stop()
+
+	b.SignalPeerRegistrable()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("ValidatePeerType should unblock after SignalPeerRegistrable")
+	}
+}
+
+func TestValidatePeerType_UnblocksOnStop(t *testing.T) {
+	b, done := startBlockedValidatePeer(t)
+	defer b.Stop()
+
+	b.Stop()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("ValidatePeerType should unblock after Stop")
 	}
 }

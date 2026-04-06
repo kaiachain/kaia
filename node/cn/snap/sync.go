@@ -750,7 +750,7 @@ func (s *Syncer) loadSyncStatus() {
 			big.NewInt(int64(accountConcurrency)),
 		), common.Big1,
 	)
-	for i := 0; i < accountConcurrency; i++ {
+	for i := range accountConcurrency {
 		last := common.BigToHash(new(big.Int).Add(next.Big(), step))
 		if i == accountConcurrency-1 {
 			// Make sure we don't overflow if the step is not a proper divisor

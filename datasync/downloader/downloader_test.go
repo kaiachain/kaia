@@ -54,9 +54,12 @@ import (
 
 // Reduce some of the parameters to make the tester faster.
 func init() {
-	MaxForkAncestry = uint64(10000)
-	blockCacheMaxItems = 1024
-	fsHeaderContCheck = 500 * time.Millisecond
+	MaxForkAncestry = uint64(512)
+	MaxHashFetch = 64
+	MaxHeaderFetch = 16
+	MaxBlockFetch = 16
+	blockCacheMaxItems = 80
+	fsHeaderContCheck = 200 * time.Millisecond
 }
 
 var (
@@ -1209,7 +1212,7 @@ func testMultiSynchronisation(t *testing.T, protocol int, mode SyncMode) {
 	targetBlocks := targetPeers*blockCacheMaxItems - 15
 	hashes, headers, blocks, receipts, stakingInfos := tester.makeChain(targetBlocks, 0, tester.genesis, nil, false)
 
-	for i := 0; i < targetPeers; i++ {
+	for i := range targetPeers {
 		id := fmt.Sprintf("peer #%d", i)
 		tester.newPeer(id, protocol, hashes[i*blockCacheMaxItems:], headers, blocks, receipts, stakingInfos)
 	}
@@ -1921,7 +1924,7 @@ func testDeliverHeadersHang(t *testing.T, protocol int, mode SyncMode) {
 	defer master.terminate()
 
 	hashes, headers, blocks, receipts, stakingInfos := master.makeChain(5, 0, master.genesis, nil, false)
-	for i := 0; i < 200; i++ {
+	for i := range 200 {
 		tester := newTester(t)
 		tester.peerDb = master.peerDb
 
@@ -2018,7 +2021,7 @@ func TestCalcStakingBlockNumber(t *testing.T) {
 		{86400, 259201, 172800},
 	}
 
-	for i := 0; i < len(testCase); i++ {
+	for i := range testCase {
 		result := calcStakingBlockNumber(testCase[i].blockNu, testCase[i].interval)
 
 		if result != testCase[i].result {

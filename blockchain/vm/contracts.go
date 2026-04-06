@@ -80,196 +80,6 @@ type PrecompiledContract interface {
 	Name() string
 }
 
-// PrecompiledContractsByzantium contains the default set of pre-compiled Kaia
-// contracts based on Ethereum Byzantium.
-var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}):  &ecrecover{},
-	common.BytesToAddress([]byte{2}):  &sha256hash{},
-	common.BytesToAddress([]byte{3}):  &ripemd160hash{},
-	common.BytesToAddress([]byte{4}):  &dataCopy{},
-	common.BytesToAddress([]byte{5}):  &bigModExp{eip2565: false, eip7823: false, eip7883: false},
-	common.BytesToAddress([]byte{6}):  &bn256AddByzantium{},
-	common.BytesToAddress([]byte{7}):  &bn256ScalarMulByzantium{},
-	common.BytesToAddress([]byte{8}):  &bn256PairingByzantium{},
-	common.BytesToAddress([]byte{9}):  &vmLog{},
-	common.BytesToAddress([]byte{10}): &feePayer{},
-	common.BytesToAddress([]byte{11}): &validateSender{},
-}
-
-// DO NOT USE 0x3FD, 0x3FE, 0x3FF ADDRESSES BEFORE ISTANBUL CHANGE ACTIVATED.
-
-// PrecompiledContractsIstanbul contains the default set of pre-compiled Kaia
-// contracts based on Ethereum Istanbul.
-var PrecompiledContractsIstanbul = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}):      &ecrecover{},
-	common.BytesToAddress([]byte{2}):      &sha256hash{},
-	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
-	common.BytesToAddress([]byte{4}):      &dataCopy{},
-	common.BytesToAddress([]byte{5}):      &bigModExp{eip2565: false, eip7823: false, eip7883: false},
-	common.BytesToAddress([]byte{6}):      &bn256AddIstanbul{},
-	common.BytesToAddress([]byte{7}):      &bn256ScalarMulIstanbul{},
-	common.BytesToAddress([]byte{8}):      &bn256PairingIstanbul{},
-	common.BytesToAddress([]byte{9}):      &blake2F{},
-	common.BytesToAddress([]byte{3, 253}): &vmLog{},
-	common.BytesToAddress([]byte{3, 254}): &feePayer{},
-	common.BytesToAddress([]byte{3, 255}): &validateSender{},
-}
-
-// PrecompiledContractsKore contains the default set of pre-compiled Kaia
-// contracts based on Ethereum Berlin.
-var PrecompiledContractsKore = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}):      &ecrecover{},
-	common.BytesToAddress([]byte{2}):      &sha256hash{},
-	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
-	common.BytesToAddress([]byte{4}):      &dataCopy{},
-	common.BytesToAddress([]byte{5}):      &bigModExp{eip2565: true, eip7823: false, eip7883: false},
-	common.BytesToAddress([]byte{6}):      &bn256AddIstanbul{},
-	common.BytesToAddress([]byte{7}):      &bn256ScalarMulIstanbul{},
-	common.BytesToAddress([]byte{8}):      &bn256PairingIstanbul{},
-	common.BytesToAddress([]byte{9}):      &blake2F{},
-	common.BytesToAddress([]byte{3, 253}): &vmLog{},
-	common.BytesToAddress([]byte{3, 254}): &feePayer{},
-	common.BytesToAddress([]byte{3, 255}): &validateSender{},
-}
-
-// PrecompiledContractsCancun contains the default set of pre-compiled Kaia
-// contracts based on Ethereum Cancun.
-var PrecompiledContractsCancun = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}):      &ecrecover{},
-	common.BytesToAddress([]byte{2}):      &sha256hash{},
-	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
-	common.BytesToAddress([]byte{4}):      &dataCopy{},
-	common.BytesToAddress([]byte{5}):      &bigModExp{eip2565: true, eip7823: false, eip7883: false},
-	common.BytesToAddress([]byte{6}):      &bn256AddIstanbul{},
-	common.BytesToAddress([]byte{7}):      &bn256ScalarMulIstanbul{},
-	common.BytesToAddress([]byte{8}):      &bn256PairingIstanbul{},
-	common.BytesToAddress([]byte{9}):      &blake2F{},
-	common.BytesToAddress([]byte{0x0a}):   &kzgPointEvaluation{},
-	common.BytesToAddress([]byte{3, 253}): &vmLog{},
-	common.BytesToAddress([]byte{3, 254}): &feePayer{},
-	common.BytesToAddress([]byte{3, 255}): &validateSender{},
-}
-
-// PrecompiledContractsPrague contains the set of pre-compiled Ethereum
-// contracts used in the Prague release.
-var PrecompiledContractsPrague = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}):      &ecrecover{},
-	common.BytesToAddress([]byte{2}):      &sha256hash{},
-	common.BytesToAddress([]byte{3}):      &ripemd160hash{},
-	common.BytesToAddress([]byte{4}):      &dataCopy{},
-	common.BytesToAddress([]byte{5}):      &bigModExp{eip2565: true, eip7823: false, eip7883: false},
-	common.BytesToAddress([]byte{6}):      &bn256AddIstanbul{},
-	common.BytesToAddress([]byte{7}):      &bn256ScalarMulIstanbul{},
-	common.BytesToAddress([]byte{8}):      &bn256PairingIstanbul{},
-	common.BytesToAddress([]byte{9}):      &blake2F{},
-	common.BytesToAddress([]byte{0x0a}):   &kzgPointEvaluation{},
-	common.BytesToAddress([]byte{0x0b}):   &bls12381G1Add{},
-	common.BytesToAddress([]byte{0x0c}):   &bls12381G1MultiExp{},
-	common.BytesToAddress([]byte{0x0d}):   &bls12381G2Add{},
-	common.BytesToAddress([]byte{0x0e}):   &bls12381G2MultiExp{},
-	common.BytesToAddress([]byte{0x0f}):   &bls12381Pairing{},
-	common.BytesToAddress([]byte{0x10}):   &bls12381MapG1{},
-	common.BytesToAddress([]byte{0x11}):   &bls12381MapG2{},
-	common.BytesToAddress([]byte{3, 253}): &vmLog{},
-	common.BytesToAddress([]byte{3, 254}): &feePayer{},
-	common.BytesToAddress([]byte{3, 255}): &validateSender{},
-}
-
-// PrecompiledContractsOsaka contains the set of pre-compiled Ethereum
-// contracts used in the Osaka release.
-var PrecompiledContractsOsaka = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}):         &ecrecover{},
-	common.BytesToAddress([]byte{2}):         &sha256hash{},
-	common.BytesToAddress([]byte{3}):         &ripemd160hash{},
-	common.BytesToAddress([]byte{4}):         &dataCopy{},
-	common.BytesToAddress([]byte{5}):         &bigModExp{eip2565: true, eip7823: true, eip7883: true},
-	common.BytesToAddress([]byte{6}):         &bn256AddIstanbul{},
-	common.BytesToAddress([]byte{7}):         &bn256ScalarMulIstanbul{},
-	common.BytesToAddress([]byte{8}):         &bn256PairingIstanbul{},
-	common.BytesToAddress([]byte{9}):         &blake2F{},
-	common.BytesToAddress([]byte{0x0a}):      &kzgPointEvaluation{},
-	common.BytesToAddress([]byte{0x0b}):      &bls12381G1Add{},
-	common.BytesToAddress([]byte{0x0c}):      &bls12381G1MultiExp{},
-	common.BytesToAddress([]byte{0x0d}):      &bls12381G2Add{},
-	common.BytesToAddress([]byte{0x0e}):      &bls12381G2MultiExp{},
-	common.BytesToAddress([]byte{0x0f}):      &bls12381Pairing{},
-	common.BytesToAddress([]byte{0x10}):      &bls12381MapG1{},
-	common.BytesToAddress([]byte{0x11}):      &bls12381MapG2{},
-	common.BytesToAddress([]byte{0x1, 0x00}): &p256Verify{},
-	common.BytesToAddress([]byte{3, 253}):    &vmLog{},
-	common.BytesToAddress([]byte{3, 254}):    &feePayer{},
-	common.BytesToAddress([]byte{3, 255}):    &validateSender{},
-}
-
-// PrecompiledContractsP256Verify contains the precompiled Ethereum
-// contract specified in EIP-7212. This is exported for testing purposes.
-var PrecompiledContractsP256Verify = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{0x1, 0x00}): &p256Verify{},
-}
-
-var (
-	PrecompiledAddressOsaka       []common.Address
-	PrecompiledAddressPrague      []common.Address
-	PrecompiledAddressCancun      []common.Address
-	PrecompiledAddressIstanbul    []common.Address
-	PrecompiledAddressesByzantium []common.Address
-)
-
-func init() {
-	for k := range PrecompiledContractsByzantium {
-		PrecompiledAddressesByzantium = append(PrecompiledAddressesByzantium, k)
-	}
-	for k := range PrecompiledContractsIstanbul {
-		PrecompiledAddressIstanbul = append(PrecompiledAddressIstanbul, k)
-	}
-	for k := range PrecompiledContractsCancun {
-		PrecompiledAddressCancun = append(PrecompiledAddressCancun, k)
-	}
-	for k := range PrecompiledContractsPrague {
-		PrecompiledAddressPrague = append(PrecompiledAddressPrague, k)
-	}
-	for k := range PrecompiledContractsOsaka {
-		PrecompiledAddressOsaka = append(PrecompiledAddressOsaka, k)
-	}
-}
-
-// ActivePrecompiles returns the precompiles enabled with the current configuration.
-func ActivePrecompiles(rules params.Rules) []common.Address {
-	var precompiledContractAddrs []common.Address
-	for addr := range ActivePrecompiledContracts(rules) {
-		precompiledContractAddrs = append(precompiledContractAddrs, addr)
-	}
-	// After istanbulCompatible hf, need to support for vmversion0 contracts, too.
-	// VmVersion0 contracts are deployed before istanbulCompatible and they use byzantiumCompatible precompiled contracts.
-	// VmVersion0 contracts are the contracts deployed before istanbulCompatible hf.
-	if rules.IsIstanbul {
-		return append(precompiledContractAddrs,
-			[]common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}...)
-	} else {
-		return precompiledContractAddrs
-	}
-}
-
-// ActivePrecompiledContracts returns the precompiled contracts enabled with the current configuration.
-// This function doesn't support for vmversion0 contracts, it only supports for istanbulCompatible hf.
-func ActivePrecompiledContracts(rules params.Rules) map[common.Address]PrecompiledContract {
-	var precompiledContracts map[common.Address]PrecompiledContract
-	switch {
-	case rules.IsOsaka:
-		precompiledContracts = PrecompiledContractsOsaka
-	case rules.IsPrague:
-		precompiledContracts = PrecompiledContractsPrague
-	case rules.IsCancun:
-		precompiledContracts = PrecompiledContractsCancun
-	case rules.IsIstanbul:
-		precompiledContracts = PrecompiledContractsIstanbul
-	default:
-		precompiledContracts = PrecompiledContractsByzantium
-	}
-
-	return precompiledContracts
-}
-
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
 func RunPrecompiledContract(p PrecompiledContract, input []byte, contract *Contract, evm *EVM) (ret []byte, computationCost uint64, err error) {
 	gas, computationCost := p.GetRequiredGasAndComputationCost(input)
@@ -907,11 +717,11 @@ func (c *blake2F) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error
 		m [16]uint64
 		t [2]uint64
 	)
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		offset := 4 + i*8
 		h[i] = binary.LittleEndian.Uint64(input[offset : offset+8])
 	}
-	for i := 0; i < 16; i++ {
+	for i := range 16 {
 		offset := 68 + i*8
 		m[i] = binary.LittleEndian.Uint64(input[offset : offset+8])
 	}
@@ -922,7 +732,7 @@ func (c *blake2F) Run(input []byte, contract *Contract, evm *EVM) ([]byte, error
 	blake2b.F(&h, m, t, final, rounds)
 
 	output := make([]byte, 64)
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		offset := i * 8
 		binary.LittleEndian.PutUint64(output[offset:offset+8], h[i])
 	}
@@ -1089,7 +899,7 @@ func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPic
 
 	numSigs := len(ptr) / common.SignatureLength
 	pubs := make([]*ecdsa.PublicKey, numSigs)
-	for i := 0; i < numSigs; i++ {
+	for i := range numSigs {
 		p, err := crypto.Ecrecover(msg, ptr[0:common.SignatureLength])
 		if err != nil {
 			return err
@@ -1191,7 +1001,7 @@ func (c *bls12381G1MultiExp) Run(input []byte, contract *Contract, evm *EVM) ([]
 	scalars := make([]fr.Element, k)
 
 	// Decode point scalar pairs
-	for i := 0; i < k; i++ {
+	for i := range k {
 		off := 160 * i
 		t0, t1, t2 := off, off+128, off+160
 		// Decode G1 point
@@ -1297,7 +1107,7 @@ func (c *bls12381G2MultiExp) Run(input []byte, contract *Contract, evm *EVM) ([]
 	scalars := make([]fr.Element, k)
 
 	// Decode point scalar pairs
-	for i := 0; i < k; i++ {
+	for i := range k {
 		off := 288 * i
 		t0, t1, t2 := off, off+256, off+288
 		// Decode G2 point
@@ -1355,7 +1165,7 @@ func (c *bls12381Pairing) Run(input []byte, contract *Contract, evm *EVM) ([]byt
 	)
 
 	// Decode pairs
-	for i := 0; i < k; i++ {
+	for i := range k {
 		off := 384 * i
 		t0, t1, t2 := off, off+128, off+384
 
@@ -1454,7 +1264,7 @@ func decodeBLS12381FieldElement(in []byte) (fp.Element, error) {
 		return fp.Element{}, errors.New("invalid field element length")
 	}
 	// check top bytes
-	for i := 0; i < 16; i++ {
+	for i := range 16 {
 		if in[i] != byte(0x00) {
 			return fp.Element{}, errBLS12381InvalidFieldElementTopBytes
 		}

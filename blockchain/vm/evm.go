@@ -162,7 +162,7 @@ type EVM struct {
 	interpreter *EVMInterpreter
 	// abort is used to abort the EVM calling operations
 	// NOTE: must be set atomically
-	abort int32
+	abort atomic.Int32
 	// callGasTemp holds the gas available for the current call. This is needed because the
 	// available gas is calculated in gasCall* according to the 63/64 rule and later
 	// applied in opCall*.
@@ -219,8 +219,8 @@ func (evm *EVM) Reset(txCtx TxContext, statedb StateDB) {
 // it's safe to be called multiple times.
 func (evm *EVM) Cancel(reason int32) {
 	for {
-		abort := atomic.LoadInt32(&evm.abort)
-		swapped := atomic.CompareAndSwapInt32(&evm.abort, abort, abort|reason)
+		abort := evm.abort.Load()
+		swapped := evm.abort.CompareAndSwap(abort, abort|reason)
 		if swapped {
 			break
 		}
@@ -233,7 +233,7 @@ func (evm *EVM) IsPrefetching() bool {
 
 // Cancelled returns true if Cancel has been called
 func (evm *EVM) Cancelled() bool {
-	return atomic.LoadInt32(&evm.abort) == 1
+	return evm.abort.Load() == 1
 }
 
 // Call executes the contract associated with the addr with the given input as
@@ -657,43 +657,6 @@ func (evm *EVM) CreateWithAddress(caller types.ContractRef, code []byte, gas uin
 	codeAndHash := &codeAndHash{code: code}
 	codeAndHash.Hash()
 	return evm.create(caller, codeAndHash, gas, value, contractAddr, CREATE, humanReadable, codeFormat)
-}
-
-func (evm *EVM) GetPrecompiledContractMap(addr common.Address) map[common.Address]PrecompiledContract {
-	precompiles := evm.getPrecompiledContractForVersion(addr)
-	// If console.log is enabled, add console.log precompile too.
-	if evm.Config.UseConsoleLog {
-		precompiles[consoleLogContractAddress] = &consoleLog{}
-	}
-	return precompiles
-}
-
-func (evm *EVM) getPrecompiledContractForVersion(addr common.Address) map[common.Address]PrecompiledContract {
-	// VmVersion means that the contract uses the precompiled contract map at the deployment time.
-	// Also, it follows old map's gas price & computation cost.
-
-	// Get vmVersion from addr only if the addr is a contract address.
-	// If new "VmVersion" is added, add new if clause below
-	if vmVersion, ok := evm.StateDB.GetVmVersion(addr); ok && vmVersion == params.VmVersion0 {
-		// Without VmVersion0, precompiled contract address 0x09-0x0b won't work properly
-		// with the contracts deployed before istanbulHF
-		return PrecompiledContractsByzantium
-	}
-
-	switch {
-	case evm.chainRules.IsOsaka:
-		return PrecompiledContractsOsaka
-	case evm.chainRules.IsPrague:
-		return PrecompiledContractsPrague
-	case evm.chainRules.IsCancun:
-		return PrecompiledContractsCancun
-	case evm.chainRules.IsKore:
-		return PrecompiledContractsKore
-	case evm.chainRules.IsIstanbul:
-		return PrecompiledContractsIstanbul
-	default:
-		return PrecompiledContractsByzantium
-	}
 }
 
 // resolveCode returns the code associated with the provided account. After

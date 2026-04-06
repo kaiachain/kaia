@@ -433,6 +433,14 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	}
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
 
+	// Adjust accountMap for actual gas used vs. the intrinsic gas estimate in Update().
+	// Execution overhead (e.g. constructor gas, code storage cost) is not captured by
+	// IntrinsicGas, causing a mismatch in Magma non-deferred mode where only half the
+	// fee reaches the rewardbase.
+	if err := accountMap.AdjustFeesByReceipts(b.Transactions(), receipts, b.NumberU64()); err != nil {
+		return err
+	}
+
 	// Verification with accountMap
 	start = time.Now()
 	statedbNew, err := bcdata.bc.State()
@@ -469,9 +477,10 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 		return err
 	}
 
-	// Update accountMap
+	// Update accountMap. Update() requires the mined block number. Since mining
+	// hasn't happened yet, derive it as CurrentBlock (parent) + 1.
 	start := time.Now()
-	if err := accountMap.Update(transactions, txHashesExpectedFail, txBundlingModules, signer, statedb, bcdata.bc.CurrentBlock().NumberU64()); err != nil {
+	if err := accountMap.Update(transactions, txHashesExpectedFail, txBundlingModules, signer, statedb, bcdata.bc.CurrentBlock().NumberU64()+1); err != nil {
 		return err
 	}
 	prof.Profile("main_update_accountMap", time.Now().Sub(start))
@@ -539,6 +548,14 @@ func (bcdata *BCData) genABlockWithTransactionsWithBundle(accountMap *AccountMap
 		}
 	}
 	prof.Profile("main_apply_reward", time.Now().Sub(start))
+
+	// Adjust accountMap for actual gas used vs. the intrinsic gas estimate in Update().
+	// Execution overhead (e.g. constructor gas, code storage cost) is not captured by
+	// IntrinsicGas, causing a mismatch in Magma non-deferred mode where only half the
+	// fee reaches the rewardbase.
+	if err := accountMap.AdjustFeesByReceipts(b.Transactions(), receipts, b.NumberU64()); err != nil {
+		return err
+	}
 
 	// Verification with accountMap
 	start = time.Now()
@@ -648,7 +665,7 @@ func createAccounts(numAccounts int) ([]*common.Address, []*ecdsa.PrivateKey, er
 	accs := make([]*common.Address, numAccounts)
 	privKeys := make([]*ecdsa.PrivateKey, numAccounts)
 
-	for i := 0; i < numAccounts; i++ {
+	for i := range numAccounts {
 		k, err := crypto.GenerateKey()
 		if err != nil {
 			return nil, nil, err

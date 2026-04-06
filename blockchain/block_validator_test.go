@@ -368,7 +368,6 @@ func testPreprocessHeaderVerification(t *testing.T, threads int) {
 			}
 			abort, results = validator.Preprocess(headers)
 		}
-
 		for j := 0; j < len(headers); j++ {
 			select {
 			case result := <-results:
@@ -383,7 +382,6 @@ func testPreprocessHeaderVerification(t *testing.T, threads int) {
 				t.Fatalf("test %d.%d: preprocessing timeout", i, j)
 			}
 		}
-
 		select {
 		case result := <-results:
 			t.Fatalf("test %d: unexpected result returned: %v", i, result)

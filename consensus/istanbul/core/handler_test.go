@@ -137,7 +137,7 @@ func genValidators(n int) ([]common.Address, map[common.Address]*ecdsa.PrivateKe
 	addrs := make([]common.Address, n)
 	keyMap := make(map[common.Address]*ecdsa.PrivateKey, n)
 
-	for i := 0; i < n; i++ {
+	for i := range n {
 		key, _ := crypto.GenerateKey()
 		addrs[i] = crypto.PubkeyToAddress(key.PublicKey)
 		keyMap[addrs[i]] = key

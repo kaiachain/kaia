@@ -23,6 +23,8 @@
 package backend
 
 import (
+	"maps"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
@@ -87,9 +89,7 @@ func (api *API) Candidates() map[common.Address]bool {
 	defer api.istanbul.candidatesLock.RUnlock()
 
 	proposals := make(map[common.Address]bool)
-	for address, auth := range api.istanbul.candidates {
-		proposals[address] = auth
-	}
+	maps.Copy(proposals, api.istanbul.candidates)
 	return proposals
 }
 

@@ -211,6 +211,16 @@ func makeTestKaiaBlock(num int64) (*types.Header, []*types.Transaction, []*types
 		}
 }
 
+// makeTestOsakaBlock creates a Kaia block with one blob transaction.
+// execFee = 0.0376e18 (same as makeTestKaiaBlock)
+// blobFee = BlobTxBlobGasPerBlob * baseFee * BlobBaseFeeMultiplier = 131072 * 27e9 * 8 = 28311552000000000
+func makeTestOsakaBlock(num int64) (*types.Header, []*types.Transaction, []*types.Receipt) {
+	blobGasUsed := uint64(params.BlobTxBlobGasPerBlob)
+	header, txs, receipts := makeTestKaiaBlock(num)
+	header.BlobGasUsed = &blobGasUsed
+	return header, txs, receipts
+}
+
 func makeTestTx_type0(gasPrice, gasLimit int64) *types.Transaction {
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)

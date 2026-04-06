@@ -19,6 +19,7 @@
 package sc
 
 import (
+	"crypto/ecdsa"
 	"math/big"
 	"testing"
 	"time"
@@ -53,8 +54,16 @@ type multiBridgeTestInfo struct {
 	handleSub  event.Subscription
 }
 
+func multiBridgeTestKey(i int) *ecdsa.PrivateKey {
+	if i >= 0 && i < len(bridgeManagerPreGeneratedKeys) {
+		return bridgeManagerPreGeneratedKeys[i]
+	}
+	k, _ := crypto.GenerateKey()
+	return k
+}
+
 func prepareMultiBridgeTest(t *testing.T) *bridgeTestInfo {
-	accKey, _ := crypto.GenerateKey()
+	accKey := multiBridgeTestKey(0)
 	acc := bind.NewKeyedTransactor(accKey)
 
 	alloc := blockchain.GenesisAlloc{acc.From: {Balance: big.NewInt(params.KAIA)}}
@@ -76,8 +85,8 @@ func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 	accountMap := make(map[common.Address]blockchain.GenesisAccount)
 	res.accounts = make([]*bind.TransactOpts, maxAccounts)
 
-	for i := 0; i < maxAccounts; i++ {
-		accKey, _ := crypto.GenerateKey()
+	for i := range maxAccounts {
+		accKey := multiBridgeTestKey(i)
 		res.accounts[i] = bind.NewKeyedTransactor(accKey)
 		accountMap[res.accounts[i].From] = blockchain.GenesisAccount{Balance: big.NewInt(params.KAIA)}
 	}
@@ -94,7 +103,7 @@ func prepareMultiBridgeEventTest(t *testing.T) *multiBridgeTestInfo {
 	assert.Nil(t, bind.CheckWaitMined(res.sim, tx))
 
 	owner := res.accounts[0]
-	for i := 0; i < maxAccounts; i++ {
+	for i := range maxAccounts {
 		acc := res.accounts[i]
 		opts := &bind.TransactOpts{From: owner.From, Signer: owner.Signer, GasLimit: DefaultBridgeTxGasLimit}
 		_, _ = b.RegisterOperator(opts, acc.From)
@@ -638,7 +647,7 @@ func TestMultiBridgeErrNotOperator1(t *testing.T) {
 	transferAmount := uint64(100)
 	sentBlockNumber := uint64(100000)
 
-	accKey, _ := crypto.GenerateKey()
+	accKey := multiBridgeTestKey(4)
 	acc := bind.NewKeyedTransactor(accKey)
 
 	tx := SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
@@ -672,7 +681,7 @@ func TestMultiBridgeErrNotOperator2(t *testing.T) {
 	info.sim.Commit()
 	assert.NoError(t, bind.CheckWaitMined(info.sim, tx))
 
-	accKey, _ := crypto.GenerateKey()
+	accKey := multiBridgeTestKey(4)
 	acc = bind.NewKeyedTransactor(accKey)
 
 	tx = SendHandleKLAYTransfer(info.b, acc, to, transferAmount, sentNonce, sentBlockNumber, t)
@@ -1206,7 +1215,7 @@ func TestNoncesAndBlockNumberUnordered(t *testing.T) {
 		{3, 400, 3, 4, 400},
 	}
 
-	for i := 0; i < len(testCases); i++ {
+	for i := range testCases {
 		sentNonce := testCases[i].requestNonce
 		sentBlockNumber := testCases[i].requestBlkNum
 		t.Log("test round", "i", i, "nonce", sentNonce, "blk", sentBlockNumber)
@@ -1230,7 +1239,7 @@ func TestNoncesAndBlockNumberUnordered(t *testing.T) {
 	lowerHandleNonce, _ := info.b.LowerHandleNonce(nil)
 	assert.Equal(t, uint64(4), lowerHandleNonce)
 
-	for i := 0; i < len(testCases); i++ {
+	for i := range testCases {
 		sentNonce := testCases[i].requestNonce
 		sentBlockNumber := testCases[i].requestBlkNum
 		t.Log("test round", "i", i, "nonce", sentNonce, "blk", sentBlockNumber)

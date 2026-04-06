@@ -78,6 +78,7 @@ func New(opts *BackendOpts) consensus.Engine {
 		govModule:        opts.GovModule,
 		sealer:           istanbul.NewSealerImpl(opts.PrivateKey),
 		nodetype:         opts.NodeType,
+		chainInitCh:      make(chan struct{}),
 	}
 
 	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)})
@@ -127,6 +128,11 @@ type backend struct {
 
 	// Node type
 	nodetype common.ConnType
+
+	chainInitCh   chan struct{} // closed when engine is ready for peer registration
+	chainInitOnce sync.Once
+
+	isRestoringSnapshots atomic.Bool
 
 	// Executor for transaction execution
 	executor consensus.Executor

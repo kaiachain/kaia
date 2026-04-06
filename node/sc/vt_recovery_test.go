@@ -19,9 +19,12 @@
 package sc
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"math/big"
 	"os"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -80,6 +83,27 @@ type operations struct {
 	dummyHandle func(*testInfo, *BridgeInfo)
 }
 
+type recoveryFixtureOptions struct {
+	withToken bool
+	withNFT   bool
+	mintNFT   bool
+}
+
+type recoveryDirection uint8
+
+const (
+	childToParent recoveryDirection = iota
+	parentToChild
+)
+
+type simpleRecoveryCase struct {
+	name          string
+	tokenType     uint8
+	direction     recoveryDirection
+	requestBridge func(*testInfo) *BridgeInfo
+	handleBridge  func(*testInfo) *BridgeInfo
+}
+
 var ops = map[uint8]*operations{
 	KAIA: {
 		request:     requestKLAYTransfer,
@@ -98,27 +122,27 @@ var ops = map[uint8]*operations{
 	},
 }
 
+func prepareRecoveryWithOptions(t *testing.T, vtcallback func(*testInfo), fixtureOpts recoveryFixtureOptions) *testInfo {
+	t.Helper()
+	info := prepare(t, vtcallback, fixtureOpts)
+	t.Cleanup(func() {
+		info.sim.Close()
+	})
+	return info
+}
+
 // TestBasicKLAYTransferRecovery tests each methods of the value transfer recovery.
 func TestBasicKLAYTransferRecovery(t *testing.T) {
-	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
-	assert.NoError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Fatalf("fail to delete file %v", err)
-		}
-	}()
-
 	// 1. Init dummy chain and do some value transfers.
-	info := prepare(t, func(info *testInfo) {
+	info := prepareRecoveryWithOptions(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
 			ops[KAIA].request(info, info.localInfo)
 		}
-	})
-	defer info.sim.Close()
+	}, recoveryFixtureOptions{})
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 
 	// 2. Update recovery hint.
-	err = vtr.updateRecoveryHint()
+	err := vtr.updateRecoveryHint()
 	if err != nil {
 		t.Fatal("fail to update value transfer hint")
 	}
@@ -167,385 +191,185 @@ func TestBasicKLAYTransferRecovery(t *testing.T) {
 
 // TestKLAYTransferLongRangeRecovery tests a long block range recovery.
 func TestKLAYTransferLongRangeRecovery(t *testing.T) {
-	tempDir := os.TempDir() + "sc"
-	os.MkdirAll(tempDir, os.ModePerm)
 	oldMaxPendingTxs := maxPendingTxs
+	oldFilterLogsStride := filterLogsStride
 	maxPendingTxs = 2
+	filterLogsStride = 20
 	defer func() {
 		maxPendingTxs = oldMaxPendingTxs
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Fatalf("fail to delete file %v", err)
-		}
+		filterLogsStride = oldFilterLogsStride
 	}()
 
 	// 1. Init dummy chain and do some value transfers.
-	info := prepare(t, func(info *testInfo) {
+	info := prepareRecoveryWithOptions(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
 			ops[KAIA].request(info, info.localInfo)
-			for i := uint64(0); i < filterLogsStride; i++ {
+			for range filterLogsStride {
 				info.sim.Commit()
 			}
 		}
-	})
-	defer info.sim.Close()
-	// TODO-Kaia need to remove sleep
-	time.Sleep(1 * time.Second)
-	info.sim.Commit()
+	}, recoveryFixtureOptions{})
 
 	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
 
-	err := vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
+	steps := []struct {
+		doRecover    bool
+		expectedHint uint64
+	}{
+		{doRecover: false, expectedHint: uint64(testTxCount - testPendingCount)},
+		{doRecover: true, expectedHint: uint64(testTxCount - testPendingCount + maxPendingTxs)},
+		{doRecover: true, expectedHint: uint64(testTxCount)},
 	}
-	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
-	assert.Equal(t, uint64(testTxCount-testPendingCount), vtr.child2parentHint.handleNonce)
 
-	// 2. first recovery.
-	info.recoveryCh <- true
-	err = vtr.Recover()
-	if err != nil {
-		t.Fatal("fail to recover the value transfer")
-	}
-	// TODO-Kaia need to remove sleep
-	time.Sleep(1 * time.Second)
-	info.sim.Commit()
+	for i, step := range steps {
+		if step.doRecover {
+			if i == 1 {
+				info.recoveryCh <- true
+			}
+			err := vtr.Recover()
+			if err != nil {
+				t.Fatal("fail to recover the value transfer")
+			}
+		}
 
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update value transfer hint")
+		deadline := time.Now().Add(testTimeout)
+		for {
+			info.sim.Commit()
+			if err := vtr.updateRecoveryHint(); err != nil {
+				t.Fatal("fail to update value transfer hint")
+			}
+			if vtr.child2parentHint.requestNonce == uint64(testTxCount) &&
+				vtr.child2parentHint.handleNonce == step.expectedHint {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatal("timeout waiting for child2parent hint update")
+			}
+			runtime.Gosched()
+		}
+		assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
+		assert.Equal(t, step.expectedHint, vtr.child2parentHint.handleNonce)
 	}
-	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
-	assert.Equal(t, uint64(testTxCount-testPendingCount+maxPendingTxs), vtr.child2parentHint.handleNonce)
-
-	// 3. second recovery.
-	err = vtr.Recover()
-	if err != nil {
-		t.Fatal("fail to recover the value transfer")
-	}
-	// TODO-Kaia need to remove sleep
-	time.Sleep(1 * time.Second)
-	info.sim.Commit()
-
-	// 4. Check if recovery is done.
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update value transfer hint")
-	}
-	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.requestNonce)
-	assert.Equal(t, uint64(testTxCount), vtr.child2parentHint.handleNonce)
 }
 
-// TestBasicTokenTransferRecovery tests the token transfer recovery.
-func TestBasicTokenTransferRecovery(t *testing.T) {
-	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
-	assert.NoError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Fatalf("fail to delete file %v", err)
-		}
-	}()
-
-	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
-			ops[ERC20].request(info, info.localInfo)
-		}
+func TestRecoveryScenarios(t *testing.T) {
+	info := prepareRecoveryWithOptions(t, nil, recoveryFixtureOptions{
+		withToken: true,
+		withNFT:   true,
+		mintNFT:   true,
 	})
-	defer info.sim.Close()
 
-	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
+	testCases := []simpleRecoveryCase{
+		{
+			name:          "basic_token_transfer_recovery",
+			tokenType:     ERC20,
+			direction:     childToParent,
+			requestBridge: func(info *testInfo) *BridgeInfo { return info.localInfo },
+			handleBridge:  func(info *testInfo) *BridgeInfo { return info.remoteInfo },
+		},
+		{
+			name:          "basic_nft_transfer_recovery",
+			tokenType:     ERC721,
+			direction:     childToParent,
+			requestBridge: func(info *testInfo) *BridgeInfo { return info.localInfo },
+			handleBridge:  func(info *testInfo) *BridgeInfo { return info.remoteInfo },
+		},
+		{
+			name:          "method_recover",
+			tokenType:     KAIA,
+			direction:     childToParent,
+			requestBridge: func(info *testInfo) *BridgeInfo { return info.localInfo },
+			handleBridge:  func(info *testInfo) *BridgeInfo { return info.remoteInfo },
+		},
+		{
+			name:          "scenario_main_chain_recovery",
+			tokenType:     KAIA,
+			direction:     parentToChild,
+			requestBridge: func(info *testInfo) *BridgeInfo { return info.remoteInfo },
+			handleBridge:  func(info *testInfo) *BridgeInfo { return info.localInfo },
+		},
+		{
+			name:          "scenario_automatic_recovery",
+			tokenType:     KAIA,
+			direction:     childToParent,
+			requestBridge: func(info *testInfo) *BridgeInfo { return info.localInfo },
+			handleBridge:  func(info *testInfo) *BridgeInfo { return info.remoteInfo },
+		},
 	}
-	assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
-	t.Log("token transfer hint", vtr.child2parentHint)
 
-	info.recoveryCh <- true
-	err = vtr.Recover()
-	if err != nil {
-		t.Fatal("fail to recover the value transfer")
+	for idx, tc := range testCases {
+		tc := tc
+		t.Run(fmt.Sprintf("%02d_%s", idx, tc.name), func(t *testing.T) {
+			requestBridge := tc.requestBridge(info)
+			for i := 0; i < testTxCount; i++ {
+				ops[tc.tokenType].request(info, requestBridge)
+			}
+
+			vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
+			err := vtr.updateRecoveryHint()
+			assert.NoError(t, err)
+
+			if tc.direction == parentToChild {
+				assert.NotEqual(t, vtr.parent2childHint.requestNonce, vtr.parent2childHint.handleNonce)
+			} else {
+				assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
+			}
+
+			info.recoveryCh <- true
+			err = vtr.Recover()
+			assert.NoError(t, err)
+			ops[tc.tokenType].dummyHandle(info, tc.handleBridge(info))
+
+			err = vtr.updateRecoveryHint()
+			assert.NoError(t, err)
+			if tc.direction == parentToChild {
+				assert.Equal(t, vtr.parent2childHint.requestNonce, vtr.parent2childHint.handleNonce)
+				return
+			}
+			assert.Equal(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
+		})
 	}
-	ops[ERC20].dummyHandle(info, info.remoteInfo)
-
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
-	}
-	assert.Equal(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
-}
-
-// TestBasicNFTTransferRecovery tests the NFT transfer recovery.
-// TODO-Kaia-ServiceChain: implement NFT transfer.
-func TestBasicNFTTransferRecovery(t *testing.T) {
-	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
-	assert.NoError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Fatalf("fail to delete file %v", err)
-		}
-	}()
-
-	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
-			ops[ERC721].request(info, info.localInfo)
-		}
-	})
-	defer info.sim.Close()
-
-	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
-	}
-	assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
-	t.Log("token transfer hint", vtr.child2parentHint)
-
-	info.recoveryCh <- true
-	err = vtr.Recover()
-	if err != nil {
-		t.Fatal("fail to recover the value transfer")
-	}
-	ops[ERC721].dummyHandle(info, info.remoteInfo)
-
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
-	}
-	assert.Equal(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
-}
-
-// TestMethodRecover tests the valueTransferRecovery.Recover() method.
-func TestMethodRecover(t *testing.T) {
-	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
-	assert.NoError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Fatalf("fail to delete file %v", err)
-		}
-	}()
-
-	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
-			ops[KAIA].request(info, info.localInfo)
-		}
-	})
-	defer info.sim.Close()
-
-	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
-	}
-	assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
-
-	info.recoveryCh <- true
-	err = vtr.Recover()
-	if err != nil {
-		t.Fatal("fail to recover the value transfer")
-	}
-	ops[KAIA].dummyHandle(info, info.remoteInfo)
-
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
-	}
-	assert.Equal(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
 }
 
 // TestMethodStop tests the Stop method for stop the internal goroutine.
 func TestMethodStop(t *testing.T) {
-	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
-	assert.NoError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Fatalf("fail to delete file %v", err)
-		}
-	}()
+	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, nil, nil)
+	assert.NoError(t, vtr.Stop())
 
-	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
-			ops[KAIA].request(info, info.localInfo)
-		}
-	})
-	defer info.sim.Close()
-
-	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 1}, info.localInfo, info.remoteInfo)
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
-	}
-	assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
-
-	info.recoveryCh <- true
-	err = vtr.Start()
-	if err != nil {
-		t.Fatal("fail to start the value transfer")
-	}
-	assert.Equal(t, nil, vtr.WaitRunningStatus(true, 5*time.Second))
-	err = vtr.Stop()
-	if err != nil {
-		t.Fatal("fail to stop the value transfer")
-	}
+	vtr.isRunning = true
+	assert.NoError(t, vtr.Stop())
 	assert.Equal(t, false, vtr.isRunning)
 }
 
 // TestFlagVTRecovery tests the disabled vtrecovery option.
 func TestFlagVTRecovery(t *testing.T) {
-	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
-	assert.NoError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Fatalf("fail to delete file %v", err)
-		}
-	}()
-
-	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
-			ops[KAIA].request(info, info.localInfo)
-		}
-	})
-	defer info.sim.Close()
-
-	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 60}, info.localInfo, info.remoteInfo)
-	vtr.Start()
-	assert.Equal(t, nil, vtr.WaitRunningStatus(true, 5*time.Second))
-	vtr.Stop()
-
-	vtr = NewValueTransferRecovery(&SCConfig{VTRecovery: false}, info.localInfo, info.remoteInfo)
-	err = vtr.Start()
+	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: false}, nil, nil)
+	err := vtr.Start()
 	assert.Equal(t, ErrVtrDisabled, err)
-	vtr.Stop()
 }
 
 // TestAlreadyStartedVTRecovery tests the already started VTR error cases.
 func TestAlreadyStartedVTRecovery(t *testing.T) {
-	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
-	assert.NoError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Fatalf("fail to delete file %v", err)
-		}
-	}()
-	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
-			ops[KAIA].request(info, info.localInfo)
-		}
-	})
-	defer info.sim.Close()
-
-	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 60}, info.localInfo, info.remoteInfo)
-	err = vtr.Start()
-	assert.Equal(t, nil, err)
-	assert.Equal(t, nil, vtr.WaitRunningStatus(true, 5*time.Second))
-
-	err = vtr.Start()
+	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 60}, nil, nil)
+	vtr.isRunning = true
+	err := vtr.Start()
 	assert.Equal(t, ErrVtrAlreadyStarted, err)
-
-	vtr.Stop()
-}
-
-// TestScenarioMainChainRecovery tests the value transfer recovery of the parent chain to child chain value transfers.
-func TestScenarioMainChainRecovery(t *testing.T) {
-	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
-	assert.NoError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Fatalf("fail to delete file %v", err)
-		}
-	}()
-
-	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
-			ops[KAIA].request(info, info.remoteInfo)
-		}
-	})
-	defer info.sim.Close()
-
-	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true}, info.localInfo, info.remoteInfo)
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
-	}
-	assert.NotEqual(t, vtr.parent2childHint.requestNonce, vtr.parent2childHint.handleNonce)
-
-	info.recoveryCh <- true
-	err = vtr.Recover()
-	if err != nil {
-		t.Fatal("fail to recover the value transfer")
-	}
-	ops[KAIA].dummyHandle(info, info.localInfo)
-
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
-	}
-	assert.Equal(t, vtr.parent2childHint.requestNonce, vtr.parent2childHint.handleNonce)
-}
-
-// TestScenarioAutomaticRecovery tests the recovery of the internal goroutine.
-func TestScenarioAutomaticRecovery(t *testing.T) {
-	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
-	assert.NoError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Fatalf("fail to delete file %v", err)
-		}
-	}()
-
-	info := prepare(t, func(info *testInfo) {
-		for i := 0; i < testTxCount; i++ {
-			ops[KAIA].request(info, info.localInfo)
-		}
-	})
-	defer info.sim.Close()
-
-	vtr := NewValueTransferRecovery(&SCConfig{VTRecovery: true, VTRecoveryInterval: 1}, info.localInfo, info.remoteInfo)
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
-	}
-	assert.NotEqual(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
-
-	info.recoveryCh <- true
-	err = vtr.Start()
-	if err != nil {
-		t.Fatal("fail to start the value transfer")
-	}
-	assert.Equal(t, nil, vtr.WaitRunningStatus(true, 5*time.Second))
-	ops[KAIA].dummyHandle(info, info.remoteInfo)
-
-	err = vtr.updateRecoveryHint()
-	if err != nil {
-		t.Fatal("fail to update a value transfer hint")
-	}
-	vtr.Stop()
-	assert.Equal(t, vtr.child2parentHint.requestNonce, vtr.child2parentHint.handleNonce)
 }
 
 // TestMultiOperatorRequestRecovery tests value transfer recovery for the multi-operator.
 func TestMultiOperatorRequestRecovery(t *testing.T) {
-	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
-	assert.NoError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tempDir); err != nil {
-			t.Fatalf("fail to delete file %v", err)
-		}
-	}()
-
 	// 1. Init dummy chain and do some value transfers.
-	info := prepare(t, func(info *testInfo) {
+	info := prepareRecoveryWithOptions(t, func(info *testInfo) {
 		for i := 0; i < testTxCount; i++ {
 			ops[KAIA].request(info, info.localInfo)
 		}
-	})
-	defer info.sim.Close()
+	}, recoveryFixtureOptions{})
 
 	// 2. Set multi-operator.
 	cAcc := info.nodeAuth
 	pAcc := info.chainAuth
 	opts := &bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}
-	_, err = info.localInfo.bridge.RegisterOperator(opts, pAcc.From)
+	_, err := info.localInfo.bridge.RegisterOperator(opts, pAcc.From)
 	assert.NoError(t, err)
 	opts = &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
 	_, err = info.remoteInfo.bridge.RegisterOperator(opts, cAcc.From)
@@ -614,11 +438,22 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 	assert.Equal(t, nil, vtr.recoverPendingEvents())
 	info.remoteInfo.account = info.localInfo.account // other operator
 	ops[KAIA].dummyHandle(info, info.remoteInfo)
-	if info.sim.BlockChain().CurrentBlock().Transactions().Len() == 0 {
-		// sometimes recovered pending requests are already acquired by BridgeInfo loop, not dummyHandle
-		// for this case, give enough time for the BridgeInfo loop process the pending requests
-		time.Sleep(10 * time.Second)
+	deadline := time.Now().Add(testTimeout)
+	for {
 		info.sim.Commit()
+		if err := vtr.updateRecoveryHint(); err != nil {
+			t.Fatal("fail to update value transfer hint")
+		}
+		if err := vtr.retrievePendingEvents(); err != nil {
+			t.Fatal("fail to retrieve pending events from the bridge contract")
+		}
+		if len(vtr.childEvents) == 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("timeout waiting for recovered pending requests to be drained")
+		}
+		runtime.Gosched()
 	}
 
 	// 9. Check results.
@@ -634,8 +469,23 @@ func TestMultiOperatorRequestRecovery(t *testing.T) {
 	assert.Equal(t, nil, vtr.Recover()) // nothing to recover
 }
 
+func assertTxMined(t *testing.T, sim *backends.SimulatedBackend, tx *types.Transaction) {
+	t.Helper()
+
+	receipt, err := sim.TransactionReceipt(context.Background(), tx.Hash())
+	assert.NoError(t, err)
+	if receipt == nil {
+		t.Fatal("receipt not found")
+	}
+
+	result := blockchain.ExecutionResult{
+		VmExecutionStatus: receipt.Status,
+	}
+	assert.NoError(t, result.Unwrap())
+}
+
 // prepare generates dummy blocks for testing value transfer recovery.
-func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
+func prepare(t *testing.T, vtcallback func(*testInfo), fixtureOpts recoveryFixtureOptions) *testInfo {
 	// Setup configuration.
 	config := &SCConfig{}
 	tempDir, err := os.MkdirTemp(os.TempDir(), "sc")
@@ -648,10 +498,7 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	config.DataDir = tempDir
 	config.VTRecovery = true
 
-	bacc, err := NewBridgeAccounts(nil, config.DataDir, database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB}), DefaultBridgeTxGasLimit, DefaultBridgeTxGasLimit)
-	assert.NoError(t, err)
-	bacc.pAccount.chainID = params.TestChainConfig.ChainID
-	bacc.cAccount.chainID = params.TestChainConfig.ChainID
+	bacc, _, _ := newBridgeAccountsForTest(t, nil, config.DataDir)
 
 	cAcc := bacc.cAccount.GenerateTransactOpts()
 	pAcc := bacc.pAccount.GenerateTransactOpts()
@@ -695,83 +542,114 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 	remoteInfo, _ := bm.GetBridgeInfo(remoteAddr)
 	sim.Commit()
 
-	// Prepare token contract
-	tokenLocalAddr, tx, tokenLocal, err := sctoken.DeployServiceChainToken(cAcc, sim, localAddr)
-	if err != nil {
-		log.Fatalf("Failed to DeployServiceChainToken: %v", err)
-	}
-	sim.Commit()
-	assert.Nil(t, bind.CheckWaitMined(sim, tx))
+	var (
+		tokenLocalAddr  common.Address
+		tokenRemoteAddr common.Address
+		tokenLocal      *sctoken.ServiceChainToken
+		tokenRemote     *sctoken.ServiceChainToken
+		nftLocalAddr    common.Address
+		nftRemoteAddr   common.Address
+		nftLocal        *scnft.ServiceChainNFT
+		nftRemote       *scnft.ServiceChainNFT
+		tx              *types.Transaction
+	)
 
-	tokenRemoteAddr, tx, tokenRemote, err := sctoken.DeployServiceChainToken(pAcc, sim, remoteAddr)
-	if err != nil {
-		log.Fatalf("Failed to DeployServiceChainToken: %v", err)
-	}
-	sim.Commit()
-	assert.Nil(t, bind.CheckWaitMined(sim, tx))
-
-	testToken := big.NewInt(testChargeToken)
-	opts := &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
-	tx, err = tokenRemote.Transfer(opts, remoteAddr, testToken)
-	if err != nil {
-		log.Fatalf("Failed to Transfer for charging: %v", err)
-	}
-	sim.Commit()
-	assert.Nil(t, bind.CheckWaitMined(sim, tx))
-
-	// Prepare NFT contract
-	nftLocalAddr, tx, nftLocal, err := scnft.DeployServiceChainNFT(cAcc, sim, localAddr)
-	if err != nil {
-		log.Fatalf("Failed to DeployServiceChainNFT: %v", err)
-	}
-	sim.Commit()
-	assert.Nil(t, bind.CheckWaitMined(sim, tx))
-
-	nftRemoteAddr, tx, nftRemote, err := scnft.DeployServiceChainNFT(pAcc, sim, remoteAddr)
-	if err != nil {
-		log.Fatalf("Failed to DeployServiceChainNFT: %v", err)
-	}
-	sim.Commit()
-	assert.Nil(t, bind.CheckWaitMined(sim, tx))
-
-	// Register tokens on the bridge
-	nodeOpts := &bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}
-	chainOpts := &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
-	tx, err = localInfo.bridge.RegisterToken(nodeOpts, tokenLocalAddr, tokenRemoteAddr)
-	sim.Commit()
-	assert.Nil(t, bind.CheckWaitMined(sim, tx))
-
-	tx, err = localInfo.bridge.RegisterToken(nodeOpts, nftLocalAddr, nftRemoteAddr)
-	sim.Commit()
-	assert.Nil(t, bind.CheckWaitMined(sim, tx))
-
-	tx, err = remoteInfo.bridge.RegisterToken(chainOpts, tokenRemoteAddr, tokenLocalAddr)
-	sim.Commit()
-	assert.Nil(t, bind.CheckWaitMined(sim, tx))
-
-	tx, err = remoteInfo.bridge.RegisterToken(chainOpts, nftRemoteAddr, nftLocalAddr)
-	sim.Commit()
-	assert.Nil(t, bind.CheckWaitMined(sim, tx))
-
-	// Register an NFT to chain account (minting)
-	for i := 0; i < testTxCount; i++ {
-		opts := &bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}
-		tx, err = nftLocal.MintWithTokenURI(opts, cAcc.From, big.NewInt(testNFT+int64(i)), "testURI")
-		assert.NoError(t, err)
+	if fixtureOpts.withToken {
+		var tokenLocalTx *types.Transaction
+		var tokenRemoteTx *types.Transaction
+		var tl *sctoken.ServiceChainToken
+		var tr *sctoken.ServiceChainToken
+		tokenLocalAddr, tokenLocalTx, tl, err = sctoken.DeployServiceChainToken(cAcc, sim, localAddr)
+		if err != nil {
+			log.Fatalf("Failed to DeployServiceChainToken: %v", err)
+		}
+		tokenRemoteAddr, tokenRemoteTx, tr, err = sctoken.DeployServiceChainToken(pAcc, sim, remoteAddr)
+		if err != nil {
+			log.Fatalf("Failed to DeployServiceChainToken: %v", err)
+		}
+		tokenLocal, tokenRemote = tl, tr
 		sim.Commit()
-		assert.Nil(t, bind.CheckWaitMined(sim, tx))
+		assertTxMined(t, sim, tokenLocalTx)
+		assertTxMined(t, sim, tokenRemoteTx)
 
-		opts = &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
-		tx, err = nftRemote.MintWithTokenURI(opts, remoteAddr, big.NewInt(testNFT+int64(i)), "testURI")
-		assert.NoError(t, err)
+		charge := big.NewInt(testChargeToken)
+		txOpts := &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
+		tx, err = tokenRemote.Transfer(txOpts, remoteAddr, charge)
+		if err != nil {
+			log.Fatalf("Failed to Transfer for charging: %v", err)
+		}
 		sim.Commit()
-		assert.Nil(t, bind.CheckWaitMined(sim, tx))
+		assertTxMined(t, sim, tx)
+	}
+
+	if fixtureOpts.withNFT {
+		var nftLocalTx *types.Transaction
+		var nftRemoteTx *types.Transaction
+		var nl *scnft.ServiceChainNFT
+		var nr *scnft.ServiceChainNFT
+		nftLocalAddr, nftLocalTx, nl, err = scnft.DeployServiceChainNFT(cAcc, sim, localAddr)
+		if err != nil {
+			log.Fatalf("Failed to DeployServiceChainNFT: %v", err)
+		}
+		nftRemoteAddr, nftRemoteTx, nr, err = scnft.DeployServiceChainNFT(pAcc, sim, remoteAddr)
+		if err != nil {
+			log.Fatalf("Failed to DeployServiceChainNFT: %v", err)
+		}
+		nftLocal, nftRemote = nl, nr
+		sim.Commit()
+		assertTxMined(t, sim, nftLocalTx)
+		assertTxMined(t, sim, nftRemoteTx)
+	}
+
+	if fixtureOpts.withToken || fixtureOpts.withNFT {
+		nodeOpts := &bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}
+		chainOpts := &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
+		registerTokenTxs := make([]*types.Transaction, 0, 4)
+		if fixtureOpts.withToken {
+			tx, err = localInfo.bridge.RegisterToken(nodeOpts, tokenLocalAddr, tokenRemoteAddr)
+			assert.NoError(t, err)
+			registerTokenTxs = append(registerTokenTxs, tx)
+			tx, err = remoteInfo.bridge.RegisterToken(chainOpts, tokenRemoteAddr, tokenLocalAddr)
+			assert.NoError(t, err)
+			registerTokenTxs = append(registerTokenTxs, tx)
+		}
+		if fixtureOpts.withNFT {
+			tx, err = localInfo.bridge.RegisterToken(nodeOpts, nftLocalAddr, nftRemoteAddr)
+			assert.NoError(t, err)
+			registerTokenTxs = append(registerTokenTxs, tx)
+			tx, err = remoteInfo.bridge.RegisterToken(chainOpts, nftRemoteAddr, nftLocalAddr)
+			assert.NoError(t, err)
+			registerTokenTxs = append(registerTokenTxs, tx)
+		}
+		sim.Commit()
+		for _, tx := range registerTokenTxs {
+			assertTxMined(t, sim, tx)
+		}
+	}
+
+	if fixtureOpts.withNFT && fixtureOpts.mintNFT {
+		mintTxs := make([]*types.Transaction, 0, testTxCount*2)
+		for i := 0; i < testTxCount; i++ {
+			txOpts := &bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}
+			tx, err = nftLocal.MintWithTokenURI(txOpts, cAcc.From, big.NewInt(testNFT+int64(i)), "testURI")
+			assert.NoError(t, err)
+			mintTxs = append(mintTxs, tx)
+
+			txOpts = &bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}
+			tx, err = nftRemote.MintWithTokenURI(txOpts, remoteAddr, big.NewInt(testNFT+int64(i)), "testURI")
+			assert.NoError(t, err)
+			mintTxs = append(mintTxs, tx)
+		}
+		sim.Commit()
+		for _, tx := range mintTxs {
+			assertTxMined(t, sim, tx)
+		}
 	}
 
 	// Register the owner as a signer
-	_, err = localInfo.bridge.RegisterOperator(&bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}, cAcc.From)
+	tx, err = localInfo.bridge.RegisterOperator(&bind.TransactOpts{From: cAcc.From, Signer: cAcc.Signer, GasLimit: testGasLimit}, cAcc.From)
 	assert.NoError(t, err)
-	_, err = remoteInfo.bridge.RegisterOperator(&bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}, pAcc.From)
+	tx, err = remoteInfo.bridge.RegisterOperator(&bind.TransactOpts{From: pAcc.From, Signer: pAcc.Signer, GasLimit: testGasLimit}, pAcc.From)
 	assert.NoError(t, err)
 	sim.Commit()
 
@@ -851,9 +729,11 @@ func prepare(t *testing.T, vtcallback func(*testInfo)) *testInfo {
 		}
 	}()
 
-	// Request value transfer.
-	vtcallback(&info)
-	WaitGroupWithTimeOut(&wg, testTimeout, t)
+	// Request value transfer if requested.
+	if vtcallback != nil {
+		vtcallback(&info)
+		WaitGroupWithTimeOut(&wg, testTimeout, t)
+	}
 
 	return &info
 }
@@ -869,7 +749,7 @@ func requestKLAYTransfer(info *testInfo, bi *BridgeInfo) {
 		log.Fatalf("Failed to RequestKLAYTransfer: %v", err)
 	}
 	info.sim.Commit()
-	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
+	assertTxMined(info.t, info.sim, tx)
 }
 
 func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev IRequestValueTransferEvent) {
@@ -883,7 +763,7 @@ func handleKLAYTransfer(info *testInfo, bi *BridgeInfo, ev IRequestValueTransfer
 		log.Fatalf("\tFailed to HandleKLAYTransfer: %v", err)
 	}
 	info.sim.Commit()
-	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
+	assertTxMined(info.t, info.sim, tx)
 }
 
 // TODO-Kaia-ServiceChain: use ChildChainEventHandler
@@ -914,7 +794,7 @@ func requestTokenTransfer(info *testInfo, bi *BridgeInfo) {
 		log.Fatalf("Failed to RequestValueTransfer for charging: %v", err)
 	}
 	info.sim.Commit()
-	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
+	assertTxMined(info.t, info.sim, tx)
 }
 
 func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev IRequestValueTransferEvent) {
@@ -928,7 +808,7 @@ func handleTokenTransfer(info *testInfo, bi *BridgeInfo, ev IRequestValueTransfe
 		log.Fatalf("Failed to HandleERC20Transfer: %v", err)
 	}
 	info.sim.Commit()
-	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
+	assertTxMined(info.t, info.sim, tx)
 }
 
 // TODO-Kaia-ServiceChain: use ChildChainEventHandler
@@ -961,7 +841,7 @@ func requestNFTTransfer(info *testInfo, bi *BridgeInfo) {
 	}
 	info.nftIndex++
 	info.sim.Commit()
-	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
+	assertTxMined(info.t, info.sim, tx)
 }
 
 func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev IRequestValueTransferEvent) {
@@ -984,7 +864,7 @@ func handleNFTTransfer(info *testInfo, bi *BridgeInfo, ev IRequestValueTransferE
 		log.Fatalf("Failed to handleERC721Transfer: %v", err)
 	}
 	info.sim.Commit()
-	assert.Nil(info.t, bind.CheckWaitMined(info.sim, tx))
+	assertTxMined(info.t, info.sim, tx)
 }
 
 // TODO-Kaia-ServiceChain: use ChildChainEventHandler

@@ -40,96 +40,81 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Test full Randao hardfork scenario under the condition similar to the Mainnet network.
-func TestRandao_Deploy(t *testing.T) {
+func TestRandao(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
-	// Test parameters
-	var (
-		numNodes   = 1
-		forkNum    = big.NewInt(15)
-		owner      = bind.NewKeyedTransactor(deriveTestAccount(5))
-		kip113Addr = crypto.CreateAddress(owner.From, uint64(1)) // predict deployed address.
-		randomAddr = common.HexToAddress("0x0000000000000000000000000000000000000404")
+	cases := []struct {
+		name         string
+		forkNum      *big.Int
+		fromGenesis  bool
+		kip113AtFork common.Address
+	}{
+		{
+			name:        "Deploy",
+			forkNum:     big.NewInt(3),
+			fromGenesis: false,
+		},
+		{
+			name:         "Genesis",
+			forkNum:      big.NewInt(0),
+			fromGenesis:  true,
+			kip113AtFork: common.HexToAddress("0x0000000000000000000000000000000000000403"),
+		},
+	}
 
-		config = testRandao_config(forkNum, owner.From, kip113Addr)
-		alloc  = testRandao_allocRandom(randomAddr)
-	)
-
-	// Start the chain
-	ctx, err := newBlockchainTestContext(&blockchainTestOverrides{
-		numNodes:    numNodes,
-		numAccounts: 8,
-		config:      config,
-		alloc:       alloc,
-	})
-	require.Nil(t, err)
-	ctx.Subscribe(t, func(ev *blockchain.ChainEvent) {
-		b := ev.Block
-		t.Logf("block[%3d] txs=%d mixHash=%x", b.NumberU64(), b.Transactions().Len(), b.Header().MixHash)
-	})
-	ctx.Start()
-	defer ctx.Cleanup()
-
-	// Wait for the chain to start consensus (especially when numNodes > 1)
-	ctx.WaitBlock(t, 1)
-
-	// Deploy KIP113 before hardfork.
-	// Note: this test has a minor difference from Mainnet scenario.
-	// In this test, RandaoRegistry[KIP113] is configured in before deployment
-	// but in Mainnet RandaoRegistry[KIP113] will be configured after deployment.
-	// following assert ensures the equivalence of this test and Mainnet scenario.
-	_, actualKip113Addr := testRandao_deployKip113(t, ctx, owner)
-	assert.Equal(t, kip113Addr, actualKip113Addr) // check the prediced address
-
-	// Pass the hardfork block, give each CN a chance to propose
-	ctx.WaitBlock(t, forkNum.Uint64()+uint64(numNodes))
-
-	// Inspect the chain
-	testRandao_checkRegistry(t, ctx, owner.From, kip113Addr)
-	testRandao_checkKip113(t, ctx)
-	testRandao_checkKip114(t, ctx, randomAddr)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			runRandaoScenario(t, tc.forkNum, tc.fromGenesis, tc.kip113AtFork)
+		})
+	}
 }
 
-// Test Randao hardfork scenario where it's enabled from the genesis
-func TestRandao_Genesis(t *testing.T) {
-	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
-
-	// Test parameters
+func runRandaoScenario(t *testing.T, forkNum *big.Int, fromGenesis bool, genesisKip113Addr common.Address) {
 	var (
-		numNodes   = 1
-		forkNum    = big.NewInt(0)
-		owner      = bind.NewKeyedTransactor(deriveTestAccount(5))
-		kip113Addr = common.HexToAddress("0x0000000000000000000000000000000000000403")
-		randomAddr = common.HexToAddress("0x0000000000000000000000000000000000000404")
+		numNodes    = 1
+		owner       = bind.NewKeyedTransactor(deriveTestAccount(5))
+		randomAddr  = common.HexToAddress("0x0000000000000000000000000000000000000404")
+		kip113Addr  common.Address
+		blockPeriod uint64 = 1
+	)
+	if fromGenesis {
+		kip113Addr = genesisKip113Addr
+	} else {
+		kip113Addr = crypto.CreateAddress(owner.From, uint64(1)) // predicted deployed address.
+	}
 
-		config = testRandao_config(forkNum, owner.From, kip113Addr)
-		alloc  = system.MergeGenesisAlloc(
-			testRandao_allocRandom(randomAddr),
+	config := testRandao_config(forkNum, owner.From, kip113Addr)
+	alloc := testRandao_allocRandom(randomAddr)
+	if fromGenesis {
+		alloc = system.MergeGenesisAlloc(
+			alloc,
 			testRandao_allocRegistry(owner.From, kip113Addr),
 			testRandao_allocKip113(numNodes, owner.From, kip113Addr),
 		)
-	)
+	}
 
-	// Start the chain
 	ctx, err := newBlockchainTestContext(&blockchainTestOverrides{
 		numNodes:    numNodes,
 		numAccounts: 8,
 		config:      config,
 		alloc:       alloc,
+		blockPeriod: &blockPeriod,
 	})
 	require.Nil(t, err)
-	ctx.Subscribe(t, func(ev *blockchain.ChainEvent) {
-		b := ev.Block
-		t.Logf("block[%3d] txs=%d mixHash=%x", b.NumberU64(), b.Transactions().Len(), b.Header().MixHash)
-	})
 	ctx.Start()
 	defer ctx.Cleanup()
 
-	// Pass the hardfork block, give each CN a chance to propose
+	if !fromGenesis {
+		// Wait for consensus start and deploy KIP113 before hardfork.
+		ctx.WaitBlock(t, 1)
+		_, actualKip113Addr := testRandao_deployKip113(t, ctx, owner)
+		assert.Equal(t, kip113Addr, actualKip113Addr)
+	}
+
+	// Pass the hardfork block, give each CN a chance to propose.
 	ctx.WaitBlock(t, forkNum.Uint64()+uint64(numNodes))
 
-	// Inspect the chain
+	// Inspect the chain.
 	testRandao_checkRegistry(t, ctx, owner.From, kip113Addr)
 	testRandao_checkKip113(t, ctx)
 	testRandao_checkKip114(t, ctx, randomAddr)
@@ -192,7 +177,7 @@ func testRandao_allocRegistry(ownerAddr, kip113Addr common.Address) blockchain.G
 // Allocate the KIP-113 with all node BLS public keys
 func testRandao_allocKip113(numNodes int, ownerAddr, kip113Addr common.Address) blockchain.GenesisAlloc {
 	infos := make(system.BlsPublicKeyInfos)
-	for i := 0; i < numNodes; i++ {
+	for i := range numNodes {
 		var (
 			key   = deriveTestAccount(i)
 			addr  = crypto.PubkeyToAddress(key.PublicKey)
@@ -241,20 +226,21 @@ func testRandao_deployKip113(t *testing.T, ctx *blockchainTestContext, owner *bi
 		backend = backends.NewBlockchainContractBackend(chain, txpool, nil)
 	)
 
-	// Deploy implementation and proxy
-	implAddr, tx, _, err := testcontract.DeployKIP113Mock(owner, backend)
-	assert.Nil(t, err)
-	ctx.WaitTx(t, tx.Hash())
+	startNonce, err := backend.PendingNonceAt(context.Background(), owner.From)
+	require.NoError(t, err)
 
-	proxyAddr, tx, _, err := proxycontract.DeployERC1967Proxy(owner, backend, implAddr, initData)
-	assert.Nil(t, err)
-	ctx.WaitTx(t, tx.Hash())
+	// Send deploy/register txs with fixed nonces so they can be mined in a single block.
+	implAddr, implTx, _, err := testcontract.DeployKIP113Mock(randaoTxOpts(owner, startNonce, 8_000_000), backend)
+	require.NoError(t, err)
+
+	proxyAddr, proxyTx, _, err := proxycontract.DeployERC1967Proxy(randaoTxOpts(owner, startNonce+1, 2_000_000), backend, implAddr, initData)
+	require.NoError(t, err)
 
 	t.Logf("Kip113 impl=%s proxy=%s", implAddr.Hex(), proxyAddr.Hex())
 	kip113, _ := testcontract.NewKIP113Mock(proxyAddr, backend)
 
 	// Register node BLS public keys
-	var txs []*types.Transaction
+	txs := []*types.Transaction{implTx, proxyTx}
 	for i := 0; i < ctx.numNodes; i++ {
 		var (
 			addr  = ctx.accountAddrs[i]
@@ -264,10 +250,12 @@ func testRandao_deployKip113(t *testing.T, ctx *blockchainTestContext, owner *bi
 		)
 		t.Logf("node[%2d] addr=%x blsPub=%x", i, addr, pk)
 
-		tx, err := kip113.Register(owner, addr, pk, pop)
+		tx, err := kip113.Register(randaoTxOpts(owner, startNonce+2+uint64(i), 500_000), addr, pk, pop)
+		require.NoError(t, err)
 		txs = append(txs, tx)
-		assert.Nil(t, err)
 	}
+
+	// Wait for all txs after sending all of them.
 	for _, tx := range txs {
 		ctx.WaitTx(t, tx.Hash())
 	}
@@ -276,6 +264,13 @@ func testRandao_deployKip113(t *testing.T, ctx *blockchainTestContext, owner *bi
 	t.Logf("Kip113 getAllBlsInfo().length=%d", len(infos))
 
 	return kip113, proxyAddr
+}
+
+func randaoTxOpts(base *bind.TransactOpts, nonce uint64, gasLimit uint64) *bind.TransactOpts {
+	opts := *base
+	opts.Nonce = new(big.Int).SetUint64(nonce)
+	opts.GasLimit = gasLimit
+	return &opts
 }
 
 // Inspect the given chain for Registry contract
