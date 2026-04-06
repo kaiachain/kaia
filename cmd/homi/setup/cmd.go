@@ -849,6 +849,15 @@ func Gen(ctx *cli.Context) error {
 	}
 	genesisJson.Config.BlobScheduleConfig = params.DefaultBlobSchedule
 
+	// EIP-2935: pre-deploy history storage contract when Prague is active from genesis
+	if pragueBlock := ctx.Int64(pragueCompatibleBlockNumberFlag.Name); pragueBlock == 0 {
+		genesisJson.Alloc[params.HistoryStorageAddress] = blockchain.GenesisAccount{
+			Nonce:   1,
+			Code:    params.HistoryStorageCode,
+			Balance: common.Big0,
+		}
+	}
+
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)
 	lastIssuedPortNum = uint16(ctx.Int(p2pPortFlag.Name))
