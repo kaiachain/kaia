@@ -103,7 +103,7 @@ func (v *ValsetModule) applyAllTransitions(
 func (v *ValsetModule) isPassVrankTest(addr common.Address, num, cfsThreshold, slotFactor uint64) bool {
 	cfsScores, err := v.VRankModule.GetCFSWithSlotFactor(num, slotFactor)
 	if err != nil { // CFS unavailable → pass to avoid blocking promotion
-		logger.Warn("isPassVrankTest: GetCFS failed", "num", num, "err", err)
+		logger.Warn("isPassVrankTest: GetCFSWithSlotFactor failed", "num", num, "err", err)
 		return true
 	}
 	cfs, ok := cfsScores[addr]
