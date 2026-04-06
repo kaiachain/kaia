@@ -11,6 +11,8 @@ import (
 	"github.com/kaiachain/kaia/params"
 )
 
+var _ consensus.Sealer = (*dynamicSealer)(nil)
+
 func newSealerImpl(privateKey *ecdsa.PrivateKey) consensus.Sealer {
 	return istanbul.NewSealerImpl(privateKey)
 }
@@ -30,7 +32,7 @@ func NewSealer(chainConfig *params.ChainConfig, privateKey *ecdsa.PrivateKey) co
 		s.address = crypto.PubkeyToAddress(privateKey.PublicKey)
 	}
 	s.sealer = newSealerImpl(privateKey)
-	types.SetHeaderHashFn(s.headerHash)
+	types.SetHeaderHashFn(s.HeaderHash)
 	return s
 }
 
@@ -42,12 +44,20 @@ func (s *dynamicSealer) MakeCommittedSeal(header *types.Header) ([]byte, error) 
 	if header == nil || header.Number == nil {
 		return nil, consensus.ErrUnknownBlock
 	}
+	// If it's genesis block, return empty seal
+	if header.Number.Sign() == 0 {
+		return []byte{}, nil
+	}
 	return s.implAt(header.Number.Uint64()).MakeCommittedSeal(header)
 }
 
 func (s *dynamicSealer) MakeAuthorSeal(header *types.Header) ([]byte, error) {
 	if header == nil || header.Number == nil {
 		return nil, consensus.ErrUnknownBlock
+	}
+	// If it's genesis block, return empty seal
+	if header.Number.Sign() == 0 {
+		return []byte{}, nil
 	}
 	return s.implAt(header.Number.Uint64()).MakeAuthorSeal(header)
 }
@@ -112,11 +122,19 @@ func (s *dynamicSealer) WriteAuthorSeal(header *types.Header, seal []byte) error
 	if header == nil || header.Number == nil {
 		return consensus.ErrUnknownBlock
 	}
+	// It shoudn't support writing author seal for the genesis block
+	if header.Number.Sign() == 0 {
+		return consensus.ErrUnknownBlock
+	}
 	return s.implAt(header.Number.Uint64()).WriteAuthorSeal(header, seal)
 }
 
 func (s *dynamicSealer) WriteCommittedSeals(header *types.Header, committedSeals [][]byte) error {
 	if header == nil || header.Number == nil {
+		return consensus.ErrUnknownBlock
+	}
+	// It shouldn't support writing committed seals for the genesis block
+	if header.Number.Sign() == 0 {
 		return consensus.ErrUnknownBlock
 	}
 	return s.implAt(header.Number.Uint64()).WriteCommittedSeals(header, committedSeals)
@@ -134,20 +152,10 @@ func (s *dynamicSealer) SigHash(header *types.Header) common.Hash {
 	if header == nil || header.Number == nil {
 		return common.Hash{}
 	}
-	hasher, ok := s.implAt(header.Number.Uint64()).(interface {
-		SigHash(header *types.Header) common.Hash
-	})
-	if !ok {
-		return common.Hash{}
-	}
-	return hasher.SigHash(header)
+	return s.implAt(header.Number.Uint64()).SigHash(header)
 }
 
 func (s *dynamicSealer) HeaderHash(header *types.Header) common.Hash {
-	return s.headerHash(header)
-}
-
-func (s *dynamicSealer) headerHash(header *types.Header) common.Hash {
 	if header == nil || header.Number == nil {
 		return istanbul.RLPHash(header)
 	}
@@ -157,11 +165,4 @@ func (s *dynamicSealer) headerHash(header *types.Header) common.Hash {
 func (s *dynamicSealer) implAt(number uint64) consensus.Sealer {
 	_ = number
 	return s.sealer
-}
-
-func (s *dynamicSealer) ChainConfig() *params.ChainConfig {
-	if s.chainConfig != nil {
-		return s.chainConfig
-	}
-	return params.TestChainConfig
 }

@@ -11,11 +11,13 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/rlp"
 )
 
+var _ consensus.Sealer = (*IstanbulSealer)(nil)
 var (
 	inmemoryBlocks             = 2048
 	inmemoryValidatorsPerBlock = 30
@@ -73,9 +75,6 @@ func (ist *IstanbulExtra) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (ist *IstanbulExtra) Copy() *IstanbulExtra {
-	if ist == nil {
-		return &IstanbulExtra{}
-	}
 	out := &IstanbulExtra{
 		Validators: make([]common.Address, len(ist.Validators)),
 		Seal:       append([]byte(nil), ist.Seal...),
@@ -152,9 +151,6 @@ func prepareCommittedSeal(hash common.Hash) []byte {
 }
 
 func (m *IstanbulSealer) Author(header *types.Header) (common.Address, error) {
-	if header == nil || header.Number == nil {
-		return common.Address{}, ErrUnknownBlock
-	}
 	extra, err := m.parseIstanbulExtra(header.Extra)
 	if err != nil {
 		return common.Address{}, err
@@ -170,9 +166,6 @@ func (m *IstanbulSealer) Author(header *types.Header) (common.Address, error) {
 }
 
 func (m *IstanbulSealer) Committers(header *types.Header) ([]common.Address, error) {
-	if header == nil || header.Number == nil {
-		return nil, ErrUnknownBlock
-	}
 	extra, err := m.parseIstanbulExtra(header.Extra)
 	if err != nil {
 		return nil, err
@@ -194,9 +187,6 @@ func (m *IstanbulSealer) Committers(header *types.Header) ([]common.Address, err
 }
 
 func (m *IstanbulSealer) Vanity(header *types.Header) ([]byte, error) {
-	if header == nil || header.Number == nil {
-		return nil, ErrUnknownBlock
-	}
 	if _, err := m.parseIstanbulExtra(header.Extra); err != nil {
 		return nil, err
 	}
@@ -206,9 +196,6 @@ func (m *IstanbulSealer) Vanity(header *types.Header) ([]byte, error) {
 }
 
 func (m *IstanbulSealer) Validators(header *types.Header) ([]common.Address, error) {
-	if header == nil || header.Number == nil {
-		return nil, ErrUnknownBlock
-	}
 	extra, err := m.parseIstanbulExtra(header.Extra)
 	if err != nil {
 		return nil, err
@@ -219,9 +206,6 @@ func (m *IstanbulSealer) Validators(header *types.Header) ([]common.Address, err
 }
 
 func (m *IstanbulSealer) Round(header *types.Header) (byte, error) {
-	if header == nil || header.Number == nil {
-		return 0, ErrUnknownBlock
-	}
 	if _, err := m.parseIstanbulExtra(header.Extra); err != nil {
 		return 0, err
 	}
@@ -229,9 +213,6 @@ func (m *IstanbulSealer) Round(header *types.Header) (byte, error) {
 }
 
 func (m *IstanbulSealer) RawSeals(header *types.Header) ([]byte, [][]byte, error) {
-	if header == nil || header.Number == nil {
-		return nil, nil, ErrUnknownBlock
-	}
 	extra, err := m.parseIstanbulExtra(header.Extra)
 	if err != nil {
 		return nil, nil, err
@@ -245,9 +226,6 @@ func (m *IstanbulSealer) RawSeals(header *types.Header) ([]byte, [][]byte, error
 }
 
 func (m *IstanbulSealer) writeExtra(header *types.Header, mutator func(*IstanbulExtra) error) error {
-	if header == nil {
-		return ErrUnknownBlock
-	}
 	header.Extra = ensureIstanbulVanityBytes(header.Extra)
 
 	extra, err := m.parseIstanbulExtra(header.Extra)
@@ -284,9 +262,6 @@ func (m *IstanbulSealer) WriteValidators(header *types.Header, validators []comm
 }
 
 func (m *IstanbulSealer) WriteAuthorSeal(header *types.Header, seal []byte) error {
-	if header == nil || header.Number == nil || header.Number.Sign() == 0 {
-		return ErrUnknownBlock
-	}
 	if len(seal) != IstanbulExtraSeal {
 		return ErrInvalidSignature
 	}
@@ -297,9 +272,6 @@ func (m *IstanbulSealer) WriteAuthorSeal(header *types.Header, seal []byte) erro
 }
 
 func (m *IstanbulSealer) WriteCommittedSeals(header *types.Header, committedSeals [][]byte) error {
-	if header == nil || header.Number == nil || header.Number.Sign() == 0 {
-		return ErrUnknownBlock
-	}
 	if len(committedSeals) == 0 {
 		return ErrInvalidCommittedSeals
 	}
@@ -341,19 +313,10 @@ func (m *IstanbulSealer) Quorum(blockNum uint64, qualifiedlen, committeeSize int
 }
 
 func (m *IstanbulSealer) MakeCommittedSeal(header *types.Header) ([]byte, error) {
-	if header == nil || header.Number == nil {
-		return nil, ErrUnknownBlock
-	}
-	if header.Number.Sign() == 0 {
-		return []byte{}, nil
-	}
 	return crypto.Sign(crypto.Keccak256(prepareCommittedSeal(m.HeaderHash(header))), m.privateKey)
 }
 
 func (m *IstanbulSealer) MakeAuthorSeal(header *types.Header) ([]byte, error) {
-	if header == nil || header.Number == nil {
-		return nil, ErrUnknownBlock
-	}
 	if header.Number.Sign() == 0 {
 		return []byte{}, nil
 	}

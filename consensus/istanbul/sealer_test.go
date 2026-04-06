@@ -102,14 +102,19 @@ func TestWriteAuthorSeal(t *testing.T) {
 	assert.Equal(t, author, authorizedAddr)
 }
 
-func TestWriteAuthorSeal_GenesisNotHandled(t *testing.T) {
+func TestWriteAuthorSeal_GenesisHandled(t *testing.T) {
 	key, err := crypto.GenerateKey()
 	require.NoError(t, err)
 
 	s := NewSealerImpl(key)
 	h := &types.Header{Number: big.NewInt(0)}
-	err = s.WriteAuthorSeal(h, make([]byte, IstanbulExtraSeal))
-	require.ErrorIs(t, err, ErrUnknownBlock)
+	seal := make([]byte, IstanbulExtraSeal)
+
+	require.NoError(t, s.WriteAuthorSeal(h, seal))
+
+	authorSeal, _, err := s.RawSeals(h)
+	require.NoError(t, err)
+	assert.Equal(t, seal, authorSeal)
 }
 
 func TestWriteCommittedSeals(t *testing.T) {
@@ -141,10 +146,16 @@ func TestWriteCommittedSeals(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidCommittedSeals)
 }
 
-func TestWriteCommittedSeals_GenesisNotHandled(t *testing.T) {
+func TestWriteCommittedSeals_GenesisHandled(t *testing.T) {
 	s := NewSealerImpl(nil)
-	err := s.WriteCommittedSeals(&types.Header{Number: big.NewInt(0)}, [][]byte{make([]byte, IstanbulExtraSeal)})
-	require.ErrorIs(t, err, ErrUnknownBlock)
+	h := &types.Header{Number: big.NewInt(0)}
+	seal := make([]byte, IstanbulExtraSeal)
+
+	require.NoError(t, s.WriteCommittedSeals(h, [][]byte{seal}))
+
+	_, committedSeals, err := s.RawSeals(h)
+	require.NoError(t, err)
+	assert.Equal(t, [][]byte{seal}, committedSeals)
 }
 
 func TestMakeSeals_GenesisHandled(t *testing.T) {
@@ -160,5 +171,8 @@ func TestMakeSeals_GenesisHandled(t *testing.T) {
 
 	committedSeal, err := s.MakeCommittedSeal(h)
 	require.NoError(t, err)
-	assert.Empty(t, committedSeal)
+	assert.Len(t, committedSeal, IstanbulExtraSeal)
+	addr, err := GetSignatureAddress(prepareCommittedSeal(s.HeaderHash(h)), committedSeal)
+	require.NoError(t, err)
+	assert.Equal(t, crypto.PubkeyToAddress(key.PublicKey), addr)
 }
