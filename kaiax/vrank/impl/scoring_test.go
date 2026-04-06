@@ -1024,7 +1024,6 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		assert.True(t, hasC1, "C1 should appear in CFS map (pre-seeded from candidates)")
 		assert.Equal(t, uint64(0), score, "C1 CFS should be 0 (no failures reported)")
 	})
-
 }
 
 // TestByzantineFilter verifies the byzantine-reporter filtering logic against KIP-227 spec examples.
