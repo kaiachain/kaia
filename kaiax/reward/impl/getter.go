@@ -22,9 +22,9 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/kaiax/reward"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/params"
 )
 
 // Below outlines the relationship between the getters and their helper functions.
@@ -115,7 +115,7 @@ func getBlobFee(header *types.Header) *big.Int {
 	if header.BlobGasUsed == nil || *header.BlobGasUsed == 0 {
 		return big.NewInt(0)
 	}
-	blobBaseFee := eip4844.CalcBlobFee(header.BaseFee)
+	blobBaseFee := params.CalcBlobFee(header.BaseFee)
 	if blobBaseFee == nil {
 		return big.NewInt(0)
 	}

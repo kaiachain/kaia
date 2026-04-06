@@ -85,11 +85,11 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-		for i := range maxBlockNum {
-			// Test for round 0 to round 14
-			for round := int64(0); round < 14; round++ {
-				currentCommittee, err := istBackend.valsetModule.GetCommittee(uint64(i), uint64(round))
-				assert.NoError(t, err)
+	for i := range maxBlockNum {
+		// Test for round 0 to round 14
+		for round := int64(0); round < 14; round++ {
+			currentCommittee, err := istBackend.valsetModule.GetCommittee(uint64(i), uint64(round))
+			assert.NoError(t, err)
 
 			// skip if the testing node is not in a committee
 			isInSubList := valset.NewAddressSet(currentCommittee).Contains(istBackend.Address())

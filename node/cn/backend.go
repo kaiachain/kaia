@@ -114,6 +114,7 @@ type BackendProtocolManager interface {
 
 type chainAwareConsensusEngine interface {
 	SetChain(chain consensus.ChainReader)
+	SignalPeerRegistrable()
 }
 
 // CN implements the Kaia consensus node service.

@@ -75,7 +75,7 @@ func runRandaoScenario(t *testing.T, forkNum *big.Int, fromGenesis bool, genesis
 		owner       = bind.NewKeyedTransactor(deriveTestAccount(5))
 		randomAddr  = common.HexToAddress("0x0000000000000000000000000000000000000404")
 		kip113Addr  common.Address
-		blockPeriod uint64
+		blockPeriod uint64 = 1
 	)
 	if fromGenesis {
 		kip113Addr = genesisKip113Addr
