@@ -543,81 +543,72 @@ func TestGetViolationTransition_SlotLimits(t *testing.T) {
 		result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold, slotMax, minActive)
 		assert.Equal(t, valset.ValActive, result[addr1].State, "paused slot full, minor violation skipped")
 	})
-}
 
-// ============================================================
-// TestGetViolationTransition with SlotLimits (n=10)
-//
-// Uses slotFactor=10 (10 validators at epoch start).
-// SlotMath:
-//   f(10)             = (10-1)/3           → 3
-//   maxSlotAvailable  = max(1, 3/2)        → 1
-//   minActiveCount    = max(2*3+1, 10-2*1) → max(7, 8) = 8
-//
-// With n=10, maxSlot=1 each and minActive=8, up to 2 can leave ValActive
-// (1 paused + 1 exiting), but a 3rd would be blocked by minActive.
-// ============================================================
-
-func TestGetViolationTransition_SlotLimits_N10(t *testing.T) {
-	const (
-		slotMax10      = uint64(1) // maxSlotAvailable(10)
-		minActive10    = uint64(8) // minActiveCount(10)
-		pfsThreshold10 = uint64(2)
-	)
-
-	addrs := [10]common.Address{
-		addr1, addr2, addr3, addr4, addr5,
-		common.HexToAddress("0x0006"),
-		common.HexToAddress("0x0007"),
-		common.HexToAddress("0x0008"),
-		common.HexToAddress("0x0009"),
-		common.HexToAddress("0x000a"),
-	}
-
-	t.Run("PFS minor+severe: 1 paused + 1 exited, 3rd blocked", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		v := newTestValsetModule(ctrl)
-		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-		mockVRank.EXPECT().GetPfReport(uint64(100)).Return([]common.Address{addr1}, nil)
-		mockVRank.EXPECT().GetPFS(uint64(100)).Return(map[common.Address]uint64{
-			addrs[0]: pfsThreshold10 + 1, // severe → ValExiting
-			addrs[1]: pfsThreshold10 - 1, // minor → ValPaused
-			addrs[2]: pfsThreshold10 - 1, // minor → should be blocked (paused slot full)
-		}, nil)
-		v.VRankModule = mockVRank
-
-		validators := valset.NodeStateMap{}
-		for _, addr := range addrs {
-			validators[addr] = &valset.ValidatorState{State: valset.ValActive, StakingAmount: aboveMinStake}
+	// n=10: SlotMath:
+	//   f(10)            = (10-1)/3           → 3
+	//   maxSlotAvailable = max(1, 3/2)        → 1
+	//   minActiveCount   = max(2*3+1, 10-2*1) → max(7, 8) = 8
+	// Up to 2 can leave ValActive (1 paused + 1 exiting), 3rd blocked by minActive.
+	t.Run("n=10", func(t *testing.T) {
+		const (
+			slotMax10      = uint64(1) // maxSlotAvailable(10)
+			minActive10    = uint64(8) // minActiveCount(10)
+			pfsThreshold10 = uint64(2)
+		)
+		addrs := [10]common.Address{
+			addr1, addr2, addr3, addr4, addr5,
+			common.HexToAddress("0x0006"),
+			common.HexToAddress("0x0007"),
+			common.HexToAddress("0x0008"),
+			common.HexToAddress("0x0009"),
+			common.HexToAddress("0x000a"),
 		}
 
-		result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold10, slotMax10, minActive10)
+		t.Run("PFS minor+severe: 1 paused + 1 exited, 3rd blocked", func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			v := newTestValsetModule(ctrl)
+			mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+			mockVRank.EXPECT().GetPfReport(uint64(100)).Return([]common.Address{addr1}, nil)
+			mockVRank.EXPECT().GetPFS(uint64(100)).Return(map[common.Address]uint64{
+				addrs[0]: pfsThreshold10,     // severe → ValExiting
+				addrs[1]: pfsThreshold10 - 1, // minor → ValPaused
+				addrs[2]: pfsThreshold10 - 1, // minor → should be blocked (paused slot full)
+			}, nil)
+			v.VRankModule = mockVRank
 
-		assert.Equal(t, 1, countState(result, valset.ValExiting), "1 severe → 1 exiting")
-		assert.Equal(t, 1, countState(result, valset.ValPaused), "1 minor paused, 2nd blocked by slot")
-		assert.Equal(t, 8, countState(result, valset.ValActive), "8 remain active (minActive=8)")
-	})
-
-	t.Run("3 belowMinStake: only 1 exits (exitSlot cap=1)", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		v := newTestValsetModule(ctrl)
-		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-		mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
-		v.VRankModule = mockVRank
-
-		validators := valset.NodeStateMap{}
-		for i, addr := range addrs {
-			stake := aboveMinStake
-			if i < 3 {
-				stake = belowMinStake // 3 validators below min stake
+			validators := valset.NodeStateMap{}
+			for _, addr := range addrs {
+				validators[addr] = &valset.ValidatorState{State: valset.ValActive, StakingAmount: aboveMinStake}
 			}
-			validators[addr] = &valset.ValidatorState{State: valset.ValActive, StakingAmount: stake}
-		}
 
-		result := v.getViolationTransition(testMinStake, validators, 0, 0, slotMax10, minActive10)
+			result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold10, slotMax10, minActive10)
 
-		assert.Equal(t, 1, countState(result, valset.ValExiting), "maxSlot=1 → only 1 can exit")
-		assert.Equal(t, 9, countState(result, valset.ValActive), "9 remain active")
+			assert.Equal(t, 1, countState(result, valset.ValExiting), "1 severe → 1 exiting")
+			assert.Equal(t, 1, countState(result, valset.ValPaused), "1 minor paused, 2nd blocked by slot")
+			assert.Equal(t, 8, countState(result, valset.ValActive), "8 remain active (minActive=8)")
+		})
+
+		t.Run("3 belowMinStake: only 1 exits (exitSlot cap=1)", func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			v := newTestValsetModule(ctrl)
+			mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+			mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
+			v.VRankModule = mockVRank
+
+			validators := valset.NodeStateMap{}
+			for i, addr := range addrs {
+				stake := aboveMinStake
+				if i < 3 {
+					stake = belowMinStake // 3 validators below min stake
+				}
+				validators[addr] = &valset.ValidatorState{State: valset.ValActive, StakingAmount: stake}
+			}
+
+			result := v.getViolationTransition(testMinStake, validators, 0, 0, slotMax10, minActive10)
+
+			assert.Equal(t, 1, countState(result, valset.ValExiting), "maxSlot=1 → only 1 can exit")
+			assert.Equal(t, 9, countState(result, valset.ValActive), "9 remain active")
+		})
 	})
 }
 
