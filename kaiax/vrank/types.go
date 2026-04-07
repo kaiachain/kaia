@@ -80,7 +80,8 @@ type VRankCandidate struct {
 	BlockNumber uint64
 	Round       uint8
 	BlockHash   common.Hash
-	Sig         []byte
+	Sig         []byte // Sign(vrankPreprepareSigHash(), nodeKey)
+	BlsSig      []byte // Sign(blockNumber, blsKey)
 }
 
 func EncodeReport(report []common.Address) ([]byte, error) {

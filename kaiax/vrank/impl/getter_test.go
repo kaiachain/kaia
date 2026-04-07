@@ -28,6 +28,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	mock_randao "github.com/kaiachain/kaia/kaiax/randao/mock"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/params"
@@ -97,8 +98,10 @@ func makeHeaderWithRound(number uint64, round int64) *types.Header {
 
 func TestGetCfReport(t *testing.T) {
 	t.Run("returns decoded report from header.VRank", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		v := createCN(t, valset).VRankModule
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := createCN(t, valset, randao).VRankModule
 		c1 := common.HexToAddress("0x0000000000000000000000000000000000000001")
 		c2 := common.HexToAddress("0x0000000000000000000000000000000000000002")
 		encoded, err := vrank.EncodeReport([]common.Address{c1, c2})
@@ -117,8 +120,10 @@ func TestGetCfReport(t *testing.T) {
 	})
 
 	t.Run("nil header.VRank returns empty report", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		v := createCN(t, valset).VRankModule
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := createCN(t, valset, randao).VRankModule
 		v.Chain = &testChain{headers: map[uint64]*types.Header{
 			5: makeHeaderWithRound(5, 0), // header.VRank is nil
 		}}
@@ -131,8 +136,10 @@ func TestGetCfReport(t *testing.T) {
 
 func TestGetCfReport_Errors(t *testing.T) {
 	t.Run("header not found returns error", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		v := createCN(t, valset).VRankModule
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := createCN(t, valset, randao).VRankModule
 		v.Chain = &testChain{headers: map[uint64]*types.Header{}}
 
 		report, err := v.cfReport(99)
@@ -159,8 +166,10 @@ func TestGetCfReport_Errors(t *testing.T) {
 
 func TestGetPfReport(t *testing.T) {
 	t.Run("round zero returns empty report", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		v := createCN(t, valset).VRankModule
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := createCN(t, valset, randao).VRankModule
 		v.Chain = &testChain{
 			headers: map[uint64]*types.Header{
 				10: makeHeaderWithRound(10, 0),
@@ -173,8 +182,10 @@ func TestGetPfReport(t *testing.T) {
 	})
 
 	t.Run("round greater than zero returns proposers in round order", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		v := createCN(t, valset).VRankModule
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := createCN(t, valset, randao).VRankModule
 		v.Chain = &testChain{
 			headers: map[uint64]*types.Header{
 				20: makeHeaderWithRound(20, 3),
@@ -211,8 +222,10 @@ func TestGetPfReport_Errors(t *testing.T) {
 	})
 
 	t.Run("header not found returns error", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		v := createCN(t, valset).VRankModule
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := createCN(t, valset, randao).VRankModule
 		v.Chain = &testChain{headers: map[uint64]*types.Header{}}
 
 		report, err := v.pfReport(30)
@@ -221,8 +234,10 @@ func TestGetPfReport_Errors(t *testing.T) {
 	})
 
 	t.Run("short extra returns error", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		v := createCN(t, valset).VRankModule
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := createCN(t, valset, randao).VRankModule
 		v.Chain = &testChain{
 			headers: map[uint64]*types.Header{
 				40: {Number: big.NewInt(40), Extra: make([]byte, types.IstanbulExtraVanity-1)},
@@ -235,8 +250,10 @@ func TestGetPfReport_Errors(t *testing.T) {
 	})
 
 	t.Run("GetProposer error is propagated", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		v := createCN(t, valset).VRankModule
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := createCN(t, valset, randao).VRankModule
 		v.Chain = &testChain{
 			headers: map[uint64]*types.Header{
 				50: makeHeaderWithRound(50, 2),
@@ -257,8 +274,10 @@ func TestGetPfReport_Errors(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestTallyCfReport(t *testing.T) {
+	ctrl := gomock.NewController(t)
 	var (
-		valset                 = mock_valset.NewMockValsetModule(gomock.NewController(t))
+		valset                 = mock_valset.NewMockValsetModule(ctrl)
+		randao                 = mock_randao.NewMockRandaoModule(ctrl)
 		block1                 = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 		block2                 = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(2)})
 		view1_0                = &istanbul.View{Sequence: big.NewInt(1), Round: common.Big0}
@@ -274,11 +293,11 @@ func TestTallyCfReport(t *testing.T) {
 	)
 
 	for i := 0; i < 3; i++ {
-		validators = append(validators, createCN(t, valset))
+		validators = append(validators, createCN(t, valset, randao))
 		valAddrs[i] = validators[i].Addr
 	}
 	for i := 0; i < 8; i++ {
-		candidates = append(candidates, createCN(t, valset))
+		candidates = append(candidates, createCN(t, valset, randao))
 		candAddrs[i] = candidates[i].Addr
 	}
 
@@ -287,8 +306,8 @@ func TestTallyCfReport(t *testing.T) {
 	valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(validators[0].Addr, nil).AnyTimes()
 
 	for i := 0; i < 8; i++ {
-		sig := signVRankCandidate(t, candidates[i].VRankModule, candidates[i].Key, block2.NumberU64(), uint8(view2_0.Round.Uint64()), block2.Hash())
-		candMsgsBlock2[i] = vrank.VRankCandidate{BlockNumber: block2.NumberU64(), Round: uint8(view2_0.Round.Uint64()), BlockHash: block2.Hash(), Sig: sig}
+		sig, blsSig := signVRankCandidate(t, candidates[i].VRankModule, candidates[i].Key, candidates[i].BlsKey, block2.NumberU64(), uint8(view2_0.Round.Uint64()), block2.Hash())
+		candMsgsBlock2[i] = vrank.VRankCandidate{BlockNumber: block2.NumberU64(), Round: uint8(view2_0.Round.Uint64()), BlockHash: block2.Hash(), Sig: sig, BlsSig: blsSig}
 	}
 
 	// Initialize prepreparedView at least once to set `v.prepreparedView`.
@@ -320,8 +339,8 @@ func TestTallyCfReport(t *testing.T) {
 	// Liars: candidates send VRankCandidate for block2 with wrong BlockHash.
 	for i := 4; i < 6; i++ {
 		liarHash := common.Hash{byte(i)}
-		sig := signVRankCandidate(t, candidates[i].VRankModule, candidates[i].Key, block2.NumberU64(), uint8(view2_0.Round.Uint64()), liarHash)
-		liarMsg := vrank.VRankCandidate{BlockNumber: block2.NumberU64(), Round: uint8(view2_0.Round.Uint64()), BlockHash: liarHash, Sig: sig}
+		sig, blsSig := signVRankCandidate(t, candidates[i].VRankModule, candidates[i].Key, candidates[i].BlsKey, block2.NumberU64(), uint8(view2_0.Round.Uint64()), liarHash)
+		liarMsg := vrank.VRankCandidate{BlockNumber: block2.NumberU64(), Round: uint8(view2_0.Round.Uint64()), BlockHash: liarHash, Sig: sig, BlsSig: blsSig}
 		for _, v := range validators {
 			err := v.VRankModule.HandleVRankCandidate(&liarMsg)
 			assert.NoError(t, err)
@@ -375,8 +394,10 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	})
 
 	t.Run("Report should contain candAddr", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		val := createCN(t, valset)
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		val := createCN(t, valset, randao)
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
@@ -388,8 +409,10 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	})
 
 	t.Run("epoch header returns empty report", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		val := createCN(t, valset)
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		val := createCN(t, valset, randao)
 		valset.EXPECT().GetCommittee(uint64(params.DefaultVRankEpoch-1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(params.DefaultVRankEpoch-1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(params.DefaultVRankEpoch-1), uint64(0)).Return(val.Addr, nil).AnyTimes()
@@ -403,8 +426,10 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	})
 
 	t.Run("round out of range returns error", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		val := createCN(t, valset)
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		val := createCN(t, valset, randao)
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
@@ -419,8 +444,10 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	})
 
 	t.Run("non-validator returns empty report", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		val, otherVal := createCN(t, valset), createCN(t, valset)
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		val, otherVal := createCN(t, valset, randao), createCN(t, valset, randao)
 		// This node is not in the council for block 1.
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{otherVal.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
@@ -433,8 +460,10 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	})
 
 	t.Run("no preprepare data returns empty report", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		val := createCN(t, valset)
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		val := createCN(t, valset, randao)
 		// skip HandleIstanbulPreprepare — no preprepare data in collector
 
 		prepreparedTime, _, _ := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
@@ -445,8 +474,10 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	})
 
 	t.Run("GetCandidates failed returns error", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		val := createCN(t, valset)
+		ctrl := gomock.NewController(t)
+		valset := mock_valset.NewMockValsetModule(ctrl)
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		val := createCN(t, valset, randao)
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetCandidates(uint64(1)).Return(nil, assert.AnError).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()

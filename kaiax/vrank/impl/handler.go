@@ -27,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
@@ -86,6 +87,8 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 			logger.Error("Sign failed", "blockNum", block.NumberU64(), "blockHash", block.Hash().Hex())
 			return err
 		}
+		blsMsg := vrankCandidateBlsMsg(block.NumberU64())
+		blsSig := bls.Sign(v.BlsKey, blsMsg[:]).Marshal()
 		// TODO-Permissionless: Testing only. Remove before production release.
 		if v.skipCandidate.Load() {
 			logger.Warn("SkipCandidate is enabled, skipping VRankCandidate broadcast")
@@ -96,6 +99,7 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 			Round:       uint8(view.Round.Uint64()),
 			BlockHash:   block.Hash(),
 			Sig:         sig,
+			BlsSig:      blsSig,
 		})
 	}
 	return nil
@@ -132,6 +136,16 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	sender, err := v.recoverVRankCandidateSender(msg)
 	if err != nil {
 		return err
+	}
+	headNum := v.Chain.CurrentHeader().Number
+	blsPub, err := v.Randao.GetBlsPubkey(sender, headNum)
+	if err != nil {
+		return fmt.Errorf("%w: %v", vrank.ErrInvalidCandidateBlsSig, err)
+	}
+	blsMsg := vrankCandidateBlsMsg(msg.BlockNumber)
+	ok, err := bls.VerifySignature(msg.BlsSig, blsMsg, blsPub)
+	if err != nil || !ok {
+		return vrank.ErrInvalidCandidateBlsSig
 	}
 	vk := vrank.ViewKey{N: msg.BlockNumber, R: msg.Round}
 	if v.collector.HasCandMsg(vk, sender) {
@@ -196,6 +210,12 @@ func (v *VRankModule) recoverVRankCandidateSender(msg *vrank.VRankCandidate) (co
 	}
 	sender := crypto.PubkeyToAddress(*pubkey)
 	return sender, nil
+}
+
+// vrankCandidateBlsMsg returns the message that candidates BLS-sign: the block number
+// encoded as a 32-byte big-endian hash, matching the Randao random-reveal format.
+func vrankCandidateBlsMsg(blockNum uint64) common.Hash {
+	return common.BytesToHash(new(big.Int).SetUint64(blockNum).Bytes())
 }
 
 func (v *VRankModule) vrankCandidateSigHash(blockNum uint64, round uint8, blockHash common.Hash) common.Hash {

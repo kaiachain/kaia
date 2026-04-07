@@ -19,12 +19,21 @@
 package vrank
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 )
+
+// BlsPubkeyGetter is a narrow interface for looking up a node's registered BLS public key.
+// Typically satisfied by the Randao module, which reads KIP-113 state.
+type BlsPubkeyGetter interface {
+	GetBlsPubkey(nodeId common.Address, num *big.Int) (bls.PublicKey, error)
+}
 
 type VRankModule interface {
 	kaiax.BaseModule

@@ -565,7 +565,9 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		}),
 		mVRank.Init(&vrank_impl.InitOpts{
 			Valset:      mValset,
+			Randao:      mRandao,
 			NodeKey:     ctx.NodeKey(),
+			BlsKey:      ctx.BlsNodeKey(),
 			ChainConfig: s.chainConfig,
 			Chain:       s.blockchain,
 			ChainKv:     s.chainDB.GetMiscDB(),
