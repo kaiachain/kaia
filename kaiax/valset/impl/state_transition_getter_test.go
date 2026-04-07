@@ -151,6 +151,31 @@ func TestGetEpochTransition_MaxValidatorCount(t *testing.T) {
 	assert.False(t, result[addr3].IdleTimeout.IsZero())
 }
 
+// TestGetEpochTransition_NoValActiveFallback tests the edge case where the sole ValActive node
+// lost its stake (T3b → ValInactive), leaving only ValPaused nodes in the competition.
+// The fallback must force-promote ValPaused nodes to preserve len(ValActive)>0.
+func TestGetEpochTransition_NoValActiveFallback(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	v := newTestValsetModule(ctrl)
+
+	// addr1 was the only ValActive node but lost its stake below minStake → T3b (ValInactive, exits competition).
+	// addr2 and addr3 are ValPaused with sufficient stake → enter competition but stay paused in the normal path.
+	validators := valset.NodeStateMap{
+		addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
+		addr2: {State: valset.ValPaused, StakingAmount: highStake},
+		addr3: {State: valset.ValPaused, StakingAmount: aboveMinStake},
+	}
+	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, 0, 0, 0)
+
+	// addr1 dropped below minStake → ValInactive, not in competition.
+	assert.Equal(t, valset.ValInactive, result[addr1].State)
+	// Fallback: addr2 and addr3 are force-promoted to ValActive with PausedTimeout cleared.
+	assert.Equal(t, valset.ValActive, result[addr2].State)
+	assert.Equal(t, valset.ValActive, result[addr3].State)
+	assert.True(t, result[addr2].PausedTimeout.IsZero())
+	assert.True(t, result[addr3].PausedTimeout.IsZero())
+}
+
 func TestGetEpochTransition_TieBreakingByAddress(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := newTestValsetModule(ctrl)
