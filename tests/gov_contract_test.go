@@ -34,7 +34,6 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	govcontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/gov"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
@@ -89,15 +88,6 @@ func TestGovernance_GovModule(t *testing.T) {
 	// (b) contract engine enabled (via vote)
 
 	govModule := node.GovModule().(*gov_impl.GovModule)
-	chain.RegisterKaiaxModules(
-		govModule,
-		nil,
-		[]kaiax.ExecutionModule{govModule},
-		nil,
-		[]kaiax.HeaderModule{govModule},
-		nil,
-	)
-	node.Miner().RegisterExecutionModule(govModule)
 
 	// Run tx sender thread
 	go func() {
