@@ -90,8 +90,9 @@ func doSetHead(bc work.BlockChain, cn consensus.Engine, gpo *gasprice.Oracle, ta
 	if err := bc.SetHead(targetBlkNum); err != nil {
 		return err
 	}
-	// Initialize staking info cache, and governance cache
-	//cn.PurgeCache() // TODO: Remove this after the cache is properly implemented. This is to make sure the cache is cleared after setHead, and the new head's info is reflected in the cache.
+	// Initialize staking info cache and governance cache.
+	// TODO: Re-enable consensus engine cache purge after SetHead once the cache
+	// invalidation correctly reflects the new head.
 	gpo.PurgeCache()
 	return nil
 }
