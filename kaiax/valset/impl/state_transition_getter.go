@@ -93,24 +93,26 @@ func (v *ValsetModule) getEpochTransition(
 			potentialActiveVal.IdleTimeout = now.Add(idleTimeout)
 		}
 	}
+	return newValidators
+}
 
-	// Fallback: if no validator ended up ValActive (e.g., all top competitors were ValPaused),
-	// promote the entire staking-competition group to ValActive to preserve len(ValActive)>0.
-	// The group is guaranteed non-empty because intra-epoch checks ensure len(ValActive)>=1 at epoch-1.
-	hasActive := slices.ContainsFunc(activeValCompetitors, func(sv sortableValidator) bool {
-		// Optimization: check `activeValCompetitors` instead of `newValidators` — after the loop above,
-		// any ValActive in `newValidators` must have come through `activeValCompetitors`.
-		return sv.State == valset.ValActive
-	})
-	if !hasActive {
-		logger.Warn("All top competitors are ValPaused; force-promoting to ValActive", "count", min(maxValidatorCount, len(activeValCompetitors)))
-		for idx, sv := range activeValCompetitors {
-			if idx >= maxValidatorCount {
-				break
+// getFallbackTransition is the last-resort committee fallback when getEpochTransition produces no ValActive.
+// It promotes epoch-1's staking competition group members (CandTesting/ValReady/ValActive/ValPaused)
+// to ValActive regardless of stake. CandTesting validators are still subject to the vrank test.
+func (v *ValsetModule) getFallbackTransition(validators valset.NodeStateMap, num, cfsThreshold, slotFactor uint64) valset.NodeStateMap {
+	newValidators := validators.Copy()
+	for addr, val := range newValidators {
+		switch val.State {
+		case valset.CandTesting:
+			if v.isPassVrankTest(addr, num, cfsThreshold, slotFactor) {
+				val.State = valset.ValActive
+				val.IdleTimeout = time.Time{}
+				val.PausedTimeout = time.Time{}
 			}
-			sv.State = valset.ValActive
-			sv.IdleTimeout = time.Time{}
-			sv.PausedTimeout = time.Time{}
+		case valset.ValReady, valset.ValActive, valset.ValPaused:
+			val.State = valset.ValActive
+			val.IdleTimeout = time.Time{}
+			val.PausedTimeout = time.Time{}
 		}
 	}
 	return newValidators

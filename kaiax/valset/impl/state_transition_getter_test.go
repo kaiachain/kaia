@@ -113,7 +113,7 @@ func TestGetEpochTransition_StateTransitions(t *testing.T) {
 		{"T3b: CandTesting + stake<min → ValInactive", valset.CandTesting, belowMinStake, valset.ValInactive, true},
 		{"ValReady + stake>=min → ValActive", valset.ValReady, aboveMinStake, valset.ValActive, false},
 		{"ValActive + stake>=min → ValActive", valset.ValActive, aboveMinStake, valset.ValActive, false},
-		{"ValPaused + stake>=min → ValActive (fallback)", valset.ValPaused, aboveMinStake, valset.ValActive, false},
+		{"ValPaused + stake>=min → ValPaused (preserved)", valset.ValPaused, aboveMinStake, valset.ValPaused, false},
 		{"T3b: ValActive + stake<min → ValInactive", valset.ValActive, belowMinStake, valset.ValInactive, true},
 		{"T3b: ValReady + stake<min → ValInactive", valset.ValReady, belowMinStake, valset.ValInactive, true},
 		{"T3b: ValPaused + stake<min → ValInactive", valset.ValPaused, belowMinStake, valset.ValInactive, true},
@@ -151,31 +151,6 @@ func TestGetEpochTransition_MaxValidatorCount(t *testing.T) {
 	assert.False(t, result[addr3].IdleTimeout.IsZero())
 }
 
-// TestGetEpochTransition_NoValActiveFallback tests the edge case where the sole ValActive node
-// lost its stake (T3b → ValInactive), leaving only ValPaused nodes in the competition.
-// The fallback must force-promote ValPaused nodes to preserve len(ValActive)>0.
-func TestGetEpochTransition_NoValActiveFallback(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	v := newTestValsetModule(ctrl)
-
-	// addr1 was the only ValActive node but lost its stake below minStake → T3b (ValInactive, exits competition).
-	// addr2 and addr3 are ValPaused with sufficient stake → enter competition but stay paused in the normal path.
-	validators := valset.NodeStateMap{
-		addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
-		addr2: {State: valset.ValPaused, StakingAmount: highStake},
-		addr3: {State: valset.ValPaused, StakingAmount: aboveMinStake},
-	}
-	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, 0, 0, 0)
-
-	// addr1 dropped below minStake → ValInactive, not in competition.
-	assert.Equal(t, valset.ValInactive, result[addr1].State)
-	// Fallback: addr2 and addr3 are force-promoted to ValActive with PausedTimeout cleared.
-	assert.Equal(t, valset.ValActive, result[addr2].State)
-	assert.Equal(t, valset.ValActive, result[addr3].State)
-	assert.True(t, result[addr2].PausedTimeout.IsZero())
-	assert.True(t, result[addr3].PausedTimeout.IsZero())
-}
-
 func TestGetEpochTransition_TieBreakingByAddress(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := newTestValsetModule(ctrl)
@@ -204,6 +179,36 @@ func TestGetEpochTransition_DoesNotMutateInput(t *testing.T) {
 	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, 0, 0, 0)
 	assert.Equal(t, valset.ValInactive, result[addr1].State)    // result is transitioned
 	assert.Equal(t, valset.ValExiting, validators[addr1].State) // original is unchanged
+}
+
+// ============================================================
+// TestGetFallbackTransition
+// ============================================================
+
+func TestGetFallbackTransition(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	v := newTestValsetModule(ctrl) // mockVRank returns nil scores → isPassVrankTest passes
+
+	pausedTimeout := testBlockTime.Add(8 * time.Hour)
+	validators := valset.NodeStateMap{
+		addr1: {State: valset.CandTesting, StakingAmount: belowMinStake},
+		addr2: {State: valset.ValReady, StakingAmount: belowMinStake},
+		addr3: {State: valset.ValActive, StakingAmount: belowMinStake},
+		addr4: {State: valset.ValPaused, StakingAmount: belowMinStake, PausedTimeout: pausedTimeout},
+		addr5: {State: valset.Registered, StakingAmount: belowMinStake},
+	}
+	result := v.getFallbackTransition(validators, 0, 0, 0)
+
+	// Competition group promoted to ValActive with timeouts cleared.
+	assert.Equal(t, valset.ValActive, result[addr1].State) // CandTesting passes vrank (nil scores)
+	assert.Equal(t, valset.ValActive, result[addr2].State)
+	assert.Equal(t, valset.ValActive, result[addr3].State)
+	assert.Equal(t, valset.ValActive, result[addr4].State)
+	assert.True(t, result[addr4].PausedTimeout.IsZero())
+	// Non-competition state unchanged.
+	assert.Equal(t, valset.Registered, result[addr5].State)
+	// Input not mutated.
+	assert.Equal(t, valset.ValPaused, validators[addr4].State)
 }
 
 // ============================================================
@@ -631,12 +636,14 @@ func TestApplyAllTransitions(t *testing.T) {
 		},
 		{
 			// addr1: CandReady+aboveMin → violation(noop) → timeout(noop) → epoch(CandTesting)
+			// addr2: ValActive+aboveMin → epoch(ValActive) — prevents fallback from firing
 			"candidate promotion at epoch",
 			testEpochNum,
 			valset.NodeStateMap{
 				addr1: {State: valset.CandReady, StakingAmount: aboveMinStake},
+				addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
 			},
-			map[common.Address]valset.State{addr1: valset.CandTesting},
+			map[common.Address]valset.State{addr1: valset.CandTesting, addr2: valset.ValActive},
 		},
 		{
 			// addr1: ValActive+belowMin  → violation(ValExiting) → timeout(noop) → epoch(ValInactive)
@@ -663,12 +670,14 @@ func TestApplyAllTransitions(t *testing.T) {
 		},
 		{
 			// addr1: ValInactive+expiredIdle → violation(noop) → timeout(Registered) → epoch(noop)
+			// addr2: ValActive+aboveMin → epoch(ValActive) — prevents fallback from firing
 			"timeout fires: expired idle → Registered",
 			testEpochNum,
 			valset.NodeStateMap{
 				addr1: {State: valset.ValInactive, StakingAmount: aboveMinStake, IdleTimeout: testBlockTime.Add(-1 * time.Hour)},
+				addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
 			},
-			map[common.Address]valset.State{addr1: valset.Registered},
+			map[common.Address]valset.State{addr1: valset.Registered, addr2: valset.ValActive},
 		},
 		{
 			// addr1: ValPaused+expiredPause → violation(noop) → timeout(ValInactive+IdleTimeout set) → epoch(noop, non-epoch)
@@ -681,12 +690,36 @@ func TestApplyAllTransitions(t *testing.T) {
 		},
 		{
 			// addr1: ValPaused+expiredPause → violation(noop) → timeout(ValInactive) → epoch(ValInactive not in competition → stays)
+			// addr2: ValActive+aboveMin → epoch(ValActive) — prevents fallback from firing
 			"timeout→epoch chain (epoch): expired pause → ValInactive",
 			testEpochNum,
 			valset.NodeStateMap{
 				addr1: {State: valset.ValPaused, StakingAmount: aboveMinStake, PausedTimeout: testBlockTime.Add(-1 * time.Hour)},
+				addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
 			},
-			map[common.Address]valset.State{addr1: valset.ValInactive},
+			map[common.Address]valset.State{addr1: valset.ValInactive, addr2: valset.ValActive},
+		},
+		{
+			// All validators below minStake → epoch transition produces no ValActive → fallback fires.
+			// getFallbackTransition(original) promotes epoch-1 competition group to ValActive.
+			// addr1: ValActive+below   → violation(ValExiting) → epoch(ValInactive) → fallback(ValActive)
+			// addr2: ValReady+below    → epoch(T3b → ValInactive)                   → fallback(ValActive)
+			// addr3: ValPaused+below   → epoch(T3b → ValInactive)                   → fallback(ValActive)
+			// addr4: CandTesting+below → epoch(pass vrank, T3b → ValInactive)       → fallback(pass vrank → ValActive)
+			"fallback: all below minStake → epoch-1 committee restored",
+			testEpochNum,
+			valset.NodeStateMap{
+				addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
+				addr2: {State: valset.ValReady, StakingAmount: belowMinStake},
+				addr3: {State: valset.ValPaused, StakingAmount: belowMinStake},
+				addr4: {State: valset.CandTesting, StakingAmount: belowMinStake},
+			},
+			map[common.Address]valset.State{
+				addr1: valset.ValActive,
+				addr2: valset.ValActive,
+				addr3: valset.ValActive,
+				addr4: valset.ValActive,
+			},
 		},
 	}
 	for _, tc := range testcases {
