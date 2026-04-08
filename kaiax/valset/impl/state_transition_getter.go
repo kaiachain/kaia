@@ -102,30 +102,30 @@ func (v *ValsetModule) getEpochTransition(
 func (v *ValsetModule) getFallbackTransition(validators valset.NodeStateMap, num, cfsThreshold, slotFactor uint64, maxValidatorCount int) valset.NodeStateMap {
 	newValidators := validators.Copy()
 
-	var potentialActiveVal []sortableValidator
+	var activeValCompetitors []sortableValidator
 	for addr, val := range newValidators {
 		switch val.State {
 		case valset.CandTesting:
 			if v.isPassVrankTest(addr, num, cfsThreshold, slotFactor) {
-				potentialActiveVal = append(potentialActiveVal, sortableValidator{addr, val})
+				activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val})
 			}
 		case valset.ValReady, valset.ValActive, valset.ValPaused:
-			potentialActiveVal = append(potentialActiveVal, sortableValidator{addr, val})
+			activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val})
 		}
 	}
-	slices.SortFunc(potentialActiveVal, func(a, b sortableValidator) int {
+	slices.SortFunc(activeValCompetitors, func(a, b sortableValidator) int {
 		return cmp.Or(
 			cmp.Compare(b.StakingAmount, a.StakingAmount),
-			bytes.Compare(a.addr[:], b.addr[:]),
+			bytes.Compare(a.addr[:], b.addr[:]), // tie-breaking: address order
 		)
 	})
-	for i, sv := range potentialActiveVal {
-		if i >= maxValidatorCount {
+	for idx, potentialActiveVal := range activeValCompetitors {
+		if idx >= maxValidatorCount {
 			break
 		}
-		sv.State = valset.ValActive
-		sv.IdleTimeout = time.Time{}
-		sv.PausedTimeout = time.Time{}
+		potentialActiveVal.State = valset.ValActive
+		potentialActiveVal.IdleTimeout = time.Time{}
+		potentialActiveVal.PausedTimeout = time.Time{}
 	}
 	return newValidators
 }
