@@ -56,9 +56,9 @@ type HeaderChain struct {
 
 	procInterrupt func() bool
 
-	rand   *mrand.Rand
-	engine consensus.Engine
+	rand *mrand.Rand
 
+	sealer    consensus.Sealer
 	validator Validator
 }
 
@@ -67,7 +67,7 @@ type HeaderChain struct {
 //	getValidator should return the parent's validator
 //	procInterrupt points to the parent's interrupt semaphore
 //	wg points to the parent's shutdown wait group
-func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, engine consensus.Engine, procInterrupt func() bool) (*HeaderChain, error) {
+func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, sealer consensus.Sealer, validator Validator, procInterrupt func() bool) (*HeaderChain, error) {
 	// Seed a fast but crypto originating random generator
 	seed, err := crand.Int(crand.Reader, big.NewInt(math.MaxInt64))
 	if err != nil {
@@ -79,7 +79,8 @@ func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, engi
 		chainDB:       chainDB,
 		procInterrupt: procInterrupt,
 		rand:          mrand.New(mrand.NewSource(seed.Int64())),
-		engine:        engine,
+		sealer:        sealer,
+		validator:     validator,
 	}
 
 	hc.genesisHeader = hc.GetHeaderByNumber(0)
@@ -98,8 +99,6 @@ func NewHeaderChain(chainDB database.DBManager, config *params.ChainConfig, engi
 		}
 	}
 	hc.currentHeaderHash = hc.CurrentHeader().Hash()
-
-	hc.validator = NewBlockValidatorWithHeaderChain(config, hc)
 
 	return hc, nil
 }
@@ -332,9 +331,9 @@ func (hc *HeaderChain) CurrentHeader() *types.Header {
 	return hc.currentHeader.Load().(*types.Header)
 }
 
-// CurrentBlock is added because HeaderChain is sometimes used as
-// type consensus.ChainReader and consensus.ChainReader interface has CurrentBlock.
-// However CurrentBlock is not supported in HeaderChain so this function just panics.
+// CurrentBlock exists because HeaderChain is sometimes passed where a
+// blockchain.ChainContext-like view is expected.
+// HeaderChain does not retain full blocks, so this function panics.
 func (hc *HeaderChain) CurrentBlock() *types.Block {
 	panic("CurrentBlock not supported for HeaderChain")
 }
@@ -419,8 +418,19 @@ func (hc *HeaderChain) SetGenesis(head *types.Header) {
 // Config retrieves the header chain's chain configuration.
 func (hc *HeaderChain) Config() *params.ChainConfig { return hc.config }
 
+// Sealer retrieves the header chain's sealer.
+func (hc *HeaderChain) Sealer() consensus.Sealer { return hc.sealer }
+
 // Engine retrieves the header chain's consensus engine.
-func (hc *HeaderChain) Engine() consensus.Engine { return hc.engine }
+func (hc *HeaderChain) Engine() consensus.Engine { return nil }
+
+// ValidateHeader validates a header via the configured validator.
+func (hc *HeaderChain) ValidateHeader(header *types.Header) error {
+	if hc.validator == nil {
+		return errors.New("header validator is not configured")
+	}
+	return hc.validator.ValidateHeader(header)
+}
 
 // GetBlock implements consensus.ChainReader, and returns nil for every input as
 // a header chain does not have blocks available for retrieval.

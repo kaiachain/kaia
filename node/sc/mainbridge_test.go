@@ -31,9 +31,7 @@ import (
 	"github.com/kaiachain/kaia/api"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/vm"
-	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -68,14 +66,6 @@ func testNewMainBridge(t *testing.T) *MainBridge {
 func testBlockChain(t *testing.T) *blockchain.BlockChain {
 	db := database.NewMemoryDBManager()
 
-	prvKey, _ := crypto.GenerateKey()
-	engine := backend.New(&backend.BackendOpts{
-		IstanbulConfig: istanbul.DefaultConfig,
-		PrivateKey:     prvKey,
-		DB:             db,
-		NodeType:       common.CONSENSUSNODE,
-	})
-
 	genesis := blockchain.DefaultTestGenesisBlock()
 	genesis.BlockScore = big.NewInt(1)
 	genesis.Config = params.MainnetChainConfig.Copy()
@@ -88,7 +78,7 @@ func testBlockChain(t *testing.T) *blockchain.BlockChain {
 		t.Fatal(err)
 	}
 
-	bc, err := blockchain.NewBlockChain(db, nil, chainConfig, engine, vm.Config{})
+	bc, err := blockchain.NewBlockChain(db, nil, chainConfig, faker.NewFaker(), vm.Config{})
 	if err != nil {
 		t.Fatal(err)
 	}

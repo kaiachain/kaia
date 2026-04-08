@@ -36,10 +36,10 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/profile"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
@@ -101,14 +101,12 @@ func TestHardForkBlock(t *testing.T) {
 	govModule := gov_impl.NewGovModule()
 	genesisBlsKey, err := bls.DeriveFromECDSA(genesisKey)
 	require.NoError(t, err)
-	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
-		IstanbulConfig: istanbul.DefaultConfig,
-		PrivateKey:     genesisKey,
-		DB:             chainDb,
-		GovModule:      govModule,
-		NodeType:       common.CONSENSUSNODE,
-	})
-	chain, err := blockchain.NewBlockChain(chainDb, nil, chainConfig, engine, vm.Config{})
+	sealer := istanbul.NewSealerImpl(genesisKey)
+	prevHeaderHashFn := types.HeaderHashFn
+	types.SetHeaderHashFn(sealer.HeaderHash)
+	defer types.SetHeaderHashFn(prevHeaderHashFn)
+
+	chain, err := blockchain.NewBlockChain(chainDb, nil, chainConfig, sealer, vm.Config{})
 	require.NoError(t, err)
 
 	mStaking := staking_impl.NewStakingModule()
@@ -148,9 +146,14 @@ func TestHardForkBlock(t *testing.T) {
 		}),
 	)
 	require.NoError(t, err)
-	chain.RegisterHeaderModule(mReward, mRandao)
-	chain.Processor().RegisterBlockStateModule(mReward, mSystem)
-	engine.RegisterKaiaxModules(govModule, mValset)
+	chain.RegisterKaiaxModules(
+		govModule,
+		mValset,
+		nil,
+		nil,
+		[]kaiax.HeaderModule{mReward, mRandao},
+		[]kaiax.BlockStateModule{mReward, mSystem},
+	)
 	mValset.Start()
 
 	r1, err := hexutil.Decode(string(rawb1))

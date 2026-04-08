@@ -38,7 +38,10 @@ import (
 )
 
 type ChainContext interface {
-	consensus.ChainReader
+	CurrentBlock() *types.Block
+	GetHeader(common.Hash, uint64) *types.Header
+	Config() *params.ChainConfig
+	Sealer() consensus.Sealer
 }
 
 // NewEVMBlockContext creates a new context for use in the EVM.
@@ -53,7 +56,7 @@ func NewEVMBlockContext(header *types.Header, chain ChainContext, author *common
 	)
 
 	if author == nil {
-		beneficiary, _ = chain.Engine().Author(header) // Ignore error, we're past header validation
+		beneficiary, _ = chain.Sealer().Author(header) // Ignore error, we're past header validation
 	} else {
 		beneficiary = *author
 	}

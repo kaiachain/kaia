@@ -160,8 +160,8 @@ func (r *RewardModule) specWithNonDeferredFee(spec *reward.RewardSpec, config *r
 		newSpec.TotalFee.Add(newSpec.TotalFee, new(big.Int).Add(execFee, blobFee))
 		newSpec.Proposer.Add(newSpec.Proposer, distributedFee)
 
-		// Before Magma, non-deferred fees are assigned to evm.Coinbase which originates from Engine().Author(header).
-		coinbase, err := r.Chain.Engine().Author(header)
+		// Before Magma, non-deferred fees are assigned to evm.Coinbase which originates from the block author.
+		coinbase, err := r.Chain.Sealer().Author(header)
 		if err != nil {
 			return nil, err
 		}

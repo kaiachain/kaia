@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -71,7 +72,12 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 	configItems = append(configItems, mStaking)
 
 	chain, istBackend := newBlockChain(t, len(stakes), configItems...)
-	chain.RegisterExecutionModule(istBackend.govModule)
+	chain.RegisterKaiaxModules(
+		istBackend.govModule,
+		istBackend.valsetModule,
+		[]kaiax.ExecutionModule{istBackend.govModule},
+		nil, nil, nil,
+	)
 	defer istBackend.Stop()
 
 	// Test for blocks from 0 to maxBlockNum

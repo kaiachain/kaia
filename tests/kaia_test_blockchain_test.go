@@ -19,7 +19,6 @@
 package tests
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
@@ -35,12 +34,9 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/profile"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
-	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -72,7 +68,6 @@ type BCData struct {
 	rewardBase         *common.Address
 	validatorAddresses []common.Address
 	validatorPrivKeys  []*ecdsa.PrivateKey
-	engine             consensus.Engine
 	genesis            *blockchain.Genesis
 	govModule          gov.GovModule
 	isMiner            bool
@@ -128,16 +123,9 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 	if err != nil {
 		return nil, err
 	}
-	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
-		IstanbulConfig: istanbul.DefaultConfig,
-		PrivateKey:     validatorPrivKeys[0],
-		DB:             chainDb,
-		GovModule:      mGov,
-		NodeType:       common.CONSENSUSNODE,
-	})
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain
-	bc, genesis, err := initBlockChain(chainDb, cacheConfig, addrs, validatorAddresses, nil, engine, chainCfg)
+	bc, genesis, err := initBlockChain(chainDb, cacheConfig, addrs, validatorAddresses, nil, bft.NewSealer(chainCfg, validatorPrivKeys[0]), chainCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -185,17 +173,19 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 	if err != nil {
 		return nil, err
 	}
-	engine.RegisterKaiaxModules(mGov, mValset)
-	bc.RegisterHeaderModule(mReward, mRandao)
-	bc.Processor().RegisterBlockStateModule(mReward, mSystem)
-	if err = engine.Start(bc, bc.CurrentBlock, bc.HasBadBlock, nil); err != nil {
-		return nil, err
-	}
+	bc.RegisterKaiaxModules(
+		mGov,
+		mValset,
+		nil,
+		nil,
+		[]kaiax.HeaderModule{mReward, mRandao},
+		[]kaiax.BlockStateModule{mReward, mSystem},
+	)
 
 	return &BCData{
 		bc, addrs, privKeys, chainDb,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, mGov, false,
+		validatorPrivKeys, genesis, mGov, false,
 	}, nil
 }
 
@@ -206,7 +196,6 @@ func NewBCData(maxAccounts, numValidators int) (*BCData, error) {
 
 func (bcdata *BCData) Shutdown() {
 	bcdata.bc.Stop()
-	bcdata.engine.Stop()
 
 	bcdata.db.Close()
 	// Remove leveldb dir which was created for this test.
@@ -311,7 +300,7 @@ func (bcdata *BCData) MineABlock(transactions types.Transactions, signer types.S
 	////////////////////////////////////////////////////////////////////////////////
 
 	start = time.Now()
-	b, err = sealBlock(b, bcdata.validatorPrivKeys)
+	b, err = sealBlock(b, bcdata.bc.Sealer(), bcdata.bc.Config(), bcdata.validatorPrivKeys)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -379,7 +368,7 @@ func (bcdata *BCData) GenABlockWithTxpool(accountMap *AccountMap, txpool *blockc
 	prof.Profile("mine_finalize_block", time.Now().Sub(start))
 
 	start = time.Now()
-	b, err = sealBlock(b, bcdata.validatorPrivKeys)
+	b, err = sealBlock(b, bcdata.bc.Sealer(), bcdata.bc.Config(), bcdata.validatorPrivKeys)
 	if err != nil {
 		return err
 	}
@@ -589,37 +578,24 @@ func NewDatabase(dir string, dbType database.DBType) database.DBManager {
 	}
 }
 
-// Copied from consensus/istanbul/backend/engine.go
-func prepareIstanbulExtra(validators []common.Address) ([]byte, error) {
-	var buf bytes.Buffer
-
-	buf.Write(bytes.Repeat([]byte{0x0}, types.IstanbulExtraVanity))
-
-	ist := &types.IstanbulExtra{
-		Validators:    validators,
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	}
-
-	payload, err := rlp.EncodeToBytes(&ist)
-	if err != nil {
-		return nil, err
-	}
-	return append(buf.Bytes(), payload...), nil
-}
-
 func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, coinbaseAddrs []*common.Address, validators []common.Address,
-	genesis *blockchain.Genesis, engine consensus.Engine, config *params.ChainConfig,
+	genesis *blockchain.Genesis, sealer consensus.Sealer, config *params.ChainConfig,
 ) (*blockchain.BlockChain, *blockchain.Genesis, error) {
 	if config == nil {
 		return nil, nil, errors.New("config is nil")
 	}
-	extraData, err := prepareIstanbulExtra(validators)
+	if sealer == nil {
+		return nil, nil, errors.New("sealer is nil")
+	}
 
 	if genesis == nil {
 		genesis = blockchain.DefaultTestGenesisBlock()
 		genesis.Config = config.Copy()
-		genesis.ExtraData = extraData
+		genesisHeader := &types.Header{Number: common.Big0, Extra: genesis.ExtraData}
+		if err := sealer.WriteValidators(genesisHeader, validators); err != nil {
+			return nil, nil, err
+		}
+		genesis.ExtraData = genesisHeader.Extra
 		genesis.BlockScore = big.NewInt(1)
 		genesis.Config.Governance = params.GetDefaultGovernanceConfig()
 		genesis.Config.Istanbul = params.GetDefaultIstanbulConfig()
@@ -653,7 +629,7 @@ func initBlockChain(db database.DBManager, cacheConfig *blockchain.CacheConfig, 
 
 	genesis.Config = &cfg
 
-	chain, err := blockchain.NewBlockChain(db, cacheConfig, genesis.Config, engine, vm.Config{})
+	chain, err := blockchain.NewBlockChain(db, cacheConfig, genesis.Config, sealer, vm.Config{})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -679,83 +655,12 @@ func createAccounts(numAccounts int) ([]*common.Address, []*ecdsa.PrivateKey, er
 	return accs, privKeys, nil
 }
 
-// Copied from consensus/istanbul/backend/engine.go
-func sigHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewKeccak256()
-
-	// Clean seal is required for calculating proposer seal.
-	rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false))
-	hasher.Sum(hash[:0])
-	return hash
-}
-
-// writeSeal writes the extra-data field of the given header with the given seals.
-// Copied from consensus/istanbul/backend/engine.go
-func writeSeal(h *types.Header, seal []byte) error {
-	if len(seal)%types.IstanbulExtraSeal != 0 {
-		return errors.New("invalid signature")
-	}
-
-	istanbulExtra, err := types.ExtractIstanbulExtra(h)
-	if err != nil {
-		return err
-	}
-
-	istanbulExtra.Seal = seal
-	payload, err := rlp.EncodeToBytes(&istanbulExtra)
-	if err != nil {
-		return err
-	}
-
-	h.Extra = append(h.Extra[:types.IstanbulExtraVanity], payload...)
-	return nil
-}
-
-// writeCommittedSeals writes the extra-data field of a block header with given committed seals.
-// Copied from consensus/istanbul/backend/engine.go
-func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
-	errInvalidCommittedSeals := errors.New("invalid committed seals")
-
-	if len(committedSeals) == 0 {
-		return errInvalidCommittedSeals
-	}
-
-	for _, seal := range committedSeals {
-		if len(seal) != types.IstanbulExtraSeal {
-			return errInvalidCommittedSeals
-		}
-	}
-
-	istanbulExtra, err := types.ExtractIstanbulExtra(h)
-	if err != nil {
-		return err
-	}
-
-	istanbulExtra.CommittedSeal = make([][]byte, len(committedSeals))
-	copy(istanbulExtra.CommittedSeal, committedSeals)
-
-	payload, err := rlp.EncodeToBytes(&istanbulExtra)
-	if err != nil {
-		return err
-	}
-
-	h.Extra = append(h.Extra[:types.IstanbulExtraVanity], payload...)
-	return nil
-}
-
-// sign implements istanbul.backend.Sign
-// Copied from consensus/istanbul/backend/backend.go
-func sign(data []byte, privkey *ecdsa.PrivateKey) ([]byte, error) {
-	hashData := crypto.Keccak256([]byte(data))
-	return crypto.Sign(hashData, privkey)
-}
-
-func makeCommittedSeal(h *types.Header, privKeys []*ecdsa.PrivateKey) ([][]byte, error) {
+func makeCommittedSeal(h *types.Header, chainConfig *params.ChainConfig, privKeys []*ecdsa.PrivateKey) ([][]byte, error) {
 	committedSeals := make([][]byte, 0, 3)
 
 	for i := 1; i < 4; i++ {
-		seal := istanbulCore.PrepareCommittedSeal(h.Hash())
-		committedSeal, err := sign(seal, privKeys[i])
+		signer := bft.NewSealer(chainConfig, privKeys[i])
+		committedSeal, err := signer.MakeCommittedSeal(h)
 		if err != nil {
 			return nil, err
 		}
@@ -765,28 +670,23 @@ func makeCommittedSeal(h *types.Header, privKeys []*ecdsa.PrivateKey) ([][]byte,
 	return committedSeals, nil
 }
 
-func sealBlock(b *types.Block, privKeys []*ecdsa.PrivateKey) (*types.Block, error) {
+func sealBlock(b *types.Block, sealer consensus.Sealer, chainConfig *params.ChainConfig, privKeys []*ecdsa.PrivateKey) (*types.Block, error) {
 	header := b.Header()
 
-	seal, err := sign(sigHash(header).Bytes(), privKeys[0])
+	authorSeal, err := sealer.MakeAuthorSeal(header)
 	if err != nil {
 		return nil, err
 	}
-
-	err = writeSeal(header, seal)
-	if err != nil {
+	if err := sealer.WriteAuthorSeal(header, authorSeal); err != nil {
 		return nil, err
 	}
 
-	committedSeals, err := makeCommittedSeal(header, privKeys)
+	committedSeals, err := makeCommittedSeal(header, chainConfig, privKeys)
 	if err != nil {
 		return nil, err
 	}
-
-	err = writeCommittedSeals(header, committedSeals)
-	if err != nil {
+	if err := sealer.WriteCommittedSeals(header, committedSeals); err != nil {
 		return nil, err
 	}
-
 	return b.WithSeal(header), nil
 }

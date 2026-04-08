@@ -40,6 +40,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/bft"
 	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
@@ -288,7 +289,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	)
 
-	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
+	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, bft.NewSealer(chainConfig, ctx.NodeKey()), vmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -614,12 +615,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	s.RegisterJsonRpcModules(mJsonRpc...)
 	s.miner.RegisterExecutionModule(mExecution...)
 	s.miner.RegisterTxBundlingModule(mTxBundling...)
-	s.blockchain.RegisterExecutionModule(mExecution...)
-	s.blockchain.RegisterRewindableModule(mRewindable...)
-	s.blockchain.RegisterHeaderModule(mHeader...)
-	s.blockchain.Validator().RegisterHeaderModules(mHeader...)
-	s.blockchain.Validator().SetupKaiaxModules(s.govModule)
-	s.blockchain.Processor().RegisterBlockStateModule(mBlockState...)
+	s.blockchain.RegisterKaiaxModules(s.govModule, mValset, mExecution, mRewindable, mHeader, mBlockState)
 	s.txPool.RegisterTxPoolModule(mTxPool...)
 	s.engine.RegisterKaiaxModules(s.govModule, mValset)
 	s.protocolManager.RegisterStakingModule(s.stakingModule)

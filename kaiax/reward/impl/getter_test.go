@@ -20,11 +20,22 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/faker"
+	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/kaiax/reward"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
+	valset_mock "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
+	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -261,7 +272,7 @@ func TestGetBlockReward(t *testing.T) {
 func TestSpecWithNonDeferredFeeAuthor(t *testing.T) {
 	header, txs, receipts := makeTestPreMagmaBlock(1)
 	r := makeTestRewardModule(t, true, false, false, header, txs, receipts)
-	author, _ := r.Chain.Engine().Author(header)
+	author, _ := r.Chain.Sealer().Author(header)
 
 	expected := &reward.RewardSpec{
 		RewardSummary: reward.RewardSummary{
@@ -1621,4 +1632,123 @@ func TestGetDeferredRewardFull_BlobFee(t *testing.T) {
 	assert.Equal(t, new(big.Int).Add(execFee, blobFee), spec.TotalFee, "flex deferred TotalFee")
 	assert.Equal(t, new(big.Int).Add(execFee, blobFee), spec.BurntFee, "flex deferred BurntFee")
 	sanityCheckRewardSpec(t, spec, "flex deferred with blob")
+}
+func newRewardDistributionTestContext(t *testing.T, config *params.ChainConfig, mintingByBlock map[uint64]uint64) (*state.StateDB, common.Address, *RewardModule) {
+	config = config.Copy()
+	config.SetDefaults()
+
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+	if config.Governance != nil && config.Governance.GovernanceMode == "single" {
+		config.Governance.GoverningNode = addr
+	}
+
+	dbm := database.NewMemoryDBManager()
+	sealer := faker.NewFaker()
+
+	genesis := blockchain.DefaultTestGenesisBlock()
+	genesis.Config = config
+	genesis.MustCommit(dbm)
+
+	chain, err := blockchain.NewBlockChain(dbm, nil, genesis.Config, sealer, vm.Config{})
+	require.NoError(t, err)
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	stakingInfo := &staking.StakingInfo{SourceBlockNum: 0}
+	rewardKey, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	stakingInfo.NodeIds = []common.Address{addr}
+	stakingInfo.StakingContracts = []common.Address{addr}
+	stakingInfo.RewardAddrs = []common.Address{crypto.PubkeyToAddress(rewardKey.PublicKey)}
+	stakingInfo.StakingAmounts = []uint64{0}
+
+	mStaking := staking_mock.NewMockStakingModule(ctrl)
+	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
+
+	mValset := valset_mock.NewMockValsetModule(ctrl)
+	mGov := gov_mock.NewMockGovModule(ctrl)
+
+	baseParamSet := *gov.GetDefaultGovernanceParamSet()
+	for name, param := range gov.Params {
+		val, err := param.ChainConfigValue(config)
+		require.NoError(t, err)
+		require.NoError(t, baseParamSet.Set(name, val))
+	}
+	mGov.EXPECT().GetParamSet(gomock.Any()).DoAndReturn(func(blockNum uint64) gov.ParamSet {
+		ps := baseParamSet
+		mintingAmount := mintingByBlock[blockNum]
+		if mintingAmount == 0 {
+			mintingAmount = mintingByBlock[0]
+		}
+		ps.MintingAmount = new(big.Int).SetUint64(mintingAmount)
+		return ps
+	}).AnyTimes()
+
+	mReward := NewRewardModule()
+	require.NoError(t, mReward.Init(&InitOpts{
+		ChainConfig:   chain.Config(),
+		Chain:         chain,
+		GovModule:     mGov,
+		StakingModule: mStaking,
+		ValsetModule:  mValset,
+	}))
+
+	stateDB, err := chain.StateAt(chain.Genesis().Root())
+	require.NoError(t, err)
+
+	t.Cleanup(chain.Stop)
+	return stateDB, addr, mReward
+}
+
+func TestRewardDistribution(t *testing.T) {
+	type expected = map[int]uint64
+	type testcase struct {
+		length         int
+		mintingByBlock map[uint64]uint64
+		expected       expected
+	}
+
+	cfg := params.TestKaiaConfig("magma")
+	cfg.Istanbul.Epoch = 3
+	cfg.Governance.Reward.MintingAmount = new(big.Int).SetUint64(1)
+	cfg.KoreCompatibleBlock = new(big.Int).SetUint64(9)
+
+	testcases := []testcase{
+		{
+			length: 12,
+			mintingByBlock: map[uint64]uint64{
+				0: 1,
+				1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1,
+				7: 2, 8: 2,
+				9: 3, 10: 3, 11: 3, 12: 3, 13: 3,
+			},
+			expected: map[int]uint64{
+				1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6,
+				7: 8, 8: 10, 9: 13, 10: 16, 11: 19, 12: 22, 13: 25,
+			},
+		},
+	}
+
+	for _, tc := range testcases {
+		stateDB, rewardbase, mReward := newRewardDistributionTestContext(t, cfg, tc.mintingByBlock)
+		for blockNum := 1; blockNum <= tc.length+1; blockNum++ {
+			header := &types.Header{
+				Number:     new(big.Int).SetUint64(uint64(blockNum)),
+				GasUsed:    0,
+				BaseFee:    big.NewInt(0),
+				Rewardbase: rewardbase,
+				BlockScore: params.DefaultBlockScore,
+				Root:       common.Hash{1}, // skip reward-address path; focus on distribution amount
+			}
+
+			err := mReward.FinalizeState(header, stateDB, nil, nil)
+			require.NoError(t, err)
+
+			bal := stateDB.GetBalance(rewardbase)
+			assert.Equal(t, tc.expected[blockNum], bal.Uint64(), "wrong at block %d", blockNum)
+		}
+	}
 }

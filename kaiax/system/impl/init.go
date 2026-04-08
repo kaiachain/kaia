@@ -30,12 +30,8 @@ var (
 	logger = log.NewModuleLogger(log.Blockchain)
 )
 
-type chainReader interface {
-	consensus.ChainReader
-}
-
 type InitOpts struct {
-	Chain chainReader
+	Chain consensus.ChainReaderWithSealer
 }
 
 type SystemModule struct {

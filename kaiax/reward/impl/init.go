@@ -38,7 +38,7 @@ type blockChain interface {
 	GetHeaderByNumber(number uint64) *types.Header
 	GetBlockByNumber(number uint64) *types.Block
 	GetReceiptsByBlockHash(blockHash common.Hash) types.Receipts
-	Engine() consensus.Engine
+	Sealer() consensus.Sealer
 }
 
 type InitOpts struct {

@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/event"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node/cn/gasprice"
 	"github.com/kaiachain/kaia/node/cn/tracers"
@@ -90,7 +91,7 @@ func doSetHead(bc work.BlockChain, cn consensus.Engine, gpo *gasprice.Oracle, ta
 		return err
 	}
 	// Initialize staking info cache, and governance cache
-	cn.PurgeCache()
+	//cn.PurgeCache() // TODO: Remove this after the cache is properly implemented. This is to make sure the cache is cleared after setHead, and the new head's info is reflected in the cache.
 	gpo.PurgeCache()
 	return nil
 }
@@ -397,6 +398,14 @@ func (b *CNAPIBackend) RPCTxFeeCap() float64 {
 
 func (b *CNAPIBackend) Engine() consensus.Engine {
 	return b.cn.engine
+}
+
+func (b *CNAPIBackend) Sealer() consensus.Sealer {
+	return b.cn.blockchain.Sealer()
+}
+
+func (b *CNAPIBackend) ValsetModule() valset.ValsetModule {
+	return b.cn.blockchain.Validator().ValsetModule()
 }
 
 func (b *CNAPIBackend) StateAtBlock(ctx context.Context, block *types.Block, reexec uint64, base *state.StateDB, readOnly bool, preferDisk bool) (*state.StateDB, tracers.StateReleaseFunc, error) {

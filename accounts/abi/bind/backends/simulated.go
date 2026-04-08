@@ -741,8 +741,8 @@ func (fb *filterBackend) ChainConfig() *params.ChainConfig {
 	return fb.bc.Config()
 }
 
-func (fb *filterBackend) Engine() consensus.Engine {
-	return fb.bc.Engine()
+func (fb *filterBackend) Sealer() consensus.Sealer {
+	return fb.bc.Sealer()
 }
 
 func nullSubscription() event.Subscription {

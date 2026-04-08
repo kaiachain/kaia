@@ -1216,12 +1216,12 @@ func (api *EthAPI) Accounts() []common.Address {
 	return api.kaiaAccountAPI.Accounts()
 }
 
-func RpcMarshalEthHeader(head *types.Header, engine consensus.Engine, chainConfig *params.ChainConfig, inclMiner bool) (map[string]interface{}, error) {
+func RpcMarshalEthHeader(head *types.Header, sealer consensus.Sealer, chainConfig *params.ChainConfig, inclMiner bool) (map[string]interface{}, error) {
 	var proposer common.Address
 	var err error
 
 	if head.Number.Sign() != 0 && inclMiner {
-		proposer, err = engine.Author(head)
+		proposer, err = sealer.Author(head)
 		if err != nil {
 			// miner is the field Kaia should provide the correct value. It's not the field dummy value is allowed.
 			logger.Error("Failed to fetch author during marshaling header", "err", err.Error())
@@ -1269,8 +1269,8 @@ func RpcMarshalEthHeader(head *types.Header, engine consensus.Engine, chainConfi
 	return result, nil
 }
 
-func RpcMarshalEthBlock(block *types.Block, engine consensus.Engine, chainConfig *params.ChainConfig, inclMiner, inclTx, fullTx bool) (map[string]interface{}, error) {
-	fields, err := RpcMarshalEthHeader(block.Header(), engine, chainConfig, inclMiner)
+func RpcMarshalEthBlock(block *types.Block, sealer consensus.Sealer, chainConfig *params.ChainConfig, inclMiner, inclTx, fullTx bool) (map[string]interface{}, error) {
+	fields, err := RpcMarshalEthHeader(block.Header(), sealer, chainConfig, inclMiner)
 	if err != nil {
 		return nil, err
 	}
@@ -1301,12 +1301,12 @@ func RpcMarshalEthBlock(block *types.Block, engine consensus.Engine, chainConfig
 // rpcMarshalHeader marshal block header as Ethereum compatible format.
 // It returns error when fetching Author which is block proposer is failed.
 func (api *EthAPI) rpcMarshalHeader(head *types.Header, inclMiner bool) (map[string]interface{}, error) {
-	return RpcMarshalEthHeader(head, api.kaiaAPI.b.Engine(), api.kaiaAPI.b.ChainConfig(), inclMiner)
+	return RpcMarshalEthHeader(head, api.kaiaAPI.b.Sealer(), api.kaiaAPI.b.ChainConfig(), inclMiner)
 }
 
 // rpcMarshalBlock marshal block as Ethereum compatible format
 func (api *EthAPI) rpcMarshalBlock(block *types.Block, inclMiner, inclTx, fullTx bool) (map[string]interface{}, error) {
-	return RpcMarshalEthBlock(block, api.kaiaAPI.b.Engine(), api.kaiaAPI.b.ChainConfig(), inclMiner, inclTx, fullTx)
+	return RpcMarshalEthBlock(block, api.kaiaAPI.b.Sealer(), api.kaiaAPI.b.ChainConfig(), inclMiner, inclTx, fullTx)
 }
 
 func EthDoCall(ctx context.Context, b Backend, args EthTransactionArgs, blockNrOrHash rpc.BlockNumberOrHash, overrides *EthStateOverride, timeout time.Duration, globalGasCap uint64) (*blockchain.ExecutionResult, error) {

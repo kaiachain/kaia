@@ -30,7 +30,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -39,7 +39,6 @@ import (
 	"github.com/kaiachain/kaia/node"
 	"github.com/kaiachain/kaia/node/cn"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
 	"github.com/tyler-smith/go-bip32"
 	"golang.org/x/crypto/pbkdf2"
@@ -95,7 +94,7 @@ var blockchainTestChainConfig = &params.ChainConfig{
 	},
 	Istanbul: &params.IstanbulConfig{
 		Epoch:          120,
-		ProposerPolicy: uint64(istanbul.RoundRobin),
+		ProposerPolicy: uint64(0),
 		SubGroupSize:   100,
 	},
 }
@@ -158,13 +157,16 @@ func (ctx *blockchainTestContext) setConfig(config *params.ChainConfig) {
 }
 
 func (ctx *blockchainTestContext) setGenesis(alloc blockchain.GenesisAlloc) {
+	baseGenesis := blockchain.DefaultTestGenesisBlock()
+
 	// Genesis ExtraData from nodeAddrs
-	extra, _ := rlp.EncodeToBytes(&types.IstanbulExtra{
-		Validators:    ctx.accountAddrs[:ctx.numNodes],
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	})
-	vanity := make([]byte, types.IstanbulExtraVanity)
+	genesisHeader := &types.Header{
+		Number: big.NewInt(0),
+		Extra:  append([]byte(nil), baseGenesis.ExtraData...),
+	}
+	if err := bft.NewSealer(ctx.config, nil).WriteValidators(genesisHeader, ctx.accountAddrs[:ctx.numNodes]); err != nil {
+		panic(err)
+	}
 
 	// Genesis Alloc from overrides.alloc + rich accountAddrs
 	richBalance := new(big.Int).Mul(big.NewInt(params.KAIA), big.NewInt(10_000_000))
@@ -177,7 +179,7 @@ func (ctx *blockchainTestContext) setGenesis(alloc blockchain.GenesisAlloc) {
 	ctx.genesis = &blockchain.Genesis{
 		Config:     ctx.config,
 		Timestamp:  uint64(time.Now().Unix()),
-		ExtraData:  append(vanity, extra...),
+		ExtraData:  genesisHeader.Extra,
 		BlockScore: common.Big1,
 		Alloc:      alloc,
 	}

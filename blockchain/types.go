@@ -28,17 +28,18 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
 // Validator is an interface which defines the standard for block validation. It
 // is only responsible for validating block contents, as the header validation is
 // done by the specific consensus engines.
 type Validator interface {
-	// RegisterHeaderModules registers header modules used during header validation.
-	RegisterHeaderModules(modules ...kaiax.HeaderModule)
+	// RegisterKaiaxModules wires kaiax modules used during validation.
+	RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule, mHeader ...kaiax.HeaderModule)
 
-	// SetupKaiaxModules sets up Kaiax modules used during validation, such as the governance module.
-	SetupKaiaxModules(mGov gov.GovModule)
+	// ValsetModule returns the validator-set module if registered.
+	ValsetModule() valset.ValsetModule
 
 	// Preprocess preprocesses the given headers concurrently.
 	Preprocess(headers []*types.Header) (chan<- struct{}, <-chan error)

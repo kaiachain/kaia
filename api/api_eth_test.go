@@ -27,7 +27,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
-	"github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -204,17 +203,12 @@ func TestEthAPI_GetHeaderByHash(t *testing.T) {
 // testGetHeader generates data to test GetHeader related functions in EthAPI
 // and actually tests the API function passed as a parameter.
 func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig) {
-	mockCtrl, mockBackend, api := testInitForEthApi(t)
-
-	// Creates a MockEngine.
-	mockEngine := mocks.NewMockEngine(mockCtrl)
-	// GetHeader APIs calls internally below methods.
-	mockBackend.EXPECT().Engine().Return(mockEngine)
-	mockBackend.EXPECT().ChainConfig().Return(config).AnyTimes()
+	_, mockBackend, api := testInitForEthApi(t)
 
 	// Author is called when calculates miner field of Header.
 	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
-	mockEngine.EXPECT().Author(gomock.Any()).Return(dummyMiner, nil)
+	mockBackend.EXPECT().Sealer().Return(faker.NewFakerWithFixedSealer(dummyMiner)).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(config).AnyTimes()
 
 	// Create dummy header
 	header := types.CopyHeader(&types.Header{
@@ -309,16 +303,12 @@ func TestEthAPI_GetBlockByHash(t *testing.T) {
 // testGetBlock generates data to test GetBlock related functions in EthAPI
 // and actually tests the API function passed as a parameter.
 func testGetBlock(t *testing.T, testAPIName string, fullTxs bool) {
-	mockCtrl, mockBackend, api := testInitForEthApi(t)
+	_, mockBackend, api := testInitForEthApi(t)
 
-	// Creates a MockEngine.
-	mockEngine := mocks.NewMockEngine(mockCtrl)
-	// GetHeader APIs calls internally below methods.
-	mockBackend.EXPECT().Engine().Return(mockEngine)
-	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("ethTxType")).AnyTimes()
 	// Author is called when calculates miner field of Header.
 	dummyMiner := common.HexToAddress("0x9712f943b296758aaae79944ec975884188d3a96")
-	mockEngine.EXPECT().Author(gomock.Any()).Return(dummyMiner, nil)
+	mockBackend.EXPECT().Sealer().Return(faker.NewFakerWithFixedSealer(dummyMiner)).AnyTimes()
+	mockBackend.EXPECT().ChainConfig().Return(params.TestKaiaConfig("ethTxType")).AnyTimes()
 
 	// Create dummy header
 	header := types.CopyHeader(&types.Header{
@@ -2814,6 +2804,10 @@ func (mc *testChainContext) CurrentBlock() *types.Block {
 }
 
 func (mc *testChainContext) Engine() consensus.Engine {
+	return nil
+}
+
+func (mc *testChainContext) Sealer() consensus.Sealer {
 	return faker.NewFaker()
 }
 
@@ -2821,15 +2815,15 @@ func (mc *testChainContext) GetHeader(common.Hash, uint64) *types.Header {
 	return mc.header
 }
 
-func (mc *testChainContext) GetHeaderByNumber(number uint64) *types.Header {
+func (mc *testChainContext) GetHeaderByNumber(uint64) *types.Header {
 	return mc.header
 }
 
-func (mc *testChainContext) GetHeaderByHash(hash common.Hash) *types.Header {
+func (mc *testChainContext) GetHeaderByHash(common.Hash) *types.Header {
 	return mc.header
 }
 
-func (mc *testChainContext) GetBlock(hash common.Hash, number uint64) *types.Block {
+func (mc *testChainContext) GetBlock(common.Hash, uint64) *types.Block {
 	return types.NewBlock(mc.header, nil, nil)
 }
 
@@ -2837,7 +2831,7 @@ func (mc *testChainContext) State() (*state.StateDB, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (mc *testChainContext) StateAt(root common.Hash) (*state.StateDB, error) {
+func (mc *testChainContext) StateAt(common.Hash) (*state.StateDB, error) {
 	return nil, errors.New("not implemented")
 }
 

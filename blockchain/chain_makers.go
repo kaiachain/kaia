@@ -31,6 +31,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -43,15 +45,15 @@ type BlockGen struct {
 	i           int
 	parent      *types.Block
 	chain       []*types.Block
-	chainReader consensus.ChainReader
+	chainReader ChainContext
 	header      *types.Header
 	statedb     *state.StateDB
+	author      common.Address
 
 	txs      []*types.Transaction
 	receipts []*types.Receipt
 
 	config *params.ChainConfig
-	engine consensus.Engine
 }
 
 // SetRewardbase sets the rewardbase field of the generated block.
@@ -102,6 +104,10 @@ func (b *BlockGen) SetExcessBlobGas(excessBlobGas uint64) {
 // added. Notably, contract code relying on the BLOCKHASH instruction
 // will panic during execution.
 func (b *BlockGen) AddTx(tx *types.Transaction) {
+	if bc, ok := b.chainReader.(*BlockChain); ok {
+		b.AddTxWithChain(bc, tx)
+		return
+	}
 	b.AddTxWithChain(nil, tx)
 }
 
@@ -114,7 +120,11 @@ func (b *BlockGen) AddTx(tx *types.Transaction) {
 // the block in chain will be returned.
 func (b *BlockGen) AddTxWithChain(bc *BlockChain, tx *types.Transaction) {
 	b.statedb.SetTxContext(tx.Hash(), common.Hash{}, len(b.txs))
-	receipt, _, err := bc.ApplyTransaction(b.config, &params.AuthorAddressForTesting, b.statedb, b.header, tx, &b.header.GasUsed, &vm.Config{})
+	author := b.author
+	if author == (common.Address{}) {
+		author = params.AuthorAddressForTesting
+	}
+	receipt, _, err := bc.ApplyTransaction(b.config, &author, b.statedb, b.header, tx, &b.header.GasUsed, &vm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -130,11 +140,15 @@ func (b *BlockGen) AddTxWithChainEvenHasError(bc *BlockChain, tx *types.Transact
 	if bc != nil {
 		vmConfig = bc.vmConfig
 	}
-	auther, err := b.engine.Author(b.header)
-	if err != nil {
-		return err
+	author := b.author
+	if author == (common.Address{}) {
+		var err error
+		author, err = b.chainReader.Sealer().Author(b.header)
+		if err != nil {
+			return err
+		}
 	}
-	receipt, _, _ := bc.ApplyTransaction(b.config, &auther, b.statedb, b.header, tx, &b.header.GasUsed, &vmConfig)
+	receipt, _, _ := bc.ApplyTransaction(b.config, &author, b.statedb, b.header, tx, &b.header.GasUsed, &vmConfig)
 	b.txs = append(b.txs, tx)
 	if receipt != nil {
 		b.receipts = append(b.receipts, receipt)
@@ -208,10 +222,11 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 // Blocks created by GenerateChain do not contain valid proof of work
 // values. Inserting them into BlockChain requires use of FakePow or
 // a similar non-validating proof of work implementation.
-func GenerateChain(config *params.ChainConfig, parent *types.Block, engine consensus.Engine, db database.DBManager, n int, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
+func GenerateChain(config *params.ChainConfig, parent *types.Block, sealer consensus.Sealer, db database.DBManager, n int, gen func(int, *BlockGen)) ([]*types.Block, []types.Receipts) {
 	if config == nil {
 		config = params.TestChainConfig
 	}
+	signerSealer, signerAddr := generateChainSigner(config)
 	blocks, receipts := make(types.Blocks, n), make([]types.Receipts, n)
 	genblock := func(i int, parent *types.Block, stateDB *state.StateDB) (*types.Block, types.Receipts) {
 		// TODO(karalabe): This is needed for consensus engines, which depends on multiple blocks.
@@ -225,15 +240,22 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 			SnapshotCacheSize:   512,
 			SnapshotAsyncGen:    true,
 		}
-		blockchain, _ := NewBlockChain(db, cacheConfig, config, engine, vm.Config{})
+		blockchain, _ := NewBlockChain(db, cacheConfig, config, sealer, vm.Config{})
 		defer blockchain.Stop()
 
-		if module, ok := engine.(kaiax.BlockStateModule); ok {
+		if module, ok := blockchain.sealer.(kaiax.BlockStateModule); ok {
 			blockchain.Processor().RegisterBlockStateModule(module)
 		}
 
-		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: stateDB, config: config, engine: engine}
+		b := &BlockGen{i: i, parent: parent, chain: blocks, chainReader: blockchain, statedb: stateDB, config: config}
 		b.header = makeHeader(b.chainReader, parent, stateDB)
+		// Prefer the target sealer's author to align GenerateChain execution
+		// with subsequent block re-execution during insertion.
+		if author, err := blockchain.sealer.Author(b.header); err == nil {
+			b.author = author
+		} else {
+			b.author = signerAddr
+		}
 
 		processor := blockchain.Processor()
 		processor.InitializeState(b.header, stateDB)
@@ -255,6 +277,11 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 		if err := stateDB.Database().TrieDB().Commit(root, false, block.NumberU64()); err != nil {
 			panic(fmt.Sprintf("trie write error: %v", err))
 		}
+		sealedBlock, err := sealGeneratedBlock(blockchain.sealer, signerSealer, signerAddr, block)
+		if err != nil {
+			panic(fmt.Sprintf("seal write error: %v", err))
+		}
+		block = sealedBlock
 		return block, b.receipts
 	}
 	for i := range n {
@@ -270,7 +297,44 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, engine conse
 	return blocks, receipts
 }
 
-func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.StateDB) *types.Header {
+func generateChainSigner(config *params.ChainConfig) (consensus.Sealer, common.Address) {
+	// Deterministic signer key used only for synthetic test-chain generation.
+	key, err := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+	if err != nil {
+		panic(fmt.Sprintf("failed to build test signer: %v", err))
+	}
+	return bft.NewSealer(config, key), crypto.PubkeyToAddress(key.PublicKey)
+}
+
+func sealGeneratedBlock(targetSealer, signerSealer consensus.Sealer, signer common.Address, block *types.Block) (*types.Block, error) {
+	header := block.Header()
+	// Preserve already-sealed headers (e.g. explicitly prepared by a test case).
+	if _, err := targetSealer.Author(header); err == nil {
+		if committers, err := targetSealer.Committers(header); err == nil && len(committers) > 0 {
+			return block, nil
+		}
+	}
+	if err := targetSealer.WriteValidators(header, []common.Address{signer}); err != nil {
+		return nil, err
+	}
+	authorSeal, err := signerSealer.MakeAuthorSeal(header)
+	if err != nil {
+		return nil, err
+	}
+	if err := targetSealer.WriteAuthorSeal(header, authorSeal); err != nil {
+		return nil, err
+	}
+	committedSeal, err := signerSealer.MakeCommittedSeal(header)
+	if err != nil {
+		return nil, err
+	}
+	if err := targetSealer.WriteCommittedSeals(header, [][]byte{committedSeal}); err != nil {
+		return nil, err
+	}
+	return block.WithSeal(header), nil
+}
+
+func makeHeader(chain ChainContext, parent *types.Block, state *state.StateDB) *types.Header {
 	var time *big.Int
 	if parent.Time() == nil {
 		time = big.NewInt(10)
@@ -300,8 +364,8 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 }
 
 // MakeHeaderChain creates a deterministic chain of headers rooted at parent.
-func MakeHeaderChain(parent *types.Header, n int, engine consensus.Engine, db database.DBManager, seed int) []*types.Header {
-	blocks := MakeBlockChain(types.NewBlockWithHeader(parent), n, engine, db, seed)
+func MakeHeaderChain(parent *types.Header, n int, sealer consensus.Sealer, db database.DBManager, seed int) []*types.Header {
+	blocks := MakeBlockChain(types.NewBlockWithHeader(parent), n, sealer, db, seed)
 	headers := make([]*types.Header, len(blocks))
 	for i, block := range blocks {
 		headers[i] = block.Header()
@@ -310,8 +374,8 @@ func MakeHeaderChain(parent *types.Header, n int, engine consensus.Engine, db da
 }
 
 // MakeBlockChain creates a deterministic chain of blocks rooted at parent.
-func MakeBlockChain(parent *types.Block, n int, engine consensus.Engine, db database.DBManager, seed int) []*types.Block {
-	blocks, _ := GenerateChain(params.TestChainConfig, parent, engine, db, n, func(i int, b *BlockGen) {
+func MakeBlockChain(parent *types.Block, n int, sealer consensus.Sealer, db database.DBManager, seed int) []*types.Block {
+	blocks, _ := GenerateChain(params.TestChainConfig, parent, sealer, db, n, func(i int, b *BlockGen) {
 		b.SetRewardbase(common.Address{0: byte(seed), 19: byte(i)})
 	})
 	return blocks

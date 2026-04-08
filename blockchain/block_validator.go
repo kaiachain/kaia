@@ -31,8 +31,10 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -62,9 +64,12 @@ type BlockValidator struct {
 	config        *params.ChainConfig   // Chain configuration options
 	bc            *BlockChain           // Canonical block chain
 	hc            consensus.ChainReader // Header chain
-	engine        consensus.Engine      // Consensus engine
 	headerModules []kaiax.HeaderModule  // Header modules
-	mGov          gov.GovModule         // Governance module
+
+	// bc has next fields, but hc doesn't. However, these fields are required for header validation
+	sealer  consensus.Sealer    // Seal parser/verifier
+	mGov    gov.GovModule       // Governance module
+	mValset valset.ValsetModule // Validator-set module
 }
 
 // NewBlockValidator returns a new block validator which is safe for re-use
@@ -73,44 +78,22 @@ func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain) *Bloc
 		config: config,
 		bc:     blockchain,
 		hc:     blockchain,
-		engine: blockchain.Engine(),
+		sealer: blockchain.sealer,
 	}
 	return validator
 }
 
-func NewBlockValidatorWithHeaderChain(config *params.ChainConfig, hc consensus.ChainReader) *BlockValidator {
-	validator := &BlockValidator{
-		config: config,
-		hc:     hc,
-		engine: hc.Engine(),
-	}
-	return validator
-}
-
-func (v *BlockValidator) RegisterHeaderModules(modules ...kaiax.HeaderModule) {
-	v.headerModules = append(v.headerModules, modules...)
-}
-
-func (v *BlockValidator) SetupKaiaxModules(mGov gov.GovModule) {
+func (v *BlockValidator) RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule, mHeader ...kaiax.HeaderModule) {
 	v.mGov = mGov
+	v.mValset = mValset
+	v.headerModules = append(v.headerModules, mHeader...)
 }
 
-func (v *BlockValidator) kip71Config(blockNum uint64) (*params.KIP71Config, error) {
-	if v.mGov != nil {
-		pset := v.mGov.GetParamSet(blockNum)
-		return pset.ToKip71Config(), nil
-	}
-	if v.config == nil || v.config.Governance == nil || v.config.Governance.KIP71 == nil {
-		return nil, errors.New("missing KIP-71 config for magma header verification")
-	}
-	return v.config.Governance.KIP71, nil
+func (v *BlockValidator) ValsetModule() valset.ValsetModule {
+	return v.mValset
 }
 
 func (v *BlockValidator) ValidateHeader(header *types.Header) error {
-	if header.Number == nil {
-		return consensus.ErrUnknownBlock
-	}
-
 	return v.validateHeader(header, nil)
 }
 
@@ -127,9 +110,14 @@ func (v *BlockValidator) Preprocess(headers []*types.Header) (chan<- struct{}, <
 				if header.Number == nil {
 					err = consensus.ErrUnknownBlock
 				} else if header.Number.Uint64() != 0 {
-					_, err = v.engine.Author(header)
+					_, err = v.sealer.Author(header)
 					if err == nil {
-						_, err = v.engine.Committers(header)
+						cs, committersErr := v.sealer.Committers(header)
+						if committersErr != nil {
+							err = committersErr
+						} else if len(cs) == 0 {
+							err = istanbul.ErrEmptyCommittedSeals
+						}
 					}
 				}
 			}
@@ -149,10 +137,6 @@ func (v *BlockValidator) Preprocess(headers []*types.Header) (chan<- struct{}, <
 }
 
 func (v *BlockValidator) validateHeader(header *types.Header, parent *types.Header) error {
-	if header.Number == nil {
-		return consensus.ErrUnknownBlock
-	}
-
 	// Don't waste time checking blocks from the future
 	if header.Time.Cmp(big.NewInt(time.Now().Add(time.Duration(params.DefaultBlockGenerationInterval)*time.Second).Unix())) > 0 {
 		return consensus.ErrFutureBlock
@@ -204,19 +188,19 @@ func (v *BlockValidator) validateHeader(header *types.Header, parent *types.Head
 
 	// Verify Magma basefee rule from governance paramset.
 	if v.config.IsMagmaForkEnabled(header.Number) {
-		kip71Config, err := v.kip71Config(header.Number.Uint64())
-		if err != nil {
-			return err
-		}
-		if err := kip71Config.VerifyMagmaHeader(header.BaseFee, parent.Number, parent.BaseFee, parent.GasUsed); err != nil {
-			return err
+		// Skip governance-dependent validation when gov module is not registered.
+		if v.mGov != nil {
+			govParamSet := v.mGov.GetParamSet(header.Number.Uint64())
+			if err := govParamSet.ToKip71Config().VerifyMagmaHeader(header.BaseFee, parent.Number, parent.BaseFee, parent.GasUsed); err != nil {
+				return err
+			}
 		}
 	} else if header.BaseFee != nil {
 		return ErrInvalidBaseFee
 	}
 
 	// Verify the header's seal and consensus-specific fields.
-	if err := v.engine.VerifySeals(header); err != nil {
+	if err := v.verifySeals(header); err != nil {
 		return err
 	}
 
@@ -225,6 +209,57 @@ func (v *BlockValidator) validateHeader(header *types.Header, parent *types.Head
 		if err := module.VerifyHeader(header, parent); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (v *BlockValidator) verifySeals(header *types.Header) error {
+	if header.Number.Uint64() == 0 {
+		return nil
+	}
+	author, err := v.sealer.Author(header)
+	if err != nil {
+		return err
+	}
+	committers, err := v.sealer.Committers(header)
+	if err != nil {
+		return err
+	}
+	if len(committers) == 0 {
+		return istanbul.ErrEmptyCommittedSeals
+	}
+
+	blockNum := header.Number.Uint64()
+
+	// Skip module-dependent seal validation when gov/valset modules are not registered.
+	if v.mValset == nil || v.mGov == nil {
+		return nil
+	}
+
+	qualified, err := v.mValset.GetQualifiedValidators(blockNum)
+	if err != nil {
+		return err
+	}
+	if !valset.NewAddressSet(qualified).Contains(author) {
+		return istanbul.ErrUnauthorized
+	}
+
+	council, err := v.mValset.GetCouncil(blockNum)
+	if err != nil {
+		return err
+	}
+	councilSet := valset.NewAddressSet(council).Copy()
+	validSeal := 0
+	for _, addr := range committers {
+		if councilSet.Remove(addr) {
+			validSeal++
+		} else {
+			return istanbul.ErrInvalidCommittedSeals
+		}
+	}
+
+	if validSeal < v.sealer.Quorum(blockNum, len(qualified), int(v.mGov.GetParamSet(blockNum).CommitteeSize)) {
+		return istanbul.ErrInvalidCommittedSeals
 	}
 	return nil
 }

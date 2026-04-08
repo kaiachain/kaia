@@ -150,6 +150,20 @@ func (mr *MockBlockChainMockRecorder) GetHeaderByNumber(arg0 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeaderByNumber", reflect.TypeOf((*MockBlockChain)(nil).GetHeaderByNumber), arg0)
 }
 
+// Sealer mocks base method.
+func (m *MockBlockChain) Sealer() consensus.Sealer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Sealer")
+	ret0, _ := ret[0].(consensus.Sealer)
+	return ret0
+}
+
+// Sealer indicates an expected call of Sealer.
+func (mr *MockBlockChainMockRecorder) Sealer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sealer", reflect.TypeOf((*MockBlockChain)(nil).Sealer))
+}
+
 // State mocks base method.
 func (m *MockBlockChain) State() (*state.StateDB, error) {
 	m.ctrl.T.Helper()
@@ -178,4 +192,18 @@ func (m *MockBlockChain) StateAt(arg0 common.Hash) (*state.StateDB, error) {
 func (mr *MockBlockChainMockRecorder) StateAt(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StateAt", reflect.TypeOf((*MockBlockChain)(nil).StateAt), arg0)
+}
+
+// ValidateHeader mocks base method.
+func (m *MockBlockChain) ValidateHeader(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateHeader indicates an expected call of ValidateHeader.
+func (mr *MockBlockChainMockRecorder) ValidateHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateHeader", reflect.TypeOf((*MockBlockChain)(nil).ValidateHeader), arg0)
 }

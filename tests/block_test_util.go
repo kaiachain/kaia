@@ -154,24 +154,7 @@ type eestEngine struct {
 }
 
 var _ consensus.Engine = &eestEngine{}
-var _ blockchain.Validator = &eestEngine{}
-
-type eestChainReader struct {
-	config *params.ChainConfig
-}
-
-func (r eestChainReader) Config() *params.ChainConfig               { return r.config }
-func (eestChainReader) CurrentHeader() *types.Header                { return nil }
-func (eestChainReader) CurrentBlock() *types.Block                  { return nil }
-func (eestChainReader) Engine() consensus.Engine                    { return nil }
-func (eestChainReader) GetHeader(common.Hash, uint64) *types.Header { return nil }
-func (eestChainReader) GetHeaderByNumber(uint64) *types.Header      { return nil }
-func (eestChainReader) GetHeaderByHash(common.Hash) *types.Header   { return nil }
-func (eestChainReader) GetBlock(common.Hash, uint64) *types.Block   { return nil }
-func (eestChainReader) State() (*state.StateDB, error)              { return nil, errors.New("not implemented") }
-func (eestChainReader) StateAt(common.Hash) (*state.StateDB, error) {
-	return nil, errors.New("not implemented")
-}
+var _ blockchain.Validator = &eestValidator{}
 
 // This is called inside blockchain.ApplyTransaction to manipulate the evm configuration and recreate the eth.
 func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
@@ -216,12 +199,7 @@ func (e *eestEngine) newValidator() *blockchain.BlockValidator {
 		return nil
 	}
 	v := blockchain.NewBlockValidator(e.config, e.chain)
-	if len(e.headerModules) > 0 {
-		v.RegisterHeaderModules(e.headerModules...)
-	}
-	if e.govModule != nil {
-		v.SetupKaiaxModules(e.govModule)
-	}
+	v.RegisterKaiaxModules(e.govModule, nil, e.headerModules...)
 	return v
 }
 
@@ -231,6 +209,14 @@ func (e *eestEngine) RegisterHeaderModules(modules ...kaiax.HeaderModule) {
 
 func (e *eestEngine) SetupKaiaxModules(mGov gov.GovModule) {
 	e.govModule = mGov
+}
+
+func (e *eestEngine) ValsetModule() valset.ValsetModule {
+	return nil
+}
+
+func (e *eestEngine) Sealer() consensus.Sealer {
+	return e
 }
 
 func (e *eestEngine) Preprocess(headers []*types.Header) (chan<- struct{}, <-chan error) {
@@ -332,11 +318,12 @@ func (e *eestEngine) ValidateState(block, parent *types.Block, state *state.Stat
 }
 
 func (e *eestEngine) InitializeState(header *types.Header, state *state.StateDB) {
-	if e.config.IsPragueForkEnabled(header.Number) {
-		context := blockchain.NewEVMBlockContext(header, eestChainReader{config: e.config}, &common.Address{})
-		vmenv := vm.NewEVM(context, vm.TxContext{}, state, e.config, &vm.Config{})
-		blockchain.ProcessParentBlockHash(header, vmenv, state, e.config.Rules(header.Number))
+	if !e.config.IsPragueForkEnabled(header.Number) || e.chain == nil {
+		return
 	}
+	context := blockchain.NewEVMBlockContext(header, e.chain, &common.Address{})
+	vmenv := vm.NewEVM(context, vm.TxContext{}, state, e.config, &vm.Config{})
+	blockchain.ProcessParentBlockHash(header, vmenv, state, e.config.Rules(header.Number))
 }
 
 func (e *eestEngine) FinalizeState(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
@@ -360,6 +347,22 @@ func (e *eestEngine) Committers(header *types.Header) ([]common.Address, error) 
 	return nil, nil
 }
 
+func (e *eestEngine) Vanity(header *types.Header) ([]byte, error) {
+	return nil, nil
+}
+
+func (e *eestEngine) RawSeals(header *types.Header) ([]byte, [][]byte, error) {
+	return nil, nil, nil
+}
+
+func (e *eestEngine) Round(header *types.Header) (byte, error) {
+	return 0, nil
+}
+
+func (e *eestEngine) Validators(header *types.Header) ([]common.Address, error) {
+	return nil, nil
+}
+
 func (e *eestEngine) VerifySeals(header *types.Header) error {
 	return nil
 }
@@ -377,6 +380,71 @@ func (e *eestEngine) Stop() error {
 }
 
 func (e *eestEngine) RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule) {}
+
+type eestValidator struct {
+	engine *eestEngine
+}
+
+func (v *eestValidator) RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule, mHeader ...kaiax.HeaderModule) {
+	v.engine.RegisterKaiaxModules(mGov, mValset)
+	v.engine.headerModules = append(v.engine.headerModules, mHeader...)
+}
+
+func (v *eestValidator) ValsetModule() valset.ValsetModule { return nil }
+
+func (v *eestValidator) Preprocess(headers []*types.Header) (chan<- struct{}, <-chan error) {
+	return v.engine.Preprocess(headers)
+}
+
+func (v *eestValidator) ValidateHeader(header *types.Header) error {
+	return v.engine.ValidateHeader(header)
+}
+
+func (v *eestValidator) ValidateBody(block *types.Block) error {
+	return v.engine.ValidateBody(block)
+}
+
+func (v *eestValidator) ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas uint64) error {
+	return v.engine.ValidateState(block, parent, state, receipts, usedGas)
+}
+
+func (e *eestEngine) WriteAuthorSeal(header *types.Header, seal []byte) error {
+	return nil
+}
+
+func (e *eestEngine) WriteCommittedSeals(header *types.Header, committedSeals [][]byte) error {
+	return nil
+}
+
+func (e *eestEngine) WriteRound(header *types.Header, round int64) {}
+
+func (e *eestEngine) WriteValidators(header *types.Header, validators []common.Address) error {
+	return nil
+}
+
+func (e *eestEngine) MakeAuthorSeal(header *types.Header) ([]byte, error) {
+	return nil, nil
+}
+
+func (e *eestEngine) MakeCommittedSeal(header *types.Header) ([]byte, error) {
+	return nil, nil
+}
+
+func (e *eestEngine) HeaderHash(header *types.Header) common.Hash {
+	return header.Hash()
+}
+
+func (e *eestEngine) SigHash(header *types.Header) common.Hash {
+	return header.Hash()
+}
+
+func (e *eestEngine) F(blockNum uint64, qualifiedlen, committeeSize int) int {
+	return 0
+}
+
+func (e *eestEngine) Quorum(blockNum uint64, qualifiedlen, committeeSize int) int {
+	return 0
+}
 
 func (e *eestEngine) applyHeader(parent *types.Header, h btHeader) {
 	e.baseFee = h.BaseFee
@@ -447,7 +515,7 @@ func (t *BlockTest) Run() error {
 	engine.SetChain(chain)
 	defer chain.Stop()
 	chain.Processor().RegisterBlockStateModule(engine)
-	chain.SetValidatorForTest(engine)
+	chain.SetValidatorForTest(&eestValidator{engine: engine})
 
 	_, err = t.insertBlocks(chain, *gblock, db)
 	if err != nil {
@@ -515,12 +583,12 @@ func (t *BlockTest) insertBlocks(bc *blockchain.BlockChain, gBlock types.Block, 
 			}
 		}
 
-		// The eth header is recorded to the engine by calling applyHeader.
-		if e := bc.Engine().(interface{ applyHeader(*types.Header, btHeader) }); e != nil {
+		// The eth header is recorded to the sealer by calling applyHeader.
+		if e, ok := bc.Sealer().(interface{ applyHeader(*types.Header, btHeader) }); ok {
 			e.applyHeader(preBlock.Header(), header)
 		}
 
-		blocks, _ := blockchain.GenerateChain(bc.Config(), preBlock, bc.Engine(), db, 1, func(i int, b *blockchain.BlockGen) {
+		blocks, _ := blockchain.GenerateChain(bc.Config(), preBlock, bc.Sealer(), db, 1, func(i int, b *blockchain.BlockGen) {
 			b.SetRewardbase(common.Address(header.Coinbase))
 			b.SetMixHash(header.MixHash)
 			b.SetBaseFee(header.BaseFee)

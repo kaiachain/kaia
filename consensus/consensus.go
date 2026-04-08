@@ -47,8 +47,8 @@ type ChainReader interface {
 	// CurrentBlock revrieves the current block from the local chain.
 	CurrentBlock() *types.Block
 
-	// Engine retrieves the header chain's consensus engine.
-	Engine() Engine
+	// ValidateHeader validates a header according to chain rules.
+	ValidateHeader(header *types.Header) error
 
 	// GetHeader retrieves a block header from the database by hash and number.
 	GetHeader(hash common.Hash, number uint64) *types.Header
