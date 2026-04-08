@@ -1378,12 +1378,12 @@ func handleVRankCandidateMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
 
-	if vrankCandidate == nil || len(vrankCandidate.Sig) == 0 {
+	if vrankCandidate == nil || len(vrankCandidate.Sig) == 0 || len(vrankCandidate.BlsSig) == 0 {
 		return errResp(ErrDecode, "msg %v: malformed VRankCandidate payload", msg)
 	}
 
 	if err := pm.vrankModule.HandleVRankCandidate(vrankCandidate); err != nil {
-		if errors.Is(err, vrank.ErrRoundOutOfRange) || errors.Is(err, vrank.ErrInvalidCandidateSig) {
+		if errors.Is(err, vrank.ErrRoundOutOfRange) || errors.Is(err, vrank.ErrInvalidCandidateSig) || errors.Is(err, vrank.ErrInvalidCandidateBlsSig) {
 			return err
 		}
 		logger.Debug("Ignored VRankCandidate handler error", "peer", p.GetID(), "err", err)

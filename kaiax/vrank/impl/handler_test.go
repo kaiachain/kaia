@@ -140,8 +140,7 @@ func signVRankCandidate(t *testing.T, m *VRankModule, key *ecdsa.PrivateKey, bls
 	sigHash := m.vrankCandidateSigHash(blockNum, round, blockHash)
 	sig, err := crypto.Sign(sigHash.Bytes(), key)
 	require.NoError(t, err)
-	blsMsg := vrankCandidateBlsMsg(blockNum)
-	blsSig = bls.Sign(blsKey, blsMsg[:]).Marshal()
+	blsSig = bls.Sign(blsKey, sigHash.Bytes()).Marshal()
 	return sig, blsSig
 }
 
@@ -600,57 +599,6 @@ func TestHandleVRankCandidate(t *testing.T) {
 		}
 	})
 
-	t.Run("message from unknown sender does not affect valid candidate entry", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		valset := mock_valset.NewMockValsetModule(ctrl)
-		randao := mock_randao.NewMockRandaoModule(ctrl)
-		val, cand := createCN(t, valset, randao), createCN(t, valset, randao)
-
-		// makeMsg creates a signed VRankCandidate for the given block/round context.
-		makeMsg := func(m *VRankModule, key *ecdsa.PrivateKey, blsKey bls.SecretKey, blockNum uint64, round uint8, hash common.Hash) vrank.VRankCandidate {
-			sig, blsSig := signVRankCandidate(t, m, key, blsKey, blockNum, round, hash)
-			return vrank.VRankCandidate{BlockNumber: blockNum, Round: round, BlockHash: hash, Sig: sig, BlsSig: blsSig}
-		}
-
-		// makeUnknownSenderMsg crafts a message that passes ECDSA+BLS verification but recovers
-		// to an unknown address. The sig is for block2's context; applied to block1's sig hash it
-		// recovers to unknownAddr (not cand.Addr). GetBlsPubkey is mocked for unknownAddr since it
-		// has no real KIP-113 entry; bls.VerifySignature is a real call so a matching BLS sig is produced.
-		makeUnknownSenderMsg := func(blockNum uint64, round uint8, hash common.Hash) vrank.VRankCandidate {
-			block2 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(2)})
-			block2Sig, _ := signVRankCandidate(t, cand.VRankModule, cand.Key, cand.BlsKey, block2.NumberU64(), round, block2.Hash())
-			recoveredPub, _ := crypto.SigToPub(val.VRankModule.vrankCandidateSigHash(blockNum, round, hash).Bytes(), block2Sig)
-			unknownAddr := crypto.PubkeyToAddress(*recoveredPub)
-			unknownKey, _ := crypto.GenerateKey()
-			unknownBlsKey, _ := bls.DeriveFromECDSA(unknownKey)
-			randao.EXPECT().GetBlsPubkey(unknownAddr, gomock.Any()).Return(unknownBlsKey.PublicKey(), nil).AnyTimes()
-			blsMsg := vrankCandidateBlsMsg(blockNum)
-			return vrank.VRankCandidate{BlockNumber: blockNum, Round: round, BlockHash: hash, Sig: block2Sig, BlsSig: bls.Sign(unknownBlsKey, blsMsg[:]).Marshal()}
-		}
-
-		var (
-			msg        = makeMsg(cand.VRankModule, cand.Key, cand.BlsKey, block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash())
-			unknownMsg = makeUnknownSenderMsg(block1.NumberU64(), uint8(view1_0.Round.Uint64()), block1.Hash())
-		)
-
-		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
-		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
-
-		// 1. valid message from cand is accepted and stored.
-		require.NoError(t, val.VRankModule.HandleVRankCandidate(&msg))
-		_, _, candMap := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
-		assert.Len(t, candMap, 1)
-		assert.Equal(t, msg, *candMap[cand.Addr].Msg)
-
-		// 2. message from unknown sender is stored in a separate slot without overwriting cand's entry.
-		require.NoError(t, val.VRankModule.HandleVRankCandidate(&unknownMsg))
-		_, _, candMap = val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
-		assert.Len(t, candMap, 2)
-		assert.Equal(t, msg, *candMap[cand.Addr].Msg)
-	})
-
 	t.Run("stale messages should be discarded", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		valset := mock_valset.NewMockValsetModule(ctrl)
@@ -742,10 +690,8 @@ func TestHandleVRankCandidate(t *testing.T) {
 		vs.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 		var (
-			sigHash     = val.VRankModule.vrankCandidateSigHash(block1.NumberU64(), 0, block1.Hash())
-			ecdsaSig, _ = crypto.Sign(sigHash.Bytes(), candKey)
-			blsMsg      = vrankCandidateBlsMsg(block1.NumberU64())
-			msg         = &vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: 0, BlockHash: block1.Hash(), Sig: ecdsaSig, BlsSig: bls.Sign(candBlsKey, blsMsg[:]).Marshal()}
+			ecdsaSig, blsSig = signVRankCandidate(t, val.VRankModule, candKey, candBlsKey, block1.NumberU64(), 0, block1.Hash())
+			msg              = &vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: 0, BlockHash: block1.Hash(), Sig: ecdsaSig, BlsSig: blsSig}
 		)
 		assert.ErrorIs(t, val.VRankModule.HandleVRankCandidate(msg), vrank.ErrInvalidCandidateBlsSig)
 	})

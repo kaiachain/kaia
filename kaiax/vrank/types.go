@@ -73,15 +73,15 @@ type VRankBroadcastEvent struct {
 type VRankPreprepare struct {
 	Block *types.Block
 	View  *istanbul.View
-	Sig   []byte // proposer's signature over vrankPreprepareSigHash(chainID, blockNum, round, blockHash)
+	Sig   []byte // Sign(vrankPreprepareSigHash(), nodeKey)
 }
 
 type VRankCandidate struct {
 	BlockNumber uint64
 	Round       uint8
 	BlockHash   common.Hash
-	Sig         []byte // Sign(vrankPreprepareSigHash(), nodeKey)
-	BlsSig      []byte // Sign(blockNumber, blsKey)
+	Sig         []byte // Sign(vrankCandidateSigHash(), nodeKey)
+	BlsSig      []byte // Sign(vrankCandidateSigHash(), blsKey)
 }
 
 func EncodeReport(report []common.Address) ([]byte, error) {

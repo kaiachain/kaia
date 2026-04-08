@@ -87,8 +87,7 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 			logger.Error("Sign failed", "blockNum", block.NumberU64(), "blockHash", block.Hash().Hex())
 			return err
 		}
-		blsMsg := vrankCandidateBlsMsg(block.NumberU64())
-		blsSig := bls.Sign(v.BlsKey, blsMsg[:]).Marshal()
+		blsSig := bls.Sign(v.BlsKey, sigHash.Bytes()).Marshal()
 		// TODO-Permissionless: Testing only. Remove before production release.
 		if v.skipCandidate.Load() {
 			logger.Warn("SkipCandidate is enabled, skipping VRankCandidate broadcast")
@@ -133,7 +132,8 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 		return nil
 	}
 
-	sender, err := v.recoverVRankCandidateSender(msg)
+	sigHash := v.vrankCandidateSigHash(msg.BlockNumber, msg.Round, msg.BlockHash)
+	sender, err := v.recoverVRankCandidateSender(sigHash, msg.Sig)
 	if err != nil {
 		return err
 	}
@@ -142,8 +142,7 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if err != nil {
 		return fmt.Errorf("%w: %v", vrank.ErrInvalidCandidateBlsSig, err)
 	}
-	blsMsg := vrankCandidateBlsMsg(msg.BlockNumber)
-	ok, err := bls.VerifySignature(msg.BlsSig, blsMsg, blsPub)
+	ok, err := bls.VerifySignature(msg.BlsSig, sigHash, blsPub)
 	if err != nil || !ok {
 		return vrank.ErrInvalidCandidateBlsSig
 	}
@@ -201,21 +200,14 @@ func (v *VRankModule) verifyVRankPreprepareSender(msg *vrank.VRankPreprepare, se
 	return nil
 }
 
-func (v *VRankModule) recoverVRankCandidateSender(msg *vrank.VRankCandidate) (common.Address, error) {
-	sigHash := v.vrankCandidateSigHash(msg.BlockNumber, msg.Round, msg.BlockHash)
-	pubkey, err := crypto.SigToPub(sigHash.Bytes(), msg.Sig)
+func (v *VRankModule) recoverVRankCandidateSender(sigHash common.Hash, signature []byte) (common.Address, error) {
+	pubkey, err := crypto.SigToPub(sigHash.Bytes(), signature)
 	if err != nil {
-		logger.Debug("SigToPub failed", "err", err, "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
+		logger.Debug("SigToPub failed", "err", err, "sigHash", sigHash, "sig", signature)
 		return common.Address{}, fmt.Errorf("%w: %v", vrank.ErrInvalidCandidateSig, err)
 	}
 	sender := crypto.PubkeyToAddress(*pubkey)
 	return sender, nil
-}
-
-// vrankCandidateBlsMsg returns the message that candidates BLS-sign: the block number
-// encoded as a 32-byte big-endian hash, matching the Randao random-reveal format.
-func vrankCandidateBlsMsg(blockNum uint64) common.Hash {
-	return common.BytesToHash(new(big.Int).SetUint64(blockNum).Bytes())
 }
 
 func (v *VRankModule) vrankCandidateSigHash(blockNum uint64, round uint8, blockHash common.Hash) common.Hash {
