@@ -113,7 +113,7 @@ func TestGetEpochTransition_StateTransitions(t *testing.T) {
 		{"T3b: CandTesting + stake<min → ValInactive", valset.CandTesting, belowMinStake, valset.ValInactive, true},
 		{"ValReady + stake>=min → ValActive", valset.ValReady, aboveMinStake, valset.ValActive, false},
 		{"ValActive + stake>=min → ValActive", valset.ValActive, aboveMinStake, valset.ValActive, false},
-		{"ValPaused + stake>=min → ValPaused (preserved)", valset.ValPaused, aboveMinStake, valset.ValPaused, false},
+		{"ValPaused + stake>=min → ValActive (fallback)", valset.ValPaused, aboveMinStake, valset.ValActive, false},
 		{"T3b: ValActive + stake<min → ValInactive", valset.ValActive, belowMinStake, valset.ValInactive, true},
 		{"T3b: ValReady + stake<min → ValInactive", valset.ValReady, belowMinStake, valset.ValInactive, true},
 		{"T3b: ValPaused + stake<min → ValInactive", valset.ValPaused, belowMinStake, valset.ValInactive, true},
