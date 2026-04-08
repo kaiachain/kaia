@@ -203,11 +203,11 @@ func TestGetFallbackTransition(t *testing.T) {
 	// maxValidatorCount=3: top 3 are addr3, addr2, addr1 → ValActive; addr4 stays ValPaused.
 	result := v.getFallbackTransition(validators, 0, 0, 0, 3)
 
-	assert.Equal(t, valset.ValActive, result[addr3].State)
-	assert.Equal(t, valset.ValActive, result[addr2].State)
 	assert.Equal(t, valset.ValActive, result[addr1].State) // CandTesting passes vrank (nil scores)
-	assert.Equal(t, valset.ValPaused, result[addr4].State) // outside cap, unchanged
-	assert.Equal(t, valset.Registered, result[addr5].State) // non-competition, unchanged
+	assert.Equal(t, valset.ValActive, result[addr2].State)
+	assert.Equal(t, valset.ValActive, result[addr3].State)
+	assert.Equal(t, valset.ValPaused, result[addr4].State)           // outside cap, unchanged
+	assert.Equal(t, valset.Registered, result[addr5].State)          // non-competition, unchanged
 	assert.True(t, result[addr4].PausedTimeout.Equal(pausedTimeout)) // timeout preserved
 	// Input not mutated.
 	assert.Equal(t, valset.ValPaused, validators[addr4].State)
