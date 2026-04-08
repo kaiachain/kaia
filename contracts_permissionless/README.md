@@ -26,7 +26,6 @@ Permissionless (KIP-286/287) Solidity contracts, separated from `contracts/` to 
 
 | File | Source | Reason |
 |---|---|---|
-| `kip149/Registry.sol` | `contracts/system_contracts/kip149/` | Test helper deploys Registry at 0x401 |
 | `kip113/IAddressBook.sol` | `contracts/system_contracts/kip113/` | MultiCallContractMock dependency |
 | `testing/AddressBookMock.sol` | `contracts/testing/reward/` | Multicall permissioned mock (legacy) |
 | `testing/AddressBookV2Mock.sol` | New | ABv2 mock for permissionless test |
