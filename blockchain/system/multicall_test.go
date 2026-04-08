@@ -23,7 +23,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/contracts_permissionless/contracts/multicall"
+	"github.com/kaiachain/kaia/bindings/multicall"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
