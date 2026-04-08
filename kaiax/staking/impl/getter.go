@@ -21,11 +21,11 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind"
+	"github.com/kaiachain/kaia/bindings/multicall"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/bindings/multicall"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/params"
 )

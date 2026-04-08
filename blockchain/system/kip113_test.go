@@ -21,11 +21,11 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	proxycontracts "github.com/kaiachain/kaia/bindings/proxy"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
 	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip113"
 	testcontracts "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
-	proxycontracts "github.com/kaiachain/kaia/bindings/proxy"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/log"

@@ -21,9 +21,9 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	addressbookv2contract "github.com/kaiachain/kaia/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
-	addressbookv2contract "github.com/kaiachain/kaia/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/stretchr/testify/assert"

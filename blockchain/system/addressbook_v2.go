@@ -24,11 +24,11 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	abv2data "github.com/kaiachain/kaia/bindings/abv2data"
+	abv2contracts "github.com/kaiachain/kaia/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	abv2contracts "github.com/kaiachain/kaia/bindings/addressbookv2"
-	abv2data "github.com/kaiachain/kaia/bindings/abv2data"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )

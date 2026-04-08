@@ -24,12 +24,12 @@ import (
 
 	"github.com/kaiachain/kaia"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
+	"github.com/kaiachain/kaia/bindings/multicall"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/bindings/multicall"
 )
 
 // ContractCallerForMultiCall is an implementation of ContractCaller only for MultiCall contract.

@@ -21,6 +21,10 @@ package system
 import (
 	"errors"
 
+	addressbookv2contract "github.com/kaiachain/kaia/bindings/addressbookv2"
+	"github.com/kaiachain/kaia/bindings/multicall"
+	permlessproxycontract "github.com/kaiachain/kaia/bindings/proxy"
+	permlesstestcontract "github.com/kaiachain/kaia/bindings/testing"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/factory"
@@ -31,10 +35,6 @@ import (
 	proxycontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/proxy"
 	"github.com/kaiachain/kaia/contracts/contracts/testing/reward"
 	testcontract "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
-	addressbookv2contract "github.com/kaiachain/kaia/bindings/addressbookv2"
-	permlessproxycontract "github.com/kaiachain/kaia/bindings/proxy"
-	"github.com/kaiachain/kaia/bindings/multicall"
-	permlesstestcontract "github.com/kaiachain/kaia/bindings/testing"
 	"github.com/kaiachain/kaia/log"
 )
 
@@ -95,8 +95,8 @@ var (
 	AddressBookV2Code   = hexutil.MustDecode("0x" + addressbookv2contract.AddressBookV2BinRuntime)
 	AddressBookV2ABI, _ = addressbookv2contract.AddressBookV2MetaData.GetAbi()
 
-	MultiCallCode     = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
-	MultiCallMockCode        = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)
+	MultiCallCode             = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
+	MultiCallMockCode         = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)
 	MultiCallPermlessMockCode = hexutil.MustDecode("0x" + permlesstestcontract.MultiCallContractMockBinRuntime)
 
 	// Mock for CLRegistry testing

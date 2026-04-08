@@ -20,8 +20,8 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 
-	"github.com/kaiachain/kaia/common"
 	addressbookv2contract "github.com/kaiachain/kaia/bindings/addressbookv2"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/kaiax/valset"
@@ -84,4 +84,3 @@ func MakeTestPermissionlessConfig(n int) (*AllocPermissionlessConfig, []*ecdsa.P
 		},
 	}, nodeKeys
 }
-
