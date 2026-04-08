@@ -190,23 +190,25 @@ func TestGetFallbackTransition(t *testing.T) {
 	v := newTestValsetModule(ctrl) // mockVRank returns nil scores → isPassVrankTest passes
 
 	pausedTimeout := testBlockTime.Add(8 * time.Hour)
+	// Staking amounts differ so the cap selects by stake rank.
+	// Rank: addr3(highStake) > addr2(midStake) > addr1,addr4(lowStake, addr1<addr4 by address)
 	validators := valset.NodeStateMap{
-		addr1: {State: valset.CandTesting, StakingAmount: belowMinStake},
-		addr2: {State: valset.ValReady, StakingAmount: belowMinStake},
-		addr3: {State: valset.ValActive, StakingAmount: belowMinStake},
-		addr4: {State: valset.ValPaused, StakingAmount: belowMinStake, PausedTimeout: pausedTimeout},
-		addr5: {State: valset.Registered, StakingAmount: belowMinStake},
+		addr1: {State: valset.CandTesting, StakingAmount: lowStake},
+		addr2: {State: valset.ValReady, StakingAmount: midStake},
+		addr3: {State: valset.ValActive, StakingAmount: highStake},
+		addr4: {State: valset.ValPaused, StakingAmount: lowStake, PausedTimeout: pausedTimeout},
+		addr5: {State: valset.Registered, StakingAmount: highStake},
 	}
-	result := v.getFallbackTransition(validators, 0, 0, 0)
 
-	// Competition group promoted to ValActive with timeouts cleared.
-	assert.Equal(t, valset.ValActive, result[addr1].State) // CandTesting passes vrank (nil scores)
-	assert.Equal(t, valset.ValActive, result[addr2].State)
+	// maxValidatorCount=3: top 3 are addr3, addr2, addr1 → ValActive; addr4 stays ValPaused.
+	result := v.getFallbackTransition(validators, 0, 0, 0, 3)
+
 	assert.Equal(t, valset.ValActive, result[addr3].State)
-	assert.Equal(t, valset.ValActive, result[addr4].State)
-	assert.True(t, result[addr4].PausedTimeout.IsZero())
-	// Non-competition state unchanged.
-	assert.Equal(t, valset.Registered, result[addr5].State)
+	assert.Equal(t, valset.ValActive, result[addr2].State)
+	assert.Equal(t, valset.ValActive, result[addr1].State) // CandTesting passes vrank (nil scores)
+	assert.Equal(t, valset.ValPaused, result[addr4].State) // outside cap, unchanged
+	assert.Equal(t, valset.Registered, result[addr5].State) // non-competition, unchanged
+	assert.True(t, result[addr4].PausedTimeout.Equal(pausedTimeout)) // timeout preserved
 	// Input not mutated.
 	assert.Equal(t, valset.ValPaused, validators[addr4].State)
 }

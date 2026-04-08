@@ -97,23 +97,35 @@ func (v *ValsetModule) getEpochTransition(
 }
 
 // getFallbackTransition is the last-resort committee fallback when getEpochTransition produces no ValActive.
-// It promotes epoch-1's staking competition group members (CandTesting/ValReady/ValActive/ValPaused)
+// It promotes the top maxValidatorCount epoch-1 competition group members (sorted by stake desc, address asc)
 // to ValActive regardless of stake. CandTesting validators are still subject to the vrank test.
-func (v *ValsetModule) getFallbackTransition(validators valset.NodeStateMap, num, cfsThreshold, slotFactor uint64) valset.NodeStateMap {
+func (v *ValsetModule) getFallbackTransition(validators valset.NodeStateMap, num, cfsThreshold, slotFactor uint64, maxValidatorCount int) valset.NodeStateMap {
 	newValidators := validators.Copy()
+
+	var potentialActiveVal []sortableValidator
 	for addr, val := range newValidators {
 		switch val.State {
 		case valset.CandTesting:
 			if v.isPassVrankTest(addr, num, cfsThreshold, slotFactor) {
-				val.State = valset.ValActive
-				val.IdleTimeout = time.Time{}
-				val.PausedTimeout = time.Time{}
+				potentialActiveVal = append(potentialActiveVal, sortableValidator{addr, val})
 			}
 		case valset.ValReady, valset.ValActive, valset.ValPaused:
-			val.State = valset.ValActive
-			val.IdleTimeout = time.Time{}
-			val.PausedTimeout = time.Time{}
+			potentialActiveVal = append(potentialActiveVal, sortableValidator{addr, val})
 		}
+	}
+	slices.SortFunc(potentialActiveVal, func(a, b sortableValidator) int {
+		return cmp.Or(
+			cmp.Compare(b.StakingAmount, a.StakingAmount),
+			bytes.Compare(a.addr[:], b.addr[:]),
+		)
+	})
+	for i, sv := range potentialActiveVal {
+		if i >= maxValidatorCount {
+			break
+		}
+		sv.State = valset.ValActive
+		sv.IdleTimeout = time.Time{}
+		sv.PausedTimeout = time.Time{}
 	}
 	return newValidators
 }

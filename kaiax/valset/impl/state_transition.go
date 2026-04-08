@@ -104,7 +104,7 @@ func (v *ValsetModule) applyAllTransitions(
 			// Fallback: epoch transition produced no ValActive (e.g. all validators dropped below minStake).
 			// Use epoch-1 staking competition group as the committee, regardless of stake.
 			logger.Warn("Epoch transition produced no ValActive; falling back to epoch-1 committee", "num", num)
-			newValidators = v.getFallbackTransition(validators, num, cfsThreshold, slotFactor)
+			newValidators = v.getFallbackTransition(validators, num, cfsThreshold, slotFactor, int(maxValCount))
 		}
 	}
 	return newValidators, nil
