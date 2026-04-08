@@ -91,15 +91,24 @@ describe("Multicall permissionless", function () {
     expect(retKpf.toLowerCase()).to.equal("0x000000000000000000000000000000000000aaa3");
   });
 
-  it("multiCallNodeStatesPermissionless returns profiles, amounts, timeouts, maxCounts", async function () {
+  it("multiCallNodeStatesPermissionless returns profiles, amounts, timeouts, maxCounts, thresholds, slotFactor, slotLimits", async function () {
     const { abv2, multiCall, cnStakingAddrs, expectedAmounts } = await loadFixture(deployMulticallFixture);
 
-    // Set timeouts and max counts
+    // Set timeouts, max counts, thresholds, and slot factor
     await abv2.setTimeouts(28800, 2592000); // 8h, 30d in seconds
     await abv2.setMaxCounts(50, 100);
+    await abv2.setThresholds(2, 300); // pfsThreshold=2, cfsThreshold=300
+    await abv2.setSlotFactor(10); // slotFactor=10 → f(10)=3, maxSlot=1, minActive=8
 
     const result = await multiCall.multiCallNodeStatesPermissionless();
-    const [profiles, stakingAmounts, retPauseTimeout, retIdleTimeout, retMaxValCount, retMaxReadyCandCount] = result;
+    const [
+      profiles, stakingAmounts,
+      retPauseTimeout, retIdleTimeout,
+      retMaxValCount, retMaxReadyCandCount,
+      retPfsThreshold, retCfsThreshold,
+      retSlotFactor,
+      retMaxSlotAvailable, retMinActiveCount,
+    ] = result;
 
     expect(profiles.length).to.equal(3);
     for (let i = 0; i < 3; i++) {
@@ -111,5 +120,11 @@ describe("Multicall permissionless", function () {
     expect(retIdleTimeout).to.equal(2592000);
     expect(retMaxValCount).to.equal(50);
     expect(retMaxReadyCandCount).to.equal(100);
+    expect(retPfsThreshold).to.equal(2);
+    expect(retCfsThreshold).to.equal(300);
+    expect(retSlotFactor).to.equal(10);
+    // SlotMath for n=10: f(10)=3, maxSlotAvailable=max(1,3/2)=1, minActiveCount=max(7,8)=8
+    expect(retMaxSlotAvailable).to.equal(1);
+    expect(retMinActiveCount).to.equal(8);
   });
 });

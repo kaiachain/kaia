@@ -2,9 +2,10 @@
 pragma solidity ^0.8.18;
 
 import {Profile, State} from "../types/Node.sol";
+import {SlotMath} from "../libraries/SlotMath.sol";
 
 /// @title AddressBookV2Mock
-/// @notice Minimal mock for testing multiCallStakingInfoPermissionless
+/// @notice Minimal mock for testing multiCallStakingInfoPermissionless and multiCallNodeStatesPermissionless
 contract AddressBookV2Mock {
     Profile[] private profiles;
     address public kefAddress;
@@ -14,6 +15,9 @@ contract AddressBookV2Mock {
     uint256 public idleTimeout;
     uint256 public maxValidatorCount;
     uint256 public maxReadyCandidateCount;
+    uint256 public pfsThreshold;
+    uint256 public cfsThreshold;
+    uint256 public slotFactor;
 
     function addProfile(
         address nodeId,
@@ -55,5 +59,30 @@ contract AddressBookV2Mock {
 
     function getMaxCounts() external view returns (uint256, uint256) {
         return (maxValidatorCount, maxReadyCandidateCount);
+    }
+
+    function setThresholds(uint256 _pfsThreshold, uint256 _cfsThreshold) external {
+        pfsThreshold = _pfsThreshold;
+        cfsThreshold = _cfsThreshold;
+    }
+
+    function setSlotFactor(uint256 _slotFactor) external {
+        slotFactor = _slotFactor;
+    }
+
+    function getPfsThreshold() external view returns (uint256) {
+        return pfsThreshold;
+    }
+
+    function getCfsThreshold() external view returns (uint256) {
+        return cfsThreshold;
+    }
+
+    function getSlotFactor() external view returns (uint256) {
+        return slotFactor;
+    }
+
+    function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount) {
+        return (SlotMath.maxSlotAvailable(slotFactor), SlotMath.minActiveCount(slotFactor));
     }
 }
