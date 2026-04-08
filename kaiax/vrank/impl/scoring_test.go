@@ -23,6 +23,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	mock_randao "github.com/kaiachain/kaia/kaiax/randao/mock"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/params"
@@ -43,7 +44,7 @@ func addrN(n int) common.Address {
 func newTestModuleWithHeaders(t *testing.T, valset *mock_valset.MockValsetModule, db database.Database, headers map[uint64]*types.Header) *VRankModule {
 	t.Helper()
 
-	_, module := newTestModule(t, valset, db, &testChain{headers: map[uint64]*types.Header{}})
+	_, _, module, _ := newTestModule(t, valset, db, &testChain{headers: map[uint64]*types.Header{}})
 	module.Chain = &testChain{headers: headers}
 	return module
 }
@@ -136,7 +137,8 @@ func TestGetPFS(t *testing.T) {
 
 		ctrl   = gomock.NewController(t)
 		valset = mock_valset.NewMockValsetModule(ctrl)
-		v      = createCN(t, valset).VRankModule
+		randao = mock_randao.NewMockRandaoModule(ctrl)
+		v      = createCN(t, valset, randao).VRankModule
 	)
 
 	for i := uint64(0); i <= round2Offset; i++ {
@@ -183,7 +185,7 @@ func TestGetPFS_ErrNotPermissionless(t *testing.T) {
 	valset := mock_valset.NewMockValsetModule(ctrl)
 
 	// Empty chain at Init so catchUpScoreCaches exits early (nil head), then swap in real state.
-	_, module := newTestModule(t, valset, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
+	_, _, module, _ := newTestModule(t, valset, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
 	// Switch to osaka config (permissionless fork NOT enabled) and inject chain.
 	module.ChainConfig = params.TestKaiaConfig("osaka")
 	module.Chain = &testChain{headers: map[uint64]*types.Header{10: makeHeaderWithRound(10, 0)}}
@@ -477,7 +479,8 @@ func TestGetCFS(t *testing.T) {
 
 		ctrl := gomock.NewController(t)
 		valset := mock_valset.NewMockValsetModule(ctrl)
-		v := createCN(t, valset).VRankModule
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := createCN(t, valset, randao).VRankModule
 
 		headers := make(map[uint64]*types.Header, params.DefaultVRankEpoch)
 		for i := uint64(0); i < params.DefaultVRankEpoch; i++ {
@@ -506,7 +509,8 @@ func TestGetCFS(t *testing.T) {
 		candidates := []common.Address{C1, C2, C3}
 		ctrl := gomock.NewController(t)
 		valset := mock_valset.NewMockValsetModule(ctrl)
-		v := createCN(t, valset).VRankModule
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := createCN(t, valset, randao).VRankModule
 		v.Chain = &testChain{
 			headers: map[uint64]*types.Header{
 				epochStart:     makeHeaderWithVRank(epochStart, 0, nil),
@@ -545,7 +549,7 @@ func TestGetCFS_ErrNotPermissionless(t *testing.T) {
 	valset := mock_valset.NewMockValsetModule(ctrl)
 
 	// Empty chain at Init so catchUpScoreCaches exits early (nil head), then swap in real state.
-	_, module := newTestModule(t, valset, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
+	_, _, module, _ := newTestModule(t, valset, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
 	// Switch to osaka config (permissionless fork NOT enabled) and inject chain.
 	module.ChainConfig = params.TestKaiaConfig("osaka")
 	module.Chain = &testChain{headers: map[uint64]*types.Header{10: makeHeaderWithRound(10, 0)}}
@@ -873,7 +877,8 @@ func TestApplyBlocksForPFS(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	valset := mock_valset.NewMockValsetModule(ctrl)
-	v := createCN(t, valset).VRankModule
+	randao := mock_randao.NewMockRandaoModule(ctrl)
+	v := createCN(t, valset, randao).VRankModule
 	v.Chain = &testChain{
 		headers: map[uint64]*types.Header{
 			10: makeHeaderWithRound(10, 0),
@@ -916,7 +921,8 @@ func TestApplyBlocksForCFS(t *testing.T) {
 
 		ctrl := gomock.NewController(t)
 		valset := mock_valset.NewMockValsetModule(ctrl)
-		v := createCN(t, valset).VRankModule
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := createCN(t, valset, randao).VRankModule
 		v.Chain = &testChain{
 			headers: map[uint64]*types.Header{
 				5: makeHeaderWithVRank(5, 0, nil),                          // epoch start, empty
@@ -971,7 +977,8 @@ func TestApplyBlocksForCFS(t *testing.T) {
 
 		ctrl := gomock.NewController(t)
 		valset := mock_valset.NewMockValsetModule(ctrl)
-		v := createCN(t, valset).VRankModule
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := createCN(t, valset, randao).VRankModule
 		v.Chain = &testChain{headers: headers}
 
 		valset.EXPECT().GetCandidates(start).Return(candidates, nil).Times(1)
@@ -1006,7 +1013,8 @@ func TestApplyBlocksForCFS(t *testing.T) {
 
 		ctrl := gomock.NewController(t)
 		valset := mock_valset.NewMockValsetModule(ctrl)
-		v := createCN(t, valset).VRankModule
+		randao := mock_randao.NewMockRandaoModule(ctrl)
+		v := createCN(t, valset, randao).VRankModule
 
 		// Only one block in the range: the epoch-start block with nil VRank.
 		v.Chain = &testChain{

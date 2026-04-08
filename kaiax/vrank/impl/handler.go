@@ -27,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
@@ -86,6 +87,7 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 			logger.Error("Sign failed", "blockNum", block.NumberU64(), "blockHash", block.Hash().Hex())
 			return err
 		}
+		blsSig := bls.Sign(v.BlsKey, sigHash.Bytes()).Marshal()
 		// TODO-Permissionless: Testing only. Remove before production release.
 		if v.skipCandidate.Load() {
 			logger.Warn("SkipCandidate is enabled, skipping VRankCandidate broadcast")
@@ -96,6 +98,7 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 			Round:       uint8(view.Round.Uint64()),
 			BlockHash:   block.Hash(),
 			Sig:         sig,
+			BlsSig:      blsSig,
 		})
 	}
 	return nil
@@ -129,9 +132,19 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 		return nil
 	}
 
-	sender, err := v.recoverVRankCandidateSender(msg)
+	sigHash := v.vrankCandidateSigHash(msg.BlockNumber, msg.Round, msg.BlockHash)
+	sender, err := v.recoverVRankCandidateSender(sigHash, msg.Sig)
 	if err != nil {
 		return err
+	}
+	headNum := v.Chain.CurrentHeader().Number
+	blsPub, err := v.Randao.GetBlsPubkey(sender, headNum)
+	if err != nil {
+		return fmt.Errorf("%w: %v", vrank.ErrInvalidCandidateBlsSig, err)
+	}
+	ok, err := bls.VerifySignature(msg.BlsSig, sigHash, blsPub)
+	if err != nil || !ok {
+		return vrank.ErrInvalidCandidateBlsSig
 	}
 	vk := vrank.ViewKey{N: msg.BlockNumber, R: msg.Round}
 	if v.collector.HasCandMsg(vk, sender) {
@@ -187,11 +200,10 @@ func (v *VRankModule) verifyVRankPreprepareSender(msg *vrank.VRankPreprepare, se
 	return nil
 }
 
-func (v *VRankModule) recoverVRankCandidateSender(msg *vrank.VRankCandidate) (common.Address, error) {
-	sigHash := v.vrankCandidateSigHash(msg.BlockNumber, msg.Round, msg.BlockHash)
-	pubkey, err := crypto.SigToPub(sigHash.Bytes(), msg.Sig)
+func (v *VRankModule) recoverVRankCandidateSender(sigHash common.Hash, signature []byte) (common.Address, error) {
+	pubkey, err := crypto.SigToPub(sigHash.Bytes(), signature)
 	if err != nil {
-		logger.Debug("SigToPub failed", "err", err, "blockNum", msg.BlockNumber, "blockHash", msg.BlockHash, "sig", msg.Sig)
+		logger.Debug("SigToPub failed", "err", err, "sigHash", sigHash, "sig", signature)
 		return common.Address{}, fmt.Errorf("%w: %v", vrank.ErrInvalidCandidateSig, err)
 	}
 	sender := crypto.PubkeyToAddress(*pubkey)

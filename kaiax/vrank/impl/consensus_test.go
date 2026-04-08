@@ -77,49 +77,49 @@ func TestVerifyHeader(t *testing.T) {
 
 	t.Run("epoch-start: empty VRank passes", func(t *testing.T) {
 		vs := noCallValset(t)
-		_, module := newTestModule(t, vs, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
+		_, _, module, _ := newTestModule(t, vs, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
 		h := &types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}
 		assert.NoError(t, module.VerifyHeader(h))
 	})
 
 	t.Run("epoch-start: non-empty VRank rejected", func(t *testing.T) {
 		vs := noCallValset(t)
-		_, module := newTestModule(t, vs, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
+		_, _, module, _ := newTestModule(t, vs, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
 		assert.ErrorIs(t, module.VerifyHeader(makeVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C1})),
 			vrank.ErrUnexpectedVRankAtEpochStart)
 	})
 
 	t.Run("post-fork non-epoch: empty VRank passes", func(t *testing.T) {
 		vs := noCallValset(t)
-		_, module := newTestModule(t, vs, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
+		_, _, module, _ := newTestModule(t, vs, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
 		h := &types.Header{Number: big.NewInt(100)}
 		assert.NoError(t, module.VerifyHeader(h))
 	})
 
 	t.Run("valid sorted report with known candidates passes", func(t *testing.T) {
 		const num = uint64(100)
-		_, module := newTestModule(t, withCandidates(t, num), database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
+		_, _, module, _ := newTestModule(t, withCandidates(t, num), database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
 		assert.NoError(t, module.VerifyHeader(makeVRankHeader(t, num, []common.Address{C1, C2, C3})))
 	})
 
 	t.Run("unknown address rejected", func(t *testing.T) {
 		const num = uint64(100)
 		unknown := addrN(99)
-		_, module := newTestModule(t, withCandidates(t, num), database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
+		_, _, module, _ := newTestModule(t, withCandidates(t, num), database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
 		assert.ErrorIs(t, module.VerifyHeader(makeVRankHeader(t, num, []common.Address{C1, unknown})),
 			vrank.ErrInvalidVRankCandidate)
 	})
 
 	t.Run("duplicate address rejected", func(t *testing.T) {
 		const num = uint64(100)
-		_, module := newTestModule(t, withCandidates(t, num), database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
+		_, _, module, _ := newTestModule(t, withCandidates(t, num), database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
 		assert.ErrorIs(t, module.VerifyHeader(makeVRankHeader(t, num, []common.Address{C1, C1})),
 			vrank.ErrDuplicateVRankCandidate)
 	})
 
 	t.Run("unsorted addresses rejected", func(t *testing.T) {
 		const num = uint64(100)
-		_, module := newTestModule(t, withCandidates(t, num), database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
+		_, _, module, _ := newTestModule(t, withCandidates(t, num), database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
 		// C3 > C2, so C3 before C2 is not ascending.
 		assert.ErrorIs(t, module.VerifyHeader(makeVRankHeader(t, num, []common.Address{C3, C2})),
 			vrank.ErrVRankNotSorted)
@@ -127,7 +127,7 @@ func TestVerifyHeader(t *testing.T) {
 
 	t.Run("invalid encoding rejected", func(t *testing.T) {
 		vs := noCallValset(t)
-		_, module := newTestModule(t, vs, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
+		_, _, module, _ := newTestModule(t, vs, database.NewMemDB(), &testChain{headers: map[uint64]*types.Header{}})
 		h := &types.Header{Number: big.NewInt(100), VRank: []byte{0xff, 0xfe}} // garbage
 		assert.ErrorIs(t, module.VerifyHeader(h), vrank.ErrInvalidVRankFormat)
 	})

@@ -25,6 +25,8 @@ import (
 	"github.com/kaiachain/kaia/common"
 	consensus_mocks "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls"
+	mock_randao "github.com/kaiachain/kaia/kaiax/randao/mock"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/params"
@@ -64,6 +66,9 @@ func TestInit_CatchUpFromCheckpoint(t *testing.T) {
 	valset := mock_valset.NewMockValsetModule(ctrl)
 	key, err := crypto.GenerateKey()
 	require.NoError(t, err)
+	blsKey, err := bls.DeriveFromECDSA(key)
+	require.NoError(t, err)
+	randao := mock_randao.NewMockRandaoModule(ctrl)
 
 	// round=0 → P1 (pfReport proposer); round=1 → P2 (cfReport reporter).
 	valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -80,6 +85,8 @@ func TestInit_CatchUpFromCheckpoint(t *testing.T) {
 	module := NewVRankModule()
 	require.NoError(t, module.Init(&InitOpts{
 		NodeKey:     key,
+		BlsKey:      blsKey,
+		Randao:      randao,
 		Valset:      valset,
 		ChainConfig: params.TestKaiaConfig("permissionless"),
 		Chain:       &testChain{headers: headers, engine: mockEngine},
@@ -133,10 +140,15 @@ func TestVRankModule_RestartAfterStop(t *testing.T) {
 
 	key, err := crypto.GenerateKey()
 	require.NoError(t, err)
+	blsKey, err := bls.DeriveFromECDSA(key)
+	require.NoError(t, err)
+	randao := mock_randao.NewMockRandaoModule(ctrl)
 
 	module := NewVRankModule()
 	require.NoError(t, module.Init(&InitOpts{
 		NodeKey:     key,
+		BlsKey:      blsKey,
+		Randao:      randao,
 		Valset:      valset,
 		ChainConfig: params.TestKaiaConfig("permissionless"),
 		Chain:       &testChain{headers: map[uint64]*types.Header{}},

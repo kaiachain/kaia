@@ -26,6 +26,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/kaiax/vrank"
@@ -54,7 +55,9 @@ var (
 
 type InitOpts struct {
 	Valset      valset.ValsetModule
+	Randao      vrank.BlsPubkeyGetter
 	NodeKey     *ecdsa.PrivateKey
+	BlsKey      bls.SecretKey
 	ChainConfig *params.ChainConfig
 	Chain       chain
 	ChainKv     database.Database
@@ -116,7 +119,7 @@ func (v *VRankModule) scoreCheckpointInterval() uint64 {
 }
 
 func (v *VRankModule) Init(opts *InitOpts) error {
-	if opts == nil || opts.Valset == nil || opts.NodeKey == nil || opts.ChainConfig == nil || opts.ChainConfig.ChainID == nil || opts.Chain == nil || opts.ChainKv == nil {
+	if opts == nil || opts.Valset == nil || opts.Randao == nil || opts.NodeKey == nil || opts.BlsKey == nil || opts.ChainConfig == nil || opts.ChainConfig.ChainID == nil || opts.Chain == nil || opts.ChainKv == nil {
 		return vrank.ErrInitUnexpectedNil
 	}
 	v.InitOpts = *opts
