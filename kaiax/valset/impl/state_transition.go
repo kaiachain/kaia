@@ -18,9 +18,7 @@ package impl
 
 import (
 	"fmt"
-	"maps"
 	"math/big"
-	"slices"
 	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
@@ -96,16 +94,6 @@ func (v *ValsetModule) applyAllTransitions(
 	newValidators = v.getTimeoutTransition(newValidators, idleTimeout, pauseTimeout, blockTime)
 	if v.isVrankEpoch(num) {
 		newValidators = v.getEpochTransition(minStake, newValidators, idleTimeout, int(maxValCount), blockTime, header.Number.Uint64(), cfsThreshold, slotFactor)
-
-		hasActive := slices.ContainsFunc(slices.Collect(maps.Values(newValidators)), func(val *valset.ValidatorState) bool {
-			return val != nil && val.State == valset.ValActive
-		})
-		if !hasActive {
-			// Fallback: epoch transition produced no ValActive (e.g. all validators dropped below minStake).
-			// Use epoch-1 staking competition group as the committee, regardless of stake.
-			logger.Warn("Epoch transition produced no ValActive; falling back to epoch-1 committee", "num", num)
-			newValidators = v.getFallbackTransition(validators, blockTime, idleTimeout, num, cfsThreshold, slotFactor, int(maxValCount))
-		}
 	}
 	return newValidators, nil
 }

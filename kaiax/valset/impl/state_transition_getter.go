@@ -54,6 +54,29 @@ func (v *ValsetModule) getEpochTransition(
 	now time.Time,
 	num, cfsThreshold, slotFactor uint64,
 ) valset.NodeStateMap {
+	result := v.doEpochTransition(validators, minStake, idleTimeout, maxValidatorCount, now, num, cfsThreshold, slotFactor, false)
+	for _, val := range result {
+		if val != nil && val.State == valset.ValActive {
+			return result
+		}
+	}
+
+	logger.Warn("Epoch transition produced no ValActive; retrying with staking filter lifted", "num", num)
+	return v.doEpochTransition(validators, minStake, idleTimeout, maxValidatorCount, now, num, cfsThreshold, slotFactor, true)
+}
+
+// doEpochTransition applies all epoch state transitions (T1–T4) and the staking competition cap.
+// When fallback is true, the minStake guard (T3b) is skipped so all competition-group
+// members are eligible regardless of stake.
+func (v *ValsetModule) doEpochTransition(
+	validators valset.NodeStateMap,
+	minStake uint64,
+	idleTimeout time.Duration,
+	maxValidatorCount int,
+	now time.Time,
+	num, cfsThreshold, slotFactor uint64,
+	fallback bool, // when true, collect `activeValCompetitors` regardless of stake amount
+) valset.NodeStateMap {
 	var (
 		newValidators        = validators.Copy()
 		activeValCompetitors []sortableValidator
@@ -71,7 +94,7 @@ func (v *ValsetModule) getEpochTransition(
 			}
 		case valset.CandTesting:
 			if v.isPassVrankTest(addr, num, cfsThreshold, slotFactor) {
-				if val.StakingAmount >= minStake {
+				if fallback || val.StakingAmount >= minStake {
 					activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
 				} else {
 					val.State = valset.ValInactive // T3b
@@ -81,7 +104,7 @@ func (v *ValsetModule) getEpochTransition(
 				val.State = valset.Registered // T2
 			}
 		case valset.ValReady, valset.ValActive, valset.ValPaused:
-			if val.StakingAmount >= minStake {
+			if fallback || val.StakingAmount >= minStake {
 				activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
 			} else {
 				val.State = valset.ValInactive // T3b
@@ -97,37 +120,6 @@ func (v *ValsetModule) getEpochTransition(
 				potentialActiveVal.IdleTimeout = time.Time{}
 				potentialActiveVal.PausedTimeout = time.Time{}
 			}
-		} else {
-			potentialActiveVal.State = valset.ValInactive
-			potentialActiveVal.IdleTimeout = now.Add(idleTimeout)
-		}
-	}
-	return newValidators
-}
-
-// getFallbackTransition is the last-resort committee fallback when getEpochTransition produces no ValActive.
-// It promotes the top maxValidatorCount epoch-1 competition group members (sorted by stake desc, address asc)
-// to ValActive regardless of stake. CandTesting validators are still subject to the vrank test.
-func (v *ValsetModule) getFallbackTransition(validators valset.NodeStateMap, now time.Time, idleTimeout time.Duration, num, cfsThreshold, slotFactor uint64, maxValidatorCount int) valset.NodeStateMap {
-	newValidators := validators.Copy()
-
-	var activeValCompetitors []sortableValidator
-	for addr, val := range newValidators {
-		switch val.State {
-		case valset.CandTesting:
-			if v.isPassVrankTest(addr, num, cfsThreshold, slotFactor) {
-				activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val})
-			}
-		case valset.ValReady, valset.ValActive, valset.ValPaused:
-			activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val})
-		}
-	}
-	sortValidatorsByRank(activeValCompetitors)
-	for idx, potentialActiveVal := range activeValCompetitors {
-		if idx < maxValidatorCount {
-			potentialActiveVal.State = valset.ValActive
-			potentialActiveVal.IdleTimeout = time.Time{}
-			potentialActiveVal.PausedTimeout = time.Time{}
 		} else {
 			potentialActiveVal.State = valset.ValInactive
 			potentialActiveVal.IdleTimeout = now.Add(idleTimeout)
