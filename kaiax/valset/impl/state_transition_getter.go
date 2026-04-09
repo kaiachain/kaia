@@ -31,6 +31,20 @@ type sortableValidator struct {
 	*valset.ValidatorState
 }
 
+// compareValidatorRank defines the canonical staking competition order:
+// higher stake first; equal stake breaks ties by address ascending.
+func compareValidatorRank(a, b sortableValidator) int {
+	return cmp.Or(
+		cmp.Compare(b.StakingAmount, a.StakingAmount),
+		bytes.Compare(a.addr[:], b.addr[:]),
+	)
+}
+
+// sortValidatorsByRank sorts activeValCompetitors in place by staking competition order.
+func sortValidatorsByRank(activeValCompetitors []sortableValidator) {
+	slices.SortFunc(activeValCompetitors, compareValidatorRank)
+}
+
 // getEpochTransition returns new validators after applying epoch transition
 func (v *ValsetModule) getEpochTransition(
 	minStake uint64,
@@ -75,12 +89,7 @@ func (v *ValsetModule) getEpochTransition(
 			}
 		}
 	}
-	slices.SortFunc(activeValCompetitors, func(a, b sortableValidator) int {
-		return cmp.Or(
-			cmp.Compare(b.StakingAmount, a.StakingAmount),
-			bytes.Compare(a.addr[:], b.addr[:]), // tie-breaking: address order
-		)
-	})
+	sortValidatorsByRank(activeValCompetitors)
 	for idx, potentialActiveVal := range activeValCompetitors {
 		if idx < maxValidatorCount {
 			if potentialActiveVal.State != valset.ValPaused {
@@ -99,7 +108,7 @@ func (v *ValsetModule) getEpochTransition(
 // getFallbackTransition is the last-resort committee fallback when getEpochTransition produces no ValActive.
 // It promotes the top maxValidatorCount epoch-1 competition group members (sorted by stake desc, address asc)
 // to ValActive regardless of stake. CandTesting validators are still subject to the vrank test.
-func (v *ValsetModule) getFallbackTransition(validators valset.NodeStateMap, num, cfsThreshold, slotFactor uint64, maxValidatorCount int) valset.NodeStateMap {
+func (v *ValsetModule) getFallbackTransition(validators valset.NodeStateMap, now time.Time, idleTimeout time.Duration, num, cfsThreshold, slotFactor uint64, maxValidatorCount int) valset.NodeStateMap {
 	newValidators := validators.Copy()
 
 	var activeValCompetitors []sortableValidator
@@ -113,19 +122,16 @@ func (v *ValsetModule) getFallbackTransition(validators valset.NodeStateMap, num
 			activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val})
 		}
 	}
-	slices.SortFunc(activeValCompetitors, func(a, b sortableValidator) int {
-		return cmp.Or(
-			cmp.Compare(b.StakingAmount, a.StakingAmount),
-			bytes.Compare(a.addr[:], b.addr[:]), // tie-breaking: address order
-		)
-	})
+	sortValidatorsByRank(activeValCompetitors)
 	for idx, potentialActiveVal := range activeValCompetitors {
-		if idx >= maxValidatorCount {
-			break
+		if idx < maxValidatorCount {
+			potentialActiveVal.State = valset.ValActive
+			potentialActiveVal.IdleTimeout = time.Time{}
+			potentialActiveVal.PausedTimeout = time.Time{}
+		} else {
+			potentialActiveVal.State = valset.ValInactive
+			potentialActiveVal.IdleTimeout = now.Add(idleTimeout)
 		}
-		potentialActiveVal.State = valset.ValActive
-		potentialActiveVal.IdleTimeout = time.Time{}
-		potentialActiveVal.PausedTimeout = time.Time{}
 	}
 	return newValidators
 }

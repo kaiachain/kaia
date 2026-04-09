@@ -200,17 +200,38 @@ func TestGetFallbackTransition(t *testing.T) {
 		addr5: {State: valset.Registered, StakingAmount: highStake},
 	}
 
-	// maxValidatorCount=3: top 3 are addr3, addr2, addr1 → ValActive; addr4 stays ValPaused.
-	result := v.getFallbackTransition(validators, 0, 0, 0, 3)
+	// maxValidatorCount=3: top 3 are addr3, addr2, addr1 → ValActive; addr4 → ValInactive.
+	result := v.getFallbackTransition(validators, testBlockTime, testIdleTimeout, 0, 0, 0, 3)
 
 	assert.Equal(t, valset.ValActive, result[addr1].State) // CandTesting passes vrank (nil scores)
 	assert.Equal(t, valset.ValActive, result[addr2].State)
 	assert.Equal(t, valset.ValActive, result[addr3].State)
-	assert.Equal(t, valset.ValPaused, result[addr4].State)           // outside cap, unchanged
-	assert.Equal(t, valset.Registered, result[addr5].State)          // non-competition, unchanged
-	assert.True(t, result[addr4].PausedTimeout.Equal(pausedTimeout)) // timeout preserved
+	assert.Equal(t, valset.ValInactive, result[addr4].State)                              // outside cap → ValInactive
+	assert.True(t, result[addr4].IdleTimeout.Equal(testBlockTime.Add(testIdleTimeout)))  // idleTimeout set
+	assert.Equal(t, valset.Registered, result[addr5].State)                              // non-competition, unchanged
 	// Input not mutated.
 	assert.Equal(t, valset.ValPaused, validators[addr4].State)
+}
+
+// ============================================================
+// TestCompareValidatorRank
+// ============================================================
+
+func TestCompareValidatorRank(t *testing.T) {
+	sv := func(addr common.Address, stake uint64) sortableValidator {
+		return sortableValidator{addr, &valset.ValidatorState{StakingAmount: stake}}
+	}
+
+	// Higher stake ranks first (negative result means a < b in sort order).
+	assert.Negative(t, compareValidatorRank(sv(addr1, highStake), sv(addr2, lowStake)))
+	assert.Positive(t, compareValidatorRank(sv(addr1, lowStake), sv(addr2, highStake)))
+
+	// Equal stake: lower address ranks first.
+	assert.Negative(t, compareValidatorRank(sv(addr1, highStake), sv(addr2, highStake)))
+	assert.Positive(t, compareValidatorRank(sv(addr2, highStake), sv(addr1, highStake)))
+
+	// Equal stake and address: tie.
+	assert.Zero(t, compareValidatorRank(sv(addr1, highStake), sv(addr1, highStake)))
 }
 
 // ============================================================
