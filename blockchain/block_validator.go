@@ -74,6 +74,10 @@ type BlockValidator struct {
 
 // NewBlockValidator returns a new block validator which is safe for re-use
 func NewBlockValidator(config *params.ChainConfig, blockchain *BlockChain) *BlockValidator {
+	if blockchain == nil || blockchain.sealer == nil {
+		panic("blockchain and its sealer must be non-nil")
+	}
+
 	validator := &BlockValidator{
 		config: config,
 		bc:     blockchain,
