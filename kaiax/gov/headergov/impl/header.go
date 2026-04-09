@@ -79,7 +79,7 @@ func (h *headerGovModule) VerifyVote(header *types.Header) error {
 	}
 
 	// check if Voter is the block proposer.
-	author, err := h.Chain.Engine().Author(header)
+	author, err := h.Chain.Sealer().Author(header)
 	if err != nil {
 		return err
 	}

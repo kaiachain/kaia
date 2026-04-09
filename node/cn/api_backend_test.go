@@ -32,6 +32,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
 	mocks3 "github.com/kaiachain/kaia/event/mocks"
+	"github.com/kaiachain/kaia/kaiax"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
@@ -699,30 +700,35 @@ type rewindTest struct {
 	expHeadBlock       uint64 // Block number of the expected head full block
 }
 
-func newCanonical(engine consensus.Engine, n int, full bool) (database.DBManager, *blockchain.BlockChain, error) {
+func newCanonical(sealer consensus.Sealer, n int, full bool) (database.DBManager, *blockchain.BlockChain, error) {
 	var (
 		canonicalSeed = 1
 		db            = database.NewDBManager(&database.DBConfig{DBType: database.MemoryDB})
+		err           error
 		// TODO: Remove me
 		// db      = database.NewMemoryDBManager()
 		genesis = new(blockchain.Genesis).MustCommit(db)
 	)
 
 	// Initialize a fresh chain with only a genesis block
-	bc, _ := blockchain.NewBlockChain(db, nil, params.TestChainConfig, engine, vm.Config{})
+	bc, _ := blockchain.NewBlockChain(db, nil, params.TestChainConfig, sealer, vm.Config{})
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, bc, nil
 	}
+
+	blocks, _ := blockchain.GenerateChain(params.TestChainConfig, genesis, sealer, db, n, func(i int, b *blockchain.BlockGen) {
+		b.SetRewardbase(common.Address{0: byte(canonicalSeed), 19: byte(i)})
+	})
 	if full {
-		// Full block-chain requested
-		blocks := blockchain.MakeBlockChain(genesis, n, engine, db, canonicalSeed)
-		_, err := bc.InsertChain(blocks)
+		_, err = bc.InsertChain(blocks)
 		return db, bc, err
 	}
-	// Header-only chain requested
-	headers := blockchain.MakeHeaderChain(genesis.Header(), n, engine, db, canonicalSeed)
-	_, err := bc.InsertHeaderChain(headers, 1)
+	headers := make([]*types.Header, len(blocks))
+	for i, block := range blocks {
+		headers[i] = block.Header()
+	}
+	_, err = bc.InsertHeaderChain(headers, 1)
 	return db, bc, err
 }
 
@@ -773,8 +779,14 @@ func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
 		gpo = gasprice.NewOracle(api, gasprice.Config{}, nil, govModule)
 	)
 	chain.Config().Istanbul = &params.IstanbulConfig{Epoch: epoch, ProposerPolicy: params.WeightedRandom}
-	chain.RegisterRewindableModule(govModule)
-	chain.RegisterExecutionModule(govModule)
+	chain.RegisterKaiaxModules(
+		nil,
+		nil,
+		[]kaiax.ExecutionModule{govModule},
+		[]kaiax.RewindableModule{govModule},
+		nil,
+		nil,
+	)
 
 	canonblocks, _ := blockchain.GenerateChain(params.TestChainConfig, chain.CurrentBlock(), faker.NewFaker(), db, tt.canonicalBlocks, func(i int, b *blockchain.BlockGen) {
 		if i == govBlockNum-1 { // Subtract 1, because the callback starts to enumerate from zero
@@ -792,7 +804,7 @@ func headerGovSetHeadTest(t *testing.T, tt *rewindTest) {
 	assert.Equal(t, newMintingAmount, govModule.GetParamSet(appliedGovBlockNum).MintingAmount.String())
 
 	// Set the head of the chain back to the requested number
-	err = doSetHead(chain, chain.Engine(), gpo, tt.setheadBlock)
+	err = doSetHead(chain, nil, gpo, tt.setheadBlock)
 	assert.Nil(t, err)
 
 	if head := chain.CurrentHeader(); head.Number.Uint64() != tt.expHeadHeader {

@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -274,8 +275,10 @@ type BlockChain interface {
 	StateAtWithGCLock(root common.Hash) (*state.StateDB, error)
 	Export(w io.Writer) error
 	ExportN(w io.Writer, first, last uint64) error
-	Engine() consensus.Engine
+	ValidateHeader(header *types.Header) error
+	Sealer() consensus.Sealer
 	PrepareHeader(header *types.Header) error
+	RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule, mExecution []kaiax.ExecutionModule, mRewindable []kaiax.RewindableModule, mHeader []kaiax.HeaderModule, mBlockState []kaiax.BlockStateModule)
 	GetTxLookupInfoAndReceipt(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 	GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	GetBlockReceiptsInCache(blockHash common.Hash) types.Receipts
@@ -316,9 +319,4 @@ type BlockChain interface {
 
 	// Snapshot
 	Snapshots() *snapshot.Tree
-
-	// kaiax module host
-	kaiax.HeaderModuleHost
-	kaiax.ExecutionModuleHost
-	kaiax.RewindableModuleHost
 }

@@ -110,11 +110,11 @@ func TestValidateHeader(t *testing.T) {
 				testdb  = database.NewMemoryDBManager()
 				gspec   = &Genesis{Config: config}
 				genesis = gspec.MustCommit(testdb)
-				engine  = faker.NewFaker()
+				sealer  = faker.NewFaker()
 			)
-			blocks, _ := GenerateChain(config, genesis, engine, testdb, 1, nil)
+			blocks, _ := GenerateChain(config, genesis, sealer, testdb, 1, nil)
 
-			chain, _ := NewBlockChain(testdb, nil, config, engine, vm.Config{})
+			chain, _ := NewBlockChain(testdb, nil, config, sealer, vm.Config{})
 			t.Cleanup(chain.Stop)
 
 			header := types.CopyHeader(blocks[0].Header())
@@ -138,7 +138,6 @@ func TestValidateHeader(t *testing.T) {
 			validator := &BlockValidator{
 				config: chain.Config(),
 				hc:     chain,
-				engine: engine,
 				mGov:   mGov,
 			}
 
@@ -358,14 +357,10 @@ func testPreprocessHeaderVerification(t *testing.T, threads int) {
 		var abort chan<- struct{}
 		var results <-chan error
 		if valid {
-			validator := &BlockValidator{
-				engine: faker.NewFaker(),
-			}
+			validator := &BlockValidator{sealer: faker.NewFaker()}
 			abort, results = validator.Preprocess(headers)
 		} else {
-			validator := &BlockValidator{
-				engine: faker.NewFakeFailer(failBlock),
-			}
+			validator := &BlockValidator{sealer: faker.NewFakeFailer(failBlock)}
 			abort, results = validator.Preprocess(headers)
 		}
 		for j := 0; j < len(headers); j++ {

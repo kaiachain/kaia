@@ -41,7 +41,7 @@ import (
 // consensus.ChainReader, governance.blockChain, work.BlockChain.
 type BlockChainForCaller interface {
 	// Required by NewEVMContext
-	consensus.ChainReader
+	consensus.ChainReaderWithSealer
 }
 
 // Maintain separate minimal interfaces of blockchain.TxPool because ContractBackend are used

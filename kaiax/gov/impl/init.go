@@ -28,7 +28,7 @@ var (
 
 //go:generate mockgen -destination=./mock/blockchain_mock.go -package=mock_impl github.com/kaiachain/kaia/kaiax/gov/impl BlockChain
 type BlockChain interface {
-	consensus.ChainReader
+	consensus.ChainReaderWithSealer
 }
 
 type GovModule struct {

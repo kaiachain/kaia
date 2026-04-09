@@ -20,6 +20,7 @@ import (
 	common "github.com/kaiachain/kaia/common"
 	consensus "github.com/kaiachain/kaia/consensus"
 	event "github.com/kaiachain/kaia/event"
+	valset "github.com/kaiachain/kaia/kaiax/valset"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 	params "github.com/kaiachain/kaia/params"
 	database "github.com/kaiachain/kaia/storage/database"
@@ -147,20 +148,6 @@ func (m *MockBackend) CurrentBlock() *types.Block {
 func (mr *MockBackendMockRecorder) CurrentBlock() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBlock", reflect.TypeOf((*MockBackend)(nil).CurrentBlock))
-}
-
-// Engine mocks base method.
-func (m *MockBackend) Engine() consensus.Engine {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Engine")
-	ret0, _ := ret[0].(consensus.Engine)
-	return ret0
-}
-
-// Engine indicates an expected call of Engine.
-func (mr *MockBackendMockRecorder) Engine() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Engine", reflect.TypeOf((*MockBackend)(nil).Engine))
 }
 
 // EventMux mocks base method.
@@ -568,6 +555,20 @@ func (mr *MockBackendMockRecorder) RPCTxFeeCap() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RPCTxFeeCap", reflect.TypeOf((*MockBackend)(nil).RPCTxFeeCap))
 }
 
+// Sealer mocks base method.
+func (m *MockBackend) Sealer() consensus.Sealer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Sealer")
+	ret0, _ := ret[0].(consensus.Sealer)
+	return ret0
+}
+
+// Sealer indicates an expected call of Sealer.
+func (mr *MockBackendMockRecorder) Sealer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sealer", reflect.TypeOf((*MockBackend)(nil).Sealer))
+}
+
 // SendTx mocks base method.
 func (m *MockBackend) SendTx(arg0 context.Context, arg1 *types.Transaction) error {
 	m.ctrl.T.Helper()
@@ -756,4 +757,18 @@ func (m *MockBackend) UpperBoundGasPrice(arg0 context.Context) *big.Int {
 func (mr *MockBackendMockRecorder) UpperBoundGasPrice(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpperBoundGasPrice", reflect.TypeOf((*MockBackend)(nil).UpperBoundGasPrice), arg0)
+}
+
+// ValsetModule mocks base method.
+func (m *MockBackend) ValsetModule() valset.ValsetModule {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValsetModule")
+	ret0, _ := ret[0].(valset.ValsetModule)
+	return ret0
+}
+
+// ValsetModule indicates an expected call of ValsetModule.
+func (mr *MockBackendMockRecorder) ValsetModule() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValsetModule", reflect.TypeOf((*MockBackend)(nil).ValsetModule))
 }

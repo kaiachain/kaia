@@ -57,7 +57,7 @@ var (
 
 type testBackend struct {
 	chainConfig *params.ChainConfig
-	engine      consensus.Engine
+	sealer      consensus.Sealer
 	chaindb     database.DBManager
 	chain       *blockchain.BlockChain
 
@@ -68,7 +68,7 @@ type testBackend struct {
 func newTestBackend(t *testing.T, n int, gspec *blockchain.Genesis, generator func(i int, b *blockchain.BlockGen)) *testBackend {
 	backend := &testBackend{
 		chainConfig: params.TestChainConfig,
-		engine:      faker.NewFaker(),
+		sealer:      faker.NewFaker(),
 		chaindb:     database.NewMemoryDBManager(),
 	}
 	// Generate blocks for testing
@@ -77,7 +77,7 @@ func newTestBackend(t *testing.T, n int, gspec *blockchain.Genesis, generator fu
 		gendb   = database.NewMemoryDBManager()
 		genesis = gspec.MustCommit(gendb)
 	)
-	blocks, _ := blockchain.GenerateChain(backend.chainConfig, genesis, backend.engine, gendb, n, generator)
+	blocks, _ := blockchain.GenerateChain(backend.chainConfig, genesis, backend.sealer, gendb, n, generator)
 	// Import the canonical chain
 	gspec.MustCommit(backend.chaindb)
 	cacheConfig := &blockchain.CacheConfig{
@@ -88,7 +88,7 @@ func newTestBackend(t *testing.T, n int, gspec *blockchain.Genesis, generator fu
 		SnapshotCacheSize:   512,
 		ArchiveMode:         true, // Archive mode
 	}
-	chain, err := blockchain.NewBlockChain(backend.chaindb, cacheConfig, backend.chainConfig, backend.engine, vm.Config{})
+	chain, err := blockchain.NewBlockChain(backend.chaindb, cacheConfig, backend.chainConfig, backend.sealer, vm.Config{})
 	if err != nil {
 		t.Fatalf("failed to create tester chain: %v", err)
 	}
@@ -141,8 +141,8 @@ func (b *testBackend) ChainConfig() *params.ChainConfig {
 	return b.chainConfig
 }
 
-func (b *testBackend) Engine() consensus.Engine {
-	return b.engine
+func (b *testBackend) Sealer() consensus.Sealer {
+	return b.sealer
 }
 
 func (b *testBackend) ChainDB() database.DBManager {

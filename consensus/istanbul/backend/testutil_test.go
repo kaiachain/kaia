@@ -35,6 +35,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
@@ -197,7 +198,7 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		TriesInMemory:     blockchain.DefaultTriesInMemory,
 		SnapshotCacheSize: 0, // Disable state snapshot
 	}
-	chain, err := blockchain.NewBlockChain(dbm, cacheConfig, config, engine, vm.Config{})
+	chain, err := blockchain.NewBlockChain(dbm, cacheConfig, config, engine.Sealer(), vm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -236,10 +237,14 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		panic(err)
 	}
 	engine.RegisterKaiaxModules(mGov, mValset)
-	chain.RegisterHeaderModule(mRandao)
-	chain.Validator().SetupKaiaxModules(mGov)
-	chain.Validator().RegisterHeaderModules(mRandao)
-	chain.Processor().RegisterBlockStateModule(mSystem)
+	chain.RegisterKaiaxModules(
+		mGov,
+		mValset,
+		nil,
+		nil,
+		[]kaiax.HeaderModule{mRandao},
+		[]kaiax.BlockStateModule{mSystem},
+	)
 	// Start the engine
 	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock, nil); err != nil {
 		panic(err)

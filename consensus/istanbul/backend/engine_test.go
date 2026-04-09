@@ -44,6 +44,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
@@ -308,7 +309,7 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 
 	genesis.MustCommit(b.db)
 
-	bc, err := blockchain.NewBlockChain(b.db, nil, genesis.Config, b, vm.Config{})
+	bc, err := blockchain.NewBlockChain(b.db, nil, genesis.Config, b.Sealer(), vm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -370,10 +371,14 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	}
 
 	b.RegisterKaiaxModules(mGov, mValset)
-	bc.RegisterHeaderModule(mReward, mGov, mRandao)
-	bc.Validator().SetupKaiaxModules(mGov)
-	bc.Validator().RegisterHeaderModules(mReward, mGov, mRandao)
-	bc.Processor().RegisterBlockStateModule(mReward, mSystem)
+	bc.RegisterKaiaxModules(
+		mGov,
+		mValset,
+		nil,
+		nil,
+		[]kaiax.HeaderModule{mReward, mGov, mRandao},
+		[]kaiax.BlockStateModule{mReward, mSystem},
+	)
 
 	if b.Start(bc, bc.CurrentBlock, bc.HasBadBlock, nil) != nil {
 		panic(err)
@@ -758,7 +763,12 @@ func TestRewardDistribution(t *testing.T) {
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 
 	chain, engine := newBlockChain(t, 1, configItems...)
-	chain.RegisterExecutionModule(engine.govModule)
+	chain.RegisterKaiaxModules(
+		engine.govModule,
+		engine.valsetModule,
+		[]kaiax.ExecutionModule{engine.govModule},
+		nil, nil, nil,
+	)
 	defer engine.Stop()
 
 	assert.Equal(t, uint64(testEpoch), engine.govModule.GetParamSet(0).Epoch)
@@ -966,7 +976,12 @@ func Test_AfterMinimumStakingVotes(t *testing.T) {
 	for _, tc := range testcases {
 		ctrl, mStaking := makeMockStakingManager(t, tc.stakingAmounts, 0)
 		chain, engine := newBlockChain(t, len(tc.stakingAmounts), append(configItems, mStaking)...)
-		chain.RegisterExecutionModule(engine.govModule)
+		chain.RegisterKaiaxModules(
+			engine.govModule,
+			engine.valsetModule,
+			[]kaiax.ExecutionModule{engine.govModule},
+			nil, nil, nil,
+		)
 
 		var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
 
@@ -1424,7 +1439,12 @@ func Test_AddRemove(t *testing.T) {
 		// Create test blockchain
 		ctrl, mStaking := makeMockStakingManager(t, stakes, 0)
 		chain, engine := newBlockChain(t, len(stakes), append(configItems, mStaking)...)
-		chain.RegisterExecutionModule(engine.valsetModule, engine.govModule)
+		chain.RegisterKaiaxModules(
+			engine.govModule,
+			engine.valsetModule,
+			[]kaiax.ExecutionModule{engine.valsetModule, engine.govModule},
+			nil, nil, nil,
+		)
 
 		// Backup the globals. The globals `nodeKeys` and `addrs` will be
 		// modified according to validator change votes.
@@ -1720,7 +1740,12 @@ func TestGovernance_Votes(t *testing.T) {
 	for _, tc := range testcases {
 		mockCtrl, mStaking := makeMockStakingManager(t, nil, 0)
 		chain, engine := newBlockChain(t, 1, append(configItems, mStaking)...)
-		chain.RegisterExecutionModule(engine.valsetModule, engine.govModule)
+		chain.RegisterKaiaxModules(
+			engine.govModule,
+			engine.valsetModule,
+			[]kaiax.ExecutionModule{engine.valsetModule, engine.govModule},
+			nil, nil, nil,
+		)
 
 		// test initial governance items
 		pset := engine.govModule.GetParamSet(chain.CurrentHeader().Number.Uint64() + 1)
@@ -1827,7 +1852,12 @@ func TestGovernance_GovModule(t *testing.T) {
 		// Create test blockchain
 		mockCtrl, mStaking := makeMockStakingManager(t, stakes, 0)
 		chain, engine := newBlockChain(t, len(stakes), append(configItems, mStaking)...)
-		chain.RegisterExecutionModule(engine.valsetModule, engine.govModule)
+		chain.RegisterKaiaxModules(
+			engine.govModule,
+			engine.valsetModule,
+			[]kaiax.ExecutionModule{engine.valsetModule, engine.govModule},
+			nil, nil, nil,
+		)
 
 		var previousBlock, currentBlock *types.Block = nil, chain.Genesis()
 

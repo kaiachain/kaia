@@ -243,6 +243,11 @@ func (d *dummyChain) Engine() consensus.Engine {
 	return nil
 }
 
+// Sealer retrieves the chain's consensus sealer.
+func (d *dummyChain) Sealer() consensus.Sealer {
+	return nil
+}
+
 // GetHeader returns the hash corresponding to their hash.
 func (d *dummyChain) GetHeader(h common.Hash, n uint64) *types.Header {
 	d.counter++

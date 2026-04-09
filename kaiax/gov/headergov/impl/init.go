@@ -7,8 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -30,10 +28,7 @@ var (
 )
 
 type chain interface {
-	GetHeaderByNumber(number uint64) *types.Header
-	CurrentBlock() *types.Block
-	State() (*state.StateDB, error)
-	Engine() consensus.Engine
+	consensus.ChainReaderWithSealer
 }
 
 type ValsetModule interface {

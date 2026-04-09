@@ -88,9 +88,6 @@ func TestGovernance_GovModule(t *testing.T) {
 	// (b) contract engine enabled (via vote)
 
 	govModule := node.GovModule().(*gov_impl.GovModule)
-	chain.RegisterHeaderModule(govModule)
-	chain.RegisterExecutionModule(govModule)
-	node.Miner().RegisterExecutionModule(govModule)
 
 	// Run tx sender thread
 	go func() {

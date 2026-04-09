@@ -24,6 +24,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -38,6 +39,7 @@ func TestNewFaker(t *testing.T) {
 	assert.Equal(t, uint64(0), f.failBlock)
 	assert.Equal(t, time.Duration(0), f.failDelay)
 	assert.False(t, f.fullFake)
+	assert.Equal(t, params.AuthorAddressForTesting, f.address)
 
 	// Test NewFakeFailer
 	f2 := NewFakeFailer(10)
@@ -54,6 +56,12 @@ func TestNewFaker(t *testing.T) {
 	f4 := NewFullFaker()
 	assert.NotNil(t, f4)
 	assert.True(t, f4.fullFake)
+
+	// Test NewFakerWithFixedSealer
+	addr := common.HexToAddress("0x1234")
+	f5 := NewFakerWithFixedSealer(addr)
+	assert.NotNil(t, f5)
+	assert.Equal(t, addr, f5.address)
 }
 
 // TestAuthor tests the Author method
@@ -64,6 +72,16 @@ func TestAuthor(t *testing.T) {
 	author, err := f.Author(header)
 	assert.NoError(t, err)
 	assert.Equal(t, params.AuthorAddressForTesting, author)
+}
+
+func TestAuthorWithFixedSealer(t *testing.T) {
+	addr := common.HexToAddress("0x1234")
+	f := NewFakerWithFixedSealer(addr)
+	header := &types.Header{Number: big.NewInt(1)}
+
+	author, err := f.Author(header)
+	assert.NoError(t, err)
+	assert.Equal(t, addr, author)
 }
 
 // TestVerifyHeader tests header verification

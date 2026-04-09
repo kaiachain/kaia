@@ -78,7 +78,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	p.InitializeState(header, statedb)
 
 	// Extract author from the header
-	author, _ := p.bc.Engine().Author(header) // Ignore error, we're past header validation
+	author, _ := p.bc.sealer.Author(header) // Ignore error, we're past header validation
 
 	processStats.BeforeApplyTxs = time.Now()
 	// Iterate over and process the individual transactions

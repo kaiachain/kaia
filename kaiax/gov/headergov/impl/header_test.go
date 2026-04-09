@@ -15,8 +15,8 @@ import (
 func TestVerifyHeader(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlCrit)
 	var (
-		vote               = headergov.NewVoteData(common.Address{1}, string(gov.GovernanceUnitPrice), uint64(100))
-		voteBytes, _       = headergov.NewVoteData(common.Address{1}, string(gov.GovernanceUnitPrice), uint64(100)).ToVoteBytes()
+		vote               = headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(100))
+		voteBytes, _       = headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(100)).ToVoteBytes()
 		govBytes, _        = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(100)}).ToGovBytes()
 		invalidGovBytes, _ = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(200)}).ToGovBytes()
 		h                  = newHeaderGovModule(t, getTestChainConfig())

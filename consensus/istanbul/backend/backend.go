@@ -392,8 +392,7 @@ func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
 	}
 
 	// verify the header of proposed block
-	validator := blockchain.NewBlockValidatorWithHeaderChain(sb.chain.Config(), sb.chain)
-	err := validator.ValidateHeader(block.Header())
+	err := sb.chain.ValidateHeader(block.Header())
 	// ignore errEmptyCommittedSeals error because we don't have the committed seals yet
 	if err == nil || err == istanbul.ErrEmptyCommittedSeals {
 		return 0, nil

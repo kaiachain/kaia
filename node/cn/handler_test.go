@@ -1365,7 +1365,7 @@ func TestGetBlockHeaders(t *testing.T) {
 		},
 	}
 
-	pm, err := NewProtocolManager(params.TestChainConfig, downloader.FullSync, 1, nil, nil, backend.Engine(), backend, db, 1, common.ENDPOINTNODE, &Config{TxResendUseLegacy: false, TxResendInterval: 1, TxResendCount: 0})
+	pm, err := NewProtocolManager(params.TestChainConfig, downloader.FullSync, 1, nil, nil, faker.NewFaker(), backend, db, 1, common.ENDPOINTNODE, &Config{TxResendUseLegacy: false, TxResendInterval: 1, TxResendCount: 0})
 	if err != nil {
 		t.Fatal(err)
 	}

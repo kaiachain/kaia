@@ -53,7 +53,7 @@ func (r *RandaoModule) VerifyHeader(header *types.Header, parent *types.Header) 
 		return consensus.ErrUnknownAncestor
 	}
 
-	proposer, err := r.Chain.Engine().Author(header)
+	proposer, err := r.Chain.Sealer().Author(header)
 	if err != nil {
 		return err
 	}

@@ -24,8 +24,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	consensus_mock "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
@@ -60,7 +60,6 @@ func makeTestRewardModule(t *testing.T,
 		mStaking = staking_mock.NewMockStakingModule(mockCtrl)
 		mGov     = gov_mock.NewMockGovModule(mockCtrl)
 		mValset  = valset_mock.NewMockValsetModule(mockCtrl)
-		engine   = consensus_mock.NewMockEngine(mockCtrl)
 
 		chainConfig = &params.ChainConfig{
 			ChainID:                  big.NewInt(31337),
@@ -103,8 +102,7 @@ func makeTestRewardModule(t *testing.T,
 
 	chain.EXPECT().GetBlockByNumber(header.Number.Uint64()).Return(block).AnyTimes()
 	chain.EXPECT().GetReceiptsByBlockHash(block.Hash()).Return(receipts).AnyTimes()
-	chain.EXPECT().Engine().Return(engine).AnyTimes()
-	engine.EXPECT().Author(gomock.Any()).Return(common.HexToAddress("0xeee"), nil).AnyTimes() // Author is different from Rewardbase
+	chain.EXPECT().Sealer().Return(faker.NewFaker()).AnyTimes() // Author is different from Rewardbase
 	mGov.EXPECT().GetParamSet(header.Number.Uint64()).Return(paramset).AnyTimes()
 	mStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(stakingInfo, nil).AnyTimes()
 

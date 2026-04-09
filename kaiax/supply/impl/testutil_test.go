@@ -33,10 +33,11 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	consensus_mock "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
@@ -149,8 +150,7 @@ func (s *SupplyTestSuite) SetupTest() {
 		mockCtrl = gomock.NewController(t)
 		config   = testConfig.Copy()
 		genesis  = makeGenesis(t, config)
-
-		engine   = consensus_mock.NewMockEngine(mockCtrl)
+		sealer   = faker.NewFakerWithFixedSealer(addrProposer)
 		mGov     = gov_mock.NewMockGovModule(mockCtrl)
 		mStaking = staking_mock.NewMockStakingModule(mockCtrl)
 		mValset  = valset_mock.NewMockValsetModule(mockCtrl)
@@ -168,10 +168,9 @@ func (s *SupplyTestSuite) SetupTest() {
 		}
 	)
 	genesisBlock := genesis.MustCommit(dbm)
-	chain, err := blockchain.NewBlockChain(dbm, cacheConfig, config, engine, vm.Config{})
+	chain, err := blockchain.NewBlockChain(dbm, cacheConfig, config, sealer, vm.Config{})
 	require.NoError(t, err)
 
-	setupMockEngine(engine)
 	setupMockGov(mGov, config)
 	setupMockStaking(mStaking)
 
@@ -192,12 +191,17 @@ func (s *SupplyTestSuite) SetupTest() {
 		Chain:        chain,
 		RewardModule: mReward,
 	})
-	chain.RegisterHeaderModule(mReward)
-	chain.Processor().RegisterBlockStateModule(mReward, mSystem)
-	chain.RegisterExecutionModule(mSupply)
+	chain.RegisterKaiaxModules(
+		nil,
+		nil,
+		[]kaiax.ExecutionModule{mSupply},
+		nil,
+		[]kaiax.HeaderModule{mReward},
+		[]kaiax.BlockStateModule{mReward, mSystem},
+	)
 
 	// With every modules ready, generate the blocks
-	blocks := setupBlocks(t, config, genesisBlock, engine, dbm, mGov, mStaking, mValset)
+	blocks := setupBlocks(t, config, genesisBlock, dbm, mGov, mStaking, mValset)
 
 	s.mockCtrl = mockCtrl
 	s.dbm = dbm
@@ -291,13 +295,6 @@ func rebalanceAlloc(t *testing.T, blockNum uint64, addr common.Address, code []b
 	}
 }
 
-func setupMockEngine(engine *consensus_mock.MockEngine) {
-	engine.EXPECT().Author(gomock.Any()).Return(addrProposer, nil).AnyTimes()
-	engine.EXPECT().Committers(gomock.Any()).Return(nil, nil).AnyTimes()
-	engine.EXPECT().PrepareExtra(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
-	engine.EXPECT().VerifySeals(gomock.Any()).Return(nil).AnyTimes()
-}
-
 func setupMockGov(mGov *gov_mock.MockGovModule, config *params.ChainConfig) {
 	mGov.EXPECT().GetParamSet(gomock.Any()).DoAndReturn(func(num uint64) (gov.ParamSet, error) {
 		p0 := gov.ParamSet{
@@ -362,7 +359,7 @@ func setupMockStaking(mStaking *staking_mock.MockStakingModule) {
 	}, nil).AnyTimes()
 }
 
-func setupBlocks(t *testing.T, config *params.ChainConfig, genesisBlock *types.Block, engine *consensus_mock.MockEngine, dbm database.DBManager, mGov *gov_mock.MockGovModule, mStaking *staking_mock.MockStakingModule, mValset *valset_mock.MockValsetModule) []*types.Block {
+func setupBlocks(t *testing.T, config *params.ChainConfig, genesisBlock *types.Block, dbm database.DBManager, mGov *gov_mock.MockGovModule, mStaking *staking_mock.MockStakingModule, mValset *valset_mock.MockValsetModule) []*types.Block {
 	cacheConfig := &blockchain.CacheConfig{
 		ArchiveMode:         false,
 		CacheSize:           512,
@@ -370,7 +367,7 @@ func setupBlocks(t *testing.T, config *params.ChainConfig, genesisBlock *types.B
 		TriesInMemory:       128,
 		TrieNodeCacheConfig: statedb.GetEmptyTrieNodeCacheConfig(),
 	}
-	chain, err := blockchain.NewBlockChain(dbm, cacheConfig, config, engine, vm.Config{})
+	chain, err := blockchain.NewBlockChain(dbm, cacheConfig, config, faker.NewFakerWithFixedSealer(addrProposer), vm.Config{})
 	require.NoError(t, err)
 	defer chain.Stop()
 
@@ -389,8 +386,14 @@ func setupBlocks(t *testing.T, config *params.ChainConfig, genesisBlock *types.B
 		Chain: chain,
 	}))
 
-	chain.RegisterHeaderModule(mReward)
-	chain.Processor().RegisterBlockStateModule(mReward, mSystem)
+	chain.RegisterKaiaxModules(
+		nil,
+		nil,
+		nil,
+		nil,
+		[]kaiax.HeaderModule{mReward},
+		[]kaiax.BlockStateModule{mReward, mSystem},
+	)
 
 	var (
 		signer   = types.LatestSignerForChainID(config.ChainID)
@@ -408,9 +411,7 @@ func setupBlocks(t *testing.T, config *params.ChainConfig, genesisBlock *types.B
 		require.NoError(t, err)
 
 		header := makeSupplyHeader(chain, parent, stateDB)
-		extra, err := engine.PrepareExtra(header, parent.Header())
-		require.NoError(t, err)
-		header.Extra = extra
+		require.NoError(t, chain.Sealer().WriteValidators(header, nil))
 		require.NoError(t, mReward.PrepareHeader(header))
 		chain.Processor().InitializeState(header, stateDB)
 
