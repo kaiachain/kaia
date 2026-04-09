@@ -1062,7 +1062,6 @@ func parseExpectationFromLegacyResult(resultCode int) (strict bool, wantErr bool
 func TestDefaultCmd_ParseOnlyAllFlagCases(t *testing.T) {
 	runner := newParseOnlyRunner(t)
 	for _, fwv := range flagsWithValues {
-		fwv := fwv
 		switch fwv.flagType {
 		case FlagTypeBoolean:
 			t.Run("parseonly"+sanitizeTestName(fwv.flag), func(t *testing.T) {
@@ -1072,7 +1071,6 @@ func TestDefaultCmd_ParseOnlyAllFlagCases(t *testing.T) {
 			})
 		case FlagTypeArgument:
 			for _, item := range fwv.values {
-				item := item
 				t.Run("parseonly"+sanitizeTestName(fwv.flag)+"-"+sanitizeTestName(item), func(t *testing.T) {
 					if err := runner.parse(fwv.flag, item); err != nil {
 						t.Fatalf("expected parse success for %s %q, got error: %v", fwv.flag, item, err)
@@ -1080,8 +1078,6 @@ func TestDefaultCmd_ParseOnlyAllFlagCases(t *testing.T) {
 				})
 			}
 			for idx2, wrongItem := range fwv.wrongValues {
-				idx2 := idx2
-				wrongItem := wrongItem
 				t.Run("parseonly"+sanitizeTestName(fwv.flag)+"-"+sanitizeTestName(wrongItem), func(t *testing.T) {
 					strict, wantErr := parseExpectationFromLegacyResult(fwv.errors[idx2])
 					err := runner.parse(fwv.flag, wrongItem)

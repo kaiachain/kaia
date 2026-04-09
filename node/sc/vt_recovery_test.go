@@ -298,7 +298,6 @@ func TestRecoveryScenarios(t *testing.T) {
 	}
 
 	for idx, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("%02d_%s", idx, tc.name), func(t *testing.T) {
 			requestBridge := tc.requestBridge(info)
 			for i := 0; i < testTxCount; i++ {
