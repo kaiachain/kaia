@@ -206,9 +206,9 @@ func TestGetFallbackTransition(t *testing.T) {
 	assert.Equal(t, valset.ValActive, result[addr1].State) // CandTesting passes vrank (nil scores)
 	assert.Equal(t, valset.ValActive, result[addr2].State)
 	assert.Equal(t, valset.ValActive, result[addr3].State)
-	assert.Equal(t, valset.ValInactive, result[addr4].State)                              // outside cap → ValInactive
-	assert.True(t, result[addr4].IdleTimeout.Equal(testBlockTime.Add(testIdleTimeout)))  // idleTimeout set
-	assert.Equal(t, valset.Registered, result[addr5].State)                              // non-competition, unchanged
+	assert.Equal(t, valset.ValInactive, result[addr4].State)                            // outside cap → ValInactive
+	assert.True(t, result[addr4].IdleTimeout.Equal(testBlockTime.Add(testIdleTimeout))) // idleTimeout set
+	assert.Equal(t, valset.Registered, result[addr5].State)                             // non-competition, unchanged
 	// Input not mutated.
 	assert.Equal(t, valset.ValPaused, validators[addr4].State)
 }
