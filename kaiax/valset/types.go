@@ -126,6 +126,7 @@ type ValidatorState struct {
 	StakingAmount uint64    `json:"stakingAmount"` // in KAIA unit
 	IdleTimeout   time.Time `json:"idleTimeout"`
 	PausedTimeout time.Time `json:"pausedTimeout"`
+	Suspended     bool      `json:"suspended"`
 }
 
 // NodeStateMap maps validator addresses to their state. Used for permissionless state transitions.
@@ -189,4 +190,37 @@ func (v NodeStateMap) Addresses() []common.Address {
 		return bytes.Compare(a[:], b[:])
 	})
 	return addrs
+}
+
+// CountByState counts the number of validators in a given state.
+func (v NodeStateMap) CountByState(state State) uint64 {
+	var count uint64
+	for _, val := range v {
+		if val.State == state {
+			count++
+		}
+	}
+	return count
+}
+
+// MarkSuspended sets the Suspended flag on validators whose address is in the given list.
+func (v NodeStateMap) MarkSuspended(suspended []common.Address) {
+	set := make(map[common.Address]struct{}, len(suspended))
+	for _, addr := range suspended {
+		set[addr] = struct{}{}
+	}
+	for addr, vs := range v {
+		_, vs.Suspended = set[addr]
+	}
+}
+
+// ExcludeSuspended returns a new NodeStateMap without suspended validators.
+func (v NodeStateMap) ExcludeSuspended() NodeStateMap {
+	filtered := make(NodeStateMap, len(v))
+	for addr, val := range v {
+		if !val.Suspended {
+			filtered[addr] = val
+		}
+	}
+	return filtered
 }

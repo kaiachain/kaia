@@ -42,15 +42,19 @@ func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 }
 
 // GetDemotedValidators returns the demoted validators at block `num`.
-// In permissionless: demoted = council - committee = ValReady + ValPaused
+// In permissionless: demoted = council - qualified = ValReady + ValPaused + suspended ValActive
 // In permissioned: demoted = council members with staking < minimum
 func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error) {
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		m, err := v.GetNodeByState(num, []valset.State{valset.ValReady, valset.ValPaused})
+		council, err := v.GetNodeByState(num, valset.CouncilStates)
 		if err != nil {
 			return nil, err
 		}
-		return m.Addresses(), nil
+		qualified, err := v.getQualifiedValidators(num)
+		if err != nil {
+			return nil, err
+		}
+		return valset.NewAddressSet(council.Addresses()).Subtract(qualified).List(), nil
 	}
 	_, demoted, err := v.getCouncilAndDemoted(num)
 	if err != nil {
@@ -61,12 +65,22 @@ func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error
 
 func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, error) {
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		// qualified = council - demoted = ValActive
+		// qualified = ValActive excluding suspended
 		m, err := v.GetNodeByState(num, valset.CommitteeStates)
 		if err != nil {
 			return nil, err
 		}
-		return valset.NewAddressSet(m.Addresses()), nil
+		qualified := m.ExcludeSuspended()
+		// Safety fallback: if all ValActive are suspended, ignore the suspended set
+		// to prevent consensus halt.
+		if len(qualified) == 0 && len(m) > 0 {
+			if v.lastSuspendFallbackLog != num {
+				logger.Warn("all ValActive are suspended, ignoring suspended set for committee", "num", num)
+				v.lastSuspendFallbackLog = num
+			}
+			return valset.NewAddressSet(m.Addresses()), nil
+		}
+		return valset.NewAddressSet(qualified.Addresses()), nil
 	}
 	council, demoted, err := v.getCouncilAndDemoted(num)
 	if err != nil {

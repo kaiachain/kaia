@@ -45,7 +45,7 @@ func (api *ValsetAPI) GetNodeByState(number *rpc.BlockNumber, states []valset.St
 	}
 	result := make(map[string]any, len(validators))
 	for addr, val := range validators {
-		result[addr.Hex()] = val.State
+		result[addr.Hex()] = val
 	}
 	return result, nil
 }

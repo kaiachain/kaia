@@ -82,6 +82,8 @@ type ValsetModule struct {
 
 	validatorVoteBlockNumsCache []uint64
 	lowestScannedVoteNumCache   *uint64
+
+	lastSuspendFallbackLog uint64 // block number of last suspend fallback warning
 }
 
 func NewValsetModule() *ValsetModule {
