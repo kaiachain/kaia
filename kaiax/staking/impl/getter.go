@@ -27,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/contracts_permissionless/contracts/multicall"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
 
@@ -179,6 +180,7 @@ func (s *StakingModule) getFromState(header *types.Header, statedb *state.StateD
 }
 
 // parsePermissionlessCallResult converts ABv2 multicall results into StakingInfo for permissionless mode.
+// Per KIP-286, only ValActive validators receive staking rewards (including suspended ValActive).
 func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amounts []*big.Int, kefAddr, kifAddr, kpfAddr common.Address, clRes clRegistryResult) (*staking.StakingInfo, error) {
 	if len(profiles) == 0 {
 		return emptyStakingInfo(num), nil
@@ -191,16 +193,19 @@ func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amo
 		return nil, staking.ErrCLRegistryResult
 	}
 	var (
-		nodeIds          = make([]common.Address, len(profiles))
-		stakingContracts = make([]common.Address, len(profiles))
-		rewardAddrs      = make([]common.Address, len(profiles))
-		stakingAmounts   = make([]uint64, len(profiles))
+		nodeIds          []common.Address
+		stakingContracts []common.Address
+		rewardAddrs      []common.Address
+		stakingAmounts   []uint64
 	)
 	for i, p := range profiles {
-		nodeIds[i] = p.NodeId
-		stakingContracts[i] = p.StakingContract
-		rewardAddrs[i] = p.RewardAddress
-		stakingAmounts[i] = new(big.Int).Div(amounts[i], big.NewInt(params.KAIA)).Uint64()
+		if p.State != uint8(valset.ValActive) {
+			continue
+		}
+		nodeIds = append(nodeIds, p.NodeId)
+		stakingContracts = append(stakingContracts, p.StakingContract)
+		rewardAddrs = append(rewardAddrs, p.RewardAddress)
+		stakingAmounts = append(stakingAmounts, new(big.Int).Div(amounts[i], big.NewInt(params.KAIA)).Uint64())
 	}
 	return &staking.StakingInfo{
 		SourceBlockNum:   num,
