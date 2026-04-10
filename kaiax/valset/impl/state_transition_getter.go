@@ -67,7 +67,10 @@ func (v *ValsetModule) getEpochTransition(
 				val.State = valset.Registered // T2
 			}
 		case valset.ValReady, valset.ValActive, valset.ValPaused:
-			activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
+			if val.StakingAmount >= minStake {
+				activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
+			}
+			// else: excluded from competition, violation handles demotion
 		}
 	}
 	slices.SortFunc(activeValCompetitors, func(a, b sortableValidator) int {

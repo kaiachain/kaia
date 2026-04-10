@@ -25,7 +25,10 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/contracts_permissionless/contracts/multicall"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/stretchr/testify/require"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -276,4 +279,32 @@ func TestSourceBlockNum(t *testing.T) {
 		actual := sourceBlockNum(tc.num, tc.isKaia, tc.interval)
 		assert.Equal(t, tc.expected, actual, i)
 	}
+}
+
+func TestParsePermissionlessCallResult_OnlyValActive(t *testing.T) {
+	kefAddr := common.HexToAddress("0xeef")
+	kifAddr := common.HexToAddress("0xeif")
+	kpfAddr := common.HexToAddress("0xepf")
+	stakeAmount := new(big.Int).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA))
+
+	profiles := []multicall.Profile{
+		{NodeId: common.HexToAddress("0x01"), StakingContract: common.HexToAddress("0x11"), RewardAddress: common.HexToAddress("0x21"), State: uint8(valset.ValActive)},
+		{NodeId: common.HexToAddress("0x02"), StakingContract: common.HexToAddress("0x12"), RewardAddress: common.HexToAddress("0x22"), State: uint8(valset.ValPaused)},
+		{NodeId: common.HexToAddress("0x03"), StakingContract: common.HexToAddress("0x13"), RewardAddress: common.HexToAddress("0x23"), State: uint8(valset.ValReady)},
+		{NodeId: common.HexToAddress("0x04"), StakingContract: common.HexToAddress("0x14"), RewardAddress: common.HexToAddress("0x24"), State: uint8(valset.ValActive)},
+		{NodeId: common.HexToAddress("0x05"), StakingContract: common.HexToAddress("0x15"), RewardAddress: common.HexToAddress("0x25"), State: uint8(valset.ValExiting)},
+	}
+	amounts := []*big.Int{stakeAmount, stakeAmount, stakeAmount, stakeAmount, stakeAmount}
+	clRes := clRegistryResult{}
+
+	si, err := parsePermissionlessCallResult(100, profiles, amounts, kefAddr, kifAddr, kpfAddr, clRes)
+	require.NoError(t, err)
+
+	// Only ValActive (0x01, 0x04) should be included
+	assert.Len(t, si.NodeIds, 2)
+	assert.Equal(t, common.HexToAddress("0x01"), si.NodeIds[0])
+	assert.Equal(t, common.HexToAddress("0x04"), si.NodeIds[1])
+	assert.Len(t, si.StakingAmounts, 2)
+	assert.Equal(t, uint64(5_000_000), si.StakingAmounts[0])
+	assert.Equal(t, uint64(5_000_000), si.StakingAmounts[1])
 }
