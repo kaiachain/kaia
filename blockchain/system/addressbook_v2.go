@@ -129,16 +129,16 @@ func EncodeNodeStateUpdate(
 
 // NodeStatesResult holds the result of ReadNodeStates.
 type NodeStatesResult struct {
-	Validators        valset.NodeStateMap
-	PauseTimeout      time.Duration
-	IdleTimeout       time.Duration
-	PfsThreshold uint64
-	CfsThreshold      uint64
-	SlotFactor              uint64
-	MaxSlotAvailable        uint64
-	MinActiveCount          uint64
-	ActiveValidatorCount    uint64
-	SuspendedValidators     []common.Address
+	Validators           valset.NodeStateMap
+	PauseTimeout         time.Duration
+	IdleTimeout          time.Duration
+	PfsThreshold         uint64
+	CfsThreshold         uint64
+	SlotFactor           uint64
+	MaxSlotAvailable     uint64
+	MinActiveCount       uint64
+	ActiveValidatorCount uint64
+	SuspendedValidators  []common.Address
 }
 
 // ReadNodeStates reads all validator states, timeouts, max counts, and thresholds from ABv2 in a single MultiCall.
@@ -179,16 +179,16 @@ func ReadNodeStates(
 	}
 
 	return &NodeStatesResult{
-		Validators:        validators,
-		PauseTimeout:      time.Duration(res.PauseTimeout.Int64()) * time.Second,
-		IdleTimeout:       time.Duration(res.IdleTimeout.Int64()) * time.Second,
-		PfsThreshold: res.PfsThreshold.Uint64(),
-		CfsThreshold:      res.CfsThreshold.Uint64(),
+		Validators:           validators,
+		PauseTimeout:         time.Duration(res.PauseTimeout.Int64()) * time.Second,
+		IdleTimeout:          time.Duration(res.IdleTimeout.Int64()) * time.Second,
+		PfsThreshold:         res.PfsThreshold.Uint64(),
+		CfsThreshold:         res.CfsThreshold.Uint64(),
 		SlotFactor:           res.SlotFactor.Uint64(),
-		MaxSlotAvailable:    res.MaxSlotAvailable.Uint64(),
-		MinActiveCount:      res.MinActiveCount.Uint64(),
+		MaxSlotAvailable:     res.MaxSlotAvailable.Uint64(),
+		MinActiveCount:       res.MinActiveCount.Uint64(),
 		ActiveValidatorCount: res.ActiveValidatorCount.Uint64(),
-		SuspendedValidators: res.SuspendedValidators,
+		SuspendedValidators:  res.SuspendedValidators,
 	}, nil
 }
 

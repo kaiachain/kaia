@@ -132,6 +132,7 @@ func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, idle
 //   - ValActive → ValExiting (if ValExiting slots available and ValActive > minActiveCount)
 //   - ValPaused → ValExiting (if ValExiting slots available)
 //   - ValReady → ValInactive (unconditional)
+//
 // rule2: PFS violation (only when proposal failure occurred at this block)
 //   - PFS >= pfsThreshold (severe): ValActive → ValExiting
 //   - 0 < PFS < pfsThreshold (minor): ValActive → ValPaused

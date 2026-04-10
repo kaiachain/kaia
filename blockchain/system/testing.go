@@ -85,4 +85,3 @@ func MakeTestPermissionlessConfig(n int) (*AllocPermissionlessConfig, []*ecdsa.P
 		},
 	}, nodeKeys
 }
-

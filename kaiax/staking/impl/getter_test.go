@@ -28,11 +28,11 @@ import (
 	"github.com/kaiachain/kaia/contracts_permissionless/contracts/multicall"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/stretchr/testify/require"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func testPragueForkChainConfig(forkNum *big.Int) *params.ChainConfig {
