@@ -35,6 +35,7 @@ import (
 const (
 	DefaultValPausedTimeout     = time.Hour * 8
 	DefaultValIdleTimeout       = 30 * 24 * time.Hour
+	DefaultMaxValidatorCount    = 100
 	DefaultActiveValidatorCount = 50
 )
 
@@ -71,31 +72,58 @@ func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.H
 	if err != nil {
 		return nil, err
 	}
-	return v.applyAllTransitions(res.Validators, header, res.PauseTimeout, res.IdleTimeout, res.MaxValCount, res.PfsThreshold, res.CfsThreshold, res.MaxSlotAvailable, res.MinActiveCount, res.SlotFactor)
+	res.Validators.MarkSuspended(res.SuspendedValidators)
+	slotLimitsFn := func(sf uint64) (uint64, uint64) {
+		return v.readSlotLimitsFor(statedb, header, sf, res.MaxSlotAvailable, res.MinActiveCount)
+	}
+	return v.applyAllTransitions(res, header, slotLimitsFn)
 }
 
 // applyAllTransitions computes applyTr(N-1) given ABv2(N-1) validators and block N-1 parameters.
-// NodeStates(N) = ABv2(N-1) + applyTr(N-1), where applyTr(N-1) = VrankViolation → Timeout → Epoch (epoch blocks only).
+// NodeStates(N) = ABv2(N-1) + applyTr(N-1), where applyTr(N-1) = Epoch → Violation → Timeout.
+// At epoch blocks, epoch runs first so that violation uses the new SF-based slot limits.
 // header must be the parent header (N-1).
+// slotLimitsFn computes (maxSlotAvailable, minActiveCount) for a given slot factor.
 func (v *ValsetModule) applyAllTransitions(
-	validators valset.NodeStateMap,
+	res *system.NodeStatesResult,
 	header *types.Header, // parent header (N-1)
-	pauseTimeout, idleTimeout time.Duration,
-	maxValCount, pfsThreshold, cfsThreshold, maxSlotAvailable, minActiveCount, slotFactor uint64,
+	slotLimitsFn func(sf uint64) (uint64, uint64),
 ) (valset.NodeStateMap, error) {
 	var (
 		num       = header.Number.Uint64() + 1
 		pset      = v.GovModule.GetParamSet(num)
 		minStake  = pset.MinimumStake.Uint64()
 		blockTime = time.Unix(header.Time.Int64(), 0)
+
+		maxSlotAvailable = res.MaxSlotAvailable
+		minActiveCount   = res.MinActiveCount
 	)
 
-	newValidators := v.getViolationTransition(minStake, validators, header.Number.Uint64(), pfsThreshold, maxSlotAvailable, minActiveCount)
-	newValidators = v.getTimeoutTransition(newValidators, idleTimeout, pauseTimeout, blockTime)
+	newValidators := res.Validators
 	if v.isVrankEpoch(num) {
-		newValidators = v.getEpochTransition(minStake, newValidators, idleTimeout, int(maxValCount), blockTime, header.Number.Uint64(), cfsThreshold, slotFactor)
+		newValidators = v.getEpochTransition(minStake, newValidators, res.IdleTimeout, int(res.ActiveValidatorCount), blockTime, header.Number.Uint64(), res.CfsThreshold, res.SlotFactor)
+		// Recompute slot limits from new SF (VA + VP after epoch)
+		newSF := newValidators.CountByState(valset.ValActive) + newValidators.CountByState(valset.ValPaused)
+		maxSlotAvailable, minActiveCount = slotLimitsFn(newSF)
 	}
+	newValidators = v.getViolationTransition(minStake, newValidators, header.Number.Uint64(), res.PfsThreshold, maxSlotAvailable, minActiveCount, res.IdleTimeout, blockTime)
+	newValidators = v.getTimeoutTransition(newValidators, res.IdleTimeout, res.PauseTimeout, blockTime)
 	return newValidators, nil
+}
+
+// readSlotLimitsFor computes slot limits for a given SF via contract call, falling back to provided defaults on error.
+func (v *ValsetModule) readSlotLimitsFor(statedb *state.StateDB, header *types.Header, sf uint64, fallbackMaxSlot, fallbackMinActive uint64) (uint64, uint64) {
+	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb)
+	if err != nil {
+		logger.Error("failed to create contract backend for slot limits", "err", err)
+		return fallbackMaxSlot, fallbackMinActive
+	}
+	maxSlot, minActive, err := system.ReadSlotLimitsFor(backend, header.Number, sf)
+	if err != nil {
+		logger.Error("failed to read slot limits for new SF", "sf", sf, "err", err)
+		return fallbackMaxSlot, fallbackMinActive
+	}
+	return maxSlot, minActive
 }
 
 // isPassVrankTest returns true if the candidate's CFS is below the threshold.

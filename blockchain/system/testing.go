@@ -76,7 +76,8 @@ func MakeTestPermissionlessConfig(n int) (*AllocPermissionlessConfig, []*ecdsa.P
 			CfsThreshold:           big.NewInt(300),
 			PauseTimeout:           big.NewInt(8 * 3600),   // 8h
 			IdleTimeout:            big.NewInt(30 * 86400), // 30d
-			MaxValidatorCount:      big.NewInt(50),
+			MaxValidatorCount:      big.NewInt(100),
+			ActiveValidatorCount:   big.NewInt(50),
 			MaxReadyCandidateCount: big.NewInt(3),
 			KefAddress:             common.HexToAddress("0x1111"),
 			KifAddress:             common.HexToAddress("0x2222"),
