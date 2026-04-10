@@ -466,10 +466,12 @@ func TestGetViolationTransition_PFSAboveThreshold(t *testing.T) {
 	validators := valset.NodeStateMap{
 		addr1: {State: valset.ValActive, StakingAmount: aboveMinStake},
 		addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
+		addr3: {State: valset.ValActive, StakingAmount: aboveMinStake}, // because minActive=1
 	}
 	result := v.getViolationTransition(testMinStake, validators, 100, 2, noSlotLimit, noMinActive)
 	assert.Equal(t, valset.ValExiting, result[addr1].State, "PFS(3) >= threshold(2) → ValExiting (severe)")
 	assert.Equal(t, valset.ValPaused, result[addr2].State, "PFS(1) > 0, < threshold(2) → ValPaused (minor)")
+	assert.Equal(t, valset.ValActive, result[addr3].State)
 }
 
 func TestGetViolationTransition_PFSNonActiveNotAffected(t *testing.T) {
