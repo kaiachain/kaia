@@ -80,20 +80,6 @@ func (mr *MockBackendMockRecorder) Broadcast(arg0, arg1 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Broadcast", reflect.TypeOf((*MockBackend)(nil).Broadcast), arg0, arg1)
 }
 
-// CheckSignature mocks base method.
-func (m *MockBackend) CheckSignature(arg0 []byte, arg1 common.Address, arg2 []byte) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckSignature", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CheckSignature indicates an expected call of CheckSignature.
-func (mr *MockBackendMockRecorder) CheckSignature(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckSignature", reflect.TypeOf((*MockBackend)(nil).CheckSignature), arg0, arg1, arg2)
-}
-
 // Commit mocks base method.
 func (m *MockBackend) Commit(arg0 istanbul.Proposal, arg1 [][]byte) error {
 	m.ctrl.T.Helper()

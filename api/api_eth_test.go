@@ -2795,16 +2795,8 @@ func (mc *testChainContext) Config() *params.ChainConfig {
 	return &params.ChainConfig{}
 }
 
-func (mc *testChainContext) CurrentHeader() *types.Header {
-	return mc.header
-}
-
 func (mc *testChainContext) CurrentBlock() *types.Block {
 	return types.NewBlock(mc.header, nil, nil)
-}
-
-func (mc *testChainContext) Engine() consensus.Engine {
-	return nil
 }
 
 func (mc *testChainContext) Sealer() consensus.Sealer {
@@ -2813,26 +2805,6 @@ func (mc *testChainContext) Sealer() consensus.Sealer {
 
 func (mc *testChainContext) GetHeader(common.Hash, uint64) *types.Header {
 	return mc.header
-}
-
-func (mc *testChainContext) GetHeaderByNumber(uint64) *types.Header {
-	return mc.header
-}
-
-func (mc *testChainContext) GetHeaderByHash(common.Hash) *types.Header {
-	return mc.header
-}
-
-func (mc *testChainContext) GetBlock(common.Hash, uint64) *types.Block {
-	return types.NewBlock(mc.header, nil, nil)
-}
-
-func (mc *testChainContext) State() (*state.StateDB, error) {
-	return nil, errors.New("not implemented")
-}
-
-func (mc *testChainContext) StateAt(common.Hash) (*state.StateDB, error) {
-	return nil, errors.New("not implemented")
 }
 
 // Contract C { constructor() { revert("hello"); } }

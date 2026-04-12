@@ -32,7 +32,6 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/auction"
@@ -1272,10 +1271,10 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	var consensusChannel chan p2p.Msg
 	isCN := false
 
-	if _, ok := pm.engine.(consensus.Handler); ok && pm.nodetype == common.CONSENSUSNODE {
+	if pm.handler != nil && pm.nodetype == common.CONSENSUSNODE {
 		consensusChannel = make(chan p2p.Msg, channelSizePerPeer)
 		defer close(consensusChannel)
-		pm.engine.(consensus.Handler).RegisterConsensusMsgCode(p)
+		pm.handler.RegisterConsensusMsgCode(p)
 		isCN = true
 	}
 

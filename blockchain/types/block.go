@@ -114,14 +114,6 @@ func (h *Header) Hash() common.Hash {
 	if fn := HeaderHashFn; fn != nil {
 		return fn(h)
 	}
-	// If the mix digest is equivalent to the predefined Istanbul digest, use Istanbul
-	// specific hash calculation.
-	if EngineType == Engine_IBFT {
-		// Seal is reserved in extra-data. To prove block is signed by the proposer.
-		if istanbulHeader := IstanbulFilteredHeader(h, true); istanbulHeader != nil {
-			return rlpHash(istanbulHeader)
-		}
-	}
 	return rlpHash(h)
 }
 
@@ -154,10 +146,6 @@ func (h *Header) Size() common.StorageSize {
 	} else {
 		return constantSize + byteSize + bigIntSize
 	}
-}
-
-func (h *Header) Round() byte {
-	return byte(h.Extra[IstanbulExtraVanity-1])
 }
 
 func rlpHash(x interface{}) (h common.Hash) {

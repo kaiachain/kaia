@@ -25,11 +25,9 @@ package backend
 import (
 	"maps"
 
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -109,18 +107,6 @@ func (api *API) Discard(address common.Address) {
 	defer api.istanbul.candidatesLock.Unlock()
 
 	delete(api.istanbul.candidates, address)
-}
-
-func RecoverCommittedSeals(extra *types.IstanbulExtra, headerHash common.Hash) ([]common.Address, error) {
-	committers := make([]common.Address, len(extra.CommittedSeal))
-	for idx, cs := range extra.CommittedSeal {
-		committer, err := istanbul.GetSignatureAddress(istanbulCore.PrepareCommittedSeal(headerHash), cs)
-		if err != nil {
-			return nil, err
-		}
-		committers[idx] = committer
-	}
-	return committers, nil
 }
 
 func (api *API) GetTimeout() uint64 {

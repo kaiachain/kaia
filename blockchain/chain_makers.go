@@ -31,8 +31,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/bft"
-	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -226,7 +224,6 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, sealer conse
 	if config == nil {
 		config = params.TestChainConfig
 	}
-	signerSealer, signerAddr := generateChainSigner(config)
 	blocks, receipts := make(types.Blocks, n), make([]types.Receipts, n)
 	genblock := func(i int, parent *types.Block, stateDB *state.StateDB) (*types.Block, types.Receipts) {
 		// TODO(karalabe): This is needed for consensus engines, which depends on multiple blocks.
@@ -253,8 +250,6 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, sealer conse
 		// with subsequent block re-execution during insertion.
 		if author, err := blockchain.sealer.Author(b.header); err == nil {
 			b.author = author
-		} else {
-			b.author = signerAddr
 		}
 
 		processor := blockchain.Processor()
@@ -277,11 +272,6 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, sealer conse
 		if err := stateDB.Database().TrieDB().Commit(root, false, block.NumberU64()); err != nil {
 			panic(fmt.Sprintf("trie write error: %v", err))
 		}
-		sealedBlock, err := sealGeneratedBlock(blockchain.sealer, signerSealer, signerAddr, block)
-		if err != nil {
-			panic(fmt.Sprintf("seal write error: %v", err))
-		}
-		block = sealedBlock
 		return block, b.receipts
 	}
 	for i := range n {
@@ -295,43 +285,6 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, sealer conse
 		parent = block
 	}
 	return blocks, receipts
-}
-
-func generateChainSigner(config *params.ChainConfig) (consensus.Sealer, common.Address) {
-	// Deterministic signer key used only for synthetic test-chain generation.
-	key, err := crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-	if err != nil {
-		panic(fmt.Sprintf("failed to build test signer: %v", err))
-	}
-	return bft.NewSealer(config, key), crypto.PubkeyToAddress(key.PublicKey)
-}
-
-func sealGeneratedBlock(targetSealer, signerSealer consensus.Sealer, signer common.Address, block *types.Block) (*types.Block, error) {
-	header := block.Header()
-	// Preserve already-sealed headers (e.g. explicitly prepared by a test case).
-	if _, err := targetSealer.Author(header); err == nil {
-		if committers, err := targetSealer.Committers(header); err == nil && len(committers) > 0 {
-			return block, nil
-		}
-	}
-	if err := targetSealer.WriteValidators(header, []common.Address{signer}); err != nil {
-		return nil, err
-	}
-	authorSeal, err := signerSealer.MakeAuthorSeal(header)
-	if err != nil {
-		return nil, err
-	}
-	if err := targetSealer.WriteAuthorSeal(header, authorSeal); err != nil {
-		return nil, err
-	}
-	committedSeal, err := signerSealer.MakeCommittedSeal(header)
-	if err != nil {
-		return nil, err
-	}
-	if err := targetSealer.WriteCommittedSeals(header, [][]byte{committedSeal}); err != nil {
-		return nil, err
-	}
-	return block.WithSeal(header), nil
 }
 
 func makeHeader(chain ChainContext, parent *types.Block, state *state.StateDB) *types.Header {

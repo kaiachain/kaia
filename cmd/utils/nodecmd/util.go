@@ -28,11 +28,10 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/sha3"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/urfave/cli/v2"
 )
@@ -163,61 +162,64 @@ func decodeGov(bytes []byte) (map[string]interface{}, error) {
 	}
 }
 
-func parseHeaderFile(headerFile string) (*types.Header, common.Hash, error) {
+func parseHeaderFile(headerFile string) (*types.Header, error) {
 	header := new(types.Header)
 	bytes, err := os.ReadFile(headerFile)
 	if err != nil {
-		return nil, common.Hash{}, err
+		return nil, err
 	}
 	if err = json.Unmarshal(bytes, &header); err != nil {
-		return nil, common.Hash{}, err
+		return nil, err
 	}
-	var hash common.Hash
-	hasher := sha3.NewKeccak256()
-	rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false))
-	hasher.Sum(hash[:0])
-	return header, hash, nil
+	return header, nil
 }
 
 func decodeExtra(headerFile string) (map[string]interface{}, error) {
-	// TODO-consensus: Switch to the engine/sealer-provided extra decoding path after sealer introduction.
-	header, sigHash, err := parseHeaderFile(headerFile)
+	header, err := parseHeaderFile(headerFile)
 	if err != nil {
 		return nil, err
 	}
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	// decode-extra can use a fixed sealer config because only one effective
+	// scheme implementation is available. If a new scheme is introduced later,
+	// this command should inspect the chainConfig from DB and reintroduce a
+	// scheme option so DecodeExtra uses the correct implementation.
+	s := bft.NewSealer(params.TestChainConfig.Copy(), nil)
+	validators, err := s.Validators(header)
 	if err != nil {
 		return nil, err
 	}
-	validators := make([]string, len(istanbulExtra.Validators))
-	for idx, addr := range istanbulExtra.Validators {
-		validators[idx] = addr.String()
-	}
-	proposer, err := istanbul.GetSignatureAddress(sigHash.Bytes(), istanbulExtra.Seal)
+	authorSeal, committedSeals, err := s.RawSeals(header)
 	if err != nil {
 		return nil, err
 	}
-	committers, err := backend.RecoverCommittedSeals(istanbulExtra, header.Hash())
+	round, err := s.Round(header)
 	if err != nil {
 		return nil, err
 	}
-	cSeals := make([]string, len(istanbulExtra.CommittedSeal))
-	for i := range cSeals {
-		cSeals[i] = hexutil.Encode(istanbulExtra.CommittedSeal[i])
+	author, err := s.Author(header)
+	if err != nil {
+		author = common.Address{}
+	}
+	committers, err := s.Committers(header)
+	if err != nil {
+		committers = []common.Address{}
 	}
 
-	m := make(map[string]interface{})
-	m["hash"] = header.Hash().Hex()
-	m["sigHash"] = sigHash.Hex()
-	m["validators"] = validators
-	m["seal"] = hexutil.Encode(istanbulExtra.Seal)
-	m["committedSeal"] = cSeals
-	m["committers"] = committers
-	m["validatorSize"] = len(validators)
-	m["committedSealSize"] = len(cSeals)
-	m["proposer"] = proposer.String()
-	m["round"] = header.Round()
-	return m, nil
+	headerHash := s.HeaderHash(header)
+	sigHash := s.SigHash(header)
+
+	result := make(map[string]interface{})
+	result["hash"] = headerHash.Hex()
+	result["sigHash"] = sigHash.Hex()
+	result["validators"] = validators
+	result["seal"] = hexutil.Encode(authorSeal)
+	result["committedSeal"] = committedSeals
+	result["committers"] = committers
+	result["validatorSize"] = len(validators)
+	result["committedSealSize"] = len(committedSeals)
+	result["proposer"] = author.String()
+	result["round"] = round
+	return result, nil
 }
 
 func decodeVote(bytes []byte) (map[string]interface{}, error) {

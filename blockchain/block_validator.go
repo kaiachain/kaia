@@ -245,7 +245,7 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		return err
 	}
 	if !valset.NewAddressSet(qualified).Contains(author) {
-		return istanbul.ErrUnauthorized
+		return consensus.ErrUnauthorized
 	}
 
 	council, err := v.mValset.GetCouncil(blockNum)

@@ -2818,12 +2818,12 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(blockContext, txContext, statedb, chainConfig, vmConfig)
 
-	// change evm and msg for eest
+	// EEST test hook: validator-only extension point.
 	if bc != nil {
-		if e, hasMethod := bc.Sealer().(interface {
+		if v, hasMethod := bc.Validator().(interface {
 			BeforeApplyMessage(*vm.EVM, *types.Transaction)
 		}); hasMethod {
-			e.BeforeApplyMessage(vmenv, msg)
+			v.BeforeApplyMessage(vmenv, msg)
 		}
 	}
 

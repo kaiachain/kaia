@@ -23,9 +23,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/crypto/sha3"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/consensus"
 )
 
 const (
@@ -35,31 +33,21 @@ const (
 	TX_KEY_FACTOR    = 100000
 )
 
-func getProposerAndValidatorsFromBlock(block *types.Block) (proposer string, validators string, err error) {
+func getProposerAndValidatorsFromBlock(s consensus.Sealer, block *types.Block) (proposer string, validators string, err error) {
 	blockNumber := block.NumberU64()
 	if blockNumber == 0 {
 		return "", "", nil
 	}
-	// Retrieve the signature from the header extra-data
-	istanbulExtra, err := types.ExtractIstanbulExtra(block.Header())
+	proposerAddr, err := s.Author(block.Header())
 	if err != nil {
 		return "", "", err
 	}
-
-	sigHash, err := sigHash(block.Header())
+	validatorsList, err := s.Validators(block.Header())
 	if err != nil {
 		return "", "", err
-	}
-	proposerAddr, err := istanbul.GetSignatureAddress(sigHash.Bytes(), istanbulExtra.Seal)
-	if err != nil {
-		return "", "", err
-	}
-	commiteeAddrs := make([]common.Address, len(istanbulExtra.Validators))
-	for i, addr := range istanbulExtra.Validators {
-		commiteeAddrs[i] = addr
 	}
 	var strValidators []string
-	for _, validator := range istanbulExtra.Validators {
+	for _, validator := range validatorsList {
 		strValidators = append(strValidators, validator.Hex())
 	}
 
@@ -67,32 +55,7 @@ func getProposerAndValidatorsFromBlock(block *types.Block) (proposer string, val
 }
 
 // ecrecover extracts the Kaia account address from a signed header.
-func ecrecover(header *types.Header) (common.Address, error) {
-	// Retrieve the signature from the header extra-data
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
-	if err != nil {
-		return common.Address{}, err
-	}
-
-	sigHash, err := sigHash(header)
-	if err != nil {
-		return common.Address{}, err
-	}
-	addr, err := istanbul.GetSignatureAddress(sigHash.Bytes(), istanbulExtra.Seal)
-	if err != nil {
-		return addr, err
-	}
-	return addr, nil
-}
-
-func sigHash(header *types.Header) (hash common.Hash, err error) {
-	hasher := sha3.NewKeccak256()
-
-	// Clean seal is required for calculating proposer seal.
-	if err := rlp.Encode(hasher, types.IstanbulFilteredHeader(header, false)); err != nil {
-		logger.Error("fail to encode", "err", err)
-		return common.Hash{}, err
-	}
-	hasher.Sum(hash[:0])
-	return hash, nil
+func ecrecover(s consensus.Sealer, header *types.Header) (common.Address, error) {
+	author, err := s.Author(header)
+	return author, err
 }

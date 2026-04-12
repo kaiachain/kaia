@@ -31,12 +31,12 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -72,11 +72,14 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 	configItems = append(configItems, mStaking)
 
 	chain, istBackend := newBlockChain(t, len(stakes), configItems...)
+	mGov := govModuleOf(istBackend)
 	chain.RegisterKaiaxModules(
-		istBackend.govModule,
+		mGov,
 		istBackend.valsetModule,
-		[]kaiax.ExecutionModule{istBackend.govModule},
-		nil, nil, nil,
+		[]kaiax.ExecutionModule{mGov},
+		nil,
+		nil,
+		nil,
 	)
 	defer istBackend.Stop()
 
@@ -137,7 +140,6 @@ func newTestBackend() (b *backend) {
 }
 
 func newTestBackendWithConfig(chainConfig *params.ChainConfig, key *ecdsa.PrivateKey) (b *backend) {
-	dbm := database.NewMemoryDBManager()
 	if key == nil {
 		// if key is nil, generate new key for a test account
 		key, _ = crypto.GenerateKey()
@@ -156,7 +158,6 @@ func newTestBackendWithConfig(chainConfig *params.ChainConfig, key *ecdsa.Privat
 	backend := New(&BackendOpts{
 		IstanbulConfig: istanbulConfig,
 		PrivateKey:     key,
-		DB:             dbm,
 		NodeType:       common.CONSENSUSNODE,
 	}).(*backend)
 	return backend
@@ -176,23 +177,6 @@ func TestSign(t *testing.T) {
 	assert.Equal(t, b.address, actualSigner)
 }
 
-func TestCheckSignature(t *testing.T) {
-	b := newTestBackend()
-	defer b.Stop()
-
-	// testAddr is derived from testPrivateKey.
-	testPrivateKey, _ := crypto.HexToECDSA("bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1")
-	testAddr := common.HexToAddress("0x70524d664ffe731100208a0154e556f9bb679ae6")
-	testInvalidAddr := common.HexToAddress("0x9535b2e7faaba5288511d89341d94a38063a349b")
-
-	hashData := crypto.Keccak256([]byte(testSigningData))
-	sig, err := crypto.Sign(hashData, testPrivateKey)
-	assert.NoError(t, err)
-
-	assert.NoError(t, b.CheckSignature(testSigningData, testAddr, sig))
-	assert.Equal(t, istanbul.ErrInvalidSignature, b.CheckSignature(testSigningData, testInvalidAddr, sig))
-}
-
 func TestCommit(t *testing.T) {
 	commitCh := make(chan *types.Block)
 
@@ -204,11 +188,11 @@ func TestCommit(t *testing.T) {
 		{
 			// normal case
 			nil,
-			[][]byte{append([]byte{1}, bytes.Repeat([]byte{0x00}, types.IstanbulExtraSeal-1)...)},
+			[][]byte{append([]byte{1}, bytes.Repeat([]byte{0x00}, istanbul.IstanbulExtraSeal-1)...)},
 		},
 		{
 			// invalid signature
-			istanbul.ErrInvalidCommittedSeals,
+			consensus.ErrInvalidCommittedSeals,
 			nil,
 		},
 	} {
