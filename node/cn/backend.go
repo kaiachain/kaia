@@ -40,7 +40,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
@@ -243,7 +243,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		chainConfig:       chainConfig,
 		eventMux:          ctx.EventMux,
 		accountManager:    ctx.AccountManager,
-		engine:            bft.NewEngine(&bft.Opts{IstanbulConfig: &config.Istanbul, PrivateKey: ctx.NodeKey(), NodeType: ctx.NodeType()}),
+		engine:            engine.NewEngine(&engine.Opts{IstanbulConfig: &config.Istanbul, PrivateKey: ctx.NodeKey(), NodeType: ctx.NodeType()}),
 		networkId:         config.NetworkId,
 		rewardbase:        config.Rewardbase,
 		bloomRequests:     make(chan chan *bloombits.Retrieval),
@@ -264,7 +264,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	}
 	var (
-		sealer      = bft.NewSealer(chainConfig, ctx.NodeKey())
+		sealer      = engine.NewSealer(chainConfig, ctx.NodeKey())
 		vmConfig    = config.getVMConfig()
 		cacheConfig = &blockchain.CacheConfig{
 			ArchiveMode:          config.NoPruning,

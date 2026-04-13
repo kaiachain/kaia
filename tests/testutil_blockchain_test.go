@@ -30,7 +30,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -164,7 +164,7 @@ func (ctx *blockchainTestContext) setGenesis(alloc blockchain.GenesisAlloc) {
 		Number: big.NewInt(0),
 		Extra:  append([]byte(nil), baseGenesis.ExtraData...),
 	}
-	if err := bft.NewSealer(ctx.config, nil).WriteValidators(genesisHeader, ctx.accountAddrs[:ctx.numNodes]); err != nil {
+	if err := engine.NewSealer(ctx.config, nil).WriteValidators(genesisHeader, ctx.accountAddrs[:ctx.numNodes]); err != nil {
 		panic(err)
 	}
 

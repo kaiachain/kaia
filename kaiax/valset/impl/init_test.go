@@ -25,7 +25,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
@@ -56,7 +56,7 @@ func TestStartStop(t *testing.T) {
 
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{}).AnyTimes()
 	mockChain.EXPECT().CurrentBlock().Return(current).AnyTimes()
-	mockChain.EXPECT().Sealer().Return(bft.NewSealer(nil, nil)).AnyTimes()
+	mockChain.EXPECT().Sealer().Return(engine.NewSealer(nil, nil)).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesis).AnyTimes()
 	for i := uint64(1); i <= current.NumberU64(); i++ {
 		header := &types.Header{Number: big.NewInt(int64(i))}
@@ -152,7 +152,7 @@ func TestMigration(t *testing.T) {
 
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(pset).AnyTimes()
 	mockChain.EXPECT().CurrentBlock().Return(block2050).AnyTimes()
-	mockChain.EXPECT().Sealer().Return(bft.NewSealer(nil, nil)).AnyTimes()
+	mockChain.EXPECT().Sealer().Return(engine.NewSealer(nil, nil)).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesis).AnyTimes()
 	for i := uint64(1); i <= 2050; i++ {
 		header := &types.Header{Number: big.NewInt(int64(i)), Vote: votes[i]}
@@ -205,7 +205,7 @@ func TestMigration(t *testing.T) {
 
 func makeGenesisBlock(council []common.Address) *types.Block {
 	header := &types.Header{Number: big.NewInt(0)}
-	if err := bft.NewSealer(nil, nil).WriteValidators(header, council); err != nil {
+	if err := engine.NewSealer(nil, nil).WriteValidators(header, council); err != nil {
 		panic(err)
 	}
 	return types.NewBlockWithHeader(header)

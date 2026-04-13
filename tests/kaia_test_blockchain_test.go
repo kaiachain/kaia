@@ -34,7 +34,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/profile"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/downloader"
@@ -125,7 +125,7 @@ func NewBCDataWithConfigs(maxAccounts, numValidators int, chainCfg *params.Chain
 	}
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockchain
-	bc, genesis, err := initBlockChain(chainDb, cacheConfig, addrs, validatorAddresses, nil, bft.NewSealer(chainCfg, validatorPrivKeys[0]), chainCfg)
+	bc, genesis, err := initBlockChain(chainDb, cacheConfig, addrs, validatorAddresses, nil, engine.NewSealer(chainCfg, validatorPrivKeys[0]), chainCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -659,7 +659,7 @@ func makeCommittedSeal(h *types.Header, chainConfig *params.ChainConfig, privKey
 	committedSeals := make([][]byte, 0, 3)
 
 	for i := 1; i < 4; i++ {
-		signer := bft.NewSealer(chainConfig, privKeys[i])
+		signer := engine.NewSealer(chainConfig, privKeys[i])
 		committedSeal, err := signer.MakeCommittedSeal(h)
 		if err != nil {
 			return nil, err

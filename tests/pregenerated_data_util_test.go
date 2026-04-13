@@ -35,7 +35,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/crypto"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
@@ -370,7 +370,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Setup sealer for istanbul extra/seal handling
-	s := bft.NewSealer(Forks["Byzantium"], validatorPrivKeys[0])
+	s := engine.NewSealer(Forks["Byzantium"], validatorPrivKeys[0])
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockChain

@@ -25,7 +25,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/naoina/toml"
 	"github.com/urfave/cli/v2"
 )
@@ -132,7 +132,7 @@ func decode(ctx *cli.Context) error {
 		Number: big.NewInt(1),
 		Extra:  append([]byte(nil), extraBytes...),
 	}
-	sealer := bft.NewSealer(nil, nil)
+	sealer := engine.NewSealer(nil, nil)
 
 	vanity, err := sealer.Vanity(header)
 	if err != nil {

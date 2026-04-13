@@ -30,7 +30,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
@@ -169,7 +169,7 @@ func newKaiaNode(t *testing.T, dir string, validator *TestAccountType, config *p
 			Number: big.NewInt(0),
 			Extra:  append([]byte(nil), genesis.ExtraData...),
 		}
-		if err := bft.NewSealer(genesis.Config, nil).WriteValidators(genesisHeader, []common.Address{validator.Addr}); err != nil {
+		if err := engine.NewSealer(genesis.Config, nil).WriteValidators(genesisHeader, []common.Address{validator.Addr}); err != nil {
 			t.Fatal(err)
 		}
 		genesis.ExtraData = genesisHeader.Extra
