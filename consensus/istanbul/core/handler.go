@@ -155,7 +155,7 @@ func (c *core) handleMsg(payload []byte) error {
 	logger := c.logger.NewWith()
 
 	// Decode message and check its signature
-	msg := new(message)
+	msg := new(bft.Message)
 	if err := msg.FromPayload(payload, c.validateFn); err != nil {
 		if c.backend.NodeType() == common.CONSENSUSNODE {
 			if err != istanbul.ErrUnauthorizedAddress {
@@ -186,7 +186,7 @@ func (c *core) handleMsg(payload []byte) error {
 	return c.handleCheckedMsg(msg, msg.Address)
 }
 
-func (c *core) handleCheckedMsg(msg *message, src common.Address) error {
+func (c *core) handleCheckedMsg(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("address", c.address, "from", src)
 
 	// Store the message if it's a future message, or catch up if we're behind
@@ -207,19 +207,19 @@ func (c *core) handleCheckedMsg(msg *message, src common.Address) error {
 	}
 
 	switch msg.Code {
-	case msgPreprepare:
+	case bft.MsgPreprepare:
 		return testBacklog(c.handlePreprepare(msg, src))
-	case msgPrepare:
+	case bft.MsgPrepare:
 		return testBacklog(c.handlePrepare(msg, src))
-	case msgCommit:
+	case bft.MsgCommit:
 		return testBacklog(c.handleCommit(msg, src))
-	case msgRoundChange:
+	case bft.MsgRoundChange:
 		return testBacklog(c.handleRoundChange(msg, src))
 	default:
 		logger.Error("Invalid message type", "msg", msg)
 	}
 
-	return errInvalidMessage
+	return bft.ErrInvalidMessage
 }
 
 func (c *core) handleTimeoutMsg(nextView *bft.View) {

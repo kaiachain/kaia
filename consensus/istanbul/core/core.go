@@ -172,7 +172,7 @@ func (c *core) RegisterKaiaxModules(mValset valset.ValsetModule, mGov gov.GovMod
 	c.govModule = mGov
 }
 
-func (c *core) finalizeMessage(msg *message) ([]byte, error) {
+func (c *core) finalizeMessage(msg *bft.Message) ([]byte, error) {
 	var err error
 	// Add sender address
 	msg.Address = c.Address()
@@ -180,7 +180,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	// Add proof of consensus
 	msg.CommittedSeal = []byte{}
 	// Assign the CommittedSeal if it's a COMMIT message and proposal is not nil
-	if msg.Code == msgCommit && c.current.Proposal() != nil {
+	if msg.Code == bft.MsgCommit && c.current.Proposal() != nil {
 		msg.CommittedSeal, err = c.backend.Sealer().MakeCommittedSeal(c.current.Proposal().Header())
 		if err != nil {
 			return nil, err
@@ -206,7 +206,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	return payload, nil
 }
 
-func (c *core) broadcast(msg *message) {
+func (c *core) broadcast(msg *bft.Message) {
 	logger := c.logger.NewWith("state", c.state)
 
 	payload, err := c.finalizeMessage(msg)

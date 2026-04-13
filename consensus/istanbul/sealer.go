@@ -147,7 +147,7 @@ func istanbulFilteredHeader(h *types.Header, keepSeal bool) *types.Header {
 func prepareCommittedSeal(hash common.Hash) []byte {
 	var buf bytes.Buffer
 	buf.Write(hash.Bytes())
-	buf.Write([]byte{byte(2)}) // keep in sync with consensus/istanbul/core.msgCommit
+	buf.Write([]byte{byte(2)}) // keep in sync with consensus/istanbul/core.bft.MsgCommit
 	return buf.Bytes()
 }
 
@@ -175,7 +175,7 @@ func (m *IstanbulSealer) Committers(header *types.Header) ([]common.Address, err
 		return []common.Address{}, nil
 	}
 
-	proposalSeal := prepareCommittedSeal(m.HeaderHash(header)) // msgCommit
+	proposalSeal := prepareCommittedSeal(m.HeaderHash(header)) // bft.MsgCommit
 	committers := make([]common.Address, 0, len(extra.CommittedSeal))
 	for _, seal := range extra.CommittedSeal {
 		addr, err := cacheSignatureAddress(proposalSeal, seal)

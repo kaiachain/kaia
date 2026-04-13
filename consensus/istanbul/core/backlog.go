@@ -29,23 +29,23 @@ import (
 )
 
 // msgPriority is defined for calculating processing priority to speedup consensus
-// msgPreprepare > msgCommit > msgPrepare
+// bft.MsgPreprepare > bft.MsgCommit > bft.MsgPrepare
 var msgPriority = map[uint64]int{
-	msgPreprepare: 1,
-	msgCommit:     2,
-	msgPrepare:    3,
+	bft.MsgPreprepare: 1,
+	bft.MsgCommit:     2,
+	bft.MsgPrepare:    3,
 }
 
 // checkMessage checks the message state
-// return errInvalidMessage if the message is invalid
+// return bft.ErrInvalidMessage if the message is invalid
 // return errFutureMessage if the message view is larger than current view
 // return errOldMessage if the message view is smaller than current view
 func (c *core) checkMessage(msgCode uint64, view *bft.View) error {
 	if view == nil || view.Sequence == nil || view.Round == nil {
-		return errInvalidMessage
+		return bft.ErrInvalidMessage
 	}
 
-	if msgCode == msgRoundChange {
+	if msgCode == bft.MsgRoundChange {
 		if view.Sequence.Cmp(c.currentView().Sequence) > 0 {
 			return errFutureMessage
 		} else if view.Cmp(c.currentView()) < 0 {
@@ -66,10 +66,10 @@ func (c *core) checkMessage(msgCode uint64, view *bft.View) error {
 		return errFutureMessage
 	}
 
-	// StateAcceptRequest only accepts msgPreprepare
+	// StateAcceptRequest only accepts bft.MsgPreprepare
 	// other messages are future messages
 	if c.state == StateAcceptRequest {
-		if msgCode > msgPreprepare {
+		if msgCode > bft.MsgPreprepare {
 			return errFutureMessage
 		}
 		return nil
@@ -80,7 +80,7 @@ func (c *core) checkMessage(msgCode uint64, view *bft.View) error {
 	return nil
 }
 
-func (c *core) storeBacklog(msg *message, src common.Address) {
+func (c *core) storeBacklog(msg *bft.Message, src common.Address) {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	if src == c.Address() {
@@ -98,13 +98,13 @@ func (c *core) storeBacklog(msg *message, src common.Address) {
 		backlog = prque.New()
 	}
 	switch msg.Code {
-	case msgPreprepare:
+	case bft.MsgPreprepare:
 		var p *bft.Preprepare
 		err := msg.Decode(&p)
 		if err == nil {
 			backlog.Push(msg, toPriority(msg.Code, p.View))
 		}
-		// for msgRoundChange, msgPrepare and msgCommit cases
+		// for bft.MsgRoundChange, bft.MsgPrepare and bft.MsgCommit cases
 	default:
 		var p *bft.Subject
 		err := msg.Decode(&p)
@@ -132,18 +132,18 @@ func (c *core) processBacklog() {
 		//   2. The first message in queue is a future message
 		for !(backlog.Empty() || isFuture) {
 			m, prio := backlog.Pop()
-			msg := m.(*message)
+			msg := m.(*bft.Message)
 			var view *bft.View
 			var prevHash common.Hash
 			switch msg.Code {
-			case msgPreprepare:
+			case bft.MsgPreprepare:
 				var m *bft.Preprepare
 				err := msg.Decode(&m)
 				if err == nil {
 					view = m.View
 				}
 				prevHash = m.Proposal.ParentHash()
-				// for msgRoundChange, msgPrepare and msgCommit cases
+				// for bft.MsgRoundChange, bft.MsgPrepare and bft.MsgCommit cases
 			default:
 				var sub *bft.Subject
 				err := msg.Decode(&sub)
@@ -180,8 +180,8 @@ func (c *core) processBacklog() {
 }
 
 func toPriority(msgCode uint64, view *bft.View) int64 {
-	if msgCode == msgRoundChange {
-		// For msgRoundChange, set the message priority based on its sequence
+	if msgCode == bft.MsgRoundChange {
+		// For bft.MsgRoundChange, set the message priority based on its sequence
 		return -int64(view.Sequence.Uint64() * 1000)
 	}
 	// FIXME: round will be reset as 0 while new sequence

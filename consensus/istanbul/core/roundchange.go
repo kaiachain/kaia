@@ -74,15 +74,15 @@ func (c *core) sendRoundChange(round *big.Int) {
 		PrevHash: lastProposal.Hash(),
 	}
 
-	payload, err := Encode(rc)
+	payload, err := bft.Encode(rc)
 	if err != nil {
 		logger.Error("Failed to encode ROUND CHANGE", "rc", rc, "err", err)
 		return
 	}
 
-	c.broadcast(&message{
+	c.broadcast(&bft.Message{
 		Hash: rc.PrevHash,
-		Code: msgRoundChange,
+		Code: bft.MsgRoundChange,
 		Msg:  payload,
 	})
 
@@ -97,7 +97,7 @@ func (c *core) sendRoundChange(round *big.Int) {
 	Vrank.AddMyRoundChange(round.Uint64(), timestamp)
 }
 
-func (c *core) handleRoundChange(msg *message, src common.Address) error {
+func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("state", c.state, "from", src.Hex())
 	timestamp := time.Now()
 
@@ -105,7 +105,7 @@ func (c *core) handleRoundChange(msg *message, src common.Address) error {
 	var rc *bft.Subject
 	if err := msg.Decode(&rc); err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
-		return errInvalidMessage
+		return bft.ErrInvalidMessage
 	}
 
 	// TODO-Kaia-Istanbul: establish round change messaging policy and then apply it
@@ -113,7 +113,7 @@ func (c *core) handleRoundChange(msg *message, src common.Address) error {
 	//	return errNotFromCommittee
 	//}
 
-	if err := c.checkMessage(msgRoundChange, rc.View); err != nil {
+	if err := c.checkMessage(bft.MsgRoundChange, rc.View); err != nil {
 		return err
 	}
 
@@ -185,7 +185,7 @@ type roundChangeSet struct {
 }
 
 // Add adds the round and message into round change set
-func (rcs *roundChangeSet) Add(r *big.Int, msg *message) (int, error) {
+func (rcs *roundChangeSet) Add(r *big.Int, msg *bft.Message) (int, error) {
 	rcs.mu.Lock()
 	defer rcs.mu.Unlock()
 

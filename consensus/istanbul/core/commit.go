@@ -58,31 +58,31 @@ func (c *core) sendCommitForOldBlock(view *bft.View, digest common.Hash, prevHas
 func (c *core) broadcastCommit(sub *bft.Subject) {
 	logger := c.logger.NewWith("state", c.state)
 
-	encodedSubject, err := Encode(sub)
+	encodedSubject, err := bft.Encode(sub)
 	if err != nil {
 		logger.Error("Failed to encode", "subject", sub)
 		return
 	}
 
-	c.broadcast(&message{
+	c.broadcast(&bft.Message{
 		Hash: sub.PrevHash,
-		Code: msgCommit,
+		Code: bft.MsgCommit,
 		Msg:  encodedSubject,
 	})
 }
 
-func (c *core) handleCommit(msg *message, src common.Address) error {
+func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
 	timestamp := time.Now()
 	// Decode COMMIT message
 	var commit *bft.Subject
 	err := msg.Decode(&commit)
 	if err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
-		return errInvalidMessage
+		return bft.ErrInvalidMessage
 	}
 
 	// logger.Error("receive handle commit","num", commit.View.Sequence)
-	if err := c.checkMessage(msgCommit, commit.View); err != nil {
+	if err := c.checkMessage(bft.MsgCommit, commit.View); err != nil {
 		// logger.Error("### istanbul/commit.go checkMessage","num",commit.View.Sequence,"err",err)
 		return err
 	}
@@ -106,11 +106,11 @@ func (c *core) handleCommit(msg *message, src common.Address) error {
 	// the previous round skip sending PREPARE messages.
 	if c.state.Cmp(StatePrepared) < 0 {
 		if c.current.IsHashLocked() && commit.Digest == c.current.GetLockedHash() {
-			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", msgCommit)
+			logger.Warn("received commit of the hash locked proposal and change state to prepared", "msgType", bft.MsgCommit)
 			c.setState(StatePrepared)
 			c.sendCommit()
 		} else if c.current.GetPrepareOrCommitSize() >= c.current.requiredMessageCount {
-			logger.Info("received a quorum of the messages and change state to prepared", "msgType", msgCommit, "valSet", c.current.qualified.Len())
+			logger.Info("received a quorum of the messages and change state to prepared", "msgType", bft.MsgCommit, "valSet", c.current.qualified.Len())
 			c.current.LockHash()
 			c.setState(StatePrepared)
 			c.sendCommit()
@@ -144,7 +144,7 @@ func (c *core) verifyCommit(commit *bft.Subject, src common.Address) error {
 	return nil
 }
 
-func (c *core) acceptCommit(msg *message, src common.Address) error {
+func (c *core) acceptCommit(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("from", src.Hex(), "state", c.state)
 
 	// Add the COMMIT message to current round state

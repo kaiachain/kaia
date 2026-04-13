@@ -31,7 +31,7 @@ func (c *core) handleRequest(request *bft.Request) error {
 	logger := c.logger.NewWith("state", c.state, "seq", c.current.sequence)
 
 	if err := c.checkRequestMsg(request); err != nil {
-		if err == errInvalidMessage {
+		if err == bft.ErrInvalidMessage {
 			logger.Warn("invalid request")
 			return err
 		}
@@ -49,12 +49,12 @@ func (c *core) handleRequest(request *bft.Request) error {
 }
 
 // check request state
-// return errInvalidMessage if the message is invalid
+// return bft.ErrInvalidMessage if the message is invalid
 // return errFutureMessage if the sequence of proposal is larger than current sequence
 // return errOldMessage if the sequence of proposal is smaller than current sequence
 func (c *core) checkRequestMsg(request *bft.Request) error {
 	if request == nil || request.Proposal == nil {
-		return errInvalidMessage
+		return bft.ErrInvalidMessage
 	}
 
 	cmp := c.current.sequence.Cmp(request.Proposal.Number())

@@ -29,7 +29,7 @@ import (
 
 type backlogEvent struct {
 	src  common.Address
-	msg  *message
+	msg  *bft.Message
 	Hash common.Hash
 }
 

@@ -36,30 +36,30 @@ func (c *core) sendPrepare() {
 	}
 
 	sub := c.current.Subject()
-	encodedSubject, err := Encode(sub)
+	encodedSubject, err := bft.Encode(sub)
 	if err != nil {
 		logger.Error("Failed to encode", "subject", sub)
 		return
 	}
 
-	c.broadcast(&message{
+	c.broadcast(&bft.Message{
 		Hash: c.current.Proposal().ParentHash(),
-		Code: msgPrepare,
+		Code: bft.MsgPrepare,
 		Msg:  encodedSubject,
 	})
 }
 
-func (c *core) handlePrepare(msg *message, src common.Address) error {
+func (c *core) handlePrepare(msg *bft.Message, src common.Address) error {
 	// Decode PREPARE message
 	var prepare *bft.Subject
 	err := msg.Decode(&prepare)
 	if err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
-		return errInvalidMessage
+		return bft.ErrInvalidMessage
 	}
 
 	// logger.Error("call receive prepare","num",prepare.View.Sequence)
-	if err := c.checkMessage(msgPrepare, prepare.View); err != nil {
+	if err := c.checkMessage(bft.MsgPrepare, prepare.View); err != nil {
 		return err
 	}
 
@@ -83,11 +83,11 @@ func (c *core) handlePrepare(msg *message, src common.Address) error {
 	// the previous round skip sending PREPARE messages.
 	if c.state.Cmp(StatePrepared) < 0 {
 		if c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash() {
-			logger.Warn("received prepare of the hash locked proposal and change state to prepared", "msgType", msgPrepare)
+			logger.Warn("received prepare of the hash locked proposal and change state to prepared", "msgType", bft.MsgPrepare)
 			c.setState(StatePrepared)
 			c.sendCommit()
 		} else if c.current.GetPrepareOrCommitSize() >= c.current.requiredMessageCount {
-			logger.Info("received a quorum of the messages and change state to prepared", "msgType", msgPrepare,
+			logger.Info("received a quorum of the messages and change state to prepared", "msgType", bft.MsgPrepare,
 				"prepareMsgNum", c.current.Prepares.Size(), "commitMsgNum", c.current.Commits.Size(),
 				"valSet", c.current.qualified.Len())
 			c.current.LockHash()
@@ -112,7 +112,7 @@ func (c *core) verifyPrepare(prepare *bft.Subject, src common.Address) error {
 	return nil
 }
 
-func (c *core) acceptPrepare(msg *message, src common.Address) error {
+func (c *core) acceptPrepare(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	// Add the PREPARE message to current round state
