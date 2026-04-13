@@ -192,6 +192,10 @@ func decodeExtra(headerFile string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	committedSealHex := make([]string, len(committedSeals))
+	for i, s := range committedSeals {
+		committedSealHex[i] = hexutil.Encode(s)
+	}
 	round, err := s.Round(header)
 	if err != nil {
 		return nil, err
@@ -213,7 +217,7 @@ func decodeExtra(headerFile string) (map[string]interface{}, error) {
 	result["sigHash"] = sigHash.Hex()
 	result["validators"] = validators
 	result["seal"] = hexutil.Encode(authorSeal)
-	result["committedSeal"] = committedSeals
+	result["committedSeal"] = committedSealHex
 	result["committers"] = committers
 	result["validatorSize"] = len(validators)
 	result["committedSealSize"] = len(committedSeals)

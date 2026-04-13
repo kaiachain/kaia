@@ -18,6 +18,9 @@ type Opts struct {
 
 // NewEngine creates the consensus engine selected by the given configuration.
 func NewEngine(opts *Opts) consensus.Engine {
+	if opts == nil || opts.IstanbulConfig == nil || opts.PrivateKey == nil {
+		panic("NewEngine receives invalid opts")
+	}
 	return istanbulBackend.New(&istanbulBackend.BackendOpts{
 		IstanbulConfig: opts.IstanbulConfig,
 		PrivateKey:     opts.PrivateKey,
