@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
@@ -58,7 +58,7 @@ func (c *core) sendRoundChange(round *big.Int) {
 	logger.Warn("[RC] Commit messages received before catchUpRound",
 		"len(commits)", c.current.Commits.Size(), "messages", c.current.Commits.GetMessages())
 
-	c.catchUpRound(&istanbul.View{
+	c.catchUpRound(&bft.View{
 		// The round number we'd like to transfer to.
 		Round:    new(big.Int).Set(round),
 		Sequence: new(big.Int).Set(cv.Sequence),
@@ -68,7 +68,7 @@ func (c *core) sendRoundChange(round *big.Int) {
 
 	// Now we have the new round number and sequence number
 	cv = c.currentView()
-	rc := &istanbul.Subject{
+	rc := &bft.Subject{
 		View:     cv,
 		Digest:   common.Hash{},
 		PrevHash: lastProposal.Hash(),
@@ -90,7 +90,7 @@ func (c *core) sendRoundChange(round *big.Int) {
 	if c.current.committee != nil {
 		committeeList = c.current.committee.List()
 	}
-	Vrank.SetLatestView(istanbul.View{
+	Vrank.SetLatestView(bft.View{
 		Round:    new(big.Int).Set(round),
 		Sequence: new(big.Int).Set(cv.Sequence),
 	}, committeeList, c.current.requiredMessageCount)
@@ -102,7 +102,7 @@ func (c *core) handleRoundChange(msg *message, src common.Address) error {
 	timestamp := time.Now()
 
 	// Decode ROUND CHANGE message
-	var rc *istanbul.Subject
+	var rc *bft.Subject
 	if err := msg.Decode(&rc); err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
 		return errInvalidMessage

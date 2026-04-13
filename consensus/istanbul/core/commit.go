@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 )
 
 func (c *core) sendCommit() {
@@ -46,8 +46,8 @@ func (c *core) sendCommit() {
 	c.broadcastCommit(sub)
 }
 
-func (c *core) sendCommitForOldBlock(view *istanbul.View, digest common.Hash, prevHash common.Hash) {
-	sub := &istanbul.Subject{
+func (c *core) sendCommitForOldBlock(view *bft.View, digest common.Hash, prevHash common.Hash) {
+	sub := &bft.Subject{
 		View:     view,
 		Digest:   digest,
 		PrevHash: prevHash,
@@ -55,7 +55,7 @@ func (c *core) sendCommitForOldBlock(view *istanbul.View, digest common.Hash, pr
 	c.broadcastCommit(sub)
 }
 
-func (c *core) broadcastCommit(sub *istanbul.Subject) {
+func (c *core) broadcastCommit(sub *bft.Subject) {
 	logger := c.logger.NewWith("state", c.state)
 
 	encodedSubject, err := Encode(sub)
@@ -74,7 +74,7 @@ func (c *core) broadcastCommit(sub *istanbul.Subject) {
 func (c *core) handleCommit(msg *message, src common.Address) error {
 	timestamp := time.Now()
 	// Decode COMMIT message
-	var commit *istanbul.Subject
+	var commit *bft.Subject
 	err := msg.Decode(&commit)
 	if err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
@@ -132,7 +132,7 @@ func (c *core) handleCommit(msg *message, src common.Address) error {
 }
 
 // verifyCommit verifies if the received COMMIT message is equivalent to our subject
-func (c *core) verifyCommit(commit *istanbul.Subject, src common.Address) error {
+func (c *core) verifyCommit(commit *bft.Subject, src common.Address) error {
 	logger := c.logger.NewWith("from", src.Hex(), "state", c.state)
 
 	sub := c.current.Subject()

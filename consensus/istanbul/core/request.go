@@ -23,10 +23,11 @@
 package core
 
 import (
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 )
 
-func (c *core) handleRequest(request *istanbul.Request) error {
+func (c *core) handleRequest(request *bft.Request) error {
 	logger := c.logger.NewWith("state", c.state, "seq", c.current.sequence)
 
 	if err := c.checkRequestMsg(request); err != nil {
@@ -51,7 +52,7 @@ func (c *core) handleRequest(request *istanbul.Request) error {
 // return errInvalidMessage if the message is invalid
 // return errFutureMessage if the sequence of proposal is larger than current sequence
 // return errOldMessage if the sequence of proposal is smaller than current sequence
-func (c *core) checkRequestMsg(request *istanbul.Request) error {
+func (c *core) checkRequestMsg(request *bft.Request) error {
 	if request == nil || request.Proposal == nil {
 		return errInvalidMessage
 	}
@@ -66,7 +67,7 @@ func (c *core) checkRequestMsg(request *istanbul.Request) error {
 	}
 }
 
-func (c *core) storeRequestMsg(request *istanbul.Request) {
+func (c *core) storeRequestMsg(request *bft.Request) {
 	logger := c.logger.NewWith("state", c.state)
 
 	logger.Trace("Store future request", "number", request.Proposal.Number(), "hash", request.Proposal.Hash())
@@ -83,7 +84,7 @@ func (c *core) processPendingRequests() {
 
 	for !(c.pendingRequests.Empty()) {
 		m, prio := c.pendingRequests.Pop()
-		r, ok := m.(*istanbul.Request)
+		r, ok := m.(*bft.Request)
 		if !ok {
 			c.logger.Warn("Malformed request, skip", "msg", m)
 			continue

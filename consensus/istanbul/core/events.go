@@ -24,7 +24,7 @@ package core
 
 import (
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 )
 
 type backlogEvent struct {
@@ -34,5 +34,5 @@ type backlogEvent struct {
 }
 
 type timeoutEvent struct {
-	nextView *istanbul.View
+	nextView *bft.View
 }

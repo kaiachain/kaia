@@ -25,6 +25,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/params"
@@ -63,7 +64,7 @@ func TestCore_sendPrepare(t *testing.T) {
 		assert.NoError(t, err)
 
 		istCore.current.round.Set(big.NewInt(tc.round))
-		istCore.current.Preprepare = &istanbul.Preprepare{
+		istCore.current.Preprepare = &bft.Preprepare{
 			View:     istCore.currentView(),
 			Proposal: proposal,
 		}
@@ -75,9 +76,9 @@ func TestCore_sendPrepare(t *testing.T) {
 }
 
 func BenchmarkMsgCmp(b *testing.B) {
-	getEmptySubject := func() istanbul.Subject {
-		return istanbul.Subject{
-			View: &istanbul.View{
+	getEmptySubject := func() bft.Subject {
+		return bft.Subject{
+			View: &bft.View{
 				Round:    big.NewInt(0),
 				Sequence: big.NewInt(0),
 			},
@@ -112,11 +113,11 @@ func TestSubjectCmp(t *testing.T) {
 	genRandomInt := func(min, max int) int64 {
 		return int64(rand.Intn(max-min) + min)
 	}
-	genSubject := func(min, max int) *istanbul.Subject {
+	genSubject := func(min, max int) *bft.Subject {
 		round, seq := big.NewInt(genRandomInt(min, max)), big.NewInt(genRandomInt(min, max))
 		digest, prevHash := genRandomHash(max), genRandomHash(max)
-		return &istanbul.Subject{
-			View: &istanbul.View{
+		return &bft.Subject{
+			View: &bft.View{
 				Round:    round,
 				Sequence: seq,
 			},
@@ -124,9 +125,9 @@ func TestSubjectCmp(t *testing.T) {
 			PrevHash: prevHash,
 		}
 	}
-	copySubject := func(s *istanbul.Subject) *istanbul.Subject {
-		r := new(istanbul.Subject)
-		v := new(istanbul.View)
+	copySubject := func(s *bft.Subject) *bft.Subject {
+		r := new(bft.Subject)
+		v := new(bft.View)
 		r.Digest = s.Digest
 		r.PrevHash = s.PrevHash
 		v.Round = new(big.Int).SetUint64(s.View.Round.Uint64())
@@ -137,7 +138,7 @@ func TestSubjectCmp(t *testing.T) {
 
 	min, max, n := 1, 9999, 10000
 	var identity bool
-	var s1, s2 *istanbul.Subject
+	var s1, s2 *bft.Subject
 	for range n {
 		s1 = genSubject(min, max)
 		if rand.Intn(2) == 0 {
@@ -158,15 +159,15 @@ func TestSubjectCmp(t *testing.T) {
 }
 
 func TestNilSubjectCmp(t *testing.T) {
-	sbj := istanbul.Subject{
-		View: &istanbul.View{
+	sbj := bft.Subject{
+		View: &bft.View{
 			Round:    big.NewInt(0),
 			Sequence: big.NewInt(0),
 		},
 		Digest:   common.HexToHash("1"),
 		PrevHash: common.HexToHash("2"),
 	}
-	var nilSbj *istanbul.Subject = nil
+	var nilSbj *bft.Subject = nil
 
 	assert.Equal(t, sbj.Equal(nil), false)
 	assert.Equal(t, sbj.Equal(nilSbj), false)

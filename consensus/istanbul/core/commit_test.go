@@ -21,6 +21,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/params"
@@ -60,7 +61,7 @@ func TestCore_sendCommit(t *testing.T) {
 			assert.NoError(t, err)
 
 			istCore.current.round.Set(big.NewInt(tc.round))
-			istCore.current.Preprepare = &istanbul.Preprepare{
+			istCore.current.Preprepare = &bft.Preprepare{
 				View:     istCore.currentView(),
 				Proposal: proposal,
 			}

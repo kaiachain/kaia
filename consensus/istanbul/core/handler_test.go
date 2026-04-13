@@ -28,6 +28,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	mock_istanbul "github.com/kaiachain/kaia/consensus/istanbul/mocks"
 	"github.com/kaiachain/kaia/crypto"
@@ -191,16 +192,16 @@ func genIstanbulMsg(msgType uint64, prevHash common.Hash, proposal *types.Block,
 	var subject interface{}
 
 	if msgType == msgPreprepare {
-		subject = &istanbul.Preprepare{
-			View: &istanbul.View{
+		subject = &bft.Preprepare{
+			View: &bft.View{
 				Round:    big.NewInt(0),
 				Sequence: proposal.Number(),
 			},
 			Proposal: proposal,
 		}
 	} else {
-		subject = &istanbul.Subject{
-			View: &istanbul.View{
+		subject = &bft.Subject{
+			View: &bft.View{
 				Round:    big.NewInt(0),
 				Sequence: proposal.Number(),
 			},
@@ -846,8 +847,8 @@ func TestCore_handleTimeoutMsg_race(t *testing.T) {
 
 // makeRCMsgPayload makes a payload of round change message.
 func makeRCMsgPayload(t *testing.T, round int64, sequence int64, prevHash common.Hash, senderAddr common.Address, signerKey *ecdsa.PrivateKey) []byte {
-	subject, err := Encode(&istanbul.Subject{
-		View: &istanbul.View{
+	subject, err := Encode(&bft.Subject{
+		View: &bft.View{
 			Round:    big.NewInt(round),
 			Sequence: big.NewInt(sequence),
 		},

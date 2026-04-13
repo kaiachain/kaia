@@ -22,11 +22,14 @@
 
 package istanbul
 
-import "github.com/kaiachain/kaia/common"
+import (
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/bft"
+)
 
 // RequestEvent is posted to propose a proposal
 type RequestEvent struct {
-	Proposal Proposal
+	Proposal bft.Proposal
 }
 
 // MessageEvent is posted for Istanbul engine communication

@@ -28,7 +28,7 @@ import (
 	"io"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/rlp"
@@ -175,17 +175,17 @@ func (m *message) String() string {
 	return fmt.Sprintf("{Code: %v, Address: %v}", m.Code, m.Address.String())
 }
 
-func (m *message) GetView() (*istanbul.View, error) {
-	var msgView *istanbul.View
+func (m *message) GetView() (*bft.View, error) {
+	var msgView *bft.View
 	switch m.Code {
 	case msgPreprepare:
-		var preprepare *istanbul.Preprepare
+		var preprepare *bft.Preprepare
 		if decodeErr := m.Decode(&preprepare); decodeErr != nil {
 			return nil, decodeErr
 		}
 		msgView = preprepare.View
 	case msgPrepare, msgCommit, msgRoundChange:
-		var subject *istanbul.Subject
+		var subject *bft.Subject
 		if decodeErr := m.Decode(&subject); decodeErr != nil {
 			return nil, decodeErr
 		}

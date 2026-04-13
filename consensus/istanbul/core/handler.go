@@ -24,6 +24,7 @@ package core
 
 import (
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 )
 
@@ -94,7 +95,7 @@ func (c *core) handleEvents() {
 			// A real event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case istanbul.RequestEvent:
-				r := &istanbul.Request{
+				r := &bft.Request{
 					Proposal: ev.Proposal,
 				}
 				err := c.handleRequest(r)
@@ -221,7 +222,7 @@ func (c *core) handleCheckedMsg(msg *message, src common.Address) error {
 	return errInvalidMessage
 }
 
-func (c *core) handleTimeoutMsg(nextView *istanbul.View) {
+func (c *core) handleTimeoutMsg(nextView *bft.View) {
 	// TODO-Kaia-Istanbul: EN/PN should not handle consensus msgs.
 	if c.backend.NodeType() != common.CONSENSUSNODE {
 		logger.Trace("PN/EN doesn't need to handle timeout messages",

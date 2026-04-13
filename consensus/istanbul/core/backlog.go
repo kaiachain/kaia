@@ -25,7 +25,7 @@ package core
 import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 )
 
 // msgPriority is defined for calculating processing priority to speedup consensus
@@ -40,7 +40,7 @@ var msgPriority = map[uint64]int{
 // return errInvalidMessage if the message is invalid
 // return errFutureMessage if the message view is larger than current view
 // return errOldMessage if the message view is smaller than current view
-func (c *core) checkMessage(msgCode uint64, view *istanbul.View) error {
+func (c *core) checkMessage(msgCode uint64, view *bft.View) error {
 	if view == nil || view.Sequence == nil || view.Round == nil {
 		return errInvalidMessage
 	}
@@ -99,14 +99,14 @@ func (c *core) storeBacklog(msg *message, src common.Address) {
 	}
 	switch msg.Code {
 	case msgPreprepare:
-		var p *istanbul.Preprepare
+		var p *bft.Preprepare
 		err := msg.Decode(&p)
 		if err == nil {
 			backlog.Push(msg, toPriority(msg.Code, p.View))
 		}
 		// for msgRoundChange, msgPrepare and msgCommit cases
 	default:
-		var p *istanbul.Subject
+		var p *bft.Subject
 		err := msg.Decode(&p)
 		if err == nil {
 			backlog.Push(msg, toPriority(msg.Code, p.View))
@@ -133,11 +133,11 @@ func (c *core) processBacklog() {
 		for !(backlog.Empty() || isFuture) {
 			m, prio := backlog.Pop()
 			msg := m.(*message)
-			var view *istanbul.View
+			var view *bft.View
 			var prevHash common.Hash
 			switch msg.Code {
 			case msgPreprepare:
-				var m *istanbul.Preprepare
+				var m *bft.Preprepare
 				err := msg.Decode(&m)
 				if err == nil {
 					view = m.View
@@ -145,7 +145,7 @@ func (c *core) processBacklog() {
 				prevHash = m.Proposal.ParentHash()
 				// for msgRoundChange, msgPrepare and msgCommit cases
 			default:
-				var sub *istanbul.Subject
+				var sub *bft.Subject
 				err := msg.Decode(&sub)
 				if err == nil {
 					view = sub.View
@@ -179,7 +179,7 @@ func (c *core) processBacklog() {
 	}
 }
 
-func toPriority(msgCode uint64, view *istanbul.View) int64 {
+func toPriority(msgCode uint64, view *bft.View) int64 {
 	if msgCode == msgRoundChange {
 		// For msgRoundChange, set the message priority based on its sequence
 		return -int64(view.Sequence.Uint64() * 1000)

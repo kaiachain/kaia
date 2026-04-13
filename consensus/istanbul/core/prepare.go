@@ -24,7 +24,7 @@ package core
 
 import (
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 )
 
 func (c *core) sendPrepare() {
@@ -51,7 +51,7 @@ func (c *core) sendPrepare() {
 
 func (c *core) handlePrepare(msg *message, src common.Address) error {
 	// Decode PREPARE message
-	var prepare *istanbul.Subject
+	var prepare *bft.Subject
 	err := msg.Decode(&prepare)
 	if err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
@@ -100,7 +100,7 @@ func (c *core) handlePrepare(msg *message, src common.Address) error {
 }
 
 // verifyPrepare verifies if the received PREPARE message is equivalent to our subject
-func (c *core) verifyPrepare(prepare *istanbul.Subject, src common.Address) error {
+func (c *core) verifyPrepare(prepare *bft.Subject, src common.Address) error {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	sub := c.current.Subject()

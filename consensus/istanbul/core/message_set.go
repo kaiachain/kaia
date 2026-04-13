@@ -29,6 +29,7 @@ import (
 	"sync"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
@@ -36,7 +37,7 @@ import (
 // Construct a new message set to accumulate messages for given sequence/view number.
 func newMessageSet(qualified *valset.AddressSet) *messageSet {
 	return &messageSet{
-		view: &istanbul.View{
+		view: &bft.View{
 			Round:    new(big.Int),
 			Sequence: new(big.Int),
 		},
@@ -49,13 +50,13 @@ func newMessageSet(qualified *valset.AddressSet) *messageSet {
 // ----------------------------------------------------------------------------
 
 type messageSet struct {
-	view       *istanbul.View
+	view       *bft.View
 	qualified  *valset.AddressSet
 	messagesMu *sync.Mutex
 	messages   map[common.Address]*message
 }
 
-func (ms *messageSet) View() *istanbul.View {
+func (ms *messageSet) View() *bft.View {
 	return ms.view
 }
 

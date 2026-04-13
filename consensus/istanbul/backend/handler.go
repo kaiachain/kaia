@@ -29,6 +29,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -71,7 +72,7 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 			return true, istanbul.ErrStoppedEngine
 		}
 
-		var cmsg istanbul.ConsensusMsg
+		var cmsg bft.ConsensusMsg
 
 		// var data []byte
 		if err := msg.Decode(&cmsg); err != nil {
