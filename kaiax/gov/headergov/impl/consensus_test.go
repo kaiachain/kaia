@@ -117,6 +117,29 @@ func TestVerifyVote(t *testing.T) {
 	}
 }
 
+func TestVerifyVote_PermissionlessForbidden(t *testing.T) {
+	config := getTestChainConfig()
+	config.PermissionlessCompatibleBlock = common.Big0
+	h := newHeaderGovModule(t, config)
+
+	tcs := []struct {
+		desc string
+		vote headergov.VoteData
+	}{
+		{"addvalidator forbidden", headergov.NewVoteData(validVoter, string(gov.AddValidator), common.HexToAddress("0x1234"))},
+		{"removevalidator forbidden", headergov.NewVoteData(validVoter, string(gov.RemoveValidator), common.HexToAddress("0x1234"))},
+		{"committeesize forbidden", headergov.NewVoteData(validVoter, string(gov.IstanbulCommitteeSize), uint64(7))},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.desc, func(t *testing.T) {
+			vb, err := tc.vote.ToVoteBytes()
+			assert.NoError(t, err)
+			err = h.VerifyVote(&types.Header{Number: big.NewInt(1), Vote: vb, Extra: extra})
+			assert.Equal(t, ErrVoteForbiddenPermless, err)
+		})
+	}
+}
+
 func TestGetVotesInEpoch(t *testing.T) {
 	h := newHeaderGovModule(t, getTestChainConfig())
 

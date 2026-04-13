@@ -23,6 +23,7 @@ var (
 	ErrGovNodeInValSetVoteValue = errors.New("gov node is found in the valset vote value")
 	ErrGovNodeNotInValSetList   = errors.New("gov node is not found in the valset list")
 	ErrInvalidVoter             = errors.New("invalid voter")
+	ErrVoteForbiddenPermless    = errors.New("vote is forbidden in permissionless mode")
 )
 
 func errInitNil(msg string) error {

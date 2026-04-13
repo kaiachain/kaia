@@ -95,6 +95,11 @@ func (v *ValsetModule) getCommittee(c *blockContext, round uint64) ([]common.Add
 	if c.num == 0 {
 		return c.qualified.List(), nil
 	}
+	// In permissionless mode, all qualified validators form the committee.
+	// CommitteeSize is not used; subset selection is disabled.
+	if c.rules.IsPermissionless {
+		return c.qualified.List(), nil
+	}
 	if c.qualified.Len() <= int(c.pset.CommitteeSize) {
 		return c.qualified.List(), nil
 	}
@@ -200,7 +205,12 @@ func (v *ValsetModule) getProposer(c *blockContext, round uint64) (common.Addres
 		return selectStickyProposer(c.qualified, c.prevProposer, round), nil
 	case istanbul.WeightedRandom:
 		if c.rules.IsRandao {
-			committee := selectRandaoCommittee(c.qualified, c.pset.CommitteeSize, c.prevHeader.MixHash)
+			var committee []common.Address
+			if c.rules.IsPermissionless {
+				committee = c.qualified.List()
+			} else {
+				committee = selectRandaoCommittee(c.qualified, c.pset.CommitteeSize, c.prevHeader.MixHash)
+			}
 			return selectRandaoProposer(committee, round), nil
 		} else {
 			list, sourceNum, err := v.getProposerList(c)

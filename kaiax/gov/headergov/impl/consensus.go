@@ -2,6 +2,7 @@ package impl
 
 import (
 	"maps"
+	"math/big"
 	"reflect"
 	"slices"
 
@@ -140,6 +141,15 @@ func (h *headerGovModule) VerifyGov(header *types.Header) error {
 
 // checkConsistency checks if vote values are consistent with chain states such as other parameters and validator set.
 func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteData) error {
+	// In permissionless mode, validator/committee governance votes are forbidden.
+	// Validators are managed by ABv2 contract, and committee = all qualified validators.
+	if h.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
+		switch vote.Name() {
+		case gov.AddValidator, gov.RemoveValidator, gov.IstanbulCommitteeSize:
+			return ErrVoteForbiddenPermless
+		}
+	}
+
 	switch vote.Name() {
 	case gov.GovernanceGoverningNode:
 		params := h.GetParamSet(blockNum)
