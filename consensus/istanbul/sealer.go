@@ -147,7 +147,7 @@ func istanbulFilteredHeader(h *types.Header, keepSeal bool) *types.Header {
 func prepareCommittedSeal(hash common.Hash) []byte {
 	var buf bytes.Buffer
 	buf.Write(hash.Bytes())
-	buf.Write([]byte{byte(2)}) // keep in sync with consensus/istanbul/core.bft.MsgCommit
+	buf.Write([]byte{byte(2)}) // keep in sync with bft.MsgCommit
 	return buf.Bytes()
 }
 
