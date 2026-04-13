@@ -25,9 +25,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/contracts_permissionless/contracts/multicall"
 	"github.com/kaiachain/kaia/kaiax/staking"
-	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -281,30 +279,49 @@ func TestSourceBlockNum(t *testing.T) {
 	}
 }
 
-func TestParsePermissionlessCallResult_OnlyValActive(t *testing.T) {
-	kefAddr := common.HexToAddress("0xeef")
-	kifAddr := common.HexToAddress("0xeif")
-	kpfAddr := common.HexToAddress("0xepf")
-	stakeAmount := new(big.Int).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA))
+func TestGetStakingInfo_Permissionless_OnlyValActive(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
-	profiles := []multicall.Profile{
-		{NodeId: common.HexToAddress("0x01"), StakingContract: common.HexToAddress("0x11"), RewardAddress: common.HexToAddress("0x21"), State: uint8(valset.ValActive)},
-		{NodeId: common.HexToAddress("0x02"), StakingContract: common.HexToAddress("0x12"), RewardAddress: common.HexToAddress("0x22"), State: uint8(valset.ValPaused)},
-		{NodeId: common.HexToAddress("0x03"), StakingContract: common.HexToAddress("0x13"), RewardAddress: common.HexToAddress("0x23"), State: uint8(valset.ValReady)},
-		{NodeId: common.HexToAddress("0x04"), StakingContract: common.HexToAddress("0x14"), RewardAddress: common.HexToAddress("0x24"), State: uint8(valset.ValActive)},
-		{NodeId: common.HexToAddress("0x05"), StakingContract: common.HexToAddress("0x15"), RewardAddress: common.HexToAddress("0x25"), State: uint8(valset.ValExiting)},
+	// Use MultiCallPermlessMockCode which returns:
+	//   profile[0]: NodeId=0xF00, Staking=0xF01, Reward=0xF02, ValActive,  5M KAIA
+	//   profile[1]: NodeId=0xF03, Staking=0xF04, Reward=0xF05, CandReady, 10M KAIA
+	// Only ValActive should appear in StakingInfo.
+	originCode := system.MultiCallCode
+	system.MultiCallCode = system.MultiCallPermlessMockCode
+	defer func() { system.MultiCallCode = originCode }()
+
+	db := database.NewMemoryDBManager()
+	config := testPragueForkChainConfig(big.NewInt(0))
+	config.PermissionlessCompatibleBlock = big.NewInt(0)
+
+	alloc := blockchain.GenesisAlloc{
+		system.AddressBookAddr: {Code: []byte{0x01}, Balance: big.NewInt(0)}, // non-nil to pass bail-out check
 	}
-	amounts := []*big.Int{stakeAmount, stakeAmount, stakeAmount, stakeAmount, stakeAmount}
-	clRes := clRegistryResult{}
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
 
-	si, err := parsePermissionlessCallResult(100, profiles, amounts, kefAddr, kifAddr, kpfAddr, clRes)
+	mStaking := NewStakingModule()
+	mStaking.Init(&InitOpts{
+		ChainKv:     db.GetMiscDB(),
+		ChainConfig: config,
+		Chain:       backend.BlockChain(),
+	})
+	si, err := mStaking.GetStakingInfo(0)
 	require.NoError(t, err)
 
-	// Only ValActive (0x01, 0x04) should be included
+	// Only ValActive (profile[0]=0xF00, profile[5]=0x4000) should be included
+	// ValPaused, ValReady, ValExiting, CandReady are all excluded
 	assert.Len(t, si.NodeIds, 2)
-	assert.Equal(t, common.HexToAddress("0x01"), si.NodeIds[0])
-	assert.Equal(t, common.HexToAddress("0x04"), si.NodeIds[1])
-	assert.Len(t, si.StakingAmounts, 2)
+	assert.Equal(t, common.HexToAddress("0xF00"), si.NodeIds[0])
+	assert.Equal(t, common.HexToAddress("0x4000"), si.NodeIds[1])
+	assert.Equal(t, common.HexToAddress("0xF01"), si.StakingContracts[0])
+	assert.Equal(t, common.HexToAddress("0x4001"), si.StakingContracts[1])
+	assert.Equal(t, common.HexToAddress("0xF02"), si.RewardAddrs[0])
+	assert.Equal(t, common.HexToAddress("0x4002"), si.RewardAddrs[1])
 	assert.Equal(t, uint64(5_000_000), si.StakingAmounts[0])
-	assert.Equal(t, uint64(5_000_000), si.StakingAmounts[1])
+	assert.Equal(t, uint64(9_000_000), si.StakingAmounts[1])
+
+	// Fund addresses from mock
+	assert.Equal(t, common.HexToAddress("0x0a01"), si.KEFAddr)
+	assert.Equal(t, common.HexToAddress("0x0a02"), si.KIFAddr)
+	assert.Equal(t, common.HexToAddress("0x0a03"), si.KPFAddr)
 }

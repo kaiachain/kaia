@@ -410,6 +410,40 @@ func TestGetViolationTransition_SuspendedNotExempt(t *testing.T) {
 	assert.Equal(t, valset.ValActive, result[addr3].State, "non-suspended, no violation → unchanged")
 }
 
+// TestGetViolationTransition_Deterministic verifies that violation transitions produce
+// consistent results regardless of Go map iteration order. Two ValActive validators both
+// below minStake compete for a single ValExiting slot — the same one must always win.
+func TestGetViolationTransition_Deterministic(t *testing.T) {
+	var firstResult map[common.Address]valset.State
+	for i := 0; i < 100; i++ {
+		ctrl := gomock.NewController(t)
+		v := newTestValsetModule(ctrl)
+		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+		mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
+		v.VRankModule = mockVRank
+
+		validators := valset.NodeStateMap{
+			addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
+			addr2: {State: valset.ValActive, StakingAmount: belowMinStake},
+			addr3: {State: valset.ValActive, StakingAmount: aboveMinStake}, // keeps ValActive count > minActiveCount
+		}
+		// maxSlotAvailable=1, minActiveCount=2 → only 1 of addr1/addr2 can transition
+		result := v.getViolationTransition(testMinStake, validators, 0, 0, 1, 2, testIdleTimeout, testBlockTime)
+
+		states := map[common.Address]valset.State{
+			addr1: result[addr1].State,
+			addr2: result[addr2].State,
+			addr3: result[addr3].State,
+		}
+		if firstResult == nil {
+			firstResult = states
+		} else {
+			require.Equal(t, firstResult, states, "nondeterministic result at iteration %d", i)
+		}
+		ctrl.Finish()
+	}
+}
+
 func TestGetViolationTransition_MinStakeMigrated(t *testing.T) {
 	testcases := []struct {
 		name           string

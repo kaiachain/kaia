@@ -24,6 +24,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/contracts_permissionless/contracts/multicall"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
@@ -101,20 +102,23 @@ func TestMultiCallStakingInfoPermissionless(t *testing.T) {
 	// Does not affect the original state
 	assert.Equal(t, []byte(nil), state.GetCode(MultiCallAddr))
 
-	// Verify profiles
-	assert.Equal(t, 2, len(ret.Profiles))
+	// Verify profiles (6 validators with different states)
+	assert.Equal(t, 6, len(ret.Profiles))
 	assert.Equal(t, common.HexToAddress("0xF00"), ret.Profiles[0].NodeId)
-	assert.Equal(t, common.HexToAddress("0xF01"), ret.Profiles[0].StakingContract)
-	assert.Equal(t, common.HexToAddress("0xF02"), ret.Profiles[0].RewardAddress)
-	assert.Equal(t, uint8(6), ret.Profiles[0].State) // ValActive
-
+	assert.Equal(t, uint8(valset.ValActive), ret.Profiles[0].State)
 	assert.Equal(t, common.HexToAddress("0xF03"), ret.Profiles[1].NodeId)
-	assert.Equal(t, common.HexToAddress("0xF04"), ret.Profiles[1].StakingContract)
-	assert.Equal(t, common.HexToAddress("0xF05"), ret.Profiles[1].RewardAddress)
-	assert.Equal(t, uint8(2), ret.Profiles[1].State) // CandReady
+	assert.Equal(t, uint8(valset.ValPaused), ret.Profiles[1].State)
+	assert.Equal(t, common.HexToAddress("0x1000"), ret.Profiles[2].NodeId)
+	assert.Equal(t, uint8(valset.ValReady), ret.Profiles[2].State)
+	assert.Equal(t, common.HexToAddress("0x2000"), ret.Profiles[3].NodeId)
+	assert.Equal(t, uint8(valset.ValExiting), ret.Profiles[3].State)
+	assert.Equal(t, common.HexToAddress("0x3000"), ret.Profiles[4].NodeId)
+	assert.Equal(t, uint8(valset.CandReady), ret.Profiles[4].State)
+	assert.Equal(t, common.HexToAddress("0x4000"), ret.Profiles[5].NodeId)
+	assert.Equal(t, uint8(valset.ValActive), ret.Profiles[5].State)
 
 	// Verify staking amounts
-	assert.Equal(t, 2, len(ret.StakingAmounts))
+	assert.Equal(t, 6, len(ret.StakingAmounts))
 	assert.Equal(t, new(big.Int).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA)), ret.StakingAmounts[0])
 	assert.Equal(t, new(big.Int).Mul(big.NewInt(10_000_000), big.NewInt(params.KAIA)), ret.StakingAmounts[1])
 

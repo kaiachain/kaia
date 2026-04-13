@@ -79,8 +79,8 @@ contract MultiCallContractMock {
         pure
         returns (Profile[] memory profiles, uint256[] memory stakingAmounts, address kefAddr, address kifAddr, address kpfAddr)
     {
-        profiles = new Profile[](2);
-        stakingAmounts = new uint256[](2);
+        profiles = new Profile[](6);
+        stakingAmounts = new uint256[](6);
 
         profiles[0] = Profile(
             0x0000000000000000000000000000000000000F00,
@@ -94,11 +94,43 @@ contract MultiCallContractMock {
             0x0000000000000000000000000000000000000f04,
             0x0000000000000000000000000000000000000f05,
             0,
+            State.ValPaused
+        );
+        profiles[2] = Profile(
+            0x0000000000000000000000000000000000001000,
+            0x0000000000000000000000000000000000001001,
+            0x0000000000000000000000000000000000001002,
+            0,
+            State.ValReady
+        );
+        profiles[3] = Profile(
+            0x0000000000000000000000000000000000002000,
+            0x0000000000000000000000000000000000002001,
+            0x0000000000000000000000000000000000002002,
+            0,
+            State.ValExiting
+        );
+        profiles[4] = Profile(
+            0x0000000000000000000000000000000000003000,
+            0x0000000000000000000000000000000000003001,
+            0x0000000000000000000000000000000000003002,
+            0,
             State.CandReady
+        );
+        profiles[5] = Profile(
+            0x0000000000000000000000000000000000004000,
+            0x0000000000000000000000000000000000004001,
+            0x0000000000000000000000000000000000004002,
+            0,
+            State.ValActive
         );
 
         stakingAmounts[0] = 5_000_000 ether;
         stakingAmounts[1] = 10_000_000 ether;
+        stakingAmounts[2] = 8_000_000 ether;
+        stakingAmounts[3] = 7_000_000 ether;
+        stakingAmounts[4] = 6_000_000 ether;
+        stakingAmounts[5] = 9_000_000 ether;
 
         kefAddr = 0x0000000000000000000000000000000000000a01;
         kifAddr = 0x0000000000000000000000000000000000000a02;

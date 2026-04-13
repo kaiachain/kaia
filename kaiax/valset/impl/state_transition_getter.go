@@ -148,8 +148,13 @@ func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset
 		}
 	)
 
+	// Iterate in deterministic address order. Slot-limited transitions depend on
+	// which validator is processed first, so random map iteration would be nondeterministic.
+	sortedAddrs := newValidators.Addresses()
+
 	// rule1: staking amount dropped below MinimumStake
-	for addr, val := range newValidators {
+	for _, addr := range sortedAddrs {
+		val := newValidators[addr]
 		if val.StakingAmount >= minStake {
 			continue
 		}
@@ -194,7 +199,8 @@ func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset
 		logger.Warn("getViolationTransition: GetPFS failed", "num", num, "err", err)
 		return newValidators
 	}
-	for addr, val := range newValidators {
+	for _, addr := range sortedAddrs {
+		val := newValidators[addr]
 		if val.State != valset.ValActive {
 			continue
 		}
