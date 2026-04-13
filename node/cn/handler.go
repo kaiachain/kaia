@@ -134,8 +134,8 @@ type ProtocolManager struct {
 	// and processing
 	wg     sync.WaitGroup
 	peerWg sync.WaitGroup
-	// istanbul BFT
-	engine consensus.Engine
+
+	handler consensus.Handler
 
 	wsendpoint string
 
@@ -155,7 +155,7 @@ type ProtocolManager struct {
 // NewProtocolManager returns a new Kaia sub protocol manager. The Kaia sub protocol manages peers capable
 // with the Kaia network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux,
-	txpool work.TxPool, engine consensus.Engine, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
+	txpool work.TxPool, handler consensus.Handler, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
 	nodetype common.ConnType, cnconfig *Config,
 ) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
@@ -171,7 +171,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		txsyncCh:          make(chan *txsync),
 		quitSync:          make(chan struct{}),
 		quitResendCh:      make(chan struct{}),
-		engine:            engine,
+		handler:           handler,
 		nodetype:          nodetype,
 		txResendUseLegacy: cnconfig.TxResendUseLegacy,
 		blobSidecarReqManager: &sidecarReqManager{
@@ -181,10 +181,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		},
 	}
 
-	// istanbul BFT
-	if handler, ok := engine.(consensus.Handler); ok {
-		handler.SetBroadcaster(manager, manager.nodetype)
-	}
+	handler.SetBroadcaster(manager, manager.nodetype)
 
 	// Figure out whether to allow fast sync or not
 	if (mode == downloader.FastSync || mode == downloader.SnapSync) && blockchain.CurrentBlock().NumberU64() > 0 {
@@ -199,8 +196,8 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.fastSync = uint32(0)
 		manager.snapSync = uint32(1)
 	}
-	// istanbul BFT
-	protocol := engine.Protocol()
+	protocol := handler.Protocol()
+	logger.Info("Initialising Klaytn protocol", "versions", protocol.Versions, "network", networkId)
 	// Initiate a sub-protocol for every implemented version we can handle
 	manager.SubProtocols = make([]p2p.Protocol, 0, len(protocol.Versions))
 	for i, version := range protocol.Versions {
@@ -361,7 +358,6 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	return manager, nil
 }
 
-// istanbul BFT
 func (pm *ProtocolManager) RegisterValidator(connType common.ConnType, validator p2p.PeerTypeValidator) {
 	pm.peers.RegisterValidator(connType, validator)
 }
@@ -665,9 +661,9 @@ func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.
 // processConsensusMsg processes the consensus message.
 func (pm *ProtocolManager) processConsensusMsg(msgCh <-chan p2p.Msg, p Peer, addr common.Address, errCh chan<- error) {
 	for msg := range msgCh {
-		if handler, ok := pm.engine.(consensus.Handler); ok {
-			_, err := handler.HandleMsg(addr, msg)
-			// if msg is istanbul msg, handled is true and err is nil if handle msg is successful.
+		if pm.handler != nil {
+			_, err := pm.handler.HandleMsg(addr, msg)
+			// if msg is consensus msg, handled is true and err is nil if handle msg is successful.
 			if err != nil {
 				p.GetP2PPeer().Log().Warn("ProtocolManager failed to handle consensus message. This can happen during block synchronization.", "msg", msg, "err", err)
 				errCh <- err
@@ -693,15 +689,14 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 	//}
 	//defer msg.Discard()
 
-	// istanbul BFT
-	if handler, ok := pm.engine.(consensus.Handler); ok {
-		//pubKey, err := p.ID().Pubkey()
-		//if err != nil {
-		//	return err
-		//}
-		//addr := crypto.PubkeyToAddress(*pubKey)
-		handled, err := handler.HandleMsg(addr, msg)
-		// if msg is istanbul msg, handled is true and err is nil if handle msg is successful.
+	//pubKey, err := p.ID().Pubkey()
+	//if err != nil {
+	//	return err
+	//}
+	//addr := crypto.PubkeyToAddress(*pubKey)
+	if pm.handler != nil {
+		handled, err := pm.handler.HandleMsg(addr, msg)
+		// if msg is a consensus msg, handled is true and err is nil if handle msg is successful.
 		if handled {
 			return err
 		}

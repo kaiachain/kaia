@@ -80,20 +80,6 @@ func (mr *MockBlockChainMockRecorder) CurrentHeader() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentHeader", reflect.TypeOf((*MockBlockChain)(nil).CurrentHeader))
 }
 
-// Engine mocks base method.
-func (m *MockBlockChain) Engine() consensus.Engine {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Engine")
-	ret0, _ := ret[0].(consensus.Engine)
-	return ret0
-}
-
-// Engine indicates an expected call of Engine.
-func (mr *MockBlockChainMockRecorder) Engine() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Engine", reflect.TypeOf((*MockBlockChain)(nil).Engine))
-}
-
 // GetBlock mocks base method.
 func (m *MockBlockChain) GetBlock(arg0 common.Hash, arg1 uint64) *types.Block {
 	m.ctrl.T.Helper()

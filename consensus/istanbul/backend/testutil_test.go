@@ -31,7 +31,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/downloader"
@@ -185,8 +184,6 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 	engine := New(&BackendOpts{
 		IstanbulConfig: istanbulConfig,
 		PrivateKey:     nodeKeys[0],
-		DB:             dbm,
-		GovModule:      mGov,
 		NodeType:       common.CONSENSUSNODE,
 	}).(*backend)
 
@@ -198,7 +195,9 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		TriesInMemory:     blockchain.DefaultTriesInMemory,
 		SnapshotCacheSize: 0, // Disable state snapshot
 	}
-	chain, err := blockchain.NewBlockChain(dbm, cacheConfig, config, engine.Sealer(), vm.Config{})
+	chainSealer := istanbul.NewSealerImpl(nodeKeys[0])
+	types.SetHeaderHashFn(chainSealer.HeaderHash)
+	chain, err := blockchain.NewBlockChain(dbm, cacheConfig, config, chainSealer, vm.Config{})
 	if err != nil {
 		panic(err)
 	}
@@ -314,9 +313,11 @@ func (ctx *testContext) MakeBlockWithCommittedSeals(parent *types.Block) *types.
 
 	// write validators committed seals to the block
 	header := block.Header()
-	committedSeals := ctx.MakeCommittedSeals(block.Hash())
-	err = writeCommittedSeals(header, committedSeals)
+	committedSeals, err := ctx.MakeCommittedSeals(header)
 	if err != nil {
+		panic(err)
+	}
+	if err = ctx.engine.sealer.WriteCommittedSeals(header, committedSeals); err != nil {
 		panic(err)
 	}
 	block = block.WithSeal(header)
@@ -324,15 +325,22 @@ func (ctx *testContext) MakeBlockWithCommittedSeals(parent *types.Block) *types.
 	return block
 }
 
-func (ctx *testContext) MakeCommittedSeals(hash common.Hash) [][]byte {
+func (ctx *testContext) MakeCommittedSeals(header *types.Header) ([][]byte, error) {
 	committedSeals := make([][]byte, len(ctx.nodeKeys))
-	hashData := crypto.Keccak256(core.PrepareCommittedSeal(hash))
 	for i, key := range ctx.nodeKeys {
-		sig, _ := crypto.Sign(hashData, key)
-		committedSeals[i] = make([]byte, types.IstanbulExtraSeal)
+		signer := istanbul.NewSealerImpl(key)
+		sig, err := signer.MakeCommittedSeal(header)
+		if err != nil {
+			return nil, err
+		}
+		committedSeals[i] = make([]byte, istanbul.IstanbulExtraSeal)
 		copy(committedSeals[i][:], sig)
 	}
-	return committedSeals
+	return committedSeals, nil
+}
+
+func prepareCommittedSealForTest(hash common.Hash) []byte {
+	return append(append([]byte{}, hash.Bytes()...), byte(2))
 }
 
 func (ctx *testContext) Cleanup() {
@@ -342,7 +350,7 @@ func (ctx *testContext) Cleanup() {
 }
 
 func makeGenesisExtra(addrs []common.Address) []byte {
-	extra := &types.IstanbulExtra{
+	extra := &istanbul.IstanbulExtra{
 		Validators:    addrs,
 		Seal:          []byte{},
 		CommittedSeal: [][]byte{},
@@ -352,7 +360,7 @@ func makeGenesisExtra(addrs []common.Address) []byte {
 		panic(err)
 	}
 
-	vanity := make([]byte, types.IstanbulExtraVanity)
+	vanity := make([]byte, istanbul.IstanbulExtraVanity)
 	return append(vanity, encoded...)
 }
 

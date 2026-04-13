@@ -16,7 +16,9 @@
 
 package consensus
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	// ErrUnknownAncestor is returned when validating a block requires an ancestor
@@ -34,4 +36,10 @@ var (
 	// ErrUnknownBlock is returned when the list of validators is requested for a block
 	// that is not part of the local blockchain.
 	ErrUnknownBlock = errors.New("unknown block")
+
+	// ErrInvalidCommittedSeals is returned if committed seals are missing or invalid.
+	ErrInvalidCommittedSeals = errors.New("invalid committed seals")
+
+	// ErrUnauthorized is returned if a header is signed by a non authorized entity.
+	ErrUnauthorized = errors.New("unauthorized")
 )

@@ -62,10 +62,6 @@ type Backend interface {
 	// Sign signs input data with the backend's private key
 	Sign([]byte) ([]byte, error)
 
-	// CheckSignature verifies the signature by checking if it's signed by
-	// the given validator
-	CheckSignature(data []byte, addr common.Address, sig []byte) error
-
 	// LastProposal retrieves latest committed proposal and the address of proposer
 	LastProposal() (Proposal, common.Address)
 

@@ -39,10 +39,8 @@ import (
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
-	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/storage/database"
 )
 
 const (
@@ -55,8 +53,6 @@ var logger = log.NewModuleLogger(log.ConsensusIstanbulBackend)
 type BackendOpts struct {
 	IstanbulConfig *istanbul.Config  // Istanbul consensus core config
 	PrivateKey     *ecdsa.PrivateKey // Consensus message signing key
-	DB             database.DBManager
-	GovModule      gov.GovModule
 	NodeType       common.ConnType
 }
 
@@ -69,13 +65,11 @@ func New(opts *BackendOpts) consensus.Engine {
 		privateKey:       opts.PrivateKey,
 		address:          crypto.PubkeyToAddress(opts.PrivateKey.PublicKey),
 		logger:           logger.NewWith(),
-		db:               opts.DB,
 		commitCh:         make(chan *types.Result, 1),
 		candidates:       make(map[common.Address]bool),
 		coreStarted:      false,
 		recentMessages:   recentMessages,
 		knownMessages:    knownMessages,
-		govModule:        opts.GovModule,
 		sealer:           istanbul.NewSealerImpl(opts.PrivateKey),
 		nodetype:         opts.NodeType,
 		chainInitCh:      make(chan struct{}),
@@ -95,7 +89,6 @@ type backend struct {
 	address          common.Address
 	core             istanbulCore.Engine
 	logger           log.Logger
-	db               database.DBManager
 	chain            consensus.ChainReader
 	currentBlock     func() *types.Block
 	hasBadBlock      func(hash common.Hash) bool
@@ -122,7 +115,6 @@ type backend struct {
 	currentView atomic.Value //*istanbul.View
 
 	// Reference to the kaiax modules
-	govModule    gov.GovModule
 	valsetModule valset.ValsetModule
 	sealer       *istanbul.IstanbulSealer
 
@@ -406,19 +398,6 @@ func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
 func (sb *backend) Sign(data []byte) ([]byte, error) {
 	hashData := crypto.Keccak256([]byte(data))
 	return crypto.Sign(hashData, sb.privateKey)
-}
-
-// CheckSignature implements istanbul.Backend.CheckSignature
-func (sb *backend) CheckSignature(data []byte, address common.Address, sig []byte) error {
-	signer, err := cacheSignatureAddresses(data, sig)
-	if err != nil {
-		logger.Error("Failed to get signer address", "err", err)
-		return err
-	}
-	if signer != address {
-		return istanbul.ErrInvalidSignature
-	}
-	return nil
 }
 
 // HasPropsal implements istanbul.Backend.HashBlock

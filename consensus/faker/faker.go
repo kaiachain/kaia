@@ -130,16 +130,6 @@ func (f *Faker) Sealer() consensus.Sealer { return f }
 // RegisterKaiaxModules is a no-op for faker.
 func (f *Faker) RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule) {}
 
-// PrepareExtra returns consensus-specific extra-data content.
-func (f *Faker) PrepareExtra(header *types.Header, _ *types.Header) ([]byte, error) {
-	return header.Extra, nil
-}
-
-// GetConsensusInfo returns empty consensus info.
-func (f *Faker) GetConsensusInfo(block *types.Block) (consensus.ConsensusInfo, error) {
-	return consensus.ConsensusInfo{}, nil
-}
-
 func (f *Faker) SigHash(_ *types.Header) common.Hash {
 	return common.Hash{}
 }

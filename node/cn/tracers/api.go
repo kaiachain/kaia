@@ -160,10 +160,6 @@ func (context *chainContext) CurrentBlock() *types.Block {
 	return block
 }
 
-func (context *chainContext) Engine() consensus.Engine {
-	return nil
-}
-
 func (context *chainContext) Sealer() consensus.Sealer {
 	return context.backend.Sealer()
 }

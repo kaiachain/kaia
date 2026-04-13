@@ -55,80 +55,6 @@ func (mr *MockEngineMockRecorder) APIs(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockEngine)(nil).APIs), arg0)
 }
 
-// Author mocks base method.
-func (m *MockEngine) Author(arg0 *types.Header) (common.Address, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Author", arg0)
-	ret0, _ := ret[0].(common.Address)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Author indicates an expected call of Author.
-func (mr *MockEngineMockRecorder) Author(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Author", reflect.TypeOf((*MockEngine)(nil).Author), arg0)
-}
-
-// Committers mocks base method.
-func (m *MockEngine) Committers(arg0 *types.Header) ([]common.Address, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Committers", arg0)
-	ret0, _ := ret[0].([]common.Address)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Committers indicates an expected call of Committers.
-func (mr *MockEngineMockRecorder) Committers(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Committers", reflect.TypeOf((*MockEngine)(nil).Committers), arg0)
-}
-
-// GetConsensusInfo mocks base method.
-func (m *MockEngine) GetConsensusInfo(arg0 *types.Block) (consensus.ConsensusInfo, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetConsensusInfo", arg0)
-	ret0, _ := ret[0].(consensus.ConsensusInfo)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetConsensusInfo indicates an expected call of GetConsensusInfo.
-func (mr *MockEngineMockRecorder) GetConsensusInfo(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConsensusInfo", reflect.TypeOf((*MockEngine)(nil).GetConsensusInfo), arg0)
-}
-
-// PrepareExtra mocks base method.
-func (m *MockEngine) PrepareExtra(arg0, arg1 *types.Header) ([]byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrepareExtra", arg0, arg1)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PrepareExtra indicates an expected call of PrepareExtra.
-func (mr *MockEngineMockRecorder) PrepareExtra(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareExtra", reflect.TypeOf((*MockEngine)(nil).PrepareExtra), arg0, arg1)
-}
-
-// Protocol mocks base method.
-func (m *MockEngine) Protocol() consensus.Protocol {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Protocol")
-	ret0, _ := ret[0].(consensus.Protocol)
-	return ret0
-}
-
-// Protocol indicates an expected call of Protocol.
-func (mr *MockEngineMockRecorder) Protocol() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Protocol", reflect.TypeOf((*MockEngine)(nil).Protocol))
-}
-
 // PurgeCache mocks base method.
 func (m *MockEngine) PurgeCache() {
 	m.ctrl.T.Helper()
@@ -207,18 +133,4 @@ func (m *MockEngine) SubscribeNewSequence() *event.TypeMuxSubscription {
 func (mr *MockEngineMockRecorder) SubscribeNewSequence() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeNewSequence", reflect.TypeOf((*MockEngine)(nil).SubscribeNewSequence))
-}
-
-// VerifySeals mocks base method.
-func (m *MockEngine) VerifySeals(arg0 *types.Header) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifySeals", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// VerifySeals indicates an expected call of VerifySeals.
-func (mr *MockEngineMockRecorder) VerifySeals(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifySeals", reflect.TypeOf((*MockEngine)(nil).VerifySeals), arg0)
 }

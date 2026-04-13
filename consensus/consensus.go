@@ -115,14 +115,6 @@ type Sealer interface {
 //
 //go:generate mockgen -destination=./mocks/engine_mock.go -package=mocks github.com/kaiachain/kaia/consensus Engine
 type Engine interface {
-	// Author retrieves the Kaia address of the account that minted the given
-	// block.
-	Author(header *types.Header) (common.Address, error)
-
-	// Committers extracts committed-seal signer addresses from the given header.
-	// Engines that do not use committed seals may return (nil, nil).
-	Committers(header *types.Header) ([]common.Address, error)
-
 	// RegisterKaiaxModules wires kaiax modules to the consensus engine.
 	RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule)
 
@@ -134,9 +126,6 @@ type Engine interface {
 	// Engines without a background runtime should implement this as a no-op.
 	Stop() error
 
-	// PrepareExtra builds consensus-specific header.Extra content.
-	PrepareExtra(header *types.Header, parent *types.Header) ([]byte, error)
-
 	// SubmitTransactions submits transactions for execution and consensus.
 	// Returns finalizeCh which receives the execution result when block is finalized (for DB write and broadcast).
 	// onPrepared is called after transactions are executed and block is finalized but before consensus sealing.
@@ -145,15 +134,6 @@ type Engine interface {
 
 	// APIs returns the RPC APIs this consensus engine provides.
 	APIs(chain ChainReader) []rpc.API
-
-	// VerifySeals checks consensus-specific seals for the given header.
-	VerifySeals(header *types.Header) error
-
-	// Protocol returns the protocol for this consensus.
-	Protocol() Protocol
-
-	// GetConsensusInfo returns consensus information regarding the given block number.
-	GetConsensusInfo(block *types.Block) (ConsensusInfo, error)
 
 	PurgeCache()
 
@@ -164,6 +144,9 @@ type Engine interface {
 
 // Handler should be implemented is the consensus needs to handle and send peer's message
 type Handler interface {
+	// Protocol returns the protocol metadata for this consensus handler.
+	Protocol() Protocol
+
 	// NewChainHead handles a new head block comes
 	NewChainHead() error
 
@@ -175,14 +158,4 @@ type Handler interface {
 
 	// RegisterConsensusMsgCode registers the channel of consensus msg.
 	RegisterConsensusMsgCode(Peer)
-}
-
-type ConsensusInfo struct {
-	// Proposer signs [sigHash] to make seal; Validators signs [block.Hash + msgCommit] to make committedSeal
-	SigHash        common.Hash
-	Proposer       common.Address
-	OriginProposer *common.Address // the proposer of 0th round at the same block number
-	Committee      []common.Address
-	Committers     []common.Address
-	Round          byte
 }

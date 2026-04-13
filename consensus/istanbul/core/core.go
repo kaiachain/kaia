@@ -23,17 +23,14 @@
 package core
 
 import (
-	"bytes"
 	"math"
 	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
-	consensuscommon "github.com/kaiachain/kaia/consensus/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -68,9 +65,31 @@ func getRoundCommitteeState(c *core, seq, r uint64) (qualified *valset.AddressSe
 	committeeSize = c.govModule.GetParamSet(seq).CommitteeSize
 
 	qLen := qualified.Len()
-	requiredMsgCnt = consensuscommon.CalcQuorumSize(qLen, committeeSize)
-	fNum = consensuscommon.CalcFaultTolerance(qLen, committeeSize)
+	requiredMsgCnt = calcQuorumSize(qLen, committeeSize)
+	fNum = calcFaultTolerance(qLen, committeeSize)
 	return qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum, nil
+}
+
+// calcQuorumSize returns the minimum number of messages required to proceed (QBFT quorum).
+// qualifiedLen is the number of qualified validators, committeeSize is the committee size.
+// For less than 4 validators, quorum size equals the effective size;
+// otherwise it is ceil(2 * min(qualifiedLen, committeeSize) / 3).
+func calcQuorumSize(qualifiedLen int, committeeSize uint64) int {
+	size := qualifiedLen
+	if size > int(committeeSize) {
+		size = int(committeeSize)
+	}
+	if size < 4 {
+		return size
+	}
+	return int(math.Ceil(float64(2*size) / 3))
+}
+
+func calcFaultTolerance(qualifiedLen int, committeeSize uint64) int {
+	if qualifiedLen > int(committeeSize) {
+		return int(math.Ceil(float64(committeeSize)/3)) - 1
+	}
+	return int(math.Ceil(float64(qualifiedLen)/3)) - 1
 }
 
 // New creates an Istanbul consensus core
@@ -161,8 +180,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	msg.CommittedSeal = []byte{}
 	// Assign the CommittedSeal if it's a COMMIT message and proposal is not nil
 	if msg.Code == msgCommit && c.current.Proposal() != nil {
-		seal := PrepareCommittedSeal(c.current.Proposal().Hash())
-		msg.CommittedSeal, err = c.backend.Sign(seal)
+		msg.CommittedSeal, err = c.backend.Sealer().MakeCommittedSeal(c.current.Proposal().Header())
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +243,7 @@ func (c *core) commit() {
 	if proposal != nil {
 		committedSeals := make([][]byte, c.current.Commits.Size())
 		for i, v := range c.current.Commits.Values() {
-			committedSeals[i] = make([]byte, types.IstanbulExtraSeal)
+			committedSeals[i] = make([]byte, len(v.CommittedSeal))
 			copy(committedSeals[i][:], v.CommittedSeal[:])
 		}
 
@@ -498,12 +516,4 @@ func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address,
 	}
 
 	return common.Address{}, istanbul.ErrUnauthorizedAddress
-}
-
-// PrepareCommittedSeal returns a committed seal for the given hash
-func PrepareCommittedSeal(hash common.Hash) []byte {
-	var buf bytes.Buffer
-	buf.Write(hash.Bytes())
-	buf.Write([]byte{byte(msgCommit)})
-	return buf.Bytes()
 }
