@@ -158,9 +158,8 @@ func (b *backend) Start(chain consensus.ChainReader, executor consensus.Executor
 	b.sealSkippedNum = 0
 	if b.commitCh != nil {
 		close(b.commitCh)
-		b.commitCh = nil
 	}
-	b.commitCh = make(chan *types.Result, 1)
+	b.commitCh = nil
 	b.sealMu.Unlock()
 
 	defer b.signalPeerRegistrable()
