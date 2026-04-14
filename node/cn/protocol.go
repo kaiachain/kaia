@@ -39,14 +39,30 @@ import (
 	"github.com/kaiachain/kaia/rlp"
 )
 
-// `kaia` is the default fallback protocol for all consensus engine types.
-// The name, versions, and lengths are defined in consensus/protocol.go.
 const (
 	kaia63 = 63
+	kaia64 = 64
 	kaia65 = 65
 	kaia66 = 66
 	kaia67 = 67
 )
+
+// Protocol defines the P2P protocol metadata used during capability negotiation.
+type Protocol struct {
+	// Official short name of the protocol used during capability negotiation.
+	Name string
+	// Supported versions of the Kaia protocol (first is primary).
+	Versions []uint
+	// Number of implemented message corresponding to different protocol versions.
+	Lengths []uint64
+}
+
+// ConsensusProtocol is the P2P protocol used by BFT consensus nodes.
+var ConsensusProtocol = Protocol{
+	Name:     "istanbul",
+	Versions: []uint{kaia67, kaia66, kaia65, kaia64},
+	Lengths:  []uint64{26, 24, 23, 21},
+}
 
 const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
 

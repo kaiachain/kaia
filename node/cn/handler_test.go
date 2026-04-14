@@ -146,7 +146,7 @@ func (h *testConsensusHandler) HandleMsg(common.Address, p2p.Msg) (bool, error) 
 func (h *testConsensusHandler) SetBroadcaster(consensus.Broadcaster) {}
 
 func TestNewProtocolManager(t *testing.T) {
-	// NewProtocolManager uses consensus.IstanbulProtocol directly (not handler-provided).
+	// NewProtocolManager uses ConsensusProtocol directly (not handler-provided).
 	// Verifies successful initialization with all Istanbul versions passing the
 	// FastSync version filter (>= kaia63).
 	{
