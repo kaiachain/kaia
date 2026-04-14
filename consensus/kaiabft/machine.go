@@ -50,6 +50,7 @@ var (
 	errNotFromCommittee    = errors.New("message does not come from committee")
 	errInconsistentSubject = errors.New("inconsistent subjects")
 	errUnauthorizedAddress = errors.New("unauthorized address")
+	errIgnored             = errors.New("ignored")
 )
 
 // machine implements the single-runloop BFT state machine.
@@ -96,6 +97,9 @@ type machine struct {
 
 	// Timer
 	roundChangeTimer atomic.Value // *time.Timer
+
+	// Future preprepare retry timer
+	futurePreprepareTimer *time.Timer
 
 	// Speculative execution cancellation
 	specCancel context.CancelFunc
@@ -292,8 +296,8 @@ func (m *machine) handlePreprepare(msg *bft.Message, src common.Address) error {
 
 	if duration, err := m.b.verify(pp.Proposal); err != nil {
 		if err == consensus.ErrFutureBlock {
-			// Retry after duration via backlog.
-			time.AfterFunc(duration, func() {
+			m.stopFuturePreprepareTimer()
+			m.futurePreprepareTimer = time.AfterFunc(duration, func() {
 				m.b.eventMux.Post(backlogEvent{src: src, msg: msg, Hash: msg.Hash})
 			})
 		} else {
@@ -304,6 +308,10 @@ func (m *machine) handlePreprepare(msg *bft.Message, src common.Address) error {
 
 	if m.state == stateAcceptRequest {
 		if m.isHashLocked() {
+			header := m.preprepare.Proposal.Header()
+			m.b.sealer.WriteRound(header, m.currentView().Round.Int64())
+			m.preprepare.Proposal = m.preprepare.Proposal.WithSeal(header)
+
 			if pp.Proposal.Hash() == m.lockedHash {
 				m.acceptPreprepare(pp)
 				m.setState(statePrepared)
@@ -399,7 +407,11 @@ func (m *machine) handleRoundChange(msg *bft.Message, _ common.Address) error {
 	}
 
 	cv := m.currentView()
-	num := m.addRoundChange(rc.View.Round, msg)
+	num, err := m.addRoundChange(rc.View.Round, msg)
+	if err != nil {
+		logger.Warn("Failed to add round change message", "from", msg.Address, "err", err)
+		return err
+	}
 
 	numStartNewRound := m.requiredMessageCount
 	numCatchUp := m.f + 1
@@ -415,7 +427,7 @@ func (m *machine) handleRoundChange(msg *bft.Message, _ common.Address) error {
 		return nil
 	}
 	if cv.Round.Cmp(rc.View.Round) < 0 {
-		return errors.New("ignored")
+		return errIgnored
 	}
 	return nil
 }
@@ -464,6 +476,11 @@ func (m *machine) handleChainHead() {
 func (m *machine) startNewRound(round *big.Int) {
 	roundChange := false
 	lastProposal, _ := m.b.lastProposal()
+
+	if lastProposal == nil {
+		logger.Error("Cannot start new round: last proposal is nil")
+		return
+	}
 
 	if m.sequence == nil {
 		// First round after start.
@@ -528,7 +545,7 @@ func (m *machine) startNewRound(round *big.Int) {
 	}
 	m.prepares = newMessageSet(qualified)
 	m.commits = newMessageSet(qualified)
-	m.clearRoundChangeSets(newView.Round)
+	m.resetRoundChangeSets()
 	m.waitingForRoundChange = false
 	m.state = stateAcceptRequest
 
@@ -764,7 +781,9 @@ func (m *machine) startSpeculativeExecution(proposal bft.Proposal) {
 		return
 	}
 
+	m.wg.Add(1)
 	go func() {
+		defer m.wg.Done()
 		defer cancel()
 
 		parentState, err := m.b.chain.StateAt(parentHeader.Root)
@@ -1031,7 +1050,15 @@ func (m *machine) newRoundChangeTimer() {
 	}))
 }
 
+func (m *machine) stopFuturePreprepareTimer() {
+	if m.futurePreprepareTimer != nil {
+		m.futurePreprepareTimer.Stop()
+		m.futurePreprepareTimer = nil
+	}
+}
+
 func (m *machine) stopTimer() {
+	m.stopFuturePreprepareTimer()
 	if t := m.roundChangeTimer.Load(); t != nil {
 		t.(*time.Timer).Stop()
 	}
@@ -1146,22 +1173,37 @@ func toPriority(msgCode uint64, view *bft.View) int64 {
 // Round change set
 // ---------------------------------------------------------------------------
 
-func (m *machine) addRoundChange(round *big.Int, msg *bft.Message) int {
+func (m *machine) addRoundChange(round *big.Int, msg *bft.Message) (int, error) {
 	m.roundChangesMu.Lock()
 	defer m.roundChangesMu.Unlock()
 	r := round.Uint64()
 	if m.roundChangeSets[r] == nil {
 		m.roundChangeSets[r] = newMessageSet(m.qualified)
 	}
-	m.roundChangeSets[r].Add(msg)
-	return m.roundChangeSets[r].Size()
+	if err := m.roundChangeSets[r].Add(msg); err != nil {
+		return 0, err
+	}
+	return m.roundChangeSets[r].Size(), nil
 }
 
+// resetRoundChangeSets creates a fresh (empty) round change set, matching
+// Istanbul's behaviour in startNewRound.  This ensures stale entries from a
+// previous sequence (which may carry an outdated qualified-validator set)
+// are never reused.
+func (m *machine) resetRoundChangeSets() {
+	m.roundChangesMu.Lock()
+	defer m.roundChangesMu.Unlock()
+	m.roundChangeSets = make(map[uint64]*messageSet)
+}
+
+// clearRoundChangeSets removes entries for rounds strictly below the given
+// round.  Used in catchUpRound where we want to preserve higher-round entries
+// within the same sequence (same qualified set).
 func (m *machine) clearRoundChangeSets(round *big.Int) {
 	m.roundChangesMu.Lock()
 	defer m.roundChangesMu.Unlock()
-	for k := range m.roundChangeSets {
-		if k < round.Uint64() {
+	for k, rms := range m.roundChangeSets {
+		if rms.Size() == 0 || k < round.Uint64() {
 			delete(m.roundChangeSets, k)
 		}
 	}
