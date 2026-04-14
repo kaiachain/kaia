@@ -892,6 +892,11 @@ func (m *machine) startSpeculativeExecution(proposal bft.Proposal) {
 			Logs:             result.Logs,
 			UsedGas:          result.UsedGas,
 			InternalTxTraces: result.InternalTxTraces,
+			ProcessStats: blockchain.ProcessStats{
+				BeforeApplyTxs: result.BeforeApplyTxs,
+				AfterApplyTxs:  result.AfterApplyTxs,
+				AfterFinalize:  result.AfterFinalize,
+			},
 		}, nil)
 
 		logger.Info("Speculative execution completed",
