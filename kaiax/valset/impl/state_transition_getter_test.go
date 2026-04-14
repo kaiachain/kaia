@@ -771,13 +771,25 @@ func TestApplyAllTransitions(t *testing.T) {
 		},
 		{
 			// addr1: ValActive+belowMin → violation(ValExiting) → timeout(noop) → epoch(noop, non-epoch)
+			// addr2: ValActive+aboveMin → violation(noop) → timeout(noop)
 			// Proves: violation applies regardless of epoch, but epoch transition only fires at VRankEpoch
 			"non-epoch: violation fires but epoch noop",
 			testNonEpochNum,
 			valset.NodeStateMap{
 				addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
+				addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
 			},
-			map[common.Address]valset.State{addr1: valset.ValExiting},
+			map[common.Address]valset.State{addr1: valset.ValExiting, addr2: valset.ValActive},
+		},
+		{
+			// addr1: ValActive+belowMin → violation would fire but minActiveCount=1 blocks demotion
+			// Proves: last VA is protected from demotion when minActiveCount=1
+			"non-epoch: last VA protected by minActiveCount",
+			testNonEpochNum,
+			valset.NodeStateMap{
+				addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
+			},
+			map[common.Address]valset.State{addr1: valset.ValActive},
 		},
 		{
 			// addr1: CandReady+aboveMin → violation(noop) → timeout(noop) → epoch(CandTesting)
@@ -845,14 +857,14 @@ func TestApplyAllTransitions(t *testing.T) {
 			v := newTestApplyAllTransitions(ctrl)
 			parentHeader := &types.Header{Number: big.NewInt(int64(tc.num - 1)), Time: big.NewInt(testBlockTime.Unix())}
 
-			noopSlotLimitsFn := func(sf uint64) (uint64, uint64) { return noSlotLimit, noMinActive }
+			noopSlotLimitsFn := func(sf uint64) (uint64, uint64, error) { return noSlotLimit, 1, nil }
 			res := &system.NodeStatesResult{
 				Validators:           tc.input,
 				PauseTimeout:         DefaultValPausedTimeout,
 				IdleTimeout:          DefaultValIdleTimeout,
 				ActiveValidatorCount: DefaultActiveValidatorCount,
 				MaxSlotAvailable:     noSlotLimit,
-				MinActiveCount:       noMinActive,
+				MinActiveCount:       1,
 			}
 			result, err := v.applyAllTransitions(res, parentHeader, noopSlotLimitsFn)
 			assert.NoError(t, err)
