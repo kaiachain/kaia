@@ -277,7 +277,14 @@ func (b *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, sta
 }
 
 func (b *backend) APIs(chain consensus.ChainReader) []rpc.API {
-	return nil // KaiaBFT reuses Istanbul's RPC namespace; no additional APIs.
+	return []rpc.API{
+		{
+			Namespace: "istanbul",
+			Version:   "1.0",
+			Service:   &api{chain: chain, backend: b},
+			Public:    true,
+		},
+	}
 }
 
 func (b *backend) PurgeCache() {}
