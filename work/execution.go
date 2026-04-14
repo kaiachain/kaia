@@ -137,14 +137,11 @@ func (e *DefaultExecutor) FinalizeState(result *consensus.ExecutionResult) (*typ
 
 // buildResult builds and returns the current execution result.
 func (e *DefaultExecutor) buildResult() *consensus.ExecutionResult {
-	stateRoot := e.state.IntermediateRoot(true)
-
 	return &consensus.ExecutionResult{
-		StateRoot: stateRoot,
-		State:     e.state,
-		Receipts:  e.receipts,
-		Logs:      e.logs,
-		UsedGas:   e.usedGas,
-		Txs:       e.txs,
+		State:    e.state,
+		Receipts: e.receipts,
+		Logs:     e.logs,
+		UsedGas:  e.usedGas,
+		Txs:      e.txs,
 	}
 }

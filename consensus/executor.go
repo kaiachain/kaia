@@ -21,14 +21,11 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/event"
 )
 
 // ExecutionResult contains the results of executing a batch of transactions.
 type ExecutionResult struct {
-	// StateRoot is the root hash of the state trie after execution
-	StateRoot common.Hash
 	// State is the state database after execution
 	State *state.StateDB
 	// Receipts contains the receipts of all executed transactions
