@@ -589,7 +589,6 @@ func TestGetViolationTransition_PFSNonActiveNotAffected(t *testing.T) {
 // (either 1 paused or 1 exiting, not both), since 4-2=2 < minActive=3.
 // ============================================================
 
-
 func TestGetViolationTransition_SlotLimits(t *testing.T) {
 	const (
 		slotMax      = uint64(1) // maxSlotAvailable(4)

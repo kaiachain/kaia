@@ -131,11 +131,12 @@ func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, idle
 
 // getViolationTransition handles staking and PFS violations (runs every block):
 // rule1: staking < MinimumStake
-//   At epoch blocks, VA/VR/VP+belowMin are already demoted to VI by T3b in getEpochTransition,
-//   so these cases only trigger on non-epoch blocks.
-//   - ValActive → ValExiting (if ValExiting slots available and ValActive > minActiveCount)
-//   - ValPaused → ValExiting (if ValExiting slots available)
-//   - ValReady → ValInactive (unconditional)
+//
+//	At epoch blocks, VA/VR/VP+belowMin are already demoted to VI by T3b in getEpochTransition,
+//	so these cases only trigger on non-epoch blocks.
+//	- ValActive → ValExiting (if ValExiting slots available and ValActive > minActiveCount)
+//	- ValPaused → ValExiting (if ValExiting slots available)
+//	- ValReady → ValInactive (unconditional)
 //
 // rule2: PFS violation (only when proposal failure occurred at this block)
 //   - PFS >= pfsThreshold (severe): ValActive → ValExiting
