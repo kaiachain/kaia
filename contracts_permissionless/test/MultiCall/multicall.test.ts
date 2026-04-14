@@ -98,7 +98,7 @@ describe("Multicall permissionless", function () {
     await abv2.setTimeouts(28800, 2592000); // 8h, 30d in seconds
     await abv2.setMaxCounts(50, 100);
     await abv2.setThresholds(2, 300); // pfsThreshold=2, cfsThreshold=300
-    await abv2.setSlotFactor(10); // slotFactor=10 → f(10)=3, maxSlot=1, minActive=8
+    await abv2.setSlotFactor(10); // slotFactor=10 → minActive=ceil(20/3)=7, maxSlot=ceil(3/2)=2
 
     const result = await multiCall.multiCallNodeStatesPermissionless();
     const [
@@ -123,8 +123,8 @@ describe("Multicall permissionless", function () {
     expect(retPfsThreshold).to.equal(2);
     expect(retCfsThreshold).to.equal(300);
     expect(retSlotFactor).to.equal(10);
-    // SlotMath for n=10: f(10)=3, maxSlotAvailable=max(1,3/2)=1, minActiveCount=max(7,8)=8
-    expect(retMaxSlotAvailable).to.equal(1);
-    expect(retMinActiveCount).to.equal(8);
+    // SlotMath for n=10: minActive=ceil(20/3)=7, maxSlot=ceil(floor(10/3)/2)=ceil(3/2)=2
+    expect(retMaxSlotAvailable).to.equal(2);
+    expect(retMinActiveCount).to.equal(7);
   });
 });

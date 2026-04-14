@@ -201,7 +201,7 @@ abstract contract NodeActions is AddressBookV2Base {
             _batchTransition(nodeIds, newStates, timeoutAts);
         }
         if (_isEpochBlock()) {
-            uint256 slotFactor = _getStateCount(State.ValActive) + _getStateCount(State.ValPaused);
+            uint256 slotFactor = _getStateCount(State.ValActive);
             _getStorage().slotFactor = slotFactor;
             emit EpochTransitionProcessed(slotFactor);
         }

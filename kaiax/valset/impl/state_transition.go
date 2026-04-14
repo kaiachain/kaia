@@ -102,8 +102,8 @@ func (v *ValsetModule) applyAllTransitions(
 	newValidators := res.Validators
 	if v.isVrankEpoch(num) {
 		newValidators = v.getEpochTransition(minStake, newValidators, res.IdleTimeout, int(res.ActiveValidatorCount), blockTime, header.Number.Uint64(), res.CfsThreshold, res.SlotFactor)
-		// Recompute slot limits from new SF (VA + VP after epoch)
-		newSF := newValidators.CountByState(valset.ValActive) + newValidators.CountByState(valset.ValPaused)
+		// Recompute slot limits from new SF (VA count after epoch)
+		newSF := newValidators.CountByState(valset.ValActive)
 		var err error
 		maxSlotAvailable, minActiveCount, err = slotLimitsFn(newSF)
 		if err != nil {
