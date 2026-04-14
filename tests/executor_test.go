@@ -525,3 +525,20 @@ func TestKaiaBFT_EngineFactory(t *testing.T) {
 	_, isHandler2 := e2.(consensus.Handler)
 	assert.True(t, isHandler2, "kaiabft engine should implement Handler")
 }
+
+// TestKaiaBFT_BlockGenerationTimeLimit verifies that the kaiabft-specific
+// block generation time limit constant exists and that the params global
+// can be set to it. The actual CLI config path (which sets the global
+// based on --consensus.engine) is tested by integration tests.
+func TestKaiaBFT_BlockGenerationTimeLimit(t *testing.T) {
+	// Verify the constants are defined with expected values.
+	assert.Equal(t, 250*time.Millisecond, params.DefaultBlockGenerationTimeLimit)
+	assert.Equal(t, 500*time.Millisecond, params.KaiaBFTBlockGenerationTimeLimit)
+
+	// Verify the global can be set to the kaiabft value and restored.
+	original := params.BlockGenerationTimeLimit
+	defer func() { params.BlockGenerationTimeLimit = original }()
+
+	params.BlockGenerationTimeLimit = params.KaiaBFTBlockGenerationTimeLimit
+	assert.Equal(t, 500*time.Millisecond, params.BlockGenerationTimeLimit)
+}
