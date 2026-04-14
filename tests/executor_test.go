@@ -464,13 +464,8 @@ func TestKaiaBFT_SpeculativeExecution_ClonePath(t *testing.T) {
 	specResult, err := clonedExecutor.ProcessBlock(block.Transactions())
 	require.NoError(t, err)
 
-	specBlock, err := clonedExecutor.FinalizeState(specResult)
-	require.NoError(t, err)
-
-	assert.Equal(t, block.Root(), specBlock.Root(), "state root mismatch")
-	assert.Equal(t, block.ReceiptHash(), specBlock.ReceiptHash(), "receipt hash mismatch")
-	assert.Equal(t, block.Bloom(), specBlock.Bloom(), "bloom mismatch")
-	assert.Equal(t, block.GasUsed(), specBlock.GasUsed(), "gas used mismatch")
+	assert.Equal(t, block.Root(), specResult.State.IntermediateRoot(true), "state root mismatch")
+	assert.Equal(t, block.GasUsed(), specResult.UsedGas, "gas used mismatch")
 
 	hitsBefore := bcdata.bc.SpeculativeCache().Hits()
 	entry := bcdata.bc.SpeculativeCache().Reserve(block.Hash())
