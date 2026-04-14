@@ -24,26 +24,17 @@ package istanbul
 
 import (
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/crypto/sha3"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/consensus/bft"
 )
 
-func RLPHash(v interface{}) (h common.Hash) {
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, v)
-	hw.Sum(h[:0])
-	return h
+// RLPHash delegates to bft.RLPHash. Kept for backward compatibility with
+// existing istanbul call sites.
+func RLPHash(v any) (h common.Hash) {
+	return bft.RLPHash(v)
 }
 
-// GetSignatureAddress gets the signer address from the signature
+// GetSignatureAddress delegates to bft.GetSignatureAddress. Kept for backward
+// compatibility with existing istanbul call sites.
 func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
-	// 1. Keccak data
-	hashData := crypto.Keccak256([]byte(data))
-	// 2. Recover public key
-	pubkey, err := crypto.SigToPub(hashData, sig)
-	if err != nil {
-		return common.Address{}, err
-	}
-	return crypto.PubkeyToAddress(*pubkey), nil
+	return bft.GetSignatureAddress(data, sig)
 }
