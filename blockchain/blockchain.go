@@ -201,6 +201,7 @@ type BlockChain struct {
 	prefetcher Prefetcher // Block state prefetcher interface
 	validator  Validator  // block and state validator interface
 	vmConfig   vm.Config
+	specCache  *SpeculativeResultCache // single-entry cache for speculative execution results
 
 	parallelDBWrite bool // TODO-Kaia-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
 
@@ -274,6 +275,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		futureBlocks:       futureBlocks,
 		sealer:             sealer,
 		vmConfig:           vmConfig,
+		specCache:          NewSpeculativeResultCache(),
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
 		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
@@ -737,6 +739,17 @@ func (bc *BlockChain) CurrentFastBlock() *types.Block {
 // Validator returns the current validator.
 func (bc *BlockChain) Validator() Validator {
 	return bc.validator
+}
+
+// VMConfig returns the VM configuration used for block processing.
+func (bc *BlockChain) VMConfig() vm.Config {
+	return bc.vmConfig
+}
+
+// SpeculativeCache returns the speculative execution result cache.
+// The consensus engine populates this cache; InsertChain consumes it.
+func (bc *BlockChain) SpeculativeCache() *SpeculativeResultCache {
+	return bc.specCache
 }
 
 // SetValidator overrides the blockchain/headerchain validator pair.
@@ -2104,25 +2117,58 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			return i, events, coalescedLogs, err
 		}
 
-		stateDB, err := bc.PrunableStateAt(parent.Root(), parent.NumberU64())
-		if err != nil {
-			return i, events, coalescedLogs, err
+		// --- Speculative cache fast path ---
+		// If the consensus engine speculatively executed this block during
+		// pre-prepare handling, use the cached result to skip Process().
+		// ValidateState always runs regardless of path.
+		var (
+			stateDB          *state.StateDB
+			receipts         types.Receipts
+			logs             []*types.Log
+			usedGas          uint64
+			internalTxTraces []*vm.InternalTxTrace
+			procStats        ProcessStats
+			cacheHit         bool
+			validateStart    time.Time
+		)
+
+		if cached := bc.specCache.TryGet(block.Hash(), 0); cached != nil {
+			validateStart = time.Now()
+			if err = bc.validator.ValidateState(block, parent, cached.State, cached.Receipts, cached.UsedGas); err == nil {
+				stateDB = cached.State
+				receipts = cached.Receipts
+				logs = cached.Logs
+				usedGas = cached.UsedGas
+				internalTxTraces = cached.InternalTxTraces
+				procStats = cached.ProcessStats
+				cacheHit = true
+			} else {
+				logger.Warn("Speculative cache hit but validation failed, falling back to sync execution",
+					"number", block.NumberU64(), "hash", block.Hash(), "err", err)
+			}
 		}
 
-		// Process block using the parent state as reference point.
-		receipts, logs, usedGas, internalTxTraces, procStats, err := bc.processor.Process(block, stateDB, bc.vmConfig)
-		if err != nil {
-			bc.reportBlock(block, receipts, err)
-			atomic.StoreUint32(&followupInterrupt, 1)
-			return i, events, coalescedLogs, err
-		}
+		if !cacheHit {
+			stateDB, err = bc.PrunableStateAt(parent.Root(), parent.NumberU64())
+			if err != nil {
+				return i, events, coalescedLogs, err
+			}
 
-		// Validate the state using the default validator
-		err = bc.validator.ValidateState(block, parent, stateDB, receipts, usedGas)
-		if err != nil {
-			bc.reportBlock(block, receipts, err)
-			atomic.StoreUint32(&followupInterrupt, 1)
-			return i, events, coalescedLogs, err
+			// Process block using the parent state as reference point.
+			receipts, logs, usedGas, internalTxTraces, procStats, err = bc.processor.Process(block, stateDB, bc.vmConfig)
+			if err != nil {
+				bc.reportBlock(block, receipts, err)
+				atomic.StoreUint32(&followupInterrupt, 1)
+				return i, events, coalescedLogs, err
+			}
+
+			// Validate the state using the default validator
+			err = bc.validator.ValidateState(block, parent, stateDB, receipts, usedGas)
+			if err != nil {
+				bc.reportBlock(block, receipts, err)
+				atomic.StoreUint32(&followupInterrupt, 1)
+				return i, events, coalescedLogs, err
+			}
 		}
 		afterValidate := time.Now()
 
@@ -2144,44 +2190,60 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			spamThrottler.updateThrottlerState(block.Transactions(), receipts)
 		}
 
-		// Update the metrics subsystem with all the measurements
-		accountReadTimer.Update(stateDB.AccountReads)
-		accountHashTimer.Update(stateDB.AccountHashes)
-		accountUpdateTimer.Update(stateDB.AccountUpdates)
-		accountCommitTimer.Update(stateDB.AccountCommits)
+		// Update the metrics subsystem with all the measurements.
+		// StateDB timing metrics are only meaningful for the sync path;
+		// for cache hits the speculative execution already warmed the trie.
+		var trieAccess time.Duration
+		if !cacheHit {
+			accountReadTimer.Update(stateDB.AccountReads)
+			accountHashTimer.Update(stateDB.AccountHashes)
+			accountUpdateTimer.Update(stateDB.AccountUpdates)
+			accountCommitTimer.Update(stateDB.AccountCommits)
 
-		storageReadTimer.Update(stateDB.StorageReads)
-		storageHashTimer.Update(stateDB.StorageHashes)
-		storageUpdateTimer.Update(stateDB.StorageUpdates)
-		storageCommitTimer.Update(stateDB.StorageCommits)
+			storageReadTimer.Update(stateDB.StorageReads)
+			storageHashTimer.Update(stateDB.StorageHashes)
+			storageUpdateTimer.Update(stateDB.StorageUpdates)
+			storageCommitTimer.Update(stateDB.StorageCommits)
 
-		snapshotAccountReadTimer.Update(stateDB.SnapshotAccountReads)
-		snapshotStorageReadTimer.Update(stateDB.SnapshotStorageReads)
-		snapshotCommitTimer.Update(stateDB.SnapshotCommits)
+			snapshotAccountReadTimer.Update(stateDB.SnapshotAccountReads)
+			snapshotStorageReadTimer.Update(stateDB.SnapshotStorageReads)
+			snapshotCommitTimer.Update(stateDB.SnapshotCommits)
 
-		trieAccess := stateDB.AccountReads + stateDB.AccountHashes + stateDB.AccountUpdates + stateDB.AccountCommits
-		trieAccess += stateDB.StorageReads + stateDB.StorageHashes + stateDB.StorageUpdates + stateDB.StorageCommits
+			trieAccess = stateDB.AccountReads + stateDB.AccountHashes + stateDB.AccountUpdates + stateDB.AccountCommits
+			trieAccess += stateDB.StorageReads + stateDB.StorageHashes + stateDB.StorageUpdates + stateDB.StorageCommits
+		}
 
 		blockAgeTimer.Update(time.Since(time.Unix(int64(block.Time().Uint64()), 0)))
 
 		switch writeResult.Status {
 		case CanonStatTy:
+			// procStats is from Process() — either InsertChain's own or the speculative cache's.
 			processTxsTime := common.PrettyDuration(procStats.AfterApplyTxs.Sub(procStats.BeforeApplyTxs))
 			processFinalizeTime := common.PrettyDuration(procStats.AfterFinalize.Sub(procStats.AfterApplyTxs))
-			validateTime := common.PrettyDuration(afterValidate.Sub(procStats.AfterFinalize))
+			var validateTime common.PrettyDuration
+			if cacheHit {
+				validateTime = common.PrettyDuration(time.Since(validateStart))
+			} else {
+				validateTime = common.PrettyDuration(afterValidate.Sub(procStats.AfterFinalize))
+			}
+
+			if !cacheHit {
+				blockProcessTimer.Update(time.Duration(processTxsTime))
+				blockExecutionTimer.Update(time.Duration(processTxsTime) - trieAccess)
+				blockFinalizeTimer.Update(time.Duration(processFinalizeTime))
+				blockValidateTimer.Update(time.Duration(validateTime))
+			}
+
 			totalTime := common.PrettyDuration(time.Since(bstart))
 			logger.Info("Inserted a new block", "number", block.Number(), "hash", block.Hash(),
 				"txs", len(block.Transactions()), "gas", block.GasUsed(), "elapsed", totalTime,
 				"processTxs", processTxsTime, "finalize", processFinalizeTime, "validateState", validateTime,
-				"totalWrite", writeResult.TotalWriteTime, "trieWrite", writeResult.TrieWriteTime)
+				"totalWrite", writeResult.TotalWriteTime, "trieWrite", writeResult.TrieWriteTime,
+				"cacheHit", cacheHit)
 
 			if block.Header().BaseFee != nil {
 				blockBaseFee.Update(block.Header().BaseFee.Int64() / int64(params.Gkei))
 			}
-			blockProcessTimer.Update(time.Duration(processTxsTime))
-			blockExecutionTimer.Update(time.Duration(processTxsTime) - trieAccess)
-			blockFinalizeTimer.Update(time.Duration(processFinalizeTime))
-			blockValidateTimer.Update(time.Duration(validateTime))
 			blockInsertTimer.Update(time.Duration(totalTime))
 
 			coalescedLogs = append(coalescedLogs, logs...)
