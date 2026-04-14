@@ -320,8 +320,8 @@ var (
 	}
 	ConsensusEngineFlag = &cli.StringFlag{
 		Name:     "consensus.engine",
-		Usage:    `Consensus engine type: "istanbul" (default) or "kaiabft" (speculative execution)`,
-		Value:    "istanbul",
+		Usage:    `Consensus engine type: "kaiabft" (default) or "istanbul" (legacy)`,
+		Value:    "kaiabft",
 		EnvVars:  []string{"KAIA_CONSENSUS_ENGINE"},
 		Category: "CONSENSUS",
 	}
