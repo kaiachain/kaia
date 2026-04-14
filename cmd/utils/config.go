@@ -735,6 +735,8 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	}
 	if ctx.IsSet(BlockGenerationTimeLimitFlag.Name) {
 		params.BlockGenerationTimeLimit = ctx.Duration(BlockGenerationTimeLimitFlag.Name)
+	} else if cfg.ConsensusEngine == "kaiabft" {
+		params.BlockGenerationTimeLimit = params.KaiaBFTBlockGenerationTimeLimit
 	}
 	if ctx.IsSet(OpcodeComputationCostLimitFlag.Name) {
 		params.OpcodeComputationCostLimitOverride = ctx.Uint64(OpcodeComputationCostLimitFlag.Name)
