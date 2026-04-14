@@ -114,11 +114,9 @@ func TestGetEpochTransition_StateTransitions(t *testing.T) {
 		{"ValReady + stake>=min → ValActive", valset.ValReady, aboveMinStake, valset.ValActive, false},
 		{"ValActive + stake>=min → ValActive", valset.ValActive, aboveMinStake, valset.ValActive, false},
 		{"ValPaused + stake>=min → ValPaused (preserved)", valset.ValPaused, aboveMinStake, valset.ValPaused, false},
-		// T3b removed — minStake demotion handled by violation transition.
-		// Low-staking validators are excluded from epoch competition but not demoted; state unchanged.
-		{"ValActive + stake<min → ValActive (excluded from competition)", valset.ValActive, belowMinStake, valset.ValActive, false},
-		{"ValReady + stake<min → ValReady (excluded from competition)", valset.ValReady, belowMinStake, valset.ValReady, false},
-		{"ValPaused + stake<min → ValPaused (excluded from competition)", valset.ValPaused, belowMinStake, valset.ValPaused, false},
+		{"T3b: ValActive + stake<min → ValInactive", valset.ValActive, belowMinStake, valset.ValInactive, true},
+		{"T3b: ValReady + stake<min → ValInactive", valset.ValReady, belowMinStake, valset.ValInactive, true},
+		{"T3b: ValPaused + stake<min → ValInactive", valset.ValPaused, belowMinStake, valset.ValInactive, true},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -135,6 +133,30 @@ func TestGetEpochTransition_StateTransitions(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestGetEpochTransition_BelowMinStakeDemoted verifies that VA/VR/VP+belowMin are demoted to VI at epoch (T5).
+// This ensures newSF is computed only from validators with sufficient stake,
+// preventing SF inflation that would cause incorrect slot limits in violation transition.
+func TestGetEpochTransition_BelowMinStakeDemoted(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	v := newTestValsetModule(ctrl)
+
+	validators := valset.NodeStateMap{
+		addr1: {State: valset.ValActive, StakingAmount: aboveMinStake}, // above-min: stays VA
+		addr2: {State: valset.ValActive, StakingAmount: belowMinStake}, // T3b: → VI
+		addr3: {State: valset.ValReady, StakingAmount: belowMinStake},  // T3b: → VI
+		addr4: {State: valset.ValPaused, StakingAmount: belowMinStake}, // T3b: → VI
+	}
+	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, 0, 0, 0)
+
+	assert.Equal(t, valset.ValActive, result[addr1].State)
+	assert.Equal(t, valset.ValInactive, result[addr2].State)
+	assert.Equal(t, valset.ValInactive, result[addr3].State)
+	assert.Equal(t, valset.ValInactive, result[addr4].State)
+	assert.False(t, result[addr2].IdleTimeout.IsZero())
+	assert.False(t, result[addr3].IdleTimeout.IsZero())
+	assert.False(t, result[addr4].IdleTimeout.IsZero())
 }
 
 func TestGetEpochTransition_MaxValidatorCount(t *testing.T) {
@@ -759,15 +781,15 @@ func TestApplyAllTransitions(t *testing.T) {
 		expected map[common.Address]valset.State
 	}{
 		{
-			// addr1: ValActive+belowMin → epoch(excluded from competition, stays ValActive) → violation(ValExiting) → timeout(noop)
+			// addr1: ValActive+belowMin → epoch(T3b: ValInactive) → violation(noop) → timeout(noop)
 			// addr2: ValActive+aboveMin → epoch(ValActive) → violation(noop) → timeout(noop)
-			"epoch→violation pipeline",
+			"epoch→T5 pipeline",
 			testEpochNum,
 			valset.NodeStateMap{
 				addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
 				addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
 			},
-			map[common.Address]valset.State{addr1: valset.ValExiting, addr2: valset.ValActive},
+			map[common.Address]valset.State{addr1: valset.ValInactive, addr2: valset.ValActive},
 		},
 		{
 			// addr1: ValActive+belowMin → violation(ValExiting) → timeout(noop) → epoch(noop, non-epoch)
@@ -801,7 +823,7 @@ func TestApplyAllTransitions(t *testing.T) {
 			map[common.Address]valset.State{addr1: valset.CandTesting},
 		},
 		{
-			// addr1: ValActive+belowMin  → epoch(excluded from competition, stays ValActive) → violation(ValExiting) → timeout(noop)
+			// addr1: ValActive+belowMin  → epoch(T3b: ValInactive) → violation(noop) → timeout(noop)
 			// addr2: ValActive+aboveMin  → epoch(ValActive) → violation(noop) → timeout(noop)
 			// addr3: CandReady+aboveMin  → epoch(CandTesting) → violation(noop) → timeout(noop)
 			// addr4: ValPaused+aboveMin  → epoch(ValPaused preserved) → violation(noop) → timeout(set PausedTimeout)
@@ -816,7 +838,7 @@ func TestApplyAllTransitions(t *testing.T) {
 				addr5: {State: valset.CandReady, StakingAmount: belowMinStake},
 			},
 			map[common.Address]valset.State{
-				addr1: valset.ValExiting,
+				addr1: valset.ValInactive,
 				addr2: valset.ValActive,
 				addr3: valset.CandTesting,
 				addr4: valset.ValPaused,
