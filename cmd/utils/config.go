@@ -555,6 +555,10 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	setRewardbase(ctx, ks, cfg)
 	setTxPool(ctx, &cfg.TxPool)
 
+	if ctx.IsSet(ConsensusEngineFlag.Name) {
+		cfg.ConsensusEngine = ctx.String(ConsensusEngineFlag.Name)
+	}
+
 	if ctx.IsSet(SyncModeFlag.Name) {
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
 		if cfg.SyncMode != downloader.FullSync && cfg.SyncMode != downloader.SnapSync {

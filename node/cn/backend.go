@@ -243,7 +243,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		chainConfig:       chainConfig,
 		eventMux:          ctx.EventMux,
 		accountManager:    ctx.AccountManager,
-		engine:            engine.NewEngine(&engine.Opts{IstanbulConfig: &config.Istanbul, PrivateKey: ctx.NodeKey(), NodeType: ctx.NodeType()}),
+		engine:            engine.NewEngine(&engine.Opts{EngineType: engine.EngineType(config.ConsensusEngine), IstanbulConfig: &config.Istanbul, PrivateKey: ctx.NodeKey(), NodeType: ctx.NodeType()}),
 		networkId:         config.NetworkId,
 		rewardbase:        config.Rewardbase,
 		bloomRequests:     make(chan chan *bloombits.Retrieval),
