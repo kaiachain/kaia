@@ -66,21 +66,6 @@ func (mr *MockExecutorMockRecorder) Execute(arg0, arg1 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockExecutor)(nil).Execute), arg0, arg1)
 }
 
-// ExecuteTransactions mocks base method.
-func (m *MockExecutor) ExecuteTransactions(arg0 []*types.Transaction) (*consensus.ExecutionResult, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExecuteTransactions", arg0)
-	ret0, _ := ret[0].(*consensus.ExecutionResult)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ExecuteTransactions indicates an expected call of ExecuteTransactions.
-func (mr *MockExecutorMockRecorder) ExecuteTransactions(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteTransactions", reflect.TypeOf((*MockExecutor)(nil).ExecuteTransactions), arg0)
-}
-
 // FinalizeState mocks base method.
 func (m *MockExecutor) FinalizeState(arg0 *consensus.ExecutionResult) (*types.Block, error) {
 	m.ctrl.T.Helper()
@@ -94,6 +79,21 @@ func (m *MockExecutor) FinalizeState(arg0 *consensus.ExecutionResult) (*types.Bl
 func (mr *MockExecutorMockRecorder) FinalizeState(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeState", reflect.TypeOf((*MockExecutor)(nil).FinalizeState), arg0)
+}
+
+// ProcessBlock mocks base method.
+func (m *MockExecutor) ProcessBlock(arg0 []*types.Transaction) (*consensus.ExecutionResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProcessBlock", arg0)
+	ret0, _ := ret[0].(*consensus.ExecutionResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ProcessBlock indicates an expected call of ProcessBlock.
+func (mr *MockExecutorMockRecorder) ProcessBlock(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProcessBlock", reflect.TypeOf((*MockExecutor)(nil).ProcessBlock), arg0)
 }
 
 // ResetWithState mocks base method.

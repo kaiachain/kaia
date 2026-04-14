@@ -1077,6 +1077,20 @@ func (mr *MockBlockChainMockRecorder) TrieNode(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrieNode", reflect.TypeOf((*MockBlockChain)(nil).TrieNode), arg0)
 }
 
+// VMConfig mocks base method.
+func (m *MockBlockChain) VMConfig() vm.Config {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VMConfig")
+	ret0, _ := ret[0].(vm.Config)
+	return ret0
+}
+
+// VMConfig indicates an expected call of VMConfig.
+func (mr *MockBlockChainMockRecorder) VMConfig() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VMConfig", reflect.TypeOf((*MockBlockChain)(nil).VMConfig))
+}
+
 // ValidateHeader mocks base method.
 func (m *MockBlockChain) ValidateHeader(arg0 *types.Header) error {
 	m.ctrl.T.Helper()
