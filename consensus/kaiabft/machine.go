@@ -649,7 +649,7 @@ func (m *machine) sendCommit() {
 	m.broadcastCommit(sub)
 }
 
-func (m *machine) sendCommitForOldBlock(view *bft.View, digest common.Hash, prevHash common.Hash) {
+func (m *machine) sendCommitForOldBlock(view *bft.View, digest, prevHash common.Hash) {
 	m.broadcastCommit(&bft.Subject{View: view, Digest: digest, PrevHash: prevHash})
 }
 
@@ -950,7 +950,7 @@ func (m *machine) checkMessage(msgCode uint64, view *bft.View) error {
 	return nil
 }
 
-func (m *machine) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
+func (m *machine) checkValidatorSignature(data, sig []byte) (common.Address, error) {
 	signer, err := bft.GetSignatureAddress(data, sig)
 	if err != nil {
 		return common.Address{}, err
@@ -976,21 +976,21 @@ func (m *machine) getRoundCommitteeState(seq, r uint64) (
 ) {
 	council, err := m.b.valsetModule.GetCouncil(seq)
 	if err != nil {
-		return
+		return qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum, err
 	}
 	demoted, err := m.b.valsetModule.GetDemotedValidators(seq)
 	if err != nil {
-		return
+		return qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum, err
 	}
 	qualified = valset.NewAddressSet(council).Subtract(valset.NewAddressSet(demoted))
 
 	committeeAddrs, err := m.b.valsetModule.GetCommittee(seq, r)
 	if err != nil {
-		return
+		return qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum, err
 	}
 	proposer, err = m.b.valsetModule.GetProposer(seq, r)
 	if err != nil {
-		return
+		return qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum, err
 	}
 
 	committeeSet = valset.NewAddressSet(committeeAddrs)
@@ -999,7 +999,7 @@ func (m *machine) getRoundCommitteeState(seq, r uint64) (
 	qLen := qualified.Len()
 	requiredMsgCnt = calcQuorumSize(qLen, committeeSize)
 	fNum = calcFaultTolerance(qLen, committeeSize)
-	return
+	return qualified, committeeSet, proposer, committeeSize, requiredMsgCnt, fNum, err
 }
 
 func calcQuorumSize(qualifiedLen int, committeeSize uint64) int {
