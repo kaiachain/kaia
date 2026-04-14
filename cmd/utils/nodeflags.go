@@ -327,6 +327,7 @@ var KCNFlags = []cli.Flag{
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
 	altsrc.NewBoolFlag(gasless.DisableFlag),
+	altsrc.NewStringFlag(ConsensusEngineFlag),
 }
 
 var KENFlags = []cli.Flag{
@@ -337,7 +338,6 @@ var KENFlags = []cli.Flag{
 	altsrc.NewBoolFlag(MainBridgeFlag),
 	altsrc.NewIntFlag(MainBridgeListenPortFlag),
 	altsrc.NewBoolFlag(KESNodeTypeServiceFlag),
-	altsrc.NewStringFlag(ConsensusEngineFlag),
 	// DBSyncer
 	altsrc.NewBoolFlag(EnableDBSyncerFlag),
 	altsrc.NewStringFlag(DBHostFlag),
