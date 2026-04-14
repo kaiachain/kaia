@@ -11,7 +11,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	common "github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/bft"
+	bft "github.com/kaiachain/kaia/consensus/bft"
 	istanbul "github.com/kaiachain/kaia/consensus/istanbul"
 	event "github.com/kaiachain/kaia/event"
 )
@@ -51,20 +51,6 @@ func (m *MockBackend) Address() common.Address {
 func (mr *MockBackendMockRecorder) Address() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Address", reflect.TypeOf((*MockBackend)(nil).Address))
-}
-
-// Sealer mocks base method.
-func (m *MockBackend) Sealer() *istanbul.IstanbulSealer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Sealer")
-	ret0, _ := ret[0].(*istanbul.IstanbulSealer)
-	return ret0
-}
-
-// Sealer indicates an expected call of Sealer.
-func (mr *MockBackendMockRecorder) Sealer() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sealer", reflect.TypeOf((*MockBackend)(nil).Sealer))
 }
 
 // Broadcast mocks base method.
@@ -190,6 +176,20 @@ func (m *MockBackend) NodeType() common.ConnType {
 func (mr *MockBackendMockRecorder) NodeType() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeType", reflect.TypeOf((*MockBackend)(nil).NodeType))
+}
+
+// Sealer mocks base method.
+func (m *MockBackend) Sealer() *istanbul.IstanbulSealer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Sealer")
+	ret0, _ := ret[0].(*istanbul.IstanbulSealer)
+	return ret0
+}
+
+// Sealer indicates an expected call of Sealer.
+func (mr *MockBackendMockRecorder) Sealer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sealer", reflect.TypeOf((*MockBackend)(nil).Sealer))
 }
 
 // SetCurrentView mocks base method.
