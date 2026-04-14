@@ -382,7 +382,7 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	)
 	b.RegisterKaiaxModules(mGov, mValset)
 
-	if b.Start(bc, bc.CurrentBlock, bc.HasBadBlock, nil) != nil {
+	if b.Start(bc, nil) != nil {
 		panic(err)
 	}
 

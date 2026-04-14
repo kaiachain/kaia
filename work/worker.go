@@ -249,7 +249,7 @@ func (self *worker) start() {
 
 	executor := NewDefaultExecutor(self.config, self.chain, self.nodeAddr)
 	executor.SetTxBundlingModules(self.txBundlingModules)
-	self.engine.Start(self.chain, self.chain.CurrentBlock, self.chain.HasBadBlock, executor)
+	self.engine.Start(self.chain, executor)
 }
 
 func (self *worker) stop() {

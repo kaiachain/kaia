@@ -174,7 +174,7 @@ func (sb *backend) RegisterKaiaxModules(mGov gov.GovModule, mValset valset.Valse
 }
 
 // Start starts the Istanbul backend core.
-func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool, executor consensus.Executor) error {
+func (sb *backend) Start(chain consensus.ChainReader, executor consensus.Executor) error {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
 	if sb.coreStarted {
@@ -198,8 +198,6 @@ func (sb *backend) Start(chain consensus.ChainReader, currentBlock func() *types
 	defer sb.SignalPeerRegistrable()
 
 	sb.SetChain(chain)
-	sb.currentBlock = currentBlock
-	sb.hasBadBlock = hasBadBlock
 	sb.executor = executor
 
 	if err := sb.core.Start(); err != nil {

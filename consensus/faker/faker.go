@@ -115,7 +115,7 @@ func (f *Faker) WriteRound(header *types.Header, round int64) {
 }
 
 // Start is a no-op for faker.
-func (f *Faker) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool, executor consensus.Executor) error {
+func (f *Faker) Start(chain consensus.ChainReader, executor consensus.Executor) error {
 	return nil
 }
 
@@ -212,10 +212,7 @@ func (f *Faker) HandleMsg(_ common.Address, _ p2p.Msg) (bool, error) {
 }
 
 // SetBroadcaster is a no-op for faker.
-func (f *Faker) SetBroadcaster(consensus.Broadcaster, common.ConnType) {}
-
-// RegisterConsensusMsgCode is a no-op for faker.
-func (f *Faker) RegisterConsensusMsgCode(consensus.Peer) {}
+func (f *Faker) SetBroadcaster(consensus.Broadcaster) {}
 
 // Prepare prepares the header for mining.
 func (f *Faker) Prepare(chain consensus.ChainReader, header *types.Header) error {
@@ -265,11 +262,6 @@ func (f *Faker) Seal(chain consensus.ChainReader, block *types.Block) (*types.Bl
 // APIs returns RPC APIs (none for faker).
 func (f *Faker) APIs(chain consensus.ChainReader) []rpc.API {
 	return nil
-}
-
-// Protocol returns the consensus protocol.
-func (f *Faker) Protocol() consensus.Protocol {
-	return consensus.KaiaProtocol
 }
 
 // PurgeCache is a no-op for faker.
