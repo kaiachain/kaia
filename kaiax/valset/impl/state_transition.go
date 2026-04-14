@@ -73,8 +73,8 @@ func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.H
 		return nil, err
 	}
 	res.Validators.MarkSuspended(res.SuspendedValidators)
-	slotLimitsFn := func(sf uint64) (uint64, uint64) {
-		return v.readSlotLimitsFor(statedb, header, sf, res.MaxSlotAvailable, res.MinActiveCount)
+	slotLimitsFn := func(sf uint64) (uint64, uint64, error) {
+		return v.readSlotLimitsFor(statedb, header, sf)
 	}
 	return v.applyAllTransitions(res, header, slotLimitsFn)
 }
@@ -87,7 +87,7 @@ func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.H
 func (v *ValsetModule) applyAllTransitions(
 	res *system.NodeStatesResult,
 	header *types.Header, // parent header (N-1)
-	slotLimitsFn func(sf uint64) (uint64, uint64),
+	slotLimitsFn func(sf uint64) (uint64, uint64, error),
 ) (valset.NodeStateMap, error) {
 	var (
 		num       = header.Number.Uint64() + 1
@@ -104,26 +104,28 @@ func (v *ValsetModule) applyAllTransitions(
 		newValidators = v.getEpochTransition(minStake, newValidators, res.IdleTimeout, int(res.ActiveValidatorCount), blockTime, header.Number.Uint64(), res.CfsThreshold, res.SlotFactor)
 		// Recompute slot limits from new SF (VA + VP after epoch)
 		newSF := newValidators.CountByState(valset.ValActive) + newValidators.CountByState(valset.ValPaused)
-		maxSlotAvailable, minActiveCount = slotLimitsFn(newSF)
+		var err error
+		maxSlotAvailable, minActiveCount, err = slotLimitsFn(newSF)
+		if err != nil {
+			return nil, fmt.Errorf("slot limits at epoch (sf=%d): %w", newSF, err)
+		}
 	}
 	newValidators = v.getViolationTransition(minStake, newValidators, header.Number.Uint64(), res.PfsThreshold, maxSlotAvailable, minActiveCount, res.IdleTimeout, blockTime)
 	newValidators = v.getTimeoutTransition(newValidators, res.IdleTimeout, res.PauseTimeout, blockTime)
 	return newValidators, nil
 }
 
-// readSlotLimitsFor computes slot limits for a given SF via contract call, falling back to provided defaults on error.
-func (v *ValsetModule) readSlotLimitsFor(statedb *state.StateDB, header *types.Header, sf uint64, fallbackMaxSlot, fallbackMinActive uint64) (uint64, uint64) {
+// readSlotLimitsFor computes slot limits for a given SF via contract call.
+func (v *ValsetModule) readSlotLimitsFor(statedb *state.StateDB, header *types.Header, sf uint64) (uint64, uint64, error) {
 	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb)
 	if err != nil {
-		logger.Error("failed to create contract backend for slot limits", "err", err)
-		return fallbackMaxSlot, fallbackMinActive
+		return 0, 0, fmt.Errorf("create contract backend for slot limits: %w", err)
 	}
 	maxSlot, minActive, err := system.ReadSlotLimitsFor(backend, header.Number, sf)
 	if err != nil {
-		logger.Error("failed to read slot limits for new SF", "sf", sf, "err", err)
-		return fallbackMaxSlot, fallbackMinActive
+		return 0, 0, fmt.Errorf("read slot limits for sf=%d: %w", sf, err)
 	}
-	return maxSlot, minActive
+	return maxSlot, minActive, nil
 }
 
 // isPassVrankTest returns true if the candidate's CFS is below the threshold.
