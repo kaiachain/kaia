@@ -70,7 +70,7 @@ func (v *ValsetModule) getEpochTransition(
 			if val.StakingAmount >= minStake {
 				activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
 			} else {
-				val.State = valset.ValInactive // T3b: belowMin → VI (below top 50; demoted before SF recomputation)
+				val.State = valset.ValInactive // T3b
 				val.IdleTimeout = now.Add(idleTimeout)
 			}
 		}
@@ -89,7 +89,7 @@ func (v *ValsetModule) getEpochTransition(
 				potentialActiveVal.PausedTimeout = time.Time{}
 			}
 		} else {
-			potentialActiveVal.State = valset.ValInactive
+			potentialActiveVal.State = valset.ValInactive // T3b
 			potentialActiveVal.IdleTimeout = now.Add(idleTimeout)
 		}
 	}
@@ -131,6 +131,8 @@ func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, idle
 
 // getViolationTransition handles staking and PFS violations (runs every block):
 // rule1: staking < MinimumStake
+//   At epoch blocks, VA/VR/VP+belowMin are already demoted to VI by T3b in getEpochTransition,
+//   so these cases only trigger on non-epoch blocks.
 //   - ValActive → ValExiting (if ValExiting slots available and ValActive > minActiveCount)
 //   - ValPaused → ValExiting (if ValExiting slots available)
 //   - ValReady → ValInactive (unconditional)
