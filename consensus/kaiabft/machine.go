@@ -43,6 +43,13 @@ const (
 	stateCommitted
 )
 
+var stateNames = map[uint64]string{
+	stateAcceptRequest: "AcceptRequest",
+	statePreprepared:   "Preprepared",
+	statePrepared:      "Prepared",
+	stateCommitted:     "Committed",
+}
+
 var (
 	errFutureMessage       = errors.New("future message")
 	errOldMessage          = errors.New("old message")
@@ -313,13 +320,20 @@ func (m *machine) handlePreprepare(msg *bft.Message, src common.Address) error {
 			m.preprepare.Proposal = m.preprepare.Proposal.WithSeal(header)
 
 			if pp.Proposal.Hash() == m.lockedHash {
+				logger.Info("Received preprepare matching hash-locked proposal, moving to Prepared",
+					"seq", m.sequence, "round", m.round, "hash", pp.Proposal.Hash())
 				m.acceptPreprepare(pp)
 				m.setState(statePrepared)
 				m.sendCommit()
 			} else {
+				logger.Warn("[RC] Hash locked but received different proposal hash",
+					"seq", m.sequence, "round", m.round,
+					"locked", m.lockedHash, "received", pp.Proposal.Hash())
 				m.sendNextRoundChange("handlePreprepare: hash locked but different proposal")
 			}
 		} else {
+			logger.Debug("Accepted preprepare, moving to Preprepared",
+				"seq", m.sequence, "round", m.round, "from", src, "hash", pp.Proposal.Hash())
 			m.acceptPreprepare(pp)
 			m.setState(statePreprepared)
 			m.sendPrepare()
@@ -350,9 +364,15 @@ func (m *machine) handlePrepare(msg *bft.Message, src common.Address) error {
 
 	if m.state < statePrepared {
 		if m.isHashLocked() && prepare.Digest == m.lockedHash {
+			logger.Info("Received prepare matching hash-locked proposal, moving to Prepared",
+				"seq", m.sequence, "round", m.round, "from", src)
 			m.setState(statePrepared)
 			m.sendCommit()
 		} else if m.getPrepareOrCommitSize() >= m.requiredMessageCount {
+			logger.Info("Received quorum of prepare/commit messages, moving to Prepared",
+				"seq", m.sequence, "round", m.round,
+				"prepares", m.prepares.Size(), "commits", m.commits.Size(),
+				"required", m.requiredMessageCount)
 			m.lockHash()
 			m.setState(statePrepared)
 			m.sendCommit()
@@ -381,9 +401,15 @@ func (m *machine) handleCommit(msg *bft.Message, src common.Address) error {
 	// Both PREPARE and COMMIT messages count for the prepared quorum.
 	if m.state < statePrepared {
 		if m.isHashLocked() && commit.Digest == m.lockedHash {
+			logger.Info("Received commit matching hash-locked proposal, moving to Prepared",
+				"seq", m.sequence, "round", m.round, "from", src)
 			m.setState(statePrepared)
 			m.sendCommit()
 		} else if m.getPrepareOrCommitSize() >= m.requiredMessageCount {
+			logger.Info("Received quorum of prepare/commit messages (via commit), moving to Prepared",
+				"seq", m.sequence, "round", m.round,
+				"prepares", m.prepares.Size(), "commits", m.commits.Size(),
+				"required", m.requiredMessageCount)
 			m.lockHash()
 			m.setState(statePrepared)
 			m.sendCommit()
@@ -391,6 +417,9 @@ func (m *machine) handleCommit(msg *bft.Message, src common.Address) error {
 	}
 
 	if m.state < stateCommitted && m.commits.Size() >= m.requiredMessageCount {
+		logger.Info("Received quorum of commit messages, committing",
+			"seq", m.sequence, "round", m.round,
+			"commits", m.commits.Size(), "required", m.requiredMessageCount)
 		m.lockHash()
 		m.doCommit()
 	}
@@ -416,17 +445,29 @@ func (m *machine) handleRoundChange(msg *bft.Message, _ common.Address) error {
 	numStartNewRound := m.requiredMessageCount
 	numCatchUp := m.f + 1
 
+	logger.Debug("[RC] Round change received",
+		"from", msg.Address, "rcRound", rc.View.Round, "currentRound", cv.Round,
+		"seq", cv.Sequence, "numRC", num, "need", numStartNewRound,
+		"waiting", m.waitingForRoundChange, "state", stateNames[m.state])
+
 	if num == numStartNewRound && (m.waitingForRoundChange || cv.Round.Cmp(rc.View.Round) < 0) {
+		logger.Warn("[RC] Received 2f+1 round change messages, starting new round",
+			"seq", cv.Sequence, "currentRound", cv.Round, "newRound", rc.View.Round,
+			"proposer", m.proposer, "prepares", m.prepares.Size(), "commits", m.commits.Size())
 		m.startNewRound(rc.View.Round)
 		return nil
 	}
 	if m.waitingForRoundChange && num == numCatchUp {
 		if cv.Round.Cmp(rc.View.Round) < 0 {
+			logger.Warn("[RC] Sending round change: received f+1 round change messages",
+				"currentRound", cv.Round, "newRound", rc.View.Round, "seq", cv.Sequence)
 			m.sendRoundChange(rc.View.Round)
 		}
 		return nil
 	}
 	if cv.Round.Cmp(rc.View.Round) < 0 {
+		logger.Debug("[RC] Received higher round but not enough messages, ignored",
+			"currentRound", cv.Round, "rcRound", rc.View.Round, "numRC", num, "need", numStartNewRound)
 		return errIgnored
 	}
 	return nil
@@ -438,23 +479,33 @@ func (m *machine) handleTimeout(nextView *bft.View) {
 	}
 	lastProposal, _ := m.b.lastProposal()
 	if lastProposal == nil {
+		logger.Error("[RC] Timeout but last proposal is nil", "nextView", nextView)
 		return
 	}
 	if lastProposal.Number().Cmp(nextView.Sequence) >= 0 {
+		logger.Debug("[RC] Timeout outdated, chain already advanced",
+			"blockNumber", lastProposal.Number().Uint64(), "timeoutSeq", nextView.Sequence, "timeoutRound", nextView.Round)
 		return
 	}
 
 	if !m.waitingForRoundChange {
 		maxRound := m.maxRoundChangeRound(m.f + 1)
 		if maxRound != nil && maxRound.Cmp(m.round) > 0 {
+			logger.Warn("[RC] Sending round change on timeout: catching up to f+1 max round",
+				"currentRound", m.round, "maxRound", maxRound, "seq", m.sequence)
 			m.sendRoundChange(maxRound)
 			return
 		}
 	}
 
 	if lastProposal.Number().Cmp(m.sequence) >= 0 {
+		logger.Debug("[RC] Timeout: chain caught up, starting new sequence",
+			"blockNumber", lastProposal.Number().Uint64(), "seq", m.sequence)
 		m.startNewRound(common.Big0)
 	} else {
+		logger.Warn("[RC] Sending round change on timeout",
+			"seq", m.sequence, "currentRound", m.round, "nextRound", nextView.Round,
+			"waiting", m.waitingForRoundChange, "state", stateNames[m.state])
 		m.sendRoundChange(nextView.Round)
 	}
 }
@@ -483,9 +534,10 @@ func (m *machine) startNewRound(round *big.Int) {
 	}
 
 	if m.sequence == nil {
-		// First round after start.
+		logger.Debug("Starting initial round")
 	} else if lastProposal.Number().Cmp(m.sequence) >= 0 {
-		// Chain advanced past our sequence.
+		logger.Debug("Chain advanced past our sequence, starting new sequence",
+			"lastBlock", lastProposal.Number().Uint64(), "currentSeq", m.sequence)
 	} else if lastProposal.Number().Cmp(big.NewInt(m.sequence.Int64()-1)) == 0 {
 		if round.Cmp(common.Big0) == 0 {
 			return // same seq, round 0 — nothing to do
@@ -568,10 +620,16 @@ func (m *machine) startNewRound(round *big.Int) {
 	m.newRoundChangeTimer()
 
 	logger.Debug("New round", "round", newView.Round, "seq", newView.Sequence,
-		"proposer", m.proposer, "isProposer", m.isProposer())
+		"proposer", m.proposer, "isProposer", m.isProposer(),
+		"roundChange", roundChange, "quorum", m.requiredMessageCount, "f", m.f)
+	logger.Trace("New round committee", "round", newView.Round, "seq", newView.Sequence,
+		"qualifiedSize", m.qualified.Len(), "committeeSize", m.committeeSize)
 }
 
 func (m *machine) catchUpRound(view *bft.View) {
+	oldRound := new(big.Int).Set(m.round)
+	oldSeq := new(big.Int).Set(m.sequence)
+
 	m.waitingForRoundChange = true
 	// Preserve lock state through round catch-up.
 	oldPreprepare := m.preprepare
@@ -593,6 +651,15 @@ func (m *machine) catchUpRound(view *bft.View) {
 	m.pendingRequest = oldPendingReq
 	m.clearRoundChangeSets(view.Round)
 	m.newRoundChangeTimer()
+
+	newProposer, err := m.b.valsetModule.GetProposer(view.Sequence.Uint64(), view.Round.Uint64())
+	if err != nil {
+		logger.Warn("Failed to get proposer for catch-up round", "err", err)
+	}
+	logger.Warn("[RC] Catch up round",
+		"oldRound", oldRound, "oldSeq", oldSeq, "oldProposer", m.proposer,
+		"newRound", view.Round, "newSeq", view.Sequence, "newProposer", newProposer,
+		"hashLocked", !common.EmptyHash(oldLockedHash))
 }
 
 // ---------------------------------------------------------------------------
@@ -676,8 +743,14 @@ func (m *machine) sendNextRoundChange(reason string) {
 func (m *machine) sendRoundChange(round *big.Int) {
 	cv := m.currentView()
 	if cv.Round.Cmp(round) >= 0 {
+		logger.Warn("[RC] Skip sending round change, current round >= target",
+			"current", cv.Round, "target", round, "seq", cv.Sequence)
 		return
 	}
+
+	logger.Warn("[RC] Sending round change",
+		"seq", cv.Sequence, "currentRound", cv.Round, "targetRound", round,
+		"proposer", m.proposer, "prepares", m.prepares.Size(), "commits", m.commits.Size())
 
 	m.catchUpRound(&bft.View{
 		Round:    new(big.Int).Set(round),
@@ -1032,12 +1105,32 @@ func (m *machine) newRoundChangeTimer() {
 	seq := new(big.Int).Set(m.sequence)
 	r := new(big.Int).Set(m.round)
 
+	// Capture current state for logging inside the timer callback.
+	preprepareNil := m.preprepare == nil
+	preparesSize := m.prepares.Size()
+	commitsSize := m.commits.Size()
+	proposer := m.proposer
+	state := m.state
+
+	loc := "startNewRound"
+	if round > 0 {
+		loc = "catchUpRound"
+	}
+
 	m.roundChangeTimer.Store(time.AfterFunc(timeout, func() {
+		if m.b.nodetype == common.CONSENSUSNODE {
+			logger.Warn("[RC] Timeout fired",
+				"setBy", loc, "seq", seq, "round", r, "proposer", proposer,
+				"preprepareNil", preprepareNil, "prepares", preparesSize,
+				"commits", commitsSize, "state", stateNames[state])
+		}
 		m.b.eventMux.Post(timeoutEvent{&bft.View{
 			Sequence: seq,
 			Round:    new(big.Int).Add(r, common.Big1),
 		}})
 	}))
+
+	logger.Debug("[RC] Timer set", "seq", seq, "round", round, "timeout", timeout)
 }
 
 func (m *machine) stopFuturePreprepareTimer() {
