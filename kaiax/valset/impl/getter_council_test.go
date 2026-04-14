@@ -23,7 +23,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/kaiax/valset"
@@ -44,7 +44,7 @@ func TestGetCouncilGenesis(t *testing.T) {
 		Number: common.Big0,
 		Extra:  hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f89af8549499fb17d324fa0e07f23b49d09028ac0919414db694b74ff9dea397fe9e231df545eb53fe2adf776cb294571e53df607be97431a5bbefca1dffe5aef56f4d945cb1a7dccbd0dc446e3640898ede8820368554c8b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"),
 	}).AnyTimes()
-	mockChain.EXPECT().Sealer().Return(bft.NewSealer(nil, nil)).AnyTimes()
+	mockChain.EXPECT().Sealer().Return(engine.NewSealer(nil, nil)).AnyTimes()
 
 	council, err := v.getCouncilGenesis()
 	assert.NoError(t, err)

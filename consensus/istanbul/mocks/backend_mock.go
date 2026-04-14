@@ -11,6 +11,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	common "github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/bft"
 	istanbul "github.com/kaiachain/kaia/consensus/istanbul"
 	event "github.com/kaiachain/kaia/event"
 )
@@ -81,7 +82,7 @@ func (mr *MockBackendMockRecorder) Broadcast(arg0, arg1 interface{}) *gomock.Cal
 }
 
 // Commit mocks base method.
-func (m *MockBackend) Commit(arg0 istanbul.Proposal, arg1 [][]byte) error {
+func (m *MockBackend) Commit(arg0 bft.Proposal, arg1 [][]byte) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Commit", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -163,10 +164,10 @@ func (mr *MockBackendMockRecorder) HasPropsal(arg0, arg1 interface{}) *gomock.Ca
 }
 
 // LastProposal mocks base method.
-func (m *MockBackend) LastProposal() (istanbul.Proposal, common.Address) {
+func (m *MockBackend) LastProposal() (bft.Proposal, common.Address) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LastProposal")
-	ret0, _ := ret[0].(istanbul.Proposal)
+	ret0, _ := ret[0].(bft.Proposal)
 	ret1, _ := ret[1].(common.Address)
 	return ret0, ret1
 }
@@ -192,7 +193,7 @@ func (mr *MockBackendMockRecorder) NodeType() *gomock.Call {
 }
 
 // SetCurrentView mocks base method.
-func (m *MockBackend) SetCurrentView(arg0 *istanbul.View) {
+func (m *MockBackend) SetCurrentView(arg0 *bft.View) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetCurrentView", arg0)
 }
@@ -219,7 +220,7 @@ func (mr *MockBackendMockRecorder) Sign(arg0 interface{}) *gomock.Call {
 }
 
 // Verify mocks base method.
-func (m *MockBackend) Verify(arg0 istanbul.Proposal) (time.Duration, error) {
+func (m *MockBackend) Verify(arg0 bft.Proposal) (time.Duration, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Verify", arg0)
 	ret0, _ := ret[0].(time.Duration)

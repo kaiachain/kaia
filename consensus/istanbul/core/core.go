@@ -31,6 +31,7 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -171,7 +172,7 @@ func (c *core) RegisterKaiaxModules(mValset valset.ValsetModule, mGov gov.GovMod
 	c.govModule = mGov
 }
 
-func (c *core) finalizeMessage(msg *message) ([]byte, error) {
+func (c *core) finalizeMessage(msg *bft.Message) ([]byte, error) {
 	var err error
 	// Add sender address
 	msg.Address = c.Address()
@@ -179,7 +180,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	// Add proof of consensus
 	msg.CommittedSeal = []byte{}
 	// Assign the CommittedSeal if it's a COMMIT message and proposal is not nil
-	if msg.Code == msgCommit && c.current.Proposal() != nil {
+	if msg.Code == bft.MsgCommit && c.current.Proposal() != nil {
 		msg.CommittedSeal, err = c.backend.Sealer().MakeCommittedSeal(c.current.Proposal().Header())
 		if err != nil {
 			return nil, err
@@ -205,7 +206,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	return payload, nil
 }
 
-func (c *core) broadcast(msg *message) {
+func (c *core) broadcast(msg *bft.Message) {
 	logger := c.logger.NewWith("state", c.state)
 
 	payload, err := c.finalizeMessage(msg)
@@ -221,8 +222,8 @@ func (c *core) broadcast(msg *message) {
 	}
 }
 
-func (c *core) currentView() *istanbul.View {
-	return &istanbul.View{
+func (c *core) currentView() *bft.View {
+	return &bft.View{
 		Sequence: new(big.Int).Set(c.current.Sequence()),
 		Round:    new(big.Int).Set(c.current.Round()),
 	}
@@ -298,7 +299,7 @@ func (c *core) startNewRound(round *big.Int) {
 	}
 
 	var (
-		newView     *istanbul.View
+		newView     *bft.View
 		err         error
 		oldProposer common.Address
 	)
@@ -307,12 +308,12 @@ func (c *core) startNewRound(round *big.Int) {
 		oldProposer = c.current.proposer
 	}
 	if roundChange {
-		newView = &istanbul.View{
+		newView = &bft.View{
 			Sequence: new(big.Int).Set(c.current.Sequence()),
 			Round:    new(big.Int).Set(round),
 		}
 	} else {
-		newView = &istanbul.View{
+		newView = &bft.View{
 			Sequence: new(big.Int).Add(lastProposal.Number(), common.Big1),
 			Round:    new(big.Int),
 		}
@@ -348,7 +349,7 @@ func (c *core) startNewRound(round *big.Int) {
 		// If it is locked, propose the old proposal
 		// If we have pending request, propose pending request
 		if c.current.IsHashLocked() {
-			r := &istanbul.Request{
+			r := &bft.Request{
 				Proposal: c.current.Proposal(), // c.current.Proposal would be the locked proposal by previous proposer, see updateRoundState
 			}
 			c.sendPreprepare(r)
@@ -367,7 +368,7 @@ func (c *core) startNewRound(round *big.Int) {
 	logger.Trace("New round", "new_round", newView.Round, "new_seq", newView.Sequence, "size", c.current.qualified.Len(), "valSet", c.current.qualified.String())
 }
 
-func (c *core) catchUpRound(view *istanbul.View) {
+func (c *core) catchUpRound(view *bft.View) {
 	cLogger := c.logger.NewWith("old_round", c.current.Round(), "old_seq", c.current.Sequence(), "old_proposer", c.current.proposer)
 
 	if view.Round.Cmp(c.current.Round()) > 0 {
@@ -391,7 +392,7 @@ func (c *core) catchUpRound(view *istanbul.View) {
 }
 
 // updateRoundState updates round state by checking if locking block is necessary
-func (c *core) updateRoundState(view *istanbul.View, roundChange bool,
+func (c *core) updateRoundState(view *bft.View, roundChange bool,
 	qualified *valset.AddressSet, committee *valset.AddressSet, proposer common.Address,
 	committeeSize uint64, requiredMessageCount, f int,
 ) {
@@ -493,7 +494,7 @@ func (c *core) newRoundChangeTimer() {
 			}
 		}
 
-		c.sendEvent(timeoutEvent{&istanbul.View{
+		c.sendEvent(timeoutEvent{&bft.View{
 			Sequence: current.sequence,
 			Round:    new(big.Int).Add(current.round, common.Big1),
 		}})

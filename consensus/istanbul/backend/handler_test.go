@@ -24,6 +24,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/rlp"
@@ -36,7 +37,7 @@ func TestBackend_HandleMsg(t *testing.T) {
 	eventSub := backend.istanbulEventMux.Subscribe(istanbul.MessageEvent{})
 
 	addr := common.StringToAddress("test addr")
-	data := &istanbul.ConsensusMsg{
+	data := &bft.ConsensusMsg{
 		PrevHash: common.HexToHash("0x1234"),
 		Payload:  []byte("test data"),
 	}

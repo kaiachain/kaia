@@ -28,7 +28,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/params"
@@ -183,7 +183,7 @@ func decodeExtra(headerFile string) (map[string]interface{}, error) {
 	// scheme implementation is available. If a new scheme is introduced later,
 	// this command should inspect the chainConfig from DB and reintroduce a
 	// scheme option so DecodeExtra uses the correct implementation.
-	s := bft.NewSealer(params.TestChainConfig.Copy(), nil)
+	s := engine.NewSealer(params.TestChainConfig.Copy(), nil)
 	validators, err := s.Validators(header)
 	if err != nil {
 		return nil, err

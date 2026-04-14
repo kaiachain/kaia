@@ -33,7 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/cmd/utils"
-	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/engine"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
@@ -252,7 +252,7 @@ func ValidateGenesisConfig(g *blockchain.Genesis) error {
 		// Check if governingNode is properly set
 		if strings.ToLower(g.Config.Governance.GovernanceMode) == "single" {
 			h := &types.Header{Number: big.NewInt(0), Extra: g.ExtraData}
-			validators, err := bft.NewSealer(g.Config, nil).Validators(h)
+			validators, err := engine.NewSealer(g.Config, nil).Validators(h)
 			if err != nil {
 				return err
 			}

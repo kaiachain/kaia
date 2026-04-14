@@ -23,7 +23,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/engine"
 )
 
 func Encode(vanity string, validators []common.Address) (string, error) {
@@ -36,7 +36,7 @@ func Encode(vanity string, validators []common.Address) (string, error) {
 		Number: big.NewInt(1),
 		Extra:  newVanity,
 	}
-	sealer := bft.NewSealer(nil, nil)
+	sealer := engine.NewSealer(nil, nil)
 	if err := sealer.WriteValidators(header, validators); err != nil {
 		return "", err
 	}

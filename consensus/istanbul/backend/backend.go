@@ -35,6 +35,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	istanbulCore "github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
@@ -75,7 +76,7 @@ func New(opts *BackendOpts) consensus.Engine {
 		chainInitCh:      make(chan struct{}),
 	}
 
-	backend.currentView.Store(&istanbul.View{Sequence: big.NewInt(0), Round: big.NewInt(0)})
+	backend.currentView.Store(&bft.View{Sequence: big.NewInt(0), Round: big.NewInt(0)})
 	backend.core = istanbulCore.New(backend, backend.config)
 	return backend
 }
@@ -112,7 +113,7 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	currentView atomic.Value //*istanbul.View
+	currentView atomic.Value //*bft.View
 
 	// Reference to the kaiax modules
 	valsetModule valset.ValsetModule
@@ -162,7 +163,7 @@ func (sb *backend) cleanupSealState() {
 	sb.commitCh = nil
 }
 
-func (sb *backend) SetCurrentView(view *istanbul.View) {
+func (sb *backend) SetCurrentView(view *bft.View) {
 	sb.currentView.Store(view)
 }
 
@@ -208,7 +209,7 @@ func (sb *backend) Gossip(payload []byte) error {
 			m.Add(hash, true)
 			sb.recentMessages.Add(addr, m)
 
-			cmsg := &istanbul.ConsensusMsg{
+			cmsg := &bft.ConsensusMsg{
 				PrevHash: common.Hash{},
 				Payload:  payload,
 			}
@@ -225,7 +226,7 @@ func (sb *backend) getTargetReceivers() map[common.Address]bool {
 	if sb.valsetModule == nil {
 		return nil
 	}
-	cv, ok := sb.currentView.Load().(*istanbul.View)
+	cv, ok := sb.currentView.Load().(*bft.View)
 	if !ok {
 		logger.Error("Failed to assert type from sb.currentView!!", "cv", cv)
 		return nil
@@ -282,7 +283,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, payload []byte) {
 			m.Add(hash, true)
 			sb.recentMessages.Add(addr, m)
 
-			cmsg := &istanbul.ConsensusMsg{
+			cmsg := &bft.ConsensusMsg{
 				PrevHash: prevHash,
 				Payload:  payload,
 			}
@@ -294,7 +295,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, payload []byte) {
 }
 
 // Commit implements istanbul.Backend.Commit
-func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
+func (sb *backend) Commit(proposal bft.Proposal, seals [][]byte) error {
 	// Check if the proposal is a valid block
 	block, ok := proposal.(*types.Block)
 	if !ok {
@@ -303,7 +304,7 @@ func (sb *backend) Commit(proposal istanbul.Proposal, seals [][]byte) error {
 	}
 	proposalHash := proposal.Hash()
 	h := block.Header()
-	round := sb.currentView.Load().(*istanbul.View).Round.Int64()
+	round := sb.currentView.Load().(*bft.View).Round.Int64()
 	sb.sealer.WriteRound(h, round)
 	// Append seals into extra-data
 	if err := sb.sealer.WriteCommittedSeals(h, seals); err != nil {
@@ -351,7 +352,7 @@ func (sb *backend) EventMux() *event.TypeMux {
 }
 
 // Verify implements istanbul.Backend.Verify
-func (sb *backend) Verify(proposal istanbul.Proposal) (time.Duration, error) {
+func (sb *backend) Verify(proposal bft.Proposal) (time.Duration, error) {
 	// Check if the proposal is a valid block
 	block, ok := proposal.(*types.Block)
 	if !ok {
@@ -405,7 +406,7 @@ func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
 	return sb.chain.GetHeader(hash, number.Uint64()) != nil
 }
 
-func (sb *backend) LastProposal() (istanbul.Proposal, common.Address) {
+func (sb *backend) LastProposal() (bft.Proposal, common.Address) {
 	block := sb.currentBlock()
 
 	var proposer common.Address

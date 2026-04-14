@@ -27,10 +27,10 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 )
 
-func (c *core) sendPreprepare(request *istanbul.Request) {
+func (c *core) sendPreprepare(request *bft.Request) {
 	logger := c.logger.NewWith("state", c.state)
 
 	header := request.Proposal.Header()
@@ -40,7 +40,7 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 	// If I'm the proposer and I have the same sequence with the proposal
 	if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.isProposer() {
 		curView := c.currentView()
-		preprepare, err := Encode(&istanbul.Preprepare{
+		preprepare, err := bft.Encode(&bft.Preprepare{
 			View:     curView,
 			Proposal: request.Proposal,
 		})
@@ -49,30 +49,30 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 			return
 		}
 
-		c.broadcast(&message{
+		c.broadcast(&bft.Message{
 			Hash: request.Proposal.ParentHash(),
-			Code: msgPreprepare,
+			Code: bft.MsgPreprepare,
 			Msg:  preprepare,
 		})
 	}
 }
 
-func (c *core) handlePreprepare(msg *message, src common.Address) error {
+func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	timestamp := time.Now()
 
 	// Decode PRE-PREPARE
-	var preprepare *istanbul.Preprepare
+	var preprepare *bft.Preprepare
 	err := msg.Decode(&preprepare)
 	if err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
-		return errInvalidMessage
+		return bft.ErrInvalidMessage
 	}
 
 	// Ensure we have the same view with the PRE-PREPARE message
 	// If it is old message, see if we need to broadcast COMMIT
-	if err := c.checkMessage(msgPreprepare, preprepare.View); err != nil {
+	if err := c.checkMessage(bft.MsgPreprepare, preprepare.View); err != nil {
 		if err == errOldMessage {
 			// Broadcast COMMIT if it is an existing block
 			// 1. The proposer needs to match the given (Sequence + Round)
@@ -149,7 +149,7 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 	return nil
 }
 
-func (c *core) acceptPreprepare(preprepare *istanbul.Preprepare) {
+func (c *core) acceptPreprepare(preprepare *bft.Preprepare) {
 	c.consensusTimestamp = time.Now()
 	c.current.SetPreprepare(preprepare)
 }
