@@ -94,6 +94,7 @@ abstract contract AddressBookV2Base is
         uint256 maxValidatorCount;
         uint256 maxReadyCandidateCount;
         uint256 slotFactor;
+        uint256 activeValidatorCount;
         address kefAddress;
         address kifAddress;
         address kpfAddress;

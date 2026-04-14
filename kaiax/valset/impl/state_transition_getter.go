@@ -89,7 +89,7 @@ func (v *ValsetModule) getEpochTransition(
 				potentialActiveVal.PausedTimeout = time.Time{}
 			}
 		} else {
-			potentialActiveVal.State = valset.ValInactive
+			potentialActiveVal.State = valset.ValInactive // T3b
 			potentialActiveVal.IdleTimeout = now.Add(idleTimeout)
 		}
 	}
@@ -129,36 +129,65 @@ func (v *ValsetModule) getTimeoutTransition(validators valset.NodeStateMap, idle
 	return newValidators
 }
 
-// getViolationTransition transitions ValActive validators to ValExiting when they violate rules:
-// rule1: staking amount dropped below MinimumStake
-// rule2: PFS >= pfsThreshold (vrank violation, anytime)
-func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset.NodeStateMap, num, pfsThreshold, maxSlotAvailable, minActiveCount uint64) valset.NodeStateMap {
+// getViolationTransition handles staking and PFS violations (runs every block):
+// rule1: staking < MinimumStake
+//
+//	At epoch blocks, VA/VR/VP+belowMin are already demoted to VI by T3b in getEpochTransition,
+//	so these cases only trigger on non-epoch blocks.
+//	- ValActive → ValExiting (if ValExiting slots available and ValActive > minActiveCount)
+//	- ValPaused → ValExiting (if ValExiting slots available)
+//	- ValReady → ValInactive (unconditional)
+//
+// rule2: PFS violation (only when proposal failure occurred at this block)
+//   - PFS >= pfsThreshold (severe): ValActive → ValExiting
+//   - 0 < PFS < pfsThreshold (minor): ValActive → ValPaused
+func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset.NodeStateMap, num, pfsThreshold, maxSlotAvailable, minActiveCount uint64, idleTimeout time.Duration, now time.Time) valset.NodeStateMap {
 	var (
 		newValidators = validators.Copy()
-		countByState  = func(state valset.State) uint64 {
-			var count uint64
-			for _, val := range newValidators {
-				if val.State == state {
-					count++
-				}
-			}
-			return count
+		// Slot/count helpers check the in-progress state of newValidators.
+		// Counts change as validators transition within the loop, so these cannot be replaced with a contract call.
+		hasSlot = func(state valset.State) bool {
+			return newValidators.CountByState(state) < maxSlotAvailable
 		}
-		canTransition = func(targetState valset.State) bool {
-			return countByState(targetState) < maxSlotAvailable && countByState(valset.ValActive) > minActiveCount
+		// canDemoteActive additionally ensures enough ValActive remain for consensus.
+		// Used only when transitioning FROM ValActive (reducing active count).
+		canDemoteActive = func(targetState valset.State) bool {
+			return hasSlot(targetState) && newValidators.CountByState(valset.ValActive) > minActiveCount
 		}
 	)
 
-	// rule1: staking amount dropped below MinimumStake → ValExiting
-	for addr, val := range newValidators {
-		if val.State != valset.ValActive || val.StakingAmount >= minStake {
+	// Iterate in deterministic address order. Slot-limited transitions depend on
+	// which validator is processed first, so random map iteration would be nondeterministic.
+	sortedAddrs := newValidators.Addresses()
+
+	// rule1: staking amount dropped below MinimumStake
+	for _, addr := range sortedAddrs {
+		val := newValidators[addr]
+		if val.StakingAmount >= minStake {
 			continue
 		}
-		if canTransition(valset.ValExiting) {
-			logger.Info("MinStake violation: transitioning to ValExiting", "addr", addr, "staking", val.StakingAmount, "minStake", minStake, "num", num)
-			val.State = valset.ValExiting
-		} else {
-			logger.Warn("MinStake violation: slot full, skipping transition", "addr", addr, "staking", val.StakingAmount, "num", num)
+		switch val.State {
+		case valset.ValActive:
+			// ValActive → ValExiting (slot + minActiveCount: removing an active validator reduces consensus participants)
+			if canDemoteActive(valset.ValExiting) {
+				logger.Info("MinStake violation: ValActive → ValExiting", "addr", addr, "staking", val.StakingAmount, "minStake", minStake, "num", num)
+				val.State = valset.ValExiting
+			} else {
+				logger.Warn("MinStake violation: slot full, skipping ValActive transition", "addr", addr, "staking", val.StakingAmount, "num", num)
+			}
+		case valset.ValPaused:
+			// ValPaused → ValExiting (slot only: ValPaused is already not in active set)
+			if hasSlot(valset.ValExiting) {
+				logger.Info("MinStake violation: ValPaused → ValExiting", "addr", addr, "staking", val.StakingAmount, "minStake", minStake, "num", num)
+				val.State = valset.ValExiting
+			} else {
+				logger.Warn("MinStake violation: slot full, skipping ValPaused transition", "addr", addr, "staking", val.StakingAmount, "num", num)
+			}
+		case valset.ValReady:
+			// ValReady → ValInactive (no slot check, not in active set)
+			logger.Info("MinStake violation: ValReady → ValInactive", "addr", addr, "staking", val.StakingAmount, "minStake", minStake, "num", num)
+			val.State = valset.ValInactive
+			val.IdleTimeout = now.Add(idleTimeout)
 		}
 	}
 
@@ -178,7 +207,8 @@ func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset
 		logger.Warn("getViolationTransition: GetPFS failed", "num", num, "err", err)
 		return newValidators
 	}
-	for addr, val := range newValidators {
+	for _, addr := range sortedAddrs {
+		val := newValidators[addr]
 		if val.State != valset.ValActive {
 			continue
 		}
@@ -187,14 +217,14 @@ func (v *ValsetModule) getViolationTransition(minStake uint64, validators valset
 			continue
 		}
 		if pfs >= pfsThreshold {
-			if canTransition(valset.ValExiting) {
+			if canDemoteActive(valset.ValExiting) {
 				logger.Info("PFS severe violation: transitioning to ValExiting", "addr", addr, "pfs", pfs, "pfsThreshold", pfsThreshold, "num", num)
 				val.State = valset.ValExiting
 			} else {
 				logger.Warn("PFS severe violation: slot full, skipping transition", "addr", addr, "pfs", pfs, "num", num)
 			}
 		} else {
-			if canTransition(valset.ValPaused) {
+			if canDemoteActive(valset.ValPaused) {
 				logger.Info("PFS minor violation: transitioning to ValPaused", "addr", addr, "pfs", pfs, "pfsThreshold", pfsThreshold, "num", num)
 				val.State = valset.ValPaused
 			} else {

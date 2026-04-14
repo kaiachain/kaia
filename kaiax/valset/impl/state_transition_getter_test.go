@@ -135,6 +135,30 @@ func TestGetEpochTransition_StateTransitions(t *testing.T) {
 	}
 }
 
+// TestGetEpochTransition_BelowMinStakeDemoted verifies that VA/VR/VP+belowMin are demoted to VI at epoch (T5).
+// This ensures newSF is computed only from validators with sufficient stake,
+// preventing SF inflation that would cause incorrect slot limits in violation transition.
+func TestGetEpochTransition_BelowMinStakeDemoted(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	v := newTestValsetModule(ctrl)
+
+	validators := valset.NodeStateMap{
+		addr1: {State: valset.ValActive, StakingAmount: aboveMinStake}, // above-min: stays VA
+		addr2: {State: valset.ValActive, StakingAmount: belowMinStake}, // T3b: → VI
+		addr3: {State: valset.ValReady, StakingAmount: belowMinStake},  // T3b: → VI
+		addr4: {State: valset.ValPaused, StakingAmount: belowMinStake}, // T3b: → VI
+	}
+	result := v.getEpochTransition(testMinStake, validators, testIdleTimeout, testMaxValCount, testBlockTime, 0, 0, 0)
+
+	assert.Equal(t, valset.ValActive, result[addr1].State)
+	assert.Equal(t, valset.ValInactive, result[addr2].State)
+	assert.Equal(t, valset.ValInactive, result[addr3].State)
+	assert.Equal(t, valset.ValInactive, result[addr4].State)
+	assert.False(t, result[addr2].IdleTimeout.IsZero())
+	assert.False(t, result[addr3].IdleTimeout.IsZero())
+	assert.False(t, result[addr4].IdleTimeout.IsZero())
+}
+
 func TestGetEpochTransition_MaxValidatorCount(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := newTestValsetModule(ctrl)
@@ -382,9 +406,124 @@ func TestGetViolationTransition_ValActiveBelowMinStake(t *testing.T) {
 		addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
 		addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
 	}
-	result := v.getViolationTransition(testMinStake, validators, 0, 0, noSlotLimit, noMinActive)
+	result := v.getViolationTransition(testMinStake, validators, 0, 0, noSlotLimit, noMinActive, testIdleTimeout, testBlockTime)
 	assert.Equal(t, valset.ValExiting, result[addr1].State)
 	assert.Equal(t, valset.ValActive, result[addr2].State)
+}
+
+// TestGetViolationTransition_SuspendedNotExempt verifies that suspended ValActive validators
+// are subject to the same violation transitions as non-suspended ones.
+func TestGetViolationTransition_SuspendedNotExempt(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	v := newTestValsetModule(ctrl)
+	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+	mockVRank.EXPECT().GetPfReport(uint64(100)).Return([]common.Address{addr1}, nil)
+	mockVRank.EXPECT().GetPFS(uint64(100)).Return(map[common.Address]uint64{addr2: 3}, nil)
+	v.VRankModule = mockVRank
+
+	validators := valset.NodeStateMap{
+		addr1: {State: valset.ValActive, StakingAmount: belowMinStake, Suspended: true},  // minStake violation
+		addr2: {State: valset.ValActive, StakingAmount: aboveMinStake, Suspended: true},  // PFS severe
+		addr3: {State: valset.ValActive, StakingAmount: aboveMinStake, Suspended: false}, // no violation
+	}
+	result := v.getViolationTransition(testMinStake, validators, 100, 2, noSlotLimit, noMinActive, testIdleTimeout, testBlockTime)
+	assert.Equal(t, valset.ValExiting, result[addr1].State, "suspended + low staking → ValExiting")
+	assert.Equal(t, valset.ValExiting, result[addr2].State, "suspended + PFS severe → ValExiting")
+	assert.Equal(t, valset.ValActive, result[addr3].State, "non-suspended, no violation → unchanged")
+}
+
+// TestGetViolationTransition_Deterministic verifies that violation transitions produce
+// consistent results regardless of Go map iteration order. Two ValActive validators both
+// below minStake compete for a single ValExiting slot — the same one must always win.
+func TestGetViolationTransition_Deterministic(t *testing.T) {
+	var firstResult map[common.Address]valset.State
+	for i := 0; i < 100; i++ {
+		ctrl := gomock.NewController(t)
+		v := newTestValsetModule(ctrl)
+		mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+		mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
+		v.VRankModule = mockVRank
+
+		validators := valset.NodeStateMap{
+			addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
+			addr2: {State: valset.ValActive, StakingAmount: belowMinStake},
+			addr3: {State: valset.ValActive, StakingAmount: aboveMinStake}, // keeps ValActive count > minActiveCount
+		}
+		// maxSlotAvailable=1, minActiveCount=2 → only 1 of addr1/addr2 can transition
+		result := v.getViolationTransition(testMinStake, validators, 0, 0, 1, 2, testIdleTimeout, testBlockTime)
+
+		states := map[common.Address]valset.State{
+			addr1: result[addr1].State,
+			addr2: result[addr2].State,
+			addr3: result[addr3].State,
+		}
+		if firstResult == nil {
+			firstResult = states
+		} else {
+			require.Equal(t, firstResult, states, "nondeterministic result at iteration %d", i)
+		}
+		ctrl.Finish()
+	}
+}
+
+func TestGetViolationTransition_MinStakeMigrated(t *testing.T) {
+	testcases := []struct {
+		name           string
+		validators     valset.NodeStateMap
+		maxSlot        uint64
+		expectedStates map[common.Address]valset.State
+		checkTimeout   *common.Address // if set, assert IdleTimeout is non-zero
+	}{
+		{
+			"ValReady + low staking → ValInactive",
+			valset.NodeStateMap{
+				addr1: {State: valset.ValReady, StakingAmount: belowMinStake},
+				addr2: {State: valset.ValReady, StakingAmount: aboveMinStake},
+			},
+			noSlotLimit,
+			map[common.Address]valset.State{addr1: valset.ValInactive, addr2: valset.ValReady},
+			&addr1,
+		},
+		{
+			"ValPaused + low staking → ValExiting",
+			valset.NodeStateMap{
+				addr1: {State: valset.ValPaused, StakingAmount: belowMinStake},
+				addr2: {State: valset.ValPaused, StakingAmount: aboveMinStake},
+			},
+			noSlotLimit,
+			map[common.Address]valset.State{addr1: valset.ValExiting, addr2: valset.ValPaused},
+			nil,
+		},
+		{
+			"ValPaused + low staking + slot full → stays ValPaused",
+			valset.NodeStateMap{
+				addr1: {State: valset.ValPaused, StakingAmount: belowMinStake},
+				addr2: {State: valset.ValExiting, StakingAmount: aboveMinStake}, // slot occupied
+				addr3: {State: valset.ValActive, StakingAmount: aboveMinStake},
+				addr4: {State: valset.ValActive, StakingAmount: aboveMinStake},
+			},
+			1, // maxSlotAvailable=1, already occupied
+			map[common.Address]valset.State{addr1: valset.ValPaused, addr2: valset.ValExiting, addr3: valset.ValActive, addr4: valset.ValActive},
+			nil,
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			v := newTestValsetModule(ctrl)
+			mockVRank := vrank_mock.NewMockVRankModule(ctrl)
+			mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
+			v.VRankModule = mockVRank
+
+			result := v.getViolationTransition(testMinStake, tc.validators, 0, 0, tc.maxSlot, noMinActive, testIdleTimeout, testBlockTime)
+			for addr, expected := range tc.expectedStates {
+				assert.Equal(t, expected, result[addr].State, "addr=%s", addr.Hex())
+			}
+			if tc.checkTimeout != nil {
+				assert.False(t, result[*tc.checkTimeout].IdleTimeout.IsZero(), "IdleTimeout should be set")
+			}
+		})
+	}
 }
 
 func TestGetViolationTransition_NonActiveNotAffected(t *testing.T) {
@@ -398,7 +537,7 @@ func TestGetViolationTransition_NonActiveNotAffected(t *testing.T) {
 		addr1: {State: valset.CandReady, StakingAmount: belowMinStake},
 		addr2: {State: valset.ValInactive, StakingAmount: belowMinStake},
 	}
-	result := v.getViolationTransition(testMinStake, validators, 0, 0, noSlotLimit, noMinActive)
+	result := v.getViolationTransition(testMinStake, validators, 0, 0, noSlotLimit, noMinActive, testIdleTimeout, testBlockTime)
 	assert.Equal(t, valset.CandReady, result[addr1].State)
 	assert.Equal(t, valset.ValInactive, result[addr2].State)
 }
@@ -415,7 +554,7 @@ func TestGetViolationTransition_PFSAboveThreshold(t *testing.T) {
 		addr1: {State: valset.ValActive, StakingAmount: aboveMinStake},
 		addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
 	}
-	result := v.getViolationTransition(testMinStake, validators, 100, 2, noSlotLimit, noMinActive)
+	result := v.getViolationTransition(testMinStake, validators, 100, 2, noSlotLimit, noMinActive, testIdleTimeout, testBlockTime)
 	assert.Equal(t, valset.ValExiting, result[addr1].State, "PFS(3) >= threshold(2) → ValExiting (severe)")
 	assert.Equal(t, valset.ValPaused, result[addr2].State, "PFS(1) > 0, < threshold(2) → ValPaused (minor)")
 }
@@ -432,7 +571,7 @@ func TestGetViolationTransition_PFSNonActiveNotAffected(t *testing.T) {
 		addr1: {State: valset.CandReady, StakingAmount: aboveMinStake},
 		addr2: {State: valset.ValPaused, StakingAmount: aboveMinStake},
 	}
-	result := v.getViolationTransition(testMinStake, validators, 100, 2, noSlotLimit, noMinActive)
+	result := v.getViolationTransition(testMinStake, validators, 100, 2, noSlotLimit, noMinActive, testIdleTimeout, testBlockTime)
 	assert.Equal(t, valset.CandReady, result[addr1].State, "CandReady not affected by PFS")
 	assert.Equal(t, valset.ValPaused, result[addr2].State, "ValPaused not affected by PFS")
 }
@@ -449,16 +588,6 @@ func TestGetViolationTransition_PFSNonActiveNotAffected(t *testing.T) {
 // With n=4, maxSlot=1 for each but minActive=3 means only 1 total can leave ValActive
 // (either 1 paused or 1 exiting, not both), since 4-2=2 < minActive=3.
 // ============================================================
-
-func countState(validators valset.NodeStateMap, state valset.State) int {
-	count := 0
-	for _, val := range validators {
-		if val.State == state {
-			count++
-		}
-	}
-	return count
-}
 
 func TestGetViolationTransition_SlotLimits(t *testing.T) {
 	const (
@@ -481,10 +610,10 @@ func TestGetViolationTransition_SlotLimits(t *testing.T) {
 			addr3: {State: valset.ValActive, StakingAmount: aboveMinStake},
 			addr4: {State: valset.ValActive, StakingAmount: aboveMinStake},
 		}
-		result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold, slotMax, minActive)
+		result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold, slotMax, minActive, testIdleTimeout, testBlockTime)
 
-		assert.Equal(t, 1, countState(result, valset.ValPaused), "only 1 slot available for ValPaused")
-		assert.Equal(t, 3, countState(result, valset.ValActive), "remaining 3 should stay ValActive")
+		assert.Equal(t, 1, int(result.CountByState(valset.ValPaused)), "only 1 slot available for ValPaused")
+		assert.Equal(t, 3, int(result.CountByState(valset.ValActive)), "remaining 3 should stay ValActive")
 	})
 
 	t.Run("PFS severe: only 1 exited when 2 violate", func(t *testing.T) {
@@ -501,10 +630,10 @@ func TestGetViolationTransition_SlotLimits(t *testing.T) {
 			addr3: {State: valset.ValActive, StakingAmount: aboveMinStake},
 			addr4: {State: valset.ValActive, StakingAmount: aboveMinStake},
 		}
-		result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold, slotMax, minActive)
+		result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold, slotMax, minActive, testIdleTimeout, testBlockTime)
 
-		assert.Equal(t, 1, countState(result, valset.ValExiting), "only 1 slot available for ValExiting")
-		assert.Equal(t, 3, countState(result, valset.ValActive), "remaining 3 should stay ValActive")
+		assert.Equal(t, 1, int(result.CountByState(valset.ValExiting)), "only 1 slot available for ValExiting")
+		assert.Equal(t, 3, int(result.CountByState(valset.ValActive)), "remaining 3 should stay ValActive")
 	})
 
 	t.Run("minStake violation: skip when slot full", func(t *testing.T) {
@@ -520,10 +649,10 @@ func TestGetViolationTransition_SlotLimits(t *testing.T) {
 			addr3: {State: valset.ValActive, StakingAmount: aboveMinStake},
 			addr4: {State: valset.ValActive, StakingAmount: aboveMinStake},
 		}
-		result := v.getViolationTransition(testMinStake, validators, 0, 0, slotMax, minActive)
+		result := v.getViolationTransition(testMinStake, validators, 0, 0, slotMax, minActive, testIdleTimeout, testBlockTime)
 
-		assert.Equal(t, 1, countState(result, valset.ValExiting), "only 1 can exit due to slot limit")
-		assert.Equal(t, 3, countState(result, valset.ValActive), "remaining 3 should stay ValActive")
+		assert.Equal(t, 1, int(result.CountByState(valset.ValExiting)), "only 1 can exit due to slot limit")
+		assert.Equal(t, 3, int(result.CountByState(valset.ValActive)), "remaining 3 should stay ValActive")
 	})
 
 	t.Run("slot already occupied: no more transitions", func(t *testing.T) {
@@ -540,7 +669,7 @@ func TestGetViolationTransition_SlotLimits(t *testing.T) {
 			addr3: {State: valset.ValActive, StakingAmount: aboveMinStake},
 			addr4: {State: valset.ValActive, StakingAmount: aboveMinStake},
 		}
-		result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold, slotMax, minActive)
+		result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold, slotMax, minActive, testIdleTimeout, testBlockTime)
 		assert.Equal(t, valset.ValActive, result[addr1].State, "paused slot full, minor violation skipped")
 	})
 
@@ -581,11 +710,11 @@ func TestGetViolationTransition_SlotLimits(t *testing.T) {
 				validators[addr] = &valset.ValidatorState{State: valset.ValActive, StakingAmount: aboveMinStake}
 			}
 
-			result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold10, slotMax10, minActive10)
+			result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold10, slotMax10, minActive10, testIdleTimeout, testBlockTime)
 
-			assert.Equal(t, 1, countState(result, valset.ValExiting), "1 severe → 1 exiting")
-			assert.Equal(t, 1, countState(result, valset.ValPaused), "1 minor paused, 2nd blocked by slot")
-			assert.Equal(t, 8, countState(result, valset.ValActive), "8 remain active (minActive=8)")
+			assert.Equal(t, 1, int(result.CountByState(valset.ValExiting)), "1 severe → 1 exiting")
+			assert.Equal(t, 1, int(result.CountByState(valset.ValPaused)), "1 minor paused, 2nd blocked by slot")
+			assert.Equal(t, 8, int(result.CountByState(valset.ValActive)), "8 remain active (minActive=8)")
 		})
 
 		t.Run("3 belowMinStake: only 1 exits (exitSlot cap=1)", func(t *testing.T) {
@@ -604,10 +733,10 @@ func TestGetViolationTransition_SlotLimits(t *testing.T) {
 				validators[addr] = &valset.ValidatorState{State: valset.ValActive, StakingAmount: stake}
 			}
 
-			result := v.getViolationTransition(testMinStake, validators, 0, 0, slotMax10, minActive10)
+			result := v.getViolationTransition(testMinStake, validators, 0, 0, slotMax10, minActive10, testIdleTimeout, testBlockTime)
 
-			assert.Equal(t, 1, countState(result, valset.ValExiting), "maxSlot=1 → only 1 can exit")
-			assert.Equal(t, 9, countState(result, valset.ValActive), "9 remain active")
+			assert.Equal(t, 1, int(result.CountByState(valset.ValExiting)), "maxSlot=1 → only 1 can exit")
+			assert.Equal(t, 9, int(result.CountByState(valset.ValActive)), "9 remain active")
 		})
 	})
 }
@@ -651,9 +780,9 @@ func TestApplyAllTransitions(t *testing.T) {
 		expected map[common.Address]valset.State
 	}{
 		{
-			// addr1: ValActive+belowMin → violation(ValExiting) → timeout(noop) → epoch(ValInactive)
-			// addr2: ValActive+aboveMin → violation(noop) → timeout(noop) → epoch(ValActive)
-			"violation→epoch pipeline",
+			// addr1: ValActive+belowMin → epoch(T3b: ValInactive) → violation(noop) → timeout(noop)
+			// addr2: ValActive+aboveMin → epoch(ValActive) → violation(noop) → timeout(noop)
+			"epoch→T5 pipeline",
 			testEpochNum,
 			valset.NodeStateMap{
 				addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
@@ -663,13 +792,25 @@ func TestApplyAllTransitions(t *testing.T) {
 		},
 		{
 			// addr1: ValActive+belowMin → violation(ValExiting) → timeout(noop) → epoch(noop, non-epoch)
+			// addr2: ValActive+aboveMin → violation(noop) → timeout(noop)
 			// Proves: violation applies regardless of epoch, but epoch transition only fires at VRankEpoch
 			"non-epoch: violation fires but epoch noop",
 			testNonEpochNum,
 			valset.NodeStateMap{
 				addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
+				addr2: {State: valset.ValActive, StakingAmount: aboveMinStake},
 			},
-			map[common.Address]valset.State{addr1: valset.ValExiting},
+			map[common.Address]valset.State{addr1: valset.ValExiting, addr2: valset.ValActive},
+		},
+		{
+			// addr1: ValActive+belowMin → violation would fire but minActiveCount=1 blocks demotion
+			// Proves: last VA is protected from demotion when minActiveCount=1
+			"non-epoch: last VA protected by minActiveCount",
+			testNonEpochNum,
+			valset.NodeStateMap{
+				addr1: {State: valset.ValActive, StakingAmount: belowMinStake},
+			},
+			map[common.Address]valset.State{addr1: valset.ValActive},
 		},
 		{
 			// addr1: CandReady+aboveMin → violation(noop) → timeout(noop) → epoch(CandTesting)
@@ -681,11 +822,11 @@ func TestApplyAllTransitions(t *testing.T) {
 			map[common.Address]valset.State{addr1: valset.CandTesting},
 		},
 		{
-			// addr1: ValActive+belowMin  → violation(ValExiting) → timeout(noop) → epoch(ValInactive)
-			// addr2: ValActive+aboveMin  → violation(noop) → timeout(noop) → epoch(ValActive)
-			// addr3: CandReady+aboveMin  → violation(noop) → timeout(noop) → epoch(CandTesting)
-			// addr4: ValPaused+aboveMin  → violation(noop) → timeout(set PausedTimeout) → epoch(ValPaused preserved)
-			// addr5: CandReady+belowMin  → violation(noop) → timeout(noop) → epoch(Registered)
+			// addr1: ValActive+belowMin  → epoch(T3b: ValInactive) → violation(noop) → timeout(noop)
+			// addr2: ValActive+aboveMin  → epoch(ValActive) → violation(noop) → timeout(noop)
+			// addr3: CandReady+aboveMin  → epoch(CandTesting) → violation(noop) → timeout(noop)
+			// addr4: ValPaused+aboveMin  → epoch(ValPaused preserved) → violation(noop) → timeout(set PausedTimeout)
+			// addr5: CandReady+belowMin  → epoch(Registered) → violation(noop) → timeout(noop)
 			"mixed states at epoch",
 			testEpochNum,
 			valset.NodeStateMap{
@@ -737,7 +878,16 @@ func TestApplyAllTransitions(t *testing.T) {
 			v := newTestApplyAllTransitions(ctrl)
 			parentHeader := &types.Header{Number: big.NewInt(int64(tc.num - 1)), Time: big.NewInt(testBlockTime.Unix())}
 
-			result, err := v.applyAllTransitions(tc.input, parentHeader, DefaultValPausedTimeout, DefaultValIdleTimeout, DefaultActiveValidatorCount, 0, 0, noSlotLimit, noMinActive, 0)
+			noopSlotLimitsFn := func(sf uint64) (uint64, uint64, error) { return noSlotLimit, 1, nil }
+			res := &system.NodeStatesResult{
+				Validators:           tc.input,
+				PauseTimeout:         DefaultValPausedTimeout,
+				IdleTimeout:          DefaultValIdleTimeout,
+				ActiveValidatorCount: DefaultActiveValidatorCount,
+				MaxSlotAvailable:     noSlotLimit,
+				MinActiveCount:       1,
+			}
+			result, err := v.applyAllTransitions(res, parentHeader, noopSlotLimitsFn)
 			assert.NoError(t, err)
 			for addr, expectedState := range tc.expected {
 				assert.Equal(t, expectedState, result[addr].State, "addr=%s", addr.Hex())
@@ -861,5 +1011,73 @@ func TestGetNodeByState(t *testing.T) {
 
 		_, err := v2.GetNodeByState(1, nil)
 		assert.Error(t, err)
+	})
+}
+
+// TestSuspendedFallback tests the safety fallback in getQualifiedValidators:
+// when all ValActive are suspended, the suspended set is ignored to prevent consensus halt.
+func TestSuspendedFallback(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	config, _ := system.MakeTestPermissionlessConfig(5)
+
+	alloc, err := system.AllocPermissionless(config)
+	require.NoError(t, err)
+
+	chainConfig := params.TestChainConfig.Copy()
+	chainConfig.PermissionlessCompatibleBlock = big.NewInt(0)
+
+	simBackend := backends.NewSimulatedBackendWithChainConfig(blockchain.GenesisAlloc(alloc), chainConfig)
+	defer simBackend.Close()
+	chain := simBackend.BlockChain()
+
+	v := NewValsetModule()
+	v.Chain = chain
+
+	t.Run("all ValActive suspended → fallback returns all ValActive", func(t *testing.T) {
+		nodes := valset.NodeStateMap{
+			config.NodeIds[0]: {State: valset.ValActive, Suspended: true},
+			config.NodeIds[1]: {State: valset.ValActive, Suspended: true},
+			config.NodeIds[2]: {State: valset.ValReady},
+		}
+		v.nodeStatesCache.Add(uint64(1), nodes)
+
+		qualified, err := v.getQualifiedValidators(1)
+		require.NoError(t, err)
+		assert.Equal(t, 2, qualified.Len(), "fallback: all suspended ValActive returned")
+		assert.True(t, qualified.Contains(config.NodeIds[0]))
+		assert.True(t, qualified.Contains(config.NodeIds[1]))
+	})
+
+	t.Run("some ValActive suspended → only non-suspended returned", func(t *testing.T) {
+		nodes := valset.NodeStateMap{
+			config.NodeIds[0]: {State: valset.ValActive, Suspended: true},
+			config.NodeIds[1]: {State: valset.ValActive, Suspended: false},
+			config.NodeIds[2]: {State: valset.ValReady},
+		}
+		v.nodeStatesCache.Add(uint64(1), nodes)
+
+		qualified, err := v.getQualifiedValidators(1)
+		require.NoError(t, err)
+		assert.Equal(t, 1, qualified.Len())
+		assert.True(t, qualified.Contains(config.NodeIds[1]))
+	})
+
+	t.Run("demoted = council - qualified with suspended", func(t *testing.T) {
+		nodes := valset.NodeStateMap{
+			config.NodeIds[0]: {State: valset.ValActive, Suspended: true},
+			config.NodeIds[1]: {State: valset.ValActive, Suspended: false},
+			config.NodeIds[2]: {State: valset.ValReady},
+			config.NodeIds[3]: {State: valset.ValPaused},
+		}
+		v.nodeStatesCache.Add(uint64(1), nodes)
+
+		demoted, err := v.GetDemotedValidators(1)
+		require.NoError(t, err)
+		// demoted = council(4) - qualified(1 non-suspended ValActive) = 3
+		assert.Len(t, demoted, 3)
+		assert.Contains(t, demoted, config.NodeIds[0], "suspended ValActive is demoted")
+		assert.Contains(t, demoted, config.NodeIds[2], "ValReady is demoted")
+		assert.Contains(t, demoted, config.NodeIds[3], "ValPaused is demoted")
+		assert.NotContains(t, demoted, config.NodeIds[1], "non-suspended ValActive is not demoted")
 	})
 }

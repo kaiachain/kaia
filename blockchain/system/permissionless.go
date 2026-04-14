@@ -371,6 +371,7 @@ func convertToABv2DataInitData(config *AllocPermissionlessConfig) abv2data.IABv2
 		PauseTimeout:           d.PauseTimeout,
 		IdleTimeout:            d.IdleTimeout,
 		MaxValidatorCount:      d.MaxValidatorCount,
+		ActiveValidatorCount:   d.ActiveValidatorCount,
 		MaxReadyCandidateCount: d.MaxReadyCandidateCount,
 		KefAddress:             d.KefAddress,
 		KifAddress:             d.KifAddress,

@@ -143,6 +143,11 @@ interface IAddressBookV2 {
     /// @param newCount The new count
     event MaxValidatorCountUpdated(uint256 oldCount, uint256 newCount);
 
+    /// @notice Emitted when the active validator count is updated
+    /// @param oldCount The previous count
+    /// @param newCount The new count
+    event ActiveValidatorCountUpdated(uint256 oldCount, uint256 newCount);
+
     /// @notice Emitted when the maximum ready candidate count is updated
     /// @param oldCount The previous count
     /// @param newCount The new count
@@ -277,6 +282,10 @@ interface IAddressBookV2 {
     /// @param newMaxValidatorCount The new maximum
     function updateMaxValidatorCount(uint256 newMaxValidatorCount) external;
 
+    /// @notice Updates the active validator count (max ValActive + ValPaused for epoch slot competition)
+    /// @param newActiveValidatorCount The new count
+    function updateActiveValidatorCount(uint256 newActiveValidatorCount) external;
+
     /// @notice Updates the maximum ready candidate count
     /// @param newMaxReadyCandidateCount The new maximum
     function updateMaxReadyCandidateCount(uint256 newMaxReadyCandidateCount) external;
@@ -323,6 +332,10 @@ interface IAddressBookV2 {
     /// @return maxReadyCandidateCount The maximum ready candidate count
     function getMaxCounts() external view returns (uint256 maxValidatorCount, uint256 maxReadyCandidateCount);
 
+    /// @notice Returns the active validator count (max ValActive + ValPaused for epoch slot competition)
+    /// @return The active validator count
+    function getActiveValidatorCount() external view returns (uint256);
+
     /// @notice Returns the PFS threshold for validator exit
     /// @return The PFS threshold
     function getPfsThreshold() external view returns (uint256);
@@ -335,6 +348,12 @@ interface IAddressBookV2 {
     /// @return maxSlotAvailable Maximum number of ValPaused or ValExiting each
     /// @return minActiveCount Minimum number of ValActive validators required
     function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount);
+
+    /// @notice Computes slot limits for a given slot factor
+    /// @param sf The slot factor to compute limits for
+    /// @return maxSlotAvailable Maximum number of ValPaused or ValExiting each
+    /// @return minActiveCount Minimum number of ValActive validators required
+    function getSlotLimitsFor(uint256 sf) external pure returns (uint256 maxSlotAvailable, uint256 minActiveCount);
 
     /// @notice Returns the fund addresses (KEF, KIF, KPF)
     /// @return kefAddress The Kaia Ecosystem Fund address

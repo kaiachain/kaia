@@ -129,16 +129,16 @@ func EncodeNodeStateUpdate(
 
 // NodeStatesResult holds the result of ReadNodeStates.
 type NodeStatesResult struct {
-	Validators        valset.NodeStateMap
-	PauseTimeout      time.Duration
-	IdleTimeout       time.Duration
-	MaxValCount       uint64
-	MaxReadyCandCount uint64
-	PfsThreshold      uint64
-	CfsThreshold      uint64
-	SlotFactor        uint64
-	MaxSlotAvailable  uint64
-	MinActiveCount    uint64
+	Validators           valset.NodeStateMap
+	PauseTimeout         time.Duration
+	IdleTimeout          time.Duration
+	PfsThreshold         uint64
+	CfsThreshold         uint64
+	SlotFactor           uint64
+	MaxSlotAvailable     uint64
+	MinActiveCount       uint64
+	ActiveValidatorCount uint64
+	SuspendedValidators  []common.Address
 }
 
 // ReadNodeStates reads all validator states, timeouts, max counts, and thresholds from ABv2 in a single MultiCall.
@@ -179,16 +179,16 @@ func ReadNodeStates(
 	}
 
 	return &NodeStatesResult{
-		Validators:        validators,
-		PauseTimeout:      time.Duration(res.PauseTimeout.Int64()) * time.Second,
-		IdleTimeout:       time.Duration(res.IdleTimeout.Int64()) * time.Second,
-		MaxValCount:       res.MaxValidatorCount.Uint64(),
-		MaxReadyCandCount: res.MaxReadyCandidateCount.Uint64(),
-		PfsThreshold:      res.PfsThreshold.Uint64(),
-		CfsThreshold:      res.CfsThreshold.Uint64(),
-		SlotFactor:        res.SlotFactor.Uint64(),
-		MaxSlotAvailable:  res.MaxSlotAvailable.Uint64(),
-		MinActiveCount:    res.MinActiveCount.Uint64(),
+		Validators:           validators,
+		PauseTimeout:         time.Duration(res.PauseTimeout.Int64()) * time.Second,
+		IdleTimeout:          time.Duration(res.IdleTimeout.Int64()) * time.Second,
+		PfsThreshold:         res.PfsThreshold.Uint64(),
+		CfsThreshold:         res.CfsThreshold.Uint64(),
+		SlotFactor:           res.SlotFactor.Uint64(),
+		MaxSlotAvailable:     res.MaxSlotAvailable.Uint64(),
+		MinActiveCount:       res.MinActiveCount.Uint64(),
+		ActiveValidatorCount: res.ActiveValidatorCount.Uint64(),
+		SuspendedValidators:  res.SuspendedValidators,
 	}, nil
 }
 
@@ -204,6 +204,20 @@ func ReadSlotFactor(backend bind.ContractCaller, num *big.Int) (uint64, error) {
 		return 0, err
 	}
 	return sf.Uint64(), nil
+}
+
+// ReadSlotLimitsFor computes slot limits for a given slot factor via ABv2.getSlotLimitsFor.
+func ReadSlotLimitsFor(backend bind.ContractCaller, num *big.Int, sf uint64) (maxSlotAvailable, minActiveCount uint64, err error) {
+	caller, err := abv2contracts.NewAddressBookV2Caller(AddressBookAddr, backend)
+	if err != nil {
+		return 0, 0, err
+	}
+	opts := &bind.CallOpts{BlockNumber: num}
+	result, err := caller.GetSlotLimitsFor(opts, new(big.Int).SetUint64(sf))
+	if err != nil {
+		return 0, 0, err
+	}
+	return result.MaxSlotAvailable.Uint64(), result.MinActiveCount.Uint64(), nil
 }
 
 // ReadAddressBookV2BlsAll reads BLS public key info for all nodes from AddressBookV2.

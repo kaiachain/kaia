@@ -15,17 +15,27 @@ library ABv2ConfigLib {
     bytes32 internal constant STORAGE_LOCATION = 0x1b0484cbd0fba815b5886ffd853c75e18f4b5720362abf431d1f348b59d4ff00;
 
     /* ========== Config slot offsets ========== */
+    // ABv2Storage layout (ERC-7201, base = STORAGE_LOCATION):
+    //   0: nodeInfo (mapping, 1 slot)
+    //   1-2: allNodes (EnumerableSet, 2 slots)
+    //   3-4: registeredNodes (EnumerableSet, 2 slots)
+    //   5-6: suspendedSet (EnumerableSet, 2 slots)
+    //   7: lastAssignedGCId (uint256)
+    //   8: stateCount (mapping, 1 slot)
+    //   9: usedAddresses (mapping, 1 slot)
+    //   10+: configurable fields below
 
-    ConfigSlot internal constant PFS_THRESHOLD = ConfigSlot.wrap(8);
-    ConfigSlot internal constant CFS_THRESHOLD = ConfigSlot.wrap(9);
-    ConfigSlot internal constant PAUSE_TIMEOUT = ConfigSlot.wrap(10);
-    ConfigSlot internal constant IDLE_TIMEOUT = ConfigSlot.wrap(11);
-    ConfigSlot internal constant MAX_VALIDATOR_COUNT = ConfigSlot.wrap(12);
-    ConfigSlot internal constant MAX_READY_CANDIDATE_COUNT = ConfigSlot.wrap(13);
-    // offset 14 = slotFactor (system-managed, not configurable)
-    ConfigSlot internal constant KEF_ADDRESS = ConfigSlot.wrap(15);
-    ConfigSlot internal constant KIF_ADDRESS = ConfigSlot.wrap(16);
-    ConfigSlot internal constant KPF_ADDRESS = ConfigSlot.wrap(17);
+    ConfigSlot internal constant PFS_THRESHOLD = ConfigSlot.wrap(10);
+    ConfigSlot internal constant CFS_THRESHOLD = ConfigSlot.wrap(11);
+    ConfigSlot internal constant PAUSE_TIMEOUT = ConfigSlot.wrap(12);
+    ConfigSlot internal constant IDLE_TIMEOUT = ConfigSlot.wrap(13);
+    ConfigSlot internal constant MAX_VALIDATOR_COUNT = ConfigSlot.wrap(14);
+    ConfigSlot internal constant MAX_READY_CANDIDATE_COUNT = ConfigSlot.wrap(15);
+    // offset 16 = slotFactor (system-managed, not configurable)
+    ConfigSlot internal constant ACTIVE_VALIDATOR_COUNT = ConfigSlot.wrap(17);
+    ConfigSlot internal constant KEF_ADDRESS = ConfigSlot.wrap(18);
+    ConfigSlot internal constant KIF_ADDRESS = ConfigSlot.wrap(19);
+    ConfigSlot internal constant KPF_ADDRESS = ConfigSlot.wrap(20);
 
     /* ========== Typed update functions ========== */
 

@@ -25,6 +25,7 @@ contract ABv2DataContract is IABv2DataContract {
     uint256 public immutable pauseTimeout;
     uint256 public immutable idleTimeout;
     uint256 public immutable maxValidatorCount;
+    uint256 public immutable activeValidatorCount;
     uint256 public immutable maxReadyCandidateCount;
     address public immutable kefAddress;
     address public immutable kifAddress;
@@ -54,6 +55,7 @@ contract ABv2DataContract is IABv2DataContract {
         if (data.pauseTimeout == 0) revert InvalidInput();
         if (data.idleTimeout == 0) revert InvalidInput();
         if (data.maxValidatorCount == 0) revert InvalidInput();
+        if (data.activeValidatorCount == 0) revert InvalidInput();
         if (data.maxReadyCandidateCount == 0) revert InvalidInput();
         if (data.kefAddress == address(0)) revert InvalidInput();
         if (data.kifAddress == address(0)) revert InvalidInput();
@@ -72,6 +74,7 @@ contract ABv2DataContract is IABv2DataContract {
         pauseTimeout = data.pauseTimeout;
         idleTimeout = data.idleTimeout;
         maxValidatorCount = data.maxValidatorCount;
+        activeValidatorCount = data.activeValidatorCount;
         maxReadyCandidateCount = data.maxReadyCandidateCount;
         kefAddress = data.kefAddress;
         kifAddress = data.kifAddress;
@@ -108,6 +111,7 @@ contract ABv2DataContract is IABv2DataContract {
                 pauseTimeout: pauseTimeout,
                 idleTimeout: idleTimeout,
                 maxValidatorCount: maxValidatorCount,
+                activeValidatorCount: activeValidatorCount,
                 maxReadyCandidateCount: maxReadyCandidateCount,
                 kefAddress: kefAddress,
                 kifAddress: kifAddress,

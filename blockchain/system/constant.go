@@ -95,8 +95,8 @@ var (
 	AddressBookV2Code   = hexutil.MustDecode("0x" + addressbookv2contract.AddressBookV2BinRuntime)
 	AddressBookV2ABI, _ = addressbookv2contract.AddressBookV2MetaData.GetAbi()
 
-	MultiCallCode     = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
-	MultiCallMockCode        = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)
+	MultiCallCode             = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
+	MultiCallMockCode         = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)
 	MultiCallPermlessMockCode = hexutil.MustDecode("0x" + permlesstestcontract.MultiCallContractMockBinRuntime)
 
 	// Mock for CLRegistry testing

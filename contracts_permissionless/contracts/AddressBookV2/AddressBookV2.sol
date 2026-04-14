@@ -42,6 +42,7 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
         $.pauseTimeout = d.pauseTimeout;
         $.idleTimeout = d.idleTimeout;
         $.maxValidatorCount = d.maxValidatorCount;
+        $.activeValidatorCount = d.activeValidatorCount;
         $.maxReadyCandidateCount = d.maxReadyCandidateCount;
         $.kefAddress = d.kefAddress;
         $.kifAddress = d.kifAddress;
@@ -100,6 +101,14 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
+    function updateActiveValidatorCount(uint256 newActiveValidatorCount) external onlyOwner {
+        emit ActiveValidatorCountUpdated(
+            ABv2ConfigLib.ACTIVE_VALIDATOR_COUNT.updateUint(newActiveValidatorCount),
+            newActiveValidatorCount
+        );
+    }
+
+    /// @inheritdoc IAddressBookV2
     function updateMaxReadyCandidateCount(uint256 newMaxReadyCandidateCount) external onlyOwner {
         emit MaxReadyCandidateCountUpdated(
             ABv2ConfigLib.MAX_READY_CANDIDATE_COUNT.updateUint(newMaxReadyCandidateCount),
@@ -147,6 +156,11 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
+    function getActiveValidatorCount() external view returns (uint256) {
+        return _getStorage().activeValidatorCount;
+    }
+
+    /// @inheritdoc IAddressBookV2
     function getPfsThreshold() external view returns (uint256) {
         return _getStorage().pfsThreshold;
     }
@@ -158,8 +172,12 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
 
     /// @inheritdoc IAddressBookV2
     function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount) {
-        uint256 n = _getStorage().slotFactor;
-        return (SlotMath.maxSlotAvailable(n), SlotMath.minActiveCount(n));
+        return getSlotLimitsFor(_getStorage().slotFactor);
+    }
+
+    /// @inheritdoc IAddressBookV2
+    function getSlotLimitsFor(uint256 sf) public pure returns (uint256 maxSlotAvailable, uint256 minActiveCount) {
+        return (SlotMath.maxSlotAvailable(sf), SlotMath.minActiveCount(sf));
     }
 
     /// @inheritdoc IAddressBookV2
@@ -208,11 +226,10 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     /// @inheritdoc IAddressBookV2
     function getAllProfiles() external view override returns (Profile[] memory profiles) {
         ABv2Storage storage $ = _getStorage();
-        address[] memory nodeIds = _getNonSuspendedNodeIds();
-        uint256 len = nodeIds.length;
-        profiles = new Profile[](len);
-        for (uint256 i; i < len; ++i) {
-            address nid = nodeIds[i];
+        uint256 activeLen = $.allNodes.length();
+        profiles = new Profile[](activeLen);
+        for (uint256 i; i < activeLen; ++i) {
+            address nid = $.allNodes.at(i);
             NodeInfo storage info = $.nodeInfo[nid];
             profiles[i] = Profile(nid, info.stakingContract, info.rewardAddress, info.timeoutAt, info.state);
         }
@@ -226,10 +243,11 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
         returns (address[] memory nodeIdList, BlsPublicKeyInfo[] memory pubkeyList)
     {
         ABv2Storage storage $ = _getStorage();
-        nodeIdList = _getNonSuspendedNodeIds();
-        uint256 len = nodeIdList.length;
+        uint256 len = $.allNodes.length();
+        nodeIdList = new address[](len);
         pubkeyList = new BlsPublicKeyInfo[](len);
         for (uint256 i; i < len; ++i) {
+            nodeIdList[i] = $.allNodes.at(i);
             pubkeyList[i] = $.nodeInfo[nodeIdList[i]].blsInfo;
         }
     }
@@ -322,31 +340,6 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
             return (address(0), address(0), false);
         }
         return (info.stakingContract, info.rewardAddress, true);
-    }
-
-    /* ========== INTERNAL HELPERS ========== */
-
-    /// @notice Returns all node IDs, excluding suspended nodes.
-    function _getNonSuspendedNodeIds() private view returns (address[] memory nodeIds) {
-        ABv2Storage storage $ = _getStorage();
-        uint256 activeLen = $.allNodes.length();
-
-        nodeIds = new address[](activeLen);
-        uint256 idx;
-
-        for (uint256 i; i < activeLen; ++i) {
-            address nid = $.allNodes.at(i);
-            if (!$.suspendedSet.contains(nid)) {
-                nodeIds[idx] = nid;
-                unchecked {
-                    ++idx;
-                }
-            }
-        }
-
-        assembly {
-            mstore(nodeIds, idx)
-        }
     }
 
     /* ========== UPGRADE FUNCTIONS ========== */

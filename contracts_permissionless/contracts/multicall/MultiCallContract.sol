@@ -15,7 +15,7 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity 0.8.25;
+pragma solidity 0.8.19;
 
 import {Profile} from "../types/Node.sol";
 
@@ -68,6 +68,8 @@ interface IAddressBookV2 {
     function getCfsThreshold() external view returns (uint256);
     function getSlotFactor() external view returns (uint256);
     function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount);
+    function getActiveValidatorCount() external view returns (uint256);
+    function getSuspendedValidators() external view returns (address[] memory);
 }
 
 // MultiCallContract provides a function to retrieve the any information needed for the Kaia client.
@@ -139,31 +141,34 @@ contract MultiCallContract {
         (kefAddr, kifAddr, kpfAddr) = abv2.getFundAddresses();
     }
 
+    struct NodeStatesResult {
+        Profile[] profiles;
+        uint256[] stakingAmounts;
+        uint256 pauseTimeout;
+        uint256 idleTimeout;
+        uint256 pfsThreshold;
+        uint256 cfsThreshold;
+        uint256 slotFactor;
+        uint256 maxSlotAvailable;
+        uint256 minActiveCount;
+        uint256 activeValidatorCount;
+        address[] suspendedValidators;
+    }
+
     function multiCallNodeStatesPermissionless()
         external
         view
-        returns (
-            Profile[] memory profiles,
-            uint256[] memory stakingAmounts,
-            uint256 pauseTimeout,
-            uint256 idleTimeout,
-            uint256 maxValidatorCount,
-            uint256 maxReadyCandidateCount,
-            uint256 pfsThreshold,
-            uint256 cfsThreshold,
-            uint256 slotFactor,
-            uint256 maxSlotAvailable,
-            uint256 minActiveCount
-        )
+        returns (NodeStatesResult memory result)
     {
-        (profiles, stakingAmounts) = _getProfilesAndStaking();
         IAddressBookV2 abv2 = IAddressBookV2(ADDRESS_BOOK_ADDRESS);
-        (pauseTimeout, idleTimeout) = abv2.getTimeouts();
-        (maxValidatorCount, maxReadyCandidateCount) = abv2.getMaxCounts();
-        pfsThreshold = abv2.getPfsThreshold();
-        cfsThreshold = abv2.getCfsThreshold();
-        slotFactor = abv2.getSlotFactor();
-        (maxSlotAvailable, minActiveCount) = abv2.getSlotLimits();
+        (result.profiles, result.stakingAmounts) = _getProfilesAndStaking();
+        (result.pauseTimeout, result.idleTimeout) = abv2.getTimeouts();
+        result.pfsThreshold = abv2.getPfsThreshold();
+        result.cfsThreshold = abv2.getCfsThreshold();
+        result.slotFactor = abv2.getSlotFactor();
+        result.activeValidatorCount = abv2.getActiveValidatorCount();
+        result.suspendedValidators = abv2.getSuspendedValidators();
+        (result.maxSlotAvailable, result.minActiveCount) = abv2.getSlotLimits();
     }
 
     function _getProfilesAndStaking() private view returns (Profile[] memory profiles, uint256[] memory stakingAmounts) {

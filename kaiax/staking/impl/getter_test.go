@@ -30,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func testPragueForkChainConfig(forkNum *big.Int) *params.ChainConfig {
@@ -276,4 +277,51 @@ func TestSourceBlockNum(t *testing.T) {
 		actual := sourceBlockNum(tc.num, tc.isKaia, tc.interval)
 		assert.Equal(t, tc.expected, actual, i)
 	}
+}
+
+func TestGetStakingInfo_Permissionless_OnlyValActive(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+
+	// Use MultiCallPermlessMockCode which returns:
+	//   profile[0]: NodeId=0xF00, Staking=0xF01, Reward=0xF02, ValActive,  5M KAIA
+	//   profile[1]: NodeId=0xF03, Staking=0xF04, Reward=0xF05, CandReady, 10M KAIA
+	// Only ValActive should appear in StakingInfo.
+	originCode := system.MultiCallCode
+	system.MultiCallCode = system.MultiCallPermlessMockCode
+	defer func() { system.MultiCallCode = originCode }()
+
+	db := database.NewMemoryDBManager()
+	config := testPragueForkChainConfig(big.NewInt(0))
+	config.PermissionlessCompatibleBlock = big.NewInt(0)
+
+	alloc := blockchain.GenesisAlloc{
+		system.AddressBookAddr: {Code: []byte{0x01}, Balance: big.NewInt(0)}, // non-nil to pass bail-out check
+	}
+	backend := backends.NewSimulatedBackendWithDatabase(db, alloc, config)
+
+	mStaking := NewStakingModule()
+	mStaking.Init(&InitOpts{
+		ChainKv:     db.GetMiscDB(),
+		ChainConfig: config,
+		Chain:       backend.BlockChain(),
+	})
+	si, err := mStaking.GetStakingInfo(0)
+	require.NoError(t, err)
+
+	// Only ValActive (profile[0]=0xF00, profile[5]=0x4000) should be included
+	// ValPaused, ValReady, ValExiting, CandReady are all excluded
+	assert.Len(t, si.NodeIds, 2)
+	assert.Equal(t, common.HexToAddress("0xF00"), si.NodeIds[0])
+	assert.Equal(t, common.HexToAddress("0x4000"), si.NodeIds[1])
+	assert.Equal(t, common.HexToAddress("0xF01"), si.StakingContracts[0])
+	assert.Equal(t, common.HexToAddress("0x4001"), si.StakingContracts[1])
+	assert.Equal(t, common.HexToAddress("0xF02"), si.RewardAddrs[0])
+	assert.Equal(t, common.HexToAddress("0x4002"), si.RewardAddrs[1])
+	assert.Equal(t, uint64(5_000_000), si.StakingAmounts[0])
+	assert.Equal(t, uint64(9_000_000), si.StakingAmounts[1])
+
+	// Fund addresses from mock
+	assert.Equal(t, common.HexToAddress("0x0a01"), si.KEFAddr)
+	assert.Equal(t, common.HexToAddress("0x0a02"), si.KIFAddr)
+	assert.Equal(t, common.HexToAddress("0x0a03"), si.KPFAddr)
 }
