@@ -181,7 +181,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		},
 	}
 
-	handler.SetBroadcaster(manager, manager.nodetype)
+	handler.SetBroadcaster(manager)
 
 	// Figure out whether to allow fast sync or not
 	if (mode == downloader.FastSync || mode == downloader.SnapSync) && blockchain.CurrentBlock().NumberU64() > 0 {
@@ -196,7 +196,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.fastSync = uint32(0)
 		manager.snapSync = uint32(1)
 	}
-	protocol := handler.Protocol()
+	protocol := consensus.IstanbulProtocol
 	logger.Info("Initialising Klaytn protocol", "versions", protocol.Versions, "network", networkId)
 	// Initiate a sub-protocol for every implemented version we can handle
 	manager.SubProtocols = make([]p2p.Protocol, 0, len(protocol.Versions))

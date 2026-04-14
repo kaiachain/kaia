@@ -36,8 +36,6 @@ import (
 )
 
 const (
-	IstanbulMsg = 0x11
-
 	// chainInitTimeout is the maximum time ValidatePeerType waits for the
 	// consensus engine to be ready before rejecting the peer connection.
 	chainInitTimeout = 30 * time.Second
@@ -48,26 +46,14 @@ var (
 	errDecodeFailed       = errors.New("fail to decode istanbul message")
 	errNoChainReader      = errors.New("sb.chain is nil! --mine option might be missing")
 	errInvalidPeerAddress = errors.New("invalid address")
-
-	// TODO-Kaia-Istanbul: define Versions and Lengths with correct values.
-	IstanbulProtocol = consensus.Protocol{
-		Name:     "istanbul",
-		Versions: []uint{67, 66, 65, 64},
-		Lengths:  []uint64{26, 24, 23, 21},
-	}
 )
-
-// Protocol implements consensus.Engine.Protocol
-func (sb *backend) Protocol() consensus.Protocol {
-	return IstanbulProtocol
-}
 
 // HandleMsg implements consensus.Handler.HandleMsg
 func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
 
-	if msg.Code == IstanbulMsg {
+	if msg.Code == consensus.ConsensusMsgCode {
 		if !sb.coreStarted {
 			return true, istanbul.ErrStoppedEngine
 		}
@@ -136,17 +122,10 @@ func (sb *backend) ValidatePeerType(addr common.Address) error {
 }
 
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
-func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster, nodetype common.ConnType) {
+func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
-	if nodetype == common.CONSENSUSNODE {
+	if sb.nodetype == common.CONSENSUSNODE {
 		sb.broadcaster.RegisterValidator(common.CONSENSUSNODE, sb)
-	}
-}
-
-// RegisterConsensusMsgCode registers the channel of consensus msg.
-func (sb *backend) RegisterConsensusMsgCode(peer consensus.Peer) {
-	if err := peer.RegisterConsensusMsgCode(IstanbulMsg); err != nil {
-		logger.Error("RegisterConsensusMsgCode failed", "err", err)
 	}
 }
 

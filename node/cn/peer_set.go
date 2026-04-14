@@ -33,7 +33,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/node/cn/snap"
 )
@@ -588,7 +588,7 @@ func (peers *peerSet) UpdateTypePeersWithoutTxs(tx *types.Transaction, nodeType 
 func (peers *peerSet) RegisterSnapExtension(peer *snap.Peer) error {
 	// Reject the peer if it advertises `snap` without `klay` as `snap` is only a
 	// satellite protocol meaningful with the chain selection of `klay`
-	if !peer.RunningCap(backend.IstanbulProtocol.Name, backend.IstanbulProtocol.Versions) {
+	if !peer.RunningCap(consensus.IstanbulProtocol.Name, consensus.IstanbulProtocol.Versions) {
 		return errSnapWithoutIstanbul
 	}
 	// Ensure nobody can double connect

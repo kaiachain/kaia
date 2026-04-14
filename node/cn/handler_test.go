@@ -137,20 +137,18 @@ func newReceipt(gasUsed int) *types.Receipt {
 	return rct
 }
 
-type testConsensusHandler struct {
-	protocol consensus.Protocol
-}
+type testConsensusHandler struct{}
 
-func (h *testConsensusHandler) Protocol() consensus.Protocol { return h.protocol }
-func (h *testConsensusHandler) NewChainHead() error          { return nil }
+func (h *testConsensusHandler) NewChainHead() error { return nil }
 func (h *testConsensusHandler) HandleMsg(common.Address, p2p.Msg) (bool, error) {
 	return false, nil
 }
-func (h *testConsensusHandler) SetBroadcaster(consensus.Broadcaster, common.ConnType) {}
-func (h *testConsensusHandler) RegisterConsensusMsgCode(consensus.Peer)               {}
+func (h *testConsensusHandler) SetBroadcaster(consensus.Broadcaster) {}
 
 func TestNewProtocolManager(t *testing.T) {
-	// 1. NewProtocolManager can be initialized with faker as consensus handler.
+	// NewProtocolManager uses consensus.IstanbulProtocol directly (not handler-provided).
+	// Verifies successful initialization with all Istanbul versions passing the
+	// FastSync version filter (>= kaia63).
 	{
 		mockCtrl, mockBlockChain, mockTxPool := newMocks(t)
 		defer mockCtrl.Finish()
@@ -159,10 +157,11 @@ func TestNewProtocolManager(t *testing.T) {
 		mockBlockChain.EXPECT().CurrentBlock().Return(block).Times(1)
 
 		pm, err := NewProtocolManager(params.TestChainConfig, downloader.FastSync, 0, nil, mockTxPool,
-			&testConsensusHandler{protocol: consensus.Protocol{}}, mockBlockChain, nil, 1, common.ConnTypeUndefined, &Config{})
+			&testConsensusHandler{}, mockBlockChain, nil, 1, common.CONSENSUSNODE,
+			&Config{DownloaderDisable: true, FetcherDisable: true})
 
-		assert.Nil(t, pm)
-		assert.Equal(t, errIncompatibleConfig, err)
+		assert.NotNil(t, pm)
+		assert.NoError(t, err)
 	}
 }
 

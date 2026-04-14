@@ -75,7 +75,7 @@ const (
 
 	// Protocol messages belonging to kaia/64
 	Unused10 = 0x10 // Skipped a number because 0x11 is already taken
-	Unused11 = 0x11 // Already used by consensus (IstanbulMsg)
+	Unused11 = 0x11 // Already used by consensus (consensus.ConsensusMsgCode)
 
 	// Protocol messages belonging to kaia/65
 	StakingInfoRequestMsg = 0x12

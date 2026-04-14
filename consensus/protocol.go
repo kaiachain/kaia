@@ -44,6 +44,16 @@ var KaiaProtocol = Protocol{
 	Lengths:  []uint64{24, 22, 21, 19, 17, 8},
 }
 
+// IstanbulProtocol is the p2p protocol used by Istanbul BFT consensus nodes.
+var IstanbulProtocol = Protocol{
+	Name:     "istanbul",
+	Versions: []uint{Kaia67, Kaia66, Kaia65, Kaia64},
+	Lengths:  []uint64{26, 24, 23, 21},
+}
+
+// ConsensusMsgCode is the p2p message code for BFT consensus messages.
+const ConsensusMsgCode = 0x11
+
 // Protocol defines the protocol of the consensus
 type Protocol struct {
 	// Official short name of the protocol used during capability negotiation.
