@@ -249,6 +249,7 @@ type BlockChain interface {
 	ContractCode(hash common.Hash) ([]byte, error)
 	ContractCodeWithPrefix(hash common.Hash) ([]byte, error)
 	Config() *params.ChainConfig
+	VMConfig() vm.Config
 	State() (*state.StateDB, error)
 	Rollback(chain []common.Hash)
 	InsertReceiptChain(blockChain types.Blocks, receiptChain []types.Receipts) (int, error)
