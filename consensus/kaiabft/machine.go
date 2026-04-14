@@ -804,20 +804,10 @@ func (m *machine) startSpeculativeExecution(proposal bft.Proposal) {
 		default:
 		}
 
+		// ProcessBlock delegates to StateProcessor.Process() which already
+		// calls FinalizeState internally (applies rewards, computes root).
+		// Do NOT call FinalizeState again — that would double-apply rewards.
 		result, err := executor.ProcessBlock(block.Transactions())
-		if err != nil {
-			entry.Complete(nil, err)
-			return
-		}
-
-		select {
-		case <-ctx.Done():
-			entry.Complete(nil, ctx.Err())
-			return
-		default:
-		}
-
-		_, err = executor.FinalizeState(result)
 		if err != nil {
 			entry.Complete(nil, err)
 			return
