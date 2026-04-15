@@ -893,7 +893,7 @@ func TestApplyAllTransitions(t *testing.T) {
 				MaxSlotAvailable:     noSlotLimit,
 				MinActiveCount:       1,
 			}
-			result, err := v.applyAllTransitions(res, parentHeader, noopSlotLimitsFn)
+			result, _, err := v.applyAllTransitions(res, parentHeader, noopSlotLimitsFn)
 			assert.NoError(t, err)
 			for addr, expectedState := range tc.expected {
 				assert.Equal(t, expectedState, result[addr].State, "addr=%s", addr.Hex())
@@ -928,7 +928,7 @@ func TestGetCouncilPermissionless(t *testing.T) {
 		config.NodeIds[5]: {State: valset.CandReady},   // excluded
 		config.NodeIds[6]: {State: valset.Registered},  // excluded
 	}
-	v.nodeStatesCache.Add(uint64(1), nodes)
+	v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
 
 	council, err := v.GetCouncil(1)
 	require.NoError(t, err)
@@ -971,7 +971,7 @@ func TestGetNodeByState(t *testing.T) {
 		config.NodeIds[3]: {State: valset.CandReady, StakingAmount: 5_000_000},
 		config.NodeIds[4]: {State: valset.ValExiting, StakingAmount: 5_000_000},
 	}
-	v.nodeStatesCache.Add(uint64(1), nodes)
+	v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
 
 	t.Run("filter single state", func(t *testing.T) {
 		result, err := v.GetNodeByState(1, []valset.State{valset.ValActive})
@@ -1045,7 +1045,7 @@ func TestSuspendedFallback(t *testing.T) {
 			config.NodeIds[1]: {State: valset.ValActive, Suspended: true},
 			config.NodeIds[2]: {State: valset.ValReady},
 		}
-		v.nodeStatesCache.Add(uint64(1), nodes)
+		v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
 
 		qualified, err := v.getQualifiedValidators(1)
 		require.NoError(t, err)
@@ -1060,7 +1060,7 @@ func TestSuspendedFallback(t *testing.T) {
 			config.NodeIds[1]: {State: valset.ValActive, Suspended: false},
 			config.NodeIds[2]: {State: valset.ValReady},
 		}
-		v.nodeStatesCache.Add(uint64(1), nodes)
+		v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
 
 		qualified, err := v.getQualifiedValidators(1)
 		require.NoError(t, err)
@@ -1075,7 +1075,7 @@ func TestSuspendedFallback(t *testing.T) {
 			config.NodeIds[2]: {State: valset.ValReady},
 			config.NodeIds[3]: {State: valset.ValPaused},
 		}
-		v.nodeStatesCache.Add(uint64(1), nodes)
+		v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
 
 		demoted, err := v.GetDemotedValidators(1)
 		require.NoError(t, err)

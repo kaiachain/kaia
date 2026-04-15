@@ -111,7 +111,7 @@ func TestInstallAndInitializeABv2(t *testing.T) {
 func TestGetOrComputeNodeStates(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
 
-	config, nodeKeys := system.MakeTestPermissionlessConfig(3)
+	config, nodeKeys := system.MakeTestPermissionlessConfig(4)
 	alloc, err := system.AllocPermissionless(config)
 	require.NoError(t, err)
 
@@ -186,12 +186,14 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 
 	t.Run("cache hit returns cached value", func(t *testing.T) {
 		v := newModule(t)
-		cached := valset.NodeStateMap{
-			config.NodeIds[0]: {State: valset.ValPaused, StakingAmount: 999},
+		cached := nodeStatesCacheEntry{
+			validators: valset.NodeStateMap{
+				config.NodeIds[0]: {State: valset.ValPaused, StakingAmount: 999},
+			},
 		}
 		v.nodeStatesCache.Add(uint64(1), cached)
 
-		result, err := v.getOrComputeNodeStates(1, genesisStatedb())
+		result, _, err := v.getOrComputeNodeStates(1, genesisStatedb())
 		require.NoError(t, err)
 		assert.Equal(t, valset.ValPaused, result[config.NodeIds[0]].State)
 		assert.Equal(t, uint64(999), result[config.NodeIds[0]].StakingAmount)
@@ -201,7 +203,7 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 		v := newModule(t)
 		// Block 1 is committed with pause tx → ABv2(1) has ValPaused.
 		// But getOrComputeNodeStates(1) should read ABv2(0) + applyTr(0) = all ValActive.
-		result, err := v.getOrComputeNodeStates(1, genesisStatedb())
+		result, _, err := v.getOrComputeNodeStates(1, genesisStatedb())
 		require.NoError(t, err)
 		assert.Equal(t, valset.ValActive, result[config.NodeIds[0]].State,
 			"should return ValActive from ABv2(0), not ValPaused from committed ABv2(1)")
@@ -211,7 +213,7 @@ func TestGetOrComputeNodeStates(t *testing.T) {
 		v := newModule(t)
 		// pause() is an anytime transition (user tx, any block). ABv2(1) has ValPaused written by that tx.
 		// Block 2: reads ABv2(1) with ValPaused + applyTr(1) (no timeout expiry, not epoch block → state unchanged)
-		result, err := v.getOrComputeNodeStates(2, block1Statedb())
+		result, _, err := v.getOrComputeNodeStates(2, block1Statedb())
 		require.NoError(t, err)
 		assert.Equal(t, valset.ValPaused, result[config.NodeIds[0]].State,
 			"should read ValPaused from committed ABv2(1)")
@@ -264,8 +266,8 @@ func TestReadGetAllValidators(t *testing.T) {
 		StakingAmount: 5_000_000,
 		PausedTimeout: pauseTimeout,
 	}
-	v.nodeStatesCache.Add(uint64(0), validators) // parent
-	v.nodeStatesCache.Add(uint64(1), modified)   // current
+	v.nodeStatesCache.Add(uint64(0), nodeStatesCacheEntry{validators: validators}) // parent
+	v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: modified})   // current
 
 	hfHeader := &types.Header{
 		Number:     big.NewInt(1),
