@@ -835,6 +835,12 @@ func (m *machine) startSpeculativeExecution(proposal bft.Proposal) {
 	if !ok || m.b.specCache == nil || m.b.executor == nil {
 		return
 	}
+	// Skip when this node is the proposer for the current round. The proposer
+	// has already executed the block via SubmitTransactions (work path) and
+	// writes it through WriteBlockWithState — it never consumes the cache.
+	if m.isProposer() {
+		return
+	}
 
 	// Cancel any previous speculative execution.
 	m.cancelSpecExec()
@@ -859,7 +865,10 @@ func (m *machine) startSpeculativeExecution(proposal bft.Proposal) {
 		defer m.wg.Done()
 		defer cancel()
 
-		parentState, err := m.b.chain.StateAt(parentHeader.Root)
+		// Use PrunableStateAt so the speculative StateDB marks obsolete trie
+		// nodes for live pruning the same way InsertChain's normal path does.
+		// When pruning is disabled it transparently falls back to StateAt.
+		parentState, err := m.b.chain.PrunableStateAt(parentHeader.Root, parentHeader.Number.Uint64())
 		if err != nil {
 			entry.Complete(nil, err)
 			return
@@ -886,6 +895,12 @@ func (m *machine) startSpeculativeExecution(proposal bft.Proposal) {
 			return
 		}
 
+		// Pre-compute bloom filter and receipt hash so that InsertChain
+		// can validate the block header without re-deriving them.
+		// These are O(n) over receipts and dominate ValidateState time.
+		bloom := types.CreateBloom(result.Receipts)
+		receiptHash := types.DeriveReceiptsRoot(result.Receipts, block.Number())
+
 		entry.Complete(&blockchain.SpeculativeResult{
 			State:            result.State,
 			Receipts:         result.Receipts,
@@ -897,6 +912,8 @@ func (m *machine) startSpeculativeExecution(proposal bft.Proposal) {
 				AfterApplyTxs:  result.AfterApplyTxs,
 				AfterFinalize:  result.AfterFinalize,
 			},
+			Bloom:       bloom,
+			ReceiptHash: receiptHash,
 		}, nil)
 
 		logger.Info("Speculative execution completed",
