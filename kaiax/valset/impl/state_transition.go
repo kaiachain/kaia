@@ -39,38 +39,46 @@ const (
 	DefaultActiveValidatorCount = 50
 )
 
-// getOrComputeNodeStates returns the node states for block `num`.
+// nodeStatesCacheEntry holds the result of getOrComputeNodeStates.
+// epochSF is the VA count after epoch transition (before violation); 0 for non-epoch blocks.
+type nodeStatesCacheEntry struct {
+	validators valset.NodeStateMap
+	epochSF    uint64
+}
+
+// getOrComputeNodeStates returns the node states for block `num` and the epoch SF (0 if not epoch).
 // Always computes ABv2(N-1) + applyTr(N-1) to exclude user transactions at block N.
 // parentStatedb must be the committed state of block N-1.
-func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.StateDB) (valset.NodeStateMap, error) {
+func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.StateDB) (valset.NodeStateMap, uint64, error) {
 	// 1. Cache hit
 	if cached, ok := v.nodeStatesCache.Get(num); ok {
-		return cached.(valset.NodeStateMap), nil
+		entry := cached.(nodeStatesCacheEntry)
+		return entry.validators, entry.epochSF, nil
 	}
 
 	// 2. Read ABv2(N-1) + apply transitions for block N
 	parentHeader := v.Chain.GetHeaderByNumber(num - 1)
 	if parentHeader == nil {
-		return nil, errParentHeaderNotFound(num)
+		return nil, 0, errParentHeaderNotFound(num)
 	}
 	// Assert parentStatedb matches block num-1
 	if root := parentStatedb.IntermediateRoot(false); root != parentHeader.Root {
-		return nil, fmt.Errorf("parentStatedb root mismatch for block %d: got %s, want %s", num-1, root.Hex(), parentHeader.Root.Hex())
+		return nil, 0, fmt.Errorf("parentStatedb root mismatch for block %d: got %s, want %s", num-1, root.Hex(), parentHeader.Root.Hex())
 	}
-	newValidators, err := v.computeNodeStates(parentStatedb, parentHeader)
+	newValidators, epochSF, err := v.computeNodeStates(parentStatedb, parentHeader)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	v.nodeStatesCache.Add(num, newValidators)
-	return newValidators, nil
+	v.nodeStatesCache.Add(num, nodeStatesCacheEntry{validators: newValidators, epochSF: epochSF})
+	return newValidators, epochSF, nil
 }
 
 // computeNodeStates reads ABv2 validators, timeouts, and max counts in a single MultiCall,
 // then applies all transitions.
-func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.Header) (valset.NodeStateMap, error) {
+func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.Header) (valset.NodeStateMap, uint64, error) {
 	res, err := system.ReadNodeStates(statedb, v.Chain, header)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	res.Validators.MarkSuspended(res.SuspendedValidators)
 	slotLimitsFn := func(sf uint64) (uint64, uint64, error) {
@@ -84,11 +92,12 @@ func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.H
 // At epoch blocks, epoch runs first so that violation uses the new SF-based slot limits.
 // header must be the parent header (N-1).
 // slotLimitsFn computes (maxSlotAvailable, minActiveCount) for a given slot factor.
+// Returns the final NodeStateMap and the epoch SF (VA count after epoch, before violation; 0 if not epoch).
 func (v *ValsetModule) applyAllTransitions(
 	res *system.NodeStatesResult,
 	header *types.Header, // parent header (N-1)
 	slotLimitsFn func(sf uint64) (uint64, uint64, error),
-) (valset.NodeStateMap, error) {
+) (valset.NodeStateMap, uint64, error) {
 	var (
 		num       = header.Number.Uint64() + 1
 		pset      = v.GovModule.GetParamSet(num)
@@ -97,22 +106,24 @@ func (v *ValsetModule) applyAllTransitions(
 
 		maxSlotAvailable = res.MaxSlotAvailable
 		minActiveCount   = res.MinActiveCount
+		epochSF          uint64
 	)
 
 	newValidators := res.Validators
 	if v.isVrankEpoch(num) {
 		newValidators = v.getEpochTransition(minStake, newValidators, res.IdleTimeout, int(res.ActiveValidatorCount), blockTime, header.Number.Uint64(), res.CfsThreshold, res.SlotFactor)
-		// Recompute slot limits from new SF (VA count after epoch)
-		newSF := newValidators.CountByState(valset.ValActive)
+		// Recompute slot limits from new SF (VA count after epoch, before violation).
+		// This SF defines the epoch's canonical slot budget and is stored in the contract.
+		epochSF = newValidators.CountByState(valset.ValActive)
 		var err error
-		maxSlotAvailable, minActiveCount, err = slotLimitsFn(newSF)
+		maxSlotAvailable, minActiveCount, err = slotLimitsFn(epochSF)
 		if err != nil {
-			return nil, fmt.Errorf("slot limits at epoch (sf=%d): %w", newSF, err)
+			return nil, 0, fmt.Errorf("slot limits at epoch (sf=%d): %w", epochSF, err)
 		}
 	}
 	newValidators = v.getViolationTransition(minStake, newValidators, header.Number.Uint64(), res.PfsThreshold, maxSlotAvailable, minActiveCount, res.IdleTimeout, blockTime)
 	newValidators = v.getTimeoutTransition(newValidators, res.IdleTimeout, res.PauseTimeout, blockTime)
-	return newValidators, nil
+	return newValidators, epochSF, nil
 }
 
 // readSlotLimitsFor computes slot limits for a given SF via contract call.
@@ -189,7 +200,7 @@ func (v *ValsetModule) writeNodeStateUpdateToContract(
 	statedb *state.StateDB,
 ) error {
 	num := header.Number.Uint64()
-	currentNodes, err := v.getOrComputeNodeStates(num, statedb)
+	currentNodes, epochSF, err := v.getOrComputeNodeStates(num, statedb)
 	if err != nil {
 		return err
 	}
@@ -211,7 +222,7 @@ func (v *ValsetModule) writeNodeStateUpdateToContract(
 	}
 
 	config := v.Chain.Config()
-	msg, from, err := prepareNodeStateUpdate(config, header.Number, diff)
+	msg, from, err := prepareNodeStateUpdate(config, header.Number, diff, epochSF)
 	if err != nil {
 		return err
 	}
@@ -276,14 +287,17 @@ func (v *ValsetModule) installAndInitializeABv2(
 }
 
 // prepareNodeStateUpdate builds the ABI-encoded input for writing changed validator states to ABv2.
+// epochSF is the VA count after epoch transition (newSF); 0 for non-epoch blocks.
 func prepareNodeStateUpdate(
 	config *params.ChainConfig,
 	num *big.Int,
 	nodes valset.NodeStateMap,
+	epochSF uint64,
 ) (*types.Transaction, common.Address, error) {
 	from, msg, err := system.EncodeNodeStateUpdate(
 		config.Rules(num),
 		nodes,
+		epochSF,
 	)
 	if err != nil {
 		logger.Error("Failed to encode processSystemTransition", "number", num.Uint64(), "err", err.Error(), "nodes", nodes.String())

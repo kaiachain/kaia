@@ -327,7 +327,10 @@ func applyInitialNodeStateOverrides(cfg *runtime.Config, config *AllocPermission
 	cfg.Origin = params.SystemAddress
 	defer func() { cfg.Origin = origOrigin }()
 
-	if err := evmCallABI(cfg, AddressBookAddr, abv2ABI, "processSystemTransition", nodeIds, newStates, timeoutAts); err != nil {
+	// Genesis is block 0 which satisfies _isEpochBlock() (0 % interval == 0).
+	// Pass the VA count after overrides so slotFactor is correctly initialized.
+	epochSlotFactor := big.NewInt(int64(len(config.NodeInfos) - len(nodeIds)))
+	if err := evmCallABI(cfg, AddressBookAddr, abv2ABI, "processSystemTransition", nodeIds, newStates, timeoutAts, epochSlotFactor); err != nil {
 		return fmt.Errorf("applyInitialNodeStateOverrides: %w", err)
 	}
 	return nil

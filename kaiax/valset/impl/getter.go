@@ -140,7 +140,7 @@ func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset
 	}
 	var nodes valset.NodeStateMap
 	if cached, ok := v.nodeStatesCache.Get(num); ok {
-		nodes = cached.(valset.NodeStateMap)
+		nodes = cached.(nodeStatesCacheEntry).validators
 	} else if num == 0 {
 		// Block 0 has no parent; read ABv2 directly from genesis state.
 		genesisHeader := v.Chain.GetHeaderByNumber(0)
@@ -165,7 +165,7 @@ func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset
 		if err != nil {
 			return nil, err
 		}
-		nodes, err = v.getOrComputeNodeStates(num, parentStatedb)
+		nodes, _, err = v.getOrComputeNodeStates(num, parentStatedb)
 		if err != nil {
 			return nil, err
 		}

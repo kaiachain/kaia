@@ -86,9 +86,11 @@ func EncodeInitializeABv2(rules params.Rules) (common.Address, *types.Transactio
 }
 
 // EncodeNodeStateUpdate encodes the processSystemTransition call with the given validator state changes.
+// epochSF is the VA count after epoch transition (newSF); 0 for non-epoch blocks.
 func EncodeNodeStateUpdate(
 	rules params.Rules,
 	validators valset.NodeStateMap,
+	epochSF uint64,
 ) (common.Address, *types.Transaction, error) {
 	nodeIds := make([]common.Address, 0, len(validators))
 	for addr := range validators {
@@ -120,7 +122,7 @@ func EncodeNodeStateUpdate(
 		}
 	}
 
-	data, err := AddressBookV2ABI.Pack("processSystemTransition", nodeIds, newStates, timeoutAts)
+	data, err := AddressBookV2ABI.Pack("processSystemTransition", nodeIds, newStates, timeoutAts, new(big.Int).SetUint64(epochSF))
 	if err != nil {
 		return common.Address{}, nil, err
 	}
