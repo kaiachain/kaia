@@ -35,8 +35,8 @@ import (
 const (
 	DefaultValPausedTimeout     = time.Hour * 8
 	DefaultValIdleTimeout       = 30 * 24 * time.Hour
-	DefaultMaxValidatorCount    = 100
-	DefaultActiveValidatorCount = 50
+	DefaultMaxNodeCount         = 100
+	DefaultMaxValActivePausedCount = 50
 )
 
 // nodeStatesCacheEntry holds the result of getOrComputeNodeStates.
@@ -111,7 +111,7 @@ func (v *ValsetModule) applyAllTransitions(
 
 	newValidators := res.Validators
 	if v.isVrankEpoch(num) {
-		newValidators = v.getEpochTransition(minStake, newValidators, res.IdleTimeout, int(res.ActiveValidatorCount), blockTime, header.Number.Uint64(), res.CfsThreshold, res.SlotFactor)
+		newValidators = v.getEpochTransition(minStake, newValidators, res.IdleTimeout, int(res.MaxValActivePausedCount), blockTime, header.Number.Uint64(), res.CfsThreshold, res.SlotFactor)
 		// Recompute slot limits from new SF (VA count after epoch, before violation).
 		// This SF defines the epoch's canonical slot budget and is stored in the contract.
 		epochSF = newValidators.CountByState(valset.ValActive)

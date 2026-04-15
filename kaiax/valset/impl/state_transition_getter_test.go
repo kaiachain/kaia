@@ -159,7 +159,7 @@ func TestGetEpochTransition_BelowMinStakeDemoted(t *testing.T) {
 	assert.False(t, result[addr4].IdleTimeout.IsZero())
 }
 
-func TestGetEpochTransition_MaxValidatorCount(t *testing.T) {
+func TestGetEpochTransition_MaxValActivePausedCount(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := newTestValsetModule(ctrl)
 
@@ -889,7 +889,7 @@ func TestApplyAllTransitions(t *testing.T) {
 				Validators:           tc.input,
 				PauseTimeout:         DefaultValPausedTimeout,
 				IdleTimeout:          DefaultValIdleTimeout,
-				ActiveValidatorCount: DefaultActiveValidatorCount,
+				MaxValActivePausedCount: DefaultMaxValActivePausedCount,
 				MaxSlotAvailable:     noSlotLimit,
 				MinActiveCount:       1,
 			}
