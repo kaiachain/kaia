@@ -536,6 +536,11 @@ func (m *machine) startNewRound(round *big.Int) {
 	if m.sequence == nil {
 		logger.Debug("Starting initial round")
 	} else if lastProposal.Number().Cmp(m.sequence) >= 0 {
+		diff := new(big.Int).Sub(lastProposal.Number(), m.sequence)
+		sequenceMeter.Mark(new(big.Int).Add(diff, common.Big1).Int64())
+		if !m.consensusTimestamp.IsZero() {
+			consensusTimeGauge.Update(int64(time.Since(m.consensusTimestamp)))
+		}
 		logger.Debug("Chain advanced past our sequence, starting new sequence",
 			"lastBlock", lastProposal.Number().Uint64(), "currentSeq", m.sequence)
 	} else if lastProposal.Number().Cmp(big.NewInt(m.sequence.Int64()-1)) == 0 {
@@ -585,6 +590,22 @@ func (m *machine) startNewRound(round *big.Int) {
 	m.requiredMessageCount = required
 	m.f = fNum
 
+	if !roundChange {
+		councilSize := int64(qualified.Len())
+		cs := int64(committeeSize)
+		if cs > councilSize {
+			cs = councilSize
+		}
+		councilSizeGauge.Update(councilSize)
+		committeeSizeGauge.Update(cs)
+	}
+	currentRoundGauge.Update(m.round.Int64())
+	if m.isHashLocked() {
+		hashLockGauge.Update(1)
+	} else {
+		hashLockGauge.Update(0)
+	}
+
 	if roundChange && m.isHashLocked() {
 		// Keep the locked preprepare and proposal.
 	} else if !roundChange {
@@ -630,6 +651,10 @@ func (m *machine) catchUpRound(view *bft.View) {
 	oldRound := new(big.Int).Set(m.round)
 	oldSeq := new(big.Int).Set(m.sequence)
 
+	if diff := new(big.Int).Sub(view.Round, m.round); diff.Sign() > 0 {
+		roundMeter.Mark(diff.Int64())
+	}
+
 	m.waitingForRoundChange = true
 	// Preserve lock state through round catch-up.
 	oldPreprepare := m.preprepare
@@ -651,6 +676,13 @@ func (m *machine) catchUpRound(view *bft.View) {
 	m.pendingRequest = oldPendingReq
 	m.clearRoundChangeSets(view.Round)
 	m.newRoundChangeTimer()
+
+	currentRoundGauge.Update(m.round.Int64())
+	if m.isHashLocked() {
+		hashLockGauge.Update(1)
+	} else {
+		hashLockGauge.Update(0)
+	}
 
 	newProposer, err := m.b.valsetModule.GetProposer(view.Sequence.Uint64(), view.Round.Uint64())
 	if err != nil {
