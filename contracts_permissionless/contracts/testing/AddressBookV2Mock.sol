@@ -13,8 +13,8 @@ contract AddressBookV2Mock {
     address public kpfAddress;
     uint256 public pauseTimeout;
     uint256 public idleTimeout;
-    uint256 public maxValidatorCount;
-    uint256 public maxReadyCandidateCount;
+    uint256 public maxNodeCount;
+    uint256 public maxCandReadyCount;
     uint256 public pfsThreshold;
     uint256 public cfsThreshold;
     uint256 public slotFactor;
@@ -48,9 +48,9 @@ contract AddressBookV2Mock {
         idleTimeout = _idleTimeout;
     }
 
-    function setMaxCounts(uint256 _maxValidatorCount, uint256 _maxReadyCandidateCount) external {
-        maxValidatorCount = _maxValidatorCount;
-        maxReadyCandidateCount = _maxReadyCandidateCount;
+    function setMaxCounts(uint256 _maxNodeCount, uint256 _maxCandReadyCount) external {
+        maxNodeCount = _maxNodeCount;
+        maxCandReadyCount = _maxCandReadyCount;
     }
 
     function getTimeouts() external view returns (uint256, uint256) {
@@ -58,7 +58,7 @@ contract AddressBookV2Mock {
     }
 
     function getMaxCounts() external view returns (uint256, uint256) {
-        return (maxValidatorCount, maxReadyCandidateCount);
+        return (maxNodeCount, maxCandReadyCount);
     }
 
     function setThresholds(uint256 _pfsThreshold, uint256 _cfsThreshold) external {

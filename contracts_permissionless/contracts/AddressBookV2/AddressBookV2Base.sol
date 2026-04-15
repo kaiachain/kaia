@@ -91,10 +91,10 @@ abstract contract AddressBookV2Base is
         uint256 cfsThreshold;
         uint256 pauseTimeout;
         uint256 idleTimeout;
-        uint256 maxValidatorCount;
-        uint256 maxReadyCandidateCount;
+        uint256 maxNodeCount;
+        uint256 maxCandReadyCount;
         uint256 slotFactor;
-        uint256 activeValidatorCount;
+        uint256 maxValActivePausedCount;
         address kefAddress;
         address kifAddress;
         address kpfAddress;

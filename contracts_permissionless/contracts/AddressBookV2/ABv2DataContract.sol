@@ -24,9 +24,9 @@ contract ABv2DataContract is IABv2DataContract {
     uint256 public immutable cfsThreshold;
     uint256 public immutable pauseTimeout;
     uint256 public immutable idleTimeout;
-    uint256 public immutable maxValidatorCount;
-    uint256 public immutable activeValidatorCount;
-    uint256 public immutable maxReadyCandidateCount;
+    uint256 public immutable maxNodeCount;
+    uint256 public immutable maxValActivePausedCount;
+    uint256 public immutable maxCandReadyCount;
     address public immutable kefAddress;
     address public immutable kifAddress;
     address public immutable kpfAddress;
@@ -54,9 +54,9 @@ contract ABv2DataContract is IABv2DataContract {
         if (data.cfsThreshold == 0) revert InvalidInput();
         if (data.pauseTimeout == 0) revert InvalidInput();
         if (data.idleTimeout == 0) revert InvalidInput();
-        if (data.maxValidatorCount == 0) revert InvalidInput();
-        if (data.activeValidatorCount == 0) revert InvalidInput();
-        if (data.maxReadyCandidateCount == 0) revert InvalidInput();
+        if (data.maxNodeCount == 0) revert InvalidInput();
+        if (data.maxValActivePausedCount == 0) revert InvalidInput();
+        if (data.maxCandReadyCount == 0) revert InvalidInput();
         if (data.kefAddress == address(0)) revert InvalidInput();
         if (data.kifAddress == address(0)) revert InvalidInput();
         if (data.kpfAddress == address(0)) revert InvalidInput();
@@ -64,7 +64,7 @@ contract ABv2DataContract is IABv2DataContract {
         // Validate array length consistency
         uint256 len = data.nodeIds.length;
         if (len != data.infos.length) revert InvalidInput();
-        if (len > data.maxValidatorCount) revert InvalidInput();
+        if (len > data.maxNodeCount) revert InvalidInput();
 
         // Store immutables
         implementation = _implementation;
@@ -73,9 +73,9 @@ contract ABv2DataContract is IABv2DataContract {
         cfsThreshold = data.cfsThreshold;
         pauseTimeout = data.pauseTimeout;
         idleTimeout = data.idleTimeout;
-        maxValidatorCount = data.maxValidatorCount;
-        activeValidatorCount = data.activeValidatorCount;
-        maxReadyCandidateCount = data.maxReadyCandidateCount;
+        maxNodeCount = data.maxNodeCount;
+        maxValActivePausedCount = data.maxValActivePausedCount;
+        maxCandReadyCount = data.maxCandReadyCount;
         kefAddress = data.kefAddress;
         kifAddress = data.kifAddress;
         kpfAddress = data.kpfAddress;
@@ -110,9 +110,9 @@ contract ABv2DataContract is IABv2DataContract {
                 cfsThreshold: cfsThreshold,
                 pauseTimeout: pauseTimeout,
                 idleTimeout: idleTimeout,
-                maxValidatorCount: maxValidatorCount,
-                activeValidatorCount: activeValidatorCount,
-                maxReadyCandidateCount: maxReadyCandidateCount,
+                maxNodeCount: maxNodeCount,
+                maxValActivePausedCount: maxValActivePausedCount,
+                maxCandReadyCount: maxCandReadyCount,
                 kefAddress: kefAddress,
                 kifAddress: kifAddress,
                 kpfAddress: kpfAddress,
