@@ -254,10 +254,12 @@ interface IAddressBookV2 {
     /// @param nodeIds Array of node addresses to transition
     /// @param newStates Array of target states for each node
     /// @param timeoutAts Array of timeout timestamps for each node (0 = no timeout)
+    /// @param epochSlotFactor VA count after epoch transition (before violation); 0 for non-epoch blocks
     function processSystemTransition(
         address[] calldata nodeIds,
         State[] calldata newStates,
-        uint256[] calldata timeoutAts
+        uint256[] calldata timeoutAts,
+        uint256 epochSlotFactor
     ) external;
 
     /* ========== ADMIN FUNCTIONS ========== */
