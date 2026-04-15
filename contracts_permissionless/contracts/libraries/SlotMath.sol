@@ -24,7 +24,7 @@ library SlotMath {
     }
 
     /// @notice Returns the maximum number of validators allowed in ValPaused or ValExiting state each.
-    /// @dev n >= 4: totalBudget = floor(n/3) = n/3; maxSlotAvailable = ceil(totalBudget/2) = (n/3 + 1) / 2.
+    /// @dev Derived from ceil((n - minActiveCount(n)) / 2), simplified to (n/3 + 1) / 2.
     ///      n <  4: totalBudget = 0 (f = 0, no transitions out of ValActive allowed), so maxSlotAvailable = 0.
     /// @param n The epoch slot factor (ValActive count at epoch start)
     /// @return The maximum count for each of ValPaused and ValExiting states
