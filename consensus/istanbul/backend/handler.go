@@ -24,6 +24,7 @@ package backend
 
 import (
 	"errors"
+	"math/big"
 	"slices"
 	"time"
 
@@ -122,19 +123,24 @@ func (sb *backend) ValidatePeerType(addr common.Address) error {
 		return errNoChainReader
 	}
 	num := sb.chain.CurrentHeader().Number.Uint64() + 1
+
+	// Permissionless: use CNPeers (VA+VR+VP+CR+CT) for P2P connection validation
+	if sb.chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		cnPeers, err := sb.valsetModule.GetCNPeers(num)
+		if err != nil {
+			return err
+		}
+		if slices.Contains(cnPeers, addr) {
+			return nil
+		}
+		return errInvalidPeerAddress
+	}
+
 	valSet, err := sb.GetValidatorSet(num)
 	if err != nil {
 		return errInvalidPeerAddress
 	}
 	if valSet.Council().Contains(addr) {
-		return nil
-	}
-
-	candidates, err := sb.GetCandidates(num)
-	if err != nil {
-		return errInvalidPeerAddress
-	}
-	if slices.Contains(candidates, addr) {
 		return nil
 	}
 	return errInvalidPeerAddress
@@ -163,5 +169,40 @@ func (sb *backend) NewChainHead() error {
 	}
 
 	go sb.istanbulEventMux.Post(istanbul.FinalCommittedEvent{})
+	// TODO: Discuss in team whether to enable active CN peer disconnect.
+	// Concern: VI/VE nodes lose block sync since CN discovery doesn't cover EN/PN.
+	// sb.disconnectNonCNPeers()
 	return nil
+}
+
+// disconnectNonCNPeers disconnects CN peers that are no longer in the CNPeers set.
+func (sb *backend) disconnectNonCNPeers() {
+	if sb.broadcaster == nil || sb.valsetModule == nil || sb.chain == nil {
+		return
+	}
+	header := sb.chain.CurrentHeader()
+	if header == nil {
+		return
+	}
+	num := header.Number.Uint64()
+	if !sb.chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return
+	}
+	cnPeers, err := sb.valsetModule.GetCNPeers(num)
+	if err != nil {
+		return
+	}
+	cnPeerSet := make(map[common.Address]bool, len(cnPeers))
+	for _, addr := range cnPeers {
+		cnPeerSet[addr] = true
+	}
+	var toDisconnect []common.Address
+	for addr := range sb.broadcaster.GetCNPeers() {
+		if !cnPeerSet[addr] {
+			toDisconnect = append(toDisconnect, addr)
+		}
+	}
+	if len(toDisconnect) > 0 {
+		sb.broadcaster.DisconnectCNPeers(toDisconnect)
+	}
 }
