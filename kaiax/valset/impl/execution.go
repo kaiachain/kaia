@@ -33,7 +33,7 @@ func (v *ValsetModule) postInsertBlockPermissionless(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	_, err = v.getOrComputeNodeStates(nextNum, parentStatedb)
+	_, _, err = v.getOrComputeNodeStates(nextNum, parentStatedb)
 	return err
 }
 

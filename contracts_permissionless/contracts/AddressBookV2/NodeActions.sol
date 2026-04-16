@@ -193,7 +193,8 @@ abstract contract NodeActions is AddressBookV2Base {
     function processSystemTransition(
         address[] calldata nodeIds,
         State[] calldata newStates,
-        uint256[] calldata timeoutAts
+        uint256[] calldata timeoutAts,
+        uint256 epochSlotFactor
     ) external onlySystemTx {
         uint256 len = nodeIds.length;
         if (len != newStates.length || len != timeoutAts.length) revert InvalidInput();
@@ -201,9 +202,8 @@ abstract contract NodeActions is AddressBookV2Base {
             _batchTransition(nodeIds, newStates, timeoutAts);
         }
         if (_isEpochBlock()) {
-            uint256 slotFactor = _getStateCount(State.ValActive) + _getStateCount(State.ValPaused);
-            _getStorage().slotFactor = slotFactor;
-            emit EpochTransitionProcessed(slotFactor);
+            _getStorage().slotFactor = epochSlotFactor;
+            emit EpochTransitionProcessed(epochSlotFactor);
         }
         emit SystemTransitionProcessed(nodeIds, newStates);
     }

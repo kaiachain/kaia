@@ -2,39 +2,34 @@
 pragma solidity ^0.8.0;
 
 /// @title SlotMath
-/// @notice Slot limit calculations for validator slot limit calculations
+/// @notice Slot limit calculations for validator state transitions.
+///
+///         For n >= 4 (standard BFT with f = floor(n/3) > 0):
+///           minActiveCount = ceil(2n/3) = (2n + 2) / 3
+///           totalBudget    = n - minActiveCount = floor(n/3) = n / 3
+///           maxSlotAvailable = ceil(totalBudget / 2) = (n/3 + 1) / 2
+///
+///         For n < 4 (BFT fault tolerance f = 0; all nodes must remain active):
+///           minActiveCount   = n
+///           maxSlotAvailable = 0
 library SlotMath {
-    /// @notice Returns the maximum number of total changeable slots per epoch
-    function f(uint256 n) internal pure returns (uint256) {
-        if (n == 0) return 0;
-        return (n - 1) / 3;
-    }
-
-    /// @notice Returns the maximum number of validators allowed in ValPaused or ValExiting state each
-    /// @dev Returns max(1, F/2) where F is the maximum number of total changeable slots per epoch
-    ///      N = epoch validator count (VA + VP at epoch start). Returns 0 if N < 2.
-    /// @param n The number of epoch validators
-    /// @return The maximum count for each of ValPaused and ValExiting states
-    function maxSlotAvailable(uint256 n) internal pure returns (uint256) {
-        if (n < 2) return 0;
-        uint256 cnt = f(n) / 2;
-        return cnt < 1 ? 1 : cnt;
-    }
-
-    /// @notice Returns the minimum number of active validators required for BFT liveness
-    /// @dev Takes the stricter of two constraints:
-    ///      - BFT liveness: 2F+1 active validators (from N = 3F+1)
-    ///      - Budget-based: n - 2 * maxSlotAvailable(n)
-    ///      For most n these are equal; for n=4 the BFT threshold (3) is stricter
-    ///      than the budget-based minimum (2), preventing a pause-exit-pause cycle
-    ///      from draining active validators below the BFT liveness threshold.
-    /// @param n The epoch validator count
+    /// @notice Returns the minimum number of active validators required for BFT liveness.
+    /// @dev n >= 4: ceil(2n/3) = (2n + 2) / 3 in integer arithmetic.
+    ///      n <  4: f = 0 under BFT (2/3 majority requires all nodes), so minActiveCount = n.
+    /// @param n The epoch slot factor (ValActive count at epoch start)
     /// @return The minimum active validator count
     function minActiveCount(uint256 n) internal pure returns (uint256) {
-        if (n == 0) return 0;
-        uint256 bftMin = 2 * f(n) + 1;
-        uint256 budgetMin = n - 2 * maxSlotAvailable(n);
-        uint256 cnt = bftMin > budgetMin ? bftMin : budgetMin;
-        return cnt < 1 ? 1 : cnt;
+        if (n < 4) return n;
+        return (2 * n + 2) / 3;
+    }
+
+    /// @notice Returns the maximum number of validators allowed in ValPaused or ValExiting state each.
+    /// @dev Derived from ceil((n - minActiveCount(n)) / 2), simplified to (n/3 + 1) / 2.
+    ///      n <  4: totalBudget = 0 (f = 0, no transitions out of ValActive allowed), so maxSlotAvailable = 0.
+    /// @param n The epoch slot factor (ValActive count at epoch start)
+    /// @return The maximum count for each of ValPaused and ValExiting states
+    function maxSlotAvailable(uint256 n) internal pure returns (uint256) {
+        if (n < 4) return 0;
+        return (n / 3 + 1) / 2;
     }
 }

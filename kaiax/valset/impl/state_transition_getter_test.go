@@ -581,9 +581,9 @@ func TestGetViolationTransition_PFSNonActiveNotAffected(t *testing.T) {
 //
 // Uses slotFactor=4 (4 validators at epoch start).
 // SlotMath (see contracts/libraries/SlotMath.sol):
-//   f(n)              = (n-1)/3            → f(4)=1
-//   maxSlotAvailable  = max(1, f(n)/2)     → max(1, 0)=1  (up to 1 ValPaused, up to 1 ValExiting independently)
-//   minActiveCount    = max(2f+1, n-2*max) → max(3, 2)=3  (at least 3 ValActive required)
+//   minActiveCount    = ceil(2*4/3)        → 3
+//   totalBudget       = 4 - 3             → 1
+//   maxSlotAvailable  = ceil(1/2)          → 1  (up to 1 ValPaused, up to 1 ValExiting independently)
 //
 // With n=4, maxSlot=1 for each but minActive=3 means only 1 total can leave ValActive
 // (either 1 paused or 1 exiting, not both), since 4-2=2 < minActive=3.
@@ -674,14 +674,14 @@ func TestGetViolationTransition_SlotLimits(t *testing.T) {
 	})
 
 	// n=10: SlotMath:
-	//   f(10)            = (10-1)/3           → 3
-	//   maxSlotAvailable = max(1, 3/2)        → 1
-	//   minActiveCount   = max(2*3+1, 10-2*1) → max(7, 8) = 8
-	// Up to 2 can leave ValActive (1 paused + 1 exiting), 3rd blocked by minActive.
+	//   minActiveCount   = ceil(2*10/3)       → 7
+	//   totalBudget      = 10 - 7             → 3
+	//   maxSlotAvailable = ceil(3/2)          → 2
+	// Up to 3 can leave ValActive (2 paused + 1 exiting or vice versa), but minActive=7 caps total.
 	t.Run("n=10", func(t *testing.T) {
 		const (
-			slotMax10      = uint64(1) // maxSlotAvailable(10)
-			minActive10    = uint64(8) // minActiveCount(10)
+			slotMax10      = uint64(2) // maxSlotAvailable(10)
+			minActive10    = uint64(7) // minActiveCount(10)
 			pfsThreshold10 = uint64(2)
 		)
 		addrs := [10]common.Address{
@@ -693,15 +693,21 @@ func TestGetViolationTransition_SlotLimits(t *testing.T) {
 			common.HexToAddress("0x000a"),
 		}
 
-		t.Run("PFS minor+severe: 1 paused + 1 exited, 3rd blocked", func(t *testing.T) {
+		// 4 violators: 2 severe + 2 minor. budget=3, maxSlot=2.
+		// addrs[0]: severe → VE (exitSlot 1/2, VA 10→9)
+		// addrs[1]: severe → VE (exitSlot 2/2, VA 9→8)
+		// addrs[2]: minor  → VP (pauseSlot 1/2, VA 8→7)
+		// addrs[3]: minor  → blocked (VA=7 = minActive, canDemoteActive fails)
+		t.Run("PFS 4 violators: 3 transition, 4th blocked by minActive", func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			v := newTestValsetModule(ctrl)
 			mockVRank := vrank_mock.NewMockVRankModule(ctrl)
 			mockVRank.EXPECT().GetPfReport(uint64(100)).Return([]common.Address{addr1}, nil)
 			mockVRank.EXPECT().GetPFS(uint64(100)).Return(map[common.Address]uint64{
 				addrs[0]: pfsThreshold10,     // severe → ValExiting
-				addrs[1]: pfsThreshold10 - 1, // minor → ValPaused
-				addrs[2]: pfsThreshold10 - 1, // minor → should be blocked (paused slot full)
+				addrs[1]: pfsThreshold10,     // severe → ValExiting
+				addrs[2]: pfsThreshold10 - 1, // minor → ValPaused
+				addrs[3]: pfsThreshold10 - 1, // minor → blocked by minActive
 			}, nil)
 			v.VRankModule = mockVRank
 
@@ -712,12 +718,12 @@ func TestGetViolationTransition_SlotLimits(t *testing.T) {
 
 			result := v.getViolationTransition(testMinStake, validators, 100, pfsThreshold10, slotMax10, minActive10, testIdleTimeout, testBlockTime)
 
-			assert.Equal(t, 1, int(result.CountByState(valset.ValExiting)), "1 severe → 1 exiting")
-			assert.Equal(t, 1, int(result.CountByState(valset.ValPaused)), "1 minor paused, 2nd blocked by slot")
-			assert.Equal(t, 8, int(result.CountByState(valset.ValActive)), "8 remain active (minActive=8)")
+			assert.Equal(t, 2, int(result.CountByState(valset.ValExiting)), "2 severe → 2 exiting (maxSlot=2)")
+			assert.Equal(t, 1, int(result.CountByState(valset.ValPaused)), "1 minor paused, 2nd blocked by minActive")
+			assert.Equal(t, 7, int(result.CountByState(valset.ValActive)), "7 remain active (minActive=7)")
 		})
 
-		t.Run("3 belowMinStake: only 1 exits (exitSlot cap=1)", func(t *testing.T) {
+		t.Run("3 belowMinStake: 2 exit (exitSlot cap=2), 3rd blocked", func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			v := newTestValsetModule(ctrl)
 			mockVRank := vrank_mock.NewMockVRankModule(ctrl)
@@ -735,8 +741,8 @@ func TestGetViolationTransition_SlotLimits(t *testing.T) {
 
 			result := v.getViolationTransition(testMinStake, validators, 0, 0, slotMax10, minActive10, testIdleTimeout, testBlockTime)
 
-			assert.Equal(t, 1, int(result.CountByState(valset.ValExiting)), "maxSlot=1 → only 1 can exit")
-			assert.Equal(t, 9, int(result.CountByState(valset.ValActive)), "9 remain active")
+			assert.Equal(t, 2, int(result.CountByState(valset.ValExiting)), "maxSlot=2 → 2 can exit")
+			assert.Equal(t, 8, int(result.CountByState(valset.ValActive)), "8 remain active")
 		})
 	})
 }
@@ -887,7 +893,7 @@ func TestApplyAllTransitions(t *testing.T) {
 				MaxSlotAvailable:     noSlotLimit,
 				MinActiveCount:       1,
 			}
-			result, err := v.applyAllTransitions(res, parentHeader, noopSlotLimitsFn)
+			result, _, err := v.applyAllTransitions(res, parentHeader, noopSlotLimitsFn)
 			assert.NoError(t, err)
 			for addr, expectedState := range tc.expected {
 				assert.Equal(t, expectedState, result[addr].State, "addr=%s", addr.Hex())
@@ -922,7 +928,7 @@ func TestGetCouncilPermissionless(t *testing.T) {
 		config.NodeIds[5]: {State: valset.CandReady},   // excluded
 		config.NodeIds[6]: {State: valset.Registered},  // excluded
 	}
-	v.nodeStatesCache.Add(uint64(1), nodes)
+	v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
 
 	council, err := v.GetCouncil(1)
 	require.NoError(t, err)
@@ -965,7 +971,7 @@ func TestGetNodeByState(t *testing.T) {
 		config.NodeIds[3]: {State: valset.CandReady, StakingAmount: 5_000_000},
 		config.NodeIds[4]: {State: valset.ValExiting, StakingAmount: 5_000_000},
 	}
-	v.nodeStatesCache.Add(uint64(1), nodes)
+	v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
 
 	t.Run("filter single state", func(t *testing.T) {
 		result, err := v.GetNodeByState(1, []valset.State{valset.ValActive})
@@ -1039,7 +1045,7 @@ func TestSuspendedFallback(t *testing.T) {
 			config.NodeIds[1]: {State: valset.ValActive, Suspended: true},
 			config.NodeIds[2]: {State: valset.ValReady},
 		}
-		v.nodeStatesCache.Add(uint64(1), nodes)
+		v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
 
 		qualified, err := v.getQualifiedValidators(1)
 		require.NoError(t, err)
@@ -1054,7 +1060,7 @@ func TestSuspendedFallback(t *testing.T) {
 			config.NodeIds[1]: {State: valset.ValActive, Suspended: false},
 			config.NodeIds[2]: {State: valset.ValReady},
 		}
-		v.nodeStatesCache.Add(uint64(1), nodes)
+		v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
 
 		qualified, err := v.getQualifiedValidators(1)
 		require.NoError(t, err)
@@ -1069,7 +1075,7 @@ func TestSuspendedFallback(t *testing.T) {
 			config.NodeIds[2]: {State: valset.ValReady},
 			config.NodeIds[3]: {State: valset.ValPaused},
 		}
-		v.nodeStatesCache.Add(uint64(1), nodes)
+		v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
 
 		demoted, err := v.GetDemotedValidators(1)
 		require.NoError(t, err)
