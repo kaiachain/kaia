@@ -22,7 +22,7 @@ var (
 	ErrInitUnexpectedNil      = errors.New("unexpected nil during module init")
 	ErrVRankPreprepareNil     = errors.New("VRankPreprepare is nil")
 	ErrVRankCandidateNil      = errors.New("VRankCandidate is nil")
-	ErrGetCandidateFailed     = errors.New("valset.GetCandidates failed")
+	ErrGetCandidateFailed     = errors.New("valset.GetCandTesting failed")
 	ErrPrepreparedViewNotSet  = errors.New("preprepared view is not set")
 	ErrViewMismatch           = errors.New("view mismatch")
 	ErrBlockHashMismatch      = errors.New("block hash mismatch")

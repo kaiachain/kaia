@@ -302,7 +302,7 @@ func TestTallyCfReport(t *testing.T) {
 	}
 
 	valset.EXPECT().GetCommittee(gomock.Any(), gomock.Any()).Return(valAddrs, nil).AnyTimes()
-	valset.EXPECT().GetCandidates(gomock.Any()).Return(candAddrs, nil).AnyTimes()
+	valset.EXPECT().GetCandTesting(gomock.Any()).Return(candAddrs, nil).AnyTimes()
 	valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(validators[0].Addr, nil).AnyTimes()
 
 	for i := 0; i < 8; i++ {
@@ -399,7 +399,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		randao := mock_randao.NewMockRandaoModule(ctrl)
 		val := createCN(t, valset, randao)
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
@@ -414,7 +414,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		randao := mock_randao.NewMockRandaoModule(ctrl)
 		val := createCN(t, valset, randao)
 		valset.EXPECT().GetCommittee(uint64(params.DefaultVRankEpoch-1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(params.DefaultVRankEpoch-1)).Return([]common.Address{candAddr}, nil).AnyTimes()
+		valset.EXPECT().GetCandTesting(uint64(params.DefaultVRankEpoch-1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(params.DefaultVRankEpoch-1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		block := types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(params.DefaultVRankEpoch - 1)})
 		view := &istanbul.View{Sequence: new(big.Int).SetUint64(params.DefaultVRankEpoch - 1), Round: common.Big0}
@@ -431,7 +431,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		randao := mock_randao.NewMockRandaoModule(ctrl)
 		val := createCN(t, valset, randao)
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
@@ -450,7 +450,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		val, otherVal := createCN(t, valset, randao), createCN(t, valset, randao)
 		// This node is not in the council for block 1.
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{otherVal.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
@@ -473,13 +473,13 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		assert.Empty(t, report)
 	})
 
-	t.Run("GetCandidates failed returns error", func(t *testing.T) {
+	t.Run("GetCandTesting failed returns error", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		valset := mock_valset.NewMockValsetModule(ctrl)
 		randao := mock_randao.NewMockRandaoModule(ctrl)
 		val := createCN(t, valset, randao)
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return(nil, assert.AnError).AnyTimes()
+		valset.EXPECT().GetCandTesting(uint64(1)).Return(nil, assert.AnError).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 

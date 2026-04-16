@@ -106,9 +106,9 @@ func (v *VRankModule) TallyCfReport(blockNum, round uint64) ([]common.Address, e
 		// or it missed the PREPREPARE message. Either way, nothing to report.
 		return []common.Address{}, nil
 	}
-	candidates, err := v.Valset.GetCandidates(blockNum)
+	candidates, err := v.Valset.GetCandTesting(blockNum)
 	if err != nil {
-		logger.Error("GetCandidates failed", "blockNum", blockNum, "err", err)
+		logger.Error("GetCandTesting failed", "blockNum", blockNum, "err", err)
 		return nil, vrank.ErrGetCandidateFailed
 	}
 	if len(candidates) == 0 {

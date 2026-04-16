@@ -155,7 +155,7 @@ func (v *VRankModule) lookupCFSSeed(blockNum uint64) (start uint64, seed vrank.C
 }
 
 func (v *VRankModule) newCPMatrix(blockNum uint64) (vrank.CPMatrix, error) {
-	candidates, err := v.Valset.GetCandidates(blockNum)
+	candidates, err := v.Valset.GetCandTesting(blockNum)
 	if err != nil {
 		return nil, err
 	}

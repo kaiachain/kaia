@@ -75,8 +75,7 @@ func newHeaderGovModule(t *testing.T, config *params.ChainConfig) *headerGovModu
 	chain.EXPECT().Engine().Return(engine).AnyTimes()
 	engine.EXPECT().Author(gomock.Any()).Return(validVoter, nil).AnyTimes()
 
-	valSet.EXPECT().GetCouncil(uint64(0)).Return([]common.Address{validVoter}, nil).AnyTimes()
-	valSet.EXPECT().GetCouncil(uint64(1)).Return([]common.Address{validVoter}, nil).AnyTimes()
+	valSet.EXPECT().GetHeaderGovVoters(gomock.Any()).Return([]common.Address{validVoter, config.Governance.GoverningNode}, nil).AnyTimes()
 	valSet.EXPECT().GetProposer(uint64(1), uint64(0)).Return(validVoter, nil).AnyTimes()
 
 	h := NewHeaderGovModule()

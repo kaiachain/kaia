@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,6 +26,23 @@ func TestVoteLowerBoundBaseFee(t *testing.T) {
 	s, err := api.Vote("kip71.lowerboundbasefee", uint64(1e18))
 	assert.Equal(t, ErrLowerBoundBaseFee, err)
 	assert.Equal(t, "", s)
+}
+
+func TestVoteEligibility(t *testing.T) {
+	t.Run("eligible voter succeeds", func(t *testing.T) {
+		api := newHeaderGovAPI(t)
+		// nodeAddress is GoverningNode which is in HeaderGovVoters mock
+		_, err := api.Vote("governance.unitprice", uint64(25000000000))
+		assert.NoError(t, err)
+	})
+
+	t.Run("ineligible voter denied", func(t *testing.T) {
+		api := newHeaderGovAPI(t)
+		// Simulate voter not in HeaderGovVoters (e.g. suspended VA or ValPaused)
+		api.h.nodeAddress = common.Address{99}
+		_, err := api.Vote("governance.unitprice", uint64(25000000000))
+		assert.Equal(t, ErrVotePermissionDenied, err)
+	})
 }
 
 func TestValidatorVotes(t *testing.T) {

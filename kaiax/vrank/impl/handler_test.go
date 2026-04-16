@@ -188,7 +188,7 @@ func runVRankScenario(t *testing.T, s VRankScenario) {
 	}
 	proposerAddr := nameToCN[s.Proposer].Addr
 	valset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(councilAddrs, nil).AnyTimes()
-	valset.EXPECT().GetCandidates(blockNum).Return(candAddrs, nil).AnyTimes()
+	valset.EXPECT().GetCandTesting(blockNum).Return(candAddrs, nil).AnyTimes()
 	valset.EXPECT().GetProposer(blockNum, uint64(0)).Return(proposerAddr, nil).AnyTimes()
 
 	block1 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
@@ -339,7 +339,7 @@ func TestHandleIstanbulPreprepare(t *testing.T) {
 		// proposer is not in the next council, so it should only broadcast and does not start collection.
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{validator.Addr}, nil).Times(2)
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(2)
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(2)
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(2)
 
 		proposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 		prepreparedTime, _, _ := proposer.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
@@ -360,7 +360,7 @@ func TestHandleIstanbulPreprepare(t *testing.T) {
 
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(3)
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(3)
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(3)
 
 		proposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 		nonProposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
@@ -403,7 +403,7 @@ func TestHandleVRankPreprepare(t *testing.T) {
 		randao := mock_randao.NewMockRandaoModule(ctrl)
 		proposer, nonProposer, candidate := createCN(t, valset, randao), createCN(t, valset, randao), createCN(t, valset, randao)
 
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candidate.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).AnyTimes()
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).AnyTimes()
 
@@ -432,7 +432,7 @@ func TestHandleVRankPreprepare(t *testing.T) {
 		pppSig := signVRankPreprepare(t, proposer.VRankModule, proposer.Key, block1.NumberU64(), 1, block1.Hash())
 		pppMsg := &vrank.VRankPreprepare{Block: block1, View: view1_1, Sig: pppSig}
 
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candidate.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(1)).Return(proposer.Addr, nil).AnyTimes()
 		valset.EXPECT().GetCommittee(uint64(1), uint64(1)).Return([]common.Address{round1Val1.Addr, round1Val2.Addr}, nil).Times(1)
 
@@ -451,7 +451,7 @@ func TestHandleVRankPreprepare(t *testing.T) {
 		randao := mock_randao.NewMockRandaoModule(ctrl)
 		proposer, nonProposer, candidate := createCN(t, valset, randao), createCN(t, valset, randao), createCN(t, valset, randao)
 
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candidate.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).AnyTimes()
 
 		// signed by nonProposer instead of proposer
@@ -489,7 +489,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(3)
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(3)
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(3)
 
 		proposer.VRankModule.HandleVRankCandidate(&msg)
 		nonProposer.VRankModule.HandleVRankCandidate(&msg)
@@ -511,7 +511,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		// proposer is not in the next council, so it should only broadcast and does not start collection.
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{validator.Addr}, nil).Times(3)
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(2)
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(1)
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candidate.Addr}, nil).Times(1)
 
 		proposer.VRankModule.HandleIstanbulPreprepare(block1, view1_0) // this won't happen in production
 		err := proposer.VRankModule.HandleVRankCandidate(&msg)
@@ -540,7 +540,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
 
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
@@ -577,7 +577,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		msg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: sig, BlsSig: blsSig}
 
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
-		valset.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{cand.Addr}, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
 
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
@@ -654,7 +654,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		v, c := createCN(t, vs, rd), createCN(t, vs, rd)
 		vs.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{v.Addr}, nil).AnyTimes()
 		vs.EXPECT().GetProposer(uint64(1), uint64(0)).Return(v.Addr, nil).AnyTimes()
-		vs.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{c.Addr}, nil).AnyTimes()
+		vs.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{c.Addr}, nil).AnyTimes()
 		v.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 		return v, c
 	}
@@ -687,7 +687,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		rd.EXPECT().GetBlsPubkey(candAddr, gomock.Any()).Return(nil, assert.AnError).AnyTimes()
 		vs.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{val.Addr}, nil).AnyTimes()
 		vs.EXPECT().GetProposer(uint64(1), uint64(0)).Return(val.Addr, nil).AnyTimes()
-		vs.EXPECT().GetCandidates(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
+		vs.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candAddr}, nil).AnyTimes()
 		val.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 		var (
 			ecdsaSig, blsSig = signVRankCandidate(t, val.VRankModule, candKey, candBlsKey, block1.NumberU64(), 0, block1.Hash())

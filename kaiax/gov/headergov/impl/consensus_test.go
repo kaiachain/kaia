@@ -10,6 +10,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestVerifyHeader(t *testing.T) {
@@ -105,6 +106,10 @@ func TestVerifyVote(t *testing.T) {
 		// RewardUseGiniCoeff vote is forbidden
 		{desc: "valid addvalidator", vote: headergov.NewVoteData(validVoter, string(gov.AddValidator), eoa), expectedError: nil},
 		{desc: "valid removevalidator", vote: headergov.NewVoteData(validVoter, string(gov.RemoveValidator), eoa), expectedError: nil},
+
+		// HeaderGovVoters enforcement: VP and suspended VA are not eligible
+		{desc: "ValPaused voter not eligible", vote: headergov.NewVoteData(common.Address{99}, string(gov.GovernanceUnitPrice), uint64(25000000000)), expectedError: ErrVotePermissionDenied},
+		{desc: "suspended VA not eligible", vote: headergov.NewVoteData(common.Address{98}, string(gov.GovernanceUnitPrice), uint64(25000000000)), expectedError: ErrVotePermissionDenied},
 	}
 
 	for _, tc := range tcs {
@@ -113,6 +118,38 @@ func TestVerifyVote(t *testing.T) {
 			assert.NoError(t, err)
 			err = h.VerifyVote(&types.Header{Number: big.NewInt(1), Vote: vb, Extra: extra})
 			assert.Equal(t, tc.expectedError, err)
+		})
+	}
+}
+
+func TestPrepareHeader_VoteEligibility(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlCrit)
+
+	tcs := []struct {
+		desc         string
+		overrideAddr *common.Address // nil = keep eligible nodeAddress
+		wantVote     bool
+	}{
+		{"eligible voter includes vote in header", nil, true},
+		{"ineligible voter skips vote in header", &common.Address{99}, false},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.desc, func(t *testing.T) {
+			h := newHeaderGovModule(t, getTestChainConfig())
+			h.PushMyVotes(headergov.NewVoteData(h.nodeAddress, string(gov.GovernanceUnitPrice), uint64(100)))
+
+			if tc.overrideAddr != nil {
+				h.nodeAddress = *tc.overrideAddr
+			}
+
+			header := &types.Header{Number: big.NewInt(1)}
+			require.NoError(t, h.PrepareHeader(header))
+			if tc.wantVote {
+				assert.NotNil(t, header.Vote)
+			} else {
+				assert.Nil(t, header.Vote)
+			}
 		})
 	}
 }

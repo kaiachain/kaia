@@ -2,6 +2,7 @@ package impl
 
 import (
 	"maps"
+	"slices"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
@@ -58,6 +59,19 @@ func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 
 	if gMode == "single" && voter != gp.GoverningNode {
 		return "", ErrVotePermissionDenied
+	}
+
+	// Fail-fast check at queue time: block voting if not currently eligible.
+	// The canonical enforcement is at VerifyVote (proposal time), but blocking
+	// here gives immediate feedback and avoids queuing votes that will never apply.
+	if api.h.ValSet != nil {
+		voters, err := api.h.ValSet.GetHeaderGovVoters(blockNumber)
+		if err != nil {
+			return "", err
+		}
+		if !slices.Contains(voters, voter) {
+			return "", ErrVotePermissionDenied
+		}
 	}
 
 	vote := headergov.NewVoteData(voter, name, value)
