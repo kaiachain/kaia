@@ -902,47 +902,157 @@ func TestApplyAllTransitions(t *testing.T) {
 	}
 }
 
-// TestGetCouncilPermissionless tests GetCouncil filters by council states via GetNodeByState.
-func TestGetCouncilPermissionless(t *testing.T) {
-	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
-	config, _ := system.MakeTestPermissionlessConfig(7)
+// newPermlessValsetModule creates a ValsetModule backed by a simulated permissionless chain with n nodes.
+func newPermlessValsetModule(t *testing.T, n int) (*system.AllocPermissionlessConfig, *ValsetModule) {
+	t.Helper()
+	config, _ := system.MakeTestPermissionlessConfig(n)
 
 	alloc, err := system.AllocPermissionless(config)
 	require.NoError(t, err)
 
-	simBackend := backends.NewSimulatedBackend(blockchain.GenesisAlloc(alloc))
-	defer simBackend.Close()
-	chain := simBackend.BlockChain()
-	chain.Config().PermissionlessCompatibleBlock = big.NewInt(0)
+	chainConfig := params.TestChainConfig.Copy()
+	chainConfig.PermissionlessCompatibleBlock = big.NewInt(0)
+
+	simBackend := backends.NewSimulatedBackendWithChainConfig(blockchain.GenesisAlloc(alloc), chainConfig)
+	t.Cleanup(func() { simBackend.Close() })
 
 	v := NewValsetModule()
-	v.Chain = chain
+	v.Chain = simBackend.BlockChain()
+	return config, v
+}
+
+// TestGetCouncilPermissionless tests GetCouncil filters by council states via GetNodeByState.
+func TestGetCouncilPermissionless(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	config, v := newPermlessValsetModule(t, 7)
 
 	// Seed cache: 7 validators covering all states
 	nodes := valset.NodeStateMap{
-		config.NodeIds[0]: {State: valset.ValActive},   // included
-		config.NodeIds[1]: {State: valset.ValPaused},   // included
-		config.NodeIds[2]: {State: valset.ValReady},    // included
-		config.NodeIds[3]: {State: valset.ValInactive}, // excluded
-		config.NodeIds[4]: {State: valset.ValExiting},  // excluded
-		config.NodeIds[5]: {State: valset.CandReady},   // excluded
-		config.NodeIds[6]: {State: valset.Registered},  // excluded
+		config.NodeIds[0]: {State: valset.ValActive},
+		config.NodeIds[1]: {State: valset.ValPaused},
+		config.NodeIds[2]: {State: valset.ValReady},
+		config.NodeIds[3]: {State: valset.ValInactive},
+		config.NodeIds[4]: {State: valset.ValExiting},
+		config.NodeIds[5]: {State: valset.CandReady},
+		config.NodeIds[6]: {State: valset.Registered},
 	}
 	v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
 
 	council, err := v.GetCouncil(1)
 	require.NoError(t, err)
 
-	// Only ValActive, ValPaused, ValReady should be in council (3 of 7)
-	councilAddrs := council
-	assert.Len(t, councilAddrs, 3)
-	assert.Contains(t, councilAddrs, config.NodeIds[0])
-	assert.Contains(t, councilAddrs, config.NodeIds[1])
-	assert.Contains(t, councilAddrs, config.NodeIds[2])
-	assert.NotContains(t, councilAddrs, config.NodeIds[3])
-	assert.NotContains(t, councilAddrs, config.NodeIds[4])
-	assert.NotContains(t, councilAddrs, config.NodeIds[5])
-	assert.NotContains(t, councilAddrs, config.NodeIds[6])
+	// Council = {ValActive, ValPaused} (2 of 7)
+	assert.Len(t, council, 2)
+	assert.Contains(t, council, config.NodeIds[0])
+	assert.Contains(t, council, config.NodeIds[1])
+	assert.NotContains(t, council, config.NodeIds[2], "ValReady is not in council")
+	assert.NotContains(t, council, config.NodeIds[3])
+	assert.NotContains(t, council, config.NodeIds[4])
+	assert.NotContains(t, council, config.NodeIds[5])
+	assert.NotContains(t, council, config.NodeIds[6])
+}
+
+func TestGetCNPeers(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	config, v := newPermlessValsetModule(t, 7)
+
+	nodes := valset.NodeStateMap{
+		config.NodeIds[0]: {State: valset.ValActive},
+		config.NodeIds[1]: {State: valset.ValReady},
+		config.NodeIds[2]: {State: valset.ValPaused},
+		config.NodeIds[3]: {State: valset.CandReady},
+		config.NodeIds[4]: {State: valset.CandTesting},
+		config.NodeIds[5]: {State: valset.ValInactive},
+		config.NodeIds[6]: {State: valset.Registered},
+	}
+	v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
+
+	peers, err := v.GetCNPeers(1)
+	require.NoError(t, err)
+
+	// CNPeers = {VA, VR, VP, CR, CT} (5 of 7)
+	assert.Len(t, peers, 5)
+	assert.Contains(t, peers, config.NodeIds[0], "ValActive in CNPeers")
+	assert.Contains(t, peers, config.NodeIds[1], "ValReady in CNPeers")
+	assert.Contains(t, peers, config.NodeIds[2], "ValPaused in CNPeers")
+	assert.Contains(t, peers, config.NodeIds[3], "CandReady in CNPeers")
+	assert.Contains(t, peers, config.NodeIds[4], "CandTesting in CNPeers")
+	assert.NotContains(t, peers, config.NodeIds[5], "ValInactive not in CNPeers")
+	assert.NotContains(t, peers, config.NodeIds[6], "Registered not in CNPeers")
+}
+
+func TestGetHeaderGovVoters(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	config, v := newPermlessValsetModule(t, 4)
+
+	nodes := valset.NodeStateMap{
+		config.NodeIds[0]: {State: valset.ValActive},
+		config.NodeIds[1]: {State: valset.ValActive, Suspended: true},
+		config.NodeIds[2]: {State: valset.ValPaused},
+		config.NodeIds[3]: {State: valset.ValReady},
+	}
+	v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
+
+	voters, err := v.GetHeaderGovVoters(1)
+	require.NoError(t, err)
+
+	// HeaderGovVoters = {VA} excl. suspended (1 of 4)
+	assert.Len(t, voters, 1)
+	assert.Contains(t, voters, config.NodeIds[0], "unsuspended ValActive in HeaderGovVoters")
+	assert.NotContains(t, voters, config.NodeIds[1], "suspended ValActive not in HeaderGovVoters")
+	assert.NotContains(t, voters, config.NodeIds[2], "ValPaused not in HeaderGovVoters")
+	assert.NotContains(t, voters, config.NodeIds[3], "ValReady not in HeaderGovVoters")
+}
+
+func TestGetDemotedValidatorsPermissionless(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	config, v := newPermlessValsetModule(t, 4)
+
+	nodes := valset.NodeStateMap{
+		config.NodeIds[0]: {State: valset.ValActive},
+		config.NodeIds[1]: {State: valset.ValActive, Suspended: true},
+		config.NodeIds[2]: {State: valset.ValPaused},
+		config.NodeIds[3]: {State: valset.ValReady},
+	}
+	v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
+
+	demoted, err := v.GetDemotedValidators(1)
+	require.NoError(t, err)
+
+	// Council = {VA, VP} = {0,1,2}. Qualified = {0} (non-suspended VA). Demoted = {1,2}.
+	assert.Len(t, demoted, 2)
+	assert.Contains(t, demoted, config.NodeIds[1], "suspended ValActive is demoted")
+	assert.Contains(t, demoted, config.NodeIds[2], "ValPaused is demoted")
+	assert.NotContains(t, demoted, config.NodeIds[0], "unsuspended ValActive not demoted")
+	assert.NotContains(t, demoted, config.NodeIds[3], "ValReady not in council, not demoted")
+}
+
+func TestGetCommitteePermissionless(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlWarn)
+	config, v := newPermlessValsetModule(t, 4)
+
+	ctrl := gomock.NewController(t)
+	mockGov := gov_mock.NewMockGovModule(ctrl)
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{CommitteeSize: 100}).AnyTimes()
+	v.GovModule = mockGov
+
+	nodes := valset.NodeStateMap{
+		config.NodeIds[0]: {State: valset.ValActive},
+		config.NodeIds[1]: {State: valset.ValActive, Suspended: true},
+		config.NodeIds[2]: {State: valset.ValPaused},
+		config.NodeIds[3]: {State: valset.ValReady},
+	}
+	v.nodeStatesCache.Add(uint64(1), nodeStatesCacheEntry{validators: nodes})
+
+	committee, err := v.GetCommittee(1, 0)
+	require.NoError(t, err)
+
+	// Committee = {VA} excl. suspended (1 of 4)
+	assert.Len(t, committee, 1)
+	assert.Contains(t, committee, config.NodeIds[0], "unsuspended ValActive in committee")
+	assert.NotContains(t, committee, config.NodeIds[1], "suspended ValActive not in committee")
+	assert.NotContains(t, committee, config.NodeIds[2], "ValPaused not in committee")
+	assert.NotContains(t, committee, config.NodeIds[3], "ValReady not in committee")
 }
 
 // TestGetNodeByState tests GetNodeByState filtering by state.
@@ -1079,11 +1189,11 @@ func TestSuspendedFallback(t *testing.T) {
 
 		demoted, err := v.GetDemotedValidators(1)
 		require.NoError(t, err)
-		// demoted = council(4) - qualified(1 non-suspended ValActive) = 3
-		assert.Len(t, demoted, 3)
+		// Council = {VA, VP}. demoted = council(3) - qualified(1 non-suspended VA) = 2
+		assert.Len(t, demoted, 2)
 		assert.Contains(t, demoted, config.NodeIds[0], "suspended ValActive is demoted")
-		assert.Contains(t, demoted, config.NodeIds[2], "ValReady is demoted")
 		assert.Contains(t, demoted, config.NodeIds[3], "ValPaused is demoted")
 		assert.NotContains(t, demoted, config.NodeIds[1], "non-suspended ValActive is not demoted")
+		assert.NotContains(t, demoted, config.NodeIds[2], "ValReady is not in council, not demoted")
 	})
 }

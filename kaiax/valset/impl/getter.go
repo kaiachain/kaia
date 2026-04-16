@@ -26,13 +26,14 @@ import (
 )
 
 // GetCouncil returns the whole validator list for validating the block `num`.
+// In permissionless: Council = {ValActive, ValPaused}. VR excluded (voluntary standby).
 func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		nodes, err := v.GetNodeByState(num, valset.CouncilStates)
+		nodes, err := v.getNodeStates(num)
 		if err != nil {
 			return nil, err
 		}
-		return nodes.Addresses(), nil
+		return nodes.Council().Addresses(), nil
 	}
 	council, err := v.getCouncil(num)
 	if err != nil {
@@ -42,14 +43,15 @@ func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 }
 
 // GetDemotedValidators returns the demoted validators at block `num`.
-// In permissionless: demoted = council - qualified = ValReady + ValPaused + suspended ValActive
+// In permissionless: demoted = council - committee = {ValPaused, suspended ValActive}
 // In permissioned: demoted = council members with staking < minimum
 func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error) {
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		council, err := v.GetNodeByState(num, valset.CouncilStates)
+		nodes, err := v.getNodeStates(num)
 		if err != nil {
 			return nil, err
 		}
+		council := nodes.Council()
 		qualified, err := v.getQualifiedValidators(num)
 		if err != nil {
 			return nil, err
@@ -65,22 +67,22 @@ func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error
 
 func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, error) {
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		// qualified = ValActive excluding suspended
-		m, err := v.GetNodeByState(num, valset.CommitteeStates)
+		nodes, err := v.getNodeStates(num)
 		if err != nil {
 			return nil, err
 		}
-		qualified := m.ExcludeSuspended()
+		committee := nodes.Committee()
 		// Safety fallback: if all ValActive are suspended, ignore the suspended set
 		// to prevent consensus halt.
-		if len(qualified) == 0 && len(m) > 0 {
+		allActive := nodes.FilterByState(valset.ValActive)
+		if len(committee) == 0 && len(allActive) > 0 {
 			if v.lastSuspendFallbackLog != num {
 				logger.Warn("all ValActive are suspended, ignoring suspended set for committee", "num", num)
 				v.lastSuspendFallbackLog = num
 			}
-			return valset.NewAddressSet(m.Addresses()), nil
+			return valset.NewAddressSet(allActive.Addresses()), nil
 		}
-		return valset.NewAddressSet(qualified.Addresses()), nil
+		return valset.NewAddressSet(committee.Addresses()), nil
 	}
 	council, demoted, err := v.getCouncilAndDemoted(num)
 	if err != nil {
@@ -132,9 +134,8 @@ func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
 	return v.getProposer(c, round)
 }
 
-// GetNodeByState returns validators filtered by the given states at block num.
-// If no states are provided, returns all nodes.
-func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset.NodeStateMap, error) {
+// getNodeStates returns all node states at block num. Internal use only — no Copy.
+func (v *ValsetModule) getNodeStates(num uint64) (valset.NodeStateMap, error) {
 	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
 		return nil, errors.New("permissionless fork is not enabled")
 	}
@@ -170,29 +171,54 @@ func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset
 			return nil, err
 		}
 	}
-
-	// empty states means return all
-	if len(states) == 0 {
-		return nodes.Copy(), nil
-	}
-
-	desiredStates := make(map[valset.State]struct{}, len(states))
-	for _, s := range states {
-		desiredStates[s] = struct{}{}
-	}
-	filtered := make(valset.NodeStateMap)
-	for addr, val := range nodes {
-		if _, ok := desiredStates[val.State]; ok {
-			filtered[addr] = val
-		}
-	}
-	return filtered.Copy(), nil
+	return nodes, nil
 }
 
-func (v *ValsetModule) GetCandidates(num uint64) ([]common.Address, error) {
-	candTestings, err := v.GetNodeByState(num, valset.CandidateStates)
+// GetNodeByState returns validators filtered by the given states at block num.
+// If no states are provided, returns all nodes. Used by RPC API.
+func (v *ValsetModule) GetNodeByState(num uint64, states []valset.State) (valset.NodeStateMap, error) {
+	nodes, err := v.getNodeStates(num)
 	if err != nil {
 		return nil, err
 	}
-	return candTestings.Addresses(), nil
+	if len(states) == 0 {
+		return nodes.Copy(), nil
+	}
+	return nodes.FilterByState(states...).Copy(), nil
+}
+
+func (v *ValsetModule) GetCandTesting(num uint64) ([]common.Address, error) {
+	nodes, err := v.getNodeStates(num)
+	if err != nil {
+		return nil, err
+	}
+	return nodes.FilterByState(valset.CandTesting).Addresses(), nil
+}
+
+// GetCNPeers returns addresses of nodes that should maintain CN-CN P2P connections.
+// In permissionless: CNPeers = {VA, VR, VP, CR, CT}
+// In permissioned: equivalent to council (all council members are CN peers)
+func (v *ValsetModule) GetCNPeers(num uint64) ([]common.Address, error) {
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		nodes, err := v.getNodeStates(num)
+		if err != nil {
+			return nil, err
+		}
+		return nodes.CNPeers().Addresses(), nil
+	}
+	return v.GetCouncil(num)
+}
+
+// GetHeaderGovVoters returns addresses of validators eligible for governance header votes.
+// In permissionless: HeaderGovVoters = {VA} excluding suspended
+// In permissioned: equivalent to council
+func (v *ValsetModule) GetHeaderGovVoters(num uint64) ([]common.Address, error) {
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		nodes, err := v.getNodeStates(num)
+		if err != nil {
+			return nil, err
+		}
+		return nodes.HeaderGovVoters().Addresses(), nil
+	}
+	return v.GetCouncil(num)
 }

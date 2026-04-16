@@ -44,6 +44,16 @@ func (v *ValsetModule) getEpochTransition(
 		newValidators        = validators.Copy()
 		activeValCompetitors []sortableValidator
 	)
+	// T3a/T3b: compete for top-N or demote to ValInactive.
+	// Shared by EpochCompetitors = {VA, VR, VP, CT}.
+	competeOrDemote := func(addr common.Address, val *valset.ValidatorState) {
+		if val.StakingAmount >= minStake {
+			activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
+		} else {
+			val.State = valset.ValInactive // T3b
+			val.IdleTimeout = now.Add(idleTimeout)
+		}
+	}
 	for addr, val := range newValidators {
 		switch val.State {
 		case valset.ValExiting:
@@ -57,22 +67,12 @@ func (v *ValsetModule) getEpochTransition(
 			}
 		case valset.CandTesting:
 			if v.isPassVrankTest(addr, num, cfsThreshold, slotFactor) {
-				if val.StakingAmount >= minStake {
-					activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
-				} else {
-					val.State = valset.ValInactive // T3b
-					val.IdleTimeout = now.Add(idleTimeout)
-				}
+				competeOrDemote(addr, val)
 			} else {
 				val.State = valset.Registered // T2
 			}
 		case valset.ValReady, valset.ValActive, valset.ValPaused:
-			if val.StakingAmount >= minStake {
-				activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
-			} else {
-				val.State = valset.ValInactive // T3b
-				val.IdleTimeout = now.Add(idleTimeout)
-			}
+			competeOrDemote(addr, val)
 		}
 	}
 	slices.SortFunc(activeValCompetitors, func(a, b sortableValidator) int {

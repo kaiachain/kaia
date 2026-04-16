@@ -25,18 +25,6 @@ const (
 	ValExiting               // 8
 )
 
-// State groups for permissionless consensus.
-// Validator = ValActive + ValReady + ValPaused + ValExiting + ValInactive
-// Council = ValActive + ValReady + ValPaused
-// Committee = ValActive
-// Candidate = CandTesting
-var (
-	ValidatorStates = []State{ValActive, ValReady, ValPaused, ValExiting, ValInactive}
-	CouncilStates   = []State{ValActive, ValReady, ValPaused}
-	CommitteeStates = []State{ValActive}
-	CandidateStates = []State{CandTesting}
-)
-
 const (
 	RegisteredStr  = "Registered"
 	CandReadyStr   = "CandReady"
@@ -51,6 +39,11 @@ const (
 // ToUint8 converts the State to its uint8 representation for ABI encoding.
 func (s State) ToUint8() uint8 {
 	return uint8(s)
+}
+
+// IsRewardEligible returns true if the state is eligible for block rewards.
+func (s State) IsRewardEligible() bool {
+	return s == ValActive
 }
 
 // String returns the human-readable name of the state.
@@ -223,4 +216,42 @@ func (v NodeStateMap) ExcludeSuspended() NodeStateMap {
 		}
 	}
 	return filtered
+}
+
+// FilterByState returns a new NodeStateMap containing only validators in one of the given states.
+func (v NodeStateMap) FilterByState(states ...State) NodeStateMap {
+	filtered := make(NodeStateMap)
+	for addr, val := range v {
+		for _, s := range states {
+			if val.State == s {
+				filtered[addr] = val
+				break
+			}
+		}
+	}
+	return filtered
+}
+
+// Council returns validators committed to the Istanbul consensus cycle.
+// {ValActive, ValPaused}. ValReady excluded — voluntary standby, not consensus commitment.
+func (v NodeStateMap) Council() NodeStateMap {
+	return v.FilterByState(ValActive, ValPaused)
+}
+
+// Committee returns validators eligible for consensus signing and proposing.
+// {ValActive} excluding suspended validators.
+func (v NodeStateMap) Committee() NodeStateMap {
+	return v.FilterByState(ValActive).ExcludeSuspended()
+}
+
+// HeaderGovVoters returns validators eligible for governance header votes.
+// {ValActive} excluding suspended validators.
+func (v NodeStateMap) HeaderGovVoters() NodeStateMap {
+	return v.FilterByState(ValActive).ExcludeSuspended()
+}
+
+// CNPeers returns nodes that should maintain CN-CN P2P connections.
+// Includes CandReady — P2P must be established before CandTesting promotion.
+func (v NodeStateMap) CNPeers() NodeStateMap {
+	return v.FilterByState(ValActive, ValReady, ValPaused, CandReady, CandTesting)
 }
