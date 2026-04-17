@@ -12,6 +12,7 @@ import (
 	types "github.com/kaiachain/kaia/blockchain/types"
 	vm "github.com/kaiachain/kaia/blockchain/vm"
 	common "github.com/kaiachain/kaia/common"
+	valset "github.com/kaiachain/kaia/kaiax/valset"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -140,6 +141,21 @@ func (m *MockValsetModule) GetHeaderGovVoters(arg0 uint64) ([]common.Address, er
 func (mr *MockValsetModuleMockRecorder) GetHeaderGovVoters(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeaderGovVoters", reflect.TypeOf((*MockValsetModule)(nil).GetHeaderGovVoters), arg0)
+}
+
+// GetNodeByState mocks base method.
+func (m *MockValsetModule) GetNodeByState(arg0 uint64, arg1 []valset.State) (valset.NodeStateMap, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNodeByState", arg0, arg1)
+	ret0, _ := ret[0].(valset.NodeStateMap)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNodeByState indicates an expected call of GetNodeByState.
+func (mr *MockValsetModuleMockRecorder) GetNodeByState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodeByState", reflect.TypeOf((*MockValsetModule)(nil).GetNodeByState), arg0, arg1)
 }
 
 // GetProposer mocks base method.
