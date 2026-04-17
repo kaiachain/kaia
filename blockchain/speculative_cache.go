@@ -40,6 +40,11 @@ type SpeculativeResult struct {
 	UsedGas          uint64
 	InternalTxTraces []*vm.InternalTxTrace
 	ProcessStats     ProcessStats // timing from speculative Process() call
+
+	// Pre-computed validation fields — computed once during speculative
+	// execution to avoid redundant O(n) derivation in ValidateState.
+	Bloom       types.Bloom
+	ReceiptHash common.Hash
 }
 
 // speculativeEntry is the internal cache slot. It acts as a future:
