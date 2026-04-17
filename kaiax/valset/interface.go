@@ -51,6 +51,7 @@ type ValsetModule interface {
 	GetCandTesting(num uint64) ([]common.Address, error)
 	GetCNPeers(num uint64) ([]common.Address, error)
 	GetHeaderGovVoters(num uint64) ([]common.Address, error)
+	GetNodeByState(num uint64, states []State) (NodeStateMap, error)
 	WriteStatesToContract(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 	InstallABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 }

@@ -32,6 +32,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/p2p"
 )
 
@@ -124,13 +125,22 @@ func (sb *backend) ValidatePeerType(addr common.Address) error {
 	}
 	num := sb.chain.CurrentHeader().Number.Uint64() + 1
 
-	// Permissionless: use CNPeers (VA+VR+VP+CR+CT) for P2P connection validation
+	// Permissionless: CNPeers (VA+VR+VP+CR+CT) for active participants,
+	// plus VI/VE for block sync until CN-EN connectivity is available.
+	// TODO: Remove VI/VE exception after CN-EN connectivity PR lands.
 	if sb.chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
 		cnPeers, err := sb.valsetModule.GetCNPeers(num)
 		if err != nil {
 			return err
 		}
 		if slices.Contains(cnPeers, addr) {
+			return nil
+		}
+		viVe, err := sb.valsetModule.GetNodeByState(num, []valset.State{valset.ValInactive, valset.ValExiting})
+		if err != nil {
+			return err
+		}
+		if slices.Contains(viVe.Addresses(), addr) {
 			return nil
 		}
 		return errInvalidPeerAddress
@@ -169,8 +179,8 @@ func (sb *backend) NewChainHead() error {
 	}
 
 	go sb.istanbulEventMux.Post(istanbul.FinalCommittedEvent{})
-	// TODO: Discuss in team whether to enable active CN peer disconnect.
-	// Concern: VI/VE nodes lose block sync since CN discovery doesn't cover EN/PN.
+	// TODO: Enable after CN-EN connectivity PR lands; VI/VE block sync is handled
+	// by ValidatePeerType allowing VI/VE until then.
 	// sb.disconnectNonCNPeers()
 	return nil
 }
