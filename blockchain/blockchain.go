@@ -2132,7 +2132,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			validateStart    time.Time
 		)
 
-		if cached := bc.specCache.TryGet(block.Hash(), 0); cached != nil {
+		if cached := bc.specCache.TryGet(block.Hash(), params.BlockGenerationTimeLimit*2); cached != nil {
 			validateStart = time.Now()
 			if err = bc.validator.ValidateStateWithCache(block, cached); err == nil {
 				stateDB = cached.State
