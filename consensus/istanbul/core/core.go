@@ -37,7 +37,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
-	"github.com/rcrowley/go-metrics"
 )
 
 var logger = log.NewModuleLogger(log.ConsensusIstanbulCore)
@@ -108,13 +107,7 @@ func New(backend istanbul.Backend, config *istanbul.Config) Engine {
 		pendingRequestsMu:  new(sync.Mutex),
 		consensusTimestamp: time.Time{},
 
-		roundMeter:         metrics.NewRegisteredMeter("consensus/istanbul/core/round", nil),
-		currentRoundGauge:  metrics.NewRegisteredGauge("consensus/istanbul/core/currentRound", nil),
-		sequenceMeter:      metrics.NewRegisteredMeter("consensus/istanbul/core/sequence", nil),
-		consensusTimeGauge: metrics.NewRegisteredGauge("consensus/istanbul/core/timer", nil),
-		councilSizeGauge:   metrics.NewRegisteredGauge("consensus/istanbul/core/councilSize", nil),
-		committeeSizeGauge: metrics.NewRegisteredGauge("consensus/istanbul/core/committeeSize", nil),
-		hashLockGauge:      metrics.NewRegisteredGauge("consensus/istanbul/core/hashLock", nil),
+		metrics: bft.NewCoreMetrics("consensus/istanbul/core"),
 	}
 	c.validateFn = c.checkValidatorSignature
 	return c
@@ -152,19 +145,8 @@ type core struct {
 	pendingRequestsMu *sync.Mutex
 
 	consensusTimestamp time.Time
-	// the meter to record the round change rate
-	roundMeter metrics.Meter
-	// the gauge to record the current round
-	currentRoundGauge metrics.Gauge
-	// the meter to record the sequence update rate
-	sequenceMeter metrics.Meter
-	// the gauge to record consensus duration (from accepting a preprepare to final committed stage)
-	consensusTimeGauge metrics.Gauge
-	// the gauge to record hashLock status (1 if hash-locked. 0 otherwise)
-	hashLockGauge metrics.Gauge
 
-	councilSizeGauge   metrics.Gauge
-	committeeSizeGauge metrics.Gauge
+	metrics *bft.CoreMetrics
 }
 
 func (c *core) RegisterKaiaxModules(mValset valset.ValsetModule, mGov gov.GovModule) {
@@ -277,10 +259,10 @@ func (c *core) startNewRound(round *big.Int) {
 		logger.Trace("Start to the initial round")
 	} else if lastProposal.Number().Cmp(c.current.Sequence()) >= 0 {
 		diff := new(big.Int).Sub(lastProposal.Number(), c.current.Sequence())
-		c.sequenceMeter.Mark(new(big.Int).Add(diff, common.Big1).Int64())
+		c.metrics.Sequence.Mark(new(big.Int).Add(diff, common.Big1).Int64())
 
 		if !c.consensusTimestamp.IsZero() {
-			c.consensusTimeGauge.Update(int64(time.Since(c.consensusTimestamp)))
+			c.metrics.ConsensusTime.Update(int64(time.Since(c.consensusTimestamp)))
 			c.consensusTimestamp = time.Time{}
 		}
 		logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
@@ -331,8 +313,8 @@ func (c *core) startNewRound(round *big.Int) {
 		if committeeSize > councilSize {
 			committeeSize = councilSize
 		}
-		c.councilSizeGauge.Update(councilSize)
-		c.committeeSizeGauge.Update(committeeSize)
+		c.metrics.CouncilSize.Update(councilSize)
+		c.metrics.CommitteeSize.Update(committeeSize)
 	}
 	c.backend.SetCurrentView(newView)
 
@@ -372,7 +354,7 @@ func (c *core) catchUpRound(view *bft.View) {
 	cLogger := c.logger.NewWith("old_round", c.current.Round(), "old_seq", c.current.Sequence(), "old_proposer", c.current.proposer)
 
 	if view.Round.Cmp(c.current.Round()) > 0 {
-		c.roundMeter.Mark(new(big.Int).Sub(view.Round, c.current.Round()).Int64())
+		c.metrics.Round.Mark(new(big.Int).Sub(view.Round, c.current.Round()).Int64())
 	}
 	c.waitingForRoundChange = true
 
@@ -414,11 +396,11 @@ func (c *core) updateRoundState(view *bft.View, roundChange bool,
 	c.current.requiredMessageCount = requiredMessageCount
 	c.current.f = f
 
-	c.currentRoundGauge.Update(c.current.round.Int64())
+	c.metrics.CurrentRound.Update(c.current.round.Int64())
 	if c.current.IsHashLocked() {
-		c.hashLockGauge.Update(1)
+		c.metrics.HashLock.Update(1)
 	} else {
-		c.hashLockGauge.Update(0)
+		c.metrics.HashLock.Update(0)
 	}
 }
 
