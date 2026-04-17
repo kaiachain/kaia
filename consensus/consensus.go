@@ -62,6 +62,9 @@ type ChainReader interface {
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
 
+	// HasBadBlock reports whether the given hash is on the bad-block blacklist.
+	HasBadBlock(hash common.Hash) bool
+
 	// State retrieves statedb
 	State() (*state.StateDB, error)
 
@@ -120,7 +123,7 @@ type Engine interface {
 
 	// Start starts any consensus-specific background lifecycle.
 	// Engines without a background runtime should implement this as a no-op.
-	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool, executor Executor) error
+	Start(chain ChainReader, executor Executor) error
 
 	// Stop stops any consensus-specific background lifecycle.
 	// Engines without a background runtime should implement this as a no-op.
@@ -142,11 +145,8 @@ type Engine interface {
 	SubscribeNewSequence() *event.TypeMuxSubscription
 }
 
-// Handler should be implemented is the consensus needs to handle and send peer's message
+// Handler should be implemented if the consensus needs to handle peer messages.
 type Handler interface {
-	// Protocol returns the protocol metadata for this consensus handler.
-	Protocol() Protocol
-
 	// NewChainHead handles a new head block comes
 	NewChainHead() error
 
@@ -154,8 +154,5 @@ type Handler interface {
 	HandleMsg(address common.Address, data p2p.Msg) (bool, error)
 
 	// SetBroadcaster sets the broadcaster to send message to peers
-	SetBroadcaster(Broadcaster, common.ConnType)
-
-	// RegisterConsensusMsgCode registers the channel of consensus msg.
-	RegisterConsensusMsgCode(Peer)
+	SetBroadcaster(Broadcaster)
 }

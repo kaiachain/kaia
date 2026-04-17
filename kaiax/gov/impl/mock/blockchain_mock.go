@@ -80,6 +80,20 @@ func (mr *MockBlockChainMockRecorder) CurrentHeader() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentHeader", reflect.TypeOf((*MockBlockChain)(nil).CurrentHeader))
 }
 
+// HasBadBlock mocks base method.
+func (m *MockBlockChain) HasBadBlock(arg0 common.Hash) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasBadBlock", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasBadBlock indicates an expected call of HasBadBlock.
+func (mr *MockBlockChainMockRecorder) HasBadBlock(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasBadBlock", reflect.TypeOf((*MockBlockChain)(nil).HasBadBlock), arg0)
+}
+
 // GetBlock mocks base method.
 func (m *MockBlockChain) GetBlock(arg0 common.Hash, arg1 uint64) *types.Block {
 	m.ctrl.T.Helper()

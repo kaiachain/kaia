@@ -181,7 +181,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		},
 	}
 
-	handler.SetBroadcaster(manager, manager.nodetype)
+	handler.SetBroadcaster(manager)
 
 	// Figure out whether to allow fast sync or not
 	if (mode == downloader.FastSync || mode == downloader.SnapSync) && blockchain.CurrentBlock().NumberU64() > 0 {
@@ -196,8 +196,8 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.fastSync = uint32(0)
 		manager.snapSync = uint32(1)
 	}
-	protocol := handler.Protocol()
-	logger.Info("Initialising Klaytn protocol", "versions", protocol.Versions, "network", networkId)
+	protocol := ConsensusProtocol
+	logger.Info("Initialising Kaia protocol", "versions", protocol.Versions, "network", networkId)
 	// Initiate a sub-protocol for every implemented version we can handle
 	manager.SubProtocols = make([]p2p.Protocol, 0, len(protocol.Versions))
 	for i, version := range protocol.Versions {
@@ -694,9 +694,11 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 	//	return err
 	//}
 	//addr := crypto.PubkeyToAddress(*pubKey)
-	if pm.handler != nil {
+	if msg.Code == consensus.ConsensusMsgCode {
+		if pm.handler == nil {
+			return nil
+		}
 		handled, err := pm.handler.HandleMsg(addr, msg)
-		// if msg is a consensus msg, handled is true and err is nil if handle msg is successful.
 		if handled {
 			return err
 		}

@@ -14,30 +14,44 @@ import (
 	event "github.com/kaiachain/kaia/event"
 )
 
-// MockExecutor is a mock of Executor interface
+// MockExecutor is a mock of Executor interface.
 type MockExecutor struct {
 	ctrl     *gomock.Controller
 	recorder *MockExecutorMockRecorder
 }
 
-// MockExecutorMockRecorder is the mock recorder for MockExecutor
+// MockExecutorMockRecorder is the mock recorder for MockExecutor.
 type MockExecutorMockRecorder struct {
 	mock *MockExecutor
 }
 
-// NewMockExecutor creates a new mock instance
+// NewMockExecutor creates a new mock instance.
 func NewMockExecutor(ctrl *gomock.Controller) *MockExecutor {
 	mock := &MockExecutor{ctrl: ctrl}
 	mock.recorder = &MockExecutorMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockExecutor) EXPECT() *MockExecutorMockRecorder {
 	return m.recorder
 }
 
-// Execute mocks base method
+// Clone mocks base method.
+func (m *MockExecutor) Clone() consensus.Executor {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Clone")
+	ret0, _ := ret[0].(consensus.Executor)
+	return ret0
+}
+
+// Clone indicates an expected call of Clone.
+func (mr *MockExecutorMockRecorder) Clone() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Clone", reflect.TypeOf((*MockExecutor)(nil).Clone))
+}
+
+// Execute mocks base method.
 func (m *MockExecutor) Execute(arg0 *types.TransactionsByPriceAndNonce, arg1 *event.TypeMux) (*consensus.ExecutionResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Execute", arg0, arg1)
@@ -46,13 +60,28 @@ func (m *MockExecutor) Execute(arg0 *types.TransactionsByPriceAndNonce, arg1 *ev
 	return ret0, ret1
 }
 
-// Execute indicates an expected call of Execute
+// Execute indicates an expected call of Execute.
 func (mr *MockExecutorMockRecorder) Execute(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockExecutor)(nil).Execute), arg0, arg1)
 }
 
-// FinalizeState mocks base method
+// ExecuteTransactions mocks base method.
+func (m *MockExecutor) ExecuteTransactions(arg0 []*types.Transaction) (*consensus.ExecutionResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteTransactions", arg0)
+	ret0, _ := ret[0].(*consensus.ExecutionResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ExecuteTransactions indicates an expected call of ExecuteTransactions.
+func (mr *MockExecutorMockRecorder) ExecuteTransactions(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteTransactions", reflect.TypeOf((*MockExecutor)(nil).ExecuteTransactions), arg0)
+}
+
+// FinalizeState mocks base method.
 func (m *MockExecutor) FinalizeState(arg0 *consensus.ExecutionResult) (*types.Block, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FinalizeState", arg0)
@@ -61,13 +90,13 @@ func (m *MockExecutor) FinalizeState(arg0 *consensus.ExecutionResult) (*types.Bl
 	return ret0, ret1
 }
 
-// FinalizeState indicates an expected call of FinalizeState
+// FinalizeState indicates an expected call of FinalizeState.
 func (mr *MockExecutorMockRecorder) FinalizeState(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeState", reflect.TypeOf((*MockExecutor)(nil).FinalizeState), arg0)
 }
 
-// ResetWithState mocks base method
+// ResetWithState mocks base method.
 func (m *MockExecutor) ResetWithState(arg0 *state.StateDB, arg1 *types.Header) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResetWithState", arg0, arg1)
@@ -75,7 +104,7 @@ func (m *MockExecutor) ResetWithState(arg0 *state.StateDB, arg1 *types.Header) e
 	return ret0
 }
 
-// ResetWithState indicates an expected call of ResetWithState
+// ResetWithState indicates an expected call of ResetWithState.
 func (mr *MockExecutorMockRecorder) ResetWithState(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetWithState", reflect.TypeOf((*MockExecutor)(nil).ResetWithState), arg0, arg1)

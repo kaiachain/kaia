@@ -63,6 +63,18 @@ type Executor interface {
 	// mux is used to post PendingLogsEvent and PendingStateEvent for APIs.
 	Execute(txs *types.TransactionsByPriceAndNonce, mux *event.TypeMux) (*ExecutionResult, error)
 
+	// ExecuteTransactions executes the given transaction list in the provided
+	// order without re-sorting. This is the path validators use during
+	// speculative execution of a received pre-prepare: they must replay the
+	// exact order encoded in the proposer's block body.
+	ExecuteTransactions(txs []*types.Transaction) (*ExecutionResult, error)
+
 	// FinalizeState runs post-transaction state modifications and assembles final block.
 	FinalizeState(result *ExecutionResult) (*types.Block, error)
+
+	// Clone returns a fresh Executor that shares immutable configuration
+	// (chain, config, signer, node address) but carries its own mutable
+	// execution state. The clone starts uninitialized — the caller must
+	// invoke ResetWithState before Execute/ExecuteTransactions.
+	Clone() Executor
 }

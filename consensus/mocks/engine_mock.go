@@ -10,7 +10,6 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
-	common "github.com/kaiachain/kaia/common"
 	consensus "github.com/kaiachain/kaia/consensus"
 	event "github.com/kaiachain/kaia/event"
 	gov "github.com/kaiachain/kaia/kaiax/gov"
@@ -80,17 +79,17 @@ func (mr *MockEngineMockRecorder) RegisterKaiaxModules(arg0, arg1 interface{}) *
 }
 
 // Start mocks base method.
-func (m *MockEngine) Start(arg0 consensus.ChainReader, arg1 func() *types.Block, arg2 func(common.Hash) bool, arg3 consensus.Executor) error {
+func (m *MockEngine) Start(arg0 consensus.ChainReader, arg1 consensus.Executor) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Start", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Start indicates an expected call of Start.
-func (mr *MockEngineMockRecorder) Start(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) Start(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockEngine)(nil).Start), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockEngine)(nil).Start), arg0, arg1)
 }
 
 // Stop mocks base method.

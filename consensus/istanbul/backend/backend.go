@@ -91,8 +91,6 @@ type backend struct {
 	core             istanbulCore.Engine
 	logger           log.Logger
 	chain            consensus.ChainReader
-	currentBlock     func() *types.Block
-	hasBadBlock      func(hash common.Hash) bool
 
 	// the channels for istanbul engine notifications
 	commitCh          chan *types.Result
@@ -214,8 +212,7 @@ func (sb *backend) Gossip(payload []byte) error {
 				Payload:  payload,
 			}
 
-			// go p.Send(IstanbulMsg, payload)
-			go p.Send(IstanbulMsg, cmsg)
+			go p.Send(consensus.ConsensusMsgCode, cmsg)
 		}
 	}
 	return nil
@@ -288,7 +285,7 @@ func (sb *backend) GossipSubPeer(prevHash common.Hash, payload []byte) {
 				Payload:  payload,
 			}
 
-			go p.Send(IstanbulMsg, cmsg)
+			go p.Send(consensus.ConsensusMsgCode, cmsg)
 		}
 	}
 	return
@@ -407,7 +404,7 @@ func (sb *backend) HasPropsal(hash common.Hash, number *big.Int) bool {
 }
 
 func (sb *backend) LastProposal() (bft.Proposal, common.Address) {
-	block := sb.currentBlock()
+	block := sb.chain.CurrentBlock()
 
 	var proposer common.Address
 	if block.Number().Cmp(common.Big0) > 0 {
@@ -424,10 +421,10 @@ func (sb *backend) LastProposal() (bft.Proposal, common.Address) {
 }
 
 func (sb *backend) HasBadProposal(hash common.Hash) bool {
-	if sb.hasBadBlock == nil {
+	if sb.chain == nil {
 		return false
 	}
-	return sb.hasBadBlock(hash)
+	return sb.chain.HasBadBlock(hash)
 }
 
 // SubmitTransactions executes transactions and returns the execution result.
@@ -500,7 +497,7 @@ func (sb *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, st
 		}
 		if sealedBlock == nil {
 			// Not the proposer - this is expected, block will be received via ChainHeadEvent
-			logger.Info("Seal skipped. Not the proposer for block", "number", block.Number(), "sealTime", result.SealTime)
+			logger.Debug("Seal skipped. Not the proposer for block", "number", block.Number(), "sealTime", result.SealTime)
 			resultCh <- nil
 			return
 		}

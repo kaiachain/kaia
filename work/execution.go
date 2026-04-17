@@ -18,10 +18,12 @@ package work
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/event"
@@ -72,6 +74,20 @@ func NewDefaultExecutor(config *params.ChainConfig, chain BlockChain, nodeAddr c
 	}
 }
 
+// Clone returns a fresh DefaultExecutor that shares immutable configuration
+// with e but carries its own mutable execution state.
+func (e *DefaultExecutor) Clone() consensus.Executor {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return &DefaultExecutor{
+		config:            e.config,
+		chain:             e.chain,
+		nodeAddr:          e.nodeAddr,
+		signer:            e.signer,
+		txBundlingModules: e.txBundlingModules,
+	}
+}
+
 // SetTxBundlingModules sets the transaction bundling modules for gasless transactions.
 func (e *DefaultExecutor) SetTxBundlingModules(modules []builder.TxBundlingModule) {
 	e.mu.Lock()
@@ -117,6 +133,57 @@ func (e *DefaultExecutor) Execute(txs *types.TransactionsByPriceAndNonce, mux *e
 	e.txs = task.Transactions()
 	e.receipts = task.Receipts()
 	e.usedGas = e.header.GasUsed
+
+	return e.buildResult(), nil
+}
+
+// ExecuteTransactions executes the given transactions in the provided order
+// without re-sorting. This is the validator-path primitive used during
+// speculative execution of a received pre-prepare block.
+//
+// Mirrors the per-transaction loop of StateProcessor.Process (InitializeState +
+// ApplyTransaction per tx), but deliberately excludes FinalizeState — the caller
+// must invoke FinalizeState separately after this returns.
+func (e *DefaultExecutor) ExecuteTransactions(txs []*types.Transaction) (*consensus.ExecutionResult, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if !e.initialized {
+		return nil, ErrExecutorNotInitialized
+	}
+
+	// Pre-tx hooks (EIP-2935, kaiax module pre-hooks, etc.)
+	e.chain.Processor().InitializeState(e.header, e.state)
+
+	// Extract the block proposer from the header seal — must match
+	// StateProcessor.Process so COINBASE and reward distribution are identical.
+	// Using e.nodeAddr here would be wrong: the local validator is not
+	// necessarily the proposer of this block.
+	author, _ := e.chain.Sealer().Author(e.header)
+
+	var (
+		receipts types.Receipts
+		allLogs  []*types.Log
+		usedGas  = new(uint64)
+	)
+
+	for i, tx := range txs {
+		e.state.SetTxContext(tx.Hash(), common.Hash{}, i)
+		receipt, _, err := e.chain.ApplyTransaction(
+			e.config, &author, e.state, e.header, tx, usedGas, &vm.Config{},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("tx %d (%s): %w", i, tx.Hash().Hex(), err)
+		}
+		receipts = append(receipts, receipt)
+		allLogs = append(allLogs, receipt.Logs...)
+	}
+
+	e.header.GasUsed = *usedGas
+	e.txs = txs
+	e.receipts = receipts
+	e.logs = allLogs
+	e.usedGas = *usedGas
 
 	return e.buildResult(), nil
 }

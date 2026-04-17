@@ -245,7 +245,7 @@ func newTestContext(numNodes int, config *params.ChainConfig, overrides *testOve
 		[]kaiax.BlockStateModule{mSystem},
 	)
 	// Start the engine
-	if err = engine.Start(chain, chain.CurrentBlock, chain.HasBadBlock, nil); err != nil {
+	if err = engine.Start(chain, nil); err != nil {
 		panic(err)
 	}
 

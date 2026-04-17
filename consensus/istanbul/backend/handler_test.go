@@ -24,6 +24,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -47,7 +48,7 @@ func TestBackend_HandleMsg(t *testing.T) {
 	// Success case
 	{
 		msg := p2p.Msg{
-			Code:    IstanbulMsg,
+			Code:    consensus.ConsensusMsgCode,
 			Size:    uint32(size),
 			Payload: payload,
 		}
@@ -106,7 +107,7 @@ func TestBackend_HandleMsg(t *testing.T) {
 	{
 		size, payload, _ := rlp.EncodeToReader([]byte{0x1, 0x2})
 		msg := p2p.Msg{
-			Code:    IstanbulMsg,
+			Code:    consensus.ConsensusMsgCode,
 			Size:    uint32(size),
 			Payload: payload,
 		}
@@ -118,7 +119,7 @@ func TestBackend_HandleMsg(t *testing.T) {
 	// Failure case - stopped istanbul engine
 	{
 		msg := p2p.Msg{
-			Code:    IstanbulMsg,
+			Code:    consensus.ConsensusMsgCode,
 			Size:    uint32(size),
 			Payload: payload,
 		}
@@ -127,13 +128,6 @@ func TestBackend_HandleMsg(t *testing.T) {
 		assert.Equal(t, istanbul.ErrStoppedEngine, err)
 		assert.True(t, isHandled)
 	}
-}
-
-func TestBackend_Protocol(t *testing.T) {
-	backend := newTestBackend()
-	defer backend.Stop()
-
-	assert.Equal(t, IstanbulProtocol, backend.Protocol())
 }
 
 func TestBackend_ValidatePeerType(t *testing.T) {
