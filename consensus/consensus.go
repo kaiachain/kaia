@@ -70,6 +70,9 @@ type ChainReader interface {
 
 	// StateAt retrieves statedb on a particular point in time
 	StateAt(root common.Hash) (*state.StateDB, error)
+
+	// PrunableStateAt retrieves statedb on a particular point in time with live pruning
+	PrunableStateAt(root common.Hash, num uint64) (*state.StateDB, error)
 }
 
 // ChainContext extends ChainReader with transaction execution capability.
