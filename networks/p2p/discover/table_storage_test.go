@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
 func TestKademliaStorage_AddBump(t *testing.T) {
 	s := newTestKademliaStorage()
 	n1 := nodeAtDist(10)

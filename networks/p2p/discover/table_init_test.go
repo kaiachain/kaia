@@ -71,4 +71,3 @@ func Test_Table_StartClose(t *testing.T) {
 	tab.Close()
 	tab.Close() // idempotent
 }
-
