@@ -113,6 +113,8 @@ type machine struct {
 
 	// Consensus timing
 	consensusTimestamp time.Time
+
+	metrics *bft.CoreMetrics
 }
 
 func newMachine(b *backend) *machine {
@@ -120,6 +122,7 @@ func newMachine(b *backend) *machine {
 		b:               b,
 		backlogs:        make(map[common.Address]*prque.Prque),
 		roundChangeSets: make(map[uint64]*messageSet),
+		metrics:         bft.NewCoreMetrics("consensus/istanbul/core"),
 	}
 }
 
@@ -334,11 +337,13 @@ func (m *machine) handlePreprepare(msg *bft.Message, src common.Address) error {
 		} else {
 			logger.Debug("Accepted preprepare, moving to Preprepared",
 				"seq", m.sequence, "round", m.round, "from", src, "hash", pp.Proposal.Hash())
+			// Speculative execution (kaiabft-specific)
+			m.startSpeculativeExecution(pp.Proposal)
+
+			// Accept preprepare and move to Preprepared state
 			m.acceptPreprepare(pp)
 			m.setState(statePreprepared)
 			m.sendPrepare()
-			// --- Speculative execution (kaiabft addition) ---
-			m.startSpeculativeExecution(pp.Proposal)
 		}
 	}
 
@@ -537,9 +542,10 @@ func (m *machine) startNewRound(round *big.Int) {
 		logger.Debug("Starting initial round")
 	} else if lastProposal.Number().Cmp(m.sequence) >= 0 {
 		diff := new(big.Int).Sub(lastProposal.Number(), m.sequence)
-		sequenceMeter.Mark(new(big.Int).Add(diff, common.Big1).Int64())
+		m.metrics.Sequence.Mark(new(big.Int).Add(diff, common.Big1).Int64())
 		if !m.consensusTimestamp.IsZero() {
-			consensusTimeGauge.Update(int64(time.Since(m.consensusTimestamp)))
+			m.metrics.ConsensusTime.Update(int64(time.Since(m.consensusTimestamp)))
+			m.consensusTimestamp = time.Time{}
 		}
 		logger.Debug("Chain advanced past our sequence, starting new sequence",
 			"lastBlock", lastProposal.Number().Uint64(), "currentSeq", m.sequence)
@@ -596,14 +602,14 @@ func (m *machine) startNewRound(round *big.Int) {
 		if cs > councilSize {
 			cs = councilSize
 		}
-		councilSizeGauge.Update(councilSize)
-		committeeSizeGauge.Update(cs)
+		m.metrics.CouncilSize.Update(councilSize)
+		m.metrics.CommitteeSize.Update(cs)
 	}
-	currentRoundGauge.Update(m.round.Int64())
+	m.metrics.CurrentRound.Update(m.round.Int64())
 	if m.isHashLocked() {
-		hashLockGauge.Update(1)
+		m.metrics.HashLock.Update(1)
 	} else {
-		hashLockGauge.Update(0)
+		m.metrics.HashLock.Update(0)
 	}
 
 	if roundChange && m.isHashLocked() {
@@ -635,7 +641,6 @@ func (m *machine) startNewRound(round *big.Int) {
 
 	if !roundChange {
 		m.b.eventMux.Post(newSequenceEvent{})
-		m.consensusTimestamp = time.Time{}
 	}
 
 	m.newRoundChangeTimer()
@@ -652,7 +657,7 @@ func (m *machine) catchUpRound(view *bft.View) {
 	oldSeq := new(big.Int).Set(m.sequence)
 
 	if diff := new(big.Int).Sub(view.Round, m.round); diff.Sign() > 0 {
-		roundMeter.Mark(diff.Int64())
+		m.metrics.Round.Mark(diff.Int64())
 	}
 
 	m.waitingForRoundChange = true
@@ -677,11 +682,11 @@ func (m *machine) catchUpRound(view *bft.View) {
 	m.clearRoundChangeSets(view.Round)
 	m.newRoundChangeTimer()
 
-	currentRoundGauge.Update(m.round.Int64())
+	m.metrics.CurrentRound.Update(m.round.Int64())
 	if m.isHashLocked() {
-		hashLockGauge.Update(1)
+		m.metrics.HashLock.Update(1)
 	} else {
-		hashLockGauge.Update(0)
+		m.metrics.HashLock.Update(0)
 	}
 
 	newProposer, err := m.b.valsetModule.GetProposer(view.Sequence.Uint64(), view.Round.Uint64())
@@ -837,7 +842,7 @@ func (m *machine) broadcastMsg(msg *bft.Message) {
 }
 
 func (m *machine) doCommit() {
-	m.state = stateCommitted
+	m.setState(stateCommitted)
 
 	proposal := m.proposal()
 	if proposal == nil {
