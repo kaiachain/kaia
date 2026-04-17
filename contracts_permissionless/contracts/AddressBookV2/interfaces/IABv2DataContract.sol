@@ -15,9 +15,9 @@ interface IABv2DataContract {
         uint256 cfsThreshold;
         uint256 pauseTimeout;
         uint256 idleTimeout;
-        uint256 maxValidatorCount;
-        uint256 activeValidatorCount;
-        uint256 maxReadyCandidateCount;
+        uint256 maxNodeCount;
+        uint256 maxValActivePausedCount;
+        uint256 maxCandReadyCount;
         address kefAddress;
         address kifAddress;
         address kpfAddress;

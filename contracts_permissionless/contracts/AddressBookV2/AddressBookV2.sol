@@ -41,9 +41,9 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
         $.cfsThreshold = d.cfsThreshold;
         $.pauseTimeout = d.pauseTimeout;
         $.idleTimeout = d.idleTimeout;
-        $.maxValidatorCount = d.maxValidatorCount;
-        $.activeValidatorCount = d.activeValidatorCount;
-        $.maxReadyCandidateCount = d.maxReadyCandidateCount;
+        $.maxNodeCount = d.maxNodeCount;
+        $.maxValActivePausedCount = d.maxValActivePausedCount;
+        $.maxCandReadyCount = d.maxCandReadyCount;
         $.kefAddress = d.kefAddress;
         $.kifAddress = d.kifAddress;
         $.kpfAddress = d.kpfAddress;
@@ -93,26 +93,26 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
-    function updateMaxValidatorCount(uint256 newMaxValidatorCount) external onlyOwner {
-        emit MaxValidatorCountUpdated(
-            ABv2ConfigLib.MAX_VALIDATOR_COUNT.updateUint(newMaxValidatorCount),
-            newMaxValidatorCount
+    function updateMaxNodeCount(uint256 newMaxNodeCount) external onlyOwner {
+        emit MaxNodeCountUpdated(
+            ABv2ConfigLib.MAX_NODE_COUNT.updateUint(newMaxNodeCount),
+            newMaxNodeCount
         );
     }
 
     /// @inheritdoc IAddressBookV2
-    function updateActiveValidatorCount(uint256 newActiveValidatorCount) external onlyOwner {
-        emit ActiveValidatorCountUpdated(
-            ABv2ConfigLib.ACTIVE_VALIDATOR_COUNT.updateUint(newActiveValidatorCount),
-            newActiveValidatorCount
+    function updateMaxValActivePausedCount(uint256 newMaxValActivePausedCount) external onlyOwner {
+        emit MaxValActivePausedCountUpdated(
+            ABv2ConfigLib.MAX_VAL_ACTIVE_PAUSED_COUNT.updateUint(newMaxValActivePausedCount),
+            newMaxValActivePausedCount
         );
     }
 
     /// @inheritdoc IAddressBookV2
-    function updateMaxReadyCandidateCount(uint256 newMaxReadyCandidateCount) external onlyOwner {
-        emit MaxReadyCandidateCountUpdated(
-            ABv2ConfigLib.MAX_READY_CANDIDATE_COUNT.updateUint(newMaxReadyCandidateCount),
-            newMaxReadyCandidateCount
+    function updateMaxCandReadyCount(uint256 newMaxCandReadyCount) external onlyOwner {
+        emit MaxCandReadyCountUpdated(
+            ABv2ConfigLib.MAX_CAND_READY_COUNT.updateUint(newMaxCandReadyCount),
+            newMaxCandReadyCount
         );
     }
 
@@ -152,12 +152,12 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     /// @inheritdoc IAddressBookV2
     function getMaxCounts() external view returns (uint256, uint256) {
         ABv2Storage storage $ = _getStorage();
-        return ($.maxValidatorCount, $.maxReadyCandidateCount);
+        return ($.maxNodeCount, $.maxCandReadyCount);
     }
 
     /// @inheritdoc IAddressBookV2
-    function getActiveValidatorCount() external view returns (uint256) {
-        return _getStorage().activeValidatorCount;
+    function getMaxValActivePausedCount() external view returns (uint256) {
+        return _getStorage().maxValActivePausedCount;
     }
 
     /// @inheritdoc IAddressBookV2

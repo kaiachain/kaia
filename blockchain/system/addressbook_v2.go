@@ -139,7 +139,7 @@ type NodeStatesResult struct {
 	SlotFactor           uint64
 	MaxSlotAvailable     uint64
 	MinActiveCount       uint64
-	ActiveValidatorCount uint64
+	MaxValActivePausedCount uint64
 	SuspendedValidators  []common.Address
 }
 
@@ -189,7 +189,7 @@ func ReadNodeStates(
 		SlotFactor:           res.SlotFactor.Uint64(),
 		MaxSlotAvailable:     res.MaxSlotAvailable.Uint64(),
 		MinActiveCount:       res.MinActiveCount.Uint64(),
-		ActiveValidatorCount: res.ActiveValidatorCount.Uint64(),
+		MaxValActivePausedCount: res.MaxValActivePausedCount.Uint64(),
 		SuspendedValidators:  res.SuspendedValidators,
 	}, nil
 }

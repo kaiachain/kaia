@@ -138,20 +138,20 @@ interface IAddressBookV2 {
     /// @param newThreshold The new threshold value
     event CfsThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
 
-    /// @notice Emitted when the maximum validator count is updated
+    /// @notice Emitted when the maximum node count is updated
     /// @param oldCount The previous count
     /// @param newCount The new count
-    event MaxValidatorCountUpdated(uint256 oldCount, uint256 newCount);
+    event MaxNodeCountUpdated(uint256 oldCount, uint256 newCount);
 
-    /// @notice Emitted when the active validator count is updated
+    /// @notice Emitted when the max ValActive+ValPaused count is updated
     /// @param oldCount The previous count
     /// @param newCount The new count
-    event ActiveValidatorCountUpdated(uint256 oldCount, uint256 newCount);
+    event MaxValActivePausedCountUpdated(uint256 oldCount, uint256 newCount);
 
-    /// @notice Emitted when the maximum ready candidate count is updated
+    /// @notice Emitted when the maximum CandReady count is updated
     /// @param oldCount The previous count
     /// @param newCount The new count
-    event MaxReadyCandidateCountUpdated(uint256 oldCount, uint256 newCount);
+    event MaxCandReadyCountUpdated(uint256 oldCount, uint256 newCount);
 
     /// @notice Emitted when the KEF address is updated
     /// @param oldAddress The previous address
@@ -280,17 +280,17 @@ interface IAddressBookV2 {
     /// @param newIdleTimeout The new timeout in seconds
     function updateIdleTimeout(uint256 newIdleTimeout) external;
 
-    /// @notice Updates the maximum validator count
-    /// @param newMaxValidatorCount The new maximum
-    function updateMaxValidatorCount(uint256 newMaxValidatorCount) external;
+    /// @notice Updates the maximum node count (all nodes including candidates)
+    /// @param newMaxNodeCount The new maximum
+    function updateMaxNodeCount(uint256 newMaxNodeCount) external;
 
-    /// @notice Updates the active validator count (max ValActive + ValPaused for epoch slot competition)
-    /// @param newActiveValidatorCount The new count
-    function updateActiveValidatorCount(uint256 newActiveValidatorCount) external;
+    /// @notice Updates the max ValActive + ValPaused count (epoch slot competition limit)
+    /// @param newMaxValActivePausedCount The new count
+    function updateMaxValActivePausedCount(uint256 newMaxValActivePausedCount) external;
 
-    /// @notice Updates the maximum ready candidate count
-    /// @param newMaxReadyCandidateCount The new maximum
-    function updateMaxReadyCandidateCount(uint256 newMaxReadyCandidateCount) external;
+    /// @notice Updates the maximum CandReady count
+    /// @param newMaxCandReadyCount The new maximum
+    function updateMaxCandReadyCount(uint256 newMaxCandReadyCount) external;
 
     /// @notice Updates the PFS threshold for validator exit
     /// @param newPfsThreshold The new threshold
@@ -329,14 +329,14 @@ interface IAddressBookV2 {
     /// @return idleTimeout The idle timeout in seconds
     function getTimeouts() external view returns (uint256 pauseTimeout, uint256 idleTimeout);
 
-    /// @notice Returns the maximum validator and ready candidate counts
-    /// @return maxValidatorCount The maximum validator count
-    /// @return maxReadyCandidateCount The maximum ready candidate count
-    function getMaxCounts() external view returns (uint256 maxValidatorCount, uint256 maxReadyCandidateCount);
+    /// @notice Returns the maximum node and CandReady counts
+    /// @return maxNodeCount The maximum node count
+    /// @return maxCandReadyCount The maximum CandReady count
+    function getMaxCounts() external view returns (uint256 maxNodeCount, uint256 maxCandReadyCount);
 
-    /// @notice Returns the active validator count (max ValActive + ValPaused for epoch slot competition)
-    /// @return The active validator count
-    function getActiveValidatorCount() external view returns (uint256);
+    /// @notice Returns the max ValActive + ValPaused count (epoch slot competition limit)
+    /// @return The max ValActive + ValPaused count
+    function getMaxValActivePausedCount() external view returns (uint256);
 
     /// @notice Returns the PFS threshold for validator exit
     /// @return The PFS threshold

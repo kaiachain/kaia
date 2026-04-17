@@ -112,8 +112,8 @@ abstract contract NodeActions is AddressBookV2Base {
         if (!_isNodeOverMinStake(nodeId)) revert StakingTooLow();
 
         ABv2Storage storage $ = _getStorage();
-        if (_getStateCount(State.CandReady) >= $.maxReadyCandidateCount) revert SlotsFull();
-        if (_getAllNodesLength() >= $.maxValidatorCount) revert SlotsFull();
+        if (_getStateCount(State.CandReady) >= $.maxCandReadyCount) revert SlotsFull();
+        if (_getAllNodesLength() >= $.maxNodeCount) revert SlotsFull();
 
         _transition(nodeId, State.CandReady, 0);
         emit CandidateReadied(nodeId);

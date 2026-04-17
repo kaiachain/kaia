@@ -63,12 +63,12 @@ interface IAddressBookV2 {
     function getAllProfiles() external view returns (Profile[] memory);
     function getFundAddresses() external view returns (address, address, address);
     function getTimeouts() external view returns (uint256 pauseTimeout, uint256 idleTimeout);
-    function getMaxCounts() external view returns (uint256 maxValidatorCount, uint256 maxReadyCandidateCount);
+    function getMaxCounts() external view returns (uint256 maxNodeCount, uint256 maxCandReadyCount);
     function getPfsThreshold() external view returns (uint256);
     function getCfsThreshold() external view returns (uint256);
     function getSlotFactor() external view returns (uint256);
     function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount);
-    function getActiveValidatorCount() external view returns (uint256);
+    function getMaxValActivePausedCount() external view returns (uint256);
     function getSuspendedValidators() external view returns (address[] memory);
 }
 
@@ -151,7 +151,7 @@ contract MultiCallContract {
         uint256 slotFactor;
         uint256 maxSlotAvailable;
         uint256 minActiveCount;
-        uint256 activeValidatorCount;
+        uint256 maxValActivePausedCount;
         address[] suspendedValidators;
     }
 
@@ -166,7 +166,7 @@ contract MultiCallContract {
         result.pfsThreshold = abv2.getPfsThreshold();
         result.cfsThreshold = abv2.getCfsThreshold();
         result.slotFactor = abv2.getSlotFactor();
-        result.activeValidatorCount = abv2.getActiveValidatorCount();
+        result.maxValActivePausedCount = abv2.getMaxValActivePausedCount();
         result.suspendedValidators = abv2.getSuspendedValidators();
         (result.maxSlotAvailable, result.minActiveCount) = abv2.getSlotLimits();
     }
