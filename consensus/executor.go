@@ -47,6 +47,12 @@ type ExecutionResult struct {
 	ExecuteTime  time.Duration // Time spent executing transactions
 	FinalizeTime time.Duration // Time spent finalizing the block
 	SealTime     time.Duration // Time spent in consensus (Seal)
+
+	// ProcessStats timestamps — set by ProcessBlock to mirror
+	// blockchain.ProcessStats so speculative cache can forward them.
+	BeforeApplyTxs time.Time
+	AfterApplyTxs  time.Time
+	AfterFinalize  time.Time
 }
 
 // Transactions returns the executed transactions.

@@ -223,9 +223,13 @@ func TestInsertChain_SpeculativeCacheHit(t *testing.T) {
 		Logs:             specResult.Logs,
 		UsedGas:          specResult.UsedGas,
 		InternalTxTraces: specResult.InternalTxTraces,
-		ProcessStats:     executor.LastProcessStats(),
-		Bloom:            types.CreateBloom(specResult.Receipts),
-		ReceiptHash:      types.DeriveReceiptsRoot(specResult.Receipts, block.Number()),
+		ProcessStats: blockchain.ProcessStats{
+			BeforeApplyTxs: specResult.BeforeApplyTxs,
+			AfterApplyTxs:  specResult.AfterApplyTxs,
+			AfterFinalize:  specResult.AfterFinalize,
+		},
+		Bloom:       types.CreateBloom(specResult.Receipts),
+		ReceiptHash: types.DeriveReceiptsRoot(specResult.Receipts, block.Number()),
 	}, nil)
 
 	// --- 4. InsertChain should use the cached result ---
