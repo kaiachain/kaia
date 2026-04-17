@@ -19,6 +19,7 @@ package tests
 import (
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -307,4 +308,109 @@ func TestInsertChain_SpeculativeCacheHashMismatch(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 0, n)
 	assert.Equal(t, uint64(0), bcdata.bc.SpeculativeCache().Hits())
+}
+
+// TestInsertChain_SpeculativeCacheWait verifies that InsertChain blocks on an
+// in-flight speculative entry instead of falling through to synchronous
+// execution — the behaviour enabled by the non-zero TryGet timeout.
+func TestInsertChain_SpeculativeCacheWait(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Magma"], nil)
+	require.NoError(t, err)
+	defer bcdata.Shutdown()
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).Add(bcdata.bc.CurrentBlock().Header().BaseFee, big.NewInt(1))
+
+	sender := bcdata.privKeys[0]
+	senderAddr := *bcdata.addrs[0]
+	stateDb, err := bcdata.bc.State()
+	require.NoError(t, err)
+	nonce := stateDb.GetNonce(senderAddr)
+
+	tx := types.NewTransaction(nonce, *bcdata.addrs[1], new(big.Int).SetUint64(1000), params.TxGas, gasPrice, nil)
+	signedTx, err := types.SignTx(tx, signer, sender)
+	require.NoError(t, err)
+
+	prof := profile.NewProfiler()
+	_, block, _, err := bcdata.MineABlock(types.Transactions{signedTx}, signer, prof, nil)
+	require.NoError(t, err)
+
+	parent := bcdata.bc.CurrentBlock()
+	parentState, err := bcdata.bc.PrunableStateAt(parent.Root(), parent.NumberU64())
+	require.NoError(t, err)
+
+	executor := work.NewDefaultExecutor(bcdata.bc.Config(), bcdata.bc, common.Address{}, vm.Config{})
+	require.NoError(t, executor.ResetWithState(parentState, block.Header()))
+
+	specResult, err := executor.ProcessBlock(block.Transactions())
+	require.NoError(t, err)
+
+	hitsBefore := bcdata.bc.SpeculativeCache().Hits()
+	entry := bcdata.bc.SpeculativeCache().Reserve(block.Hash())
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		entry.Complete(&blockchain.SpeculativeResult{
+			State:            specResult.State,
+			Receipts:         specResult.Receipts,
+			Logs:             specResult.Logs,
+			UsedGas:          specResult.UsedGas,
+			InternalTxTraces: specResult.InternalTxTraces,
+			ProcessStats: blockchain.ProcessStats{
+				BeforeApplyTxs: specResult.BeforeApplyTxs,
+				AfterApplyTxs:  specResult.AfterApplyTxs,
+				AfterFinalize:  specResult.AfterFinalize,
+			},
+			Bloom:       types.CreateBloom(specResult.Receipts),
+			ReceiptHash: types.DeriveReceiptsRoot(specResult.Receipts, block.Number()),
+		}, nil)
+	}()
+
+	n, err := bcdata.bc.InsertChain(types.Blocks{block})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, n)
+	assert.Equal(t, hitsBefore+1, bcdata.bc.SpeculativeCache().Hits(),
+		"InsertChain should have waited for the in-flight speculative result")
+}
+
+// TestInsertChain_SpeculativeCacheTimeout verifies that InsertChain falls back
+// to synchronous execution when the speculative entry stays in-flight past
+// the timeout.
+func TestInsertChain_SpeculativeCacheTimeout(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Magma"], nil)
+	require.NoError(t, err)
+	defer bcdata.Shutdown()
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).Add(bcdata.bc.CurrentBlock().Header().BaseFee, big.NewInt(1))
+
+	sender := bcdata.privKeys[0]
+	senderAddr := *bcdata.addrs[0]
+	stateDb, err := bcdata.bc.State()
+	require.NoError(t, err)
+	nonce := stateDb.GetNonce(senderAddr)
+
+	tx := types.NewTransaction(nonce, *bcdata.addrs[1], new(big.Int).SetUint64(1000), params.TxGas, gasPrice, nil)
+	signedTx, err := types.SignTx(tx, signer, sender)
+	require.NoError(t, err)
+
+	prof := profile.NewProfiler()
+	_, block, _, err := bcdata.MineABlock(types.Transactions{signedTx}, signer, prof, nil)
+	require.NoError(t, err)
+
+	original := params.BlockGenerationTimeLimit
+	params.BlockGenerationTimeLimit = 10 * time.Millisecond
+	defer func() { params.BlockGenerationTimeLimit = original }()
+
+	hitsBefore := bcdata.bc.SpeculativeCache().Hits()
+	bcdata.bc.SpeculativeCache().Reserve(block.Hash())
+
+	n, err := bcdata.bc.InsertChain(types.Blocks{block})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, n)
+	assert.Equal(t, hitsBefore, bcdata.bc.SpeculativeCache().Hits(),
+		"InsertChain should have timed out and fallen back to sync execution")
 }
