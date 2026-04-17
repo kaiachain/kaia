@@ -2190,28 +2190,24 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			spamThrottler.updateThrottlerState(block.Transactions(), receipts)
 		}
 
-		// Update the metrics subsystem with all the measurements.
-		// StateDB timing metrics are only meaningful for the sync path;
-		// for cache hits the speculative execution already warmed the trie.
-		var trieAccess time.Duration
-		if !cacheHit {
-			accountReadTimer.Update(stateDB.AccountReads)
-			accountHashTimer.Update(stateDB.AccountHashes)
-			accountUpdateTimer.Update(stateDB.AccountUpdates)
-			accountCommitTimer.Update(stateDB.AccountCommits)
+		// StateDB timers are valid on both paths: on cache hit, stateDB is
+		// the speculative StateDB whose counters accumulated during Process.
+		accountReadTimer.Update(stateDB.AccountReads)
+		accountHashTimer.Update(stateDB.AccountHashes)
+		accountUpdateTimer.Update(stateDB.AccountUpdates)
+		accountCommitTimer.Update(stateDB.AccountCommits)
 
-			storageReadTimer.Update(stateDB.StorageReads)
-			storageHashTimer.Update(stateDB.StorageHashes)
-			storageUpdateTimer.Update(stateDB.StorageUpdates)
-			storageCommitTimer.Update(stateDB.StorageCommits)
+		storageReadTimer.Update(stateDB.StorageReads)
+		storageHashTimer.Update(stateDB.StorageHashes)
+		storageUpdateTimer.Update(stateDB.StorageUpdates)
+		storageCommitTimer.Update(stateDB.StorageCommits)
 
-			snapshotAccountReadTimer.Update(stateDB.SnapshotAccountReads)
-			snapshotStorageReadTimer.Update(stateDB.SnapshotStorageReads)
-			snapshotCommitTimer.Update(stateDB.SnapshotCommits)
+		snapshotAccountReadTimer.Update(stateDB.SnapshotAccountReads)
+		snapshotStorageReadTimer.Update(stateDB.SnapshotStorageReads)
+		snapshotCommitTimer.Update(stateDB.SnapshotCommits)
 
-			trieAccess = stateDB.AccountReads + stateDB.AccountHashes + stateDB.AccountUpdates + stateDB.AccountCommits
-			trieAccess += stateDB.StorageReads + stateDB.StorageHashes + stateDB.StorageUpdates + stateDB.StorageCommits
-		}
+		trieAccess := stateDB.AccountReads + stateDB.AccountHashes + stateDB.AccountUpdates + stateDB.AccountCommits
+		trieAccess += stateDB.StorageReads + stateDB.StorageHashes + stateDB.StorageUpdates + stateDB.StorageCommits
 
 		blockAgeTimer.Update(time.Since(time.Unix(int64(block.Time().Uint64()), 0)))
 
@@ -2222,17 +2218,17 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			processFinalizeTime := common.PrettyDuration(procStats.AfterFinalize.Sub(procStats.AfterApplyTxs))
 			var validateTime common.PrettyDuration
 			if cacheHit {
-				validateTime = common.PrettyDuration(time.Since(validateStart))
+				validateTime = common.PrettyDuration(afterValidate.Sub(validateStart))
 			} else {
 				validateTime = common.PrettyDuration(afterValidate.Sub(procStats.AfterFinalize))
 			}
 
-			if !cacheHit {
-				blockProcessTimer.Update(time.Duration(processTxsTime))
-				blockExecutionTimer.Update(time.Duration(processTxsTime) - trieAccess)
-				blockFinalizeTimer.Update(time.Duration(processFinalizeTime))
-				blockValidateTimer.Update(time.Duration(validateTime))
-			}
+			// procStats come from Process() in both paths (speculative or
+			// inline), so these timers are valid on every block.
+			blockProcessTimer.Update(time.Duration(processTxsTime))
+			blockExecutionTimer.Update(time.Duration(processTxsTime) - trieAccess)
+			blockFinalizeTimer.Update(time.Duration(processFinalizeTime))
+			blockValidateTimer.Update(time.Duration(validateTime))
 
 			totalTime := common.PrettyDuration(time.Since(bstart))
 			logger.Info("Inserted a new block", "number", block.Number(), "hash", block.Hash(),
