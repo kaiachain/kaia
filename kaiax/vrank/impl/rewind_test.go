@@ -38,7 +38,7 @@ func TestRewindTo_PurgesCache(t *testing.T) {
 	db := database.NewMemDB()
 
 	headers := map[uint64]*types.Header{
-		0:                           makeHeaderWithRound(0, 0),
+		0:                          makeHeaderWithRound(0, 0),
 		testCheckpointInterval:     makeHeaderWithRound(testCheckpointInterval, 0),
 		testCheckpointInterval + 1: makeHeaderWithRound(testCheckpointInterval+1, 0),
 	}

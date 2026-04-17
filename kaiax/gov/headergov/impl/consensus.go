@@ -29,9 +29,16 @@ func (h *headerGovModule) VerifyHeader(header *types.Header) error {
 
 func (h *headerGovModule) PrepareHeader(header *types.Header) error {
 	// if this node has a vote waiting to be casted, put Vote field.
+	// Skip if not in HeaderGovVoters to avoid VerifyVote failure and RC.
+	// A queued vote can exist despite Vote() blocking: node voted while unsuspended,
+	// then got suspended before proposing.
 	if vote, ok := h.peekMyVote(); ok {
-		header.Vote, _ = vote.ToVoteBytes()
-		logger.Debug("Prepare header with vote", "num", header.Number.Uint64(), "vote", hexutil.Encode(header.Vote))
+		blockNum := header.Number.Uint64()
+		voters, err := h.ValSet.GetHeaderGovVoters(blockNum)
+		if err == nil && slices.Contains(voters, h.nodeAddress) {
+			header.Vote, _ = vote.ToVoteBytes()
+			logger.Debug("Prepare header with vote", "num", blockNum, "vote", hexutil.Encode(header.Vote))
+		}
 	}
 
 	// if epoch block & vote exists in the last epoch, put Governance field.
@@ -50,8 +57,9 @@ func (h *headerGovModule) FinalizeHeader(header *types.Header, state *state.Stat
 	return nil
 }
 
-// VerifyVote checks the following:
-// (1) voter must be in valset,
+// VerifyVote is the canonical enforcement point for vote eligibility at proposal time.
+// It checks the following:
+// (1) voter must be in HeaderGovVoters at this block (suspended VA excluded),
 // (2) integrity of the voter (the voter must be the block proposer),
 // (3) the vote value must be consistent compared to the latest ParamSet.
 func (h *headerGovModule) VerifyVote(header *types.Header) error {
@@ -73,14 +81,14 @@ func (h *headerGovModule) VerifyVote(header *types.Header) error {
 		return err
 	}
 
-	council, err := h.ValSet.GetCouncil(blockNum)
+	voters, err := h.ValSet.GetHeaderGovVoters(blockNum)
 	if err != nil {
 		return err
 	}
 
-	// check if the voter is in council
-	if !slices.Contains(council, vote.Voter()) {
-		return ErrInvalidKeyValue
+	// check if the voter is a governance-eligible validator
+	if !slices.Contains(voters, vote.Voter()) {
+		return ErrVotePermissionDenied
 	}
 
 	// check if Voter is the block proposer.
@@ -149,15 +157,15 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 			return nil
 		}
 
-		// we'll use blockNum-1 for the blocknumber of GetCouncil since blockNum cannot be available(eg. vote)
+		// we'll use blockNum-1 since blockNum cannot be available(eg. vote)
 		// it's definite that the valSet vote is not included in this block
-		// so the council(blockNum - 1) and council(blockNum) should be same
-		council, err := h.ValSet.GetCouncil(blockNum - 1)
+		// so the voters(blockNum - 1) and voters(blockNum) should be same
+		voters, err := h.ValSet.GetHeaderGovVoters(blockNum - 1)
 		if err != nil {
 			return err
 		}
 
-		if slices.Contains(council, params.GoverningNode) {
+		if slices.Contains(voters, params.GoverningNode) {
 			return nil
 		}
 		return ErrGovNodeNotInValSetList

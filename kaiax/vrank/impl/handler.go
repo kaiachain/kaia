@@ -227,9 +227,9 @@ func (v *VRankModule) vrankCandidateSigHash(blockNum uint64, round uint8, blockH
 // BroadcastVRankPreprepare is called by the proposer. It signs the message before broadcasting.
 func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPreprepare) {
 	block := vrankPreprepare.Block
-	candidates, err := v.Valset.GetCandidates(block.NumberU64())
+	candidates, err := v.Valset.GetCandTesting(block.NumberU64())
 	if err != nil {
-		logger.Error("GetCandidates failed", "blockNum", block.NumberU64(), "err", err)
+		logger.Error("GetCandTesting failed", "blockNum", block.NumberU64(), "err", err)
 		return
 	}
 	if len(candidates) == 0 {
@@ -277,9 +277,9 @@ func (v *VRankModule) isProposer(blockNum, round uint64) bool {
 }
 
 func (v *VRankModule) isCandidate(blockNum uint64) bool {
-	candidates, err := v.Valset.GetCandidates(blockNum)
+	candidates, err := v.Valset.GetCandTesting(blockNum)
 	if err != nil {
-		logger.Error("GetCandidates failed", "blockNum", blockNum, "err", err)
+		logger.Error("GetCandTesting failed", "blockNum", blockNum, "err", err)
 		return false
 	}
 

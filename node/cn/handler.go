@@ -1958,6 +1958,18 @@ func (pm *ProtocolManager) FindCNPeers(targets map[common.Address]bool) map[comm
 	return m
 }
 
+func (pm *ProtocolManager) DisconnectCNPeers(addrs []common.Address) {
+	addrSet := make(map[common.Address]bool, len(addrs))
+	for _, addr := range addrs {
+		addrSet[addr] = true
+	}
+	for addr, p := range pm.peers.CNPeers() {
+		if addrSet[addr] {
+			p.DisconnectP2PPeer(p2p.DiscUselessPeer)
+		}
+	}
+}
+
 func (pm *ProtocolManager) GetENPeers() map[common.Address]consensus.Peer {
 	m := make(map[common.Address]consensus.Peer)
 	for addr, p := range pm.peers.ENPeers() {

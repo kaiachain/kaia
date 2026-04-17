@@ -199,7 +199,7 @@ func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amo
 		stakingAmounts   []uint64
 	)
 	for i, p := range profiles {
-		if p.State != uint8(valset.ValActive) {
+		if !valset.State(p.State).IsRewardEligible() {
 			continue
 		}
 		nodeIds = append(nodeIds, p.NodeId)

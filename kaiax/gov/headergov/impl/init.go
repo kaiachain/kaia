@@ -37,7 +37,7 @@ type chain interface {
 }
 
 type ValsetModule interface {
-	GetCouncil(num uint64) ([]common.Address, error)
+	GetHeaderGovVoters(num uint64) ([]common.Address, error)
 	GetProposer(num uint64, round uint64) (common.Address, error)
 }
 

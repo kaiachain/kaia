@@ -35,11 +35,12 @@ type ValsetModule interface {
 	// Council = {Demoted Validators} ∪ {Validators with Staking >= 5M}
 	// Committee = Council - {Demoted Validators}
 
-	// NOTE: In permissionless, the entities are defined as below
-	// Validator = ValActive + ValReady + ValPaused + ValExiting + ValInactive
-	// Council = ValActive + ValReady + ValPaused
-	// Committee = ValActive
-	// Candidate = CandTesting
+	// NOTE: In permissionless, the entities are defined as NodeStateMap methods:
+	// Council()          = {ValActive, ValPaused}
+	// Committee()        = {ValActive} excluding suspended
+	// HeaderGovVoters() = {ValActive} excluding suspended
+	// CNPeers()          = {ValActive, ValReady, ValPaused, CandReady, CandTesting}
+	// RewardEligible()   = {ValActive}
 
 	GetCouncil(num uint64) ([]common.Address, error)
 	GetCommittee(num uint64, round uint64) ([]common.Address, error)
@@ -47,7 +48,10 @@ type ValsetModule interface {
 	GetProposer(num uint64, round uint64) (common.Address, error)
 
 	// Permissionless
-	GetCandidates(num uint64) ([]common.Address, error)
+	GetCandTesting(num uint64) ([]common.Address, error)
+	GetCNPeers(num uint64) ([]common.Address, error)
+	GetHeaderGovVoters(num uint64) ([]common.Address, error)
+	GetNodeByState(num uint64, states []State) (NodeStateMap, error)
 	WriteStatesToContract(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 	InstallABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 }

@@ -75,3 +75,74 @@ func TestCountByState(t *testing.T) {
 	assert.Equal(t, uint64(1), m.CountByState(ValPaused))
 	assert.Equal(t, uint64(0), m.CountByState(ValExiting))
 }
+
+func TestCouncil(t *testing.T) {
+	addr4 := common.HexToAddress("0x0004")
+	addr5 := common.HexToAddress("0x0005")
+	m := NodeStateMap{
+		addr1: {State: ValActive},
+		addr2: {State: ValPaused},
+		addr3: {State: ValReady},
+		addr4: {State: ValInactive},
+		addr5: {State: CandTesting},
+	}
+	council := m.Council()
+	assert.Len(t, council, 2)
+	assert.NotNil(t, council[addr1], "ValActive in council")
+	assert.NotNil(t, council[addr2], "ValPaused in council")
+	assert.Nil(t, council[addr3], "ValReady not in council")
+	assert.Nil(t, council[addr4], "ValInactive not in council")
+	assert.Nil(t, council[addr5], "CandTesting not in council")
+}
+
+func TestCommittee(t *testing.T) {
+	addr4 := common.HexToAddress("0x0004")
+	m := NodeStateMap{
+		addr1: {State: ValActive},
+		addr2: {State: ValActive, Suspended: true},
+		addr3: {State: ValPaused},
+		addr4: {State: ValReady},
+	}
+	committee := m.Committee()
+	assert.Len(t, committee, 1)
+	assert.NotNil(t, committee[addr1], "unsuspended ValActive in committee")
+	assert.Nil(t, committee[addr2], "suspended ValActive not in committee")
+	assert.Nil(t, committee[addr3], "ValPaused not in committee")
+	assert.Nil(t, committee[addr4], "ValReady not in committee")
+}
+
+func TestCNPeers(t *testing.T) {
+	addr4 := common.HexToAddress("0x0004")
+	addr5 := common.HexToAddress("0x0005")
+	addr6 := common.HexToAddress("0x0006")
+	addr7 := common.HexToAddress("0x0007")
+	m := NodeStateMap{
+		addr1: {State: ValActive},
+		addr2: {State: ValReady},
+		addr3: {State: ValPaused},
+		addr4: {State: CandReady},
+		addr5: {State: CandTesting},
+		addr6: {State: ValInactive},
+		addr7: {State: Registered},
+	}
+	peers := m.CNPeers()
+	assert.Len(t, peers, 5)
+	assert.NotNil(t, peers[addr1], "ValActive in CNPeers")
+	assert.NotNil(t, peers[addr2], "ValReady in CNPeers")
+	assert.NotNil(t, peers[addr3], "ValPaused in CNPeers")
+	assert.NotNil(t, peers[addr4], "CandReady in CNPeers")
+	assert.NotNil(t, peers[addr5], "CandTesting in CNPeers")
+	assert.Nil(t, peers[addr6], "ValInactive not in CNPeers")
+	assert.Nil(t, peers[addr7], "Registered not in CNPeers")
+}
+
+func TestIsRewardEligible(t *testing.T) {
+	assert.True(t, ValActive.IsRewardEligible())
+	assert.False(t, ValPaused.IsRewardEligible())
+	assert.False(t, ValReady.IsRewardEligible())
+	assert.False(t, ValInactive.IsRewardEligible())
+	assert.False(t, ValExiting.IsRewardEligible())
+	assert.False(t, CandReady.IsRewardEligible())
+	assert.False(t, CandTesting.IsRewardEligible())
+	assert.False(t, Registered.IsRewardEligible())
+}

@@ -70,6 +70,9 @@ type Broadcaster interface {
 	GetENPeers() map[common.Address]Peer
 
 	RegisterValidator(conType common.ConnType, validator p2p.PeerTypeValidator)
+
+	// DisconnectCNPeers disconnects the CN peers with the given addresses.
+	DisconnectCNPeers(addrs []common.Address)
 }
 
 // Peer defines the interface to communicate with peer

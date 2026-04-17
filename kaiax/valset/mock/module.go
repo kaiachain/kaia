@@ -12,6 +12,7 @@ import (
 	types "github.com/kaiachain/kaia/blockchain/types"
 	vm "github.com/kaiachain/kaia/blockchain/vm"
 	common "github.com/kaiachain/kaia/common"
+	valset "github.com/kaiachain/kaia/kaiax/valset"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -52,19 +53,34 @@ func (mr *MockValsetModuleMockRecorder) APIs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockValsetModule)(nil).APIs))
 }
 
-// GetCandidates mocks base method.
-func (m *MockValsetModule) GetCandidates(arg0 uint64) ([]common.Address, error) {
+// GetCNPeers mocks base method.
+func (m *MockValsetModule) GetCNPeers(arg0 uint64) ([]common.Address, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCandidates", arg0)
+	ret := m.ctrl.Call(m, "GetCNPeers", arg0)
 	ret0, _ := ret[0].([]common.Address)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetCandidates indicates an expected call of GetCandidates.
-func (mr *MockValsetModuleMockRecorder) GetCandidates(arg0 interface{}) *gomock.Call {
+// GetCNPeers indicates an expected call of GetCNPeers.
+func (mr *MockValsetModuleMockRecorder) GetCNPeers(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCandidates", reflect.TypeOf((*MockValsetModule)(nil).GetCandidates), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCNPeers", reflect.TypeOf((*MockValsetModule)(nil).GetCNPeers), arg0)
+}
+
+// GetCandTesting mocks base method.
+func (m *MockValsetModule) GetCandTesting(arg0 uint64) ([]common.Address, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCandTesting", arg0)
+	ret0, _ := ret[0].([]common.Address)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCandTesting indicates an expected call of GetCandTesting.
+func (mr *MockValsetModuleMockRecorder) GetCandTesting(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCandTesting", reflect.TypeOf((*MockValsetModule)(nil).GetCandTesting), arg0)
 }
 
 // GetCommittee mocks base method.
@@ -110,6 +126,36 @@ func (m *MockValsetModule) GetDemotedValidators(arg0 uint64) ([]common.Address, 
 func (mr *MockValsetModuleMockRecorder) GetDemotedValidators(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDemotedValidators", reflect.TypeOf((*MockValsetModule)(nil).GetDemotedValidators), arg0)
+}
+
+// GetHeaderGovVoters mocks base method.
+func (m *MockValsetModule) GetHeaderGovVoters(arg0 uint64) ([]common.Address, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHeaderGovVoters", arg0)
+	ret0, _ := ret[0].([]common.Address)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetHeaderGovVoters indicates an expected call of GetHeaderGovVoters.
+func (mr *MockValsetModuleMockRecorder) GetHeaderGovVoters(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeaderGovVoters", reflect.TypeOf((*MockValsetModule)(nil).GetHeaderGovVoters), arg0)
+}
+
+// GetNodeByState mocks base method.
+func (m *MockValsetModule) GetNodeByState(arg0 uint64, arg1 []valset.State) (valset.NodeStateMap, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNodeByState", arg0, arg1)
+	ret0, _ := ret[0].(valset.NodeStateMap)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNodeByState indicates an expected call of GetNodeByState.
+func (mr *MockValsetModuleMockRecorder) GetNodeByState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodeByState", reflect.TypeOf((*MockValsetModule)(nil).GetNodeByState), arg0, arg1)
 }
 
 // GetProposer mocks base method.
