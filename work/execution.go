@@ -20,7 +20,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -57,9 +56,6 @@ type DefaultExecutor struct {
 	receipts []*types.Receipt
 	logs     []*types.Log
 	usedGas  uint64
-
-	// lastProcessStats holds timing from the last ProcessBlock call.
-	lastProcessStats blockchain.ProcessStats
 
 	// Transaction bundling modules for gasless transactions
 	txBundlingModules []builder.TxBundlingModule
@@ -180,17 +176,12 @@ func (e *DefaultExecutor) ProcessBlock(txs []*types.Transaction) (*consensus.Exe
 	e.receipts = receipts
 	e.logs = logs
 	e.usedGas = usedGas
-	e.lastProcessStats = procStats
 
-	return e.buildResult(internalTxTraces), nil
-}
-
-// LastProcessStats returns the ProcessStats from the last ProcessBlock call.
-// Used to populate SpeculativeResult.ProcessStats for cache-hit logging.
-func (e *DefaultExecutor) LastProcessStats() blockchain.ProcessStats {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	return e.lastProcessStats
+	result := e.buildResult(internalTxTraces)
+	result.BeforeApplyTxs = procStats.BeforeApplyTxs
+	result.AfterApplyTxs = procStats.AfterApplyTxs
+	result.AfterFinalize = procStats.AfterFinalize
+	return result, nil
 }
 
 // FinalizeState runs post-transaction state modifications and assembles final block.
