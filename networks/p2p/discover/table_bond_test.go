@@ -231,4 +231,3 @@ func Test_Table_Bond_recentlyBonded(t *testing.T) {
 	// ping must not be called because the node is assumed to be bonded.
 	assert.Equal(t, int32(0), udp.pingCnt.Load(), "ping should be skipped for a recently bonded node")
 }
-

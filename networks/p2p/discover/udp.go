@@ -295,6 +295,7 @@ type ReadPacket struct {
 //   - waitping() passively waits for a PING packet
 //   - findnode() actively sends a FINDNODE packet, and wait for NEIGHBORS.
 //   - You do not actively send a PONG or NEIGHBORS packets. They are send only in response to incoming requests.
+//
 // Compile-time assertion: *udp implements transport.
 var _ transport = (*udp)(nil)
 
