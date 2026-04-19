@@ -232,7 +232,7 @@ func TestArrayify(t *testing.T) {
 	for i := range txs {
 		assert.Equal(t, true, hashes[txs[i].Hash()])
 	}
-	assert.False(t, heap.Empty()) // don't modify the original heap
+	assert.True(t, heap.Empty()) // Arrayify drains the heap
 }
 
 func TestIsConflict(t *testing.T) {

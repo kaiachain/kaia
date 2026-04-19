@@ -613,15 +613,15 @@ func (env *Task) CommitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 }
 
 func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc BlockChain, nodeAddr common.Address, txBundlingModules []builder.TxBundlingModule) []*types.Log {
-	var (
-		arrayTxs                 = builder.Arrayify(txs)
-		incorporatedTxs, bundles = builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
-		totalTxs                 = len(incorporatedTxs)
-		totalBundles             = len(bundles)
-		coalescedLogs            []*types.Log
-	)
+	// Capture first tx hash and total count before heap draining.
+	totalTxs := txs.Len()
+	var firstTxHash common.Hash
+	if txs.Peek() != nil {
+		firstTxHash = txs.Peek().Hash()
+	}
 
-	// Limit the execution time of all transactions in a block
+	// Limit the execution time of all transactions in a block.
+	// Timer covers Arrayify + ExtractBundles + CommitTransactionLoop.
 	var abort int32 = 0                   // To break the below `CommitTransactionLoop` for loop when timed out
 	var isExecutingBundleTxs atomic.Int32 // To wait for abort while the bundle is running
 	chDone := make(chan bool)             // To stop the goroutine below when processing txs is completed
@@ -655,12 +655,12 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 				if env.tcount > 0 && isExecutingBundleTxs.Load() == 0 {
 					// The total time limit reached, thus we stop the currently running EVM.
 					evm.Cancel(vm.CancelByTotalTimeLimit)
-				} else if env.tcount == 0 && len(arrayTxs) > 0 {
+				} else if env.tcount == 0 && totalTxs > 0 {
 					// Case 'Single long tx':
 					//   T0 (executing tx) ------- T_limit --> abort=1 (but let T0 finish)
 					//   Result: tcount=0 → Log "A single transaction exceeds limit" and "unexecuted transactions due to time limit"
 					//
-					logger.Warn("A single transaction exceeds total time limit", "hash", arrayTxs[0].Hash().String())
+					logger.Warn("A single transaction exceeds total time limit", "hash", firstTxHash.String())
 					tooLongTxCounter.Inc(1)
 				}
 				evm = nil
@@ -671,6 +671,12 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 	vmConfig := &vm.Config{
 		RunningEVM: chEVM,
 	}
+
+	arrayTxs := builder.Arrayify(txs)
+	incorporatedTxs, bundles := builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
+	totalBundles := len(bundles)
+
+	var coalescedLogs []*types.Log
 
 	var numTxsChecked int64 = 0
 	var numTxsNonceTooLow int64 = 0
