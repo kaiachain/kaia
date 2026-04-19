@@ -115,13 +115,13 @@ func incorporate(txs []*TxOrGen, bundle *Bundle) ([]*TxOrGen, error) {
 	return ret, nil
 }
 
-// Arrayify flattens transaction heaps into a single array
-func Arrayify(heap *types.TransactionsByPriceAndNonce) []*types.Transaction {
-	ret := make([]*types.Transaction, 0)
-	copied := heap.Copy()
-	for !copied.Empty() {
-		ret = append(ret, copied.Peek())
-		copied.Shift()
+// Arrayify drains the heap in price-sorted order into a flat slice.
+// The heap is consumed and will be empty after this call.
+func Arrayify(txs *types.TransactionsByPriceAndNonce) []*types.Transaction {
+	ret := make([]*types.Transaction, 0, txs.Len())
+	for !txs.Empty() {
+		ret = append(ret, txs.Peek())
+		txs.Shift()
 	}
 	return ret
 }
