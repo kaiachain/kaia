@@ -1905,6 +1905,9 @@ func (m *sidecarReqManager) get(txHash common.Hash) *sidecarReq {
 func (m *sidecarReqManager) update(txHash common.Hash, peer string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.list[txHash] == nil {
+		return // already deleted by a concurrent response
+	}
 	// no longer keep the request if the try count is too high
 	if m.list[txHash].try+1 >= m.maxTry {
 		delete(m.list, txHash)

@@ -1574,6 +1574,28 @@ func TestSidecarReqManager_Update(t *testing.T) {
 	assert.Nil(t, req, "Request should be deleted when try >= maxTry")
 }
 
+// TestSidecarReqManager_UpdateNilEntry tests that update does not panic when the entry
+// has been concurrently deleted before update() acquires the lock.
+func TestSidecarReqManager_UpdateNilEntry(t *testing.T) {
+	m := newTestSidecarReqManager(10*time.Second, 5)
+	txHash := tx1.Hash()
+
+	// update on a never-added (nil) entry must not panic
+	assert.NotPanics(t, func() {
+		m.update(txHash, "peer-1")
+	}, "update on missing entry should be a no-op, not a panic")
+
+	// add, delete, then update — simulates the race: response arrives before update()
+	m.add(txHash, newTestBlobSidecarsRequestData(txHash, 100, 0))
+	m.delete(txHash)
+	assert.NotPanics(t, func() {
+		m.update(txHash, "peer-1")
+	}, "update after concurrent delete should be a no-op, not a panic")
+
+	// entry must remain absent
+	assert.Nil(t, m.get(txHash), "entry should remain deleted after no-op update")
+}
+
 // TestSidecarReqManager_Delete tests the delete method
 func TestSidecarReqManager_Delete(t *testing.T) {
 	cooldown := 10 * time.Second
