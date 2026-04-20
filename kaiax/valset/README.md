@@ -553,7 +553,7 @@ This module does not expose APIs.
 
 ## Permissionless Validator Lifecycle
 
-After the permissionless hardfork, the validator management transitions from header-governance-based (permissioned) to contract-based (permissionless) using AddressBookV2 (ABv2). See [KIP-286](https://kips.kaia.io/KIPs/kip-286) and [KIP-290](https://kips.kaia.io/KIPs/kip-290) for the full specification.
+After the permissionless hardfork, the validator management transitions from governance-vote-based council management (permissioned) to automated state-machine-based management via AddressBookV2 (ABv2). See [KIP-286](https://kips.kaia.io/KIPs/kip-286) and [KIP-290](https://kips.kaia.io/KIPs/kip-290) for the full specification.
 
 ### Validator States
 
@@ -575,11 +575,11 @@ Each validator has one of the following states, stored in ABv2:
 In permissionless mode, the council is determined by validator states rather than header votes:
 
 ```
-Council(N) = {v ∈ ABv2 | v.State ∈ {ValActive, ValReady, ValPaused}}
+Council(N) = {v ∈ ABv2 | v.State ∈ {ValActive, ValPaused}}
 ```
 
-- **Qualified (committee-eligible)**: ValActive only
-- **Demoted**: ValReady + ValPaused
+- **Qualified (committee-eligible)**: ValActive only (excluding suspended)
+- **Demoted**: ValPaused only (maintenance/recovery; excluded from block proposals)
 
 This replaces the permissioned model where council membership was governed by `governance.addvalidator` / `governance.removevalidator` votes.
 
@@ -591,9 +591,14 @@ State transitions are computed at `PostInsertBlock(N-1)` and written to ABv2 at 
 
 Executed in order:
 1. **T1**: ValExiting → ValInactive (clear transitional states)
-2. **T2**: Evaluate VRank for CandTesting candidates (TODO: currently hardcoded pass)
-3. **T3**: Top-N recalculation — promote/demote based on stake ranking (N = `ActiveValidatorCount`)
+2. **T2**: Evaluate VRank for CandTesting candidates; fail → Registered. Pass condition: CFS (Cumulative Failure Score) < `cfsThreshold`. If CFS data is unavailable, the candidate passes defensively to avoid blocking promotion.
+3. **T3**: Top-N recalculation based on stake ranking (N = `MaxValActivePausedCount`):
+   - **T3a**: In top-N with MinStake → ValActive (ValReady/CandTesting promoted; ValPaused stays ValPaused)
+   - **T3b**: Below MinStake → ValInactive (unconditional, before competition)
+   - **T3b**: Not in top-N → ValInactive
 4. **T4**: CandReady with MinStake → CandTesting; CandReady below MinStake → Registered
+
+After epoch transition, `epochSF = |ValActive|` is computed (before violation runs) and stored in the ABv2 contract via `processSystemTransition`. This snapshot is used as the slot factor for slot limit calculations until the next epoch.
 
 #### 2. Timeout Transition (every block)
 
@@ -602,9 +607,17 @@ Executed in order:
 
 #### 3. Violation Transition (every block)
 
-- Staking below MinStake: ValActive → ValExiting
-- Minor VRank violation: ValActive → ValPaused (TODO — KIP-227)
-- Severe VRank violation: ValActive → ValExiting (TODO — KIP-227)
+Slot limits (`maxSlotAvailable`, `minActiveCount`) are read from the ABv2 contract via `getSlotLimitsFor(epochSF)` — they depend on the current epoch's slot factor. These limits cap how many validators can simultaneously occupy ValExiting/ValPaused slots, and ensure enough ValActive nodes remain for consensus.
+
+At epoch blocks, MinStake violations are handled by T3b above (unconditional demotion to ValInactive). At non-epoch blocks:
+
+- Staking below MinStake (Rule 1):
+  - ValActive → ValExiting (slot-limited, requires `ValActive > minActiveCount`)
+  - ValPaused → ValExiting (slot-limited only, no `minActiveCount` guard)
+  - ValReady → ValInactive (unconditional, no slot check)
+- VRank (PFS) violation (Rule 2) — triggered when a proposal failure occurs at this block:
+  - Minor (`0 < PFS < pfsThreshold`): ValActive → ValPaused (slot-limited, requires `ValActive > minActiveCount`)
+  - Severe (`PFS >= pfsThreshold`): ValActive → ValExiting (slot-limited, requires `ValActive > minActiveCount`)
 
 ### Block Processing (Permissionless)
 
@@ -619,15 +632,39 @@ Finalize(HF-1):
   → InstallABv2() — one-time ABv2 proxy installation at hardfork boundary
 ```
 
-Node states are computed from the parent block's ABv2 contract state, with epoch/timeout/violation transitions applied. The result is cached in `nodeStatesCache` to avoid recomputation.
+Node states are computed from ABv2(N-1) with epoch/timeout/violation transitions applied and cached in `nodeStatesCache` keyed by block number. `PostInsertBlock(N-1)` pre-computes states for block N so that `Initialize(N)` can use the cache directly without recomputation. On reorg, `RewindTo` purges the entire cache.
+
+### Entity Groups (Permissionless)
+
+Named subsets of the validator set used by different subsystems:
+
+| Group | Composition | Used by |
+|-------|-------------|---------|
+| `Council` | ValActive + ValPaused | Block validation, header verification |
+| `Committee` | ValActive (excluding Suspended) | Consensus committee selection |
+| `HeaderGovVoters` | ValActive (excluding Suspended) | Governance vote eligibility in block headers |
+| `CNPeers` | ValActive + ValPaused + ValReady + CandReady + CandTesting | P2P peer validation |
+| `Suspended` | External marker; excludes node from Committee/HeaderGovVoters | Safety isolation |
+
+**Suspended set**: Validators can be marked suspended externally (e.g., by the valset module). Suspended nodes are excluded from `Committee` and `HeaderGovVoters` but remain in `Council`. If suspension causes `Committee` to be empty while `ValActive` is non-empty, the suspended set is ignored as a safety fallback to prevent consensus halt.
+
+**CNPeers includes CandReady and CandTesting** so that candidate nodes participate in CN-CN P2P connections during their evaluation period.
 
 ### Additional Getters (Permissionless)
 
-- `GetCandidates(num)`: Returns addresses of CandTesting validators.
+- `GetCandTesting(num)`: Returns addresses of CandTesting validators.
   ```
-  GetCandidates(num) -> []common.Address
+  GetCandTesting(num) -> []common.Address
   ```
 - `GetNodeByState(num, states)`: Returns validators filtered by the given states.
   ```
   GetNodeByState(num, states) -> NodeStateMap
+  ```
+- `GetCNPeers(num)`: Returns addresses eligible for CN-CN P2P connections (CNPeers group).
+  ```
+  GetCNPeers(num) -> []common.Address
+  ```
+- `GetHeaderGovVoters(num)`: Returns addresses eligible to cast governance votes in block headers.
+  ```
+  GetHeaderGovVoters(num) -> []common.Address
   ```
