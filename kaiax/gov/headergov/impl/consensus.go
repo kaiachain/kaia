@@ -81,6 +81,11 @@ func (h *headerGovModule) VerifyVote(header *types.Header) error {
 		return err
 	}
 
+	if gov.DeprecatedAt(vote.Name(), h.ChainConfig.Rules(header.Number)) {
+		logger.Error("Vote is deprecated", "num", blockNum, "name", vote.Name())
+		return ErrDeprecatedVote
+	}
+
 	voters, err := h.ValSet.GetHeaderGovVoters(blockNum)
 	if err != nil {
 		return err

@@ -119,7 +119,7 @@ See [vote.go](./vote.go).
 
 `GovData` is used for storing header's `Governance` in memory.
 All `GovData` values are canonicalized and format-checked.
-Unlike `VoteData`, vote-forbidden parameters are allowed for parsing the genesis block.
+Unlike `VoteData`, deprecated parameters (per `gov.DeprecatedAt`) are allowed for parsing the genesis block.
 
 See [gov.go](./gov.go).
 
