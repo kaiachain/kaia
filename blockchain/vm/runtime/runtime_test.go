@@ -238,8 +238,8 @@ func (d *dummyChain) CurrentBlock() *types.Block {
 	return nil
 }
 
-// Engine retrieves the chain's consensus engine.
-func (d *dummyChain) Engine() consensus.Engine {
+// Sealer retrieves the chain's consensus sealer.
+func (d *dummyChain) Sealer() consensus.Sealer {
 	return nil
 }
 

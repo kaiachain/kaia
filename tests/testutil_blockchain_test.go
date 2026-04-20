@@ -30,7 +30,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -39,7 +39,6 @@ import (
 	"github.com/kaiachain/kaia/node"
 	"github.com/kaiachain/kaia/node/cn"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
 	"github.com/tyler-smith/go-bip32"
 	"golang.org/x/crypto/pbkdf2"
@@ -48,13 +47,15 @@ import (
 // Full blockchain test context.
 // TODO: replace newBlockchain()
 type blockchainTestContext struct {
-	numNodes     int
-	accountKeys  []*ecdsa.PrivateKey
-	accountAddrs []common.Address
-	accounts     []*bind.TransactOpts // accounts[0:numNodes] are node keys
-	config       *params.ChainConfig
-	genesis      *blockchain.Genesis
-	blockPeriod  *uint64
+	numNodes       int
+	accountKeys    []*ecdsa.PrivateKey
+	accountAddrs   []common.Address
+	accounts       []*bind.TransactOpts // accounts[0:numNodes] are node keys
+	config         *params.ChainConfig
+	genesis        *blockchain.Genesis
+	blockPeriod    *uint64
+	oldBlockPeriod int64
+	hasBlockPeriod bool
 
 	workspace string
 	nodes     []*blockchainTestNode
@@ -93,7 +94,7 @@ var blockchainTestChainConfig = &params.ChainConfig{
 	},
 	Istanbul: &params.IstanbulConfig{
 		Epoch:          120,
-		ProposerPolicy: uint64(istanbul.RoundRobin),
+		ProposerPolicy: uint64(0),
 		SubGroupSize:   100,
 	},
 }
@@ -122,12 +123,20 @@ func newBlockchainTestContext(overrides *blockchainTestOverrides) (*blockchainTe
 		numNodes:    overrides.numNodes,
 		blockPeriod: overrides.blockPeriod,
 	}
+	if ctx.blockPeriod != nil {
+		ctx.hasBlockPeriod = true
+		ctx.oldBlockPeriod = params.BlockGenerationInterval
+		params.BlockGenerationInterval = int64(*ctx.blockPeriod)
+	}
 	ctx.setAccounts(overrides.numAccounts)
 	ctx.setConfig(overrides.config)
 	ctx.setGenesis(overrides.alloc)
 	ctx.setWorkspace()
-	err := ctx.setNodes(ctx.numNodes)
-	return ctx, err
+	if err := ctx.setNodes(ctx.numNodes); err != nil {
+		ctx.restoreBlockPeriod()
+		return nil, err
+	}
+	return ctx, nil
 }
 
 func (ctx *blockchainTestContext) setAccounts(count int) {
@@ -148,13 +157,16 @@ func (ctx *blockchainTestContext) setConfig(config *params.ChainConfig) {
 }
 
 func (ctx *blockchainTestContext) setGenesis(alloc blockchain.GenesisAlloc) {
+	baseGenesis := blockchain.DefaultTestGenesisBlock()
+
 	// Genesis ExtraData from nodeAddrs
-	extra, _ := rlp.EncodeToBytes(&types.IstanbulExtra{
-		Validators:    ctx.accountAddrs[:ctx.numNodes],
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	})
-	vanity := make([]byte, types.IstanbulExtraVanity)
+	genesisHeader := &types.Header{
+		Number: big.NewInt(0),
+		Extra:  append([]byte(nil), baseGenesis.ExtraData...),
+	}
+	if err := engine.NewSealer(ctx.config, nil).WriteValidators(genesisHeader, ctx.accountAddrs[:ctx.numNodes]); err != nil {
+		panic(err)
+	}
 
 	// Genesis Alloc from overrides.alloc + rich accountAddrs
 	richBalance := new(big.Int).Mul(big.NewInt(params.KAIA), big.NewInt(10_000_000))
@@ -167,7 +179,7 @@ func (ctx *blockchainTestContext) setGenesis(alloc blockchain.GenesisAlloc) {
 	ctx.genesis = &blockchain.Genesis{
 		Config:     ctx.config,
 		Timestamp:  uint64(time.Now().Unix()),
-		ExtraData:  append(vanity, extra...),
+		ExtraData:  genesisHeader.Extra,
 		BlockScore: common.Big1,
 		Alloc:      alloc,
 	}
@@ -234,9 +246,6 @@ func (ctx *blockchainTestContext) setNode(nodeIndex int) (err error) {
 	cnConf.NetworkId = ctx.config.ChainID.Uint64()
 	cnConf.Genesis = ctx.genesis
 	cnConf.Rewardbase = ctx.accountAddrs[nodeIndex]
-	if ctx.blockPeriod != nil {
-		cnConf.Istanbul.BlockPeriod = *ctx.blockPeriod
-	}
 	cnConf.SingleDB = false       // identical to regular CN
 	cnConf.NumStateTrieShards = 4 // identical to regular CN
 	cnConf.NoPruning = true       // archive mode
@@ -295,10 +304,19 @@ func (ctx *blockchainTestContext) Restart() error {
 }
 
 func (ctx *blockchainTestContext) Cleanup() error {
+	defer ctx.restoreBlockPeriod()
 	if err := ctx.Stop(); err != nil {
 		return err
 	}
 	return os.RemoveAll(ctx.workspace)
+}
+
+func (ctx *blockchainTestContext) restoreBlockPeriod() {
+	if !ctx.hasBlockPeriod {
+		return
+	}
+	params.BlockGenerationInterval = ctx.oldBlockPeriod
+	ctx.hasBlockPeriod = false
 }
 
 func (ctx *blockchainTestContext) WaitBlock(t *testing.T, num uint64) {

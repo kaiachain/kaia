@@ -10,7 +10,7 @@ import (
 type HeaderGovModule interface {
 	kaiax.BaseModule
 	kaiax.JsonRpcModule
-	kaiax.ConsensusModule
+	kaiax.HeaderModule
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
 

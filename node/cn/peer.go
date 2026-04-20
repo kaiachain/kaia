@@ -1272,10 +1272,12 @@ func (p *multiChannelPeer) Handle(pm *ProtocolManager) error {
 	var consensusChannel chan p2p.Msg
 	isCN := false
 
-	if _, ok := pm.engine.(consensus.Handler); ok && pm.nodetype == common.CONSENSUSNODE {
+	if pm.handler != nil && pm.nodetype == common.CONSENSUSNODE {
 		consensusChannel = make(chan p2p.Msg, channelSizePerPeer)
 		defer close(consensusChannel)
-		pm.engine.(consensus.Handler).RegisterConsensusMsgCode(p)
+		if err := p.RegisterConsensusMsgCode(consensus.ConsensusMsgCode); err != nil {
+			logger.Error("RegisterConsensusMsgCode failed", "err", err)
+		}
 		isCN = true
 	}
 

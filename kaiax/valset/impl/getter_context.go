@@ -53,7 +53,7 @@ func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
 
 	prevProposer := qualified.At(0)
 	if num-1 > 0 {
-		prevProposer, err = v.Chain.Engine().Author(prevHeader)
+		prevProposer, err = v.Chain.Sealer().Author(prevHeader)
 		if err != nil {
 			return nil, err
 		}

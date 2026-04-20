@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,7 +34,7 @@ func TestVrank(t *testing.T) {
 		quorum       = 4
 		committee, _ = genValidators(N)
 		testRound    = uint64(2)
-		view         = istanbul.View{Sequence: big.NewInt(1), Round: big.NewInt(int64(testRound))}
+		view         = bft.View{Sequence: big.NewInt(1), Round: big.NewInt(int64(testRound))}
 		vrank        = NewVrank()
 	)
 

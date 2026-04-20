@@ -22,9 +22,9 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/math"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/kaiax/reward"
 	"github.com/kaiachain/kaia/kaiax/staking"
+	"github.com/kaiachain/kaia/params"
 )
 
 // Below outlines the relationship between the getters and their helper functions.
@@ -115,7 +115,7 @@ func getBlobFee(header *types.Header) *big.Int {
 	if header.BlobGasUsed == nil || *header.BlobGasUsed == 0 {
 		return big.NewInt(0)
 	}
-	blobBaseFee := eip4844.CalcBlobFee(header.BaseFee)
+	blobBaseFee := params.CalcBlobFee(header.BaseFee)
 	if blobBaseFee == nil {
 		return big.NewInt(0)
 	}
@@ -160,8 +160,8 @@ func (r *RewardModule) specWithNonDeferredFee(spec *reward.RewardSpec, config *r
 		newSpec.TotalFee.Add(newSpec.TotalFee, new(big.Int).Add(execFee, blobFee))
 		newSpec.Proposer.Add(newSpec.Proposer, distributedFee)
 
-		// Before Magma, non-deferred fees are assigned to evm.Coinbase which originates from Engine().Author(header).
-		coinbase, err := r.Chain.Engine().Author(header)
+		// Before Magma, non-deferred fees are assigned to evm.Coinbase which originates from the block author.
+		coinbase, err := r.Chain.Sealer().Author(header)
 		if err != nil {
 			return nil, err
 		}

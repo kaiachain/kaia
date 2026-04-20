@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/cmd/utils"
+	"github.com/kaiachain/kaia/consensus/engine"
 	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
@@ -250,13 +251,13 @@ func ValidateGenesisConfig(g *blockchain.Genesis) error {
 		// TODO-Kaia: Add validation logic for other GovernanceModes
 		// Check if governingNode is properly set
 		if strings.ToLower(g.Config.Governance.GovernanceMode) == "single" {
-
-			istanbulExtra, err := types.ExtractIstanbulExtra(&types.Header{Extra: g.ExtraData})
+			h := &types.Header{Number: big.NewInt(0), Extra: g.ExtraData}
+			validators, err := engine.NewSealer(g.Config, nil).Validators(h)
 			if err != nil {
 				return err
 			}
 
-			if !slices.Contains(istanbulExtra.Validators, g.Config.Governance.GoverningNode) {
+			if !slices.Contains(validators, g.Config.Governance.GoverningNode) {
 				return errors.New("governingNode is not in the validator list")
 			}
 		}

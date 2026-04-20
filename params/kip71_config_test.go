@@ -1,4 +1,4 @@
-// Copyright 2024 The Kaia Authors
+// Copyright 2026 The Kaia Authors
 // This file is part of the Kaia library.
 //
 // The Kaia library is free software: you can redistribute it and/or modify
@@ -13,24 +13,22 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
-package misc
+package params
 
 import (
 	"math/big"
 	"math/rand"
 	"testing"
 
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/params"
 )
 
-func getTestConfig(forkedBlockNum *big.Int) *params.ChainConfig {
-	testConfig := params.MainnetChainConfig
+func getTestConfig(forkedBlockNum *big.Int) *ChainConfig {
+	testConfig := MainnetChainConfig
 	testConfig.UnitPrice = uint64(25000000000)
 	testConfig.MagmaCompatibleBlock = forkedBlockNum
-	testConfig.Governance = &params.GovernanceConfig{
-		KIP71: params.GetDefaultKIP71Config(),
+	testConfig.Governance = &GovernanceConfig{
+		KIP71: GetDefaultKIP71Config(),
 	}
 	return testConfig
 }
@@ -90,7 +88,7 @@ func TestEvenBaseFee(t *testing.T) {
 		{0, 0, 30000000, 20, 60000000, 43212345, 75489234128},
 	}
 
-	testConfig := getTestConfig(big.NewInt(3))
+	testConfig := getTestConfig(common.Big3)
 	for _, test := range tests {
 		testConfig.Governance.KIP71.LowerBoundBaseFee = test.lowerBoundBaseFee
 		testConfig.Governance.KIP71.UpperBoundBaseFee = test.upperBoundBaseFee
@@ -98,12 +96,7 @@ func TestEvenBaseFee(t *testing.T) {
 		testConfig.Governance.KIP71.MaxBlockGasUsedForBaseFee = test.maxBlockGasUsedForBaseFee
 		testConfig.Governance.KIP71.BaseFeeDenominator = test.baseFeeDenominator
 
-		parent := &types.Header{
-			Number:  common.Big3,
-			GasUsed: test.parentGasUsed,
-			BaseFee: new(big.Int).SetUint64(test.parentBaseFee),
-		}
-		even := NextMagmaBlockBaseFee(parent, testConfig.Governance.KIP71)
+		even := testConfig.Governance.KIP71.NextMagmaBlockBaseFee(common.Big3, new(big.Int).SetUint64(test.parentBaseFee), test.parentGasUsed)
 		// even check
 		if even.Bit(0) != 0 {
 			t.Errorf("NextBlockBaseFee:%d is not a even number", even)
@@ -130,15 +123,9 @@ func TestNextBlockBaseFee(t *testing.T) {
 		{300000000000, 40000000, 305000000000}, // usage above target
 	}
 	for i, test := range tests {
-		parent := &types.Header{
-			Number:  common.Big3,
-			GasUsed: test.parentGasUsed,
-			BaseFee: big.NewInt(test.parentBaseFee),
-		}
-		if have, want := NextMagmaBlockBaseFee(
-			parent,
-			getTestConfig(big.NewInt(3)).Governance.KIP71),
-			big.NewInt(test.nextBaseFee); have.Cmp(want) != 0 {
+		have := getTestConfig(common.Big3).Governance.KIP71.NextMagmaBlockBaseFee(common.Big3, big.NewInt(test.parentBaseFee), test.parentGasUsed)
+		want := big.NewInt(test.nextBaseFee)
+		if have.Cmp(want) != 0 {
 			t.Errorf("test %d: have %d  want %d, ", i, have, want)
 		}
 	}
@@ -165,12 +152,9 @@ func TestNextBlockBaseFeeWhenGovernanceUpdated(t *testing.T) {
 		config := getTestConfig(common.Big2)
 		config.Governance.KIP71.UpperBoundBaseFee = test.upperBoundBaseFee
 		config.Governance.KIP71.LowerBoundBaseFee = test.lowerBoundBaseFee
-		parent := &types.Header{
-			Number:  common.Big3,
-			GasUsed: test.parentGasUsed,
-			BaseFee: big.NewInt(test.parentBaseFee),
-		}
-		if have, want := NextMagmaBlockBaseFee(parent, config.Governance.KIP71), big.NewInt(test.nextBaseFee); have.Cmp(want) != 0 {
+		have := config.Governance.KIP71.NextMagmaBlockBaseFee(common.Big3, big.NewInt(test.parentBaseFee), test.parentGasUsed)
+		want := big.NewInt(test.nextBaseFee)
+		if have.Cmp(want) != 0 {
 			t.Errorf("test %d: have %d  want %d, ", i, have, want)
 		}
 	}
@@ -227,17 +211,12 @@ func TestBlocksToReachExpectedBaseFee(t *testing.T) {
 }
 
 func blocksToReachExpectedBaseFee(t *testing.T, testCase BaseFeeTestCase) {
-	testConfig := getTestConfig(big.NewInt(3))
+	testConfig := getTestConfig(common.Big3)
 	blockNum := 0
 	parentBaseFee := testCase.genesisParentBaseFee
 	for {
 		blockNum++
-		parent := &types.Header{
-			Number:  testCase.hardforkedNum,
-			GasUsed: testCase.GasUsed,
-			BaseFee: parentBaseFee,
-		}
-		parentBaseFee = NextMagmaBlockBaseFee(parent, testConfig.Governance.KIP71)
+		parentBaseFee = testConfig.Governance.KIP71.NextMagmaBlockBaseFee(testCase.hardforkedNum, parentBaseFee, testCase.GasUsed)
 
 		if testCase.compMethod(parentBaseFee, testCase.expectedBaseFee) {
 			break
@@ -250,11 +229,7 @@ func blocksToReachExpectedBaseFee(t *testing.T, testCase BaseFeeTestCase) {
 
 func TestInactieDynamicPolicyBeforeForkedBlock(t *testing.T) {
 	parentBaseFee := big.NewInt(25000000000)
-	parent := &types.Header{
-		Number:  common.Big3,
-		GasUsed: 84000000,
-	}
-	nextBaseFee := NextMagmaBlockBaseFee(parent, getTestConfig(big.NewInt(5)).Governance.KIP71)
+	nextBaseFee := getTestConfig(big.NewInt(5)).Governance.KIP71.NextMagmaBlockBaseFee(common.Big3, nil, 84000000)
 	if parentBaseFee.Cmp(nextBaseFee) < 0 {
 		t.Errorf("before fork, dynamic base fee policy should be inactive, current base fee: %d  next base fee: %d", parentBaseFee, nextBaseFee)
 	}
@@ -262,12 +237,7 @@ func TestInactieDynamicPolicyBeforeForkedBlock(t *testing.T) {
 
 func TestActieDynamicPolicyAfterForkedBlock(t *testing.T) {
 	parentBaseFee := big.NewInt(25000000000)
-	parent := &types.Header{
-		Number:  common.Big3,
-		GasUsed: 84000000,
-		BaseFee: parentBaseFee,
-	}
-	nextBaseFee := NextMagmaBlockBaseFee(parent, getTestConfig(big.NewInt(2)).Governance.KIP71)
+	nextBaseFee := getTestConfig(common.Big2).Governance.KIP71.NextMagmaBlockBaseFee(common.Big3, parentBaseFee, 84000000)
 	if parentBaseFee.Cmp(nextBaseFee) > 0 {
 		t.Errorf("after fork, dynamic base fee policy should be active, current base fee: %d  next base fee: %d", parentBaseFee, nextBaseFee)
 	}
@@ -275,41 +245,27 @@ func TestActieDynamicPolicyAfterForkedBlock(t *testing.T) {
 
 func BenchmarkNextBlockBaseFeeRandom(b *testing.B) {
 	parentBaseFee := big.NewInt(500000000000)
-	parent := &types.Header{
-		Number:  common.Big3,
-		GasUsed: 10000000,
-		BaseFee: parentBaseFee,
-	}
+	parentGasUsed := 10000000
 	for i := 0; i < b.N; i++ {
 		if rand.Int()%2 == 0 {
-			parent.GasUsed = 10000000
+			parentGasUsed = 10000000
 		} else {
-			parent.GasUsed = 40000000
+			parentGasUsed = 40000000
 		}
-		_ = NextMagmaBlockBaseFee(parent, getTestConfig(big.NewInt(2)).Governance.KIP71)
+		_ = getTestConfig(common.Big2).Governance.KIP71.NextMagmaBlockBaseFee(common.Big3, parentBaseFee, uint64(parentGasUsed))
 	}
 }
 
 func BenchmarkNextBlockBaseFeeUpperBound(b *testing.B) {
 	parentBaseFee := big.NewInt(750000000000)
-	parent := &types.Header{
-		Number:  common.Big3,
-		GasUsed: 40000000,
-		BaseFee: parentBaseFee,
-	}
 	for i := 0; i < b.N; i++ {
-		_ = NextMagmaBlockBaseFee(parent, getTestConfig(big.NewInt(2)).Governance.KIP71)
+		_ = getTestConfig(common.Big2).Governance.KIP71.NextMagmaBlockBaseFee(common.Big3, parentBaseFee, 40000000)
 	}
 }
 
 func BenchmarkNextBlockBaseFeeLowerBound(b *testing.B) {
 	parentBaseFee := big.NewInt(25000000000)
-	parent := &types.Header{
-		Number:  common.Big3,
-		GasUsed: 10000000,
-		BaseFee: parentBaseFee,
-	}
 	for i := 0; i < b.N; i++ {
-		_ = NextMagmaBlockBaseFee(parent, getTestConfig(big.NewInt(2)).Governance.KIP71)
+		_ = getTestConfig(common.Big2).Governance.KIP71.NextMagmaBlockBaseFee(common.Big3, parentBaseFee, 10000000)
 	}
 }

@@ -49,11 +49,11 @@ func (v *ValsetModule) getCouncilGenesis() (*valset.AddressSet, error) {
 	if header == nil {
 		return nil, errNoHeader
 	}
-	istanbulExtra, err := types.ExtractIstanbulExtra(header)
+	validators, err := v.Chain.Sealer().Validators(header)
 	if err != nil {
 		return nil, err
 	}
-	return valset.NewAddressSet(istanbulExtra.Validators), nil
+	return valset.NewAddressSet(validators), nil
 }
 
 func (v *ValsetModule) getCouncilDB(num uint64) (*valset.AddressSet, bool, error) {

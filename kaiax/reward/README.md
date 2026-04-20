@@ -32,7 +32,7 @@ The rules have changed over hardforks.
     - The `TransitionDb()` function shall pay the transaction fees to the Coinbase or Rewardbase as soon as the transaction is executed. Therefore the balance of the block proposer changes within the same block.
   - **Deferred fees (DF)**: The accounting method whereby transaction fees are recognized and processed once at the end of the block.
     - DF method is used when `reward.deferredtxfee` is set to `true`. Kaia Mainnet and Kairos testnet use this method.
-    - The `Finalize()` function shall pay the transaction fees to various recipients. The deferred fees are calculated along with the minting amount.
+    - The `FinalizeState()` function shall pay the transaction fees to various recipients. The deferred fees are calculated along with the minting amount.
 
 ### Recipients
 
@@ -113,7 +113,7 @@ arameters are inconsistently specified.
 ### RewardSpec
 
 `RewardSpec` is a reward distribution specification for a block. Describes each reward component and their recipients.
-- It can represent the deferred reward to be distributed at the end of the block (e.g. FinalizeBlock).
+- It can represent the deferred reward to be distributed at the end of the block (e.g. `FinalizeState`).
 - It can also represent the block reward including both non-deferred and deferred fees (e.g. kaia_getReward API).
 
 ### RewardResponse
@@ -140,9 +140,15 @@ This module does not have any background threads.
 
 ## Block processing
 
-### Consensus
+### Header
 
-#### FinalizeHeader
+#### PrepareHeader
+
+This module initializes `header.Rewardbase` with the node's configured reward base.
+
+### BlockState
+
+#### FinalizeState
 
 After all transactions are processed, calculate and accredit the block reward.
 
@@ -221,7 +227,7 @@ curl "http://localhost:8551" -X POST -H 'Content-Type: application/json' --data 
 
 ## Getters
 
-- GetDeferredReward: GetDeferredReward returns the deferred reward specification to be distributed at the given block that is being created. Intended to be used in FinalizeHeader. Under non-deferred mode, transaction fees are ignored.
+- GetDeferredReward: GetDeferredReward returns the deferred reward specification to be distributed at the given block that is being created. Intended to be used in FinalizeState. Under non-deferred mode, transaction fees are ignored.
   ```
   GetDeferredReward(header, txs, receipts) -> RewardSpec
 

@@ -18,6 +18,8 @@ import (
 	consensus "github.com/kaiachain/kaia/consensus"
 	event "github.com/kaiachain/kaia/event"
 	kaiax "github.com/kaiachain/kaia/kaiax"
+	gov "github.com/kaiachain/kaia/kaiax/gov"
+	valset "github.com/kaiachain/kaia/kaiax/valset"
 	params "github.com/kaiachain/kaia/params"
 	rlp "github.com/kaiachain/kaia/rlp"
 	snapshot "github.com/kaiachain/kaia/snapshot"
@@ -197,20 +199,6 @@ func (m *MockBlockChain) CurrentHeader() *types.Header {
 func (mr *MockBlockChainMockRecorder) CurrentHeader() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentHeader", reflect.TypeOf((*MockBlockChain)(nil).CurrentHeader))
-}
-
-// Engine mocks base method.
-func (m *MockBlockChain) Engine() consensus.Engine {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Engine")
-	ret0, _ := ret[0].(consensus.Engine)
-	return ret0
-}
-
-// Engine indicates an expected call of Engine.
-func (mr *MockBlockChainMockRecorder) Engine() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Engine", reflect.TypeOf((*MockBlockChain)(nil).Engine))
 }
 
 // Export mocks base method.
@@ -663,6 +651,20 @@ func (mr *MockBlockChainMockRecorder) PostChainEvents(arg0, arg1 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostChainEvents", reflect.TypeOf((*MockBlockChain)(nil).PostChainEvents), arg0, arg1)
 }
 
+// PrepareHeader mocks base method.
+func (m *MockBlockChain) PrepareHeader(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrepareHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PrepareHeader indicates an expected call of PrepareHeader.
+func (mr *MockBlockChainMockRecorder) PrepareHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareHeader", reflect.TypeOf((*MockBlockChain)(nil).PrepareHeader), arg0)
+}
+
 // PrepareStateMigration mocks base method.
 func (m *MockBlockChain) PrepareStateMigration() error {
 	m.ctrl.T.Helper()
@@ -706,36 +708,16 @@ func (mr *MockBlockChainMockRecorder) PrunableStateAt(arg0, arg1 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrunableStateAt", reflect.TypeOf((*MockBlockChain)(nil).PrunableStateAt), arg0, arg1)
 }
 
-// RegisterExecutionModule mocks base method.
-func (m *MockBlockChain) RegisterExecutionModule(arg0 ...kaiax.ExecutionModule) {
+// RegisterKaiaxModules mocks base method.
+func (m *MockBlockChain) RegisterKaiaxModules(arg0 gov.GovModule, arg1 valset.ValsetModule, arg2 []kaiax.ExecutionModule, arg3 []kaiax.RewindableModule, arg4 []kaiax.HeaderModule, arg5 []kaiax.BlockStateModule) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
-		varargs = append(varargs, a)
-	}
-	m.ctrl.Call(m, "RegisterExecutionModule", varargs...)
+	m.ctrl.Call(m, "RegisterKaiaxModules", arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
-// RegisterExecutionModule indicates an expected call of RegisterExecutionModule.
-func (mr *MockBlockChainMockRecorder) RegisterExecutionModule(arg0 ...interface{}) *gomock.Call {
+// RegisterKaiaxModules indicates an expected call of RegisterKaiaxModules.
+func (mr *MockBlockChainMockRecorder) RegisterKaiaxModules(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterExecutionModule", reflect.TypeOf((*MockBlockChain)(nil).RegisterExecutionModule), arg0...)
-}
-
-// RegisterRewindableModule mocks base method.
-func (m *MockBlockChain) RegisterRewindableModule(arg0 ...kaiax.RewindableModule) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
-		varargs = append(varargs, a)
-	}
-	m.ctrl.Call(m, "RegisterRewindableModule", varargs...)
-}
-
-// RegisterRewindableModule indicates an expected call of RegisterRewindableModule.
-func (mr *MockBlockChainMockRecorder) RegisterRewindableModule(arg0 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterRewindableModule", reflect.TypeOf((*MockBlockChain)(nil).RegisterRewindableModule), arg0...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterKaiaxModules", reflect.TypeOf((*MockBlockChain)(nil).RegisterKaiaxModules), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // ResetWithGenesisBlock mocks base method.
@@ -776,6 +758,20 @@ func (m *MockBlockChain) SaveTrieNodeCacheToDisk() error {
 func (mr *MockBlockChainMockRecorder) SaveTrieNodeCacheToDisk() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveTrieNodeCacheToDisk", reflect.TypeOf((*MockBlockChain)(nil).SaveTrieNodeCacheToDisk))
+}
+
+// Sealer mocks base method.
+func (m *MockBlockChain) Sealer() consensus.Sealer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Sealer")
+	ret0, _ := ret[0].(consensus.Sealer)
+	return ret0
+}
+
+// Sealer indicates an expected call of Sealer.
+func (mr *MockBlockChainMockRecorder) Sealer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sealer", reflect.TypeOf((*MockBlockChain)(nil).Sealer))
 }
 
 // SetHead mocks base method.
@@ -1079,6 +1075,20 @@ func (m *MockBlockChain) TrieNode(arg0 common.Hash) ([]byte, error) {
 func (mr *MockBlockChainMockRecorder) TrieNode(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrieNode", reflect.TypeOf((*MockBlockChain)(nil).TrieNode), arg0)
+}
+
+// ValidateHeader mocks base method.
+func (m *MockBlockChain) ValidateHeader(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateHeader indicates an expected call of ValidateHeader.
+func (mr *MockBlockChainMockRecorder) ValidateHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateHeader", reflect.TypeOf((*MockBlockChain)(nil).ValidateHeader), arg0)
 }
 
 // Validator mocks base method.

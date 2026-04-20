@@ -22,14 +22,11 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 )
 
@@ -49,17 +46,9 @@ var (
 	logger = log.NewModuleLogger(log.KaiaxValset)
 )
 
-type chain interface {
-	GetHeaderByNumber(number uint64) *types.Header
-	GetHeaderByHash(hash common.Hash) *types.Header
-	CurrentBlock() *types.Block
-	Config() *params.ChainConfig
-	Engine() consensus.Engine
-}
-
 type InitOpts struct {
 	ChainKv       database.Database
-	Chain         chain
+	Chain         consensus.ChainReaderWithSealer
 	GovModule     gov.GovModule
 	StakingModule staking.StakingModule
 }

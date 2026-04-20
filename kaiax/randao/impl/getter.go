@@ -96,7 +96,7 @@ func (r *RandaoModule) getAllCached(num *big.Int) (system.BlsPublicKeyInfos, err
 			return nil, err
 		}
 
-		// Because the system contract Registry is installed at Finalize() of RandaoForkBlock,
+		// Because the system contract Registry is installed at FinalizeState() of RandaoForkBlock,
 		// it is not possible to read KIP113 address from the Registry at RandaoForkBlock.
 		// Hence the ChainConfig fallback.
 		if r.ChainConfig.IsRandaoForkBlock(num) {

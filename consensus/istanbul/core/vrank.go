@@ -25,14 +25,14 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/rcrowley/go-metrics"
 )
 
 type vrank struct {
 	miningStartTime time.Time
-	view            istanbul.View
+	view            bft.View
 	committee       []common.Address
 	quorum          int
 	maxRound        uint64 // highest round with RC data received
@@ -66,7 +66,7 @@ var (
 
 func NewVrank() *vrank {
 	ret := &vrank{
-		view:       istanbul.View{},
+		view:       bft.View{},
 		committee:  []common.Address{},
 		timestamps: [MaxRoundChangeCount]msgArrivalTimes{},
 	}
@@ -86,7 +86,7 @@ func NewMsgArrivalTimes() *msgArrivalTimes {
 
 func (v *vrank) StartTimer() {
 	v.miningStartTime = time.Now()
-	v.view = istanbul.View{}
+	v.view = bft.View{}
 	v.committee = []common.Address{}
 	v.quorum = 0
 	v.maxRound = 0
@@ -95,7 +95,7 @@ func (v *vrank) StartTimer() {
 	}
 }
 
-func (v *vrank) SetLatestView(view istanbul.View, committee []common.Address, quorum int) {
+func (v *vrank) SetLatestView(view bft.View, committee []common.Address, quorum int) {
 	v.view = view
 	v.committee = committee
 	v.quorum = quorum

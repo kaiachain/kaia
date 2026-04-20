@@ -1561,6 +1561,7 @@ func TestAnchoringBasic(t *testing.T) {
 
 	sim, sc, bAcc, _, _, _ := generateAnchoringEnv(t, tempDir)
 	defer sim.Close()
+	defer sc.GetBridgeTxPool().Stop()
 
 	assert.Equal(t, uint64(0), sc.handler.txCountStartingBlockNumber)
 	assert.Equal(t, uint64(0), sc.handler.latestTxCountAddedBlockNumber)
@@ -1614,6 +1615,7 @@ func TestAnchoringBasicWithFeePayer(t *testing.T) {
 
 	sim, sc, bAcc, parentOperator, feePayer, tester := generateAnchoringEnv(t, tempDir)
 	defer sim.Close()
+	defer sc.GetBridgeTxPool().Stop()
 
 	invalidAccount := common.HexToAddress("0x1")
 	bAcc.SetParentOperatorFeePayer(feePayer.Address)
@@ -1701,6 +1703,8 @@ func TestAnchoringBasicWithBridgeTxPoolMock(t *testing.T) {
 
 	sim, sc, bAcc, _, feePayer, _ := generateAnchoringEnv(t, tempDir)
 	defer sim.Close()
+	originalBridgeTxPool := sc.GetBridgeTxPool()
+	defer originalBridgeTxPool.Stop()
 
 	// mock BridgeTxPool
 	{
@@ -1839,6 +1843,7 @@ func TestAnchoringStart(t *testing.T) {
 		Journal:     path.Join(tempDir, "bridge_transactions.rlp"),
 		GlobalQueue: 1024,
 	})
+	defer sc.GetBridgeTxPool().Stop()
 
 	assert.Equal(t, uint64(0), sc.handler.txCountStartingBlockNumber)
 	assert.Equal(t, uint64(4), sc.handler.chainTxPeriod)
@@ -1920,6 +1925,7 @@ func TestAnchoringPeriod(t *testing.T) {
 		Journal:     path.Join(tempDir, "bridge_transactions.rlp"),
 		GlobalQueue: 1024,
 	})
+	defer sc.GetBridgeTxPool().Stop()
 
 	assert.Equal(t, uint64(0), sc.handler.txCountStartingBlockNumber)
 	assert.Equal(t, uint64(4), sc.handler.chainTxPeriod)

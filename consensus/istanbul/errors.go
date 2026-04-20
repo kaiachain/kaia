@@ -16,7 +16,9 @@
 
 package istanbul
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	// ErrUnauthorizedAddress is returned when given address cannot be found in
@@ -26,4 +28,34 @@ var (
 	ErrStoppedEngine = errors.New("stopped engine")
 	// ErrStartedEngine is returned if the engine is already started
 	ErrStartedEngine = errors.New("started engine")
+	// errInvalidProposal is returned when a prposal is malformed.
+	ErrInvalidProposal = errors.New("invalid proposal")
+	// errInvalidSignature is returned when given signature is not signed by given
+	// address.
+	ErrInvalidSignature = errors.New("invalid signature")
+	// errNoValidator is returned when the validator is not set.
+	ErrNoValidator = errors.New("no validator")
+	// errNoEssentialModule is returned when essential module is not registered.
+	ErrNoEssentialModule = errors.New("no essential module")
+	// errInvalidExtraDataFormat is returned when the extra data format is incorrect
+	ErrInvalidExtraDataFormat = errors.New("invalid extra data format")
+	// errInvalidVotingChain is returned if an authorization list is attempted to
+	// be modified via out-of-range or non-contiguous headers.
+	ErrInvalidVotingChain = errors.New("invalid voting chain")
+	// ErrUnknownBlock is returned when a required block/header context is missing.
+	ErrUnknownBlock = errors.New("unknown block")
+	// errInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
+	ErrInvalidCommittedSeals = errors.New("invalid committed seals")
+	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
+	ErrEmptyCommittedSeals = errors.New("zero committed seals")
+	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
+	ErrMismatchTxhashes = errors.New("mismatch transactions hashes")
+	// errInternalError is returned when an internal error occurs.
+	ErrInternalError = errors.New("internal error")
+	// errPendingNotAllowed is returned when pending block is not allowed.
+	ErrPendingNotAllowed = errors.New("pending is not allowed")
+	// errNoBlobSidecarForBlobTx is returned if the blob sidecar is not found for a blob transaction.
+	ErrNoBlobSidecarForBlobTx = errors.New("no blob sidecar for blob transaction")
+	// errInvalidBlobTxWithSidecar is returned if the blob transaction has an invalid sidecar.
+	ErrInvalidBlobTxWithSidecar = errors.New("invalid blob transaction with sidecar")
 )

@@ -59,9 +59,12 @@ func (api *ValsetAPI) GetCommittee(number *rpc.BlockNumber) ([]common.Address, e
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	round := uint64(header.Round())
+	round, err := api.vs.Chain.Sealer().Round(header)
+	if err != nil {
+		return nil, err
+	}
 
-	return api.vs.GetCommittee(num, round)
+	return api.vs.GetCommittee(num, uint64(round))
 }
 
 func (api *ValsetAPI) GetCommitteeSize(number *rpc.BlockNumber) (int, error) {

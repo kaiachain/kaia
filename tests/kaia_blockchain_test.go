@@ -30,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
@@ -38,7 +39,6 @@ import (
 	"github.com/kaiachain/kaia/node"
 	"github.com/kaiachain/kaia/node/cn"
 	"github.com/kaiachain/kaia/params"
-	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/work"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -163,19 +163,16 @@ func newKaiaNode(t *testing.T, dir string, validator *TestAccountType, config *p
 		t.Fatalf("failed to create node: %v", err)
 	}
 
-	istanbulConfData, err := rlp.EncodeToBytes(&types.IstanbulExtra{
-		Validators:    []common.Address{validator.Addr},
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	if genesis == nil {
 		genesis = blockchain.DefaultTestGenesisBlock()
-		genesis.ExtraData = genesis.ExtraData[:types.IstanbulExtraVanity]
-		genesis.ExtraData = append(genesis.ExtraData, istanbulConfData...)
+		genesisHeader := &types.Header{
+			Number: big.NewInt(0),
+			Extra:  append([]byte(nil), genesis.ExtraData...),
+		}
+		if err := engine.NewSealer(genesis.Config, nil).WriteValidators(genesisHeader, []common.Address{validator.Addr}); err != nil {
+			t.Fatal(err)
+		}
+		genesis.ExtraData = genesisHeader.Extra
 		genesis.Alloc[validator.Addr] = blockchain.GenesisAccount{Balance: new(big.Int).Mul(big.NewInt(1000000000000000000), big.NewInt(params.KAIA))}
 	}
 

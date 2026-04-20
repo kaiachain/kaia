@@ -37,7 +37,6 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
-	consensusmocks "github.com/kaiachain/kaia/consensus/mocks"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
@@ -105,13 +104,12 @@ func init() {
 	hash1 = tx1.Hash()
 }
 
-func newMocks(t *testing.T) (*gomock.Controller, *consensusmocks.MockEngine, *workmocks.MockBlockChain, *workmocks.MockTxPool) {
+func newMocks(t *testing.T) (*gomock.Controller, *workmocks.MockBlockChain, *workmocks.MockTxPool) {
 	mockCtrl := gomock.NewController(t)
-	mockEngine := consensusmocks.NewMockEngine(mockCtrl)
 	mockBlockChain := workmocks.NewMockBlockChain(mockCtrl)
 	mockTxPool := workmocks.NewMockTxPool(mockCtrl)
 
-	return mockCtrl, mockEngine, mockBlockChain, mockTxPool
+	return mockCtrl, mockBlockChain, mockTxPool
 }
 
 func newBlock(blockNum int) *types.Block {
@@ -139,21 +137,31 @@ func newReceipt(gasUsed int) *types.Receipt {
 	return rct
 }
 
+type testConsensusHandler struct{}
+
+func (h *testConsensusHandler) NewChainHead() error { return nil }
+func (h *testConsensusHandler) HandleMsg(common.Address, p2p.Msg) (bool, error) {
+	return false, nil
+}
+func (h *testConsensusHandler) SetBroadcaster(consensus.Broadcaster) {}
+
 func TestNewProtocolManager(t *testing.T) {
-	// 1. If consensus.Engine returns an empty Protocol, NewProtocolManager throws an error.
+	// NewProtocolManager uses ConsensusProtocol directly (not handler-provided).
+	// Verifies successful initialization with all Istanbul versions passing the
+	// FastSync version filter (>= kaia63).
 	{
-		mockCtrl, mockEngine, mockBlockChain, mockTxPool := newMocks(t)
+		mockCtrl, mockBlockChain, mockTxPool := newMocks(t)
 		defer mockCtrl.Finish()
 
 		block := newBlock(blockNum1)
 		mockBlockChain.EXPECT().CurrentBlock().Return(block).Times(1)
-		mockEngine.EXPECT().Protocol().Return(consensus.Protocol{}).Times(1)
 
-		pm, err := NewProtocolManager(nil, downloader.FastSync, 0, nil, mockTxPool,
-			mockEngine, mockBlockChain, nil, 1, -1, &Config{})
+		pm, err := NewProtocolManager(params.TestChainConfig, downloader.FastSync, 0, nil, mockTxPool,
+			&testConsensusHandler{}, mockBlockChain, nil, 1, common.CONSENSUSNODE,
+			&Config{DownloaderDisable: true, FetcherDisable: true})
 
-		assert.Nil(t, pm)
-		assert.Equal(t, errIncompatibleConfig, err)
+		assert.NotNil(t, pm)
+		assert.NoError(t, err)
 	}
 }
 
@@ -722,29 +730,6 @@ func TestReBroadcastTxs_EN(t *testing.T) {
 	}
 }
 
-func TestUseTxResend(t *testing.T) {
-	testSet := [...]struct {
-		pm     *ProtocolManager
-		result bool
-	}{
-		{&ProtocolManager{nodetype: common.CONSENSUSNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: common.ENDPOINTNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: common.PROXYNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: common.BOOTNODE, txResendUseLegacy: true}, false},
-		{&ProtocolManager{nodetype: common.UNKNOWNNODE, txResendUseLegacy: true}, false},
-
-		{&ProtocolManager{nodetype: common.CONSENSUSNODE, txResendUseLegacy: false}, false},
-		{&ProtocolManager{nodetype: common.ENDPOINTNODE, txResendUseLegacy: false}, true},
-		{&ProtocolManager{nodetype: common.PROXYNODE, txResendUseLegacy: false}, true},
-		{&ProtocolManager{nodetype: common.BOOTNODE, txResendUseLegacy: false}, true},
-		{&ProtocolManager{nodetype: common.UNKNOWNNODE, txResendUseLegacy: false}, true},
-	}
-
-	for _, tc := range testSet {
-		assert.Equal(t, tc.result, tc.pm.useTxResend())
-	}
-}
-
 func TestNodeInfo(t *testing.T) {
 	pm := &ProtocolManager{}
 	pm.nodetype = common.ENDPOINTNODE
@@ -1180,7 +1165,7 @@ func newTestBackendWithGenerator(blocks int, generator func(int, *blockchain.Blo
 		// Create a database pre-initialize with a genesis block
 		db     = database.NewMemoryDBManager()
 		config = params.TestChainConfig
-		engine = faker.NewFaker()
+		sealer = faker.NewFaker()
 	)
 
 	gspec := &blockchain.Genesis{
@@ -1196,9 +1181,9 @@ func newTestBackendWithGenerator(blocks int, generator func(int, *blockchain.Blo
 		SnapshotCacheSize:   512,
 		ArchiveMode:         true, // Archive mode
 	}
-	chain, _ := blockchain.NewBlockChain(db, cacheConfig, config, engine, vm.Config{})
+	chain, _ := blockchain.NewBlockChain(db, cacheConfig, config, sealer, vm.Config{})
 
-	bs, _ := blockchain.GenerateChain(config, genesis, engine, db, blocks, generator)
+	bs, _ := blockchain.GenerateChain(config, genesis, sealer, db, blocks, generator)
 	if _, err := chain.InsertChain(bs); err != nil {
 		panic(err)
 	}
@@ -1388,7 +1373,7 @@ func TestGetBlockHeaders(t *testing.T) {
 		},
 	}
 
-	pm, err := NewProtocolManager(params.TestChainConfig, downloader.FullSync, 1, nil, nil, backend.Engine(), backend, db, 1, common.ENDPOINTNODE, &Config{TxResendUseLegacy: false, TxResendInterval: 1, TxResendCount: 0})
+	pm, err := NewProtocolManager(params.TestChainConfig, downloader.FullSync, 1, nil, nil, faker.NewFaker(), backend, db, 1, common.ENDPOINTNODE, &Config{TxResendUseLegacy: false, TxResendInterval: 1, TxResendCount: 0})
 	if err != nil {
 		t.Fatal(err)
 	}

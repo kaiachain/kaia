@@ -61,7 +61,7 @@ type Backend interface {
 	ServiceFilter(ctx context.Context, session *bloombits.MatcherSession)
 
 	ChainConfig() *params.ChainConfig
-	Engine() consensus.Engine
+	Sealer() consensus.Sealer
 }
 
 // Filter can be used to retrieve and filter logs.

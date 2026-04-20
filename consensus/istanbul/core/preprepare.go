@@ -25,22 +25,22 @@ package core
 import (
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 )
 
-func (c *core) sendPreprepare(request *istanbul.Request) {
+func (c *core) sendPreprepare(request *bft.Request) {
 	logger := c.logger.NewWith("state", c.state)
 
-	header := types.SetRoundToHeader(request.Proposal.Header(), c.currentView().Round.Int64())
+	header := request.Proposal.Header()
+	c.backend.Sealer().WriteRound(header, c.currentView().Round.Int64())
 	request.Proposal = request.Proposal.WithSeal(header)
 
 	// If I'm the proposer and I have the same sequence with the proposal
 	if c.current.Sequence().Cmp(request.Proposal.Number()) == 0 && c.isProposer() {
 		curView := c.currentView()
-		preprepare, err := Encode(&istanbul.Preprepare{
+		preprepare, err := bft.Encode(&bft.Preprepare{
 			View:     curView,
 			Proposal: request.Proposal,
 		})
@@ -49,40 +49,39 @@ func (c *core) sendPreprepare(request *istanbul.Request) {
 			return
 		}
 
-		c.broadcast(&message{
+		c.broadcast(&bft.Message{
 			Hash: request.Proposal.ParentHash(),
-			Code: msgPreprepare,
+			Code: bft.MsgPreprepare,
 			Msg:  preprepare,
 		})
 	}
 }
 
-func (c *core) handlePreprepare(msg *message, src common.Address) error {
+func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	timestamp := time.Now()
 
 	// Decode PRE-PREPARE
-	var preprepare *istanbul.Preprepare
+	var preprepare *bft.Preprepare
 	err := msg.Decode(&preprepare)
 	if err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
-		return errInvalidMessage
+		return bft.ErrInvalidMessage
 	}
 
 	// Ensure we have the same view with the PRE-PREPARE message
 	// If it is old message, see if we need to broadcast COMMIT
-	if err := c.checkMessage(msgPreprepare, preprepare.View); err != nil {
+	if err := c.checkMessage(bft.MsgPreprepare, preprepare.View); err != nil {
 		if err == errOldMessage {
-			// Get validator set for the given proposal
-			councilState, getCouncilError := c.backend.GetCommitteeStateByRound(preprepare.View.Sequence.Uint64(), preprepare.View.Round.Uint64())
-			if getCouncilError != nil {
-				return getCouncilError
-			}
 			// Broadcast COMMIT if it is an existing block
-			// 1. The proposer needs to be a proposer matches the given (Sequence + Round)
+			// 1. The proposer needs to match the given (Sequence + Round)
 			// 2. The given block must exist
-			if councilState.IsProposer(src) && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
+			proposer, getProposerErr := c.valsetModule.GetProposer(preprepare.View.Sequence.Uint64(), preprepare.View.Round.Uint64())
+			if getProposerErr != nil {
+				return getProposerErr
+			}
+			if proposer == src && c.backend.HasPropsal(preprepare.Proposal.Hash(), preprepare.Proposal.Number()) {
 				c.sendCommitForOldBlock(preprepare.View, preprepare.Proposal.Hash(), preprepare.Proposal.ParentHash())
 				return nil
 			}
@@ -91,7 +90,7 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 	}
 
 	// Check if the message comes from current proposer
-	if !c.currentCommittee.IsProposer(src) {
+	if c.current.proposer != src {
 		logger.Warn("Ignore preprepare messages from non-proposer")
 		return errNotFromProposer
 	}
@@ -119,13 +118,14 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 	if c.state == StateAcceptRequest {
 		// Send ROUND CHANGE if the locked proposal and the received proposal are different
 		if c.current.IsHashLocked() {
-			header := types.SetRoundToHeader(c.current.Preprepare.Proposal.Header(), c.currentView().Round.Int64())
+			header := c.current.Preprepare.Proposal.Header()
+			c.backend.Sealer().WriteRound(header, c.currentView().Round.Int64())
 			c.current.Preprepare.Proposal = c.current.Preprepare.Proposal.WithSeal(header)
 
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
 				logger.Warn("Received preprepare message of the hash locked proposal and change state to prepared")
 				// Broadcast COMMIT and enters Prepared state directly
-				Vrank.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+				Vrank.SetLatestView(*preprepare.View, c.current.committee.List(), c.current.requiredMessageCount)
 				Vrank.AddPreprepare(src, preprepare.View.Round.Uint64(), timestamp)
 				c.acceptPreprepare(preprepare)
 				c.setState(StatePrepared)
@@ -135,7 +135,7 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 				c.sendNextRoundChange("handlePreprepare. HashLocked, but received hash is different from locked hash")
 			}
 		} else {
-			Vrank.SetLatestView(*preprepare.View, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+			Vrank.SetLatestView(*preprepare.View, c.current.committee.List(), c.current.requiredMessageCount)
 			Vrank.AddPreprepare(src, preprepare.View.Round.Uint64(), timestamp)
 			// Either
 			//   1. the locked proposal and the received proposal match
@@ -149,7 +149,7 @@ func (c *core) handlePreprepare(msg *message, src common.Address) error {
 	return nil
 }
 
-func (c *core) acceptPreprepare(preprepare *istanbul.Preprepare) {
+func (c *core) acceptPreprepare(preprepare *bft.Preprepare) {
 	c.consensusTimestamp = time.Now()
 	c.current.SetPreprepare(preprepare)
 }

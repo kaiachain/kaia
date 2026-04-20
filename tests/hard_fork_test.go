@@ -36,13 +36,15 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/common/profile"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/downloader"
+	"github.com/kaiachain/kaia/kaiax"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	randao_impl "github.com/kaiachain/kaia/kaiax/randao/impl"
 	reward_impl "github.com/kaiachain/kaia/kaiax/reward/impl"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
+	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
@@ -82,12 +84,6 @@ func TestHardForkBlock(t *testing.T) {
 	genesisKey, err := crypto.HexToECDSA("42eb1412d77987043716f425964b1c8d4c27ce9fb3e9a5b9ab243bc9882fe731")
 	require.Equal(t, nil, err)
 
-	var genesisAddr common.Address
-	for addr := range genesis.Alloc {
-		genesisAddr = addr
-		break
-	}
-
 	dir := "chaindata-hardfork"
 	os.RemoveAll(dir)
 
@@ -103,21 +99,21 @@ func TestHardForkBlock(t *testing.T) {
 	require.Nil(t, err)
 
 	govModule := gov_impl.NewGovModule()
-	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
-		IstanbulConfig: istanbul.DefaultConfig,
-		Rewardbase:     genesisAddr,
-		PrivateKey:     genesisKey,
-		DB:             chainDb,
-		GovModule:      govModule,
-		NodeType:       common.CONSENSUSNODE,
-	})
-	chain, err := blockchain.NewBlockChain(chainDb, nil, chainConfig, engine, vm.Config{})
+	genesisBlsKey, err := bls.DeriveFromECDSA(genesisKey)
+	require.NoError(t, err)
+	sealer := istanbul.NewSealerImpl(genesisKey)
+	prevHeaderHashFn := types.HeaderHashFn
+	types.SetHeaderHashFn(sealer.HeaderHash)
+	defer types.SetHeaderHashFn(prevHeaderHashFn)
+
+	chain, err := blockchain.NewBlockChain(chainDb, nil, chainConfig, sealer, vm.Config{})
 	require.NoError(t, err)
 
 	mStaking := staking_impl.NewStakingModule()
 	mReward := reward_impl.NewRewardModule()
 	mValset := valset_impl.NewValsetModule()
 	mRandao := randao_impl.NewRandaoModule()
+	mSystem := system_impl.NewSystemModule()
 	fakeDownloader := downloader.NewFakeDownloader()
 	err = errors.Join(
 		govModule.Init(&gov_impl.InitOpts{
@@ -131,6 +127,7 @@ func TestHardForkBlock(t *testing.T) {
 			Chain:         chain,
 			GovModule:     govModule,
 			StakingModule: mStaking, // Not used in "Simple" istanbul policy
+			ValsetModule:  mValset,
 		}),
 		mValset.Init(&valset_impl.InitOpts{
 			ChainKv:       chainDb.GetMiscDB(),
@@ -139,14 +136,24 @@ func TestHardForkBlock(t *testing.T) {
 			StakingModule: mStaking,
 		}),
 		mRandao.Init(&randao_impl.InitOpts{
-			ChainConfig: chainConfig,
-			Chain:       chain,
-			Downloader:  fakeDownloader,
+			ChainConfig:  chainConfig,
+			Chain:        chain,
+			Downloader:   fakeDownloader,
+			BlsSecretKey: genesisBlsKey,
+		}),
+		mSystem.Init(&system_impl.InitOpts{
+			Chain: chain,
 		}),
 	)
 	require.NoError(t, err)
-	engine.RegisterConsensusModule(mReward)
-	engine.RegisterKaiaxModules(govModule, mStaking, mValset, mRandao)
+	chain.RegisterKaiaxModules(
+		govModule,
+		mValset,
+		nil,
+		nil,
+		[]kaiax.HeaderModule{mReward, mRandao},
+		[]kaiax.BlockStateModule{mReward, mSystem},
+	)
 	mValset.Start()
 
 	r1, err := hexutil.Decode(string(rawb1))
