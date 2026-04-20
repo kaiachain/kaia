@@ -585,4 +585,3 @@ func DeprecatedAt(name ParamName, rules params.Rules) bool {
 	// Fork-aware deprecation: extended in the permissionless branch.
 	return false
 }
-
