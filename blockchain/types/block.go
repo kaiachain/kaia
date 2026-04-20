@@ -99,16 +99,20 @@ type headerMarshaling struct {
 	ExcessBlobGas *hexutil.Uint64
 }
 
+// HeaderHashFn is an optional override for Header.Hash. When set, it replaces
+// the default logic. Intended to be initialized by the consensus sealer.
+var HeaderHashFn func(h *Header) common.Hash // replaces Header.Hash
+
+// SetHeaderHashFn sets an optional override for Header.Hash.
+func SetHeaderHashFn(hashFn func(h *Header) common.Hash) {
+	HeaderHashFn = hashFn
+}
+
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
-	// If the mix digest is equivalent to the predefined Istanbul digest, use Istanbul
-	// specific hash calculation.
-	if EngineType == Engine_IBFT {
-		// Seal is reserved in extra-data. To prove block is signed by the proposer.
-		if istanbulHeader := IstanbulFilteredHeader(h, true); istanbulHeader != nil {
-			return rlpHash(istanbulHeader)
-		}
+	if fn := HeaderHashFn; fn != nil {
+		return fn(h)
 	}
 	return rlpHash(h)
 }
@@ -142,10 +146,6 @@ func (h *Header) Size() common.StorageSize {
 	} else {
 		return constantSize + byteSize + bigIntSize
 	}
-}
-
-func (h *Header) Round() byte {
-	return byte(h.Extra[IstanbulExtraVanity-1])
 }
 
 func rlpHash(x interface{}) (h common.Hash) {

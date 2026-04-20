@@ -16,7 +16,9 @@
 
 package consensus
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	// ErrUnknownAncestor is returned when validating a block requires an ancestor
@@ -31,10 +33,13 @@ var (
 	// to the current node.
 	ErrFutureBlock = errors.New("block in the future")
 
-	// ErrInvalidNumber is returned if a block's number doesn't equal it's parent's
-	// plus one.
-	ErrInvalidNumber = errors.New("invalid block number")
+	// ErrUnknownBlock is returned when the list of validators is requested for a block
+	// that is not part of the local blockchain.
+	ErrUnknownBlock = errors.New("unknown block")
 
-	// ErrInvalidBaseFee is returned if a block before fork has a base fee field, not nil
-	ErrInvalidBaseFee = errors.New("invalid baseFee before fork")
+	// ErrInvalidCommittedSeals is returned if committed seals are missing or invalid.
+	ErrInvalidCommittedSeals = errors.New("invalid committed seals")
+
+	// ErrUnauthorized is returned if a header is signed by a non authorized entity.
+	ErrUnauthorized = errors.New("unauthorized")
 )

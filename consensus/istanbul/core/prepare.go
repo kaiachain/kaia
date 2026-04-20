@@ -24,42 +24,42 @@ package core
 
 import (
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
 )
 
 func (c *core) sendPrepare() {
 	logger := c.logger.NewWith("state", c.state)
 
 	// Do not send message if the owner of the core is not a member of the committee for the current view
-	if !c.currentCommittee.Committee().Contains(c.Address()) {
+	if !c.current.committee.Contains(c.Address()) {
 		return
 	}
 
 	sub := c.current.Subject()
-	encodedSubject, err := Encode(sub)
+	encodedSubject, err := bft.Encode(sub)
 	if err != nil {
 		logger.Error("Failed to encode", "subject", sub)
 		return
 	}
 
-	c.broadcast(&message{
+	c.broadcast(&bft.Message{
 		Hash: c.current.Proposal().ParentHash(),
-		Code: msgPrepare,
+		Code: bft.MsgPrepare,
 		Msg:  encodedSubject,
 	})
 }
 
-func (c *core) handlePrepare(msg *message, src common.Address) error {
+func (c *core) handlePrepare(msg *bft.Message, src common.Address) error {
 	// Decode PREPARE message
-	var prepare *istanbul.Subject
+	var prepare *bft.Subject
 	err := msg.Decode(&prepare)
 	if err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
-		return errInvalidMessage
+		return bft.ErrInvalidMessage
 	}
 
 	// logger.Error("call receive prepare","num",prepare.View.Sequence)
-	if err := c.checkMessage(msgPrepare, prepare.View); err != nil {
+	if err := c.checkMessage(bft.MsgPrepare, prepare.View); err != nil {
 		return err
 	}
 
@@ -69,7 +69,7 @@ func (c *core) handlePrepare(msg *message, src common.Address) error {
 		return err
 	}
 
-	if !c.currentCommittee.Committee().Contains(src) {
+	if !c.current.committee.Contains(src) {
 		logger.Warn("received an istanbul prepare message from non-committee",
 			"currentSequence", c.current.sequence.Uint64(), "sender", src.String(), "msgView", prepare.View.String())
 		return errNotFromCommittee
@@ -83,13 +83,13 @@ func (c *core) handlePrepare(msg *message, src common.Address) error {
 	// the previous round skip sending PREPARE messages.
 	if c.state.Cmp(StatePrepared) < 0 {
 		if c.current.IsHashLocked() && prepare.Digest == c.current.GetLockedHash() {
-			logger.Warn("received prepare of the hash locked proposal and change state to prepared", "msgType", msgPrepare)
+			logger.Warn("received prepare of the hash locked proposal and change state to prepared", "msgType", bft.MsgPrepare)
 			c.setState(StatePrepared)
 			c.sendCommit()
-		} else if c.current.GetPrepareOrCommitSize() >= c.currentCommittee.RequiredMessageCount() {
-			logger.Info("received a quorum of the messages and change state to prepared", "msgType", msgPrepare,
+		} else if c.current.GetPrepareOrCommitSize() >= c.current.requiredMessageCount {
+			logger.Info("received a quorum of the messages and change state to prepared", "msgType", bft.MsgPrepare,
 				"prepareMsgNum", c.current.Prepares.Size(), "commitMsgNum", c.current.Commits.Size(),
-				"valSet", c.currentCommittee.Qualified().Len())
+				"valSet", c.current.qualified.Len())
 			c.current.LockHash()
 			c.setState(StatePrepared)
 			c.sendCommit()
@@ -100,7 +100,7 @@ func (c *core) handlePrepare(msg *message, src common.Address) error {
 }
 
 // verifyPrepare verifies if the received PREPARE message is equivalent to our subject
-func (c *core) verifyPrepare(prepare *istanbul.Subject, src common.Address) error {
+func (c *core) verifyPrepare(prepare *bft.Subject, src common.Address) error {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	sub := c.current.Subject()
@@ -112,7 +112,7 @@ func (c *core) verifyPrepare(prepare *istanbul.Subject, src common.Address) erro
 	return nil
 }
 
-func (c *core) acceptPrepare(msg *message, src common.Address) error {
+func (c *core) acceptPrepare(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
 	// Add the PREPARE message to current round state

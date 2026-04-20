@@ -50,6 +50,8 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/fork"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
@@ -194,7 +196,7 @@ type BlockChain struct {
 	procInterrupt int32          // interrupt signaler for block processing
 	wg            sync.WaitGroup // chain processing wait group for shutting down
 
-	engine     consensus.Engine
+	sealer     consensus.Sealer
 	processor  Processor  // block processor interface
 	prefetcher Prefetcher // Block state prefetcher interface
 	validator  Validator  // block and state validator interface
@@ -219,6 +221,7 @@ type BlockChain struct {
 	prefetchTxCh chan prefetchTx
 
 	// kaiax modules
+	headerModules     []kaiax.HeaderModule
 	executionModules  []kaiax.ExecutionModule
 	rewindableModules []kaiax.RewindableModule
 }
@@ -233,7 +236,7 @@ type prefetchTx struct {
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Kaia validator and
 // Processor.
-func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, engine consensus.Engine, vmConfig vm.Config) (*BlockChain, error) {
+func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig *params.ChainConfig, sealer consensus.Sealer, vmConfig vm.Config) (*BlockChain, error) {
 	if cacheConfig == nil {
 		cacheConfig = &CacheConfig{
 			ArchiveMode:          false,
@@ -255,6 +258,10 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 
 	futureBlocks, _ := lru.New(maxFutureBlocks)
 
+	if sealer == nil {
+		return nil, errors.New("consensus sealer is nil")
+	}
+
 	bc := &BlockChain{
 		chainConfig:        chainConfig,
 		cacheConfig:        cacheConfig,
@@ -265,7 +272,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		stateCache:         state.NewDatabaseWithNewCache(db, cacheConfig.TrieNodeCacheConfig),
 		quit:               make(chan struct{}),
 		futureBlocks:       futureBlocks,
-		engine:             engine,
+		sealer:             sealer,
 		vmConfig:           vmConfig,
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
@@ -282,7 +289,7 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	bc.processor = NewStateProcessor(chainConfig, bc)
 
 	var err error
-	bc.hc, err = NewHeaderChain(db, chainConfig, engine, bc.getProcInterrupt)
+	bc.hc, err = NewHeaderChain(db, chainConfig, bc.sealer, bc.validator, bc.getProcInterrupt)
 	if err != nil {
 		return nil, err
 	}
@@ -732,9 +739,61 @@ func (bc *BlockChain) Validator() Validator {
 	return bc.validator
 }
 
+// SetValidator overrides the blockchain/headerchain validator pair.
+// Intended for tests that need custom header/execution compatibility behavior.
+func (bc *BlockChain) SetValidatorForTest(validator Validator) {
+	bc.validator = validator
+	if bc.hc != nil {
+		bc.hc.validator = validator
+	}
+}
+
 // Processor returns the current processor.
 func (bc *BlockChain) Processor() Processor {
 	return bc.processor
+}
+
+// PrepareHeader runs proposer-specific header preparation.
+func (bc *BlockChain) PrepareHeader(header *types.Header) error {
+	// copy the parent extra data as the header extra data
+	number := header.Number.Uint64()
+	parent := bc.GetHeader(header.ParentHash, number-1)
+	if parent == nil {
+		return consensus.ErrUnknownAncestor
+	}
+
+	// use the same blockscore for all blocks
+	header.BlockScore = params.DefaultBlockScore
+
+	mValset := bc.Validator().ValsetModule()
+	if mValset == nil {
+		return errors.New("valset module is not configured")
+	}
+
+	qualified, err := mValset.GetQualifiedValidators(number)
+	if err != nil {
+		return err
+	}
+	if err := bc.sealer.WriteValidators(header, qualified); err != nil {
+		return err
+	}
+
+	// set header's timestamp
+	blockPeriod := uint64(params.BlockGenerationInterval)
+	header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(blockPeriod))
+	header.TimeFoS = parent.TimeFoS
+	if header.Time.Int64() < time.Now().Unix() {
+		t := time.Now()
+		header.Time = big.NewInt(t.Unix())
+		header.TimeFoS = uint8((t.UnixNano() / 1000 / 1000 / 10) % 100)
+	}
+
+	for _, module := range bc.headerModules {
+		if err := module.PrepareHeader(header); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // State returns a new mutable state based on the current HEAD block.
@@ -1898,11 +1957,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		abort   chan<- struct{}
 		results <-chan error
 	)
-	if bc.engine.CanVerifyHeadersConcurrently() {
-		abort, results = bc.engine.VerifyHeaders(bc, headers, seals)
-	} else {
-		abort, results = bc.engine.PreprocessHeaderVerification(headers)
-	}
+	abort, results = bc.validator.Preprocess(headers)
 	defer close(abort)
 
 	// Start a parallel signature recovery (signer will fluke on fork transition, minimal perf loss)
@@ -1979,8 +2034,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		bstart := time.Now()
 
 		err := <-results
-		if !bc.engine.CanVerifyHeadersConcurrently() && err == nil {
-			err = bc.engine.VerifyHeader(bc, block.Header(), true)
+		if err == nil {
+			err = bc.validator.ValidateHeader(block.Header())
 		}
 
 		if err == nil {
@@ -2604,17 +2659,7 @@ func (bc *BlockChain) reportBlock(block *types.Block, receipts types.Receipts, e
 // InsertHeaderChain attempts to insert the given header chain in to the local
 // chain, possibly creating a reorg. If an error is returned, it will return the
 // index number of the failing header as well an error describing what went wrong.
-//
-// The verify parameter can be used to fine tune whether nonce verification
-// should be done or not. The reason behind the optional check is because some
-// of the header retrieval mechanisms already need to verify nonces, as well as
-// because nonces can be verified sparsely, not needing to check each.
-func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (int, error) {
-	start := time.Now()
-	if i, err := bc.hc.ValidateHeaderChain(chain, checkFreq); err != nil {
-		return i, err
-	}
-
+func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, _ int) (int, error) {
 	// Make sure only one thread manipulates the chain at once
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
@@ -2622,12 +2667,7 @@ func (bc *BlockChain) InsertHeaderChain(chain []*types.Header, checkFreq int) (i
 	bc.wg.Add(1)
 	defer bc.wg.Done()
 
-	whFunc := func(header *types.Header) error {
-		_, err := bc.hc.WriteHeader(header)
-		return err
-	}
-
-	return bc.hc.InsertHeaderChain(chain, whFunc, start)
+	return bc.hc.InsertHeaderChain(chain)
 }
 
 // CurrentHeader retrieves the current head header of the canonical chain. The
@@ -2681,8 +2721,13 @@ func (bc *BlockChain) GetHeaderByNumber(number uint64) *types.Header {
 // Config retrieves the blockchain's chain configuration.
 func (bc *BlockChain) Config() *params.ChainConfig { return bc.chainConfig }
 
-// Engine retrieves the blockchain's consensus engine.
-func (bc *BlockChain) Engine() consensus.Engine { return bc.engine }
+// Sealer retrieves the blockchain's sealer.
+func (bc *BlockChain) Sealer() consensus.Sealer { return bc.sealer }
+
+// ValidateHeader validates a header via the configured validator.
+func (bc *BlockChain) ValidateHeader(header *types.Header) error {
+	return bc.validator.ValidateHeader(header)
+}
 
 // Snapshots returns the blockchain snapshot tree.
 func (bc *BlockChain) Snapshots() *snapshot.Tree {
@@ -2773,12 +2818,12 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	// about the transaction and calling mechanisms.
 	vmenv := vm.NewEVM(blockContext, txContext, statedb, chainConfig, vmConfig)
 
-	// change evm and msg for eest
+	// EEST test hook: validator-only extension point.
 	if bc != nil {
-		if e, hasMethod := bc.Engine().(interface {
+		if v, hasMethod := bc.Validator().(interface {
 			BeforeApplyMessage(*vm.EVM, *types.Transaction)
 		}); hasMethod {
-			e.BeforeApplyMessage(vmenv, msg)
+			v.BeforeApplyMessage(vmenv, msg)
 		}
 	}
 
@@ -2811,12 +2856,22 @@ func (bc *BlockChain) ApplyTransaction(chainConfig *params.ChainConfig, author *
 	return receipt, internalTrace, err
 }
 
-func (bc *BlockChain) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
-	bc.executionModules = append(bc.executionModules, modules...)
-}
-
-func (bc *BlockChain) RegisterRewindableModule(modules ...kaiax.RewindableModule) {
-	bc.rewindableModules = append(bc.rewindableModules, modules...)
+// RegisterKaiaxModules wires kaiax modules to blockchain components in one place.
+func (bc *BlockChain) RegisterKaiaxModules(
+	mGov gov.GovModule,
+	mValset valset.ValsetModule,
+	mExecution []kaiax.ExecutionModule,
+	mRewindable []kaiax.RewindableModule,
+	mHeader []kaiax.HeaderModule,
+	mBlockState []kaiax.BlockStateModule,
+) {
+	bc.executionModules = append(bc.executionModules, mExecution...)
+	bc.rewindableModules = append(bc.rewindableModules, mRewindable...)
+	bc.headerModules = append(bc.headerModules, mHeader...)
+	if bc.validator != nil {
+		bc.validator.RegisterKaiaxModules(mGov, mValset, mHeader...)
+	}
+	bc.processor.RegisterBlockStateModule(mBlockState...)
 }
 
 func GetInternalTxTrace(tracer vm.Tracer) (*vm.InternalTxTrace, error) {

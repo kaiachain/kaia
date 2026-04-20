@@ -21,7 +21,7 @@ package cn
 import (
 	"testing"
 
-	"github.com/kaiachain/kaia/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/stretchr/testify/assert"
 )
@@ -48,7 +48,7 @@ func TestChannelManager_ChannelSize_5(t *testing.T) {
 // message channels with the given channel size.
 func testChannelManager(t *testing.T, chSize int) {
 	cm := NewChannelManager(chSize)
-	cm.RegisterMsgCode(ConsensusChannel, backend.IstanbulMsg)
+	cm.RegisterMsgCode(ConsensusChannel, consensus.ConsensusMsgCode)
 
 	channel := make(chan p2p.Msg, channelSizePerPeer)
 	consensusChannel := make(chan p2p.Msg, channelSizePerPeer)
@@ -65,7 +65,7 @@ func testChannelManager(t *testing.T, chSize int) {
 			assert.Nil(t, ch)
 			assert.NoError(t, err)
 		}
-		ch, err := cm.GetChannelWithMsgCode(chIdx, backend.IstanbulMsg)
+		ch, err := cm.GetChannelWithMsgCode(chIdx, consensus.ConsensusMsgCode)
 		assert.Nil(t, ch)
 		assert.NoError(t, err)
 
@@ -96,7 +96,7 @@ func testChannelManager(t *testing.T, chSize int) {
 			assert.Equal(t, channel, ch)
 			assert.NoError(t, err)
 		}
-		ch, err := cm.GetChannelWithMsgCode(chIdx, backend.IstanbulMsg)
+		ch, err := cm.GetChannelWithMsgCode(chIdx, consensus.ConsensusMsgCode)
 		assert.Equal(t, consensusChannel, ch)
 		assert.NoError(t, err)
 

@@ -81,6 +81,20 @@ func (mr *MockRandaoModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockRandaoModule)(nil).PostInsertBlock), arg0)
 }
 
+// PrepareHeader mocks base method.
+func (m *MockRandaoModule) PrepareHeader(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrepareHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PrepareHeader indicates an expected call of PrepareHeader.
+func (mr *MockRandaoModuleMockRecorder) PrepareHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareHeader", reflect.TypeOf((*MockRandaoModule)(nil).PrepareHeader), arg0)
+}
+
 // RewindDelete mocks base method.
 func (m *MockRandaoModule) RewindDelete(arg0 common.Hash, arg1 uint64) {
 	m.ctrl.T.Helper()
@@ -129,4 +143,18 @@ func (m *MockRandaoModule) Stop() {
 func (mr *MockRandaoModuleMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockRandaoModule)(nil).Stop))
+}
+
+// VerifyHeader mocks base method.
+func (m *MockRandaoModule) VerifyHeader(arg0, arg1 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyHeader", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VerifyHeader indicates an expected call of VerifyHeader.
+func (mr *MockRandaoModuleMockRecorder) VerifyHeader(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockRandaoModule)(nil).VerifyHeader), arg0, arg1)
 }

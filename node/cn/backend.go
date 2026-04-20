@@ -40,7 +40,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
-	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/event"
@@ -55,6 +55,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/staking"
 	staking_impl "github.com/kaiachain/kaia/kaiax/staking/impl"
 	supply_impl "github.com/kaiachain/kaia/kaiax/supply/impl"
+	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
@@ -85,9 +86,7 @@ type LesServer interface {
 type Miner interface {
 	Start()
 	Stop()
-	Register(agent work.Agent)
 	Mining() bool
-	HashRate() (tot int64)
 	SetExtra(extra []byte) error
 	Pending() (*types.Block, types.Receipts, *state.StateDB)
 	PendingBlock() *types.Block
@@ -111,6 +110,11 @@ type BackendProtocolManager interface {
 	SetSyncStop(flag bool)
 	staking.StakingModuleHost
 	auction.AuctionModuleHost
+}
+
+type chainAwareConsensusEngine interface {
+	SetChain(chain consensus.ChainReader)
+	SignalPeerRegistrable()
 }
 
 // CN implements the Kaia consensus node service.
@@ -209,12 +213,6 @@ func checkSyncMode(config *Config) error {
 	return nil
 }
 
-func setEngineType(chainConfig *params.ChainConfig) {
-	if chainConfig.Istanbul != nil {
-		types.EngineType = types.Engine_IBFT
-	}
-}
-
 // New creates a new CN object (including the
 // initialisation of the common CN object)
 func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
@@ -228,8 +226,6 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
-
-	setEngineType(chainConfig)
 
 	// load governance state
 	chainConfig.SetDefaults()
@@ -247,7 +243,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		chainConfig:       chainConfig,
 		eventMux:          ctx.EventMux,
 		accountManager:    ctx.AccountManager,
-		engine:            CreateConsensusEngine(ctx, config, chainConfig, chainDB, mGov, ctx.NodeType()),
+		engine:            engine.NewEngine(&engine.Opts{IstanbulConfig: &config.Istanbul, PrivateKey: ctx.NodeKey(), NodeType: ctx.NodeType()}),
 		networkId:         config.NetworkId,
 		rewardbase:        config.Rewardbase,
 		bloomRequests:     make(chan chan *bloombits.Retrieval),
@@ -257,12 +253,10 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		stakingModule:     mStaking,
 	}
 
-	// istanbul BFT. Derive and set node's address using nodekey
+	// Derive and set node's address using nodekey
 	if cn.chainConfig.Istanbul != nil {
 		cn.nodeAddress = crypto.PubkeyToAddress(ctx.NodeKey().PublicKey)
 	}
-
-	logger.Info("Initialising Klaytn protocol", "versions", cn.engine.Protocol().Versions, "network", config.NetworkId)
 
 	if !config.SkipBcVersionCheck {
 		if err := blockchain.CheckBlockChainVersion(chainDB); err != nil {
@@ -270,6 +264,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	}
 	var (
+		sealer      = engine.NewSealer(chainConfig, ctx.NodeKey())
 		vmConfig    = config.getVMConfig()
 		cacheConfig = &blockchain.CacheConfig{
 			ArchiveMode:          config.NoPruning,
@@ -284,7 +279,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		}
 	)
 
-	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, cn.engine, vmConfig)
+	bc, err := blockchain.NewBlockChain(chainDB, cacheConfig, cn.chainConfig, sealer, vmConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +349,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB
-	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, cn.engine, cn.blockchain, chainDB, cacheLimit, ctx.NodeType(), config); err != nil {
+	handler, ok := cn.engine.(consensus.Handler)
+	if !ok {
+		return nil, errUnsupportedEnginePolicy
+	}
+	if cn.protocolManager, err = NewProtocolManager(cn.chainConfig, config.SyncMode, config.NetworkId, cn.eventMux, cn.txPool, handler, cn.blockchain, chainDB, cacheLimit, ctx.NodeType(), config); err != nil {
 		return nil, err
 	}
 
@@ -376,21 +375,22 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	}
 
 	// set worker
-	if config.WorkerDisable {
+	if ctx.NodeType() != common.CONSENSUSNODE || config.WorkerDisable {
 		cn.miner = work.NewFakeWorker()
+		// TODO-Kaiabft-Refactor: Remove this chain-only injection path once runtime
+		// (Start/Stop) and passive engine/handler dependencies are split.
 		// Istanbul backend can be accessed by APIs to call its methods even though the core of the
 		// consensus engine doesn't run.
-		istBackend, ok := cn.engine.(consensus.Istanbul)
+		istBackend, ok := cn.engine.(chainAwareConsensusEngine)
 		if ok {
 			istBackend.SetChain(cn.blockchain)
 			istBackend.SignalPeerRegistrable()
 		}
 	} else {
 		// TODO-Kaia improve to handle drop transaction on network traffic in PN and EN
-		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.config.TxResendUseLegacy, cn.govModule)
+		cn.miner = work.New(cn, cn.chainConfig, cn.EventMux(), cn.engine, ctx.NodeType(), crypto.PubkeyToAddress(ctx.NodeKey().PublicKey), cn.govModule)
 	}
 
-	// istanbul BFT
 	cn.miner.SetExtra(makeExtraData(config.ExtraData))
 
 	cn.APIBackend = &CNAPIBackend{cn, nil}
@@ -466,11 +466,11 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 // setAcceptTxs sets AcceptTxs flag in 1CN case to receive tx propagation.
 func (s *CN) setAcceptTxs() error {
 	if s.chainConfig.Istanbul != nil {
-		istanbulExtra, err := types.ExtractIstanbulExtra(s.blockchain.Genesis().Header())
+		validators, err := s.blockchain.Sealer().Validators(s.blockchain.Genesis().Header())
 		if err != nil {
 			return err
 		} else {
-			if len(istanbulExtra.Validators) == 1 {
+			if len(validators) == 1 {
 				s.protocolManager.SetAcceptTxs()
 			}
 		}
@@ -521,6 +521,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mRandao  = randao_impl.NewRandaoModule()
 		mReward  = reward_impl.NewRewardModule()
 		mSupply  = supply_impl.NewSupplyModule()
+		mSystem  = system_impl.NewSystemModule()
 		mGasless = gasless_impl.NewGaslessModule()
 		mAuction = auction_impl.NewAuctionModule()
 	)
@@ -531,6 +532,9 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Chain:         s.blockchain,
 			GovModule:     s.govModule,
 			StakingModule: s.stakingModule,
+			ValsetModule:  mValset,
+			NodeAddress:   s.nodeAddress,
+			Rewardbase:    s.rewardbase,
 		}),
 		mSupply.Init(&supply_impl.InitOpts{
 			ChainKv:      s.chainDB.GetMiscDB(),
@@ -539,9 +543,13 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			RewardModule: mReward,
 		}),
 		mRandao.Init(&randao_impl.InitOpts{
-			ChainConfig: s.chainConfig,
-			Chain:       s.blockchain,
-			Downloader:  s.protocolManager.Downloader(),
+			ChainConfig:  s.chainConfig,
+			Chain:        s.blockchain,
+			Downloader:   s.protocolManager.Downloader(),
+			BlsSecretKey: ctx.BlsNodeKey(),
+		}),
+		mSystem.Init(&system_impl.InitOpts{
+			Chain: s.blockchain,
 		}),
 		mGasless.Init(&gasless_impl.InitOpts{
 			ChainConfig:   s.chainConfig,
@@ -563,12 +571,14 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		return err
 	}
 
-	mBase := []kaiax.BaseModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao}
+	mBase := []kaiax.BaseModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao, mSystem}
 	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
 	mTxBundling := []kaiax.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
 	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao}
 	mRewindable := []kaiax.RewindableModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
+	mHeader := []kaiax.HeaderModule{mReward, s.govModule, mRandao}
+	mBlockState := []kaiax.BlockStateModule{mReward, mSystem}
 
 	if !mGasless.IsDisabled() {
 		mExecution = append(mExecution, mGasless)
@@ -596,13 +606,9 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	s.RegisterJsonRpcModules(mJsonRpc...)
 	s.miner.RegisterExecutionModule(mExecution...)
 	s.miner.RegisterTxBundlingModule(mTxBundling...)
-	s.blockchain.RegisterExecutionModule(mExecution...)
-	s.blockchain.RegisterRewindableModule(mRewindable...)
+	s.blockchain.RegisterKaiaxModules(s.govModule, mValset, mExecution, mRewindable, mHeader, mBlockState)
 	s.txPool.RegisterTxPoolModule(mTxPool...)
-	if engine, ok := s.engine.(consensus.Istanbul); ok {
-		engine.RegisterKaiaxModules(s.govModule, s.stakingModule, mValset, mRandao)
-		engine.RegisterConsensusModule(mReward, s.govModule)
-	}
+	s.engine.RegisterKaiaxModules(s.govModule, mValset)
 	s.protocolManager.RegisterStakingModule(s.stakingModule)
 
 	return nil
@@ -646,23 +652,6 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) database.DB
 		UseFlatTrie: config.UseFlatTrie,
 	}
 	return ctx.OpenDatabase(dbc)
-}
-
-// CreateConsensusEngine creates the required type of consensus engine instance for a Kaia service
-func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db database.DBManager, govModule gov.GovModule, nodetype common.ConnType) consensus.Engine {
-	// Only istanbul  BFT is allowed in the main net. PoA is supported by service chain
-	if chainConfig.Governance == nil {
-		chainConfig.Governance = params.GetDefaultGovernanceConfig()
-	}
-	return istanbulBackend.New(&istanbulBackend.BackendOpts{
-		IstanbulConfig: &config.Istanbul,
-		Rewardbase:     config.Rewardbase,
-		PrivateKey:     ctx.NodeKey(),
-		BlsSecretKey:   ctx.BlsNodeKey(),
-		DB:             db,
-		GovModule:      govModule,
-		NodeType:       nodetype,
-	})
 }
 
 // APIs returns the collection of RPC services the ethereum package offers.

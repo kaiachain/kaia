@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -107,16 +108,14 @@ type Miner struct {
 	shouldStart atomic.Int32 // should start indicates whether we should start after sync
 }
 
-func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, nodeAddr common.Address, TxResendUseLegacy bool, govModule gov.GovModule) *Miner {
+func New(backend Backend, config *params.ChainConfig, mux *event.TypeMux, engine consensus.Engine, nodetype common.ConnType, nodeAddr common.Address, govModule gov.GovModule) *Miner {
 	miner := &Miner{
 		backend:  backend,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, nodeAddr, backend, mux, nodetype, TxResendUseLegacy, govModule),
+		worker:   newWorker(config, engine, nodeAddr, backend, mux, nodetype, govModule),
 		canStart: 1,
 	}
-	// TODO-Kaia drop or missing tx
-	miner.Register(NewCpuAgent(backend.BlockChain(), engine, nodetype))
 	go miner.update()
 
 	return miner
@@ -167,7 +166,7 @@ func (self *Miner) Start() {
 		logger.Info("Starting mining operation")
 	}
 	self.worker.start()
-	self.worker.commitNewWork()
+	// commitNewWork() is triggered by NewSequenceEvent from startNewRound()
 }
 
 func (self *Miner) Stop() {
@@ -176,34 +175,8 @@ func (self *Miner) Stop() {
 	self.shouldStart.Store(0)
 }
 
-func (self *Miner) Register(agent Agent) {
-	if self.Mining() {
-		agent.Start()
-	}
-	self.worker.register(agent)
-}
-
-func (self *Miner) Unregister(agent Agent) {
-	self.worker.unregister(agent)
-}
-
 func (self *Miner) Mining() bool {
 	return self.mining.Load() > 0
-}
-
-func (self *Miner) HashRate() (tot int64) {
-	if pow, ok := self.engine.(consensus.PoW); ok {
-		tot += int64(pow.Hashrate())
-	}
-	// do we care this might race? is it worth we're rewriting some
-	// aspects of the worker/locking up agents so we can get an accurate
-	// hashrate?
-	for agent := range self.worker.agents {
-		if _, ok := agent.(*CpuAgent); !ok {
-			tot += agent.GetHashRate()
-		}
-	}
-	return
 }
 
 func (self *Miner) SetExtra(extra []byte) error {
@@ -302,7 +275,10 @@ type BlockChain interface {
 	StateAtWithGCLock(root common.Hash) (*state.StateDB, error)
 	Export(w io.Writer) error
 	ExportN(w io.Writer, first, last uint64) error
-	Engine() consensus.Engine
+	ValidateHeader(header *types.Header) error
+	Sealer() consensus.Sealer
+	PrepareHeader(header *types.Header) error
+	RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule, mExecution []kaiax.ExecutionModule, mRewindable []kaiax.RewindableModule, mHeader []kaiax.HeaderModule, mBlockState []kaiax.BlockStateModule)
 	GetTxLookupInfoAndReceipt(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64, *types.Receipt)
 	GetTxAndLookupInfoInCache(hash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 	GetBlockReceiptsInCache(blockHash common.Hash) types.Receipts
@@ -343,8 +319,4 @@ type BlockChain interface {
 
 	// Snapshot
 	Snapshots() *snapshot.Tree
-
-	// kaiax module host
-	kaiax.ExecutionModuleHost
-	kaiax.RewindableModuleHost
 }

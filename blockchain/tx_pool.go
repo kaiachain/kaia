@@ -36,8 +36,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
-	"github.com/kaiachain/kaia/consensus/misc"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -565,9 +563,9 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// It needs to update gas price of tx pool since magma hardfork
 	if pool.rules.IsMagma {
 		pset := pool.govModule.GetParamSet(newHead.Number.Uint64() + 1)
-		pool.gasPrice = misc.NextMagmaBlockBaseFee(newHead, pset.ToKip71Config())
+		pool.gasPrice = pset.ToKip71Config().NextMagmaBlockBaseFee(newHead.Number, newHead.BaseFee, newHead.GasUsed)
 		if pool.rules.IsOsaka {
-			pool.blobBaseFee = eip4844.CalcBlobFee(pool.gasPrice)
+			pool.blobBaseFee = params.CalcBlobFee(pool.gasPrice)
 		}
 	}
 

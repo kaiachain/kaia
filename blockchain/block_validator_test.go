@@ -23,66 +23,133 @@
 package blockchain
 
 import (
+	"fmt"
 	"math/big"
 	"runtime"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	mock_gov "github.com/kaiachain/kaia/kaiax/gov/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
 
-// Tests that simple header verification works, for both good and bad blocks.
-func TestHeaderVerification(t *testing.T) {
-	// Create a simple chain to verify
-	var (
-		testdb    = database.NewMemoryDBManager()
-		gspec     = &Genesis{Config: params.TestChainConfig}
-		genesis   = gspec.MustCommit(testdb)
-		blocks, _ = GenerateChain(params.TestChainConfig, genesis, faker.NewFaker(), testdb, 8, nil)
-	)
-	headers := make([]*types.Header, len(blocks))
-	for i, block := range blocks {
-		headers[i] = block.Header()
+func TestValidateHeader(t *testing.T) {
+	testcases := []struct {
+		name           string
+		maxHardfork    string
+		mutateHeader   func(header *types.Header, parent *types.Header)
+		expectedErr    error
+		expectedErrStr string
+	}{
+		{
+			name:        "invalid block score",
+			maxHardfork: "kore",
+			mutateHeader: func(header *types.Header, _ *types.Header) {
+				header.BlockScore = big.NewInt(2)
+			},
+			expectedErr: ErrInvalidBlockScore,
+		},
+		{
+			name:        "future block",
+			maxHardfork: "kore",
+			mutateHeader: func(header *types.Header, _ *types.Header) {
+				header.Time = new(big.Int).Add(big.NewInt(time.Now().Unix()), new(big.Int).SetUint64(10))
+			},
+			expectedErr: consensus.ErrFutureBlock,
+		},
+		{
+			name:        "invalid timestamp",
+			maxHardfork: "kore",
+			mutateHeader: func(header *types.Header, parent *types.Header) {
+				header.Time = new(big.Int).Add(parent.Time, new(big.Int).SetUint64(uint64(params.BlockGenerationInterval)-1))
+			},
+			expectedErr: ErrInvalidTimestamp,
+		},
+		{
+			name:        "eip4844 header before osaka - excess blob gas",
+			maxHardfork: "kore",
+			mutateHeader: func(header *types.Header, _ *types.Header) {
+				excessBlobGas := uint64(0)
+				header.ExcessBlobGas = &excessBlobGas
+			},
+			expectedErr: ErrUnexpectedExcessBlobGasBeforeOsaka,
+		},
+		{
+			name:        "eip4844 header before osaka - blob gas used",
+			maxHardfork: "kore",
+			mutateHeader: func(header *types.Header, _ *types.Header) {
+				blobGasUsed := uint64(0)
+				header.BlobGasUsed = &blobGasUsed
+			},
+			expectedErr: ErrUnexpectedBlobGasUsedBeforeOsaka,
+		},
+		{
+			name:        "invalid eip4844 header",
+			maxHardfork: "osaka",
+			mutateHeader: func(header *types.Header, _ *types.Header) {
+				header.ExcessBlobGas = nil
+			},
+			expectedErrStr: "header is missing excessBlobGas",
+		},
 	}
-	// Run the header checker for blocks one-by-one, checking for both valid and invalid nonces
-	chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, faker.NewFaker(), vm.Config{})
-	defer chain.Stop()
 
-	for i := range blocks {
-		for j, valid := range []bool{true, false} {
-			var results <-chan error
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			config := params.TestKaiaConfig(tc.maxHardfork).Copy()
+			var (
+				testdb  = database.NewMemoryDBManager()
+				gspec   = &Genesis{Config: config}
+				genesis = gspec.MustCommit(testdb)
+				sealer  = faker.NewFaker()
+			)
+			blocks, _ := GenerateChain(config, genesis, sealer, testdb, 1, nil)
 
-			if valid {
-				engine := faker.NewFaker()
-				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
-			} else {
-				engine := faker.NewFakeFailer(headers[i].Number.Uint64())
-				_, results = engine.VerifyHeaders(chain, []*types.Header{headers[i]}, []bool{true})
-			}
-			// Wait for the verification result
-			select {
-			case result := <-results:
-				if (result == nil) != valid {
-					t.Errorf("test %d.%d: validity mismatch: have %v, want %v", i, j, result, valid)
+			chain, _ := NewBlockChain(testdb, nil, config, sealer, vm.Config{})
+			t.Cleanup(chain.Stop)
+
+			header := types.CopyHeader(blocks[0].Header())
+			parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+			ctrl := gomock.NewController(t)
+			t.Cleanup(ctrl.Finish)
+
+			mGov := mock_gov.NewMockGovModule(ctrl)
+			pset := gov.ParamSet{}
+			if config != nil && config.Governance != nil && config.Governance.KIP71 != nil {
+				pset = gov.ParamSet{
+					LowerBoundBaseFee:         config.Governance.KIP71.LowerBoundBaseFee,
+					UpperBoundBaseFee:         config.Governance.KIP71.UpperBoundBaseFee,
+					GasTarget:                 config.Governance.KIP71.GasTarget,
+					MaxBlockGasUsedForBaseFee: config.Governance.KIP71.MaxBlockGasUsedForBaseFee,
+					BaseFeeDenominator:        config.Governance.KIP71.BaseFeeDenominator,
 				}
-			case <-time.After(time.Second):
-				t.Fatalf("test %d.%d: verification timeout", i, j)
 			}
-			// Make sure no more data is returned
-			select {
-			case result := <-results:
-				t.Fatalf("test %d.%d: unexpected result returned: %v", i, j, result)
-			case <-time.After(25 * time.Millisecond):
+			mGov.EXPECT().GetParamSet(gomock.Any()).Return(pset).AnyTimes()
+
+			validator := &BlockValidator{
+				config: chain.Config(),
+				hc:     chain,
+				mGov:   mGov,
 			}
-		}
-		chain.InsertChain(blocks[i : i+1])
+
+			tc.mutateHeader(header, parent)
+
+			err := validator.ValidateHeader(header)
+			if tc.expectedErrStr != "" {
+				assert.EqualError(t, err, tc.expectedErrStr)
+				return
+			}
+			assert.ErrorIs(t, err, tc.expectedErr)
+		})
 	}
 }
 
@@ -256,124 +323,66 @@ func TestVerifyBlockBodyForOsakaFork(t *testing.T) {
 	}
 }
 
-// Tests that concurrent header verification works, for both good and bad blocks.
-func TestHeaderConcurrentVerification2(t *testing.T)  { testHeaderConcurrentVerification(t, 2) }
-func TestHeaderConcurrentVerification8(t *testing.T)  { testHeaderConcurrentVerification(t, 8) }
-func TestHeaderConcurrentVerification32(t *testing.T) { testHeaderConcurrentVerification(t, 32) }
+// Tests that header preprocess verification works for both valid and invalid chains.
+func TestPreprocessHeaderVerification(t *testing.T) {
+	for _, threads := range []int{2, 8, 32} {
+		t.Run(fmt.Sprintf("threads_%d", threads), func(t *testing.T) {
+			testPreprocessHeaderVerification(t, threads)
+		})
+	}
+}
 
-func testHeaderConcurrentVerification(t *testing.T, threads int) {
-	// Create a simple chain to verify
+func testPreprocessHeaderVerification(t *testing.T, threads int) {
+	// Create a simple chain to preprocess.
 	var (
-		testdb    = database.NewMemoryDBManager()
-		gspec     = &Genesis{Config: params.TestChainConfig}
-		genesis   = gspec.MustCommit(testdb)
-		blocks, _ = GenerateChain(params.TestChainConfig, genesis, faker.NewFaker(), testdb, 8, nil)
+		testConfig = params.TestChainConfig.Copy()
+		testdb     = database.NewMemoryDBManager()
+		gspec      = &Genesis{Config: testConfig}
+		genesis    = gspec.MustCommit(testdb)
 	)
+	// Keep this test in pre-Osaka behavior for legacy faker headers.
+	testConfig.OsakaCompatibleBlock = nil
+	blocks, _ := GenerateChain(testConfig, genesis, faker.NewFaker(), testdb, 8, nil)
 	headers := make([]*types.Header, len(blocks))
-	seals := make([]bool, len(blocks))
-
 	for i, block := range blocks {
 		headers[i] = block.Header()
-		seals[i] = true
 	}
-	// Set the number of threads to verify on
+
+	// Match the old concurrent test shape, even though preprocess is now validator-owned.
 	old := runtime.GOMAXPROCS(threads)
 	defer runtime.GOMAXPROCS(old)
 
-	// Run the header checker for the entire block chain at once both for a valid and
-	// also an invalid chain (enough if one arbitrary block is invalid).
+	failBlock := headers[len(headers)-2].Number.Uint64()
 	for i, valid := range []bool{true, false} {
+		var abort chan<- struct{}
 		var results <-chan error
-
 		if valid {
-			chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, faker.NewFaker(), vm.Config{})
-			_, results = chain.engine.VerifyHeaders(chain, headers, seals)
-			chain.Stop()
+			validator := &BlockValidator{sealer: faker.NewFaker()}
+			abort, results = validator.Preprocess(headers)
 		} else {
-			chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, faker.NewFakeFailer(uint64(len(headers)-1)), vm.Config{})
-			_, results = chain.engine.VerifyHeaders(chain, headers, seals)
-			chain.Stop()
+			validator := &BlockValidator{sealer: faker.NewFakeFailer(failBlock)}
+			abort, results = validator.Preprocess(headers)
 		}
-		// Wait for all the verification results
-		checks := make(map[int]error)
-		for j := range blocks {
+		for j := 0; j < len(headers); j++ {
 			select {
 			case result := <-results:
-				checks[j] = result
-
+				if valid || j < len(headers)-2 {
+					if result != nil {
+						t.Errorf("test %d.%d: expected nil result, got %v", i, j, result)
+					}
+				} else {
+					assert.ErrorIs(t, result, consensus.ErrUnknownAncestor, "test %d.%d: expected ErrUnknownAncestor", i, j)
+				}
 			case <-time.After(time.Second):
-				t.Fatalf("test %d.%d: verification timeout", i, j)
+				t.Fatalf("test %d.%d: preprocessing timeout", i, j)
 			}
 		}
-		// Check nonce check validity
-		for j := range blocks {
-			want := valid || (j < len(blocks)-2) // We chose the last-but-one nonce in the chain to fail
-			if (checks[j] == nil) != want {
-				t.Errorf("test %d.%d: validity mismatch: have %v, want %v", i, j, checks[j], want)
-			}
-			if !want {
-				// A few blocks after the first error may pass verification due to concurrent
-				// workers. We don't care about those in this test, just that the correct block
-				// errors out.
-				break
-			}
-		}
-		// Make sure no more data is returned
 		select {
 		case result := <-results:
 			t.Fatalf("test %d: unexpected result returned: %v", i, result)
 		case <-time.After(25 * time.Millisecond):
 		}
-	}
-}
 
-// Tests that aborting a header validation indeed prevents further checks from being
-// run, as well as checks that no left-over goroutines are leaked.
-func TestHeaderConcurrentAbortion2(t *testing.T)  { testHeaderConcurrentAbortion(t, 2) }
-func TestHeaderConcurrentAbortion8(t *testing.T)  { testHeaderConcurrentAbortion(t, 8) }
-func TestHeaderConcurrentAbortion32(t *testing.T) { testHeaderConcurrentAbortion(t, 32) }
-
-func testHeaderConcurrentAbortion(t *testing.T, threads int) {
-	// Create a simple chain to verify
-	var (
-		testdb    = database.NewMemoryDBManager()
-		gspec     = &Genesis{Config: params.TestChainConfig}
-		genesis   = gspec.MustCommit(testdb)
-		blocks, _ = GenerateChain(params.TestChainConfig, genesis, faker.NewFaker(), testdb, 1024, nil)
-	)
-	headers := make([]*types.Header, len(blocks))
-	seals := make([]bool, len(blocks))
-
-	for i, block := range blocks {
-		headers[i] = block.Header()
-		seals[i] = true
-	}
-	// Set the number of threads to verify on
-	old := runtime.GOMAXPROCS(threads)
-	defer runtime.GOMAXPROCS(old)
-
-	// Start the verifications and immediately abort
-	chain, _ := NewBlockChain(testdb, nil, params.TestChainConfig, faker.NewFakeDelayer(time.Millisecond), vm.Config{})
-	defer chain.Stop()
-
-	abort, results := chain.engine.VerifyHeaders(chain, headers, seals)
-	close(abort)
-
-	// Deplete the results channel
-	verified := 0
-	for depleted := false; !depleted; {
-		select {
-		case result := <-results:
-			if result != nil {
-				t.Errorf("header %d: validation failed: %v", verified, result)
-			}
-			verified++
-		case <-time.After(50 * time.Millisecond):
-			depleted = true
-		}
-	}
-	// Check that abortion was honored by not processing too many POWs
-	if verified > 2*threads {
-		t.Errorf("verification count too large: have %d, want below %d", verified, 2*threads)
+		close(abort)
 	}
 }

@@ -40,7 +40,9 @@ import (
 	"github.com/kaiachain/kaia/common/math"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
-	"github.com/kaiachain/kaia/consensus/misc/eip4844"
+	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/kaiachain/kaia/storage/database"
@@ -136,34 +138,36 @@ type btBlobConfigMarshaling struct {
 	UpdateFraction math.HexOrDecimal64
 }
 
-// eestEngine is a test engine to absorb the difference in gas calculation and gas limit
-// between Kaia and Ethereum. This includes the distribution of rewards.
-type eestEngine struct {
+// eestAdaptor is a wrapper to absorb consensus/header differences
+// between Kaia and Ethereum execution-spec block tests.
+type eestAdaptor struct {
 	*faker.Faker
+	config *params.ChainConfig
+	chain  *blockchain.BlockChain
+
 	baseFee       *big.Int
 	gasLimit      uint64
-	coinbase      common.Address
 	parentHeader  *types.Header
 	excessBlobGas uint64
 }
 
-var _ consensus.Engine = &eestEngine{}
+var (
+	_ consensus.Sealer       = &eestAdaptor{}
+	_ blockchain.Validator   = &eestAdaptor{}
+	_ kaiax.BlockStateModule = &eestAdaptor{}
+)
 
-// This is called inside blockchain.ApplyTransaction to manipulate the evm configuration and recreate the eth.
-func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
+func (e *eestAdaptor) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 	// Change BaseFee/GasLimit to the one in the eth header
 	evm.Context.BaseFee = e.baseFee
 	evm.Context.GasLimit = e.gasLimit
 	if evm.ChainConfig().IsOsakaForkEnabled(evm.Context.BlockNumber) {
 		// If the parent header has excess blob gas, calculate the excess blob gas for the current block.
+		bcfg := evm.ChainConfig().LatestBlobConfig(evm.Context.BlockNumber)
 		if e.parentHeader.ExcessBlobGas != nil {
-			e.excessBlobGas = eip4844.CalcExcessBlobGasEIP4844(evm.ChainConfig(), e.parentHeader, evm.Context.BlockNumber)
+			e.excessBlobGas = bcfg.CalcExcessBlobGasForEEST(e.parentHeader.ExcessBlobGas, e.parentHeader.BlobGasUsed, e.parentHeader.BaseFee)
 		}
-		header := &types.Header{
-			Number:        new(big.Int).Set(evm.Context.BlockNumber),
-			ExcessBlobGas: &e.excessBlobGas,
-		}
-		evm.Context.BlobBaseFee = eip4844.CalcBlobFeeEIP4844(evm.ChainConfig(), header)
+		evm.Context.BlobBaseFee = bcfg.BlobBaseFeeEIP4844(e.excessBlobGas)
 	}
 
 	if evm.ChainConfig().Rules(evm.Context.BlockNumber).IsCancun {
@@ -186,37 +190,49 @@ func (e *eestEngine) BeforeApplyMessage(evm *vm.EVM, msg *types.Transaction) {
 	evm.GasPrice, _ = calculateEthGasPrice(evm.ChainConfig().Rules(evm.Context.BlockNumber), msg.GasPrice(), e.baseFee, msg.GasFeeCap(), msg.GasTipCap())
 }
 
-func (e *eestEngine) Initialize(chain consensus.ChainReader, header *types.Header, state *state.StateDB) {
-	if chain.Config().IsPragueForkEnabled(header.Number) {
-		context := blockchain.NewEVMBlockContext(header, chain, nil)
-		vmenv := vm.NewEVM(context, vm.TxContext{}, state, chain.Config(), &vm.Config{})
-		blockchain.ProcessParentBlockHash(header, vmenv, state, chain.Config().Rules(header.Number))
+func (e *eestAdaptor) applyHeader(parent *types.Header, h btHeader) {
+	e.baseFee = h.BaseFee
+	e.gasLimit = h.GasLimit
+	e.parentHeader = parent
+	if h.ExcessBlobGas != nil {
+		e.excessBlobGas = *h.ExcessBlobGas
 	}
 }
 
-// VerifyHeaders verifies a batch of headers concurrently.
-func (e *eestEngine) VerifyHeaders(chain consensus.ChainReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	abort, results := make(chan struct{}), make(chan error, len(headers))
-	go func() {
-		for i := range headers {
-			select {
-			case <-abort:
-				return
-			default:
-				err := e.verifyHeaderWorker(chain, headers, seals, i)
-				results <- err
-			}
-		}
-	}()
-	return abort, results
+func (e *eestAdaptor) newValidator() *blockchain.BlockValidator {
+	if e.chain == nil {
+		return nil
+	}
+	return blockchain.NewBlockValidator(e.config, e.chain)
 }
 
-func (e *eestEngine) verifyHeaderWorker(chain consensus.ChainReader, headers []*types.Header, seals []bool, index int) error {
-	header := headers[index]
+// blockchain.Validator implementation.
+func (e *eestAdaptor) RegisterKaiaxModules(_ gov.GovModule, _ valset.ValsetModule, _ ...kaiax.HeaderModule) {
+}
+
+func (e *eestAdaptor) ValsetModule() valset.ValsetModule {
+	return nil
+}
+
+func (e *eestAdaptor) Preprocess(headers []*types.Header) (chan<- struct{}, <-chan error) {
+	if validator := e.newValidator(); validator != nil {
+		return validator.Preprocess(headers)
+	}
+
+	return nil, nil
+}
+
+func (e *eestAdaptor) ValidateHeader(header *types.Header) error {
+	if header == nil || header.Number == nil {
+		return consensus.ErrUnknownBlock
+	}
+	if e.chain == nil {
+		return consensus.ErrUnknownAncestor
+	}
 	number := header.Number.Uint64()
 
 	// Short circuit if the header is known
-	if chain.GetHeader(header.Hash(), number) != nil {
+	if e.chain.GetHeader(header.Hash(), number) != nil {
 		return nil
 	}
 
@@ -225,22 +241,13 @@ func (e *eestEngine) verifyHeaderWorker(chain consensus.ChainReader, headers []*
 		return nil
 	}
 
-	// Find parent - either from previous header in batch or from chain
-	var parent *types.Header
-	if index == 0 {
-		parent = chain.GetHeader(header.ParentHash, number-1)
-	} else if headers[index-1].Hash() == header.ParentHash {
-		parent = headers[index-1]
-	} else {
-		parent = chain.GetHeader(header.ParentHash, number-1)
-	}
-
+	parent := e.chain.GetHeader(header.ParentHash, number-1)
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
 
 	// Verify the existence / non-existence of osaka-specific header fields
-	osaka := chain.Config().IsOsakaForkEnabled(header.Number)
+	osaka := e.chain.Config().IsOsakaForkEnabled(header.Number)
 	if !osaka {
 		switch {
 		case header.ExcessBlobGas != nil:
@@ -249,7 +256,16 @@ func (e *eestEngine) verifyHeaderWorker(chain consensus.ChainReader, headers []*
 			return errors.New("unexpected blobGasUsed before osaka")
 		}
 	} else {
-		if err := eip4844.VerifyEIP4844HeaderForEEST(chain.Config(), parent, header); err != nil {
+		if header.Number.Uint64() != parent.Number.Uint64()+1 {
+			panic("bad header pair")
+		}
+
+		bcfg := e.chain.Config().LatestBlobConfig(header.Number)
+		if bcfg == nil {
+			panic("called before EIP-4844 is active")
+		}
+
+		if err := bcfg.VerifyEIP4844HeaderForEEST(parent.ExcessBlobGas, parent.BlobGasUsed, parent.BaseFee, header.ExcessBlobGas, header.BlobGasUsed); err != nil {
 			return err
 		}
 	}
@@ -258,7 +274,31 @@ func (e *eestEngine) verifyHeaderWorker(chain consensus.ChainReader, headers []*
 	return nil
 }
 
-func (e *eestEngine) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) (*types.Block, error) {
+func (e *eestAdaptor) ValidateBody(block *types.Block) error {
+	if validator := e.newValidator(); validator != nil {
+		return validator.ValidateBody(block)
+	}
+	return nil
+}
+
+func (e *eestAdaptor) ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas uint64) error {
+	if validator := e.newValidator(); validator != nil {
+		return validator.ValidateState(block, parent, state, receipts, usedGas)
+	}
+	return nil
+}
+
+// kaiax.BlockStateModule implementation.
+func (e *eestAdaptor) InitializeState(header *types.Header, state *state.StateDB) {
+	if !e.config.IsPragueForkEnabled(header.Number) || e.chain == nil {
+		return
+	}
+	context := blockchain.NewEVMBlockContext(header, e.chain, &common.Address{})
+	vmenv := vm.NewEVM(context, vm.TxContext{}, state, e.config, &vm.Config{})
+	blockchain.ProcessParentBlockHash(header, vmenv, state, e.config.Rules(header.Number))
+}
+
+func (e *eestAdaptor) FinalizeState(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
 	ethReward := common.Big0
 	for _, receipt := range receipts {
 		for _, tx := range txs {
@@ -266,29 +306,48 @@ func (e *eestEngine) Finalize(chain consensus.ChainReader, header *types.Header,
 				continue
 			}
 
-			ethGasPrice, _ := calculateEthGasPrice(chain.Config().Rules(header.Number), tx.GasPrice(), e.baseFee, tx.GasFeeCap(), tx.GasTipCap())
-			ethReward = new(big.Int).Add(ethReward, calculateEthMiningReward(ethGasPrice, tx.GasFeeCap(), tx.GasTipCap(), e.baseFee, receipt.GasUsed, chain.Config().Rules(header.Number)))
+			ethGasPrice, _ := calculateEthGasPrice(e.config.Rules(header.Number), tx.GasPrice(), header.BaseFee, tx.GasFeeCap(), tx.GasTipCap())
+			ethReward = new(big.Int).Add(ethReward, calculateEthMiningReward(ethGasPrice, tx.GasFeeCap(), tx.GasTipCap(), header.BaseFee, receipt.GasUsed, e.config.Rules(header.Number)))
 		}
 	}
 
 	state.AddBalance(header.Rewardbase, ethReward)
-	header.Root = state.IntermediateRoot(true)
-
-	return types.NewBlock(header, txs, receipts), nil
+	return nil
 }
 
-func (e *eestEngine) Author(header *types.Header) (common.Address, error) {
-	return e.coinbase, nil
-}
-
-func (e *eestEngine) applyHeader(parent *types.Header, h btHeader) {
-	e.baseFee = h.BaseFee
-	e.gasLimit = h.GasLimit
-	e.coinbase = h.Coinbase
-	e.parentHeader = parent
-	if h.ExcessBlobGas != nil {
-		e.excessBlobGas = *h.ExcessBlobGas
+// consensus.Sealer implementation.
+func (e *eestAdaptor) Committers(header *types.Header) ([]common.Address, error) {
+	if header == nil {
+		return nil, nil
 	}
+	return []common.Address{header.Rewardbase}, nil
+}
+
+func (e *eestAdaptor) Vanity(header *types.Header) ([]byte, error) {
+	return nil, nil
+}
+
+func (e *eestAdaptor) RawSeals(header *types.Header) ([]byte, [][]byte, error) {
+	return nil, nil, nil
+}
+
+func (e *eestAdaptor) Round(header *types.Header) (byte, error) {
+	return 0, nil
+}
+
+func (e *eestAdaptor) Validators(header *types.Header) ([]common.Address, error) {
+	return nil, nil
+}
+
+func (e *eestAdaptor) VerifySeals(header *types.Header) error {
+	return nil
+}
+
+func (e *eestAdaptor) Author(header *types.Header) (common.Address, error) {
+	if header == nil {
+		return common.Address{}, nil
+	}
+	return header.Rewardbase, nil
 }
 
 func (t *BlockTest) Run() error {
@@ -306,7 +365,7 @@ func (t *BlockTest) Run() error {
 		MaxBlockGasUsedForBaseFee: 0,
 		BaseFeeDenominator:        0,
 	}
-	// Override Finalize in testEngine and enable it to distribute eth rewards.
+	// Override Finalize in test adaptor and enable it to distribute eth rewards.
 	config.Governance.Reward = &params.RewardConfig{
 		DeferredTxFee: true,
 	}
@@ -342,11 +401,15 @@ func (t *BlockTest) Run() error {
 		return fmt.Errorf("genesis block state root does not match test: computed=%x, test=%x", simulatedRoot.Bytes()[:6], t.json.Genesis.Root[:6])
 	}
 
-	chain, err := blockchain.NewBlockChain(db, nil, config, &eestEngine{Faker: faker.NewShared()}, vm.Config{Debug: false, ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
+	adaptor := &eestAdaptor{Faker: faker.NewFakerWithFixedSealer(params.AuthorAddressForTesting), config: config}
+	chain, err := blockchain.NewBlockChain(db, nil, config, adaptor, vm.Config{Debug: false, ComputationCostLimit: params.OpcodeComputationCostLimitInfinite})
 	if err != nil {
 		return err
 	}
+	adaptor.chain = chain
 	defer chain.Stop()
+	chain.Processor().RegisterBlockStateModule(adaptor)
+	chain.SetValidatorForTest(adaptor)
 
 	_, err = t.insertBlocks(chain, *gblock, db)
 	if err != nil {
@@ -414,12 +477,12 @@ func (t *BlockTest) insertBlocks(bc *blockchain.BlockChain, gBlock types.Block, 
 			}
 		}
 
-		// The eth header is recorded to the engine by calling applyHeader.
-		if e := bc.Engine().(interface{ applyHeader(*types.Header, btHeader) }); e != nil {
-			e.applyHeader(preBlock.Header(), header)
+		// The eth header is recorded by calling applyHeader.
+		if v, ok := bc.Validator().(interface{ applyHeader(*types.Header, btHeader) }); ok {
+			v.applyHeader(preBlock.Header(), header)
 		}
 
-		blocks, _ := blockchain.GenerateChain(bc.Config(), preBlock, bc.Engine(), db, 1, func(i int, b *blockchain.BlockGen) {
+		blocks, _ := blockchain.GenerateChain(bc.Config(), preBlock, bc.Sealer(), db, 1, func(i int, b *blockchain.BlockGen) {
 			b.SetRewardbase(common.Address(header.Coinbase))
 			b.SetMixHash(header.MixHash)
 			b.SetBaseFee(header.BaseFee)

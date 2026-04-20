@@ -52,18 +52,18 @@ func (mr *MockRewardModuleMockRecorder) APIs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockRewardModule)(nil).APIs))
 }
 
-// FinalizeHeader mocks base method.
-func (m *MockRewardModule) FinalizeHeader(arg0 *types.Header, arg1 *state.StateDB, arg2 []*types.Transaction, arg3 []*types.Receipt) error {
+// FinalizeState mocks base method.
+func (m *MockRewardModule) FinalizeState(arg0 *types.Header, arg1 *state.StateDB, arg2 []*types.Transaction, arg3 []*types.Receipt) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FinalizeHeader", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "FinalizeState", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// FinalizeHeader indicates an expected call of FinalizeHeader.
-func (mr *MockRewardModuleMockRecorder) FinalizeHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+// FinalizeState indicates an expected call of FinalizeState.
+func (mr *MockRewardModuleMockRecorder) FinalizeState(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeHeader", reflect.TypeOf((*MockRewardModule)(nil).FinalizeHeader), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeState", reflect.TypeOf((*MockRewardModule)(nil).FinalizeState), arg0, arg1, arg2, arg3)
 }
 
 // GetBlockReward mocks base method.
@@ -109,6 +109,18 @@ func (m *MockRewardModule) GetRewardSummary(arg0 uint64) (*reward.RewardSummary,
 func (mr *MockRewardModuleMockRecorder) GetRewardSummary(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRewardSummary", reflect.TypeOf((*MockRewardModule)(nil).GetRewardSummary), arg0)
+}
+
+// InitializeState mocks base method.
+func (m *MockRewardModule) InitializeState(arg0 *types.Header, arg1 *state.StateDB) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "InitializeState", arg0, arg1)
+}
+
+// InitializeState indicates an expected call of InitializeState.
+func (mr *MockRewardModuleMockRecorder) InitializeState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeState", reflect.TypeOf((*MockRewardModule)(nil).InitializeState), arg0, arg1)
 }
 
 // PostRunTx mocks base method.
@@ -181,15 +193,15 @@ func (mr *MockRewardModuleMockRecorder) Stop() *gomock.Call {
 }
 
 // VerifyHeader mocks base method.
-func (m *MockRewardModule) VerifyHeader(arg0 *types.Header) error {
+func (m *MockRewardModule) VerifyHeader(arg0, arg1 *types.Header) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyHeader", arg0)
+	ret := m.ctrl.Call(m, "VerifyHeader", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // VerifyHeader indicates an expected call of VerifyHeader.
-func (mr *MockRewardModuleMockRecorder) VerifyHeader(arg0 interface{}) *gomock.Call {
+func (mr *MockRewardModuleMockRecorder) VerifyHeader(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockRewardModule)(nil).VerifyHeader), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockRewardModule)(nil).VerifyHeader), arg0, arg1)
 }

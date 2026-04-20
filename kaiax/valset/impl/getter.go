@@ -44,6 +44,14 @@ func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error
 	return demoted.List(), nil
 }
 
+func (v *ValsetModule) GetQualifiedValidators(num uint64) ([]common.Address, error) {
+	qualified, err := v.getQualifiedValidators(num)
+	if err != nil {
+		return nil, err
+	}
+	return qualified.List(), nil
+}
+
 func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, error) {
 	council, err := v.getCouncil(num)
 	if err != nil {
@@ -75,8 +83,9 @@ func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
 		return common.Address{}, nil
 	}
 	if header := v.Chain.GetHeaderByNumber(num); header != nil {
-		if uint64(header.Round()) == round {
-			return v.Chain.Engine().Author(header)
+		headerRound, err := v.Chain.Sealer().Round(header)
+		if err == nil && uint64(headerRound) == round {
+			return v.Chain.Sealer().Author(header)
 		}
 	}
 	// TODO-kaiax: Sync blockContext

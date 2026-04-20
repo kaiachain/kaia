@@ -28,7 +28,8 @@ import (
 	"time"
 
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
 // sendNextRoundChange sends the ROUND CHANGE message with current round + 1
@@ -57,7 +58,7 @@ func (c *core) sendRoundChange(round *big.Int) {
 	logger.Warn("[RC] Commit messages received before catchUpRound",
 		"len(commits)", c.current.Commits.Size(), "messages", c.current.Commits.GetMessages())
 
-	c.catchUpRound(&istanbul.View{
+	c.catchUpRound(&bft.View{
 		// The round number we'd like to transfer to.
 		Round:    new(big.Int).Set(round),
 		Sequence: new(big.Int).Set(cv.Sequence),
@@ -67,40 +68,44 @@ func (c *core) sendRoundChange(round *big.Int) {
 
 	// Now we have the new round number and sequence number
 	cv = c.currentView()
-	rc := &istanbul.Subject{
+	rc := &bft.Subject{
 		View:     cv,
 		Digest:   common.Hash{},
 		PrevHash: lastProposal.Hash(),
 	}
 
-	payload, err := Encode(rc)
+	payload, err := bft.Encode(rc)
 	if err != nil {
 		logger.Error("Failed to encode ROUND CHANGE", "rc", rc, "err", err)
 		return
 	}
 
-	c.broadcast(&message{
+	c.broadcast(&bft.Message{
 		Hash: rc.PrevHash,
-		Code: msgRoundChange,
+		Code: bft.MsgRoundChange,
 		Msg:  payload,
 	})
 
-	Vrank.SetLatestView(istanbul.View{
+	committeeList := []common.Address{}
+	if c.current.committee != nil {
+		committeeList = c.current.committee.List()
+	}
+	Vrank.SetLatestView(bft.View{
 		Round:    new(big.Int).Set(round),
 		Sequence: new(big.Int).Set(cv.Sequence),
-	}, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+	}, committeeList, c.current.requiredMessageCount)
 	Vrank.AddMyRoundChange(round.Uint64(), timestamp)
 }
 
-func (c *core) handleRoundChange(msg *message, src common.Address) error {
+func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("state", c.state, "from", src.Hex())
 	timestamp := time.Now()
 
 	// Decode ROUND CHANGE message
-	var rc *istanbul.Subject
+	var rc *bft.Subject
 	if err := msg.Decode(&rc); err != nil {
 		logger.Error("Failed to decode message", "code", msg.Code, "err", err)
-		return errInvalidMessage
+		return bft.ErrInvalidMessage
 	}
 
 	// TODO-Kaia-Istanbul: establish round change messaging policy and then apply it
@@ -108,7 +113,7 @@ func (c *core) handleRoundChange(msg *message, src common.Address) error {
 	//	return errNotFromCommittee
 	//}
 
-	if err := c.checkMessage(msgRoundChange, rc.View); err != nil {
+	if err := c.checkMessage(bft.MsgRoundChange, rc.View); err != nil {
 		return err
 	}
 
@@ -123,12 +128,12 @@ func (c *core) handleRoundChange(msg *message, src common.Address) error {
 		return err
 	}
 
-	Vrank.SetLatestView(*cv, c.currentCommittee.Committee().List(), c.currentCommittee.RequiredMessageCount())
+	Vrank.SetLatestView(*cv, c.current.committee.List(), c.current.requiredMessageCount)
 	Vrank.AddRoundChange(src, roundView.Round.Uint64(), timestamp)
 
 	var numCatchUp, numStartNewRound int
-	n := c.currentCommittee.RequiredMessageCount()
-	f := c.currentCommittee.F()
+	n := c.current.requiredMessageCount
+	f := c.current.f
 	// N ROUND CHANGE messages can start new round.
 	numStartNewRound = n
 	// F + 1 ROUND CHANGE messages can start catch up the round.
@@ -165,28 +170,28 @@ func (c *core) handleRoundChange(msg *message, src common.Address) error {
 
 // ----------------------------------------------------------------------------
 
-func newRoundChangeSet(councilState *istanbul.BlockValSet) *roundChangeSet {
+func newRoundChangeSet(qualified *valset.AddressSet) *roundChangeSet {
 	return &roundChangeSet{
-		valSet:       councilState,
+		qualified:    qualified,
 		roundChanges: make(map[uint64]*messageSet),
 		mu:           new(sync.Mutex),
 	}
 }
 
 type roundChangeSet struct {
-	valSet       *istanbul.BlockValSet
+	qualified    *valset.AddressSet
 	roundChanges map[uint64]*messageSet
 	mu           *sync.Mutex
 }
 
 // Add adds the round and message into round change set
-func (rcs *roundChangeSet) Add(r *big.Int, msg *message) (int, error) {
+func (rcs *roundChangeSet) Add(r *big.Int, msg *bft.Message) (int, error) {
 	rcs.mu.Lock()
 	defer rcs.mu.Unlock()
 
 	round := r.Uint64()
 	if rcs.roundChanges[round] == nil {
-		rcs.roundChanges[round] = newMessageSet(rcs.valSet)
+		rcs.roundChanges[round] = newMessageSet(rcs.qualified)
 	}
 	err := rcs.roundChanges[round].Add(msg)
 	if err != nil {

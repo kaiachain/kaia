@@ -134,8 +134,8 @@ type ProtocolManager struct {
 	// and processing
 	wg     sync.WaitGroup
 	peerWg sync.WaitGroup
-	// istanbul BFT
-	engine consensus.Engine
+
+	handler consensus.Handler
 
 	wsendpoint string
 
@@ -155,7 +155,7 @@ type ProtocolManager struct {
 // NewProtocolManager returns a new Kaia sub protocol manager. The Kaia sub protocol manages peers capable
 // with the Kaia network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux,
-	txpool work.TxPool, engine consensus.Engine, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
+	txpool work.TxPool, handler consensus.Handler, blockchain work.BlockChain, chainDB database.DBManager, cacheLimit int,
 	nodetype common.ConnType, cnconfig *Config,
 ) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields
@@ -171,7 +171,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		txsyncCh:          make(chan *txsync),
 		quitSync:          make(chan struct{}),
 		quitResendCh:      make(chan struct{}),
-		engine:            engine,
+		handler:           handler,
 		nodetype:          nodetype,
 		txResendUseLegacy: cnconfig.TxResendUseLegacy,
 		blobSidecarReqManager: &sidecarReqManager{
@@ -181,10 +181,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		},
 	}
 
-	// istanbul BFT
-	if handler, ok := engine.(consensus.Handler); ok {
-		handler.SetBroadcaster(manager, manager.nodetype)
-	}
+	handler.SetBroadcaster(manager)
 
 	// Figure out whether to allow fast sync or not
 	if (mode == downloader.FastSync || mode == downloader.SnapSync) && blockchain.CurrentBlock().NumberU64() > 0 {
@@ -199,8 +196,8 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.fastSync = uint32(0)
 		manager.snapSync = uint32(1)
 	}
-	// istanbul BFT
-	protocol := engine.Protocol()
+	protocol := ConsensusProtocol
+	logger.Info("Initialising Kaia protocol", "versions", protocol.Versions, "network", networkId)
 	// Initiate a sub-protocol for every implemented version we can handle
 	manager.SubProtocols = make([]p2p.Protocol, 0, len(protocol.Versions))
 	for i, version := range protocol.Versions {
@@ -338,7 +335,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.fetcher = fetcher.NewFakeFetcher()
 	} else {
 		validator := func(header *types.Header) error {
-			return engine.VerifyHeader(blockchain, header, true)
+			return blockchain.Validator().ValidateHeader(header)
 		}
 		heighter := func() uint64 {
 			return blockchain.CurrentBlock().NumberU64()
@@ -355,13 +352,12 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.fetcher = fetcher.New(blockchain.GetBlockByHash, validator, manager.BroadcastBlock, manager.BroadcastBlockHash, heighter, inserter, manager.removePeer)
 	}
 
-	if manager.useTxResend() {
+	if manager.nodetype != common.CONSENSUSNODE {
 		go manager.txResendLoop(cnconfig.TxResendInterval, cnconfig.TxResendCount)
 	}
 	return manager, nil
 }
 
-// istanbul BFT
 func (pm *ProtocolManager) RegisterValidator(connType common.ConnType, validator p2p.PeerTypeValidator) {
 	pm.peers.RegisterValidator(connType, validator)
 }
@@ -450,7 +446,7 @@ func (pm *ProtocolManager) Stop() {
 	// After this send has completed, no new peers will be accepted.
 	pm.noMorePeers <- struct{}{}
 
-	if pm.useTxResend() {
+	if pm.nodetype != common.CONSENSUSNODE {
 		// Quit resend loop
 		pm.quitResendCh <- struct{}{}
 	}
@@ -665,9 +661,9 @@ func (pm *ProtocolManager) processMsg(msgCh <-chan p2p.Msg, p Peer, addr common.
 // processConsensusMsg processes the consensus message.
 func (pm *ProtocolManager) processConsensusMsg(msgCh <-chan p2p.Msg, p Peer, addr common.Address, errCh chan<- error) {
 	for msg := range msgCh {
-		if handler, ok := pm.engine.(consensus.Handler); ok {
-			_, err := handler.HandleMsg(addr, msg)
-			// if msg is istanbul msg, handled is true and err is nil if handle msg is successful.
+		if pm.handler != nil {
+			_, err := pm.handler.HandleMsg(addr, msg)
+			// if msg is consensus msg, handled is true and err is nil if handle msg is successful.
 			if err != nil {
 				p.GetP2PPeer().Log().Warn("ProtocolManager failed to handle consensus message. This can happen during block synchronization.", "msg", msg, "err", err)
 				errCh <- err
@@ -693,15 +689,16 @@ func (pm *ProtocolManager) handleMsg(p Peer, addr common.Address, msg p2p.Msg) e
 	//}
 	//defer msg.Discard()
 
-	// istanbul BFT
-	if handler, ok := pm.engine.(consensus.Handler); ok {
-		//pubKey, err := p.ID().Pubkey()
-		//if err != nil {
-		//	return err
-		//}
-		//addr := crypto.PubkeyToAddress(*pubKey)
-		handled, err := handler.HandleMsg(addr, msg)
-		// if msg is istanbul msg, handled is true and err is nil if handle msg is successful.
+	//pubKey, err := p.ID().Pubkey()
+	//if err != nil {
+	//	return err
+	//}
+	//addr := crypto.PubkeyToAddress(*pubKey)
+	if msg.Code == consensus.ConsensusMsgCode {
+		if pm.handler == nil {
+			return nil
+		}
+		handled, err := pm.handler.HandleMsg(addr, msg)
 		if handled {
 			return err
 		}
@@ -1754,13 +1751,6 @@ func (pm *ProtocolManager) txResend(pending types.Transactions) {
 	}
 }
 
-func (pm *ProtocolManager) useTxResend() bool {
-	if pm.nodetype != common.CONSENSUSNODE && !pm.txResendUseLegacy {
-		return true
-	}
-	return false
-}
-
 // NodeInfo represents a short summary of the Kaia sub-protocol metadata
 // known about the host peer.
 type NodeInfo struct {
@@ -1905,6 +1895,9 @@ func (m *sidecarReqManager) get(txHash common.Hash) *sidecarReq {
 func (m *sidecarReqManager) update(txHash common.Hash, peer string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.list[txHash] == nil {
+		return // already deleted by a concurrent response
+	}
 	// no longer keep the request if the try count is too high
 	if m.list[txHash].try+1 >= m.maxTry {
 		delete(m.list, txHash)

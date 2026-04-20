@@ -239,16 +239,6 @@ const (
 )
 
 var (
-	// DefaultOsakaBlobConfig is the default blob configuration for the Osaka fork.
-	DefaultOsakaBlobConfig = &BlobConfig{
-		Target:         1,
-		Max:            1,
-		UpdateFraction: 5007716,
-	}
-	// DefaultBlobSchedule is the latest configured blob schedule for Ethereum mainnet.
-	DefaultBlobSchedule = &BlobScheduleConfig{
-		Osaka: DefaultOsakaBlobConfig,
-	}
 	// DefaultRegistryConfig is the default registry config for the Randao fork.
 	DefaultRegistryConfig = &RegistryConfig{
 		Records: map[string]common.Address{
@@ -356,15 +346,6 @@ type RewardConfig struct {
 	UseFlexReward          bool     `json:"useFlexReward,omitempty"`          // Enable flexible reward scheme (reward.ratio g/x/y/z)
 }
 
-// Magma governance parameters
-type KIP71Config struct {
-	LowerBoundBaseFee         uint64 `json:"lowerboundbasefee"`         // Minimum base fee for dynamic gas price
-	UpperBoundBaseFee         uint64 `json:"upperboundbasefee"`         // Maximum base fee for dynamic gas price
-	GasTarget                 uint64 `json:"gastarget"`                 // Gauge parameter increasing or decreasing gas price
-	MaxBlockGasUsedForBaseFee uint64 `json:"maxblockgasusedforbasefee"` // Maximum network and process capacity to allow in a block
-	BaseFeeDenominator        uint64 `json:"basefeedenominator"`        // For normalizing effect of the rapid change like impulse gas used
-}
-
 // IstanbulConfig is the consensus engine configs for Istanbul based sealing.
 type IstanbulConfig struct {
 	Epoch          uint64 `json:"epoch"`  // Epoch length to reset votes and checkpoint
@@ -449,32 +430,42 @@ func (c *ChainConfig) Copy() *ChainConfig {
 	return r
 }
 
-// BlobConfig specifies the target and max blobs per block for the associated fork.
-type BlobConfig struct {
-	Target         int    `json:"target"`
-	Max            int    `json:"max"`
-	UpdateFraction uint64 `json:"baseFeeUpdateFraction"`
-}
-
-// String implement fmt.Stringer, returning string format blob config.
-func (bc *BlobConfig) String() string {
-	if bc == nil {
-		return "nil"
-	}
-	return fmt.Sprintf("target: %d, max: %d, fraction: %d", bc.Target, bc.Max, bc.UpdateFraction)
-}
-
-// BlobScheduleConfig determines target and max number of blobs allow per fork.
-type BlobScheduleConfig struct {
-	Osaka *BlobConfig `json:"osaka,omitempty"`
-}
-
 // BlobConfig returns the blob config associated with the provided fork.
 func (c *ChainConfig) BlobConfig(head *big.Int) *BlobConfig {
 	if c.IsOsakaForkEnabled(head) {
 		return c.BlobScheduleConfig.Osaka
 	}
 	return nil
+}
+
+func (c *ChainConfig) LatestBlobConfig(blockNumber *big.Int) *BlobConfig {
+	if c.BlobScheduleConfig == nil {
+		return nil
+	}
+	var (
+		s  = c.BlobScheduleConfig
+		bc *BlobConfig
+	)
+	switch {
+	case c.IsOsakaForkEnabled(blockNumber) && s.Osaka != nil:
+		bc = s.Osaka
+	default:
+		return nil
+	}
+
+	return &BlobConfig{
+		Target:         bc.Target,
+		Max:            bc.Max,
+		UpdateFraction: bc.UpdateFraction,
+	}
+}
+
+func (c *ChainConfig) LatestBlobConfigMax(blockNumber *big.Int) int {
+	bcfg := c.LatestBlobConfig(blockNumber)
+	if bcfg == nil {
+		return 0
+	}
+	return bcfg.Max
 }
 
 // IsIstanbulForkEnabled returns whether num is either equal to the istanbul block or greater.
@@ -887,15 +878,5 @@ func GetDefaultRewardConfig() *RewardConfig {
 		StakingUpdateInterval:  DefaultStakeUpdateInterval,
 		ProposerUpdateInterval: DefaultProposerRefreshInterval,
 		MinimumStake:           DefaultMinimumStake,
-	}
-}
-
-func GetDefaultKIP71Config() *KIP71Config {
-	return &KIP71Config{
-		LowerBoundBaseFee:         DefaultLowerBoundBaseFee,
-		UpperBoundBaseFee:         DefaultUpperBoundBaseFee,
-		GasTarget:                 DefaultGasTarget,
-		MaxBlockGasUsedForBaseFee: DefaultMaxBlockGasUsedForBaseFee,
-		BaseFeeDenominator:        DefaultBaseFeeDenominator,
 	}
 }

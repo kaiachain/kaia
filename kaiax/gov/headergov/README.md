@@ -171,7 +171,7 @@ If migration was already completed (`lowestVoteScannedEpochIdx == 0`), the gorou
 
 ## Block processing
 
-### Consensus
+### Header
 
 #### PrepareHeader
 
@@ -192,10 +192,6 @@ It checks the following for `header.Governance` if it exists:
 
 - The block is an epoch block.
 - The ratification is built based on the votes in the previous epoch.
-
-#### FinalizeHeader
-
-This module does not have any block processing logic at `FinalizeHeader`.
 
 ### Execution
 

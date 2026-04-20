@@ -26,12 +26,27 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
+	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
 // Validator is an interface which defines the standard for block validation. It
 // is only responsible for validating block contents, as the header validation is
 // done by the specific consensus engines.
 type Validator interface {
+	// RegisterKaiaxModules wires kaiax modules used during validation.
+	RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule, mHeader ...kaiax.HeaderModule)
+
+	// ValsetModule returns the validator-set module if registered.
+	ValsetModule() valset.ValsetModule
+
+	// Preprocess preprocesses the given headers concurrently.
+	Preprocess(headers []*types.Header) (chan<- struct{}, <-chan error)
+
+	// ValidateHeader validates or preprocesses the given header.
+	ValidateHeader(header *types.Header) error
+
 	// ValidateBody validates the given block's content.
 	ValidateBody(block *types.Block) error
 
@@ -51,6 +66,15 @@ type Prefetcher interface {
 
 // Processor is an interface for processing blocks using a given initial state.
 type Processor interface {
+	// InitializeState runs pre-transaction state modifications.
+	InitializeState(header *types.Header, stateDB *state.StateDB)
+
+	// RegisterBlockStateModule registers state transition modules.
+	RegisterBlockStateModule(modules ...kaiax.BlockStateModule)
+
+	// FinalizeState runs post-transaction state modifications and assembles final block.
+	FinalizeState(header *types.Header, stateDB *state.StateDB, txs []*types.Transaction, receipts types.Receipts) (*types.Block, error)
+
 	// Process processes the state changes according to the Kaia rules by running
 	// the transaction messages using the statedb and applying any rewards to
 	// the processor (coinbase).

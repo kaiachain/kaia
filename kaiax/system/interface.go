@@ -1,4 +1,4 @@
-// Copyright 2024 The Kaia Authors
+// Copyright 2026 The Kaia Authors
 // This file is part of the Kaia library.
 //
 // The Kaia library is free software: you can redistribute it and/or modify
@@ -14,29 +14,11 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the Kaia library. If not, see <http://www.gnu.org/licenses/>.
 
-package impl
+package system
 
-import (
-	"github.com/kaiachain/kaia/blockchain/state"
-	"github.com/kaiachain/kaia/blockchain/types"
-)
+import "github.com/kaiachain/kaia/kaiax"
 
-func (r *RewardModule) VerifyHeader(header *types.Header) error {
-	return nil
-}
-
-func (r *RewardModule) PrepareHeader(header *types.Header) error {
-	return nil
-}
-
-// Distribute the deferred rewards at the end of block processing
-func (r *RewardModule) FinalizeHeader(header *types.Header, state *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
-	spec, err := r.GetDeferredReward(header, txs, receipts)
-	if err != nil {
-		return err
-	}
-	for addr, amount := range spec.Rewards {
-		state.AddBalance(addr, amount)
-	}
-	return nil
+type SystemModule interface {
+	kaiax.BaseModule
+	kaiax.BlockStateModule
 }

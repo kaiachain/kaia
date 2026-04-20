@@ -94,7 +94,7 @@ type Backend interface {
 	RPCGasCap() *big.Int
 	ChainConfig() *params.ChainConfig
 	ChainDB() database.DBManager
-	Engine() consensus.Engine
+	Sealer() consensus.Sealer
 	// StateAtBlock returns the state corresponding to the stateroot of the block.
 	// N.B: For executing transactions on block N, the required stateRoot is block N-1,
 	// so this method should be called with the parent.
@@ -160,8 +160,12 @@ func (context *chainContext) CurrentBlock() *types.Block {
 	return block
 }
 
-func (context *chainContext) Engine() consensus.Engine {
-	return context.backend.Engine()
+func (context *chainContext) Sealer() consensus.Sealer {
+	return context.backend.Sealer()
+}
+
+func (context *chainContext) ValidateHeader(header *types.Header) error {
+	return nil
 }
 
 func (context *chainContext) GetHeader(hash common.Hash, number uint64) *types.Header {
@@ -220,7 +224,7 @@ func (context *chainContext) StateAt(root common.Hash) (*state.StateDB, error) {
 
 // chainContext constructs the context reader which is used by the evm for reading
 // the necessary chain context.
-func newChainContext(ctx context.Context, backend Backend) consensus.ChainReader {
+func newChainContext(ctx context.Context, backend Backend) blockchain.ChainContext {
 	return &chainContext{backend: backend, ctx: ctx}
 }
 

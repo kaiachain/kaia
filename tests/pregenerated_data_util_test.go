@@ -35,8 +35,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	istanbulBackend "github.com/kaiachain/kaia/consensus/istanbul/backend"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/crypto"
 	gov_impl "github.com/kaiachain/kaia/kaiax/gov/impl"
 	"github.com/kaiachain/kaia/log"
@@ -284,13 +283,13 @@ func (bcdata *BCData) GenABlockWithTxPoolWithoutAccountMap(txPool *blockchain.Tx
 	}
 
 	// Finalize the block.
-	b, err := bcdata.engine.Finalize(bcdata.bc, header, stateDB, newtxs, receipts)
+	b, err := bcdata.bc.Processor().FinalizeState(header, stateDB, newtxs, receipts)
 	if err != nil {
 		return err
 	}
 
 	// Seal the block.
-	b, err = sealBlock(b, bcdata.validatorPrivKeys)
+	b, err = sealBlock(b, bcdata.bc.Sealer(), bcdata.bc.Config(), bcdata.validatorPrivKeys)
 	if err != nil {
 		return err
 	}
@@ -370,14 +369,8 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	validatorAddresses, validatorPrivKeys := getValidatorAddrsAndKeys(addrs, privKeys, numValidatorsForTest)
 
 	////////////////////////////////////////////////////////////////////////////////
-	// Setup istanbul consensus backend
-	engine := istanbulBackend.New(&istanbulBackend.BackendOpts{
-		IstanbulConfig: istanbul.DefaultConfig,
-		Rewardbase:     genesisAddr,
-		PrivateKey:     validatorPrivKeys[0],
-		DB:             chainDB,
-		NodeType:       common.CONSENSUSNODE,
-	})
+	// Setup sealer for istanbul extra/seal handling
+	s := engine.NewSealer(Forks["Byzantium"], validatorPrivKeys[0])
 
 	////////////////////////////////////////////////////////////////////////////////
 	// Make a blockChain
@@ -386,7 +379,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	var bc *blockchain.BlockChain
 	var genesis *blockchain.Genesis
 	if tc.isGenerateTest {
-		bc, genesis, err = initBlockChain(chainDB, tc.cacheConfig, addrs, validatorAddresses, nil, engine, Forks["Byzantium"])
+		bc, genesis, err = initBlockChain(chainDB, tc.cacheConfig, addrs, validatorAddresses, nil, s, Forks["Byzantium"])
 	} else {
 		chainConfig, err := getChainConfig(chainDB)
 		if err != nil {
@@ -394,7 +387,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 		}
 		genesis = blockchain.DefaultTestGenesisBlock()
 		genesis.Config = chainConfig
-		bc, err = blockchain.NewBlockChain(chainDB, tc.cacheConfig, chainConfig, engine, vm.Config{})
+		bc, err = blockchain.NewBlockChain(chainDB, tc.cacheConfig, chainConfig, nil, vm.Config{})
 	}
 
 	mGov := gov_impl.NewGovModule()
@@ -410,7 +403,7 @@ func NewBCDataForPreGeneratedTest(testDataDir string, tc *preGeneratedTC) (*BCDa
 	return &BCData{
 		bc, addrs, privKeys, chainDB,
 		&genesisAddr, validatorAddresses,
-		validatorPrivKeys, engine, genesis, mGov, false,
+		validatorPrivKeys, genesis, mGov, false,
 	}, nil
 }
 
