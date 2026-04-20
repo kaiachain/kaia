@@ -582,6 +582,6 @@ func DeprecatedAt(name ParamName, rules params.Rules) bool {
 		return true
 	}
 
-	// Fork-aware deprecation: extended in the permissionless branch.
+	// TODO-Permissionless: fork-aware deprecation: extended in the permissionless branch.
 	return false
 }
