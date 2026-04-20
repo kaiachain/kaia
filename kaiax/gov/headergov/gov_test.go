@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewGovData(t *testing.T) {
-	// These are params where VoteForbidden=true.
+	// These are params that gov.DeprecatedAt returns true for by default.
 	goodGovs := []struct {
 		name  gov.ParamName
 		value any

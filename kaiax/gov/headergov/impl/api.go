@@ -2,8 +2,10 @@ package impl
 
 import (
 	"maps"
+	"math/big"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/networks/rpc"
 )
@@ -50,10 +52,10 @@ func NewHeaderGovAPI(s *headerGovModule) *headerGovAPI {
 
 func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 	var (
-		voter       = api.h.nodeAddress
-		blockNumber = api.h.Chain.CurrentBlock().NumberU64()
-		gp          = api.h.GetParamSet(blockNumber + 1)
-		gMode       = gp.GovernanceMode
+		voter     = api.h.nodeAddress
+		nextBlock = api.h.Chain.CurrentBlock().NumberU64() + 1
+		gp        = api.h.GetParamSet(nextBlock)
+		gMode     = gp.GovernanceMode
 	)
 
 	if gMode == "single" && voter != gp.GoverningNode {
@@ -65,7 +67,11 @@ func (api *headerGovAPI) Vote(name string, value any) (string, error) {
 		return "", ErrInvalidKeyValue
 	}
 
-	err := api.h.checkConsistency(blockNumber+1, vote)
+	if gov.DeprecatedAt(vote.Name(), api.h.ChainConfig.Rules(new(big.Int).SetUint64(nextBlock))) {
+		return "", ErrDeprecatedVote
+	}
+
+	err := api.h.checkConsistency(nextBlock, vote)
 	if err != nil {
 		return "", err
 	}

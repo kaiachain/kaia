@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -11,6 +12,14 @@ func newHeaderGovAPI(t *testing.T) *headerGovAPI {
 	chainConfig := getTestChainConfig()
 	h := newHeaderGovModule(t, chainConfig)
 	return NewHeaderGovAPI(h)
+}
+
+func TestVoteDeprecated(t *testing.T) {
+	api := newHeaderGovAPI(t)
+	for name := range gov.StaticDeprecated {
+		_, err := api.Vote(string(name), gov.Params[name].DefaultValue)
+		assert.Equal(t, ErrDeprecatedVote, err, "expected ErrDeprecatedVote for %s", name)
+	}
 }
 
 func TestVoteUpperBoundBaseFee(t *testing.T) {
