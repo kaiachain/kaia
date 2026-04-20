@@ -1603,7 +1603,6 @@ func Test_AddRemove(t *testing.T) {
 }
 
 func TestGovernance_Votes(t *testing.T) {
-
 	type vote struct {
 		key   string
 		value interface{}
@@ -1620,13 +1619,13 @@ func TestGovernance_Votes(t *testing.T) {
 	testcases := []testcase{
 		{
 			votes: []vote{
-				{}, // voted on block 1
-				{"istanbul.committeesize", uint64(4)},     // voted on block 2
+				{},                                    // voted on block 1
+				{"istanbul.committeesize", uint64(4)}, // voted on block 2
 				{"governance.unitprice", uint64(2000000)}, // voted on block 3
 				{"reward.mintingamount", "96000000000"},   // voted on block 4
 				{"reward.ratio", "34/33/33"},              // voted on block 5
-				{}, // voted on block 6
-				{}, // voted on block 7
+				{},                                        // voted on block 6
+				{},                                        // voted on block 7
 				{"reward.kip82ratio", "50/50"},            // voted on block 8
 				{"governance.deriveshaimpl", uint64(2)},   // voted on block 9
 			},
@@ -1648,16 +1647,15 @@ func TestGovernance_Votes(t *testing.T) {
 		},
 		{
 			votes: []vote{
-				{}, // voted on block 1
-				{"istanbul.committeesize", uint64(4)},     // voted on block 2
+				{},                                    // voted on block 1
+				{"istanbul.committeesize", uint64(4)}, // voted on block 2
 				{"governance.unitprice", uint64(2000000)}, // voted on block 3
-				{}, // voted on block 4
-				{"istanbul.committeesize", uint64(22)},    // voted on block 5
-				{"governance.unitprice", uint64(2)},       // voted on block 6
-				{}, // voted on block 7
+				{},                                     // voted on block 4
+				{"istanbul.committeesize", uint64(22)}, // voted on block 5
+				{"governance.unitprice", uint64(2)},    // voted on block 6
+				{},                                     // voted on block 7
 			},
 			expected: []governanceItem{
-
 				// committee size for all blocks
 				{vote{"istanbul.committeesize", uint64(21)}, 1},
 				{vote{"istanbul.committeesize", uint64(21)}, 2},
