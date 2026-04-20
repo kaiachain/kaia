@@ -220,7 +220,6 @@ func TestDeprecatedAt(t *testing.T) {
 	}
 }
 
-
 func TestRatio_FormatChecker(t *testing.T) {
 	checker := Params[RewardRatio].FormatChecker
 	tcs := []struct {
