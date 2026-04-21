@@ -71,19 +71,19 @@ func MakeTestPermissionlessConfig(n int) (*AllocPermissionlessConfig, []*ecdsa.P
 		NodeInfos: nodeInfos,
 		StakeAmts: stakeAmts,
 		DataConfig: addressbookv2contract.IABv2DataContractInitData{
-			InitialOwner:           owner,
-			InitialSuspender:       owner,
-			InitialConfigurator:    owner,
-			PfsThreshold:           big.NewInt(2),
-			CfsThreshold:           big.NewInt(300),
-			PauseTimeout:           big.NewInt(8 * 3600),   // 8h
-			IdleTimeout:            big.NewInt(30 * 86400), // 30d
+			InitialOwner:            owner,
+			InitialSuspender:        owner,
+			InitialConfigurator:     owner,
+			PfsThreshold:            big.NewInt(2),
+			CfsThreshold:            big.NewInt(300),
+			PauseTimeout:            big.NewInt(8 * 3600),   // 8h
+			IdleTimeout:             big.NewInt(30 * 86400), // 30d
 			MaxNodeCount:            big.NewInt(100),
 			MaxValActivePausedCount: big.NewInt(50),
 			MaxCandReadyCount:       big.NewInt(3),
-			KefAddress:             common.HexToAddress("0x1111"),
-			KifAddress:             common.HexToAddress("0x2222"),
-			KpfAddress:             common.HexToAddress("0x3333"),
+			KefAddress:              common.HexToAddress("0x1111"),
+			KifAddress:              common.HexToAddress("0x2222"),
+			KpfAddress:              common.HexToAddress("0x3333"),
 		},
 	}, nodeKeys
 }
