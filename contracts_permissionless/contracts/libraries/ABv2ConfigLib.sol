@@ -31,7 +31,7 @@ library ABv2ConfigLib {
     ConfigSlot internal constant IDLE_TIMEOUT = ConfigSlot.wrap(13);
     ConfigSlot internal constant MAX_NODE_COUNT = ConfigSlot.wrap(14);
     ConfigSlot internal constant MAX_CAND_READY_COUNT = ConfigSlot.wrap(15);
-    // offset 16 = slotFactor (system-managed, not configurable)
+    // offset 16 = epochVACount (system-managed, not configurable)
     ConfigSlot internal constant MAX_VAL_ACTIVE_PAUSED_COUNT = ConfigSlot.wrap(17);
     ConfigSlot internal constant KEF_ADDRESS = ConfigSlot.wrap(18);
     ConfigSlot internal constant KIF_ADDRESS = ConfigSlot.wrap(19);

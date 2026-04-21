@@ -17,7 +17,7 @@ contract AddressBookV2Mock {
     uint256 public maxCandReadyCount;
     uint256 public pfsThreshold;
     uint256 public cfsThreshold;
-    uint256 public slotFactor;
+    uint256 public epochVACount;
 
     function addProfile(
         address nodeId,
@@ -66,8 +66,8 @@ contract AddressBookV2Mock {
         cfsThreshold = _cfsThreshold;
     }
 
-    function setSlotFactor(uint256 _slotFactor) external {
-        slotFactor = _slotFactor;
+    function setEpochVACount(uint256 _epochVACount) external {
+        epochVACount = _epochVACount;
     }
 
     function getPfsThreshold() external view returns (uint256) {
@@ -78,11 +78,11 @@ contract AddressBookV2Mock {
         return cfsThreshold;
     }
 
-    function getSlotFactor() external view returns (uint256) {
-        return slotFactor;
+    function getEpochVACount() external view returns (uint256) {
+        return epochVACount;
     }
 
     function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount) {
-        return (SlotMath.maxSlotAvailable(slotFactor), SlotMath.minActiveCount(slotFactor));
+        return (SlotMath.maxSlotAvailable(epochVACount), SlotMath.minActiveCount(epochVACount));
     }
 }
