@@ -68,19 +68,19 @@ func (mr *MockVRankModuleMockRecorder) GetCFS(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCFS", reflect.TypeOf((*MockVRankModule)(nil).GetCFS), arg0)
 }
 
-// GetCFSWithSlotFactor mocks base method.
-func (m *MockVRankModule) GetCFSWithSlotFactor(arg0, arg1 uint64) (map[common.Address]uint64, error) {
+// GetCFSWithEpochVACount mocks base method.
+func (m *MockVRankModule) GetCFSWithEpochVACount(arg0, arg1 uint64) (map[common.Address]uint64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCFSWithSlotFactor", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetCFSWithEpochVACount", arg0, arg1)
 	ret0, _ := ret[0].(map[common.Address]uint64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetCFSWithSlotFactor indicates an expected call of GetCFSWithSlotFactor.
-func (mr *MockVRankModuleMockRecorder) GetCFSWithSlotFactor(arg0, arg1 interface{}) *gomock.Call {
+// GetCFSWithEpochVACount indicates an expected call of GetCFSWithEpochVACount.
+func (mr *MockVRankModuleMockRecorder) GetCFSWithEpochVACount(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCFSWithSlotFactor", reflect.TypeOf((*MockVRankModule)(nil).GetCFSWithSlotFactor), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCFSWithEpochVACount", reflect.TypeOf((*MockVRankModule)(nil).GetCFSWithEpochVACount), arg0, arg1)
 }
 
 // GetPFS mocks base method.

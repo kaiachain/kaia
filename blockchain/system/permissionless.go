@@ -328,9 +328,9 @@ func applyInitialNodeStateOverrides(cfg *runtime.Config, config *AllocPermission
 	defer func() { cfg.Origin = origOrigin }()
 
 	// Genesis is block 0 which satisfies _isEpochBlock() (0 % interval == 0).
-	// Pass the VA count after overrides so slotFactor is correctly initialized.
-	epochSlotFactor := big.NewInt(int64(len(config.NodeInfos) - len(nodeIds)))
-	if err := evmCallABI(cfg, AddressBookAddr, abv2ABI, "processSystemTransition", nodeIds, newStates, timeoutAts, epochSlotFactor); err != nil {
+	// Pass the VA count after overrides so epochVACount is correctly initialized.
+	epochVACount := big.NewInt(int64(len(config.NodeInfos) - len(nodeIds)))
+	if err := evmCallABI(cfg, AddressBookAddr, abv2ABI, "processSystemTransition", nodeIds, newStates, timeoutAts, epochVACount); err != nil {
 		return fmt.Errorf("applyInitialNodeStateOverrides: %w", err)
 	}
 	return nil
@@ -368,19 +368,19 @@ func convertToABv2DataInitData(config *AllocPermissionlessConfig) abv2data.IABv2
 	}
 	d := config.DataConfig
 	return abv2data.IABv2DataContractInitData{
-		InitialOwner:           d.InitialOwner,
-		PfsThreshold:           d.PfsThreshold,
-		CfsThreshold:           d.CfsThreshold,
-		PauseTimeout:           d.PauseTimeout,
-		IdleTimeout:            d.IdleTimeout,
+		InitialOwner:            d.InitialOwner,
+		PfsThreshold:            d.PfsThreshold,
+		CfsThreshold:            d.CfsThreshold,
+		PauseTimeout:            d.PauseTimeout,
+		IdleTimeout:             d.IdleTimeout,
 		MaxNodeCount:            d.MaxNodeCount,
 		MaxValActivePausedCount: d.MaxValActivePausedCount,
 		MaxCandReadyCount:       d.MaxCandReadyCount,
-		KefAddress:             d.KefAddress,
-		KifAddress:             d.KifAddress,
-		KpfAddress:             d.KpfAddress,
-		NodeIds:                config.NodeIds,
-		Infos:                  infos,
+		KefAddress:              d.KefAddress,
+		KifAddress:              d.KifAddress,
+		KpfAddress:              d.KpfAddress,
+		NodeIds:                 config.NodeIds,
+		Infos:                   infos,
 	}
 }
 

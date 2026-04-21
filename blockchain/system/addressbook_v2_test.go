@@ -57,14 +57,14 @@ func TestEncodeNodeStateUpdate(t *testing.T) {
 	rules := params.Rules{IsPrague: true} // enable intrinsic gas calculation
 
 	tests := []struct {
-		name       string
-		validators valset.NodeStateMap
-		epochSF    uint64
+		name         string
+		validators   valset.NodeStateMap
+		epochVACount uint64
 		// expected decoded values (sorted by address)
-		wantAddrs    []common.Address
-		wantStates   []uint8
-		wantTimeouts []*big.Int
-		wantEpochSF  *big.Int // nil means skip check (empty map case)
+		wantAddrs        []common.Address
+		wantStates       []uint8
+		wantTimeouts     []*big.Int
+		wantEpochVACount *big.Int // nil means skip check (empty map case)
 	}{
 		{
 			name:       "empty map",
@@ -76,10 +76,10 @@ func TestEncodeNodeStateUpdate(t *testing.T) {
 			validators: valset.NodeStateMap{
 				common.HexToAddress("0x01"): {State: valset.ValActive},
 			},
-			wantAddrs:    []common.Address{common.HexToAddress("0x01")},
-			wantStates:   []uint8{valset.ValActive.ToUint8()},
-			wantTimeouts: []*big.Int{big.NewInt(0)},
-			wantEpochSF:  big.NewInt(0),
+			wantAddrs:        []common.Address{common.HexToAddress("0x01")},
+			wantStates:       []uint8{valset.ValActive.ToUint8()},
+			wantTimeouts:     []*big.Int{big.NewInt(0)},
+			wantEpochVACount: big.NewInt(0),
 		},
 		{
 			name: "ValPaused uses PausedTimeout",
@@ -89,10 +89,10 @@ func TestEncodeNodeStateUpdate(t *testing.T) {
 					PausedTimeout: time.Unix(1000, 0),
 				},
 			},
-			wantAddrs:    []common.Address{common.HexToAddress("0x01")},
-			wantStates:   []uint8{valset.ValPaused.ToUint8()},
-			wantTimeouts: []*big.Int{big.NewInt(1000)},
-			wantEpochSF:  big.NewInt(0),
+			wantAddrs:        []common.Address{common.HexToAddress("0x01")},
+			wantStates:       []uint8{valset.ValPaused.ToUint8()},
+			wantTimeouts:     []*big.Int{big.NewInt(1000)},
+			wantEpochVACount: big.NewInt(0),
 		},
 		{
 			name: "ValReady uses IdleTimeout",
@@ -102,10 +102,10 @@ func TestEncodeNodeStateUpdate(t *testing.T) {
 					IdleTimeout: time.Unix(2000, 0),
 				},
 			},
-			wantAddrs:    []common.Address{common.HexToAddress("0x01")},
-			wantStates:   []uint8{valset.ValReady.ToUint8()},
-			wantTimeouts: []*big.Int{big.NewInt(2000)},
-			wantEpochSF:  big.NewInt(0),
+			wantAddrs:        []common.Address{common.HexToAddress("0x01")},
+			wantStates:       []uint8{valset.ValReady.ToUint8()},
+			wantTimeouts:     []*big.Int{big.NewInt(2000)},
+			wantEpochVACount: big.NewInt(0),
 		},
 		{
 			name: "ValInactive uses IdleTimeout",
@@ -115,20 +115,20 @@ func TestEncodeNodeStateUpdate(t *testing.T) {
 					IdleTimeout: time.Unix(3000, 0),
 				},
 			},
-			wantAddrs:    []common.Address{common.HexToAddress("0x01")},
-			wantStates:   []uint8{valset.ValInactive.ToUint8()},
-			wantTimeouts: []*big.Int{big.NewInt(3000)},
-			wantEpochSF:  big.NewInt(0),
+			wantAddrs:        []common.Address{common.HexToAddress("0x01")},
+			wantStates:       []uint8{valset.ValInactive.ToUint8()},
+			wantTimeouts:     []*big.Int{big.NewInt(3000)},
+			wantEpochVACount: big.NewInt(0),
 		},
 		{
 			name: "ValExiting has zero timeout",
 			validators: valset.NodeStateMap{
 				common.HexToAddress("0x01"): {State: valset.ValExiting},
 			},
-			wantAddrs:    []common.Address{common.HexToAddress("0x01")},
-			wantStates:   []uint8{valset.ValExiting.ToUint8()},
-			wantTimeouts: []*big.Int{big.NewInt(0)},
-			wantEpochSF:  big.NewInt(0),
+			wantAddrs:        []common.Address{common.HexToAddress("0x01")},
+			wantStates:       []uint8{valset.ValExiting.ToUint8()},
+			wantTimeouts:     []*big.Int{big.NewInt(0)},
+			wantEpochVACount: big.NewInt(0),
 		},
 		{
 			name: "multiple validators sorted by address",
@@ -148,26 +148,26 @@ func TestEncodeNodeStateUpdate(t *testing.T) {
 				common.HexToAddress("0xbb"),
 				common.HexToAddress("0xcc"),
 			},
-			wantStates:   []uint8{valset.ValPaused.ToUint8(), valset.ValInactive.ToUint8(), valset.ValActive.ToUint8()},
-			wantTimeouts: []*big.Int{big.NewInt(500), big.NewInt(999), big.NewInt(0)},
-			wantEpochSF:  big.NewInt(0),
+			wantStates:       []uint8{valset.ValPaused.ToUint8(), valset.ValInactive.ToUint8(), valset.ValActive.ToUint8()},
+			wantTimeouts:     []*big.Int{big.NewInt(500), big.NewInt(999), big.NewInt(0)},
+			wantEpochVACount: big.NewInt(0),
 		},
 		{
-			name: "non-zero epochSF is encoded as 4th param",
+			name: "non-zero epochVACount is encoded as 4th param",
 			validators: valset.NodeStateMap{
 				common.HexToAddress("0x01"): {State: valset.ValActive},
 			},
-			epochSF:      1,
-			wantAddrs:    []common.Address{common.HexToAddress("0x01")},
-			wantStates:   []uint8{valset.ValActive.ToUint8()},
-			wantTimeouts: []*big.Int{big.NewInt(0)},
-			wantEpochSF:  big.NewInt(1),
+			epochVACount:     1,
+			wantAddrs:        []common.Address{common.HexToAddress("0x01")},
+			wantStates:       []uint8{valset.ValActive.ToUint8()},
+			wantTimeouts:     []*big.Int{big.NewInt(0)},
+			wantEpochVACount: big.NewInt(1),
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			from, msg, err := EncodeNodeStateUpdate(rules, tc.validators, tc.epochSF)
+			from, msg, err := EncodeNodeStateUpdate(rules, tc.validators, tc.epochVACount)
 			require.NoError(t, err)
 
 			// from is always SystemAddress
@@ -199,8 +199,8 @@ func TestEncodeNodeStateUpdate(t *testing.T) {
 			for i, want := range tc.wantTimeouts {
 				assert.Equal(t, 0, want.Cmp(decodedTimeouts[i]), "timeout[%d]: want %s got %s", i, want, decodedTimeouts[i])
 			}
-			if tc.wantEpochSF != nil {
-				assert.Equal(t, 0, tc.wantEpochSF.Cmp(decodedEpochSF), "epochSF: want %s got %s", tc.wantEpochSF, decodedEpochSF)
+			if tc.wantEpochVACount != nil {
+				assert.Equal(t, 0, tc.wantEpochVACount.Cmp(decodedEpochSF), "epochVACount: want %s got %s", tc.wantEpochVACount, decodedEpochSF)
 			}
 		})
 	}
