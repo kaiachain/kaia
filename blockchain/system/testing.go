@@ -72,6 +72,8 @@ func MakeTestPermissionlessConfig(n int) (*AllocPermissionlessConfig, []*ecdsa.P
 		StakeAmts: stakeAmts,
 		DataConfig: addressbookv2contract.IABv2DataContractInitData{
 			InitialOwner:           owner,
+			InitialSuspender:       owner,
+			InitialConfigurator:    owner,
 			PfsThreshold:           big.NewInt(2),
 			CfsThreshold:           big.NewInt(300),
 			PauseTimeout:           big.NewInt(8 * 3600),   // 8h

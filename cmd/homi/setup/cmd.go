@@ -594,6 +594,8 @@ func allocatePermissionless(ctx *cli.Context, genesisJson *blockchain.Genesis, v
 		EpochBlockInterval: int64(ctx.Uint64(vrankEpochFlag.Name)),
 		DataConfig: addressbookv2contract.IABv2DataContractInitData{
 			InitialOwner:           owner,
+			InitialSuspender:       owner,
+			InitialConfigurator:    owner,
 			PfsThreshold:           big.NewInt(ctx.Int64(pfsThresholdFlag.Name)),
 			CfsThreshold:           big.NewInt(ctx.Int64(cfsThresholdFlag.Name)),
 			PauseTimeout:           big.NewInt(int64(valsetimpl.DefaultValPausedTimeout.Seconds())),
