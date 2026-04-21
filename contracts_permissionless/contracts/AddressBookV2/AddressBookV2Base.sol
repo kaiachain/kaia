@@ -98,6 +98,8 @@ abstract contract AddressBookV2Base is
         address kefAddress;
         address kifAddress;
         address kpfAddress;
+        address suspender;
+        address configurator;
     }
 
     function _getStorage() internal pure returns (ABv2Storage storage $) {
@@ -108,6 +110,18 @@ abstract contract AddressBookV2Base is
     }
 
     /* ========== MODIFIERS ========== */
+
+    /// @notice Restricts a function to the suspender address
+    modifier onlySuspender() {
+        if (msg.sender != _getStorage().suspender) revert OnlySuspender();
+        _;
+    }
+
+    /// @notice Restricts a function to the configurator address
+    modifier onlyConfigurator() {
+        if (msg.sender != _getStorage().configurator) revert OnlyConfigurator();
+        _;
+    }
 
     /// @notice Restricts a function to the registered manager of the given node
     modifier onlyManager(address nodeId) {

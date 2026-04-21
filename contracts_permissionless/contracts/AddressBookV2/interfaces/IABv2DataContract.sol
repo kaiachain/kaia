@@ -11,6 +11,8 @@ interface IABv2DataContract {
     /// @notice Aggregated genesis data for ABv2 initialization
     struct InitData {
         address initialOwner;
+        address initialSuspender;
+        address initialConfigurator;
         uint256 pfsThreshold;
         uint256 cfsThreshold;
         uint256 pauseTimeout;

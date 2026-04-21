@@ -19,6 +19,12 @@ interface IAddressBookV2 {
     /// @notice Thrown when caller is not the node ID itself
     error OnlyNodeId();
 
+    /// @notice Thrown when caller is not the suspender
+    error OnlySuspender();
+
+    /// @notice Thrown when caller is not the configurator
+    error OnlyConfigurator();
+
     /// @notice Thrown when a node is not in a valid state for the requested operation
     error InvalidState();
 
@@ -168,6 +174,16 @@ interface IAddressBookV2 {
     /// @param newAddress The new address
     event KpfAddressUpdated(address oldAddress, address newAddress);
 
+    /// @notice Emitted when the suspender address is updated
+    /// @param oldSuspender The previous suspender address
+    /// @param newSuspender The new suspender address
+    event SuspenderUpdated(address oldSuspender, address newSuspender);
+
+    /// @notice Emitted when the configurator address is updated
+    /// @param oldConfigurator The previous configurator address
+    /// @param newConfigurator The new configurator address
+    event ConfiguratorUpdated(address oldConfigurator, address newConfigurator);
+
     /// @notice Emitted when genesis validators are initialized
     /// @param nodeIds The addresses of the initialized validators
     event ValidatorsInitialized(address[] nodeIds);
@@ -264,13 +280,21 @@ interface IAddressBookV2 {
 
     /* ========== ADMIN FUNCTIONS ========== */
 
-    /// @notice Suspends a validator (owner emergency action)
+    /// @notice Suspends a validator (suspender emergency action)
     /// @param nodeId The address of the validator to suspend
     function suspendValidator(address nodeId) external;
 
-    /// @notice Unsuspends a validator
+    /// @notice Unsuspends a validator (suspender action)
     /// @param nodeId The address of the validator to unsuspend
     function unsuspendValidator(address nodeId) external;
+
+    /// @notice Updates the suspender address (owner only)
+    /// @param newSuspender The new suspender address
+    function updateSuspender(address newSuspender) external;
+
+    /// @notice Updates the configurator address (owner only)
+    /// @param newConfigurator The new configurator address
+    function updateConfigurator(address newConfigurator) external;
 
     /// @notice Updates the pause timeout duration
     /// @param newPauseTimeout The new timeout in seconds
@@ -313,6 +337,14 @@ interface IAddressBookV2 {
     function updateKpfAddress(address newKpfAddress) external;
 
     /* ========== GETTERS (node management) ========== */
+
+    /// @notice Returns the suspender address
+    /// @return The suspender address
+    function getSuspender() external view returns (address);
+
+    /// @notice Returns the configurator address
+    /// @return The configurator address
+    function getConfigurator() external view returns (address);
 
     /// @notice Returns the manager address of a node
     /// @param nodeId The address of the node

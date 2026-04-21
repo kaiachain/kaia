@@ -36,6 +36,8 @@ library ABv2ConfigLib {
     ConfigSlot internal constant KEF_ADDRESS = ConfigSlot.wrap(18);
     ConfigSlot internal constant KIF_ADDRESS = ConfigSlot.wrap(19);
     ConfigSlot internal constant KPF_ADDRESS = ConfigSlot.wrap(20);
+    ConfigSlot internal constant SUSPENDER = ConfigSlot.wrap(21);
+    ConfigSlot internal constant CONFIGURATOR = ConfigSlot.wrap(22);
 
     /* ========== Typed update functions ========== */
 

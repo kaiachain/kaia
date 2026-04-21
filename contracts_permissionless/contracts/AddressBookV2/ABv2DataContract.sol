@@ -20,6 +20,8 @@ contract ABv2DataContract is IABv2DataContract {
     address public immutable override implementation;
 
     address public immutable initialOwner;
+    address public immutable initialSuspender;
+    address public immutable initialConfigurator;
     uint256 public immutable pfsThreshold;
     uint256 public immutable cfsThreshold;
     uint256 public immutable pauseTimeout;
@@ -50,6 +52,8 @@ contract ABv2DataContract is IABv2DataContract {
 
         // Validate config
         if (data.initialOwner == address(0)) revert InvalidInput();
+        if (data.initialSuspender == address(0)) revert InvalidInput();
+        if (data.initialConfigurator == address(0)) revert InvalidInput();
         if (data.pfsThreshold == 0) revert InvalidInput();
         if (data.cfsThreshold == 0) revert InvalidInput();
         if (data.pauseTimeout == 0) revert InvalidInput();
@@ -69,6 +73,8 @@ contract ABv2DataContract is IABv2DataContract {
         // Store immutables
         implementation = _implementation;
         initialOwner = data.initialOwner;
+        initialSuspender = data.initialSuspender;
+        initialConfigurator = data.initialConfigurator;
         pfsThreshold = data.pfsThreshold;
         cfsThreshold = data.cfsThreshold;
         pauseTimeout = data.pauseTimeout;
@@ -106,6 +112,8 @@ contract ABv2DataContract is IABv2DataContract {
         return
             InitData({
                 initialOwner: initialOwner,
+                initialSuspender: initialSuspender,
+                initialConfigurator: initialConfigurator,
                 pfsThreshold: pfsThreshold,
                 cfsThreshold: cfsThreshold,
                 pauseTimeout: pauseTimeout,
