@@ -558,9 +558,9 @@ const (
 	ProposerPolicy_End
 )
 
-// staticDeprecated is the definitive list of params that are always deprecated
+// AlwaysDeprecated is the definitive list of params that are always deprecated
 // regardless of fork state.
-var StaticDeprecated = map[ParamName]struct{}{
+var AlwaysDeprecated = map[ParamName]struct{}{
 	GovernanceGovernanceMode:     {},
 	IstanbulEpoch:                {},
 	IstanbulPolicy:               {},
@@ -578,7 +578,7 @@ var StaticDeprecated = map[ParamName]struct{}{
 //
 // Callers (Vote, VerifyVote) reject votes on any name for which this returns true.
 func DeprecatedAt(name ParamName, rules params.Rules) bool {
-	if _, ok := StaticDeprecated[name]; ok {
+	if _, ok := AlwaysDeprecated[name]; ok {
 		return true
 	}
 
