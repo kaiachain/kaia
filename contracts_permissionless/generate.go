@@ -25,8 +25,8 @@ Uses abigenw from contracts/ directory. OZ v5 imports are resolved from this dir
 	go generate
 */
 
-//go:generate ../contracts/abigenw --pkg addressbookv2 --sol ./contracts/AddressBookV2/AddressBookV2.sol --out ./contracts/AddressBookV2/AddressBookV2.go --ver 0.8.25
-//go:generate ../contracts/abigenw --pkg abv2data --sol ./contracts/AddressBookV2/ABv2DataContract.sol --out ./contracts/AddressBookV2/abv2data/ABv2DataContract.go --ver 0.8.25
+//go:generate ../contracts/abigenw --pkg addressbookv2 --sol ./contracts/AddressBookV2/AddressBookV2.sol --out ./contracts/AddressBookV2/AddressBookV2.go --ver 0.8.25 --via-ir --runs 100 --evm-version cancun
+//go:generate ../contracts/abigenw --pkg abv2data --sol ./contracts/AddressBookV2/ABv2DataContract.sol --out ./contracts/AddressBookV2/abv2data/ABv2DataContract.go --ver 0.8.25 --via-ir --runs 100 --evm-version cancun
 //go:generate ../contracts/abigenw --pkg cnstakingv4 --sol ./contracts/CnStaking/CnStakingV4/CnStakingV4.sol --out ./contracts/CnStaking/CnStakingV4/CnStakingV4.go --ver 0.8.25
 //go:generate ../contracts/abigenw --pkg cnstakingv4factory --sol ./contracts/CnStaking/CnStakingV4Factory/CnStakingV4Factory.sol --out ./contracts/CnStaking/CnStakingV4Factory/CnStakingV4Factory.go --ver 0.8.25
 //go:generate ../contracts/abigenw --pkg publicdelegation --sol ./contracts/PublicDelegation/PublicDelegation.sol --out ./contracts/PublicDelegation/PublicDelegation.go --ver 0.8.25
