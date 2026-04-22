@@ -123,8 +123,8 @@ func TestVerifyVote(t *testing.T) {
 func TestVerifyVote_SingleMode(t *testing.T) {
 	config := getTestChainConfig()
 	config.Governance.GoverningNode = common.Address{2} // validVoter is the proposer, but not governing node
-	t.Run("pre-osaka allows non-governing node", func(t *testing.T) {
-		config.OsakaCompatibleBlock = nil
+	t.Run("pre-permissionless allows non-governing node", func(t *testing.T) {
+		config.PermissionlessCompatibleBlock = nil
 		h := newHeaderGovModule(t, config)
 		vote := headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(100))
 		vb, err := vote.ToVoteBytes()
@@ -132,8 +132,8 @@ func TestVerifyVote_SingleMode(t *testing.T) {
 		err = h.VerifyVote(&types.Header{Number: big.NewInt(1), Vote: vb, Extra: extra})
 		assert.NoError(t, err)
 	})
-	t.Run("post-osaka requires governing node", func(t *testing.T) {
-		config.OsakaCompatibleBlock = common.Big0
+	t.Run("post-permissionless requires governing node", func(t *testing.T) {
+		config.PermissionlessCompatibleBlock = common.Big0
 		h := newHeaderGovModule(t, config)
 		vote := headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(100))
 		vb, err := vote.ToVoteBytes()
