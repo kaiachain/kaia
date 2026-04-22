@@ -207,7 +207,7 @@ func printAndWait(ec *client.KaiaClient, tx *types.Transaction, from common.Addr
 		if reason := revertReason(ec, tx, from); reason != "" {
 			return fmt.Errorf("transaction failed: %s", reason)
 		}
-		return fmt.Errorf("transaction failed")
+		return errors.New("transaction failed")
 	}
 	fmt.Println("status: success")
 	return nil
