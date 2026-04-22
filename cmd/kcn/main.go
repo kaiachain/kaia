@@ -73,6 +73,9 @@ func init() {
 
 		// See utils/nodecmd/snapshot.go:
 		nodecmd.SnapshotCommand,
+
+		// See cmd/kcn/abv2.go:
+		ABv2Command,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
