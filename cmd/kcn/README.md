@@ -80,5 +80,5 @@ On failure:
 
 ```
 tx: 0xabc123...
-Error: transaction failed: <revert reason>
+transaction failed: <revert reason>
 ```
