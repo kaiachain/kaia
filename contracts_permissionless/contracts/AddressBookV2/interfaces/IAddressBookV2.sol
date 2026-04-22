@@ -55,6 +55,9 @@ interface IAddressBookV2 {
     /// @notice Thrown when attempting to update the reward address while public delegation is enabled
     error PDEnabled();
 
+    /// @notice Thrown when the nodeId address balance is below MIN_NODE_BALANCE
+    error InsufficientNodeBalance();
+
     /// @notice Thrown when attempting to assign a gcId to a node that already has one
     error GcIdAlreadyAssigned();
 

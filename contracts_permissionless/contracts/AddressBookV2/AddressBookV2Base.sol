@@ -36,6 +36,9 @@ abstract contract AddressBookV2Base is
     /// @notice Minimum staking amount required for candidate activation and validator readiness (5M KAIA)
     uint256 public constant MIN_STAKE = 5_000_000 ether;
 
+    /// @notice Minimum nodeId address balance required for auction/gasless participation (10 KAIA)
+    uint256 public constant MIN_NODE_BALANCE = 10 ether;
+
     /// @notice Maximum metadata length (2KB)
     uint256 public constant MAX_METADATA_LENGTH = 2048; // 2KB
 
