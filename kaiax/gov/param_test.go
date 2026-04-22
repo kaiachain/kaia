@@ -199,13 +199,13 @@ func TestDeprecatedAt(t *testing.T) {
 	for _, rv := range rulesVariants {
 		t.Run(rv.desc, func(t *testing.T) {
 			// Static deprecated: must return true.
-			for name := range StaticDeprecated {
+			for name := range AlwaysDeprecated {
 				assert.True(t, DeprecatedAt(name, rv.rules), "expected %s to be deprecated", name)
 			}
 
 			// Every other known param in Params and ValidatorParams must return false.
 			for name := range Params {
-				if _, ok := StaticDeprecated[name]; ok {
+				if _, ok := AlwaysDeprecated[name]; ok {
 					continue
 				}
 				assert.False(t, DeprecatedAt(name, rv.rules), "expected %s not deprecated", name)

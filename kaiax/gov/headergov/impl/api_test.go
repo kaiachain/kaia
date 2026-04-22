@@ -16,7 +16,7 @@ func newHeaderGovAPI(t *testing.T) *headerGovAPI {
 
 func TestVoteDeprecated(t *testing.T) {
 	api := newHeaderGovAPI(t)
-	for name := range gov.StaticDeprecated {
+	for name := range gov.AlwaysDeprecated {
 		_, err := api.Vote(string(name), gov.Params[name].DefaultValue)
 		assert.Equal(t, ErrDeprecatedVote, err, "expected ErrDeprecatedVote for %s", name)
 	}
