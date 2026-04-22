@@ -61,7 +61,6 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
         // Set initial active validators and set epoch count
         _setInitialActiveValidators(d.nodeIds, d.infos);
 
-        // GC IDs for genesis validators come from data contract.
         // Start counter at 100 so post-init nodes get gcId >= 101.
         $.lastAssignedGCId = 100;
 
@@ -92,6 +91,16 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     /// @inheritdoc IAddressBookV2
     function updateConfigurator(address newConfigurator) external onlyOwner {
         emit ConfiguratorUpdated(ABv2ConfigLib.CONFIGURATOR.updateAddress(newConfigurator), newConfigurator);
+    }
+
+    /// @inheritdoc IAddressBookV2
+    function assignGcId(address nodeId) external onlyConfigurator {
+        ABv2Storage storage $ = _getStorage();
+        if ($.nodeInfo[nodeId].state == State.Unknown) revert NodeNotFound();
+        if ($.nodeInfo[nodeId].gcId != 0) revert GcIdAlreadyAssigned();
+        uint256 gcId = ++$.lastAssignedGCId;
+        $.nodeInfo[nodeId].gcId = gcId;
+        emit GcIdAssigned(nodeId, gcId);
     }
 
     /// @inheritdoc IAddressBookV2

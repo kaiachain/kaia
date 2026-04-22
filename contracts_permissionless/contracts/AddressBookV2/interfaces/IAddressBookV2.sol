@@ -55,6 +55,9 @@ interface IAddressBookV2 {
     /// @notice Thrown when attempting to update the reward address while public delegation is enabled
     error PDEnabled();
 
+    /// @notice Thrown when attempting to assign a gcId to a node that already has one
+    error GcIdAlreadyAssigned();
+
     /* ========== EVENTS ========== */
 
     /// @notice Emitted when a node's state changes
@@ -63,10 +66,15 @@ interface IAddressBookV2 {
     /// @param toState The new state
     event StateChanged(address indexed nodeId, State indexed fromState, State indexed toState);
 
-    /// @notice Emitted when a new node is created
+    /// @notice Emitted when a new node is created (gcId is 0 until assignGcId is called)
     /// @param nodeId The address of the newly created node
-    /// @param gcId The governance council ID assigned to the node
+    /// @param gcId Always 0 at creation; see GcIdAssigned
     event NodeCreated(address indexed nodeId, uint256 gcId);
+
+    /// @notice Emitted when a gcId is assigned to a node by the configurator
+    /// @param nodeId The address of the node
+    /// @param gcId The assigned governance council ID
+    event GcIdAssigned(address indexed nodeId, uint256 gcId);
 
     /// @notice Emitted when a node is deleted
     /// @param nodeId The address of the deleted node
@@ -295,6 +303,11 @@ interface IAddressBookV2 {
     /// @notice Updates the configurator address (owner only)
     /// @param newConfigurator The new configurator address
     function updateConfigurator(address newConfigurator) external;
+
+    /// @notice Assigns the next auto-incremented gcId to a node (configurator only)
+    /// @dev Node must exist and must not already have a gcId assigned
+    /// @param nodeId The address of the node
+    function assignGcId(address nodeId) external;
 
     /// @notice Updates the pause timeout duration
     /// @param newPauseTimeout The new timeout in seconds

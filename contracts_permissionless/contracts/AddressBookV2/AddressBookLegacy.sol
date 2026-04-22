@@ -18,6 +18,9 @@ abstract contract AddressBookLegacy {
     /// @notice Thrown when a deprecated legacy function is called
     error LegacyFunctionDeprecated();
 
+    /// @notice Thrown when getCnInfo is called with an unregistered node ID
+    error CnNodeNotFound();
+
     /* ========== LEGACY ENUMS (matching original AddressBook values) ========== */
 
     enum RequestState {
@@ -59,11 +62,11 @@ abstract contract AddressBookLegacy {
     /* ========== LEGACY CONSTANTS ========== */
     // Note: CONTRACT_TYPE and VERSION are NOT redeclared here — ABv2 defines them (VERSION=2).
 
-    uint8 public constant CN_NODE_ID_TYPE = 0;
-    uint8 public constant CN_STAKING_ADDRESS_TYPE = 1;
-    uint8 public constant CN_REWARD_ADDRESS_TYPE = 2;
-    uint8 public constant POC_CONTRACT_TYPE = 3;
-    uint8 public constant KIR_CONTRACT_TYPE = 4;
+    uint8 internal constant CN_NODE_ID_TYPE = 0;
+    uint8 internal constant CN_STAKING_ADDRESS_TYPE = 1;
+    uint8 internal constant CN_REWARD_ADDRESS_TYPE = 2;
+    uint8 internal constant POC_CONTRACT_TYPE = 3;
+    uint8 internal constant KIR_CONTRACT_TYPE = 4;
 
     /* ========== LEGACY STORAGE (slots 0-12, matching original AddressBook) ========== */
     // IMPORTANT: Declaration order determines slot positions. Do NOT reorder.
@@ -202,7 +205,7 @@ abstract contract AddressBookLegacy {
     /// @dev Reads from ABv2's live nodeInfo storage.
     function getCnInfo(address _cnNodeId) external view returns (address, address, address) {
         (address staking, address reward, bool exists) = _getNodeData(_cnNodeId);
-        require(exists, "Invalid CN node ID.");
+        if (!exists) revert CnNodeNotFound();
         return (_cnNodeId, staking, reward);
     }
 
