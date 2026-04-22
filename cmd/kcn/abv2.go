@@ -59,6 +59,11 @@ var (
 		Name:  "private-key",
 		Usage: "Hex-encoded private key (default: load from " + defaultNodeKeyPath + ")",
 	}
+	abv2NodeIdFlag = &cli.StringFlag{
+		Name:     "node-id",
+		Usage:    "Address of the target validator node",
+		Required: true,
+	}
 )
 
 var ABv2Command = &cli.Command{
@@ -67,18 +72,16 @@ var ABv2Command = &cli.Command{
 	Category: "PERMISSIONLESS COMMANDS",
 	Subcommands: []*cli.Command{
 		{
-			Name:      "suspend-validator",
-			Usage:     "Suspend a validator (requires suspender role)",
-			ArgsUsage: "<node-id>",
-			Flags:     abv2Flags(),
-			Action:    abv2SuspenderAction((*addressbookv2.AddressBookV2Transactor).SuspendValidator),
+			Name:   "suspend-validator",
+			Usage:  "Suspend a validator (requires suspender role)",
+			Flags:  abv2SuspenderFlags(),
+			Action: abv2SuspenderAction((*addressbookv2.AddressBookV2Transactor).SuspendValidator),
 		},
 		{
-			Name:      "unsuspend-validator",
-			Usage:     "Unsuspend a validator (requires suspender role)",
-			ArgsUsage: "<node-id>",
-			Flags:     abv2Flags(),
-			Action:    abv2SuspenderAction((*addressbookv2.AddressBookV2Transactor).UnsuspendValidator),
+			Name:   "unsuspend-validator",
+			Usage:  "Unsuspend a validator (requires suspender role)",
+			Flags:  abv2SuspenderFlags(),
+			Action: abv2SuspenderAction((*addressbookv2.AddressBookV2Transactor).UnsuspendValidator),
 		},
 		{
 			Name:   "ready-candidate",
@@ -135,6 +138,10 @@ func abv2Flags() []cli.Flag {
 	return []cli.Flag{abv2EndpointFlag, abv2PrivateKeyFlag}
 }
 
+func abv2SuspenderFlags() []cli.Flag {
+	return []cli.Flag{abv2EndpointFlag, abv2PrivateKeyFlag, abv2NodeIdFlag}
+}
+
 func loadKey(ctx *cli.Context) (*ecdsa.PrivateKey, error) {
 	if keyHex := ctx.String("private-key"); keyHex != "" {
 		return crypto.HexToECDSA(strings.TrimPrefix(keyHex, "0x"))
@@ -162,13 +169,10 @@ func abv2Run(ctx *cli.Context, fn abv2RunFn) error {
 	return printAndWait(ec, tx, opts.From)
 }
 
-// abv2SuspenderAction wraps a suspender-role command; parses <node-id> from args.
+// abv2SuspenderAction wraps a suspender-role command; reads node-id from --node-id flag.
 func abv2SuspenderAction(fn abv2TxFn) cli.ActionFunc {
 	return func(ctx *cli.Context) error {
-		if ctx.Args().Len() != 1 {
-			return fmt.Errorf("usage: %s <node-id>", ctx.Command.Name)
-		}
-		nodeId := common.HexToAddress(ctx.Args().Get(0))
+		nodeId := common.HexToAddress(ctx.String("node-id"))
 		return abv2Run(ctx, func(t *addressbookv2.AddressBookV2Transactor, opts *bind.TransactOpts, _ *ecdsa.PrivateKey) (*types.Transaction, error) {
 			return fn(t, opts, nodeId)
 		})

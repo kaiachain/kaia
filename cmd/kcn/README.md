@@ -26,13 +26,13 @@ Chain ID is fetched automatically from the endpoint.
 These commands require the caller to hold the suspender role in AddressBookV2.
 
 ```
-kcn abv2 suspend-validator <node-id>
-kcn abv2 unsuspend-validator <node-id>
+kcn abv2 suspend-validator --node-id <address>
+kcn abv2 unsuspend-validator --node-id <address>
 ```
 
-| Argument | Description |
-|----------|-------------|
-| `<node-id>` | Address of the target validator node |
+| Flag | Description |
+|------|-------------|
+| `--node-id` | Address of the target validator node |
 
 ### Node operator role
 
@@ -55,7 +55,7 @@ No extra arguments. The node-id is derived from the private key.
 
 ```sh
 # Suspend a validator (as suspender)
-kcn abv2 suspend-validator 0xABCD... --private-key 0x1234...
+kcn abv2 suspend-validator --node-id 0xABCD... --private-key 0x1234...
 
 # Use default IPC endpoint and nodekey file
 kcn abv2 ready-candidate
