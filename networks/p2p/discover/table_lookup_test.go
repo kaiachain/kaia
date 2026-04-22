@@ -106,7 +106,7 @@ func Test_Table_findNodesOnce_error(t *testing.T) {
 	tab.db.updateNode(seed)
 
 	result := tab.findNodesOnce(seed, NodeID{}, NodeTypeEN, 10)
-	assert.Nil(t, result)
+	assert.Empty(t, result)
 	assert.Equal(t, 1, tab.db.findFails(seed.ID), "failure should be recorded in DB")
 }
 
@@ -123,6 +123,27 @@ func Test_Table_findNodesOnce_success(t *testing.T) {
 	// Peer is bonded (ping returns nil by default) so it appears in results.
 	require.Len(t, result, 1)
 	assert.Equal(t, peer.ID, result[0].ID)
+}
+
+func Test_Table_findNodesOnce_timeout_noFailure(t *testing.T) {
+	// When the responder has fewer nodes than requested, findnode sends a
+	// short NEIGHBORS packet and the matcher times out waiting for more.
+	// findNodesOnce must keep the peer result instead of discarding it,
+	// and must not bump the seed's failure counter.
+	peer := newTestNode(t, NodeTypeCN)
+	udp := newMockTransport()
+	udp.findnodeFn = func(NodeID, *net.UDPAddr, NodeID, NodeType, int) ([]*Node, error) {
+		return []*Node{peer}, errTimeout
+	}
+	tab := newTestTable2(t, udp)
+	seed := newTestNode(t, NodeTypeEN)
+	tab.addNode(seed)
+	tab.db.updateNode(seed)
+
+	result := tab.findNodesOnce(seed, NodeID{}, NodeTypeCN, 100)
+	require.Len(t, result, 1)
+	assert.Equal(t, peer.ID, result[0].ID)
+	assert.Equal(t, 0, tab.db.findFails(seed.ID), "timeout with response must not record a find failure")
 }
 
 func Test_Table_lookup_emptyTable(t *testing.T) {

@@ -17,6 +17,7 @@
 package discover
 
 import (
+	"errors"
 	"time"
 
 	"github.com/kaiachain/kaia/crypto"
@@ -164,9 +165,14 @@ func (tab *Table2) findNodes(seeds []*Node, targetID NodeID, targetType NodeType
 
 func (tab *Table2) findNodesOnce(seed *Node, targetID NodeID, targetType NodeType, max int) []*Node {
 	r, err := tab.udp.findnode(seed.ID, seed.addr(), targetID, targetType, max)
-	if err != nil {
+	// A timeout with no NEIGHBORS at all means the seed is unresponsive
+	if errors.Is(err, errTimeout) && len(r) == 0 {
 		tab.recordFindFailure(seed)
 		return nil
+	}
+	// Drop bootnodes from the response unless the caller is explicitly looking for them
+	if targetType != NodeTypeBN {
+		r = removeBn(r)
 	}
 	// Out of the find results, return only reachable (bonded) nodes.
 	return tab.bondall(r)

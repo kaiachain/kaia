@@ -43,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {
@@ -249,7 +250,7 @@ func TestUDP_findnodeTimeout(t *testing.T) {
 	}
 }
 
-func TestUDP_findnode(t *testing.T) {
+func TestUDP_findnode_EN(t *testing.T) {
 	test := newUDPTest(t)
 	defer test.table.Close()
 
@@ -289,6 +290,68 @@ func TestUDP_findnode(t *testing.T) {
 	}
 	waitNeighbors(expected.entries[:maxNeighbors])
 	waitNeighbors(expected.entries[maxNeighbors:])
+}
+
+func TestUDP_findnode_CN_overfill(t *testing.T) {
+	test := newUDPTest(t)
+	defer test.table.Close()
+
+	// Fill the CN storage with more nodes than the per-request retrieve cap.
+	const filled = 200
+	retrieve := findnodeRetrieveSize(NodeTypeCN)
+	assert.Greater(t, filled, retrieve)
+	selfSha := crypto.Keccak256Hash(test.table.selfID[:])
+	s := test.table.storages[NodeTypeCN]
+	addedIDs := make(map[NodeID]struct{}, filled)
+	for i := range filled {
+		n := nodeAtDistance(selfSha, i+2, NodeTypeCN)
+		n.IP = net.IPv4(1, byte((i>>8)&0xff), byte(i&0xff), 1)
+		s.add(n)
+		addedIDs[n.ID] = struct{}{}
+	}
+
+	// ensure there's a bond with the test node,
+	// findnode won't be accepted otherwise.
+	test.table.db.updateBondTime(PubkeyID(&test.remotekey.PublicKey), time.Now())
+
+	// Trigger the findnode. retrieveSize for NodeTypeCN is 100.
+	test.packetIn(nil, findnodePacket, &findnode{Target: testTarget, TargetType: NodeTypeCN, Expiration: futureExp})
+
+	// Collect all NEIGHBORS packets. The handler sends ceil(retrieve/maxNeighbors)
+	// packets, with the last one possibly short.
+	numPackets := (retrieve + maxNeighbors - 1) / maxNeighbors
+	t.Logf("expecting %d NEIGHBORS packets (retrieve=%d, maxNeighbors=%d)",
+		numPackets, retrieve, maxNeighbors)
+
+	seen := make(map[NodeID]struct{}, retrieve)
+	totalReceived := 0
+	for p := range numPackets {
+		test.waitPacketOut(func(pkt *neighbors) {
+			// Intermediate packets must be full; the last packet carries the remainder.
+			isLast := p == numPackets-1
+			if !isLast && len(pkt.Nodes) != maxNeighbors {
+				t.Errorf("packet %d: got %d nodes, want %d (maxNeighbors)",
+					p, len(pkt.Nodes), maxNeighbors)
+			} else if isLast && len(pkt.Nodes) != retrieve-(numPackets-1)*maxNeighbors {
+				t.Errorf("packet %d: got %d nodes, want %d (last packet)",
+					p, len(pkt.Nodes), retrieve-(numPackets-1)*maxNeighbors)
+			}
+			for _, rn := range pkt.Nodes {
+				if _, ok := addedIDs[rn.ID]; !ok {
+					t.Errorf("packet %d: unexpected NodeID %x returned", p, rn.ID[:8])
+				}
+				if _, dup := seen[rn.ID]; dup {
+					t.Errorf("packet %d: duplicate NodeID %x", p, rn.ID[:8])
+				}
+				seen[rn.ID] = struct{}{}
+				totalReceived++
+			}
+		})
+	}
+
+	if totalReceived != retrieve {
+		t.Errorf("total returned nodes = %d, want %d", totalReceived, retrieve)
+	}
 }
 
 func TestUDP_findnodeMultiReply(t *testing.T) {
