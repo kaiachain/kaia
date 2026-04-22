@@ -91,12 +91,11 @@ describe("Multicall permissionless", function () {
     expect(retKpf.toLowerCase()).to.equal("0x000000000000000000000000000000000000aaa3");
   });
 
-  it("multiCallNodeStatesPermissionless returns profiles, amounts, timeouts, maxCounts, thresholds, slotFactor, slotLimits", async function () {
+  it("multiCallNodeStatesPermissionless returns profiles, amounts, timeouts, thresholds, slotFactor, slotLimits, maxValActivePausedCount, suspendedValidators", async function () {
     const { abv2, multiCall, cnStakingAddrs, expectedAmounts } = await loadFixture(deployMulticallFixture);
 
-    // Set timeouts, max counts, thresholds, and slot factor
+    // Set timeouts, thresholds, and slot factor
     await abv2.setTimeouts(28800, 2592000); // 8h, 30d in seconds
-    await abv2.setMaxCounts(50, 100);
     await abv2.setThresholds(2, 300); // pfsThreshold=2, cfsThreshold=300
     await abv2.setSlotFactor(10); // slotFactor=10 → minActive=ceil(20/3)=7, maxSlot=ceil(3/2)=2
 
@@ -104,10 +103,10 @@ describe("Multicall permissionless", function () {
     const [
       profiles, stakingAmounts,
       retPauseTimeout, retIdleTimeout,
-      retMaxValCount, retMaxReadyCandCount,
       retPfsThreshold, retCfsThreshold,
       retSlotFactor,
       retMaxSlotAvailable, retMinActiveCount,
+      retMaxValActivePausedCount, retSuspendedValidators,
     ] = result;
 
     expect(profiles.length).to.equal(3);
@@ -118,13 +117,13 @@ describe("Multicall permissionless", function () {
 
     expect(retPauseTimeout).to.equal(28800);
     expect(retIdleTimeout).to.equal(2592000);
-    expect(retMaxValCount).to.equal(50);
-    expect(retMaxReadyCandCount).to.equal(100);
     expect(retPfsThreshold).to.equal(2);
     expect(retCfsThreshold).to.equal(300);
     expect(retSlotFactor).to.equal(10);
     // SlotMath for n=10: minActive=ceil(20/3)=7, maxSlot=ceil(floor(10/3)/2)=ceil(3/2)=2
     expect(retMaxSlotAvailable).to.equal(2);
     expect(retMinActiveCount).to.equal(7);
+    expect(retMaxValActivePausedCount).to.equal(0);
+    expect(retSuspendedValidators).to.deep.equal([]);
   });
 });
