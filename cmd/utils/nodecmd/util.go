@@ -26,13 +26,11 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/keystore"
 	"github.com/kaiachain/kaia/blockchain/types"
-	utils "github.com/kaiachain/kaia/cmd/utils"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
-	headergov_impl "github.com/kaiachain/kaia/kaiax/gov/headergov/impl"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/urfave/cli/v2"
@@ -43,7 +41,6 @@ const (
 	DECODE_VOTE  = "decode-vote"
 	DECODE_GOV   = "decode-gov"
 	DECRYPT_KEY  = "decrypt-keystore"
-	VOTE_HISTORY = "vote-history"
 )
 
 var ErrInvalidCmd = errors.New("Invalid command. Check usage through --help command")
@@ -76,13 +73,6 @@ var UtilCommand = &cli.Command{
 			Usage:       "<keystore path> <password>",
 			Action:      action,
 			Description: "Decrypt keystore",
-		},
-		{
-			Name:        VOTE_HISTORY,
-			Usage:       "--datadir <path>",
-			Action:      utils.MigrateFlags(voteHistory),
-			Flags:       utils.SnapshotFlags,
-			Description: "Show all historical governance votes",
 		},
 	},
 }
@@ -234,34 +224,6 @@ func decodeExtra(headerFile string) (map[string]interface{}, error) {
 	result["proposer"] = author.String()
 	result["round"] = round
 	return result, nil
-}
-
-func voteHistory(ctx *cli.Context) error {
-	stack := MakeFullNode(ctx)
-	dbm := stack.OpenDatabase(getConfig(ctx))
-	defer dbm.Close()
-
-	miscDB := dbm.GetMiscDB()
-	lowestEpoch := headergov_impl.ReadLowestVoteScannedEpochIdx(miscDB)
-	if lowestEpoch == nil || *lowestEpoch != 0 {
-		fmt.Println("WARNING: vote history may be incomplete (not yet scanned to block 0)")
-	}
-
-	voteBlockNums := headergov_impl.ReadVoteDataBlockNums(miscDB)
-	for _, num := range voteBlockNums {
-		hash := dbm.ReadCanonicalHash(num)
-		header := dbm.ReadHeader(hash, num)
-		if header == nil || len(header.Vote) == 0 {
-			continue
-		}
-		vote, err := headergov.VoteBytes(header.Vote).ToVoteData()
-		if err != nil {
-			continue
-		}
-		fmt.Printf("block %-12d key=%-40s value=%v\n", num, vote.Name(), vote.Value())
-	}
-	fmt.Printf("\nTotal: %d votes\n", len(voteBlockNums))
-	return nil
 }
 
 func decodeVote(bytes []byte) (map[string]interface{}, error) {
