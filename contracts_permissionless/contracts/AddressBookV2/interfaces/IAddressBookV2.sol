@@ -76,16 +76,6 @@ interface IAddressBookV2 {
     /// @param nodeId The address of the newly created node
     event NodeCreated(address indexed nodeId);
 
-    /// @notice Emitted when a gcId is assigned to a node by the configurator
-    /// @param nodeId The address of the node
-    /// @param gcId The assigned governance council ID
-    event GcIdAssigned(address indexed nodeId, uint256 gcId);
-
-    /// @notice Emitted when a gcId is revoked from a node by the configurator
-    /// @param nodeId The address of the node
-    /// @param gcId The revoked governance council ID
-    event GcIdRevoked(address indexed nodeId, uint256 gcId);
-
     /// @notice Emitted when a node is deleted
     /// @param nodeId The address of the deleted node
     event NodeDeleted(address indexed nodeId);
@@ -124,14 +114,6 @@ interface IAddressBookV2 {
     /// @param nodeId The address of the node
     /// @param newMetadata The new metadata string
     event MetadataUpdated(address indexed nodeId, string newMetadata);
-
-    /// @notice Emitted when a candidate transitions from Registered to CandReady
-    /// @param nodeId The address of the readied candidate
-    event CandidateReadied(address indexed nodeId);
-
-    /// @notice Emitted when a candidate transitions from CandReady to Registered
-    /// @param nodeId The address of the unreadied candidate
-    event CandidateUnreadied(address indexed nodeId);
 
     /// @notice Emitted when system transitions are processed
     /// @param nodeIds The addresses of the transitioned nodes
@@ -202,9 +184,6 @@ interface IAddressBookV2 {
     /// @param newConfigurator The new configurator address
     event ConfiguratorUpdated(address oldConfigurator, address newConfigurator);
 
-    /// @notice Emitted when genesis validators are initialized
-    /// @param nodeIds The addresses of the initialized validators
-    event ValidatorsInitialized(address[] nodeIds);
 
     /* ========== USER FUNCTIONS ========== */
 
@@ -214,6 +193,7 @@ interface IAddressBookV2 {
     /// @param rewardAddress The reward address
     /// @param voterAddress The voter address for on-chain governance (optional)
     /// @param blsInfo The BLS public key and proof-of-possession
+    /// @param name The human-readable name of the node (must be non-empty)
     /// @param metadata The node metadata in JSON format
     function createNode(
         address nodeId,
@@ -221,6 +201,7 @@ interface IAddressBookV2 {
         address rewardAddress,
         address voterAddress,
         BlsPublicKeyInfo memory blsInfo,
+        string memory name,
         string memory metadata
     ) external;
 
