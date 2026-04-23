@@ -59,7 +59,7 @@ func (v *VRankModule) GetPFS(blockNum uint64) (map[common.Address]uint64, error)
 	return cloneMap(seed), nil
 }
 
-func (v *VRankModule) getSlotFactorAt(blockNum uint64) (uint64, error) {
+func (v *VRankModule) getEpochVACountAt(blockNum uint64) (uint64, error) {
 	header := v.Chain.GetHeaderByNumber(blockNum)
 	if header == nil {
 		return 0, vrank.ErrHeaderNotFound
@@ -72,7 +72,7 @@ func (v *VRankModule) getSlotFactorAt(blockNum uint64) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return system.ReadSlotFactor(backend, header.Number)
+	return system.ReadEpochVACount(backend, header.Number)
 }
 
 // GetCFS computes the running Candidate Failure Score up to blockNum.
@@ -81,18 +81,18 @@ func (v *VRankModule) getSlotFactorAt(blockNum uint64) (uint64, error) {
 // Returns ErrNotPermissionless if blockNum is before the permissionless fork.
 // Returns ErrFutureBlock if blockNum exceeds the current chain head.
 func (v *VRankModule) GetCFS(blockNum uint64) (map[common.Address]uint64, error) {
-	sf, err := v.getSlotFactorAt(blockNum)
+	n, err := v.getEpochVACountAt(blockNum)
 	if err != nil {
 		return nil, err
 	}
-	return v.getCFS(blockNum, sf)
+	return v.getCFS(blockNum, n)
 }
 
-func (v *VRankModule) GetCFSWithSlotFactor(blockNum uint64, slotFactor uint64) (map[common.Address]uint64, error) {
-	return v.getCFS(blockNum, slotFactor)
+func (v *VRankModule) GetCFSWithEpochVACount(blockNum uint64, epochVACount uint64) (map[common.Address]uint64, error) {
+	return v.getCFS(blockNum, epochVACount)
 }
 
-// getCPMatrix computes and caches the CP matrix for blockNum without requiring a slotFactor.
+// getCPMatrix computes and caches the CP matrix for blockNum without requiring an epochVACount.
 // Use this when only the matrix (not the final CFS scores) is needed, e.g. during cache warm-up.
 func (v *VRankModule) getCPMatrix(blockNum uint64) (vrank.CPMatrix, error) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
@@ -118,12 +118,12 @@ func (v *VRankModule) getCPMatrix(blockNum uint64) (vrank.CPMatrix, error) {
 	return seed, nil
 }
 
-func (v *VRankModule) getCFS(blockNum uint64, slotFactor uint64) (map[common.Address]uint64, error) {
+func (v *VRankModule) getCFS(blockNum uint64, epochVACount uint64) (map[common.Address]uint64, error) {
 	cpMatrix, err := v.getCPMatrix(blockNum)
 	if err != nil {
 		return nil, err
 	}
-	return generateCFSFromCPMatrix(cpMatrix, slotFactor), nil
+	return generateCFSFromCPMatrix(cpMatrix, epochVACount), nil
 }
 
 // lookupPFSSeed returns (start, seed) where seed holds PFS accumulated up to start-1.
@@ -212,10 +212,10 @@ func (v *VRankModule) applyBlocksForCPMatrix(start, end uint64, seed vrank.CPMat
 	return cpMatrix, nil
 }
 
-func generateCFSFromCPMatrix(cpMatrix vrank.CPMatrix, slotFactor uint64) map[common.Address]uint64 {
+func generateCFSFromCPMatrix(cpMatrix vrank.CPMatrix, epochVACount uint64) map[common.Address]uint64 {
 	F := 0
-	if slotFactor > 0 {
-		F = int((slotFactor - 1) / 3)
+	if epochVACount > 0 {
+		F = int((epochVACount - 1) / 3)
 	}
 	return byzantineFilter(cpMatrix, F)
 }

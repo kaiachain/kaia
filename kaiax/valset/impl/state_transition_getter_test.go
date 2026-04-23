@@ -84,7 +84,7 @@ func newTestValsetModule(ctrl *gomock.Controller) *ValsetModule {
 	mockChain := chain_mock.NewMockBlockChain(ctrl)
 	mockChain.EXPECT().Config().Return(&params.ChainConfig{VRankEpoch: testVRankEpoch}).AnyTimes()
 	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-	mockVRank.EXPECT().GetCFSWithSlotFactor(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	mockVRank.EXPECT().GetCFSWithEpochVACount(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	return &ValsetModule{
 		InitOpts: InitOpts{
 			Chain:       mockChain,
@@ -137,7 +137,7 @@ func TestGetEpochTransition_StateTransitions(t *testing.T) {
 
 // TestGetEpochTransition_BelowMinStakeDemoted verifies that VA/VR/VP+belowMin are demoted to VI at epoch (T5).
 // This ensures newSF is computed only from validators with sufficient stake,
-// preventing SF inflation that would cause incorrect slot limits in violation transition.
+// preventing epochVACount inflation that would cause incorrect slot limits in violation transition.
 func TestGetEpochTransition_BelowMinStakeDemoted(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	v := newTestValsetModule(ctrl)
@@ -252,7 +252,7 @@ func TestIsPassVrankTest(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			v := newTestValsetModule(ctrl)
 			mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-			mockVRank.EXPECT().GetCFSWithSlotFactor(testCFSBlockNum, uint64(0)).Return(tc.cfsScores, tc.cfsErr)
+			mockVRank.EXPECT().GetCFSWithEpochVACount(testCFSBlockNum, uint64(0)).Return(tc.cfsScores, tc.cfsErr)
 			v.VRankModule = mockVRank
 
 			result := v.isPassVrankTest(addr1, testCFSBlockNum, tc.cfsThreshold, 0)
@@ -279,7 +279,7 @@ func TestGetEpochTransition_CandTestingCFS(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			v := newTestValsetModule(ctrl)
 			mockVRank := vrank_mock.NewMockVRankModule(ctrl)
-			mockVRank.EXPECT().GetCFSWithSlotFactor(testCFSBlockNum, uint64(0)).Return(map[common.Address]uint64{addr1: tc.cfs}, nil)
+			mockVRank.EXPECT().GetCFSWithEpochVACount(testCFSBlockNum, uint64(0)).Return(map[common.Address]uint64{addr1: tc.cfs}, nil)
 			v.VRankModule = mockVRank
 
 			validators := valset.NodeStateMap{
@@ -579,7 +579,7 @@ func TestGetViolationTransition_PFSNonActiveNotAffected(t *testing.T) {
 // ============================================================
 // TestGetViolationTransition with SlotLimits
 //
-// Uses slotFactor=4 (4 validators at epoch start).
+// Uses epochVACount=4 (4 validators at epoch start).
 // SlotMath (see contracts/libraries/SlotMath.sol):
 //   minActiveCount    = ceil(2*4/3)        → 3
 //   totalBudget       = 4 - 3             → 1
@@ -766,7 +766,7 @@ func newTestApplyAllTransitions(ctrl *gomock.Controller) *ValsetModule {
 	mockVRank := vrank_mock.NewMockVRankModule(ctrl)
 	mockVRank.EXPECT().GetPfReport(gomock.Any()).Return(nil, nil).AnyTimes()
 	mockVRank.EXPECT().GetPFS(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockVRank.EXPECT().GetCFSWithSlotFactor(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	mockVRank.EXPECT().GetCFSWithEpochVACount(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	v := &ValsetModule{
 		InitOpts: InitOpts{
@@ -884,14 +884,14 @@ func TestApplyAllTransitions(t *testing.T) {
 			v := newTestApplyAllTransitions(ctrl)
 			parentHeader := &types.Header{Number: big.NewInt(int64(tc.num - 1)), Time: big.NewInt(testBlockTime.Unix())}
 
-			noopSlotLimitsFn := func(sf uint64) (uint64, uint64, error) { return noSlotLimit, 1, nil }
+			noopSlotLimitsFn := func(n uint64) (uint64, uint64, error) { return noSlotLimit, 1, nil }
 			res := &system.NodeStatesResult{
-				Validators:           tc.input,
-				PauseTimeout:         DefaultValPausedTimeout,
-				IdleTimeout:          DefaultValIdleTimeout,
+				Validators:              tc.input,
+				PauseTimeout:            DefaultValPausedTimeout,
+				IdleTimeout:             DefaultValIdleTimeout,
 				MaxValActivePausedCount: DefaultMaxValActivePausedCount,
-				MaxSlotAvailable:     noSlotLimit,
-				MinActiveCount:       1,
+				MaxSlotAvailable:        noSlotLimit,
+				MinActiveCount:          1,
 			}
 			result, _, err := v.applyAllTransitions(res, parentHeader, noopSlotLimitsFn)
 			assert.NoError(t, err)

@@ -46,7 +46,7 @@ type VRankModule interface {
 	GetPfReport(blockNum uint64) ([]common.Address, error)
 	GetPFS(blockNum uint64) (map[common.Address]uint64, error)
 	GetCFS(blockNum uint64) (map[common.Address]uint64, error)
-	GetCFSWithSlotFactor(blockNum uint64, slotFactor uint64) (map[common.Address]uint64, error)
+	GetCFSWithEpochVACount(blockNum uint64, epochVACount uint64) (map[common.Address]uint64, error)
 
 	SubscribeVRank(sink chan<- *VRankBroadcastEvent) event.Subscription
 }

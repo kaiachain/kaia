@@ -86,11 +86,11 @@ func EncodeInitializeABv2(rules params.Rules) (common.Address, *types.Transactio
 }
 
 // EncodeNodeStateUpdate encodes the processSystemTransition call with the given validator state changes.
-// epochSF is the VA count after epoch transition (newSF); 0 for non-epoch blocks.
+// epochVACount is the VA count after epoch transition (newSF); 0 for non-epoch blocks.
 func EncodeNodeStateUpdate(
 	rules params.Rules,
 	validators valset.NodeStateMap,
-	epochSF uint64,
+	epochVACount uint64,
 ) (common.Address, *types.Transaction, error) {
 	nodeIds := make([]common.Address, 0, len(validators))
 	for addr := range validators {
@@ -122,7 +122,7 @@ func EncodeNodeStateUpdate(
 		}
 	}
 
-	data, err := AddressBookV2ABI.Pack("processSystemTransition", nodeIds, newStates, timeoutAts, new(big.Int).SetUint64(epochSF))
+	data, err := AddressBookV2ABI.Pack("processSystemTransition", nodeIds, newStates, timeoutAts, new(big.Int).SetUint64(epochVACount))
 	if err != nil {
 		return common.Address{}, nil, err
 	}
@@ -131,16 +131,16 @@ func EncodeNodeStateUpdate(
 
 // NodeStatesResult holds the result of ReadNodeStates.
 type NodeStatesResult struct {
-	Validators           valset.NodeStateMap
-	PauseTimeout         time.Duration
-	IdleTimeout          time.Duration
-	PfsThreshold         uint64
-	CfsThreshold         uint64
-	SlotFactor           uint64
-	MaxSlotAvailable     uint64
-	MinActiveCount       uint64
+	Validators              valset.NodeStateMap
+	PauseTimeout            time.Duration
+	IdleTimeout             time.Duration
+	PfsThreshold            uint64
+	CfsThreshold            uint64
+	EpochVACount            uint64
+	MaxSlotAvailable        uint64
+	MinActiveCount          uint64
 	MaxValActivePausedCount uint64
-	SuspendedValidators  []common.Address
+	SuspendedValidators     []common.Address
 }
 
 // ReadNodeStates reads all validator states, timeouts, max counts, and thresholds from ABv2 in a single MultiCall.
@@ -181,41 +181,41 @@ func ReadNodeStates(
 	}
 
 	return &NodeStatesResult{
-		Validators:           validators,
-		PauseTimeout:         time.Duration(res.PauseTimeout.Int64()) * time.Second,
-		IdleTimeout:          time.Duration(res.IdleTimeout.Int64()) * time.Second,
-		PfsThreshold:         res.PfsThreshold.Uint64(),
-		CfsThreshold:         res.CfsThreshold.Uint64(),
-		SlotFactor:           res.SlotFactor.Uint64(),
-		MaxSlotAvailable:     res.MaxSlotAvailable.Uint64(),
-		MinActiveCount:       res.MinActiveCount.Uint64(),
+		Validators:              validators,
+		PauseTimeout:            time.Duration(res.PauseTimeout.Int64()) * time.Second,
+		IdleTimeout:             time.Duration(res.IdleTimeout.Int64()) * time.Second,
+		PfsThreshold:            res.PfsThreshold.Uint64(),
+		CfsThreshold:            res.CfsThreshold.Uint64(),
+		EpochVACount:            res.EpochVACount.Uint64(),
+		MaxSlotAvailable:        res.MaxSlotAvailable.Uint64(),
+		MinActiveCount:          res.MinActiveCount.Uint64(),
 		MaxValActivePausedCount: res.MaxValActivePausedCount.Uint64(),
-		SuspendedValidators:  res.SuspendedValidators,
+		SuspendedValidators:     res.SuspendedValidators,
 	}, nil
 }
 
-// ReadSlotFactor reads the slot factor from AddressBookV2.
-func ReadSlotFactor(backend bind.ContractCaller, num *big.Int) (uint64, error) {
+// ReadEpochVACount reads the epoch VA count from AddressBookV2.
+func ReadEpochVACount(backend bind.ContractCaller, num *big.Int) (uint64, error) {
 	caller, err := abv2contracts.NewAddressBookV2Caller(AddressBookAddr, backend)
 	if err != nil {
 		return 0, err
 	}
 	opts := &bind.CallOpts{BlockNumber: num}
-	sf, err := caller.GetSlotFactor(opts)
+	n, err := caller.GetEpochVACount(opts)
 	if err != nil {
 		return 0, err
 	}
-	return sf.Uint64(), nil
+	return n.Uint64(), nil
 }
 
-// ReadSlotLimitsFor computes slot limits for a given slot factor via ABv2.getSlotLimitsFor.
-func ReadSlotLimitsFor(backend bind.ContractCaller, num *big.Int, sf uint64) (maxSlotAvailable, minActiveCount uint64, err error) {
+// ReadSlotLimitsFor computes slot limits for a given epochVACount via ABv2.getSlotLimitsFor.
+func ReadSlotLimitsFor(backend bind.ContractCaller, num *big.Int, n uint64) (maxSlotAvailable, minActiveCount uint64, err error) {
 	caller, err := abv2contracts.NewAddressBookV2Caller(AddressBookAddr, backend)
 	if err != nil {
 		return 0, 0, err
 	}
 	opts := &bind.CallOpts{BlockNumber: num}
-	result, err := caller.GetSlotLimitsFor(opts, new(big.Int).SetUint64(sf))
+	result, err := caller.GetSlotLimitsFor(opts, new(big.Int).SetUint64(n))
 	if err != nil {
 		return 0, 0, err
 	}

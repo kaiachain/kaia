@@ -66,7 +66,7 @@ interface IAddressBookV2 {
     function getMaxCounts() external view returns (uint256 maxNodeCount, uint256 maxCandReadyCount);
     function getPfsThreshold() external view returns (uint256);
     function getCfsThreshold() external view returns (uint256);
-    function getSlotFactor() external view returns (uint256);
+    function getEpochVACount() external view returns (uint256);
     function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount);
     function getMaxValActivePausedCount() external view returns (uint256);
     function getSuspendedValidators() external view returns (address[] memory);
@@ -148,7 +148,7 @@ contract MultiCallContract {
         uint256 idleTimeout;
         uint256 pfsThreshold;
         uint256 cfsThreshold;
-        uint256 slotFactor;
+        uint256 epochVACount;
         uint256 maxSlotAvailable;
         uint256 minActiveCount;
         uint256 maxValActivePausedCount;
@@ -165,7 +165,7 @@ contract MultiCallContract {
         (result.pauseTimeout, result.idleTimeout) = abv2.getTimeouts();
         result.pfsThreshold = abv2.getPfsThreshold();
         result.cfsThreshold = abv2.getCfsThreshold();
-        result.slotFactor = abv2.getSlotFactor();
+        result.epochVACount = abv2.getEpochVACount();
         result.maxValActivePausedCount = abv2.getMaxValActivePausedCount();
         result.suspendedValidators = abv2.getSuspendedValidators();
         (result.maxSlotAvailable, result.minActiveCount) = abv2.getSlotLimits();

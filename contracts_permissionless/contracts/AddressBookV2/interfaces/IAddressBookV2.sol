@@ -115,8 +115,8 @@ interface IAddressBookV2 {
     event SystemTransitionProcessed(address[] nodeIds, State[] newStates);
 
     /// @notice Emitted when the epoch transition is processed
-    /// @param slotFactor The slot factor for the epoch
-    event EpochTransitionProcessed(uint256 slotFactor);
+    /// @param epochVACount VA count after epoch transition
+    event EpochTransitionProcessed(uint256 epochVACount);
 
     /// @notice Emitted when the pause timeout is updated
     /// @param oldPauseTimeout The previous timeout value
@@ -250,16 +250,16 @@ interface IAddressBookV2 {
 
     /// @notice Processes system-triggered state transitions for nodes.
     /// @dev Core client computes all timeout/violation/epoch logic; AddressBookV2 unconditionally records results.
-    ///      Updates slotFactor only at epoch boundaries (block.number % epochBlockInterval == 0).
+    ///      Updates epochVACount only at epoch boundaries (block.number % epochBlockInterval == 0).
     /// @param nodeIds Array of node addresses to transition
     /// @param newStates Array of target states for each node
     /// @param timeoutAts Array of timeout timestamps for each node (0 = no timeout)
-    /// @param epochSlotFactor VA count after epoch transition (before violation); 0 for non-epoch blocks
+    /// @param epochVACount VA count after epoch transition (before violation); 0 for non-epoch blocks
     function processSystemTransition(
         address[] calldata nodeIds,
         State[] calldata newStates,
         uint256[] calldata timeoutAts,
-        uint256 epochSlotFactor
+        uint256 epochVACount
     ) external;
 
     /* ========== ADMIN FUNCTIONS ========== */
@@ -346,16 +346,16 @@ interface IAddressBookV2 {
     /// @return The CFS threshold
     function getCfsThreshold() external view returns (uint256);
 
-    /// @notice Returns the slot limits for violation transitions based on slotFactor
+    /// @notice Returns the slot limits for violation transitions based on epochVACount
     /// @return maxSlotAvailable Maximum number of ValPaused or ValExiting each
     /// @return minActiveCount Minimum number of ValActive validators required
     function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount);
 
-    /// @notice Computes slot limits for a given slot factor
-    /// @param sf The slot factor to compute limits for
+    /// @notice Computes slot limits for a given epochVACount
+    /// @param n The epochVACount to compute limits for
     /// @return maxSlotAvailable Maximum number of ValPaused or ValExiting each
     /// @return minActiveCount Minimum number of ValActive validators required
-    function getSlotLimitsFor(uint256 sf) external pure returns (uint256 maxSlotAvailable, uint256 minActiveCount);
+    function getSlotLimitsFor(uint256 n) external pure returns (uint256 maxSlotAvailable, uint256 minActiveCount);
 
     /// @notice Returns the fund addresses (KEF, KIF, KPF)
     /// @return kefAddress The Kaia Ecosystem Fund address
@@ -369,7 +369,7 @@ interface IAddressBookV2 {
 
     /// @notice Returns the epoch validator count snapshot (ValActive + ValPaused at last epoch)
     /// @return The epoch validator count used for mid-epoch slot math
-    function getSlotFactor() external view returns (uint256);
+    function getEpochVACount() external view returns (uint256);
 
     /// @notice Returns the number of blocks per epoch (set at deployment, immutable)
     /// @return The epoch block interval

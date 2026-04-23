@@ -42,7 +42,7 @@ for each x in [epochStart(N), N]:
         cpMatrix_N[candidate][reporter(x)] += 1
 ```
 
-The CP matrix is then passed through a **byzantine filter** before producing the final CFS. The filter discards the top-F reporter totals per candidate, where `F = floor((slotFactor - 1) / 3)`. Here `slotFactor` is the ABv2 epoch snapshot of `ValActive + ValPaused`, not the live committee length. This protects against up to F malicious proposers falsely accusing candidates.
+The CP matrix is then passed through a **byzantine filter** before producing the final CFS. The filter discards the top-F reporter totals per candidate, where `F = floor((epochVACount - 1) / 3)`. Here `epochVACount` is the ABv2 epoch snapshot of `ValActive + ValPaused`, not the live committee length. This protects against up to F malicious proposers falsely accusing candidates.
 
 ```
 scores_N(candidate) = sorted list of cpMatrix_N[candidate][reporter] over all reporters
