@@ -61,6 +61,9 @@ interface IAddressBookV2 {
     /// @notice Thrown when attempting to assign a gcId to a node that already has one
     error GcIdAlreadyAssigned();
 
+    /// @notice Thrown when attempting to revoke a gcId from a node that has none
+    error GcIdNotAssigned();
+
     /* ========== EVENTS ========== */
 
     /// @notice Emitted when a node's state changes
@@ -77,6 +80,11 @@ interface IAddressBookV2 {
     /// @param nodeId The address of the node
     /// @param gcId The assigned governance council ID
     event GcIdAssigned(address indexed nodeId, uint256 gcId);
+
+    /// @notice Emitted when a gcId is revoked from a node by the configurator
+    /// @param nodeId The address of the node
+    /// @param gcId The revoked governance council ID
+    event GcIdRevoked(address indexed nodeId, uint256 gcId);
 
     /// @notice Emitted when a node is deleted
     /// @param nodeId The address of the deleted node
@@ -310,6 +318,11 @@ interface IAddressBookV2 {
     /// @dev Node must exist and must not already have a gcId assigned
     /// @param nodeId The address of the node
     function assignGcId(address nodeId) external;
+
+    /// @notice Revokes the gcId from a node (configurator only)
+    /// @dev Node must exist and must have a gcId assigned
+    /// @param nodeId The address of the node
+    function revokeGcId(address nodeId) external;
 
     /// @notice Updates the pause timeout duration
     /// @param newPauseTimeout The new timeout in seconds

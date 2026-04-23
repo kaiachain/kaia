@@ -104,6 +104,16 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
+    function revokeGcId(address nodeId) external onlyConfigurator {
+        ABv2Storage storage $ = _getStorage();
+        if ($.nodeInfo[nodeId].state == State.Unknown) revert NodeNotFound();
+        uint256 gcId = $.nodeInfo[nodeId].gcId;
+        if (gcId == 0) revert GcIdNotAssigned();
+        $.nodeInfo[nodeId].gcId = 0;
+        emit GcIdRevoked(nodeId, gcId);
+    }
+
+    /// @inheritdoc IAddressBookV2
     function updatePauseTimeout(uint256 newPauseTimeout) external onlyConfigurator {
         emit PauseTimeoutUpdated(ABv2ConfigLib.PAUSE_TIMEOUT.updateUint(newPauseTimeout), newPauseTimeout);
     }
