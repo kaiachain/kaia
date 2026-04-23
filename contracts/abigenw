@@ -5,6 +5,9 @@ PKG=
 SOL=
 OUT=
 VER=
+VIA_IR=
+RUNS=200
+EVM_VERSION=
 OTHER_ARGS=
 
 while [[ $# -gt 0 ]]; do
@@ -20,6 +23,15 @@ while [[ $# -gt 0 ]]; do
       shift; shift; ;;
     --ver)
       VER="$2"
+      shift; shift; ;;
+    --via-ir)
+      VIA_IR=1
+      shift; ;;
+    --runs)
+      RUNS="$2"
+      shift; shift; ;;
+    --evm-version)
+      EVM_VERSION="$2"
       shift; shift; ;;
     *)
       OTHER_ARGS="$OTHER_ARGS $1"
@@ -68,6 +80,17 @@ cleanup() {
 }
 trap cleanup EXIT
 
-set -x
-abigen --pkg $PKG --sol $SOL --out $OUT $OTHER_ARGS
-{ set +x; } 2>/dev/null
+if [ -n "$VIA_IR" ]; then
+  TMP_JSON=$(mktemp /tmp/abigenw_XXXX.json)
+  SOLC_FLAGS="--optimize --optimize-runs $RUNS --via-ir"
+  [ -n "$EVM_VERSION" ] && SOLC_FLAGS="$SOLC_FLAGS --evm-version $EVM_VERSION"
+  solc $SOLC_FLAGS --combined-json abi,bin $SOL > "$TMP_JSON"
+  set -x
+  abigen --pkg $PKG --combined-json $TMP_JSON --out $OUT $OTHER_ARGS
+  { set +x; } 2>/dev/null
+  rm -f "$TMP_JSON"
+else
+  set -x
+  abigen --pkg $PKG --sol $SOL --out $OUT $OTHER_ARGS
+  { set +x; } 2>/dev/null
+fi
