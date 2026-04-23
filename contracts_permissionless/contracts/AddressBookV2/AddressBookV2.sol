@@ -218,11 +218,6 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
-    function getManager(address nodeId) external view returns (address) {
-        return _getStorage().nodeInfo[nodeId].manager;
-    }
-
-    /// @inheritdoc IAddressBookV2
     function isUsedAddress(address addr) external view returns (bool) {
         return _getStorage().usedAddresses[addr];
     }
@@ -306,16 +301,6 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     /// @inheritdoc IAddressBookV2
     function getRegisteredNodes() external view override returns (address[] memory) {
         return _getStorage().registeredNodes.values();
-    }
-
-    /// @inheritdoc IAddressBookV2
-    function getStakingContract(address nodeId) external view override returns (address) {
-        return _getStorage().nodeInfo[nodeId].stakingContract;
-    }
-
-    /// @inheritdoc IAddressBookV2
-    function getTimeoutAt(address nodeId) external view override returns (uint256) {
-        return _getStorage().nodeInfo[nodeId].timeoutAt;
     }
 
     /* ========== LEGACY COMPATIBILITY ========== */

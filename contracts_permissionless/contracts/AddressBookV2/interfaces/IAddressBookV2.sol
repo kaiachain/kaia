@@ -361,11 +361,6 @@ interface IAddressBookV2 {
     /// @return The configurator address
     function getConfigurator() external view returns (address);
 
-    /// @notice Returns the manager address of a node
-    /// @param nodeId The address of the node
-    /// @return The manager address
-    function getManager(address nodeId) external view returns (address);
-
     /// @notice Checks if an address is in use (nodeId, stakingContract, or rewardAddress)
     /// @param addr The address to check
     /// @return True if the address is in use
@@ -458,16 +453,6 @@ interface IAddressBookV2 {
     /// @notice Returns all nodes in the Registered state
     /// @return Array of registered node addresses
     function getRegisteredNodes() external view returns (address[] memory);
-
-    /// @notice Returns the staking contract address of a node
-    /// @param nodeId The address of the node
-    /// @return The staking contract address
-    function getStakingContract(address nodeId) external view returns (address);
-
-    /// @notice Returns the timeout timestamp of a node
-    /// @param nodeId The address of the node
-    /// @return The timeout timestamp (0 if no timeout)
-    function getTimeoutAt(address nodeId) external view returns (uint256);
 
     /// @notice Returns the number of nodes (all states except Registered)
     /// @return The total node count
