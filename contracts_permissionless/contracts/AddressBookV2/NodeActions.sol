@@ -148,8 +148,8 @@ abstract contract NodeActions is AddressBookV2Base {
         if (!_isNodeAtState(nodeId, State.ValActive)) revert InvalidState();
 
         ABv2Storage storage $ = _getStorage();
-        if (_getStateCount(State.ValPaused) >= SlotMath.maxSlotAvailable($.slotFactor)) revert SlotsFull();
-        if (_getStateCount(State.ValActive) <= SlotMath.minActiveCount($.slotFactor)) revert SlotsFull();
+        if (_getStateCount(State.ValPaused) >= SlotMath.maxSlotAvailable($.epochVACount)) revert SlotsFull();
+        if (_getStateCount(State.ValActive) <= SlotMath.minActiveCount($.epochVACount)) revert SlotsFull();
 
         uint256 timeout = block.timestamp + $.pauseTimeout;
         _transition(nodeId, State.ValPaused, timeout);
@@ -174,9 +174,9 @@ abstract contract NodeActions is AddressBookV2Base {
         }
 
         ABv2Storage storage $ = _getStorage();
-        if (_getStateCount(State.ValExiting) >= SlotMath.maxSlotAvailable($.slotFactor)) revert SlotsFull();
+        if (_getStateCount(State.ValExiting) >= SlotMath.maxSlotAvailable($.epochVACount)) revert SlotsFull();
         if (state == State.ValActive) {
-            if (_getStateCount(State.ValActive) <= SlotMath.minActiveCount($.slotFactor)) revert SlotsFull();
+            if (_getStateCount(State.ValActive) <= SlotMath.minActiveCount($.epochVACount)) revert SlotsFull();
         }
 
         _transition(nodeId, State.ValExiting, 0);
@@ -195,7 +195,7 @@ abstract contract NodeActions is AddressBookV2Base {
         address[] calldata nodeIds,
         State[] calldata newStates,
         uint256[] calldata timeoutAts,
-        uint256 epochSlotFactor
+        uint256 epochVACount
     ) external onlySystemTx {
         uint256 len = nodeIds.length;
         if (len != newStates.length || len != timeoutAts.length) revert InvalidInput();
@@ -203,8 +203,8 @@ abstract contract NodeActions is AddressBookV2Base {
             _batchTransition(nodeIds, newStates, timeoutAts);
         }
         if (_isEpochBlock()) {
-            _getStorage().slotFactor = epochSlotFactor;
-            emit EpochTransitionProcessed(epochSlotFactor);
+            _getStorage().epochVACount = epochVACount;
+            emit EpochTransitionProcessed(epochVACount);
         }
         emit SystemTransitionProcessed(nodeIds, newStates);
     }

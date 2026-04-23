@@ -33,27 +33,27 @@ import (
 )
 
 const (
-	DefaultValPausedTimeout     = time.Hour * 8
-	DefaultValIdleTimeout       = 30 * 24 * time.Hour
-	DefaultMaxNodeCount         = 100
+	DefaultValPausedTimeout        = time.Hour * 8
+	DefaultValIdleTimeout          = 30 * 24 * time.Hour
+	DefaultMaxNodeCount            = 100
 	DefaultMaxValActivePausedCount = 50
 )
 
 // nodeStatesCacheEntry holds the result of getOrComputeNodeStates.
-// epochSF is the VA count after epoch transition (before violation); 0 for non-epoch blocks.
+// epochVACount is the VA count after epoch transition (before violation); 0 for non-epoch blocks.
 type nodeStatesCacheEntry struct {
-	validators valset.NodeStateMap
-	epochSF    uint64
+	validators   valset.NodeStateMap
+	epochVACount uint64
 }
 
-// getOrComputeNodeStates returns the node states for block `num` and the epoch SF (0 if not epoch).
+// getOrComputeNodeStates returns the node states for block `num` and the epoch epochVACount(0 if not epoch).
 // Always computes ABv2(N-1) + applyTr(N-1) to exclude user transactions at block N.
 // parentStatedb must be the committed state of block N-1.
 func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.StateDB) (valset.NodeStateMap, uint64, error) {
 	// 1. Cache hit
 	if cached, ok := v.nodeStatesCache.Get(num); ok {
 		entry := cached.(nodeStatesCacheEntry)
-		return entry.validators, entry.epochSF, nil
+		return entry.validators, entry.epochVACount, nil
 	}
 
 	// 2. Read ABv2(N-1) + apply transitions for block N
@@ -65,12 +65,12 @@ func (v *ValsetModule) getOrComputeNodeStates(num uint64, parentStatedb *state.S
 	if root := parentStatedb.IntermediateRoot(false); root != parentHeader.Root {
 		return nil, 0, fmt.Errorf("parentStatedb root mismatch for block %d: got %s, want %s", num-1, root.Hex(), parentHeader.Root.Hex())
 	}
-	newValidators, epochSF, err := v.computeNodeStates(parentStatedb, parentHeader)
+	newValidators, epochVACount, err := v.computeNodeStates(parentStatedb, parentHeader)
 	if err != nil {
 		return nil, 0, err
 	}
-	v.nodeStatesCache.Add(num, nodeStatesCacheEntry{validators: newValidators, epochSF: epochSF})
-	return newValidators, epochSF, nil
+	v.nodeStatesCache.Add(num, nodeStatesCacheEntry{validators: newValidators, epochVACount: epochVACount})
+	return newValidators, epochVACount, nil
 }
 
 // computeNodeStates reads ABv2 validators, timeouts, and max counts in a single MultiCall,
@@ -81,22 +81,22 @@ func (v *ValsetModule) computeNodeStates(statedb *state.StateDB, header *types.H
 		return nil, 0, err
 	}
 	res.Validators.MarkSuspended(res.SuspendedValidators)
-	slotLimitsFn := func(sf uint64) (uint64, uint64, error) {
-		return v.readSlotLimitsFor(statedb, header, sf)
+	slotLimitsFn := func(n uint64) (uint64, uint64, error) {
+		return v.readSlotLimitsFor(statedb, header, n)
 	}
 	return v.applyAllTransitions(res, header, slotLimitsFn)
 }
 
 // applyAllTransitions computes applyTr(N-1) given ABv2(N-1) validators and block N-1 parameters.
 // NodeStates(N) = ABv2(N-1) + applyTr(N-1), where applyTr(N-1) = Epoch → Violation → Timeout.
-// At epoch blocks, epoch runs first so that violation uses the new SF-based slot limits.
+// At epoch blocks, epoch runs first so that violation uses the new epochVACount-based slot limits.
 // header must be the parent header (N-1).
-// slotLimitsFn computes (maxSlotAvailable, minActiveCount) for a given slot factor.
-// Returns the final NodeStateMap and the epoch SF (VA count after epoch, before violation; 0 if not epoch).
+// slotLimitsFn computes (maxSlotAvailable, minActiveCount) for a given epochVACount.
+// Returns the final NodeStateMap and the epoch epochVACount(VA count after epoch, before violation; 0 if not epoch).
 func (v *ValsetModule) applyAllTransitions(
 	res *system.NodeStatesResult,
 	header *types.Header, // parent header (N-1)
-	slotLimitsFn func(sf uint64) (uint64, uint64, error),
+	slotLimitsFn func(n uint64) (uint64, uint64, error),
 ) (valset.NodeStateMap, uint64, error) {
 	var (
 		num       = header.Number.Uint64() + 1
@@ -106,45 +106,45 @@ func (v *ValsetModule) applyAllTransitions(
 
 		maxSlotAvailable = res.MaxSlotAvailable
 		minActiveCount   = res.MinActiveCount
-		epochSF          uint64
+		epochVACount     uint64
 	)
 
 	newValidators := res.Validators
 	if v.isVrankEpoch(num) {
-		newValidators = v.getEpochTransition(minStake, newValidators, res.IdleTimeout, int(res.MaxValActivePausedCount), blockTime, header.Number.Uint64(), res.CfsThreshold, res.SlotFactor)
-		// Recompute slot limits from new SF (VA count after epoch, before violation).
-		// This SF defines the epoch's canonical slot budget and is stored in the contract.
-		epochSF = newValidators.CountByState(valset.ValActive)
+		newValidators = v.getEpochTransition(minStake, newValidators, res.IdleTimeout, int(res.MaxValActivePausedCount), blockTime, header.Number.Uint64(), res.CfsThreshold, res.EpochVACount)
+		// Recompute slot limits from new epochVACount(VA count after epoch, before violation).
+		// This epochVACountdefines the epoch's canonical slot budget and is stored in the contract.
+		epochVACount = newValidators.CountByState(valset.ValActive)
 		var err error
-		maxSlotAvailable, minActiveCount, err = slotLimitsFn(epochSF)
+		maxSlotAvailable, minActiveCount, err = slotLimitsFn(epochVACount)
 		if err != nil {
-			return nil, 0, fmt.Errorf("slot limits at epoch (sf=%d): %w", epochSF, err)
+			return nil, 0, fmt.Errorf("slot limits at epoch (n=%d): %w", epochVACount, err)
 		}
 	}
 	newValidators = v.getViolationTransition(minStake, newValidators, header.Number.Uint64(), res.PfsThreshold, maxSlotAvailable, minActiveCount, res.IdleTimeout, blockTime)
 	newValidators = v.getTimeoutTransition(newValidators, res.IdleTimeout, res.PauseTimeout, blockTime)
-	return newValidators, epochSF, nil
+	return newValidators, epochVACount, nil
 }
 
-// readSlotLimitsFor computes slot limits for a given SF via contract call.
-func (v *ValsetModule) readSlotLimitsFor(statedb *state.StateDB, header *types.Header, sf uint64) (uint64, uint64, error) {
+// readSlotLimitsFor computes slot limits for a given epochVACountvia contract call.
+func (v *ValsetModule) readSlotLimitsFor(statedb *state.StateDB, header *types.Header, n uint64) (uint64, uint64, error) {
 	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb)
 	if err != nil {
 		return 0, 0, fmt.Errorf("create contract backend for slot limits: %w", err)
 	}
-	maxSlot, minActive, err := system.ReadSlotLimitsFor(backend, header.Number, sf)
+	maxSlot, minActive, err := system.ReadSlotLimitsFor(backend, header.Number, n)
 	if err != nil {
-		return 0, 0, fmt.Errorf("read slot limits for sf=%d: %w", sf, err)
+		return 0, 0, fmt.Errorf("read slot limits for n=%d: %w", n, err)
 	}
 	return maxSlot, minActive, nil
 }
 
 // isPassVrankTest returns true if the candidate's CFS is below the threshold.
 // CFS < cfsThreshold → pass (CandTesting → ValActive promotion eligible).
-func (v *ValsetModule) isPassVrankTest(addr common.Address, num, cfsThreshold, slotFactor uint64) bool {
-	cfsScores, err := v.VRankModule.GetCFSWithSlotFactor(num, slotFactor)
+func (v *ValsetModule) isPassVrankTest(addr common.Address, num, cfsThreshold, epochVACount uint64) bool {
+	cfsScores, err := v.VRankModule.GetCFSWithEpochVACount(num, epochVACount)
 	if err != nil { // CFS unavailable → pass to avoid blocking promotion
-		logger.Warn("isPassVrankTest: GetCFSWithSlotFactor failed", "num", num, "err", err)
+		logger.Warn("isPassVrankTest: GetCFSWithEpochVACount failed", "num", num, "err", err)
 		return true
 	}
 	cfs, ok := cfsScores[addr]
@@ -193,14 +193,14 @@ func (v *ValsetModule) InstallABv2(
 
 // writeNodeStateUpdateToContract computes the diff between parent(N-1) and current(N) node states,
 // and writes only the changed nodes to the AddressBookV2 contract via processSystemTransition.
-// At epoch blocks, the call is always made (even with empty diff) to update the slot factor snapshot.
+// At epoch blocks, the call is always made (even with empty diff) to update the epochVACount snapshot.
 func (v *ValsetModule) writeNodeStateUpdateToContract(
 	vmenv *vm.EVM,
 	header *types.Header,
 	statedb *state.StateDB,
 ) error {
 	num := header.Number.Uint64()
-	currentNodes, epochSF, err := v.getOrComputeNodeStates(num, statedb)
+	currentNodes, epochVACount, err := v.getOrComputeNodeStates(num, statedb)
 	if err != nil {
 		return err
 	}
@@ -216,13 +216,13 @@ func (v *ValsetModule) writeNodeStateUpdateToContract(
 	}
 	diff := diffNodeStates(parentRes.Validators, currentNodes)
 
-	// Skip call if no changes and not an epoch block (epoch blocks need slot factor update)
+	// Skip call if no changes and not an epoch block (epoch blocks need epochVACount update)
 	if len(diff) == 0 && !v.isVrankEpoch(num) {
 		return nil
 	}
 
 	config := v.Chain.Config()
-	msg, from, err := prepareNodeStateUpdate(config, header.Number, diff, epochSF)
+	msg, from, err := prepareNodeStateUpdate(config, header.Number, diff, epochVACount)
 	if err != nil {
 		return err
 	}
@@ -287,17 +287,17 @@ func (v *ValsetModule) installAndInitializeABv2(
 }
 
 // prepareNodeStateUpdate builds the ABI-encoded input for writing changed validator states to ABv2.
-// epochSF is the VA count after epoch transition (newSF); 0 for non-epoch blocks.
+// epochVACount is the VA count after epoch transition; 0 for non-epoch blocks.
 func prepareNodeStateUpdate(
 	config *params.ChainConfig,
 	num *big.Int,
 	nodes valset.NodeStateMap,
-	epochSF uint64,
+	epochVACount uint64,
 ) (*types.Transaction, common.Address, error) {
 	from, msg, err := system.EncodeNodeStateUpdate(
 		config.Rules(num),
 		nodes,
-		epochSF,
+		epochVACount,
 	)
 	if err != nil {
 		logger.Error("Failed to encode processSystemTransition", "number", num.Uint64(), "err", err.Error(), "nodes", nodes.String())
