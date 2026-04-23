@@ -19,6 +19,12 @@ interface IAddressBookV2 {
     /// @notice Thrown when caller is not the node ID itself
     error OnlyNodeId();
 
+    /// @notice Thrown when caller is not the suspender
+    error OnlySuspender();
+
+    /// @notice Thrown when caller is not the configurator
+    error OnlyConfigurator();
+
     /// @notice Thrown when a node is not in a valid state for the requested operation
     error InvalidState();
 
@@ -49,6 +55,12 @@ interface IAddressBookV2 {
     /// @notice Thrown when attempting to update the reward address while public delegation is enabled
     error PDEnabled();
 
+    /// @notice Thrown when the nodeId address balance is below MIN_NODE_BALANCE
+    error InsufficientNodeBalance();
+
+    /// @notice Thrown when attempting to assign a gcId to a node that already has one
+    error GcIdAlreadyAssigned();
+
     /* ========== EVENTS ========== */
 
     /// @notice Emitted when a node's state changes
@@ -59,8 +71,12 @@ interface IAddressBookV2 {
 
     /// @notice Emitted when a new node is created
     /// @param nodeId The address of the newly created node
-    /// @param gcId The governance council ID assigned to the node
-    event NodeCreated(address indexed nodeId, uint256 gcId);
+    event NodeCreated(address indexed nodeId);
+
+    /// @notice Emitted when a gcId is assigned to a node by the configurator
+    /// @param nodeId The address of the node
+    /// @param gcId The assigned governance council ID
+    event GcIdAssigned(address indexed nodeId, uint256 gcId);
 
     /// @notice Emitted when a node is deleted
     /// @param nodeId The address of the deleted node
@@ -168,6 +184,16 @@ interface IAddressBookV2 {
     /// @param newAddress The new address
     event KpfAddressUpdated(address oldAddress, address newAddress);
 
+    /// @notice Emitted when the suspender address is updated
+    /// @param oldSuspender The previous suspender address
+    /// @param newSuspender The new suspender address
+    event SuspenderUpdated(address oldSuspender, address newSuspender);
+
+    /// @notice Emitted when the configurator address is updated
+    /// @param oldConfigurator The previous configurator address
+    /// @param newConfigurator The new configurator address
+    event ConfiguratorUpdated(address oldConfigurator, address newConfigurator);
+
     /// @notice Emitted when genesis validators are initialized
     /// @param nodeIds The addresses of the initialized validators
     event ValidatorsInitialized(address[] nodeIds);
@@ -264,13 +290,26 @@ interface IAddressBookV2 {
 
     /* ========== ADMIN FUNCTIONS ========== */
 
-    /// @notice Suspends a validator (owner emergency action)
+    /// @notice Suspends a validator (suspender emergency action)
     /// @param nodeId The address of the validator to suspend
     function suspendValidator(address nodeId) external;
 
-    /// @notice Unsuspends a validator
+    /// @notice Unsuspends a validator (suspender action)
     /// @param nodeId The address of the validator to unsuspend
     function unsuspendValidator(address nodeId) external;
+
+    /// @notice Updates the suspender address (owner only)
+    /// @param newSuspender The new suspender address
+    function updateSuspender(address newSuspender) external;
+
+    /// @notice Updates the configurator address (owner only)
+    /// @param newConfigurator The new configurator address
+    function updateConfigurator(address newConfigurator) external;
+
+    /// @notice Assigns the next auto-incremented gcId to a node (configurator only)
+    /// @dev Node must exist and must not already have a gcId assigned
+    /// @param nodeId The address of the node
+    function assignGcId(address nodeId) external;
 
     /// @notice Updates the pause timeout duration
     /// @param newPauseTimeout The new timeout in seconds
@@ -314,10 +353,13 @@ interface IAddressBookV2 {
 
     /* ========== GETTERS (node management) ========== */
 
-    /// @notice Returns the manager address of a node
-    /// @param nodeId The address of the node
-    /// @return The manager address
-    function getManager(address nodeId) external view returns (address);
+    /// @notice Returns the suspender address
+    /// @return The suspender address
+    function getSuspender() external view returns (address);
+
+    /// @notice Returns the configurator address
+    /// @return The configurator address
+    function getConfigurator() external view returns (address);
 
     /// @notice Checks if an address is in use (nodeId, stakingContract, or rewardAddress)
     /// @param addr The address to check
@@ -411,16 +453,6 @@ interface IAddressBookV2 {
     /// @notice Returns all nodes in the Registered state
     /// @return Array of registered node addresses
     function getRegisteredNodes() external view returns (address[] memory);
-
-    /// @notice Returns the staking contract address of a node
-    /// @param nodeId The address of the node
-    /// @return The staking contract address
-    function getStakingContract(address nodeId) external view returns (address);
-
-    /// @notice Returns the timeout timestamp of a node
-    /// @param nodeId The address of the node
-    /// @return The timeout timestamp (0 if no timeout)
-    function getTimeoutAt(address nodeId) external view returns (uint256);
 
     /// @notice Returns the number of nodes (all states except Registered)
     /// @return The total node count

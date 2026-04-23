@@ -47,6 +47,8 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
         $.kefAddress = d.kefAddress;
         $.kifAddress = d.kifAddress;
         $.kpfAddress = d.kpfAddress;
+        $.suspender = d.initialSuspender;
+        $.configurator = d.initialConfigurator;
 
         // Register addresses
         uint256 len = d.nodeIds.length;
@@ -59,7 +61,6 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
         // Set initial active validators and set epoch count
         _setInitialActiveValidators(d.nodeIds, d.infos);
 
-        // GC IDs for genesis validators come from data contract.
         // Start counter at 100 so post-init nodes get gcId >= 101.
         $.lastAssignedGCId = 100;
 
@@ -69,31 +70,51 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     /* ========== CONFIGURATIONS  ========== */
 
     /// @inheritdoc IAddressBookV2
-    function suspendValidator(address nodeId) external onlyOwner {
+    function suspendValidator(address nodeId) external onlySuspender {
         ABv2Storage storage $ = _getStorage();
         if (!$.suspendedSet.add(nodeId)) revert AlreadySuspended();
         emit ValidatorSuspended(nodeId);
     }
 
     /// @inheritdoc IAddressBookV2
-    function unsuspendValidator(address nodeId) external onlyOwner {
+    function unsuspendValidator(address nodeId) external onlySuspender {
         ABv2Storage storage $ = _getStorage();
         if (!$.suspendedSet.remove(nodeId)) revert NotSuspended();
         emit ValidatorUnsuspended(nodeId);
     }
 
     /// @inheritdoc IAddressBookV2
-    function updatePauseTimeout(uint256 newPauseTimeout) external onlyOwner {
+    function updateSuspender(address newSuspender) external onlyOwner {
+        emit SuspenderUpdated(ABv2ConfigLib.SUSPENDER.updateAddress(newSuspender), newSuspender);
+    }
+
+    /// @inheritdoc IAddressBookV2
+    function updateConfigurator(address newConfigurator) external onlyOwner {
+        emit ConfiguratorUpdated(ABv2ConfigLib.CONFIGURATOR.updateAddress(newConfigurator), newConfigurator);
+    }
+
+    /// @inheritdoc IAddressBookV2
+    function assignGcId(address nodeId) external onlyConfigurator {
+        ABv2Storage storage $ = _getStorage();
+        if ($.nodeInfo[nodeId].state == State.Unknown) revert NodeNotFound();
+        if ($.nodeInfo[nodeId].gcId != 0) revert GcIdAlreadyAssigned();
+        uint256 gcId = ++$.lastAssignedGCId;
+        $.nodeInfo[nodeId].gcId = gcId;
+        emit GcIdAssigned(nodeId, gcId);
+    }
+
+    /// @inheritdoc IAddressBookV2
+    function updatePauseTimeout(uint256 newPauseTimeout) external onlyConfigurator {
         emit PauseTimeoutUpdated(ABv2ConfigLib.PAUSE_TIMEOUT.updateUint(newPauseTimeout), newPauseTimeout);
     }
 
     /// @inheritdoc IAddressBookV2
-    function updateIdleTimeout(uint256 newIdleTimeout) external onlyOwner {
+    function updateIdleTimeout(uint256 newIdleTimeout) external onlyConfigurator {
         emit IdleTimeoutUpdated(ABv2ConfigLib.IDLE_TIMEOUT.updateUint(newIdleTimeout), newIdleTimeout);
     }
 
     /// @inheritdoc IAddressBookV2
-    function updateMaxNodeCount(uint256 newMaxNodeCount) external onlyOwner {
+    function updateMaxNodeCount(uint256 newMaxNodeCount) external onlyConfigurator {
         emit MaxNodeCountUpdated(
             ABv2ConfigLib.MAX_NODE_COUNT.updateUint(newMaxNodeCount),
             newMaxNodeCount
@@ -101,7 +122,7 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
-    function updateMaxValActivePausedCount(uint256 newMaxValActivePausedCount) external onlyOwner {
+    function updateMaxValActivePausedCount(uint256 newMaxValActivePausedCount) external onlyConfigurator {
         emit MaxValActivePausedCountUpdated(
             ABv2ConfigLib.MAX_VAL_ACTIVE_PAUSED_COUNT.updateUint(newMaxValActivePausedCount),
             newMaxValActivePausedCount
@@ -109,7 +130,7 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
-    function updateMaxCandReadyCount(uint256 newMaxCandReadyCount) external onlyOwner {
+    function updateMaxCandReadyCount(uint256 newMaxCandReadyCount) external onlyConfigurator {
         emit MaxCandReadyCountUpdated(
             ABv2ConfigLib.MAX_CAND_READY_COUNT.updateUint(newMaxCandReadyCount),
             newMaxCandReadyCount
@@ -117,27 +138,27 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
-    function updatePfsThreshold(uint256 newPfsThreshold) external onlyOwner {
+    function updatePfsThreshold(uint256 newPfsThreshold) external onlyConfigurator {
         emit PfsThresholdUpdated(ABv2ConfigLib.PFS_THRESHOLD.updateUint(newPfsThreshold), newPfsThreshold);
     }
 
     /// @inheritdoc IAddressBookV2
-    function updateCfsThreshold(uint256 newCfsThreshold) external onlyOwner {
+    function updateCfsThreshold(uint256 newCfsThreshold) external onlyConfigurator {
         emit CfsThresholdUpdated(ABv2ConfigLib.CFS_THRESHOLD.updateUint(newCfsThreshold), newCfsThreshold);
     }
 
     /// @inheritdoc IAddressBookV2
-    function updateKefAddress(address newKefAddress) external onlyOwner {
+    function updateKefAddress(address newKefAddress) external onlyConfigurator {
         emit KefAddressUpdated(ABv2ConfigLib.KEF_ADDRESS.updateAddress(newKefAddress), newKefAddress);
     }
 
     /// @inheritdoc IAddressBookV2
-    function updateKifAddress(address newKifAddress) external onlyOwner {
+    function updateKifAddress(address newKifAddress) external onlyConfigurator {
         emit KifAddressUpdated(ABv2ConfigLib.KIF_ADDRESS.updateAddress(newKifAddress), newKifAddress);
     }
 
     /// @inheritdoc IAddressBookV2
-    function updateKpfAddress(address newKpfAddress) external onlyOwner {
+    function updateKpfAddress(address newKpfAddress) external onlyConfigurator {
         emit KpfAddressUpdated(ABv2ConfigLib.KPF_ADDRESS.updateAddress(newKpfAddress), newKpfAddress);
     }
 
@@ -187,8 +208,13 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     }
 
     /// @inheritdoc IAddressBookV2
-    function getManager(address nodeId) external view returns (address) {
-        return _getStorage().nodeInfo[nodeId].manager;
+    function getSuspender() external view returns (address) {
+        return _getStorage().suspender;
+    }
+
+    /// @inheritdoc IAddressBookV2
+    function getConfigurator() external view returns (address) {
+        return _getStorage().configurator;
     }
 
     /// @inheritdoc IAddressBookV2
@@ -275,16 +301,6 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
     /// @inheritdoc IAddressBookV2
     function getRegisteredNodes() external view override returns (address[] memory) {
         return _getStorage().registeredNodes.values();
-    }
-
-    /// @inheritdoc IAddressBookV2
-    function getStakingContract(address nodeId) external view override returns (address) {
-        return _getStorage().nodeInfo[nodeId].stakingContract;
-    }
-
-    /// @inheritdoc IAddressBookV2
-    function getTimeoutAt(address nodeId) external view override returns (uint256) {
-        return _getStorage().nodeInfo[nodeId].timeoutAt;
     }
 
     /* ========== LEGACY COMPATIBILITY ========== */

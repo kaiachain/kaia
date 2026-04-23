@@ -63,7 +63,6 @@ interface IAddressBookV2 {
     function getAllProfiles() external view returns (Profile[] memory);
     function getFundAddresses() external view returns (address, address, address);
     function getTimeouts() external view returns (uint256 pauseTimeout, uint256 idleTimeout);
-    function getMaxCounts() external view returns (uint256 maxNodeCount, uint256 maxCandReadyCount);
     function getPfsThreshold() external view returns (uint256);
     function getCfsThreshold() external view returns (uint256);
     function getEpochVACount() external view returns (uint256);

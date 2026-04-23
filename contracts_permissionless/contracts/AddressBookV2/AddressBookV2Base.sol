@@ -36,6 +36,9 @@ abstract contract AddressBookV2Base is
     /// @notice Minimum staking amount required for candidate activation and validator readiness (5M KAIA)
     uint256 public constant MIN_STAKE = 5_000_000 ether;
 
+    /// @notice Minimum nodeId address balance required for auction/gasless participation (10 KAIA)
+    uint256 public constant MIN_NODE_BALANCE = 10 ether;
+
     /// @notice Maximum metadata length (2KB)
     uint256 public constant MAX_METADATA_LENGTH = 2048; // 2KB
 
@@ -98,6 +101,8 @@ abstract contract AddressBookV2Base is
         address kefAddress;
         address kifAddress;
         address kpfAddress;
+        address suspender;
+        address configurator;
     }
 
     function _getStorage() internal pure returns (ABv2Storage storage $) {
@@ -108,6 +113,18 @@ abstract contract AddressBookV2Base is
     }
 
     /* ========== MODIFIERS ========== */
+
+    /// @notice Restricts a function to the suspender address
+    modifier onlySuspender() {
+        if (msg.sender != _getStorage().suspender) revert OnlySuspender();
+        _;
+    }
+
+    /// @notice Restricts a function to the configurator address
+    modifier onlyConfigurator() {
+        if (msg.sender != _getStorage().configurator) revert OnlyConfigurator();
+        _;
+    }
 
     /// @notice Restricts a function to the registered manager of the given node
     modifier onlyManager(address nodeId) {
@@ -132,19 +149,15 @@ abstract contract AddressBookV2Base is
     /* ========== INTERNAL MUTATORS ========== */
 
     /// @notice Stores a new node in the Registered state
-    /// @dev Assigns gcId, stores nodeInfo.
     function _createNode(address nodeId, NodeInfo memory info) internal {
         ABv2Storage storage $ = _getStorage();
 
-        uint256 gcId = ++$.lastAssignedGCId;
-
         $.nodeInfo[nodeId] = info;
-        $.nodeInfo[nodeId].gcId = gcId;
         $.registeredNodes.add(nodeId);
 
         $.stateCount[State.Registered]++;
 
-        emit NodeCreated(nodeId, gcId);
+        emit NodeCreated(nodeId);
     }
 
     /// @notice Removes a Registered node entirely

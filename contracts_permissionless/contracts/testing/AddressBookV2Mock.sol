@@ -85,4 +85,12 @@ contract AddressBookV2Mock {
     function getSlotLimits() external view returns (uint256 maxSlotAvailable, uint256 minActiveCount) {
         return (SlotMath.maxSlotAvailable(epochVACount), SlotMath.minActiveCount(epochVACount));
     }
+
+    function getMaxValActivePausedCount() external pure returns (uint256) {
+        return 0;
+    }
+
+    function getSuspendedValidators() external pure returns (address[] memory) {
+        return new address[](0);
+    }
 }

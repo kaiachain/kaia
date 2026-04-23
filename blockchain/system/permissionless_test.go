@@ -109,6 +109,14 @@ func verifyPermissionlessAlloc(t *testing.T, config *AllocPermissionlessConfig, 
 	caller, err := addressbookv2contract.NewAddressBookV2Caller(AddressBookAddr, backend)
 	require.NoError(t, err)
 
+	suspender, err := caller.GetSuspender(&bind.CallOpts{})
+	require.NoError(t, err)
+	assert.Equal(t, config.DataConfig.InitialSuspender, suspender)
+
+	configurator, err := caller.GetConfigurator(&bind.CallOpts{})
+	require.NoError(t, err)
+	assert.Equal(t, config.DataConfig.InitialConfigurator, configurator)
+
 	profiles, err := caller.GetAllProfiles(&bind.CallOpts{})
 	require.NoError(t, err)
 	assert.Len(t, profiles, numNodes)
