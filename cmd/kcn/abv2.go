@@ -66,9 +66,9 @@ var (
 	}
 )
 
-var ABv2Command = &cli.Command{
-	Name:     "abv2",
-	Usage:    "AddressBookV2 contract commands",
+var ValOpsCommand = &cli.Command{
+	Name:     "valops",
+	Usage:    "Validator state transition and suspension commands",
 	Category: "PERMISSIONLESS COMMANDS",
 	Subcommands: []*cli.Command{
 		{
