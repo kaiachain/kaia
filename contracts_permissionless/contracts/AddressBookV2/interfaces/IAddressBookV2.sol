@@ -69,10 +69,9 @@ interface IAddressBookV2 {
     /// @param toState The new state
     event StateChanged(address indexed nodeId, State indexed fromState, State indexed toState);
 
-    /// @notice Emitted when a new node is created (gcId is 0 until assignGcId is called)
+    /// @notice Emitted when a new node is created
     /// @param nodeId The address of the newly created node
-    /// @param gcId Always 0 at creation; see GcIdAssigned
-    event NodeCreated(address indexed nodeId, uint256 gcId);
+    event NodeCreated(address indexed nodeId);
 
     /// @notice Emitted when a gcId is assigned to a node by the configurator
     /// @param nodeId The address of the node

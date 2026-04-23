@@ -149,17 +149,15 @@ abstract contract AddressBookV2Base is
     /* ========== INTERNAL MUTATORS ========== */
 
     /// @notice Stores a new node in the Registered state
-    /// @dev gcId is left 0 until assignGcId() is called by configurator.
     function _createNode(address nodeId, NodeInfo memory info) internal {
         ABv2Storage storage $ = _getStorage();
 
         $.nodeInfo[nodeId] = info;
-        $.nodeInfo[nodeId].gcId = 0;
         $.registeredNodes.add(nodeId);
 
         $.stateCount[State.Registered]++;
 
-        emit NodeCreated(nodeId, 0);
+        emit NodeCreated(nodeId);
     }
 
     /// @notice Removes a Registered node entirely

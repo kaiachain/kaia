@@ -61,6 +61,10 @@ abstract contract AddressBookLegacy {
 
     /* ========== LEGACY CONSTANTS ========== */
     // Note: CONTRACT_TYPE and VERSION are NOT redeclared here — ABv2 defines them (VERSION=2).
+    /// uint256 public constant MAX_ADMIN = 50;
+    /// uint256 public constant MAX_PENDING_REQUEST = 100;
+    /// uint256 public constant ONE_WEEK = 1 weeks;
+    /// uint256 public constant TWO_WEEKS = 2 weeks;
 
     uint8 internal constant CN_NODE_ID_TYPE = 0;
     uint8 internal constant CN_STAKING_ADDRESS_TYPE = 1;
