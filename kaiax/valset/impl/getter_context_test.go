@@ -71,18 +71,21 @@ func TestGetCommittee(t *testing.T) {
 	)
 
 	testcases := []struct {
-		desc     string
-		isKore   bool
-		isRandao bool
-		policy   istanbul.ProposerPolicy
-		expected []common.Address
+		desc             string
+		isKore           bool
+		isRandao         bool
+		isPermissionless bool
+		policy           istanbul.ProposerPolicy
+		expected         []common.Address
 	}{
 		// Refer to other Test*Proposer tests for the expected results.
-		{"RoundRobin", false, false, istanbul.RoundRobin, numsToAddrs(2, 3, 4, 1, 7, 5)},                      // prev=1, curr=2, next=3
-		{"Sticky", false, false, istanbul.Sticky, numsToAddrs(1, 2, 4, 3, 7, 5)},                              // prev=1, curr=1, next=2
-		{"WeightedRandom, before Kore", false, false, istanbul.WeightedRandom, numsToAddrs(4, 6, 2, 1, 7, 3)}, // curr=4, next=6, list=[4,6,1,7,...]
-		{"WeightedRandom, after Kore", true, false, istanbul.WeightedRandom, numsToAddrs(7, 1, 3, 2, 6, 4)},   // curr=7, next=1, list=[7,1,0,4,...]
-		{"WeightedRandom, after Randao", true, true, istanbul.WeightedRandom, numsToAddrs(8, 3, 5, 1, 0, 9)},  // committee=[8,3,5,1,0,9]
+		{"RoundRobin", false, false, false, istanbul.RoundRobin, numsToAddrs(2, 3, 4, 1, 7, 5)},                      // prev=1, curr=2, next=3
+		{"Sticky", false, false, false, istanbul.Sticky, numsToAddrs(1, 2, 4, 3, 7, 5)},                              // prev=1, curr=1, next=2
+		{"WeightedRandom, before Kore", false, false, false, istanbul.WeightedRandom, numsToAddrs(4, 6, 2, 1, 7, 3)}, // curr=4, next=6, list=[4,6,1,7,...]
+		{"WeightedRandom, after Kore", true, false, false, istanbul.WeightedRandom, numsToAddrs(7, 1, 3, 2, 6, 4)},   // curr=7, next=1, list=[7,1,0,4,...]
+		{"WeightedRandom, after Randao", true, true, false, istanbul.WeightedRandom, numsToAddrs(8, 3, 5, 1, 0, 9)},  // committee=[8,3,5,1,0,9]
+		// Post-Permissionless: CommitteeSize is deprecated; full qualified set returned regardless of CommitteeSize param.
+		{"WeightedRandom, after Permissionless", true, true, true, istanbul.WeightedRandom, numsToAddrs(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)},
 	}
 
 	var (
@@ -113,6 +116,7 @@ func TestGetCommittee(t *testing.T) {
 		c.rules.IsShanghai = tc.isRandao
 		c.rules.IsCancun = tc.isRandao
 		c.rules.IsRandao = tc.isRandao
+		c.rules.IsPermissionless = tc.isPermissionless
 
 		v.proposerListCache.Purge()
 		v.removeVotesCache.Purge()

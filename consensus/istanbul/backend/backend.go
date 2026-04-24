@@ -475,6 +475,9 @@ func (sb *backend) GetCommitteeStateByRound(num uint64, round uint64) (*istanbul
 	}
 
 	committeeSize := sb.govModule.GetParamSet(num).CommitteeSize
+	if gov.DeprecatedAt(gov.IstanbulCommitteeSize, sb.chain.Config().Rules(new(big.Int).SetUint64(num))) {
+		committeeSize = uint64(blockValSet.Qualified().Len())
+	}
 	return istanbul.NewRoundCommitteeState(blockValSet, committeeSize, committee, proposer), nil
 }
 
