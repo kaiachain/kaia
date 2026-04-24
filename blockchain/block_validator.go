@@ -203,17 +203,18 @@ func (v *BlockValidator) validateHeader(header *types.Header, parent *types.Head
 		return ErrInvalidBaseFee
 	}
 
-	// Verify the header's seal and consensus-specific fields.
-	if err := v.verifySeals(header); err != nil {
-		return err
-	}
-
 	// Verify the header with registered header modules.
 	for _, module := range v.headerModules {
 		if err := module.VerifyHeader(header, parent); err != nil {
 			return err
 		}
 	}
+
+	// Verify the header's seal and consensus-specific fields.
+	if err := v.verifySeals(header); err != nil {
+		return err
+	}
+
 	return nil
 }
 

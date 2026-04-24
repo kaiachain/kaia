@@ -2,6 +2,7 @@ package impl
 
 import (
 	"maps"
+	"math/big"
 	"reflect"
 	"slices"
 
@@ -91,6 +92,15 @@ func (h *headerGovModule) VerifyVote(header *types.Header) error {
 	if author != vote.Voter() {
 		return ErrInvalidVoter
 	}
+
+	// In single mode, only the governing node can write header.Vote after Permissionless.
+	params := h.GetParamSet(blockNum)
+	if h.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) &&
+		params.GovernanceMode == "single" &&
+		vote.Voter() != params.GoverningNode {
+		return ErrVotePermissionDenied
+	}
+
 	return h.checkConsistency(blockNum, vote)
 }
 

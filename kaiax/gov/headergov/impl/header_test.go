@@ -10,6 +10,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestVerifyHeader(t *testing.T) {
@@ -19,9 +20,11 @@ func TestVerifyHeader(t *testing.T) {
 		voteBytes, _       = headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(100)).ToVoteBytes()
 		govBytes, _        = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(100)}).ToGovBytes()
 		invalidGovBytes, _ = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(200)}).ToGovBytes()
-		h                  = newHeaderGovModule(t, getTestChainConfig())
+		config             = getTestChainConfig()
 		invalidVoteRlp     = common.FromHex("0xea9452d41ca72af615a1ac3301b0a93efa222ecc7541947265776172642e6d696e74696e67616d6f756e74")
 	)
+	config.Governance.GoverningNode = validVoter
+	h := newHeaderGovModule(t, config)
 
 	h.HandleVote(1, vote)
 
@@ -114,6 +117,29 @@ func TestVerifyVote(t *testing.T) {
 			assert.Equal(t, tc.expectedError, err)
 		})
 	}
+}
+
+func TestVerifyVote_SingleMode(t *testing.T) {
+	config := getTestChainConfig()
+	config.Governance.GoverningNode = common.Address{2} // validVoter is the proposer, but not governing node
+	t.Run("pre-permissionless allows non-governing node", func(t *testing.T) {
+		config.PermissionlessCompatibleBlock = nil
+		h := newHeaderGovModule(t, config)
+		vote := headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(100))
+		vb, err := vote.ToVoteBytes()
+		require.NoError(t, err)
+		err = h.VerifyVote(&types.Header{Number: big.NewInt(1), Vote: vb, Extra: extra})
+		assert.NoError(t, err)
+	})
+	t.Run("post-permissionless requires governing node", func(t *testing.T) {
+		config.PermissionlessCompatibleBlock = common.Big0
+		h := newHeaderGovModule(t, config)
+		vote := headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(100))
+		vb, err := vote.ToVoteBytes()
+		require.NoError(t, err)
+		err = h.VerifyVote(&types.Header{Number: big.NewInt(1), Vote: vb, Extra: extra})
+		assert.Equal(t, ErrVotePermissionDenied, err)
+	})
 }
 
 func TestGetVotesInEpoch(t *testing.T) {
