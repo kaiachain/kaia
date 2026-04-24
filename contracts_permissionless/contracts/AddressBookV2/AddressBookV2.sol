@@ -63,8 +63,6 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
 
         // Start counter at 100 so post-init nodes get gcId >= 101.
         $.lastAssignedGCId = 100;
-
-        emit ValidatorsInitialized(d.nodeIds);
     }
 
     /* ========== CONFIGURATIONS  ========== */
@@ -100,7 +98,14 @@ contract AddressBookV2 is NodeActions, AddressBookLegacy {
         if ($.nodeInfo[nodeId].gcId != 0) revert GcIdAlreadyAssigned();
         uint256 gcId = ++$.lastAssignedGCId;
         $.nodeInfo[nodeId].gcId = gcId;
-        emit GcIdAssigned(nodeId, gcId);
+    }
+
+    /// @inheritdoc IAddressBookV2
+    function revokeGcId(address nodeId) external onlyConfigurator {
+        ABv2Storage storage $ = _getStorage();
+        uint256 gcId = $.nodeInfo[nodeId].gcId;
+        if (gcId == 0) revert GcIdNotAssigned();
+        $.nodeInfo[nodeId].gcId = 0;
     }
 
     /// @inheritdoc IAddressBookV2

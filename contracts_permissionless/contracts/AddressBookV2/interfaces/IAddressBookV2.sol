@@ -61,6 +61,9 @@ interface IAddressBookV2 {
     /// @notice Thrown when attempting to assign a gcId to a node that already has one
     error GcIdAlreadyAssigned();
 
+    /// @notice Thrown when attempting to revoke a gcId from a node that has none
+    error GcIdNotAssigned();
+
     /* ========== EVENTS ========== */
 
     /// @notice Emitted when a node's state changes
@@ -72,11 +75,6 @@ interface IAddressBookV2 {
     /// @notice Emitted when a new node is created
     /// @param nodeId The address of the newly created node
     event NodeCreated(address indexed nodeId);
-
-    /// @notice Emitted when a gcId is assigned to a node by the configurator
-    /// @param nodeId The address of the node
-    /// @param gcId The assigned governance council ID
-    event GcIdAssigned(address indexed nodeId, uint256 gcId);
 
     /// @notice Emitted when a node is deleted
     /// @param nodeId The address of the deleted node
@@ -116,14 +114,6 @@ interface IAddressBookV2 {
     /// @param nodeId The address of the node
     /// @param newMetadata The new metadata string
     event MetadataUpdated(address indexed nodeId, string newMetadata);
-
-    /// @notice Emitted when a candidate transitions from Registered to CandReady
-    /// @param nodeId The address of the readied candidate
-    event CandidateReadied(address indexed nodeId);
-
-    /// @notice Emitted when a candidate transitions from CandReady to Registered
-    /// @param nodeId The address of the unreadied candidate
-    event CandidateUnreadied(address indexed nodeId);
 
     /// @notice Emitted when system transitions are processed
     /// @param nodeIds The addresses of the transitioned nodes
@@ -194,9 +184,6 @@ interface IAddressBookV2 {
     /// @param newConfigurator The new configurator address
     event ConfiguratorUpdated(address oldConfigurator, address newConfigurator);
 
-    /// @notice Emitted when genesis validators are initialized
-    /// @param nodeIds The addresses of the initialized validators
-    event ValidatorsInitialized(address[] nodeIds);
 
     /* ========== USER FUNCTIONS ========== */
 
@@ -206,6 +193,7 @@ interface IAddressBookV2 {
     /// @param rewardAddress The reward address
     /// @param voterAddress The voter address for on-chain governance (optional)
     /// @param blsInfo The BLS public key and proof-of-possession
+    /// @param name The human-readable name of the node (must be non-empty)
     /// @param metadata The node metadata in JSON format
     function createNode(
         address nodeId,
@@ -213,6 +201,7 @@ interface IAddressBookV2 {
         address rewardAddress,
         address voterAddress,
         BlsPublicKeyInfo memory blsInfo,
+        string memory name,
         string memory metadata
     ) external;
 
@@ -310,6 +299,11 @@ interface IAddressBookV2 {
     /// @dev Node must exist and must not already have a gcId assigned
     /// @param nodeId The address of the node
     function assignGcId(address nodeId) external;
+
+    /// @notice Revokes the gcId from a node (configurator only)
+    /// @dev Node must exist and must have a gcId assigned
+    /// @param nodeId The address of the node
+    function revokeGcId(address nodeId) external;
 
     /// @notice Updates the pause timeout duration
     /// @param newPauseTimeout The new timeout in seconds

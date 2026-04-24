@@ -43,6 +43,8 @@ struct NodeInfo {
     uint256 gcId;
     /// @dev Used to verify signatures, immutable
     BlsPublicKeyInfo blsInfo;
+    /// @dev Used to store the human-readable name of the node
+    string name;
     /// @dev Used to store the metadata of the validator, in JSON format
     string metadata;
     /// @dev Used to store the current state of the node

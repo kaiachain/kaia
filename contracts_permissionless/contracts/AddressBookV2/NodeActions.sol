@@ -26,9 +26,11 @@ abstract contract NodeActions is AddressBookV2Base {
         address rewardAddress,
         address voterAddress,
         BlsPublicKeyInfo memory blsInfo,
+        string memory name,
         string memory metadata
     ) external {
         if (_getNodeState(nodeId) != State.Unknown) revert NodeAlreadyExists();
+        if (bytes(name).length == 0) revert InvalidInput();
         if (bytes(metadata).length > MAX_METADATA_LENGTH) revert InvalidInput();
 
         ABv2Storage storage $ = _getStorage();
@@ -42,6 +44,7 @@ abstract contract NodeActions is AddressBookV2Base {
             timeoutAt: 0,
             gcId: 0,
             blsInfo: blsInfo,
+            name: name,
             metadata: metadata,
             state: State.Registered
         });
@@ -117,7 +120,6 @@ abstract contract NodeActions is AddressBookV2Base {
         if (_getAllNodesLength() >= $.maxNodeCount) revert SlotsFull();
 
         _transition(nodeId, State.CandReady, 0);
-        emit CandidateReadied(nodeId);
     }
 
     /// @inheritdoc IAddressBookV2
@@ -125,7 +127,6 @@ abstract contract NodeActions is AddressBookV2Base {
         if (!_isNodeAtState(nodeId, State.CandReady)) revert InvalidState();
 
         _transition(nodeId, State.Registered, 0);
-        emit CandidateUnreadied(nodeId);
     }
 
     /// @inheritdoc IAddressBookV2
