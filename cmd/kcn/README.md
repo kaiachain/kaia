@@ -1,11 +1,11 @@
-# kcn abv2 — AddressBookV2 CLI
+# kcn valops — Validator Operations CLI
 
 Command-line interface for interacting with the AddressBookV2 contract (`0x400`) on-chain.
 
 ## Usage
 
 ```
-kcn abv2 <command> [flags] [args]
+kcn valops <command> [flags] [args]
 ```
 
 ## Flags (all commands)
@@ -26,8 +26,8 @@ Chain ID is fetched automatically from the endpoint.
 These commands require the caller to hold the suspender role in AddressBookV2.
 
 ```
-kcn abv2 suspend-validator --node-id <address>
-kcn abv2 unsuspend-validator --node-id <address>
+kcn valops suspend-validator --node-id <address>
+kcn valops unsuspend-validator --node-id <address>
 ```
 
 | Flag | Description |
@@ -39,14 +39,14 @@ kcn abv2 unsuspend-validator --node-id <address>
 These commands require `msg.sender == node-id` (the private key **is** the node key).
 
 ```
-kcn abv2 ready-candidate
-kcn abv2 unready-candidate
-kcn abv2 ready-validator
-kcn abv2 unready-validator
-kcn abv2 pause
-kcn abv2 resume
-kcn abv2 exit
-kcn abv2 offboard
+kcn valops ready-candidate
+kcn valops unready-candidate
+kcn valops ready-validator
+kcn valops unready-validator
+kcn valops pause
+kcn valops resume
+kcn valops exit
+kcn valops offboard
 ```
 
 No extra arguments. The node-id is derived from the private key.
@@ -55,16 +55,16 @@ No extra arguments. The node-id is derived from the private key.
 
 ```sh
 # Suspend a validator (as suspender)
-kcn abv2 suspend-validator --node-id 0xABCD... --private-key 0x1234...
+kcn valops suspend-validator --node-id 0xABCD... --private-key 0x1234...
 
 # Use default IPC endpoint and nodekey file
-kcn abv2 ready-candidate
+kcn valops ready-candidate
 
 # Specify a custom endpoint
-kcn abv2 pause --endpoint http://localhost:8551
+kcn valops pause --endpoint http://localhost:8551
 
 # Use a custom private key and endpoint
-kcn abv2 ready-validator --private-key 0x1234... --endpoint /tmp/klay.ipc
+kcn valops ready-validator --private-key 0x1234... --endpoint /tmp/klay.ipc
 ```
 
 ## Output

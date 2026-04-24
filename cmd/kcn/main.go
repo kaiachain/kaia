@@ -75,7 +75,7 @@ func init() {
 		nodecmd.SnapshotCommand,
 
 		// See cmd/kcn/abv2.go:
-		ABv2Command,
+		ValOpsCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
