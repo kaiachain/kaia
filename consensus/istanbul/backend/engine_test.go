@@ -125,18 +125,6 @@ func excludeNodeByAddr(target common.Address) {
 	}
 }
 
-func enableVotes(paramNames []gov.ParamName) {
-	for _, paramName := range paramNames {
-		gov.Params[paramName].VoteForbidden = false
-	}
-}
-
-func disableVotes(paramNames []gov.ParamName) {
-	for _, paramName := range paramNames {
-		gov.Params[paramName].VoteForbidden = true
-	}
-}
-
 func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, []common.Address) {
 	nodeKeys = make([]*ecdsa.PrivateKey, n)
 	addrs = make([]common.Address, n)

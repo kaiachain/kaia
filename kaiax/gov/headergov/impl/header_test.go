@@ -73,7 +73,7 @@ func TestVerifyVote(t *testing.T) {
 	}{
 		// governance.*
 		{desc: "valid deriveshaimpl", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceDeriveShaImpl), uint64(1)), expectedError: nil},
-		// GovernanceGovernanceMode vote is forbidden
+		{desc: "deprecated governancemode", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovernanceMode), "none"), expectedError: ErrDeprecatedVote},
 		{desc: "valid governingnode", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGoverningNode), validVoter.Hex()), expectedError: nil},
 		{desc: "valid govparam", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovParamContract), contract), expectedError: nil},
 		{desc: "valid unitprice", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(25000000000)), expectedError: nil},
@@ -82,8 +82,8 @@ func TestVerifyVote(t *testing.T) {
 
 		// istanbul.*
 		{desc: "valid committeesize", vote: headergov.NewVoteData(validVoter, string(gov.IstanbulCommitteeSize), uint64(7)), expectedError: nil},
-		// IstanbulEpoch vote is forbidden
-		// IstanbulPolicy vote is forbidden
+		{desc: "deprecated epoch", vote: headergov.NewVoteData(validVoter, string(gov.IstanbulEpoch), uint64(30000)), expectedError: ErrDeprecatedVote},
+		{desc: "deprecated policy", vote: headergov.NewVoteData(validVoter, string(gov.IstanbulPolicy), uint64(0)), expectedError: ErrDeprecatedVote},
 
 		// kip71.*
 		{desc: "valid basefeedenominator", vote: headergov.NewVoteData(validVoter, string(gov.Kip71BaseFeeDenominator), uint64(8)), expectedError: nil},
@@ -95,14 +95,13 @@ func TestVerifyVote(t *testing.T) {
 		{desc: "invalid upper", vote: headergov.NewVoteData(validVoter, string(gov.Kip71UpperBoundBaseFee), uint64(1)), expectedError: ErrUpperBoundBaseFee},
 
 		// reward.*
-		// RewardDeferredTxFee vote is forbidden
+		// RewardDeferredTxFee and RewardUseGiniCoeff (bool) skipped: bool RLP round-trip broken in ToVoteBytes, ErrInvalidVoteData fires before ErrDeprecatedVote.
 		{desc: "valid kip82ratio", vote: headergov.NewVoteData(validVoter, string(gov.RewardKip82Ratio), "20/80"), expectedError: nil},
 		{desc: "valid mintingamount", vote: headergov.NewVoteData(validVoter, string(gov.RewardMintingAmount), "6400000000000000000"), expectedError: nil},
-		// RewardMinimumStake vote is forbidden
-		// RewardProposerUpdateInterval vote is forbidden
+		{desc: "deprecated minimumstake", vote: headergov.NewVoteData(validVoter, string(gov.RewardMinimumStake), "2000000"), expectedError: ErrDeprecatedVote},
+		{desc: "deprecated proposerupdateinterval", vote: headergov.NewVoteData(validVoter, string(gov.RewardProposerUpdateInterval), uint64(3600)), expectedError: ErrDeprecatedVote},
 		{desc: "valid ratio", vote: headergov.NewVoteData(validVoter, string(gov.RewardRatio), "50/30/20"), expectedError: nil},
-		// RewardStakingUpdateInterval vote is forbidden
-		// RewardUseGiniCoeff vote is forbidden
+		{desc: "deprecated stakingupdateinterval", vote: headergov.NewVoteData(validVoter, string(gov.RewardStakingUpdateInterval), uint64(86400)), expectedError: ErrDeprecatedVote},
 		{desc: "valid addvalidator", vote: headergov.NewVoteData(validVoter, string(gov.AddValidator), eoa), expectedError: nil},
 		{desc: "valid removevalidator", vote: headergov.NewVoteData(validVoter, string(gov.RemoveValidator), eoa), expectedError: nil},
 	}
