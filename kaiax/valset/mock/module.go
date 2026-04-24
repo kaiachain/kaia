@@ -50,6 +50,21 @@ func (mr *MockValsetModuleMockRecorder) APIs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockValsetModule)(nil).APIs))
 }
 
+// GetCandTesting mocks base method.
+func (m *MockValsetModule) GetCandTesting(arg0 uint64) ([]common.Address, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCandTesting", arg0)
+	ret0, _ := ret[0].([]common.Address)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCandTesting indicates an expected call of GetCandTesting.
+func (mr *MockValsetModuleMockRecorder) GetCandTesting(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCandTesting", reflect.TypeOf((*MockValsetModule)(nil).GetCandTesting), arg0)
+}
+
 // GetCommittee mocks base method.
 func (m *MockValsetModule) GetCommittee(arg0, arg1 uint64) ([]common.Address, error) {
 	m.ctrl.T.Helper()

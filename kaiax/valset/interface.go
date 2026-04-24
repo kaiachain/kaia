@@ -33,4 +33,8 @@ type ValsetModule interface {
 	GetQualifiedValidators(num uint64) ([]common.Address, error)
 	GetDemotedValidators(num uint64) ([]common.Address, error)
 	GetProposer(num uint64, round uint64) (common.Address, error)
+
+	// GetCandTesting returns nodes in the CandTesting state at block `num`.
+	// Stub until permissionless system contracts (AddressBookV2) land; currently returns an empty slice.
+	GetCandTesting(num uint64) ([]common.Address, error)
 }
