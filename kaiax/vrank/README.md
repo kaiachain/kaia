@@ -13,6 +13,24 @@ VRank measures the reliability of validators and candidates over a rolling epoch
 
 Both scores reset to zero at the start of each epoch.
 
+### header.VRank
+
+`header(N).VRank` is the cfReport for block `N-1`, written by the proposer of block `N` from messages exchanged during consensus of block `N-1`.
+
+```
+during consensus of block N-1
+  proposer(N-1) ──[VRankPreprepare]──▶ candidates
+  candidates    ──[VRankCandidate]───▶ committee of (N-1, round)
+                                       (committee collects VRankCandidate messages to produce the next block)
+
+when block N is proposed
+  proposer(N) ── TallyCfReport(N-1, round) ──▶ cfReport ──▶ header(N).VRank
+```
+
+- `VRankPreprepare{Block, View, Sig}`: signed by `proposer(N-1)`; tells candidates a response is expected for `(N-1, view.Round)`.
+- `VRankCandidate{BlockNumber, Round, BlockHash, Sig, BlsSig}`: signed by each candidate; carries the block hash they observed.
+- `TallyCfReport(N-1, round)` lists every address in `GetCandTesting(N-1)` whose `VRankCandidate` did not arrive with the correct `BlockHash` before the timeout.
+
 ### PFS
 
 `PFS(N)` is the cumulative proposal failure score at block N, covering blocks `[epochStart(N), N]`.
