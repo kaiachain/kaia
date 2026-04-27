@@ -8,7 +8,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	common "github.com/kaiachain/kaia/common"
 	bft "github.com/kaiachain/kaia/consensus/bft"
@@ -37,20 +36,6 @@ func NewMockVRankModule(ctrl *gomock.Controller) *MockVRankModule {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockVRankModule) EXPECT() *MockVRankModuleMockRecorder {
 	return m.recorder
-}
-
-// FinalizeHeader mocks base method.
-func (m *MockVRankModule) FinalizeHeader(arg0 *types.Header, arg1 *state.StateDB, arg2 []*types.Transaction, arg3 []*types.Receipt) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FinalizeHeader", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// FinalizeHeader indicates an expected call of FinalizeHeader.
-func (mr *MockVRankModuleMockRecorder) FinalizeHeader(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeHeader", reflect.TypeOf((*MockVRankModule)(nil).FinalizeHeader), arg0, arg1, arg2, arg3)
 }
 
 // GetCFS mocks base method.
@@ -208,15 +193,15 @@ func (mr *MockVRankModuleMockRecorder) TallyCfReport(arg0, arg1 interface{}) *go
 }
 
 // VerifyHeader mocks base method.
-func (m *MockVRankModule) VerifyHeader(arg0 *types.Header) error {
+func (m *MockVRankModule) VerifyHeader(arg0, arg1 *types.Header) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyHeader", arg0)
+	ret := m.ctrl.Call(m, "VerifyHeader", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // VerifyHeader indicates an expected call of VerifyHeader.
-func (mr *MockVRankModuleMockRecorder) VerifyHeader(arg0 interface{}) *gomock.Call {
+func (mr *MockVRankModuleMockRecorder) VerifyHeader(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockVRankModule)(nil).VerifyHeader), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockVRankModule)(nil).VerifyHeader), arg0, arg1)
 }
