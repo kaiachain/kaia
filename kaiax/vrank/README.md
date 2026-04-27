@@ -97,29 +97,31 @@ Calls `GetPFS(head)` and `getCPMatrix(head)` to warm both in-memory caches (PFS 
   - `GetCFS(N, epochVACount)` calls `GetCandTesting(N)` to seed a fresh CP matrix when there is no cache or checkpoint seed.
   - `TallyCfReport(N, round)` is called by the proposer of block `N+1` to fill `header(N+1).VRank`; it queries `GetCandTesting(N)` because it validates messages collected for block `N`.
 
-| Function                             | Valset call                                                               | Notes                                                         |
-| ------------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `GetPfReport(N)`                     | `GetProposer(N, r)`; `r ∈ [0, header(N).Round)`                           | valset fast-paths committed headers via `Chain.Sealer().Author` |
-| `GetCfReport(N)`                     | —                                                                         | —                                                             |
-| `TallyCfReport(N, round)`            | `GetCandTesting(N)`                                                       | `N` is the reported block whose responses are being tallied   |
-| `GetPFS(N)`                          | `GetProposer(x, r)`; `x ∈ [epochStart(N), N]`, `r ∈ [0, header(x).Round)` | valset fast-paths committed headers via `Chain.Sealer().Author` |
-| `GetCFS(N, epochVACount)`            | `GetCandTesting(N)`                                                       | seeds `newCPMatrix` when no cache/checkpoint seed exists      |
-|                                      | `GetProposer(x, header(x).Round)`; `x ∈ [epochStart(N), N]`               | reporter lookup per committed header                          |
+| Function                  | Valset call                                                               | Notes                                                           |
+| ------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `GetPfReport(N)`          | `GetProposer(N, r)`; `r ∈ [0, header(N).Round)`                           | valset fast-paths committed headers via `Chain.Sealer().Author` |
+| `GetCfReport(N)`          | —                                                                         | —                                                               |
+| `TallyCfReport(N, round)` | `GetCandTesting(N)`                                                       | `N` is the reported block whose responses are being tallied     |
+| `GetPFS(N)`               | `GetProposer(x, r)`; `x ∈ [epochStart(N), N]`, `r ∈ [0, header(x).Round)` | valset fast-paths committed headers via `Chain.Sealer().Author` |
+| `GetCFS(N, epochVACount)` | `GetCandTesting(N)`                                                       | seeds `newCPMatrix` when no cache/checkpoint seed exists        |
+|                           | `GetProposer(x, header(x).Round)`; `x ∈ [epochStart(N), N]`               | reporter lookup per committed header                            |
 
 - handlers
   - During consensus of block N, block N is not yet committed, but its validator/candidate/proposer set is already determined — so `Get*(N)` is safe for proposer / candidate / committee identity checks tied to that live view.
   - `HandleVRankCandidate` deliberately does not perform canonical committee-membership or candidate-membership validation at receive time. It acts as a bounded inbox keyed by `(BlockNumber, Round)`: it requires a current preprepared view, drops stale messages, rejects overly-future messages, verifies ECDSA and BLS signatures, and ignores duplicate senders per view.
   - Canonical semantic validation for candidate messages happens later in `TallyCfReport`, which checks the exact view's preprepare time, expected block hash, the candidate set from `GetCandTesting(N)`, and the timeout.
+  - `VerifyHeader(N)` calls `GetCandTesting(N-1)` to confirm every address in `header(N).VRank` is an actual candidate for the reported block `N-1`, blocking malicious proposers from injecting arbitrary addresses to manipulate CFS scores.
 
-| Function                                  | Valset call                  | Notes                                                       |
-| ----------------------------------------- | ---------------------------- | ----------------------------------------------------------- |
-| `HandleIstanbulPreprepare(block N)`       | `GetCommittee(N, 0)`         | committee members collect `VRankCandidate` messages         |
-|                                           | `GetProposer(N, view.Round)` | only proposer broadcasts `VRankPreprepare`                  |
-|                                           | `GetCandTesting(N)`          | proposer broadcasts `VRankPreprepare` to candidates         |
-| `HandleVRankPreprepare(block N)`          | `GetCandTesting(N)`          | only candidates handle `VRankPreprepare`                    |
-|                                           | `GetProposer(N, view.Round)` | verifies `VRankPreprepare` sender is the proposer           |
-|                                           | `GetCommittee(N, view.Round)` | candidates broadcast `VRankCandidate` to the round committee |
-| `HandleVRankCandidate(msg.BlockNumber=M)` | —                             | receive-time path does not query valset                     |
+| Function                                  | Valset call                   | Notes                                                          |
+| ----------------------------------------- | ----------------------------- | -------------------------------------------------------------- |
+| `HandleIstanbulPreprepare(block N)`       | `GetCommittee(N, 0)`          | committee members collect `VRankCandidate` messages            |
+|                                           | `GetProposer(N, view.Round)`  | only proposer broadcasts `VRankPreprepare`                     |
+|                                           | `GetCandTesting(N)`           | proposer broadcasts `VRankPreprepare` to candidates            |
+| `HandleVRankPreprepare(block N)`          | `GetCandTesting(N)`           | only candidates handle `VRankPreprepare`                       |
+|                                           | `GetProposer(N, view.Round)`  | verifies `VRankPreprepare` sender is the proposer              |
+|                                           | `GetCommittee(N, view.Round)` | candidates broadcast `VRankCandidate` to the round committee   |
+| `HandleVRankCandidate(msg.BlockNumber=M)` | —                             | receive-time path does not query valset                        |
+| `VerifyHeader(N)`                         | `GetCandTesting(N-1)`         | validates `header(N).VRank` addresses are candidates for `N-1` |
 
 ### Start and stop
 
