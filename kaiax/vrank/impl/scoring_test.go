@@ -708,7 +708,6 @@ func TestGetCFS_DBFallback(t *testing.T) {
 	})
 }
 
-
 // TestApplyBlocksForPFS verifies the raw proposer-failure accumulation over a small block range.
 func TestApplyBlocksForPFS(t *testing.T) {
 	// Set up three consecutive blocks:
