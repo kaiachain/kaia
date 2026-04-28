@@ -151,7 +151,7 @@ func bootnode(ctx *cli.Context) error {
 		DiscoverTypes:   discover.DiscoverTypesConfig{CN: true, PN: true, EN: true},
 	}
 
-	tab, err := discover.ListenUDP(&cfg)
+	disc, err := discover.NewDiscovery2(&cfg)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -160,7 +160,7 @@ func bootnode(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	node.appendAPIs(NewBN(tab).APIs())
+	node.appendAPIs(disc.APIs())
 	if err := startNode(node); err != nil {
 		return err
 	}
