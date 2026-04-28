@@ -3012,6 +3012,7 @@ func TestEthAPI_Config(t *testing.T) {
 	expectedChainConfig := params.TestChainConfig.Copy()
 	expectedChainConfig.IstanbulCompatibleBlock = big.NewInt(75373312)
 	expectedChainConfig.LondonCompatibleBlock = big.NewInt(80295291)
+	expectedChainConfig.KoreCompatibleBlock = big.NewInt(111736800)
 	expectedChainConfig.PragueCompatibleBlock = big.NewInt(187930000)
 	expectedChainConfig.OsakaCompatibleBlock = big.NewInt(195000000)
 	expectedChainConfig.BlobScheduleConfig = &params.BlobScheduleConfig{
@@ -3024,17 +3025,20 @@ func TestEthAPI_Config(t *testing.T) {
 	genesisForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 0).Hash
 	istanbulForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 75373312).Hash
 	lonondonForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 80295291).Hash
+	koreForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 111736800).Hash
 	pragueForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 187930000).Hash
 	osakaForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 195000000).Hash
 	var (
 		genesisRules        = expectedChainConfig.Rules(big.NewInt(0))
 		istanbulRules       = expectedChainConfig.Rules(big.NewInt(75373312))
 		lonondonRules       = expectedChainConfig.Rules(big.NewInt(80295291))
+		koreRules           = expectedChainConfig.Rules(big.NewInt(111736800))
 		pragueRules         = expectedChainConfig.Rules(big.NewInt(187930000))
 		osakaRules          = expectedChainConfig.Rules(big.NewInt(195000000))
 		genesisPrecompiles  = make(map[string]common.Address)
 		istanbulPrecompiles = make(map[string]common.Address)
 		lonondonPrecompiles = make(map[string]common.Address)
+		korePrecompiles     = make(map[string]common.Address)
 		praguePrecompiles   = make(map[string]common.Address)
 		osakaPrecompiles    = make(map[string]common.Address)
 	)
@@ -3046,6 +3050,9 @@ func TestEthAPI_Config(t *testing.T) {
 	}
 	for addr, c := range vm.ActivePrecompiledContracts(lonondonRules) {
 		lonondonPrecompiles[c.Name()] = addr
+	}
+	for addr, c := range vm.ActivePrecompiledContracts(koreRules) {
+		korePrecompiles[c.Name()] = addr
 	}
 	for addr, c := range vm.ActivePrecompiledContracts(pragueRules) {
 		praguePrecompiles[c.Name()] = addr
@@ -3100,6 +3107,31 @@ func TestEthAPI_Config(t *testing.T) {
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
 				ForkId:          lonondonForkID[:],
 				Precompiles:     lonondonPrecompiles,
+				SystemContracts: nil,
+			},
+			expectedLast: &Kip276Config{
+				BlobSchedule:    params.DefaultOsakaBlobConfig,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          osakaForkID[:],
+				Precompiles:     osakaPrecompiles,
+				SystemContracts: nil,
+			},
+		},
+		{
+			name:        "Kore fork block",
+			blockNumber: 111736800,
+			expectedCurrent: &Kip276Config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          koreForkID[:],
+				Precompiles:     korePrecompiles,
+				SystemContracts: nil,
+			},
+			expectedNext: &Kip276Config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          pragueForkID[:],
+				Precompiles:     praguePrecompiles,
 				SystemContracts: nil,
 			},
 			expectedLast: &Kip276Config{
