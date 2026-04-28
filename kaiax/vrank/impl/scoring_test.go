@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func computeCFS(v *VRankModule, start, end uint64, epochVACount uint64) (map[common.Address]uint64, error) {
+func computeCFS(v *VRankModule, start, end uint64) (map[common.Address]uint64, error) {
 	cpMatrix, err := v.newCPMatrix(start)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func computeCFS(v *VRankModule, start, end uint64, epochVACount uint64) (map[com
 	if err != nil {
 		return nil, err
 	}
-	return generateCFSFromCPMatrix(cpMatrix, epochVACount), nil
+	return generateCFSFromCPMatrix(cpMatrix), nil
 }
 
 // makeHeaderWithVRank creates a header with a specific round and an encoded cfReport in VRank.
@@ -375,7 +375,6 @@ func TestGetPFS_DBFallback(t *testing.T) {
 
 // # GetCFS
 func TestGetCFS(t *testing.T) {
-	const epochVACount = 1
 	t.Run("epoch boundary", func(t *testing.T) {
 		P1, C1 := numToAddr(1), numToAddr(10)
 		epochStart := uint64(params.DefaultVRankEpoch)
@@ -389,13 +388,13 @@ func TestGetCFS(t *testing.T) {
 		v := newCN(t, withGenesis(), withCandidates([]common.Address{C1}), withProposer(P1)).VRankModule
 		v.Chain = &testChain{headers: headers}
 
-		cfs, err := v.GetCFS(epochStart, epochVACount)
+		cfs, err := v.GetCFS(epochStart)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(0), cfs[C1], "C1 should have 0 candidate failures at epoch start")
 
-		cfs, err = v.GetCFS(epochEnd, epochVACount)
+		cfs, err = v.GetCFS(epochEnd)
 		require.NoError(t, err)
-		// F = (1-1)/3 = 0, so no filtering; C1 appears once.
+		// ProposerCount = 1 (P1 only), F = 1 - ceil(2/3) = 0, so no filtering; C1 appears once.
 		assert.Equal(t, uint64(1), cfs[C1], "C1 should have 1 candidate failure")
 	})
 
@@ -424,12 +423,12 @@ func TestGetCFS(t *testing.T) {
 		b.Valset.EXPECT().GetProposer(epochStart+3, uint64(0)).Return(P3, nil)
 		b.Valset.EXPECT().GetProposer(epochStart+4, uint64(0)).Return(P4, nil)
 		b.Valset.EXPECT().GetProposer(epochStart+5, uint64(0)).Return(P4, nil)
-		cfs, err := v.GetCFS(epochStart+5, 4)
+		cfs, err := v.GetCFS(epochStart + 5)
 		require.NoError(t, err)
-		// F = 1. Raw totals:
-		// C1: {P1:1, P2:1, P3:1, P4:2} -> drop 2 -> score 3
-		// C2: {P1:1, P3:1, P4:2}       -> drop 2 -> score 2
-		// C3: {P3:1}                   -> drop 1 -> score 0
+		// ProposerCount = 4, F = 4 - ceil(8/3) = 1. Sorted scores per candidate:
+		// C1: [1,1,1,2]  -> drop 1 -> sum 3
+		// C2: [0,1,1,2]  -> drop 1 -> sum 2
+		// C3: [0,0,0,1]  -> drop 1 -> sum 0
 		assert.Equal(t, uint64(3), cfs[C1])
 		assert.Equal(t, uint64(2), cfs[C2])
 		assert.Equal(t, uint64(0), cfs[C3])
@@ -444,16 +443,15 @@ func TestGetCFS(t *testing.T) {
 		}
 		headers[5] = makeHeaderWithVRank(5, 0, []common.Address{C1})
 
-		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1}))
-		cn.Valset.EXPECT().GetProposer(uint64(5), uint64(0)).Return(P1, nil).Times(1)
+		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1}), withProposer(P1))
 
-		cfs1, err := cn.VRankModule.GetCFS(5, epochVACount)
+		cfs1, err := cn.VRankModule.GetCFS(5)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(1), cfs1[C1])
 
 		// Mutating the returned map must not affect the cached copy.
 		cfs1[C1] = 999
-		cfs2, err := cn.VRankModule.GetCFS(5, epochVACount)
+		cfs2, err := cn.VRankModule.GetCFS(5)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(1), cfs2[C1])
 	})
@@ -464,15 +462,14 @@ func TestGetCFS(t *testing.T) {
 		headers := map[uint64]*types.Header{
 			epochStart: makeHeaderWithVRank(epochStart, 0, nil), // epoch start: VRank must be nil
 		}
-		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1, C2}))
+		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1, C2}), withProposer(P1))
 
 		// Seed the previous epoch's last block with large CFS values.
 		cn.VRankModule.cpMatrixCache.Add(epochStart-1, vrank.CPMatrix{
 			C1: {P1: 50}, C2: {P1: 50},
 		})
 
-		// GetProposer is NOT called: the epoch-start block has a nil/empty cfReport.
-		cfs, err := cn.VRankModule.GetCFS(epochStart, epochVACount)
+		cfs, err := cn.VRankModule.GetCFS(epochStart)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(0), cfs[C1], "C1 must start at 0 in new epoch")
 		assert.Equal(t, uint64(0), cfs[C2], "C2 must start at 0 in new epoch")
@@ -481,10 +478,9 @@ func TestGetCFS(t *testing.T) {
 }
 
 func TestGetCFS_Errors(t *testing.T) {
-	const epochVACount = 1
 	t.Run("pre-fork block returns ErrNotPermissionless", func(t *testing.T) {
 		module := newCN(t, withHardfork("osaka"), withHeaders(map[uint64]*types.Header{10: makeHeaderWithRound(10, 0)})).VRankModule
-		_, err := module.GetCFS(10, epochVACount)
+		_, err := module.GetCFS(10)
 		assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
 	})
 	t.Run("future block (beyond head) returns ErrFutureBlock", func(t *testing.T) {
@@ -494,24 +490,23 @@ func TestGetCFS_Errors(t *testing.T) {
 		}
 		v := newCN(t, withHeaders(headers), withCandidates(nil), withProposer(numToAddr(0))).VRankModule
 
-		_, err := v.GetCFS(5, epochVACount)
+		_, err := v.GetCFS(5)
 		assert.NoError(t, err)
 
-		_, err = v.GetCFS(6, epochVACount)
+		_, err = v.GetCFS(6)
 		assert.ErrorIs(t, err, vrank.ErrFutureBlock)
 	})
 	t.Run("GetProposer error", func(t *testing.T) {
 		C1 := numToAddr(10)
 		headers := map[uint64]*types.Header{
 			0: makeHeaderWithRound(0, 0),
-			// Block 1 has a non-empty cfReport so applyCPMatrix will call GetProposer for it.
 			1: makeHeaderWithVRank(1, 0, []common.Address{C1}),
 		}
 		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1}))
-		// GetProposer is NOT called for block 0 (empty cfReport); only for block 1.
-		cn.Valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(common.Address{}, assert.AnError).Times(1)
+		// Block 0 is the first block applied for the [0, 1] range, so its GetProposer is the first call — surface the error there and verify it propagates.
+		cn.Valset.EXPECT().GetProposer(uint64(0), uint64(0)).Return(common.Address{}, assert.AnError).Times(1)
 
-		_, err := cn.VRankModule.GetCFS(1, epochVACount)
+		_, err := cn.VRankModule.GetCFS(1)
 		assert.ErrorIs(t, err, assert.AnError)
 	})
 	t.Run("missing header error", func(t *testing.T) {
@@ -521,14 +516,13 @@ func TestGetCFS_Errors(t *testing.T) {
 		headers := map[uint64]*types.Header{1: makeHeaderWithRound(1, 0)}
 		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1}))
 
-		_, err := cn.VRankModule.GetCFS(1, epochVACount)
+		_, err := cn.VRankModule.GetCFS(1)
 		assert.ErrorIs(t, err, vrank.ErrHeaderNotFound)
 	})
 }
 
 func TestGetCFS_CacheFallback(t *testing.T) {
 	P1, C1 := numToAddr(1), numToAddr(10)
-	const epochVACount = 1
 
 	t.Run("nearby cache hit", func(t *testing.T) {
 		P2 := numToAddr(2)
@@ -540,17 +534,18 @@ func TestGetCFS_CacheFallback(t *testing.T) {
 		headers[6] = makeHeaderWithVRank(6, 0, []common.Address{C1})
 
 		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1}))
-		// Per-block proposer assignments; can't use withProposer because each block has a different one.
+		// Specific overrides for blocks 5 and 6 (different reporters); P1 wildcard catches the rest.
 		cn.Valset.EXPECT().GetProposer(uint64(5), uint64(0)).Return(P1, nil).Times(1)
 		cn.Valset.EXPECT().GetProposer(uint64(6), uint64(0)).Return(P2, nil).Times(1)
+		cn.Valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(P1, nil).AnyTimes()
 
-		cfs5, err := cn.VRankModule.GetCFS(5, epochVACount)
+		cfs5, err := cn.VRankModule.GetCFS(5)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(1), cfs5[C1])
 		_, ok := cn.VRankModule.cpMatrixCache.Get(uint64(5))
 		assert.True(t, ok)
 
-		cfs6, err := cn.VRankModule.GetCFS(6, epochVACount)
+		cfs6, err := cn.VRankModule.GetCFS(6)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(2), cfs6[C1])
 	})
@@ -561,14 +556,11 @@ func TestGetCFS_CacheFallback(t *testing.T) {
 			1: makeHeaderWithVRank(1, 0, []common.Address{C1}),
 			2: makeHeaderWithVRank(2, 0, []common.Address{C1}),
 		}
-		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1}))
+		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1}), withProposer(P1))
 		_, inCache := cn.VRankModule.cpMatrixCache.Get(uint64(2))
 		require.False(t, inCache, "cache must be cold before first call")
 
-		cn.Valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(P1, nil).Times(1)
-		cn.Valset.EXPECT().GetProposer(uint64(2), uint64(0)).Return(P1, nil).Times(1)
-
-		cfs, err := cn.VRankModule.GetCFS(2, epochVACount)
+		cfs, err := cn.VRankModule.GetCFS(2)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(2), cfs[C1])
 	})
@@ -583,14 +575,12 @@ func TestGetCFS_CacheFallback(t *testing.T) {
 		}
 		headers[blockNum] = makeHeaderWithVRank(blockNum, 0, []common.Address{C1})
 
-		cn := newCN(t, withHeaders(headers))
+		cn := newCN(t, withHeaders(headers), withProposer(P1))
 
 		// forge cache - it must be used
 		cn.VRankModule.cpMatrixCache.Add(boundary, vrank.CPMatrix{C1: {P1: 12345}})
 
-		cn.Valset.EXPECT().GetProposer(blockNum, uint64(0)).Return(P1, nil).Times(1)
-
-		cfs, err := cn.VRankModule.GetCFS(blockNum, epochVACount)
+		cfs, err := cn.VRankModule.GetCFS(blockNum)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(12346), cfs[C1], "cache at exact boundary must be used as seed")
 	})
@@ -605,14 +595,12 @@ func TestGetCFS_CacheFallback(t *testing.T) {
 		}
 		headers[blockNum] = makeHeaderWithVRank(blockNum, 0, []common.Address{C1})
 
-		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1}))
+		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1}), withProposer(P1))
 
 		// forge cache - it must NOT be used (beyond boundary by 1)
 		cn.VRankModule.cpMatrixCache.Add(boundary-1, vrank.CPMatrix{C1: {P1: 12345}})
 
-		cn.Valset.EXPECT().GetProposer(blockNum, uint64(0)).Return(P1, nil).Times(1)
-
-		cfs, err := cn.VRankModule.GetCFS(blockNum, epochVACount)
+		cfs, err := cn.VRankModule.GetCFS(blockNum)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(1), cfs[C1], "cache beyond boundary must NOT be used as seed")
 	})
@@ -624,15 +612,14 @@ func TestGetCFS_CacheFallback(t *testing.T) {
 			epochStart + 1: makeHeaderWithVRank(epochStart+1, 0, []common.Address{C1}),
 			epochStart + 2: makeHeaderWithRound(epochStart+2, 0),
 		}
-		cn := newCN(t, withHeaders(headers))
+		cn := newCN(t, withHeaders(headers), withProposer(P1))
 
 		// Seed cache at epochStart+1 (same epoch, distance=1) — must be used.
 		cn.VRankModule.cpMatrixCache.Add(epochStart+1, vrank.CPMatrix{C1: {P1: 1}})
 		// Seed previous-epoch entry — must NOT be used.
 		cn.VRankModule.cpMatrixCache.Add(epochStart-1, vrank.CPMatrix{C1: {P1: 99}})
 
-		// epochStart+2 has empty cfReport, so GetProposer is NOT called.
-		cfs, err := cn.VRankModule.GetCFS(epochStart+2, epochVACount)
+		cfs, err := cn.VRankModule.GetCFS(epochStart + 2)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(1), cfs[C1], "score must come only from same-epoch nearby cache")
 	})
@@ -644,21 +631,20 @@ func TestGetCFS_CacheFallback(t *testing.T) {
 		for i := epochStart; i <= blockNum; i++ {
 			headers[i] = makeHeaderWithRound(i, 0)
 		}
-		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1}))
+		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1}), withProposer(P1))
 
 		// Probe limit = min(64, blockNum-epochStart) = 3; epochStart-1 is at distance 4 — not reached.
 		// Even within scoreCacheProbeLookback range, the epoch clamp blocks the probe from reading
 		// across the epoch boundary.
 		cn.VRankModule.cpMatrixCache.Add(epochStart-1, vrank.CPMatrix{C1: {P1: 99}})
 
-		cfs, err := cn.VRankModule.GetCFS(blockNum, epochVACount)
+		cfs, err := cn.VRankModule.GetCFS(blockNum)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(0), cfs[C1], "previous-epoch cache must not carry over into current epoch")
 	})
 }
 
 func TestGetCFS_DBFallback(t *testing.T) {
-	const epochVACount = 1
 	P1, C1 := numToAddr(1), numToAddr(10)
 	ckpt := testCheckpointInterval
 
@@ -675,7 +661,7 @@ func TestGetCFS_DBFallback(t *testing.T) {
 
 		cn := newCN(t, withDB(db), withHeaders(headers))
 
-		cfs, err := cn.VRankModule.GetCFS(ckpt, epochVACount)
+		cfs, err := cn.VRankModule.GetCFS(ckpt)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(1), cfs[C1])
 		assert.Equal(t, uint64(0), cfs[C2], "zero-failure candidates must remain in CFS after checkpoint load")
@@ -698,11 +684,9 @@ func TestGetCFS_DBFallback(t *testing.T) {
 		})
 		WriteLastCheckpoint(db, ckpt)
 
-		cn := newCN(t, withDB(db), withHeaders(headers))
-		// With the DB checkpoint, only block ckpt+1 needs to be computed.
-		cn.Valset.EXPECT().GetProposer(ckpt+1, uint64(0)).Return(P1, nil).Times(1)
+		cn := newCN(t, withDB(db), withHeaders(headers), withProposer(P1))
 
-		cfs, err := cn.VRankModule.GetCFS(ckpt+1, epochVACount)
+		cfs, err := cn.VRankModule.GetCFS(ckpt + 1)
 		require.NoError(t, err)
 		assert.Equal(t, uint64(2), cfs[C1], "1 from checkpoint + 1 from ckpt+1")
 	})
@@ -756,9 +740,9 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		//   proposer(8)=P4, cfReport(8)=[C1,C2]
 		//   proposer(9)=P4, cfReport(9)=[C1,C2]
 		//
-		// council size = 4 → F = 1
+		// 4 distinct proposers → F = N - ceil(2N/3) = 4 - 3 = 1.
 		// Expected CFS: C1=1, C2=1, C3=0 (present in map with zero score)
-		P3, P4 := numToAddr(12), numToAddr(13)
+		P1, P2, P3, P4 := numToAddr(10), numToAddr(11), numToAddr(12), numToAddr(13)
 		C1, C2, C3 := numToAddr(20), numToAddr(21), numToAddr(22)
 		candidates := []common.Address{C1, C2, C3}
 
@@ -775,13 +759,13 @@ func TestApplyBlocksForCFS(t *testing.T) {
 				9: makeHeaderWithVRank(9, 0, []common.Address{C1, C2}),     // P4 reports C1,C2 again
 			},
 		}
-		// GetProposer only called for blocks with non-empty cfReports (blocks 7–9).
-		// Blocks 5 and 6 have nil cfReports so GetProposer is skipped for them.
 		valset.EXPECT().GetCandTesting(uint64(5)).Return(candidates, nil)
+		valset.EXPECT().GetProposer(uint64(5), uint64(0)).Return(P1, nil)
+		valset.EXPECT().GetProposer(uint64(6), uint64(0)).Return(P2, nil)
 		valset.EXPECT().GetProposer(uint64(7), uint64(0)).Return(P3, nil)
 		valset.EXPECT().GetProposer(uint64(8), uint64(0)).Return(P4, nil)
 		valset.EXPECT().GetProposer(uint64(9), uint64(0)).Return(P4, nil)
-		cfs, err := computeCFS(v, 5, 9, 4)
+		cfs, err := computeCFS(v, 5, 9)
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(1), cfs[C1], "C1 should be 1")
@@ -838,7 +822,7 @@ func TestApplyBlocksForCFS(t *testing.T) {
 			},
 		).Times(int(totalBlocks))
 
-		cfs, err := computeCFS(v, start, end, uint64(len(proposers)))
+		cfs, err := computeCFS(v, start, end)
 		require.NoError(t, err)
 
 		assert.Equal(t, uint64(139), cfs[candidates[0]], "C1")
@@ -865,10 +849,10 @@ func TestApplyBlocksForCFS(t *testing.T) {
 				0: makeHeaderWithRound(0, 0), // VRank is nil
 			},
 		}
-		// GetProposer is NOT called: block 0 has no VRank set (nil → empty cfReport).
 		valset.EXPECT().GetCandTesting(uint64(0)).Return(candidates, nil)
+		valset.EXPECT().GetProposer(uint64(0), uint64(0)).Return(numToAddr(1), nil)
 
-		cfs, err := computeCFS(v, 0, 0, 1)
+		cfs, err := computeCFS(v, 0, 0)
 		require.NoError(t, err)
 		// C1 is pre-seeded from GetCandTesting but no block reported any failure, so CFS=0.
 		score, hasC1 := cfs[C1]

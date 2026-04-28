@@ -57,14 +57,16 @@ func (v *VRankModule) GetPFS(blockNum uint64) (map[common.Address]uint64, error)
 	return cloneMap(seed), nil
 }
 
-// GetCFS computes the running Candidate Failure Score up to blockNum, using
-// the provided epochVACount (the ValActive count at the start of the block's
-// epoch). cfs(N) -> map[candidateAddr]score for blocks [epochBegin(N), N].
-// For the validator state transition at block N, use GetCFS(N-1, epochVACount(N-1)).
+// GetCFS computes the running Candidate Failure Score up to blockNum.
+// cfs(N) -> map[candidateAddr]score for blocks [epochBegin(N), N].
+// For the validator state transition at block N, use GetCFS(N-1).
+// The byzantine filter threshold is derived from the number of distinct proposers
+// observed in the epoch so far (CPMatrix.ProposerCount()), so no caller-supplied
+// committee/ValActive count is required.
 // Returns ErrNotPermissionless if blockNum is before the permissionless fork.
 // Returns ErrFutureBlock if blockNum exceeds the current chain head.
-func (v *VRankModule) GetCFS(blockNum uint64, epochVACount uint64) (map[common.Address]uint64, error) {
-	return v.getCFS(blockNum, epochVACount)
+func (v *VRankModule) GetCFS(blockNum uint64) (map[common.Address]uint64, error) {
+	return v.getCFS(blockNum)
 }
 
 // getCPMatrix computes and caches the CP matrix for blockNum without requiring an epochVACount.
@@ -93,12 +95,12 @@ func (v *VRankModule) getCPMatrix(blockNum uint64) (vrank.CPMatrix, error) {
 	return seed, nil
 }
 
-func (v *VRankModule) getCFS(blockNum uint64, epochVACount uint64) (map[common.Address]uint64, error) {
+func (v *VRankModule) getCFS(blockNum uint64) (map[common.Address]uint64, error) {
 	cpMatrix, err := v.getCPMatrix(blockNum)
 	if err != nil {
 		return nil, err
 	}
-	return generateCFSFromCPMatrix(cpMatrix, epochVACount), nil
+	return generateCFSFromCPMatrix(cpMatrix), nil
 }
 
 // lookupPFSSeed returns (start, seed) where seed holds PFS accumulated up to start-1.
@@ -166,9 +168,6 @@ func (v *VRankModule) applyBlocksForCPMatrix(start, end uint64, seed vrank.CPMat
 		if err != nil {
 			return nil, err
 		}
-		if len(cfReport) == 0 {
-			continue
-		}
 
 		roundByte, err := v.RoundReader.Round(header)
 		if err != nil {
@@ -179,6 +178,9 @@ func (v *VRankModule) applyBlocksForCPMatrix(start, end uint64, seed vrank.CPMat
 		if err != nil {
 			return nil, err
 		}
+		// Record the proposer in the CP matrix even when this block has no cfReport,
+		// so ProposerCount() reflects every proposer seen in the epoch.
+		cpMatrix.AddProposer(reporter)
 
 		for _, candidate := range cfReport {
 			if _, ok := cpMatrix[candidate]; !ok {
@@ -191,23 +193,20 @@ func (v *VRankModule) applyBlocksForCPMatrix(start, end uint64, seed vrank.CPMat
 	return cpMatrix, nil
 }
 
-func generateCFSFromCPMatrix(cpMatrix vrank.CPMatrix, epochVACount uint64) map[common.Address]uint64 {
-	F := 0
-	if epochVACount > 0 {
-		F = int((epochVACount - 1) / 3)
-	}
+// generateCFSFromCPMatrix derives F = floor(N/3) from the number of distinct
+// proposers seen in the epoch (CPMatrix.ProposerCount()) and applies the
+// byzantine filter.
+func generateCFSFromCPMatrix(cpMatrix vrank.CPMatrix) map[common.Address]uint64 {
+	F := cpMatrix.ProposerCount() / 3
 	return byzantineFilter(cpMatrix, F)
 }
 
 // byzantineFilter computes CFS scores from pre-aggregated per-candidate failure data.
 //
-// failuresByCandidate[candidate][reporter] is the number of times reporter included
-// candidate in cfReport over the epoch.
-// F is the number of highest reporter totals to discard per candidate (MAX_BYZANTINE_NODES).
-func byzantineFilter(
-	cpMatrix vrank.CPMatrix,
-	F int,
-) map[common.Address]uint64 {
+// cpMatrix[candidate][reporter] is the number of times reporter included candidate
+// in cfReport over the epoch. F is the number of highest reporter totals to discard
+// per candidate, defending against up to F byzantine reporters that may inflate scores.
+func byzantineFilter(cpMatrix vrank.CPMatrix, F int) map[common.Address]uint64 {
 	cfs := make(map[common.Address]uint64)
 	for cand, reporterToScore := range cpMatrix {
 		scores := slices.Collect(maps.Values(reporterToScore))

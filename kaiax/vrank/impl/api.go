@@ -46,8 +46,7 @@ func (api *VRankKaiaAPI) GetPFS(num *rpc.BlockNumber) (map[common.Address]uint64
 // GetCFS returns the Consensus Failure Scores for all validators at the given block number.
 func (api *VRankKaiaAPI) GetCFS(num *rpc.BlockNumber) (map[common.Address]uint64, error) {
 	blockNum := api.resolveBlockNum(num)
-	epochVACount := uint64(1) // TODO-permissionless: get the actual epoch VACount
-	return api.v.GetCFS(blockNum, epochVACount)
+	return api.v.GetCFS(blockNum)
 }
 
 func (api *VRankKaiaAPI) resolveBlockNum(num *rpc.BlockNumber) uint64 {

@@ -51,16 +51,17 @@ pfReport(x)  = [Proposer(x, 0), Proposer(x, 1), ..., Proposer(x, header(x).Round
 
 For each committed header `x` in the range, `header(x).VRank` stores the `cfReport` written by the proposer of block `x`. That report is tallied from candidate responses observed during the consensus of block `x-1`: candidates who did not respond with the correct block hash before the timeout are included.
 
-The raw per-block cfReports are first aggregated into a candidate-proposer (CP) matrix:
+The raw per-block cfReports are first aggregated into a candidate-proposer (CP) matrix. Every block contributes its proposer to the matrix even when its cfReport is empty, so the matrix's reporter set covers all distinct proposers seen in the epoch:
 
 ```
 for each x in [epochStart(N), N]:
     reporter(x) = Proposer(x, header(x).Round)
+    cpMatrix_N.AddProposer(reporter(x))
     for each candidate in cfReport(x):
         cpMatrix_N[candidate][reporter(x)] += 1
 ```
 
-The CP matrix is then passed through a **byzantine filter** before producing the final CFS. The filter discards the top-F reporter totals per candidate, where `F = floor((epochVACount - 1) / 3)`. `epochVACount` is supplied by the caller; the intended source is the epoch snapshot of `ValActive` from AddressBookV2, not the live committee length. This protects against up to F malicious proposers falsely accusing candidates.
+The CP matrix is then passed through a **byzantine filter** before producing the final CFS. The filter discards the top-F reporter totals per candidate, where `F = N - ceil(2N/3) = floor(N/3)` and `N = cpMatrix.ProposerCount()` (the number of distinct proposers in the epoch so far). This protects against up to F malicious proposers falsely accusing candidates. Early in an epoch `N` is small and the filter is correspondingly weak, but CFS is only consulted at epoch-end state transitions.
 
 ```
 scores_N(candidate) = sorted list of cpMatrix_N[candidate][reporter] over all reporters
@@ -112,7 +113,7 @@ Calls `GetPFS(head)` and `getCPMatrix(head)` to warm both in-memory caches (PFS 
 - getters
   - For all getters except `TallyCfReport`, `N` must exist in the header DB.
   - `GetPfReport` and `GetPFS` call `GetProposer` for each block `x` in `[epochStart(N), N]`. In the valset module, `GetProposer` fast-paths committed historical blocks by returning `Chain.Sealer().Author(header)` when `header(x)` exists and its round matches the requested round; otherwise it falls back to block-context lookup.
-  - `GetCFS(N, epochVACount)` calls `GetCandTesting(N)` to seed a fresh CP matrix when there is no cache or checkpoint seed.
+  - `GetCFS(N)` calls `GetCandTesting(N)` to seed a fresh CP matrix when there is no cache or checkpoint seed, and `GetProposer(x, header(x).Round)` for every block `x ∈ [epochStart(N), N]`.
   - `TallyCfReport(N, round)` is called by the proposer of block `N+1` to fill `header(N+1).VRank`; it queries `GetCandTesting(N)` because it validates messages collected for block `N`.
 
 | Function                  | Valset call                                                               | Notes                                                           |
@@ -121,7 +122,7 @@ Calls `GetPFS(head)` and `getCPMatrix(head)` to warm both in-memory caches (PFS 
 | `GetCfReport(N)`          | —                                                                         | —                                                               |
 | `TallyCfReport(N, round)` | `GetCandTesting(N)`                                                       | `N` is the reported block whose responses are being tallied     |
 | `GetPFS(N)`               | `GetProposer(x, r)`; `x ∈ [epochStart(N), N]`, `r ∈ [0, header(x).Round)` | valset fast-paths committed headers via `Chain.Sealer().Author` |
-| `GetCFS(N, epochVACount)` | `GetCandTesting(N)`                                                       | seeds `newCPMatrix` when no cache/checkpoint seed exists        |
+| `GetCFS(N)`               | `GetCandTesting(N)`                                                       | seeds `newCPMatrix` when no cache/checkpoint seed exists        |
 |                           | `GetProposer(x, header(x).Round)`; `x ∈ [epochStart(N), N]`               | reporter lookup per committed header                            |
 
 - handlers
@@ -197,6 +198,4 @@ All getters return `ErrNotPermissionless` if the queried block is before the per
 - `GetCfReport(N)`: Returns the raw cfReport committed in `header(N).VRank`.
 - `TallyCfReport(N, round)`: Computes the cfReport for block N at the given round from the in-memory collector, for use by the proposer of block N+1.
 - `GetPFS(N)`: Returns the cumulative PFS map over `[epochStart(N), N]`.
-- `GetCFS(N, epochVACount)`: Returns the cumulative CFS map over `[epochStart(N), N]`.
-
-The JSON-RPC wrapper currently resolves `epochVACount` to `1` as a temporary placeholder until the real epoch snapshot source is wired.
+- `GetCFS(N)`: Returns the cumulative CFS map over `[epochStart(N), N]`. The byzantine-filter threshold is derived internally from `cpMatrix.ProposerCount()`, the number of distinct proposers seen so far in the epoch.

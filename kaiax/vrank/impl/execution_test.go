@@ -67,7 +67,7 @@ func TestPostInsertBlock(t *testing.T) {
 			cp:     makeHeaderWithVRank(cp, 0, []common.Address{C1}),
 			cp + 1: makeHeaderWithRound(cp+1, 0),
 		}
-		cn := newCN(t, withHeaders(headers))
+		cn := newCN(t, withHeaders(headers), withProposer(P1))
 
 		// Pre-seed the cache and DB to simulate PostInsertBlock(cp) having already run.
 		cn.VRankModule.pfsCache.Add(cp, map[common.Address]uint64{P1: 1})
@@ -78,7 +78,7 @@ func TestPostInsertBlock(t *testing.T) {
 		)
 		WriteLastCheckpoint(cn.DB, cp)
 
-		// Block cp+1 has no VRank → empty cfReport → GetProposer not called.
+		// Block cp+1 has no VRank → empty cfReport.
 		block := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(int64(cp + 1))})
 		require.NoError(t, cn.VRankModule.PostInsertBlock(block))
 

@@ -54,6 +54,23 @@ func (m CPMatrix) Increment(candidate, reporter common.Address) {
 	m[candidate][reporter]++
 }
 
+// AddProposer records that `proposer` produced a block in the current epoch.
+func (m CPMatrix) AddProposer(proposer common.Address) {
+	for candidate := range m {
+		if _, ok := m[candidate][proposer]; !ok {
+			m[candidate][proposer] = 0
+		}
+	}
+}
+
+// ProposerCount returns the number of distinct proposers seen in the current epoch.
+func (m CPMatrix) ProposerCount() int {
+	for _, sub := range m {
+		return len(sub) // any key should be the same
+	}
+	return 0
+}
+
 const (
 	VRankPreprepareMsg = 0x17
 	VRankCandidateMsg  = 0x18

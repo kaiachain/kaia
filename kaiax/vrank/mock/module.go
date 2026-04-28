@@ -39,18 +39,18 @@ func (m *MockVRankModule) EXPECT() *MockVRankModuleMockRecorder {
 }
 
 // GetCFS mocks base method.
-func (m *MockVRankModule) GetCFS(arg0, arg1 uint64) (map[common.Address]uint64, error) {
+func (m *MockVRankModule) GetCFS(arg0 uint64) (map[common.Address]uint64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCFS", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetCFS", arg0)
 	ret0, _ := ret[0].(map[common.Address]uint64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetCFS indicates an expected call of GetCFS.
-func (mr *MockVRankModuleMockRecorder) GetCFS(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockVRankModuleMockRecorder) GetCFS(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCFS", reflect.TypeOf((*MockVRankModule)(nil).GetCFS), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCFS", reflect.TypeOf((*MockVRankModule)(nil).GetCFS), arg0)
 }
 
 // GetPFS mocks base method.
