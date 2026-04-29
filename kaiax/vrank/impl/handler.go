@@ -145,8 +145,8 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if err != nil {
 		return err
 	}
-	headNum := v.Chain.CurrentHeader().Number
-	blsPub, err := v.Randao.GetBlsPubkey(sender, headNum)
+	blsNum := big.NewInt(0).Add(v.Chain.CurrentHeader().Number, big.NewInt(1)) // head + 1
+	blsPub, err := v.Randao.GetBlsPubkey(sender, blsNum)
 	if err != nil {
 		return fmt.Errorf("%w: %v", vrank.ErrInvalidCandidateBlsSig, err)
 	}
