@@ -99,8 +99,8 @@ func (v *ValsetModule) applyAllTransitions(
 	slotLimitsFn func(n uint64) (uint64, uint64, error),
 ) (valset.NodeStateMap, uint64, error) {
 	var (
-		num       = header.Number.Uint64() + 1
-		pset      = v.GovModule.GetParamSet(num)
+		nextNum   = header.Number.Uint64() + 1
+		pset      = v.GovModule.GetParamSet(nextNum)
 		minStake  = pset.MinimumStake.Uint64()
 		blockTime = time.Unix(header.Time.Int64(), 0)
 
@@ -110,7 +110,7 @@ func (v *ValsetModule) applyAllTransitions(
 	)
 
 	newValidators := res.Validators
-	if v.isVrankEpoch(num) {
+	if v.isVrankEpoch(nextNum) {
 		newValidators = v.getEpochTransition(minStake, newValidators, res.IdleTimeout, int(res.MaxValActivePausedCount), blockTime, header.Number.Uint64(), res.CfsThreshold, res.EpochVACount)
 		// Recompute slot limits from new epochVACount(VA count after epoch, before violation).
 		// This epochVACountdefines the epoch's canonical slot budget and is stored in the contract.
