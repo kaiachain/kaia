@@ -139,10 +139,10 @@ func (v *ValsetModule) getNodeStates(num uint64) (valset.NodeStateMap, error) {
 	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
 		return nil, errors.New("permissionless fork is not enabled")
 	}
-	var nodes valset.NodeStateMap
 	if cached, ok := v.nodeStatesCache.Get(num); ok {
-		nodes = cached.(nodeStatesCacheEntry).validators
-	} else if num == 0 {
+		return cached.(nodeStatesCacheEntry).validators, nil
+	}
+	if num == 0 {
 		// Block 0 has no parent; read ABv2 directly from genesis state.
 		genesisHeader := v.Chain.GetHeaderByNumber(0)
 		if genesisHeader == nil {
@@ -156,20 +156,34 @@ func (v *ValsetModule) getNodeStates(num uint64) (valset.NodeStateMap, error) {
 		if err != nil {
 			return nil, err
 		}
-		nodes = res.Validators
-	} else {
-		parentHeader := v.Chain.GetHeaderByNumber(num - 1)
-		if parentHeader == nil {
-			return nil, errParentHeaderNotFound(num)
+		return res.Validators, nil
+	}
+	// Shortcut: if block num is already committed, read NodeStates(num) from S(num) directly.
+	// Initialize(num) writes NodeStates(num) to ABv2 via system tx, so ABv2(num) == NodeStates(num)
+	// after commit — no applyTr needed.
+	// Without this shortcut, getNodeStates(K) reads S(K-1); callers like TallyCfReport(N-1)
+	// invoke getNodeStates(N-1), which would read S(N-2) — absent on a non-archive node
+	// after graceful shutdown/restart (only head state is preserved on Stop).
+	if header := v.Chain.GetHeaderByNumber(num); header != nil {
+		if statedb, err := v.Chain.StateAt(header.Root); err == nil {
+			if res, err := system.ReadNodeStates(statedb, v.Chain, header); err == nil {
+				res.Validators.MarkSuspended(res.SuspendedValidators)
+				v.nodeStatesCache.Add(num, nodeStatesCacheEntry{validators: res.Validators})
+				return res.Validators, nil
+			}
 		}
-		parentStatedb, err := v.Chain.StateAt(parentHeader.Root)
-		if err != nil {
-			return nil, err
-		}
-		nodes, _, err = v.getOrComputeNodeStates(num, parentStatedb)
-		if err != nil {
-			return nil, err
-		}
+	}
+	parentHeader := v.Chain.GetHeaderByNumber(num - 1)
+	if parentHeader == nil {
+		return nil, errParentHeaderNotFound(num)
+	}
+	parentStatedb, err := v.Chain.StateAt(parentHeader.Root)
+	if err != nil {
+		return nil, err
+	}
+	nodes, _, err := v.getOrComputeNodeStates(num, parentStatedb)
+	if err != nil {
+		return nil, err
 	}
 	return nodes, nil
 }
