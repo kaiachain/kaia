@@ -48,9 +48,6 @@ func (m CPMatrix) Clone() CPMatrix {
 }
 
 func (m CPMatrix) Increment(candidate, reporter common.Address) {
-	if m[candidate] == nil {
-		m[candidate] = make(map[common.Address]uint64)
-	}
 	m[candidate][reporter]++
 }
 
