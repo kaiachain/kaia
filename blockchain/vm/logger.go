@@ -118,6 +118,14 @@ type Tracer interface {
 	CaptureFault(env *EVM, pc uint64, op OpCode, gas, cost, ccLeft, ccOpcode uint64, scope *ScopeContext, depth int, err error)
 }
 
+// TxPrestateTracer is implemented by tracers that need to snapshot top-level
+// transaction state before StateTransition preCheck and subsequent execution
+// mutate balances, nonces, or access lists. It is optional so existing tracers
+// do not need to implement it.
+type TxPrestateTracer interface {
+	CaptureTxStartPreCheck(env *EVM, from common.Address, feePayer common.Address, to common.Address, create bool, input []byte, value *big.Int)
+}
+
 // StructLogger is an EVM state logger and implements Tracer.
 //
 // StructLogger can capture state based on the given Log configuration and also keeps
