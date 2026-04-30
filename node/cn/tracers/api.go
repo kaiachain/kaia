@@ -256,10 +256,11 @@ func (api *CommonAPI) blockByNumberAndHash(ctx context.Context, number rpc.Block
 // TraceConfig holds extra parameters to trace functions.
 type TraceConfig struct {
 	*vm.LogConfig
-	Tracer        *string
-	Timeout       *string
-	LoggerTimeout *string
-	Reexec        *uint64
+	Tracer         *string                   `json:"tracer,omitempty"`
+	Timeout        *string                   `json:"timeout,omitempty"`
+	LoggerTimeout  *string                   `json:"loggerTimeout,omitempty"`
+	Reexec         *uint64                   `json:"reexec,omitempty"`
+	StateOverrides *kaiaapi.EthStateOverride `json:"stateOverrides,omitempty"`
 }
 
 // StdTraceConfig holds extra parameters to standard-json trace functions.
@@ -947,6 +948,12 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 	}
 	defer release()
 
+	if config != nil && config.StateOverrides != nil {
+		if err := config.StateOverrides.Apply(statedb); err != nil {
+			return nil, err
+		}
+	}
+
 	// Execute the trace
 	intrinsicGas, err := types.IntrinsicGas(args.InputData(), args.GetAccessList(), nil, args.To == nil, api.backend.ChainConfig().Rules(block.Number()))
 	if err != nil {
@@ -966,7 +973,7 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 	}
 
 	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
-	statedb.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), basefee))
+	statedb.AddBalance(msg.ValidatedSender(), new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.EffectiveGasPrice(block.Header(), api.backend.ChainConfig())))
 
 	txCtx := blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 	blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
