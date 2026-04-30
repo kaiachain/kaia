@@ -148,17 +148,22 @@ func (t TCPDialer) Dial(dest *discover.Node) (net.Conn, error) {
 
 // DialMulti creates TCP connections to the node.
 func (t TCPDialer) DialMulti(dest *discover.Node) ([]net.Conn, error) {
-	var conns []net.Conn
-	if dest.TCPs != nil || len(dest.TCPs) != 0 {
-		conns = make([]net.Conn, 0, len(dest.TCPs))
-		for _, tcp := range dest.TCPs {
-			addr := &net.TCPAddr{IP: dest.IP, Port: int(tcp)}
-			conn, err := t.Dialer.Dial("tcp", addr.String())
-			conns = append(conns, conn)
-			if err != nil {
-				return nil, err
+	if len(dest.TCPs) == 0 {
+		return nil, nil
+	}
+	conns := make([]net.Conn, 0, len(dest.TCPs))
+	for _, tcp := range dest.TCPs {
+		addr := &net.TCPAddr{IP: dest.IP, Port: int(tcp)}
+		conn, err := t.Dialer.Dial("tcp", addr.String())
+		if err != nil {
+			// Close any connections opened so far to avoid leaking sockets
+			// when only some of the ports could be reached.
+			for _, c := range conns {
+				c.Close()
 			}
+			return nil, err
 		}
+		conns = append(conns, conn)
 	}
 	return conns, nil
 }
