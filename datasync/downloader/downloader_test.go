@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -376,8 +377,8 @@ func (dl *downloadTester) CurrentHeader() *types.Header {
 	dl.lock.RLock()
 	defer dl.lock.RUnlock()
 
-	for i := len(dl.ownHashes) - 1; i >= 0; i-- {
-		if header := dl.ownHeaders[dl.ownHashes[i]]; header != nil {
+	for _, dl.ownHashe := range slices.Backward(dl.ownHashes) {
+		if header := dl.ownHeaders[dl.ownHashe]; header != nil {
 			return header
 		}
 	}
@@ -389,8 +390,8 @@ func (dl *downloadTester) CurrentBlock() *types.Block {
 	dl.lock.RLock()
 	defer dl.lock.RUnlock()
 
-	for i := len(dl.ownHashes) - 1; i >= 0; i-- {
-		if block := dl.ownBlocks[dl.ownHashes[i]]; block != nil {
+	for _, dl.ownHashe := range slices.Backward(dl.ownHashes) {
+		if block := dl.ownBlocks[dl.ownHashe]; block != nil {
 			if has, _ := dl.stateDb.HasTrieNode(block.Root().ExtendZero()); has {
 				return block
 			}
@@ -409,8 +410,8 @@ func (dl *downloadTester) CurrentFastBlock() *types.Block {
 	dl.lock.RLock()
 	defer dl.lock.RUnlock()
 
-	for i := len(dl.ownHashes) - 1; i >= 0; i-- {
-		if block := dl.ownBlocks[dl.ownHashes[i]]; block != nil {
+	for _, dl.ownHashe := range slices.Backward(dl.ownHashes) {
+		if block := dl.ownBlocks[dl.ownHashe]; block != nil {
 			return block
 		}
 	}
@@ -539,15 +540,15 @@ func (dl *downloadTester) Rollback(hashes []common.Hash) {
 	dl.lock.Lock()
 	defer dl.lock.Unlock()
 
-	for i := len(hashes) - 1; i >= 0; i-- {
-		if dl.ownHashes[len(dl.ownHashes)-1] == hashes[i] {
+	for _, hashe := range slices.Backward(hashes) {
+		if dl.ownHashes[len(dl.ownHashes)-1] == hashe {
 			dl.ownHashes = dl.ownHashes[:len(dl.ownHashes)-1]
 		}
-		delete(dl.ownChainTd, hashes[i])
-		delete(dl.ownHeaders, hashes[i])
-		delete(dl.ownReceipts, hashes[i])
-		delete(dl.ownBlocks, hashes[i])
-		delete(dl.ownStakingInfo, hashes[i])
+		delete(dl.ownChainTd, hashe)
+		delete(dl.ownHeaders, hashe)
+		delete(dl.ownReceipts, hashe)
+		delete(dl.ownBlocks, hashe)
+		delete(dl.ownStakingInfo, hashe)
 	}
 }
 

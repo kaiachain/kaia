@@ -30,6 +30,7 @@ import (
 	mrand "math/rand"
 	"reflect"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -1246,8 +1247,8 @@ func (bc *BlockChain) Rollback(chain []common.Hash) {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
-	for i := len(chain) - 1; i >= 0; i-- {
-		hash := chain[i]
+	for _, c := range slices.Backward(chain) {
+		hash := c
 
 		currentHeader := bc.CurrentHeader()
 		if currentHeader.Hash() == hash {
@@ -2550,12 +2551,12 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	}
 	// Insert the new chain, taking care of the proper incremental order
 	var addedTxs types.Transactions
-	for i := len(newChain) - 1; i >= 0; i-- {
+	for _, n := range slices.Backward(newChain) {
 		// insert the block in the canonical way, re-writing history
-		bc.insert(newChain[i])
+		bc.insert(n)
 		// write lookup entries for hash based transaction/receipt searches
-		bc.db.WriteTxLookupEntries(newChain[i])
-		addedTxs = append(addedTxs, newChain[i].Transactions()...)
+		bc.db.WriteTxLookupEntries(n)
+		addedTxs = append(addedTxs, n.Transactions()...)
 	}
 	// calculate the difference between deleted and added transactions
 	diff := types.TxDifference(deletedTxs, addedTxs)

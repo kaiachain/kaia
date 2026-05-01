@@ -28,6 +28,7 @@ import (
 	"io"
 	"maps"
 	"math/big"
+	"slices"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -245,8 +246,8 @@ func WriteTrace(writer io.Writer, logs []StructLog) {
 
 		if len(log.Stack) > 0 {
 			fmt.Fprintln(writer, "Stack:")
-			for i := len(log.Stack) - 1; i >= 0; i-- {
-				fmt.Fprintf(writer, "%08d  %x\n", len(log.Stack)-i-1, math.PaddedBigBytes(log.Stack[i], 32))
+			for i, l := range slices.Backward(log.Stack) {
+				fmt.Fprintf(writer, "%08d  %x\n", len(log.Stack)-i-1, math.PaddedBigBytes(l, 32))
 			}
 		}
 		if len(log.Memory) > 0 {

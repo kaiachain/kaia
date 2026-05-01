@@ -2915,10 +2915,10 @@ func (dbm *databaseManager) ReadGovernanceAtNumber(num uint64, epoch uint64) (ui
 		minimum -= epoch
 	}
 	totalIdx, _ := dbm.ReadRecentGovernanceIdx(0)
-	for i := len(totalIdx) - 1; i >= 0; i-- {
-		if totalIdx[i] <= minimum {
-			result, err := dbm.ReadGovernance(totalIdx[i])
-			return totalIdx[i], result, err
+	for _, t := range slices.Backward(totalIdx) {
+		if t <= minimum {
+			result, err := dbm.ReadGovernance(t)
+			return t, result, err
 		}
 	}
 	return 0, nil, errors.New("No governance data found")

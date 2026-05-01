@@ -26,6 +26,7 @@ import (
 	"errors"
 	"maps"
 	"math/big"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -452,9 +453,9 @@ func testRandomArrivalImport(t *testing.T, protocol int) {
 	imported := make(chan *types.Block, len(hashes)-1)
 	tester.fetcher.importedHook = func(block *types.Block) { imported <- block }
 
-	for i := len(hashes) - 1; i >= 0; i-- {
+	for i, hashe := range slices.Backward(hashes) {
 		if i != skip {
-			tester.fetcher.Notify("valid", hashes[i], uint64(len(hashes)-i-1), time.Now().Add(-arriveTimeout), headerFetcher, bodyFetcher)
+			tester.fetcher.Notify("valid", hashe, uint64(len(hashes)-i-1), time.Now().Add(-arriveTimeout), headerFetcher, bodyFetcher)
 			time.Sleep(time.Millisecond)
 		}
 	}
@@ -485,9 +486,9 @@ func testQueueGapFill(t *testing.T, protocol int) {
 	imported := make(chan *types.Block, len(hashes)-1)
 	tester.fetcher.importedHook = func(block *types.Block) { imported <- block }
 
-	for i := len(hashes) - 1; i >= 0; i-- {
+	for i, hashe := range slices.Backward(hashes) {
 		if i != skip {
-			tester.fetcher.Notify("valid", hashes[i], uint64(len(hashes)-i-1), time.Now().Add(-arriveTimeout), headerFetcher, bodyFetcher)
+			tester.fetcher.Notify("valid", hashe, uint64(len(hashes)-i-1), time.Now().Add(-arriveTimeout), headerFetcher, bodyFetcher)
 			time.Sleep(time.Millisecond)
 		}
 	}
