@@ -286,6 +286,8 @@ var FlagGroups = []FlagGroup{
 			RPCGlobalEVMTimeoutFlag,
 			RPCGlobalEthTxFeeCapFlag,
 			RPCConcurrencyLimit,
+			RPCBatchRequestLimit,
+			RPCBatchResponseMaxSize,
 			RPCNonEthCompatibleFlag,
 			RPCExecutionTimeoutFlag,
 			RPCIdleTimeoutFlag,

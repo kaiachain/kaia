@@ -310,6 +310,8 @@ var CommonRPCFlags = []cli.Flag{
 	altsrc.NewStringFlag(GRPCListenAddrFlag),
 	altsrc.NewIntFlag(GRPCPortFlag),
 	altsrc.NewIntFlag(RPCConcurrencyLimit),
+	altsrc.NewIntFlag(RPCBatchRequestLimit),
+	altsrc.NewIntFlag(RPCBatchResponseMaxSize),
 	altsrc.NewStringFlag(WSApiFlag),
 	altsrc.NewStringFlag(WSAllowedOriginsFlag),
 	altsrc.NewIntFlag(WSMaxSubscriptionPerConn),
