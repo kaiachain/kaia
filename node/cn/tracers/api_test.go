@@ -422,6 +422,59 @@ func TestTraceCallPrestateTracerKeepsLogicalPrestate(t *testing.T) {
 	assertTraceBalance(t, prestate[from], big.NewInt(0x42))
 }
 
+func TestTraceCallPrestateTracerDiffModeKeepsLogicalPostBalance(t *testing.T) {
+	t.Parallel()
+
+	from := common.HexToAddress("0x000000000000000000000000000000000000a111")
+	to := common.HexToAddress("0x000000000000000000000000000000000000b111")
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		from: {Balance: big.NewInt(0)},
+	}}
+	api := NewAPI(newTestBackend(t, 1, genesis, nil))
+
+	tracerName := "prestateTracer"
+	gas := hexutil.Uint64(100000)
+	gasPrice := hexutil.Big(*big.NewInt(1))
+	value := hexutil.Big(*big.NewInt(0x1234))
+	overrideBalance := hexutil.Big(*big.NewInt(100000))
+	overrideBalancePtr := &overrideBalance
+	overrides := kaiaapi.EthStateOverride{
+		from: {Balance: &overrideBalancePtr},
+	}
+	config := &TraceConfig{
+		Tracer:         &tracerName,
+		TracerConfig:   json.RawMessage(`{"diffMode":true}`),
+		StateOverrides: &overrides,
+	}
+
+	blockNumber := rpc.LatestBlockNumber
+	result, err := api.TraceCall(context.Background(), kaiaapi.CallArgs{
+		From:     from,
+		To:       &to,
+		Gas:      &gas,
+		GasPrice: &gasPrice,
+		Value:    value,
+	}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, config)
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+	raw, ok := result.(json.RawMessage)
+	if !assert.True(t, ok, "expected json.RawMessage result, got %T", result) {
+		return
+	}
+
+	var diff struct {
+		Pre  map[common.Address]tracedPrestateAccount `json:"pre"`
+		Post map[common.Address]tracedPrestateAccount `json:"post"`
+	}
+	assert.NoError(t, json.Unmarshal(raw, &diff))
+
+	assertTraceBalance(t, diff.Pre[from], (*big.Int)(&overrideBalance))
+	wantPost := new(big.Int).Sub((*big.Int)(&overrideBalance), (*big.Int)(&value))
+	assertTraceBalance(t, diff.Post[from], wantPost)
+}
+
 func TestTraceCallPrestateTracerDiffModeCreate(t *testing.T) {
 	t.Parallel()
 

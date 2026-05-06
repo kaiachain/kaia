@@ -73,6 +73,9 @@ type PrestateTracer struct {
 
 	synthAddr   common.Address
 	synthAmount *big.Int
+	synthPrice  *big.Int
+	synthRefund *big.Int
+	synthFee    *big.Int
 
 	interrupt atomic.Bool
 	reason    error
@@ -97,10 +100,13 @@ func NewPrestateTracer(cfg json.RawMessage) (*PrestateTracer, error) {
 // SetSyntheticBalance records balance that debug_traceCall added only to make
 // simulation executable. The tracer subtracts it from prestate snapshots so the
 // output reflects the state selected by the caller plus stateOverrides.
-func (t *PrestateTracer) SetSyntheticBalance(addr common.Address, amount *big.Int) {
+func (t *PrestateTracer) SetSyntheticBalance(addr common.Address, amount *big.Int, gasPrice *big.Int) {
 	t.synthAddr = addr
 	if amount != nil {
 		t.synthAmount = new(big.Int).Set(amount)
+	}
+	if gasPrice != nil {
+		t.synthPrice = new(big.Int).Set(gasPrice)
 	}
 }
 
@@ -120,6 +126,7 @@ func (t *PrestateTracer) CaptureTxEnd(restGas uint64) {
 	if t.env == nil {
 		return
 	}
+	t.setSyntheticGasUsage(restGas)
 	if !t.config.DiffMode {
 		for addr := range t.created {
 			if acc, ok := t.pre[addr]; ok && acc.empty() {
@@ -232,7 +239,7 @@ func (t *PrestateTracer) processDiffState() {
 
 		modified := false
 		postAcc := &PrestateAccount{}
-		newBalance := t.env.StateDB.GetBalance(addr)
+		newBalance := t.adjustPostBalance(addr, t.env.StateDB.GetBalance(addr))
 		newNonce := t.env.StateDB.GetNonce(addr)
 		newCode := t.env.StateDB.GetCode(addr)
 
@@ -294,10 +301,7 @@ func (t *PrestateTracer) lookupAccount(addr common.Address) {
 	if _, ok := t.pre[addr]; ok {
 		return
 	}
-	balance := new(big.Int).Set(t.env.StateDB.GetBalance(addr))
-	if t.synthAmount != nil && addr == t.synthAddr {
-		balance.Sub(balance, t.synthAmount)
-	}
+	balance := t.adjustPreBalance(addr, t.env.StateDB.GetBalance(addr))
 	acc := &PrestateAccount{
 		Balance: balance,
 		Nonce:   t.env.StateDB.GetNonce(addr),
@@ -312,6 +316,48 @@ func (t *PrestateTracer) lookupAccount(addr common.Address) {
 		}
 	}
 	t.pre[addr] = acc
+}
+
+func (t *PrestateTracer) setSyntheticGasUsage(restGas uint64) {
+	if t.synthAmount == nil || t.synthPrice == nil {
+		return
+	}
+	t.synthRefund = new(big.Int).Mul(new(big.Int).SetUint64(restGas), t.synthPrice)
+	t.synthFee = new(big.Int).Sub(new(big.Int).Set(t.synthAmount), t.synthRefund)
+	if t.synthFee.Sign() < 0 {
+		t.synthFee.SetInt64(0)
+	}
+}
+
+func (t *PrestateTracer) adjustPreBalance(addr common.Address, stateBalance *big.Int) *big.Int {
+	balance := new(big.Int).Set(stateBalance)
+	if t.synthAmount != nil && addr == t.synthAddr {
+		balance.Sub(balance, t.synthAmount)
+	}
+	return balance
+}
+
+func (t *PrestateTracer) adjustPostBalance(addr common.Address, stateBalance *big.Int) *big.Int {
+	balance := new(big.Int).Set(stateBalance)
+	if t.synthRefund != nil && addr == t.synthAddr {
+		balance.Sub(balance, t.synthRefund)
+	}
+	if t.synthFee != nil {
+		if recipient, ok := t.syntheticFeeRecipient(); ok && addr == recipient {
+			balance.Sub(balance, t.synthFee)
+		}
+	}
+	return balance
+}
+
+func (t *PrestateTracer) syntheticFeeRecipient() (common.Address, bool) {
+	if t.env.ChainConfig().Governance != nil && t.env.ChainConfig().Governance.DeferredTxFee() {
+		return common.Address{}, false
+	}
+	if t.env.ChainConfig().Rules(t.env.Context.BlockNumber).IsMagma {
+		return t.env.Context.Rewardbase, true
+	}
+	return t.env.Context.Coinbase, true
 }
 
 func (t *PrestateTracer) lookupStorage(addr common.Address, key common.Hash) {

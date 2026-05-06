@@ -266,8 +266,9 @@ type TraceConfig struct {
 }
 
 type traceSyntheticBalance struct {
-	addr   common.Address
-	amount *big.Int
+	addr     common.Address
+	amount   *big.Int
+	gasPrice *big.Int
 }
 
 // StdTraceConfig holds extra parameters to standard-json trace functions.
@@ -980,13 +981,14 @@ func (api *CommonAPI) TraceCall(ctx context.Context, args kaiaapi.CallArgs, bloc
 	}
 
 	// Add gas fee to sender for estimating gasLimit/computing cost or calling a function by insufficient balance sender.
-	traceCallTopUp := new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.EffectiveGasPrice(block.Header(), api.backend.ChainConfig()))
+	traceCallGasPrice := msg.EffectiveGasPrice(block.Header(), api.backend.ChainConfig())
+	traceCallTopUp := new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), traceCallGasPrice)
 	statedb.AddBalance(msg.ValidatedSender(), traceCallTopUp)
 
 	txCtx := blockchain.NewEVMTxContext(msg, block.Header(), api.backend.ChainConfig())
 	blockCtx := blockchain.NewEVMBlockContext(block.Header(), newChainContext(ctx, api.backend), nil)
 
-	return api.traceTx(ctx, msg, blockCtx, txCtx, statedb, config, traceSyntheticBalance{addr: msg.ValidatedSender(), amount: traceCallTopUp})
+	return api.traceTx(ctx, msg, blockCtx, txCtx, statedb, config, traceSyntheticBalance{addr: msg.ValidatedSender(), amount: traceCallTopUp, gasPrice: traceCallGasPrice})
 }
 
 // traceTx configures a new tracer according to the provided configuration, and
@@ -1023,7 +1025,7 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 		if len(syntheticBalance) > 0 {
 			if prestateTracer, ok := tracer.(*vm.PrestateTracer); ok {
 				synthetic := syntheticBalance[0]
-				prestateTracer.SetSyntheticBalance(synthetic.addr, synthetic.amount)
+				prestateTracer.SetSyntheticBalance(synthetic.addr, synthetic.amount, synthetic.gasPrice)
 			}
 		}
 		// Handle timeouts and RPC cancellations
