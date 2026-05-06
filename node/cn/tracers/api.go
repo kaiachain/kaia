@@ -1011,7 +1011,9 @@ func (api *CommonAPI) traceTx(ctx context.Context, message blockchain.Message, b
 		}
 
 		if *config.Tracer == "fastCallTracer" || *config.Tracer == "callTracer" {
-			tracer = vm.NewCallTracer()
+			if tracer, err = vm.NewCallTracerWithConfig(config.TracerConfig); err != nil {
+				return nil, err
+			}
 		} else if *config.Tracer == "prestateTracer" {
 			if tracer, err = vm.NewPrestateTracer(config.TracerConfig); err != nil {
 				return nil, err

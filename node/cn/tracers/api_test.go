@@ -580,6 +580,57 @@ func TestTraceCallPrestateTracerDiffModePrunesUnchangedStorage(t *testing.T) {
 	assert.Equal(t, common.BigToHash(big.NewInt(1)), diff.Post[contract].Storage[common.BigToHash(big.NewInt(1))])
 }
 
+func TestTraceCallCallTracerWithLog(t *testing.T) {
+	t.Parallel()
+
+	from := common.HexToAddress("0x000000000000000000000000000000000000a222")
+	contract := common.HexToAddress("0x000000000000000000000000000000000000b222")
+	genesis := &blockchain.Genesis{Alloc: blockchain.GenesisAlloc{
+		from: {Balance: big.NewInt(0)},
+	}}
+	api := NewAPI(newTestBackend(t, 1, genesis, nil))
+
+	tracerName := "callTracer"
+	gas := hexutil.Uint64(100000)
+	gasPrice := hexutil.Big(*big.NewInt(0))
+	topic := common.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111")
+	code := hexutil.Bytes(common.FromHex("0x7f111111111111111111111111111111111111111111111111111111111111111160006000a100"))
+	overrides := kaiaapi.EthStateOverride{
+		contract: {Code: &code},
+	}
+	config := &TraceConfig{
+		Tracer:         &tracerName,
+		TracerConfig:   json.RawMessage(`{"withLog":true}`),
+		StateOverrides: &overrides,
+	}
+
+	blockNumber := rpc.LatestBlockNumber
+	result, err := api.TraceCall(context.Background(), kaiaapi.CallArgs{
+		From:     from,
+		To:       &contract,
+		Gas:      &gas,
+		GasPrice: &gasPrice,
+	}, rpc.BlockNumberOrHash{BlockNumber: &blockNumber}, config)
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+	frame, ok := result.(vm.CallFrame)
+	if !assert.True(t, ok, "expected vm.CallFrame result, got %T", result) {
+		return
+	}
+	if assert.Len(t, frame.Logs, 1) {
+		assert.Equal(t, contract, frame.Logs[0].Address)
+		assert.Equal(t, []common.Hash{topic}, frame.Logs[0].Topics)
+		assert.Empty(t, frame.Logs[0].Data)
+		assert.Equal(t, hexutil.Uint(0), frame.Logs[0].Index)
+		assert.Equal(t, hexutil.Uint(0), frame.Logs[0].Position)
+	}
+	encoded, err := json.Marshal(frame)
+	assert.NoError(t, err)
+	assert.Contains(t, string(encoded), `"logs"`)
+}
+
 func TestTraceTransaction(t *testing.T) {
 	t.Parallel()
 
