@@ -27,8 +27,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	abv2contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/consensus/AddressBookV2"
-	abv2data "github.com/kaiachain/kaia/contracts/contracts/system_contracts/consensus/AddressBookV2/abv2data"
+	abv2contracts "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
+	abv2data "github.com/kaiachain/kaia/contracts/bindings/abv2data"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
