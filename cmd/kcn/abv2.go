@@ -32,7 +32,7 @@ import (
 	"github.com/kaiachain/kaia/client"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	addressbookv2 "github.com/kaiachain/kaia/contracts_permissionless/contracts/AddressBookV2"
+	addressbookv2 "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
