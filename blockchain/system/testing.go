@@ -21,6 +21,7 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/common"
+	abv2data "github.com/kaiachain/kaia/contracts/bindings/abv2data"
 	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
@@ -70,7 +71,7 @@ func MakeTestPermissionlessConfig(n int) (*AllocPermissionlessConfig, []*ecdsa.P
 		NodeIds:   nodeIds,
 		NodeInfos: nodeInfos,
 		StakeAmts: stakeAmts,
-		DataConfig: addressbookv2contract.IABv2DataContractInitData{
+		DataConfig: abv2data.IABv2DataContractInitData{
 			InitialOwner:            owner,
 			InitialSuspender:        owner,
 			InitialConfigurator:     owner,

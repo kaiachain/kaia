@@ -27,13 +27,13 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/blockchain/vm/runtime"
 	"github.com/kaiachain/kaia/common"
-	registrycontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip149"
-	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
 	abv2data "github.com/kaiachain/kaia/contracts/bindings/abv2data"
+	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
+	beaconcontract "github.com/kaiachain/kaia/contracts/bindings/beacon"
 	cnstakingv4 "github.com/kaiachain/kaia/contracts/bindings/cnstakingv4"
 	cnstakingv4factory "github.com/kaiachain/kaia/contracts/bindings/cnstakingv4factory"
-	beaconcontract "github.com/kaiachain/kaia/contracts/bindings/beacon"
 	pdcontract "github.com/kaiachain/kaia/contracts/bindings/publicdelegation"
+	registrycontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip149"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -48,7 +48,7 @@ type AllocPermissionlessConfig struct {
 	NodeIds            []common.Address                                // Validator node IDs
 	NodeInfos          []addressbookv2contract.NodeInfo                // Validator info — caller fills all fields except StakingContract (set after deployCnStaking)
 	StakeAmts          []*big.Int                                      // Stake amounts per validator
-	DataConfig         addressbookv2contract.IABv2DataContractInitData // ABv2DataContract constructor data
+	DataConfig         abv2data.IABv2DataContractInitData // ABv2DataContract constructor data
 	EpochBlockInterval int64                                           // Blocks per epoch baked into ABv2 bytecode. 0 = use DefaultEpochBlockInterval.
 }
 
@@ -347,7 +347,7 @@ func patchRegistryActivations(statedb *state.StateDB, names ...string) {
 	}
 }
 
-// convertToABv2DataInitData converts addressbookv2contract types to abv2data types.
+// convertToABv2DataInitData merges node infos into the ABv2DataContract constructor data.
 func convertToABv2DataInitData(config *AllocPermissionlessConfig) abv2data.IABv2DataContractInitData {
 	infos := make([]abv2data.NodeInfo, len(config.NodeInfos))
 	for i, info := range config.NodeInfos {
@@ -366,24 +366,10 @@ func convertToABv2DataInitData(config *AllocPermissionlessConfig) abv2data.IABv2
 			State:    info.State,
 		}
 	}
-	d := config.DataConfig
-	return abv2data.IABv2DataContractInitData{
-		InitialOwner:            d.InitialOwner,
-		InitialSuspender:        d.InitialSuspender,
-		InitialConfigurator:     d.InitialConfigurator,
-		PfsThreshold:            d.PfsThreshold,
-		CfsThreshold:            d.CfsThreshold,
-		PauseTimeout:            d.PauseTimeout,
-		IdleTimeout:             d.IdleTimeout,
-		MaxNodeCount:            d.MaxNodeCount,
-		MaxValActivePausedCount: d.MaxValActivePausedCount,
-		MaxCandReadyCount:       d.MaxCandReadyCount,
-		KefAddress:              d.KefAddress,
-		KifAddress:              d.KifAddress,
-		KpfAddress:              d.KpfAddress,
-		NodeIds:                 config.NodeIds,
-		Infos:                   infos,
-	}
+	result := config.DataConfig
+	result.NodeIds = config.NodeIds
+	result.Infos = infos
+	return result
 }
 
 // evmCreate deploys a contract using the EVM runtime and returns the deployed address.

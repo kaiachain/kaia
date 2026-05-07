@@ -41,6 +41,7 @@ import (
 	"github.com/kaiachain/kaia/cmd/homi/docker/service"
 	"github.com/kaiachain/kaia/cmd/homi/genesis"
 	"github.com/kaiachain/kaia/common"
+	abv2data "github.com/kaiachain/kaia/contracts/bindings/abv2data"
 	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/auction"
@@ -592,7 +593,7 @@ func allocatePermissionless(ctx *cli.Context, genesisJson *blockchain.Genesis, v
 		NodeInfos:          nodeInfos,
 		StakeAmts:          stakeAmts,
 		EpochBlockInterval: int64(ctx.Uint64(vrankEpochFlag.Name)),
-		DataConfig: addressbookv2contract.IABv2DataContractInitData{
+		DataConfig: abv2data.IABv2DataContractInitData{
 			InitialOwner:            owner,
 			InitialSuspender:        owner,
 			InitialConfigurator:     owner,

@@ -23,6 +23,10 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
+	"github.com/kaiachain/kaia/contracts/bindings/multicall"
+	permlessproxycontract "github.com/kaiachain/kaia/contracts/bindings/proxy"
+	permlesstestcontract "github.com/kaiachain/kaia/contracts/bindings/testing"
 	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/factory"
 	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/router"
 	kip113contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip113"
@@ -31,10 +35,6 @@ import (
 	proxycontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/proxy"
 	"github.com/kaiachain/kaia/contracts/contracts/testing/reward"
 	testcontract "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
-	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
-	permlessproxycontract "github.com/kaiachain/kaia/contracts/bindings/proxy"
-	"github.com/kaiachain/kaia/contracts/bindings/multicall"
-	permlesstestcontract "github.com/kaiachain/kaia/contracts/bindings/testing"
 	"github.com/kaiachain/kaia/log"
 )
 
