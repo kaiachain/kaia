@@ -24,17 +24,17 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
+	kip113contract "github.com/kaiachain/kaia/contracts/bindings/kip113"
+	kip149contract "github.com/kaiachain/kaia/contracts/bindings/kip149"
+	misccontract "github.com/kaiachain/kaia/contracts/bindings/misc"
 	"github.com/kaiachain/kaia/contracts/bindings/multicall"
-	permlessproxycontract "github.com/kaiachain/kaia/contracts/bindings/proxy"
+	proxyv4contract "github.com/kaiachain/kaia/contracts/bindings/proxyv4"
+	proxyv5contract "github.com/kaiachain/kaia/contracts/bindings/proxyv5"
 	permlesstestcontract "github.com/kaiachain/kaia/contracts/bindings/testing"
-	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/factory"
-	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/contracts/libs/uniswap/router"
-	kip113contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip113"
-	kip149contract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip149"
-	misccontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/misc"
-	proxycontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/proxy"
-	"github.com/kaiachain/kaia/contracts/contracts/testing/reward"
-	testcontract "github.com/kaiachain/kaia/contracts/contracts/testing/system_contracts"
+	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/libs/uniswap/factory"
+	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/libs/uniswap/router"
+	"github.com/kaiachain/kaia/contracts/testing/reward"
+	testcontract "github.com/kaiachain/kaia/contracts/testing/system_contracts"
 	"github.com/kaiachain/kaia/log"
 )
 
@@ -86,8 +86,8 @@ var (
 	Kip113MockCode            = hexutil.MustDecode("0x" + testcontract.KIP113MockBinRuntime)
 	AuctionEntryPointMockCode = hexutil.MustDecode("0x" + testcontract.AuctionEntryPointMockBinRuntime)
 
-	ERC1967ProxyCode   = hexutil.MustDecode("0x" + proxycontract.ERC1967ProxyBinRuntime)
-	ERC1967ProxyV5Code = hexutil.MustDecode("0x" + permlessproxycontract.ERC1967ProxyBinRuntime)
+	ERC1967ProxyCode   = hexutil.MustDecode("0x" + proxyv4contract.ERC1967ProxyBinRuntime)
+	ERC1967ProxyV5Code = hexutil.MustDecode("0x" + proxyv5contract.ERC1967ProxyBinRuntime)
 
 	AddressBookMockTwoCNCode = hexutil.MustDecode("0x" + reward.AddressBookMockTwoCNBinRuntime)
 	Kip113MockThreeCNCode    = hexutil.MustDecode("0x" + testcontract.KIP113MockThreeCNBinRuntime)

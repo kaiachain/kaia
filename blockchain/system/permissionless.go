@@ -32,8 +32,8 @@ import (
 	beaconcontract "github.com/kaiachain/kaia/contracts/bindings/beacon"
 	cnstakingv4 "github.com/kaiachain/kaia/contracts/bindings/cnstakingv4"
 	cnstakingv4factory "github.com/kaiachain/kaia/contracts/bindings/cnstakingv4factory"
+	registrycontract "github.com/kaiachain/kaia/contracts/bindings/kip149"
 	pdcontract "github.com/kaiachain/kaia/contracts/bindings/publicdelegation"
-	registrycontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip149"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -44,12 +44,12 @@ const DefaultEpochBlockInterval = int64(params.DefaultVRankEpoch)
 
 // AllocPermissionlessConfig holds parameters for genesis permissionless allocation.
 type AllocPermissionlessConfig struct {
-	Owner              common.Address                                  // Owner of beacons, Registry registrant
-	NodeIds            []common.Address                                // Validator node IDs
-	NodeInfos          []addressbookv2contract.NodeInfo                // Validator info — caller fills all fields except StakingContract (set after deployCnStaking)
-	StakeAmts          []*big.Int                                      // Stake amounts per validator
+	Owner              common.Address                     // Owner of beacons, Registry registrant
+	NodeIds            []common.Address                   // Validator node IDs
+	NodeInfos          []addressbookv2contract.NodeInfo   // Validator info — caller fills all fields except StakingContract (set after deployCnStaking)
+	StakeAmts          []*big.Int                         // Stake amounts per validator
 	DataConfig         abv2data.IABv2DataContractInitData // ABv2DataContract constructor data
-	EpochBlockInterval int64                                           // Blocks per epoch baked into ABv2 bytecode. 0 = use DefaultEpochBlockInterval.
+	EpochBlockInterval int64                              // Blocks per epoch baked into ABv2 bytecode. 0 = use DefaultEpochBlockInterval.
 }
 
 // allocPermissionlessResult holds intermediate deployed addresses passed between internal steps.
