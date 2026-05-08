@@ -16,7 +16,7 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 // Modified and improved for the Kaia development.
 
-package reward
+package reward_test
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
+	"github.com/kaiachain/kaia/contracts/bindings/testing/reward"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +49,7 @@ func TestSmartContract(t *testing.T) {
 	defer sim.Close()
 
 	// Deploy a token contract on the simulated blockchain
-	_, _, reward, err := DeployKlaytnReward(auth, sim)
+	_, _, reward, err := reward.DeployKlaytnReward(auth, sim)
 	if err != nil {
 		log.Fatalf("Failed to deploy new token contract: %v", err)
 	}
