@@ -460,6 +460,14 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 		rpc.ConcurrencyLimit = ctx.Int(RPCConcurrencyLimit.Name)
 		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
 	}
+	if ctx.IsSet(RPCBatchRequestLimit.Name) {
+		rpc.BatchRequestLimit = ctx.Int(RPCBatchRequestLimit.Name)
+		logger.Info("Set the batch request limit of RPC server", "limit", rpc.BatchRequestLimit)
+	}
+	if ctx.IsSet(RPCBatchResponseMaxSize.Name) {
+		rpc.BatchResponseMaxSize = ctx.Int(RPCBatchResponseMaxSize.Name)
+		logger.Info("Set the batch response size limit of RPC server", "limit", rpc.BatchResponseMaxSize)
+	}
 	if ctx.IsSet(RPCReadTimeout.Name) {
 		cfg.HTTPTimeouts.ReadTimeout = time.Duration(ctx.Int(RPCReadTimeout.Name)) * time.Second
 	}

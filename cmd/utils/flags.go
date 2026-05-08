@@ -889,6 +889,22 @@ var (
 		EnvVars:  []string{"KLAYTN_RPC_CONCURRENCYLIMIT", "KAIA_RPC_CONCURRENCYLIMIT"},
 		Category: "API AND CONSOLE",
 	}
+	RPCBatchRequestLimit = &cli.IntFlag{
+		Name:     "rpc.batch-request-limit",
+		Usage:    "Maximum number of items in a JSON-RPC batch request (0 disables the check)",
+		Value:    rpc.BatchRequestLimit,
+		Aliases:  []string{"http-rpc.batch-request-limit"},
+		EnvVars:  []string{"KLAYTN_RPC_BATCH_REQUEST_LIMIT", "KAIA_RPC_BATCH_REQUEST_LIMIT"},
+		Category: "API AND CONSOLE",
+	}
+	RPCBatchResponseMaxSize = &cli.IntFlag{
+		Name:     "rpc.batch-response-max-size",
+		Usage:    "Maximum total response bytes per JSON-RPC batch (0 disables the check)",
+		Value:    rpc.BatchResponseMaxSize,
+		Aliases:  []string{"http-rpc.batch-response-max-size"},
+		EnvVars:  []string{"KLAYTN_RPC_BATCH_RESPONSE_MAX_SIZE", "KAIA_RPC_BATCH_RESPONSE_MAX_SIZE"},
+		Category: "API AND CONSOLE",
+	}
 	RPCNonEthCompatibleFlag = &cli.BoolFlag{
 		Name:     "rpc.eth.noncompatible",
 		Usage:    "Disables the eth namespace API return formatting for compatibility",
