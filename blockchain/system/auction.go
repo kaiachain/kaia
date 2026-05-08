@@ -22,7 +22,7 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/common"
-	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/auction"
+	contracts "github.com/kaiachain/kaia/contracts/bindings/auction"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/mitchellh/mapstructure"
 )

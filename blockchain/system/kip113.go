@@ -28,7 +28,7 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/common"
-	contracts "github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip113"
+	contracts "github.com/kaiachain/kaia/contracts/bindings/kip113"
 	"github.com/kaiachain/kaia/crypto/bls"
 )
 
@@ -152,7 +152,7 @@ func AllocKip113Logic() map[common.Hash]common.Hash {
 }
 
 func ReadKip113All(backend bind.ContractCaller, contractAddr common.Address, num *big.Int) (BlsPublicKeyInfos, error) {
-	caller, err := contracts.NewIKIP113Caller(contractAddr, backend)
+	caller, err := contracts.NewSimpleBlsRegistryCaller(contractAddr, backend)
 	if err != nil {
 		return nil, err
 	}

@@ -32,7 +32,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/rebalance"
+	"github.com/kaiachain/kaia/contracts/bindings/rebalance"
 )
 
 type RebalanceCaller interface {
