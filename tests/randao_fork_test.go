@@ -31,7 +31,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	kip149contract "github.com/kaiachain/kaia/contracts/bindings/kip149"
 	proxycontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/proxy"
-	testcontract "github.com/kaiachain/kaia/contracts/testing/system_contracts"
+	testcontract "github.com/kaiachain/kaia/contracts/bindings/testing/system_contracts"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/log"

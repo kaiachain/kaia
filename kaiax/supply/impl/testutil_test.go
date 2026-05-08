@@ -36,7 +36,7 @@ import (
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	consensus_mock "github.com/kaiachain/kaia/consensus/mocks"
-	"github.com/kaiachain/kaia/contracts/testing/system_contracts"
+	"github.com/kaiachain/kaia/contracts/bindings/testing/system_contracts"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"

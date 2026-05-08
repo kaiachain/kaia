@@ -28,7 +28,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	contracts "github.com/kaiachain/kaia/contracts/testing/system_contracts"
+	contracts "github.com/kaiachain/kaia/contracts/bindings/testing/system_contracts"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"

@@ -31,10 +31,10 @@ import (
 	proxyv4contract "github.com/kaiachain/kaia/contracts/bindings/proxyv4"
 	proxyv5contract "github.com/kaiachain/kaia/contracts/bindings/proxyv5"
 	permlesstestcontract "github.com/kaiachain/kaia/contracts/bindings/testing"
-	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/libs/uniswap/factory"
-	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/libs/uniswap/router"
-	"github.com/kaiachain/kaia/contracts/testing/reward"
-	testcontract "github.com/kaiachain/kaia/contracts/testing/system_contracts"
+	"github.com/kaiachain/kaia/contracts/bindings/testing/reward"
+	testcontract "github.com/kaiachain/kaia/contracts/bindings/testing/system_contracts"
+	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/bindings/uniswap/factory"
+	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/bindings/uniswap/router"
 	"github.com/kaiachain/kaia/log"
 )
 

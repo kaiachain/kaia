@@ -25,7 +25,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	contracts "github.com/kaiachain/kaia/contracts/bindings/kip113"
 	proxycontracts "github.com/kaiachain/kaia/contracts/bindings/proxyv5"
-	testcontracts "github.com/kaiachain/kaia/contracts/testing/system_contracts"
+	testcontracts "github.com/kaiachain/kaia/contracts/bindings/testing/system_contracts"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/log"

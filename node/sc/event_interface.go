@@ -20,7 +20,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	bridgecontract "github.com/kaiachain/kaia/contracts/service_chain/bridge"
+	bridgecontract "github.com/kaiachain/kaia/contracts/bindings/bridge"
 )
 
 type IRequestValueTransferEvent interface {
