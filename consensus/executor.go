@@ -21,6 +21,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/event"
 )
 
@@ -36,6 +37,9 @@ type ExecutionResult struct {
 	UsedGas uint64
 	// Txs contains the executed transactions
 	Txs []*types.Transaction
+	// InternalTxTraces contains the internal transaction traces produced during
+	// execution. Only populated when vm.Config.EnableInternalTxTracing is set.
+	InternalTxTraces []*vm.InternalTxTrace
 	// Block is the finalized block (set after FinalizeState is called)
 	Block *types.Block
 
@@ -43,6 +47,12 @@ type ExecutionResult struct {
 	ExecuteTime  time.Duration // Time spent executing transactions
 	FinalizeTime time.Duration // Time spent finalizing the block
 	SealTime     time.Duration // Time spent in consensus (Seal)
+
+	// ProcessStats timestamps — set by ProcessBlock to mirror
+	// blockchain.ProcessStats so speculative cache can forward them.
+	BeforeApplyTxs time.Time
+	AfterApplyTxs  time.Time
+	AfterFinalize  time.Time
 }
 
 // Transactions returns the executed transactions.
@@ -63,11 +73,11 @@ type Executor interface {
 	// mux is used to post PendingLogsEvent and PendingStateEvent for APIs.
 	Execute(txs *types.TransactionsByPriceAndNonce, mux *event.TypeMux) (*ExecutionResult, error)
 
-	// ExecuteTransactions executes the given transaction list in the provided
+	// ProcessBlock executes the given transaction list in the provided
 	// order without re-sorting. This is the path validators use during
 	// speculative execution of a received pre-prepare: they must replay the
 	// exact order encoded in the proposer's block body.
-	ExecuteTransactions(txs []*types.Transaction) (*ExecutionResult, error)
+	ProcessBlock(txs []*types.Transaction) (*ExecutionResult, error)
 
 	// FinalizeState runs post-transaction state modifications and assembles final block.
 	FinalizeState(result *ExecutionResult) (*types.Block, error)
@@ -75,6 +85,6 @@ type Executor interface {
 	// Clone returns a fresh Executor that shares immutable configuration
 	// (chain, config, signer, node address) but carries its own mutable
 	// execution state. The clone starts uninitialized — the caller must
-	// invoke ResetWithState before Execute/ExecuteTransactions.
+	// invoke ResetWithState before Execute/ProcessBlock.
 	Clone() Executor
 }

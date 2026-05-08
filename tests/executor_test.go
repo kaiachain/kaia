@@ -19,8 +19,11 @@ package tests
 import (
 	"math/big"
 	"testing"
+	"time"
 
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/profile"
 	"github.com/kaiachain/kaia/log"
@@ -39,7 +42,7 @@ func TestDefaultExecutor_Clone(t *testing.T) {
 	require.NoError(t, err)
 	defer bcdata.Shutdown()
 
-	executor := work.NewDefaultExecutor(bcdata.bc.Config(), bcdata.bc, nodeAddr)
+	executor := work.NewDefaultExecutor(bcdata.bc.Config(), bcdata.bc, nodeAddr, vm.Config{})
 
 	// Clone before initialization — clone should also be uninitialized.
 	clone := executor.Clone()
@@ -54,11 +57,12 @@ func TestDefaultExecutor_Clone(t *testing.T) {
 		ParentHash: parent.Hash(),
 		Number:     new(big.Int).Add(parent.Number(), common.Big1),
 		Time:       new(big.Int).Add(parent.Time(), common.Big1),
+		BaseFee:    parent.Header().BaseFee,
 	}
 	require.NoError(t, executor.ResetWithState(parentState, header))
 
-	// Clone should fail ExecuteTransactions because it was never initialized.
-	_, err = clone.ExecuteTransactions(nil)
+	// Clone should fail ProcessBlock because it was never initialized.
+	_, err = clone.ProcessBlock(nil)
 	assert.ErrorIs(t, err, work.ErrExecutorNotInitialized)
 
 	// Initialize clone separately — should succeed independently.
@@ -66,17 +70,17 @@ func TestDefaultExecutor_Clone(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, clone.ResetWithState(cloneState, header))
 
-	result, err := clone.ExecuteTransactions(nil)
+	result, err := clone.ProcessBlock(nil)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0), result.UsedGas)
 }
 
-// TestExecuteTransactions_MatchesInsertChain is the single canonical test for
+// TestProcessBlock_MatchesInsertChain is the single canonical test for
 // speculative execution correctness. It asserts that the speculative pipeline
-// (ExecuteTransactions + FinalizeState) produces identical state root, receipt
+// (ProcessBlock + FinalizeState) produces identical state root, receipt
 // root, bloom, and gas-used as the proposer's MineABlock AND that InsertChain
 // accepts the same block (confirming StateProcessor.Process also agrees).
-func TestExecuteTransactions_MatchesInsertChain(t *testing.T) {
+func TestProcessBlock_MatchesInsertChain(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
 
 	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Magma"], nil)
@@ -117,22 +121,23 @@ func TestExecuteTransactions_MatchesInsertChain(t *testing.T) {
 	require.Equal(t, len(txs), len(block.Transactions()), "all txs should be included")
 
 	// --- 3. Speculative execution (validator path) ---
+	// ProcessBlock delegates to Process() internally, which includes
+	// FinalizeState. Do NOT call FinalizeState separately.
 	parent := bcdata.bc.CurrentBlock()
 	parentState, err := bcdata.bc.PrunableStateAt(parent.Root(), parent.NumberU64())
 	require.NoError(t, err)
 
-	executor := work.NewDefaultExecutor(bcdata.bc.Config(), bcdata.bc, common.Address{})
+	executor := work.NewDefaultExecutor(bcdata.bc.Config(), bcdata.bc, common.Address{}, vm.Config{})
 	require.NoError(t, executor.ResetWithState(parentState, block.Header()))
 
-	specResult, err := executor.ExecuteTransactions(block.Transactions())
-	require.NoError(t, err)
-
-	specBlock, err := executor.FinalizeState(specResult)
+	specResult, err := executor.ProcessBlock(block.Transactions())
 	require.NoError(t, err)
 
 	// --- 4. Compare speculative results with block header ---
-	// State root: the most critical invariant.
-	assert.Equal(t, block.Root(), specBlock.Root(),
+	// State root: the most critical invariant. Process() already called
+	// FinalizeState which computes IntermediateRoot.
+	specRoot := specResult.State.IntermediateRoot(true)
+	assert.Equal(t, block.Root(), specRoot,
 		"state root mismatch between proposer and speculative execution")
 
 	// Receipt root.
@@ -163,4 +168,249 @@ func TestExecuteTransactions_MatchesInsertChain(t *testing.T) {
 	n, err := bcdata.bc.InsertChain(types.Blocks{block})
 	assert.NoError(t, err, "InsertChain should accept the block")
 	assert.Equal(t, 0, n, "InsertChain should process the block at index 0")
+}
+
+// TestInsertChain_SpeculativeCacheHit verifies that InsertChain uses a
+// correctly populated speculative cache, skipping Process().
+func TestInsertChain_SpeculativeCacheHit(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Magma"], nil)
+	require.NoError(t, err)
+	defer bcdata.Shutdown()
+
+	// --- 1. Create and mine a block ---
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).Add(bcdata.bc.CurrentBlock().Header().BaseFee, big.NewInt(1))
+
+	var txs types.Transactions
+	sender := bcdata.privKeys[0]
+	senderAddr := *bcdata.addrs[0]
+	stateDb, err := bcdata.bc.State()
+	require.NoError(t, err)
+	nonce := stateDb.GetNonce(senderAddr)
+
+	for i := range 3 {
+		tx := types.NewTransaction(nonce, *bcdata.addrs[1+i%4], new(big.Int).SetUint64(1000), params.TxGas, gasPrice, nil)
+		signedTx, err := types.SignTx(tx, signer, sender)
+		require.NoError(t, err)
+		txs = append(txs, signedTx)
+		nonce++
+	}
+
+	prof := profile.NewProfiler()
+	_, block, _, err := bcdata.MineABlock(txs, signer, prof, nil)
+	require.NoError(t, err)
+
+	// --- 2. Speculatively execute (validator path) ---
+	// Uses the same ProcessBlock workflow that KBFT-2 will use.
+	// ProcessBlock delegates to Process() internally.
+	parent := bcdata.bc.CurrentBlock()
+	parentState, err := bcdata.bc.PrunableStateAt(parent.Root(), parent.NumberU64())
+	require.NoError(t, err)
+
+	executor := work.NewDefaultExecutor(bcdata.bc.Config(), bcdata.bc, common.Address{}, vm.Config{})
+	require.NoError(t, executor.ResetWithState(parentState, block.Header()))
+
+	specResult, err := executor.ProcessBlock(block.Transactions())
+	require.NoError(t, err)
+
+	// --- 3. Populate the speculative cache ---
+	hitsBefore := bcdata.bc.SpeculativeCache().Hits()
+	entry := bcdata.bc.SpeculativeCache().Reserve(block.Hash())
+	entry.Complete(&blockchain.SpeculativeResult{
+		State:            specResult.State,
+		Receipts:         specResult.Receipts,
+		Logs:             specResult.Logs,
+		UsedGas:          specResult.UsedGas,
+		InternalTxTraces: specResult.InternalTxTraces,
+		ProcessStats: blockchain.ProcessStats{
+			BeforeApplyTxs: specResult.BeforeApplyTxs,
+			AfterApplyTxs:  specResult.AfterApplyTxs,
+			AfterFinalize:  specResult.AfterFinalize,
+		},
+		Bloom:       types.CreateBloom(specResult.Receipts),
+		ReceiptHash: types.DeriveReceiptsRoot(specResult.Receipts, block.Number()),
+	}, nil)
+
+	// --- 4. InsertChain should use the cached result ---
+	n, err := bcdata.bc.InsertChain(types.Blocks{block})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, n)
+	assert.Equal(t, hitsBefore+1, bcdata.bc.SpeculativeCache().Hits(), "cache should have been hit")
+}
+
+// TestInsertChain_SpeculativeCacheMiss verifies that InsertChain falls through
+// to synchronous execution when the cache is empty.
+func TestInsertChain_SpeculativeCacheMiss(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Magma"], nil)
+	require.NoError(t, err)
+	defer bcdata.Shutdown()
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).Add(bcdata.bc.CurrentBlock().Header().BaseFee, big.NewInt(1))
+
+	sender := bcdata.privKeys[0]
+	senderAddr := *bcdata.addrs[0]
+	stateDb, err := bcdata.bc.State()
+	require.NoError(t, err)
+	nonce := stateDb.GetNonce(senderAddr)
+
+	tx := types.NewTransaction(nonce, *bcdata.addrs[1], new(big.Int).SetUint64(1000), params.TxGas, gasPrice, nil)
+	signedTx, err := types.SignTx(tx, signer, sender)
+	require.NoError(t, err)
+
+	prof := profile.NewProfiler()
+	_, block, _, err := bcdata.MineABlock(types.Transactions{signedTx}, signer, prof, nil)
+	require.NoError(t, err)
+
+	// Cache is empty — InsertChain must succeed via sync path.
+	n, err := bcdata.bc.InsertChain(types.Blocks{block})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, n)
+	assert.Equal(t, uint64(0), bcdata.bc.SpeculativeCache().Hits())
+}
+
+// TestInsertChain_SpeculativeCacheHashMismatch verifies that a cache entry
+// for a different block hash is ignored and InsertChain falls through to sync.
+func TestInsertChain_SpeculativeCacheHashMismatch(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Magma"], nil)
+	require.NoError(t, err)
+	defer bcdata.Shutdown()
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).Add(bcdata.bc.CurrentBlock().Header().BaseFee, big.NewInt(1))
+
+	sender := bcdata.privKeys[0]
+	senderAddr := *bcdata.addrs[0]
+	stateDb, err := bcdata.bc.State()
+	require.NoError(t, err)
+	nonce := stateDb.GetNonce(senderAddr)
+
+	tx := types.NewTransaction(nonce, *bcdata.addrs[1], new(big.Int).SetUint64(1000), params.TxGas, gasPrice, nil)
+	signedTx, err := types.SignTx(tx, signer, sender)
+	require.NoError(t, err)
+
+	prof := profile.NewProfiler()
+	_, block, _, err := bcdata.MineABlock(types.Transactions{signedTx}, signer, prof, nil)
+	require.NoError(t, err)
+
+	// Populate cache with a DIFFERENT block hash.
+	entry := bcdata.bc.SpeculativeCache().Reserve(common.HexToHash("0xdeadbeef"))
+	entry.Complete(&blockchain.SpeculativeResult{UsedGas: 999}, nil)
+
+	// InsertChain should ignore the mismatched entry and succeed via sync.
+	n, err := bcdata.bc.InsertChain(types.Blocks{block})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, n)
+	assert.Equal(t, uint64(0), bcdata.bc.SpeculativeCache().Hits())
+}
+
+// TestInsertChain_SpeculativeCacheWait verifies that InsertChain blocks on an
+// in-flight speculative entry instead of falling through to synchronous
+// execution — the behaviour enabled by the non-zero TryGet timeout.
+func TestInsertChain_SpeculativeCacheWait(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Magma"], nil)
+	require.NoError(t, err)
+	defer bcdata.Shutdown()
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).Add(bcdata.bc.CurrentBlock().Header().BaseFee, big.NewInt(1))
+
+	sender := bcdata.privKeys[0]
+	senderAddr := *bcdata.addrs[0]
+	stateDb, err := bcdata.bc.State()
+	require.NoError(t, err)
+	nonce := stateDb.GetNonce(senderAddr)
+
+	tx := types.NewTransaction(nonce, *bcdata.addrs[1], new(big.Int).SetUint64(1000), params.TxGas, gasPrice, nil)
+	signedTx, err := types.SignTx(tx, signer, sender)
+	require.NoError(t, err)
+
+	prof := profile.NewProfiler()
+	_, block, _, err := bcdata.MineABlock(types.Transactions{signedTx}, signer, prof, nil)
+	require.NoError(t, err)
+
+	parent := bcdata.bc.CurrentBlock()
+	parentState, err := bcdata.bc.PrunableStateAt(parent.Root(), parent.NumberU64())
+	require.NoError(t, err)
+
+	executor := work.NewDefaultExecutor(bcdata.bc.Config(), bcdata.bc, common.Address{}, vm.Config{})
+	require.NoError(t, executor.ResetWithState(parentState, block.Header()))
+
+	specResult, err := executor.ProcessBlock(block.Transactions())
+	require.NoError(t, err)
+
+	hitsBefore := bcdata.bc.SpeculativeCache().Hits()
+	entry := bcdata.bc.SpeculativeCache().Reserve(block.Hash())
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		entry.Complete(&blockchain.SpeculativeResult{
+			State:            specResult.State,
+			Receipts:         specResult.Receipts,
+			Logs:             specResult.Logs,
+			UsedGas:          specResult.UsedGas,
+			InternalTxTraces: specResult.InternalTxTraces,
+			ProcessStats: blockchain.ProcessStats{
+				BeforeApplyTxs: specResult.BeforeApplyTxs,
+				AfterApplyTxs:  specResult.AfterApplyTxs,
+				AfterFinalize:  specResult.AfterFinalize,
+			},
+			Bloom:       types.CreateBloom(specResult.Receipts),
+			ReceiptHash: types.DeriveReceiptsRoot(specResult.Receipts, block.Number()),
+		}, nil)
+	}()
+
+	n, err := bcdata.bc.InsertChain(types.Blocks{block})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, n)
+	assert.Equal(t, hitsBefore+1, bcdata.bc.SpeculativeCache().Hits(),
+		"InsertChain should have waited for the in-flight speculative result")
+}
+
+// TestInsertChain_SpeculativeCacheTimeout verifies that InsertChain falls back
+// to synchronous execution when the speculative entry stays in-flight past
+// the timeout.
+func TestInsertChain_SpeculativeCacheTimeout(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Magma"], nil)
+	require.NoError(t, err)
+	defer bcdata.Shutdown()
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).Add(bcdata.bc.CurrentBlock().Header().BaseFee, big.NewInt(1))
+
+	sender := bcdata.privKeys[0]
+	senderAddr := *bcdata.addrs[0]
+	stateDb, err := bcdata.bc.State()
+	require.NoError(t, err)
+	nonce := stateDb.GetNonce(senderAddr)
+
+	tx := types.NewTransaction(nonce, *bcdata.addrs[1], new(big.Int).SetUint64(1000), params.TxGas, gasPrice, nil)
+	signedTx, err := types.SignTx(tx, signer, sender)
+	require.NoError(t, err)
+
+	prof := profile.NewProfiler()
+	_, block, _, err := bcdata.MineABlock(types.Transactions{signedTx}, signer, prof, nil)
+	require.NoError(t, err)
+
+	original := params.BlockGenerationTimeLimit
+	params.BlockGenerationTimeLimit = 10 * time.Millisecond
+	defer func() { params.BlockGenerationTimeLimit = original }()
+
+	hitsBefore := bcdata.bc.SpeculativeCache().Hits()
+	bcdata.bc.SpeculativeCache().Reserve(block.Hash())
+
+	n, err := bcdata.bc.InsertChain(types.Blocks{block})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, n)
+	assert.Equal(t, hitsBefore, bcdata.bc.SpeculativeCache().Hits(),
+		"InsertChain should have timed out and fallen back to sync execution")
 }

@@ -80,20 +80,6 @@ func (mr *MockBlockChainMockRecorder) CurrentHeader() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentHeader", reflect.TypeOf((*MockBlockChain)(nil).CurrentHeader))
 }
 
-// HasBadBlock mocks base method.
-func (m *MockBlockChain) HasBadBlock(arg0 common.Hash) bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasBadBlock", arg0)
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// HasBadBlock indicates an expected call of HasBadBlock.
-func (mr *MockBlockChainMockRecorder) HasBadBlock(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasBadBlock", reflect.TypeOf((*MockBlockChain)(nil).HasBadBlock), arg0)
-}
-
 // GetBlock mocks base method.
 func (m *MockBlockChain) GetBlock(arg0 common.Hash, arg1 uint64) *types.Block {
 	m.ctrl.T.Helper()
@@ -148,6 +134,35 @@ func (m *MockBlockChain) GetHeaderByNumber(arg0 uint64) *types.Header {
 func (mr *MockBlockChainMockRecorder) GetHeaderByNumber(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeaderByNumber", reflect.TypeOf((*MockBlockChain)(nil).GetHeaderByNumber), arg0)
+}
+
+// HasBadBlock mocks base method.
+func (m *MockBlockChain) HasBadBlock(arg0 common.Hash) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasBadBlock", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasBadBlock indicates an expected call of HasBadBlock.
+func (mr *MockBlockChainMockRecorder) HasBadBlock(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasBadBlock", reflect.TypeOf((*MockBlockChain)(nil).HasBadBlock), arg0)
+}
+
+// PrunableStateAt mocks base method.
+func (m *MockBlockChain) PrunableStateAt(arg0 common.Hash, arg1 uint64) (*state.StateDB, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrunableStateAt", arg0, arg1)
+	ret0, _ := ret[0].(*state.StateDB)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PrunableStateAt indicates an expected call of PrunableStateAt.
+func (mr *MockBlockChainMockRecorder) PrunableStateAt(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrunableStateAt", reflect.TypeOf((*MockBlockChain)(nil).PrunableStateAt), arg0, arg1)
 }
 
 // Sealer mocks base method.

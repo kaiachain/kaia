@@ -18,7 +18,6 @@ package work
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -48,6 +47,7 @@ type DefaultExecutor struct {
 	chain    BlockChain
 	signer   types.Signer
 	nodeAddr common.Address
+	vmConfig vm.Config
 
 	// Current execution state
 	state    *state.StateDB
@@ -65,12 +65,16 @@ type DefaultExecutor struct {
 }
 
 // NewDefaultExecutor creates a new DefaultExecutor instance.
-func NewDefaultExecutor(config *params.ChainConfig, chain BlockChain, nodeAddr common.Address) *DefaultExecutor {
+// vmConfig controls EVM behavior during execution — pass the chain's vmConfig
+// so that speculative execution produces identical results to Process(),
+// including internal transaction traces when EnableInternalTxTracing is set.
+func NewDefaultExecutor(config *params.ChainConfig, chain BlockChain, nodeAddr common.Address, vmConfig vm.Config) *DefaultExecutor {
 	return &DefaultExecutor{
 		config:   config,
 		chain:    chain,
 		nodeAddr: nodeAddr,
 		signer:   types.MakeSigner(config, nil),
+		vmConfig: vmConfig,
 	}
 }
 
@@ -84,6 +88,7 @@ func (e *DefaultExecutor) Clone() consensus.Executor {
 		chain:             e.chain,
 		nodeAddr:          e.nodeAddr,
 		signer:            e.signer,
+		vmConfig:          e.vmConfig,
 		txBundlingModules: e.txBundlingModules,
 	}
 }
@@ -134,17 +139,20 @@ func (e *DefaultExecutor) Execute(txs *types.TransactionsByPriceAndNonce, mux *e
 	e.receipts = task.Receipts()
 	e.usedGas = e.header.GasUsed
 
-	return e.buildResult(), nil
+	// Execute (proposer path) does not collect internal tx traces;
+	// they are only needed for the speculative validation path.
+	return e.buildResult(nil), nil
 }
 
-// ExecuteTransactions executes the given transactions in the provided order
+// ProcessBlock executes the given transactions in the provided order
 // without re-sorting. This is the validator-path primitive used during
 // speculative execution of a received pre-prepare block.
 //
-// Mirrors the per-transaction loop of StateProcessor.Process (InitializeState +
-// ApplyTransaction per tx), but deliberately excludes FinalizeState — the caller
-// must invoke FinalizeState separately after this returns.
-func (e *DefaultExecutor) ExecuteTransactions(txs []*types.Transaction) (*consensus.ExecutionResult, error) {
+// Delegates to the same Process() that InsertChain uses. This runs
+// InitializeState + ApplyTransaction×N + FinalizeState in one call,
+// producing results identical to the normal block insertion path.
+// The caller must NOT call FinalizeState separately.
+func (e *DefaultExecutor) ProcessBlock(txs []*types.Transaction) (*consensus.ExecutionResult, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -152,40 +160,28 @@ func (e *DefaultExecutor) ExecuteTransactions(txs []*types.Transaction) (*consen
 		return nil, ErrExecutorNotInitialized
 	}
 
-	// Pre-tx hooks (EIP-2935, kaiax module pre-hooks, etc.)
-	e.chain.Processor().InitializeState(e.header, e.state)
+	// Construct a block preserving the exact header from ResetWithState.
+	// WithBody copies the header without modifying any fields (unlike NewBlock
+	// which rewrites TxHash/ReceiptHash). This ensures block.Hash() matches
+	// the proposed block's hash for correct SetTxContext behavior inside Process.
+	block := types.NewBlockWithHeader(e.header).WithBody(txs)
 
-	// Extract the block proposer from the header seal — must match
-	// StateProcessor.Process so COINBASE and reward distribution are identical.
-	// Using e.nodeAddr here would be wrong: the local validator is not
-	// necessarily the proposer of this block.
-	author, _ := e.chain.Sealer().Author(e.header)
-
-	var (
-		receipts types.Receipts
-		allLogs  []*types.Log
-		usedGas  = new(uint64)
-	)
-
-	for i, tx := range txs {
-		e.state.SetTxContext(tx.Hash(), common.Hash{}, i)
-		receipt, _, err := e.chain.ApplyTransaction(
-			e.config, &author, e.state, e.header, tx, usedGas, &vm.Config{},
-		)
-		if err != nil {
-			return nil, fmt.Errorf("tx %d (%s): %w", i, tx.Hash().Hex(), err)
-		}
-		receipts = append(receipts, receipt)
-		allLogs = append(allLogs, receipt.Logs...)
+	// Delegate to Process() — the same function InsertChain uses.
+	receipts, logs, usedGas, internalTxTraces, procStats, err := e.chain.Processor().Process(block, e.state, e.vmConfig)
+	if err != nil {
+		return nil, err
 	}
 
-	e.header.GasUsed = *usedGas
 	e.txs = txs
 	e.receipts = receipts
-	e.logs = allLogs
-	e.usedGas = *usedGas
+	e.logs = logs
+	e.usedGas = usedGas
 
-	return e.buildResult(), nil
+	result := e.buildResult(internalTxTraces)
+	result.BeforeApplyTxs = procStats.BeforeApplyTxs
+	result.AfterApplyTxs = procStats.AfterApplyTxs
+	result.AfterFinalize = procStats.AfterFinalize
+	return result, nil
 }
 
 // FinalizeState runs post-transaction state modifications and assembles final block.
@@ -203,12 +199,13 @@ func (e *DefaultExecutor) FinalizeState(result *consensus.ExecutionResult) (*typ
 }
 
 // buildResult builds and returns the current execution result.
-func (e *DefaultExecutor) buildResult() *consensus.ExecutionResult {
+func (e *DefaultExecutor) buildResult(internalTxTraces []*vm.InternalTxTrace) *consensus.ExecutionResult {
 	return &consensus.ExecutionResult{
-		State:    e.state,
-		Receipts: e.receipts,
-		Logs:     e.logs,
-		UsedGas:  e.usedGas,
-		Txs:      e.txs,
+		State:            e.state,
+		Receipts:         e.receipts,
+		Logs:             e.logs,
+		UsedGas:          e.usedGas,
+		Txs:              e.txs,
+		InternalTxTraces: internalTxTraces,
 	}
 }

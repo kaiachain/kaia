@@ -53,6 +53,11 @@ type Validator interface {
 	// ValidateState validates the given statedb and optionally the receipts and
 	// gas used.
 	ValidateState(block, parent *types.Block, state *state.StateDB, receipts types.Receipts, usedGas uint64) error
+
+	// ValidateStateWithCache validates a block using results from speculative
+	// execution, skipping the O(n) CreateBloom/DeriveReceiptsRoot derivation
+	// in favour of the pre-computed values carried on the cached result.
+	ValidateStateWithCache(block *types.Block, cached *SpeculativeResult) error
 }
 
 // Prefetcher is an interface for pre-caching transaction signatures and state.

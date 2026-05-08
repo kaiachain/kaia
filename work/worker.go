@@ -247,7 +247,7 @@ func (self *worker) start() {
 
 	self.mining.Store(1)
 
-	executor := NewDefaultExecutor(self.config, self.chain, self.nodeAddr)
+	executor := NewDefaultExecutor(self.config, self.chain, self.nodeAddr, self.chain.VMConfig())
 	executor.SetTxBundlingModules(self.txBundlingModules)
 	self.engine.Start(self.chain, executor)
 }

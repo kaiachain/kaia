@@ -288,6 +288,13 @@ func (e *eestAdaptor) ValidateState(block, parent *types.Block, state *state.Sta
 	return nil
 }
 
+func (e *eestAdaptor) ValidateStateWithCache(block *types.Block, cached *blockchain.SpeculativeResult) error {
+	if validator := e.newValidator(); validator != nil {
+		return validator.ValidateStateWithCache(block, cached)
+	}
+	return nil
+}
+
 // kaiax.BlockStateModule implementation.
 func (e *eestAdaptor) InitializeState(header *types.Header, state *state.StateDB) {
 	if !e.config.IsPragueForkEnabled(header.Number) || e.chain == nil {
