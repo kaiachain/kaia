@@ -3732,12 +3732,13 @@ func TestEthAPI_FeeHistory(t *testing.T) {
 					big.NewInt(30000000000),
 				}
 				gasUsedRatio := []float64{0.5, 0.6}
+				blobGasUsedRatio := []float64{0.25, 0.5}
 				mockBackend.EXPECT().FeeHistory(
 					gomock.Any(),
 					uint64(2),
 					rpc.LatestBlockNumber,
 					[]float64{50.0, 90.0},
-				).Return(oldestBlock, reward, baseFee, gasUsedRatio, nil)
+				).Return(oldestBlock, reward, baseFee, gasUsedRatio, blobGasUsedRatio, nil)
 			},
 			expected: &FeeHistoryResult{
 				OldestBlock: (*hexutil.Big)(big.NewInt(100)),
@@ -3753,7 +3754,8 @@ func TestEthAPI_FeeHistory(t *testing.T) {
 					(*hexutil.Big)(params.CalcBlobFee(big.NewInt(25000000000))),
 					(*hexutil.Big)(params.CalcBlobFee(big.NewInt(30000000000))),
 				},
-				GasUsedRatio: []float64{0.5, 0.6},
+				GasUsedRatio:     []float64{0.5, 0.6},
+				BlobGasUsedRatio: []float64{0.25, 0.5},
 			},
 		},
 		{
@@ -3766,19 +3768,21 @@ func TestEthAPI_FeeHistory(t *testing.T) {
 				var reward [][]*big.Int
 				var baseFee []*big.Int
 				gasUsedRatio := []float64{0.5}
+				blobGasUsedRatio := []float64{0}
 				mockBackend.EXPECT().FeeHistory(
 					gomock.Any(),
 					uint64(1),
 					rpc.BlockNumber(100),
 					[]float64(nil),
-				).Return(oldestBlock, reward, baseFee, gasUsedRatio, nil)
+				).Return(oldestBlock, reward, baseFee, gasUsedRatio, blobGasUsedRatio, nil)
 			},
 			expected: &FeeHistoryResult{
-				OldestBlock:  (*hexutil.Big)(big.NewInt(100)),
-				Reward:       nil,
-				BaseFee:      nil,
-				BlobBaseFee:  nil,
-				GasUsedRatio: []float64{0.5},
+				OldestBlock:      (*hexutil.Big)(big.NewInt(100)),
+				Reward:           nil,
+				BaseFee:          nil,
+				BlobBaseFee:      nil,
+				GasUsedRatio:     []float64{0.5},
+				BlobGasUsedRatio: []float64{0},
 			},
 		},
 		{
@@ -3792,7 +3796,7 @@ func TestEthAPI_FeeHistory(t *testing.T) {
 					uint64(1),
 					rpc.LatestBlockNumber,
 					[]float64{50.0},
-				).Return(nil, nil, nil, nil, errors.New("fee history error"))
+				).Return(nil, nil, nil, nil, nil, errors.New("fee history error"))
 			},
 			expectedErr: "fee history error",
 		},
@@ -3818,6 +3822,7 @@ func TestEthAPI_FeeHistory(t *testing.T) {
 
 				assert.Equal(t, tc.expected.OldestBlock, result.OldestBlock)
 				assert.Equal(t, tc.expected.GasUsedRatio, result.GasUsedRatio)
+				assert.Equal(t, tc.expected.BlobGasUsedRatio, result.BlobGasUsedRatio)
 
 				if tc.expected.Reward != nil {
 					require.NotNil(t, result.Reward)
