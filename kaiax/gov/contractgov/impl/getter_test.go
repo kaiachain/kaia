@@ -10,7 +10,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	govcontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/gov"
+	govcontract "github.com/kaiachain/kaia/contracts/bindings/gov"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	headergov_mock "github.com/kaiachain/kaia/kaiax/gov/headergov/mock"

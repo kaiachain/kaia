@@ -5,7 +5,7 @@ import (
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/common"
-	govcontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/gov"
+	govcontract "github.com/kaiachain/kaia/contracts/bindings/gov"
 	"github.com/kaiachain/kaia/kaiax/gov"
 )
 

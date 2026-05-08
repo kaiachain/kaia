@@ -25,8 +25,8 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/kip247"
-	"github.com/kaiachain/kaia/contracts/contracts/testing/sc_erc20"
+	"github.com/kaiachain/kaia/contracts/bindings/kip247"
+	"github.com/kaiachain/kaia/contracts/testing/sc_erc20"
 )
 
 var (
