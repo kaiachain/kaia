@@ -325,10 +325,10 @@ type ContractExecutionOption struct {
 func BenchmarkSmartContractExecute(b *testing.B) {
 	prof := profile.NewProfiler()
 
-	// solc --combined-json abi,bin,bin-runtime,hashes,metadata ../contracts/contracts/testing/reward/KlaytnReward.sol > ../contracts/contracts/testing/reward/KlaytnReward.sol.json
+	// solc --combined-json abi,bin,bin-runtime,hashes,metadata ../contracts/testing/reward/KlaytnReward.sol > ../contracts/testing/reward/KlaytnReward.sol.json
 	benches := []ContractExecutionOption{
-		{"KlaytnReward:reward", "../contracts/contracts/testing/reward/KlaytnReward.sol", makeRewardTransactions, executeRewardTransactions},
-		{"KlaytnReward:balanceOf", "../contracts/contracts/testing/reward/KlaytnReward.sol", makeBalanceOf, executeBalanceOf},
+		{"KlaytnReward:reward", "../contracts/testing/reward/KlaytnReward.sol", makeRewardTransactions, executeRewardTransactions},
+		{"KlaytnReward:balanceOf", "../contracts/testing/reward/KlaytnReward.sol", makeBalanceOf, executeBalanceOf},
 		{"QuickSort:sort", "./testdata/contracts/sort/QuickSort.sol", makeQuickSortTransactions, executeQuickSortTransactions},
 	}
 
@@ -349,7 +349,7 @@ func BenchmarkStorageTrieStore(b *testing.B) {
 
 	benchOption := ContractExecutionOption{
 		"StorageTrieStore",
-		"../contracts/contracts/testing/storagetrie/StorageTrieStoreTest.sol",
+		"../contracts/testing/storagetrie/StorageTrieStoreTest.sol",
 		makeStorageTrieTransactions,
 		nil,
 	}

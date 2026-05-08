@@ -33,7 +33,7 @@ import (
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	govcontract "github.com/kaiachain/kaia/contracts/contracts/system_contracts/gov"
+	govcontract "github.com/kaiachain/kaia/contracts/bindings/gov"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
