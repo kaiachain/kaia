@@ -11,6 +11,8 @@ import (
 	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
 	kaiax "github.com/kaiachain/kaia/kaiax"
+	valset "github.com/kaiachain/kaia/kaiax/valset"
+	vrank "github.com/kaiachain/kaia/kaiax/vrank"
 )
 
 // MockMiner is a mock of Miner interface.
@@ -110,6 +112,30 @@ func (m *MockMiner) RegisterTxBundlingModule(arg0 ...kaiax.TxBundlingModule) {
 func (mr *MockMinerMockRecorder) RegisterTxBundlingModule(arg0 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterTxBundlingModule", reflect.TypeOf((*MockMiner)(nil).RegisterTxBundlingModule), arg0...)
+}
+
+// RegisterVRankModule mocks base method.
+func (m *MockMiner) RegisterVRankModule(arg0 vrank.VRankModule) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RegisterVRankModule", arg0)
+}
+
+// RegisterVRankModule indicates an expected call of RegisterVRankModule.
+func (mr *MockMinerMockRecorder) RegisterVRankModule(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterVRankModule", reflect.TypeOf((*MockMiner)(nil).RegisterVRankModule), arg0)
+}
+
+// RegisterValsetModule mocks base method.
+func (m *MockMiner) RegisterValsetModule(arg0 valset.ValsetModule) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RegisterValsetModule", arg0)
+}
+
+// RegisterValsetModule indicates an expected call of RegisterValsetModule.
+func (mr *MockMinerMockRecorder) RegisterValsetModule(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterValsetModule", reflect.TypeOf((*MockMiner)(nil).RegisterValsetModule), arg0)
 }
 
 // SetExtra mocks base method.

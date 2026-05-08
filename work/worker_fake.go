@@ -22,6 +22,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/kaiax"
+	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
 type FakeWorker struct{}
@@ -41,3 +43,5 @@ func (*FakeWorker) Pending() (*types.Block, types.Receipts, *state.StateDB)    {
 func (*FakeWorker) PendingBlock() *types.Block                                 { return nil }
 func (*FakeWorker) RegisterExecutionModule(modules ...kaiax.ExecutionModule)   {}
 func (*FakeWorker) RegisterTxBundlingModule(modules ...kaiax.TxBundlingModule) {}
+func (*FakeWorker) RegisterVRankModule(module vrank.VRankModule)               {}
+func (*FakeWorker) RegisterValsetModule(module valset.ValsetModule)            {}

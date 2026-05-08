@@ -26,12 +26,22 @@ import (
 )
 
 // cfReport reads the committed cfReport for block blockNum from header.VRank.
-// Returns an empty report if header.VRank is nil (e.g. epoch-start block).
+// Returns an empty report if header.VRank is nil.
 // Returns ErrNotPermissionless if blockNum is before the permissionless fork.
+//
+// At epoch-start blocks (blockNum % VRankEpoch == 0), header.VRank carries
+// CandTesting(blockNum) per KIP-227, NOT cfReport. CFS aggregation must skip
+// these blocks — decoding the candidate list as a cfReport would credit every
+// candidate with a failure they didn't have. Returns an empty report at
+// epoch-start so applyBlocksForCPMatrix is a no-op for that block.
+//
 // Used by applyBlocksForCPMatrix so that catchUp can process pre-fork blocks without error.
 func (v *VRankModule) cfReport(blockNum uint64) ([]common.Address, error) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
 		return nil, vrank.ErrNotPermissionless
+	}
+	if blockNum%v.vrankEpoch() == 0 {
+		return []common.Address{}, nil
 	}
 
 	header := v.Chain.GetHeaderByNumber(blockNum)

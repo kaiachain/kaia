@@ -40,6 +40,8 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
+	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/kerrors"
 	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
@@ -162,6 +164,8 @@ type worker struct {
 	chain             BlockChain
 	chainDB           database.DBManager
 	govModule         gov.GovModule
+	valsetModule      valset.ValsetModule // optional, nil before permissionless fork
+	vrankModule       vrank.VRankModule   // optional, nil before permissionless fork
 	executionModules  []kaiax.ExecutionModule
 	txBundlingModules []builder.TxBundlingModule
 
@@ -403,6 +407,9 @@ func (self *worker) commitNewWork() {
 		logger.Error("Failed to prepare header for mining", "err", err)
 		return
 	}
+	if self.config.IsPermissionlessForkEnabled(header.Number) {
+		header.VRank = self.generateVRankField(parent)
+	}
 	// Apply KIP-279.
 	if self.config.IsOsakaForkEnabled(header.Number) {
 		// In KIP-279, ExcessBlobGas is defined as follows:
@@ -605,6 +612,75 @@ func (self *worker) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
 
 func (self *worker) RegisterTxBundlingModule(modules ...builder.TxBundlingModule) {
 	self.txBundlingModules = append(self.txBundlingModules, modules...)
+}
+
+func (self *worker) RegisterVRankModule(module vrank.VRankModule) {
+	self.vrankModule = module
+}
+
+func (self *worker) RegisterValsetModule(module valset.ValsetModule) {
+	self.valsetModule = module
+}
+
+// generateVRankField fills `header(num).VRank` per KIP-227.
+//
+//	num % VRankEpoch != 0:  RLPEncode(cfReport(num)), or nil if empty.
+//	num % VRankEpoch == 0:  RLPEncode(CandTesting(num)), MUST NOT be nil.
+//
+// Returns nil on error; consensus rules permit nil only when num is non-epoch
+// AND cfReport is empty. At epoch-start, nil produces an invalid header — the
+// proposer will fail VerifyHeader, which is the desired behavior over silently
+// emitting a malformed block.
+func (self *worker) generateVRankField(parent *types.Block) []byte {
+	if self.vrankModule == nil {
+		return nil
+	}
+	prevBlockNum := parent.Number().Uint64()
+	num := prevBlockNum + 1
+	if num%self.config.VRankEpoch == 0 {
+		return self.encodeCandTestingForEpochStart(num)
+	}
+	prevRound, err := self.chain.Sealer().Round(parent.Header())
+	if err != nil {
+		logger.Error("Failed to read parent round for vrank", "err", err, "prevBlockNum", prevBlockNum)
+		return nil
+	}
+	cfReport, err := self.vrankModule.TallyCfReport(prevBlockNum, uint64(prevRound))
+	if err != nil {
+		logger.Error("Failed to tally cfReport", "err", err, "prevBlockNum", prevBlockNum, "prevRound", prevRound)
+		return nil
+	}
+	if len(cfReport) == 0 {
+		return nil
+	}
+	encoded, err := vrank.EncodeReport(cfReport)
+	if err != nil {
+		logger.Error("Failed to encode cfReport", "err", err, "cfReport", cfReport)
+		return nil
+	}
+	return encoded
+}
+
+// encodeCandTestingForEpochStart returns RLPEncode(CandTesting(num)) for an
+// epoch-start block. Per KIP-227 the field MUST NOT be nil at epoch-start, so
+// any error here will fail header verification downstream rather than silently
+// emit a malformed block.
+func (self *worker) encodeCandTestingForEpochStart(num uint64) []byte {
+	if self.valsetModule == nil {
+		logger.Error("epoch-start VRank fill: valsetModule unavailable", "num", num)
+		return nil
+	}
+	candidates, err := self.valsetModule.GetCandTesting(num)
+	if err != nil {
+		logger.Error("epoch-start VRank fill: GetCandTesting failed", "num", num, "err", err)
+		return nil
+	}
+	encoded, err := vrank.EncodeReport(candidates)
+	if err != nil {
+		logger.Error("epoch-start VRank fill: EncodeReport failed", "num", num, "err", err)
+		return nil
+	}
+	return encoded
 }
 
 // Return the balance of the address in KAIA, in int64. If the balance is greater (often happens in private net), return MaxInt64.
