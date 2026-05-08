@@ -39,27 +39,27 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 
 // WARNING: Do not regenerate credit.go — the BinRuntime must match the mainnet-deployed bytecode.
 // //go:generate ./abigenw --pkg misc --sol ./contracts/system_contracts/misc/credit.sol --out ./bindings/misc/credit.go --ver 0.4.24
-// //go:generate ./abigenw --pkg reward --sol ./testing/reward/all.sol --out ./bindings/testing/reward/all.go --ver 0.4.24
+//go:generate ./abigenw --pkg reward --sol ./testing/reward/all.sol --out ./bindings/testing/reward/all.go --ver 0.4.24
 
 // These files were compiled with solidity 0.5.6.
 
-// //go:generate ./abigenw --pkg bridge --sol ./service_chain/bridge/Bridge.sol --out ./bindings/bridge/bridge.go --ver 0.5.6
-// //go:generate ./abigenw --pkg sc_erc20 --sol ./testing/sc_erc20/sc_token.sol --out ./bindings/testing/sc_erc20/sc_token.go --ver 0.5.6
-// //go:generate ./abigenw --pkg sc_erc721 --sol ./testing/sc_erc721/sc_nft.sol --out ./bindings/testing/sc_erc721/sc_nft.go --ver 0.5.6
-// //go:generate ./abigenw --pkg sc_erc721_no_uri --sol ./testing/sc_erc721_no_uri/sc_nft_no_uri.sol --out ./bindings/testing/sc_erc721_no_uri/sc_nft_no_uri.go --ver 0.5.6
-// //go:generate ./abigenw --pkg extbridge --sol ./testing/extbridge/ext_bridge.sol --out ./bindings/testing/extbridge/ext_bridge.go --ver 0.5.6
+//go:generate ./abigenw --pkg bridge --sol ./service_chain/bridge/Bridge.sol --out ./bindings/bridge/bridge.go --ver 0.5.6
+//go:generate ./abigenw --pkg sc_erc20 --sol ./testing/sc_erc20/sc_token.sol --out ./bindings/testing/sc_erc20/sc_token.go --ver 0.5.6
+//go:generate ./abigenw --pkg sc_erc721 --sol ./testing/sc_erc721/sc_nft.sol --out ./bindings/testing/sc_erc721/sc_nft.go --ver 0.5.6
+//go:generate ./abigenw --pkg sc_erc721_no_uri --sol ./testing/sc_erc721_no_uri/sc_nft_no_uri.sol --out ./bindings/testing/sc_erc721_no_uri/sc_nft_no_uri.go --ver 0.5.6
+//go:generate ./abigenw --pkg extbridge --sol ./testing/extbridge/ext_bridge.sol --out ./bindings/testing/extbridge/ext_bridge.go --ver 0.5.6
 
 // These files were compiled with solidity 0.5.9.
 
-// //go:generate ./abigenw --pkg system_contracts --sol ./testing/system_contracts/WKAIA.sol --out ./bindings/testing/system_contracts/WKAIA.go --ver 0.5.9
+//go:generate ./abigenw --pkg system_contracts --sol ./testing/system_contracts/WKAIA.sol --out ./bindings/testing/system_contracts/WKAIA.go --ver 0.5.9
 
 // These files were compiled with solidity 0.5.16.
 
-// //go:generate ./abigenw --pkg factory --sol ./node_modules/@uniswap/v2-core/contracts/UniswapV2Factory.sol --out ./bindings/uniswap/factory/UniswapV2Factory.go --ver 0.5.16
+//go:generate ./abigenw --pkg factory --sol ./node_modules/@uniswap/v2-core/contracts/UniswapV2Factory.sol --out ./bindings/uniswap/factory/UniswapV2Factory.go --ver 0.5.16
 
 // These files were compiled with solidity 0.6.6.
 
-// //go:generate ./abigenw --pkg router --sol ./node_modules/@uniswap/v2-periphery/contracts/UniswapV2Router02.sol --out ./bindings/uniswap/router/UniswapV2Router02.go --ver 0.6.6
+//go:generate ./abigenw --pkg router --sol ./node_modules/@uniswap/v2-periphery/contracts/UniswapV2Router02.sol --out ./bindings/uniswap/router/UniswapV2Router02.go --ver 0.6.6
 
 // These files were compiled with solidity 0.8.19.
 
@@ -72,10 +72,9 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 // //go:generate ./abigenw --pkg kip149 --type Registry --artifact ./kaia-system-contracts/contracts-klaytn-v1.12/artifacts/contracts/Registry.sol/Registry.json --out ./bindings/kip149/Registry.go
 // WARNING: Do not regenerate proxyv4/Proxy.go — the BinRuntime must match the mainnet-deployed bytecode.
 // //go:generate ./abigenw --pkg proxyv4 --type ERC1967Proxy --sol ./contracts/system_contracts/proxy/proxy.sol --out ./bindings/proxyv4/Proxy.go --ver 0.8.19
-// //go:generate ./abigenw --pkg system_contracts --sol ./testing/system_contracts/all.sol --out ./bindings/testing/system_contracts/all.go --ver 0.8.19
+//go:generate ./abigenw --pkg system_contracts --sol ./testing/system_contracts/all.sol --out ./bindings/testing/system_contracts/all.go --ver 0.8.19
 
 // These files were compiled with solidity 0.8.25.
-
 
 //go:generate ./abigenw --pkg kip247 --type GaslessSwapRouter --artifact ./kaia-system-contracts/contracts-v2.0/artifacts/contracts/gasless/GaslessSwapRouter.sol/GaslessSwapRouter.json --out ./bindings/kip247/GaslessSwapRouter.go
 //go:generate ./abigenw --pkg gasless --type TestToken --artifact ./kaia-system-contracts/contracts-v2.0/artifacts/contracts/gasless/TestToken.sol/TestToken.json --out ./bindings/testing/system_contracts/gasless/TestToken.go
