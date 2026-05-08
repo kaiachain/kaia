@@ -85,15 +85,15 @@ func EncodeInitializeABv2(rules params.Rules) (common.Address, *types.Transactio
 	return encodeSystemMessage(rules, AddressBookAddr, data)
 }
 
-// EncodeNodeStateUpdate encodes the processSystemTransition call with the given validator state changes.
+// EncodeNodeStateUpdate encodes the processSystemTransition call with the given node state changes.
 // epochVACount is the VA count after epoch transition (newSF); 0 for non-epoch blocks.
 func EncodeNodeStateUpdate(
 	rules params.Rules,
-	validators valset.NodeMap,
+	nodes valset.NodeMap,
 	epochVACount uint64,
 ) (common.Address, *types.Transaction, error) {
-	nodeIds := make([]common.Address, 0, len(validators))
-	for addr := range validators {
+	nodeIds := make([]common.Address, 0, len(nodes))
+	for addr := range nodes {
 		nodeIds = append(nodeIds, addr)
 	}
 	// Sort for deterministic ABI encoding across all nodes
@@ -106,7 +106,7 @@ func EncodeNodeStateUpdate(
 		timeoutAts = make([]*big.Int, len(nodeIds))
 	)
 	for idx, addr := range nodeIds {
-		vs := validators[addr]
+		vs := nodes[addr]
 		newStates[idx] = vs.State.ToUint8()
 		var timeout time.Time
 		switch vs.State {
@@ -129,9 +129,11 @@ func EncodeNodeStateUpdate(
 	return encodeSystemMessage(rules, AddressBookAddr, data)
 }
 
-// NodeStatesResult holds the result of ReadNodeStates.
-type NodeStatesResult struct {
-	Validators              valset.NodeMap
+// ABv2StateSnapshot holds the result of ReadNodeStates.
+type ABv2StateSnapshot struct {
+	Nodes valset.NodeMap
+
+	// parameters for transition
 	PauseTimeout            time.Duration
 	IdleTimeout             time.Duration
 	PfsThreshold            uint64
@@ -143,12 +145,12 @@ type NodeStatesResult struct {
 	SuspendedValidators     []common.Address
 }
 
-// ReadNodeStates reads all validator states, timeouts, max counts, and thresholds from ABv2 in a single MultiCall.
+// ReadNodeStates reads all node states, timeouts, max counts, and thresholds from ABv2 in a single MultiCall.
 func ReadNodeStates(
 	statedb *state.StateDB,
 	chain backends.BlockChainForCaller,
 	header *types.Header,
-) (*NodeStatesResult, error) {
+) (*ABv2StateSnapshot, error) {
 	caller, err := NewMultiCallContractCaller(statedb, chain, header)
 	if err != nil {
 		return nil, err
@@ -160,7 +162,7 @@ func ReadNodeStates(
 		return nil, err
 	}
 
-	validators := make(valset.NodeMap)
+	nodes := make(valset.NodeMap)
 	for i, p := range res.Profiles {
 		nodeState := valset.NodeState(p.State)
 		vs := &valset.Node{
@@ -177,11 +179,11 @@ func ReadNodeStates(
 				vs.PausedTimeout = time.Unix(p.TimeoutAt.Int64(), 0)
 			}
 		}
-		validators[p.NodeId] = vs
+		nodes[p.NodeId] = vs
 	}
 
-	return &NodeStatesResult{
-		Validators:              validators,
+	return &ABv2StateSnapshot{
+		Nodes:                   nodes,
 		PauseTimeout:            time.Duration(res.PauseTimeout.Int64()) * time.Second,
 		IdleTimeout:             time.Duration(res.IdleTimeout.Int64()) * time.Second,
 		PfsThreshold:            res.PfsThreshold.Uint64(),

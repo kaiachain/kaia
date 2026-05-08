@@ -111,7 +111,7 @@ func buildCtx(t *testing.T, opts ctxOpts) *TransitionContext {
 	ctx := NewTransitionContext()
 	ctx.SetBlockCtx(header, false)
 	ctx.SetGovCtx(gov.ParamSet{MinimumStake: new(big.Int).SetUint64(opts.MinStake)})
-	ctx.SetABv2Ctx(&system.NodeStatesResult{
+	ctx.SetABv2Ctx(&system.ABv2StateSnapshot{
 		PfsThreshold:            opts.PfsThreshold,
 		CfsThreshold:            opts.CfsThreshold,
 		IdleTimeout:             opts.IdleTimeout,

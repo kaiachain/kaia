@@ -60,7 +60,7 @@ type GovContext struct {
 	MinStake uint64 // Used by: epoch, violation
 }
 
-// ABv2Context is a subset of NodeStatesResult which holds values read from
+// ABv2Context is a subset of ABv2StateSnapshot which holds values read from
 // system.ReadNodeStates against the AddressBookV2 contract.
 type ABv2Context struct {
 	Nodes        valset.NodeMap // pipeline input. Used by: epoch, violation, timeout
@@ -89,12 +89,11 @@ type VRankContext struct {
 }
 
 // TransitionResult is the output of the orchestrator's transition pipeline.
-// EpochVACount is the count of ValActive after applyEpochTransition (before
-// violation); 0 for non-epoch blocks. The orchestrator writes it back to the
-// AddressBookV2 contract via processSystemTransition.
+// epochVACountForWrite is set only for epoch blocks, where it is written back
+// to AddressBookV2 via processSystemTransition.
 type TransitionResult struct {
-	Nodes        valset.NodeMap
-	EpochVACount uint64
+	Nodes                valset.NodeMap
+	epochVACountForWrite uint64
 }
 
 func NewTransitionContext() *TransitionContext {
@@ -114,9 +113,9 @@ func (ctx *TransitionContext) SetGovCtx(pset gov.ParamSet) {
 	}
 }
 
-func (ctx *TransitionContext) SetABv2Ctx(r *system.NodeStatesResult) {
+func (ctx *TransitionContext) SetABv2Ctx(r *system.ABv2StateSnapshot) {
 	ctx.ABv2Context = ABv2Context{
-		Nodes:                   r.Validators,
+		Nodes:                   r.Nodes,
 		EpochVACount:            r.EpochVACount,
 		PfsThreshold:            r.PfsThreshold,
 		CfsThreshold:            r.CfsThreshold,
@@ -151,24 +150,24 @@ func (ctx *TransitionContext) SetVRankCtx(cfs, pfs map[common.Address]uint64, pf
 // this call — the orchestrator pre-populates ctx and slot math is computed in
 // Go (see slot_math.go), so this method stays free of I/O.
 //
-// Returns the final NodeMap and the epoch VA count (0 on non-epoch blocks).
+// Returns the final NodeMap and, on epoch blocks, the epoch VA count to write.
 func (ctx *TransitionContext) ApplyAllTransitions() *TransitionResult {
 	nodes := ctx.Nodes
-	epochVACount := ctx.EpochVACount
+	epochVACountForWrite := uint64(0)
 
 	if ctx.IsEpoch {
 		nodes = ctx.applyEpochTransition(nodes)
 		// After the epoch transition the active-validator count changes, so
 		// slot limits must be recomputed before violation runs.
-		epochVACount = nodes.CountByState(valset.ValActive)
-		ctx.SetSlotsCtx(slotLimitsFor(epochVACount))
+		epochVACountForWrite = nodes.CountByState(valset.ValActive)
+		ctx.SetSlotsCtx(slotLimitsFor(epochVACountForWrite))
 	}
 	nodes = ctx.applyViolationTransition(nodes)
 	nodes = ctx.applyTimeoutTransition(nodes)
 
 	return &TransitionResult{
-		Nodes:        nodes,
-		EpochVACount: epochVACount,
+		Nodes:                nodes,
+		epochVACountForWrite: epochVACountForWrite,
 	}
 }
 
@@ -408,7 +407,8 @@ func (ctx *TransitionContext) applyTimeoutTransition(m valset.NodeMap) valset.No
 }
 
 // #region SlotMath
-// Slot limit calculations for validator state transitions. Go port of
+//
+// Slot limit calculations for node state transitions. Go port of
 // contracts_permissionless/contracts/libraries/SlotMath.sol — kept in lockstep
 // with that contract since the orchestrator and ABv2 must agree on slot math.
 //
@@ -423,7 +423,7 @@ func (ctx *TransitionContext) applyTimeoutTransition(m valset.NodeMap) valset.No
 //	minActiveCount   = n
 //	maxSlotAvailable = 0
 
-// minActiveCount returns the minimum number of active validators required for
+// minActiveCount returns the minimum number of active nodes required for
 // BFT liveness given epochVACount n.
 func minActiveCount(n uint64) uint64 {
 	if n < 4 {
@@ -432,7 +432,7 @@ func minActiveCount(n uint64) uint64 {
 	return (2*n + 2) / 3
 }
 
-// maxSlotAvailable returns the maximum number of validators allowed in
+// maxSlotAvailable returns the maximum number of nodes allowed in
 // ValPaused or ValExiting state each given epochVACount n.
 func maxSlotAvailable(n uint64) uint64 {
 	if n < 4 {

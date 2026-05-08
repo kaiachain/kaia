@@ -8,7 +8,9 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	state "github.com/kaiachain/kaia/blockchain/state"
 	types "github.com/kaiachain/kaia/blockchain/types"
+	vm "github.com/kaiachain/kaia/blockchain/vm"
 	common "github.com/kaiachain/kaia/common"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
@@ -48,6 +50,20 @@ func (m *MockValsetModule) APIs() []rpc.API {
 func (mr *MockValsetModuleMockRecorder) APIs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIs", reflect.TypeOf((*MockValsetModule)(nil).APIs))
+}
+
+// FinalizeState mocks base method.
+func (m *MockValsetModule) FinalizeState(arg0 *types.Header, arg1 *state.StateDB, arg2 []*types.Transaction, arg3 []*types.Receipt) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FinalizeState", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FinalizeState indicates an expected call of FinalizeState.
+func (mr *MockValsetModuleMockRecorder) FinalizeState(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeState", reflect.TypeOf((*MockValsetModule)(nil).FinalizeState), arg0, arg1, arg2, arg3)
 }
 
 // GetCandTesting mocks base method.
@@ -140,6 +156,32 @@ func (mr *MockValsetModuleMockRecorder) GetQualifiedValidators(arg0 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetQualifiedValidators", reflect.TypeOf((*MockValsetModule)(nil).GetQualifiedValidators), arg0)
 }
 
+// InitializeState mocks base method.
+func (m *MockValsetModule) InitializeState(arg0 *types.Header, arg1 *state.StateDB) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "InitializeState", arg0, arg1)
+}
+
+// InitializeState indicates an expected call of InitializeState.
+func (mr *MockValsetModuleMockRecorder) InitializeState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeState", reflect.TypeOf((*MockValsetModule)(nil).InitializeState), arg0, arg1)
+}
+
+// InstallABv2 mocks base method.
+func (m *MockValsetModule) InstallABv2(arg0 *vm.EVM, arg1 *types.Header, arg2 *state.StateDB) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstallABv2", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InstallABv2 indicates an expected call of InstallABv2.
+func (mr *MockValsetModuleMockRecorder) InstallABv2(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallABv2", reflect.TypeOf((*MockValsetModule)(nil).InstallABv2), arg0, arg1, arg2)
+}
+
 // PostInsertBlock mocks base method.
 func (m *MockValsetModule) PostInsertBlock(arg0 *types.Block) error {
 	m.ctrl.T.Helper()
@@ -202,4 +244,18 @@ func (m *MockValsetModule) Stop() {
 func (mr *MockValsetModuleMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockValsetModule)(nil).Stop))
+}
+
+// WriteTransitionToABv2 mocks base method.
+func (m *MockValsetModule) WriteTransitionToABv2(arg0 *vm.EVM, arg1 *types.Header, arg2 *state.StateDB) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteTransitionToABv2", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteTransitionToABv2 indicates an expected call of WriteTransitionToABv2.
+func (mr *MockValsetModuleMockRecorder) WriteTransitionToABv2(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteTransitionToABv2", reflect.TypeOf((*MockValsetModule)(nil).WriteTransitionToABv2), arg0, arg1, arg2)
 }

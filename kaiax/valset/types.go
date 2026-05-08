@@ -145,12 +145,12 @@ type NodeMap map[common.Address]*Node
 func (v NodeMap) String() string {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		return fmt.Sprintf("NodeStateMap error: %v", err)
+		return fmt.Sprintf("NodeMap error: %v", err)
 	}
 	return string(b)
 }
 
-// Copy returns a deep copy of the NodeStateMap. ValidatorState values are
+// Copy returns a deep copy of the NodeMap. Node values are
 // duplicated so that mutations through the returned map do not affect the
 // receiver. Pure transition methods rely on this property.
 func (v NodeMap) Copy() NodeMap {
@@ -204,7 +204,7 @@ func (v NodeMap) Addresses() []common.Address {
 	return addrs
 }
 
-// CountByState counts the number of validators in a given state.
+// CountByState counts the number of nodes in a given state.
 func (v NodeMap) CountByState(state NodeState) uint64 {
 	var count uint64
 	for _, val := range v {
@@ -215,8 +215,8 @@ func (v NodeMap) CountByState(state NodeState) uint64 {
 	return count
 }
 
-// MarkSuspended sets the Suspended flag on validators whose address is in the given list.
-// Mutates the receiver in place; the only in-place mutator on NodeStateMap.
+// MarkSuspended sets the Suspended flag on nodes whose address is in the given list.
+// Mutates the receiver in place; the only in-place mutator on NodeMap.
 func (v NodeMap) MarkSuspended(suspended []common.Address) {
 	set := make(map[common.Address]struct{}, len(suspended))
 	for _, addr := range suspended {
@@ -227,7 +227,7 @@ func (v NodeMap) MarkSuspended(suspended []common.Address) {
 	}
 }
 
-// ExcludeSuspended returns a new NodeStateMap without suspended validators.
+// ExcludeSuspended returns a new NodeMap without suspended nodes.
 func (v NodeMap) ExcludeSuspended() NodeMap {
 	filtered := make(NodeMap, len(v))
 	for addr, val := range v {
@@ -238,7 +238,7 @@ func (v NodeMap) ExcludeSuspended() NodeMap {
 	return filtered
 }
 
-// FilterByState returns a new NodeStateMap containing only validators in one of the given states.
+// FilterByState returns a new NodeMap containing only nodes in one of the given states.
 func (v NodeMap) FilterByState(states ...NodeState) NodeMap {
 	filtered := make(NodeMap)
 	for addr, val := range v {
@@ -249,20 +249,20 @@ func (v NodeMap) FilterByState(states ...NodeState) NodeMap {
 	return filtered
 }
 
-// Council returns validators committed to the Istanbul consensus cycle.
+// Council returns nodes committed to the Istanbul consensus cycle.
 // {ValActive, ValPaused}. ValReady excluded — voluntary standby, not consensus commitment.
 func (v NodeMap) Council() NodeMap {
 	return v.FilterByState(ValActive, ValPaused)
 }
 
-// Committee returns validators eligible for consensus signing and proposing.
-// {ValActive} excluding suspended validators.
+// Committee returns nodes eligible for consensus signing and proposing.
+// {ValActive} excluding suspended nodes.
 func (v NodeMap) Committee() NodeMap {
 	return v.FilterByState(ValActive).ExcludeSuspended()
 }
 
-// HeaderGovVoters returns validators eligible for governance header votes.
-// {ValActive} excluding suspended validators.
+// HeaderGovVoters returns nodes eligible for governance header votes.
+// {ValActive} excluding suspended nodes.
 func (v NodeMap) HeaderGovVoters() NodeMap {
 	return v.FilterByState(ValActive).ExcludeSuspended()
 }
