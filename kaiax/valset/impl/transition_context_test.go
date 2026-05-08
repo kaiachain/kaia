@@ -186,7 +186,7 @@ func TestApplyEpochTransition_StateTransitions(t *testing.T) {
 			// failing-vrank case lives in TestApplyEpochTransition_CandTestingCFS.
 			ctx := epochCtx(t, map[common.Address]uint64{addr1: 0}, testMaxValCount)
 			out := ctx.applyEpochTransition(m)
-			assert.Equal(t, tc.expectedState, out[addr1].State, "state")
+			assert.Equal(t, tc.expectedState, out[addr1].State, "not expected state")
 			if tc.expectTimeout {
 				assert.False(t, out[addr1].IdleTimeout.IsZero(), "IdleTimeout should be set")
 				assert.Equal(t, ctx.BlockTime.Add(ctx.IdleTimeout), out[addr1].IdleTimeout, "IdleTimeout should be set")
@@ -487,7 +487,7 @@ func TestApplyViolationTransition_EmptyPfReport_NoOp(t *testing.T) {
 // SlotMath (see contracts/libraries/SlotMath.sol):
 //
 //	minActiveCount    = ceil(2*4/3)        → 3
-//	totalBudget       = 4 - 3             → 1
+//	totalBudget       = 4 - 3              → 1
 //	maxSlotAvailable  = ceil(1/2)          → 1  (up to 1 ValPaused, up to 1 ValExiting independently)
 //
 // With n=4, maxSlot=1 for each but minActive=3 means only 1 total can leave ValActive

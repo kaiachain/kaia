@@ -258,7 +258,7 @@ func (ctx *TransitionContext) applyEpochTransition(m valset.NodeMap) valset.Node
 
 func (ctx *TransitionContext) isPassVrankTest(addr common.Address) bool {
 	cfs, ok := ctx.CFS[addr]
-	if !ok {
+	if !ok { // no score recorded → pass
 		return true
 	}
 	return cfs < ctx.CfsThreshold
