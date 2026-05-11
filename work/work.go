@@ -225,8 +225,7 @@ func (self *Miner) RegisterVRankModule(module vrank.VRankModule) {
 }
 
 // RegisterValsetModule registers valset.ValsetModule to underlying worker.
-// The worker reads CandTesting from it to fill header.VRank at epoch-start
-// blocks (KIP-227).
+// The worker reads CandTesting from it to fill header.VRank at epoch-start blocks.
 func (self *Miner) RegisterValsetModule(module valset.ValsetModule) {
 	self.worker.RegisterValsetModule(module)
 }

@@ -164,7 +164,7 @@ type worker struct {
 	chain             BlockChain
 	chainDB           database.DBManager
 	govModule         gov.GovModule
-	valsetModule      valset.ValsetModule // optional, nil before permissionless fork
+	valsetModule      valset.ValsetModule // optional, used for epoch-start VRank fill
 	vrankModule       vrank.VRankModule   // optional, nil before permissionless fork
 	executionModules  []kaiax.ExecutionModule
 	txBundlingModules []builder.TxBundlingModule
@@ -625,12 +625,7 @@ func (self *worker) RegisterValsetModule(module valset.ValsetModule) {
 // generateVRankField fills `header(num).VRank` per KIP-227.
 //
 //	num % VRankEpoch != 0:  RLPEncode(cfReport(num)), or nil if empty.
-//	num % VRankEpoch == 0:  RLPEncode(CandTesting(num)), MUST NOT be nil.
-//
-// Returns nil on error; consensus rules permit nil only when num is non-epoch
-// AND cfReport is empty. At epoch-start, nil produces an invalid header — the
-// proposer will fail VerifyHeader, which is the desired behavior over silently
-// emitting a malformed block.
+//	num % VRankEpoch == 0:  RLPEncode(CandTesting(num)).
 func (self *worker) generateVRankField(parent *types.Block) []byte {
 	if self.vrankModule == nil {
 		return nil
@@ -661,10 +656,6 @@ func (self *worker) generateVRankField(parent *types.Block) []byte {
 	return encoded
 }
 
-// encodeCandTestingForEpochStart returns RLPEncode(CandTesting(num)) for an
-// epoch-start block. Per KIP-227 the field MUST NOT be nil at epoch-start, so
-// any error here will fail header verification downstream rather than silently
-// emit a malformed block.
 func (self *worker) encodeCandTestingForEpochStart(num uint64) []byte {
 	if self.valsetModule == nil {
 		logger.Error("epoch-start VRank fill: valsetModule unavailable", "num", num)
@@ -675,9 +666,9 @@ func (self *worker) encodeCandTestingForEpochStart(num uint64) []byte {
 		logger.Error("epoch-start VRank fill: GetCandTesting failed", "num", num, "err", err)
 		return nil
 	}
-	encoded, err := vrank.EncodeReport(candidates)
+	encoded, err := vrank.EncodeAddressList(candidates)
 	if err != nil {
-		logger.Error("epoch-start VRank fill: EncodeReport failed", "num", num, "err", err)
+		logger.Error("epoch-start VRank fill: EncodeAddressList failed", "num", num, "err", err)
 		return nil
 	}
 	return encoded

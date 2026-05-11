@@ -51,9 +51,8 @@ type ValsetModule interface {
 	InstallABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 }
 
-// ValsetModuleHost is implemented by the miner. The worker registers a
-// ValsetModule to read CandTesting at epoch-start blocks for header.VRank fill
-// (KIP-227).
+// ValsetModuleHost is implemented by the miner. The worker reads CandTesting
+// from it to fill header.VRank at epoch-start blocks.
 type ValsetModuleHost interface {
 	RegisterValsetModule(module ValsetModule)
 }
