@@ -754,7 +754,7 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 		cfg.RPCTxFeeCap = ctx.Float64(RPCGlobalEthTxFeeCapFlag.Name)
 	}
 
-	// Only CNs could set BlockGenerationIntervalFlag and BlockGenerationTimeLimitFlag
+	// Only CNs could set block-generation tuning flags.
 	if ctx.IsSet(BlockGenerationIntervalFlag.Name) {
 		params.BlockGenerationInterval = ctx.Int64(BlockGenerationIntervalFlag.Name)
 		if params.BlockGenerationInterval < 1 {
@@ -765,6 +765,12 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 		params.BlockGenerationTimeLimit = ctx.Duration(BlockGenerationTimeLimitFlag.Name)
 	} else if cfg.ConsensusEngine == "kaiabft" {
 		params.BlockGenerationTimeLimit = params.KaiaBFTBlockGenerationTimeLimit
+	}
+	if ctx.IsSet(BlockGenerationTxLimitFlag.Name) {
+		params.BlockGenerationTxLimit = ctx.Int(BlockGenerationTxLimitFlag.Name)
+		if params.BlockGenerationTxLimit < 0 {
+			logger.Crit("Block generation tx limit should be zero or larger", "limit", params.BlockGenerationTxLimit)
+		}
 	}
 	if ctx.IsSet(OpcodeComputationCostLimitFlag.Name) {
 		params.OpcodeComputationCostLimitOverride = ctx.Uint64(OpcodeComputationCostLimitFlag.Name)
