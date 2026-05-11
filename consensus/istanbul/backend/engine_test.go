@@ -330,6 +330,7 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 			GovModule:     mGov,
 			StakingModule: mStaking, // Irrelevant in ProposerPolicy=0. Won't inject mock.
 			ValsetModule:  mValset,
+			NodeAddress:   b.address,
 		}),
 		mValset.Init(&valset_impl.InitOpts{
 			Chain:         bc,
