@@ -34,6 +34,10 @@ import (
 
 // Ecrecover returns the uncompressed public key that created the given signature.
 func Ecrecover(hash, sig []byte) ([]byte, error) {
+	// Enforce canonical Ethereum recovery id v ∈ {0, 1}.
+	if sig[RecoveryIDOffset] >= 2 {
+		return nil, fmt.Errorf("invalid signature recovery id")
+	}
 	return secp256k1.RecoverPubkey(hash, sig)
 }
 
