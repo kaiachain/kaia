@@ -55,6 +55,7 @@ var FlagGroups = []FlagGroup{
 			StartBlockNumberFlag,
 			BlockGenerationIntervalFlag,
 			BlockGenerationTimeLimitFlag,
+			BlockGenerationTxLimitFlag,
 			OpcodeComputationCostLimitFlag,
 			UseConsoleLogFlag,
 		},

@@ -226,6 +226,10 @@ const (
 	DefaultBlockGenerationInterval  = int64(1) // unit: seconds
 	DefaultBlockGenerationTimeLimit = 250 * time.Millisecond
 
+	// DefaultBlockGenerationTxLimit caps how many top-priced transactions a proposer
+	// will inspect during one block-building round.
+	DefaultBlockGenerationTxLimit = 12_000
+
 	// KaiaBFTBlockGenerationTimeLimit is the default tx execution time limit
 	// for kaiabft. Speculative execution lets non-proposers overlap execution
 	// with consensus, so the proposer can use a larger execution window.
@@ -271,6 +275,9 @@ var (
 	// TODO-Kaia-Governance Change the following variables to governance items which requires consensus of CCN
 	// Block generation interval in seconds. It should be equal or larger than 1
 	BlockGenerationInterval = DefaultBlockGenerationInterval
+
+	// Tx limit for one block-building round. Zero disables the cap.
+	BlockGenerationTxLimit = DefaultBlockGenerationTxLimit
 )
 
 // istanbul BFT

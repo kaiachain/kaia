@@ -118,8 +118,17 @@ func incorporate(txs []*TxOrGen, bundle *Bundle) ([]*TxOrGen, error) {
 // Arrayify drains the heap in price-sorted order into a flat slice.
 // The heap is consumed and will be empty after this call.
 func Arrayify(txs *types.TransactionsByPriceAndNonce) []*types.Transaction {
-	ret := make([]*types.Transaction, 0, txs.Len())
-	for !txs.Empty() {
+	return ArrayifyByCount(txs, txs.Len())
+}
+
+// ArrayifyByCount drains at most count transactions from the heap in price-sorted order.
+// When count is non-positive, the heap is fully drained.
+func ArrayifyByCount(txs *types.TransactionsByPriceAndNonce, count int) []*types.Transaction {
+	if count <= 0 || count > txs.Len() {
+		count = txs.Len()
+	}
+	ret := make([]*types.Transaction, 0, count)
+	for !txs.Empty() && len(ret) < count {
 		ret = append(ret, txs.Peek())
 		txs.Shift()
 	}
