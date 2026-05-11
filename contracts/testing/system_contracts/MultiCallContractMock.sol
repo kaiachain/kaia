@@ -17,7 +17,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity ^0.8.18;
 
-import "../../kaia-system-contracts/contracts-klaytn-v1.12/contracts/interfaces/IAddressBook.sol";
+import "../../kaia-system-contract/contracts-klaytn-v1.12/contracts/interfaces/IAddressBook.sol";
 
 contract MultiCallContractMock {
     address private constant ADDRESS_BOOK_ADDRESS = 0x0000000000000000000000000000000000000400;

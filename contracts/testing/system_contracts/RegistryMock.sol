@@ -17,7 +17,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity ^0.8.0;
 
-import "../../kaia-system-contracts/contracts-klaytn-v1.12/contracts/interfaces/IRegistry.sol";
+import "../../kaia-system-contract/contracts-klaytn-v1.12/contracts/interfaces/IRegistry.sol";
 
 contract RegistryMock is IRegistry {
     function transferOwnership(address newOwner) external override {
