@@ -423,8 +423,7 @@ func (self *worker) commitNewWork() {
 		header.ExcessBlobGas = &excessBlobGas
 	}
 	// Could potentially happen if starting to mine in an odd state.
-	err = self.makeCurrent(parent, header)
-	if err != nil {
+	if err := self.makeCurrent(parent, header); err != nil {
 		logger.Error("Failed to create mining context", "err", err)
 		return
 	}
@@ -672,7 +671,8 @@ func (env *Task) ApplyTransactions(txs *types.TransactionsByPriceAndNonce, bc Bl
 		RunningEVM: chEVM,
 	}
 
-	arrayTxs := builder.Arrayify(txs)
+	txLimit := params.BlockGenerationTxLimit
+	arrayTxs := builder.ArrayifyByCount(txs, txLimit)
 	incorporatedTxs, bundles := builder.ExtractBundlesAndIncorporate(arrayTxs, txBundlingModules)
 	totalBundles := len(bundles)
 
@@ -714,6 +714,9 @@ CommitTransactionLoop:
 				builder.PopTxs(&incorporatedTxs, numShift, &bundles, env.signer)
 				continue
 			}
+		}
+		if txLimit > 0 && numTxsChecked+int64(numShift) > int64(txLimit) {
+			break
 		}
 
 		tx, err := txOrGen.GetTx(env.state.GetNonce(nodeAddr))
@@ -852,7 +855,6 @@ CommitTransactionLoop:
 			)
 		}
 	}
-
 	// Update the number of transactions checked and dropped during ApplyTransactions.
 	checkedTxsGauge.Update(numTxsChecked)
 	nonceTooLowTxsGauge.Update(numTxsNonceTooLow)
