@@ -35,7 +35,9 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
 
 var logger = log.NewModuleLogger(log.NetworksGRPC)
@@ -95,6 +97,16 @@ func (gw *bufWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
+// isJSONRPCNotification reports whether params is a JSON-RPC notification —
+// a request object with no "id" member. gRPC transports require a response for
+// every call, so notifications cannot be dispatched over them.
+func isJSONRPCNotification(params []byte) bool {
+	var msg struct {
+		ID json.RawMessage `json:"id"`
+	}
+	return json.Unmarshal(params, &msg) == nil && len(msg.ID) == 0
+}
+
 // BiCall handles bidirectional communication between client and server.
 func (kns *kaiaServer) BiCall(stream KlaytnNode_BiCallServer) error {
 	for {
@@ -135,9 +147,19 @@ func (kns *kaiaServer) BiCall(stream KlaytnNode_BiCallServer) error {
 	}
 }
 
-// only server can send message to client repeatedly
+// Subscribe handles gRPC server-streaming calls. Despite the name, this is NOT
+// a JSON-RPC subscription endpoint: ServeSingleRequest sets allowSubscribe=false,
+// so any kaia_subscribe call is rejected with ErrNotificationsUnsupported
+// ("Notifications" = geth's term for subscription push events, distinct from
+// JSON-RPC 2.0 id-less notifications). Only regular one-shot methods are served
+// here; the server sends exactly one response and closes the stream.
 func (kns *kaiaServer) Subscribe(request *RPCRequest, stream KlaytnNode_SubscribeServer) error {
+	if isJSONRPCNotification(request.Params) {
+		return status.Error(codes.InvalidArgument, "JSON-RPC notifications are not supported over gRPC Subscribe")
+	}
+
 	var (
+		writeOk  = make(chan struct{}, 1)
 		writeErr = make(chan error, 1)
 		readErr  = make(chan error, 1)
 	)
@@ -156,6 +178,7 @@ func (kns *kaiaServer) Subscribe(request *RPCRequest, stream KlaytnNode_Subscrib
 			writeErr <- err
 			return err
 		}
+		writeOk <- struct{}{}
 		return err
 	}
 	decoder := func(v interface{}) error {
@@ -177,6 +200,8 @@ func (kns *kaiaServer) Subscribe(request *RPCRequest, stream KlaytnNode_Subscrib
 loop:
 	for {
 		select {
+		case <-writeOk:
+			break loop
 		case err = <-writeErr:
 			logger.Warn("fail to write", "err", err)
 			break loop
@@ -191,6 +216,10 @@ loop:
 
 // general RPC call, such as one-to-one communication
 func (kns *kaiaServer) Call(ctx context.Context, request *RPCRequest) (*RPCResponse, error) {
+	if isJSONRPCNotification(request.Params) {
+		return nil, status.Error(codes.InvalidArgument, "JSON-RPC notifications are not supported over gRPC unary Call")
+	}
+
 	var (
 		err      error
 		writeErr = make(chan error, 1)
