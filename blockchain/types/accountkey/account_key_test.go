@@ -261,6 +261,23 @@ func TestAccountKeyWeightedMultiSig_Validate(t *testing.T) {
 	}
 }
 
+func TestAccountKeyWeightedMultiSig_CheckInstallable_ZeroThreshold(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)})
+
+	k, _ := crypto.GenerateKey()
+	keys := WeightedPublicKeys{
+		NewWeightedPublicKey(1, (*PublicKeySerializable)(&k.PublicKey)),
+	}
+	m := NewAccountKeyWeightedMultiSigWithValues(0, keys)
+
+	// CheckInstallable must reject threshold=0 to prevent signature bypass via Validate().
+	assert.EqualError(t, m.CheckInstallable(0), "threshold is zero")
+
+	// Validate() also rejects threshold=0 directly, covering any pre-existing accounts
+	// that may have been installed before CheckInstallable began enforcing this.
+	assert.False(t, m.Validate(0, RoleTransaction, []*ecdsa.PublicKey{}, common.Address{}))
+}
+
 func TestAccountKeyWeightedMultiSig_SigValidationGas(t *testing.T) {
 	// declare special block numbers and set hardForkBlockNumberConfig
 	var (
