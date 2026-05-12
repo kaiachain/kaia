@@ -358,11 +358,11 @@ func (b *backend) ValidatePeerType(addr common.Address) error {
 		return errNoChainReader
 	}
 	if b.valsetModule == nil {
-		return errInvalidPeer
+		return errNoModule
 	}
 	council, err := b.valsetModule.GetCouncil(b.chain.CurrentHeader().Number.Uint64() + 1)
 	if err != nil {
-		return errInvalidPeer
+		return err
 	}
 	if valset.NewAddressSet(council).Contains(addr) {
 		return nil
