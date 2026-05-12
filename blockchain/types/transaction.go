@@ -546,6 +546,10 @@ func (tx *Transaction) Validate(db StateDB, signer Signer, currentBlockNumber ui
 			}
 		}
 	}
+	// Range-check the fee ratio on the consensus path.
+	if feeRatio, isRatioTx := tx.FeeRatio(); isRatioTx && !feeRatio.IsValid() {
+		return kerrors.ErrFeeRatioOutOfRange
+	}
 	return tx.data.Validate(db, currentBlockNumber, checkMutableValue)
 }
 
