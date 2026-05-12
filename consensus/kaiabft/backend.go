@@ -24,6 +24,7 @@
 package kaiabft
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"errors"
 	"math/big"
@@ -132,8 +133,12 @@ type backend struct {
 	chainInitCh   chan struct{}
 	chainInitOnce sync.Once
 
-	// Speculative execution cache (set in Start from chain type assertion)
-	specCache *blockchain.SpeculativeResultCache
+	// Speculative execution (cache set in Start from chain type assertion;
+	// cancel/wg track the in-flight goroutine launched by the machine).
+	specCache  *blockchain.SpeculativeResultCache
+	specCancel context.CancelFunc
+	specWg     sync.WaitGroup
+	specMu     sync.Mutex
 }
 
 // ---------------------------------------------------------------------------
@@ -195,6 +200,8 @@ func (b *backend) Stop() error {
 	}
 	b.sealMu.Unlock()
 	b.machine.stop()
+	b.cancelSpeculativeExecution()
+	b.specWg.Wait()
 	b.coreStarted = false
 	return nil
 }
@@ -621,6 +628,112 @@ func (b *backend) hasBadProposal(hash common.Hash) bool {
 
 func (b *backend) hasProposal(hash common.Hash, number *big.Int) bool {
 	return b.chain.GetHeader(hash, number.Uint64()) != nil
+}
+
+// ---------------------------------------------------------------------------
+// Speculative execution
+// ---------------------------------------------------------------------------
+
+// startSpeculativeExecution validates the proposed block in a background
+// goroutine and populates the speculative cache so InsertChain can skip
+// re-execution. Cancels any prior in-flight execution. Caller (the machine)
+// owns the decision of when to trigger; this method owns the execution.
+func (b *backend) startSpeculativeExecution(proposal bft.Proposal) {
+	block, ok := proposal.(*types.Block)
+	if !ok || b.specCache == nil || b.executor == nil {
+		return
+	}
+
+	b.specMu.Lock()
+	if b.specCancel != nil {
+		b.specCancel()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	b.specCancel = cancel
+	b.specMu.Unlock()
+
+	blockHash := block.Hash()
+	entry := b.specCache.Reserve(blockHash)
+
+	executor := b.executor.Clone()
+
+	parentHeader := b.chain.GetHeader(block.ParentHash(), block.NumberU64()-1)
+	if parentHeader == nil {
+		entry.Complete(nil, errors.New("parent header not found"))
+		cancel()
+		return
+	}
+
+	b.specWg.Add(1)
+	go func() {
+		defer b.specWg.Done()
+		defer cancel()
+
+		// PrunableStateAt marks obsolete trie nodes for live pruning the same
+		// way InsertChain's normal path does; falls back to StateAt when
+		// pruning is disabled.
+		parentState, err := b.chain.PrunableStateAt(parentHeader.Root, parentHeader.Number.Uint64())
+		if err != nil {
+			entry.Complete(nil, err)
+			return
+		}
+
+		if err := executor.ResetWithState(parentState, block.Header()); err != nil {
+			entry.Complete(nil, err)
+			return
+		}
+
+		select {
+		case <-ctx.Done():
+			entry.Complete(nil, ctx.Err())
+			return
+		default:
+		}
+
+		// ProcessBlock delegates to StateProcessor.Process() which already
+		// applies rewards and computes the state root — do NOT call
+		// FinalizeState again.
+		result, err := executor.ProcessBlock(block.Transactions())
+		if err != nil {
+			entry.Complete(nil, err)
+			return
+		}
+
+		// Pre-compute bloom + receipt hash so InsertChain can validate the
+		// header without re-deriving them; both are O(n) over receipts and
+		// dominate ValidateState time.
+		bloom := types.CreateBloom(result.Receipts)
+		receiptHash := types.DeriveReceiptsRoot(result.Receipts, block.Number())
+
+		entry.Complete(&blockchain.SpeculativeResult{
+			State:            result.State,
+			Receipts:         result.Receipts,
+			Logs:             result.Logs,
+			UsedGas:          result.UsedGas,
+			InternalTxTraces: result.InternalTxTraces,
+			ProcessStats: blockchain.ProcessStats{
+				BeforeApplyTxs: result.BeforeApplyTxs,
+				AfterApplyTxs:  result.AfterApplyTxs,
+				AfterFinalize:  result.AfterFinalize,
+			},
+			Bloom:       bloom,
+			ReceiptHash: receiptHash,
+		}, nil)
+
+		logger.Info("Speculative execution completed",
+			"number", block.NumberU64(), "hash", blockHash, "txs", len(block.Transactions()))
+	}()
+}
+
+// cancelSpeculativeExecution signals any in-flight speculative execution to
+// abort. Safe to call when nothing is running.
+func (b *backend) cancelSpeculativeExecution() {
+	b.specMu.Lock()
+	defer b.specMu.Unlock()
+	if b.specCancel != nil {
+		b.specCancel()
+		b.specCancel = nil
+	}
 }
 
 // ---------------------------------------------------------------------------
