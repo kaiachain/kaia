@@ -32,6 +32,12 @@ const (
 	reportCycle = IdealBatchSize * 20
 )
 
+// ErrDBMigrationInterrupted is returned by copyDB when migration is aborted
+// because the quit channel was closed (e.g. by SIGINT or SIGTERM).
+// Callers can use errors.Is to distinguish an interrupted migration from a
+// successful completion.
+var ErrDBMigrationInterrupted = errors.New("db migration interrupted")
+
 // copyDB migrates a DB to another DB.
 // This feature uses Iterator. A src DB should have implementation of Iteratee to use this function.
 func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
@@ -76,7 +82,7 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 		select {
 		case <-quit:
 			logger.Warn("exit called", "db", name, "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
-			return nil
+			return ErrDBMigrationInterrupted
 		default:
 		}
 	}
@@ -146,17 +152,20 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 			}()
 		}
 
+		var firstErr error
 		for range databaseEntryTypeSize {
-			err := <-errChan
-			if err != nil {
+			if err := <-errChan; err != nil {
 				logger.Error("copyDB got an error", "err", err)
+				if firstErr == nil {
+					firstErr = err
+				}
 			}
 		}
 
 		// Reset state trie DB path if migrated state trie path ("statetrie_migrated_XXXXXX") is set
 		dstdbm.setDBDir(DBEntryType(StateTrieDB), "")
 
-		return nil
+		return firstErr
 	}
 
 	// single DB -> single DB
