@@ -44,6 +44,9 @@ var logger = log.NewModuleLogger(log.ConsensusIstanbulCore)
 
 // getRoundCommitteeState fetches qualified, committee, proposer and derived values for the given sequence and round.
 func getRoundCommitteeState(c *core, seq, r uint64) (qualified *valset.AddressSet, committeeSet *valset.AddressSet, proposer common.Address, committeeSize uint64, requiredMsgCnt int, fNum int, err error) {
+	if c.valsetModule == nil || c.govModule == nil {
+		return nil, nil, common.Address{}, 0, 0, 0, istanbul.ErrNoEssentialModule
+	}
 	council, err := c.valsetModule.GetCouncil(seq)
 	if err != nil {
 		return nil, nil, common.Address{}, 0, 0, 0, err

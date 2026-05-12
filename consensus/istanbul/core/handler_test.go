@@ -133,6 +133,11 @@ func getTestCommitteeState(validatorAddrs []common.Address, committeeSize uint64
 	return qualified, committee, proposer, nonCommittee
 }
 
+func TestGetRoundCommitteeStateMissingModules(t *testing.T) {
+	_, _, _, _, _, _, err := getRoundCommitteeState(&core{}, 1, 0)
+	assert.ErrorIs(t, err, istanbul.ErrNoEssentialModule)
+}
+
 // genValidators returns a set of addresses and corresponding keys used for generating a validator set
 func genValidators(n int) ([]common.Address, map[common.Address]*ecdsa.PrivateKey) {
 	addrs := make([]common.Address, n)

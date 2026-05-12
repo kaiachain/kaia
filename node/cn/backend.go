@@ -412,6 +412,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	if err := cn.SetupKaiaxModules(ctx, mValset, mVRank); err != nil {
 		logger.Error("Failed to setup kaiax modules", "err", err)
+		return nil, err
 	}
 
 	// Fill the staking info cache for the recent blocks.
@@ -575,6 +576,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		mVRank.Init(&vrank_impl.InitOpts{
 			Valset:      mValset,
 			Randao:      mRandao,
+			RoundReader: s.blockchain.Sealer(),
 			NodeKey:     ctx.NodeKey(),
 			BlsKey:      ctx.BlsNodeKey(),
 			ChainConfig: s.chainConfig,
