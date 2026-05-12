@@ -938,17 +938,20 @@ func handleBlockBodiesRequest(pm *ProtocolManager, p Peer, msg p2p.Msg) ([]rlp.R
 	}
 	// Gather blocks until the fetch or network limits is reached
 	var (
-		hash   common.Hash
-		bytes  int
-		bodies []rlp.RawValue
+		hash    common.Hash
+		bytes   int
+		bodies  []rlp.RawValue
+		lookups int
 	)
-	for bytes < softResponseLimit && len(bodies) < downloader.MaxBlockFetch {
+	for bytes < softResponseLimit && len(bodies) < downloader.MaxBlockFetch &&
+		lookups < 2*downloader.MaxBlockFetch {
 		// Retrieve the hash of the next block
 		if err := msgStream.Decode(&hash); err == rlp.EOL {
 			break
 		} else if err != nil {
 			return nil, errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+		lookups++
 		// Retrieve the requested block body, stopping if enough was found
 		if data := pm.blockchain.GetBodyRLP(hash); len(data) != 0 {
 			bodies = append(bodies, data)
@@ -999,17 +1002,20 @@ func handleNodeDataRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	}
 	// Gather state data until the fetch or network limits is reached
 	var (
-		hash  common.Hash
-		bytes int
-		data  [][]byte
+		hash    common.Hash
+		bytes   int
+		data    [][]byte
+		lookups int
 	)
-	for bytes < softResponseLimit && len(data) < downloader.MaxStateFetch {
+	for bytes < softResponseLimit && len(data) < downloader.MaxStateFetch &&
+		lookups < 2*downloader.MaxStateFetch {
 		// Retrieve the hash of the next state entry
 		if err := msgStream.Decode(&hash); err == rlp.EOL {
 			break
 		} else if err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+		lookups++
 		// Retrieve the requested state entry, stopping if enough was found
 		// TODO-Kaia-Snapsync now the code and trienode is mixed in the protocol level, separate these two types.
 		entry, err := pm.blockchain.TrieNode(hash)
@@ -1051,14 +1057,17 @@ func handleReceiptsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		hash     common.Hash
 		bytes    int
 		receipts []rlp.RawValue
+		lookups  int
 	)
-	for bytes < softResponseLimit && len(receipts) < downloader.MaxReceiptFetch {
+	for bytes < softResponseLimit && len(receipts) < downloader.MaxReceiptFetch &&
+		lookups < 2*downloader.MaxReceiptFetch {
 		// Retrieve the hash of the next block
 		if err := msgStream.Decode(&hash); err == rlp.EOL {
 			break
 		} else if err != nil {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
+		lookups++
 		// Retrieve the requested block's receipts, skipping if unknown to us
 		results := pm.blockchain.GetReceiptsByBlockHash(hash)
 		if results == nil {
@@ -1107,8 +1116,10 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 		hash         common.Hash
 		bytes        int
 		stakingInfos []rlp.RawValue
+		lookups      int
 	)
-	for bytes < softResponseLimit && len(stakingInfos) < downloader.MaxStakingInfoFetch {
+	for bytes < softResponseLimit && len(stakingInfos) < downloader.MaxStakingInfoFetch &&
+		lookups < 2*downloader.MaxStakingInfoFetch {
 		// Retrieve the hash of the next block
 		if err := msgStream.Decode(&hash); err == rlp.EOL {
 			break
@@ -1116,6 +1127,7 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
+		lookups++
 		// Retrieve the requested block's staking information, skipping if unknown to us
 		header := pm.blockchain.GetHeaderByHash(hash)
 		if header == nil {
@@ -1141,7 +1153,6 @@ func handleStakingInfoRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error
 		if encoded, err := rlp.EncodeToBytes(result); err != nil {
 			logger.Error("Failed to encode staking info", "err", err)
 		} else {
-			fmt.Println("encoding", result, "len", len(encoded))
 			stakingInfos = append(stakingInfos, encoded)
 			bytes += len(encoded)
 		}
@@ -1194,8 +1205,10 @@ func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 		data     blobSidecarsRequestData
 		bytes    int
 		sidecars []rlp.RawValue
+		lookups  int
 	)
-	for bytes < softResponseLimit && len(sidecars) < downloader.MaxBlobSidecarsFetch {
+	for bytes < softResponseLimit && len(sidecars) < downloader.MaxBlobSidecarsFetch &&
+		lookups < 2*downloader.MaxBlobSidecarsFetch {
 		// Retrieve data
 		if err := msgStream.Decode(&data); err == rlp.EOL {
 			break
@@ -1203,6 +1216,7 @@ func handleBlobSidecarsRequestMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) erro
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 
+		lookups++
 		// Retrieve a requested tx's blob sidecar, skipping if unknown to us
 		result, err := pm.txpool.GetBlobSidecarFromStorage(big.NewInt(int64(data.BlockNum)), int(data.TxIndex))
 		if result == nil {
