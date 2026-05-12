@@ -17,7 +17,6 @@
 package kaiabft
 
 import (
-	"context"
 	"errors"
 	"math"
 	"math/big"
@@ -25,8 +24,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kaiachain/kaia/blockchain"
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
 	"github.com/kaiachain/kaia/consensus"
@@ -108,9 +105,6 @@ type machine struct {
 	// Future preprepare retry timer
 	futurePreprepareTimer *time.Timer
 
-	// Speculative execution cancellation
-	specCancel context.CancelFunc
-
 	// Consensus timing
 	consensusTimestamp time.Time
 
@@ -148,7 +142,6 @@ func (m *machine) start() error {
 
 func (m *machine) stop() {
 	m.stopTimer()
-	m.cancelSpecExec()
 	m.events.Unsubscribe()
 	m.timeoutSub.Unsubscribe()
 	m.chainHead.Unsubscribe()
@@ -337,8 +330,10 @@ func (m *machine) handlePreprepare(msg *bft.Message, src common.Address) error {
 		} else {
 			logger.Debug("Accepted preprepare, moving to Preprepared",
 				"seq", m.sequence, "round", m.round, "from", src, "hash", pp.Proposal.Hash())
-			// Speculative execution (kaiabft-specific)
-			m.startSpeculativeExecution(pp.Proposal)
+			// Speculative execution (kaiabft-specific).
+			if !m.isProposer() {
+				m.b.startSpeculativeExecution(pp.Proposal)
+			}
 
 			// Accept preprepare and move to Preprepared state
 			m.acceptPreprepare(pp)
@@ -584,7 +579,7 @@ func (m *machine) startNewRound(round *big.Int) {
 	m.b.currentView.Store(newView)
 
 	// Cancel any in-flight speculative execution from the previous round.
-	m.cancelSpecExec()
+	m.b.cancelSpeculativeExecution()
 
 	// Reset round state.
 	m.sequence = newView.Sequence
@@ -860,108 +855,6 @@ func (m *machine) doCommit() {
 	if err := m.b.commit(proposal, committedSeals); err != nil {
 		m.unlockHash()
 		m.sendNextRoundChange("commit failure")
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Speculative execution (the kaiabft-specific addition)
-// ---------------------------------------------------------------------------
-
-func (m *machine) startSpeculativeExecution(proposal bft.Proposal) {
-	block, ok := proposal.(*types.Block)
-	if !ok || m.b.specCache == nil || m.b.executor == nil {
-		return
-	}
-	// Skip when this node is the proposer for the current round. The proposer
-	// has already executed the block via SubmitTransactions (work path) and
-	// writes it through WriteBlockWithState — it never consumes the cache.
-	if m.isProposer() {
-		return
-	}
-
-	// Cancel any previous speculative execution.
-	m.cancelSpecExec()
-	ctx, cancel := context.WithCancel(context.Background())
-	m.specCancel = cancel
-
-	blockHash := block.Hash()
-	entry := m.b.specCache.Reserve(blockHash)
-
-	// Clone executor for isolated execution.
-	executor := m.b.executor.Clone()
-
-	// Get parent state.
-	parentHeader := m.b.chain.GetHeader(block.ParentHash(), block.NumberU64()-1)
-	if parentHeader == nil {
-		entry.Complete(nil, errors.New("parent header not found"))
-		return
-	}
-
-	m.wg.Add(1)
-	go func() {
-		defer m.wg.Done()
-		defer cancel()
-
-		// Use PrunableStateAt so the speculative StateDB marks obsolete trie
-		// nodes for live pruning the same way InsertChain's normal path does.
-		// When pruning is disabled it transparently falls back to StateAt.
-		parentState, err := m.b.chain.PrunableStateAt(parentHeader.Root, parentHeader.Number.Uint64())
-		if err != nil {
-			entry.Complete(nil, err)
-			return
-		}
-
-		if err := executor.ResetWithState(parentState, block.Header()); err != nil {
-			entry.Complete(nil, err)
-			return
-		}
-
-		select {
-		case <-ctx.Done():
-			entry.Complete(nil, ctx.Err())
-			return
-		default:
-		}
-
-		// ProcessBlock delegates to StateProcessor.Process() which already
-		// calls FinalizeState internally (applies rewards, computes root).
-		// Do NOT call FinalizeState again — that would double-apply rewards.
-		result, err := executor.ProcessBlock(block.Transactions())
-		if err != nil {
-			entry.Complete(nil, err)
-			return
-		}
-
-		// Pre-compute bloom filter and receipt hash so that InsertChain
-		// can validate the block header without re-deriving them.
-		// These are O(n) over receipts and dominate ValidateState time.
-		bloom := types.CreateBloom(result.Receipts)
-		receiptHash := types.DeriveReceiptsRoot(result.Receipts, block.Number())
-
-		entry.Complete(&blockchain.SpeculativeResult{
-			State:            result.State,
-			Receipts:         result.Receipts,
-			Logs:             result.Logs,
-			UsedGas:          result.UsedGas,
-			InternalTxTraces: result.InternalTxTraces,
-			ProcessStats: blockchain.ProcessStats{
-				BeforeApplyTxs: result.BeforeApplyTxs,
-				AfterApplyTxs:  result.AfterApplyTxs,
-				AfterFinalize:  result.AfterFinalize,
-			},
-			Bloom:       bloom,
-			ReceiptHash: receiptHash,
-		}, nil)
-
-		logger.Info("Speculative execution completed",
-			"number", block.NumberU64(), "hash", blockHash, "txs", len(block.Transactions()))
-	}()
-}
-
-func (m *machine) cancelSpecExec() {
-	if m.specCancel != nil {
-		m.specCancel()
-		m.specCancel = nil
 	}
 }
 
