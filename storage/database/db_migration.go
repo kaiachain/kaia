@@ -19,13 +19,13 @@
 package database
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"path"
 	"syscall"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -62,7 +62,7 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 		// write fetched keys and values to DB
 		// If dstDB is dynamoDB, Put will Write when the number items reach dynamoBatchSize.
 		if err := dstBatch.Put(key, val); err != nil {
-			return errors.WithMessage(err, "failed to put batch")
+			return fmt.Errorf("failed to put batch: %w", err)
 		}
 
 		if dstBatch.ValueSize() > IdealBatchSize {
@@ -88,7 +88,7 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 	}
 
 	if err := dstBatch.Write(); err != nil {
-		return errors.WithMessage(err, "failed to write items")
+		return fmt.Errorf("failed to write items: %w", err)
 	}
 	dstBatch.Reset()
 
@@ -96,7 +96,7 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 
 	srcIter.Release()
 	if err := srcIter.Error(); err != nil { // any accumulated error from iterator
-		return errors.WithMessage(err, "failed to iterate")
+		return fmt.Errorf("failed to iterate: %w", err)
 	}
 
 	return nil
@@ -152,20 +152,18 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 			}()
 		}
 
-		var firstErr error
+		var errs []error
 		for range databaseEntryTypeSize {
 			if err := <-errChan; err != nil {
 				logger.Error("copyDB got an error", "err", err)
-				if firstErr == nil {
-					firstErr = err
-				}
+				errs = append(errs, err)
 			}
 		}
 
 		// Reset state trie DB path if migrated state trie path ("statetrie_migrated_XXXXXX") is set
 		dstdbm.setDBDir(DBEntryType(StateTrieDB), "")
 
-		return firstErr
+		return errors.Join(errs...)
 	}
 
 	// single DB -> single DB
