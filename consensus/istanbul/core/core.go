@@ -32,6 +32,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/prque"
+	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/event"
@@ -415,9 +416,8 @@ func (c *core) startNewRound(round *big.Int) {
 		}
 	}
 
-	// For new sequences, notify worker to start new block
 	if !roundChange {
-		c.backend.EventMux().Post(istanbul.NewSequenceEvent{})
+		c.backend.EventMux().Post(consensus.NewSequenceEvent{IsProposer: true})
 	}
 	c.newRoundChangeTimer()
 
