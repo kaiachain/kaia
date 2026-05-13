@@ -20,7 +20,7 @@
 
 pragma solidity 0.8.19;
 
-import "../../kaia-system-contract/contracts-klaytn-v1.10/contracts/libraries/Ownable.sol";
+import "../../kaia-system-contracts/contracts-klaytn-v1.10/contracts/libraries/Ownable.sol";
 
 /**
  * @title Interface to get adminlist and quorom

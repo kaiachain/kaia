@@ -16,7 +16,7 @@ cd contracts
 go generate
 ```
 
-Bindings are generated from [kaia-system-contract](./kaia-system-contract/) submodule artifacts.
+Bindings are generated from [kaia-system-contracts](./kaia-system-contracts/) submodule artifacts.
 After updating the submodule, run `go generate` to regenerate `bindings/`.
 
 ## Unit test
@@ -39,7 +39,7 @@ contracts/
 ├── abigenw                   # Go binding generator script
 ├── generate.go               # go generate directives
 ├── bindings/                 # Generated Go bindings (do not edit manually)
-├── kaia-system-contract/    # Git submodule — single source of truth for system contract .sol
+├── kaia-system-contracts/    # Git submodule — single source of truth for system contract .sol
 ├── libs/                     # Vendored Solidity libraries
 ├── service_chain/            # Service chain bridge contracts
 └── testing/                  # Testing and mock contracts
@@ -49,7 +49,7 @@ contracts/
 
 Generated Go wrappers for all system contracts. Regenerated via `go generate`.
 
-### `kaia-system-contract/`
+### `kaia-system-contracts/`
 
 Git submodule pointing to [kaia-system-contract](https://github.com/kaiachain/kaia-system-contract).
 Contains compiled artifacts used by `go generate`.
