@@ -34,28 +34,35 @@ func PrefetchBlockState(ctx context.Context, stateReader stateAtReader, parentRo
 			return
 		default:
 		}
-		if _, err := tx.ValidateSender(signer, statedb, blockNumber); err != nil {
-			continue
+		prefetchTxState(statedb, signer, tx, blockNumber)
+	}
+}
+
+// prefetchTxState warms the trie nodes execution will need for one tx
+// without running the EVM: sender + (fee-payer) account keys via
+// ValidateSender, and recipient bytecode/storage-trie root.
+func prefetchTxState(statedb *state.StateDB, signer types.Signer, tx *types.Transaction, blockNumber uint64) {
+	if _, err := tx.ValidateSender(signer, statedb, blockNumber); err != nil {
+		return
+	}
+	from := tx.ValidatedSender()
+	statedb.Exist(from)
+	if tx.IsFeeDelegatedTransaction() {
+		if _, err := tx.ValidateFeePayer(signer, statedb, blockNumber); err == nil {
+			statedb.Exist(tx.ValidatedFeePayer())
 		}
-		from := tx.ValidatedSender()
-		statedb.Exist(from)
-		if tx.IsFeeDelegatedTransaction() {
-			if _, err := tx.ValidateFeePayer(signer, statedb, blockNumber); err == nil {
-				statedb.Exist(tx.ValidatedFeePayer())
-			}
-		}
-		// EIP-7702: sender may carry delegated code; warm its code + storage too.
-		if statedb.GetCodeHash(from) != types.EmptyCodeHash {
-			statedb.GetCode(from)
-			statedb.GetState(from, common.Hash{})
-		}
-		to := tx.To()
-		if to == nil {
-			continue
-		}
-		if statedb.GetCodeHash(*to) != types.EmptyCodeHash {
-			statedb.GetCode(*to)
-			statedb.GetState(*to, common.Hash{})
-		}
+	}
+	// EIP-7702: sender may carry delegated code; warm its code + storage too.
+	if statedb.GetCodeHash(from) != types.EmptyCodeHash {
+		statedb.GetCode(from)
+		statedb.GetState(from, common.Hash{})
+	}
+	to := tx.To()
+	if to == nil {
+		return
+	}
+	if statedb.GetCodeHash(*to) != types.EmptyCodeHash {
+		statedb.GetCode(*to)
+		statedb.GetState(*to, common.Hash{})
 	}
 }

@@ -28,7 +28,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
-	"github.com/kaiachain/kaia/common"
 )
 
 // statePrefetcher is a basic Prefetcher, which blindly executes a block on top
@@ -45,46 +44,15 @@ func newStatePrefetcher(chain ChainContext) *statePrefetcher {
 	}
 }
 
-// Prefetch processes the state changes according to the Kaia rules by running
-// the transaction messages using the statedb, but any changes are discarded. The
-// only goal is to pre-cache transaction signatures and state trie nodes.
-func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, cfg vm.Config, interrupt *uint32) {
-	header := block.Header()
-	// Iterate over and process the individual transactions
-	for i, tx := range block.Transactions() {
-		// If block precaching was interrupted, abort
+// Prefetch warms state caches via prefetchTxState (no EVM).
+func (p *statePrefetcher) Prefetch(block *types.Block, stateDB *state.StateDB, _ vm.Config, interrupt *uint32) {
+	signer := types.MakeSigner(p.chain.Config(), block.Header().Number)
+	blockNumber := block.NumberU64()
+	for _, tx := range block.Transactions() {
 		if interrupt != nil && atomic.LoadUint32(interrupt) == 1 {
 			return
 		}
-		// Block precaching permitted to continue, execute the transaction
-		stateDB.SetTxContext(tx.Hash(), block.Hash(), i)
-		tx = copyTxForPrefetch(tx)
-		if err := precacheTransaction(p.chain, nil, stateDB, header, tx, cfg); err != nil {
-			return // Ugh, something went horribly wrong, bail out
-		}
-	}
-}
-
-// PrefetchTx processes the state changes according to the Kaia rules by running
-// a single transaction message using the statedb, but any changes are discarded. The
-// only goal is to pre-cache transaction signatures and state trie nodes. It is used
-// when fetcher works, so it fetches only a block.
-func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.StateDB, cfg vm.Config, interrupt *uint32) {
-	var (
-		header = block.Header()
-		tx     = block.Transactions()[ti]
-	)
-
-	// If block precaching was interrupted, abort
-	if interrupt != nil && atomic.LoadUint32(interrupt) == 1 {
-		return
-	}
-
-	// Block precaching permitted to continue, execute the transaction
-	stateDB.SetTxContext(tx.Hash(), block.Hash(), ti)
-	tx = copyTxForPrefetch(tx)
-	if err := precacheTransaction(p.chain, nil, stateDB, header, tx, cfg); err != nil {
-		return // Ugh, something went horribly wrong, bail out
+		prefetchTxState(stateDB, signer, tx, blockNumber)
 	}
 }
 
@@ -92,22 +60,4 @@ func (p *statePrefetcher) PrefetchTx(block *types.Block, ti int, stateDB *state.
 // state-dependent execution caches on the transaction imported by the block.
 func copyTxForPrefetch(tx *types.Transaction) *types.Transaction {
 	return types.NewTx(tx.GetTxInternalData())
-}
-
-// precacheTransaction attempts to apply a transaction to the given state database
-// and uses the input parameters for its environment. The goal is not to execute
-// the transaction successfully, rather to warm up touched data slots.
-func precacheTransaction(chain ChainContext, author *common.Address, statedb *state.StateDB, header *types.Header, tx *types.Transaction, cfg vm.Config) error {
-	// Convert the transaction into an executable message and pre-cache its sender
-	msg, err := tx.AsMessageWithAccountKeyPicker(types.MakeSigner(chain.Config(), header.Number), statedb, header.Number.Uint64())
-	if err != nil {
-		return err
-	}
-	// Create the EVM and execute the transaction
-	blockContext := NewEVMBlockContext(header, chain, author)
-	txContext := NewEVMTxContext(msg, header, chain.Config())
-	vm := vm.NewEVM(blockContext, txContext, statedb, chain.Config(), &cfg)
-
-	_, err = ApplyMessage(vm, msg)
-	return err
 }
