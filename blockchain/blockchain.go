@@ -202,6 +202,7 @@ type BlockChain struct {
 	validator  Validator  // block and state validator interface
 	vmConfig   vm.Config
 	specCache  *SpeculativeResultCache // single-entry cache for speculative execution results
+	txLookup   atomic.Pointer[chainTxLookup]
 
 	parallelDBWrite bool // TODO-Kaia-Storage parallelDBWrite will be replaced by number of goroutines when worker pool pattern is introduced.
 
