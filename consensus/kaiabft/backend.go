@@ -712,6 +712,13 @@ func (b *backend) startSpeculativeExecution(proposal bft.Proposal) {
 		return
 	}
 
+	// Warm trie-node cache for spec-exec; ctx ties prefetch to this round.
+	b.specWg.Add(1)
+	go func() {
+		defer b.specWg.Done()
+		blockchain.PrefetchBlockState(ctx, b.chain, parentHeader.Root, block.NumberU64(), block.Transactions(), signer)
+	}()
+
 	b.specWg.Add(1)
 	go func() {
 		defer b.specWg.Done()
