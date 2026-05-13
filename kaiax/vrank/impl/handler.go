@@ -112,7 +112,7 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 	return nil
 }
 
-// HandleVRankCandidate stores VRankCandidate from candidates. Verification is performed at TallyCfReport.
+// HandleVRankCandidate stores VRankCandidate from candidates. Verification is performed at EvaluateCandidates.
 func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(msg.BlockNumber)) {
 		return nil

@@ -92,10 +92,10 @@ func (v *VRankModule) pfReport(blockNum uint64) ([]common.Address, error) {
 	return pfReport, nil
 }
 
-// TallyCfReport computes the cfReport for block blockNum at the given round from in-memory collector state.
-// To fill `header(N).VRank`, the proposer of block N must use `TallyCfReport(N-1, last round of N-1)`.
+// EvaluateCandidates computes the cfReport for block blockNum at the given round from in-memory collector state.
+// To fill `header(N).VRank`, the proposer of block N must use `EvaluateCandidates(N-1, last round of N-1)`.
 // Returns ErrNotPermissionless if header(blockNum+1) is before the permissionless fork.
-func (v *VRankModule) TallyCfReport(blockNum, round uint64) ([]common.Address, error) {
+func (v *VRankModule) EvaluateCandidates(blockNum, round uint64) ([]common.Address, error) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum + 1)) {
 		return nil, vrank.ErrNotPermissionless
 	}

@@ -640,9 +640,9 @@ func (self *worker) generateVRankField(parent *types.Block) []byte {
 		logger.Error("Failed to read parent round for vrank", "err", err, "prevBlockNum", prevBlockNum)
 		return nil
 	}
-	cfReport, err := self.vrankModule.TallyCfReport(prevBlockNum, uint64(prevRound))
+	cfReport, err := self.vrankModule.EvaluateCandidates(prevBlockNum, uint64(prevRound))
 	if err != nil {
-		logger.Error("Failed to tally cfReport", "err", err, "prevBlockNum", prevBlockNum, "prevRound", prevRound)
+		logger.Error("Failed to evaluate VRank candidates", "err", err, "prevBlockNum", prevBlockNum, "prevRound", prevRound)
 		return nil
 	}
 	if len(cfReport) == 0 {
