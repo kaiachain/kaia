@@ -23,7 +23,6 @@
 package blockchain
 
 import (
-	"math"
 	"runtime"
 
 	"github.com/kaiachain/kaia/blockchain/types"
@@ -34,8 +33,7 @@ import (
 var senderCacher = newTxSenderCacher(calcNumSenderCachers())
 
 func calcNumSenderCachers() int {
-	numWorkers := math.Ceil(float64(runtime.NumCPU()) * 2.0 / 3.0)
-	return int(numWorkers)
+	return runtime.NumCPU()
 }
 
 // txSenderCacherRequest is a request for recovering transaction senders with a
