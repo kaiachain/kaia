@@ -217,6 +217,23 @@ func (b *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, sta
 			}
 		}()
 
+		if cv, ok := b.currentView.Load().(*bft.View); ok && cv != nil &&
+			cv.Sequence.Cmp(header.Number) == 0 {
+			proposer, err := b.valsetModule.GetProposer(cv.Sequence.Uint64(), cv.Round.Uint64())
+			if err != nil {
+				logger.Warn("Failed to resolve proposer for local block execution",
+					"number", header.Number.Uint64(), "viewSeq", cv.Sequence.Uint64(),
+					"viewRound", cv.Round.Uint64(), "self", b.address, "err", err)
+			} else if proposer != b.address {
+				logger.Debug("Skipping local block execution on non-proposer",
+					"number", header.Number.Uint64(), "proposer", proposer)
+				resultCh <- nil
+				return
+			}
+		}
+		// If currentView is stale or unavailable, fall through to the legacy
+		// full execution path as a defensive fallback.
+
 		validators, err := b.valsetModule.GetQualifiedValidators(header.Number.Uint64())
 		if err != nil {
 			resultCh <- nil
@@ -295,7 +312,7 @@ func (b *backend) APIs(chain consensus.ChainReader) []rpc.API {
 func (b *backend) PurgeCache() {}
 
 func (b *backend) SubscribeNewSequence() *event.TypeMuxSubscription {
-	return b.eventMux.Subscribe(newSequenceEvent{})
+	return b.eventMux.Subscribe(consensus.NewSequenceEvent{})
 }
 
 // ---------------------------------------------------------------------------
@@ -410,7 +427,7 @@ func (b *backend) seal(block *types.Block) (*types.Block, error) {
 	if commitCh == nil {
 		return nil, nil
 	}
-	defer b.cleanupSealState()
+	defer b.cleanupSealState(commitCh)
 
 	go b.eventMux.Post(requestEvent{Proposal: block})
 
@@ -463,14 +480,29 @@ func (b *backend) initSealState(number uint64, blockHash common.Hash) chan *type
 		b.sealSkippedNum = 0
 		return nil
 	}
+	// A prior in-flight seal() for this sequence (e.g. a round-change rebuild
+	// superseding an earlier build) is still blocked on the old channel. Release
+	// it with a nil result so its goroutine returns instead of leaking. The
+	// channel is buffered (cap 1) and the old sealer is its only reader, so this
+	// never blocks: it either hands nil to the waiting sealer or fills the buffer
+	// of a sealer that has already returned.
+	if b.commitCh != nil {
+		b.commitCh <- nil
+	}
 	b.proposedBlockHash = blockHash
 	b.commitCh = make(chan *types.Result, 1)
 	return b.commitCh
 }
 
-func (b *backend) cleanupSealState() {
+func (b *backend) cleanupSealState(ch chan *types.Result) {
 	b.sealMu.Lock()
 	defer b.sealMu.Unlock()
+	// Only clear if we still own the current channel: a superseding seal()
+	// (see initSealState) may have already replaced it, and clearing then would
+	// wipe the live seal's state.
+	if b.commitCh != ch {
+		return
+	}
 	b.proposedBlockHash = common.Hash{}
 	b.commitCh = nil
 }
@@ -762,8 +794,6 @@ type messageEvent struct {
 }
 
 type chainHeadEvent struct{}
-
-type newSequenceEvent struct{}
 
 type backlogEvent struct {
 	src  common.Address
