@@ -17,7 +17,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity ^0.8.18;
 
-import "../../kaia-system-contract/contracts-klaytn-v1.12/contracts/SimpleBlsRegistry.sol";
+import "../../kaia-system-contracts/contracts-klaytn-v1.12/contracts/SimpleBlsRegistry.sol";
 
 contract KIP113Mock is SimpleBlsRegistry {
     function register(
