@@ -1544,7 +1544,10 @@ func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error
 
 // addTx enqueues a single transaction into the pool if it is valid.
 func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
-	pool.recoverSenders([]*types.Transaction{tx})
+	// RPC latency path: recover sender synchronously, skipping the async queue.
+	if !pool.warmFromKnownTx(tx) {
+		cacheSender(pool.signer, tx)
+	}
 
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -1564,7 +1567,13 @@ func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {
 
 // addTxs attempts to queue a batch of transactions if they are valid.
 func (pool *TxPool) addTxs(txs []*types.Transaction, local bool) []error {
-	pool.recoverSenders(txs)
+	toRecover := make([]*types.Transaction, 0, len(txs))
+	for _, tx := range txs {
+		if !pool.warmFromKnownTx(tx) {
+			toRecover = append(toRecover, tx)
+		}
+	}
+	senderCacher.recover(pool.signer, toRecover)
 
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
@@ -1583,6 +1592,15 @@ func (pool *TxPool) recoverSenders(txs []*types.Transaction) {
 		}
 	}
 	senderCacher.recover(pool.signer, validTxs)
+}
+
+func (pool *TxPool) warmFromKnownTx(tx *types.Transaction) bool {
+	known := pool.Get(tx.Hash())
+	if known == nil {
+		return false
+	}
+	tx.CopySenderFrom(known)
+	return true
 }
 
 // addTxsLocked attempts to queue a batch of transactions if they are valid,
