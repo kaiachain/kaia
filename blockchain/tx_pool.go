@@ -1326,9 +1326,7 @@ func (pool *TxPool) HandleTxMsg(txs types.Transactions) {
 	// Filter spam txs based on to-address of failed txs
 	spamThrottler := GetSpamThrottler()
 	if spamThrottler != nil {
-		pool.mu.RLock()
 		poolSize := uint64(pool.all.Count())
-		pool.mu.RUnlock()
 
 		// Activate spam throttler when pool has enough txs
 		if poolSize > uint64(spamThrottler.config.ActivateTxPoolSize) {
@@ -1464,10 +1462,7 @@ func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 		return errNotAllowedAnchoringTx
 	}
 
-	pool.mu.RLock()
-	poolSize := uint64(pool.all.Count())
-	pool.mu.RUnlock()
-	if poolSize >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
+	if poolSize := uint64(pool.all.Count()); poolSize >= pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
 		return fmt.Errorf("txpool is full: %d", poolSize)
 	}
 	return pool.addTx(tx, !pool.config.NoLocals)
@@ -1498,9 +1493,7 @@ func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
 // If given transactions exceed the capacity of TxPool, it slices the given transactions
 // so it can fit into TxPool's capacity.
 func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error {
-	pool.mu.RLock()
 	poolSize := uint64(pool.all.Count())
-	pool.mu.RUnlock()
 	poolCapacity := int(pool.config.ExecSlotsAll + pool.config.NonExecSlotsAll - poolSize)
 	numTxs := len(txs)
 
