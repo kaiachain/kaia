@@ -699,6 +699,10 @@ func (b *backend) startSpeculativeExecution(proposal bft.Proposal) {
 	blockHash := block.Hash()
 	entry := b.specCache.Reserve(blockHash)
 
+	// Adopt pool-known senders; kick async ecrecover for the rest.
+	signer := types.MakeSigner(b.chain.Config(), block.Number())
+	blockchain.WarmSenders(signer, block, b.chain.TxLookup())
+
 	executor := b.executor.Clone()
 
 	parentHeader := b.chain.GetHeader(block.ParentHash(), block.NumberU64()-1)

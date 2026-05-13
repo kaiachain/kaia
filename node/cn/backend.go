@@ -354,6 +354,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	config.TxPool.BlobStorageConfig = &blobStorageConfig
 
 	cn.txPool = blockchain.NewTxPool(config.TxPool, cn.chainConfig, bc, mGov)
+	bc.SetTxLookup(cn.txPool.Get)
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieNodeCacheConfig.LocalCacheSizeMiB

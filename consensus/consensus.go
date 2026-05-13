@@ -73,6 +73,9 @@ type ChainReader interface {
 
 	// PrunableStateAt retrieves statedb on a particular point in time with live pruning
 	PrunableStateAt(root common.Hash, num uint64) (*state.StateDB, error)
+
+	// TxLookup returns the optional hash→tx resolver used by sender warming.
+	TxLookup() func(common.Hash) *types.Transaction
 }
 
 // ChainContext extends ChainReader with transaction execution capability.
