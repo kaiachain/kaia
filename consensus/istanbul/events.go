@@ -46,10 +46,6 @@ type CommitEvent struct {
 // ChainHeadEvent is posted when a new block is added to the chain
 type ChainHeadEvent struct{}
 
-// NewSequenceEvent is posted when a new sequence (block number) starts.
-// This signals the worker to start preparing the next block.
-type NewSequenceEvent struct{}
-
 // PrepreparedEvent is posted when this node accepts a PRE-PREPARE for a (block, view).
 // VRank subscribes to it to record consensus participation timing for the view.
 type PrepreparedEvent struct {
