@@ -73,7 +73,7 @@ On a cold start, the CP matrix is seeded from `GetCandTesting(N)` for the querie
 
 ### Scoring epoch
 
-Both scores are epoch-local. `epochStart(N) = N - (N % epoch)`. The epoch-start block itself (`N % epoch == 0`) always has an empty `header.VRank` and does not contribute to CFS.
+Both scores are epoch-local. `epochStart(N) = N - (N % epoch)`. The epoch-start block itself (`N % epoch == 0`) carries `RLPEncode(CandTesting(N))` in `header.VRank` and does not contribute to CFS.
 
 ### Checkpoints
 
@@ -176,7 +176,7 @@ Called when a `VRankCandidate` message is received. The handler does not try to 
 `VerifyHeader` checks the `VRank` field in committed headers:
 
 - before the permissionless fork, `header.VRank` must be empty
-- at epoch-start blocks, `header.VRank` must be empty
+- at epoch-start blocks, `header.VRank` must decode to `CandTesting(N)`
 - otherwise, `header(N).VRank` must decode to a sorted, deduplicated candidate list whose addresses are all in `GetCandTesting(N-1)`, because `header(N).VRank` reports failures observed while building block `N-1`
 
 ### Execution

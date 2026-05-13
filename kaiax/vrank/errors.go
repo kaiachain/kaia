@@ -38,6 +38,7 @@ var (
 
 	ErrUnexpectedVRankBeforePermissionless = errors.New("unexpected vrank before permissionless fork")
 	ErrUnexpectedVRankAtEpochStart         = errors.New("unexpected vrank at epoch start block")
+	ErrMismatchedEpochStartVRank           = errors.New("vrank at epoch start does not match CandTesting")
 	ErrInvalidVRankFormat                  = errors.New("invalid vrank format")
 	ErrInvalidVRankCandidate               = errors.New("invalid vrank: address is not a candidate")
 	ErrDuplicateVRankCandidate             = errors.New("invalid vrank: duplicate candidate address")

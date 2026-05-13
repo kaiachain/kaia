@@ -460,7 +460,7 @@ func TestGetCFS(t *testing.T) {
 		epochStart := uint64(params.DefaultVRankEpoch)
 		C1, C2, P1 := numToAddr(10), numToAddr(11), numToAddr(1)
 		headers := map[uint64]*types.Header{
-			epochStart: makeHeaderWithVRank(epochStart, 0, nil), // epoch start: VRank must be nil
+			epochStart: makeHeaderWithVRank(epochStart, 0, nil), // CFS ignores epoch-start VRank.
 		}
 		cn := newCN(t, withHeaders(headers), withCandidates([]common.Address{C1, C2}), withProposer(P1))
 
@@ -843,10 +843,10 @@ func TestApplyBlocksForCFS(t *testing.T) {
 		randao := mock_randao.NewMockRandaoModule(ctrl)
 		v := newCN(t, withValset(valset), withRandao(randao), withGenesis()).VRankModule
 
-		// Only one block in the range: the epoch-start block with nil VRank.
+		// Only one block in the range: the epoch-start block, whose VRank is ignored by CFS.
 		v.Chain = &testChain{
 			headers: map[uint64]*types.Header{
-				0: makeHeaderWithRound(0, 0), // VRank is nil
+				0: makeHeaderWithRound(0, 0),
 			},
 		}
 		valset.EXPECT().GetCandTesting(uint64(0)).Return(candidates, nil)

@@ -52,3 +52,13 @@ func TestEncodeDecodeReport(t *testing.T) {
 		})
 	}
 }
+
+func TestEncodeAddressList_EmptyList(t *testing.T) {
+	enc, err := EncodeAddressList(nil)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, enc)
+
+	dec, err := DecodeReport(enc)
+	assert.NoError(t, err)
+	assert.Empty(t, dec)
+}

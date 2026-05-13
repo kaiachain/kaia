@@ -41,6 +41,13 @@ func makeVRankHeader(t *testing.T, number uint64, cfAddrs []common.Address) *typ
 	return h
 }
 
+func makeEpochStartVRankHeader(t *testing.T, number uint64, candidates []common.Address) *types.Header {
+	t.Helper()
+	encoded, err := vrank.EncodeAddressList(candidates)
+	require.NoError(t, err)
+	return &types.Header{Number: big.NewInt(int64(number)), VRank: encoded}
+}
+
 // TestVerifyHeader covers all branches of VRankModule.VerifyHeader.
 func TestVerifyHeader(t *testing.T) {
 	C1, C2, C3 := numToAddr(1), numToAddr(2), numToAddr(3)
@@ -55,16 +62,44 @@ func TestVerifyHeader(t *testing.T) {
 		assert.ErrorIs(t, v.VerifyHeader(h, nil), vrank.ErrUnexpectedVRankBeforePermissionless)
 	})
 
-	t.Run("epoch-start: VRank must be empty", func(t *testing.T) {
-		v := newCN(t).VRankModule
-		h := &types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}
-		assert.NoError(t, v.VerifyHeader(h, nil))
-		h = makeVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C1})
-		assert.ErrorIs(t, v.VerifyHeader(h, nil), vrank.ErrUnexpectedVRankAtEpochStart)
+	t.Run("epoch-start: VRank must match CandTesting", func(t *testing.T) {
+		v := newCN(t, withCandidates([]common.Address{C1, C2})).VRankModule
+		assert.NoError(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C1, C2}), nil))
+		assert.ErrorIs(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C2, C1}), nil),
+			vrank.ErrMismatchedEpochStartVRank)
+		assert.ErrorIs(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C1, C1}), nil),
+			vrank.ErrMismatchedEpochStartVRank)
+		assert.ErrorIs(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C1, C3}), nil),
+			vrank.ErrMismatchedEpochStartVRank)
+		assert.ErrorIs(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C1}), nil),
+			vrank.ErrMismatchedEpochStartVRank)
+		assert.ErrorIs(t, v.VerifyHeader(&types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}, nil),
+			vrank.ErrInvalidVRankFormat)
 	})
 
-	t.Run("post-fork non-epoch: empty VRank passes", func(t *testing.T) {
-		v := newCN(t).VRankModule
+	t.Run("epoch-start: empty CandTesting is encoded as an RLP list", func(t *testing.T) {
+		v := newCN(t, withCandidates(nil)).VRankModule
+		assert.NoError(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, nil), nil))
+	})
+
+	t.Run("epoch-start: candidate membership is checked against block N", func(t *testing.T) {
+		headerNum := uint64(params.DefaultVRankEpoch)
+		cn := newCN(t, withoutStart())
+		cn.Valset.EXPECT().GetCandTesting(headerNum).Return(candidates, nil).Times(1)
+
+		assert.NoError(t, cn.VRankModule.VerifyHeader(makeEpochStartVRankHeader(t, headerNum, candidates), nil))
+	})
+
+	t.Run("epoch-start: candidate lookup failure is returned", func(t *testing.T) {
+		headerNum := uint64(params.DefaultVRankEpoch)
+		cn := newCN(t, withoutStart())
+		cn.Valset.EXPECT().GetCandTesting(headerNum).Return(nil, assert.AnError).Times(1)
+
+		assert.ErrorIs(t, cn.VRankModule.VerifyHeader(makeEpochStartVRankHeader(t, headerNum, candidates), nil), assert.AnError)
+	})
+
+	t.Run("post-fork non-epoch: empty VRank passes without reading candidates", func(t *testing.T) {
+		v := newCN(t, withoutStart()).VRankModule
 		h := &types.Header{Number: big.NewInt(100)}
 		assert.NoError(t, v.VerifyHeader(h, nil))
 	})
@@ -94,10 +129,18 @@ func TestVerifyHeader(t *testing.T) {
 			vrank.ErrVRankNotSorted)
 	})
 
-	t.Run("invalid encoding rejected", func(t *testing.T) {
-		v := newCN(t).VRankModule
+	t.Run("invalid encoding rejected before reading candidates", func(t *testing.T) {
+		v := newCN(t, withoutStart()).VRankModule
 		h := &types.Header{Number: big.NewInt(100), VRank: []byte{0xff, 0xfe}} // garbage
 		assert.ErrorIs(t, v.VerifyHeader(h, nil), vrank.ErrInvalidVRankFormat)
+	})
+
+	t.Run("non-epoch candidate lookup failure is returned", func(t *testing.T) {
+		headerNum := uint64(101)
+		cn := newCN(t, withoutStart())
+		cn.Valset.EXPECT().GetCandTesting(headerNum-1).Return(nil, assert.AnError).Times(1)
+
+		assert.ErrorIs(t, cn.VRankModule.VerifyHeader(makeVRankHeader(t, headerNum, []common.Address{C1}), nil), assert.AnError)
 	})
 
 	t.Run("candidate membership is checked against the reported block N-1", func(t *testing.T) {
