@@ -414,6 +414,21 @@ func (tx *Transaction) WithoutBlobTxSidecar() *Transaction {
 	return cpy
 }
 
+// CopySenderFrom transplants the cached sender (and fee-payer) from a same-hash twin.
+func (tx *Transaction) CopySenderFrom(src *Transaction) {
+	if src == nil || src == tx {
+		return
+	}
+	if v := src.from.Load(); v != nil {
+		tx.from.Store(v)
+	}
+	if tx.IsFeeDelegatedTransaction() {
+		if v := src.feePayer.Load(); v != nil {
+			tx.feePayer.Store(v)
+		}
+	}
+}
+
 // WithBlobTxSidecar returns a copy of tx with the blob sidecar added.
 func (tx *Transaction) WithBlobTxSidecar(sideCar *BlobTxSidecar) *Transaction {
 	blobtx, ok := tx.GetTxInternalData().(*TxInternalDataEthereumBlob)
