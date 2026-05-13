@@ -115,7 +115,6 @@ const (
 	DefaultTriesInMemory        = 128
 	DefaultBlockInterval        = 128
 	DefaultLivePruningRetention = 172800 // 2*params.DefaultStakeUpdateInterval
-	MaxPrefetchTxs              = 20000
 
 	// BlockChainVersion ensures that an incompatible database forces a resync from scratch.
 	// Changelog:
@@ -220,19 +219,10 @@ type BlockChain struct {
 	lastCommittedBlock uint64
 	quitWarmUp         chan struct{}
 
-	prefetchTxCh chan prefetchTx
-
 	// kaiax modules
 	headerModules     []kaiax.HeaderModule
 	executionModules  []kaiax.ExecutionModule
 	rewindableModules []kaiax.RewindableModule
-}
-
-// prefetchTx is used to prefetch transactions, when fetcher works.
-type prefetchTx struct {
-	ti                int
-	block             *types.Block
-	followupInterrupt *uint32
 }
 
 // NewBlockChain returns a fully initialised block chain using information
@@ -279,7 +269,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		specCache:          NewSpeculativeResultCache(),
 		parallelDBWrite:    db.IsParallelDBWrite(),
 		stopStateMigration: make(chan struct{}),
-		prefetchTxCh:       make(chan prefetchTx, MaxPrefetchTxs),
 	}
 
 	// set hardForkBlockNumberConfig which will be used as a global variable
@@ -368,12 +357,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 		bc.snaps, _ = snapshot.New(bc.db, bc.stateCache.TrieDB(), bc.cacheConfig.SnapshotCacheSize, head.Root(), bc.cacheConfig.SnapshotAsyncGen, true, recover)
 	}
 
-	for i := 1; i <= bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker; i++ {
-		bc.wg.Add(1)
-		go bc.prefetchTxWorker(i)
-	}
-	logger.Info("prefetchTxWorkers are started", "num", bc.cacheConfig.TrieNodeCacheConfig.NumFetcherPrefetchWorker)
-
 	// Take ownership of this particular state
 	go bc.update()
 	bc.gcCachedNodeLoop()
@@ -391,30 +374,6 @@ func NewBlockChain(db database.DBManager, cacheConfig *CacheConfig, chainConfig 
 	}
 
 	return bc, nil
-}
-
-// prefetchTxWorker receives a block and a transaction index, which it pre-executes
-// to retrieve and cache the data for the actual block processing.
-func (bc *BlockChain) prefetchTxWorker(index int) {
-	defer bc.wg.Done()
-
-	logger.Debug("prefetchTxWorker is started", "index", index)
-	var snaps *snapshot.Tree
-	if bc.cacheConfig.TrieNodeCacheConfig.UseSnapshotForPrefetch {
-		snaps = bc.snaps
-	}
-	for followup := range bc.prefetchTxCh {
-		stateDB, err := state.New(bc.CurrentBlock().Root(), bc.stateCache, snaps,
-			&statedb.TrieOpts{Prefetching: true})
-		if err != nil {
-			logger.Debug("failed to retrieve stateDB for prefetchTxWorker", "err", err)
-			continue
-		}
-		vmCfg := bc.vmConfig
-		vmCfg.Prefetching = true
-		bc.prefetcher.PrefetchTx(followup.block, followup.ti, stateDB, vmCfg, followup.followupInterrupt)
-	}
-	logger.Debug("prefetchTxWorker is terminated", "index", index)
 }
 
 // SetCanonicalBlock resets the canonical as the block with the given block number.
@@ -1157,7 +1116,6 @@ func (bc *BlockChain) Stop() {
 		bc.CloseBlockSubscriptionLoop()
 	}
 
-	close(bc.prefetchTxCh)
 	close(bc.quit)
 	atomic.StoreInt32(&bc.procInterrupt, 1)
 
@@ -2003,13 +1961,6 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				snaps = bc.snaps
 			}
 
-			// Tx prefetcher is enabled for all cases (both single and multiple block insertion).
-			for ti := range block.Transactions() {
-				select {
-				case bc.prefetchTxCh <- prefetchTx{ti, block, &followupInterrupt}:
-				default:
-				}
-			}
 			if i < len(chain)-1 {
 				// current block is not the last one, so prefetch the right next block
 				followup := chain[i+1]
