@@ -23,8 +23,6 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/bindings/uniswap/factory"
-	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/bindings/uniswap/router"
 	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
 	kip113contract "github.com/kaiachain/kaia/contracts/bindings/kip113"
 	kip149contract "github.com/kaiachain/kaia/contracts/bindings/kip149"
@@ -34,6 +32,8 @@ import (
 	proxyv5contract "github.com/kaiachain/kaia/contracts/bindings/proxyv5"
 	"github.com/kaiachain/kaia/contracts/bindings/testing/reward"
 	testcontract "github.com/kaiachain/kaia/contracts/bindings/testing/system_contracts"
+	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/bindings/uniswap/factory"
+	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/bindings/uniswap/router"
 	"github.com/kaiachain/kaia/log"
 )
 
