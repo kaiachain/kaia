@@ -60,8 +60,6 @@ func (c *core) sendPreprepare(request *bft.Request) {
 func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("from", src, "state", c.state)
 
-	timestamp := time.Now()
-
 	// Decode PRE-PREPARE
 	var preprepare *bft.Preprepare
 	err := msg.Decode(&preprepare)
@@ -125,8 +123,6 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 			if preprepare.Proposal.Hash() == c.current.GetLockedHash() {
 				logger.Warn("Received preprepare message of the hash locked proposal and change state to prepared")
 				// Broadcast COMMIT and enters Prepared state directly
-				Vrank.SetLatestView(*preprepare.View, c.current.committee.List(), c.current.requiredMessageCount)
-				Vrank.AddPreprepare(src, preprepare.View.Round.Uint64(), timestamp)
 				c.acceptPreprepare(preprepare)
 				c.setState(StatePrepared)
 				c.sendCommit()
@@ -135,8 +131,6 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 				c.sendNextRoundChange("handlePreprepare. HashLocked, but received hash is different from locked hash")
 			}
 		} else {
-			Vrank.SetLatestView(*preprepare.View, c.current.committee.List(), c.current.requiredMessageCount)
-			Vrank.AddPreprepare(src, preprepare.View.Round.Uint64(), timestamp)
 			// Either
 			//   1. the locked proposal and the received proposal match
 			//   2. we have no locked proposal

@@ -37,7 +37,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -369,9 +368,6 @@ func (self *worker) commitNewWork() {
 	// Wait for ideal block time to ensure consistent block intervals
 	self.waitForIdealBlockTime(parent)
 	tstart := time.Now()
-
-	core.Vrank.Log()
-	core.Vrank.StartTimer()
 
 	var pending map[common.Address]types.Transactions
 	var err error

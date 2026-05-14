@@ -23,8 +23,6 @@
 package core
 
 import (
-	"time"
-
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
 )
@@ -72,7 +70,6 @@ func (c *core) broadcastCommit(sub *bft.Subject) {
 }
 
 func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
-	timestamp := time.Now()
 	// Decode COMMIT message
 	var commit *bft.Subject
 	err := msg.Decode(&commit)
@@ -98,7 +95,6 @@ func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
 	}
 
 	c.acceptCommit(msg, src)
-	Vrank.AddCommit(src, commit.View.Round.Uint64(), timestamp)
 
 	// Change to Prepared state if we've received enough PREPARE/COMMIT messages or it is locked
 	// and we are in earlier state before Prepared state.

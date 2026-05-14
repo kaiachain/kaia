@@ -25,7 +25,6 @@ package core
 import (
 	"math/big"
 	"sync"
-	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
@@ -44,7 +43,6 @@ func (c *core) sendNextRoundChange(loc string) {
 // sendRoundChange sends the ROUND CHANGE message with the given round
 func (c *core) sendRoundChange(round *big.Int) {
 	logger := c.logger.NewWith("state", c.state)
-	timestamp := time.Now()
 
 	cv := c.currentView()
 	if cv.Round.Cmp(round) >= 0 {
@@ -85,21 +83,10 @@ func (c *core) sendRoundChange(round *big.Int) {
 		Code: bft.MsgRoundChange,
 		Msg:  payload,
 	})
-
-	committeeList := []common.Address{}
-	if c.current.committee != nil {
-		committeeList = c.current.committee.List()
-	}
-	Vrank.SetLatestView(bft.View{
-		Round:    new(big.Int).Set(round),
-		Sequence: new(big.Int).Set(cv.Sequence),
-	}, committeeList, c.current.requiredMessageCount)
-	Vrank.AddMyRoundChange(round.Uint64(), timestamp)
 }
 
 func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 	logger := c.logger.NewWith("state", c.state, "from", src.Hex())
-	timestamp := time.Now()
 
 	// Decode ROUND CHANGE message
 	var rc *bft.Subject
@@ -127,9 +114,6 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 		logger.Warn("Failed to add round change message", "from", src, "msg", msg, "err", err)
 		return err
 	}
-
-	Vrank.SetLatestView(*cv, c.current.committee.List(), c.current.requiredMessageCount)
-	Vrank.AddRoundChange(src, roundView.Round.Uint64(), timestamp)
 
 	var numCatchUp, numStartNewRound int
 	n := c.current.requiredMessageCount

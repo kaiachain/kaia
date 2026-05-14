@@ -31,7 +31,6 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kafka"
 	"github.com/kaiachain/kaia/datasync/dbsyncer"
@@ -2066,14 +2065,6 @@ var (
 		Usage:    "Maximum transaction priority fee (or gasprice before Magma fork) to be recommended by gpo",
 		Value:    cn.GetDefaultConfig().GPO.MaxPrice.Int64(),
 		Category: "GAS PRICE ORACLE",
-	}
-
-	// VRank logging frequency
-	VRankLogFrequencyFlag = &cli.Uint64Flag{
-		Name:     "vrank.log-frequency",
-		Usage:    "Frequency of VRank logging in blocks (0=disabled, 1=every block, 60=every 60 blocks, ...)",
-		Value:    core.DefaultVRankLogFrequency,
-		Category: "VRANK",
 	}
 
 	// TODO-Kaia-Bootnode: Add bootnode's metric options
