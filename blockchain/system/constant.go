@@ -97,7 +97,7 @@ var (
 
 	MultiCallCode             = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
 	MultiCallMockCode         = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)
-	MultiCallPermlessMockCode = hexutil.MustDecode("0x" + permlesstestcontract.MultiCallContractMockBinRuntime)
+	MultiCallPermlessMockCode = hexutil.MustDecode("0x" + permlesstestcontract.MultiCallContractMockPermissionlessBinRuntime)
 
 	// Mock for CLRegistry testing
 	CLRegistryMockThreeCLAddr = common.HexToAddress("0x0000000000000000000000000000000000000Ff0")
