@@ -82,8 +82,8 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 //go:generate ./abigenw --pkg auction --type IAuctionEntryPoint --artifact ./kaia-system-contracts/contracts-v2.1/artifacts/contracts/auction/interfaces/IAuctionEntryPoint.sol/IAuctionEntryPoint.json --out ./bindings/auction/Kip249.go
 
 // Permissionless contracts (v3.0) — generated from forge artifacts in kaia-system-contracts submodule.
-// MultiCallContractMock is excluded (not yet in kaia-system-contracts; kept as copied binding).
 
+//go:generate ./abigenw --pkg testing --type MultiCallContractMockPermissionless --sol ./testing/system_contracts/MultiCallContractMockPermissionless.sol --out ./bindings/testing/MultiCallContractMockPermissionless.go --ver 0.8.19
 //go:generate ./abigenw --pkg addressbookv2 --type AddressBookV2 --artifact ./kaia-system-contracts/contracts-v3.0/out/AddressBookV2.sol/AddressBookV2.json --out ./bindings/addressbookv2/AddressBookV2.go
 //go:generate ./abigenw --pkg abv2data --type ABv2DataContract --artifact ./kaia-system-contracts/contracts-v3.0/out/ABv2DataContract.sol/ABv2DataContract.json --out ./bindings/abv2data/ABv2DataContract.go
 //go:generate ./abigenw --pkg cnstakingv4 --type CnStakingV4 --artifact ./kaia-system-contracts/contracts-v3.0/out/CnStakingV4.sol/CnStakingV4.json --out ./bindings/cnstakingv4/CnStakingV4.go
