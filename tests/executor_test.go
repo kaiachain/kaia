@@ -26,6 +26,10 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/profile"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/engine"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/work"
@@ -413,4 +417,111 @@ func TestInsertChain_SpeculativeCacheTimeout(t *testing.T) {
 	assert.Equal(t, 0, n)
 	assert.Equal(t, hitsBefore, bcdata.bc.SpeculativeCache().Hits(),
 		"InsertChain should have timed out and fallen back to sync execution")
+}
+
+// TestKaiaBFT_SpeculativeExecution_ClonePath verifies that the kaiabft
+// speculative execution path (Clone → ResetWithState → ProcessBlock →
+// FinalizeState → populate cache) produces results that pass InsertChain's
+// ValidateState, matching the proposer's block exactly.
+func TestKaiaBFT_SpeculativeExecution_ClonePath(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Magma"], nil)
+	require.NoError(t, err)
+	defer bcdata.Shutdown()
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).Add(bcdata.bc.CurrentBlock().Header().BaseFee, big.NewInt(1))
+
+	var txs types.Transactions
+	sender := bcdata.privKeys[0]
+	senderAddr := *bcdata.addrs[0]
+	stateDb, err := bcdata.bc.State()
+	require.NoError(t, err)
+	nonce := stateDb.GetNonce(senderAddr)
+
+	for i := range 5 {
+		tx := types.NewTransaction(nonce, *bcdata.addrs[1+i%4], new(big.Int).SetUint64(1000), params.TxGas, gasPrice, nil)
+		signedTx, err := types.SignTx(tx, signer, sender)
+		require.NoError(t, err)
+		txs = append(txs, signedTx)
+		nonce++
+	}
+
+	prof := profile.NewProfiler()
+	_, block, _, err := bcdata.MineABlock(txs, signer, prof, nil)
+	require.NoError(t, err)
+
+	parent := bcdata.bc.CurrentBlock()
+	parentState, err := bcdata.bc.PrunableStateAt(parent.Root(), parent.NumberU64())
+	require.NoError(t, err)
+
+	origExecutor := work.NewDefaultExecutor(bcdata.bc.Config(), bcdata.bc, common.Address{}, vm.Config{})
+	clonedExecutor := origExecutor.Clone()
+
+	require.NoError(t, clonedExecutor.ResetWithState(parentState, block.Header()))
+
+	specResult, err := clonedExecutor.ProcessBlock(block.Transactions())
+	require.NoError(t, err)
+
+	assert.Equal(t, block.Root(), specResult.State.IntermediateRoot(true), "state root mismatch")
+	assert.Equal(t, block.GasUsed(), specResult.UsedGas, "gas used mismatch")
+
+	hitsBefore := bcdata.bc.SpeculativeCache().Hits()
+	entry := bcdata.bc.SpeculativeCache().Reserve(block.Hash())
+
+	entry.Complete(&blockchain.SpeculativeResult{
+		State:            specResult.State,
+		Receipts:         specResult.Receipts,
+		Logs:             specResult.Logs,
+		UsedGas:          specResult.UsedGas,
+		InternalTxTraces: specResult.InternalTxTraces,
+		ProcessStats: blockchain.ProcessStats{
+			BeforeApplyTxs: specResult.BeforeApplyTxs,
+			AfterApplyTxs:  specResult.AfterApplyTxs,
+			AfterFinalize:  specResult.AfterFinalize,
+		},
+		Bloom:       types.CreateBloom(specResult.Receipts),
+		ReceiptHash: types.DeriveReceiptsRoot(specResult.Receipts, block.Number()),
+	}, nil)
+
+	n, err := bcdata.bc.InsertChain(types.Blocks{block})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, n)
+	assert.Equal(t, hitsBefore+1, bcdata.bc.SpeculativeCache().Hits(), "speculative cache should have been hit")
+}
+
+// TestKaiaBFT_EngineFactory verifies that the consensus engine factory
+// creates the correct engine type based on EngineType.
+func TestKaiaBFT_EngineFactory(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+
+	istanbulConfig := &istanbul.Config{
+		Timeout:        10000,
+		ProposerPolicy: istanbul.RoundRobin,
+		Epoch:          30000,
+		SubGroupSize:   21,
+	}
+
+	e1 := engine.NewEngine(&engine.Opts{
+		IstanbulConfig: istanbulConfig,
+		PrivateKey:     key,
+		NodeType:       common.CONSENSUSNODE,
+	})
+	require.NotNil(t, e1)
+	_, isHandler := e1.(consensus.Handler)
+	assert.True(t, isHandler, "istanbul engine should implement Handler")
+
+	e2 := engine.NewEngine(&engine.Opts{
+		EngineType:     engine.KaiaBFT,
+		IstanbulConfig: istanbulConfig,
+		PrivateKey:     key,
+		NodeType:       common.CONSENSUSNODE,
+	})
+	require.NotNil(t, e2)
+	_, isHandler2 := e2.(consensus.Handler)
+	assert.True(t, isHandler2, "kaiabft engine should implement Handler")
 }

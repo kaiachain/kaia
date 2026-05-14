@@ -318,6 +318,13 @@ var (
 		EnvVars:  []string{"KLAYTN_KES_NODETYPE_SERVICE", "KAIA_KES_NODETYPE_SERVICE"},
 		Category: "MISC",
 	}
+	ConsensusEngineFlag = &cli.StringFlag{
+		Name:     "consensus.engine",
+		Usage:    `Consensus engine type: "istanbul" (default) or "kaiabft" (speculative execution)`,
+		Value:    "istanbul",
+		EnvVars:  []string{"KAIA_CONSENSUS_ENGINE"},
+		Category: "CONSENSUS",
+	}
 	SingleDBFlag = &cli.BoolFlag{
 		Name:     "db.single",
 		Usage:    "Create a single persistent storage. MiscDB, headerDB and etc are stored in one DB.",

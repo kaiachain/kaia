@@ -159,6 +159,9 @@ type Config struct {
 	// Enables collecting and printing opcode execution time when node stops
 	EnableOpDebug bool
 
+	// Consensus engine type: "istanbul" (default) or "kaiabft"
+	ConsensusEngine string
+
 	// Istanbul options
 	Istanbul istanbul.Config
 
