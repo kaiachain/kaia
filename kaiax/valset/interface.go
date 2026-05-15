@@ -31,6 +31,7 @@ type ValsetModule interface {
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
 	kaiax.BlockStateModule
+	kaiax.HeaderModule
 
 	GetCouncil(num uint64) ([]common.Address, error)
 	GetCommittee(num uint64, round uint64) ([]common.Address, error)
@@ -41,6 +42,9 @@ type ValsetModule interface {
 	// GetCandTesting returns nodes in the CandTesting state at block `num`.
 	// Stub until permissionless system contracts (AddressBookV2) land; currently returns an empty slice.
 	GetCandTesting(num uint64) ([]common.Address, error)
+	GetCNPeers(num uint64) ([]common.Address, error)
+	GetHeaderGovVoters(num uint64) ([]common.Address, error)
+	GetNodeByState(num uint64, states []NodeState) (NodeMap, error)
 
 	// Permissionless additions (post-fork; pre-fork these are no-ops).
 	WriteTransitionToABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error

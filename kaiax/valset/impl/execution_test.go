@@ -66,6 +66,7 @@ func TestPostInsertBlock(t *testing.T) {
 	writeCouncil(db, 0, genesisCouncil)
 	writeValidatorVoteBlockNums(db, []uint64{0})
 	writeLowestScannedVoteNum(db, 0)
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(makeGenesisBlock(genesisCouncil).Header()).AnyTimes()
 	mockGov.EXPECT().GetParamSet(uint64(1)).Return(pset).AnyTimes()
 	mockGov.EXPECT().GetParamSet(uint64(2)).Return(pset).AnyTimes()
@@ -111,16 +112,19 @@ func Test_AddRemove(t *testing.T) {
 	for _, tc := range testcases {
 		ctrl := gomock.NewController(t)
 		db := database.NewMemDB()
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
 		mockGov := gov_mock.NewMockGovModule(ctrl)
 		mockStaking := staking_mock.NewMockStakingModule(ctrl)
 		v := &ValsetModule{InitOpts: InitOpts{
 			ChainKv:       db,
+			Chain:         mockChain,
 			GovModule:     mockGov,
 			StakingModule: mockStaking,
 		}}
 		writeCouncil(db, 0, genesisCouncil)
 		writeValidatorVoteBlockNums(db, []uint64{0})
 		writeLowestScannedVoteNum(db, 0)
+		mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
 		mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{GoverningNode: governingNode}).AnyTimes()
 
 		for i := 0; i < tc.length; i++ {

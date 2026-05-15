@@ -42,10 +42,36 @@ type blockContext struct {
 }
 
 func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
-	qualified, err := v.getQualifiedValidators(num)
-	if err != nil {
-		return nil, err
+	var (
+		qualified *valset.AddressSet
+		err       error
+	)
+
+	// Post-fork fast path: VerifyHeader guarantees that the header's stored
+	// validator list (Sealer().Validators) equals getQualifiedValidators(num)
+	// for committed canonical blocks. Read it directly to avoid an ABv2
+	// lookup. Falls back to recomputing when the block is not yet inserted
+	// (e.g. while mining or verifying the candidate header before insertion).
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		if header := v.Chain.GetHeaderByNumber(num); header != nil {
+			vals, err := v.Chain.Sealer().Validators(header)
+			if err != nil {
+				return nil, err
+			}
+			qualified = valset.NewAddressSet(vals)
+		} else {
+			qualified, err = v.getQualifiedValidators(num)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		qualified, err = v.getQualifiedPermissioned(num)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	prevHeader := v.Chain.GetHeaderByNumber(num - 1)
 	if prevHeader == nil {
 		return nil, errNoHeader
@@ -69,7 +95,7 @@ func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
 	}, nil
 }
 
-func (v *ValsetModule) getCommittee(c *blockContext, round uint64) ([]common.Address, error) {
+func (v *ValsetModule) getCommitteePermissioned(c *blockContext, round uint64) ([]common.Address, error) {
 	if c.num == 0 {
 		return c.qualified.List(), nil
 	}
@@ -178,7 +204,13 @@ func (v *ValsetModule) getProposer(c *blockContext, round uint64) (common.Addres
 		return selectStickyProposer(c.qualified, c.prevProposer, round), nil
 	case istanbul.WeightedRandom:
 		if c.rules.IsRandao {
-			committee := selectRandaoCommittee(c.qualified, c.pset.CommitteeSize, c.prevHeader.MixHash)
+			// CommitteeSize is deprecated post-fork: shuffle the full qualified
+			// set so the proposer is drawn from every active validator.
+			committeeSize := c.pset.CommitteeSize
+			if c.rules.IsPermissionless {
+				committeeSize = uint64(c.qualified.Len())
+			}
+			committee := selectRandaoCommittee(c.qualified, committeeSize, c.prevHeader.MixHash)
 			return selectRandaoProposer(committee, round), nil
 		} else {
 			list, sourceNum, err := v.getProposerList(c)

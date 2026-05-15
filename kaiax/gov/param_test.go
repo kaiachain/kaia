@@ -194,23 +194,36 @@ func TestDeprecatedAt(t *testing.T) {
 			IsKore: true, IsShanghai: true, IsCancun: true, IsKaia: true,
 			IsRandao: true, IsPrague: true, IsOsaka: true,
 		}},
+		{desc: "permissionless rules", rules: params.Rules{IsPermissionless: true}},
 	}
 
 	for _, rv := range rulesVariants {
 		t.Run(rv.desc, func(t *testing.T) {
-			// Static deprecated: must return true.
+			expectedDeprecated := make(map[ParamName]struct{})
 			for name := range AlwaysDeprecated {
+				expectedDeprecated[name] = struct{}{}
+			}
+			if rv.rules.IsPermissionless {
+				for name := range PermissionlessDeprecated {
+					expectedDeprecated[name] = struct{}{}
+				}
+			}
+
+			for name := range expectedDeprecated {
 				assert.True(t, DeprecatedAt(name, rv.rules), "expected %s to be deprecated", name)
 			}
 
 			// Every other known param in Params and ValidatorParams must return false.
 			for name := range Params {
-				if _, ok := AlwaysDeprecated[name]; ok {
+				if _, ok := expectedDeprecated[name]; ok {
 					continue
 				}
 				assert.False(t, DeprecatedAt(name, rv.rules), "expected %s not deprecated", name)
 			}
 			for name := range ValidatorParams {
+				if _, ok := expectedDeprecated[name]; ok {
+					continue
+				}
 				assert.False(t, DeprecatedAt(name, rv.rules), "expected %s not deprecated (validator param)", name)
 			}
 

@@ -36,7 +36,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestGetCommittee tests various branches of getCommittee().
+// TestGetCommittee tests various branches of getCommitteePermissioned().
 // Individual selectors are tested as separate tests.
 func TestGetCommittee(t *testing.T) {
 	var (
@@ -116,7 +116,7 @@ func TestGetCommittee(t *testing.T) {
 
 		v.proposerListCache.Purge()
 		v.removeVotesCache.Purge()
-		committee, err := v.getCommittee(c, 0)
+		committee, err := v.getCommitteePermissioned(c, 0)
 		assert.NoError(t, err)
 		assert.Equal(t, tc.expected, committee, tc.desc)
 	}

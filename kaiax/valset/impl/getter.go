@@ -17,34 +17,30 @@
 package impl
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
-// GetCandTesting returns nodes in the CandTesting state at block `num`.
-// TODO-kaia-permissionless: replace with a real implementation once AddressBookV2
-// and the permissionless node-state map land on dev.
-func (v *ValsetModule) GetCandTesting(num uint64) ([]common.Address, error) {
-	return []common.Address{}, nil
-}
-
 // GetCouncil returns the whole validator list for validating the block `num`.
 func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
-	council, err := v.getCouncil(num)
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return v.getCouncil(num)
+	}
+	council, err := v.getCouncilPermissioned(num)
 	if err != nil {
 		return nil, err
-	} else {
-		return council.List(), nil
 	}
+	return council.List(), nil
 }
 
-// GetDemotedValidators are subtract of qualified from council(N)
+// GetDemotedValidators returns council − qualified at block `num`.
 func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error) {
-	council, err := v.getCouncil(num)
-	if err != nil {
-		return nil, err
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return v.getDemoted(num)
 	}
-	demoted, err := v.getDemotedValidators(council, num)
+	demoted, err := v.getDemotedPermissioned(num)
 	if err != nil {
 		return nil, err
 	}
@@ -52,23 +48,19 @@ func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error
 }
 
 func (v *ValsetModule) GetQualifiedValidators(num uint64) ([]common.Address, error) {
-	qualified, err := v.getQualifiedValidators(num)
+	var (
+		qualified *valset.AddressSet
+		err       error
+	)
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		qualified, err = v.getQualifiedValidators(num)
+	} else {
+		qualified, err = v.getQualifiedPermissioned(num)
+	}
 	if err != nil {
 		return nil, err
 	}
 	return qualified.List(), nil
-}
-
-func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, error) {
-	council, err := v.getCouncil(num)
-	if err != nil {
-		return nil, err
-	}
-	demoted, err := v.getDemotedValidators(council, num)
-	if err != nil {
-		return nil, err
-	}
-	return council.Subtract(demoted), nil
 }
 
 // GetCommittee returns the current block's committee.
@@ -76,13 +68,16 @@ func (v *ValsetModule) GetCommittee(num uint64, round uint64) ([]common.Address,
 	if num == 0 {
 		return v.GetCouncil(0)
 	}
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return v.getCommittee(num, round)
+	}
 
 	// TODO-kaiax: Sync blockContext
 	c, err := v.getBlockContext(num)
 	if err != nil {
 		return nil, err
 	}
-	return v.getCommittee(c, round)
+	return v.getCommitteePermissioned(c, round)
 }
 
 func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
@@ -101,4 +96,42 @@ func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
 		return common.Address{}, err
 	}
 	return v.getProposer(c, round)
+}
+
+// #region Permissionless-only public getters.
+//
+// Pre-fork they return permissioned
+// equivalents (council for peer/voter sets, empty for the post-fork-only
+// CandTesting / NodeByState).
+
+// GetCandTesting returns nodes in the CandTesting state. Empty pre-fork.
+func (v *ValsetModule) GetCandTesting(num uint64) ([]common.Address, error) {
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return v.getCandTesting(num)
+	}
+	return []common.Address{}, nil
+}
+
+// GetCNPeers returns the CN-CN P2P peer set. Pre-fork: council.
+func (v *ValsetModule) GetCNPeers(num uint64) ([]common.Address, error) {
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return v.getCNPeers(num)
+	}
+	return v.GetCouncil(num)
+}
+
+// GetHeaderGovVoters returns validators eligible for header governance votes. Pre-fork: council.
+func (v *ValsetModule) GetHeaderGovVoters(num uint64) ([]common.Address, error) {
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return v.getHeaderGovVoters(num)
+	}
+	return v.GetCouncil(num)
+}
+
+// GetNodeByState filters NodeMap by state. Empty states means "all". Empty pre-fork.
+func (v *ValsetModule) GetNodeByState(num uint64, states []valset.NodeState) (valset.NodeMap, error) {
+	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return v.getNodeByState(num, states)
+	}
+	return nil, nil
 }

@@ -17,19 +17,40 @@
 package impl
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 )
 
 func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
-	header := block.Header()
-	num := header.Number.Uint64()
+	num := block.Header().Number.Uint64()
 	if num == 0 {
 		return nil
 	}
+	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return v.postInsertBlockPermissioned(block)
+	}
+	return v.postInsertBlockPermissionless(block)
+}
 
-	// Ingest validator vote
-	council, err := v.getCouncil(num)
+func (v *ValsetModule) postInsertBlockPermissionless(block *types.Block) error {
+	header := block.Header()
+	nextNum := header.Number.Uint64() + 1
+	parentStatedb, err := v.Chain.StateAt(header.Root)
+	if err != nil {
+		return err
+	}
+	_, err = v.getTransitionResult(nextNum, parentStatedb)
+	return err
+}
+
+// postInsertBlockPermissioned ingests the validator vote (if any) carried in
+// the block's header and persists the updated council to the DB.
+func (v *ValsetModule) postInsertBlockPermissioned(block *types.Block) error {
+	header := block.Header()
+	num := header.Number.Uint64()
+	council, err := v.getCouncilPermissioned(num)
 	if err != nil {
 		return err
 	}
@@ -39,13 +60,13 @@ func (v *ValsetModule) PostInsertBlock(block *types.Block) error {
 		writeCouncil(v.ChainKv, num, council.List())
 		v.validatorVoteBlockNumsCache = nil
 	}
-
 	return nil
 }
 
 func (v *ValsetModule) RewindTo(block *types.Block) {
 	trimValidatorVoteBlockNums(v.ChainKv, block.Header().Number.Uint64())
 	v.validatorVoteBlockNumsCache = nil
+	v.transitionResultCache.Purge()
 }
 
 func (v *ValsetModule) RewindDelete(hash common.Hash, num uint64) {

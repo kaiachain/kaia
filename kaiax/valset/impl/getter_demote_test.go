@@ -114,7 +114,7 @@ func TestGetDemotedValidators(t *testing.T) {
 		mockGov.EXPECT().GetParamSet(gomock.Any()).Return(pset).Times(1)
 		mockStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
 
-		demoted, err := v.getDemotedValidators(valset.NewAddressSet(council), 1)
+		demoted, err := v.getDemotedValidatorsPermissioned(valset.NewAddressSet(council), 1)
 		assert.NoError(t, err)
 		assert.Equal(t, tc.demoted, demoted.List(), tc.desc)
 	}

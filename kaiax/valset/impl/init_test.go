@@ -179,7 +179,7 @@ func TestMigration(t *testing.T) {
 	// 3. Before migration, check GetCouncil() results
 	for _, tc := range expectedCouncils {
 		// council, _, err := v.replayFromIstanbulSnapshot(tc.num, false)
-		council, err := v.getCouncil(tc.num)
+		council, err := v.getCouncilPermissioned(tc.num)
 		require.NoError(t, err)
 		assert.Equal(t, tc.council, council.List(), tc.num)
 	}

@@ -29,6 +29,7 @@ var (
 	errNoBlock                = errors.New("no block found")
 	errNoLowestScannedNum     = errors.New("no lowest scanned validator vote num")
 	errNoVoteBlockNums        = errors.New("no validator vote block nums")
+	errMismatchedValidators   = errors.New("header extra validators do not match qualified validators")
 
 	// rpc related errors
 	errPendingNotAllowed       = errors.New("pending is not allowed")
