@@ -32,6 +32,8 @@ contract AuctionEntryPointMock {
         bytes auctioneerSig; // digest = hashEthSignedMessage(searcherSig)
     }
 
+    string public constant AUCTION_VERSION = "0.0.1";
+
     address public auctioneer;
     uint256 public gasBufferEstimate = 180_000;
     uint256 public count;
