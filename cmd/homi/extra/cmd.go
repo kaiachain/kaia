@@ -19,13 +19,9 @@ package extra
 
 import (
 	"fmt"
-	"math/big"
 	"os"
 
-	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/naoina/toml"
 	"github.com/urfave/cli/v2"
 )
@@ -123,41 +119,22 @@ func decode(ctx *cli.Context) error {
 	}
 
 	extraString := ctx.String(extraDataFlag.Name)
-	extraBytes, err := hexutil.Decode(extraString)
-	if err != nil {
-		return err
-	}
-
-	header := &types.Header{
-		Number: big.NewInt(1),
-		Extra:  append([]byte(nil), extraBytes...),
-	}
-	sealer := engine.NewSealer(nil, nil)
-
-	vanity, err := sealer.Vanity(header)
-	if err != nil {
-		return err
-	}
-	validators, err := sealer.Validators(header)
-	if err != nil {
-		return err
-	}
-	authorSeal, committedSeals, err := sealer.RawSeals(header)
+	vanity, istanbulExtra, err := Decode(extraString)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("vanity: ", "0x"+common.Bytes2Hex(vanity))
 
-	for _, v := range validators {
+	for _, v := range istanbulExtra.Validators {
 		fmt.Println("validator: ", v.Hex())
 	}
 
-	if len(authorSeal) != 0 {
-		fmt.Println("seal:", "0x"+common.Bytes2Hex(authorSeal))
+	if len(istanbulExtra.Seal) != 0 {
+		fmt.Println("seal:", "0x"+common.Bytes2Hex(istanbulExtra.Seal))
 	}
 
-	for _, seal := range committedSeals {
+	for _, seal := range istanbulExtra.CommittedSeal {
 		fmt.Println("committed seal: ", "0x"+common.Bytes2Hex(seal))
 	}
 

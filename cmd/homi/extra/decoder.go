@@ -18,34 +18,23 @@
 package extra
 
 import (
-	"bytes"
-
-	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/rlp"
 )
 
-func Encode(vanity string, validators []common.Address) (string, error) {
-	newVanity, err := hexutil.Decode(vanity)
+func Decode(extraData string) ([]byte, *istanbul.IstanbulExtra, error) {
+	extra, err := hexutil.Decode(extraData)
 	if err != nil {
-		return "", err
+		return nil, nil, err
+	}
+	if len(extra) < istanbul.IstanbulExtraVanity {
+		return nil, nil, istanbul.ErrInvalidIstanbulHeaderExtra
 	}
 
-	if len(newVanity) < istanbul.IstanbulExtraVanity {
-		newVanity = append(newVanity, bytes.Repeat([]byte{0x00}, istanbul.IstanbulExtraVanity-len(newVanity))...)
+	var istanbulExtra *istanbul.IstanbulExtra
+	if err := rlp.DecodeBytes(extra[istanbul.IstanbulExtraVanity:], &istanbulExtra); err != nil {
+		return nil, nil, err
 	}
-	newVanity = newVanity[:istanbul.IstanbulExtraVanity]
-
-	ist := &istanbul.IstanbulExtra{
-		Validators:    validators,
-		Seal:          make([]byte, istanbul.IstanbulExtraSeal),
-		CommittedSeal: [][]byte{},
-	}
-	payload, err := rlp.EncodeToBytes(ist)
-	if err != nil {
-		return "", err
-	}
-
-	return "0x" + common.Bytes2Hex(append(newVanity, payload...)), nil
+	return extra[:istanbul.IstanbulExtraVanity], istanbulExtra, nil
 }
