@@ -47,11 +47,7 @@ func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
 		err       error
 	)
 
-	// Post-fork fast path: VerifyHeader guarantees that the header's stored
-	// validator list (Sealer().Validators) equals getQualifiedValidators(num)
-	// for committed canonical blocks. Read it directly to avoid an ABv2
-	// lookup. Falls back to recomputing when the block is not yet inserted
-	// (e.g. while mining or verifying the candidate header before insertion).
+	// After the fork, canonical headers already carry the verified validator set.
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
 		if header := v.Chain.GetHeaderByNumber(num); header != nil {
 			vals, err := v.Chain.Sealer().Validators(header)

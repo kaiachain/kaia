@@ -164,8 +164,8 @@ type worker struct {
 	chain             BlockChain
 	chainDB           database.DBManager
 	govModule         gov.GovModule
-	valsetModule      valset.ValsetModule // optional, used for epoch-start VRank fill
-	vrankModule       vrank.VRankModule   // optional, nil before permissionless fork
+	valsetModule      valset.ValsetModule
+	vrankModule       vrank.VRankModule
 	executionModules  []kaiax.ExecutionModule
 	txBundlingModules []builder.TxBundlingModule
 

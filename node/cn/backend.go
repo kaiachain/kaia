@@ -94,7 +94,7 @@ type Miner interface {
 	PendingBlock() *types.Block
 	kaiax.ExecutionModuleHost  // Because miner executes blocks, inject ExecutionModule.
 	kaiax.TxBundlingModuleHost // Because miner bundle transactions, inject TxBundlingModule
-	vrank.VRankModuleHost      // Worker reads cfReports to fill header.VRank
+	vrank.VRankModuleHost      // Worker reads candidate evaluations to fill header.VRank
 	valset.ValsetModuleHost    // Worker reads CandTesting to fill header.VRank at epoch-start
 }
 

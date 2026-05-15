@@ -171,12 +171,42 @@ func TestVerifySealsChecksAuthorMatchesProposer(t *testing.T) {
 	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(otherProposer, nil)
 
 	validator := &BlockValidator{
+		config:  params.TestKaiaConfig("permissionless"),
 		sealer:  sealer,
 		mGov:    mGov,
 		mValset: mValset,
 	}
 
 	assert.ErrorIs(t, validator.verifySeals(header), consensus.ErrUnauthorized)
+}
+
+func TestVerifySealsSkipsProposerAuthorCheckBeforePermissionless(t *testing.T) {
+	var (
+		author   = common.HexToAddress("0x0001")
+		blockNum = uint64(7)
+		header   = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+		sealer   = faker.NewFakerWithFixedSealer(author)
+		config   = params.TestKaiaConfig("permissionless").Copy()
+	)
+	config.PermissionlessCompatibleBlock = big.NewInt(10)
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mGov := mock_gov.NewMockGovModule(ctrl)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetQualifiedValidators(blockNum).Return([]common.Address{author}, nil)
+	mValset.EXPECT().GetCouncil(blockNum).Return([]common.Address{author}, nil)
+	mGov.EXPECT().GetParamSet(blockNum).Return(gov.ParamSet{CommitteeSize: 1})
+
+	validator := &BlockValidator{
+		config:  config,
+		sealer:  sealer,
+		mGov:    mGov,
+		mValset: mValset,
+	}
+
+	assert.NoError(t, validator.verifySeals(header))
 }
 
 func TestVerifySealsAcceptsExpectedProposer(t *testing.T) {
@@ -198,6 +228,7 @@ func TestVerifySealsAcceptsExpectedProposer(t *testing.T) {
 	mGov.EXPECT().GetParamSet(blockNum).Return(gov.ParamSet{CommitteeSize: 1})
 
 	validator := &BlockValidator{
+		config:  params.TestKaiaConfig("permissionless"),
 		sealer:  sealer,
 		mGov:    mGov,
 		mValset: mValset,
