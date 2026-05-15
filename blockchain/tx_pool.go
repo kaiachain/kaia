@@ -706,7 +706,7 @@ func (pool *TxPool) Pending() (map[common.Address]types.Transactions, error) {
 
 // pendingUnlocked must be protected by pool.mu AND pool.txMu by the caller.
 func (pool *TxPool) pendingUnlocked() (map[common.Address]types.Transactions, error) {
-	pending := make(map[common.Address]types.Transactions)
+	pending := make(map[common.Address]types.Transactions, len(pool.pending))
 	for addr, list := range pool.pending {
 		pending[addr] = list.Flatten()
 	}
@@ -715,7 +715,7 @@ func (pool *TxPool) pendingUnlocked() (map[common.Address]types.Transactions, er
 
 // queueUnlocked must be protected by pool.mu AND pool.txMu by the caller.
 func (pool *TxPool) queueUnlocked() (map[common.Address]types.Transactions, error) {
-	queue := make(map[common.Address]types.Transactions)
+	queue := make(map[common.Address]types.Transactions, len(pool.queue))
 	for addr, list := range pool.queue {
 		queue[addr] = list.Flatten()
 	}
@@ -1493,6 +1493,12 @@ func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
 // If given transactions exceed the capacity of TxPool, it slices the given transactions
 // so it can fit into TxPool's capacity.
 func (pool *TxPool) checkAndAddTxs(txs []*types.Transaction, local bool) []error {
+	// Single-tx fast path: bypass the slot pre-check so add()'s existing
+	// missing-nonce admission can run even when the pool is at cap.
+	if len(txs) == 1 {
+		return []error{pool.addTx(txs[0], local)}
+	}
+
 	poolSize := uint64(pool.all.Count())
 	poolCapacity := int(pool.config.ExecSlotsAll + pool.config.NonExecSlotsAll - poolSize)
 	numTxs := len(txs)
