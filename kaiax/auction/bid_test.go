@@ -23,7 +23,6 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/require"
 )
@@ -46,13 +45,9 @@ var testBid = &Bid{
 	BidData: data,
 }
 
-var testChainConfigV3 = &params.ChainConfig{
-	ChainID:                       big.NewInt(31337),
-	PermissionlessCompatibleBlock: big.NewInt(1),
-}
 
 func TestBidEIP712Encode(t *testing.T) {
-	digest := testBid.GetHashTypedData(big.NewInt(31337), common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"), nil)
+	digest := testBid.GetHashTypedData(big.NewInt(31337), common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"), AuctionVersionV2)
 	require.Equal(t, common.Hex2Bytes("da9b3f7a46d0b5e6875970b19ef7c60e2f969e5b44f6a4701b9889694df6fe0d"), digest)
 }
 
@@ -62,7 +57,7 @@ func TestBidGetEthSignedMessageHash(t *testing.T) {
 }
 
 func TestBidValidateSearcherSig(t *testing.T) {
-	err := testBid.ValidateSearcherSig(big.NewInt(31337), common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"), nil)
+	err := testBid.ValidateSearcherSig(big.NewInt(31337), common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"), AuctionVersionV2)
 	require.NoError(t, err)
 	// Do not modify the original bid.
 	require.Equal(t, uint8(27), testBid.SearcherSig[crypto.RecoveryIDOffset])
@@ -114,33 +109,20 @@ func TestBidGetHashTypedDataBranching(t *testing.T) {
 	chainId := big.NewInt(31337)
 	verifyingContract := common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9")
 	v2Digest := common.Hex2Bytes("da9b3f7a46d0b5e6875970b19ef7c60e2f969e5b44f6a4701b9889694df6fe0d")
-	v3Digest := common.Hex2Bytes("8b454fdc7409ffc597fd34ff404d7810b97188cb49d69fa7e78e3882379de0b0")
+	v3Digest := common.Hex2Bytes("aa05ecfa4c6656eab74cdde5b57c4cb53f41cc74e8c4409889714ad377998a37")
 
 	tcs := []struct {
-		name        string
-		chainConfig *params.ChainConfig
-		expected    []byte
+		name     string
+		version  string
+		expected []byte
 	}{
-		{
-			"nil chainConfig uses v2.1 typehash",
-			nil,
-			v2Digest,
-		},
-		{
-			"fork not yet reached (HF block 100 > bid block 11) uses v2.1 typehash",
-			&params.ChainConfig{ChainID: chainId, PermissionlessCompatibleBlock: big.NewInt(100)},
-			v2Digest,
-		},
-		{
-			"fork reached (HF block 1 <= bid block 11) uses v3.0 typehash",
-			testChainConfigV3,
-			v3Digest,
-		},
+		{"v2.1 typehash + domain version", AuctionVersionV2, v2Digest},
+		{"v3.0 typehash + domain version", AuctionVersionV3, v3Digest},
 	}
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			digest := testBid.GetHashTypedData(chainId, verifyingContract, tc.chainConfig)
+			digest := testBid.GetHashTypedData(chainId, verifyingContract, tc.version)
 			require.Equal(t, tc.expected, digest)
 		})
 	}

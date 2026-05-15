@@ -64,6 +64,7 @@ func prep(t *testing.T) *AuctionModule {
 	mAuction.bidPool.auctioneer = common.HexToAddress("0x96Bd8E216c0D894C0486341288Bf486d5686C5b6")
 	mAuction.bidPool.ChainConfig.ChainID = big.NewInt(1000)
 	mAuction.bidPool.auctionEntryPoint = common.HexToAddress("0x6869431f189dCd7C2B92002aA61FCD4c1c0C1A33")
+	mAuction.bidPool.auctionEntryPointVersion = auction.AuctionVersionV2
 	return mAuction
 }
 

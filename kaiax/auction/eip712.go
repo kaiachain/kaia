@@ -21,7 +21,6 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
-	"github.com/kaiachain/kaia/params"
 )
 
 const (
@@ -29,15 +28,18 @@ const (
 	auctionTypeV3    = "AuctionTx(bytes32 targetTxHash,uint256 blockNumber,address sender,address to,uint256 nonce,uint256 bid,uint256 maxGasPrice,uint256 callGasLimit,bytes data)"
 	EIP712DomainType = "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
 	auctionName      = "KAIA_AUCTION"
-	auctionVersion   = "0.0.1"
+	// Auction version strings match the on-chain AUCTION_VERSION view of the
+	// corresponding entry-point contract. v3.0 selects the typehash that
+	// includes maxGasPrice.
+	AuctionVersionV2 = "0.0.1"
+	AuctionVersionV3 = "0.0.2"
 )
 
 var (
-	auctionTypeHash    = crypto.Keccak256Hash([]byte(auctionType))
-	auctionTypeHashV3  = crypto.Keccak256Hash([]byte(auctionTypeV3))
-	eip712TypeHash     = crypto.Keccak256Hash([]byte(EIP712DomainType))
-	auctionNameHash    = crypto.Keccak256Hash([]byte(auctionName))
-	auctionVersionHash = crypto.Keccak256Hash([]byte(auctionVersion))
+	auctionTypeHash   = crypto.Keccak256Hash([]byte(auctionType))
+	auctionTypeHashV3 = crypto.Keccak256Hash([]byte(auctionTypeV3))
+	eip712TypeHash    = crypto.Keccak256Hash([]byte(EIP712DomainType))
+	auctionNameHash   = crypto.Keccak256Hash([]byte(auctionName))
 )
 
 type EIP712Encoder interface {
@@ -115,7 +117,11 @@ func (b bidV3) EncodeData() []byte {
 	return encoded
 }
 
-func (b *Bid) GetHashTypedData(chainId *big.Int, verifyingContract common.Address, chainConfig *params.ChainConfig) []byte {
+// GetHashTypedData returns the EIP-712 digest for the bid.
+// version must match the on-chain AUCTION_VERSION of the entry-point contract
+// the bid targets; "0.0.2" selects the v3.0 struct typehash (with maxGasPrice),
+// any other value falls back to the v2.1 typehash.
+func (b *Bid) GetHashTypedData(chainId *big.Int, verifyingContract common.Address, version string) []byte {
 	if chainId == nil {
 		return nil
 	}
@@ -123,7 +129,7 @@ func (b *Bid) GetHashTypedData(chainId *big.Int, verifyingContract common.Addres
 	domain := EIP712Domain{
 		EIP712DomainTypeHash: eip712TypeHash,
 		NameHash:             auctionNameHash,
-		VersionHash:          auctionVersionHash,
+		VersionHash:          crypto.Keccak256Hash([]byte(version)),
 		ChainId:              chainId,
 		VerifyingContract:    verifyingContract,
 	}
@@ -131,9 +137,12 @@ func (b *Bid) GetHashTypedData(chainId *big.Int, verifyingContract common.Addres
 	domainSeparator := EncodeEIP712(domain)
 
 	var structHash []byte
-	if chainConfig != nil && chainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(b.BlockNumber)) {
+	if version == AuctionVersionV3 {
 		structHash = EncodeEIP712(bidV3{b})
+	} else if version == AuctionVersionV2 {
+		structHash = EncodeEIP712(b)
 	} else {
+		// Unknown version: default to v2.1 typehash.
 		structHash = EncodeEIP712(b)
 	}
 

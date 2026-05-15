@@ -46,7 +46,7 @@ func init() {
 		bid.Sender = crypto.PubkeyToAddress(key.PublicKey)
 
 		// Generate searcher signature (EIP-712)
-		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, testChainConfig)
+		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, auction.AuctionVersionV2)
 		sig, _ := crypto.Sign(digest, key)
 		// Convert V from 0/1 to 27/28
 		sig[crypto.RecoveryIDOffset] += 27
@@ -106,6 +106,7 @@ func TestHandler_HandleBid(t *testing.T) {
 
 	module.bidPool.auctioneer = testAuctioneer
 	module.bidPool.auctionEntryPoint = testAuctionEntryPoint
+	module.bidPool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	// Test handling a valid bid
 	module.HandleBid(testPeerID, handlerTestBids[0])
@@ -171,6 +172,7 @@ func TestHandler_RateLimit(t *testing.T) {
 
 	module.bidPool.auctioneer = testAuctioneer
 	module.bidPool.auctionEntryPoint = testAuctionEntryPoint
+	module.bidPool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	// Commit a block to set current block number
 	backend.Commit()
@@ -185,7 +187,7 @@ func TestHandler_RateLimit(t *testing.T) {
 		initBaseBid(bid, i, currentBlock+1)
 		bid.Sender = crypto.PubkeyToAddress(key.PublicKey)
 
-		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, testChainConfig)
+		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, auction.AuctionVersionV2)
 		sig, _ := crypto.Sign(digest, key)
 		sig[crypto.RecoveryIDOffset] += 27
 		bid.SearcherSig = sig
@@ -277,6 +279,7 @@ func TestHandler_SubscribeNewBid(t *testing.T) {
 
 	module.bidPool.auctioneer = testAuctioneer
 	module.bidPool.auctionEntryPoint = testAuctionEntryPoint
+	module.bidPool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	// Create a channel to receive new bids
 	newBidCh := make(chan *auction.Bid, 10)

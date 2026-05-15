@@ -77,7 +77,7 @@ func init() {
 		bid.Sender = crypto.PubkeyToAddress(key.PublicKey)
 
 		// Generate searcher signature (EIP-712)
-		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, testChainConfig)
+		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, auction.AuctionVersionV2)
 		sig, _ := crypto.Sign(digest, key)
 		// Convert V from 0/1 to 27/28
 		sig[crypto.RecoveryIDOffset] += 27
@@ -177,6 +177,7 @@ func TestBidPool_AddBid(t *testing.T) {
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
+	pool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	// Test adding bid not valid block number
 	_, err = pool.AddBid(testBids[0])
@@ -247,6 +248,7 @@ func TestBidPool_AddBid_MaxBidPoolSize(t *testing.T) {
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
+	pool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	// Test successful bid additions
 	bid := testBids[0]
@@ -278,6 +280,7 @@ func TestBidPool_AddBid_ExceedMaxDataSize(t *testing.T) {
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
+	pool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	// Test bid with data size exceed max data size
 	bid := testBids[6]
@@ -304,6 +307,7 @@ func TestBidPool_AddBid_ExceedMaxGasLimit(t *testing.T) {
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
+	pool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	// Test successful bid additions
 	bid := testBids[5]
@@ -331,6 +335,7 @@ func TestBidPool_RemoveOldBidsByNumber(t *testing.T) {
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
+	pool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	for _, bid := range testBids[:3] {
 		hash, err := pool.AddBid(bid)
@@ -370,6 +375,7 @@ func TestBidPool_RemoveOldBidsByTxHash(t *testing.T) {
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
+	pool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	for _, bid := range testBids[:3] {
 		hash, err := pool.AddBid(bid)
@@ -413,6 +419,7 @@ func TestBidPool_ClearBidPool(t *testing.T) {
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
+	pool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	// Add some bids
 	for _, bid := range testBids[:3] {
@@ -454,6 +461,7 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
+	pool.auctionEntryPointVersion = auction.AuctionVersionV2
 	pool.bidTxGasBuffer = 180_000
 
 	// Add some bids
@@ -469,7 +477,7 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	}
 
 	// Update auction info with same addresses
-	pool.updateAuctionInfo(testAuctioneer, testAuctionEntryPoint, 180_000)
+	pool.updateAuctionInfo(testAuctioneer, testAuctionEntryPoint, auction.AuctionVersionV2, 180_000)
 	assert.NotEmpty(t, pool.bidTargetMap)
 	assert.NotEmpty(t, pool.bidWinnerMap)
 	assert.NotEmpty(t, pool.bidMap)
@@ -477,7 +485,7 @@ func TestBidPool_UpdateAuctionInfo(t *testing.T) {
 	// Update auction info with different addresses
 	newAuctioneer := common.HexToAddress("0x1234")
 	newAuctionEntryPoint := common.HexToAddress("0x5678")
-	pool.updateAuctionInfo(newAuctioneer, newAuctionEntryPoint, 180_000)
+	pool.updateAuctionInfo(newAuctioneer, newAuctionEntryPoint, auction.AuctionVersionV2, 180_000)
 
 	// Verify pool was cleared and addresses were updated
 	assert.Empty(t, pool.bidTargetMap)
@@ -506,6 +514,7 @@ func TestBidPool_UpdateAuctionInfo_DifferentGasBufferEstimate(t *testing.T) {
 	defer pool.stop()
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
+	pool.auctionEntryPointVersion = auction.AuctionVersionV2
 	pool.bidTxGasBuffer = 180_000
 
 	// Add some bids
@@ -521,13 +530,13 @@ func TestBidPool_UpdateAuctionInfo_DifferentGasBufferEstimate(t *testing.T) {
 	}
 
 	// Update auction info with same addresses
-	pool.updateAuctionInfo(testAuctioneer, testAuctionEntryPoint, 180_000)
+	pool.updateAuctionInfo(testAuctioneer, testAuctionEntryPoint, auction.AuctionVersionV2, 180_000)
 	assert.NotEmpty(t, pool.bidTargetMap)
 	assert.NotEmpty(t, pool.bidWinnerMap)
 	assert.NotEmpty(t, pool.bidMap)
 
 	// Update auction info with different gas buffer estimate
-	pool.updateAuctionInfo(testAuctioneer, testAuctionEntryPoint, 160_000)
+	pool.updateAuctionInfo(testAuctioneer, testAuctionEntryPoint, auction.AuctionVersionV2, 160_000)
 
 	// Verify pool was cleared and addresses were updated
 	assert.Empty(t, pool.bidTargetMap)
@@ -554,6 +563,7 @@ func benchmarkAddBidParallel(b *testing.B, numBids int) {
 
 	pool.auctioneer = testAuctioneer
 	pool.auctionEntryPoint = testAuctionEntryPoint
+	pool.auctionEntryPointVersion = auction.AuctionVersionV2
 
 	// Start the auction
 	pool.start()
@@ -577,7 +587,7 @@ func benchmarkAddBidParallel(b *testing.B, numBids int) {
 		}}
 
 		// Generate searcher signature (EIP-712)
-		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, testChainConfig)
+		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, auction.AuctionVersionV2)
 		sig, _ := crypto.Sign(digest, searcherKey)
 		sig[crypto.RecoveryIDOffset] += 27
 		bid.SearcherSig = sig

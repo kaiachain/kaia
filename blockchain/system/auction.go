@@ -26,7 +26,6 @@ import (
 	contracts "github.com/kaiachain/kaia/contracts/bindings/auction"
 	contractsv3 "github.com/kaiachain/kaia/contracts/bindings/auctionv3"
 	"github.com/kaiachain/kaia/kaiax/auction"
-	"github.com/kaiachain/kaia/params"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -62,8 +61,27 @@ func ReadGasBufferEstimate(backend bind.ContractCaller, contractAddr common.Addr
 	return buffer.Uint64(), nil
 }
 
-func EncodeAuctionCallData(bid *auction.Bid, chainConfig *params.ChainConfig) ([]byte, error) {
-	if chainConfig != nil && chainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(bid.BlockNumber)) {
+// ReadAuctionVersion reads the AUCTION_VERSION view from the given entry-point
+// contract. The result distinguishes v2.1 ("0.0.1") from v3.0 ("0.0.2") so
+// callers can pick the appropriate EIP-712 typehash and ABI.
+//
+// The v3.0 binding is used for the call: AUCTION_VERSION() is a public-constant
+// getter with the same selector on both v2.1 and v3.0 contracts, so the same
+// typed binding works against either deployment.
+func ReadAuctionVersion(backend bind.ContractCaller, contractAddr common.Address, num *big.Int) (string, error) {
+	caller, err := contractsv3.NewIAuctionEntryPointCaller(contractAddr, backend)
+	if err != nil {
+		return "", err
+	}
+	return caller.AUCTIONVERSION(&bind.CallOpts{BlockNumber: num})
+}
+
+// EncodeAuctionCallData encodes the bid as calldata for the active auction
+// entry-point contract. version must match the on-chain AUCTION_VERSION of the
+// active contract; "0.0.2" selects the v3.0 ABI (with maxGasPrice), any other
+// value falls back to the v2.1 ABI.
+func EncodeAuctionCallData(bid *auction.Bid, version string) ([]byte, error) {
+	if version == auction.AuctionVersionV3 {
 		maxGasPrice := bid.MaxGasPrice
 		if maxGasPrice == nil {
 			maxGasPrice = new(big.Int)
@@ -84,6 +102,7 @@ func EncodeAuctionCallData(bid *auction.Bid, chainConfig *params.ChainConfig) ([
 		return abiV3.Pack("call", input)
 	}
 
+	// auction.AuctionVersionV2 or unknown version: default to v2.1 ABI.
 	input := contracts.IAuctionEntryPointAuctionTx{
 		TargetTxHash:  bid.TargetTxHash,
 		BlockNumber:   new(big.Int).SetUint64(bid.BlockNumber),

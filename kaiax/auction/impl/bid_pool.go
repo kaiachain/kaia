@@ -52,6 +52,7 @@ type BidPool struct {
 	auctionInfoMu     sync.RWMutex
 	auctioneer        common.Address
 	auctionEntryPoint common.Address
+	auctionEntryPointVersion    string
 	bidTxGasBuffer    uint64
 
 	bidMu        sync.RWMutex
@@ -188,11 +189,11 @@ func (bp *BidPool) clearBidPool() {
 }
 
 // updateAuctionInfo updates the auction info if the auctioneer or auction entry point address is changed.
-func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoint common.Address, bidTxGasBuffer uint64) {
+func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoint common.Address, auctionEntryPointVersion string, bidTxGasBuffer uint64) {
 	bp.auctionInfoMu.Lock()
 	defer bp.auctionInfoMu.Unlock()
 
-	if bp.auctioneer == auctioneer && bp.auctionEntryPoint == auctionEntryPoint && bp.bidTxGasBuffer == bidTxGasBuffer {
+	if bp.auctioneer == auctioneer && bp.auctionEntryPoint == auctionEntryPoint && bp.auctionEntryPointVersion == auctionEntryPointVersion && bp.bidTxGasBuffer == bidTxGasBuffer {
 		return
 	}
 
@@ -201,9 +202,10 @@ func (bp *BidPool) updateAuctionInfo(auctioneer common.Address, auctionEntryPoin
 
 	bp.auctioneer = auctioneer
 	bp.auctionEntryPoint = auctionEntryPoint
+	bp.auctionEntryPointVersion = auctionEntryPointVersion
 	bp.bidTxGasBuffer = bidTxGasBuffer
 
-	logger.Info("Update auction info", "auctioneer", auctioneer, "auctionEntryPoint", auctionEntryPoint, "bidTxGasBuffer", bidTxGasBuffer)
+	logger.Info("Update auction info", "auctioneer", auctioneer, "auctionEntryPoint", auctionEntryPoint, "auctionEntryPointVersion", auctionEntryPointVersion, "bidTxGasBuffer", bidTxGasBuffer)
 }
 
 // getTargetTxHashMap returns the target tx hash map for the given block number.
@@ -223,6 +225,12 @@ func (bp *BidPool) GetAuctionEntryPoint() common.Address {
 	defer bp.auctionInfoMu.RUnlock()
 
 	return bp.auctionEntryPoint
+}
+
+func (bp *BidPool) GetAuctionEntryPointVersion() string {
+	bp.auctionInfoMu.RLock()
+	defer bp.auctionInfoMu.RUnlock()
+	return bp.auctionEntryPointVersion
 }
 
 func (bp *BidPool) GetTargetTxMap(num uint64) map[common.Hash]*auction.Bid {
@@ -384,7 +392,7 @@ func (bp *BidPool) validateBidSigs(bid *auction.Bid) error {
 	}
 
 	// Verify the EIP712 signature.
-	if err := bid.ValidateSearcherSig(bp.ChainConfig.ChainID, bp.auctionEntryPoint, bp.ChainConfig); err != nil {
+	if err := bid.ValidateSearcherSig(bp.ChainConfig.ChainID, bp.auctionEntryPoint, bp.auctionEntryPointVersion); err != nil {
 		return err
 	}
 
@@ -461,7 +469,7 @@ func (bp *BidPool) getBidTxGasLimit(bid *auction.Bid) (uint64, error) {
 	buffer := bp.bidTxGasBuffer
 	bp.auctionInfoMu.RUnlock()
 
-	data, err := system.EncodeAuctionCallData(bid, bp.ChainConfig)
+	data, err := system.EncodeAuctionCallData(bid, bp.auctionEntryPointVersion)
 	if err != nil {
 		return 0, err
 	}
