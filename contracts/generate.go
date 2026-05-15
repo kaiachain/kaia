@@ -80,6 +80,7 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 //go:generate ./abigenw --pkg gasless --type TestToken --artifact ./kaia-system-contracts/contracts-v2.0/artifacts/contracts/gasless/TestToken.sol/TestToken.json --out ./bindings/testing/system_contracts/gasless/TestToken.go
 
 //go:generate ./abigenw --pkg auction --type IAuctionEntryPoint --artifact ./kaia-system-contracts/contracts-v2.1/artifacts/contracts/auction/interfaces/IAuctionEntryPoint.sol/IAuctionEntryPoint.json --out ./bindings/auction/Kip249.go
+//go:generate ./abigenw --pkg auctionv3 --type IAuctionEntryPoint --artifact ./kaia-system-contracts/contracts-v3.0/out/IAuctionEntryPoint.sol/IAuctionEntryPoint.json --out ./bindings/auctionv3/Kip249V3.go
 
 // Permissionless contracts (v3.0) — generated from forge artifacts in kaia-system-contracts submodule.
 
