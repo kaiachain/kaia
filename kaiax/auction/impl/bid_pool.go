@@ -49,11 +49,11 @@ type BidPool struct {
 	ChainConfig *params.ChainConfig
 	Chain       backends.BlockChainForCaller
 
-	auctionInfoMu     sync.RWMutex
-	auctioneer        common.Address
-	auctionEntryPoint common.Address
-	auctionEntryPointVersion    string
-	bidTxGasBuffer    uint64
+	auctionInfoMu            sync.RWMutex
+	auctioneer               common.Address
+	auctionEntryPoint        common.Address
+	auctionEntryPointVersion string
+	bidTxGasBuffer           uint64
 
 	bidMu        sync.RWMutex
 	bidMap       map[common.Hash]*auction.Bid              // (bidHash) -> Bid
