@@ -129,20 +129,33 @@ func EncodeNodeStateUpdate(
 	return encodeSystemMessage(rules, AddressBookAddr, data)
 }
 
+// ABv2TransitionParam is the subset of ABv2 reads consumed by the transition
+// pipeline. NodeMap is passed separately as the mutable pipeline input.
+type ABv2TransitionParam struct {
+	EpochVACount uint64 // pipeline initial value; carried through on non-epoch blocks
+
+	PfsThreshold            uint64
+	CfsThreshold            uint64
+	IdleTimeout             time.Duration
+	PauseTimeout            time.Duration
+	MaxValActivePausedCount uint64
+}
+
 // ABv2StateSnapshot holds the result of ReadNodeStates.
 type ABv2StateSnapshot struct {
 	Nodes valset.NodeMap
+	ABv2TransitionParam
 
-	// parameters for transition
-	PauseTimeout            time.Duration
-	IdleTimeout             time.Duration
-	PfsThreshold            uint64
-	CfsThreshold            uint64
-	EpochVACount            uint64
-	MaxSlotAvailable        uint64
-	MinActiveCount          uint64
-	MaxValActivePausedCount uint64
-	SuspendedValidators     []common.Address
+	MaxSlotAvailable    uint64
+	MinActiveCount      uint64
+	SuspendedValidators []common.Address
+}
+
+func (s *ABv2StateSnapshot) TransitionParam() ABv2TransitionParam {
+	if s == nil {
+		return ABv2TransitionParam{}
+	}
+	return s.ABv2TransitionParam
 }
 
 // ReadNodeStates reads all node states, timeouts, max counts, and thresholds from ABv2 in a single MultiCall.
@@ -183,16 +196,18 @@ func ReadNodeStates(
 	}
 
 	return &ABv2StateSnapshot{
-		Nodes:                   nodes,
-		PauseTimeout:            time.Duration(res.PauseTimeout.Int64()) * time.Second,
-		IdleTimeout:             time.Duration(res.IdleTimeout.Int64()) * time.Second,
-		PfsThreshold:            res.PfsThreshold.Uint64(),
-		CfsThreshold:            res.CfsThreshold.Uint64(),
-		EpochVACount:            res.EpochVACount.Uint64(),
-		MaxSlotAvailable:        res.MaxSlotAvailable.Uint64(),
-		MinActiveCount:          res.MinActiveCount.Uint64(),
-		MaxValActivePausedCount: res.MaxValActivePausedCount.Uint64(),
-		SuspendedValidators:     res.SuspendedValidators,
+		Nodes: nodes,
+		ABv2TransitionParam: ABv2TransitionParam{
+			PauseTimeout:            time.Duration(res.PauseTimeout.Int64()) * time.Second,
+			IdleTimeout:             time.Duration(res.IdleTimeout.Int64()) * time.Second,
+			PfsThreshold:            res.PfsThreshold.Uint64(),
+			CfsThreshold:            res.CfsThreshold.Uint64(),
+			EpochVACount:            res.EpochVACount.Uint64(),
+			MaxValActivePausedCount: res.MaxValActivePausedCount.Uint64(),
+		},
+		MaxSlotAvailable:    res.MaxSlotAvailable.Uint64(),
+		MinActiveCount:      res.MinActiveCount.Uint64(),
+		SuspendedValidators: res.SuspendedValidators,
 	}, nil
 }
 

@@ -106,11 +106,11 @@ func (v *ValsetModule) applyTransition(header *types.Header, statedb *state.Stat
 	ctx := NewTransitionContext()
 	ctx.SetBlockCtx(header, v.isVrankEpoch(nextNum))
 	ctx.SetGovCtx(pset)
-	ctx.SetABv2Ctx(abv2result)
+	ctx.SetABv2TransitionParam(abv2result.TransitionParam())
 	ctx.SetSlotsCtx(slotLimitsFor(abv2result.EpochVACount))
 	ctx.SetVRankCtx(cfs, pfs, pfReport)
 
-	return ctx.ApplyAllTransitions(), nil
+	return ctx.ApplyAllTransitions(abv2result.Nodes), nil
 }
 
 // fetchVRankCtx pulls the three vrank scores transitions need at block num.

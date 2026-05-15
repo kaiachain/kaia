@@ -35,7 +35,7 @@ import (
 // EpochTransitionContext is overwritten after epoch transition.
 //   - BlockContext           — header-derived
 //   - GovContext             — governance parameters
-//   - ABv2Context            — AddressBookV2 contract reads
+//   - ABv2TransitionParam    — AddressBookV2 transition parameters
 //   - EpochTransitionContext — slot limits derived from epochVACount; recomputed
 //     mid-pipeline at epoch boundaries by the orchestrator.
 //   - VRankContext           — vrank scores pre-fetched at orchestrator entry
@@ -44,7 +44,7 @@ import (
 type TransitionContext struct {
 	BlockContext
 	GovContext
-	ABv2Context
+	system.ABv2TransitionParam
 	EpochTransitionContext
 	VRankContext
 }
@@ -58,19 +58,6 @@ type BlockContext struct {
 // GovContext holds required governance parameters.
 type GovContext struct {
 	MinStake uint64 // Used by: epoch, violation
-}
-
-// ABv2Context is a subset of ABv2StateSnapshot which holds values read from
-// system.ReadNodeStates against the AddressBookV2 contract.
-type ABv2Context struct {
-	Nodes        valset.NodeMap // pipeline input. Used by: epoch, violation, timeout
-	EpochVACount uint64         // pipeline initial value. Used by: epoch (carried through on non-epoch blocks)
-
-	PfsThreshold            uint64        // Used by: violation
-	CfsThreshold            uint64        // Used by: epoch
-	IdleTimeout             time.Duration // Used by: epoch, violation, timeout
-	PauseTimeout            time.Duration // Used by: timeout
-	MaxValActivePausedCount uint64        // Used by: epoch
 }
 
 // EpochTransitionContext holds slot-limit values derived from the current
@@ -113,16 +100,8 @@ func (ctx *TransitionContext) SetGovCtx(pset gov.ParamSet) {
 	}
 }
 
-func (ctx *TransitionContext) SetABv2Ctx(r *system.ABv2StateSnapshot) {
-	ctx.ABv2Context = ABv2Context{
-		Nodes:                   r.Nodes,
-		EpochVACount:            r.EpochVACount,
-		PfsThreshold:            r.PfsThreshold,
-		CfsThreshold:            r.CfsThreshold,
-		IdleTimeout:             r.IdleTimeout,
-		PauseTimeout:            r.PauseTimeout,
-		MaxValActivePausedCount: r.MaxValActivePausedCount,
-	}
+func (ctx *TransitionContext) SetABv2TransitionParam(param system.ABv2TransitionParam) {
+	ctx.ABv2TransitionParam = param
 }
 
 func (ctx *TransitionContext) SetSlotsCtx(maxSlot, minActive uint64) {
@@ -151,8 +130,7 @@ func (ctx *TransitionContext) SetVRankCtx(cfs, pfs map[common.Address]uint64, pf
 // Go (see slot_math.go), so this method stays free of I/O.
 //
 // Returns the final NodeMap and, on epoch blocks, the epoch VA count to write.
-func (ctx *TransitionContext) ApplyAllTransitions() *TransitionResult {
-	nodes := ctx.Nodes
+func (ctx *TransitionContext) ApplyAllTransitions(nodes valset.NodeMap) *TransitionResult {
 	epochVACountForWrite := uint64(0)
 
 	if ctx.IsEpoch {
@@ -174,7 +152,7 @@ func (ctx *TransitionContext) ApplyAllTransitions() *TransitionResult {
 // applyEpochTransition returns a new NodeMap with the KIP-286 epoch transition
 // applied to m. Pure: m is not mutated.
 //
-// Reads from ABv2Context:  IdleTimeout, MaxValActivePausedCount, CfsThreshold.
+// Reads from ABv2TransitionParam: IdleTimeout, MaxValActivePausedCount, CfsThreshold.
 // Reads from GovContext:   MinStake.
 // Reads from BlockContext: BlockTime.
 // Reads from VRankContext: CFS (via isPassVrankTest).
@@ -266,7 +244,7 @@ func (ctx *TransitionContext) isPassVrankTest(addr common.Address) bool {
 // applyViolationTransition returns a new NodeMap with min-stake and PFS violation
 // transitions applied to m. Pure: m is not mutated. Runs every block.
 //
-// Reads from ABv2Context:            PfsThreshold, IdleTimeout.
+// Reads from ABv2TransitionParam:    PfsThreshold, IdleTimeout.
 // Reads from EpochTransitionContext: MaxSlotAvailable, MinActiveCount.
 // Reads from GovContext:             MinStake.
 // Reads from BlockContext:           BlockTime.
@@ -373,7 +351,7 @@ func (ctx *TransitionContext) applyViolationTransition(m valset.NodeMap) valset.
 // For nodes newly entering ValReady/ValInactive or ValPaused (timeout not yet
 // set), the timeout is initialized. Existing timeouts are preserved.
 //
-// Reads from ABv2Context:  IdleTimeout, PauseTimeout.
+// Reads from ABv2TransitionParam: IdleTimeout, PauseTimeout.
 // Reads from BlockContext: BlockTime.
 //
 // Internal use only — call via the orchestrator after applyViolationTransition.
