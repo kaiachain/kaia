@@ -38,6 +38,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	mock_gov "github.com/kaiachain/kaia/kaiax/gov/mock"
+	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -151,6 +152,58 @@ func TestValidateHeader(t *testing.T) {
 			assert.ErrorIs(t, err, tc.expectedErr)
 		})
 	}
+}
+
+func TestVerifySealsChecksAuthorMatchesProposer(t *testing.T) {
+	var (
+		author        = common.HexToAddress("0x0001")
+		otherProposer = common.HexToAddress("0x0002")
+		blockNum      = uint64(7)
+		header        = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+		sealer        = faker.NewFakerWithFixedSealer(author)
+	)
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mGov := mock_gov.NewMockGovModule(ctrl)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(otherProposer, nil)
+
+	validator := &BlockValidator{
+		sealer:  sealer,
+		mGov:    mGov,
+		mValset: mValset,
+	}
+
+	assert.ErrorIs(t, validator.verifySeals(header), consensus.ErrUnauthorized)
+}
+
+func TestVerifySealsAcceptsExpectedProposer(t *testing.T) {
+	var (
+		author   = common.HexToAddress("0x0001")
+		blockNum = uint64(7)
+		header   = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+		sealer   = faker.NewFakerWithFixedSealer(author)
+	)
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mGov := mock_gov.NewMockGovModule(ctrl)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(author, nil)
+	mValset.EXPECT().GetQualifiedValidators(blockNum).Return([]common.Address{author}, nil)
+	mValset.EXPECT().GetCouncil(blockNum).Return([]common.Address{author}, nil)
+	mGov.EXPECT().GetParamSet(blockNum).Return(gov.ParamSet{CommitteeSize: 1})
+
+	validator := &BlockValidator{
+		sealer:  sealer,
+		mGov:    mGov,
+		mValset: mValset,
+	}
+
+	assert.NoError(t, validator.verifySeals(header))
 }
 
 func TestVerifyBlockBody(t *testing.T) {

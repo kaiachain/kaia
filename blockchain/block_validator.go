@@ -241,6 +241,18 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		return nil
 	}
 
+	round, err := v.sealer.Round(header)
+	if err != nil {
+		return err
+	}
+	proposer, err := v.mValset.GetProposer(blockNum, uint64(round))
+	if err != nil {
+		return err
+	}
+	if author != proposer {
+		return consensus.ErrUnauthorized
+	}
+
 	qualified, err := v.mValset.GetQualifiedValidators(blockNum)
 	if err != nil {
 		return err
