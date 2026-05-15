@@ -21,10 +21,12 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
+	"github.com/kaiachain/kaia/params"
 )
 
 const (
 	auctionType      = "AuctionTx(bytes32 targetTxHash,uint256 blockNumber,address sender,address to,uint256 nonce,uint256 bid,uint256 callGasLimit,bytes data)"
+	auctionTypeV3    = "AuctionTx(bytes32 targetTxHash,uint256 blockNumber,address sender,address to,uint256 nonce,uint256 bid,uint256 maxGasPrice,uint256 callGasLimit,bytes data)"
 	EIP712DomainType = "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
 	auctionName      = "KAIA_AUCTION"
 	auctionVersion   = "0.0.1"
@@ -32,6 +34,7 @@ const (
 
 var (
 	auctionTypeHash    = crypto.Keccak256Hash([]byte(auctionType))
+	auctionTypeHashV3  = crypto.Keccak256Hash([]byte(auctionTypeV3))
 	eip712TypeHash     = crypto.Keccak256Hash([]byte(EIP712DomainType))
 	auctionNameHash    = crypto.Keccak256Hash([]byte(auctionName))
 	auctionVersionHash = crypto.Keccak256Hash([]byte(auctionVersion))
@@ -88,7 +91,31 @@ func EncodeEIP712(encoder EIP712Encoder) []byte {
 	return crypto.Keccak256Hash(encoded).Bytes()
 }
 
-func (b *Bid) GetHashTypedData(chainId *big.Int, verifyingContract common.Address) []byte {
+type bidV3 struct{ *Bid }
+
+func (b bidV3) EncodeType() []byte {
+	return auctionTypeHashV3.Bytes()
+}
+
+func (b bidV3) EncodeData() []byte {
+	maxGasPrice := b.MaxGasPrice
+	if maxGasPrice == nil {
+		maxGasPrice = new(big.Int)
+	}
+	encoded := make([]byte, 0, 10*32)
+	encoded = append(encoded, b.TargetTxHash.Bytes()...)
+	encoded = append(encoded, common.LeftPadBytes(common.Int64ToByteBigEndian(b.BlockNumber), 32)...)
+	encoded = append(encoded, common.LeftPadBytes(b.Sender.Bytes(), 32)...)
+	encoded = append(encoded, common.LeftPadBytes(b.To.Bytes(), 32)...)
+	encoded = append(encoded, common.LeftPadBytes(common.Int64ToByteBigEndian(b.Nonce), 32)...)
+	encoded = append(encoded, common.LeftPadBytes(b.BidData.Bid.Bytes(), 32)...)
+	encoded = append(encoded, common.LeftPadBytes(maxGasPrice.Bytes(), 32)...)
+	encoded = append(encoded, common.LeftPadBytes(common.Int64ToByteBigEndian(b.CallGasLimit), 32)...)
+	encoded = append(encoded, crypto.Keccak256Hash(b.Data).Bytes()...)
+	return encoded
+}
+
+func (b *Bid) GetHashTypedData(chainId *big.Int, verifyingContract common.Address, chainConfig *params.ChainConfig) []byte {
 	if chainId == nil {
 		return nil
 	}
@@ -102,7 +129,13 @@ func (b *Bid) GetHashTypedData(chainId *big.Int, verifyingContract common.Addres
 	}
 
 	domainSeparator := EncodeEIP712(domain)
-	structHash := EncodeEIP712(b)
+
+	var structHash []byte
+	if chainConfig != nil && chainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(b.BlockNumber)) {
+		structHash = EncodeEIP712(bidV3{b})
+	} else {
+		structHash = EncodeEIP712(b)
+	}
 
 	return crypto.Keccak256([]byte{0x19, 0x01}, domainSeparator, structHash)
 }

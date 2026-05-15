@@ -160,7 +160,7 @@ func TestSubmitBid(t *testing.T) {
 		{
 			"another bid with same target tx",
 			validBid,
-			makeRPCOutput(common.HexToHash("0x26688d0fc660b6fed98b7f96ab5602e4c4dbe133e278fc08cc6bc51131d1bdd2"), nil),
+			makeRPCOutput(common.HexToHash("0x9b5d19bd350d416216d1c592eb416d1198e78303d296267194d7ee3985bafc52"), nil),
 		},
 	}
 

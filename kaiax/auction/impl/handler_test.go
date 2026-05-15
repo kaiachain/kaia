@@ -46,7 +46,7 @@ func init() {
 		bid.Sender = crypto.PubkeyToAddress(key.PublicKey)
 
 		// Generate searcher signature (EIP-712)
-		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint)
+		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, testChainConfig)
 		sig, _ := crypto.Sign(digest, key)
 		// Convert V from 0/1 to 27/28
 		sig[crypto.RecoveryIDOffset] += 27
@@ -185,7 +185,7 @@ func TestHandler_RateLimit(t *testing.T) {
 		initBaseBid(bid, i, currentBlock+1)
 		bid.Sender = crypto.PubkeyToAddress(key.PublicKey)
 
-		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint)
+		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, testChainConfig)
 		sig, _ := crypto.Sign(digest, key)
 		sig[crypto.RecoveryIDOffset] += 27
 		bid.SearcherSig = sig

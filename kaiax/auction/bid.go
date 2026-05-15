@@ -26,6 +26,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/sha3"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -36,6 +37,7 @@ type BidData struct {
 	To            common.Address `json:"to"`
 	Nonce         uint64         `json:"nonce"`
 	Bid           *big.Int       `json:"bid"`
+	MaxGasPrice   *big.Int       `json:"maxGasPrice,omitempty"`
 	CallGasLimit  uint64         `json:"callGasLimit"`
 	Data          []byte         `json:"data"`
 	SearcherSig   []byte         `json:"searcherSig"`
@@ -90,7 +92,7 @@ func rlpHash(x interface{}) (h common.Hash) {
 	return h
 }
 
-func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Address) error {
+func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Address, chainConfig *params.ChainConfig) error {
 	if chainId == nil {
 		return ErrNilChainId
 	}
@@ -99,7 +101,7 @@ func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Add
 		return ErrNilVerifyingContract
 	}
 
-	digest := b.GetHashTypedData(chainId, verifyingContract)
+	digest := b.GetHashTypedData(chainId, verifyingContract, chainConfig)
 
 	recoveredSender, err := getSigner(b.SearcherSig, digest)
 	if err != nil {

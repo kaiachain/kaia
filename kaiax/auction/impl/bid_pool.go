@@ -384,7 +384,7 @@ func (bp *BidPool) validateBidSigs(bid *auction.Bid) error {
 	}
 
 	// Verify the EIP712 signature.
-	if err := bid.ValidateSearcherSig(bp.ChainConfig.ChainID, bp.auctionEntryPoint); err != nil {
+	if err := bid.ValidateSearcherSig(bp.ChainConfig.ChainID, bp.auctionEntryPoint, bp.ChainConfig); err != nil {
 		return err
 	}
 
@@ -461,7 +461,7 @@ func (bp *BidPool) getBidTxGasLimit(bid *auction.Bid) (uint64, error) {
 	buffer := bp.bidTxGasBuffer
 	bp.auctionInfoMu.RUnlock()
 
-	data, err := system.EncodeAuctionCallData(bid)
+	data, err := system.EncodeAuctionCallData(bid, bp.ChainConfig)
 	if err != nil {
 		return 0, err
 	}

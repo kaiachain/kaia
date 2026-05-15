@@ -77,7 +77,7 @@ func init() {
 		bid.Sender = crypto.PubkeyToAddress(key.PublicKey)
 
 		// Generate searcher signature (EIP-712)
-		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint)
+		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, testChainConfig)
 		sig, _ := crypto.Sign(digest, key)
 		// Convert V from 0/1 to 27/28
 		sig[crypto.RecoveryIDOffset] += 27
@@ -577,7 +577,7 @@ func benchmarkAddBidParallel(b *testing.B, numBids int) {
 		}}
 
 		// Generate searcher signature (EIP-712)
-		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint)
+		digest := bid.GetHashTypedData(testChainConfig.ChainID, testAuctionEntryPoint, testChainConfig)
 		sig, _ := crypto.Sign(digest, searcherKey)
 		sig[crypto.RecoveryIDOffset] += 27
 		bid.SearcherSig = sig
