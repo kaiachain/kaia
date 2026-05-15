@@ -11,7 +11,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	testcontract "github.com/kaiachain/kaia/contracts/contracts/testing/reward"
+	testcontract "github.com/kaiachain/kaia/contracts/bindings/testing/reward"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
