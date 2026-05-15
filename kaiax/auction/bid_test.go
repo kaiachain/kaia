@@ -45,7 +45,6 @@ var testBid = &Bid{
 	BidData: data,
 }
 
-
 func TestBidEIP712Encode(t *testing.T) {
 	digest := testBid.GetHashTypedData(big.NewInt(31337), common.HexToAddress("0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"), AuctionVersionV2)
 	require.Equal(t, common.Hex2Bytes("da9b3f7a46d0b5e6875970b19ef7c60e2f969e5b44f6a4701b9889694df6fe0d"), digest)
@@ -127,4 +126,3 @@ func TestBidGetHashTypedDataBranching(t *testing.T) {
 		})
 	}
 }
-
