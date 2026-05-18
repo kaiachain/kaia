@@ -53,6 +53,26 @@ func TestGetNodesCache(t *testing.T) {
 		assert.Equal(t, cached, nodes)
 	})
 
+	t.Run("genesis reads genesis state", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		root := common.HexToHash("0x1234")
+		genesisHeader := &types.Header{Number: big.NewInt(0), Root: root}
+		stateErr := errors.New("state unavailable")
+
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesisHeader)
+		mockChain.EXPECT().StateAt(root).Return(nil, stateErr)
+
+		v := NewValsetModule()
+		v.Chain = mockChain
+
+		nodes, err := v.getNodes(0)
+		require.Nil(t, nodes)
+		require.ErrorIs(t, err, stateErr)
+	})
+
 	t.Run("no cache hit", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -90,6 +110,14 @@ func TestGetTransitionResultCache(t *testing.T) {
 		result, err := v.getTransitionResult(10, nil)
 		require.NoError(t, err)
 		require.Same(t, cached, result)
+	})
+
+	t.Run("genesis has no parent transition", func(t *testing.T) {
+		v := NewValsetModule()
+
+		result, err := v.getTransitionResult(0, nil)
+		require.Nil(t, result)
+		require.ErrorContains(t, err, "parent header not found for block 0")
 	})
 
 	t.Run("no cache hit", func(t *testing.T) {

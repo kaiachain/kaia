@@ -46,6 +46,23 @@ func (v *ValsetModule) getNodes(num uint64) (valset.NodeMap, error) {
 	if cached, ok := v.transitionResultCache.Get(num); ok {
 		return cached.(*TransitionResult).Nodes, nil
 	}
+	if num == 0 {
+		// Block 0 has no parent; read ABv2 directly from genesis state.
+		genesisHeader := v.Chain.GetHeaderByNumber(0)
+		if genesisHeader == nil {
+			return nil, errParentHeaderNotFound(num)
+		}
+		statedb, err := v.Chain.StateAt(genesisHeader.Root)
+		if err != nil {
+			return nil, fmt.Errorf("StateAt(%d) failed: %w", num, err)
+		}
+		result, err := system.ReadABv2Snapshot(statedb, v.Chain, genesisHeader)
+		if err != nil {
+			return nil, err
+		}
+		result.Nodes.MarkSuspended(result.SuspendedValidators)
+		return result.Nodes, nil
+	}
 	parentHeader := v.Chain.GetHeaderByNumber(num - 1)
 	if parentHeader == nil {
 		return nil, errParentHeaderNotFound(num)
@@ -62,6 +79,9 @@ func (v *ValsetModule) getNodes(num uint64) (valset.NodeMap, error) {
 }
 
 func (v *ValsetModule) getTransitionResult(num uint64, parentStatedb *state.StateDB) (*TransitionResult, error) {
+	if num == 0 {
+		return nil, errParentHeaderNotFound(num)
+	}
 	if cached, ok := v.transitionResultCache.Get(num); ok {
 		return cached.(*TransitionResult), nil
 	}
