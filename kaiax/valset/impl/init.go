@@ -52,7 +52,7 @@ type InitOpts struct {
 	Chain         consensus.ChainReaderWithSealer
 	GovModule     gov.GovModule
 	StakingModule staking.StakingModule
-	VRankModule   vrank.VRankModule // optional, nil before permissionless fork
+	VRankModule   vrank.VRankModule
 }
 
 type ValsetModule struct {
