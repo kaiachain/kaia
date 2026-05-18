@@ -90,7 +90,7 @@ func (v *ValsetModule) applyTransition(header *types.Header, statedb *state.Stat
 	nextNum := headNum + 1
 
 	// ABv2 read from state `headNum`
-	abv2result, err := system.ReadNodeStates(statedb, v.Chain, header)
+	abv2result, err := system.ReadABv2Snapshot(statedb, v.Chain, header)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (v *ValsetModule) writeTransitionToABv2(
 	if parentHeader == nil {
 		return errParentHeaderNotFound(num)
 	}
-	parentRes, err := system.ReadNodeStates(statedb, v.Chain, parentHeader)
+	parentRes, err := system.ReadABv2Snapshot(statedb, v.Chain, parentHeader)
 	if err != nil {
 		return fmt.Errorf("failed to read ABv2(N-1): %w", err)
 	}

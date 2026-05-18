@@ -143,7 +143,7 @@ type ABv2TransitionParam struct {
 	MaxValActivePausedCount uint64
 }
 
-// ABv2Snapshot holds the result of ReadNodeStates.
+// ABv2Snapshot holds the result of ReadABv2Snapshot.
 type ABv2Snapshot struct {
 	Nodes valset.NodeMap
 	ABv2TransitionParam
@@ -187,8 +187,8 @@ func NewNodeMapFromABv2(profiles []multicall.Profile, stakingAmounts []*big.Int)
 	return nodes, nil
 }
 
-// ReadNodeStates reads all node states, timeouts, max counts, and thresholds from ABv2 in a single MultiCall.
-func ReadNodeStates(
+// ReadABv2Snapshot reads all node states, timeouts, max counts, and thresholds from ABv2 in a single MultiCall.
+func ReadABv2Snapshot(
 	statedb *state.StateDB,
 	chain backends.BlockChainForCaller,
 	header *types.Header,
