@@ -18,6 +18,7 @@ package system
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"sort"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	abv2data "github.com/kaiachain/kaia/contracts/bindings/abv2data"
 	abv2contracts "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
+	"github.com/kaiachain/kaia/contracts/bindings/multicall"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
@@ -85,9 +87,9 @@ func EncodeInitializeABv2(rules params.Rules) (common.Address, *types.Transactio
 	return encodeSystemMessage(rules, AddressBookAddr, data)
 }
 
-// EncodeNodeStateUpdate encodes the processSystemTransition call with the given node state changes.
+// EncodeProcessSystemTransition encodes the processSystemTransition call with the given node state changes.
 // epochVACount is the VA count after epoch transition (newSF); 0 for non-epoch blocks.
-func EncodeNodeStateUpdate(
+func EncodeProcessSystemTransition(
 	rules params.Rules,
 	nodes valset.NodeMap,
 	epochVACount uint64,
@@ -141,8 +143,8 @@ type ABv2TransitionParam struct {
 	MaxValActivePausedCount uint64
 }
 
-// ABv2StateSnapshot holds the result of ReadNodeStates.
-type ABv2StateSnapshot struct {
+// ABv2Snapshot holds the result of ReadNodeStates.
+type ABv2Snapshot struct {
 	Nodes valset.NodeMap
 	ABv2TransitionParam
 
@@ -151,11 +153,38 @@ type ABv2StateSnapshot struct {
 	SuspendedValidators []common.Address
 }
 
-func (s *ABv2StateSnapshot) TransitionParam() ABv2TransitionParam {
+func (s *ABv2Snapshot) TransitionParam() ABv2TransitionParam {
 	if s == nil {
 		return ABv2TransitionParam{}
 	}
 	return s.ABv2TransitionParam
+}
+
+func NewNodeMapFromABv2(profiles []multicall.Profile, stakingAmounts []*big.Int) (valset.NodeMap, error) {
+	if len(profiles) != len(stakingAmounts) {
+		return nil, fmt.Errorf("profile/staking amount length mismatch: profiles=%d stakingAmounts=%d", len(profiles), len(stakingAmounts))
+	}
+
+	nodes := make(valset.NodeMap)
+	for i, p := range profiles {
+		nodeState := valset.NodeState(p.State)
+		node := &valset.Node{
+			State:         nodeState,
+			StakingAmount: new(big.Int).Div(stakingAmounts[i], big.NewInt(params.KAIA)).Uint64(),
+		}
+		switch nodeState {
+		case valset.ValReady, valset.ValInactive:
+			if p.TimeoutAt.Sign() > 0 {
+				node.IdleTimeout = time.Unix(p.TimeoutAt.Int64(), 0)
+			}
+		case valset.ValPaused:
+			if p.TimeoutAt.Sign() > 0 {
+				node.PausedTimeout = time.Unix(p.TimeoutAt.Int64(), 0)
+			}
+		}
+		nodes[p.NodeId] = node
+	}
+	return nodes, nil
 }
 
 // ReadNodeStates reads all node states, timeouts, max counts, and thresholds from ABv2 in a single MultiCall.
@@ -163,7 +192,7 @@ func ReadNodeStates(
 	statedb *state.StateDB,
 	chain backends.BlockChainForCaller,
 	header *types.Header,
-) (*ABv2StateSnapshot, error) {
+) (*ABv2Snapshot, error) {
 	caller, err := NewMultiCallContractCaller(statedb, chain, header)
 	if err != nil {
 		return nil, err
@@ -175,27 +204,12 @@ func ReadNodeStates(
 		return nil, err
 	}
 
-	nodes := make(valset.NodeMap)
-	for i, p := range res.Profiles {
-		nodeState := valset.NodeState(p.State)
-		vs := &valset.Node{
-			State:         nodeState,
-			StakingAmount: new(big.Int).Div(res.StakingAmounts[i], big.NewInt(params.KAIA)).Uint64(),
-		}
-		switch nodeState {
-		case valset.ValReady, valset.ValInactive:
-			if p.TimeoutAt.Sign() > 0 {
-				vs.IdleTimeout = time.Unix(p.TimeoutAt.Int64(), 0)
-			}
-		case valset.ValPaused:
-			if p.TimeoutAt.Sign() > 0 {
-				vs.PausedTimeout = time.Unix(p.TimeoutAt.Int64(), 0)
-			}
-		}
-		nodes[p.NodeId] = vs
+	nodes, err := NewNodeMapFromABv2(res.Profiles, res.StakingAmounts)
+	if err != nil {
+		return nil, err
 	}
 
-	return &ABv2StateSnapshot{
+	return &ABv2Snapshot{
 		Nodes: nodes,
 		ABv2TransitionParam: ABv2TransitionParam{
 			PauseTimeout:            time.Duration(res.PauseTimeout.Int64()) * time.Second,

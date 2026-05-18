@@ -201,7 +201,7 @@ func (v *ValsetModule) writeTransitionToABv2(
 	}
 
 	config := v.Chain.Config()
-	from, msg, err := system.EncodeNodeStateUpdate(config.Rules(header.Number), diff, tr.epochVACountForWrite)
+	from, msg, err := system.EncodeProcessSystemTransition(config.Rules(header.Number), diff, tr.epochVACountForWrite)
 	if err != nil {
 		logger.Error("Failed to encode processSystemTransition", "number", header.Number.Uint64(), "err", err.Error(), "nodes", diff.String())
 		return err
