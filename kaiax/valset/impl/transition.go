@@ -86,6 +86,7 @@ func (v *ValsetModule) getTransitionResult(num uint64, parentStatedb *state.Stat
 		return cached.(*TransitionResult), nil
 	}
 
+	// Read ABv2(N-1) + apply transitions for block N
 	parentHeader := v.Chain.GetHeaderByNumber(num - 1)
 	if parentHeader == nil {
 		return nil, errParentHeaderNotFound(num)
