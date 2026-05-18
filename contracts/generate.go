@@ -37,7 +37,7 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 
 // These files were compiled with solidity 0.4.24.
 
-// WARNING: Do not regenerate credit.go — the BinRuntime must match the mainnet-deployed bytecode.
+// WARNING: Do not regenerate credit.go — the BinRuntime is referenced as a fixed constant in the Kaia codebase. Any byte change (including solc metadata) flips the state root.
 // //go:generate ./abigenw --pkg misc --sol ./contracts/system_contracts/misc/credit.sol --out ./bindings/misc/credit.go --ver 0.4.24
 //go:generate ./abigenw --pkg reward --sol ./testing/reward/all.sol --out ./bindings/testing/reward/all.go --ver 0.4.24
 
@@ -55,22 +55,24 @@ Othewise, you can manually switch solc versions and run go generate for each sol
 
 // These files were compiled with solidity 0.5.16.
 
-//go:generate ./abigenw --pkg factory --sol ./node_modules/@uniswap/v2-core/contracts/UniswapV2Factory.sol --out ./bindings/uniswap/factory/UniswapV2Factory.go --ver 0.5.16
+// WARNING: Do not regenerate UniswapV2Factory.go — the BinRuntime is referenced as a fixed constant in the Kaia codebase. Any byte change (including solc metadata) flips the state root.
+// //go:generate ./abigenw --pkg factory --sol ./node_modules/@uniswap/v2-core/contracts/UniswapV2Factory.sol --out ./bindings/uniswap/factory/UniswapV2Factory.go --ver 0.5.16
 
 // These files were compiled with solidity 0.6.6.
 
-//go:generate ./abigenw --pkg router --sol ./node_modules/@uniswap/v2-periphery/contracts/UniswapV2Router02.sol --out ./bindings/uniswap/router/UniswapV2Router02.go --ver 0.6.6
+// WARNING: Do not regenerate UniswapV2Router02.go — the BinRuntime is referenced as a fixed constant in the Kaia codebase. Any byte change (including solc metadata) flips the state root.
+// //go:generate ./abigenw --pkg router --sol ./node_modules/@uniswap/v2-periphery/contracts/UniswapV2Router02.sol --out ./bindings/uniswap/router/UniswapV2Router02.go --ver 0.6.6
 
 // These files were compiled with solidity 0.8.19.
 
 //go:generate ./abigenw --pkg gov --type GovParam --artifact ./kaia-system-contracts/contracts-klaytn-v1.10/artifacts/contracts/GovParam.sol/GovParam.json --out ./bindings/gov/GovParam.go
 //go:generate ./abigenw --pkg rebalance --type TreasuryRebalance --artifact ./kaia-system-contracts/contracts-klaytn-v1.10/artifacts/contracts/TreasuryRebalance.sol/TreasuryRebalance.json --out ./bindings/rebalance/TreasuryRebalance.go
 //go:generate ./abigenw --pkg rebalance --type TreasuryRebalanceV2 --artifact ./kaia-system-contracts/contracts-v1.0/artifacts/contracts/TreasuryRebalanceV2.sol/TreasuryRebalanceV2.json --out ./bindings/rebalance/TreasuryRebalanceV2.go
-// WARNING: Do not regenerate SimpleBlsRegistry.go — the BinRuntime must match the mainnet-deployed bytecode.
+// WARNING: Do not regenerate SimpleBlsRegistry.go — the BinRuntime is referenced as a fixed constant in the Kaia codebase. Any byte change (including solc metadata) flips the state root.
 // //go:generate ./abigenw --pkg kip113 --type SimpleBlsRegistry --artifact ./kaia-system-contracts/contracts-klaytn-v1.12/artifacts/contracts/SimpleBlsRegistry.sol/SimpleBlsRegistry.json --out ./bindings/kip113/SimpleBlsRegistry.go
-// WARNING: Do not regenerate Registry.go — the BinRuntime must match the mainnet-deployed bytecode.
+// WARNING: Do not regenerate Registry.go — the BinRuntime is referenced as a fixed constant in the Kaia codebase. Any byte change (including solc metadata) flips the state root.
 // //go:generate ./abigenw --pkg kip149 --type Registry --artifact ./kaia-system-contracts/contracts-klaytn-v1.12/artifacts/contracts/Registry.sol/Registry.json --out ./bindings/kip149/Registry.go
-// WARNING: Do not regenerate proxyv4/Proxy.go — the BinRuntime must match the mainnet-deployed bytecode.
+// WARNING: Do not regenerate proxyv4/Proxy.go — the BinRuntime is referenced as a fixed constant in the Kaia codebase. Any byte change (including solc metadata) flips the state root.
 // //go:generate ./abigenw --pkg proxyv4 --type ERC1967Proxy --sol ./contracts/system_contracts/proxy/proxy.sol --out ./bindings/proxyv4/Proxy.go --ver 0.8.19
 //go:generate ./abigenw --pkg system_contracts --sol ./testing/system_contracts/all.sol --out ./bindings/testing/system_contracts/all.go --ver 0.8.19
 
