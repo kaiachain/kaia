@@ -134,6 +134,7 @@ func (v *ValsetModule) Start() error {
 	// Reset all caches
 	v.proposerListCache.Purge()
 	v.removeVotesCache.Purge()
+	v.transitionResultCache.Purge()
 
 	// Reset the quit state.
 	v.quit.Store(0)
