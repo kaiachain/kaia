@@ -71,7 +71,7 @@ func (v *VRankModule) PrepareHeader(*types.Header) error { return nil }
 
 func validateEpochVRank(report, candidates []common.Address) error {
 	if !slices.Equal(report, candidates) {
-		return vrank.ErrMismatchedEpochStartVRank
+		return vrank.ErrEpochStartVRankMismatch
 	}
 	return nil
 }

@@ -66,13 +66,13 @@ func TestVerifyHeader(t *testing.T) {
 		v := newCN(t, withCandidates([]common.Address{C1, C2})).VRankModule
 		assert.NoError(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C1, C2}), nil))
 		assert.ErrorIs(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C2, C1}), nil),
-			vrank.ErrMismatchedEpochStartVRank)
+			vrank.ErrEpochStartVRankMismatch)
 		assert.ErrorIs(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C1, C1}), nil),
-			vrank.ErrMismatchedEpochStartVRank)
+			vrank.ErrEpochStartVRankMismatch)
 		assert.ErrorIs(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C1, C3}), nil),
-			vrank.ErrMismatchedEpochStartVRank)
+			vrank.ErrEpochStartVRankMismatch)
 		assert.ErrorIs(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C1}), nil),
-			vrank.ErrMismatchedEpochStartVRank)
+			vrank.ErrEpochStartVRankMismatch)
 		assert.ErrorIs(t, v.VerifyHeader(&types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}, nil),
 			vrank.ErrInvalidVRankFormat)
 	})
