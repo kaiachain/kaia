@@ -39,17 +39,76 @@ func testPermissionlessConfig(permissionlessBlock int64, vrankEpoch uint64) *par
 	return config
 }
 
-func TestGetNodesCacheHit(t *testing.T) {
-	v := NewValsetModule()
-	cached := NodeMap{
-		addr1: {State: ValActive, StakingAmount: aboveMinStake},
-	}
-	v.transitionResultCache.Add(uint64(10), &TransitionResult{Nodes: cached})
+func TestGetNodesCache(t *testing.T) {
+	t.Run("cache hit", func(t *testing.T) {
+		v := NewValsetModule()
+		cached := NodeMap{
+			addr1: {State: ValActive, StakingAmount: aboveMinStake},
+		}
+		v.transitionResultCache.Add(uint64(10), &TransitionResult{Nodes: cached})
 
-	nodes, err := v.getNodes(10)
-	require.NoError(t, err)
-	require.Same(t, cached[addr1], nodes[addr1])
-	assert.Equal(t, cached, nodes)
+		nodes, err := v.getNodes(10)
+		require.NoError(t, err)
+		require.Same(t, cached[addr1], nodes[addr1])
+		assert.Equal(t, cached, nodes)
+	})
+
+	t.Run("no cache hit", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		root := common.HexToHash("0x1234")
+		parentHeader := &types.Header{Number: big.NewInt(9), Root: root}
+		stateErr := errors.New("state unavailable")
+
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().GetHeaderByNumber(uint64(9)).Return(parentHeader)
+		mockChain.EXPECT().StateAt(root).Return(nil, stateErr)
+
+		v := NewValsetModule()
+		v.Chain = mockChain
+
+		_, inCache := v.transitionResultCache.Get(uint64(10))
+		require.False(t, inCache, "cache must be cold before first call")
+
+		nodes, err := v.getNodes(10)
+		require.Nil(t, nodes)
+		require.ErrorIs(t, err, stateErr)
+	})
+}
+
+func TestGetTransitionResultCache(t *testing.T) {
+	t.Run("cache hit", func(t *testing.T) {
+		v := NewValsetModule()
+		cached := &TransitionResult{
+			Nodes: NodeMap{
+				addr1: {State: ValActive, StakingAmount: aboveMinStake},
+			},
+		}
+		v.transitionResultCache.Add(uint64(10), cached)
+
+		result, err := v.getTransitionResult(10, nil)
+		require.NoError(t, err)
+		require.Same(t, cached, result)
+	})
+
+	t.Run("no cache hit", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().GetHeaderByNumber(uint64(9)).Return(nil)
+
+		v := NewValsetModule()
+		v.Chain = mockChain
+
+		_, inCache := v.transitionResultCache.Get(uint64(10))
+		require.False(t, inCache, "cache must be cold before first call")
+
+		result, err := v.getTransitionResult(10, nil)
+		require.Nil(t, result)
+		require.ErrorContains(t, err, "parent header not found for block 10")
+	})
 }
 
 func TestGetNodesParentReadErrors(t *testing.T) {
