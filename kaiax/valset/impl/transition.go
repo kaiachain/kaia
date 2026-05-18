@@ -123,21 +123,21 @@ func (v *ValsetModule) fetchVRankCtx(num uint64) (cfs, pfs map[common.Address]ui
 	if nextNum := num + 1; v.isVrankEpoch(nextNum) {
 		c, err := v.VRankModule.GetCFS(num)
 		if err != nil {
-			logger.Warn("fetchVRankCtx: GetCFS failed", "num", num, "err", err)
+			logger.Error("fetchVRankCtx: GetCFS failed", "num", num, "err", err)
 		} else {
 			cfs = c
 		}
 	}
 	r, err := v.VRankModule.GetPfReport(num)
 	if err != nil {
-		logger.Warn("fetchVRankCtx: GetPfReport failed", "num", num, "err", err)
+		logger.Error("fetchVRankCtx: GetPfReport failed", "num", num, "err", err)
 	} else {
 		pfReport = r
 	}
 	if len(pfReport) > 0 {
 		p, err := v.VRankModule.GetPFS(num)
 		if err != nil {
-			logger.Warn("fetchVRankCtx: GetPFS failed", "num", num, "err", err)
+			logger.Error("fetchVRankCtx: GetPFS failed", "num", num, "err", err)
 		} else {
 			pfs = p
 		}
