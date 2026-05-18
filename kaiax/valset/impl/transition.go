@@ -65,6 +65,7 @@ func (v *ValsetModule) getTransitionResult(num uint64, parentStatedb *state.Stat
 	if cached, ok := v.transitionResultCache.Get(num); ok {
 		return cached.(*TransitionResult), nil
 	}
+
 	parentHeader := v.Chain.GetHeaderByNumber(num - 1)
 	if parentHeader == nil {
 		return nil, errParentHeaderNotFound(num)
@@ -86,31 +87,31 @@ func (v *ValsetModule) getTransitionResult(num uint64, parentStatedb *state.Stat
 //
 // Caller must ensure statedb == StateAt(header.Root).
 func (v *ValsetModule) applyTransition(header *types.Header, statedb *state.StateDB) (*TransitionResult, error) {
-	headNum := header.Number.Uint64()
-	nextNum := headNum + 1
-
-	// ABv2 read from state `headNum`
+	// ABv2 read from state(header.Root), i.e. ABv2(N).
 	abv2result, err := system.ReadABv2Snapshot(statedb, v.Chain, header)
 	if err != nil {
 		return nil, err
 	}
 	abv2result.Nodes.MarkSuspended(abv2result.SuspendedValidators)
 
-	// Gov read from `nextNum`
-	pset := v.GovModule.GetParamSet(nextNum)
+	ctx := v.newTransitionContext(header, abv2result)
+	return ctx.ApplyAllTransitions(abv2result.Nodes), nil
+}
 
-	// VRank reads `headNum` (fail-open via nil maps on error).
+func (v *ValsetModule) newTransitionContext(header *types.Header, abv2result *system.ABv2Snapshot) *TransitionContext {
+	headNum := header.Number.Uint64()
+	nextNum := headNum + 1
+
+	pset := v.GovModule.GetParamSet(nextNum)
 	cfs, pfs, pfReport := v.fetchVRankCtx(headNum)
 
-	// Build the transition context.
 	ctx := NewTransitionContext()
 	ctx.SetBlockCtx(header, v.isVrankEpoch(nextNum))
 	ctx.SetGovCtx(pset)
 	ctx.SetABv2TransitionParam(abv2result.TransitionParam())
 	ctx.SetSlotsCtx(slotLimitsFor(abv2result.EpochVACount))
 	ctx.SetVRankCtx(cfs, pfs, pfReport)
-
-	return ctx.ApplyAllTransitions(abv2result.Nodes), nil
+	return ctx
 }
 
 // fetchVRankCtx pulls the three vrank scores transitions need at block num.
