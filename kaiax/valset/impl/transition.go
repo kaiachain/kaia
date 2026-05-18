@@ -114,8 +114,7 @@ func (v *ValsetModule) applyTransition(header *types.Header, statedb *state.Stat
 }
 
 // fetchVRankCtx pulls the three vrank scores transitions need at block num.
-// Errors are swallowed here so the orchestrator stays robust to transient
-// vrank failures; the resulting nil/empty maps cause transitions to fail open.
+// Errors are swallowed here so the orchestrator stays robust to transient vrank failures.
 func (v *ValsetModule) fetchVRankCtx(num uint64) (cfs, pfs map[common.Address]uint64, pfReport []common.Address) {
 	if v.VRankModule == nil {
 		logger.Error("VRankModule is nil")
@@ -155,8 +154,8 @@ func (v *ValsetModule) isVrankEpoch(num uint64) bool {
 // WriteTransitionToABv2 computes the node-state transition for the current
 // block and writes any diffs to AddressBookV2 via SystemTx (ABv2.processSystemTransition).
 // No-op pre-fork.
-// WriteTransitionToABv2(n) is for generating the next block.
-// WriteTransitionToABv2(n) = Write NodeStates(N) - NodeStates(N-1) at Initialize(N).
+// WriteTransitionToABv2(N) is for generating the next block.
+// WriteTransitionToABv2(N) = Write NodeStates(N) - NodeStates(N-1) at Initialize(N).
 func (v *ValsetModule) WriteTransitionToABv2(
 	vmenv *vm.EVM,
 	header *types.Header,
