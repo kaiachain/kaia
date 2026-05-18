@@ -22,6 +22,7 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -146,6 +147,30 @@ func TestIsRewardEligible(t *testing.T) {
 	assert.False(t, CandReady.IsRewardEligible())
 	assert.False(t, CandTesting.IsRewardEligible())
 	assert.False(t, Registered.IsRewardEligible())
+}
+
+func TestNodeCopy(t *testing.T) {
+	var nilNode *Node
+	assert.Nil(t, nilNode.Copy())
+
+	t1 := time.Unix(1000, 0)
+	original := &Node{State: ValActive, StakingAmount: 5_000_000, IdleTimeout: t1, Suspended: false}
+
+	cp := original.Copy()
+	require.NotSame(t, original, cp)
+	assert.Equal(t, original, cp)
+
+	cp.State = ValPaused
+	cp.StakingAmount = 999
+	cp.IdleTimeout = time.Unix(2000, 0)
+	cp.PausedTimeout = time.Unix(3000, 0)
+	cp.Suspended = true
+
+	assert.Equal(t, ValActive, original.State)
+	assert.Equal(t, uint64(5_000_000), original.StakingAmount)
+	assert.Equal(t, t1, original.IdleTimeout)
+	assert.True(t, original.PausedTimeout.IsZero())
+	assert.False(t, original.Suspended)
 }
 
 // TestCopy_DeepCopy verifies the deep-copy property that pure transition methods

@@ -139,6 +139,14 @@ type Node struct {
 	Suspended     bool      `json:"suspended"`
 }
 
+func (n *Node) Copy() *Node {
+	if n == nil {
+		return nil
+	}
+	copied := *n
+	return &copied
+}
+
 // NodeMap is the keyed collection of per-node records. Used for permissionless state transitions.
 type NodeMap map[common.Address]*Node
 
@@ -160,12 +168,7 @@ func (v NodeMap) Copy() NodeMap {
 
 	cp := make(NodeMap, len(v))
 	for key, value := range v {
-		if value == nil {
-			cp[key] = nil
-			continue
-		}
-		newValue := *value
-		cp[key] = &newValue
+		cp[key] = value.Copy()
 	}
 	return cp
 }
