@@ -468,7 +468,7 @@ func (self *worker) commitNewWork() {
 	// - newSequenceSub -> commitNewWork() for next block (triggered from consensus startNewRound)
 }
 
-// handleExecutionResult processes the execution result from consensus
+// handleFinalizedBlock processes the finalized block result from consensus
 func (self *worker) handleFinalizedBlock(result *consensus.ExecutionResult) {
 	self.mu.Lock()
 	defer self.mu.Unlock()
