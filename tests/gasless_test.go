@@ -40,6 +40,7 @@ import (
 	testingGaslessContracts "github.com/kaiachain/kaia/contracts/bindings/testing/system_contracts/gasless"
 	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/bindings/uniswap/factory"
 	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/bindings/uniswap/router"
+	"github.com/kaiachain/kaia/crypto"
 	gaslessImpl "github.com/kaiachain/kaia/kaiax/gasless/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -55,6 +56,13 @@ var (
 
 func TestGasless(t *testing.T) {
 	log.EnableLogForTest(log.LvlError, log.LvlError)
+
+	// Bytecode regression: pin the keccak256 of Uniswap runtime bytecode used in gasless.
+	// DO NOT MODIFY THE EXPECTED HASHES BELOW.
+	assert.Equal(t, "0xbab145d02e7005f0d84c6c1639d39b799b0ea16df99ebbdaf5a14d9da820b4e0",
+		crypto.Keccak256Hash(common.Hex2Bytes(uniswapFactoryContracts.UniswapV2FactoryBinRuntime)).Hex())
+	assert.Equal(t, "0x8078c0090b05e0bee0587064947604e217146cc295dcb119a2c0217d6e88dac5",
+		crypto.Keccak256Hash(common.Hex2Bytes(uniswapRouterContracts.UniswapV2Router02BinRuntime)).Hex())
 
 	// prepare chain configuration
 	config := params.MainnetChainConfig.Copy()

@@ -32,8 +32,6 @@ import (
 	proxyv5contract "github.com/kaiachain/kaia/contracts/bindings/proxyv5"
 	"github.com/kaiachain/kaia/contracts/bindings/testing/reward"
 	testcontract "github.com/kaiachain/kaia/contracts/bindings/testing/system_contracts"
-	uniswapFactoryContracts "github.com/kaiachain/kaia/contracts/bindings/uniswap/factory"
-	uniswapRouterContracts "github.com/kaiachain/kaia/contracts/bindings/uniswap/router"
 	"github.com/kaiachain/kaia/log"
 )
 
@@ -104,10 +102,6 @@ var (
 	RegistryMockZero          = hexutil.MustDecode("0x" + reward.RegistryMockZeroBinRuntime)
 	CLRegistryMockThreeCLCode = hexutil.MustDecode("0x" + reward.CLRegistryMockThreeCLBinRuntime)
 	WrappedKaiaMockCode       = hexutil.MustDecode("0x" + reward.WrappedKaiaMockBinRuntime)
-
-	// Uniswap contracts for Gasless test
-	UniswapV2FactoryCode  = hexutil.MustDecode("0x" + uniswapFactoryContracts.UniswapV2FactoryBinRuntime)
-	UniswapV2Router02Code = hexutil.MustDecode("0x" + uniswapRouterContracts.UniswapV2Router02BinRuntime)
 
 	// Errors
 	ErrRegistryNotInstalled      = errors.New("Registry contract not installed")
