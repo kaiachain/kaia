@@ -66,7 +66,7 @@ func getRoundCommitteeState(c *core, seq, r uint64) (qualified *valset.AddressSe
 		return nil, nil, common.Address{}, 0, 0, 0, err
 	}
 	committeeSet = valset.NewAddressSet(committeeAddrs)
-	committeeSize = c.govModule.GetParamSet(seq).CommitteeSize
+	committeeSize = uint64(committeeSet.Len())
 
 	qLen := qualified.Len()
 	requiredMsgCnt = calcQuorumSize(qLen, committeeSize)
