@@ -235,13 +235,14 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 	}
 
 	blockNum := header.Number.Uint64()
+	isPermissionless := v.config != nil && v.config.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum))
 
 	// Skip module-dependent seal validation when gov/valset modules are not registered.
 	if v.mValset == nil || v.mGov == nil {
 		return nil
 	}
 
-	if v.config != nil && v.config.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
+	if isPermissionless {
 		round, err := v.sealer.Round(header)
 		if err != nil {
 			return err
@@ -259,25 +260,33 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 	if err != nil {
 		return err
 	}
-	if !valset.NewAddressSet(qualified).Contains(author) {
+	qualifiedSet := valset.NewAddressSet(qualified)
+	if !qualifiedSet.Contains(author) {
 		return consensus.ErrUnauthorized
 	}
 
-	council, err := v.mValset.GetCouncil(blockNum)
-	if err != nil {
-		return err
+	signerSet := qualifiedSet.Copy()
+	if !isPermissionless {
+		council, err := v.mValset.GetCouncil(blockNum)
+		if err != nil {
+			return err
+		}
+		signerSet = valset.NewAddressSet(council).Copy()
 	}
-	councilSet := valset.NewAddressSet(council).Copy()
 	validSeal := 0
 	for _, addr := range committers {
-		if councilSet.Remove(addr) {
+		if signerSet.Remove(addr) {
 			validSeal++
 		} else {
 			return istanbul.ErrInvalidCommittedSeals
 		}
 	}
 
-	if validSeal < v.sealer.Quorum(blockNum, len(qualified), int(v.mGov.GetParamSet(blockNum).CommitteeSize)) {
+	committeeSize := len(qualified)
+	if !isPermissionless {
+		committeeSize = int(v.mGov.GetParamSet(blockNum).CommitteeSize)
+	}
+	if validSeal < v.sealer.Quorum(blockNum, len(qualified), committeeSize) {
 		return istanbul.ErrInvalidCommittedSeals
 	}
 	return nil

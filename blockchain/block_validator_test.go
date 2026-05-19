@@ -35,6 +35,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/faker"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	mock_gov "github.com/kaiachain/kaia/kaiax/gov/mock"
@@ -43,6 +44,33 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
 )
+
+type verifySealsTestSealer struct {
+	consensus.Sealer
+	author        common.Address
+	committers    []common.Address
+	quorum        int
+	qualifiedLen  int
+	committeeSize int
+}
+
+func (s *verifySealsTestSealer) Author(*types.Header) (common.Address, error) {
+	return s.author, nil
+}
+
+func (s *verifySealsTestSealer) Committers(*types.Header) ([]common.Address, error) {
+	return s.committers, nil
+}
+
+func (s *verifySealsTestSealer) Round(*types.Header) (byte, error) {
+	return 0, nil
+}
+
+func (s *verifySealsTestSealer) Quorum(_ uint64, qualifiedLen, committeeSize int) int {
+	s.qualifiedLen = qualifiedLen
+	s.committeeSize = committeeSize
+	return s.quorum
+}
 
 func TestValidateHeader(t *testing.T) {
 	testcases := []struct {
@@ -224,8 +252,6 @@ func TestVerifySealsAcceptsExpectedProposer(t *testing.T) {
 	mValset := mock_valset.NewMockValsetModule(ctrl)
 	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(author, nil)
 	mValset.EXPECT().GetQualifiedValidators(blockNum).Return([]common.Address{author}, nil)
-	mValset.EXPECT().GetCouncil(blockNum).Return([]common.Address{author}, nil)
-	mGov.EXPECT().GetParamSet(blockNum).Return(gov.ParamSet{CommitteeSize: 1})
 
 	validator := &BlockValidator{
 		config:  params.TestKaiaConfig("permissionless"),
@@ -235,6 +261,80 @@ func TestVerifySealsAcceptsExpectedProposer(t *testing.T) {
 	}
 
 	assert.NoError(t, validator.verifySeals(header))
+}
+
+func TestVerifySealsPermissionlessUsesQualifiedAsCommitteeSize(t *testing.T) {
+	var (
+		author    = common.HexToAddress("0x0001")
+		b         = common.HexToAddress("0x0002")
+		c         = common.HexToAddress("0x0003")
+		d         = common.HexToAddress("0x0004")
+		e         = common.HexToAddress("0x0005")
+		blockNum  = uint64(7)
+		header    = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+		qualified = []common.Address{author, b, c, d, e}
+		sealer    = &verifySealsTestSealer{
+			Sealer:     faker.NewFaker(),
+			author:     author,
+			committers: []common.Address{author, b, c, d},
+			quorum:     4,
+		}
+	)
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mGov := mock_gov.NewMockGovModule(ctrl)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(author, nil)
+	mValset.EXPECT().GetQualifiedValidators(blockNum).Return(qualified, nil)
+
+	validator := &BlockValidator{
+		config:  params.TestKaiaConfig("permissionless"),
+		sealer:  sealer,
+		mGov:    mGov,
+		mValset: mValset,
+	}
+
+	assert.NoError(t, validator.verifySeals(header))
+	assert.Equal(t, len(qualified), sealer.qualifiedLen)
+	assert.Equal(t, len(qualified), sealer.committeeSize)
+}
+
+func TestVerifySealsPermissionlessRejectsNonQualifiedCommitter(t *testing.T) {
+	var (
+		author    = common.HexToAddress("0x0001")
+		b         = common.HexToAddress("0x0002")
+		c         = common.HexToAddress("0x0003")
+		d         = common.HexToAddress("0x0004")
+		paused    = common.HexToAddress("0x0005")
+		blockNum  = uint64(7)
+		header    = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+		qualified = []common.Address{author, b, c, d}
+		sealer    = &verifySealsTestSealer{
+			Sealer:     faker.NewFaker(),
+			author:     author,
+			committers: []common.Address{author, b, paused},
+			quorum:     3,
+		}
+	)
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mGov := mock_gov.NewMockGovModule(ctrl)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(author, nil)
+	mValset.EXPECT().GetQualifiedValidators(blockNum).Return(qualified, nil)
+
+	validator := &BlockValidator{
+		config:  params.TestKaiaConfig("permissionless"),
+		sealer:  sealer,
+		mGov:    mGov,
+		mValset: mValset,
+	}
+
+	assert.ErrorIs(t, validator.verifySeals(header), istanbul.ErrInvalidCommittedSeals)
 }
 
 func TestVerifyBlockBody(t *testing.T) {
