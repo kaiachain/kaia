@@ -59,7 +59,7 @@ func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
 	}
 
 	if qualified == nil {
-		// post-permissionless + future blocks, or pre-permissionless
+		// future blocks under post-permissionless, or pre-permissionless
 		qualified, err = v.getQualifiedPermissioned(num)
 		if err != nil {
 			return nil, err
