@@ -103,7 +103,11 @@ func EncodeReport(report []common.Address) ([]byte, error) {
 		return nil, nil
 	}
 
-	return rlp.EncodeToBytes(report)
+	return EncodeAddressList(report)
+}
+
+func EncodeAddressList(addrs []common.Address) ([]byte, error) {
+	return rlp.EncodeToBytes(addrs)
 }
 
 func DecodeReport(data []byte) ([]common.Address, error) {

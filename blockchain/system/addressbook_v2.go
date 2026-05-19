@@ -18,6 +18,7 @@ package system
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"sort"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	abv2data "github.com/kaiachain/kaia/contracts/bindings/abv2data"
 	abv2contracts "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
+	"github.com/kaiachain/kaia/contracts/bindings/multicall"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/params"
 )
@@ -85,15 +87,15 @@ func EncodeInitializeABv2(rules params.Rules) (common.Address, *types.Transactio
 	return encodeSystemMessage(rules, AddressBookAddr, data)
 }
 
-// EncodeNodeStateUpdate encodes the processSystemTransition call with the given validator state changes.
+// EncodeProcessSystemTransition encodes the processSystemTransition call with the given node state changes.
 // epochVACount is the VA count after epoch transition (newSF); 0 for non-epoch blocks.
-func EncodeNodeStateUpdate(
+func EncodeProcessSystemTransition(
 	rules params.Rules,
-	validators valset.NodeMap,
+	nodes valset.NodeMap,
 	epochVACount uint64,
 ) (common.Address, *types.Transaction, error) {
-	nodeIds := make([]common.Address, 0, len(validators))
-	for addr := range validators {
+	nodeIds := make([]common.Address, 0, len(nodes))
+	for addr := range nodes {
 		nodeIds = append(nodeIds, addr)
 	}
 	// Sort for deterministic ABI encoding across all nodes
@@ -106,7 +108,7 @@ func EncodeNodeStateUpdate(
 		timeoutAts = make([]*big.Int, len(nodeIds))
 	)
 	for idx, addr := range nodeIds {
-		vs := validators[addr]
+		vs := nodes[addr]
 		newStates[idx] = vs.State.ToUint8()
 		var timeout time.Time
 		switch vs.State {
@@ -129,26 +131,68 @@ func EncodeNodeStateUpdate(
 	return encodeSystemMessage(rules, AddressBookAddr, data)
 }
 
-// NodeStatesResult holds the result of ReadNodeStates.
-type NodeStatesResult struct {
-	Validators              valset.NodeMap
-	PauseTimeout            time.Duration
-	IdleTimeout             time.Duration
+// ABv2TransitionParam is the subset of ABv2 reads consumed by the transition
+// pipeline. NodeMap is passed separately as the mutable pipeline input.
+type ABv2TransitionParam struct {
+	EpochVACount uint64 // pipeline initial value; carried through on non-epoch blocks
+
 	PfsThreshold            uint64
 	CfsThreshold            uint64
-	EpochVACount            uint64
-	MaxSlotAvailable        uint64
-	MinActiveCount          uint64
+	IdleTimeout             time.Duration
+	PauseTimeout            time.Duration
 	MaxValActivePausedCount uint64
-	SuspendedValidators     []common.Address
 }
 
-// ReadNodeStates reads all validator states, timeouts, max counts, and thresholds from ABv2 in a single MultiCall.
-func ReadNodeStates(
+// ABv2Snapshot holds the result of ReadABv2Snapshot.
+type ABv2Snapshot struct {
+	Nodes valset.NodeMap
+	ABv2TransitionParam
+
+	MaxSlotAvailable    uint64
+	MinActiveCount      uint64
+	SuspendedValidators []common.Address
+}
+
+func (s *ABv2Snapshot) TransitionParam() ABv2TransitionParam {
+	if s == nil {
+		return ABv2TransitionParam{}
+	}
+	return s.ABv2TransitionParam
+}
+
+func NewNodeMapFromABv2(profiles []multicall.Profile, stakingAmounts []*big.Int) (valset.NodeMap, error) {
+	if len(profiles) != len(stakingAmounts) {
+		return nil, fmt.Errorf("profile/staking amount length mismatch: profiles=%d stakingAmounts=%d", len(profiles), len(stakingAmounts))
+	}
+
+	nodes := make(valset.NodeMap)
+	for i, p := range profiles {
+		nodeState := valset.NodeState(p.State)
+		node := &valset.Node{
+			State:         nodeState,
+			StakingAmount: new(big.Int).Div(stakingAmounts[i], big.NewInt(params.KAIA)).Uint64(),
+		}
+		switch nodeState {
+		case valset.ValReady, valset.ValInactive:
+			if p.TimeoutAt.Sign() > 0 {
+				node.IdleTimeout = time.Unix(p.TimeoutAt.Int64(), 0)
+			}
+		case valset.ValPaused:
+			if p.TimeoutAt.Sign() > 0 {
+				node.PausedTimeout = time.Unix(p.TimeoutAt.Int64(), 0)
+			}
+		}
+		nodes[p.NodeId] = node
+	}
+	return nodes, nil
+}
+
+// ReadABv2Snapshot reads all node states, timeouts, max counts, and thresholds from ABv2 in a single MultiCall.
+func ReadABv2Snapshot(
 	statedb *state.StateDB,
 	chain backends.BlockChainForCaller,
 	header *types.Header,
-) (*NodeStatesResult, error) {
+) (*ABv2Snapshot, error) {
 	caller, err := NewMultiCallContractCaller(statedb, chain, header)
 	if err != nil {
 		return nil, err
@@ -160,37 +204,24 @@ func ReadNodeStates(
 		return nil, err
 	}
 
-	validators := make(valset.NodeMap)
-	for i, p := range res.Profiles {
-		nodeState := valset.NodeState(p.State)
-		vs := &valset.Node{
-			State:         nodeState,
-			StakingAmount: new(big.Int).Div(res.StakingAmounts[i], big.NewInt(params.KAIA)).Uint64(),
-		}
-		switch nodeState {
-		case valset.ValReady, valset.ValInactive:
-			if p.TimeoutAt.Sign() > 0 {
-				vs.IdleTimeout = time.Unix(p.TimeoutAt.Int64(), 0)
-			}
-		case valset.ValPaused:
-			if p.TimeoutAt.Sign() > 0 {
-				vs.PausedTimeout = time.Unix(p.TimeoutAt.Int64(), 0)
-			}
-		}
-		validators[p.NodeId] = vs
+	nodes, err := NewNodeMapFromABv2(res.Profiles, res.StakingAmounts)
+	if err != nil {
+		return nil, err
 	}
 
-	return &NodeStatesResult{
-		Validators:              validators,
-		PauseTimeout:            time.Duration(res.PauseTimeout.Int64()) * time.Second,
-		IdleTimeout:             time.Duration(res.IdleTimeout.Int64()) * time.Second,
-		PfsThreshold:            res.PfsThreshold.Uint64(),
-		CfsThreshold:            res.CfsThreshold.Uint64(),
-		EpochVACount:            res.EpochVACount.Uint64(),
-		MaxSlotAvailable:        res.MaxSlotAvailable.Uint64(),
-		MinActiveCount:          res.MinActiveCount.Uint64(),
-		MaxValActivePausedCount: res.MaxValActivePausedCount.Uint64(),
-		SuspendedValidators:     res.SuspendedValidators,
+	return &ABv2Snapshot{
+		Nodes: nodes,
+		ABv2TransitionParam: ABv2TransitionParam{
+			PauseTimeout:            time.Duration(res.PauseTimeout.Int64()) * time.Second,
+			IdleTimeout:             time.Duration(res.IdleTimeout.Int64()) * time.Second,
+			PfsThreshold:            res.PfsThreshold.Uint64(),
+			CfsThreshold:            res.CfsThreshold.Uint64(),
+			EpochVACount:            res.EpochVACount.Uint64(),
+			MaxValActivePausedCount: res.MaxValActivePausedCount.Uint64(),
+		},
+		MaxSlotAvailable:    res.MaxSlotAvailable.Uint64(),
+		MinActiveCount:      res.MinActiveCount.Uint64(),
+		SuspendedValidators: res.SuspendedValidators,
 	}, nil
 }
 

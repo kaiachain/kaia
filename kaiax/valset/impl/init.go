@@ -26,6 +26,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/staking"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/storage/database"
 )
@@ -51,6 +52,7 @@ type InitOpts struct {
 	Chain         consensus.ChainReaderWithSealer
 	GovModule     gov.GovModule
 	StakingModule staking.StakingModule
+	VRankModule   vrank.VRankModule
 }
 
 type ValsetModule struct {
@@ -60,9 +62,10 @@ type ValsetModule struct {
 	wg   sync.WaitGroup
 
 	// cache for weightedRandom and uniformRandom proposerLists.
-	proposerListCache *lru.Cache // uint64 -> []common.Address
-	removeVotesCache  *lru.Cache // uint64 -> removeVoteList
-	councilCache      *lru.Cache // uint64 -> *valset.AddressSet
+	proposerListCache     *lru.Cache // uint64 -> []common.Address
+	removeVotesCache      *lru.Cache // uint64 -> removeVoteList
+	councilCache          *lru.Cache // uint64 -> *valset.AddressSet
+	transitionResultCache *lru.Cache // uint64 -> *TransitionResult (permissionless)
 
 	validatorVoteBlockNumsCache []uint64
 	lowestScannedVoteNumCache   *uint64
@@ -72,10 +75,12 @@ func NewValsetModule() *ValsetModule {
 	pListCache, _ := lru.New(128)
 	rVoteCache, _ := lru.New(128)
 	councilCache, _ := lru.New(128)
+	transitionResultCache, _ := lru.New(128)
 	return &ValsetModule{
-		proposerListCache: pListCache,
-		removeVotesCache:  rVoteCache,
-		councilCache:      councilCache,
+		proposerListCache:     pListCache,
+		removeVotesCache:      rVoteCache,
+		councilCache:          councilCache,
+		transitionResultCache: transitionResultCache,
 	}
 }
 
@@ -129,6 +134,7 @@ func (v *ValsetModule) Start() error {
 	// Reset all caches
 	v.proposerListCache.Purge()
 	v.removeVotesCache.Purge()
+	v.transitionResultCache.Purge()
 
 	// Reset the quit state.
 	v.quit.Store(0)
