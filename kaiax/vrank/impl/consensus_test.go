@@ -19,6 +19,7 @@ package impl
 import (
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
@@ -74,12 +75,13 @@ func TestVerifyHeader(t *testing.T) {
 		assert.ErrorIs(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, []common.Address{C1}), nil),
 			vrank.ErrEpochStartVRankMismatch)
 		assert.ErrorIs(t, v.VerifyHeader(&types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}, nil),
-			vrank.ErrInvalidVRankFormat)
+			vrank.ErrEpochStartVRankMismatch)
 	})
 
-	t.Run("epoch-start: empty CandTesting is encoded as an RLP list", func(t *testing.T) {
+	t.Run("epoch-start: empty CandTesting accepts encoded or nil VRank", func(t *testing.T) {
 		v := newCN(t, withCandidates(nil)).VRankModule
 		assert.NoError(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, nil), nil))
+		assert.NoError(t, v.VerifyHeader(&types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}, nil))
 	})
 
 	t.Run("epoch-start: candidate membership is checked against block N", func(t *testing.T) {
@@ -154,5 +156,66 @@ func TestVerifyHeader(t *testing.T) {
 
 		assert.NoError(t, v.VerifyHeader(makeVRankHeader(t, headerNum, []common.Address{cand}), nil))
 		assert.ErrorIs(t, v.VerifyHeader(makeVRankHeader(t, headerNum, []common.Address{futureCand}), nil), vrank.ErrInvalidVRankCandidate)
+	})
+}
+
+func TestPrepareHeader(t *testing.T) {
+	C1, C2 := numToAddr(1), numToAddr(2)
+	candidates := []common.Address{C1, C2}
+
+	t.Run("pre-fork clears VRank", func(t *testing.T) {
+		v := newCN(t, withHardfork("osaka"), withoutStart()).VRankModule
+		header := makeVRankHeader(t, 100, []common.Address{C1})
+
+		require.NoError(t, v.PrepareHeader(header))
+		assert.Nil(t, header.VRank)
+	})
+
+	t.Run("epoch-start fills CandTesting", func(t *testing.T) {
+		v := newCN(t, withCandidates(candidates), withoutStart()).VRankModule
+		header := &types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}
+
+		require.NoError(t, v.PrepareHeader(header))
+		report, err := vrank.DecodeReport(header.VRank)
+		require.NoError(t, err)
+		assert.Equal(t, candidates, report)
+	})
+
+	t.Run("epoch-start with no candidates leaves VRank nil", func(t *testing.T) {
+		v := newCN(t, withCandidates(nil), withoutStart()).VRankModule
+		header := &types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}
+
+		require.NoError(t, v.PrepareHeader(header))
+		assert.Nil(t, header.VRank)
+		assert.NoError(t, v.VerifyHeader(header, nil))
+	})
+
+	t.Run("non-epoch empty evaluation leaves VRank nil", func(t *testing.T) {
+		parent := makeHeaderWithRound(10, 1)
+		v := newCN(t, withCandidates(candidates), withHeaders(map[uint64]*types.Header{10: parent}), withoutStart()).VRankModule
+		header := &types.Header{Number: big.NewInt(11)}
+
+		require.NoError(t, v.PrepareHeader(header))
+		assert.Nil(t, header.VRank)
+	})
+
+	t.Run("non-epoch fills evaluated candidate failures", func(t *testing.T) {
+		parent := makeHeaderWithRound(10, 1)
+		parentBlock := types.NewBlockWithHeader(parent)
+		v := newCN(t, withCandidates(candidates), withHeaders(map[uint64]*types.Header{10: parent}), withoutStart()).VRankModule
+		v.collector.AddPrepreparedTime(vrank.ViewKey{N: 10, R: 1}, time.Now(), parentBlock.Hash())
+		header := &types.Header{Number: big.NewInt(11)}
+
+		require.NoError(t, v.PrepareHeader(header))
+		report, err := vrank.DecodeReport(header.VRank)
+		require.NoError(t, err)
+		assert.Equal(t, candidates, report)
+	})
+
+	t.Run("non-epoch parent lookup failure is returned", func(t *testing.T) {
+		v := newCN(t, withoutStart()).VRankModule
+		header := &types.Header{Number: big.NewInt(11)}
+
+		assert.ErrorIs(t, v.PrepareHeader(header), vrank.ErrHeaderNotFound)
 	})
 }

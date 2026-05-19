@@ -40,7 +40,6 @@ import (
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/valset"
-	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
@@ -216,18 +215,6 @@ func (self *Miner) RegisterTxBundlingModule(txBundlingModules ...kaiax.TxBundlin
 		modules[i] = module.(builder.TxBundlingModule)
 	}
 	self.worker.RegisterTxBundlingModule(modules...)
-}
-
-// RegisterVRankModule registers vrank.VRankModule to underlying worker. The
-// worker reads candidate evaluations from it to fill header.VRank at block creation.
-func (self *Miner) RegisterVRankModule(module vrank.VRankModule) {
-	self.worker.RegisterVRankModule(module)
-}
-
-// RegisterValsetModule registers valset.ValsetModule to underlying worker.
-// The worker reads CandTesting from it to fill header.VRank at epoch-start blocks.
-func (self *Miner) RegisterValsetModule(module valset.ValsetModule) {
-	self.worker.RegisterValsetModule(module)
 }
 
 // BlockChain is an interface of blockchain.BlockChain used by ProtocolManager.

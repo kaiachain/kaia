@@ -50,9 +50,3 @@ type ValsetModule interface {
 	WriteTransitionToABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 	InstallABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 }
-
-// ValsetModuleHost is implemented by the miner. The worker reads CandTesting
-// from it to fill header.VRank at epoch-start blocks.
-type ValsetModuleHost interface {
-	RegisterValsetModule(module ValsetModule)
-}

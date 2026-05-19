@@ -28,7 +28,7 @@ import (
 
 // VerifyHeader checks the VRank field in the header:
 //   - Before the permissionless fork: VRank must be empty.
-//   - At epoch-start blocks: VRank must be RLPEncode(CandTesting(N)).
+//   - At epoch-start blocks: VRank must be RLPEncode(CandTesting(N)), or empty when CandTesting(N) is empty.
 //   - Otherwise: VRank must be a valid encoded report whose addresses are sorted,
 //     deduplicated, and all present in GetCandTesting(N-1), because header(N).VRank
 //     reports candidate failures observed while building block N-1.
@@ -43,31 +43,104 @@ func (v *VRankModule) VerifyHeader(header *types.Header, _ *types.Header) error 
 		return nil
 	}
 
-	if number%v.vrankEpoch() != 0 && len(header.VRank) == 0 {
-		return nil
-	}
-
-	report, err := vrank.DecodeReport(header.VRank)
-	if err != nil {
-		return vrank.ErrInvalidVRankFormat
-	}
-
 	if number%v.vrankEpoch() == 0 {
+		if len(header.VRank) == 0 {
+			candidates, err := v.Valset.GetCandTesting(number)
+			if err != nil {
+				return err
+			}
+			if len(candidates) == 0 {
+				return nil
+			}
+			return vrank.ErrEpochStartVRankMismatch
+		}
+		report, err := vrank.DecodeReport(header.VRank)
+		if err != nil {
+			return vrank.ErrInvalidVRankFormat
+		}
 		candidates, err := v.Valset.GetCandTesting(number)
 		if err != nil {
 			return err
 		}
 		return validateEpochVRank(report, candidates)
-	} else {
-		candidates, err := v.Valset.GetCandTesting(number - 1)
-		if err != nil {
-			return err
-		}
-		return validateNonEpochVRank(report, candidates)
 	}
+
+	if len(header.VRank) == 0 {
+		return nil
+	}
+	report, err := vrank.DecodeReport(header.VRank)
+	if err != nil {
+		return vrank.ErrInvalidVRankFormat
+	}
+	candidates, err := v.Valset.GetCandTesting(number - 1)
+	if err != nil {
+		return err
+	}
+	return validateNonEpochVRank(report, candidates)
 }
 
-func (v *VRankModule) PrepareHeader(*types.Header) error { return nil }
+// PrepareHeader fills header.VRank per KIP-227.
+//
+//   - At epoch-start blocks: VRank is CandTesting(N), or nil when there are no candidates.
+//   - Otherwise: VRank is EvaluateCandidates(N-1, parentRound), or nil when the report is empty.
+func (v *VRankModule) PrepareHeader(header *types.Header) error {
+	number := header.Number.Uint64()
+	if !v.ChainConfig.IsPermissionlessForkEnabled(header.Number) {
+		header.VRank = nil
+		return nil
+	}
+
+	if number%v.vrankEpoch() == 0 {
+		candidates, err := v.Valset.GetCandTesting(number)
+		if err != nil {
+			logger.Error("epoch-start VRank fill: GetCandTesting failed", "num", number, "err", err)
+			return err
+		}
+		if len(candidates) == 0 {
+			header.VRank = nil
+			return nil
+		}
+		encoded, err := vrank.EncodeAddressList(candidates)
+		if err != nil {
+			logger.Error("epoch-start VRank fill: EncodeAddressList failed", "num", number, "err", err)
+			return err
+		}
+		header.VRank = encoded
+		return nil
+	}
+
+	if number == 0 {
+		header.VRank = nil
+		return nil
+	}
+	parentNum := number - 1
+	parent := v.Chain.GetHeaderByNumber(parentNum)
+	if parent == nil {
+		logger.Error("Failed to read parent header for VRank", "num", number, "parentNum", parentNum)
+		return vrank.ErrHeaderNotFound
+	}
+	parentRound, err := v.RoundReader.Round(parent)
+	if err != nil {
+		logger.Error("Failed to read parent round for VRank", "err", err, "parentNum", parentNum)
+		return err
+	}
+	report, err := v.EvaluateCandidates(parentNum, uint64(parentRound))
+	if err != nil {
+		logger.Error("Failed to evaluate VRank candidates", "err", err, "prevBlockNum", parentNum, "prevRound", parentRound)
+		return err
+	}
+	if len(report) == 0 {
+		header.VRank = nil
+		return nil
+	}
+	encoded, err := vrank.EncodeReport(report)
+	if err != nil {
+		logger.Error("Failed to encode VRank report", "err", err, "report", report)
+		return err
+	}
+	header.VRank = encoded
+	return nil
+}
 
 func validateEpochVRank(report, candidates []common.Address) error {
 	if !slices.Equal(report, candidates) {

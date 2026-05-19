@@ -58,7 +58,6 @@ import (
 	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
-	"github.com/kaiachain/kaia/kaiax/vrank"
 	vrank_impl "github.com/kaiachain/kaia/kaiax/vrank/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -94,8 +93,6 @@ type Miner interface {
 	PendingBlock() *types.Block
 	kaiax.ExecutionModuleHost  // Because miner executes blocks, inject ExecutionModule.
 	kaiax.TxBundlingModuleHost // Because miner bundle transactions, inject TxBundlingModule
-	vrank.VRankModuleHost      // Worker reads candidate evaluations to fill header.VRank
-	valset.ValsetModuleHost    // Worker reads CandTesting to fill header.VRank at epoch-start
 }
 
 // BackendProtocolManager is an interface of cn.ProtocolManager used from cn.CN and cn.ServiceChain.
@@ -623,8 +620,6 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	s.RegisterJsonRpcModules(mJsonRpc...)
 	s.miner.RegisterExecutionModule(mExecution...)
 	s.miner.RegisterTxBundlingModule(mTxBundling...)
-	s.miner.RegisterVRankModule(mVRank)
-	s.miner.RegisterValsetModule(mValset)
 	s.blockchain.RegisterKaiaxModules(s.govModule, mValset, mExecution, mRewindable, mHeader, mBlockState)
 	s.txPool.RegisterTxPoolModule(mTxPool...)
 	s.engine.RegisterKaiaxModules(s.govModule, mValset)

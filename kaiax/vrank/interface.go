@@ -64,7 +64,3 @@ type VRankModule interface {
 
 	SubscribeVRank(sink chan<- *VRankBroadcastEvent) event.Subscription
 }
-
-type VRankModuleHost interface {
-	RegisterVRankModule(module VRankModule)
-}
