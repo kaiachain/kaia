@@ -271,15 +271,20 @@ func (bp *BidPool) insertBid(bid *auction.Bid) error {
 		sender       = bid.Sender
 	)
 
+	// Re-check bidWinnerMap here — two concurrent bids can pass validateBid together.
+	if _, ok := bp.bidMap[bid.Hash()]; ok {
+		return auction.ErrBidAlreadyExists
+	}
+	if existingHash, ok := bp.bidWinnerMap[blockNumber][sender]; ok {
+		if !bid.Equals(bp.bidMap[existingHash]) {
+			return auction.ErrBidSenderExists
+		}
+	}
+
 	// If same block number, same target tx hash exists, replace it if it's better
 	if existingBid, ok := bp.bidTargetMap[blockNumber][targetTxHash]; ok {
 		// FCFS if the bid is the same.
 		if existingBid.Bid.Cmp(bid.Bid) >= 0 {
-			// Since we allow the parallel bid validation, the previous duplicate bid check at #validateBid might be skipped.
-			// So we need to check the bid map again to return the correct error.
-			if _, ok := bp.bidMap[bid.Hash()]; ok {
-				return auction.ErrBidAlreadyExists
-			}
 			return auction.ErrLowBid
 		}
 

@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -603,4 +604,58 @@ func benchmarkAddBidParallel(b *testing.B, numBids int) {
 			bidIndex++
 		}
 	})
+}
+
+// Two concurrent same-sender bids with different targets must not both succeed.
+func TestBidPool_ConcurrentAddBid_OneWinnerPerSender(t *testing.T) {
+	bidA, bidB := testBids[0], testBids[4]
+	require.Equal(t, bidA.Sender, bidB.Sender)
+	require.Equal(t, bidA.BlockNumber, bidB.BlockNumber)
+	require.NotEqual(t, bidA.TargetTxHash, bidB.TargetTxHash)
+
+	for i := 0; i < 10; i++ {
+		func() {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			chain := chain_mock.NewMockBlockChain(mockCtrl)
+			chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})).AnyTimes()
+
+			pool := NewBidPool(testChainConfig, chain, &auction.AuctionConfig{MaxBidPoolSize: 1024})
+			require.NotNil(t, pool)
+			pool.start()
+			atomic.StoreUint32(&pool.running, 1)
+			defer pool.stop()
+			pool.auctioneer = testAuctioneer
+			pool.auctionEntryPoint = testAuctionEntryPoint
+
+			var (
+				wg         sync.WaitGroup
+				errA, errB error
+			)
+			startGate := make(chan struct{})
+
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				<-startGate
+				_, errA = pool.AddBid(bidA)
+			}()
+			go func() {
+				defer wg.Done()
+				<-startGate
+				_, errB = pool.AddBid(bidB)
+			}()
+			close(startGate)
+			wg.Wait()
+
+			pool.bidMu.RLock()
+			_, gotA := pool.bidMap[bidA.Hash()]
+			_, gotB := pool.bidMap[bidB.Hash()]
+			pool.bidMu.RUnlock()
+
+			require.False(t, errA == nil && errB == nil && gotA && gotB,
+				"iter %d: both bids accepted; rule 1a violated", i)
+		}()
+	}
 }
