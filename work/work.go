@@ -219,7 +219,7 @@ func (self *Miner) RegisterTxBundlingModule(txBundlingModules ...kaiax.TxBundlin
 }
 
 // RegisterVRankModule registers vrank.VRankModule to underlying worker. The
-// worker reads cfReports from it to fill header.VRank at block creation.
+// worker reads candidate evaluations from it to fill header.VRank at block creation.
 func (self *Miner) RegisterVRankModule(module vrank.VRankModule) {
 	self.worker.RegisterVRankModule(module)
 }

@@ -387,7 +387,7 @@ func (ctx *TransitionContext) applyTimeoutTransition(m valset.NodeMap) valset.No
 // #region SlotMath
 //
 // Slot limit calculations for node state transitions. Go port of
-// contracts/contracts/system_contracts/consensus/AddressBookV2/libraries/SlotMath.sol — kept in lockstep
+// kaia-system-contracts/contracts-v3.0/src/libraries/SlotMath.sol — kept in lockstep
 // with that contract since the orchestrator and ABv2 must agree on slot math.
 //
 // For n >= 4 (standard BFT with f = floor(n/3) > 0):

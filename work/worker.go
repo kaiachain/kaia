@@ -624,7 +624,7 @@ func (self *worker) RegisterValsetModule(module valset.ValsetModule) {
 
 // generateVRankField fills `header(num).VRank` per KIP-227.
 //
-//	num % VRankEpoch != 0:  RLPEncode(cfReport(num)), or nil if empty.
+//	num % VRankEpoch != 0:  RLPEncode(EvaluateCandidates(num-1, parentRound)), or nil if empty.
 //	num % VRankEpoch == 0:  RLPEncode(CandTesting(num)).
 func (self *worker) generateVRankField(parent *types.Block) []byte {
 	if self.vrankModule == nil {

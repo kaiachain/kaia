@@ -66,7 +66,6 @@ func (v *ValsetModule) postInsertBlockPermissioned(block *types.Block) error {
 func (v *ValsetModule) RewindTo(block *types.Block) {
 	trimValidatorVoteBlockNums(v.ChainKv, block.Header().Number.Uint64())
 	v.validatorVoteBlockNumsCache = nil
-	v.transitionResultCache.Purge()
 }
 
 func (v *ValsetModule) RewindDelete(hash common.Hash, num uint64) {
