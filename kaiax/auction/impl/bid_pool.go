@@ -275,10 +275,8 @@ func (bp *BidPool) insertBid(bid *auction.Bid) error {
 	if _, ok := bp.bidMap[bid.Hash()]; ok {
 		return auction.ErrBidAlreadyExists
 	}
-	if existingHash, ok := bp.bidWinnerMap[blockNumber][sender]; ok {
-		if !bid.Equals(bp.bidMap[existingHash]) {
-			return auction.ErrBidSenderExists
-		}
+	if bp.senderHasDifferentWinner(bid) {
+		return auction.ErrBidSenderExists
 	}
 
 	// If same block number, same target tx hash exists, replace it if it's better
@@ -322,9 +320,18 @@ func (bp *BidPool) initializeBidMap(num uint64) {
 	}
 }
 
+// senderHasDifferentWinner reports whether a different bid from the same sender
+// already exists in the winner list for this block. Caller must hold bidMu.
+func (bp *BidPool) senderHasDifferentWinner(bid *auction.Bid) bool {
+	hash, ok := bp.bidWinnerMap[bid.BlockNumber][bid.Sender]
+	if !ok {
+		return false
+	}
+	return !bid.Equals(bp.bidMap[hash])
+}
+
 func (bp *BidPool) validateBid(bid *auction.Bid) error {
 	blockNumber := bid.BlockNumber
-	sender := bid.Sender
 
 	bp.bidMu.RLock()
 
@@ -335,11 +342,9 @@ func (bp *BidPool) validateBid(bid *auction.Bid) error {
 	}
 
 	// 1. The `bid.Sender` must not be in the winner list of the same block number if the new bid isn't equal to the previous bid.
-	if hash, ok := bp.bidWinnerMap[blockNumber][sender]; ok {
-		if !bid.Equals(bp.bidMap[hash]) {
-			bp.bidMu.RUnlock()
-			return auction.ErrBidSenderExists
-		}
+	if bp.senderHasDifferentWinner(bid) {
+		bp.bidMu.RUnlock()
+		return auction.ErrBidSenderExists
 	}
 	bp.bidMu.RUnlock()
 

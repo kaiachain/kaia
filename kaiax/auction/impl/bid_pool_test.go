@@ -655,7 +655,7 @@ func TestBidPool_ConcurrentAddBid_OneWinnerPerSender(t *testing.T) {
 			pool.bidMu.RUnlock()
 
 			require.False(t, errA == nil && errB == nil && gotA && gotB,
-				"iter %d: both bids accepted; rule 1a violated", i)
+				"iter %d: both same-sender bids accepted", i)
 		}()
 	}
 }
