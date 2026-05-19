@@ -55,13 +55,11 @@ func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
 				return nil, err
 			}
 			qualified = valset.NewAddressSet(vals)
-		} else {
-			qualified, err = v.getQualifiedValidators(num)
-			if err != nil {
-				return nil, err
-			}
 		}
-	} else {
+	}
+
+	if qualified == nil {
+		// post-permissionless + future blocks, or pre-permissionless
 		qualified, err = v.getQualifiedPermissioned(num)
 		if err != nil {
 			return nil, err
@@ -200,10 +198,8 @@ func (v *ValsetModule) getProposer(c *blockContext, round uint64) (common.Addres
 		return selectStickyProposer(c.qualified, c.prevProposer, round), nil
 	case istanbul.WeightedRandom:
 		if c.rules.IsRandao {
-			// CommitteeSize is deprecated post-fork: shuffle the full qualified
-			// set so the proposer is drawn from every active validator.
 			committeeSize := c.pset.CommitteeSize
-			if c.rules.IsPermissionless {
+			if gov.DeprecatedAt(gov.IstanbulCommitteeSize, c.rules) {
 				committeeSize = uint64(c.qualified.Len())
 			}
 			committee := selectRandaoCommittee(c.qualified, committeeSize, c.prevHeader.MixHash)

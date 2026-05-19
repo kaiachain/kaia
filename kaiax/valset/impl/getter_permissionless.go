@@ -31,7 +31,7 @@ func (v *ValsetModule) getCouncil(num uint64) ([]common.Address, error) {
 }
 
 // committeeWithFallback returns the committee at the given block.
-// Committee = {ValActive} - SuspendedSet.
+// Committee = {VA} - {Suspended}.
 //
 // Safety fallback: when len(committee)=0 due to {ValActive} ⊆ SuspendedSet, fallback to all VA.
 func committeeWithFallback(nodes valset.NodeMap) (committee valset.NodeMap, fellBack bool) {
@@ -44,7 +44,7 @@ func committeeWithFallback(nodes valset.NodeMap) (committee valset.NodeMap, fell
 	return nodes.FilterByState(valset.ValActive), true
 }
 
-// getQualifiedValidators: qualified = committee = {VA} − suspended (with safety fallback).
+// getQualifiedValidators: qualified = committee = {VA} − {Suspended} (with safety fallback).
 func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, error) {
 	nodes, err := v.getNodes(num)
 	if err != nil {
@@ -67,7 +67,7 @@ func (v *ValsetModule) getCommittee(num uint64, round uint64) ([]common.Address,
 	return qualified.List(), nil
 }
 
-// getDemoted: demoted = council − qualified = {VP} ∪ {suspended VA}.
+// getDemoted: demoted = council − qualified = {VP} ∪ {Suspended}.
 func (v *ValsetModule) getDemoted(num uint64) ([]common.Address, error) {
 	nodes, err := v.getNodes(num)
 	if err != nil {
@@ -96,7 +96,7 @@ func (v *ValsetModule) getCNPeers(num uint64) ([]common.Address, error) {
 	return nodes.CNPeers().Addresses(), nil
 }
 
-// getHeaderGovVoters: HeaderGovVoters = {ValActive} - SuspendedSet.
+// getHeaderGovVoters: HeaderGovVoters = {VA} - {Suspended}.
 func (v *ValsetModule) getHeaderGovVoters(num uint64) ([]common.Address, error) {
 	nodes, err := v.getNodes(num)
 	if err != nil {

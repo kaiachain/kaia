@@ -41,7 +41,7 @@ func (v *ValsetModule) postInsertBlockPermissionless(block *types.Block) error {
 	if err != nil {
 		return err
 	}
-	_, err = v.getTransitionResult(nextNum, parentStatedb)
+	_, err = v.getTransitionResult(nextNum, parentStatedb) // to cache the transition result
 	return err
 }
 

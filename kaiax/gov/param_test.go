@@ -199,29 +199,28 @@ func TestDeprecatedAt(t *testing.T) {
 
 	for _, rv := range rulesVariants {
 		t.Run(rv.desc, func(t *testing.T) {
-			expectedDeprecated := make(map[ParamName]struct{})
+			// Static deprecated: must return true regardless of fork.
 			for name := range AlwaysDeprecated {
-				expectedDeprecated[name] = struct{}{}
-			}
-			if rv.rules.IsPermissionless {
-				for name := range PermissionlessDeprecated {
-					expectedDeprecated[name] = struct{}{}
-				}
-			}
-
-			for name := range expectedDeprecated {
 				assert.True(t, DeprecatedAt(name, rv.rules), "expected %s to be deprecated", name)
 			}
 
-			// Every other known param in Params and ValidatorParams must return false.
+			// Permissionless-deprecated: true only when IsPermissionless.
+			for name := range PermissionlessDeprecated {
+				assert.Equal(t, rv.rules.IsPermissionless, DeprecatedAt(name, rv.rules), "permissionless deprecated %s", name)
+			}
+
+			// Every other known param must return false.
 			for name := range Params {
-				if _, ok := expectedDeprecated[name]; ok {
+				if _, ok := AlwaysDeprecated[name]; ok {
+					continue
+				}
+				if _, ok := PermissionlessDeprecated[name]; ok {
 					continue
 				}
 				assert.False(t, DeprecatedAt(name, rv.rules), "expected %s not deprecated", name)
 			}
 			for name := range ValidatorParams {
-				if _, ok := expectedDeprecated[name]; ok {
+				if _, ok := PermissionlessDeprecated[name]; ok {
 					continue
 				}
 				assert.False(t, DeprecatedAt(name, rv.rules), "expected %s not deprecated (validator param)", name)
