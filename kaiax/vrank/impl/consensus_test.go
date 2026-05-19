@@ -78,10 +78,11 @@ func TestVerifyHeader(t *testing.T) {
 			vrank.ErrEpochStartVRankMismatch)
 	})
 
-	t.Run("epoch-start: empty CandTesting accepts encoded or nil VRank", func(t *testing.T) {
+	t.Run("epoch-start: empty CandTesting is encoded as an RLP list", func(t *testing.T) {
 		v := newCN(t, withCandidates(nil)).VRankModule
-		assert.NoError(t, v.VerifyHeader(makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, nil), nil))
-		assert.NoError(t, v.VerifyHeader(&types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}, nil))
+		h := makeEpochStartVRankHeader(t, params.DefaultVRankEpoch, nil)
+		assert.Equal(t, []byte{0xc0}, h.VRank)
+		assert.NoError(t, v.VerifyHeader(h, nil))
 	})
 
 	t.Run("epoch-start: candidate membership is checked against block N", func(t *testing.T) {
@@ -151,7 +152,6 @@ func TestVerifyHeader(t *testing.T) {
 		cn := newCN(t, withoutStart())
 		v := cn.VRankModule
 
-		// headerNum must be generated with CandidateSet at headerNum-1
 		cn.Valset.EXPECT().GetCandTesting(headerNum-1).Return([]common.Address{cand}, nil).Times(2)
 
 		assert.NoError(t, v.VerifyHeader(makeVRankHeader(t, headerNum, []common.Address{cand}), nil))
@@ -179,14 +179,15 @@ func TestPrepareHeader(t *testing.T) {
 		report, err := vrank.DecodeReport(header.VRank)
 		require.NoError(t, err)
 		assert.Equal(t, candidates, report)
+		assert.NoError(t, v.VerifyHeader(header, nil))
 	})
 
-	t.Run("epoch-start with no candidates leaves VRank nil", func(t *testing.T) {
+	t.Run("epoch-start with no candidates writes encoded empty list", func(t *testing.T) {
 		v := newCN(t, withCandidates(nil), withoutStart()).VRankModule
 		header := &types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}
 
 		require.NoError(t, v.PrepareHeader(header))
-		assert.Nil(t, header.VRank)
+		assert.Equal(t, []byte{0xc0}, header.VRank)
 		assert.NoError(t, v.VerifyHeader(header, nil))
 	})
 
