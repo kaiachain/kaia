@@ -18,6 +18,7 @@ package impl
 
 import (
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
@@ -43,6 +44,9 @@ const (
 // Resolves parent state from chain (StateAt(parent.Root)). Use this for
 // post-commit reads (RPC, peer set queries).
 func (v *ValsetModule) getNodes(num uint64) (valset.NodeMap, error) {
+	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return nil, errPermissionlessDisabled
+	}
 	if cached, ok := v.transitionResultCache.Get(num); ok {
 		return cached.(*TransitionResult).Nodes, nil
 	}
