@@ -82,6 +82,36 @@ func TestPostInsertBlock(t *testing.T) {
 	assert.Equal(t, numsToAddrs(1, 2, 3, 6), ReadCouncil(db, 2))
 }
 
+func TestPostInsertBlock_PermissionlessIgnoresVote(t *testing.T) {
+	var (
+		governingNode = numToAddr(3)
+		voteAdd6, _   = headergov.NewVoteData(governingNode, string(gov.AddValidator), numToAddr(6)).ToVoteBytes()
+		block1        = types.NewBlockWithHeader(&types.Header{
+			Number: big.NewInt(1),
+			Vote:   voteAdd6,
+		})
+	)
+
+	ctrl := gomock.NewController(t)
+
+	db := database.NewMemDB()
+	mockChain := chain_mock.NewMockBlockChain(ctrl)
+	mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
+	mockChain.EXPECT().StateAt(gomock.Any()).Return(nil, nil)
+
+	v := NewValsetModule()
+	v.ChainKv = db
+	v.Chain = mockChain
+	v.transitionResultCache.Add(uint64(2), &TransitionResult{
+		Nodes: NodeMap{numToAddr(1): {State: ValActive}},
+	})
+
+	writeValidatorVoteBlockNums(db, []uint64{0})
+	assert.NoError(t, v.PostInsertBlock(block1))
+	assert.Equal(t, []uint64{0}, ReadValidatorVoteBlockNums(db))
+	assert.Nil(t, ReadCouncil(db, 1))
+}
+
 func Test_AddRemove(t *testing.T) {
 	type vote struct {
 		key   gov.ParamName
@@ -149,6 +179,5 @@ func Test_AddRemove(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, numsToAddrs(e.validators...), council)
 		}
-		ctrl.Finish()
 	}
 }

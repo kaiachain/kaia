@@ -32,8 +32,6 @@ import (
 
 func TestVerifyHeaderPrePermissionlessNoOp(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	config := params.TestKaiaConfig("osaka")
 	config.PermissionlessCompatibleBlock = big.NewInt(10)
 
@@ -51,8 +49,6 @@ func TestVerifyHeaderPrePermissionlessNoOp(t *testing.T) {
 
 func TestVerifyHeaderPermissionlessValidatorOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	config := params.TestKaiaConfig("permissionless")
 	sealer := engine.NewSealer(nil, nil)
 

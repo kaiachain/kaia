@@ -36,7 +36,6 @@ import (
 
 func newValsetModuleWithCouncil(t *testing.T, config *params.ChainConfig, council []common.Address) (*ValsetModule, *gov_mock.MockGovModule, *staking_mock.MockStakingModule) {
 	ctrl := gomock.NewController(t)
-	t.Cleanup(ctrl.Finish)
 
 	db := database.NewMemDB()
 	writeLowestScannedVoteNum(db, 0)
@@ -103,7 +102,6 @@ func TestGetDemotedValidators(t *testing.T) {
 			StakingModule: mockStaking,
 		}}
 	)
-	defer ctrl.Finish()
 	for _, tc := range testcases {
 		if tc.isIstanbul {
 			config.IstanbulCompatibleBlock = big.NewInt(1)

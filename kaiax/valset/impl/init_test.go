@@ -52,7 +52,6 @@ func TestStartStop(t *testing.T) {
 		mockStaking = staking_mock.NewMockStakingModule(ctrl) // not used in GetCouncil() stage.
 		v           = NewValsetModule()
 	)
-	defer ctrl.Finish()
 
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{}).AnyTimes()
 	mockChain.EXPECT().CurrentBlock().Return(current).AnyTimes()
@@ -148,7 +147,6 @@ func TestMigration(t *testing.T) {
 		mockStaking = staking_mock.NewMockStakingModule(ctrl) // not used in GetCouncil() stage.
 		v           = NewValsetModule()
 	)
-	defer ctrl.Finish()
 
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(pset).AnyTimes()
 	mockChain.EXPECT().CurrentBlock().Return(block2050).AnyTimes()
