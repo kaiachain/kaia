@@ -8,6 +8,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain/system"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -29,6 +30,25 @@ type ValsetAPI struct {
 
 func NewValsetAPI(vs *ValsetModule) *ValsetAPI {
 	return &ValsetAPI{vs: vs}
+}
+
+// GetNodeByState retrieves nodes at the specified block filtered by state.
+// If no states are provided, it returns all nodes.
+func (api *ValsetAPI) GetNodeByState(number *rpc.BlockNumber, states []valset.NodeState) (map[string]any, error) {
+	num, err := api.resolveRpcNumber(number, true)
+	if err != nil {
+		return nil, err
+	}
+	nodes, err := api.vs.GetNodeByState(num, states)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]any, len(nodes))
+	for addr, node := range nodes {
+		result[addr.Hex()] = node
+	}
+	return result, nil
 }
 
 // GetCouncil retrieves the list of authorized validators at the specified block.
