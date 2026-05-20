@@ -235,14 +235,18 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 	}
 
 	blockNum := header.Number.Uint64()
-	isPermissionless := v.config != nil && v.config.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum))
+
+	var rules params.Rules
+	if v.config != nil {
+		rules = v.config.Rules(new(big.Int).SetUint64(blockNum))
+	}
 
 	// Skip module-dependent seal validation when gov/valset modules are not registered.
 	if v.mValset == nil || v.mGov == nil {
 		return nil
 	}
 
-	if isPermissionless {
+	if rules.IsPermissionless {
 		round, err := v.sealer.Round(header)
 		if err != nil {
 			return err
@@ -266,7 +270,7 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 	}
 
 	signerSet := qualifiedSet.Copy()
-	if !isPermissionless {
+	if !rules.IsPermissionless {
 		council, err := v.mValset.GetCouncil(blockNum)
 		if err != nil {
 			return err
@@ -282,11 +286,12 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		}
 	}
 
-	committeeSize := len(qualified)
-	if !isPermissionless {
+	qualifiedLen := len(qualified)
+	committeeSize := qualifiedLen
+	if !gov.DeprecatedAt(gov.IstanbulCommitteeSize, rules) {
 		committeeSize = int(v.mGov.GetParamSet(blockNum).CommitteeSize)
 	}
-	if validSeal < v.sealer.Quorum(blockNum, len(qualified), committeeSize) {
+	if validSeal < v.sealer.Quorum(blockNum, qualifiedLen, committeeSize) {
 		return istanbul.ErrInvalidCommittedSeals
 	}
 	return nil
