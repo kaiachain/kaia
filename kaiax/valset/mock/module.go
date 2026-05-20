@@ -157,19 +157,19 @@ func (mr *MockValsetModuleMockRecorder) GetHeaderGovVoters(arg0 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeaderGovVoters", reflect.TypeOf((*MockValsetModule)(nil).GetHeaderGovVoters), arg0)
 }
 
-// GetNodeByState mocks base method.
-func (m *MockValsetModule) GetNodeByState(arg0 uint64, arg1 []valset.NodeState) (valset.NodeMap, error) {
+// GetNodesByState mocks base method.
+func (m *MockValsetModule) GetNodesByState(arg0 uint64, arg1 []valset.NodeState) (valset.NodeMap, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetNodeByState", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetNodesByState", arg0, arg1)
 	ret0, _ := ret[0].(valset.NodeMap)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetNodeByState indicates an expected call of GetNodeByState.
-func (mr *MockValsetModuleMockRecorder) GetNodeByState(arg0, arg1 interface{}) *gomock.Call {
+// GetNodesByState indicates an expected call of GetNodesByState.
+func (mr *MockValsetModuleMockRecorder) GetNodesByState(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodeByState", reflect.TypeOf((*MockValsetModule)(nil).GetNodeByState), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodesByState", reflect.TypeOf((*MockValsetModule)(nil).GetNodesByState), arg0, arg1)
 }
 
 // GetProposer mocks base method.

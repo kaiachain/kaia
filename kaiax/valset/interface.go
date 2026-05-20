@@ -40,10 +40,11 @@ type ValsetModule interface {
 	GetProposer(num uint64, round uint64) (common.Address, error)
 
 	// GetCandTesting returns nodes in the CandTesting state at block `num`.
-	// Stub until permissionless system contracts (AddressBookV2) land; currently returns an empty slice.
 	GetCandTesting(num uint64) ([]common.Address, error)
 	GetCNPeers(num uint64) ([]common.Address, error)
 	GetHeaderGovVoters(num uint64) ([]common.Address, error)
+	// GetNodesByState returns nodes filtered by state at block `num`.
+	// It returns an error before the permissionless fork.
 	GetNodesByState(num uint64, states []NodeState) (NodeMap, error)
 
 	// Permissionless additions (post-fork; pre-fork these are no-ops).

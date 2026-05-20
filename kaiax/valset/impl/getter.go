@@ -100,9 +100,8 @@ func (v *ValsetModule) GetProposer(num, round uint64) (common.Address, error) {
 
 // #region Permissionless-only public getters.
 //
-// Pre-fork they return permissioned
-// equivalents (council for peer/voter sets, empty for the post-fork-only
-// CandTesting / NodeByState).
+// Pre-fork they return permissioned equivalents for peer/voter sets, empty for
+// CandTesting, and an explicit fork-disabled error for NodesByState.
 
 // GetCandTesting returns nodes in the CandTesting state. Empty pre-fork.
 func (v *ValsetModule) GetCandTesting(num uint64) ([]common.Address, error) {
@@ -128,10 +127,8 @@ func (v *ValsetModule) GetHeaderGovVoters(num uint64) ([]common.Address, error) 
 	return v.GetCouncil(num)
 }
 
-// GetNodesByState filters NodeMap by state. Empty states means "all". Empty pre-fork.
+// GetNodesByState filters NodeMap by state. Empty states means "all".
+// Returns an explicit fork-disabled error pre-fork.
 func (v *ValsetModule) GetNodesByState(num uint64, states []valset.NodeState) (valset.NodeMap, error) {
-	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		return v.getNodesByState(num, states)
-	}
-	return nil, nil
+	return v.getNodesByState(num, states)
 }
