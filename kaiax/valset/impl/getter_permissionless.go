@@ -59,7 +59,7 @@ func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, e
 }
 
 // getCommittee: committee: qualified = {VA} − suspended
-func (v *ValsetModule) getCommittee(num uint64, round uint64) ([]common.Address, error) {
+func (v *ValsetModule) getCommittee(num uint64) ([]common.Address, error) {
 	qualified, err := v.getQualifiedValidators(num)
 	if err != nil {
 		return nil, err

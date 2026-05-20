@@ -69,7 +69,7 @@ func (v *ValsetModule) GetCommittee(num uint64, round uint64) ([]common.Address,
 		return v.GetCouncil(0)
 	}
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		return v.getCommittee(num, round)
+		return v.getCommittee(num)
 	}
 
 	// TODO-kaiax: Sync blockContext
