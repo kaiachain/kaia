@@ -44,7 +44,7 @@ type ValsetModule interface {
 	GetCandTesting(num uint64) ([]common.Address, error)
 	GetCNPeers(num uint64) ([]common.Address, error)
 	GetHeaderGovVoters(num uint64) ([]common.Address, error)
-	GetNodeByState(num uint64, states []NodeState) (NodeMap, error)
+	GetNodesByState(num uint64, states []NodeState) (NodeMap, error)
 
 	// Permissionless additions (post-fork; pre-fork these are no-ops).
 	WriteTransitionToABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error

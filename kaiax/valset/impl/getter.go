@@ -128,10 +128,10 @@ func (v *ValsetModule) GetHeaderGovVoters(num uint64) ([]common.Address, error) 
 	return v.GetCouncil(num)
 }
 
-// GetNodeByState filters NodeMap by state. Empty states means "all". Empty pre-fork.
-func (v *ValsetModule) GetNodeByState(num uint64, states []valset.NodeState) (valset.NodeMap, error) {
+// GetNodesByState filters NodeMap by state. Empty states means "all". Empty pre-fork.
+func (v *ValsetModule) GetNodesByState(num uint64, states []valset.NodeState) (valset.NodeMap, error) {
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		return v.getNodeByState(num, states)
+		return v.getNodesByState(num, states)
 	}
 	return nil, nil
 }

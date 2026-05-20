@@ -41,7 +41,14 @@ func testPermissionlessConfig(permissionlessBlock int64, vrankEpoch uint64) *par
 
 func TestGetNodesCache(t *testing.T) {
 	t.Run("cache hit", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10))
+
 		v := NewValsetModule()
+		v.Chain = mockChain
 		cached := NodeMap{
 			addr1: {State: ValActive, StakingAmount: aboveMinStake},
 		}
@@ -62,6 +69,7 @@ func TestGetNodesCache(t *testing.T) {
 		stateErr := errors.New("state unavailable")
 
 		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10))
 		mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesisHeader)
 		mockChain.EXPECT().StateAt(root).Return(nil, stateErr)
 
@@ -82,6 +90,7 @@ func TestGetNodesCache(t *testing.T) {
 		stateErr := errors.New("state unavailable")
 
 		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10))
 		mockChain.EXPECT().GetHeaderByNumber(uint64(9)).Return(parentHeader)
 		mockChain.EXPECT().StateAt(root).Return(nil, stateErr)
 
@@ -94,6 +103,21 @@ func TestGetNodesCache(t *testing.T) {
 		nodes, err := v.getNodes(10)
 		require.Nil(t, nodes)
 		require.ErrorIs(t, err, stateErr)
+	})
+
+	t.Run("permissionless fork not enabled", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(100, 10))
+
+		v := NewValsetModule()
+		v.Chain = mockChain
+
+		nodes, err := v.getNodes(10)
+		require.Nil(t, nodes)
+		require.ErrorIs(t, err, errPermissionlessDisabled)
 	})
 }
 
@@ -145,6 +169,7 @@ func TestGetNodesParentReadErrors(t *testing.T) {
 		defer ctrl.Finish()
 
 		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10))
 		mockChain.EXPECT().GetHeaderByNumber(uint64(9)).Return(nil)
 
 		v := NewValsetModule()
@@ -164,6 +189,7 @@ func TestGetNodesParentReadErrors(t *testing.T) {
 		stateErr := errors.New("state unavailable")
 
 		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10))
 		mockChain.EXPECT().GetHeaderByNumber(uint64(9)).Return(parentHeader)
 		mockChain.EXPECT().StateAt(root).Return(nil, stateErr)
 

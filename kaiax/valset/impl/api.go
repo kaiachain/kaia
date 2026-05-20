@@ -32,14 +32,14 @@ func NewValsetAPI(vs *ValsetModule) *ValsetAPI {
 	return &ValsetAPI{vs: vs}
 }
 
-// GetNodeByState retrieves nodes at the specified block filtered by state.
+// GetNodesByState retrieves nodes at the specified block filtered by state.
 // If no states are provided, it returns all nodes.
-func (api *ValsetAPI) GetNodeByState(number *rpc.BlockNumber, states []valset.NodeState) (map[string]any, error) {
+func (api *ValsetAPI) GetNodesByState(number *rpc.BlockNumber, states []valset.NodeState) (map[string]any, error) {
 	num, err := api.resolveRpcNumber(number, true)
 	if err != nil {
 		return nil, err
 	}
-	nodes, err := api.vs.GetNodeByState(num, states)
+	nodes, err := api.vs.GetNodesByState(num, states)
 	if err != nil {
 		return nil, err
 	}
