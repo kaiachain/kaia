@@ -81,25 +81,25 @@ func TestGetNodesByState(t *testing.T) {
 	t.Run("filter single state", func(t *testing.T) {
 		result, err := v.GetNodesByState(testGetterBlock, []NodeState{ValActive})
 		require.NoError(t, err)
-		assert.ElementsMatch(t, []common.Address{addr1, addr6}, result.Addresses())
+		assert.ElementsMatch(t, []common.Address{addr1, addr6}, NodeMap(result).Addresses())
 	})
 
 	t.Run("filter multiple states", func(t *testing.T) {
 		result, err := v.GetNodesByState(testGetterBlock, []NodeState{ValActive, ValPaused})
 		require.NoError(t, err)
-		assert.ElementsMatch(t, []common.Address{addr1, addr2, addr6}, result.Addresses())
+		assert.ElementsMatch(t, []common.Address{addr1, addr2, addr6}, NodeMap(result).Addresses())
 	})
 
 	t.Run("empty states returns all", func(t *testing.T) {
 		result, err := v.GetNodesByState(testGetterBlock, []NodeState{})
 		require.NoError(t, err)
-		assert.ElementsMatch(t, nodes.Addresses(), result.Addresses())
+		assert.ElementsMatch(t, nodes.Addresses(), NodeMap(result).Addresses())
 	})
 
 	t.Run("nil states returns all", func(t *testing.T) {
 		result, err := v.GetNodesByState(testGetterBlock, nil)
 		require.NoError(t, err)
-		assert.ElementsMatch(t, nodes.Addresses(), result.Addresses())
+		assert.ElementsMatch(t, nodes.Addresses(), NodeMap(result).Addresses())
 	})
 
 	t.Run("no match returns empty", func(t *testing.T) {
@@ -115,7 +115,7 @@ func TestGetNodesByState(t *testing.T) {
 
 		again, err := v.GetNodesByState(testGetterBlock, []NodeState{ValActive})
 		require.NoError(t, err)
-		assert.ElementsMatch(t, []common.Address{addr1, addr6}, again.Addresses())
+		assert.ElementsMatch(t, []common.Address{addr1, addr6}, NodeMap(again).Addresses())
 		assert.Equal(t, ValActive, again[addr1].State)
 	})
 }

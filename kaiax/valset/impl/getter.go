@@ -129,6 +129,10 @@ func (v *ValsetModule) GetHeaderGovVoters(num uint64) ([]common.Address, error) 
 
 // GetNodesByState filters NodeMap by state. Empty states means "all".
 // Returns an explicit fork-disabled error pre-fork.
-func (v *ValsetModule) GetNodesByState(num uint64, states []valset.NodeState) (valset.NodeMap, error) {
-	return v.getNodesByState(num, states)
+func (v *ValsetModule) GetNodesByState(num uint64, states []valset.NodeState) (map[common.Address]*valset.Node, error) {
+	nodes, err := v.getNodesByState(num, states)
+	if err != nil {
+		return nil, err
+	}
+	return map[common.Address]*valset.Node(nodes), nil
 }

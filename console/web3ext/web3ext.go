@@ -924,6 +924,12 @@ var klayMethods = [
 		inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 	}),
 	new web3._extend.Method({
+		name: 'getNodesByState',
+		call: 'klay_getNodesByState',
+		params: 2,
+		inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, null]
+	}),
+	new web3._extend.Method({
 		name: 'getCommittee',
 		call: 'klay_getCommittee',
 		params: 1,

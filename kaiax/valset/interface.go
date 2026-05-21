@@ -45,7 +45,7 @@ type ValsetModule interface {
 	GetHeaderGovVoters(num uint64) ([]common.Address, error)
 	// GetNodesByState returns nodes filtered by state at block `num`.
 	// It returns an error before the permissionless fork.
-	GetNodesByState(num uint64, states []NodeState) (NodeMap, error)
+	GetNodesByState(num uint64, states []NodeState) (map[common.Address]*Node, error)
 
 	// Permissionless additions (post-fork; pre-fork these are no-ops).
 	WriteTransitionToABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error

@@ -158,10 +158,10 @@ func (mr *MockValsetModuleMockRecorder) GetHeaderGovVoters(arg0 interface{}) *go
 }
 
 // GetNodesByState mocks base method.
-func (m *MockValsetModule) GetNodesByState(arg0 uint64, arg1 []valset.NodeState) (valset.NodeMap, error) {
+func (m *MockValsetModule) GetNodesByState(arg0 uint64, arg1 []valset.NodeState) (map[common.Address]*valset.Node, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetNodesByState", arg0, arg1)
-	ret0, _ := ret[0].(valset.NodeMap)
+	ret0, _ := ret[0].(map[common.Address]*valset.Node)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

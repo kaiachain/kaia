@@ -34,21 +34,12 @@ func NewValsetAPI(vs *ValsetModule) *ValsetAPI {
 
 // GetNodesByState retrieves nodes at the specified block filtered by state.
 // If no states are provided, it returns all nodes.
-func (api *ValsetAPI) GetNodesByState(number *rpc.BlockNumber, states []valset.NodeState) (map[string]any, error) {
+func (api *ValsetAPI) GetNodesByState(number *rpc.BlockNumber, states []valset.NodeState) (map[common.Address]*valset.Node, error) {
 	num, err := api.resolveRpcNumber(number, true)
 	if err != nil {
 		return nil, err
 	}
-	nodes, err := api.vs.GetNodesByState(num, states)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make(map[string]any, len(nodes))
-	for addr, node := range nodes {
-		result[addr.Hex()] = node
-	}
-	return result, nil
+	return api.vs.GetNodesByState(num, states)
 }
 
 // GetCouncil retrieves the list of authorized validators at the specified block.
