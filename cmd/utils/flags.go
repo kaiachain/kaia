@@ -320,8 +320,8 @@ var (
 	}
 	ConsensusEngineFlag = &cli.StringFlag{
 		Name:     "consensus.engine",
-		Usage:    `Consensus engine type: "istanbul" (default) or "kaiabft" (speculative execution)`,
-		Value:    "istanbul",
+		Usage:    `Consensus engine type: "kaiabft" (default) or "istanbul" (legacy)`,
+		Value:    "kaiabft",
 		EnvVars:  []string{"KAIA_CONSENSUS_ENGINE"},
 		Category: "CONSENSUS",
 	}
@@ -2010,9 +2010,9 @@ var (
 	}
 	BlockGenerationTimeLimitFlag = &cli.DurationFlag{
 		Name: "block-generation-time-limit",
-		Usage: "(experimental option) Set the vm execution time limit during block generation. " +
-			"Less than half of the block generation interval is recommended for this value. " +
-			"This flag is only applicable to CN",
+		Usage: "(experimental option) Override the tx execution time limit during block generation. " +
+			"Default is 250ms (istanbul) or 500ms (kaiabft) and should not be changed in normal operation. " +
+			"Only applicable to CN.",
 		Value:    params.DefaultBlockGenerationTimeLimit,
 		Aliases:  []string{"experimental.block-generation-time-limit"},
 		EnvVars:  []string{"KLAYTN_BLOCK_GENERATION_TIME_LIMIT", "KAIA_BLOCK_GENERATION_TIME_LIMIT"},
