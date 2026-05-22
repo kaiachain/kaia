@@ -65,6 +65,13 @@ func TestDevParity_CommitSealSignsSubjectWithRound(t *testing.T) {
 				want = istanbul.PrepareCommittedSealWithRound(old.Hash(), 2)
 			}
 			assert.True(t, recovers(want, msg.CommittedSeal, self), "seal must sign the subject digest (and round post-fork)")
+
+			// signPayload is also called directly by sendPreprepare (no self-loop),
+			// so the same seal binding must hold without going through broadcastMsg.
+			direct := &bft.Message{Hash: sub.PrevHash, Code: bft.MsgCommit, Msg: mustEncode(t, sub)}
+			require.NotNil(t, m.signPayload(direct))
+			require.Len(t, direct.CommittedSeal, crypto.SignatureLength)
+			assert.True(t, recovers(want, direct.CommittedSeal, self), "signPayload must produce the same seal binding")
 		})
 	}
 }
