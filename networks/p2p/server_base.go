@@ -610,10 +610,9 @@ func (srv *BaseServer) reportPeerMetric() {
 // nil disables filtering; an empty list rejects all CN claims.
 func (srv *BaseServer) SetCNPeers(addrs []common.Address) {
 	srv.lock.Lock()
-	defer srv.lock.Unlock()
-
 	if addrs == nil {
 		srv.cnPeerAddrs = nil
+		srv.lock.Unlock()
 		return
 	}
 
@@ -622,6 +621,33 @@ func (srv *BaseServer) SetCNPeers(addrs []common.Address) {
 		cnPeerAddrs[addr] = struct{}{}
 	}
 	srv.cnPeerAddrs = cnPeerAddrs
+	drops := srv.peersOutsideCNPeerAddrs(cnPeerAddrs)
+	srv.lock.Unlock()
+
+	for _, p := range drops {
+		srv.logger.Info("Disconnecting CN peer outside allowlist", "id", p.ID())
+		p.Disconnect(DiscRequested)
+	}
+}
+
+func (srv *BaseServer) peersOutsideCNPeerAddrs(cnPeerAddrs map[common.Address]struct{}) []*Peer {
+	drops := make([]*Peer, 0)
+	for id, p := range srv.peers {
+		if p == nil || EffectiveConnType(p.ConnType()) != common.CONSENSUSNODE {
+			continue
+		}
+		if p.rws[ConnDefault].is(trustedConn | staticDialedConn) {
+			continue
+		}
+		addr, err := addressFromNodeID(id)
+		if err != nil {
+			continue
+		}
+		if _, ok := cnPeerAddrs[addr]; !ok {
+			drops = append(drops, p)
+		}
+	}
+	return drops
 }
 
 // Disconnect tries to disconnect peer.

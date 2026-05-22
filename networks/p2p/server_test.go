@@ -442,6 +442,61 @@ func TestServerCNPeersAdmission(t *testing.T) {
 	}
 }
 
+func TestServerSetCNPeersReconcilesConnectedCNPeers(t *testing.T) {
+	newPeerWithKey := func(key *ecdsa.PrivateKey, connType common.ConnType, flags connFlag) *Peer {
+		return &Peer{
+			rws:  []*conn{{id: discover.PubkeyID(&key.PublicKey), conntype: connType, flags: flags}},
+			disc: make(chan DiscReason, 1),
+		}
+	}
+	assertNotDisconnected := func(t *testing.T, p *Peer) {
+		t.Helper()
+		select {
+		case reason := <-p.disc:
+			t.Fatalf("peer should remain connected, got disconnect %v", reason)
+		default:
+		}
+	}
+
+	allowedKey := newkey()
+	dropKey := newkey()
+	trustedKey := newkey()
+	staticKey := newkey()
+	enKey := newkey()
+
+	allowed := newPeerWithKey(allowedKey, common.CONSENSUSNODE, inboundConn)
+	drop := newPeerWithKey(dropKey, common.CONSENSUSNODE, inboundConn)
+	trusted := newPeerWithKey(trustedKey, common.CONSENSUSNODE, inboundConn|trustedConn)
+	staticOutbound := newPeerWithKey(staticKey, common.CONSENSUSNODE, staticDialedConn)
+	en := newPeerWithKey(enKey, common.ENDPOINTNODE, inboundConn)
+
+	srv := &BaseServer{
+		logger: logger.NewWith(),
+		peers: map[discover.NodeID]*Peer{
+			allowed.ID():        allowed,
+			drop.ID():           drop,
+			trusted.ID():        trusted,
+			staticOutbound.ID(): staticOutbound,
+			en.ID():             en,
+		},
+	}
+
+	srv.SetCNPeers([]common.Address{crypto.PubkeyToAddress(allowedKey.PublicKey)})
+
+	select {
+	case reason := <-drop.disc:
+		if reason != DiscRequested {
+			t.Fatalf("wrong disconnect reason: %v", reason)
+		}
+	default:
+		t.Fatal("CN peer outside allowlist should be disconnected")
+	}
+	assertNotDisconnected(t, allowed)
+	assertNotDisconnected(t, trusted)
+	assertNotDisconnected(t, staticOutbound)
+	assertNotDisconnected(t, en)
+}
+
 func TestServerSetupConn(t *testing.T) {
 	var (
 		id     = discover.PubkeyID(&newkey().PublicKey)
