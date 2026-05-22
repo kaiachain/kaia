@@ -19,7 +19,6 @@ package discover
 import (
 	"errors"
 	"fmt"
-	"math"
 	"sync"
 	"sync/atomic"
 
@@ -149,43 +148,14 @@ func (tab *Table2) initialized() bool {
 	return tab.init.Load()
 }
 
-// Returns the number of nodes to actively discover depending of self node type.
-// Note that this number is NOT the number of connections to maintain.
-// The connection counts (or peer counts) are regulated by the p2p.Server and p2p.DialSched.
+// getDiscoverTargets returns this node's discovery goals by remote node type.
+// These targets are not connection counts; p2p.Server and p2p.DialSched regulate peers.
 func getDiscoverTargets(cfg *Config) map[NodeType]int {
-	switch cfg.NodeType {
-	case NodeTypeCN:
-		// CN discovers each other in a mesh structure. Assuming up to 100 validators.
-		return map[NodeType]int{
-			NodeTypeCN: 100,
-			NodeTypeBN: 3,
-		}
-	case NodeTypePN:
-		// PN discovers at least one neighboring PN. However, in production, PN connections are usually specified via static nodes
-		// to make up a certain network structure, in which case this number is irrelevant.
-		return map[NodeType]int{
-			NodeTypePN: 1,
-			NodeTypeBN: 3,
-		}
-	case NodeTypeEN:
-		// EN discovers to up to 2 PNs for high availability.
-		// EN try to learn as many ENs as possible via Kademlia algorithm.
-		return map[NodeType]int{
-			NodeTypeEN: math.MaxInt32,
-			NodeTypePN: 2,
-			NodeTypeBN: 3,
-		}
-	case NodeTypeBN:
-		// BN has to learn every CN and PN.
-		return map[NodeType]int{
-			NodeTypeCN: 100,
-			NodeTypePN: 100,
-			NodeTypeBN: 3,
-		}
-	default:
+	targets := discoverTargets[EffectiveNodeType(cfg.NodeType)]
+	if len(targets) == 0 {
 		logger.Error("Unsupported node type", "NodeType", cfg.NodeType)
-		return map[NodeType]int{}
 	}
+	return cloneNodeTypeTargets(targets)
 }
 
 // Filter bootnodes to be used as initial seeds.

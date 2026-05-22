@@ -115,3 +115,20 @@ func TestTypedNodeSet_RemoveNoopAndNilAdd(t *testing.T) {
 	assert.False(t, set.contains(n.ID))
 	assert.Nil(t, set.get(n.ID))
 }
+
+func TestDefaultConnTarget(t *testing.T) {
+	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 100, discover.NodeTypeEN: 1},
+		defaultConnTarget(DialConfig{selfType: discover.NodeTypeCN}))
+	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypeEN: 3},
+		defaultConnTarget(DialConfig{selfType: discover.NodeTypeEN}))
+	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypeEN: 3},
+		defaultConnTarget(DialConfig{selfType: discover.NodeTypePN}))
+
+	maxENToENDynDials := 5
+	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypeEN: 5},
+		defaultConnTarget(DialConfig{selfType: discover.NodeTypeEN, maxENToENDynDials: &maxENToENDynDials}))
+
+	maxENToENDynDials = 0
+	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypeEN: 0},
+		defaultConnTarget(DialConfig{selfType: discover.NodeTypeEN, maxENToENDynDials: &maxENToENDynDials}))
+}

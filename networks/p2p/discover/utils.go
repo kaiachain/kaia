@@ -22,6 +22,8 @@ import (
 	crand "crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"maps"
+	"math"
 	"math/rand"
 	"sort"
 	"sync"
@@ -247,6 +249,19 @@ func EffectiveNodeType(nt NodeType) NodeType {
 		return NodeTypeEN
 	}
 	return nt
+}
+
+// KIP-311 discoverTargets
+var discoverTargets = map[NodeType]map[NodeType]int{
+	NodeTypeCN: {NodeTypeCN: 100, NodeTypeEN: 1, NodeTypeBN: 3},
+	NodeTypeEN: {NodeTypeCN: 100, NodeTypeEN: math.MaxInt32, NodeTypeBN: 3},
+	NodeTypeBN: {NodeTypeCN: 100, NodeTypeBN: 3},
+}
+
+func cloneNodeTypeTargets(targets map[NodeType]int) map[NodeType]int {
+	cloned := make(map[NodeType]int, len(targets))
+	maps.Copy(cloned, targets)
+	return cloned
 }
 
 func ParseNodeType(nt string) NodeType {

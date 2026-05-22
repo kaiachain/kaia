@@ -135,17 +135,17 @@ func TestDialSched_StaticNode_RedialImmediatelyAfterReAdd(t *testing.T) {
 // Updates accounting for inbound and outbound peers.
 func TestDialSched_OnPeerConnected(t *testing.T) {
 	var (
-		candidate = testNode(1, "10.0.0.1", discover.NodeTypePN)
+		candidate = testNode(1, "10.0.0.1", discover.NodeTypeEN)
 		inbound   = testNode(2, "10.0.0.2", discover.NodeTypePN)
 		outbound  = testNode(3, "10.0.0.3", discover.NodeTypePN)
 		tab       = &mockTable{
 			nodesByType: map[discover.NodeType][]*discover.Node{
-				discover.NodeTypePN: {candidate},
+				discover.NodeTypeEN: {candidate},
 			},
 		}
 		ds = NewDialSched(DialConfig{
 			connTarget: map[discover.NodeType]int{
-				discover.NodeTypePN: 1,
+				discover.NodeTypeEN: 1,
 			},
 		}, tab, nil)
 	)
@@ -154,14 +154,14 @@ func TestDialSched_OnPeerConnected(t *testing.T) {
 	assert.False(t, ds.connectedOutbound.contains(inbound.ID), "inbound peer should not be counted as connected outbound")
 	assert.True(t, ds.connectedAll.contains(inbound.ID), "inbound peer should be counted as connected")
 	cands, _ := ds.getCandidates()
-	require.Len(t, cands, 1, "expected one outbound candidate for PN when only inbound PN exists")
+	require.Len(t, cands, 1, "expected one outbound EN candidate when only inbound legacy PN exists")
 	assert.Equal(t, candidate.ID, cands[0].ID)
 
 	ds.OnPeerConnected(outbound.ID, outbound.NType, false)
 	assert.True(t, ds.connectedOutbound.contains(outbound.ID), "outbound peer should be counted as connected outbound")
 	assert.True(t, ds.connectedAll.contains(outbound.ID), "outbound peer should be counted as connected")
 	cands, _ = ds.getCandidates()
-	assert.Len(t, cands, 0, "expected no outbound candidate when outbound PN target is already met")
+	assert.Len(t, cands, 0, "expected no outbound candidate when outbound legacy PN fulfills EN target")
 }
 
 // Correctly enforces discovery table refresh throttling.
@@ -218,6 +218,51 @@ func TestDialSched_Candidates_StaticNodes(t *testing.T) {
 // Dynamic nodes are candidates if connTarget is not met.
 func TestDialSched_GetCandidates_FromDiscovery(t *testing.T) {
 	var (
+		cn  = testNode(201, "10.0.0.201", discover.NodeTypeCN)
+		tab = &mockTable{
+			nodesByType: map[discover.NodeType][]*discover.Node{
+				discover.NodeTypeCN: {cn},
+			},
+		}
+		ds = NewDialSched(DialConfig{
+			connTarget: map[discover.NodeType]int{
+				discover.NodeTypeCN: 1,
+			},
+		}, tab, nil)
+	)
+
+	cands, needRefresh := ds.getCandidates()
+
+	assert.True(t, hasNodeID(cands, cn.ID), "CN candidates should include discovery result")
+	assert.False(t, needRefresh, "No need to refresh when candidates are enough")
+}
+
+func TestDialSched_GetCandidates_ENTargetDoesNotQueryLegacyPN(t *testing.T) {
+	var (
+		pn  = testNode(201, "10.0.0.201", discover.NodeTypePN)
+		en  = testNode(202, "10.0.0.202", discover.NodeTypeEN)
+		tab = &mockTable{
+			nodesByType: map[discover.NodeType][]*discover.Node{
+				discover.NodeTypePN: {pn},
+				discover.NodeTypeEN: {en},
+			},
+		}
+		ds = NewDialSched(DialConfig{
+			connTarget: map[discover.NodeType]int{
+				discover.NodeTypeEN: 1,
+			},
+		}, tab, nil)
+	)
+
+	cands, needRefresh := ds.getCandidates()
+
+	assert.True(t, hasNodeID(cands, en.ID), "EN candidates should fill the EN target")
+	assert.False(t, hasNodeID(cands, pn.ID), "upgraded nodes should not dial PN candidates dynamically")
+	assert.False(t, needRefresh)
+}
+
+func TestDialSched_GetCandidates_LegacyPNTargetUsesEffectiveEN(t *testing.T) {
+	var (
 		pn  = testNode(201, "10.0.0.201", discover.NodeTypePN)
 		en  = testNode(202, "10.0.0.202", discover.NodeTypeEN)
 		tab = &mockTable{
@@ -229,16 +274,15 @@ func TestDialSched_GetCandidates_FromDiscovery(t *testing.T) {
 		ds = NewDialSched(DialConfig{
 			connTarget: map[discover.NodeType]int{
 				discover.NodeTypePN: 1,
-				discover.NodeTypeEN: 1,
 			},
 		}, tab, nil)
 	)
 
 	cands, needRefresh := ds.getCandidates()
 
-	assert.True(t, hasNodeID(cands, pn.ID), "PN candidates should include GetNodes result")
-	assert.True(t, hasNodeID(cands, en.ID), "EN candidates should include ReadRandomNodes result")
-	assert.False(t, needRefresh, "No need to refresh when candidates are enough")
+	assert.True(t, hasNodeID(cands, en.ID), "legacy PN target should include EN candidates")
+	assert.False(t, hasNodeID(cands, pn.ID), "legacy PN target should not query PN candidates")
+	assert.False(t, needRefresh)
 }
 
 // Skips discovery when connTarget is met.
