@@ -36,6 +36,7 @@ type BidData struct {
 	To            common.Address `json:"to"`
 	Nonce         uint64         `json:"nonce"`
 	Bid           *big.Int       `json:"bid"`
+	MaxGasPrice   *big.Int       `json:"maxGasPrice,omitempty"`
 	CallGasLimit  uint64         `json:"callGasLimit"`
 	Data          []byte         `json:"data"`
 	SearcherSig   []byte         `json:"searcherSig"`
@@ -90,7 +91,7 @@ func rlpHash(x interface{}) (h common.Hash) {
 	return h
 }
 
-func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Address) error {
+func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Address, version string) error {
 	if chainId == nil {
 		return ErrNilChainId
 	}
@@ -99,7 +100,7 @@ func (b *Bid) ValidateSearcherSig(chainId *big.Int, verifyingContract common.Add
 		return ErrNilVerifyingContract
 	}
 
-	digest := b.GetHashTypedData(chainId, verifyingContract)
+	digest := b.GetHashTypedData(chainId, verifyingContract, version)
 
 	recoveredSender, err := getSigner(b.SearcherSig, digest)
 	if err != nil {
