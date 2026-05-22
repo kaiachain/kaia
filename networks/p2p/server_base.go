@@ -68,6 +68,7 @@ type BaseServer struct {
 	outboundCount int
 	trusted       map[discover.NodeID]bool
 	dialSched     *DialSched
+	cnPeerAddrs   map[common.Address]struct{} // KIP-311 peerNodes allowlist for CN-CN connections.
 }
 
 // SingleChannelServer is a server that uses a single channel.
@@ -284,7 +285,7 @@ func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, inbou
 	case c.id == srv.selfID:
 		return DiscSelf
 	default:
-		return nil
+		return srv.admitByCNPeers(c)
 	}
 }
 
@@ -307,6 +308,27 @@ func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *con
 		}
 	}
 	return count >= target
+}
+
+func (srv *BaseServer) admitByCNPeers(c *conn) error {
+	if EffectiveConnType(c.conntype) != common.CONSENSUSNODE {
+		return nil
+	}
+	if c.is(trustedConn | staticDialedConn) {
+		return nil
+	}
+	if srv.cnPeerAddrs == nil {
+		return nil
+	}
+
+	addr, err := addressFromNodeID(c.id)
+	if err != nil {
+		return err
+	}
+	if _, ok := srv.cnPeerAddrs[addr]; !ok {
+		return DiscUselessPeer
+	}
+	return nil
 }
 
 func (srv *BaseServer) maxInboundConns() int {
@@ -582,6 +604,24 @@ func (srv *BaseServer) reportPeerMetric() {
 	connectionCountGauge.Update(int64(srv.outboundCount + srv.inboundCount))
 	connectionInCountGauge.Update(int64(srv.inboundCount))
 	connectionOutCountGauge.Update(int64(srv.outboundCount))
+}
+
+// SetCNPeers replaces the address-keyed CN admission allowlist.
+// nil disables filtering; an empty list rejects all CN claims.
+func (srv *BaseServer) SetCNPeers(addrs []common.Address) {
+	srv.lock.Lock()
+	defer srv.lock.Unlock()
+
+	if addrs == nil {
+		srv.cnPeerAddrs = nil
+		return
+	}
+
+	cnPeerAddrs := make(map[common.Address]struct{}, len(addrs))
+	for _, addr := range addrs {
+		cnPeerAddrs[addr] = struct{}{}
+	}
+	srv.cnPeerAddrs = cnPeerAddrs
 }
 
 // Disconnect tries to disconnect peer.

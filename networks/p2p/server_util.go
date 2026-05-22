@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 )
 
@@ -58,6 +59,8 @@ const (
 type connFlag int
 
 const (
+	// inbound/dyndial/staticdial are mutually exclusive origins.
+	// trusted is an independent overlay added after identity is known.
 	dynDialedConn connFlag = 1 << iota
 	staticDialedConn
 	inboundConn
@@ -212,6 +215,14 @@ func EffectiveConnType(ct common.ConnType) common.ConnType {
 		return common.ENDPOINTNODE
 	}
 	return ct
+}
+
+func addressFromNodeID(id discover.NodeID) (common.Address, error) {
+	pub, err := id.Pubkey()
+	if err != nil {
+		return common.Address{}, err
+	}
+	return crypto.PubkeyToAddress(*pub), nil
 }
 
 func ConvertConnType(nt discover.NodeType) common.ConnType {

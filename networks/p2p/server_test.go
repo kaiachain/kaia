@@ -403,6 +403,45 @@ func TestServerPeerTargets(t *testing.T) {
 	}
 }
 
+func TestServerCNPeersAdmission(t *testing.T) {
+	key := newkey()
+	id := discover.PubkeyID(&key.PublicKey)
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+	srv := &BaseServer{}
+
+	c := &conn{conntype: common.CONSENSUSNODE, id: id}
+	srv.SetCNPeers(nil)
+	if err := srv.admitByCNPeers(c); err != nil {
+		t.Fatalf("nil CN peers should disable CN filtering: %v", err)
+	}
+
+	srv.SetCNPeers([]common.Address{})
+	if err := srv.admitByCNPeers(c); err != DiscUselessPeer {
+		t.Fatalf("empty CN peers should reject CN claims, got %v", err)
+	}
+
+	if err := srv.admitByCNPeers(&conn{conntype: common.ENDPOINTNODE, id: id}); err != nil {
+		t.Fatalf("EN should bypass CN peer admission: %v", err)
+	}
+	if err := srv.admitByCNPeers(&conn{conntype: common.PROXYNODE, id: id}); err != nil {
+		t.Fatalf("legacy PN should bypass CN peer admission as EN-equivalent: %v", err)
+	}
+	if err := srv.admitByCNPeers(&conn{conntype: common.CONSENSUSNODE, id: id, flags: trustedConn}); err != nil {
+		t.Fatalf("trusted CN should bypass CN peer admission: %v", err)
+	}
+	if err := srv.admitByCNPeers(&conn{conntype: common.CONSENSUSNODE, id: id, flags: staticDialedConn}); err != nil {
+		t.Fatalf("static outbound CN should bypass CN peer admission: %v", err)
+	}
+	if err := srv.admitByCNPeers(&conn{conntype: common.CONSENSUSNODE, id: id, flags: inboundConn}); err != DiscUselessPeer {
+		t.Fatalf("inbound CN should not bypass CN peer admission, got %v", err)
+	}
+
+	srv.SetCNPeers([]common.Address{addr})
+	if err := srv.admitByCNPeers(c); err != nil {
+		t.Fatalf("CN in CN peers should pass admission: %v", err)
+	}
+}
+
 func TestServerSetupConn(t *testing.T) {
 	var (
 		id     = discover.PubkeyID(&newkey().PublicKey)
