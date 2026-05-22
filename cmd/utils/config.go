@@ -43,7 +43,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/fdlimit"
-	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher"
@@ -460,6 +459,14 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 		rpc.ConcurrencyLimit = ctx.Int(RPCConcurrencyLimit.Name)
 		logger.Info("Set the concurrency limit of RPC-HTTP server", "limit", rpc.ConcurrencyLimit)
 	}
+	if ctx.IsSet(RPCBatchRequestLimit.Name) {
+		rpc.BatchRequestLimit = ctx.Int(RPCBatchRequestLimit.Name)
+		logger.Info("Set the batch request limit of RPC server", "limit", rpc.BatchRequestLimit)
+	}
+	if ctx.IsSet(RPCBatchResponseMaxSize.Name) {
+		rpc.BatchResponseMaxSize = ctx.Int(RPCBatchResponseMaxSize.Name)
+		logger.Info("Set the batch response size limit of RPC server", "limit", rpc.BatchResponseMaxSize)
+	}
 	if ctx.IsSet(RPCReadTimeout.Name) {
 		cfg.HTTPTimeouts.ReadTimeout = time.Duration(ctx.Int(RPCReadTimeout.Name)) * time.Second
 	}
@@ -603,6 +610,10 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	if ctx.IsSet(OverrideOsaka.Name) {
 		v := ctx.Uint64(OverrideOsaka.Name)
 		overrides.OverrideOsaka = new(big.Int).SetUint64(v)
+	}
+	if ctx.IsSet(OverridePermissionless.Name) {
+		v := ctx.Uint64(OverridePermissionless.Name)
+		overrides.OverridePermissionless = new(big.Int).SetUint64(v)
 	}
 	cfg.Overrides = &overrides
 	cfg.StartBlockNumber = ctx.Uint64(StartBlockNumberFlag.Name)
@@ -779,10 +790,6 @@ func (kCfg *KaiaConfig) SetKaiaConfig(ctx *cli.Context, stack *node.Node) {
 	cfg.GPO.Blocks = ctx.Int(GpoBlocksFlag.Name)
 	cfg.GPO.Percentile = ctx.Int(GpoPercentileFlag.Name)
 	cfg.GPO.MaxPrice = big.NewInt(ctx.Int64(GpoMaxGasPriceFlag.Name))
-
-	if ctx.IsSet(VRankLogFrequencyFlag.Name) {
-		core.VRankLogFrequency = ctx.Uint64(VRankLogFrequencyFlag.Name)
-	}
 
 	// Set kaiax module config
 	gasless.SetGaslessConfig(ctx, cfg.Gasless)

@@ -159,6 +159,8 @@ func TestLoadYaml(t *testing.T) {
 		"grpcaddr":                                  true,
 		"grpcport":                                  true,
 		"rpc.concurrencylimit":                      true,
+		"rpc.batch-request-limit":                   true,
+		"rpc.batch-response-max-size":               true,
 		"wsapi":                                     true,
 		"wsorigins":                                 true,
 		"wsmaxsubscriptionperconn":                  true,

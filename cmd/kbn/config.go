@@ -295,7 +295,7 @@ func (ctx *bootnodeConfig) readNodeKey() error {
 		return err
 	}
 	if ctx.nodeKeyHex != "" {
-		ctx.nodeKey, err = crypto.LoadECDSA(ctx.nodeKeyHex)
+		ctx.nodeKey, err = crypto.HexToECDSA(ctx.nodeKeyHex)
 		return err
 	}
 	return nil

@@ -17,6 +17,9 @@
 package valset
 
 import (
+	"github.com/kaiachain/kaia/blockchain/state"
+	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax"
 )
@@ -27,10 +30,19 @@ type ValsetModule interface {
 	kaiax.JsonRpcModule
 	kaiax.ExecutionModule
 	kaiax.RewindableModule
+	kaiax.BlockStateModule
 
 	GetCouncil(num uint64) ([]common.Address, error)
 	GetCommittee(num uint64, round uint64) ([]common.Address, error)
 	GetQualifiedValidators(num uint64) ([]common.Address, error)
 	GetDemotedValidators(num uint64) ([]common.Address, error)
 	GetProposer(num uint64, round uint64) (common.Address, error)
+
+	// GetCandTesting returns nodes in the CandTesting state at block `num`.
+	// Stub until permissionless system contracts (AddressBookV2) land; currently returns an empty slice.
+	GetCandTesting(num uint64) ([]common.Address, error)
+
+	// Permissionless additions (post-fork; pre-fork these are no-ops).
+	WriteTransitionToABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
+	InstallABv2(vmenv *vm.EVM, header *types.Header, state *state.StateDB) error
 }

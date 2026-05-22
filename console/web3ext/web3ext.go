@@ -281,69 +281,41 @@ web3._extend({
 	property: 'bootnode',
 	methods: [
 		new web3._extend.Method({
-			name: 'createUpdateNodeOnDB',
-			call: 'bootnode_createUpdateNodeOnDB',
-			params: 1
-		}),
-        new web3._extend.Method({
-			name: 'createUpdateNodeOnTable',
-			call: 'bootnode_createUpdateNodeOnTable',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getNodeFromDB',
-			call: 'bootnode_getNodeFromDB',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'getTableEntries',
-			call: 'bootnode_getTableEntries'
-		}),
-		new web3._extend.Method({
-			name: 'getTableReplacements',
-			call: 'bootnode_getTableReplacements'
-		}),
-		new web3._extend.Method({
-			name: 'deleteNodeFromDB',
-			call: 'bootnode_deleteNodeFromDB',
-			params: 1
-		}),
-        new web3._extend.Method({
-			name: 'deleteNodeFromTable',
-			call: 'bootnode_deleteNodeFromTable',
-			params: 1
-		}),
-		new web3._extend.Method({
-			name: 'name',
-			call: 'bootnode_name',
+			name: 'refresh',
+			call: 'bootnode_refresh',
 			params: 0
 		}),
 		new web3._extend.Method({
-			name: 'resolve',
-			call: 'bootnode_resolve',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'lookup',
-			call: 'bootnode_lookup',
-			params: 2
-		}),
-		new web3._extend.Method({
-			name: 'readRandomNodes',
-			call: 'bootnode_readRandomNodes',
+			name: 'nodes',
+			call: 'bootnode_nodes',
 			params: 1
 		}),
-        new web3._extend.Method({
+		new web3._extend.Method({
+			name: 'getNode',
+			call: 'bootnode_getNode',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'putNode',
+			call: 'bootnode_putNode',
+			params: 1
+		}),
+		new web3._extend.Method({
+			name: 'deleteNode',
+			call: 'bootnode_deleteNode',
+			params: 1
+		}),
+		new web3._extend.Method({
 			name: 'getAuthorizedNodes',
 			call: 'bootnode_getAuthorizedNodes',
 			params: 0
 		}),
-        new web3._extend.Method({
+		new web3._extend.Method({
 			name: 'putAuthorizedNodes',
 			call: 'bootnode_putAuthorizedNodes',
 			params: 1
 		}),
-        new web3._extend.Method({
+		new web3._extend.Method({
 			name: 'deleteAuthorizedNodes',
 			call: 'bootnode_deleteAuthorizedNodes',
 			params: 1

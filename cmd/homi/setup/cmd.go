@@ -137,6 +137,8 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewInt64Flag(randaoCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(pragueCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(osakaCompatibleBlockNumberFlag),
+	altsrc.NewInt64Flag(permissionlessCompatibleBlockNumberFlag),
+	altsrc.NewUint64Flag(vrankEpochFlag),
 	altsrc.NewStringFlag(kip113ProxyAddressFlag),
 	altsrc.NewStringFlag(kip113LogicAddressFlag),
 	altsrc.NewBoolFlag(kip113MockFlag),
@@ -767,7 +769,20 @@ func Gen(ctx *cli.Context) error {
 	genesisJson.Config.RandaoCompatibleBlock = big.NewInt(ctx.Int64(randaoCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.PragueCompatibleBlock = big.NewInt(ctx.Int64(pragueCompatibleBlockNumberFlag.Name))
 	genesisJson.Config.OsakaCompatibleBlock = big.NewInt(ctx.Int64(osakaCompatibleBlockNumberFlag.Name))
+	genesisJson.Config.PermissionlessCompatibleBlock = big.NewInt(ctx.Int64(permissionlessCompatibleBlockNumberFlag.Name))
+	if epoch := ctx.Uint64(vrankEpochFlag.Name); epoch != params.DefaultVRankEpoch {
+		genesisJson.Config.VRankEpoch = epoch
+	}
 	genesisJson.Config.BlobScheduleConfig = params.DefaultBlobSchedule
+
+	// EIP-2935: pre-deploy history storage contract when Prague is active from genesis
+	if pragueBlock := ctx.Int64(pragueCompatibleBlockNumberFlag.Name); pragueBlock == 0 {
+		genesisJson.Alloc[params.HistoryStorageAddress] = blockchain.GenesisAccount{
+			Nonce:   1,
+			Code:    params.HistoryStorageCode,
+			Balance: common.Big0,
+		}
+	}
 
 	genesisJsonBytes, _ = json.MarshalIndent(genesisJson, "", "    ")
 	genValidatorKeystore(privKeys)

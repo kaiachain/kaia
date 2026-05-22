@@ -39,7 +39,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/compiler"
 	"github.com/kaiachain/kaia/common/profile"
-	contracts "github.com/kaiachain/kaia/contracts/contracts/testing/reward"
+	contracts "github.com/kaiachain/kaia/contracts/bindings/testing/reward"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax"
 	mock_kaiax "github.com/kaiachain/kaia/kaiax/mock"

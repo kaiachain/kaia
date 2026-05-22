@@ -417,7 +417,7 @@ func (b *CNAPIBackend) StateAtTransaction(ctx context.Context, block *types.Bloc
 	return b.cn.stateAtTransaction(block, txIndex, reexec, base, readOnly, preferDisk)
 }
 
-func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount uint64, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
+func (b *CNAPIBackend) FeeHistory(ctx context.Context, blockCount uint64, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, []float64, error) {
 	return b.gpo.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
 }
 

@@ -364,10 +364,7 @@ func testOverlappingAnnouncements(t *testing.T, protocol int) {
 	bodyFetcher := tester.makeBodyFetcher("valid", blocks, 0)
 
 	// Iteratively announce blocks, but overlap them continuously
-	overlap := 16
-	if overlap > targetBlocks {
-		overlap = targetBlocks
-	}
+	overlap := min(16, targetBlocks)
 	imported := make(chan *types.Block, len(hashes)-1)
 	for range overlap {
 		imported <- nil

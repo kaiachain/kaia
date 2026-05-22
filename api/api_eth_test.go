@@ -270,7 +270,7 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 		"parentHash": "0xc8036293065bacdfce87debec0094a71dbbe40345b078d21dcc47adb4513f348",
 		"receiptsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
 		"sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
-		"size": "0x254",
+		"size": "0x26c",
 		"stateRoot": "0xad31c32942fa033166e4ef588ab973dbe26657c594de4ba98192108becf0fec9",
 		"timestamp": "0x61d53854",
 		"transactionsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
@@ -283,7 +283,7 @@ func testGetHeader(t *testing.T, testAPIName string, config *params.ChainConfig)
 		expected["randomReveal"] = "0x94516a8bc695b5bf43aa077cd682d9475a3a6bed39a633395b78ed8f276e7c5bb00bb26a77825013c6718579f1b3ee2275b158801705ea77989e3acc849ee9c524bd1822bde3cba7be2aae04347f0d91508b7b7ce2f11ec36cbf763173421ae7"
 		expected["mixHash"] = "0xdf117d1245dceaae0a47f05371b23cd0d0db963ff9d5c8ba768dc989f4c31883"
 		expected["hash"] = "0x36f1c36d1723049abf1202a1cda828eec6399edd654dae12b72a1642097a29e4"
-		expected["size"] = "0x2d4"
+		expected["size"] = "0x2ec"
 	}
 	assert.Equal(t, stringifyMap(expected), stringifyMap(ethHeader))
 }
@@ -3012,6 +3012,7 @@ func TestEthAPI_Config(t *testing.T) {
 	expectedChainConfig := params.TestChainConfig.Copy()
 	expectedChainConfig.IstanbulCompatibleBlock = big.NewInt(75373312)
 	expectedChainConfig.LondonCompatibleBlock = big.NewInt(80295291)
+	expectedChainConfig.KoreCompatibleBlock = big.NewInt(111736800)
 	expectedChainConfig.PragueCompatibleBlock = big.NewInt(187930000)
 	expectedChainConfig.OsakaCompatibleBlock = big.NewInt(195000000)
 	expectedChainConfig.BlobScheduleConfig = &params.BlobScheduleConfig{
@@ -3024,17 +3025,20 @@ func TestEthAPI_Config(t *testing.T) {
 	genesisForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 0).Hash
 	istanbulForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 75373312).Hash
 	lonondonForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 80295291).Hash
+	koreForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 111736800).Hash
 	pragueForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 187930000).Hash
 	osakaForkID := forkid.NewID(expectedChainConfig, genesisHeader.Hash(), 195000000).Hash
 	var (
 		genesisRules        = expectedChainConfig.Rules(big.NewInt(0))
 		istanbulRules       = expectedChainConfig.Rules(big.NewInt(75373312))
 		lonondonRules       = expectedChainConfig.Rules(big.NewInt(80295291))
+		koreRules           = expectedChainConfig.Rules(big.NewInt(111736800))
 		pragueRules         = expectedChainConfig.Rules(big.NewInt(187930000))
 		osakaRules          = expectedChainConfig.Rules(big.NewInt(195000000))
 		genesisPrecompiles  = make(map[string]common.Address)
 		istanbulPrecompiles = make(map[string]common.Address)
 		lonondonPrecompiles = make(map[string]common.Address)
+		korePrecompiles     = make(map[string]common.Address)
 		praguePrecompiles   = make(map[string]common.Address)
 		osakaPrecompiles    = make(map[string]common.Address)
 	)
@@ -3046,6 +3050,9 @@ func TestEthAPI_Config(t *testing.T) {
 	}
 	for addr, c := range vm.ActivePrecompiledContracts(lonondonRules) {
 		lonondonPrecompiles[c.Name()] = addr
+	}
+	for addr, c := range vm.ActivePrecompiledContracts(koreRules) {
+		korePrecompiles[c.Name()] = addr
 	}
 	for addr, c := range vm.ActivePrecompiledContracts(pragueRules) {
 		praguePrecompiles[c.Name()] = addr
@@ -3100,6 +3107,31 @@ func TestEthAPI_Config(t *testing.T) {
 				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
 				ForkId:          lonondonForkID[:],
 				Precompiles:     lonondonPrecompiles,
+				SystemContracts: nil,
+			},
+			expectedLast: &Kip276Config{
+				BlobSchedule:    params.DefaultOsakaBlobConfig,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          osakaForkID[:],
+				Precompiles:     osakaPrecompiles,
+				SystemContracts: nil,
+			},
+		},
+		{
+			name:        "Kore fork block",
+			blockNumber: 111736800,
+			expectedCurrent: &Kip276Config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          koreForkID[:],
+				Precompiles:     korePrecompiles,
+				SystemContracts: nil,
+			},
+			expectedNext: &Kip276Config{
+				BlobSchedule:    nil,
+				ChainId:         (*hexutil.Big)(expectedChainConfig.ChainID),
+				ForkId:          pragueForkID[:],
+				Precompiles:     praguePrecompiles,
 				SystemContracts: nil,
 			},
 			expectedLast: &Kip276Config{
@@ -3700,12 +3732,13 @@ func TestEthAPI_FeeHistory(t *testing.T) {
 					big.NewInt(30000000000),
 				}
 				gasUsedRatio := []float64{0.5, 0.6}
+				blobGasUsedRatio := []float64{0.25, 0.5}
 				mockBackend.EXPECT().FeeHistory(
 					gomock.Any(),
 					uint64(2),
 					rpc.LatestBlockNumber,
 					[]float64{50.0, 90.0},
-				).Return(oldestBlock, reward, baseFee, gasUsedRatio, nil)
+				).Return(oldestBlock, reward, baseFee, gasUsedRatio, blobGasUsedRatio, nil)
 			},
 			expected: &FeeHistoryResult{
 				OldestBlock: (*hexutil.Big)(big.NewInt(100)),
@@ -3721,7 +3754,8 @@ func TestEthAPI_FeeHistory(t *testing.T) {
 					(*hexutil.Big)(params.CalcBlobFee(big.NewInt(25000000000))),
 					(*hexutil.Big)(params.CalcBlobFee(big.NewInt(30000000000))),
 				},
-				GasUsedRatio: []float64{0.5, 0.6},
+				GasUsedRatio:     []float64{0.5, 0.6},
+				BlobGasUsedRatio: []float64{0.25, 0.5},
 			},
 		},
 		{
@@ -3734,19 +3768,21 @@ func TestEthAPI_FeeHistory(t *testing.T) {
 				var reward [][]*big.Int
 				var baseFee []*big.Int
 				gasUsedRatio := []float64{0.5}
+				blobGasUsedRatio := []float64{0}
 				mockBackend.EXPECT().FeeHistory(
 					gomock.Any(),
 					uint64(1),
 					rpc.BlockNumber(100),
 					[]float64(nil),
-				).Return(oldestBlock, reward, baseFee, gasUsedRatio, nil)
+				).Return(oldestBlock, reward, baseFee, gasUsedRatio, blobGasUsedRatio, nil)
 			},
 			expected: &FeeHistoryResult{
-				OldestBlock:  (*hexutil.Big)(big.NewInt(100)),
-				Reward:       nil,
-				BaseFee:      nil,
-				BlobBaseFee:  nil,
-				GasUsedRatio: []float64{0.5},
+				OldestBlock:      (*hexutil.Big)(big.NewInt(100)),
+				Reward:           nil,
+				BaseFee:          nil,
+				BlobBaseFee:      nil,
+				GasUsedRatio:     []float64{0.5},
+				BlobGasUsedRatio: []float64{0},
 			},
 		},
 		{
@@ -3760,7 +3796,7 @@ func TestEthAPI_FeeHistory(t *testing.T) {
 					uint64(1),
 					rpc.LatestBlockNumber,
 					[]float64{50.0},
-				).Return(nil, nil, nil, nil, errors.New("fee history error"))
+				).Return(nil, nil, nil, nil, nil, errors.New("fee history error"))
 			},
 			expectedErr: "fee history error",
 		},
@@ -3786,6 +3822,7 @@ func TestEthAPI_FeeHistory(t *testing.T) {
 
 				assert.Equal(t, tc.expected.OldestBlock, result.OldestBlock)
 				assert.Equal(t, tc.expected.GasUsedRatio, result.GasUsedRatio)
+				assert.Equal(t, tc.expected.BlobGasUsedRatio, result.BlobGasUsedRatio)
 
 				if tc.expected.Reward != nil {
 					require.NotNil(t, result.Reward)

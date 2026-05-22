@@ -30,7 +30,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	bridgecontract "github.com/kaiachain/kaia/contracts/contracts/service_chain/bridge"
+	bridgecontract "github.com/kaiachain/kaia/contracts/bindings/bridge"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/node/sc/bridgepool"
 	"github.com/kaiachain/kaia/rlp"

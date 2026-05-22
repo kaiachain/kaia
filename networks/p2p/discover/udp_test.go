@@ -43,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {
@@ -61,7 +62,7 @@ var (
 type udpTest struct {
 	t                   *testing.T
 	pipe                *dgramPipe
-	table               *Table
+	table               *Table2
 	udp                 *udp
 	sent                [][]byte
 	localkey, remotekey *ecdsa.PrivateKey
@@ -76,18 +77,21 @@ func newUDPTest(t *testing.T) *udpTest {
 		remotekey:  newkey(),
 		remoteaddr: &net.UDPAddr{IP: net.IP{10, 0, 1, 99}, Port: 30303},
 	}
-	conf := Config{
+	cfg := &Config{
 		Conn:       test.pipe,
 		PrivateKey: test.localkey,
 		Id:         PubkeyID(&test.localkey.PublicKey),
 		Addr:       test.pipe.LocalAddr().(*net.UDPAddr),
+		NodeType:   NodeTypeEN,
 	}
-	discv, udp, _ := newUDP(&conf)
-	tab := discv.(*Table)
-	tab.addStorage(NodeTypeUnknown, &KademliaStorage{targetType: NodeTypeUnknown})
-	test.table, test.udp = tab, udp
-	// Wait for initial refresh so the table doesn't send unexpected findnode.
-	<-test.table.initDone
+	u := newUDPv4(cfg)
+	tab, err := newTable2(cfg, u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tab.init.Store(true) // Mark as initialized so Bond accepts inbound requests.
+	u.Start(tab)         // Start UDP loop and readLoop (but not table loops).
+	test.table, test.udp = tab, u
 	return test
 }
 
@@ -178,6 +182,7 @@ func TestUDP_responseTimeouts(t *testing.T) {
 		// For all other requests, a reply is scheduled to arrive
 		// within the timeout window.
 		p := &pending{
+			fromIP:   net.IPv4(127, 0, 0, 1),
 			ptype:    byte(rand.Intn(255)),
 			callback: func(interface{}) bool { return true },
 		}
@@ -190,7 +195,7 @@ func TestUDP_responseTimeouts(t *testing.T) {
 			p.errc = nilErr
 			test.udp.addpending <- p
 			time.AfterFunc(randomDuration(60*time.Millisecond), func() {
-				if !test.udp.handleReply(p.from, p.ptype, nil) {
+				if !test.udp.handleReply(p.from, p.fromIP, p.ptype, nil) {
 					t.Logf("not matched: %v", p)
 				}
 			})
@@ -245,7 +250,7 @@ func TestUDP_findnodeTimeout(t *testing.T) {
 	}
 }
 
-func TestUDP_findnode(t *testing.T) {
+func TestUDP_findnode_EN(t *testing.T) {
 	test := newUDPTest(t)
 	defer test.table.Close()
 
@@ -253,19 +258,23 @@ func TestUDP_findnode(t *testing.T) {
 	// distribution shouldn't matter much, although we need to
 	// take care not to overflow any bucket.
 	targetHash := crypto.Keccak256Hash(testTarget[:])
+	selfSha := crypto.Keccak256Hash(test.table.selfID[:])
 	nodes := &nodesByDistance{target: targetHash}
 	for i := range bucketSize {
-		nodes.push(nodeAtDistance(test.table.self.sha, i+2, NodeTypeUnknown), bucketSize)
+		nodes.push(nodeAtDistance(selfSha, i+2, NodeTypeEN), bucketSize)
 	}
-	test.table.stuff(nodes.entries, NodeTypeUnknown)
+	s := test.table.storages[NodeTypeEN]
+	for _, n := range nodes.entries {
+		s.add(n)
+	}
 
 	// ensure there's a bond with the test node,
 	// findnode won't be accepted otherwise.
 	test.table.db.updateBondTime(PubkeyID(&test.remotekey.PublicKey), time.Now())
 
 	// check that closest neighbors are returned.
-	test.packetIn(nil, findnodePacket, &findnode{Target: testTarget, Expiration: futureExp})
-	expected := test.table.closest(targetHash, NodeTypeUnknown, bucketSize)
+	test.packetIn(nil, findnodePacket, &findnode{Target: testTarget, TargetType: NodeTypeEN, Expiration: futureExp})
+	expected := s.closest(targetHash, bucketSize)
 
 	waitNeighbors := func(want []*Node) {
 		test.waitPacketOut(func(p *neighbors) {
@@ -281,6 +290,68 @@ func TestUDP_findnode(t *testing.T) {
 	}
 	waitNeighbors(expected.entries[:maxNeighbors])
 	waitNeighbors(expected.entries[maxNeighbors:])
+}
+
+func TestUDP_findnode_CN_overfill(t *testing.T) {
+	test := newUDPTest(t)
+	defer test.table.Close()
+
+	// Fill the CN storage with more nodes than the per-request retrieve cap.
+	const filled = 200
+	retrieve := findnodeRetrieveSize(NodeTypeCN)
+	assert.Greater(t, filled, retrieve)
+	selfSha := crypto.Keccak256Hash(test.table.selfID[:])
+	s := test.table.storages[NodeTypeCN]
+	addedIDs := make(map[NodeID]struct{}, filled)
+	for i := range filled {
+		n := nodeAtDistance(selfSha, i+2, NodeTypeCN)
+		n.IP = net.IPv4(1, byte((i>>8)&0xff), byte(i&0xff), 1)
+		s.add(n)
+		addedIDs[n.ID] = struct{}{}
+	}
+
+	// ensure there's a bond with the test node,
+	// findnode won't be accepted otherwise.
+	test.table.db.updateBondTime(PubkeyID(&test.remotekey.PublicKey), time.Now())
+
+	// Trigger the findnode. retrieveSize for NodeTypeCN is 100.
+	test.packetIn(nil, findnodePacket, &findnode{Target: testTarget, TargetType: NodeTypeCN, Expiration: futureExp})
+
+	// Collect all NEIGHBORS packets. The handler sends ceil(retrieve/maxNeighbors)
+	// packets, with the last one possibly short.
+	numPackets := (retrieve + maxNeighbors - 1) / maxNeighbors
+	t.Logf("expecting %d NEIGHBORS packets (retrieve=%d, maxNeighbors=%d)",
+		numPackets, retrieve, maxNeighbors)
+
+	seen := make(map[NodeID]struct{}, retrieve)
+	totalReceived := 0
+	for p := range numPackets {
+		test.waitPacketOut(func(pkt *neighbors) {
+			// Intermediate packets must be full; the last packet carries the remainder.
+			isLast := p == numPackets-1
+			if !isLast && len(pkt.Nodes) != maxNeighbors {
+				t.Errorf("packet %d: got %d nodes, want %d (maxNeighbors)",
+					p, len(pkt.Nodes), maxNeighbors)
+			} else if isLast && len(pkt.Nodes) != retrieve-(numPackets-1)*maxNeighbors {
+				t.Errorf("packet %d: got %d nodes, want %d (last packet)",
+					p, len(pkt.Nodes), retrieve-(numPackets-1)*maxNeighbors)
+			}
+			for _, rn := range pkt.Nodes {
+				if _, ok := addedIDs[rn.ID]; !ok {
+					t.Errorf("packet %d: unexpected NodeID %x returned", p, rn.ID[:8])
+				}
+				if _, dup := seen[rn.ID]; dup {
+					t.Errorf("packet %d: duplicate NodeID %x", p, rn.ID[:8])
+				}
+				seen[rn.ID] = struct{}{}
+				totalReceived++
+			}
+		})
+	}
+
+	if totalReceived != retrieve {
+		t.Errorf("total returned nodes = %d, want %d", totalReceived, retrieve)
+	}
 }
 
 func TestUDP_findnodeMultiReply(t *testing.T) {
@@ -337,8 +408,6 @@ func TestUDP_findnodeMultiReply(t *testing.T) {
 
 func TestUDP_successfulPing(t *testing.T) {
 	test := newUDPTest(t)
-	added := make(chan *Node, 1)
-	test.table.nodeAddedHook = func(n *Node) { added <- n }
 	defer test.table.Close()
 
 	// The remote side sends a ping packet to initiate the exchange.
@@ -379,24 +448,29 @@ func TestUDP_successfulPing(t *testing.T) {
 	test.packetIn(nil, pongPacket, &pong{ReplyTok: hash, Expiration: futureExp})
 
 	// the node should be added to the table shortly after getting the
-	// pong packet.
-	select {
-	case n := <-added:
-		rid := PubkeyID(&test.remotekey.PublicKey)
-		if n.ID != rid {
-			t.Errorf("node has wrong ID: got %v, want %v", n.ID, rid)
+	// pong packet. Poll the DB to see if it was added to the table.
+	rid := PubkeyID(&test.remotekey.PublicKey)
+	var n *Node
+	for i := 0; i < 200; i++ {
+		if n = test.table.db.node(rid); n != nil {
+			break
 		}
-		if !n.IP.Equal(test.remoteaddr.IP) {
-			t.Errorf("node has wrong IP: got %v, want: %v", n.IP, test.remoteaddr.IP)
-		}
-		if int(n.UDP) != test.remoteaddr.Port {
-			t.Errorf("node has wrong UDP port: got %v, want: %v", n.UDP, test.remoteaddr.Port)
-		}
-		if n.TCP != testRemote.TCP {
-			t.Errorf("node has wrong TCP port: got %v, want: %v", n.TCP, testRemote.TCP)
-		}
-	case <-time.After(2 * time.Second):
-		t.Errorf("node was not added within 2 seconds")
+		time.Sleep(10 * time.Millisecond)
+	}
+	if n == nil {
+		t.Fatal("node was not added within 2 seconds")
+	}
+	if n.ID != rid {
+		t.Errorf("node has wrong ID: got %v, want %v", n.ID, rid)
+	}
+	if !n.IP.Equal(test.remoteaddr.IP) {
+		t.Errorf("node has wrong IP: got %v, want: %v", n.IP, test.remoteaddr.IP)
+	}
+	if int(n.UDP) != test.remoteaddr.Port {
+		t.Errorf("node has wrong UDP port: got %v, want: %v", n.UDP, test.remoteaddr.Port)
+	}
+	if n.TCP != testRemote.TCP {
+		t.Errorf("node has wrong TCP port: got %v, want: %v", n.TCP, testRemote.TCP)
 	}
 }
 

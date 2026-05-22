@@ -34,8 +34,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
-	sctoken "github.com/kaiachain/kaia/contracts/contracts/testing/sc_erc20"
-	scnft "github.com/kaiachain/kaia/contracts/contracts/testing/sc_erc721"
+	sctoken "github.com/kaiachain/kaia/contracts/bindings/testing/sc_erc20"
+	scnft "github.com/kaiachain/kaia/contracts/bindings/testing/sc_erc721"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -298,7 +298,6 @@ func TestRecoveryScenarios(t *testing.T) {
 	}
 
 	for idx, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("%02d_%s", idx, tc.name), func(t *testing.T) {
 			requestBridge := tc.requestBridge(info)
 			for i := 0; i < testTxCount; i++ {

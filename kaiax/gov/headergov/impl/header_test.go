@@ -10,6 +10,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestVerifyHeader(t *testing.T) {
@@ -19,9 +20,11 @@ func TestVerifyHeader(t *testing.T) {
 		voteBytes, _       = headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(100)).ToVoteBytes()
 		govBytes, _        = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(100)}).ToGovBytes()
 		invalidGovBytes, _ = headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(200)}).ToGovBytes()
-		h                  = newHeaderGovModule(t, getTestChainConfig())
+		config             = getTestChainConfig()
 		invalidVoteRlp     = common.FromHex("0xea9452d41ca72af615a1ac3301b0a93efa222ecc7541947265776172642e6d696e74696e67616d6f756e74")
 	)
+	config.Governance.GoverningNode = validVoter
+	h := newHeaderGovModule(t, config)
 
 	h.HandleVote(1, vote)
 
@@ -73,7 +76,7 @@ func TestVerifyVote(t *testing.T) {
 	}{
 		// governance.*
 		{desc: "valid deriveshaimpl", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceDeriveShaImpl), uint64(1)), expectedError: nil},
-		// GovernanceGovernanceMode vote is forbidden
+		{desc: "deprecated governancemode", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovernanceMode), "none"), expectedError: ErrDeprecatedVote},
 		{desc: "valid governingnode", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGoverningNode), validVoter.Hex()), expectedError: nil},
 		{desc: "valid govparam", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovParamContract), contract), expectedError: nil},
 		{desc: "valid unitprice", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(25000000000)), expectedError: nil},
@@ -82,8 +85,8 @@ func TestVerifyVote(t *testing.T) {
 
 		// istanbul.*
 		{desc: "valid committeesize", vote: headergov.NewVoteData(validVoter, string(gov.IstanbulCommitteeSize), uint64(7)), expectedError: nil},
-		// IstanbulEpoch vote is forbidden
-		// IstanbulPolicy vote is forbidden
+		{desc: "deprecated epoch", vote: headergov.NewVoteData(validVoter, string(gov.IstanbulEpoch), uint64(30000)), expectedError: ErrDeprecatedVote},
+		{desc: "deprecated policy", vote: headergov.NewVoteData(validVoter, string(gov.IstanbulPolicy), uint64(0)), expectedError: ErrDeprecatedVote},
 
 		// kip71.*
 		{desc: "valid basefeedenominator", vote: headergov.NewVoteData(validVoter, string(gov.Kip71BaseFeeDenominator), uint64(8)), expectedError: nil},
@@ -95,14 +98,13 @@ func TestVerifyVote(t *testing.T) {
 		{desc: "invalid upper", vote: headergov.NewVoteData(validVoter, string(gov.Kip71UpperBoundBaseFee), uint64(1)), expectedError: ErrUpperBoundBaseFee},
 
 		// reward.*
-		// RewardDeferredTxFee vote is forbidden
+		// RewardDeferredTxFee and RewardUseGiniCoeff (bool) skipped: bool RLP round-trip broken in ToVoteBytes, ErrInvalidVoteData fires before ErrDeprecatedVote.
 		{desc: "valid kip82ratio", vote: headergov.NewVoteData(validVoter, string(gov.RewardKip82Ratio), "20/80"), expectedError: nil},
 		{desc: "valid mintingamount", vote: headergov.NewVoteData(validVoter, string(gov.RewardMintingAmount), "6400000000000000000"), expectedError: nil},
-		// RewardMinimumStake vote is forbidden
-		// RewardProposerUpdateInterval vote is forbidden
+		{desc: "deprecated minimumstake", vote: headergov.NewVoteData(validVoter, string(gov.RewardMinimumStake), "2000000"), expectedError: ErrDeprecatedVote},
+		{desc: "deprecated proposerupdateinterval", vote: headergov.NewVoteData(validVoter, string(gov.RewardProposerUpdateInterval), uint64(3600)), expectedError: ErrDeprecatedVote},
 		{desc: "valid ratio", vote: headergov.NewVoteData(validVoter, string(gov.RewardRatio), "50/30/20"), expectedError: nil},
-		// RewardStakingUpdateInterval vote is forbidden
-		// RewardUseGiniCoeff vote is forbidden
+		{desc: "deprecated stakingupdateinterval", vote: headergov.NewVoteData(validVoter, string(gov.RewardStakingUpdateInterval), uint64(86400)), expectedError: ErrDeprecatedVote},
 		{desc: "valid addvalidator", vote: headergov.NewVoteData(validVoter, string(gov.AddValidator), eoa), expectedError: nil},
 		{desc: "valid removevalidator", vote: headergov.NewVoteData(validVoter, string(gov.RemoveValidator), eoa), expectedError: nil},
 	}
@@ -115,6 +117,29 @@ func TestVerifyVote(t *testing.T) {
 			assert.Equal(t, tc.expectedError, err)
 		})
 	}
+}
+
+func TestVerifyVote_SingleMode(t *testing.T) {
+	config := getTestChainConfig()
+	config.Governance.GoverningNode = common.Address{2} // validVoter is the proposer, but not governing node
+	t.Run("pre-permissionless allows non-governing node", func(t *testing.T) {
+		config.PermissionlessCompatibleBlock = nil
+		h := newHeaderGovModule(t, config)
+		vote := headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(100))
+		vb, err := vote.ToVoteBytes()
+		require.NoError(t, err)
+		err = h.VerifyVote(&types.Header{Number: big.NewInt(1), Vote: vb, Extra: extra})
+		assert.NoError(t, err)
+	})
+	t.Run("post-permissionless requires governing node", func(t *testing.T) {
+		config.PermissionlessCompatibleBlock = common.Big0
+		h := newHeaderGovModule(t, config)
+		vote := headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(100))
+		vb, err := vote.ToVoteBytes()
+		require.NoError(t, err)
+		err = h.VerifyVote(&types.Header{Number: big.NewInt(1), Vote: vb, Extra: extra})
+		assert.Equal(t, ErrVotePermissionDenied, err)
+	})
 }
 
 func TestGetVotesInEpoch(t *testing.T) {

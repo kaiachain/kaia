@@ -19,18 +19,24 @@
 package database
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"path"
 	"syscall"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 const (
 	reportCycle = IdealBatchSize * 20
 )
+
+// ErrDBMigrationInterrupted is returned by copyDB when migration is aborted
+// because the quit channel was closed (e.g. by SIGINT or SIGTERM).
+// Callers can use errors.Is to distinguish an interrupted migration from a
+// successful completion.
+var ErrDBMigrationInterrupted = errors.New("db migration interrupted")
 
 // copyDB migrates a DB to another DB.
 // This feature uses Iterator. A src DB should have implementation of Iteratee to use this function.
@@ -56,7 +62,7 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 		// write fetched keys and values to DB
 		// If dstDB is dynamoDB, Put will Write when the number items reach dynamoBatchSize.
 		if err := dstBatch.Put(key, val); err != nil {
-			return errors.WithMessage(err, "failed to put batch")
+			return fmt.Errorf("failed to put batch: %w", err)
 		}
 
 		if dstBatch.ValueSize() > IdealBatchSize {
@@ -76,13 +82,13 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 		select {
 		case <-quit:
 			logger.Warn("exit called", "db", name, "fetchedTotal", fetched, "elapsedTotal", time.Since(start))
-			return nil
+			return ErrDBMigrationInterrupted
 		default:
 		}
 	}
 
 	if err := dstBatch.Write(); err != nil {
-		return errors.WithMessage(err, "failed to write items")
+		return fmt.Errorf("failed to write items: %w", err)
 	}
 	dstBatch.Reset()
 
@@ -90,7 +96,7 @@ func copyDB(name string, srcDB, dstDB Database, quit chan struct{}) error {
 
 	srcIter.Release()
 	if err := srcIter.Error(); err != nil { // any accumulated error from iterator
-		return errors.WithMessage(err, "failed to iterate")
+		return fmt.Errorf("failed to iterate: %w", err)
 	}
 
 	return nil
@@ -146,17 +152,18 @@ func (dbm *databaseManager) StartDBMigration(dstdbm DBManager) error {
 			}()
 		}
 
+		var errs []error
 		for range databaseEntryTypeSize {
-			err := <-errChan
-			if err != nil {
+			if err := <-errChan; err != nil {
 				logger.Error("copyDB got an error", "err", err)
+				errs = append(errs, err)
 			}
 		}
 
 		// Reset state trie DB path if migrated state trie path ("statetrie_migrated_XXXXXX") is set
 		dstdbm.setDBDir(DBEntryType(StateTrieDB), "")
 
-		return nil
+		return errors.Join(errs...)
 	}
 
 	// single DB -> single DB

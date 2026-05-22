@@ -61,6 +61,7 @@ var logger = log.NewModuleLogger(log.VM)
 var (
 	errInputTooShort        = errors.New("input length is too short")
 	errWrongSignatureLength = errors.New("wrong signature length")
+	errNoSignatures         = errors.New("no signatures provided")
 )
 
 // PrecompiledContract is the basic interface for native Go contracts. The implementation
@@ -898,6 +899,9 @@ func (c *validateSender) validateSender(input []byte, picker types.AccountKeyPic
 	}
 
 	numSigs := len(ptr) / common.SignatureLength
+	if numSigs == 0 {
+		return errNoSignatures
+	}
 	pubs := make([]*ecdsa.PublicKey, numSigs)
 	for i := range numSigs {
 		p, err := crypto.Ecrecover(msg, ptr[0:common.SignatureLength])

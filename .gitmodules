@@ -1,0 +1,3 @@
+[submodule "contracts/kaia-system-contracts"]
+	path = contracts/kaia-system-contracts
+	url = https://github.com/kaiachain/kaia-system-contracts
