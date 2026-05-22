@@ -53,8 +53,8 @@ func TestTypedNodeSet_BasicOps(t *testing.T) {
 	set.add(n2)
 
 	assert.Equal(t, 2, set.len())
-	assert.Equal(t, 1, set.count(discover.NodeTypePN))
-	assert.Equal(t, 1, set.count(discover.NodeTypeEN))
+	assert.Equal(t, 2, set.count(discover.NodeTypePN))
+	assert.Equal(t, 2, set.count(discover.NodeTypeEN))
 	assert.Equal(t, 0, set.count(discover.NodeTypeCN))
 	assert.True(t, set.contains(n1.ID))
 	assert.True(t, set.contains(n2.ID))
@@ -67,6 +67,21 @@ func TestTypedNodeSet_BasicOps(t *testing.T) {
 	assert.True(t, hasNode(all, n2.ID))
 }
 
+func TestTypedNodeSet_CountTreatsPNAsEN(t *testing.T) {
+	set := newTypedNodeSet()
+	pn := typedSetNode(1, "10.0.0.1", discover.NodeTypePN)
+	en := typedSetNode(2, "10.0.0.2", discover.NodeTypeEN)
+	cn := typedSetNode(3, "10.0.0.3", discover.NodeTypeCN)
+
+	set.add(pn)
+	set.add(en)
+	set.add(cn)
+
+	assert.Equal(t, 2, set.count(discover.NodeTypePN))
+	assert.Equal(t, 2, set.count(discover.NodeTypeEN))
+	assert.Equal(t, 1, set.count(discover.NodeTypeCN))
+}
+
 func TestTypedNodeSet_RetypeSameID(t *testing.T) {
 	set := newTypedNodeSet()
 	n1 := typedSetNode(1, "10.0.0.1", discover.NodeTypePN)
@@ -76,7 +91,7 @@ func TestTypedNodeSet_RetypeSameID(t *testing.T) {
 	set.add(n2)
 
 	assert.Equal(t, 1, set.len())
-	assert.Equal(t, 0, set.count(discover.NodeTypePN))
+	assert.Equal(t, 0, set.counts[discover.NodeTypePN])
 	assert.Equal(t, 1, set.count(discover.NodeTypeEN))
 	assert.Equal(t, n2, set.get(n1.ID))
 }

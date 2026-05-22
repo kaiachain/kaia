@@ -194,6 +194,14 @@ func ConvertNodeType(ct common.ConnType) discover.NodeType {
 	}
 }
 
+// EffectiveConnType returns the KIP-311 role bucket for a wire-level connection type.
+func EffectiveConnType(ct common.ConnType) common.ConnType {
+	if ct == common.PROXYNODE {
+		return common.ENDPOINTNODE
+	}
+	return ct
+}
+
 func ConvertConnType(nt discover.NodeType) common.ConnType {
 	switch nt {
 	case discover.NodeTypeCN:

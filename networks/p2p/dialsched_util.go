@@ -99,5 +99,11 @@ func (t *typedNodeSet) contains(id discover.NodeID) bool {
 }
 
 func (t *typedNodeSet) count(nType discover.NodeType) int {
+	// PN is a legacy wire value. For target accounting, PN and EN share
+	// the same effective role bucket.
+	nType = discover.EffectiveNodeType(nType)
+	if nType == discover.NodeTypeEN {
+		return t.counts[discover.NodeTypeEN] + t.counts[discover.NodeTypePN]
+	}
 	return t.counts[nType]
 }

@@ -239,8 +239,9 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 func setDefaultDiscoverTypes(cfg *p2p.Config) {
 	if cfg.ConnectionType == common.CONSENSUSNODE {
 		cfg.DiscoverTypes.CN = true
-	} else { // PN or EN
-		cfg.DiscoverTypes.PN = true
+		cfg.DiscoverTypes.EN = true
+	} else { // PN is EN-equivalent under KIP-311.
+		cfg.DiscoverTypes.CN = true
 		cfg.DiscoverTypes.EN = true
 	}
 }

@@ -241,6 +241,14 @@ func nodeTypeName(nt NodeType) string { // TODO-Kaia-Node Consolidate p2p.NodeTy
 	}
 }
 
+// EffectiveNodeType returns the KIP-311 role bucket for a wire-level node type.
+func EffectiveNodeType(nt NodeType) NodeType {
+	if nt == NodeTypePN {
+		return NodeTypeEN
+	}
+	return nt
+}
+
 func ParseNodeType(nt string) NodeType {
 	switch nt {
 	case "cn":
