@@ -77,6 +77,41 @@ func TestDevParity_AcceptedPreprepareReachesVRank(t *testing.T) {
 	}
 }
 
+// dev #923 over the kaiabft self-accept path: the proposer's sendPreprepare
+// accepts its own PRE-PREPARE inline (no self-loop through backend.broadcast),
+// and that acceptance must reach VRank too.
+func TestDevParity_ProposerSelfAcceptReachesVRank(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	parent := newEmptyBlock(9, common.Hash{})
+	chain := &fakeChain{cfg: legacyConfig(), current: parent, headers: map[common.Hash]*types.Header{parent.Hash(): parent.Header()}}
+	b, key := newTestBackend(t, chain)
+	self := crypto.PubkeyToAddress(key.PublicKey)
+	otherKey, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	other := crypto.PubkeyToAddress(otherKey.PublicKey)
+
+	got := make(chan *bft.View, 1)
+	mVRank := vrank_mock.NewMockVRankModule(ctrl)
+	mVRank.EXPECT().HandleIstanbulPreprepare(gomock.Any(), gomock.Any()).Do(func(_ *types.Block, view *bft.View) { got <- view }).Times(1)
+	b.RegisterVRankModule(mVRank)
+	b.startPrepreparedRelay()
+	defer b.stopPrepreparedRelay()
+
+	m := newTestMachine(b, 10, 1, nil, []common.Address{self, other})
+	m.state = stateAcceptRequest
+	m.proposer = self
+	m.sendPreprepare(&bft.Request{Proposal: newEmptyBlock(10, parent.Hash())})
+	assert.Equal(t, statePreprepared, m.state, "self-accept must move the proposer to Preprepared without a self-loop")
+
+	select {
+	case view := <-got:
+		assert.Equal(t, int64(10), view.Sequence.Int64())
+		assert.Equal(t, int64(1), view.Round.Int64())
+	case <-time.After(2 * time.Second):
+		t.Fatal("no VRank relay for the proposer's self-accepted PRE-PREPARE")
+	}
+}
+
 // dev #923: the relay runs exactly while the engine is started.
 func TestDevParity_VRankRelayFollowsLifecycle(t *testing.T) {
 	ctrl := gomock.NewController(t)
