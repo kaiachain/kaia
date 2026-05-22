@@ -366,6 +366,43 @@ func TestServerAtCap(t *testing.T) {
 	}
 }
 
+func TestServerPeerTargets(t *testing.T) {
+	newPeerWithType := func(connType common.ConnType) *Peer {
+		return &Peer{rws: []*conn{{conntype: connType}}}
+	}
+	newPeers := func(connTypes ...common.ConnType) map[discover.NodeID]*Peer {
+		peers := make(map[discover.NodeID]*Peer, len(connTypes))
+		for _, connType := range connTypes {
+			peers[randomID()] = newPeerWithType(connType)
+		}
+		return peers
+	}
+
+	cnSrv := &BaseServer{Config: Config{ConnectionType: common.CONSENSUSNODE}}
+	cnPeers := newPeers(common.ENDPOINTNODE, common.PROXYNODE, common.ENDPOINTNODE)
+	if !cnSrv.exceedsPeerTarget(cnPeers, &conn{conntype: common.ENDPOINTNODE}) {
+		t.Fatal("CN should reject EN when EN-equivalent peer target is full")
+	}
+	if !cnSrv.exceedsPeerTarget(cnPeers, &conn{conntype: common.PROXYNODE}) {
+		t.Fatal("CN should count PN against the EN-equivalent peer target")
+	}
+	if cnSrv.exceedsPeerTarget(cnPeers, &conn{conntype: common.ENDPOINTNODE, flags: trustedConn}) {
+		t.Fatal("trusted peer should bypass peer target")
+	}
+	if cnSrv.exceedsPeerTarget(cnPeers, &conn{conntype: common.ENDPOINTNODE, flags: staticDialedConn}) {
+		t.Fatal("static outbound peer should bypass peer target")
+	}
+	if !cnSrv.exceedsPeerTarget(cnPeers, &conn{conntype: common.ENDPOINTNODE, flags: inboundConn}) {
+		t.Fatal("static/dynamic inbound peer should not bypass peer target unless trusted")
+	}
+
+	enSrv := &BaseServer{Config: Config{ConnectionType: common.ENDPOINTNODE}}
+	enPeers := newPeers(common.CONSENSUSNODE, common.CONSENSUSNODE)
+	if !enSrv.exceedsPeerTarget(enPeers, &conn{conntype: common.CONSENSUSNODE}) {
+		t.Fatal("EN should reject CN when CN peer target is full")
+	}
+}
+
 func TestServerSetupConn(t *testing.T) {
 	var (
 		id     = discover.PubkeyID(&newkey().PublicKey)

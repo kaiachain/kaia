@@ -277,6 +277,8 @@ func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, inbou
 		return DiscTooManyPeers
 	case !c.is(trustedConn) && c.is(inboundConn) && inboundCount >= srv.maxInboundConns():
 		return DiscTooManyPeers
+	case srv.exceedsPeerTarget(peers, c):
+		return DiscTooManyPeers
 	case peers[c.id] != nil:
 		return DiscAlreadyConnected
 	case c.id == srv.selfID:
@@ -284,6 +286,27 @@ func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, inbou
 	default:
 		return nil
 	}
+}
+
+func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *conn) bool {
+	if c.is(trustedConn | staticDialedConn) {
+		return false
+	}
+
+	selfType := EffectiveConnType(srv.ConnectionType)
+	peerType := EffectiveConnType(c.conntype)
+	target, ok := peerTargets[selfType][peerType]
+	if !ok {
+		return false
+	}
+
+	count := 0
+	for _, p := range peers {
+		if EffectiveConnType(p.ConnType()) == peerType {
+			count++
+		}
+	}
+	return count >= target
 }
 
 func (srv *BaseServer) maxInboundConns() int {

@@ -31,6 +31,18 @@ import (
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 )
 
+// peerTargets from KIP-311.
+var peerTargets = map[common.ConnType]map[common.ConnType]int{
+	common.CONSENSUSNODE: {
+		common.CONSENSUSNODE: 100,
+		common.ENDPOINTNODE:  3,
+	},
+	common.ENDPOINTNODE: {
+		common.CONSENSUSNODE: 2,
+		common.ENDPOINTNODE:  10,
+	},
+}
+
 type peerDrop struct {
 	*Peer
 	err       error
