@@ -62,10 +62,6 @@ type bootnodeConfig struct {
 	natm         nat.Interface
 	listenAddr   string
 
-	// Authorized Nodes are used as pre-configured nodes list which are only
-	// bonded with this bootnode.
-	AuthorizedNodes []*discover.Node
-
 	// DataDir is the file system folder the node should use for any data storage
 	// requirements. The configured data directory will not be directly shared with
 	// registered services, instead those can use utility methods to create/access
@@ -161,23 +157,6 @@ func splitAndTrim(input string) []string {
 		result[i] = strings.TrimSpace(r)
 	}
 	return result
-}
-
-func setAuthorizedNodes(ctx *cli.Context, cfg *bootnodeConfig) {
-	if !ctx.IsSet(utils.AuthorizedNodesFlag.Name) {
-		return
-	}
-	urls := ctx.String(utils.AuthorizedNodesFlag.Name)
-	splitedUrls := strings.Split(urls, ",")
-	cfg.AuthorizedNodes = make([]*discover.Node, 0, len(splitedUrls))
-	for _, url := range splitedUrls {
-		node, err := discover.ParseNode(url)
-		if err != nil {
-			logger.Error("URL is invalid", "kni", url, "err", err)
-			continue
-		}
-		cfg.AuthorizedNodes = append(cfg.AuthorizedNodes, node)
-	}
 }
 
 // setHTTP creates the HTTP RPC listener interface string from the set

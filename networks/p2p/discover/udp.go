@@ -51,7 +51,6 @@ var (
 	errTimeout          = errors.New("RPC timeout")
 	errClockWarp        = errors.New("reply deadline too far in the future")
 	errClosed           = errors.New("socket closed")
-	errUnauthorized     = errors.New("unauthorized node")
 	errMismatchNetwork  = errors.New("mismatch network id")
 )
 
@@ -346,10 +345,6 @@ func (t *udp) close() {
 	close(t.closing) // shuts down the loop()
 	t.conn.Close()   // shuts down the readLoop()
 	t.wg.Wait()
-}
-
-func (t *udp) isAuthorized(fromID NodeID, nType NodeType) bool {
-	return t.tab.IsAuthorized(fromID, nType)
 }
 
 func (t *udp) hasBond(fromID NodeID) bool {
@@ -733,11 +728,6 @@ func (req *ping) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 		mismatchNetworkCounter.Mark(1)
 		return errMismatchNetwork
 	}
-	if !t.isAuthorized(fromID, req.From.NType) {
-		logger.Trace("unauthorized node.", "nodeid", fromID, "nodetype", req.From.NType)
-		return errUnauthorized
-	}
-	logger.Trace("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
 	return nil
 }
 

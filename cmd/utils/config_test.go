@@ -228,7 +228,6 @@ func TestLoadYaml(t *testing.T) {
 		"genkey":                                    false,
 		"writeaddress":                              true,
 		"bnaddr":                                    true,
-		"authorized-nodes":                          false,
 		"rewardbase":                                false,
 		"mainnet":                                   true,
 		"kairos":                                    true,

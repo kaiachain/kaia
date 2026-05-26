@@ -1291,14 +1291,6 @@ var (
 		EnvVars:  []string{"KLAYTN_BAOBAB", "KAIA_BAOBAB", "KAIA_KAIROS"}, // TODO: remove baobab
 		Category: "NETWORK",
 	}
-	// Bootnode's settings
-	AuthorizedNodesFlag = &cli.StringFlag{
-		Name:    "authorized-nodes",
-		Usage:   "Comma separated kni URLs for authorized nodes list",
-		Value:   "",
-		Aliases: []string{"common.authorized-nodes"},
-		EnvVars: []string{"KLAYTN_AUTHORIZED_NODES", "KAIA_AUTHORIZED_NODES"},
-	}
 	// TODO-Kaia-Bootnode the boodnode flags should be updated when it is implemented
 	BNAddrFlag = &cli.StringFlag{
 		Name:    "bnaddr",

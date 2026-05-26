@@ -49,10 +49,6 @@ type Table2 struct {
 	nursery  []*Node
 	storages map[NodeType]tableStorage
 
-	// Authorized nodes (in-memory only)
-	authMu    sync.RWMutex
-	authNodes map[NodeID]*Node
-
 	// target number of nodes to obtain for each node type.
 	// set discoverTargets[T] = 0 to disable discovery of node type T (i.e. only accept inbound connections).
 	// see also: p2p.DialSched.connTargets.
@@ -96,11 +92,6 @@ func newTable2(cfg *Config, udp transport) (*Table2, error) {
 		bondslots <- struct{}{}
 	}
 
-	authNodes := make(map[NodeID]*Node, len(cfg.AuthorizedNodes))
-	for _, n := range cfg.AuthorizedNodes {
-		authNodes[n.ID] = n
-	}
-
 	tab := &Table2{
 		rand:            rand,
 		db:              db,
@@ -111,7 +102,6 @@ func newTable2(cfg *Config, udp transport) (*Table2, error) {
 		storages:        storages,
 		discoverTargets: discoverTargets,
 		bondslots:       bondslots,
-		authNodes:       authNodes,
 	}
 
 	// Insert the initial seeds into storages.
