@@ -154,7 +154,12 @@ type CN struct {
 
 	components []interface{}
 
-	govModule gov.GovModule
+	govModule    gov.GovModule
+	valsetModule valset.ValsetModule
+
+	cnPeerHeadSub event.Subscription
+	cnPeerSyncWg  sync.WaitGroup
+	cnPeerUpdater *cnPeerUpdater
 
 	// kaiax modules
 	baseModules    []kaiax.BaseModule
@@ -253,6 +258,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		closeBloomHandler: make(chan struct{}),
 		govModule:         mGov,
 		stakingModule:     mStaking,
+		valsetModule:      mValset,
 	}
 
 	// Derive and set node's address using nodekey
@@ -905,6 +911,8 @@ func (s *CN) Start(srvr p2p.Server) error {
 	// Start the RPC service
 	s.p2pServer = srvr
 
+	s.startCNPeerSync(srvr)
+
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers()
 	// Start the networking layer and the light server if requested
@@ -920,6 +928,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 // Kaia protocol.
 func (s *CN) Stop() error {
 	// Stop all the peer-related stuff first.
+	s.stopCNPeerSync()
 	s.protocolManager.Stop()
 	if s.lesServer != nil {
 		s.lesServer.Stop()
