@@ -71,7 +71,7 @@ func makeContractCreationTransactions(bcdata *BCData, accountMap *AccountMap, si
 }
 
 func genOptions(b *testing.B) ([]testData, error) {
-	solFiles := []string{"../contracts/contracts/testing/reward/KlaytnReward.sol"}
+	solFiles := []string{"../contracts/testing/reward/KlaytnReward.sol"}
 
 	opts := make([]testData, len(solFiles))
 	for i, filename := range solFiles {

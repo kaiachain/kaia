@@ -37,12 +37,10 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
-	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kerrors"
-	kaiametrics "github.com/kaiachain/kaia/metrics"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/kaiachain/kaia/work/builder"
@@ -78,20 +76,20 @@ var (
 
 	blockBaseFee              = metrics.NewRegisteredGauge("miner/block/mining/basefee", nil)
 	blobsGauge                = metrics.NewRegisteredGauge("miner/block/mining/blobs", nil)
-	blockMiningTimer          = kaiametrics.NewRegisteredHybridTimer("miner/block/mining/time", nil)
-	blockMiningExecuteTxTimer = kaiametrics.NewRegisteredHybridTimer("miner/block/execute/time", nil)
-	blockMiningCommitTxTimer  = kaiametrics.NewRegisteredHybridTimer("miner/block/commit/time", nil)
-	blockMiningFinalizeTimer  = kaiametrics.NewRegisteredHybridTimer("miner/block/finalize/time", nil)
+	blockMiningTimer          = metrics.NewRegisteredTimer("miner/block/mining/time", nil)
+	blockMiningExecuteTxTimer = metrics.NewRegisteredTimer("miner/block/execute/time", nil)
+	blockMiningCommitTxTimer  = metrics.NewRegisteredTimer("miner/block/commit/time", nil)
+	blockMiningFinalizeTimer  = metrics.NewRegisteredTimer("miner/block/finalize/time", nil)
 
-	accountReadTimer   = kaiametrics.NewRegisteredHybridTimer("miner/block/account/reads", nil)
-	accountHashTimer   = kaiametrics.NewRegisteredHybridTimer("miner/block/account/hashes", nil)
-	accountUpdateTimer = kaiametrics.NewRegisteredHybridTimer("miner/block/account/updates", nil)
-	accountCommitTimer = kaiametrics.NewRegisteredHybridTimer("miner/block/account/commits", nil)
+	accountReadTimer   = metrics.NewRegisteredTimer("miner/block/account/reads", nil)
+	accountHashTimer   = metrics.NewRegisteredTimer("miner/block/account/hashes", nil)
+	accountUpdateTimer = metrics.NewRegisteredTimer("miner/block/account/updates", nil)
+	accountCommitTimer = metrics.NewRegisteredTimer("miner/block/account/commits", nil)
 
-	storageReadTimer   = kaiametrics.NewRegisteredHybridTimer("miner/block/storage/reads", nil)
-	storageHashTimer   = kaiametrics.NewRegisteredHybridTimer("miner/block/storage/hashes", nil)
-	storageUpdateTimer = kaiametrics.NewRegisteredHybridTimer("miner/block/storage/updates", nil)
-	storageCommitTimer = kaiametrics.NewRegisteredHybridTimer("miner/block/storage/commits", nil)
+	storageReadTimer   = metrics.NewRegisteredTimer("miner/block/storage/reads", nil)
+	storageHashTimer   = metrics.NewRegisteredTimer("miner/block/storage/hashes", nil)
+	storageUpdateTimer = metrics.NewRegisteredTimer("miner/block/storage/updates", nil)
+	storageCommitTimer = metrics.NewRegisteredTimer("miner/block/storage/commits", nil)
 
 	snapshotAccountReadTimer = metrics.NewRegisteredTimer("miner/snapshot/account/reads", nil)
 	snapshotStorageReadTimer = metrics.NewRegisteredTimer("miner/snapshot/storage/reads", nil)
@@ -370,9 +368,6 @@ func (self *worker) commitNewWork() {
 	self.waitForIdealBlockTime(parent)
 	tstart := time.Now()
 
-	core.Vrank.Log()
-	core.Vrank.StartTimer()
-
 	var pending map[common.Address]types.Transactions
 	var err error
 	var nextBaseFee *big.Int
@@ -472,7 +467,7 @@ func (self *worker) commitNewWork() {
 	// - newSequenceSub -> commitNewWork() for next block (triggered from consensus startNewRound)
 }
 
-// handleExecutionResult processes the execution result from consensus
+// handleFinalizedBlock processes the finalized block result from consensus
 func (self *worker) handleFinalizedBlock(result *consensus.ExecutionResult) {
 	self.mu.Lock()
 	defer self.mu.Unlock()

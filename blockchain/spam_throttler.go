@@ -238,8 +238,9 @@ func (t *throttler) updateThrottlerState(txs types.Transactions, receipts types.
 // classifyTxs classifies given txs into allowTxs and throttleTxs.
 // If to-address of tx is listed in the throttle list, it is classified as throttleTx.
 func (t *throttler) classifyTxs(txs types.Transactions) (types.Transactions, types.Transactions) {
-	allowTxs := txs[:0]
-	throttleTxs := txs[:0]
+	// Use independent backing arrays so appends to one partition cannot overwrite the other.
+	allowTxs := make(types.Transactions, 0, len(txs))
+	throttleTxs := make(types.Transactions, 0, len(txs))
 
 	t.mu.RLock()
 	for _, tx := range txs {

@@ -29,9 +29,11 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
+	"github.com/kaiachain/kaia/datasync/downloader"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	auction_mock "github.com/kaiachain/kaia/kaiax/auction/mock"
 	"github.com/kaiachain/kaia/kaiax/staking"
@@ -1029,6 +1031,128 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		assert.NotNil(t, req, "should not be deleted from blobSidecarReqManager even on error")
 		mockCtrl.Finish()
 	}
+}
+
+// makePhantomHashes returns n distinct hashes whose i-th byte is i+1, suitable
+// for phantom-flood tests where every lookup is expected to miss.
+func makePhantomHashes(n int) []common.Hash {
+	out := make([]common.Hash, n)
+	for i := range out {
+		out[i][0] = byte(i & 0xff)
+		out[i][1] = byte((i >> 8) & 0xff)
+		out[i][2] = byte((i >> 16) & 0xff)
+	}
+	return out
+}
+
+// The next set of tests verifies the per-iteration lookup counter that bounds
+// DB work when a peer floods the handler with hashes that all miss on disk.
+// Each test sends 4*cap phantom hashes and asserts the handler runs at most
+// 2*cap iterations before returning, matching the pattern geth adopted in
+// eth/66.
+
+func TestHandleBlockBodiesRequestMsg_PhantomFlood(t *testing.T) {
+	cap := downloader.MaxBlockFetch
+	hashes := makePhantomHashes(4 * cap)
+
+	mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+	defer mockCtrl.Finish()
+
+	msg := generateMsg(t, BlockBodiesRequestMsg, hashes)
+
+	// With the fix, lookups (incremented once per iteration) stops at 2*cap,
+	// so GetBodyRLP is invoked exactly 2*cap times for all-miss input.
+	mockBlockChain.EXPECT().GetBodyRLP(gomock.Any()).Return(nil).Times(2 * cap)
+
+	bodies, err := handleBlockBodiesRequest(pm, mockPeer, msg)
+	assert.NoError(t, err)
+	assert.Empty(t, bodies)
+}
+
+func TestHandleNodeDataRequestMsg_PhantomFlood(t *testing.T) {
+	cap := downloader.MaxStateFetch
+	hashes := makePhantomHashes(4 * cap)
+
+	mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+	defer mockCtrl.Finish()
+
+	msg := generateMsg(t, NodeDataRequestMsg, hashes)
+
+	// lookups increments once per iteration, capped at 2*cap. Every miss falls
+	// through TrieNode to ContractCodeWithPrefix, so both fire 2*cap times.
+	mockBlockChain.EXPECT().TrieNode(gomock.Any()).Return(nil, nil).Times(2 * cap)
+	mockBlockChain.EXPECT().ContractCodeWithPrefix(gomock.Any()).Return(nil, nil).Times(2 * cap)
+	mockPeer.EXPECT().SendNodeData([][]byte(nil)).Return(nil).Times(1)
+
+	assert.NoError(t, handleNodeDataRequestMsg(pm, mockPeer, msg))
+}
+
+func TestHandleReceiptsRequestMsg_PhantomFlood(t *testing.T) {
+	cap := downloader.MaxReceiptFetch
+	hashes := makePhantomHashes(4 * cap)
+
+	mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+	defer mockCtrl.Finish()
+
+	msg := generateMsg(t, ReceiptsRequestMsg, hashes)
+
+	// lookups increments once per iteration, capped at 2*cap. Every miss falls
+	// through GetReceiptsByBlockHash to GetHeaderByHash, so both fire 2*cap times.
+	mockBlockChain.EXPECT().GetReceiptsByBlockHash(gomock.Any()).Return(nil).Times(2 * cap)
+	mockBlockChain.EXPECT().GetHeaderByHash(gomock.Any()).Return(nil).Times(2 * cap)
+	mockPeer.EXPECT().SendReceiptsRLP(gomock.Any()).Return(nil).Times(1)
+
+	assert.NoError(t, handleReceiptsRequestMsg(pm, mockPeer, msg))
+}
+
+func TestHandleStakingInfoRequestMsg_PhantomFlood(t *testing.T) {
+	cap := downloader.MaxStakingInfoFetch
+	hashes := makePhantomHashes(4 * cap)
+
+	mockCtrl, mockBlockChain, mockPeer, pm := prepareBlockChain(t)
+	defer mockCtrl.Finish()
+
+	cfg := params.TestChainConfig.Copy()
+	cfg.Istanbul = &params.IstanbulConfig{ProposerPolicy: uint64(istanbul.WeightedRandom)}
+	cfg.Governance = params.GetDefaultGovernanceConfig()
+	pm.chainconfig = cfg
+
+	msg := generateMsg(t, StakingInfoRequestMsg, hashes)
+
+	// lookups increments once per iteration, capped at 2*cap. Phantom header
+	// triggers `continue`, so only GetHeaderByHash fires (2*cap times).
+	mockBlockChain.EXPECT().GetHeaderByHash(gomock.Any()).Return(nil).Times(2 * cap)
+	mockPeer.EXPECT().SendStakingInfoRLP(gomock.Any()).Return(nil).Times(1)
+
+	assert.NoError(t, handleStakingInfoRequestMsg(pm, mockPeer, msg))
+}
+
+func TestHandleBlobSidecarsRequestMsg_PhantomFlood(t *testing.T) {
+	cap := downloader.MaxBlobSidecarsFetch
+	hashes := makePhantomHashes(4 * cap)
+	requestData := make([]blobSidecarsRequestData, 4*cap)
+	for i := range requestData {
+		requestData[i] = blobSidecarsRequestData{
+			BlockNum: hexutil.Uint64(i + 1),
+			TxIndex:  hexutil.Uint(i),
+			Hash:     hashes[i],
+		}
+	}
+
+	mockCtrl, _, mockPeer, pm := prepareBlockChain(t)
+	defer mockCtrl.Finish()
+
+	msg := generateMsg(t, BlobSidecarsRequestMsg, requestData)
+
+	mockTxPool := mocks.NewMockTxPool(mockCtrl)
+	// lookups increments once per iteration, capped at 2*cap. Every miss falls
+	// through storage to pool, so both fire 2*cap times.
+	mockTxPool.EXPECT().GetBlobSidecarFromStorage(gomock.Any(), gomock.Any()).Return(nil, nil).Times(2 * cap)
+	mockTxPool.EXPECT().GetBlobSidecarFromPool(gomock.Any()).Return(nil, nil).Times(2 * cap)
+	pm.txpool = mockTxPool
+	mockPeer.EXPECT().SendBlobSidecarsRLP(gomock.Any()).Return(nil).Times(1)
+
+	assert.NoError(t, handleBlobSidecarsRequestMsg(pm, mockPeer, msg))
 }
 
 // generateTestSidecar generates a test BlobTxSidecar for a given transaction hash.

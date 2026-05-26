@@ -165,15 +165,16 @@ func (mr *MockBackendMockRecorder) EventMux() *gomock.Call {
 }
 
 // FeeHistory mocks base method.
-func (m *MockBackend) FeeHistory(arg0 context.Context, arg1 uint64, arg2 rpc.BlockNumber, arg3 []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error) {
+func (m *MockBackend) FeeHistory(arg0 context.Context, arg1 uint64, arg2 rpc.BlockNumber, arg3 []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, []float64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FeeHistory", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*big.Int)
 	ret1, _ := ret[1].([][]*big.Int)
 	ret2, _ := ret[2].([]*big.Int)
 	ret3, _ := ret[3].([]float64)
-	ret4, _ := ret[4].(error)
-	return ret0, ret1, ret2, ret3, ret4
+	ret4, _ := ret[4].([]float64)
+	ret5, _ := ret[5].(error)
+	return ret0, ret1, ret2, ret3, ret4, ret5
 }
 
 // FeeHistory indicates an expected call of FeeHistory.

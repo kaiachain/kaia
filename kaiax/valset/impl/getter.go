@@ -21,6 +21,13 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
+// GetCandTesting returns nodes in the CandTesting state at block `num`.
+// TODO-kaia-permissionless: replace with a real implementation once AddressBookV2
+// and the permissionless node-state map land on dev.
+func (v *ValsetModule) GetCandTesting(num uint64) ([]common.Address, error) {
+	return []common.Address{}, nil
+}
+
 // GetCouncil returns the whole validator list for validating the block `num`.
 func (v *ValsetModule) GetCouncil(num uint64) ([]common.Address, error) {
 	council, err := v.getCouncil(num)

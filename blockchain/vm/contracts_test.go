@@ -626,3 +626,37 @@ func TestConsoleLog(t *testing.T) {
 		})
 	}
 }
+
+// TestValidateSenderPrecompile_ZeroSignatures verifies that the validateSender precompile
+// (0x400) rejects inputs that carry no signatures.
+func TestValidateSenderPrecompile_ZeroSignatures(t *testing.T) {
+	stateDb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+
+	k, err := crypto.HexToECDSA("98275a145bc1726eb0445433088f5f882f8a4a9499135239cfb4040e78991dab")
+	require.NoError(t, err)
+	addr := crypto.PubkeyToAddress(k.PublicKey)
+	stateDb.CreateEOA(addr, false, accountkey.NewAccountKeyPublicWithValue(&k.PublicKey))
+
+	// Build input: [20-byte address][32-byte hash] with no trailing signature bytes.
+	input := make([]byte, common.AddressLength+common.HashLength)
+	copy(input[:common.AddressLength], addr.Bytes())
+
+	c := &validateSender{}
+	assert.ErrorIs(t, c.validateSender(input, stateDb, 0), errNoSignatures)
+
+	// Run() swallows the error and returns 0x00 (failure indicator).
+	contract := NewContract(
+		types.NewAccountRefWithFeePayer(addr, addr),
+		nil, new(big.Int), 1e6, nil,
+	)
+	evm := NewEVM(
+		BlockContext{BlockNumber: big.NewInt(0)},
+		TxContext{},
+		stateDb,
+		&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)},
+		&Config{},
+	)
+	out, _, runErr := RunPrecompiledContract(c, input, contract, evm)
+	assert.NoError(t, runErr)
+	assert.Equal(t, []byte{0}, out)
+}

@@ -62,7 +62,7 @@ type Backend interface {
 	RPCTxFeeCap() float64         // global tx fee cap in eth_signTransaction
 	Sealer() consensus.Sealer
 	ValsetModule() valset.ValsetModule
-	FeeHistory(ctx context.Context, blockCount uint64, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, error)
+	FeeHistory(ctx context.Context, blockCount uint64, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*big.Int, [][]*big.Int, []*big.Int, []float64, []float64, error)
 
 	// BlockChain API
 	SetHead(number uint64) error

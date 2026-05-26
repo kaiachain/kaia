@@ -109,6 +109,9 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 		GoverningNode:          numToAddr(0),
 	}).AnyTimes()
 
+	// Mock chainConfig (set up before PostInsertBlock since applyVote reads Config())
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}).AnyTimes()
+
 	// Mock chain headers
 	for _, vote := range voteData {
 		voteBytes, err := headergov.NewVoteData(numToAddr(0), string(vote.key), vote.addresses).ToVoteBytes()
@@ -119,9 +122,6 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 		assert.NoError(t, v.PostInsertBlock(types.NewBlockWithHeader(header)))
 	}
 	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(&types.Header{}).AnyTimes() // For unused blocks
-
-	// Mock chainConfig
-	mockChain.EXPECT().Config().Return(&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}).AnyTimes()
 
 	// Mock qualified validators
 	for blkNum, data := range mockQualifiedValidators {

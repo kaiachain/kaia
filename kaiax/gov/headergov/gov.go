@@ -19,8 +19,8 @@ type govData struct {
 }
 
 // NewGovData returns a canonical & formatted gov data. It returns nil if any entry from `m` is invalid.
-// VoteForbidden flag and consistency is NOT checked.
-// In genesis, forbidden-vote params can exist. Thus, unlike NewVoteData, here we must not check VoteForbidden flag.
+// Deprecation (gov.DeprecatedAt) and consistency are NOT checked here.
+// In genesis, deprecated params can exist. Thus, unlike NewVoteData, we must not reject them at this layer.
 func NewGovData(m gov.PartialParamSet) GovData {
 	items := make(gov.PartialParamSet)
 	for name, value := range m {

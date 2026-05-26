@@ -31,7 +31,6 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/istanbul/core"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher"
 	"github.com/kaiachain/kaia/datasync/chaindatafetcher/kafka"
 	"github.com/kaiachain/kaia/datasync/dbsyncer"
@@ -192,6 +191,11 @@ var (
 	OverrideOsaka = &cli.Uint64Flag{
 		Name:     "override.osaka",
 		Usage:    "Manually specify the Osaka fork block, overriding the bundled setting",
+		Category: "KAIA",
+	}
+	OverridePermissionless = &cli.Uint64Flag{
+		Name:     "override.permissionless",
+		Usage:    "Manually specify the permissionless hardfork block, overriding the bundled setting",
 		Category: "KAIA",
 	}
 	StartBlockNumberFlag = &cli.Uint64Flag{
@@ -889,6 +893,22 @@ var (
 		Value:    rpc.ConcurrencyLimit,
 		Aliases:  []string{"http-rpc.concurrency-limit"},
 		EnvVars:  []string{"KLAYTN_RPC_CONCURRENCYLIMIT", "KAIA_RPC_CONCURRENCYLIMIT"},
+		Category: "API AND CONSOLE",
+	}
+	RPCBatchRequestLimit = &cli.IntFlag{
+		Name:     "rpc.batch-request-limit",
+		Usage:    "Maximum number of items in a JSON-RPC batch request (0 disables the check)",
+		Value:    rpc.BatchRequestLimit,
+		Aliases:  []string{"http-rpc.batch-request-limit"},
+		EnvVars:  []string{"KLAYTN_RPC_BATCH_REQUEST_LIMIT", "KAIA_RPC_BATCH_REQUEST_LIMIT"},
+		Category: "API AND CONSOLE",
+	}
+	RPCBatchResponseMaxSize = &cli.IntFlag{
+		Name:     "rpc.batch-response-max-size",
+		Usage:    "Maximum total response bytes per JSON-RPC batch (0 disables the check)",
+		Value:    rpc.BatchResponseMaxSize,
+		Aliases:  []string{"http-rpc.batch-response-max-size"},
+		EnvVars:  []string{"KLAYTN_RPC_BATCH_RESPONSE_MAX_SIZE", "KAIA_RPC_BATCH_RESPONSE_MAX_SIZE"},
 		Category: "API AND CONSOLE",
 	}
 	RPCNonEthCompatibleFlag = &cli.BoolFlag{
@@ -2052,14 +2072,6 @@ var (
 		Usage:    "Maximum transaction priority fee (or gasprice before Magma fork) to be recommended by gpo",
 		Value:    cn.GetDefaultConfig().GPO.MaxPrice.Int64(),
 		Category: "GAS PRICE ORACLE",
-	}
-
-	// VRank logging frequency
-	VRankLogFrequencyFlag = &cli.Uint64Flag{
-		Name:     "vrank.log-frequency",
-		Usage:    "Frequency of VRank logging in blocks (0=disabled, 1=every block, 60=every 60 blocks, ...)",
-		Value:    core.DefaultVRankLogFrequency,
-		Category: "VRANK",
 	}
 
 	// TODO-Kaia-Bootnode: Add bootnode's metric options

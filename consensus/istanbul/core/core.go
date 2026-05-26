@@ -75,10 +75,7 @@ func getRoundCommitteeState(c *core, seq, r uint64) (qualified *valset.AddressSe
 // For less than 4 validators, quorum size equals the effective size;
 // otherwise it is ceil(2 * min(qualifiedLen, committeeSize) / 3).
 func calcQuorumSize(qualifiedLen int, committeeSize uint64) int {
-	size := qualifiedLen
-	if size > int(committeeSize) {
-		size = int(committeeSize)
-	}
+	size := min(qualifiedLen, int(committeeSize))
 	if size < 4 {
 		return size
 	}

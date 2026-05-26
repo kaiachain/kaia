@@ -71,22 +71,24 @@ func (s *KaiaAPI) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, error
 }
 
 type FeeHistoryResult struct {
-	OldestBlock  *hexutil.Big     `json:"oldestBlock"`
-	Reward       [][]*hexutil.Big `json:"reward,omitempty"`
-	BaseFee      []*hexutil.Big   `json:"baseFeePerGas,omitempty"`
-	BlobBaseFee  []*hexutil.Big   `json:"blobBaseFeePerGas,omitempty"`
-	GasUsedRatio []float64        `json:"gasUsedRatio"`
+	OldestBlock      *hexutil.Big     `json:"oldestBlock"`
+	Reward           [][]*hexutil.Big `json:"reward,omitempty"`
+	BaseFee          []*hexutil.Big   `json:"baseFeePerGas,omitempty"`
+	BlobBaseFee      []*hexutil.Big   `json:"baseFeePerBlobGas,omitempty"`
+	GasUsedRatio     []float64        `json:"gasUsedRatio"`
+	BlobGasUsedRatio []float64        `json:"blobGasUsedRatio"`
 }
 
 // FeeHistory returns data relevant for fee estimation based on the specified range of blocks.
 func (s *KaiaAPI) FeeHistory(ctx context.Context, blockCount DecimalOrHex, lastBlock rpc.BlockNumber, rewardPercentiles []float64) (*FeeHistoryResult, error) {
-	oldest, reward, baseFee, gasUsed, err := s.b.FeeHistory(ctx, uint64(blockCount), lastBlock, rewardPercentiles)
+	oldest, reward, baseFee, gasUsed, blobGasUsed, err := s.b.FeeHistory(ctx, uint64(blockCount), lastBlock, rewardPercentiles)
 	if err != nil {
 		return nil, err
 	}
 	results := &FeeHistoryResult{
-		OldestBlock:  (*hexutil.Big)(oldest),
-		GasUsedRatio: gasUsed,
+		OldestBlock:      (*hexutil.Big)(oldest),
+		GasUsedRatio:     gasUsed,
+		BlobGasUsedRatio: blobGasUsed,
 	}
 	if reward != nil {
 		results.Reward = make([][]*hexutil.Big, len(reward))

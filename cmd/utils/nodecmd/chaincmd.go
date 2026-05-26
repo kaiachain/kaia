@@ -71,6 +71,7 @@ var (
 			utils.RocksDBMaxOpenFilesFlag,
 			utils.RocksDBCacheIndexAndFilterFlag,
 			utils.OverrideOsaka,
+			utils.OverridePermissionless,
 			utils.LivePruningFlag,
 			utils.FlatTrieFlag,
 		},
@@ -125,6 +126,10 @@ func initGenesis(ctx *cli.Context) error {
 	if ctx.IsSet(utils.OverrideOsaka.Name) {
 		v := ctx.Uint64(utils.OverrideOsaka.Name)
 		overrides.OverrideOsaka = new(big.Int).SetUint64(v)
+	}
+	if ctx.IsSet(utils.OverridePermissionless.Name) {
+		v := ctx.Uint64(utils.OverridePermissionless.Name)
+		overrides.OverridePermissionless = new(big.Int).SetUint64(v)
 	}
 
 	// Update undefined config with default values

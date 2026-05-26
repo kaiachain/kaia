@@ -76,6 +76,9 @@ type Header struct {
 	// ExcessBlobGas was added by EIP-4844 and is ignored in legacy headers.
 	ExcessBlobGas *uint64 `json:"excessBlobGas" rlp:"optional"`
 
+	// VRank was added by KIP-227 and is ignored in legacy headers.
+	VRank []byte `json:"vrank,omitempty" rlp:"optional"`
+
 	// New header fields must be added at tail for backward compatibility.
 }
 
@@ -97,6 +100,7 @@ type headerMarshaling struct {
 	MixHash       hexutil.Bytes
 	BlobGasUsed   *hexutil.Uint64
 	ExcessBlobGas *hexutil.Uint64
+	VRank         hexutil.Bytes
 }
 
 // HeaderHashFn is an optional override for Header.Hash. When set, it replaces
@@ -291,6 +295,10 @@ func CopyHeader(h *Header) *Header {
 	if h.BlobGasUsed != nil {
 		cpy.BlobGasUsed = new(uint64)
 		*cpy.BlobGasUsed = *h.BlobGasUsed
+	}
+	if len(h.VRank) > 0 {
+		cpy.VRank = make([]byte, len(h.VRank))
+		copy(cpy.VRank, h.VRank)
 	}
 	return &cpy
 }

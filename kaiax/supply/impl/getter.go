@@ -25,7 +25,7 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind"
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/contracts/contracts/system_contracts/rebalance"
+	"github.com/kaiachain/kaia/contracts/bindings/rebalance"
 	"github.com/kaiachain/kaia/kaiax/supply"
 )
 

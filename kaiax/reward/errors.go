@@ -28,6 +28,7 @@ var (
 	ErrNoReceipts            = errors.New("receipts not found")
 	ErrInvalidBlockRange     = errors.New("invalid block number range")
 	ErrBlockRangeLimit       = errors.New("exceeds block number range limit")
+	ErrInvalidRewardbase     = errors.New("rewardbase mismatches with expected address")
 )
 
 func errMalformedRewardRatio(ratio string) error {

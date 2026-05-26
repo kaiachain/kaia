@@ -231,6 +231,8 @@ func ActivePrecompiledContracts(rules params.Rules) map[common.Address]Precompil
 		return PrecompiledContractsPrague
 	case rules.IsCancun:
 		return PrecompiledContractsCancun
+	case rules.IsKore:
+		return PrecompiledContractsKore
 	case rules.IsIstanbul:
 		return PrecompiledContractsIstanbul
 	default:

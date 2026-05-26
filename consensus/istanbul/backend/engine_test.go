@@ -125,18 +125,6 @@ func excludeNodeByAddr(target common.Address) {
 	}
 }
 
-func enableVotes(paramNames []gov.ParamName) {
-	for _, paramName := range paramNames {
-		gov.Params[paramName].VoteForbidden = false
-	}
-}
-
-func disableVotes(paramNames []gov.ParamName) {
-	for _, paramName := range paramNames {
-		gov.Params[paramName].VoteForbidden = true
-	}
-}
-
 func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, []common.Address) {
 	nodeKeys = make([]*ecdsa.PrivateKey, n)
 	addrs = make([]common.Address, n)
@@ -342,6 +330,7 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 			GovModule:     mGov,
 			StakingModule: mStaking, // Irrelevant in ProposerPolicy=0. Won't inject mock.
 			ValsetModule:  mValset,
+			NodeAddress:   b.address,
 		}),
 		mValset.Init(&valset_impl.InitOpts{
 			Chain:         bc,
