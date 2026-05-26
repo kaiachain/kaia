@@ -142,7 +142,7 @@ func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
 	}
 
 	for currentNum, mockQualified := range mockQualifiedValidators {
-		qualified, err := v.getQualifiedValidators(currentNum)
+		qualified, err := v.getQualifiedPermissioned(currentNum)
 		assert.NoError(t, err)
 		assert.Equal(t, mockQualified, qualified.List())
 	}

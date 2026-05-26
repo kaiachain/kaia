@@ -24,12 +24,12 @@ during consensus of block N-1
                                        (committee collects VRankCandidate messages to produce the next block)
 
 when block N is proposed
-  proposer(N) ── TallyCfReport(N-1, round) ──▶ cfReport ──▶ header(N).VRank
+  proposer(N) ── EvaluateCandidates(N-1, round) ──▶ cfReport ──▶ header(N).VRank
 ```
 
 - `VRankPreprepare{Block, View, Sig}`: signed by `proposer(N-1)`; tells candidates a response is expected for `(N-1, view.Round)`.
 - `VRankCandidate{BlockNumber, Round, BlockHash, Sig, BlsSig}`: signed by each candidate; carries the block hash they observed.
-- `TallyCfReport(N-1, round)` lists every address in `GetCandTesting(N-1)` whose `VRankCandidate` did not arrive with the correct `BlockHash` before the timeout.
+- `EvaluateCandidates(N-1, round)` lists every address in `GetCandTesting(N-1)` whose `VRankCandidate` did not arrive with the correct `BlockHash` before the timeout.
 
 ### PFS
 
@@ -111,16 +111,16 @@ Calls `GetPFS(head)` and `getCPMatrix(head)` to warm both in-memory caches (PFS 
 #### Valset dependency
 
 - getters
-  - For all getters except `TallyCfReport`, `N` must exist in the header DB.
+  - For all getters except `EvaluateCandidates`, `N` must exist in the header DB.
   - `GetPfReport` and `GetPFS` call `GetProposer` for each block `x` in `[epochStart(N), N]`. In the valset module, `GetProposer` fast-paths committed historical blocks by returning `Chain.Sealer().Author(header)` when `header(x)` exists and its round matches the requested round; otherwise it falls back to block-context lookup.
   - `GetCFS(N)` calls `GetCandTesting(N)` to seed a fresh CP matrix when there is no cache or checkpoint seed, and `GetProposer(x, header(x).Round)` for every block `x ∈ [epochStart(N), N]`.
-  - `TallyCfReport(N, round)` is called by the proposer of block `N+1` to fill `header(N+1).VRank`; it queries `GetCandTesting(N)` because it validates messages collected for block `N`.
+  - `EvaluateCandidates(N, round)` is called by the proposer of block `N+1` to fill `header(N+1).VRank`; it queries `GetCandTesting(N)` because it validates messages collected for block `N`.
 
 | Function                  | Valset call                                                               | Notes                                                           |
 | ------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | `GetPfReport(N)`          | `GetProposer(N, r)`; `r ∈ [0, header(N).Round)`                           | valset fast-paths committed headers via `Chain.Sealer().Author` |
 | `GetCfReport(N)`          | —                                                                         | —                                                               |
-| `TallyCfReport(N, round)` | `GetCandTesting(N)`                                                       | `N` is the reported block whose responses are being tallied     |
+| `EvaluateCandidates(N, round)` | `GetCandTesting(N)`                                                       | `N` is the reported block whose responses are being evaluated   |
 | `GetPFS(N)`               | `GetProposer(x, r)`; `x ∈ [epochStart(N), N]`, `r ∈ [0, header(x).Round)` | valset fast-paths committed headers via `Chain.Sealer().Author` |
 | `GetCFS(N)`               | `GetCandTesting(N)`                                                       | seeds `newCPMatrix` when no cache/checkpoint seed exists        |
 |                           | `GetProposer(x, header(x).Round)`; `x ∈ [epochStart(N), N]`               | reporter lookup per committed header                            |
@@ -128,7 +128,7 @@ Calls `GetPFS(head)` and `getCPMatrix(head)` to warm both in-memory caches (PFS 
 - handlers
   - During consensus of block N, block N is not yet committed, but its validator/candidate/proposer set is already determined — so `Get*(N)` is safe for proposer / candidate / committee identity checks tied to that live view.
   - `HandleVRankCandidate` deliberately does not perform canonical committee-membership or candidate-membership validation at receive time. It acts as a bounded inbox keyed by `(BlockNumber, Round)`: it requires a current preprepared view, drops stale messages, rejects overly-future messages, verifies ECDSA and BLS signatures, and ignores duplicate senders per view.
-  - Canonical semantic validation for candidate messages happens later in `TallyCfReport`, which checks the exact view's preprepare time, expected block hash, the candidate set from `GetCandTesting(N)`, and the timeout.
+  - Canonical semantic validation for candidate messages happens later in `EvaluateCandidates`, which checks the exact view's preprepare time, expected block hash, the candidate set from `GetCandTesting(N)`, and the timeout.
   - `VerifyHeader(N)` calls `GetCandTesting(N-1)` to confirm every address in `header(N).VRank` is an actual candidate for the reported block `N-1`, blocking malicious proposers from injecting arbitrary addresses to manipulate CFS scores.
 
 | Function                                  | Valset call                   | Notes                                                          |
@@ -167,9 +167,9 @@ Called when a `VRankCandidate` message is received. The handler does not try to 
 - drops stale messages for already-passed views
 - verifies the candidate's ECDSA and BLS signatures
 - ignores duplicate senders for the same `(blockNum, round)`
-- records the message in the collector for later tallying
+- records the message in the collector for later evaluation
 
-`TallyCfReport` is the stage that applies canonical checks such as expected block hash, candidate membership in `GetCandTesting(N)`, and the timeout rule.
+`EvaluateCandidates` is the stage that applies canonical checks such as expected block hash, candidate membership in `GetCandTesting(N)`, and the timeout rule.
 
 #### VerifyHeader
 
@@ -196,6 +196,6 @@ All getters return `ErrNotPermissionless` if the queried block is before the per
 
 - `GetPfReport(N)`: Returns the list of proposers who failed at block N (one per failed round).
 - `GetCfReport(N)`: Returns the raw cfReport committed in `header(N).VRank`.
-- `TallyCfReport(N, round)`: Computes the cfReport for block N at the given round from the in-memory collector, for use by the proposer of block N+1.
+- `EvaluateCandidates(N, round)`: Computes the cfReport for block N at the given round from the in-memory collector, for use by the proposer of block N+1.
 - `GetPFS(N)`: Returns the cumulative PFS map over `[epochStart(N), N]`.
 - `GetCFS(N)`: Returns the cumulative CFS map over `[epochStart(N), N]`. The byzantine-filter threshold is derived internally from `cpMatrix.ProposerCount()`, the number of distinct proposers seen so far in the epoch.

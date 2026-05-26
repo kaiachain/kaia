@@ -38,7 +38,6 @@ func TestGetCouncilGenesis(t *testing.T) {
 		mockChain = chain_mock.NewMockBlockChain(ctrl)
 		v         = &ValsetModule{InitOpts: InitOpts{Chain: mockChain}}
 	)
-	defer ctrl.Finish()
 	// Kairos block 0
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(&types.Header{
 		Number: common.Big0,

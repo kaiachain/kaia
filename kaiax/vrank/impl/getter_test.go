@@ -174,9 +174,9 @@ func TestGetPfReport_Errors(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// TestTallyCfReport
+// TestEvaluateCandidates
 // ---------------------------------------------------------------------------
-func TestTallyCfReport(t *testing.T) {
+func TestEvaluateCandidates(t *testing.T) {
 	var (
 		ctrl   = gomock.NewController(t)
 		valset = mock_valset.NewMockValsetModule(ctrl)
@@ -249,7 +249,7 @@ func TestTallyCfReport(t *testing.T) {
 	}
 
 	for _, v := range validators {
-		report, err := v.VRankModule.TallyCfReport(2, 0)
+		report, err := v.VRankModule.EvaluateCandidates(2, 0)
 		assert.NoError(t, err)
 		assert.Len(t, report, 4, "cfReport: 2 liars + 2 late")
 		for _, addr := range ontimeCands {
@@ -264,13 +264,13 @@ func TestTallyCfReport(t *testing.T) {
 		for _, addr := range lateCands {
 			assert.True(t, slices.Contains(report, addr))
 		}
-		report2, err := v.VRankModule.TallyCfReport(2, 0)
+		report2, err := v.VRankModule.EvaluateCandidates(2, 0)
 		assert.NoError(t, err)
-		assert.Equal(t, report, report2, "TallyCfReport must be deterministic")
+		assert.Equal(t, report, report2, "EvaluateCandidates must be deterministic")
 	}
 }
 
-func TestTallyCfReport_Errors(t *testing.T) {
+func TestEvaluateCandidates_Errors(t *testing.T) {
 	block1 := types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
 	view1_0 := &bft.View{Sequence: big.NewInt(1), Round: common.Big0}
 	candAddr := common.HexToAddress("0xc4nd1d473")
@@ -286,11 +286,11 @@ func TestTallyCfReport_Errors(t *testing.T) {
 	}
 
 	t.Run("pre-fork block returns ErrNotPermissionless", func(t *testing.T) {
-		// TallyCfReport(blockNum=0, ...) targets header(1).VRank; fork check is on blockNum+1=1.
+		// EvaluateCandidates(blockNum=0, ...) targets header(1).VRank; fork check is on blockNum+1=1.
 		// With osaka config, fork is never enabled, so block 1 is pre-fork.
 		v := newCN(t, withHardfork("osaka"), withoutStart()).VRankModule
 
-		report, err := v.TallyCfReport(0, 0)
+		report, err := v.EvaluateCandidates(0, 0)
 		assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
 		assert.Nil(t, report)
 	})
@@ -299,7 +299,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		cn := newCNWithDefaults()
 		cn.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
-		report, err := cn.VRankModule.TallyCfReport(1, 0)
+		report, err := cn.VRankModule.EvaluateCandidates(1, 0)
 		require.NoError(t, err)
 		assert.True(t, slices.Contains(report, candAddr))
 	})
@@ -313,7 +313,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		cn.Valset.EXPECT().GetProposer(uint64(params.DefaultVRankEpoch-1), uint64(0)).Return(cn.Addr, nil).AnyTimes()
 		cn.VRankModule.HandleIstanbulPreprepare(block, view)
 
-		report, err := cn.VRankModule.TallyCfReport(params.DefaultVRankEpoch-1, 0)
+		report, err := cn.VRankModule.EvaluateCandidates(params.DefaultVRankEpoch-1, 0)
 		require.NoError(t, err)
 		assert.Empty(t, report)
 	})
@@ -322,11 +322,11 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		cn := newCNWithDefaults()
 		cn.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
-		report, err := cn.VRankModule.TallyCfReport(1, 11) // maxRound is 10
+		report, err := cn.VRankModule.EvaluateCandidates(1, 11) // maxRound is 10
 		require.ErrorIs(t, err, vrank.ErrRoundOutOfRange)
 		assert.Nil(t, report)
 
-		report, err = cn.VRankModule.TallyCfReport(1, 10)
+		report, err = cn.VRankModule.EvaluateCandidates(1, 10)
 		assert.NotErrorIs(t, err, vrank.ErrRoundOutOfRange)
 	})
 
@@ -340,7 +340,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(cn1.Addr, nil).AnyTimes()
 		cn1.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
-		report, err := cn2.VRankModule.TallyCfReport(1, 0)
+		report, err := cn2.VRankModule.EvaluateCandidates(1, 0)
 		require.NoError(t, err)
 		assert.Empty(t, report)
 	})
@@ -351,7 +351,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 
 		prepreparedTime, _, _ := val.VRankModule.collector.GetViewData(vrank.ViewKey{N: 1, R: 0})
 		assert.True(t, prepreparedTime.IsZero())
-		report, err := val.VRankModule.TallyCfReport(1, 0)
+		report, err := val.VRankModule.EvaluateCandidates(1, 0)
 		require.NoError(t, err)
 		assert.Empty(t, report)
 	})
@@ -364,7 +364,7 @@ func TestTallyCfReport_Errors(t *testing.T) {
 		valset.EXPECT().GetCandTesting(uint64(1)).Return(nil, assert.AnError).AnyTimes()
 		cn.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
-		report, err := cn.VRankModule.TallyCfReport(1, 0)
+		report, err := cn.VRankModule.EvaluateCandidates(1, 0)
 		require.ErrorIs(t, err, vrank.ErrGetCandidateFailed)
 		assert.Nil(t, report)
 	})

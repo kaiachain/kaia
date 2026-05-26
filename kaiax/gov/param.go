@@ -571,6 +571,16 @@ var AlwaysDeprecated = map[ParamName]struct{}{
 	RewardUseGiniCoeff:           {},
 }
 
+// PermissionlessDeprecated lists params that become disallowed for voting
+// after the Permissionless hardfork. Validator membership is governed by
+// AddressBookV2 (KIP-290) and the committee is derived from on-chain state,
+// so these governance levers no longer have an effect.
+var PermissionlessDeprecated = map[ParamName]struct{}{
+	AddValidator:          {},
+	RemoveValidator:       {},
+	IstanbulCommitteeSize: {},
+}
+
 // DeprecatedAt reports whether a governance parameter is deprecated (disallowed
 // for voting) given the current chain rules. Deprecation has two sources:
 //   - static: params that have always been deprecated regardless of fork state
@@ -581,7 +591,10 @@ func DeprecatedAt(name ParamName, rules params.Rules) bool {
 	if _, ok := AlwaysDeprecated[name]; ok {
 		return true
 	}
-
-	// TODO-Permissionless: fork-aware deprecation: extended in the permissionless branch.
+	if rules.IsPermissionless {
+		if _, ok := PermissionlessDeprecated[name]; ok {
+			return true
+		}
+	}
 	return false
 }

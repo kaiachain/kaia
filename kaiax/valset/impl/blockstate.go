@@ -25,7 +25,7 @@ import (
 
 // InitializeState writes the post-fork node-state diff into the
 // AddressBookV2 contract via a system tx. No-op pre-fork. Runs before user
-// transactions while statedb still represents parent state.
+// transactions.
 func (v *ValsetModule) InitializeState(header *types.Header, statedb *state.StateDB) {
 	config := v.Chain.Config()
 	if !config.IsPermissionlessForkEnabled(header.Number) {
@@ -38,9 +38,7 @@ func (v *ValsetModule) InitializeState(header *types.Header, statedb *state.Stat
 	}
 }
 
-// FinalizeState installs and initializes the AddressBookV2 proxy at the HF-1
-// block. Runs after user transactions so the install is the last thing in the
-// block's state root. No-op outside that single block.
+// FinalizeState installs and initializes the AddressBookV2 proxy at the HF-1 block.
 func (v *ValsetModule) FinalizeState(header *types.Header, statedb *state.StateDB, txs []*types.Transaction, receipts []*types.Receipt) error {
 	config := v.Chain.Config()
 	if !config.IsPermissionlessForkBlockParent(header.Number) {

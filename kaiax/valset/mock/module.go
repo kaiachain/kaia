@@ -12,6 +12,7 @@ import (
 	types "github.com/kaiachain/kaia/blockchain/types"
 	vm "github.com/kaiachain/kaia/blockchain/vm"
 	common "github.com/kaiachain/kaia/common"
+	valset "github.com/kaiachain/kaia/kaiax/valset"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -64,6 +65,21 @@ func (m *MockValsetModule) FinalizeState(arg0 *types.Header, arg1 *state.StateDB
 func (mr *MockValsetModuleMockRecorder) FinalizeState(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinalizeState", reflect.TypeOf((*MockValsetModule)(nil).FinalizeState), arg0, arg1, arg2, arg3)
+}
+
+// GetCNPeers mocks base method.
+func (m *MockValsetModule) GetCNPeers(arg0 uint64) ([]common.Address, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCNPeers", arg0)
+	ret0, _ := ret[0].([]common.Address)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCNPeers indicates an expected call of GetCNPeers.
+func (mr *MockValsetModuleMockRecorder) GetCNPeers(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCNPeers", reflect.TypeOf((*MockValsetModule)(nil).GetCNPeers), arg0)
 }
 
 // GetCandTesting mocks base method.
@@ -124,6 +140,36 @@ func (m *MockValsetModule) GetDemotedValidators(arg0 uint64) ([]common.Address, 
 func (mr *MockValsetModuleMockRecorder) GetDemotedValidators(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDemotedValidators", reflect.TypeOf((*MockValsetModule)(nil).GetDemotedValidators), arg0)
+}
+
+// GetHeaderGovVoters mocks base method.
+func (m *MockValsetModule) GetHeaderGovVoters(arg0 uint64) ([]common.Address, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHeaderGovVoters", arg0)
+	ret0, _ := ret[0].([]common.Address)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetHeaderGovVoters indicates an expected call of GetHeaderGovVoters.
+func (mr *MockValsetModuleMockRecorder) GetHeaderGovVoters(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeaderGovVoters", reflect.TypeOf((*MockValsetModule)(nil).GetHeaderGovVoters), arg0)
+}
+
+// GetNodesByState mocks base method.
+func (m *MockValsetModule) GetNodesByState(arg0 uint64, arg1 []valset.NodeState) (map[common.Address]*valset.Node, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNodesByState", arg0, arg1)
+	ret0, _ := ret[0].(map[common.Address]*valset.Node)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNodesByState indicates an expected call of GetNodesByState.
+func (mr *MockValsetModuleMockRecorder) GetNodesByState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodesByState", reflect.TypeOf((*MockValsetModule)(nil).GetNodesByState), arg0, arg1)
 }
 
 // GetProposer mocks base method.
@@ -196,6 +242,20 @@ func (mr *MockValsetModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockValsetModule)(nil).PostInsertBlock), arg0)
 }
 
+// PrepareHeader mocks base method.
+func (m *MockValsetModule) PrepareHeader(arg0 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrepareHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PrepareHeader indicates an expected call of PrepareHeader.
+func (mr *MockValsetModuleMockRecorder) PrepareHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareHeader", reflect.TypeOf((*MockValsetModule)(nil).PrepareHeader), arg0)
+}
+
 // RewindDelete mocks base method.
 func (m *MockValsetModule) RewindDelete(arg0 common.Hash, arg1 uint64) {
 	m.ctrl.T.Helper()
@@ -244,6 +304,20 @@ func (m *MockValsetModule) Stop() {
 func (mr *MockValsetModuleMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockValsetModule)(nil).Stop))
+}
+
+// VerifyHeader mocks base method.
+func (m *MockValsetModule) VerifyHeader(arg0, arg1 *types.Header) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyHeader", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VerifyHeader indicates an expected call of VerifyHeader.
+func (mr *MockValsetModuleMockRecorder) VerifyHeader(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyHeader", reflect.TypeOf((*MockValsetModule)(nil).VerifyHeader), arg0, arg1)
 }
 
 // WriteTransitionToABv2 mocks base method.
