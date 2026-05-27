@@ -17,12 +17,15 @@
 package cn
 
 import (
+	"math/big"
+
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/networks/p2p"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -37,8 +40,9 @@ type cnPeerSink interface {
 }
 
 type cnPeerUpdater struct {
-	reader cnPeerReader
-	sink   cnPeerSink
+	reader      cnPeerReader
+	sink        cnPeerSink
+	chainConfig *params.ChainConfig
 
 	lastHash *common.Hash // Last hashed SetCNPeers input; nil means never pushed.
 }
@@ -48,10 +52,11 @@ type cnPeerInput struct {
 	Addrs             []common.Address
 }
 
-func newCNPeerUpdater(reader cnPeerReader, sink cnPeerSink) *cnPeerUpdater {
+func newCNPeerUpdater(reader cnPeerReader, sink cnPeerSink, chainConfig *params.ChainConfig) *cnPeerUpdater {
 	return &cnPeerUpdater{
-		reader: reader,
-		sink:   sink,
+		reader:      reader,
+		sink:        sink,
+		chainConfig: chainConfig,
 	}
 }
 
@@ -59,7 +64,21 @@ func (u *cnPeerUpdater) syncHead(head *types.Block) {
 	if head == nil {
 		return
 	}
-	u.sync(head.NumberU64() + 1)
+	num := head.NumberU64() + 1
+	if !u.shouldSync(num) {
+		u.setCNPeersIfChanged(nil)
+		return
+	}
+	u.sync(num)
+}
+
+func (u *cnPeerUpdater) shouldSync(num uint64) bool {
+	if u == nil || u.chainConfig == nil || u.chainConfig.PermissionlessCompatibleBlock == nil {
+		return false
+	}
+	// Avoid next-block ABv2 reads until the HF block has been committed.
+	syncAfter := new(big.Int).Add(u.chainConfig.PermissionlessCompatibleBlock, common.Big1)
+	return new(big.Int).SetUint64(num).Cmp(syncAfter) >= 0
 }
 
 func (u *cnPeerUpdater) sync(num uint64) {
@@ -101,7 +120,7 @@ func (s *CN) startCNPeerSync(srvr p2p.Server) {
 	if srvr == nil || s.valsetModule == nil || s.blockchain == nil {
 		return
 	}
-	s.cnPeerUpdater = newCNPeerUpdater(s.valsetModule, srvr)
+	s.cnPeerUpdater = newCNPeerUpdater(s.valsetModule, srvr, s.chainConfig)
 
 	ch := make(chan blockchain.ChainHeadEvent, cnPeerHeadChanSize)
 	sub := s.blockchain.SubscribeChainHeadEvent(ch)

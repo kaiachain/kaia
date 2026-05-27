@@ -23,6 +23,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -63,84 +64,128 @@ func (s *recordCNPeerSink) SetCNPeers(addrs []common.Address) {
 	s.calls = append(s.calls, cp)
 }
 
-func TestCNPeerUpdaterSyncHeadUsesNextBlockNumber(t *testing.T) {
-	reader := &fakeCNPeerReader{results: []cnPeerReadResult{{addrs: cnTestAddrs(1)}}}
+type cnPeerUpdaterOpt func(*cnPeerUpdaterOpts)
+
+type cnPeerUpdaterOpts struct {
+	results []cnPeerReadResult
+	fork    uint64
+}
+
+func withCNPeerReadResults(results ...cnPeerReadResult) cnPeerUpdaterOpt {
+	return func(o *cnPeerUpdaterOpts) { o.results = results }
+}
+
+func withPermissionlessFork(fork uint64) cnPeerUpdaterOpt {
+	return func(o *cnPeerUpdaterOpts) { o.fork = fork }
+}
+
+type cnPeerUpdaterTest struct {
+	updater *cnPeerUpdater
+	reader  *fakeCNPeerReader
+	sink    *recordCNPeerSink
+}
+
+func newCNPeerUpdaterTest(t *testing.T, options ...cnPeerUpdaterOpt) *cnPeerUpdaterTest {
+	t.Helper()
+
+	opts := &cnPeerUpdaterOpts{fork: 1}
+	for _, opt := range options {
+		opt(opts)
+	}
+
+	reader := &fakeCNPeerReader{results: opts.results}
 	sink := &recordCNPeerSink{}
-	updater := newCNPeerUpdater(reader, sink)
+	return &cnPeerUpdaterTest{
+		updater: newCNPeerUpdater(reader, sink, &params.ChainConfig{
+			PermissionlessCompatibleBlock: new(big.Int).SetUint64(opts.fork),
+		}),
+		reader: reader,
+		sink:   sink,
+	}
+}
 
-	updater.syncHead(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)}))
+func TestCNPeerUpdaterSyncHeadUsesNextBlockNumber(t *testing.T) {
+	cn := newCNPeerUpdaterTest(t, withCNPeerReadResults(cnPeerReadResult{addrs: cnTestAddrs(1)}))
 
-	require.Equal(t, []uint64{11}, reader.calls)
-	require.Len(t, sink.calls, 1)
-	assert.Equal(t, cnTestAddrs(1), sink.calls[0])
+	cn.updater.syncHead(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(10)}))
+
+	require.Equal(t, []uint64{11}, cn.reader.calls)
+	require.Len(t, cn.sink.calls, 1)
+	assert.Equal(t, cnTestAddrs(1), cn.sink.calls[0])
+}
+
+func TestCNPeerUpdaterSyncHeadWaitsUntilPermissionlessPlusOne(t *testing.T) {
+	cn := newCNPeerUpdaterTest(t,
+		withPermissionlessFork(30),
+		withCNPeerReadResults(cnPeerReadResult{addrs: cnTestAddrs(1)}),
+	)
+
+	cn.updater.syncHead(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(28)})) // target 29
+	cn.updater.syncHead(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(29)})) // target 30
+	cn.updater.syncHead(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(30)})) // target 31
+
+	require.Equal(t, []uint64{31}, cn.reader.calls)
+	require.Len(t, cn.sink.calls, 2)
+	assert.Nil(t, cn.sink.calls[0])
+	assert.Equal(t, cnTestAddrs(1), cn.sink.calls[1])
 }
 
 func TestCNPeerUpdaterSkipsDuplicatePushes(t *testing.T) {
-	reader := &fakeCNPeerReader{results: []cnPeerReadResult{{addrs: cnTestAddrs(1, 2)}}}
-	sink := &recordCNPeerSink{}
-	updater := newCNPeerUpdater(reader, sink)
+	cn := newCNPeerUpdaterTest(t, withCNPeerReadResults(cnPeerReadResult{addrs: cnTestAddrs(1, 2)}))
 
-	updater.sync(11)
-	updater.sync(12)
+	cn.updater.sync(11)
+	cn.updater.sync(12)
 
-	require.Len(t, sink.calls, 1)
-	assert.Equal(t, cnTestAddrs(1, 2), sink.calls[0])
+	require.Len(t, cn.sink.calls, 1)
+	assert.Equal(t, cnTestAddrs(1, 2), cn.sink.calls[0])
 }
 
 func TestCNPeerUpdaterNilDisablesFiltering(t *testing.T) {
-	reader := &fakeCNPeerReader{results: []cnPeerReadResult{{addrs: nil}}}
-	sink := &recordCNPeerSink{}
-	updater := newCNPeerUpdater(reader, sink)
+	cn := newCNPeerUpdaterTest(t, withCNPeerReadResults(cnPeerReadResult{addrs: nil}))
 
-	updater.sync(11)
-	updater.sync(12)
+	cn.updater.sync(11)
+	cn.updater.sync(12)
 
-	require.Len(t, sink.calls, 1)
-	assert.Nil(t, sink.calls[0])
+	require.Len(t, cn.sink.calls, 1)
+	assert.Nil(t, cn.sink.calls[0])
 }
 
 func TestCNPeerUpdaterNilAndEmptyInputsAreDistinct(t *testing.T) {
-	reader := &fakeCNPeerReader{results: []cnPeerReadResult{
-		{addrs: nil},
-		{addrs: []common.Address{}},
-	}}
-	sink := &recordCNPeerSink{}
-	updater := newCNPeerUpdater(reader, sink)
+	cn := newCNPeerUpdaterTest(t, withCNPeerReadResults(
+		cnPeerReadResult{addrs: nil},
+		cnPeerReadResult{addrs: []common.Address{}},
+	))
 
-	updater.sync(11)
-	updater.sync(12)
+	cn.updater.sync(11)
+	cn.updater.sync(12)
 
-	require.Len(t, sink.calls, 2)
-	assert.Nil(t, sink.calls[0])
-	assert.NotNil(t, sink.calls[1])
-	assert.Empty(t, sink.calls[1])
+	require.Len(t, cn.sink.calls, 2)
+	assert.Nil(t, cn.sink.calls[0])
+	assert.NotNil(t, cn.sink.calls[1])
+	assert.Empty(t, cn.sink.calls[1])
 }
 
 func TestCNPeerUpdaterFailureDisablesBeforeFirstPush(t *testing.T) {
-	reader := &fakeCNPeerReader{results: []cnPeerReadResult{{err: errors.New("missing cn peers")}}}
-	sink := &recordCNPeerSink{}
-	updater := newCNPeerUpdater(reader, sink)
+	cn := newCNPeerUpdaterTest(t, withCNPeerReadResults(cnPeerReadResult{err: errors.New("missing cn peers")}))
 
-	updater.sync(11)
+	cn.updater.sync(11)
 
-	require.Len(t, sink.calls, 1)
-	assert.Nil(t, sink.calls[0])
+	require.Len(t, cn.sink.calls, 1)
+	assert.Nil(t, cn.sink.calls[0])
 }
 
 func TestCNPeerUpdaterFailureDisablesFilteringAfterPreviousPush(t *testing.T) {
-	reader := &fakeCNPeerReader{results: []cnPeerReadResult{
-		{addrs: cnTestAddrs(1)},
-		{err: errors.New("temporary read failure")},
-	}}
-	sink := &recordCNPeerSink{}
-	updater := newCNPeerUpdater(reader, sink)
+	cn := newCNPeerUpdaterTest(t, withCNPeerReadResults(
+		cnPeerReadResult{addrs: cnTestAddrs(1)},
+		cnPeerReadResult{err: errors.New("temporary read failure")},
+	))
 
-	updater.sync(11)
-	updater.sync(12)
+	cn.updater.sync(11)
+	cn.updater.sync(12)
 
-	require.Len(t, sink.calls, 2)
-	assert.Equal(t, cnTestAddrs(1), sink.calls[0])
-	assert.Nil(t, sink.calls[1])
+	require.Len(t, cn.sink.calls, 2)
+	assert.Equal(t, cnTestAddrs(1), cn.sink.calls[0])
+	assert.Nil(t, cn.sink.calls[1])
 }
 
 func cnTestAddrs(n ...int) []common.Address {
