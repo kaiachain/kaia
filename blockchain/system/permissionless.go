@@ -17,6 +17,7 @@
 package system
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -77,7 +78,7 @@ func AllocPermissionlessPrerequisites(config *AllocPermissionlessConfig) (map[co
 
 func allocPermissionless(config *AllocPermissionlessConfig, installABv2 bool) (map[common.Address]blockchain.GenesisAccount, map[string]common.Address, error) {
 	if config == nil {
-		return nil, nil, fmt.Errorf("nil permissionless config")
+		return nil, nil, errors.New("nil permissionless config")
 	}
 	if len(config.NodeIds) != len(config.NodeInfos) || len(config.NodeIds) != len(config.StakeAmts) {
 		return nil, nil, fmt.Errorf("mismatched lengths: nodeIds=%d, infos=%d, stakeAmts=%d",
