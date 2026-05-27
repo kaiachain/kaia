@@ -283,9 +283,9 @@ type basePeer struct {
 	td   *big.Int
 	lock sync.RWMutex
 
-	knownTxsCache    common.Cache              // FIFO cache of transaction hashes known to be known by this peer
-	knownBlocksCache common.Cache              // FIFO cache of block hashes known to be known by this peer
-	knownBidsCache   common.Cache              // FIFO cache of bid hashes known to be known by this peer
+	knownTxsCache    *knownHashSet             // bounded FIFO set of tx hashes known to be known by this peer
+	knownBlocksCache *knownHashSet             // bounded FIFO set of block hashes known to be known by this peer
+	knownBidsCache   *knownHashSet             // bounded FIFO set of bid hashes known to be known by this peer
 	queuedTxs        chan []*types.Transaction // Queue of transactions to broadcast to the peer
 	queuedProps      chan *propEvent           // Queue of blocks to broadcast to the peer
 	queuedAnns       chan *types.Block         // Queue of blocks to announce to the peer
@@ -297,19 +297,19 @@ type basePeer struct {
 	snapExt *snap.Peer // Satellite `snap` connection
 }
 
-// newKnownBlockCache returns an empty cache for knownBlocksCache.
-func newKnownBlockCache() common.Cache {
-	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownBlocks, IsScaled: true})
+// newKnownBlockCache returns an empty FIFO set for knownBlocksCache.
+func newKnownBlockCache() *knownHashSet {
+	return newKnownHashSet(maxKnownBlocks)
 }
 
-// newKnownTxCache returns an empty cache for knownTxsCache.
-func newKnownTxCache() common.Cache {
-	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownTxs, IsScaled: true})
+// newKnownTxCache returns an empty FIFO set for knownTxsCache.
+func newKnownTxCache() *knownHashSet {
+	return newKnownHashSet(maxKnownTxs)
 }
 
-// newKnownBidCache returns an empty cache for knownBidsCache.
-func newKnownBidCache() common.Cache {
-	return common.NewCache(common.FIFOCacheConfig{CacheSize: maxKnownBids, IsScaled: true})
+// newKnownBidCache returns an empty FIFO set for knownBidsCache.
+func newKnownBidCache() *knownHashSet {
+	return newKnownHashSet(maxKnownBids)
 }
 
 // newPeer returns new Peer interface.
@@ -487,19 +487,19 @@ func (p *basePeer) SetHead(hash common.Hash, td *big.Int) {
 // AddToKnownBlocks adds a block hash to knownBlocksCache for the peer, ensuring that the block will
 // never be propagated to this particular peer.
 func (p *basePeer) AddToKnownBlocks(hash common.Hash) {
-	p.knownBlocksCache.Add(hash, struct{}{})
+	p.knownBlocksCache.Add(hash)
 }
 
 // AddToKnownTxs adds a transaction hash to knownTxsCache for the peer, ensuring that it
 // will never be propagated to this particular peer.
 func (p *basePeer) AddToKnownTxs(hash common.Hash) {
-	p.knownTxsCache.Add(hash, struct{}{})
+	p.knownTxsCache.Add(hash)
 }
 
 // AddToKnownBids adds a bid hash to knownBidsCache for the peer, ensuring that it
 // will never be propagated to this particular peer.
 func (p *basePeer) AddToKnownBids(hash common.Hash) {
-	p.knownBidsCache.Add(hash, struct{}{})
+	p.knownBidsCache.Add(hash)
 }
 
 // Send writes an RLP-encoded message with the given code.
@@ -815,20 +815,17 @@ func (p *basePeer) GetVersion() int {
 
 // KnowsBlock returns if the peer is known to have the block, based on knownBlocksCache.
 func (p *basePeer) KnowsBlock(hash common.Hash) bool {
-	_, ok := p.knownBlocksCache.Get(hash)
-	return ok
+	return p.knownBlocksCache.Contains(hash)
 }
 
 // KnowsTx returns if the peer is known to have the transaction, based on knownTxsCache.
 func (p *basePeer) KnowsTx(hash common.Hash) bool {
-	_, ok := p.knownTxsCache.Get(hash)
-	return ok
+	return p.knownTxsCache.Contains(hash)
 }
 
 // KnowsBid returns if the peer is known to have the bid, based on knownBidsCache.
 func (p *basePeer) KnowsBid(hash common.Hash) bool {
-	_, ok := p.knownBidsCache.Get(hash)
-	return ok
+	return p.knownBidsCache.Contains(hash)
 }
 
 // GetP2PPeer returns the p2p.Peer.
