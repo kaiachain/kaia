@@ -22,6 +22,9 @@ import (
 	"os"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/naoina/toml"
 	"github.com/urfave/cli/v2"
 )
@@ -119,7 +122,7 @@ func decode(ctx *cli.Context) error {
 	}
 
 	extraString := ctx.String(extraDataFlag.Name)
-	vanity, istanbulExtra, err := Decode(extraString)
+	vanity, istanbulExtra, err := DecodeExtra(extraString)
 	if err != nil {
 		return err
 	}
@@ -139,4 +142,20 @@ func decode(ctx *cli.Context) error {
 	}
 
 	return nil
+}
+
+func DecodeExtra(extraData string) ([]byte, *istanbul.IstanbulExtra, error) {
+	extra, err := hexutil.Decode(extraData)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(extra) < istanbul.IstanbulExtraVanity {
+		return nil, nil, istanbul.ErrInvalidIstanbulHeaderExtra
+	}
+
+	var istanbulExtra *istanbul.IstanbulExtra
+	if err := rlp.DecodeBytes(extra[istanbul.IstanbulExtraVanity:], &istanbulExtra); err != nil {
+		return nil, nil, err
+	}
+	return extra[:istanbul.IstanbulExtraVanity], istanbulExtra, nil
 }
