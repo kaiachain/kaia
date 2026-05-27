@@ -197,6 +197,20 @@ func TestGetCNPeersFilterFallback(t *testing.T) {
 		assert.Equal(t, numsToAddrs(1, 2), cnPeers)
 	})
 
+	t.Run("pre-fork GetCouncil failure returns nil to disable filtering", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(100, 10)).AnyTimes()
+
+		v := NewValsetModule()
+		v.Chain = mockChain
+		v.ChainKv = database.NewMemDB()
+
+		cnPeers, err := v.GetCNPeers(11)
+		require.NoError(t, err)
+		assert.Nil(t, cnPeers)
+	})
+
 	t.Run("post-fork read failure returns nil to disable filtering", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		mockChain := chain_mock.NewMockBlockChain(ctrl)

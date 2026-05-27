@@ -125,7 +125,12 @@ func (v *ValsetModule) GetCNPeers(num uint64) ([]common.Address, error) {
 		}
 		return nil, nil // allow all CN peers as fallback
 	}
-	return v.GetCouncil(num)
+	cnPeers, err := v.GetCouncil(num)
+	if err != nil {
+		logger.Warn("GetCNPeers: disabling CN peer filter after pre-fork GetCouncil failed", "num", num, "err", err)
+		return nil, nil
+	}
+	return cnPeers, nil
 }
 
 // GetHeaderGovVoters returns validators eligible for header governance votes. Pre-fork: council.
