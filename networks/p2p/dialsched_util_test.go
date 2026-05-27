@@ -124,11 +124,11 @@ func TestDefaultConnTarget(t *testing.T) {
 	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypeEN: 3},
 		defaultConnTarget(DialConfig{selfType: discover.NodeTypePN}))
 
-	maxENToENDynDials := 5
+	maxENToENDialTarget := 5
 	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypeEN: 5},
-		defaultConnTarget(DialConfig{selfType: discover.NodeTypeEN, maxENToENDynDials: &maxENToENDynDials}))
+		defaultConnTarget(DialConfig{selfType: discover.NodeTypeEN, maxENToENDialTarget: &maxENToENDialTarget}))
 
-	maxENToENDynDials = 0
+	maxENToENDialTarget = 0
 	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypeEN: 0},
-		defaultConnTarget(DialConfig{selfType: discover.NodeTypeEN, maxENToENDynDials: &maxENToENDynDials}))
+		defaultConnTarget(DialConfig{selfType: discover.NodeTypeEN, maxENToENDialTarget: &maxENToENDialTarget}))
 }

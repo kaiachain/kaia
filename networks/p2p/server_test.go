@@ -379,6 +379,10 @@ func TestServerPeerTargets(t *testing.T) {
 	}
 
 	cnSrv := &BaseServer{Config: Config{ConnectionType: common.CONSENSUSNODE}}
+	cnMeshPeers := newPeers(common.CONSENSUSNODE, common.CONSENSUSNODE, common.CONSENSUSNODE)
+	if cnSrv.exceedsPeerTarget(cnMeshPeers, &conn{conntype: common.CONSENSUSNODE}) {
+		t.Fatal("CN should not apply an extra per-role cap to CN peers")
+	}
 	cnPeers := newPeers(common.ENDPOINTNODE, common.PROXYNODE, common.ENDPOINTNODE)
 	if !cnSrv.exceedsPeerTarget(cnPeers, &conn{conntype: common.ENDPOINTNODE}) {
 		t.Fatal("CN should reject EN when EN-equivalent peer target is full")
@@ -397,6 +401,10 @@ func TestServerPeerTargets(t *testing.T) {
 	}
 
 	enSrv := &BaseServer{Config: Config{ConnectionType: common.ENDPOINTNODE}}
+	enMeshPeers := newPeers(common.ENDPOINTNODE, common.PROXYNODE, common.ENDPOINTNODE)
+	if enSrv.exceedsPeerTarget(enMeshPeers, &conn{conntype: common.ENDPOINTNODE}) {
+		t.Fatal("EN should not apply an extra per-role cap to EN-equivalent peers")
+	}
 	enPeers := newPeers(common.CONSENSUSNODE, common.CONSENSUSNODE)
 	if !enSrv.exceedsPeerTarget(enPeers, &conn{conntype: common.CONSENSUSNODE}) {
 		t.Fatal("EN should reject CN when CN peer target is full")

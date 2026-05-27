@@ -22,18 +22,19 @@ import (
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 )
 
-// dialTargets from KIP-311
+// dialTargets from KIP-311.
 var dialTargets = map[discover.NodeType]map[discover.NodeType]int{
 	discover.NodeTypeCN: {discover.NodeTypeCN: 100, discover.NodeTypeEN: 1},
 	discover.NodeTypeEN: {discover.NodeTypeCN: 2, discover.NodeTypeEN: 3},
 }
 
-// defaultConnTarget = KIP-311 dialTargets + maxENToENDynDials override
+// defaultConnTarget applies KIP-311 dialTargets. EN-to-EN preserves the legacy
+// DialRatio semantics by using maxENToENDialTarget when provided.
 func defaultConnTarget(cfg DialConfig) map[discover.NodeType]int {
 	targets := dialTargets[discover.EffectiveNodeType(cfg.selfType)]
 	targets = cloneTargets(targets)
-	if discover.EffectiveNodeType(cfg.selfType) == discover.NodeTypeEN && cfg.maxENToENDynDials != nil {
-		targets[discover.NodeTypeEN] = *cfg.maxENToENDynDials
+	if discover.EffectiveNodeType(cfg.selfType) == discover.NodeTypeEN && cfg.maxENToENDialTarget != nil {
+		targets[discover.NodeTypeEN] = *cfg.maxENToENDialTarget
 	}
 	return targets
 }

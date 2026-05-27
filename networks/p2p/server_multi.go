@@ -120,15 +120,15 @@ func (srv *MultiChannelServer) Start() (err error) {
 	}
 
 	if !srv.NoDial {
-		maxENToENDynDials := srv.maxDialedConns()
+		maxENToENDialTarget := srv.maxDialedConns()
 		srv.dialSched = NewDialSched(DialConfig{
-			selfID:            srv.selfID,
-			selfType:          ConvertNodeType(srv.ConnectionType),
-			staticNodes:       srv.StaticNodes,
-			netrestrict:       srv.NetRestrict,
-			maxENToENDynDials: &maxENToENDynDials,
-			maxPeers:          srv.MaxPeers(),
-			dialer:            srv.Dialer,
+			selfID:              srv.selfID,
+			selfType:            ConvertNodeType(srv.ConnectionType),
+			staticNodes:         srv.StaticNodes,
+			netrestrict:         srv.NetRestrict,
+			maxENToENDialTarget: &maxENToENDialTarget,
+			maxPeers:            srv.MaxPeers(),
+			dialer:              srv.Dialer,
 		}, srv.ntab, srv)
 		srv.dialSched.Start()
 	}

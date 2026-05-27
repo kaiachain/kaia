@@ -249,8 +249,8 @@ func setDefaultDiscoverTypes(cfg *p2p.Config) {
 }
 
 const (
-	defaultCNMaxPhysicalConnections = 103 // peerTargets[CN][CN] + peerTargets[CN][EN]
-	defaultENMaxPhysicalConnections = 12  // peerTargets[EN][CN] + peerTargets[EN][EN]
+	defaultCNMaxPhysicalConnections = 103 // MaxNodeCount + peerTargets[CN][EN]
+	defaultENMaxPhysicalConnections = node.DefaultMaxPhysicalConnections
 )
 
 func setDefaultMaxPhysicalConnections(cfg *p2p.Config) {

@@ -26,7 +26,9 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"errors"
+	"maps"
 	"net"
+	"slices"
 	"sync"
 
 	"github.com/kaiachain/kaia/common"
@@ -147,15 +149,15 @@ func (srv *BaseServer) Start() (err error) {
 	}
 
 	if !srv.NoDial {
-		maxENToENDynDials := srv.maxDialedConns()
+		maxENToENDialTarget := srv.maxDialedConns()
 		srv.dialSched = NewDialSched(DialConfig{
-			selfID:            srv.selfID,
-			selfType:          ConvertNodeType(srv.ConnectionType),
-			staticNodes:       srv.StaticNodes,
-			netrestrict:       srv.NetRestrict,
-			maxENToENDynDials: &maxENToENDynDials,
-			maxPeers:          srv.MaxPeers(),
-			dialer:            srv.Dialer,
+			selfID:              srv.selfID,
+			selfType:            ConvertNodeType(srv.ConnectionType),
+			staticNodes:         srv.StaticNodes,
+			netrestrict:         srv.NetRestrict,
+			maxENToENDialTarget: &maxENToENDialTarget,
+			maxPeers:            srv.MaxPeers(),
+			dialer:              srv.Dialer,
 		}, srv.ntab, srv)
 		srv.dialSched.Start()
 	}
@@ -301,13 +303,10 @@ func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *con
 		return false
 	}
 
-	count := 0
-	for _, p := range peers {
-		if EffectiveConnType(p.ConnType()) == peerType {
-			count++
-		}
-	}
-	return count >= target
+	peersByType := slices.DeleteFunc(slices.Collect(maps.Values(peers)), func(p *Peer) bool {
+		return EffectiveConnType(p.ConnType()) != peerType
+	})
+	return len(peersByType) >= target
 }
 
 func (srv *BaseServer) admitByCNPeers(c *conn) error {
