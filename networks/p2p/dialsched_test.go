@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/networks/p2p/netutil"
 	"github.com/stretchr/testify/assert"
@@ -41,6 +43,12 @@ func testNodeID(i uint32) discover.NodeID {
 
 func testNode(i uint32, ip string, nType discover.NodeType) *discover.Node {
 	return discover.NewNode(testNodeID(i), net.ParseIP(ip), 30303, 30303, nil, nType)
+}
+
+func testNodeWithAddress(ip string, nType discover.NodeType) (*discover.Node, common.Address) {
+	key := newkey()
+	return discover.NewNode(discover.PubkeyID(&key.PublicKey), net.ParseIP(ip), 30303, 30303, nil, nType),
+		crypto.PubkeyToAddress(key.PublicKey)
 }
 
 func hasNodeID(nodes []*discover.Node, id discover.NodeID) bool {
@@ -258,6 +266,97 @@ func TestDialSched_GetCandidates_ENTargetDoesNotQueryLegacyPN(t *testing.T) {
 
 	assert.True(t, hasNodeID(cands, en.ID), "EN candidates should fill the EN target")
 	assert.False(t, hasNodeID(cands, pn.ID), "upgraded nodes should not dial PN candidates dynamically")
+	assert.False(t, needRefresh)
+}
+
+func TestDialSched_GetCandidates_CNPeerAllowlist(t *testing.T) {
+	allowed, allowedAddr := testNodeWithAddress("10.0.0.201", discover.NodeTypeCN)
+	blocked, _ := testNodeWithAddress("10.0.0.202", discover.NodeTypeCN)
+	tab := &mockTable{
+		nodesByType: map[discover.NodeType][]*discover.Node{
+			discover.NodeTypeCN: {allowed, blocked},
+		},
+	}
+	ds := NewDialSched(DialConfig{
+		selfType: discover.NodeTypeCN,
+		connTarget: map[discover.NodeType]int{
+			discover.NodeTypeCN: 2,
+		},
+	}, tab, nil)
+	ds.SetCNPeers([]common.Address{allowedAddr})
+
+	cands, needRefresh := ds.getCandidates()
+
+	assert.True(t, hasNodeID(cands, allowed.ID), "CN peer in allowlist should remain dialable")
+	assert.False(t, hasNodeID(cands, blocked.ID), "CN peer outside allowlist should be filtered")
+	assert.True(t, needRefresh, "filtering below target should request discovery refresh")
+}
+
+func TestDialSched_GetCandidates_CNPeerAllowlistNilAndEmpty(t *testing.T) {
+	cn, _ := testNodeWithAddress("10.0.0.201", discover.NodeTypeCN)
+	tab := &mockTable{
+		nodesByType: map[discover.NodeType][]*discover.Node{
+			discover.NodeTypeCN: {cn},
+		},
+	}
+
+	nilFilter := NewDialSched(DialConfig{
+		selfType: discover.NodeTypeCN,
+		connTarget: map[discover.NodeType]int{
+			discover.NodeTypeCN: 1,
+		},
+	}, tab, nil)
+	nilFilter.SetCNPeers(nil)
+	cands, needRefresh := nilFilter.getCandidates()
+	assert.True(t, hasNodeID(cands, cn.ID), "nil allowlist should disable CN filtering")
+	assert.False(t, needRefresh)
+
+	emptyFilter := NewDialSched(DialConfig{
+		selfType: discover.NodeTypeCN,
+		connTarget: map[discover.NodeType]int{
+			discover.NodeTypeCN: 1,
+		},
+	}, tab, nil)
+	emptyFilter.SetCNPeers([]common.Address{})
+	cands, needRefresh = emptyFilter.getCandidates()
+	assert.False(t, hasNodeID(cands, cn.ID), "empty allowlist should reject dynamic CN candidates")
+	assert.True(t, needRefresh)
+}
+
+func TestDialSched_GetCandidates_CNPeerAllowlistStaticBypass(t *testing.T) {
+	staticCN, _ := testNodeWithAddress("10.0.0.201", discover.NodeTypeCN)
+	ds := NewDialSched(DialConfig{
+		selfType:    discover.NodeTypeCN,
+		staticNodes: []*discover.Node{staticCN},
+		connTarget: map[discover.NodeType]int{
+			discover.NodeTypeCN: 1,
+		},
+	}, &mockTable{}, nil)
+	ds.SetCNPeers([]common.Address{})
+
+	cands, _ := ds.getCandidates()
+
+	assert.True(t, hasNodeID(cands, staticCN.ID), "static outbound CN should bypass dynamic CN filtering")
+}
+
+func TestDialSched_GetCandidates_CNPeerAllowlistOnlyAppliesToCN(t *testing.T) {
+	cn, _ := testNodeWithAddress("10.0.0.201", discover.NodeTypeCN)
+	tab := &mockTable{
+		nodesByType: map[discover.NodeType][]*discover.Node{
+			discover.NodeTypeCN: {cn},
+		},
+	}
+	ds := NewDialSched(DialConfig{
+		selfType: discover.NodeTypeEN,
+		connTarget: map[discover.NodeType]int{
+			discover.NodeTypeCN: 1,
+		},
+	}, tab, nil)
+	ds.SetCNPeers([]common.Address{})
+
+	cands, needRefresh := ds.getCandidates()
+
+	assert.True(t, hasNodeID(cands, cn.ID), "EN dynamic CN dials should not use CN peer allowlist")
 	assert.False(t, needRefresh)
 }
 

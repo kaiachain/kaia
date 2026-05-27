@@ -612,6 +612,9 @@ func (srv *BaseServer) SetCNPeers(addrs []common.Address) {
 	srv.lock.Lock()
 	if addrs == nil {
 		srv.cnPeerAddrs = nil
+		if srv.dialSched != nil {
+			srv.dialSched.SetCNPeers(nil)
+		}
 		srv.lock.Unlock()
 		return
 	}
@@ -621,6 +624,9 @@ func (srv *BaseServer) SetCNPeers(addrs []common.Address) {
 		cnPeerAddrs[addr] = struct{}{}
 	}
 	srv.cnPeerAddrs = cnPeerAddrs
+	if srv.dialSched != nil {
+		srv.dialSched.SetCNPeers(addrs)
+	}
 	drops := srv.peersOutsideCNPeerAddrs(cnPeerAddrs)
 	srv.lock.Unlock()
 

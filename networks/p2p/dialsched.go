@@ -20,10 +20,12 @@ package p2p
 
 import (
 	"net"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/networks/p2p/netutil"
 )
@@ -108,6 +110,7 @@ type DialConfig struct {
 type DialSched struct {
 	mu         sync.RWMutex
 	selfID     discover.NodeID
+	selfType   discover.NodeType
 	connTarget map[discover.NodeType]int // Number of outbound connections to maintain for each node type
 	maxPeers   int                       // Total peer capacity (inbound + outbound). 0 = no limit.
 	dialer     NodeDialer
@@ -132,6 +135,7 @@ type DialSched struct {
 	connectedAll      typedNodeSet            // All connected peers, inbound + outbound.
 	connectedOutbound typedNodeSet            // Outbound connected peers only.
 	connFails         map[discover.NodeID]int // For static nodes, count the consecutive connection failures to limit retries.
+	cnPeerAddrs       map[common.Address]struct{}
 
 	// Coordination
 	started  atomic.Bool
@@ -156,6 +160,7 @@ func NewDialSched(cfg DialConfig, tab discovery, backend DialBackend) *DialSched
 
 	ds := &DialSched{
 		selfID:            cfg.selfID,
+		selfType:          discover.EffectiveNodeType(cfg.selfType),
 		connTarget:        connTarget,
 		maxPeers:          cfg.maxPeers,
 		dialer:            dialer,
@@ -212,6 +217,24 @@ func (ds *DialSched) AddStatic(n *discover.Node) {
 
 func (ds *DialSched) RemoveStatic(id discover.NodeID) {
 	ds.removeStatic(id)
+	ds.signalDial()
+}
+
+// SetCNPeers replaces the CN dynamic dial allowlist.
+// nil disables filtering; an empty list rejects all dynamic CN candidates.
+func (ds *DialSched) SetCNPeers(addrs []common.Address) {
+	ds.mu.Lock()
+	if addrs == nil {
+		ds.cnPeerAddrs = nil
+	} else {
+		cnPeerAddrs := make(map[common.Address]struct{}, len(addrs))
+		for _, addr := range addrs {
+			cnPeerAddrs[addr] = struct{}{}
+		}
+		ds.cnPeerAddrs = cnPeerAddrs
+	}
+	ds.mu.Unlock()
+
 	ds.signalDial()
 }
 
@@ -333,19 +356,23 @@ func (ds *DialSched) getDynamicCandidates(targetType discover.NodeType, need int
 	if ds.tab == nil || need <= 0 {
 		return nil, false
 	}
-
 	// Try to refill from the table if the queue can't satisfy the demand.
 	// The table may already have nodes (e.g. from local nodeDB) without needing a refresh
 	if len(ds.candidateQueue[targetType]) < need {
 		ds.refillCandidates()
 	}
 
-	// Pop up to `need` candidates from the queue.
+	// Disallowed CNs are discarded so they do not keep occupying the dynamic candidate queue.
 	q := ds.candidateQueue[targetType]
+	q = slices.DeleteFunc(q, func(n *discover.Node) bool {
+		return !ds.dynamicCandidateAllowed(targetType, n)
+	})
+
+	// Pop up to `need` candidates from the filtered queue.
 	end := min(need, len(q))
 	nodes, ds.candidateQueue[targetType] = q[:end], q[end:]
 	// If the queue is short even after a refill, signal the dial loop to run a discovery refresh.
-	return nodes, len(q) < need
+	return nodes, len(nodes) < need
 }
 
 // #region dial task
@@ -448,6 +475,25 @@ func (ds *DialSched) refillCandidates() {
 			ds.candidateQueue[targetType] = buf[:n]
 		}
 	}
+}
+
+func (ds *DialSched) dynamicCandidateAllowed(targetType discover.NodeType, n *discover.Node) bool {
+	if ds.selfType != discover.NodeTypeCN || discover.EffectiveNodeType(targetType) != discover.NodeTypeCN {
+		return true
+	}
+
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+	if ds.cnPeerAddrs == nil {
+		return true
+	}
+
+	addr, err := addressFromNodeID(n.ID)
+	if err != nil {
+		return false
+	}
+	_, ok := ds.cnPeerAddrs[addr]
+	return ok
 }
 
 // #region internal variable accessors

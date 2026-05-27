@@ -497,6 +497,31 @@ func TestServerSetCNPeersReconcilesConnectedCNPeers(t *testing.T) {
 	assertNotDisconnected(t, en)
 }
 
+func TestServerSetCNPeersUpdatesDialSched(t *testing.T) {
+	allowedKey := newkey()
+	blockedKey := newkey()
+	allowed := discover.NewNode(discover.PubkeyID(&allowedKey.PublicKey), net.ParseIP("10.0.0.1"), 30303, 30303, nil, discover.NodeTypeCN)
+	blocked := discover.NewNode(discover.PubkeyID(&blockedKey.PublicKey), net.ParseIP("10.0.0.2"), 30303, 30303, nil, discover.NodeTypeCN)
+	ds := NewDialSched(DialConfig{selfType: discover.NodeTypeCN}, nil, nil)
+	srv := &BaseServer{
+		dialSched: ds,
+		peers:     make(map[discover.NodeID]*Peer),
+	}
+
+	srv.SetCNPeers([]common.Address{crypto.PubkeyToAddress(allowedKey.PublicKey)})
+	if !ds.dynamicCandidateAllowed(discover.NodeTypeCN, allowed) {
+		t.Fatal("allowed CN should remain dialable")
+	}
+	if ds.dynamicCandidateAllowed(discover.NodeTypeCN, blocked) {
+		t.Fatal("blocked CN should not remain dialable")
+	}
+
+	srv.SetCNPeers(nil)
+	if !ds.dynamicCandidateAllowed(discover.NodeTypeCN, blocked) {
+		t.Fatal("nil CN peer allowlist should disable dynamic dial filtering")
+	}
+}
+
 func TestServerSetupConn(t *testing.T) {
 	var (
 		id     = discover.PubkeyID(&newkey().PublicKey)
