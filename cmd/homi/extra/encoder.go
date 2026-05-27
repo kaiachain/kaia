@@ -18,12 +18,12 @@
 package extra
 
 import (
-	"bytes"
+	"math/big"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/consensus/engine"
 )
 
 func Encode(vanity string, validators []common.Address) (string, error) {
@@ -32,20 +32,14 @@ func Encode(vanity string, validators []common.Address) (string, error) {
 		return "", err
 	}
 
-	if len(newVanity) < istanbul.IstanbulExtraVanity {
-		newVanity = append(newVanity, bytes.Repeat([]byte{0x00}, istanbul.IstanbulExtraVanity-len(newVanity))...)
+	header := &types.Header{
+		Number: big.NewInt(1),
+		Extra:  newVanity,
 	}
-	newVanity = newVanity[:istanbul.IstanbulExtraVanity]
-
-	ist := &istanbul.IstanbulExtra{
-		Validators:    validators,
-		Seal:          make([]byte, istanbul.IstanbulExtraSeal),
-		CommittedSeal: [][]byte{},
-	}
-	payload, err := rlp.EncodeToBytes(ist)
-	if err != nil {
+	sealer := engine.NewSealer(nil, nil)
+	if err := sealer.WriteValidators(header, validators); err != nil {
 		return "", err
 	}
 
-	return "0x" + common.Bytes2Hex(append(newVanity, payload...)), nil
+	return "0x" + common.Bytes2Hex(header.Extra), nil
 }

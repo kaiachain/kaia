@@ -19,12 +19,13 @@ package extra
 
 import (
 	"fmt"
+	"math/big"
 	"os"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
-	"github.com/kaiachain/kaia/consensus/istanbul"
-	"github.com/kaiachain/kaia/rlp"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/naoina/toml"
 	"github.com/urfave/cli/v2"
 )
@@ -122,40 +123,43 @@ func decode(ctx *cli.Context) error {
 	}
 
 	extraString := ctx.String(extraDataFlag.Name)
-	vanity, istanbulExtra, err := DecodeExtra(extraString)
+	extraBytes, err := hexutil.Decode(extraString)
+	if err != nil {
+		return err
+	}
+
+	header := &types.Header{
+		Number: big.NewInt(1),
+		Extra:  append([]byte(nil), extraBytes...),
+	}
+	sealer := engine.NewSealer(nil, nil)
+
+	vanity, err := sealer.Vanity(header)
+	if err != nil {
+		return err
+	}
+	validators, err := sealer.Validators(header)
+	if err != nil {
+		return err
+	}
+	authorSeal, committedSeals, err := sealer.RawSeals(header)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("vanity: ", "0x"+common.Bytes2Hex(vanity))
 
-	for _, v := range istanbulExtra.Validators {
+	for _, v := range validators {
 		fmt.Println("validator: ", v.Hex())
 	}
 
-	if len(istanbulExtra.Seal) != 0 {
-		fmt.Println("seal:", "0x"+common.Bytes2Hex(istanbulExtra.Seal))
+	if len(authorSeal) != 0 {
+		fmt.Println("seal:", "0x"+common.Bytes2Hex(authorSeal))
 	}
 
-	for _, seal := range istanbulExtra.CommittedSeal {
+	for _, seal := range committedSeals {
 		fmt.Println("committed seal: ", "0x"+common.Bytes2Hex(seal))
 	}
 
 	return nil
-}
-
-func DecodeExtra(extraData string) ([]byte, *istanbul.IstanbulExtra, error) {
-	extra, err := hexutil.Decode(extraData)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(extra) < istanbul.IstanbulExtraVanity {
-		return nil, nil, istanbul.ErrInvalidIstanbulHeaderExtra
-	}
-
-	var istanbulExtra *istanbul.IstanbulExtra
-	if err := rlp.DecodeBytes(extra[istanbul.IstanbulExtraVanity:], &istanbulExtra); err != nil {
-		return nil, nil, err
-	}
-	return extra[:istanbul.IstanbulExtraVanity], istanbulExtra, nil
 }
