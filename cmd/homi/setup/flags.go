@@ -577,6 +577,11 @@ var (
 		Aliases: []string{"genesis.cfs-threshold"},
 	}
 
+	allocPermissionlessPrerequisitesFlag = &cli.BoolFlag{
+		Name:  "alloc-permissionless-prerequisites",
+		Usage: "Allocate permissionless prerequisite contracts and Registry records in genesis.json for a delayed hardfork",
+	}
+
 	kip113ProxyAddressFlag = &cli.StringFlag{
 		Name:    "kip113-proxy-contract-address",
 		Usage:   "kip113 proxy contract address",

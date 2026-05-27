@@ -57,14 +57,30 @@ type allocPermissionlessResult struct {
 	pdBeacon        common.Address
 	factory         common.Address
 	abv2Impl        common.Address
+	abv2Data        common.Address
 }
 
 // AllocPermissionless deploys all permissionless system contracts into an
 // in-memory statedb using the EVM runtime, and returns the resulting genesis
 // alloc.
 func AllocPermissionless(config *AllocPermissionlessConfig) (map[common.Address]blockchain.GenesisAccount, error) {
+	alloc, _, err := allocPermissionless(config, true)
+	return alloc, err
+}
+
+// AllocPermissionlessPrerequisites deploys the contracts needed before a
+// delayed permissionless HF. It does not install ABv2 at 0x400; Finalize(HF-1)
+// installs and initializes ABv2 from ABv2DataContract.
+func AllocPermissionlessPrerequisites(config *AllocPermissionlessConfig) (map[common.Address]blockchain.GenesisAccount, map[string]common.Address, error) {
+	return allocPermissionless(config, false)
+}
+
+func allocPermissionless(config *AllocPermissionlessConfig, installABv2 bool) (map[common.Address]blockchain.GenesisAccount, map[string]common.Address, error) {
+	if config == nil {
+		return nil, nil, fmt.Errorf("nil permissionless config")
+	}
 	if len(config.NodeIds) != len(config.NodeInfos) || len(config.NodeIds) != len(config.StakeAmts) {
-		return nil, fmt.Errorf("mismatched lengths: nodeIds=%d, infos=%d, stakeAmts=%d",
+		return nil, nil, fmt.Errorf("mismatched lengths: nodeIds=%d, infos=%d, stakeAmts=%d",
 			len(config.NodeIds), len(config.NodeInfos), len(config.StakeAmts))
 	}
 
@@ -76,7 +92,7 @@ func AllocPermissionless(config *AllocPermissionlessConfig) (map[common.Address]
 		Owner:   config.Owner,
 	}
 	if err := InstallRegistry(statedb, registryConfig); err != nil {
-		return nil, fmt.Errorf("install registry: %w", err)
+		return nil, nil, fmt.Errorf("install registry: %w", err)
 	}
 
 	deployer := config.Owner
@@ -97,28 +113,30 @@ func AllocPermissionless(config *AllocPermissionlessConfig) (map[common.Address]
 
 	result := &allocPermissionlessResult{}
 	if err := deployBeaconInfra(cfg, deployer, config.EpochBlockInterval, result); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := deployCnStakingFactory(cfg, big.NewInt(1), result); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := deployCnStakingPerValidator(cfg, config, result); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	cfg.Origin = deployer
 	if err := deployABv2DataContract(cfg, big.NewInt(1), config, result); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// The registry entries are initially registered at activation=1, so the
 	// initialization calls can resolve them while running against the genesis
 	// staging state. The activation slots are patched back to zero below.
-	cfg.BlockNumber = big.NewInt(1)
-	if err := installAndInitABv2(cfg, statedb, result.abv2Impl); err != nil {
-		return nil, err
-	}
-	if err := applyInitialNodeStateOverrides(cfg, config); err != nil {
-		return nil, err
+	if installABv2 {
+		cfg.BlockNumber = big.NewInt(1)
+		if err := installAndInitABv2(cfg, statedb, result.abv2Impl); err != nil {
+			return nil, nil, err
+		}
+		if err := applyInitialNodeStateOverrides(cfg, config); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	patchRegistryActivations(statedb, "CnStakingFactory", "ABv2DataContract")
@@ -128,7 +146,7 @@ func AllocPermissionless(config *AllocPermissionlessConfig) (map[common.Address]
 	}
 
 	if _, err := statedb.Commit(false); err != nil {
-		return nil, fmt.Errorf("statedb commit: %w", err)
+		return nil, nil, fmt.Errorf("statedb commit: %w", err)
 	}
 
 	excludeAddrs := map[common.Address]bool{}
@@ -137,9 +155,13 @@ func AllocPermissionless(config *AllocPermissionlessConfig) (map[common.Address]
 	}
 	alloc, err := extractAlloc(statedb, excludeAddrs)
 	if err != nil {
-		return nil, fmt.Errorf("extract alloc: %w", err)
+		return nil, nil, fmt.Errorf("extract alloc: %w", err)
 	}
-	return alloc, nil
+	records := map[string]common.Address{
+		"CnStakingFactory": result.factory,
+		"ABv2DataContract": result.abv2Data,
+	}
+	return alloc, records, nil
 }
 
 func deployBeaconInfra(cfg *runtime.Config, owner common.Address, epochBlockInterval int64, result *allocPermissionlessResult) error {
@@ -242,6 +264,7 @@ func deployABv2DataContract(cfg *runtime.Config, activation *big.Int, config *Al
 	if err != nil {
 		return fmt.Errorf("deploy ABv2DataContract: %w", err)
 	}
+	result.abv2Data = dataContractAddr
 
 	registryABI, _ := registrycontract.RegistryMetaData.GetAbi()
 	if err := evmCallABI(cfg, RegistryAddr, registryABI, "register", "ABv2DataContract", dataContractAddr, activation); err != nil {

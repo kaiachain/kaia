@@ -151,6 +151,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewUint64Flag(vrankEpochFlag),
 	altsrc.NewInt64Flag(pfsThresholdFlag),
 	altsrc.NewInt64Flag(cfsThresholdFlag),
+	altsrc.NewBoolFlag(allocPermissionlessPrerequisitesFlag),
 	altsrc.NewStringFlag(kip113ProxyAddressFlag),
 	altsrc.NewStringFlag(kip113LogicAddressFlag),
 	altsrc.NewBoolFlag(kip113MockFlag),
@@ -560,6 +561,29 @@ func useAddressBookMock(ctx *cli.Context, genesisJson *blockchain.Genesis) {
 }
 
 func allocatePermissionless(ctx *cli.Context, genesisJson *blockchain.Genesis, validatorAddrs []common.Address, kip113Init system.AllocKip113Init) {
+	alloc, err := system.AllocPermissionless(makePermissionlessConfig(ctx, validatorAddrs, kip113Init))
+	if err != nil {
+		log.Fatalf("Failed to allocate permissionless contracts: %v", err)
+	}
+
+	for addr, account := range alloc {
+		genesisJson.Alloc[addr] = account
+	}
+}
+
+func allocatePermissionlessPrerequisites(ctx *cli.Context, genesisJson *blockchain.Genesis, validatorAddrs []common.Address, kip113Init system.AllocKip113Init) map[string]common.Address {
+	alloc, records, err := system.AllocPermissionlessPrerequisites(makePermissionlessConfig(ctx, validatorAddrs, kip113Init))
+	if err != nil {
+		log.Fatalf("Failed to allocate permissionless transition contracts: %v", err)
+	}
+
+	for addr, account := range alloc {
+		genesisJson.Alloc[addr] = account
+	}
+	return records
+}
+
+func makePermissionlessConfig(ctx *cli.Context, validatorAddrs []common.Address, kip113Init system.AllocKip113Init) *system.AllocPermissionlessConfig {
 	owner := validatorAddrs[0]
 	numValidators := len(validatorAddrs)
 	stakeAmt := new(big.Int).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA))
@@ -586,7 +610,7 @@ func allocatePermissionless(ctx *cli.Context, genesisJson *blockchain.Genesis, v
 		stakeAmts[i] = new(big.Int).Set(stakeAmt)
 	}
 
-	config := &system.AllocPermissionlessConfig{
+	return &system.AllocPermissionlessConfig{
 		Owner:              owner,
 		NodeIds:            validatorAddrs,
 		NodeInfos:          nodeInfos,
@@ -608,30 +632,21 @@ func allocatePermissionless(ctx *cli.Context, genesisJson *blockchain.Genesis, v
 			KpfAddress:              owner,
 		},
 	}
-
-	alloc, err := system.AllocPermissionless(config)
-	if err != nil {
-		log.Fatalf("Failed to allocate permissionless contracts: %v", err)
-	}
-
-	for addr, account := range alloc {
-		genesisJson.Alloc[addr] = account
-	}
 }
 
-func allocateRegistry(ctx *cli.Context, genesisJson *blockchain.Genesis, owner common.Address, kip113Addr *common.Address) {
+func allocateRegistry(ctx *cli.Context, genesisJson *blockchain.Genesis, owner common.Address, records map[string]common.Address) {
 	if randaoCompatibleBlock := ctx.Int64(randaoCompatibleBlockNumberFlag.Name); randaoCompatibleBlock != 0 {
+		return
+	}
+	if len(records) == 0 {
 		return
 	}
 
 	registryConfig := &params.RegistryConfig{
-		Records: make(map[string]common.Address),
+		Records: records,
 		Owner:   owner,
 	}
-
-	if kip113Addr != nil {
-		registryConfig.Records[system.Kip113Name] = *kip113Addr
-	}
+	genesisJson.Config.RandaoRegistry = registryConfig
 
 	allocRegistryStorage := system.AllocRegistry(registryConfig)
 
@@ -823,7 +838,16 @@ func Gen(ctx *cli.Context) error {
 		allocatePermissionless(ctx, genesisJson, validatorNodeAddrs, kip113Init)
 	} else {
 		kip113ProxyAddr, kip113LogicAddr := allocateKip113(ctx, genesisJson, kip113Init)
-		allocateRegistry(ctx, genesisJson, nodeAddrs[0], kip113ProxyAddr)
+		registryRecords := make(map[string]common.Address)
+		if kip113ProxyAddr != nil {
+			registryRecords[system.Kip113Name] = *kip113ProxyAddr
+		}
+		if ctx.Bool(allocPermissionlessPrerequisitesFlag.Name) {
+			for name, addr := range allocatePermissionlessPrerequisites(ctx, genesisJson, validatorNodeAddrs, kip113Init) {
+				registryRecords[name] = addr
+			}
+		}
+		allocateRegistry(ctx, genesisJson, nodeAddrs[0], registryRecords)
 		useKip113Mock(ctx, genesisJson, kip113LogicAddr)
 	}
 	useRegistryMock(ctx, genesisJson)

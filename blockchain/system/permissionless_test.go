@@ -128,6 +128,27 @@ func TestAllocPermissionlessInstallsInitializedABv2(t *testing.T) {
 	}
 }
 
+func TestAllocPermissionlessPrerequisites(t *testing.T) {
+	config, _ := makeTestPermissionlessConfig(t, 4)
+
+	alloc, records, err := AllocPermissionlessPrerequisites(config)
+	require.NoError(t, err)
+	require.NotContains(t, alloc, AddressBookAddr)
+
+	dataAddr := records["ABv2DataContract"]
+	factoryAddr := records["CnStakingFactory"]
+	require.NotEqual(t, common.Address{}, dataAddr)
+	require.NotEqual(t, common.Address{}, factoryAddr)
+	require.Contains(t, alloc, RegistryAddr)
+	require.Contains(t, alloc, dataAddr)
+	require.Contains(t, alloc, factoryAddr)
+
+	backend := backends.NewSimulatedBackend(blockchain.GenesisAlloc(alloc))
+	implAddr, err := ReadABv2Implementation(backend, nil)
+	require.NoError(t, err)
+	require.NotEqual(t, common.Address{}, implAddr)
+}
+
 func TestAllocPermissionlessMismatchedLengths(t *testing.T) {
 	config, _ := makeTestPermissionlessConfig(t, 2)
 	config.StakeAmts = config.StakeAmts[:1]
