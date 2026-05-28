@@ -59,8 +59,11 @@ func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
 	}
 
 	if qualified == nil {
-		// future blocks under post-permissionless, or pre-permissionless
-		qualified, err = v.getQualifiedPermissioned(num)
+		if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+			qualified, err = v.getQualifiedValidators(num)
+		} else {
+			qualified, err = v.getQualifiedPermissioned(num)
+		}
 		if err != nil {
 			return nil, err
 		}

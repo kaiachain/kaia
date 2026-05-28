@@ -34,6 +34,7 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestGetCommittee tests various branches of getCommitteePermissioned().
@@ -140,6 +141,35 @@ func TestRandaoCommittee(t *testing.T) {
 	)
 	assert.Equal(t, numsToAddrs(8), selectRandaoCommittee(qualified, 1, mixHash))
 	assert.Equal(t, numsToAddrs(8, 3, 5, 1, 0, 9), selectRandaoCommittee(qualified, 6, mixHash))
+}
+
+func TestGetBlockContextPermissionlessFutureBlockUsesTransitionedNodes(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockChain := chain_mock.NewMockBlockChain(ctrl)
+	mockGov := gov_mock.NewMockGovModule(ctrl)
+
+	mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
+	mockChain.EXPECT().GetHeaderByNumber(uint64(1)).Return(nil)
+	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(&types.Header{Number: big.NewInt(0)})
+	mockGov.EXPECT().GetParamSet(uint64(1)).Return(gov.ParamSet{
+		CommitteeSize:  4,
+		ProposerPolicy: uint64(istanbul.RoundRobin),
+	})
+
+	v := NewValsetModule()
+	v.Chain = mockChain
+	v.GovModule = mockGov
+	v.transitionResultCache.Add(uint64(1), &TransitionResult{
+		Nodes: NodeMap{
+			addr1: {State: ValActive},
+			addr2: {State: ValPaused},
+			addr3: {State: ValActive},
+		},
+	})
+
+	c, err := v.getBlockContext(1)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []common.Address{addr1, addr3}, c.qualified.List())
 }
 
 // TestGetProposer tests various branches of getProposer().
