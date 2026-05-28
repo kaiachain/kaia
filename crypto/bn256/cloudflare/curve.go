@@ -2,6 +2,7 @@ package bn256
 
 import (
 	"math/big"
+	"slices"
 )
 
 // curvePoint implements the elliptic curve y²=x³+3. Points are kept in Jacobian
@@ -195,12 +196,12 @@ func (c *curvePoint) Mul(a *curvePoint, scalar *big.Int) {
 	sum.SetInfinity()
 	t := &curvePoint{}
 
-	for i := len(multiScalar) - 1; i >= 0; i-- {
+	for _, m := range slices.Backward(multiScalar) {
 		t.Double(sum)
-		if multiScalar[i] == 0 {
+		if m == 0 {
 			sum.Set(t)
 		} else {
-			sum.Add(t, precomp[multiScalar[i]])
+			sum.Add(t, precomp[m])
 		}
 	}
 	c.Set(sum)
