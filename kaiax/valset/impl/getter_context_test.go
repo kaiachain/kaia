@@ -143,7 +143,7 @@ func TestRandaoCommittee(t *testing.T) {
 	assert.Equal(t, numsToAddrs(8, 3, 5, 1, 0, 9), selectRandaoCommittee(qualified, 6, mixHash))
 }
 
-func TestGetBlockContextPermissionlessFutureBlockUsesTransitionedNodes(t *testing.T) {
+func TestGetBlockContext_FutureBlockPostFork(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockChain := chain_mock.NewMockBlockChain(ctrl)
 	mockGov := gov_mock.NewMockGovModule(ctrl)
