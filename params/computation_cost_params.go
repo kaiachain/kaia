@@ -212,7 +212,11 @@ const (
 	Bls12381MapG1ComputationCost          = 275000
 	Bls12381MapG2ComputationCost          = 1190000
 
+	// computation cost added at OsakaCompatible
 	P256VerifyComputationCost = 235000
+
+	// computation cost added at PermissionlessCompatible
+	ClzComputationCost = 165
 
 	OpcodeComputationCostLimit         = 100000000      // 100ms
 	OpcodeComputationCostLimitCancun   = 150000000      // 150ms
