@@ -338,9 +338,7 @@ func (srv *BaseServer) maxDialedConns() int {
 	switch srv.ConnectionType {
 	case common.CONSENSUSNODE:
 		return 0
-	case common.PROXYNODE:
-		return 0
-	case common.ENDPOINTNODE:
+	case common.PROXYNODE, common.ENDPOINTNODE:
 		if srv.NoDiscovery || srv.NoDial {
 			return 0
 		}
@@ -626,7 +624,7 @@ func (srv *BaseServer) SetCNPeers(addrs []common.Address) {
 	if srv.dialSched != nil {
 		srv.dialSched.SetCNPeers(addrs)
 	}
-	drops := srv.peersOutsideCNPeerAddrs(cnPeerAddrs)
+	drops := srv.peersOutsideCNPeerAddrs()
 	srv.lock.Unlock()
 
 	for _, p := range drops {
@@ -635,7 +633,7 @@ func (srv *BaseServer) SetCNPeers(addrs []common.Address) {
 	}
 }
 
-func (srv *BaseServer) peersOutsideCNPeerAddrs(cnPeerAddrs map[common.Address]struct{}) []*Peer {
+func (srv *BaseServer) peersOutsideCNPeerAddrs() []*Peer {
 	drops := make([]*Peer, 0)
 	for id, p := range srv.peers {
 		if p == nil || EffectiveConnType(p.ConnType()) != common.CONSENSUSNODE {
@@ -648,7 +646,7 @@ func (srv *BaseServer) peersOutsideCNPeerAddrs(cnPeerAddrs map[common.Address]st
 		if err != nil {
 			continue
 		}
-		if _, ok := cnPeerAddrs[addr]; !ok {
+		if _, ok := srv.cnPeerAddrs[addr]; !ok {
 			drops = append(drops, p)
 		}
 	}

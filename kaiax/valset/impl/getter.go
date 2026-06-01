@@ -115,7 +115,7 @@ func (v *ValsetModule) GetCandTesting(num uint64) ([]common.Address, error) {
 func (v *ValsetModule) GetCNPeers(num uint64) ([]common.Address, error) {
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
 		cnPeers, err := v.getCNPeers(num)
-		if err == nil && len(cnPeers) > 0 {
+		if len(cnPeers) > 0 {
 			return cnPeers, nil
 		}
 		if err != nil {
