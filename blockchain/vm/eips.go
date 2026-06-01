@@ -341,7 +341,7 @@ func opBlobBaseFee(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext)
 	return nil, nil
 }
 
-// opCLZ implements the CLZ opcode (count leading zero bytes)
+// opCLZ implements the CLZ opcode (count leading zero bits)
 func opCLZ(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	x := scope.Stack.peek()
 	x.SetUint64(256 - uint64(x.BitLen()))
