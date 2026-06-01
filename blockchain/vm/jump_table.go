@@ -64,11 +64,18 @@ var (
 	ShanghaiInstructionSet       = newShanghaiInstructionSet()
 	CancunInstructionSet         = newCancunInstructionSet()
 	PragueInstructionSet         = newPragueInstructionSet()
+	PermissionlessInstructionSet = newPermissionlessInstructionSet()
 	OsakaInstructionSet          = newOsakaInstructionSet()
 )
 
 // JumpTable contains the EVM opcodes supported at a given fork.
 type JumpTable [256]*operation
+
+func newPermissionlessInstructionSet() JumpTable {
+	instructionSet := newOsakaInstructionSet()
+	enablePermissionlessComputationCostModification(&instructionSet)
+	return instructionSet
+}
 
 func newOsakaInstructionSet() JumpTable {
 	instructionSet := newPragueInstructionSet()

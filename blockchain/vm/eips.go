@@ -408,6 +408,10 @@ func enableCancunComputationCostModification(jt *JumpTable) {
 	jt[LOG4].computationCost = params.Log4ComputationCostCancun
 }
 
+func enablePermissionlessComputationCostModification(jt *JumpTable) {
+	jt[CLZ].computationCost = params.ClzComputationCost
+}
+
 func ChangeGasCostForTest(jt *JumpTable) {
 	// EIP-1052 must be activated for backward compatibility on Kaia. But EIP-2929 is activated instead of it on Ethereum
 	jt[EXTCODEHASH].constantGas = params.WarmStorageReadCostEIP2929
