@@ -293,6 +293,21 @@ func TestFetchVRankCtx(t *testing.T) {
 		assert.Nil(t, gotPFS)
 		assert.Equal(t, pfReport, gotPfReport)
 	})
+
+	t.Run("pre-fork block returns empty context without vrank reads", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(30, 10)).AnyTimes()
+
+		v := NewValsetModule()
+		v.Chain = mockChain
+		v.VRankModule = vrank_mock.NewMockVRankModule(ctrl)
+
+		gotCFS, gotPFS, gotPfReport := v.fetchVRankCtx(29)
+		assert.Nil(t, gotCFS)
+		assert.Nil(t, gotPFS)
+		assert.Nil(t, gotPfReport)
+	})
 }
 
 func TestDiffNodeStates(t *testing.T) {

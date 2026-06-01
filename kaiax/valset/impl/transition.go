@@ -146,6 +146,11 @@ func (v *ValsetModule) fetchVRankCtx(num uint64) (cfs, pfs map[common.Address]ui
 		logger.Error("VRankModule is nil")
 		return nil, nil, nil
 	}
+	// Pre-HF blocks have no VRank evidence. Keep applyTr(HF-1) as a no-op
+	// for VRank-dependent transitions by returning an empty VRank context.
+	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return nil, nil, nil
+	}
 	if nextNum := num + 1; v.isVrankEpoch(nextNum) {
 		c, err := v.VRankModule.GetCFS(num)
 		if err != nil {
