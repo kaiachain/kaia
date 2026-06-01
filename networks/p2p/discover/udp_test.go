@@ -354,6 +354,12 @@ func TestUDP_findnode_CN_overfill(t *testing.T) {
 	}
 }
 
+func TestFindnodeRetrieveSize(t *testing.T) {
+	assert.Equal(t, discoverTargets[NodeTypeCN][NodeTypeCN], findnodeRetrieveSize(NodeTypeCN))
+	assert.Equal(t, bucketSize, findnodeRetrieveSize(NodeTypeEN))
+	assert.Equal(t, bucketSize, findnodeRetrieveSize(NodeTypePN))
+}
+
 func TestUDP_findnodeMultiReply(t *testing.T) {
 	test := newUDPTest(t)
 	defer test.table.Close()

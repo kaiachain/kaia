@@ -21,6 +21,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -174,6 +175,69 @@ func TestGetNodesByStatePreForkError(t *testing.T) {
 	nodes, err := v.GetNodesByState(10, nil)
 	require.Nil(t, nodes)
 	require.ErrorIs(t, err, errPermissionlessDisabled)
+}
+
+func TestGetCNPeersFilterFallback(t *testing.T) {
+	t.Run("pre-fork returns council", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(100, 10)).AnyTimes()
+
+		db := database.NewMemDB()
+		writeCouncil(db, 0, numsToAddrs(2, 1))
+		writeValidatorVoteBlockNums(db, []uint64{0})
+		writeLowestScannedVoteNum(db, 0)
+
+		v := NewValsetModule()
+		v.Chain = mockChain
+		v.ChainKv = db
+
+		cnPeers, err := v.GetCNPeers(11)
+		require.NoError(t, err)
+		assert.Equal(t, numsToAddrs(1, 2), cnPeers)
+	})
+
+	t.Run("pre-fork GetCouncil failure returns nil to disable filtering", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(100, 10)).AnyTimes()
+
+		v := NewValsetModule()
+		v.Chain = mockChain
+		v.ChainKv = database.NewMemDB()
+
+		cnPeers, err := v.GetCNPeers(11)
+		require.NoError(t, err)
+		assert.Nil(t, cnPeers)
+	})
+
+	t.Run("post-fork read failure returns nil to disable filtering", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
+		mockChain.EXPECT().GetHeaderByNumber(uint64(10)).Return(nil)
+
+		v := NewValsetModule()
+		v.Chain = mockChain
+
+		cnPeers, err := v.GetCNPeers(11)
+		require.NoError(t, err)
+		assert.Nil(t, cnPeers)
+	})
+
+	t.Run("post-fork empty peer set returns nil to disable filtering", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockChain := chain_mock.NewMockBlockChain(ctrl)
+		mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
+
+		v := NewValsetModule()
+		v.Chain = mockChain
+		v.transitionResultCache.Add(uint64(11), &TransitionResult{Nodes: NodeMap{}})
+
+		cnPeers, err := v.GetCNPeers(11)
+		require.NoError(t, err)
+		assert.Nil(t, cnPeers)
+	})
 }
 
 func newCachedPermissionlessValset(t *testing.T, nodes NodeMap) *ValsetModule {

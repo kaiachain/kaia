@@ -186,6 +186,8 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 
 	if ctx.IsSet(MaxConnectionsFlag.Name) {
 		cfg.MaxPhysicalConnections = ctx.Int(MaxConnectionsFlag.Name)
+	} else {
+		setDefaultMaxPhysicalConnections(cfg)
 	}
 	logger.Info("Setting MaxPhysicalConnections", "MaxPhysicalConnections", cfg.MaxPhysicalConnections)
 
@@ -239,9 +241,24 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 func setDefaultDiscoverTypes(cfg *p2p.Config) {
 	if cfg.ConnectionType == common.CONSENSUSNODE {
 		cfg.DiscoverTypes.CN = true
-	} else { // PN or EN
-		cfg.DiscoverTypes.PN = true
 		cfg.DiscoverTypes.EN = true
+	} else { // PN is EN-equivalent under KIP-311.
+		cfg.DiscoverTypes.CN = true
+		cfg.DiscoverTypes.EN = true
+	}
+}
+
+const (
+	defaultCNMaxPhysicalConnections = 103 // MaxNodeCount + peerTargets[CN][EN]
+	defaultENMaxPhysicalConnections = node.DefaultMaxPhysicalConnections
+)
+
+func setDefaultMaxPhysicalConnections(cfg *p2p.Config) {
+	switch cfg.ConnectionType {
+	case common.CONSENSUSNODE:
+		cfg.MaxPhysicalConnections = defaultCNMaxPhysicalConnections
+	case common.ENDPOINTNODE, common.PROXYNODE:
+		cfg.MaxPhysicalConnections = defaultENMaxPhysicalConnections
 	}
 }
 

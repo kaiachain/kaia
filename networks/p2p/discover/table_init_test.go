@@ -17,6 +17,7 @@
 package discover
 
 import (
+	"math"
 	"net"
 	"testing"
 
@@ -63,6 +64,17 @@ func Test_Table_getBootnodes_netRestrict(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, nursery, 1, "node outside netrestrict subnet should be filtered")
 	assert.Equal(t, inside.ID, nursery[0].ID)
+}
+
+func Test_Table_getDiscoverTargets(t *testing.T) {
+	assert.Equal(t, map[NodeType]int{NodeTypeCN: 100, NodeTypeEN: 1, NodeTypeBN: 3},
+		getDiscoverTargets(&Config{NodeType: NodeTypeCN}))
+	assert.Equal(t, map[NodeType]int{NodeTypeCN: 100, NodeTypeEN: math.MaxInt32, NodeTypeBN: 3},
+		getDiscoverTargets(&Config{NodeType: NodeTypeEN}))
+	assert.Equal(t, getDiscoverTargets(&Config{NodeType: NodeTypeEN}),
+		getDiscoverTargets(&Config{NodeType: NodeTypePN}))
+	assert.Equal(t, map[NodeType]int{NodeTypeCN: 100, NodeTypeBN: 3},
+		getDiscoverTargets(&Config{NodeType: NodeTypeBN}))
 }
 
 func Test_Table_StartClose(t *testing.T) {

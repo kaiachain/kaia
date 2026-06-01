@@ -22,26 +22,29 @@ import (
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 )
 
+// dialTargets from KIP-311.
+var dialTargets = map[discover.NodeType]map[discover.NodeType]int{
+	discover.NodeTypeCN: {discover.NodeTypeCN: 100, discover.NodeTypeEN: 1},
+	discover.NodeTypeEN: {discover.NodeTypeCN: 2, discover.NodeTypeEN: 3},
+}
+
+// defaultConnTarget applies KIP-311 dialTargets. EN-to-EN preserves the legacy
+// DialRatio semantics by using maxENToENDialTarget when provided.
 func defaultConnTarget(cfg DialConfig) map[discover.NodeType]int {
-	switch cfg.selfType {
-	case discover.NodeTypeCN:
-		// CN attempts to connect to all other CNs.
-		return map[discover.NodeType]int{
-			discover.NodeTypeCN: 100,
-		}
-	case discover.NodeTypePN:
-		// PN attempts to connect to at most 1 PN, if not statically configured.
-		return map[discover.NodeType]int{
-			discover.NodeTypePN: 1,
-		}
-	case discover.NodeTypeEN:
-		return map[discover.NodeType]int{
-			discover.NodeTypePN: 2,
-			discover.NodeTypeEN: cfg.maxDynDials,
-		}
-	default:
-		return map[discover.NodeType]int{}
+	targets := dialTargets[discover.EffectiveNodeType(cfg.selfType)]
+	targets = cloneTargets(targets)
+	if discover.EffectiveNodeType(cfg.selfType) == discover.NodeTypeEN && cfg.maxENToENDialTarget != nil {
+		targets[discover.NodeTypeEN] = *cfg.maxENToENDialTarget
 	}
+	return targets
+}
+
+func cloneTargets(targets map[discover.NodeType]int) map[discover.NodeType]int {
+	cloned := make(map[discover.NodeType]int, len(targets))
+	for nType, target := range targets {
+		cloned[nType] = target
+	}
+	return cloned
 }
 
 // typedNodeSet is a set of discover.Nodes, which are counted by NodeType.
@@ -99,5 +102,11 @@ func (t *typedNodeSet) contains(id discover.NodeID) bool {
 }
 
 func (t *typedNodeSet) count(nType discover.NodeType) int {
+	// PN is a legacy wire value. For target accounting, PN and EN share
+	// the same effective role bucket.
+	nType = discover.EffectiveNodeType(nType)
+	if nType == discover.NodeTypeEN {
+		return t.counts[discover.NodeTypeEN] + t.counts[discover.NodeTypePN]
+	}
 	return t.counts[nType]
 }

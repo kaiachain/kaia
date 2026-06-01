@@ -114,9 +114,23 @@ func (v *ValsetModule) GetCandTesting(num uint64) ([]common.Address, error) {
 // GetCNPeers returns the CN-CN P2P peer set. Pre-fork: council.
 func (v *ValsetModule) GetCNPeers(num uint64) ([]common.Address, error) {
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		return v.getCNPeers(num)
+		cnPeers, err := v.getCNPeers(num)
+		if len(cnPeers) > 0 {
+			return cnPeers, nil
+		}
+		if err != nil {
+			logger.Warn("GetCNPeers: disabling CN peer filter after post-fork read failed", "num", num, "err", err)
+		} else {
+			logger.Warn("GetCNPeers: disabling CN peer filter after post-fork read returned empty", "num", num)
+		}
+		return nil, nil // allow all CN peers as fallback
 	}
-	return v.GetCouncil(num)
+	cnPeers, err := v.GetCouncil(num)
+	if err != nil {
+		logger.Warn("GetCNPeers: disabling CN peer filter after pre-fork GetCouncil failed", "num", num, "err", err)
+		return nil, nil
+	}
+	return cnPeers, nil
 }
 
 // GetHeaderGovVoters returns validators eligible for header governance votes. Pre-fork: council.
