@@ -65,9 +65,9 @@ var (
 	RegistryAddr    = common.HexToAddress("0x0000000000000000000000000000000000000401")
 	MultiCallAddr   = common.HexToAddress("0x0000000000000000000000000000000000000402")
 	// The following addresses are only used for testing.
-	Kip113ProxyAddrMock       = common.HexToAddress("0x0000000000000000000000000000000000000402")
-	Kip113LogicAddrMock       = common.HexToAddress("0x0000000000000000000000000000000000000403")
-	AuctionEntryPointAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000404")
+	Kip113ProxyAddrMock       = common.HexToAddress("0x0000000000000000000000000000000000000403")
+	Kip113LogicAddrMock       = common.HexToAddress("0x0000000000000000000000000000000000000404")
+	AuctionEntryPointAddrMock = common.HexToAddress("0x0000000000000000000000000000000000000405")
 
 	// Registry will return zero address for non-existent system contract.
 	NonExistentAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
