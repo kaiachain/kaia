@@ -287,7 +287,7 @@ func TestTraceCall(t *testing.T) {
 			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+				Value: hexutil.Big(*big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: errors.New("tracing failed: insufficient balance for transfer"),
@@ -299,7 +299,7 @@ func TestTraceCall(t *testing.T) {
 			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+				Value: hexutil.Big(*big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: nil,
@@ -316,7 +316,7 @@ func TestTraceCall(t *testing.T) {
 			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+				Value: hexutil.Big(*big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: fmt.Errorf("the block does not exist (block number: %d)", genBlocks+1),
@@ -328,7 +328,7 @@ func TestTraceCall(t *testing.T) {
 			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+				Value: hexutil.Big(*big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: nil,
@@ -345,7 +345,7 @@ func TestTraceCall(t *testing.T) {
 			call: kaiaapi.CallArgs{
 				From:  accounts[0].addr,
 				To:    &accounts[1].addr,
-				Value: (hexutil.Big)(*big.NewInt(1000)),
+				Value: hexutil.Big(*big.NewInt(1000)),
 			},
 			config:    nil,
 			expectErr: nil,
@@ -546,7 +546,7 @@ func TestTraceCallPrestateTracerDiffModePrunesUnchangedStorage(t *testing.T) {
 	gasPrice := hexutil.Big(*big.NewInt(0))
 	code := hexutil.Bytes(common.FromHex("0x600054600160015500"))
 	state := map[common.Hash]common.Hash{
-		common.Hash{}: common.BigToHash(big.NewInt(1)),
+		{}: common.BigToHash(big.NewInt(1)),
 	}
 	overrides := kaiaapi.EthStateOverride{
 		contract: {Code: &code, State: &state},

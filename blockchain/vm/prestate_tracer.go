@@ -15,8 +15,10 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 )
 
-var _ Tracer = (*PrestateTracer)(nil)
-var _ TxPrestateTracer = (*PrestateTracer)(nil)
+var (
+	_ Tracer           = (*PrestateTracer)(nil)
+	_ TxPrestateTracer = (*PrestateTracer)(nil)
+)
 
 // PrestateAccount captures account state for the prestate tracer.
 type PrestateAccount struct {
