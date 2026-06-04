@@ -282,7 +282,7 @@ func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPrepr
 		return
 	}
 	vrankPreprepare.Sig = sig
-	v.broadcast(candidates, vrank.VRankPreprepareMsg, vrankPreprepare)
+	v.broadcast(candidates, vrankPreprepare)
 }
 
 // BroadcastVRankCandidate is called by candidates.
@@ -294,13 +294,12 @@ func (v *VRankModule) BroadcastVRankCandidate(vrankCandidate *vrank.VRankCandida
 		return
 	}
 
-	v.broadcast(validators, vrank.VRankCandidateMsg, vrankCandidate)
+	v.broadcast(validators, vrankCandidate)
 }
 
-func (v *VRankModule) broadcast(targets []common.Address, code int, msg any) {
+func (v *VRankModule) broadcast(targets []common.Address, msg any) {
 	req := &vrank.VRankBroadcastEvent{
 		Targets: targets,
-		Code:    code,
 		Msg:     msg,
 	}
 	v.broadcastCh <- req

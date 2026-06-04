@@ -1828,19 +1828,11 @@ func (pm *ProtocolManager) BroadcastVRank(ev *vrank.VRankBroadcastEvent) {
 	}
 
 	var asyncSend func(peer Peer)
-	switch ev.Code {
-	case VRankPreprepareMsg:
-		preprepare, ok := ev.Msg.(*vrank.VRankPreprepare)
-		if !ok {
-			return
-		}
-		asyncSend = func(peer Peer) { peer.AsyncSendVRankPreprepare(preprepare) }
-	case VRankCandidateMsg:
-		candidate, ok := ev.Msg.(*vrank.VRankCandidate)
-		if !ok {
-			return
-		}
-		asyncSend = func(peer Peer) { peer.AsyncSendVRankCandidate(candidate) }
+	switch msg := ev.Msg.(type) {
+	case *vrank.VRankPreprepare:
+		asyncSend = func(peer Peer) { peer.AsyncSendVRankPreprepare(msg) }
+	case *vrank.VRankCandidate:
+		asyncSend = func(peer Peer) { peer.AsyncSendVRankCandidate(msg) }
 	default:
 		return
 	}

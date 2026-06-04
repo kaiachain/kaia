@@ -374,12 +374,11 @@ func TestVRankModule_RestartAfterStop(t *testing.T) {
 	module.Stop() // Stop must be idempotent
 
 	require.NoError(t, module.Start())
-	module.broadcast([]common.Address{numToAddr(0)}, vrank.VRankCandidateMsg, "test")
+	module.broadcast([]common.Address{numToAddr(0)}, "test")
 
 	select {
 	case req := <-sink:
 		assert.Equal(t, []common.Address{numToAddr(0)}, req.Targets)
-		assert.Equal(t, vrank.VRankCandidateMsg, req.Code)
 		assert.Equal(t, "test", req.Msg)
 	case <-time.After(time.Second):
 		t.Fatal("broadcast did not resume after restart")

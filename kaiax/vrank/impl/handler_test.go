@@ -344,7 +344,6 @@ func TestHandleVRankPreprepare(t *testing.T) {
 
 		req := mustPop(t, candidate.sub)
 		assert.Equal(t, []common.Address{round1Val1.Addr, round1Val2.Addr}, req.Targets)
-		assert.Equal(t, vrank.VRankCandidateMsg, req.Code)
 		assert.Len(t, req.Msg.(*vrank.VRankCandidate).BlsSig, 96)
 	})
 
