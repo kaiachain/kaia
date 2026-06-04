@@ -14,6 +14,7 @@ import (
 	event "github.com/kaiachain/kaia/event"
 	gov "github.com/kaiachain/kaia/kaiax/gov"
 	valset "github.com/kaiachain/kaia/kaiax/valset"
+	vrank "github.com/kaiachain/kaia/kaiax/vrank"
 	rpc "github.com/kaiachain/kaia/networks/rpc"
 )
 
@@ -76,6 +77,18 @@ func (m *MockEngine) RegisterKaiaxModules(arg0 gov.GovModule, arg1 valset.Valset
 func (mr *MockEngineMockRecorder) RegisterKaiaxModules(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterKaiaxModules", reflect.TypeOf((*MockEngine)(nil).RegisterKaiaxModules), arg0, arg1)
+}
+
+// RegisterVRankModule mocks base method.
+func (m *MockEngine) RegisterVRankModule(arg0 vrank.VRankModule) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RegisterVRankModule", arg0)
+}
+
+// RegisterVRankModule indicates an expected call of RegisterVRankModule.
+func (mr *MockEngineMockRecorder) RegisterVRankModule(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterVRankModule", reflect.TypeOf((*MockEngine)(nil).RegisterVRankModule), arg0)
 }
 
 // Start mocks base method.

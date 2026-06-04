@@ -23,11 +23,14 @@
 package core
 
 import (
+	"math/big"
 	"time"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 )
 
 func (c *core) sendPreprepare(request *bft.Request) {
@@ -54,6 +57,8 @@ func (c *core) sendPreprepare(request *bft.Request) {
 			Code: bft.MsgPreprepare,
 			Msg:  preprepare,
 		})
+		// Notify VRank: proposer accepted its own preprepare.
+		c.postPrepreparedEvent(&bft.Preprepare{View: curView, Proposal: request.Proposal})
 	}
 }
 
@@ -124,6 +129,7 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 				logger.Warn("Received preprepare message of the hash locked proposal and change state to prepared")
 				// Broadcast COMMIT and enters Prepared state directly
 				c.acceptPreprepare(preprepare)
+				c.postPrepreparedEvent(preprepare)
 				c.setState(StatePrepared)
 				c.sendCommit()
 			} else {
@@ -135,6 +141,7 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 			//   1. the locked proposal and the received proposal match
 			//   2. we have no locked proposal
 			c.acceptPreprepare(preprepare)
+			c.postPrepreparedEvent(preprepare)
 			c.setState(StatePreprepared)
 			c.sendPrepare()
 		}
@@ -146,4 +153,20 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 func (c *core) acceptPreprepare(preprepare *bft.Preprepare) {
 	c.consensusTimestamp = time.Now()
 	c.current.SetPreprepare(preprepare)
+}
+
+// postPrepreparedEvent notifies subscribers (VRank) that this node accepted the
+// PRE-PREPARE for the given (block, view). The view is deep-copied so later
+// round mutations don't alias the event payload.
+func (c *core) postPrepreparedEvent(preprepare *bft.Preprepare) {
+	block, ok := preprepare.Proposal.(*types.Block)
+	if !ok {
+		c.logger.Warn("Failed to post preprepared event due to unexpected proposal type")
+		return
+	}
+	view := &bft.View{
+		Round:    new(big.Int).Set(preprepare.View.Round),
+		Sequence: new(big.Int).Set(preprepare.View.Sequence),
+	}
+	c.sendEvent(istanbul.PrepreparedEvent{Block: block, View: view})
 }

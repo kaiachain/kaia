@@ -58,6 +58,7 @@ import (
 	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	vrank_impl "github.com/kaiachain/kaia/kaiax/vrank/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
@@ -111,6 +112,7 @@ type BackendProtocolManager interface {
 	SetSyncStop(flag bool)
 	staking.StakingModuleHost
 	auction.AuctionModuleHost
+	vrank.VRankModuleHost
 }
 
 type chainAwareConsensusEngine interface {
@@ -591,7 +593,7 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		return err
 	}
 
-	mBase := []kaiax.BaseModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao, mSystem}
+	mBase := []kaiax.BaseModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao, mSystem, mVRank}
 	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
 	mTxBundling := []kaiax.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
@@ -629,7 +631,12 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	s.blockchain.RegisterKaiaxModules(s.govModule, mValset, mExecution, mRewindable, mHeader, mBlockState)
 	s.txPool.RegisterTxPoolModule(mTxPool...)
 	s.engine.RegisterKaiaxModules(s.govModule, mValset)
+	s.engine.RegisterVRankModule(mVRank)
 	s.protocolManager.RegisterStakingModule(s.stakingModule)
+	// VRank p2p send/receive runs on consensus nodes only (candidates are CN-typed).
+	if ctx.NodeType() == common.CONSENSUSNODE {
+		s.protocolManager.RegisterVRankModule(mVRank)
+	}
 
 	return nil
 }
