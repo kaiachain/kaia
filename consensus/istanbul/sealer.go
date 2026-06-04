@@ -3,7 +3,6 @@ package istanbul
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"errors"
 	"io"
 	"math"
@@ -329,14 +328,16 @@ func (m *IstanbulSealer) MakeAuthorSeal(header *types.Header) ([]byte, error) {
 }
 
 func cacheSignatureAddress(data []byte, sig []byte) (common.Address, error) {
-	sigHex := hex.EncodeToString(sig)
-	if addr, ok := signatureAddresses.Get(sigHex); ok {
+	// Key on both data and sig: ecrecover depends on data, so keying on sig alone
+	// would return a cached address even when queried with different data.
+	key := string(crypto.Keccak256(data, sig))
+	if addr, ok := signatureAddresses.Get(key); ok {
 		return addr.(common.Address), nil
 	}
 	addr, err := GetSignatureAddress(data, sig)
 	if err != nil {
 		return common.Address{}, err
 	}
-	signatureAddresses.Add(sigHex, addr)
+	signatureAddresses.Add(key, addr)
 	return addr, nil
 }

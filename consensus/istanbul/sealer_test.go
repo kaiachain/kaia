@@ -43,6 +43,36 @@ func TestCommitters(t *testing.T) {
 	assert.NotEmpty(t, committedSeals)
 }
 
+// TestCacheSignatureAddress_BindsData checks that the cache binds data: a signature
+// cached for one data must not be returned as the signer when queried with different
+// data (which would let a forged header reuse a cached recovery).
+func TestCacheSignatureAddress_BindsData(t *testing.T) {
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	signer := crypto.PubkeyToAddress(key.PublicKey)
+
+	// A legitimate (data, sig) pair, e.g. recovered while processing block N-1.
+	legitData := []byte("legitimate block sighash preimage")
+	sig, err := crypto.Sign(crypto.Keccak256(legitData), key)
+	require.NoError(t, err)
+
+	got, err := cacheSignatureAddress(legitData, sig)
+	require.NoError(t, err)
+	require.Equal(t, signer, got) // populates the cache for sig
+
+	// Reuse the same sig over different data (the forged block N). The recovered
+	// address must reflect ecrecover(forgedData, sig), NOT the cached legit signer.
+	forgedData := []byte("forged block sighash preimage")
+	want, err := GetSignatureAddress(forgedData, sig)
+	require.NoError(t, err)
+	require.NotEqual(t, signer, want) // sanity: different data recovers a different address
+
+	cached, err := cacheSignatureAddress(forgedData, sig)
+	require.NoError(t, err)
+	assert.Equal(t, want, cached, "cache must bind data; a reused sig with different data must not return the cached signer")
+	assert.NotEqual(t, signer, cached)
+}
+
 func TestWriteValidators(t *testing.T) {
 	var (
 		validators = []common.Address{
