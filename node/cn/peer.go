@@ -23,6 +23,7 @@
 package cn
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -346,7 +347,7 @@ func newPeer(version int, p *p2p.Peer, rw p2p.MsgReadWriter) Peer {
 			Peer:                  p,
 			rw:                    rw,
 			version:               version,
-			id:                    fmt.Sprintf("%x", id[:8]),
+			id:                    hex.EncodeToString(id[:8]),
 			knownTxsCache:         newKnownTxCache(),
 			knownBlocksCache:      newKnownBlockCache(),
 			knownBidsCache:        newKnownBidCache(),
@@ -415,7 +416,7 @@ func newPeerWithRWs(version int, p *p2p.Peer, rws []p2p.MsgReadWriter) (Peer, er
 			Peer:                  p,
 			rw:                    rws[p2p.ConnDefault],
 			version:               version,
-			id:                    fmt.Sprintf("%x", id[:8]),
+			id:                    hex.EncodeToString(id[:8]),
 			knownTxsCache:         newKnownTxCache(),
 			knownBlocksCache:      newKnownBlockCache(),
 			knownBidsCache:        newKnownBidCache(),
