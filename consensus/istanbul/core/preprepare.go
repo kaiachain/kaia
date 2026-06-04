@@ -57,8 +57,6 @@ func (c *core) sendPreprepare(request *bft.Request) {
 			Code: bft.MsgPreprepare,
 			Msg:  preprepare,
 		})
-		// Notify VRank: proposer accepted its own preprepare.
-		c.postPrepreparedEvent(&bft.Preprepare{View: curView, Proposal: request.Proposal})
 	}
 }
 

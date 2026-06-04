@@ -556,107 +556,62 @@ func TestCore_handlerMsg(t *testing.T) {
 	}
 }
 
-// TestCore_postPrepreparedEvent asserts the core posts a PrepreparedEvent on both
-// emission sites: sendPreprepare (proposer) and handlePreprepare (receiver).
+// TestCore_postPrepreparedEvent asserts the core posts a PrepreparedEvent when it
+// accepts a PRE-PREPARE in handlePreprepare. This is the sole emission site; the
+// proposer reaches it via the backend's self-broadcast loopback, like any receiver.
 func TestCore_postPrepreparedEvent(t *testing.T) {
 	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
 	defer fork.ClearHardForkBlockNumberConfig()
 
 	validatorAddrs, validatorKeyMap := genValidators(10)
+	mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs)
+	defer mockCtrl.Finish()
 
-	// startCore builds and starts a core whose owner (validatorAddrs[0]) is also the
-	// round-0 proposer (see newMockBackend), so both emission paths are reachable.
-	startCore := func(t *testing.T) (*core, *mock_istanbul.MockBackend, func()) {
-		mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs)
-		istConfig := istanbul.DefaultConfig.Copy()
-		istConfig.ProposerPolicy = istanbul.WeightedRandom
-		istCore := New(mockBackend, istConfig).(*core)
-		istCore.RegisterKaiaxModules(mockValset, mockGov)
-		if err := istCore.Start(); err != nil {
-			t.Fatal(err)
-		}
-		return istCore, mockBackend, func() {
-			istCore.Stop()
-			mockCtrl.Finish()
-		}
+	istConfig := istanbul.DefaultConfig.Copy()
+	istConfig.ProposerPolicy = istanbul.WeightedRandom
+	istCore := New(mockBackend, istConfig).(*core)
+	istCore.RegisterKaiaxModules(mockValset, mockGov)
+	if err := istCore.Start(); err != nil {
+		t.Fatal(err)
 	}
+	defer istCore.Stop()
 
-	// awaitEvent reads the next PrepreparedEvent concurrently. event.TypeMux uses an
-	// unbuffered channel, so the synchronous Post blocks until a reader is present;
-	// the reader must be started before the triggering call.
-	awaitEvent := func(sub *event.TypeMuxSubscription) <-chan istanbul.PrepreparedEvent {
-		out := make(chan istanbul.PrepreparedEvent, 1)
-		go func() {
-			if ev := <-sub.Chan(); ev != nil {
-				if pe, ok := ev.Data.(istanbul.PrepreparedEvent); ok {
-					out <- pe
-				}
+	lastProposal, _ := mockBackend.LastProposal()
+	lastBlock := lastProposal.(*types.Block)
+	wantSeq := lastBlock.NumberU64() + 1
+	committeeSize := uint64(len(validatorAddrs) / 3)
+	_, _, proposer, _ := getTestCommitteeState(validatorAddrs, committeeSize, wantSeq, 0)
+	proposerKey := validatorKeyMap[proposer]
+
+	sub := mockBackend.EventMux().Subscribe(istanbul.PrepreparedEvent{})
+	defer sub.Unsubscribe()
+
+	// event.TypeMux uses an unbuffered channel, so handleMsg's synchronous Post blocks
+	// until a reader is present; start the reader before triggering.
+	out := make(chan istanbul.PrepreparedEvent, 1)
+	go func() {
+		if ev := <-sub.Chan(); ev != nil {
+			if pe, ok := ev.Data.(istanbul.PrepreparedEvent); ok {
+				out <- pe
 			}
-		}()
-		return out
+		}
+	}()
+
+	proposal, err := genBlock(lastBlock, proposerKey)
+	require.NoError(t, err)
+	istanbulMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), proposal, proposer, proposerKey)
+	require.NoError(t, err)
+	require.NoError(t, istCore.handleMsg(istanbulMsg.Payload))
+
+	select {
+	case pe := <-out:
+		require.NotNil(t, pe.Block)
+		assert.Equal(t, proposal.Hash(), pe.Block.Hash())
+		assert.Equal(t, wantSeq, pe.View.Sequence.Uint64())
+		assert.Equal(t, uint64(0), pe.View.Round.Uint64())
+	case <-time.After(3 * time.Second):
+		t.Fatal("expected PrepreparedEvent from handlePreprepare was not posted")
 	}
-
-	t.Run("proposer path (sendPreprepare)", func(t *testing.T) {
-		istCore, mockBackend, cleanup := startCore(t)
-		defer cleanup()
-
-		lastProposal, _ := mockBackend.LastProposal()
-		lastBlock := lastProposal.(*types.Block)
-		wantSeq := lastBlock.NumberU64() + 1
-
-		sub := mockBackend.EventMux().Subscribe(istanbul.PrepreparedEvent{})
-		defer sub.Unsubscribe()
-		out := awaitEvent(sub)
-
-		proposal, err := genBlock(lastBlock, validatorKeyMap[validatorAddrs[0]])
-		require.NoError(t, err)
-
-		// sendPreprepare re-seals the proposal, so assert on number/view, not hash.
-		istCore.sendPreprepare(&bft.Request{Proposal: proposal})
-
-		select {
-		case pe := <-out:
-			require.NotNil(t, pe.Block)
-			assert.Equal(t, wantSeq, pe.Block.NumberU64())
-			assert.Equal(t, wantSeq, pe.View.Sequence.Uint64())
-			assert.Equal(t, uint64(0), pe.View.Round.Uint64())
-		case <-time.After(3 * time.Second):
-			t.Fatal("expected PrepreparedEvent from sendPreprepare was not posted")
-		}
-	})
-
-	t.Run("receiver path (handlePreprepare)", func(t *testing.T) {
-		istCore, mockBackend, cleanup := startCore(t)
-		defer cleanup()
-
-		lastProposal, _ := mockBackend.LastProposal()
-		lastBlock := lastProposal.(*types.Block)
-		wantSeq := lastBlock.NumberU64() + 1
-		committeeSize := uint64(len(validatorAddrs) / 3)
-		_, _, proposer, _ := getTestCommitteeState(validatorAddrs, committeeSize, wantSeq, 0)
-		proposerKey := validatorKeyMap[proposer]
-
-		sub := mockBackend.EventMux().Subscribe(istanbul.PrepreparedEvent{})
-		defer sub.Unsubscribe()
-		out := awaitEvent(sub)
-
-		proposal, err := genBlock(lastBlock, proposerKey)
-		require.NoError(t, err)
-		istanbulMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), proposal, proposer, proposerKey)
-		require.NoError(t, err)
-
-		require.NoError(t, istCore.handleMsg(istanbulMsg.Payload))
-
-		select {
-		case pe := <-out:
-			require.NotNil(t, pe.Block)
-			assert.Equal(t, proposal.Hash(), pe.Block.Hash())
-			assert.Equal(t, wantSeq, pe.View.Sequence.Uint64())
-			assert.Equal(t, uint64(0), pe.View.Round.Uint64())
-		case <-time.After(3 * time.Second):
-			t.Fatal("expected PrepreparedEvent from handlePreprepare was not posted")
-		}
-	})
 }
 
 // TODO-Kaia: To enable logging in the test code, we can use the following function.
