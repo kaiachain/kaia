@@ -73,6 +73,18 @@ func TestCacheSignatureAddress_BindsData(t *testing.T) {
 	assert.NotEqual(t, signer, cached)
 }
 
+// TestQuorum checks that Quorum is ceil(2N/3) over min(qualified, committee),
+// and N for tiny committees.
+func TestQuorum(t *testing.T) {
+	s := NewSealerImpl(nil)
+	for _, tc := range []struct{ n, want int }{
+		{1, 1}, {2, 2}, {3, 3}, // < 4: everyone
+		{4, 3}, {5, 4}, {6, 4}, {7, 5}, {21, 14}, {22, 15}, {50, 34}, {100, 67},
+	} {
+		assert.Equalf(t, tc.want, s.Quorum(0, tc.n, tc.n), "Quorum(%d, %d)", tc.n, tc.n)
+	}
+}
+
 func TestWriteValidators(t *testing.T) {
 	var (
 		validators = []common.Address{

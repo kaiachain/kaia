@@ -308,8 +308,16 @@ func (m *IstanbulSealer) F(_ uint64, qualifiedLen, committeeSize int) int {
 	return int(math.Ceil(float64(qualifiedLen)/3)) - 1
 }
 
-func (m *IstanbulSealer) Quorum(blockNum uint64, qualifiedlen, committeeSize int) int {
-	return 2*m.F(blockNum, qualifiedlen, committeeSize) + 1
+// Quorum returns the quorum: ceil(2N/3) over the effective size
+// N = min(qualifiedlen, committeeSize), or N for tiny committees. This matches
+// calcQuorumSize used by the consensus core.
+// Pre-permissionless sealer quorum: 2f+1
+func (m *IstanbulSealer) Quorum(_ uint64, qualifiedlen, committeeSize int) int {
+	n := min(qualifiedlen, committeeSize)
+	if n < 4 {
+		return n
+	}
+	return int(math.Ceil(float64(2*n) / 3))
 }
 
 func (m *IstanbulSealer) MakeCommittedSeal(header *types.Header) ([]byte, error) {

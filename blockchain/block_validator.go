@@ -255,9 +255,34 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		if err != nil {
 			return err
 		}
+		// author == proposer implies the author is the committee-selected proposer,
+		// so a separate qualified-membership check is redundant here.
 		if author != proposer {
 			return consensus.ErrUnauthorized
 		}
+
+		// Count committed seals only from the round's committee, matching the set the
+		// live consensus commits against (handleCommit rejects non-committee senders),
+		// rather than the broader qualified/council set.
+		committee, err := v.mValset.GetCommittee(blockNum, uint64(round))
+		if err != nil {
+			return err
+		}
+		committeeSet := valset.NewAddressSet(committee)
+		validSeal := 0
+		for _, addr := range committers {
+			if committeeSet.Remove(addr) {
+				validSeal++
+			} else {
+				return istanbul.ErrInvalidCommittedSeals
+			}
+		}
+		// Require the quorum over the committee. Post-permissionless the committee
+		// equals the qualified set, so pass its size for both arguments.
+		if validSeal < v.sealer.Quorum(blockNum, len(committee), len(committee)) {
+			return istanbul.ErrInvalidCommittedSeals
+		}
+		return nil
 	}
 
 	qualified, err := v.mValset.GetQualifiedValidators(blockNum)
@@ -291,7 +316,9 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 	if !gov.DeprecatedAt(gov.IstanbulCommitteeSize, rules) {
 		committeeSize = int(v.mGov.GetParamSet(blockNum).CommitteeSize)
 	}
-	if validSeal < v.sealer.Quorum(blockNum, qualifiedLen, committeeSize) {
+	// Pre-permissionless uses the legacy 2f+1 quorum. sealer.Quorum now returns
+	// ceil(2N/3), so compute 2f+1 explicitly to preserve historical header validity.
+	if validSeal < 2*v.sealer.F(blockNum, qualifiedLen, committeeSize)+1 {
 		return istanbul.ErrInvalidCommittedSeals
 	}
 	return nil
