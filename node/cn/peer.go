@@ -306,16 +306,16 @@ type basePeer struct {
 	td   *big.Int
 	lock sync.RWMutex
 
-	knownTxsCache    *knownHashSet             // bounded FIFO set of tx hashes known to be known by this peer
-	knownBlocksCache *knownHashSet             // bounded FIFO set of block hashes known to be known by this peer
-	knownBidsCache   *knownHashSet             // bounded FIFO set of bid hashes known to be known by this peer
-	queuedTxs              chan []*types.Transaction    // Queue of transactions to broadcast to the peer
-	queuedProps            chan *propEvent              // Queue of blocks to broadcast to the peer
-	queuedAnns             chan *types.Block            // Queue of blocks to announce to the peer
-	queuedBids             chan *auction.Bid            // Queue of bids to broadcast to the peer
-	queuedVRankPreprepare  chan *vrank.VRankPreprepare  // Queue of VRankPreprepare messages to broadcast to the peer
-	queuedVRankCandidate   chan *vrank.VRankCandidate   // Queue of VRankCandidate messages to broadcast to the peer
-	term                   chan struct{}                // Termination channel to stop the broadcaster
+	knownTxsCache         *knownHashSet               // bounded FIFO set of tx hashes known to be known by this peer
+	knownBlocksCache      *knownHashSet               // bounded FIFO set of block hashes known to be known by this peer
+	knownBidsCache        *knownHashSet               // bounded FIFO set of bid hashes known to be known by this peer
+	queuedTxs             chan []*types.Transaction   // Queue of transactions to broadcast to the peer
+	queuedProps           chan *propEvent             // Queue of blocks to broadcast to the peer
+	queuedAnns            chan *types.Block           // Queue of blocks to announce to the peer
+	queuedBids            chan *auction.Bid           // Queue of bids to broadcast to the peer
+	queuedVRankPreprepare chan *vrank.VRankPreprepare // Queue of VRankPreprepare messages to broadcast to the peer
+	queuedVRankCandidate  chan *vrank.VRankCandidate  // Queue of VRankCandidate messages to broadcast to the peer
+	term                  chan struct{}               // Termination channel to stop the broadcaster
 
 	chainID *big.Int // ChainID to sign a transaction
 
