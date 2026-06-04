@@ -25,6 +25,7 @@ package core
 import (
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/consensus/istanbul"
 )
 
 func (c *core) sendCommit() {
@@ -92,6 +93,15 @@ func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
 		logger.Warn("received an istanbul commit message from non-committee",
 			"currentSequence", c.current.sequence.Uint64(), "sender", src.String(), "msgView", commit.View.String())
 		return errNotFromCommittee
+	}
+
+	// Verify msg.CommittedSeal is the sender's signature over the proposal's
+	// committed-seal preimage. Without this, an arbitrary seal would be copied verbatim into the sealed block.
+	// commit.Digest is the proposal hash, already validated by verifyCommit above.
+	committer, err := istanbul.GetSignatureAddress(istanbul.PrepareCommittedSeal(commit.Digest), msg.CommittedSeal)
+	if err != nil || committer != src {
+		logger.Warn("invalid committed seal in commit message", "sender", src.String(), "recovered", committer.String(), "err", err)
+		return errInvalidCommittedSeal
 	}
 
 	c.acceptCommit(msg, src)

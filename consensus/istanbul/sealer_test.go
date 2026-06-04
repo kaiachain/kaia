@@ -214,7 +214,7 @@ func TestMakeSeals_GenesisHandled(t *testing.T) {
 	committedSeal, err := s.MakeCommittedSeal(h)
 	require.NoError(t, err)
 	assert.Len(t, committedSeal, IstanbulExtraSeal)
-	addr, err := GetSignatureAddress(prepareCommittedSeal(s.HeaderHash(h)), committedSeal)
+	addr, err := GetSignatureAddress(PrepareCommittedSeal(s.HeaderHash(h)), committedSeal)
 	require.NoError(t, err)
 	assert.Equal(t, crypto.PubkeyToAddress(key.PublicKey), addr)
 }

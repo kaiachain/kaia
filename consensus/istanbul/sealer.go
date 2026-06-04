@@ -143,7 +143,7 @@ func istanbulFilteredHeader(h *types.Header, keepSeal bool) *types.Header {
 	return newHeader
 }
 
-func prepareCommittedSeal(hash common.Hash) []byte {
+func PrepareCommittedSeal(hash common.Hash) []byte {
 	var buf bytes.Buffer
 	buf.Write(hash.Bytes())
 	buf.Write([]byte{byte(2)}) // keep in sync with bft.MsgCommit
@@ -174,7 +174,7 @@ func (m *IstanbulSealer) Committers(header *types.Header) ([]common.Address, err
 		return []common.Address{}, nil
 	}
 
-	proposalSeal := prepareCommittedSeal(m.HeaderHash(header)) // bft.MsgCommit
+	proposalSeal := PrepareCommittedSeal(m.HeaderHash(header)) // bft.MsgCommit
 	committers := make([]common.Address, 0, len(extra.CommittedSeal))
 	for _, seal := range extra.CommittedSeal {
 		addr, err := cacheSignatureAddress(proposalSeal, seal)
@@ -321,7 +321,7 @@ func (m *IstanbulSealer) Quorum(_ uint64, qualifiedlen, committeeSize int) int {
 }
 
 func (m *IstanbulSealer) MakeCommittedSeal(header *types.Header) ([]byte, error) {
-	return crypto.Sign(crypto.Keccak256(prepareCommittedSeal(m.HeaderHash(header))), m.privateKey)
+	return crypto.Sign(crypto.Keccak256(PrepareCommittedSeal(m.HeaderHash(header))), m.privateKey)
 }
 
 func (m *IstanbulSealer) MakeAuthorSeal(header *types.Header) ([]byte, error) {

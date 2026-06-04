@@ -27,6 +27,9 @@ var (
 	errNotFromProposer = errors.New("message does not come from proposer")
 	// errNotFromCommittee is returned when received message is supposed to be from a committee.
 	errNotFromCommittee = errors.New("message does not come from a committee")
+	// errInvalidCommittedSeal is returned when a COMMIT's CommittedSeal is not the
+	// sender's signature over the proposal's committed-seal preimage.
+	errInvalidCommittedSeal = errors.New("invalid committed seal")
 	// errIgnored is returned when a message was ignored.
 	errIgnored = errors.New("message is ignored")
 	// errFutureMessage is returned when current view is earlier than the
