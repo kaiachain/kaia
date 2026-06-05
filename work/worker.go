@@ -439,7 +439,6 @@ func (self *worker) commitNewWork() {
 	self.pendingWork = self.current
 	self.pendingWorkStart = tstart
 
-	// Callback to update snapshot when block is prepared (before consensus sealing)
 	onPrepared := func(result *consensus.ExecutionResult) {
 		// Log block preparation completion (all validators log this, before seal)
 		logger.Info("Prepared new block",
