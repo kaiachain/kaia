@@ -95,13 +95,19 @@ func (c *core) handleRoundChange(msg *bft.Message, src common.Address) error {
 		return bft.ErrInvalidMessage
 	}
 
-	// TODO-Kaia-Istanbul: establish round change messaging policy and then apply it
-	//if !c.valSet.CheckInSubList(msg.Hash, rc.View, src.Address()) {
-	//	return errNotFromCommittee
-	//}
-
 	if err := c.checkMessage(bft.MsgRoundChange, rc.View); err != nil {
 		return err
+	}
+
+	// Restrict round-change admission to committee members, mirroring handleCommit.
+	// The thresholds (requiredMessageCount, f) are committee-sized, but messageSet
+	// admits any qualified validator; gating on the committee keeps admission
+	// consistent with the thresholds. The committee equals the qualified set (now and
+	// post-permissionless), so this is round-agnostic.
+	if !c.current.committee.Contains(src) {
+		logger.Warn("received an istanbul round change message from non-committee",
+			"currentSequence", c.current.sequence.Uint64(), "sender", src.Hex(), "msgView", rc.View.String())
+		return errNotFromCommittee
 	}
 
 	cv := c.currentView()

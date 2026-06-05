@@ -465,28 +465,30 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 		assert.Equal(t, 1, len(istCore.current.Commits.messages))
 	}
 
-	//// RoundChange message originated from invalid sender
-	//{
-	//	msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
-	//	msgSenderKey := validatorKeyMap[msgSender.Address()]
-	//
-	//	istanbulMsg, err := genIstanbulMsg(bft.MsgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	if err := eventMux.Post(istanbulMsg); err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	time.Sleep(time.Second)
-	//	assert.Nil(t, istCore.roundChangeSet.roundChanges[0]) // round is set to 0 in this test
-	//}
-
-	// RoundChange message originated from valid sender even though using non-committee sender because there is no checking for committee in round change
-	// See: TODO-Kaia-Istanbul: establish round change messaging policy and then apply it
+	// RoundChange message originated from invalid (non-committee) sender is rejected.
+	// Round-change admission is now gated on committee membership so that the
+	// (qualified - committee) validators cannot force a round change.
 	{
 		msgSender := nonCommittee.At(rand.Int() % (nonCommittee.Len() - 1))
+		msgSenderKey := validatorKeyMap[msgSender]
+
+		istanbulMsg, err := genIstanbulMsg(bft.MsgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := eventMux.Post(istanbulMsg); err != nil {
+			t.Fatal(err)
+		}
+
+		time.Sleep(time.Second)
+		assert.Nil(t, istCore.roundChangeSet.roundChanges[0]) // round is set to 0 in this test
+	}
+
+	// RoundChange message originated from valid (committee) sender is accepted.
+	{
+		_, committee, _, _ := getTestCommitteeState(validatorAddrs, committeeSize, istCore.currentView().Sequence.Uint64(), istCore.currentView().Round.Uint64())
+		msgSender := committee.At(rand.Int() % (committee.Len() - 1))
 		msgSenderKey := validatorKeyMap[msgSender]
 
 		istanbulMsg, err := genIstanbulMsg(bft.MsgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
