@@ -28,6 +28,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/mclock"
@@ -205,34 +206,14 @@ func (srv *MultiChannelServer) listenLoop(listener net.Listener) {
 		slots <- struct{}{}
 	}
 
+	var lastLog time.Time
 	for {
 		// Wait for a handshake slot before accepting.
 		<-slots
 
-		var (
-			fd  net.Conn
-			err error
-		)
-		for {
-			fd, err = listener.Accept()
-			if tempErr, ok := err.(tempError); ok && tempErr.Temporary() {
-				srv.logger.Debug("Temporary read error", "err", err)
-				continue
-			} else if err != nil {
-				srv.logger.Debug("Read error", "err", err)
-				return
-			}
-			break
-		}
-
-		// Reject connections that do not match NetRestrict.
-		if srv.NetRestrict != nil {
-			if tcp, ok := fd.RemoteAddr().(*net.TCPAddr); ok && !srv.NetRestrict.Contains(tcp.IP) {
-				srv.logger.Debug("Rejected conn (not whitelisted in NetRestrict)", "addr", fd.RemoteAddr())
-				fd.Close()
-				slots <- struct{}{}
-				continue
-			}
+		fd := srv.acceptInbound(listener, &lastLog)
+		if fd == nil {
+			return
 		}
 
 		fd = newMeteredConn(fd, true)
