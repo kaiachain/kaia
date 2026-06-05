@@ -1,5 +1,4 @@
-// Modifications Copyright 2024 The Kaia Authors
-// Modifications Copyright 2019 The klaytn Authors
+// Modifications Copyright 2026 The Kaia Authors
 // Copyright 2019 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
@@ -17,7 +16,6 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 //
 // This file is derived from p2p/util.go (2019/04/02).
-// Modified and improved for the klaytn development.
 // Modified and improved for the Kaia development.
 
 package p2p
