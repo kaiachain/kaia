@@ -179,11 +179,6 @@ type worker struct {
 	current   *Task
 	nodeAddr  common.Address
 
-	snapshotMu       sync.RWMutex // The lock used to protect the block snapshot and state snapshot
-	snapshotBlock    *types.Block
-	snapshotReceipts types.Receipts
-	snapshotState    *state.StateDB
-
 	// atomic status counters
 	mining atomic.Int32
 
@@ -225,18 +220,20 @@ func (self *worker) setExtra(extra []byte) {
 }
 
 func (self *worker) pending() (*types.Block, types.Receipts, *state.StateDB) {
-	self.snapshotMu.RLock()
-	defer self.snapshotMu.RUnlock()
-	if self.snapshotState == nil {
+	block := self.chain.CurrentBlock()
+	if block == nil {
 		return nil, nil, nil
 	}
-	return self.snapshotBlock, self.snapshotReceipts, self.snapshotState.Copy()
+	receipts := self.chain.GetReceiptsByBlockHash(block.Hash())
+	state, err := self.chain.StateAt(block.Root())
+	if err != nil {
+		return nil, nil, nil
+	}
+	return block, receipts, state
 }
 
 func (self *worker) pendingBlock() *types.Block {
-	self.snapshotMu.RLock()
-	defer self.snapshotMu.RUnlock()
-	return self.snapshotBlock
+	return self.chain.CurrentBlock()
 }
 
 func (self *worker) start() {
@@ -442,7 +439,6 @@ func (self *worker) commitNewWork() {
 	self.pendingWork = self.current
 	self.pendingWorkStart = tstart
 
-	// Callback to update snapshot when block is prepared (before consensus sealing)
 	onPrepared := func(result *consensus.ExecutionResult) {
 		// Log block preparation completion (all validators log this, before seal)
 		logger.Info("Prepared new block",
@@ -452,12 +448,6 @@ func (self *worker) commitNewWork() {
 			"elapsed", common.PrettyDuration(result.ExecuteTime+result.FinalizeTime),
 			"executeTime", common.PrettyDuration(result.ExecuteTime),
 			"finalizeTime", common.PrettyDuration(result.FinalizeTime))
-
-		self.snapshotMu.Lock()
-		defer self.snapshotMu.Unlock()
-		self.snapshotBlock = result.Block
-		self.snapshotReceipts = result.Receipts
-		self.snapshotState = result.State.Copy()
 	}
 
 	self.finalizeCh = self.engine.SubmitTransactions(txs, self.current.state, self.current.header, self.mux, onPrepared)
@@ -581,21 +571,6 @@ func (self *worker) handleFinalizedBlock(result *consensus.ExecutionResult) {
 	logger.Info("Successfully wrote mined block", "num", block.NumberU64(),
 		"hash", block.Hash(), "txs", len(block.Transactions()), "elapsed", blockWriteTime)
 	self.chain.PostChainEvents(events, logs)
-
-	self.updateSnapshot()
-}
-
-func (self *worker) updateSnapshot() {
-	self.snapshotMu.Lock()
-	defer self.snapshotMu.Unlock()
-
-	self.snapshotBlock = types.NewBlock(
-		self.current.header,
-		self.current.txs,
-		self.current.receipts,
-	)
-	self.snapshotReceipts = self.current.receipts
-	self.snapshotState = self.current.state.Copy()
 }
 
 func (self *worker) RegisterExecutionModule(modules ...kaiax.ExecutionModule) {
