@@ -314,3 +314,26 @@ func TestSetDefaultMaxPhysicalConnections(t *testing.T) {
 		})
 	}
 }
+
+func TestSetDefaultDiscoverTypes(t *testing.T) {
+	tests := []struct {
+		name     string
+		connType common.ConnType
+		wantCN   bool
+		wantPN   bool
+		wantEN   bool
+	}{
+		{name: "CN", connType: common.CONSENSUSNODE, wantCN: true, wantEN: true},
+		{name: "EN", connType: common.ENDPOINTNODE, wantCN: true, wantPN: true, wantEN: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &p2p.Config{ConnectionType: tt.connType}
+			setDefaultDiscoverTypes(cfg)
+			assert.Equal(t, tt.wantCN, cfg.DiscoverTypes.CN)
+			assert.Equal(t, tt.wantPN, cfg.DiscoverTypes.PN)
+			assert.Equal(t, tt.wantEN, cfg.DiscoverTypes.EN)
+		})
+	}
+}

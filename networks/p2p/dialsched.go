@@ -66,8 +66,8 @@ type DialConfig struct {
 	// See also: discover.table.discoverTargets.
 	connTarget map[discover.NodeType]int
 
-	// maxENToENDialTarget is the EN-to-EN target derived from MaxPhysicalConnections / DialRatio.
-	// Pass the result of Server.maxDialedConns() here.
+	// maxENToENDialTarget is the dynamic-dial EN cap derived from
+	// MaxPhysicalConnections / DialRatio. Pass Server.maxDialedConns() here.
 	maxENToENDialTarget *int
 
 	// maxPeers is the total peer capacity (inbound + outbound).
@@ -316,8 +316,8 @@ func (ds *DialSched) dialLoop() {
 //
 // If there are too many dynamic CN candidates, EN dialing can be delayed. But it is unlikely under the connTarget settings.
 // - CN's connTarget = {CN: 100}. No starvation possible.
-// - EN's connTarget = {CN: 2, EN: maxENToENDialTarget}.
-// EN dialing is delayed only if static nodes and CN candidates fill maxConcurrentDials first.
+// - EN's connTarget = {CN: 2, PN: 2, EN: maxENToENDialTarget}.
+// PN/EN dialing is delayed only if static nodes and CN candidates fill maxConcurrentDials first.
 // But in reality, there are much less static nodes, and even so they will be filtered out by shouldDial() in later iterations quite soon.
 func (ds *DialSched) getCandidates() (candidates []*discover.Node, needRefresh bool) {
 	ds.mu.RLock()
@@ -471,7 +471,7 @@ func (ds *DialSched) refillCandidates() {
 	for targetType := range ds.connTarget {
 		if len(ds.candidateQueue[targetType]) == 0 {
 			buf := make([]*discover.Node, candidateQueueSize)
-			n := ds.tab.RandomNodes(buf, discover.EffectiveNodeType(targetType))
+			n := ds.tab.RandomNodes(buf, targetType)
 			ds.candidateQueue[targetType] = buf[:n]
 		}
 	}

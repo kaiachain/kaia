@@ -25,11 +25,14 @@ import (
 // dialTargets from KIP-311.
 var dialTargets = map[discover.NodeType]map[discover.NodeType]int{
 	discover.NodeTypeCN: {discover.NodeTypeCN: 100, discover.NodeTypeEN: 1},
-	discover.NodeTypeEN: {discover.NodeTypeCN: 2, discover.NodeTypeEN: 3},
+	discover.NodeTypeEN: {
+		discover.NodeTypeCN: 2,
+		discover.NodeTypePN: 2,
+		discover.NodeTypeEN: 3,
+	},
 }
 
-// defaultConnTarget applies KIP-311 dialTargets. EN-to-EN preserves the legacy
-// DialRatio semantics by using maxENToENDialTarget when provided.
+// defaultConnTarget applies KIP-311 dialTargets plus PN compatibility.
 func defaultConnTarget(cfg DialConfig) map[discover.NodeType]int {
 	targets := dialTargets[discover.EffectiveNodeType(cfg.selfType)]
 	targets = cloneTargets(targets)
@@ -102,11 +105,5 @@ func (t *typedNodeSet) contains(id discover.NodeID) bool {
 }
 
 func (t *typedNodeSet) count(nType discover.NodeType) int {
-	// PN is a legacy wire value. For target accounting, PN and EN share
-	// the same effective role bucket.
-	nType = discover.EffectiveNodeType(nType)
-	if nType == discover.NodeTypeEN {
-		return t.counts[discover.NodeTypeEN] + t.counts[discover.NodeTypePN]
-	}
 	return t.counts[nType]
 }

@@ -69,12 +69,23 @@ func Test_Table_getBootnodes_netRestrict(t *testing.T) {
 func Test_Table_getDiscoverTargets(t *testing.T) {
 	assert.Equal(t, map[NodeType]int{NodeTypeCN: 100, NodeTypeEN: 1, NodeTypeBN: 3},
 		getDiscoverTargets(&Config{NodeType: NodeTypeCN}))
-	assert.Equal(t, map[NodeType]int{NodeTypeCN: 100, NodeTypeEN: math.MaxInt32, NodeTypeBN: 3},
+	assert.Equal(t, map[NodeType]int{NodeTypeCN: 100, NodeTypePN: 2, NodeTypeEN: math.MaxInt32, NodeTypeBN: 3},
 		getDiscoverTargets(&Config{NodeType: NodeTypeEN}))
-	assert.Equal(t, getDiscoverTargets(&Config{NodeType: NodeTypeEN}),
-		getDiscoverTargets(&Config{NodeType: NodeTypePN}))
 	assert.Equal(t, map[NodeType]int{NodeTypeCN: 100, NodeTypeBN: 3},
 		getDiscoverTargets(&Config{NodeType: NodeTypeBN}))
+}
+
+func Test_Table_getDiscoverTargets_FiltersDiscoverTypes(t *testing.T) {
+	cfg := &Config{
+		NodeType: NodeTypeEN,
+		DiscoverTypes: DiscoverTypesConfig{
+			PN: true,
+		},
+	}
+	assert.Equal(t, map[NodeType]int{NodeTypePN: 2, NodeTypeBN: 3}, getDiscoverTargets(cfg))
+
+	cfg.DiscoverTypes = DiscoverTypesConfig{CN: true, EN: true}
+	assert.Equal(t, map[NodeType]int{NodeTypeCN: 100, NodeTypeEN: math.MaxInt32, NodeTypeBN: 3}, getDiscoverTargets(cfg))
 }
 
 func Test_Table_StartClose(t *testing.T) {

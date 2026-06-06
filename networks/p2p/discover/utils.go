@@ -254,7 +254,7 @@ func EffectiveNodeType(nt NodeType) NodeType {
 // KIP-311 discoverTargets
 var discoverTargets = map[NodeType]map[NodeType]int{
 	NodeTypeCN: {NodeTypeCN: 100, NodeTypeEN: 1, NodeTypeBN: 3},
-	NodeTypeEN: {NodeTypeCN: 100, NodeTypeEN: math.MaxInt32, NodeTypeBN: 3},
+	NodeTypeEN: {NodeTypeCN: 100, NodeTypePN: 2, NodeTypeEN: math.MaxInt32, NodeTypeBN: 3},
 	NodeTypeBN: {NodeTypeCN: 100, NodeTypeBN: 3},
 }
 
