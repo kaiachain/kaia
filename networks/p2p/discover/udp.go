@@ -52,6 +52,7 @@ var (
 	errClockWarp        = errors.New("reply deadline too far in the future")
 	errClosed           = errors.New("socket closed")
 	errMismatchNetwork  = errors.New("mismatch network id")
+	errPingRateLimited  = errors.New("ping rate limited")
 )
 
 // Timeouts
@@ -312,6 +313,10 @@ type udp struct {
 	wg      sync.WaitGroup
 
 	tab *Table2
+
+	// pingLimiter throttles discovery pings from unknown source IPs. It is only
+	// enforced when this node is a bootstrap node (KIP-311 R2).
+	pingLimiter *ipRateLimiter
 }
 
 // #region UDP Init
@@ -325,6 +330,7 @@ func newUDPv4(cfg *Config) *udp {
 		closing:     make(chan struct{}),
 		gotreply:    make(chan reply),
 		addpending:  make(chan *pending),
+		pingLimiter: newIPRateLimiter(pingRatePerIP, pingBurstPerIP, maxLimitedIPs, limiterIdleTTL),
 	}
 	realaddr := cfg.Addr
 	if cfg.AnnounceAddr != nil {
@@ -727,6 +733,21 @@ func (req *ping) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 		logger.Debug("udp: ping: mismatch networkid", "local", t.networkID, "remote", req.NetworkID)
 		mismatchNetworkCounter.Mark(1)
 		return errMismatchNetwork
+	}
+	// KIP-311 R2: bootstrap nodes rate-limit pings per source IP to bound
+	// amplification/DoS against the UDP endpoint. Rejecting here prevents both
+	// the pong reply and the bonding goroutine in handle().
+	//
+	// The limit is applied to every source IP, not just unbonded ones: a UDP
+	// source IP is unauthenticated/spoofable, and kaia's bond is keyed by NodeID
+	// only (not IP), so a "bonded NodeID + spoofed source IP" packet could
+	// otherwise bypass the limit and reflect a pong to the spoofed victim.
+	if t.ourEndpoint.NType == NodeTypeBN && t.pingLimiter != nil {
+		if !t.pingLimiter.allow(from.IP, time.Now()) {
+			logger.Trace("udp: ping: rate limited", "addr", from)
+			pingRateLimitedCounter.Mark(1)
+			return errPingRateLimited
+		}
 	}
 	return nil
 }
