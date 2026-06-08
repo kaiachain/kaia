@@ -439,18 +439,7 @@ func (self *worker) commitNewWork() {
 	self.pendingWork = self.current
 	self.pendingWorkStart = tstart
 
-	onPrepared := func(result *consensus.ExecutionResult) {
-		// Log block preparation completion (all validators log this, before seal)
-		logger.Info("Prepared new block",
-			"number", result.Block.Number(),
-			"hash", result.Block.Hash(),
-			"txs", len(result.Txs),
-			"elapsed", common.PrettyDuration(result.ExecuteTime+result.FinalizeTime),
-			"executeTime", common.PrettyDuration(result.ExecuteTime),
-			"finalizeTime", common.PrettyDuration(result.FinalizeTime))
-	}
-
-	self.finalizeCh = self.engine.SubmitTransactions(txs, self.current.state, self.current.header, self.mux, onPrepared)
+	self.finalizeCh = self.engine.SubmitTransactions(txs, self.current.state, self.current.header, self.mux)
 
 	// Results will be handled in update() loop:
 	// - finalizeCh -> handleFinalizedBlock() for DB write and broadcast

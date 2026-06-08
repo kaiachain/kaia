@@ -107,17 +107,17 @@ func (mr *MockEngineMockRecorder) Stop() *gomock.Call {
 }
 
 // SubmitTransactions mocks base method.
-func (m *MockEngine) SubmitTransactions(arg0 *types.TransactionsByPriceAndNonce, arg1 *state.StateDB, arg2 *types.Header, arg3 *event.TypeMux, arg4 func(*consensus.ExecutionResult)) <-chan *consensus.ExecutionResult {
+func (m *MockEngine) SubmitTransactions(arg0 *types.TransactionsByPriceAndNonce, arg1 *state.StateDB, arg2 *types.Header, arg3 *event.TypeMux) <-chan *consensus.ExecutionResult {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SubmitTransactions", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "SubmitTransactions", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(<-chan *consensus.ExecutionResult)
 	return ret0
 }
 
 // SubmitTransactions indicates an expected call of SubmitTransactions.
-func (mr *MockEngineMockRecorder) SubmitTransactions(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) SubmitTransactions(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitTransactions", reflect.TypeOf((*MockEngine)(nil).SubmitTransactions), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitTransactions", reflect.TypeOf((*MockEngine)(nil).SubmitTransactions), arg0, arg1, arg2, arg3)
 }
 
 // SubscribeNewSequence mocks base method.
