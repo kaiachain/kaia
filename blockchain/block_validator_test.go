@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	mock_gov "github.com/kaiachain/kaia/kaiax/gov/mock"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -70,6 +71,55 @@ func (s *verifySealsTestSealer) Quorum(_ uint64, qualifiedLen, committeeSize int
 	s.qualifiedLen = qualifiedLen
 	s.committeeSize = committeeSize
 	return s.quorum
+}
+
+func TestCountValidCommittedSeals(t *testing.T) {
+	var (
+		a = common.HexToAddress("0x0001")
+		b = common.HexToAddress("0x0002")
+		c = common.HexToAddress("0x0003")
+		d = common.HexToAddress("0x0004")
+	)
+
+	testcases := []struct {
+		name          string
+		signers       []common.Address
+		committers    []common.Address
+		expectedCount int
+		expectedErr   error
+	}{
+		{
+			name:          "counts unique committed seals",
+			signers:       []common.Address{a, b, c},
+			committers:    []common.Address{a, b},
+			expectedCount: 2,
+		},
+		{
+			name:        "rejects duplicate committer",
+			signers:     []common.Address{a, b, c},
+			committers:  []common.Address{a, a, b},
+			expectedErr: istanbul.ErrInvalidCommittedSeals,
+		},
+		{
+			name:        "rejects non-signer committer",
+			signers:     []common.Address{a, b, c},
+			committers:  []common.Address{a, d},
+			expectedErr: istanbul.ErrInvalidCommittedSeals,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			count, err := countValidCommittedSeals(tc.committers, valset.NewAddressSet(tc.signers))
+
+			if tc.expectedErr == nil {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorIs(t, err, tc.expectedErr)
+			}
+			assert.Equal(t, tc.expectedCount, count)
+		})
+	}
 }
 
 func TestValidateHeader(t *testing.T) {

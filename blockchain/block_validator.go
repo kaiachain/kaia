@@ -30,6 +30,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/kaiax"
@@ -269,13 +270,9 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 			return err
 		}
 		committeeSet := valset.NewAddressSet(committee)
-		validSeal := 0
-		for _, addr := range committers {
-			if committeeSet.Remove(addr) {
-				validSeal++
-			} else {
-				return istanbul.ErrInvalidCommittedSeals
-			}
+		validSeal, err := countValidCommittedSeals(committers, committeeSet)
+		if err != nil {
+			return err
 		}
 		// Require the quorum over the committee. Post-permissionless the committee
 		// equals the qualified set, so pass its size for both arguments.
@@ -302,13 +299,9 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		}
 		signerSet = valset.NewAddressSet(council).Copy()
 	}
-	validSeal := 0
-	for _, addr := range committers {
-		if signerSet.Remove(addr) {
-			validSeal++
-		} else {
-			return istanbul.ErrInvalidCommittedSeals
-		}
+	validSeal, err := countValidCommittedSeals(committers, signerSet)
+	if err != nil {
+		return err
 	}
 
 	qualifiedLen := len(qualified)
@@ -322,6 +315,17 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		return istanbul.ErrInvalidCommittedSeals
 	}
 	return nil
+}
+
+func countValidCommittedSeals(committers []common.Address, signerSet *valset.AddressSet) (int, error) {
+	validSeal := 0
+	for _, addr := range committers {
+		if !signerSet.Remove(addr) {
+			return 0, istanbul.ErrInvalidCommittedSeals
+		}
+		validSeal++
+	}
+	return validSeal, nil
 }
 
 // ValidateBody verifies the block
