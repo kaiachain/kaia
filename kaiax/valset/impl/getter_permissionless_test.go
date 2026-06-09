@@ -17,10 +17,13 @@
 package impl
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/engine"
 	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
@@ -133,7 +136,7 @@ func TestSuspendedFallback(t *testing.T) {
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []common.Address{addr1, addr2}, qualified.List())
 
-		committee, err := v.getCommittee(testGetterBlock)
+		committee, err := v.GetCommittee(testGetterBlock, 0)
 		require.NoError(t, err)
 		assert.ElementsMatch(t, []common.Address{addr1, addr2}, committee)
 	})
@@ -247,9 +250,39 @@ func newCachedPermissionlessValset(t *testing.T, nodes NodeMap) *ValsetModule {
 
 	mockChain := chain_mock.NewMockBlockChain(ctrl)
 	mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
+	// The committee/qualified getters prefer the canonical header; return nil so
+	// they fall back to the pre-cached transition result (the state path under test).
+	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(nil).AnyTimes()
 
 	v := NewValsetModule()
 	v.Chain = mockChain
 	v.transitionResultCache.Add(testGetterBlock, &TransitionResult{Nodes: nodes})
 	return v
+}
+
+// TestPermissionlessCommitteeFromHeader checks that GetCommittee and
+// GetQualifiedValidators serve the set from the canonical header: no
+// transitionResultCache is set up, so any state read would fail the test.
+func TestPermissionlessCommitteeFromHeader(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	sealer := engine.NewSealer(nil, nil)
+
+	mockChain := chain_mock.NewMockBlockChain(ctrl)
+	mockChain.EXPECT().Config().Return(testPermissionlessConfig(0, 10)).AnyTimes()
+	mockChain.EXPECT().Sealer().Return(sealer).AnyTimes()
+
+	header := &types.Header{Number: new(big.Int).SetUint64(testGetterBlock)}
+	require.NoError(t, sealer.WriteValidators(header, numsToAddrs(1, 2)))
+	mockChain.EXPECT().GetHeaderByNumber(testGetterBlock).Return(header).AnyTimes()
+
+	v := NewValsetModule()
+	v.Chain = mockChain
+
+	committee, err := v.GetCommittee(testGetterBlock, 0)
+	require.NoError(t, err)
+	assert.Equal(t, numsToAddrs(1, 2), committee)
+
+	qualified, err := v.GetQualifiedValidators(testGetterBlock)
+	require.NoError(t, err)
+	assert.Equal(t, numsToAddrs(1, 2), qualified)
 }

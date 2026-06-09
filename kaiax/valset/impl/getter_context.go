@@ -42,31 +42,12 @@ type blockContext struct {
 }
 
 func (v *ValsetModule) getBlockContext(num uint64) (*blockContext, error) {
-	var (
-		qualified *valset.AddressSet
-		err       error
-	)
-
-	// After the fork, canonical headers already carry the verified validator set.
-	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		if header := v.Chain.GetHeaderByNumber(num); header != nil {
-			vals, err := v.Chain.Sealer().Validators(header)
-			if err != nil {
-				return nil, err
-			}
-			qualified = valset.NewAddressSet(vals)
-		}
-	}
-
-	if qualified == nil {
-		if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-			qualified, err = v.getQualifiedValidators(num)
-		} else {
-			qualified, err = v.getQualifiedPermissioned(num)
-		}
-		if err != nil {
-			return nil, err
-		}
+	// Canonical headers already carry the verified validator set;
+	// qualifiedFromHeaderOrState reads it from the header when available and
+	// falls back to state otherwise.
+	qualified, err := v.qualifiedFromHeaderOrState(num)
+	if err != nil {
+		return nil, err
 	}
 
 	prevHeader := v.Chain.GetHeaderByNumber(num - 1)
