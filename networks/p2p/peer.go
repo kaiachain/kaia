@@ -194,6 +194,12 @@ func (p *Peer) Inbound() bool {
 	return p.rws[ConnDefault].flags&inboundConn != 0
 }
 
+// IsTrustedOrStatic reports whether the peer's default connection is a trusted peer
+// or a static outbound dial. See (*conn).isTrustedOrStatic.
+func (p *Peer) IsTrustedOrStatic() bool {
+	return p.rws[ConnDefault].isTrustedOrStatic()
+}
+
 // GetNumberInboundAndOutbound returns the number of
 // inbound and outbound connections connected to the peer.
 func (p *Peer) GetNumberInboundAndOutbound() (int, int) {

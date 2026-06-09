@@ -35,6 +35,8 @@ func setMockPeers(mockPeers []*MockPeer) {
 		mp.EXPECT().GetAddr().Return(addrs[i]).AnyTimes()
 		mp.EXPECT().GetID().Return(nodeids[i].String()).AnyTimes()
 		mp.EXPECT().Broadcast().AnyTimes()
+		// Register calls GetP2PPeer() for the exemption check; nil keeps validation.
+		mp.EXPECT().GetP2PPeer().Return(nil).AnyTimes()
 	}
 }
 

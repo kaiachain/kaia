@@ -276,7 +276,7 @@ func (srv *BaseServer) protoHandshakeChecks(peers map[discover.NodeID]*Peer, inb
 
 func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, inboundCount int, c *conn) error {
 	switch {
-	case !c.is(trustedConn|staticDialedConn) && len(peers) >= srv.Config.MaxPhysicalConnections:
+	case !c.isTrustedOrStatic() && len(peers) >= srv.Config.MaxPhysicalConnections:
 		return DiscTooManyPeers
 	case !c.is(trustedConn) && c.is(inboundConn) && inboundCount >= srv.maxInboundConns():
 		return DiscTooManyPeers
@@ -292,7 +292,7 @@ func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, inbou
 }
 
 func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *conn) bool {
-	if c.is(trustedConn | staticDialedConn) {
+	if c.isTrustedOrStatic() {
 		return false
 	}
 
@@ -313,7 +313,7 @@ func (srv *BaseServer) admitByCNPeers(c *conn) error {
 	if EffectiveConnType(c.conntype) != common.CONSENSUSNODE {
 		return nil
 	}
-	if c.is(trustedConn | staticDialedConn) {
+	if c.isTrustedOrStatic() {
 		return nil
 	}
 	if srv.cnPeerAddrs == nil {
@@ -639,7 +639,7 @@ func (srv *BaseServer) peersOutsideCNPeerAddrs() []*Peer {
 		if p == nil || EffectiveConnType(p.ConnType()) != common.CONSENSUSNODE {
 			continue
 		}
-		if p.rws[ConnDefault].is(trustedConn | staticDialedConn) {
+		if p.rws[ConnDefault].isTrustedOrStatic() {
 			continue
 		}
 		addr, err := addressFromNodeID(id)

@@ -118,6 +118,15 @@ func (c *conn) is(f connFlag) bool {
 	return c.flags&f != 0
 }
 
+// isTrustedOrStatic reports whether this connection is a trusted peer or a static
+// outbound dial (staticDialedConn is set only on dial). Such connections bypass
+// (1) CNPeers authorization, and
+// (2) peer-count limits (physical cap, per-type targets).
+// Split into purpose-specific predicates if those policies diverge.
+func (c *conn) isTrustedOrStatic() bool {
+	return c.is(trustedConn | staticDialedConn)
+}
+
 // sharedUDPConn implements a shared connection. Write sends messages to the underlying connection while read returns
 // messages that were found unprocessable and sent to the unhandled channel by the primary listener.
 type sharedUDPConn struct {
