@@ -117,12 +117,12 @@ func Test_Table_ClosestNodes_happy(t *testing.T) {
 func Test_Table_IsBonded_false(t *testing.T) {
 	tab := newTestTable2(t, nil)
 	n := newTestNode(t, NodeTypeEN)
-	assert.False(t, tab.IsBonded(n.ID), "brand-new node should not be bonded")
+	assert.False(t, tab.IsBonded(n.ID, n.IP), "brand-new node should not be bonded")
 }
 
 func Test_Table_IsBonded_true(t *testing.T) {
 	tab := newTestTable2(t, nil)
 	n := newTestNode(t, NodeTypeEN)
 	tab.recordBonded(n)
-	assert.True(t, tab.IsBonded(n.ID), "node with recent bond time should be bonded")
+	assert.True(t, tab.IsBonded(n.ID, n.IP), "node with recent bond time should be bonded")
 }

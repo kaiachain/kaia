@@ -31,5 +31,5 @@ var (
 	pendingNeighborsCounter = metrics.NewRegisteredCounter("discover/pendingNeighbors", nil) // pending neighbors counter at the moment
 	neighborsMeter          = metrics.NewRegisteredMeter("discover/neighbors", nil)          // received neighbors packet meter
 	mismatchNetworkCounter  = metrics.NewRegisteredMeter("discover/mismatchNetwork", nil)    // mismatch network ping packet counter
-	pingRateLimitedCounter  = metrics.NewRegisteredMeter("discover/pingRateLimited", nil)    // rate-limited ping packet meter (KIP-311 R2)
+	pingRateLimitedCounter  = metrics.NewRegisteredMeter("discover/pingRateLimited", nil)    // rate-limited ping packet meter
 )

@@ -25,11 +25,13 @@ import (
 )
 
 const (
-	// pingRatePerIP is the sustained discovery-ping rate allowed per source IP
-	// on a bootstrap node (KIP-311 R2).
-	pingRatePerIP = rate.Limit(1) // 1 ping/sec sustained
+	// pingRatePerIP is the sustained discovery-ping rate allowed per source IP.
+	// A node pings a bootnode at up to ~1/s while its dialer drives repeated
+	// discovery refreshes, so this leaves headroom for a few nodes sharing one
+	// (non-LAN) public IP.
+	pingRatePerIP = rate.Limit(3) // 3 pings/sec sustained
 	// pingBurstPerIP is the burst of pings tolerated per source IP.
-	pingBurstPerIP = 5
+	pingBurstPerIP = 10
 	// maxLimitedIPs bounds the number of tracked source IPs so the limiter map
 	// cannot grow without limit under source-IP rotation.
 	maxLimitedIPs = 16384
@@ -39,12 +41,11 @@ const (
 )
 
 // ipRateLimiter applies a per-source-IP token-bucket rate limit. It is used by
-// bootstrap nodes to throttle discovery pings from unknown (unbonded) nodes,
-// bounding amplification/DoS against the UDP endpoint (KIP-311 R2).
+// bootstrap nodes to throttle discovery pings, bounding amplification/DoS
+// against the UDP endpoint.
 //
 // Source IPs in UDP are spoofable, so this is a partial, application-level
-// defense intended to be complemented by network-layer (L3/L4) protections, as
-// required by KIP-311's Security Considerations.
+// defense intended to be complemented by network-layer (L3/L4) protections.
 type ipRateLimiter struct {
 	mu      sync.Mutex
 	limit   rate.Limit

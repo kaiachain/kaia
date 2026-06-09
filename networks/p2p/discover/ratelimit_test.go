@@ -79,3 +79,59 @@ func TestIPRateLimiterBounded(t *testing.T) {
 		t.Fatalf("limiter map exceeded cap: got %d, want <= %d", got, max)
 	}
 }
+
+// newPingTestUDP builds a minimal udp instance for exercising ping.preverify.
+// It carries only the fields the rate-limit gate reads: the local network id,
+// this node's type (BN gating), and the per-IP ping limiter.
+func newPingTestUDP(nodeType NodeType, networkID uint64) *udp {
+	return &udp{
+		networkID:   networkID,
+		ourEndpoint: rpcEndpoint{NType: nodeType},
+		pingLimiter: newIPRateLimiter(pingRatePerIP, pingBurstPerIP, maxLimitedIPs, limiterIdleTTL),
+	}
+}
+
+// TestPingPreverifyRateLimit exercises the full ping rate-limit gate in
+// ping.preverify end to end: a bootstrap node throttles pings from a non-LAN
+// source IP once the burst is spent, exempts LAN/loopback sources, and does not
+// rate-limit at all when the node is not a bootstrap node.
+func TestPingPreverifyRateLimit(t *testing.T) {
+	const networkID = 12345
+	req := &ping{NetworkID: networkID, Expiration: futureExp}
+	fromID := NodeID{}
+
+	t.Run("BN throttles non-LAN flood after burst", func(t *testing.T) {
+		u := newPingTestUDP(NodeTypeBN, networkID)
+		from := &net.UDPAddr{IP: net.ParseIP("203.0.113.5"), Port: 30303}
+		// The burst (token bucket capacity) is allowed in one flood.
+		for i := 0; i < pingBurstPerIP; i++ {
+			if err := req.preverify(u, from, fromID); err != nil {
+				t.Fatalf("ping %d within burst should pass, got %v", i, err)
+			}
+		}
+		// The very next ping (no time for tokens to refill) is throttled.
+		if err := req.preverify(u, from, fromID); err != errPingRateLimited {
+			t.Fatalf("ping beyond burst should be rate limited, got %v", err)
+		}
+	})
+
+	t.Run("LAN source is exempt", func(t *testing.T) {
+		u := newPingTestUDP(NodeTypeBN, networkID)
+		from := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 30303}
+		for i := 0; i < pingBurstPerIP*3; i++ {
+			if err := req.preverify(u, from, fromID); err != nil {
+				t.Fatalf("LAN ping %d must never be rate limited, got %v", i, err)
+			}
+		}
+	})
+
+	t.Run("non-BN node never rate-limits", func(t *testing.T) {
+		u := newPingTestUDP(NodeTypeCN, networkID)
+		from := &net.UDPAddr{IP: net.ParseIP("203.0.113.5"), Port: 30303}
+		for i := 0; i < pingBurstPerIP*3; i++ {
+			if err := req.preverify(u, from, fromID); err != nil {
+				t.Fatalf("non-BN ping %d must never be rate limited, got %v", i, err)
+			}
+		}
+	})
+}

@@ -314,8 +314,8 @@ type udp struct {
 
 	tab *Table2
 
-	// pingLimiter throttles discovery pings from unknown source IPs. It is only
-	// enforced when this node is a bootstrap node (KIP-311 R2).
+	// pingLimiter throttles discovery pings per source IP. It is only enforced
+	// when this node is a bootstrap node.
 	pingLimiter *ipRateLimiter
 }
 
@@ -353,8 +353,8 @@ func (t *udp) close() {
 	t.wg.Wait()
 }
 
-func (t *udp) hasBond(fromID NodeID) bool {
-	return t.tab.IsBonded(fromID)
+func (t *udp) hasBond(fromID NodeID, fromIP net.IP) bool {
+	return t.tab.IsBonded(fromID, fromIP)
 }
 
 func (t *udp) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16, nType NodeType) {
@@ -734,15 +734,21 @@ func (req *ping) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 		mismatchNetworkCounter.Mark(1)
 		return errMismatchNetwork
 	}
-	// KIP-311 R2: bootstrap nodes rate-limit pings per source IP to bound
+	// Bootstrap nodes rate-limit discovery pings per source IP to bound
 	// amplification/DoS against the UDP endpoint. Rejecting here prevents both
 	// the pong reply and the bonding goroutine in handle().
 	//
-	// The limit is applied to every source IP, not just unbonded ones: a UDP
-	// source IP is unauthenticated/spoofable, and kaia's bond is keyed by NodeID
-	// only (not IP), so a "bonded NodeID + spoofed source IP" packet could
-	// otherwise bypass the limit and reflect a pong to the spoofed victim.
-	if t.ourEndpoint.NType == NodeTypeBN && t.pingLimiter != nil {
+	// LAN/loopback sources are exempt: the limit protects an internet-reachable
+	// BN from public ping floods, while co-located/local nodes legitimately share
+	// a single private IP (e.g. many nodes behind one NAT, or localhost in tests)
+	// and must not throttle one another. This mirrors the LAN exemption on the
+	// inbound TCP connection throttle.
+	//
+	// The limit is otherwise applied to every (non-LAN) source IP, not just
+	// unbonded ones: a UDP source IP is unauthenticated/spoofable and kaia's bond
+	// is keyed by NodeID only, so a "bonded NodeID + spoofed source IP" packet
+	// could otherwise bypass the limit and reflect a pong to the spoofed victim.
+	if t.ourEndpoint.NType == NodeTypeBN && t.pingLimiter != nil && !netutil.IsLAN(from.IP) {
 		if !t.pingLimiter.allow(from.IP, time.Now()) {
 			logger.Trace("udp: ping: rate limited", "addr", from)
 			pingRateLimitedCounter.Mark(1)
@@ -791,14 +797,15 @@ func (req *findnode) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 	if expired(req.Expiration) {
 		return errExpired
 	}
-	if !t.hasBond(fromID) {
-		// No bond exists, we don't process the packet. This prevents
-		// an attack vector where the discovery protocol could be used
-		// to amplify traffic in a DDOS attack. A malicious actor
-		// would send a findnode request with the IP address and UDP
-		// port of the target as the source address. The recipient of
-		// the findnode packet would then send a neighbors packet
-		// (which is a much bigger packet than findnode) to the victim.
+	if !t.hasBond(fromID, from.IP) {
+		// No bond exists for this (NodeID, source IP), so we don't process the
+		// packet. This prevents an attack vector where the discovery protocol
+		// could be used to amplify traffic in a DDOS attack. A malicious actor
+		// would send a findnode request with the IP address and UDP port of the
+		// target as the source address. The recipient of the findnode packet
+		// would then send a neighbors packet (which is a much bigger packet than
+		// findnode) to the victim. Binding the bond to the source IP ensures a
+		// spoofed source cannot reuse another node's endpoint proof.
 		return errUnknownNode
 	}
 	return nil

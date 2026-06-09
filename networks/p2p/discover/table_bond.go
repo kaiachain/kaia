@@ -18,6 +18,7 @@ package discover
 
 import (
 	"errors"
+	"net"
 	"sync"
 	"time"
 )
@@ -59,7 +60,7 @@ func (tab *Table2) revalidateOnce(s tableStorage) {
 		return
 	}
 
-	if tab.bondAge(n.ID) < revalidateBackoff {
+	if tab.bondAge(n.ID, n.IP) < revalidateBackoff {
 		logger.Trace("skip revalidate", "node", n.addr())
 		return
 	}
@@ -67,7 +68,7 @@ func (tab *Table2) revalidateOnce(s tableStorage) {
 	err := tab.udp.ping(n.ID, n.addr())
 	if err == nil {
 		s.add(n) // bump the node
-		tab.db.updateBondTime(n.ID, time.Now())
+		tab.db.updateBondTime(n.ID, n.IP, time.Now())
 		logger.Debug("Discovery revalidation passed", "node", n.addr())
 	} else {
 		s.delete(n)
@@ -78,8 +79,8 @@ func (tab *Table2) revalidateOnce(s tableStorage) {
 
 // Returns the time since the last bond with the given node.
 // If the node is not bonded, return a very large duration.
-func (tab *Table2) bondAge(id NodeID) time.Duration {
-	return time.Since(tab.db.bondTime(id))
+func (tab *Table2) bondAge(id NodeID, ip net.IP) time.Duration {
+	return time.Since(tab.db.bondTime(id, ip))
 }
 
 //// Bonding primitives
@@ -141,7 +142,7 @@ func (tab *Table2) Bond(pinged bool, n *Node) error {
 	}
 
 	// Skip if we're really sure that this node is reachable and completed the bonding process.
-	if tab.canAssumeBonded(n.ID) {
+	if tab.canAssumeBonded(n.ID, n.IP) {
 		return nil
 	}
 
@@ -180,16 +181,16 @@ func (tab *Table2) pingpong(pinged bool, n *Node) error {
 }
 
 // A node is assumed to be bonded if all values are recently written by recordBonded().
-func (tab *Table2) canAssumeBonded(id NodeID) bool {
-	recentlyBonded := tab.db.hasBond(id)
-	neverFailed := tab.db.findFails(id) == 0
+func (tab *Table2) canAssumeBonded(id NodeID, ip net.IP) bool {
+	recentlyBonded := tab.db.hasBond(id, ip)
+	neverFailed := tab.db.findFails(id, ip) == 0
 	storedInDB := tab.db.node(id) != nil
 	return recentlyBonded && neverFailed && storedInDB
 }
 
 func (tab *Table2) recordBonded(n *Node) {
-	tab.db.updateBondTime(n.ID, time.Now())
-	tab.db.updateFindFails(n.ID, 0)
+	tab.db.updateBondTime(n.ID, n.IP, time.Now())
+	tab.db.updateFindFails(n.ID, n.IP, 0)
 	tab.db.updateNode(n)
 
 	bucketEntriesGauge.Update(int64(tab.len()))
