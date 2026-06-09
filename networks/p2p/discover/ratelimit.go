@@ -25,13 +25,13 @@ import (
 )
 
 const (
-	// pingRatePerIP is the sustained discovery-ping rate allowed per source IP.
-	// A node pings a bootnode at up to ~1/s while its dialer drives repeated
-	// discovery refreshes, so this leaves headroom for a few nodes sharing one
-	// (non-LAN) public IP.
-	pingRatePerIP = rate.Limit(3) // 3 pings/sec sustained
-	// pingBurstPerIP is the burst of pings tolerated per source IP.
-	pingBurstPerIP = 10
+	// defaultPingBurst is the token-bucket burst used when ping rate limiting is
+	// enabled without an explicit burst. LAN/loopback sources are exempt, so the
+	// limiter only sees public IPs — where several nodes can sit behind one IP
+	// via NAT and share its bucket. Each node pings a bootnode at ~1/s (its
+	// dialer drives repeated discovery refreshes), so a burst of 10 absorbs
+	// short spikes from a handful of such nodes without throttling them.
+	defaultPingBurst = 10
 	// maxLimitedIPs bounds the number of tracked source IPs so the limiter map
 	// cannot grow without limit under source-IP rotation.
 	maxLimitedIPs = 16384
@@ -68,6 +68,15 @@ func newIPRateLimiter(limit rate.Limit, burst, maxIPs int, idleTTL time.Duration
 		idleTTL: idleTTL,
 		ips:     make(map[string]*ipLimiterEntry),
 	}
+}
+
+// newPingLimiter builds the per-IP discovery-ping limiter for a bootstrap node
+// from operator-provided values, applying defaultPingBurst when burst <= 0.
+func newPingLimiter(ratePerSec float64, burst int) *ipRateLimiter {
+	if burst <= 0 {
+		burst = defaultPingBurst
+	}
+	return newIPRateLimiter(rate.Limit(ratePerSec), burst, maxLimitedIPs, limiterIdleTTL)
 }
 
 // allow reports whether an event from ip is permitted at time now. now is passed

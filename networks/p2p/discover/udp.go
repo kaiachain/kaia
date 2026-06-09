@@ -330,7 +330,12 @@ func newUDPv4(cfg *Config) *udp {
 		closing:     make(chan struct{}),
 		gotreply:    make(chan reply),
 		addpending:  make(chan *pending),
-		pingLimiter: newIPRateLimiter(pingRatePerIP, pingBurstPerIP, maxLimitedIPs, limiterIdleTTL),
+	}
+	// Opt-in: the per-IP discovery-ping limiter is enabled only when a positive
+	// rate is configured (bootstrap nodes via --bn.ping-ratelimit). preverify
+	// additionally restricts it to bootstrap nodes and exempts LAN sources.
+	if cfg.PingRateLimit > 0 {
+		u.pingLimiter = newPingLimiter(cfg.PingRateLimit, cfg.PingBurst)
 	}
 	realaddr := cfg.Addr
 	if cfg.AnnounceAddr != nil {

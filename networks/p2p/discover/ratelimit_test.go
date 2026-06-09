@@ -80,6 +80,11 @@ func TestIPRateLimiterBounded(t *testing.T) {
 	}
 }
 
+const (
+	testPingRate  = 3  // pings/sec for ping.preverify tests
+	testPingBurst = 10 // token-bucket burst for ping.preverify tests
+)
+
 // newPingTestUDP builds a minimal udp instance for exercising ping.preverify.
 // It carries only the fields the rate-limit gate reads: the local network id,
 // this node's type (BN gating), and the per-IP ping limiter.
@@ -87,7 +92,7 @@ func newPingTestUDP(nodeType NodeType, networkID uint64) *udp {
 	return &udp{
 		networkID:   networkID,
 		ourEndpoint: rpcEndpoint{NType: nodeType},
-		pingLimiter: newIPRateLimiter(pingRatePerIP, pingBurstPerIP, maxLimitedIPs, limiterIdleTTL),
+		pingLimiter: newPingLimiter(testPingRate, testPingBurst),
 	}
 }
 
@@ -104,7 +109,7 @@ func TestPingPreverifyRateLimit(t *testing.T) {
 		u := newPingTestUDP(NodeTypeBN, networkID)
 		from := &net.UDPAddr{IP: net.ParseIP("203.0.113.5"), Port: 30303}
 		// The burst (token bucket capacity) is allowed in one flood.
-		for i := 0; i < pingBurstPerIP; i++ {
+		for i := 0; i < testPingBurst; i++ {
 			if err := req.preverify(u, from, fromID); err != nil {
 				t.Fatalf("ping %d within burst should pass, got %v", i, err)
 			}
@@ -118,7 +123,7 @@ func TestPingPreverifyRateLimit(t *testing.T) {
 	t.Run("LAN source is exempt", func(t *testing.T) {
 		u := newPingTestUDP(NodeTypeBN, networkID)
 		from := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 30303}
-		for i := 0; i < pingBurstPerIP*3; i++ {
+		for i := 0; i < testPingBurst*3; i++ {
 			if err := req.preverify(u, from, fromID); err != nil {
 				t.Fatalf("LAN ping %d must never be rate limited, got %v", i, err)
 			}
@@ -128,7 +133,7 @@ func TestPingPreverifyRateLimit(t *testing.T) {
 	t.Run("non-BN node never rate-limits", func(t *testing.T) {
 		u := newPingTestUDP(NodeTypeCN, networkID)
 		from := &net.UDPAddr{IP: net.ParseIP("203.0.113.5"), Port: 30303}
-		for i := 0; i < pingBurstPerIP*3; i++ {
+		for i := 0; i < testPingBurst*3; i++ {
 			if err := req.preverify(u, from, fromID); err != nil {
 				t.Fatalf("non-BN ping %d must never be rate limited, got %v", i, err)
 			}

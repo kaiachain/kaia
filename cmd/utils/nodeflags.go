@@ -338,6 +338,8 @@ var BNFlags = []cli.Flag{
 	altsrc.NewStringFlag(NodeKeyHexFlag),
 	altsrc.NewBoolFlag(WriteAddressFlag),
 	altsrc.NewStringFlag(BNAddrFlag),
+	altsrc.NewIntFlag(BNPingRateLimitFlag),
+	altsrc.NewIntFlag(BNPingBurstFlag),
 	altsrc.NewStringFlag(NATFlag),
 	altsrc.NewStringFlag(NetrestrictFlag),
 	altsrc.NewBoolFlag(MetricsEnabledFlag),
