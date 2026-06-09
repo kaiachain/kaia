@@ -34,9 +34,6 @@ type Discovery2 interface {
 	// Serve discovered nodes. Used by p2p.DialSched.
 	RandomNodes(buf []*Node, nType NodeType) int
 
-	// Update authorized nodes. To be used by permless.
-	PutAuthorizedNodes(nodes []*Node)
-
 	// APIs returns the RPC APIs for the discovery service.
 	APIs() []rpc.API
 }
@@ -61,7 +58,6 @@ type Config struct {
 
 	// These settings are required for discovery packet control
 	MaxNeighborsNode uint
-	AuthorizedNodes  []*Node
 
 	// DiscoverNodetype is list of node type to enable discovery.
 	DiscoverTypes DiscoverTypesConfig
@@ -78,7 +74,6 @@ type Config struct {
 //   - refreshLoop         -> findNodesOnce()      -> udp.findnode()
 //
 // UDP -> Table calls (originating from udp.readLoop dispatching packet handlers):
-//   - incoming PING     -> ping.preverify()     -> tab.IsAuthorized()  works even before tab.Start or after tab.Close
 //   - incoming FINDNODE -> findnode.preverify() -> tab.IsBonded()      same as above
 //   - incoming FINDNODE -> findnode.handle()    -> tab.ClosestNodes()  same as above
 //   - incoming PING     -> go t.bond(...)       -> go tab.Bond()       no-op before tab.Start or after tab.Close
@@ -109,8 +104,4 @@ func (d *discovery2) Refresh() {
 
 func (d *discovery2) RandomNodes(buf []*Node, nType NodeType) int {
 	return d.tab.RandomNodes(buf, nType)
-}
-
-func (d *discovery2) PutAuthorizedNodes(nodes []*Node) {
-	d.tab.PutAuthorizedNodes(nodes)
 }

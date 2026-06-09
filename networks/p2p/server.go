@@ -209,6 +209,10 @@ type Server interface {
 	Name() string
 	GetListenAddress() []string
 	MaxPeers() int // returns MaxPhysicalConnections
+
+	// SetCNPeers replaces the address-keyed CN admission allowlist.
+	// nil disables filtering; an empty list rejects all CN claims.
+	SetCNPeers(addrs []common.Address)
 }
 
 // NewServer returns a new Server interface.

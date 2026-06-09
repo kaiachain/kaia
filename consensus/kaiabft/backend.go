@@ -206,7 +206,7 @@ func (b *backend) Stop() error {
 	return nil
 }
 
-func (b *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, statedb *state.StateDB, header *types.Header, mux *event.TypeMux, onPrepared func(*consensus.ExecutionResult)) <-chan *consensus.ExecutionResult {
+func (b *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, statedb *state.StateDB, header *types.Header, mux *event.TypeMux) <-chan *consensus.ExecutionResult {
 	resultCh := make(chan *consensus.ExecutionResult, 1)
 
 	go func() {
@@ -249,9 +249,14 @@ func (b *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, sta
 		result.FinalizeTime = time.Since(finalizeStart)
 		result.Block = block
 
-		if onPrepared != nil {
-			onPrepared(result)
-		}
+		// Log block preparation completion (all validators log this, before seal)
+		logger.Info("Prepared new block",
+			"number", result.Block.Number(),
+			"hash", result.Block.Hash(),
+			"txs", len(result.Txs),
+			"elapsed", common.PrettyDuration(result.ExecuteTime+result.FinalizeTime),
+			"executeTime", common.PrettyDuration(result.ExecuteTime),
+			"finalizeTime", common.PrettyDuration(result.FinalizeTime))
 
 		sealStart := time.Now()
 		sealedBlock, err := b.seal(block)

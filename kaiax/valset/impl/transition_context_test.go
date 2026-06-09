@@ -705,3 +705,123 @@ func TestApplyTimeoutTransition_DefaultClearsAllTimeouts(t *testing.T) {
 }
 
 //#endregion
+
+//#region ApplyAllTransitions
+
+func TestApplyAllTransitions(t *testing.T) {
+	expiredTimeout := testBlockTime.Add(-1 * time.Hour)
+
+	cases := []struct {
+		name                 string
+		isEpoch              bool
+		input                NodeMap
+		expected             map[common.Address]NodeState
+		expectedEpochVACount uint64
+	}{
+		{
+			name:    "epoch pipeline demotes below-min before violation",
+			isEpoch: true,
+			input: NodeMap{
+				addr1: {State: ValActive, StakingAmount: belowMinStake},
+				addr2: {State: ValActive, StakingAmount: aboveMinStake},
+			},
+			expected: map[common.Address]NodeState{
+				addr1: ValInactive,
+				addr2: ValActive,
+			},
+			expectedEpochVACount: 1,
+		},
+		{
+			name:    "non-epoch violation fires while epoch transition is skipped",
+			isEpoch: false,
+			input: NodeMap{
+				addr1: {State: ValActive, StakingAmount: belowMinStake},
+				addr2: {State: ValActive, StakingAmount: aboveMinStake},
+			},
+			expected: map[common.Address]NodeState{
+				addr1: ValExiting,
+				addr2: ValActive,
+			},
+		},
+		{
+			name:    "non-epoch last ValActive protected by minActiveCount",
+			isEpoch: false,
+			input: NodeMap{
+				addr1: {State: ValActive, StakingAmount: belowMinStake},
+			},
+			expected: map[common.Address]NodeState{
+				addr1: ValActive,
+			},
+		},
+		{
+			name:    "candidate promotion only happens at epoch",
+			isEpoch: true,
+			input: NodeMap{
+				addr1: {State: CandReady, StakingAmount: aboveMinStake},
+			},
+			expected: map[common.Address]NodeState{
+				addr1: CandTesting,
+			},
+		},
+		{
+			name:    "mixed states at epoch run through epoch and timeout",
+			isEpoch: true,
+			input: NodeMap{
+				addr1: {State: ValActive, StakingAmount: belowMinStake},
+				addr2: {State: ValActive, StakingAmount: aboveMinStake},
+				addr3: {State: CandReady, StakingAmount: aboveMinStake},
+				addr4: {State: ValPaused, StakingAmount: aboveMinStake},
+				addr5: {State: CandReady, StakingAmount: belowMinStake},
+			},
+			expected: map[common.Address]NodeState{
+				addr1: ValInactive,
+				addr2: ValActive,
+				addr3: CandTesting,
+				addr4: ValPaused,
+				addr5: Registered,
+			},
+			expectedEpochVACount: 1,
+		},
+		{
+			name:    "timeout fires after transition pipeline",
+			isEpoch: true,
+			input: NodeMap{
+				addr1: {State: ValInactive, StakingAmount: aboveMinStake, IdleTimeout: expiredTimeout},
+			},
+			expected: map[common.Address]NodeState{
+				addr1: Registered,
+			},
+		},
+		{
+			name:    "expired pause transitions to ValInactive",
+			isEpoch: false,
+			input: NodeMap{
+				addr1: {State: ValPaused, StakingAmount: aboveMinStake, PausedTimeout: expiredTimeout},
+			},
+			expected: map[common.Address]NodeState{
+				addr1: ValInactive,
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := buildCtx(t, ctxOpts{
+				MinStake:                testMinStake,
+				IdleTimeout:             testIdleTimeout,
+				PauseTimeout:            testPauseTimeout,
+				MaxValActivePausedCount: testMaxValCount,
+				MaxSlotAvailable:        noSlotLimit,
+				MinActiveCount:          1,
+			})
+			ctx.IsEpoch = tc.isEpoch
+
+			result := ctx.ApplyAllTransitions(tc.input)
+			for addr, expectedState := range tc.expected {
+				assert.Equal(t, expectedState, result.Nodes[addr].State, "addr=%s", addr.Hex())
+			}
+			assert.Equal(t, tc.expectedEpochVACount, result.epochVACountForWrite)
+		})
+	}
+}
+
+//#endregion

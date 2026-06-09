@@ -111,13 +111,21 @@ func (sb *backend) ValidatePeerType(addr common.Address) error {
 	if sb.valsetModule == nil {
 		return errInvalidPeerAddress
 	}
-	council, err := sb.valsetModule.GetCouncil(sb.chain.CurrentHeader().Number.Uint64() + 1)
+	num := sb.chain.CurrentHeader().Number.Uint64() + 1
+	cnPeers, err := sb.valsetModule.GetCNPeers(num)
 	if err != nil {
+		sb.logger.Trace("Failed to read CN peers for peer type validation", "addr", addr, "num", num, "err", err)
 		return errInvalidPeerAddress
 	}
-	if valset.NewAddressSet(council).Contains(addr) {
+	if cnPeers == nil {
+		sb.logger.Trace("CN peer validation disabled", "addr", addr, "num", num)
 		return nil
 	}
+	if valset.NewAddressSet(cnPeers).Contains(addr) {
+		sb.logger.Trace("CN peer type validation accepted", "addr", addr, "num", num)
+		return nil
+	}
+	sb.logger.Trace("CN peer type validation rejected", "addr", addr, "num", num)
 	return errInvalidPeerAddress
 }
 

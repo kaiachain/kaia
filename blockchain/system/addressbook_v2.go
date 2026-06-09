@@ -148,8 +148,6 @@ type ABv2Snapshot struct {
 	Nodes valset.NodeMap
 	ABv2TransitionParam
 
-	MaxSlotAvailable    uint64
-	MinActiveCount      uint64
 	SuspendedValidators []common.Address
 }
 
@@ -219,8 +217,6 @@ func ReadABv2Snapshot(
 			EpochVACount:            res.EpochVACount.Uint64(),
 			MaxValActivePausedCount: res.MaxValActivePausedCount.Uint64(),
 		},
-		MaxSlotAvailable:    res.MaxSlotAvailable.Uint64(),
-		MinActiveCount:      res.MinActiveCount.Uint64(),
 		SuspendedValidators: res.SuspendedValidators,
 	}, nil
 }

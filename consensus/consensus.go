@@ -134,9 +134,7 @@ type Engine interface {
 
 	// SubmitTransactions submits transactions for execution and consensus.
 	// Returns finalizeCh which receives the execution result when block is finalized (for DB write and broadcast).
-	// onPrepared is called after transactions are executed and block is finalized but before consensus sealing.
-	// This allows the caller to update pending block state for APIs.
-	SubmitTransactions(txs *types.TransactionsByPriceAndNonce, state *state.StateDB, header *types.Header, mux *event.TypeMux, onPrepared func(*ExecutionResult)) (finalizeCh <-chan *ExecutionResult)
+	SubmitTransactions(txs *types.TransactionsByPriceAndNonce, state *state.StateDB, header *types.Header, mux *event.TypeMux) (finalizeCh <-chan *ExecutionResult)
 
 	// APIs returns the RPC APIs this consensus engine provides.
 	APIs(chain ChainReader) []rpc.API

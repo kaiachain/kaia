@@ -58,6 +58,7 @@ import (
 	system_impl "github.com/kaiachain/kaia/kaiax/system/impl"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	valset_impl "github.com/kaiachain/kaia/kaiax/valset/impl"
+	vrank_impl "github.com/kaiachain/kaia/kaiax/vrank/impl"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/node"
@@ -153,7 +154,12 @@ type CN struct {
 
 	components []interface{}
 
-	govModule gov.GovModule
+	govModule    gov.GovModule
+	valsetModule valset.ValsetModule
+
+	cnPeerHeadSub event.Subscription
+	cnPeerSyncWg  sync.WaitGroup
+	cnPeerUpdater *cnPeerUpdater
 
 	// kaiax modules
 	baseModules    []kaiax.BaseModule
@@ -236,6 +242,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		mGov     = gov_impl.NewGovModule()
 		mValset  = valset_impl.NewValsetModule()
 		mStaking = staking_impl.NewStakingModule()
+		mVRank   = vrank_impl.NewVRankModule()
 	)
 	cn := &CN{
 		config:            config,
@@ -251,6 +258,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 		closeBloomHandler: make(chan struct{}),
 		govModule:         mGov,
 		stakingModule:     mStaking,
+		valsetModule:      mValset,
 	}
 
 	// Derive and set node's address using nodekey
@@ -307,7 +315,7 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 
 	cn.blockchain = bc
 
-	if err := cn.InitGovModule(mStaking, mGov, mValset); err != nil {
+	if err := cn.InitGovModule(mStaking, mGov, mValset, mVRank); err != nil {
 		return nil, err
 	}
 
@@ -405,8 +413,9 @@ func New(ctx *node.ServiceContext, config *Config) (*CN, error) {
 	cn.addComponent(cn.ChainDB())
 	cn.addComponent(cn.engine)
 
-	if err := cn.SetupKaiaxModules(ctx, mValset); err != nil {
+	if err := cn.SetupKaiaxModules(ctx, mValset, mVRank); err != nil {
 		logger.Error("Failed to setup kaiax modules", "err", err)
+		return nil, err
 	}
 
 	// Fill the staking info cache for the recent blocks.
@@ -491,7 +500,7 @@ func (s *CN) SetComponents(component []interface{}) {
 	// do nothing
 }
 
-func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.GovModule, mValset *valset_impl.ValsetModule,
+func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.GovModule, mValset *valset_impl.ValsetModule, mVRank *vrank_impl.VRankModule,
 ) error {
 	// Initialize modules
 	return errors.Join(
@@ -512,11 +521,12 @@ func (s *CN) InitGovModule(mStaking *staking_impl.StakingModule, mGov *gov_impl.
 			Chain:         s.blockchain,
 			GovModule:     mGov,
 			StakingModule: mStaking,
+			VRankModule:   mVRank,
 		}),
 	)
 }
 
-func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetModule) error {
+func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetModule, mVRank *vrank_impl.VRankModule) error {
 	var (
 		mRandao  = randao_impl.NewRandaoModule()
 		mReward  = reward_impl.NewRewardModule()
@@ -566,6 +576,16 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 			Downloader:    s.protocolManager.Downloader(),
 			NodeKey:       ctx.NodeKey(),
 		}),
+		mVRank.Init(&vrank_impl.InitOpts{
+			Valset:      mValset,
+			Randao:      mRandao,
+			RoundReader: s.blockchain.Sealer(),
+			NodeKey:     ctx.NodeKey(),
+			BlsKey:      ctx.BlsNodeKey(),
+			ChainConfig: s.chainConfig,
+			Chain:       s.blockchain,
+			ChainKv:     s.chainDB.GetMiscDB(),
+		}),
 	)
 	if err != nil {
 		return err
@@ -577,8 +597,8 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	mTxPool := []kaiax.TxPoolModule{}
 	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao}
 	mRewindable := []kaiax.RewindableModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
-	mHeader := []kaiax.HeaderModule{mReward, s.govModule, mRandao}
-	mBlockState := []kaiax.BlockStateModule{mReward, mSystem}
+	mHeader := []kaiax.HeaderModule{mReward, s.govModule, mRandao, mValset, mVRank}
+	mBlockState := []kaiax.BlockStateModule{mReward, mSystem, mValset}
 
 	if !mGasless.IsDisabled() {
 		mExecution = append(mExecution, mGasless)
@@ -891,6 +911,8 @@ func (s *CN) Start(srvr p2p.Server) error {
 	// Start the RPC service
 	s.p2pServer = srvr
 
+	s.startCNPeerSync(srvr)
+
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers()
 	// Start the networking layer and the light server if requested
@@ -906,6 +928,7 @@ func (s *CN) Start(srvr p2p.Server) error {
 // Kaia protocol.
 func (s *CN) Stop() error {
 	// Stop all the peer-related stuff first.
+	s.stopCNPeerSync()
 	s.protocolManager.Stop()
 	if s.lesServer != nil {
 		s.lesServer.Stop()

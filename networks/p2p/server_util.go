@@ -28,8 +28,20 @@ import (
 	"strings"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 )
+
+// Finite peerTargets from KIP-311. Missing entries mean no per-role cap beyond
+// MaxPhysicalConnections and inbound capacity.
+var peerTargets = map[common.ConnType]map[common.ConnType]int{
+	common.CONSENSUSNODE: {
+		common.ENDPOINTNODE: 3,
+	},
+	common.ENDPOINTNODE: {
+		common.CONSENSUSNODE: 2,
+	},
+}
 
 type peerDrop struct {
 	*Peer
@@ -46,6 +58,8 @@ const (
 type connFlag int
 
 const (
+	// inbound/dyndial/staticdial are mutually exclusive origins.
+	// trusted is an independent overlay added after identity is known.
 	dynDialedConn connFlag = 1 << iota
 	staticDialedConn
 	inboundConn
@@ -192,6 +206,22 @@ func ConvertNodeType(ct common.ConnType) discover.NodeType {
 	default:
 		return discover.NodeTypeUnknown // TODO-Kaia-Node Maybe, call panic() func or Crit()
 	}
+}
+
+// EffectiveConnType returns the KIP-311 role bucket for a wire-level connection type.
+func EffectiveConnType(ct common.ConnType) common.ConnType {
+	if ct == common.PROXYNODE {
+		return common.ENDPOINTNODE
+	}
+	return ct
+}
+
+func addressFromNodeID(id discover.NodeID) (common.Address, error) {
+	pub, err := id.Pubkey()
+	if err != nil {
+		return common.Address{}, err
+	}
+	return crypto.PubkeyToAddress(*pub), nil
 }
 
 func ConvertConnType(nt discover.NodeType) common.ConnType {

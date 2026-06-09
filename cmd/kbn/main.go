@@ -93,7 +93,6 @@ func bootnode(ctx *cli.Context) error {
 	setHTTP(ctx, &bcfg)
 	setWS(ctx, &bcfg)
 	setgRPC(ctx, &bcfg)
-	setAuthorizedNodes(ctx, &bcfg)
 
 	// Check exit condition
 	switch bcfg.checkCMDState() {
@@ -139,16 +138,15 @@ func bootnode(ctx *cli.Context) error {
 	}
 
 	cfg := discover.Config{
-		NetworkID:       bcfg.networkID,
-		PrivateKey:      bcfg.nodeKey,
-		AnnounceAddr:    realaddr,
-		NetRestrict:     bcfg.restrictList,
-		Conn:            conn,
-		Addr:            realaddr,
-		Id:              discover.PubkeyID(&bcfg.nodeKey.PublicKey),
-		NodeType:        p2p.ConvertNodeType(common.BOOTNODE),
-		AuthorizedNodes: bcfg.AuthorizedNodes,
-		DiscoverTypes:   discover.DiscoverTypesConfig{CN: true, PN: true, EN: true},
+		NetworkID:     bcfg.networkID,
+		PrivateKey:    bcfg.nodeKey,
+		AnnounceAddr:  realaddr,
+		NetRestrict:   bcfg.restrictList,
+		Conn:          conn,
+		Addr:          realaddr,
+		Id:            discover.PubkeyID(&bcfg.nodeKey.PublicKey),
+		NodeType:      p2p.ConvertNodeType(common.BOOTNODE),
+		DiscoverTypes: discover.DiscoverTypesConfig{CN: true, PN: true, EN: true},
 	}
 
 	disc, err := discover.NewDiscovery2(&cfg)

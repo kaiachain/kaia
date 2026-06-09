@@ -78,10 +78,10 @@ type VRankScenario struct {
 	Candidates        []string   // Candidates(1)
 	Proposer          string     // Proposer(1, 0)
 	UnresponsiveCands []string   // optional: candidates whose message is not delivered to validators
-	ExpectedCfReports [][]string // ExpectedCfReports[i] = expected TallyCfReport(1, 0) for Nodes[i]
+	ExpectedCfReports [][]string // ExpectedCfReports[i] = expected EvaluateCandidates(1, 0) for Nodes[i]
 }
 
-// runVRankScenario runs the full cycle for block 1 and asserts TallyCfReport(1, 0) for each node matches ExpectedCfReports[i].
+// runVRankScenario runs the full cycle for block 1 and asserts EvaluateCandidates(1, 0) for each node matches ExpectedCfReports[i].
 func runVRankScenario(t *testing.T, s VRankScenario) {
 	const blockNum = uint64(1)
 	require.Len(t, s.ExpectedCfReports, len(s.Nodes), "ExpectedCfReports must have one entry per node")
@@ -147,9 +147,9 @@ func runVRankScenario(t *testing.T, s VRankScenario) {
 		}
 	}
 
-	// 4. TallyCfReport(1, 0) from each node and assert ExpectedCfReports[i]
+	// 4. EvaluateCandidates(1, 0) from each node and assert ExpectedCfReports[i]
 	for i, nodeName := range s.Nodes {
-		report, err := nameToCN[nodeName].VRankModule.TallyCfReport(blockNum, 0)
+		report, err := nameToCN[nodeName].VRankModule.EvaluateCandidates(blockNum, 0)
 		require.NoError(t, err)
 		expectedNames := s.ExpectedCfReports[i]
 		expectedAddrs := make([]common.Address, 0, len(expectedNames))
@@ -552,7 +552,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 		assert.Nil(t, candMap, "stale messages should not be stored")
 	})
 
-	t.Run("epoch boundary future messages should be stored until tally", func(t *testing.T) {
+	t.Run("epoch boundary future messages should be stored until evaluation", func(t *testing.T) {
 		cns, valset, _ := newCNMulti(t, 2)
 		val, cand := cns[0], cns[1]
 		blockNum := params.DefaultVRankEpoch - 1
