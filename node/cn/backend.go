@@ -620,6 +620,9 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 		}
 	}
 
+	// VRank exposes the kaia_getCFS / kaia_getPFS JSON-RPC APIs on all node types.
+	mJsonRpc = append(mJsonRpc, mVRank)
+
 	// Register modules to respective components
 	// TODO-kaiax: Organize below lines.
 	s.RegisterBaseModules(mBase...)
