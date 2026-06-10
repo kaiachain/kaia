@@ -77,9 +77,10 @@ var (
 )
 
 type testBlockChain struct {
-	statedb       *state.StateDB
-	gasLimit      uint64
-	chainHeadFeed *event.Feed
+	statedb            *state.StateDB
+	gasLimit           uint64
+	chainHeadFeed      *event.Feed
+	chainPreCommitFeed event.Feed
 }
 
 func (bc *testBlockChain) CurrentBlock() *types.Block {
@@ -104,6 +105,10 @@ func (bc *testBlockChain) GetTxAndLookupInfo(txHash common.Hash) (*types.Transac
 
 func (bc *testBlockChain) SubscribeChainHeadEvent(ch chan<- blockchain.ChainHeadEvent) event.Subscription {
 	return bc.chainHeadFeed.Subscribe(ch)
+}
+
+func (bc *testBlockChain) SubscribeChainPreCommitEvent(ch chan<- blockchain.ChainPreCommitEvent) event.Subscription {
+	return bc.chainPreCommitFeed.Subscribe(ch)
 }
 
 type dummyGovModule struct {

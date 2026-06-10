@@ -82,6 +82,20 @@ func (mr *MockTxPoolMockRecorder) Content() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Content", reflect.TypeOf((*MockTxPool)(nil).Content))
 }
 
+// CurrentBlockNumber mocks base method.
+func (m *MockTxPool) CurrentBlockNumber() uint64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CurrentBlockNumber")
+	ret0, _ := ret[0].(uint64)
+	return ret0
+}
+
+// CurrentBlockNumber indicates an expected call of CurrentBlockNumber.
+func (mr *MockTxPoolMockRecorder) CurrentBlockNumber() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CurrentBlockNumber", reflect.TypeOf((*MockTxPool)(nil).CurrentBlockNumber))
+}
+
 // GasPrice mocks base method.
 func (m *MockTxPool) GasPrice() *big.Int {
 	m.ctrl.T.Helper()
