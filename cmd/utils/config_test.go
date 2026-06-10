@@ -18,6 +18,8 @@ package utils
 import (
 	"testing"
 
+	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
@@ -228,7 +230,6 @@ func TestLoadYaml(t *testing.T) {
 		"genkey":                                    false,
 		"writeaddress":                              true,
 		"bnaddr":                                    true,
-		"authorized-nodes":                          false,
 		"rewardbase":                                false,
 		"mainnet":                                   true,
 		"kairos":                                    true,
@@ -291,5 +292,25 @@ func TestLoadYaml(t *testing.T) {
 	err := app.Run([]string{"testApp", "--conf", "nodecmd/testdata/test-config.yaml"})
 	if err != nil {
 		t.Error(err)
+	}
+}
+
+func TestSetDefaultMaxPhysicalConnections(t *testing.T) {
+	tests := []struct {
+		name     string
+		connType common.ConnType
+		want     int
+	}{
+		{name: "CN", connType: common.CONSENSUSNODE, want: defaultCNMaxPhysicalConnections},
+		{name: "EN", connType: common.ENDPOINTNODE, want: defaultENMaxPhysicalConnections},
+		{name: "PN", connType: common.PROXYNODE, want: defaultENMaxPhysicalConnections},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &p2p.Config{ConnectionType: tt.connType}
+			setDefaultMaxPhysicalConnections(cfg)
+			assert.Equal(t, tt.want, cfg.MaxPhysicalConnections)
+		})
 	}
 }

@@ -237,34 +237,62 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 
 	blockNum := header.Number.Uint64()
 
+	var rules params.Rules
+	if v.config != nil {
+		rules = v.config.Rules(new(big.Int).SetUint64(blockNum))
+	}
+
 	// Skip module-dependent seal validation when gov/valset modules are not registered.
 	if v.mValset == nil || v.mGov == nil {
 		return nil
+	}
+
+	if rules.IsPermissionless {
+		round, err := v.sealer.Round(header)
+		if err != nil {
+			return err
+		}
+		proposer, err := v.mValset.GetProposer(blockNum, uint64(round))
+		if err != nil {
+			return err
+		}
+		if author != proposer {
+			return consensus.ErrUnauthorized
+		}
 	}
 
 	qualified, err := v.mValset.GetQualifiedValidators(blockNum)
 	if err != nil {
 		return err
 	}
-	if !valset.NewAddressSet(qualified).Contains(author) {
+	qualifiedSet := valset.NewAddressSet(qualified)
+	if !qualifiedSet.Contains(author) {
 		return consensus.ErrUnauthorized
 	}
 
-	council, err := v.mValset.GetCouncil(blockNum)
-	if err != nil {
-		return err
+	signerSet := qualifiedSet.Copy()
+	if !rules.IsPermissionless {
+		council, err := v.mValset.GetCouncil(blockNum)
+		if err != nil {
+			return err
+		}
+		signerSet = valset.NewAddressSet(council).Copy()
 	}
-	councilSet := valset.NewAddressSet(council).Copy()
 	validSeal := 0
 	for _, addr := range committers {
-		if councilSet.Remove(addr) {
+		if signerSet.Remove(addr) {
 			validSeal++
 		} else {
 			return istanbul.ErrInvalidCommittedSeals
 		}
 	}
 
-	if validSeal < v.sealer.Quorum(blockNum, len(qualified), int(v.mGov.GetParamSet(blockNum).CommitteeSize)) {
+	qualifiedLen := len(qualified)
+	committeeSize := qualifiedLen
+	if !gov.DeprecatedAt(gov.IstanbulCommitteeSize, rules) {
+		committeeSize = int(v.mGov.GetParamSet(blockNum).CommitteeSize)
+	}
+	if validSeal < v.sealer.Quorum(blockNum, qualifiedLen, committeeSize) {
 		return istanbul.ErrInvalidCommittedSeals
 	}
 	return nil

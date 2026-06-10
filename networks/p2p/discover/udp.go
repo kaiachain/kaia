@@ -51,7 +51,6 @@ var (
 	errTimeout          = errors.New("RPC timeout")
 	errClockWarp        = errors.New("reply deadline too far in the future")
 	errClosed           = errors.New("socket closed")
-	errUnauthorized     = errors.New("unauthorized node")
 	errMismatchNetwork  = errors.New("mismatch network id")
 )
 
@@ -346,10 +345,6 @@ func (t *udp) close() {
 	close(t.closing) // shuts down the loop()
 	t.conn.Close()   // shuts down the readLoop()
 	t.wg.Wait()
-}
-
-func (t *udp) isAuthorized(fromID NodeID, nType NodeType) bool {
-	return t.tab.IsAuthorized(fromID, nType)
 }
 
 func (t *udp) hasBond(fromID NodeID) bool {
@@ -733,11 +728,6 @@ func (req *ping) preverify(t *udp, from *net.UDPAddr, fromID NodeID) error {
 		mismatchNetworkCounter.Mark(1)
 		return errMismatchNetwork
 	}
-	if !t.isAuthorized(fromID, req.From.NType) {
-		logger.Trace("unauthorized node.", "nodeid", fromID, "nodetype", req.From.NType)
-		return errUnauthorized
-	}
-	logger.Trace("authorized node.", "nodeid", fromID, "nodetype", req.From.NType)
 	return nil
 }
 
@@ -836,22 +826,12 @@ func (req *neighbors) handle(t *udp, from *net.UDPAddr, fromID NodeID, mac []byt
 
 func (req *neighbors) name() string { return "NEIGHBORS/v4" }
 
+// findnodeRetrieveSize caps one FINDNODE response. It is responder-side packet
+// sizing, not the requester's long-term discovery goal from getDiscoverTargets.
 func findnodeRetrieveSize(nType NodeType) int {
 	// Returning too small value will make CNs unable to find each other.
 	if nType == NodeTypeCN {
 		return 100
-	}
-	// Return at most 2 PNs.
-	// 1. Under current CN-PN-EN 3-tier operating practices, findnode(type=PN) packet originates only from EN.
-	//    CNs only connect to other CNs via CNBN. PNs are connected to PNs and CNs via static-nodes.json.
-	// 2. Giving 16 PNs to ENs will lead to uneven PN connection distribution.
-	//    ENs will choose 2 PNs from 16 PNs based on the ping-pong latency. Given that PNs and ENs are geographically
-	//    unevenly distributed, the EN's PN choice should be concentrated to a small number of PNs, even if the 16 is random.
-	// Returning up to 2 PNs will force EN to connect to random PNs that may not necessarily be the geographically closest ones.
-	// ENs may suffer some latency if it connected to faraway PN, but distributing the p2p workload across PNs is more important
-	// for the network stability.
-	if nType == NodeTypePN {
-		return 2
 	}
 	return bucketSize
 }

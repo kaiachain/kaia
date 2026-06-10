@@ -78,7 +78,7 @@ func (v *ValsetModule) getRemoveVotesInInterval(pUpdateNum, pUpdateInterval uint
 		}
 		if len(addresses) > 0 && voteKey == gov.RemoveValidator {
 			// demoted validators are not considered
-			qualified, err := v.getQualifiedValidators(num)
+			qualified, err := v.getQualifiedPermissioned(num)
 			if err != nil {
 				logger.Error("Failed to get qualified validators", "block", num, "err", err)
 				return nil

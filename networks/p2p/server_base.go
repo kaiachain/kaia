@@ -26,7 +26,9 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"errors"
+	"maps"
 	"net"
+	"slices"
 	"sync"
 
 	"github.com/kaiachain/kaia/common"
@@ -68,6 +70,7 @@ type BaseServer struct {
 	outboundCount int
 	trusted       map[discover.NodeID]bool
 	dialSched     *DialSched
+	cnPeerAddrs   map[common.Address]struct{} // KIP-311 peerNodes allowlist for CN-CN connections.
 }
 
 // SingleChannelServer is a server that uses a single channel.
@@ -146,14 +149,15 @@ func (srv *BaseServer) Start() (err error) {
 	}
 
 	if !srv.NoDial {
+		maxENToENDialTarget := srv.maxDialedConns()
 		srv.dialSched = NewDialSched(DialConfig{
-			selfID:      srv.selfID,
-			selfType:    ConvertNodeType(srv.ConnectionType),
-			staticNodes: srv.StaticNodes,
-			netrestrict: srv.NetRestrict,
-			maxDynDials: srv.maxDialedConns(),
-			maxPeers:    srv.MaxPeers(),
-			dialer:      srv.Dialer,
+			selfID:              srv.selfID,
+			selfType:            ConvertNodeType(srv.ConnectionType),
+			staticNodes:         srv.StaticNodes,
+			netrestrict:         srv.NetRestrict,
+			maxENToENDialTarget: &maxENToENDialTarget,
+			maxPeers:            srv.MaxPeers(),
+			dialer:              srv.Dialer,
 		}, srv.ntab, srv)
 		srv.dialSched.Start()
 	}
@@ -276,13 +280,54 @@ func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, inbou
 		return DiscTooManyPeers
 	case !c.is(trustedConn) && c.is(inboundConn) && inboundCount >= srv.maxInboundConns():
 		return DiscTooManyPeers
+	case srv.exceedsPeerTarget(peers, c):
+		return DiscTooManyPeers
 	case peers[c.id] != nil:
 		return DiscAlreadyConnected
 	case c.id == srv.selfID:
 		return DiscSelf
 	default:
+		return srv.admitByCNPeers(c)
+	}
+}
+
+func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *conn) bool {
+	if c.is(trustedConn | staticDialedConn) {
+		return false
+	}
+
+	selfType := EffectiveConnType(srv.ConnectionType)
+	peerType := EffectiveConnType(c.conntype)
+	target, ok := peerTargets[selfType][peerType]
+	if !ok {
+		return false
+	}
+
+	peersByType := slices.DeleteFunc(slices.Collect(maps.Values(peers)), func(p *Peer) bool {
+		return EffectiveConnType(p.ConnType()) != peerType
+	})
+	return len(peersByType) >= target
+}
+
+func (srv *BaseServer) admitByCNPeers(c *conn) error {
+	if EffectiveConnType(c.conntype) != common.CONSENSUSNODE {
 		return nil
 	}
+	if c.is(trustedConn | staticDialedConn) {
+		return nil
+	}
+	if srv.cnPeerAddrs == nil {
+		return nil
+	}
+
+	addr, err := addressFromNodeID(c.id)
+	if err != nil {
+		return err
+	}
+	if _, ok := srv.cnPeerAddrs[addr]; !ok {
+		return DiscUselessPeer
+	}
+	return nil
 }
 
 func (srv *BaseServer) maxInboundConns() int {
@@ -293,9 +338,7 @@ func (srv *BaseServer) maxDialedConns() int {
 	switch srv.ConnectionType {
 	case common.CONSENSUSNODE:
 		return 0
-	case common.PROXYNODE:
-		return 0
-	case common.ENDPOINTNODE:
+	case common.PROXYNODE, common.ENDPOINTNODE:
 		if srv.NoDiscovery || srv.NoDial {
 			return 0
 		}
@@ -558,6 +601,56 @@ func (srv *BaseServer) reportPeerMetric() {
 	connectionCountGauge.Update(int64(srv.outboundCount + srv.inboundCount))
 	connectionInCountGauge.Update(int64(srv.inboundCount))
 	connectionOutCountGauge.Update(int64(srv.outboundCount))
+}
+
+// SetCNPeers replaces the address-keyed CN admission allowlist.
+// nil disables filtering; an empty list rejects all CN claims.
+func (srv *BaseServer) SetCNPeers(addrs []common.Address) {
+	srv.lock.Lock()
+	if addrs == nil {
+		srv.cnPeerAddrs = nil
+		if srv.dialSched != nil {
+			srv.dialSched.SetCNPeers(nil)
+		}
+		srv.lock.Unlock()
+		return
+	}
+
+	cnPeerAddrs := make(map[common.Address]struct{}, len(addrs))
+	for _, addr := range addrs {
+		cnPeerAddrs[addr] = struct{}{}
+	}
+	srv.cnPeerAddrs = cnPeerAddrs
+	if srv.dialSched != nil {
+		srv.dialSched.SetCNPeers(addrs)
+	}
+	drops := srv.peersOutsideCNPeerAddrs()
+	srv.lock.Unlock()
+
+	for _, p := range drops {
+		srv.logger.Info("Disconnecting CN peer outside allowlist", "id", p.ID())
+		p.Disconnect(DiscRequested)
+	}
+}
+
+func (srv *BaseServer) peersOutsideCNPeerAddrs() []*Peer {
+	drops := make([]*Peer, 0)
+	for id, p := range srv.peers {
+		if p == nil || EffectiveConnType(p.ConnType()) != common.CONSENSUSNODE {
+			continue
+		}
+		if p.rws[ConnDefault].is(trustedConn | staticDialedConn) {
+			continue
+		}
+		addr, err := addressFromNodeID(id)
+		if err != nil {
+			continue
+		}
+		if _, ok := srv.cnPeerAddrs[addr]; !ok {
+			drops = append(drops, p)
+		}
+	}
+	return drops
 }
 
 // Disconnect tries to disconnect peer.

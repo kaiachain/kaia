@@ -366,6 +366,170 @@ func TestServerAtCap(t *testing.T) {
 	}
 }
 
+func TestServerPeerTargets(t *testing.T) {
+	newPeerWithType := func(connType common.ConnType) *Peer {
+		return &Peer{rws: []*conn{{conntype: connType}}}
+	}
+	newPeers := func(connTypes ...common.ConnType) map[discover.NodeID]*Peer {
+		peers := make(map[discover.NodeID]*Peer, len(connTypes))
+		for _, connType := range connTypes {
+			peers[randomID()] = newPeerWithType(connType)
+		}
+		return peers
+	}
+
+	cnSrv := &BaseServer{Config: Config{ConnectionType: common.CONSENSUSNODE}}
+	cnMeshPeers := newPeers(common.CONSENSUSNODE, common.CONSENSUSNODE, common.CONSENSUSNODE)
+	if cnSrv.exceedsPeerTarget(cnMeshPeers, &conn{conntype: common.CONSENSUSNODE}) {
+		t.Fatal("CN should not apply an extra per-role cap to CN peers")
+	}
+	cnPeers := newPeers(common.ENDPOINTNODE, common.PROXYNODE, common.ENDPOINTNODE)
+	if !cnSrv.exceedsPeerTarget(cnPeers, &conn{conntype: common.ENDPOINTNODE}) {
+		t.Fatal("CN should reject EN when EN-equivalent peer target is full")
+	}
+	if !cnSrv.exceedsPeerTarget(cnPeers, &conn{conntype: common.PROXYNODE}) {
+		t.Fatal("CN should count PN against the EN-equivalent peer target")
+	}
+	if cnSrv.exceedsPeerTarget(cnPeers, &conn{conntype: common.ENDPOINTNODE, flags: trustedConn}) {
+		t.Fatal("trusted peer should bypass peer target")
+	}
+	if cnSrv.exceedsPeerTarget(cnPeers, &conn{conntype: common.ENDPOINTNODE, flags: staticDialedConn}) {
+		t.Fatal("static outbound peer should bypass peer target")
+	}
+	if !cnSrv.exceedsPeerTarget(cnPeers, &conn{conntype: common.ENDPOINTNODE, flags: inboundConn}) {
+		t.Fatal("static/dynamic inbound peer should not bypass peer target unless trusted")
+	}
+
+	enSrv := &BaseServer{Config: Config{ConnectionType: common.ENDPOINTNODE}}
+	enMeshPeers := newPeers(common.ENDPOINTNODE, common.PROXYNODE, common.ENDPOINTNODE)
+	if enSrv.exceedsPeerTarget(enMeshPeers, &conn{conntype: common.ENDPOINTNODE}) {
+		t.Fatal("EN should not apply an extra per-role cap to EN-equivalent peers")
+	}
+	enPeers := newPeers(common.CONSENSUSNODE, common.CONSENSUSNODE)
+	if !enSrv.exceedsPeerTarget(enPeers, &conn{conntype: common.CONSENSUSNODE}) {
+		t.Fatal("EN should reject CN when CN peer target is full")
+	}
+}
+
+func TestServerCNPeersAdmission(t *testing.T) {
+	key := newkey()
+	id := discover.PubkeyID(&key.PublicKey)
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+	srv := &BaseServer{}
+
+	c := &conn{conntype: common.CONSENSUSNODE, id: id}
+	srv.SetCNPeers(nil)
+	if err := srv.admitByCNPeers(c); err != nil {
+		t.Fatalf("nil CN peers should disable CN filtering: %v", err)
+	}
+
+	srv.SetCNPeers([]common.Address{})
+	if err := srv.admitByCNPeers(c); err != DiscUselessPeer {
+		t.Fatalf("empty CN peers should reject CN claims, got %v", err)
+	}
+
+	if err := srv.admitByCNPeers(&conn{conntype: common.ENDPOINTNODE, id: id}); err != nil {
+		t.Fatalf("EN should bypass CN peer admission: %v", err)
+	}
+	if err := srv.admitByCNPeers(&conn{conntype: common.PROXYNODE, id: id}); err != nil {
+		t.Fatalf("legacy PN should bypass CN peer admission as EN-equivalent: %v", err)
+	}
+	if err := srv.admitByCNPeers(&conn{conntype: common.CONSENSUSNODE, id: id, flags: trustedConn}); err != nil {
+		t.Fatalf("trusted CN should bypass CN peer admission: %v", err)
+	}
+	if err := srv.admitByCNPeers(&conn{conntype: common.CONSENSUSNODE, id: id, flags: staticDialedConn}); err != nil {
+		t.Fatalf("static outbound CN should bypass CN peer admission: %v", err)
+	}
+	if err := srv.admitByCNPeers(&conn{conntype: common.CONSENSUSNODE, id: id, flags: inboundConn}); err != DiscUselessPeer {
+		t.Fatalf("inbound CN should not bypass CN peer admission, got %v", err)
+	}
+
+	srv.SetCNPeers([]common.Address{addr})
+	if err := srv.admitByCNPeers(c); err != nil {
+		t.Fatalf("CN in CN peers should pass admission: %v", err)
+	}
+}
+
+func TestServerSetCNPeersReconcilesConnectedCNPeers(t *testing.T) {
+	newPeerWithKey := func(key *ecdsa.PrivateKey, connType common.ConnType, flags connFlag) *Peer {
+		return &Peer{
+			rws:  []*conn{{id: discover.PubkeyID(&key.PublicKey), conntype: connType, flags: flags}},
+			disc: make(chan DiscReason, 1),
+		}
+	}
+	assertNotDisconnected := func(t *testing.T, p *Peer) {
+		t.Helper()
+		select {
+		case reason := <-p.disc:
+			t.Fatalf("peer should remain connected, got disconnect %v", reason)
+		default:
+		}
+	}
+
+	allowedKey := newkey()
+	dropKey := newkey()
+	trustedKey := newkey()
+	staticKey := newkey()
+	enKey := newkey()
+
+	allowed := newPeerWithKey(allowedKey, common.CONSENSUSNODE, inboundConn)
+	drop := newPeerWithKey(dropKey, common.CONSENSUSNODE, inboundConn)
+	trusted := newPeerWithKey(trustedKey, common.CONSENSUSNODE, inboundConn|trustedConn)
+	staticOutbound := newPeerWithKey(staticKey, common.CONSENSUSNODE, staticDialedConn)
+	en := newPeerWithKey(enKey, common.ENDPOINTNODE, inboundConn)
+
+	srv := &BaseServer{
+		logger: logger.NewWith(),
+		peers: map[discover.NodeID]*Peer{
+			allowed.ID():        allowed,
+			drop.ID():           drop,
+			trusted.ID():        trusted,
+			staticOutbound.ID(): staticOutbound,
+			en.ID():             en,
+		},
+	}
+
+	srv.SetCNPeers([]common.Address{crypto.PubkeyToAddress(allowedKey.PublicKey)})
+
+	select {
+	case reason := <-drop.disc:
+		if reason != DiscRequested {
+			t.Fatalf("wrong disconnect reason: %v", reason)
+		}
+	default:
+		t.Fatal("CN peer outside allowlist should be disconnected")
+	}
+	assertNotDisconnected(t, allowed)
+	assertNotDisconnected(t, trusted)
+	assertNotDisconnected(t, staticOutbound)
+	assertNotDisconnected(t, en)
+}
+
+func TestServerSetCNPeersUpdatesDialSched(t *testing.T) {
+	allowedKey := newkey()
+	blockedKey := newkey()
+	allowed := discover.NewNode(discover.PubkeyID(&allowedKey.PublicKey), net.ParseIP("10.0.0.1"), 30303, 30303, nil, discover.NodeTypeCN)
+	blocked := discover.NewNode(discover.PubkeyID(&blockedKey.PublicKey), net.ParseIP("10.0.0.2"), 30303, 30303, nil, discover.NodeTypeCN)
+	ds := NewDialSched(DialConfig{selfType: discover.NodeTypeCN}, nil, nil)
+	srv := &BaseServer{
+		dialSched: ds,
+		peers:     make(map[discover.NodeID]*Peer),
+	}
+
+	srv.SetCNPeers([]common.Address{crypto.PubkeyToAddress(allowedKey.PublicKey)})
+	if !ds.dynamicCandidateAllowed(discover.NodeTypeCN, allowed) {
+		t.Fatal("allowed CN should remain dialable")
+	}
+	if ds.dynamicCandidateAllowed(discover.NodeTypeCN, blocked) {
+		t.Fatal("blocked CN should not remain dialable")
+	}
+
+	srv.SetCNPeers(nil)
+	if !ds.dynamicCandidateAllowed(discover.NodeTypeCN, blocked) {
+		t.Fatal("nil CN peer allowlist should disable dynamic dial filtering")
+	}
+}
+
 func TestServerSetupConn(t *testing.T) {
 	var (
 		id     = discover.PubkeyID(&newkey().PublicKey)

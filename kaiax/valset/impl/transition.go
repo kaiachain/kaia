@@ -18,6 +18,7 @@ package impl
 
 import (
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
@@ -43,6 +44,9 @@ const (
 // Resolves parent state from chain (StateAt(parent.Root)). Use this for
 // post-commit reads (RPC, peer set queries).
 func (v *ValsetModule) getNodes(num uint64) (valset.NodeMap, error) {
+	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return nil, errPermissionlessDisabled
+	}
 	if cached, ok := v.transitionResultCache.Get(num); ok {
 		return cached.(*TransitionResult).Nodes, nil
 	}
@@ -140,6 +144,11 @@ func (v *ValsetModule) newTransitionContext(header *types.Header, abv2result *sy
 func (v *ValsetModule) fetchVRankCtx(num uint64) (cfs, pfs map[common.Address]uint64, pfReport []common.Address) {
 	if v.VRankModule == nil {
 		logger.Error("VRankModule is nil")
+		return nil, nil, nil
+	}
+	// Pre-HF blocks have no VRank evidence. Keep applyTr(HF-1) as a no-op
+	// for VRank-dependent transitions by returning an empty VRank context.
+	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
 		return nil, nil, nil
 	}
 	if nextNum := num + 1; v.isVrankEpoch(nextNum) {

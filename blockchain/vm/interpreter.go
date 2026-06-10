@@ -104,6 +104,8 @@ func NewEVMInterpreter(evm *EVM) *EVMInterpreter {
 	if cfg.JumpTable[STOP] == nil {
 		var jt JumpTable
 		switch {
+		case evm.chainRules.IsPermissionless:
+			jt = PermissionlessInstructionSet
 		case evm.chainRules.IsOsaka:
 			jt = OsakaInstructionSet
 		case evm.chainRules.IsPrague:

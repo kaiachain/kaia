@@ -38,6 +38,21 @@ func (m *MockVRankModule) EXPECT() *MockVRankModuleMockRecorder {
 	return m.recorder
 }
 
+// EvaluateCandidates mocks base method.
+func (m *MockVRankModule) EvaluateCandidates(arg0, arg1 uint64) ([]common.Address, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EvaluateCandidates", arg0, arg1)
+	ret0, _ := ret[0].([]common.Address)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EvaluateCandidates indicates an expected call of EvaluateCandidates.
+func (mr *MockVRankModuleMockRecorder) EvaluateCandidates(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvaluateCandidates", reflect.TypeOf((*MockVRankModule)(nil).EvaluateCandidates), arg0, arg1)
+}
+
 // GetCFS mocks base method.
 func (m *MockVRankModule) GetCFS(arg0 uint64) (map[common.Address]uint64, error) {
 	m.ctrl.T.Helper()
@@ -175,21 +190,6 @@ func (m *MockVRankModule) SubscribeVRank(arg0 chan<- *vrank.VRankBroadcastEvent)
 func (mr *MockVRankModuleMockRecorder) SubscribeVRank(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeVRank", reflect.TypeOf((*MockVRankModule)(nil).SubscribeVRank), arg0)
-}
-
-// TallyCfReport mocks base method.
-func (m *MockVRankModule) TallyCfReport(arg0, arg1 uint64) ([]common.Address, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TallyCfReport", arg0, arg1)
-	ret0, _ := ret[0].([]common.Address)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// TallyCfReport indicates an expected call of TallyCfReport.
-func (mr *MockVRankModuleMockRecorder) TallyCfReport(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TallyCfReport", reflect.TypeOf((*MockVRankModule)(nil).TallyCfReport), arg0, arg1)
 }
 
 // VerifyHeader mocks base method.

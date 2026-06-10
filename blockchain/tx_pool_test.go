@@ -56,11 +56,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	// testTxPoolConfig is a transaction pool configuration without stateful disk
-	// sideeffects used during testing.
-	testTxPoolConfig TxPoolConfig
-)
+// testTxPoolConfig is a transaction pool configuration without stateful disk
+// sideeffects used during testing.
+var testTxPoolConfig TxPoolConfig
 
 type dummyGovModule struct {
 	chainConfig *params.ChainConfig
@@ -4348,5 +4346,257 @@ func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
 			}
 			tc.verify(t, pool, block)
 		})
+	}
+}
+
+// sumPendingQueued recomputes pendingCount/queuedCount from the source-of-truth
+// per-sender lists. It runs under pool.mu RLock to keep the snapshot consistent.
+func sumPendingQueued(pool *TxPool) (uint64, uint64) {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
+	pool.txMu.RLock()
+	defer pool.txMu.RUnlock()
+	var p, q uint64
+	for _, list := range pool.pending {
+		p += uint64(list.Len())
+	}
+	for _, list := range pool.queue {
+		q += uint64(list.Len())
+	}
+	return p, q
+}
+
+func assertCountsMatch(t *testing.T, pool *TxPool, label string) {
+	t.Helper()
+	wantP, wantQ := sumPendingQueued(pool)
+	pool.mu.RLock()
+	gotP, gotQ := pool.pendingCount, pool.queuedCount
+	pool.mu.RUnlock()
+	if gotP != wantP {
+		t.Fatalf("%s: pendingCount drift: counter=%d actual=%d", label, gotP, wantP)
+	}
+	if gotQ != wantQ {
+		t.Fatalf("%s: queuedCount drift: counter=%d actual=%d", label, gotQ, wantQ)
+	}
+}
+
+// largeCapTxPool wires a TxPool with high slot caps so multi-sender benchmarks
+// don't trip the global limit before the workload begins.
+func largeCapTxPool(execAll, nonExecAll uint64) *TxPool {
+	cfg := testTxPoolConfig
+	cfg.ExecSlotsAll = execAll
+	cfg.NonExecSlotsAll = nonExecAll
+	cfg.ExecSlotsAccount = 64
+	cfg.NonExecSlotsAccount = 64
+
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	chain := &testBlockChain{
+		statedb:       statedb,
+		gasLimit:      1_000_000_000,
+		chainHeadFeed: new(event.Feed),
+		txMap:         make(map[common.Hash]*types.Transaction),
+	}
+	return NewTxPool(cfg, params.TestChainConfig, chain, &dummyGovModule{chainConfig: params.TestChainConfig})
+}
+
+// TestTxPoolPendingQueuedCountInvariant exercises the full mutation surface of
+// pool.pending / pool.queue and checks the running counters track the actual
+// per-sender list sums after every operation. Covers: queue inserts, pending
+// promotion via reset, replacement, eviction by balance drop, gap-induced
+// demotion, removeTx, cap-overflow (per-account + global), GasPrice reset,
+// and Clear.
+func TestTxPoolPendingQueuedCountInvariant(t *testing.T) {
+	t.Parallel()
+
+	cfg := testTxPoolConfig
+	cfg.ExecSlotsAll = 256
+	cfg.NonExecSlotsAll = 64
+	cfg.ExecSlotsAccount = 8
+	cfg.NonExecSlotsAccount = 8
+
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	chain := &testBlockChain{
+		statedb:       statedb,
+		gasLimit:      1_000_000_000,
+		chainHeadFeed: new(event.Feed),
+		txMap:         make(map[common.Hash]*types.Transaction),
+	}
+	pool := NewTxPool(cfg, params.TestChainConfig, chain, &dummyGovModule{chainConfig: params.TestChainConfig})
+	defer pool.Stop()
+	assertCountsMatch(t, pool, "init")
+
+	const numKeys = 80
+	keys := make([]*ecdsa.PrivateKey, numKeys)
+	accs := make([]common.Address, numKeys)
+	for i := range keys {
+		keys[i], _ = crypto.GenerateKey()
+		accs[i] = crypto.PubkeyToAddress(keys[i].PublicKey)
+		testAddBalance(pool, accs[i], new(big.Int).Mul(big.NewInt(1_000_000_000), big.NewInt(1_000_000)))
+	}
+
+	rng := rand.New(rand.NewSource(0xC0FFEE))
+
+	// Phase 1: contiguous-nonce inserts from many senders — they should all flow
+	// straight into pending after the addTx promotion pass.
+	for i, key := range keys {
+		for n := 0; n < 3; n++ {
+			tx := transaction(uint64(n), 21000, key)
+			if err := pool.AddRemote(tx); err != nil {
+				t.Fatalf("phase1 sender %d nonce %d: %v", i, n, err)
+			}
+		}
+	}
+	assertCountsMatch(t, pool, "phase1 contiguous adds")
+
+	// Phase 2: gapped-nonce inserts that should land in queue.
+	for i, key := range keys[:numKeys/2] {
+		tx := transaction(uint64(10+rng.Intn(4)), 21000, key)
+		if err := pool.AddRemote(tx); err != nil {
+			t.Fatalf("phase2 sender %d: %v", i, err)
+		}
+	}
+	assertCountsMatch(t, pool, "phase2 gapped adds")
+
+	// Phase 3: replacements (same nonce, higher price for the eth-replace path).
+	for i, key := range keys[:10] {
+		tx := pricedTransaction(0, 21000, big.NewInt(2), key)
+		// Replacement may return ErrAlreadyNonceExistInPool if priceBump not met;
+		// pre-Magma config requires strictly higher gasPrice, which 2>1 satisfies.
+		_ = pool.AddRemote(tx)
+		_ = i
+	}
+	assertCountsMatch(t, pool, "phase3 replacements")
+
+	// Phase 4: state-nonce bump triggers demoteUnexecutables on next reset, which
+	// strips low-nonce pending txs and may push trailing ones back to queue.
+	for _, addr := range accs[:numKeys/4] {
+		testSetNonce(pool, addr, 2)
+	}
+	pool.lockedReset(nil, nil)
+	assertCountsMatch(t, pool, "phase4 nonce bump + reset")
+
+	// Phase 5: balance crash on some senders — Filter() drops in promote/demote.
+	for _, addr := range accs[numKeys/4 : numKeys/2] {
+		pool.mu.Lock()
+		pool.currentState.SetBalance(addr, big.NewInt(0))
+		pool.mu.Unlock()
+	}
+	pool.lockedReset(nil, nil)
+	assertCountsMatch(t, pool, "phase5 balance crash + reset")
+
+	// Phase 6: direct removeTx for some still-alive hashes — exercises both the
+	// pending strict-Remove (with invalidated trailing txs) and the queue branch.
+	pool.mu.Lock()
+	victims := []common.Hash{}
+	for _, addr := range accs {
+		if list := pool.pending[addr]; list != nil {
+			for _, tx := range list.Flatten() {
+				if rng.Intn(4) == 0 {
+					victims = append(victims, tx.Hash())
+				}
+			}
+		}
+		if list := pool.queue[addr]; list != nil {
+			for _, tx := range list.Flatten() {
+				if rng.Intn(3) == 0 {
+					victims = append(victims, tx.Hash())
+				}
+			}
+		}
+	}
+	for _, h := range victims {
+		pool.removeTx(h, true)
+	}
+	pool.mu.Unlock()
+	assertCountsMatch(t, pool, "phase6 removeTx")
+
+	// Phase 7: per-account cap-overflow — load >ExecSlotsAccount contiguous txs
+	// from one fresh sender. The per-account cap fires inside promoteExecutables
+	// for the queue side via list.Cap(NonExecSlotsAccount).
+	bulkKey, _ := crypto.GenerateKey()
+	bulkAddr := crypto.PubkeyToAddress(bulkKey.PublicKey)
+	testAddBalance(pool, bulkAddr, new(big.Int).Mul(big.NewInt(1_000_000_000), big.NewInt(1_000_000)))
+	for n := 0; n < int(cfg.NonExecSlotsAccount)+20; n++ {
+		// Use a nonce gap so they pile into the queue, not pending.
+		_ = pool.AddRemote(transaction(uint64(100+n), 21000, bulkKey))
+	}
+	assertCountsMatch(t, pool, "phase7 per-account cap")
+
+	// Phase 8: global cap-overflow — keep pumping fresh senders until
+	// ExecSlotsAll trips and the spammer-equalize path runs.
+	for i := 0; i < 200; i++ {
+		k, _ := crypto.GenerateKey()
+		a := crypto.PubkeyToAddress(k.PublicKey)
+		testAddBalance(pool, a, new(big.Int).Mul(big.NewInt(1_000_000_000), big.NewInt(1_000_000)))
+		for n := 0; n < 4; n++ {
+			_ = pool.AddRemote(transaction(uint64(n), 21000, k))
+		}
+	}
+	assertCountsMatch(t, pool, "phase8 global cap")
+
+	// Phase 9: SetGasPrice on a non-Magma chain wipes the pool entirely.
+	pool.SetGasPrice(big.NewInt(1000000))
+	assertCountsMatch(t, pool, "phase9 SetGasPrice")
+
+	// Phase 10: Clear() must zero both counters.
+	for n := 0; n < 5; n++ {
+		_ = pool.AddRemote(pricedTransaction(uint64(n), 21000, big.NewInt(1000000), keys[0]))
+	}
+	pool.Clear()
+	assertCountsMatch(t, pool, "phase10 Clear")
+}
+
+// BenchmarkAddTxManySenders measures addTx cost when the pool already holds
+// txs from many senders. With the O(N_senders) sum gone from promoteExecutables,
+// per-op time should be roughly flat across N. Without the fix it scales linearly.
+func BenchmarkAddTxManySenders1k(b *testing.B)   { benchmarkAddTxManySenders(b, 1_000) }
+func BenchmarkAddTxManySenders10k(b *testing.B)  { benchmarkAddTxManySenders(b, 10_000) }
+func BenchmarkAddTxManySenders100k(b *testing.B) { benchmarkAddTxManySenders(b, 100_000) }
+
+func benchmarkAddTxManySenders(b *testing.B, numSenders int) {
+	pool := largeCapTxPool(uint64(numSenders*4), uint64(numSenders*4))
+	defer pool.Stop()
+
+	// Preload pool.pending with one tx from each of numSenders different senders.
+	// Use promoteTx + currentState fiddling directly to keep preload time bounded;
+	// going through AddRemote would also pay O(N_senders) per preload step.
+	pool.mu.Lock()
+	for i := 0; i < numSenders; i++ {
+		key, _ := crypto.GenerateKey()
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		pool.currentState.AddBalance(addr, new(big.Int).Mul(big.NewInt(1_000_000_000), big.NewInt(1_000_000)))
+		tx := transaction(0, 21000, key)
+		pool.all.Add(tx)
+		pool.priced.Put(tx)
+		pool.promoteTx(addr, tx.Hash(), tx)
+	}
+	pool.mu.Unlock()
+
+	// Dedicated sender we'll spam addTx from; nonce advances each iteration.
+	senderKey, _ := crypto.GenerateKey()
+	senderAddr := crypto.PubkeyToAddress(senderKey.PublicKey)
+	testAddBalance(pool, senderAddr, new(big.Int).Mul(big.NewInt(1_000_000_000), big.NewInt(1_000_000)))
+
+	txs := make([]*types.Transaction, b.N)
+	for i := range txs {
+		txs[i] = transaction(uint64(i), 21000, senderKey)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if err := pool.AddRemote(txs[i]); err != nil {
+			b.Fatalf("AddRemote %d: %v", i, err)
+		}
+	}
+	b.StopTimer()
+
+	// Post-bench correctness sanity check on the counters.
+	wantP, wantQ := sumPendingQueued(pool)
+	pool.mu.RLock()
+	gotP, gotQ := pool.pendingCount, pool.queuedCount
+	pool.mu.RUnlock()
+	if gotP != wantP || gotQ != wantQ {
+		b.Fatalf("counter drift after bench: pending counter=%d actual=%d, queued counter=%d actual=%d",
+			gotP, wantP, gotQ, wantQ)
 	}
 }

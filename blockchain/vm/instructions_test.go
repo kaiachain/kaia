@@ -704,6 +704,11 @@ func BenchmarkOpIsZero(b *testing.B) {
 	opBenchmark(b, opIszero, x)
 }
 
+func BenchmarkOpCLZ(b *testing.B) {
+	x := "FBCDEF090807060504030201ffffffffFBCDEF090807060504030201ffffffff"
+	opBenchmark(b, opCLZ, x)
+}
+
 func TestOpMstore(t *testing.T) {
 	var (
 		env            = NewEVM(BlockContext{}, TxContext{}, nil, params.TestChainConfig, &Config{})

@@ -26,7 +26,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 )
 
-func (v *ValsetModule) getCouncil(num uint64) (*valset.AddressSet, error) {
+func (v *ValsetModule) getCouncilPermissioned(num uint64) (*valset.AddressSet, error) {
 	if num == 0 {
 		return v.getCouncilGenesis()
 	}

@@ -12,7 +12,7 @@ FIXTURE_TEST_REGEX?=^(TestExecutionSpecBlockTestSuite|TestExecutionSpecStateTest
 
 OBJECTS=kcn kpn ken kscn kspn ksen kbn kgen homi
 
-.PHONY: all test clean ${OBJECTS}
+.PHONY: all submodules test clean ${OBJECTS}
 
 all: ${OBJECTS}
 
@@ -61,6 +61,9 @@ clean:
 
 # The devtools target installs tools required for 'go generate'.
 # You need to put $BIN (or $GOPATH/bin) in your PATH to use 'go generate'.
+
+submodules:
+	git submodule update --init
 
 devtools:
 	env GOFLAGS= GOBIN= go install golang.org/x/tools/cmd/stringer@latest

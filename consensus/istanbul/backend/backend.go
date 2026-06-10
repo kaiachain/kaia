@@ -432,7 +432,7 @@ func (sb *backend) HasBadProposal(hash common.Hash) bool {
 // Returns a channel that will receive the execution result when consensus is complete.
 // In Istanbul: execute first → then consensus → finalize → send result
 // In Kaia-BFT: consensus + execute in parallel → committed → send result
-func (sb *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, statedb *state.StateDB, header *types.Header, mux *event.TypeMux, onPrepared func(*consensus.ExecutionResult)) (finalizeCh <-chan *consensus.ExecutionResult) {
+func (sb *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, statedb *state.StateDB, header *types.Header, mux *event.TypeMux) (finalizeCh <-chan *consensus.ExecutionResult) {
 	resultCh := make(chan *consensus.ExecutionResult, 1)
 
 	go func() {
@@ -478,10 +478,14 @@ func (sb *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, st
 		result.FinalizeTime = time.Since(finalizeStart)
 		result.Block = block
 
-		// Notify caller that block is prepared (for pending block API)
-		if onPrepared != nil {
-			onPrepared(result)
-		}
+		// Log block preparation completion (all validators log this, before seal)
+		logger.Info("Prepared new block",
+			"number", result.Block.Number(),
+			"hash", result.Block.Hash(),
+			"txs", len(result.Txs),
+			"elapsed", common.PrettyDuration(result.ExecuteTime+result.FinalizeTime),
+			"executeTime", common.PrettyDuration(result.ExecuteTime),
+			"finalizeTime", common.PrettyDuration(result.FinalizeTime))
 
 		// Trigger consensus (Seal) - this will run BFT consensus
 		// Seal is blocking until consensus is complete

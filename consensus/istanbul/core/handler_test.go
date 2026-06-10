@@ -90,7 +90,7 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 		}).AnyTimes()
 	mockValsetModule.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(validatorAddrs[0], nil).AnyTimes()
 
-	// Gov module: used by core for committee size
+	// Gov module: required by core registration checks.
 	mockGovModule.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{CommitteeSize: committeeSize}).AnyTimes()
 
 	// Consider the last proposal is "initBlock" and the owner of mockBackend is validatorAddrs[0]
@@ -118,6 +118,54 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 	return mockBackend, mockCtrl, mockValsetModule, mockGovModule
 }
 
+func TestGetRoundCommitteeStateUsesReturnedCommitteeSize(t *testing.T) {
+	validatorAddrs := []common.Address{
+		common.HexToAddress("0x0001"),
+		common.HexToAddress("0x0002"),
+		common.HexToAddress("0x0003"),
+		common.HexToAddress("0x0004"),
+		common.HexToAddress("0x0005"),
+	}
+	const (
+		round           = uint64(0)
+		govCommitteeLen = uint64(2)
+	)
+	proposer := validatorAddrs[0]
+
+	for _, tc := range []struct {
+		name              string
+		committee         []common.Address
+		expectedCommittee uint64
+	}{
+		{name: "subset committee keeps old effective size", committee: validatorAddrs[:int(govCommitteeLen)], expectedCommittee: govCommitteeLen},
+		{name: "full committee uses qualified length", committee: validatorAddrs, expectedCommittee: uint64(len(validatorAddrs))},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			const seq = uint64(7)
+			mockCtrl := gomock.NewController(t)
+			t.Cleanup(mockCtrl.Finish)
+
+			mockValsetModule := valset_mock.NewMockValsetModule(mockCtrl)
+			mockGovModule := mock_gov.NewMockGovModule(mockCtrl)
+			mockValsetModule.EXPECT().GetCouncil(seq).Return(validatorAddrs, nil)
+			mockValsetModule.EXPECT().GetDemotedValidators(seq).Return([]common.Address{}, nil)
+			mockValsetModule.EXPECT().GetCommittee(seq, round).Return(tc.committee, nil)
+			mockValsetModule.EXPECT().GetProposer(seq, round).Return(proposer, nil)
+
+			c := &core{valsetModule: mockValsetModule, govModule: mockGovModule}
+			qualified, committee, gotProposer, committeeSize, requiredMsgCnt, fNum, err := getRoundCommitteeState(c, seq, round)
+			require.NoError(t, err)
+
+			assert.Equal(t, validatorAddrs, qualified.List())
+			assert.Equal(t, tc.committee, committee.List())
+			assert.Equal(t, proposer, gotProposer)
+			assert.Equal(t, tc.expectedCommittee, committeeSize)
+			assert.Equal(t, calcQuorumSize(len(validatorAddrs), tc.expectedCommittee), requiredMsgCnt)
+			assert.Equal(t, calcFaultTolerance(len(validatorAddrs), tc.expectedCommittee), fNum)
+		})
+	}
+}
+
 // getTestCommitteeState returns qualified, committee, proposer, nonCommittee for tests using the same logic as newMockBackend
 func getTestCommitteeState(validatorAddrs []common.Address, committeeSize uint64, seq, round uint64) (qualified, committee *valset.AddressSet, proposer common.Address, nonCommittee *valset.AddressSet) {
 	qualified = valset.NewAddressSet(validatorAddrs).Subtract(valset.NewAddressSet([]common.Address{}))
@@ -131,6 +179,11 @@ func getTestCommitteeState(validatorAddrs []common.Address, committeeSize uint64
 	proposer = validatorAddrs[0]
 	nonCommittee = qualified.Subtract(committee)
 	return qualified, committee, proposer, nonCommittee
+}
+
+func TestGetRoundCommitteeStateMissingModules(t *testing.T) {
+	_, _, _, _, _, _, err := getRoundCommitteeState(&core{}, 1, 0)
+	assert.ErrorIs(t, err, istanbul.ErrNoEssentialModule)
 }
 
 // genValidators returns a set of addresses and corresponding keys used for generating a validator set
