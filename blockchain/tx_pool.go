@@ -141,6 +141,7 @@ type blockChain interface {
 	GetTxAndLookupInfo(txHash common.Hash) (*types.Transaction, common.Hash, uint64, uint64)
 
 	SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription
+	SubscribeChainPreCommitEvent(ch chan<- ChainPreCommitEvent) event.Subscription
 }
 
 // TxPoolConfig are the configuration parameters of the transaction pool.
@@ -223,17 +224,19 @@ type MissingBlobSidecar struct {
 // current state) and future transactions. Transactions move between those
 // two states over time as they are received and processed.
 type TxPool struct {
-	config       TxPoolConfig
-	chainconfig  *params.ChainConfig
-	chain        blockChain
-	gasPrice     *big.Int // minimum required gasPrice = unitPrice (before Magma) or baseFee (since Magma)
-	blobBaseFee  *big.Int // minimum required blobFee =  0 (before Osaka for nil safety) or blobBaseFee (since Osaka)
-	txFeed       event.Feed
-	scope        event.SubscriptionScope
-	chainHeadCh  chan ChainHeadEvent
-	chainHeadSub event.Subscription
-	signer       types.Signer
-	mu           sync.RWMutex
+	config            TxPoolConfig
+	chainconfig       *params.ChainConfig
+	chain             blockChain
+	gasPrice          *big.Int // minimum required gasPrice = unitPrice (before Magma) or baseFee (since Magma)
+	blobBaseFee       *big.Int // minimum required blobFee =  0 (before Osaka for nil safety) or blobBaseFee (since Osaka)
+	txFeed            event.Feed
+	scope             event.SubscriptionScope
+	chainHeadCh       chan ChainHeadEvent
+	chainHeadSub      event.Subscription
+	chainPreCommitCh  chan ChainPreCommitEvent
+	chainPreCommitSub event.Subscription
+	signer            types.Signer
+	mu                sync.RWMutex
 
 	currentBlockNumber uint64                    // Current block number
 	currentState       *state.StateDB            // Current state in the blockchain head
@@ -292,6 +295,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		all:                   newTxLookup(),
 		pendingNonce:          make(map[common.Address]uint64),
 		chainHeadCh:           make(chan ChainHeadEvent, chainHeadChanSize),
+		chainPreCommitCh:      make(chan ChainPreCommitEvent, chainHeadChanSize),
 		gasPrice:              new(big.Int).SetUint64(pset.UnitPrice),
 		blobBaseFee:           new(big.Int).SetUint64(params.ZeroBaseFee),
 		txMsgCh:               make(chan types.Transactions, txMsgChSize),
@@ -301,7 +305,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	}
 	pool.locals = newAccountSet(pool.signer)
 	pool.priced = newTxPricedList(pool.all)
-	pool.reset(nil, chain.CurrentBlock().Header())
+	pool.reset(nil, chain.CurrentBlock().Header(), nil)
 
 	// If local transactions and journaling is enabled, load from disk
 	if !config.NoLocals && config.Journal != "" {
@@ -316,6 +320,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	}
 	// Subscribe events from blockchain
 	pool.chainHeadSub = pool.chain.SubscribeChainHeadEvent(pool.chainHeadCh)
+	pool.chainPreCommitSub = pool.chain.SubscribeChainPreCommitEvent(pool.chainPreCommitCh)
 
 	// Initialize blob storage
 	if config.BlobStorageConfig != nil {
@@ -361,10 +366,29 @@ func (pool *TxPool) loop() {
 	// Keep waiting for and reacting to the various events
 	for {
 		select {
+		// Handle ChainPreCommitEvent: reset early to the upcoming head. Only
+		// direct children of the pool head qualify; anything else (reorg,
+		// sync backlog) is left to the ChainHeadEvent path below.
+		case ev := <-pool.chainPreCommitCh:
+			if ev.Block == nil || ev.State == nil || ev.Block.ParentHash() != head.Hash() {
+				continue
+			}
+			pool.mu.Lock()
+			pool.reset(head.Header(), ev.Block.Header(), ev.State)
+			// Advance head only if the reset took effect, so a failed reset
+			// is retried via the ChainHeadEvent path instead of deduped away.
+			if pool.currentBlockNumber == ev.Block.NumberU64() {
+				head = ev.Block
+			}
+			pool.mu.Unlock()
+
 		// Handle ChainHeadEvent
 		case ev := <-pool.chainHeadCh:
 			if ev.Block != nil {
 				pool.saveAndPruneBlobStorage(ev.Block)
+				if ev.Block.Hash() == head.Hash() {
+					continue // already reset via ChainPreCommitEvent
+				}
 				pool.mu.Lock()
 				currBlock := pool.chain.CurrentBlock()
 				if ev.Block.Root() != currBlock.Root() {
@@ -374,12 +398,14 @@ func (pool *TxPool) loop() {
 						"currNum", currBlock.NumberU64(), "currHash", currBlock.Hash().String())
 					continue
 				}
-				pool.reset(head.Header(), ev.Block.Header())
+				pool.reset(head.Header(), ev.Block.Header(), nil)
 				head = ev.Block
 				pool.mu.Unlock()
 			}
 		// Be unsubscribed due to system stopped
 		case <-pool.chainHeadSub.Err():
+			return
+		case <-pool.chainPreCommitSub.Err():
 			return
 
 		// Handle stats reporting ticks
@@ -437,12 +463,13 @@ func (pool *TxPool) lockedReset(oldHead, newHead *types.Header) {
 	pool.mu.Lock()
 	defer pool.mu.Unlock()
 
-	pool.reset(oldHead, newHead)
+	pool.reset(oldHead, newHead, nil)
 }
 
 // reset retrieves the current state of the blockchain and ensures the content
-// of the transaction pool is valid with regard to the chain state.
-func (pool *TxPool) reset(oldHead, newHead *types.Header) {
+// of the transaction pool is valid with regard to the chain state. A non-nil
+// newState is used as the head state instead of StateAt (pre-commit path).
+func (pool *TxPool) reset(oldHead, newHead *types.Header, newState *state.StateDB) {
 	pool.txMu.Lock()
 	var drops []common.Hash
 	for _, module := range pool.modules {
@@ -524,10 +551,14 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	if newHead == nil {
 		newHead = pool.chain.CurrentBlock().Header() // Special case during testing
 	}
-	stateDB, err := pool.chain.StateAt(newHead.Root)
-	if err != nil {
-		logger.Error("Failed to reset txpool state", "err", err)
-		return
+	stateDB := newState
+	if stateDB == nil {
+		var err error
+		stateDB, err = pool.chain.StateAt(newHead.Root)
+		if err != nil {
+			logger.Error("Failed to reset txpool state", "err", err)
+			return
+		}
 	}
 	pool.currentState = stateDB
 	pool.pendingNonce = make(map[common.Address]uint64)
@@ -607,6 +638,7 @@ func (pool *TxPool) Stop() {
 
 	// Unsubscribe subscriptions registered from blockchain
 	pool.chainHeadSub.Unsubscribe()
+	pool.chainPreCommitSub.Unsubscribe()
 	pool.wg.Wait()
 
 	if pool.journal != nil {
@@ -655,6 +687,14 @@ func (pool *TxPool) SetGasPrice(price *big.Int) {
 
 		pool.mu.Unlock()
 	}
+}
+
+// CurrentBlockNumber returns the head block number the pool last reset to.
+func (pool *TxPool) CurrentBlockNumber() uint64 {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
+
+	return pool.currentBlockNumber
 }
 
 // Stats retrieves the current pool stats, namely the number of pending and the

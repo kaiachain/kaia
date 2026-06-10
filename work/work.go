@@ -67,6 +67,9 @@ type TxPool interface {
 	// NewTxsEvent and send events to the given channel.
 	SubscribeNewTxsEvent(chan<- blockchain.NewTxsEvent) event.Subscription
 
+	// CurrentBlockNumber returns the head block number the pool last reset to.
+	CurrentBlockNumber() uint64
+
 	GetPendingNonce(addr common.Address) uint64
 	AddLocal(tx *types.Transaction) error
 	GasPrice() *big.Int

@@ -342,7 +342,7 @@ func TestPromoteGaslessTxsWithSingleSender(t *testing.T) {
 		if tc.balance {
 			cdb.SetBalance(crypto.PubkeyToAddress(userKey.PublicKey), new(big.Int).SetUint64(params.KAIA))
 		}
-		bc := &testBlockChain{cdb, 10000000, new(event.Feed)}
+		bc := &testBlockChain{statedb: cdb, gasLimit: 10000000, chainHeadFeed: new(event.Feed)}
 		pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
 		g := NewGaslessModule()
 		err := g.Init(&InitOpts{
@@ -438,7 +438,7 @@ func TestPromoteGaslessTxsWithMultiSenders(t *testing.T) {
 	// send A1, S1, A2, S2, S3, T4, and T5 in random order and then check if pending has expected txs.
 	for range make([]int, 1000) {
 		cdb := sdb.Copy()
-		bc := &testBlockChain{cdb, 10000000, new(event.Feed)}
+		bc := &testBlockChain{statedb: cdb, gasLimit: 10000000, chainHeadFeed: new(event.Feed)}
 		pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
 		g := NewGaslessModule()
 		err := g.Init(&InitOpts{

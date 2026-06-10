@@ -170,14 +170,15 @@ type BlockChain struct {
 	chBlock chan gcBlock       // chPushBlockGCPrque is a channel for delivering the gc item to gc loop.
 	chPrune chan uint64        // chPrune is a channel for delivering the current block number for pruning loop.
 
-	hc            *HeaderChain
-	rmLogsFeed    event.Feed
-	chainFeed     event.Feed
-	chainSideFeed event.Feed
-	chainHeadFeed event.Feed
-	logsFeed      event.Feed
-	scope         event.SubscriptionScope
-	genesisBlock  *types.Block
+	hc                 *HeaderChain
+	rmLogsFeed         event.Feed
+	chainFeed          event.Feed
+	chainSideFeed      event.Feed
+	chainHeadFeed      event.Feed
+	chainPreCommitFeed event.Feed
+	logsFeed           event.Feed
+	scope              event.SubscriptionScope
+	genesisBlock       *types.Block
 
 	mu sync.RWMutex // global mutex for locking chain operations
 
@@ -1593,13 +1594,19 @@ func (bc *BlockChain) WriteBlockWithState(block *types.Block, receipts []*types.
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
-	return bc.writeBlockWithState(block, receipts, stateDB)
+	return bc.writeBlockWithState(block, receipts, stateDB, true)
 }
 
 // writeBlockWithState writes the block and all associated state to the database.
 // If BlockChain.parallelDBWrite is true, it calls writeBlockWithStateParallel.
 // If not, it calls writeBlockWithStateSerial.
-func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB) (WriteResult, error) {
+// When announce is set, a ChainPreCommitEvent is published so subscribers can
+// prepare for the new head in parallel; bulk (sync) inserts skip it.
+func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.Receipt, stateDB *state.StateDB, announce bool) (WriteResult, error) {
+	if announce {
+		bc.announceChainPreCommit(block, stateDB)
+	}
+
 	var status WriteResult
 	var err error
 	if bc.parallelDBWrite {
@@ -2126,7 +2133,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 		afterValidate := time.Now()
 
 		// Write the block to the chain and get the writeResult.
-		writeResult, err := bc.writeBlockWithState(block, receipts, stateDB)
+		// Pre-commit announcement is only worth its state copy for live
+		// single-block inserts; sync batches skip it.
+		writeResult, err := bc.writeBlockWithState(block, receipts, stateDB, len(chain) == 1)
 		if err != nil {
 			atomic.StoreUint32(&followupInterrupt, 1)
 			if err == ErrKnownBlock {
@@ -2758,6 +2767,22 @@ func (bc *BlockChain) SubscribeChainEvent(ch chan<- ChainEvent) event.Subscripti
 // SubscribeChainHeadEvent registers a subscription of ChainHeadEvent.
 func (bc *BlockChain) SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription {
 	return bc.scope.Track(bc.chainHeadFeed.Subscribe(ch))
+}
+
+// SubscribeChainPreCommitEvent registers a subscription of ChainPreCommitEvent.
+func (bc *BlockChain) SubscribeChainPreCommitEvent(ch chan<- ChainPreCommitEvent) event.Subscription {
+	return bc.scope.Track(bc.chainPreCommitFeed.Subscribe(ch))
+}
+
+// announceChainPreCommit publishes the upcoming head with a private copy of its
+// post-execution state. Blocks not extending the current head are skipped.
+func (bc *BlockChain) announceChainPreCommit(block *types.Block, stateDB *state.StateDB) {
+	if block.ParentHash() != bc.CurrentBlock().Hash() {
+		return
+	}
+	ev := ChainPreCommitEvent{Block: block, State: stateDB.Copy()}
+	// Feed.Send blocks until delivery; keep it off the bc.mu critical section.
+	go bc.chainPreCommitFeed.Send(ev)
 }
 
 // SubscribeChainSideEvent registers a subscription of ChainSideEvent.
