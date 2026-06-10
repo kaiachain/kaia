@@ -43,6 +43,11 @@ const (
 	defaultMaxPendingPeers = 50
 	defaultDialRatio       = 3
 
+	// inboundThrottleTime is the minimum time between inbound connection
+	// attempts allowed from a single (non-LAN) remote IP. It bounds
+	// connection-flood attempts from a single peer.
+	inboundThrottleTime = 30 * time.Second
+
 	// Maximum time allowed for reading a complete message.
 	// This is effectively the amount of time a connection can be idle.
 	frameReadTimeout = 30 * time.Second

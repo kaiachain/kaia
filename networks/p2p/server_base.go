@@ -30,6 +30,7 @@ import (
 	"net"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/mclock"
@@ -37,6 +38,12 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/networks/p2p/nat"
+	"github.com/kaiachain/kaia/networks/p2p/netutil"
+)
+
+var (
+	errNotWhitelisted         = errors.New("not whitelisted in NetRestrict")
+	errTooManyInboundAttempts = errors.New("too many inbound connection attempts")
 )
 
 // BaseServer is a common data structure used by implementations of Server.
@@ -71,6 +78,12 @@ type BaseServer struct {
 	trusted       map[discover.NodeID]bool
 	dialSched     *DialSched
 	cnPeerAddrs   map[common.Address]struct{} // KIP-311 peerNodes allowlist for CN-CN connections.
+
+	// Inbound connection throttling. inboundHistory tracks the last seen time
+	// per remote IP; its mutex guards concurrent access from multiple
+	// listenLoop goroutines (one per listener in MultiChannelServer).
+	inboundHistory   expHeap
+	inboundHistoryMu sync.Mutex
 }
 
 // SingleChannelServer is a server that uses a single channel.
@@ -355,6 +368,77 @@ func (srv *BaseServer) maxDialedConns() int {
 	}
 }
 
+// checkInboundConn decides whether an inbound connection from remoteIP should
+// be accepted. It rejects connections that do not match NetRestrict, and
+// throttles repeated attempts from the same non-LAN IP within
+// inboundThrottleTime to bound connection-flood attempts. now is passed in so
+// the throttle window is deterministic and testable.
+func (srv *BaseServer) checkInboundConn(remoteIP net.IP, now mclock.AbsTime) error {
+	if remoteIP == nil {
+		// No usable remote IP (e.g. in-process test pipes); nothing to throttle.
+		return nil
+	}
+	// Reject connections that do not match NetRestrict.
+	if srv.NetRestrict != nil && !srv.NetRestrict.Contains(remoteIP) {
+		return errNotWhitelisted
+	}
+	// Reject peers that try to connect too frequently. LAN addresses are
+	// exempt so co-located/internal nodes are never throttled.
+	srv.inboundHistoryMu.Lock()
+	defer srv.inboundHistoryMu.Unlock()
+	srv.inboundHistory.expire(now, nil)
+	if !netutil.IsLAN(remoteIP) && srv.inboundHistory.contains(remoteIP.String()) {
+		return errTooManyInboundAttempts
+	}
+	srv.inboundHistory.add(remoteIP.String(), now+mclock.AbsTime(inboundThrottleTime))
+	return nil
+}
+
+// acceptWithBackoff accepts the next connection from listener. On temporary
+// errors (e.g. fd exhaustion) it backs off to avoid busy-looping and log
+// flooding while resources recover. It returns nil when the listener is
+// permanently closed and the caller should stop the loop.
+func (srv *BaseServer) acceptWithBackoff(listener net.Listener, lastLog *time.Time) net.Conn {
+	for {
+		fd, err := listener.Accept()
+		if tempErr, ok := err.(tempError); ok && tempErr.Temporary() {
+			if time.Since(*lastLog) > 1*time.Second {
+				srv.logger.Debug("Temporary read error", "err", err)
+				*lastLog = time.Now()
+			}
+			time.Sleep(200 * time.Millisecond)
+			continue
+		} else if err != nil {
+			srv.logger.Debug("Read error", "err", err)
+			return nil
+		}
+		return fd
+	}
+}
+
+// acceptInbound returns the next inbound connection worth handshaking. It wraps
+// acceptWithBackoff and applies the inbound checks (NetRestrict + per-IP
+// throttle), silently dropping rejected connections. It returns nil when the
+// listener is permanently closed and the caller should stop the loop.
+//
+// The handshake slot is held across rejects: listenLoop is the sole receiver of
+// its slots channel (SetupConn goroutines only send), so releasing and
+// re-acquiring a token on each reject would be a no-op.
+func (srv *BaseServer) acceptInbound(listener net.Listener, lastLog *time.Time) net.Conn {
+	for {
+		fd := srv.acceptWithBackoff(listener, lastLog)
+		if fd == nil {
+			return nil
+		}
+		if err := srv.checkInboundConn(tcpAddrIP(fd.RemoteAddr()), mclock.Now()); err != nil {
+			srv.logger.Debug("Rejected inbound connection", "addr", fd.RemoteAddr(), "err", err)
+			fd.Close()
+			continue
+		}
+		return fd
+	}
+}
+
 // listenLoop runs in its own goroutine and accepts
 // inbound connections.
 func (srv *BaseServer) listenLoop() {
@@ -370,34 +454,14 @@ func (srv *BaseServer) listenLoop() {
 		slots <- struct{}{}
 	}
 
+	var lastLog time.Time
 	for {
 		// Wait for a handshake slot before accepting.
 		<-slots
 
-		var (
-			fd  net.Conn
-			err error
-		)
-		for {
-			fd, err = srv.listener.Accept()
-			if tempErr, ok := err.(tempError); ok && tempErr.Temporary() {
-				srv.logger.Debug("Temporary read error", "err", err)
-				continue
-			} else if err != nil {
-				srv.logger.Debug("Read error", "err", err)
-				return
-			}
-			break
-		}
-
-		// Reject connections that do not match NetRestrict.
-		if srv.NetRestrict != nil {
-			if tcp, ok := fd.RemoteAddr().(*net.TCPAddr); ok && !srv.NetRestrict.Contains(tcp.IP) {
-				srv.logger.Debug("Rejected conn (not whitelisted in NetRestrict)", "addr", fd.RemoteAddr())
-				fd.Close()
-				slots <- struct{}{}
-				continue
-			}
+		fd := srv.acceptInbound(srv.listener, &lastLog)
+		if fd == nil {
+			return
 		}
 
 		fd = newMeteredConn(fd, true)
