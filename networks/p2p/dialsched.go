@@ -478,7 +478,7 @@ func (ds *DialSched) refillCandidates() {
 }
 
 func (ds *DialSched) dynamicCandidateAllowed(targetType discover.NodeType, n *discover.Node) bool {
-	if ds.selfType != discover.NodeTypeCN || discover.EffectiveNodeType(targetType) != discover.NodeTypeCN {
+	if ds.selfType != discover.NodeTypeCN || targetType != discover.NodeTypeCN {
 		return true
 	}
 
