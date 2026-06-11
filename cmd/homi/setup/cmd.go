@@ -67,9 +67,10 @@ type GrafanaFile struct {
 }
 
 const (
-	defaultMaxReadyCandidateCount = 3
-	defaultPfsThreshold           = 2
-	defaultCfsThreshold           = 300
+	defaultMaxReadyCandidateCount        = 3
+	defaultPfsThreshold                  = 2
+	defaultCfsThreshold                  = 300
+	defaultPermissionlessGenesisDeployer = "0xdeaddeaddeaddeaddeaddeaddeaddeaddeaddead"
 )
 
 var HomiFlags = []cli.Flag{
@@ -151,6 +152,7 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewUint64Flag(vrankEpochFlag),
 	altsrc.NewInt64Flag(pfsThresholdFlag),
 	altsrc.NewInt64Flag(cfsThresholdFlag),
+	altsrc.NewStringFlag(permissionlessGenesisDeployerFlag),
 	altsrc.NewBoolFlag(allocPermissionlessPrerequisitesFlag),
 	altsrc.NewStringFlag(kip113ProxyAddressFlag),
 	altsrc.NewStringFlag(kip113LogicAddressFlag),
@@ -585,6 +587,11 @@ func allocatePermissionlessPrerequisites(ctx *cli.Context, genesisJson *blockcha
 
 func makePermissionlessConfig(ctx *cli.Context, validatorAddrs []common.Address, kip113Init system.AllocKip113Init) *system.AllocPermissionlessConfig {
 	owner := validatorAddrs[0]
+	deployerStr := ctx.String(permissionlessGenesisDeployerFlag.Name)
+	if !common.IsHexAddress(deployerStr) {
+		log.Fatalf("'%s' is not a valid permissionless genesis deployer address", deployerStr)
+	}
+	deployer := common.HexToAddress(deployerStr)
 	numValidators := len(validatorAddrs)
 	stakeAmt := new(big.Int).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA))
 
@@ -612,6 +619,7 @@ func makePermissionlessConfig(ctx *cli.Context, validatorAddrs []common.Address,
 
 	return &system.AllocPermissionlessConfig{
 		Owner:              owner,
+		Deployer:           deployer,
 		NodeIds:            validatorAddrs,
 		NodeInfos:          nodeInfos,
 		StakeAmts:          stakeAmts,
@@ -954,7 +962,8 @@ func Gen(ctx *cli.Context) error {
 				TxGenThreadSize: ctx.Int(txGenThFlag.Name),
 				TxGenConnSize:   ctx.Int(txGenConnFlag.Name),
 				TxGenDuration:   ctx.String(txGenDurFlag.Name),
-			})
+			},
+		)
 		os.MkdirAll(outputPath, os.ModePerm)
 		os.WriteFile(path.Join(outputPath, "docker-compose.yml"), []byte(compose.String()), os.ModePerm)
 		fmt.Println("Created : ", path.Join(outputPath, "docker-compose.yml"))
@@ -1108,7 +1117,8 @@ func makeValidators(num int, isWorkOnSingleHost bool, nodeAddrs []common.Address
 				0,
 				validatorPort,
 				nil,
-				discover.NodeTypeCN).String(),
+				discover.NodeTypeCN,
+			).String(),
 		}
 		validators = append(validators, v)
 	}
@@ -1146,7 +1156,8 @@ func makeValidatorsWithIp(num int, isWorkOnSingleHost bool, nodeAddrs []common.A
 				0,
 				validatorPort,
 				nil,
-				discover.NodeTypeCN).String(),
+				discover.NodeTypeCN,
+			).String(),
 		}
 		validators = append(validators, v)
 	}
@@ -1190,7 +1201,8 @@ func makeProxys(ctx *cli.Context, num int, isWorkOnSingleHost bool) ([]*Validato
 				0,
 				p2pPort,
 				nil,
-				discover.NodeTypePN).String(),
+				discover.NodeTypePN,
+			).String(),
 		}
 		proxies = append(proxies, v)
 		proxyNodeKeys = append(proxyNodeKeys, v.Nodekey)
@@ -1235,7 +1247,8 @@ func makeEndpoints(ctx *cli.Context, num int, isWorkOnSingleHost bool) ([]*Valid
 				0,
 				p2pPort,
 				nil,
-				discover.NodeTypeEN).String(),
+				discover.NodeTypeEN,
+			).String(),
 		}
 		endpoints = append(endpoints, v)
 		endpointsNodeKeys = append(endpointsNodeKeys, v.Nodekey)
@@ -1266,7 +1279,8 @@ func makeSCNs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 				0,
 				p2pPort,
 				nil,
-				discover.NodeTypeUnknown).String(),
+				discover.NodeTypeUnknown,
+			).String(),
 		}
 		scn = append(scn, v)
 		scnKeys = append(scnKeys, v.Nodekey)
@@ -1297,7 +1311,8 @@ func makeSPNs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 				0,
 				p2pPort,
 				nil,
-				discover.NodeTypeUnknown).String(),
+				discover.NodeTypeUnknown,
+			).String(),
 		}
 		proxies = append(proxies, v)
 		proxyNodeKeys = append(proxyNodeKeys, v.Nodekey)
@@ -1328,7 +1343,8 @@ func makeSENs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 				0,
 				p2pPort,
 				nil,
-				discover.NodeTypeUnknown).String(),
+				discover.NodeTypeUnknown,
+			).String(),
 		}
 		endpoints = append(endpoints, v)
 		endpointsNodeKeys = append(endpointsNodeKeys, v.Nodekey)

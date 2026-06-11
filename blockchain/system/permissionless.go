@@ -46,6 +46,7 @@ const DefaultEpochBlockInterval = int64(params.DefaultVRankEpoch)
 // AllocPermissionlessConfig holds parameters for genesis permissionless allocation.
 type AllocPermissionlessConfig struct {
 	Owner              common.Address                     // Owner of beacons and Registry registrant.
+	Deployer           common.Address                     // Genesis-only deployer for nonce-based CREATE. Zero falls back to Owner.
 	NodeIds            []common.Address                   // Validator node IDs.
 	NodeInfos          []addressbookv2contract.NodeInfo   // Validator info; StakingContract is filled after deployCnStaking.
 	StakeAmts          []*big.Int                         // Stake amounts per validator.
@@ -98,7 +99,10 @@ func allocPermissionless(config *AllocPermissionlessConfig, installABv2 bool) (m
 		return nil, nil, fmt.Errorf("install registry: %w", err)
 	}
 
-	deployer := config.Owner
+	deployer := config.Deployer
+	if common.EmptyAddress(deployer) {
+		deployer = config.Owner
+	}
 	for i, amt := range config.StakeAmts {
 		statedb.AddBalance(config.NodeInfos[i].Manager, amt)
 	}
@@ -116,12 +120,12 @@ func allocPermissionless(config *AllocPermissionlessConfig, installABv2 bool) (m
 
 	// Step 1: Deploy implementation contracts and their UpgradeableBeacons
 	result := &allocPermissionlessResult{}
-	if err := deployBeaconInfra(cfg, deployer, config.EpochBlockInterval, result); err != nil {
+	if err := deployBeaconInfra(cfg, config.Owner, config.EpochBlockInterval, result); err != nil {
 		return nil, nil, err
 	}
 
 	// Step 2: Deploy CnStakingV4Factory and register in Registry (activation=1, block=0)
-	if err := deployCnStakingFactory(cfg, big.NewInt(1), result); err != nil {
+	if err := deployCnStakingFactory(cfg, config.Owner, big.NewInt(1), result); err != nil {
 		return nil, nil, err
 	}
 
@@ -132,7 +136,7 @@ func allocPermissionless(config *AllocPermissionlessConfig, installABv2 bool) (m
 	cfg.Origin = deployer // restore after per-validator origin switching
 
 	// Step 4: Deploy ABv2DataContract and register in Registry (activation=1, block=0)
-	if err := deployABv2DataContract(cfg, big.NewInt(1), config, result); err != nil {
+	if err := deployABv2DataContract(cfg, config.Owner, big.NewInt(1), config, result); err != nil {
 		return nil, nil, err
 	}
 
@@ -242,7 +246,7 @@ func deployBeaconInfra(cfg *runtime.Config, owner common.Address, epochBlockInte
 }
 
 // deployCnStakingFactory deploys CnStakingV4Factory and registers it in Registry (step 2).
-func deployCnStakingFactory(cfg *runtime.Config, activation *big.Int, result *allocPermissionlessResult) error {
+func deployCnStakingFactory(cfg *runtime.Config, owner common.Address, activation *big.Int, result *allocPermissionlessResult) error {
 	factoryABI, _ := cnstakingv4factory.CnStakingV4FactoryMetaData.GetAbi()
 	factoryInput, err := packConstructor(factoryABI, common.FromHex(cnstakingv4factory.CnStakingV4FactoryBin), result.cnStakingBeacon, result.pdBeacon)
 	if err != nil {
@@ -255,6 +259,9 @@ func deployCnStakingFactory(cfg *runtime.Config, activation *big.Int, result *al
 	result.factory = factoryAddr
 
 	registryABI, _ := registrycontract.RegistryMetaData.GetAbi()
+	origOrigin := cfg.Origin
+	cfg.Origin = owner
+	defer func() { cfg.Origin = origOrigin }()
 	if err := evmCallABI(cfg, RegistryAddr, registryABI, "register", "CnStakingFactory", factoryAddr, activation); err != nil {
 		return fmt.Errorf("register CnStakingFactory: %w", err)
 	}
@@ -288,7 +295,7 @@ func deployCnStakingPerValidator(cfg *runtime.Config, config *AllocPermissionles
 }
 
 // deployABv2DataContract deploys ABv2DataContract and registers it in Registry (step 4).
-func deployABv2DataContract(cfg *runtime.Config, activation *big.Int, config *AllocPermissionlessConfig, result *allocPermissionlessResult) error {
+func deployABv2DataContract(cfg *runtime.Config, owner common.Address, activation *big.Int, config *AllocPermissionlessConfig, result *allocPermissionlessResult) error {
 	abv2DataABI, _ := abv2data.ABv2DataContractMetaData.GetAbi()
 	dataInput := convertToABv2DataInitData(config)
 	dataContractInput, err := packConstructor(abv2DataABI, common.FromHex(abv2data.ABv2DataContractBin), result.abv2Impl, dataInput)
@@ -302,6 +309,9 @@ func deployABv2DataContract(cfg *runtime.Config, activation *big.Int, config *Al
 	result.abv2Data = dataContractAddr
 
 	registryABI, _ := registrycontract.RegistryMetaData.GetAbi()
+	origOrigin := cfg.Origin
+	cfg.Origin = owner
+	defer func() { cfg.Origin = origOrigin }()
 	if err := evmCallABI(cfg, RegistryAddr, registryABI, "register", "ABv2DataContract", dataContractAddr, activation); err != nil {
 		return fmt.Errorf("register ABv2DataContract: %w", err)
 	}

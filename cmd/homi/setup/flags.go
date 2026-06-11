@@ -577,6 +577,13 @@ var (
 		Aliases: []string{"genesis.cfs-threshold"},
 	}
 
+	permissionlessGenesisDeployerFlag = &cli.StringFlag{
+		Name:    "permissionless-genesis-deployer",
+		Usage:   "Genesis-only deployer address for permissionless system contract CREATE deployments",
+		Value:   defaultPermissionlessGenesisDeployer,
+		Aliases: []string{"genesis.permissionless-genesis-deployer"},
+	}
+
 	allocPermissionlessPrerequisitesFlag = &cli.BoolFlag{
 		Name:  "alloc-permissionless-prerequisites",
 		Usage: "Allocate permissionless prerequisite contracts and Registry records in genesis.json for a delayed hardfork",
