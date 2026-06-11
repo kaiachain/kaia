@@ -43,6 +43,48 @@ func TestCommitters(t *testing.T) {
 	assert.NotEmpty(t, committedSeals)
 }
 
+// TestCacheSignatureAddress_BindsData checks that the cache binds data: a signature
+// cached for one data must not be returned as the signer when queried with different
+// data (which would let a forged header reuse a cached recovery).
+func TestCacheSignatureAddress_BindsData(t *testing.T) {
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	signer := crypto.PubkeyToAddress(key.PublicKey)
+
+	// A legitimate (data, sig) pair, e.g. recovered while processing block N-1.
+	legitData := []byte("legitimate block sighash preimage")
+	sig, err := crypto.Sign(crypto.Keccak256(legitData), key)
+	require.NoError(t, err)
+
+	got, err := cacheSignatureAddress(legitData, sig)
+	require.NoError(t, err)
+	require.Equal(t, signer, got) // populates the cache for sig
+
+	// Reuse the same sig over different data (the forged block N). The recovered
+	// address must reflect ecrecover(forgedData, sig), NOT the cached legit signer.
+	forgedData := []byte("forged block sighash preimage")
+	want, err := GetSignatureAddress(forgedData, sig)
+	require.NoError(t, err)
+	require.NotEqual(t, signer, want) // sanity: different data recovers a different address
+
+	cached, err := cacheSignatureAddress(forgedData, sig)
+	require.NoError(t, err)
+	assert.Equal(t, want, cached, "cache must bind data; a reused sig with different data must not return the cached signer")
+	assert.NotEqual(t, signer, cached)
+}
+
+// TestQuorum checks that Quorum is ceil(2N/3) over min(qualified, committee),
+// and N for tiny committees.
+func TestQuorum(t *testing.T) {
+	s := NewSealerImpl(nil)
+	for _, tc := range []struct{ n, want int }{
+		{1, 1}, {2, 2}, {3, 3}, // < 4: everyone
+		{4, 3}, {5, 4}, {6, 4}, {7, 5}, {21, 14}, {22, 15}, {50, 34}, {100, 67},
+	} {
+		assert.Equalf(t, tc.want, s.Quorum(0, tc.n, tc.n), "Quorum(%d, %d)", tc.n, tc.n)
+	}
+}
+
 func TestWriteValidators(t *testing.T) {
 	var (
 		validators = []common.Address{
@@ -172,7 +214,7 @@ func TestMakeSeals_GenesisHandled(t *testing.T) {
 	committedSeal, err := s.MakeCommittedSeal(h)
 	require.NoError(t, err)
 	assert.Len(t, committedSeal, IstanbulExtraSeal)
-	addr, err := GetSignatureAddress(prepareCommittedSeal(s.HeaderHash(h)), committedSeal)
+	addr, err := GetSignatureAddress(PrepareCommittedSeal(s.HeaderHash(h)), committedSeal)
 	require.NoError(t, err)
 	assert.Equal(t, crypto.PubkeyToAddress(key.PublicKey), addr)
 }

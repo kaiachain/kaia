@@ -39,6 +39,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	mock_gov "github.com/kaiachain/kaia/kaiax/gov/mock"
+	"github.com/kaiachain/kaia/kaiax/valset"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
@@ -70,6 +71,55 @@ func (s *verifySealsTestSealer) Quorum(_ uint64, qualifiedLen, committeeSize int
 	s.qualifiedLen = qualifiedLen
 	s.committeeSize = committeeSize
 	return s.quorum
+}
+
+func TestCountValidCommittedSeals(t *testing.T) {
+	var (
+		a = common.HexToAddress("0x0001")
+		b = common.HexToAddress("0x0002")
+		c = common.HexToAddress("0x0003")
+		d = common.HexToAddress("0x0004")
+	)
+
+	testcases := []struct {
+		name          string
+		signers       []common.Address
+		committers    []common.Address
+		expectedCount int
+		expectedErr   error
+	}{
+		{
+			name:          "counts unique committed seals",
+			signers:       []common.Address{a, b, c},
+			committers:    []common.Address{a, b},
+			expectedCount: 2,
+		},
+		{
+			name:        "rejects duplicate committer",
+			signers:     []common.Address{a, b, c},
+			committers:  []common.Address{a, a, b},
+			expectedErr: istanbul.ErrInvalidCommittedSeals,
+		},
+		{
+			name:        "rejects non-signer committer",
+			signers:     []common.Address{a, b, c},
+			committers:  []common.Address{a, d},
+			expectedErr: istanbul.ErrInvalidCommittedSeals,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			count, err := countValidCommittedSeals(tc.committers, valset.NewAddressSet(tc.signers))
+
+			if tc.expectedErr == nil {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorIs(t, err, tc.expectedErr)
+			}
+			assert.Equal(t, tc.expectedCount, count)
+		})
+	}
 }
 
 func TestValidateHeader(t *testing.T) {
@@ -251,7 +301,7 @@ func TestVerifySealsAcceptsExpectedProposer(t *testing.T) {
 	mGov := mock_gov.NewMockGovModule(ctrl)
 	mValset := mock_valset.NewMockValsetModule(ctrl)
 	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(author, nil)
-	mValset.EXPECT().GetQualifiedValidators(blockNum).Return([]common.Address{author}, nil)
+	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return([]common.Address{author}, nil)
 
 	validator := &BlockValidator{
 		config:  params.TestKaiaConfig("permissionless"),
@@ -263,7 +313,10 @@ func TestVerifySealsAcceptsExpectedProposer(t *testing.T) {
 	assert.NoError(t, validator.verifySeals(header))
 }
 
-func TestVerifySealsPermissionlessUsesQualifiedAsCommitteeSize(t *testing.T) {
+// TestVerifySealsPermissionlessUsesSealerQuorum checks that post-permissionless, the
+// quorum is taken from sealer.Quorum with the committee size passed for both
+// arguments (committee == qualified), and validSeal must meet it.
+func TestVerifySealsPermissionlessUsesSealerQuorum(t *testing.T) {
 	var (
 		author    = common.HexToAddress("0x0001")
 		b         = common.HexToAddress("0x0002")
@@ -272,7 +325,7 @@ func TestVerifySealsPermissionlessUsesQualifiedAsCommitteeSize(t *testing.T) {
 		e         = common.HexToAddress("0x0005")
 		blockNum  = uint64(7)
 		header    = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
-		qualified = []common.Address{author, b, c, d, e}
+		committee = []common.Address{author, b, c, d, e}
 		sealer    = &verifySealsTestSealer{
 			Sealer:     faker.NewFaker(),
 			author:     author,
@@ -287,7 +340,7 @@ func TestVerifySealsPermissionlessUsesQualifiedAsCommitteeSize(t *testing.T) {
 	mGov := mock_gov.NewMockGovModule(ctrl)
 	mValset := mock_valset.NewMockValsetModule(ctrl)
 	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(author, nil)
-	mValset.EXPECT().GetQualifiedValidators(blockNum).Return(qualified, nil)
+	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(committee, nil)
 
 	validator := &BlockValidator{
 		config:  params.TestKaiaConfig("permissionless"),
@@ -297,25 +350,27 @@ func TestVerifySealsPermissionlessUsesQualifiedAsCommitteeSize(t *testing.T) {
 	}
 
 	assert.NoError(t, validator.verifySeals(header))
-	assert.Equal(t, len(qualified), sealer.qualifiedLen)
-	assert.Equal(t, len(qualified), sealer.committeeSize)
+	// Quorum is computed over the committee size, passed as both arguments.
+	assert.Equal(t, len(committee), sealer.qualifiedLen)
+	assert.Equal(t, len(committee), sealer.committeeSize)
 }
 
-func TestVerifySealsPermissionlessRejectsNonQualifiedCommitter(t *testing.T) {
+// TestVerifySealsPermissionlessRejectsBelowQuorum checks that fewer committed seals
+// than sealer.Quorum reports are rejected.
+func TestVerifySealsPermissionlessRejectsBelowQuorum(t *testing.T) {
 	var (
 		author    = common.HexToAddress("0x0001")
 		b         = common.HexToAddress("0x0002")
 		c         = common.HexToAddress("0x0003")
 		d         = common.HexToAddress("0x0004")
-		paused    = common.HexToAddress("0x0005")
 		blockNum  = uint64(7)
 		header    = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
-		qualified = []common.Address{author, b, c, d}
+		committee = []common.Address{author, b, c, d}
 		sealer    = &verifySealsTestSealer{
 			Sealer:     faker.NewFaker(),
 			author:     author,
-			committers: []common.Address{author, b, paused},
-			quorum:     3,
+			committers: []common.Address{author, b, c},
+			quorum:     4,
 		}
 	)
 
@@ -325,7 +380,45 @@ func TestVerifySealsPermissionlessRejectsNonQualifiedCommitter(t *testing.T) {
 	mGov := mock_gov.NewMockGovModule(ctrl)
 	mValset := mock_valset.NewMockValsetModule(ctrl)
 	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(author, nil)
-	mValset.EXPECT().GetQualifiedValidators(blockNum).Return(qualified, nil)
+	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(committee, nil)
+
+	validator := &BlockValidator{
+		config:  params.TestKaiaConfig("permissionless"),
+		sealer:  sealer,
+		mGov:    mGov,
+		mValset: mValset,
+	}
+
+	assert.ErrorIs(t, validator.verifySeals(header), istanbul.ErrInvalidCommittedSeals)
+}
+
+// TestVerifySealsPermissionlessRejectsNonCommitteeCommitter checks that a committed
+// seal from a validator outside the round's committee is rejected, even if it
+// belongs to the broader qualified/council set.
+func TestVerifySealsPermissionlessRejectsNonCommitteeCommitter(t *testing.T) {
+	var (
+		author       = common.HexToAddress("0x0001")
+		b            = common.HexToAddress("0x0002")
+		c            = common.HexToAddress("0x0003")
+		d            = common.HexToAddress("0x0004")
+		nonCommittee = common.HexToAddress("0x0005")
+		blockNum     = uint64(7)
+		header       = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+		committee    = []common.Address{author, b, c, d}
+		sealer       = &verifySealsTestSealer{
+			Sealer:     faker.NewFaker(),
+			author:     author,
+			committers: []common.Address{author, b, nonCommittee},
+		}
+	)
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mGov := mock_gov.NewMockGovModule(ctrl)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(author, nil)
+	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(committee, nil)
 
 	validator := &BlockValidator{
 		config:  params.TestKaiaConfig("permissionless"),

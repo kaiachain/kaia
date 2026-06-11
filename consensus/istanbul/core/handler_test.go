@@ -87,7 +87,8 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 				return validatorAddrs[2 : committeeSize+2], nil
 			}
 			return validatorAddrs[0:committeeSize], nil
-		}).AnyTimes()
+		},
+	).AnyTimes()
 	mockValsetModule.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(validatorAddrs[0], nil).AnyTimes()
 
 	// Gov module: required by core registration checks.
@@ -242,6 +243,13 @@ func genBlockParams(prevBlock *types.Block, signerKey *ecdsa.PrivateKey, gasUsed
 
 // genIstanbulMsg generates an istanbul message with given values
 func genIstanbulMsg(msgType uint64, prevHash common.Hash, proposal *types.Block, signerAddr common.Address, signerKey *ecdsa.PrivateKey) (istanbul.MessageEvent, error) {
+	return genIstanbulMsgWithSealKey(msgType, prevHash, proposal, signerAddr, signerKey, signerKey)
+}
+
+// genIstanbulMsgWithSealKey builds an istanbul message signed (outer signature) by
+// signerKey, but whose COMMIT CommittedSeal is signed by sealKey. A sealKey different
+// from signerKey forges the committed seal.
+func genIstanbulMsgWithSealKey(msgType uint64, prevHash common.Hash, proposal *types.Block, signerAddr common.Address, signerKey, sealKey *ecdsa.PrivateKey) (istanbul.MessageEvent, error) {
 	var subject interface{}
 
 	if msgType == bft.MsgPreprepare {
@@ -273,6 +281,15 @@ func genIstanbulMsg(msgType uint64, prevHash common.Hash, proposal *types.Block,
 		Code:    msgType,
 		Msg:     encodedSubject,
 		Address: signerAddr,
+	}
+
+	// A COMMIT carries a CommittedSeal: the sender's signature over the proposal's
+	// committed-seal preimage, which handleCommit verifies.
+	if msgType == bft.MsgCommit {
+		msg.CommittedSeal, err = crypto.Sign(crypto.Keccak256(istanbul.PrepareCommittedSeal(proposal.Hash())), sealKey)
+		if err != nil {
+			return istanbul.MessageEvent{}, err
+		}
 	}
 
 	data, err := msg.PayloadNoSig()
@@ -448,26 +465,9 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 		assert.Equal(t, 1, len(istCore.current.Commits.messages))
 	}
 
-	//// RoundChange message originated from invalid sender
-	//{
-	//	msgSender := getRandomValidator(false, validators, lastBlock.Hash(), istCore.currentView())
-	//	msgSenderKey := validatorKeyMap[msgSender.Address()]
-	//
-	//	istanbulMsg, err := genIstanbulMsg(bft.MsgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender.Address(), msgSenderKey)
-	//	if err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	if err := eventMux.Post(istanbulMsg); err != nil {
-	//		t.Fatal(err)
-	//	}
-	//
-	//	time.Sleep(time.Second)
-	//	assert.Nil(t, istCore.roundChangeSet.roundChanges[0]) // round is set to 0 in this test
-	//}
-
-	// RoundChange message originated from valid sender even though using non-committee sender because there is no checking for committee in round change
-	// See: TODO-Kaia-Istanbul: establish round change messaging policy and then apply it
+	// RoundChange message originated from invalid (non-committee) sender is rejected.
+	// Round-change admission is now gated on committee membership so that the
+	// (qualified - committee) validators cannot force a round change.
 	{
 		msgSender := nonCommittee.At(rand.Int() % (nonCommittee.Len() - 1))
 		msgSenderKey := validatorKeyMap[msgSender]
@@ -482,8 +482,106 @@ func TestCore_handleEvents_scenario_invalidSender(t *testing.T) {
 		}
 
 		time.Sleep(time.Second)
+		assert.Nil(t, istCore.roundChangeSet.roundChanges[0]) // round is set to 0 in this test
+	}
+
+	// RoundChange message originated from valid (committee) sender is accepted.
+	{
+		_, committee, _, _ := getTestCommitteeState(validatorAddrs, committeeSize, istCore.currentView().Sequence.Uint64(), istCore.currentView().Round.Uint64())
+		msgSender := committee.At(rand.Int() % (committee.Len() - 1))
+		msgSenderKey := validatorKeyMap[msgSender]
+
+		istanbulMsg, err := genIstanbulMsg(bft.MsgRoundChange, lastBlock.Hash(), istCore.current.Preprepare.Proposal.(*types.Block), msgSender, msgSenderKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := eventMux.Post(istanbulMsg); err != nil {
+			t.Fatal(err)
+		}
+
+		time.Sleep(time.Second)
 		assert.Equal(t, 1, len(istCore.roundChangeSet.roundChanges[0].messages)) // round is set to 0 in this test
 	}
+}
+
+// TestCore_handleCommit_RejectsForgedCommittedSeal checks that a COMMIT from a
+// committee member whose CommittedSeal is signed by a different key (a forged seal)
+// is rejected, while a correctly-signed COMMIT is accepted.
+func TestCore_handleCommit_RejectsForgedCommittedSeal(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
+	validatorAddrs, validatorKeyMap := genValidators(30)
+	mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs)
+	defer mockCtrl.Finish()
+
+	istConfig := istanbul.DefaultConfig
+	istConfig.ProposerPolicy = istanbul.WeightedRandom
+
+	istCore := New(mockBackend, istConfig).(*core)
+	istCore.RegisterKaiaxModules(mockValset, mockGov)
+	if err := istCore.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer istCore.Stop()
+
+	eventMux := mockBackend.EventMux()
+	lastProposal, _ := mockBackend.LastProposal()
+	lastBlock := lastProposal.(*types.Block)
+	committeeSize := uint64(len(validatorAddrs) / 3)
+
+	// Establish a proposal via a valid preprepare from the proposer.
+	_, committee, proposer, _ := getTestCommitteeState(validatorAddrs, committeeSize, istCore.currentView().Sequence.Uint64(), istCore.currentView().Round.Uint64())
+	proposerKey := validatorKeyMap[proposer]
+	newProposal, err := genBlock(lastBlock, proposerKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preprepareMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), newProposal, proposer, proposerKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := eventMux.Post(preprepareMsg); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(time.Second)
+	require.NotNil(t, istCore.current.Preprepare)
+	proposalBlock := istCore.current.Preprepare.Proposal.(*types.Block)
+
+	// Pick a committee member distinct from the proposer to send the commits.
+	var sender common.Address
+	for i := 0; i < committee.Len(); i++ {
+		if committee.At(i) != proposer {
+			sender = committee.At(i)
+			break
+		}
+	}
+	senderKey := validatorKeyMap[sender]
+
+	// A committed seal signed by the proposer's key (not the sender's) is forged:
+	// the recovered signer != sender, so handleCommit must reject it.
+	forged, err := genIstanbulMsgWithSealKey(bft.MsgCommit, lastBlock.Hash(), proposalBlock, sender, senderKey, proposerKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := eventMux.Post(forged); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(time.Second)
+	assert.Equal(t, 0, len(istCore.current.Commits.messages), "forged committed seal must be rejected")
+
+	// A correctly-signed committed seal from the same sender is accepted, proving
+	// it was specifically the forged seal (not the sender) that caused rejection.
+	valid, err := genIstanbulMsg(bft.MsgCommit, lastBlock.Hash(), proposalBlock, sender, senderKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := eventMux.Post(valid); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(time.Second)
+	assert.Equal(t, 1, len(istCore.current.Commits.messages), "valid committed seal must be accepted")
 }
 
 func TestCore_handlerMsg(t *testing.T) {

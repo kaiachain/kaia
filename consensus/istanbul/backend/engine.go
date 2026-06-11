@@ -23,9 +23,6 @@
 package backend
 
 import (
-	"encoding/hex"
-
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
@@ -39,26 +36,6 @@ const (
 	inmemoryPeers    = 200
 	inmemoryMessages = 4096
 )
-
-var (
-	inmemoryBlocks             = 2048 // Number of blocks to precompute validators' addresses
-	inmemoryValidatorsPerBlock = 30   // Approximate number of validators' addresses from ecrecover
-	signatureAddresses, _      = lru.NewARC(inmemoryBlocks * inmemoryValidatorsPerBlock)
-)
-
-// cacheSignatureAddresses extracts the address from the given data and signature and cache them for later usage.
-func cacheSignatureAddresses(data []byte, sig []byte) (common.Address, error) {
-	sigStr := hex.EncodeToString(sig)
-	if addr, ok := signatureAddresses.Get(sigStr); ok {
-		return addr.(common.Address), nil
-	}
-	addr, err := istanbul.GetSignatureAddress(data, sig)
-	if err != nil {
-		return common.Address{}, err
-	}
-	signatureAddresses.Add(sigStr, addr)
-	return addr, err
-}
 
 // Seal generates a new block for the given input block with the local miner's
 // seal place on top.

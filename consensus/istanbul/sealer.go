@@ -3,7 +3,6 @@ package istanbul
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"errors"
 	"io"
 	"math"
@@ -144,7 +143,7 @@ func istanbulFilteredHeader(h *types.Header, keepSeal bool) *types.Header {
 	return newHeader
 }
 
-func prepareCommittedSeal(hash common.Hash) []byte {
+func PrepareCommittedSeal(hash common.Hash) []byte {
 	var buf bytes.Buffer
 	buf.Write(hash.Bytes())
 	buf.Write([]byte{byte(2)}) // keep in sync with bft.MsgCommit
@@ -175,7 +174,7 @@ func (m *IstanbulSealer) Committers(header *types.Header) ([]common.Address, err
 		return []common.Address{}, nil
 	}
 
-	proposalSeal := prepareCommittedSeal(m.HeaderHash(header)) // bft.MsgCommit
+	proposalSeal := PrepareCommittedSeal(m.HeaderHash(header)) // bft.MsgCommit
 	committers := make([]common.Address, 0, len(extra.CommittedSeal))
 	for _, seal := range extra.CommittedSeal {
 		addr, err := cacheSignatureAddress(proposalSeal, seal)
@@ -309,12 +308,20 @@ func (m *IstanbulSealer) F(_ uint64, qualifiedLen, committeeSize int) int {
 	return int(math.Ceil(float64(qualifiedLen)/3)) - 1
 }
 
-func (m *IstanbulSealer) Quorum(blockNum uint64, qualifiedlen, committeeSize int) int {
-	return 2*m.F(blockNum, qualifiedlen, committeeSize) + 1
+// Quorum returns the quorum: ceil(2N/3) over the effective size
+// N = min(qualifiedlen, committeeSize), or N for tiny committees. This matches
+// calcQuorumSize used by the consensus core.
+// Pre-permissionless sealer quorum: 2f+1
+func (m *IstanbulSealer) Quorum(_ uint64, qualifiedlen, committeeSize int) int {
+	n := min(qualifiedlen, committeeSize)
+	if n < 4 {
+		return n
+	}
+	return int(math.Ceil(float64(2*n) / 3))
 }
 
 func (m *IstanbulSealer) MakeCommittedSeal(header *types.Header) ([]byte, error) {
-	return crypto.Sign(crypto.Keccak256(prepareCommittedSeal(m.HeaderHash(header))), m.privateKey)
+	return crypto.Sign(crypto.Keccak256(PrepareCommittedSeal(m.HeaderHash(header))), m.privateKey)
 }
 
 func (m *IstanbulSealer) MakeAuthorSeal(header *types.Header) ([]byte, error) {
@@ -329,14 +336,16 @@ func (m *IstanbulSealer) MakeAuthorSeal(header *types.Header) ([]byte, error) {
 }
 
 func cacheSignatureAddress(data []byte, sig []byte) (common.Address, error) {
-	sigHex := hex.EncodeToString(sig)
-	if addr, ok := signatureAddresses.Get(sigHex); ok {
+	// Key on both data and sig: ecrecover depends on data, so keying on sig alone
+	// would return a cached address even when queried with different data.
+	key := string(crypto.Keccak256(data, sig))
+	if addr, ok := signatureAddresses.Get(key); ok {
 		return addr.(common.Address), nil
 	}
 	addr, err := GetSignatureAddress(data, sig)
 	if err != nil {
 		return common.Address{}, err
 	}
-	signatureAddresses.Add(sigHex, addr)
+	signatureAddresses.Add(key, addr)
 	return addr, nil
 }

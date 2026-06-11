@@ -30,6 +30,7 @@ import (
 
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/kaiax"
@@ -255,9 +256,30 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		if err != nil {
 			return err
 		}
+		// author == proposer implies the author is the committee-selected proposer,
+		// so a separate qualified-membership check is redundant here.
 		if author != proposer {
 			return consensus.ErrUnauthorized
 		}
+
+		// Count committed seals only from the round's committee, matching the set the
+		// live consensus commits against (handleCommit rejects non-committee senders),
+		// rather than the broader qualified/council set.
+		committee, err := v.mValset.GetCommittee(blockNum, uint64(round))
+		if err != nil {
+			return err
+		}
+		committeeSet := valset.NewAddressSet(committee)
+		validSeal, err := countValidCommittedSeals(committers, committeeSet)
+		if err != nil {
+			return err
+		}
+		// Require the quorum over the committee. Post-permissionless the committee
+		// equals the qualified set, so pass its size for both arguments.
+		if validSeal < v.sealer.Quorum(blockNum, len(committee), len(committee)) {
+			return istanbul.ErrInvalidCommittedSeals
+		}
+		return nil
 	}
 
 	qualified, err := v.mValset.GetQualifiedValidators(blockNum)
@@ -277,13 +299,9 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		}
 		signerSet = valset.NewAddressSet(council).Copy()
 	}
-	validSeal := 0
-	for _, addr := range committers {
-		if signerSet.Remove(addr) {
-			validSeal++
-		} else {
-			return istanbul.ErrInvalidCommittedSeals
-		}
+	validSeal, err := countValidCommittedSeals(committers, signerSet)
+	if err != nil {
+		return err
 	}
 
 	qualifiedLen := len(qualified)
@@ -291,10 +309,23 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 	if !gov.DeprecatedAt(gov.IstanbulCommitteeSize, rules) {
 		committeeSize = int(v.mGov.GetParamSet(blockNum).CommitteeSize)
 	}
-	if validSeal < v.sealer.Quorum(blockNum, qualifiedLen, committeeSize) {
+	// Pre-permissionless uses the legacy 2f+1 quorum. sealer.Quorum now returns
+	// ceil(2N/3), so compute 2f+1 explicitly to preserve historical header validity.
+	if validSeal < 2*v.sealer.F(blockNum, qualifiedLen, committeeSize)+1 {
 		return istanbul.ErrInvalidCommittedSeals
 	}
 	return nil
+}
+
+func countValidCommittedSeals(committers []common.Address, signerSet *valset.AddressSet) (int, error) {
+	validSeal := 0
+	for _, addr := range committers {
+		if !signerSet.Remove(addr) {
+			return 0, istanbul.ErrInvalidCommittedSeals
+		}
+		validSeal++
+	}
+	return validSeal, nil
 }
 
 // ValidateBody verifies the block
