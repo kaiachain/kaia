@@ -26,6 +26,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"maps"
 	"net"
 	"slices"
@@ -192,6 +193,10 @@ func (srv *BaseServer) initialize() error {
 	if !srv.ConnectionType.Valid() {
 		return errors.New("Invalid connection type speficied")
 	}
+	if minConns := minPhysicalConnections(srv.ConnectionType, srv.reservedENForCN(), srv.reservedCNForEN()); srv.Config.MaxPhysicalConnections < minConns {
+		return fmt.Errorf("MaxPhysicalConnections (%d) too low for connection type %v: need >= %d to reserve CN<->EN slots",
+			srv.Config.MaxPhysicalConnections, srv.ConnectionType, minConns)
+	}
 	if srv.newTransport == nil {
 		srv.newTransport = newRLPX
 	}
@@ -304,6 +309,22 @@ func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, inbou
 	}
 }
 
+// reservedENForCN and reservedCNForEN resolve the node's cross-type reservation,
+// falling back to the package defaults when unset (Config value 0).
+func (srv *BaseServer) reservedENForCN() int {
+	if srv.Config.ReservedENForCN > 0 {
+		return srv.Config.ReservedENForCN
+	}
+	return defaultReservedENForCN
+}
+
+func (srv *BaseServer) reservedCNForEN() int {
+	if srv.Config.ReservedCNForEN > 0 {
+		return srv.Config.ReservedCNForEN
+	}
+	return defaultReservedCNForEN
+}
+
 func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *conn) bool {
 	if c.is(trustedConn | staticDialedConn) {
 		return false
@@ -311,7 +332,7 @@ func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *con
 
 	selfType := EffectiveConnType(srv.ConnectionType)
 	peerType := EffectiveConnType(c.conntype)
-	target, ok := peerTargets[selfType][peerType]
+	target, ok := peerTargetFor(selfType, peerType, srv.Config.MaxPhysicalConnections, srv.reservedENForCN(), srv.reservedCNForEN())
 	if !ok {
 		return false
 	}
@@ -670,6 +691,24 @@ func (srv *BaseServer) reportPeerMetric() {
 // SetCNPeers replaces the address-keyed CN admission allowlist.
 // nil disables filtering; an empty list rejects all CN claims.
 func (srv *BaseServer) SetCNPeers(addrs []common.Address) {
+	// Only CNs enforce the validator allowlist. ENs/PNs serve everyone, so they
+	// skip it: leaving cnPeerAddrs nil makes the admit and drop checks no-op.
+	if srv.ConnectionType != common.CONSENSUSNODE {
+		return
+	}
+	// A full CN mesh needs one slot per other validator (len(addrs)-1). Once that
+	// no longer fits under the CN-mesh cap (maxconnections - reservedENForCN), this
+	// node can't stay fully meshed while reserving EN slots -> tell the operator.
+	// Only a CN that is itself in CNPeers forms the full mesh (with the other
+	// |CNPeers|-1 members). A nonCNPeers CN (e.g. ValInactive) syncs via ENs and
+	// does not mesh, so this full-mesh capacity warning does not apply to it.
+	if selfAddr, err := addressFromNodeID(srv.selfID); err == nil && slices.Contains(addrs, selfAddr) {
+		rEN := srv.reservedENForCN()
+		if mesh := len(addrs) - 1; mesh > srv.Config.MaxPhysicalConnections-rEN {
+			logger.Warn("CN count exceeds capacity for full mesh + EN reservation; raise maxconnections",
+				"cnPeers", len(addrs), "maxConn", srv.Config.MaxPhysicalConnections, "reservedEN", rEN)
+		}
+	}
 	srv.lock.Lock()
 	if addrs == nil {
 		srv.cnPeerAddrs = nil

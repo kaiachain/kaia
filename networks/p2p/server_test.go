@@ -377,11 +377,21 @@ func TestServerPeerTargets(t *testing.T) {
 		}
 		return peers
 	}
+	newNPeers := func(connType common.ConnType, n int) map[discover.NodeID]*Peer {
+		peers := make(map[discover.NodeID]*Peer, n)
+		for range n {
+			peers[randomID()] = newPeerWithType(connType)
+		}
+		return peers
+	}
 
-	cnSrv := &BaseServer{Config: Config{ConnectionType: common.CONSENSUSNODE}}
-	cnMeshPeers := newPeers(common.CONSENSUSNODE, common.CONSENSUSNODE, common.CONSENSUSNODE)
-	if cnSrv.exceedsPeerTarget(cnMeshPeers, &conn{conntype: common.CONSENSUSNODE}) {
-		t.Fatal("CN should not apply an extra per-role cap to CN peers")
+	cnSrv := &BaseServer{Config: Config{ConnectionType: common.CONSENSUSNODE, MaxPhysicalConnections: 10}}
+	// CN-mesh accept cap = MaxPhysicalConnections - reservedENForCN (=7), reserving EN slots.
+	if cnSrv.exceedsPeerTarget(newNPeers(common.CONSENSUSNODE, 6), &conn{conntype: common.CONSENSUSNODE}) {
+		t.Fatal("CN mesh under the reserved cap should be accepted")
+	}
+	if !cnSrv.exceedsPeerTarget(newNPeers(common.CONSENSUSNODE, 7), &conn{conntype: common.CONSENSUSNODE}) {
+		t.Fatal("CN mesh at the reserved cap (maxPhys - reservedENForCN) should be rejected")
 	}
 	cnPeers := newPeers(common.ENDPOINTNODE, common.PROXYNODE, common.ENDPOINTNODE)
 	if !cnSrv.exceedsPeerTarget(cnPeers, &conn{conntype: common.ENDPOINTNODE}) {
@@ -400,10 +410,13 @@ func TestServerPeerTargets(t *testing.T) {
 		t.Fatal("static/dynamic inbound peer should not bypass peer target unless trusted")
 	}
 
-	enSrv := &BaseServer{Config: Config{ConnectionType: common.ENDPOINTNODE}}
-	enMeshPeers := newPeers(common.ENDPOINTNODE, common.PROXYNODE, common.ENDPOINTNODE)
-	if enSrv.exceedsPeerTarget(enMeshPeers, &conn{conntype: common.ENDPOINTNODE}) {
-		t.Fatal("EN should not apply an extra per-role cap to EN-equivalent peers")
+	enSrv := &BaseServer{Config: Config{ConnectionType: common.ENDPOINTNODE, MaxPhysicalConnections: 10}}
+	// EN-mesh accept cap = MaxPhysicalConnections - reservedCNForEN (=8), reserving CN slots.
+	if enSrv.exceedsPeerTarget(newNPeers(common.ENDPOINTNODE, 7), &conn{conntype: common.ENDPOINTNODE}) {
+		t.Fatal("EN mesh under the reserved cap should be accepted")
+	}
+	if !enSrv.exceedsPeerTarget(newNPeers(common.ENDPOINTNODE, 8), &conn{conntype: common.ENDPOINTNODE}) {
+		t.Fatal("EN mesh at the reserved cap (maxPhys - reservedCNForEN) should be rejected")
 	}
 	enPeers := newPeers(common.CONSENSUSNODE, common.CONSENSUSNODE)
 	if !enSrv.exceedsPeerTarget(enPeers, &conn{conntype: common.CONSENSUSNODE}) {
@@ -447,6 +460,69 @@ func TestServerCNPeersAdmission(t *testing.T) {
 	srv.SetCNPeers([]common.Address{addr})
 	if err := srv.admitByCNPeers(c); err != nil {
 		t.Fatalf("CN in CN peers should pass admission: %v", err)
+	}
+}
+
+// Only CNs enforce the CN allowlist. EN/PN must keep serving any peer, so their
+// SetCNPeers is a no-op and admitByCNPeers admits CNs outside any allowlist.
+func TestServerENBypassesCNPeerFilter(t *testing.T) {
+	allowed := crypto.PubkeyToAddress(newkey().PublicKey)
+
+	for _, nodeType := range []common.ConnType{common.ENDPOINTNODE, common.PROXYNODE} {
+		srv := &BaseServer{Config: Config{ConnectionType: nodeType}}
+		srv.SetCNPeers([]common.Address{allowed}) // no-op on EN/PN
+		if srv.cnPeerAddrs != nil {
+			t.Fatalf("%v must not populate cnPeerAddrs", nodeType)
+		}
+		outsider := &conn{conntype: common.CONSENSUSNODE, id: randomID(), flags: inboundConn}
+		if err := srv.admitByCNPeers(outsider); err != nil {
+			t.Fatalf("%v must admit a CN outside any allowlist, got %v", nodeType, err)
+		}
+	}
+}
+
+func TestPeerTargetFor(t *testing.T) {
+	const (
+		maxPhys = 100
+		rEN     = defaultReservedENForCN
+		rCN     = defaultReservedCNForEN
+	)
+	cases := []struct {
+		self, peer common.ConnType
+		want       int
+		wantOK     bool
+	}{
+		{common.CONSENSUSNODE, common.CONSENSUSNODE, maxPhys - rEN, true}, // CN mesh
+		{common.CONSENSUSNODE, common.ENDPOINTNODE, rEN, true},            // CN->EN reservation
+		{common.ENDPOINTNODE, common.ENDPOINTNODE, maxPhys - rCN, true},   // EN mesh
+		{common.ENDPOINTNODE, common.CONSENSUSNODE, rCN, true},            // EN->CN reservation
+		{common.CONSENSUSNODE, common.BOOTNODE, 0, false},                 // unrelated peer type: no cap
+		{common.BOOTNODE, common.CONSENSUSNODE, 0, false},                 // node type with no reservation: no cap
+	}
+	for _, c := range cases {
+		if got, ok := peerTargetFor(c.self, c.peer, maxPhys, rEN, rCN); got != c.want || ok != c.wantOK {
+			t.Errorf("peerTargetFor(%v,%v)=(%d,%v), want (%d,%v)", c.self, c.peer, got, ok, c.want, c.wantOK)
+		}
+	}
+	// own-mesh cap clamps to 0 when maxPhys is below the reservation.
+	if got, _ := peerTargetFor(common.CONSENSUSNODE, common.CONSENSUSNODE, rEN-1, rEN, rCN); got != 0 {
+		t.Errorf("own-mesh cap should clamp to 0, got %d", got)
+	}
+}
+
+func TestMinPhysicalConnections(t *testing.T) {
+	const (
+		rEN = defaultReservedENForCN
+		rCN = defaultReservedCNForEN
+	)
+	if got := minPhysicalConnections(common.CONSENSUSNODE, rEN, rCN); got != rEN+1 {
+		t.Errorf("CN min = %d, want %d", got, rEN+1)
+	}
+	if got := minPhysicalConnections(common.ENDPOINTNODE, rEN, rCN); got != rCN+1 {
+		t.Errorf("EN min = %d, want %d", got, rCN+1)
+	}
+	if got := minPhysicalConnections(common.PROXYNODE, rEN, rCN); got != rCN+1 {
+		t.Errorf("PN min (as EN) = %d, want %d", got, rCN+1)
 	}
 }
 

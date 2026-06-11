@@ -191,6 +191,10 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 	logger.Info("Setting MaxPhysicalConnections", "MaxPhysicalConnections", cfg.MaxPhysicalConnections)
 
+	// Cross-type connection reservations (0 leaves the p2p defaults in effect).
+	cfg.ReservedENForCN = ctx.Int(ReservedENConnsFlag.Name)
+	cfg.ReservedCNForEN = ctx.Int(ReservedCNConnsFlag.Name)
+
 	if ctx.IsSet(MaxPendingPeersFlag.Name) {
 		cfg.MaxPendingPeers = ctx.Int(MaxPendingPeersFlag.Name)
 	}
@@ -249,7 +253,7 @@ func setDefaultDiscoverTypes(cfg *p2p.Config) {
 }
 
 const (
-	defaultCNMaxPhysicalConnections = 103 // MaxNodeCount + peerTargets[CN][EN]
+	defaultCNMaxPhysicalConnections = 103 // MaxNodeCount + defaultReservedENForCN (full CN mesh + reserved EN slots)
 	defaultENMaxPhysicalConnections = node.DefaultMaxPhysicalConnections
 )
 

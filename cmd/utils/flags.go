@@ -1140,6 +1140,20 @@ var (
 		EnvVars:  []string{"KLAYTN_MAXCONNECTIONS", "KAIA_MAXCONNECTIONS"},
 		Category: "NETWORK",
 	}
+	ReservedENConnsFlag = &cli.IntFlag{
+		Name:     "reserved-en-conns",
+		Usage:    "Number of EN connection slots a CN reserves so its CN mesh cannot starve the CN<->EN link (0 = use default)",
+		Value:    0,
+		Aliases:  []string{"p2p.reserved-en-conns"},
+		Category: "NETWORK",
+	}
+	ReservedCNConnsFlag = &cli.IntFlag{
+		Name:     "reserved-cn-conns",
+		Usage:    "Number of CN connection slots an EN/PN reserves so its EN mesh cannot starve the CN<->EN link (0 = use default)",
+		Value:    0,
+		Aliases:  []string{"p2p.reserved-cn-conns"},
+		Category: "NETWORK",
+	}
 	MaxPendingPeersFlag = &cli.IntFlag{
 		Name:     "maxpendpeers",
 		Usage:    "Maximum number of pending connection attempts (defaults used if set to 0)",

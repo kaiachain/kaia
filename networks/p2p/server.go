@@ -71,6 +71,12 @@ type Config struct {
 	// multi channel peer. It must be greater than zero.
 	MaxPhysicalConnections int
 
+	// ReservedENForCN / ReservedCNForEN are the cross-type connection slots a node
+	// reserves so its own-type mesh can't starve the CN<->EN link (see peerTargetFor).
+	// A CN uses ReservedENForCN; an EN/PN uses ReservedCNForEN. Zero means "use default".
+	ReservedENForCN int `toml:",omitempty"`
+	ReservedCNForEN int `toml:",omitempty"`
+
 	// ConnectionType is a type of connection like Consensus or Normal
 	// described at common.ConnType
 	// When the connection is established, each peer exchange each connection type
