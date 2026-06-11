@@ -456,6 +456,12 @@ func (sb *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, st
 			resultCh <- nil
 			return
 		}
+		// Only qualified validators produce a block. Others skip here instead of
+		// doing the execute/finalize work and then failing authorization at Seal.
+		if !valset.NewAddressSet(validators).Contains(sb.address) {
+			resultCh <- nil
+			return
+		}
 		if err := sb.sealer.WriteValidators(header, validators); err != nil {
 			resultCh <- nil
 			return
