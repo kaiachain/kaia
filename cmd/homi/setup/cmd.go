@@ -41,9 +41,13 @@ import (
 	"github.com/kaiachain/kaia/cmd/homi/docker/service"
 	"github.com/kaiachain/kaia/cmd/homi/genesis"
 	"github.com/kaiachain/kaia/common"
+	abv2data "github.com/kaiachain/kaia/contracts/bindings/abv2data"
+	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/kaiax/gasless"
+	"github.com/kaiachain/kaia/kaiax/valset"
+	valsetimpl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/params"
@@ -61,6 +65,13 @@ type GrafanaFile struct {
 	url  string
 	name string
 }
+
+const (
+	defaultMaxReadyCandidateCount        = 3
+	defaultPfsThreshold                  = 2
+	defaultCfsThreshold                  = 300
+	defaultPermissionlessGenesisDeployer = "0xdeaddeaddeaddeaddeaddeaddeaddeaddeaddead"
+)
 
 var HomiFlags = []cli.Flag{
 	homiYamlFlag,
@@ -139,6 +150,10 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewInt64Flag(osakaCompatibleBlockNumberFlag),
 	altsrc.NewInt64Flag(permissionlessCompatibleBlockNumberFlag),
 	altsrc.NewUint64Flag(vrankEpochFlag),
+	altsrc.NewInt64Flag(pfsThresholdFlag),
+	altsrc.NewInt64Flag(cfsThresholdFlag),
+	altsrc.NewStringFlag(permissionlessGenesisDeployerFlag),
+	altsrc.NewBoolFlag(allocPermissionlessPrerequisitesFlag),
 	altsrc.NewStringFlag(kip113ProxyAddressFlag),
 	altsrc.NewStringFlag(kip113LogicAddressFlag),
 	altsrc.NewBoolFlag(kip113MockFlag),
@@ -547,19 +562,99 @@ func useAddressBookMock(ctx *cli.Context, genesisJson *blockchain.Genesis) {
 	allocationFunction(genesisJson)
 }
 
-func allocateRegistry(ctx *cli.Context, genesisJson *blockchain.Genesis, owner common.Address, kip113Addr *common.Address) {
+func allocatePermissionless(ctx *cli.Context, genesisJson *blockchain.Genesis, validatorAddrs []common.Address, kip113Init system.AllocKip113Init) {
+	alloc, err := system.AllocPermissionless(makePermissionlessConfig(ctx, validatorAddrs, kip113Init))
+	if err != nil {
+		log.Fatalf("Failed to allocate permissionless contracts: %v", err)
+	}
+
+	for addr, account := range alloc {
+		genesisJson.Alloc[addr] = account
+	}
+}
+
+func allocatePermissionlessPrerequisites(ctx *cli.Context, genesisJson *blockchain.Genesis, validatorAddrs []common.Address, kip113Init system.AllocKip113Init) map[string]common.Address {
+	alloc, records, err := system.AllocPermissionlessPrerequisites(makePermissionlessConfig(ctx, validatorAddrs, kip113Init))
+	if err != nil {
+		log.Fatalf("Failed to allocate permissionless transition contracts: %v", err)
+	}
+
+	for addr, account := range alloc {
+		genesisJson.Alloc[addr] = account
+	}
+	return records
+}
+
+func makePermissionlessConfig(ctx *cli.Context, validatorAddrs []common.Address, kip113Init system.AllocKip113Init) *system.AllocPermissionlessConfig {
+	owner := validatorAddrs[0]
+	deployerStr := ctx.String(permissionlessGenesisDeployerFlag.Name)
+	if !common.IsHexAddress(deployerStr) {
+		log.Fatalf("'%s' is not a valid permissionless genesis deployer address", deployerStr)
+	}
+	deployer := common.HexToAddress(deployerStr)
+	numValidators := len(validatorAddrs)
+	stakeAmt := new(big.Int).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA))
+
+	nodeInfos := make([]addressbookv2contract.NodeInfo, numValidators)
+	for i, addr := range validatorAddrs {
+		blsInfo := kip113Init.Infos[addr]
+		nodeInfos[i] = addressbookv2contract.NodeInfo{
+			Manager:       addr,
+			RewardAddress: common.BytesToAddress(crypto.Keccak256(addr.Bytes())),
+			VoterAddress:  addr,
+			TimeoutAt:     new(big.Int),
+			GcId:          big.NewInt(int64(i + 1)),
+			BlsInfo: addressbookv2contract.BlsPublicKeyInfo{
+				PublicKey: blsInfo.PublicKey,
+				Pop:       blsInfo.Pop,
+			},
+			State: valset.ValActive.ToUint8(),
+		}
+	}
+
+	stakeAmts := make([]*big.Int, numValidators)
+	for i := range stakeAmts {
+		stakeAmts[i] = new(big.Int).Set(stakeAmt)
+	}
+
+	return &system.AllocPermissionlessConfig{
+		Owner:              owner,
+		Deployer:           deployer,
+		NodeIds:            validatorAddrs,
+		NodeInfos:          nodeInfos,
+		StakeAmts:          stakeAmts,
+		EpochBlockInterval: int64(ctx.Uint64(vrankEpochFlag.Name)),
+		DataConfig: abv2data.IABv2DataContractInitData{
+			InitialOwner:            owner,
+			InitialSuspender:        owner,
+			InitialConfigurator:     owner,
+			PfsThreshold:            big.NewInt(ctx.Int64(pfsThresholdFlag.Name)),
+			CfsThreshold:            big.NewInt(ctx.Int64(cfsThresholdFlag.Name)),
+			PauseTimeout:            big.NewInt(int64(valsetimpl.DefaultValPausedTimeout.Seconds())),
+			IdleTimeout:             big.NewInt(int64(valsetimpl.DefaultValIdleTimeout.Seconds())),
+			MaxNodeCount:            big.NewInt(int64(valsetimpl.DefaultMaxNodeCount)),
+			MaxValActivePausedCount: big.NewInt(int64(valsetimpl.DefaultMaxValActivePausedCount)),
+			MaxCandReadyCount:       big.NewInt(defaultMaxReadyCandidateCount),
+			KefAddress:              owner,
+			KifAddress:              owner,
+			KpfAddress:              owner,
+		},
+	}
+}
+
+func allocateRegistry(ctx *cli.Context, genesisJson *blockchain.Genesis, owner common.Address, records map[string]common.Address) {
 	if randaoCompatibleBlock := ctx.Int64(randaoCompatibleBlockNumberFlag.Name); randaoCompatibleBlock != 0 {
+		return
+	}
+	if len(records) == 0 {
 		return
 	}
 
 	registryConfig := &params.RegistryConfig{
-		Records: make(map[string]common.Address),
+		Records: records,
 		Owner:   owner,
 	}
-
-	if kip113Addr != nil {
-		registryConfig.Records[system.Kip113Name] = *kip113Addr
-	}
+	genesisJson.Config.RandaoRegistry = registryConfig
 
 	allocRegistryStorage := system.AllocRegistry(registryConfig)
 
@@ -745,10 +840,24 @@ func Gen(ctx *cli.Context) error {
 	patchGenesisAddressBook(ctx, genesisJson, validatorNodeAddrs)
 	useAddressBookMock(ctx, genesisJson)
 
-	// Randao hardfork related system contracts
-	kip113ProxyAddr, kip113LogicAddr := allocateKip113(ctx, genesisJson, kip113Init)
-	allocateRegistry(ctx, genesisJson, nodeAddrs[0], kip113ProxyAddr)
-	useKip113Mock(ctx, genesisJson, kip113LogicAddr)
+	// Permissionless genesis uses ABv2DataContract as the source of BLS keys and
+	// installs initialized ABv2 at 0x400. Non-genesis forks keep the KIP113 path.
+	if permissionlessBlock := ctx.Int64(permissionlessCompatibleBlockNumberFlag.Name); permissionlessBlock == 0 {
+		allocatePermissionless(ctx, genesisJson, validatorNodeAddrs, kip113Init)
+	} else {
+		kip113ProxyAddr, kip113LogicAddr := allocateKip113(ctx, genesisJson, kip113Init)
+		registryRecords := make(map[string]common.Address)
+		if kip113ProxyAddr != nil {
+			registryRecords[system.Kip113Name] = *kip113ProxyAddr
+		}
+		if ctx.Bool(allocPermissionlessPrerequisitesFlag.Name) {
+			for name, addr := range allocatePermissionlessPrerequisites(ctx, genesisJson, validatorNodeAddrs, kip113Init) {
+				registryRecords[name] = addr
+			}
+		}
+		allocateRegistry(ctx, genesisJson, nodeAddrs[0], registryRecords)
+		useKip113Mock(ctx, genesisJson, kip113LogicAddr)
+	}
 	useRegistryMock(ctx, genesisJson)
 
 	genesisJson.Config.IstanbulCompatibleBlock = big.NewInt(ctx.Int64(istanbulCompatibleBlockNumberFlag.Name))
@@ -853,7 +962,8 @@ func Gen(ctx *cli.Context) error {
 				TxGenThreadSize: ctx.Int(txGenThFlag.Name),
 				TxGenConnSize:   ctx.Int(txGenConnFlag.Name),
 				TxGenDuration:   ctx.String(txGenDurFlag.Name),
-			})
+			},
+		)
 		os.MkdirAll(outputPath, os.ModePerm)
 		os.WriteFile(path.Join(outputPath, "docker-compose.yml"), []byte(compose.String()), os.ModePerm)
 		fmt.Println("Created : ", path.Join(outputPath, "docker-compose.yml"))
@@ -1007,7 +1117,8 @@ func makeValidators(num int, isWorkOnSingleHost bool, nodeAddrs []common.Address
 				0,
 				validatorPort,
 				nil,
-				discover.NodeTypeCN).String(),
+				discover.NodeTypeCN,
+			).String(),
 		}
 		validators = append(validators, v)
 	}
@@ -1045,7 +1156,8 @@ func makeValidatorsWithIp(num int, isWorkOnSingleHost bool, nodeAddrs []common.A
 				0,
 				validatorPort,
 				nil,
-				discover.NodeTypeCN).String(),
+				discover.NodeTypeCN,
+			).String(),
 		}
 		validators = append(validators, v)
 	}
@@ -1089,7 +1201,8 @@ func makeProxys(ctx *cli.Context, num int, isWorkOnSingleHost bool) ([]*Validato
 				0,
 				p2pPort,
 				nil,
-				discover.NodeTypePN).String(),
+				discover.NodeTypePN,
+			).String(),
 		}
 		proxies = append(proxies, v)
 		proxyNodeKeys = append(proxyNodeKeys, v.Nodekey)
@@ -1134,7 +1247,8 @@ func makeEndpoints(ctx *cli.Context, num int, isWorkOnSingleHost bool) ([]*Valid
 				0,
 				p2pPort,
 				nil,
-				discover.NodeTypeEN).String(),
+				discover.NodeTypeEN,
+			).String(),
 		}
 		endpoints = append(endpoints, v)
 		endpointsNodeKeys = append(endpointsNodeKeys, v.Nodekey)
@@ -1165,7 +1279,8 @@ func makeSCNs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 				0,
 				p2pPort,
 				nil,
-				discover.NodeTypeUnknown).String(),
+				discover.NodeTypeUnknown,
+			).String(),
 		}
 		scn = append(scn, v)
 		scnKeys = append(scnKeys, v.Nodekey)
@@ -1196,7 +1311,8 @@ func makeSPNs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 				0,
 				p2pPort,
 				nil,
-				discover.NodeTypeUnknown).String(),
+				discover.NodeTypeUnknown,
+			).String(),
 		}
 		proxies = append(proxies, v)
 		proxyNodeKeys = append(proxyNodeKeys, v.Nodekey)
@@ -1227,7 +1343,8 @@ func makeSENs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 				0,
 				p2pPort,
 				nil,
-				discover.NodeTypeUnknown).String(),
+				discover.NodeTypeUnknown,
+			).String(),
 		}
 		endpoints = append(endpoints, v)
 		endpointsNodeKeys = append(endpointsNodeKeys, v.Nodekey)
