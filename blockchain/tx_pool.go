@@ -119,6 +119,10 @@ var (
 	underpricedTxCounter = metrics.NewRegisteredCounter("txpool/underpriced", nil)
 	refusedTxCounter     = metrics.NewRegisteredCounter("txpool/refuse", nil)
 	slotsGauge           = metrics.NewRegisteredGauge("txpool/slots", nil)
+
+	// Queue eviction metrics, split by path.
+	queueCapEvictionCounter = metrics.NewRegisteredCounter("txpool/queued/capevict", nil)
+	lifetimeEvictionCounter = metrics.NewRegisteredCounter("txpool/queued/lifetimeevict", nil)
 )
 
 // TxStatus is the current status of a transaction as seen by the pool.
@@ -411,6 +415,7 @@ func (pool *TxPool) loop() {
 					if pool.queue[addr] != nil {
 						for _, tx := range pool.queue[addr].Flatten() {
 							pool.removeTx(tx.Hash(), true)
+							lifetimeEvictionCounter.Inc(1)
 						}
 					}
 					delete(pool.beats, addr)
@@ -1245,6 +1250,9 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if pool.queue[from] == nil {
 		pool.queue[from] = newTxList(false)
+		// Refresh the beat on (re)creation so the account doesn't inherit a
+		// stale one and become the next eviction victim.
+		pool.beats[from] = time.Now()
 	}
 	inserted, old := pool.queue[from].Add(tx, pool.config.PriceBump, pool.rules.IsMagma)
 	if !inserted {
@@ -1264,8 +1272,6 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 		pool.all.Add(tx)
 		pool.priced.Put(tx)
 	}
-
-	pool.checkAndSetBeat(from)
 	return old != nil, nil
 }
 
@@ -1640,15 +1646,6 @@ func (pool *TxPool) GetBlobSidecarFromPool(txHash common.Hash) (*types.BlobTxSid
 	return sidecar, nil
 }
 
-// checkAndSetBeat sets the beat of the account if there is no beat of the account.
-func (pool *TxPool) checkAndSetBeat(addr common.Address) {
-	_, exist := pool.beats[addr]
-
-	if !exist {
-		pool.beats[addr] = time.Now()
-	}
-}
-
 // removeTx removes a single transaction from the queue, moving all subsequent
 // transactions back to the future queue.
 func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
@@ -1849,37 +1846,29 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	queued := pool.queuedCount
 
 	if queued > pool.config.NonExecSlotsAll {
-		// Sort all accounts with queued transactions by heartbeat
+		// Sort by heartbeat with the stalest account last: the eviction loop below
+		// pops from the tail, so the least-recently-active accounts are dropped first.
 		addresses := make(addresssByHeartbeat, 0, len(pool.queue))
 		for addr := range pool.queue {
 			if !pool.locals.contains(addr) { // don't drop locals
 				addresses = append(addresses, addressByHeartbeat{addr, pool.beats[addr]})
 			}
 		}
-		sort.Sort(addresses)
+		sort.Sort(sort.Reverse(addresses))
 
-		// Drop transactions until the total is below the limit or only locals remain
+		// Drop highest-nonce txs from the stalest accounts, keeping each
+		// account's lowest queued tx so missing-nonce admission can heal it.
 		for drop := queued - pool.config.NonExecSlotsAll; drop > 0 && len(addresses) > 0; {
 			addr := addresses[len(addresses)-1]
 			list := pool.queue[addr.address]
 
 			addresses = addresses[:len(addresses)-1]
 
-			// Drop all transactions if they are less than the overflow
-			if size := uint64(list.Len()); size <= drop {
-				for _, tx := range list.Flatten() {
-					pool.removeTx(tx.Hash(), true)
-				}
-				drop -= size
-				queuedRateLimitCounter.Inc(int64(size))
-				continue
-			}
-			// Otherwise drop only last few transactions
 			txs := list.Flatten()
-			for i := len(txs) - 1; i >= 0 && drop > 0; i-- {
+			for i := len(txs) - 1; i >= 1 && drop > 0; i-- {
 				pool.removeTx(txs[i].Hash(), true)
 				drop--
-				queuedRateLimitCounter.Inc(1)
+				queueCapEvictionCounter.Inc(1)
 			}
 		}
 	}
