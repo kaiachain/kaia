@@ -1202,9 +1202,9 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 
 	// If the transaction pool is full and new Tx is valid,
 	// (1) discard a new Tx if there is no room for the account of the Tx
-	// (2) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
-	// (3) discard a new Tx if the new Tx does not have a missing nonce
-	// (4) discard underpriced transactions
+	// (2) discard a new Tx if the new Tx does not have a missing nonce
+	// (3) discard underpriced transactions
+	// (4) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
 	if uint64(pool.all.Slots()+numSlots(tx)) > pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
 		// (1) discard a new Tx if there is no room for the account of the Tx
 		from, _ := types.Sender(pool.signer, tx)
@@ -1215,30 +1215,35 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		}
 
 		maxTx := pool.getMaxTxFromQueueWhenNonceIsMissing(tx, &from)
-		if maxTx != tx {
-			// (2) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
-			pool.removeTx(maxTx.Hash(), true)
-			logger.Trace("Removing an old Tx with the max nonce to insert a new Tx with missing nonce, because TxPool is full", "account", from, "new nonce(previously missing)", tx.Nonce(), "removed max nonce", maxTx.Nonce())
-		} else {
-			// (3) discard a new Tx if the new Tx does not have a missing nonce
+		if maxTx == tx {
+			// (2) discard a new Tx if the new Tx does not have a missing nonce
 			logger.Trace("Rejecting a new Tx, because TxPool is full and a new TX does not have missing nonce", "hash", tx.Hash())
 			refusedTxCounter.Inc(1)
 			return false, fmt.Errorf("txpool is full and the new tx does not have missing nonce: %d", uint64(pool.all.Count()))
 		}
 
-		// (4) discard underpriced transactions
-		// If the new transaction is underpriced, don't accept it
+		// (3) discard underpriced transactions, before the eviction in (4): a refused
+		// tx must leave the sender's queue untouched, so the eviction only runs once
+		// the tx is certain to be admitted.
 		if !local && pool.priced.Underpriced(tx, pool.locals) {
 			logger.Trace("Discarding underpriced transaction", "hash", hash, "price", tx.GasPrice())
 			underpricedTxCounter.Inc(1)
 			return false, ErrUnderpriced
 		}
-		// New transaction is better than our worse ones, make room for it
-		drop := pool.priced.Discard(pool.all.Slots()-int(pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll)+numSlots(tx), pool.locals)
-		for _, tx := range drop {
-			logger.Trace("Discarding freshly underpriced transaction", "hash", tx.Hash(), "price", tx.GasPrice())
-			underpricedTxCounter.Inc(1)
-			pool.removeTx(tx.Hash(), false)
+
+		// (4) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
+		pool.removeTx(maxTx.Hash(), true)
+		logger.Trace("Removing an old Tx with the max nonce to insert a new Tx with missing nonce, because TxPool is full", "account", from, "new nonce(previously missing)", tx.Nonce(), "removed max nonce", maxTx.Nonce())
+
+		// New transaction is better than our worse ones, make room for it.
+		// Guarded: a multi-slot maxTx makes the count negative, which panics in Discard's make.
+		if count := pool.all.Slots() - int(pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll) + numSlots(tx); count > 0 {
+			drop := pool.priced.Discard(count, pool.locals)
+			for _, tx := range drop {
+				logger.Trace("Discarding freshly underpriced transaction", "hash", tx.Hash(), "price", tx.GasPrice())
+				underpricedTxCounter.Inc(1)
+				pool.removeTx(tx.Hash(), false)
+			}
 		}
 	}
 	// If the transaction is replacing an already pending one, do directly
