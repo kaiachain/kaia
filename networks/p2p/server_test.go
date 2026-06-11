@@ -524,6 +524,15 @@ func TestMinPhysicalConnections(t *testing.T) {
 	if got := minPhysicalConnections(common.PROXYNODE, rEN, rCN); got != rCN+1 {
 		t.Errorf("PN min (as EN) = %d, want %d", got, rCN+1)
 	}
+
+	// MinPhysicalConnections(Config) resolves unset reservations to the defaults...
+	if got := MinPhysicalConnections(Config{ConnectionType: common.CONSENSUSNODE}); got != rEN+1 {
+		t.Errorf("CN min with default reservation = %d, want %d", got, rEN+1)
+	}
+	// ...and honors explicit overrides (PROXYNODE resolves as EN).
+	if got := MinPhysicalConnections(Config{ConnectionType: common.PROXYNODE, ReservedCNForEN: 4}); got != 5 {
+		t.Errorf("PN min (as EN) with reserved 4 = %d, want 5", got)
+	}
 }
 
 func TestServerSetCNPeersReconcilesConnectedCNPeers(t *testing.T) {

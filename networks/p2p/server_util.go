@@ -47,6 +47,7 @@ const (
 // EffectiveConnType values. The reservation turns into accept caps:
 //   - other type (CN->EN, EN->CN): the reserved number
 //   - same type  (CN->CN, EN->EN): maxconnections minus the reservation
+//
 // ok=false means "no per-type cap" — only maxconnections / inbound limits apply.
 func peerTargetFor(selfType, peerType common.ConnType, maxPhys, reservedENForCN, reservedCNForEN int) (target int, ok bool) {
 	switch selfType {
@@ -79,6 +80,29 @@ func minPhysicalConnections(selfType common.ConnType, reservedENForCN, reservedC
 		return reservedCNForEN + 1
 	}
 	return 1
+}
+
+// effectiveReservedENForCN and effectiveReservedCNForEN resolve a configured
+// cross-type reservation, falling back to the package default when unset (<= 0).
+func effectiveReservedENForCN(v int) int {
+	if v > 0 {
+		return v
+	}
+	return defaultReservedENForCN
+}
+
+func effectiveReservedCNForEN(v int) int {
+	if v > 0 {
+		return v
+	}
+	return defaultReservedCNForEN
+}
+
+// MinPhysicalConnections returns the smallest MaxPhysicalConnections a node of
+// cfg's connection type may use while still honoring its cross-type reservation.
+// Unset reservations fall back to the package defaults.
+func MinPhysicalConnections(cfg Config) int {
+	return minPhysicalConnections(cfg.ConnectionType, effectiveReservedENForCN(cfg.ReservedENForCN), effectiveReservedCNForEN(cfg.ReservedCNForEN))
 }
 
 type peerDrop struct {

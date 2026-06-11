@@ -194,6 +194,10 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	// Cross-type connection reservations (0 leaves the p2p defaults in effect).
 	cfg.ReservedENForCN = ctx.Int(ReservedENConnsFlag.Name)
 	cfg.ReservedCNForEN = ctx.Int(ReservedCNConnsFlag.Name)
+	if minConns := p2p.MinPhysicalConnections(*cfg); cfg.MaxPhysicalConnections < minConns {
+		logger.Crit("maxconnections is too low to reserve CN<->EN slots",
+			"maxconnections", cfg.MaxPhysicalConnections, "required", minConns, "nodetype", cfg.ConnectionType)
+	}
 
 	if ctx.IsSet(MaxPendingPeersFlag.Name) {
 		cfg.MaxPendingPeers = ctx.Int(MaxPendingPeersFlag.Name)

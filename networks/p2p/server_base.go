@@ -26,7 +26,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"errors"
-	"fmt"
 	"maps"
 	"net"
 	"slices"
@@ -193,10 +192,6 @@ func (srv *BaseServer) initialize() error {
 	if !srv.ConnectionType.Valid() {
 		return errors.New("Invalid connection type speficied")
 	}
-	if minConns := minPhysicalConnections(srv.ConnectionType, srv.reservedENForCN(), srv.reservedCNForEN()); srv.Config.MaxPhysicalConnections < minConns {
-		return fmt.Errorf("MaxPhysicalConnections (%d) too low for connection type %v: need >= %d to reserve CN<->EN slots",
-			srv.Config.MaxPhysicalConnections, srv.ConnectionType, minConns)
-	}
 	if srv.newTransport == nil {
 		srv.newTransport = newRLPX
 	}
@@ -312,17 +307,11 @@ func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, inbou
 // reservedENForCN and reservedCNForEN resolve the node's cross-type reservation,
 // falling back to the package defaults when unset (Config value 0).
 func (srv *BaseServer) reservedENForCN() int {
-	if srv.Config.ReservedENForCN > 0 {
-		return srv.Config.ReservedENForCN
-	}
-	return defaultReservedENForCN
+	return effectiveReservedENForCN(srv.Config.ReservedENForCN)
 }
 
 func (srv *BaseServer) reservedCNForEN() int {
-	if srv.Config.ReservedCNForEN > 0 {
-		return srv.Config.ReservedCNForEN
-	}
-	return defaultReservedCNForEN
+	return effectiveReservedCNForEN(srv.Config.ReservedCNForEN)
 }
 
 func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *conn) bool {
