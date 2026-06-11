@@ -742,7 +742,7 @@ func TestHandleBidMsg(t *testing.T) {
 
 	msg := generateMsg(t, BidMsg, testBid)
 
-	mockPeer.EXPECT().GetVersion().Return(kaia63).Times(9)
+	mockPeer.EXPECT().GetVersion().Return(kaia63).Times(11)
 	assert.Error(t, pm.handleMsg(mockPeer, addrs[0], msg), "should return error when protocol version is not kaia66")
 
 	mockPeer.EXPECT().GetVersion().Return(kaia66).AnyTimes()

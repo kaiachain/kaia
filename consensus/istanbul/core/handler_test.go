@@ -556,6 +556,64 @@ func TestCore_handlerMsg(t *testing.T) {
 	}
 }
 
+// TestCore_postPrepreparedEvent asserts the core posts a PrepreparedEvent when it
+// accepts a PRE-PREPARE in handlePreprepare. This is the sole emission site; the
+// proposer reaches it via the backend's self-broadcast loopback, like any receiver.
+func TestCore_postPrepreparedEvent(t *testing.T) {
+	fork.SetHardForkBlockNumberConfig(&params.ChainConfig{})
+	defer fork.ClearHardForkBlockNumberConfig()
+
+	validatorAddrs, validatorKeyMap := genValidators(10)
+	mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs)
+	defer mockCtrl.Finish()
+
+	istConfig := istanbul.DefaultConfig.Copy()
+	istConfig.ProposerPolicy = istanbul.WeightedRandom
+	istCore := New(mockBackend, istConfig).(*core)
+	istCore.RegisterKaiaxModules(mockValset, mockGov)
+	if err := istCore.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer istCore.Stop()
+
+	lastProposal, _ := mockBackend.LastProposal()
+	lastBlock := lastProposal.(*types.Block)
+	wantSeq := lastBlock.NumberU64() + 1
+	committeeSize := uint64(len(validatorAddrs) / 3)
+	_, _, proposer, _ := getTestCommitteeState(validatorAddrs, committeeSize, wantSeq, 0)
+	proposerKey := validatorKeyMap[proposer]
+
+	sub := mockBackend.EventMux().Subscribe(istanbul.PrepreparedEvent{})
+	defer sub.Unsubscribe()
+
+	// event.TypeMux uses an unbuffered channel, so handleMsg's synchronous Post blocks
+	// until a reader is present; start the reader before triggering.
+	out := make(chan istanbul.PrepreparedEvent, 1)
+	go func() {
+		if ev := <-sub.Chan(); ev != nil {
+			if pe, ok := ev.Data.(istanbul.PrepreparedEvent); ok {
+				out <- pe
+			}
+		}
+	}()
+
+	proposal, err := genBlock(lastBlock, proposerKey)
+	require.NoError(t, err)
+	istanbulMsg, err := genIstanbulMsg(bft.MsgPreprepare, lastBlock.Hash(), proposal, proposer, proposerKey)
+	require.NoError(t, err)
+	require.NoError(t, istCore.handleMsg(istanbulMsg.Payload))
+
+	select {
+	case pe := <-out:
+		require.NotNil(t, pe.Block)
+		assert.Equal(t, proposal.Hash(), pe.Block.Hash())
+		assert.Equal(t, wantSeq, pe.View.Sequence.Uint64())
+		assert.Equal(t, uint64(0), pe.View.Round.Uint64())
+	case <-time.After(3 * time.Second):
+		t.Fatal("expected PrepreparedEvent from handlePreprepare was not posted")
+	}
+}
+
 // TODO-Kaia: To enable logging in the test code, we can use the following function.
 // This function will be moved to somewhere utility functions are located.
 func enableLog() {

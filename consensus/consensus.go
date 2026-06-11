@@ -30,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -120,6 +121,10 @@ type Sealer interface {
 type Engine interface {
 	// RegisterKaiaxModules wires kaiax modules to the consensus engine.
 	RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule)
+
+	// RegisterVRankModule wires the VRank module so the engine relays accepted
+	// PRE-PREPAREs into it. Engines without VRank support implement this as a no-op.
+	RegisterVRankModule(mVRank vrank.VRankModule)
 
 	// Start starts any consensus-specific background lifecycle.
 	// Engines without a background runtime should implement this as a no-op.

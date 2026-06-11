@@ -206,6 +206,7 @@ func (ctx *TransitionContext) applyEpochTransition(m valset.NodeMap) valset.Node
 			if ctx.isPassVrankTest(addr) {
 				competeOrDemote(addr, val)
 			} else {
+				logger.Trace("VRank test failed: CandTesting → Registered", "addr", addr, "cfs", ctx.CFS[addr], "cfsThreshold", ctx.CfsThreshold)
 				val.State = valset.Registered // T2
 			}
 		case valset.ValReady, valset.ValActive, valset.ValPaused:

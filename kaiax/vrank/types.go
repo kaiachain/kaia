@@ -69,19 +69,13 @@ func (m CPMatrix) ProposerCount() int {
 }
 
 const (
-	VRankPreprepareMsg = 0x17
-	VRankCandidateMsg  = 0x18
-)
-
-const (
 	// MaxRound is the maximum allowed consensus round per block (range [0, MaxRound]).
 	MaxRound = 10
 )
 
 type VRankBroadcastEvent struct {
 	Targets []common.Address
-	Code    int // VRankPreprepareMsg or VRankCandidateMsg
-	Msg     any // VRankPreprepare or VRankCandidate
+	Msg     any // *VRankPreprepare or *VRankCandidate; node/cn routes on the type
 }
 
 type VRankPreprepare struct {

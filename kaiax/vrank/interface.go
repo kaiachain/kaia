@@ -64,3 +64,9 @@ type VRankModule interface {
 
 	SubscribeVRank(sink chan<- *VRankBroadcastEvent) event.Subscription
 }
+
+// VRankModuleHost is implemented by the protocol manager to accept the VRank
+// module for p2p send/receive of VRank messages.
+type VRankModuleHost interface {
+	RegisterVRankModule(module VRankModule)
+}

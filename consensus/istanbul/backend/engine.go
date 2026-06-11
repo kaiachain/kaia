@@ -200,7 +200,9 @@ func (sb *backend) Start(chain consensus.ChainReader, executor consensus.Executo
 	sb.SetChain(chain)
 	sb.executor = executor
 
+	sb.startPrepreparedRelay()
 	if err := sb.core.Start(); err != nil {
+		sb.stopPrepreparedRelay()
 		return err
 	}
 
@@ -224,6 +226,7 @@ func (sb *backend) Stop() error {
 		sb.commitCh = nil
 	}
 	sb.sealMu.Unlock()
+	sb.stopPrepreparedRelay()
 	if err := sb.core.Stop(); err != nil {
 		return err
 	}

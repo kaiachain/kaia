@@ -41,6 +41,7 @@ import (
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/log"
 )
 
@@ -116,6 +117,13 @@ type backend struct {
 	// Reference to the kaiax modules
 	valsetModule valset.ValsetModule
 	sealer       *istanbul.IstanbulSealer
+
+	// VRank consensus-participation collection: accepted PRE-PREPAREs are relayed
+	// to the VRank module off the consensus hot path. nil until RegisterVRankModule.
+	vrankModule       vrank.VRankModule
+	prepreparedSub    *event.TypeMuxSubscription
+	prepreparedStopCh chan struct{}
+	prepreparedWg     sync.WaitGroup
 
 	// Node type
 	nodetype common.ConnType

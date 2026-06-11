@@ -30,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/event"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/valset"
+	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/networks/p2p"
 	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
@@ -129,6 +130,9 @@ func (f *Faker) Sealer() consensus.Sealer { return f }
 
 // RegisterKaiaxModules is a no-op for faker.
 func (f *Faker) RegisterKaiaxModules(mGov gov.GovModule, mValset valset.ValsetModule) {}
+
+// RegisterVRankModule is a no-op for faker.
+func (f *Faker) RegisterVRankModule(mVRank vrank.VRankModule) {}
 
 func (f *Faker) SigHash(_ *types.Header) common.Hash {
 	return common.Hash{}

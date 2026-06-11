@@ -45,6 +45,7 @@ const (
 	kaia65 = 65
 	kaia66 = 66
 	kaia67 = 67
+	kaia68 = 68
 )
 
 // Protocol defines the P2P protocol metadata used during capability negotiation.
@@ -60,8 +61,8 @@ type Protocol struct {
 // ConsensusProtocol is the P2P protocol used by BFT consensus nodes.
 var ConsensusProtocol = Protocol{
 	Name:     "istanbul",
-	Versions: []uint{kaia67, kaia66, kaia65, kaia64},
-	Lengths:  []uint64{26, 24, 23, 21},
+	Versions: []uint{kaia68, kaia67, kaia66, kaia65, kaia64},
+	Lengths:  []uint64{28, 26, 24, 23, 21},
 }
 
 const ProtocolMaxMsgSize = 12 * 1024 * 1024 // Maximum cap on the size of a protocol message
@@ -104,7 +105,11 @@ const (
 	BlobSidecarsRequestMsg = 0x15
 	BlobSidecarsMsg        = 0x16
 
-	MsgCodeEnd = 0x17
+	// Protocol messages belonging to kaia/68
+	VRankPreprepareMsg = 0x17
+	VRankCandidateMsg  = 0x18
+
+	MsgCodeEnd = 0x19
 )
 
 type errCode int
