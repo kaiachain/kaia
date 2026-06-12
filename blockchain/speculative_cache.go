@@ -165,6 +165,23 @@ func (c *SpeculativeResultCache) TryGet(hash common.Hash, timeout time.Duration)
 	return e.result
 }
 
+// HasUsable reports whether an entry for hash is in flight or completed
+// successfully, i.e. re-Reserving it would discard useful work.
+func (c *SpeculativeResultCache) HasUsable(hash common.Hash) bool {
+	c.mu.Lock()
+	e := c.entry
+	c.mu.Unlock()
+	if e == nil || e.blockHash != hash {
+		return false
+	}
+	select {
+	case <-e.done:
+		return e.err == nil
+	default:
+		return true // in flight
+	}
+}
+
 // Clear removes the current entry. Safe to call when no entry exists.
 func (c *SpeculativeResultCache) Clear() {
 	c.mu.Lock()

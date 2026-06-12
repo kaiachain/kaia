@@ -568,20 +568,37 @@ func (b *backend) cleanupSealState(ch chan *types.Result) {
 // Verify, Commit, Broadcast — called from the state machine
 // ---------------------------------------------------------------------------
 
+// verify runs every proposal check: the cheap pre-work rules, then the header
+// validation. handlePreprepare calls the two halves separately so speculative
+// execution can start in between.
 func (b *backend) verify(proposal bft.Proposal) (time.Duration, error) {
+	if err := b.verifyPrework(proposal); err != nil {
+		return 0, err
+	}
+	return b.verifyHeader(proposal)
+}
+
+// verifyPrework rejects a blacklisted or body-invalid proposal. It is cheap and
+// stateless (no execution), so it runs before speculative execution starts.
+func (b *backend) verifyPrework(proposal bft.Proposal) error {
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		return errors.New("kaiabft: invalid proposal type")
+	}
+	if b.chain.HasBadBlock(block.Hash()) {
+		return blockchain.ErrBlacklistedHash
+	}
+	return b.verifyBody(block)
+}
+
+// verifyHeader verifies the header of the proposed block. The proposal entry
+// point skips the committed-seal rules by construction, so every other rule is
+// enforced here and any failure rejects the proposal.
+func (b *backend) verifyHeader(proposal bft.Proposal) (time.Duration, error) {
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		return 0, errors.New("kaiabft: invalid proposal type")
 	}
-	if b.chain.HasBadBlock(block.Hash()) {
-		return 0, blockchain.ErrBlacklistedHash
-	}
-	if err := b.verifyBody(block); err != nil {
-		return 0, err
-	}
-	// Verify the header of the proposed block. The proposal entry point skips the
-	// committed-seal rules by construction, so every other rule is enforced here and
-	// any failure rejects the proposal.
 	err := b.chain.ValidateProposalHeader(block.Header())
 	if err == nil {
 		return 0, nil
@@ -805,6 +822,13 @@ func (b *backend) startSpeculativeExecution(proposal bft.Proposal) {
 		return
 	}
 
+	blockHash := block.Hash()
+	// Re-entry for the same proposal (e.g. future-block retry) keeps the
+	// in-flight or completed execution instead of restarting it.
+	if b.specCache.HasUsable(blockHash) {
+		return
+	}
+
 	b.specMu.Lock()
 	if b.specCancel != nil {
 		b.specCancel()
@@ -813,13 +837,9 @@ func (b *backend) startSpeculativeExecution(proposal bft.Proposal) {
 	b.specCancel = cancel
 	b.specMu.Unlock()
 
-	blockHash := block.Hash()
 	entry := b.specCache.Reserve(blockHash)
 
-	// Adopt pool-known senders; kick async ecrecover for the rest.
 	signer := types.MakeSigner(b.chain.Config(), block.Number())
-	blockchain.WarmSenders(signer, block, b.chain.TxLookup())
-
 	executor := b.executor.Clone()
 
 	parentHeader := b.chain.GetHeader(block.ParentHash(), block.NumberU64()-1)
@@ -828,6 +848,10 @@ func (b *backend) startSpeculativeExecution(proposal bft.Proposal) {
 		cancel()
 		return
 	}
+
+	// Adopt pool-known senders; kick async ecrecover for the rest. Runs
+	// synchronously so execution and prefetch always see warmed senders.
+	blockchain.WarmSenders(signer, block, b.chain.TxLookup())
 
 	// Warm trie-node cache for spec-exec; ctx ties prefetch to this round.
 	b.specWg.Add(1)
