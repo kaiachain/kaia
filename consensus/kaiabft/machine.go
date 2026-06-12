@@ -297,13 +297,22 @@ func (m *machine) handlePreprepare(msg *bft.Message, src common.Address) error {
 		return errNotFromProposer
 	}
 
+	// Start speculative execution before verify so the tx-root derivation
+	// below overlaps execution; the result is consumed only after the full
+	// InsertChain validation.
+	if m.state == stateAcceptRequest && !m.isHashLocked() && !m.isProposer() {
+		m.b.startSpeculativeExecution(pp.Proposal)
+	}
+
 	if duration, err := m.b.verify(pp.Proposal); err != nil {
 		if err == consensus.ErrFutureBlock {
+			// Keep the in-flight execution; the retry reuses it.
 			m.stopFuturePreprepareTimer()
 			m.futurePreprepareTimer = time.AfterFunc(duration, func() {
 				m.b.eventMux.Post(backlogEvent{src: src, msg: msg, Hash: msg.Hash})
 			})
 		} else {
+			m.b.cancelSpeculativeExecution()
 			m.sendNextRoundChange("handlePreprepare: verification failure")
 		}
 		return err
@@ -330,10 +339,6 @@ func (m *machine) handlePreprepare(msg *bft.Message, src common.Address) error {
 		} else {
 			logger.Debug("Accepted preprepare, moving to Preprepared",
 				"seq", m.sequence, "round", m.round, "from", src, "hash", pp.Proposal.Hash())
-			// Speculative execution (kaiabft-specific).
-			if !m.isProposer() {
-				m.b.startSpeculativeExecution(pp.Proposal)
-			}
 
 			// Accept preprepare and move to Preprepared state
 			m.acceptPreprepare(pp)
