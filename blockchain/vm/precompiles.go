@@ -180,8 +180,17 @@ var (
 	PrecompiledAddressOsaka       []common.Address
 	PrecompiledAddressPrague      []common.Address
 	PrecompiledAddressCancun      []common.Address
+	PrecompiledAddressKore        []common.Address
 	PrecompiledAddressIstanbul    []common.Address
 	PrecompiledAddressesByzantium []common.Address
+
+	// Per-fork address lists with the vmversion0 compatibility addresses
+	// appended, prebuilt so ActivePrecompiles avoids a per-call map walk.
+	activeAddressesOsaka    []common.Address
+	activeAddressesPrague   []common.Address
+	activeAddressesCancun   []common.Address
+	activeAddressesKore     []common.Address
+	activeAddressesIstanbul []common.Address
 )
 
 func init() {
@@ -190,6 +199,9 @@ func init() {
 	}
 	for k := range PrecompiledContractsIstanbul {
 		PrecompiledAddressIstanbul = append(PrecompiledAddressIstanbul, k)
+	}
+	for k := range PrecompiledContractsKore {
+		PrecompiledAddressKore = append(PrecompiledAddressKore, k)
 	}
 	for k := range PrecompiledContractsCancun {
 		PrecompiledAddressCancun = append(PrecompiledAddressCancun, k)
@@ -200,24 +212,37 @@ func init() {
 	for k := range PrecompiledContractsOsaka {
 		PrecompiledAddressOsaka = append(PrecompiledAddressOsaka, k)
 	}
+
+	vmVersion0Compat := []common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}
+	withCompat := func(addrs []common.Address) []common.Address {
+		return append(append(make([]common.Address, 0, len(addrs)+2), addrs...), vmVersion0Compat...)
+	}
+	activeAddressesOsaka = withCompat(PrecompiledAddressOsaka)
+	activeAddressesPrague = withCompat(PrecompiledAddressPrague)
+	activeAddressesCancun = withCompat(PrecompiledAddressCancun)
+	activeAddressesKore = withCompat(PrecompiledAddressKore)
+	activeAddressesIstanbul = withCompat(PrecompiledAddressIstanbul)
 }
 
 // ActivePrecompiles returns the precompiles enabled with the current configuration.
 // This is a variable so that it can be overridden in tests (e.g. EEST) to exclude
 // the vmversion0 compatibility addresses from the access list.
 var ActivePrecompiles = func(rules params.Rules) []common.Address {
-	var precompiledContractAddrs []common.Address
-	for addr := range ActivePrecompiledContracts(rules) {
-		precompiledContractAddrs = append(precompiledContractAddrs, addr)
-	}
-	// After istanbulCompatible hf, need to support for vmversion0 contracts, too.
-	// VmVersion0 contracts are deployed before istanbulCompatible and they use byzantiumCompatible precompiled contracts.
-	// VmVersion0 contracts are the contracts deployed before istanbulCompatible hf.
-	if rules.IsIstanbul {
-		return append(precompiledContractAddrs,
-			[]common.Address{common.BytesToAddress([]byte{10}), common.BytesToAddress([]byte{11})}...)
-	} else {
-		return precompiledContractAddrs
+	// Prebuilt per-fork slices; the >=istanbul ones carry the vmversion0
+	// compatibility addresses appended at init. Callers must not mutate.
+	switch {
+	case rules.IsOsaka:
+		return activeAddressesOsaka
+	case rules.IsPrague:
+		return activeAddressesPrague
+	case rules.IsCancun:
+		return activeAddressesCancun
+	case rules.IsKore:
+		return activeAddressesKore
+	case rules.IsIstanbul:
+		return activeAddressesIstanbul
+	default:
+		return PrecompiledAddressesByzantium
 	}
 }
 
