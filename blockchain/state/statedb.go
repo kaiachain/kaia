@@ -1266,31 +1266,35 @@ func (s *StateDB) GetContractStorageRoot(contractAddr common.Address) (common.Ex
 // Potential EIPs:
 // - Reset transient storage(1153)
 func (s *StateDB) Prepare(rules params.Rules, sender, feepayer, coinbase common.Address, dst *common.Address, precompiles []common.Address, list types.AccessList) {
+	// The initial population below bypasses the journal: the list is rebuilt
+	// wholesale here on every transaction and is never read between a cross-
+	// Prepare revert and the next Prepare, so the entries need no undo.
 	if rules.IsKore {
 		// Clear out any leftover from previous executions
-		s.accessList = newAccessList()
+		al := newAccessList()
+		s.accessList = al
 
-		s.AddAddressToAccessList(sender)
+		al.AddAddress(sender)
 		if !common.EmptyAddress(feepayer) {
-			s.AddAddressToAccessList(feepayer)
+			al.AddAddress(feepayer)
 		}
 		if dst != nil {
-			s.AddAddressToAccessList(*dst)
+			al.AddAddress(*dst)
 			// If it's a create-tx, the destination will be added inside evm.create
 		}
 		for _, addr := range precompiles {
-			s.AddAddressToAccessList(addr)
+			al.AddAddress(addr)
 		}
 	}
 	if rules.IsShanghai {
-		s.AddAddressToAccessList(coinbase)
+		s.accessList.AddAddress(coinbase)
 	}
 	if rules.IsCancun {
 		// Optional accessList is the accessList mentioned through tx args.
 		for _, el := range list {
-			s.AddAddressToAccessList(el.Address)
+			s.accessList.AddAddress(el.Address)
 			for _, key := range el.StorageKeys {
-				s.AddSlotToAccessList(el.Address, key)
+				s.accessList.AddSlot(el.Address, key)
 			}
 		}
 	}
