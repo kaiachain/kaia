@@ -244,6 +244,30 @@ func NewBlock(header *Header, txs []*Transaction, receipts []*Receipt) *Block {
 	return b
 }
 
+// NewBlockWithRoots is NewBlock with txRoot/receiptRoot/bloom precomputed by
+// the caller (e.g. concurrently with state-root hashing). The given values are
+// only used for the non-empty cases, mirroring NewBlock exactly.
+func NewBlockWithRoots(header *Header, txs []*Transaction, receipts []*Receipt, txRoot, receiptRoot common.Hash, bloom Bloom) *Block {
+	b := &Block{header: CopyHeader(header), td: new(big.Int)}
+
+	if len(txs) == 0 {
+		b.header.TxHash = GetEmptyRootHash(header.Number)
+	} else {
+		b.header.TxHash = txRoot
+		b.transactions = make(Transactions, len(txs))
+		copy(b.transactions, txs)
+	}
+
+	if len(receipts) == 0 {
+		b.header.ReceiptHash = GetEmptyRootHash(header.Number)
+	} else {
+		b.header.ReceiptHash = receiptRoot
+		b.header.Bloom = bloom
+	}
+
+	return b
+}
+
 // NewBlockWithHeader creates a block with the given header data. The
 // header data is copied, changes to header and to the field values
 // will not affect the block.

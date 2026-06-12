@@ -35,6 +35,69 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestNewBlockWithRootsMatchesNewBlock guards the consensus-critical invariant
+// that NewBlockWithRoots (fed precomputed roots) produces a header byte-identical
+// to NewBlock for every empty/non-empty combination of txs and receipts.
+func TestNewBlockWithRootsMatchesNewBlock(t *testing.T) {
+	// Stub the derivesha hooks (normally wired by the derivesha subpackage);
+	// both constructors use the same pointers, so equivalence still holds.
+	oldDerive, oldEmpty := DeriveShaImpl, GetEmptyRootHash
+	DeriveShaImpl = func(list DerivableList, num *big.Int) common.Hash {
+		return common.Hash{0x01, byte(list.Len())}
+	}
+	GetEmptyRootHash = func(num *big.Int) common.Hash { return common.Hash{0x02} }
+	defer func() { DeriveShaImpl, GetEmptyRootHash = oldDerive, oldEmpty }()
+
+	num := big.NewInt(7)
+	mkTxs := func(n int) Transactions {
+		txs := make(Transactions, n)
+		for i := 0; i < n; i++ {
+			txs[i], _ = NewTransactionWithMap(TxTypeValueTransfer, map[TxValueKeyType]interface{}{
+				TxValueKeyNonce:    uint64(i),
+				TxValueKeyTo:       common.Address{byte(i + 1)},
+				TxValueKeyAmount:   big.NewInt(1),
+				TxValueKeyGasLimit: uint64(21000),
+				TxValueKeyGasPrice: big.NewInt(1),
+				TxValueKeyFrom:     common.Address{0xaa},
+			})
+		}
+		return txs
+	}
+	mkReceipts := func(n int) Receipts {
+		rs := make(Receipts, n)
+		for i := 0; i < n; i++ {
+			rs[i] = NewReceipt(ReceiptStatusSuccessful, common.Hash{byte(i)}, 21000)
+		}
+		return rs
+	}
+
+	for _, tc := range []struct{ nTx, nRcpt int }{{0, 0}, {3, 0}, {0, 3}, {3, 3}} {
+		txs, receipts := mkTxs(tc.nTx), mkReceipts(tc.nRcpt)
+		h := &Header{Number: num}
+		want := NewBlock(h, txs, receipts)
+
+		var txRoot, receiptRoot common.Hash
+		var bloom Bloom
+		if tc.nTx > 0 {
+			txRoot = DeriveTransactionsRoot(txs, num)
+		}
+		if tc.nRcpt > 0 {
+			receiptRoot = DeriveReceiptsRoot(receipts, num)
+			bloom = CreateBloom(receipts)
+		}
+		got := NewBlockWithRoots(&Header{Number: num}, txs, receipts, txRoot, receiptRoot, bloom)
+
+		if got.Hash() != want.Hash() {
+			t.Fatalf("nTx=%d nRcpt=%d: block hash mismatch", tc.nTx, tc.nRcpt)
+		}
+		if got.Header().TxHash != want.Header().TxHash ||
+			got.Header().ReceiptHash != want.Header().ReceiptHash ||
+			got.Header().Bloom != want.Header().Bloom {
+			t.Fatalf("nTx=%d nRcpt=%d: header root/bloom mismatch", tc.nTx, tc.nRcpt)
+		}
+	}
+}
+
 type testBlockEncodingTC struct {
 	encoded    string   // RLP encoded block; debug.getBlockRlp(num)
 	header     *Header  // expected header fields

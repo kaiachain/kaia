@@ -25,6 +25,7 @@ package blockchain
 import (
 	"context"
 	"errors"
+	"math/big"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -100,8 +101,9 @@ func (p *StateProcessor) Process(ctx context.Context, block *types.Block, stated
 	}
 	processStats.AfterApplyTxs = time.Now()
 
-	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
-	if _, err := p.FinalizeState(header, statedb, block.Transactions(), receipts); err != nil {
+	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards).
+	// Block assembly is skipped: insertion/speculative paths never use the assembled block.
+	if err := p.finalizeStateRoot(header, statedb, block.Transactions(), receipts); err != nil {
 		return nil, nil, 0, nil, processStats, err
 	}
 	processStats.AfterFinalize = time.Now()
@@ -130,27 +132,64 @@ func (p *StateProcessor) RegisterBlockStateModule(modules ...kaiax.BlockStateMod
 
 // FinalizeState runs post-transaction state modifications and assembles final block.
 func (p *StateProcessor) FinalizeState(header *types.Header, statedb *state.StateDB, txs []*types.Transaction, receipts types.Receipts) (*types.Block, error) {
+	if err := p.finalizeStateModules(header, statedb, txs, receipts); err != nil {
+		return nil, err
+	}
+
+	// Derive roots/bloom concurrently with state-root hashing; txs/receipts are
+	// immutable here. number is passed in so the goroutine never reads header,
+	// whose Root field IntermediateRoot writes concurrently.
+	var (
+		txRoot, receiptRoot common.Hash
+		bloom               types.Bloom
+		derived             = make(chan struct{})
+	)
+	go func(number *big.Int) {
+		defer close(derived)
+		if len(txs) > 0 {
+			txRoot = types.DeriveTransactionsRoot(txs, number)
+		}
+		if len(receipts) > 0 {
+			receiptRoot = types.DeriveReceiptsRoot(receipts, number)
+			bloom = types.CreateBloom(receipts)
+		}
+	}(header.Number)
+
+	header.Root = statedb.IntermediateRoot(true)
+	<-derived
+
+	// Assemble and return the final block for sealing
+	return types.NewBlockWithRoots(header, txs, receipts, txRoot, receiptRoot, bloom), nil
+}
+
+// finalizeStateRoot is FinalizeState without block assembly, for callers that
+// only need the post-block state and header root (Process).
+func (p *StateProcessor) finalizeStateRoot(header *types.Header, statedb *state.StateDB, txs []*types.Transaction, receipts types.Receipts) error {
+	if err := p.finalizeStateModules(header, statedb, txs, receipts); err != nil {
+		return err
+	}
+	header.Root = statedb.IntermediateRoot(true)
+	return nil
+}
+
+func (p *StateProcessor) finalizeStateModules(header *types.Header, statedb *state.StateDB, txs []*types.Transaction, receipts types.Receipts) error {
 	// We can assure that if the magma hard forked block should have the field of base fee
 	if p.config.IsMagmaForkEnabled(header.Number) {
 		if header.BaseFee == nil {
 			logger.Error("Magma hard forked block should have baseFee", "blockNum", header.Number.Uint64())
-			return nil, errors.New("Invalid Magma block without baseFee")
+			return errors.New("Invalid Magma block without baseFee")
 		}
 	} else if header.BaseFee != nil {
 		logger.Error("A block before Magma hardfork shouldn't have baseFee", "blockNum", header.Number.Uint64())
-		return nil, ErrInvalidBaseFee
+		return ErrInvalidBaseFee
 	}
 
 	for _, module := range p.blockStateModules {
 		if err := module.FinalizeState(header, statedb, txs, receipts); err != nil {
-			return nil, err
+			return err
 		}
 	}
-
-	header.Root = statedb.IntermediateRoot(true)
-
-	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, receipts), nil
+	return nil
 }
 
 // ProcessParentBlockHash stores the parent block hash in the history storage contract
