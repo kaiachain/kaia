@@ -106,6 +106,7 @@ func (l *ipRateLimiter) allow(ip net.IP, now time.Time) bool {
 
 // evictIdle removes entries idle for longer than idleTTL. An idle entry's token
 // bucket is necessarily full, so dropping it loses no rate-limit state.
+// The caller must hold l.mu.
 func (l *ipRateLimiter) evictIdle(now time.Time) {
 	for k, e := range l.ips {
 		if now.Sub(e.lastSeen) > l.idleTTL {
@@ -115,7 +116,7 @@ func (l *ipRateLimiter) evictIdle(now time.Time) {
 }
 
 // evictOldest removes the single least-recently-seen entry to make room for a
-// new IP when the map is at capacity.
+// new IP when the map is at capacity. The caller must hold l.mu.
 func (l *ipRateLimiter) evictOldest() {
 	var (
 		oldestKey  string

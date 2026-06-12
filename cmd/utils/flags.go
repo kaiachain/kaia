@@ -1308,7 +1308,7 @@ var (
 	}
 	BNPingBurstFlag = &cli.IntFlag{
 		Name:     "bn.ping-burst",
-		Usage:    "Burst size for the bootstrap-node discovery ping rate limit (used only when bn.ping-ratelimit > 0)",
+		Usage:    "Burst size for the discovery PING rate limiter: the token-bucket capacity, i.e. the maximum number of pings allowed immediately from a full bucket before throttling. (used only when bn.ping-ratelimit > 0)",
 		Value:    10,
 		EnvVars:  []string{"KLAYTN_BN_PING_BURST", "KAIA_BN_PING_BURST"},
 		Category: "MISC",
