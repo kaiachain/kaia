@@ -242,8 +242,9 @@ func setDefaultDiscoverTypes(cfg *p2p.Config) {
 	if cfg.ConnectionType == common.CONSENSUSNODE {
 		cfg.DiscoverTypes.CN = true
 		cfg.DiscoverTypes.EN = true
-	} else { // PN is EN-equivalent under KIP-311.
+	} else {
 		cfg.DiscoverTypes.CN = true
+		cfg.DiscoverTypes.PN = true // required until all PNs are deprecated. TODO: remove PN
 		cfg.DiscoverTypes.EN = true
 	}
 }

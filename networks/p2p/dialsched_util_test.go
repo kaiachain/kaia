@@ -53,8 +53,8 @@ func TestTypedNodeSet_BasicOps(t *testing.T) {
 	set.add(n2)
 
 	assert.Equal(t, 2, set.len())
-	assert.Equal(t, 2, set.count(discover.NodeTypePN))
-	assert.Equal(t, 2, set.count(discover.NodeTypeEN))
+	assert.Equal(t, 1, set.count(discover.NodeTypePN))
+	assert.Equal(t, 1, set.count(discover.NodeTypeEN))
 	assert.Equal(t, 0, set.count(discover.NodeTypeCN))
 	assert.True(t, set.contains(n1.ID))
 	assert.True(t, set.contains(n2.ID))
@@ -67,7 +67,7 @@ func TestTypedNodeSet_BasicOps(t *testing.T) {
 	assert.True(t, hasNode(all, n2.ID))
 }
 
-func TestTypedNodeSet_CountTreatsPNAsEN(t *testing.T) {
+func TestTypedNodeSet_CountsPNAndENExactly(t *testing.T) {
 	set := newTypedNodeSet()
 	pn := typedSetNode(1, "10.0.0.1", discover.NodeTypePN)
 	en := typedSetNode(2, "10.0.0.2", discover.NodeTypeEN)
@@ -77,8 +77,8 @@ func TestTypedNodeSet_CountTreatsPNAsEN(t *testing.T) {
 	set.add(en)
 	set.add(cn)
 
-	assert.Equal(t, 2, set.count(discover.NodeTypePN))
-	assert.Equal(t, 2, set.count(discover.NodeTypeEN))
+	assert.Equal(t, 1, set.count(discover.NodeTypePN))
+	assert.Equal(t, 1, set.count(discover.NodeTypeEN))
 	assert.Equal(t, 1, set.count(discover.NodeTypeCN))
 }
 
@@ -119,16 +119,14 @@ func TestTypedNodeSet_RemoveNoopAndNilAdd(t *testing.T) {
 func TestDefaultConnTarget(t *testing.T) {
 	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 100, discover.NodeTypeEN: 1},
 		defaultConnTarget(DialConfig{selfType: discover.NodeTypeCN}))
-	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypeEN: 3},
+	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypePN: 2, discover.NodeTypeEN: 3},
 		defaultConnTarget(DialConfig{selfType: discover.NodeTypeEN}))
-	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypeEN: 3},
+	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypePN: 2, discover.NodeTypeEN: 3},
 		defaultConnTarget(DialConfig{selfType: discover.NodeTypePN}))
-
-	maxENToENDialTarget := 5
-	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypeEN: 5},
+	maxENToENDialTarget := 1
+	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypePN: 2, discover.NodeTypeEN: 1},
 		defaultConnTarget(DialConfig{selfType: discover.NodeTypeEN, maxENToENDialTarget: &maxENToENDialTarget}))
-
-	maxENToENDialTarget = 0
-	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypeEN: 0},
+	maxENToENDialTarget = 3
+	assert.Equal(t, map[discover.NodeType]int{discover.NodeTypeCN: 2, discover.NodeTypePN: 2, discover.NodeTypeEN: 3},
 		defaultConnTarget(DialConfig{selfType: discover.NodeTypeEN, maxENToENDialTarget: &maxENToENDialTarget}))
 }

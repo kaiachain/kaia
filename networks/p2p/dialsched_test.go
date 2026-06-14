@@ -169,7 +169,8 @@ func TestDialSched_OnPeerConnected(t *testing.T) {
 	assert.True(t, ds.connectedOutbound.contains(outbound.ID), "outbound peer should be counted as connected outbound")
 	assert.True(t, ds.connectedAll.contains(outbound.ID), "outbound peer should be counted as connected")
 	cands, _ = ds.getCandidates()
-	assert.Len(t, cands, 0, "expected no outbound candidate when outbound legacy PN fulfills EN target")
+	require.Len(t, cands, 1, "expected outbound PN not to fulfill exact EN target")
+	assert.Equal(t, candidate.ID, cands[0].ID)
 }
 
 // Correctly enforces discovery table refresh throttling.
@@ -360,7 +361,7 @@ func TestDialSched_GetCandidates_CNPeerAllowlistOnlyAppliesToCN(t *testing.T) {
 	assert.False(t, needRefresh)
 }
 
-func TestDialSched_GetCandidates_LegacyPNTargetUsesEffectiveEN(t *testing.T) {
+func TestDialSched_GetCandidates_PNTargetQueriesPN(t *testing.T) {
 	var (
 		pn  = testNode(201, "10.0.0.201", discover.NodeTypePN)
 		en  = testNode(202, "10.0.0.202", discover.NodeTypeEN)
@@ -379,8 +380,8 @@ func TestDialSched_GetCandidates_LegacyPNTargetUsesEffectiveEN(t *testing.T) {
 
 	cands, needRefresh := ds.getCandidates()
 
-	assert.True(t, hasNodeID(cands, en.ID), "legacy PN target should include EN candidates")
-	assert.False(t, hasNodeID(cands, pn.ID), "legacy PN target should not query PN candidates")
+	assert.True(t, hasNodeID(cands, pn.ID), "PN target should include PN candidates")
+	assert.False(t, hasNodeID(cands, en.ID), "PN target should not query EN candidates")
 	assert.False(t, needRefresh)
 }
 

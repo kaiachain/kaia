@@ -145,7 +145,23 @@ func getDiscoverTargets(cfg *Config) map[NodeType]int {
 	if len(targets) == 0 {
 		logger.Error("Unsupported node type", "NodeType", cfg.NodeType)
 	}
-	return cloneNodeTypeTargets(targets)
+	targets = cloneNodeTypeTargets(targets)
+
+	// An all-false DiscoverTypesConfig means "not configured" for callers that
+	// construct discovery.Config directly. CLI auto/default paths populate it.
+	if !cfg.DiscoverTypes.CN && !cfg.DiscoverTypes.PN && !cfg.DiscoverTypes.EN {
+		return targets
+	}
+	if !cfg.DiscoverTypes.CN {
+		delete(targets, NodeTypeCN)
+	}
+	if !cfg.DiscoverTypes.PN {
+		delete(targets, NodeTypePN)
+	}
+	if !cfg.DiscoverTypes.EN {
+		delete(targets, NodeTypeEN)
+	}
+	return targets
 }
 
 // Filter bootnodes to be used as initial seeds.
