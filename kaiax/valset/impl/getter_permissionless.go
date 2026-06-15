@@ -58,15 +58,6 @@ func (v *ValsetModule) getQualifiedValidators(num uint64) (*valset.AddressSet, e
 	return valset.NewAddressSet(committee.Addresses()), nil
 }
 
-// getCommittee: committee: qualified = {VA} − suspended
-func (v *ValsetModule) getCommittee(num uint64) ([]common.Address, error) {
-	qualified, err := v.getQualifiedValidators(num)
-	if err != nil {
-		return nil, err
-	}
-	return qualified.List(), nil
-}
-
 // getDemoted: demoted = council − qualified = {VP} ∪ {Suspended}.
 func (v *ValsetModule) getDemoted(num uint64) ([]common.Address, error) {
 	nodes, err := v.getNodes(num)

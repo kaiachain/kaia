@@ -47,16 +47,30 @@ func (v *ValsetModule) GetDemotedValidators(num uint64) ([]common.Address, error
 	return demoted.List(), nil
 }
 
-func (v *ValsetModule) GetQualifiedValidators(num uint64) ([]common.Address, error) {
-	var (
-		qualified *valset.AddressSet
-		err       error
-	)
-	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		qualified, err = v.getQualifiedValidators(num)
-	} else {
-		qualified, err = v.getQualifiedPermissioned(num)
+// qualifiedFromHeaderOrState returns the qualified validator set for block `num`.
+//
+// Post-fork, a canonical header already carries the verified validator set (== the
+// committee in permissionless), so we read it from the header to avoid a state trie
+// lookup that fails with "missing trie node" on pruned blocks. We compute from state
+// instead when pre-fork, or when the header isn't available yet (block being
+// produced) or unparsable.
+//
+// Safe: VerifyHeader independently rechecks the header against state-computed
+// qualified validators, so the header we trust here is already validated.
+func (v *ValsetModule) qualifiedFromHeaderOrState(num uint64) (*valset.AddressSet, error) {
+	if !v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
+		return v.getQualifiedPermissioned(num)
 	}
+	if header := v.Chain.GetHeaderByNumber(num); header != nil {
+		if vals, err := v.Chain.Sealer().Validators(header); err == nil {
+			return valset.NewAddressSet(vals), nil
+		}
+	}
+	return v.getQualifiedValidators(num)
+}
+
+func (v *ValsetModule) GetQualifiedValidators(num uint64) ([]common.Address, error) {
+	qualified, err := v.qualifiedFromHeaderOrState(num)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +83,13 @@ func (v *ValsetModule) GetCommittee(num uint64, round uint64) ([]common.Address,
 		return v.GetCouncil(0)
 	}
 	if v.Chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num)) {
-		return v.getCommittee(num)
+		// Permissionless committee == qualified validators (no round-based
+		// subselection), so serve it from the header when available.
+		qualified, err := v.qualifiedFromHeaderOrState(num)
+		if err != nil {
+			return nil, err
+		}
+		return qualified.List(), nil
 	}
 
 	// TODO-kaiax: Sync blockContext
