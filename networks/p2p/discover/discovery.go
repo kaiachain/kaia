@@ -61,6 +61,12 @@ type Config struct {
 
 	// DiscoverNodetype is list of node type to enable discovery.
 	DiscoverTypes DiscoverTypesConfig
+
+	// PingRateLimit, when > 0, enables a per-source-IP discovery-ping rate limit
+	// (in pings/sec) on bootstrap nodes; 0 disables it. PingBurst is the
+	// token-bucket burst size (default applied when <= 0).
+	PingRateLimit float64
+	PingBurst     int
 }
 
 // discovery2 combines a UDP transport and a Table2 into a Discovery2 implementation.

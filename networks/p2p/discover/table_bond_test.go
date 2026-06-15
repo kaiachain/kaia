@@ -40,7 +40,7 @@ func Test_Table_revalidateOnce_success(t *testing.T) {
 	// Node is still in storage (bumped to front on success).
 	assert.Equal(t, 1, s.len())
 	// Bond time is updated in the database.
-	assert.True(t, tab.db.hasBond(n.ID), "bondTime should be recent after successful revalidation")
+	assert.True(t, tab.db.hasBond(n.ID, n.IP), "bondTime should be recent after successful revalidation")
 	assert.Equal(t, int32(1), udp.pingCnt.Load())
 }
 
@@ -151,9 +151,9 @@ func Test_Table_Bond_happy(t *testing.T) {
 	// Node should be added to the EN storage.
 	assert.Equal(t, 1, tab.storages[NodeTypeEN].len(), "node should appear in EN storage")
 	// DB should reflect successful bonding.
-	assert.True(t, tab.db.hasBond(n.ID), "DB bond time should be set")
+	assert.True(t, tab.db.hasBond(n.ID, n.IP), "DB bond time should be set")
 	assert.NotNil(t, tab.db.node(n.ID), "DB should store the node")
-	assert.Equal(t, 0, tab.db.findFails(n.ID), "DB find failures should be 0")
+	assert.Equal(t, 0, tab.db.findFails(n.ID, n.IP), "DB find failures should be 0")
 	assert.Equal(t, int32(1), udp.pingCnt.Load())
 }
 
@@ -222,8 +222,8 @@ func Test_Table_Bond_recentlyBonded(t *testing.T) {
 
 	// canAssumeBonded requires node to be stored in DB too.
 	require.NotNil(t, tab.db.node(n.ID))
-	require.True(t, tab.db.hasBond(n.ID))
-	require.Equal(t, 0, tab.db.findFails(n.ID))
+	require.True(t, tab.db.hasBond(n.ID, n.IP))
+	require.Equal(t, 0, tab.db.findFails(n.ID, n.IP))
 
 	err := tab.Bond(false, n)
 

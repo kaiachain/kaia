@@ -17,6 +17,8 @@
 package discover
 
 import (
+	"net"
+
 	"github.com/kaiachain/kaia/crypto"
 )
 
@@ -36,8 +38,8 @@ func (tab *Table2) ClosestNodes(targetID NodeID, targetType NodeType, max int) [
 	}
 }
 
-func (tab *Table2) IsBonded(id NodeID) bool {
-	return tab.bondAge(id) < nodeDBNodeExpiration
+func (tab *Table2) IsBonded(id NodeID, ip net.IP) bool {
+	return tab.bondAge(id, ip) < nodeDBNodeExpiration
 }
 
 //// Wrappers for underlying storages.

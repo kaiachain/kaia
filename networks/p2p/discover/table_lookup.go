@@ -180,8 +180,8 @@ func (tab *Table2) findNodesOnce(seed *Node, targetID NodeID, targetType NodeTyp
 
 // Records a findnode failure.
 func (tab *Table2) recordFindFailure(seed *Node) {
-	fails := tab.db.findFails(seed.ID) + 1
-	tab.db.updateFindFails(seed.ID, fails)
+	fails := tab.db.findFails(seed.ID, seed.IP) + 1
+	tab.db.updateFindFails(seed.ID, seed.IP, fails)
 	logger.Trace("Findnode failure", "id", seed.ID, "failcount", fails)
 
 	if fails >= maxFindnodeFailures {

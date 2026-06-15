@@ -74,9 +74,9 @@ func Test_Table_recordFindFailure_increments(t *testing.T) {
 	n := newTestNode(t, NodeTypeEN)
 	tab.addNode(n)
 
-	require.Equal(t, 0, tab.db.findFails(n.ID))
+	require.Equal(t, 0, tab.db.findFails(n.ID, n.IP))
 	tab.recordFindFailure(n)
-	assert.Equal(t, 1, tab.db.findFails(n.ID))
+	assert.Equal(t, 1, tab.db.findFails(n.ID, n.IP))
 	// Node still in the table (1 < maxFindnodeFailures).
 	assert.Equal(t, 1, tab.storages[NodeTypeEN].len())
 }
@@ -107,7 +107,7 @@ func Test_Table_findNodesOnce_error(t *testing.T) {
 
 	result := tab.findNodesOnce(seed, NodeID{}, NodeTypeEN, 10)
 	assert.Empty(t, result)
-	assert.Equal(t, 1, tab.db.findFails(seed.ID), "failure should be recorded in DB")
+	assert.Equal(t, 1, tab.db.findFails(seed.ID, seed.IP), "failure should be recorded in DB")
 }
 
 func Test_Table_findNodesOnce_success(t *testing.T) {
@@ -143,7 +143,7 @@ func Test_Table_findNodesOnce_timeout_noFailure(t *testing.T) {
 	result := tab.findNodesOnce(seed, NodeID{}, NodeTypeCN, 100)
 	require.Len(t, result, 1)
 	assert.Equal(t, peer.ID, result[0].ID)
-	assert.Equal(t, 0, tab.db.findFails(seed.ID), "timeout with response must not record a find failure")
+	assert.Equal(t, 0, tab.db.findFails(seed.ID, seed.IP), "timeout with response must not record a find failure")
 }
 
 func Test_Table_lookup_emptyTable(t *testing.T) {

@@ -270,7 +270,7 @@ func TestUDP_findnode_EN(t *testing.T) {
 
 	// ensure there's a bond with the test node,
 	// findnode won't be accepted otherwise.
-	test.table.db.updateBondTime(PubkeyID(&test.remotekey.PublicKey), time.Now())
+	test.table.db.updateBondTime(PubkeyID(&test.remotekey.PublicKey), test.remoteaddr.IP, time.Now())
 
 	// check that closest neighbors are returned.
 	test.packetIn(nil, findnodePacket, &findnode{Target: testTarget, TargetType: NodeTypeEN, Expiration: futureExp})
@@ -312,7 +312,7 @@ func TestUDP_findnode_CN_overfill(t *testing.T) {
 
 	// ensure there's a bond with the test node,
 	// findnode won't be accepted otherwise.
-	test.table.db.updateBondTime(PubkeyID(&test.remotekey.PublicKey), time.Now())
+	test.table.db.updateBondTime(PubkeyID(&test.remotekey.PublicKey), test.remoteaddr.IP, time.Now())
 
 	// Trigger the findnode. retrieveSize for NodeTypeCN is 100.
 	test.packetIn(nil, findnodePacket, &findnode{Target: testTarget, TargetType: NodeTypeCN, Expiration: futureExp})

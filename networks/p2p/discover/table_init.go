@@ -84,7 +84,7 @@ func newTable2(cfg *Config, udp transport) (*Table2, error) {
 		return nil, err
 	}
 
-	db, err := newNodeDB(cfg.NodeDBPath, Version, cfg.Id)
+	db, err := newNodeDB(cfg.NodeDBPath, nodeDBVersion, cfg.Id)
 	if err != nil {
 		return nil, err
 	}

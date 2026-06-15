@@ -147,6 +147,8 @@ func bootnode(ctx *cli.Context) error {
 		Id:            discover.PubkeyID(&bcfg.nodeKey.PublicKey),
 		NodeType:      p2p.ConvertNodeType(common.BOOTNODE),
 		DiscoverTypes: discover.DiscoverTypesConfig{CN: true, PN: true, EN: true},
+		PingRateLimit: float64(ctx.Int(utils.BNPingRateLimitFlag.Name)),
+		PingBurst:     ctx.Int(utils.BNPingBurstFlag.Name),
 	}
 
 	disc, err := discover.NewDiscovery2(&cfg)

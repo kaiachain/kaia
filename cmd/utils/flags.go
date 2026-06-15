@@ -1299,6 +1299,20 @@ var (
 		Aliases: []string{"p2p.bn-addr"},
 		EnvVars: []string{"KLAYTN_BNADDR", "KAIA_BNADDR"},
 	}
+	BNPingRateLimitFlag = &cli.IntFlag{
+		Name:     "bn.ping-ratelimit",
+		Usage:    "Per-source-IP discovery ping rate limit in pings/sec on a bootstrap node. 0 disables it; LAN/loopback sources are always exempt",
+		Value:    0,
+		EnvVars:  []string{"KLAYTN_BN_PING_RATELIMIT", "KAIA_BN_PING_RATELIMIT"},
+		Category: "MISC",
+	}
+	BNPingBurstFlag = &cli.IntFlag{
+		Name:     "bn.ping-burst",
+		Usage:    "Burst size for the discovery PING rate limiter: the token-bucket capacity, i.e. the maximum number of pings allowed immediately from a full bucket before throttling. (used only when bn.ping-ratelimit > 0)",
+		Value:    10,
+		EnvVars:  []string{"KLAYTN_BN_PING_BURST", "KAIA_BN_PING_BURST"},
+		Category: "MISC",
+	}
 	GenKeyFlag = &cli.StringFlag{
 		Name:     "genkey",
 		Usage:    "generate a node private key and write to given filename",
