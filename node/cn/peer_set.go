@@ -151,8 +151,12 @@ func (ps *peerSet) Register(p Peer, ext *snap.Peer) error {
 		return errAlreadyRegistered
 	}
 
-	if err := peerTypeValidator.ValidatePeerType(p.GetAddr()); err != nil {
-		return fmt.Errorf("fail to validate peer type: %s", err)
+	// Trusted/static-outbound peers bypass CNPeers authorization, matching the
+	// p2p server admission check.
+	if pp := p.GetP2PPeer(); pp == nil || !pp.IsTrustedOrStatic() {
+		if err := peerTypeValidator.ValidatePeerType(p.GetAddr()); err != nil {
+			return fmt.Errorf("fail to validate peer type: %s", err)
+		}
 	}
 
 	if ext != nil {
