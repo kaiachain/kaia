@@ -123,7 +123,7 @@ type Tracer interface {
 // mutate balances, nonces, or access lists. It is optional so existing tracers
 // do not need to implement it.
 type TxPrestateTracer interface {
-	CaptureTxStartPreCheck(env *EVM, from common.Address, feePayer common.Address, to common.Address, create bool, input []byte, value *big.Int)
+	CaptureTxStartPreCheck(env *EVM, from common.Address, feePayer common.Address, to common.Address, create bool, input []byte, value *big.Int, authList []types.SetCodeAuthorization)
 }
 
 // StructLogger is an EVM state logger and implements Tracer.

@@ -495,7 +495,7 @@ func (st *StateTransition) captureTxStartPreCheck() {
 	} else if tx.To() != nil {
 		to = *tx.To()
 	}
-	tracer.CaptureTxStartPreCheck(st.evm, from, feePayer, to, create, tx.Data(), tx.Value())
+	tracer.CaptureTxStartPreCheck(st.evm, from, feePayer, to, create, tx.Data(), tx.Value(), tx.AuthList())
 }
 
 // TransitionDb will transition the state by applying the current message and

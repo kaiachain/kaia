@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/crypto"
@@ -112,13 +113,20 @@ func (t *PrestateTracer) SetSyntheticBalance(addr common.Address, amount *big.In
 	}
 }
 
-func (t *PrestateTracer) CaptureTxStartPreCheck(env *EVM, from common.Address, feePayer common.Address, to common.Address, create bool, input []byte, value *big.Int) {
+func (t *PrestateTracer) CaptureTxStartPreCheck(env *EVM, from common.Address, feePayer common.Address, to common.Address, create bool, input []byte, value *big.Int, authList []types.SetCodeAuthorization) {
 	t.env = env
 	t.lookupAccount(from)
 	t.lookupAccount(feePayer)
 	t.lookupAccount(to)
 	if create {
 		t.created[to] = true
+	}
+	// Capture EIP-7702 authority accounts before applyAuthorization mutates
+	// their nonce and code, so the prestate reflects their pre-tx state.
+	for _, auth := range authList {
+		if authority, err := auth.Authority(); err == nil {
+			t.lookupAccount(authority)
+		}
 	}
 }
 
