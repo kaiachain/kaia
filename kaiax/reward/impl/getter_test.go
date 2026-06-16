@@ -1258,6 +1258,42 @@ func TestAssignStakingRewards(t *testing.T) {
 	}
 }
 
+// TestAssignStakingRewards_AddressCollision verifies that rewards are accumulated,
+// not overwritten, when a CN's RewardAddr equals its CLPoolAddr. Direct assignment
+// would drop the CN reward; accumulation must yield cnAmount + clAmount = full reward.
+func TestAssignStakingRewards_AddressCollision(t *testing.T) {
+	var (
+		min          = uint64(5_000_000)
+		config       = &reward.RewardConfig{MinimumStake: big.NewInt(int64(min))}
+		stakerReward = big.NewInt(1e18)
+		collision    = common.HexToAddress("0xc01")
+	)
+	config.Rules.IsPrague = true
+
+	// Single eligible CN whose CL pool address equals its own reward address.
+	si := &staking.StakingInfo{
+		NodeIds:          []common.Address{common.HexToAddress("0xa01")},
+		StakingContracts: []common.Address{common.HexToAddress("0xb01")},
+		RewardAddrs:      []common.Address{collision},
+		StakingAmounts:   []uint64{5_000_001},
+		KIFAddr:          common.HexToAddress("0xd01"),
+		KEFAddr:          common.HexToAddress("0xd02"),
+		CLStakingInfos: staking.CLStakingInfos{
+			&staking.CLStakingInfo{
+				CLNodeId:        common.HexToAddress("0xa01"),
+				CLPoolAddr:      collision,
+				CLStakingAmount: 999_999,
+			},
+		},
+	}
+
+	alloc, remainder := assignStakingRewards(config, stakerReward, si)
+
+	// The full reward lands on the single colliding address; nothing is overwritten.
+	assert.Equal(t, map[common.Address]*big.Int{collision: big.NewInt(1e18)}, alloc)
+	assert.Equal(t, "0", remainder.String())
+}
+
 func TestSpecWithProposerAndFunds(t *testing.T) {
 	var (
 		zeroAddr   = common.Address{}
@@ -1633,6 +1669,7 @@ func TestGetDeferredRewardFull_BlobFee(t *testing.T) {
 	assert.Equal(t, new(big.Int).Add(execFee, blobFee), spec.BurntFee, "flex deferred BurntFee")
 	sanityCheckRewardSpec(t, spec, "flex deferred with blob")
 }
+
 func newRewardDistributionTestContext(t *testing.T, config *params.ChainConfig, mintingByBlock map[uint64]uint64) (*state.StateDB, common.Address, *RewardModule) {
 	config = config.Copy()
 	config.SetDefaults()

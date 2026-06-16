@@ -418,6 +418,14 @@ func calcRemainder(total *big.Int, parts ...*big.Int) *big.Int {
 	return remaining
 }
 
+// addAlloc accumulates amount into alloc[addr], initializing the entry if absent.
+func addAlloc(alloc map[common.Address]*big.Int, addr common.Address, amount *big.Int) {
+	if alloc[addr] == nil {
+		alloc[addr] = new(big.Int)
+	}
+	alloc[addr].Add(alloc[addr], amount)
+}
+
 // assignStakingRewardsFlex assigns staking rewards to stakers according to their staking amounts.
 // Returns the allocation and the remainder.
 func assignStakingRewardsFlex(config *reward.RewardConfig, budget *big.Int, si *staking.StakingInfo) (map[common.Address]*big.Int, *big.Int) {
@@ -473,10 +481,10 @@ func assignStakingRewardsFlex(config *reward.RewardConfig, budget *big.Int, si *
 		// If Prague and CL is configured for this CN, split the reward between CN and CL.
 		if isPrague && cn.CLStakingInfo != nil {
 			cnAmount, clAmount := cn.Split(reward)
-			alloc[cn.RewardAddr] = cnAmount
-			alloc[cn.CLStakingInfo.CLPoolAddr] = clAmount
+			addAlloc(alloc, cn.RewardAddr, cnAmount)
+			addAlloc(alloc, cn.CLStakingInfo.CLPoolAddr, clAmount)
 		} else {
-			alloc[cn.RewardAddr] = reward
+			addAlloc(alloc, cn.RewardAddr, reward)
 		}
 		remaining.Sub(remaining, reward)
 	}
@@ -521,10 +529,10 @@ func assignStakingRewards(config *reward.RewardConfig, stakersReward *big.Int, s
 				if isPrague && cn.CLStakingInfo != nil {
 					// The remaining amount will be added to the cnAmount.
 					cnAmount, clAmount := cn.Split(reward)
-					alloc[cn.RewardAddr] = cnAmount
-					alloc[cn.CLStakingInfo.CLPoolAddr] = clAmount
+					addAlloc(alloc, cn.RewardAddr, cnAmount)
+					addAlloc(alloc, cn.CLStakingInfo.CLPoolAddr, clAmount)
 				} else {
-					alloc[cn.RewardAddr] = reward
+					addAlloc(alloc, cn.RewardAddr, reward)
 				}
 				remaining.Sub(remaining, reward)
 			}
