@@ -346,7 +346,13 @@ func (t *PrestateTracer) adjustPostBalance(addr common.Address, stateBalance *bi
 	}
 	if t.synthFee != nil {
 		if recipient, ok := t.syntheticFeeRecipient(); ok && addr == recipient {
-			balance.Sub(balance, t.synthFee)
+			credit := new(big.Int).Set(t.synthFee)
+			// Since Magma + Non-deferred, half the fee is burned and only the remainder is
+			// credited to the rewardbase (see StateTransition.TransitionDb).
+			if t.env.ChainConfig().Rules(t.env.Context.BlockNumber).IsMagma {
+				credit.Sub(credit, new(big.Int).Div(credit, big.NewInt(2)))
+			}
+			balance.Sub(balance, credit)
 		}
 	}
 	return balance
