@@ -1254,14 +1254,151 @@ func testTransactionQueueGlobalLimiting(t *testing.T, nolocals bool) {
 			t.Fatalf("total transactions overflow allowance: %d > %d", queued, config.NonExecSlotsAll)
 		}
 	} else {
-		// Local exemptions are enabled, make sure the local account owned the queue
-		if len(pool.queue) != 1 {
-			t.Errorf("multiple accounts in queue: have %v, want %v", len(pool.queue), 1)
+		// Local exemptions are enabled: remote accounts are tail-dropped down to
+		// their lowest queued tx, never deleted outright.
+		localAddr := crypto.PubkeyToAddress(local.PublicKey)
+		for addr, list := range pool.queue {
+			if addr != localAddr && list.Len() != 1 {
+				t.Errorf("remote account %x not tail-dropped to its frontier: have %d, want 1", addr, list.Len())
+			}
 		}
 		// Also ensure no local transactions are ever dropped, even if above global limits
-		if queued := pool.queue[crypto.PubkeyToAddress(local.PublicKey)].Len(); uint64(queued) != 3*config.NonExecSlotsAll {
+		if queued := pool.queue[localAddr].Len(); uint64(queued) != 3*config.NonExecSlotsAll {
 			t.Fatalf("local account queued transaction count mismatch: have %v, want %v", queued, 3*config.NonExecSlotsAll)
 		}
+	}
+}
+
+// Tests that the queue-cap eviction drops the stalest-beat accounts' tails
+// first and never removes an account's lowest queued tx or its queue entry.
+func TestQueueCapEvictionStalestTailDrop(t *testing.T) {
+	t.Parallel()
+
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 10000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+
+	config := testTxPoolConfig
+	config.NonExecSlotsAccount = 8
+	config.NonExecSlotsAll = 4
+
+	pool := NewTxPool(config, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
+	defer pool.Stop()
+
+	keyStale, _ := crypto.GenerateKey()
+	keyFresh, _ := crypto.GenerateKey()
+	stale := crypto.PubkeyToAddress(keyStale.PublicKey)
+	fresh := crypto.PubkeyToAddress(keyFresh.PublicKey)
+	testAddBalance(pool, stale, big.NewInt(10000000))
+	testAddBalance(pool, fresh, big.NewInt(10000000))
+
+	// Grow the queue past the cap through enqueueTx directly, mirroring
+	// demote-driven growth that bypasses AddRemote's capacity checks.
+	pool.mu.Lock()
+	for nonce := uint64(1); nonce <= 4; nonce++ {
+		staleTx := transaction(nonce, 100000, keyStale)
+		freshTx := transaction(nonce, 100000, keyFresh)
+		if _, err := pool.enqueueTx(staleTx.Hash(), staleTx); err != nil {
+			pool.mu.Unlock()
+			t.Fatalf("enqueue stale acct nonce %d: %v", nonce, err)
+		}
+		if _, err := pool.enqueueTx(freshTx.Hash(), freshTx); err != nil {
+			pool.mu.Unlock()
+			t.Fatalf("enqueue fresh acct nonce %d: %v", nonce, err)
+		}
+	}
+	pool.beats[stale] = time.Now().Add(-time.Hour)
+	pool.beats[fresh] = time.Now()
+	pool.promoteExecutables(nil) // 8 queued > cap 4 triggers the eviction
+	pool.mu.Unlock()
+
+	if pool.queuedCount != 4 {
+		t.Fatalf("queued count after eviction: have %d, want 4", pool.queuedCount)
+	}
+	if pool.queue[stale] == nil || pool.queue[stale].Len() != 1 {
+		t.Fatalf("stale account not tail-dropped to its frontier")
+	}
+	if pool.queue[stale].txs.Get(1) == nil {
+		t.Fatalf("stale account lost its lowest queued tx")
+	}
+	if pool.queue[fresh] == nil || pool.queue[fresh].Len() != 3 {
+		have := 0
+		if pool.queue[fresh] != nil {
+			have = pool.queue[fresh].Len()
+		}
+		t.Fatalf("fresh account dropped before stale exhausted: have %d, want 3", have)
+	}
+	if err := validateTxPoolInternals(pool); err != nil {
+		t.Fatalf("pool internal state corrupted: %v", err)
+	}
+}
+
+// Tests the missing-nonce fill at full pool: a strictly cheaper tx is refused
+// without evicting the account's max queued tx, and an equal-price tx
+// swap-admits and heals the account.
+func TestTransactionFullPoolRefuseBeforeEvict(t *testing.T) {
+	t.Parallel()
+
+	statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+	blockchain := &testBlockChain{statedb: statedb, gasLimit: 10000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+
+	config := testTxPoolConfig
+	config.ExecSlotsAccount = 8
+	config.ExecSlotsAll = 4
+	config.NonExecSlotsAccount = 8
+	config.NonExecSlotsAll = 4
+
+	pool := NewTxPool(config, params.TestChainConfig.Copy(), blockchain, &dummyGovModule{chainConfig: params.TestChainConfig.Copy()})
+	defer pool.Stop()
+
+	keyA, _ := crypto.GenerateKey()
+	keyB, _ := crypto.GenerateKey()
+	addrB := crypto.PubkeyToAddress(keyB.PublicKey)
+	testAddBalance(pool, crypto.PubkeyToAddress(keyA.PublicKey), big.NewInt(10000000))
+	testAddBalance(pool, addrB, big.NewInt(10000000))
+
+	// Account A: 4 pending (0..3). Account B: 4 queued (1..4, missing 0). Pool full.
+	for nonce := uint64(0); nonce <= 3; nonce++ {
+		if err := pool.AddRemote(pricedTransaction(nonce, 100000, big.NewInt(2), keyA)); err != nil {
+			t.Fatalf("pending filler nonce %d: %v", nonce, err)
+		}
+	}
+	for nonce := uint64(1); nonce <= 4; nonce++ {
+		if err := pool.AddRemote(pricedTransaction(nonce, 100000, big.NewInt(2), keyB)); err != nil {
+			t.Fatalf("queued filler nonce %d: %v", nonce, err)
+		}
+	}
+	if pool.all.Count() != 8 {
+		t.Fatalf("pool not full: have %d, want 8", pool.all.Count())
+	}
+	maxHash := pricedTransaction(4, 100000, big.NewInt(2), keyB).Hash()
+
+	// Cheaper missing-nonce tx: refused as underpriced without collateral damage.
+	if err := pool.AddRemote(pricedTransaction(0, 100000, big.NewInt(1), keyB)); err != ErrUnderpriced {
+		t.Fatalf("refusal error mismatch: have %v, want %v", err, ErrUnderpriced)
+	}
+	if pool.all.Get(maxHash) == nil {
+		t.Fatalf("max queued tx destroyed by a refused missing-nonce tx")
+	}
+	if pool.queue[addrB] == nil || pool.queue[addrB].Len() != 4 {
+		t.Fatalf("account B queue mutated by a refused missing-nonce tx")
+	}
+
+	// Equal-price missing-nonce tx: swap-admits and heals the account.
+	if err := pool.AddRemote(pricedTransaction(0, 100000, big.NewInt(2), keyB)); err != nil {
+		t.Fatalf("equal-price missing-nonce tx refused: %v", err)
+	}
+	if pool.all.Get(maxHash) != nil {
+		t.Fatalf("max queued tx should have been swapped out")
+	}
+	if pool.pending[addrB] == nil || pool.pending[addrB].Len() != 4 {
+		have := 0
+		if pool.pending[addrB] != nil {
+			have = pool.pending[addrB].Len()
+		}
+		t.Fatalf("account B not healed: pending %d, want 4", have)
+	}
+	if err := validateTxPoolInternals(pool); err != nil {
+		t.Fatalf("pool internal state corrupted: %v", err)
 	}
 }
 
