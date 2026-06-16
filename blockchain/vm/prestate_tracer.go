@@ -81,7 +81,7 @@ type PrestateTracer struct {
 	synthFee    *big.Int
 
 	interrupt atomic.Bool
-	reason    error
+	reason    atomic.Pointer[error]
 }
 
 // NewPrestateTracer constructs a PrestateTracer. cfg may be nil.
@@ -233,11 +233,14 @@ func (t *PrestateTracer) GetResult() (json.RawMessage, error) {
 	if err != nil {
 		return nil, err
 	}
-	return res, t.reason
+	if reason := t.reason.Load(); reason != nil {
+		return res, *reason
+	}
+	return res, nil
 }
 
 func (t *PrestateTracer) Stop(err error) {
-	t.reason = err
+	t.reason.Store(&err)
 	t.interrupt.Store(true)
 }
 
