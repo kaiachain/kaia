@@ -631,11 +631,17 @@ func (m *machine) startNewRound(round *big.Int) {
 			m.sendPreprepare(&bft.Request{Proposal: m.preprepare.Proposal})
 		} else if m.pendingRequest != nil {
 			m.sendPreprepare(m.pendingRequest)
+		} else {
+			// Round-change proposer with no local pendingRequest: ask worker to build lazily.
+			logger.Info("Requesting local proposal build for round-change proposer",
+				"seq", newView.Sequence.Uint64(), "round", newView.Round.Uint64(),
+				"proposer", m.proposer, "self", m.b.address)
+			m.b.eventMux.Post(consensus.NewSequenceEvent{IsProposer: true})
 		}
 	}
 
 	if !roundChange {
-		m.b.eventMux.Post(newSequenceEvent{})
+		m.b.eventMux.Post(consensus.NewSequenceEvent{IsProposer: m.isProposer()})
 	}
 
 	m.newRoundChangeTimer()
@@ -650,6 +656,7 @@ func (m *machine) startNewRound(round *big.Int) {
 func (m *machine) catchUpRound(view *bft.View) {
 	oldRound := new(big.Int).Set(m.round)
 	oldSeq := new(big.Int).Set(m.sequence)
+	oldProposer := m.proposer // capture before the update below so the log is accurate
 
 	if diff := new(big.Int).Sub(view.Round, m.round); diff.Sign() > 0 {
 		m.metrics.Round.Mark(diff.Int64())
@@ -687,9 +694,17 @@ func (m *machine) catchUpRound(view *bft.View) {
 	newProposer, err := m.b.valsetModule.GetProposer(view.Sequence.Uint64(), view.Round.Uint64())
 	if err != nil {
 		logger.Warn("Failed to get proposer for catch-up round", "err", err)
+	} else {
+		m.proposer = newProposer
 	}
+	// Keep the shared view in sync with the round-change view so isProposer()
+	// and the SubmitTransactions proposer check don't act on the pre-RC round.
+	m.b.currentView.Store(&bft.View{
+		Sequence: new(big.Int).Set(view.Sequence),
+		Round:    new(big.Int).Set(view.Round),
+	})
 	logger.Warn("[RC] Catch up round",
-		"oldRound", oldRound, "oldSeq", oldSeq, "oldProposer", m.proposer,
+		"oldRound", oldRound, "oldSeq", oldSeq, "oldProposer", oldProposer,
 		"newRound", view.Round, "newSeq", view.Sequence, "newProposer", newProposer,
 		"hashLocked", !common.EmptyHash(oldLockedHash))
 }
@@ -707,15 +722,33 @@ func (m *machine) sendPreprepare(request *bft.Request) {
 		return
 	}
 	curView := m.currentView()
-	encoded, err := bft.Encode(&bft.Preprepare{View: curView, Proposal: request.Proposal})
+	pp := &bft.Preprepare{View: curView, Proposal: request.Proposal}
+	encoded, err := bft.Encode(pp)
 	if err != nil {
 		return
 	}
-	m.broadcastMsg(&bft.Message{
+	msg := &bft.Message{
 		Hash: request.Proposal.ParentHash(),
 		Code: bft.MsgPreprepare,
 		Msg:  encoded,
-	})
+	}
+	// Self-accept and gossip directly to peers; skip the self-loop (otherwise
+	// the proposer pays the decode + verify on its own block). Skipping the
+	// self-loop also skips checkMessage, so re-check waitingForRoundChange here:
+	// a late request during round change must not gossip a stale-round proposal.
+	if m.state == stateAcceptRequest && !m.isHashLocked() && !m.waitingForRoundChange {
+		payload := m.signPayload(msg)
+		if payload == nil {
+			return
+		}
+		m.b.gossipSubPeer(msg.Hash, payload)
+		m.acceptPreprepare(pp)
+		m.setState(statePreprepared)
+		m.sendPrepare()
+		return
+	}
+	// Hash-locked round-change path keeps the legacy self-loop.
+	m.broadcastMsg(msg)
 }
 
 func (m *machine) sendPrepare() {
@@ -808,32 +841,38 @@ func (m *machine) sendRoundChange(round *big.Int) {
 }
 
 func (m *machine) broadcastMsg(msg *bft.Message) {
-	msg.Address = m.b.address
-	msg.CommittedSeal = []byte{}
-	if msg.Code == bft.MsgCommit && m.preprepare != nil {
-		var err error
-		msg.CommittedSeal, err = m.b.sealer.MakeCommittedSeal(m.preprepare.Proposal.Header())
-		if err != nil {
-			return
-		}
-	}
-
-	data, err := msg.PayloadNoSig()
-	if err != nil {
-		return
-	}
-	msg.Signature, err = m.b.sign(data)
-	if err != nil {
-		return
-	}
-
-	payload, err := msg.Payload()
-	if err != nil {
+	payload := m.signPayload(msg)
+	if payload == nil {
 		return
 	}
 	if err := m.b.broadcast(msg.Hash, payload); err != nil {
 		logger.Error("Failed to broadcast message", "err", err)
 	}
+}
+
+func (m *machine) signPayload(msg *bft.Message) []byte {
+	msg.Address = m.b.address
+	msg.CommittedSeal = []byte{}
+	if msg.Code == bft.MsgCommit && m.preprepare != nil {
+		seal, err := m.b.sealer.MakeCommittedSeal(m.preprepare.Proposal.Header())
+		if err != nil {
+			return nil
+		}
+		msg.CommittedSeal = seal
+	}
+	data, err := msg.PayloadNoSig()
+	if err != nil {
+		return nil
+	}
+	msg.Signature, err = m.b.sign(data)
+	if err != nil {
+		return nil
+	}
+	payload, err := msg.Payload()
+	if err != nil {
+		return nil
+	}
+	return payload
 }
 
 func (m *machine) doCommit() {
@@ -949,6 +988,12 @@ func (m *machine) checkMessage(msgCode uint64, view *bft.View) error {
 	cv := m.currentView()
 
 	if msgCode == bft.MsgRoundChange {
+		// Round-change buckets are keyed by uint64 round in roundChangeSets;
+		// reject out-of-range rounds early to avoid truncation collisions and to
+		// match istanbul's checkMessage (mixed-engine wire compatibility).
+		if !view.Round.IsUint64() {
+			return bft.ErrInvalidMessage
+		}
 		if view.Sequence.Cmp(cv.Sequence) > 0 {
 			return errFutureMessage
 		}

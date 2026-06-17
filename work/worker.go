@@ -164,10 +164,9 @@ type worker struct {
 	executionModules  []kaiax.ExecutionModule
 	txBundlingModules []builder.TxBundlingModule
 
-	// Channels for consensus-worker communication
-	// finalizeCh receives finalized block results for DB write and broadcast
+	// finalizeCh receives finalized block results for DB write and broadcast.
 	finalizeCh <-chan *consensus.ExecutionResult
-	// newSequenceSub receives signals when a new block sequence starts (not round change)
+	// newSequenceSub receives new-sequence signals and lazy round-change build requests.
 	newSequenceSub *event.TypeMuxSubscription
 	// Pending work context for async execution
 	pendingWork      *Task
@@ -299,7 +298,12 @@ func (self *worker) update() {
 			self.handleFinalizedBlock(result)
 
 		// Handle new sequence event from consensus - start mining next block
-		case <-self.newSequenceSub.Chan():
+		case ev := <-self.newSequenceSub.Chan():
+			// Only the proposer builds a block (non-proposers rely on speculative
+			// execution of the received proposal).
+			if req, ok := ev.Data.(consensus.NewSequenceEvent); ok && !req.IsProposer {
+				continue
+			}
 			self.commitNewWork()
 
 			// TODO-Klaytn-Issue264 If we are using istanbul BFT, then we always have a canonical chain.
@@ -361,7 +365,10 @@ func (self *worker) commitNewWork() {
 	parent := self.chain.CurrentBlock()
 	nextBlockNum := new(big.Int).Add(parent.Number(), common.Big1)
 
-	// Wait for ideal block time to ensure consistent block intervals
+	// Wait for the ideal block time to keep block intervals consistent and the
+	// header timestamp valid. After a round change this is a no-op in practice
+	// (the round-change timeout already exceeds the block interval), matching
+	// istanbul's behavior of always proposing a normally-timed block.
 	self.waitForIdealBlockTime(parent)
 	tstart := time.Now()
 
@@ -455,6 +462,8 @@ func (self *worker) handleFinalizedBlock(result *consensus.ExecutionResult) {
 
 	if result == nil || result.Block == nil {
 		// Not the proposer - block will be received via ChainHeadEvent
+		self.pendingWork = nil
+		self.finalizeCh = nil
 		logger.Debug("Not proposer, waiting for block via ChainHeadEvent")
 		return
 	}

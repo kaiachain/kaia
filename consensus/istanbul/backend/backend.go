@@ -516,7 +516,7 @@ func (sb *backend) SubmitTransactions(txs *types.TransactionsByPriceAndNonce, st
 }
 
 // SubscribeNewSequence subscribes to new sequence events.
-// When a new block sequence starts (not round change), this subscription receives a signal.
+// Istanbul emits this only when a new block sequence starts.
 func (sb *backend) SubscribeNewSequence() *event.TypeMuxSubscription {
-	return sb.istanbulEventMux.Subscribe(istanbul.NewSequenceEvent{})
+	return sb.istanbulEventMux.Subscribe(consensus.NewSequenceEvent{})
 }
