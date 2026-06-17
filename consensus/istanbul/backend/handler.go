@@ -54,7 +54,7 @@ func (sb *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	defer sb.coreMu.Unlock()
 
 	if msg.Code == consensus.ConsensusMsgCode {
-		if !sb.coreStarted {
+		if !sb.coreStarted.Load() {
 			return true, istanbul.ErrStoppedEngine
 		}
 
@@ -138,9 +138,9 @@ func (sb *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 }
 
 func (sb *backend) NewChainHead() error {
-	sb.coreMu.RLock()
-	defer sb.coreMu.RUnlock()
-	if !sb.coreStarted {
+	// Do not take coreMu here. NewChainHead runs on the worker loop, and a
+	// coreMu holder can block waiting on that loop, so locking risks a deadlock.
+	if !sb.coreStarted.Load() {
 		return istanbul.ErrStoppedEngine
 	}
 

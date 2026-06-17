@@ -154,7 +154,7 @@ func (sb *backend) RegisterKaiaxModules(mGov gov.GovModule, mValset valset.Valse
 func (sb *backend) Start(chain consensus.ChainReader, executor consensus.Executor) error {
 	sb.coreMu.Lock()
 	defer sb.coreMu.Unlock()
-	if sb.coreStarted {
+	if sb.coreStarted.Load() {
 		return istanbul.ErrStartedEngine
 	}
 
@@ -183,7 +183,7 @@ func (sb *backend) Start(chain consensus.ChainReader, executor consensus.Executo
 		return err
 	}
 
-	sb.coreStarted = true
+	sb.coreStarted.Store(true)
 	return nil
 }
 
@@ -193,7 +193,7 @@ func (sb *backend) Stop() error {
 	defer sb.coreMu.Unlock()
 	// Unblock any peers waiting in ValidatePeerType during shutdown.
 	sb.SignalPeerRegistrable()
-	if !sb.coreStarted {
+	if !sb.coreStarted.Load() {
 		return istanbul.ErrStoppedEngine
 	}
 	// Close commitCh to stop any pending Seal() calls
@@ -207,7 +207,7 @@ func (sb *backend) Stop() error {
 	if err := sb.core.Stop(); err != nil {
 		return err
 	}
-	sb.coreStarted = false
+	sb.coreStarted.Store(false)
 	return nil
 }
 
