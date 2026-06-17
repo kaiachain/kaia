@@ -191,14 +191,12 @@ func SetP2PConfig(ctx *cli.Context, cfg *p2p.Config) {
 	}
 	logger.Info("Setting MaxPhysicalConnections", "MaxPhysicalConnections", cfg.MaxPhysicalConnections)
 
-	// Cross-type connection reservations (0 leaves the p2p defaults in effect).
-	cfg.ReservedENForCN = ctx.Int(ReservedENConnsFlag.Name)
-	cfg.ReservedCNForEN = ctx.Int(ReservedCNConnsFlag.Name)
-	// maxconnections == 0 zeroes the dynamic peer budget (only pinned static/trusted
-	// peers connect), so there is no capacity to reserve; enforce the floor only
-	// when a positive limit is set.
+	// Cross-type connection reservation (0 leaves the per-node-type default in effect).
+	cfg.ReservedCrossTypeSlots = ctx.Int(ReservedCrossTypeSlotsFlag.Name)
+	// maxconnections == 0 disables dynamic peering (only static/trusted connect), so
+	// there is nothing to reserve; enforce the floor only for a positive limit.
 	if cfg.MaxPhysicalConnections > 0 {
-		if minConns := p2p.MinPhysicalConnections(*cfg); cfg.MaxPhysicalConnections < minConns {
+		if minConns := p2p.MaxPhysicalConnectionsLowerBound(*cfg); cfg.MaxPhysicalConnections < minConns {
 			logger.Crit("maxconnections is too low to reserve CN<->EN slots",
 				"maxconnections", cfg.MaxPhysicalConnections, "required", minConns, "nodetype", cfg.ConnectionType)
 		}
@@ -262,7 +260,7 @@ func setDefaultDiscoverTypes(cfg *p2p.Config) {
 }
 
 const (
-	defaultCNMaxPhysicalConnections = 103 // MaxNodeCount + defaultReservedENForCN (full CN mesh + reserved EN slots)
+	defaultCNMaxPhysicalConnections = 103 // MaxNodeCount + defaultCNReservedSlots (full CN mesh + reserved EN slots)
 	defaultENMaxPhysicalConnections = node.DefaultMaxPhysicalConnections
 )
 

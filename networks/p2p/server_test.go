@@ -386,12 +386,12 @@ func TestServerPeerTargets(t *testing.T) {
 	}
 
 	cnSrv := &BaseServer{Config: Config{ConnectionType: common.CONSENSUSNODE, MaxPhysicalConnections: 10}}
-	// CN-mesh accept cap = MaxPhysicalConnections - reservedENForCN (=7), reserving EN slots.
+	// CN-mesh accept cap = MaxPhysicalConnections - reserved cross-type slots (=7), reserving EN slots.
 	if cnSrv.exceedsPeerTarget(newNPeers(common.CONSENSUSNODE, 6), &conn{conntype: common.CONSENSUSNODE}) {
 		t.Fatal("CN mesh under the reserved cap should be accepted")
 	}
 	if !cnSrv.exceedsPeerTarget(newNPeers(common.CONSENSUSNODE, 7), &conn{conntype: common.CONSENSUSNODE}) {
-		t.Fatal("CN mesh at the reserved cap (maxPhys - reservedENForCN) should be rejected")
+		t.Fatal("CN mesh at the reserved cap (maxPhys - reserved cross-type slots) should be rejected")
 	}
 	cnPeers := newPeers(common.ENDPOINTNODE, common.PROXYNODE, common.ENDPOINTNODE)
 	if !cnSrv.exceedsPeerTarget(cnPeers, &conn{conntype: common.ENDPOINTNODE}) {
@@ -411,12 +411,12 @@ func TestServerPeerTargets(t *testing.T) {
 	}
 
 	enSrv := &BaseServer{Config: Config{ConnectionType: common.ENDPOINTNODE, MaxPhysicalConnections: 10}}
-	// EN-mesh accept cap = MaxPhysicalConnections - reservedCNForEN (=8), reserving CN slots.
+	// EN-mesh accept cap = MaxPhysicalConnections - reserved cross-type slots (=8), reserving CN slots.
 	if enSrv.exceedsPeerTarget(newNPeers(common.ENDPOINTNODE, 7), &conn{conntype: common.ENDPOINTNODE}) {
 		t.Fatal("EN mesh under the reserved cap should be accepted")
 	}
 	if !enSrv.exceedsPeerTarget(newNPeers(common.ENDPOINTNODE, 8), &conn{conntype: common.ENDPOINTNODE}) {
-		t.Fatal("EN mesh at the reserved cap (maxPhys - reservedCNForEN) should be rejected")
+		t.Fatal("EN mesh at the reserved cap (maxPhys - reserved cross-type slots) should be rejected")
 	}
 	enPeers := newPeers(common.CONSENSUSNODE, common.CONSENSUSNODE)
 	if !enSrv.exceedsPeerTarget(enPeers, &conn{conntype: common.CONSENSUSNODE}) {
@@ -483,55 +483,53 @@ func TestServerENBypassesCNPeerFilter(t *testing.T) {
 
 func TestPeerTargetFor(t *testing.T) {
 	const (
-		maxPhys = 100
-		rEN     = defaultReservedENForCN
-		rCN     = defaultReservedCNForEN
+		maxPhys    = 100
+		cnReserved = defaultCNReservedSlots // slots a CN keeps for ENs
+		enReserved = defaultENReservedSlots // slots an EN keeps for CNs
 	)
 	cases := []struct {
 		self, peer common.ConnType
+		reserved   int
 		want       int
 		wantOK     bool
 	}{
-		{common.CONSENSUSNODE, common.CONSENSUSNODE, maxPhys - rEN, true}, // CN mesh
-		{common.CONSENSUSNODE, common.ENDPOINTNODE, rEN, true},            // CN->EN reservation
-		{common.ENDPOINTNODE, common.ENDPOINTNODE, maxPhys - rCN, true},   // EN mesh
-		{common.ENDPOINTNODE, common.CONSENSUSNODE, rCN, true},            // EN->CN reservation
-		{common.CONSENSUSNODE, common.BOOTNODE, 0, false},                 // unrelated peer type: no cap
-		{common.BOOTNODE, common.CONSENSUSNODE, 0, false},                 // node type with no reservation: no cap
+		{common.CONSENSUSNODE, common.CONSENSUSNODE, cnReserved, maxPhys - cnReserved, true}, // CN mesh
+		{common.CONSENSUSNODE, common.ENDPOINTNODE, cnReserved, cnReserved, true},            // CN->EN reservation
+		{common.ENDPOINTNODE, common.ENDPOINTNODE, enReserved, maxPhys - enReserved, true},   // EN mesh
+		{common.ENDPOINTNODE, common.CONSENSUSNODE, enReserved, enReserved, true},            // EN->CN reservation
+		{common.CONSENSUSNODE, common.BOOTNODE, cnReserved, 0, false},                        // unrelated peer type: no cap
+		{common.BOOTNODE, common.CONSENSUSNODE, cnReserved, 0, false},                        // node with no reservation: no cap
 	}
 	for _, c := range cases {
-		if got, ok := peerTargetFor(c.self, c.peer, maxPhys, rEN, rCN); got != c.want || ok != c.wantOK {
+		if got, ok := peerTargetFor(c.self, c.peer, maxPhys, c.reserved); got != c.want || ok != c.wantOK {
 			t.Errorf("peerTargetFor(%v,%v)=(%d,%v), want (%d,%v)", c.self, c.peer, got, ok, c.want, c.wantOK)
 		}
 	}
 	// own-mesh cap clamps to 0 when maxPhys is below the reservation.
-	if got, _ := peerTargetFor(common.CONSENSUSNODE, common.CONSENSUSNODE, rEN-1, rEN, rCN); got != 0 {
+	if got, _ := peerTargetFor(common.CONSENSUSNODE, common.CONSENSUSNODE, cnReserved-1, cnReserved); got != 0 {
 		t.Errorf("own-mesh cap should clamp to 0, got %d", got)
 	}
 }
 
-func TestMinPhysicalConnections(t *testing.T) {
+func TestMaxPhysicalConnectionsLowerBound(t *testing.T) {
 	const (
-		rEN = defaultReservedENForCN
-		rCN = defaultReservedCNForEN
+		cnReserved = defaultCNReservedSlots
+		enReserved = defaultENReservedSlots
 	)
-	if got := minPhysicalConnections(common.CONSENSUSNODE, rEN, rCN); got != rEN+1 {
-		t.Errorf("CN min = %d, want %d", got, rEN+1)
+	// An unset reservation falls back to the per-node-type default.
+	if got := MaxPhysicalConnectionsLowerBound(Config{ConnectionType: common.CONSENSUSNODE}); got != cnReserved+1 {
+		t.Errorf("CN lower bound with default reservation = %d, want %d", got, cnReserved+1)
 	}
-	if got := minPhysicalConnections(common.ENDPOINTNODE, rEN, rCN); got != rCN+1 {
-		t.Errorf("EN min = %d, want %d", got, rCN+1)
+	if got := MaxPhysicalConnectionsLowerBound(Config{ConnectionType: common.ENDPOINTNODE}); got != enReserved+1 {
+		t.Errorf("EN lower bound with default reservation = %d, want %d", got, enReserved+1)
 	}
-	if got := minPhysicalConnections(common.PROXYNODE, rEN, rCN); got != rCN+1 {
-		t.Errorf("PN min (as EN) = %d, want %d", got, rCN+1)
+	// PROXYNODE resolves as EN.
+	if got := MaxPhysicalConnectionsLowerBound(Config{ConnectionType: common.PROXYNODE}); got != enReserved+1 {
+		t.Errorf("PN lower bound (as EN) = %d, want %d", got, enReserved+1)
 	}
-
-	// MinPhysicalConnections(Config) resolves unset reservations to the defaults...
-	if got := MinPhysicalConnections(Config{ConnectionType: common.CONSENSUSNODE}); got != rEN+1 {
-		t.Errorf("CN min with default reservation = %d, want %d", got, rEN+1)
-	}
-	// ...and honors explicit overrides (PROXYNODE resolves as EN).
-	if got := MinPhysicalConnections(Config{ConnectionType: common.PROXYNODE, ReservedCNForEN: 4}); got != 5 {
-		t.Errorf("PN min (as EN) with reserved 4 = %d, want 5", got)
+	// An explicit reservation overrides the default.
+	if got := MaxPhysicalConnectionsLowerBound(Config{ConnectionType: common.CONSENSUSNODE, ReservedCrossTypeSlots: 5}); got != 6 {
+		t.Errorf("CN lower bound with reserved 5 = %d, want 6", got)
 	}
 }
 
