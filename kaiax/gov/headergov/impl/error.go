@@ -17,8 +17,6 @@ var (
 	ErrNilVote            = errors.New("vote is nil")
 	ErrGovVerification    = errors.New("header.Governance does not match the vote in previous epoch")
 
-	ErrGovParamNotAccount       = errors.New("govparamcontract is not an account")
-	ErrGovParamNotContract      = errors.New("govparamcontract is not an contract account")
 	ErrLowerBoundBaseFee        = errors.New("lowerboundbasefee is greater than upperboundbasefee")
 	ErrUpperBoundBaseFee        = errors.New("upperboundbasefee is less than lowerboundbasefee")
 	ErrGovNodeInValSetVoteValue = errors.New("gov node is found in the valset vote value")

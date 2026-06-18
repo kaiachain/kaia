@@ -7,7 +7,6 @@ import (
 	"slices"
 
 	"github.com/kaiachain/kaia/blockchain/types"
-	"github.com/kaiachain/kaia/blockchain/types/account"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -171,20 +170,6 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 			return nil
 		}
 		return ErrGovNodeNotInValSetList
-	case gov.GovernanceGovParamContract:
-		state, err := h.Chain.State()
-		if err != nil {
-			return err
-		}
-
-		acc := state.GetAccount(vote.Value().(common.Address))
-		if acc == nil {
-			return ErrGovParamNotAccount
-		} else if acc.Type() != account.SmartContractAccountType || acc.Empty() {
-			return ErrGovParamNotContract
-		} else {
-			return nil
-		}
 	case gov.Kip71LowerBoundBaseFee:
 		params := h.GetParamSet(blockNum)
 		if vote.Value().(uint64) > params.UpperBoundBaseFee {
@@ -211,7 +196,7 @@ func (h *headerGovModule) checkConsistency(blockNum uint64, vote headergov.VoteD
 		}
 		return nil
 		// These votes are valid as long as it passes the format checks in NewVoteData(). No more checks here.
-	case gov.GovernanceDeriveShaImpl, gov.GovernanceGovernanceMode, gov.GovernanceUnitPrice,
+	case gov.GovernanceDeriveShaImpl, gov.GovernanceGovParamContract, gov.GovernanceGovernanceMode, gov.GovernanceUnitPrice,
 		gov.IstanbulCommitteeSize, gov.IstanbulEpoch, gov.IstanbulPolicy,
 		gov.Kip71BaseFeeDenominator, gov.Kip71GasTarget, gov.Kip71MaxBlockGasUsedForBaseFee,
 		gov.RewardDeferredTxFee, gov.RewardKip82Ratio, gov.RewardMintingAmount, gov.RewardMinimumStake,
