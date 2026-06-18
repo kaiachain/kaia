@@ -39,16 +39,15 @@ The rules have changed over hardforks.
 - **Validators (G)**: The block validators also known as the GC.
   - **Proposer (P)**: The validator who proposed the block. Receives rewards to its reward address.
   - **Stakers (S)**: The validators, including proposer, who staked enough tokens to be eligible for rewards. Receives rewards to its staking address.
-- **Fund1 (X; KIF, KFF, KGF, PoC)**: The first fund. Its address is specified in the AddressBook contract. Its name has been changed over hardforks. Current name is KIF (Kaia Infrastructure Fund).
-- **Fund2 (Y; KEF, KCF, KIR)**: The second fund. Its address is specified in the AddressBook contract. Current name is KEF (Kaia Ecosystem Fund).
-- **Fund3 (Z; KPF)**: The third fund. Its address is specified in the AddressBook contract. Current name is KPF (Kaia Protocol Fund).
+- **Fund1 (X; KIF, KFF, KGF, PoC)**: The first fund. Its address is specified in the AddressBook contract. Its name has been changed over hardforks. Current name is KIF (Kaia Infrastructure Fund). If the address is empty, this portion is reassigned to the block proposer.
+- **Fund2 (Y; KEF, KCF, KIR)**: The second fund. Its address is specified in the AddressBook contract. Current name is KEF (Kaia Ecosystem Fund). If the address is empty, this portion is reassigned to the block proposer.
+- **Fund3 (Z; KPF)**: The third fund. Its address is specified in the AddressBook contract. Current name is KPF (Kaia Protocol Fund). If the address is empty, this portion is reassigned to the block proposer.
 - **Burnt (B)**: The amount burnt. Tokens are implicitly burnt during reward distribution; the transaction fees are deducted from the transaction senders but less amount are added to the reward recipients.
 - **Reward ratio**: The reward distribution ratio among GC, Fund1, Fund2, and optionally Fund3 (g/x/y) or (g/x/y/z).
   - Determined by the `reward.ratio` parameter in three or four nonnegative integer percentiles sums up to 100. e.g. `34/54/12` or `40/25/25/10`.
   - If the ratio is in three parts (`g/x/y`), `z` is considered `0`.
   - The fourth part (`z`) is relevant only when `reward.useflexreward == true`.
   - If the fourth part (`z`) is nonzero with `reward.useflexreward == false`, the fourth portion is regarded as a remainder and added to the first fund for backward compatibility, making the ratio effectively three parts of (g/x+z/y). This is a fallback behavior when the parameters are inconsistently specified.
-arameters are inconsistently specified.
 - **KIP-82 ratio**: The reward distribution ratio between proposer and stakers (p/s).
   - Determined by the `reward.kip82` parameter in two nonnegative integer percentiles sums up to 100. e.g. `20/80`
 
