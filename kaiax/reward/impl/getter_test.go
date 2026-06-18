@@ -428,6 +428,8 @@ func TestGetDeferredReward(t *testing.T) {
 }
 
 func TestGetExecFee(t *testing.T) {
+	largeGas := uint64(1 << 63)
+
 	testcases := []struct {
 		desc     string
 		config   *reward.RewardConfig
@@ -489,6 +491,34 @@ func TestGetExecFee(t *testing.T) {
 				{GasUsed: 400_000},
 			},
 			big.NewInt(0.0376e18), // sum{ (effectiveGasTip[i] + baseFee) * gasUsed[i] }
+		},
+		{
+			"pre-magma large gas",
+			&reward.RewardConfig{UnitPrice: big.NewInt(2)},
+			&types.Header{BaseFee: nil, GasUsed: largeGas},
+			nil,
+			nil,
+			new(big.Int).Mul(new(big.Int).SetUint64(largeGas), big.NewInt(2)),
+		},
+		{
+			"magma large gas",
+			&reward.RewardConfig{Rules: params.Rules{IsMagma: true}, UnitPrice: big.NewInt(25e9)},
+			&types.Header{BaseFee: big.NewInt(2), GasUsed: largeGas},
+			nil,
+			nil,
+			new(big.Int).Mul(new(big.Int).SetUint64(largeGas), big.NewInt(2)),
+		},
+		{
+			"kaia large gas",
+			&reward.RewardConfig{Rules: params.Rules{IsMagma: true, IsKaia: true}, UnitPrice: big.NewInt(25e9)},
+			&types.Header{BaseFee: big.NewInt(2), GasUsed: largeGas},
+			[]*types.Transaction{
+				makeTestTx_type2(3, 1, 1), // effectiveTip = 1
+			},
+			[]*types.Receipt{
+				{GasUsed: largeGas},
+			},
+			new(big.Int).Mul(new(big.Int).SetUint64(largeGas), big.NewInt(3)),
 		},
 	}
 	for _, tc := range testcases {

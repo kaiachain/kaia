@@ -206,18 +206,18 @@ func getExecFee(config *reward.RewardConfig, header *types.Header, txs []*types.
 		if len(txs) != len(receipts) {
 			return nil, reward.ErrTxReceiptsLenMismatch
 		}
-		execFee := new(big.Int).Mul(big.NewInt(int64(header.GasUsed)), header.BaseFee)
+		execFee := new(big.Int).Mul(new(big.Int).SetUint64(header.GasUsed), header.BaseFee)
 		for i, tx := range txs {
-			tip := new(big.Int).Mul(big.NewInt(int64(receipts[i].GasUsed)), tx.EffectiveGasTip(header.BaseFee))
+			tip := new(big.Int).Mul(new(big.Int).SetUint64(receipts[i].GasUsed), tx.EffectiveGasTip(header.BaseFee))
 			execFee = execFee.Add(execFee, tip)
 		}
 		return execFee, nil
 	} else if config.Rules.IsMagma {
 		// Optimized to block.gasUsed * block.baseFeePerGas
-		return new(big.Int).Mul(big.NewInt(int64(header.GasUsed)), header.BaseFee), nil
+		return new(big.Int).Mul(new(big.Int).SetUint64(header.GasUsed), header.BaseFee), nil
 	} else {
 		// Optimized to block.gasUsed * governance.unitprice
-		return new(big.Int).Mul(big.NewInt(int64(header.GasUsed)), config.UnitPrice), nil
+		return new(big.Int).Mul(new(big.Int).SetUint64(header.GasUsed), config.UnitPrice), nil
 	}
 }
 
