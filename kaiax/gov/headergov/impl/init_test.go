@@ -102,6 +102,7 @@ func TestReadGovVoteBlockNumsFromDB(t *testing.T) {
 
 	mockCtrl := gomock.NewController(t)
 	chain := mocks.NewMockBlockChain(mockCtrl)
+	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(100)})).AnyTimes()
 
 	db := database.NewMemDB()
 	voteDataBlockNums := make(StoredUint64Array, 0, len(votes))
@@ -119,6 +120,7 @@ func TestReadGovVoteBlockNumsFromDB(t *testing.T) {
 func TestReadGovDataFromDB(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	chain := mocks.NewMockBlockChain(mockCtrl)
+	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(2)})).AnyTimes()
 	db := database.NewMemDB()
 
 	ps1 := &gov.ParamSet{UnitPrice: uint64(100)}
@@ -137,6 +139,41 @@ func TestReadGovDataFromDB(t *testing.T) {
 	}
 
 	assert.Equal(t, govs, readGovDataFromDB(chain, db))
+}
+
+// mockChainWithStaleBlock sets up head=2 with a gov/vote index {1, 9}, where block 1 has
+// header1 and block 9's header is missing (nil) — i.e. a stale block above head.
+func mockChainWithStaleBlock(t *testing.T, header1 *types.Header, writeIndex func(database.Database, StoredUint64Array)) (*mocks.MockBlockChain, database.Database) {
+	chain := mocks.NewMockBlockChain(gomock.NewController(t))
+	chain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(2)})).AnyTimes()
+	chain.EXPECT().GetHeaderByNumber(uint64(1)).Return(header1)
+	chain.EXPECT().GetHeaderByNumber(uint64(9)).Return((*types.Header)(nil))
+
+	db := database.NewMemDB()
+	writeIndex(db, StoredUint64Array{1, 9})
+	return chain, db
+}
+
+// A stale block above head must be skipped, not panic, and the index is left untouched
+// (read stays pure).
+func TestReadGovDataFromDBSkipsStaleBlock(t *testing.T) {
+	gov1 := headergov.NewGovData(gov.PartialParamSet{gov.GovernanceUnitPrice: uint64(100)})
+	govBytes, err := gov1.ToGovBytes()
+	require.NoError(t, err)
+
+	chain, db := mockChainWithStaleBlock(t, &types.Header{Governance: govBytes}, WriteGovDataBlockNums)
+	assert.Equal(t, map[uint64]headergov.GovData{1: gov1}, readGovDataFromDB(chain, db))
+	assert.Equal(t, StoredUint64Array{1, 9}, ReadGovDataBlockNums(db))
+}
+
+func TestReadVoteDataFromDBSkipsStaleBlock(t *testing.T) {
+	vote1 := headergov.NewVoteData(common.Address{1}, string(gov.GovernanceUnitPrice), uint64(100))
+	voteBytes, err := vote1.ToVoteBytes()
+	require.NoError(t, err)
+
+	chain, db := mockChainWithStaleBlock(t, &types.Header{Vote: voteBytes}, WriteVoteDataBlockNums)
+	assert.Equal(t, map[uint64]headergov.VoteData{1: vote1}, readVoteDataFromDB(chain, db))
+	assert.Equal(t, StoredUint64Array{1, 9}, ReadVoteDataBlockNums(db))
 }
 
 func TestInitialDB(t *testing.T) {
