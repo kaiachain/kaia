@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"reflect"
 	"slices"
+	"strconv"
 
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/types/account"
@@ -258,6 +259,11 @@ func (h *headerGovModule) getVotesInEpoch(epochIdx uint64) map[uint64]headergov.
 		return votes
 	} else {
 		logger.Debug("Scanning votes slowpath")
-		return h.scanAllVotesInEpoch(epochIdx)
+		// Deduplicate concurrent slow-path scans of the same epoch.
+		// The returned map is read-only for all callers, so sharing one instance is safe.
+		votes, _, _ := h.scanGroup.Do(strconv.FormatUint(epochIdx, 10), func() (interface{}, error) {
+			return h.scanAllVotesInEpoch(epochIdx), nil
+		})
+		return votes.(map[uint64]headergov.VoteData)
 	}
 }

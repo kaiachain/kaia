@@ -14,6 +14,7 @@ import (
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
+	"golang.org/x/sync/singleflight"
 )
 
 var (
@@ -54,6 +55,11 @@ type headerGovModule struct {
 	governances  headergov.GovDataMap
 	history      headergov.History
 	mu           *sync.RWMutex
+
+	// scanGroup deduplicates concurrent slow-path epoch scans so that
+	// multiple simultaneous requests for the same unscanned epoch trigger
+	// only a single header scan.
+	scanGroup singleflight.Group
 
 	epoch uint64
 
