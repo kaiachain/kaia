@@ -30,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/contracts/bindings/multicall"
 	proxycontract "github.com/kaiachain/kaia/contracts/bindings/proxyv4"
 	proxyv5contract "github.com/kaiachain/kaia/contracts/bindings/proxyv5"
+	permlesstestcontract "github.com/kaiachain/kaia/contracts/bindings/testing"
 	"github.com/kaiachain/kaia/contracts/bindings/testing/reward"
 	testcontract "github.com/kaiachain/kaia/contracts/bindings/testing/system_contracts"
 	"github.com/kaiachain/kaia/log"
@@ -92,8 +93,9 @@ var (
 	AddressBookMockTwoCNCode = hexutil.MustDecode("0x" + reward.AddressBookMockTwoCNBinRuntime)
 	Kip113MockThreeCNCode    = hexutil.MustDecode("0x" + testcontract.KIP113MockThreeCNBinRuntime)
 
-	MultiCallCode     = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
-	MultiCallMockCode = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)
+	MultiCallCode             = hexutil.MustDecode("0x" + multicall.MultiCallContractBinRuntime)
+	MultiCallMockCode         = hexutil.MustDecode("0x" + testcontract.MultiCallContractMockBinRuntime)
+	MultiCallPermlessMockCode = hexutil.MustDecode("0x" + permlesstestcontract.MultiCallContractMockPermissionlessBinRuntime)
 
 	// Mock for CLRegistry testing
 	CLRegistryMockThreeCLAddr = common.HexToAddress("0x0000000000000000000000000000000000000Ff0")
