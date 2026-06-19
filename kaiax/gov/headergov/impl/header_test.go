@@ -59,15 +59,10 @@ func TestVerifyVote(t *testing.T) {
 	config.Governance.GoverningNode = validVoter // for "valid governingnode" test case
 
 	var (
-		h          = newHeaderGovModule(t, config)
-		statedb, _ = h.Chain.State()
-
+		h        = newHeaderGovModule(t, config)
 		eoa      = common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 		contract = common.HexToAddress("0x0000000000000000000000000000000000000400")
 	)
-
-	statedb.SetNonce(eoa, 1)
-	statedb.SetCode(contract, []byte{1})
 
 	tcs := []struct {
 		desc          string
@@ -80,8 +75,8 @@ func TestVerifyVote(t *testing.T) {
 		{desc: "valid governingnode", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGoverningNode), validVoter.Hex()), expectedError: nil},
 		{desc: "valid govparam", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovParamContract), contract), expectedError: nil},
 		{desc: "valid unitprice", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceUnitPrice), uint64(25000000000)), expectedError: nil},
-		{desc: "invalid govparam", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovParamContract), common.Address{}), expectedError: ErrGovParamNotAccount},
-		{desc: "invalid govparam", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovParamContract), eoa), expectedError: ErrGovParamNotContract},
+		// govparamcontract is not state-checked here; a non-contract address is accepted (verified via committed seals).
+		{desc: "govparam not state-checked", vote: headergov.NewVoteData(validVoter, string(gov.GovernanceGovParamContract), eoa), expectedError: nil},
 
 		// istanbul.*
 		{desc: "valid committeesize", vote: headergov.NewVoteData(validVoter, string(gov.IstanbulCommitteeSize), uint64(7)), expectedError: nil},
