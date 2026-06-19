@@ -15,6 +15,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov"
 	headergov_mock "github.com/kaiachain/kaia/kaiax/gov/headergov/mock"
 	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/networks/rpc"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
@@ -80,6 +81,18 @@ func setParam(t *testing.T, sim *backends.SimulatedBackend, gp *govcontract.GovP
 	receipt, _ := sim.TransactionReceipt(nil, tx.Hash())
 	require.NotNil(t, receipt)
 	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+}
+
+func TestGetContractParamsInvalidBlockNumber(t *testing.T) {
+	_, sim, addr, _ := createSimulateBackend(t)
+	api := NewContractGovAPI(prepareContractGovModule(t, sim.BlockChain(), addr))
+
+	_, err := api.GetContractParams(rpc.BlockNumber(-3), nil)
+	require.ErrorIs(t, err, gov.ErrUnknownBlock)
+
+	future := rpc.BlockNumber(sim.BlockChain().CurrentBlock().NumberU64() + 1)
+	_, err = api.GetContractParams(future, nil)
+	require.ErrorIs(t, err, gov.ErrUnknownBlock)
 }
 
 func TestGetParamSet(t *testing.T) {

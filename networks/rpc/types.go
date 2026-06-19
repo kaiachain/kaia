@@ -91,6 +91,9 @@ func (bn *BlockNumber) UnmarshalJSON(data []byte) error {
 	var decimalInput uint64
 	err := json.Unmarshal(data, &decimalInput)
 	if err == nil {
+		if decimalInput > math.MaxInt64 {
+			return fmt.Errorf("blocknumber too high")
+		}
 		*bn = BlockNumber(decimalInput)
 		return nil
 	}
@@ -155,6 +158,9 @@ func (bnh *BlockNumberOrHash) UnmarshalJSON(data []byte) error {
 	var decimalInput uint64
 	err = json.Unmarshal(data, &decimalInput)
 	if err == nil {
+		if decimalInput > math.MaxInt64 {
+			return fmt.Errorf("blocknumber too high")
+		}
 		bn := BlockNumber(decimalInput)
 		bnh.BlockNumber = &bn
 		return nil
