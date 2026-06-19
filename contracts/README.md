@@ -51,7 +51,7 @@ Generated Go wrappers for all system contracts. Regenerated via `go generate`.
 
 ### `kaia-system-contracts/`
 
-Git submodule pointing to [kaia-system-contract](https://github.com/kaiachain/kaia-system-contract).
+Git submodule pointing to [kaia-system-contracts](https://github.com/kaiachain/kaia-system-contracts).
 Contains compiled artifacts used by `go generate`.
 
 ### `libs/`
