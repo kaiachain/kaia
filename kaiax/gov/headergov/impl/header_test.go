@@ -2,13 +2,19 @@ package impl
 
 import (
 	"math/big"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
+	gomock "github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/storage/database"
+	"github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -148,6 +154,69 @@ func TestGetVotesInEpoch(t *testing.T) {
 
 	assert.Equal(t, map[uint64]headergov.VoteData{50: v1}, h.getVotesInEpoch(0))
 	assert.Equal(t, map[uint64]headergov.VoteData{150: v2}, h.getVotesInEpoch(1))
+}
+
+// TestGetVotesInEpochSingleflight verifies that concurrent slow-path scans of
+// the same unscanned epoch are deduplicated: many simultaneous requests trigger
+// only a single header scan instead of one scan each.
+func TestGetVotesInEpochSingleflight(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlCrit)
+
+	const (
+		epoch        = uint64(10)
+		queriedEpoch = uint64(0)
+		concurrency  = 20
+	)
+
+	var (
+		scanCalls int32 // number of times a scan actually started
+		release   = make(chan struct{})
+		entered   = make(chan struct{}, 1)
+	)
+
+	chain := mocks.NewMockBlockChain(gomock.NewController(t))
+	chain.EXPECT().CurrentBlock().
+		Return(types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1000)})).AnyTimes()
+	// Block the leader scan on the first block of the epoch so that the other
+	// concurrent callers pile up inside singleflight before the scan returns.
+	chain.EXPECT().GetHeaderByNumber(gomock.Any()).
+		DoAndReturn(func(num uint64) *types.Header {
+			if num == 0 {
+				if atomic.AddInt32(&scanCalls, 1) == 1 {
+					entered <- struct{}{}
+				}
+				<-release
+			}
+			return &types.Header{Number: new(big.Int).SetUint64(num)}
+		}).AnyTimes()
+
+	db := database.NewMemDB()
+	WriteLowestVoteScannedEpochIdx(db, 5) // border > queriedEpoch => slow path
+
+	h := &headerGovModule{
+		ChainKv:      db,
+		Chain:        chain,
+		epoch:        epoch,
+		mu:           &sync.RWMutex{},
+		groupedVotes: make(headergov.GroupedVotesMap),
+	}
+
+	var wg sync.WaitGroup
+	for range concurrency {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			h.getVotesInEpoch(queriedEpoch)
+		}()
+	}
+
+	<-entered                          // a scan has started and is blocked
+	time.Sleep(100 * time.Millisecond) // let the other callers block in singleflight
+	close(release)                     // unblock the scan
+	wg.Wait()
+
+	assert.Equal(t, int32(1), atomic.LoadInt32(&scanCalls),
+		"concurrent slow-path scans of the same epoch should be deduplicated to one")
 }
 
 func TestGetExpectedGovernance(t *testing.T) {
