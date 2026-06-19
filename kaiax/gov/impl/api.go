@@ -79,13 +79,18 @@ func patchDeprecatedParams(gp gov.ParamSet, rule params.Rules) gov.ParamSet {
 	return gp
 }
 
-func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
-	var blocknum uint64
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blocknum = g.Chain.CurrentBlock().NumberU64()
+func apiBlockNumber(g *GovModule, num *rpc.BlockNumber) uint64 {
+	if num == nil || *num == rpc.LatestBlockNumber {
+		return g.Chain.CurrentBlock().NumberU64()
+	} else if *num == rpc.PendingBlockNumber {
+		return g.Chain.CurrentBlock().NumberU64() + 1
 	} else {
-		blocknum = num.Uint64()
+		return num.Uint64()
 	}
+}
+
+func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
+	blocknum := apiBlockNumber(g, num)
 
 	ret := g.Chain.Config().Copy()
 	pset := g.GetParamSet(blocknum)
@@ -126,12 +131,7 @@ func getChainConfig(g *GovModule, num *rpc.BlockNumber) *params.ChainConfig {
 }
 
 func getParams(g *GovModule, num *rpc.BlockNumber) (gov.PartialParamSet, error) {
-	blockNumber := uint64(0)
-	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
-		blockNumber = g.Chain.CurrentBlock().NumberU64()
-	} else {
-		blockNumber = uint64(num.Int64())
-	}
+	blockNumber := apiBlockNumber(g, num)
 
 	rule := g.Chain.Config().Rules(new(big.Int).SetUint64(blockNumber))
 	gp := g.GetParamSet(blockNumber)

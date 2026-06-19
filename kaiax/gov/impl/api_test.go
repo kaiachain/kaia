@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/kaiachain/kaia/blockchain/forkid"
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/gov"
 	contractgov_mock "github.com/kaiachain/kaia/kaiax/gov/contractgov/mock"
@@ -64,6 +65,52 @@ func generateRandomValue(name gov.ParamName) any {
 		panic(fmt.Errorf("unknown type %s: %T", name, param.DefaultValue))
 	}
 	return randomValue
+}
+
+func TestAPI_apiBlockNumber(t *testing.T) {
+	head := uint64(10)
+	latest, pending, explicit := rpc.LatestBlockNumber, rpc.PendingBlockNumber, rpc.BlockNumber(3)
+
+	tests := []struct {
+		name      string
+		num       *rpc.BlockNumber
+		want      uint64
+		needsHead bool
+	}{
+		{
+			name:      "nil uses current block",
+			want:      head,
+			needsHead: true,
+		},
+		{
+			name:      "latest uses current block",
+			num:       &latest,
+			want:      head,
+			needsHead: true,
+		},
+		{
+			name:      "pending uses next block",
+			num:       &pending,
+			want:      head + 1,
+			needsHead: true,
+		},
+		{
+			name: "explicit block uses requested block",
+			num:  &explicit,
+			want: 3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g, mockChain, _, _ := newGovModule(t, params.TestChainConfig.Copy())
+			if tt.needsHead {
+				mockChain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(head)})).Times(1)
+			}
+
+			require.Equal(t, tt.want, apiBlockNumber(g, tt.num))
+		})
+	}
 }
 
 // TestAPI_kaia_getChainConfig_CompatibleBlocksCompleteness ensures that
