@@ -30,7 +30,11 @@ func (h *headerGovModule) VerifyHeader(header *types.Header, _ *types.Header) er
 func (h *headerGovModule) PrepareHeader(header *types.Header) error {
 	// if this node has a vote waiting to be casted, put Vote field.
 	if vote, ok := h.peekMyVote(); ok {
-		header.Vote, _ = vote.ToVoteBytes()
+		voteBytes, err := vote.ToVoteBytes()
+		if err != nil {
+			return err
+		}
+		header.Vote = voteBytes
 		logger.Debug("Prepare header with vote", "num", header.Number.Uint64(), "vote", hexutil.Encode(header.Vote))
 	}
 
@@ -38,7 +42,11 @@ func (h *headerGovModule) PrepareHeader(header *types.Header) error {
 	if header.Number.Uint64()%h.epoch == 0 {
 		gov := h.getExpectedGovernance(header.Number.Uint64())
 		if len(gov.Items()) > 0 {
-			header.Governance, _ = gov.ToGovBytes()
+			govBytes, err := gov.ToGovBytes()
+			if err != nil {
+				return err
+			}
+			header.Governance = govBytes
 			logger.Debug("Prepare header with governance", "num", header.Number.Uint64(), "governance", hexutil.Encode(header.Governance))
 		}
 	}
