@@ -68,7 +68,7 @@ arameters are inconsistently specified.
   - MR: M is distributed according to the reward ratio and KIP-82 ratio.
     - The rewards allocated to stakers is further distributed by their relative staking amounts. The staker rewards are proportional to their staking amounts exceeding the minimum staking amount. The minimum staking amount refers to the `reward.minstake` parameter which determines the staking requirement to be a validator.
     - If no validator has staked more than the minimum staking amount, all staking rewards are sent to the proposer.
-    - Any remainder from the division math is sent to the proposer, simplifying the calculation of total rewards.
+    - Remainders from the reward ratio and KIP-82 proposer/staker ratio divisions are sent to Fund1. The remainder from distributing staking rewards among validators is sent to the proposer.
   - NDF: Same as the previous rule.
   - DF: Proposer receives `max(0, F/2 - gpM)` and rest of the fees are burnt.
     - The proposer's minting reward is fixed to a product of minting amount (M), validator's reward ratio (g) and KIP-82 proposer ratio (p). This amount is considered the minimum operation cost of a validator.
@@ -81,7 +81,7 @@ arameters are inconsistently specified.
 - **Prague rule (KIP-226)**: The rule since the KIP-226 hardfork with `istanbul.policy == 2` and `reward.deferredtxfee = true`.
   - MR: The consensus liquidity is introduced. The validator's total staking amount is summed up with the KAIA staked in consensus liquidity.
     - If the validator has staked more than `reward.minstake` in staking-only (CNStaking) contract, the validator's total staking amount will be summed up with the consensus liquidity.
-    - In this case, the reward between staking-only and consensus liquidity will be distributed proportionally to their staking amounts.
+    - In this case, the reward between staking-only and consensus liquidity will be distributed proportionally to their staking amounts. The consensus liquidity portion is rounded down, and the remainder goes to the validator's AddressBook reward address.
     - Otherwise, validator will not be eligible for rewards.
   - NDF: Same as the previous rule.
   - DF: Same as the previous rule.
@@ -93,6 +93,7 @@ arameters are inconsistently specified.
     - The `reward.ratio` parameter can be either four parts (g/x/y/z) or three parts (g/x/y), in which case z is zero.
     - The fourth portion is granted to the Fund3 (KPF).
     - The rewards allocated to stakers are further distributed according to their relative staking amounts. The staker rewards are proportional to their staking amounts that exceeds `reward.stakingrewardthreshold`. However, their staking amounts must still be at least `reward.minimumstake` to be eligible.
+    - Remainders follow the same policy as above: reward-ratio and KIP-82 proposer/staker ratio remainders are sent to Fund1, staking allocation remainders are sent to the proposer, and consensus liquidity split remainders go to the validator's AddressBook reward address.
   - NDF: Same as the previous rule.
   - DF: Same as the previous rule.
 
