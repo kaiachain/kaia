@@ -81,6 +81,15 @@ func (c *contractGovModule) contractGetAllParamsAtFromAddr(blockNum uint64, addr
 	}
 
 	ret := ParseContractCall(names, values)
+
+	rules := config.Rules(new(big.Int).SetUint64(blockNum))
+	for name := range ret {
+		if gov.DeprecatedAt(name, rules) {
+			logger.Warn("Ignoring deprecated parameter from contract governance", "name", name, "blockNum", blockNum)
+			delete(ret, name)
+		}
+	}
+
 	return ret, nil
 }
 

@@ -57,11 +57,15 @@ func createSimulateBackend(t *testing.T) ([]*bind.TransactOpts, *backends.Simula
 }
 
 func prepareContractGovModule(t *testing.T, bc *blockchain.BlockChain, addr common.Address) *contractGovModule {
+	return prepareContractGovModuleWithConfig(t, bc, addr, &params.ChainConfig{KoreCompatibleBlock: big.NewInt(100)})
+}
+
+func prepareContractGovModuleWithConfig(t *testing.T, bc *blockchain.BlockChain, addr common.Address, config *params.ChainConfig) *contractGovModule {
 	mockHGM := headergov_mock.NewMockHeaderGovModule(gomock.NewController(t))
 	cgm := NewContractGovModule()
 	err := cgm.Init(&InitOpts{
 		Chain:       bc,
-		ChainConfig: &params.ChainConfig{KoreCompatibleBlock: big.NewInt(100)},
+		ChainConfig: config,
 		Hgm:         mockHGM,
 	})
 	require.Nil(t, err)
@@ -69,41 +73,52 @@ func prepareContractGovModule(t *testing.T, bc *blockchain.BlockChain, addr comm
 	return cgm
 }
 
+func setParam(t *testing.T, sim *backends.SimulatedBackend, gp *govcontract.GovParam, owner *bind.TransactOpts, name string, val []byte, activation int64) {
+	tx, err := gp.SetParam(owner, name, true, val, big.NewInt(activation))
+	require.Nil(t, err)
+	sim.Commit()
+	receipt, _ := sim.TransactionReceipt(nil, tx.Hash())
+	require.NotNil(t, receipt)
+	require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+}
+
 func TestGetParamSet(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlError)
-	paramName := string(gov.GovernanceUnitPrice)
+	name := string(gov.GovernanceUnitPrice)
 	accounts, sim, addr, gp := createSimulateBackend(t)
 	cgm := prepareContractGovModule(t, sim.BlockChain(), addr)
 
-	{
-		activation := big.NewInt(1000)
-		val := []byte{0, 0, 0, 0, 0, 0, 0, 25}
-		tx, err := gp.SetParam(accounts[0], paramName, true, val, activation)
-		require.Nil(t, err)
-		sim.Commit()
+	setParam(t, sim, gp, accounts[0], name, []byte{0, 0, 0, 0, 0, 0, 0, 25}, 1000)
+	assert.Equal(t, uint64(25), cgm.GetParamSet(1000).UnitPrice)
 
-		receipt, _ := sim.TransactionReceipt(nil, tx.Hash())
-		require.NotNil(t, receipt)
-		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+	setParam(t, sim, gp, accounts[0], name, []byte{0, 0, 0, 0, 0, 0, 0, 125}, 2000)
+	assert.Equal(t, uint64(125), cgm.GetParamSet(2000).UnitPrice)
+}
 
-		ps := cgm.GetParamSet(activation.Uint64())
-		assert.NotNil(t, ps)
-		assert.Equal(t, uint64(25), ps.UnitPrice)
-	}
+// reward.deferredtxfee (gov.AlwaysDeprecated): always dropped from contract governance.
+func TestGetParamSetIgnoresDeprecatedParam(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
+	accounts, sim, addr, gp := createSimulateBackend(t)
+	cgm := prepareContractGovModuleWithConfig(t, sim.BlockChain(), addr,
+		&params.ChainConfig{KoreCompatibleBlock: big.NewInt(100), PermissionlessCompatibleBlock: big.NewInt(2000)})
 
-	{
-		activation := big.NewInt(2000)
-		val := []byte{0, 0, 0, 0, 0, 0, 0, 125}
-		tx, err := gp.SetParam(accounts[0], paramName, true, val, activation)
-		require.Nil(t, err)
-		sim.Commit()
+	setParam(t, sim, gp, accounts[0], string(gov.RewardDeferredTxFee), []byte{0x01}, 200)
 
-		receipt, _ := sim.TransactionReceipt(nil, tx.Hash())
-		require.NotNil(t, receipt)
-		require.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+	deferredTxFee := gov.GetDefaultGovernanceParamSet().DeferredTxFee
+	assert.Equal(t, deferredTxFee, cgm.GetParamSet(1500).DeferredTxFee) // ignored
+	assert.Equal(t, deferredTxFee, cgm.GetParamSet(2500).DeferredTxFee) // ignored
+}
 
-		ps := cgm.GetParamSet(activation.Uint64())
-		assert.NotNil(t, ps)
-		assert.Equal(t, uint64(125), ps.UnitPrice)
-	}
+// istanbul.committeesize is in gov.PermissionlessDeprecated: allowed before the Permissionless fork, ignored after.
+func TestGetParamSetIgnoresPermissionlessDeprecatedParam(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlError)
+	accounts, sim, addr, gp := createSimulateBackend(t)
+	cgm := prepareContractGovModuleWithConfig(t, sim.BlockChain(), addr,
+		&params.ChainConfig{KoreCompatibleBlock: big.NewInt(100), PermissionlessCompatibleBlock: big.NewInt(2000)})
+
+	committeeSize := uint64(50)
+	setParam(t, sim, gp, accounts[0], string(gov.IstanbulCommitteeSize), new(big.Int).SetUint64(committeeSize).Bytes(), 200)
+
+	assert.Equal(t, committeeSize, cgm.GetParamSet(1500).CommitteeSize)                                    // before fork: applied
+	assert.Equal(t, gov.GetDefaultGovernanceParamSet().CommitteeSize, cgm.GetParamSet(2500).CommitteeSize) // after fork: ignored
 }
