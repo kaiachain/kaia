@@ -95,8 +95,7 @@ func TestGetParamSet(t *testing.T) {
 	assert.Equal(t, uint64(125), cgm.GetParamSet(2000).UnitPrice)
 }
 
-// reward.deferredtxfee (gov.AlwaysDeprecated): contract-gov enforcement is gated by the
-// Permissionless fork — applied before the fork, dropped after.
+// reward.deferredtxfee (gov.AlwaysDeprecated): always dropped from contract governance.
 func TestGetParamSetIgnoresDeprecatedParam(t *testing.T) {
 	log.EnableLogForTest(log.LvlCrit, log.LvlError)
 	accounts, sim, addr, gp := createSimulateBackend(t)
@@ -105,8 +104,9 @@ func TestGetParamSetIgnoresDeprecatedParam(t *testing.T) {
 
 	setParam(t, sim, gp, accounts[0], string(gov.RewardDeferredTxFee), []byte{0x01}, 200)
 
-	assert.True(t, cgm.GetParamSet(1500).DeferredTxFee)                                                    // before fork: applied
-	assert.Equal(t, gov.GetDefaultGovernanceParamSet().DeferredTxFee, cgm.GetParamSet(2500).DeferredTxFee) // after fork: ignored
+	deferredTxFee := gov.GetDefaultGovernanceParamSet().DeferredTxFee
+	assert.Equal(t, deferredTxFee, cgm.GetParamSet(1500).DeferredTxFee) // ignored
+	assert.Equal(t, deferredTxFee, cgm.GetParamSet(2500).DeferredTxFee) // ignored
 }
 
 // istanbul.committeesize is in gov.PermissionlessDeprecated: allowed before the Permissionless fork, ignored after.
