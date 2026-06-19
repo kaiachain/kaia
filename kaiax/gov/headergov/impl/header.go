@@ -54,9 +54,6 @@ func (h *headerGovModule) VerifyVote(header *types.Header) error {
 	if len(header.Vote) == 0 {
 		return nil
 	}
-	if header.Vote == nil {
-		return ErrNilVote
-	}
 
 	var (
 		vb       headergov.VoteBytes = header.Vote

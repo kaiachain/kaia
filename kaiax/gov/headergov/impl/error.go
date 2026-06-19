@@ -14,7 +14,6 @@ var (
 	ErrDeprecatedVote       = errors.New("vote parameter is deprecated at the current rules")
 
 	ErrGovInNonEpochBlock = errors.New("governance is not allowed in non-epoch block")
-	ErrNilVote            = errors.New("vote is nil")
 	ErrGovVerification    = errors.New("header.Governance does not match the vote in previous epoch")
 
 	ErrGovParamNotAccount       = errors.New("govparamcontract is not an account")
