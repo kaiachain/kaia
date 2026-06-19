@@ -194,12 +194,10 @@ func parsePermissionlessCallResult(num uint64, profiles []multicall.Profile, amo
 		return nil, staking.ErrCLRegistryResult
 	}
 
-	var (
-		nodeIds          []common.Address
-		stakingContracts []common.Address
-		rewardAddrs      []common.Address
-		stakingAmounts   []uint64
-	)
+	nodeIds := make([]common.Address, 0, len(profiles))
+	stakingContracts := make([]common.Address, 0, len(profiles))
+	rewardAddrs := make([]common.Address, 0, len(profiles))
+	stakingAmounts := make([]uint64, 0, len(profiles))
 	for i, p := range profiles {
 		if !valset.NodeState(p.State).IsRewardEligible() {
 			continue
