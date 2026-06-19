@@ -47,6 +47,9 @@ func (r *RewardModule) FinalizeState(header *types.Header, state *state.StateDB,
 	if err != nil {
 		return err
 	}
+	if err := spec.Validate(); err != nil {
+		return err
+	}
 	for addr, amount := range spec.Rewards {
 		state.AddBalance(addr, amount)
 	}
