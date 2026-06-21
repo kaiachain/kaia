@@ -44,7 +44,7 @@ It contains a JSON object of `{name: value}` for each ratified parameter.
 The ratification condition is determined by the `governance.governancemode` parameter. Mainnet and Kairos both operate in `single` mode. There are two governance modes:
 
 - `none` mode: all members of the GC can vote. For each governance parameter, the last vote in the epoch will be ratified.
-- `single` mode: only one member of the GC, stipulated in the parameter `governance.governingnode`, can vote. The vote will be ratified if it is the only vote in the epoch.
+- `single` mode: only one member of the GC, stipulated in the parameter `governance.governingnode`, can vote. All valid votes from the governing node in the epoch are ratified in block order. For each governance parameter, the last vote in the epoch will be ratified.
 
 Parameter change ratified at `k*epoch` block takes effect starting from `(k+1)*epoch` block.
 It is worth noting that the effective time of the ratification is `(k+1)*epoch + 1` before Kore.
