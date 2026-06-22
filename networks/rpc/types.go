@@ -31,6 +31,7 @@ import (
 
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/pkg/errors"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -92,7 +93,7 @@ func (bn *BlockNumber) UnmarshalJSON(data []byte) error {
 	err := json.Unmarshal(data, &decimalInput)
 	if err == nil {
 		if decimalInput > math.MaxInt64 {
-			return fmt.Errorf("blocknumber too high")
+			return errors.New("blocknumber too high")
 		}
 		*bn = BlockNumber(decimalInput)
 		return nil
@@ -128,11 +129,11 @@ func (bn *BlockNumber) UnmarshalJSON(data []byte) error {
 }
 
 func (bn BlockNumber) Int64() int64 {
-	return (int64)(bn)
+	return int64(bn)
 }
 
 func (bn BlockNumber) Uint64() uint64 {
-	return (uint64)(bn)
+	return uint64(bn)
 }
 
 type BlockNumberOrHash struct {
@@ -159,7 +160,7 @@ func (bnh *BlockNumberOrHash) UnmarshalJSON(data []byte) error {
 	err = json.Unmarshal(data, &decimalInput)
 	if err == nil {
 		if decimalInput > math.MaxInt64 {
-			return fmt.Errorf("blocknumber too high")
+			return errors.New("blocknumber too high")
 		}
 		bn := BlockNumber(decimalInput)
 		bnh.BlockNumber = &bn
