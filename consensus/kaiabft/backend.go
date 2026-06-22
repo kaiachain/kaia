@@ -755,7 +755,7 @@ func (b *backend) startSpeculativeExecution(proposal bft.Proposal) {
 		// ProcessBlock delegates to StateProcessor.Process() which already
 		// applies rewards and computes the state root — do NOT call
 		// FinalizeState again.
-		result, err := executor.ProcessBlock(block.Transactions())
+		result, err := executor.ProcessBlock(ctx, block.Transactions())
 		if err != nil {
 			entry.Complete(nil, err)
 			return

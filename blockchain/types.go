@@ -23,6 +23,8 @@
 package blockchain
 
 import (
+	"context"
+
 	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
@@ -81,6 +83,9 @@ type Processor interface {
 
 	// Process processes the state changes according to the Kaia rules by running
 	// the transaction messages using the statedb and applying any rewards to
-	// the processor (coinbase).
-	Process(block *types.Block, stateDB *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, []*vm.InternalTxTrace, ProcessStats, error)
+	// the processor (coinbase). ctx aborts execution between transactions; pass
+	// context.Background() on the InsertChain path, which must never abort
+	// mid-block. Only speculative execution (validator path) passes a
+	// cancellable context.
+	Process(ctx context.Context, block *types.Block, stateDB *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, []*vm.InternalTxTrace, ProcessStats, error)
 }

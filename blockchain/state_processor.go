@@ -23,6 +23,7 @@
 package blockchain
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -65,7 +66,7 @@ func NewStateProcessor(config *params.ChainConfig, bc *BlockChain) *StateProcess
 // Process returns the receipts and logs accumulated during the process and
 // returns the amount of gas that was used in the process. If any of the
 // transactions failed to execute due to insufficient gas it will return an error.
-func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, []*vm.InternalTxTrace, ProcessStats, error) {
+func (p *StateProcessor) Process(ctx context.Context, block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, []*vm.InternalTxTrace, ProcessStats, error) {
 	var (
 		receipts         types.Receipts
 		usedGas          = new(uint64)
@@ -83,6 +84,11 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	processStats.BeforeApplyTxs = time.Now()
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
+		// Abort between txs when the speculative result is no longer needed.
+		// InsertChain passes context.Background(), so this never fires on commit.
+		if err := ctx.Err(); err != nil {
+			return nil, nil, 0, nil, processStats, err
+		}
 		statedb.SetTxContext(tx.Hash(), block.Hash(), i)
 		receipt, internalTxTrace, err := p.bc.ApplyTransaction(p.config, &author, statedb, header, tx, usedGas, &cfg)
 		if err != nil {
