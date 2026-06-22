@@ -69,7 +69,6 @@ func New(opts *BackendOpts) consensus.Engine {
 		logger:           logger.NewWith(),
 		commitCh:         make(chan *types.Result, 1),
 		candidates:       make(map[common.Address]bool),
-		coreStarted:      false,
 		recentMessages:   recentMessages,
 		knownMessages:    knownMessages,
 		sealer:           istanbul.NewSealerImpl(opts.PrivateKey),
@@ -98,7 +97,7 @@ type backend struct {
 	proposedBlockHash common.Hash
 	sealMu            sync.Mutex
 	sealSkippedNum    uint64 // block number that was committed before Seal started (0 = none)
-	coreStarted       bool
+	coreStarted       atomic.Bool
 	coreMu            sync.RWMutex
 
 	// Current list of candidates we are pushing
