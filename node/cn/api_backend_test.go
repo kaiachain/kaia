@@ -185,8 +185,9 @@ func TestCNAPIBackend_SetHead(t *testing.T) {
 	mockCtrl, mockBlockChain, _, api := newCNAPIBackend(t)
 	defer mockCtrl.Finish()
 
-	// headergov.Init reads genesis block
+	// headergov.Init reads genesis block and the current head
 	mockBlockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(&types.Header{}).Times(1)
+	mockBlockChain.EXPECT().CurrentBlock().Return(types.NewBlockWithHeader(&types.Header{Number: common.Big0})).AnyTimes()
 
 	mockDownloader := mocks2.NewMockProtocolManagerDownloader(mockCtrl)
 	mockDownloader.EXPECT().Cancel().Times(1)

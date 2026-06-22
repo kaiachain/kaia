@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
 	"github.com/kaiachain/kaia/kaiax/gov"
@@ -286,43 +287,55 @@ func (h *headerGovModule) accumulateVotesInEpoch(epochIdx uint64) {
 	logger.Info("Accumulated votes", "epochIdx", epochIdx)
 }
 
-func readVoteDataFromDB(chain chain, db database.Database) map[uint64]headergov.VoteData {
-	voteBlocks := ReadVoteDataBlockNums(db)
-	votes := make(map[uint64]headergov.VoteData)
-	for _, blockNum := range voteBlocks {
+// forEachIndexedHeader calls fn for each indexed block whose header is present. A block
+// above head is no longer on the canonical chain, so it is skipped; a missing header at or
+// below head means the canonical chain is broken (fatal).
+func forEachIndexedHeader(chain chain, blockNums StoredUint64Array, kind string, fn func(blockNum uint64, header *types.Header)) {
+	head := chain.CurrentBlock().NumberU64()
+	for _, blockNum := range blockNums {
 		header := chain.GetHeaderByNumber(blockNum)
-		parsedVote, err := headergov.VoteBytes(header.Vote).ToVoteData()
-		if err != nil {
-			panic(err)
+		if header == nil {
+			if blockNum > head {
+				logger.Warn("Skipping stale block above head", "kind", kind, "num", blockNum, "head", head)
+				continue
+			}
+			logger.Crit("Missing canonical header for indexed block", "kind", kind, "num", blockNum, "head", head)
 		}
 
-		votes[blockNum] = parsedVote
+		fn(blockNum, header)
 	}
+}
 
+func readVoteDataFromDB(chain chain, db database.Database) map[uint64]headergov.VoteData {
+	votes := make(map[uint64]headergov.VoteData)
+	forEachIndexedHeader(chain, ReadVoteDataBlockNums(db), "vote",
+		func(blockNum uint64, header *types.Header) {
+			parsedVote, err := headergov.VoteBytes(header.Vote).ToVoteData()
+			if err != nil {
+				panic(err)
+			}
+			votes[blockNum] = parsedVote
+		},
+	)
 	return votes
 }
 
 func readGovDataFromDB(chain chain, db database.Database) map[uint64]headergov.GovData {
-	govBlocks := ReadGovDataBlockNums(db)
 	govs := make(map[uint64]headergov.GovData)
-
-	for _, blockNum := range govBlocks {
-		header := chain.GetHeaderByNumber(blockNum)
-
-		parsedGov, err := headergov.GovBytes(header.Governance).ToGovData()
-		if err != nil {
-			// For tests, genesis' governance can be nil.
-			if blockNum == 0 {
-				continue
+	forEachIndexedHeader(chain, ReadGovDataBlockNums(db), "gov",
+		func(blockNum uint64, header *types.Header) {
+			parsedGov, err := headergov.GovBytes(header.Governance).ToGovData()
+			if err != nil {
+				// For tests, genesis' governance can be nil: omit from cache.
+				if blockNum == 0 {
+					return
+				}
+				logger.Error("Failed to parse gov", "num", blockNum, "err", err)
+				panic("failed to parse gov")
 			}
-
-			logger.Error("Failed to parse gov", "num", blockNum, "err", err)
-			panic("failed to parse gov")
-		}
-
-		govs[blockNum] = parsedGov
-	}
-
+			govs[blockNum] = parsedGov
+		},
+	)
 	return govs
 }
 
