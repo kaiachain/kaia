@@ -65,6 +65,8 @@ func TestBlockNumberJSONUnmarshal(t *testing.T) {
 		24: {"-3", true, BlockNumber(0)},
 		25: {"-4", true, BlockNumber(0)},
 		26: {"-5", true, BlockNumber(0)},
+		27: {"9223372036854775808", true, BlockNumber(0)},  // 2^63
+		28: {"18446744073709551615", true, BlockNumber(0)}, // 2^64 - 1, used to wrap to -1
 	}
 
 	for i, test := range tests {
@@ -128,6 +130,10 @@ func TestBlockNumberOrHash_UnmarshalJSON(t *testing.T) {
 		33: {`{"blockNumber":"-1"}`, true, BlockNumberOrHash{}},
 		34: {`{"blockNumber":"-2"}`, true, BlockNumberOrHash{}},
 		35: {`{"blockNumber":"-3"}`, true, BlockNumberOrHash{}},
+		36: {"9223372036854775808", true, BlockNumberOrHash{}},                  // 2^63
+		37: {"18446744073709551615", true, BlockNumberOrHash{}},                 // 2^64 - 1, used to wrap to -1
+		38: {`{"blockNumber":9223372036854775808}`, true, BlockNumberOrHash{}},  // 2^63
+		39: {`{"blockNumber":18446744073709551615}`, true, BlockNumberOrHash{}}, // 2^64 - 1, used to wrap to -1
 	}
 
 	for i, test := range tests {
