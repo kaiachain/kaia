@@ -17,6 +17,7 @@
 package work
 
 import (
+	"context"
 	"errors"
 	"sync"
 
@@ -152,7 +153,7 @@ func (e *DefaultExecutor) Execute(txs *types.TransactionsByPriceAndNonce, mux *e
 // InitializeState + ApplyTransaction×N + FinalizeState in one call,
 // producing results identical to the normal block insertion path.
 // The caller must NOT call FinalizeState separately.
-func (e *DefaultExecutor) ProcessBlock(txs []*types.Transaction) (*consensus.ExecutionResult, error) {
+func (e *DefaultExecutor) ProcessBlock(ctx context.Context, txs []*types.Transaction) (*consensus.ExecutionResult, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -167,7 +168,7 @@ func (e *DefaultExecutor) ProcessBlock(txs []*types.Transaction) (*consensus.Exe
 	block := types.NewBlockWithHeader(e.header).WithBody(txs)
 
 	// Delegate to Process() — the same function InsertChain uses.
-	receipts, logs, usedGas, internalTxTraces, procStats, err := e.chain.Processor().Process(block, e.state, e.vmConfig)
+	receipts, logs, usedGas, internalTxTraces, procStats, err := e.chain.Processor().Process(ctx, block, e.state, e.vmConfig)
 	if err != nil {
 		return nil, err
 	}

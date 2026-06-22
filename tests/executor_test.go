@@ -17,6 +17,7 @@
 package tests
 
 import (
+	"context"
 	"math/big"
 	"testing"
 	"time"
@@ -66,7 +67,7 @@ func TestDefaultExecutor_Clone(t *testing.T) {
 	require.NoError(t, executor.ResetWithState(parentState, header))
 
 	// Clone should fail ProcessBlock because it was never initialized.
-	_, err = clone.ProcessBlock(nil)
+	_, err = clone.ProcessBlock(context.Background(), nil)
 	assert.ErrorIs(t, err, work.ErrExecutorNotInitialized)
 
 	// Initialize clone separately — should succeed independently.
@@ -74,7 +75,7 @@ func TestDefaultExecutor_Clone(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, clone.ResetWithState(cloneState, header))
 
-	result, err := clone.ProcessBlock(nil)
+	result, err := clone.ProcessBlock(context.Background(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0), result.UsedGas)
 }
@@ -134,7 +135,7 @@ func TestProcessBlock_MatchesInsertChain(t *testing.T) {
 	executor := work.NewDefaultExecutor(bcdata.bc.Config(), bcdata.bc, common.Address{}, vm.Config{})
 	require.NoError(t, executor.ResetWithState(parentState, block.Header()))
 
-	specResult, err := executor.ProcessBlock(block.Transactions())
+	specResult, err := executor.ProcessBlock(context.Background(), block.Transactions())
 	require.NoError(t, err)
 
 	// --- 4. Compare speculative results with block header ---
@@ -172,6 +173,54 @@ func TestProcessBlock_MatchesInsertChain(t *testing.T) {
 	n, err := bcdata.bc.InsertChain(types.Blocks{block})
 	assert.NoError(t, err, "InsertChain should accept the block")
 	assert.Equal(t, 0, n, "InsertChain should process the block at index 0")
+}
+
+// TestProcessBlock_ContextCancellation verifies that a cancelled context aborts
+// speculative execution between transactions rather than running the whole block.
+// A pre-cancelled context must bail on the first loop iteration, before any tx
+// is applied, so no result is produced.
+func TestProcessBlock_ContextCancellation(t *testing.T) {
+	log.EnableLogForTest(log.LvlCrit, log.LvlTrace)
+
+	bcdata, err := NewBCDataWithConfigs(6, 4, Forks["Magma"], nil)
+	require.NoError(t, err)
+	defer bcdata.Shutdown()
+
+	signer := types.LatestSignerForChainID(bcdata.bc.Config().ChainID)
+	gasPrice := new(big.Int).Add(bcdata.bc.CurrentBlock().Header().BaseFee, big.NewInt(1))
+
+	var txs types.Transactions
+	sender := bcdata.privKeys[0]
+	senderAddr := *bcdata.addrs[0]
+	stateDb, err := bcdata.bc.State()
+	require.NoError(t, err)
+	nonce := stateDb.GetNonce(senderAddr)
+	for i := range 5 {
+		tx := types.NewTransaction(nonce, *bcdata.addrs[1+i%4], new(big.Int).SetUint64(1000), params.TxGas, gasPrice, nil)
+		signedTx, err := types.SignTx(tx, signer, sender)
+		require.NoError(t, err)
+		txs = append(txs, signedTx)
+		nonce++
+	}
+
+	prof := profile.NewProfiler()
+	_, block, _, err := bcdata.MineABlock(txs, signer, prof, nil)
+	require.NoError(t, err)
+	require.NotEmpty(t, block.Transactions(), "block must contain txs for the test to be meaningful")
+
+	parent := bcdata.bc.CurrentBlock()
+	parentState, err := bcdata.bc.PrunableStateAt(parent.Root(), parent.NumberU64())
+	require.NoError(t, err)
+
+	executor := work.NewDefaultExecutor(bcdata.bc.Config(), bcdata.bc, common.Address{}, vm.Config{})
+	require.NoError(t, executor.ResetWithState(parentState, block.Header()))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // pre-cancel: Process must bail on the first loop iteration
+
+	specResult, err := executor.ProcessBlock(ctx, block.Transactions())
+	require.ErrorIs(t, err, context.Canceled, "cancelled context must abort ProcessBlock")
+	require.Nil(t, specResult, "no result expected on cancellation")
 }
 
 // TestInsertChain_SpeculativeCacheHit verifies that InsertChain uses a
@@ -216,7 +265,7 @@ func TestInsertChain_SpeculativeCacheHit(t *testing.T) {
 	executor := work.NewDefaultExecutor(bcdata.bc.Config(), bcdata.bc, common.Address{}, vm.Config{})
 	require.NoError(t, executor.ResetWithState(parentState, block.Header()))
 
-	specResult, err := executor.ProcessBlock(block.Transactions())
+	specResult, err := executor.ProcessBlock(context.Background(), block.Transactions())
 	require.NoError(t, err)
 
 	// --- 3. Populate the speculative cache ---
@@ -348,7 +397,7 @@ func TestInsertChain_SpeculativeCacheWait(t *testing.T) {
 	executor := work.NewDefaultExecutor(bcdata.bc.Config(), bcdata.bc, common.Address{}, vm.Config{})
 	require.NoError(t, executor.ResetWithState(parentState, block.Header()))
 
-	specResult, err := executor.ProcessBlock(block.Transactions())
+	specResult, err := executor.ProcessBlock(context.Background(), block.Transactions())
 	require.NoError(t, err)
 
 	hitsBefore := bcdata.bc.SpeculativeCache().Hits()
@@ -461,7 +510,7 @@ func TestKaiaBFT_SpeculativeExecution_ClonePath(t *testing.T) {
 
 	require.NoError(t, clonedExecutor.ResetWithState(parentState, block.Header()))
 
-	specResult, err := clonedExecutor.ProcessBlock(block.Transactions())
+	specResult, err := clonedExecutor.ProcessBlock(context.Background(), block.Transactions())
 	require.NoError(t, err)
 
 	assert.Equal(t, block.Root(), specResult.State.IntermediateRoot(true), "state root mismatch")

@@ -21,6 +21,7 @@
 package cn
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -164,7 +165,7 @@ func (cn *CN) stateAtBlock(block *types.Block, reexec uint64, base *state.StateD
 		if current = cn.blockchain.GetBlockByNumber(next); current == nil {
 			return nil, nil, fmt.Errorf("block #%d not found", next)
 		}
-		_, _, _, _, _, err := cn.blockchain.Processor().Process(current, statedb, vm.Config{})
+		_, _, _, _, _, err := cn.blockchain.Processor().Process(context.Background(), current, statedb, vm.Config{})
 		if err != nil {
 			return nil, nil, fmt.Errorf("processing block %d failed: %v", current.NumberU64(), err)
 		}
