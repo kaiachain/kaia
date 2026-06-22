@@ -17,6 +17,7 @@
 package consensus
 
 import (
+	"context"
 	"time"
 
 	"github.com/kaiachain/kaia/blockchain/state"
@@ -76,8 +77,9 @@ type Executor interface {
 	// ProcessBlock executes the given transaction list in the provided
 	// order without re-sorting. This is the path validators use during
 	// speculative execution of a received pre-prepare: they must replay the
-	// exact order encoded in the proposer's block body.
-	ProcessBlock(txs []*types.Transaction) (*ExecutionResult, error)
+	// exact order encoded in the proposer's block body. ctx aborts execution
+	// between transactions when the speculative result is no longer needed.
+	ProcessBlock(ctx context.Context, txs []*types.Transaction) (*ExecutionResult, error)
 
 	// FinalizeState runs post-transaction state modifications and assembles final block.
 	FinalizeState(result *ExecutionResult) (*types.Block, error)

@@ -23,6 +23,7 @@
 package blockchain
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -2107,7 +2108,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 			}
 
 			// Process block using the parent state as reference point.
-			receipts, logs, usedGas, internalTxTraces, procStats, err = bc.processor.Process(block, stateDB, bc.vmConfig)
+			receipts, logs, usedGas, internalTxTraces, procStats, err = bc.processor.Process(context.Background(), block, stateDB, bc.vmConfig)
 			if err != nil {
 				bc.reportBlock(block, receipts, err)
 				atomic.StoreUint32(&followupInterrupt, 1)
