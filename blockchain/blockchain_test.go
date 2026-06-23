@@ -24,6 +24,7 @@ package blockchain
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"encoding/binary"
 	"encoding/json"
@@ -176,7 +177,7 @@ func testBlockChainImport(chain types.Blocks, blockchain *BlockChain) error {
 		if err != nil {
 			return err
 		}
-		receipts, _, usedGas, _, _, err := blockchain.Processor().Process(block, statedb, vm.Config{})
+		receipts, _, usedGas, _, _, err := blockchain.Processor().Process(context.Background(), block, statedb, vm.Config{})
 		if err != nil {
 			blockchain.reportBlock(block, receipts, err)
 			return err

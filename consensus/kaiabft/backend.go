@@ -688,6 +688,13 @@ func (b *backend) startSpeculativeExecution(proposal bft.Proposal) {
 		return
 	}
 
+	blockHash := block.Hash()
+	// Re-entry for the same proposal (e.g. future-block retry) keeps the
+	// in-flight or completed execution instead of restarting it.
+	if b.specCache.HasUsable(blockHash) {
+		return
+	}
+
 	b.specMu.Lock()
 	if b.specCancel != nil {
 		b.specCancel()
@@ -696,9 +703,9 @@ func (b *backend) startSpeculativeExecution(proposal bft.Proposal) {
 	b.specCancel = cancel
 	b.specMu.Unlock()
 
-	blockHash := block.Hash()
 	entry := b.specCache.Reserve(blockHash)
 
+	signer := types.MakeSigner(b.chain.Config(), block.Number())
 	executor := b.executor.Clone()
 
 	parentHeader := b.chain.GetHeader(block.ParentHash(), block.NumberU64()-1)
@@ -707,6 +714,17 @@ func (b *backend) startSpeculativeExecution(proposal bft.Proposal) {
 		cancel()
 		return
 	}
+
+	// Adopt pool-known senders; kick async ecrecover for the rest. Runs
+	// synchronously so execution and prefetch always see warmed senders.
+	blockchain.WarmSenders(signer, block, b.chain.TxLookup())
+
+	// Warm trie-node cache for spec-exec; ctx ties prefetch to this round.
+	b.specWg.Add(1)
+	go func() {
+		defer b.specWg.Done()
+		blockchain.PrefetchBlockState(ctx, b.chain, parentHeader.Root, block.NumberU64(), block.Transactions(), signer)
+	}()
 
 	b.specWg.Add(1)
 	go func() {
@@ -737,7 +755,7 @@ func (b *backend) startSpeculativeExecution(proposal bft.Proposal) {
 		// ProcessBlock delegates to StateProcessor.Process() which already
 		// applies rewards and computes the state root — do NOT call
 		// FinalizeState again.
-		result, err := executor.ProcessBlock(block.Transactions())
+		result, err := executor.ProcessBlock(ctx, block.Transactions())
 		if err != nil {
 			entry.Complete(nil, err)
 			return

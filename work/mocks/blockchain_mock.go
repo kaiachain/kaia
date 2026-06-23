@@ -1077,6 +1077,20 @@ func (mr *MockBlockChainMockRecorder) TrieNode(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrieNode", reflect.TypeOf((*MockBlockChain)(nil).TrieNode), arg0)
 }
 
+// TxLookup mocks base method.
+func (m *MockBlockChain) TxLookup() func(common.Hash) *types.Transaction {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TxLookup")
+	ret0, _ := ret[0].(func(common.Hash) *types.Transaction)
+	return ret0
+}
+
+// TxLookup indicates an expected call of TxLookup.
+func (mr *MockBlockChainMockRecorder) TxLookup() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TxLookup", reflect.TypeOf((*MockBlockChain)(nil).TxLookup))
+}
+
 // VMConfig mocks base method.
 func (m *MockBlockChain) VMConfig() vm.Config {
 	m.ctrl.T.Helper()

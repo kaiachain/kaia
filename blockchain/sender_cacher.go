@@ -23,18 +23,17 @@
 package blockchain
 
 import (
-	"math"
 	"runtime"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/common"
 )
 
 // senderCacher is a concurrent transaction sender recoverer and cacher.
 var senderCacher = newTxSenderCacher(calcNumSenderCachers())
 
 func calcNumSenderCachers() int {
-	numWorkers := math.Ceil(float64(runtime.NumCPU()) * 2.0 / 3.0)
-	return int(numWorkers)
+	return runtime.NumCPU()
 }
 
 // txSenderCacherRequest is a request for recovering transaction senders with a
@@ -131,4 +130,34 @@ func (cacher *txSenderCacher) recoverFromBlocks(signer types.Signer, blocks []*t
 		txs = append(txs, block.Transactions()...)
 	}
 	cacher.recover(signer, txs)
+}
+
+// WarmSenders copies sender cache from pool-resident twins (when lookup is set)
+// and kicks async ecrecover for the rest. Pass nil lookup to skip the transplant.
+func WarmSenders(signer types.Signer, block *types.Block, lookup func(common.Hash) *types.Transaction) {
+	if block == nil {
+		return
+	}
+	txs := block.Transactions()
+	toRecover := make([]*types.Transaction, 0, len(txs))
+	if lookup != nil {
+		for _, tx := range txs {
+			if tx == nil {
+				continue
+			}
+			known := lookup(tx.Hash())
+			if known == nil || known == tx {
+				toRecover = append(toRecover, tx)
+				continue
+			}
+			tx.CopySenderFrom(known)
+			// recover is idempotent on cached txs; queue all to avoid a second pass.
+			toRecover = append(toRecover, tx)
+		}
+	} else {
+		toRecover = append(toRecover, txs...)
+	}
+	if len(toRecover) > 0 {
+		senderCacher.recover(signer, toRecover)
+	}
 }

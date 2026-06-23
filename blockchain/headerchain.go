@@ -445,3 +445,7 @@ func (hc *HeaderChain) State() (*state.StateDB, error) {
 func (hc *HeaderChain) StateAt(root common.Hash) (*state.StateDB, error) {
 	return nil, errors.New("HeaderChain does not support StateAt() method")
 }
+
+func (hc *HeaderChain) TxLookup() func(common.Hash) *types.Transaction {
+	return nil
+}
