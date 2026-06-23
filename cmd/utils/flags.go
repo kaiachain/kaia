@@ -2023,7 +2023,7 @@ var (
 	BlockGenerationTimeLimitFlag = &cli.DurationFlag{
 		Name: "block-generation-time-limit",
 		Usage: "(experimental option) Override the tx execution time limit during block generation. " +
-			"Default is 250ms (istanbul) or 500ms (kaiabft) and should not be changed in normal operation. " +
+			"Default is 250ms (istanbul) or 400ms (kaiabft) and should not be changed in normal operation. " +
 			"Only applicable to CN.",
 		Value:    params.DefaultBlockGenerationTimeLimit,
 		Aliases:  []string{"experimental.block-generation-time-limit"},
