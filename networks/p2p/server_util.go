@@ -36,7 +36,7 @@ import (
 // MaxPhysicalConnections and inbound capacity.
 var peerTargets = map[common.ConnType]map[common.ConnType]int{
 	common.CONSENSUSNODE: {
-		common.ENDPOINTNODE: 3,
+		common.ENDPOINTNODE: 4,
 	},
 	common.ENDPOINTNODE: {
 		common.CONSENSUSNODE: 2,
