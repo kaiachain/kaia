@@ -1350,8 +1350,11 @@ func handleBlobSidecarsMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 			continue
 		}
 
-		if err := pm.txpool.SaveBlobSidecar(big.NewInt(int64(sidecar.BlockNum)), int(sidecar.TxIndex), sidecar.TxHash, sidecar.Sidecar); err != nil {
-			logger.Warn("Saved blob sidecar", "blockNum", sidecar.BlockNum, "txIndex", sidecar.TxIndex, "txHash", sidecar.TxHash)
+		// The peer-supplied sidecar.BlockNum/TxIndex are intentionally ignored:
+		// SaveBlobSidecar derives the canonical storage location from the
+		// transaction itself.
+		if err := pm.txpool.SaveBlobSidecar(sidecar.TxHash, sidecar.Sidecar); err != nil {
+			logger.Warn("Failed to save blob sidecar", "txHash", sidecar.TxHash, "err", err)
 			continue
 		}
 

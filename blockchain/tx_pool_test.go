@@ -85,6 +85,9 @@ type testBlockChain struct {
 	gasLimit      uint64
 	chainHeadFeed *event.Feed
 	txMap         map[common.Hash]*types.Transaction
+
+	txLookupBlockNum uint64
+	txLookupIndex    uint64
 }
 
 func (pool *TxPool) SetBaseFee(baseFee *big.Int) {
@@ -111,7 +114,7 @@ func (bc *testBlockChain) GetTxAndLookupInfo(hash common.Hash) (*types.Transacti
 	if !ok {
 		return nil, common.Hash{}, 0, 0
 	}
-	return tx, common.Hash{}, 0, 0
+	return tx, common.Hash{}, bc.txLookupBlockNum, bc.txLookupIndex
 }
 
 func (bc *testBlockChain) addTransaction(tx *types.Transaction) {
@@ -3926,8 +3929,10 @@ func TestTxPool_SaveBlobSidecar(t *testing.T) {
 			name: "success-save-blob-sidecar",
 			setup: func(t *testing.T) (*TxPool, *testBlockChain, *types.Transaction, *types.BlobTxSidecar, *big.Int, int, common.Hash) {
 				pool, blockchain, key, _ := setupTxPoolWithBlobStorage(t)
+				blockchain.txLookupBlockNum = 1000
+				blockchain.txLookupIndex = 2
 				blockNum := big.NewInt(1000)
-				txIndex := 0
+				txIndex := 2
 
 				// Create a blob transaction
 				tx := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(10), key, 1, nil)
@@ -3974,18 +3979,6 @@ func TestTxPool_SaveBlobSidecar(t *testing.T) {
 				blockchain.addTransaction(tx)
 
 				return pool, blockchain, tx, sidecar, big.NewInt(1000), 0, tx.Hash()
-			},
-			expectedError: "blob storage not initialized",
-		},
-		{
-			name: "error-block-num-nil",
-			setup: func(t *testing.T) (*TxPool, *testBlockChain, *types.Transaction, *types.BlobTxSidecar, *big.Int, int, common.Hash) {
-				pool, blockchain, key, _ := setupTxPoolWithBlobStorage(t)
-				tx := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(10), key, 1, nil)
-				sidecar := tx.BlobTxSidecar()
-				blockchain.addTransaction(tx)
-
-				return pool, blockchain, tx, sidecar, nil, 0, tx.Hash()
 			},
 			expectedError: "blob storage not initialized",
 		},
@@ -4083,12 +4076,12 @@ func TestTxPool_SaveBlobSidecar(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			pool, _, _, sidecar, blockNum, txIndex, txHash := tc.setup(t)
+			pool, _, _, sidecar, expBlockNum, expTxIndex, txHash := tc.setup(t)
 			if pool != nil {
 				defer pool.Stop()
 			}
 
-			err := pool.SaveBlobSidecar(blockNum, txIndex, txHash, sidecar)
+			err := pool.SaveBlobSidecar(txHash, sidecar)
 
 			if tc.expectedError != "" {
 				require.Error(t, err)
@@ -4096,7 +4089,7 @@ func TestTxPool_SaveBlobSidecar(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				if tc.verify != nil {
-					tc.verify(t, pool, blockNum, txIndex, sidecar)
+					tc.verify(t, pool, expBlockNum, expTxIndex, sidecar)
 				}
 			}
 		})

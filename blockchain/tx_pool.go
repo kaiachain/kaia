@@ -2028,14 +2028,14 @@ func (pool *TxPool) SubscribeMissingBlobSidecars() <-chan *MissingBlobSidecar {
 	return pool.missingBlobSidecarsCh
 }
 
-func (pool *TxPool) SaveBlobSidecar(blockNum *big.Int, txIndex int, txHash common.Hash, sidecar *types.BlobTxSidecar) error {
-	if pool.blobStorage == nil || blockNum == nil {
+func (pool *TxPool) SaveBlobSidecar(txHash common.Hash, sidecar *types.BlobTxSidecar) error {
+	if pool.blobStorage == nil {
 		return errors.New("blob storage not initialized")
 	}
 	if sidecar == nil {
 		return errors.New("sidecar is nil")
 	}
-	tx, _, _, _ := pool.chain.GetTxAndLookupInfo(txHash)
+	tx, _, blockNumber, txIndex := pool.chain.GetTxAndLookupInfo(txHash)
 	if tx == nil {
 		return errors.New("tx not found")
 	}
@@ -2045,7 +2045,7 @@ func (pool *TxPool) SaveBlobSidecar(blockNum *big.Int, txIndex int, txHash commo
 	if err := sidecar.ValidateWithBlobHashes(tx.BlobHashes()); err != nil {
 		return err
 	}
-	return pool.blobStorage.Save(blockNum, txIndex, sidecar)
+	return pool.blobStorage.Save(new(big.Int).SetUint64(blockNumber), int(txIndex), sidecar)
 }
 
 // saveAndPruneBlobStorage saves and prunes blob storage.
