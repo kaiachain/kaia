@@ -119,6 +119,10 @@ var (
 	underpricedTxCounter = metrics.NewRegisteredCounter("txpool/underpriced", nil)
 	refusedTxCounter     = metrics.NewRegisteredCounter("txpool/refuse", nil)
 	slotsGauge           = metrics.NewRegisteredGauge("txpool/slots", nil)
+
+	// Queue eviction metrics, split by path.
+	queueCapEvictionCounter = metrics.NewRegisteredCounter("txpool/queued/capevict", nil)
+	lifetimeEvictionCounter = metrics.NewRegisteredCounter("txpool/queued/lifetimeevict", nil)
 )
 
 // TxStatus is the current status of a transaction as seen by the pool.
@@ -437,6 +441,7 @@ func (pool *TxPool) loop() {
 					if pool.queue[addr] != nil {
 						for _, tx := range pool.queue[addr].Flatten() {
 							pool.removeTx(tx.Hash(), true)
+							lifetimeEvictionCounter.Inc(1)
 						}
 					}
 					delete(pool.beats, addr)
@@ -1197,9 +1202,9 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 
 	// If the transaction pool is full and new Tx is valid,
 	// (1) discard a new Tx if there is no room for the account of the Tx
-	// (2) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
-	// (3) discard a new Tx if the new Tx does not have a missing nonce
-	// (4) discard underpriced transactions
+	// (2) discard a new Tx if the new Tx does not have a missing nonce
+	// (3) discard underpriced transactions
+	// (4) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
 	if uint64(pool.all.Slots()+numSlots(tx)) > pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll {
 		// (1) discard a new Tx if there is no room for the account of the Tx
 		from, _ := types.Sender(pool.signer, tx)
@@ -1210,30 +1215,35 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		}
 
 		maxTx := pool.getMaxTxFromQueueWhenNonceIsMissing(tx, &from)
-		if maxTx != tx {
-			// (2) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
-			pool.removeTx(maxTx.Hash(), true)
-			logger.Trace("Removing an old Tx with the max nonce to insert a new Tx with missing nonce, because TxPool is full", "account", from, "new nonce(previously missing)", tx.Nonce(), "removed max nonce", maxTx.Nonce())
-		} else {
-			// (3) discard a new Tx if the new Tx does not have a missing nonce
+		if maxTx == tx {
+			// (2) discard a new Tx if the new Tx does not have a missing nonce
 			logger.Trace("Rejecting a new Tx, because TxPool is full and a new TX does not have missing nonce", "hash", tx.Hash())
 			refusedTxCounter.Inc(1)
 			return false, fmt.Errorf("txpool is full and the new tx does not have missing nonce: %d", uint64(pool.all.Count()))
 		}
 
-		// (4) discard underpriced transactions
-		// If the new transaction is underpriced, don't accept it
+		// (3) discard underpriced transactions, before the eviction in (4): a refused
+		// tx must leave the sender's queue untouched, so the eviction only runs once
+		// the tx is certain to be admitted.
 		if !local && pool.priced.Underpriced(tx, pool.locals) {
 			logger.Trace("Discarding underpriced transaction", "hash", hash, "price", tx.GasPrice())
 			underpricedTxCounter.Inc(1)
 			return false, ErrUnderpriced
 		}
-		// New transaction is better than our worse ones, make room for it
-		drop := pool.priced.Discard(pool.all.Slots()-int(pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll)+numSlots(tx), pool.locals)
-		for _, tx := range drop {
-			logger.Trace("Discarding freshly underpriced transaction", "hash", tx.Hash(), "price", tx.GasPrice())
-			underpricedTxCounter.Inc(1)
-			pool.removeTx(tx.Hash(), false)
+
+		// (4) remove an old Tx with the largest nonce from queue to make a room for a new Tx with missing nonce
+		pool.removeTx(maxTx.Hash(), true)
+		logger.Trace("Removing an old Tx with the max nonce to insert a new Tx with missing nonce, because TxPool is full", "account", from, "new nonce(previously missing)", tx.Nonce(), "removed max nonce", maxTx.Nonce())
+
+		// New transaction is better than our worse ones, make room for it.
+		// Guarded: a multi-slot maxTx makes the count negative, which panics in Discard's make.
+		if count := pool.all.Slots() - int(pool.config.ExecSlotsAll+pool.config.NonExecSlotsAll) + numSlots(tx); count > 0 {
+			drop := pool.priced.Discard(count, pool.locals)
+			for _, tx := range drop {
+				logger.Trace("Discarding freshly underpriced transaction", "hash", tx.Hash(), "price", tx.GasPrice())
+				underpricedTxCounter.Inc(1)
+				pool.removeTx(tx.Hash(), false)
+			}
 		}
 	}
 	// If the transaction is replacing an already pending one, do directly
@@ -1285,6 +1295,9 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if pool.queue[from] == nil {
 		pool.queue[from] = newTxList(false)
+		// Refresh the beat on (re)creation so the account doesn't inherit a
+		// stale one and become the next eviction victim.
+		pool.beats[from] = time.Now()
 	}
 	inserted, old := pool.queue[from].Add(tx, pool.config.PriceBump, pool.rules.IsMagma)
 	if !inserted {
@@ -1304,8 +1317,6 @@ func (pool *TxPool) enqueueTx(hash common.Hash, tx *types.Transaction) (bool, er
 		pool.all.Add(tx)
 		pool.priced.Put(tx)
 	}
-
-	pool.checkAndSetBeat(from)
 	return old != nil, nil
 }
 
@@ -1696,15 +1707,6 @@ func (pool *TxPool) GetBlobSidecarFromPool(txHash common.Hash) (*types.BlobTxSid
 	return sidecar, nil
 }
 
-// checkAndSetBeat sets the beat of the account if there is no beat of the account.
-func (pool *TxPool) checkAndSetBeat(addr common.Address) {
-	_, exist := pool.beats[addr]
-
-	if !exist {
-		pool.beats[addr] = time.Now()
-	}
-}
-
 // removeTx removes a single transaction from the queue, moving all subsequent
 // transactions back to the future queue.
 func (pool *TxPool) removeTx(hash common.Hash, outofbound bool) {
@@ -1905,37 +1907,29 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	queued := pool.queuedCount
 
 	if queued > pool.config.NonExecSlotsAll {
-		// Sort all accounts with queued transactions by heartbeat
+		// Sort by heartbeat with the stalest account last: the eviction loop below
+		// pops from the tail, so the least-recently-active accounts are dropped first.
 		addresses := make(addresssByHeartbeat, 0, len(pool.queue))
 		for addr := range pool.queue {
 			if !pool.locals.contains(addr) { // don't drop locals
 				addresses = append(addresses, addressByHeartbeat{addr, pool.beats[addr]})
 			}
 		}
-		sort.Sort(addresses)
+		sort.Sort(sort.Reverse(addresses))
 
-		// Drop transactions until the total is below the limit or only locals remain
+		// Drop highest-nonce txs from the stalest accounts, keeping each
+		// account's lowest queued tx so missing-nonce admission can heal it.
 		for drop := queued - pool.config.NonExecSlotsAll; drop > 0 && len(addresses) > 0; {
 			addr := addresses[len(addresses)-1]
 			list := pool.queue[addr.address]
 
 			addresses = addresses[:len(addresses)-1]
 
-			// Drop all transactions if they are less than the overflow
-			if size := uint64(list.Len()); size <= drop {
-				for _, tx := range list.Flatten() {
-					pool.removeTx(tx.Hash(), true)
-				}
-				drop -= size
-				queuedRateLimitCounter.Inc(int64(size))
-				continue
-			}
-			// Otherwise drop only last few transactions
 			txs := list.Flatten()
-			for i := len(txs) - 1; i >= 0 && drop > 0; i-- {
+			for i := len(txs) - 1; i >= 1 && drop > 0; i-- {
 				pool.removeTx(txs[i].Hash(), true)
 				drop--
-				queuedRateLimitCounter.Inc(1)
+				queueCapEvictionCounter.Inc(1)
 			}
 		}
 	}
