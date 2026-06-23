@@ -25,6 +25,7 @@ package blockchain
 import (
 	"encoding/json"
 
+	"github.com/kaiachain/kaia/blockchain/state"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
@@ -68,3 +69,11 @@ type ChainSideEvent struct {
 }
 
 type ChainHeadEvent struct{ Block *types.Block }
+
+// ChainPreCommitEvent is posted when a block starts being written, before it
+// becomes the canonical head. State is a private copy of its post-execution
+// state, letting subscribers prepare for the new head during the write.
+type ChainPreCommitEvent struct {
+	Block *types.Block
+	State *state.StateDB
+}

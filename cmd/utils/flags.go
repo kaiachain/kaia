@@ -2030,6 +2030,15 @@ var (
 		EnvVars:  []string{"KLAYTN_BLOCK_GENERATION_TIME_LIMIT", "KAIA_BLOCK_GENERATION_TIME_LIMIT"},
 		Category: "KAIA",
 	}
+	BlockGenerationTxLimitFlag = &cli.IntFlag{
+		Name: "block-generation-tx-limit",
+		Usage: "(experimental option) Cap the number of top-priced transactions inspected during block generation. " +
+			"Preserves price priority within the bounded set. Zero disables the cap. Only applicable to CN.",
+		Value:    params.DefaultBlockGenerationTxLimit,
+		Aliases:  []string{"experimental.block-generation-tx-limit"},
+		EnvVars:  []string{"KLAYTN_BLOCK_GENERATION_TX_LIMIT", "KAIA_BLOCK_GENERATION_TX_LIMIT"},
+		Category: "KAIA",
+	}
 	OpcodeComputationCostLimitFlag = &cli.Uint64Flag{
 		Name: "opcode-computation-cost-limit",
 		Usage: "(experimental option) Set the computation cost limit for a tx. " +

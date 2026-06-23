@@ -1215,6 +1215,15 @@ func (t *TransactionsByPriceAndNonce) Empty() bool {
 	return len(t.heads) == 0
 }
 
+// Len returns the total number of transactions remaining in the set.
+func (t *TransactionsByPriceAndNonce) Len() int {
+	n := len(t.heads)
+	for _, txs := range t.txs {
+		n += len(txs)
+	}
+	return n
+}
+
 // Clear removes the entire content of the heap.
 func (t *TransactionsByPriceAndNonce) Clear() {
 	t.heads, t.txs = nil, nil

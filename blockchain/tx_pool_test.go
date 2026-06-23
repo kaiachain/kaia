@@ -81,10 +81,11 @@ func init() {
 }
 
 type testBlockChain struct {
-	statedb       *state.StateDB
-	gasLimit      uint64
-	chainHeadFeed *event.Feed
-	txMap         map[common.Hash]*types.Transaction
+	statedb            *state.StateDB
+	gasLimit           uint64
+	chainHeadFeed      *event.Feed
+	chainPreCommitFeed event.Feed
+	txMap              map[common.Hash]*types.Transaction
 }
 
 func (pool *TxPool) SetBaseFee(baseFee *big.Int) {
@@ -123,6 +124,10 @@ func (bc *testBlockChain) addTransaction(tx *types.Transaction) {
 
 func (bc *testBlockChain) SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription {
 	return bc.chainHeadFeed.Subscribe(ch)
+}
+
+func (bc *testBlockChain) SubscribeChainPreCommitEvent(ch chan<- ChainPreCommitEvent) event.Subscription {
+	return bc.chainPreCommitFeed.Subscribe(ch)
 }
 
 func transaction(nonce uint64, gaslimit uint64, key *ecdsa.PrivateKey) *types.Transaction {
@@ -4598,5 +4603,52 @@ func benchmarkAddTxManySenders(b *testing.B, numSenders int) {
 	if gotP != wantP || gotQ != wantQ {
 		b.Fatalf("counter drift after bench: pending counter=%d actual=%d, queued counter=%d actual=%d",
 			gotP, wantP, gotQ, wantQ)
+	}
+}
+
+// TestChainPreCommitReset verifies the pool resets to a new head on
+// ChainPreCommitEvent alone, using the event-supplied state — before any
+// ChainHeadEvent for the block arrives and before StateAt could serve it.
+func TestChainPreCommitReset(t *testing.T) {
+	t.Parallel()
+
+	pool, key := setupTxPool()
+	defer pool.Stop()
+
+	from, _ := deriveSender(transaction(0, 100000, key))
+	if err := pool.AddRemote(transaction(0, 100000, key)); err != nil {
+		t.Fatalf("add tx: %v", err)
+	}
+	if pending, _ := pool.Stats(); pending != 1 {
+		t.Fatalf("pending = %d, want 1", pending)
+	}
+
+	// Mine the tx in a private state copy only; the chain's StateAt still
+	// returns nonce 0, so a successful demotion proves the event state is used.
+	bc := pool.chain.(*testBlockChain)
+	minedState := bc.statedb.Copy()
+	minedState.SetNonce(from, 1)
+	parent := bc.CurrentBlock()
+
+	// Events that must be skipped: a block not extending the pool head, and a
+	// child block without state. If either advanced the pool head, the valid
+	// event below would fail its parent-linkage check and never apply.
+	orphan := types.NewBlock(&types.Header{Number: big.NewInt(5), ParentHash: common.HexToHash("0xdead")}, nil, nil)
+	bc.chainPreCommitFeed.Send(ChainPreCommitEvent{Block: orphan, State: minedState})
+	stateless := types.NewBlock(&types.Header{Number: big.NewInt(3), ParentHash: parent.Hash()}, nil, nil)
+	bc.chainPreCommitFeed.Send(ChainPreCommitEvent{Block: stateless})
+
+	block := types.NewBlock(&types.Header{Number: big.NewInt(1), ParentHash: parent.Hash()}, nil, nil)
+	bc.chainPreCommitFeed.Send(ChainPreCommitEvent{Block: block, State: minedState})
+
+	deadline := time.Now().Add(5 * time.Second)
+	for pool.CurrentBlockNumber() != 1 {
+		if time.Now().After(deadline) {
+			t.Fatalf("pool did not reset on ChainPreCommitEvent (head=%d)", pool.CurrentBlockNumber())
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if pending, queued := pool.Stats(); pending != 0 || queued != 0 {
+		t.Fatalf("pool not drained after pre-commit reset: pending=%d queued=%d", pending, queued)
 	}
 }

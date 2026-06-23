@@ -352,6 +352,7 @@ var KCNFlags = []cli.Flag{
 	altsrc.NewBoolFlag(KairosFlag),
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
+	altsrc.NewIntFlag(BlockGenerationTxLimitFlag),
 	altsrc.NewBoolFlag(gasless.DisableFlag),
 	altsrc.NewStringFlag(ConsensusEngineFlag),
 }
@@ -400,6 +401,7 @@ var KSCNFlags = []cli.Flag{
 	altsrc.NewStringFlag(RewardbaseFlag),
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
+	altsrc.NewIntFlag(BlockGenerationTxLimitFlag),
 	altsrc.NewStringFlag(ServiceChainSignerFlag),
 	altsrc.NewUint64Flag(AnchoringPeriodFlag),
 	altsrc.NewUint64Flag(SentChainTxsLimit),

@@ -232,7 +232,49 @@ func TestArrayify(t *testing.T) {
 	for i := range txs {
 		assert.Equal(t, true, hashes[txs[i].Hash()])
 	}
-	assert.False(t, heap.Empty()) // don't modify the original heap
+	assert.True(t, heap.Empty()) // Arrayify drains the heap
+}
+
+func TestArrayifyByCount(t *testing.T) {
+	keyLen := 4
+	txLen := 6
+	limit := 5
+
+	keys := make([]*ecdsa.PrivateKey, keyLen)
+	for i := range keys {
+		keys[i], _ = crypto.GenerateKey()
+	}
+
+	signer := types.LatestSignerForChainID(common.Big1)
+	mkGroups := func() map[common.Address]types.Transactions {
+		groups := map[common.Address]types.Transactions{}
+		for start, key := range keys {
+			addr := crypto.PubkeyToAddress(key.PublicKey)
+			for i := range txLen {
+				tx, _ := types.SignTx(types.NewTransaction(uint64(start+i), common.Address{}, big.NewInt(100), 100, big.NewInt(int64(start+i)), nil), signer, key)
+				groups[addr] = append(groups[addr], tx)
+			}
+		}
+		return groups
+	}
+
+	fullOrder := Arrayify(types.NewTransactionsByPriceAndNonce(signer, mkGroups(), nil))
+	heap := types.NewTransactionsByPriceAndNonce(signer, mkGroups(), nil)
+	total := heap.Len()
+	txs := ArrayifyByCount(heap, limit)
+	hashes := func(txs []*types.Transaction) []common.Hash {
+		ret := make([]common.Hash, len(txs))
+		for i, tx := range txs {
+			ret[i] = tx.Hash()
+		}
+		return ret
+	}
+
+	assert.Len(t, txs, limit)
+	assert.Equal(t, total-limit, heap.Len())
+	assert.False(t, heap.Empty())
+	require.Equal(t, hashes(fullOrder[:limit]), hashes(txs))
+	assert.Equal(t, hashes(fullOrder[limit:]), hashes(Arrayify(heap)))
 }
 
 func TestIsConflict(t *testing.T) {

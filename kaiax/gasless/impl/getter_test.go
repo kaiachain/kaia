@@ -235,7 +235,7 @@ func TestGetLendTxGenerator(t *testing.T) {
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
 			g := NewGaslessModule()
-			bc := &testBlockChain{sdb.Copy(), 10000000, new(event.Feed)}
+			bc := &testBlockChain{statedb: sdb.Copy(), gasLimit: 10000000, chainHeadFeed: new(event.Feed)}
 			pool := blockchain.NewTxPool(testTxPoolConfig, testChainConfig, bc, &dummyGovModule{chainConfig: testChainConfig})
 			err := g.Init(&InitOpts{
 				ChainConfig:   testChainConfig,
