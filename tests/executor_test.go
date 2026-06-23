@@ -582,12 +582,12 @@ func TestKaiaBFT_EngineFactory(t *testing.T) {
 func TestKaiaBFT_BlockGenerationTimeLimit(t *testing.T) {
 	// Verify the constants are defined with expected values.
 	assert.Equal(t, 250*time.Millisecond, params.DefaultBlockGenerationTimeLimit)
-	assert.Equal(t, 500*time.Millisecond, params.KaiaBFTBlockGenerationTimeLimit)
+	assert.Equal(t, 400*time.Millisecond, params.KaiaBFTBlockGenerationTimeLimit)
 
 	// Verify the global can be set to the kaiabft value and restored.
 	original := params.BlockGenerationTimeLimit
 	defer func() { params.BlockGenerationTimeLimit = original }()
 
 	params.BlockGenerationTimeLimit = params.KaiaBFTBlockGenerationTimeLimit
-	assert.Equal(t, 500*time.Millisecond, params.BlockGenerationTimeLimit)
+	assert.Equal(t, 400*time.Millisecond, params.BlockGenerationTimeLimit)
 }
