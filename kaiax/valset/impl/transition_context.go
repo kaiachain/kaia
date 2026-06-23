@@ -187,8 +187,10 @@ func (ctx *TransitionContext) applyEpochTransition(m valset.NodeMap) valset.Node
 		if val.StakingAmount >= ctx.MinStake {
 			activeValCompetitors = append(activeValCompetitors, sortableValidator{addr, val}) // T3a
 		} else {
+			if val.State != valset.ValReady {
+				val.IdleTimeout = ctx.BlockTime.Add(ctx.IdleTimeout)
+			}
 			val.State = valset.ValInactive // T3b
-			val.IdleTimeout = ctx.BlockTime.Add(ctx.IdleTimeout)
 		}
 	}
 	for addr, val := range newValidators {
@@ -227,8 +229,10 @@ func (ctx *TransitionContext) applyEpochTransition(m valset.NodeMap) valset.Node
 				potentialActiveVal.PausedTimeout = time.Time{}
 			}
 		} else {
+			if potentialActiveVal.State != valset.ValReady {
+				potentialActiveVal.IdleTimeout = ctx.BlockTime.Add(ctx.IdleTimeout)
+			}
 			potentialActiveVal.State = valset.ValInactive // T3b
-			potentialActiveVal.IdleTimeout = ctx.BlockTime.Add(ctx.IdleTimeout)
 		}
 	}
 	return newValidators
@@ -308,7 +312,6 @@ func (ctx *TransitionContext) applyViolationTransition(m valset.NodeMap) valset.
 			// ValReady → ValInactive (no slot check, not in active set)
 			logger.Trace("MinStake violation: ValReady → ValInactive", "addr", addr, "staking", val.StakingAmount, "minStake", ctx.MinStake)
 			val.State = valset.ValInactive
-			val.IdleTimeout = ctx.BlockTime.Add(ctx.IdleTimeout)
 		}
 	}
 
@@ -364,7 +367,7 @@ func (ctx *TransitionContext) applyTimeoutTransition(m valset.NodeMap) valset.No
 			if val.IdleTimeout.IsZero() {
 				val.IdleTimeout = ctx.BlockTime.Add(ctx.IdleTimeout)
 			}
-			if ctx.BlockTime.After(val.IdleTimeout) {
+			if !ctx.BlockTime.Before(val.IdleTimeout) {
 				val.State = valset.Registered
 				val.IdleTimeout = time.Time{}
 			}
@@ -372,7 +375,7 @@ func (ctx *TransitionContext) applyTimeoutTransition(m valset.NodeMap) valset.No
 			if val.PausedTimeout.IsZero() {
 				val.PausedTimeout = ctx.BlockTime.Add(ctx.PauseTimeout)
 			}
-			if ctx.BlockTime.After(val.PausedTimeout) {
+			if !ctx.BlockTime.Before(val.PausedTimeout) {
 				val.State = valset.ValInactive
 				val.PausedTimeout = time.Time{}
 				val.IdleTimeout = ctx.BlockTime.Add(ctx.IdleTimeout)
