@@ -304,6 +304,11 @@ func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, inbou
 	}
 }
 
+// reservedSlots resolves this node's cross-type reservation, using the per-type default when unset.
+func (srv *BaseServer) reservedSlots() int {
+	return effectiveReservedSlots(srv.ConnectionType, srv.Config.ReservedCrossTypeSlots)
+}
+
 func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *conn) bool {
 	if c.isTrustedOrStatic() {
 		return false
@@ -311,7 +316,7 @@ func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *con
 
 	selfType := EffectiveConnType(srv.ConnectionType)
 	peerType := EffectiveConnType(c.conntype)
-	target, ok := peerTargets[selfType][peerType]
+	target, ok := peerTargetFor(selfType, peerType, srv.Config.MaxPhysicalConnections, srv.reservedSlots())
 	if !ok {
 		return false
 	}
@@ -670,6 +675,21 @@ func (srv *BaseServer) reportPeerMetric() {
 // SetCNPeers replaces the address-keyed CN admission allowlist.
 // nil disables filtering; an empty list rejects all CN claims.
 func (srv *BaseServer) SetCNPeers(addrs []common.Address) {
+	// Only CNs enforce the validator allowlist. ENs/PNs serve everyone, so they
+	// skip it: leaving cnPeerAddrs nil makes the admit and drop checks no-op.
+	if srv.ConnectionType != common.CONSENSUSNODE {
+		return
+	}
+	// Warn if the full CN mesh (len(addrs)-1 peers) no longer fits under the CN-mesh cap
+	// (maxconnections - reservation). Only a CN in CNPeers forms the mesh; a nonCNPeers
+	// CN (e.g. ValInactive) syncs via ENs, so it's exempt.
+	if selfAddr, err := addressFromNodeID(srv.selfID); err == nil && slices.Contains(addrs, selfAddr) {
+		reserved := srv.reservedSlots()
+		if mesh := len(addrs) - 1; mesh > srv.Config.MaxPhysicalConnections-reserved {
+			logger.Warn("CN count exceeds capacity for full mesh + EN reservation; raise maxconnections",
+				"cnPeers", len(addrs), "maxConn", srv.Config.MaxPhysicalConnections, "reservedSlots", reserved)
+		}
+	}
 	srv.lock.Lock()
 	if addrs == nil {
 		srv.cnPeerAddrs = nil

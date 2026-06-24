@@ -32,15 +32,57 @@ import (
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 )
 
-// Finite peerTargets from KIP-311. Missing entries mean no per-role cap beyond
-// MaxPhysicalConnections and inbound capacity.
-var peerTargets = map[common.ConnType]map[common.ConnType]int{
-	common.CONSENSUSNODE: {
-		common.ENDPOINTNODE: 3,
-	},
-	common.ENDPOINTNODE: {
-		common.CONSENSUSNODE: 2,
-	},
+// Default cross-type reservation (KIP-311): slots a node keeps for the opposite CN/EN
+// type so its own-type mesh can't starve the CN<->EN link. Per-type, overridable via
+// Config (0 = use default).
+const (
+	defaultCNReservedSlots = 3 // a CN reserves this many EN slots by default
+	defaultENReservedSlots = 2 // an EN reserves this many CN slots by default
+)
+
+// effectiveReservedSlots resolves connType's cross-type reservation, using the
+// per-type default when unset (configured <= 0).
+func effectiveReservedSlots(connType common.ConnType, configured int) int {
+	if configured > 0 {
+		return configured
+	}
+	switch EffectiveConnType(connType) {
+	case common.CONSENSUSNODE:
+		return defaultCNReservedSlots
+	case common.ENDPOINTNODE:
+		return defaultENReservedSlots
+	}
+	return 0
+}
+
+// peerTargetFor returns the accept cap for peers of peerType on a selfType node. Pass
+// EffectiveConnType values:
+//   - same type  (CN<->CN, EN<->EN): maxconnections minus the reservation
+//   - cross type (CN<->EN):          the reservation
+//
+// ok=false means no per-type cap (e.g. a bootnode, or a non-CN/EN node).
+func peerTargetFor(selfType, peerType common.ConnType, maxPhys, reservedCrossTypeSlots int) (target int, ok bool) {
+	isCNorEN := func(t common.ConnType) bool {
+		return t == common.CONSENSUSNODE || t == common.ENDPOINTNODE
+	}
+	if !isCNorEN(selfType) || !isCNorEN(peerType) {
+		return 0, false // unrelated pair (e.g. bootnode): no per-type cap
+	}
+	if selfType == peerType {
+		return max(0, maxPhys-reservedCrossTypeSlots), true // own mesh
+	}
+	return reservedCrossTypeSlots, true // cross-type CN<->EN
+}
+
+// MaxPhysicalConnectionsLowerBound is the minimum valid MaxPhysicalConnections for
+// cfg's node type: below it the own-mesh cap (maxconnections minus the reservation)
+// would be 0, leaving no room to mesh with its own type.
+func MaxPhysicalConnectionsLowerBound(cfg Config) int {
+	switch EffectiveConnType(cfg.ConnectionType) {
+	case common.CONSENSUSNODE, common.ENDPOINTNODE:
+		return effectiveReservedSlots(cfg.ConnectionType, cfg.ReservedCrossTypeSlots) + 1
+	}
+	return 1
 }
 
 type peerDrop struct {

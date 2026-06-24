@@ -1140,6 +1140,13 @@ var (
 		EnvVars:  []string{"KLAYTN_MAXCONNECTIONS", "KAIA_MAXCONNECTIONS"},
 		Category: "NETWORK",
 	}
+	ReservedCrossTypeSlotsFlag = &cli.IntFlag{
+		Name:     "reserved-cross-type-slots",
+		Usage:    "Number of connection slots reserved for the opposite CN/EN node type so same-type peers cannot starve CN<->EN connectivity (0 = use node-type default)",
+		Value:    0,
+		Aliases:  []string{"p2p.reserved-cross-type-slots"},
+		Category: "NETWORK",
+	}
 	MaxPendingPeersFlag = &cli.IntFlag{
 		Name:     "maxpendpeers",
 		Usage:    "Maximum number of pending connection attempts (defaults used if set to 0)",

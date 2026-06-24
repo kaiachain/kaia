@@ -240,6 +240,7 @@ var FlagGroups = []FlagGroup{
 			SubListenPortFlag,
 			MultiChannelUseFlag,
 			MaxConnectionsFlag,
+			ReservedCrossTypeSlotsFlag,
 			MaxPendingPeersFlag,
 			TargetGasLimitFlag,
 			NATFlag,

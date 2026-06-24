@@ -243,6 +243,7 @@ var CommonNodeFlags = []cli.Flag{
 	altsrc.NewIntFlag(SubListenPortFlag),
 	altsrc.NewBoolFlag(MultiChannelUseFlag),
 	altsrc.NewIntFlag(MaxConnectionsFlag),
+	altsrc.NewIntFlag(ReservedCrossTypeSlotsFlag),
 	altsrc.NewIntFlag(MaxRequestContentLengthFlag),
 	altsrc.NewIntFlag(MaxPendingPeersFlag),
 	altsrc.NewUint64Flag(TargetGasLimitFlag),
