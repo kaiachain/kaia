@@ -270,6 +270,11 @@ type blobSidecarsRequestData struct {
 }
 
 type blobSidecarsData struct {
+	// BlockNum and TxIndex are deprecated: the receiver no longer reads them.
+	// SaveBlobSidecar derives the canonical storage location from TxHash, so a
+	// peer cannot dictate where the sidecar is stored. They are retained only
+	// for wire compatibility with existing peers and should be removed in a
+	// future protocol version bump.
 	BlockNum hexutil.Uint64
 	TxIndex  hexutil.Uint
 	TxHash   common.Hash

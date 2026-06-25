@@ -982,8 +982,6 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		// Setup expected save call
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 		mockTxPool.EXPECT().SaveBlobSidecar(
-			big.NewInt(int64(d.BlockNum)),
-			int(d.TxIndex),
 			d.TxHash,
 			d.Sidecar,
 		).Return(nil).Times(1)
@@ -1018,8 +1016,6 @@ func TestHandleBlobSidecarsMsg(t *testing.T) {
 		}
 		mockTxPool := mocks.NewMockTxPool(mockCtrl)
 		mockTxPool.EXPECT().SaveBlobSidecar(
-			big.NewInt(int64(d.BlockNum)),
-			int(d.TxIndex),
 			d.TxHash,
 			d.Sidecar,
 		).Return(errors.New("expected error")).Times(1)
