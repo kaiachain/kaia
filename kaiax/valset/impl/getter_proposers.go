@@ -2,6 +2,7 @@ package impl
 
 import (
 	"math"
+	"math/big"
 	"slices"
 
 	"github.com/kaiachain/kaia/common"
@@ -40,17 +41,27 @@ func (v *ValsetModule) calcBaseProposers(c *blockContext, updateNum uint64, useG
 	if updateHeader == nil {
 		return nil, errNoHeader
 	}
+
+	// The base list is cached under updateNum and reused for the whole interval, so it must be a pure
+	// function of updateNum rather than of c.num (the block that first misses the cache). Legacy istanbul
+	// fixed it from the interval's first block (updateNum+1); reproduce that so sealed blocks stay reproducible
+	// and so the schedule cannot diverge on a mid-interval restart.
+	baseNum := updateNum + 1
+	qualified, err := v.getQualifiedPermissioned(baseNum)
+	if err != nil {
+		return nil, err
+	}
 	var list []common.Address
-	if c.rules.IsKore {
-		list = generateProposerListUniform(c.qualified, updateHeader.Hash())
+	if v.Chain.Config().Rules(new(big.Int).SetUint64(baseNum)).IsKore {
+		list = generateProposerListUniform(qualified, updateHeader.Hash())
 	} else {
 		si, err := v.StakingModule.GetStakingInfo(updateNum)
 		if err != nil {
 			return nil, err
 		}
-		list = generateProposerListWeighted(c.qualified, si, useGini, updateHeader.Hash())
+		list = generateProposerListWeighted(qualified, si, useGini, updateHeader.Hash())
 	}
-	logger.Debug("GetProposerList", "number", c.num, "list", valset.NewAddressSet(list).String())
+	logger.Debug("GetProposerList", "number", c.num, "updateNum", updateNum, "list", valset.NewAddressSet(list).String())
 
 	// Store to cache
 	v.proposerListCache.Add(updateNum, list)

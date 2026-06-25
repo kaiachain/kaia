@@ -18,6 +18,7 @@ import (
 	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetProposers_GetRemoveVotesInInterval(t *testing.T) {
@@ -245,6 +246,91 @@ func TestWeightedRandomProposer_ListWeighted(t *testing.T) {
 			t.Logf("actual: %v", addrsToNums(proposerList))
 		}
 	}
+}
+
+// TestCalcBaseProposers_PinnedToUpdateNumPlus1 verifies that the cached base proposer list is a
+// pure function of updateNum — derived from the qualified set at updateNum+1 (the interval's first
+// block, matching legacy istanbul) — and does NOT depend on the requesting block's context
+// (c.num / c.qualified). Otherwise the per-interval schedule would depend on which block first
+// populates proposerListCache, diverging across restarts/sync.
+// See AUDIT_PROPOSER_LIST_NONDETERMINISM.md.
+func TestCalcBaseProposers_PinnedToUpdateNumPlus1(t *testing.T) {
+	const (
+		interval  = uint64(100)
+		updateNum = uint64(100)
+		minStake  = uint64(5000000)
+	)
+	var (
+		ctrl          = gomock.NewController(t)
+		mockChain     = chain_mock.NewMockBlockChain(ctrl)
+		mockGov       = gov_mock.NewMockGovModule(ctrl)
+		mockStaking   = staking_mock.NewMockStakingModule(ctrl)
+		pListCache, _ = lru.New(128)
+		rVoteCache, _ = lru.New(128)
+		v             = &ValsetModule{
+			InitOpts: InitOpts{
+				ChainKv:       database.NewMemoryDBManager().GetMiscDB(),
+				Chain:         mockChain,
+				GovModule:     mockGov,
+				StakingModule: mockStaking,
+			},
+			proposerListCache: pListCache,
+			removeVotesCache:  rVoteCache,
+		}
+		council      = numsToAddrs(1, 2, 3, 4)
+		updateHeader = &types.Header{Number: big.NewInt(int64(updateNum))}
+	)
+
+	// Migrated council DB: council [1,2,3,4] from genesis.
+	writeLowestScannedVoteNum(v.ChainKv, 0)
+	writeValidatorVoteBlockNums(v.ChainKv, []uint64{0})
+	writeCouncil(v.ChainKv, 0, council)
+
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
+		ProposerUpdateInterval: interval,
+		ProposerPolicy:         uint64(params.WeightedRandom),
+		MinimumStake:           big.NewInt(int64(minStake)),
+		GovernanceMode:         "none",
+	}).AnyTimes()
+	// Istanbul on (staking-based demotion active), Kore off (weighted path).
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}).AnyTimes()
+	mockChain.EXPECT().GetHeaderByNumber(updateNum).Return(updateHeader).AnyTimes()
+
+	// Every validator is qualified at updateNum (weights) and updateNum+1 (demotion check).
+	fullStaking := &staking.StakingInfo{
+		NodeIds:          council,
+		StakingContracts: council,
+		RewardAddrs:      council,
+		StakingAmounts:   []uint64{minStake, minStake, minStake, minStake},
+	}
+	mockStaking.EXPECT().GetStakingInfo(updateNum).Return(fullStaking, nil).AnyTimes()
+	mockStaking.EXPECT().GetStakingInfo(updateNum+1).Return(fullStaking, nil).AnyTimes()
+	// At a late block validator 4 is understaked (demoted). This "poisoned" context must not leak
+	// into the cached base list.
+	mockStaking.EXPECT().GetStakingInfo(updateNum+50).Return(&staking.StakingInfo{
+		NodeIds:          council,
+		StakingContracts: council,
+		RewardAddrs:      council,
+		StakingAmounts:   []uint64{minStake, minStake, minStake, minStake - 1},
+	}, nil).AnyTimes()
+
+	// Reference: list built from qualified@(updateNum+1) = [1,2,3,4], weights from staking@updateNum.
+	reference := generateProposerListWeighted(valset.NewAddressSet(council), fullStaking, false, updateHeader.Hash())
+
+	// 1) First cache population from a poisoned late block whose c.qualified is the demoted set [1,2,3].
+	//    The result must still be the [1,2,3,4]-based reference list.
+	cLate := &blockContext{num: updateNum + 50, qualified: valset.NewAddressSet(numsToAddrs(1, 2, 3))}
+	listLate, err := v.calcBaseProposers(cLate, updateNum, false)
+	require.NoError(t, err)
+	assert.Equal(t, reference, listLate, "base list must derive from qualified@(updateNum+1), not c.qualified")
+	assert.Contains(t, listLate, numToAddr(4), "validator demoted mid-interval must remain in the base list")
+
+	// 2) Cache-population order must not matter: a fresh cache filled from updateNum+1 yields the same list.
+	v.proposerListCache.Purge()
+	cFirst := &blockContext{num: updateNum + 1, qualified: valset.NewAddressSet(council)}
+	listFirst, err := v.calcBaseProposers(cFirst, updateNum, false)
+	require.NoError(t, err)
+	assert.Equal(t, listLate, listFirst, "base list must be independent of cache-population order")
 }
 
 func TestWeightedRandomProposer_ListUniform(t *testing.T) {
