@@ -33,6 +33,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
 	"github.com/kaiachain/kaia/kerrors"
 	"github.com/kaiachain/kaia/params"
@@ -471,6 +472,32 @@ func (st *StateTransition) preCheck() error {
 	return st.buyGas()
 }
 
+func (st *StateTransition) captureTxStartPreCheck() {
+	if !st.evm.Config.Debug {
+		return
+	}
+	tracer, ok := st.evm.Config.Tracer.(vm.TxPrestateTracer)
+	if !ok {
+		return
+	}
+
+	tx := st.msg
+	from := tx.ValidatedSender()
+	feePayer := tx.ValidatedFeePayer()
+	to := from
+	create := (tx.Type().IsEthereumTransaction() && tx.To() == nil) || tx.Type().IsContractDeploy()
+	if create {
+		if tx.To() != nil {
+			to = *tx.To()
+		} else {
+			to = crypto.CreateAddress(from, st.state.GetNonce(from))
+		}
+	} else if tx.To() != nil {
+		to = *tx.To()
+	}
+	tracer.CaptureTxStartPreCheck(st.evm, from, feePayer, to, create, tx.Data(), tx.Value(), tx.AuthList())
+}
+
 // TransitionDb will transition the state by applying the current message and
 // returning the evm execution result with following fields.
 //
@@ -495,6 +522,8 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	// 4. the purchased gas is enough to cover intrinsic usage
 	// 5. there is no overflow when calculating intrinsic gas
 	// 6. caller has enough balance to cover asset transfer for **topmost** call
+
+	st.captureTxStartPreCheck()
 
 	// Check clauses 1-3, buy gas if everything is correct
 	if err := st.preCheck(); err != nil {
