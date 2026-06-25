@@ -105,7 +105,11 @@ func (v *VRankModule) EvaluateCandidates(blockNum, round uint64) ([]common.Addre
 		return []common.Address{}, nil
 	}
 	if round > maxRound {
-		return nil, vrank.ErrRoundOutOfRange
+		// Candidate messages above maxRound are dropped on receipt, though the
+		// preprepare timestamp may still be recorded. Evaluating this view would
+		// then see no candidate responses and mark every candidate as failed, so
+		// return an empty report instead of that spurious result.
+		return []common.Address{}, nil
 	}
 
 	vk := vrank.ViewKey{N: blockNum, R: uint8(round)}

@@ -200,6 +200,17 @@ func TestPrepareHeader(t *testing.T) {
 		assert.Nil(t, header.VRank)
 	})
 
+	t.Run("high-round parent accepted in next header preparation", func(t *testing.T) {
+		// Regression: a parent committed at round > MaxRound must not make
+		// PrepareHeader fail.
+		parent := makeHeaderWithRound(10, int64(vrank.MaxRound+1)) // round 11
+		v := newCN(t, withCandidates(candidates), withHeaders(map[uint64]*types.Header{10: parent}), withoutStart()).VRankModule
+		header := &types.Header{Number: big.NewInt(11)}
+
+		require.NoError(t, v.PrepareHeader(header))
+		assert.Nil(t, header.VRank)
+	})
+
 	t.Run("non-epoch fills evaluated candidate failures", func(t *testing.T) {
 		parent := makeHeaderWithRound(10, 1)
 		parentBlock := types.NewBlockWithHeader(parent)
