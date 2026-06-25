@@ -44,7 +44,10 @@ func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
 	}
 
 	if g.IsBundleTx(tx) {
-		if g.knownTxs.numQueue() >= int(g.GetMaxBundleTxsInQueue()) {
+		// numQueue() is always non-negative, so compare in uint space to avoid the
+		// uint->int cast overflowing the math.MaxUint64 "no limit" sentinel to -1
+		// (which would reject every bundle tx). See GetMaxBundleTxsInQueue / config.go.
+		if uint(g.knownTxs.numQueue()) >= g.GetMaxBundleTxsInQueue() {
 			return ErrBundleTxQueueFull
 		}
 		g.knownTxs.add(tx, TxStatusQueue)
