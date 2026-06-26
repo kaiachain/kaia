@@ -320,8 +320,13 @@ func (m *IstanbulSealer) Quorum(_ uint64, qualifiedlen, committeeSize int) int {
 	return int(math.Ceil(float64(2*n) / 3))
 }
 
+// MakeCommittedSealFromHash signs the COMMIT committed-seal for the given block hash.
+func (m *IstanbulSealer) MakeCommittedSealFromHash(hash common.Hash) ([]byte, error) {
+	return crypto.Sign(crypto.Keccak256(PrepareCommittedSeal(hash)), m.privateKey)
+}
+
 func (m *IstanbulSealer) MakeCommittedSeal(header *types.Header) ([]byte, error) {
-	return crypto.Sign(crypto.Keccak256(PrepareCommittedSeal(m.HeaderHash(header))), m.privateKey)
+	return m.MakeCommittedSealFromHash(m.HeaderHash(header))
 }
 
 func (m *IstanbulSealer) MakeAuthorSeal(header *types.Header) ([]byte, error) {

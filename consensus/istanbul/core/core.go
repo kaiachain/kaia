@@ -179,10 +179,19 @@ func (c *core) finalizeMessage(msg *bft.Message) ([]byte, error) {
 
 	// Add proof of consensus
 	msg.CommittedSeal = []byte{}
-	// Assign the CommittedSeal if it's a COMMIT message and proposal is not nil
-	if msg.Code == bft.MsgCommit && c.current.Proposal() != nil {
-		msg.CommittedSeal, err = c.backend.Sealer().MakeCommittedSeal(c.current.Proposal().Header())
-		if err != nil {
+	// Assign the CommittedSeal if it's a COMMIT message.
+	// Sign over the digest carried in the message's own Subject (the block this
+	// COMMIT votes for) rather than the current proposal. For a normal COMMIT the
+	// subject digest equals the current proposal hash, so the produced seal is
+	// unchanged; for a rebroadcast COMMIT of an old block (sendCommitForOldBlock)
+	// this keeps the seal consistent with the message's digest instead of signing
+	// the current proposal.
+	if msg.Code == bft.MsgCommit {
+		var sub *bft.Subject
+		if err = msg.Decode(&sub); err != nil {
+			return nil, err
+		}
+		if msg.CommittedSeal, err = c.backend.Sealer().MakeCommittedSealFromHash(sub.Digest); err != nil {
 			return nil, err
 		}
 	}
