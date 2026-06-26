@@ -367,22 +367,24 @@ func TestServerAtCap(t *testing.T) {
 }
 
 func TestCountInboundPeers(t *testing.T) {
-	// A multichannel peer holds multiple sockets but must count once: inbound
-	// capacity is measured in peers, not physical connections (KIP-311).
-	withChannels := func(flag connFlag, channels int) *Peer {
-		rws := make([]*conn, channels)
-		for i := range rws {
-			rws[i] = &conn{flags: flag}
+	// Inbound capacity is measured in peers, not sockets: a multichannel peer
+	// counts once, and a mixed-direction peer is classified by its default
+	// channel (ConnDefault), matching Peer.Inbound.
+	peer := func(channelFlags ...connFlag) *Peer {
+		rws := make([]*conn, len(channelFlags))
+		for i, f := range channelFlags {
+			rws[i] = &conn{flags: f}
 		}
 		return &Peer{rws: rws}
 	}
 	peers := map[discover.NodeID]*Peer{
-		randomID(): withChannels(inboundConn, 2),   // multichannel inbound
-		randomID(): withChannels(inboundConn, 2),   // multichannel inbound
-		randomID(): withChannels(inboundConn, 1),   // single-channel inbound
-		randomID(): withChannels(dynDialedConn, 2), // multichannel outbound (not counted)
+		randomID(): peer(inboundConn, inboundConn),     // multichannel inbound -> counts
+		randomID(): peer(inboundConn),                  // single-channel inbound -> counts
+		randomID(): peer(inboundConn, dynDialedConn),   // default inbound, sub outbound -> counts
+		randomID(): peer(dynDialedConn, dynDialedConn), // multichannel outbound -> not counted
+		randomID(): peer(dynDialedConn, inboundConn),   // default outbound, sub inbound -> not counted
 	}
-	// 3 inbound peers spread over 5 inbound sockets; the count is by peer.
+	// Counted: the three peers whose default channel is inbound.
 	if got := countInboundPeers(peers); got != 3 {
 		t.Errorf("countInboundPeers = %d, want 3", got)
 	}

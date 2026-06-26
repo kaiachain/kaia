@@ -330,6 +330,9 @@ func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *con
 // countInboundPeers returns how many peers are connected via an inbound
 // connection. A multichannel peer holds several sockets but counts once, so
 // inbound capacity is measured in peers (per KIP-311), not physical sockets.
+// Direction is taken from the peer's default channel (Peer.Inbound); a peer
+// whose channels are of mixed direction (a rare simultaneous-dial race) is
+// classified by that channel.
 func countInboundPeers(peers map[discover.NodeID]*Peer) int {
 	n := 0
 	for _, p := range peers {
