@@ -43,6 +43,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/log"
+	"github.com/kaiachain/kaia/params"
 )
 
 const (
@@ -386,6 +387,13 @@ func (sb *backend) Verify(proposal bft.Proposal) (time.Duration, error) {
 				return 0, istanbul.ErrInvalidBlobTxWithSidecar
 			}
 		}
+	}
+
+	// check EIP-7934 RLP-encoded block size cap, mirroring BlockValidator.ValidateBody
+	// so an oversized proposal is rejected here instead of being PREPARE/COMMIT-ed and
+	// then refused on the import path.
+	if sb.chain.Config().IsOsakaForkEnabled(block.Number()) && block.Size() > params.MaxBlockSize {
+		return 0, blockchain.ErrBlockOversized
 	}
 
 	// verify the header of proposed block

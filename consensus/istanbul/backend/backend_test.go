@@ -29,6 +29,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus"
@@ -226,4 +227,85 @@ func TestCommit(t *testing.T) {
 		}
 		engine.Stop()
 	}
+}
+
+// buildOversizedBlock returns a sealed block whose RLP-encoded size exceeds
+// params.MaxBlockSize, built on top of the chain's current head. Verify does not
+// execute transactions, so the injected tx only needs to inflate the encoded size.
+func buildOversizedBlock(t *testing.T, chain *blockchain.BlockChain, engine *backend) *types.Block {
+	t.Helper()
+	parent := chain.CurrentBlock()
+	header := makeHeader(parent, chain.Config())
+	if err := chain.PrepareHeader(header); err != nil {
+		t.Fatal(err)
+	}
+	state, err := chain.StateAt(parent.Root())
+	if err != nil {
+		t.Fatal(err)
+	}
+	emptyBlock, err := chain.Processor().FinalizeState(header, state, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	recipient := common.Address{}
+	tx := types.NewTx(&types.TxInternalDataLegacy{
+		AccountNonce: 0,
+		Price:        big.NewInt(1),
+		GasLimit:     1,
+		Recipient:    &recipient,
+		Amount:       big.NewInt(0),
+		Payload:      make([]byte, params.MaxBlockSize), // pushes the whole block past the cap
+	})
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(chain.Config().ChainID), key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// NewBlock recomputes the header TxHash from the supplied txs, so Verify's
+	// tx-root check still passes and the test isolates the size cap.
+	block := sealBlock(engine, types.NewBlock(emptyBlock.Header(), []*types.Transaction{signedTx}, nil))
+	if block.Size() <= params.MaxBlockSize {
+		t.Fatalf("test setup: block is not oversized (size=%d, cap=%d)", uint64(block.Size()), params.MaxBlockSize)
+	}
+	return block
+}
+
+// TestBackend_VerifyEnforcesBlockSizeCap checks that backend.Verify applies the
+// EIP-7934 RLP block-size cap (params.MaxBlockSize) on Osaka-enabled blocks, the
+// same rule the import path enforces in BlockValidator.ValidateBody. Without this,
+// honest validators would PREPARE/COMMIT an oversized proposal and only reject it
+// later on import.
+func TestBackend_VerifyEnforcesBlockSizeCap(t *testing.T) {
+	// Osaka enabled: the cap applies.
+	t.Run("osaka", func(t *testing.T) {
+		chain, engine := newBlockChain(t, 1, osakaCompatibleBlock(big.NewInt(0)))
+		defer chain.Stop()
+		defer engine.Stop()
+
+		// A normal-sized block must not be rejected by the size cap.
+		normal := makeBlockWithSeal(chain, engine, chain.CurrentBlock())
+		_, err := engine.Verify(normal)
+		assert.NotErrorIs(t, err, blockchain.ErrBlockOversized)
+
+		// An oversized proposal must be rejected up front in Verify.
+		oversized := buildOversizedBlock(t, chain, engine)
+		_, err = engine.Verify(oversized)
+		assert.ErrorIs(t, err, blockchain.ErrBlockOversized)
+	})
+
+	// Pre-Osaka: the cap is gated on IsOsakaForkEnabled, so it must not apply.
+	t.Run("pre-osaka", func(t *testing.T) {
+		chain, engine := newBlockChain(t, 1, osakaCompatibleBlock(nil))
+		defer chain.Stop()
+		defer engine.Stop()
+
+		oversized := buildOversizedBlock(t, chain, engine)
+		_, err := engine.Verify(oversized)
+		assert.NotErrorIs(t, err, blockchain.ErrBlockOversized)
+	})
 }
