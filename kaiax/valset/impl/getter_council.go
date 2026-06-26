@@ -140,7 +140,7 @@ func (v *ValsetModule) getCouncilFromIstanbulSnapshot(targetNum uint64, write bo
 	// Try to get from cache first
 	cached, ok := v.councilCache.Get(targetNum - 1)
 	if ok {
-		council = cached.(*valset.AddressSet)
+		council = cached.(*valset.AddressSet).Copy()
 		if err := v.applyBlock(council, targetNum-1, write); err != nil {
 			return nil, 0, err
 		}
