@@ -250,10 +250,9 @@ func TestWeightedRandomProposer_ListWeighted(t *testing.T) {
 
 // TestCalcBaseProposers_PinnedToUpdateNumPlus1 verifies that the cached base proposer list is a
 // pure function of updateNum — derived from the qualified set at updateNum+1 (the interval's first
-// block, matching legacy istanbul) — and does NOT depend on the requesting block's context
-// (c.num / c.qualified). Otherwise the per-interval schedule would depend on which block first
-// populates proposerListCache, diverging across restarts/sync.
-// See AUDIT_PROPOSER_LIST_NONDETERMINISM.md.
+// block, matching legacy istanbul). calcBaseProposers takes no block context, so the per-interval
+// schedule cannot depend on which block first populates proposerListCache (no divergence across
+// restarts/sync). See AUDIT_PROPOSER_LIST_NONDETERMINISM.md.
 func TestCalcBaseProposers_PinnedToUpdateNumPlus1(t *testing.T) {
 	const (
 		interval  = uint64(100)
@@ -305,32 +304,20 @@ func TestCalcBaseProposers_PinnedToUpdateNumPlus1(t *testing.T) {
 	}
 	mockStaking.EXPECT().GetStakingInfo(updateNum).Return(fullStaking, nil).AnyTimes()
 	mockStaking.EXPECT().GetStakingInfo(updateNum+1).Return(fullStaking, nil).AnyTimes()
-	// At a late block validator 4 is understaked (demoted). This "poisoned" context must not leak
-	// into the cached base list.
-	mockStaking.EXPECT().GetStakingInfo(updateNum+50).Return(&staking.StakingInfo{
-		NodeIds:          council,
-		StakingContracts: council,
-		RewardAddrs:      council,
-		StakingAmounts:   []uint64{minStake, minStake, minStake, minStake - 1},
-	}, nil).AnyTimes()
 
 	// Reference: list built from qualified@(updateNum+1) = [1,2,3,4], weights from staking@updateNum.
 	reference := generateProposerListWeighted(valset.NewAddressSet(council), fullStaking, false, updateHeader.Hash())
 
-	// 1) First cache population from a poisoned late block whose c.qualified is the demoted set [1,2,3].
-	//    The result must still be the [1,2,3,4]-based reference list.
-	cLate := &blockContext{num: updateNum + 50, qualified: valset.NewAddressSet(numsToAddrs(1, 2, 3))}
-	listLate, err := v.calcBaseProposers(cLate, updateNum, false)
+	// 1) Populate the cache. The list must derive from qualified@(updateNum+1).
+	list1, err := v.calcBaseProposers(updateNum, false)
 	require.NoError(t, err)
-	assert.Equal(t, reference, listLate, "base list must derive from qualified@(updateNum+1), not c.qualified")
-	assert.Contains(t, listLate, numToAddr(4), "validator demoted mid-interval must remain in the base list")
+	assert.Equal(t, reference, list1, "base list must derive from qualified@(updateNum+1)")
 
-	// 2) Cache-population order must not matter: a fresh cache filled from updateNum+1 yields the same list.
+	// 2) Cache-population order must not matter: a fresh cache yields the same list.
 	v.proposerListCache.Purge()
-	cFirst := &blockContext{num: updateNum + 1, qualified: valset.NewAddressSet(council)}
-	listFirst, err := v.calcBaseProposers(cFirst, updateNum, false)
+	list2, err := v.calcBaseProposers(updateNum, false)
 	require.NoError(t, err)
-	assert.Equal(t, listLate, listFirst, "base list must be independent of cache-population order")
+	assert.Equal(t, list1, list2, "base list must be independent of cache-population order")
 }
 
 func TestWeightedRandomProposer_ListUniform(t *testing.T) {

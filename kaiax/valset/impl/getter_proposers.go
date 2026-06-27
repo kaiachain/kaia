@@ -18,7 +18,7 @@ func (v *ValsetModule) getProposerList(c *blockContext) ([]common.Address, uint6
 	)
 
 	// calculate base pList at updateNum
-	pList, err := v.calcBaseProposers(c, updateNum, useGini)
+	pList, err := v.calcBaseProposers(updateNum, useGini)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -30,7 +30,7 @@ func (v *ValsetModule) getProposerList(c *blockContext) ([]common.Address, uint6
 	return pList, updateNum, nil
 }
 
-func (v *ValsetModule) calcBaseProposers(c *blockContext, updateNum uint64, useGini bool) ([]common.Address, error) {
+func (v *ValsetModule) calcBaseProposers(updateNum uint64, useGini bool) ([]common.Address, error) {
 	// Lookup proposers at updateNum from cache
 	if list, ok := v.proposerListCache.Get(updateNum); ok {
 		return list.([]common.Address), nil
@@ -61,7 +61,7 @@ func (v *ValsetModule) calcBaseProposers(c *blockContext, updateNum uint64, useG
 		}
 		list = generateProposerListWeighted(qualified, si, useGini, updateHeader.Hash())
 	}
-	logger.Debug("GetProposerList", "number", c.num, "updateNum", updateNum, "list", valset.NewAddressSet(list).String())
+	logger.Debug("GetProposerList", "updateNum", updateNum, "list", valset.NewAddressSet(list).String())
 
 	// Store to cache
 	v.proposerListCache.Add(updateNum, list)
