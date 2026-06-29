@@ -44,7 +44,7 @@ func (g *GaslessModule) PreAddTx(tx *types.Transaction, local bool) error {
 	}
 
 	if g.IsBundleTx(tx) {
-		if g.knownTxs.numQueue() >= int(g.GetMaxBundleTxsInQueue()) {
+		if uint(g.knownTxs.numQueue()) >= g.GetMaxBundleTxsInQueue() {
 			return ErrBundleTxQueueFull
 		}
 		g.knownTxs.add(tx, TxStatusQueue)
