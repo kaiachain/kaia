@@ -108,12 +108,31 @@ func TestGetCommittee(t *testing.T) {
 	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(c.prevHeader).AnyTimes()
 	mockStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
 
+	// calcBaseProposers derives the base list from the qualified set at updateNum+1, so the council DB,
+	// gov params and chain config must be available. Council@(updateNum+1) resolves to `qualified`.
+	writeLowestScannedVoteNum(v.ChainKv, 0)
+	writeCouncil(v.ChainKv, 0, qualified)
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
+		ProposerPolicy: uint64(istanbul.WeightedRandom),
+		MinimumStake:   big.NewInt(0),
+		GovernanceMode: "none",
+	}).AnyTimes()
+	chainConfig := &params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}
+	mockChain.EXPECT().Config().Return(chainConfig).AnyTimes()
+
 	for _, tc := range testcases {
 		c.pset.ProposerPolicy = uint64(tc.policy)
 		c.rules.IsKore = tc.isKore
 		c.rules.IsShanghai = tc.isRandao
 		c.rules.IsCancun = tc.isRandao
 		c.rules.IsRandao = tc.isRandao
+		// The uniform-vs-weighted choice is now pinned to the rule at updateNum+1, so toggle Kore on
+		// the chain config (not just c.rules) to match the test case.
+		if tc.isKore {
+			chainConfig.KoreCompatibleBlock = big.NewInt(0)
+		} else {
+			chainConfig.KoreCompatibleBlock = nil
+		}
 
 		v.proposerListCache.Purge()
 		v.removeVotesCache.Purge()
@@ -243,12 +262,31 @@ func TestGetProposer(t *testing.T) {
 	mockChain.EXPECT().GetHeaderByNumber(gomock.Any()).Return(c.prevHeader).AnyTimes()
 	mockStaking.EXPECT().GetStakingInfo(gomock.Any()).Return(si, nil).AnyTimes()
 
+	// calcBaseProposers derives the base list from the qualified set at updateNum+1, so the council DB,
+	// gov params and chain config must be available. Council@(updateNum+1) resolves to `qualified`.
+	writeLowestScannedVoteNum(v.ChainKv, 0)
+	writeCouncil(v.ChainKv, 0, qualified)
+	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{
+		ProposerPolicy: uint64(istanbul.WeightedRandom),
+		MinimumStake:   big.NewInt(0),
+		GovernanceMode: "none",
+	}).AnyTimes()
+	chainConfig := &params.ChainConfig{IstanbulCompatibleBlock: big.NewInt(0)}
+	mockChain.EXPECT().Config().Return(chainConfig).AnyTimes()
+
 	for _, tc := range testcases {
 		c.pset.ProposerPolicy = uint64(tc.policy)
 		c.rules.IsKore = tc.isKore
 		c.rules.IsShanghai = tc.isRandao
 		c.rules.IsCancun = tc.isRandao
 		c.rules.IsRandao = tc.isRandao
+		// The uniform-vs-weighted choice is now pinned to the rule at updateNum+1, so toggle Kore on
+		// the chain config (not just c.rules) to match the test case.
+		if tc.isKore {
+			chainConfig.KoreCompatibleBlock = big.NewInt(0)
+		} else {
+			chainConfig.KoreCompatibleBlock = nil
+		}
 
 		v.proposerListCache.Purge()
 		v.removeVotesCache.Purge()
