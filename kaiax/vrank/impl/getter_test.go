@@ -318,16 +318,20 @@ func TestEvaluateCandidates_Errors(t *testing.T) {
 		assert.Empty(t, report)
 	})
 
-	t.Run("round out of range returns error", func(t *testing.T) {
+	t.Run("round above maxRound returns empty report", func(t *testing.T) {
 		cn := newCNWithDefaults()
 		cn.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
 
+		// round > maxRound must degrade gracefully.
 		report, err := cn.VRankModule.EvaluateCandidates(1, 11) // maxRound is 10
-		require.ErrorIs(t, err, vrank.ErrRoundOutOfRange)
-		assert.Nil(t, report)
+		require.NoError(t, err)
+		assert.NotErrorIs(t, err, vrank.ErrRoundOutOfRange)
+		assert.Empty(t, report)
 
 		report, err = cn.VRankModule.EvaluateCandidates(1, 10)
+		require.NoError(t, err)
 		assert.NotErrorIs(t, err, vrank.ErrRoundOutOfRange)
+		assert.Empty(t, report)
 	})
 
 	t.Run("non-validator returns empty report", func(t *testing.T) {
