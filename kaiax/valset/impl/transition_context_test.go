@@ -176,7 +176,7 @@ func TestApplyEpochTransition_StateTransitions(t *testing.T) {
 		{"ValActive + stake above → ValActive (preserved)", ValActive, aboveMinStake, ValActive, false},
 		{"ValPaused + stake above → ValPaused (preserved)", ValPaused, aboveMinStake, ValPaused, false},
 		{"T3b: ValActive + stake below → ValInactive", ValActive, belowMinStake, ValInactive, true},
-		{"T3b: ValReady + stake below → ValInactive", ValReady, belowMinStake, ValInactive, true},
+		{"T3b: ValReady + stake below → ValInactive", ValReady, belowMinStake, ValInactive, false},
 		{"T3b: ValPaused + stake below → ValInactive", ValPaused, belowMinStake, ValInactive, true},
 	}
 	for _, tc := range cases {
@@ -199,11 +199,12 @@ func TestApplyEpochTransition_StateTransitions(t *testing.T) {
 // are demoted to VI at epoch (T3b), so newSF is computed only from validators
 // with sufficient stake.
 func TestApplyEpochTransition_BelowMinStakeDemoted(t *testing.T) {
+	vrIdle := testBlockTime.Add(5 * time.Hour) // ValReady's already-accumulating idle deadline
 	m := NodeMap{
-		addr1: {State: ValActive, StakingAmount: aboveMinStake}, // above-min: stays VA
-		addr2: {State: ValActive, StakingAmount: belowMinStake}, // T3b → VI
-		addr3: {State: ValReady, StakingAmount: belowMinStake},  // T3b → VI
-		addr4: {State: ValPaused, StakingAmount: belowMinStake}, // T3b → VI
+		addr1: {State: ValActive, StakingAmount: aboveMinStake},                     // above-min: stays VA
+		addr2: {State: ValActive, StakingAmount: belowMinStake},                     // T3b → VI (fresh idle)
+		addr3: {State: ValReady, StakingAmount: belowMinStake, IdleTimeout: vrIdle}, // T3b → VI (idle preserved)
+		addr4: {State: ValPaused, StakingAmount: belowMinStake},                     // T3b → VI (fresh idle)
 	}
 	ctx := epochCtx(t, nil, testMaxValCount)
 	out := ctx.applyEpochTransition(m)
@@ -213,15 +214,17 @@ func TestApplyEpochTransition_BelowMinStakeDemoted(t *testing.T) {
 	assert.Equal(t, ValInactive, out[addr3].State)
 	assert.Equal(t, ValInactive, out[addr4].State)
 	assert.False(t, out[addr2].IdleTimeout.IsZero())
-	assert.False(t, out[addr3].IdleTimeout.IsZero())
+	assert.Equal(t, vrIdle, out[addr3].IdleTimeout) // VR carries its idle timer through the demotion
 	assert.False(t, out[addr4].IdleTimeout.IsZero())
 }
 
 func TestApplyEpochTransition_MaxValActivePausedCount(t *testing.T) {
+	vrIdle := testBlockTime.Add(2 * time.Hour) // ValReady competitor's already-accumulating idle deadline
 	m := NodeMap{
 		addr1: {State: ValActive, StakingAmount: highStake},
 		addr2: {State: ValActive, StakingAmount: midStake},
 		addr3: {State: ValActive, StakingAmount: lowStake},
+		addr4: {State: ValReady, StakingAmount: testMinStake + 1, IdleTimeout: vrIdle}, // competitor, ranks last → loses top-N
 	}
 	ctx := epochCtx(t, nil, 2)
 	out := ctx.applyEpochTransition(m)
@@ -229,6 +232,8 @@ func TestApplyEpochTransition_MaxValActivePausedCount(t *testing.T) {
 	assert.Equal(t, ValActive, out[addr2].State)
 	assert.Equal(t, ValInactive, out[addr3].State)
 	assert.False(t, out[addr3].IdleTimeout.IsZero())
+	assert.Equal(t, ValInactive, out[addr4].State)
+	assert.Equal(t, vrIdle, out[addr4].IdleTimeout) // VR that loses top-N keeps its idle timer
 }
 
 func TestApplyEpochTransition_TieBreakingByAddress(t *testing.T) {
@@ -366,6 +371,7 @@ func TestApplyViolationTransition_Deterministic(t *testing.T) {
 }
 
 func TestApplyViolationTransition_MinStakeMigrated(t *testing.T) {
+	vrIdleViol := testBlockTime.Add(3 * time.Hour) // ValReady's already-accumulating idle deadline
 	cases := []struct {
 		name           string
 		validators     NodeMap
@@ -376,7 +382,7 @@ func TestApplyViolationTransition_MinStakeMigrated(t *testing.T) {
 		{
 			"ValReady + low staking → ValInactive",
 			NodeMap{
-				addr1: {State: ValReady, StakingAmount: belowMinStake},
+				addr1: {State: ValReady, StakingAmount: belowMinStake, IdleTimeout: vrIdleViol},
 				addr2: {State: ValReady, StakingAmount: aboveMinStake},
 			},
 			noSlotLimit,
@@ -414,7 +420,7 @@ func TestApplyViolationTransition_MinStakeMigrated(t *testing.T) {
 				assert.Equal(t, expected, out[addr].State, "addr=%s", addr.Hex())
 			}
 			if tc.checkTimeout != nil {
-				assert.False(t, out[*tc.checkTimeout].IdleTimeout.IsZero(), "IdleTimeout should be set")
+				assert.Equal(t, vrIdleViol, out[*tc.checkTimeout].IdleTimeout, "VR idle timer preserved through violation demotion")
 			}
 		})
 	}
@@ -664,6 +670,8 @@ func TestApplyTimeoutTransition(t *testing.T) {
 		{"ValReady: preserve existing idle timeout", &Node{State: ValReady, IdleTimeout: futureTimeout}, ValReady, true, false, &futureTimeout},
 		{"ValInactive: idle expired → Registered", &Node{State: ValInactive, IdleTimeout: expiredTimeout}, Registered, false, false, nil},
 		{"ValReady: idle expired → Registered", &Node{State: ValReady, IdleTimeout: expiredTimeout}, Registered, false, false, nil},
+		{"ValInactive: idle exactly at deadline → Registered", &Node{State: ValInactive, IdleTimeout: testBlockTime}, Registered, false, false, nil},
+		{"ValPaused: paused exactly at deadline → ValInactive", &Node{State: ValPaused, PausedTimeout: testBlockTime}, ValInactive, true, false, nil},
 		{"ValPaused: set paused timeout", &Node{State: ValPaused}, ValPaused, false, true, nil},
 		{"ValPaused: preserve existing paused timeout", &Node{State: ValPaused, PausedTimeout: futureTimeout}, ValPaused, false, true, nil},
 		{"ValPaused: paused expired → ValInactive + idle set", &Node{State: ValPaused, PausedTimeout: expiredTimeout}, ValInactive, true, false, nil},
