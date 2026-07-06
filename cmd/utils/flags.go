@@ -1134,7 +1134,7 @@ var (
 	}
 	MaxConnectionsFlag = &cli.IntFlag{
 		Name:     "maxconnections",
-		Usage:    "Maximum number of physical connections. All single channel peers can be maxconnections peers. All multi channel peers can be maxconnections/2 peers. (network disabled if set to 0)",
+		Usage:    "Maximum number of peers, inbound and outbound combined. A multi-channel peer counts once regardless of how many sockets it uses. (network disabled if set to 0)",
 		Value:    node.DefaultMaxPhysicalConnections,
 		Aliases:  []string{"p2p.max-connections"},
 		EnvVars:  []string{"KLAYTN_MAXCONNECTIONS", "KAIA_MAXCONNECTIONS"},

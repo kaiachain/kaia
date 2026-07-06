@@ -277,21 +277,21 @@ func (srv *BaseServer) startListening() error {
 	return nil
 }
 
-func (srv *BaseServer) protoHandshakeChecks(peers map[discover.NodeID]*Peer, inboundCount int, c *conn) error {
+func (srv *BaseServer) protoHandshakeChecks(peers map[discover.NodeID]*Peer, c *conn) error {
 	// Drop connections with no matching protocols.
 	if len(srv.Protocols) > 0 && countMatchingProtocols(srv.Protocols, c.caps) == 0 {
 		return DiscUselessPeer
 	}
 	// Repeat the encryption handshake checks because the
 	// peer set might have changed between the handshakes.
-	return srv.encHandshakeChecks(peers, inboundCount, c)
+	return srv.encHandshakeChecks(peers, c)
 }
 
-func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, inboundCount int, c *conn) error {
+func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, c *conn) error {
 	switch {
 	case !c.isTrustedOrStatic() && len(peers) >= srv.Config.MaxPhysicalConnections:
 		return DiscTooManyPeers
-	case !c.is(trustedConn) && c.is(inboundConn) && inboundCount >= srv.maxInboundConns():
+	case !c.is(trustedConn) && c.is(inboundConn) && countInboundPeers(peers) >= srv.maxInboundConns():
 		return DiscTooManyPeers
 	case srv.exceedsPeerTarget(peers, c):
 		return DiscTooManyPeers
@@ -325,6 +325,22 @@ func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *con
 		return EffectiveConnType(p.ConnType()) != peerType
 	})
 	return len(peersByType) >= target
+}
+
+// countInboundPeers returns how many peers are connected via an inbound
+// connection. A multichannel peer holds several sockets but counts once, so
+// inbound capacity is measured in peers (per KIP-311), not physical sockets.
+// Direction is taken from the peer's default channel (Peer.Inbound); a peer
+// whose channels are of mixed direction (a rare simultaneous-dial race) is
+// classified by that channel.
+func countInboundPeers(peers map[discover.NodeID]*Peer) int {
+	n := 0
+	for _, p := range peers {
+		if p.Inbound() {
+			n++
+		}
+	}
+	return n
 }
 
 func (srv *BaseServer) admitByCNPeers(c *conn) error {
@@ -570,7 +586,7 @@ func (srv *BaseServer) handlePostHandshake(c *conn) error {
 	if srv.trusted[c.id] {
 		c.flags |= trustedConn
 	}
-	return srv.encHandshakeChecks(srv.peers, srv.inboundCount, c)
+	return srv.encHandshakeChecks(srv.peers, c)
 }
 
 func (srv *BaseServer) handleAddPeerConn(c *conn) error {
@@ -580,7 +596,7 @@ func (srv *BaseServer) handleAddPeerConn(c *conn) error {
 	if !srv.running {
 		return errServerStopped
 	}
-	err := srv.protoHandshakeChecks(srv.peers, srv.inboundCount, c)
+	err := srv.protoHandshakeChecks(srv.peers, c)
 	if err != nil {
 		return err
 	}

@@ -366,6 +366,30 @@ func TestServerAtCap(t *testing.T) {
 	}
 }
 
+func TestCountInboundPeers(t *testing.T) {
+	// Inbound capacity is measured in peers, not sockets: a multichannel peer
+	// counts once, and a mixed-direction peer is classified by its default
+	// channel (ConnDefault), matching Peer.Inbound.
+	peer := func(channelFlags ...connFlag) *Peer {
+		rws := make([]*conn, len(channelFlags))
+		for i, f := range channelFlags {
+			rws[i] = &conn{flags: f}
+		}
+		return &Peer{rws: rws}
+	}
+	peers := map[discover.NodeID]*Peer{
+		randomID(): peer(inboundConn, inboundConn),     // multichannel inbound -> counts
+		randomID(): peer(inboundConn),                  // single-channel inbound -> counts
+		randomID(): peer(inboundConn, dynDialedConn),   // default inbound, sub outbound -> counts
+		randomID(): peer(dynDialedConn, dynDialedConn), // multichannel outbound -> not counted
+		randomID(): peer(dynDialedConn, inboundConn),   // default outbound, sub inbound -> not counted
+	}
+	// Counted: the three peers whose default channel is inbound.
+	if got := countInboundPeers(peers); got != 3 {
+		t.Errorf("countInboundPeers = %d, want 3", got)
+	}
+}
+
 func TestServerPeerTargets(t *testing.T) {
 	newPeerWithType := func(connType common.ConnType) *Peer {
 		return &Peer{rws: []*conn{{conntype: connType}}}

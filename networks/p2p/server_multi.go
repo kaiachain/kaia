@@ -338,7 +338,7 @@ func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
 	if !srv.running {
 		return errServerStopped
 	}
-	err := srv.protoHandshakeChecks(srv.peers, srv.inboundCount, c)
+	err := srv.protoHandshakeChecks(srv.peers, c)
 	if err != nil {
 		return err
 	}
