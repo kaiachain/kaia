@@ -46,10 +46,10 @@ var ecdsaKeyNames = []string{"nodekey", "manager", "voter", "reward", "cnstaking
 
 // GenerateKeysCommand generates the full validator onboarding key set offline.
 var GenerateKeysCommand = &cli.Command{
-	Name:     "generate-keys",
-	Usage:    "Generate all validator onboarding keys into <datadir>/klay (offline)",
-	Flags:    []cli.Flag{genkeysDatadirFlag},
-	Action:   generateKeysAction,
+	Name:   "generate-keys",
+	Usage:  "Generate all validator onboarding keys into <datadir>/klay (offline)",
+	Flags:  []cli.Flag{genkeysDatadirFlag},
+	Action: generateKeysAction,
 }
 
 func writeFile(path, content string, perm os.FileMode) error {
