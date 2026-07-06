@@ -50,7 +50,6 @@ var GenerateKeysCommand = &cli.Command{
 	Usage:    "Generate all validator onboarding keys into <datadir>/klay (offline)",
 	Flags:    []cli.Flag{genkeysDatadirFlag},
 	Action:   generateKeysAction,
-	Category: "PERMISSIONLESS COMMANDS",
 }
 
 func writeFile(path, content string, perm os.FileMode) error {
