@@ -58,7 +58,7 @@ func (tab *Table2) doRefresh() {
 		tab.simpleRefresh(NodeTypeCN)
 		tab.simpleRefresh(NodeTypePN)
 		tab.simpleRefresh(NodeTypeBN)
-		logger.Info("Discovery table refreshed", "counts", tab.lenByNodeTypes())
+		logger.Debug("Discovery table refreshed", "counts", tab.lenByNodeTypes())
 		return nil, nil
 	})
 }
