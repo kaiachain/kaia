@@ -4479,6 +4479,68 @@ func TestTxPool_saveAndPruneBlobStorage(t *testing.T) {
 	}
 }
 
+// TestTxPool_saveAndPruneBlobStorage_inlineSidecarValidation verifies that a
+// block's inline blob sidecar is persisted only when it matches the tx's blob
+// hashes; an invalid one is discarded and refetched through the validated path.
+func TestTxPool_saveAndPruneBlobStorage_inlineSidecarValidation(t *testing.T) {
+	t.Parallel()
+
+	newPool := func(t *testing.T) *TxPool {
+		statedb, _ := state.New(common.Hash{}, state.NewDatabase(database.NewMemoryDBManager()), nil, nil)
+		bc := &testBlockChain{statedb: statedb, gasLimit: 1000000, chainHeadFeed: new(event.Feed), txMap: make(map[common.Hash]*types.Transaction)}
+		config := testTxPoolConfig
+		blobConfig := DefaultBlobStorageConfig(t.TempDir())
+		config.BlobStorageConfig = &blobConfig
+		return NewTxPool(config, params.TestChainConfig, bc, &dummyGovModule{chainConfig: params.TestChainConfig})
+	}
+
+	t.Run("invalid inline sidecar is not persisted", func(t *testing.T) {
+		pool := newPool(t)
+		defer pool.Stop()
+
+		key, _ := crypto.GenerateKey()
+		// blob hashes commit to the original commitment; corrupt the attached
+		// sidecar so it no longer matches.
+		tx := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(100), key, 1,
+			func(sc *types.BlobTxSidecar) { sc.Commitments[0][0] ^= 0x01 })
+		block := createTestBlock(big.NewInt(1000), big.NewInt(time.Now().Unix()), types.Transactions{tx})
+
+		ch := pool.SubscribeMissingBlobSidecars()
+		pool.saveAndPruneBlobStorage(block)
+		time.Sleep(10 * time.Millisecond)
+
+		// not persisted
+		_, err := pool.GetBlobSidecarFromStorage(block.Number(), 0)
+		require.Error(t, err)
+
+		// falls through to the validated fetch path
+		select {
+		case missing := <-ch:
+			assert.Equal(t, block.Number(), missing.BlockNum)
+			assert.Equal(t, 0, missing.TxIndex)
+			assert.Equal(t, tx.Hash(), missing.TxHash)
+		case <-time.After(time.Second):
+			t.Fatal("expected a missing blob sidecar request after discarding the invalid one")
+		}
+	})
+
+	t.Run("valid inline sidecar is persisted", func(t *testing.T) {
+		pool := newPool(t)
+		defer pool.Stop()
+
+		key, _ := crypto.GenerateKey()
+		tx := blobTransaction(0, 100000, big.NewInt(1000), big.NewInt(100), big.NewInt(100), key, 1, nil)
+		block := createTestBlock(big.NewInt(1000), big.NewInt(time.Now().Unix()), types.Transactions{tx})
+
+		pool.saveAndPruneBlobStorage(block)
+		time.Sleep(10 * time.Millisecond)
+
+		saved, err := pool.GetBlobSidecarFromStorage(block.Number(), 0)
+		require.NoError(t, err)
+		require.NotNil(t, saved)
+	})
+}
+
 // sumPendingQueued recomputes pendingCount/queuedCount from the source-of-truth
 // per-sender lists. It runs under pool.mu RLock to keep the snapshot consistent.
 func sumPendingQueued(pool *TxPool) (uint64, uint64) {
