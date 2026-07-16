@@ -135,7 +135,7 @@ jobs:
             export GOMODCACHE=/tmp/go-mod-cache
             export PLATFORM_SUFFIX=$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)
           fi
-          for item in kcn ken kscn kspn ksen kgen kbn homi kcn-kairos ken-kairos; do
+          for item in kcn ken kscn ksen kgen kbn homi kcn-kairos ken-kairos; do
             KAIROS=""
             B=""
             if [[ $item == *-kairos ]]; then

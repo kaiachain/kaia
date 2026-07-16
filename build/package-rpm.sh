@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DAEMON_BINARIES=(kcn ken kbn kscn kspn ksen)
+DAEMON_BINARIES=(kcn ken kbn kscn ksen)
 BINARIES=(kgen homi)
 
 set -e
@@ -8,7 +8,7 @@ set -e
 function printUsage {
     echo "Usage: $0 [-b] <target binary>"
     echo "               -b: use Kairos configuration."
-    echo "  <target binary>: kcn | ken | kbn | kscn | kspn | ksen | kgen | homi"
+    echo "  <target binary>: kcn | ken | kbn | kscn | ksen | kgen | homi"
     exit 1
 }
 

@@ -7,7 +7,7 @@ SHORT_SHA1=${CIRCLE_SHA1:0:7}
 CIRCLE_PR=$(hub pr list -s open -L 10 -f "%I %sH %n" | grep $CIRCLE_SHA1)
 CIRCLE_PR_NUMBER=${CIRCLE_PR%% *}
 
-PACKAGES="kcn ken kscn kspn ksen kbn kgen homi"
+PACKAGES="kcn ken kscn ksen kbn kgen homi"
 BAOBAB_PACKAGES="kcn ken"
 PACKAGE_PREFIX="http://packages.klaytn.net/klaytn/${VERSION}"
 
