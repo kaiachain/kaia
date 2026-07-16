@@ -84,12 +84,6 @@ var (
 		Value:   0,
 		Aliases: []string{"topology.validators-num"},
 	}
-	numOfPNsFlag = &cli.IntFlag{
-		Name:    "pn-num",
-		Usage:   "Number of proxy node",
-		Value:   0,
-		Aliases: []string{"topology.pn-num"},
-	}
 	numOfENsFlag = &cli.IntFlag{
 		Name:    "en-num",
 		Usage:   "Number of end-point node",
@@ -101,12 +95,6 @@ var (
 		Usage:   "Number of service chain nodes",
 		Value:   0,
 		Aliases: []string{"topology.scn-num"},
-	}
-	numOfSPNsFlag = &cli.IntFlag{
-		Name:    "spn-num",
-		Usage:   "Number of service chain proxy nodes",
-		Value:   0,
-		Aliases: []string{"topology.spn-num"},
 	}
 	numOfSENsFlag = &cli.IntFlag{
 		Name:    "sen-num",
@@ -142,12 +130,6 @@ var (
 	cnNodeKeyDirFlag = &cli.StringFlag{
 		Name:  "cn-nodekey-dir",
 		Usage: "CN nodekey dir containing nodekey*",
-		Value: "",
-	}
-
-	pnNodeKeyDirFlag = &cli.StringFlag{
-		Name:  "pn-nodekey-dir",
-		Usage: "PN nodekey dir containing nodekey*",
 		Value: "",
 	}
 

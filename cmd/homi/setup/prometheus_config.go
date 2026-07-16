@@ -27,27 +27,14 @@ type PrometheusConfig struct {
 	PnIps []string
 }
 
-func NewPrometheusConfig(cnNum int, cnNetworkIp string, pnNum int, pnNetworkId1 string, pnNetworkId2 string) PrometheusConfig {
+func NewPrometheusConfig(cnNum int, cnNetworkIp string) PrometheusConfig {
 	var cnIps []string
 	for i := 1; i <= cnNum; i++ {
 		cnIps = append(cnIps, fmt.Sprintf("%s.%d", cnNetworkIp, 100+i))
 	}
 
-	var pnIps []string
-	for i := 1; i <= pnNum; i++ {
-		instanceId := 100
-		if i%2 == 1 {
-			instanceId += i/2 + 1
-			pnIps = append(pnIps, fmt.Sprintf("%s.%d", pnNetworkId1, instanceId))
-		} else {
-			instanceId += i / 2
-			pnIps = append(pnIps, fmt.Sprintf("%s.%d", pnNetworkId2, instanceId))
-		}
-	}
-
 	return PrometheusConfig{
 		CnIps: cnIps,
-		PnIps: pnIps,
 	}
 }
 
