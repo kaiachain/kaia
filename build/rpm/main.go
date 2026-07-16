@@ -15,7 +15,6 @@ const (
 	CN   = "kcn"
 	EN   = "ken"
 	SCN  = "kscn"
-	SPN  = "kspn"
 	SEN  = "ksen"
 	BN   = "kbn"
 	HOMI = "homi"
@@ -43,11 +42,6 @@ var BINARY_TYPE = map[string]NodeInfo{
 		"kscnd",
 		"Kaia servicechain consensus node daemon",
 		"kscnd is a daemon for Kaia servicechain consensus node (kscn). For more information, please refer to https://docs.kaia.io.",
-	},
-	SPN: {
-		"kspnd",
-		"Kaia servicechain proxy node daemon",
-		"kspnd is a daemon for Kaia servicechain proxy node (kspn). For more information, please refer to https://docs.kaia.io.",
 	},
 	SEN: {
 		"ksend",
@@ -77,8 +71,8 @@ type RpmSpec struct {
 	Name        string
 	Summary     string
 	MakeTarget  string
-	ProgramName string // kcn, ken, kscn, kspn, ksen, kbn
-	DaemonName  string // kcnd, kend, kscnd, kspnd, ksend, kbnd
+	ProgramName string // kcn, ken, kscn, ksen, kbn
+	DaemonName  string // kcnd, kend, kscnd, ksend, kbnd
 	PostFix     string // kairos
 	Description string
 }
@@ -111,7 +105,7 @@ func main() {
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:  "binary_type",
-					Usage: "Kaia binary type (kcn, ken, kscn, kspn, ksen, kbn, kgen, homi)",
+					Usage: "Kaia binary type (kcn, ken, kscn, ksen, kbn, kgen, homi)",
 				},
 				&cli.BoolFlag{
 					Name:  "devel",
@@ -159,7 +153,7 @@ func genspec(c *cli.Context) error {
 
 	binaryType := c.String("binary_type")
 	if _, ok := BINARY_TYPE[binaryType]; ok != true {
-		return fmt.Errorf("binary_type[\"%s\"] is not supported. Use --binary_type [kcn, ken, kscn, kspn, ksen, kbn, kgen, homi]", binaryType)
+		return fmt.Errorf("binary_type[\"%s\"] is not supported. Use --binary_type [kcn, ken, kscn, ksen, kbn, kgen, homi]", binaryType)
 	}
 
 	rpmSpec.ProgramName = strings.ToLower(binaryType)

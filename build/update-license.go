@@ -165,7 +165,6 @@ var (
 		"cmd/kcn/main.go":                                    "cmd/geth/main.go",
 		"cmd/ken/main.go":                                    "cmd/geth/main.go",
 		"cmd/kscn/main.go":                                   "cmd/geth/main.go",
-		"cmd/kspn/main.go":                                   "cmd/geth/main.go",
 		"cmd/ksen/main.go":                                   "cmd/geth/main.go",
 		"cmd/klay/main.go":                                   "cmd/geth/main.go",
 		"cmd/utils/cmd.go":                                   "cmd/utils/cmd.go",
