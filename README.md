@@ -4,10 +4,10 @@ Official golang implementation of the Kaia blockchain. Please visit our [Docs](h
 
 ## Building from Sources
 
-Building the Kaia node binaries as well as utility tools, such as `kcn`, `kpn`, `ken`, `kbn`, `kscn`, `kspn`, `ksen`, `kgen`, `homi` and `abigen` requires
+Building the Kaia node binaries as well as utility tools, such as `kcn`, `ken`, `kbn`, `kscn`, `kspn`, `ksen`, `kgen`, `homi` and `abigen` requires
 both a Go and a C compiler. You can install them using your favorite package manager. Once the dependencies are installed, run
 
-    make all (or make {kcn, kpn, ken, kbn, kscn, kspn, ksen, kgen, homi, abigen})
+    make all (or make {kcn, ken, kbn, kscn, kspn, ksen, kgen, homi, abigen})
 
 This repository uses Git submodules. The submodule (`contracts/kaia-system-contracts`) is only needed if you want to regenerate Go contract bindings via `go generate`. For normal builds, the pre-generated bindings are already included. To initialize the submodule, run `make submodules`.
 
@@ -18,7 +18,6 @@ After successful build, executable binaries are installed at `build/bin/`.
 | Command    | Description |
 |:----------:|-------------|
 | `kcn` | The CLI client for Kaia Consensus Node. Run `kcn --help` for command-line flags. |
-| `kpn` | The CLI client for Kaia Proxy Node. Run `kpn --help` for command-line flags. |
 | `ken` | The CLI client for Kaia Endpoint Node, which is the entry point into the Kaia network (main-, test- or private net).  It can be used by other processes as a gateway into the Kaia network via JSON RPC endpoints exposed on top of HTTP, WebSocket, gRPC, and/or IPC transports. Run `ken --help` for command-line flags. |
 | `kscn` | The CLI client for Kaia ServiceChain Consensus Node.  Run `kscn --help` for command-line flags. |
 | `kspn` | The CLI client for Kaia ServiceChain Proxy Node.  Run `kspn --help` for command-line flags. |

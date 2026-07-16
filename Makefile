@@ -10,7 +10,7 @@ BIN = $(shell pwd)/build/bin
 BUILD_PARAM?=install
 FIXTURE_TEST_REGEX?=^(TestExecutionSpecBlockTestSuite|TestExecutionSpecStateTestSuite|TestKaiaSpecState|TestRLP|TestTransaction|TestVM)$$
 
-OBJECTS=kcn kpn ken kscn kspn ksen kbn kgen homi
+OBJECTS=kcn ken kscn kspn ksen kbn kgen homi
 
 .PHONY: all submodules test clean ${OBJECTS}
 

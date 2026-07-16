@@ -234,7 +234,6 @@ var (
 		"cmd/kbn/node.go":                                    "node/node.go",
 		"cmd/kcn/main.go":                                    "cmd/geth/main.go",
 		"cmd/ken/main.go":                                    "cmd/geth/main.go",
-		"cmd/kpn/main.go":                                    "cmd/geth/main.go",
 		"cmd/kscn/main.go":                                   "cmd/geth/main.go",
 		"cmd/kspn/main.go":                                   "cmd/geth/main.go",
 		"cmd/ksen/main.go":                                   "cmd/geth/main.go",

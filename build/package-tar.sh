@@ -1,7 +1,7 @@
 #!/bin/bash
 
 MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-DAEMON_BINARIES=(kcn kpn ken kbn kscn kspn ksen)
+DAEMON_BINARIES=(kcn ken kbn kscn kspn ksen)
 BINARIES=(kgen homi)
 
 set -e
@@ -10,7 +10,7 @@ function printUsage {
     echo "Usage: ${0} [-b] <arch> <target>"
     echo "         -b: use Kairos configuration"
     echo "     <arch>:  linux-386 | linux-amd64 | linux-arm64 | darwin-arm64"
-    echo "   <target>:  kcn | kpn | ken | kbn | kscn | kspn | ksen | kgen | homi"
+    echo "   <target>:  kcn | ken | kbn | kscn | kspn | ksen | kgen | homi"
     echo ""
     echo "    ${0} linux-amd64 kcn"
     exit 1

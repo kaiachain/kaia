@@ -15,7 +15,7 @@
 // along with the klaytn library. If not, see <http://www.gnu.org/licenses/>.
 
 /*
-Package nodecmd contains command definitions and related functions used for node cmds, such as kcn, kpn, and ken.
+Package nodecmd contains command definitions and related functions used for node cmds, such as kcn and ken.
 
 # Source Files
 

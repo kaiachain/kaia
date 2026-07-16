@@ -44,7 +44,6 @@ func AllNodeFlags() []cli.Flag {
 	nodeFlags = union(nodeFlags, DBMigrationDstFlags)
 	nodeFlags = union(nodeFlags, BNFlags)
 	nodeFlags = union(nodeFlags, KCNFlags)
-	nodeFlags = union(nodeFlags, KPNFlags)
 	nodeFlags = union(nodeFlags, KENFlags)
 	nodeFlags = union(nodeFlags, KSCNFlags)
 	nodeFlags = union(nodeFlags, KSPNFlags)
@@ -73,10 +72,6 @@ func union(list1, list2 []cli.Flag) []cli.Flag {
 // All flags used for each node type
 func KcnNodeFlags() []cli.Flag {
 	return append(CommonNodeFlags, KCNFlags...)
-}
-
-func KpnNodeFlags() []cli.Flag {
-	return append(CommonNodeFlags, KPNFlags...)
 }
 
 func KenNodeFlags() []cli.Flag {
@@ -108,16 +103,6 @@ func KcnAppFlags() []cli.Flag {
 	flags = append(flags, ConsoleFlags...)
 	flags = append(flags, debug.Flags...)
 	flags = append(flags, DBMigrationDstFlags...)
-	return flags
-}
-
-func KpnAppFlags() []cli.Flag {
-	flags := append([]cli.Flag{}, KpnNodeFlags()...)
-	flags = append(flags, CommonRPCFlags...)
-	flags = append(flags, ConsoleFlags...)
-	flags = append(flags, debug.Flags...)
-	flags = append(flags, DBMigrationDstFlags...)
-	flags = append(flags, ChainDataFetcherFlags...)
 	return flags
 }
 
@@ -356,15 +341,6 @@ var KCNFlags = []cli.Flag{
 	altsrc.NewInt64Flag(BlockGenerationIntervalFlag),
 	altsrc.NewDurationFlag(BlockGenerationTimeLimitFlag),
 	altsrc.NewBoolFlag(gasless.DisableFlag),
-}
-
-var KPNFlags = []cli.Flag{
-	altsrc.NewUint64Flag(TxResendIntervalFlag),
-	altsrc.NewIntFlag(TxResendCountFlag),
-	altsrc.NewBoolFlag(TxResendUseLegacyFlag),
-	altsrc.NewBoolFlag(MainnetFlag),
-	altsrc.NewBoolFlag(KairosFlag),
-	altsrc.NewBoolFlag(TxPoolSpamThrottlerDisableFlag),
 }
 
 var KENFlags = []cli.Flag{
