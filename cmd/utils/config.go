@@ -360,8 +360,6 @@ func convertNodeType(nodetype string) common.ConnType {
 	switch strings.ToLower(nodetype) {
 	case "cn", "scn":
 		return common.CONSENSUSNODE
-	case "pn", "spn":
-		return common.PROXYNODE
 	case "en", "sen":
 		return common.ENDPOINTNODE
 	default:
@@ -387,7 +385,7 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 	case cfg.BootstrapNodes != nil:
 		return // already set, don't apply defaults.
 	case !ctx.IsSet(NetworkIdFlag.Name):
-		if NodeTypeFlag.Value != "scn" && NodeTypeFlag.Value != "spn" && NodeTypeFlag.Value != "sen" {
+		if NodeTypeFlag.Value != "scn" && NodeTypeFlag.Value != "sen" {
 			logger.Info("Mainnet bootnodes are set")
 			urls = params.MainnetBootnodes[cfg.ConnectionType].Addrs
 		}
@@ -921,11 +919,6 @@ func setTxPool(ctx *cli.Context, cfg *blockchain.TxPoolConfig) {
 	if ctx.IsSet(TxPoolLifetimeFlag.Name) {
 		cfg.Lifetime = ctx.Duration(TxPoolLifetimeFlag.Name)
 	}
-
-	// PN specific txpool setting
-	if NodeTypeFlag.Value == "pn" {
-		cfg.EnableSpamThrottlerAtRuntime = !ctx.Bool(TxPoolSpamThrottlerDisableFlag.Name)
-	}
 }
 
 // getNetworkId returns the associated network ID with whether or not the network is private.
@@ -952,7 +945,7 @@ func getNetworkId(ctx *cli.Context) (uint64, bool) {
 		logger.Info("A private network ID is set", "networkid", networkId)
 		return networkId, true
 	default:
-		if NodeTypeFlag.Value == "scn" || NodeTypeFlag.Value == "spn" || NodeTypeFlag.Value == "sen" {
+		if NodeTypeFlag.Value == "scn" || NodeTypeFlag.Value == "sen" {
 			logger.Info("A Service Chain default network ID is set", "networkid", params.ServiceChainDefaultNetworkId)
 			return params.ServiceChainDefaultNetworkId, true
 		}

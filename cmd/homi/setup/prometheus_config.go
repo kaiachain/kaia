@@ -24,7 +24,6 @@ import (
 
 type PrometheusConfig struct {
 	CnIps []string
-	PnIps []string
 }
 
 func NewPrometheusConfig(cnNum int, cnNetworkIp string) PrometheusConfig {
@@ -68,12 +67,4 @@ scrape_configs:
       {{- end }}
       labels:
         job: 'klaytn-cn'
-    {{- if gt (len .PnIps) 0 }}
-    - targets:
-      {{- range .PnIps }}
-      - "{{ . }}:61001"
-      {{- end }}
-      labels:
-        job: 'klaytn-pn'
-    {{ end }}
 `

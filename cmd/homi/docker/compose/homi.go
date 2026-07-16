@@ -190,8 +190,6 @@ func (ist *Homi) init(number int, addresses, nodeKeys []string, genesis, scGenes
 			ist.Services[i].StaticNodes = staticSCNNodes
 		} else if ist.Services[i].NodeType == "sen" {
 			ist.Services[i].StaticNodes = staticSCNNodes
-		} else if ist.Services[i].NodeType == "en" {
-			ist.Services[i].StaticNodes = staticCNNodes
 		} else {
 			ist.Services[i].StaticNodes = staticCNNodes
 		}
