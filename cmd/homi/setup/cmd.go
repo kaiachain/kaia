@@ -84,16 +84,13 @@ var HomiFlags = []cli.Flag{
 	altsrc.NewBoolFlag(serviceChainTestFlag),
 	altsrc.NewIntFlag(numOfCNsFlag),
 	altsrc.NewIntFlag(numOfValidatorsFlag),
-	altsrc.NewIntFlag(numOfPNsFlag),
 	altsrc.NewIntFlag(numOfENsFlag),
 	altsrc.NewIntFlag(numOfSCNsFlag),
-	altsrc.NewIntFlag(numOfSPNsFlag),
 	altsrc.NewIntFlag(numOfSENsFlag),
 	altsrc.NewIntFlag(numOfTestKeyFlag),
 	altsrc.NewStringFlag(mnemonicFlag),
 	altsrc.NewStringFlag(mnemonicPathFlag),
 	altsrc.NewStringFlag(cnNodeKeyDirFlag),
-	altsrc.NewStringFlag(pnNodeKeyDirFlag),
 	altsrc.NewStringFlag(enNodeKeyDirFlag),
 	altsrc.NewUint64Flag(chainIDFlag),
 	altsrc.NewUint64Flag(serviceChainIDFlag),
@@ -203,12 +200,8 @@ const (
 	TypeDeploy            = 3
 	DirScript             = "scripts"
 	DirKeys               = "keys"
-	DirPnScript           = "scripts_pn"
-	DirPnKeys             = "keys_pn"
 	DirTestKeys           = "keys_test"
 	CNIpNetwork           = "10.11.2"
-	PNIpNetwork1          = "10.11.10"
-	PNIpNetwork2          = "10.11.11"
 )
 
 var Types = [4]string{"docker", "local", "remote", "deploy"}
@@ -729,10 +722,8 @@ func Gen(ctx *cli.Context) error {
 
 	cnNum := ctx.Int(numOfCNsFlag.Name)
 	numValidators := ctx.Int(numOfValidatorsFlag.Name)
-	pnNum := ctx.Int(numOfPNsFlag.Name)
 	enNum := ctx.Int(numOfENsFlag.Name)
 	scnNum := ctx.Int(numOfSCNsFlag.Name)
-	spnNum := ctx.Int(numOfSPNsFlag.Name)
 	senNum := ctx.Int(numOfSENsFlag.Name)
 	numTestAccs := ctx.Int(numOfTestKeyFlag.Name)
 	kairos := ctx.Bool(kairosFlag.Name)
@@ -900,11 +891,9 @@ func Gen(ctx *cli.Context) error {
 	switch genType {
 	case TypeDocker:
 		validators := makeValidators(cnNum, false, nodeAddrs, nodeKeys, privKeys)
-		pnValidators, proxyNodeKeys := makeProxys(ctx, pnNum, false)
 		nodeInfos := filterNodeInfo(validators)
 		staticNodesJsonBytes, _ := json.MarshalIndent(nodeInfos, "", "\t")
 		address := filterAddressesString(validators)
-		pnInfos := filterNodeInfo(pnValidators)
 		enValidators, enKeys := makeEndpoints(ctx, enNum, false)
 		enInfos := filterNodeInfo(enValidators)
 
@@ -912,16 +901,11 @@ func Gen(ctx *cli.Context) error {
 		scnInfos := filterNodeInfo(scnValidators)
 		scnAddress := filterAddresses(scnValidators)
 
-		spnValidators, spnKeys := makeSPNs(spnNum, false)
-		spnInfos := filterNodeInfo(spnValidators)
-
 		senValidators, senKeys := makeSENs(senNum, false)
 		senInfos := filterNodeInfo(senValidators)
 
-		staticPNJsonBytes, _ := json.MarshalIndent(pnInfos, "", "\t")
 		staticENJsonBytes, _ := json.MarshalIndent(enInfos, "", "\t")
 		staticSCNJsonBytes, _ := json.MarshalIndent(scnInfos, "", "\t")
-		staticSPNJsonBytes, _ := json.MarshalIndent(spnInfos, "", "\t")
 		staticSENJsonBytes, _ := json.MarshalIndent(senInfos, "", "\t")
 		var bridgeNodesJsonBytes []byte
 		if len(enInfos) != 0 {
@@ -940,10 +924,8 @@ func Gen(ctx *cli.Context) error {
 			removeSpacesAndLines(genesisJsonBytes),
 			removeSpacesAndLines(scnGenesisJsonBytes),
 			removeSpacesAndLines(staticNodesJsonBytes),
-			removeSpacesAndLines(staticPNJsonBytes),
 			removeSpacesAndLines(staticENJsonBytes),
 			removeSpacesAndLines(staticSCNJsonBytes),
-			removeSpacesAndLines(staticSPNJsonBytes),
 			removeSpacesAndLines(staticSENJsonBytes),
 			removeSpacesAndLines(bridgeNodesJsonBytes),
 			dockerImageId,
@@ -951,10 +933,8 @@ func Gen(ctx *cli.Context) error {
 			ctx.Int(networkIdFlag.Name),
 			int(chainid),
 			!ctx.Bool(nografanaFlag.Name),
-			proxyNodeKeys,
 			enKeys,
 			scnKeys,
-			spnKeys,
 			senKeys,
 			ctx.Bool(useTxGenFlag.Name),
 			service.TxGenOption{
@@ -971,21 +951,18 @@ func Gen(ctx *cli.Context) error {
 		fmt.Println("Created : ", path.Join(outputPath, "prometheus.yml"))
 		downLoadGrafanaJson()
 	case TypeLocal:
-		writeNodeFiles(ctx, true, cnNum, pnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
+		writeNodeFiles(ctx, true, cnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
 		writeTestKeys(DirTestKeys, testPrivKeys, testKeys)
 		downLoadGrafanaJson()
 	case TypeRemote:
-		writeNodeFiles(ctx, false, cnNum, pnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
+		writeNodeFiles(ctx, false, cnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
 		writeTestKeys(DirTestKeys, testPrivKeys, testKeys)
 		downLoadGrafanaJson()
 	case TypeDeploy:
 		writeCNInfoKey(cnNum, nodeAddrs, nodeKeys, privKeys, genesisJsonBytes)
 		writeKaiaConfig(ctx.Int(networkIdFlag.Name), ctx.Int(rpcPortFlag.Name), ctx.Int(wsPortFlag.Name), ctx.Int(p2pPortFlag.Name),
 			ctx.String(dataDirFlag.Name), ctx.String(logDirFlag.Name), "CN")
-		writeKaiaConfig(ctx.Int(networkIdFlag.Name), ctx.Int(rpcPortFlag.Name), ctx.Int(wsPortFlag.Name), ctx.Int(p2pPortFlag.Name),
-			ctx.String(dataDirFlag.Name), ctx.String(logDirFlag.Name), "PN")
-		writePNInfoKey(ctx.Int(numOfPNsFlag.Name))
-		writePrometheusConfig(cnNum, ctx.Int(numOfPNsFlag.Name))
+		writePrometheusConfig(cnNum)
 	}
 
 	return nil
@@ -1030,28 +1007,17 @@ func writeCNInfoKey(num int, nodeAddrs []common.Address, nodeKeys []string, priv
 	}
 }
 
-func writePNInfoKey(num int) {
-	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
-	validators := makeValidatorsWithIp(num, false, nodeAddrs, nodeKeys, privKeys, []string{PNIpNetwork1, PNIpNetwork2})
-	for i, v := range validators {
-		parentDir := fmt.Sprintf("pn%02d", i+1)
-		WriteFile([]byte(nodeKeys[i]), parentDir, "nodekey")
-		str, _ := json.MarshalIndent(v, "", "\t")
-		WriteFile([]byte(str), parentDir, "validator")
-	}
-}
-
 func writeKaiaConfig(networkId int, rpcPort int, wsPort int, p2pPort int, dataDir string, logDir string, nodeType string) {
 	kConfig := NewKaiaConfig(networkId, rpcPort, wsPort, p2pPort, dataDir, logDir, "/var/run/klay", nodeType)
 	WriteFile([]byte(kConfig.String()), strings.ToLower(nodeType), "klay.conf")
 }
 
-func writePrometheusConfig(cnNum int, pnNum int) {
-	pConf := NewPrometheusConfig(cnNum, CNIpNetwork, pnNum, PNIpNetwork1, PNIpNetwork2)
+func writePrometheusConfig(cnNum int) {
+	pConf := NewPrometheusConfig(cnNum, CNIpNetwork)
 	WriteFile([]byte(pConf.String()), "monitoring", "prometheus.yml")
 }
 
-func writeNodeFiles(ctx *cli.Context, isWorkOnSingleHost bool, num int, pnum int, nodeAddrs []common.Address, nodeKeys []string,
+func writeNodeFiles(ctx *cli.Context, isWorkOnSingleHost bool, num int, nodeAddrs []common.Address, nodeKeys []string,
 	privKeys []*ecdsa.PrivateKey, genesisJsonBytes []byte,
 ) {
 	WriteFile(genesisJsonBytes, DirScript, "genesis.json")
@@ -1061,14 +1027,6 @@ func writeNodeFiles(ctx *cli.Context, isWorkOnSingleHost bool, num int, pnum int
 	staticNodesJsonBytes, _ := json.MarshalIndent(nodeInfos, "", "\t")
 	writeValidatorsAndNodesToFile(validators, DirKeys, nodeKeys)
 	WriteFile(staticNodesJsonBytes, DirScript, "static-nodes.json")
-
-	if pnum > 0 {
-		proxys, proxyNodeKeys := makeProxys(ctx, pnum, isWorkOnSingleHost)
-		pNodeInfos := filterNodeInfo(proxys)
-		staticPNodesJsonBytes, _ := json.MarshalIndent(pNodeInfos, "", "\t")
-		writeValidatorsAndNodesToFile(proxys, DirPnKeys, proxyNodeKeys)
-		WriteFile(staticPNodesJsonBytes, DirPnScript, "static-nodes.json")
-	}
 }
 
 func filterAddresses(validatorInfos []*ValidatorInfo) []common.Address {
@@ -1164,52 +1122,6 @@ func makeValidatorsWithIp(num int, isWorkOnSingleHost bool, nodeAddrs []common.A
 	return validators
 }
 
-func makeProxys(ctx *cli.Context, num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
-	var (
-		privKeys  []*ecdsa.PrivateKey
-		nodeKeys  []string
-		nodeAddrs []common.Address
-	)
-
-	keydir := ctx.String(pnNodeKeyDirFlag.Name)
-	if len(keydir) > 0 {
-		privKeys, nodeKeys, nodeAddrs = istcommon.LoadNodekey(keydir)
-		if len(nodeKeys) != num {
-			log.Fatalf("The number of nodekey files (%d) does not match the given PN num (%d)", len(nodeKeys), num)
-		}
-	} else {
-		privKeys, nodeKeys, nodeAddrs = istcommon.GenerateKeys(num)
-	}
-
-	var p2pPort uint16
-	var proxies []*ValidatorInfo
-	var proxyNodeKeys []string
-	for i := range num {
-		if isWorkOnSingleHost {
-			p2pPort = lastIssuedPortNum
-			lastIssuedPortNum++
-		} else {
-			p2pPort = DefaultTcpPort
-		}
-
-		v := &ValidatorInfo{
-			Address: nodeAddrs[i],
-			Nodekey: nodeKeys[i],
-			NodeInfo: discover.NewNode(
-				discover.PubkeyID(&privKeys[i].PublicKey),
-				net.ParseIP("0.0.0.0"),
-				0,
-				p2pPort,
-				nil,
-				discover.NodeTypePN,
-			).String(),
-		}
-		proxies = append(proxies, v)
-		proxyNodeKeys = append(proxyNodeKeys, v.Nodekey)
-	}
-	return proxies, proxyNodeKeys
-}
-
 func makeEndpoints(ctx *cli.Context, num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 	var (
 		privKeys  []*ecdsa.PrivateKey
@@ -1286,38 +1198,6 @@ func makeSCNs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
 		scnKeys = append(scnKeys, v.Nodekey)
 	}
 	return scn, scnKeys
-}
-
-func makeSPNs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
-	privKeys, nodeKeys, nodeAddrs := istcommon.GenerateKeys(num)
-
-	var p2pPort uint16
-	var proxies []*ValidatorInfo
-	var proxyNodeKeys []string
-	for i := range num {
-		if isWorkOnSingleHost {
-			p2pPort = lastIssuedPortNum
-			lastIssuedPortNum++
-		} else {
-			p2pPort = DefaultTcpPort
-		}
-
-		v := &ValidatorInfo{
-			Address: nodeAddrs[i],
-			Nodekey: nodeKeys[i],
-			NodeInfo: discover.NewNode(
-				discover.PubkeyID(&privKeys[i].PublicKey),
-				net.ParseIP("0.0.0.0"),
-				0,
-				p2pPort,
-				nil,
-				discover.NodeTypeUnknown,
-			).String(),
-		}
-		proxies = append(proxies, v)
-		proxyNodeKeys = append(proxyNodeKeys, v.Nodekey)
-	}
-	return proxies, proxyNodeKeys
 }
 
 func makeSENs(num int, isWorkOnSingleHost bool) ([]*ValidatorInfo, []string) {
