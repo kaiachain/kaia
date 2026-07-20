@@ -133,6 +133,10 @@ func (v *ValsetModule) initSchema() error {
 func (v *ValsetModule) Start() error {
 	logger.Info("ValsetModule Started")
 
+	if err := v.verifyVRankEpochAtHead(); err != nil {
+		return err
+	}
+
 	// Reset all caches
 	v.proposerListCache.Purge()
 	v.removeVotesCache.Purge()

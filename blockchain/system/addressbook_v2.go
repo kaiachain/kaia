@@ -235,6 +235,19 @@ func ReadEpochVACount(backend bind.ContractCaller, num *big.Int) (uint64, error)
 	return n.Uint64(), nil
 }
 
+// ReadABv2EpochBlockInterval reads the epoch block interval baked into AddressBookV2.
+func ReadABv2EpochBlockInterval(backend bind.ContractCaller, num *big.Int) (uint64, error) {
+	caller, err := abv2contracts.NewAddressBookV2Caller(AddressBookAddr, backend)
+	if err != nil {
+		return 0, err
+	}
+	n, err := caller.EpochBlockInterval(&bind.CallOpts{BlockNumber: num})
+	if err != nil {
+		return 0, err
+	}
+	return n.Uint64(), nil
+}
+
 // ReadAddressBookV2BlsAll reads BLS public key info for all nodes from
 // AddressBookV2. Used post-permissionless-fork where ABv2 — not KIP113 — is
 // the BLS source of truth.

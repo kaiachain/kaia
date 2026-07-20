@@ -30,6 +30,7 @@ import (
 	"github.com/kaiachain/kaia/kaiax/gov/headergov"
 	gov_mock "github.com/kaiachain/kaia/kaiax/gov/mock"
 	staking_mock "github.com/kaiachain/kaia/kaiax/staking/mock"
+	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	chain_mock "github.com/kaiachain/kaia/work/mocks"
 	"github.com/stretchr/testify/assert"
@@ -55,6 +56,7 @@ func TestStartStop(t *testing.T) {
 
 	mockGov.EXPECT().GetParamSet(gomock.Any()).Return(gov.ParamSet{}).AnyTimes()
 	mockChain.EXPECT().CurrentBlock().Return(current).AnyTimes()
+	mockChain.EXPECT().Config().Return(&params.ChainConfig{}).AnyTimes()
 	mockChain.EXPECT().Sealer().Return(engine.NewSealer(nil, nil)).AnyTimes()
 	mockChain.EXPECT().GetHeaderByNumber(uint64(0)).Return(genesis).AnyTimes()
 	for i := uint64(1); i <= current.NumberU64(); i++ {
