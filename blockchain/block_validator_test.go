@@ -63,6 +63,10 @@ func (s *verifySealsTestSealer) Committers(*types.Header) ([]common.Address, err
 	return s.committers, nil
 }
 
+func (s *verifySealsTestSealer) CommittersWithRound(*types.Header) ([]common.Address, error) {
+	return s.committers, nil
+}
+
 func (s *verifySealsTestSealer) Round(*types.Header) (byte, error) {
 	return 0, nil
 }

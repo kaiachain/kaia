@@ -43,6 +43,57 @@ func TestCommitters(t *testing.T) {
 	assert.NotEmpty(t, committedSeals)
 }
 
+// singleValidatorHeader builds a header whose validator set is {addr} with the
+// given round written; the caller adds the committed seal.
+func singleValidatorHeader(t *testing.T, round int64) (common.Address, *IstanbulSealer, *types.Header) {
+	t.Helper()
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+	sealer := NewSealerImpl(key)
+
+	header := &types.Header{Number: big.NewInt(1)}
+	require.NoError(t, sealer.WriteValidators(header, []common.Address{addr}))
+	sealer.WriteRound(header, round)
+	return addr, sealer, header
+}
+
+// TestCommittersWithRoundDetectsRoundMutation: a round-bound committed seal is
+// recovered correctly, but mutating the header round byte changes the committers.
+func TestCommittersWithRoundDetectsRoundMutation(t *testing.T) {
+	addr, sealer, header := singleValidatorHeader(t, 0)
+	seal, err := sealer.MakeCommittedSealFromHashWithRound(sealer.HeaderHash(header), 0)
+	require.NoError(t, err)
+	require.NoError(t, sealer.WriteCommittedSeals(header, [][]byte{seal}))
+
+	got, err := sealer.CommittersWithRound(header)
+	require.NoError(t, err)
+	assert.Equal(t, []common.Address{addr}, got)
+
+	header.Extra[IstanbulExtraVanity-1] = 1
+	mutated, err := sealer.CommittersWithRound(header)
+	require.NoError(t, err)
+	assert.NotEqual(t, []common.Address{addr}, mutated)
+}
+
+// TestCommittersRoundIndependent: the legacy Committers ignores the round byte,
+// so pre-fork blocks validate the same regardless of it.
+func TestCommittersRoundIndependent(t *testing.T) {
+	addr, sealer, header := singleValidatorHeader(t, 0)
+	seal, err := sealer.MakeCommittedSeal(header)
+	require.NoError(t, err)
+	require.NoError(t, sealer.WriteCommittedSeals(header, [][]byte{seal}))
+
+	got, err := sealer.Committers(header)
+	require.NoError(t, err)
+	assert.Equal(t, []common.Address{addr}, got)
+
+	header.Extra[IstanbulExtraVanity-1] = 1
+	got2, err := sealer.Committers(header)
+	require.NoError(t, err)
+	assert.Equal(t, []common.Address{addr}, got2)
+}
+
 // TestCacheSignatureAddress_BindsData checks that the cache binds data: a signature
 // cached for one data must not be returned as the signer when queried with different
 // data (which would let a forged header reuse a cached recovery).

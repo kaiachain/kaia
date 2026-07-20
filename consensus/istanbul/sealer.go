@@ -150,6 +150,15 @@ func PrepareCommittedSeal(hash common.Hash) []byte {
 	return buf.Bytes()
 }
 
+// PrepareCommittedSealWithRound binds the final round into the committed-seal preimage.
+func PrepareCommittedSealWithRound(hash common.Hash, round byte) []byte {
+	var buf bytes.Buffer
+	buf.Write(hash.Bytes())
+	buf.Write([]byte{byte(2)}) // keep in sync with bft.MsgCommit
+	buf.Write([]byte{round})
+	return buf.Bytes()
+}
+
 func (m *IstanbulSealer) Author(header *types.Header) (common.Address, error) {
 	extra, err := m.parseIstanbulExtra(header.Extra)
 	if err != nil {
@@ -166,6 +175,19 @@ func (m *IstanbulSealer) Author(header *types.Header) (common.Address, error) {
 }
 
 func (m *IstanbulSealer) Committers(header *types.Header) ([]common.Address, error) {
+	return m.committers(header, PrepareCommittedSeal(m.HeaderHash(header)))
+}
+
+// CommittersWithRound recovers committers using the round-bound preimage.
+func (m *IstanbulSealer) CommittersWithRound(header *types.Header) ([]common.Address, error) {
+	round, err := m.Round(header)
+	if err != nil {
+		return nil, err
+	}
+	return m.committers(header, PrepareCommittedSealWithRound(m.HeaderHash(header), round))
+}
+
+func (m *IstanbulSealer) committers(header *types.Header, proposalSeal []byte) ([]common.Address, error) {
 	extra, err := m.parseIstanbulExtra(header.Extra)
 	if err != nil {
 		return nil, err
@@ -174,7 +196,6 @@ func (m *IstanbulSealer) Committers(header *types.Header) ([]common.Address, err
 		return []common.Address{}, nil
 	}
 
-	proposalSeal := PrepareCommittedSeal(m.HeaderHash(header)) // bft.MsgCommit
 	committers := make([]common.Address, 0, len(extra.CommittedSeal))
 	for _, seal := range extra.CommittedSeal {
 		addr, err := cacheSignatureAddress(proposalSeal, seal)
@@ -323,6 +344,11 @@ func (m *IstanbulSealer) Quorum(_ uint64, qualifiedlen, committeeSize int) int {
 // MakeCommittedSealFromHash signs the COMMIT committed-seal for the given block hash.
 func (m *IstanbulSealer) MakeCommittedSealFromHash(hash common.Hash) ([]byte, error) {
 	return crypto.Sign(crypto.Keccak256(PrepareCommittedSeal(hash)), m.privateKey)
+}
+
+// MakeCommittedSealFromHashWithRound signs the round-bound COMMIT committed-seal.
+func (m *IstanbulSealer) MakeCommittedSealFromHashWithRound(hash common.Hash, round byte) ([]byte, error) {
+	return crypto.Sign(crypto.Keccak256(PrepareCommittedSealWithRound(hash, round)), m.privateKey)
 }
 
 func (m *IstanbulSealer) MakeCommittedSeal(header *types.Header) ([]byte, error) {

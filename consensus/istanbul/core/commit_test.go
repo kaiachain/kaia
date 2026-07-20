@@ -96,6 +96,7 @@ func TestSendCommitForOldBlockSealMatchesDigest(t *testing.T) {
 	mockBackend := mock_istanbul.NewMockBackend(mockCtrl)
 	mockBackend.EXPECT().Address().Return(sealAddr).AnyTimes()
 	mockBackend.EXPECT().Sealer().Return(istanbul.NewSealerImpl(sealKey)).AnyTimes()
+	mockBackend.EXPECT().IsPermissionlessAt(gomock.Any()).Return(false).AnyTimes()
 	mockBackend.EXPECT().Sign(gomock.Any()).Return([]byte{0x01}, nil).AnyTimes() // message-payload signature, unused here
 	mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any()).DoAndReturn(func(_ common.Hash, p []byte) error {
 		payload = append([]byte(nil), p...)

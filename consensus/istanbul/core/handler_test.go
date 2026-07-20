@@ -101,6 +101,7 @@ func newMockBackend(t *testing.T, validatorAddrs []common.Address) (*mock_istanb
 	mockBackend.EXPECT().Sealer().Return(istanbul.NewSealerImpl(sealerKey)).AnyTimes()
 	mockBackend.EXPECT().LastProposal().Return(initBlock, validatorAddrs[0]).AnyTimes()
 	mockBackend.EXPECT().NodeType().Return(common.CONSENSUSNODE).AnyTimes()
+	mockBackend.EXPECT().IsPermissionlessAt(gomock.Any()).Return(false).AnyTimes()
 
 	// Set an eventMux in which istanbul core will subscribe istanbul events
 	mockBackend.EXPECT().EventMux().Return(eventMux).AnyTimes()

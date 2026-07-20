@@ -181,6 +181,10 @@ func (f *Faker) Committers(header *types.Header) ([]common.Address, error) {
 	return []common.Address{f.address}, nil
 }
 
+func (f *Faker) CommittersWithRound(header *types.Header) ([]common.Address, error) {
+	return f.Committers(header)
+}
+
 func (f *Faker) Vanity(header *types.Header) ([]byte, error) {
 	if err := f.verifyFailure(header); err != nil {
 		return nil, err

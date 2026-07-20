@@ -75,4 +75,7 @@ type Backend interface {
 	SetCurrentView(view *bft.View)
 
 	NodeType() common.ConnType
+
+	// IsPermissionlessAt reports whether the permissionless fork is enabled at num.
+	IsPermissionlessAt(num uint64) bool
 }

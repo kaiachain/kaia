@@ -93,6 +93,7 @@ type Sealer interface {
 	// Read information from header.Extra.
 	Author(header *types.Header) (common.Address, error)
 	Committers(header *types.Header) ([]common.Address, error)
+	CommittersWithRound(header *types.Header) ([]common.Address, error)
 	Vanity(header *types.Header) ([]byte, error)
 	RawSeals(header *types.Header) ([]byte, [][]byte, error)
 	Round(header *types.Header) (byte, error)

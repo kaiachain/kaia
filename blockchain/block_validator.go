@@ -252,6 +252,11 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		if err != nil {
 			return err
 		}
+		// Committed seals bind the round post-permissionless.
+		committers, err := v.sealer.CommittersWithRound(header)
+		if err != nil {
+			return err
+		}
 		proposer, err := v.mValset.GetProposer(blockNum, uint64(round))
 		if err != nil {
 			return err

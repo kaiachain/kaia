@@ -145,6 +145,13 @@ func (sb *backend) NodeType() common.ConnType {
 	return sb.nodetype
 }
 
+func (sb *backend) IsPermissionlessAt(num uint64) bool {
+	if sb.chain == nil {
+		return false
+	}
+	return sb.chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num))
+}
+
 // initSealState initializes state for Seal operation.
 // Returns the commitCh channel to wait on, or nil if the block was already committed.
 func (sb *backend) initSealState(number uint64, blockHash common.Hash) chan *types.Result {

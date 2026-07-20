@@ -76,6 +76,13 @@ func (s *dynamicSealer) Committers(header *types.Header) ([]common.Address, erro
 	return s.implAt(header.Number.Uint64()).Committers(header)
 }
 
+func (s *dynamicSealer) CommittersWithRound(header *types.Header) ([]common.Address, error) {
+	if header == nil || header.Number == nil {
+		return nil, consensus.ErrUnknownBlock
+	}
+	return s.implAt(header.Number.Uint64()).CommittersWithRound(header)
+}
+
 func (s *dynamicSealer) Vanity(header *types.Header) ([]byte, error) {
 	if header == nil || header.Number == nil {
 		return nil, consensus.ErrUnknownBlock
