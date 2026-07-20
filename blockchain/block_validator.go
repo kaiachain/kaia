@@ -47,6 +47,9 @@ var (
 	// ErrInvalidBlockScore is returned if the BlockScore of a block is not 1.
 	ErrInvalidBlockScore = errors.New("invalid blockscore")
 
+	// ErrInvalidBlockNumber is returned if a header's block number exceeds uint64 range.
+	ErrInvalidBlockNumber = errors.New("invalid block number: out of uint64 range")
+
 	// ErrInvalidBaseFee is returned if a block before Magma has a non-nil base fee.
 	ErrInvalidBaseFee = errors.New("invalid baseFee before fork")
 
@@ -150,6 +153,11 @@ func (v *BlockValidator) validateHeader(header *types.Header, parent *types.Head
 	// Ensure that the block's blockscore is meaningful (may not be correct at this point)
 	if header.BlockScore == nil || header.BlockScore.Cmp(params.DefaultBlockScore) != 0 {
 		return ErrInvalidBlockScore
+	}
+
+	// Reject out-of-uint64 numbers before Uint64() aliases them to a lower height.
+	if header.Number == nil || !header.Number.IsUint64() {
+		return ErrInvalidBlockNumber
 	}
 
 	// The genesis block is the always valid dead-end

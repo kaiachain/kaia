@@ -71,6 +71,12 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 		return bft.ErrInvalidMessage
 	}
 
+	// Proposal number must equal the view sequence, else it can be aliased to another height.
+	if !proposalNumberMatchesView(preprepare) {
+		logger.Warn("Ignore preprepare whose proposal number does not match view sequence")
+		return bft.ErrInvalidMessage
+	}
+
 	// Ensure we have the same view with the PRE-PREPARE message
 	// If it is old message, see if we need to broadcast COMMIT
 	if err := c.checkMessage(bft.MsgPreprepare, preprepare.View); err != nil {
@@ -146,6 +152,15 @@ func (c *core) handlePreprepare(msg *bft.Message, src common.Address) error {
 	}
 
 	return nil
+}
+
+// proposalNumberMatchesView reports whether the proposal's block number equals the view sequence.
+func proposalNumberMatchesView(pp *bft.Preprepare) bool {
+	if pp == nil || pp.Proposal == nil || pp.Proposal.Number() == nil ||
+		pp.View == nil || pp.View.Sequence == nil {
+		return false
+	}
+	return pp.Proposal.Number().Cmp(pp.View.Sequence) == 0
 }
 
 func (c *core) acceptPreprepare(preprepare *bft.Preprepare) {
