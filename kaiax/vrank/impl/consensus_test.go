@@ -55,11 +55,14 @@ func TestVerifyHeader(t *testing.T) {
 	candidates := []common.Address{C1, C2, C3}
 	const num = uint64(100)
 
-	t.Run("pre-fork: VRank must be empty", func(t *testing.T) {
+	t.Run("pre-fork: VRank must be absent", func(t *testing.T) {
 		v := newCN(t, withHardfork("osaka"), withoutStart()).VRankModule
 		h := &types.Header{Number: big.NewInt(100)}
 		assert.NoError(t, v.VerifyHeader(h, nil))
 		h = makeVRankHeader(t, 100, []common.Address{C1})
+		assert.ErrorIs(t, v.VerifyHeader(h, nil), vrank.ErrUnexpectedVRankBeforePermissionless)
+		// A non-nil zero-length VRank is present and must be rejected.
+		h = &types.Header{Number: big.NewInt(100), VRank: []byte{}}
 		assert.ErrorIs(t, v.VerifyHeader(h, nil), vrank.ErrUnexpectedVRankBeforePermissionless)
 	})
 

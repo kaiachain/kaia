@@ -143,7 +143,7 @@ func (h *Header) HashNoNonce() common.Hash {
 // to approximate and limit the memory consumption of various caches.
 func (h *Header) Size() common.StorageSize {
 	constantSize := common.StorageSize(reflect.TypeFor[Header]().Size())
-	byteSize := common.StorageSize(len(h.Extra) + len(h.Governance) + len(h.Vote) + len(h.RandomReveal) + len(h.MixHash))
+	byteSize := common.StorageSize(len(h.Extra) + len(h.Governance) + len(h.Vote) + len(h.RandomReveal) + len(h.MixHash) + len(h.VRank))
 	bigIntSize := common.StorageSize((h.BlockScore.BitLen() + h.Number.BitLen() + h.Time.BitLen()) / 8)
 	if h.BaseFee != nil {
 		return constantSize + byteSize + bigIntSize + common.StorageSize(h.BaseFee.BitLen()/8)

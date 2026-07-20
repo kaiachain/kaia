@@ -220,6 +220,11 @@ func TestHeaderSizeCalc(t *testing.T) {
 	h.BaseFee = big.NewInt(0x5d21dba00) // 35 bits ~= 4 bytes
 	expectSize += 4
 	assert.Equal(t, expectSize, int(h.Size()))
+
+	// VRank byte length is added as-is
+	h.VRank = hexutil.MustDecode("0xc80102030405060708")
+	expectSize += len(h.VRank)
+	assert.Equal(t, expectSize, int(h.Size()))
 }
 
 func TestHeaderJSON(t *testing.T) {

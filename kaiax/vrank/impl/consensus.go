@@ -27,7 +27,7 @@ import (
 )
 
 // VerifyHeader checks the VRank field in the header:
-//   - Before the permissionless fork: VRank must be empty.
+//   - Before the permissionless fork: VRank must be absent.
 //   - At epoch-start blocks: VRank must be RLPEncode(CandTesting(N)) or RLPEncode([]).
 //   - Otherwise: VRank must be a valid encoded report whose addresses are sorted,
 //     deduplicated, and all present in GetCandTesting(N-1), because header(N).VRank
@@ -37,7 +37,8 @@ func (v *VRankModule) VerifyHeader(header *types.Header, _ *types.Header) error 
 	permissionless := v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(number))
 
 	if !permissionless {
-		if len(header.VRank) > 0 {
+		// Reject presence, not content: an explicit empty RLP string decodes to a non-nil zero-length slice.
+		if header.VRank != nil {
 			return vrank.ErrUnexpectedVRankBeforePermissionless
 		}
 		return nil
