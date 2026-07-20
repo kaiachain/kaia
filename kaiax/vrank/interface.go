@@ -53,6 +53,8 @@ type RoundReader interface {
 type VRankModule interface {
 	kaiax.BaseModule
 	kaiax.HeaderModule
+	kaiax.ExecutionModule
+	kaiax.RewindableModule
 
 	HandleIstanbulPreprepare(block *types.Block, view *bft.View)
 	HandleVRankPreprepare(msg *VRankPreprepare) error

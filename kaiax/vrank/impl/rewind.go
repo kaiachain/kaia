@@ -19,7 +19,10 @@ package impl
 import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/kaiax"
 )
+
+var _ kaiax.RewindableModule = (*VRankModule)(nil)
 
 func (v *VRankModule) RewindTo(newBlock *types.Block) {
 	v.pfsCache.Purge()

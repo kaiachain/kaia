@@ -594,11 +594,11 @@ func (s *CN) SetupKaiaxModules(ctx *node.ServiceContext, mValset valset.ValsetMo
 	}
 
 	mBase := []kaiax.BaseModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao, mSystem, mVRank}
-	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
+	mExecution := []kaiax.ExecutionModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao, mVRank}
 	mTxBundling := []kaiax.TxBundlingModule{}
 	mTxPool := []kaiax.TxPoolModule{}
 	mJsonRpc := []kaiax.JsonRpcModule{s.stakingModule, mReward, mSupply, s.govModule, mValset, mRandao}
-	mRewindable := []kaiax.RewindableModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao}
+	mRewindable := []kaiax.RewindableModule{s.stakingModule, mSupply, s.govModule, mValset, mRandao, mVRank}
 	mHeader := []kaiax.HeaderModule{mReward, s.govModule, mRandao, mValset, mVRank}
 	mBlockState := []kaiax.BlockStateModule{mReward, mSystem, mValset}
 
