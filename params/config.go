@@ -616,7 +616,7 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		name  string
 		block *big.Int
 	}
-	var lastFork fork
+	var lastFork, skipped fork
 	for _, cur := range []fork{
 		{name: "istanbulBlock", block: c.IstanbulCompatibleBlock},
 		{name: "londonBlock", block: c.LondonCompatibleBlock},
@@ -631,23 +631,23 @@ func (c *ChainConfig) CheckConfigForkOrder() error {
 		{name: "osakaBlock", block: c.OsakaCompatibleBlock},
 		{name: "permissionlessBlock", block: c.PermissionlessCompatibleBlock},
 	} {
-		if lastFork.name != "" {
-			// Next one must be higher number
-			if lastFork.block == nil && cur.block != nil {
-				return fmt.Errorf("unsupported fork ordering: %v not enabled, but %v enabled at %v",
-					lastFork.name, cur.name, cur.block)
+		if cur.block == nil {
+			// Remember the first skipped mandatory fork; enabling a later one is then invalid.
+			if skipped.name == "" {
+				skipped = cur
 			}
-			if lastFork.block != nil && cur.block != nil {
-				if lastFork.block.Cmp(cur.block) > 0 {
-					return fmt.Errorf("unsupported fork ordering: %v enabled at %v, but %v enabled at %v",
-						lastFork.name, lastFork.block, cur.name, cur.block)
-				}
-			}
+			continue
 		}
-		// If it was not set, then ignore it
-		if cur.block != nil {
-			lastFork = cur
+		if skipped.name != "" {
+			return fmt.Errorf("unsupported fork ordering: %v not enabled, but %v enabled at %v",
+				skipped.name, cur.name, cur.block)
 		}
+		// Next one must be higher number
+		if lastFork.block != nil && lastFork.block.Cmp(cur.block) > 0 {
+			return fmt.Errorf("unsupported fork ordering: %v enabled at %v, but %v enabled at %v",
+				lastFork.name, lastFork.block, cur.name, cur.block)
+		}
+		lastFork = cur
 	}
 	return nil
 }

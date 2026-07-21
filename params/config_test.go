@@ -26,8 +26,17 @@ import (
 )
 
 func TestChainConfig_CheckConfigForkOrder(t *testing.T) {
+	// Real configs have nil only at the trailing (unscheduled) forks, so they pass.
 	assert.Nil(t, KairosChainConfig.CheckConfigForkOrder())
 	assert.Nil(t, MainnetChainConfig.CheckConfigForkOrder())
+
+	// A skipped mandatory fork with a later enabled fork must be rejected.
+	gap := &ChainConfig{
+		IstanbulCompatibleBlock:  big.NewInt(0),
+		LondonCompatibleBlock:    nil, // skipped
+		EthTxTypeCompatibleBlock: big.NewInt(10),
+	}
+	assert.Error(t, gap.CheckConfigForkOrder())
 }
 
 func TestChainConfig_Copy(t *testing.T) {
