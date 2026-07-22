@@ -30,7 +30,6 @@ import (
 	mock_randao "github.com/kaiachain/kaia/kaiax/randao/mock"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
-	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -41,19 +40,21 @@ import (
 func TestGetCfReport(t *testing.T) {
 	t.Run("returns decoded report from header.VRank", func(t *testing.T) {
 		c1, c2 := numToAddr(1), numToAddr(2)
-		encoded, err := vrank.EncodeReport([]common.Address{c1, c2})
+		encoded, err := vrank.EncodeReport(8, []common.Address{c1, c2})
 		require.NoError(t, err)
 		h := makeHeaderWithRound(10, 0)
 		h.VRank = encoded
 		v := newCN(t, withHeaders(map[uint64]*types.Header{10: h})).VRankModule
 
-		report, err := v.cfReport(10)
+		target, report, err := v.cfReport(10)
 		require.NoError(t, err)
+		assert.Equal(t, uint64(8), target)
 		assert.Equal(t, []common.Address{c1, c2}, report)
 
 		// must be deterministic
-		report2, err := v.cfReport(10)
+		target2, report2, err := v.cfReport(10)
 		require.NoError(t, err)
+		assert.Equal(t, target, target2, "cfReport target must be deterministic")
 		assert.Equal(t, report, report2, "cfReport must be deterministic")
 	})
 
@@ -62,7 +63,7 @@ func TestGetCfReport(t *testing.T) {
 			5: makeHeaderWithRound(5, 0), // header.VRank is nil
 		})).VRankModule
 
-		report, err := v.cfReport(5)
+		_, report, err := v.cfReport(5)
 		require.NoError(t, err)
 		assert.Empty(t, report)
 	})
@@ -72,7 +73,7 @@ func TestGetCfReport_Errors(t *testing.T) {
 	t.Run("header not found returns error", func(t *testing.T) {
 		v := newCN(t).VRankModule
 
-		report, err := v.cfReport(99)
+		_, report, err := v.cfReport(99)
 		assert.ErrorIs(t, err, vrank.ErrHeaderNotFound)
 		assert.Nil(t, report)
 	})
@@ -84,7 +85,7 @@ func TestGetCfReport_Errors(t *testing.T) {
 			withoutStart(),
 		).VRankModule
 
-		report, err := v.cfReport(10)
+		_, report, err := v.cfReport(10)
 		assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
 		assert.Nil(t, report)
 	})
@@ -302,20 +303,6 @@ func TestEvaluateCandidates_Errors(t *testing.T) {
 		report, err := cn.VRankModule.EvaluateCandidates(1, 0)
 		require.NoError(t, err)
 		assert.True(t, slices.Contains(report, candAddr))
-	})
-
-	t.Run("epoch header returns empty report", func(t *testing.T) {
-		cn := newCNWithDefaults()
-		block := types.NewBlockWithHeader(&types.Header{Number: new(big.Int).SetUint64(params.DefaultVRankEpoch - 1)})
-		view := &bft.View{Sequence: new(big.Int).SetUint64(params.DefaultVRankEpoch - 1), Round: common.Big0}
-		cn.Valset.EXPECT().GetCommittee(uint64(params.DefaultVRankEpoch-1), uint64(0)).Return([]common.Address{cn.Addr}, nil).AnyTimes()
-		cn.Valset.EXPECT().GetCandTesting(uint64(params.DefaultVRankEpoch-1)).Return([]common.Address{candAddr}, nil).AnyTimes()
-		cn.Valset.EXPECT().GetProposer(uint64(params.DefaultVRankEpoch-1), uint64(0)).Return(cn.Addr, nil).AnyTimes()
-		cn.VRankModule.HandleIstanbulPreprepare(block, view)
-
-		report, err := cn.VRankModule.EvaluateCandidates(params.DefaultVRankEpoch-1, 0)
-		require.NoError(t, err)
-		assert.Empty(t, report)
 	})
 
 	t.Run("round above maxRound returns empty report", func(t *testing.T) {

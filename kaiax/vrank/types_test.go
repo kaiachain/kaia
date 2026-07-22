@@ -33,42 +33,43 @@ import (
 
 func TestEncodeDecodeReport(t *testing.T) {
 	cases := []struct {
-		name   string
-		report []common.Address
+		name        string
+		targetBlock uint64
+		report      []common.Address
 	}{
 		{
-			name:   "addresses",
-			report: []common.Address{common.HexToAddress("0x15d34AAf54267DB7D7cC839724318F2730aC377B"), common.HexToAddress("0x9965507D1a55bcC2695C58ba16FB37d819D0A4DC")},
+			name:        "addresses",
+			targetBlock: 12345,
+			report:      []common.Address{common.HexToAddress("0x15d34AAf54267DB7D7cC839724318F2730aC377B"), common.HexToAddress("0x9965507D1a55bcC2695C58ba16FB37d819D0A4DC")},
 		},
 		{
-			name:   "empty",
-			report: []common.Address{},
+			name:        "empty",
+			targetBlock: 0,
+			report:      []common.Address{},
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			enc, err := EncodeReport(tc.report)
+			enc, err := EncodeReport(tc.targetBlock, tc.report)
 			assert.NoError(t, err)
 			if len(tc.report) == 0 {
 				assert.Nil(t, enc)
 				return
 			}
 			assert.NotEmpty(t, enc)
-			dec, err := DecodeReport(enc)
+			gotTarget, gotReport, err := DecodeReport(enc)
 			assert.NoError(t, err)
-			assert.Equal(t, tc.report, dec)
+			assert.Equal(t, tc.targetBlock, gotTarget)
+			assert.Equal(t, tc.report, gotReport)
 		})
 	}
 }
 
 func TestEncodeAddressList_EmptyList(t *testing.T) {
+	// Epoch-start VRank encodes an empty CandTesting list as the canonical empty RLP list (0xc0).
 	enc, err := EncodeAddressList(nil)
 	assert.NoError(t, err)
-	assert.NotEmpty(t, enc)
-
-	dec, err := DecodeReport(enc)
-	assert.NoError(t, err)
-	assert.Empty(t, dec)
+	assert.Equal(t, []byte{0xc0}, enc)
 }
 
 // The pre-fixed-size shapes. A wrong signature length is only expressible from here.

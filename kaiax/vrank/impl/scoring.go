@@ -158,13 +158,14 @@ func (v *VRankModule) applyBlocksForPFS(start, end uint64, seed map[common.Addre
 // applyBlocksForCPMatrix accumulates the candidate-proposer matrix for blocks in [start, end].
 func (v *VRankModule) applyBlocksForCPMatrix(start, end uint64, seed vrank.CPMatrix) (vrank.CPMatrix, error) {
 	cpMatrix := seed.Clone()
+	epoch := v.vrankEpoch()
 	for blockNum := start; blockNum <= end; blockNum++ {
 		header := v.Chain.GetHeaderByNumber(blockNum)
 		if header == nil {
 			return nil, vrank.ErrHeaderNotFound
 		}
 
-		cfReport, err := v.cfReport(blockNum)
+		targetNum, cfReport, err := v.cfReport(blockNum)
 		if err != nil {
 			return nil, err
 		}
@@ -181,6 +182,11 @@ func (v *VRankModule) applyBlocksForCPMatrix(start, end uint64, seed vrank.CPMat
 		// Record the proposer in the CP matrix even when this block has no cfReport,
 		// so ProposerCount() reflects every proposer seen in the epoch.
 		cpMatrix.AddProposer(reporter)
+
+		// Cross-epoch reports are never counted (CFS is epoch-local; VerifyHeader also rejects them).
+		if len(cfReport) > 0 && calcEpochStart(targetNum, epoch) != calcEpochStart(blockNum, epoch) {
+			continue
+		}
 
 		for _, candidate := range cfReport {
 			if _, ok := cpMatrix[candidate]; !ok {

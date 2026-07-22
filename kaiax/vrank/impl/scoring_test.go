@@ -44,10 +44,11 @@ func computeCFS(v *VRankModule, start, end uint64) (map[common.Address]uint64, e
 }
 
 // makeHeaderWithVRank creates a header with a specific round and an encoded cfReport in VRank.
-// cfAddrs may be nil/empty for an empty report.
+// cfAddrs may be nil/empty for an empty report. The report's target block is set to number
+// itself so it is trivially in the same epoch (aggregation only counts same-epoch reports).
 func makeHeaderWithVRank(number uint64, round int64, cfAddrs []common.Address) *types.Header {
 	h := makeHeaderWithRound(number, round)
-	encoded, err := vrank.EncodeReport(cfAddrs)
+	encoded, err := vrank.EncodeReport(number, cfAddrs)
 	if err != nil {
 		panic(err)
 	}

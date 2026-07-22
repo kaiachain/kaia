@@ -80,6 +80,11 @@ type VRankModule struct {
 	prepreparedViewMu sync.RWMutex
 	collector         *vrank.Collector
 
+	// ownProposals: blocks this node proposed this epoch, pending report. Their collector views are
+	// kept past the prune window until reported. In-memory — a restart drops them (fail-safe).
+	ownProposals   map[uint64]struct{}
+	ownProposalsMu sync.Mutex
+
 	// only for candidates
 	seenPreprepare   map[vrank.ViewKey]common.Hash
 	seenPreprepareMu sync.Mutex
@@ -98,6 +103,7 @@ func NewVRankModule() *VRankModule {
 		broadcastCh:    make(chan *vrank.VRankBroadcastEvent, broadcastChSize),
 		stopCh:         make(chan struct{}),
 		collector:      vrank.NewCollector(),
+		ownProposals:   make(map[uint64]struct{}),
 		seenPreprepare: make(map[vrank.ViewKey]common.Hash),
 		pfsCache:       pfsCache,
 		cpMatrixCache:  cpMatrixCache,

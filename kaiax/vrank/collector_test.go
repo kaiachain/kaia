@@ -103,7 +103,7 @@ func TestCollector_RemoveOldViews(t *testing.T) {
 		c.AddCandMsg(v, common.HexToAddress("0x01"), time.Now(), &VRankCandidate{BlockNumber: v.N, Round: v.R})
 	}
 
-	c.RemoveOldViews(threshold)
+	c.RemoveOldViews(threshold, nil)
 	for i, v := range views {
 		at, _, m := c.GetViewData(v)
 		if wantGone[i] {
@@ -114,6 +114,22 @@ func TestCollector_RemoveOldViews(t *testing.T) {
 			assert.NotNil(t, m)
 		}
 	}
+}
+
+func TestCollector_RemoveOldViews_Protected(t *testing.T) {
+	c := NewCollector()
+	old := ViewKey{N: 1, R: 0}   // behind threshold but protected (own proposal)
+	stale := ViewKey{N: 2, R: 0} // behind threshold, not protected
+	for _, v := range []ViewKey{old, stale} {
+		c.AddPrepreparedTime(v, time.Now(), common.Hash{})
+	}
+
+	c.RemoveOldViews(ViewKey{N: 3, R: 0}, map[uint64]struct{}{old.N: {}})
+
+	at, _, _ := c.GetViewData(old)
+	assert.False(t, at.IsZero(), "protected own-proposal view must survive pruning")
+	at, _, _ = c.GetViewData(stale)
+	assert.True(t, at.IsZero(), "unprotected stale view must be pruned")
 }
 
 func TestViewKey_Cmp(t *testing.T) {

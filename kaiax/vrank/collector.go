@@ -70,22 +70,30 @@ func NewCollector() *Collector {
 	}
 }
 
-// RemoveOldViews deletes views that are strictly behind threshold.
-func (c *Collector) RemoveOldViews(threshold ViewKey) {
+// RemoveOldViews deletes views strictly behind threshold, keeping any whose sequence is in
+// protected. A proposer retains its own-proposal view (protected) until it next proposes.
+func (c *Collector) RemoveOldViews(threshold ViewKey, protected map[uint64]struct{}) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	stale := func(vk ViewKey) bool {
+		if vk.Cmp(threshold) >= 0 {
+			return false
+		}
+		_, keep := protected[vk.N]
+		return !keep
+	}
 	for vk := range c.prepreparedMap {
-		if vk.Cmp(threshold) < 0 {
+		if stale(vk) {
 			delete(c.prepreparedMap, vk)
 		}
 	}
 	for vk := range c.blockHashMap {
-		if vk.Cmp(threshold) < 0 {
+		if stale(vk) {
 			delete(c.blockHashMap, vk)
 		}
 	}
 	for vk := range c.viewMap {
-		if vk.Cmp(threshold) < 0 {
+		if stale(vk) {
 			delete(c.viewMap, vk)
 		}
 	}

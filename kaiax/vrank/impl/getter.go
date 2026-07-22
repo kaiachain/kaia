@@ -25,31 +25,23 @@ import (
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
-// cfReport reads the committed cfReport for block blockNum from header.VRank.
-// Returns an empty report if header.VRank is nil.
-// Returns ErrNotPermissionless if blockNum is before the permissionless fork.
-//
-// At epoch-start blocks (blockNum % VRankEpoch == 0), header.VRank carries
-// CandTesting(blockNum) per KIP-227, NOT cfReport. CFS aggregation must skip
-// these blocks — decoding the candidate list as a cfReport would credit every
-// candidate with a failure they didn't have. Returns an empty report at
-// epoch-start so applyBlocksForCPMatrix is a no-op for that block.
-//
-// Used by applyBlocksForCPMatrix so that catchUp can process pre-fork blocks without error.
-func (v *VRankModule) cfReport(blockNum uint64) ([]common.Address, error) {
+// cfReport reads block blockNum's committed cfReport from header.VRank, returning its target block
+// and failed list (target 0 for empty / epoch-start blocks, which carry CandTesting not a cfReport).
+// Returns ErrNotPermissionless before the fork.
+func (v *VRankModule) cfReport(blockNum uint64) (uint64, []common.Address, error) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
-		return nil, vrank.ErrNotPermissionless
+		return 0, nil, vrank.ErrNotPermissionless
 	}
 	if blockNum%v.vrankEpoch() == 0 {
-		return []common.Address{}, nil
+		return 0, []common.Address{}, nil
 	}
 
 	header := v.Chain.GetHeaderByNumber(blockNum)
 	if header == nil {
-		return nil, vrank.ErrHeaderNotFound
+		return 0, nil, vrank.ErrHeaderNotFound
 	}
 	if len(header.VRank) == 0 {
-		return []common.Address{}, nil
+		return 0, []common.Address{}, nil
 	}
 	return vrank.DecodeReport(header.VRank)
 }
@@ -93,17 +85,13 @@ func (v *VRankModule) pfReport(blockNum uint64) ([]common.Address, error) {
 }
 
 // EvaluateCandidates computes the cfReport for block blockNum at the given round from in-memory collector state.
-// To fill `header(N).VRank`, the proposer of block N must use `EvaluateCandidates(N-1, last round of N-1)`.
+// The proposer fills its own header.VRank by evaluating its most recent prior proposal.
 // Returns ErrNotPermissionless if header(blockNum+1) is before the permissionless fork.
 func (v *VRankModule) EvaluateCandidates(blockNum, round uint64) ([]common.Address, error) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum + 1)) {
 		return nil, vrank.ErrNotPermissionless
 	}
 
-	// epoch header's VRank should be nil
-	if (blockNum+1)%v.vrankEpoch() == 0 {
-		return []common.Address{}, nil
-	}
 	if round > maxRound {
 		// Candidate messages above maxRound are dropped on receipt, though the
 		// preprepare timestamp may still be recorded. Evaluating this view would

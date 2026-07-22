@@ -56,12 +56,96 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *bft.Vie
 	// if I'm the proposer that broadcast IstanbulPreprepare to other validators,
 	// then I need to broadcast VRankPreprepare as well
 	if v.isProposer(blockNum, view.Round.Uint64()) {
+		v.recordOwnProposal(blockNum)
 		v.BroadcastVRankPreprepare(&vrank.VRankPreprepare{Block: block, View: view})
 	}
 
 	if blockNum > maxWindow {
-		v.collector.RemoveOldViews(vrank.ViewKey{N: blockNum - maxWindow, R: maxRound})
+		v.collector.RemoveOldViews(vrank.ViewKey{N: blockNum - maxWindow, R: maxRound}, v.ownProposalSnapshot())
 	}
+}
+
+// recordOwnProposal marks blockNum as proposed by this node so its collector view survives until
+// the next proposal reports it. Prior-epoch entries are dropped (CFS is epoch-local).
+func (v *VRankModule) recordOwnProposal(blockNum uint64) {
+	epochStart := calcEpochStart(blockNum, v.vrankEpoch())
+	v.ownProposalsMu.Lock()
+	defer v.ownProposalsMu.Unlock()
+	v.ownProposals[blockNum] = struct{}{}
+	for n := range v.ownProposals {
+		if n < epochStart {
+			delete(v.ownProposals, n)
+		}
+	}
+}
+
+// ownProposalSnapshot copies the retained own-proposal block numbers (protected from pruning).
+func (v *VRankModule) ownProposalSnapshot() map[uint64]struct{} {
+	v.ownProposalsMu.Lock()
+	defer v.ownProposalsMu.Unlock()
+	snap := make(map[uint64]struct{}, len(v.ownProposals))
+	for n := range v.ownProposals {
+		snap[n] = struct{}{}
+	}
+	return snap
+}
+
+// pruneReportedProposals drops entries strictly below upto. The selected block is kept (strict <)
+// so a round change or a failed commit still re-reports it; it goes only once a later block supersedes it.
+func (v *VRankModule) pruneReportedProposals(upto uint64) {
+	v.ownProposalsMu.Lock()
+	defer v.ownProposalsMu.Unlock()
+	for n := range v.ownProposals {
+		if n < upto {
+			delete(v.ownProposals, n)
+		}
+	}
+}
+
+// selectReportTarget returns the most recent block this node produced before number in the same
+// epoch. Rounds it proposed but another validator committed are skipped (committed-header proposer
+// check). ok=false when none exists (first proposal, or a restart cleared the set).
+func (v *VRankModule) selectReportTarget(number uint64) (targetNum, round uint64, ok bool) {
+	epochStart := calcEpochStart(number, v.vrankEpoch())
+	v.ownProposalsMu.Lock()
+	cands := make([]uint64, 0, len(v.ownProposals))
+	for n := range v.ownProposals {
+		if n < number && n >= epochStart {
+			cands = append(cands, n)
+		}
+	}
+	v.ownProposalsMu.Unlock()
+
+	slices.Sort(cands)
+	for i := len(cands) - 1; i >= 0; i-- {
+		n := cands[i]
+		proposer, r, err := v.proposerOf(n)
+		if err != nil {
+			continue
+		}
+		if proposer == v.nodeID {
+			return n, r, true
+		}
+	}
+	return 0, 0, false
+}
+
+// proposerOf returns the proposer and final round of a committed block.
+func (v *VRankModule) proposerOf(number uint64) (common.Address, uint64, error) {
+	header := v.Chain.GetHeaderByNumber(number)
+	if header == nil {
+		return common.Address{}, 0, vrank.ErrHeaderNotFound
+	}
+	roundByte, err := v.RoundReader.Round(header)
+	if err != nil {
+		return common.Address{}, 0, err
+	}
+	round := uint64(roundByte)
+	proposer, err := v.Valset.GetProposer(number, round)
+	if err != nil {
+		return common.Address{}, 0, err
+	}
+	return proposer, round, nil
 }
 
 // HandleVRankPreprepare processes VRankPreprepare; if this node is a candidate, it verifies the

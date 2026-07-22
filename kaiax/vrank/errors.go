@@ -42,4 +42,6 @@ var (
 	ErrInvalidVRankCandidate               = errors.New("invalid vrank: address is not a candidate")
 	ErrDuplicateVRankCandidate             = errors.New("invalid vrank: duplicate candidate address")
 	ErrVRankNotSorted                      = errors.New("invalid vrank: addresses not sorted")
+	ErrInvalidVRankTarget                  = errors.New("invalid vrank: target block is not a prior block in the same epoch")
+	ErrVRankProposerMismatch               = errors.New("invalid vrank: target block was proposed by a different validator")
 )

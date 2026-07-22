@@ -29,9 +29,8 @@ import (
 // VerifyHeader checks the VRank field in the header:
 //   - Before the permissionless fork: VRank must be absent.
 //   - At epoch-start blocks: VRank must be RLPEncode(CandTesting(N)) or RLPEncode([]).
-//   - Otherwise: VRank must be a valid encoded report whose addresses are sorted,
-//     deduplicated, and all present in GetCandTesting(N-1), because header(N).VRank
-//     reports candidate failures observed while building block N-1.
+//   - Otherwise: a cfReport about a target block that is prior, same-epoch, and proposed by the
+//     same validator as N; failed addresses sorted, deduped, ⊆ CandTesting.
 func (v *VRankModule) VerifyHeader(header *types.Header, _ *types.Header) error {
 	number := header.Number.Uint64()
 	permissionless := v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(number))
@@ -61,10 +60,41 @@ func (v *VRankModule) VerifyHeader(header *types.Header, _ *types.Header) error 
 		return nil
 	}
 
-	report, err := vrank.DecodeReport(header.VRank)
+	targetNum, report, err := vrank.DecodeReport(header.VRank)
 	if err != nil {
 		return vrank.ErrInvalidVRankFormat
 	}
+	return v.validateCfReport(header, targetNum, report)
+}
+
+// validateCfReport requires proposer(target) == proposer(number), with targetNum prior and
+// same-epoch and the failed addresses sorted, deduped, and all candidates — which keeps a
+// withheld/fabricated failure in the proposer's own byzantine-filterable column.
+func (v *VRankModule) validateCfReport(header *types.Header, targetNum uint64, report []common.Address) error {
+	number := header.Number.Uint64()
+	epoch := v.vrankEpoch()
+	if targetNum >= number || calcEpochStart(targetNum, epoch) != calcEpochStart(number, epoch) {
+		return vrank.ErrInvalidVRankTarget
+	}
+
+	// The round comes from the header under verification (not yet in the chain DB during import).
+	round, err := v.RoundReader.Round(header)
+	if err != nil {
+		return err
+	}
+	proposer, err := v.Valset.GetProposer(number, uint64(round))
+	if err != nil {
+		return err
+	}
+	targetProposer, _, err := v.proposerOf(targetNum)
+	if err != nil {
+		return err
+	}
+	if proposer != targetProposer {
+		return vrank.ErrVRankProposerMismatch
+	}
+
+	// CandTesting is epoch-stable, so CandTesting(number-1) == CandTesting(targetNum).
 	candidates, err := v.Valset.GetCandTesting(number - 1)
 	if err != nil {
 		return err
@@ -75,7 +105,8 @@ func (v *VRankModule) VerifyHeader(header *types.Header, _ *types.Header) error 
 // PrepareHeader fills header.VRank per KIP-227.
 //
 //   - At epoch-start blocks: VRank is CandTesting(N), encoded even when empty.
-//   - Otherwise: VRank is EvaluateCandidates(N-1, parentRound), or nil when the report is empty.
+//   - Otherwise: VRank is a cfReport about this proposer's own most recent prior proposal in
+//     the current epoch, or nil when there is no such block or no failures.
 func (v *VRankModule) PrepareHeader(header *types.Header) error {
 	number := header.Number.Uint64()
 	if !v.ChainConfig.IsPermissionlessForkEnabled(header.Number) {
@@ -116,29 +147,21 @@ func (v *VRankModule) encodeEpochStartVRank(number uint64) ([]byte, error) {
 }
 
 func (v *VRankModule) encodeCandidateFailureVRank(number uint64) ([]byte, error) {
-	if number == 0 {
+	targetNum, round, ok := v.selectReportTarget(number)
+	if !ok {
+		// No own prior proposal this epoch (first proposal, or restart). Empty report — fail-safe.
 		return nil, nil
 	}
-	parentNum := number - 1
-	parent := v.Chain.GetHeaderByNumber(parentNum)
-	if parent == nil {
-		logger.Error("Failed to read parent header for VRank", "num", number, "parentNum", parentNum)
-		return nil, vrank.ErrHeaderNotFound
-	}
-	parentRound, err := v.RoundReader.Round(parent)
+	report, err := v.EvaluateCandidates(targetNum, round)
 	if err != nil {
-		logger.Error("Failed to read parent round for VRank", "err", err, "parentNum", parentNum)
+		logger.Error("Failed to evaluate VRank candidates", "err", err, "targetNum", targetNum, "round", round)
 		return nil, err
 	}
-	report, err := v.EvaluateCandidates(parentNum, uint64(parentRound))
-	if err != nil {
-		logger.Error("Failed to evaluate VRank candidates", "err", err, "prevBlockNum", parentNum, "prevRound", parentRound)
-		return nil, err
-	}
+	v.pruneReportedProposals(targetNum) // drop proposals older than targetNum; targetNum stays for re-report
 	if len(report) == 0 {
 		return nil, nil
 	}
-	encoded, err := vrank.EncodeReport(report)
+	encoded, err := vrank.EncodeReport(targetNum, report)
 	if err != nil {
 		logger.Error("Failed to encode VRank report", "err", err, "report", report)
 		return nil, err
