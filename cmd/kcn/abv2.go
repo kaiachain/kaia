@@ -146,6 +146,7 @@ var ValOpsCommand = &cli.Command{
 			Action: abv2NodeOperatorAction(methodOffboard, (*addressbookv2.AddressBookV2Transactor).Offboard),
 		},
 		GenerateKeysCommand,
+		SignCreateNodeCommand,
 	},
 }
 
