@@ -146,9 +146,6 @@ func (sb *backend) NodeType() common.ConnType {
 }
 
 func (sb *backend) IsPermissionlessAt(num uint64) bool {
-	if sb.chain == nil {
-		return false
-	}
 	return sb.chain.Config().IsPermissionlessForkEnabled(new(big.Int).SetUint64(num))
 }
 
