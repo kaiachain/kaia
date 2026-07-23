@@ -8,6 +8,7 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
@@ -74,4 +75,32 @@ func TestBlockHash_PreIstanbulCompatibleBlockUsesIstanbulHeaderHash(t *testing.T
 	assert.Equal(t, expectedHash, header.Hash())
 	assert.Equal(t, uint64(75373312), params.KairosChainConfig.IstanbulCompatibleBlock.Uint64())
 	assert.Less(t, header.Number.Uint64(), params.KairosChainConfig.IstanbulCompatibleBlock.Uint64())
+}
+
+// TestCommittersForkGating: the engine sealer recovers committed seals with the round-bound
+// preimage post-permissionless and the legacy preimage before it.
+func TestCommittersForkGating(t *testing.T) {
+	defer types.SetHeaderHashFn(nil)
+
+	key, err := crypto.GenerateKey()
+	require.NoError(t, err)
+	addr := crypto.PubkeyToAddress(key.PublicKey)
+
+	// header carrying a round-bound committed seal
+	impl := istanbul.NewSealerImpl(key)
+	header := &types.Header{Number: big.NewInt(1)}
+	require.NoError(t, impl.WriteValidators(header, []common.Address{addr}))
+	impl.WriteRound(header, 0)
+	seal, err := impl.MakeCommittedSealFromHashWithRound(impl.HeaderHash(header), 0)
+	require.NoError(t, err)
+	require.NoError(t, impl.WriteCommittedSeals(header, [][]byte{seal}))
+
+	// post-fork routes to round-bound recovery (finds the signer); pre-fork stays legacy (misses it)
+	got, err := NewSealer(&params.ChainConfig{PermissionlessCompatibleBlock: big.NewInt(0)}, nil).Committers(header)
+	require.NoError(t, err)
+	assert.Equal(t, []common.Address{addr}, got)
+
+	got, err = NewSealer(&params.ChainConfig{}, nil).Committers(header)
+	require.NoError(t, err)
+	assert.NotEqual(t, []common.Address{addr}, got)
 }

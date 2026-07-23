@@ -48,13 +48,12 @@ import (
 
 type verifySealsTestSealer struct {
 	consensus.Sealer
-	author              common.Address
-	committers          []common.Address
-	committersWithRound []common.Address // recovered set post-permissionless; falls back to committers if nil
-	quorum              int
-	f                   int
-	qualifiedLen        int
-	committeeSize       int
+	author        common.Address
+	committers    []common.Address
+	quorum        int
+	f             int
+	qualifiedLen  int
+	committeeSize int
 }
 
 func (s *verifySealsTestSealer) Author(*types.Header) (common.Address, error) {
@@ -62,13 +61,6 @@ func (s *verifySealsTestSealer) Author(*types.Header) (common.Address, error) {
 }
 
 func (s *verifySealsTestSealer) Committers(*types.Header) ([]common.Address, error) {
-	return s.committers, nil
-}
-
-func (s *verifySealsTestSealer) CommittersWithRound(*types.Header) ([]common.Address, error) {
-	if s.committersWithRound != nil {
-		return s.committersWithRound, nil
-	}
 	return s.committers, nil
 }
 
@@ -441,79 +433,6 @@ func TestVerifySealsPermissionlessRejectsNonCommitteeCommitter(t *testing.T) {
 	}
 
 	assert.ErrorIs(t, validator.verifySeals(header), istanbul.ErrInvalidCommittedSeals)
-}
-
-// Post-permissionless verifySeals uses CommittersWithRound; the legacy set is invalid, so NoError proves it.
-func TestVerifySealsPermissionlessUsesRoundBoundCommitters(t *testing.T) {
-	var (
-		author    = common.HexToAddress("0x0001")
-		b         = common.HexToAddress("0x0002")
-		c         = common.HexToAddress("0x0003")
-		outsider  = common.HexToAddress("0x0009")
-		blockNum  = uint64(7)
-		header    = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
-		committee = []common.Address{author, b, c}
-		sealer    = &verifySealsTestSealer{
-			Sealer:              faker.NewFaker(),
-			author:              author,
-			committers:          []common.Address{outsider},     // legacy: invalid if used
-			committersWithRound: []common.Address{author, b, c}, // round-bound: valid committee
-			quorum:              3,
-		}
-	)
-
-	ctrl := gomock.NewController(t)
-	t.Cleanup(ctrl.Finish)
-
-	mGov := mock_gov.NewMockGovModule(ctrl)
-	mValset := mock_valset.NewMockValsetModule(ctrl)
-	mValset.EXPECT().GetProposer(blockNum, uint64(0)).Return(author, nil)
-	mValset.EXPECT().GetCommittee(blockNum, uint64(0)).Return(committee, nil)
-
-	validator := &BlockValidator{
-		config:  params.TestKaiaConfig("permissionless"),
-		sealer:  sealer,
-		mGov:    mGov,
-		mValset: mValset,
-	}
-
-	assert.NoError(t, validator.verifySeals(header))
-}
-
-// Pre-permissionless verifySeals uses legacy Committers; the round-bound set is invalid, so NoError proves it.
-func TestVerifySealsPrePermissionlessUsesLegacyCommitters(t *testing.T) {
-	var (
-		author   = common.HexToAddress("0x0001")
-		outsider = common.HexToAddress("0x0009")
-		blockNum = uint64(7)
-		header   = &types.Header{Number: new(big.Int).SetUint64(blockNum)}
-		config   = params.TestKaiaConfig("permissionless").Copy()
-		sealer   = &verifySealsTestSealer{
-			Sealer:              faker.NewFaker(),
-			author:              author,
-			committers:          []common.Address{author},   // legacy: valid council
-			committersWithRound: []common.Address{outsider}, // round-bound: invalid if used
-		}
-	)
-	config.PermissionlessCompatibleBlock = big.NewInt(10) // blockNum 7 < 10 => pre-permissionless
-
-	ctrl := gomock.NewController(t)
-	t.Cleanup(ctrl.Finish)
-
-	mGov := mock_gov.NewMockGovModule(ctrl)
-	mValset := mock_valset.NewMockValsetModule(ctrl)
-	mValset.EXPECT().GetQualifiedValidators(blockNum).Return([]common.Address{author}, nil)
-	mValset.EXPECT().GetCouncil(blockNum).Return([]common.Address{author}, nil)
-	mGov.EXPECT().GetParamSet(blockNum).Return(gov.ParamSet{CommitteeSize: 1})
-
-	validator := &BlockValidator{
-		config:  config,
-		sealer:  sealer,
-		mGov:    mGov,
-		mValset: mValset,
-	}
-
-	assert.NoError(t, validator.verifySeals(header))
 }
 
 func TestVerifyBlockBody(t *testing.T) {

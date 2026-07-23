@@ -235,13 +235,8 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		rules = v.config.Rules(new(big.Int).SetUint64(blockNum))
 	}
 
-	// Post-permissionless committed seals bind the round, so recover with the matching preimage.
-	var committers []common.Address
-	if rules.IsPermissionless {
-		committers, err = v.sealer.CommittersWithRound(header)
-	} else {
-		committers, err = v.sealer.Committers(header)
-	}
+	// Committers is fork-aware: post-permissionless it recovers with the round-bound preimage.
+	committers, err := v.sealer.Committers(header)
 	if err != nil {
 		return err
 	}
