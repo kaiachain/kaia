@@ -484,7 +484,7 @@ const (
 
 // Valid reports whether ct is a defined connection role.
 func (ct ConnType) Valid() bool {
-	return ct >= CONSENSUSNODE && ct <= BOOTNODE
+	return ct >= CONSENSUSNODE && ct < UNKNOWNNODE
 }
 
 func (ct ConnType) String() string {
