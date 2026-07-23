@@ -31,13 +31,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// makeSelfReportHeader builds a round-0 header at `number` whose VRank is a cfReport about
-// `target` (same validator proposes both `number` and `target`). Empty cfAddrs yields a nil VRank field.
-func makeSelfReportHeader(t *testing.T, number, target uint64, cfAddrs []common.Address) *types.Header {
+// makeSelfReportHeader builds a round-0 header at `number` whose VRank is a cfReport listing
+// cfAddrs as failed candidates. Empty cfAddrs yields a nil VRank field.
+func makeSelfReportHeader(t *testing.T, number uint64, cfAddrs []common.Address) *types.Header {
 	t.Helper()
 	h := makeHeaderWithRound(number, 0)
 	if len(cfAddrs) > 0 {
-		encoded, err := vrank.EncodeReport(target, cfAddrs)
+		encoded, err := vrank.EncodeReport(cfAddrs)
 		require.NoError(t, err)
 		h.VRank = encoded
 	}
@@ -56,21 +56,17 @@ func TestVerifyHeader(t *testing.T) {
 	C1, C2, C3 := numToAddr(1), numToAddr(2), numToAddr(3)
 	candidates := []common.Address{C1, C2, C3}
 	const num = uint64(100)
-	const target = uint64(99) // proposer's own prior proposal, same epoch
-	P := numToAddr(42)        // proposer of both num and target ⇒ proposer(num)==proposer(target)
 
-	// newVerifier wires GetProposer(any)=P, GetCandTesting(any)=candidates, and a committed
-	// header(target) so proposerOf(target) resolves. VerifyHeader never reads nodeID.
+	// newVerifier wires GetCandTesting(any)=candidates; VerifyHeader validates only the failed list.
 	newVerifier := func(t *testing.T) *VRankModule {
-		return newCN(t, withProposer(P), withCandidates(candidates), withoutStart(),
-			withHeaders(map[uint64]*types.Header{target: makeHeaderWithRound(target, 0)})).VRankModule
+		return newCN(t, withCandidates(candidates), withoutStart()).VRankModule
 	}
 
 	t.Run("pre-fork: VRank must be absent", func(t *testing.T) {
 		v := newCN(t, withHardfork("osaka"), withoutStart()).VRankModule
 		h := &types.Header{Number: big.NewInt(100)}
 		assert.NoError(t, v.VerifyHeader(h, nil))
-		h = makeSelfReportHeader(t, 100, 99, []common.Address{C1})
+		h = makeSelfReportHeader(t, 100, []common.Address{C1})
 		assert.ErrorIs(t, v.VerifyHeader(h, nil), vrank.ErrUnexpectedVRankBeforePermissionless)
 		// A non-nil zero-length VRank is present and must be rejected.
 		h = &types.Header{Number: big.NewInt(100), VRank: []byte{}}
@@ -122,50 +118,26 @@ func TestVerifyHeader(t *testing.T) {
 
 	t.Run("valid self-report passes", func(t *testing.T) {
 		v := newVerifier(t)
-		assert.NoError(t, v.VerifyHeader(makeSelfReportHeader(t, num, target, candidates), nil))
-	})
-
-	t.Run("target not before the reporting block rejected", func(t *testing.T) {
-		v := newCN(t, withoutStart()).VRankModule
-		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, num, []common.Address{C1}), nil),
-			vrank.ErrInvalidVRankTarget)
-	})
-
-	t.Run("cross-epoch target rejected", func(t *testing.T) {
-		epoch := uint64(params.DefaultVRankEpoch)
-		v := newCN(t, withoutStart()).VRankModule
-		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, epoch+5, epoch-1, []common.Address{C1}), nil),
-			vrank.ErrInvalidVRankTarget)
-	})
-
-	t.Run("proposer mismatch rejected", func(t *testing.T) {
-		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		valset.EXPECT().GetProposer(num, uint64(0)).Return(numToAddr(1), nil).AnyTimes()
-		valset.EXPECT().GetProposer(target, uint64(0)).Return(numToAddr(2), nil).AnyTimes()
-		valset.EXPECT().GetCandTesting(gomock.Any()).Return(candidates, nil).AnyTimes()
-		v := newCN(t, withValset(valset), withoutStart(),
-			withHeaders(map[uint64]*types.Header{target: makeHeaderWithRound(target, 0)})).VRankModule
-		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, target, []common.Address{C1}), nil),
-			vrank.ErrVRankProposerMismatch)
+		assert.NoError(t, v.VerifyHeader(makeSelfReportHeader(t, num, candidates), nil))
 	})
 
 	t.Run("non-candidate rejected", func(t *testing.T) {
 		unknown := numToAddr(150)
 		v := newVerifier(t)
-		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, target, []common.Address{C1, unknown}), nil),
+		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, []common.Address{C1, unknown}), nil),
 			vrank.ErrInvalidVRankCandidate)
 	})
 
 	t.Run("duplicate address rejected", func(t *testing.T) {
 		v := newVerifier(t)
-		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, target, []common.Address{C1, C1}), nil),
+		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, []common.Address{C1, C1}), nil),
 			vrank.ErrDuplicateVRankCandidate)
 	})
 
 	t.Run("unsorted addresses rejected", func(t *testing.T) {
 		v := newVerifier(t)
 		// C3 > C2, so C3 before C2 is not ascending.
-		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, target, []common.Address{C3, C2}), nil),
+		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, []common.Address{C3, C2}), nil),
 			vrank.ErrVRankNotSorted)
 	})
 
@@ -178,11 +150,9 @@ func TestVerifyHeader(t *testing.T) {
 
 	t.Run("candidate lookup failure is returned", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
-		valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(P, nil).AnyTimes()
 		valset.EXPECT().GetCandTesting(num-1).Return(nil, assert.AnError).AnyTimes()
-		v := newCN(t, withValset(valset), withoutStart(),
-			withHeaders(map[uint64]*types.Header{target: makeHeaderWithRound(target, 0)})).VRankModule
-		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, target, []common.Address{C1}), nil), assert.AnError)
+		v := newCN(t, withValset(valset), withoutStart()).VRankModule
+		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, []common.Address{C1}), nil), assert.AnError)
 	})
 }
 
@@ -192,7 +162,7 @@ func TestPrepareHeader(t *testing.T) {
 
 	t.Run("pre-fork clears VRank", func(t *testing.T) {
 		v := newCN(t, withHardfork("osaka"), withoutStart()).VRankModule
-		header := makeSelfReportHeader(t, 100, 99, []common.Address{C1})
+		header := makeSelfReportHeader(t, 100, []common.Address{C1})
 
 		require.NoError(t, v.PrepareHeader(header))
 		assert.Nil(t, header.VRank)
@@ -246,9 +216,8 @@ func TestPrepareHeader(t *testing.T) {
 		header := makeHeaderWithRound(11, 0)
 
 		require.NoError(t, v.PrepareHeader(header))
-		gotTarget, report, err := vrank.DecodeReport(header.VRank)
+		report, err := vrank.DecodeReport(header.VRank)
 		require.NoError(t, err)
-		assert.Equal(t, uint64(10), gotTarget)
 		assert.Equal(t, candidates, report) // no responses collected ⇒ all candidates failed
 		assert.NoError(t, v.VerifyHeader(header, nil))
 	})

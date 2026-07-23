@@ -40,21 +40,19 @@ import (
 func TestGetCfReport(t *testing.T) {
 	t.Run("returns decoded report from header.VRank", func(t *testing.T) {
 		c1, c2 := numToAddr(1), numToAddr(2)
-		encoded, err := vrank.EncodeReport(8, []common.Address{c1, c2})
+		encoded, err := vrank.EncodeReport([]common.Address{c1, c2})
 		require.NoError(t, err)
 		h := makeHeaderWithRound(10, 0)
 		h.VRank = encoded
 		v := newCN(t, withHeaders(map[uint64]*types.Header{10: h})).VRankModule
 
-		target, report, err := v.cfReport(10)
+		report, err := v.cfReport(10)
 		require.NoError(t, err)
-		assert.Equal(t, uint64(8), target)
 		assert.Equal(t, []common.Address{c1, c2}, report)
 
 		// must be deterministic
-		target2, report2, err := v.cfReport(10)
+		report2, err := v.cfReport(10)
 		require.NoError(t, err)
-		assert.Equal(t, target, target2, "cfReport target must be deterministic")
 		assert.Equal(t, report, report2, "cfReport must be deterministic")
 	})
 
@@ -63,7 +61,7 @@ func TestGetCfReport(t *testing.T) {
 			5: makeHeaderWithRound(5, 0), // header.VRank is nil
 		})).VRankModule
 
-		_, report, err := v.cfReport(5)
+		report, err := v.cfReport(5)
 		require.NoError(t, err)
 		assert.Empty(t, report)
 	})
@@ -73,7 +71,7 @@ func TestGetCfReport_Errors(t *testing.T) {
 	t.Run("header not found returns error", func(t *testing.T) {
 		v := newCN(t).VRankModule
 
-		_, report, err := v.cfReport(99)
+		report, err := v.cfReport(99)
 		assert.ErrorIs(t, err, vrank.ErrHeaderNotFound)
 		assert.Nil(t, report)
 	})
@@ -85,7 +83,7 @@ func TestGetCfReport_Errors(t *testing.T) {
 			withoutStart(),
 		).VRankModule
 
-		_, report, err := v.cfReport(10)
+		report, err := v.cfReport(10)
 		assert.ErrorIs(t, err, vrank.ErrNotPermissionless)
 		assert.Nil(t, report)
 	})

@@ -25,23 +25,23 @@ import (
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
-// cfReport reads block blockNum's committed cfReport from header.VRank, returning its target block
-// and failed list (target 0 for empty / epoch-start blocks, which carry CandTesting not a cfReport).
+// cfReport reads block blockNum's committed failed list from header.VRank (empty for empty /
+// epoch-start blocks, which carry CandTesting not a cfReport).
 // Returns ErrNotPermissionless before the fork.
-func (v *VRankModule) cfReport(blockNum uint64) (uint64, []common.Address, error) {
+func (v *VRankModule) cfReport(blockNum uint64) ([]common.Address, error) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(blockNum)) {
-		return 0, nil, vrank.ErrNotPermissionless
+		return nil, vrank.ErrNotPermissionless
 	}
 	if blockNum%v.vrankEpoch() == 0 {
-		return 0, []common.Address{}, nil
+		return []common.Address{}, nil
 	}
 
 	header := v.Chain.GetHeaderByNumber(blockNum)
 	if header == nil {
-		return 0, nil, vrank.ErrHeaderNotFound
+		return nil, vrank.ErrHeaderNotFound
 	}
 	if len(header.VRank) == 0 {
-		return 0, []common.Address{}, nil
+		return []common.Address{}, nil
 	}
 	return vrank.DecodeReport(header.VRank)
 }

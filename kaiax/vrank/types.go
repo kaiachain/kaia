@@ -94,30 +94,23 @@ type VRankCandidate struct {
 	BlsSig      [blstypes.SignatureLength]byte // Sign(vrankCandidateSigHash(), blsKey)
 }
 
-// CfReport is the non-epoch header.VRank payload. TargetBlock is the proposer's own most recent
-// prior block this epoch — reporting only its own block keeps any failure in its own
-// byzantine-filterable column. Failed lists CandTesting addresses that missed TargetBlock.
-type CfReport struct {
-	TargetBlock uint64
-	Failed      []common.Address
-}
-
-// EncodeReport returns nil for an empty report so an absent VRank stays the "nothing" encoding.
-func EncodeReport(targetBlock uint64, failed []common.Address) ([]byte, error) {
+// EncodeReport encodes the failed CandTesting addresses, or nil when empty so an absent VRank stays
+// the "nothing" encoding.
+func EncodeReport(failed []common.Address) ([]byte, error) {
 	if len(failed) == 0 {
 		return nil, nil
 	}
-	return rlp.EncodeToBytes(&CfReport{TargetBlock: targetBlock, Failed: failed})
+	return EncodeAddressList(failed)
 }
 
 func EncodeAddressList(addrs []common.Address) ([]byte, error) {
 	return rlp.EncodeToBytes(addrs)
 }
 
-func DecodeReport(data []byte) (uint64, []common.Address, error) {
-	var report CfReport
+func DecodeReport(data []byte) ([]common.Address, error) {
+	var report []common.Address
 	if err := rlp.DecodeBytes(data, &report); err != nil {
-		return 0, nil, err
+		return nil, err
 	}
-	return report.TargetBlock, report.Failed, nil
+	return report, nil
 }
