@@ -108,6 +108,15 @@ func (c *Collector) AddPrepreparedTime(vk ViewKey, prepreparedAt time.Time, expe
 	c.blockHashMap[vk] = expectedBlockHash
 }
 
+// HasPreprepared reports whether a preprepared time has been recorded for the view, i.e. this node
+// proposed it and is expected to collect its VRankCandidate replies.
+func (c *Collector) HasPreprepared(vk ViewKey) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	_, ok := c.prepreparedMap[vk]
+	return ok
+}
+
 // AddCandMsg stores a VRankCandidate message for the given view. No verification is done here.
 // Returns false if the sender already has a message stored for this view (duplicate).
 func (c *Collector) AddCandMsg(vk ViewKey, sender common.Address, receivedAt time.Time, msg *VRankCandidate) bool {

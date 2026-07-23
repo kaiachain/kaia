@@ -41,22 +41,13 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *bft.Vie
 
 	prepreparedAt := time.Now()
 	blockNum := block.NumberU64()
-	// if I'm a committee member (ValActive), then I need to collect VRankCandidate
-	// ideally isCommitteeMember(blockNum + 1, round), but committee is not finalized during `blockNum` consensus, thus (blockNum, round).
-	if v.isCommitteeMember(blockNum, view.Round.Uint64()) {
-		copiedView := bft.View{
-			Sequence: new(big.Int).Set(view.Sequence),
-			Round:    new(big.Int).Set(view.Round),
-		}
-		v.prepreparedViewMu.Lock()
-		v.prepreparedView = copiedView
-		v.prepreparedViewMu.Unlock()
-		v.collector.AddPrepreparedTime(vrank.ViewKey{N: blockNum, R: uint8(view.Round.Uint64())}, prepreparedAt, block.Hash())
-	}
-	// if I'm the proposer that broadcast IstanbulPreprepare to other validators,
-	// then I need to broadcast VRankPreprepare as well
+	// Only the proposer keeps VRank state for this view: it sends VRankPreprepare to CandTesting so
+	// the candidates reply with VRankCandidate (distinct from the Istanbul Preprepare consensus
+	// already sent to validators), and it records the preprepared time to measure those replies.
+	// It reports the result from its own next proposal, so no other node needs to collect.
 	if v.isProposer(blockNum, view.Round.Uint64()) {
 		v.recordOwnProposal(blockNum)
+		v.collector.AddPrepreparedTime(vrank.ViewKey{N: blockNum, R: uint8(view.Round.Uint64())}, prepreparedAt, block.Hash())
 		v.BroadcastVRankPreprepare(&vrank.VRankPreprepare{Block: block, View: view})
 	}
 
@@ -192,36 +183,26 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 			BlockHash:   block.Hash(),
 			Sig:         [crypto.SignatureLength]byte(sig),
 			BlsSig:      [blstypes.SignatureLength]byte(blsSig),
-		})
+		}, sender)
 	}
 	return nil
 }
 
-// HandleVRankCandidate stores VRankCandidate from candidates. Verification is performed at EvaluateCandidates.
+// HandleVRankCandidate stores a VRankCandidate reply for a view this node proposed. Candidates
+// reply to the proposer directly, and only the proposer reports on the view (from its own next
+// proposal), so a reply for any other view is dropped. Full validation is at EvaluateCandidates.
 func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(msg.BlockNumber)) {
 		return nil
 	}
-
 	receivedAt := time.Now()
-	v.prepreparedViewMu.RLock()
-	prepreparedSeqNum, prepreparedRound := uint64(0), uint64(0)
-	hasPrepreparedView := v.prepreparedView.Sequence != nil && v.prepreparedView.Round != nil
-	if hasPrepreparedView {
-		prepreparedSeqNum = v.prepreparedView.Sequence.Uint64()
-		prepreparedRound = v.prepreparedView.Round.Uint64()
-	}
-	v.prepreparedViewMu.RUnlock()
-	if !hasPrepreparedView {
-		return vrank.ErrPrepreparedViewNotSet
-	}
-	if msg.BlockNumber > prepreparedSeqNum+maxWindow {
-		return vrank.ErrTooFar
-	}
 	if msg.Round > maxRound {
 		return vrank.ErrRoundOutOfRange
 	}
-	if isStaleVRankCandidate(msg, prepreparedSeqNum, prepreparedRound) {
+	vk := vrank.ViewKey{N: msg.BlockNumber, R: msg.Round}
+	// Accept only a view this node proposed (its preprepared time is recorded). This drops forged
+	// or misdirected replies cheaply, before signature recovery.
+	if !v.collector.HasPreprepared(vk) {
 		return nil
 	}
 
@@ -239,19 +220,11 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if err != nil || !ok {
 		return vrank.ErrInvalidCandidateBlsSig
 	}
-	vk := vrank.ViewKey{N: msg.BlockNumber, R: msg.Round}
 	if v.collector.HasCandMsg(vk, sender) {
 		return nil
 	}
 	v.collector.AddCandMsg(vk, sender, receivedAt, msg)
 	return nil
-}
-
-func isStaleVRankCandidate(msg *vrank.VRankCandidate, prepreparedSeqNum, prepreparedRound uint64) bool {
-	if msg.BlockNumber < prepreparedSeqNum {
-		return true
-	}
-	return msg.BlockNumber == prepreparedSeqNum && uint64(msg.Round) < prepreparedRound
 }
 
 func (v *VRankModule) pruneSeenPreprepare(currentBlockNum uint64) {
@@ -370,16 +343,10 @@ func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPrepr
 	v.broadcast(candidates, vrankPreprepare)
 }
 
-// BroadcastVRankCandidate is called by candidates.
-func (v *VRankModule) BroadcastVRankCandidate(vrankCandidate *vrank.VRankCandidate) {
-	// ideally GetCommittee(blockNum + 1, round), but committee is not finalized during `blockNum` consensus, thus (blockNum, round).
-	validators, err := v.Valset.GetCommittee(vrankCandidate.BlockNumber, uint64(vrankCandidate.Round))
-	if err != nil || validators == nil {
-		logger.Error("GetCommittee failed", "blockNum", vrankCandidate.BlockNumber)
-		return
-	}
-
-	v.broadcast(validators, vrankCandidate)
+// BroadcastVRankCandidate is called by a candidate to reply to the block's proposer — the only node
+// that reports on this view, since it collects the replies to its own VRankPreprepare.
+func (v *VRankModule) BroadcastVRankCandidate(vrankCandidate *vrank.VRankCandidate, proposer common.Address) {
+	v.broadcast([]common.Address{proposer}, vrankCandidate)
 }
 
 func (v *VRankModule) broadcast(targets []common.Address, msg any) {
@@ -408,16 +375,6 @@ func (v *VRankModule) isCandidate(blockNum uint64) bool {
 	}
 
 	return slices.Contains(candidates, v.nodeID)
-}
-
-func (v *VRankModule) isCommitteeMember(blockNum, round uint64) bool {
-	committee, err := v.Valset.GetCommittee(blockNum, round)
-	if err != nil || committee == nil {
-		logger.Error("GetCommittee failed", "blockNum", blockNum)
-		return false
-	}
-
-	return slices.Contains(committee, v.nodeID)
 }
 
 func (v *VRankModule) handleBroadcastLoop(stopCh <-chan struct{}) {

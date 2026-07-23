@@ -23,7 +23,6 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/event"
@@ -75,10 +74,8 @@ type VRankModule struct {
 
 	nodeID common.Address
 
-	// only for validators
-	prepreparedView   bft.View // for collection window management
-	prepreparedViewMu sync.RWMutex
-	collector         *vrank.Collector
+	// only for the proposer, which collects VRankCandidate replies to its own VRankPreprepare
+	collector *vrank.Collector
 
 	// ownProposals: blocks this node proposed this epoch, pending report. Their collector views are
 	// kept past the prune window until reported. In-memory — a restart drops them (fail-safe).

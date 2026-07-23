@@ -181,92 +181,73 @@ func TestEvaluateCandidates(t *testing.T) {
 		valset = mock_valset.NewMockValsetModule(ctrl)
 		randao = mock_randao.NewMockRandaoModule(ctrl)
 
-		block1, block2   = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)}), types.NewBlockWithHeader(&types.Header{Number: big.NewInt(2)})
-		view1_0, view2_0 = &bft.View{Sequence: big.NewInt(1), Round: common.Big0}, &bft.View{Sequence: big.NewInt(2), Round: common.Big0}
+		block2  = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(2)})
+		view2_0 = &bft.View{Sequence: big.NewInt(2), Round: common.Big0}
 
-		validators, candidates []*CN
-		valAddrs               = make([]common.Address, 3)
-		candAddrs              = make([]common.Address, 8)
-		candMsgsBlock2         = make([]vrank.VRankCandidate, 8)
-		earlybirdCands         = candAddrs[0:2] // sent VRankCandidate for block2 before validator preprepared block2
-		ontimeCands            = candAddrs[2:4]
-		liarCands              = candAddrs[4:6]
-		lateCands              = candAddrs[6:8]
+		candidates     []*CN
+		candAddrs      = make([]common.Address, 8)
+		candMsgsBlock2 = make([]vrank.VRankCandidate, 8)
+		ontimeCands    = candAddrs[0:4] // sent VRankCandidate for block2 after the proposer preprepared it, before deadline
+		liarCands      = candAddrs[4:6]
+		lateCands      = candAddrs[6:8]
 	)
 
-	for i := 0; i < 3; i++ {
-		validators = append(validators, newCN(t, withValset(valset), withRandao(randao), withGenesis()))
-		valAddrs[i] = validators[i].Addr
-	}
+	// Only the proposer collects candidate replies; it records the view before any reply can arrive.
+	proposer := newCN(t, withValset(valset), withRandao(randao), withGenesis())
 	for i := 0; i < 8; i++ {
 		candidates = append(candidates, newCN(t, withValset(valset), withRandao(randao), withGenesis()))
 		candAddrs[i] = candidates[i].Addr
 	}
 
-	valset.EXPECT().GetCommittee(gomock.Any(), gomock.Any()).Return(valAddrs, nil).AnyTimes()
 	valset.EXPECT().GetCandTesting(gomock.Any()).Return(candAddrs, nil).AnyTimes()
-	valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(validators[0].Addr, nil).AnyTimes()
+	valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(proposer.Addr, nil).AnyTimes()
 
 	for i := 0; i < 8; i++ {
 		sig, blsSig := signVRankCandidate(t, candidates[i].VRankModule, candidates[i].Key, candidates[i].BlsKey, block2.NumberU64(), uint8(view2_0.Round.Uint64()), block2.Hash())
 		candMsgsBlock2[i] = vrank.VRankCandidate{BlockNumber: block2.NumberU64(), Round: uint8(view2_0.Round.Uint64()), BlockHash: block2.Hash(), Sig: sig, BlsSig: blsSig}
 	}
 
-	// Initialize prepreparedView at least once to set `v.prepreparedView`.
-	for _, v := range validators {
-		v.VRankModule.HandleIstanbulPreprepare(block1, view1_0)
-	}
+	proposer.VRankModule.HandleIstanbulPreprepare(block2, view2_0)
 
 	for i, cand := range candidates {
 		candMsg := &candMsgsBlock2[i]
 		if i == 6 {
 			time.Sleep(candidateMsgTimeoutMs * time.Millisecond)
 		}
-		for _, v := range validators {
-			if i < 2 {
-				// Earlybirds: candidates send VRankCandidate for block2 *before* validator has preprepared block2.
-				err := v.VRankModule.HandleVRankCandidate(candMsg)
-				assert.NoError(t, err)
-			} else if i < 4 {
-				// On-time: candidates send VRankCandidate for block2 *after* validator has preprepared block2 and before deadline.
-				v.VRankModule.HandleIstanbulPreprepare(block2, view2_0)
-				err := v.VRankModule.HandleVRankCandidate(candMsg)
-				assert.NoError(t, err)
-			} else if i < 6 {
-				// Liars: candidates send VRankCandidate for block2 with wrong BlockHash.
-				liarHash := common.Hash{byte(i)}
-				sig, blsSig := signVRankCandidate(t, cand.VRankModule, cand.Key, cand.BlsKey, block2.NumberU64(), uint8(view2_0.Round.Uint64()), liarHash)
-				liarMsg := vrank.VRankCandidate{BlockNumber: block2.NumberU64(), Round: uint8(view2_0.Round.Uint64()), BlockHash: liarHash, Sig: sig, BlsSig: blsSig}
-				err := v.VRankModule.HandleVRankCandidate(&liarMsg)
-				assert.NoError(t, err)
-			} else if i < 8 {
-				// Late: candidates send VRankCandidate for block2 after deadline.
-				err := v.VRankModule.HandleVRankCandidate(candMsg)
-				assert.NoError(t, err)
-			}
+		switch {
+		case i < 4:
+			// On-time: candidates send VRankCandidate for block2 after the proposer preprepared it and before deadline.
+			err := proposer.VRankModule.HandleVRankCandidate(candMsg)
+			assert.NoError(t, err)
+		case i < 6:
+			// Liars: candidates send VRankCandidate for block2 with wrong BlockHash.
+			liarHash := common.Hash{byte(i)}
+			sig, blsSig := signVRankCandidate(t, cand.VRankModule, cand.Key, cand.BlsKey, block2.NumberU64(), uint8(view2_0.Round.Uint64()), liarHash)
+			liarMsg := vrank.VRankCandidate{BlockNumber: block2.NumberU64(), Round: uint8(view2_0.Round.Uint64()), BlockHash: liarHash, Sig: sig, BlsSig: blsSig}
+			err := proposer.VRankModule.HandleVRankCandidate(&liarMsg)
+			assert.NoError(t, err)
+		default:
+			// Late: candidates send VRankCandidate for block2 after deadline.
+			err := proposer.VRankModule.HandleVRankCandidate(candMsg)
+			assert.NoError(t, err)
 		}
 	}
 
-	for _, v := range validators {
-		report, err := v.VRankModule.EvaluateCandidates(2, 0)
-		assert.NoError(t, err)
-		assert.Len(t, report, 4, "cfReport: 2 liars + 2 late")
-		for _, addr := range ontimeCands {
-			assert.False(t, slices.Contains(report, addr))
-		}
-		for _, addr := range earlybirdCands {
-			assert.False(t, slices.Contains(report, addr))
-		}
-		for _, addr := range liarCands {
-			assert.True(t, slices.Contains(report, addr))
-		}
-		for _, addr := range lateCands {
-			assert.True(t, slices.Contains(report, addr))
-		}
-		report2, err := v.VRankModule.EvaluateCandidates(2, 0)
-		assert.NoError(t, err)
-		assert.Equal(t, report, report2, "EvaluateCandidates must be deterministic")
+	report, err := proposer.VRankModule.EvaluateCandidates(2, 0)
+	assert.NoError(t, err)
+	assert.Len(t, report, 4, "cfReport: 2 liars + 2 late")
+	for _, addr := range ontimeCands {
+		assert.False(t, slices.Contains(report, addr))
 	}
+	for _, addr := range liarCands {
+		assert.True(t, slices.Contains(report, addr))
+	}
+	for _, addr := range lateCands {
+		assert.True(t, slices.Contains(report, addr))
+	}
+	report2, err := proposer.VRankModule.EvaluateCandidates(2, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, report, report2, "EvaluateCandidates must be deterministic")
 }
 
 func TestEvaluateCandidates_Errors(t *testing.T) {
