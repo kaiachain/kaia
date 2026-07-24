@@ -310,5 +310,43 @@ func (v *ValsetModule) installAndInitializeABv2(
 	}
 
 	logger.Info("Initialized AddressBookV2", "number", header.Number)
+
+	// config.VRankEpoch must equal the epoch baked into AddressBookV2 (only the
+	// contract value is authenticated by the genesis hash).
+	if err := v.verifyVRankEpoch(statedb, nil); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// verifyVRankEpoch errors if the configured VRankEpoch differs from the epoch
+// baked into AddressBookV2, read from the given state.
+func (v *ValsetModule) verifyVRankEpoch(statedb *state.StateDB, num *big.Int) error {
+	backend, err := backends.NewStateBlockchainContractBackend(v.Chain, statedb)
+	if err != nil {
+		return fmt.Errorf("create contract backend: %w", err)
+	}
+	onchainEpoch, err := system.ReadABv2EpochBlockInterval(backend, num)
+	if err != nil {
+		return fmt.Errorf("read ABv2 epochBlockInterval: %w", err)
+	}
+	if cfgEpoch := v.Chain.Config().VRankEpoch; cfgEpoch != onchainEpoch {
+		return fmt.Errorf("VRankEpoch mismatch: config has %d, AddressBookV2 has %d", cfgEpoch, onchainEpoch)
+	}
+	return nil
+}
+
+// verifyVRankEpochAtHead validates the epoch against head state once past the
+// permissionless fork; no-op before it (AddressBookV2 not yet installed).
+func (v *ValsetModule) verifyVRankEpochAtHead() error {
+	head := v.Chain.CurrentBlock()
+	if head == nil || !v.Chain.Config().IsPermissionlessForkEnabled(head.Number()) {
+		return nil
+	}
+	statedb, err := v.Chain.StateAt(head.Root())
+	if err != nil {
+		return fmt.Errorf("StateAt(head) failed: %w", err)
+	}
+	return v.verifyVRankEpoch(statedb, head.Number())
 }
