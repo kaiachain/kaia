@@ -663,3 +663,13 @@ func testPreprocessHeaderVerification(t *testing.T, threads int) {
 		close(abort)
 	}
 }
+
+func TestValidateHeaderRejectsOutOfUint64Number(t *testing.T) {
+	v := &BlockValidator{}
+	h := &types.Header{
+		Number:     new(big.Int).Lsh(big.NewInt(1), 64), // 2^64, exceeds uint64
+		Time:       big.NewInt(1),
+		BlockScore: params.DefaultBlockScore,
+	}
+	assert.ErrorIs(t, v.ValidateHeader(h), ErrInvalidBlockNumber)
+}
