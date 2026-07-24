@@ -20,7 +20,10 @@ import (
 	"math/big"
 
 	"github.com/kaiachain/kaia/blockchain/types"
+	"github.com/kaiachain/kaia/kaiax"
 )
+
+var _ kaiax.ExecutionModule = (*VRankModule)(nil)
 
 func (v *VRankModule) PostInsertBlock(block *types.Block) error {
 	blockNum := block.NumberU64()

@@ -138,6 +138,20 @@ func (mr *MockVRankModuleMockRecorder) HandleVRankPreprepare(arg0 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleVRankPreprepare", reflect.TypeOf((*MockVRankModule)(nil).HandleVRankPreprepare), arg0)
 }
 
+// PostInsertBlock mocks base method.
+func (m *MockVRankModule) PostInsertBlock(arg0 *types.Block) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostInsertBlock", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PostInsertBlock indicates an expected call of PostInsertBlock.
+func (mr *MockVRankModuleMockRecorder) PostInsertBlock(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostInsertBlock", reflect.TypeOf((*MockVRankModule)(nil).PostInsertBlock), arg0)
+}
+
 // PrepareHeader mocks base method.
 func (m *MockVRankModule) PrepareHeader(arg0 *types.Header) error {
 	m.ctrl.T.Helper()
@@ -150,6 +164,30 @@ func (m *MockVRankModule) PrepareHeader(arg0 *types.Header) error {
 func (mr *MockVRankModuleMockRecorder) PrepareHeader(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareHeader", reflect.TypeOf((*MockVRankModule)(nil).PrepareHeader), arg0)
+}
+
+// RewindDelete mocks base method.
+func (m *MockVRankModule) RewindDelete(arg0 common.Hash, arg1 uint64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RewindDelete", arg0, arg1)
+}
+
+// RewindDelete indicates an expected call of RewindDelete.
+func (mr *MockVRankModuleMockRecorder) RewindDelete(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RewindDelete", reflect.TypeOf((*MockVRankModule)(nil).RewindDelete), arg0, arg1)
+}
+
+// RewindTo mocks base method.
+func (m *MockVRankModule) RewindTo(arg0 *types.Block) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RewindTo", arg0)
+}
+
+// RewindTo indicates an expected call of RewindTo.
+func (mr *MockVRankModuleMockRecorder) RewindTo(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RewindTo", reflect.TypeOf((*MockVRankModule)(nil).RewindTo), arg0)
 }
 
 // Start mocks base method.
