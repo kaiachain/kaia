@@ -393,6 +393,44 @@ func TestHandleVRankPreprepare(t *testing.T) {
 		mustNotPop(t, candidate.sub)
 	})
 
+	t.Run("out of range round must not claim the truncated round slot", func(t *testing.T) {
+		cns, valset, _ := newCNMulti(t, 3)
+		proposer, attacker, candidate := cns[0], cns[1], cns[2]
+
+		altBlock := types.NewBlockWithHeader(&types.Header{
+			Number:     big.NewInt(1),
+			ParentHash: common.HexToHash("0x01"),
+		})
+
+		valset.EXPECT().GetCandTesting(uint64(1)).Return([]common.Address{candidate.Addr}, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).AnyTimes()
+		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{proposer.Addr}, nil).Times(1)
+
+		// Round 256 truncates to round 0. GetProposer must never be consulted for it,
+		// so no mock is registered for round 256.
+		aliasSig := signVRankPreprepare(t, attacker.VRankModule, attacker.Key, altBlock.NumberU64(), 0, altBlock.Hash())
+		for _, round := range []*big.Int{
+			big.NewInt(int64(vrank.MaxRound) + 1),
+			big.NewInt(256),
+			new(big.Int).Lsh(big.NewInt(1), 64), // beyond uint64
+		} {
+			err := candidate.VRankModule.HandleVRankPreprepare(&vrank.VRankPreprepare{
+				Block: altBlock,
+				View:  &bft.View{Sequence: big.NewInt(1), Round: round},
+				Sig:   aliasSig,
+			})
+			assert.ErrorIs(t, err, vrank.ErrRoundOutOfRange, "round %s", round)
+			mustNotPop(t, candidate.sub)
+		}
+
+		// round 0 must still be free for the real proposer
+		pppSig := signVRankPreprepare(t, proposer.VRankModule, proposer.Key, block1.NumberU64(), 0, block1.Hash())
+		require.NoError(t, candidate.VRankModule.HandleVRankPreprepare(
+			&vrank.VRankPreprepare{Block: block1, View: view1_0, Sig: pppSig}))
+		req := mustPop(t, candidate.sub)
+		assert.Equal(t, block1.Hash(), req.Msg.(*vrank.VRankCandidate).BlockHash)
+	})
+
 	t.Run("non-proposer signature should be rejected by candidate", func(t *testing.T) {
 		cns, valset, _ := newCNMulti(t, 3)
 		proposer, nonProposer, candidate := cns[0], cns[1], cns[2]
