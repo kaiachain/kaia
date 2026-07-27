@@ -17,9 +17,11 @@
 package vrank
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,4 +63,36 @@ func TestEncodeAddressList_EmptyList(t *testing.T) {
 	dec, err := DecodeReport(enc)
 	assert.NoError(t, err)
 	assert.Empty(t, dec)
+}
+
+func TestVRankCandidateRLPRejectsOversizedSignatures(t *testing.T) {
+	// fixed-length signatures round-trip
+	valid := VRankCandidate{
+		BlockNumber: 1,
+		Round:       0,
+		BlockHash:   common.HexToHash("0x42"),
+		Sig:         [65]byte{0x11},
+		BlsSig:      [96]byte{0x22},
+	}
+	enc, err := rlp.EncodeToBytes(&valid)
+	assert.NoError(t, err)
+	var back VRankCandidate
+	assert.NoError(t, rlp.DecodeBytes(enc, &back))
+	assert.Equal(t, valid, back)
+
+	// oversized signature bytes fail to decode into the fixed-size fields
+	type wire struct {
+		BlockNumber uint64
+		Round       uint8
+		BlockHash   common.Hash
+		Sig         []byte
+		BlsSig      []byte
+	}
+	oversized, err := rlp.EncodeToBytes(&wire{
+		BlockNumber: 1,
+		Sig:         bytes.Repeat([]byte{0x11}, 1<<20),
+		BlsSig:      bytes.Repeat([]byte{0x22}, 96),
+	})
+	assert.NoError(t, err)
+	assert.Error(t, rlp.DecodeBytes(oversized, new(VRankCandidate)))
 }
