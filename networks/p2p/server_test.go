@@ -326,6 +326,8 @@ func TestServerAtCap(t *testing.T) {
 	srv := &SingleChannelServer{
 		BaseServer: &BaseServer{
 			Config: Config{
+				// BOOTNODE: no per-type reservation, isolates the global cap.
+				ConnectionType:         common.BOOTNODE,
 				PrivateKey:             newkey(),
 				MaxPhysicalConnections: 10,
 				NoDial:                 true,
@@ -445,6 +447,41 @@ func TestServerPeerTargets(t *testing.T) {
 	enPeers := newPeers(common.CONSENSUSNODE, common.CONSENSUSNODE)
 	if !enSrv.exceedsPeerTarget(enPeers, &conn{conntype: common.CONSENSUSNODE}) {
 		t.Fatal("EN should reject CN when CN peer target is full")
+	}
+}
+
+// CN/EN servers reject untrusted non-CN/EN peers (which would escape the
+// per-type cap); trusted/static and non-CN/EN servers accept any type.
+func TestAdmissiblePeerType(t *testing.T) {
+	cnSrv := &BaseServer{Config: Config{ConnectionType: common.CONSENSUSNODE}}
+	enSrv := &BaseServer{Config: Config{ConnectionType: common.ENDPOINTNODE}}
+	bnSrv := &BaseServer{Config: Config{ConnectionType: common.BOOTNODE}}
+
+	for _, peerType := range []common.ConnType{common.CONSENSUSNODE, common.ENDPOINTNODE, common.PROXYNODE} {
+		if !cnSrv.admissiblePeerType(&conn{conntype: peerType, flags: inboundConn}) {
+			t.Fatalf("CN server should admit peer type %v", peerType)
+		}
+		if !enSrv.admissiblePeerType(&conn{conntype: peerType, flags: inboundConn}) {
+			t.Fatalf("EN server should admit peer type %v", peerType)
+		}
+	}
+
+	if cnSrv.admissiblePeerType(&conn{conntype: common.BOOTNODE, flags: inboundConn}) {
+		t.Fatal("CN server should reject an inbound bootnode peer")
+	}
+	if enSrv.admissiblePeerType(&conn{conntype: common.UNKNOWNNODE, flags: inboundConn}) {
+		t.Fatal("EN server should reject an inbound unknown-type peer")
+	}
+
+	if !cnSrv.admissiblePeerType(&conn{conntype: common.BOOTNODE, flags: trustedConn}) {
+		t.Fatal("trusted peer should bypass the peer-type check")
+	}
+	if !cnSrv.admissiblePeerType(&conn{conntype: common.BOOTNODE, flags: staticDialedConn}) {
+		t.Fatal("static outbound peer should bypass the peer-type check")
+	}
+
+	if !bnSrv.admissiblePeerType(&conn{conntype: common.BOOTNODE, flags: inboundConn}) {
+		t.Fatal("bootnode server should keep accepting any peer type")
 	}
 }
 

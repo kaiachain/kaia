@@ -293,6 +293,8 @@ func (srv *BaseServer) encHandshakeChecks(peers map[discover.NodeID]*Peer, c *co
 		return DiscTooManyPeers
 	case !c.is(trustedConn) && c.is(inboundConn) && countInboundPeers(peers) >= srv.maxInboundConns():
 		return DiscTooManyPeers
+	case !srv.admissiblePeerType(c):
+		return DiscUselessPeer
 	case srv.exceedsPeerTarget(peers, c):
 		return DiscTooManyPeers
 	case peers[c.id] != nil:
@@ -325,6 +327,22 @@ func (srv *BaseServer) exceedsPeerTarget(peers map[discover.NodeID]*Peer, c *con
 		return EffectiveConnType(p.ConnType()) != peerType
 	})
 	return len(peersByType) >= target
+}
+
+// admissiblePeerType reports whether the server accepts a peer of this type.
+// A CN/EN server meshes only with CN/EN peers (keeping others out of the
+// uncapped path in exceedsPeerTarget); trusted/static and non-CN/EN servers
+// accept any type.
+func (srv *BaseServer) admissiblePeerType(c *conn) bool {
+	if c.isTrustedOrStatic() {
+		return true
+	}
+	selfType := EffectiveConnType(srv.ConnectionType)
+	if selfType != common.CONSENSUSNODE && selfType != common.ENDPOINTNODE {
+		return true
+	}
+	peerType := EffectiveConnType(c.conntype)
+	return peerType == common.CONSENSUSNODE || peerType == common.ENDPOINTNODE
 }
 
 // countInboundPeers returns how many peers are connected via an inbound
