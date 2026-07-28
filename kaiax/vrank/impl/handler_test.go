@@ -557,6 +557,13 @@ func TestHandleVRankCandidate(t *testing.T) {
 				assert.Equal(t, receivedAt, cm.ReceivedAt, "ReceivedAt should not change on duplicate")
 			}
 		}
+
+		// This replay carries a BLS signature from the wrong key. Dropping it without an error
+		// means the duplicate check ran before the verification.
+		_, wrongBlsSig := signVRankCandidate(t, val.VRankModule, val.Key, val.BlsKey, msg.BlockNumber, msg.Round, msg.BlockHash)
+		replay := msg
+		replay.BlsSig = wrongBlsSig
+		assert.NoError(t, val.VRankModule.HandleVRankCandidate(&replay))
 	})
 
 	t.Run("stale messages should be discarded", func(t *testing.T) {

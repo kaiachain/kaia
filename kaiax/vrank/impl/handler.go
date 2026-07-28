@@ -173,6 +173,9 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if err != nil {
 		return err
 	}
+	if v.collector.HasCandMsg(vk, sender) {
+		return nil
+	}
 	blsNum := big.NewInt(0).Add(v.Chain.CurrentHeader().Number, big.NewInt(1)) // head + 1
 	blsPub, err := v.Randao.GetBlsPubkey(sender, blsNum)
 	if err != nil {
@@ -181,9 +184,6 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	ok, err := bls.VerifySignature(msg.BlsSig[:], sigHash, blsPub)
 	if err != nil || !ok {
 		return vrank.ErrInvalidCandidateBlsSig
-	}
-	if v.collector.HasCandMsg(vk, sender) {
-		return nil
 	}
 	v.collector.AddCandMsg(vk, sender, receivedAt, msg)
 	return nil
