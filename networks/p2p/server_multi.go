@@ -36,14 +36,18 @@ import (
 	"github.com/kaiachain/kaia/networks/p2p/nat"
 )
 
+// A peer dials all of its channels at once, so a set still incomplete after this is not coming.
+const candidateAssemblyTimeout = 10 * time.Second
+
 // MultiChannelServer is a server that uses a multi channel.
 // It inherits BaseServer. This file only contains overriding methods.
 // There must be a reason to override BaseServer methods.
 type MultiChannelServer struct {
 	*BaseServer
-	listeners      []net.Listener              // Extended TCP listener
-	ListenAddrs    []string                    // Extended TCP listen addresses
-	CandidateConns map[discover.NodeID][]*conn // Subset of connections towards a premature peer
+	listeners      []net.Listener                     // Extended TCP listener
+	ListenAddrs    []string                           // Extended TCP listen addresses
+	CandidateConns map[discover.NodeID][]*conn        // Subset of connections towards a premature peer
+	candidateSince map[discover.NodeID]mclock.AbsTime // Open time of each CandidateConns entry
 }
 
 // Stop terminates the server and all active peer connections.
@@ -64,6 +68,17 @@ func (srv *MultiChannelServer) Stop() {
 	}
 	for _, listener := range srv.listeners {
 		listener.Close()
+	}
+
+	// Peers under assembly have no read loop to notice the shutdown.
+	for id, connSet := range srv.CandidateConns {
+		for _, c := range connSet {
+			if c != nil {
+				c.close(DiscQuitting)
+			}
+		}
+		delete(srv.CandidateConns, id)
+		delete(srv.candidateSince, id)
 	}
 
 	close(srv.quit) // Ask loops to terminate
@@ -148,6 +163,7 @@ func (srv *MultiChannelServer) initialize() error {
 	srv.ListenAddrs = append(srv.ListenAddrs, srv.ListenAddr)
 	srv.ListenAddrs = append(srv.ListenAddrs, srv.SubListenAddr...)
 	srv.CandidateConns = make(map[discover.NodeID][]*conn)
+	srv.candidateSince = make(map[discover.NodeID]mclock.AbsTime)
 	return nil
 }
 
@@ -338,6 +354,7 @@ func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
 	if !srv.running {
 		return errServerStopped
 	}
+	srv.expireCandidates(mclock.Now())
 	err := srv.protoHandshakeChecks(srv.peers, c)
 	if err != nil {
 		return err
@@ -345,15 +362,22 @@ func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
 
 	var p *Peer
 	if c.multiChannel {
+		// Out of range fills no slot; falling through would drop c unstored and unclosed.
+		if int(c.portOrder) < 0 || int(c.portOrder) >= len(srv.ListenAddrs) {
+			return DiscUnexpectedIdentity
+		}
+
 		connSet := srv.CandidateConns[c.id]
 		if connSet == nil {
 			connSet = make([]*conn, len(srv.ListenAddrs))
 			srv.CandidateConns[c.id] = connSet
+			srv.candidateSince[c.id] = mclock.Now()
 		}
 
-		if int(c.portOrder) < len(connSet) {
-			connSet[c.portOrder] = c
+		if old := connSet[c.portOrder]; old != nil {
+			old.close(DiscAlreadyConnected)
 		}
+		connSet[c.portOrder] = c
 
 		pending := len(connSet)
 		for _, conn := range connSet {
@@ -367,6 +391,7 @@ func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
 
 		p, err = newPeer(connSet, srv.Protocols, srv.Config.RWTimerConfig)
 		delete(srv.CandidateConns, c.id)
+		delete(srv.candidateSince, c.id)
 	} else {
 		p, err = newPeer([]*conn{c}, srv.Protocols, srv.Config.RWTimerConfig)
 	}
@@ -389,6 +414,25 @@ func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
 	srv.peerWG.Add(1)
 	go srv.runPeer(p)
 	return nil
+}
+
+// expireCandidates drops multichannel peers whose remaining channels never arrived.
+// Nothing else does: CandidateConns is cleared only once every channel is present.
+// Caller must hold srv.lock.
+func (srv *MultiChannelServer) expireCandidates(now mclock.AbsTime) {
+	for id, connSet := range srv.CandidateConns {
+		if now-srv.candidateSince[id] < mclock.AbsTime(candidateAssemblyTimeout) {
+			continue
+		}
+		for _, c := range connSet {
+			if c != nil {
+				c.close(DiscUselessPeer)
+			}
+		}
+		delete(srv.CandidateConns, id)
+		delete(srv.candidateSince, id)
+		srv.logger.Debug("Dropped incomplete multichannel peer", "id", id)
+	}
 }
 
 // Overrides BaseServer.runPeer() because multichannel peers run all socket
