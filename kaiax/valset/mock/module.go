@@ -142,21 +142,6 @@ func (mr *MockValsetModuleMockRecorder) GetDemotedValidators(arg0 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDemotedValidators", reflect.TypeOf((*MockValsetModule)(nil).GetDemotedValidators), arg0)
 }
 
-// GetHeaderGovVoters mocks base method.
-func (m *MockValsetModule) GetHeaderGovVoters(arg0 uint64) ([]common.Address, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetHeaderGovVoters", arg0)
-	ret0, _ := ret[0].([]common.Address)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetHeaderGovVoters indicates an expected call of GetHeaderGovVoters.
-func (mr *MockValsetModuleMockRecorder) GetHeaderGovVoters(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeaderGovVoters", reflect.TypeOf((*MockValsetModule)(nil).GetHeaderGovVoters), arg0)
-}
-
 // GetNodesByState mocks base method.
 func (m *MockValsetModule) GetNodesByState(arg0 uint64, arg1 []valset.NodeState) (map[common.Address]*valset.Node, error) {
 	m.ctrl.T.Helper()

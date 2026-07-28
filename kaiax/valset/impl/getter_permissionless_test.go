@@ -53,10 +53,6 @@ func TestPermissionlessPublicGetters(t *testing.T) {
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []common.Address{addr1, addr2, addr3, addr4, addr5, addr6}, cnPeers)
 
-	headerGovVoters, err := v.GetHeaderGovVoters(testGetterBlock)
-	require.NoError(t, err)
-	assert.ElementsMatch(t, []common.Address{addr1}, headerGovVoters)
-
 	demoted, err := v.GetDemotedValidators(testGetterBlock)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []common.Address{addr2, addr3}, demoted)

@@ -87,15 +87,6 @@ func (v *ValsetModule) getCNPeers(num uint64) ([]common.Address, error) {
 	return nodes.CNPeers().Addresses(), nil
 }
 
-// getHeaderGovVoters: HeaderGovVoters = {VA} - {Suspended}.
-func (v *ValsetModule) getHeaderGovVoters(num uint64) ([]common.Address, error) {
-	nodes, err := v.getNodes(num)
-	if err != nil {
-		return nil, err
-	}
-	return nodes.HeaderGovVoters().Addresses(), nil
-}
-
 // getNodesByState filters nodes by state. Empty states means "all".
 // Returns a defensive copy so callers can mutate the result freely.
 func (v *ValsetModule) getNodesByState(num uint64, states []valset.NodeState) (valset.NodeMap, error) {
