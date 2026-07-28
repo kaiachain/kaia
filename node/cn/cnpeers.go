@@ -44,7 +44,8 @@ type cnPeerUpdater struct {
 	sink        cnPeerSink
 	chainConfig *params.ChainConfig
 
-	lastHash *common.Hash // Last hashed SetCNPeers input; nil means never pushed.
+	lastHash  *common.Hash // Last hashed SetCNPeers input; nil means never pushed.
+	filtering bool         // Whether the last pushed allowlist was non-nil, i.e. CN filtering is on.
 }
 
 type cnPeerInput struct {
@@ -87,9 +88,16 @@ func (u *cnPeerUpdater) sync(num uint64) {
 	}
 	addrs, err := u.reader.GetCNPeers(num)
 	if err != nil {
-		logger.Warn("syncCNPeers: disabling CN peer filter after initial GetCNPeers failed", "num", num, "err", err)
-		u.setCNPeersIfChanged(nil)
-		return
+		addrs = nil
+	}
+	if addrs == nil {
+		// The read produced no allowlist. Pushing nil would turn CN filtering off
+		// entirely, so keep the last one instead.
+		if u.filtering {
+			logger.Warn("syncCNPeers: keeping the last CN peer allowlist", "num", num, "err", err)
+			return
+		}
+		logger.Warn("syncCNPeers: leaving the CN peer filter disabled", "num", num, "err", err)
 	}
 	u.setCNPeersIfChanged(addrs)
 }
@@ -100,6 +108,7 @@ func (u *cnPeerUpdater) setCNPeersIfChanged(addrs []common.Address) {
 		return
 	}
 	u.lastHash = &hash
+	u.filtering = addrs != nil
 	u.sink.SetCNPeers(addrs)
 }
 
