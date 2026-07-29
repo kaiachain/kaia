@@ -183,6 +183,10 @@ func decodeExtra(headerFile string) (map[string]interface{}, error) {
 	// scheme implementation is available. If a new scheme is introduced later,
 	// this command should inspect the chainConfig from DB and reintroduce a
 	// scheme option so DecodeExtra uses the correct implementation.
+	//
+	// NOTE: Committers() picks its recovery preimage by fork, and this config enables
+	// permissionless, so the reported committers hold only for post-fork headers.
+	// TODO-permissionless: take the fork identity as an argument so pre-fork headers decode too.
 	s := engine.NewSealer(params.TestChainConfig.Copy(), nil)
 	validators, err := s.Validators(header)
 	if err != nil {
