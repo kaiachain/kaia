@@ -213,7 +213,6 @@ func TestPrepareHeader(t *testing.T) {
 		cn := newCN(t, withValset(valset), withoutStart(),
 			withHeaders(map[uint64]*types.Header{target: targetHeader}))
 		valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(cn.Addr, nil).AnyTimes()
-		cn.VRankModule.recordOwnProposal(target)
 		cn.VRankModule.collector.AddPrepreparedTime(
 			vrank.ViewKey{N: target, R: uint8(round)}, time.Now(), types.NewBlockWithHeader(targetHeader).Hash())
 		return cn.VRankModule
@@ -254,6 +253,10 @@ func TestSelectReportTarget(t *testing.T) {
 			11: makeHeaderWithRound(11, 0),
 		}))
 		v := cn.VRankModule
+		// propose records the view exactly as HandleIstanbulPreprepare does when this node proposes.
+		propose := func(n uint64) {
+			v.collector.AddPrepreparedTime(vrank.ViewKey{N: n, R: 0}, time.Now(), common.Hash{})
+		}
 		// 7 and 11 are committed by this node; 9 is proposed by this node but committed by `other`.
 		valset.EXPECT().GetProposer(uint64(7), uint64(0)).Return(cn.Addr, nil).AnyTimes()
 		valset.EXPECT().GetProposer(uint64(9), uint64(0)).Return(other, nil).AnyTimes()
@@ -262,7 +265,7 @@ func TestSelectReportTarget(t *testing.T) {
 		// Block 7 is this node's first proposal in the epoch — nothing prior to report.
 		_, _, ok := v.selectReportTarget(7)
 		assert.False(t, ok, "first proposal in the epoch has no prior target")
-		v.recordOwnProposal(7)
+		propose(7)
 
 		// This node then builds block 9: that build reports block 7, and prune keeps 7 (strict <).
 		// Keeping it matters because this node loses block 9 to `other`, so 7's report is discarded.
@@ -270,17 +273,17 @@ func TestSelectReportTarget(t *testing.T) {
 		require.True(t, ok)
 		assert.Equal(t, uint64(7), target)
 		assert.Equal(t, uint64(0), round)
-		v.pruneReportedProposals(target) // keeps 7
-		v.recordOwnProposal(9)
+		v.collector.PruneReported(target) // keeps 7
+		propose(9)
 
 		// Building block 11: block 9 was lost, so 7 is re-reported (idempotent) and 9 is skipped.
 		target, _, ok = v.selectReportTarget(11)
 		require.True(t, ok)
 		assert.Equal(t, uint64(7), target)
-		v.pruneReportedProposals(target) // still keeps 7
+		v.collector.PruneReported(target) // still keeps 7
 
 		// Once block 11 commits it becomes the most recent own block: 7 is superseded, 9 still skipped.
-		v.recordOwnProposal(11)
+		propose(11)
 		target, _, ok = v.selectReportTarget(13)
 		require.True(t, ok)
 		assert.Equal(t, uint64(11), target)
@@ -289,7 +292,7 @@ func TestSelectReportTarget(t *testing.T) {
 	t.Run("prior-epoch proposal is not selected", func(t *testing.T) {
 		epoch := uint64(params.DefaultVRankEpoch)
 		v := newCN(t, withoutStart()).VRankModule
-		v.recordOwnProposal(epoch - 1) // previous epoch
+		v.collector.AddPrepreparedTime(vrank.ViewKey{N: epoch - 1, R: 0}, time.Now(), common.Hash{}) // previous epoch
 
 		_, _, ok := v.selectReportTarget(epoch + 1)
 		assert.False(t, ok)

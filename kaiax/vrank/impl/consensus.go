@@ -127,7 +127,7 @@ func (v *VRankModule) encodeCandidateFailureVRank(number uint64) ([]byte, error)
 		logger.Error("Failed to evaluate VRank candidates", "err", err, "targetNum", targetNum, "round", round)
 		return nil, err
 	}
-	v.pruneReportedProposals(targetNum) // drop proposals older than targetNum; targetNum stays for re-report
+	v.collector.PruneReported(targetNum) // drop views older than targetNum; targetNum stays for re-report
 	if len(report) == 0 {
 		return nil, nil
 	}

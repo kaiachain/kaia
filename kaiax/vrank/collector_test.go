@@ -90,12 +90,12 @@ func TestCollector_GetViewData_ReturnsSnapshotCopy(t *testing.T) {
 	assert.NotContains(t, m2, addr2)
 }
 
-func TestCollector_RemoveOldViews(t *testing.T) {
+func TestCollector_PruneReported(t *testing.T) {
 	var (
-		c         = NewCollector()
-		views     = []ViewKey{{N: 1, R: 0}, {N: 1, R: 8}, {N: 2, R: 0}, {N: 2, R: 1}, {N: 3, R: 0}}
-		threshold = ViewKey{N: 2, R: 1}
-		wantGone  = []bool{true, true, true, false, false}
+		c = NewCollector()
+		// Pruning is per sequence: every round of block 1 goes, every round of block 2 stays.
+		views    = []ViewKey{{N: 1, R: 0}, {N: 1, R: 8}, {N: 2, R: 0}, {N: 2, R: 1}, {N: 3, R: 0}}
+		wantGone = []bool{true, true, false, false, false}
 	)
 
 	for _, v := range views {
@@ -103,7 +103,7 @@ func TestCollector_RemoveOldViews(t *testing.T) {
 		c.AddCandMsg(v, common.HexToAddress("0x01"), time.Now(), &VRankCandidate{BlockNumber: v.N, Round: v.R})
 	}
 
-	c.RemoveOldViews(threshold, nil)
+	c.PruneReported(2)
 	for i, v := range views {
 		at, _, m := c.GetViewData(v)
 		if wantGone[i] {
@@ -116,20 +116,14 @@ func TestCollector_RemoveOldViews(t *testing.T) {
 	}
 }
 
-func TestCollector_RemoveOldViews_Protected(t *testing.T) {
+func TestCollector_PendingEvaluations(t *testing.T) {
 	c := NewCollector()
-	old := ViewKey{N: 1, R: 0}   // behind threshold but protected (own proposal)
-	stale := ViewKey{N: 2, R: 0} // behind threshold, not protected
-	for _, v := range []ViewKey{old, stale} {
+	for _, v := range []ViewKey{{N: 1, R: 0}, {N: 5, R: 0}, {N: 5, R: 2}} {
 		c.AddPrepreparedTime(v, time.Now(), common.Hash{})
 	}
 
-	c.RemoveOldViews(ViewKey{N: 3, R: 0}, map[uint64]struct{}{old.N: {}})
-
-	at, _, _ := c.GetViewData(old)
-	assert.False(t, at.IsZero(), "protected own-proposal view must survive pruning")
-	at, _, _ = c.GetViewData(stale)
-	assert.True(t, at.IsZero(), "unprotected stale view must be pruned")
+	assert.ElementsMatch(t, []uint64{1, 5}, c.PendingEvaluations(0)) // both rounds of 5 collapse
+	assert.Equal(t, []uint64{5}, c.PendingEvaluations(2))
 }
 
 func TestViewKey_Cmp(t *testing.T) {

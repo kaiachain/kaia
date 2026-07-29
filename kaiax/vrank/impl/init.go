@@ -40,7 +40,7 @@ const (
 
 	broadcastChSize = 2048
 	maxRound        = vrank.MaxRound
-	maxWindow       = uint64(10) // max collection window [N-10, N+10]
+	maxWindow       = uint64(10) // how far back a candidate keeps seen VRankPreprepare views
 
 	scoreCacheSize = 1024
 )
@@ -74,13 +74,9 @@ type VRankModule struct {
 
 	nodeID common.Address
 
-	// only for the proposer, which collects VRankCandidate replies to its own VRankPreprepare
+	// only for the proposer, which collects VRankCandidate replies to its own VRankPreprepare.
+	// Its views are also the blocks pending report. In-memory — a restart drops them (fail-safe).
 	collector *vrank.Collector
-
-	// ownProposals: blocks this node proposed this epoch, pending report. Their collector views are
-	// kept past the prune window until reported. In-memory — a restart drops them (fail-safe).
-	ownProposals   map[uint64]struct{}
-	ownProposalsMu sync.Mutex
 
 	// only for candidates
 	seenPreprepare   map[vrank.ViewKey]common.Hash
@@ -100,7 +96,6 @@ func NewVRankModule() *VRankModule {
 		broadcastCh:    make(chan *vrank.VRankBroadcastEvent, broadcastChSize),
 		stopCh:         make(chan struct{}),
 		collector:      vrank.NewCollector(),
-		ownProposals:   make(map[uint64]struct{}),
 		seenPreprepare: make(map[vrank.ViewKey]common.Hash),
 		pfsCache:       pfsCache,
 		cpMatrixCache:  cpMatrixCache,

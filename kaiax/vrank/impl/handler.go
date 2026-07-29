@@ -32,8 +32,8 @@ import (
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
-// HandleIstanbulPreprepare records the view when this node is a validator for the next block.
-// When proposer, it broadcasts VRankPreprepare to candidates.
+// HandleIstanbulPreprepare records the view and broadcasts VRankPreprepare to the candidates when
+// this node is the proposer of the next block. Other nodes do nothing.
 func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *bft.View) {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(block.Number()) {
 		return
@@ -46,70 +46,26 @@ func (v *VRankModule) HandleIstanbulPreprepare(block *types.Block, view *bft.Vie
 	// already sent to validators), and it records the preprepared time to measure those replies.
 	// It reports the result from its own next proposal, so no other node needs to collect.
 	if v.isProposer(blockNum, view.Round.Uint64()) {
-		v.recordOwnProposal(blockNum)
 		v.collector.AddPrepreparedTime(vrank.ViewKey{N: blockNum, R: uint8(view.Round.Uint64())}, prepreparedAt, block.Hash())
+		// Prior-epoch views can never be reported. The report-time prune would drop them too, but a
+		// node that keeps losing its rounds has nothing to report and never gets there.
+		v.collector.PruneReported(calcEpochStart(blockNum, v.vrankEpoch()))
 		v.BroadcastVRankPreprepare(&vrank.VRankPreprepare{Block: block, View: view})
-	}
-
-	if blockNum > maxWindow {
-		v.collector.RemoveOldViews(vrank.ViewKey{N: blockNum - maxWindow, R: maxRound}, v.ownProposalSnapshot())
-	}
-}
-
-// recordOwnProposal marks blockNum as proposed by this node so its collector view survives until
-// the next proposal reports it. Prior-epoch entries are dropped (CFS is epoch-local).
-func (v *VRankModule) recordOwnProposal(blockNum uint64) {
-	epochStart := calcEpochStart(blockNum, v.vrankEpoch())
-	v.ownProposalsMu.Lock()
-	defer v.ownProposalsMu.Unlock()
-	v.ownProposals[blockNum] = struct{}{}
-	for n := range v.ownProposals {
-		if n < epochStart {
-			delete(v.ownProposals, n)
-		}
-	}
-}
-
-// ownProposalSnapshot copies the retained own-proposal block numbers (protected from pruning).
-func (v *VRankModule) ownProposalSnapshot() map[uint64]struct{} {
-	v.ownProposalsMu.Lock()
-	defer v.ownProposalsMu.Unlock()
-	snap := make(map[uint64]struct{}, len(v.ownProposals))
-	for n := range v.ownProposals {
-		snap[n] = struct{}{}
-	}
-	return snap
-}
-
-// pruneReportedProposals drops entries strictly below upto. The selected block is kept (strict <)
-// so a round change or a failed commit still re-reports it; it goes only once a later block supersedes it.
-func (v *VRankModule) pruneReportedProposals(upto uint64) {
-	v.ownProposalsMu.Lock()
-	defer v.ownProposalsMu.Unlock()
-	for n := range v.ownProposals {
-		if n < upto {
-			delete(v.ownProposals, n)
-		}
 	}
 }
 
 // selectReportTarget returns the most recent block this node produced before number in the same
 // epoch. Rounds it proposed but another validator committed are skipped (committed-header proposer
-// check). ok=false when none exists (first proposal, or a restart cleared the set).
+// check). ok=false when none exists (first proposal, or a restart cleared the collector).
 func (v *VRankModule) selectReportTarget(number uint64) (targetNum, round uint64, ok bool) {
-	epochStart := calcEpochStart(number, v.vrankEpoch())
-	v.ownProposalsMu.Lock()
-	cands := make([]uint64, 0, len(v.ownProposals))
-	for n := range v.ownProposals {
-		if n < number && n >= epochStart {
-			cands = append(cands, n)
-		}
-	}
-	v.ownProposalsMu.Unlock()
-
+	cands := v.collector.PendingEvaluations(calcEpochStart(number, v.vrankEpoch()))
 	slices.Sort(cands)
 	for i := len(cands) - 1; i >= 0; i-- {
 		n := cands[i]
+		// The collector may already hold the view of the block being built; report only on prior ones.
+		if n >= number {
+			continue
+		}
 		proposer, r, err := v.proposerOf(n)
 		if err != nil {
 			continue
