@@ -148,6 +148,14 @@ func TestVerifyHeader(t *testing.T) {
 		assert.ErrorIs(t, v.VerifyHeader(h, nil), vrank.ErrInvalidVRankFormat)
 	})
 
+	t.Run("candidate membership is checked against the reporting block's epoch", func(t *testing.T) {
+		cn := newCN(t, withoutStart())
+		// The target is an earlier block of the same epoch, and CandTesting is epoch-stable.
+		cn.Valset.EXPECT().GetCandTesting(num-1).Return(candidates, nil).Times(1)
+
+		assert.NoError(t, cn.VRankModule.VerifyHeader(makeSelfReportHeader(t, num, []common.Address{C1}), nil))
+	})
+
 	t.Run("candidate lookup failure is returned", func(t *testing.T) {
 		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
 		valset.EXPECT().GetCandTesting(num-1).Return(nil, assert.AnError).AnyTimes()
