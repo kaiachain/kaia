@@ -27,6 +27,18 @@ import (
 	"github.com/kaiachain/kaia/common"
 )
 
+// Genesis defaults for the ABv2 parameters. Chains may configure other values; these are
+// what homi writes and what tests build their genesis from.
+const (
+	DefaultValPausedTimeout        = time.Hour * 8
+	DefaultValIdleTimeout          = 30 * 24 * time.Hour
+	DefaultMaxNodeCount            = 100
+	DefaultMaxValActivePausedCount = 50
+	DefaultMaxCandReadyCount       = 3
+	DefaultPfsThreshold            = 2
+	DefaultCfsThreshold            = 300
+)
+
 type NodeState uint8
 
 const (

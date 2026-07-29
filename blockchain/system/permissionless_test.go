@@ -17,7 +17,6 @@
 package system
 
 import (
-	"crypto/ecdsa"
 	"math/big"
 	"testing"
 
@@ -25,81 +24,31 @@ import (
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
 	"github.com/kaiachain/kaia/common"
-	abv2data "github.com/kaiachain/kaia/contracts/bindings/abv2data"
 	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/kaiax/valset"
 	"github.com/kaiachain/kaia/log"
-	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// makeTestPermissionlessConfig delegates to the exported MakeTestPermissionlessConfig.
+// makeTestPermissionlessConfig creates an AllocPermissionlessConfig with n validators.
 func makeTestPermissionlessConfig(n int) *AllocPermissionlessConfig {
-	config, _ := MakeTestPermissionlessConfig(n)
-	return config
-}
-
-// MakeTestPermissionlessConfig creates a test AllocPermissionlessConfig with n validators.
-func MakeTestPermissionlessConfig(n int) (*AllocPermissionlessConfig, []*ecdsa.PrivateKey) {
 	ownerKey, _ := crypto.GenerateKey()
-	owner := crypto.PubkeyToAddress(ownerKey.PublicKey)
-
-	nodeKeys := make([]*ecdsa.PrivateKey, n)
-	nodeIds := make([]common.Address, n)
-	nodeInfos := make([]addressbookv2contract.NodeInfo, n)
-	stakeAmts := make([]*big.Int, n)
-	stakeAmt := new(big.Int).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA))
-
-	for i := 0; i < n; i++ {
+	specs := make([]ABv2NodeSpec, n)
+	for i := range specs {
 		key, _ := crypto.GenerateKey()
-		addr := crypto.PubkeyToAddress(key.PublicKey)
-		nodeKeys[i] = key
-		blsSk, _ := bls.DeriveFromECDSA(key)
-		blsPk := blsSk.PublicKey()
-		blsPop := bls.PopProve(blsSk)
-		pub := blsPk.Marshal()
-		pop := blsPop.Marshal()
-
-		nodeIds[i] = addr
-		stakeAmts[i] = new(big.Int).Set(stakeAmt)
-		nodeInfos[i] = addressbookv2contract.NodeInfo{
-			Manager:       addr,
-			RewardAddress: common.BytesToAddress(crypto.Keccak256(addr.Bytes())),
-			VoterAddress:  addr,
-			TimeoutAt:     new(big.Int),
-			GcId:          big.NewInt(int64(i + 1)),
+		blsKey, _ := bls.DeriveFromECDSA(key)
+		specs[i] = ABv2NodeSpec{
+			NodeID: crypto.PubkeyToAddress(key.PublicKey),
 			BlsInfo: addressbookv2contract.BlsPublicKeyInfo{
-				PublicKey: pub,
-				Pop:       pop,
+				PublicKey: blsKey.PublicKey().Marshal(),
+				Pop:       bls.PopProve(blsKey).Marshal(),
 			},
-			State: valset.ValActive.ToUint8(),
 		}
 	}
-
-	return &AllocPermissionlessConfig{
-		Owner:     owner,
-		NodeIds:   nodeIds,
-		NodeInfos: nodeInfos,
-		StakeAmts: stakeAmts,
-		DataConfig: abv2data.IABv2DataContractInitData{
-			InitialOwner:            owner,
-			InitialSuspender:        owner,
-			InitialConfigurator:     owner,
-			PfsThreshold:            big.NewInt(2),
-			CfsThreshold:            big.NewInt(300),
-			PauseTimeout:            big.NewInt(8 * 3600),   // 8h
-			IdleTimeout:             big.NewInt(30 * 86400), // 30d
-			MaxNodeCount:            big.NewInt(100),
-			MaxValActivePausedCount: big.NewInt(50),
-			MaxCandReadyCount:       big.NewInt(3),
-			KefAddress:              common.HexToAddress("0x1111"),
-			KifAddress:              common.HexToAddress("0x2222"),
-			KpfAddress:              common.HexToAddress("0x3333"),
-		},
-	}, nodeKeys
+	return MakeABv2AllocConfig(crypto.PubkeyToAddress(ownerKey.PublicKey), specs)
 }
 
 // verifyPermissionlessAlloc checks alloc-level properties and ABv2 contract state.
