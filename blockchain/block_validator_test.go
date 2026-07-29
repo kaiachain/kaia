@@ -23,6 +23,7 @@
 package blockchain
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"math/big"
 	"runtime"
@@ -44,6 +45,7 @@ import (
 	"github.com/kaiachain/kaia/params"
 	"github.com/kaiachain/kaia/storage/database"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type verifySealsTestSealer struct {
@@ -432,6 +434,68 @@ func TestVerifySealsPermissionlessRejectsNonCommitteeCommitter(t *testing.T) {
 		mValset: mValset,
 	}
 
+	assert.ErrorIs(t, validator.verifySeals(header), istanbul.ErrInvalidCommittedSeals)
+}
+
+// roundBoundSealer stands in for the post-permissionless dynamicSealer: it always recovers
+// with the round-bound preimage. The per-fork selection itself is covered by consensus/engine,
+// which this package cannot import (engine -> istanbul/backend -> blockchain).
+type roundBoundSealer struct {
+	*istanbul.IstanbulSealer
+}
+
+func (s *roundBoundSealer) Committers(header *types.Header) ([]common.Address, error) {
+	return s.IstanbulSealer.CommittersWithRound(header)
+}
+
+// TestVerifySealsPermissionlessRejectsMutatedRound runs real committer recovery through
+// verifySeals: the round byte lives in the vanity that HeaderHash zeroes, so mutating it
+// leaves the block hash and the author seal intact and only the committed-seal preimage
+// changes. Post-permissionless that must cost the block its committers.
+func TestVerifySealsPermissionlessRejectsMutatedRound(t *testing.T) {
+	const round = int64(3)
+	var (
+		blockNum = uint64(7)
+		keys     = make([]*ecdsa.PrivateKey, 4) // Quorum(4, 4) == 3, so 4 valid seals pass
+		addrs    = make([]common.Address, 4)
+	)
+	for i := range keys {
+		key, err := crypto.GenerateKey()
+		require.NoError(t, err)
+		keys[i], addrs[i] = key, crypto.PubkeyToAddress(key.PublicKey)
+	}
+
+	config := params.TestKaiaConfig("permissionless")
+	sealer := &roundBoundSealer{istanbul.NewSealerImpl(keys[0])} // keys[0] proposes
+
+	header := &types.Header{Number: new(big.Int).SetUint64(blockNum)}
+	require.NoError(t, sealer.WriteValidators(header, addrs))
+	sealer.WriteRound(header, round)
+	authorSeal, err := sealer.MakeAuthorSeal(header)
+	require.NoError(t, err)
+	require.NoError(t, sealer.WriteAuthorSeal(header, authorSeal))
+
+	seals := make([][]byte, len(keys))
+	for i, key := range keys {
+		preimage := istanbul.PrepareCommittedSealWithRound(sealer.HeaderHash(header), byte(round))
+		seals[i], err = crypto.Sign(crypto.Keccak256(preimage), key)
+		require.NoError(t, err)
+	}
+	require.NoError(t, sealer.WriteCommittedSeals(header, seals))
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mGov := mock_gov.NewMockGovModule(ctrl)
+	mValset := mock_valset.NewMockValsetModule(ctrl)
+	mValset.EXPECT().GetProposer(blockNum, gomock.Any()).Return(addrs[0], nil).AnyTimes()
+	mValset.EXPECT().GetCommittee(blockNum, gomock.Any()).Return(addrs, nil).AnyTimes()
+
+	validator := &BlockValidator{config: config, sealer: sealer, mGov: mGov, mValset: mValset}
+
+	require.NoError(t, validator.verifySeals(header))
+
+	sealer.WriteRound(header, round+1)
 	assert.ErrorIs(t, validator.verifySeals(header), istanbul.ErrInvalidCommittedSeals)
 }
 
