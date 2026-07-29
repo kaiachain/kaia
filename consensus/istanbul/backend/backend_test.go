@@ -69,6 +69,7 @@ func TestBackend_GetTargetReceivers(t *testing.T) {
 	configItems = append(configItems, kaiaCompatibleBlock(nil))
 	configItems = append(configItems, pragueCompatibleBlock(nil))
 	configItems = append(configItems, osakaCompatibleBlock(nil))
+	configItems = append(configItems, permissionlessCompatibleBlock(nil))
 	configItems = append(configItems, blockPeriod(0)) // set block period to 0 to prevent creating future block
 	configItems = append(configItems, mStaking)
 
@@ -300,7 +301,7 @@ func TestBackend_VerifyEnforcesBlockSizeCap(t *testing.T) {
 
 	// Pre-Osaka: the cap is gated on IsOsakaForkEnabled, so it must not apply.
 	t.Run("pre-osaka", func(t *testing.T) {
-		chain, engine := newBlockChain(t, 1, osakaCompatibleBlock(nil))
+		chain, engine := newBlockChain(t, 1, osakaCompatibleBlock(nil), permissionlessCompatibleBlock(nil))
 		defer chain.Stop()
 		defer engine.Stop()
 

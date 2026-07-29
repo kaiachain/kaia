@@ -565,6 +565,7 @@ func TestVerifyBlockBodyForOsakaFork(t *testing.T) {
 	config.KaiaCompatibleBlock = common.Big1
 	config.PragueCompatibleBlock = common.Big1
 	config.OsakaCompatibleBlock = common.Big1
+	config.PermissionlessCompatibleBlock = common.Big1
 	var (
 		testdb  = database.NewMemoryDBManager()
 		gspec   = &Genesis{Config: config}
