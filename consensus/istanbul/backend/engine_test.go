@@ -37,6 +37,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
+	abv2data "github.com/kaiachain/kaia/contracts/bindings/abv2data"
+	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/datasync/downloader"
@@ -86,6 +88,8 @@ type (
 	kaiaCompatibleBlock      *big.Int
 	pragueCompatibleBlock    *big.Int
 	osakaCompatibleBlock     *big.Int
+
+	permissionlessCompatibleBlock *big.Int
 )
 
 type (
@@ -139,6 +143,58 @@ func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, [
 	return nodeKeys, addrs
 }
 
+// permissionlessGenesisConfig describes the test validators for AllocPermissionless.
+// Each node's BLS key is derived from its consensus key, so the keys ABv2 publishes are
+// the ones the nodes actually sign with.
+func permissionlessGenesisConfig(keys []*ecdsa.PrivateKey, nodes []common.Address) *system.AllocPermissionlessConfig {
+	owner := common.HexToAddress("0xffff")
+	stakeAmt := new(big.Int).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA))
+
+	nodeInfos := make([]addressbookv2contract.NodeInfo, len(nodes))
+	stakeAmts := make([]*big.Int, len(nodes))
+	for i, addr := range nodes {
+		blsKey, err := bls.DeriveFromECDSA(keys[i])
+		if err != nil {
+			panic(err)
+		}
+		nodeInfos[i] = addressbookv2contract.NodeInfo{
+			Manager:       addr,
+			RewardAddress: common.BytesToAddress(crypto.Keccak256(addr.Bytes())),
+			VoterAddress:  addr,
+			TimeoutAt:     new(big.Int),
+			GcId:          big.NewInt(int64(i + 1)),
+			BlsInfo: addressbookv2contract.BlsPublicKeyInfo{
+				PublicKey: blsKey.PublicKey().Marshal(),
+				Pop:       bls.PopProve(blsKey).Marshal(),
+			},
+			State: valset.ValActive.ToUint8(),
+		}
+		stakeAmts[i] = new(big.Int).Set(stakeAmt)
+	}
+
+	return &system.AllocPermissionlessConfig{
+		Owner:     owner,
+		NodeIds:   append([]common.Address(nil), nodes...),
+		NodeInfos: nodeInfos,
+		StakeAmts: stakeAmts,
+		DataConfig: abv2data.IABv2DataContractInitData{
+			InitialOwner:            owner,
+			InitialSuspender:        owner,
+			InitialConfigurator:     owner,
+			PfsThreshold:            big.NewInt(2),
+			CfsThreshold:            big.NewInt(300),
+			PauseTimeout:            big.NewInt(8 * 3600),
+			IdleTimeout:             big.NewInt(30 * 86400),
+			MaxNodeCount:            big.NewInt(100),
+			MaxValActivePausedCount: big.NewInt(50),
+			MaxCandReadyCount:       big.NewInt(3),
+			KefAddress:              common.HexToAddress("0x1111"),
+			KifAddress:              common.HexToAddress("0x2222"),
+			KpfAddress:              common.HexToAddress("0x3333"),
+		},
+	}
+}
+
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.
@@ -183,6 +239,8 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 			genesis.Config.PragueCompatibleBlock = v
 		case osakaCompatibleBlock:
 			genesis.Config.OsakaCompatibleBlock = v
+		case permissionlessCompatibleBlock:
+			genesis.Config.PermissionlessCompatibleBlock = v
 		case proposerPolicy:
 			genesis.Config.Istanbul.ProposerPolicy = uint64(v)
 		case epoch:
@@ -237,8 +295,23 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	}
 	genesis.ExtraData = append([]byte(nil), genesisHeader.Extra...)
 
+	switch {
+	case genesis.Config.IsPermissionlessForkEnabled(common.Big0):
+		// Post-fork BLS keys come from ABv2, not KIP113 (randao.readBlsPermissionless), so the
+		// randao branch is dead here and its Registry must not overwrite this one.
+		alloc, err := system.AllocPermissionless(permissionlessGenesisConfig(nodeKeys, addrs))
+		if err != nil {
+			panic(err)
+		}
+		if genesis.Alloc == nil {
+			genesis.Alloc = make(blockchain.GenesisAlloc)
+		}
+		for addr, account := range alloc {
+			genesis.Alloc[addr] = account
+		}
+
 	// Set up Registry and KIP113 contracts for Randao fork if RandaoCompatibleBlock is set
-	if genesis.Config.RandaoCompatibleBlock != nil {
+	case genesis.Config.RandaoCompatibleBlock != nil:
 		// Generate BLS keys for all nodes
 		nodeBlsKeys := make([]bls.SecretKey, n)
 		for i := range n {
