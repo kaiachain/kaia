@@ -37,7 +37,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/istanbul"
-	abv2data "github.com/kaiachain/kaia/contracts/bindings/abv2data"
 	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
@@ -143,56 +142,24 @@ func setNodeKeys(n int, governingNode *ecdsa.PrivateKey) ([]*ecdsa.PrivateKey, [
 	return nodeKeys, addrs
 }
 
-// permissionlessGenesisConfig describes the test validators for AllocPermissionless.
-// Each node's BLS key is derived from its consensus key, so the keys ABv2 publishes are
-// the ones the nodes actually sign with.
-func permissionlessGenesisConfig(keys []*ecdsa.PrivateKey, nodes []common.Address) *system.AllocPermissionlessConfig {
-	owner := common.HexToAddress("0xffff")
-	stakeAmt := new(big.Int).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA))
-
-	nodeInfos := make([]addressbookv2contract.NodeInfo, len(nodes))
-	stakeAmts := make([]*big.Int, len(nodes))
-	for i, addr := range nodes {
-		blsKey, err := bls.DeriveFromECDSA(keys[i])
+// abv2SpecsFromKeys derives one ABv2 spec per validator, taking each BLS key from the
+// node's consensus key so ABv2 publishes the keys the nodes actually sign with.
+func abv2SpecsFromKeys(keys []*ecdsa.PrivateKey) []system.ABv2NodeSpec {
+	specs := make([]system.ABv2NodeSpec, len(keys))
+	for i, key := range keys {
+		blsKey, err := bls.DeriveFromECDSA(key)
 		if err != nil {
 			panic(err)
 		}
-		nodeInfos[i] = addressbookv2contract.NodeInfo{
-			Manager:       addr,
-			RewardAddress: common.BytesToAddress(crypto.Keccak256(addr.Bytes())),
-			VoterAddress:  addr,
-			TimeoutAt:     new(big.Int),
-			GcId:          big.NewInt(int64(i + 1)),
+		specs[i] = system.ABv2NodeSpec{
+			NodeID: crypto.PubkeyToAddress(key.PublicKey),
 			BlsInfo: addressbookv2contract.BlsPublicKeyInfo{
 				PublicKey: blsKey.PublicKey().Marshal(),
 				Pop:       bls.PopProve(blsKey).Marshal(),
 			},
-			State: valset.ValActive.ToUint8(),
 		}
-		stakeAmts[i] = new(big.Int).Set(stakeAmt)
 	}
-
-	return &system.AllocPermissionlessConfig{
-		Owner:     owner,
-		NodeIds:   append([]common.Address(nil), nodes...),
-		NodeInfos: nodeInfos,
-		StakeAmts: stakeAmts,
-		DataConfig: abv2data.IABv2DataContractInitData{
-			InitialOwner:            owner,
-			InitialSuspender:        owner,
-			InitialConfigurator:     owner,
-			PfsThreshold:            big.NewInt(2),
-			CfsThreshold:            big.NewInt(300),
-			PauseTimeout:            big.NewInt(8 * 3600),
-			IdleTimeout:             big.NewInt(30 * 86400),
-			MaxNodeCount:            big.NewInt(100),
-			MaxValActivePausedCount: big.NewInt(50),
-			MaxCandReadyCount:       big.NewInt(3),
-			KefAddress:              common.HexToAddress("0x1111"),
-			KifAddress:              common.HexToAddress("0x2222"),
-			KpfAddress:              common.HexToAddress("0x3333"),
-		},
-	}
+	return specs
 }
 
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a
@@ -299,7 +266,8 @@ func newBlockChain(t *testing.T, n int, items ...interface{}) (*blockchain.Block
 	case genesis.Config.IsPermissionlessForkEnabled(common.Big0):
 		// Post-fork BLS keys come from ABv2, not KIP113 (randao.readBlsPermissionless), so the
 		// randao branch is dead here and its Registry must not overwrite this one.
-		alloc, err := system.AllocPermissionless(permissionlessGenesisConfig(nodeKeys, addrs))
+		specs := abv2SpecsFromKeys(nodeKeys)
+		alloc, err := system.AllocPermissionless(system.MakeABv2AllocConfig(common.HexToAddress("0xffff"), specs))
 		if err != nil {
 			panic(err)
 		}

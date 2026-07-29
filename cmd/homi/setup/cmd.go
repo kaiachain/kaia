@@ -41,13 +41,11 @@ import (
 	"github.com/kaiachain/kaia/cmd/homi/docker/service"
 	"github.com/kaiachain/kaia/cmd/homi/genesis"
 	"github.com/kaiachain/kaia/common"
-	abv2data "github.com/kaiachain/kaia/contracts/bindings/abv2data"
 	addressbookv2contract "github.com/kaiachain/kaia/contracts/bindings/addressbookv2"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/kaiax/auction"
 	"github.com/kaiachain/kaia/kaiax/gasless"
 	"github.com/kaiachain/kaia/kaiax/valset"
-	valsetimpl "github.com/kaiachain/kaia/kaiax/valset/impl"
 	"github.com/kaiachain/kaia/log"
 	"github.com/kaiachain/kaia/networks/p2p/discover"
 	"github.com/kaiachain/kaia/params"
@@ -67,9 +65,8 @@ type GrafanaFile struct {
 }
 
 const (
-	defaultMaxReadyCandidateCount        = 3
-	defaultPfsThreshold                  = 2
-	defaultCfsThreshold                  = 300
+	defaultPfsThreshold                  = valset.DefaultPfsThreshold
+	defaultCfsThreshold                  = valset.DefaultCfsThreshold
 	defaultPermissionlessGenesisDeployer = "0xdeaddeaddeaddeaddeaddeaddeaddeaddeaddead"
 )
 
@@ -591,55 +588,25 @@ func makePermissionlessConfig(ctx *cli.Context, validatorAddrs []common.Address,
 	if !common.IsHexAddress(deployerStr) {
 		log.Fatalf("'%s' is not a valid permissionless genesis deployer address", deployerStr)
 	}
-	deployer := common.HexToAddress(deployerStr)
-	numValidators := len(validatorAddrs)
-	stakeAmt := new(big.Int).Mul(big.NewInt(5_000_000), big.NewInt(params.KAIA))
-
-	nodeInfos := make([]addressbookv2contract.NodeInfo, numValidators)
+	specs := make([]system.ABv2NodeSpec, len(validatorAddrs))
 	for i, addr := range validatorAddrs {
 		blsInfo := kip113Init.Infos[addr]
-		nodeInfos[i] = addressbookv2contract.NodeInfo{
-			Manager:       addr,
-			RewardAddress: common.BytesToAddress(crypto.Keccak256(addr.Bytes())),
-			VoterAddress:  addr,
-			TimeoutAt:     new(big.Int),
-			GcId:          big.NewInt(int64(i + 1)),
+		specs[i] = system.ABv2NodeSpec{
+			NodeID: addr,
 			BlsInfo: addressbookv2contract.BlsPublicKeyInfo{
 				PublicKey: blsInfo.PublicKey,
 				Pop:       blsInfo.Pop,
 			},
-			State: valset.ValActive.ToUint8(),
 		}
 	}
 
-	stakeAmts := make([]*big.Int, numValidators)
-	for i := range stakeAmts {
-		stakeAmts[i] = new(big.Int).Set(stakeAmt)
-	}
-
-	return &system.AllocPermissionlessConfig{
-		Owner:              owner,
-		Deployer:           deployer,
-		NodeIds:            validatorAddrs,
-		NodeInfos:          nodeInfos,
-		StakeAmts:          stakeAmts,
-		EpochBlockInterval: int64(ctx.Uint64(vrankEpochFlag.Name)),
-		DataConfig: abv2data.IABv2DataContractInitData{
-			InitialOwner:            owner,
-			InitialSuspender:        owner,
-			InitialConfigurator:     owner,
-			PfsThreshold:            big.NewInt(ctx.Int64(pfsThresholdFlag.Name)),
-			CfsThreshold:            big.NewInt(ctx.Int64(cfsThresholdFlag.Name)),
-			PauseTimeout:            big.NewInt(int64(valsetimpl.DefaultValPausedTimeout.Seconds())),
-			IdleTimeout:             big.NewInt(int64(valsetimpl.DefaultValIdleTimeout.Seconds())),
-			MaxNodeCount:            big.NewInt(int64(valsetimpl.DefaultMaxNodeCount)),
-			MaxValActivePausedCount: big.NewInt(int64(valsetimpl.DefaultMaxValActivePausedCount)),
-			MaxCandReadyCount:       big.NewInt(defaultMaxReadyCandidateCount),
-			KefAddress:              owner,
-			KifAddress:              owner,
-			KpfAddress:              owner,
-		},
-	}
+	// Start from the genesis defaults and overwrite what this command exposes as flags.
+	config := system.MakeABv2AllocConfig(owner, specs)
+	config.Deployer = common.HexToAddress(deployerStr)
+	config.EpochBlockInterval = int64(ctx.Uint64(vrankEpochFlag.Name))
+	config.DataConfig.PfsThreshold = big.NewInt(ctx.Int64(pfsThresholdFlag.Name))
+	config.DataConfig.CfsThreshold = big.NewInt(ctx.Int64(cfsThresholdFlag.Name))
+	return config
 }
 
 func allocateRegistry(ctx *cli.Context, genesisJson *blockchain.Genesis, owner common.Address, records map[string]common.Address) {

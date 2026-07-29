@@ -19,7 +19,6 @@ package impl
 import (
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/kaiachain/kaia/accounts/abi/bind/backends"
 	"github.com/kaiachain/kaia/blockchain"
@@ -29,13 +28,6 @@ import (
 	"github.com/kaiachain/kaia/blockchain/vm"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/kaiax/valset"
-)
-
-const (
-	DefaultValPausedTimeout        = time.Hour * 8
-	DefaultValIdleTimeout          = 30 * 24 * time.Hour
-	DefaultMaxNodeCount            = 100
-	DefaultMaxValActivePausedCount = 50
 )
 
 // #region getter
