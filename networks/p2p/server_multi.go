@@ -71,10 +71,11 @@ func (srv *MultiChannelServer) Stop() {
 	}
 
 	// Peers under assembly have no read loop to notice the shutdown.
+	var candidates []*conn
 	for id, connSet := range srv.CandidateConns {
 		for _, c := range connSet {
 			if c != nil {
-				c.close(DiscQuitting)
+				candidates = append(candidates, c)
 			}
 		}
 		delete(srv.CandidateConns, id)
@@ -85,6 +86,10 @@ func (srv *MultiChannelServer) Stop() {
 
 	// Unlock here to allow Server loops and dialsched loop to finish their remaining jobs, dialsched to finish its dial goroutines.
 	srv.lock.Unlock()
+
+	for _, c := range candidates {
+		c.close(DiscQuitting)
+	}
 
 	if srv.dialSched != nil {
 		srv.dialSched.Close() // Wait for dial attempts to finish.
@@ -348,13 +353,28 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 // Override BaseServer.handleAddPeerConn because multichannel peer admission
 // waits for the full candidate connection set and updates outbound metrics.
 func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
+	// close writes a disconnect reason under a write deadline, so it must not run under srv.lock.
+	// Registered before the unlock below to run after it.
+	var (
+		expired  []*conn
+		replaced *conn
+	)
+	defer func() {
+		for _, ec := range expired {
+			ec.close(DiscUselessPeer)
+		}
+		if replaced != nil {
+			replaced.close(DiscAlreadyConnected)
+		}
+	}()
+
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 
 	if !srv.running {
 		return errServerStopped
 	}
-	srv.expireCandidates(mclock.Now())
+	expired = srv.expireCandidates(mclock.Now())
 	err := srv.protoHandshakeChecks(srv.peers, c)
 	if err != nil {
 		return err
@@ -374,9 +394,7 @@ func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
 			srv.candidateSince[c.id] = mclock.Now()
 		}
 
-		if old := connSet[c.portOrder]; old != nil {
-			old.close(DiscAlreadyConnected)
-		}
+		replaced = connSet[c.portOrder]
 		connSet[c.portOrder] = c
 
 		pending := len(connSet)
@@ -416,23 +434,25 @@ func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
 	return nil
 }
 
-// expireCandidates drops multichannel peers whose remaining channels never arrived.
-// Nothing else does: CandidateConns is cleared only once every channel is present.
-// Caller must hold srv.lock.
-func (srv *MultiChannelServer) expireCandidates(now mclock.AbsTime) {
+// expireCandidates drops multichannel peers whose remaining channels never arrived and returns
+// their connections for the caller to close. Nothing else does: CandidateConns is cleared only
+// once every channel is present. Caller must hold srv.lock.
+func (srv *MultiChannelServer) expireCandidates(now mclock.AbsTime) []*conn {
+	var expired []*conn
 	for id, connSet := range srv.CandidateConns {
 		if now-srv.candidateSince[id] < mclock.AbsTime(candidateAssemblyTimeout) {
 			continue
 		}
 		for _, c := range connSet {
 			if c != nil {
-				c.close(DiscUselessPeer)
+				expired = append(expired, c)
 			}
 		}
 		delete(srv.CandidateConns, id)
 		delete(srv.candidateSince, id)
 		srv.logger.Debug("Dropped incomplete multichannel peer", "id", id)
 	}
+	return expired
 }
 
 // Overrides BaseServer.runPeer() because multichannel peers run all socket

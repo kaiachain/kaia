@@ -64,10 +64,28 @@ func newCandidateConn(t *testing.T, n int, portOrder PortOrder) (*conn, *testTra
 	}, tt
 }
 
+// lockProbeTransport records whether srv.lock was free while close ran. close writes a disconnect
+// reason under a 1s deadline, so a sweep holding the lock across it stalls the whole server.
+type lockProbeTransport struct {
+	transport
+	srv      *MultiChannelServer
+	lockFree bool
+}
+
+func (t *lockProbeTransport) close(err error) {
+	if t.srv.lock.TryLock() {
+		t.lockFree = true
+		t.srv.lock.Unlock()
+	}
+	t.transport.close(err)
+}
+
 func TestMultiChannelCandidatesExpire(t *testing.T) {
 	srv := newCandidateTestServer(t, 4)
 
 	stale, staleTransport := newCandidateConn(t, 1, ConnDefault)
+	probe := &lockProbeTransport{transport: stale.transport, srv: srv}
+	stale.transport = probe
 	require.NoError(t, srv.handleAddPeerConn(stale))
 	require.Len(t, srv.CandidateConns, 1)
 	require.Empty(t, srv.peers, "half-assembled peers must not be registered")
@@ -78,6 +96,7 @@ func TestMultiChannelCandidatesExpire(t *testing.T) {
 	require.NoError(t, srv.handleAddPeerConn(fresh))
 
 	assert.Equal(t, DiscUselessPeer, staleTransport.closeErr, "the expired candidate must be closed")
+	assert.True(t, probe.lockFree, "the sweep must not close connections under srv.lock")
 	require.Len(t, srv.CandidateConns, 1)
 	assert.NotContains(t, srv.CandidateConns, stale.id)
 	assert.Contains(t, srv.CandidateConns, fresh.id)
