@@ -28,6 +28,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
+	blstypes "github.com/kaiachain/kaia/crypto/bls/types"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
@@ -105,8 +106,8 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 			BlockNumber: block.NumberU64(),
 			Round:       uint8(view.Round.Uint64()),
 			BlockHash:   block.Hash(),
-			Sig:         [65]byte(sig),
-			BlsSig:      [96]byte(blsSig),
+			Sig:         [crypto.SignatureLength]byte(sig),
+			BlsSig:      [blstypes.SignatureLength]byte(blsSig),
 		})
 	}
 	return nil
@@ -281,7 +282,7 @@ func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPrepr
 		logger.Error("Sign VRankPreprepare failed", "blockNum", block.NumberU64())
 		return
 	}
-	vrankPreprepare.Sig = [65]byte(sig)
+	vrankPreprepare.Sig = [crypto.SignatureLength]byte(sig)
 	v.broadcast(candidates, vrankPreprepare)
 }
 
