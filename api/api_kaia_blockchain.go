@@ -55,7 +55,7 @@ var (
 	errPendingNotAllowed       = errors.New("pending is not allowed")
 	errRangeNil                = errors.New("range values should not be nil")
 	errStartNotPositive        = errors.New("start block number should be positive")
-	errEndLargetThanLatest     = errors.New("end block number should be smaller than the latest block number")
+	errEndLargerThanLatest     = errors.New("end block number should be smaller than the latest block number")
 	errStartLargerThanEnd      = errors.New("start should be smaller than end")
 	errRequestedBlocksTooLarge = errors.New("number of requested blocks should be smaller than 50")
 	errNoCypressCreditContract = errors.New("no mainnet credit contract")
@@ -318,7 +318,7 @@ func (s *KaiaBlockChainAPI) GetBlockWithConsensusInfoByNumberRange(ctx context.C
 	eChain := s.b.CurrentBlock().Number().Int64()
 	if endNum > eChain {
 		logger.Trace("end should be smaller than the latest block number", "end", end, "eChain", eChain)
-		return nil, errEndLargetThanLatest
+		return nil, errEndLargerThanLatest
 	}
 
 	if startNum > endNum {

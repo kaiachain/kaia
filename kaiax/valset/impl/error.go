@@ -36,7 +36,7 @@ var (
 	errPendingNotAllowed       = errors.New("pending is not allowed")
 	errInternalError           = errors.New("internal error")
 	errStartNotPositive        = errors.New("start block number should be positive")
-	errEndLargetThanLatest     = errors.New("end block number should be smaller than the latest block number")
+	errEndLargerThanLatest     = errors.New("end block number should be smaller than the latest block number")
 	errStartLargerThanEnd      = errors.New("start should be smaller than end")
 	errRequestedBlocksTooLarge = errors.New("number of requested blocks should be smaller than 50")
 	errRangeNil                = errors.New("range values should not be nil")
