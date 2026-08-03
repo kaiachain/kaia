@@ -191,7 +191,13 @@ func (c *core) finalizeMessage(msg *bft.Message) ([]byte, error) {
 		if err = msg.Decode(&sub); err != nil {
 			return nil, err
 		}
-		if msg.CommittedSeal, err = c.backend.Sealer().MakeCommittedSealFromHash(sub.Digest); err != nil {
+		// Post-permissionless: bind the round into the committed seal.
+		if c.backend.IsPermissionlessAt(sub.View.Sequence.Uint64()) {
+			msg.CommittedSeal, err = c.backend.Sealer().MakeCommittedSealFromHashWithRound(sub.Digest, byte(sub.View.Round.Uint64()))
+		} else {
+			msg.CommittedSeal, err = c.backend.Sealer().MakeCommittedSealFromHash(sub.Digest)
+		}
+		if err != nil {
 			return nil, err
 		}
 	}

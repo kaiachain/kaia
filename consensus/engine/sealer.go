@@ -73,7 +73,18 @@ func (s *dynamicSealer) Committers(header *types.Header) ([]common.Address, erro
 	if header == nil || header.Number == nil {
 		return nil, consensus.ErrUnknownBlock
 	}
+	// Post-permissionless committed seals bind the round; recover with the matching preimage.
+	if s.chainConfig.IsPermissionlessForkEnabled(header.Number) {
+		return s.implAt(header.Number.Uint64()).CommittersWithRound(header)
+	}
 	return s.implAt(header.Number.Uint64()).Committers(header)
+}
+
+func (s *dynamicSealer) CommittersWithRound(header *types.Header) ([]common.Address, error) {
+	if header == nil || header.Number == nil {
+		return nil, consensus.ErrUnknownBlock
+	}
+	return s.implAt(header.Number.Uint64()).CommittersWithRound(header)
 }
 
 func (s *dynamicSealer) Vanity(header *types.Header) ([]byte, error) {

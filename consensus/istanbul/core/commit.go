@@ -98,7 +98,11 @@ func (c *core) handleCommit(msg *bft.Message, src common.Address) error {
 	// Verify msg.CommittedSeal is the sender's signature over the proposal's
 	// committed-seal preimage. Without this, an arbitrary seal would be copied verbatim into the sealed block.
 	// commit.Digest is the proposal hash, already validated by verifyCommit above.
-	committer, err := istanbul.GetSignatureAddress(istanbul.PrepareCommittedSeal(commit.Digest), msg.CommittedSeal)
+	committedSealPreimage := istanbul.PrepareCommittedSeal(commit.Digest)
+	if c.backend.IsPermissionlessAt(commit.View.Sequence.Uint64()) {
+		committedSealPreimage = istanbul.PrepareCommittedSealWithRound(commit.Digest, byte(commit.View.Round.Uint64()))
+	}
+	committer, err := istanbul.GetSignatureAddress(committedSealPreimage, msg.CommittedSeal)
 	if err != nil || committer != src {
 		logger.Warn("invalid committed seal in commit message", "sender", src.String(), "recovered", committer.String(), "err", err)
 		return errInvalidCommittedSeal

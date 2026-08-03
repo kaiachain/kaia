@@ -235,19 +235,21 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 	if err != nil {
 		return err
 	}
-	committers, err := v.sealer.Committers(header)
-	if err != nil {
-		return err
-	}
-	if len(committers) == 0 {
-		return istanbul.ErrEmptyCommittedSeals
-	}
 
 	blockNum := header.Number.Uint64()
 
 	var rules params.Rules
 	if v.config != nil {
 		rules = v.config.Rules(new(big.Int).SetUint64(blockNum))
+	}
+
+	// Committers is fork-aware: post-permissionless it recovers with the round-bound preimage.
+	committers, err := v.sealer.Committers(header)
+	if err != nil {
+		return err
+	}
+	if len(committers) == 0 {
+		return istanbul.ErrEmptyCommittedSeals
 	}
 
 	// Skip module-dependent seal validation when gov/valset modules are not registered.
@@ -299,14 +301,12 @@ func (v *BlockValidator) verifySeals(header *types.Header) error {
 		return consensus.ErrUnauthorized
 	}
 
-	signerSet := qualifiedSet.Copy()
-	if !rules.IsPermissionless {
-		council, err := v.mValset.GetCouncil(blockNum)
-		if err != nil {
-			return err
-		}
-		signerSet = valset.NewAddressSet(council).Copy()
+	// Reached only pre-permissionless (post-fork returns above); count seals against the council.
+	council, err := v.mValset.GetCouncil(blockNum)
+	if err != nil {
+		return err
 	}
+	signerSet := valset.NewAddressSet(council).Copy()
 	validSeal, err := countValidCommittedSeals(committers, signerSet)
 	if err != nil {
 		return err

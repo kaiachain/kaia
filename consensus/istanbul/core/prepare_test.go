@@ -46,7 +46,7 @@ func TestCore_sendPrepare(t *testing.T) {
 		{"valid case", 0, true},
 		{"invalid case - not committee", 2, false},
 	} {
-		mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs)
+		mockBackend, mockCtrl, mockValset, mockGov := newMockBackend(t, validatorAddrs, false)
 		if tc.valid {
 			mockBackend.EXPECT().Sign(gomock.Any()).Return(nil, nil).AnyTimes()
 			mockBackend.EXPECT().Broadcast(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()

@@ -178,6 +178,20 @@ func (mr *MockBackendMockRecorder) NodeType() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NodeType", reflect.TypeOf((*MockBackend)(nil).NodeType))
 }
 
+// IsPermissionlessAt mocks base method.
+func (m *MockBackend) IsPermissionlessAt(num uint64) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsPermissionlessAt", num)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsPermissionlessAt indicates an expected call of IsPermissionlessAt.
+func (mr *MockBackendMockRecorder) IsPermissionlessAt(num interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPermissionlessAt", reflect.TypeOf((*MockBackend)(nil).IsPermissionlessAt), num)
+}
+
 // Sealer mocks base method.
 func (m *MockBackend) Sealer() *istanbul.IstanbulSealer {
 	m.ctrl.T.Helper()
