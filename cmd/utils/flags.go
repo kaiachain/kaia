@@ -306,13 +306,6 @@ var (
 		EnvVars:  []string{"KLAYTN_TXPOOL_LIFETIME", "KAIA_TXPOOL_LIFETIME"},
 		Category: "TXPOOL",
 	}
-	// PN specific txpool settings
-	TxPoolSpamThrottlerDisableFlag = &cli.BoolFlag{
-		Name:    "txpool.spamthrottler.disable",
-		Usage:   "Disable txpool spam throttler prototype",
-		Aliases: []string{},
-		EnvVars: []string{"KLAYTN_TXPOOL_SPAMTHROTTLER_DISABLE", "KAIA_TXPOOL_SPAMTHROTTLER_DISABLE"},
-	}
 
 	// KES
 	KESNodeTypeServiceFlag = &cli.BoolFlag{
@@ -1127,7 +1120,7 @@ var (
 	// Network Settings
 	NodeTypeFlag = &cli.StringFlag{
 		Name:    "nodetype",
-		Usage:   "Kaia node type (consensus node (cn), proxy node (pn), endpoint node (en))",
+		Usage:   "Kaia node type (consensus node (cn), endpoint node (en))",
 		Value:   "en",
 		Aliases: []string{},
 		EnvVars: []string{"KLAYTN_NODETYPE", "KAIA_NODETYPE"},
