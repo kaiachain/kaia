@@ -29,6 +29,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
+	blstypes "github.com/kaiachain/kaia/crypto/bls/types"
 	mock_randao "github.com/kaiachain/kaia/kaiax/randao/mock"
 	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
@@ -37,20 +38,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func signVRankCandidate(t *testing.T, m *VRankModule, key *ecdsa.PrivateKey, blsKey bls.SecretKey, blockNum uint64, round uint8, blockHash common.Hash) (sig []byte, blsSig []byte) {
+func signVRankCandidate(t *testing.T, m *VRankModule, key *ecdsa.PrivateKey, blsKey bls.SecretKey, blockNum uint64, round uint8, blockHash common.Hash) ([crypto.SignatureLength]byte, [blstypes.SignatureLength]byte) {
 	t.Helper()
 	sigHash := m.vrankCandidateSigHash(blockNum, round, blockHash)
 	sig, err := crypto.Sign(sigHash.Bytes(), key)
 	require.NoError(t, err)
-	blsSig = bls.Sign(blsKey, sigHash.Bytes()).Marshal()
-	return sig, blsSig
+	blsSig := bls.Sign(blsKey, sigHash.Bytes()).Marshal()
+	return [crypto.SignatureLength]byte(sig), [blstypes.SignatureLength]byte(blsSig)
 }
 
-func signVRankPreprepare(t *testing.T, m *VRankModule, key *ecdsa.PrivateKey, blockNum uint64, round uint8, blockHash common.Hash) []byte {
+func signVRankPreprepare(t *testing.T, m *VRankModule, key *ecdsa.PrivateKey, blockNum uint64, round uint8, blockHash common.Hash) [crypto.SignatureLength]byte {
 	sigHash := m.vrankPreprepareSigHash(blockNum, round, blockHash)
 	sig, err := crypto.Sign(sigHash.Bytes(), key)
 	require.NoError(t, err)
-	return sig
+	return [crypto.SignatureLength]byte(sig)
 }
 
 // newCNMulti builds n CNs sharing one fresh valset/randao mock. Each subtest gets its own
@@ -416,14 +417,14 @@ func TestHandleVRankCandidate(t *testing.T) {
 	)
 	t.Run("permissionless fork is disabled", func(t *testing.T) {
 		val := newCN(t, withHardfork("osaka"))
-		val.VRankModule.HandleVRankCandidate(&vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: []byte{}})
+		val.VRankModule.HandleVRankCandidate(&vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: [crypto.SignatureLength]byte{}})
 		mustNotPop(t, val.sub)
 	})
 
 	t.Run("no nodes should broadcast", func(t *testing.T) {
 		cns, valset, _ := newCNMulti(t, 3)
 		proposer, nonProposer, candidate := cns[0], cns[1], cns[2]
-		msg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: []byte{}}
+		msg := vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: uint8(view1_0.Round.Uint64()), BlockHash: block1.Hash(), Sig: [crypto.SignatureLength]byte{}}
 
 		valset.EXPECT().GetCommittee(uint64(1), uint64(0)).Return([]common.Address{proposer.Addr, nonProposer.Addr}, nil).Times(3)
 		valset.EXPECT().GetProposer(uint64(1), uint64(0)).Return(proposer.Addr, nil).Times(3)
@@ -595,7 +596,7 @@ func TestHandleVRankCandidate(t *testing.T) {
 
 	t.Run("corrupt BLS sig bytes are rejected", func(t *testing.T) {
 		val, cand := newBLSSetup()
-		randomBlsSig := make([]byte, 96)
+		randomBlsSig := [blstypes.SignatureLength]byte{}
 		sig, _ := signVRankCandidate(t, cand.VRankModule, cand.Key, cand.BlsKey, block1.NumberU64(), 0, block1.Hash())
 		msg := &vrank.VRankCandidate{BlockNumber: block1.NumberU64(), Round: 0, BlockHash: block1.Hash(), Sig: sig, BlsSig: randomBlsSig}
 		assert.ErrorIs(t, val.VRankModule.HandleVRankCandidate(msg), vrank.ErrInvalidCandidateBlsSig)

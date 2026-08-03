@@ -22,6 +22,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/crypto"
+	blstypes "github.com/kaiachain/kaia/crypto/bls/types"
 	"github.com/kaiachain/kaia/rlp"
 )
 
@@ -81,15 +83,15 @@ type VRankBroadcastEvent struct {
 type VRankPreprepare struct {
 	Block *types.Block
 	View  *bft.View
-	Sig   []byte // Sign(vrankPreprepareSigHash(), nodeKey)
+	Sig   [crypto.SignatureLength]byte // Sign(vrankPreprepareSigHash(), nodeKey)
 }
 
 type VRankCandidate struct {
 	BlockNumber uint64
 	Round       uint8
 	BlockHash   common.Hash
-	Sig         []byte // Sign(vrankCandidateSigHash(), nodeKey)
-	BlsSig      []byte // Sign(vrankCandidateSigHash(), blsKey)
+	Sig         [crypto.SignatureLength]byte   // Sign(vrankCandidateSigHash(), nodeKey)
+	BlsSig      [blstypes.SignatureLength]byte // Sign(vrankCandidateSigHash(), blsKey)
 }
 
 func EncodeReport(report []common.Address) ([]byte, error) {

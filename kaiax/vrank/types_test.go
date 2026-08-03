@@ -17,10 +17,18 @@
 package vrank
 
 import (
+	"bytes"
+	"math/big"
 	"testing"
 
+	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	"github.com/kaiachain/kaia/consensus/bft"
+	"github.com/kaiachain/kaia/crypto"
+	blstypes "github.com/kaiachain/kaia/crypto/bls/types"
+	"github.com/kaiachain/kaia/rlp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEncodeDecodeReport(t *testing.T) {
@@ -61,4 +69,68 @@ func TestEncodeAddressList_EmptyList(t *testing.T) {
 	dec, err := DecodeReport(enc)
 	assert.NoError(t, err)
 	assert.Empty(t, dec)
+}
+
+// The pre-fixed-size shapes. A wrong signature length is only expressible from here.
+type varSizeCandidate struct {
+	BlockNumber uint64
+	Round       uint8
+	BlockHash   common.Hash
+	Sig         []byte
+	BlsSig      []byte
+}
+
+type varSizePreprepare struct {
+	Block *types.Block
+	View  *bft.View
+	Sig   []byte
+}
+
+// The fixed-size fields are the only length guard: node/cn dropped its check for VRankCandidate
+// and never had one for VRankPreprepare.
+func TestVRankRLPSignatureLengths(t *testing.T) {
+	const (
+		sigLen = crypto.SignatureLength
+		blsLen = blstypes.SignatureLength
+	)
+	var (
+		block   = types.NewBlockWithHeader(&types.Header{Number: big.NewInt(1)})
+		view    = &bft.View{Sequence: big.NewInt(1), Round: big.NewInt(0)}
+		bytesOf = func(n int) []byte { return bytes.Repeat([]byte{0x11}, n) }
+		cand    = func(sig, bls int) any {
+			return &varSizeCandidate{BlockNumber: 1, Sig: bytesOf(sig), BlsSig: bytesOf(bls)}
+		}
+		prep = func(sig int) any { return &varSizePreprepare{Block: block, View: view, Sig: bytesOf(sig)} }
+	)
+
+	for _, tc := range []struct {
+		name    string
+		msg     any
+		target  any
+		wantErr bool
+	}{
+		{"candidate exact", cand(sigLen, blsLen), new(VRankCandidate), false},
+		{"candidate empty sig", cand(0, blsLen), new(VRankCandidate), true},
+		{"candidate empty BLS sig", cand(sigLen, 0), new(VRankCandidate), true},
+		{"candidate undersized sig", cand(sigLen-1, blsLen), new(VRankCandidate), true},
+		{"candidate undersized BLS sig", cand(sigLen, blsLen-1), new(VRankCandidate), true},
+		{"candidate oversized sig", cand(1<<20, blsLen), new(VRankCandidate), true},
+		{"candidate oversized BLS sig", cand(sigLen, blsLen+1), new(VRankCandidate), true},
+		{"preprepare exact", prep(sigLen), new(VRankPreprepare), false},
+		{"preprepare empty sig", prep(0), new(VRankPreprepare), true},
+		{"preprepare undersized sig", prep(sigLen - 1), new(VRankPreprepare), true},
+		{"preprepare oversized sig", prep(1 << 20), new(VRankPreprepare), true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			enc, err := rlp.EncodeToBytes(tc.msg)
+			require.NoError(t, err)
+
+			err = rlp.DecodeBytes(enc, tc.target)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

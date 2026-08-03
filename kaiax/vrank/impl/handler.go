@@ -28,6 +28,7 @@ import (
 	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
+	blstypes "github.com/kaiachain/kaia/crypto/bls/types"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 )
 
@@ -105,8 +106,8 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 			BlockNumber: block.NumberU64(),
 			Round:       uint8(view.Round.Uint64()),
 			BlockHash:   block.Hash(),
-			Sig:         sig,
-			BlsSig:      blsSig,
+			Sig:         [crypto.SignatureLength]byte(sig),
+			BlsSig:      [blstypes.SignatureLength]byte(blsSig),
 		})
 	}
 	return nil
@@ -141,7 +142,7 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	}
 
 	sigHash := v.vrankCandidateSigHash(msg.BlockNumber, msg.Round, msg.BlockHash)
-	sender, err := v.recoverVRankCandidateSender(sigHash, msg.Sig)
+	sender, err := v.recoverVRankCandidateSender(sigHash, msg.Sig[:])
 	if err != nil {
 		return err
 	}
@@ -150,7 +151,7 @@ func (v *VRankModule) HandleVRankCandidate(msg *vrank.VRankCandidate) error {
 	if err != nil {
 		return fmt.Errorf("%w: %v", vrank.ErrInvalidCandidateBlsSig, err)
 	}
-	ok, err := bls.VerifySignature(msg.BlsSig, sigHash, blsPub)
+	ok, err := bls.VerifySignature(msg.BlsSig[:], sigHash, blsPub)
 	if err != nil || !ok {
 		return vrank.ErrInvalidCandidateBlsSig
 	}
@@ -217,7 +218,7 @@ func (v *VRankModule) vrankPreprepareSigHash(blockNum uint64, round uint8, block
 
 func (v *VRankModule) recoverVRankPreprepareSender(msg *vrank.VRankPreprepare) (common.Address, error) {
 	sigHash := v.vrankPreprepareSigHash(msg.Block.NumberU64(), uint8(msg.View.Round.Uint64()), msg.Block.Hash())
-	pubkey, err := crypto.SigToPub(sigHash.Bytes(), msg.Sig)
+	pubkey, err := crypto.SigToPub(sigHash.Bytes(), msg.Sig[:])
 	if err != nil {
 		logger.Debug("SigToPub failed for VRankPreprepare", "err", err, "blockNum", msg.Block.NumberU64())
 		return common.Address{}, fmt.Errorf("%w: %v", vrank.ErrInvalidProposerSig, err)
@@ -281,7 +282,7 @@ func (v *VRankModule) BroadcastVRankPreprepare(vrankPreprepare *vrank.VRankPrepr
 		logger.Error("Sign VRankPreprepare failed", "blockNum", block.NumberU64())
 		return
 	}
-	vrankPreprepare.Sig = sig
+	vrankPreprepare.Sig = [crypto.SignatureLength]byte(sig)
 	v.broadcast(candidates, vrankPreprepare)
 }
 

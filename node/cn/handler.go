@@ -1260,7 +1260,7 @@ func handleVRankCandidateMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 	if err := msg.Decode(&data); err != nil {
 		return errResp(ErrDecode, "msg %v: %v", msg, err)
 	}
-	if data == nil || len(data.Sig) == 0 || len(data.BlsSig) == 0 {
+	if data == nil {
 		return errResp(ErrDecode, "msg %v: malformed VRankCandidate", msg)
 	}
 
