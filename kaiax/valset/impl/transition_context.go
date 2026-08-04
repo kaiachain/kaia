@@ -218,7 +218,7 @@ func (ctx *TransitionContext) applyEpochTransition(m valset.NodeMap) valset.Node
 	slices.SortFunc(activeValCompetitors, func(a, b sortableValidator) int {
 		return cmp.Or(
 			cmp.Compare(b.StakingAmount, a.StakingAmount),
-			bytes.Compare(a.addr[:], b.addr[:]), // tie-breaking: address order
+			bytes.Compare(b.addr[:], a.addr[:]), // tie-breaking: higher address first, per KIP-286
 		)
 	})
 	for idx, potentialActiveVal := range activeValCompetitors {

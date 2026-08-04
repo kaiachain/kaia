@@ -245,10 +245,10 @@ func TestApplyEpochTransition_TieBreakingByAddress(t *testing.T) {
 	ctx := epochCtx(t, nil, 2)
 	out := ctx.applyEpochTransition(m)
 
-	// addr1 (0x0001) < addr2 (0x0002) < addr3 (0x0003)
-	assert.Equal(t, ValActive, out[addr1].State)
+	// addr3 (0x0003) > addr2 (0x0002) > addr1 (0x0001)
+	assert.Equal(t, ValActive, out[addr3].State)
 	assert.Equal(t, ValActive, out[addr2].State)
-	assert.Equal(t, ValInactive, out[addr3].State)
+	assert.Equal(t, ValInactive, out[addr1].State)
 }
 
 func TestApplyEpochTransition_DefensiveCopy(t *testing.T) {
