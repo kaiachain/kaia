@@ -22,30 +22,18 @@
 
 package params
 
-import (
-	"github.com/kaiachain/kaia/common"
-)
-
-type bootnodesByTypes struct {
-	Addrs []string
-}
+// KIP-311 defines BN as the single bootstrap role for all node types, replacing
+// the pre-fork role-specific bootstrap nodes. These lists are therefore shared by
+// CN, PN and EN; do not reintroduce a per-node-type split.
 
 // MainnetBootnodes are the URLs of bootnodes running on the Kaia main network.
-var MainnetBootnodes = map[common.ConnType]bootnodesByTypes{
-	common.CONSENSUSNODE: {
-		[]string{
-			"kni://b286e4140aea469992146c299f8915e34d59a014c29a045de41e578014761114176f42dece34a54ce1e37f92ab981fe1bb14e54fe23576e1182778c40e6272a2@ston146.node.kaia.io:32323?ntype=bn",
-			"kni://a6b61ee786952e3f8b681867d2535485622e80d0b9b7b89f26b2c631e59a4246b5f879487fbde7c324c3308ece0cdb1d7738430bdffce4f7f8c4f5a09eef80a3@ston738.node.kaia.io:32323?ntype=bn",
-			"kni://b25838727eb6b4631c8f8910b4f6376fe28041f251ee21129078a61d18d62d0dc2601be5a97eab8bdb5772309f861fddb7192935483813ef20e5716a34266f16@ston903.node.kaia.io:32323?ntype=bn",
-		},
-	},
+var MainnetBootnodes = []string{
+	"kni://b286e4140aea469992146c299f8915e34d59a014c29a045de41e578014761114176f42dece34a54ce1e37f92ab981fe1bb14e54fe23576e1182778c40e6272a2@ston146.node.kaia.io:32323?ntype=bn",
+	"kni://a6b61ee786952e3f8b681867d2535485622e80d0b9b7b89f26b2c631e59a4246b5f879487fbde7c324c3308ece0cdb1d7738430bdffce4f7f8c4f5a09eef80a3@ston738.node.kaia.io:32323?ntype=bn",
+	"kni://b25838727eb6b4631c8f8910b4f6376fe28041f251ee21129078a61d18d62d0dc2601be5a97eab8bdb5772309f861fddb7192935483813ef20e5716a34266f16@ston903.node.kaia.io:32323?ntype=bn",
 }
 
 // KairosBootnodes are the URLs of bootnodes running on the Kairos network.
-var KairosBootnodes = map[common.ConnType]bootnodesByTypes{
-	common.CONSENSUSNODE: {
-		[]string{
-			"kni://979159c738bb0c8c60b36267c56d2b4d4a995326be666460c3d612856caab522ebe6f81ea5cdbb605051f12cbf8f787ce0f172256545a5b3400c751afbdcd0c8@ston36-kairos.node.kaia.io:32323?discport=32323&ntype=bn",
-		},
-	},
+var KairosBootnodes = []string{
+	"kni://979159c738bb0c8c60b36267c56d2b4d4a995326be666460c3d612856caab522ebe6f81ea5cdbb605051f12cbf8f787ce0f172256545a5b3400c751afbdcd0c8@ston36-kairos.node.kaia.io:32323?discport=32323&ntype=bn",
 }
