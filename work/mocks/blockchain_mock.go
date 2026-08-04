@@ -257,6 +257,21 @@ func (mr *MockBlockChainMockRecorder) Genesis() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Genesis", reflect.TypeOf((*MockBlockChain)(nil).Genesis))
 }
 
+// GetAncestor mocks base method.
+func (m *MockBlockChain) GetAncestor(arg0 common.Hash, arg1, arg2 uint64, arg3 *uint64) (common.Hash, uint64) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAncestor", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(common.Hash)
+	ret1, _ := ret[1].(uint64)
+	return ret0, ret1
+}
+
+// GetAncestor indicates an expected call of GetAncestor.
+func (mr *MockBlockChainMockRecorder) GetAncestor(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAncestor", reflect.TypeOf((*MockBlockChain)(nil).GetAncestor), arg0, arg1, arg2, arg3)
+}
+
 // GetBlock mocks base method.
 func (m *MockBlockChain) GetBlock(arg0 common.Hash, arg1 uint64) *types.Block {
 	m.ctrl.T.Helper()
@@ -297,20 +312,6 @@ func (m *MockBlockChain) GetBlockByNumber(arg0 uint64) *types.Block {
 func (mr *MockBlockChainMockRecorder) GetBlockByNumber(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockByNumber", reflect.TypeOf((*MockBlockChain)(nil).GetBlockByNumber), arg0)
-}
-
-// GetBlockHashesFromHash mocks base method.
-func (m *MockBlockChain) GetBlockHashesFromHash(arg0 common.Hash, arg1 uint64) []common.Hash {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBlockHashesFromHash", arg0, arg1)
-	ret0, _ := ret[0].([]common.Hash)
-	return ret0
-}
-
-// GetBlockHashesFromHash indicates an expected call of GetBlockHashesFromHash.
-func (mr *MockBlockChainMockRecorder) GetBlockHashesFromHash(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockHashesFromHash", reflect.TypeOf((*MockBlockChain)(nil).GetBlockHashesFromHash), arg0, arg1)
 }
 
 // GetBlockReceiptsInCache mocks base method.

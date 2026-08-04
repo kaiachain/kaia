@@ -238,6 +238,37 @@ func TestLastBlock(t *testing.T) {
 	}
 }
 
+func TestGetAncestor(t *testing.T) {
+	_, blockchain, err := newCanonical(faker.NewFaker(), 128, false)
+	require.NoError(t, err)
+	defer blockchain.Stop()
+
+	head := blockchain.CurrentHeader()
+	number := head.Number.Uint64()
+
+	// A canonical block resolves its ancestor by number, so the walk budget is
+	// left untouched no matter how far back the ancestor is.
+	for _, ancestor := range []uint64{1, 2, 64, number} {
+		budget := uint64(100)
+		hash, num := blockchain.GetAncestor(head.Hash(), number, ancestor, &budget)
+		assert.Equal(t, number-ancestor, num)
+		assert.Equal(t, blockchain.GetHeaderByNumber(number-ancestor).Hash(), hash)
+		assert.Equal(t, uint64(100), budget, "ancestor=%d spent the walk budget", ancestor)
+	}
+
+	// An ancestor below genesis is rejected without walking.
+	budget := uint64(100)
+	hash, _ := blockchain.GetAncestor(head.Hash(), number, number+1, &budget)
+	assert.Equal(t, common.Hash{}, hash)
+	assert.Equal(t, uint64(100), budget)
+
+	// A non-canonical origin falls back to walking parents, bounded by the budget.
+	budget = uint64(100)
+	hash, _ = blockchain.GetAncestor(common.HexToHash("0xdead"), number, 64, &budget)
+	assert.Equal(t, common.Hash{}, hash)
+	assert.Equal(t, uint64(99), budget)
+}
+
 // Tests that given a starting canonical chain of a given size, it can be extended
 // with various length chains.
 func TestExtendCanonicalHeaders(t *testing.T) { testExtendCanonical(t, false) }
