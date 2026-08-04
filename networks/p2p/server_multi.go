@@ -36,14 +36,18 @@ import (
 	"github.com/kaiachain/kaia/networks/p2p/nat"
 )
 
+// A peer dials all of its channels at once, so a set still incomplete after this is not coming.
+const candidateAssemblyTimeout = 10 * time.Second
+
 // MultiChannelServer is a server that uses a multi channel.
 // It inherits BaseServer. This file only contains overriding methods.
 // There must be a reason to override BaseServer methods.
 type MultiChannelServer struct {
 	*BaseServer
-	listeners      []net.Listener              // Extended TCP listener
-	ListenAddrs    []string                    // Extended TCP listen addresses
-	CandidateConns map[discover.NodeID][]*conn // Subset of connections towards a premature peer
+	listeners      []net.Listener                     // Extended TCP listener
+	ListenAddrs    []string                           // Extended TCP listen addresses
+	CandidateConns map[discover.NodeID][]*conn        // Subset of connections towards a premature peer
+	candidateSince map[discover.NodeID]mclock.AbsTime // Open time of each CandidateConns entry
 }
 
 // Stop terminates the server and all active peer connections.
@@ -66,10 +70,26 @@ func (srv *MultiChannelServer) Stop() {
 		listener.Close()
 	}
 
+	// Peers under assembly have no read loop to notice the shutdown.
+	var candidates []*conn
+	for id, connSet := range srv.CandidateConns {
+		for _, c := range connSet {
+			if c != nil {
+				candidates = append(candidates, c)
+			}
+		}
+		delete(srv.CandidateConns, id)
+		delete(srv.candidateSince, id)
+	}
+
 	close(srv.quit) // Ask loops to terminate
 
 	// Unlock here to allow Server loops and dialsched loop to finish their remaining jobs, dialsched to finish its dial goroutines.
 	srv.lock.Unlock()
+
+	for _, c := range candidates {
+		c.close(DiscQuitting)
+	}
 
 	if srv.dialSched != nil {
 		srv.dialSched.Close() // Wait for dial attempts to finish.
@@ -148,6 +168,7 @@ func (srv *MultiChannelServer) initialize() error {
 	srv.ListenAddrs = append(srv.ListenAddrs, srv.ListenAddr)
 	srv.ListenAddrs = append(srv.ListenAddrs, srv.SubListenAddr...)
 	srv.CandidateConns = make(map[discover.NodeID][]*conn)
+	srv.candidateSince = make(map[discover.NodeID]mclock.AbsTime)
 	return nil
 }
 
@@ -332,12 +353,28 @@ func (srv *MultiChannelServer) setupConn(c *conn, flags connFlag, dialDest *disc
 // Override BaseServer.handleAddPeerConn because multichannel peer admission
 // waits for the full candidate connection set and updates outbound metrics.
 func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
+	// close writes a disconnect reason under a write deadline, so it must not run under srv.lock.
+	// Registered before the unlock below to run after it.
+	var (
+		expired  []*conn
+		replaced *conn
+	)
+	defer func() {
+		for _, ec := range expired {
+			ec.close(DiscUselessPeer)
+		}
+		if replaced != nil {
+			replaced.close(DiscAlreadyConnected)
+		}
+	}()
+
 	srv.lock.Lock()
 	defer srv.lock.Unlock()
 
 	if !srv.running {
 		return errServerStopped
 	}
+	expired = srv.expireCandidates(mclock.Now())
 	err := srv.protoHandshakeChecks(srv.peers, c)
 	if err != nil {
 		return err
@@ -345,15 +382,20 @@ func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
 
 	var p *Peer
 	if c.multiChannel {
+		// Out of range fills no slot; falling through would drop c unstored and unclosed.
+		if int(c.portOrder) < 0 || int(c.portOrder) >= len(srv.ListenAddrs) {
+			return DiscUnexpectedIdentity
+		}
+
 		connSet := srv.CandidateConns[c.id]
 		if connSet == nil {
 			connSet = make([]*conn, len(srv.ListenAddrs))
 			srv.CandidateConns[c.id] = connSet
+			srv.candidateSince[c.id] = mclock.Now()
 		}
 
-		if int(c.portOrder) < len(connSet) {
-			connSet[c.portOrder] = c
-		}
+		replaced = connSet[c.portOrder]
+		connSet[c.portOrder] = c
 
 		pending := len(connSet)
 		for _, conn := range connSet {
@@ -367,6 +409,7 @@ func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
 
 		p, err = newPeer(connSet, srv.Protocols, srv.Config.RWTimerConfig)
 		delete(srv.CandidateConns, c.id)
+		delete(srv.candidateSince, c.id)
 	} else {
 		p, err = newPeer([]*conn{c}, srv.Protocols, srv.Config.RWTimerConfig)
 	}
@@ -389,6 +432,27 @@ func (srv *MultiChannelServer) handleAddPeerConn(c *conn) error {
 	srv.peerWG.Add(1)
 	go srv.runPeer(p)
 	return nil
+}
+
+// expireCandidates drops multichannel peers whose remaining channels never arrived and returns
+// their connections for the caller to close. Nothing else does: CandidateConns is cleared only
+// once every channel is present. Caller must hold srv.lock.
+func (srv *MultiChannelServer) expireCandidates(now mclock.AbsTime) []*conn {
+	var expired []*conn
+	for id, connSet := range srv.CandidateConns {
+		if now-srv.candidateSince[id] < mclock.AbsTime(candidateAssemblyTimeout) {
+			continue
+		}
+		for _, c := range connSet {
+			if c != nil {
+				expired = append(expired, c)
+			}
+		}
+		delete(srv.CandidateConns, id)
+		delete(srv.candidateSince, id)
+		srv.logger.Debug("Dropped incomplete multichannel peer", "id", id)
+	}
+	return expired
 }
 
 // Overrides BaseServer.runPeer() because multichannel peers run all socket
