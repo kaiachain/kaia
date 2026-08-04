@@ -87,6 +87,9 @@ const (
 
 	// ExtraNonSnapPeers is the number of non-snap peers allowed to connect more than snap peers.
 	ExtraNonSnapPeers = 5
+
+	// maxVerifiedBlobTxs bounds verifiedBlobTxs.
+	maxVerifiedBlobTxs = 1024
 )
 
 var (
@@ -113,6 +116,10 @@ type ProtocolManager struct {
 	blockchain  work.BlockChain
 	chainconfig *params.ChainConfig
 	maxPeers    int
+
+	// verifiedBlobTxs holds blob tx hashes whose sidecar already passed KZG
+	// verification. The tx pool verifies the sidecar again before admitting it.
+	verifiedBlobTxs *knownHashSet
 
 	downloader ProtocolManagerDownloader
 	fetcher    ProtocolManagerFetcher
@@ -181,6 +188,7 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		handler:           handler,
 		nodetype:          nodetype,
 		txResendUseLegacy: cnconfig.TxResendUseLegacy,
+		verifiedBlobTxs:   newKnownHashSet(maxVerifiedBlobTxs),
 		blobSidecarReqManager: &sidecarReqManager{
 			list:     make(map[common.Hash]*sidecarReq),
 			cooldown: 10 * time.Second,
@@ -1562,7 +1570,7 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 		// defensive measure against potential DoS attacks.
 		if tx.Type() == types.TxTypeEthereumBlob {
 			sidecar := tx.BlobTxSidecar()
-			if sidecar != nil {
+			if sidecar != nil && !pm.verifiedBlobTxs.Contains(tx.Hash()) {
 				// If any of the transaction contains invalid KZG sidecar, terminate transaction processing immediately.
 				// KZG verification is computationally expensive, so this acts as a
 				// defensive measure against potential DoS attacks.
@@ -1570,6 +1578,7 @@ func handleTxMsg(pm *ProtocolManager, p Peer, msg p2p.Msg) error {
 					logger.Warn("Disconnect peer for protocol violation", "peer", p.GetID(), "error", err)
 					return errResp(ErrDecode, "Invalid blob transaction with sidecar: %v", errKZGVerificationError)
 				}
+				pm.verifiedBlobTxs.Add(tx.Hash())
 			}
 		}
 		p.AddToKnownTxs(tx.Hash())

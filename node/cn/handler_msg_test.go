@@ -291,33 +291,28 @@ func TestHandleTxMsg(t *testing.T) {
 	}
 }
 
-func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	pm := &ProtocolManager{}
+// prepareBlobTxMsg returns a protocol manager, a peer and a signed blob transaction
+// with a valid v1 sidecar. Callers corrupt the sidecar via blobTx.BlobTxSidecar().
+func prepareBlobTxMsg(t *testing.T, mockCtrl *gomock.Controller) (*ProtocolManager, *MockPeer, *types.Transaction) {
+	pm := &ProtocolManager{verifiedBlobTxs: newKnownHashSet(maxVerifiedBlobTxs)}
 	pm.acceptTxs.Store(1)
 	mockTxPool := mocks.NewMockTxPool(mockCtrl)
+	mockTxPool.EXPECT().HandleTxMsg(gomock.Any()).AnyTimes()
 	pm.txpool = mockTxPool
 
 	mockPeer := NewMockPeer(mockCtrl)
 	mockPeer.EXPECT().GetVersion().Return(kaia63).AnyTimes()
 	mockPeer.EXPECT().GetID().Return("test-peer").AnyTimes()
+	mockPeer.EXPECT().AddToKnownTxs(gomock.Any()).AnyTimes()
 
-	// Generate a blob transaction with invalid KZG proof
 	var (
-		addr          = crypto.PubkeyToAddress(keys[0].PublicKey)
-		signer        = types.MakeSigner(params.TestChainConfig, common.Big0)
 		blob          = kzg4844.Blob{}
 		commitment, _ = kzg4844.BlobToCommitment(&blob)
 		proofs, _     = kzg4844.ComputeCellProofs(&blob)
-		blobhash      = common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commitment))
 	)
-	// corrupt a byte in the commitment
-	commitment[0] = commitment[0] ^ 0xFF
 	blobTx, err := types.NewTransactionWithMap(types.TxTypeEthereumBlob, map[types.TxValueKeyType]interface{}{
 		types.TxValueKeyNonce:      uint64(0),
-		types.TxValueKeyTo:         addr,
+		types.TxValueKeyTo:         crypto.PubkeyToAddress(keys[0].PublicKey),
 		types.TxValueKeyAmount:     big.NewInt(0),
 		types.TxValueKeyGasLimit:   uint64(10000000),
 		types.TxValueKeyGasFeeCap:  big.NewInt(25),
@@ -325,7 +320,7 @@ func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
 		types.TxValueKeyData:       []byte{},
 		types.TxValueKeyAccessList: types.AccessList{},
 		types.TxValueKeyBlobFeeCap: big.NewInt(25),
-		types.TxValueKeyBlobHashes: []common.Hash{blobhash},
+		types.TxValueKeyBlobHashes: []common.Hash{common.Hash(kzg4844.CalcBlobHashV1(sha256.New(), &commitment))},
 		types.TxValueKeySidecar: &types.BlobTxSidecar{
 			Version:     types.BlobSidecarVersion1,
 			Blobs:       []kzg4844.Blob{blob},
@@ -335,15 +330,35 @@ func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
 		types.TxValueKeyChainID: params.TestChainConfig.ChainID,
 	})
 	require.NoError(t, err)
-	require.NoError(t, blobTx.Sign(signer, keys[0]))
+	require.NoError(t, blobTx.Sign(types.MakeSigner(params.TestChainConfig, common.Big0), keys[0]))
+	return pm, mockPeer, blobTx
+}
 
-	txs := types.Transactions{blobTx}
-	msg := generateMsg(t, TxMsg, txs)
+func TestHandleTxMsg_KZGVerificationError(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pm, mockPeer, blobTx := prepareBlobTxMsg(t, mockCtrl)
+	blobTx.BlobTxSidecar().Commitments[0][0] ^= 0xFF
 
 	// Should return error and disconnect peer
-	err = handleTxMsg(pm, mockPeer, msg)
+	err := handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobTx}))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), errKZGVerificationError.Error())
+}
+
+func TestHandleTxMsg_BlobSidecarVerifiedOnce(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	pm, mockPeer, blobTx := prepareBlobTxMsg(t, mockCtrl)
+	require.NoError(t, handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobTx})))
+	require.True(t, pm.verifiedBlobTxs.Contains(blobTx.Hash()))
+
+	// The tx hash does not cover the sidecar, so the replay carries a broken proof
+	// under the same hash and passes only because the verification is skipped.
+	blobTx.BlobTxSidecar().Proofs[0][0] ^= 0xFF
+	assert.NoError(t, handleTxMsg(pm, mockPeer, generateMsg(t, TxMsg, types.Transactions{blobTx})))
 }
 
 func prepareTestHandleBlockHeaderFetchRequestMsg(t *testing.T) (*gomock.Controller, *MockPeer, *mocks.MockBlockChain, *ProtocolManager) {
