@@ -236,6 +236,22 @@ func (tx *Transaction) MarshalBinary() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
+// sanityCheckTransactionSignatureLists validates the sender signatures and
+// bounds the fee-payer signature list. Fee-payer signature values are validated
+// later because fee-delegated transactions may be decoded before the fee payer
+// signs.
+func sanityCheckTransactionSignatureLists(tx TxInternalData) bool {
+	if !SanityCheckSignatures(tx.RawSignatureValues(), tx.Type()) {
+		return false
+	}
+
+	if feePayerTx, ok := tx.(TxInternalDataFeePayer); ok {
+		return hasValidSignatureListLength(feePayerTx.GetFeePayerRawSignatureValues())
+	}
+
+	return true
+}
+
 // DecodeRLP implements rlp.Decoder
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	serializer := newTxInternalDataSerializer()
@@ -243,7 +259,7 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 
-	if !SanityCheckSignatures(serializer.tx.RawSignatureValues(), serializer.tx.Type()) {
+	if !sanityCheckTransactionSignatureLists(serializer.tx) {
 		return ErrInvalidSig
 	}
 
@@ -280,7 +296,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	if err := json.Unmarshal(input, serializer); err != nil {
 		return err
 	}
-	if !SanityCheckSignatures(serializer.tx.RawSignatureValues(), serializer.tx.Type()) {
+	if !sanityCheckTransactionSignatureLists(serializer.tx) {
 		return ErrInvalidSig
 	}
 
