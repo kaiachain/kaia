@@ -137,6 +137,22 @@ func bootnode(ctx *cli.Context) error {
 		}
 	}
 
+	// KIP-311 requires a BN to rate limit discovery pings from unknown NodeIds.
+	// Reject a negative rate outright, and warn when the limiter is disabled or
+	// set so low that legitimate NAT'd nodes would be throttled.
+	pingRateLimit := ctx.Int(utils.BNPingRateLimitFlag.Name)
+	if pingRateLimit < 0 {
+		log.Fatalf("Invalid --%s %d: must not be negative (0 disables the limiter)",
+			utils.BNPingRateLimitFlag.Name, pingRateLimit)
+	}
+	if pingRateLimit == 0 {
+		logger.Warn("Discovery ping rate limiting is disabled; KIP-311 requires a bootstrap node to rate limit pings from unknown NodeIds",
+			"flag", utils.BNPingRateLimitFlag.Name)
+	} else if pingRateLimit < 2 {
+		logger.Warn("Discovery ping rate limit is very low; nodes sharing one public IP via NAT may be throttled",
+			"flag", utils.BNPingRateLimitFlag.Name, "value", pingRateLimit)
+	}
+
 	cfg := discover.Config{
 		NetworkID:     bcfg.networkID,
 		PrivateKey:    bcfg.nodeKey,
@@ -147,7 +163,7 @@ func bootnode(ctx *cli.Context) error {
 		Id:            discover.PubkeyID(&bcfg.nodeKey.PublicKey),
 		NodeType:      p2p.ConvertNodeType(common.BOOTNODE),
 		DiscoverTypes: discover.DiscoverTypesConfig{CN: true, PN: true, EN: true},
-		PingRateLimit: float64(ctx.Int(utils.BNPingRateLimitFlag.Name)),
+		PingRateLimit: float64(pingRateLimit),
 		PingBurst:     ctx.Int(utils.BNPingBurstFlag.Name),
 	}
 
