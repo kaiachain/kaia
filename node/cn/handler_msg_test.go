@@ -30,6 +30,8 @@ import (
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/common/hexutil"
+	"github.com/kaiachain/kaia/consensus"
+	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/consensus/istanbul"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/kzg4844"
@@ -77,6 +79,47 @@ func prepareTestHandleNewBlockMsg(t *testing.T, mockCtrl *gomock.Controller, blo
 	mockFetcher.EXPECT().Enqueue(nodeids[0].String(), newBlock).Times(1)
 
 	return newBlock, msg, mockPeer, mockFetcher
+}
+
+// countingConsensusHandler records how many messages reached the consensus engine.
+type countingConsensusHandler struct{ calls int }
+
+func (h *countingConsensusHandler) NewChainHead() error                  { return nil }
+func (h *countingConsensusHandler) SetBroadcaster(consensus.Broadcaster) {}
+
+func (h *countingConsensusHandler) HandleMsg(common.Address, p2p.Msg) (bool, error) {
+	h.calls++
+	return true, nil
+}
+
+func TestHandleConsensusMsgFromNonCNPeer(t *testing.T) {
+	tcs := []struct {
+		name      string
+		connType  common.ConnType
+		wantErr   bool
+		wantCalls int
+	}{
+		{"cn", common.CONSENSUSNODE, false, 1},
+		{"en", common.ENDPOINTNODE, true, 0},
+		{"pn", common.PROXYNODE, true, 0},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+
+			mockPeer := NewMockPeer(mockCtrl)
+			mockPeer.EXPECT().ConnType().Return(tc.connType).AnyTimes()
+
+			handler := &countingConsensusHandler{}
+			pm := &ProtocolManager{handler: handler}
+			msg := generateMsg(t, consensus.ConsensusMsgCode, &bft.ConsensusMsg{})
+
+			err := pm.handleMsg(mockPeer, addrs[0], msg)
+			assert.Equal(t, tc.wantErr, err != nil, "err: %v", err)
+			assert.Equal(t, tc.wantCalls, handler.calls)
+		})
+	}
 }
 
 func prepareDownloader(t *testing.T) (*gomock.Controller, *mocks2.MockProtocolManagerDownloader, *MockPeer, *ProtocolManager) {
