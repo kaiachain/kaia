@@ -363,6 +363,18 @@ web3._extend({
 			call: 'governance_getRewardsAccumulated',
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getPFS',
+			call: 'governance_getPFS',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
+			name: 'getCFS',
+			call: 'governance_getCFS',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter]
 		})
 	],
 	properties: [
@@ -1177,18 +1189,6 @@ var klayMethods = [
 	new web3._extend.Method({
 		name: 'isConsoleLogEnabled',
 		call: 'klay_isConsoleLogEnabled',
-	}),
-	new web3._extend.Method({
-		name: 'getPFS',
-		call: 'kaia_getPFS',
-		params: 1,
-		inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
-	}),
-	new web3._extend.Method({
-		name: 'getCFS',
-		call: 'kaia_getCFS',
-		params: 1,
-		inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter],
 	}),
 ];
 `

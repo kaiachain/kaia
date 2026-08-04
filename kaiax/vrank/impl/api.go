@@ -24,32 +24,32 @@ import (
 func (v *VRankModule) APIs() []rpc.API {
 	return []rpc.API{
 		{
-			Namespace: "kaia",
+			Namespace: "governance",
 			Version:   "1.0",
-			Service:   &VRankKaiaAPI{v: v},
+			Service:   &VRankGovernanceAPI{v: v},
 			Public:    true,
 		},
 	}
 }
 
-// VRankKaiaAPI defines the kaia namespace APIs for VRank scores.
-type VRankKaiaAPI struct {
+// VRankGovernanceAPI defines the governance namespace APIs for VRank scores.
+type VRankGovernanceAPI struct {
 	v *VRankModule
 }
 
 // GetPFS returns the Proposal Failure Scores for all validators at the given block number.
-func (api *VRankKaiaAPI) GetPFS(num *rpc.BlockNumber) (map[common.Address]uint64, error) {
+func (api *VRankGovernanceAPI) GetPFS(num *rpc.BlockNumber) (map[common.Address]uint64, error) {
 	blockNum := api.resolveBlockNum(num)
 	return api.v.GetPFS(blockNum)
 }
 
 // GetCFS returns the Consensus Failure Scores for all validators at the given block number.
-func (api *VRankKaiaAPI) GetCFS(num *rpc.BlockNumber) (map[common.Address]uint64, error) {
+func (api *VRankGovernanceAPI) GetCFS(num *rpc.BlockNumber) (map[common.Address]uint64, error) {
 	blockNum := api.resolveBlockNum(num)
 	return api.v.GetCFS(blockNum)
 }
 
-func (api *VRankKaiaAPI) resolveBlockNum(num *rpc.BlockNumber) uint64 {
+func (api *VRankGovernanceAPI) resolveBlockNum(num *rpc.BlockNumber) uint64 {
 	if num == nil || *num == rpc.LatestBlockNumber || *num == rpc.PendingBlockNumber {
 		return api.v.Chain.CurrentHeader().Number.Uint64()
 	}
