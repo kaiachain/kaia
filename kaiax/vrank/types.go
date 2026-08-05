@@ -108,6 +108,10 @@ func EncodeAddressList(addrs []common.Address) ([]byte, error) {
 }
 
 func DecodeReport(data []byte) ([]common.Address, error) {
+	if len(data) == 0 {
+		return []common.Address{}, nil
+	}
+
 	var report []common.Address
 	if err := rlp.DecodeBytes(data, &report); err != nil {
 		return nil, err

@@ -55,13 +55,12 @@ func (v *VRankModule) VerifyHeader(header *types.Header, _ *types.Header) error 
 	}
 
 	// Non-epoch-start block
-	if len(header.VRank) == 0 {
-		return nil
-	}
-
 	report, err := vrank.DecodeReport(header.VRank)
 	if err != nil {
 		return vrank.ErrInvalidVRankFormat
+	}
+	if len(report) == 0 {
+		return nil
 	}
 	// Failures score against the reporter's own byzantine-filterable column regardless of content,
 	// so only the failed list is checked (CandTesting is epoch-stable within the epoch).
