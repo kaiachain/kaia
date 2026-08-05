@@ -18,7 +18,9 @@ package discover
 
 import (
 	"net"
+	"slices"
 
+	"github.com/kaiachain/kaia/common"
 	"github.com/kaiachain/kaia/crypto"
 )
 
@@ -74,15 +76,68 @@ func (tab *Table2) lenByNodeTypes() map[string]int {
 // If the node is a bootstrap node, it is added to all storages.
 func (tab *Table2) addNode(n *Node) {
 	if n.NType == NodeTypeBN {
-		for _, s := range tab.storages {
+		for nType, s := range tab.storages {
+			if nType == NodeTypeCN && !tab.cnStorageAllowed(n.ID) {
+				continue
+			}
 			s.add(n)
 		}
 		return
 	} else {
+		if n.NType == NodeTypeCN && !tab.cnStorageAllowed(n.ID) {
+			return
+		}
 		if s := tab.storages[n.NType]; s != nil {
 			s.add(n)
 		}
 	}
+}
+
+// SetCNPeers replaces the allowlist admitting entries into the CN storage.
+// nil disables the filter. Entries outside the new list are dropped.
+func (tab *Table2) SetCNPeers(addrs []common.Address) {
+	tab.cnPeerMu.Lock()
+	if addrs == nil {
+		tab.cnPeerAddrs = nil
+		tab.cnPeerMu.Unlock()
+		return
+	}
+	cnPeerAddrs := make(map[common.Address]struct{}, len(addrs))
+	for _, addr := range addrs {
+		cnPeerAddrs[addr] = struct{}{}
+	}
+	tab.cnPeerAddrs = cnPeerAddrs
+	tab.cnPeerMu.Unlock()
+
+	s := tab.storages[NodeTypeCN]
+	if s == nil {
+		return
+	}
+	for _, n := range s.all() {
+		if !tab.cnStorageAllowed(n.ID) {
+			s.delete(n)
+		}
+	}
+}
+
+// cnStorageAllowed reports whether an entry may enter the CN storage. The claimed
+// node type is unauthenticated, so the entry has to be vouched for either on-chain
+// by CNPeers or locally by the configured bootnodes, which seed CN lookups.
+func (tab *Table2) cnStorageAllowed(id NodeID) bool {
+	tab.cnPeerMu.RLock()
+	defer tab.cnPeerMu.RUnlock()
+	if tab.cnPeerAddrs == nil {
+		return true
+	}
+	if slices.ContainsFunc(tab.nursery, func(n *Node) bool { return n.ID == id }) {
+		return true
+	}
+	pub, err := id.Pubkey()
+	if err != nil {
+		return false
+	}
+	_, ok := tab.cnPeerAddrs[crypto.PubkeyToAddress(*pub)]
+	return ok
 }
 
 func (tab *Table2) deleteNode(n *Node) {

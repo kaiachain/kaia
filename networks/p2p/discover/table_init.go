@@ -22,6 +22,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/kaiachain/kaia/common"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -48,6 +49,10 @@ type Table2 struct {
 	selfID   NodeID
 	nursery  []*Node
 	storages map[NodeType]tableStorage
+
+	// CN storage admission. nil disables the filter.
+	cnPeerMu    sync.RWMutex
+	cnPeerAddrs map[common.Address]struct{}
 
 	// target number of nodes to obtain for each node type.
 	// set discoverTargets[T] = 0 to disable discovery of node type T (i.e. only accept inbound connections).

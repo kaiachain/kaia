@@ -17,8 +17,10 @@
 package discover
 
 import (
+	"net"
 	"testing"
 
+	"github.com/kaiachain/kaia/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -50,6 +52,86 @@ func Test_Table_addNode_BN(t *testing.T) {
 	assert.Equal(t, 1, tab.storages[NodeTypeEN].len())
 	assert.Equal(t, 1, tab.storages[NodeTypeBN].len())
 	assert.Equal(t, 4, tab.len())
+}
+
+func Test_Table_addNode_CNPeers(t *testing.T) {
+	member, memberAddr := newTestNodeWithAddr(t, NodeTypeCN)
+	outsider, _ := newTestNodeWithAddr(t, NodeTypeCN)
+
+	t.Run("nil allowlist admits any CN claim", func(t *testing.T) {
+		tab := newTestTable2(t, nil)
+		tab.addNode(outsider)
+		assert.Equal(t, 1, tab.storages[NodeTypeCN].len())
+	})
+
+	t.Run("allowlist admits only its members", func(t *testing.T) {
+		tab := newTestTable2(t, nil)
+		tab.SetCNPeers([]common.Address{memberAddr})
+
+		tab.addNode(outsider)
+		assert.Equal(t, 0, tab.storages[NodeTypeCN].len(), "CN outside CNPeers must not take a CN slot")
+
+		tab.addNode(member)
+		assert.Equal(t, 1, tab.storages[NodeTypeCN].len(), "CN inside CNPeers must take a CN slot")
+	})
+
+	t.Run("empty allowlist rejects every CN claim", func(t *testing.T) {
+		tab := newTestTable2(t, nil)
+		tab.SetCNPeers([]common.Address{})
+		tab.addNode(member)
+		assert.Equal(t, 0, tab.storages[NodeTypeCN].len())
+	})
+}
+
+// A node claiming BN reaches every storage, so the CN storage applies the allowlist
+// on that path too. A configured bootnode is exempt: it seeds CN lookups.
+func Test_Table_addNode_BN_CNPeers(t *testing.T) {
+	_, memberAddr := newTestNodeWithAddr(t, NodeTypeCN)
+
+	t.Run("self-declared BN stays out of the CN storage", func(t *testing.T) {
+		tab := newTestTable2(t, nil)
+		tab.SetCNPeers([]common.Address{memberAddr})
+
+		tab.addNode(newTestBootnode(t, net.IP{127, 0, 0, 1}))
+
+		assert.Equal(t, 0, tab.storages[NodeTypeCN].len())
+		assert.Equal(t, 1, tab.storages[NodeTypePN].len())
+		assert.Equal(t, 1, tab.storages[NodeTypeEN].len())
+		assert.Equal(t, 1, tab.storages[NodeTypeBN].len())
+	})
+
+	t.Run("configured bootnode reaches every storage", func(t *testing.T) {
+		tab := newTestTable2(t, nil)
+		bootnode := newTestBootnode(t, net.IP{127, 0, 0, 1})
+		tab.nursery = []*Node{bootnode}
+		tab.SetCNPeers([]common.Address{memberAddr})
+
+		tab.addNode(bootnode)
+
+		assert.Equal(t, 1, tab.storages[NodeTypeCN].len(), "a configured bootnode must keep seeding CN lookups")
+		assert.Equal(t, 4, tab.len())
+	})
+}
+
+func Test_Table_SetCNPeers_dropsOutsiders(t *testing.T) {
+	tab := newTestTable2(t, nil)
+	member, memberAddr := newTestNodeWithAddr(t, NodeTypeCN)
+	outsider, _ := newTestNodeWithAddr(t, NodeTypeCN)
+	bootnode := newTestBootnode(t, net.IP{127, 0, 0, 1})
+	tab.nursery = []*Node{bootnode}
+
+	// Entries admitted before the allowlist was known must not survive it.
+	tab.addNode(member)
+	tab.addNode(outsider)
+	tab.addNode(bootnode)
+	require.Equal(t, 3, tab.storages[NodeTypeCN].len())
+
+	tab.SetCNPeers([]common.Address{memberAddr})
+	assert.ElementsMatch(t, []*Node{member, bootnode}, tab.storages[NodeTypeCN].all())
+
+	tab.SetCNPeers(nil)
+	tab.addNode(outsider)
+	assert.Equal(t, 3, tab.storages[NodeTypeCN].len(), "nil allowlist restores the unfiltered behavior")
 }
 
 func Test_Table_deleteNode_typed(t *testing.T) {

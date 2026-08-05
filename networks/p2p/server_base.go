@@ -65,10 +65,10 @@ type BaseServer struct {
 
 	// Relying components
 	logger       log.Logger
-	ntab         discovery       // UDP discovery
-	ourHandshake *protoHandshake // our TCP handshake message
-	listener     net.Listener    // TCP listener
-	peerFeed     event.Feed      // Peer event feed as in peer.go:PeerEventType.
+	ntab         discover.Discovery2 // UDP discovery
+	ourHandshake *protoHandshake     // our TCP handshake message
+	listener     net.Listener        // TCP listener
+	peerFeed     event.Feed          // Peer event feed as in peer.go:PeerEventType.
 
 	// Peer lifecycle state
 	selfID        discover.NodeID // precompulted Self().ID
@@ -709,6 +709,10 @@ func (srv *BaseServer) reportPeerMetric() {
 // SetCNPeers replaces the address-keyed CN admission allowlist.
 // nil disables filtering; an empty list rejects all CN claims.
 func (srv *BaseServer) SetCNPeers(addrs []common.Address) {
+	// Every observer keeps only CN discovery entries it can authenticate.
+	if srv.ntab != nil {
+		srv.ntab.SetCNPeers(addrs)
+	}
 	// Only CNs enforce the validator allowlist. ENs/PNs serve everyone, so they
 	// skip it: leaving cnPeerAddrs nil makes the admit and drop checks no-op.
 	if srv.ConnectionType != common.CONSENSUSNODE {
