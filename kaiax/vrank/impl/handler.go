@@ -103,25 +103,31 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 	if !v.ChainConfig.IsPermissionlessForkEnabled(block.Number()) {
 		return nil
 	}
+	// Out-of-range rounds wrap to a valid proposer in GetProposer while truncating to a
+	// different uint8 round for the signed payload, the replay key and the response.
+	if !view.Round.IsUint64() || view.Round.Uint64() > maxRound {
+		return vrank.ErrRoundOutOfRange
+	}
+	round := uint8(view.Round.Uint64())
 
 	if v.isCandidate(block.NumberU64()) {
-		sender, err := v.recoverVRankPreprepareSender(msg)
+		sender, err := v.recoverVRankPreprepareSender(msg, round)
 		if err != nil {
 			return err
 		}
-		if err := v.verifyVRankPreprepareSender(msg, sender); err != nil {
+		if err := v.verifyVRankPreprepareSender(msg, round, sender); err != nil {
 			return err
 		}
 		v.pruneSeenPreprepare(block.NumberU64())
-		if exactReplay, conflictingView := v.markSeenPreprepare(vrank.ViewKey{N: block.NumberU64(), R: uint8(view.Round.Uint64())}, block.Hash()); exactReplay {
+		if exactReplay, conflictingView := v.markSeenPreprepare(vrank.ViewKey{N: block.NumberU64(), R: round}, block.Hash()); exactReplay {
 			// ignore seen preprepare
 			return nil
 		} else if conflictingView {
-			logger.Warn("Conflicting VRankPreprepare ignored", "blockNum", block.NumberU64(), "round", view.Round.Uint64(), "blockHash", block.Hash().Hex())
+			logger.Warn("Conflicting VRankPreprepare ignored", "blockNum", block.NumberU64(), "round", round, "blockHash", block.Hash().Hex())
 			return nil
 		}
 
-		sigHash := v.vrankCandidateSigHash(block.NumberU64(), uint8(view.Round.Uint64()), block.Hash())
+		sigHash := v.vrankCandidateSigHash(block.NumberU64(), round, block.Hash())
 		sig, err := crypto.Sign(sigHash.Bytes(), v.NodeKey)
 		if err != nil {
 			logger.Error("Sign failed", "blockNum", block.NumberU64(), "blockHash", block.Hash().Hex())
@@ -135,7 +141,7 @@ func (v *VRankModule) HandleVRankPreprepare(msg *vrank.VRankPreprepare) error {
 		}
 		v.BroadcastVRankCandidate(&vrank.VRankCandidate{
 			BlockNumber: block.NumberU64(),
-			Round:       uint8(view.Round.Uint64()),
+			Round:       round,
 			BlockHash:   block.Hash(),
 			Sig:         [crypto.SignatureLength]byte(sig),
 			BlsSig:      [blstypes.SignatureLength]byte(blsSig),
@@ -229,8 +235,8 @@ func (v *VRankModule) vrankPreprepareSigHash(blockNum uint64, round uint8, block
 	return crypto.Keccak256Hash(payload)
 }
 
-func (v *VRankModule) recoverVRankPreprepareSender(msg *vrank.VRankPreprepare) (common.Address, error) {
-	sigHash := v.vrankPreprepareSigHash(msg.Block.NumberU64(), uint8(msg.View.Round.Uint64()), msg.Block.Hash())
+func (v *VRankModule) recoverVRankPreprepareSender(msg *vrank.VRankPreprepare, round uint8) (common.Address, error) {
+	sigHash := v.vrankPreprepareSigHash(msg.Block.NumberU64(), round, msg.Block.Hash())
 	pubkey, err := crypto.SigToPub(sigHash.Bytes(), msg.Sig[:])
 	if err != nil {
 		logger.Debug("SigToPub failed for VRankPreprepare", "err", err, "blockNum", msg.Block.NumberU64())
@@ -239,10 +245,9 @@ func (v *VRankModule) recoverVRankPreprepareSender(msg *vrank.VRankPreprepare) (
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
 
-func (v *VRankModule) verifyVRankPreprepareSender(msg *vrank.VRankPreprepare, sender common.Address) error {
+func (v *VRankModule) verifyVRankPreprepareSender(msg *vrank.VRankPreprepare, round uint8, sender common.Address) error {
 	blockNum := msg.Block.NumberU64()
-	round := msg.View.Round.Uint64()
-	proposer, err := v.Valset.GetProposer(blockNum, round)
+	proposer, err := v.Valset.GetProposer(blockNum, uint64(round))
 	if err != nil {
 		logger.Debug("GetProposer failed", "err", err, "blockNum", blockNum)
 		return err
