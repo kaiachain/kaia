@@ -29,9 +29,7 @@ import (
 // VerifyHeader checks the VRank field in the header:
 //   - Before the permissionless fork: VRank must be absent.
 //   - At epoch-start blocks: VRank must be RLPEncode(CandTesting(N)) or RLPEncode([]).
-//   - Otherwise: VRank must be a valid encoded report whose addresses are sorted,
-//     deduplicated, and all present in GetCandTesting(N-1), because header(N).VRank
-//     reports candidate failures observed while building block N-1.
+//   - Otherwise: a cfReport whose failed addresses are sorted, deduped, and ⊆ CandTesting.
 func (v *VRankModule) VerifyHeader(header *types.Header, _ *types.Header) error {
 	number := header.Number.Uint64()
 	permissionless := v.ChainConfig.IsPermissionlessForkEnabled(new(big.Int).SetUint64(number))
@@ -65,6 +63,8 @@ func (v *VRankModule) VerifyHeader(header *types.Header, _ *types.Header) error 
 	if err != nil {
 		return vrank.ErrInvalidVRankFormat
 	}
+	// Failures score against the reporter's own byzantine-filterable column regardless of content,
+	// so only the failed list is checked (CandTesting is epoch-stable within the epoch).
 	candidates, err := v.Valset.GetCandTesting(number - 1)
 	if err != nil {
 		return err
@@ -75,7 +75,8 @@ func (v *VRankModule) VerifyHeader(header *types.Header, _ *types.Header) error 
 // PrepareHeader fills header.VRank per KIP-227.
 //
 //   - At epoch-start blocks: VRank is CandTesting(N), encoded even when empty.
-//   - Otherwise: VRank is EvaluateCandidates(N-1, parentRound), or nil when the report is empty.
+//   - Otherwise: VRank is a cfReport about this proposer's own most recent prior proposal in
+//     the current epoch, or nil when there is no such block or no failures.
 func (v *VRankModule) PrepareHeader(header *types.Header) error {
 	number := header.Number.Uint64()
 	if !v.ChainConfig.IsPermissionlessForkEnabled(header.Number) {
@@ -116,25 +117,17 @@ func (v *VRankModule) encodeEpochStartVRank(number uint64) ([]byte, error) {
 }
 
 func (v *VRankModule) encodeCandidateFailureVRank(number uint64) ([]byte, error) {
-	if number == 0 {
+	targetNum, round, ok := v.selectReportTarget(number)
+	if !ok {
+		// No own prior proposal this epoch (first proposal, or restart). Empty report — fail-safe.
 		return nil, nil
 	}
-	parentNum := number - 1
-	parent := v.Chain.GetHeaderByNumber(parentNum)
-	if parent == nil {
-		logger.Error("Failed to read parent header for VRank", "num", number, "parentNum", parentNum)
-		return nil, vrank.ErrHeaderNotFound
-	}
-	parentRound, err := v.RoundReader.Round(parent)
+	report, err := v.EvaluateCandidates(targetNum, round)
 	if err != nil {
-		logger.Error("Failed to read parent round for VRank", "err", err, "parentNum", parentNum)
+		logger.Error("Failed to evaluate VRank candidates", "err", err, "targetNum", targetNum, "round", round)
 		return nil, err
 	}
-	report, err := v.EvaluateCandidates(parentNum, uint64(parentRound))
-	if err != nil {
-		logger.Error("Failed to evaluate VRank candidates", "err", err, "prevBlockNum", parentNum, "prevRound", parentRound)
-		return nil, err
-	}
+	v.collector.PruneReported(targetNum) // drop views older than targetNum; targetNum stays for re-report
 	if len(report) == 0 {
 		return nil, nil
 	}

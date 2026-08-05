@@ -54,21 +54,18 @@ func TestEncodeDecodeReport(t *testing.T) {
 				return
 			}
 			assert.NotEmpty(t, enc)
-			dec, err := DecodeReport(enc)
+			gotReport, err := DecodeReport(enc)
 			assert.NoError(t, err)
-			assert.Equal(t, tc.report, dec)
+			assert.Equal(t, tc.report, gotReport)
 		})
 	}
 }
 
 func TestEncodeAddressList_EmptyList(t *testing.T) {
+	// Epoch-start VRank encodes an empty CandTesting list as the canonical empty RLP list (0xc0).
 	enc, err := EncodeAddressList(nil)
 	assert.NoError(t, err)
-	assert.NotEmpty(t, enc)
-
-	dec, err := DecodeReport(enc)
-	assert.NoError(t, err)
-	assert.Empty(t, dec)
+	assert.Equal(t, []byte{0xc0}, enc)
 }
 
 // The pre-fixed-size shapes. A wrong signature length is only expressible from here.

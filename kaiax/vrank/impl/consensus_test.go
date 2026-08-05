@@ -21,19 +21,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/kaiachain/kaia/blockchain/types"
 	"github.com/kaiachain/kaia/common"
+	mock_valset "github.com/kaiachain/kaia/kaiax/valset/mock"
 	"github.com/kaiachain/kaia/kaiax/vrank"
 	"github.com/kaiachain/kaia/params"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// makeVRankHeader builds a header at the given block number containing the encoded cfReport.
-// cfAddrs may be nil for an empty VRank field.
-func makeVRankHeader(t *testing.T, number uint64, cfAddrs []common.Address) *types.Header {
+// makeSelfReportHeader builds a round-0 header at `number` whose VRank is a cfReport listing
+// cfAddrs as failed candidates. Empty cfAddrs yields a nil VRank field.
+func makeSelfReportHeader(t *testing.T, number uint64, cfAddrs []common.Address) *types.Header {
 	t.Helper()
-	h := &types.Header{Number: big.NewInt(int64(number))}
+	h := makeHeaderWithRound(number, 0)
 	if len(cfAddrs) > 0 {
 		encoded, err := vrank.EncodeReport(cfAddrs)
 		require.NoError(t, err)
@@ -55,11 +57,16 @@ func TestVerifyHeader(t *testing.T) {
 	candidates := []common.Address{C1, C2, C3}
 	const num = uint64(100)
 
+	// newVerifier wires GetCandTesting(any)=candidates; VerifyHeader validates only the failed list.
+	newVerifier := func(t *testing.T) *VRankModule {
+		return newCN(t, withCandidates(candidates), withoutStart()).VRankModule
+	}
+
 	t.Run("pre-fork: VRank must be absent", func(t *testing.T) {
 		v := newCN(t, withHardfork("osaka"), withoutStart()).VRankModule
 		h := &types.Header{Number: big.NewInt(100)}
 		assert.NoError(t, v.VerifyHeader(h, nil))
-		h = makeVRankHeader(t, 100, []common.Address{C1})
+		h = makeSelfReportHeader(t, 100, []common.Address{C1})
 		assert.ErrorIs(t, v.VerifyHeader(h, nil), vrank.ErrUnexpectedVRankBeforePermissionless)
 		// A non-nil zero-length VRank is present and must be rejected.
 		h = &types.Header{Number: big.NewInt(100), VRank: []byte{}}
@@ -106,59 +113,54 @@ func TestVerifyHeader(t *testing.T) {
 
 	t.Run("post-fork non-epoch: empty VRank passes without reading candidates", func(t *testing.T) {
 		v := newCN(t, withoutStart()).VRankModule
-		h := &types.Header{Number: big.NewInt(100)}
-		assert.NoError(t, v.VerifyHeader(h, nil))
+		assert.NoError(t, v.VerifyHeader(makeHeaderWithRound(100, 0), nil)) // nil VRank
 	})
 
-	t.Run("valid sorted report with known candidates passes", func(t *testing.T) {
-		v := newCN(t, withCandidates(candidates)).VRankModule
-		assert.NoError(t, v.VerifyHeader(makeVRankHeader(t, num, []common.Address{C1, C2, C3}), nil))
+	t.Run("valid self-report passes", func(t *testing.T) {
+		v := newVerifier(t)
+		assert.NoError(t, v.VerifyHeader(makeSelfReportHeader(t, num, candidates), nil))
 	})
 
-	t.Run("non-candidate in VRank rejected", func(t *testing.T) {
-		unknown := numToAddr(99)
-		v := newCN(t, withCandidates(candidates)).VRankModule
-		assert.ErrorIs(t, v.VerifyHeader(makeVRankHeader(t, num, []common.Address{C1, unknown}), nil),
+	t.Run("non-candidate rejected", func(t *testing.T) {
+		unknown := numToAddr(150)
+		v := newVerifier(t)
+		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, []common.Address{C1, unknown}), nil),
 			vrank.ErrInvalidVRankCandidate)
 	})
 
 	t.Run("duplicate address rejected", func(t *testing.T) {
-		v := newCN(t, withCandidates(candidates)).VRankModule
-		assert.ErrorIs(t, v.VerifyHeader(makeVRankHeader(t, num, []common.Address{C1, C1}), nil),
+		v := newVerifier(t)
+		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, []common.Address{C1, C1}), nil),
 			vrank.ErrDuplicateVRankCandidate)
 	})
 
 	t.Run("unsorted addresses rejected", func(t *testing.T) {
-		v := newCN(t, withCandidates(candidates)).VRankModule
+		v := newVerifier(t)
 		// C3 > C2, so C3 before C2 is not ascending.
-		assert.ErrorIs(t, v.VerifyHeader(makeVRankHeader(t, num, []common.Address{C3, C2}), nil),
+		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, []common.Address{C3, C2}), nil),
 			vrank.ErrVRankNotSorted)
 	})
 
-	t.Run("invalid encoding rejected before reading candidates", func(t *testing.T) {
+	t.Run("invalid encoding rejected before validation", func(t *testing.T) {
 		v := newCN(t, withoutStart()).VRankModule
-		h := &types.Header{Number: big.NewInt(100), VRank: []byte{0xff, 0xfe}} // garbage
+		h := makeHeaderWithRound(100, 0)
+		h.VRank = []byte{0xff, 0xfe} // garbage
 		assert.ErrorIs(t, v.VerifyHeader(h, nil), vrank.ErrInvalidVRankFormat)
 	})
 
-	t.Run("non-epoch candidate lookup failure is returned", func(t *testing.T) {
-		headerNum := uint64(101)
+	t.Run("candidate membership is checked against the reporting block's epoch", func(t *testing.T) {
 		cn := newCN(t, withoutStart())
-		cn.Valset.EXPECT().GetCandTesting(headerNum-1).Return(nil, assert.AnError).Times(1)
+		// The target is an earlier block of the same epoch, and CandTesting is epoch-stable.
+		cn.Valset.EXPECT().GetCandTesting(num-1).Return(candidates, nil).Times(1)
 
-		assert.ErrorIs(t, cn.VRankModule.VerifyHeader(makeVRankHeader(t, headerNum, []common.Address{C1}), nil), assert.AnError)
+		assert.NoError(t, cn.VRankModule.VerifyHeader(makeSelfReportHeader(t, num, []common.Address{C1}), nil))
 	})
 
-	t.Run("candidate membership is checked against the reported block N-1", func(t *testing.T) {
-		headerNum := uint64(101)
-		cand, futureCand := numToAddr(10), numToAddr(11)
-		cn := newCN(t, withoutStart())
-		v := cn.VRankModule
-
-		cn.Valset.EXPECT().GetCandTesting(headerNum-1).Return([]common.Address{cand}, nil).Times(2)
-
-		assert.NoError(t, v.VerifyHeader(makeVRankHeader(t, headerNum, []common.Address{cand}), nil))
-		assert.ErrorIs(t, v.VerifyHeader(makeVRankHeader(t, headerNum, []common.Address{futureCand}), nil), vrank.ErrInvalidVRankCandidate)
+	t.Run("candidate lookup failure is returned", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		valset.EXPECT().GetCandTesting(num-1).Return(nil, assert.AnError).AnyTimes()
+		v := newCN(t, withValset(valset), withoutStart()).VRankModule
+		assert.ErrorIs(t, v.VerifyHeader(makeSelfReportHeader(t, num, []common.Address{C1}), nil), assert.AnError)
 	})
 }
 
@@ -168,7 +170,7 @@ func TestPrepareHeader(t *testing.T) {
 
 	t.Run("pre-fork clears VRank", func(t *testing.T) {
 		v := newCN(t, withHardfork("osaka"), withoutStart()).VRankModule
-		header := makeVRankHeader(t, 100, []common.Address{C1})
+		header := makeSelfReportHeader(t, 100, []common.Address{C1})
 
 		require.NoError(t, v.PrepareHeader(header))
 		assert.Nil(t, header.VRank)
@@ -179,9 +181,9 @@ func TestPrepareHeader(t *testing.T) {
 		header := &types.Header{Number: big.NewInt(int64(params.DefaultVRankEpoch))}
 
 		require.NoError(t, v.PrepareHeader(header))
-		report, err := vrank.DecodeReport(header.VRank)
+		expected, err := vrank.EncodeAddressList(candidates)
 		require.NoError(t, err)
-		assert.Equal(t, candidates, report)
+		assert.Equal(t, expected, header.VRank)
 		assert.NoError(t, v.VerifyHeader(header, nil))
 	})
 
@@ -194,43 +196,105 @@ func TestPrepareHeader(t *testing.T) {
 		assert.NoError(t, v.VerifyHeader(header, nil))
 	})
 
-	t.Run("non-epoch empty evaluation leaves VRank nil", func(t *testing.T) {
-		parent := makeHeaderWithRound(10, 1)
-		v := newCN(t, withCandidates(candidates), withHeaders(map[uint64]*types.Header{10: parent}), withoutStart()).VRankModule
+	t.Run("non-epoch with no own proposal leaves VRank nil", func(t *testing.T) {
+		v := newCN(t, withoutStart()).VRankModule
 		header := &types.Header{Number: big.NewInt(11)}
 
 		require.NoError(t, v.PrepareHeader(header))
 		assert.Nil(t, header.VRank)
 	})
 
-	t.Run("high-round parent accepted in next header preparation", func(t *testing.T) {
-		// Regression: a parent committed at round > MaxRound must not make
-		// PrepareHeader fail.
-		parent := makeHeaderWithRound(10, int64(vrank.MaxRound+1)) // round 11
-		v := newCN(t, withCandidates(candidates), withHeaders(map[uint64]*types.Header{10: parent}), withoutStart()).VRankModule
-		header := &types.Header{Number: big.NewInt(11)}
+	// setupOwnProposal builds a CN that produced block `target` at `round` and collected its
+	// own-proposal preprepare, so PrepareHeader can report it.
+	setupOwnProposal := func(t *testing.T, target uint64, round int64) *VRankModule {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		valset.EXPECT().GetCandTesting(gomock.Any()).Return(candidates, nil).AnyTimes()
+		targetHeader := makeHeaderWithRound(target, round)
+		cn := newCN(t, withValset(valset), withoutStart(),
+			withHeaders(map[uint64]*types.Header{target: targetHeader}))
+		valset.EXPECT().GetProposer(gomock.Any(), gomock.Any()).Return(cn.Addr, nil).AnyTimes()
+		cn.VRankModule.collector.AddPrepreparedTime(
+			vrank.ViewKey{N: target, R: uint8(round)}, time.Now(), types.NewBlockWithHeader(targetHeader).Hash())
+		return cn.VRankModule
+	}
 
-		require.NoError(t, v.PrepareHeader(header))
-		assert.Nil(t, header.VRank)
-	})
-
-	t.Run("non-epoch fills evaluated candidate failures", func(t *testing.T) {
-		parent := makeHeaderWithRound(10, 1)
-		parentBlock := types.NewBlockWithHeader(parent)
-		v := newCN(t, withCandidates(candidates), withHeaders(map[uint64]*types.Header{10: parent}), withoutStart()).VRankModule
-		v.collector.AddPrepreparedTime(vrank.ViewKey{N: 10, R: 1}, time.Now(), parentBlock.Hash())
-		header := &types.Header{Number: big.NewInt(11)}
+	t.Run("non-epoch reports candidate failures of own prior proposal", func(t *testing.T) {
+		v := setupOwnProposal(t, 10, 1)
+		header := makeHeaderWithRound(11, 0)
 
 		require.NoError(t, v.PrepareHeader(header))
 		report, err := vrank.DecodeReport(header.VRank)
 		require.NoError(t, err)
-		assert.Equal(t, candidates, report)
+		assert.Equal(t, candidates, report) // no responses collected ⇒ all candidates failed
+		assert.NoError(t, v.VerifyHeader(header, nil))
 	})
 
-	t.Run("non-epoch parent lookup failure is returned", func(t *testing.T) {
-		v := newCN(t, withoutStart()).VRankModule
+	t.Run("high-round own proposal yields nil VRank", func(t *testing.T) {
+		// An own proposal committed above MaxRound is evaluated as empty (candidate msgs were dropped),
+		// so it must not fail PrepareHeader.
+		v := setupOwnProposal(t, 10, int64(vrank.MaxRound+1))
 		header := &types.Header{Number: big.NewInt(11)}
 
-		assert.ErrorIs(t, v.PrepareHeader(header), vrank.ErrHeaderNotFound)
+		require.NoError(t, v.PrepareHeader(header))
+		assert.Nil(t, header.VRank)
+	})
+}
+
+// TestSelectReportTarget follows one node through a realistic sequence: it reports the most
+// recent block it committed, skips a round it proposed but another validator committed, re-reports
+// idempotently across a round change, and moves on once a newer own block supersedes the target.
+func TestSelectReportTarget(t *testing.T) {
+	t.Run("reports most recent own block, skips lost round, superseded by newer", func(t *testing.T) {
+		valset := mock_valset.NewMockValsetModule(gomock.NewController(t))
+		other := numToAddr(777)
+		cn := newCN(t, withValset(valset), withoutStart(), withHeaders(map[uint64]*types.Header{
+			7:  makeHeaderWithRound(7, 0),
+			9:  makeHeaderWithRound(9, 0),
+			11: makeHeaderWithRound(11, 0),
+		}))
+		v := cn.VRankModule
+		// propose records the view exactly as HandleIstanbulPreprepare does when this node proposes.
+		propose := func(n uint64) {
+			v.collector.AddPrepreparedTime(vrank.ViewKey{N: n, R: 0}, time.Now(), common.Hash{})
+		}
+		// 7 and 11 are committed by this node; 9 is proposed by this node but committed by `other`.
+		valset.EXPECT().GetProposer(uint64(7), uint64(0)).Return(cn.Addr, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(9), uint64(0)).Return(other, nil).AnyTimes()
+		valset.EXPECT().GetProposer(uint64(11), uint64(0)).Return(cn.Addr, nil).AnyTimes()
+
+		// Block 7 is this node's first proposal in the epoch — nothing prior to report.
+		_, _, ok := v.selectReportTarget(7)
+		assert.False(t, ok, "first proposal in the epoch has no prior target")
+		propose(7)
+
+		// This node then builds block 9: that build reports block 7, and prune keeps 7 (strict <).
+		// Keeping it matters because this node loses block 9 to `other`, so 7's report is discarded.
+		target, round, ok := v.selectReportTarget(9)
+		require.True(t, ok)
+		assert.Equal(t, uint64(7), target)
+		assert.Equal(t, uint64(0), round)
+		v.collector.PruneReported(target) // keeps 7
+		propose(9)
+
+		// Building block 11: block 9 was lost, so 7 is re-reported (idempotent) and 9 is skipped.
+		target, _, ok = v.selectReportTarget(11)
+		require.True(t, ok)
+		assert.Equal(t, uint64(7), target)
+		v.collector.PruneReported(target) // still keeps 7
+
+		// Once block 11 commits it becomes the most recent own block: 7 is superseded, 9 still skipped.
+		propose(11)
+		target, _, ok = v.selectReportTarget(13)
+		require.True(t, ok)
+		assert.Equal(t, uint64(11), target)
+	})
+
+	t.Run("prior-epoch proposal is not selected", func(t *testing.T) {
+		epoch := uint64(params.DefaultVRankEpoch)
+		v := newCN(t, withoutStart()).VRankModule
+		v.collector.AddPrepreparedTime(vrank.ViewKey{N: epoch - 1, R: 0}, time.Now(), common.Hash{}) // previous epoch
+
+		_, _, ok := v.selectReportTarget(epoch + 1)
+		assert.False(t, ok)
 	})
 }

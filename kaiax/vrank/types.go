@@ -94,12 +94,13 @@ type VRankCandidate struct {
 	BlsSig      [blstypes.SignatureLength]byte // Sign(vrankCandidateSigHash(), blsKey)
 }
 
-func EncodeReport(report []common.Address) ([]byte, error) {
-	if len(report) == 0 {
+// EncodeReport encodes the failed CandTesting addresses, or nil when empty so an absent VRank stays
+// the "nothing" encoding.
+func EncodeReport(failed []common.Address) ([]byte, error) {
+	if len(failed) == 0 {
 		return nil, nil
 	}
-
-	return EncodeAddressList(report)
+	return EncodeAddressList(failed)
 }
 
 func EncodeAddressList(addrs []common.Address) ([]byte, error) {

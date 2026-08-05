@@ -23,7 +23,6 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/kaiachain/kaia/common"
-	"github.com/kaiachain/kaia/consensus/bft"
 	"github.com/kaiachain/kaia/crypto"
 	"github.com/kaiachain/kaia/crypto/bls"
 	"github.com/kaiachain/kaia/event"
@@ -41,7 +40,7 @@ const (
 
 	broadcastChSize = 2048
 	maxRound        = vrank.MaxRound
-	maxWindow       = uint64(10) // max collection window [N-10, N+10]
+	maxWindow       = uint64(10) // how far back a candidate keeps seen VRankPreprepare views
 
 	scoreCacheSize = 1024
 )
@@ -75,10 +74,9 @@ type VRankModule struct {
 
 	nodeID common.Address
 
-	// only for validators
-	prepreparedView   bft.View // for collection window management
-	prepreparedViewMu sync.RWMutex
-	collector         *vrank.Collector
+	// only for the proposer, which collects VRankCandidate replies to its own VRankPreprepare.
+	// Its views are also the blocks pending report. In-memory — a restart drops them (fail-safe).
+	collector *vrank.Collector
 
 	// only for candidates
 	seenPreprepare   map[vrank.ViewKey]common.Hash

@@ -70,25 +70,44 @@ func NewCollector() *Collector {
 	}
 }
 
-// RemoveOldViews deletes views that are strictly behind threshold.
-func (c *Collector) RemoveOldViews(threshold ViewKey) {
+// PruneReported deletes views for sequences strictly below upto, so every round of the block just
+// reported survives until a later proposal supersedes it.
+func (c *Collector) PruneReported(upto uint64) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	for vk := range c.prepreparedMap {
-		if vk.Cmp(threshold) < 0 {
+		if vk.N < upto {
 			delete(c.prepreparedMap, vk)
 		}
 	}
 	for vk := range c.blockHashMap {
-		if vk.Cmp(threshold) < 0 {
+		if vk.N < upto {
 			delete(c.blockHashMap, vk)
 		}
 	}
 	for vk := range c.viewMap {
-		if vk.Cmp(threshold) < 0 {
+		if vk.N < upto {
 			delete(c.viewMap, vk)
 		}
 	}
+}
+
+// PendingEvaluations returns the deduplicated, unsorted sequences preprepared at or after epochStart.
+func (c *Collector) PendingEvaluations(epochStart uint64) []uint64 {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	seen := make(map[uint64]struct{}, len(c.prepreparedMap))
+	nums := make([]uint64, 0, len(c.prepreparedMap))
+	for vk := range c.prepreparedMap {
+		if vk.N < epochStart {
+			continue
+		}
+		if _, dup := seen[vk.N]; !dup {
+			seen[vk.N] = struct{}{}
+			nums = append(nums, vk.N)
+		}
+	}
+	return nums
 }
 
 // AddPrepreparedTime records the start time and expected block hash for the view.
@@ -98,6 +117,15 @@ func (c *Collector) AddPrepreparedTime(vk ViewKey, prepreparedAt time.Time, expe
 	defer c.mu.Unlock()
 	c.prepreparedMap[vk] = prepreparedAt
 	c.blockHashMap[vk] = expectedBlockHash
+}
+
+// HasPreprepared reports whether a preprepared time has been recorded for the view, i.e. this node
+// proposed it and is expected to collect its VRankCandidate replies.
+func (c *Collector) HasPreprepared(vk ViewKey) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	_, ok := c.prepreparedMap[vk]
+	return ok
 }
 
 // AddCandMsg stores a VRankCandidate message for the given view. No verification is done here.
