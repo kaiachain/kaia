@@ -224,6 +224,44 @@ func TestDialSched_Candidates_StaticNodes(t *testing.T) {
 	assert.Equal(t, staticNode.ID, cands[0].ID, "static node should be the only candidate")
 }
 
+// Static nodes dialed in the same batch consume the outbound demand of their type.
+func TestDialSched_GetCandidates_StaticNodesConsumeDemand(t *testing.T) {
+	var (
+		staticCNs = []*discover.Node{
+			testNode(61, "10.0.0.61", discover.NodeTypeCN),
+			testNode(62, "10.0.0.62", discover.NodeTypeCN),
+		}
+		dynamicCNs = []*discover.Node{
+			testNode(201, "10.0.0.201", discover.NodeTypeCN),
+			testNode(202, "10.0.0.202", discover.NodeTypeCN),
+		}
+		tab = &mockTable{
+			nodesByType: map[discover.NodeType][]*discover.Node{
+				discover.NodeTypeCN: dynamicCNs,
+			},
+		}
+	)
+
+	filled := NewDialSched(DialConfig{
+		staticNodes: staticCNs,
+		connTarget:  map[discover.NodeType]int{discover.NodeTypeCN: 2},
+	}, tab, nil)
+	cands, _ := filled.getCandidates()
+	assert.Len(t, cands, len(staticCNs), "pending static CNs alone should fill the CN target")
+	for _, dynamic := range dynamicCNs {
+		assert.False(t, hasNodeID(cands, dynamic.ID), "no dynamic CN is needed while statics fill the target")
+	}
+
+	// A connected static is already counted in connectedOutbound, so it must not reserve a second slot.
+	connected := NewDialSched(DialConfig{
+		staticNodes: staticCNs[:1],
+		connTarget:  map[discover.NodeType]int{discover.NodeTypeCN: 2},
+	}, tab, nil)
+	connected.OnPeerConnected(staticCNs[0].ID, staticCNs[0].NType, false)
+	cands, _ = connected.getCandidates()
+	assert.True(t, hasNodeID(cands, dynamicCNs[0].ID), "the demand left by a connected static should pull a dynamic CN")
+}
+
 // Dynamic nodes are candidates if connTarget is not met.
 func TestDialSched_GetCandidates_FromDiscovery(t *testing.T) {
 	var (
