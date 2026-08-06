@@ -46,14 +46,15 @@ func (h *expHeap) add(item string, exp mclock.AbsTime) {
 	heap.Push(h, expItem{item, exp})
 }
 
-// contains checks whether an item is present.
-func (h expHeap) contains(item string) bool {
+// count returns how many unexpired entries an item holds.
+func (h expHeap) count(item string) int {
+	n := 0
 	for _, v := range h {
 		if v.item == item {
-			return true
+			n++
 		}
 	}
-	return false
+	return n
 }
 
 // expire removes items with expiry time before 'now'.

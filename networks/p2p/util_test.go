@@ -45,7 +45,7 @@ func TestExpHeap(t *testing.T) {
 	if h.nextExpiry() != exptimeA {
 		t.Fatal("wrong nextExpiry")
 	}
-	if !h.contains("a") || !h.contains("b") || !h.contains("c") {
+	if h.count("a") != 1 || h.count("b") != 1 || h.count("c") != 1 {
 		t.Fatal("heap doesn't contain all live items")
 	}
 
@@ -53,10 +53,10 @@ func TestExpHeap(t *testing.T) {
 	if h.nextExpiry() != exptimeB {
 		t.Fatal("wrong nextExpiry")
 	}
-	if h.contains("a") {
+	if h.count("a") != 0 {
 		t.Fatal("heap contains a even though it has already expired")
 	}
-	if !h.contains("b") || !h.contains("c") {
+	if h.count("b") != 1 || h.count("c") != 1 {
 		t.Fatal("heap doesn't contain all live items")
 	}
 }
@@ -69,13 +69,13 @@ func TestCheckInboundConnThrottle(t *testing.T) {
 	ip := net.ParseIP("203.0.113.7") // TEST-NET-3, treated as a public (non-LAN) IP
 	now := mclock.AbsTime(0)
 
-	if err := srv.checkInboundConn(ip, now); err != nil {
+	if err := srv.checkInboundConn(ip, 1, now); err != nil {
 		t.Fatalf("first attempt should be accepted, got %v", err)
 	}
-	if err := srv.checkInboundConn(ip, now+mclock.AbsTime(inboundThrottleTime/2)); err != errTooManyInboundAttempts {
+	if err := srv.checkInboundConn(ip, 1, now+mclock.AbsTime(inboundThrottleTime/2)); err != errTooManyInboundAttempts {
 		t.Fatalf("attempt within throttle window should be rejected, got %v", err)
 	}
-	if err := srv.checkInboundConn(ip, now+mclock.AbsTime(inboundThrottleTime)+1); err != nil {
+	if err := srv.checkInboundConn(ip, 1, now+mclock.AbsTime(inboundThrottleTime)+1); err != nil {
 		t.Fatalf("attempt after throttle window should be accepted, got %v", err)
 	}
 }
@@ -86,7 +86,7 @@ func TestCheckInboundConnLANExempt(t *testing.T) {
 	srv := &BaseServer{}
 	ip := net.ParseIP("127.0.0.1")
 	for i := 0; i < 5; i++ {
-		if err := srv.checkInboundConn(ip, mclock.AbsTime(0)); err != nil {
+		if err := srv.checkInboundConn(ip, 1, mclock.AbsTime(0)); err != nil {
 			t.Fatalf("LAN IP should never be throttled, got %v on attempt %d", err, i)
 		}
 	}
@@ -102,10 +102,10 @@ func TestCheckInboundConnNetRestrict(t *testing.T) {
 	srv := &BaseServer{}
 	srv.NetRestrict = list
 
-	if err := srv.checkInboundConn(net.ParseIP("203.0.113.7"), 0); err != errNotWhitelisted {
+	if err := srv.checkInboundConn(net.ParseIP("203.0.113.7"), 1, 0); err != errNotWhitelisted {
 		t.Fatalf("IP outside NetRestrict should be rejected, got %v", err)
 	}
-	if err := srv.checkInboundConn(net.ParseIP("192.0.2.5"), 0); err != nil {
+	if err := srv.checkInboundConn(net.ParseIP("192.0.2.5"), 1, 0); err != nil {
 		t.Fatalf("IP within NetRestrict should be accepted, got %v", err)
 	}
 }

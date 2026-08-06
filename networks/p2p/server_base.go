@@ -407,26 +407,22 @@ func (srv *BaseServer) maxDialedConns() int {
 	}
 }
 
-// checkInboundConn decides whether an inbound connection from remoteIP should
-// be accepted. It rejects connections that do not match NetRestrict, and
-// throttles repeated attempts from the same non-LAN IP within
-// inboundThrottleTime to bound connection-flood attempts. now is passed in so
-// the throttle window is deterministic and testable.
-func (srv *BaseServer) checkInboundConn(remoteIP net.IP, now mclock.AbsTime) error {
+// checkInboundConn reports whether an inbound connection from remoteIP may proceed to
+// the handshake at time now.
+func (srv *BaseServer) checkInboundConn(remoteIP net.IP, allowance int, now mclock.AbsTime) error {
 	if remoteIP == nil {
 		// No usable remote IP (e.g. in-process test pipes); nothing to throttle.
 		return nil
 	}
-	// Reject connections that do not match NetRestrict.
 	if srv.NetRestrict != nil && !srv.NetRestrict.Contains(remoteIP) {
 		return errNotWhitelisted
 	}
-	// Reject peers that try to connect too frequently. LAN addresses are
-	// exempt so co-located/internal nodes are never throttled.
+
 	srv.inboundHistoryMu.Lock()
 	defer srv.inboundHistoryMu.Unlock()
 	srv.inboundHistory.expire(now, nil)
-	if !netutil.IsLAN(remoteIP) && srv.inboundHistory.contains(remoteIP.String()) {
+	// LAN addresses are exempt so co-located/internal nodes are never throttled.
+	if !netutil.IsLAN(remoteIP) && srv.inboundHistory.count(remoteIP.String()) >= allowance {
 		return errTooManyInboundAttempts
 	}
 	srv.inboundHistory.add(remoteIP.String(), now+mclock.AbsTime(inboundThrottleTime))
@@ -455,6 +451,13 @@ func (srv *BaseServer) acceptWithBackoff(listener net.Listener, lastLog *time.Ti
 	}
 }
 
+// inboundAllowance is how many inbound connections one remote IP may open within
+// inboundThrottleTime. A single-channel node advertises one port, so one peer opens
+// one connection.
+func (srv *BaseServer) inboundAllowance() int {
+	return 1
+}
+
 // acceptInbound returns the next inbound connection worth handshaking. It wraps
 // acceptWithBackoff and applies the inbound checks (NetRestrict + per-IP
 // throttle), silently dropping rejected connections. It returns nil when the
@@ -463,13 +466,13 @@ func (srv *BaseServer) acceptWithBackoff(listener net.Listener, lastLog *time.Ti
 // The handshake slot is held across rejects: listenLoop is the sole receiver of
 // its slots channel (SetupConn goroutines only send), so releasing and
 // re-acquiring a token on each reject would be a no-op.
-func (srv *BaseServer) acceptInbound(listener net.Listener, lastLog *time.Time) net.Conn {
+func (srv *BaseServer) acceptInbound(listener net.Listener, allowance int, lastLog *time.Time) net.Conn {
 	for {
 		fd := srv.acceptWithBackoff(listener, lastLog)
 		if fd == nil {
 			return nil
 		}
-		if err := srv.checkInboundConn(tcpAddrIP(fd.RemoteAddr()), mclock.Now()); err != nil {
+		if err := srv.checkInboundConn(tcpAddrIP(fd.RemoteAddr()), allowance, mclock.Now()); err != nil {
 			srv.logger.Debug("Rejected inbound connection", "addr", fd.RemoteAddr(), "err", err)
 			fd.Close()
 			continue
@@ -498,7 +501,7 @@ func (srv *BaseServer) listenLoop() {
 		// Wait for a handshake slot before accepting.
 		<-slots
 
-		fd := srv.acceptInbound(srv.listener, &lastLog)
+		fd := srv.acceptInbound(srv.listener, srv.inboundAllowance(), &lastLog)
 		if fd == nil {
 			return
 		}
